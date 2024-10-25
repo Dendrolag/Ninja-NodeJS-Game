@@ -13,7 +13,7 @@ const waitingRoom = {
     isGameStarted: false
 };
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Configuration des fichiers statiques
 app.use('/assets', express.static(__dirname + '/assets'));
