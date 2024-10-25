@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeu de capture</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <!-- Menu principal -->
+    <div id="mainMenu" class="active">
+        <div class="menu-content">
+            <h1>Jeu de capture</h1>
+            <div class="menu-form">
+                <input 
+                    type="text" 
+                    id="nicknameInput" 
+                    placeholder="Entrez votre pseudo" 
+                    maxlength="15" 
+                    required
+                >
+                <button id="startButton" class="primary-button">Rejoindre la salle</button>
+                <button id="settingsButton" class="secondary-button">Paramètres</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="waitingRoom" class="screen">
+        <div class="waiting-room-content">
+            <h2>Salle d'attente</h2>
+            <div class="waiting-room-container">
+                <div class="players-list-container">
+                    <h3>Joueurs connectés</h3>
+                    <ul id="waitingRoomPlayers"></ul>
+                </div>
+                <div class="waiting-room-buttons">
+                    <button id="startGameButton" class="primary-button" disabled>Lezgoooo</button>
+                    <button id="leaveRoomButton" class="secondary-button">Quitter la salle</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Menu des paramètres -->
+    <div id="settingsMenu" style="display: none;">
+        <div class="settings-content">
+            <h2>Paramètres du jeu</h2>
+            
+            <!-- Paramètres généraux -->
+            <div class="setting-group">
+                <label for="gameDuration">Durée de la partie (en secondes):</label>
+                <input 
+                    type="number" 
+                    id="gameDuration" 
+                    value="180" 
+                    min="60" 
+                    max="600"
+                    step="30"
+                >
+            </div>
+            
+            <!-- Paramètres des bots -->
+            <div class="setting-group">
+                <label for="initialBotCount">Nombre de bots au départ:</label>
+                <input 
+                    type="number" 
+                    id="initialBotCount" 
+                    value="20" 
+                    min="5" 
+                    max="50"
+                >
+            </div>
+
+            <!-- Paramètres du bonus de vitesse -->
+            <div class="setting-group">
+                <div class="setting-header">
+                    <input 
+                        type="checkbox" 
+                        id="enableSpeedBoost" 
+                        checked
+                    >
+                    <label for="enableSpeedBoost">Activer le bonus de vitesse</label>
+                </div>
+                <div class="setting-details">
+                    <label for="speedBoostDuration">
+                        Durée du bonus de vitesse (secondes):
+                    </label>
+                    <input 
+                        type="number" 
+                        id="speedBoostDuration" 
+                        value="5" 
+                        min="1" 
+                        max="30"
+                    >
+                </div>
+            </div>
+
+            <!-- Paramètres du bonus d'invincibilité -->
+            <div class="setting-group">
+                <div class="setting-header">
+                    <input 
+                        type="checkbox" 
+                        id="enableInvincibility" 
+                        checked
+                    >
+                    <label for="enableInvincibility">
+                        Activer le bonus d'invincibilité
+                    </label>
+                </div>
+                <div class="setting-details">
+                    <label for="invincibilityDuration">
+                        Durée du bonus d'invincibilité (secondes):
+                    </label>
+                    <input 
+                        type="number" 
+                        id="invincibilityDuration" 
+                        value="5" 
+                        min="1" 
+                        max="30"
+                    >
+                </div>
+            </div>
+
+            <!-- Paramètres du bonus de révélation -->
+            <div class="setting-group">
+                <div class="setting-header">
+                    <input 
+                        type="checkbox" 
+                        id="enableReveal" 
+                        checked
+                    >
+                    <label for="enableReveal">
+                        Activer le bonus de révélation
+                    </label>
+                </div>
+                <div class="setting-details">
+                    <label for="revealDuration">
+                        Durée du bonus de révélation (secondes):
+                    </label>
+                    <input 
+                        type="number" 
+                        id="revealDuration" 
+                        value="5" 
+                        min="1" 
+                        max="30"
+                    >
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <div class="setting-header">
+                    <input type="checkbox" id="enableSpecialZones" checked>
+                    <label for="enableSpecialZones">Activer les zones spéciales</label>
+                </div>
+                <div class="setting-details">
+                    <div class="zone-type">
+                        <input type="checkbox" id="enableChaosZone" checked>
+                        <label for="enableChaosZone">Zone de Chaos</label>
+                    </div>
+                    <div class="zone-type">
+                        <input type="checkbox" id="enableRepelZone" checked>
+                        <label for="enableRepelZone">Zone Répulsive</label>
+                    </div>
+                    <div class="zone-type">
+                        <input type="checkbox" id="enableAttractZone" checked>
+                        <label for="enableAttractZone">Zone Attractive</label>
+                    </div>
+                    <div class="zone-type">
+                        <input type="checkbox" id="enableStealthZone" checked>
+                        <label for="enableStealthZone">Zone d'Invisibilité</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Boutons du menu des paramètres -->
+            <div class="settings-buttons">
+                <button id="saveSettingsButton" class="primary-button">
+                    Enregistrer
+                </button>
+                <button id="backToMenuButton" class="secondary-button">
+                    Retour
+                </button>
+            </div>
+        
+        </div>
+    </div>
+
+    <!-- Écran de jeu -->
+    <div id="gameScreen">
+        <!-- Conteneur du canvas -->
+        <div id="gameContainer">
+            <canvas id="gameCanvas" style="position: absolute; top: 0; left: 0;" width="100%" height="100%"></canvas>
+        </div>
+
+        <!-- Interface de jeu -->
+        <div id="gameInterface">
+            <!-- Notification des bonus -->
+            <div id="collectedBonusDisplay" class="hidden">
+                <div id="collectedBonusDisplayContent"></div>
+            </div>
+
+            <!-- Zone des bonus actifs -->
+            <div id="activeBonuses"></div>
+
+            <!-- Liste des joueurs -->
+            <div id="playerList">
+                <h3>Classement</h3>
+                <ul id="players"></ul>
+            </div>
+
+            <!-- Overlay de jeu (timer, score, pause) -->
+            <div id="gameOverlay">
+                <div id="gameInfo">
+                    <div id="timer">
+                        Temps restant: <span id="time">180</span>
+                    </div>
+                    <div id="score"></div>
+                </div>
+                <button id="pauseButton" class="game-button">
+                    Pause
+                </button>
+            </div>
+        </div>
+
+        <!-- Instructions du jeu -->
+        <div id="instructions" class="game-help-panel">
+            <div class="help-content">
+                <div class="help-header">
+                    <h3>Comment jouer</h3>
+                    <button class="close-button" id="closeInstructions">&times;</button>
+                </div>
+                <div class="help-body">
+                    <p>
+                        Déplacez-vous pour capturer les autres joueurs et les bots.
+                        Collectez les bonus pour obtenir des avantages temporaires.
+                    </p>
+                    <div class="bonus-list">
+                        <div class="bonus-item">
+                            <img src="/assets/images/speed.svg" alt="Vitesse" style="height: 20px;"/>
+                            <span>Boost de vitesse : Déplacez-vous plus rapidement</span>
+                        </div>
+                        <div class="bonus-item">
+                            <img src="/assets/images/shield.svg" alt="Bouclier" style="height: 20px;"/>
+                            <span>Invincibilité : Évitez d'être capturé</span>
+                        </div>
+                        <div class="bonus-item">
+                            <img src="/assets/images/eye.svg" alt="Œil" style="height: 20px;"/>
+                            <span>Révélation : Identifiez les vrais joueurs</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Commandes du jeu -->
+        <div id="controls" class="game-help-panel">
+            <div class="help-content">
+                <div class="help-header">
+                    <h3>Commandes</h3>
+                    <button class="close-button" id="closeControls">&times;</button>
+                </div>
+                <div class="help-body">
+                    <div class="controls-grid">
+                        <div class="control-item">
+                            <span class="key">↑</span> ou <span class="key">Z</span>
+                            <span class="action">Monter</span>
+                        </div>
+                        <div class="control-item">
+                            <span class="key">↓</span> ou <span class="key">S</span>
+                            <span class="action">Descendre</span>
+                        </div>
+                        <div class="control-item">
+                            <span class="key">←</span> ou <span class="key">Q</span>
+                            <span class="action">Gauche</span>
+                        </div>
+                        <div class="control-item">
+                            <span class="key">→</span> ou <span class="key">D</span>
+                            <span class="action">Droite</span>
+                        </div>
+                        <div class="control-item">
+                            <span class="key">F</span>
+                            <span class="action">Localiser votre point</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/client.js"></script>
+</body>
+</html>
