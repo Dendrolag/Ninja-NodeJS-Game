@@ -3,19 +3,23 @@
 // Socket.io et variables globales
 let socket;
 
-// Éléments DOM
+// Éléments DOM principaux
 const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
-const startButton = document.getElementById('startButton');
 const nicknameInput = document.getElementById('nicknameInput');
-const settingsButton = document.getElementById('settingsButton');
+
+// Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
 const saveSettingsButton = document.getElementById('saveSettingsButton');
 const backToMenuButton = document.getElementById('backToMenuButton');
+
+// Éléments de la salle d'attente
 const waitingRoomScreen = document.getElementById('waitingRoom');
 const playersList = document.getElementById('waitingRoomPlayers');
-const leaveRoomButton = document.getElementById('leaveRoomButton');
 const startGameButton = document.getElementById('startGameButton');
+const settingsButton = document.getElementById('waitingRoomSettings'); // Un seul bouton de paramètres
+const leaveRoomButton = document.getElementById('leaveRoomButton');
+
 const GAME_VIRTUAL_WIDTH = 2000;  // Taille virtuelle de la zone de jeu
 const GAME_VIRTUAL_HEIGHT = 1500;
 let camera = {
@@ -40,6 +44,8 @@ const enableChaosZoneCheckbox = document.getElementById('enableChaosZone');
 const enableRepelZoneCheckbox = document.getElementById('enableRepelZone');
 const enableAttractZoneCheckbox = document.getElementById('enableAttractZone');
 const enableStealthZoneCheckbox = document.getElementById('enableStealthZone');
+const enableBlackBotCheckbox = document.getElementById('enableBlackBot');
+const blackBotCountInput = document.getElementById('blackBotCount');
 
 // Éléments du jeu
 const canvas = document.getElementById('gameCanvas');
@@ -51,6 +57,34 @@ const collectedBonusDisplay = document.getElementById('collectedBonusDisplay');
 const collectedBonusDisplayContent = document.getElementById('collectedBonusDisplayContent');
 const activeBonusesContainer = document.getElementById('activeBonuses');
 const playerListContainer = document.getElementById('players');
+
+// constantes pour les effets des bonus
+const BONUS_EFFECTS = {
+    speed: {
+        color: '#00ff00',      // Vert vif pour la vitesse
+        glowSize: 20,
+        pulseSpeed: 0.006,
+        name: 'Boost',
+        backgroundColor: 'rgba(0, 255, 0, 0.2)',  // Fond semi-transparent
+        borderColor: 'rgba(0, 255, 0, 0.6)'       // Bordure plus visible
+    },
+    invincibility: {
+        color: '#ffd700',      // Or pour l'invincibilité
+        glowSize: 25,
+        pulseSpeed: 0.004,
+        name: 'Invincibilité',
+        backgroundColor: 'rgba(255, 215, 0, 0.2)',
+        borderColor: 'rgba(255, 215, 0, 0.6)'
+    },
+    reveal: {
+        color: '#ff00ff',      // Magenta pour la révélation
+        glowSize: 15,
+        pulseSpeed: 0.005,
+        name: 'Révélation',
+        backgroundColor: 'rgba(255, 0, 255, 0.2)',
+        borderColor: 'rgba(255, 0, 255, 0.6)'
+    }
+};
 
 // Dimensions du jeu
 let GAME_WIDTH = window.innerWidth;
@@ -67,6 +101,7 @@ let isPaused = false;
 let isGameOver = false;
 let keysPressed = {};
 let specialZones = [];
+let isRoomOwner = false;
 
 // Variables pour les bonus
 let speedBoostActive = false;
@@ -92,12 +127,12 @@ let gameLoopInterval;
 let gameSettings = {
     gameDuration: 180,
     enableSpeedBoost: true,
-    speedBoostDuration: 5,
+    speedBoostDuration: 10,
     enableInvincibility: true,
-    invincibilityDuration: 5,
+    invincibilityDuration: 10,
     enableReveal: true,
-    revealDuration: 5,
-    initialBotCount: 20,
+    revealDuration: 10,
+    initialBotCount: 30,
     enableSpecialZones: true,
     enabledZones: {
         CHAOS: true,
@@ -128,39 +163,53 @@ modakRegular.load().then(function(loadedFont) {
 
 // Fonction pour mettre à jour la position de la caméra
 function updateCamera() {
-    if (!entities) return;
-    
-    const currentPlayer = entities.find(e => e.id === playerId);
-    if (!currentPlayer) return;
+    if (!entities || !playerId) return;
+
+    // Trouver le joueur actuel, en s'assurant qu'il s'agit bien d'une entité de type 'player'
+    const myPlayer = entities.find(e => e.id === playerId && e.type === 'player');
+    if (!myPlayer) {
+        console.log("Player not found:", playerId); // Debug log
+        return;
+    }
 
     // Calculer les limites de la caméra
-    const viewWidth = window.innerWidth / camera.scale;
-    const viewHeight = window.innerHeight / camera.scale;
-    const edgeMargin = 200; // Augmenter la marge pour une transition plus douce
-    
-    // Position cible idéale (centrée sur le joueur)
-    camera.targetX = currentPlayer.x;
-    camera.targetY = currentPlayer.y;
+    const viewWidth = canvas.width / camera.scale;
+    const viewHeight = canvas.height / camera.scale;
 
-    // Limites de la caméra
-    const leftLimit = viewWidth / 2;
-    const rightLimit = GAME_VIRTUAL_WIDTH - viewWidth / 2;
-    const topLimit = viewHeight / 2;
-    const bottomLimit = GAME_VIRTUAL_HEIGHT - viewHeight / 2;
-
-    // Appliquer les limites de manière stricte
-    camera.targetX = Math.max(leftLimit, Math.min(rightLimit, camera.targetX));
-    camera.targetY = Math.max(topLimit, Math.min(bottomLimit, camera.targetY));
+    // Calculer la position cible (centrée sur le joueur avec limites)
+    const targetX = Math.max(
+        viewWidth / 2,
+        Math.min(GAME_VIRTUAL_WIDTH - viewWidth / 2, myPlayer.x)
+    );
+    const targetY = Math.max(
+        viewHeight / 2,
+        Math.min(GAME_VIRTUAL_HEIGHT - viewHeight / 2, myPlayer.y)
+    );
 
     // Transition douce
-    const smoothFactor = 0.06;
-    camera.x += (camera.targetX - camera.x) * smoothFactor;
-    camera.y += (camera.targetY - camera.y) * smoothFactor;
+    const smoothness = 0.1;
+    camera.x += (targetX - camera.x) * smoothness;
+    camera.y += (targetY - camera.y) * smoothness;
 
     // S'assurer que la caméra reste dans les limites
-    camera.x = Math.max(leftLimit, Math.min(rightLimit, camera.x));
-    camera.y = Math.max(topLimit, Math.min(bottomLimit, camera.y));
+    camera.x = Math.max(viewWidth / 2, Math.min(GAME_VIRTUAL_WIDTH - viewWidth / 2, camera.x));
+    camera.y = Math.max(viewHeight / 2, Math.min(GAME_VIRTUAL_HEIGHT - viewHeight / 2, camera.y));
 }
+
+// Ajouter une fonction de debug pour suivre le problème
+/*function logCameraDebug() {
+    const myPlayer = entities?.find(e => e.type === 'player' && e.id === playerId);
+    console.log('Camera Debug:', {
+        playerId,
+        playerFound: !!myPlayer,
+        playerPosition: myPlayer ? { x: myPlayer.x, y: myPlayer.y } : null,
+        cameraPosition: { x: camera.x, y: camera.y },
+        cameraTarget: { x: camera.targetX, y: camera.targetY }
+    });
+}
+
+// Appeler le debug toutes les secondes
+setInterval(logCameraDebug, 1000);*/
 
 // Images des bonus
 const bonusImages = {
@@ -227,31 +276,31 @@ settingsButton.addEventListener('click', () => {
 });
 
 saveSettingsButton.addEventListener('click', () => {
-    gameSettings = {
-        ...gameSettings,
-        gameDuration: parseInt(gameDurationInput.value),
-        enableSpeedBoost: enableSpeedBoostCheckbox.checked,
-        speedBoostDuration: parseInt(speedBoostDurationInput.value),
-        enableInvincibility: enableInvincibilityCheckbox.checked,
-        invincibilityDuration: parseInt(invincibilityDurationInput.value),
-        enableReveal: enableRevealCheckbox.checked,
-        revealDuration: parseInt(revealDurationInput.value),
-        initialBotCount: parseInt(initialBotCountInput.value),
-        enableSpecialZones: enableSpecialZonesCheckbox.checked,
-        enabledZones: {
-            CHAOS: enableChaosZoneCheckbox.checked,
-            REPEL: enableRepelZoneCheckbox.checked,
-            ATTRACT: enableAttractZoneCheckbox.checked,
-            STEALTH: enableStealthZoneCheckbox.checked
-        }
-    };
+    if (isRoomOwner) {
+        const newSettings = {
+            gameDuration: parseInt(gameDurationInput.value),
+            enableSpeedBoost: enableSpeedBoostCheckbox.checked,
+            speedBoostDuration: parseInt(speedBoostDurationInput.value),
+            enableInvincibility: enableInvincibilityCheckbox.checked,
+            invincibilityDuration: parseInt(invincibilityDurationInput.value),
+            enableReveal: enableRevealCheckbox.checked,
+            revealDuration: parseInt(revealDurationInput.value),
+            initialBotCount: parseInt(initialBotCountInput.value),
+            enableSpecialZones: enableSpecialZonesCheckbox.checked,
+            enabledZones: {
+                CHAOS: enableChaosZoneCheckbox.checked,
+                REPEL: enableRepelZoneCheckbox.checked,
+                ATTRACT: enableAttractZoneCheckbox.checked,
+                STEALTH: enableStealthZoneCheckbox.checked
+            },
+            enableBlackBot: enableBlackBotCheckbox.checked,
+            blackBotCount: parseInt(blackBotCountInput.value)
+        };
 
-    // Mettre à jour également le timer affiché
-    timeRemaining = gameSettings.gameDuration;
-    timerDisplay.textContent = timeRemaining;
-
+        socket.emit('updateGameSettings', newSettings);
+    }
+    
     settingsMenu.style.display = 'none';
-    mainMenu.classList.add('active');
 });
 
 // gestion de l'activation/désactivation globale des zones
@@ -270,7 +319,6 @@ enableSpecialZonesCheckbox.addEventListener('change', (e) => {
 
 backToMenuButton.addEventListener('click', () => {
     settingsMenu.style.display = 'none';
-    mainMenu.classList.add('active');
 });
 
 // Démarrage du jeu
@@ -286,6 +334,14 @@ startButton.addEventListener('click', () => {
     mainMenu.classList.remove('active');
     waitingRoomScreen.classList.add('active');
     socket = initializeSocket(io());
+
+    // écouteur pour les mises à jour des paramètres
+    socket.on('gameSettingsUpdated', (settings) => {
+        // Mettre à jour l'interface
+        updateSettingsUI(settings);
+        // Mettre à jour les paramètres locaux
+        gameSettings = settings;
+    });
     
     // Écouter les mises à jour de la salle d'attente
     socket.on('updateWaitingRoom', (players) => {
@@ -301,11 +357,45 @@ startButton.addEventListener('click', () => {
     socket.emit('joinWaitingRoom', nickname);
 });
 
+settingsButton.addEventListener('click', () => {
+    settingsMenu.style.display = 'block';
+});
+
+saveSettingsButton.addEventListener('click', () => {
+    if (isRoomOwner) {
+        gameSettings = {
+            ...gameSettings,
+            gameDuration: parseInt(gameDurationInput.value),
+            enableSpeedBoost: enableSpeedBoostCheckbox.checked,
+            speedBoostDuration: parseInt(speedBoostDurationInput.value),
+            enableInvincibility: enableInvincibilityCheckbox.checked,
+            invincibilityDuration: parseInt(invincibilityDurationInput.value),
+            enableReveal: enableRevealCheckbox.checked,
+            revealDuration: parseInt(revealDurationInput.value),
+            initialBotCount: parseInt(initialBotCountInput.value),
+            enableSpecialZones: enableSpecialZonesCheckbox.checked,
+            enabledZones: {
+                CHAOS: enableChaosZoneCheckbox.checked,
+                REPEL: enableRepelZoneCheckbox.checked,
+                ATTRACT: enableAttractZoneCheckbox.checked,
+                STEALTH: enableStealthZoneCheckbox.checked
+            },
+            enableBlackBot: enableBlackBotCheckbox.checked,
+            blackBotCount: parseInt(blackBotCountInput.value)
+        };
+
+        // Émettre les nouveaux paramètres si on est le propriétaire
+        socket.emit('updateGameSettings', gameSettings);
+    }
+    settingsMenu.style.display = 'none';
+});
+
 leaveRoomButton.addEventListener('click', () => {
     if (socket) {
         socket.emit('leaveWaitingRoom');
         socket.disconnect();
     }
+    settingsMenu.style.display = 'none'; // Cacher les paramètres si ouverts
     waitingRoomScreen.classList.remove('active');
     mainMenu.classList.add('active');
 });
@@ -322,22 +412,56 @@ startGameButton.addEventListener('click', () => {
 // Fonction pour mettre à jour la liste des joueurs
 function updateWaitingRoomPlayers(players) {
     playersList.innerHTML = '';
+    console.log('Updating waiting room players:', JSON.stringify(players, null, 2)); // Log plus détaillé
+    console.log('Current socket id:', socket?.id);
+
+    // Vérifier si on est le premier joueur
+    if (players.length > 0) {
+        const firstPlayer = players[0];
+        // Mettre à jour isRoomOwner si on est le premier joueur ou si on a déjà le flag isOwner
+        isRoomOwner = players.some(player => 
+            player.id === socket?.id && player.isOwner
+        );
+    }
+    
+    console.log('isRoomOwner:', isRoomOwner);
+
     players.forEach(player => {
         const playerElement = document.createElement('li');
         playerElement.className = 'waiting-room-player';
+        
+        // Créer le contenu du joueur avant d'ajouter le badge
+        const playerContent = document.createElement('span');
+        playerContent.textContent = player.nickname;
+        playerElement.appendChild(playerContent);
+
         if (player.id === socket?.id) {
             playerElement.classList.add('current-player');
         }
-        playerElement.textContent = player.nickname;
+        
+        if (player.isOwner) {
+            console.log('Adding owner badge to:', player.nickname);
+            const ownerBadge = document.createElement('span');
+            ownerBadge.className = 'owner-badge';
+            ownerBadge.textContent = '👑';
+            playerElement.appendChild(ownerBadge);
+        }
+
         playersList.appendChild(playerElement);
     });
-    
-    // Activer le bouton de démarrage uniquement pour le premier joueur qui a rejoint
-    if (players.length > 0 && players[0].id === socket?.id) {
-        startGameButton.disabled = false;
-    } else {
-        startGameButton.disabled = true;
-    }
+
+    // Mettre à jour les contrôles en fonction du statut de propriétaire
+    startGameButton.disabled = !isRoomOwner;
+    console.log('Start game button disabled:', !isRoomOwner);
+
+    // Gérer l'état des inputs dans le menu paramètres
+    const settingsInputs = settingsMenu.querySelectorAll('input, select, button');
+    settingsInputs.forEach(input => {
+        if (input.id === 'backToMenuButton') return;
+        input.disabled = !isRoomOwner;
+    });
+
+    saveSettingsButton.style.display = isRoomOwner ? 'block' : 'none';
 }
 
 // Fonctions d'initialisation
@@ -391,13 +515,15 @@ function handleKeyUp(event) {
 function movePlayer() {
     if (isPaused || isGameOver) return;
 
-    const baseSpeed = 3; // Vitesse de base fixe
+    const baseSpeed = 3;
+    // Appliquer le boost de vitesse si actif
+    const currentSpeed = speedBoostActive ? baseSpeed * 1.3 : baseSpeed;
     let move = { x: 0, y: 0 };
 
-    if (keysPressed['ArrowUp'] || keysPressed['z']) move.y = -baseSpeed;
-    if (keysPressed['ArrowDown'] || keysPressed['s']) move.y = baseSpeed;
-    if (keysPressed['ArrowLeft'] || keysPressed['q']) move.x = -baseSpeed;
-    if (keysPressed['ArrowRight'] || keysPressed['d']) move.x = baseSpeed;
+    if (keysPressed['ArrowUp'] || keysPressed['z']) move.y = -currentSpeed;
+    if (keysPressed['ArrowDown'] || keysPressed['s']) move.y = currentSpeed;
+    if (keysPressed['ArrowLeft'] || keysPressed['q']) move.x = -currentSpeed;
+    if (keysPressed['ArrowRight'] || keysPressed['d']) move.x = currentSpeed;
 
     // Normaliser le mouvement diagonal
     if (move.x !== 0 && move.y !== 0) {
@@ -407,8 +533,11 @@ function movePlayer() {
     }
 
     if (move.x !== 0 || move.y !== 0) {
-        // Envoyer le mouvement sans tenir compte du scale de la caméra
-        socket.emit('move', move);
+        socket.emit('move', { 
+            x: move.x,
+            y: move.y,
+            speedBoostActive: speedBoostActive 
+        });
     }
 }
 
@@ -418,8 +547,29 @@ function handlePauseClick() {
     }
 }
 
+function updateSettingsUI(settings) {
+    // Mettre à jour tous les champs avec les nouvelles valeurs
+    gameDurationInput.value = settings.gameDuration;
+    enableSpeedBoostCheckbox.checked = settings.enableSpeedBoost;
+    speedBoostDurationInput.value = settings.speedBoostDuration;
+    enableInvincibilityCheckbox.checked = settings.enableInvincibility;
+    invincibilityDurationInput.value = settings.invincibilityDuration;
+    enableRevealCheckbox.checked = settings.enableReveal;
+    revealDurationInput.value = settings.revealDuration;
+    initialBotCountInput.value = settings.initialBotCount;
+    enableSpecialZonesCheckbox.checked = settings.enableSpecialZones;
+    enableChaosZoneCheckbox.checked = settings.enabledZones.CHAOS;
+    enableRepelZoneCheckbox.checked = settings.enabledZones.REPEL;
+    enableAttractZoneCheckbox.checked = settings.enabledZones.ATTRACT;
+    enableStealthZoneCheckbox.checked = settings.enabledZones.STEALTH;
+    enableBlackBotCheckbox.checked = settings.enableBlackBot;
+    blackBotCountInput.value = settings.blackBotCount;
+}
+
 // Fonction de démarrage du jeu
 function startGame() {
+    console.log('Starting game...'); // Debug log
+    
     isGameOver = false;
     isPaused = false;
     pauseButton.disabled = false;
@@ -431,26 +581,36 @@ function startGame() {
     locatorFadeStartTime = 0;
     keysPressed = {};
     playerColor = null;
-    playerId = null;
+    playerId = socket.id; // Important : définir directement l'ID du joueur
+
+    // Afficher l'indicateur de position au démarrage
+    showPlayerLocator = true;
+    locatorFadeStartTime = Date.now() + 3000; // Afficher pendant 3 secondes
+    setTimeout(() => {
+        showPlayerLocator = false;
+    }, 3500); // 3.5 secondes pour inclure le fade out
 
     // Réinitialiser les bonus
     speedBoostActive = false;
     invincibilityActive = false;
     revealActive = false;
-    playerSpeed = 3;  // Vitesse de base augmentée
+    playerSpeed = 3;
     speedBoostTimeLeft = 0;
     invincibilityTimeLeft = 0;
     revealTimeLeft = 0;
 
+    // Gérer l'affichage des écrans
     mainMenu.classList.remove('active');
     waitingRoomScreen.classList.remove('active');
     settingsMenu.style.display = 'none';
     gameScreen.classList.add('active');
 
+    // S'assurer que le canvas est correctement dimensionné
+    resizeCanvas();
+
     // Ne pas créer une nouvelle connexion si elle existe déjà
     if (!socket) {
         socket = initializeSocket(io());
-
         if (!socket.hasListeners) {
             socket.hasListeners = hasListeners;
         }
@@ -472,29 +632,37 @@ function startGame() {
     if (!socket.hasListeners('connect')) {
         socket.on('connect', () => {
             playerId = socket.id;
+            console.log('Socket connected, player ID:', playerId); // Debug log
         });
     }
 
     if (!socket.hasListeners('updateEntities')) {
         socket.on('updateEntities', (data) => {
             if (isPaused || isGameOver) return;
-        
-            entities = data.entities;
+
+            console.log('Received game update for player:', socket.id); // Debug log
+
+            // Mise à jour du timer
+            timerDisplay.textContent = data.timeLeft || 0;
             timeRemaining = data.timeLeft;
+            
+            // Mise à jour des bonus
             bonuses = data.bonuses || [];
             specialZones = data.zones || [];
-        
-            timerDisplay.textContent = timeRemaining;
-        
+            
+            // Trouver d'abord notre joueur dans les scores
             const currentPlayer = data.playerScores.find(p => p.id === socket.id);
             if (currentPlayer) {
                 playerColor = currentPlayer.color;
                 playerId = currentPlayer.id;
-                const totalScore = currentPlayer.currentBots + currentPlayer.captures;
+                const totalScore = currentPlayer.currentBots;
                 scoreDisplay.textContent = `${currentPlayer.nickname}: ${totalScore} points`;
             }
-        
+            
+            // Mettre à jour les entités et la caméra
+            entities = data.entities;
             updatePlayerList(data.playerScores);
+            updateCamera();
             drawEntities();
             updateActiveBonusesDisplay();
         });
@@ -505,10 +673,21 @@ function startGame() {
             playerColor = data.newColor;
             showCaptureNotification(`Capturé par ${data.capturedBy} !`);
             showPlayerLocator = true;
-            locatorFadeStartTime = Date.now() + LOCATOR_DURATION - LOCATOR_FADE_DURATION;
+            locatorFadeStartTime = Date.now() + 3000;
             setTimeout(() => {
                 showPlayerLocator = false;
-            }, LOCATOR_DURATION);
+            }, 3500);
+        });
+    }
+
+    if (!socket.hasListeners('capturedByBlackBot')) {
+        socket.on('capturedByBlackBot', (data) => {
+            showCaptureNotification(data.message);
+            showPlayerLocator = true;
+            locatorFadeStartTime = Date.now() + 3000;
+            setTimeout(() => {
+                showPlayerLocator = false;
+            }, 3500);
         });
     }
     
@@ -564,16 +743,20 @@ function startGame() {
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keyup', handleKeyUp);
 
-    // Retirer l'ancien écouteur du bouton pause s'il existe
     pauseButton.removeEventListener('click', handlePauseClick);
-    // Ajouter le nouvel écouteur
     pauseButton.addEventListener('click', handlePauseClick);
 
-    // Créer un nouvel interval unique
+    // Réinitialiser la boucle de jeu
+    if (gameLoopInterval) {
+        clearInterval(gameLoopInterval);
+    }
+
     gameLoopInterval = setInterval(() => {
-        movePlayer();
-        updateBonusTimers();
-        updateCamera();
+        if (!isPaused && !isGameOver) {
+            movePlayer();
+            updateBonusTimers();
+            updateCamera();
+        }
     }, 20);
 
     initializeHelpPanels();
@@ -582,7 +765,6 @@ function startGame() {
 
 // Rendu du jeu
 function drawEntities() {
-
     context.imageSmoothingEnabled = true;
     context.imageSmoothingQuality = 'high';
 
@@ -686,36 +868,86 @@ function drawEntities() {
             context.globalAlpha = 0.3;
         }
 
-        context.shadowColor = 'rgba(0, 0, 0, 0.5)';
-        context.shadowBlur = 4;
-        context.shadowOffsetX = 2;
-        context.shadowOffsetY = 2;
+        // Si c'est notre joueur, on ajoute les effets de bonus
+        if (entity.id === playerId) {
+            // Dessiner d'abord les effets de bonus si actifs
+            drawBonusEffects(entity);
+        }
 
-        // Dessiner le contour noir
+        // Dessiner le point normalement
         context.beginPath();
         context.arc(entity.x, entity.y, 11, 0, 2 * Math.PI);
         context.fillStyle = 'black';
         context.fill();
 
-        // Dessiner le cercle de couleur
         context.beginPath();
         context.arc(entity.x, entity.y, 10, 0, 2 * Math.PI);
         context.fillStyle = entity.color;
         context.fill();
 
-        // Styles spéciaux pour le joueur actuel et les joueurs révélés
-        if (entity.id === playerId) {
-            context.lineWidth = 2;
-            context.strokeStyle = '#FFD700';
-            context.stroke();
-            
-            context.lineWidth = 1;
-            context.strokeStyle = '#FFFFFF';
-            context.stroke();
-        } else if (revealActive && entity.type === 'player') {
-            context.lineWidth = 2;
-            context.strokeStyle = '#FF0000';
-            context.stroke();
+        // Gestion spéciale pour les bots noirs
+        if (entity.type === 'blackBot') {
+        // Effet de lueur rouge pour montrer le rayon de détection
+        context.beginPath();
+        context.arc(entity.x, entity.y, entity.detectionRadius, 0, 2 * Math.PI);
+        context.fillStyle = 'rgba(255, 0, 0, 0.1)';
+        context.fill();
+
+        // Lueur autour du bot noir
+        const glowSize = 15;
+        context.beginPath();
+        context.arc(entity.x, entity.y, glowSize, 0, 2 * Math.PI);
+        context.fillStyle = 'rgba(255, 0, 0, 0.3)';
+        context.fill();
+
+        // Corps du bot noir
+        context.beginPath();
+        context.arc(entity.x, entity.y, 11, 0, 2 * Math.PI);
+        context.fillStyle = 'black';
+        context.fill();
+        context.lineWidth = 2;
+        context.strokeStyle = '#FF0000';
+        context.stroke();
+
+        // Effet de pulsation
+        const pulseSize = 13 + Math.sin(Date.now() * 0.01) * 2;
+        context.beginPath();
+        context.arc(entity.x, entity.y, pulseSize, 0, 2 * Math.PI);
+        context.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+        context.stroke();
+        } 
+        else {
+            // Dessiner le contour noir standard
+            context.shadowColor = 'rgba(0, 0, 0, 0.5)';
+            context.shadowBlur = 4;
+            context.shadowOffsetX = 2;
+            context.shadowOffsetY = 2;
+
+            context.beginPath();
+            context.arc(entity.x, entity.y, 11, 0, 2 * Math.PI);
+            context.fillStyle = 'black';
+            context.fill();
+
+            // Dessiner le cercle de couleur
+            context.beginPath();
+            context.arc(entity.x, entity.y, 10, 0, 2 * Math.PI);
+            context.fillStyle = entity.color;
+            context.fill();
+
+            // Styles spéciaux pour le joueur actuel et les joueurs révélés
+            if (entity.id === playerId) {
+                context.lineWidth = 2;
+                context.strokeStyle = '#FFD700';
+                context.stroke();
+                
+                context.lineWidth = 1;
+                context.strokeStyle = '#FFFFFF';
+                context.stroke();
+            } else if (revealActive && entity.type === 'player') {
+                context.lineWidth = 2;
+                context.strokeStyle = '#FF0000';
+                context.stroke();
+            }
         }
 
         // Réinitialiser les paramètres
@@ -729,23 +961,88 @@ function drawEntities() {
     // Dessiner les bonus
     bonuses.forEach(bonus => {
         const image = bonusImages[bonus.type];
-        if (image && image.complete) {
-            const size = 30;
-            context.drawImage(image, 
-                bonus.x - size/2, 
-                bonus.y - size/2, 
-                size, 
-                size
-            );
-
+        const effect = BONUS_EFFECTS[bonus.type];
+        if (image && image.complete && effect) {
+            const visualSize = 24;        // Taille visuelle réduite pour l'effet
+            const imageSize = 30;         // Taille de l'image conservée pour la hitbox
+            const glowSize = visualSize * 1.2;  // Halo réduit autour du bonus
+            
+            // Dessiner le fond lumineux
             context.beginPath();
-            context.arc(bonus.x, bonus.y, size/1.5, 0, Math.PI * 2);
-            context.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            context.arc(bonus.x, bonus.y, glowSize, 0, Math.PI * 2);
+            context.fillStyle = effect.backgroundColor;
             context.fill();
+            
+            // Ajouter un contour lumineux
+            context.strokeStyle = effect.borderColor;
+            context.lineWidth = 2;
+            context.stroke();
+            
+            // Appliquer une teinte à l'image
+            context.globalCompositeOperation = 'source-atop';
+            context.fillStyle = `${effect.color}40`;
+            
+            // Dessiner l'image du bonus
+            context.drawImage(image, 
+                bonus.x - imageSize/2, 
+                bonus.y - imageSize/2, 
+                imageSize, 
+                imageSize
+            );
+            
+            // Réinitialiser le mode de composition
+            context.globalCompositeOperation = 'source-over';
         }
     });
 
     // Restaurer le contexte
+    context.restore();
+}
+
+// Nouvelle fonction pour dessiner les effets de bonus
+function drawBonusEffects(player) {
+    const now = Date.now();
+    const activeEffects = [];
+
+    // Collecter les effets actifs
+    if (speedBoostActive) activeEffects.push('speed');
+    if (invincibilityActive) activeEffects.push('invincibility');
+    if (revealActive) activeEffects.push('reveal');
+
+    if (activeEffects.length === 0) return;
+
+    context.save();
+
+    // Calculer la taille totale de l'effet en fonction du nombre de bonus actifs
+    activeEffects.forEach((effectType, index) => {
+        const effect = BONUS_EFFECTS[effectType];
+        const baseGlowSize = effect.glowSize;
+        const pulse = Math.sin(now * effect.pulseSpeed) * 5;
+        const offsetDistance = index * 8; // Décalage pour les effets multiples
+
+        // Créer un dégradé radial pour l'effet de lueur
+        const gradient = context.createRadialGradient(
+            player.x, player.y, 10 + offsetDistance,
+            player.x, player.y, baseGlowSize + pulse + offsetDistance
+        );
+
+        // Calculer l'opacité en fonction du nombre d'effets actifs
+        const baseOpacity = 0.7 / Math.max(1, activeEffects.length);
+        gradient.addColorStop(0, `${effect.color}${Math.floor(baseOpacity * 255).toString(16).padStart(2, '0')}`);
+        gradient.addColorStop(1, 'transparent');
+
+        // Dessiner l'effet de lueur
+        context.beginPath();
+        context.fillStyle = gradient;
+        context.arc(player.x, player.y, baseGlowSize + pulse + offsetDistance, 0, Math.PI * 2);
+        context.fill();
+
+        // Ajouter un contour subtil
+        context.strokeStyle = `${effect.color}40`; // 25% opacité
+        context.lineWidth = 2;
+        context.stroke();
+    });
+
     context.restore();
 }
 
@@ -760,47 +1057,59 @@ function drawPlayerLocator(player) {
         opacity = Math.max(0, Math.min(1, opacity));
     }
 
+    const ARROW_DISTANCE = 80;  // Augmenté : Distance des flèches par rapport au point
+    const ARROW_SIZE = 40;      // Augmenté : Taille des flèches
+    const ARROW_WIDTH = 30;     // Nouveau : Largeur de la base des flèches
+    const BOUNCE_AMOUNT = 8;    // Augmenté : Amplitude de l'animation
+    const BOUNCE_SPEED = 0.004; // Vitesse de l'animation
+    const LINE_WIDTH = 3;       // Augmenté : Épaisseur du contour
+
+    // Calculer l'animation de pulsation
+    const bounce = Math.sin(now * BOUNCE_SPEED) * BOUNCE_AMOUNT;
+    
     context.save();
     
-    // Dimensions de la flèche
-    const arrowSize = 40;
-    const bounceHeight = 20;
-    const bounceSpeed = 0.004;
-    const bounce = Math.sin(now * bounceSpeed) * bounceHeight;
+    // Pour chaque direction (haut, droite, bas, gauche)
+    const directions = [
+        { angle: 0, dx: 0, dy: -1 },     // Haut
+        { angle: Math.PI/2, dx: 1, dy: 0 },      // Droite
+        { angle: Math.PI, dx: 0, dy: 1 },    // Bas
+        { angle: -Math.PI/2, dx: -1, dy: 0 }     // Gauche
+    ];
 
-    // Position de la flèche au-dessus du joueur
-    const arrowY = player.y - 50 + bounce;
+    directions.forEach(dir => {
+        context.save();
+        
+        // Positionner la flèche
+        const arrowX = player.x + (dir.dx * (ARROW_DISTANCE + bounce));
+        const arrowY = player.y + (dir.dy * (ARROW_DISTANCE + bounce));
+        
+        context.translate(arrowX, arrowY);
+        context.rotate(dir.angle);
 
-    // Déplacer au point d'origine
-    context.translate(player.x, arrowY);
-    
-    // Rotation de 180 degrés pour pointer vers le bas
-    context.rotate(Math.PI);
+        // Dessiner la flèche
+        context.beginPath();
+        context.moveTo(0, ARROW_SIZE);          // Pointe de la flèche
+        context.lineTo(-ARROW_WIDTH, 0);        // Côté gauche
+        context.lineTo(ARROW_WIDTH, 0);         // Côté droit
+        context.closePath();
 
-    // Dessiner la flèche
-    context.beginPath();
-    context.moveTo(0, -arrowSize/2);  // Pointe de la flèche
-    context.lineTo(-arrowSize/3, arrowSize/2);  // Coin gauche
-    context.lineTo(arrowSize/3, arrowSize/2);   // Coin droit
-    context.closePath();
+        // Remplir avec un rouge vif
+        context.fillStyle = `rgba(255, 30, 30, ${opacity})`;
+        context.fill();
 
-    // Remplir avec un dégradé
-    const gradient = context.createLinearGradient(0, -arrowSize/2, 0, arrowSize/2);
-    gradient.addColorStop(0, `rgba(255, 215, 0, ${opacity})`);
-    gradient.addColorStop(1, `rgba(255, 140, 0, ${opacity})`);
-    context.fillStyle = gradient;
-    context.fill();
+        // Contour plus épais de la flèche
+        context.strokeStyle = `rgba(255, 255, 255, ${opacity})`;
+        context.lineWidth = LINE_WIDTH;
+        context.stroke();
 
-    // Contour de la flèche
-    context.strokeStyle = `rgba(0, 0, 0, ${opacity})`;
-    context.lineWidth = 2;
-    context.stroke();
+        // Ajouter un effet de lueur
+        context.shadowColor = `rgba(255, 0, 0, ${opacity * 0.5})`;
+        context.shadowBlur = 10;
+        context.stroke();
 
-    // Effet de brillance
-    context.beginPath();
-    context.arc(0, 0, 5, 0, Math.PI * 2);
-    context.fillStyle = `rgba(255, 255, 255, ${opacity})`;
-    context.fill();
+        context.restore();
+    });
 
     context.restore();
 }
@@ -808,18 +1117,18 @@ function drawPlayerLocator(player) {
 // Gestion des bonus
 function activateSpeedBoost(duration) {
     speedBoostActive = true;
-    speedBoostTimeLeft += duration;
+    speedBoostTimeLeft = duration;
     playerSpeed = 6;
 }
 
 function activateInvincibility(duration) {
     invincibilityActive = true;
-    invincibilityTimeLeft += duration;
+    invincibilityTimeLeft = duration;
 }
 
 function activateReveal(duration) {
     revealActive = true;
-    revealTimeLeft += duration;
+    revealTimeLeft = duration;
 }
 
 function updateBonusTimers() {
@@ -880,22 +1189,70 @@ function updateActiveBonusesDisplay() {
 }
 
 function createActiveBonusElement(type, timeLeft) {
+    const effect = BONUS_EFFECTS[type];
     const bonusDiv = document.createElement('div');
     bonusDiv.className = 'activeBonus';
+    bonusDiv.style.background = effect.backgroundColor;
+    bonusDiv.style.borderColor = effect.borderColor;
 
     const img = document.createElement('img');
     img.src = bonusImages[type].src;
-    img.alt = getBonusName(type);
+    img.alt = effect.name;
+    // Appliquer une teinte à l'image
+    img.style.filter = `drop-shadow(0 0 3px ${effect.color})`;
 
     const timerSpan = document.createElement('span');
     timerSpan.className = 'timer';
     timerSpan.textContent = `${Math.ceil(timeLeft)}s`;
+    timerSpan.style.color = effect.color;
 
     bonusDiv.appendChild(img);
     bonusDiv.appendChild(timerSpan);
 
     return bonusDiv;
 }
+
+// Ajouter du CSS pour les styles des bonus actifs
+const style = document.createElement('style');
+style.textContent = `
+.activeBonus {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background-color: rgba(0, 0, 0, 0.8);
+    padding: 8px 15px;
+    border-radius: 20px;
+    border: 2px solid transparent;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    animation: bonusPulse 2s infinite;
+}
+
+.activeBonus img {
+    width: 24px;
+    height: 24px;
+    filter: brightness(1.1);
+    animation: bonusIconPulse 2s infinite;
+}
+
+.activeBonus .timer {
+    font-weight: bold;
+    text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes bonusPulse {
+    0% { box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); }
+    50% { box-shadow: 0 0 15px currentColor; }
+    100% { box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); }
+}
+
+@keyframes bonusIconPulse {
+    0% { filter: brightness(1.1); }
+    50% { filter: brightness(1.3); }
+    100% { filter: brightness(1.1); }
+}
+`;
+document.head.appendChild(style);
 
 function getBonusName(bonusType) {
     switch (bonusType) {
@@ -1033,7 +1390,7 @@ function showGameOverModal(scores) {
     replayButton.textContent = 'Rejouer';
     replayButton.addEventListener('click', () => {
         document.body.removeChild(modal);
-        restartGame();
+        returnToWaitingRoom();  // Au lieu de restartGame()
     });
 
     const mainMenuButton = document.createElement('button');
@@ -1059,6 +1416,66 @@ function showCaptureNotification(message) {
     setTimeout(() => {
         collectedBonusDisplay.classList.add('hidden');
     }, 3000);
+}
+
+// Nouvelle fonction pour retourner à la salle d'attente
+function returnToWaitingRoom() {
+    // Réinitialiser les états du jeu
+    isGameOver = false;
+    isPaused = false;
+    pauseButton.disabled = false;
+
+    // Réinitialiser les bonus
+    speedBoostActive = false;
+    invincibilityActive = false;
+    revealActive = false;
+    playerSpeed = 3;
+    speedBoostTimeLeft = 0;
+    invincibilityTimeLeft = 0;
+    revealTimeLeft = 0;
+
+    // Nettoyer l'interface
+    activeBonusesContainer.innerHTML = '';
+    playerListContainer.innerHTML = '';
+    collectedBonusDisplay.classList.add('hidden');
+
+    // Masquer l'écran de jeu
+    gameScreen.classList.remove('active');
+
+    // Réinitialiser la connexion socket si nécessaire
+    if (!socket || !socket.connected) {
+        socket = initializeSocket(io());
+    }
+
+    // S'assurer que les écouteurs d'événements sont en place
+    if (!socket.hasListeners('updateWaitingRoom')) {
+        socket.on('updateWaitingRoom', (players) => {
+            updateWaitingRoomPlayers(players);
+        });
+    }
+
+    if (!socket.hasListeners('gameSettingsUpdated')) {
+        socket.on('gameSettingsUpdated', (settings) => {
+            updateSettingsUI(settings);
+            gameSettings = settings;
+        });
+    }
+
+    // Rejoindre la salle d'attente avec une indication de retour de partie
+    socket.emit('rejoinWaitingRoom', {
+        nickname: playerNickname,
+        wasInGame: true
+    });
+
+    // Afficher la salle d'attente
+    waitingRoomScreen.classList.add('active');
+
+    // Nettoyer les écouteurs d'événements du jeu
+    document.removeEventListener('keydown', handleKeyDown);
+    document.removeEventListener('keyup', handleKeyUp);
+    if (gameLoopInterval) {
+        clearInterval(gameLoopInterval);
+    }
 }
 
 function showCaptureModal(capturedNickname) {
@@ -1155,78 +1572,58 @@ function restartGame() {
 }
 
 function returnToMainMenu() {
+    // Réinitialiser les états
     showPlayerLocator = false;
-    // Fermer la modale de pause si elle est ouverte
-    hidePauseOverlay();
-    
-    // Réinitialiser les états du jeu
     isGameOver = false;
     isPaused = false;
     pauseButton.disabled = false;
 
-    // Déconnecter le socket
+    // Nettoyer l'interface
+    hidePauseOverlay();
+    activeBonusesContainer.innerHTML = '';
+    playerListContainer.innerHTML = '';
+    collectedBonusDisplay.classList.add('hidden');
+
+    // Nettoyer la connexion socket
     if (socket) {
         socket.disconnect();
         socket = null;
     }
 
-    // Réinitialiser les bonus
+    // Réinitialiser les bonus et états du jeu
     speedBoostActive = false;
     invincibilityActive = false;
     revealActive = false;
     playerSpeed = 3;
-
     speedBoostTimeLeft = 0;
     invincibilityTimeLeft = 0;
     revealTimeLeft = 0;
-
-    // Nettoyer les événements
     keysPressed = {};
 
-    // Arrêter la boucle de jeu
+    // Nettoyer les écouteurs d'événements
+    document.removeEventListener('keydown', handleKeyDown);
+    document.removeEventListener('keyup', handleKeyUp);
     if (gameLoopInterval) {
         clearInterval(gameLoopInterval);
     }
 
-    // Définir un seul gameLoop
-    function gameLoop() {
-        if (!isPaused && !isGameOver) {
-            movePlayer();
-            updateBonusTimers();
-            updateCamera();
-        }
-    }
-
-    // Créer l'interval
-    gameLoopInterval = setInterval(gameLoop, 20);
-
     // Réinitialiser les panneaux d'aide
     resetHelpPanels();
 
-    // Retirer les écouteurs d'événements
-    document.removeEventListener('keydown', handleKeyDown);
-    document.removeEventListener('keyup', handleKeyUp);
-
-    // Nettoyer l'interface
-    activeBonusesContainer.innerHTML = '';
-    playerListContainer.innerHTML = '';
-    collectedBonusDisplay.classList.add('hidden');
-
-    // Masquer l'écran de jeu et afficher le menu
+    // Gérer l'affichage des écrans
     gameScreen.classList.remove('active');
+    waitingRoomScreen.classList.remove('active');
     mainMenu.classList.add('active');
 }
 
 function handleKeyDown(event) {
     keysPressed[event.key] = true;
-    console.log('Touche pressée:', event.key, keysPressed);  // Debug
 
-    // Touche pour localiser le joueur
     if (event.key.toLowerCase() === 'f' && !showPlayerLocator) {
         showPlayerLocator = true;
-        locatorFadeStartTime = Date.now() + LOCATOR_DURATION - LOCATOR_FADE_DURATION;
+        locatorFadeStartTime = Date.now() + 3000;
         setTimeout(() => {
             showPlayerLocator = false;
-        }, LOCATOR_DURATION);
+        }, 3500);
     }
 }

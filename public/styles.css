@@ -22,7 +22,8 @@ body, html {
     padding: 0;
     font-family: Arial, sans-serif;
     overflow: hidden;
-    background-color: #2c3e50;
+    background: rgb(63,94,251);
+    background: radial-gradient(circle, rgba(63,94,251,1) 0%, rgba(252,70,107,1) 100%);
 }
 
 /* Styles des menus */
@@ -33,7 +34,8 @@ body, html {
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, #3498db, #2980b9);
+    background-image: url("/assets/images/background-home.jpg");
+    background-size: cover;
     color: white;
     text-align: center;
 }
@@ -45,12 +47,11 @@ body, html {
 }
 
 .menu-content {
-    padding: 40px;
-    border-radius: 20px;
+    padding: 5rem;
+    border-radius: 50%;
     background-color: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
     max-width: 600px;
-    width: 90%;
     animation: fadeIn 0.3s ease-out;
 }
 
@@ -63,7 +64,7 @@ h1, h2, h3 {
 
 h1 {
     font-size: 48px;
-    color: #f1c40f;
+    color: #cc99ff;
     text-transform: uppercase;
 }
 
@@ -74,7 +75,7 @@ h2 {
 
 h3 {
     font-size: 24px;
-    color: #f1c40f;
+    color: #cc99ff;
     margin-bottom: 15px;
 }
 
@@ -117,12 +118,12 @@ input[type="text"]:focus, input[type="number"]:focus {
 }
 
 .primary-button {
-    background-color: #f1c40f;
+    background-color: #cc99ff;
     color: #2c3e50;
 }
 
 .primary-button:hover {
-    background-color: #f39c12;
+    background-color: #9966ff;
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
 }
@@ -265,7 +266,7 @@ canvas {
 
 #players li.current-player {
     background-color: rgba(241, 196, 15, 0.3);
-    border: 1px solid #f1c40f;
+    border: 1px solid #cc99ff;
 }
 
 /* Bonus actifs */
@@ -288,25 +289,51 @@ canvas {
     border-radius: 20px;
     color: white;
     backdrop-filter: blur(5px);
+    animation: bonusPulse 2s infinite;
+}
+
+@keyframes bonusPulse {
+    0% {
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 15px currentColor;
+    }
+    100% {
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    }
 }
 
 .activeBonus img {
     width: 24px;
     height: 24px;
     filter: brightness(0) invert(1);
+    animation: bonusIconPulse 2s infinite;
+}
+
+@keyframes bonusIconPulse {
+    0% {
+        filter: brightness(1);
+    }
+    50% {
+        filter: brightness(1.3);
+    }
+    100% {
+        filter: brightness(1);
+    }
 }
 
 /* Notification de bonus */
 #collectedBonusDisplay {
     position: fixed;
-    top: 50%;
+    top: 35%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: rgba(0, 0, 0, 0.9);
-    color: #f1c40f;
+    background-color: rgba(111, 0, 109, 0.5);
+    color: #ffffff;
     padding: 20px 40px;
     border-radius: 15px;
-    font-size: 36px;
+    font-size: 50px;
     font-family: 'Chewy-Regular', sans-serif;
     z-index: 2000;
     transition: opacity 0.5s ease;
@@ -340,7 +367,7 @@ canvas {
 }
 
 .game-over-title {
-    color: #f1c40f;
+    color: #cc99ff;
     font-size: 36px;
     margin-bottom: 30px;
     font-family: 'Chewy-Regular', sans-serif;
@@ -369,7 +396,7 @@ canvas {
 
 .first .podium-block {
     height: 120px;
-    background-color: #f1c40f;
+    background-color: #cc99ff;
 }
 
 .second .podium-block {
@@ -393,7 +420,7 @@ canvas {
 }
 
 .final-score {
-    color: #f1c40f;
+    color: #cc99ff;
 }
 
 .final-scores {
@@ -415,7 +442,7 @@ canvas {
 
 .score-item.current-player {
     background-color: rgba(241, 196, 15, 0.2);
-    border: 1px solid #f1c40f;
+    border: 1px solid #cc99ff;
 }
 
 .game-over-buttons {
@@ -459,7 +486,7 @@ canvas {
 
 .first .podium-block {
     height: 200px;
-    background-color: #f1c40f;
+    background-color: #ffe199;
 }
 
 .second .podium-block {
@@ -604,7 +631,7 @@ canvas {
 }
 
 .close-button:hover {
-    color: #f1c40f;
+    color: #cc99ff;
 }
 
 /* Style pour le bouton pause */
@@ -613,12 +640,13 @@ canvas {
     position: fixed;
     top: 20px;
     right: 20px;
-    background-color: rgba(241, 196, 15, 0.9);
+    background-color: #cc99fff2;
+    color: #2c3e50;
     transition: all 0.3s ease;
 }
 
 #pauseButton:hover {
-    background-color: #f1c40f;
+    background-color: #cc99ff;
     transform: scale(1.05);
 }
 
@@ -661,8 +689,8 @@ canvas {
 }
 
 .player-stats-card.current-player {
-    background-color: rgba(241, 196, 15, 0.2);
-    border: 1px solid #f1c40f;
+    background-color: rgba(226, 121, 255, 0.2);
+    border: 1px solid #cc99ff;
 }
 
 .player-header {
@@ -673,7 +701,7 @@ canvas {
 }
 
 .rank {
-    background-color: #f1c40f;
+    background-color: #cc99ff;
     color: #2c3e50;
     width: 30px;
     height: 30px;
@@ -727,7 +755,8 @@ canvas {
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, #3498db, #2980b9);
+    background-image: url("/assets/images/background-home.jpg");
+    background-size: cover;
     color: white;
 }
 
@@ -775,8 +804,8 @@ canvas {
 }
 
 .waiting-room-player.current-player {
-    background-color: rgba(241, 196, 15, 0.3);
-    border: 1px solid #f1c40f;
+    background-color: rgba(255, 101, 202, 0.3);
+    border: 1px solid #cc99ff;
 }
 
 .waiting-room-buttons {
@@ -795,4 +824,24 @@ canvas {
         padding: 20px;
         width: 95%;
     }
+}
+
+.owner-badge {
+    margin-left: 8px;
+    font-size: 1.2em;
+}
+
+.waiting-room-player {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Style pour les inputs désactivés */
+input:disabled, 
+select:disabled, 
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: rgba(255, 255, 255, 0.1);
 }

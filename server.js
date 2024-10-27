@@ -8,13 +8,6 @@ const io = require('socket.io')(server);
 const GAME_WIDTH = 2000;
 const GAME_HEIGHT = 1500;
 
-const waitingRoom = {
-    players: new Map(),
-    isGameStarted: false
-};
-
-const PORT = process.env.PORT || 3000;
-
 // Configuration des fichiers statiques
 app.use('/assets', express.static(__dirname + '/assets'));
 app.use(express.static(__dirname + '/public'));
@@ -23,12 +16,12 @@ app.use(express.static(__dirname + '/public'));
 const DEFAULT_GAME_SETTINGS = {
     gameDuration: 180,
     enableSpeedBoost: true,
-    speedBoostDuration: 5,
+    speedBoostDuration: 10,
     enableInvincibility: true,
-    invincibilityDuration: 5,
+    invincibilityDuration: 10,
     enableReveal: true,
-    revealDuration: 5,
-    initialBotCount: 20,
+    revealDuration: 10,
+    initialBotCount: 30,
     enableSpecialZones: true,
     zoneMinDuration: 10,  // durée minimale en secondes
     zoneMaxDuration: 30,  // durée maximale en secondes
@@ -38,8 +31,24 @@ const DEFAULT_GAME_SETTINGS = {
         REPEL: true,
         ATTRACT: true,
         STEALTH: true
-    }
+    
+    },
+    enableBlackBot: true,  // Activé par défaut maintenant
+    blackBotCount: 2,
+    blackBotStartPercent: 50, // Apparaît à 50% du temps de la partie
+    blackBotDetectionRadius: 150, // Rayon de détection en pixels
+    blackBotSpeed: 6, // Vitesse légèrement supérieure aux bots normaux
+    pointsLossPercent: 50 // Pourcentage de points perdus lors d'une capture
 };
+
+
+const waitingRoom = {
+    players: new Map(),
+    isGameStarted: false,
+    settings: { ...DEFAULT_GAME_SETTINGS } // Ajout des paramètres par défaut
+};
+
+const PORT = process.env.PORT || 3000;
 
 // Constantes du jeu
 const SPAWN_PROTECTION_TIME = 3000;
@@ -51,6 +60,7 @@ const UPDATE_INTERVAL = 50;
 // Variables globales
 let players = {};
 let bots = {};
+let blackBots = {};
 let bonuses = [];
 let gameStartTime = Date.now();
 let currentGameSettings = { ...DEFAULT_GAME_SETTINGS };
@@ -249,6 +259,68 @@ class SpecialZone {
     }
 }
 
+function handlePlayerCapture(attacker, victim) {
+    // Vérifier l'invincibilité et la protection au spawn
+    if (victim.invincibilityActive || victim.isInvulnerable() || !attacker.canCapture()) return;
+
+    const attackerSocket = activeSockets[attacker.id];
+    const victimSocket = activeSockets[victim.id];
+    const victimColor = victim.color;
+
+    // Compter les bots avant le transfert
+    const botsToCapture = Object.values(bots).filter(bot => bot.color === victimColor).length;
+    
+    // Mettre à jour les statistiques de capture
+    attacker.captures++;
+    attacker.addCapturedBots(botsToCapture);
+
+    // Enregistrer la capture dans l'historique
+    if (!attacker.capturedPlayers[victim.id]) {
+        attacker.capturedPlayers[victim.id] = {
+            nickname: victim.nickname,
+            count: 0
+        };
+    }
+    attacker.capturedPlayers[victim.id].count++;
+
+    if (!victim.capturedBy[attacker.id]) {
+        victim.capturedBy[attacker.id] = {
+            nickname: attacker.nickname,
+            count: 0
+        };
+    }
+    victim.capturedBy[attacker.id].count++;
+
+    // Transférer les bots
+    Object.values(bots).forEach(bot => {
+        if (bot.color === victimColor) {
+            bot.color = attacker.color;
+        }
+    });
+
+    attacker.lastCapture = Date.now();
+    victim.respawn([attacker.color], false); // Capture normale, on change la couleur
+
+    // Notifications
+    if (victimSocket) {
+        victimSocket.emit('playerCaptured', {
+            newColor: victim.color,
+            capturedBy: attacker.nickname,
+            totalTimesCaptured: Object.values(victim.capturedBy)
+                .reduce((sum, cap) => sum + cap.count, 0)
+        });
+    }
+
+    if (attackerSocket) {
+        attackerSocket.emit('playerCapturedEnemy', {
+            capturedNickname: victim.nickname,
+            captures: attacker.captures,
+            botsControlled: attacker.botsControlled,
+            captureDetails: attacker.capturedPlayers
+        });
+    }
+}
+
 function manageSpecialZones() {
     if (!currentGameSettings.enableSpecialZones) {
         specialZones.clear();
@@ -295,26 +367,33 @@ class Player extends Entity {
         this.capturedPlayers = {};
         this.capturedBy = {};
         this.botsControlled = 0;
-        this.totalBotsCaptures = 0; // Nouveau compteur pour le total des bots capturés
+        this.totalBotsCaptures = 0;
         this.spawnProtection = Date.now() + SPAWN_PROTECTION_TIME;
         this.lastCapture = 0;
         this.type = 'player';
+        this.speedBoostActive = false;
+        this.invincibilityActive = false;
+    }
+
+    isInvulnerable() {
+        // Retourner true si le joueur a soit la protection au spawn, soit le bonus d'invincibilité
+        return this.invincibilityActive || Date.now() < this.spawnProtection;
     }
 
     addCapturedBots(count) {
         this.totalBotsCaptures += count;
     }
 
-    respawn(excludeColors = []) {
+    respawn(excludeColors = [], keepColor = false) {
         const spawnPos = getSpawnPosition();
         this.x = spawnPos.x;
         this.y = spawnPos.y;
-        this.color = getUniqueColor(excludeColors);
+        
+        // Ne changer la couleur que si keepColor est false
+        if (!keepColor) {
+            this.color = getUniqueColor(excludeColors);
+        }
         this.spawnProtection = Date.now() + SPAWN_PROTECTION_TIME;
-    }
-
-    isInvulnerable() {
-        return Date.now() < this.spawnProtection;
     }
 
     canCapture() {
@@ -385,6 +464,216 @@ class Bot extends Entity {
         const speed = 1;
         this.vx = Math.cos(newAngle) * speed;
         this.vy = Math.sin(newAngle) * speed;
+    }
+}
+
+class BlackBot extends Bot {
+    constructor(id) {
+        super(id);
+        this.color = '#000000';  // Couleur noire
+        this.type = 'blackBot';
+        this.lastCaptureTime = 0;
+        this.captureCooldown = 2000; // 2 secondes entre chaque capture
+        this.detectionRadius = DEFAULT_GAME_SETTINGS.blackBotDetectionRadius;
+        this.targetEntity = null;
+        this.baseSpeed = BOT_SPEED; // Utiliser la même vitesse que les autres bots
+
+        // Repositionner le bot noir à une position sûre lors de sa création
+        const spawnPos = getSpawnPosition();
+        this.x = spawnPos.x;
+        this.y = spawnPos.y;
+    }
+
+    update(entities) {
+        if (isPaused || isGameOver) return;
+        const now = Date.now();
+        
+        // Si on n'a pas de cible ou si la dernière recherche date de plus d'une seconde
+        if (!this.targetEntity || now - this.lastTargetSearch > 500) {
+            this.findNewTarget(entities);
+            this.lastTargetSearch = now;
+        } else {
+            // Vérifier si un joueur est entré dans le rayon pendant la poursuite d'un bot
+            if (this.targetEntity && this.targetEntity.type === 'bot') {
+                const nearbyPlayer = Object.values(entities)
+                    .find(e => e.type === 'player' &&
+                              !e.invincibilityActive &&
+                              this.getDistanceTo(e) < this.detectionRadius);
+                
+                if (nearbyPlayer) {
+                    this.targetEntity = nearbyPlayer;
+                }
+            }
+    
+            // Vérifier si la cible existe toujours et est à portée
+            const target = entities[this.targetEntity?.id];
+            if (!target || this.getDistanceTo(target) > this.detectionRadius) {
+                this.targetEntity = null;
+            }
+        }
+    
+        // Si on a une cible, on la poursuit
+        if (this.targetEntity) {
+            this.pursueTarget();
+        } else {
+            // Comportement normal de bot si pas de cible
+            super.update();
+        }
+    }
+
+    findNewTarget(entities) {
+        let nearestPlayer = null;
+        let nearestPlayerDistance = Infinity;
+        let nearestNormalBot = null;
+        let nearestBotDistance = Infinity;
+    
+    // Parcourir toutes les entités pour trouver les plus proches
+    Object.values(entities).forEach(entity => {
+        if (entity.id === this.id) return;
+        const distance = this.getDistanceTo(entity);
+    
+        // Ne considérer que les entités dans le rayon de détection
+        if (distance < this.detectionRadius) {
+            // Prioriser les joueurs non invincibles
+            if (entity.type === 'player' && !entity.invincibilityActive) {
+                if (distance < nearestPlayerDistance) {
+                    nearestPlayerDistance = distance;
+                    nearestPlayer = entity;
+                }
+            }
+            // Pour les bots, ne considérer que ceux qui ne sont pas déjà blancs
+            else if (entity.type === 'bot' && entity.color !== '#FFFFFF') {
+                if (distance < nearestBotDistance) {
+                    nearestBotDistance = distance;
+                    nearestNormalBot = entity;
+                    }
+                }
+            }
+        });
+    
+    // Prioriser un joueur si présent dans le rayon, sinon prendre un bot
+    if (nearestPlayer) {
+        //console.log('Setting target to player'); // Debug log
+        this.targetEntity = nearestPlayer;
+    } else if (nearestNormalBot) {
+        //console.log('Setting target to bot'); // Debug log
+        this.targetEntity = nearestNormalBot;
+    } else {
+        this.targetEntity = null;
+    }
+    }
+
+    pursueTarget() {
+        const dx = this.targetEntity.x - this.x;
+        const dy = this.targetEntity.y - this.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+    // Normaliser et appliquer la vitesse
+    if (distance > 0) {
+        this.vx = (dx / distance) * this.baseSpeed;
+        this.vy = (dy / distance) * this.baseSpeed;
+    }
+
+        // Déplacement
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // Garder dans les limites
+        this.x = Math.max(0, Math.min(GAME_WIDTH, this.x));
+        this.y = Math.max(0, Math.min(GAME_HEIGHT, this.y));
+
+        // Vérifier collision avec la cible
+        if (distance < 20) {  // Même distance de capture que les autres entités
+            this.captureEntity(this.targetEntity);
+        }
+    }
+
+    captureEntity(entity) {
+        const now = Date.now();
+        if (now - this.lastCaptureTime < this.captureCooldown) return;
+    
+        // Double vérification de l'invincibilité
+        if (entity.type === 'player') {
+            // Vérifier explicitement à la fois invincibilityActive et la protection au spawn
+            if (entity.invincibilityActive || entity.isInvulnerable()) {
+                // Si le joueur est invincible, il peut capturer le bot noir
+                this.destroyed = true;
+                delete blackBots[this.id];
+                return;
+            }
+    
+            // Si le joueur n'est pas invincible, procéder à sa capture
+            const currentBots = Object.values(bots).filter(bot => bot.color === entity.color).length;
+            const pointsLost = Math.floor(currentBots * (DEFAULT_GAME_SETTINGS.pointsLossPercent / 100));
+    
+            // Transformer la moitié des bots existants en blancs
+            let transformedCount = 0;
+            Object.values(bots).forEach(bot => {
+                if (bot.color === entity.color && transformedCount < pointsLost) {
+                    bot.color = '#FFFFFF';
+                    transformedCount++;
+                }
+            });
+    
+            // Créer des bots blancs additionnels si nécessaire
+            this.createWhiteBots(pointsLost);
+            
+            // Faire respawn le joueur en gardant sa couleur
+            this.notifyPlayerCapture(entity, pointsLost);
+            entity.respawn([], true);  // true pour garder la couleur
+    
+        } else if (entity.type === 'bot' && entity.color !== '#FFFFFF') {
+            entity.color = '#FFFFFF';
+        }
+    
+        this.lastCaptureTime = now;
+        this.targetEntity = null;
+    }
+
+    calculatePlayerPoints(player) {
+        // Calculer les points du joueur (bots contrôlés + captures)
+        let controlledBots = Object.values(bots)
+            .filter(bot => bot.color === player.color).length;
+        return controlledBots + player.captures;
+    }
+
+    createWhiteBots(count) {
+        for (let i = 0; i < count; i++) {
+            const whiteBotId = `bot_${Date.now()}_${Math.random()}`;
+            const whiteBot = new Bot(whiteBotId);
+            whiteBot.color = '#FFFFFF';
+            bots[whiteBotId] = whiteBot;
+        }
+    }
+
+    notifyPlayerCapture(player, pointsLost) {
+        const socket = activeSockets[player.id];
+        if (socket) {
+            socket.emit('capturedByBlackBot', {
+                pointsLost: pointsLost,
+                message: `Capturé par un Bot Noir ! Vous avez perdu ${pointsLost} points.`
+            });
+        }
+    }
+
+    getDistanceTo(entity) {
+        const dx = this.x - entity.x;
+        const dy = this.y - entity.y;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+}
+
+function spawnBlackBots() {
+    if (!currentGameSettings.enableBlackBot) return;
+    
+    const timeElapsed = (Date.now() - gameStartTime - totalPauseDuration) / 1000;
+    const halfGameTime = currentGameSettings.gameDuration / 2;
+    
+    if (timeElapsed >= halfGameTime && Object.keys(blackBots).length === 0) {
+        for (let i = 0; i < currentGameSettings.blackBotCount; i++) {
+            const blackBotId = `blackBot_${Date.now()}_${Math.random()}`;
+            blackBots[blackBotId] = new BlackBot(blackBotId);
+        }
     }
 }
 
@@ -494,10 +783,21 @@ function addBot() {
 function updateBots() {
     if (isPaused || isGameOver) return;
 
+    // Mettre à jour les bots normaux
     Object.values(bots).forEach(bot => {
         bot.update();
         detectCollisions(bot, bot.id);
     });
+
+    // Mettre à jour les bots noirs et supprimer ceux qui sont marqués comme détruits
+    Object.values(blackBots).forEach(blackBot => {
+        if (!blackBot.destroyed) {
+            blackBot.update({...players, ...bots});
+        }
+    });
+
+    // Vérifier s'il faut faire apparaître des bots noirs
+    spawnBlackBots();
 }
 
 // Gestion des bonus
@@ -528,6 +828,21 @@ function handleBonusCollection(player, bonus) {
         reveal: currentGameSettings.revealDuration
     };
 
+    switch(bonus.type) {
+        case 'speed':
+            player.speedBoostActive = true;
+            setTimeout(() => {
+                player.speedBoostActive = false;
+            }, bonusDurations[bonus.type] * 1000);
+            break;
+        case 'invincibility':
+            player.invincibilityActive = true;
+            setTimeout(() => {
+                player.invincibilityActive = false;
+            }, bonusDurations[bonus.type] * 1000);
+            break;
+    }
+
     socket.emit('activateBonus', {
         type: bonus.type,
         duration: bonusDurations[bonus.type]
@@ -546,7 +861,8 @@ function detectCollisions(entity, entityId) {
 
         if (distance < 20) {
             if (entity.type === 'player' && player.type === 'player') {
-                if (entity.color !== player.color) {
+                // Vérifier si le joueur cible a l'invincibilité
+                if (entity.color !== player.color && !player.invincibilityActive) {
                     handlePlayerCapture(entity, player);
                 }
             } else if (entity.type === 'player' && player.type === 'bot') {
@@ -572,6 +888,29 @@ function detectCollisions(entity, entityId) {
         }
     });
 
+    // Ajouter : Collisions avec les bots noirs
+    if (entity.type === 'player') {
+        Object.entries(blackBots).forEach(([blackBotId, blackBot]) => {
+            const dx = entity.x - blackBot.x;
+            const dy = entity.y - blackBot.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance < 20) {
+                // Si le joueur est invincible, il peut capturer le bot noir
+                if (entity.invincibilityActive) {
+                    delete blackBots[blackBotId];
+                    const socket = activeSockets[entity.id];
+                    if (socket) {
+                        socket.emit('playerCapturedEnemy', {
+                            capturedNickname: 'Bot Noir',
+                            message: 'Vous avez détruit un Bot Noir !'
+                        });
+                    }
+                }
+            }
+        });
+    }
+
     // Collisions avec les bonus
     if (entity.type === 'player') {
         bonuses = bonuses.filter(bonus => {
@@ -588,73 +927,13 @@ function detectCollisions(entity, entityId) {
     }
 }
 
-function handlePlayerCapture(attacker, victim) {
-    if (victim.isInvulnerable() || !attacker.canCapture()) return;
-
-    const attackerSocket = activeSockets[attacker.id];
-    const victimSocket = activeSockets[victim.id];
-    const victimColor = victim.color;
-
-    // Compter les bots avant le transfert
-    const botsToCapture = Object.values(bots).filter(bot => bot.color === victimColor).length;
-    
-    // Mettre à jour les statistiques de capture
-    attacker.captures++;
-    attacker.addCapturedBots(botsToCapture); // Ajouter au total des bots capturés
-
-    // Enregistrer la capture dans l'historique
-    if (!attacker.capturedPlayers[victim.id]) {
-        attacker.capturedPlayers[victim.id] = {
-            nickname: victim.nickname,
-            count: 0
-        };
-    }
-    attacker.capturedPlayers[victim.id].count++;
-
-    if (!victim.capturedBy[attacker.id]) {
-        victim.capturedBy[attacker.id] = {
-            nickname: attacker.nickname,
-            count: 0
-        };
-    }
-    victim.capturedBy[attacker.id].count++;
-
-    // Transférer les bots
-    Object.values(bots).forEach(bot => {
-        if (bot.color === victimColor) {
-            bot.color = attacker.color;
-        }
-    });
-
-    attacker.lastCapture = Date.now();
-    victim.respawn([attacker.color]);
-
-    // Notifications
-    if (victimSocket) {
-        victimSocket.emit('playerCaptured', {
-            newColor: victim.color,
-            capturedBy: attacker.nickname,
-            totalTimesCaptured: Object.values(victim.capturedBy)
-                .reduce((sum, cap) => sum + cap.count, 0)
-        });
-    }
-
-    if (attackerSocket) {
-        attackerSocket.emit('playerCapturedEnemy', {
-            capturedNickname: victim.nickname,
-            captures: attacker.captures,
-            botsControlled: attacker.botsControlled,
-            captureDetails: attacker.capturedPlayers
-        });
-    }
-}
-
 // Gestion des mises à jour et scores
 function calculatePlayerScores() {
     const scores = [];
     
     for (let id in players) {
         const player = players[id];
+        // Compter seulement les bots non blancs contrôlés par le joueur
         const controlledPoints = Object.values(bots)
             .filter(bot => bot.color === player.color)
             .length;
@@ -662,8 +941,8 @@ function calculatePlayerScores() {
         scores.push({
             id: player.id,
             nickname: player.nickname,
-            currentBots: controlledPoints,
-            totalBotsControlled: player.totalBotsCaptures, // Utiliser le nouveau compteur
+            currentBots: controlledPoints, // Ce nombre devrait être correct
+            totalBotsControlled: player.totalBotsCaptures,
             captures: player.captures,
             capturedPlayers: player.capturedPlayers,
             capturedBy: player.capturedBy,
@@ -684,6 +963,7 @@ function sendUpdates() {
     // Nettoyer les bonus expirés
     cleanExpiredBonuses();
 
+    // Gérer les zones spéciales
     manageSpecialZones();
 
     // Appliquer les effets des zones
@@ -698,51 +978,60 @@ function sendUpdates() {
         });
     }
 
+    // Vérifier le temps restant
     const timeLeft = calculateTimeLeft();
     if (timeLeft <= 0 && !isGameOver) {
         endGame();
         return;
     }
 
-    const plainEntities = [];
-
-    // Ajouter les bots
-    for (let id in bots) {
-        plainEntities.push({
-            id: bots[id].id,
-            x: bots[id].x,
-            y: bots[id].y,
-            color: bots[id].color,
-            type: 'bot'
-        });
-    }
-
-    // Ajouter les joueurs
-    for (let id in players) {
-        plainEntities.push({
-            id: players[id].id,
-            x: players[id].x,
-            y: players[id].y,
-            color: players[id].color,
+    // Préparer le tableau des entités
+    const plainEntities = [
+        // Ajouter d'abord les joueurs
+        ...Object.values(players).map(player => ({
+            id: player.id,
+            x: player.x,
+            y: player.y,
+            color: player.color,
             type: 'player',
-            nickname: players[id].nickname
-        });
-    }
+            nickname: player.nickname,
+            invincibilityActive: player.invincibilityActive
+        })),
+        // Puis les bots normaux
+        ...Object.values(bots).map(bot => ({
+            id: bot.id,
+            x: bot.x,
+            y: bot.y,
+            color: bot.color,
+            type: 'bot'
+        })),
+        // Enfin les bots noirs
+        ...Object.values(blackBots).map(bot => ({
+            id: bot.id,
+            x: bot.x,
+            y: bot.y,
+            color: bot.color,
+            type: 'blackBot',
+            detectionRadius: currentGameSettings.blackBotDetectionRadius
+        }))
+    ];
 
-    // Calculer les scores
+    // Calculer les scores des joueurs
     const playerScores = calculatePlayerScores();
 
-    // Préparer les données
+    // Préparer les données complètes du jeu
     const gameData = {
         entities: plainEntities,
         playerScores: playerScores,
         timeLeft: timeLeft,
+        // Inclure les bonus actifs
         bonuses: bonuses.map(bonus => ({
             id: bonus.id,
             x: bonus.x,
             y: bonus.y,
             type: bonus.type
         })),
+        // Inclure les zones spéciales
         zones: Array.from(specialZones).map(zone => ({
             type: zone.type,
             shape: zone.shape,
@@ -750,7 +1039,7 @@ function sendUpdates() {
         }))
     };
 
-    // Envoyer les mises à jour à tous les joueurs
+    // Envoyer les mises à jour à tous les joueurs connectés
     for (let socketId in activeSockets) {
         activeSockets[socketId].emit('updateEntities', gameData);
     }
@@ -781,6 +1070,7 @@ function resetGame() {
     }
 
     // Réinitialiser les bots
+    blackBots = {};
     bots = {};
     botsInitialized = false;
 
@@ -805,26 +1095,14 @@ function handleGameStart(socket, data) {
     }
 
     // Mettre à jour les paramètres du jeu
-    if (data.settings) {
-        currentGameSettings = {
-            ...DEFAULT_GAME_SETTINGS,
-            ...data.settings,
-            enabledZones: {
-                ...DEFAULT_GAME_SETTINGS.enabledZones,
-                ...data.settings.enabledZones
-            }
-        };
-
-        // S'assurer que la durée est un nombre valide
-        const duration = parseInt(data.settings.gameDuration);
-        if (!isNaN(duration) && duration >= 60 && duration <= 600) {
-            currentGameSettings.gameDuration = duration;
+    currentGameSettings = {
+        ...DEFAULT_GAME_SETTINGS,
+        ...data.settings,
+        enabledZones: {
+            ...DEFAULT_GAME_SETTINGS.enabledZones,
+            ...(data.settings?.enabledZones || {})
         }
-    }
-
-    // Réinitialiser le temps de jeu avec la nouvelle durée
-    gameStartTime = Date.now();
-    totalPauseDuration = 0;
+    };
 
     // Initialiser les bots si nécessaire
     if (!botsInitialized) {
@@ -838,31 +1116,156 @@ io.on('connection', (socket) => {
     console.log(`Nouvelle connexion : ${socket.id}`);
 
     socket.on('joinWaitingRoom', (nickname) => {
-        // Ajouter le joueur à la salle d'attente
-        waitingRoom.players.set(socket.id, {
-            id: socket.id,
-            nickname: nickname
+        console.log('Player joining waiting room:', {
+            socketId: socket.id,
+            nickname,
+            currentPlayers: Array.from(waitingRoom.players.values())
         });
-
+    
+        // Même logique : premier joueur ou pas de propriétaire devient propriétaire
+        const isEmptyRoom = waitingRoom.players.size === 0;
+        const hasNoOwner = !Array.from(waitingRoom.players.values()).some(player => player.isOwner);
+        const shouldBeOwner = isEmptyRoom || hasNoOwner;
+    
+        console.log('Owner check:', {
+            isEmptyRoom,
+            hasNoOwner,
+            shouldBeOwner
+        });
+    
+        const playerData = {
+            id: socket.id,
+            nickname: nickname,
+            isOwner: shouldBeOwner
+        };
+    
+        waitingRoom.players.set(socket.id, playerData);
+        console.log('Player added to waiting room:', playerData);
+    
+        // Si c'est le propriétaire, envoyer les paramètres actuels
+        if (shouldBeOwner) {
+            socket.emit('gameSettingsUpdated', waitingRoom.settings);
+        }
+    
         // Envoyer la liste mise à jour à tous les joueurs
-        io.emit('updateWaitingRoom', Array.from(waitingRoom.players.values()));
+        const players = Array.from(waitingRoom.players.values());
+        console.log('Emitting updated players:', players);
+        io.emit('updateWaitingRoom', players);
+    });
+
+    socket.on('rejoinWaitingRoom', (data) => {
+        const { nickname, wasInGame } = data;
+        console.log('Player rejoining waiting room:', {
+            socketId: socket.id,
+            nickname,
+            wasInGame,
+            currentPlayers: Array.from(waitingRoom.players.values())
+        });
+    
+        // Vérifier si ce joueur était propriétaire avant
+        const existingPlayer = waitingRoom.players.get(socket.id);
+        const wasOwner = existingPlayer?.isOwner;
+    
+        // Si la salle est vide OU s'il n'y a aucun propriétaire OU si le joueur était propriétaire
+        const isEmptyRoom = waitingRoom.players.size === 0;
+        const hasNoOwner = !Array.from(waitingRoom.players.values()).some(player => player.isOwner);
+        const shouldBeOwner = isEmptyRoom || hasNoOwner || wasOwner;
+    
+        console.log('Owner check:', {
+            isEmptyRoom,
+            hasNoOwner,
+            wasOwner,
+            shouldBeOwner
+        });
+    
+        const playerData = {
+            id: socket.id,
+            nickname: nickname,
+            isOwner: shouldBeOwner
+        };
+    
+        waitingRoom.players.set(socket.id, playerData);
+        console.log('Player added to waiting room:', playerData);
+    
+        // Si c'est le propriétaire, envoyer les paramètres
+        if (shouldBeOwner) {
+            socket.emit('gameSettingsUpdated', waitingRoom.settings);
+        }
+    
+        const players = Array.from(waitingRoom.players.values());
+        console.log('Emitting updated players:', players);
+        io.emit('updateWaitingRoom', players);
     });
 
     socket.on('leaveWaitingRoom', () => {
+        const isOwner = waitingRoom.players.get(socket.id)?.isOwner;
         waitingRoom.players.delete(socket.id);
+        
+        // Si le propriétaire part et qu'il reste des joueurs
+        if (isOwner && waitingRoom.players.size > 0) {
+            const [firstPlayerId] = waitingRoom.players.keys();
+            const firstPlayer = waitingRoom.players.get(firstPlayerId);
+            if (firstPlayer) {
+                firstPlayer.isOwner = true;
+            }
+        }
+        
         io.emit('updateWaitingRoom', Array.from(waitingRoom.players.values()));
     });
 
-    socket.on('startGameFromRoom', (data) => {
-        if (waitingRoom.players.has(socket.id)) {
-            waitingRoom.isGameStarted = true;
-            io.emit('gameStarting');
-            handleGameStart(socket, data);
+    socket.on('updateGameSettings', (settings) => {
+        const player = waitingRoom.players.get(socket.id);
+        if (player?.isOwner) {
+            waitingRoom.settings = {
+                ...waitingRoom.settings,
+                ...settings,
+                enabledZones: {
+                    ...waitingRoom.settings.enabledZones,
+                    ...settings.enabledZones
+                }
+            };
+            
+            // Informer tous les joueurs des changements
+            io.emit('gameSettingsUpdated', waitingRoom.settings);
         }
     });
 
-    socket.on('startGame', (data) => {
-        handleGameStart(socket, data);
+    socket.on('startGameFromRoom', (data) => {
+        const player = waitingRoom.players.get(socket.id);
+        console.log('Start game request from:', socket.id, 'isOwner:', player?.isOwner); // Debug log
+        
+        if (player?.isOwner) {
+            console.log('Starting game with settings:', waitingRoom.settings); // Debug log
+            waitingRoom.isGameStarted = true;
+            
+            // Initialiser la partie pour tous les joueurs de la salle d'attente
+            waitingRoom.players.forEach((waitingPlayer, socketId) => {
+                const playerSocket = io.sockets.sockets.get(socketId);
+                if (playerSocket) {
+                    // Créer un nouveau joueur s'il n'existe pas déjà
+                    if (!players[socketId]) {
+                        players[socketId] = new Player(socketId, waitingPlayer.nickname);
+                        activeSockets[socketId] = playerSocket;
+                    }
+                }
+            });
+    
+            // Réinitialiser l'état du jeu
+            gameStartTime = Date.now();
+            totalPauseDuration = 0;
+            currentGameSettings = { ...waitingRoom.settings };
+            isPaused = false;
+            isGameOver = false;
+    
+            // Initialiser les bots une seule fois pour la partie
+            if (!botsInitialized) {
+                createBots(currentGameSettings.initialBotCount);
+                botsInitialized = true;
+            }
+    
+            // Informer tous les joueurs que la partie commence
+            io.emit('gameStarting');
+        }
     });
 
     socket.on('move', (data) => {
@@ -870,11 +1273,10 @@ io.on('connection', (socket) => {
     
         const player = players[socket.id];
         if (player) {
-            // Appliquer le mouvement directement
-            player.x += data.x;
-            player.y += data.y;
+            const moveSpeed = data.speedBoostActive ? 1.3 : 1;
+            player.x += data.x * moveSpeed;
+            player.y += data.y * moveSpeed;
             
-            // Borner aux limites de la carte
             player.x = Math.max(0, Math.min(GAME_WIDTH, player.x));
             player.y = Math.max(0, Math.min(GAME_HEIGHT, player.y));
     
@@ -890,7 +1292,6 @@ io.on('connection', (socket) => {
                 pauseStartTime = Date.now();
                 io.emit('pauseGame', { pausedBy: socket.id });
             } else if (pausedBy === socket.id) {
-                // Seul le joueur qui a mis en pause peut reprendre
                 isPaused = false;
                 pausedBy = null;
                 totalPauseDuration += Date.now() - pauseStartTime;
@@ -901,25 +1302,50 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
-    // Si le joueur qui s'est déconnecté avait mis le jeu en pause, on reprend
-    if (pausedBy === socket.id) {
-        isPaused = false;
-        pausedBy = null;
-        totalPauseDuration += Date.now() - pauseStartTime;
-        pauseStartTime = null;
-        io.emit('resumeGame');
-    }
+        // Gérer la pause si nécessaire
+        if (pausedBy === socket.id) {
+            isPaused = false;
+            pausedBy = null;
+            if (pauseStartTime) {
+                totalPauseDuration += Date.now() - pauseStartTime;
+            }
+            pauseStartTime = null;
+            io.emit('resumeGame');
+        }
+    
+        // Nettoyer les ressources du joueur
         console.log(`Déconnexion : ${socket.id}`);
         delete players[socket.id];
         delete activeSockets[socket.id];
-
+    
         if (Object.keys(players).length === 0) {
             resetGame();
         }
-
+    
+        // Gérer le transfert de propriété
         if (waitingRoom.players.has(socket.id)) {
+            const disconnectedPlayer = waitingRoom.players.get(socket.id);
+            const wasOwner = disconnectedPlayer.isOwner;
             waitingRoom.players.delete(socket.id);
-            io.emit('updateWaitingRoom', Array.from(waitingRoom.players.values()));
+    
+            // Si le propriétaire se déconnecte et qu'il reste des joueurs
+            if (wasOwner && waitingRoom.players.size > 0) {
+                const [firstPlayerId] = waitingRoom.players.keys();
+                const firstPlayer = waitingRoom.players.get(firstPlayerId);
+                if (firstPlayer) {
+                    console.log('Transferring ownership to:', firstPlayer.nickname);
+                    firstPlayer.isOwner = true;
+    
+                    // Informer le nouveau propriétaire
+                    const newOwnerSocket = io.sockets.sockets.get(firstPlayerId);
+                    if (newOwnerSocket) {
+                        newOwnerSocket.emit('gameSettingsUpdated', waitingRoom.settings);
+                    }
+    
+                    // Mettre à jour immédiatement la liste pour tous
+                    io.emit('updateWaitingRoom', Array.from(waitingRoom.players.values()));
+                }
+            }
         }
     });
 });
