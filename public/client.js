@@ -86,6 +86,31 @@ const BONUS_EFFECTS = {
     }
 };
 
+// Ajouter ces styles CSS pour les boutons
+const additionalStyles = `
+.game-over-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.game-over-buttons button {
+    min-width: 180px;
+    padding: 12px 20px;
+}
+
+.game-over-buttons button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+`;
+
+// Ajouter les styles au document
+const styleSheet = document.createElement('style');
+styleSheet.textContent = additionalStyles;
+document.head.appendChild(styleSheet);
+
 // Dimensions du jeu
 let GAME_WIDTH = window.innerWidth;
 let GAME_HEIGHT = window.innerHeight;
@@ -1316,7 +1341,6 @@ function showGameOverModal(scores) {
     const topThree = scores.slice(0, 3);
     let podiumHTML = '<div class="podium-container">';
 
-    // Positions sur le podium (2e, 1er, 3e)
     const positions = [
         { index: 1, className: 'second', symbol: '🥈' },
         { index: 0, className: 'first', symbol: '👑' },
@@ -1328,71 +1352,94 @@ function showGameOverModal(scores) {
             const player = topThree[pos.index];
             podiumHTML += `
                 <div class="podium-place ${pos.className}">
-                    <div class="podium-symbol">${pos.symbol}</div>
-                    <div class="player-name">${player.nickname}</div>
-                    <div class="podium-block">
-                        <div class="score">${player.currentBots}</div>
+                    <div class="podium-badge">
+                        <div class="podium-symbol">${pos.symbol}</div>
+                        <div class="player-name">${player.nickname}</div>
+                        <div class="score">${player.currentBots} points</div>
                     </div>
-                    <div class="player-stats">
-                        <div class="total-bots">🤖 ${player.totalBotsControlled} bots capturés</div>
-                        <div class="total-players">👥 ${player.captures} joueurs capturés</div>
-                    </div>
+                    <div class="podium-block"></div>
                 </div>`;
         }
     });
 
     podiumHTML += '</div>';
-    content.innerHTML += podiumHTML;
 
-    // Statistiques détaillées
-    content.innerHTML += `
+    // Stats détaillées avec slider horizontal
+    const statsSection = `
         <div class="detailed-stats">
-            <h3>Statistiques détaillées</h3>
-            <div class="stats-list">
-    `;
+            <div class="stats-slider-container">
+                <div class="stats-slider">
+                    ${scores.map((player, index) => {
+                        const capturedPlayersHTML = Object.values(player.capturedPlayers)
+                            .map(cap => `${cap.nickname} (${cap.count}×)`)
+                            .join(', ') || 'Aucun';
 
-    scores.forEach((player, index) => {
-        const capturedPlayersHTML = Object.values(player.capturedPlayers)
-            .map(cap => `${cap.nickname} (${cap.count}x)`)
-            .join(', ') || 'Aucun joueur capturé';
+                        const capturedByHTML = Object.entries(player.capturedBy)
+                            .map(([id, cap]) => `${cap.nickname} (${cap.count}×)`)
+                            .join(', ') || 'Aucun';
+                        
+                        // Calculer les captures par les bots noirs
+                        const blackBotCaptures = player.capturedByBlackBot || 0;
+                        const blackBotText = blackBotCaptures > 0 ? `Bot noir (${blackBotCaptures}×)` : '';
+                        const capturedByFull = [capturedByHTML, blackBotText].filter(Boolean).join(', ');
 
-        const capturedByHTML = Object.values(player.capturedBy)
-            .map(cap => `${cap.nickname} (${cap.count}x)`)
-            .join(', ') || 'Jamais capturé';
-
-        content.innerHTML += `
-            <div class="player-stats-card ${player.id === playerId ? 'current-player' : ''}">
-                <div class="player-header">
-                    <span class="rank">#${index + 1}</span>
-                    <span class="player-name">${player.nickname}</span>
+                        return `
+                            <div class="player-stats-card ${player.id === playerId ? 'current-player' : ''}">
+                                <div class="player-header">
+                                    <span class="rank">#${index + 1}</span>
+                                    <span class="player-name">${player.nickname}</span>
+                                </div>
+                                <div class="stats-details">
+                                    <div class="stat-row">🤖 Bots contrôlés: ${player.currentBots}</div>
+                                    <div class="stat-row">👥 Joueurs capturés: ${capturedPlayersHTML}</div>
+                                    <div class="stat-row">💀 Capturé par: ${capturedByFull}</div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
                 </div>
-                <div class="stats-details">
-                    <div>🤖 Bots contrôlés: ${player.currentBots}</div>
-                    <div>💪 Total bots capturés: ${player.totalBotsControlled}</div>
-                    <div>👥 Joueurs capturés: ${capturedPlayersHTML}</div>
-                    <div>💀 Capturé par: ${capturedByHTML}</div>
+                <div class="slider-controls">
+                    <button class="slider-btn prev" disabled>◀</button>
+                    <button class="slider-btn next">▶</button>
                 </div>
-            </div>
-        `;
-    });
-
-    content.innerHTML += `
             </div>
         </div>
     `;
 
-    // Boutons
+    content.innerHTML += podiumHTML + statsSection;
+
+    // Boutons de fin
     const buttonsDiv = document.createElement('div');
     buttonsDiv.className = 'game-over-buttons';
 
-    const replayButton = document.createElement('button');
-    replayButton.className = 'primary-button';
-    replayButton.textContent = 'Rejouer';
-    replayButton.addEventListener('click', () => {
+    // Bouton Retour à la salle d'attente
+    const waitingRoomButton = document.createElement('button');
+    waitingRoomButton.className = 'primary-button';
+    waitingRoomButton.textContent = 'Retour à la salle d\'attente';
+    waitingRoomButton.addEventListener('click', () => {
         document.body.removeChild(modal);
-        returnToWaitingRoom();  // Au lieu de restartGame()
+        returnToWaitingRoom();
     });
 
+    // Bouton Rejouer
+    const replayButton = document.createElement('button');
+    replayButton.className = 'secondary-button';
+    replayButton.textContent = 'Nouvelle partie';
+    replayButton.addEventListener('click', () => {
+        if (isRoomOwner) {
+            document.body.removeChild(modal);
+            
+            // Reset le jeu côté serveur
+            socket.emit('resetAndStartGame', {
+                nickname: playerNickname,
+                settings: gameSettings
+         });
+       }
+    });
+    // Désactiver le bouton si le joueur n'est pas le propriétaire
+    replayButton.disabled = !isRoomOwner;
+
+    // Bouton Menu Principal
     const mainMenuButton = document.createElement('button');
     mainMenuButton.className = 'secondary-button';
     mainMenuButton.textContent = 'Menu Principal';
@@ -1401,12 +1448,40 @@ function showGameOverModal(scores) {
         returnToMainMenu();
     });
 
-    buttonsDiv.appendChild(replayButton);
+    // Ajout des boutons dans l'ordre
+    buttonsDiv.appendChild(waitingRoomButton);
+    if (isRoomOwner) {
+        buttonsDiv.appendChild(replayButton);
+    }
     buttonsDiv.appendChild(mainMenuButton);
     content.appendChild(buttonsDiv);
 
     modal.appendChild(content);
     document.body.appendChild(modal);
+
+    // Initialiser le slider
+    const slider = content.querySelector('.stats-slider');
+    const prevBtn = content.querySelector('.slider-btn.prev');
+    const nextBtn = content.querySelector('.slider-btn.next');
+    let currentSlide = 0;
+    const slideWidth = slider.querySelector('.player-stats-card').offsetWidth;
+    const visibleSlides = Math.floor(slider.parentElement.offsetWidth / slideWidth);
+    const maxSlide = scores.length - visibleSlides;
+
+    function updateSliderButtons() {
+        prevBtn.disabled = currentSlide <= 0;
+        nextBtn.disabled = currentSlide >= maxSlide;
+    }
+
+    function slideCards(direction) {
+        currentSlide = Math.max(0, Math.min(currentSlide + direction, maxSlide));
+        slider.style.transform = `translateX(-${currentSlide * slideWidth}px)`;
+        updateSliderButtons();
+    }
+
+    prevBtn.addEventListener('click', () => slideCards(-1));
+    nextBtn.addEventListener('click', () => slideCards(1));
+    updateSliderButtons();
 }
 
 function showCaptureNotification(message) {

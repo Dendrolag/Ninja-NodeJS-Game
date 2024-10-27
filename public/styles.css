@@ -355,21 +355,27 @@ canvas {
 /* Modale de fin de partie */
 .game-over-modal {
     background-color: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .game-over-content {
     background-color: rgba(44, 62, 80, 0.95);
-    max-width: 600px;
-    width: 90%;
-    padding: 30px;
+    max-width: 90vw;
+    width: 900px;
+    max-height: 90vh;
+    padding: 20px;
     border-radius: 20px;
-    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
 .game-over-title {
     color: #cc99ff;
-    font-size: 36px;
-    margin-bottom: 30px;
+    text-align: center;
+    margin: 0;
     font-family: 'Chewy-Regular', sans-serif;
 }
 
@@ -377,16 +383,26 @@ canvas {
     display: flex;
     justify-content: center;
     align-items: flex-end;
-    gap: 20px;
-    margin: 30px 0;
-    min-height: 200px;
+    gap: 15px;
+    height: 200px;
+    margin: 20px 0;
 }
 
 .podium-place {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    width: 120px;
+}
+
+.podium-badge {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.podium-symbol {
+    font-size: 24px;
+    margin-bottom: 5px;
 }
 
 .podium-block {
@@ -416,7 +432,16 @@ canvas {
 
 .player-name {
     font-weight: bold;
-    color: white;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100px;
+}
+
+.score {
+    color: #f1c40f;
+    font-size: 14px;
 }
 
 .final-score {
@@ -448,13 +473,31 @@ canvas {
 .game-over-buttons {
     display: flex;
     justify-content: center;
-    gap: 20px;
-    margin-top: 30px;
+    gap: 15px;
+    margin-top: 10px;
 }
 
 .game-over-buttons button {
     min-width: 150px;
 }
+
+.game-over-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.game-over-buttons button {
+    min-width: 180px;
+    padding: 12px 20px;
+}
+
+.game-over-buttons button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 /* Podium */
 .podium {
     display: flex;
@@ -473,30 +516,37 @@ canvas {
 }
 
 .podium-block {
-    width: 120px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: white;
-    font-size: 24px;
-    font-weight: bold;
-    border-radius: 10px 10px 0 0;
-    transition: all 0.3s ease;
+    width: 100%;
+    border-radius: 8px 8px 0 0;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
 }
 
+.first .podium-block { height: 120px; }
+.second .podium-block { height: 90px; }
+.third .podium-block { height: 60px; }
+
 .first .podium-block {
-    height: 200px;
     background-color: #ffe199;
 }
 
 .second .podium-block {
-    height: 150px;
     background-color: #bdc3c7;
 }
 
 .third .podium-block {
-    height: 100px;
     background-color: #d35400;
+}
+
+.stats-slider-container {
+    position: relative;
+    overflow: hidden;
+    padding: 0 40px;
+}
+
+.stats-slider {
+    display: flex;
+    gap: 15px;
+    transition: transform 0.3s ease;
 }
 
 /* Animations */
@@ -681,11 +731,10 @@ canvas {
 
 /* Styles spécifiques au classement */
 .player-stats-card {
-    background-color: rgba(255, 255, 255, 0.1);
+    flex: 0 0 280px;
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 10px;
     padding: 15px;
-    margin: 10px 0;
-    transition: all 0.3s ease;
 }
 
 .player-stats-card.current-player {
@@ -696,26 +745,64 @@ canvas {
 .player-header {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 10px;
     margin-bottom: 10px;
 }
 
 .rank {
     background-color: #cc99ff;
     color: #2c3e50;
-    width: 30px;
-    height: 30px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: bold;
+    font-size: 12px;
 }
 
 .stats-details {
-    display: grid;
+    display: flex;
+    flex-direction: column;
     gap: 8px;
-    font-size: 14px;
+}
+
+.stat-row {
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.slider-controls {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    transform: translateY(-50%);
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+}
+
+.slider-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: all 0.3s ease;
+}
+
+.slider-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.slider-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
 }
 
 .detailed-stats {
