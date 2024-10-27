@@ -374,18 +374,69 @@ canvas {
 
 .game-over-title {
     color: #cc99ff;
+    font-size: 36px;
     text-align: center;
-    margin: 0;
-    font-family: 'Chewy-Regular', sans-serif;
+    margin: 0 0 20px 0;
+    flex-shrink: 0;
+}
+
+/* Container pour le contenu scrollable */
+.game-over-scrollable-content {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Style du scrollbar pour une meilleure intégration */
+.game-over-scrollable-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.game-over-scrollable-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+}
+
+.game-over-scrollable-content::-webkit-scrollbar-thumb {
+    background: rgba(241, 196, 15, 0.5);
+    border-radius: 5px;
+}
+
+.game-over-scrollable-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(241, 196, 15, 0.7);
+}
+
+/* Container des boutons fixé en bas */
+.game-over-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+}
+
+.game-over-buttons button {
+    min-width: 180px;
+    padding: 12px 20px;
+}
+
+.game-over-buttons button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .podium-container {
     display: flex;
+    flex-shrink: 0;
     justify-content: center;
     align-items: flex-end;
     gap: 15px;
     height: 200px;
-    margin: 20px 0;
+    /*margin: 20px 0;*/
 }
 
 .podium-place {
@@ -541,6 +592,7 @@ canvas {
     position: relative;
     overflow: hidden;
     padding: 0 40px;
+    min-height: 0;
 }
 
 .stats-slider {
@@ -806,10 +858,11 @@ canvas {
 }
 
 .detailed-stats {
-    margin-top: 30px;
+   /* margin-top: 30px;*/
     background-color: rgba(0, 0, 0, 0.3);
     border-radius: 15px;
     padding: 20px;
+    flex: 1;
 }
 
 .stats-list {

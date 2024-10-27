@@ -1337,6 +1337,10 @@ function showGameOverModal(scores) {
     // En-tête
     content.innerHTML = '<h2 class="game-over-title">Fin de partie !</h2>';
 
+    // Créer le container pour le contenu scrollable
+    const scrollableContent = document.createElement('div');
+    scrollableContent.className = 'game-over-scrollable-content';
+
     // Podium
     const topThree = scores.slice(0, 3);
     let podiumHTML = '<div class="podium-container">';
@@ -1406,9 +1410,11 @@ function showGameOverModal(scores) {
         </div>
     `;
 
-    content.innerHTML += podiumHTML + statsSection;
+    // Ajouter le podium et les stats au contenu scrollable
+    scrollableContent.innerHTML = podiumHTML + statsSection;
+    content.appendChild(scrollableContent);
 
-    // Boutons de fin
+    // Boutons de fin dans un container séparé
     const buttonsDiv = document.createElement('div');
     buttonsDiv.className = 'game-over-buttons';
 
@@ -1421,24 +1427,6 @@ function showGameOverModal(scores) {
         returnToWaitingRoom();
     });
 
-    // Bouton Rejouer
-    const replayButton = document.createElement('button');
-    replayButton.className = 'secondary-button';
-    replayButton.textContent = 'Nouvelle partie';
-    replayButton.addEventListener('click', () => {
-        if (isRoomOwner) {
-            document.body.removeChild(modal);
-            
-            // Reset le jeu côté serveur
-            socket.emit('resetAndStartGame', {
-                nickname: playerNickname,
-                settings: gameSettings
-         });
-       }
-    });
-    // Désactiver le bouton si le joueur n'est pas le propriétaire
-    replayButton.disabled = !isRoomOwner;
-
     // Bouton Menu Principal
     const mainMenuButton = document.createElement('button');
     mainMenuButton.className = 'secondary-button';
@@ -1450,9 +1438,6 @@ function showGameOverModal(scores) {
 
     // Ajout des boutons dans l'ordre
     buttonsDiv.appendChild(waitingRoomButton);
-    if (isRoomOwner) {
-        buttonsDiv.appendChild(replayButton);
-    }
     buttonsDiv.appendChild(mainMenuButton);
     content.appendChild(buttonsDiv);
 
