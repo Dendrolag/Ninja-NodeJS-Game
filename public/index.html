@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>To the Point</title>
     <link rel="stylesheet" href="/styles.css">
+    <link rel="preload" href="/assets/fonts/Chewy-Regular.ttf" as="font" type="font/ttf" crossorigin>
 </head>
 <body>
     <!-- Menu principal -->
@@ -12,30 +13,47 @@
         <div class="menu-content">
             <h1>To the Point</h1>
             <div class="menu-form">
-                <input 
-                    type="text" 
-                    id="nicknameInput" 
-                    placeholder="Entrez votre pseudo" 
-                    maxlength="15" 
-                    required
-                >
-                <button id="startButton" class="primary-button">Rejoindre la salle</button>
+                <input type="text" id="nicknameInput" placeholder="Entrez votre pseudo" maxlength="15">
+                <button id="startButton" class="primary-button" disabled>Rejoindre la salle</button>
             </div>
         </div>
     </div>
 
     <div id="waitingRoom" class="screen">
+            <!-- Chatbox flottante -->
+            <div class="floating-chat">
+                <div class="chat-header">
+                    <div class="chat-header-title">
+                        <img src="/assets/images/chat.png" alt="Chat icon" class="chat-icon">
+                        <h3>Chat</h3>
+                    </div>
+                    <span class="toggle-icon">◀</span>
+                </div>
+                <div class="chat-container">
+                    <div class="chat-messages"></div>
+                    <form id="chatForm" class="chat-input-container">
+                        <input type="text" id="chatInput" placeholder="Écrivez un message..." maxlength="200">
+                        <button type="submit" class="chat-send-button">Envoyer</button>
+                    </form>
+                </div>
+            </div>
+
         <div class="waiting-room-content">
             <h2>Salle d'attente</h2>
-            <div class="waiting-room-container">
-                <div class="players-list-container">
-                    <h3>Joueurs connectés</h3>
-                    <ul id="waitingRoomPlayers"></ul>
-                </div>
-                <div class="waiting-room-buttons">
-                    <button id="startGameButton" class="primary-button" disabled>Lezgoooo</button>
-                    <button id="waitingRoomSettings" class="secondary-button">Paramètres</button>
-                    <button id="leaveRoomButton" class="secondary-button">Quitter la salle</button>
+            
+            <div class="waiting-room-layout">       
+                <!-- Section existante des joueurs -->
+                <div class="waiting-room-container">
+                    <div class="players-list-container">
+                        <h3>Joueurs connectés</h3>
+                        <ul id="waitingRoomPlayers"></ul>
+                    </div>
+        
+                    <div class="waiting-room-buttons">
+                        <button id="startGameButton" class="primary-button">Lezgoooo</button>
+                        <button id="waitingRoomSettings" class="secondary-button">Paramètres</button>
+                        <button id="leaveRoomButton" class="secondary-button">Quitter la salle</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -44,14 +62,15 @@
     <!-- Menu des paramètres -->
     <div id="settingsMenu" style="display: none;">
         <div class="settings-content">
-            <h2>Paramètres du jeu</h2>
+            <h2>Paramètres du jeu</h2>         
             
             <!-- Paramètres généraux -->
             <div class="setting-group">
                 <label for="gameDuration">Durée de la partie (en secondes):</label>
                 <input 
                     type="number" 
-                    id="gameDuration" 
+                    id="gameDuration"
+                    class="number-input" 
                     value="180" 
                     min="60" 
                     max="600"
@@ -61,97 +80,88 @@
             
             <!-- Paramètres des bots -->
             <div class="setting-group">
+                <div class="setting-header">
                 <label for="initialBotCount">Nombre de bots au départ:</label>
                 <input 
                     type="number" 
                     id="initialBotCount" 
+                    class="number-input"
                     value="30" 
                     min="5" 
                     max="200"
                 >
+            </div>
                 <div class="setting-header">
                     <input type="checkbox" id="enableBlackBot">
-                    <label for="enableBlackBot">Activer le Bot Noir</label>
+                    <label for="enableBlackBot">Activer les Bots Noirs</label>
                 </div>
                 <div class="setting-details">
                     <label for="blackBotCount">Nombre de Bots Noirs:</label>
-                    <input type="number" id="blackBotCount" min="1" max="5" value="1">
+                    <input type="number" id="blackBotCount" class="number-input" min="1" max="5" value="1">
                 </div>
             </div>
 
-            <!-- Paramètres du bonus de vitesse -->
-            <div class="setting-group">
+            <div class="settings-group">
                 <div class="setting-header">
-                    <input 
-                        type="checkbox" 
-                        id="enableSpeedBoost" 
-                        checked
-                    >
-                    <label for="enableSpeedBoost">Activer le bonus de vitesse</label>
+                    <h3>Paramètres des bonus</h3>
                 </div>
-                <div class="setting-details">
-                    <label for="speedBoostDuration">
-                        Durée du bonus de vitesse (secondes):
-                    </label>
-                    <input 
-                        type="number" 
-                        id="speedBoostDuration" 
-                        value="10" 
-                        min="1" 
-                        max="30"
-                    >
-                </div>
-            </div>
-
-            <!-- Paramètres du bonus d'invincibilité -->
-            <div class="setting-group">
-                <div class="setting-header">
-                    <input 
-                        type="checkbox" 
-                        id="enableInvincibility" 
-                        checked
-                    >
-                    <label for="enableInvincibility">
-                        Activer le bonus d'invincibilité
+            
+                <div class="setting-group">
+                    <label>
+                        Intervalle d'apparition des bonus (secondes) :
+                        <input type="number" id="bonusSpawnInterval" class="number-input" class="number-input" min="1" max="10" value="4">
                     </label>
                 </div>
-                <div class="setting-details">
-                    <label for="invincibilityDuration">
-                        Durée du bonus d'invincibilité (secondes):
-                    </label>
-                    <input 
-                        type="number" 
-                        id="invincibilityDuration" 
-                        value="10" 
-                        min="1" 
-                        max="30"
-                    >
+            
+                <div class="setting-group">
+                    <div class="setting-header">
+                        <input type="checkbox" id="enableSpeedBoost">
+                        <label for="enableSpeedBoost">Activer le bonus de vitesse</label>
+                    </div>
+                    <div class="setting-details">
+                        <label>
+                            Durée (secondes):
+                            <input type="number" id="speedBoostDuration" class="number-input" min="1" max="30" value="10">
+                        </label>
+                        <label>
+                            Taux d'apparition (%):
+                            <input type="number" id="speedBoostSpawnRate" class="number-input" min="1" max="100" value="25">
+                        </label>
+                    </div>
                 </div>
-            </div>
-
-            <!-- Paramètres du bonus de révélation -->
-            <div class="setting-group">
-                <div class="setting-header">
-                    <input 
-                        type="checkbox" 
-                        id="enableReveal" 
-                        checked
-                    >
-                    <label for="enableReveal">
-                        Activer le bonus de révélation
-                    </label>
+            
+                <div class="setting-group">
+                    <div class="setting-header">
+                        <input type="checkbox" id="enableInvincibility">
+                        <label for="enableInvincibility">Activer le bonus d'invincibilité</label>
+                    </div>
+                    <div class="setting-details">
+                        <label>
+                            Durée (secondes):
+                            <input type="number" id="invincibilityDuration" class="number-input" min="1" max="30" value="10">
+                        </label>
+                        <label>
+                            Taux d'apparition (%):
+                            <input type="number" id="invincibilitySpawnRate" class="number-input" min="1" max="100" value="15">
+                        </label>
+                    </div>
                 </div>
-                <div class="setting-details">
-                    <label for="revealDuration">
-                        Durée du bonus de révélation (secondes):
-                    </label>
-                    <input 
-                        type="number" 
-                        id="revealDuration" 
-                        value="10" 
-                        min="1" 
-                        max="30"
-                    >
+            
+                <div class="setting-group">
+                    <div class="setting-header">
+                        <input type="checkbox" id="enableReveal">
+                        <label for="enableReveal">Activer le bonus de révélation</label>
+                    </div>
+                    <div class="setting-details">
+                        <label>
+                            Durée (secondes):
+                            <input type="number" id="revealDuration" class="number-input" min="1" max="30" value="10">
+                        </label>
+                        <label>
+                            Taux d'apparition (%):
+                            <input type="number" id="revealSpawnRate" class="number-input" min="1" max="100" value="20">
+                        </label>
+                    </div>
                 </div>
             </div>
 
@@ -185,6 +195,9 @@
                 <button id="saveSettingsButton" class="primary-button">
                     Enregistrer
                 </button>
+                <button id="resetSettingsButton" class="secondary-button reset-button">
+                    Réinitialiser
+                </button>   
                 <button id="backToMenuButton" class="secondary-button">
                     Retour
                 </button>
@@ -220,7 +233,10 @@
             <div id="gameOverlay">
                 <div id="gameInfo">
                     <div id="timer">
-                        Temps restant: <span id="time">180</span>
+                        <div id="timerContent">
+                            <div id="timerLabel">Temps restant</div>
+                            <div id="time">180</div>
+                        </div>
                     </div>
                     <div id="score"></div>
                 </div>

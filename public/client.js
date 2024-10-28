@@ -12,6 +12,7 @@ const nicknameInput = document.getElementById('nicknameInput');
 const settingsMenu = document.getElementById('settingsMenu');
 const saveSettingsButton = document.getElementById('saveSettingsButton');
 const backToMenuButton = document.getElementById('backToMenuButton');
+const resetSettingsButton = document.getElementById('resetSettingsButton');
 
 // Éléments de la salle d'attente
 const waitingRoomScreen = document.getElementById('waitingRoom');
@@ -46,6 +47,10 @@ const enableAttractZoneCheckbox = document.getElementById('enableAttractZone');
 const enableStealthZoneCheckbox = document.getElementById('enableStealthZone');
 const enableBlackBotCheckbox = document.getElementById('enableBlackBot');
 const blackBotCountInput = document.getElementById('blackBotCount');
+const bonusSpawnIntervalInput = document.getElementById('bonusSpawnInterval');
+const speedBoostSpawnRateInput = document.getElementById('speedBoostSpawnRate');
+const invincibilitySpawnRateInput = document.getElementById('invincibilitySpawnRate');
+const revealSpawnRateInput = document.getElementById('revealSpawnRate');
 
 // Éléments du jeu
 const canvas = document.getElementById('gameCanvas');
@@ -110,6 +115,7 @@ const additionalStyles = `
 const styleSheet = document.createElement('style');
 styleSheet.textContent = additionalStyles;
 document.head.appendChild(styleSheet);
+document.addEventListener('DOMContentLoaded', initializeNicknameValidation);
 
 // Dimensions du jeu
 let GAME_WIDTH = window.innerWidth;
@@ -178,6 +184,24 @@ function initializeSocket(socket) {
     return socket;
 }
 
+function initializeNicknameValidation() {
+    const nicknameInput = document.getElementById('nicknameInput');
+    const startButton = document.getElementById('startButton');
+
+    // Fonction pour vérifier et mettre à jour l'état du bouton
+    function updateButtonState() {
+        const nickname = nicknameInput.value.trim();
+        startButton.disabled = nickname === '';
+    }
+
+    // Écouter les changements dans l'input
+    nicknameInput.addEventListener('input', updateButtonState);
+    nicknameInput.addEventListener('change', updateButtonState);
+
+    // État initial
+    updateButtonState();
+}
+
 // Chargement des ressources
 const modakRegular = new FontFace('Modak-Regular', 'url(/assets/fonts/Modak-Regular.ttf)');
 modakRegular.load().then(function(loadedFont) {
@@ -235,6 +259,16 @@ function updateCamera() {
 
 // Appeler le debug toutes les secondes
 setInterval(logCameraDebug, 1000);*/
+
+// Fonction de réinitialisation des paramètres
+function resetSettings() {
+    if (isRoomOwner) {
+        // Envoyer une demande de réinitialisation au serveur
+        socket.emit('resetGameSettings');
+    }
+}
+
+resetSettingsButton.addEventListener('click', resetSettings);
 
 // Images des bonus
 const bonusImages = {
@@ -304,11 +338,8 @@ saveSettingsButton.addEventListener('click', () => {
     if (isRoomOwner) {
         const newSettings = {
             gameDuration: parseInt(gameDurationInput.value),
-            enableSpeedBoost: enableSpeedBoostCheckbox.checked,
             speedBoostDuration: parseInt(speedBoostDurationInput.value),
-            enableInvincibility: enableInvincibilityCheckbox.checked,
             invincibilityDuration: parseInt(invincibilityDurationInput.value),
-            enableReveal: enableRevealCheckbox.checked,
             revealDuration: parseInt(revealDurationInput.value),
             initialBotCount: parseInt(initialBotCountInput.value),
             enableSpecialZones: enableSpecialZonesCheckbox.checked,
@@ -319,7 +350,21 @@ saveSettingsButton.addEventListener('click', () => {
                 STEALTH: enableStealthZoneCheckbox.checked
             },
             enableBlackBot: enableBlackBotCheckbox.checked,
-            blackBotCount: parseInt(blackBotCountInput.value)
+            blackBotCount: parseInt(blackBotCountInput.value),
+
+            bonusSpawnInterval: parseInt(bonusSpawnIntervalInput.value),
+            
+            enableSpeedBoost: enableSpeedBoostCheckbox.checked,
+            speedBoostDuration: parseInt(speedBoostDurationInput.value),
+            speedBoostSpawnRate: parseInt(speedBoostSpawnRateInput.value),
+
+            enableInvincibility: enableInvincibilityCheckbox.checked,
+            invincibilityDuration: parseInt(invincibilityDurationInput.value),
+            invincibilitySpawnRate: parseInt(invincibilitySpawnRateInput.value),
+
+            enableReveal: enableRevealCheckbox.checked,
+            revealDuration: parseInt(revealDurationInput.value),
+            revealSpawnRate: parseInt(revealSpawnRateInput.value),
         };
 
         socket.emit('updateGameSettings', newSettings);
@@ -360,6 +405,12 @@ startButton.addEventListener('click', () => {
     waitingRoomScreen.classList.add('active');
     socket = initializeSocket(io());
 
+    // Initialiser le chat après la connexion socket
+    socket.on('connect', () => {
+        console.log('Socket connected, initializing chat...');
+        initializeChat(socket); // Passer le socket en paramètre
+    });
+
     // écouteur pour les mises à jour des paramètres
     socket.on('gameSettingsUpdated', (settings) => {
         // Mettre à jour l'interface
@@ -380,39 +431,10 @@ startButton.addEventListener('click', () => {
     
     // Rejoindre la salle d'attente
     socket.emit('joinWaitingRoom', nickname);
-});
+    });
 
 settingsButton.addEventListener('click', () => {
     settingsMenu.style.display = 'block';
-});
-
-saveSettingsButton.addEventListener('click', () => {
-    if (isRoomOwner) {
-        gameSettings = {
-            ...gameSettings,
-            gameDuration: parseInt(gameDurationInput.value),
-            enableSpeedBoost: enableSpeedBoostCheckbox.checked,
-            speedBoostDuration: parseInt(speedBoostDurationInput.value),
-            enableInvincibility: enableInvincibilityCheckbox.checked,
-            invincibilityDuration: parseInt(invincibilityDurationInput.value),
-            enableReveal: enableRevealCheckbox.checked,
-            revealDuration: parseInt(revealDurationInput.value),
-            initialBotCount: parseInt(initialBotCountInput.value),
-            enableSpecialZones: enableSpecialZonesCheckbox.checked,
-            enabledZones: {
-                CHAOS: enableChaosZoneCheckbox.checked,
-                REPEL: enableRepelZoneCheckbox.checked,
-                ATTRACT: enableAttractZoneCheckbox.checked,
-                STEALTH: enableStealthZoneCheckbox.checked
-            },
-            enableBlackBot: enableBlackBotCheckbox.checked,
-            blackBotCount: parseInt(blackBotCountInput.value)
-        };
-
-        // Émettre les nouveaux paramètres si on est le propriétaire
-        socket.emit('updateGameSettings', gameSettings);
-    }
-    settingsMenu.style.display = 'none';
 });
 
 leaveRoomButton.addEventListener('click', () => {
@@ -433,6 +455,109 @@ startGameButton.addEventListener('click', () => {
         gameHeight: GAME_HEIGHT
     });
 });
+
+// Fonction d'initialisation du chat
+function initializeChat(socket) {
+    const chatHeader = document.querySelector('.chat-header');
+    const chatBox = document.querySelector('.floating-chat');
+    const chatMessages = document.querySelector('.chat-messages');
+    const chatForm = document.getElementById('chatForm');
+    const chatInput = document.getElementById('chatInput');
+    const toggleIcon = document.querySelector('.toggle-icon');
+
+    // Gestion du toggle
+    chatHeader.addEventListener('click', () => {
+        chatBox.classList.toggle('collapsed');
+        // Mise à jour de l'icône
+        if (chatBox.classList.contains('collapsed')) {
+            toggleIcon.textContent = '▶';
+        } else {
+            toggleIcon.textContent = '◀';
+        }
+    });
+
+    // Gestion des messages
+    chatForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const message = chatInput.value.trim();
+        
+        if (message) {
+            socket.emit('chatMessage', {
+                message: message,
+                nickname: playerNickname,
+                timestamp: Date.now()
+            });
+            
+            chatInput.value = '';
+            chatInput.focus();
+            
+            // Déplier le chat si replié
+            if (chatBox.classList.contains('collapsed')) {
+                chatBox.classList.remove('collapsed');
+                toggleIcon.textContent = '◀';
+            }
+        }
+    });
+
+    // Réception des messages
+    socket.on('newChatMessage', (messageData) => {
+        const messageElement = createChatMessage(messageData);
+        chatMessages.appendChild(messageElement);
+        // Scroll vers le bas
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    });
+}
+
+function createChatMessage(data) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'chat-message';
+    if (data.nickname === playerNickname) {
+        messageDiv.classList.add('own-message');
+    }
+    
+    const header = document.createElement('div');
+    header.className = 'chat-message-header';
+    
+    const author = document.createElement('span');
+    author.className = 'chat-message-author';
+    author.textContent = data.nickname;
+    
+    const time = document.createElement('span');
+    time.className = 'chat-message-time';
+    time.textContent = new Date(data.timestamp).toLocaleTimeString([], { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+    });
+    
+    const content = document.createElement('div');
+    content.className = 'chat-message-content';
+    content.textContent = data.message;
+    
+    header.appendChild(author);
+    header.appendChild(time);
+    messageDiv.appendChild(header);
+    messageDiv.appendChild(content);
+    
+    return messageDiv;
+}
+
+// Fonction pour ajouter un message au chat
+function addChatMessage(messageData) {
+    const chatMessages = document.getElementById('chatMessages');
+    if (!chatMessages) {
+        console.error('Chat messages container not found!');
+        return;
+    }
+    
+    const messageElement = createChatMessage(messageData);
+    chatMessages.appendChild(messageElement);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Fonction pour formater l'heure
+function formatTime(date) {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
 
 // Fonction pour mettre à jour la liste des joueurs
 function updateWaitingRoomPlayers(players) {
@@ -589,6 +714,10 @@ function updateSettingsUI(settings) {
     enableStealthZoneCheckbox.checked = settings.enabledZones.STEALTH;
     enableBlackBotCheckbox.checked = settings.enableBlackBot;
     blackBotCountInput.value = settings.blackBotCount;
+    bonusSpawnIntervalInput.value = settings.bonusSpawnInterval;
+    speedBoostSpawnRateInput.value = settings.speedBoostSpawnRate;
+    invincibilitySpawnRateInput.value = settings.invincibilitySpawnRate;
+    revealSpawnRateInput.value = settings.revealSpawnRate;
 }
 
 // Fonction de démarrage du jeu
@@ -657,7 +786,7 @@ function startGame() {
     if (!socket.hasListeners('connect')) {
         socket.on('connect', () => {
             playerId = socket.id;
-            console.log('Socket connected, player ID:', playerId); // Debug log
+            initializeChat();
         });
     }
 
@@ -665,10 +794,8 @@ function startGame() {
         socket.on('updateEntities', (data) => {
             if (isPaused || isGameOver) return;
 
-            console.log('Received game update for player:', socket.id); // Debug log
-
             // Mise à jour du timer
-            timerDisplay.textContent = data.timeLeft || 0;
+            updateTimer(data.timeLeft || 0);
             timeRemaining = data.timeLeft;
             
             // Mise à jour des bonus
@@ -1142,54 +1269,85 @@ function drawPlayerLocator(player) {
 // Gestion des bonus
 function activateSpeedBoost(duration) {
     speedBoostActive = true;
-    speedBoostTimeLeft = duration;
+    speedBoostTimeLeft += duration;
     playerSpeed = 6;
 }
 
 function activateInvincibility(duration) {
     invincibilityActive = true;
-    invincibilityTimeLeft = duration;
+    invincibilityTimeLeft += duration;
 }
 
 function activateReveal(duration) {
     revealActive = true;
-    revealTimeLeft = duration;
+    revealTimeLeft += duration;
+}
+
+function updateTimer(timeLeft) {
+    const timerElement = document.getElementById('timer');
+    const timeDisplay = document.getElementById('time');
+    
+    // Convertir les secondes en minutes:secondes
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = timeLeft % 60;
+    const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    
+    // Mettre à jour l'affichage
+    timeDisplay.textContent = formattedTime;
+    
+    // Gérer l'état d'urgence (10 dernières secondes)
+    if (timeLeft <= 10) {
+        timerElement.classList.add('urgent');
+        
+        // Si c'est la première fois qu'on entre dans les 10 dernières secondes
+        if (timeLeft === 10) {
+            // Tu peux ajouter un son d'urgence ici si tu le souhaites
+            // const urgentSound = new Audio('/assets/sounds/urgent.mp3');
+            // urgentSound.play();
+        }
+    } else {
+        timerElement.classList.remove('urgent');
+    }
 }
 
 function updateBonusTimers() {
-    const deltaTime = 0.02;
+    const deltaTime = 0.02;  // 20ms en secondes
     let bonusesChanged = false;
 
-    if (speedBoostActive) {
-        speedBoostTimeLeft -= deltaTime;
-        if (speedBoostTimeLeft <= 0) {
-            speedBoostActive = false;
-            playerSpeed = 3;
-            speedBoostTimeLeft = 0;
-            bonusesChanged = true;
+    // Fonction pour mettre à jour un timer spécifique
+    function updateSingleTimer(active, timeLeft, type) {
+        if (active) {
+            const newTime = Math.max(0, timeLeft - deltaTime);
+            if (newTime <= 0) {
+                return { active: false, timeLeft: 0, changed: true };
+            }
+            // Ne mettre à jour l'affichage que si la seconde a changé
+            if (Math.ceil(newTime) !== Math.ceil(timeLeft)) {
+                bonusesChanged = true;
+            }
+            return { active: true, timeLeft: newTime, changed: false };
         }
+        return { active: false, timeLeft: 0, changed: false };
     }
 
-    if (invincibilityActive) {
-        invincibilityTimeLeft -= deltaTime;
-        if (invincibilityTimeLeft <= 0) {
-            invincibilityActive = false;
-            invincibilityTimeLeft = 0;
-            bonusesChanged = true;
-        }
-    }
+    // Mettre à jour les timers
+    const speedUpdate = updateSingleTimer(speedBoostActive, speedBoostTimeLeft, 'speed');
+    const invincibilityUpdate = updateSingleTimer(invincibilityActive, invincibilityTimeLeft, 'invincibility');
+    const revealUpdate = updateSingleTimer(revealActive, revealTimeLeft, 'reveal');
 
-    if (revealActive) {
-        revealTimeLeft -= deltaTime;
-        if (revealTimeLeft <= 0) {
-            revealActive = false;
-            revealTimeLeft = 0;
-            bonusesChanged = true;
-        }
-    }
+    // Appliquer les mises à jour
+    speedBoostActive = speedUpdate.active;
+    speedBoostTimeLeft = speedUpdate.timeLeft;
+    invincibilityActive = invincibilityUpdate.active;
+    invincibilityTimeLeft = invincibilityUpdate.timeLeft;
+    revealActive = revealUpdate.active;
+    revealTimeLeft = revealUpdate.timeLeft;
 
+    // Ne mettre à jour l'affichage que si nécessaire
     if (bonusesChanged) {
-        updateActiveBonusesDisplay();
+        requestAnimationFrame(() => {
+            updateActiveBonusesDisplay();
+        });
     }
 }
 
@@ -1216,23 +1374,28 @@ function updateActiveBonusesDisplay() {
 function createActiveBonusElement(type, timeLeft) {
     const effect = BONUS_EFFECTS[type];
     const bonusDiv = document.createElement('div');
-    bonusDiv.className = 'activeBonus';
+    bonusDiv.className = 'activeBonus new-bonus';
     bonusDiv.style.background = effect.backgroundColor;
     bonusDiv.style.borderColor = effect.borderColor;
 
     const img = document.createElement('img');
     img.src = bonusImages[type].src;
     img.alt = effect.name;
-    // Appliquer une teinte à l'image
     img.style.filter = `drop-shadow(0 0 3px ${effect.color})`;
 
     const timerSpan = document.createElement('span');
     timerSpan.className = 'timer';
-    timerSpan.textContent = `${Math.ceil(timeLeft)}s`;
+    // Formatter le temps pour avoir toujours le même format
+    timerSpan.textContent = `${Math.ceil(timeLeft).toString().padStart(2, '0')}s`;
     timerSpan.style.color = effect.color;
 
     bonusDiv.appendChild(img);
     bonusDiv.appendChild(timerSpan);
+
+    // Retirer la classe new-bonus après l'animation
+    setTimeout(() => {
+        bonusDiv.classList.remove('new-bonus');
+    }, 300);
 
     return bonusDiv;
 }

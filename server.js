@@ -17,10 +17,14 @@ const DEFAULT_GAME_SETTINGS = {
     gameDuration: 180,
     enableSpeedBoost: true,
     speedBoostDuration: 10,
+    speedBoostSpawnRate: 25, // pourcentage de chance d'apparition
     enableInvincibility: true,
     invincibilityDuration: 10,
+    invincibilitySpawnRate: 15,
     enableReveal: true,
     revealDuration: 10,
+    revealSpawnRate: 20,
+    bonusSpawnInterval: 4, // intervalle en secondes entre chaque tentative d'apparition de bonus
     initialBotCount: 30,
     enableSpecialZones: true,
     zoneMinDuration: 10,  // durée minimale en secondes
@@ -808,18 +812,36 @@ function updateBots() {
 function spawnBonus() {
     if (isPaused || isGameOver) return;
 
-    const availableBonuses = [
-        ...(currentGameSettings.enableSpeedBoost ? ['speed'] : []),
-        ...(currentGameSettings.enableInvincibility ? ['invincibility'] : []),
-        ...(currentGameSettings.enableReveal ? ['reveal'] : [])
+    const bonusTypes = [
+        { 
+            type: 'speed', 
+            enabled: currentGameSettings.enableSpeedBoost,
+            spawnRate: currentGameSettings.speedBoostSpawnRate 
+        },
+        { 
+            type: 'invincibility', 
+            enabled: currentGameSettings.enableInvincibility,
+            spawnRate: currentGameSettings.invincibilitySpawnRate 
+        },
+        { 
+            type: 'reveal', 
+            enabled: currentGameSettings.enableReveal,
+            spawnRate: currentGameSettings.revealSpawnRate 
+        }
     ];
 
-    if (availableBonuses.length > 0) {
-        const randomType = availableBonuses[Math.floor(Math.random() * availableBonuses.length)];
-        bonuses.push(new Bonus(randomType));
-    }
+    // Pour chaque type de bonus activé, tenter de le faire apparaître selon son taux
+    bonusTypes.forEach(bonusType => {
+        if (bonusType.enabled && Math.random() * 100 < bonusType.spawnRate) {
+            bonuses.push(new Bonus(bonusType.type));
+        }
+    });
 
-    setTimeout(spawnBonus, Math.random() * 5000 + 3000);
+    // Planifier le prochain spawn
+    const interval = currentGameSettings.bonusSpawnInterval * 1000;
+    const randomVariation = interval * 0.5; // ±50% de variation
+    const nextSpawnTime = interval + (Math.random() * randomVariation - randomVariation / 2);
+    setTimeout(spawnBonus, nextSpawnTime);
 }
 
 function handleBonusCollection(player, bonus) {
@@ -832,18 +854,33 @@ function handleBonusCollection(player, bonus) {
         reveal: currentGameSettings.revealDuration
     };
 
+    // Initialiser les timers si nécessaire
+    if (!player.bonusTimers) {
+        player.bonusTimers = {
+            speed: 0,
+            invincibility: 0,
+            reveal: 0
+        };
+    }
+
     switch(bonus.type) {
         case 'speed':
             player.speedBoostActive = true;
-            setTimeout(() => {
-                player.speedBoostActive = false;
-            }, bonusDurations[bonus.type] * 1000);
+            if (!player.bonusTimers) player.bonusTimers = {};
+            if (!player.bonusTimers.speed) player.bonusTimers.speed = 0;
+            player.bonusTimers.speed += bonusDurations[bonus.type];
             break;
         case 'invincibility':
             player.invincibilityActive = true;
-            setTimeout(() => {
-                player.invincibilityActive = false;
-            }, bonusDurations[bonus.type] * 1000);
+            if (!player.bonusTimers) player.bonusTimers = {};
+            if (!player.bonusTimers.invincibility) player.bonusTimers.invincibility = 0;
+            player.bonusTimers.invincibility += bonusDurations[bonus.type];
+            break;
+        case 'reveal':
+            player.revealActive = true;
+            if (!player.bonusTimers) player.bonusTimers = {};
+            if (!player.bonusTimers.reveal) player.bonusTimers.reveal = 0;
+            player.bonusTimers.reveal += bonusDurations[bonus.type];
             break;
     }
 
@@ -1202,6 +1239,18 @@ io.on('connection', (socket) => {
         io.emit('updateWaitingRoom', players);
     });
 
+    socket.on('chatMessage', (data) => {
+        // Limiter la taille du message
+        const message = data.message.slice(0, 200);
+        
+        // Diffuser le message à tous les joueurs dans la salle d'attente
+        io.emit('newChatMessage', {
+            message: message,
+            nickname: data.nickname,
+            timestamp: data.timestamp
+        });
+    });
+
     socket.on('leaveWaitingRoom', () => {
         const isOwner = waitingRoom.players.get(socket.id)?.isOwner;
         waitingRoom.players.delete(socket.id);
@@ -1282,6 +1331,15 @@ io.on('connection', (socket) => {
             };
             
             // Informer tous les joueurs des changements
+            io.emit('gameSettingsUpdated', waitingRoom.settings);
+        }
+    });
+
+    socket.on('resetGameSettings', () => {
+        const player = waitingRoom.players.get(socket.id);
+        if (player?.isOwner) {
+            // Réinitialiser avec les paramètres par défaut
+            waitingRoom.settings = { ...DEFAULT_GAME_SETTINGS };
             io.emit('gameSettingsUpdated', waitingRoom.settings);
         }
     });

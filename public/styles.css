@@ -76,7 +76,7 @@ h2 {
 h3 {
     font-size: 24px;
     color: #cc99ff;
-    margin-bottom: 15px;
+    margin-bottom: 5px;
 }
 
 /* Formulaires et inputs */
@@ -87,7 +87,7 @@ h3 {
     align-items: center;
 }
 
-input[type="text"], input[type="number"] {
+input[type="text"] {
     padding: 12px 20px;
     font-size: 16px;
     border: none;
@@ -128,6 +128,18 @@ input[type="text"]:focus, input[type="number"]:focus {
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
 }
 
+.primary-button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.primary-button:disabled:hover {
+    background-color: #cccccc;
+    transform: none;
+}
+
 .secondary-button {
     background-color: rgba(255, 255, 255, 0.2);
     color: white;
@@ -145,7 +157,7 @@ input[type="text"]:focus, input[type="number"]:focus {
 }
 
 .settings-content {
-    max-width: 600px;
+    max-width: 650px;
     margin: 20px auto;
     padding: 30px;
     background-color: rgba(255, 255, 255, 0.1);
@@ -178,6 +190,26 @@ input[type="text"]:focus, input[type="number"]:focus {
     align-items: center;
     gap: 15px;
     margin-left: 25px;
+}
+
+.number-input {
+    width: 80px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    text-align: right;
+    font-size: 16px;
+    border: none;
+    border-radius: 25px;
+    background-color: rgba(255, 255, 255, 0.9);
+    transition: all 0.3s ease;
+}
+
+.reset-button {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    padding: 8px 16px;
+    font-size: 14px;
 }
 
 /* Interface de jeu */
@@ -219,17 +251,106 @@ canvas {
 }
 
 #gameInfo {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     pointer-events: auto;
 }
 
-#timer, #score {
-    background-color: rgba(0, 0, 0, 0.6);
+#score {
+    /*background-color: rgba(0, 0, 0, 0.6);*/
     color: white;
     padding: 10px 20px;
     border-radius: 20px;
     font-size: 18px;
     margin-bottom: 10px;
     backdrop-filter: blur(5px);
+}
+
+#timer {
+    background-color: rgba(0, 0, 0, 0.45);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 25px;
+    margin-bottom: 10px;
+    backdrop-filter: blur(5px);
+    border: 2px solid rgba(204, 153, 255, 0.3);
+    transition: all 0.3s ease;
+}
+
+#timerContent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+#timerLabel {
+    font-family: 'Arial', sans-serif;
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.8;
+}
+
+#time {
+    font-family: 'Chewy-Regular', sans-serif;
+    font-size: 36px;
+    color: #cc99ff;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+    line-height: 1;
+    margin-top: 5px;
+}
+
+/* Style pour les 10 dernières secondes */
+#timer.urgent {
+    background-color: rgba(255, 0, 0, 0.2);
+    border-color: rgba(255, 0, 0, 0.6);
+    transform: scale(1.1);
+    animation: urgentPulse 1s infinite;
+}
+
+#timer.urgent #time {
+    color: #ff3333;
+    font-size: 48px;
+    text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+}
+
+@keyframes urgentPulse {
+    0% {
+        transform: scale(1.1);
+        box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.4);
+    }
+    70% {
+        transform: scale(1.15);
+        box-shadow: 0 0 0 10px rgba(255, 0, 0, 0);
+    }
+    100% {
+        transform: scale(1.1);
+        box-shadow: 0 0 0 0 rgba(255, 0, 0, 0);
+    }
+}
+
+/* Adaptation mobile */
+@media (max-width: 768px) {
+    #timer {
+        padding: 10px 20px;
+    }
+    
+    #timerLabel {
+        font-size: 14px;
+    }
+    
+    #time {
+        font-size: 32px;
+    }
+    
+    #timer.urgent #time {
+        font-size: 40px;
+    }
 }
 
 /* Classement des joueurs */
@@ -272,12 +393,16 @@ canvas {
 /* Bonus actifs */
 #activeBonuses {
     position: fixed;
-    top: 20px;
+    bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
     gap: 15px;
     z-index: 1000;
+    padding: 10px;
+    border-radius: 30px;
+    /*background-color: rgba(0, 0, 0, 0.3);*/
+    backdrop-filter: blur(5px);
 }
 
 .activeBonus {
@@ -289,18 +414,35 @@ canvas {
     border-radius: 20px;
     color: white;
     backdrop-filter: blur(5px);
-    animation: bonusPulse 2s infinite;
+    transform: translateZ(0);
+    will-change: transform;
+    /* Supprimer l'animation par défaut */
+}
+
+/* Timer à l'intérieur du bonus */
+.activeBonus .timer {
+    min-width: 1.5em;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+    font-family: monospace;
+    white-space: nowrap;
+}
+
+/* Animation de pulsation pour le bonus actif */
+.activeBonus:not(.new-bonus) {
+    animation: bonusActive 2s ease-in-out infinite;
 }
 
 @keyframes bonusPulse {
     0% {
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        transform: scale(1);
     }
     50% {
-        box-shadow: 0 0 15px currentColor;
+        transform: scale(1.05);
     }
     100% {
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        transform: scale(1);
     }
 }
 
@@ -681,22 +823,52 @@ canvas {
     }
 
     #activeBonuses {
+        bottom: 10px;
+        padding: 8px;
+        gap: 10px;
         flex-wrap: wrap;
         justify-content: center;
+        width: 90%;
+        max-width: 400px;
+    }
+
+    .activeBonus {
+        padding: 6px 12px;
+        font-size: 14px;
+    }
+    
+    #gameInfo {
+        width: 90%;
+        max-width: 300px;
+    }
+}
+
+@keyframes simpleAppear {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
 /* Panneau d'aide en jeu */
 .game-help-panel {
     position: fixed;
-    background-color: rgba(0, 0, 0, 0.6);
-    color: white;
+    background-color: rgba(255, 255, 255, 0.25);
+    color: #353535;
     border-radius: 15px;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
     z-index: 1000;
     width: 300px;
     transition: all 0.3s ease;
     backdrop-filter: blur(5px);
+}
+
+.game-help-panel h3 {
+    text-shadow: 1px 1px 5px rgba(0, 0, 0, 0);
 }
 
 #instructions {
@@ -725,7 +897,7 @@ canvas {
 .close-button {
     background: none;
     border: none;
-    color: white;
+    color: #353535;
     font-size: 24px;
     cursor: pointer;
     padding: 0 5px;
@@ -984,4 +1156,187 @@ button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
     background-color: rgba(255, 255, 255, 0.1);
+}
+
+
+/* Chatbox flottante */
+.floating-chat {
+    position: fixed;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 300px;
+    height: 60vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 0 15px 15px 0;
+    backdrop-filter: blur(10px);
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+.floating-chat.collapsed {
+    transform: translateX(-270px) translateY(-50%);
+}
+
+/* En-tête du chat */
+.chat-header {
+    padding: 15px;
+    background-color: rgba(204, 153, 255, 0.2);
+    border-radius: 0 15px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
+.chat-header h3 {
+    margin: 0;
+    color: #a54bff;
+    font-size: 18px;
+}
+
+/* Structure principale du chat */
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 54px); /* Hauteur totale moins la hauteur du header */
+    overflow: hidden;
+    padding: 10px;
+}
+
+/* Zone des messages */
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 5px;
+    margin-bottom: 10px;
+}
+
+/* Messages */
+.chat-message {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 10px;
+    border-radius: 10px;
+    word-break: break-word;
+    max-width: 95%;
+}
+
+.chat-message.own-message {
+    background-color: rgba(204, 153, 255, 0.2);
+    margin-left: auto;
+    border-radius: 10px 10px 2px 10px;
+    border-right: 2px solid #cc99ff;
+}
+
+.chat-message-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 5px;
+}
+
+.chat-message-author {
+    font-weight: bold;
+    color: #cc99ff;
+}
+
+.chat-message-time {
+    font-size: 0.8em;
+    opacity: 0.7;
+    margin-left: 10px;
+}
+
+.chat-message-content {
+    color: white;
+}
+
+/* Zone de saisie */
+.chat-input-container {
+    display: flex;
+    gap: 8px;
+    padding: 5px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+}
+
+#chatInput {
+    flex: 1;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 20px;
+    background-color: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+}
+
+.chat-send-button {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 20px;
+    background-color: #cc99ff;
+    color: #2c3e50;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.chat-send-button:hover {
+    background-color: #9966ff;
+    transform: translateY(-2px);
+}
+
+/* Scrollbar personnalisée */
+.chat-messages::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+    background: rgba(204, 153, 255, 0.5);
+    border-radius: 3px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+    background: rgba(204, 153, 255, 0.7);
+}
+
+/* Bouton toggle */
+.toggle-icon {
+    font-size: 18px;
+    color: white;
+}
+
+/* Adaptation mobile */
+@media (max-width: 768px) {
+    .floating-chat {
+        width: 280px;
+        height: 50vh;
+    }
+
+    .floating-chat.collapsed {
+        transform: translateX(-250px) translateY(-50%);
+    }
+}
+
+.chat-header-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.chat-icon {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    /* Filtre pour rendre l'icône de la même couleur que le texte 
+    filter: brightness(0) saturate(100%) invert(83%) sepia(14%) saturate(1615%) hue-rotate(213deg) brightness(106%) contrast(96%);*/
 }
