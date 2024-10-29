@@ -63,6 +63,15 @@ const collectedBonusDisplayContent = document.getElementById('collectedBonusDisp
 const activeBonusesContainer = document.getElementById('activeBonuses');
 const playerListContainer = document.getElementById('players');
 
+const SPEED_MULTIPLIER = 3;
+const BASE_SPEED = 3;
+const SPEED_BOOST_MULTIPLIER = 1.3;
+
+const JOYSTICK_SPEED_MULTIPLIER = 3;
+const JOYSTICK_UPDATE_INTERVAL = 50;
+const TOUCH_START_OPTIONS = { passive: false };
+const TOUCH_MOVE_OPTIONS = { passive: false };
+
 // constantes pour les effets des bonus
 const BONUS_EFFECTS = {
     speed: {
@@ -184,6 +193,30 @@ function isMobile() {
         || window.innerWidth <= 768;
 }
 
+function showMobileControls() {
+    const mobileControls = document.getElementById('mobileControls');
+if (mobileControls) {
+    // Réinitialiser l'état des contrôles mobiles
+    isMoving = false;
+    currentMove = { x: 0, y: 0 };
+    if (moveInterval) {
+        clearInterval(moveInterval);
+        moveInterval = null;
+    }
+    
+    // Force le ré-affichage des contrôles
+    if (isMobile()) {
+        mobileControls.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+    } else {
+        mobileControls.style.display = 'none';
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+    }
+}
+}
+
 // Fonction d'initialisation des contrôles mobiles
 function initializeMobileControls() {
     if (!isMobile()) return;
@@ -194,15 +227,23 @@ function initializeMobileControls() {
     
     let baseRect;
     let centerX, centerY;
+    let touchId = null; // Stocke l'ID du touch en cours
     
     function handleStart(e) {
-        e.preventDefault(); // Empêcher le scroll pendant l'utilisation du joystick
+        // Si on a déjà un touch actif, ignorer les autres
+        if (touchId !== null) return;
+        
+        e.preventDefault();
+        const touch = e.type === 'touchstart' ? e.touches[0] : e;
+        touchId = touch.identifier;
+        
         isMoving = true;
         baseRect = joystickBase.getBoundingClientRect();
         centerX = baseRect.left + baseRect.width / 2;
         centerY = baseRect.top + baseRect.height / 2;
         handleMove(e);
         
+        if (moveInterval) clearInterval(moveInterval);
         moveInterval = setInterval(sendMovement, 50);
     }
     
@@ -210,55 +251,114 @@ function initializeMobileControls() {
         if (!isMoving) return;
         e.preventDefault();
         
-        const touch = e.type.startsWith('touch') ? e.touches[0] : e;
+        let touch = e.touches ? 
+            Array.from(e.touches).find(t => t.identifier === touchId) : 
+            e;
+            
+        if (!touch) return;
+        
         const x = touch.clientX - centerX;
         const y = touch.clientY - centerY;
+        const maxRadius = baseRect.width / 2;
+        const distance = Math.hypot(x, y);
+        const clampedDistance = Math.min(distance, maxRadius);
         
-        const distance = Math.min(baseRect.width / 2, Math.sqrt(x * x + y * y));
-        const angle = Math.atan2(y, x);
+        if (distance === 0) return;
         
-        const stickX = Math.cos(angle) * distance;
-        const stickY = Math.sin(angle) * distance;
+        const scale = clampedDistance / maxRadius;
+        const normalizedX = (x / distance) * scale;
+        const normalizedY = (y / distance) * scale;
         
-        joystick.style.transform = `translate(${stickX}px, ${stickY}px)`;
+        // Mettre à jour la position visuelle du joystick
+        const stickX = normalizedX * maxRadius;
+        const stickY = normalizedY * maxRadius;
         
+        requestAnimationFrame(() => {
+            joystick.style.transform = `translate(${stickX}px, ${stickY}px)`;
+        });
+        
+        // Utiliser des valeurs normalisées pour le mouvement
         currentMove = {
-            x: (stickX / (baseRect.width / 2)) * 3,
-            y: (stickY / (baseRect.width / 2)) * 3
+            x: normalizedX,
+            y: normalizedY
         };
     }
     
     function handleEnd(e) {
+        // Vérifier si c'est le bon touch qui se termine
+        if (e.type === 'touchend' || e.type === 'touchcancel') {
+            let touchFound = false;
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === touchId) {
+                    touchFound = true;
+                    break;
+                }
+            }
+            if (!touchFound) return;
+        }
+        
+        touchId = null;
         isMoving = false;
-        joystick.style.transform = 'translate(-50%, -50%)';
+        
+        requestAnimationFrame(() => {
+            joystick.style.transform = 'translate(-50%, -50%)';
+        });
+        
         currentMove = { x: 0, y: 0 };
-        clearInterval(moveInterval);
+        if (moveInterval) {
+            clearInterval(moveInterval);
+            moveInterval = null;
+        }
     }
     
     function sendMovement() {
         if (isMoving && socket && !isPaused && !isGameOver) {
-            socket.emit('move', {
-                x: currentMove.x,
-                y: currentMove.y,
-                speedBoostActive: speedBoostActive
+            // Normaliser la vitesse en fonction de l'échelle de la caméra
+            const normalizedSpeed = SPEED_MULTIPLIER / camera.scale;
+            const speedBoostMultiplier = speedBoostActive ? SPEED_BOOST_MULTIPLIER : 1;
+            
+            const finalMove = {
+                x: currentMove.x * normalizedSpeed * speedBoostMultiplier,
+                y: currentMove.y * normalizedSpeed * speedBoostMultiplier,
+                speedBoostActive
+            };
+            
+            requestAnimationFrame(() => {
+                socket.emit('move', finalMove);
             });
         }
     }
-    
-    // Événements tactiles pour le joystick
-    joystickBase.addEventListener('touchstart', handleStart, { passive: false });
-    document.addEventListener('touchmove', handleMove, { passive: false });
+
+    // Amélioration de la gestion des événements tactiles
+    const options = { passive: false };
+    joystickBase.addEventListener('touchstart', handleStart, options);
+    document.addEventListener('touchmove', handleMove, options);
     document.addEventListener('touchend', handleEnd);
     document.addEventListener('touchcancel', handleEnd);
     
-    // Bouton de localisation mobile
+    // Bouton de localisation avec retour visuel
     locateButton.addEventListener('click', () => {
         showPlayerLocator = true;
         locatorFadeStartTime = Date.now() + LOCATOR_DURATION - LOCATOR_FADE_DURATION;
+        
+        // Ajouter un retour visuel
+        locateButton.classList.add('active');
         setTimeout(() => {
+            locateButton.classList.remove('active');
             showPlayerLocator = false;
         }, LOCATOR_DURATION);
     });
+
+    // Désactiver le zoom sur double tap
+    document.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+    }, { passive: false });
+
+    // Empêcher le scroll de la page
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.body.style.height = '100%';
 }
 
 function hasListeners(eventName) {
@@ -415,6 +515,10 @@ function initializeCamera() {
 
 window.addEventListener('load', resizeCanvas);
 window.addEventListener('resize', resizeCanvas);
+window.addEventListener('load', showMobileControls);
+window.addEventListener('resize', showMobileControls);
+
+
 
 // Gestion des panneaux d'aide
 document.getElementById('closeInstructions').addEventListener('click', () => {
@@ -766,16 +870,16 @@ function handleKeyUp(event) {
 function movePlayer() {
     if (isPaused || isGameOver) return;
 
-    const baseSpeed = 3;
-    // Appliquer le boost de vitesse si actif
-    const currentSpeed = speedBoostActive ? baseSpeed * 1.3 : baseSpeed;
-    let move = { x: 0, y: 0 };
-
     // Si on est sur mobile et qu'on utilise le joystick
     if (isMobile() && isMoving) {
-        // Les mouvements sont déjà gérés par sendMovement dans initializeMobileControls
         return;
     }
+
+    // Normaliser la vitesse en fonction de l'échelle de la caméra
+    const normalizedSpeed = BASE_SPEED / camera.scale;
+    const currentSpeed = speedBoostActive ? normalizedSpeed * SPEED_BOOST_MULTIPLIER : normalizedSpeed;
+    
+    let move = { x: 0, y: 0 };
 
     if (keysPressed['ArrowUp'] || keysPressed['z']) move.y = -currentSpeed;
     if (keysPressed['ArrowDown'] || keysPressed['s']) move.y = currentSpeed;
@@ -793,7 +897,7 @@ function movePlayer() {
         socket.emit('move', { 
             x: move.x,
             y: move.y,
-            speedBoostActive: speedBoostActive 
+            speedBoostActive 
         });
     }
 }
@@ -836,6 +940,8 @@ function startGame() {
     pauseButton.disabled = false;
 
     initializeCamera();
+
+    showMobileControls();
 
     // Initialiser les contrôles mobiles
     initializeMobileControls();

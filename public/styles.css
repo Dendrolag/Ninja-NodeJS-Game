@@ -1262,16 +1262,22 @@ button:disabled {
     bottom: 100px;
     left: 50px;
     pointer-events: auto;
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    z-index: 1001;
 }
 
 .joystick-base {
     width: 120px;
     height: 120px;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.3);
     border: 2px solid rgba(204, 153, 255, 0.5);
     border-radius: 50%;
     position: relative;
     backdrop-filter: blur(5px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .joystick-stick {
@@ -1283,8 +1289,9 @@ button:disabled {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    cursor: pointer;
-    transition: background 0.2s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    will-change: transform;
+    transition: background-color 0.2s ease;
 }
 
 /* Bouton d'action mobile */
@@ -1296,22 +1303,65 @@ button:disabled {
     height: 60px;
     border-radius: 50%;
     background: rgba(204, 153, 255, 0.8);
-    border: none;
+    border: 2px solid rgba(255, 255, 255, 0.3);
     cursor: pointer;
     pointer-events: auto;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(5px);
 }
 
 .mobile-action-button img {
     width: 30px;
     height: 30px;
     filter: brightness(0) invert(1);
+    transition: transform 0.2s ease;
+}
+
+.mobile-action-button.active {
+    background: rgba(204, 153, 255, 0.95);
+    transform: scale(0.95);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.mobile-action-button:active {
+    transform: scale(0.9);
 }
 
 /* Adaptation mobile */
 @media (max-width: 768px) {
+
+    .is-mobile #gameContainer {
+        transform: translateZ(0);
+        backface-visibility: hidden;
+        perspective: 1000;
+    }
+
+    .is-mobile canvas {
+        touch-action: none;
+    }
+
+    /* Optimiser les animations sur mobile */
+    .is-mobile .activeBonus,
+    .is-mobile .mobile-action-button,
+    .is-mobile .joystick-stick {
+        will-change: transform;
+    }
+
+    /* Améliorer la réactivité du joystick */
+    .is-mobile .joystick-stick {
+        transition: none;
+    }
+
+    /* Éviter le flou sur les textes */
+    .is-mobile #timer,
+    .is-mobile #score,
+    .is-mobile .player-name {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
 
     #timer {
         padding: 10px 20px;
@@ -1430,6 +1480,10 @@ button:disabled {
         font-size: 14px;
     }
 
+    .waiting-room-buttons {
+        display: block;
+      }
+
     /* Ajustement du conteneur principal du jeu pour le zoom */
     #gameContainer {
         overflow: hidden;
@@ -1440,6 +1494,15 @@ button:disabled {
         image-rendering: -webkit-optimize-contrast;
         image-rendering: crisp-edges;
         image-rendering: pixelated;
+    }
+
+    #mobileLocateButton {
+        transition: all 0.2s ease;
+    }
+    
+    #mobileLocateButton.active {
+        transform: scale(0.9);
+        background-color: rgba(204, 153, 255, 0.9);
     }
 
     #controls {
@@ -1480,8 +1543,11 @@ button:disabled {
         transform: translateX(-250px) translateY(-50%);
     }
 
-    .mobile-controls {
-        display: block;
+    .mobile-controls * {
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+        transform-style: preserve-3d;
+        -webkit-transform-style: preserve-3d;
     }
     
     /* Ajuster la position de la chatbox pour ne pas interférer avec les contrôles */
@@ -1519,5 +1585,36 @@ button:disabled {
 
     #activeBonuses {
         bottom: 100px;
+    }
+}
+
+/* Ajustements spécifiques pour les petits écrans */
+@media (max-width: 360px) {
+    .mobile-action-button {
+        width: 50px;
+        height: 50px;
+        bottom: 80px;
+        right: 30px;
+    }
+
+    .mobile-action-button img {
+        width: 25px;
+        height: 25px;
+    }
+}
+
+/* Correction pour les écrans en mode paysage */
+@media (max-height: 500px) and (orientation: landscape) {
+    .mobile-action-button {
+        bottom: 20px;
+        right: 20px;
+    }
+}
+
+/* Désactiver les interactions par défaut sur mobile */
+@media (max-width: 768px) {
+    * {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
     }
 }
