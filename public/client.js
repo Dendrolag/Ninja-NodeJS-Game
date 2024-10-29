@@ -261,26 +261,27 @@ function initializeMobileControls() {
         const y = touch.clientY - centerY;
         const maxRadius = baseRect.width / 2;
         const distance = Math.hypot(x, y);
-        const clampedDistance = Math.min(distance, maxRadius);
         
         if (distance === 0) return;
         
-        const scale = clampedDistance / maxRadius;
-        const normalizedX = (x / distance) * scale;
-        const normalizedY = (y / distance) * scale;
+        // Normaliser en vecteurs binaires (-1, 0, ou 1)
+        // On utilise un seuil de 0.5 pour déterminer si une direction est active
+        const threshold = 0.5;
+        const normalizedX = Math.abs(x / maxRadius) > threshold ? Math.sign(x) : 0;
+        const normalizedY = Math.abs(y / maxRadius) > threshold ? Math.sign(y) : 0;
         
-        // Mettre à jour la position visuelle du joystick
-        const stickX = normalizedX * maxRadius;
-        const stickY = normalizedY * maxRadius;
+        // Déplacer le joystick visuellement
+        const stickX = x * 0.8; // Limite le déplacement visuel à 80% du rayon
+        const stickY = y * 0.8;
         
         requestAnimationFrame(() => {
             joystick.style.transform = `translate(${stickX}px, ${stickY}px)`;
         });
         
-        // Utiliser des valeurs normalisées pour le mouvement
+        // Appliquer la vitesse de base, comme pour le clavier
         currentMove = {
-            x: normalizedX,
-            y: normalizedY
+            x: normalizedX * BASE_SPEED,
+            y: normalizedY * BASE_SPEED
         };
     }
     
@@ -313,19 +314,15 @@ function initializeMobileControls() {
     
     function sendMovement() {
         if (isMoving && socket && !isPaused && !isGameOver) {
-            // Normaliser la vitesse en fonction de l'échelle de la caméra
-            const normalizedSpeed = SPEED_MULTIPLIER / camera.scale;
-            const speedBoostMultiplier = speedBoostActive ? SPEED_BOOST_MULTIPLIER : 1;
+            const speedMultiplier = speedBoostActive ? SPEED_BOOST_MULTIPLIER : 1;
             
             const finalMove = {
-                x: currentMove.x * normalizedSpeed * speedBoostMultiplier,
-                y: currentMove.y * normalizedSpeed * speedBoostMultiplier,
+                x: currentMove.x * speedMultiplier,
+                y: currentMove.y * speedMultiplier,
                 speedBoostActive
             };
             
-            requestAnimationFrame(() => {
-                socket.emit('move', finalMove);
-            });
+            socket.emit('move', finalMove);
         }
     }
 
@@ -870,15 +867,11 @@ function handleKeyUp(event) {
 function movePlayer() {
     if (isPaused || isGameOver) return;
 
-    // Si on est sur mobile et qu'on utilise le joystick
     if (isMobile() && isMoving) {
         return;
     }
 
-    // Normaliser la vitesse en fonction de l'échelle de la caméra
-    const normalizedSpeed = BASE_SPEED / camera.scale;
-    const currentSpeed = speedBoostActive ? normalizedSpeed * SPEED_BOOST_MULTIPLIER : normalizedSpeed;
-    
+    const currentSpeed = BASE_SPEED * (speedBoostActive ? SPEED_BOOST_MULTIPLIER : 1);
     let move = { x: 0, y: 0 };
 
     if (keysPressed['ArrowUp'] || keysPressed['z']) move.y = -currentSpeed;

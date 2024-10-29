@@ -47,12 +47,25 @@ body, html {
 }
 
 .menu-content {
-    padding: 5rem;
-    border-radius: 50%;
+    position: relative;
     background-color: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
-    max-width: 600px;
     animation: fadeIn 0.3s ease-out;
+    
+    /* Création du cercle parfait */
+    aspect-ratio: 1;
+    border-radius: 50%;
+    
+    /* Gestion de la taille responsive */
+    width: min(80vw, 80vh, 600px);
+    height: min(80vw, 80vh, 600px);
+    
+    /* Centrage du contenu */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 5vmin;
 }
 
 /* Titres */
@@ -60,6 +73,13 @@ h1, h2, h3 {
     font-family: 'Chewy-Regular', sans-serif;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
     margin-bottom: 30px;
+}
+
+.menu-content h1 {
+    font-size: clamp(24px, 5vmin, 48px);
+    margin-bottom: 4vmin;
+    color: #cc99ff;
+    text-transform: uppercase;
 }
 
 h1 {
@@ -81,10 +101,29 @@ h3 {
 
 /* Formulaires et inputs */
 .menu-form {
+    width: 100%;
+    max-width: 80%;
     display: flex;
     flex-direction: column;
-    gap: 20px;
     align-items: center;
+    gap: 2vmin;
+}
+
+
+.menu-form input[type="text"] {
+    width: 100%;
+    padding: 1.5vmin 2vmin;
+    font-size: clamp(14px, 2.5vmin, 16px);
+    border: none;
+    border-radius: 25px;
+    background-color: rgba(255, 255, 255, 0.9);
+}
+
+.menu-form button {
+    margin-top: 2vmin;
+    padding: 1.5vmin 3vmin;
+    font-size: clamp(14px, 2.5vmin, 16px);
+    min-width: 60%;
 }
 
 input[type="text"] {
@@ -115,6 +154,7 @@ input[type="text"]:focus, input[type="number"]:focus {
     font-weight: bold;
     text-transform: uppercase;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin: 10px 0;
 }
 
 .primary-button {
@@ -171,6 +211,9 @@ input[type="text"]:focus, input[type="number"]:focus {
     padding: 20px;
     border-radius: 15px;
     transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
 }
 
 .setting-group:hover {
@@ -182,26 +225,45 @@ input[type="text"]:focus, input[type="number"]:focus {
     display: flex;
     align-items: center;
     gap: 15px;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
 }
 
 .setting-details {
     display: flex;
-    align-items: center;
+    flex-wrap: wrap;
     gap: 15px;
-    margin-left: 25px;
+    margin-left: 0;
+}
+
+.zone-type {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 200px;
+    flex: 1 1 calc(50% - 15px);
 }
 
 .number-input {
     width: 80px;
+    min-width: 60px;
+    max-width: 100px;
     padding: 8px 10px;
-    border-radius: 4px;
+    margin-top: 5px;
     text-align: right;
     font-size: 16px;
     border: none;
     border-radius: 25px;
     background-color: rgba(255, 255, 255, 0.9);
     transition: all 0.3s ease;
+}
+
+.settings-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 20px;
+    flex-wrap: wrap;
 }
 
 .reset-button {
@@ -612,6 +674,10 @@ canvas {
     text-overflow: ellipsis;
     max-width: 100px;
 }
+
+.player-rank {
+    padding-right: 10px;
+  }
 
 .score {
     color: #f1c40f;
@@ -1333,6 +1399,44 @@ button:disabled {
 /* Adaptation mobile */
 @media (max-width: 768px) {
 
+    .settings-content {
+        width: 95%;
+        padding: 20px;
+        margin: 10px auto;
+    }
+
+    .setting-group {
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+
+    .setting-details {
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+    }
+
+    .zone-type {
+        flex: 1 1 100%;
+        min-width: unset;
+    }
+
+    .setting-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+
+    .number-input {
+        width: 75px;
+        font-size: 14px;
+    }
+
+    /* Ajustement pour les groupes de bonus */
+    .settings-group .setting-group {
+        padding: 10px;
+    }
+
     .is-mobile #gameContainer {
         transform: translateZ(0);
         backface-visibility: hidden;
@@ -1380,8 +1484,8 @@ button:disabled {
     }
 
     .menu-content, .settings-content {
-        width: 95%;
-        padding: 20px;
+       /* width: 95%;*/
+        padding: 40px;
     }
 
     h1 {
@@ -1412,7 +1516,8 @@ button:disabled {
     }
 
     h3 {
-        font-size: 16px;
+        font-size: 1.5rem;
+        text-align: center;
     }
 
     #players li {
@@ -1422,11 +1527,11 @@ button:disabled {
 
     .player-name {
         font-weight: bold;
-        font-size: 9px;
+        font-size: 12px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        max-width: 50px;
+        max-width: 60px;
       }
 
     /* Adapter le timer */
@@ -1561,6 +1666,11 @@ button:disabled {
     .floating-chat.collapsed {
         transform: translateX(-270px);
     }
+
+    .menu-content {
+        width: min(90vw, 90vh, 400px);
+        height: min(90vw, 90vh, 400px);
+    }
 }
 
 /* Pour les très petits écrans */
@@ -1601,13 +1711,45 @@ button:disabled {
         width: 25px;
         height: 25px;
     }
+    .settings-content {
+        padding: 15px;
+    }
+
+    .setting-group {
+        padding: 10px;
+    }
+
+    .settings-buttons {
+        flex-direction: column;
+    }
+
+    .settings-buttons button {
+        width: 100%;
+    }
 }
 
 /* Correction pour les écrans en mode paysage */
-@media (max-height: 500px) and (orientation: landscape) {
+@media (max-height: 600px) and (orientation: landscape) {
     .mobile-action-button {
         bottom: 20px;
         right: 20px;
+    }
+    .settings-content {
+        max-height: 230vh;
+        margin: 10px auto;
+    }
+
+    .setting-group {
+        padding: 12px;
+        margin-bottom: 12px;
+    }
+    .menu-content {
+        height: 80vh;
+        width: 80vh;
+      }
+    .settings-content {
+        max-height: auto;
+        margin: 10px auto;
     }
 }
 
@@ -1616,5 +1758,21 @@ button:disabled {
     * {
         touch-action: manipulation;
         -webkit-tap-highlight-color: transparent;
+    }
+}
+
+@media (max-height: 450px) and (orientation: landscape) {
+    .menu-content {
+        width: 70vh;
+        height: 70vh;
+    }
+    
+    .menu-content h1 {
+        font-size: clamp(20px, 4vmin, 36px);
+        margin-bottom: 2vmin;
+    }
+    
+    .menu-form {
+        gap: 1.5vmin;
     }
 }
