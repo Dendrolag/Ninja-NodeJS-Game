@@ -134,6 +134,11 @@ let keysPressed = {};
 let specialZones = [];
 let isRoomOwner = false;
 
+// Nouvelles variables pour les contrôles mobiles
+let isMoving = false;
+let currentMove = { x: 0, y: 0 };
+let moveInterval;
+
 // Variables pour les bonus
 let speedBoostActive = false;
 let invincibilityActive = false;
@@ -172,6 +177,89 @@ let gameSettings = {
         STEALTH: true
     }
 };
+
+// Fonction utilitaire pour détecter si on est sur mobile
+function isMobile() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+        || window.innerWidth <= 768;
+}
+
+// Fonction d'initialisation des contrôles mobiles
+function initializeMobileControls() {
+    if (!isMobile()) return;
+
+    const joystick = document.querySelector('.joystick-stick');
+    const joystickBase = document.querySelector('.joystick-base');
+    const locateButton = document.getElementById('mobileLocateButton');
+    
+    let baseRect;
+    let centerX, centerY;
+    
+    function handleStart(e) {
+        e.preventDefault(); // Empêcher le scroll pendant l'utilisation du joystick
+        isMoving = true;
+        baseRect = joystickBase.getBoundingClientRect();
+        centerX = baseRect.left + baseRect.width / 2;
+        centerY = baseRect.top + baseRect.height / 2;
+        handleMove(e);
+        
+        moveInterval = setInterval(sendMovement, 50);
+    }
+    
+    function handleMove(e) {
+        if (!isMoving) return;
+        e.preventDefault();
+        
+        const touch = e.type.startsWith('touch') ? e.touches[0] : e;
+        const x = touch.clientX - centerX;
+        const y = touch.clientY - centerY;
+        
+        const distance = Math.min(baseRect.width / 2, Math.sqrt(x * x + y * y));
+        const angle = Math.atan2(y, x);
+        
+        const stickX = Math.cos(angle) * distance;
+        const stickY = Math.sin(angle) * distance;
+        
+        joystick.style.transform = `translate(${stickX}px, ${stickY}px)`;
+        
+        currentMove = {
+            x: (stickX / (baseRect.width / 2)) * 3,
+            y: (stickY / (baseRect.width / 2)) * 3
+        };
+    }
+    
+    function handleEnd(e) {
+        isMoving = false;
+        joystick.style.transform = 'translate(-50%, -50%)';
+        currentMove = { x: 0, y: 0 };
+        clearInterval(moveInterval);
+    }
+    
+    function sendMovement() {
+        if (isMoving && socket && !isPaused && !isGameOver) {
+            socket.emit('move', {
+                x: currentMove.x,
+                y: currentMove.y,
+                speedBoostActive: speedBoostActive
+            });
+        }
+    }
+    
+    // Événements tactiles pour le joystick
+    joystickBase.addEventListener('touchstart', handleStart, { passive: false });
+    document.addEventListener('touchmove', handleMove, { passive: false });
+    document.addEventListener('touchend', handleEnd);
+    document.addEventListener('touchcancel', handleEnd);
+    
+    // Bouton de localisation mobile
+    locateButton.addEventListener('click', () => {
+        showPlayerLocator = true;
+        locatorFadeStartTime = Date.now() + LOCATOR_DURATION - LOCATOR_FADE_DURATION;
+        setTimeout(() => {
+            showPlayerLocator = false;
+        }, LOCATOR_DURATION);
+    });
+}
 
 function hasListeners(eventName) {
     return this.listeners(eventName).length > 0;
@@ -300,11 +388,24 @@ function resizeCanvas() {
 }
 
 function initializeCamera() {
-    // Réduire le scale pour un zoom plus adapté
-    camera.scale = Math.min(
-        window.innerWidth / 1500,  // Changer 1000 en 2000
-        window.innerHeight / 1000  // Changer 750 en 1500
-    );
+    // Vérifier si on est sur mobile
+    const isMobileDevice = window.innerWidth <= 768;
+    
+    if (isMobileDevice) {
+        // Échelle beaucoup plus grande pour mobile
+        const mobileScale = Math.min(
+            window.innerWidth / 500,  // Réduire ces valeurs augmente le zoom
+            window.innerHeight / 350
+        );
+        // Appliquer un multiplicateur supplémentaire pour augmenter encore le zoom
+        camera.scale = mobileScale * 1.2;
+    } else {
+        // Échelle normale pour desktop
+        camera.scale = Math.min(
+            window.innerWidth / 1500,
+            window.innerHeight / 1000
+        );
+    }
 
     if (!camera.x || !camera.y) {
         camera.x = GAME_VIRTUAL_WIDTH / 2;
@@ -670,6 +771,12 @@ function movePlayer() {
     const currentSpeed = speedBoostActive ? baseSpeed * 1.3 : baseSpeed;
     let move = { x: 0, y: 0 };
 
+    // Si on est sur mobile et qu'on utilise le joystick
+    if (isMobile() && isMoving) {
+        // Les mouvements sont déjà gérés par sendMovement dans initializeMobileControls
+        return;
+    }
+
     if (keysPressed['ArrowUp'] || keysPressed['z']) move.y = -currentSpeed;
     if (keysPressed['ArrowDown'] || keysPressed['s']) move.y = currentSpeed;
     if (keysPressed['ArrowLeft'] || keysPressed['q']) move.x = -currentSpeed;
@@ -729,6 +836,9 @@ function startGame() {
     pauseButton.disabled = false;
 
     initializeCamera();
+
+    // Initialiser les contrôles mobiles
+    initializeMobileControls();
 
     // Réinitialiser les variables de localisation et d'état
     showPlayerLocator = false;

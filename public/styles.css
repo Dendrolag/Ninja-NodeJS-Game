@@ -334,25 +334,6 @@ canvas {
     }
 }
 
-/* Adaptation mobile */
-@media (max-width: 768px) {
-    #timer {
-        padding: 10px 20px;
-    }
-    
-    #timerLabel {
-        font-size: 14px;
-    }
-    
-    #time {
-        font-size: 32px;
-    }
-    
-    #timer.urgent #time {
-        font-size: 40px;
-    }
-}
-
 /* Classement des joueurs */
 #playerList {
     position: fixed;
@@ -401,8 +382,8 @@ canvas {
     z-index: 1000;
     padding: 10px;
     border-radius: 30px;
-    /*background-color: rgba(0, 0, 0, 0.3);*/
-    backdrop-filter: blur(5px);
+    /*background-color: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(5px);*/
 }
 
 .activeBonus {
@@ -781,68 +762,6 @@ canvas {
     pointer-events: none;
 }
 
-/* Media queries pour le responsive */
-@media (max-width: 768px) {
-    .menu-content, .settings-content {
-        width: 95%;
-        padding: 20px;
-    }
-
-    h1 {
-        font-size: 36px;
-    }
-
-    .game-over-content {
-        padding: 20px;
-    }
-
-    .podium-block {
-        width: 80px;
-    }
-
-    .first .podium-block { height: 160px; }
-    .second .podium-block { height: 120px; }
-    .third .podium-block { height: 80px; }
-
-    #playerList {
-        min-width: 200px;
-    }
-
-    .game-help-panel {
-        width: calc(100% - 40px);
-        max-width: 300px;
-    }
-
-    #instructions, #controls {
-        left: 50%;
-        transform: translateX(-50%);
-    }
-
-    #controls {
-        bottom: 90px;
-    }
-
-    #activeBonuses {
-        bottom: 10px;
-        padding: 8px;
-        gap: 10px;
-        flex-wrap: wrap;
-        justify-content: center;
-        width: 90%;
-        max-width: 400px;
-    }
-
-    .activeBonus {
-        padding: 6px 12px;
-        font-size: 14px;
-    }
-    
-    #gameInfo {
-        width: 90%;
-        max-width: 300px;
-    }
-}
-
 @keyframes simpleAppear {
     from {
         opacity: 0;
@@ -1131,13 +1050,6 @@ canvas {
     cursor: not-allowed;
 }
 
-@media (max-width: 768px) {
-    .waiting-room-content {
-        padding: 20px;
-        width: 95%;
-    }
-}
-
 .owner-badge {
     margin-left: 8px;
     font-size: 1.2em;
@@ -1315,17 +1227,7 @@ button:disabled {
     color: white;
 }
 
-/* Adaptation mobile */
-@media (max-width: 768px) {
-    .floating-chat {
-        width: 280px;
-        height: 50vh;
-    }
 
-    .floating-chat.collapsed {
-        transform: translateX(-250px) translateY(-50%);
-    }
-}
 
 .chat-header-title {
     display: flex;
@@ -1339,4 +1241,283 @@ button:disabled {
     object-fit: contain;
     /* Filtre pour rendre l'icône de la même couleur que le texte 
     filter: brightness(0) saturate(100%) invert(83%) sepia(14%) saturate(1615%) hue-rotate(213deg) brightness(106%) contrast(96%);*/
+}
+
+
+/* Contrôles mobiles */
+.mobile-controls {
+    display: none; /* Caché par défaut, affiché seulement sur mobile */
+    position: fixed;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    padding: 20px;
+    z-index: 1000;
+    pointer-events: none; /* Permet de cliquer à travers le container */
+}
+
+/* Joystick */
+.joystick {
+    position: fixed;
+    bottom: 100px;
+    left: 50px;
+    pointer-events: auto;
+}
+
+.joystick-base {
+    width: 120px;
+    height: 120px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 2px solid rgba(204, 153, 255, 0.5);
+    border-radius: 50%;
+    position: relative;
+    backdrop-filter: blur(5px);
+}
+
+.joystick-stick {
+    width: 50px;
+    height: 50px;
+    background: rgba(204, 153, 255, 0.8);
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+/* Bouton d'action mobile */
+.mobile-action-button {
+    position: fixed;
+    bottom: 100px;
+    right: 50px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: rgba(204, 153, 255, 0.8);
+    border: none;
+    cursor: pointer;
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mobile-action-button img {
+    width: 30px;
+    height: 30px;
+    filter: brightness(0) invert(1);
+}
+
+/* Adaptation mobile */
+@media (max-width: 768px) {
+
+    #timer {
+        padding: 10px 20px;
+    }
+    
+    #timerLabel {
+        font-size: 14px;
+    }
+    
+    #time {
+        font-size: 32px;
+    }
+    
+    #timer.urgent #time {
+        font-size: 40px;
+    }
+
+    .menu-content, .settings-content {
+        width: 95%;
+        padding: 20px;
+    }
+
+    h1 {
+        font-size: 36px;
+    }
+
+    .game-over-content {
+        padding: 20px;
+    }
+
+    .podium-block {
+        width: 80px;
+    }
+
+    .first .podium-block { height: 160px; }
+    .second .podium-block { height: 120px; }
+    .third .podium-block { height: 80px; }
+
+    #playerList {
+        top: 100px;
+        right: 5px;
+        transform: none;
+        min-width: 80px;
+        max-width: 150px;
+        max-height: 200px;
+        font-size: 12px;
+        padding: 8px;
+    }
+
+    h3 {
+        font-size: 16px;
+    }
+
+    #players li {
+        padding: 2px 10px;
+        margin: 3px 0;
+    }
+
+    .player-name {
+        font-weight: bold;
+        font-size: 9px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 50px;
+      }
+
+    /* Adapter le timer */
+    #timer {
+        padding: 8px 15px;
+    }
+
+    #timerLabel {
+        font-size: 12px;
+    }
+
+    #time {
+        font-size: 24px;
+    }
+
+    #timer.urgent #time {
+        font-size: 32px;
+    }
+
+    /* Masquer le score sous le timer */
+    #score {
+        display: none;
+    }
+
+    /* Masquer les panneaux d'aide */
+    #instructions, 
+    #controls {
+        display: none !important;
+    }
+
+    /* Ajuster les bonus actifs pour qu'ils ne gênent pas les contrôles */
+    #activeBonuses {
+        bottom: 180px;
+    }
+
+    .activeBonus {
+        padding: 5px 10px;
+        font-size: 12px;
+    }
+
+    .activeBonus img {
+        width: 18px;
+        height: 18px;
+    }
+
+    /* Ajuster le bouton pause */
+    #pauseButton {
+        top: 10px;
+        right: 10px;
+        padding: 8px 15px;
+        font-size: 14px;
+    }
+
+    /* Ajustement du conteneur principal du jeu pour le zoom */
+    #gameContainer {
+        overflow: hidden;
+    }
+
+    /* Améliorer la netteté du rendu */
+    canvas {
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+        image-rendering: pixelated;
+    }
+
+    #controls {
+        bottom: 90px;
+    }
+
+    #activeBonuses {
+        bottom: 10px;
+        padding: 8px;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+        width: 90%;
+        max-width: 400px;
+    }
+
+    .activeBonus {
+        padding: 6px 12px;
+        font-size: 14px;
+    }
+    
+    #gameInfo {
+        width: 90%;
+        max-width: 300px;
+    }
+
+    .waiting-room-content {
+        padding: 20px;
+        width: 95%;
+    }
+
+    .floating-chat {
+        width: 280px;
+        height: 50vh;
+    }
+
+    .floating-chat.collapsed {
+        transform: translateX(-250px) translateY(-50%);
+    }
+
+    .mobile-controls {
+        display: block;
+    }
+    
+    /* Ajuster la position de la chatbox pour ne pas interférer avec les contrôles */
+    .floating-chat {
+        height: 40vh;
+        bottom: 200px;
+        top: auto;
+        transform: none;
+    }
+    
+    .floating-chat.collapsed {
+        transform: translateX(-270px);
+    }
+}
+
+/* Pour les très petits écrans */
+@media (max-width: 380px) {
+    #playerList {
+        max-width: 120px;
+        font-size: 11px;
+    }
+
+    #activeBonuses {
+        bottom: 200px;
+    }
+}
+
+/* Pour les écrans en mode paysage */
+@media (max-width: 900px) and (orientation: landscape) {
+
+    #playerList {
+        max-width: 180px;
+        max-height: 150px;
+    }
+
+    #activeBonuses {
+        bottom: 100px;
+    }
 }
