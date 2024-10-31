@@ -8,6 +8,8 @@ const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
 const nicknameInput = document.getElementById('nicknameInput');
 
+const GAME_VERSION = "v0.4.0";  // À mettre à jour à chaque déploiement
+
 // Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
 const saveSettingsButton = document.getElementById('saveSettingsButton');
@@ -173,11 +175,10 @@ const additionalStyles = `
 }
 `;
 
-// Ajouter les styles au document
-const styleSheet = document.createElement('style');
-styleSheet.textContent = additionalStyles;
-document.head.appendChild(styleSheet);
-document.addEventListener('DOMContentLoaded', initializeNicknameValidation);
+document.addEventListener('DOMContentLoaded', () => {
+    initializeNicknameValidation();
+    addVersionDisplay();
+});
 
 // Dimensions du jeu
 let GAME_WIDTH = window.innerWidth;
@@ -250,6 +251,14 @@ let gameSettings = {
         STEALTH: true
     }
 };
+
+function addVersionDisplay() {
+    const versionDisplay = document.createElement('div');
+    versionDisplay.id = 'versionDisplay';
+    versionDisplay.className = 'version-display';
+    versionDisplay.textContent = GAME_VERSION;
+    document.body.appendChild(versionDisplay);
+}
 
 // Fonction utilitaire pour détecter si on est sur mobile
 function isMobile() {
@@ -446,11 +455,12 @@ function initializeNicknameValidation() {
     // Fonction pour vérifier et mettre à jour l'état du bouton
     function updateButtonState() {
         const nickname = nicknameInput.value.trim();
-        startButton.disabled = nickname === '';
+        startButton.disabled = nickname.length === 0;
     }
 
-    // Écouter les changements dans l'input
+    // Écouter les événements d'entrée
     nicknameInput.addEventListener('input', updateButtonState);
+    nicknameInput.addEventListener('keyup', updateButtonState);
     nicknameInput.addEventListener('change', updateButtonState);
 
     // État initial
@@ -741,16 +751,20 @@ startButton.addEventListener('click', () => {
         initializeChat(socket); // Passer le socket en paramètre
     });
 
+    socket.on('playerLeft', (data) => {
+        showNotification(`${data.nickname} a quitté la salle${data.wasOwner ? ' (était propriétaire)' : ''}`, 'info');
+        
+        // Si nous devenons le nouveau propriétaire
+        if (data.wasOwner && data.newOwner === socket.id) {
+            showNotification('Vous êtes maintenant propriétaire de la salle', 'success');
+        }
+    });  
+
     socket.on('bonusExpired', (data) => {
         if (data.type === 'invincibility') {
-            const player = players[socket.id];
-            if (player) {
-                player.invincibilityActive = false;
-                // S'assurer que le timer est bien remis à zéro
-                if (player.bonusTimers) {
-                    player.bonusTimers.invincibility = 0;
-                }
-            }
+            invincibilityActive = false;
+            invincibilityTimeLeft = 0;
+            updateActiveBonusesDisplay();
         }
     });
 
@@ -774,6 +788,26 @@ startButton.addEventListener('click', () => {
     socket.on('updateWaitingRoom', (players) => {
         updateWaitingRoomPlayers(players);
     });
+
+    socket.on('playerJoined', (data) => {
+        if (data.id !== socket.id) { // Ne pas afficher pour soi-même
+            showNotification(`${data.nickname} a rejoint la partie !`, 'success');
+        }
+    });
+    
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `game-notification ${type}`;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+    
+        setTimeout(() => {
+            notification.classList.add('fade-out');
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        }, 3000);
+    }
     
     socket.on('gameStarting', () => {
         waitingRoomScreen.classList.remove('active');
@@ -943,45 +977,117 @@ function formatTime(date) {
 }
 
 // Fonction pour mettre à jour la liste des joueurs
-function updateWaitingRoomPlayers(players) {
-    playersList.innerHTML = '';
-
-    // Vérifier si on est le premier joueur
-    if (players.length > 0) {
-        const firstPlayer = players[0];
-        // Mettre à jour isRoomOwner si on est le premier joueur ou si on a déjà le flag isOwner
-        isRoomOwner = players.some(player => 
-            player.id === socket?.id && player.isOwner
-        );
+function updateWaitingRoomPlayers(data) {
+    console.log('Réception mise à jour room:', data); // Log de debug
+    
+    if (!data || !data.players) {
+        console.error('Données invalides reçues');
+        return;
     }
 
+    const { players, gameInProgress } = data;
+    playersList.innerHTML = '';
+
+    // Mettre à jour isRoomOwner
+    isRoomOwner = players.some(player => 
+        player.id === socket?.id && player.isOwner
+    );
+
+    // Supprimer l'ancien message de statut s'il existe
+    const existingStatus = document.querySelector('.game-status');
+    if (existingStatus) {
+        existingStatus.remove();
+    }
+
+    // Ajouter le message de statut SI une partie est en cours
+    if (gameInProgress) {
+        const playersInGame = players.filter(p => p.status === 'playing').length;
+        const statusMessage = document.createElement('div');
+        statusMessage.className = 'game-status';
+        statusMessage.innerHTML = `
+            <div class="game-status-content">
+                <span class="game-status-icon">🎮</span>
+                <span>Partie en cours avec ${playersInGame} joueur${playersInGame > 1 ? 's' : ''}</span>
+            </div>
+        `;
+        const container = playersList.parentElement;
+        if (container) {
+            container.insertBefore(statusMessage, playersList);
+        }
+    }
+
+    // Créer les éléments de la liste des joueurs
     players.forEach(player => {
         const playerElement = document.createElement('li');
         playerElement.className = 'waiting-room-player';
         
-        // Créer le contenu du joueur avant d'ajouter le badge
-        const playerContent = document.createElement('span');
-        playerContent.textContent = player.nickname;
+        // Conteneur pour le nom et les badges
+        const playerContent = document.createElement('div');
+        playerContent.className = 'player-content';
+        
+        // Nom du joueur
+        const playerName = document.createElement('span');
+        playerName.className = 'player-name';
+        playerName.textContent = player.nickname;
+        playerContent.appendChild(playerName);
+
+        // Badges
+        const badgesContainer = document.createElement('div');
+        badgesContainer.className = 'player-badges';
+
+        // Badge propriétaire
+        if (player.isOwner) {
+            const ownerBadge = document.createElement('span');
+            ownerBadge.className = 'owner-badge';
+            ownerBadge.title = 'Propriétaire de la salle';
+            ownerBadge.textContent = '👑';
+            badgesContainer.appendChild(ownerBadge);
+        }
+
+        // Badge statut
+        const statusBadge = document.createElement('span');
+        statusBadge.className = `status-badge ${player.status || 'waiting'}`;
+        statusBadge.textContent = (player.status === 'playing') ? '🎮' : '⌛';
+        statusBadge.title = (player.status === 'playing') ? 'En jeu' : 'En attente';
+        badgesContainer.appendChild(statusBadge);
+
+        playerContent.appendChild(badgesContainer);
         playerElement.appendChild(playerContent);
 
         if (player.id === socket?.id) {
             playerElement.classList.add('current-player');
         }
-        
-        if (player.isOwner) {
-            //console.log('Adding owner badge to:', player.nickname);
-            const ownerBadge = document.createElement('span');
-            ownerBadge.className = 'owner-badge';
-            ownerBadge.textContent = '👑';
-            playerElement.appendChild(ownerBadge);
-        }
 
         playersList.appendChild(playerElement);
     });
 
-    // Mettre à jour les contrôles en fonction du statut de propriétaire
-    startGameButton.disabled = !isRoomOwner;
-    //console.log('Start game button disabled:', !isRoomOwner);
+    // Gérer l'affichage du bouton de démarrage/rejoindre
+    if (gameInProgress) {
+        const isPlayerInGame = players.some(p => p.id === socket?.id && p.status === 'playing');
+        if (!isPlayerInGame) {
+            startGameButton.textContent = 'Rejoindre la partie en cours';
+            startGameButton.disabled = false;
+            startGameButton.className = 'primary-button join-game';
+            startGameButton.onclick = () => {
+                socket.emit('joinRunningGame', { 
+                    nickname: playerNickname 
+                });
+            };
+        } else {
+            startGameButton.style.display = 'none';
+        }
+    } else {
+        startGameButton.textContent = 'Lezgoooo';
+        startGameButton.className = 'primary-button';
+        startGameButton.disabled = !isRoomOwner;
+        startGameButton.style.display = 'block';
+        startGameButton.onclick = () => {
+            socket.emit('startGameFromRoom', {
+                nickname: playerNickname,
+                settings: gameSettings
+            });
+        };
+    }
 
     // Gérer l'état des inputs dans le menu paramètres
     const settingsInputs = settingsMenu.querySelectorAll('input, select, button');

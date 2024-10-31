@@ -8,10 +8,6 @@ const io = require('socket.io')(server);
 const GAME_WIDTH = 2000;
 const GAME_HEIGHT = 1500;
 
-// Configuration des fichiers statiques
-app.use('/assets', express.static(__dirname + '/assets'));
-app.use(express.static(__dirname + '/public'));
-
 // Paramètres par défaut du jeu
 const DEFAULT_GAME_SETTINGS = {
     gameDuration: 180,
@@ -59,26 +55,15 @@ const DEFAULT_GAME_SETTINGS = {
     negativeDuration: 14,
 };
 
-
-const waitingRoom = {
-    players: new Map(),
-    isGameStarted: false,
-    settings: { ...DEFAULT_GAME_SETTINGS } // Ajout des paramètres par défaut
-};
-
-const PORT = process.env.PORT || 3000;
-
-// Constantes du jeu
-const SPAWN_PROTECTION_TIME = 3000;
-const CAPTURE_COOLDOWN = 1000;
-const SAFE_SPAWN_DISTANCE = 100;
-const BOT_SPEED = 5;
-const UPDATE_INTERVAL = 50;
+// Configuration des fichiers statiques
+app.use('/assets', express.static(__dirname + '/assets'));
+app.use(express.static(__dirname + '/public'));
 
 // Variables globales
 let players = {};
 let bots = {};
 let blackBots = {};
+const activeSockets = {};
 let bonuses = [];
 let gameStartTime = Date.now();
 let currentGameSettings = { ...DEFAULT_GAME_SETTINGS };
@@ -89,10 +74,25 @@ let totalPauseDuration = 0;
 let botsInitialized = false;
 let specialZones = new Set();
 let zoneSpawnTimeout = null;
-const activeSockets = {};
 let pausedBy = null;
-let activemalus = new Map(); // Stocke les malus actifs par type
-let malusItems = []; // Liste des malus sur le terrain
+let activemalus = new Map();
+let malusItems = [];
+
+const waitingRoom = {
+    players: new Map(),
+    isGameStarted: false,
+    settings: { ...DEFAULT_GAME_SETTINGS }, // Ajout des paramètres par défaut
+    playersInGame: new Set() // ensemble des IDs des joueurs en partie
+};
+
+const PORT = process.env.PORT || 3000;
+
+// Constantes du jeu
+const SPAWN_PROTECTION_TIME = 3000;
+const CAPTURE_COOLDOWN = 1000;
+const SAFE_SPAWN_DISTANCE = 100;
+const BOT_SPEED = 5;
+const UPDATE_INTERVAL = 50;
 
 const availableColors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'];
 
@@ -151,44 +151,29 @@ class SpecialZone {
         );
     }
 
-    generateRandomShape() {
-        // Calculer la taille maximale (1/5 de la zone de jeu)
-        const maxArea = (GAME_WIDTH * GAME_HEIGHT) / 5;
-        
-        // Choisir aléatoirement entre cercle et rectangle
-        const isCircle = Math.random() < 0.5;
-        
-        if (isCircle) {
-            const maxRadius = Math.sqrt(maxArea / Math.PI);
-            const radius = Math.random() * (maxRadius - 50) + 50;
-            const x = radius + Math.random() * (GAME_WIDTH - 2 * radius);
-            const y = radius + Math.random() * (GAME_HEIGHT - 2 * radius);
-            
-            return {
-                type: 'circle',
-                x,
-                y,
-                radius
-            };
-        } else {
-            const aspect = 0.5 + Math.random(); // ratio largeur/hauteur entre 0.5 et 1.5
-            const maxWidth = Math.sqrt(maxArea * aspect);
-            const maxHeight = maxArea / maxWidth;
-            
-            const width = Math.random() * (maxWidth - 100) + 100;
-            const height = Math.random() * (maxHeight - 100) + 100;
-            const x = Math.random() * (GAME_WIDTH - width);
-            const y = Math.random() * (GAME_HEIGHT - height);
-            
-            return {
-                type: 'rectangle',
-                x,
-                y,
-                width,
-                height
-            };
-        }
-    }
+// Zones rondes :
+generateRandomShape() {
+    // Calculer la taille maximale (1/5 de la zone de jeu)
+    const maxArea = (GAME_WIDTH * GAME_HEIGHT) / 5;
+    
+    // Calculer le rayon maximal à partir de l'aire
+    const maxRadius = Math.sqrt(maxArea / Math.PI);
+    
+    // Générer un rayon aléatoire entre 150 et maxRadius
+    const minRadius = 150;
+    const radius = Math.random() * (maxRadius - minRadius) + minRadius;
+    
+    // Positionner le cercle en s'assurant qu'il reste dans les limites du jeu
+    const x = radius + Math.random() * (GAME_WIDTH - 2 * radius);
+    const y = radius + Math.random() * (GAME_HEIGHT - 2 * radius);
+    
+    return {
+        type: 'circle',
+        x,
+        y,
+        radius
+    };
+}
 
     isExpired() {
         return Date.now() - this.createdAt > this.duration;
@@ -1473,11 +1458,10 @@ function handleGameStart(socket, data) {
 
 // Configuration Socket.IO
 io.on('connection', (socket) => {
-    console.log(`Nouvelle connexion : ${socket.id}`);
 
     socket.on('joinWaitingRoom', (nickname) => {
+        console.log('Joueur rejoint la salle:', nickname); // Log de debug
     
-        // Même logique : premier joueur ou pas de propriétaire devient propriétaire
         const isEmptyRoom = waitingRoom.players.size === 0;
         const hasNoOwner = !Array.from(waitingRoom.players.values()).some(player => player.isOwner);
         const shouldBeOwner = isEmptyRoom || hasNoOwner;
@@ -1485,21 +1469,87 @@ io.on('connection', (socket) => {
         const playerData = {
             id: socket.id,
             nickname: nickname,
-            isOwner: shouldBeOwner
+            isOwner: shouldBeOwner,
+            status: 'waiting'
         };
     
+        console.log('Données du joueur:', playerData); // Log de debug
+        
         waitingRoom.players.set(socket.id, playerData);
-        //console.log('Player added to waiting room:', playerData);
     
-        // Si c'est le propriétaire, envoyer les paramètres actuels
         if (shouldBeOwner) {
             socket.emit('gameSettingsUpdated', waitingRoom.settings);
         }
     
-        // Envoyer la liste mise à jour à tous les joueurs
-        const players = Array.from(waitingRoom.players.values());
-        //console.log('Emitting updated players:', players);
-        io.emit('updateWaitingRoom', players);
+        // Vérifier l'état de la partie
+        if (waitingRoom.isGameStarted) {
+            socket.emit('gameInProgress', {
+                canJoin: true,
+                playersCount: Object.keys(players).length
+            });
+        }
+    
+        // Log avant l'émission
+        console.log('Émission updateWaitingRoom:', {
+            players: Array.from(waitingRoom.players.values()),
+            gameInProgress: waitingRoom.isGameStarted
+        });
+    
+        // Émettre la mise à jour à tous les clients
+        io.emit('updateWaitingRoom', {
+            players: Array.from(waitingRoom.players.values()),
+            gameInProgress: waitingRoom.isGameStarted
+        });
+    });
+
+    socket.on('joinRunningGame', (data) => {
+        console.log(`Joueur ${data.nickname} tente de rejoindre la partie en cours`);
+    
+        if (!waitingRoom.isGameStarted) {
+            socket.emit('error', 'Aucune partie en cours');
+            return;
+        }
+    
+        try {
+            // Créer le nouveau joueur
+            const newPlayer = new Player(socket.id, data.nickname);
+            players[socket.id] = newPlayer;
+            activeSockets[socket.id] = socket;
+    
+            // Faire apparaître le joueur à une position sûre
+            const spawnPos = getSpawnPosition();
+            newPlayer.x = spawnPos.x;
+            newPlayer.y = spawnPos.y;
+            newPlayer.spawnProtection = Date.now() + SPAWN_PROTECTION_TIME;
+    
+            // Mettre à jour le statut dans la salle d'attente
+            const playerData = waitingRoom.players.get(socket.id);
+            if (playerData) {
+                playerData.status = 'playing';
+                waitingRoom.playersInGame.add(socket.id);
+            }
+    
+            // Informer tous les joueurs de l'arrivée du nouveau joueur
+            io.emit('playerJoined', {
+                nickname: data.nickname,
+                id: socket.id
+            });
+    
+            // Mettre à jour la salle d'attente
+            io.emit('updateWaitingRoom', {
+                players: Array.from(waitingRoom.players.values()),
+                gameInProgress: waitingRoom.isGameStarted
+            });
+    
+            // Faire rejoindre le jeu au nouveau joueur
+            socket.emit('gameStarting');
+    
+            console.log(`Joueur ${data.nickname} a rejoint la partie avec succès`);
+    
+        } catch (error) {
+            console.error('Erreur lors de l\'ajout du joueur à la partie:', error);
+            socket.emit('error', 'Impossible de rejoindre la partie');
+        }
     });
 
     socket.on('bonusExpired', (data) => {
@@ -1515,6 +1565,34 @@ io.on('connection', (socket) => {
                 });
             }
         }
+    });
+
+    // gérer la demande de rejoindre une partie en cours
+    socket.on('joinRunningGame', (data) => {
+        if (!waitingRoom.isGameStarted) return;
+
+        const playerData = waitingRoom.players.get(socket.id);
+        if (!playerData) return;
+
+        // Ajouter le joueur à la partie
+        players[socket.id] = new Player(socket.id, data.nickname);
+        activeSockets[socket.id] = socket;
+        
+        // Faire apparaître le joueur à une position sûre
+        players[socket.id].respawn();
+        
+        // Mettre à jour le statut dans la salle d'attente
+        playerData.status = 'playing';
+        waitingRoom.playersInGame.add(socket.id);
+        
+        // Informer tout le monde de la mise à jour
+        io.emit('updateWaitingRoom', {
+            players: Array.from(waitingRoom.players.values()),
+            gameInProgress: waitingRoom.isGameStarted
+        });
+
+        // Faire rejoindre la partie au joueur
+        socket.emit('gameStarting');
     });
 
     socket.on('rejoinWaitingRoom', (data) => {
@@ -1561,19 +1639,35 @@ io.on('connection', (socket) => {
     });
 
     socket.on('leaveWaitingRoom', () => {
-        const isOwner = waitingRoom.players.get(socket.id)?.isOwner;
-        waitingRoom.players.delete(socket.id);
-        
-        // Si le propriétaire part et qu'il reste des joueurs
-        if (isOwner && waitingRoom.players.size > 0) {
-            const [firstPlayerId] = waitingRoom.players.keys();
-            const firstPlayer = waitingRoom.players.get(firstPlayerId);
-            if (firstPlayer) {
-                firstPlayer.isOwner = true;
+        const player = waitingRoom.players.get(socket.id);
+        if (player) {
+            const wasOwner = player.isOwner;
+            waitingRoom.players.delete(socket.id);
+            waitingRoom.playersInGame.delete(socket.id);
+    
+            // Transférer la propriété si nécessaire
+            if (wasOwner && waitingRoom.players.size > 0) {
+                const nextPlayer = waitingRoom.players.values().next().value;
+                if (nextPlayer) {
+                    nextPlayer.isOwner = true;
+                    const newOwnerSocket = io.sockets.sockets.get(nextPlayer.id);
+                    if (newOwnerSocket) {
+                        newOwnerSocket.emit('gameSettingsUpdated', waitingRoom.settings);
+                    }
+                }
             }
+    
+            // Informer tous les clients de la mise à jour
+            io.emit('updateWaitingRoom', {
+                players: Array.from(waitingRoom.players.values()),
+                gameInProgress: waitingRoom.isGameStarted
+            });
+    
+            io.emit('playerLeft', {
+                nickname: player.nickname,
+                wasOwner: wasOwner
+            });
         }
-        
-        io.emit('updateWaitingRoom', Array.from(waitingRoom.players.values()));
     });
 
     socket.on('resetAndReturnToWaitingRoom', (data) => {
@@ -1654,11 +1748,8 @@ io.on('connection', (socket) => {
     });
 
     socket.on('startGameFromRoom', (data) => {
-        const player = waitingRoom.players.get(socket.id);
-        //console.log('Start game request from:', socket.id, 'isOwner:', player?.isOwner); // Debug log
-        
+        const player = waitingRoom.players.get(socket.id);       
         if (player?.isOwner) {
-            //console.log('Starting game with settings:', waitingRoom.settings); // Debug log
             
             // Reset complet du jeu
             isGameOver = false;
@@ -1689,10 +1780,14 @@ io.on('connection', (socket) => {
                 
             // Initialiser la partie pour tous les joueurs de la salle d'attente
             waitingRoom.players.forEach((waitingPlayer, socketId) => {
+                // Mettre à jour le statut du joueur en attente
+                waitingPlayer.status = 'playing';  // Utiliser waitingPlayer au lieu de player
+                waitingRoom.playersInGame.add(socketId);
+    
                 const playerSocket = io.sockets.sockets.get(socketId);
                 if (playerSocket) {
                     // Créer un nouveau joueur s'il n'existe pas déjà
-                    if (!players[socketId]) {
+                   if (!players[socketId]) {
                         players[socketId] = new Player(socketId, waitingPlayer.nickname);
                         activeSockets[socketId] = playerSocket;
                     }
@@ -1811,6 +1906,8 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
+        console.log(`Déconnexion du joueur: ${socket.id}`); // Debug log
+    
         // Gérer la pause si nécessaire
         if (pausedBy === socket.id) {
             isPaused = false;
@@ -1823,38 +1920,45 @@ io.on('connection', (socket) => {
         }
     
         // Nettoyer les ressources du joueur
-        //console.log(`Déconnexion : ${socket.id}`);
         delete players[socket.id];
         delete activeSockets[socket.id];
     
-        if (Object.keys(players).length === 0) {
-            resetGame();
-        }
-    
-        // Gérer le transfert de propriété
+        // Gérer la déconnexion dans la salle d'attente
         if (waitingRoom.players.has(socket.id)) {
             const disconnectedPlayer = waitingRoom.players.get(socket.id);
             const wasOwner = disconnectedPlayer.isOwner;
             waitingRoom.players.delete(socket.id);
+            waitingRoom.playersInGame.delete(socket.id);
     
-            // Si le propriétaire se déconnecte et qu'il reste des joueurs
+            // Transférer la propriété si nécessaire
             if (wasOwner && waitingRoom.players.size > 0) {
-                const [firstPlayerId] = waitingRoom.players.keys();
-                const firstPlayer = waitingRoom.players.get(firstPlayerId);
-                if (firstPlayer) {
-                    //console.log('Transferring ownership to:', firstPlayer.nickname);
-                    firstPlayer.isOwner = true;
-    
-                    // Informer le nouveau propriétaire
-                    const newOwnerSocket = io.sockets.sockets.get(firstPlayerId);
+                const nextPlayer = waitingRoom.players.values().next().value;
+                if (nextPlayer) {
+                    nextPlayer.isOwner = true;
+                    const newOwnerSocket = io.sockets.sockets.get(nextPlayer.id);
                     if (newOwnerSocket) {
                         newOwnerSocket.emit('gameSettingsUpdated', waitingRoom.settings);
                     }
-    
-                    // Mettre à jour immédiatement la liste pour tous
-                    io.emit('updateWaitingRoom', Array.from(waitingRoom.players.values()));
                 }
             }
+    
+            // Informer tous les clients de la mise à jour
+            io.emit('updateWaitingRoom', {
+                players: Array.from(waitingRoom.players.values()),
+                gameInProgress: waitingRoom.isGameStarted
+            });
+    
+            // Si c'était le dernier joueur, réinitialiser la partie
+            if (waitingRoom.players.size === 0) {
+                resetGame();
+                waitingRoom.isGameStarted = false;
+            }
+    
+            // Notifier les autres joueurs
+            io.emit('playerLeft', {
+                nickname: disconnectedPlayer.nickname,
+                wasOwner: wasOwner
+            });
         }
     });
 });
