@@ -1,6 +1,13 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
 
+## [0.4.1] - 2024-10-31
+### Ajouts
+- Ajout des statuts des joueurs dans la salle d'attente
+- Possibilité pour un joueur de rejoindre une partie en cours
+- Notification d'un joueur qui join ou leave une partie
+- Suppression des zones carrés
+
 ## [0.4.0] - 2024-10-31
 ### Ajouts
 - Système de malus avec effets visuels
