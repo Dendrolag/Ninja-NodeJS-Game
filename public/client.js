@@ -8,7 +8,7 @@ const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
 const nicknameInput = document.getElementById('nicknameInput');
 
-const GAME_VERSION = "v0.4.0";  // À mettre à jour à chaque déploiement
+const GAME_VERSION = "v0.4.1";  // À mettre à jour à chaque déploiement
 
 // Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
