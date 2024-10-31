@@ -167,6 +167,61 @@
                 </div>
             </div>
 
+            <div class="settings-group">
+                <div class="setting-header">
+                    <h3>Paramètres des malus</h3>
+                </div>
+            
+                <div class="setting-group">
+                    <div class="setting-header">
+                        Activer les malus
+                        <input type="checkbox" id="enableMalus">
+                    </div>
+
+                    <div class="setting-details">
+                        <div>
+                            <input type="checkbox" id="enableReverseControls">
+                            <label for="enableReverseControls">Contrôles inversés</label>
+                        </div>
+                        <div>
+                            <input type="checkbox" id="enableBlurVision">
+                            <label for="enableBlurVision">Vision floue</label>
+                        </div>
+                        <div>
+                            <input type="checkbox" id="enableNegativeVision">
+                            <label for="enableNegativeVision">Vision négative</label>
+                        </div>
+                    </div>
+            
+                    <div class="setting-details">
+                        Intervalle d'apparition (secondes):
+                        <input type="number" id="malusSpawnInterval" class="number-input" min="1" max="30" value="8">
+                    </div>
+            
+                    <div class="setting-details">
+                        Taux d'apparition (%):
+                        <input type="number" id="malusSpawnRate" class="number-input" min="1" max="100" value="20">
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                <div class="setting-details">
+                    <div>
+                        Durée du malus Contrôles inversés (secondes):
+                        <input type="number" id="reverseControlsDuration" class="number-input" min="1" max="30" value="10">
+                    </div>
+                    <div>
+                        Durée du malus Vision floue (secondes):
+                        <input type="number" id="blurDuration" class="number-input" min="1" max="30" value="12">
+                    </div>
+                    <div>
+                        Durée du malus Vision négative (secondes):
+                        <input type="number" id="negativeDuration" class="number-input" min="1" max="30" value="14">
+                    </div>
+                </div>
+                </div>
+            </div>
+
             <div class="setting-group">
                 <div class="setting-header">
                     <div>

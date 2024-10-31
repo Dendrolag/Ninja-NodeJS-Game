@@ -42,7 +42,21 @@ const DEFAULT_GAME_SETTINGS = {
     blackBotStartPercent: 50, // Apparaît à 50% du temps de la partie
     blackBotDetectionRadius: 150, // Rayon de détection en pixels
     blackBotSpeed: 6, // Vitesse légèrement supérieure aux bots normaux
-    pointsLossPercent: 50 // Pourcentage de points perdus lors d'une capture
+    pointsLossPercent: 50, // Pourcentage de points perdus lors d'une capture
+
+    // Paramètres des malus
+    enableMalus: true,
+    malusSpawnInterval: 8, // Intervalle d'apparition en secondes
+    malusSpawnRate: 20,    // Taux d'apparition en pourcentage
+
+    enableReverseControls: true,
+    enableBlurVision: true,
+    enableNegativeVision: true,
+    
+    // Durées des différents malus (en secondes)
+    reverseControlsDuration: 10,
+    blurDuration: 12,
+    negativeDuration: 14,
 };
 
 
@@ -77,6 +91,8 @@ let specialZones = new Set();
 let zoneSpawnTimeout = null;
 const activeSockets = {};
 let pausedBy = null;
+let activemalus = new Map(); // Stocke les malus actifs par type
+let malusItems = []; // Liste des malus sur le terrain
 
 const availableColors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'];
 
@@ -263,6 +279,117 @@ class SpecialZone {
     }
 }
 
+function updatePlayerBonuses() {
+    const now = Date.now();
+    
+    Object.values(players).forEach(player => {
+        if (!player.bonusTimers) return;
+        
+        if (player.invincibilityActive && player.bonusTimers.invincibility > 0) {
+            const timeElapsed = (now - player.bonusStartTime) / 1000;
+            if (timeElapsed >= player.bonusTimers.invincibility) {
+                player.invincibilityActive = false;
+                player.bonusTimers.invincibility = 0;
+                //console.log(`Invincibilité désactivée pour ${player.nickname} (timer serveur)`);
+                
+                // Notifier le client
+                const socket = activeSockets[player.id];
+                if (socket) {
+                    socket.emit('bonusDeactivated', { type: 'invincibility' });
+                }
+            }
+        }
+    });
+}
+
+// Fonction de spawn des malus
+function spawnMalus() {
+    if (isPaused || isGameOver || !currentGameSettings.enableMalus) return;
+
+    const availableMalus = [
+        { type: 'reverse', enabled: currentGameSettings.enableReverseControls },
+        { type: 'blur', enabled: currentGameSettings.enableBlurVision },
+        { type: 'negative', enabled: currentGameSettings.enableNegativeVision }
+    ].filter(m => m.enabled);
+
+    // Ne rien faire s'il n'y a aucun malus activé
+    if (availableMalus.length === 0) return;
+
+    // Limiter le nombre de malus simultanés à 5
+    if (malusItems.length < 5 && Math.random() * 100 < currentGameSettings.malusSpawnRate) {
+        const selectedMalus = availableMalus[Math.floor(Math.random() * availableMalus.length)];
+        malusItems.push(new Malus(selectedMalus.type));
+    }
+
+    // Planifier le prochain spawn
+    const interval = currentGameSettings.malusSpawnInterval * 1000;
+    const randomVariation = interval * 0.5;
+    const nextSpawnTime = interval + (Math.random() * randomVariation - randomVariation / 2);
+    setTimeout(spawnMalus, nextSpawnTime);
+}
+
+// Fonction de gestion de la collection des malus
+function handleMalusCollection(player, malus) {
+    console.log('handleMalusCollection appelé:', { 
+        playerId: player.id, 
+        malusType: malus.type 
+    });
+
+    const socket = activeSockets[player.id];
+    if (!socket) {
+        console.log('Socket non trouvé pour le joueur');
+        return;
+    }
+
+    const malusDurations = {
+        reverse: currentGameSettings.reverseControlsDuration,
+        blur: currentGameSettings.blurDuration,
+        negative: currentGameSettings.negativeDuration
+    };
+
+    const duration = malusDurations[malus.type];
+    
+    // Envoyer à tous les sockets connectés
+    io.emit('malusEvent', {
+        type: malus.type,
+        duration: duration,
+        collectorId: player.id, 
+        collectorNickname: player.nickname
+    });
+    
+    console.log('Événement malusEvent émis à tous les clients');
+
+    // Notifier immédiatement tous les joueurs
+    io.emit('malusEvent', {
+        type: malus.type,
+        duration: malusDurations[malus.type],
+        collectorId: player.id,
+        collectorNickname: player.nickname
+    });
+
+    // Notifier d'abord le collecteur
+    console.log('Envoi de malusCollected au collecteur:', player.nickname);
+    socket.emit('malusCollected', {
+        type: malus.type,
+        duration: malusDurations[malus.type]
+    });
+
+    // Ensuite appliquer le malus aux autres joueurs
+    Object.entries(players).forEach(([playerId, targetPlayer]) => {
+        if (playerId !== player.id) {
+            const targetSocket = activeSockets[playerId];
+            if (targetSocket) {
+                //console.log('Envoi de applyMalus à:', targetPlayer.nickname);
+                targetSocket.emit('applyMalus', {
+                    type: malus.type,
+                    duration: malusDurations[malus.type],
+                    collectedBy: player.nickname
+                });
+            }
+        }
+    });
+}
+
 function handlePlayerCapture(attacker, victim) {
     // Vérifier l'invincibilité et la protection au spawn
     if (victim.invincibilityActive || victim.isInvulnerable() || !attacker.canCapture()) return;
@@ -372,17 +499,36 @@ class Player extends Entity {
         this.capturedBy = {};
         this.botsControlled = 0;
         this.totalBotsCaptures = 0;
-        this.capturedByBlackBot = 0;  // Nouveau compteur
+        this.capturedByBlackBot = 0;
         this.spawnProtection = Date.now() + SPAWN_PROTECTION_TIME;
         this.lastCapture = 0;
         this.type = 'player';
+        this._invincibilityActive = false; // Nouvelle propriété privée
         this.speedBoostActive = false;
-        this.invincibilityActive = false;
+        this.bonusStartTime = 0;
+    }
+
+    get invincibilityActive() {
+        return this._invincibilityActive;
+    }
+
+    set invincibilityActive(value) {
+        this._invincibilityActive = Boolean(value);
+        //console.log(`Invincibilité changée pour ${this.nickname}:`, this._invincibilityActive);
+    }
+
+    deactivateInvincibility() {
+        this._invincibilityActive = false;
+        if (this.bonusTimers) {
+            this.bonusTimers.invincibility = 0;
+        }
+        //console.log(`Invincibilité désactivée pour ${this.nickname}`);
     }
 
     isInvulnerable() {
-        // Retourner true si le joueur a soit la protection au spawn, soit le bonus d'invincibilité
-        return this.invincibilityActive || Date.now() < this.spawnProtection;
+        const now = Date.now();
+        // Retourner true si le joueur a soit la protection au spawn, soit l'invincibilité active
+        return this.invincibilityActive || now < this.spawnProtection;
     }
 
     addCapturedBots(count) {
@@ -482,6 +628,7 @@ class BlackBot extends Bot {
         this.detectionRadius = DEFAULT_GAME_SETTINGS.blackBotDetectionRadius;
         this.targetEntity = null;
         this.baseSpeed = BOT_SPEED; // Utiliser la même vitesse que les autres bots
+        this.lastTargetSearch = 0;
 
         // Repositionner le bot noir à une position sûre lors de sa création
         const spawnPos = getSpawnPosition();
@@ -532,40 +679,40 @@ class BlackBot extends Bot {
         let nearestNormalBot = null;
         let nearestBotDistance = Infinity;
     
-    // Parcourir toutes les entités pour trouver les plus proches
-    Object.values(entities).forEach(entity => {
-        if (entity.id === this.id) return;
-        const distance = this.getDistanceTo(entity);
+        Object.values(entities).forEach(entity => {
+            if (entity.id === this.id) return;
+            const distance = this.getDistanceTo(entity);
     
-        // Ne considérer que les entités dans le rayon de détection
-        if (distance < this.detectionRadius) {
-            // Prioriser les joueurs non invincibles
-            if (entity.type === 'player' && !entity.invincibilityActive) {
-                if (distance < nearestPlayerDistance) {
-                    nearestPlayerDistance = distance;
-                    nearestPlayer = entity;
+            // Ne considérer que les entités dans le rayon de détection
+            if (distance < this.detectionRadius) {
+                // Pour les joueurs, vérifier l'invincibilité
+                if (entity.type === 'player') {
+                    // Vérifier si le joueur n'est PAS invincible
+                    if (!entity.invincibilityActive && !entity.isInvulnerable()) {
+                        if (distance < nearestPlayerDistance) {
+                            nearestPlayerDistance = distance;
+                            nearestPlayer = entity;
+                        }
+                    }
                 }
-            }
-            // Pour les bots, ne considérer que ceux qui ne sont pas déjà blancs
-            else if (entity.type === 'bot' && entity.color !== '#FFFFFF') {
-                if (distance < nearestBotDistance) {
-                    nearestBotDistance = distance;
-                    nearestNormalBot = entity;
+                // Pour les bots, ne considérer que ceux qui ne sont pas déjà blancs
+                else if (entity.type === 'bot' && entity.color !== '#FFFFFF') {
+                    if (distance < nearestBotDistance) {
+                        nearestBotDistance = distance;
+                        nearestNormalBot = entity;
                     }
                 }
             }
         });
     
-    // Prioriser un joueur si présent dans le rayon, sinon prendre un bot
-    if (nearestPlayer) {
-        //console.log('Setting target to player'); // Debug log
-        this.targetEntity = nearestPlayer;
-    } else if (nearestNormalBot) {
-        //console.log('Setting target to bot'); // Debug log
-        this.targetEntity = nearestNormalBot;
-    } else {
-        this.targetEntity = null;
-    }
+        // Prioriser un joueur si présent dans le rayon
+        if (nearestPlayer) {
+            this.targetEntity = nearestPlayer;
+        } else if (nearestNormalBot) {
+            this.targetEntity = nearestNormalBot;
+        } else {
+            this.targetEntity = null;
+        }
     }
 
     pursueTarget() {
@@ -597,13 +744,10 @@ class BlackBot extends Bot {
         const now = Date.now();
         if (now - this.lastCaptureTime < this.captureCooldown) return;
     
-        // Double vérification de l'invincibilité
         if (entity.type === 'player') {
-            // Vérifier explicitement à la fois invincibilityActive et la protection au spawn
+            // Double vérification de l'invincibilité
             if (entity.invincibilityActive || entity.isInvulnerable()) {
-                // Si le joueur est invincible, il peut capturer le bot noir
-                this.destroyed = true;
-                delete blackBots[this.id];
+                // Le joueur est invincible, mais on ne détruit plus le bot noir
                 return;
             }
     
@@ -692,17 +836,132 @@ class Bonus {
         this.x = Math.random() * GAME_WIDTH;
         this.y = Math.random() * GAME_HEIGHT;
         this.createdAt = Date.now();
-        this.lifetime = 8000; // 8 secondes en millisecondes
+        this.lifetime = 8000; // 8 secondes
+        this.warningThreshold = 3000; // 3 secondes avant disparition
+        this.lastUpdateTime = Date.now();
     }
 
     isExpired() {
         return Date.now() - this.createdAt >= this.lifetime;
     }
+
+    getTimeLeft() {
+        return Math.max(0, this.lifetime - (Date.now() - this.createdAt));
+    }
+
+    shouldBlink() {
+        return this.getTimeLeft() <= this.warningThreshold;
+    }
+
+    getBlinkState() {
+        if (!this.shouldBlink()) return { opacity: 1, scale: 1 };
+        
+        const timeLeft = this.getTimeLeft();
+        const blinkProgress = 1 - (timeLeft / this.warningThreshold);
+        
+        // Fonction de lissage pour rendre l'animation plus fluide
+        const easeInOutQuad = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        
+        // Calculer la phase de clignotement (plus rapide vers la fin)
+        const blinkFrequency = 3 + (blinkProgress * 5); // Augmente progressivement
+        const blinkPhase = Math.sin(Date.now() * 0.004 * blinkFrequency);
+        
+        // Calculer l'opacité avec lissage
+        const baseOpacity = 0.4 + (0.6 * easeInOutQuad(Math.abs(blinkPhase)));
+        
+        // Ajouter une légère pulsation de taille
+        const baseScale = 1 + (0.1 * Math.abs(blinkPhase));
+        
+        return {
+            opacity: baseOpacity,
+            scale: baseScale
+        };
+    }
+}
+
+class Malus {
+    constructor(type) {
+        this.id = `malus_${Date.now()}_${Math.random()}`;
+        this.type = type;
+        this.x = Math.random() * GAME_WIDTH;
+        this.y = Math.random() * GAME_HEIGHT;
+        this.createdAt = Date.now();
+        this.lifetime = 8000; // 8 secondes
+        this.warningThreshold = 3000; // 3 secondes avant disparition
+        this.lastUpdateTime = Date.now();
+    }
+
+    isExpired() {
+        return Date.now() - this.createdAt >= this.lifetime;
+    }
+
+    getTimeLeft() {
+        return Math.max(0, this.lifetime - (Date.now() - this.createdAt));
+    }
+
+    shouldBlink() {
+        return this.getTimeLeft() <= this.warningThreshold;
+    }
+
+    getBlinkState() {
+        if (!this.shouldBlink()) return { opacity: 1, scale: 1 };
+        
+        const timeLeft = this.getTimeLeft();
+        const blinkProgress = 1 - (timeLeft / this.warningThreshold);
+        
+        // Fonction de lissage pour rendre l'animation plus fluide
+        const easeInOutQuad = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        
+        // Calculer la phase de clignotement (plus rapide vers la fin)
+        const blinkFrequency = 3 + (blinkProgress * 5); // Augmente progressivement
+        const blinkPhase = Math.sin(Date.now() * 0.004 * blinkFrequency);
+        
+        // Calculer l'opacité avec lissage
+        const baseOpacity = 0.4 + (0.6 * easeInOutQuad(Math.abs(blinkPhase)));
+        
+        // Ajouter une légère pulsation de taille
+        const baseScale = 1 + (0.1 * Math.abs(blinkPhase));
+        
+        return {
+            opacity: baseOpacity,
+            scale: baseScale
+        };
+    }
+}
+
+
+function updateMalusItems() {
+    const currentTime = Date.now();
+    
+    // Mettre à jour la liste des malus
+    malusItems = malusItems.filter(malus => {
+        if (malus.isExpired()) {
+            return false; // Supprimer les malus expirés
+        }
+        return true;
+    });
+
+    // Pour chaque malus restant, calculer son état actuel
+    malusItems.forEach(malus => {
+        malus.lastUpdateTime = currentTime;
+    });
 }
 
 // Nettoyer les bonus expirés
 function cleanExpiredBonuses() {
     bonuses = bonuses.filter(bonus => !bonus.isExpired());
+}
+
+function updateBonusItems() {
+    const currentTime = Date.now();
+    
+    // Mettre à jour la liste des bonus
+    bonuses = bonuses.filter(bonus => !bonus.isExpired());
+
+    // Pour chaque bonus restant, calculer son état actuel
+    bonuses.forEach(bonus => {
+        bonus.lastUpdateTime = currentTime;
+    });
 }
 
 // Fonctions utilitaires
@@ -863,6 +1122,9 @@ function handleBonusCollection(player, bonus) {
         };
     }
 
+    const duration = bonusDurations[bonus.type];
+
+
     switch(bonus.type) {
         case 'speed':
             player.speedBoostActive = true;
@@ -872,9 +1134,9 @@ function handleBonusCollection(player, bonus) {
             break;
         case 'invincibility':
             player.invincibilityActive = true;
-            if (!player.bonusTimers) player.bonusTimers = {};
-            if (!player.bonusTimers.invincibility) player.bonusTimers.invincibility = 0;
-            player.bonusTimers.invincibility += bonusDurations[bonus.type];
+            player.bonusTimers.invincibility = duration;
+            player.bonusStartTime = Date.now();
+            //console.log(`Invincibilité activée pour ${player.nickname} pour ${duration} secondes`);
             break;
         case 'reveal':
             player.revealActive = true;
@@ -929,16 +1191,26 @@ function detectCollisions(entity, entityId) {
         }
     });
 
-    // Ajouter : Collisions avec les bots noirs
+    // Collisions avec les bots noirs
     if (entity.type === 'player') {
+        const player = players[entity.id];
+        /*console.log('État du joueur:', {
+            id: entity.id,
+            invincibilityActive: player.invincibilityActive,
+            isInvulnerable: player.isInvulnerable(),
+            bonusTimers: player.bonusTimers
+        });*/
+    
         Object.entries(blackBots).forEach(([blackBotId, blackBot]) => {
             const dx = entity.x - blackBot.x;
             const dy = entity.y - blackBot.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
 
             if (distance < 20) {
-                // Si le joueur est invincible, il peut capturer le bot noir
-                if (entity.invincibilityActive) {
+                // IMPORTANT : Vérification stricte de l'invincibilité
+                const player = players[entity.id];
+                // Le joueur ne peut interagir avec le bot noir QUE s'il est actuellement invincible
+                if (player && player.invincibilityActive === true) {
                     delete blackBots[blackBotId];
                     const socket = activeSockets[entity.id];
                     if (socket) {
@@ -948,12 +1220,11 @@ function detectCollisions(entity, entityId) {
                         });
                     }
                 }
+                // Si le joueur n'est pas invincible, le bot noir gère lui-même la capture
             }
         });
-    }
 
-    // Collisions avec les bonus
-    if (entity.type === 'player') {
+        // Collisions avec les bonus
         bonuses = bonuses.filter(bonus => {
             const dx = entity.x - bonus.x;
             const dy = entity.y - bonus.y;
@@ -961,6 +1232,19 @@ function detectCollisions(entity, entityId) {
 
             if (distance < 15) {
                 handleBonusCollection(entity, bonus);
+                return false;
+            }
+            return true;
+        });
+
+        // Collisions avec les malus
+        malusItems = malusItems.filter(malus => {
+            const dx = entity.x - malus.x;
+            const dy = entity.y - malus.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance < 15) {
+                handleMalusCollection(entity, malus);
                 return false;
             }
             return true;
@@ -1002,11 +1286,7 @@ function calculatePlayerScores() {
 function sendUpdates() {
     if (isPaused || isGameOver) return;
 
-    // Nettoyer les bonus expirés
-    cleanExpiredBonuses();
-
-    // Gérer les zones spéciales
-    manageSpecialZones();
+    malusItems = malusItems.filter(malus => !malus.isExpired());
 
     // Appliquer les effets des zones
     for (const zone of specialZones) {
@@ -1061,6 +1341,17 @@ function sendUpdates() {
     // Calculer les scores des joueurs
     const playerScores = calculatePlayerScores();
 
+    // Nettoyer les bonus expirés
+    cleanExpiredBonuses();
+
+    // Gérer les zones spéciales
+    manageSpecialZones();
+
+    // Malus
+    updateMalusItems();
+
+    updateBonusItems();
+
     // Préparer les données complètes du jeu
     const gameData = {
         entities: plainEntities,
@@ -1071,9 +1362,21 @@ function sendUpdates() {
             id: bonus.id,
             x: bonus.x,
             y: bonus.y,
-            type: bonus.type
+            type: bonus.type,
+            timeLeft: bonus.getTimeLeft(),
+            isBlinking: bonus.shouldBlink(),
+            blinkState: bonus.getBlinkState()
         })),
-        // Inclure les zones spéciales
+        malus: malusItems.map(malus => ({
+            id: malus.id,
+            x: malus.x,
+            y: malus.y,
+            type: malus.type,
+            timeLeft: malus.getTimeLeft(),
+            isBlinking: malus.shouldBlink(),
+            blinkState: malus.getBlinkState()
+        })),
+        // zones spéciales
         zones: Array.from(specialZones).map(zone => ({
             type: zone.type,
             shape: zone.shape,
@@ -1105,10 +1408,23 @@ function resetGame() {
     pauseStartTime = null;
     gameStartTime = Date.now();
     
-    // Réinitialiser les joueurs
+    // Réinitialiser tous les joueurs
     for (let id in players) {
-        players[id].respawn();
         players[id].captures = 0;
+        players[id].capturedPlayers = {};
+        players[id].capturedBy = {};
+        players[id].botsControlled = 0;
+        players[id].capturedByBlackBot = 0;
+        players[id].speedBoostActive = false;
+        players[id].invincibilityActive = false;
+        players[id].revealActive = false;
+        if (players[id].bonusTimers) {
+            players[id].bonusTimers = {
+                speed: 0,
+                invincibility: 0,
+                reveal: 0
+            };
+        }
     }
 
     // Réinitialiser les bots
@@ -1121,6 +1437,8 @@ function resetGame() {
 
     // Redémarrer le spawn des bonus
     setTimeout(spawnBonus, 3000);
+
+    setTimeout(spawnMalus, 4000);
 }
 
 function handleGameStart(socket, data) {
@@ -1158,22 +1476,11 @@ io.on('connection', (socket) => {
     console.log(`Nouvelle connexion : ${socket.id}`);
 
     socket.on('joinWaitingRoom', (nickname) => {
-        console.log('Player joining waiting room:', {
-            socketId: socket.id,
-            nickname,
-            currentPlayers: Array.from(waitingRoom.players.values())
-        });
     
         // Même logique : premier joueur ou pas de propriétaire devient propriétaire
         const isEmptyRoom = waitingRoom.players.size === 0;
         const hasNoOwner = !Array.from(waitingRoom.players.values()).some(player => player.isOwner);
         const shouldBeOwner = isEmptyRoom || hasNoOwner;
-    
-        console.log('Owner check:', {
-            isEmptyRoom,
-            hasNoOwner,
-            shouldBeOwner
-        });
     
         const playerData = {
             id: socket.id,
@@ -1182,7 +1489,7 @@ io.on('connection', (socket) => {
         };
     
         waitingRoom.players.set(socket.id, playerData);
-        console.log('Player added to waiting room:', playerData);
+        //console.log('Player added to waiting room:', playerData);
     
         // Si c'est le propriétaire, envoyer les paramètres actuels
         if (shouldBeOwner) {
@@ -1191,18 +1498,27 @@ io.on('connection', (socket) => {
     
         // Envoyer la liste mise à jour à tous les joueurs
         const players = Array.from(waitingRoom.players.values());
-        console.log('Emitting updated players:', players);
+        //console.log('Emitting updated players:', players);
         io.emit('updateWaitingRoom', players);
+    });
+
+    socket.on('bonusExpired', (data) => {
+        console.log('Réception de l\'expiration du bonus:', data);
+        if (data.type === 'invincibility') {
+            const player = players[socket.id];
+            if (player) {
+                player.deactivateInvincibility();
+                // Notifier tous les joueurs de la fin de l'invincibilité
+                io.emit('playerStatusUpdate', {
+                    playerId: socket.id,
+                    invincibilityActive: false
+                });
+            }
+        }
     });
 
     socket.on('rejoinWaitingRoom', (data) => {
         const { nickname, wasInGame } = data;
-        console.log('Player rejoining waiting room:', {
-            socketId: socket.id,
-            nickname,
-            wasInGame,
-            currentPlayers: Array.from(waitingRoom.players.values())
-        });
     
         // Vérifier si ce joueur était propriétaire avant
         const existingPlayer = waitingRoom.players.get(socket.id);
@@ -1213,13 +1529,6 @@ io.on('connection', (socket) => {
         const hasNoOwner = !Array.from(waitingRoom.players.values()).some(player => player.isOwner);
         const shouldBeOwner = isEmptyRoom || hasNoOwner || wasOwner;
     
-        console.log('Owner check:', {
-            isEmptyRoom,
-            hasNoOwner,
-            wasOwner,
-            shouldBeOwner
-        });
-    
         const playerData = {
             id: socket.id,
             nickname: nickname,
@@ -1227,7 +1536,7 @@ io.on('connection', (socket) => {
         };
     
         waitingRoom.players.set(socket.id, playerData);
-        console.log('Player added to waiting room:', playerData);
+        //console.log('Player added to waiting room:', playerData);
     
         // Si c'est le propriétaire, envoyer les paramètres
         if (shouldBeOwner) {
@@ -1235,7 +1544,7 @@ io.on('connection', (socket) => {
         }
     
         const players = Array.from(waitingRoom.players.values());
-        console.log('Emitting updated players:', players);
+        //console.log('Emitting updated players:', players);
         io.emit('updateWaitingRoom', players);
     });
 
@@ -1346,10 +1655,10 @@ io.on('connection', (socket) => {
 
     socket.on('startGameFromRoom', (data) => {
         const player = waitingRoom.players.get(socket.id);
-        console.log('Start game request from:', socket.id, 'isOwner:', player?.isOwner); // Debug log
+        //console.log('Start game request from:', socket.id, 'isOwner:', player?.isOwner); // Debug log
         
         if (player?.isOwner) {
-            console.log('Starting game with settings:', waitingRoom.settings); // Debug log
+            //console.log('Starting game with settings:', waitingRoom.settings); // Debug log
             
             // Reset complet du jeu
             isGameOver = false;
@@ -1404,6 +1713,8 @@ io.on('connection', (socket) => {
             
             // Redémarrer le spawn des bonus
             setTimeout(spawnBonus, 3000);
+
+            setTimeout(spawnMalus, 4000);
         }
     });
 
@@ -1461,6 +1772,8 @@ io.on('connection', (socket) => {
     
             // Redémarrer le spawn des bonus
             setTimeout(spawnBonus, 3000);
+
+            setTimeout(spawnMalus, 4000);
         }
     });
 
@@ -1510,7 +1823,7 @@ io.on('connection', (socket) => {
         }
     
         // Nettoyer les ressources du joueur
-        console.log(`Déconnexion : ${socket.id}`);
+        //console.log(`Déconnexion : ${socket.id}`);
         delete players[socket.id];
         delete activeSockets[socket.id];
     
@@ -1529,7 +1842,7 @@ io.on('connection', (socket) => {
                 const [firstPlayerId] = waitingRoom.players.keys();
                 const firstPlayer = waitingRoom.players.get(firstPlayerId);
                 if (firstPlayer) {
-                    console.log('Transferring ownership to:', firstPlayer.nickname);
+                    //console.log('Transferring ownership to:', firstPlayer.nickname);
                     firstPlayer.isOwner = true;
     
                     // Informer le nouveau propriétaire
@@ -1550,6 +1863,7 @@ io.on('connection', (socket) => {
 setInterval(() => {
     if (!isPaused && !isGameOver) {
         updateBots();
+        updatePlayerBonuses(); // Ajouter cette ligne
         sendUpdates();
     }
 }, UPDATE_INTERVAL);
@@ -1563,6 +1877,8 @@ setInterval(() => {
 
 // Premier spawn de bonus
 setTimeout(spawnBonus, 3000);
+
+setTimeout(spawnMalus, 4000);
 
 // Démarrage du serveur
 server.listen(PORT, () => {

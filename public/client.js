@@ -13,6 +13,7 @@ const settingsMenu = document.getElementById('settingsMenu');
 const saveSettingsButton = document.getElementById('saveSettingsButton');
 const backToMenuButton = document.getElementById('backToMenuButton');
 const resetSettingsButton = document.getElementById('resetSettingsButton');
+const WARNING_THRESHOLD = 3000; // 3 secondes avant disparition
 
 // Éléments de la salle d'attente
 const waitingRoomScreen = document.getElementById('waitingRoom');
@@ -51,6 +52,15 @@ const bonusSpawnIntervalInput = document.getElementById('bonusSpawnInterval');
 const speedBoostSpawnRateInput = document.getElementById('speedBoostSpawnRate');
 const invincibilitySpawnRateInput = document.getElementById('invincibilitySpawnRate');
 const revealSpawnRateInput = document.getElementById('revealSpawnRate');
+const enableMalusCheckbox = document.getElementById('enableMalus');
+const malusSpawnIntervalInput = document.getElementById('malusSpawnInterval');
+const malusSpawnRateInput = document.getElementById('malusSpawnRate');
+const reverseControlsDurationInput = document.getElementById('reverseControlsDuration');
+const blurDurationInput = document.getElementById('blurDuration');
+const negativeDurationInput = document.getElementById('negativeDuration');
+const enableReverseControlsCheckbox = document.getElementById('enableReverseControls');
+const enableBlurVisionCheckbox = document.getElementById('enableBlurVision');
+const enableNegativeVisionCheckbox = document.getElementById('enableNegativeVision');
 
 // Éléments du jeu
 const canvas = document.getElementById('gameCanvas');
@@ -71,6 +81,22 @@ const JOYSTICK_SPEED_MULTIPLIER = 3;
 const JOYSTICK_UPDATE_INTERVAL = 50;
 const TOUCH_START_OPTIONS = { passive: false };
 const TOUCH_MOVE_OPTIONS = { passive: false };
+
+
+const MALUS_MESSAGES = {
+    blur: {
+        trigger: "Vous volez les lunettes de vos adversaires",
+        receive: "{player} vous a volé vos lunettes"
+    },
+    reverse: {
+        trigger: "Vous avez inversé les contrôles de vos adversaires",
+        receive: "{player} a trafiqué vos contrôles"
+    },
+    negative: {
+        trigger: "Vous avez privé vos adversaires de couleurs",
+        receive: "{player} vous prive de couleurs"
+    }
+};
 
 // constantes pour les effets des bonus
 const BONUS_EFFECTS = {
@@ -97,6 +123,33 @@ const BONUS_EFFECTS = {
         name: 'Révélation',
         backgroundColor: 'rgba(255, 0, 255, 0.2)',
         borderColor: 'rgba(255, 0, 255, 0.6)'
+    }
+};
+
+const MALUS_EFFECTS = {
+    reverse: {
+        color: '#ff4444',
+        glowSize: 20,
+        pulseSpeed: 0.006,
+        name: 'Contrôles inversés',
+        backgroundColor: 'rgba(255, 68, 68, 0.2)',
+        borderColor: 'rgba(255, 68, 68, 0.6)'
+    },
+    blur: {
+        color: '#44aaff',
+        glowSize: 20,
+        pulseSpeed: 0.006,
+        name: 'Vision floue',
+        backgroundColor: 'rgba(68, 170, 255, 0.2)',
+        borderColor: 'rgba(68, 170, 255, 0.6)'
+    },
+    negative: {
+        color: '#aa44ff',
+        glowSize: 20,
+        pulseSpeed: 0.006,
+        name: 'Vision négative',
+        backgroundColor: 'rgba(170, 68, 255, 0.2)',
+        borderColor: 'rgba(170, 68, 255, 0.6)'
     }
 };
 
@@ -155,6 +208,17 @@ let revealActive = false;
 let speedBoostTimeLeft = 0;
 let invincibilityTimeLeft = 0;
 let revealTimeLeft = 0;
+
+let activemalus = new Map();
+const malusImages = {
+    reverse: new Image(),
+    blur: new Image(),
+    negative: new Image()
+};
+
+malusImages.reverse.src = '/assets/images/reverse.svg';
+malusImages.blur.src = '/assets/images/blur.svg';
+malusImages.negative.src = '/assets/images/negative.svg';
 
 // Position et vitesse du joueur
 let playerX = 0;
@@ -262,13 +326,19 @@ function initializeMobileControls() {
         const maxRadius = baseRect.width / 2;
         const distance = Math.hypot(x, y);
         
-        if (distance === 0) return;
+        if (distance === 0) return;      
         
         // Normaliser en vecteurs binaires (-1, 0, ou 1)
         // On utilise un seuil de 0.5 pour déterminer si une direction est active
         const threshold = 0.5;
+        const isReversed = activemalus.has('reverse');
         const normalizedX = Math.abs(x / maxRadius) > threshold ? Math.sign(x) : 0;
         const normalizedY = Math.abs(y / maxRadius) > threshold ? Math.sign(y) : 0;
+
+        if (isReversed) {
+            normalizedX *= -1;
+            normalizedY *= -1;
+        }  
         
         // Déplacer le joystick visuellement
         const stickX = x * 0.8; // Limite le déplacement visuel à 80% du rayon
@@ -402,7 +472,7 @@ function updateCamera() {
     // Trouver le joueur actuel, en s'assurant qu'il s'agit bien d'une entité de type 'player'
     const myPlayer = entities.find(e => e.id === playerId && e.type === 'player');
     if (!myPlayer) {
-        console.log("Player not found:", playerId); // Debug log
+        //console.log("Player not found:", playerId); // Debug log
         return;
     }
 
@@ -540,9 +610,6 @@ saveSettingsButton.addEventListener('click', () => {
     if (isRoomOwner) {
         const newSettings = {
             gameDuration: parseInt(gameDurationInput.value),
-            speedBoostDuration: parseInt(speedBoostDurationInput.value),
-            invincibilityDuration: parseInt(invincibilityDurationInput.value),
-            revealDuration: parseInt(revealDurationInput.value),
             initialBotCount: parseInt(initialBotCountInput.value),
             enableSpecialZones: enableSpecialZonesCheckbox.checked,
             enabledZones: {
@@ -567,6 +634,16 @@ saveSettingsButton.addEventListener('click', () => {
             enableReveal: enableRevealCheckbox.checked,
             revealDuration: parseInt(revealDurationInput.value),
             revealSpawnRate: parseInt(revealSpawnRateInput.value),
+
+            enableMalus: enableMalusCheckbox.checked,
+            malusSpawnInterval: parseInt(malusSpawnIntervalInput.value),
+            malusSpawnRate: parseInt(malusSpawnRateInput.value),
+            reverseControlsDuration: parseInt(reverseControlsDurationInput.value),
+            blurDuration: parseInt(blurDurationInput.value),
+            negativeDuration: parseInt(negativeDurationInput.value),
+            enableReverseControls: enableReverseControlsCheckbox.checked,
+            enableBlurVision: enableBlurVisionCheckbox.checked,
+            enableNegativeVision: enableNegativeVisionCheckbox.checked,
         };
 
         socket.emit('updateGameSettings', newSettings);
@@ -593,6 +670,57 @@ backToMenuButton.addEventListener('click', () => {
     settingsMenu.style.display = 'none';
 });
 
+enableMalusCheckbox.addEventListener('change', (e) => {
+    const malusCheckboxes = [
+        enableReverseControlsCheckbox,
+        enableBlurVisionCheckbox,
+        enableNegativeVisionCheckbox
+    ];
+    
+    const malusInputs = [
+        malusSpawnIntervalInput,
+        malusSpawnRateInput,
+        reverseControlsDurationInput,
+        blurDurationInput,
+        negativeDurationInput
+    ];
+
+    // Désactiver/activer toutes les checkboxes des malus
+    malusCheckboxes.forEach(checkbox => {
+        checkbox.disabled = !e.target.checked;
+    });
+
+    // Désactiver/activer tous les inputs liés aux malus
+    malusInputs.forEach(input => {
+        input.disabled = !e.target.checked;
+    });
+});
+
+function initializeMalusSettings() {
+    const malusEnabled = enableMalusCheckbox.checked;
+    const malusCheckboxes = [
+        enableReverseControlsCheckbox,
+        enableBlurVisionCheckbox,
+        enableNegativeVisionCheckbox
+    ];
+    
+    const malusInputs = [
+        malusSpawnIntervalInput,
+        malusSpawnRateInput,
+        reverseControlsDurationInput,
+        blurDurationInput,
+        negativeDurationInput
+    ];
+
+    malusCheckboxes.forEach(checkbox => {
+        checkbox.disabled = !malusEnabled;
+    });
+
+    malusInputs.forEach(input => {
+        input.disabled = !malusEnabled;
+    });
+}
+
 // Démarrage du jeu
 startButton.addEventListener('click', () => {
     const nickname = nicknameInput.value.trim();
@@ -609,8 +737,29 @@ startButton.addEventListener('click', () => {
 
     // Initialiser le chat après la connexion socket
     socket.on('connect', () => {
-        console.log('Socket connected, initializing chat...');
+        //console.log('Socket connected, initializing chat...');
         initializeChat(socket); // Passer le socket en paramètre
+    });
+
+    socket.on('bonusExpired', (data) => {
+        if (data.type === 'invincibility') {
+            const player = players[socket.id];
+            if (player) {
+                player.invincibilityActive = false;
+                // S'assurer que le timer est bien remis à zéro
+                if (player.bonusTimers) {
+                    player.bonusTimers.invincibility = 0;
+                }
+            }
+        }
+    });
+
+    socket.on('bonusDeactivated', (data) => {
+        if (data.type === 'invincibility') {
+            invincibilityActive = false;
+            invincibilityTimeLeft = 0;
+            updateActiveBonusesDisplay();
+        }
     });
 
     // écouteur pour les mises à jour des paramètres
@@ -629,6 +778,38 @@ startButton.addEventListener('click', () => {
     socket.on('gameStarting', () => {
         waitingRoomScreen.classList.remove('active');
         startGame();
+    });
+
+    socket.on('applyMalus', (data) => {
+        if (!MALUS_MESSAGES) {
+            console.error('MALUS_MESSAGES non défini!');
+            return;
+        }
+        handleMalusEffect(data.type, data.duration);
+        const message = MALUS_MESSAGES[data.type].receive.replace('{player}', data.collectedBy);
+        showMalusNotification(message, false);
+    });
+
+    socket.on('malusEvent', (data) => {
+        if (data.collectorId === socket.id) {
+            showMalusNotification(MALUS_MESSAGES[data.type].trigger);
+        } else {
+            handleMalusEffect(data.type, data.duration);
+            const message = MALUS_MESSAGES[data.type].receive.replace('{player}', data.collectorNickname);
+            showMalusNotification(message);
+        }
+    });
+    
+    socket.on('malusCollected', (data) => {
+        if (!MALUS_MESSAGES) {
+            console.error('MALUS_MESSAGES non défini!');
+            return;
+        }
+        if (!MALUS_MESSAGES[data.type]) {
+            console.error('Type de malus non trouvé:', data.type);
+            return;
+        }
+        showMalusNotification(MALUS_MESSAGES[data.type].trigger, true);
     });
     
     // Rejoindre la salle d'attente
@@ -764,8 +945,6 @@ function formatTime(date) {
 // Fonction pour mettre à jour la liste des joueurs
 function updateWaitingRoomPlayers(players) {
     playersList.innerHTML = '';
-    console.log('Updating waiting room players:', JSON.stringify(players, null, 2)); // Log plus détaillé
-    console.log('Current socket id:', socket?.id);
 
     // Vérifier si on est le premier joueur
     if (players.length > 0) {
@@ -775,8 +954,6 @@ function updateWaitingRoomPlayers(players) {
             player.id === socket?.id && player.isOwner
         );
     }
-    
-    console.log('isRoomOwner:', isRoomOwner);
 
     players.forEach(player => {
         const playerElement = document.createElement('li');
@@ -792,7 +969,7 @@ function updateWaitingRoomPlayers(players) {
         }
         
         if (player.isOwner) {
-            console.log('Adding owner badge to:', player.nickname);
+            //console.log('Adding owner badge to:', player.nickname);
             const ownerBadge = document.createElement('span');
             ownerBadge.className = 'owner-badge';
             ownerBadge.textContent = '👑';
@@ -804,7 +981,7 @@ function updateWaitingRoomPlayers(players) {
 
     // Mettre à jour les contrôles en fonction du statut de propriétaire
     startGameButton.disabled = !isRoomOwner;
-    console.log('Start game button disabled:', !isRoomOwner);
+    //console.log('Start game button disabled:', !isRoomOwner);
 
     // Gérer l'état des inputs dans le menu paramètres
     const settingsInputs = settingsMenu.querySelectorAll('input, select, button');
@@ -874,10 +1051,14 @@ function movePlayer() {
     const currentSpeed = BASE_SPEED * (speedBoostActive ? SPEED_BOOST_MULTIPLIER : 1);
     let move = { x: 0, y: 0 };
 
-    if (keysPressed['ArrowUp'] || keysPressed['z']) move.y = -currentSpeed;
-    if (keysPressed['ArrowDown'] || keysPressed['s']) move.y = currentSpeed;
-    if (keysPressed['ArrowLeft'] || keysPressed['q']) move.x = -currentSpeed;
-    if (keysPressed['ArrowRight'] || keysPressed['d']) move.x = currentSpeed;
+    // Vérifier si les contrôles sont inversés
+    const isReversed = activemalus.has('reverse');
+
+    // Appliquer le mouvement en fonction de l'état des contrôles
+    if (keysPressed['ArrowUp'] || keysPressed['z']) move.y = isReversed ? currentSpeed : -currentSpeed;
+    if (keysPressed['ArrowDown'] || keysPressed['s']) move.y = isReversed ? -currentSpeed : currentSpeed;
+    if (keysPressed['ArrowLeft'] || keysPressed['q']) move.x = isReversed ? currentSpeed : -currentSpeed;
+    if (keysPressed['ArrowRight'] || keysPressed['d']) move.x = isReversed ? -currentSpeed : currentSpeed;
 
     // Normaliser le mouvement diagonal
     if (move.x !== 0 && move.y !== 0) {
@@ -922,11 +1103,21 @@ function updateSettingsUI(settings) {
     speedBoostSpawnRateInput.value = settings.speedBoostSpawnRate;
     invincibilitySpawnRateInput.value = settings.invincibilitySpawnRate;
     revealSpawnRateInput.value = settings.revealSpawnRate;
+    enableMalusCheckbox.checked = settings.enableMalus;
+    malusSpawnIntervalInput.value = settings.malusSpawnInterval;
+    malusSpawnRateInput.value = settings.malusSpawnRate;
+    reverseControlsDurationInput.value = settings.reverseControlsDuration;
+    blurDurationInput.value = settings.blurDuration;
+    negativeDurationInput.value = settings.negativeDuration;
+    enableReverseControlsCheckbox.checked = settings.enableReverseControls;
+    enableBlurVisionCheckbox.checked = settings.enableBlurVision;
+    enableNegativeVisionCheckbox.checked = settings.enableNegativeVision;
+    initializeMalusSettings();
 }
 
 // Fonction de démarrage du jeu
 function startGame() {
-    console.log('Starting game...'); // Debug log
+    //console.log('Starting game...'); // Debug log
     
     isGameOver = false;
     isPaused = false;
@@ -961,6 +1152,9 @@ function startGame() {
     speedBoostTimeLeft = 0;
     invincibilityTimeLeft = 0;
     revealTimeLeft = 0;
+
+    malusItems = [];
+    activemalus = new Map();
 
     // Gérer l'affichage des écrans
     mainMenu.classList.remove('active');
@@ -1009,6 +1203,7 @@ function startGame() {
             
             // Mise à jour des bonus
             bonuses = data.bonuses || [];
+            socket.malus = data.malus || [];
             specialZones = data.zones || [];
             
             // Trouver d'abord notre joueur dans les scores
@@ -1117,10 +1312,114 @@ function startGame() {
             movePlayer();
             updateBonusTimers();
             updateCamera();
+            updateMalusEffects();
         }
     }, 20);
 
     initializeHelpPanels();
+}
+
+function showMalusNotification(message) {
+    collectedBonusDisplayContent.textContent = message;
+    collectedBonusDisplay.classList.remove('hidden');
+
+    setTimeout(() => {
+        collectedBonusDisplay.classList.add('hidden');
+    }, 3000);
+}
+
+function drawBonus(bonus, context) {
+    const image = bonusImages[bonus.type];
+    const effect = BONUS_EFFECTS[bonus.type];
+    
+    if (!image || !image.complete || !effect) return;
+
+    // Calculer l'opacité pour le clignotement
+    let opacity = 1;
+    if (bonus.isBlinking) {
+        // Utiliser une fonction sinusoïdale pour un clignotement plus fluide
+        opacity = 0.3 + Math.abs(Math.sin(Date.now() * 0.01)) * 0.7;
+    }
+
+    context.save();
+    
+    // Dessiner l'effet de lueur
+    context.beginPath();
+    context.arc(bonus.x, bonus.y, 22, 0, Math.PI * 2);
+    context.fillStyle = effect.backgroundColor;
+    context.globalAlpha = opacity * 0.6;
+    context.fill();
+
+    // Ajouter un second cercle pour plus d'effet
+    context.beginPath();
+    context.arc(bonus.x, bonus.y, 20, 0, Math.PI * 2);
+    context.fillStyle = effect.borderColor;
+    context.globalAlpha = opacity * 0.3;
+    context.fill();
+
+    // Dessiner le contour avec une épaisseur variable
+    context.strokeStyle = effect.borderColor;
+    context.lineWidth = 2 + (opacity * 1);
+    context.globalAlpha = opacity * 0.8;
+    context.stroke();
+
+    // Dessiner l'image
+    context.globalAlpha = opacity;
+    context.drawImage(image,
+        bonus.x - 15,
+        bonus.y - 15,
+        30,
+        30
+    );
+
+    context.restore();
+}
+
+function drawMalus(malus, context) {
+    const image = malusImages[malus.type];
+    const effect = MALUS_EFFECTS[malus.type];
+    
+    if (!image || !image.complete || !effect) return;
+
+    // Calculer l'opacité pour le clignotement
+    let opacity = 1;
+    if (malus.isBlinking) {
+        // Utiliser une fonction sinusoïdale pour un clignotement plus fluide
+        opacity = 0.3 + Math.abs(Math.sin(Date.now() * 0.01)) * 0.7;
+    }
+
+    context.save();
+    
+    // Dessiner l'effet de lueur
+    context.beginPath();
+    context.arc(malus.x, malus.y, 22, 0, Math.PI * 2);
+    context.fillStyle = effect.backgroundColor;
+    context.globalAlpha = opacity * 0.6;
+    context.fill();
+
+    // Ajouter un second cercle pour plus d'effet
+    context.beginPath();
+    context.arc(malus.x, malus.y, 20, 0, Math.PI * 2);
+    context.fillStyle = effect.borderColor;
+    context.globalAlpha = opacity * 0.3;
+    context.fill();
+
+    // Dessiner le contour avec une épaisseur variable
+    context.strokeStyle = effect.borderColor;
+    context.lineWidth = 2 + (opacity * 1);
+    context.globalAlpha = opacity * 0.8;
+    context.stroke();
+
+    // Dessiner l'image
+    context.globalAlpha = opacity;
+    context.drawImage(image,
+        malus.x - 15,
+        malus.y - 15,
+        30,
+        30
+    );
+
+    context.restore();
 }
 
 
@@ -1305,7 +1604,7 @@ function drawEntities() {
                 context.strokeStyle = '#FFFFFF';
                 context.stroke();
             } else if (revealActive && entity.type === 'player') {
-                context.lineWidth = 2;
+                context.lineWidth = 3;
                 context.strokeStyle = '#FF0000';
                 context.stroke();
             }
@@ -1319,45 +1618,57 @@ function drawEntities() {
         context.globalAlpha = 1;
     });
 
-    // Dessiner les bonus
-    bonuses.forEach(bonus => {
-        const image = bonusImages[bonus.type];
-        const effect = BONUS_EFFECTS[bonus.type];
-        if (image && image.complete && effect) {
-            const visualSize = 24;        // Taille visuelle réduite pour l'effet
-            const imageSize = 30;         // Taille de l'image conservée pour la hitbox
-            const glowSize = visualSize * 1.2;  // Halo réduit autour du bonus
-            
-            // Dessiner le fond lumineux
-            context.beginPath();
-            context.arc(bonus.x, bonus.y, glowSize, 0, Math.PI * 2);
-            context.fillStyle = effect.backgroundColor;
-            context.fill();
-            
-            // Ajouter un contour lumineux
-            context.strokeStyle = effect.borderColor;
-            context.lineWidth = 2;
-            context.stroke();
-            
-            // Appliquer une teinte à l'image
-            context.globalCompositeOperation = 'source-atop';
-            context.fillStyle = `${effect.color}40`;
-            
-            // Dessiner l'image du bonus
-            context.drawImage(image, 
-                bonus.x - imageSize/2, 
-                bonus.y - imageSize/2, 
-                imageSize, 
-                imageSize
-            );
-            
-            // Réinitialiser le mode de composition
-            context.globalCompositeOperation = 'source-over';
-        }
-    });
+    bonuses.forEach(bonus => drawBonus(bonus, context));
+
+    if (socket && socket.malus) {
+        socket.malus.forEach(malus => drawMalus(malus, context));
+    }
 
     // Restaurer le contexte
     context.restore();
+}
+
+// Fonction de gestion des effets de malus
+function handleMalusEffect(type, duration) {
+    const currentTime = Date.now();
+    activemalus.set(type, {
+        endTime: currentTime + (duration * 1000),
+        startTime: currentTime
+    });
+
+    // Appliquer l'effet spécifique
+    switch (type) {
+        case 'reverse':
+            // Géré dans la fonction de mouvement
+            break;
+        case 'blur':
+            applyBlurEffect();
+            break;
+        case 'negative':
+            applyNegativeEffect();
+            break;
+    }
+}
+
+// Fonctions pour les effets visuels
+function applyBlurEffect() {
+    const gameCanvas = document.getElementById('gameCanvas');
+    // N'appliquer le flou qu'au canvas de jeu
+    gameCanvas.style.filter = 'blur(4px)';
+    // S'assurer que l'interface reste nette
+    document.getElementById('gameInterface').style.filter = 'none';
+    document.getElementById('activeBonuses').style.filter = 'none';
+    document.getElementById('playerList').style.filter = 'none';
+}
+
+function applyNegativeEffect() {
+    const gameCanvas = document.getElementById('gameCanvas');
+    gameCanvas.style.filter = 'grayscale(100%)';
+}
+
+function removeVisualEffects() {
+    const gameCanvas = document.getElementById('gameCanvas');
+    gameCanvas.style.filter = 'none';
 }
 
 // Nouvelle fonction pour dessiner les effets de bonus
@@ -1523,11 +1834,24 @@ function updateBonusTimers() {
     const deltaTime = 0.02;  // 20ms en secondes
     let bonusesChanged = false;
 
+    if (invincibilityActive && invincibilityTimeLeft <= 0) {
+        invincibilityActive = false;
+        socket.emit('bonusExpired', { 
+            type: 'invincibility',
+            playerId: socket.id 
+        });
+        //console.log('Émission de l\'expiration de l\'invincibilité');
+    }
+
     // Fonction pour mettre à jour un timer spécifique
     function updateSingleTimer(active, timeLeft, type) {
         if (active) {
             const newTime = Math.max(0, timeLeft - deltaTime);
             if (newTime <= 0) {
+                // Notifier le serveur quand un bonus se termine
+                if (type === 'invincibility') {
+                    socket.emit('bonusExpired', { type: 'invincibility' });
+                }
                 return { active: false, timeLeft: 0, changed: true };
             }
             // Ne mettre à jour l'affichage que si la seconde a changé
@@ -1556,6 +1880,33 @@ function updateBonusTimers() {
     if (bonusesChanged) {
         requestAnimationFrame(() => {
             updateActiveBonusesDisplay();
+        });
+    }
+}
+
+function updateMalusEffects() {
+    const currentTime = Date.now();
+    let needsUpdate = false;
+
+    activemalus.forEach((value, type) => {
+        if (currentTime >= value.endTime) {
+            activemalus.delete(type);
+            needsUpdate = true;
+        }
+    });
+
+    if (needsUpdate) {
+        removeVisualEffects();
+        // Réappliquer les effets actifs restants
+        activemalus.forEach((value, type) => {
+            switch (type) {
+                case 'blur':
+                    applyBlurEffect();
+                    break;
+                case 'negative':
+                    applyNegativeEffect();
+                    break;
+            }
         });
     }
 }

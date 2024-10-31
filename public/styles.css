@@ -139,7 +139,7 @@ input[type="text"] {
 
 input[type="text"]:focus, input[type="number"]:focus {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(241, 196, 15, 0.5);
+    box-shadow: 0 0 0 3px rgba(160, 15, 241, 0.5);
     transform: scale(1.02);
 }
 
@@ -330,6 +330,7 @@ canvas {
     font-size: 18px;
     margin-bottom: 10px;
     backdrop-filter: blur(5px);
+    display: none;
 }
 
 #timer {
@@ -475,6 +476,16 @@ canvas {
 /* Animation de pulsation pour le bonus actif */
 .activeBonus:not(.new-bonus) {
     animation: bonusActive 2s ease-in-out infinite;
+}
+
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0.2; }
+    100% { opacity: 1; }
+}
+
+.blinking {
+    animation: blink 0.6s infinite; /* Clignotement avec une durée de 600 ms */
 }
 
 @keyframes bonusPulse {
@@ -853,7 +864,8 @@ canvas {
 }
 
 .game-help-panel h3 {
-    text-shadow: 1px 1px 5px rgba(0, 0, 0, 0);
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.9);
+    color: #fff;
 }
 
 #instructions {
@@ -1136,6 +1148,10 @@ button:disabled {
     background-color: rgba(255, 255, 255, 0.1);
 }
 
+input[type="checkbox"]:disabled + label {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
 
 /* Chatbox flottante */
 .floating-chat {
@@ -1576,6 +1592,60 @@ button:disabled {
         width: 18px;
         height: 18px;
     }
+
+    /* Styles pour les malus */
+.malus-notification {
+    background-color: rgba(255, 68, 68, 0.9);
+    color: white;
+    padding: 15px 30px;
+    border-radius: 15px;
+    font-family: 'Chewy-Regular', sans-serif;
+    position: fixed;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2001;
+    text-align: center;
+    min-width: 300px;
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.3);
+    animation: malusNotification 3s ease-out forwards;
+}
+
+.malus-notification.trigger {
+    background-color: rgba(68, 68, 255, 0.9);
+    box-shadow: 0 0 20px rgba(0, 0, 255, 0.3);
+}
+
+.malus-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
+    filter: brightness(0) invert(1);
+}
+
+.malus-notification.receive {
+    background-color: rgba(255, 68, 68, 0.9);
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.3);
+}
+
+@keyframes malusNotification {
+    0% { 
+        transform: translate(-50%, -30%); 
+        opacity: 0; 
+    }
+    10% { 
+        transform: translate(-50%, -50%); 
+        opacity: 1; 
+    }
+    90% { 
+        transform: translate(-50%, -50%); 
+        opacity: 1; 
+    }
+    100% { 
+        transform: translate(-50%, -70%); 
+        opacity: 0; 
+    }
+}
 
     /* Ajuster le bouton pause */
     #pauseButton {
