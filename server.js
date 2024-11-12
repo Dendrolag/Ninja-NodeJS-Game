@@ -55,6 +55,18 @@ const DEFAULT_GAME_SETTINGS = {
     negativeDuration: 14,
 };
 
+const DIRECTIONS = {
+    IDLE: 'idle',
+    NORTH: 'north',
+    NORTH_EAST: 'north_east',
+    EAST: 'east',
+    SOUTH_EAST: 'south_east',
+    SOUTH: 'south',
+    SOUTH_WEST: 'south_west',
+    WEST: 'west',
+    NORTH_WEST: 'north_west'
+};
+
 // Configuration des fichiers statiques
 app.use('/assets', express.static(__dirname + '/assets'));
 app.use(express.static(__dirname + '/public'));
@@ -472,6 +484,33 @@ class Entity {
         this.x = Math.random() * GAME_WIDTH;
         this.y = Math.random() * GAME_HEIGHT;
         this.color = color || getRandomColor();
+        this.direction = DIRECTIONS.IDLE;
+        this.lastX = this.x;
+        this.lastY = this.y;
+    }
+
+    determineDirection(dx, dy) {
+        if (Math.abs(dx) < 0.1 && Math.abs(dy) < 0.1) {
+            return DIRECTIONS.IDLE;
+        }
+
+        const angle = Math.atan2(dy, dx);
+        const degrees = angle * (180 / Math.PI);
+
+        if (degrees >= -22.5 && degrees < 22.5) return DIRECTIONS.EAST;
+        if (degrees >= 22.5 && degrees < 67.5) return DIRECTIONS.SOUTH_EAST;
+        if (degrees >= 67.5 && degrees < 112.5) return DIRECTIONS.SOUTH;
+        if (degrees >= 112.5 && degrees < 157.5) return DIRECTIONS.SOUTH_WEST;
+        if (degrees >= 157.5 || degrees < -157.5) return DIRECTIONS.WEST;
+        if (degrees >= -157.5 && degrees < -112.5) return DIRECTIONS.NORTH_WEST;
+        if (degrees >= -112.5 && degrees < -67.5) return DIRECTIONS.NORTH;
+        if (degrees >= -67.5 && degrees < -22.5) return DIRECTIONS.NORTH_EAST;
+        
+        return DIRECTIONS.IDLE;
+    }
+
+    updateDirection(dx, dy) {
+        this.direction = this.determineDirection(dx, dy);
     }
 }
 
@@ -560,13 +599,16 @@ class Bot extends Entity {
             this.lastStateChange = now;
             this.stateDuration = Math.random() * 2000 + 1000;
 
-            if (this.isMoving) {
-                this.changeDirection();
+            if (!this.isMoving) {
+                this.direction = DIRECTIONS.IDLE;
             }
         }
 
         if (this.isMoving) {
+            const oldX = this.x;
+            const oldY = this.y;
             this.move();
+            this.updateDirection(this.x - oldX, this.y - oldY);
         }
     }
 
@@ -590,6 +632,9 @@ class Bot extends Entity {
             this.vy *= -1;
             this.y = Math.max(0, Math.min(GAME_HEIGHT, this.y));
         }
+
+        // Mise à jour de la direction en fonction du mouvement
+        this.updateDirection(this.vx * BOT_SPEED, this.vy * BOT_SPEED);
     }
 
     changeDirection() {
@@ -1294,31 +1339,34 @@ function sendUpdates() {
 
     // Préparer le tableau des entités
     const plainEntities = [
-        // Ajouter d'abord les joueurs
+        // Joueurs
         ...Object.values(players).map(player => ({
             id: player.id,
             x: player.x,
             y: player.y,
             color: player.color,
             type: 'player',
+            direction: player.direction,
             nickname: player.nickname,
             invincibilityActive: player.invincibilityActive
         })),
-        // Puis les bots normaux
+        // Bots normaux
         ...Object.values(bots).map(bot => ({
             id: bot.id,
             x: bot.x,
             y: bot.y,
             color: bot.color,
-            type: 'bot'
+            type: 'bot',
+            direction: bot.direction
         })),
-        // Enfin les bots noirs
+        // Bots noirs
         ...Object.values(blackBots).map(bot => ({
             id: bot.id,
             x: bot.x,
             y: bot.y,
             color: bot.color,
             type: 'blackBot',
+            direction: bot.direction,
             detectionRadius: currentGameSettings.blackBotDetectionRadius
         }))
     ];
@@ -1671,12 +1719,21 @@ io.on('connection', (socket) => {
     });
 
     socket.on('resetAndReturnToWaitingRoom', (data) => {
+        // Vérifier que le joueur est propriétaire
+        const player = waitingRoom.players.get(socket.id);
+        if (!player?.isOwner) return;
+        
         // Reset complet du jeu
         isGameOver = false;
         isPaused = false;
         totalPauseDuration = 0;
         pauseStartTime = null;
-        gameStartTime = Date.now();
+        gameStartTime = null;
+
+        // Nettoyer l'interface
+        activeBonusesContainer.innerHTML = '';
+        playerListContainer.innerHTML = '';
+        collectedBonusDisplay.classList.add('hidden');
     
         // Réinitialiser tous les joueurs
         for (let id in players) {
@@ -1695,6 +1752,11 @@ io.on('connection', (socket) => {
         bonuses = [];
         botsInitialized = false;
         specialZones.clear();
+        activemalus.clear();
+        document.body.classList.remove('reverse-controls', 'blur-vision', 'negative-vision');
+        if (canvas.style.filter) {
+            canvas.style.filter = 'none';
+        }
     
         // Réinitialiser l'état de la partie dans la salle d'attente
         waitingRoom.isGameStarted = false;
@@ -1878,12 +1940,23 @@ io.on('connection', (socket) => {
         const player = players[socket.id];
         if (player) {
             const moveSpeed = data.speedBoostActive ? 1.3 : 1;
+            const oldX = player.x;
+            const oldY = player.y;
+                
             player.x += data.x * moveSpeed;
             player.y += data.y * moveSpeed;
-            
+                
+            // Garder le joueur dans les limites
             player.x = Math.max(0, Math.min(GAME_WIDTH, player.x));
             player.y = Math.max(0, Math.min(GAME_HEIGHT, player.y));
-    
+                
+            // Mettre à jour la direction
+            if (Math.abs(data.x) < 0.1 && Math.abs(data.y) < 0.1) {
+                player.direction = DIRECTIONS.IDLE;
+            } else {
+                player.updateDirection(data.x, data.y);
+            }
+                
             detectCollisions(player, socket.id);
         }
     });

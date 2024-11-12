@@ -34,6 +34,18 @@ let camera = {
     targetY: 0
 };
 
+const DIRECTIONS = {
+    IDLE: 'idle',
+    NORTH: 'north',
+    NORTH_EAST: 'north_east',
+    EAST: 'east',
+    SOUTH_EAST: 'south_east',
+    SOUTH: 'south',
+    SOUTH_WEST: 'south_west',
+    WEST: 'west',
+    NORTH_WEST: 'north_west'
+};
+
 // Éléments des paramètres
 const enableSpeedBoostCheckbox = document.getElementById('enableSpeedBoost');
 const speedBoostDurationInput = document.getElementById('speedBoostDuration');
@@ -196,6 +208,8 @@ let isGameOver = false;
 let keysPressed = {};
 let specialZones = [];
 let isRoomOwner = false;
+let lastEntityPositions = new Map(); // Pour tracker les mouvements
+let entityMovementStates = new Map(); // Pour tracker l'état de mouvement
 
 // Nouvelles variables pour les contrôles mobiles
 let isMoving = false;
@@ -251,6 +265,184 @@ let gameSettings = {
         STEALTH: true
     }
 };
+
+class SpriteManager {
+    constructor() {
+        this.TARGET_COLOR = {r: 255, g: 0, b: 0}; // Rouge à remplacer
+        this.COLOR_TOLERANCE = 100;
+        this.ANIMATION_FRAME_DURATION = 150; // Durée de chaque frame en ms
+        this.currentFrame = 0;
+        this.lastFrameTime = Date.now();
+
+// Définition des sprites avec les deux frames pour chaque direction
+this.sprites = {
+    idle: {
+        frame1: '/assets/images/ninja/idle.png',
+        frame2: '/assets/images/ninja/idle.png' // Même image car pas d'animation à l'arrêt
+    },
+    north: {
+        frame1: '/assets/images/ninja/north_1.png',
+        frame2: '/assets/images/ninja/north_2.png'
+    },
+    north_east: {
+        frame1: '/assets/images/ninja/north_east_1.png',
+        frame2: '/assets/images/ninja/north_east_2.png'
+    },
+    east: {
+        frame1: '/assets/images/ninja/east_1.png',
+        frame2: '/assets/images/ninja/east_2.png'
+    },
+    south_east: {
+        frame1: '/assets/images/ninja/south_east_1.png',
+        frame2: '/assets/images/ninja/south_east_2.png'
+    },
+    south: {
+        frame1: '/assets/images/ninja/south_1.png',
+        frame2: '/assets/images/ninja/south_2.png'
+    },
+    south_west: {
+        frame1: '/assets/images/ninja/south_west_1.png',
+        frame2: '/assets/images/ninja/south_west_2.png'
+    },
+    west: {
+        frame1: '/assets/images/ninja/west_1.png',
+        frame2: '/assets/images/ninja/west_2.png'
+    },
+    north_west: {
+        frame1: '/assets/images/ninja/north_west_1.png',
+        frame2: '/assets/images/ninja/north_west_2.png'
+    }
+};
+
+        this.colorCache = new Map();
+        this.loadedSprites = {};
+        
+        // Précharger tous les sprites (les deux frames)
+        Object.entries(this.sprites).forEach(([direction, frames]) => {
+            this.loadedSprites[direction] = {};
+            
+            // Charger frame1
+            const img1 = new Image();
+            img1.src = frames.frame1;
+            img1.onload = () => {
+                //console.log(`Sprite ${direction} frame1 chargé`);
+            };
+            this.loadedSprites[direction].frame1 = img1;
+            
+            // Charger frame2
+            const img2 = new Image();
+            img2.src = frames.frame2;
+            img2.onload = () => {
+                //console.log(`Sprite ${direction} frame2 chargé`);
+            };
+            this.loadedSprites[direction].frame2 = img2;
+        });
+    }
+
+    updateAnimation() {
+        const now = Date.now();
+        if (now - this.lastFrameTime > this.ANIMATION_FRAME_DURATION) {
+            this.currentFrame = (this.currentFrame + 1) % 2;
+            this.lastFrameTime = now;
+        }
+    }
+
+    getFrameKey(direction, isMoving) {
+        // Si l'entité ne bouge pas, utiliser toujours la frame1 pour idle
+        if (!isMoving || direction === DIRECTIONS.IDLE) {
+            return 'frame1';
+        }
+        // Sinon, alterner entre frame1 et frame2 selon l'animation
+        return this.currentFrame === 0 ? 'frame1' : 'frame2';
+    }
+
+    hexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : null;
+    }
+
+    isColorSimilar(color1, color2, tolerance) {
+        return Math.abs(color1.r - color2.r) <= tolerance &&
+               Math.abs(color1.g - color2.g) <= tolerance &&
+               Math.abs(color1.b - color2.b) <= tolerance;
+    }
+
+    getCacheKey(direction, color, frameKey) {
+        return `${direction}-${color}-${frameKey}`;
+    }
+
+    getColoredSprite(direction, color, isMoving) {
+        const frameKey = this.getFrameKey(direction, isMoving);
+        const cacheKey = this.getCacheKey(direction, color, frameKey);
+        
+        if (this.colorCache.has(cacheKey)) {
+            return this.colorCache.get(cacheKey);
+        }
+
+        const sprite = this.loadedSprites[direction]?.[frameKey];
+        if (!sprite || !sprite.complete) return null;
+
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+        tempCanvas.width = sprite.width;
+        tempCanvas.height = sprite.height;
+
+        tempCtx.drawImage(sprite, 0, 0);
+
+        const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+        const pixels = imageData.data;
+        const targetRgb = this.hexToRgb(color);
+
+        for (let i = 0; i < pixels.length; i += 4) {
+            const currentColor = {
+                r: pixels[i],
+                g: pixels[i + 1],
+                b: pixels[i + 2]
+            };
+
+            if (this.isColorSimilar(currentColor, this.TARGET_COLOR, this.COLOR_TOLERANCE)) {
+                pixels[i] = targetRgb.r;
+                pixels[i + 1] = targetRgb.g;
+                pixels[i + 2] = targetRgb.b;
+            }
+        }
+
+        tempCtx.putImageData(imageData, 0, 0);
+        this.colorCache.set(cacheKey, tempCanvas);
+        return tempCanvas;
+    }
+
+    determineDirection(dx, dy) {
+        if (Math.abs(dx) < 0.1 && Math.abs(dy) < 0.1) {
+            return DIRECTIONS.IDLE;
+        }
+
+        const angle = Math.atan2(dy, dx);
+        const degrees = angle * (180 / Math.PI);
+
+        if (degrees >= -22.5 && degrees < 22.5) return DIRECTIONS.EAST;
+        if (degrees >= 22.5 && degrees < 67.5) return DIRECTIONS.SOUTH_EAST;
+        if (degrees >= 67.5 && degrees < 112.5) return DIRECTIONS.SOUTH;
+        if (degrees >= 112.5 && degrees < 157.5) return DIRECTIONS.SOUTH_WEST;
+        if (degrees >= 157.5 || degrees < -157.5) return DIRECTIONS.WEST;
+        if (degrees >= -157.5 && degrees < -112.5) return DIRECTIONS.NORTH_WEST;
+        if (degrees >= -112.5 && degrees < -67.5) return DIRECTIONS.NORTH;
+        if (degrees >= -67.5 && degrees < -22.5) return DIRECTIONS.NORTH_EAST;
+        
+        return DIRECTIONS.IDLE;
+    }
+
+    clearCache() {
+        this.colorCache.clear();
+    }
+}
+
+// Créer l'instance globale du SpriteManager
+const spriteManager = new SpriteManager();
 
 function addVersionDisplay() {
     const versionDisplay = document.createElement('div');
@@ -1528,9 +1720,27 @@ function drawMalus(malus, context) {
     context.restore();
 }
 
+// Ajoutez cette fonction pour mettre à jour l'état de mouvement
+function updateEntityMovement(entity) {
+    const lastPos = lastEntityPositions.get(entity.id) || { x: entity.x, y: entity.y };
+    const dx = entity.x - lastPos.x;
+    const dy = entity.y - lastPos.y;
+    
+    // Considérer l'entité en mouvement si elle s'est déplacée de plus de 0.1 pixel
+    const isMoving = Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1;
+    
+    // Mettre à jour l'état de mouvement
+    entityMovementStates.set(entity.id, isMoving);
+    
+    // Sauvegarder la position actuelle pour la prochaine frame
+    lastEntityPositions.set(entity.id, { x: entity.x, y: entity.y });
+    
+    return isMoving;
+}
 
 // Rendu du jeu
 function drawEntities() {
+    spriteManager.updateAnimation();
     context.imageSmoothingEnabled = true;
     context.imageSmoothingQuality = 'high';
 
@@ -1610,18 +1820,15 @@ function drawEntities() {
 
     // Dessiner les entités
     entities.forEach(entity => {
-        // Vérifier les zones de type STEALTH
+        const isMoving = updateEntityMovement(entity);
+
+        // Vérifier la visibilité dans les zones de type STEALTH
         const isInInvisibilityZone = specialZones?.some(zone => {
             if (zone.type.id !== 'STEALTH') return false;
-
             if (zone.shape.type === 'circle') {
                 return Math.hypot(entity.x - zone.shape.x, entity.y - zone.shape.y) <= zone.shape.radius;
-            } else {
-                return entity.x >= zone.shape.x && 
-                       entity.x <= zone.shape.x + zone.shape.width &&
-                       entity.y >= zone.shape.y && 
-                       entity.y <= zone.shape.y + zone.shape.height;
             }
+            return false;
         });
 
         // Ne pas dessiner les joueurs invisibles (sauf le joueur local)
@@ -1629,109 +1836,129 @@ function drawEntities() {
             return;
         }
 
-        // Style spécial pour le joueur local en invisibilité
+        // Gérer l'opacité pour les zones d'invisibilité
         if (isInInvisibilityZone && entity.id === playerId) {
             context.globalAlpha = 0.3;
         }
 
-        // Si c'est notre joueur, on ajoute les effets de bonus
+        // Dessiner l'entité avec son sprite animé
+        const coloredSprite = spriteManager.getColoredSprite(
+            entity.direction || DIRECTIONS.IDLE,
+            entity.color,
+            isMoving
+        );
+
+                    // Pour les bots noirs
+                    if (entity.type === 'blackBot') {
+                        // Effet de lueur rouge pour le rayon de détection
+                        context.beginPath();
+                        context.arc(entity.x, entity.y, entity.detectionRadius, 0, Math.PI * 2);
+                        context.fillStyle = 'rgba(255, 0, 0, 0.1)';
+                        context.fill();
+            
+                        // Effet de pulsation
+                        const pulseSize = 13 + Math.sin(Date.now() * 0.01) * 2;
+                        context.beginPath();
+                        context.arc(entity.x, entity.y, pulseSize, 0, Math.PI * 2);
+                        context.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+                        context.stroke();
+                    }
+        
+        // Si c'est le joueur courant, dessiner les effets de bonus en premier
         if (entity.id === playerId) {
-            // Dessiner d'abord les effets de bonus si actifs
-            drawBonusEffects(entity);
-        }
+            // Effet de boost de vitesse
+            if (speedBoostActive) {
+                const now = Date.now();
+                const glowSize = 25 + Math.sin(now * 0.006) * 5;
+                context.beginPath();
+                context.arc(entity.x, entity.y, glowSize, 0, Math.PI * 2);
+                context.fillStyle = 'rgba(0, 255, 0, 0.2)';
+                context.fill();
+            }
 
-        // Dessiner le point normalement
-        context.beginPath();
-        context.arc(entity.x, entity.y, 11, 0, 2 * Math.PI);
-        context.fillStyle = 'black';
-        context.fill();
+            // Effet d'invincibilité
+            if (entity.invincibilityActive) {
+                const now = Date.now();
+                const pulseSize = 20 + Math.sin(now * 0.004) * 5;
+                context.beginPath();
+                context.arc(entity.x, entity.y, pulseSize, 0, Math.PI * 2);
+                context.fillStyle = 'rgba(255, 215, 0, 0.3)';
+                context.fill();
+            }
 
-        context.beginPath();
-        context.arc(entity.x, entity.y, 10, 0, 2 * Math.PI);
-        context.fillStyle = entity.color;
-        context.fill();
-
-        // Gestion spéciale pour les bots noirs
-        if (entity.type === 'blackBot') {
-        // Effet de lueur rouge pour montrer le rayon de détection
-        context.beginPath();
-        context.arc(entity.x, entity.y, entity.detectionRadius, 0, 2 * Math.PI);
-        context.fillStyle = 'rgba(255, 0, 0, 0.1)';
-        context.fill();
-
-        // Lueur autour du bot noir
-        const glowSize = 15;
-        context.beginPath();
-        context.arc(entity.x, entity.y, glowSize, 0, 2 * Math.PI);
-        context.fillStyle = 'rgba(255, 0, 0, 0.3)';
-        context.fill();
-
-        // Corps du bot noir
-        context.beginPath();
-        context.arc(entity.x, entity.y, 11, 0, 2 * Math.PI);
-        context.fillStyle = 'black';
-        context.fill();
-        context.lineWidth = 2;
-        context.strokeStyle = '#FF0000';
-        context.stroke();
-
-        // Effet de pulsation
-        const pulseSize = 13 + Math.sin(Date.now() * 0.01) * 2;
-        context.beginPath();
-        context.arc(entity.x, entity.y, pulseSize, 0, 2 * Math.PI);
-        context.strokeStyle = 'rgba(255, 0, 0, 0.5)';
-        context.stroke();
-        } 
-        else {
-            // Dessiner le contour noir standard
-            context.shadowColor = 'rgba(0, 0, 0, 0.5)';
-            context.shadowBlur = 4;
-            context.shadowOffsetX = 2;
-            context.shadowOffsetY = 2;
-
-            context.beginPath();
-            context.arc(entity.x, entity.y, 11, 0, 2 * Math.PI);
-            context.fillStyle = 'black';
-            context.fill();
-
-            // Dessiner le cercle de couleur
-            context.beginPath();
-            context.arc(entity.x, entity.y, 10, 0, 2 * Math.PI);
-            context.fillStyle = entity.color;
-            context.fill();
-
-            // Styles spéciaux pour le joueur actuel et les joueurs révélés
-            if (entity.id === playerId) {
-                context.lineWidth = 2;
-                context.strokeStyle = '#FFD700';
-                context.stroke();
-                
-                context.lineWidth = 1;
-                context.strokeStyle = '#FFFFFF';
-                context.stroke();
-            } else if (revealActive && entity.type === 'player') {
-                context.lineWidth = 3;
-                context.strokeStyle = '#FF0000';
-                context.stroke();
+            // Effet de révélation
+            if (revealActive) {
+                const now = Date.now();
+                const revealSize = 15 + Math.sin(now * 0.005) * 3;
+                context.beginPath();
+                context.arc(entity.x, entity.y, revealSize, 0, Math.PI * 2);
+                context.fillStyle = 'rgba(255, 0, 255, 0.2)';
+                context.fill();
             }
         }
 
-        // Réinitialiser les paramètres
-        context.shadowColor = 'transparent';
-        context.shadowBlur = 0;
-        context.shadowOffsetX = 0;
-        context.shadowOffsetY = 0;
+        if (coloredSprite) {
+            // Ajouter l'ombre portée pour le joueur courant
+            if (entity.id === playerId) {
+                context.save();
+                context.beginPath();
+                // Augmenter le décalage vertical de l'ombre (de 2 à 6 pixels)
+                context.arc(entity.x, entity.y + 10, 12, 0, Math.PI * 2);
+                context.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                context.fill();
+                context.restore();
+            }
+
+            // Dessiner le sprite
+            context.drawImage(
+                coloredSprite,
+                entity.x - 16,
+                entity.y - 16,
+                32,
+                32
+            );
+
+            // Effets spéciaux
+            if (entity.invincibilityActive) {
+                context.globalAlpha = 0.3;
+                context.beginPath();
+                context.arc(entity.x, entity.y, 20, 0, Math.PI * 2);
+                context.fillStyle = '#FFD700';
+                context.fill();
+                context.globalAlpha = 1;
+            }
+        }
+
+        // Réinitialiser l'alpha
         context.globalAlpha = 1;
     });
 
-    bonuses.forEach(bonus => drawBonus(bonus, context));
+    // Dessiner les bonus
+    if (bonuses) {
+        bonuses.forEach(bonus => drawBonus(bonus, context));
+    }
 
-    if (socket && socket.malus) {
+    // Dessiner les malus
+    if (socket.malus) {
         socket.malus.forEach(malus => drawMalus(malus, context));
     }
 
-    // Restaurer le contexte
+    // Nettoyer le tracking des entités qui ne sont plus présentes
+    cleanupEntityTracking();
+
     context.restore();
+}
+
+// Nettoyer les entités qui ne sont plus présentes
+function cleanupEntityTracking() {
+    const currentIds = new Set(entities.map(e => e.id));
+    
+    for (const id of lastEntityPositions.keys()) {
+        if (!currentIds.has(id)) {
+            lastEntityPositions.delete(id);
+            entityMovementStates.delete(id);
+        }
+    }
 }
 
 // Fonction de gestion des effets de malus
