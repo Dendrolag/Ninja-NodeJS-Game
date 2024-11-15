@@ -1,10 +1,29 @@
 // server.js
+import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import path from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const app = express();
+const server = createServer(app);
+const io = new Server(server);
+
+// Configuration des fichiers statiques
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
+app.use(express.static(path.join(__dirname, 'public')));
+app.use((req, res, next) => {
+    if (req.url.endsWith('.js')) {
+        res.type('application/javascript');
+    }
+    next();
+});
 
 // Import des dépendances
-const express = require('express');
-const app = express();
-const server = require('http').createServer(app);
-const io = require('socket.io')(server);
 const GAME_WIDTH = 2000;
 const GAME_HEIGHT = 1500;
 
@@ -68,8 +87,17 @@ const DIRECTIONS = {
 };
 
 // Configuration des fichiers statiques
-app.use('/assets', express.static(__dirname + '/assets'));
-app.use(express.static(__dirname + '/public'));
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/test-collision', (req, res) => {
+    const collisionPath = path.join(__dirname, 'public', 'assets', 'map', 'collision.png');
+    if (fs.existsSync(collisionPath)) {
+        res.send(`Le fichier existe à : ${collisionPath}`);
+    } else {
+        res.send(`Le fichier n'existe PAS à : ${collisionPath}`);
+    }
+});
 
 // Variables globales
 let players = {};
@@ -106,6 +134,11 @@ const SAFE_SPAWN_DISTANCE = 100;
 const BOT_SPEED = 5;
 const UPDATE_INTERVAL = 50;
 
+let startCountdown = null;
+
+const GAME_START_COUNTDOWN = 5; // 5 secondes de countdown avant le début
+
+
 const availableColors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'];
 
 // Constantes pour les zones
@@ -135,6 +168,134 @@ const ZONE_TYPES = {
         borderColor: 'rgba(128, 0, 128, 0.6)'
     }
 };
+
+// Dans server.js, ajouter ces imports au début du fichier
+import { createCanvas, loadImage } from 'canvas';
+
+class CollisionMap {
+    constructor() {
+        this.collisionData = null;
+        this.initialize();
+    }
+
+    async initialize() {
+        try {
+            const collisionPath = path.join(__dirname, 'public', 'assets', 'map', 'collision.png');
+            console.log('Chargement de la carte de collision depuis:', collisionPath);
+            
+            const originalImage = await loadImage(collisionPath);
+            
+            // Créer un canvas à la taille du jeu
+            const canvas = createCanvas(GAME_WIDTH, GAME_HEIGHT);
+            const ctx = canvas.getContext('2d');
+            
+            // Redimensionner l'image aux dimensions du jeu
+            ctx.drawImage(originalImage, 0, 0, GAME_WIDTH, GAME_HEIGHT);
+            
+            console.log(`Image redimensionnée de ${originalImage.width}x${originalImage.height} à ${GAME_WIDTH}x${GAME_HEIGHT}`);
+            
+            const imageData = ctx.getImageData(0, 0, GAME_WIDTH, GAME_HEIGHT);
+            
+            // Créer la matrice de collision à la taille du jeu
+            this.collisionData = new Array(GAME_HEIGHT);
+            let collisionCount = 0;
+            
+            for (let y = 0; y < GAME_HEIGHT; y++) {
+                this.collisionData[y] = new Array(GAME_WIDTH);
+                for (let x = 0; x < GAME_WIDTH; x++) {
+                    const index = (y * GAME_WIDTH + x) * 4;
+                    // Vérifier si le pixel est proche du noir
+                    const r = imageData.data[index];
+                    const g = imageData.data[index + 1];
+                    const b = imageData.data[index + 2];
+                    const isCollision = (r + g + b) / 3 < 128;
+                    this.collisionData[y][x] = isCollision;
+                    if (isCollision) collisionCount++;
+                }
+            }
+            
+            console.log(`Carte de collision initialisée: ${collisionCount} points de collision sur ${GAME_WIDTH * GAME_HEIGHT} points totaux`);
+            
+        } catch (error) {
+            console.error('Erreur lors du chargement de la carte de collision:', error);
+            this.initializeEmptyCollisionMap();
+        }
+    }
+
+    checkCollision(x, y) {
+        if (!this.collisionData) return false;
+
+        const pixelX = Math.floor(x);
+        const pixelY = Math.floor(y);
+
+        // Vérification des limites
+        if (pixelX < 0 || pixelX >= GAME_WIDTH || pixelY < 0 || pixelY >= GAME_HEIGHT) {
+            return true;
+        }
+
+        // Vérification de la validité des indices
+        if (!this.collisionData[pixelY] || typeof this.collisionData[pixelY][pixelX] === 'undefined') {
+            return true;
+        }
+
+        return this.collisionData[pixelY][pixelX];
+    }
+
+    canMove(fromX, fromY, toX, toY, radius = 16) {
+        // Point central
+        if (this.checkCollision(toX, toY)) {
+            return false;
+        }
+
+        // Vérifier plusieurs points autour
+        const points = 8; // Nombre de points à vérifier
+        const radiusInner = radius * 0.7; // Rayon intérieur plus petit
+        
+        for (let i = 0; i < points; i++) {
+            const angle = (i / points) * Math.PI * 2;
+            // Vérifier deux cercles concentriques
+            const checkX1 = toX + Math.cos(angle) * radius;
+            const checkY1 = toY + Math.sin(angle) * radius;
+            const checkX2 = toX + Math.cos(angle) * radiusInner;
+            const checkY2 = toY + Math.sin(angle) * radiusInner;
+            
+            if (this.checkCollision(checkX1, checkY1) || this.checkCollision(checkX2, checkY2)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    findValidSpawnPosition() {
+        const margin = 50;
+        const maxAttempts = 100;
+        
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            const x = margin + Math.floor(Math.random() * (GAME_WIDTH - 2 * margin));
+            const y = margin + Math.floor(Math.random() * (GAME_HEIGHT - 2 * margin));
+            
+            if (this.canMove(x, y, x, y, 24)) {
+                return { x, y };
+            }
+        }
+        
+        return { x: GAME_WIDTH / 2, y: GAME_HEIGHT / 2 };
+    }
+
+    initializeEmptyCollisionMap() {
+        console.warn('Initialisation d\'une carte de collision vide');
+        this.collisionData = new Array(GAME_HEIGHT);
+        for (let y = 0; y < GAME_HEIGHT; y++) {
+            this.collisionData[y] = new Array(GAME_WIDTH).fill(false);
+        }
+    }
+}
+
+// Créer une instance unique pour tout le serveur
+const collisionMap = new CollisionMap();
+
+export { collisionMap };
 
 // Classe pour gérer les zones
 class SpecialZone {
@@ -481,8 +642,9 @@ function manageSpecialZones() {
 class Entity {
     constructor(id, color = null) {
         this.id = id;
-        this.x = Math.random() * GAME_WIDTH;
-        this.y = Math.random() * GAME_HEIGHT;
+        const spawnPos = getSpawnPosition();
+        this.x = spawnPos.x;
+        this.y = spawnPos.y;
         this.color = color || getRandomColor();
         this.direction = DIRECTIONS.IDLE;
         this.lastX = this.x;
@@ -518,6 +680,9 @@ class Player extends Entity {
     constructor(id, nickname) {
         super(id, getUniqueColor());
         this.nickname = nickname;
+        const spawnPos = getSpawnPosition();
+        this.x = spawnPos.x;
+        this.y = spawnPos.y;
         this.captures = 0;
         this.capturedPlayers = {};
         this.capturedBy = {};
@@ -564,7 +729,6 @@ class Player extends Entity {
         this.x = spawnPos.x;
         this.y = spawnPos.y;
         
-        // Ne changer la couleur que si keepColor est false
         if (!keepColor) {
             this.color = getUniqueColor(excludeColors);
         }
@@ -579,6 +743,9 @@ class Player extends Entity {
 class Bot extends Entity {
     constructor(id) {
         super(id);
+        const spawnPos = getSpawnPosition();
+        this.x = spawnPos.x;
+        this.y = spawnPos.y;
         this.vx = (Math.random() - 0.5) * 2;
         this.vy = (Math.random() - 0.5) * 2;
         this.changeDirectionInterval = Math.random() * 2000 + 1000;
@@ -587,6 +754,10 @@ class Bot extends Entity {
         this.stateDuration = Math.random() * 2000 + 1000;
         this.lastStateChange = Date.now();
         this.type = 'bot';
+        this.stuckCheckInterval = 500; // Vérifier si bloqué toutes les 500ms
+        this.lastPosition = { x: this.x, y: this.y };
+        this.lastMoveCheck = Date.now();
+        this.stuckCount = 0;
     }
 
     update() {
@@ -594,22 +765,106 @@ class Bot extends Entity {
 
         const now = Date.now();
 
+        // Gestion des états de mouvement/pause
         if (now - this.lastStateChange > this.stateDuration) {
             this.isMoving = !this.isMoving;
             this.lastStateChange = now;
             this.stateDuration = Math.random() * 2000 + 1000;
 
+            // Lors d'une pause, sauvegarder la position comme point de référence
             if (!this.isMoving) {
                 this.direction = DIRECTIONS.IDLE;
+                this.lastPosition = { x: this.x, y: this.y };
+                this.stuckCount = 0; // Réinitialiser le compteur de blocage
             }
         }
 
-        if (this.isMoving) {
-            const oldX = this.x;
-            const oldY = this.y;
-            this.move();
-            this.updateDirection(this.x - oldX, this.y - oldY);
+        // Vérifier si le bot est bloqué seulement quand il essaie de se déplacer
+        if (this.isMoving && now - this.lastMoveCheck > this.stuckCheckInterval) {
+            const dx = this.x - this.lastPosition.x;
+            const dy = this.y - this.lastPosition.y;
+            const distanceMoved = Math.sqrt(dx * dx + dy * dy);
+
+            if (distanceMoved < 1) { // Si le bot n'a presque pas bougé alors qu'il essaie
+                this.stuckCount++;
+                if (this.stuckCount > 3) { // Augmenté pour plus de tolérance
+                    this.changeDirection(); // D'abord essayer de changer de direction
+                    if (this.stuckCount > 5) { // Si toujours bloqué après plusieurs tentatives
+                        this.findEscapePath();
+                    }
+                }
+            } else {
+                this.stuckCount = 0;
+            }
+
+            this.lastPosition = { x: this.x, y: this.y };
+            this.lastMoveCheck = now;
         }
+
+        if (this.isMoving) {
+            this.move();
+        }
+    }
+
+    findEscapePath() {
+        const angles = [0, 45, 90, 135, 180, 225, 270, 315];
+        
+        // Essayer d'abord de trouver un chemin de sortie
+        for (const angle of angles) {
+            const radians = (angle * Math.PI) / 180;
+            const testX = this.x + Math.cos(radians) * BOT_SPEED * 2;
+            const testY = this.y + Math.sin(radians) * BOT_SPEED * 2;
+
+            if (collisionMap.canMove(this.x, this.y, testX, testY, 8)) {
+                this.x = testX;
+                this.y = testY;
+                this.vx = Math.cos(radians);
+                this.vy = Math.sin(radians);
+                this.stuckCount = 0;
+                return;
+            }
+        }
+
+        // En dernier recours seulement, téléporter à une nouvelle position
+        const spawnPos = getSpawnPosition();
+        this.x = spawnPos.x;
+        this.y = spawnPos.y;
+        this.changeDirection();
+        this.stuckCount = 0;
+    }
+
+    unstuck() {
+        const spawnPos = getSpawnPosition();
+        this.x = spawnPos.x;
+        this.y = spawnPos.y;
+        this.stuckCount = 0;
+        this.changeDirection();
+        // Essayer plusieurs directions pour s'échapper
+        const angles = [0, 45, 90, 135, 180, 225, 270, 315];
+        for (const angle of angles) {
+            const radians = (angle * Math.PI) / 180;
+            const testX = this.x + Math.cos(radians) * BOT_SPEED * 2;
+            const testY = this.y + Math.sin(radians) * BOT_SPEED * 2;
+
+            if (collisionMap.canMove(this.x, this.y, testX, testY, 8)) {
+                // Position valide trouvée, téléporter le bot légèrement plus loin
+                const escapeX = this.x + Math.cos(radians) * BOT_SPEED * 4;
+                const escapeY = this.y + Math.sin(radians) * BOT_SPEED * 4;
+                if (collisionMap.canMove(this.x, this.y, escapeX, escapeY, 8)) {
+                    this.x = escapeX;
+                    this.y = escapeY;
+                    this.changeDirection(); // Nouvelle direction aléatoire
+                    this.stuckCount = 0;
+                    return;
+                }
+            }
+        }
+
+        // Si toujours bloqué, essayer de trouver une nouvelle position valide
+        const newPos = collisionMap.findValidSpawnPosition();
+        this.x = newPos.x;
+        this.y = newPos.y;
+        this.stuckCount = 0;
     }
 
     move() {
@@ -621,37 +876,62 @@ class Bot extends Entity {
             this.changeDirectionInterval = Math.random() * 2000 + 1000;
         }
 
-        this.x += this.vx * BOT_SPEED;
-        this.y += this.vy * BOT_SPEED;
+        const newX = this.x + this.vx * BOT_SPEED;
+        const newY = this.y + this.vy * BOT_SPEED;
 
-        if (this.x <= 0 || this.x >= GAME_WIDTH) {
-            this.vx *= -1;
-            this.x = Math.max(0, Math.min(GAME_WIDTH, this.x));
-        }
-        if (this.y <= 0 || this.y >= GAME_HEIGHT) {
-            this.vy *= -1;
-            this.y = Math.max(0, Math.min(GAME_HEIGHT, this.y));
+        if (collisionMap.canMove(this.x, this.y, newX, newY, 8)) {
+            this.x = newX;
+            this.y = newY;
+            this.updateDirection(this.vx, this.vy);
+        } else {
+            this.changeDirection();
         }
 
-        // Mise à jour de la direction en fonction du mouvement
-        this.updateDirection(this.vx * BOT_SPEED, this.vy * BOT_SPEED);
+        // S'assurer que le bot reste dans les limites
+        this.x = Math.max(0, Math.min(GAME_WIDTH, this.x));
+        this.y = Math.max(0, Math.min(GAME_HEIGHT, this.y));
     }
 
     changeDirection() {
-        const angleChange = (Math.random() - 0.5) * Math.PI;
-        const currentAngle = Math.atan2(this.vy, this.vx);
-        const newAngle = currentAngle + angleChange;
-        
-        const speed = 1;
-        this.vx = Math.cos(newAngle) * speed;
-        this.vy = Math.sin(newAngle) * speed;
+        let foundValidDirection = false;
+        let attempts = 0;
+        const maxAttempts = 8;
+
+        while (!foundValidDirection && attempts < maxAttempts) {
+            const angleChange = (Math.random() - 0.5) * Math.PI;
+            const currentAngle = Math.atan2(this.vy, this.vx);
+            const newAngle = currentAngle + angleChange;
+            
+            const testVx = Math.cos(newAngle);
+            const testVy = Math.sin(newAngle);
+            
+            const testX = this.x + testVx * BOT_SPEED * 2;
+            const testY = this.y + testVy * BOT_SPEED * 2;
+
+            if (collisionMap.canMove(this.x, this.y, testX, testY, 8)) {
+                this.vx = testVx;
+                this.vy = testVy;
+                foundValidDirection = true;
+            }
+            
+            attempts++;
+        }
+
+        if (!foundValidDirection) {
+            // Si aucune direction n'est valide, inverser la direction
+            this.vx = -this.vx;
+            this.vy = -this.vy;
+        }
     }
 }
 
 class BlackBot extends Bot {
     constructor(id) {
         super(id);
-        this.color = '#000000';  // Couleur noire
+        const spawnPos = getSpawnPosition();
+        this.x = spawnPos.x;
+        this.y = spawnPos.y;
+        this.color = '#000000';
         this.type = 'blackBot';
         this.lastCaptureTime = 0;
         this.captureCooldown = 2000; // 2 secondes entre chaque capture
@@ -659,11 +939,8 @@ class BlackBot extends Bot {
         this.targetEntity = null;
         this.baseSpeed = BOT_SPEED; // Utiliser la même vitesse que les autres bots
         this.lastTargetSearch = 0;
-
-        // Repositionner le bot noir à une position sûre lors de sa création
-        const spawnPos = getSpawnPosition();
-        this.x = spawnPos.x;
-        this.y = spawnPos.y;
+        this.targetSearchInterval = 500;
+        this.stuckCheckInterval = 300; // Vérifier plus souvent si bloqué
     }
 
     update(entities) {
@@ -749,23 +1026,23 @@ class BlackBot extends Bot {
         const dx = this.targetEntity.x - this.x;
         const dy = this.targetEntity.y - this.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-
-    // Normaliser et appliquer la vitesse
-    if (distance > 0) {
-        this.vx = (dx / distance) * this.baseSpeed;
-        this.vy = (dy / distance) * this.baseSpeed;
-    }
-
-        // Déplacement
-        this.x += this.vx;
-        this.y += this.vy;
-
+    
+        if (distance > 0) {
+            // Normaliser et appliquer la vitesse
+            this.vx = (dx / distance) * this.baseSpeed;
+            this.vy = (dy / distance) * this.baseSpeed;
+        }
+    
+        // Calculer la nouvelle position
+        const newX = this.x + this.vx;
+        const newY = this.y + this.vy;
+    
         // Garder dans les limites
-        this.x = Math.max(0, Math.min(GAME_WIDTH, this.x));
-        this.y = Math.max(0, Math.min(GAME_HEIGHT, this.y));
-
+        this.x = Math.max(0, Math.min(GAME_WIDTH, newX));
+        this.y = Math.max(0, Math.min(GAME_HEIGHT, newY));
+    
         // Vérifier collision avec la cible
-        if (distance < 20) {  // Même distance de capture que les autres entités
+        if (distance < 20) {  
             this.captureEntity(this.targetEntity);
         }
     }
@@ -863,11 +1140,15 @@ class Bonus {
     constructor(type) {
         this.id = `bonus_${Date.now()}_${Math.random()}`;
         this.type = type;
-        this.x = Math.random() * GAME_WIDTH;
-        this.y = Math.random() * GAME_HEIGHT;
+        
+        // Trouver une position valide
+        const pos = getSpawnPosition();
+        this.x = pos.x;
+        this.y = pos.y;
+    
         this.createdAt = Date.now();
-        this.lifetime = 8000; // 8 secondes
-        this.warningThreshold = 3000; // 3 secondes avant disparition
+        this.lifetime = 8000;
+        this.warningThreshold = 3000;
         this.lastUpdateTime = Date.now();
     }
 
@@ -913,11 +1194,14 @@ class Malus {
     constructor(type) {
         this.id = `malus_${Date.now()}_${Math.random()}`;
         this.type = type;
-        this.x = Math.random() * GAME_WIDTH;
-        this.y = Math.random() * GAME_HEIGHT;
+        
+        const pos = getSpawnPosition();
+        this.x = pos.x;
+        this.y = pos.y;
+    
         this.createdAt = Date.now();
-        this.lifetime = 8000; // 8 secondes
-        this.warningThreshold = 3000; // 3 secondes avant disparition
+        this.lifetime = 8000;
+        this.warningThreshold = 3000;
         this.lastUpdateTime = Date.now();
     }
 
@@ -1024,37 +1308,70 @@ function getUniqueColor(excludeColors = []) {
 const SPAWN_MARGIN = 100; // 100 pixels de marge depuis les bords
 
 function getSpawnPosition() {
-    const MAX_ATTEMPTS = 10;
+    const MAX_ATTEMPTS = 100;
+    const SPAWN_MARGIN = 100;
     let attempts = 0;
     
     while (attempts < MAX_ATTEMPTS) {
-        // Générer une position aléatoire en tenant compte des marges
+        // Générer une position avec marge
         const x = SPAWN_MARGIN + Math.random() * (GAME_WIDTH - 2 * SPAWN_MARGIN);
         const y = SPAWN_MARGIN + Math.random() * (GAME_HEIGHT - 2 * SPAWN_MARGIN);
-        
-        let isSafe = true;
 
-        // Vérifier la distance avec les autres entités
-        const checkEntity = (entity) => {
-            const dx = x - entity.x;
-            const dy = y - entity.y;
-            return Math.sqrt(dx * dx + dy * dy) >= SAFE_SPAWN_DISTANCE;
-        };
-
-        if (Object.values(players).every(checkEntity) && Object.values(bots).every(checkEntity)) {
-            return { x, y };
+        // Vérifier les collisions de manière approfondie
+        if (!isValidSpawnLocation(x, y)) {
+            attempts++;
+            continue;
         }
 
-        attempts++;
+        return { x, y };
     }
 
-    // Même en cas d'échec des tentatives, on respecte les marges
-    return {
-        x: SPAWN_MARGIN + Math.random() * (GAME_WIDTH - 2 * SPAWN_MARGIN),
-        y: SPAWN_MARGIN + Math.random() * (GAME_HEIGHT - 2 * SPAWN_MARGIN)
-    };
+    // Si aucune position n'est trouvée après MAX_ATTEMPTS essais, essayer au centre avec offset
+    return findSafeBackupPosition();
 }
 
+function isValidSpawnLocation(x, y, radius = 24) {
+    // 1. Vérifier la collision avec le terrain
+    if (!collisionMap.canMove(x, y, x, y, radius)) {
+        return false;
+    }
+
+    // 2. Vérifier la distance avec les autres entités
+    const allEntities = [
+        ...Object.values(players),
+        ...Object.values(bots),
+        ...Object.values(blackBots)
+    ];
+
+    return allEntities.every(entity => {
+        const dx = x - entity.x;
+        const dy = y - entity.y;
+        return Math.sqrt(dx * dx + dy * dy) >= SAFE_SPAWN_DISTANCE;
+    });
+}
+
+function findSafeBackupPosition() {
+    const GRID_SIZE = 50; // Taille de la grille pour la recherche
+    const startX = GAME_WIDTH / 2;
+    const startY = GAME_HEIGHT / 2;
+    
+    // Chercher en spirale depuis le centre
+    for (let radius = 1; radius < 20; radius++) {
+        for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 8) {
+            const x = startX + Math.cos(angle) * (radius * GRID_SIZE);
+            const y = startY + Math.sin(angle) * (radius * GRID_SIZE);
+            
+            if (x < 0 || x >= GAME_WIDTH || y < 0 || y >= GAME_HEIGHT) continue;
+            
+            if (isValidSpawnLocation(x, y)) {
+                return { x, y };
+            }
+        }
+    }
+    
+    console.error("Aucune position de spawn valide trouvée, utilisation du centre");
+    return { x: GAME_WIDTH / 2, y: GAME_HEIGHT / 2 };
+}
 
 function calculateTimeLeft() {
     if (isPaused) {
@@ -1423,14 +1740,39 @@ function sendUpdates() {
     }
 }
 
+function checkGameEndConditions() {
+    if (waitingRoom.playersInGame.size === 0 && waitingRoom.isGameStarted) {
+        waitingRoom.isGameStarted = false;
+        io.emit('updateWaitingRoom', {
+            players: Array.from(waitingRoom.players.values()),
+            gameInProgress: false
+        });
+    }
+}
+
 function endGame() {
     isGameOver = true;
+    waitingRoom.isGameStarted = false;
+    
     const scores = calculatePlayerScores();
 
-    // Informer tous les joueurs de la fin de la partie
+    waitingRoom.players.forEach(player => {
+        if (player.status === 'playing') {
+            player.status = 'waiting';
+        }
+    });
+    waitingRoom.playersInGame.clear();
+
+    // Informer tous les joueurs
     for (let socketId in activeSockets) {
         activeSockets[socketId].emit('gameOver', { scores: scores });
     }
+
+    // Mettre à jour la salle d'attente
+    io.emit('updateWaitingRoom', {
+        players: Array.from(waitingRoom.players.values()),
+        gameInProgress: false
+    });
 }
 
 function resetGame() {
@@ -1812,68 +2154,99 @@ io.on('connection', (socket) => {
     socket.on('startGameFromRoom', (data) => {
         const player = waitingRoom.players.get(socket.id);       
         if (player?.isOwner) {
+            // Si un countdown est déjà en cours, ne rien faire
+            if (startCountdown) return;
+     
+            socket.removeAllListeners('cancelGameStart');
             
-            // Reset complet du jeu
-            isGameOver = false;
-            isPaused = false;
-            totalPauseDuration = 0;
-            pauseStartTime = null;
-            gameStartTime = Date.now();
+            let countdown = GAME_START_COUNTDOWN;
+            let canCancel = true;
             
-            // Réinitialiser tous les joueurs
-            for (let id in players) {
-                players[id].captures = 0;
-                players[id].capturedPlayers = {};
-                players[id].capturedBy = {};
-                players[id].botsControlled = 0;
-                players[id].capturedByBlackBot = 0;
-                players[id].speedBoostActive = false;
-                players[id].invincibilityActive = false;
-            }
-    
-            // Réinitialiser les bots et bonus
-            blackBots = {};
-            bots = {};
-            bonuses = [];
-            botsInitialized = false;
-            specialZones.clear();
-    
-            waitingRoom.isGameStarted = true;
+            io.emit('gameStartCountdown', { countdown, canCancel });
+            
+            startCountdown = setInterval(() => {
+                countdown--;
                 
-            // Initialiser la partie pour tous les joueurs de la salle d'attente
-            waitingRoom.players.forEach((waitingPlayer, socketId) => {
-                // Mettre à jour le statut du joueur en attente
-                waitingPlayer.status = 'playing';  // Utiliser waitingPlayer au lieu de player
-                waitingRoom.playersInGame.add(socketId);
-    
-                const playerSocket = io.sockets.sockets.get(socketId);
-                if (playerSocket) {
-                    // Créer un nouveau joueur s'il n'existe pas déjà
-                   if (!players[socketId]) {
-                        players[socketId] = new Player(socketId, waitingPlayer.nickname);
-                        activeSockets[socketId] = playerSocket;
+                if (countdown <= 2) {
+                    canCancel = false;
+                }
+                
+                io.emit('gameStartCountdown', { countdown, canCancel });
+                
+                if (countdown <= 0) {
+                    clearInterval(startCountdown);
+                    startCountdown = null;
+                    
+                    // Reset complet du jeu
+                    isGameOver = false;
+                    isPaused = false;
+                    totalPauseDuration = 0;
+                    pauseStartTime = null;
+                    gameStartTime = Date.now();
+                    
+                    // Réinitialiser tous les joueurs
+                    for (let id in players) {
+                        players[id].captures = 0;
+                        players[id].capturedPlayers = {};
+                        players[id].capturedBy = {};
+                        players[id].botsControlled = 0;
+                        players[id].capturedByBlackBot = 0;
+                        players[id].speedBoostActive = false;
+                        players[id].invincibilityActive = false;
                     }
-                    // Faire respawn tous les joueurs avec une nouvelle couleur
-                    players[socketId].respawn();
+        
+                    // Réinitialiser les bots et bonus
+                    blackBots = {};
+                    bots = {};
+                    bonuses = [];
+                    botsInitialized = false;
+                    specialZones.clear();
+        
+                    waitingRoom.isGameStarted = true;
+                        
+                    // Initialiser la partie pour tous les joueurs de la salle d'attente
+                    waitingRoom.players.forEach((waitingPlayer, socketId) => {
+                        // Mettre à jour le statut du joueur en attente
+                        waitingPlayer.status = 'playing';  
+                        waitingRoom.playersInGame.add(socketId);
+        
+                        const playerSocket = io.sockets.sockets.get(socketId);
+                        if (playerSocket) {
+                            // Créer un nouveau joueur s'il n'existe pas déjà
+                           if (!players[socketId]) {
+                                players[socketId] = new Player(socketId, waitingPlayer.nickname);
+                                activeSockets[socketId] = playerSocket;
+                            }
+                            // Faire respawn tous les joueurs avec une nouvelle couleur
+                            players[socketId].respawn();
+                        }
+                    });
+        
+                    // Réinitialiser les paramètres avec ceux de la salle d'attente
+                    currentGameSettings = { ...waitingRoom.settings };
+                    
+                    // Initialiser les bots une seule fois pour la partie
+                    createBots(currentGameSettings.initialBotCount);
+                    botsInitialized = true;
+        
+                    // Informer tous les joueurs que la partie commence
+                    io.emit('gameStarting');
+                    
+                    // Redémarrer le spawn des bonus
+                    setTimeout(spawnBonus, 3000);
+                    setTimeout(spawnMalus, 4000);
+                }
+            }, 1000);
+     
+            socket.on('cancelGameStart', () => {
+                if (canCancel && startCountdown) {
+                    clearInterval(startCountdown);
+                    startCountdown = null;
+                    io.emit('gameStartCancelled');
                 }
             });
-    
-            // Réinitialiser les paramètres avec ceux de la salle d'attente
-            currentGameSettings = { ...waitingRoom.settings };
-            
-            // Initialiser les bots une seule fois pour la partie
-            createBots(currentGameSettings.initialBotCount);
-            botsInitialized = true;
-    
-            // Informer tous les joueurs que la partie commence
-            io.emit('gameStarting');
-            
-            // Redémarrer le spawn des bonus
-            setTimeout(spawnBonus, 3000);
-
-            setTimeout(spawnMalus, 4000);
         }
-    });
+     });
 
     socket.on('resetAndStartGame', (data) => {
         const player = waitingRoom.players.get(socket.id);
@@ -1934,32 +2307,68 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('move', (data) => {
-        if (isPaused || isGameOver) return;
+    // Dans la section socket.on('move')
+socket.on('move', (data) => {
+    if (isPaused || isGameOver) return;
+
+    const player = players[socket.id];
+    if (!player) return;
+
+    const moveSpeed = data.speedBoostActive ? 1.3 : 1;
+    const oldX = player.x;
+    const oldY = player.y;
     
-        const player = players[socket.id];
-        if (player) {
-            const moveSpeed = data.speedBoostActive ? 1.3 : 1;
-            const oldX = player.x;
-            const oldY = player.y;
+    // Calculer le mouvement voulu
+    let desiredX = player.x + data.x * moveSpeed;
+    let desiredY = player.y + data.y * moveSpeed;
+    
+    // Test du mouvement complet
+    if (collisionMap.canMove(oldX, oldY, desiredX, desiredY)) {
+        player.x = desiredX;
+        player.y = desiredY;
+    } else {
+        // Essayer les mouvements séparés
+        const canMoveX = collisionMap.canMove(oldX, oldY, desiredX, oldY);
+        const canMoveY = collisionMap.canMove(oldX, oldY, oldX, desiredY);
+        
+        // Appliquer les mouvements valides
+        if (canMoveX) player.x = desiredX;
+        if (canMoveY) player.y = desiredY;
+        
+        // Si les deux mouvements sont bloqués, essayer le glissement
+        if (!canMoveX && !canMoveY) {
+            const angles = [30, -30, 45, -45, 60, -60];
+            let moved = false;
+            
+            for (const angle of angles) {
+                const rad = (angle * Math.PI) / 180;
+                const testX = oldX + Math.cos(rad) * moveSpeed;
+                const testY = oldY + Math.sin(rad) * moveSpeed;
                 
-            player.x += data.x * moveSpeed;
-            player.y += data.y * moveSpeed;
-                
-            // Garder le joueur dans les limites
-            player.x = Math.max(0, Math.min(GAME_WIDTH, player.x));
-            player.y = Math.max(0, Math.min(GAME_HEIGHT, player.y));
-                
-            // Mettre à jour la direction
-            if (Math.abs(data.x) < 0.1 && Math.abs(data.y) < 0.1) {
-                player.direction = DIRECTIONS.IDLE;
-            } else {
-                player.updateDirection(data.x, data.y);
+                if (collisionMap.canMove(oldX, oldY, testX, testY)) {
+                    player.x = testX;
+                    player.y = testY;
+                    moved = true;
+                    break;
+                }
             }
-                
-            detectCollisions(player, socket.id);
         }
-    });
+    }
+    
+    // S'assurer que le joueur reste dans les limites
+    player.x = Math.max(0, Math.min(GAME_WIDTH, player.x));
+    player.y = Math.max(0, Math.min(GAME_HEIGHT, player.y));
+    
+    // Mettre à jour la direction
+    if (player.x !== oldX || player.y !== oldY) {
+        player.updateDirection(player.x - oldX, player.y - oldY);
+    } else {
+        player.direction = DIRECTIONS.IDLE;
+    }
+    
+    // Détecter les collisions avec les autres entités
+    detectCollisions(player, socket.id);
+});
 
     socket.on('togglePause', () => {
         if (!isGameOver) {
@@ -1995,6 +2404,9 @@ io.on('connection', (socket) => {
         // Nettoyer les ressources du joueur
         delete players[socket.id];
         delete activeSockets[socket.id];
+
+        waitingRoom.playersInGame.delete(socket.id);
+        checkGameEndConditions();
     
         // Gérer la déconnexion dans la salle d'attente
         if (waitingRoom.players.has(socket.id)) {

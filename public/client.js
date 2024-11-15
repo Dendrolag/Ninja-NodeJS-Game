@@ -3,12 +3,14 @@
 // Socket.io et variables globales
 let socket;
 
+import { MapManager } from './js/MapManager.js';
+
 // Éléments DOM principaux
 const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
 const nicknameInput = document.getElementById('nicknameInput');
 
-const GAME_VERSION = "v0.4.2";  // À mettre à jour à chaque déploiement
+const GAME_VERSION = "v0.5.0";  // À mettre à jour à chaque déploiement
 
 // Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
@@ -77,8 +79,7 @@ const enableBlurVisionCheckbox = document.getElementById('enableBlurVision');
 const enableNegativeVisionCheckbox = document.getElementById('enableNegativeVision');
 
 // Éléments du jeu
-const canvas = document.getElementById('gameCanvas');
-const context = canvas.getContext('2d');
+let canvas, context, mapManager;
 const scoreDisplay = document.getElementById('score');
 const timerDisplay = document.getElementById('time');
 const pauseButton = document.getElementById('pauseButton');
@@ -95,6 +96,8 @@ const JOYSTICK_SPEED_MULTIPLIER = 3;
 const JOYSTICK_UPDATE_INTERVAL = 50;
 const TOUCH_START_OPTIONS = { passive: false };
 const TOUCH_MOVE_OPTIONS = { passive: false };
+
+const GAME_START_COUNTDOWN = 5; // 5 secondes de compte à rebours
 
 
 const MALUS_MESSAGES = {
@@ -188,6 +191,27 @@ const additionalStyles = `
 `;
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialiser le canvas
+    canvas = document.getElementById('gameCanvas');
+    if (!canvas) {
+        console.error('Canvas element not found');
+        return;
+    }
+    
+    context = canvas.getContext('2d');
+    if (!context) {
+        console.error('Could not get 2D context');
+        return;
+    }
+    
+    // Initialiser le MapManager
+    mapManager = new MapManager(canvas, {
+        debugMode: true,
+        debugCollisions: true,
+        mapWidth: GAME_VIRTUAL_WIDTH,
+        mapHeight: GAME_VIRTUAL_HEIGHT
+    });
+
     initializeNicknameValidation();
     addVersionDisplay();
 });
@@ -199,6 +223,8 @@ let GAME_HEIGHT = window.innerHeight;
 // Variables d'état du jeu
 let entities = [];
 let bonuses = [];
+let maluses = [];
+let malusItems = [];
 let playerId = null;
 let playerNickname = null;
 let timeRemaining = 180;
@@ -210,6 +236,7 @@ let specialZones = [];
 let isRoomOwner = false;
 let lastEntityPositions = new Map(); // Pour tracker les mouvements
 let entityMovementStates = new Map(); // Pour tracker l'état de mouvement
+
 
 // Nouvelles variables pour les contrôles mobiles
 let isMoving = false;
@@ -223,6 +250,8 @@ let revealActive = false;
 let speedBoostTimeLeft = 0;
 let invincibilityTimeLeft = 0;
 let revealTimeLeft = 0;
+let bonusAnimations = {};
+let malusAnimations = {};
 
 let activemalus = new Map();
 const malusImages = {
@@ -231,9 +260,9 @@ const malusImages = {
     negative: new Image()
 };
 
-malusImages.reverse.src = '/assets/images/reverse.svg';
-malusImages.blur.src = '/assets/images/blur.svg';
-malusImages.negative.src = '/assets/images/negative.svg';
+malusImages.reverse.src = '/assets/images/reverse.gif';
+malusImages.blur.src = '/assets/images/blur.gif';
+malusImages.negative.src = '/assets/images/negative.gif';
 
 // Position et vitesse du joueur
 let playerX = 0;
@@ -269,7 +298,7 @@ let gameSettings = {
 class SpriteManager {
     constructor() {
         this.TARGET_COLOR = {r: 255, g: 0, b: 0}; // Rouge à remplacer
-        this.COLOR_TOLERANCE = 100;
+        this.COLOR_TOLERANCE = 130;
         this.ANIMATION_FRAME_DURATION = 150; // Durée de chaque frame en ms
         this.currentFrame = 0;
         this.lastFrameTime = Date.now();
@@ -735,13 +764,13 @@ const bonusImages = {
 };
 
 // Chargement des images
-bonusImages.speed.src = '/assets/images/speed.svg';
-bonusImages.invincibility.src = '/assets/images/shield.svg';
-bonusImages.reveal.src = '/assets/images/eye.svg';
+bonusImages.speed.src = '/assets/images/speed.gif';
+bonusImages.invincibility.src = '/assets/images/shield.gif';
+bonusImages.reveal.src = '/assets/images/eye.gif';
 
 // Image de fond
-const backgroundImage = new Image();
-backgroundImage.src = '/assets/images/background.jpg';
+//const backgroundImage = new Image();
+//backgroundImage.src = '/assets/images/background.jpg';
 
 // Événements de redimensionnement
 function resizeCanvas() {
@@ -757,23 +786,27 @@ function resizeCanvas() {
 }
 
 function initializeCamera() {
-    // Vérifier si on est sur mobile
-    const isMobileDevice = window.innerWidth <= 768;
+    const aspectRatio = GAME_VIRTUAL_WIDTH / GAME_VIRTUAL_HEIGHT;
+    const screenAspectRatio = window.innerWidth / window.innerHeight;
     
-    if (isMobileDevice) {
-        // Échelle beaucoup plus grande pour mobile
+    if (isMobile()) {
+        // Réduire légèrement le zoom mobile
         const mobileScale = Math.min(
-            window.innerWidth / 500,  // Réduire ces valeurs augmente le zoom
-            window.innerHeight / 350
+            window.innerWidth / 800,  // Augmenté de 500 à 800
+            window.innerHeight / 600  // Augmenté de 350 à 600
         );
-        // Appliquer un multiplicateur supplémentaire pour augmenter encore le zoom
-        camera.scale = mobileScale * 1.2;
+        camera.scale = mobileScale;
     } else {
-        // Échelle normale pour desktop
-        camera.scale = Math.min(
-            window.innerWidth / 1500,
-            window.innerHeight / 1000
-        );
+        // Pour desktop, calculer un zoom fixe basé sur une hauteur de vue cible
+        const targetViewHeight = 1000; // Hauteur de vue souhaitée en pixels
+        
+        if (screenAspectRatio > aspectRatio) {
+            // Écran plus large que le ratio du jeu
+            camera.scale = window.innerHeight / targetViewHeight;
+        } else {
+            // Écran plus haut que le ratio du jeu
+            camera.scale = window.innerWidth / (targetViewHeight * aspectRatio);
+        }
     }
 
     if (!camera.x || !camera.y) {
@@ -923,6 +956,17 @@ function initializeMalusSettings() {
     });
 }
 
+function checkGameEndConditions() {
+    // Si tous les joueurs ont quitté
+    if (waitingRoom.playersInGame.size === 0 && waitingRoom.isGameStarted) {
+        waitingRoom.isGameStarted = false;
+        io.emit('updateWaitingRoom', {
+            players: Array.from(waitingRoom.players.values()),
+            gameInProgress: false
+        });
+    }
+}
+
 // Démarrage du jeu
 startButton.addEventListener('click', () => {
     const nickname = nicknameInput.value.trim();
@@ -1000,10 +1044,78 @@ startButton.addEventListener('click', () => {
             }, 300);
         }, 3000);
     }
+
+    socket.on('gameStartCountdown', (data) => {
+        const startGameButton = document.getElementById('startGameButton');
+        if (startGameButton) {
+            if (isRoomOwner) {
+                startGameButton.disabled = false;
+                startGameButton.classList.add('countdown');
+                startGameButton.textContent = `Annuler (${data.countdown}s)`;
+                startGameButton.onclick = () => {
+                    startGameButton.classList.remove('countdown');
+                    socket.emit('cancelGameStart');
+                };
+            } else {
+                startGameButton.disabled = true;
+                startGameButton.textContent = `La partie commence dans ${data.countdown}s...`;
+            }
+    
+            if (data.countdown <= 2) {
+                startGameButton.disabled = true;
+            }
+    
+            // Préchargement
+            if (data.countdown === GAME_START_COUNTDOWN) {
+                preloadGameResources();
+            }
+        }
+    });
+    
+    socket.on('gameStartCancelled', () => {
+        const startGameButton = document.getElementById('startGameButton');
+        if (startGameButton) {
+            startGameButton.classList.remove('countdown');
+            startGameButton.disabled = !isRoomOwner;
+            startGameButton.textContent = 'Lezgoooo';
+            startGameButton.onclick = () => {
+                socket.emit('startGameFromRoom', {
+                    nickname: playerNickname,
+                    settings: gameSettings
+                });
+            };
+        }
+    });
+    
+    socket.on('gameStartCancelled', () => {
+        const startGameButton = document.getElementById('startGameButton');
+        if (startGameButton) {
+            startGameButton.disabled = !isRoomOwner;
+            startGameButton.textContent = 'Lezgoooo';
+            startGameButton.onclick = () => {
+                socket.emit('startGameFromRoom', {
+                    nickname: playerNickname,
+                    settings: gameSettings
+                });
+            };
+        }
+    });
     
     socket.on('gameStarting', () => {
+        const gameOverModal = document.getElementById('game-over-modal');
+        if (gameOverModal) {
+            // Si on est sur l'écran de fin de partie, fermer la modale et son timer
+            const countdownInterval = gameOverModal.getAttribute('data-interval');
+            if (countdownInterval) {
+                clearInterval(Number(countdownInterval));
+            }
+            document.body.removeChild(gameOverModal);
+        }
+        
         waitingRoomScreen.classList.remove('active');
-        startGame();
+        startGame().catch(error => {
+            console.error('Erreur lors du démarrage du jeu:', error);
+        });
     });
 
     socket.on('applyMalus', (data) => {
@@ -1170,14 +1282,29 @@ function formatTime(date) {
 
 // Fonction pour mettre à jour la liste des joueurs
 function updateWaitingRoomPlayers(data) {
-    console.log('Réception mise à jour room:', data); // Log de debug
+    //console.log('Réception mise à jour room:', data); // Log de debug
+
+    // Gérer les différents formats de données possibles
+    let players;
+    let gameInProgress;
     
-    if (!data || !data.players) {
-        console.error('Données invalides reçues');
+    if (Array.isArray(data)) {
+        players = data;
+        gameInProgress = false; // Par défaut si format tableau
+    } else if (data && typeof data === 'object') {
+        players = data.players || [];
+        gameInProgress = data.gameInProgress;
+    } else {
+        console.error('Format de données invalide reçu:', data);
         return;
     }
 
-    const { players, gameInProgress } = data;
+    // S'assurer que players est un tableau
+    if (!Array.isArray(players)) {
+        console.error('Format de données des joueurs invalide:', players);
+        return;
+    }
+
     playersList.innerHTML = '';
 
     // Mettre à jour isRoomOwner
@@ -1342,17 +1469,13 @@ function handleKeyUp(event) {
 function movePlayer() {
     if (isPaused || isGameOver) return;
 
-    if (isMobile() && isMoving) {
-        return;
-    }
+    if (isMobile() && isMoving) return;
 
     const currentSpeed = BASE_SPEED * (speedBoostActive ? SPEED_BOOST_MULTIPLIER : 1);
     let move = { x: 0, y: 0 };
-
-    // Vérifier si les contrôles sont inversés
     const isReversed = activemalus.has('reverse');
 
-    // Appliquer le mouvement en fonction de l'état des contrôles
+    // Calculer le mouvement souhaité
     if (keysPressed['ArrowUp'] || keysPressed['z']) move.y = isReversed ? currentSpeed : -currentSpeed;
     if (keysPressed['ArrowDown'] || keysPressed['s']) move.y = isReversed ? -currentSpeed : currentSpeed;
     if (keysPressed['ArrowLeft'] || keysPressed['q']) move.x = isReversed ? currentSpeed : -currentSpeed;
@@ -1366,11 +1489,20 @@ function movePlayer() {
     }
 
     if (move.x !== 0 || move.y !== 0) {
-        socket.emit('move', { 
-            x: move.x,
-            y: move.y,
-            speedBoostActive 
-        });
+        const player = entities.find(e => e.id === playerId);
+        if (player) {
+            const newX = player.x + move.x;
+            const newY = player.y + move.y;
+            
+            // Vérifier la collision avant d'envoyer le mouvement
+            if (mapManager.canMove(player.x, player.y, newX, newY, 16)) {
+                socket.emit('move', { 
+                    x: move.x,
+                    y: move.y,
+                    speedBoostActive 
+                });
+            }
+        }
     }
 }
 
@@ -1413,17 +1545,61 @@ function updateSettingsUI(settings) {
     initializeMalusSettings();
 }
 
+    // Fonction de préchargement
+    async function preloadGameResources() {
+        try {
+            // Précharger les images
+            await Promise.all([
+                mapManager.preloadMapImages(),
+                ...Object.values(bonusImages).map(img => {
+                    return new Promise((resolve, reject) => {
+                        if (img.complete) resolve();
+                        img.onload = resolve;
+                        img.onerror = reject;
+                    });
+                }),
+                ...Object.values(malusImages).map(img => {
+                    return new Promise((resolve, reject) => {
+                        if (img.complete) resolve();
+                        img.onload = resolve;
+                        img.onerror = reject;
+                    });
+                })
+            ]);
+            
+            // Précharger les sprites
+            await Promise.all(
+                Object.values(spriteManager.sprites).flatMap(direction => 
+                    [direction.frame1, direction.frame2].map(src => 
+                        new Promise((resolve, reject) => {
+                            const img = new Image();
+                            img.src = src;
+                            img.onload = resolve;
+                            img.onerror = reject;
+                        })
+                    )
+                )
+            );
+        } catch (error) {
+            console.error('Erreur lors du préchargement:', error);
+        }
+    }
+
 // Fonction de démarrage du jeu
-function startGame() {
-    //console.log('Starting game...'); // Debug log
+async function startGame() {
+    console.log('Starting game...'); // Debug log
     
     isGameOver = false;
     isPaused = false;
     pauseButton.disabled = false;
 
     initializeCamera();
+    // Attendre que la map soit chargée
+    await mapManager.loadPromise;
 
     showMobileControls();
+    // Initialiser les animations avant tout
+    initializeAnimations();
 
     // Initialiser les contrôles mobiles
     initializeMobileControls();
@@ -1451,6 +1627,9 @@ function startGame() {
     invincibilityTimeLeft = 0;
     revealTimeLeft = 0;
 
+    entities = [];
+    bonuses = [];
+    maluses = [];
     malusItems = [];
     activemalus = new Map();
 
@@ -1615,6 +1794,7 @@ function startGame() {
     }, 20);
 
     initializeHelpPanels();
+    
 }
 
 function showMalusNotification(message) {
@@ -1627,19 +1807,18 @@ function showMalusNotification(message) {
 }
 
 function drawBonus(bonus, context) {
-    const image = bonusImages[bonus.type];
+    const animation = bonusAnimations[bonus.type];
     const effect = BONUS_EFFECTS[bonus.type];
     
-    if (!image || !image.complete || !effect) return;
+    if (!animation || !effect) return;
 
+    context.save();
+    
     // Calculer l'opacité pour le clignotement
     let opacity = 1;
     if (bonus.isBlinking) {
-        // Utiliser une fonction sinusoïdale pour un clignotement plus fluide
         opacity = 0.3 + Math.abs(Math.sin(Date.now() * 0.01)) * 0.7;
     }
-
-    context.save();
     
     // Dessiner l'effet de lueur
     context.beginPath();
@@ -1655,38 +1834,32 @@ function drawBonus(bonus, context) {
     context.globalAlpha = opacity * 0.3;
     context.fill();
 
-    // Dessiner le contour avec une épaisseur variable
+    // Dessiner le contour
     context.strokeStyle = effect.borderColor;
     context.lineWidth = 2 + (opacity * 1);
     context.globalAlpha = opacity * 0.8;
     context.stroke();
 
-    // Dessiner l'image
-    context.globalAlpha = opacity;
-    context.drawImage(image,
-        bonus.x - 15,
-        bonus.y - 15,
-        30,
-        30
-    );
+    // Mettre à jour et dessiner l'animation
+    animation.update(Date.now());
+    animation.draw(context, bonus.x, bonus.y, 30, 30);
 
     context.restore();
 }
 
 function drawMalus(malus, context) {
-    const image = malusImages[malus.type];
+    const animation = malusAnimations[malus.type];
     const effect = MALUS_EFFECTS[malus.type];
     
-    if (!image || !image.complete || !effect) return;
+    if (!animation || !effect) return;
 
+    context.save();
+    
     // Calculer l'opacité pour le clignotement
     let opacity = 1;
     if (malus.isBlinking) {
-        // Utiliser une fonction sinusoïdale pour un clignotement plus fluide
         opacity = 0.3 + Math.abs(Math.sin(Date.now() * 0.01)) * 0.7;
     }
-
-    context.save();
     
     // Dessiner l'effet de lueur
     context.beginPath();
@@ -1702,20 +1875,15 @@ function drawMalus(malus, context) {
     context.globalAlpha = opacity * 0.3;
     context.fill();
 
-    // Dessiner le contour avec une épaisseur variable
+    // Dessiner le contour
     context.strokeStyle = effect.borderColor;
     context.lineWidth = 2 + (opacity * 1);
     context.globalAlpha = opacity * 0.8;
     context.stroke();
 
-    // Dessiner l'image
-    context.globalAlpha = opacity;
-    context.drawImage(image,
-        malus.x - 15,
-        malus.y - 15,
-        30,
-        30
-    );
+    // Mettre à jour et dessiner l'animation
+    animation.update(Date.now());
+    animation.draw(context, malus.x, malus.y, 30, 30);
 
     context.restore();
 }
@@ -1738,6 +1906,112 @@ function updateEntityMovement(entity) {
     return isMoving;
 }
 
+// Définition du sprite sheet pour le bonus de vitesse
+const BONUS_SPRITES = {
+    speed: {
+        src: '/assets/images/speed.png',
+        frames: 2,
+        fps: 8,
+        frameWidth: 50,
+        frameHeight: 50
+    },
+    invincibility: {
+        src: '/assets/images/shield.png',
+        frames: 2,
+        fps: 8,
+        frameWidth: 50,
+        frameHeight: 50
+    },
+    reveal: {
+        src: '/assets/images/eye.png',
+        frames: 2,
+        fps: 8,
+        frameWidth: 50,
+        frameHeight: 50
+    }
+};
+
+const MALUS_SPRITES = {
+    reverse: {
+        src: '/assets/images/reverse.png',
+        frames: 2,
+        fps: 8,
+        frameWidth: 50,
+        frameHeight: 50
+    },
+    blur: {
+        src: '/assets/images/blur.png',
+        frames: 2,
+        fps: 8,
+        frameWidth: 50,
+        frameHeight: 50
+    },
+    negative: {
+        src: '/assets/images/negative.png',
+        frames: 2,
+        fps: 8,
+        frameWidth: 50,
+        frameHeight: 50
+    }
+};
+
+class SpriteAnimation {
+    constructor(spriteInfo) {
+        this.image = new Image();
+        this.image.src = spriteInfo.src;
+        this.frames = spriteInfo.frames;
+        this.fps = spriteInfo.fps;
+        this.frameWidth = spriteInfo.frameWidth;
+        this.frameHeight = spriteInfo.frameHeight;
+        this.currentFrame = 0;
+        this.lastFrameTime = 0;
+        this.frameDuration = 1000 / this.fps;
+    }
+
+    update(currentTime) {
+        if (this.lastFrameTime === 0) {
+            this.lastFrameTime = currentTime;
+            return;
+        }
+
+        const deltaTime = currentTime - this.lastFrameTime;
+
+        if (deltaTime >= this.frameDuration) {
+            this.currentFrame = (this.currentFrame + 1) % this.frames;
+            this.lastFrameTime = currentTime;
+        }
+    }
+
+    draw(context, x, y, width, height) {
+        if (!this.image.complete) return;
+
+        const sourceX = this.currentFrame * this.frameWidth;
+        const sourceY = 0;
+
+        context.drawImage(
+            this.image,
+            sourceX, sourceY,
+            this.frameWidth, this.frameHeight,
+            x - width/2, y - height/2,
+            width, height
+        );
+    }
+}
+
+function initializeAnimations() {
+    // Initialiser les animations des bonus
+    bonusAnimations = {};
+    for (const [type, spriteInfo] of Object.entries(BONUS_SPRITES)) {
+        bonusAnimations[type] = new SpriteAnimation(spriteInfo);
+    }
+    
+    // Initialiser les animations des malus
+    malusAnimations = {};
+    for (const [type, spriteInfo] of Object.entries(MALUS_SPRITES)) {
+        malusAnimations[type] = new SpriteAnimation(spriteInfo);
+    }
+}
+
 // Rendu du jeu
 function drawEntities() {
     spriteManager.updateAnimation();
@@ -1754,6 +2028,9 @@ function drawEntities() {
     // Arrondir les positions de la caméra pour éviter le rendu sur des demi-pixels
     const cameraX = Math.round(camera.x);
     const cameraY = Math.round(camera.y);
+
+    // Dessiner la map et ses collisions
+    mapManager.draw(context, camera);
     
     // Appliquer la transformation de la caméra
     context.translate(Math.round(canvas.width / 2), Math.round(canvas.height / 2));
@@ -1761,7 +2038,7 @@ function drawEntities() {
     context.translate(-cameraX, -cameraY);
 
     // Dessiner le fond
-    if (backgroundImage.complete) {
+    /*if (backgroundImage.complete) {
         const pattern = context.createPattern(backgroundImage, 'repeat');
         if (pattern) {
             context.fillStyle = pattern;
@@ -1772,7 +2049,7 @@ function drawEntities() {
             const height = Math.round(GAME_VIRTUAL_HEIGHT);
             context.fillRect(x, y, width, height);
         }
-    }
+    }*/
 
     // Dessiner les limites de la zone de jeu
     context.strokeStyle = 'rgba(255, 255, 255, 0.5)';
@@ -1793,7 +2070,7 @@ function drawEntities() {
                 context.stroke();
                 
                 context.fillStyle = 'white';
-                context.font = '20px Chewy-Regular';
+                context.font = '20px PermanentMarker-Regular';
                 context.textAlign = 'center';
                 context.fillText(zone.type.name, zone.shape.x, zone.shape.y);
             } else {
@@ -1801,7 +2078,7 @@ function drawEntities() {
                 context.strokeRect(zone.shape.x, zone.shape.y, zone.shape.width, zone.shape.height);
                 
                 context.fillStyle = 'white';
-                context.font = '20px Chewy-Regular';
+                context.font = '20px PermanentMarker-Regular';
                 context.textAlign = 'center';
                 context.fillText(
                     zone.type.name,
@@ -1945,6 +2222,9 @@ function drawEntities() {
 
     // Nettoyer le tracking des entités qui ne sont plus présentes
     cleanupEntityTracking();
+
+    // Dessiner le calque de premier plan après toutes les entités
+    mapManager.drawForeground(context, camera);
 
     context.restore();
 }
@@ -2380,12 +2660,23 @@ function showBonusNotification(bonusType) {
 }
 
 function showGameOverModal(scores) {
+    // Supprimer toute modale existante d'abord
+    const existingModal = document.getElementById('game-over-modal');
+    if (existingModal) {
+        const oldInterval = existingModal.getAttribute('data-interval');
+        if (oldInterval) {
+            clearInterval(Number(oldInterval));
+        }
+        existingModal.remove();
+    }
+
     isGameOver = true;
     isPaused = true;
     pauseButton.disabled = true;
 
     const modal = document.createElement('div');
     modal.className = 'modal game-over-modal';
+    modal.id = 'game-over-modal';
 
     const content = document.createElement('div');
     content.className = 'modal-content game-over-content';
@@ -2440,7 +2731,7 @@ function showGameOverModal(scores) {
                         
                         // Calculer les captures par les bots noirs
                         const blackBotCaptures = player.capturedByBlackBot || 0;
-                        const blackBotText = blackBotCaptures > 0 ? `Bot noir (${blackBotCaptures}×)` : '';
+                        const blackBotText = blackBotCaptures > 0 ? `Black Ninja (${blackBotCaptures}×)` : '';
                         const capturedByFull = [capturedByHTML, blackBotText].filter(Boolean).join(', ');
 
                         return `
@@ -2450,7 +2741,7 @@ function showGameOverModal(scores) {
                                     <span class="player-name">${player.nickname}</span>
                                 </div>
                                 <div class="stats-details">
-                                    <div class="stat-row">🤖 Bots contrôlés: ${player.currentBots}</div>
+                                    <div class="stat-row">🥷 Ninjas contrôlés: ${player.currentBots}</div>
                                     <div class="stat-row">👥 Joueurs capturés: ${capturedPlayersHTML}</div>
                                     <div class="stat-row">💀 Capturé par: ${capturedByFull}</div>
                                 </div>
@@ -2523,7 +2814,61 @@ function showGameOverModal(scores) {
     prevBtn.addEventListener('click', () => slideCards(-1));
     nextBtn.addEventListener('click', () => slideCards(1));
     updateSliderButtons();
-}
+
+        // Ajouter un timer de redirection
+        const redirectTimer = document.createElement('div');
+        redirectTimer.className = 'redirect-timer';
+        redirectTimer.textContent = 'Retour à la salle d\'attente dans 30s';
+        content.appendChild(redirectTimer);
+    
+        // Timer de 30 secondes
+        let timeLeft = 30;
+        const countdownInterval = setInterval(() => {
+            timeLeft--;
+            if (timeLeft > 0) {
+                const modalElement = document.getElementById('game-over-modal');
+                if (modalElement) {
+                    const timerElement = modalElement.querySelector('.redirect-timer');
+                    if (timerElement) {
+                        timerElement.textContent = `Retour à la salle d'attente dans ${timeLeft}s`;
+                    }
+                } else {
+                    // La modale n'existe plus, nettoyer l'intervalle
+                    clearInterval(countdownInterval);
+                }
+            } else {
+                clearInterval(countdownInterval);
+                const modalElement = document.getElementById('game-over-modal');
+                if (modalElement && modalElement.parentNode) {
+                    modalElement.parentNode.removeChild(modalElement);
+                    returnToWaitingRoom();
+                }
+            }
+        }, 1000);
+    
+        modal.setAttribute('data-interval', countdownInterval);
+
+        // Modifier les event listeners des boutons
+        waitingRoomButton.addEventListener('click', () => {
+            clearInterval(countdownInterval);
+            const modalElement = document.getElementById('game-over-modal');
+            if (modalElement && modalElement.parentNode) {
+                modalElement.parentNode.removeChild(modalElement);
+            }
+            returnToWaitingRoom();
+        });
+    
+        mainMenuButton.addEventListener('click', () => {
+            clearInterval(countdownInterval);
+            const modalElement = document.getElementById('game-over-modal');
+            if (modalElement && modalElement.parentNode) {
+                modalElement.parentNode.removeChild(modalElement);
+            }
+            returnToMainMenu();
+        });
+    
+        document.body.appendChild(modal);
+    }
 
 function showCaptureNotification(message) {
     collectedBonusDisplayContent.textContent = message;
@@ -2730,16 +3075,4 @@ function returnToMainMenu() {
     gameScreen.classList.remove('active');
     waitingRoomScreen.classList.remove('active');
     mainMenu.classList.add('active');
-}
-
-function handleKeyDown(event) {
-    keysPressed[event.key] = true;
-
-    if (event.key.toLowerCase() === 'f' && !showPlayerLocator) {
-        showPlayerLocator = true;
-        locatorFadeStartTime = Date.now() + 3000;
-        setTimeout(() => {
-            showPlayerLocator = false;
-        }, 3500);
-    }
 }

@@ -3,12 +3,14 @@
   "version": "1.0.0",
   "description": "Jeu web multijoueur avec des points et des bots",
   "main": "server.js",
+  "type": "module",
   "scripts": {
     "start": "node server.js"
   },
   "author": "Dendrolag",
   "license": "ISC",
   "dependencies": {
+    "canvas": "^2.11.2",
     "express": "^4.18.2",
     "socket.io": "^4.7.2"
   }

@@ -1,0 +1,1574 @@
+/* ==========================================================================
+   Neon Ninja - Main Stylesheet
+   Organisation et optimisation des styles avec thème cyber subtil
+   ========================================================================== */
+
+/* -----------------------------------------------------------------------------
+   1. Configuration et Variables
+   -------------------------------------------------------------------------- */
+
+   :root {
+    /* Couleurs principales */
+    --dark-bg: #0A0A0F;
+    --cyber-bg: #1A1A2E;
+    --cyber-light: rgba(255, 255, 255, 0.1);
+    
+    /* Couleurs néon (plus subtiles) */
+    --neon-pink: rgba(255, 0, 128, 0.8);
+    --neon-blue: rgba(0, 255, 255, 0.8);
+    --neon-purple: rgba(160, 32, 240, 0.8);
+    --neon-green: rgba(57, 255, 20, 0.8);
+    
+    /* Couleurs UI */
+    --primary: var(--neon-blue);
+    --secondary: var(--neon-pink);
+    --accent: var(--neon-purple);
+    --success: var(--neon-green);
+    
+    /* Effets de lueur (atténués) */
+    --glow-subtle: 0 0 5px rgba(0, 255, 255, 0.3);
+    --glow-medium: 0 0 10px rgba(0, 255, 255, 0.4);
+    --glow-strong: 0 0 15px rgba(0, 255, 255, 0.5);
+    
+    /* Transitions */
+    --transition-fast: 0.2s ease;
+    --transition-normal: 0.3s ease;
+    --transition-slow: 0.5s ease;
+    
+    /* Z-index layers */
+    --z-game: 1;
+    --z-interface: 100;
+    --z-overlay: 1000;
+    --z-modal: 2000;
+    --z-top: 3000;
+}
+
+/* -----------------------------------------------------------------------------
+   2. Polices
+   -------------------------------------------------------------------------- */
+
+@font-face {
+    font-family: 'Cyberpunk';
+    src: url('/assets/fonts/PermanentMarker-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* -----------------------------------------------------------------------------
+   3. Reset et Styles de Base
+   -------------------------------------------------------------------------- */
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: var(--dark-bg);
+    color: white;
+    overflow: hidden;
+    min-height: 100vh;
+    width: 100%;
+}
+
+/* État initial des écrans */
+#mainMenu,
+#waitingRoom,
+#gameScreen,
+#settingsMenu {
+    display: none;
+}
+
+/* État actif des écrans */
+.active {
+    display: flex !important;
+}
+
+/* États des éléments de jeu */
+#gameInterface,
+#playerList,
+#pauseButton,
+.game-help-panel,
+.floating-chat {
+    display: none;
+}
+
+#gameScreen.active {
+    #gameInterface,
+    #playerList,
+    #pauseButton,
+    .game-help-panel {
+        display: block;
+    }
+}
+
+/* Éléments de base */
+button {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+input, textarea, select {
+    font-family: inherit;
+}
+
+ul, ol {
+    list-style: none;
+}
+
+/* Accessibilité */
+:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* Classes utilitaires */
+.hidden {
+    display: none !important;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+.gpu-accelerated {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+    will-change: transform;
+}
+
+/* Support DPI */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .text-sharp {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+}
+/* -----------------------------------------------------------------------------
+   4. Typographie
+   -------------------------------------------------------------------------- */
+
+/* Titres avec police Cyberpunk */
+h1, h2, h3 {
+    font-family: 'Cyberpunk', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+    color: white;
+}
+
+/* Titres principaux */
+h1 {
+    font-size: 3rem;
+    position: relative;
+    display: inline-block;
+    
+    /* Effet néon subtil */
+    text-shadow: 
+        0 0 2px var(--primary),
+        0 0 10px var(--primary);
+}
+
+h2 {
+    font-size: 2rem;
+    color: var(--primary);
+    text-shadow: 0 0 5px var(--primary);
+}
+
+h3 {
+    font-size: 1.5rem;
+    color: var(--primary);
+    text-shadow: 0 0 3px var(--primary);
+}
+
+/* Texte standard */
+p, span, div {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+}
+
+/* -----------------------------------------------------------------------------
+   5. Boutons et contrôles interactifs
+   -------------------------------------------------------------------------- */
+
+/* Style de base des boutons */
+.btn, 
+.primary-button, 
+.secondary-button {
+    font-family: Arial, sans-serif;
+    padding: 12px 30px;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-radius: 5px;
+    transition: all var(--transition-normal);
+    position: relative;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--primary);
+    color: white;
+    
+    /* Effet de brillance */
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+            120deg,
+            transparent,
+            rgba(255, 255, 255, 0.1),
+            transparent
+        );
+        transition: all var(--transition-normal);
+    }
+    
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--glow-subtle);
+        
+        &::before {
+            left: 100%;
+        }
+    }
+    
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+}
+
+/* Bouton primaire */
+.primary-button {
+    background: linear-gradient(
+        45deg,
+        rgba(0, 255, 255, 0.1),
+        transparent
+    );
+    border-color: var(--primary);
+    box-shadow: var(--glow-subtle);
+}
+
+/* Bouton secondaire */
+.secondary-button {
+    background: transparent;
+    border-color: var(--secondary);
+}
+
+/* -----------------------------------------------------------------------------
+   6. Champs de formulaire
+   -------------------------------------------------------------------------- */
+
+/* Style de base des inputs */
+.input, 
+input[type="text"],
+input[type="number"] {
+    font-family: Arial, sans-serif;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--primary);
+    border-radius: 5px;
+    color: white;
+    padding: 12px 20px;
+    font-size: 1rem;
+    width: 100%;
+    transition: all var(--transition-normal);
+    
+    &:focus {
+        outline: none;
+        border-color: var(--secondary);
+        box-shadow: var(--glow-subtle);
+    }
+    
+    &::placeholder {
+        color: rgba(255, 255, 255, 0.5);
+    }
+}
+
+/* Input nombre spécifique pour les paramètres */
+.number-input {
+    width: 80px;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.3);
+    
+    &::-webkit-inner-spin-button {
+        opacity: 1;
+        background: transparent;
+    }
+}
+
+/* Checkboxes stylisées */
+.checkbox {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 1px solid var(--primary);
+    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    position: relative;
+    transition: all var(--transition-fast);
+    
+    &:checked {
+        background: var(--primary);
+        border-color: var(--primary);
+        
+        &::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: black;
+            font-size: 14px;
+        }
+    }
+    
+    &:hover:not(:disabled) {
+        border-color: var(--secondary);
+    }
+}
+
+/* Labels */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-family: Arial, sans-serif;
+    user-select: none;
+}
+
+/* États désactivés */
+input:disabled,
+select:disabled,
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* -----------------------------------------------------------------------------
+   7. Effets visuels de base
+   -------------------------------------------------------------------------- */
+
+/* Effet de lueur pour les éléments actifs */
+.glow {
+    &-subtle { box-shadow: var(--glow-subtle); }
+    &-medium { box-shadow: var(--glow-medium); }
+    &-strong { box-shadow: var(--glow-strong); }
+}
+
+/* Effet de surbrillance au hover */
+.hover-glow {
+    transition: box-shadow var(--transition-normal);
+    
+    &:hover {
+        box-shadow: var(--glow-medium);
+    }
+}
+
+/* Animation de base */
+@keyframes subtle-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+/* Fond avec grille cyberpunk subtile */
+.cyber-bg {
+    position: relative;
+    
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: 
+            linear-gradient(90deg, var(--dark-bg) 21px, transparent 1%) center,
+            linear-gradient(var(--dark-bg) 21px, transparent 1%) center,
+            var(--primary);
+        background-size: 22px 22px;
+        opacity: 0.05;
+        pointer-events: none;
+    }
+}
+/* -----------------------------------------------------------------------------
+   8. Structure des écrans principaux
+   -------------------------------------------------------------------------- */
+
+/* Structure de base commune pour tous les écrans */
+.screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: var(--dark-bg);
+    z-index: var(--z-interface);
+}
+
+/* Menu principal */
+#mainMenu {
+    background: linear-gradient(135deg, var(--dark-bg), var(--cyber-bg));
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+
+    &.active {
+        display: flex;
+    }
+    
+    .menu-content {
+        width: min(80vw, 80vh, 600px);
+        height: min(80vw, 80vh, 600px);
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 50%;
+        padding: 5vmin;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--primary);
+        box-shadow: var(--glow-subtle);
+        
+        /* Effet de bordure animée */
+        &::after {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: -1px;
+            right: -1px;
+            bottom: -1px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, 
+                transparent, 
+                var(--primary),
+                transparent
+            );
+            opacity: 0.3;
+            z-index: -1;
+            animation: rotate 10s linear infinite;
+        }
+    }
+
+    .menu-form {
+        width: 100%;
+        max-width: 80%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        
+        input[type="text"] {
+            text-align: center;
+            max-width: 300px;
+            background: rgba(0, 0, 0, 0.5);
+        }
+    }
+}
+
+/* Salle d'attente */
+#waitingRoom {
+    .waiting-room-content {
+        width: 90%;
+        max-width: 800px;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--primary);
+        border-radius: 10px;
+        padding: 30px;
+        box-shadow: var(--glow-subtle);
+    }
+    
+    .players-list-container {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid var(--primary);
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+        min-height: 200px;
+    }
+    
+    .waiting-room-player {
+        background: rgba(26, 26, 46, 0.5);
+        border: 1px solid var(--primary);
+        border-radius: 5px;
+        padding: 12px 20px;
+        margin: 8px 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all var(--transition-normal);
+        
+        &:hover {
+            transform: translateX(5px);
+            border-color: var(--secondary);
+        }
+        
+        &.current-player {
+            background: linear-gradient(
+                to right,
+                rgba(0, 255, 255, 0.1),
+                transparent
+            );
+            border-color: var(--secondary);
+        }
+        .player-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+    
+        .player-badges {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+    
+        .status-badge {
+            cursor: help;
+    
+            &[title] {
+                position: relative;
+    
+                &:hover::after {
+                    content: attr(title);
+                    position: absolute;
+                    bottom: 100%;
+                    right: 0;
+                    background: rgba(0, 0, 0, 0.9);
+                    padding: 5px 10px;
+                    border-radius: 3px;
+                    font-size: 12px;
+                    white-space: nowrap;
+                    pointer-events: none;
+                }
+            }
+        }
+    }
+
+    .waiting-room-buttons {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-top: 20px;
+    }
+    
+    /* Chat flottant */
+    .floating-chat {
+        position: fixed;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 300px;
+        height: 60vh;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(10px);
+        border-radius: 0 10px 10px 0;
+        border: 1px solid var(--primary);
+        border-left: none;
+        display: flex;
+        flex-direction: column;
+        z-index: var(--z-overlay);
+        transition: transform var(--transition-normal);
+
+        &.collapsed {
+            transform: translateX(-270px) translateY(-50%);
+        }
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: calc(100% - 50px); /* Hauteur total moins header */
+        }
+        
+        .chat-header {
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-bottom: 1px solid var(--primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            
+            h3 {
+                font-size: 1rem;
+                margin: 0;
+                font-family: Arial, sans-serif;
+            }
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+        }
+    
+        .chat-input-container {
+            margin-top: auto;
+            padding: 10px;
+            display: flex;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.3);
+    
+            input {
+                flex: 1;
+                min-width: 0;
+            }
+    
+            button {
+                padding: 8px 15px;
+                background: var(--primary);
+                color: black;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+    
+                &:hover {
+                    background: var(--secondary);
+                }
+            }
+        }
+    
+        .chat-icon {
+            width: 16px;
+            height: 16px;
+        }
+    }
+}
+
+/* Menu des paramètres */
+#settingsMenu {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: var(--z-modal);
+    align-items: center;
+    justify-content: center;
+
+    &.active {
+        display: flex;
+    }
+    
+    .settings-content {
+        width: 90%;
+        max-width: 800px;
+        background: var(--cyber-bg);
+        border: 1px solid var(--primary);
+        border-radius: 10px;
+        padding: 30px;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: var(--glow-subtle);
+    }
+    
+    .setting-group {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid var(--primary);
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        transition: all var(--transition-normal);
+        
+        &:hover {
+            border-color: var(--secondary);
+        }
+    }
+    
+    .setting-header {
+        margin-bottom: 15px;
+        border-bottom: 1px solid var(--primary);
+        padding-bottom: 10px;
+        
+        h3 {
+            font-family: Arial, sans-serif;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 1rem;
+            margin: 0;
+        }
+    }
+    
+    .settings-buttons {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid var(--primary);
+    }
+}
+
+/* Animations spécifiques */
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .menu-content {
+        width: min(90vw, 90vh, 400px);
+        height: min(90vw, 90vh, 400px);
+    }
+    
+    .waiting-room-content,
+    .settings-content {
+        width: 95%;
+        padding: 20px;
+    }
+    
+    .floating-chat {
+        width: 280px;
+        height: 50vh;
+        
+        &.collapsed {
+            transform: translateX(-250px) translateY(-50%);
+        }
+    }
+    .modal-content {
+        padding: 20px;
+    }
+
+    .podium-container {
+        gap: 15px;
+        height: 250px;
+
+        .podium-place {
+            width: 80px;
+        }
+
+        .podium-block {
+            width: 60px;
+        }
+    }
+}
+
+@media (max-height: 600px) and (orientation: landscape) {
+    .menu-content {
+        width: 70vh;
+        height: 70vh;
+    }
+}
+/* -----------------------------------------------------------------------------
+   9. Interface de jeu et HUD
+   -------------------------------------------------------------------------- */
+
+   #gameScreen {
+    background: var(--dark-bg);
+    z-index: var(--z-game);
+
+    /* Canvas du jeu */
+    canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+    }
+}
+
+/* HUD principal */
+#gameInterface {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: var(--z-interface);
+}
+
+/* Timer et infos principales */
+#gameInfo {
+    position: absolute;
+    left: 50%;
+    top: 20px;
+    transform: translateX(-50%);
+    pointer-events: auto;
+}
+
+#timer {
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid var(--primary);
+    padding: 15px 25px;
+    border-radius: 5px;
+    text-align: center;
+    box-shadow: var(--glow-subtle);
+    
+    #timerLabel {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: var(--primary);
+        opacity: 0.8;
+    }
+    
+    #time {
+        font-family: 'Cyberpunk', sans-serif;
+        font-size: 2rem;
+        color: var(--primary);
+        margin-top: 5px;
+        text-shadow: 0 0 5px var(--primary);
+    }
+    
+    &.urgent {
+        border-color: var(--secondary);
+        animation: urgentPulse 1s infinite;
+        
+        #time {
+            color: var(--secondary);
+            text-shadow: 0 0 10px var(--secondary);
+        }
+    }
+}
+
+/* Liste des joueurs */
+#playerList {
+    position: fixed;
+    top: 50%;
+    right: 20px;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid var(--primary);
+    border-radius: 5px;
+    padding: 15px;
+    min-width: 250px;
+    max-height: 80vh;
+    overflow-y: auto;
+    pointer-events: auto;
+    
+    h3 {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        color: var(--primary);
+        font-size: 1rem;
+        margin-bottom: 15px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    li {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid var(--primary);
+        border-radius: 3px;
+        padding: 8px 12px;
+        margin: 5px 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: transform var(--transition-normal);
+        
+        &.current-player {
+            border-color: var(--secondary);
+            background: linear-gradient(
+                to right,
+                rgba(255, 0, 128, 0.1),
+                transparent
+            );
+        }
+        
+        &:hover {
+            transform: translateX(-5px);
+        }
+    }
+}
+
+/* Bouton pause */
+#pauseButton {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid var(--primary);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    pointer-events: auto;
+    transition: all var(--transition-normal);
+    
+    &:hover:not(:disabled) {
+        border-color: var(--secondary);
+        box-shadow: var(--glow-subtle);
+    }
+}
+
+/* Panneaux d'aide */
+.game-help-panel {
+    position: fixed;
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid var(--primary);
+    border-radius: 10px;
+    width: 300px;
+    transition: opacity var(--transition-normal);
+    pointer-events: auto;
+    
+    &#instructions {
+        left: 20px;
+        bottom: 20px;
+    }
+    
+    &#controls {
+        right: 20px;
+        bottom: 20px;
+    }
+    
+    .help-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px;
+        border-bottom: 1px solid var(--primary);
+        
+        h3 {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            font-size: 1rem;
+        }
+        
+        .close-button {
+            background: none;
+            border: none;
+            color: var(--primary);
+            cursor: pointer;
+            font-size: 1.5rem;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            
+            &:hover {
+                color: var(--secondary);
+            }
+        }
+    }
+    
+    .help-body {
+        padding: 15px;
+    }
+}
+
+/* -----------------------------------------------------------------------------
+   10. Bonus et Malus
+   -------------------------------------------------------------------------- */
+
+/* Container des bonus actifs */
+#activeBonuses {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+    z-index: var(--z-interface);
+}
+
+.activeBonus {
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid var(--primary);
+    border-radius: 5px;
+    padding: 8px 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    
+    img {
+        width: 20px;
+        height: 20px;
+        opacity: 0.8;
+    }
+    
+    .timer {
+        font-family: Arial, sans-serif;
+        color: var(--primary);
+        min-width: 2.5em;
+        text-align: right;
+    }
+    
+    &.speed-boost {
+        --bonus-color: var(--success);
+        border-color: var(--success);
+        .timer { color: var(--success); }
+    }
+    
+    &.invincibility {
+        --bonus-color: var(--secondary);
+        border-color: var(--secondary);
+        .timer { color: var(--secondary); }
+    }
+    
+    &.reveal {
+        --bonus-color: var(--accent);
+        border-color: var(--accent);
+        .timer { color: var(--accent); }
+    }
+}
+
+/* Notifications de bonus/malus */
+#collectedBonusDisplay {
+    position: fixed;
+    top: 35%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid var(--primary);
+    padding: 15px 30px;
+    border-radius: 5px;
+    text-transform: uppercase;
+    font-size: 1.2rem;
+    letter-spacing: 1px;
+    text-align: center;
+    opacity: 0;
+    pointer-events: none;
+    z-index: var(--z-overlay);
+    
+    &:not(.hidden) {
+        animation: notification 3s ease-out forwards;
+    }
+}
+
+/* Effets des malus */
+body {
+    &.blur-vision #gameContainer {
+        filter: blur(4px);
+    }
+    
+    &.negative-vision #gameContainer {
+        filter: invert(100%) hue-rotate(180deg);
+    }
+    
+    &.reverse-controls .mobile-controls {
+        transform: rotate(180deg);
+    }
+}
+
+/* -----------------------------------------------------------------------------
+   11. Zones spéciales
+   -------------------------------------------------------------------------- */
+
+.special-zone {
+    position: absolute;
+    pointer-events: none;
+    border-radius: 50%;
+    mix-blend-mode: screen;
+    
+    .zone-name {
+        font-family: Arial, sans-serif;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        white-space: nowrap;
+    }
+}
+
+/* Animations */
+@keyframes urgentPulse {
+    0%, 100% { box-shadow: var(--glow-subtle); }
+    50% { box-shadow: var(--glow-medium); }
+}
+
+@keyframes notification {
+    0% { 
+        opacity: 0;
+        transform: translate(-50%, -30%);
+    }
+    10%, 90% {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -70%);
+    }
+}
+
+/* -----------------------------------------------------------------------------
+   12. Responsive HUD
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 768px) {
+    #timer {
+        padding: 10px 20px;
+        
+        #time {
+            font-size: 1.5rem;
+        }
+    }
+    
+    #playerList {
+        max-width: 200px;
+        right: 10px;
+        font-size: 0.9rem;
+    }
+    
+    #activeBonuses {
+        bottom: 150px; /* Au-dessus des contrôles mobiles */
+        flex-wrap: wrap;
+        justify-content: center;
+        max-width: 90%;
+    }
+    
+    .game-help-panel {
+        display: none !important;
+    }
+}
+/* -----------------------------------------------------------------------------
+   13. Contrôles mobiles
+   -------------------------------------------------------------------------- */
+
+   .mobile-controls {
+    display: none; /* Par défaut caché, affiché sur mobile */
+    position: fixed;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    padding: 20px;
+    z-index: var(--z-interface);
+    pointer-events: none;
+}
+
+/* Joystick */
+.joystick {
+    position: fixed;
+    bottom: 100px;
+    left: 50px;
+    pointer-events: auto;
+    touch-action: none;
+}
+
+.joystick-base {
+    width: 120px;
+    height: 120px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--primary);
+    border-radius: 50%;
+    position: relative;
+    backdrop-filter: blur(4px);
+    
+    &::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 60px;
+        height: 60px;
+        border: 1px solid var(--primary);
+        border-radius: 50%;
+        opacity: 0.3;
+    }
+}
+
+.joystick-stick {
+    width: 50px;
+    height: 50px;
+    background: var(--primary);
+    opacity: 0.8;
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    will-change: transform;
+    box-shadow: var(--glow-subtle);
+}
+
+/* Bouton de localisation */
+#mobileLocateButton {
+    position: fixed;
+    bottom: 100px;
+    right: 50px;
+    width: 60px;
+    height: 60px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--primary);
+    border-radius: 50%;
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    
+    img {
+        width: 30px;
+        height: 30px;
+        opacity: 0.8;
+    }
+    
+    &.active {
+        border-color: var(--secondary);
+        
+        img {
+            opacity: 1;
+        }
+    }
+}
+
+/* -----------------------------------------------------------------------------
+   14. Modales
+   -------------------------------------------------------------------------- */
+
+/* Base commune pour les modales */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px);
+    z-index: var(--z-modal);
+}
+
+.modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: var(--cyber-bg);
+    border: 1px solid var(--primary);
+    border-radius: 10px;
+    padding: 30px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    transform: translateY(-20px);
+    transition: transform var(--transition-normal);
+    
+    .modal.active & {
+        transform: translateY(0);
+    }
+}
+
+/* Modale de pause */
+.pause-modal {
+    z-index: var(--z-modal);
+
+    .modal-content {
+        width: 90%;
+        max-width: 400px;
+        background: var(--cyber-bg);
+        border: 1px solid var(--primary);
+        border-radius: 10px;
+        padding: 30px;
+        text-align: center;
+
+        h2 {
+            font-family: 'Cyberpunk', sans-serif;
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 5px var(--primary);
+        }
+    }
+
+    .pause-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        margin-top: 30px;
+    }
+}
+
+/* Modale de fin de partie */
+.game-over-modal {
+    z-index: var(--z-modal);
+
+    .modal-content {
+        width: 90%;
+        max-width: 800px;
+        background: var(--cyber-bg);
+        border: 1px solid var(--primary);
+        border-radius: 10px;
+        padding: 30px;
+        max-height: 90vh;
+        overflow-y: auto;
+
+        .game-over-title {
+            font-family: 'Cyberpunk', sans-serif;
+            font-size: 2rem;
+            color: var(--secondary);
+            text-align: center;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 5px var(--secondary);
+        }
+    }
+
+    /* Conteneur du podium */
+    .podium-container {
+        display: flex;
+        justify-content: center;
+        align-items: flex-end;
+        gap: 30px;
+        height: 300px;
+        margin: 40px 0;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 10px;
+
+        .podium-place {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            width: 120px;
+        }
+
+        .podium-badge {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .podium-block {
+            width: 80px;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .podium-symbol {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        /* Style spécifique pour chaque place */
+        .first {
+            .podium-block {
+                height: 180px;
+                background: linear-gradient(to top, var(--secondary), transparent);
+                border: 1px solid var(--secondary);
+            }
+        }
+
+        .second {
+            .podium-block {
+                height: 140px;
+                background: linear-gradient(to top, var(--primary), transparent);
+                border: 1px solid var(--primary);
+            }
+        }
+
+        .third {
+            .podium-block {
+                height: 100px;
+                background: linear-gradient(to top, var(--accent), transparent);
+                border: 1px solid var(--accent);
+            }
+        }
+    }
+
+    /* Styles pour les stats détaillées */
+    .detailed-stats {
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+
+    .player-stats-card {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid var(--primary);
+        border-radius: 5px;
+        padding: 15px;
+        margin: 10px 0;
+
+        &.current-player {
+            border-color: var(--secondary);
+            background: linear-gradient(
+                to right,
+                rgba(255, 0, 128, 0.1),
+                transparent
+            );
+        }
+    }
+
+    /* Boutons de fin de partie */
+    .game-over-buttons {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid var(--primary);
+    }
+}
+
+/* Stats détaillées */
+.detailed-stats {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 30px;
+    
+    .player-stats-card {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid var(--primary);
+        border-radius: 5px;
+        padding: 15px;
+        margin: 10px 0;
+        
+        &.current-player {
+            border-color: var(--secondary);
+            background: linear-gradient(
+                to right,
+                rgba(255, 0, 128, 0.1),
+                transparent
+            );
+        }
+    }
+}
+
+#players li {
+    /* ... autres styles ... */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    
+    .player-rank {
+        margin-right: 10px;
+    }
+
+    .player-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex: 1;
+    }
+
+    .player-score {
+        text-align: right;
+        margin-left: auto;
+    }
+}
+
+/* -----------------------------------------------------------------------------
+   15. Version display et derniers ajustements
+   -------------------------------------------------------------------------- */
+
+.version-display {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    font-size: 0.75rem;
+    color: var(--primary);
+    opacity: 0.5;
+    z-index: var(--z-interface);
+    pointer-events: none;
+    font-family: monospace;
+    
+    &:hover {
+        opacity: 0.8;
+    }
+}
+
+/* Optimisations de performance */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+.gpu-accelerated * {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000;
+    will-change: transform;
+}
+
+/* Pour les écrans très étroits */
+@media (max-width: 360px) {
+    .mobile-action-button {
+        transform: scale(0.8);
+    }
+    
+    .podium-container {
+        gap: 15px;
+    }
+    
+    .podium-block {
+        width: 60px;
+    }
+}
+
+/* Pour les écrans en mode paysage */
+@media (max-height: 600px) and (orientation: landscape) {
+    .modal-content {
+        max-height: 80vh;
+        padding: 20px;
+    }
+    
+    .podium-container {
+        height: 200px;
+    }
+    
+    .joystick,
+    #mobileLocateButton {
+        bottom: 20px;
+        transform: scale(0.8);
+    }
+}

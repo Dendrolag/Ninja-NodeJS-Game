@@ -1,11 +1,80 @@
-/* public/styles.css */
+/* ==========================================================================
+   Neon Ninja - Main Stylesheet
+   Organisation et optimisation des styles avec thème cyber subtil
+   ========================================================================== */
+
+/* -----------------------------------------------------------------------------
+   1. Configuration et Variables
+   -------------------------------------------------------------------------- */
+
+   :root {
+    /* Couleurs principales */
+    --dark-bg: #0A0A0F;
+    --cyber-bg: #1A1A2E;
+    --cyber-light: rgba(255, 255, 255, 0.1);
+    
+    /* Couleurs néon (plus subtiles) */
+    --neon-pink: rgba(255, 0, 128, 0.8);
+    --neon-blue: rgba(0, 255, 255, 0.8);
+    --neon-purple: rgba(160, 32, 240, 0.8);
+    --neon-green: rgba(57, 255, 20, 0.8);
+    
+    /* Couleurs UI */
+    --primary: var(--neon-blue);
+    --secondary: var(--neon-pink);
+    --accent: var(--neon-purple);
+    --success: var(--neon-green);
+    
+    /* Effets de lueur (atténués) */
+    --glow-subtle: 0 0 5px rgba(0, 255, 255, 0.3);
+    --glow-medium: 0 0 10px rgba(0, 255, 255, 0.4);
+    --glow-strong: 0 0 15px rgba(0, 255, 255, 0.5);
+    
+    /* Transitions */
+    --transition-fast: 0.2s ease;
+    --transition-normal: 0.3s ease;
+    --transition-slow: 0.5s ease;
+    
+    /* Z-index layers */
+    --z-game: 1;
+    --z-interface: 100;
+    --z-overlay: 1000;
+    --z-modal: 2000;
+    --z-top: 3000;
+}
+
+/* Effet de lueur pour les éléments actifs */
+.glow {
+    &-subtle { box-shadow: var(--glow-subtle); }
+    &-medium { box-shadow: var(--glow-medium); }
+    &-strong { box-shadow: var(--glow-strong); }
+}
+
+/* Effet de surbrillance au hover */
+.hover-glow {
+    transition: box-shadow var(--transition-normal);
+    
+    &:hover {
+        box-shadow: var(--glow-medium);
+    }
+}
+
+/* Animation de base */
+@keyframes subtle-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
 
 /* Police personnalisée */
 @font-face {
-    font-family: 'Chewy-Regular';
-    src: url('/assets/fonts/Chewy-Regular.ttf') format('truetype');
+    font-family: 'PermanentMarker-Regular';
+    src: url('/assets/fonts/PermanentMarker-Regular.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
+}
+@font-face {
+    font-family: 'BrunoAce';
+    src: url('/assets/fonts/BrunoAce-Regular.ttf') format('truetype');
 }
 
 /* Reset et styles de base */
@@ -34,10 +103,24 @@ body, html {
     left: 0;
     width: 100%;
     height: 100%;
-    background-image: url("/assets/images/background-home.jpg");
-    background-size: cover;
     color: white;
     text-align: center;
+    overflow: hidden;
+}
+
+#mainMenu::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("/assets/images/background-home.jpg");
+    background-size: cover;
+    background-position: center center;
+    filter: blur(8px);
+    z-index: -1;
+    transform: scale(1.1);
 }
 
 #mainMenu.active {
@@ -48,9 +131,11 @@ body, html {
 
 .menu-content {
     position: relative;
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(2, 3, 5, 0.5);
     backdrop-filter: blur(10px);
     animation: fadeIn 0.3s ease-out;
+    border: 1px solid var(--primary);
+    box-shadow: var(--glow-subtle);
     
     /* Création du cercle parfait */
     aspect-ratio: 1;
@@ -69,15 +154,39 @@ body, html {
 }
 
 /* Titres */
+.game-title {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+.game-title .neon {
+    font-family: 'BrunoAce', sans-serif;
+    font-size: 4rem;
+    color: #fff;
+    text-shadow: 0 0 10px #0ff,
+                 0 0 20px #0ff,
+                 0 0 30px #0ff;
+}
+
+.game-title .ninja {
+    font-family: 'PermanentMarker-Regular', cursive;
+    font-size: 7rem;
+    color: #fff;
+    margin-top: -65px;
+}
+
 h1, h2, h3 {
-    font-family: 'Chewy-Regular', sans-serif;
+    font-family: 'PermanentMarker-Regular', sans-serif;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
     margin-bottom: 30px;
 }
 
 .menu-content h1 {
     font-size: clamp(24px, 5vmin, 48px);
-    margin-bottom: 4vmin;
+    margin-bottom: 1vmin;
     color: #cc99ff;
     text-transform: uppercase;
 }
@@ -117,6 +226,7 @@ h3 {
     border: none;
     border-radius: 25px;
     background-color: rgba(255, 255, 255, 0.9);
+    text-align: center;
 }
 
 .menu-form button {
@@ -145,48 +255,79 @@ input[type="text"]:focus, input[type="number"]:focus {
 
 /* Boutons */
 .primary-button, .secondary-button, .game-button {
-    padding: 12px 30px;
+    padding: 0.8rem 1.5rem;
     font-size: 16px;
-    border: none;
+    border: 2px solid transparent;
     border-radius: 25px;
     cursor: pointer;
-    transition: all 0.3s ease;
     font-weight: bold;
     text-transform: uppercase;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    position: relative;
+    background-color: rgba(204, 153, 255, 0.1);
+    color: white;
+    transition: all 0.3s ease;
+    overflow: hidden;
     margin: 10px 0;
 }
 
+/* Effet néon de base */
 .primary-button {
-    background-color: #cc99ff;
-    color: #2c3e50;
+    box-shadow: 0 0 10px rgba(204, 153, 255, 0.2),
+                inset 0 0 10px rgba(204, 153, 255, 0.1);
+    border-color: rgba(204, 153, 255, 0.3);
 }
 
+/* Animation de lueur au survol */
 .primary-button:hover {
-    background-color: #9966ff;
+    background-color: rgba(204, 153, 255, 0.2);
+    border-color: rgba(204, 153, 255, 0.8);
+    box-shadow: 0 0 20px rgba(204, 153, 255, 0.4),
+                inset 0 0 15px rgba(204, 153, 255, 0.2);
     transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
 }
 
+/* Animation de pulsation subtile */
+.primary-button:not(:disabled) {
+    animation: buttonPulse 2s infinite;
+}
+
+/* État désactivé */
 .primary-button:disabled {
-    background-color: #cccccc;
+    opacity: 0.5;
     cursor: not-allowed;
-    transform: none;
+    animation: none;
     box-shadow: none;
 }
 
-.primary-button:disabled:hover {
-    background-color: #cccccc;
-    transform: none;
+/* Animation de pulsation */
+@keyframes buttonPulse {
+    0% {
+        box-shadow: 0 0 10px rgba(204, 153, 255, 0.2),
+                    inset 0 0 10px rgba(204, 153, 255, 0.1);
+    }
+    50% {
+        box-shadow: 0 0 15px rgba(204, 153, 255, 0.3),
+                    inset 0 0 12px rgba(204, 153, 255, 0.2);
+    }
+    100% {
+        box-shadow: 0 0 10px rgba(204, 153, 255, 0.2),
+                    inset 0 0 10px rgba(204, 153, 255, 0.1);
+    }
 }
 
+/* Style pour le bouton secondaire */
 .secondary-button {
-    background-color: rgba(255, 255, 255, 0.2);
-    color: white;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.1),
+                inset 0 0 10px rgba(255, 255, 255, 0.05);
 }
 
 .secondary-button:hover {
-    background-color: rgba(255, 255, 255, 0.3);
+    background-color: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.2),
+                inset 0 0 15px rgba(255, 255, 255, 0.1);
     transform: translateY(-2px);
 }
 
@@ -200,14 +341,16 @@ input[type="text"]:focus, input[type="number"]:focus {
     max-width: 650px;
     margin: 20px auto;
     padding: 30px;
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(0, 0, 0, 0.3);
     border-radius: 20px;
     backdrop-filter: blur(10px);
+    border: 1px solid var(--primary);
+    box-shadow: var(--glow-subtle);
 }
 
 .setting-group {
     margin-bottom: 25px;
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(0, 0, 0, 0.4);
     padding: 20px;
     border-radius: 15px;
     transition: all 0.3s ease;
@@ -217,8 +360,9 @@ input[type="text"]:focus, input[type="number"]:focus {
 }
 
 .setting-group:hover {
-    background-color: rgba(255, 255, 255, 0.15);
+    background-color: rgba(0, 0, 0, 0.3);
     transform: translateX(5px);
+    box-shadow: var(--glow-subtle);
 }
 
 .setting-header {
@@ -360,7 +504,7 @@ canvas {
 }
 
 #time {
-    font-family: 'Chewy-Regular', sans-serif;
+    font-family: 'PermanentMarker-Regular', sans-serif;
     font-size: 36px;
     color: #cc99ff;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
@@ -530,7 +674,7 @@ canvas {
     padding: 20px 40px;
     border-radius: 15px;
     font-size: 50px;
-    font-family: 'Chewy-Regular', sans-serif;
+    font-family: 'PermanentMarker-Regular', sans-serif;
     z-index: 2000;
     transition: opacity 0.5s ease;
     text-align: center;
@@ -734,7 +878,7 @@ canvas {
     z-index: 999;
     animation: slideInLeft 0.3s ease-out;
     transition: opacity 0.3s ease;
-    font-family: 'Chewy-Regular', sans-serif;
+    font-family: 'PermanentMarker-Regular', sans-serif;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
     border: 2px solid rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(5px);
@@ -791,7 +935,7 @@ canvas {
 }
 
 .join-game {
-    background-color: #4CAF50;
+    background-color: #4c8caf;
     animation: pulse 2s infinite;
 }
 
@@ -1207,13 +1351,15 @@ canvas {
 }
 
 .waiting-room-content {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(10px);
     border-radius: 20px;
     padding: 40px;
     width: 90%;
     max-width: 600px;
     animation: fadeIn 0.3s ease-out;
+    border: 1px solid var(--primary);
+    box-shadow: var(--glow-subtle);
 }
 
 .waiting-room-container {
@@ -1730,7 +1876,7 @@ input[type="checkbox"]:disabled + label {
     color: white;
     padding: 15px 30px;
     border-radius: 15px;
-    font-family: 'Chewy-Regular', sans-serif;
+    font-family: 'PermanentMarker-Regular', sans-serif;
     position: fixed;
     top: 40%;
     left: 50%;
@@ -2006,4 +2152,11 @@ input[type="checkbox"]:disabled + label {
 .version-display:hover {
     opacity: 1;
     transition: opacity 0.3s ease;
+}
+
+.redirect-timer {
+    margin-top: 15px;
+    text-align: center;
+    color: #888;
+    font-size: 0.9em;
 }

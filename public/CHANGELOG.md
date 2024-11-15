@@ -1,6 +1,18 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
 
+## [0.5.0] - 2024-11-15
+### Ajouts
+- Ajout des assets Ninja (by Bribz)
+- Ajout de la premier Map (by Bribz)
+- Ajout d'un timer de 30 secondes à la fin de la partie
+
+
+- Ajout du favicon
+## [0.4.2] - 2024-11-04
+### Ajouts
+- Ajout du favicon
+
 ## [0.4.1] - 2024-10-31
 ### Ajouts
 - Ajout des statuts des joueurs dans la salle d'attente

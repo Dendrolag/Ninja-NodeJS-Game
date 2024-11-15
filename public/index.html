@@ -6,15 +6,25 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="icon" href="/assets/images/favicon.ico" type="image/x-icon">
-    <title>To the Point</title>
+    <link rel="icon" type="image/png" href="/assets/images/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/assets/images/favicon.svg" />
+    <link rel="shortcut icon" href="/assets/images/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="Neon Ninja" />
+    <link rel="manifest" href="/assets/images/site.webmanifest" />
+    <title>NEON NINJA</title>
     <link rel="stylesheet" href="/styles.css" rel="preload">
-    <link rel="preload" href="/assets/fonts/Chewy-Regular.ttf" as="font" type="font/ttf" crossorigin>
+    <link rel="preload" href="/assets/fonts/PermanentMarker-Regular.ttf" as="font" type="font/ttf" crossorigin>
+    <link rel="preload" href="/assets/fonts/BrunoAce-Regular.ttf" as="font" type="font/ttf" crossorigin>
 </head>
 <body>
     <!-- Menu principal -->
     <div id="mainMenu" class="active">
         <div class="menu-content">
-            <h1>To the Point</h1>
+            <h1 class="game-title">
+                <span class="neon">NEON</span>
+                <span class="ninja">NINJA</span>
+            </h1>
             <div class="menu-form">
                 <input type="text" id="nicknameInput" placeholder="Entrez votre pseudo" maxlength="15">
                 <button id="startButton" class="primary-button" disabled>Rejoindre la salle</button>
@@ -48,7 +58,7 @@
                 <!-- Section existante des joueurs -->
                 <div class="waiting-room-container">
                     <div class="players-list-container">
-                        <h3>Joueurs connectés</h3>
+                        <h3>Ninjas connectés</h3>
                         <ul id="waitingRoomPlayers"></ul>
                     </div>
         
@@ -84,7 +94,7 @@
             <!-- Paramètres des bots -->
             <div class="setting-group">
                 <div class="setting-header">
-                <label for="initialBotCount">Nombre de bots au départ:</label>
+                <label for="initialBotCount">Nombre de faux Ninjas au départ:</label>
                 <input 
                     type="number" 
                     id="initialBotCount" 
@@ -96,10 +106,10 @@
             </div>
                 <div class="setting-header">
                     <input type="checkbox" id="enableBlackBot">
-                    <label for="enableBlackBot">Activer les Bots Noirs</label>
+                    <label for="enableBlackBot">Activer les Black Ninjas</label>
                 </div>
                 <div class="setting-details">
-                    <label for="blackBotCount">Nombre de Bots Noirs:</label>
+                    <label for="blackBotCount">Nombre de Black Ninjas:</label>
                     <input type="number" id="blackBotCount" class="number-input" min="1" max="5" value="1">
                 </div>
             </div>
@@ -278,7 +288,7 @@
         
             <!-- Bouton de localisation -->
             <button id="mobileLocateButton" class="mobile-action-button">
-                <img src="/assets/images/locate.png" alt="Localiser" />
+                <img src="/assets/images/locate.gif" alt="Localiser" />
             </button>
         </div>
 
@@ -324,21 +334,22 @@
                 </div>
                 <div class="help-body">
                     <p>
-                        Déplacez-vous pour capturer les autres joueurs et les bots.
+                        Déplacez-vous pour capturer les autres joueurs et les faux Ninjas.
                         Collectez les bonus pour obtenir des avantages temporaires.
+                        Activez les malus pour perturber les autres joueurs.
                     </p>
                     <div class="bonus-list">
                         <div class="bonus-item">
-                            <img src="/assets/images/speed.svg" alt="Vitesse" style="height: 20px;"/>
+                            <img src="/assets/images/speed.gif" alt="Vitesse" style="height: 20px;"/>
                             <span>Boost de vitesse : Déplacez-vous plus rapidement</span>
                         </div>
                         <div class="bonus-item">
-                            <img src="/assets/images/shield.svg" alt="Bouclier" style="height: 20px;"/>
-                            <span>Invincibilité : Évitez d'être capturé</span>
+                            <img src="/assets/images/shield.gif" alt="Bouclier" style="height: 20px;"/>
+                            <span>Invincibilité : Vous ne pouvez pas être capturé et vous pouvez capturer les Black Ninjas</span>
                         </div>
                         <div class="bonus-item">
-                            <img src="/assets/images/eye.svg" alt="Œil" style="height: 20px;"/>
-                            <span>Révélation : Identifiez les vrais joueurs</span>
+                            <img src="/assets/images/eye.gif" alt="Œil" style="height: 20px;"/>
+                            <span>Révélation : Identifiez les vrais Ninjas</span>
                         </div>
                     </div>
                 </div>
@@ -372,7 +383,7 @@
                         </div>
                         <div class="control-item">
                             <span class="key">F</span>
-                            <span class="action">Localiser votre point</span>
+                            <span class="action">Localiser votre Ninja</span>
                         </div>
                     </div>
                 </div>
@@ -382,6 +393,7 @@
 
     <!-- Scripts -->
     <script src="/socket.io/socket.io.js"></script>
-    <script src="/client.js"></script>
+    <script type="module" src="client.js"></script>
+    <script type="module" src="./js/MapManager.js"></script>
 </body>
 </html>
