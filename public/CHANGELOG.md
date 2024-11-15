@@ -4,14 +4,17 @@ Tous les changements notables de ce projet seront documentés dans ce fichier.
 ## [0.5.0] - 2024-11-15
 ### Ajouts
 - Ajout des assets Ninja (by Bribz)
-- Ajout de la premier Map (by Bribz)
+- Ajout de la première Map (by Bribz)
 - Ajout d'un timer de 30 secondes à la fin de la partie
+- Ajout d'un timer de 5 secondes avant le début de la partie
+- Ajout des sprites bonus/malus
+- Changement wordings thème Ninja
+- Nouveaux styles interface thème Ninja
 
-
-- Ajout du favicon
 ## [0.4.2] - 2024-11-04
 ### Ajouts
 - Ajout du favicon
+- Ajout des Sprites Ninja (by Bribz)
 
 ## [0.4.1] - 2024-10-31
 ### Ajouts
