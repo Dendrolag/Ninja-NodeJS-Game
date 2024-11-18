@@ -13,387 +13,432 @@
     <meta name="apple-mobile-web-app-title" content="Neon Ninja" />
     <link rel="manifest" href="/assets/images/site.webmanifest" />
     <title>NEON NINJA</title>
-    <link rel="stylesheet" href="/styles.css" rel="preload">
-    <link rel="preload" href="/assets/fonts/PermanentMarker-Regular.ttf" as="font" type="font/ttf" crossorigin>
-    <link rel="preload" href="/assets/fonts/BrunoAce-Regular.ttf" as="font" type="font/ttf" crossorigin>
+    <!-- Styles et ressources -->
+    <link rel="stylesheet" href="styles.css">
+    <!-- Préchargement des polices pour de meilleures performances -->
+    <link rel="preload" href="assets/fonts/PermanentMarker-Regular.ttf" as="font" type="font/ttf" crossorigin>
+    <link rel="preload" href="assets/fonts/BrunoAce-Regular.ttf" as="font" type="font/ttf" crossorigin>
+    <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
     <!-- Menu principal -->
     <div id="mainMenu" class="active">
         <div class="menu-content">
-            <h1 class="game-title">
+            <h1 id="neon-ninja" class="game-title">
                 <span class="neon">NEON</span>
                 <span class="ninja">NINJA</span>
             </h1>
             <div class="menu-form">
-                <input type="text" id="nicknameInput" placeholder="Entrez votre pseudo" maxlength="15">
+                <input type="text" id="nicknameInput" placeholder="Votre pseudo" maxlength="20">
                 <button id="startButton" class="primary-button" disabled>Rejoindre la salle</button>
             </div>
         </div>
     </div>
 
+    <!-- Salle d'attente -->
     <div id="waitingRoom" class="screen">
-            <!-- Chatbox flottante -->
-            <div class="floating-chat">
-                <div class="chat-header">
-                    <div class="chat-header-title">
-                        <img src="/assets/images/chat.png" alt="Chat icon" class="chat-icon">
-                        <h3>Chat</h3>
-                    </div>
-                    <span class="toggle-icon">◀</span>
+        <!-- Chat flottant -->
+        <div class="floating-chat">
+            <div class="chat-header">
+                <div class="chat-header-title">
+                    <img src="/assets/images/chat.png" alt="Chat icon" class="chat-icon">
+                    <h3>Chat</h3>
                 </div>
-                <div class="chat-container">
-                    <div class="chat-messages"></div>
-                    <form id="chatForm" class="chat-input-container">
-                        <input type="text" id="chatInput" placeholder="Écrivez un message..." maxlength="200">
-                        <button type="submit" class="chat-send-button">Envoyer</button>
-                    </form>
-                </div>
+                <span class="toggle-icon">◀</span>
             </div>
+            <div class="chat-container">
+                <div class="chat-messages"></div>
+                <form id="chatForm">
+                    <input type="text" id="chatInput" placeholder="Votre message...">
+                    <button type="submit" class="chat-send-button">Envoyer</button>
+                </form>
+            </div>
+        </div>
 
+        <!-- Contenu principal de la salle d'attente -->
         <div class="waiting-room-content">
             <h2>Salle d'attente</h2>
-            
-            <div class="waiting-room-layout">       
-                <!-- Section existante des joueurs -->
+            <div class="waiting-room-layout">
+                    <!-- Navigation par onglets -->
+                    <div class="waiting-room-tabs">
+                        <button class="tab-button active" data-tab="players">Joueurs</button>
+                        <button class="tab-button" data-tab="how-to-play">Comment jouer</button>
+                        <button class="tab-button" data-tab="controls">Commandes</button>
+                    </div>
                 <div class="waiting-room-container">
-                    <div class="players-list-container">
-                        <h3>Ninjas connectés</h3>
-                        <ul id="waitingRoomPlayers"></ul>
+
+                    <!-- Onglet Liste des joueurs -->
+                    <div class="tab-content players active" id="players-tab">
+                        <div class="players-list-container">
+                            <h3>Ninjas connectés</h3>
+                            <ul id="waitingRoomPlayers"></ul>
+                        </div>
                     </div>
-        
-                    <div class="waiting-room-buttons">
-                        <button id="startGameButton" class="primary-button">Lezgoooo</button>
-                        <button id="waitingRoomSettings" class="secondary-button">Paramètres</button>
-                        <button id="leaveRoomButton" class="secondary-button">Quitter la salle</button>
+
+                    <!-- Onglet Comment jouer -->
+                    <div class="tab-content how-to-play" id="how-to-play-tab">
+                        <div class="info-content">
+                            <h3>Comment jouer</h3>
+                            <p>Déplacez-vous pour capturer les autres joueurs et les faux Ninjas.
+                            Collectez les bonus pour obtenir des avantages temporaires. 
+                            Activez les malus pour perturber les autres joueurs.</p>
+
+                            <!-- Section des bonus -->
+                            <div class="bonus-info">
+                                <h4>Bonus disponibles</h4>
+                                <div class="bonus-item">
+                                    <img src="/assets/images/speed.gif" alt="Vitesse" style="height: 20px;"> 
+                                    <span>Boost de vitesse : Déplacez-vous plus rapidement</span>
+                                </div>
+                                <div class="bonus-item">
+                                    <img src="/assets/images/shield.gif" alt="Bouclier" style="height: 20px;">
+                                    <span>Invincibilité : Immunité et capture des Black Ninjas</span>
+                                </div>
+                                <div class="bonus-item">
+                                    <img src="/assets/images/eye.gif" alt="Œil" style="height: 20px;"> 
+                                    <span>Révélation : Identifiez les vrais Ninjas</span>
+                                </div>
+                            </div>
+
+                            <!-- Section des malus -->
+                            <div class="malus-info">
+                                <h4>Malus et pièges</h4>
+                                <div class="malus-item">
+                                    <img src="/assets/images/reverse.gif" alt="Inverse" style="height: 20px;">
+                                    <span>Contrôles inversés : Inverse les commandes des adversaires</span>
+                                </div>
+                                <div class="malus-item">
+                                    <img src="/assets/images/blur.gif" alt="Flou" style="height: 20px;">
+                                    <span>Vision floue : Trouble la vision des autres joueurs</span>
+                                </div>
+                                <div class="malus-item">
+                                    <img src="/assets/images/negative.gif" alt="Négatif" style="height: 20px;">
+                                    <span>Vision négative : Inverse les couleurs des adversaires</span>
+                                </div>
+                            </div>
+
+                            <!-- Section des zones spéciales -->
+                            <div class="zones-info">
+                                <h4>Zones spéciales</h4>
+                                <div class="zone-item">
+                                    <span>🌪️ Zone de Chaos : Les bots changent aléatoirement de couleur</span>
+                                </div>
+                                <div class="zone-item">
+                                    <span>↔️ Zone Répulsive : Repousse les bots des joueurs</span>
+                                </div>
+                                <div class="zone-item">
+                                    <span>⭕ Zone Attractive : Attire les bots vers les joueurs</span>
+                                </div>
+                                <div class="zone-item">
+                                    <span>👻 Zone d'Invisibilité : Rend les joueurs partiellement invisibles</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- Onglet Commandes -->
+                    <div class="tab-content controls" id="controls-tab">
+                        <div class="controls-content">
+                            <h3>Commandes du jeu</h3>
+                            <div class="controls-grid">
+                                <div class="control-item">
+                                    <span class="key">↑</span> ou <span class="key">Z</span>
+                                    <span class="action">Monter</span>
+                                </div>
+                                <div class="control-item">
+                                    <span class="key">↓</span> ou <span class="key">S</span>
+                                    <span class="action">Descendre</span>
+                                </div>
+                                <div class="control-item">
+                                    <span class="key">←</span> ou <span class="key">Q</span>
+                                    <span class="action">Gauche</span>
+                                </div>
+                                <div class="control-item">
+                                    <span class="key">→</span> ou <span class="key">D</span>
+                                    <span class="action">Droite</span>
+                                </div>
+                                <div class="control-item">
+                                    <span class="key">F</span>
+                                    <span class="action">Localiser votre Ninja</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
                 </div>
+                                    <!-- Boutons de contrôle de la salle -->
+                                    <div class="waiting-room-buttons">
+                                        <button id="startGameButton" class="primary-button" disabled>Lezgoooo</button>
+                                        <button id="waitingRoomSettings" class="secondary-button">Paramètres</button>
+                                        <button id="leaveRoomButton" class="secondary-button">Quitter la salle</button>
+                                    </div>
             </div>
         </div>
     </div>
-
     <!-- Menu des paramètres -->
-    <div id="settingsMenu" style="display: none;">
-        <div class="settings-content">
-            <h2>Paramètres du jeu</h2>         
-            
-            <!-- Paramètres généraux -->
-            <div class="setting-group">
+   <div id="settingsMenu" style="display: none;">
+    <div class="settings-content">
+        <h2>Paramètres du jeu</h2>
+        
+        <!-- Paramètres de base -->
+        <div class="setting-group">
+            <div class="setting-details">
                 <label for="gameDuration">Durée de la partie (en secondes):</label>
-                <input 
-                    type="number" 
-                    id="gameDuration"
-                    class="number-input" 
-                    value="180" 
-                    min="60" 
-                    max="600"
-                    step="30"
-                >
+                <input type="number" id="gameDuration" class="number-input" value="180" min="30" max="600">
             </div>
-            
-            <!-- Paramètres des bots -->
-            <div class="setting-group">
-                <div class="setting-header">
+        </div>
+
+        <!-- Paramètres des bots -->
+        <div class="setting-group">
+            <div class="setting-header">
                 <label for="initialBotCount">Nombre de faux Ninjas au départ:</label>
-                <input 
-                    type="number" 
-                    id="initialBotCount" 
-                    class="number-input"
-                    value="30" 
-                    min="5" 
-                    max="200"
-                >
-            </div>
-                <div class="setting-header">
-                    <input type="checkbox" id="enableBlackBot">
-                    <label for="enableBlackBot">Activer les Black Ninjas</label>
-                </div>
-                <div class="setting-details">
-                    <label for="blackBotCount">Nombre de Black Ninjas:</label>
-                    <input type="number" id="blackBotCount" class="number-input" min="1" max="5" value="1">
-                </div>
+                <input type="number" id="initialBotCount" class="number-input" value="30" min="10" max="100">
             </div>
 
-            <div class="settings-group">
+            <div class="setting-header">
+                <label>
+                    <input type="checkbox" id="enableBlackBot" checked>
+                    Activer les Black Ninjas
+                </label>
+            </div>
+
+            <div class="setting-details">
+                <label for="blackBotCount">Nombre de Black Ninjas:</label>
+                <input type="number" id="blackBotCount" class="number-input" value="2" min="1" max="5">
+            </div>
+        </div>
+
+        <!-- Paramètres des bonus -->
+        <div class="settings-group">
+            <div class="setting-header">
+                <h3>Paramètres des bonus</h3>
+            </div>
+
+            <div class="setting-group">
+                <label for="bonusSpawnInterval">Intervalle d'apparition des bonus (secondes) :</label>
+                <input type="number" id="bonusSpawnInterval" class="number-input" value="4" min="2" max="20">
+            </div>
+
+            <!-- Bonus de vitesse -->
+            <div class="setting-group">
                 <div class="setting-header">
-                    <h3>Paramètres des bonus</h3>
-                </div>
-            
-                <div class="setting-group">
                     <label>
-                        Intervalle d'apparition des bonus (secondes) :
-                        <input type="number" id="bonusSpawnInterval" class="number-input" class="number-input" min="1" max="10" value="4">
+                        <input type="checkbox" id="enableSpeedBoost" checked>
+                        Activer le bonus de vitesse
                     </label>
                 </div>
-            
-                <div class="setting-group">
-                    <div class="setting-header">
-                        <input type="checkbox" id="enableSpeedBoost">
-                        <label for="enableSpeedBoost">Activer le bonus de vitesse</label>
+                <div class="setting-details">
+                    <div>
+                        <label for="speedBoostDuration">Durée (secondes):</label>
+                        <input type="number" id="speedBoostDuration" class="number-input" value="10" min="5" max="30">
                     </div>
-                    <div class="setting-details">
-                        <label>
-                            Durée (secondes):
-                            <input type="number" id="speedBoostDuration" class="number-input" min="1" max="30" value="10">
-                        </label>
-                        <label>
-                            Taux d'apparition (%):
-                            <input type="number" id="speedBoostSpawnRate" class="number-input" min="1" max="100" value="25">
-                        </label>
-                    </div>
-                </div>
-            
-                <div class="setting-group">
-                    <div class="setting-header">
-                        <input type="checkbox" id="enableInvincibility">
-                        <label for="enableInvincibility">Activer le bonus d'invincibilité</label>
-                    </div>
-                    <div class="setting-details">
-                        <label>
-                            Durée (secondes):
-                            <input type="number" id="invincibilityDuration" class="number-input" min="1" max="30" value="10">
-                        </label>
-                        <label>
-                            Taux d'apparition (%):
-                            <input type="number" id="invincibilitySpawnRate" class="number-input" min="1" max="100" value="15">
-                        </label>
-                    </div>
-                </div>
-            
-                <div class="setting-group">
-                    <div class="setting-header">
-                        <input type="checkbox" id="enableReveal">
-                        <label for="enableReveal">Activer le bonus de révélation</label>
-                    </div>
-                    <div class="setting-details">
-                        <label>
-                            Durée (secondes):
-                            <input type="number" id="revealDuration" class="number-input" min="1" max="30" value="10">
-                        </label>
-                        <label>
-                            Taux d'apparition (%):
-                            <input type="number" id="revealSpawnRate" class="number-input" min="1" max="100" value="20">
-                        </label>
+                    <div>
+                        <label for="speedBoostSpawnRate">Taux d'apparition (%):</label>
+                        <input type="number" id="speedBoostSpawnRate" class="number-input" value="25" min="5" max="100">
                     </div>
                 </div>
             </div>
 
-            <div class="settings-group">
+            <!-- Bonus d'invincibilité -->
+            <div class="setting-group">
                 <div class="setting-header">
-                    <h3>Paramètres des malus</h3>
+                    <label>
+                        <input type="checkbox" id="enableInvincibility" checked>
+                        Activer le bonus d'invincibilité
+                    </label>
                 </div>
-            
-                <div class="setting-group">
-                    <div class="setting-header">
-                        Activer les malus
-                        <input type="checkbox" id="enableMalus">
-                    </div>
-
-                    <div class="setting-details">
-                        <div>
-                            <input type="checkbox" id="enableReverseControls">
-                            <label for="enableReverseControls">Contrôles inversés</label>
-                        </div>
-                        <div>
-                            <input type="checkbox" id="enableBlurVision">
-                            <label for="enableBlurVision">Vision floue</label>
-                        </div>
-                        <div>
-                            <input type="checkbox" id="enableNegativeVision">
-                            <label for="enableNegativeVision">Vision négative</label>
-                        </div>
-                    </div>
-            
-                    <div class="setting-details">
-                        Intervalle d'apparition (secondes):
-                        <input type="number" id="malusSpawnInterval" class="number-input" min="1" max="30" value="8">
-                    </div>
-            
-                    <div class="setting-details">
-                        Taux d'apparition (%):
-                        <input type="number" id="malusSpawnRate" class="number-input" min="1" max="100" value="20">
-                    </div>
-                </div>
-
-                <div class="setting-group">
                 <div class="setting-details">
                     <div>
-                        Durée du malus Contrôles inversés (secondes):
-                        <input type="number" id="reverseControlsDuration" class="number-input" min="1" max="30" value="10">
+                        <label for="invincibilityDuration">Durée (secondes):</label>
+                        <input type="number" id="invincibilityDuration" class="number-input" value="10" min="5" max="30">
                     </div>
                     <div>
-                        Durée du malus Vision floue (secondes):
-                        <input type="number" id="blurDuration" class="number-input" min="1" max="30" value="12">
+                        <label for="invincibilitySpawnRate">Taux d'apparition (%):</label>
+                        <input type="number" id="invincibilitySpawnRate" class="number-input" value="15" min="5" max="100">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bonus de révélation -->
+            <div class="setting-group">
+                <div class="setting-header">
+                    <label>
+                        <input type="checkbox" id="enableReveal" checked>
+                        Activer le bonus de révélation
+                    </label>
+                </div>
+                <div class="setting-details">
+                    <div>
+                        <label for="revealDuration">Durée (secondes):</label>
+                        <input type="number" id="revealDuration" class="number-input" value="10" min="5" max="30">
                     </div>
                     <div>
-                        Durée du malus Vision négative (secondes):
-                        <input type="number" id="negativeDuration" class="number-input" min="1" max="30" value="14">
+                        <label for="revealSpawnRate">Taux d'apparition (%):</label>
+                        <input type="number" id="revealSpawnRate" class="number-input" value="20" min="5" max="100">
                     </div>
                 </div>
-                </div>
+            </div>
+        </div>
+
+        <!-- Paramètres des malus -->
+        <div class="settings-group">
+            <div class="setting-header">
+                <h3>Paramètres des malus</h3>
             </div>
 
             <div class="setting-group">
                 <div class="setting-header">
-                    <div>
-                        <input type="checkbox" id="enableSpecialZones">
-                        <label for="enableSpecialZones">Activer les zones spéciales</label>
-                    </div>
+                    <label>
+                        <input type="checkbox" id="enableMalus" checked>
+                        Activer les malus
+                    </label>
                 </div>
-    
+
                 <div class="setting-details">
-                    <div class="zone-type">
-                        <input type="checkbox" id="enableChaosZone">
-                        <label for="enableChaosZone">Zone de Chaos</label>
+                    <!-- Types de malus -->
+                    <div>
+                        <label>
+                            <input type="checkbox" id="enableReverseControls" checked>
+                            Contrôles inversés
+                        </label>
                     </div>
-                    <div class="zone-type">
-                        <input type="checkbox" id="enableRepelZone">
-                        <label for="enableRepelZone">Zone Répulsive</label>
+                    <div>
+                        <label>
+                            <input type="checkbox" id="enableBlurVision" checked>
+                            Vision floue
+                        </label>
                     </div>
-                    <div class="zone-type">
-                        <input type="checkbox" id="enableAttractZone">
-                        <label for="enableAttractZone">Zone Attractive</label>
+                    <div>
+                        <label>
+                            <input type="checkbox" id="enableNegativeVision" checked>
+                            Vision négative
+                        </label>
                     </div>
-                    <div class="zone-type">
-                        <input type="checkbox" id="enableStealthZone">
-                        <label for="enableStealthZone">Zone d'Invisibilité</label>
+
+                    <!-- Configuration des malus -->
+                    <div>
+                        <label for="malusSpawnInterval">Intervalle d'apparition (secondes):</label>
+                        <input type="number" id="malusSpawnInterval" class="number-input" value="8" min="4" max="30">
+                    </div>
+                    <div>
+                        <label for="malusSpawnRate">Taux d'apparition (%):</label>
+                        <input type="number" id="malusSpawnRate" class="number-input" value="20" min="5" max="100">
                     </div>
                 </div>
             </div>
 
-            <!-- Boutons du menu des paramètres -->
-            <div class="settings-buttons">
-                <button id="saveSettingsButton" class="primary-button">Enregistrer</button>
-                <button id="resetSettingsButton" class="secondary-button">Réinitialiser</button>
-                <button id="backToMenuButton" class="secondary-button">Retour</button>
+            <!-- Durées des malus -->
+            <div class="setting-group">
+                <div class="setting-details">
+                    <div>
+                        <label for="reverseControlsDuration">Durée du malus Contrôles inversés (secondes):</label>
+                        <input type="number" id="reverseControlsDuration" class="number-input" value="10" min="5" max="30">
+                    </div>
+                    <div>
+                        <label for="blurDuration">Durée du malus Vision floue (secondes):</label>
+                        <input type="number" id="blurDuration" class="number-input" value="12" min="5" max="30">
+                    </div>
+                    <div>
+                        <label for="negativeDuration">Durée du malus Vision négative (secondes):</label>
+                        <input type="number" id="negativeDuration" class="number-input" value="14" min="5" max="30">
+                    </div>
+                </div>
             </div>
-        
+        </div>
+
+        <!-- Paramètres des zones -->
+        <div class="setting-group">
+            <div class="setting-header">
+                <label>
+                    <input type="checkbox" id="enableSpecialZones" checked>
+                    Activer les zones spéciales
+                </label>
+            </div>
+
+            <div class="setting-details">
+                <div class="zone-type">
+                    <label>
+                        <input type="checkbox" id="enableChaosZone" checked>
+                        Zone de Chaos
+                    </label>
+                </div>
+                <div class="zone-type">
+                    <label>
+                        <input type="checkbox" id="enableRepelZone" checked>
+                        Zone Répulsive
+                    </label>
+                </div>
+                <div class="zone-type">
+                    <label>
+                        <input type="checkbox" id="enableAttractZone" checked>
+                        Zone Attractive
+                    </label>
+                </div>
+                <div class="zone-type">
+                    <label>
+                        <input type="checkbox" id="enableStealthZone" checked>
+                        Zone d'Invisibilité
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Boutons des paramètres -->
+        <div class="settings-buttons">
+            <button id="saveSettingsButton" class="primary-button">Enregistrer</button>
+            <button id="resetSettingsButton" class="secondary-button">Réinitialiser</button>
+            <button id="backToMenuButton" class="secondary-button">Retour</button>
         </div>
     </div>
+</div>
 
-    <!-- Écran de jeu -->
-    <div id="gameScreen">
-        <!-- Conteneur du canvas -->
-        <div id="gameContainer">
-            <canvas id="gameCanvas" style="position: absolute; top: 0; left: 0;" width="100%" height="100%"></canvas>
-        </div>
-
-        <div id="mobileControls" class="mobile-controls">
-            <!-- Joystick -->
-            <div class="joystick">
-                <div class="joystick-base">
-                    <div class="joystick-stick"></div>
-                </div>
-            </div>
-        
-            <!-- Bouton de localisation -->
-            <button id="mobileLocateButton" class="mobile-action-button">
-                <img src="/assets/images/locate.gif" alt="Localiser" />
-            </button>
-        </div>
-
-        <!-- Interface de jeu -->
-        <div id="gameInterface">
-            <!-- Notification des bonus -->
-            <div id="collectedBonusDisplay" class="hidden">
-                <div id="collectedBonusDisplayContent"></div>
-            </div>
-
-            <!-- Zone des bonus actifs -->
-            <div id="activeBonuses"></div>
-
-            <!-- Liste des joueurs -->
-            <div id="playerList">
-                <h3>Classement</h3>
-                <ul id="players"></ul>
-            </div>
-
-            <!-- Overlay de jeu (timer, score, pause) -->
-            <div id="gameOverlay">
-                <div id="gameInfo">
-                    <div id="timer">
-                        <div id="timerContent">
-                            <div id="timerLabel">Temps restant</div>
-                            <div id="time">180</div>
-                        </div>
-                    </div>
-                    <div id="score"></div>
-                </div>
-                <button id="pauseButton" class="game-button">
-                    Pause
-                </button>
-            </div>
-        </div>
-
-        <!-- Instructions du jeu -->
-        <div id="instructions" class="game-help-panel">
-            <div class="help-content">
-                <div class="help-header">
-                    <h3>Comment jouer</h3>
-                    <button class="close-button" id="closeInstructions">&times;</button>
-                </div>
-                <div class="help-body">
-                    <p>
-                        Déplacez-vous pour capturer les autres joueurs et les faux Ninjas.
-                        Collectez les bonus pour obtenir des avantages temporaires.
-                        Activez les malus pour perturber les autres joueurs.
-                    </p>
-                    <div class="bonus-list">
-                        <div class="bonus-item">
-                            <img src="/assets/images/speed.gif" alt="Vitesse" style="height: 20px;"/>
-                            <span>Boost de vitesse : Déplacez-vous plus rapidement</span>
-                        </div>
-                        <div class="bonus-item">
-                            <img src="/assets/images/shield.gif" alt="Bouclier" style="height: 20px;"/>
-                            <span>Invincibilité : Vous ne pouvez pas être capturé et vous pouvez capturer les Black Ninjas</span>
-                        </div>
-                        <div class="bonus-item">
-                            <img src="/assets/images/eye.gif" alt="Œil" style="height: 20px;"/>
-                            <span>Révélation : Identifiez les vrais Ninjas</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Commandes du jeu -->
-        <div id="controls" class="game-help-panel">
-            <div class="help-content">
-                <div class="help-header">
-                    <h3>Commandes</h3>
-                    <button class="close-button" id="closeControls">&times;</button>
-                </div>
-                <div class="help-body">
-                    <div class="controls-grid">
-                        <div class="control-item">
-                            <span class="key">↑</span> ou <span class="key">Z</span>
-                            <span class="action">Monter</span>
-                        </div>
-                        <div class="control-item">
-                            <span class="key">↓</span> ou <span class="key">S</span>
-                            <span class="action">Descendre</span>
-                        </div>
-                        <div class="control-item">
-                            <span class="key">←</span> ou <span class="key">Q</span>
-                            <span class="action">Gauche</span>
-                        </div>
-                        <div class="control-item">
-                            <span class="key">→</span> ou <span class="key">D</span>
-                            <span class="action">Droite</span>
-                        </div>
-                        <div class="control-item">
-                            <span class="key">F</span>
-                            <span class="action">Localiser votre Ninja</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+<!-- Écran de jeu -->
+<div id="gameScreen">
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
     </div>
 
-    <!-- Scripts -->
-    <script src="/socket.io/socket.io.js"></script>
-    <script type="module" src="client.js"></script>
-    <script type="module" src="./js/MapManager.js"></script>
+    <!-- Contrôles mobiles -->
+    <div id="mobileControls" class="mobile-controls">
+        <div class="joystick">
+            <div class="joystick-base">
+                <div class="joystick-stick"></div>
+            </div>
+        </div>
+        <button id="mobileLocateButton" class="mobile-action-button">
+            <img src="/assets/images/locate.png" alt="Localiser">
+        </button>
+    </div>
+
+    <!-- Interface de jeu -->
+    <div id="gameInterface">
+        <div id="collectedBonusDisplay" class="hidden">
+            <div id="collectedBonusDisplayContent"></div>
+        </div>
+
+        <div id="activeBonuses"></div>
+
+        <div id="playerList">
+            <h3>Classement</h3>
+            <ul id="players"></ul>
+        </div>
+
+        <div id="gameOverlay">
+            <div id="gameInfo">
+                <div id="timer">
+                    <div id="timerContent">
+                        <div id="timerLabel">Temps restant</div>
+                        <div id="time">180</div>
+                    </div>
+                </div>
+                <div id="score"></div>
+            </div>
+            <button id="pauseButton" class="game-button">Pause</button>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="client.js"></script>
 </body>
 </html>

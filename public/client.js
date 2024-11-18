@@ -10,7 +10,7 @@ const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
 const nicknameInput = document.getElementById('nicknameInput');
 
-const GAME_VERSION = "v0.5.0";  // À mettre à jour à chaque déploiement
+const GAME_VERSION = "v0.5.1";  // À mettre à jour à chaque déploiement
 
 // Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
@@ -820,21 +820,6 @@ window.addEventListener('resize', resizeCanvas);
 window.addEventListener('load', showMobileControls);
 window.addEventListener('resize', showMobileControls);
 
-
-
-// Gestion des panneaux d'aide
-document.getElementById('closeInstructions').addEventListener('click', () => {
-    const instructions = document.getElementById('instructions');
-    instructions.classList.add('hidden');
-    localStorage.setItem('instructionsHidden', 'true');
-});
-
-document.getElementById('closeControls').addEventListener('click', () => {
-    const controls = document.getElementById('controls');
-    controls.classList.add('hidden');
-    localStorage.setItem('controlsHidden', 'true');
-});
-
 // Menu des paramètres
 settingsButton.addEventListener('click', () => {
     mainMenu.classList.remove('active');
@@ -984,6 +969,7 @@ startButton.addEventListener('click', () => {
     // Initialiser le chat après la connexion socket
     socket.on('connect', () => {
         //console.log('Socket connected, initializing chat...');
+        initializeWaitingRoomTabs();
         initializeChat(socket); // Passer le socket en paramètre
     });
 
@@ -1186,19 +1172,17 @@ function initializeChat(socket) {
     const chatInput = document.getElementById('chatInput');
     const toggleIcon = document.querySelector('.toggle-icon');
 
-    // Gestion du toggle
-    chatHeader.addEventListener('click', () => {
+    // Supprimer les anciens écouteurs s'ils existent
+    const handleToggle = () => {
         chatBox.classList.toggle('collapsed');
-        // Mise à jour de l'icône
         if (chatBox.classList.contains('collapsed')) {
             toggleIcon.textContent = '▶';
         } else {
             toggleIcon.textContent = '◀';
         }
-    });
+    };
 
-    // Gestion des messages
-    chatForm.addEventListener('submit', (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
         const message = chatInput.value.trim();
         
@@ -1218,7 +1202,18 @@ function initializeChat(socket) {
                 toggleIcon.textContent = '◀';
             }
         }
-    });
+    };
+
+    // Nettoyer les anciens écouteurs avant d'en ajouter de nouveaux
+    chatHeader.removeEventListener('click', handleToggle);
+    chatForm.removeEventListener('submit', handleSubmit);
+
+    // Ajouter les nouveaux écouteurs
+    chatHeader.addEventListener('click', handleToggle);
+    chatForm.addEventListener('submit', handleSubmit);
+
+    // Nettoyer les anciens écouteurs de messages
+    socket.removeAllListeners('newChatMessage');
 
     // Réception des messages
     socket.on('newChatMessage', (messageData) => {
@@ -1260,6 +1255,47 @@ function createChatMessage(data) {
     messageDiv.appendChild(content);
     
     return messageDiv;
+}
+
+function initializeWaitingRoomTabs() {
+    // Vérifier d'abord si on est dans la salle d'attente
+    const waitingRoom = document.getElementById('waitingRoom');
+    if (!waitingRoom) return;
+
+    const tabButtons = waitingRoom.querySelectorAll('.tab-button');
+    if (!tabButtons.length) return;
+
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            if (!button.dataset.tab) return;
+
+            // Désactiver tous les onglets
+            tabButtons.forEach(btn => {
+                btn.classList.remove('active');
+                // Utiliser waitingRoom.querySelector pour s'assurer de rester dans le contexte
+                const content = waitingRoom.querySelector(`#${btn.dataset.tab}-tab`);
+                if (content) {
+                    content.classList.remove('active');
+                }
+            });
+            
+            // Activer l'onglet sélectionné
+            button.classList.add('active');
+            const selectedContent = waitingRoom.querySelector(`#${button.dataset.tab}-tab`);
+            if (selectedContent) {
+                selectedContent.classList.add('active');
+            }
+        });
+    });
+
+    // S'assurer que l'onglet initial est actif
+    const activeTab = waitingRoom.querySelector('.tab-button.active');
+    if (activeTab) {
+        const initialContent = waitingRoom.querySelector(`#${activeTab.dataset.tab}-tab`);
+        if (initialContent) {
+            initialContent.classList.add('active');
+        }
+    }
 }
 
 // Fonction pour ajouter un message au chat
@@ -1416,35 +1452,6 @@ function updateWaitingRoomPlayers(data) {
     });
 
     saveSettingsButton.style.display = isRoomOwner ? 'block' : 'none';
-}
-
-// Fonctions d'initialisation
-function initializeHelpPanels() {
-    const instructions = document.getElementById('instructions');
-    const controls = document.getElementById('controls');
-
-    if (localStorage.getItem('instructionsHidden') === 'true') {
-        instructions.classList.add('hidden');
-    } else {
-        instructions.classList.remove('hidden');
-    }
-
-    if (localStorage.getItem('controlsHidden') === 'true') {
-        controls.classList.add('hidden');
-    } else {
-        controls.classList.remove('hidden');
-    }
-}
-
-function resetHelpPanels() {
-    const instructions = document.getElementById('instructions');
-    const controls = document.getElementById('controls');
-    
-    instructions.classList.remove('hidden');
-    controls.classList.remove('hidden');
-    
-    localStorage.removeItem('instructionsHidden');
-    localStorage.removeItem('controlsHidden');
 }
 
 // Gestion des entrées clavier
@@ -1792,8 +1799,6 @@ async function startGame() {
             updateMalusEffects();
         }
     }, 20);
-
-    initializeHelpPanels();
     
 }
 
@@ -2929,7 +2934,14 @@ function returnToWaitingRoom() {
     });
 
     // Afficher la salle d'attente
+    initializeWaitingRoomTabs(); // Réinitialiser les onglets
     waitingRoomScreen.classList.add('active');
+
+
+        // Attendre que le DOM soit prêt
+        setTimeout(() => {
+            initializeWaitingRoomTabs();
+        }, 100);
 
     // Nettoyer les écouteurs d'événements du jeu
     document.removeEventListener('keydown', handleKeyDown);
@@ -3032,6 +3044,7 @@ function restartGame() {
     });
 }
 
+// Dans client.js, dans la fonction returnToMainMenu
 function returnToMainMenu() {
     // Réinitialiser les états
     showPlayerLocator = false;
@@ -3061,18 +3074,26 @@ function returnToMainMenu() {
     revealTimeLeft = 0;
     keysPressed = {};
 
-    // Nettoyer les écouteurs d'événements
-    document.removeEventListener('keydown', handleKeyDown);
-    document.removeEventListener('keyup', handleKeyUp);
+    // Arrêter la boucle de jeu
     if (gameLoopInterval) {
         clearInterval(gameLoopInterval);
+        gameLoopInterval = null;
     }
 
-    // Réinitialiser les panneaux d'aide
-    resetHelpPanels();
+    // Nettoyer le canvas
+    if (context) {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // Réinitialiser les écouteurs d'événements
+    document.removeEventListener('keydown', handleKeyDown);
+    document.removeEventListener('keyup', handleKeyUp);
 
     // Gérer l'affichage des écrans
     gameScreen.classList.remove('active');
     waitingRoomScreen.classList.remove('active');
     mainMenu.classList.add('active');
+
+    // Réinitialiser le champ de pseudo
+    nicknameInput.value = '';
 }

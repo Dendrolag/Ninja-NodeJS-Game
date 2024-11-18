@@ -442,6 +442,258 @@ canvas {
     height: 100%;
 }
 
+/* ==========================================================================
+   Styles des onglets de la salle d'attente
+   ========================================================================== */
+
+/* Conteneur principal des onglets */
+.waiting-room-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.2);
+    margin: 0;
+    padding: 20px 20px 10px 20px;
+    border-radius: 15px 15px 0 0;
+    backdrop-filter: blur(10px);
+    justify-content: center;
+    display: flex;
+    gap: 10px;
+}
+
+/* Style des boutons d'onglets */
+.tab-button {
+    padding: 12px 12px;
+    border: none;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 16px;
+    position: relative;
+    overflow: hidden;
+    width: 33%;
+}
+
+/* État au survol des onglets */
+.tab-button:hover {
+    background: rgba(204, 153, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+/* Style de l'onglet actif */
+.tab-button.active {
+    background: rgba(204, 153, 255, 0.3);
+    border: 1px solid #cc99ff;
+    box-shadow: 0 0 15px rgba(204, 153, 255, 0.2);
+}
+
+/* ==========================================================================
+   Contenus des onglets
+   ========================================================================== */
+
+.tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease-out;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 20px;
+}
+
+/* Contenu d'onglet actif */
+.tab-content.active {
+    display: block;
+}
+
+/* Animation d'apparition */
+@keyframes fadeIn {
+    from { 
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==========================================================================
+   Styles du contenu informatif
+   ========================================================================== */
+
+/* Conteneur d'informations */
+.info-content {
+    color: white;
+    line-height: 1.6;
+}
+
+/* En-têtes des sections */
+.info-content h3,
+.info-content h4 {
+    color: #cc99ff;
+    margin: 20px 0 15px;
+    text-shadow: 0 0 10px rgba(204, 153, 255, 0.3);
+}
+
+.info-content h3 {
+    font-size: 24px;
+    border-bottom: 2px solid rgba(204, 153, 255, 0.3);
+    padding-bottom: 10px;
+}
+
+.info-content h4 {
+    font-size: 20px;
+    margin-top: 25px;
+}
+
+/* Sections d'informations (bonus, malus, zones) */
+.bonus-info,
+.malus-info,
+.zones-info {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 20px;
+    border-radius: 10px;
+    margin: 15px 0;
+}
+
+/* Items dans les sections */
+.bonus-item,
+.malus-item,
+.zone-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 10px;
+    margin: 8px 0;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+/* État au survol des items */
+.bonus-item:hover,
+.malus-item:hover,
+.zone-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateX(5px);
+}
+
+/* Images des bonus et malus */
+.bonus-item img,
+.malus-item img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    filter: drop-shadow(0px 0px 3px rgb(204, 170, 255));
+}
+
+/* ==========================================================================
+   Styles des commandes
+   ========================================================================== */
+
+/* Grille des commandes */
+.controls-grid {
+    display: grid;
+    gap: 15px;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+}
+
+/* Items de commande */
+.control-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+/* Touches */
+.key {
+    background: rgba(204, 153, 255, 0.2);
+    padding: 5px 10px;
+    border-radius: 5px;
+    min-width: 30px;
+    text-align: center;
+    font-family: monospace;
+    border: 1px solid rgba(204, 153, 255, 0.3);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Description de l'action */
+.action {
+    color: white;
+    flex-grow: 1;
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    /* Adaptation des onglets pour mobile */
+    .waiting-room-tabs {
+        flex-wrap: wrap;
+        gap: 5px;
+        padding: 10px;
+    }
+
+    .tab-button {
+        flex: 1 1 calc(33.33% - 10px);
+        padding: 10px;
+        font-size: 14px;
+        text-align: center;
+    }
+
+    /* Adaptation du contenu pour mobile */
+    .tab-content {
+        padding: 15px;
+    }
+
+    .info-content h3 {
+        font-size: 20px;
+    }
+
+    .info-content h4 {
+        font-size: 18px;
+    }
+
+    /* Adaptation des items pour mobile */
+    .bonus-item,
+    .malus-item,
+    .zone-item,
+    .control-item {
+        padding: 8px;
+        font-size: 14px;
+    }
+
+    /* Ajustement des images pour mobile */
+    .bonus-item img,
+    .malus-item img {
+        width: 20px;
+        height: 20px;
+    }
+}
+
+/* Pour les très petits écrans */
+@media (max-width: 480px) {
+    .tab-button {
+        flex: 1 1 100%;
+    }
+
+    .controls-grid {
+        padding: 10px;
+    }
+
+    .key {
+        min-width: 25px;
+        padding: 3px 8px;
+    }
+}
+
 /* Overlay et informations de jeu */
 #gameOverlay {
     position: fixed;
@@ -1350,22 +1602,63 @@ canvas {
     justify-content: center;
 }
 
+/* Container principal avec une structure en grille */
+.waiting-room-layout {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    height: 100%;
+    width: 100%;
+}
+
+#waitingRoom .waiting-room-content {
+    display: flex;
+    flex-direction: column;
+}
+
 .waiting-room-content {
     background-color: rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(10px);
     border-radius: 20px;
-    padding: 40px;
-    width: 90%;
     max-width: 600px;
     animation: fadeIn 0.3s ease-out;
     border: 1px solid var(--primary);
     box-shadow: var(--glow-subtle);
+    height: 90vh;
+    overflow-y: auto;
+}
+
+.waiting-room-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.waiting-room-content::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+.waiting-room-content::-webkit-scrollbar-thumb {
+    background-color: rgba(204, 153, 255, 0.5);
+    border-radius: 4px;
 }
 
 .waiting-room-container {
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(204, 153, 255, 0.5) rgba(0, 0, 0, 0.2);
+}
+
+.waiting-room-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.waiting-room-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+.waiting-room-container::-webkit-scrollbar-thumb {
+    background-color: rgba(204, 153, 255, 0.5);
+    border-radius: 4px;
 }
 
 .players-list-container {
@@ -1394,10 +1687,17 @@ canvas {
     border: 1px solid #cc99ff;
 }
 
+/* Barre de boutons fixe en bas */
 .waiting-room-buttons {
+    position: sticky;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
+    padding: 10px;
     display: flex;
     gap: 15px;
     justify-content: center;
+    border-radius: 0 0 15px 15px;
 }
 
 #startGameButton:disabled {
@@ -1437,7 +1737,7 @@ input[type="checkbox"]:disabled + label {
     top: 50%;
     transform: translateY(-50%);
     width: 300px;
-    height: 60vh;
+    height: 90vh;
     background-color: rgba(0, 0, 0, 0.5);
     border-radius: 0 15px 15px 0;
     backdrop-filter: blur(10px);
