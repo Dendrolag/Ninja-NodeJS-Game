@@ -37,6 +37,7 @@
 
     <!-- Salle d'attente -->
     <div id="waitingRoom" class="screen">
+        <h2>Salle d'attente</h2>
         <!-- Chat flottant -->
         <div class="floating-chat">
             <div class="chat-header">
@@ -57,7 +58,6 @@
 
         <!-- Contenu principal de la salle d'attente -->
         <div class="waiting-room-content">
-            <h2>Salle d'attente</h2>
             <div class="waiting-room-layout">
                     <!-- Navigation par onglets -->
                     <div class="waiting-room-tabs">
@@ -169,9 +169,29 @@
                 </div>
                                     <!-- Boutons de contrôle de la salle -->
                                     <div class="waiting-room-buttons">
-                                        <button id="startGameButton" class="primary-button" disabled>Lezgoooo</button>
-                                        <button id="waitingRoomSettings" class="secondary-button">Paramètres</button>
-                                        <button id="leaveRoomButton" class="secondary-button">Quitter la salle</button>
+                                        <button id="startGameButton" class="primary-button" title="Lancer la partie">
+                                            <span class="button-text">Lancer la partie</span>
+                                            <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M5 3l14 9-14 9V3z"/>
+                                            </svg>
+                                        </button>
+                                        
+                                        <button id="waitingRoomSettings" class="secondary-button" title="Paramètres">
+                                            <span class="button-text">Paramètres de la partie</span>
+                                            <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/>
+                                                <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+                                            </svg>
+                                        </button>
+                                        
+                                        <button id="leaveRoomButton" class="secondary-button" title="Quitter la salle">
+                                            <span class="button-text">Quitter la salle</span>
+                                            <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+                                                <path d="M16 17l5-5-5-5"/>
+                                                <path d="M21 12H9"/>
+                                            </svg>
+                                        </button>
                                     </div>
             </div>
         </div>

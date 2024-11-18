@@ -255,7 +255,7 @@ input[type="text"]:focus, input[type="number"]:focus {
 
 /* Boutons */
 .primary-button, .secondary-button, .game-button {
-    padding: 0.8rem 1.5rem;
+    padding: 0.8rem 1rem;
     font-size: 16px;
     border: 2px solid transparent;
     border-radius: 25px;
@@ -489,6 +489,12 @@ canvas {
     box-shadow: 0 0 15px rgba(204, 153, 255, 0.2);
 }
 
+.button-icon {
+    display: none;
+    width: 24px;
+    height: 24px;
+}
+
 /* ==========================================================================
    Contenus des onglets
    ========================================================================== */
@@ -498,6 +504,7 @@ canvas {
     animation: fadeIn 0.3s ease-out;
     background: rgba(0, 0, 0, 0.2);
     padding: 20px;
+    min-height: 200px; /* Hauteur minimum pour éviter des transitions trop petites */
 }
 
 /* Contenu d'onglet actif */
@@ -543,7 +550,7 @@ canvas {
 
 .info-content h4 {
     font-size: 20px;
-    margin-top: 25px;
+    margin-top: 0px;
 }
 
 /* Sections d'informations (bonus, malus, zones) */
@@ -635,17 +642,23 @@ canvas {
 
 @media (max-width: 768px) {
     /* Adaptation des onglets pour mobile */
+    #waitingRoom.active {
+        padding-top: 60px;
+    }
     .waiting-room-tabs {
-        flex-wrap: wrap;
-        gap: 5px;
         padding: 10px;
+        gap: 5px;
+        justify-content: space-between;
     }
 
     .tab-button {
-        flex: 1 1 calc(33.33% - 10px);
-        padding: 10px;
-        font-size: 14px;
-        text-align: center;
+        flex: 1;
+        padding: 8px;
+        font-size: 12px;
+        min-width: 0; /* Permet la réduction */
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
     }
 
     /* Adaptation du contenu pour mobile */
@@ -676,6 +689,89 @@ canvas {
         width: 20px;
         height: 20px;
     }
+        /* Style des boutons en mode compact */
+        .waiting-room-buttons {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between; /* Changé de space-around à space-between */
+            padding: 10px 20px;
+            gap: 10px;
+            width: 100%; /* S'assurer que le conteneur prend toute la largeur */
+            position: sticky;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+        }
+    
+        .waiting-room-buttons button {
+            min-width: 50px; /* Taille fixe au lieu de flex */
+            height: 50px;
+            min-width: 50px; /* Forcer la taille minimale */
+            padding: 12px;
+            border-radius: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0; /* Retirer les marges par défaut */
+        }
+        .button-text {
+            display: none !important; /* Forcer le masquage */
+        }
+    
+        /* Masquer le texte et afficher les icônes sur mobile */
+        .waiting-room-buttons button span.button-text {
+            display: none;
+        }
+        .button-icon {
+            display: block;
+            width: 24px;
+            height: 24px;
+        }
+    
+        /* Styles spécifiques pour chaque bouton */
+        #startGameButton {
+            background-color: rgba(204, 153, 255, 0.3);
+        }
+    
+        #waitingRoomSettings {
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+    
+        #leaveRoomButton {
+            background-color: rgba(255, 70, 70, 0.2);
+        }
+    
+        /* Ajuster le conteneur principal pour le nouveau layout */
+        .waiting-room-content {
+            padding: 20px 10px;
+        }
+    
+        .waiting-room-container {
+            max-height: calc(90vh - 160px); /* Ajusté pour les nouveaux boutons */
+        }
+        .waiting-room-buttons button::after {
+            content: attr(title);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            white-space: nowrap;
+        }
+    
+        .waiting-room-buttons button:active::after {
+            opacity: 1;
+        }
+        #waitingRoom > h2 {
+            font-size: 26px !important;
+        }
 }
 
 /* Pour les très petits écrans */
@@ -1600,6 +1696,23 @@ canvas {
     display: flex;
     align-items: center;
     justify-content: center;
+    padding-top: 80px; /* Ajouter de l'espace pour le titre */
+
+}
+
+/* Style pour le titre extérieur */
+#waitingRoom > h2 {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'PermanentMarker-Regular', sans-serif;
+    font-size: 48px;
+    color: #fff;
+    text-shadow: 0 0 15px rgba(204, 153, 255, 0.5),
+                 0 0 30px rgba(204, 153, 255, 0.3);
+    margin: 0;
+    z-index: 1;
 }
 
 /* Container principal avec une structure en grille */
@@ -1623,8 +1736,18 @@ canvas {
     animation: fadeIn 0.3s ease-out;
     border: 1px solid var(--primary);
     box-shadow: var(--glow-subtle);
-    height: 90vh;
-    overflow-y: auto;
+    max-height: 90vh;
+    padding: 40px;
+}
+
+/* Pour que la transition fonctionne sur le contenu interne */
+.waiting-room-content > * {
+    transition: opacity 0.3s ease-in-out;
+}
+
+/* Optionnel : animation du contenu lors du changement */
+.waiting-room-content.changing > * {
+    opacity: 0;
 }
 
 .waiting-room-content::-webkit-scrollbar {
@@ -1642,6 +1765,8 @@ canvas {
 }
 
 .waiting-room-container {
+    transition: height 0.3s ease-in-out;
+    max-height: calc(90vh - 230px); /* Hauteur max en tenant compte du header et des boutons */
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: rgba(204, 153, 255, 0.5) rgba(0, 0, 0, 0.2);
@@ -1693,9 +1818,9 @@ canvas {
     bottom: 0;
     background: rgba(0, 0, 0, 0.2);
     backdrop-filter: blur(10px);
-    padding: 10px;
+    padding: 5px 20px;
     display: flex;
-    gap: 15px;
+    gap: 10px;
     justify-content: center;
     border-radius: 0 0 15px 15px;
 }
@@ -1737,7 +1862,7 @@ input[type="checkbox"]:disabled + label {
     top: 50%;
     transform: translateY(-50%);
     width: 300px;
-    height: 90vh;
+    height: 50vh;
     background-color: rgba(0, 0, 0, 0.5);
     border-radius: 0 15px 15px 0;
     backdrop-filter: blur(10px);
@@ -1840,20 +1965,25 @@ input[type="checkbox"]:disabled + label {
     flex: 1;
     padding: 8px 15px;
     border: none;
-    border-radius: 20px;
+    border-radius: 10px;
     background-color: rgba(255, 255, 255, 0.9);
     font-size: 14px;
 }
 
 .chat-send-button {
-    padding: 8px 15px;
-    border: none;
-    border-radius: 20px;
-    background-color: #cc99ff;
-    color: #2c3e50;
+    padding: 0.8rem 1rem;
+    font-size: 14px;
+    border: 1px solid #cc99ff;
+    border-radius: 25px;
     cursor: pointer;
-    font-weight: bold;
+    text-transform: uppercase;
+    position: relative;
+    background-color: rgba(204, 153, 255, 0.1);
+    color: white;
     transition: all 0.3s ease;
+    overflow: hidden;
+    margin: 10px 0;
+    width: 100%;
 }
 
 .chat-send-button:hover {
@@ -2232,10 +2362,6 @@ input[type="checkbox"]:disabled + label {
         font-size: 14px;
     }
 
-    .waiting-room-buttons {
-        display: block;
-      }
-
     /* Ajustement du conteneur principal du jeu pour le zoom */
     #gameContainer {
         overflow: hidden;
@@ -2282,7 +2408,6 @@ input[type="checkbox"]:disabled + label {
     }
 
     .waiting-room-content {
-        padding: 20px;
         width: 95%;
     }
 

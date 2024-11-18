@@ -511,6 +511,22 @@ if (mobileControls) {
 }
 }
 
+function switchTab(tabName) {
+    const content = document.querySelector('.waiting-room-content');
+    
+    // Ajouter la classe pour l'animation
+    content.classList.add('changing');
+    
+    // Attendre la fin de l'animation de fade out
+    setTimeout(() => {
+        // Changer le contenu
+        // Votre code de changement d'onglet ici
+        
+        // Retirer la classe après le changement
+        content.classList.remove('changing');
+    }, 300); // Même durée que la transition CSS
+}
+
 // Fonction d'initialisation des contrôles mobiles
 function initializeMobileControls() {
     if (!isMobile()) return;
@@ -952,6 +968,16 @@ function checkGameEndConditions() {
     }
 }
 
+function createStartButtonContent(text, isMobile = false) {
+    if (isMobile) {
+        return `<span class="button-text">${text}</span>
+                <svg class="button-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z"/>
+                </svg>`;
+    }
+    return text;
+}
+
 // Démarrage du jeu
 startButton.addEventListener('click', () => {
     const nickname = nicknameInput.value.trim();
@@ -1063,7 +1089,7 @@ startButton.addEventListener('click', () => {
         if (startGameButton) {
             startGameButton.classList.remove('countdown');
             startGameButton.disabled = !isRoomOwner;
-            startGameButton.textContent = 'Lezgoooo';
+            startGameButton.innerHTML = createStartButtonContent('Lancer la partie', isMobile());
             startGameButton.onclick = () => {
                 socket.emit('startGameFromRoom', {
                     nickname: playerNickname,
@@ -1077,7 +1103,7 @@ startButton.addEventListener('click', () => {
         const startGameButton = document.getElementById('startGameButton');
         if (startGameButton) {
             startGameButton.disabled = !isRoomOwner;
-            startGameButton.textContent = 'Lezgoooo';
+            startGameButton.innerHTML = createStartButtonContent('Lancer la partie', isMobile());
             startGameButton.onclick = () => {
                 socket.emit('startGameFromRoom', {
                     nickname: playerNickname,
@@ -1258,12 +1284,13 @@ function createChatMessage(data) {
 }
 
 function initializeWaitingRoomTabs() {
-    // Vérifier d'abord si on est dans la salle d'attente
     const waitingRoom = document.getElementById('waitingRoom');
     if (!waitingRoom) return;
 
     const tabButtons = waitingRoom.querySelectorAll('.tab-button');
-    if (!tabButtons.length) return;
+    const container = waitingRoom.querySelector('.waiting-room-container');
+    
+    if (!tabButtons.length || !container) return;
 
     tabButtons.forEach(button => {
         button.addEventListener('click', () => {
@@ -1272,7 +1299,6 @@ function initializeWaitingRoomTabs() {
             // Désactiver tous les onglets
             tabButtons.forEach(btn => {
                 btn.classList.remove('active');
-                // Utiliser waitingRoom.querySelector pour s'assurer de rester dans le contexte
                 const content = waitingRoom.querySelector(`#${btn.dataset.tab}-tab`);
                 if (content) {
                     content.classList.remove('active');
@@ -1282,19 +1308,26 @@ function initializeWaitingRoomTabs() {
             // Activer l'onglet sélectionné
             button.classList.add('active');
             const selectedContent = waitingRoom.querySelector(`#${button.dataset.tab}-tab`);
+            
             if (selectedContent) {
+                // Définir la hauteur exacte avant la transition
+                container.style.height = `${container.scrollHeight}px`;
+                
+                // Activer le nouveau contenu
                 selectedContent.classList.add('active');
+                
+                // Faire la transition vers la nouvelle hauteur
+                requestAnimationFrame(() => {
+                    container.style.height = `${selectedContent.scrollHeight}px`;
+                });
             }
         });
     });
 
-    // S'assurer que l'onglet initial est actif
-    const activeTab = waitingRoom.querySelector('.tab-button.active');
-    if (activeTab) {
-        const initialContent = waitingRoom.querySelector(`#${activeTab.dataset.tab}-tab`);
-        if (initialContent) {
-            initialContent.classList.add('active');
-        }
+    // Définir la hauteur initiale
+    const activeTab = waitingRoom.querySelector('.tab-content.active');
+    if (activeTab && container) {
+        container.style.height = `${activeTab.scrollHeight}px`;
     }
 }
 
@@ -1432,7 +1465,7 @@ function updateWaitingRoomPlayers(data) {
             startGameButton.style.display = 'none';
         }
     } else {
-        startGameButton.textContent = 'Lezgoooo';
+        startGameButton.innerHTML = createStartButtonContent('Lancer la partie', isMobile());
         startGameButton.className = 'primary-button';
         startGameButton.disabled = !isRoomOwner;
         startGameButton.style.display = 'block';
@@ -2272,7 +2305,7 @@ function handleMalusEffect(type, duration) {
 function applyBlurEffect() {
     const gameCanvas = document.getElementById('gameCanvas');
     // N'appliquer le flou qu'au canvas de jeu
-    gameCanvas.style.filter = 'blur(4px)';
+    gameCanvas.style.filter = 'blur(8px)';
     // S'assurer que l'interface reste nette
     document.getElementById('gameInterface').style.filter = 'none';
     document.getElementById('activeBonuses').style.filter = 'none';
