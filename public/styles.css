@@ -203,7 +203,7 @@ h2 {
 }
 
 h3 {
-    font-size: 24px;
+    font-size: 22px;
     color: #cc99ff;
     margin-bottom: 5px;
 }
@@ -796,7 +796,7 @@ canvas {
     top: 0;
     left: 0;
     width: 100%;
-    padding: 20px;
+    padding: 10px;
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
@@ -893,16 +893,16 @@ canvas {
 #playerList {
     position: fixed;
     top: 50%;
-    right: 20px;
+    right: 5px;
     transform: translateY(-50%);
     background-color: rgba(0, 0, 0, 0.2);
     color: white;
     padding: 10px;
     border-radius: 15px;
-    min-width: 250px;
+    min-width: 200px;
     max-height: 80vh;
     overflow-y: auto;
-    backdrop-filter: blur(5px);
+    backdrop-filter: blur(4px);
     z-index: 900;
 }
 
@@ -914,7 +914,7 @@ canvas {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 15px;
+    padding: 3px 10px;
     margin: 5px 0;
     background-color: rgba(255, 255, 255, 0.1);
     border-radius: 10px;
@@ -1017,11 +1017,11 @@ canvas {
     top: 35%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: rgba(111, 0, 109, 0.5);
+    background-color: rgba(0, 0, 0, 0.3);
     color: #ffffff;
-    padding: 20px 40px;
+    padding: 10px 20px;
     border-radius: 15px;
-    font-size: 50px;
+    font-size: 4rem;
     font-family: 'PermanentMarker-Regular', sans-serif;
     z-index: 2000;
     transition: opacity 0.5s ease;
@@ -1532,11 +1532,13 @@ canvas {
 #pauseButton {
     pointer-events: auto;
     position: fixed;
-    top: 20px;
-    right: 20px;
-    background-color: #cc99fff2;
+    top: 0px;
+    right: 10px;
     color: #2c3e50;
     transition: all 0.3s ease;
+    color: white;
+    backdrop-filter: blur(4px);
+    border: 2px solid rgba(204, 153, 255, 0.3);
 }
 
 #pauseButton:hover {
