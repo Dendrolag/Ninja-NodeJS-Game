@@ -814,7 +814,7 @@ function initializeCamera() {
         camera.scale = mobileScale;
     } else {
         // Pour desktop, calculer un zoom fixe basé sur une hauteur de vue cible
-        const targetViewHeight = 1000; // Hauteur de vue souhaitée en pixels
+        const targetViewHeight = 900; // Hauteur de vue souhaitée en pixels
         
         if (screenAspectRatio > aspectRatio) {
             // Écran plus large que le ratio du jeu

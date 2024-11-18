@@ -1021,7 +1021,7 @@ canvas {
     color: #ffffff;
     padding: 10px 20px;
     border-radius: 15px;
-    font-size: 4rem;
+    font-size: 2rem;
     font-family: 'PermanentMarker-Regular', sans-serif;
     z-index: 2000;
     transition: opacity 0.5s ease;
@@ -1072,7 +1072,6 @@ canvas {
 .game-over-scrollable-content {
     flex: 1;
     overflow-y: auto;
-    margin-bottom: 20px;
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -1098,24 +1097,7 @@ canvas {
 }
 
 /* Container des boutons fixé en bas */
-.game-over-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    padding-top: 20px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    flex-shrink: 0;
-}
 
-.game-over-buttons button {
-    min-width: 180px;
-    padding: 12px 20px;
-}
-
-.game-over-buttons button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
 
 .podium-container {
     display: flex;
@@ -1348,18 +1330,7 @@ canvas {
     display: flex;
     justify-content: center;
     gap: 15px;
-    margin-top: 10px;
-}
-
-.game-over-buttons button {
-    min-width: 150px;
-}
-
-.game-over-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin-top: 20px;
+    margin-top: 0px;
 }
 
 .game-over-buttons button {
