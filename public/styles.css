@@ -895,14 +895,14 @@ canvas {
     top: 50%;
     right: 5px;
     transform: translateY(-50%);
-    background-color: rgba(0, 0, 0, 0.2);
+    /*background-color: rgba(0, 0, 0, 0.2);*/
     color: white;
     padding: 10px;
     border-radius: 15px;
     min-width: 200px;
     max-height: 80vh;
     overflow-y: auto;
-    backdrop-filter: blur(4px);
+    /*backdrop-filter: blur(4px);*/
     z-index: 900;
 }
 
@@ -2553,7 +2553,7 @@ input[type="checkbox"]:disabled + label {
 }
 
 .redirect-timer {
-    margin-top: 15px;
+    margin-top: 5px;
     text-align: center;
     color: #888;
     font-size: 0.9em;

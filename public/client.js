@@ -2163,6 +2163,35 @@ function drawEntities() {
             isMoving
         );
 
+        if (entity.type === 'player' && entity.id !== playerId && revealActive && currentPlayer) {
+            // Effet de révélation : lueur violette autour des vrais joueurs
+            context.beginPath();
+            const now = Date.now();
+            const glowSize = 25 + Math.sin(now * 0.005) * 3;
+            context.arc(entity.x, entity.y, glowSize, 0, Math.PI * 2);
+            context.fillStyle = 'rgba(255, 0, 255, 0.2)';
+            context.fill();
+    
+            // Ajouter un contour plus visible
+            context.strokeStyle = 'rgba(255, 0, 255, 0.4)';
+            context.lineWidth = 2;
+            context.stroke();
+            
+            // Optionnel : ajouter un effet de particules ou d'étoiles
+            const particleCount = 4;
+            const radius = 20;
+            for (let i = 0; i < particleCount; i++) {
+                const angle = (now * 0.001 + (i / particleCount) * Math.PI * 2);
+                const x = entity.x + Math.cos(angle) * radius;
+                const y = entity.y + Math.sin(angle) * radius;
+                
+                context.beginPath();
+                context.arc(x, y, 2, 0, Math.PI * 2);
+                context.fillStyle = 'rgba(255, 0, 255, 0.6)';
+                context.fill();
+            }
+        }
+
                     // Pour les bots noirs
                     if (entity.type === 'blackBot') {
                         // Effet de lueur rouge pour le rayon de détection
