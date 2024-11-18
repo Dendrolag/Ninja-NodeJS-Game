@@ -1,6 +1,11 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
 
+## [0.6.1] - 2024-11-18
+### Ajouts
+- Ajustement des collisions sur la map 1
+- Modification des styles du classement en partie
+
 ## [0.6.0] - 2024-11-18
 ### Ajouts
 - Ajout de la première Map (by Bribz)
