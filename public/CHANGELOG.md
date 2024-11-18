@@ -1,6 +1,10 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
 
+## [0.6.0] - 2024-11-18
+### Ajouts
+- Ajout de la première Map (by Bribz)
+
 ## [0.5.1] - 2024-11-17
 ### Ajouts
 - Ajout des onglets dans la salle d'attente pour les commandes et comment jouer
@@ -8,7 +12,7 @@ Tous les changements notables de ce projet seront documentés dans ce fichier.
 ## [0.5.0] - 2024-11-15
 ### Ajouts
 - Ajout des assets Ninja (by Bribz)
-- Ajout de la première Map (by Bribz)
+- Ajout de la première Map test (by Bribz)
 - Ajout d'un timer de 30 secondes à la fin de la partie
 - Ajout d'un timer de 5 secondes avant le début de la partie
 - Ajout des sprites bonus/malus
