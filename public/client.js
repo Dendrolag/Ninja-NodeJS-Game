@@ -10,7 +10,7 @@ const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
 const nicknameInput = document.getElementById('nicknameInput');
 
-const GAME_VERSION = "v0.6.2";  // À mettre à jour à chaque déploiement
+const GAME_VERSION = "v0.6.4";  // À mettre à jour à chaque déploiement
 
 // Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
@@ -91,6 +91,9 @@ const playerListContainer = document.getElementById('players');
 const SPEED_MULTIPLIER = 3;
 const BASE_SPEED = 3;
 const SPEED_BOOST_MULTIPLIER = 1.3;
+
+// Ajoutez cette nouvelle constante pour les contrôles mobiles
+const MOBILE_SPEED_FACTOR = 2;
 
 const JOYSTICK_SPEED_MULTIPLIER = 6;
 const JOYSTICK_UPDATE_INTERVAL = 50;
@@ -570,34 +573,30 @@ function initializeMobileControls() {
         const x = touch.clientX - centerX;
         const y = touch.clientY - centerY;
         const maxRadius = baseRect.width / 2;
-        const distance = Math.hypot(x, y);
+        const distance = Math.sqrt(x * x + y * y);
         
         if (distance === 0) return;      
         
-        // Normaliser en vecteurs binaires (-1, 0, ou 1)
-        // On utilise un seuil de 0.5 pour déterminer si une direction est active
-        const threshold = 0.5;
-        const isReversed = activemalus.has('reverse');
-        const normalizedX = Math.abs(x / maxRadius) > threshold ? Math.sign(x) : 0;
-        const normalizedY = Math.abs(y / maxRadius) > threshold ? Math.sign(y) : 0;
-
-        if (isReversed) {
-            normalizedX *= -1;
-            normalizedY *= -1;
-        }  
+        // Normalisation et application de la vitesse
+        let moveX = (x / distance) * BASE_SPEED * MOBILE_SPEED_FACTOR;
+        let moveY = (y / distance) * BASE_SPEED * MOBILE_SPEED_FACTOR;
         
-        // Déplacer le joystick visuellement
-        const stickX = x * 0.8; // Limite le déplacement visuel à 80% du rayon
+        if (activemalus.has('reverse')) {
+            moveX *= -1;
+            moveY *= -1;
+        }
+        
+        // Animation du joystick
+        const stickX = x * 0.8;
         const stickY = y * 0.8;
         
         requestAnimationFrame(() => {
             joystick.style.transform = `translate(${stickX}px, ${stickY}px)`;
         });
         
-        // Appliquer la vitesse de base, comme pour le clavier
         currentMove = {
-            x: normalizedX * BASE_SPEED,
-            y: normalizedY * BASE_SPEED
+            x: moveX,
+            y: moveY
         };
     }
     
@@ -737,30 +736,18 @@ function updateCamera() {
         Math.min(GAME_VIRTUAL_HEIGHT - viewHeight / 2, myPlayer.y)
     );
 
-    // Transition douce
-    const smoothness = 0.1;
-    camera.x += (targetX - camera.x) * smoothness;
-    camera.y += (targetY - camera.y) * smoothness;
+    const lerpFactor = 0.08; // Réduire cette valeur pour un mouvement plus lisse (0.05 - 0.15)
+    
+    // Utilisation de requestAnimationFrame pour la synchro avec le taux de rafraîchissement
+    requestAnimationFrame(() => {
+        camera.x += (targetX - camera.x) * lerpFactor;
+        camera.y += (targetY - camera.y) * lerpFactor;
+    });
 
     // S'assurer que la caméra reste dans les limites
     camera.x = Math.max(viewWidth / 2, Math.min(GAME_VIRTUAL_WIDTH - viewWidth / 2, camera.x));
     camera.y = Math.max(viewHeight / 2, Math.min(GAME_VIRTUAL_HEIGHT - viewHeight / 2, camera.y));
 }
-
-// Ajouter une fonction de debug pour suivre le problème
-/*function logCameraDebug() {
-    const myPlayer = entities?.find(e => e.type === 'player' && e.id === playerId);
-    console.log('Camera Debug:', {
-        playerId,
-        playerFound: !!myPlayer,
-        playerPosition: myPlayer ? { x: myPlayer.x, y: myPlayer.y } : null,
-        cameraPosition: { x: camera.x, y: camera.y },
-        cameraTarget: { x: camera.targetX, y: camera.targetY }
-    });
-}
-
-// Appeler le debug toutes les secondes
-setInterval(logCameraDebug, 1000);*/
 
 // Fonction de réinitialisation des paramètres
 function resetSettings() {

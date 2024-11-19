@@ -1,6 +1,11 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
 
+## [0.6.2] - 2024-11-19
+### Ajouts
+- Ajustements des collisions sur la map 1
+- Modification du zoom sur mobile
+
 ## [0.6.1] - 2024-11-18
 ### Ajouts
 - Ajustement des collisions sur la map 1
