@@ -10,7 +10,7 @@ const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
 const nicknameInput = document.getElementById('nicknameInput');
 
-const GAME_VERSION = "v0.6.1";  // À mettre à jour à chaque déploiement
+const GAME_VERSION = "v0.6.2";  // À mettre à jour à chaque déploiement
 
 // Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
@@ -88,11 +88,11 @@ const collectedBonusDisplayContent = document.getElementById('collectedBonusDisp
 const activeBonusesContainer = document.getElementById('activeBonuses');
 const playerListContainer = document.getElementById('players');
 
-const SPEED_MULTIPLIER = 3;
-const BASE_SPEED = 3;
+const SPEED_MULTIPLIER = 4;
+const BASE_SPEED = 4;
 const SPEED_BOOST_MULTIPLIER = 1.3;
 
-const JOYSTICK_SPEED_MULTIPLIER = 3;
+const JOYSTICK_SPEED_MULTIPLIER = 6;
 const JOYSTICK_UPDATE_INTERVAL = 50;
 const TOUCH_START_OPTIONS = { passive: false };
 const TOUCH_MOVE_OPTIONS = { passive: false };
@@ -808,8 +808,8 @@ function initializeCamera() {
     if (isMobile()) {
         // Réduire légèrement le zoom mobile
         const mobileScale = Math.min(
-            window.innerWidth / 800,  // Augmenté de 500 à 800
-            window.innerHeight / 600  // Augmenté de 350 à 600
+            window.innerWidth / 600,  // Augmenté de 500 à 800
+            window.innerHeight / 451  // Augmenté de 350 à 600
         );
         camera.scale = mobileScale;
     } else {
