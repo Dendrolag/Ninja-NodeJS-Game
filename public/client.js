@@ -88,8 +88,8 @@ const collectedBonusDisplayContent = document.getElementById('collectedBonusDisp
 const activeBonusesContainer = document.getElementById('activeBonuses');
 const playerListContainer = document.getElementById('players');
 
-const SPEED_MULTIPLIER = 4;
-const BASE_SPEED = 4;
+const SPEED_MULTIPLIER = 3;
+const BASE_SPEED = 3;
 const SPEED_BOOST_MULTIPLIER = 1.3;
 
 const JOYSTICK_SPEED_MULTIPLIER = 6;
