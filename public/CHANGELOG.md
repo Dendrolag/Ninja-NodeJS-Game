@@ -1,10 +1,27 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
 
-## [0.6.2] - 2024-11-19
+## [0.7.0] - 2024-11-21
+### Ajouts
+- Ajout de l'audio 
+-- Musique de menu et de partie
+-- Sons de déplacement des joueurs partagés
+-- Sons des effets des bonus
+-- Sons des boutons et timer
+-- Sons de capture des bots 
+
+## [0.6.4] - 2024-11-19
+### Ajouts
+- Ajout de passages secrets sur la map 1 et effets de transparence sur les arbres
+
+## [0.6.3] - 2024-11-19
 ### Ajouts
 - Ajustements des collisions sur la map 1
 - Modification du zoom sur mobile
+
+## [0.6.2] - 2024-11-18
+### Ajouts
+- Correction du bonus de révélation
 
 ## [0.6.1] - 2024-11-18
 ### Ajouts

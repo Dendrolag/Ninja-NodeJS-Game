@@ -137,6 +137,8 @@ const UPDATE_INTERVAL = 50;
 let startCountdown = null;
 
 const GAME_START_COUNTDOWN = 5; // 5 secondes de countdown avant le début
+const SOUND_EMIT_INTERVAL = 50; // Limiter l'émission des sons à 20 fois par seconde
+const playerLastSoundEmit = new Map();
 
 
 const availableColors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'];
@@ -516,14 +518,6 @@ function handleMalusCollection(player, malus) {
     });
     
     console.log('Événement malusEvent émis à tous les clients');
-
-    // Notifier immédiatement tous les joueurs
-    io.emit('malusEvent', {
-        type: malus.type,
-        duration: malusDurations[malus.type],
-        collectorId: player.id,
-        collectorNickname: player.nickname
-    });
 
     // Notifier d'abord le collecteur
     console.log('Envoi de malusCollected au collecteur:', player.nickname);
@@ -2312,7 +2306,7 @@ socket.on('move', (data) => {
     if (isPaused || isGameOver) return;
 
     const player = players[socket.id];
-    if (!player) return;
+    if (!player || !data.isMoving) return;
 
     const moveSpeed = data.speedBoostActive ? 1.3 : 1;
     const oldX = player.x;
@@ -2368,6 +2362,36 @@ socket.on('move', (data) => {
     
     // Détecter les collisions avec les autres entités
     detectCollisions(player, socket.id);
+
+    const now = Date.now();
+    const lastEmit = playerLastSoundEmit.get(socket.id) || 0;
+
+    if (now - lastEmit >= SOUND_EMIT_INTERVAL) {
+    // Émettre le son aux autres joueurs
+    Object.values(players).forEach(otherPlayer => {
+        if (otherPlayer.id !== socket.id) {
+            const dx = player.x - otherPlayer.x;
+            const dy = player.y - otherPlayer.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Distance maximale d'audition
+            const MAX_SOUND_DISTANCE = 300;
+            
+            if (distance <= MAX_SOUND_DISTANCE) {
+                const volume = Math.max(0, 1 - (distance / MAX_SOUND_DISTANCE));
+                
+                io.to(otherPlayer.id).emit('playerSound', {
+                    type: 'footstep',
+                    playerId: socket.id,
+                    distance: distance,
+                    volume: volume,
+                    isSpeedBoost: data.speedBoostActive
+                });
+            }
+        }
+    });
+    playerLastSoundEmit.set(socket.id, now);
+}
 });
 
     socket.on('togglePause', () => {

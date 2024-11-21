@@ -4,13 +4,14 @@
 let socket;
 
 import { MapManager } from './js/MapManager.js';
+import { AudioManager } from './js/AudioManager.js';
 
 // Éléments DOM principaux
 const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
 const nicknameInput = document.getElementById('nicknameInput');
 
-const GAME_VERSION = "v0.6.4";  // À mettre à jour à chaque déploiement
+const GAME_VERSION = "v0.7.0";  // À mettre à jour à chaque déploiement
 
 // Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
@@ -101,6 +102,19 @@ const TOUCH_START_OPTIONS = { passive: false };
 const TOUCH_MOVE_OPTIONS = { passive: false };
 
 const GAME_START_COUNTDOWN = 5; // 5 secondes de compte à rebours
+
+const musicVolumeInput = document.getElementById('musicVolume');
+const soundVolumeInput = document.getElementById('soundVolume');
+
+musicVolumeInput.addEventListener('input', (e) => {
+    const volume = e.target.value / 100;
+    audioManager.setMusicVolume(volume);
+});
+
+soundVolumeInput.addEventListener('input', (e) => {
+    const volume = e.target.value / 100;
+    audioManager.setSoundVolume(volume);
+});
 
 
 const MALUS_MESSAGES = {
@@ -193,7 +207,25 @@ const additionalStyles = `
 }
 `;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    audioManager = new AudioManager({
+        volume: 0.5,
+        musicVolume: 0.3,
+        soundVolume: 0.5
+    });
+        // Attendre que l'audio soit chargé
+        try {
+            await audioManager.loadPromise;
+            console.log('Audio chargé avec succès');
+            
+            // Vérifier si nous sommes sur l'écran principal (menu)
+            if (mainMenu.classList.contains('active')) {
+                console.log('Démarrage de la musique du menu');
+                audioManager.playMusic('menu');
+            }
+        } catch (error) {
+            console.error('Erreur lors du chargement de l\'audio:', error);
+        }
     // Initialiser le canvas
     canvas = document.getElementById('gameCanvas');
     if (!canvas) {
@@ -206,6 +238,9 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('Could not get 2D context');
         return;
     }
+
+    // Charger les assets
+    await loadGameAssets();
     
     // Initialiser le MapManager
     mapManager = new MapManager(canvas, {
@@ -214,6 +249,11 @@ document.addEventListener('DOMContentLoaded', () => {
         mapWidth: GAME_VIRTUAL_WIDTH,
         mapHeight: GAME_VIRTUAL_HEIGHT
     });
+    
+    await audioManager.loadPromise;
+    initializeButtonSounds(); // Initialiser les sons des boutons
+    // Démarrer la musique du menu dès que la page est chargée
+    audioManager.playMusic('menu');
 
     initializeNicknameValidation();
     addVersionDisplay();
@@ -239,7 +279,8 @@ let specialZones = [];
 let isRoomOwner = false;
 let lastEntityPositions = new Map(); // Pour tracker les mouvements
 let entityMovementStates = new Map(); // Pour tracker l'état de mouvement
-
+let audioManager;
+let lastUrgentTickTime = 0;
 
 // Nouvelles variables pour les contrôles mobiles
 let isMoving = false;
@@ -257,15 +298,6 @@ let bonusAnimations = {};
 let malusAnimations = {};
 
 let activemalus = new Map();
-const malusImages = {
-    reverse: new Image(),
-    blur: new Image(),
-    negative: new Image()
-};
-
-malusImages.reverse.src = '/assets/images/reverse.gif';
-malusImages.blur.src = '/assets/images/blur.gif';
-malusImages.negative.src = '/assets/images/negative.gif';
 
 // Position et vitesse du joueur
 let playerX = 0;
@@ -298,53 +330,102 @@ let gameSettings = {
     }
 };
 
+class AssetCache {
+    constructor() {
+        this.images = new Map();
+        this.promises = new Map();
+    }
+
+    async loadImage(src) {
+        // Si l'image est déjà chargée, la retourner
+        if (this.images.has(src)) {
+            return this.images.get(src);
+        }
+
+        // Si l'image est en cours de chargement, retourner la promesse existante
+        if (this.promises.has(src)) {
+            return this.promises.get(src);
+        }
+
+        // Créer une nouvelle promesse de chargement
+        const promise = new Promise((resolve, reject) => {
+            const img = new Image();
+            
+            img.onload = () => {
+                this.images.set(src, img);
+                this.promises.delete(src);
+                resolve(img);
+            };
+            
+            img.onerror = (error) => {
+                this.promises.delete(src);
+                reject(error);
+            };
+
+            img.src = src;
+        });
+
+        this.promises.set(src, promise);
+        return promise;
+    }
+
+    clear() {
+        this.images.clear();
+        this.promises.clear();
+    }
+}
+
+// Créer une instance globale
+const assetCache = new AssetCache();
+
 class SpriteManager {
     constructor() {
         this.TARGET_COLOR = {r: 255, g: 0, b: 0}; // Rouge à remplacer
-        this.COLOR_TOLERANCE = 130;
+        this.COLOR_TOLERANCE = 140;
         this.ANIMATION_FRAME_DURATION = 150; // Durée de chaque frame en ms
         this.currentFrame = 0;
         this.lastFrameTime = Date.now();
 
-// Définition des sprites avec les deux frames pour chaque direction
-this.sprites = {
-    idle: {
+        // Définition des sprites avec les deux frames pour chaque direction
+        this.sprites = {
+            idle: {
         frame1: '/assets/images/ninja/idle.png',
         frame2: '/assets/images/ninja/idle.png' // Même image car pas d'animation à l'arrêt
-    },
-    north: {
-        frame1: '/assets/images/ninja/north_1.png',
-        frame2: '/assets/images/ninja/north_2.png'
-    },
-    north_east: {
-        frame1: '/assets/images/ninja/north_east_1.png',
-        frame2: '/assets/images/ninja/north_east_2.png'
-    },
-    east: {
-        frame1: '/assets/images/ninja/east_1.png',
-        frame2: '/assets/images/ninja/east_2.png'
-    },
-    south_east: {
-        frame1: '/assets/images/ninja/south_east_1.png',
-        frame2: '/assets/images/ninja/south_east_2.png'
-    },
-    south: {
-        frame1: '/assets/images/ninja/south_1.png',
-        frame2: '/assets/images/ninja/south_2.png'
-    },
-    south_west: {
-        frame1: '/assets/images/ninja/south_west_1.png',
-        frame2: '/assets/images/ninja/south_west_2.png'
-    },
-    west: {
-        frame1: '/assets/images/ninja/west_1.png',
-        frame2: '/assets/images/ninja/west_2.png'
-    },
-    north_west: {
-        frame1: '/assets/images/ninja/north_west_1.png',
-        frame2: '/assets/images/ninja/north_west_2.png'
-    }
-};
+            },
+            north: {
+                frame1: '/assets/images/ninja/north_1.png',
+                frame2: '/assets/images/ninja/north_2.png'
+            },
+            north_east: {
+                frame1: '/assets/images/ninja/north_east_1.png',
+                frame2: '/assets/images/ninja/north_east_2.png'
+            },
+            east: {
+                frame1: '/assets/images/ninja/east_1.png',
+                frame2: '/assets/images/ninja/east_2.png'
+            },
+            south_east: {
+                frame1: '/assets/images/ninja/south_east_1.png',
+                frame2: '/assets/images/ninja/south_east_2.png'
+            },
+            south: {
+                frame1: '/assets/images/ninja/south_1.png',
+                frame2: '/assets/images/ninja/south_2.png'
+            },
+            south_west: {
+                frame1: '/assets/images/ninja/south_west_1.png',
+                frame2: '/assets/images/ninja/south_west_2.png'
+            },
+            west: {
+                frame1: '/assets/images/ninja/west_1.png',
+                frame2: '/assets/images/ninja/west_2.png'
+            },
+            north_west: {
+                frame1: '/assets/images/ninja/north_west_1.png',
+                frame2: '/assets/images/ninja/north_west_2.png'
+                
+            }
+        };
 
         this.colorCache = new Map();
         this.loadedSprites = {};
@@ -369,7 +450,25 @@ this.sprites = {
             };
             this.loadedSprites[direction].frame2 = img2;
         });
+                // Précharger tous les sprites
+                this.preloadSprites();
     }
+    async preloadSprites() {
+        try {
+            for (const [direction, frames] of Object.entries(this.sprites)) {
+                this.loadedSprites[direction] = {};
+                
+                // Charger frame1
+                this.loadedSprites[direction].frame1 = await assetCache.loadImage(frames.frame1);
+                
+                // Charger frame2
+                this.loadedSprites[direction].frame2 = await assetCache.loadImage(frames.frame2);
+            }
+        } catch (error) {
+            console.error('Erreur lors du préchargement des sprites:', error);
+        }
+    }
+
 
     updateAnimation() {
         const now = Date.now();
@@ -585,6 +684,12 @@ function initializeMobileControls() {
             moveX *= -1;
             moveY *= -1;
         }
+        if (isMoving) {
+            // Jouer le son des pas
+            if (audioManager) {
+                audioManager.playFootstepWithInterval();
+            }
+        }
         
         // Animation du joystick
         const stickX = x * 0.8;
@@ -760,16 +865,24 @@ function resetSettings() {
 resetSettingsButton.addEventListener('click', resetSettings);
 
 // Images des bonus
-const bonusImages = {
-    speed: new Image(),
-    invincibility: new Image(),
-    reveal: new Image()
-};
+const bonusImages = {};
+const malusImages = {};
 
-// Chargement des images
-bonusImages.speed.src = '/assets/images/speed.gif';
-bonusImages.invincibility.src = '/assets/images/shield.gif';
-bonusImages.reveal.src = '/assets/images/eye.gif';
+async function loadGameAssets() {
+    try {
+        // Charger les images des bonus
+        bonusImages.speed = await assetCache.loadImage('/assets/images/speed.gif');
+        bonusImages.invincibility = await assetCache.loadImage('/assets/images/shield.gif');
+        bonusImages.reveal = await assetCache.loadImage('/assets/images/eye.gif');
+
+        // Charger les images des malus
+        malusImages.reverse = await assetCache.loadImage('/assets/images/reverse.gif');
+        malusImages.blur = await assetCache.loadImage('/assets/images/blur.gif');
+        malusImages.negative = await assetCache.loadImage('/assets/images/negative.gif');
+    } catch (error) {
+        console.error('Erreur lors du chargement des assets:', error);
+    }
+}
 
 // Image de fond
 //const backgroundImage = new Image();
@@ -816,6 +929,37 @@ function initializeCamera() {
         camera.x = GAME_VIRTUAL_WIDTH / 2;
         camera.y = GAME_VIRTUAL_HEIGHT / 2;
     }
+}
+
+function addButtonClickSound(button) {
+    button.addEventListener('click', () => {
+        if (audioManager) {
+            audioManager.playSound('buttonClick');
+        }
+    });
+}
+
+// Fonction pour ajouter le son à plusieurs boutons
+function initializeButtonSounds() {
+    // Liste des boutons des menus
+    const menuButtons = [
+        startButton,
+        settingsButton,
+        saveSettingsButton,
+        backToMenuButton,
+        resetSettingsButton,
+        startGameButton,
+        waitingRoomSettings,
+        leaveRoomButton,
+        pauseButton
+        // Ajoutez ici d'autres boutons si nécessaire
+    ];
+
+    menuButtons.forEach(button => {
+        if (button) { // Vérifier que le bouton existe
+            addButtonClickSound(button);
+        }
+    });
 }
 
 window.addEventListener('load', resizeCanvas);
@@ -979,6 +1123,11 @@ startButton.addEventListener('click', () => {
     waitingRoomScreen.classList.add('active');
     socket = initializeSocket(io());
 
+        // Démarrer la musique du menu ici
+        if (audioManager) {
+            audioManager.playMusic('menu');
+        }
+
     // Initialiser le chat après la connexion socket
     socket.on('connect', () => {
         //console.log('Socket connected, initializing chat...');
@@ -996,19 +1145,26 @@ startButton.addEventListener('click', () => {
     });  
 
     socket.on('bonusExpired', (data) => {
-        if (data.type === 'invincibility') {
-            invincibilityActive = false;
-            invincibilityTimeLeft = 0;
-            updateActiveBonusesDisplay();
+        if (audioManager) {
+            switch(data.type) {
+                case 'speed':
+                    audioManager.stopLoopingSound('speedBoostActive');
+                    speedBoostActive = false;
+                    speedBoostTimeLeft = 0;
+                    break;
+                case 'invincibility':
+                    audioManager.stopLoopingSound('invincibilityActive');
+                    invincibilityActive = false;
+                    invincibilityTimeLeft = 0;
+                    break;
+                case 'reveal':
+                    audioManager.stopLoopingSound('revealActive');
+                    revealActive = false;
+                    revealTimeLeft = 0;
+                    break;
+            }
         }
-    });
-
-    socket.on('bonusDeactivated', (data) => {
-        if (data.type === 'invincibility') {
-            invincibilityActive = false;
-            invincibilityTimeLeft = 0;
-            updateActiveBonusesDisplay();
-        }
+        updateActiveBonusesDisplay();
     });
 
     // écouteur pour les mises à jour des paramètres
@@ -1062,7 +1218,17 @@ startButton.addEventListener('click', () => {
     
             if (data.countdown <= 2) {
                 startGameButton.disabled = true;
+                audioManager.fadeOutMusic(2000);
             }
+
+        // Jouer les sons de compte à rebours
+        if (audioManager) {
+            if (data.countdown <= 3 && data.countdown > 0) {
+                audioManager.playSound('countdownTick');
+            } else if (data.countdown === 0) {
+                audioManager.playSound('finalTick');
+            }
+        }
     
             // Préchargement
             if (data.countdown === GAME_START_COUNTDOWN) {
@@ -1138,6 +1304,13 @@ startButton.addEventListener('click', () => {
     });
     
     socket.on('malusCollected', (data) => {
+        console.log('Malus collecté', data.type);
+    
+        if (audioManager) {
+            audioManager.playSound('malusCollect');
+            console.log('Son de collecte de malus joué');
+        }
+        
         if (!MALUS_MESSAGES) {
             console.error('MALUS_MESSAGES non défini!');
             return;
@@ -1158,6 +1331,12 @@ settingsButton.addEventListener('click', () => {
 });
 
 leaveRoomButton.addEventListener('click', () => {
+    if (audioManager) {
+        audioManager.stopFootsteps();
+        audioManager.stopLoopingSound('speedBoostActive');
+        audioManager.stopLoopingSound('invincibilityActive');
+        audioManager.stopLoopingSound('revealActive');
+    }
     if (socket) {
         socket.emit('leaveWaitingRoom');
         socket.disconnect();
@@ -1280,6 +1459,7 @@ function initializeWaitingRoomTabs() {
     if (!tabButtons.length || !container) return;
 
     tabButtons.forEach(button => {
+        addButtonClickSound(button);
         button.addEventListener('click', () => {
             if (!button.dataset.tab) return;
 
@@ -1501,18 +1681,33 @@ function movePlayer() {
     const currentSpeed = BASE_SPEED * (speedBoostActive ? SPEED_BOOST_MULTIPLIER : 1);
     let move = { x: 0, y: 0 };
     const isReversed = activemalus.has('reverse');
+    let playerIsMoving = false;
 
     // Calculer le mouvement souhaité
-    if (keysPressed['ArrowUp'] || keysPressed['z']) move.y = isReversed ? currentSpeed : -currentSpeed;
-    if (keysPressed['ArrowDown'] || keysPressed['s']) move.y = isReversed ? -currentSpeed : currentSpeed;
-    if (keysPressed['ArrowLeft'] || keysPressed['q']) move.x = isReversed ? currentSpeed : -currentSpeed;
-    if (keysPressed['ArrowRight'] || keysPressed['d']) move.x = isReversed ? -currentSpeed : currentSpeed;
+    if (keysPressed['ArrowUp'] || keysPressed['z']) {
+        move.y = isReversed ? currentSpeed : -currentSpeed;
+        playerIsMoving = true;
+    }
+    if (keysPressed['ArrowDown'] || keysPressed['s']) {
+        move.y = isReversed ? -currentSpeed : currentSpeed;
+        playerIsMoving = true;
+    }
+    if (keysPressed['ArrowLeft'] || keysPressed['q']) {
+        move.x = isReversed ? currentSpeed : -currentSpeed;
+        playerIsMoving = true;
+    }
+    if (keysPressed['ArrowRight'] || keysPressed['d']) {
+        move.x = isReversed ? -currentSpeed : currentSpeed;
+        playerIsMoving = true;
+    }
 
-    // Normaliser le mouvement diagonal
-    if (move.x !== 0 && move.y !== 0) {
-        const normalize = 1 / Math.sqrt(2);
-        move.x *= normalize;
-        move.y *= normalize;
+    // Normaliser le vecteur de mouvement si le joueur se déplace
+    if (playerIsMoving) {
+        const magnitude = Math.sqrt(move.x * move.x + move.y * move.y);
+        if (magnitude !== 0) {
+            move.x = (move.x / magnitude) * currentSpeed;
+            move.y = (move.y / magnitude) * currentSpeed;
+        }
     }
 
     if (move.x !== 0 || move.y !== 0) {
@@ -1521,14 +1716,29 @@ function movePlayer() {
             const newX = player.x + move.x;
             const newY = player.y + move.y;
             
-            // Vérifier la collision avant d'envoyer le mouvement
-            if (mapManager.canMove(player.x, player.y, newX, newY, 16)) {
+            const canMoveToNewPosition = mapManager.canMove(player.x, player.y, newX, newY, 16);
+            
+            if (canMoveToNewPosition) {
+                if (audioManager) {
+                    audioManager.playFootstepWithInterval(speedBoostActive);
+                }
+                
                 socket.emit('move', { 
                     x: move.x,
                     y: move.y,
-                    speedBoostActive 
+                    speedBoostActive,
+                    isMoving: true
                 });
+            } else {
+                // Arrêter les sons de pas si on est bloqué
+                if (audioManager) {
+                    audioManager.stopFootsteps();
+                }
             }
+        }
+    } else {
+        if (audioManager) {
+            audioManager.stopFootsteps();
         }
     }
 }
@@ -1620,6 +1830,15 @@ async function startGame() {
     isPaused = false;
     pauseButton.disabled = false;
 
+    try {
+        // Précharger les assets
+        await Promise.all([
+            // Précharger les sprites
+            spriteManager.preloadSprites(),
+            // Précharger la map
+            mapManager.loadPromise
+        ]);
+
     initializeCamera();
     // Attendre que la map soit chargée
     await mapManager.loadPromise;
@@ -1666,6 +1885,12 @@ async function startGame() {
     settingsMenu.style.display = 'none';
     gameScreen.classList.add('active');
 
+    // Arrêter la musique du menu avec un fade out et démarrer la musique du jeu
+    audioManager.fadeOutMusic(1000); // Fade out sur 1 seconde
+    setTimeout(() => {
+        audioManager.playMusic('game');
+    }, 1000); // Attendre la fin du fade out
+
     // S'assurer que le canvas est correctement dimensionné
     resizeCanvas();
 
@@ -1704,11 +1929,38 @@ async function startGame() {
             // Mise à jour du timer
             updateTimer(data.timeLeft || 0);
             timeRemaining = data.timeLeft;
+
+        // Vérifier si un bonus ou malus a été collecté
+        if (data.bonusCollected && data.collectorId === socket.id) {
+            if (audioManager) {
+                audioManager.playSound('collectBonus');
+            }
+        }
+    
+         if (data.malusCollected && data.collectorId === socket.id) {
+        if (audioManager) {
+            audioManager.playSound('collectMalus');
+           }
+        }
             
             // Mise à jour des bonus
             bonuses = data.bonuses || [];
             socket.malus = data.malus || [];
             specialZones = data.zones || [];
+
+                // Comparer les anciens et nouveaux bonus/malus pour détecter les collectes
+    if (audioManager) {
+        // Pour les bonus
+        if (data.bonusCollected) {
+            console.log('Bonus collecté !');
+            audioManager.playSound('bonusCollect');
+        }
+        // Pour les malus
+        if (data.malusCollected) {
+            console.log('Malus collecté !');
+            audioManager.playSound('malusCollect');
+        }
+    }
             
             // Trouver d'abord notre joueur dans les scores
             const currentPlayer = data.playerScores.find(p => p.id === socket.id);
@@ -1718,6 +1970,22 @@ async function startGame() {
                 const totalScore = currentPlayer.currentBots;
                 scoreDisplay.textContent = `${currentPlayer.nickname}: ${totalScore} points`;
             }
+
+            // Comparer l'ancien et le nouvel état des bots
+            data.entities.forEach(newEntity => {
+                if (newEntity.type === 'bot') {
+                    const oldEntity = entities.find(e => e.id === newEntity.id);
+            // Vérifier si le bot a changé de couleur et si sa nouvelle couleur correspond à celle du joueur actuel
+            if (oldEntity && 
+                oldEntity.color !== newEntity.color && 
+                newEntity.color === playerColor) {
+                // Le bot a été converti par le joueur actuel
+                if (audioManager) {
+                    audioManager.playSound('botConvert');
+                }
+            }
+                }
+            });
             
             // Mettre à jour les entités et la caméra
             entities = data.entities;
@@ -1739,6 +2007,29 @@ async function startGame() {
             }, 3500);
         });
     }
+
+    socket.on('playerSound', (data) => {
+        console.log('Son reçu:', data); // Debug
+        if (audioManager && data.playerId !== playerId) { // Notez le changement de socket.id à playerId
+            if (data.type === 'footstep') {
+                const now = Date.now();
+                const interval = data.isSpeedBoost ? 200 : 300;
+                
+                // Ajouter un log de debug
+                console.log('Son de pas d\'un autre joueur - Volume:', data.volume, 'Distance:', data.distance);
+                
+                if (!audioManager.lastRemoteFootstepTimes) {
+                    audioManager.lastRemoteFootstepTimes = new Map();
+                }
+    
+                const lastTime = audioManager.lastRemoteFootstepTimes.get(data.playerId) || 0;
+                if (now - lastTime >= interval) {
+                    audioManager.playSpatialisedSound('footstep', data.volume);
+                    audioManager.lastRemoteFootstepTimes.set(data.playerId, now);
+                }
+            }
+        }
+    });
 
     if (!socket.hasListeners('capturedByBlackBot')) {
         socket.on('capturedByBlackBot', (data) => {
@@ -1766,24 +2057,69 @@ async function startGame() {
     if (!socket.hasListeners('activateBonus')) {
         socket.on('activateBonus', (data) => {
             const { type, duration } = data;
-            switch (type) {
+            console.log('Bonus activé:', type); // Debug
+        
+            // Jouer le son de collecte
+            if (audioManager) {
+                // Jouer immédiatement le son de collecte
+                audioManager.playSound('bonusCollect');
+                console.log('Son de collecte de bonus joué');
+        
+                // Le son continu
+                const soundMap = {
+                    'speed': 'speedBoostActive',
+                    'invincibility': 'invincibilityActive',
+                    'reveal': 'revealActive'
+                };
+                
+                const soundName = soundMap[type];
+                if (soundName) {
+                    audioManager.playLoopingSound(soundName, 0.2);
+                }
+            } else {
+                console.log('AudioManager non disponible'); // Debug
+            }
+        
+            switch(type) {
                 case 'speed':
-                    activateSpeedBoost(duration);
+                    speedBoostActive = true;
+                    speedBoostTimeLeft = speedBoostTimeLeft > 0 ? 
+                        speedBoostTimeLeft + duration : 
+                        duration;
                     break;
                 case 'invincibility':
-                    activateInvincibility(duration);
+                    invincibilityActive = true;  // S'assurer que l'état reste actif
+                    invincibilityTimeLeft = invincibilityTimeLeft > 0 ? 
+                        invincibilityTimeLeft + duration : 
+                        duration;
+                    // Réinitialiser l'effet visuel si nécessaire
+                    const player = entities.find(e => e.id === playerId);
+                    if (player) {
+                        player.invincibilityActive = true;
+                    }
                     break;
                 case 'reveal':
-                    activateReveal(duration);
+                    revealActive = true;
+                    revealTimeLeft = revealTimeLeft > 0 ? 
+                        revealTimeLeft + duration : 
+                        duration;
                     break;
             }
+            
             showBonusNotification(type);
+            updateActiveBonusesDisplay();
         });
     }
 
     if (!socket.hasListeners('pauseGame')) {
         socket.on('pauseGame', (data) => {
             isPaused = true;
+            if (audioManager) {
+                audioManager.stopFootsteps();
+                audioManager.stopLoopingSound('speedBoostActive');
+                audioManager.stopLoopingSound('invincibilityActive');
+                audioManager.stopLoopingSound('revealActive');
+            }
             pauseButton.disabled = socket.id !== data.pausedBy;
             showPauseOverlay();
         });
@@ -1819,6 +2155,10 @@ async function startGame() {
             updateMalusEffects();
         }
     }, 20);
+
+} catch (error) {
+    console.error('Erreur lors du démarrage du jeu:', error);
+}
     
 }
 
@@ -2208,7 +2548,7 @@ function drawEntities() {
             }
 
             // Effet d'invincibilité
-            if (entity.invincibilityActive) {
+            if (invincibilityActive && invincibilityTimeLeft > 0) {
                 const now = Date.now();
                 const pulseSize = 20 + Math.sin(now * 0.004) * 5;
                 context.beginPath();
@@ -2455,6 +2795,7 @@ function drawPlayerLocator(player) {
 
 // Gestion des bonus
 function activateSpeedBoost(duration) {
+    console.log('Speed boost activé pour', duration, 'secondes'); // Debug
     speedBoostActive = true;
     speedBoostTimeLeft += duration;
     playerSpeed = 6;
@@ -2468,6 +2809,41 @@ function activateInvincibility(duration) {
 function activateReveal(duration) {
     revealActive = true;
     revealTimeLeft += duration;
+}
+
+function handleBonusCollection(player, bonus) {
+    const socket = activeSockets[player.id];
+    if (!socket) return;
+
+    if (audioManager) {
+        // Son de collecte du bonus
+        audioManager.playSound('bonusCollect');
+        
+        // Démarrer le son en continu approprié
+        switch(bonus.type) {
+            case 'speed':
+                audioManager.playLoopingSound('speedBoostActive', 0.2);
+                break;
+            case 'invincibility':
+                audioManager.playLoopingSound('invincibilityActive', 0.2);
+                break;
+            case 'reveal':
+                audioManager.playLoopingSound('revealActive', 0.2);
+                break;
+        }
+    }
+
+    switch(bonus.type) {
+        case 'speed':
+            activateSpeedBoost(currentGameSettings.speedBoostDuration);
+            break;
+        case 'invincibility':
+            activateInvincibility(currentGameSettings.invincibilityDuration);
+            break;
+        case 'reveal':
+            activateReveal(currentGameSettings.revealDuration);
+            break;
+    }
 }
 
 function updateTimer(timeLeft) {
@@ -2485,12 +2861,17 @@ function updateTimer(timeLeft) {
     // Gérer l'état d'urgence (10 dernières secondes)
     if (timeLeft <= 10) {
         timerElement.classList.add('urgent');
+
+        // Jouer le son d'urgence seulement une fois par seconde
+        const currentTime = Date.now();
+        if (audioManager && timeLeft > 0 && currentTime - lastUrgentTickTime >= 1000) {
+            audioManager.playSound('urgentTick');
+            lastUrgentTickTime = currentTime;
+        }
         
-        // Si c'est la première fois qu'on entre dans les 10 dernières secondes
-        if (timeLeft === 10) {
-            // Tu peux ajouter un son d'urgence ici si tu le souhaites
-            // const urgentSound = new Audio('/assets/sounds/urgent.mp3');
-            // urgentSound.play();
+        // Son final à 0
+        if (timeLeft === 0 && audioManager) {
+            audioManager.playSound('finalTick');
         }
     } else {
         timerElement.classList.remove('urgent');
@@ -2501,27 +2882,30 @@ function updateBonusTimers() {
     const deltaTime = 0.02;  // 20ms en secondes
     let bonusesChanged = false;
 
-    if (invincibilityActive && invincibilityTimeLeft <= 0) {
-        invincibilityActive = false;
-        socket.emit('bonusExpired', { 
-            type: 'invincibility',
-            playerId: socket.id 
-        });
-        //console.log('Émission de l\'expiration de l\'invincibilité');
-    }
-
     // Fonction pour mettre à jour un timer spécifique
     function updateSingleTimer(active, timeLeft, type) {
         if (active) {
             const newTime = Math.max(0, timeLeft - deltaTime);
             if (newTime <= 0) {
-                // Notifier le serveur quand un bonus se termine
-                if (type === 'invincibility') {
-                    socket.emit('bonusExpired', { type: 'invincibility' });
+                // Arrêter le son du bonus quand il expire
+                if (audioManager) {
+                    switch(type) {
+                        case 'speed':
+                            audioManager.stopLoopingSound('speedBoostActive');
+                            break;
+                        case 'invincibility':
+                            audioManager.stopLoopingSound('invincibilityActive');
+                            break;
+                        case 'reveal':
+                            audioManager.stopLoopingSound('revealActive');
+                            break;
+                    }
                 }
+                
+                // Notifier le serveur quand un bonus se termine
+                socket.emit('bonusExpired', { type });
                 return { active: false, timeLeft: 0, changed: true };
             }
-            // Ne mettre à jour l'affichage que si la seconde a changé
             if (Math.ceil(newTime) !== Math.ceil(timeLeft)) {
                 bonusesChanged = true;
             }
@@ -2723,6 +3107,12 @@ function showGameOverModal(scores) {
         }
         existingModal.remove();
     }
+    if (audioManager) {
+        audioManager.stopFootsteps();
+        audioManager.stopLoopingSound('speedBoostActive');
+        audioManager.stopLoopingSound('invincibilityActive');
+        audioManager.stopLoopingSound('revealActive');
+    }
 
     isGameOver = true;
     isPaused = true;
@@ -2823,6 +3213,7 @@ function showGameOverModal(scores) {
     const waitingRoomButton = document.createElement('button');
     waitingRoomButton.className = 'primary-button';
     waitingRoomButton.textContent = 'Retour à la salle d\'attente';
+    addButtonClickSound(waitingRoomButton); // Ajouter le son
     waitingRoomButton.addEventListener('click', () => {
         document.body.removeChild(modal);
         returnToWaitingRoom();
@@ -2832,6 +3223,7 @@ function showGameOverModal(scores) {
     const mainMenuButton = document.createElement('button');
     mainMenuButton.className = 'secondary-button';
     mainMenuButton.textContent = 'Menu Principal';
+    addButtonClickSound(mainMenuButton); // Ajouter le son
     mainMenuButton.addEventListener('click', () => {
         document.body.removeChild(modal);
         returnToMainMenu();
@@ -2976,6 +3368,12 @@ function returnToWaitingRoom() {
         });
     }
 
+    // Arrêter la musique du jeu et remettre la musique du menu
+    audioManager.fadeOutMusic(1000);
+    setTimeout(() => {
+        audioManager.playMusic('menu');
+    }, 1000);
+
     // Rejoindre la salle d'attente avec une indication de retour de partie
     socket.emit('rejoinWaitingRoom', {
         nickname: playerNickname,
@@ -3112,6 +3510,12 @@ function returnToMainMenu() {
         socket.disconnect();
         socket = null;
     }
+
+    // Arrêter la musique du jeu et remettre la musique du menu
+    audioManager.fadeOutMusic(1000);
+    setTimeout(() => {
+        audioManager.playMusic('menu');
+    }, 1000);
 
     // Réinitialiser les bonus et états du jeu
     speedBoostActive = false;

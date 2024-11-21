@@ -1,7 +1,7 @@
 {
-  "name": "ttp",
-  "version": "1.0.0",
-  "description": "Jeu web multijoueur avec des points et des bots",
+  "name": "neon_ninja",
+  "version": "0.7.0",
+  "description": "Jeu web multijoueur de capture de Ninjas",
   "main": "server.js",
   "type": "module",
   "scripts": {
