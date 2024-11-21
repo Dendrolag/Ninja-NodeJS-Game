@@ -1,6 +1,10 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
 
+## [0.7.1] - 2024-11-21
+### Corrections
+- Correction de l'accès aux paramètres audio pour les joueurs non propriétaires
+
 ## [0.7.0] - 2024-11-21
 ### Ajouts
 - Ajout de l'audio 

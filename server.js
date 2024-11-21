@@ -2122,9 +2122,12 @@ io.on('connection', (socket) => {
     socket.on('updateGameSettings', (settings) => {
         const player = waitingRoom.players.get(socket.id);
         if (player?.isOwner) {
+            // Filtrer les paramètres audio s'ils sont présents
+            const { musicVolume, soundVolume, ...gameSettings } = settings;
+            
             waitingRoom.settings = {
                 ...waitingRoom.settings,
-                ...settings,
+                ...gameSettings,
                 enabledZones: {
                     ...waitingRoom.settings.enabledZones,
                     ...settings.enabledZones
@@ -2133,6 +2136,21 @@ io.on('connection', (socket) => {
             
             // Informer tous les joueurs des changements
             io.emit('gameSettingsUpdated', waitingRoom.settings);
+        }
+    });
+
+        // Paramètres audio (accessible à tous les joueurs)
+    socket.on('updateAudioSettings', (audioSettings) => {
+        const player = waitingRoom.players.get(socket.id);
+        if (player) {
+            // Stocker les paramètres audio pour ce joueur
+            player.audioSettings = {
+                musicVolume: audioSettings.musicVolume,
+                soundVolume: audioSettings.soundVolume
+            };
+            
+            // Confirmer uniquement au joueur qui a fait la modification
+            socket.emit('audioSettingsUpdated', player.audioSettings);
         }
     });
 

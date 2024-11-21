@@ -11,7 +11,7 @@ const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
 const nicknameInput = document.getElementById('nicknameInput');
 
-const GAME_VERSION = "v0.7.0";  // À mettre à jour à chaque déploiement
+const GAME_VERSION = "v0.7.1";  // À mettre à jour à chaque déploiement
 
 // Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
@@ -974,6 +974,13 @@ settingsButton.addEventListener('click', () => {
 });
 
 saveSettingsButton.addEventListener('click', () => {
+        // Sauvegarder les paramètres audio pour tous les joueurs
+        if (audioManager) {
+            const musicVolume = parseInt(document.getElementById('musicVolume').value);
+            const soundVolume = parseInt(document.getElementById('soundVolume').value);
+            audioManager.setMusicVolume(musicVolume / 100);
+            audioManager.setSoundVolume(soundVolume / 100);
+        }
     if (isRoomOwner) {
         const newSettings = {
             gameDuration: parseInt(gameDurationInput.value),
@@ -1645,9 +1652,14 @@ function updateWaitingRoomPlayers(data) {
     }
 
     // Gérer l'état des inputs dans le menu paramètres
+    // Gérer l'état des inputs dans le menu paramètres
     const settingsInputs = settingsMenu.querySelectorAll('input, select, button');
     settingsInputs.forEach(input => {
-        if (input.id === 'backToMenuButton') return;
+        // Exclure le bouton retour et les contrôles audio de la désactivation
+        if (input.id === 'backToMenuButton' || 
+            input.id === 'musicVolume' || 
+            input.id === 'soundVolume') return;
+        
         input.disabled = !isRoomOwner;
     });
 
