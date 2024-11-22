@@ -599,11 +599,23 @@ function handlePlayerCapture(attacker, victim) {
             capturedNickname: victim.nickname,
             captures: attacker.captures,
             botsControlled: attacker.botsControlled,
-            captureDetails: attacker.capturedPlayers
+            captureDetails: attacker.capturedPlayers,
+            capturedId: victim.id,
+            botsGained: botsToCapture // Ajout du nombre de bots gagnés
+        });
+    }
+    if (bot.color !== player.color) {
+        const oldColor = bot.color;
+        bot.color = player.color;
+        // Émettre l'événement à tous les joueurs
+        io.emit('botCaptured', {
+            botId: bot.id,
+            oldColor: oldColor,
+            newColor: bot.color,
+            position: { x: bot.x, y: bot.y }
         });
     }
 }
-
 function manageSpecialZones() {
     if (!currentGameSettings.enableSpecialZones) {
         specialZones.clear();
@@ -686,9 +698,10 @@ class Player extends Entity {
         this.spawnProtection = Date.now() + SPAWN_PROTECTION_TIME;
         this.lastCapture = 0;
         this.type = 'player';
-        this._invincibilityActive = false; // Nouvelle propriété privée
+        this._invincibilityActive = false; 
         this.speedBoostActive = false;
         this.bonusStartTime = 0;
+        this.blackBotsDestroyed = 0; 
     }
 
     get invincibilityActive() {
@@ -1535,29 +1548,24 @@ function detectCollisions(entity, entityId) {
     // Collisions avec les bots noirs
     if (entity.type === 'player') {
         const player = players[entity.id];
-        /*console.log('État du joueur:', {
-            id: entity.id,
-            invincibilityActive: player.invincibilityActive,
-            isInvulnerable: player.isInvulnerable(),
-            bonusTimers: player.bonusTimers
-        });*/
     
         Object.entries(blackBots).forEach(([blackBotId, blackBot]) => {
             const dx = entity.x - blackBot.x;
             const dy = entity.y - blackBot.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
-
+    
             if (distance < 20) {
-                // IMPORTANT : Vérification stricte de l'invincibilité
                 const player = players[entity.id];
-                // Le joueur ne peut interagir avec le bot noir QUE s'il est actuellement invincible
                 if (player && player.invincibilityActive === true) {
                     delete blackBots[blackBotId];
+                    player.blackBotsDestroyed++; // Incrémenter le compteur
                     const socket = activeSockets[entity.id];
                     if (socket) {
                         socket.emit('playerCapturedEnemy', {
                             capturedNickname: 'Bot Noir',
-                            message: 'Vous avez détruit un Bot Noir !'
+                            message: 'Vous avez détruit un Bot Noir !',
+                            pointsGained: 15, // Points gagnés pour la capture
+                            position: { x: blackBot.x, y: blackBot.y }
                         });
                     }
                 }
@@ -1599,20 +1607,22 @@ function calculatePlayerScores() {
     
     for (let id in players) {
         const player = players[id];
-        // Compter seulement les bots non blancs contrôlés par le joueur
+        // Compter les bots contrôlés et ajouter les points des black bots détruits
         const controlledPoints = Object.values(bots)
             .filter(bot => bot.color === player.color)
             .length;
+        const blackBotPoints = player.blackBotsDestroyed * 15;
         
         scores.push({
             id: player.id,
             nickname: player.nickname,
-            currentBots: controlledPoints, // Ce nombre devrait être correct
+            currentBots: controlledPoints + blackBotPoints, // Ajouter les points des black bots
             totalBotsControlled: player.totalBotsCaptures,
             captures: player.captures,
             capturedPlayers: player.capturedPlayers,
             capturedBy: player.capturedBy,
             capturedByBlackBot: player.capturedByBlackBot,
+            blackBotsDestroyed: player.blackBotsDestroyed,
             color: player.color
         });
     }

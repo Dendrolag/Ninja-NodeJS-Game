@@ -11,7 +11,7 @@ const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
 const nicknameInput = document.getElementById('nicknameInput');
 
-const GAME_VERSION = "v0.7.1";  // À mettre à jour à chaque déploiement
+const GAME_VERSION = "v0.7.2";  // À mettre à jour à chaque déploiement
 
 // Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
@@ -88,9 +88,10 @@ const collectedBonusDisplay = document.getElementById('collectedBonusDisplay');
 const collectedBonusDisplayContent = document.getElementById('collectedBonusDisplayContent');
 const activeBonusesContainer = document.getElementById('activeBonuses');
 const playerListContainer = document.getElementById('players');
+const lastEntityStates = new Map();
 
-const SPEED_MULTIPLIER = 3;
-const BASE_SPEED = 3;
+const SPEED_MULTIPLIER = 2; 
+const BASE_SPEED = 3.5; 
 const SPEED_BOOST_MULTIPLIER = 1.3;
 
 // Ajoutez cette nouvelle constante pour les contrôles mobiles
@@ -583,6 +584,12 @@ function addVersionDisplay() {
     document.body.appendChild(versionDisplay);
 }
 
+function worldToScreen(worldX, worldY) {
+    const screenX = (worldX - camera.x) * camera.scale + canvas.width / 2;
+    const screenY = (worldY - camera.y) * camera.scale + canvas.height / 2;
+    return { x: screenX, y: screenY };
+}
+
 // Fonction utilitaire pour détecter si on est sur mobile
 function isMobile() {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
@@ -627,6 +634,68 @@ function switchTab(tabName) {
         // Retirer la classe après le changement
         content.classList.remove('changing');
     }, 300); // Même durée que la transition CSS
+}
+
+function createCaptureParticles(bot) {
+    const PARTICLE_COUNT = 8;
+    const screenPos = worldToScreen(bot.x, bot.y);
+    
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'capture-particle';
+        
+        // Position initiale en coordonnées monde
+        particle.style.position = 'absolute';
+        particle.style.left = `${screenPos.x}px`;
+        particle.style.top = `${screenPos.y}px`;
+        particle.style.background = bot.color;
+        
+        // Direction aléatoire
+        const angle = (i / PARTICLE_COUNT) * Math.PI * 2;
+        const distance = 30;
+        const tx = Math.cos(angle) * distance;
+        const ty = Math.sin(angle) * distance;
+        
+        particle.style.setProperty('--tx', `${tx}px`);
+        particle.style.setProperty('--ty', `${ty}px`);
+        
+        // Ajouter une classe pour le suivi de la caméra
+        particle.classList.add('world-fixed');
+        
+        document.getElementById('gameContainer').appendChild(particle);
+        
+        setTimeout(() => {
+            particle.remove();
+        }, 500);
+    }
+}
+
+function createShockwave(x, y, color) {
+    const shockwave = document.createElement('div');
+    shockwave.className = 'capture-shockwave';
+    
+    // Position en coordonnées monde
+    shockwave.style.position = 'absolute';
+    shockwave.style.left = `${x}px`;
+    shockwave.style.top = `${y}px`;
+    shockwave.style.borderColor = color;
+    
+    // Ajouter une classe pour le suivi de la caméra
+    shockwave.classList.add('world-fixed');
+    
+    document.getElementById('gameContainer').appendChild(shockwave);
+    
+    setTimeout(() => {
+        shockwave.remove();
+    }, 600);
+}
+
+// Helper function pour ajouter un effet de lueur temporaire
+function addTemporaryEffect(element, className, duration) {
+    element.classList.add(className);
+    setTimeout(() => {
+        element.classList.remove(className);
+    }, duration);
 }
 
 // Fonction d'initialisation des contrôles mobiles
@@ -884,9 +953,21 @@ async function loadGameAssets() {
     }
 }
 
-// Image de fond
-//const backgroundImage = new Image();
-//backgroundImage.src = '/assets/images/background.jpg';
+function createFloatingPoints(x, y, points, color) {
+    const element = document.createElement('div');
+    element.className = 'floating-points';
+    element.textContent = points > 0 ? `+${points}` : points;
+    element.style.left = `${x}px`;
+    element.style.top = `${y}px`;
+    element.style.color = color || '#fff';
+    
+    document.getElementById('gameContainer').appendChild(element);
+    
+    // Supprimer l'élément après l'animation
+    setTimeout(() => {
+        element.remove();
+    }, 1000);
+}
 
 // Événements de redimensionnement
 function resizeCanvas() {
@@ -939,6 +1020,19 @@ function addButtonClickSound(button) {
     });
 }
 
+function createExplosionEffect(worldX, worldY) {
+    const screenPos = worldToScreen(worldX, worldY);
+    const explosion = document.createElement('div');
+    explosion.className = 'explosion-effect';
+    explosion.style.left = `${screenPos.x}px`;
+    explosion.style.top = `${screenPos.y}px`;
+    document.getElementById('gameContainer').appendChild(explosion);
+    
+    setTimeout(() => {
+        explosion.remove();
+    }, 1000);
+}
+
 // Fonction pour ajouter le son à plusieurs boutons
 function initializeButtonSounds() {
     // Liste des boutons des menus
@@ -960,6 +1054,26 @@ function initializeButtonSounds() {
             addButtonClickSound(button);
         }
     });
+}
+
+function createCaptureEffect(bot) {
+    const screenPos = worldToScreen(bot.x, bot.y);
+
+    // Effet de particules avec la vieille couleur qui se transforme en nouvelle couleur
+    createCaptureParticles(screenPos.x, screenPos.y, bot.oldColor, bot.color);
+    
+    // Onde de choc
+    createShockwave(screenPos.x, screenPos.y, bot.color);
+
+    // Effet de flash
+    const flash = document.createElement('div');
+    flash.className = 'capture-flash';
+    flash.style.left = `${screenPos.x}px`;
+    flash.style.top = `${screenPos.y}px`;
+    flash.style.backgroundColor = bot.color;
+    document.getElementById('gameContainer').appendChild(flash);
+    
+    setTimeout(() => flash.remove(), 400);
 }
 
 window.addEventListener('load', resizeCanvas);
@@ -1150,6 +1264,36 @@ startButton.addEventListener('click', () => {
             showNotification('Vous êtes maintenant propriétaire de la salle', 'success');
         }
     });  
+
+    socket.on('botCaptured', (data) => {
+        const { botId, oldColor, newColor, position } = data;
+        
+        // Créer l'effet visuel à la position du bot pour tous les joueurs
+        const screenPos = worldToScreen(position.x, position.y);
+        
+        // Créer les effets visuels
+        createCaptureEffect({
+            id: botId,
+            x: position.x,
+            y: position.y,
+            color: newColor,
+            oldColor: oldColor
+        });
+    
+        if (audioManager) {
+            // Ajuster le volume en fonction de la distance avec le joueur
+            const player = entities.find(e => e.id === socket.id);
+            if (player) {
+                const dx = player.x - position.x;
+                const dy = player.y - position.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const maxDistance = 500; // Distance maximale d'audibilité
+                const volume = Math.max(0, 1 - (distance / maxDistance));
+                
+                audioManager.playSound('botConvert', volume);
+            }
+        }
+    });
 
     socket.on('bonusExpired', (data) => {
         if (audioManager) {
@@ -1961,18 +2105,18 @@ async function startGame() {
             specialZones = data.zones || [];
 
                 // Comparer les anciens et nouveaux bonus/malus pour détecter les collectes
-    if (audioManager) {
-        // Pour les bonus
-        if (data.bonusCollected) {
+            if (audioManager) {
+            // Pour les bonus
+            if (data.bonusCollected) {
             console.log('Bonus collecté !');
-            audioManager.playSound('bonusCollect');
+                audioManager.playSound('bonusCollect');
+            }
+            // Pour les malus
+            if (data.malusCollected) {
+                console.log('Malus collecté !');
+                    audioManager.playSound('malusCollect');
+            }
         }
-        // Pour les malus
-        if (data.malusCollected) {
-            console.log('Malus collecté !');
-            audioManager.playSound('malusCollect');
-        }
-    }
             
             // Trouver d'abord notre joueur dans les scores
             const currentPlayer = data.playerScores.find(p => p.id === socket.id);
@@ -1983,19 +2127,30 @@ async function startGame() {
                 scoreDisplay.textContent = `${currentPlayer.nickname}: ${totalScore} points`;
             }
 
-            // Comparer l'ancien et le nouvel état des bots
             data.entities.forEach(newEntity => {
                 if (newEntity.type === 'bot') {
                     const oldEntity = entities.find(e => e.id === newEntity.id);
-            // Vérifier si le bot a changé de couleur et si sa nouvelle couleur correspond à celle du joueur actuel
-            if (oldEntity && 
-                oldEntity.color !== newEntity.color && 
-                newEntity.color === playerColor) {
-                // Le bot a été converti par le joueur actuel
-                if (audioManager) {
-                    audioManager.playSound('botConvert');
-                }
-            }
+                    if (oldEntity && oldEntity.color !== newEntity.color) {
+                        console.log('Bot capturé:', {
+                            oldColor: oldEntity.color,
+                            newColor: newEntity.color,
+                            position: { x: newEntity.x, y: newEntity.y }
+                        });
+                        
+                        const screenPos = worldToScreen(newEntity.x, newEntity.y);
+                        
+                        // Créer les effets visuels de capture
+                        createCaptureParticles({
+                            x: newEntity.x,
+                            y: newEntity.y,
+                            color: newEntity.color
+                        });
+                        createShockwave(screenPos.x, screenPos.y, newEntity.color);
+                        
+                        if (newEntity.color === playerColor) {
+                            createFloatingPoints(screenPos.x, screenPos.y, 1, '#fff');
+                        }
+                    }
                 }
             });
             
@@ -2054,11 +2209,30 @@ async function startGame() {
         });
     }
     
-    if (!socket.hasListeners('playerCapturedEnemy')) {
-        socket.on('playerCapturedEnemy', (data) => {
-            showCaptureNotification(`Vous avez capturé ${data.capturedNickname} !`);
-        });
-    }
+    socket.on('playerCapturedEnemy', (data) => {
+        if (data.capturedNickname === 'Bot Noir') {
+            // Effet visuel pour la capture d'un black bot
+            if (data.position) {
+                const screenPos = worldToScreen(data.position.x, data.position.y);
+                createFloatingPoints(screenPos.x, screenPos.y, 15, '#ffd700'); // Couleur dorée
+                
+                // Effet visuel supplémentaire d'explosion
+                if (audioManager) {
+                    audioManager.playSound('blackBotDestroy');
+                }
+                
+                createExplosionEffect(data.position.x, data.position.y);
+            }
+        } else {
+            // Code existant pour la capture des joueurs normaux
+            const player = entities.find(e => e.id === data.capturedId);
+            if (player) {
+                const screenPos = worldToScreen(player.x, player.y);
+                createFloatingPoints(screenPos.x, screenPos.y, data.botsGained, '#cc99ff');
+            }
+        }
+        showCaptureNotification(data.message || `Vous avez capturé ${data.capturedNickname} !`);
+    });
 
     if (!socket.hasListeners('gameOver')) {
         socket.on('gameOver', (data) => {
@@ -2165,6 +2339,7 @@ async function startGame() {
             updateBonusTimers();
             updateCamera();
             updateMalusEffects();
+            updateEffectsPositions();
         }
     }, 20);
 
@@ -2414,20 +2589,6 @@ function drawEntities() {
     context.scale(camera.scale, camera.scale);
     context.translate(-cameraX, -cameraY);
 
-    // Dessiner le fond
-    /*if (backgroundImage.complete) {
-        const pattern = context.createPattern(backgroundImage, 'repeat');
-        if (pattern) {
-            context.fillStyle = pattern;
-            // Arrondir les positions pour le fond aussi
-            const x = Math.round(0);
-            const y = Math.round(0);
-            const width = Math.round(GAME_VIRTUAL_WIDTH);
-            const height = Math.round(GAME_VIRTUAL_HEIGHT);
-            context.fillRect(x, y, width, height);
-        }
-    }*/
-
     // Dessiner les limites de la zone de jeu
     context.strokeStyle = 'rgba(255, 255, 255, 0.5)';
     context.lineWidth = 4;
@@ -2495,6 +2656,15 @@ function drawEntities() {
             context.globalAlpha = 0.3;
         }
 
+        // Pour les bots, on ajoute la gestion de la transition
+        if (entity.type === 'bot') {
+            const previousState = lastEntityStates.get(entity.id);
+            if (previousState && previousState.color !== entity.color) {
+                // Le bot vient de changer de couleur
+                createCaptureEffect(entity);
+            }
+        }
+
         // Dessiner l'entité avec son sprite animé
         const coloredSprite = spriteManager.getColoredSprite(
             entity.direction || DIRECTIONS.IDLE,
@@ -2531,21 +2701,21 @@ function drawEntities() {
             }
         }
 
-                    // Pour les bots noirs
-                    if (entity.type === 'blackBot') {
-                        // Effet de lueur rouge pour le rayon de détection
-                        context.beginPath();
-                        context.arc(entity.x, entity.y, entity.detectionRadius, 0, Math.PI * 2);
-                        context.fillStyle = 'rgba(255, 0, 0, 0.1)';
-                        context.fill();
+        // Pour les bots noirs
+        if (entity.type === 'blackBot') {
+        // Effet de lueur rouge pour le rayon de détection
+        context.beginPath();
+        context.arc(entity.x, entity.y, entity.detectionRadius, 0, Math.PI * 2);
+        context.fillStyle = 'rgba(255, 0, 0, 0.1)';
+        context.fill();
             
-                        // Effet de pulsation
-                        const pulseSize = 13 + Math.sin(Date.now() * 0.01) * 2;
-                        context.beginPath();
-                        context.arc(entity.x, entity.y, pulseSize, 0, Math.PI * 2);
-                        context.strokeStyle = 'rgba(255, 0, 0, 0.5)';
-                        context.stroke();
-                    }
+        // Effet de pulsation
+        const pulseSize = 13 + Math.sin(Date.now() * 0.01) * 2;
+        context.beginPath();
+        context.arc(entity.x, entity.y, pulseSize, 0, Math.PI * 2);
+        context.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+        context.stroke();
+        }
         
         // Si c'est le joueur courant, dessiner les effets de bonus en premier
         if (entity.id === playerId) {
@@ -2631,6 +2801,11 @@ function drawEntities() {
 
     // Dessiner le calque de premier plan après toutes les entités
     mapManager.drawForeground(context, camera);
+
+    // Mettre à jour lastEntityStates pour la prochaine frame
+    entities.forEach(entity => {
+        lastEntityStates.set(entity.id, { ...entity });
+    });
 
     context.restore();
 }
@@ -3561,4 +3736,17 @@ function returnToMainMenu() {
 
     // Réinitialiser le champ de pseudo
     nicknameInput.value = '';
+}
+
+// Fonction pour mettre à jour la position des effets
+function updateEffectsPositions() {
+    const worldFixedElements = document.querySelectorAll('.world-fixed');
+    worldFixedElements.forEach(element => {
+        const worldX = parseFloat(element.dataset.worldX);
+        const worldY = parseFloat(element.dataset.worldY);
+        const screenPos = worldToScreen(worldX, worldY);
+        
+        element.style.left = `${screenPos.x}px`;
+        element.style.top = `${screenPos.y}px`;
+    });
 }

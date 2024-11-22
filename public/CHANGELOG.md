@@ -1,6 +1,12 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
 
+## [0.7.2] - 2024-11-22
+### Ajouts
+- Effet visuel +1 sur les bots capturés, +15 sur les black ninjas capturés
+- Effet visuel sur les changements de couleurs des bots
+- Augmentation de la vitesse générale des déplacements
+
 ## [0.7.1] - 2024-11-21
 ### Corrections
 - Correction de l'accès aux paramètres audio pour les joueurs non propriétaires
