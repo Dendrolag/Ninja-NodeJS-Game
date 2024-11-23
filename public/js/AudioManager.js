@@ -6,8 +6,8 @@ export class AudioManager {
         this.currentMusic = null;
         this.isMuted = false;
         this.volume = options.volume || 0.5;
-        this.musicVolume = options.musicVolume || 0.1;
-        this.soundVolume = options.soundVolume || 0.5;
+        this.musicVolume = options.musicVolume || 0.7;
+        this.soundVolume = options.soundVolume || 0.9;
         this.isLoaded = false;
         this.loadPromise = this.loadAudio();
         this.loadSettings();
@@ -33,27 +33,26 @@ export class AudioManager {
                 bonus: '/assets/audio/collect-bonus.wav',
                 malus: '/assets/audio/collect-malus.wav',
                 capture: '/assets/audio/capture.wav',
-                botConvert: '/assets/audio/bot-convert.wav',
+                botConvert: '/assets/audio/bot-convert.mp3',
                 gameStart: '/assets/audio/game-start.wav',
                 gameOver: '/assets/audio/game-over.wav',
                 countdown: '/assets/audio/countdown.wav',
-                footstep1: '/assets/audio/footstep1.wav',
-                footstep2: '/assets/audio/footstep2.wav',
-                footstep3: '/assets/audio/footstep3.wav',
-                footstep4: '/assets/audio/footstep4.wav',
+                footstep1: '/assets/audio/footstep1.mp3',
+                footstep2: '/assets/audio/footstep2.mp3',
+                footstep3: '/assets/audio/footstep3.mp3',
+                footstep4: '/assets/audio/footstep4.mp3',
                 countdownTick: '/assets/audio/countdown-tick.wav',  // Pour les "tic" normaux
                 finalTick: '/assets/audio/final-tick.wav',         // Pour le dernier "tic"
-                urgentTick: '/assets/audio/urgent-tick.wav',        // Pour le timer de fin
-                speedBoostActive: '/assets/audio/speed-active.wav',
-                invincibilityActive: '/assets/audio/invincibility-active.wav',
-                revealActive: '/assets/audio/reveal-active.wav'
+                urgentTick: '/assets/audio/urgent-tick.mp3',        // Pour le timer de fin
+                speedBoostActive: '/assets/audio/speed-active.mp3',
+                invincibilityActive: '/assets/audio/invincibility-active.mp3',
+                revealActive: '/assets/audio/reveal-active.mp3'
             };
-            console.log('Sons disponibles:', Object.keys(this.sounds));
 
             // Définition des musiques
             const musicToLoad = {
-                menu: '/assets/audio/menu-music.wav',
-                game: '/assets/audio/game-music.wav',
+                menu: '/assets/audio/menu-music.mp3',
+                game: '/assets/audio/game-music.mp3',
                 gameOver: '/assets/audio/game-over-music.wav'
             };
 
@@ -90,8 +89,6 @@ export class AudioManager {
     }
 
     playSpatialisedSound(soundType, volume) {
-        console.log('Tentative de jouer un son spatialisé:', soundType, volume); // Debug
-        
         if (this.isMuted) return;
         
         const footsteps = Array.from(this.sounds.entries())
@@ -115,9 +112,7 @@ export class AudioManager {
     }
 
     playSound(soundName) {
-        console.log('Tentative de jouer le son:', soundName);
         if (this.isMuted || !this.sounds.has(soundName)) {
-            console.log('Son muet ou non trouvé:', soundName);
             return;
         }
         
@@ -241,7 +236,6 @@ export class AudioManager {
 
     // Pour arrêter un son en boucle
     stopLoopingSound(soundName) {
-        console.log('Tentative d\'arrêt du son en boucle:', soundName);
         const loopingSound = this.activeLoopSounds.get(soundName);
         if (loopingSound) {
             loopingSound.pause();

@@ -7,6 +7,8 @@ Tous les changements notables de ce projet seront documentés dans ce fichier.
 - Son de capture des bots fonctionnel
 - Optimisation des effets visuels de capture
 - Pause et resume de la musique
+- Ajustement des sons
+- Remplacement des musiques de Katana Zero par des sons d'ambiance
 
 ## [0.7.2] - 2024-11-22
 ### Ajouts

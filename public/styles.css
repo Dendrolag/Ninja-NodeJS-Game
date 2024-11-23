@@ -2604,13 +2604,6 @@ input[type="checkbox"]:disabled + label {
     background: rgba(255, 255, 255, 0.8);
 }
 
-/* Effet d'onde de choc */
-.capture-shockwave {
-    border: 2px solid;
-    border-radius: 50%;
-    animation: shockwave 0.6s ease-out forwards;
-}
-
 /* Effet d'explosion pour les black bots */
 .explosion-effect {
     width: 60px;
@@ -2637,19 +2630,6 @@ input[type="checkbox"]:disabled + label {
     }
     100% {
         transform: translate(-50%, -50%) scale(2);
-        opacity: 0;
-    }
-}
-
-@keyframes shockwave {
-    0% {
-        width: 0;
-        height: 0;
-        opacity: 1;
-    }
-    100% {
-        width: 60px;
-        height: 60px;
         opacity: 0;
     }
 }

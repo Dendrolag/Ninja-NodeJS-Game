@@ -219,11 +219,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Attendre que l'audio soit chargé
         try {
             await audioManager.loadPromise;
-            console.log('Audio chargé avec succès');
             
             // Vérifier si nous sommes sur l'écran principal (menu)
             if (mainMenu.classList.contains('active')) {
-                console.log('Démarrage de la musique du menu');
                 audioManager.playMusic('menu');
             }
         } catch (error) {
@@ -441,7 +439,6 @@ class SpriteManager {
             const img1 = new Image();
             img1.src = frames.frame1;
             img1.onload = () => {
-                //console.log(`Sprite ${direction} frame1 chargé`);
             };
             this.loadedSprites[direction].frame1 = img1;
             
@@ -449,7 +446,6 @@ class SpriteManager {
             const img2 = new Image();
             img2.src = frames.frame2;
             img2.onload = () => {
-                //console.log(`Sprite ${direction} frame2 chargé`);
             };
             this.loadedSprites[direction].frame2 = img2;
         });
@@ -665,26 +661,6 @@ function switchTab(tabName) {
         // Retirer la classe après le changement
         content.classList.remove('changing');
     }, 300); // Même durée que la transition CSS
-}
-
-function createShockwave(x, y, color) {
-    const shockwave = document.createElement('div');
-    shockwave.className = 'capture-shockwave';
-    
-    // Position en coordonnées monde
-    shockwave.style.position = 'absolute';
-    shockwave.style.left = `${x}px`;
-    shockwave.style.top = `${y}px`;
-    shockwave.style.borderColor = color;
-    
-    // Ajouter une classe pour le suivi de la caméra
-    shockwave.classList.add('world-fixed');
-    
-    document.getElementById('gameContainer').appendChild(shockwave);
-    
-    setTimeout(() => {
-        shockwave.remove();
-    }, 600);
 }
 
 // Helper function pour ajouter un effet de lueur temporaire
@@ -909,7 +885,6 @@ function updateCamera() {
     // Trouver le joueur actuel, en s'assurant qu'il s'agit bien d'une entité de type 'player'
     const myPlayer = entities.find(e => e.id === playerId && e.type === 'player');
     if (!myPlayer) {
-        //console.log("Player not found:", playerId); // Debug log
         return;
     }
 
@@ -1075,38 +1050,11 @@ function initializeButtonSounds() {
 
 function createCaptureEffect(bot) {
     const { x, y, color, oldColor } = bot;
-    
-    // Créer l'onde de choc
-    const shockwave = new VisualEffect(x, y, 'capture-shockwave');
-    shockwave.element.style.borderColor = color;
-    activeEffects.add(shockwave);
 
     // Créer le flash
     const flash = new VisualEffect(x, y, 'capture-flash');
     flash.element.style.backgroundColor = color;
     activeEffects.add(flash);
-
-    // Créer les particules
-    const PARTICLE_COUNT = 8;
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
-        const angle = (i / PARTICLE_COUNT) * Math.PI * 2;
-        const distance = 30 + Math.random() * 20;
-        const particleX = x + Math.cos(angle) * distance;
-        const particleY = y + Math.sin(angle) * distance;
-
-        const particle = new VisualEffect(x, y, 'capture-particle');
-        particle.targetX = particleX;
-        particle.targetY = particleY;
-        particle.element.style.backgroundColor = oldColor;
-        particle.element.style.setProperty('--tx', `${Math.cos(angle) * distance}px`);
-        particle.element.style.setProperty('--ty', `${Math.sin(angle) * distance}px`);
-
-        setTimeout(() => {
-            particle.element.style.backgroundColor = color;
-        }, 150);
-
-        activeEffects.add(particle);
-    }
 }
 
 // Fonction de mise à jour des effets visuels
@@ -1296,7 +1244,6 @@ startButton.addEventListener('click', () => {
 
     // Initialiser le chat après la connexion socket
     socket.on('connect', () => {
-        //console.log('Socket connected, initializing chat...');
         initializeWaitingRoomTabs();
         initializeChat(socket); // Passer le socket en paramètre
     });
@@ -1684,7 +1631,6 @@ function formatTime(date) {
 
 // Fonction pour mettre à jour la liste des joueurs
 function updateWaitingRoomPlayers(data) {
-    //console.log('Réception mise à jour room:', data); // Log de debug
 
     // Gérer les différents formats de données possibles
     let players;
@@ -1999,14 +1945,12 @@ async function startGame() {
 
         // S'assurer que l'AudioManager est initialisé
         if (!audioManager) {
-            console.log('Initialisation de l\'AudioManager...');
             audioManager = new AudioManager({
                 volume: 0.5,
                 musicVolume: 0.3,
                 soundVolume: 0.5
             });
             await audioManager.loadPromise;
-            console.log('AudioManager initialisé');
         }
     
     isGameOver = false;
@@ -2158,15 +2102,7 @@ async function startGame() {
                 if (newEntity.type === 'bot') {
                     const oldEntity = entities.find(e => e.id === newEntity.id);
                     if (oldEntity && oldEntity.color !== newEntity.color) {
-                        console.log('Bot capturé:', {
-                            oldColor: oldEntity.color,
-                            newColor: newEntity.color,
-                            position: { x: newEntity.x, y: newEntity.y }
-                        });
-                        
                         const screenPos = worldToScreen(newEntity.x, newEntity.y);
-                        
-                        createShockwave(screenPos.x, screenPos.y, newEntity.color);
                         
                         if (newEntity.color === playerColor) {
                             createFloatingPoints(screenPos.x, screenPos.y, 1, '#fff');
@@ -2725,7 +2661,7 @@ function drawEntities() {
             context.stroke();
             
             // Optionnel : ajouter un effet de particules ou d'étoiles
-            const particleCount = 4;
+            const particleCount = 6;
             const radius = 20;
             for (let i = 0; i < particleCount; i++) {
                 const angle = (now * 0.001 + (i / particleCount) * Math.PI * 2);
@@ -3023,7 +2959,6 @@ function drawPlayerLocator(player) {
 
 // Gestion des bonus
 function activateSpeedBoost(duration) {
-    console.log('Speed boost activé pour', duration, 'secondes'); // Debug
     speedBoostActive = true;
     speedBoostTimeLeft += duration;
     playerSpeed = 6;
