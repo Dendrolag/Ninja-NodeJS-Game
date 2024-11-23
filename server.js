@@ -604,17 +604,7 @@ function handlePlayerCapture(attacker, victim) {
             botsGained: botsToCapture // Ajout du nombre de bots gagnés
         });
     }
-    if (bot.color !== player.color) {
-        const oldColor = bot.color;
-        bot.color = player.color;
-        // Émettre l'événement à tous les joueurs
-        io.emit('botCaptured', {
-            botId: bot.id,
-            oldColor: oldColor,
-            newColor: bot.color,
-            position: { x: bot.x, y: bot.y }
-        });
-    }
+
 }
 function manageSpecialZones() {
     if (!currentGameSettings.enableSpecialZones) {

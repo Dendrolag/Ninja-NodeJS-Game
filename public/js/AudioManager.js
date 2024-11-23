@@ -48,6 +48,7 @@ export class AudioManager {
                 invincibilityActive: '/assets/audio/invincibility-active.wav',
                 revealActive: '/assets/audio/reveal-active.wav'
             };
+            console.log('Sons disponibles:', Object.keys(this.sounds));
 
             // Définition des musiques
             const musicToLoad = {

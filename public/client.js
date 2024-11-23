@@ -11,7 +11,7 @@ const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
 const nicknameInput = document.getElementById('nicknameInput');
 
-const GAME_VERSION = "v0.7.2";  // À mettre à jour à chaque déploiement
+const GAME_VERSION = "v0.7.3";  // À mettre à jour à chaque déploiement
 
 // Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
@@ -90,6 +90,8 @@ const activeBonusesContainer = document.getElementById('activeBonuses');
 const playerListContainer = document.getElementById('players');
 const lastEntityStates = new Map();
 
+const activeEffects = new Set();
+
 const SPEED_MULTIPLIER = 2; 
 const BASE_SPEED = 3.5; 
 const SPEED_BOOST_MULTIPLIER = 1.3;
@@ -98,7 +100,7 @@ const SPEED_BOOST_MULTIPLIER = 1.3;
 const MOBILE_SPEED_FACTOR = 2;
 
 const JOYSTICK_SPEED_MULTIPLIER = 6;
-const JOYSTICK_UPDATE_INTERVAL = 50;
+const JOYSTICK_UPDATE_INTERVAL = 16; // ~60 FPS
 const TOUCH_START_OPTIONS = { passive: false };
 const TOUCH_MOVE_OPTIONS = { passive: false };
 
@@ -620,6 +622,35 @@ if (mobileControls) {
 }
 }
 
+class VisualEffect {
+    constructor(worldX, worldY, type) {
+        this.worldX = worldX;
+        this.worldY = worldY;
+        this.type = type;
+        this.element = document.createElement('div');
+        this.element.className = `visual-effect ${type}`;
+        this.startTime = Date.now();
+        this.duration = type === 'capture-particle' ? 500 : 400; // durée selon le type
+
+        document.getElementById('gameContainer').appendChild(this.element);
+        this.updatePosition();
+    }
+
+    updatePosition() {
+        const screenPos = worldToScreen(this.worldX, this.worldY);
+        this.element.style.left = `${screenPos.x}px`;
+        this.element.style.top = `${screenPos.y}px`;
+    }
+
+    isExpired() {
+        return Date.now() - this.startTime > this.duration;
+    }
+
+    remove() {
+        this.element.remove();
+    }
+}
+
 function switchTab(tabName) {
     const content = document.querySelector('.waiting-room-content');
     
@@ -634,40 +665,6 @@ function switchTab(tabName) {
         // Retirer la classe après le changement
         content.classList.remove('changing');
     }, 300); // Même durée que la transition CSS
-}
-
-function createCaptureParticles(bot) {
-    const PARTICLE_COUNT = 8;
-    const screenPos = worldToScreen(bot.x, bot.y);
-    
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
-        const particle = document.createElement('div');
-        particle.className = 'capture-particle';
-        
-        // Position initiale en coordonnées monde
-        particle.style.position = 'absolute';
-        particle.style.left = `${screenPos.x}px`;
-        particle.style.top = `${screenPos.y}px`;
-        particle.style.background = bot.color;
-        
-        // Direction aléatoire
-        const angle = (i / PARTICLE_COUNT) * Math.PI * 2;
-        const distance = 30;
-        const tx = Math.cos(angle) * distance;
-        const ty = Math.sin(angle) * distance;
-        
-        particle.style.setProperty('--tx', `${tx}px`);
-        particle.style.setProperty('--ty', `${ty}px`);
-        
-        // Ajouter une classe pour le suivi de la caméra
-        particle.classList.add('world-fixed');
-        
-        document.getElementById('gameContainer').appendChild(particle);
-        
-        setTimeout(() => {
-            particle.remove();
-        }, 500);
-    }
 }
 
 function createShockwave(x, y, color) {
@@ -736,23 +733,30 @@ function initializeMobileControls() {
             Array.from(e.touches).find(t => t.identifier === touchId) : 
             e;
             
-        if (!touch) return;
-        
-        const x = touch.clientX - centerX;
-        const y = touch.clientY - centerY;
-        const maxRadius = baseRect.width / 2;
-        const distance = Math.sqrt(x * x + y * y);
-        
-        if (distance === 0) return;      
-        
-        // Normalisation et application de la vitesse
-        let moveX = (x / distance) * BASE_SPEED * MOBILE_SPEED_FACTOR;
-        let moveY = (y / distance) * BASE_SPEED * MOBILE_SPEED_FACTOR;
-        
-        if (activemalus.has('reverse')) {
-            moveX *= -1;
-            moveY *= -1;
-        }
+            if (!touch) return;
+    
+            const baseRect = joystickBase.getBoundingClientRect();
+            const centerX = baseRect.left + baseRect.width / 2;
+            const centerY = baseRect.top + baseRect.height / 2;
+            
+            const x = touch.clientX - centerX;
+            const y = touch.clientY - centerY;
+            const distance = Math.sqrt(x * x + y * y);
+            
+            if (distance === 0) return;      
+            
+            // Calculer la direction normalisée
+            const directionX = x / distance;
+            const directionY = y / distance;
+            
+            // Appliquer la vitesse de base
+            let moveX = directionX * BASE_SPEED * MOBILE_SPEED_FACTOR;
+            let moveY = directionY * BASE_SPEED * MOBILE_SPEED_FACTOR;
+            
+            if (activemalus.has('reverse')) {
+                moveX *= -1;
+                moveY *= -1;
+            }
         if (isMoving) {
             // Jouer le son des pas
             if (audioManager) {
@@ -760,22 +764,27 @@ function initializeMobileControls() {
             }
         }
         
-        // Animation du joystick
-        const stickX = x * 0.8;
-        const stickY = y * 0.8;
-        
-        requestAnimationFrame(() => {
-            joystick.style.transform = `translate(${stickX}px, ${stickY}px)`;
-        });
-        
-        currentMove = {
-            x: moveX,
-            y: moveY
-        };
+    // Mise à jour de la position du joystick visuel
+    requestAnimationFrame(() => {
+        const stickX = Math.min(baseRect.width / 3, x * 0.8);
+        const stickY = Math.min(baseRect.height / 3, y * 0.8);
+        joystick.style.transform = `translate(${stickX}px, ${stickY}px)`;
+    });
+    
+    currentMove = {
+        x: moveX,
+        y: moveY,
+        isMoving: true
+    };
+
+    // Démarrer l'intervalle d'envoi si ce n'est pas déjà fait
+    if (!moveInterval) {
+        sendMovement();
+        moveInterval = setInterval(sendMovement, JOYSTICK_UPDATE_INTERVAL);
     }
+}
     
     function handleEnd(e) {
-        // Vérifier si c'est le bon touch qui se termine
         if (e.type === 'touchend' || e.type === 'touchcancel') {
             let touchFound = false;
             for (let i = 0; i < e.changedTouches.length; i++) {
@@ -790,11 +799,18 @@ function initializeMobileControls() {
         touchId = null;
         isMoving = false;
         
+        // Réinitialiser la position du joystick
         requestAnimationFrame(() => {
             joystick.style.transform = 'translate(-50%, -50%)';
         });
         
-        currentMove = { x: 0, y: 0 };
+        // Réinitialiser le mouvement
+        currentMove = { x: 0, y: 0, isMoving: false };
+        
+        // Envoyer un dernier mouvement pour arrêter le déplacement
+        socket.emit('move', { x: 0, y: 0, isMoving: false });
+        
+        // Nettoyer l'intervalle
         if (moveInterval) {
             clearInterval(moveInterval);
             moveInterval = null;
@@ -808,6 +824,7 @@ function initializeMobileControls() {
             const finalMove = {
                 x: currentMove.x * speedMultiplier,
                 y: currentMove.y * speedMultiplier,
+                isMoving: true,
                 speedBoostActive
             };
             
@@ -1057,23 +1074,51 @@ function initializeButtonSounds() {
 }
 
 function createCaptureEffect(bot) {
-    const screenPos = worldToScreen(bot.x, bot.y);
-
-    // Effet de particules avec la vieille couleur qui se transforme en nouvelle couleur
-    createCaptureParticles(screenPos.x, screenPos.y, bot.oldColor, bot.color);
+    const { x, y, color, oldColor } = bot;
     
-    // Onde de choc
-    createShockwave(screenPos.x, screenPos.y, bot.color);
+    // Créer l'onde de choc
+    const shockwave = new VisualEffect(x, y, 'capture-shockwave');
+    shockwave.element.style.borderColor = color;
+    activeEffects.add(shockwave);
 
-    // Effet de flash
-    const flash = document.createElement('div');
-    flash.className = 'capture-flash';
-    flash.style.left = `${screenPos.x}px`;
-    flash.style.top = `${screenPos.y}px`;
-    flash.style.backgroundColor = bot.color;
-    document.getElementById('gameContainer').appendChild(flash);
-    
-    setTimeout(() => flash.remove(), 400);
+    // Créer le flash
+    const flash = new VisualEffect(x, y, 'capture-flash');
+    flash.element.style.backgroundColor = color;
+    activeEffects.add(flash);
+
+    // Créer les particules
+    const PARTICLE_COUNT = 8;
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+        const angle = (i / PARTICLE_COUNT) * Math.PI * 2;
+        const distance = 30 + Math.random() * 20;
+        const particleX = x + Math.cos(angle) * distance;
+        const particleY = y + Math.sin(angle) * distance;
+
+        const particle = new VisualEffect(x, y, 'capture-particle');
+        particle.targetX = particleX;
+        particle.targetY = particleY;
+        particle.element.style.backgroundColor = oldColor;
+        particle.element.style.setProperty('--tx', `${Math.cos(angle) * distance}px`);
+        particle.element.style.setProperty('--ty', `${Math.sin(angle) * distance}px`);
+
+        setTimeout(() => {
+            particle.element.style.backgroundColor = color;
+        }, 150);
+
+        activeEffects.add(particle);
+    }
+}
+
+// Fonction de mise à jour des effets visuels
+function updateVisualEffects() {
+    for (const effect of activeEffects) {
+        if (effect.isExpired()) {
+            effect.remove();
+            activeEffects.delete(effect);
+        } else {
+            effect.updatePosition();
+        }
+    }
 }
 
 window.addEventListener('load', resizeCanvas);
@@ -1264,36 +1309,6 @@ startButton.addEventListener('click', () => {
             showNotification('Vous êtes maintenant propriétaire de la salle', 'success');
         }
     });  
-
-    socket.on('botCaptured', (data) => {
-        const { botId, oldColor, newColor, position } = data;
-        
-        // Créer l'effet visuel à la position du bot pour tous les joueurs
-        const screenPos = worldToScreen(position.x, position.y);
-        
-        // Créer les effets visuels
-        createCaptureEffect({
-            id: botId,
-            x: position.x,
-            y: position.y,
-            color: newColor,
-            oldColor: oldColor
-        });
-    
-        if (audioManager) {
-            // Ajuster le volume en fonction de la distance avec le joueur
-            const player = entities.find(e => e.id === socket.id);
-            if (player) {
-                const dx = player.x - position.x;
-                const dy = player.y - position.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                const maxDistance = 500; // Distance maximale d'audibilité
-                const volume = Math.max(0, 1 - (distance / maxDistance));
-                
-                audioManager.playSound('botConvert', volume);
-            }
-        }
-    });
 
     socket.on('bonusExpired', (data) => {
         if (audioManager) {
@@ -1981,6 +1996,18 @@ function updateSettingsUI(settings) {
 // Fonction de démarrage du jeu
 async function startGame() {
     console.log('Starting game...'); // Debug log
+
+        // S'assurer que l'AudioManager est initialisé
+        if (!audioManager) {
+            console.log('Initialisation de l\'AudioManager...');
+            audioManager = new AudioManager({
+                volume: 0.5,
+                musicVolume: 0.3,
+                soundVolume: 0.5
+            });
+            await audioManager.loadPromise;
+            console.log('AudioManager initialisé');
+        }
     
     isGameOver = false;
     isPaused = false;
@@ -2139,16 +2166,22 @@ async function startGame() {
                         
                         const screenPos = worldToScreen(newEntity.x, newEntity.y);
                         
-                        // Créer les effets visuels de capture
-                        createCaptureParticles({
-                            x: newEntity.x,
-                            y: newEntity.y,
-                            color: newEntity.color
-                        });
                         createShockwave(screenPos.x, screenPos.y, newEntity.color);
                         
                         if (newEntity.color === playerColor) {
                             createFloatingPoints(screenPos.x, screenPos.y, 1, '#fff');
+                            // Jouer le son quand c'est une capture par le joueur
+                            if (audioManager) {
+                                const player = entities.find(e => e.id === socket.id);
+                                if (player) {
+                                    const dx = newEntity.x - player.x;
+                                    const dy = newEntity.y - player.y;
+                                    const distance = Math.sqrt(dx * dx + dy * dy);
+                                    const maxDistance = 500;
+                                    const volume = Math.max(0, 1 - (distance / maxDistance));
+                                    audioManager.playSound('botConvert', volume);
+                                }
+                            }
                         }
                     }
                 }
@@ -2806,6 +2839,9 @@ function drawEntities() {
     entities.forEach(entity => {
         lastEntityStates.set(entity.id, { ...entity });
     });
+
+        // Mettre à jour les effets visuels
+        updateVisualEffects();
 
     context.restore();
 }

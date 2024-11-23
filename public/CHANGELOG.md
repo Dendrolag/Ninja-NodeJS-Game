@@ -1,6 +1,12 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
 
+## [0.7.3] - 2024-11-23
+### Corrections
+- Joystick mobile de nouveau fonctionnel
+- Son de capture des bots fonctionnel
+- Optimisation des effets visuels de capture
+
 ## [0.7.2] - 2024-11-22
 ### Ajouts
 - Effet visuel +1 sur les bots capturés, +15 sur les black ninjas capturés
