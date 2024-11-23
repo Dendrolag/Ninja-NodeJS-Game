@@ -157,7 +157,19 @@ export class AudioManager {
             music.play().catch(err => console.warn('Erreur de lecture musique:', err));
         }
     }
-    
+    pauseMusic() {
+        if (this.currentMusic) {
+            this.currentMusic.pause();
+        }
+    }
+
+    resumeMusic() {
+        if (this.currentMusic) {
+            this.currentMusic.play().catch(error => {
+                console.warn('Impossible de reprendre la musique:', error);
+            });
+        }
+    }
 
     stopMusic() {
         if (this.currentMusic) {

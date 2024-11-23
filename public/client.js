@@ -2338,6 +2338,7 @@ async function startGame() {
                 audioManager.stopLoopingSound('speedBoostActive');
                 audioManager.stopLoopingSound('invincibilityActive');
                 audioManager.stopLoopingSound('revealActive');
+                audioManager.pauseMusic();
             }
             pauseButton.disabled = socket.id !== data.pausedBy;
             showPauseOverlay();
@@ -2348,6 +2349,10 @@ async function startGame() {
         socket.on('resumeGame', () => {
             isPaused = false;
             pauseButton.disabled = false;
+            // Reprendre la musique si l'audioManager existe
+            if (audioManager) {
+                audioManager.resumeMusic();
+            }
             hidePauseOverlay();
         });
     }

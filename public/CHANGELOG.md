@@ -6,6 +6,7 @@ Tous les changements notables de ce projet seront documentés dans ce fichier.
 - Joystick mobile de nouveau fonctionnel
 - Son de capture des bots fonctionnel
 - Optimisation des effets visuels de capture
+- Pause et resume de la musique
 
 ## [0.7.2] - 2024-11-22
 ### Ajouts
