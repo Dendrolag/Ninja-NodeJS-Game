@@ -1,10 +1,63 @@
-// server.js
+/**
+ * Neon Ninja - Serveur de jeu
+ * 
+ * Architecture générale du serveur :
+ * 
+ * 1. Configuration et imports
+ *    - Express et Socket.IO pour la communication temps réel
+ *    - Configuration des fichiers statiques et des routes
+ * 
+ * 2. Configuration du jeu 
+ *    - Dimensions de la zone de jeu (GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT)
+ *    - Paramètres par défaut (DEFAULT_GAME_SETTINGS)
+ *    - Types de bonus et malus
+ *    - Configuration des zones spéciales
+ * 
+ * 3. Gestion des collisions et du terrain
+ *    - Classe CollisionMap : gère la carte des collisions
+ *    - Détection des collisions entre entités et avec le terrain
+ * 
+ * 4. Classes principales
+ *    - Entity : classe de base pour tous les éléments du jeu
+ *    - Player : gestion des joueurs (mouvements, captures, bonus)
+ *    - Bot : IA des bots standards (mouvements, comportements)
+ *    - BlackBot : IA spéciale pour les bots noirs (poursuite, capture)
+ *    - Bonus/Malus : gestion des power-ups et handicaps
+ * 
+ * 5. Salle d'attente
+ *    - Liste des joueurs connectés
+ *    - Attribution des rôles (propriétaire)
+ *    - Gestion des paramètres de partie
+ * 
+ * 6. Gestion de partie
+ *    - Démarrage/fin de partie
+ *    - Spawn des entités
+ *    - Mise à jour des états (positions, scores)
+ *    - Gestion des zones spéciales
+ * 
+ * 7. Communications Socket.IO
+ *    - Connexion/déconnexion des joueurs
+ *    - Synchronisation des états de jeu
+ *    - Chat et notifications
+ */
+
+// Configuration initiale du serveur et des middlewares
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import path from 'path';
+import { createCanvas, loadImage } from 'canvas';
+
+// Import des configurations
+import { 
+    GAME_CONFIG, 
+    DIRECTIONS, 
+    DEFAULT_GAME_SETTINGS, 
+    SPAWN_CONFIG,
+    TIME_CONFIG 
+} from './game-constants.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -13,7 +66,11 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server);
 
-// Configuration des fichiers statiques
+/**
+ * Configuration des fichiers statiques
+ * - /assets : dossier des ressources (images, sons, etc.)
+ * - /public : fichiers publics (HTML, CSS, JS client)
+ */
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use((req, res, next) => {
@@ -23,73 +80,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// Import des dépendances
-const GAME_WIDTH = 2000;
-const GAME_HEIGHT = 1500;
-
-// Paramètres par défaut du jeu
-const DEFAULT_GAME_SETTINGS = {
-    gameDuration: 180,
-    enableSpeedBoost: true,
-    speedBoostDuration: 10,
-    speedBoostSpawnRate: 25, // pourcentage de chance d'apparition
-    enableInvincibility: true,
-    invincibilityDuration: 10,
-    invincibilitySpawnRate: 15,
-    enableReveal: true,
-    revealDuration: 10,
-    revealSpawnRate: 20,
-    bonusSpawnInterval: 4, // intervalle en secondes entre chaque tentative d'apparition de bonus
-    initialBotCount: 30,
-    enableSpecialZones: true,
-    zoneMinDuration: 10,  // durée minimale en secondes
-    zoneMaxDuration: 30,  // durée maximale en secondes
-    zoneSpawnInterval: 15, // intervalle d'apparition en secondes
-    enabledZones: {  // Ajout de cette configuration
-        CHAOS: true,
-        REPEL: true,
-        ATTRACT: true,
-        STEALTH: true
-    
-    },
-    enableBlackBot: true,  // Activé par défaut maintenant
-    blackBotCount: 2,
-    blackBotStartPercent: 50, // Apparaît à 50% du temps de la partie
-    blackBotDetectionRadius: 150, // Rayon de détection en pixels
-    blackBotSpeed: 6, // Vitesse légèrement supérieure aux bots normaux
-    pointsLossPercent: 50, // Pourcentage de points perdus lors d'une capture
-
-    // Paramètres des malus
-    enableMalus: true,
-    malusSpawnInterval: 8, // Intervalle d'apparition en secondes
-    malusSpawnRate: 20,    // Taux d'apparition en pourcentage
-
-    enableReverseControls: true,
-    enableBlurVision: true,
-    enableNegativeVision: true,
-    
-    // Durées des différents malus (en secondes)
-    reverseControlsDuration: 10,
-    blurDuration: 12,
-    negativeDuration: 14,
-};
-
-const DIRECTIONS = {
-    IDLE: 'idle',
-    NORTH: 'north',
-    NORTH_EAST: 'north_east',
-    EAST: 'east',
-    SOUTH_EAST: 'south_east',
-    SOUTH: 'south',
-    SOUTH_WEST: 'south_west',
-    WEST: 'west',
-    NORTH_WEST: 'north_west'
-};
-
-// Configuration des fichiers statiques
-app.use('/assets', express.static(path.join(__dirname, 'assets')));
-app.use(express.static(path.join(__dirname, 'public')));
-
+// Route de test pour vérifier la présence de la map de collision
 app.get('/test-collision', (req, res) => {
     const collisionPath = path.join(__dirname, 'public', 'assets', 'map', 'collision.png');
     if (fs.existsSync(collisionPath)) {
@@ -99,80 +90,215 @@ app.get('/test-collision', (req, res) => {
     }
 });
 
-// Variables globales
-let players = {};
-let bots = {};
-let blackBots = {};
-const activeSockets = {};
-let bonuses = [];
-let gameStartTime = Date.now();
-let currentGameSettings = { ...DEFAULT_GAME_SETTINGS };
-let isPaused = false;
-let isGameOver = false;
-let pauseStartTime = null;
-let totalPauseDuration = 0;
-let botsInitialized = false;
-let specialZones = new Set();
-let zoneSpawnTimeout = null;
-let pausedBy = null;
-let activemalus = new Map();
-let malusItems = [];
-
-const waitingRoom = {
-    players: new Map(),
-    isGameStarted: false,
-    settings: { ...DEFAULT_GAME_SETTINGS }, // Ajout des paramètres par défaut
-    playersInGame: new Set() // ensemble des IDs des joueurs en partie
-};
-
+// =========================================================================
+// CONFIGURATION SERVEUR
+// =========================================================================
 const PORT = process.env.PORT || 3000;
 
-// Constantes du jeu
-const SPAWN_PROTECTION_TIME = 3000;
-const CAPTURE_COOLDOWN = 1000;
-const SAFE_SPAWN_DISTANCE = 100;
-const BOT_SPEED = 5;
-const UPDATE_INTERVAL = 50;
+// =========================================================================
+// ÉTATS GLOBAUX DU JEU
+// =========================================================================
 
-let startCountdown = null;
+/**
+ * État général de la partie
+ */
+let gameStartTime = Date.now();           // Horodatage du début de partie
+let isPaused = false;                     // État de pause
+let isGameOver = false;                   // État de fin de partie
+let pauseStartTime = null;                // Horodatage de la mise en pause
+let totalPauseDuration = 0;              // Durée totale des pauses
+let pausedBy = null;                      // ID du joueur qui a mis en pause
+let startCountdown = null;                // Timer du compte à rebours de départ
 
-const GAME_START_COUNTDOWN = 5; // 5 secondes de countdown avant le début
-const SOUND_EMIT_INTERVAL = 50; // Limiter l'émission des sons à 20 fois par seconde
-const playerLastSoundEmit = new Map();
+/**
+ * Collections d'entités du jeu
+ */
+let players = {};                         // Joueurs connectés
+let bots = {};                           // Bots standards
+let blackBots = {};                      // Bots noirs spéciaux
+let bonuses = [];                        // Bonus actifs
+let malusItems = [];                     // Malus actifs
+let botsInitialized = false;             // État d'initialisation des bots
 
+/**
+ * Zones spéciales et effets
+ */
+let specialZones = new Set();            // Zones spéciales actives
+let zoneSpawnTimeout = null;             // Timer de spawn des zones
+let activemalus = new Map();             // Malus actifs par joueur
 
-const availableColors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'];
+/**
+ * Gestion des connexions et du son
+ */
+const activeSockets = {};                // Sockets actifs des joueurs
+const playerLastSoundEmit = new Map();   // Dernier son émis par joueur
 
-// Constantes pour les zones
+// =========================================================================
+// SALLE D'ATTENTE
+// =========================================================================
+
+/**
+ * Configuration et état de la salle d'attente
+ */
+const waitingRoom = {
+    players: new Map(),                  // Joueurs dans la salle
+    isGameStarted: false,                // État de la partie
+    settings: { ...DEFAULT_GAME_SETTINGS },  // Paramètres de la partie
+    playersInGame: new Set()             // Joueurs actuellement en jeu
+};
+
+// =========================================================================
+// CONSTANTES VISUELLES
+// =========================================================================
+
+/**
+ * Couleurs disponibles pour les joueurs
+ * Palette de couleurs vives et distinctes
+ */
+const availableColors = [
+    '#FF0000',  // Rouge
+    '#00FF00',  // Vert
+    '#0000FF',  // Bleu
+    '#FFFF00',  // Jaune
+    '#FF00FF',  // Magenta
+    '#00FFFF'   // Cyan
+];
+
+/**
+ * Configuration des zones spéciales
+ * Définit l'apparence et les propriétés de chaque type de zone
+ */
 const ZONE_TYPES = {
     CHAOS: {
         id: 'CHAOS',
         name: 'Zone de Chaos',
-        color: 'rgba(255, 64, 64, 0.2)',
-        borderColor: 'rgba(255, 64, 64, 0.6)'
+        color: 'rgba(255, 64, 64, 0.2)',      // Rouge transparent
+        borderColor: 'rgba(255, 64, 64, 0.6)'  // Bordure rouge plus opaque
     },
     REPEL: {
         id: 'REPEL',
         name: 'Zone Répulsive',
-        color: 'rgba(64, 64, 255, 0.2)',
-        borderColor: 'rgba(64, 64, 255, 0.6)'
+        color: 'rgba(64, 64, 255, 0.2)',      // Bleu transparent
+        borderColor: 'rgba(64, 64, 255, 0.6)'  // Bordure bleue plus opaque
     },
     ATTRACT: {
         id: 'ATTRACT',
         name: 'Zone Attractive',
-        color: 'rgba(64, 255, 64, 0.2)',
-        borderColor: 'rgba(64, 255, 64, 0.6)'
+        color: 'rgba(64, 255, 64, 0.2)',      // Vert transparent
+        borderColor: 'rgba(64, 255, 64, 0.6)'  // Bordure verte plus opaque
     },
     STEALTH: {
         id: 'STEALTH',
         name: 'Zone d\'Invisibilité',
-        color: 'rgba(128, 0, 128, 0.2)',
-        borderColor: 'rgba(128, 0, 128, 0.6)'
+        color: 'rgba(128, 0, 128, 0.2)',      // Violet transparent
+        borderColor: 'rgba(128, 0, 128, 0.6)'  // Bordure violette plus opaque
     }
 };
 
-// Dans server.js, ajouter ces imports au début du fichier
-import { createCanvas, loadImage } from 'canvas';
+/**
+ * Gestionnaire centralisé des positions et mouvements dans le jeu
+ * Gère la validation des positions, les collisions et les déplacements
+ */
+/**
+ * Gestionnaire centralisé des positions et mouvements dans le jeu
+ * Gère la validation des positions, les collisions et les déplacements
+ */
+class PositionManager {
+    constructor(collisionMap) {
+        this.collisionMap = collisionMap;
+        this.entitiesPositions = new Map(); // Pour suivre les positions des entités
+    }
+
+    getValidPosition(radius = 16) {
+        const startTime = performance.now();
+        const maxAttempts = SPAWN_CONFIG.MAX_ATTEMPTS;
+        let attempts = 0;
+        
+        while (attempts < maxAttempts) {
+            const x = GAME_CONFIG.SPAWN_MARGIN + 
+                     Math.random() * (GAME_CONFIG.WIDTH - 2 * GAME_CONFIG.SPAWN_MARGIN);
+            const y = GAME_CONFIG.SPAWN_MARGIN + 
+                     Math.random() * (GAME_CONFIG.HEIGHT - 2 * GAME_CONFIG.SPAWN_MARGIN);
+            
+            if (this.isValidPosition(x, y, radius)) {
+                const endTime = performance.now();
+                console.log(`Position valide générée en ${endTime - startTime}ms après ${attempts + 1} tentatives`);
+                return { x, y };
+            }
+            attempts++;
+        }
+    
+        // Si aucune position valide n'est trouvée, utiliser la position de backup
+        const position = this._findBackupPosition(radius);
+        const endTime = performance.now();
+        console.log(`Position de backup générée en ${endTime - startTime}ms après ${maxAttempts} tentatives`);
+        return position;
+    }
+
+    isValidPosition(x, y, radius = 16) {
+        // Vérification des collisions avec le terrain
+        if (!this.collisionMap.canMove(x, y, x, y, radius)) {
+            return false;
+        }
+
+        // Vérification de la distance avec les autres entités
+        for (const pos of this.entitiesPositions.values()) {
+            const dx = x - pos.x;
+            const dy = y - pos.y;
+            if (Math.sqrt(dx * dx + dy * dy) < GAME_CONFIG.SAFE_SPAWN_DISTANCE) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    validateMove(fromX, fromY, toX, toY, radius = 16) {
+        if (!this.collisionMap.canMove(fromX, fromY, toX, toY, radius)) {
+            return false;
+        }
+
+        // Vérification des limites du jeu
+        if (toX < 0 || toX > GAME_CONFIG.WIDTH || toY < 0 || toY > GAME_CONFIG.HEIGHT) {
+            return false;
+        }
+
+        return true;
+    }
+
+    registerEntity(id, x, y) {
+        this.entitiesPositions.set(id, { x, y });
+    }
+
+    updateEntityPosition(id, x, y) {
+        if (this.entitiesPositions.has(id)) {
+            this.entitiesPositions.set(id, { x, y });
+        }
+    }
+
+    removeEntity(id) {
+        this.entitiesPositions.delete(id);
+    }
+
+    // Méthode interne, convention de nommage avec _ pour indiquer qu'elle est "privée"
+    _findBackupPosition(radius) {
+        const startX = GAME_CONFIG.WIDTH / 2;
+        const startY = GAME_CONFIG.HEIGHT / 2;
+        
+        for (let r = 1; r < 20; r++) {
+            for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 8) {
+                const x = startX + Math.cos(angle) * (r * SPAWN_CONFIG.GRID_SIZE);
+                const y = startY + Math.sin(angle) * (r * SPAWN_CONFIG.GRID_SIZE);
+                
+                if (this.isValidPosition(x, y, radius)) {
+                    return { x, y };
+                }
+            }
+        }
+        
+        return { x: startX, y: startY };
+    }
+}
 
 class CollisionMap {
     constructor() {
@@ -187,26 +313,22 @@ class CollisionMap {
             
             const originalImage = await loadImage(collisionPath);
             
-            // Créer un canvas à la taille du jeu
-            const canvas = createCanvas(GAME_WIDTH, GAME_HEIGHT);
+            const canvas = createCanvas(GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
             const ctx = canvas.getContext('2d');
             
-            // Redimensionner l'image aux dimensions du jeu
-            ctx.drawImage(originalImage, 0, 0, GAME_WIDTH, GAME_HEIGHT);
+            ctx.drawImage(originalImage, 0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
             
-            console.log(`Image redimensionnée de ${originalImage.width}x${originalImage.height} à ${GAME_WIDTH}x${GAME_HEIGHT}`);
+            console.log(`Image redimensionnée de ${originalImage.width}x${originalImage.height} à ${GAME_CONFIG.WIDTH}x${GAME_CONFIG.HEIGHT}`);
             
-            const imageData = ctx.getImageData(0, 0, GAME_WIDTH, GAME_HEIGHT);
+            const imageData = ctx.getImageData(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
             
-            // Créer la matrice de collision à la taille du jeu
-            this.collisionData = new Array(GAME_HEIGHT);
+            this.collisionData = new Array(GAME_CONFIG.HEIGHT);
             let collisionCount = 0;
             
-            for (let y = 0; y < GAME_HEIGHT; y++) {
-                this.collisionData[y] = new Array(GAME_WIDTH);
-                for (let x = 0; x < GAME_WIDTH; x++) {
-                    const index = (y * GAME_WIDTH + x) * 4;
-                    // Vérifier si le pixel est proche du noir
+            for (let y = 0; y < GAME_CONFIG.HEIGHT; y++) {
+                this.collisionData[y] = new Array(GAME_CONFIG.WIDTH);
+                for (let x = 0; x < GAME_CONFIG.WIDTH; x++) {
+                    const index = (y * GAME_CONFIG.WIDTH + x) * 4;
                     const r = imageData.data[index];
                     const g = imageData.data[index + 1];
                     const b = imageData.data[index + 2];
@@ -216,7 +338,7 @@ class CollisionMap {
                 }
             }
             
-            console.log(`Carte de collision initialisée: ${collisionCount} points de collision sur ${GAME_WIDTH * GAME_HEIGHT} points totaux`);
+            console.log(`Carte de collision initialisée: ${collisionCount} points de collision sur ${GAME_CONFIG.WIDTH * GAME_CONFIG.HEIGHT} points totaux`);
             
         } catch (error) {
             console.error('Erreur lors du chargement de la carte de collision:', error);
@@ -224,38 +346,20 @@ class CollisionMap {
         }
     }
 
-    checkCollision(x, y) {
-        if (!this.collisionData) return false;
-
-        const pixelX = Math.floor(x);
-        const pixelY = Math.floor(y);
-
-        // Vérification des limites
-        if (pixelX < 0 || pixelX >= GAME_WIDTH || pixelY < 0 || pixelY >= GAME_HEIGHT) {
-            return true;
-        }
-
-        // Vérification de la validité des indices
-        if (!this.collisionData[pixelY] || typeof this.collisionData[pixelY][pixelX] === 'undefined') {
-            return true;
-        }
-
-        return this.collisionData[pixelY][pixelX];
-    }
-
     canMove(fromX, fromY, toX, toY, radius = 16) {
-        // Point central
+        // Vérifier d'abord le point central
         if (this.checkCollision(toX, toY)) {
             return false;
         }
-
-        // Vérifier plusieurs points autour
-        const points = 8; // Nombre de points à vérifier
-        const radiusInner = radius * 0.7; // Rayon intérieur plus petit
+    
+        // Vérifier plusieurs points autour de l'entité pour une meilleure précision
+        const points = 8;  // Nombre de points à vérifier sur le périmètre
+        const radiusInner = radius * 0.7;  // Rayon intérieur plus petit pour une détection progressive
         
         for (let i = 0; i < points; i++) {
             const angle = (i / points) * Math.PI * 2;
-            // Vérifier deux cercles concentriques
+            
+            // Vérifier deux cercles concentriques pour une meilleure détection
             const checkX1 = toX + Math.cos(angle) * radius;
             const checkY1 = toY + Math.sin(angle) * radius;
             const checkX2 = toX + Math.cos(angle) * radiusInner;
@@ -265,39 +369,50 @@ class CollisionMap {
                 return false;
             }
         }
-
+    
         return true;
     }
 
-    findValidSpawnPosition() {
-        const margin = 50;
-        const maxAttempts = 100;
-        
-        for (let attempt = 0; attempt < maxAttempts; attempt++) {
-            const x = margin + Math.floor(Math.random() * (GAME_WIDTH - 2 * margin));
-            const y = margin + Math.floor(Math.random() * (GAME_HEIGHT - 2 * margin));
-            
-            if (this.canMove(x, y, x, y, 24)) {
-                return { x, y };
-            }
+    checkCollision(x, y) {
+        if (!this.collisionData) return false;
+
+        const pixelX = Math.floor(x);
+        const pixelY = Math.floor(y);
+
+        if (pixelX < 0 || pixelX >= GAME_CONFIG.WIDTH || pixelY < 0 || pixelY >= GAME_CONFIG.HEIGHT) {
+            return true;
         }
-        
-        return { x: GAME_WIDTH / 2, y: GAME_HEIGHT / 2 };
+
+        if (!this.collisionData[pixelY] || typeof this.collisionData[pixelY][pixelX] === 'undefined') {
+            return true;
+        }
+
+        return this.collisionData[pixelY][pixelX];
     }
+
+    // Les autres méthodes restent les mêmes, juste mettre à jour les références aux constantes
 
     initializeEmptyCollisionMap() {
         console.warn('Initialisation d\'une carte de collision vide');
-        this.collisionData = new Array(GAME_HEIGHT);
-        for (let y = 0; y < GAME_HEIGHT; y++) {
-            this.collisionData[y] = new Array(GAME_WIDTH).fill(false);
+        this.collisionData = new Array(GAME_CONFIG.HEIGHT);
+        for (let y = 0; y < GAME_CONFIG.HEIGHT; y++) {
+            this.collisionData[y] = new Array(GAME_CONFIG.WIDTH).fill(false);
         }
     }
 }
 
-// Créer une instance unique pour tout le serveur
+let currentGameSettings = { ...DEFAULT_GAME_SETTINGS };  // Initialisation avec les paramètres par défaut
 const collisionMap = new CollisionMap();
 
-export { collisionMap };
+// Après la création de collisionMap
+const positionManager = new PositionManager(collisionMap);
+
+// Fonction de test
+function testNewSpawnSystem() {
+    const position = positionManager.getValidPosition();
+    console.log('Test nouvelle position:', position);
+    return position;
+}
 
 // Classe pour gérer les zones
 class SpecialZone {
@@ -329,7 +444,7 @@ class SpecialZone {
 // Zones rondes :
 generateRandomShape() {
     // Calculer la taille maximale (1/5 de la zone de jeu)
-    const maxArea = (GAME_WIDTH * GAME_HEIGHT) / 5;
+    const maxArea = (GAME_CONFIG.WIDTH * GAME_CONFIG.HEIGHT) / 5;
     
     // Calculer le rayon maximal à partir de l'aire
     const maxRadius = Math.sqrt(maxArea / Math.PI);
@@ -339,8 +454,8 @@ generateRandomShape() {
     const radius = Math.random() * (maxRadius - minRadius) + minRadius;
     
     // Positionner le cercle en s'assurant qu'il reste dans les limites du jeu
-    const x = radius + Math.random() * (GAME_WIDTH - 2 * radius);
-    const y = radius + Math.random() * (GAME_HEIGHT - 2 * radius);
+    const x = radius + Math.random() * (GAME_CONFIG.WIDTH - 2 * radius);
+    const y = radius + Math.random() * (GAME_CONFIG.HEIGHT - 2 * radius);
     
     return {
         type: 'circle',
@@ -638,7 +753,7 @@ function manageSpecialZones() {
 class Entity {
     constructor(id, color = null) {
         this.id = id;
-        const spawnPos = getSpawnPosition();
+        const spawnPos = positionManager.getValidPosition();
         this.x = spawnPos.x;
         this.y = spawnPos.y;
         this.color = color || getRandomColor();
@@ -676,7 +791,7 @@ class Player extends Entity {
     constructor(id, nickname) {
         super(id, getUniqueColor());
         this.nickname = nickname;
-        const spawnPos = getSpawnPosition();
+        const spawnPos = positionManager.getValidPosition();
         this.x = spawnPos.x;
         this.y = spawnPos.y;
         this.captures = 0;
@@ -685,7 +800,7 @@ class Player extends Entity {
         this.botsControlled = 0;
         this.totalBotsCaptures = 0;
         this.capturedByBlackBot = 0;
-        this.spawnProtection = Date.now() + SPAWN_PROTECTION_TIME;
+        this.spawnProtection = Date.now() + TIME_CONFIG.SPAWN_PROTECTION_TIME;
         this.lastCapture = 0;
         this.type = 'player';
         this._invincibilityActive = false; 
@@ -722,25 +837,25 @@ class Player extends Entity {
     }
 
     respawn(excludeColors = [], keepColor = false) {
-        const spawnPos = getSpawnPosition();
+        const spawnPos = positionManager.getValidPosition();
         this.x = spawnPos.x;
         this.y = spawnPos.y;
         
         if (!keepColor) {
             this.color = getUniqueColor(excludeColors);
         }
-        this.spawnProtection = Date.now() + SPAWN_PROTECTION_TIME;
+        this.spawnProtection = Date.now() + TIME_CONFIG.SPAWN_PROTECTION_TIME;
     }
 
     canCapture() {
-        return Date.now() - this.lastCapture > CAPTURE_COOLDOWN;
+        return Date.now() - this.lastCapture > TIME_CONFIG.CAPTURE_COOLDOWN;
     }
 }
 
 class Bot extends Entity {
     constructor(id) {
         super(id);
-        const spawnPos = getSpawnPosition();
+        const spawnPos = positionManager.getValidPosition();
         this.x = spawnPos.x;
         this.y = spawnPos.y;
         this.vx = (Math.random() - 0.5) * 2;
@@ -809,8 +924,8 @@ class Bot extends Entity {
         // Essayer d'abord de trouver un chemin de sortie
         for (const angle of angles) {
             const radians = (angle * Math.PI) / 180;
-            const testX = this.x + Math.cos(radians) * BOT_SPEED * 2;
-            const testY = this.y + Math.sin(radians) * BOT_SPEED * 2;
+            const testX = this.x + Math.cos(radians) * GAME_CONFIG.BOT_SPEED * 2;
+            const testY = this.y + Math.sin(radians) * GAME_CONFIG.BOT_SPEED * 2;
 
             if (collisionMap.canMove(this.x, this.y, testX, testY, 8)) {
                 this.x = testX;
@@ -823,7 +938,7 @@ class Bot extends Entity {
         }
 
         // En dernier recours seulement, téléporter à une nouvelle position
-        const spawnPos = getSpawnPosition();
+        const spawnPos = positionManager.getValidPosition();
         this.x = spawnPos.x;
         this.y = spawnPos.y;
         this.changeDirection();
@@ -831,7 +946,7 @@ class Bot extends Entity {
     }
 
     unstuck() {
-        const spawnPos = getSpawnPosition();
+        const spawnPos = positionManager.getValidPosition();
         this.x = spawnPos.x;
         this.y = spawnPos.y;
         this.stuckCount = 0;
@@ -840,13 +955,13 @@ class Bot extends Entity {
         const angles = [0, 45, 90, 135, 180, 225, 270, 315];
         for (const angle of angles) {
             const radians = (angle * Math.PI) / 180;
-            const testX = this.x + Math.cos(radians) * BOT_SPEED * 2;
-            const testY = this.y + Math.sin(radians) * BOT_SPEED * 2;
+            const testX = this.x + Math.cos(radians) * GAME_CONFIG.BOT_SPEED * 2;
+            const testY = this.y + Math.sin(radians) * GAME_CONFIG.BOT_SPEED * 2;
 
             if (collisionMap.canMove(this.x, this.y, testX, testY, 8)) {
                 // Position valide trouvée, téléporter le bot légèrement plus loin
-                const escapeX = this.x + Math.cos(radians) * BOT_SPEED * 4;
-                const escapeY = this.y + Math.sin(radians) * BOT_SPEED * 4;
+                const escapeX = this.x + Math.cos(radians) * GAME_CONFIG.BOT_SPEED * 4;
+                const escapeY = this.y + Math.sin(radians) * GAME_CONFIG.BOT_SPEED * 4;
                 if (collisionMap.canMove(this.x, this.y, escapeX, escapeY, 8)) {
                     this.x = escapeX;
                     this.y = escapeY;
@@ -873,8 +988,8 @@ class Bot extends Entity {
             this.changeDirectionInterval = Math.random() * 2000 + 1000;
         }
 
-        const newX = this.x + this.vx * BOT_SPEED;
-        const newY = this.y + this.vy * BOT_SPEED;
+        const newX = this.x + this.vx * GAME_CONFIG.BOT_SPEED;
+        const newY = this.y + this.vy * GAME_CONFIG.BOT_SPEED;
 
         if (collisionMap.canMove(this.x, this.y, newX, newY, 8)) {
             this.x = newX;
@@ -885,8 +1000,8 @@ class Bot extends Entity {
         }
 
         // S'assurer que le bot reste dans les limites
-        this.x = Math.max(0, Math.min(GAME_WIDTH, this.x));
-        this.y = Math.max(0, Math.min(GAME_HEIGHT, this.y));
+        this.x = Math.max(0, Math.min(GAME_CONFIG.WIDTH, this.x));
+        this.y = Math.max(0, Math.min(GAME_CONFIG.HEIGHT, this.y));
     }
 
     changeDirection() {
@@ -902,8 +1017,8 @@ class Bot extends Entity {
             const testVx = Math.cos(newAngle);
             const testVy = Math.sin(newAngle);
             
-            const testX = this.x + testVx * BOT_SPEED * 2;
-            const testY = this.y + testVy * BOT_SPEED * 2;
+            const testX = this.x + testVx * GAME_CONFIG.BOT_SPEED * 2;
+            const testY = this.y + testVy * GAME_CONFIG.BOT_SPEED * 2;
 
             if (collisionMap.canMove(this.x, this.y, testX, testY, 8)) {
                 this.vx = testVx;
@@ -925,7 +1040,7 @@ class Bot extends Entity {
 class BlackBot extends Bot {
     constructor(id) {
         super(id);
-        const spawnPos = getSpawnPosition();
+        const spawnPos = positionManager.getValidPosition();
         this.x = spawnPos.x;
         this.y = spawnPos.y;
         this.color = '#000000';
@@ -934,7 +1049,7 @@ class BlackBot extends Bot {
         this.captureCooldown = 2000; // 2 secondes entre chaque capture
         this.detectionRadius = DEFAULT_GAME_SETTINGS.blackBotDetectionRadius;
         this.targetEntity = null;
-        this.baseSpeed = BOT_SPEED; // Utiliser la même vitesse que les autres bots
+        this.baseSpeed = GAME_CONFIG.BOT_SPEED; // Utiliser la même vitesse que les autres bots
         this.lastTargetSearch = 0;
         this.targetSearchInterval = 500;
         this.stuckCheckInterval = 300; // Vérifier plus souvent si bloqué
@@ -1035,8 +1150,8 @@ class BlackBot extends Bot {
         const newY = this.y + this.vy;
     
         // Garder dans les limites
-        this.x = Math.max(0, Math.min(GAME_WIDTH, newX));
-        this.y = Math.max(0, Math.min(GAME_HEIGHT, newY));
+        this.x = Math.max(0, Math.min(GAME_CONFIG.WIDTH, newX));
+        this.y = Math.max(0, Math.min(GAME_CONFIG.HEIGHT, newY));
     
         // Vérifier collision avec la cible
         if (distance < 20) {  
@@ -1139,7 +1254,7 @@ class Bonus {
         this.type = type;
         
         // Trouver une position valide
-        const pos = getSpawnPosition();
+        const pos = positionManager.getValidPosition();
         this.x = pos.x;
         this.y = pos.y;
     
@@ -1192,7 +1307,7 @@ class Malus {
         this.id = `malus_${Date.now()}_${Math.random()}`;
         this.type = type;
         
-        const pos = getSpawnPosition();
+        const pos = positionManager.getValidPosition();
         this.x = pos.x;
         this.y = pos.y;
     
@@ -1299,75 +1414,6 @@ function getUniqueColor(excludeColors = []) {
         } while (forbiddenColors.includes(newColor));
         return newColor;
     }
-}
-
-// Dans server.js, ajoutons une constante pour la marge
-const SPAWN_MARGIN = 100; // 100 pixels de marge depuis les bords
-
-function getSpawnPosition() {
-    const MAX_ATTEMPTS = 100;
-    const SPAWN_MARGIN = 100;
-    let attempts = 0;
-    
-    while (attempts < MAX_ATTEMPTS) {
-        // Générer une position avec marge
-        const x = SPAWN_MARGIN + Math.random() * (GAME_WIDTH - 2 * SPAWN_MARGIN);
-        const y = SPAWN_MARGIN + Math.random() * (GAME_HEIGHT - 2 * SPAWN_MARGIN);
-
-        // Vérifier les collisions de manière approfondie
-        if (!isValidSpawnLocation(x, y)) {
-            attempts++;
-            continue;
-        }
-
-        return { x, y };
-    }
-
-    // Si aucune position n'est trouvée après MAX_ATTEMPTS essais, essayer au centre avec offset
-    return findSafeBackupPosition();
-}
-
-function isValidSpawnLocation(x, y, radius = 24) {
-    // 1. Vérifier la collision avec le terrain
-    if (!collisionMap.canMove(x, y, x, y, radius)) {
-        return false;
-    }
-
-    // 2. Vérifier la distance avec les autres entités
-    const allEntities = [
-        ...Object.values(players),
-        ...Object.values(bots),
-        ...Object.values(blackBots)
-    ];
-
-    return allEntities.every(entity => {
-        const dx = x - entity.x;
-        const dy = y - entity.y;
-        return Math.sqrt(dx * dx + dy * dy) >= SAFE_SPAWN_DISTANCE;
-    });
-}
-
-function findSafeBackupPosition() {
-    const GRID_SIZE = 50; // Taille de la grille pour la recherche
-    const startX = GAME_WIDTH / 2;
-    const startY = GAME_HEIGHT / 2;
-    
-    // Chercher en spirale depuis le centre
-    for (let radius = 1; radius < 20; radius++) {
-        for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 8) {
-            const x = startX + Math.cos(angle) * (radius * GRID_SIZE);
-            const y = startY + Math.sin(angle) * (radius * GRID_SIZE);
-            
-            if (x < 0 || x >= GAME_WIDTH || y < 0 || y >= GAME_HEIGHT) continue;
-            
-            if (isValidSpawnLocation(x, y)) {
-                return { x, y };
-            }
-        }
-    }
-    
-    console.error("Aucune position de spawn valide trouvée, utilisation du centre");
-    return { x: GAME_WIDTH / 2, y: GAME_HEIGHT / 2 };
 }
 
 function calculateTimeLeft() {
@@ -1901,10 +1947,10 @@ io.on('connection', (socket) => {
             activeSockets[socket.id] = socket;
     
             // Faire apparaître le joueur à une position sûre
-            const spawnPos = getSpawnPosition();
+            const spawnPos = positionManager.getValidPosition();
             newPlayer.x = spawnPos.x;
             newPlayer.y = spawnPos.y;
-            newPlayer.spawnProtection = Date.now() + SPAWN_PROTECTION_TIME;
+            newPlayer.spawnProtection = Date.now() + TIME_CONFIG.SPAWN_PROTECTION_TIME;
     
             // Mettre à jour le statut dans la salle d'attente
             const playerData = waitingRoom.players.get(socket.id);
@@ -2171,7 +2217,7 @@ io.on('connection', (socket) => {
      
             socket.removeAllListeners('cancelGameStart');
             
-            let countdown = GAME_START_COUNTDOWN;
+            let countdown = TIME_CONFIG.GAME_START_COUNTDOWN;
             let canCancel = true;
             
             io.emit('gameStartCountdown', { countdown, canCancel });
@@ -2368,8 +2414,8 @@ socket.on('move', (data) => {
     }
     
     // S'assurer que le joueur reste dans les limites
-    player.x = Math.max(0, Math.min(GAME_WIDTH, player.x));
-    player.y = Math.max(0, Math.min(GAME_HEIGHT, player.y));
+    player.x = Math.max(0, Math.min(GAME_CONFIG.WIDTH, player.x));
+    player.y = Math.max(0, Math.min(GAME_CONFIG.HEIGHT, player.y));
     
     // Mettre à jour la direction
     if (player.x !== oldX || player.y !== oldY) {
@@ -2384,7 +2430,7 @@ socket.on('move', (data) => {
     const now = Date.now();
     const lastEmit = playerLastSoundEmit.get(socket.id) || 0;
 
-    if (now - lastEmit >= SOUND_EMIT_INTERVAL) {
+    if (now - lastEmit >= TIME_CONFIG.SOUND_EMIT_INTERVAL) {
     // Émettre le son aux autres joueurs
     Object.values(players).forEach(otherPlayer => {
         if (otherPlayer.id !== socket.id) {
@@ -2494,17 +2540,10 @@ socket.on('move', (data) => {
 setInterval(() => {
     if (!isPaused && !isGameOver) {
         updateBots();
-        updatePlayerBonuses(); // Ajouter cette ligne
+        updatePlayerBonuses();
         sendUpdates();
     }
-}, UPDATE_INTERVAL);
-
-// Intervalle pour l'ajout de nouveaux bots
-setInterval(() => {
-    if (!isPaused && !isGameOver && Object.keys(bots).length < currentGameSettings.initialBotCount * 2) {
-        addBot();
-    }
-}, 3000);
+}, TIME_CONFIG.UPDATE_INTERVAL);
 
 // Premier spawn de bonus
 setTimeout(spawnBonus, 3000);
