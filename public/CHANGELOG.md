@@ -1,6 +1,16 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
 
+## [0.7.5] - 2024-12-06
+### Ajouts
+- Ajout d'un sélecteur de Map dans les options de la partie
+- Ajout d'un mode miroir
+
+## [0.7.4] - 2024-12-04
+### Optimisations techniques
+- Séparation des constantes dans un fichier dédié 
+- Optimisation du spawn des entités avec une nouvelle fonction plus performante
+
 ## [0.7.3] - 2024-11-23
 ### Corrections
 - Joystick mobile de nouveau fonctionnel

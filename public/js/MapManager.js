@@ -1,3 +1,5 @@
+import { DEFAULT_GAME_SETTINGS } from './game-constants.js';
+
 // MapManager.js
 export class MapManager {
     constructor(canvas, options = {}) {
@@ -18,10 +20,16 @@ export class MapManager {
             collision: new Image(),
             foreground: new Image()
         };
+        // Récupérer la map sélectionnée ou utiliser map1 par défaut
+        const selectedMap = options.selectedMap || 'map1';
+        const mirrorMode = options.mirrorMode || false;
         
-        this.mapImages.background.src = '/assets/map/background.png';
-        this.mapImages.collision.src = '/assets/map/collision.png';
-        this.mapImages.foreground.src = '/assets/map/foreground.png';
+        // Construction du chemin en fonction de la map sélectionnée
+        const basePath = `/assets/maps/${selectedMap}/${mirrorMode ? 'mirror' : 'normal'}`;
+        
+        this.mapImages.background.src = `${basePath}/background.png`;
+        this.mapImages.collision.src = `${basePath}/collision.png`;
+        this.mapImages.foreground.src = `${basePath}/foreground.png`;
         
         // Récupérer les dimensions depuis les options
         this.mapWidth = options.mapWidth || 2000;
@@ -37,12 +45,21 @@ export class MapManager {
 
     async loadLayers() {
         try {
-            // Ajouter des logs pour déboguer
-            console.log('Début du chargement des calques');
+            const gameSettings = waitingRoom.settings || DEFAULT_GAME_SETTINGS;
+            const mapId = gameSettings.selectedMap || 'map1'; // au lieu de 'tokyo'
+            const mirrorMode = gameSettings.mirrorMode || false;
             
-            this.layers.background.src = '/assets/map/background.png';
-            this.layers.collision.src = '/assets/map/collision.png';
-            this.layers.foreground.src = '/assets/map/foreground.png';
+            const basePath = `/assets/maps/${mapId}/${mirrorMode ? 'mirror' : 'normal'}`;
+            
+            console.log('Chargement de la map:', {
+                mapId: mapId,
+                mirrorMode: mirrorMode,
+                basePath: basePath
+            });
+            
+            this.layers.background.src = `${basePath}/background.png`;
+            this.layers.collision.src = `${basePath}/collision.png`;
+            this.layers.foreground.src = `${basePath}/foreground.png`;
 
             // Vérifier que les chemins sont corrects
             console.log('Chemins des images:', {
@@ -92,6 +109,25 @@ export class MapManager {
                 })
             )
         );
+    }
+
+    async updateMap(selectedMap, mirrorMode) {
+        const basePath = `/assets/maps/${selectedMap}/${mirrorMode ? 'mirror' : 'normal'}`;
+        
+        // Charger les nouvelles images
+        this.layers.background.src = `${basePath}/background.png`;
+        this.layers.collision.src = `${basePath}/collision.png`;
+        this.layers.foreground.src = `${basePath}/foreground.png`;
+
+        // Attendre que les images soient chargées
+        await Promise.all([
+            this.loadImage(this.layers.background),
+            this.loadImage(this.layers.collision),
+            this.loadImage(this.layers.foreground)
+        ]);
+
+        // Réinitialiser les données de collision avec la nouvelle map
+        await this.initializeCollisionData();
     }
 
     async initializeCollisionData() {

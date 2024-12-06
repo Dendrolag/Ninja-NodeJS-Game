@@ -73,6 +73,8 @@ const io = new Server(server);
  */
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/assets/maps', express.static(path.join(__dirname, 'public', 'assets', 'maps')));
+
 app.use((req, res, next) => {
     if (req.url.endsWith('.js')) {
         res.type('application/javascript');
@@ -80,14 +82,26 @@ app.use((req, res, next) => {
     next();
 });
 
-// Route de test pour vérifier la présence de la map de collision
-app.get('/test-collision', (req, res) => {
-    const collisionPath = path.join(__dirname, 'public', 'assets', 'map', 'collision.png');
-    if (fs.existsSync(collisionPath)) {
-        res.send(`Le fichier existe à : ${collisionPath}`);
-    } else {
-        res.send(`Le fichier n'existe PAS à : ${collisionPath}`);
-    }
+// Route de test pour vérifier la présence des maps
+app.get('/test-maps', (req, res) => {
+    const mapsBasePath = path.join(__dirname, 'public', 'assets', 'maps');
+    const maps = ['map1']; // Liste des maps disponibles
+    
+    const mapStatus = maps.map(mapName => {
+        const normalPath = path.join(mapsBasePath, mapName, 'normal', 'collision.png');
+        const mirrorPath = path.join(mapsBasePath, mapName, 'mirror', 'collision.png');
+        
+        return {
+            map: mapName,
+            normal: fs.existsSync(normalPath),
+            mirror: fs.existsSync(mirrorPath)
+        };
+    });
+
+    res.json({
+        mapsBasePath,
+        status: mapStatus
+    });
 });
 
 // =========================================================================
@@ -222,7 +236,6 @@ class PositionManager {
             
             if (this.isValidPosition(x, y, radius)) {
                 const endTime = performance.now();
-                console.log(`Position valide générée en ${endTime - startTime}ms après ${attempts + 1} tentatives`);
                 return { x, y };
             }
             attempts++;
@@ -306,9 +319,10 @@ class CollisionMap {
         this.initialize();
     }
 
-    async initialize() {
+    async initialize(mapId = 'map1', mirrorMode = false) {
         try {
-            const collisionPath = path.join(__dirname, 'public', 'assets', 'map', 'collision.png');
+            const collisionPath = path.join(__dirname, 'public', 'assets', 'maps', mapId, mirrorMode ? 'mirror' : 'normal', 'collision.png');
+            
             console.log('Chargement de la carte de collision depuis:', collisionPath);
             
             const originalImage = await loadImage(collisionPath);
@@ -317,8 +331,6 @@ class CollisionMap {
             const ctx = canvas.getContext('2d');
             
             ctx.drawImage(originalImage, 0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
-            
-            console.log(`Image redimensionnée de ${originalImage.width}x${originalImage.height} à ${GAME_CONFIG.WIDTH}x${GAME_CONFIG.HEIGHT}`);
             
             const imageData = ctx.getImageData(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
             
@@ -338,12 +350,19 @@ class CollisionMap {
                 }
             }
             
-            console.log(`Carte de collision initialisée: ${collisionCount} points de collision sur ${GAME_CONFIG.WIDTH * GAME_CONFIG.HEIGHT} points totaux`);
+            console.log(`Carte de collision initialisée: ${collisionCount} points de collision`);
+            return true;
             
         } catch (error) {
             console.error('Erreur lors du chargement de la carte de collision:', error);
             this.initializeEmptyCollisionMap();
+            return false;
         }
+    }
+
+    // Ajout d'une méthode pour mettre à jour les collisions
+    async updateCollisions(mapId, mirrorMode) {
+        return this.initialize(mapId, mirrorMode);
     }
 
     canMove(fromX, fromY, toX, toY, radius = 16) {
@@ -2171,17 +2190,42 @@ io.on('connection', (socket) => {
             // Filtrer les paramètres audio s'ils sont présents
             const { musicVolume, soundVolume, ...gameSettings } = settings;
             
-            waitingRoom.settings = {
-                ...waitingRoom.settings,
-                ...gameSettings,
-                enabledZones: {
-                    ...waitingRoom.settings.enabledZones,
-                    ...settings.enabledZones
-                }
-            };
-            
-            // Informer tous les joueurs des changements
-            io.emit('gameSettingsUpdated', waitingRoom.settings);
+            // Vérifier si la map ou le mode miroir change
+            if (gameSettings.selectedMap !== waitingRoom.settings.selectedMap || 
+                gameSettings.mirrorMode !== waitingRoom.settings.mirrorMode) {
+                // Mettre à jour les collisions en premier
+                collisionMap.updateCollisions(gameSettings.selectedMap, gameSettings.mirrorMode)
+                    .then(() => {
+                        // Puis mettre à jour les paramètres
+                        waitingRoom.settings = {
+                            ...waitingRoom.settings,
+                            ...gameSettings,
+                            enabledZones: {
+                                ...waitingRoom.settings.enabledZones,
+                                ...settings.enabledZones
+                            },
+                        };
+                        
+                        // Informer tous les joueurs des changements
+                        io.emit('gameSettingsUpdated', waitingRoom.settings);
+                    })
+                    .catch(error => {
+                        console.error('Erreur lors de la mise à jour des collisions:', error);
+                    });
+            } else {
+                // Si pas de changement de map, mise à jour normale
+                waitingRoom.settings = {
+                    ...waitingRoom.settings,
+                    ...gameSettings,
+                    enabledZones: {
+                        ...waitingRoom.settings.enabledZones,
+                        ...settings.enabledZones
+                    },
+                };
+                
+                // Informer tous les joueurs des changements
+                io.emit('gameSettingsUpdated', waitingRoom.settings);
+            }
         }
     });
 

@@ -11,7 +11,7 @@ const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
 const nicknameInput = document.getElementById('nicknameInput');
 
-const GAME_VERSION = "v0.7.3";  // À mettre à jour à chaque déploiement
+const GAME_VERSION = "v0.7.5";  // À mettre à jour à chaque déploiement
 
 // Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
@@ -19,6 +19,11 @@ const saveSettingsButton = document.getElementById('saveSettingsButton');
 const backToMenuButton = document.getElementById('backToMenuButton');
 const resetSettingsButton = document.getElementById('resetSettingsButton');
 const WARNING_THRESHOLD = 3000; // 3 secondes avant disparition
+const mapSelector = document.getElementById('mapSelector');
+const mirrorModeCheckbox = document.getElementById('mirrorMode');
+
+mapSelector.addEventListener('change', updateGameSettings);
+mirrorModeCheckbox.addEventListener('change', updateGameSettings);
 
 // Éléments de la salle d'attente
 const waitingRoomScreen = document.getElementById('waitingRoom');
@@ -216,17 +221,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         musicVolume: 0.3,
         soundVolume: 0.5
     });
-        // Attendre que l'audio soit chargé
-        try {
-            await audioManager.loadPromise;
+    // Attendre que l'audio soit chargé
+    try {
+        await audioManager.loadPromise;
             
-            // Vérifier si nous sommes sur l'écran principal (menu)
-            if (mainMenu.classList.contains('active')) {
-                audioManager.playMusic('menu');
-            }
-        } catch (error) {
-            console.error('Erreur lors du chargement de l\'audio:', error);
+        // Vérifier si nous sommes sur l'écran principal (menu)
+        if (mainMenu.classList.contains('active')) {
+            audioManager.playMusic('menu');
         }
+    } catch (error) {
+        console.error('Erreur lors du chargement de l\'audio:', error);
+    }
     // Initialiser le canvas
     canvas = document.getElementById('gameCanvas');
     if (!canvas) {
@@ -1091,6 +1096,8 @@ saveSettingsButton.addEventListener('click', () => {
     if (isRoomOwner) {
         const newSettings = {
             gameDuration: parseInt(gameDurationInput.value),
+            selectedMap: mapSelector.value,
+            mirrorMode: mirrorModeCheckbox.checked,
             initialBotCount: parseInt(initialBotCountInput.value),
             enableSpecialZones: enableSpecialZonesCheckbox.checked,
             enabledZones: {
@@ -1132,6 +1139,57 @@ saveSettingsButton.addEventListener('click', () => {
     
     settingsMenu.style.display = 'none';
 });
+
+function updateGameSettings() {
+    if (isRoomOwner) {
+        const newSettings = {
+            gameDuration: parseInt(gameDurationInput.value),
+            selectedMap: mapSelector.value,
+            mirrorMode: mirrorModeCheckbox.checked,
+            initialBotCount: parseInt(initialBotCountInput.value),
+            enableSpecialZones: enableSpecialZonesCheckbox.checked,
+            enabledZones: {
+                CHAOS: enableChaosZoneCheckbox.checked,
+                REPEL: enableRepelZoneCheckbox.checked,
+                ATTRACT: enableAttractZoneCheckbox.checked,
+                STEALTH: enableStealthZoneCheckbox.checked
+            },
+            enableBlackBot: enableBlackBotCheckbox.checked,
+            blackBotCount: parseInt(blackBotCountInput.value),
+
+            bonusSpawnInterval: parseInt(bonusSpawnIntervalInput.value),
+            
+            enableSpeedBoost: enableSpeedBoostCheckbox.checked,
+            speedBoostDuration: parseInt(speedBoostDurationInput.value),
+            speedBoostSpawnRate: parseInt(speedBoostSpawnRateInput.value),
+
+            enableInvincibility: enableInvincibilityCheckbox.checked,
+            invincibilityDuration: parseInt(invincibilityDurationInput.value),
+            invincibilitySpawnRate: parseInt(invincibilitySpawnRateInput.value),
+
+            enableReveal: enableRevealCheckbox.checked,
+            revealDuration: parseInt(revealDurationInput.value),
+            revealSpawnRate: parseInt(revealSpawnRateInput.value),
+
+            enableMalus: enableMalusCheckbox.checked,
+            malusSpawnInterval: parseInt(malusSpawnIntervalInput.value),
+            malusSpawnRate: parseInt(malusSpawnRateInput.value),
+            reverseControlsDuration: parseInt(reverseControlsDurationInput.value),
+            blurDuration: parseInt(blurDurationInput.value),
+            negativeDuration: parseInt(negativeDurationInput.value),
+            enableReverseControls: enableReverseControlsCheckbox.checked,
+            enableBlurVision: enableBlurVisionCheckbox.checked,
+            enableNegativeVision: enableNegativeVisionCheckbox.checked,        
+        };
+
+        if (mapManager) {
+            mapManager.updateMap(newSettings.selectedMap, newSettings.mirrorMode)
+                .catch(error => console.error('Erreur lors du changement de map:', error));
+        }
+
+        socket.emit('updateGameSettings', newSettings);
+    }
+}
 
 // gestion de l'activation/désactivation globale des zones
 enableSpecialZonesCheckbox.addEventListener('change', (e) => {
@@ -1282,10 +1340,15 @@ startButton.addEventListener('click', () => {
 
     // écouteur pour les mises à jour des paramètres
     socket.on('gameSettingsUpdated', (settings) => {
-        // Mettre à jour l'interface
+        // Code existant de mise à jour des paramètres
         updateSettingsUI(settings);
-        // Mettre à jour les paramètres locaux
         gameSettings = settings;
+    
+        // Mettre à jour la map pour tous les joueurs
+        if (mapManager) {
+            mapManager.updateMap(settings.selectedMap, settings.mirrorMode)
+                .catch(error => console.error('Erreur lors du changement de map:', error));
+        }
     });
     
     // Écouter les mises à jour de la salle d'attente
@@ -1869,6 +1932,10 @@ function handlePauseClick() {
 function updateSettingsUI(settings) {
     // Mettre à jour tous les champs avec les nouvelles valeurs
     gameDurationInput.value = settings.gameDuration;
+    // Mise à jour des paramètres de map
+    mapSelector.value = settings.selectedMap || 'map1';
+    mirrorModeCheckbox.checked = settings.mirrorMode || false;
+
     enableSpeedBoostCheckbox.checked = settings.enableSpeedBoost;
     speedBoostDurationInput.value = settings.speedBoostDuration;
     enableInvincibilityCheckbox.checked = settings.enableInvincibility;
