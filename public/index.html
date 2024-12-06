@@ -21,6 +21,32 @@
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
+    <div id="audioControls" class="audio-controls">
+        <button id="audioToggle" class="audio-toggle">
+            <img src="/assets/images/sound.svg" alt="Audio" class="audio-icon">
+        </button>
+        
+        <div id="audioPanel" class="audio-panel hidden">
+            <h3>Paramètres Audio</h3>
+            <div class="audio-settings">
+                <div class="setting-group">
+                    <label for="musicVolume">Musique</label>
+                    <input type="range" id="musicVolume" min="0" max="100" value="50">
+                    <span class="volume-value">50%</span>
+                </div>
+                
+                <div class="setting-group">
+                    <label for="soundVolume">Sons</label>
+                    <input type="range" id="soundVolume" min="0" max="100" value="50">
+                    <span class="volume-value">50%</span>
+                </div>
+                
+                <button id="muteToggle" class="mute-toggle">
+                    <img src="/assets/images/mute.svg" alt="Mute" class="mute-icon">
+                </button>
+            </div>
+        </div>
+    </div>
     <!-- Menu principal -->
     <div id="mainMenu" class="active">
         <div class="menu-content">
@@ -199,23 +225,7 @@
     <!-- Menu des paramètres -->
    <div id="settingsMenu" style="display: none;">
     <div class="settings-content">
-        <h2>Paramètres du jeu</h2>
-        <div class="setting-group">
-            <div class="setting-header">
-                Audio
-            </div>
-            <div class="setting-details">
-                <div>
-                    Musique : 
-                    <input type="range" id="musicVolume" min="0" max="100" value="30">
-                </div>
-                <div>
-                    Sons : 
-                    <input type="range" id="soundVolume" min="0" max="100" value="50">
-                </div>
-            </div>
-        </div>
-        
+        <h2>Paramètres de la partie</h2>    
         <!-- Paramètres de base -->
         <div class="setting-group">
             <div class="setting-details">
@@ -487,7 +497,10 @@
                 </div>
                 <div id="score"></div>
             </div>
-            <button id="pauseButton" class="game-button">Pause</button>
+
+            <button id="pauseButton">
+                <img src="/assets/images/pause.svg" alt="Pause" class="pause-icon">
+            </button>
         </div>
     </div>
 </div>

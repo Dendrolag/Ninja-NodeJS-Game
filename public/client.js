@@ -11,7 +11,7 @@ const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
 const nicknameInput = document.getElementById('nicknameInput');
 
-const GAME_VERSION = "v0.7.5";  // À mettre à jour à chaque déploiement
+const GAME_VERSION = "v0.7.6";  // À mettre à jour à chaque déploiement
 
 // Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
@@ -1016,6 +1016,69 @@ function addButtonClickSound(button) {
         }
     });
 }
+
+// Après l'initialisation de l'AudioManager
+function initializeAudioControls() {
+    const audioToggle = document.getElementById('audioToggle');
+    const audioPanel = document.getElementById('audioPanel');
+    const muteToggle = document.getElementById('muteToggle');
+    const musicVolume = document.getElementById('musicVolume');
+    const soundVolume = document.getElementById('soundVolume');
+    
+    // Initialiser les valeurs depuis l'AudioManager
+    if (audioManager) {
+        musicVolume.value = audioManager.musicVolume * 100;
+        soundVolume.value = audioManager.soundVolume * 100;
+        updateVolumeDisplays();
+    }
+
+    // Afficher/Masquer le panneau
+    audioToggle.addEventListener('click', () => {
+        audioPanel.classList.toggle('hidden');
+    });
+
+    // Gestion du mute
+    muteToggle.addEventListener('click', () => {
+        if (audioManager) {
+            audioManager.toggleMute();
+            muteToggle.classList.toggle('muted');
+            updateVolumeDisplays();
+        }
+    });
+
+    // Gestion des volumes
+    musicVolume.addEventListener('input', (e) => {
+        if (audioManager) {
+            audioManager.setMusicVolume(e.target.value / 100);
+            updateVolumeDisplays();
+        }
+    });
+
+    soundVolume.addEventListener('input', (e) => {
+        if (audioManager) {
+            audioManager.setSoundVolume(e.target.value / 100);
+            updateVolumeDisplays();
+        }
+    });
+
+    function updateVolumeDisplays() {
+        const volumes = audioPanel.querySelectorAll('.volume-value');
+        volumes[0].textContent = `${musicVolume.value}%`;
+        volumes[1].textContent = `${soundVolume.value}%`;
+    }
+
+    // Fermer le panneau en cliquant en dehors
+    document.addEventListener('click', (e) => {
+        if (!audioPanel.contains(e.target) && 
+            !audioToggle.contains(e.target) && 
+            !audioPanel.classList.contains('hidden')) {
+            audioPanel.classList.add('hidden');
+        }
+    });
+}
+
+// Ajouter l'appel à la fonction après l'initialisation de l'AudioManager
+initializeAudioControls();
 
 function createExplosionEffect(worldX, worldY) {
     const screenPos = worldToScreen(worldX, worldY);

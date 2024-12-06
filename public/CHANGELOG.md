@@ -1,6 +1,11 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
 
+## [0.7.6] - 2024-12-06
+### Ajouts
+- Ajout d'un bouton de gestion du son accessible partout
+- Ajout d'une fonction mute/unmute
+
 ## [0.7.5] - 2024-12-06
 ### Ajouts
 - Ajout d'un sélecteur de Map dans les options de la partie

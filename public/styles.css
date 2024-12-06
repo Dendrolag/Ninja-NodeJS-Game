@@ -356,7 +356,7 @@ input[type="text"]:focus, input[type="number"]:focus {
     transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    /*gap: 15px;*/
 }
 
 .setting-group:hover {
@@ -1513,29 +1513,6 @@ canvas {
     color: #cc99ff;
 }
 
-/* Style pour le bouton pause */
-#pauseButton {
-    pointer-events: auto;
-    position: fixed;
-    top: 0px;
-    right: 10px;
-    color: #2c3e50;
-    transition: all 0.3s ease;
-    color: white;
-    backdrop-filter: blur(4px);
-    border: 2px solid rgba(204, 153, 255, 0.3);
-}
-
-#pauseButton:hover {
-    background-color: #cc99ff;
-    transform: scale(1.05);
-}
-
-#pauseButton:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
 /* Styles pour les modales */
 .modal {
     position: fixed;
@@ -1648,23 +1625,6 @@ canvas {
     max-height: 400px;
     overflow-y: auto;
     padding-right: 10px;
-}
-
-/* Styles pour la pause */
-.pause-content {
-    text-align: center;
-}
-
-.pause-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    margin-top: 30px;
-}
-
-.pause-buttons button {
-    width: 100%;
-    min-width: 200px;
 }
 
 #waitingRoom {
@@ -2341,14 +2301,6 @@ input[type="checkbox"]:disabled + label {
     }
 }
 
-    /* Ajuster le bouton pause */
-    #pauseButton {
-        top: 10px;
-        right: 10px;
-        padding: 8px 15px;
-        font-size: 14px;
-    }
-
     /* Ajustement du conteneur principal du jeu pour le zoom */
     #gameContainer {
         overflow: hidden;
@@ -2705,4 +2657,161 @@ input[type="checkbox"]:disabled + label {
 .map-mirror:disabled {
     cursor: not-allowed;
     opacity: 0.5;
+}
+
+/* Style pour le bouton pause */
+#pauseButton {
+    pointer-events: auto;
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: none;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(5px);
+    transition: all 0.3s ease;
+    border: 2px solid rgba(204, 153, 255, 0.3);
+}
+
+#pauseButton:hover {
+    background: rgba(0, 0, 0, 0.7);
+    transform: scale(1.1);
+}
+
+#pauseButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pause-icon {
+    width: 25px;
+    height: 25px;
+    filter: invert(1);
+}
+
+/* Styles pour la pause */
+.pause-content {
+    text-align: center;
+}
+
+.pause-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+
+/* Contrôles audio flottants */
+.audio-controls {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+    color: #2c3e50;
+    transition: all 0.3s ease;
+    color: white;
+    backdrop-filter: blur(4px);
+    border: 2px solid rgba(204, 153, 255, 0.3);
+    border-radius: 50%;
+}
+
+.audio-toggle {
+    background: rgba(0, 0, 0, 0.5);
+    border: none;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(5px);
+    transition: all 0.3s ease;
+}
+
+.audio-toggle:hover {
+    background: rgba(0, 0, 0, 0.7);
+    transform: scale(1.1);
+}
+
+.audio-icon {
+    width: 25px;
+    height: 25px;
+    filter: invert(1);
+}
+
+.mute-icon {
+    width: 25px;
+    height: 25px;
+    filter: invert(1);
+}
+
+.audio-panel {
+    position: absolute;
+    top: 50px;
+    right: 0;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 15px;
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    min-width: 250px;
+}
+
+.audio-panel h3 {
+    color: #fff;
+    margin: 0 0 15px 0;
+    font-size: 16px;
+}
+
+.audio-settings .setting-group {
+    margin-bottom: 10px;
+}
+
+.audio-settings label {
+    display: block;
+    color: #fff;
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+.audio-settings input[type="range"] {
+    width: 100%;
+    margin: 5px 0;
+}
+
+.volume-value {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+    float: right;
+}
+
+.mute-toggle {
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.mute-toggle.muted {
+    background: rgba(255, 0, 0, 0.2);
+}
+
+.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(10px);
 }

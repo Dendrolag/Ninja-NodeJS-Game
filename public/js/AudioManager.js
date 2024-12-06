@@ -297,11 +297,45 @@ export class AudioManager {
 
     toggleMute() {
         this.isMuted = !this.isMuted;
-        if (this.isMuted) {
-            this.stopMusic();
-        } else if (this.currentMusic) {
-            this.currentMusic.play();
+        
+        // Mettre à jour tous les sons et la musique avec le nouvel état
+        this.sounds.forEach(sound => {
+            if (this.isMuted) {
+                sound.volume = 0;
+            } else {
+                // Restaurer le volume précédent
+                sound.volume = this.soundVolume * this.volume;
+            }
+        });
+    
+        // Gérer la musique
+        if (this.currentMusic) {
+            if (this.isMuted) {
+                this.currentMusic.volume = 0;
+            } else {
+                this.currentMusic.volume = this.musicVolume * this.volume;
+                // Si la musique était en cours, la reprendre
+                if (!this.currentMusic.paused) {
+                    this.currentMusic.play().catch(err => console.warn('Erreur de lecture audio:', err));
+                }
+            }
         }
+    
+        // Pour les sons en boucle
+        this.activeLoopSounds.forEach((sound, key) => {
+            if (this.isMuted) {
+                sound.volume = 0;
+            } else {
+                sound.volume = this.soundVolume * this.volume;
+                // Si le son était en cours, le reprendre
+                if (!sound.paused) {
+                    sound.play().catch(err => console.warn('Erreur de lecture audio:', err));
+                }
+            }
+        });
+    
+        // Sauvegarder les paramètres
+        this.saveSettings();
     }
     saveSettings() {
         localStorage.setItem('audioSettings', JSON.stringify({
