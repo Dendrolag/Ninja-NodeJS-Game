@@ -112,22 +112,48 @@ export class MapManager {
     }
 
     async updateMap(selectedMap, mirrorMode) {
-        const basePath = `/assets/maps/${selectedMap}/${mirrorMode ? 'mirror' : 'normal'}`;
-        
-        // Charger les nouvelles images
-        this.layers.background.src = `${basePath}/background.png`;
-        this.layers.collision.src = `${basePath}/collision.png`;
-        this.layers.foreground.src = `${basePath}/foreground.png`;
-
-        // Attendre que les images soient chargées
-        await Promise.all([
-            this.loadImage(this.layers.background),
-            this.loadImage(this.layers.collision),
-            this.loadImage(this.layers.foreground)
-        ]);
-
-        // Réinitialiser les données de collision avec la nouvelle map
-        await this.initializeCollisionData();
+        try {
+            console.log('Début de la mise à jour de la map:', {
+                map: selectedMap,
+                mirror: mirrorMode
+            });
+    
+            const basePath = `/assets/maps/${selectedMap}/${mirrorMode ? 'mirror' : 'normal'}`;
+    
+            // Créer des promesses pour le chargement des images
+            const loadPromises = [];
+    
+            // Fonction helper pour charger une image
+            const loadImageWithPromise = (imageSrc) => {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = () => reject(new Error(`Échec du chargement de ${imageSrc}`));
+                    img.src = imageSrc;
+                });
+            };
+    
+            // Charger toutes les couches en parallèle
+            const [background, collision, foreground] = await Promise.all([
+                loadImageWithPromise(`${basePath}/background.png`),
+                loadImageWithPromise(`${basePath}/collision.png`),
+                loadImageWithPromise(`${basePath}/foreground.png`)
+            ]);
+    
+            // Une fois que tout est chargé, mettre à jour les layers
+            this.layers.background = background;
+            this.layers.collision = collision;
+            this.layers.foreground = foreground;
+    
+            // Réinitialiser les données de collision
+            await this.initializeCollisionData();
+    
+            console.log('Map mise à jour avec succès');
+            return true;
+        } catch (error) {
+            console.error('Erreur lors de la mise à jour de la map:', error);
+            throw error;
+        }
     }
 
     async initializeCollisionData() {

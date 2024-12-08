@@ -1374,6 +1374,26 @@ class Malus {
     }
 }
 
+function resetPlayer(player) {
+    // Réinitialisation complète de tous les compteurs d'un joueur
+    player.captures = 0;
+    player.capturedPlayers = {};
+    player.capturedBy = {};
+    player.botsControlled = 0;
+    player.totalBotsCaptures = 0;
+    player.capturedByBlackBot = 0;
+    player.speedBoostActive = false;
+    player.invincibilityActive = false;
+    player.revealActive = false;
+    player.blackBotsDestroyed = 0; // Réinitialisation explicite du compteur de black bots
+    if (player.bonusTimers) {
+        player.bonusTimers = {
+            speed: 0,
+            invincibility: 0,
+            reveal: 0
+        };
+    }
+}
 
 function updateMalusItems() {
     const currentTime = Date.now();
@@ -1662,16 +1682,21 @@ function calculatePlayerScores() {
     
     for (let id in players) {
         const player = players[id];
-        // Compter les bots contrôlés et ajouter les points des black bots détruits
+        // Compter les bots contrôlés actuellement
         const controlledPoints = Object.values(bots)
             .filter(bot => bot.color === player.color)
             .length;
+        
+        // Ajouter les points des black bots (15 points par black bot détruit)
         const blackBotPoints = player.blackBotsDestroyed * 15;
+        
+        // Score total = bots contrôlés + points des black bots
+        const totalPoints = controlledPoints + blackBotPoints;
         
         scores.push({
             id: player.id,
             nickname: player.nickname,
-            currentBots: controlledPoints + blackBotPoints, // Ajouter les points des black bots
+            currentBots: totalPoints, // Score total incluant les points des black bots
             totalBotsControlled: player.totalBotsCaptures,
             captures: player.captures,
             capturedPlayers: player.capturedPlayers,
@@ -1842,24 +1867,10 @@ function resetGame() {
     pauseStartTime = null;
     gameStartTime = Date.now();
     
-    // Réinitialiser tous les joueurs
-    for (let id in players) {
-        players[id].captures = 0;
-        players[id].capturedPlayers = {};
-        players[id].capturedBy = {};
-        players[id].botsControlled = 0;
-        players[id].capturedByBlackBot = 0;
-        players[id].speedBoostActive = false;
-        players[id].invincibilityActive = false;
-        players[id].revealActive = false;
-        if (players[id].bonusTimers) {
-            players[id].bonusTimers = {
-                speed: 0,
-                invincibility: 0,
-                reveal: 0
-            };
-        }
-    }
+    // Réinitialiser TOUS les joueurs avec la nouvelle fonction
+    Object.values(players).forEach(player => {
+        resetPlayer(player);
+    });
 
     // Réinitialiser les bots
     blackBots = {};
@@ -1868,6 +1879,7 @@ function resetGame() {
 
     // Réinitialiser les bonus
     bonuses = [];
+    maluses = [];
 
     // Redémarrer le spawn des bonus
     setTimeout(spawnBonus, 3000);
@@ -1884,8 +1896,31 @@ function handleGameStart(socket, data) {
     
     // Vérifier si le joueur existe déjà
     if (!players[socket.id]) {
+        // Créer un nouveau joueur
         players[socket.id] = new Player(socket.id, nickname);
         activeSockets[socket.id] = socket;
+    } else {
+        // Si le joueur existe déjà, réinitialiser ses scores
+        const player = players[socket.id];
+        player.captures = 0;
+        player.capturedPlayers = {};
+        player.capturedBy = {};
+        player.botsControlled = 0;
+        player.totalBotsCaptures = 0;
+        player.capturedByBlackBot = 0;
+        player.blackBotsDestroyed = 0;  // Réinitialisation du compteur de black bots
+        player.speedBoostActive = false;
+        player.invincibilityActive = false;
+        player.revealActive = false;
+        player.bonusStartTime = 0;
+        // Réinitialiser les timers de bonus si ils existent
+        if (player.bonusTimers) {
+            player.bonusTimers = {
+                speed: 0,
+                invincibility: 0,
+                reveal: 0
+            };
+        }
     }
 
     // Mettre à jour les paramètres du jeu
@@ -2184,47 +2219,55 @@ io.on('connection', (socket) => {
         io.emit('updateWaitingRoom', Array.from(waitingRoom.players.values()));
     });
 
-    socket.on('updateGameSettings', (settings) => {
+    socket.on('updateGameSettings', async (settings) => {
         const player = waitingRoom.players.get(socket.id);
         if (player?.isOwner) {
             // Filtrer les paramètres audio s'ils sont présents
             const { musicVolume, soundVolume, ...gameSettings } = settings;
             
-            // Vérifier si la map ou le mode miroir change
-            if (gameSettings.selectedMap !== waitingRoom.settings.selectedMap || 
-                gameSettings.mirrorMode !== waitingRoom.settings.mirrorMode) {
-                // Mettre à jour les collisions en premier
-                collisionMap.updateCollisions(gameSettings.selectedMap, gameSettings.mirrorMode)
-                    .then(() => {
-                        // Puis mettre à jour les paramètres
-                        waitingRoom.settings = {
-                            ...waitingRoom.settings,
-                            ...gameSettings,
-                            enabledZones: {
-                                ...waitingRoom.settings.enabledZones,
-                                ...settings.enabledZones
-                            },
-                        };
-                        
-                        // Informer tous les joueurs des changements
-                        io.emit('gameSettingsUpdated', waitingRoom.settings);
-                    })
-                    .catch(error => {
-                        console.error('Erreur lors de la mise à jour des collisions:', error);
+            try {
+                // Vérifier si la map ou le mode miroir change
+                if (gameSettings.selectedMap !== waitingRoom.settings.selectedMap || 
+                    gameSettings.mirrorMode !== waitingRoom.settings.mirrorMode) {
+                    
+                    // Mettre à jour les collisions en premier
+                    await collisionMap.updateCollisions(gameSettings.selectedMap, gameSettings.mirrorMode);
+                    
+                    // Attendre un petit délai pour s'assurer que tout est bien initialisé
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    // Puis mettre à jour les paramètres
+                    waitingRoom.settings = {
+                        ...waitingRoom.settings,
+                        ...gameSettings,
+                        enabledZones: {
+                            ...waitingRoom.settings.enabledZones,
+                            ...settings.enabledZones
+                        },
+                    };
+                    
+                    // Informer tous les joueurs des changements
+                    io.emit('gameSettingsUpdated', {
+                        ...waitingRoom.settings,
+                        mapUpdateRequired: true // Indicateur pour forcer la mise à jour
                     });
-            } else {
-                // Si pas de changement de map, mise à jour normale
-                waitingRoom.settings = {
-                    ...waitingRoom.settings,
-                    ...gameSettings,
-                    enabledZones: {
-                        ...waitingRoom.settings.enabledZones,
-                        ...settings.enabledZones
-                    },
-                };
-                
-                // Informer tous les joueurs des changements
-                io.emit('gameSettingsUpdated', waitingRoom.settings);
+                } else {
+                    // Si pas de changement de map, mise à jour normale
+                    waitingRoom.settings = {
+                        ...waitingRoom.settings,
+                        ...gameSettings,
+                        enabledZones: {
+                            ...waitingRoom.settings.enabledZones,
+                            ...settings.enabledZones
+                        },
+                    };
+                    
+                    // Informer tous les joueurs des changements
+                    io.emit('gameSettingsUpdated', waitingRoom.settings);
+                }
+            } catch (error) {
+                console.error('Erreur lors de la mise à jour des paramètres:', error);
+                socket.emit('error', 'Erreur lors de la mise à jour de la map');
             }
         }
     });
@@ -2254,13 +2297,12 @@ io.on('connection', (socket) => {
     });
 
     socket.on('startGameFromRoom', (data) => {
-        const player = waitingRoom.players.get(socket.id);       
+        const player = waitingRoom.players.get(socket.id);
         if (player?.isOwner) {
             // Si un countdown est déjà en cours, ne rien faire
             if (startCountdown) return;
-     
+    
             socket.removeAllListeners('cancelGameStart');
-            
             let countdown = TIME_CONFIG.GAME_START_COUNTDOWN;
             let canCancel = true;
             
@@ -2286,36 +2328,31 @@ io.on('connection', (socket) => {
                     pauseStartTime = null;
                     gameStartTime = Date.now();
                     
-                    // Réinitialiser tous les joueurs
-                    for (let id in players) {
-                        players[id].captures = 0;
-                        players[id].capturedPlayers = {};
-                        players[id].capturedBy = {};
-                        players[id].botsControlled = 0;
-                        players[id].capturedByBlackBot = 0;
-                        players[id].speedBoostActive = false;
-                        players[id].invincibilityActive = false;
-                    }
-        
-                    // Réinitialiser les bots et bonus
+                    // Réinitialiser d'abord les bots et bonus
                     blackBots = {};
                     bots = {};
                     bonuses = [];
                     botsInitialized = false;
                     specialZones.clear();
-        
+    
+                    // Ensuite réinitialiser tous les joueurs
+                    Object.values(players).forEach(player => {
+                        resetPlayer(player);
+                    });
+    
+                    // Le reste du code reste identique...
                     waitingRoom.isGameStarted = true;
-                        
+                    
                     // Initialiser la partie pour tous les joueurs de la salle d'attente
                     waitingRoom.players.forEach((waitingPlayer, socketId) => {
                         // Mettre à jour le statut du joueur en attente
                         waitingPlayer.status = 'playing';  
                         waitingRoom.playersInGame.add(socketId);
-        
+    
                         const playerSocket = io.sockets.sockets.get(socketId);
                         if (playerSocket) {
                             // Créer un nouveau joueur s'il n'existe pas déjà
-                           if (!players[socketId]) {
+                            if (!players[socketId]) {
                                 players[socketId] = new Player(socketId, waitingPlayer.nickname);
                                 activeSockets[socketId] = playerSocket;
                             }
@@ -2323,14 +2360,14 @@ io.on('connection', (socket) => {
                             players[socketId].respawn();
                         }
                     });
-        
+    
                     // Réinitialiser les paramètres avec ceux de la salle d'attente
                     currentGameSettings = { ...waitingRoom.settings };
                     
                     // Initialiser les bots une seule fois pour la partie
                     createBots(currentGameSettings.initialBotCount);
                     botsInitialized = true;
-        
+    
                     // Informer tous les joueurs que la partie commence
                     io.emit('gameStarting');
                     
@@ -2339,7 +2376,7 @@ io.on('connection', (socket) => {
                     setTimeout(spawnMalus, 4000);
                 }
             }, 1000);
-     
+    
             socket.on('cancelGameStart', () => {
                 if (canCancel && startCountdown) {
                     clearInterval(startCountdown);
@@ -2348,7 +2385,7 @@ io.on('connection', (socket) => {
                 }
             });
         }
-     });
+    });
 
     socket.on('resetAndStartGame', (data) => {
         const player = waitingRoom.players.get(socket.id);

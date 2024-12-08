@@ -11,7 +11,7 @@ const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
 const nicknameInput = document.getElementById('nicknameInput');
 
-const GAME_VERSION = "v0.7.6";  // À mettre à jour à chaque déploiement
+const GAME_VERSION = "v0.7.7";  // À mettre à jour à chaque déploiement
 
 // Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
@@ -1402,15 +1402,23 @@ startButton.addEventListener('click', () => {
     });
 
     // écouteur pour les mises à jour des paramètres
-    socket.on('gameSettingsUpdated', (settings) => {
-        // Code existant de mise à jour des paramètres
+    socket.on('gameSettingsUpdated', async (settings) => {
+        // Mettre à jour l'interface utilisateur
         updateSettingsUI(settings);
         gameSettings = settings;
     
-        // Mettre à jour la map pour tous les joueurs
+        // Si nous sommes en jeu et que mapManager existe
         if (mapManager) {
-            mapManager.updateMap(settings.selectedMap, settings.mirrorMode)
-                .catch(error => console.error('Erreur lors du changement de map:', error));
+            try {
+                // Attendre que la map soit complètement mise à jour
+                await mapManager.updateMap(settings.selectedMap, settings.mirrorMode);
+                console.log('Map mise à jour avec succès:', {
+                    map: settings.selectedMap,
+                    mirror: settings.mirrorMode
+                });
+            } catch (error) {
+                console.error('Erreur lors de la mise à jour de la map:', error);
+            }
         }
     });
     
