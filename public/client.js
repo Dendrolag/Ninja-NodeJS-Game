@@ -11,7 +11,7 @@ const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
 const nicknameInput = document.getElementById('nicknameInput');
 
-const GAME_VERSION = "v0.7.9";  // À mettre à jour à chaque déploiement
+const GAME_VERSION = "v0.7.10";  // À mettre à jour à chaque déploiement
 
 // Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
@@ -1541,10 +1541,15 @@ startButton.addEventListener('click', () => {
         }
     });
     
-    socket.on('gameStarting', () => {
+    socket.on('gameStarting', async () => {
+        console.log('Réception de gameStarting, paramètres actuels:', {
+            map: gameSettings?.selectedMap,
+            mirror: gameSettings?.mirrorMode
+        });
+    
+        // Retirer la modale si elle existe
         const gameOverModal = document.getElementById('game-over-modal');
         if (gameOverModal) {
-            // Si on est sur l'écran de fin de partie, fermer la modale et son timer
             const countdownInterval = gameOverModal.getAttribute('data-interval');
             if (countdownInterval) {
                 clearInterval(Number(countdownInterval));
@@ -1553,9 +1558,56 @@ startButton.addEventListener('click', () => {
         }
         
         waitingRoomScreen.classList.remove('active');
-        startGame().catch(error => {
-            console.error('Erreur lors du démarrage du jeu:', error);
-        });
+        
+        try {
+            // Attendre un court instant pour s'assurer que les paramètres sont reçus
+            if (!gameSettings || gameSettings.selectedMap === undefined) {
+                // Demander les paramètres au serveur
+                socket.emit('requestGameSettings');
+                
+                // Attendre les paramètres avec un timeout
+                await new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => {
+                        reject(new Error('Timeout en attendant les paramètres de jeu'));
+                    }, 5000);
+    
+                    socket.once('gameSettingsUpdated', (settings) => {
+                        clearTimeout(timeout);
+                        gameSettings = settings;
+                        resolve();
+                    });
+                });
+            }
+    
+            // Maintenant que nous avons les paramètres, initialiser ou mettre à jour le mapManager
+            if (!mapManager && canvas) {
+                console.log('Initialisation mapManager avec:', {
+                    map: gameSettings.selectedMap,
+                    mirror: gameSettings.mirrorMode
+                });
+                mapManager = new MapManager(canvas, {
+                    debugMode: true,
+                    debugCollisions: true,
+                    mapWidth: GAME_VIRTUAL_WIDTH,
+                    mapHeight: GAME_VIRTUAL_HEIGHT,
+                    selectedMap: gameSettings.selectedMap || 'map1',
+                    mirrorMode: gameSettings.mirrorMode || false
+                });
+                await mapManager.loadLayers();
+            } else if (mapManager) {
+                console.log('Mise à jour mapManager avec:', {
+                    map: gameSettings.selectedMap,
+                    mirror: gameSettings.mirrorMode
+                });
+                await mapManager.updateMap(gameSettings.selectedMap, gameSettings.mirrorMode);
+            }
+    
+            // Démarrer la partie
+            await startGame();
+    
+        } catch (error) {
+            console.error('Erreur lors de l\'initialisation du jeu:', error);
+        }
     });
 
     socket.on('applyMalus', (data) => {

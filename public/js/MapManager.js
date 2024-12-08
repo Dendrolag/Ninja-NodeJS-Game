@@ -111,11 +111,16 @@ export class MapManager {
         );
     }
 
-    async updateMap(selectedMap, mirrorMode) {
+    async updateMap(selectedMap = 'map1', mirrorMode = false) {
         try {
+            // Utiliser les valeurs par défaut si undefined
+            selectedMap = selectedMap || 'map1';
+            mirrorMode = mirrorMode ?? false;
+    
             console.log('Début de la mise à jour de la map:', {
-                map: selectedMap,
-                mirror: mirrorMode
+                selectedMap,
+                mirrorMode,
+                mapManagerExists: !!this
             });
     
             const basePath = `/assets/maps/${selectedMap}/${mirrorMode ? 'mirror' : 'normal'}`;

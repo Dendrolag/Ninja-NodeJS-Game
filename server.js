@@ -2024,7 +2024,13 @@ io.on('connection', (socket) => {
                 waitingRoom.playersInGame.add(socket.id);
             }
     
-            // Informer tous les joueurs de l'arrivée du nouveau joueur
+            // IMPORTANT : Envoyer d'abord les paramètres actuels de la partie
+            socket.emit('gameSettingsUpdated', {
+                ...waitingRoom.settings,
+                mapUpdateRequired: true // Forcer la mise à jour de la map
+            });
+    
+            // Puis informer de l'arrivée du joueur et démarrer sa partie
             io.emit('playerJoined', {
                 nickname: data.nickname,
                 id: socket.id
@@ -2036,10 +2042,13 @@ io.on('connection', (socket) => {
                 gameInProgress: waitingRoom.isGameStarted
             });
     
-            // Faire rejoindre le jeu au nouveau joueur
+            // Démarrer la partie pour le nouveau joueur
             socket.emit('gameStarting');
     
-            console.log(`Joueur ${data.nickname} a rejoint la partie avec succès`);
+            console.log('Paramètres envoyés au nouveau joueur:', {
+                map: waitingRoom.settings.selectedMap,
+                mirror: waitingRoom.settings.mirrorMode
+            });
     
         } catch (error) {
             console.error('Erreur lors de l\'ajout du joueur à la partie:', error);
@@ -2088,6 +2097,10 @@ io.on('connection', (socket) => {
 
         // Faire rejoindre la partie au joueur
         socket.emit('gameStarting');
+    });
+
+    socket.on('requestGameSettings', () => {
+        socket.emit('gameSettingsUpdated', waitingRoom.settings);
     });
 
     socket.on('rejoinWaitingRoom', (data) => {

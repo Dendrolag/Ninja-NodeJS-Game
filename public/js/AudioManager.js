@@ -10,8 +10,7 @@ export class AudioManager {
         this.soundVolume = options.soundVolume || 0.9;
         this.isLoaded = false;
         this.loadPromise = this.loadAudio();
-        this.activeLoopSounds = new Map(); // Ajout de cette ligne
-        this.loadSettings();
+        this.activeLoopSounds = new Map(); 
         this.lastFootstepTime = 0;
         this.NORMAL_FOOTSTEP_INTERVAL = 250;  // Intervalle normal
         this.SPEED_FOOTSTEP_INTERVAL = 200;   // Intervalle plus court pour le speed boost
@@ -19,11 +18,11 @@ export class AudioManager {
         this.currentFootstepInterval = this.NORMAL_FOOTSTEP_INTERVAL;
         this.lastRemoteFootstepTime = 0;
         this.MAX_SOUND_DISTANCE = 300;
-        this.activeLoopSounds = new Map(); // Pour gérer les sons en continu
         this.REMOTE_SOUND_INTERVAL = {
             normal: 300,
             speedBoost: 200
         };
+        this.loadSettings();
     }
 
     async loadAudio() {
@@ -352,7 +351,10 @@ export class AudioManager {
             const settings = JSON.parse(saved);
             this.setMusicVolume(settings.musicVolume);
             this.setSoundVolume(settings.soundVolume);
-            if (settings.isMuted) this.toggleMute();
+            // Ne charger l'état muted que s'il existe dans les paramètres sauvegardés
+            if (settings.hasOwnProperty('isMuted')) {
+                this.isMuted = settings.isMuted;
+            }
         }
     }
 }

@@ -1,6 +1,13 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
 
+## [0.7.10] - 2024-12-08
+### Corrections
+- Fix de l'audio mute par défaut
+- Fix du problème de la map qui n'était pas en mode miroir pour les joueurs rejoignant une partie en cours
+### Ajout
+- Nouvelle musique de menu
+
 ## [0.7.9] - 2024-12-08
 ### Corrections
 - Fix des effets des malus qui pouvaient être gardés sur la partie suivante
