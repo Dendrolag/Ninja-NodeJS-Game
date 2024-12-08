@@ -2110,16 +2110,28 @@ io.on('connection', (socket) => {
         io.emit('updateWaitingRoom', players);
     });
 
+    // Gestion du chat avec vérification
     socket.on('chatMessage', (data) => {
+        // Vérifications de sécurité
+        if (!data || !data.message || !data.nickname) {
+            console.log('Message de chat invalide reçu:', data);
+            return;
+        }
+
         // Limiter la taille du message
         const message = data.message.slice(0, 200);
         
-        // Diffuser le message à tous les joueurs dans la salle d'attente
-        io.emit('newChatMessage', {
-            message: message,
-            nickname: data.nickname,
-            timestamp: data.timestamp
-        });
+        try {
+            // Diffuser le message à tous les joueurs dans la salle d'attente
+            io.emit('newChatMessage', {
+                message: message,
+                nickname: data.nickname,
+                timestamp: Date.now()
+            });
+            console.log(`Message de chat envoyé par ${data.nickname}`);
+        } catch (error) {
+            console.error('Erreur lors de l\'envoi du message:', error);
+        }
     });
 
     socket.on('leaveWaitingRoom', () => {
@@ -2447,7 +2459,7 @@ io.on('connection', (socket) => {
     });
 
     // Dans la section socket.on('move')
-socket.on('move', (data) => {
+    socket.on('move', (data) => {
     if (isPaused || isGameOver) return;
 
     const player = players[socket.id];
@@ -2536,8 +2548,8 @@ socket.on('move', (data) => {
         }
     });
     playerLastSoundEmit.set(socket.id, now);
-}
-});
+    }
+    });
 
     socket.on('togglePause', () => {
         if (!isGameOver) {
@@ -2614,6 +2626,14 @@ socket.on('move', (data) => {
                 wasOwner: wasOwner
             });
         }
+                // Informer les autres joueurs de la déconnexion pour le chat
+                if (players[socket.id]) {
+                    io.emit('newChatMessage', {
+                        message: `${players[socket.id].nickname} a quitté la partie`,
+                        nickname: 'Système',
+                        timestamp: Date.now()
+                    });
+                }
     });
 });
 

@@ -11,7 +11,7 @@ const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
 const nicknameInput = document.getElementById('nicknameInput');
 
-const GAME_VERSION = "v0.7.7";  // À mettre à jour à chaque déploiement
+const GAME_VERSION = "v0.7.8";  // À mettre à jour à chaque déploiement
 
 // Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
@@ -849,13 +849,6 @@ function hasListeners(eventName) {
     return this.listeners(eventName).length > 0;
 }
 
-function initializeSocket(socket) {
-    if (!socket.hasListeners) {
-        socket.hasListeners = hasListeners;
-    }
-    return socket;
-}
-
 function initializeNicknameValidation() {
     const nicknameInput = document.getElementById('nicknameInput');
     const startButton = document.getElementById('startButton');
@@ -1366,7 +1359,6 @@ startButton.addEventListener('click', () => {
     // Initialiser le chat après la connexion socket
     socket.on('connect', () => {
         initializeWaitingRoomTabs();
-        initializeChat(socket); // Passer le socket en paramètre
     });
 
     socket.on('playerLeft', (data) => {
@@ -1602,100 +1594,6 @@ startGameButton.addEventListener('click', () => {
     });
 });
 
-// Fonction d'initialisation du chat
-function initializeChat(socket) {
-    const chatHeader = document.querySelector('.chat-header');
-    const chatBox = document.querySelector('.floating-chat');
-    const chatMessages = document.querySelector('.chat-messages');
-    const chatForm = document.getElementById('chatForm');
-    const chatInput = document.getElementById('chatInput');
-    const toggleIcon = document.querySelector('.toggle-icon');
-
-    // Supprimer les anciens écouteurs s'ils existent
-    const handleToggle = () => {
-        chatBox.classList.toggle('collapsed');
-        if (chatBox.classList.contains('collapsed')) {
-            toggleIcon.textContent = '▶';
-        } else {
-            toggleIcon.textContent = '◀';
-        }
-    };
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        const message = chatInput.value.trim();
-        
-        if (message) {
-            socket.emit('chatMessage', {
-                message: message,
-                nickname: playerNickname,
-                timestamp: Date.now()
-            });
-            
-            chatInput.value = '';
-            chatInput.focus();
-            
-            // Déplier le chat si replié
-            if (chatBox.classList.contains('collapsed')) {
-                chatBox.classList.remove('collapsed');
-                toggleIcon.textContent = '◀';
-            }
-        }
-    };
-
-    // Nettoyer les anciens écouteurs avant d'en ajouter de nouveaux
-    chatHeader.removeEventListener('click', handleToggle);
-    chatForm.removeEventListener('submit', handleSubmit);
-
-    // Ajouter les nouveaux écouteurs
-    chatHeader.addEventListener('click', handleToggle);
-    chatForm.addEventListener('submit', handleSubmit);
-
-    // Nettoyer les anciens écouteurs de messages
-    socket.removeAllListeners('newChatMessage');
-
-    // Réception des messages
-    socket.on('newChatMessage', (messageData) => {
-        const messageElement = createChatMessage(messageData);
-        chatMessages.appendChild(messageElement);
-        // Scroll vers le bas
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    });
-}
-
-function createChatMessage(data) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = 'chat-message';
-    if (data.nickname === playerNickname) {
-        messageDiv.classList.add('own-message');
-    }
-    
-    const header = document.createElement('div');
-    header.className = 'chat-message-header';
-    
-    const author = document.createElement('span');
-    author.className = 'chat-message-author';
-    author.textContent = data.nickname;
-    
-    const time = document.createElement('span');
-    time.className = 'chat-message-time';
-    time.textContent = new Date(data.timestamp).toLocaleTimeString([], { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-    });
-    
-    const content = document.createElement('div');
-    content.className = 'chat-message-content';
-    content.textContent = data.message;
-    
-    header.appendChild(author);
-    header.appendChild(time);
-    messageDiv.appendChild(header);
-    messageDiv.appendChild(content);
-    
-    return messageDiv;
-}
-
 function initializeWaitingRoomTabs() {
     const waitingRoom = document.getElementById('waitingRoom');
     if (!waitingRoom) return;
@@ -1743,24 +1641,6 @@ function initializeWaitingRoomTabs() {
     if (activeTab && container) {
         container.style.height = `${activeTab.scrollHeight}px`;
     }
-}
-
-// Fonction pour ajouter un message au chat
-function addChatMessage(messageData) {
-    const chatMessages = document.getElementById('chatMessages');
-    if (!chatMessages) {
-        console.error('Chat messages container not found!');
-        return;
-    }
-    
-    const messageElement = createChatMessage(messageData);
-    chatMessages.appendChild(messageElement);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
-// Fonction pour formater l'heure
-function formatTime(date) {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 // Fonction pour mettre à jour la liste des joueurs
@@ -2183,7 +2063,6 @@ async function startGame() {
     if (!socket.hasListeners('connect')) {
         socket.on('connect', () => {
             playerId = socket.id;
-            initializeChat();
         });
     }
 
@@ -2660,6 +2539,144 @@ class SpriteAnimation {
             width, height
         );
     }
+}
+
+// Ajout d'une classe dédiée pour gérer le chat
+class ChatManager {
+    constructor(socket, playerNickname) {
+        this.socket = socket;
+        this.playerNickname = playerNickname;
+        this.initialized = false;
+        this.chatBox = document.querySelector('.floating-chat');
+        this.chatMessages = document.querySelector('.chat-messages');
+        this.chatForm = document.getElementById('chatForm');
+        this.chatInput = document.getElementById('chatInput');
+        this.chatHeader = document.querySelector('.chat-header');
+        this.toggleIcon = document.querySelector('.toggle-icon');
+    }
+
+    initialize() {
+        if (this.initialized) {
+            console.log('Chat déjà initialisé');
+            return;
+        }
+
+        // Nettoyage des anciens écouteurs si nécessaire
+        this.cleanup();
+
+        // Gestion du toggle du chat
+        this.chatHeader.addEventListener('click', this.handleToggle.bind(this));
+
+        // Gestion de l'envoi des messages
+        this.chatForm.addEventListener('submit', this.handleSubmit.bind(this));
+
+        // Écoute des nouveaux messages
+        this.socket.on('newChatMessage', this.handleNewMessage.bind(this));
+
+        this.initialized = true;
+        console.log('Chat initialisé avec succès');
+    }
+
+    cleanup() {
+        // Supprimer les anciens écouteurs
+        this.chatHeader.removeEventListener('click', this.handleToggle.bind(this));
+        this.chatForm.removeEventListener('submit', this.handleSubmit.bind(this));
+        this.socket.removeAllListeners('newChatMessage');
+        this.initialized = false;
+    }
+
+    handleToggle() {
+        this.chatBox.classList.toggle('collapsed');
+        if (this.chatBox.classList.contains('collapsed')) {
+            this.toggleIcon.textContent = '▶';
+        } else {
+            this.toggleIcon.textContent = '◀';
+        }
+    }
+
+    handleSubmit(e) {
+        e.preventDefault();
+        const message = this.chatInput.value.trim();
+        
+        if (message) {
+            console.log('Tentative d\'envoi de message:', message);
+            this.socket.emit('chatMessage', {
+                message: message,
+                nickname: this.playerNickname,
+                timestamp: Date.now()
+            });
+            
+            this.chatInput.value = '';
+            this.chatInput.focus();
+            
+            // Déplier le chat si replié
+            if (this.chatBox.classList.contains('collapsed')) {
+                this.chatBox.classList.remove('collapsed');
+                this.toggleIcon.textContent = '◀';
+            }
+        }
+    }
+
+    handleNewMessage(messageData) {
+        const messageElement = this.createMessageElement(messageData);
+        this.chatMessages.appendChild(messageElement);
+        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+    }
+
+    createMessageElement(data) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'chat-message';
+        if (data.nickname === this.playerNickname) {
+            messageDiv.classList.add('own-message');
+        }
+        
+        const header = document.createElement('div');
+        header.className = 'chat-message-header';
+        
+        const author = document.createElement('span');
+        author.className = 'chat-message-author';
+        author.textContent = data.nickname;
+        
+        const time = document.createElement('span');
+        time.className = 'chat-message-time';
+        time.textContent = new Date(data.timestamp).toLocaleTimeString([], { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+        
+        const content = document.createElement('div');
+        content.className = 'chat-message-content';
+        content.textContent = data.message;
+        
+        header.appendChild(author);
+        header.appendChild(time);
+        messageDiv.appendChild(header);
+        messageDiv.appendChild(content);
+        
+        return messageDiv;
+    }
+}
+
+// Variable globale pour le gestionnaire de chat
+let chatManager = null;
+
+// Modification de l'initialisation du socket
+function initializeSocket(socket) {
+    if (!socket.hasListeners) {
+        socket.hasListeners = hasListeners;
+    }
+
+    // Initialiser le chat une seule fois avec le nouveau socket
+    if (!chatManager) {
+        chatManager = new ChatManager(socket, playerNickname);
+    } else {
+        // Si le chat existe déjà, mettre à jour le socket et réinitialiser
+        chatManager.cleanup();
+        chatManager.socket = socket;
+    }
+    chatManager.initialize();
+
+    return socket;
 }
 
 function initializeAnimations() {

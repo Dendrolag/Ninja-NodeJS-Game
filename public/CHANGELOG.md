@@ -1,6 +1,15 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
 
+## [0.7.8] - 2024-12-08
+### Corrections
+- Refacto du chat pour fix le bug où il n'était pas possible parfois d'envoyer des messages
+
+## [0.7.7] - 2024-12-08
+### Corrections
+- Fix du bug de score non reset sur la capture des black Ninjas
+- Fix du bug du mode miroir pour les joueurs non propriétaires de la partie TBC
+
 ## [0.7.6] - 2024-12-06
 ### Ajouts
 - Ajout d'un bouton de gestion du son accessible partout
