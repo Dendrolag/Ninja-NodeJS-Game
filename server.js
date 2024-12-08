@@ -622,6 +622,13 @@ function spawnMalus() {
     setTimeout(spawnMalus, nextSpawnTime);
 }
 
+function clearMalusEffects() {
+    // Vider la Map des malus actifs
+    activemalus.clear();
+    // Informer tous les clients de nettoyer leurs effets visuels
+    io.emit('clearMalusEffects');
+}
+
 // Fonction de gestion de la collection des malus
 function handleMalusCollection(player, malus) {
     console.log('handleMalusCollection appelé:', { 
@@ -1847,6 +1854,9 @@ function endGame() {
     });
     waitingRoom.playersInGame.clear();
 
+    // Nettoyer les malus
+    clearMalusEffects();
+
     // Informer tous les joueurs
     for (let socketId in activeSockets) {
         activeSockets[socketId].emit('gameOver', { scores: scores });
@@ -1876,6 +1886,9 @@ function resetGame() {
     blackBots = {};
     bots = {};
     botsInitialized = false;
+
+    // Nettoyer les malus
+    clearMalusEffects();
 
     // Réinitialiser les bonus
     bonuses = [];

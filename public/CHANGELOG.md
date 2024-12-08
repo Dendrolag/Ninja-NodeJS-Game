@@ -1,6 +1,11 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
 
+## [0.7.9] - 2024-12-08
+### Corrections
+- Fix des effets des malus qui pouvaient être gardés sur la partie suivante
+- Fix de la casse pour les claviers AZERTY
+
 ## [0.7.8] - 2024-12-08
 ### Corrections
 - Refacto du chat pour fix le bug où il n'était pas possible parfois d'envoyer des messages

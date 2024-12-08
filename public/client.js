@@ -11,7 +11,7 @@ const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
 const nicknameInput = document.getElementById('nicknameInput');
 
-const GAME_VERSION = "v0.7.8";  // À mettre à jour à chaque déploiement
+const GAME_VERSION = "v0.7.9";  // À mettre à jour à chaque déploiement
 
 // Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
@@ -1379,6 +1379,23 @@ startButton.addEventListener('click', () => {
         }
     });  
 
+    socket.on('clearMalusEffects', () => {
+        // Retirer tous les effets visuels
+        const gameCanvas = document.getElementById('gameCanvas');
+        gameCanvas.style.filter = 'none';
+        
+        // Retirer toutes les classes d'effet sur le body
+        document.body.classList.remove('reverse-controls', 'blur-vision', 'negative-vision');
+        
+        // Réinitialiser les états des malus
+        activemalus = new Map();
+        
+        // Force le rafraîchissement du rendu si nécessaire
+        if (gameLoopInterval) {
+            drawEntities();
+        }
+    });
+
     socket.on('bonusExpired', (data) => {
         if (audioManager) {
             switch(data.type) {
@@ -1806,7 +1823,8 @@ function updateWaitingRoomPlayers(data) {
 
 // Gestion des entrées clavier
 function handleKeyDown(event) {
-    keysPressed[event.key] = true;
+    // Toujours stocker la touche en minuscule pour éviter les problèmes de casse
+    keysPressed[event.key.toLowerCase()] = true;
 
     // Touche pour localiser le joueur
     if (event.key.toLowerCase() === 'f' && !showPlayerLocator) {
@@ -1819,7 +1837,8 @@ function handleKeyDown(event) {
 }
 
 function handleKeyUp(event) {
-    keysPressed[event.key] = false;
+    // Toujours stocker la touche en minuscule
+    keysPressed[event.key.toLowerCase()] = false;
 }
 
 // Déplacement du joueur
@@ -1834,19 +1853,19 @@ function movePlayer() {
     let playerIsMoving = false;
 
     // Calculer le mouvement souhaité
-    if (keysPressed['ArrowUp'] || keysPressed['z']) {
+    if (keysPressed['arrowup'] || keysPressed['z']) {
         move.y = isReversed ? currentSpeed : -currentSpeed;
         playerIsMoving = true;
     }
-    if (keysPressed['ArrowDown'] || keysPressed['s']) {
+    if (keysPressed['arrowdown'] || keysPressed['s']) {
         move.y = isReversed ? -currentSpeed : currentSpeed;
         playerIsMoving = true;
     }
-    if (keysPressed['ArrowLeft'] || keysPressed['q']) {
+    if (keysPressed['arrowleft'] || keysPressed['q']) {
         move.x = isReversed ? currentSpeed : -currentSpeed;
         playerIsMoving = true;
     }
-    if (keysPressed['ArrowRight'] || keysPressed['d']) {
+    if (keysPressed['arrowright'] || keysPressed['d']) {
         move.x = isReversed ? -currentSpeed : currentSpeed;
         playerIsMoving = true;
     }
@@ -1990,6 +2009,12 @@ async function preloadGameResources() {
 // Fonction de démarrage du jeu
 async function startGame() {
     console.log('Starting game...'); // Debug log
+
+    // Nettoyer les effets des malus au démarrage d'une nouvelle partie
+    const gameCanvas = document.getElementById('gameCanvas');
+    gameCanvas.style.filter = 'none';
+    document.body.classList.remove('reverse-controls', 'blur-vision', 'negative-vision');
+    activemalus = new Map();
 
         // S'assurer que l'AudioManager est initialisé
         if (!audioManager) {
