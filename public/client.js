@@ -221,10 +221,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         musicVolume: 0.3,
         soundVolume: 0.5
     });
+
     // Attendre que l'audio soit chargé
     try {
         await audioManager.loadPromise;
-            
+        
         // Vérifier si nous sommes sur l'écran principal (menu)
         if (mainMenu.classList.contains('active')) {
             audioManager.playMusic('menu');
@@ -232,6 +233,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
         console.error('Erreur lors du chargement de l\'audio:', error);
     }
+
     // Initialiser le canvas
     canvas = document.getElementById('gameCanvas');
     if (!canvas) {
@@ -245,24 +247,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // Charger les assets
-    await loadGameAssets();
-    
-    // Initialiser le MapManager
-    mapManager = new MapManager(canvas, {
-        debugMode: true,
-        debugCollisions: true,
-        mapWidth: GAME_VIRTUAL_WIDTH,
-        mapHeight: GAME_VIRTUAL_HEIGHT
-    });
-    
-    await audioManager.loadPromise;
-    initializeButtonSounds(); // Initialiser les sons des boutons
-    // Démarrer la musique du menu dès que la page est chargée
-    audioManager.playMusic('menu');
-
-    initializeNicknameValidation();
-    addVersionDisplay();
+    try {
+        // Charger les assets
+        await loadGameAssets();
+        
+        // Initialiser le MapManager
+        mapManager = new MapManager(canvas, {
+            debugMode: true,
+            debugCollisions: true,
+            mapWidth: GAME_VIRTUAL_WIDTH,
+            mapHeight: GAME_VIRTUAL_HEIGHT
+        });
+        
+        await audioManager.loadPromise;
+        initializeButtonSounds(); // Initialiser les sons des boutons
+        // Démarrer la musique du menu dès que la page est chargée
+        audioManager.playMusic('menu');
+        
+        initializeNicknameValidation();
+        addVersionDisplay();
+    } catch (error) {
+        console.error('Erreur d\'initialisation:', error);
+    }
 });
 
 // Dimensions du jeu
@@ -961,14 +967,17 @@ function createFloatingPoints(x, y, points, color) {
 
 // Événements de redimensionnement
 function resizeCanvas() {
+    if (!canvas) return;
+    
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     canvas.style.width = '100%';
     canvas.style.height = '100%';
-    // Ajout des propriétés pour réduire le scintillement
+    
     canvas.style.imageRendering = 'crisp-edges';
     canvas.style.backfaceVisibility = 'hidden';
-    canvas.style.transform = 'translateZ(0)';  // Force l'accélération matérielle
+    canvas.style.transform = 'translateZ(0)';
+    
     initializeCamera();
 }
 
@@ -1395,22 +1404,32 @@ startButton.addEventListener('click', () => {
 
     // écouteur pour les mises à jour des paramètres
     socket.on('gameSettingsUpdated', async (settings) => {
-        // Mettre à jour l'interface utilisateur
+        // D'abord mettre à jour l'UI et les paramètres
         updateSettingsUI(settings);
         gameSettings = settings;
     
-        // Si nous sommes en jeu et que mapManager existe
-        if (mapManager) {
-            try {
-                // Attendre que la map soit complètement mise à jour
-                await mapManager.updateMap(settings.selectedMap, settings.mirrorMode);
-                console.log('Map mise à jour avec succès:', {
-                    map: settings.selectedMap,
-                    mirror: settings.mirrorMode
+        try {
+            // Si mapManager n'existe pas encore, l'initialiser
+            if (!mapManager && canvas) {
+                mapManager = new MapManager(canvas, {
+                    debugMode: true,
+                    debugCollisions: true,
+                    mapWidth: GAME_VIRTUAL_WIDTH,
+                    mapHeight: GAME_VIRTUAL_HEIGHT,
+                    selectedMap: settings.selectedMap,
+                    mirrorMode: settings.mirrorMode
                 });
-            } catch (error) {
-                console.error('Erreur lors de la mise à jour de la map:', error);
+                await mapManager.loadLayers();
+            } else if (mapManager) {
+                // Si mapManager existe, mettre à jour la map
+                await mapManager.updateMap(settings.selectedMap, settings.mirrorMode);
             }
+            console.log('Map mise à jour avec succès:', {
+                map: settings.selectedMap,
+                mirror: settings.mirrorMode
+            });
+        } catch (error) {
+            console.error('Erreur lors de la mise à jour de la map:', error);
         }
     });
     
@@ -1917,45 +1936,56 @@ function updateSettingsUI(settings) {
     initializeMalusSettings();
 }
 
-    // Fonction de préchargement
-    async function preloadGameResources() {
-        try {
-            // Précharger les images
-            await Promise.all([
-                mapManager.preloadMapImages(),
-                ...Object.values(bonusImages).map(img => {
-                    return new Promise((resolve, reject) => {
-                        if (img.complete) resolve();
-                        img.onload = resolve;
-                        img.onerror = reject;
-                    });
-                }),
-                ...Object.values(malusImages).map(img => {
-                    return new Promise((resolve, reject) => {
-                        if (img.complete) resolve();
-                        img.onload = resolve;
-                        img.onerror = reject;
-                    });
-                })
-            ]);
-            
-            // Précharger les sprites
-            await Promise.all(
-                Object.values(spriteManager.sprites).flatMap(direction => 
-                    [direction.frame1, direction.frame2].map(src => 
-                        new Promise((resolve, reject) => {
-                            const img = new Image();
-                            img.src = src;
-                            img.onload = resolve;
-                            img.onerror = reject;
-                        })
-                    )
-                )
-            );
-        } catch (error) {
-            console.error('Erreur lors du préchargement:', error);
+// Fonction de préchargement
+async function preloadGameResources() {
+    try {
+        // Vérifier si mapManager existe
+        if (!mapManager) {
+            console.warn('MapManager non initialisé pendant le préchargement');
+            return;
         }
+
+        // Précharger les images des maps
+        await mapManager.preloadMapImages();
+
+        // Précharger les images des bonus/malus
+        try {
+            // Charger les images des bonus
+            await Promise.all([
+                assetCache.loadImage('/assets/images/speed.gif'),
+                assetCache.loadImage('/assets/images/shield.gif'),
+                assetCache.loadImage('/assets/images/eye.gif')
+            ]);
+
+            // Charger les images des malus
+            await Promise.all([
+                assetCache.loadImage('/assets/images/reverse.gif'),
+                assetCache.loadImage('/assets/images/blur.gif'),
+                assetCache.loadImage('/assets/images/negative.gif')
+            ]);
+
+            // Précharger tous les sprites
+            await spriteManager.preloadSprites();
+
+        } catch (error) {
+            console.error('Erreur lors du chargement des assets:', error);
+        }
+
+        // Attendre que l'audio soit prêt si l'AudioManager existe
+        if (audioManager) {
+            try {
+                await audioManager.loadPromise;
+            } catch (error) {
+                console.warn('Avertissement audio:', error);
+                // Continue même si l'audio échoue
+            }
+        }
+
+    } catch (error) {
+        console.error('Erreur lors du préchargement:', error);
+        throw error;
     }
+}
 
 // Fonction de démarrage du jeu
 async function startGame() {
@@ -2059,6 +2089,19 @@ async function startGame() {
         gameWidth: GAME_VIRTUAL_WIDTH,  // Utiliser les dimensions virtuelles
         gameHeight: GAME_VIRTUAL_HEIGHT
     });
+
+        // Initialiser le MapManager avec les bons paramètres
+        if (!mapManager) {
+            mapManager = new MapManager(canvas, {
+                debugMode: true,
+                debugCollisions: true,
+                mapWidth: GAME_VIRTUAL_WIDTH,
+                mapHeight: GAME_VIRTUAL_HEIGHT,
+                selectedMap: gameSettings.selectedMap,
+                mirrorMode: gameSettings.mirrorMode
+            });
+            await mapManager.loadLayers();
+        }
 
     if (!socket.hasListeners('connect')) {
         socket.on('connect', () => {

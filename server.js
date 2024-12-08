@@ -1879,8 +1879,6 @@ function resetGame() {
 
     // Réinitialiser les bonus
     bonuses = [];
-    maluses = [];
-
     // Redémarrer le spawn des bonus
     setTimeout(spawnBonus, 3000);
 

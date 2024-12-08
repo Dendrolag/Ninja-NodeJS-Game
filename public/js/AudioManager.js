@@ -10,6 +10,7 @@ export class AudioManager {
         this.soundVolume = options.soundVolume || 0.9;
         this.isLoaded = false;
         this.loadPromise = this.loadAudio();
+        this.activeLoopSounds = new Map(); // Ajout de cette ligne
         this.loadSettings();
         this.lastFootstepTime = 0;
         this.NORMAL_FOOTSTEP_INTERVAL = 250;  // Intervalle normal
