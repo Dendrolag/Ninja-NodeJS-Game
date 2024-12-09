@@ -2527,8 +2527,9 @@ input[type="checkbox"]:disabled + label {
 
 .floating-points {
     position: absolute;
+    font-family: 'PermanentMarker-Regular', sans-serif; 
     color: #fff;
-    font-size: 20px;
+    font-size: 25px;
     font-weight: bold;
     text-shadow: 0 0 5px rgba(0,0,0,0.5);
     pointer-events: none;
@@ -2537,7 +2538,7 @@ input[type="checkbox"]:disabled + label {
 }
 
 .floating-points[data-type="blackbot"] {
-    font-size: 24px;
+    font-size: 35px;
     color: #ffd700;
     text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
 }
@@ -2563,8 +2564,8 @@ input[type="checkbox"]:disabled + label {
 
 /* Effet de flash */
 .capture-flash {
-    width: 40px;
-    height: 40px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     animation: captureFlash 0.4s ease-out forwards;
     background: rgba(255, 255, 255, 0.8);

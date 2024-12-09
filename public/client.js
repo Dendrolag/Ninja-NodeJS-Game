@@ -11,7 +11,7 @@ const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
 const nicknameInput = document.getElementById('nicknameInput');
 
-const GAME_VERSION = "v0.7.10";  // À mettre à jour à chaque déploiement
+const GAME_VERSION = "v0.7.11";  // À mettre à jour à chaque déploiement
 
 // Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
@@ -2273,6 +2273,9 @@ async function startGame() {
         socket.on('playerCaptured', (data) => {
             playerColor = data.newColor;
             showCaptureNotification(`Capturé par ${data.capturedBy} !`);
+            if (audioManager) {
+                audioManager.playSound('playerCaptured'); // Son spécifique quand on est capturé
+            }
             showPlayerLocator = true;
             locatorFadeStartTime = Date.now() + 3000;
             setTimeout(() => {
@@ -2315,30 +2318,46 @@ async function startGame() {
         });
     }
     
-    socket.on('playerCapturedEnemy', (data) => {
-        if (data.capturedNickname === 'Bot Noir') {
-            // Effet visuel pour la capture d'un black bot
-            if (data.position) {
-                const screenPos = worldToScreen(data.position.x, data.position.y);
-                createFloatingPoints(screenPos.x, screenPos.y, 15, '#ffd700'); // Couleur dorée
-                
-                // Effet visuel supplémentaire d'explosion
-                if (audioManager) {
-                    audioManager.playSound('blackBotDestroy');
-                }
-                
-                createExplosionEffect(data.position.x, data.position.y);
+// Quand on est capturé
+socket.on('playerCaptured', (data) => {
+    playerColor = data.newColor;
+    showCaptureNotification(`Capturé par ${data.capturedBy} !`);
+    if (audioManager) {
+        audioManager.playSound('playerCaptured'); // Son spécifique quand on est capturé
+    }
+    showPlayerLocator = true;
+    locatorFadeStartTime = Date.now() + 3000;
+    setTimeout(() => {
+        showPlayerLocator = false;
+    }, 3500);
+});
+
+// Quand on capture quelqu'un ou quelque chose
+socket.on('playerCapturedEnemy', (data) => {
+    if (data.capturedNickname === 'Bot Noir') {
+        // Capture d'un black bot
+        if (data.position) {
+            const screenPos = worldToScreen(data.position.x, data.position.y);
+            createFloatingPoints(screenPos.x, screenPos.y, 15, '#ffd700');
+            if (audioManager) {
+                audioManager.playSound('blackBotDestroy');
             }
-        } else {
-            // Code existant pour la capture des joueurs normaux
-            const player = entities.find(e => e.id === data.capturedId);
-            if (player) {
-                const screenPos = worldToScreen(player.x, player.y);
-                createFloatingPoints(screenPos.x, screenPos.y, data.botsGained, '#cc99ff');
-            }
+            createExplosionEffect(data.position.x, data.position.y);
         }
-        showCaptureNotification(data.message || `Vous avez capturé ${data.capturedNickname} !`);
-    });
+    } else {
+        // Capture d'un joueur - ne jouer que le son de capture de joueur
+        if (audioManager) {
+            audioManager.playSound('playerCapture');
+        }
+        // Afficher visuellement le gain des bots sans jouer de son pour chacun
+        const player = entities.find(e => e.id === data.capturedId);
+        if (player) {
+            const screenPos = worldToScreen(player.x, player.y);
+            createFloatingPoints(screenPos.x, screenPos.y, data.botsGained, '#cc99ff');
+        }
+    }
+    showCaptureNotification(data.message || `Vous avez capturé ${data.capturedNickname} !`);
+});
 
     if (!socket.hasListeners('gameOver')) {
         socket.on('gameOver', (data) => {

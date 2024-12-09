@@ -33,7 +33,10 @@ export class AudioManager {
                 bonus: '/assets/audio/collect-bonus.wav',
                 malus: '/assets/audio/collect-malus.wav',
                 capture: '/assets/audio/capture.wav',
-                botConvert: '/assets/audio/bot-convert.mp3',
+                botConvert: '/assets/audio/bot-convert.mp3',          // Quand on capture un bot (déjà en place)
+                playerCaptured: '/assets/audio/player-captured.mp3',  // Quand on est capturé par un joueur
+                playerCapture: '/assets/audio/player-capture.mp3',    // Quand on capture un joueur
+                blackBotDestroy: '/assets/audio/blackbot-destroy.mp3', // Quand on capture un black bot
                 gameStart: '/assets/audio/game-start.wav',
                 gameOver: '/assets/audio/game-over.wav',
                 countdown: '/assets/audio/countdown.wav',

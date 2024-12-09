@@ -1,6 +1,11 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
 
+## [0.7.11] - 2024-12-08
+### Ajout
+- Ajout des sons de capture de joueur, joueur capturé, capture de blackbot
+- Ajustement des effets de capture
+
 ## [0.7.10] - 2024-12-08
 ### Corrections
 - Fix de l'audio mute par défaut
