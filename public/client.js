@@ -99,7 +99,7 @@ const activeEffects = new Set();
 
 const SPEED_MULTIPLIER = 2; 
 const BASE_SPEED = 3.5; 
-const SPEED_BOOST_MULTIPLIER = 1.3;
+const SPEED_BOOST_MULTIPLIER = 1.7;
 
 // Ajoutez cette nouvelle constante pour les contrôles mobiles
 const MOBILE_SPEED_FACTOR = 2;

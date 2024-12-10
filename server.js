@@ -56,7 +56,8 @@ import {
     DIRECTIONS, 
     DEFAULT_GAME_SETTINGS, 
     SPAWN_CONFIG,
-    TIME_CONFIG 
+    TIME_CONFIG,
+    SPEED_CONFIG 
 } from './game-constants.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -2491,20 +2492,30 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Dans la section socket.on('move')
     socket.on('move', (data) => {
     if (isPaused || isGameOver) return;
 
     const player = players[socket.id];
     if (!player || !data.isMoving) return;
 
-    const moveSpeed = data.speedBoostActive ? 1.3 : 1;
+    // Normaliser le vecteur de mouvement reçu
+    const magnitude = Math.sqrt(data.x * data.x + data.y * data.y);
+    if (magnitude > 0) {
+        // Utiliser SPEED_CONFIG pour la vitesse de base
+        const normalizedSpeed = SPEED_CONFIG.PLAYER_BASE_SPEED * 
+            (data.speedBoostActive ? SPEED_CONFIG.SPEED_BOOST_MULTIPLIER : 1);
+        
+        // Normaliser les composantes du mouvement
+        data.x = (data.x / magnitude) * normalizedSpeed;
+        data.y = (data.y / magnitude) * normalizedSpeed;
+    }
+
     const oldX = player.x;
     const oldY = player.y;
     
-    // Calculer le mouvement voulu
-    let desiredX = player.x + data.x * moveSpeed;
-    let desiredY = player.y + data.y * moveSpeed;
+    // Le reste de votre code existant inchangé...
+    let desiredX = player.x + data.x;
+    let desiredY = player.y + data.y;
     
     // Test du mouvement complet
     if (collisionMap.canMove(oldX, oldY, desiredX, desiredY)) {
@@ -2526,8 +2537,8 @@ io.on('connection', (socket) => {
             
             for (const angle of angles) {
                 const rad = (angle * Math.PI) / 180;
-                const testX = oldX + Math.cos(rad) * moveSpeed;
-                const testY = oldY + Math.sin(rad) * moveSpeed;
+                const testX = oldX + Math.cos(rad) * normalizedSpeed;
+                const testY = oldY + Math.sin(rad) * normalizedSpeed;
                 
                 if (collisionMap.canMove(oldX, oldY, testX, testY)) {
                     player.x = testX;

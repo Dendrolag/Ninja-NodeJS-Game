@@ -1,4 +1,11 @@
 // public/js/game-constants.js
+export const SPEED_CONFIG = {
+    PLAYER_BASE_SPEED: 3,                // Vitesse de base des joueurs
+    BOT_SPEED: 5,                        // Vitesse de base des bots (déjà existant)
+    SPEED_BOOST_MULTIPLIER: 1.7,         // Multiplicateur du bonus de vitesse
+    MAX_SPEED_MULTIPLIER: 2,             // Limite maximale du multiplicateur de vitesse
+};
+
 export const DEFAULT_GAME_SETTINGS = {
     // Durée de la partie
     gameDuration: 180,         // Durée en secondes

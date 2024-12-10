@@ -3,6 +3,13 @@
 /**
  * Dimensions et configuration de l'espace de jeu
  */
+export const SPEED_CONFIG = {
+    PLAYER_BASE_SPEED: 3,                // Vitesse de base des joueurs
+    BOT_SPEED: 5,                        // Vitesse de base des bots (déjà existant)
+    SPEED_BOOST_MULTIPLIER: 1.7,         // Multiplicateur du bonus de vitesse
+    MAX_SPEED_MULTIPLIER: 2,             // Limite maximale du multiplicateur de vitesse
+};
+
 export const GAME_CONFIG = {
     // Dimensions de la zone de jeu
     WIDTH: 2000,
@@ -13,7 +20,8 @@ export const GAME_CONFIG = {
     SAFE_SPAWN_DISTANCE: 100,    // Distance minimale entre les entités au spawn
     
     // Paramètres de mouvement
-    BOT_SPEED: 5                 // Vitesse de base des bots
+    BOT_SPEED: SPEED_CONFIG.BOT_SPEED,
+    PLAYER_BASE_SPEED: SPEED_CONFIG.PLAYER_BASE_SPEED,
 };
 
 /**
