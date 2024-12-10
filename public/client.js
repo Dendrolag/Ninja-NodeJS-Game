@@ -5,13 +5,14 @@ let socket;
 
 import { MapManager } from './js/MapManager.js';
 import { AudioManager } from './js/AudioManager.js';
+import { SPEED_CONFIG } from './js/game-constants.js';
 
 // Éléments DOM principaux
 const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
 const nicknameInput = document.getElementById('nicknameInput');
 
-const GAME_VERSION = "v0.7.12";  // À mettre à jour à chaque déploiement
+const GAME_VERSION = "v0.7.13";  // À mettre à jour à chaque déploiement
 
 // Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
@@ -102,8 +103,6 @@ const BASE_SPEED = 3.5;
 const SPEED_BOOST_MULTIPLIER = 1.7;
 
 // Ajoutez cette nouvelle constante pour les contrôles mobiles
-const MOBILE_SPEED_FACTOR = 2;
-
 const JOYSTICK_SPEED_MULTIPLIER = 6;
 const JOYSTICK_UPDATE_INTERVAL = 16; // ~60 FPS
 const TOUCH_START_OPTIONS = { passive: false };
@@ -737,8 +736,8 @@ function initializeMobileControls() {
             const directionY = y / distance;
             
             // Appliquer la vitesse de base
-            let moveX = directionX * BASE_SPEED * MOBILE_SPEED_FACTOR;
-            let moveY = directionY * BASE_SPEED * MOBILE_SPEED_FACTOR;
+            let moveX = directionX * SPEED_CONFIG.PLAYER_BASE_SPEED * SPEED_CONFIG.MOBILE_SPEED_FACTOR;
+            let moveY = directionY * SPEED_CONFIG.PLAYER_BASE_SPEED * SPEED_CONFIG.MOBILE_SPEED_FACTOR;
             
             if (activemalus.has('reverse')) {
                 moveX *= -1;
@@ -806,13 +805,14 @@ function initializeMobileControls() {
     
     function sendMovement() {
         if (isMoving && socket && !isPaused && !isGameOver) {
-            const speedMultiplier = speedBoostActive ? SPEED_BOOST_MULTIPLIER : 1;
+            const speedMultiplier = speedBoostActive ? SPEED_CONFIG.SPEED_BOOST_MULTIPLIER : 1;
             
             const finalMove = {
-                x: currentMove.x * speedMultiplier,
-                y: currentMove.y * speedMultiplier,
+                x: currentMove.x,  // On envoie les valeurs non multipliées
+                y: currentMove.y,
                 isMoving: true,
-                speedBoostActive
+                speedBoostActive,
+                isMobile: true     // Indique au serveur que c'est un appareil mobile
             };
             
             socket.emit('move', finalMove);
@@ -2309,6 +2309,10 @@ async function startGame() {
     if (!socket.hasListeners('capturedByBlackBot')) {
         socket.on('capturedByBlackBot', (data) => {
             showCaptureNotification(data.message);
+            if (audioManager && data.playSound) {
+                // Jouer le son playerCaptured comme lors d'une capture par un joueur
+                audioManager.playSound('playerCaptured');
+            }
             showPlayerLocator = true;
             locatorFadeStartTime = Date.now() + 3000;
             setTimeout(() => {

@@ -1,6 +1,12 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
 
+## [0.7.13] - 2024-12-10
+### Corrections
+- Fix de la vitesse des joueurs sur mobile
+### Ajout
+- Ajout du son de capture de joueur par un blackbot
+
 ## [0.7.12] - 2024-12-10
 ### Corrections
 - Fix du bug du bonus d'invicibilité non actif après le premier timer si bonus cumulé plusieurs fois

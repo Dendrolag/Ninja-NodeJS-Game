@@ -1251,7 +1251,8 @@ class BlackBot extends Bot {
         if (socket) {
             socket.emit('capturedByBlackBot', {
                 pointsLost: pointsLost,
-                message: `Capturé par un Bot Noir ! Vous avez perdu ${pointsLost} points.`
+                message: `Capturé par un Bot Noir ! Vous avez perdu ${pointsLost} points.`,
+                playSound: 'playerCaptured' // Ajout de cette ligne
             });
         }
     }
@@ -2493,22 +2494,23 @@ io.on('connection', (socket) => {
     });
 
     socket.on('move', (data) => {
-    if (isPaused || isGameOver) return;
-
-    const player = players[socket.id];
-    if (!player || !data.isMoving) return;
-
-    // Normaliser le vecteur de mouvement reçu
-    const magnitude = Math.sqrt(data.x * data.x + data.y * data.y);
-    if (magnitude > 0) {
-        // Utiliser SPEED_CONFIG pour la vitesse de base
-        const normalizedSpeed = SPEED_CONFIG.PLAYER_BASE_SPEED * 
-            (data.speedBoostActive ? SPEED_CONFIG.SPEED_BOOST_MULTIPLIER : 1);
-        
-        // Normaliser les composantes du mouvement
-        data.x = (data.x / magnitude) * normalizedSpeed;
-        data.y = (data.y / magnitude) * normalizedSpeed;
-    }
+        if (isPaused || isGameOver) return;
+    
+        const player = players[socket.id];
+        if (!player || !data.isMoving) return;
+    
+        // Normaliser le vecteur de mouvement reçu
+        const magnitude = Math.sqrt(data.x * data.x + data.y * data.y);
+        if (magnitude > 0) {
+            // Appliquer la vitesse de base et le facteur mobile si c'est un appareil mobile
+            const baseSpeed = SPEED_CONFIG.PLAYER_BASE_SPEED;
+            const speedMultiplier = data.speedBoostActive ? SPEED_CONFIG.SPEED_BOOST_MULTIPLIER : 1;
+            const mobileFactor = data.isMobile ? SPEED_CONFIG.MOBILE_SPEED_FACTOR : 1; // Nouveau
+            const normalizedSpeed = baseSpeed * speedMultiplier * mobileFactor;
+            
+            data.x = (data.x / magnitude) * normalizedSpeed;
+            data.y = (data.y / magnitude) * normalizedSpeed;
+        }
 
     const oldX = player.x;
     const oldY = player.y;

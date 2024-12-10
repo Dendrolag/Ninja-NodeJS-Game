@@ -8,6 +8,7 @@ export const SPEED_CONFIG = {
     BOT_SPEED: 5,                        // Vitesse de base des bots (déjà existant)
     SPEED_BOOST_MULTIPLIER: 1.7,         // Multiplicateur du bonus de vitesse
     MAX_SPEED_MULTIPLIER: 2,             // Limite maximale du multiplicateur de vitesse
+    MOBILE_SPEED_FACTOR: 2               // Facteur de sensibilité pour le joystick mobile
 };
 
 export const GAME_CONFIG = {
