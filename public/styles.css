@@ -2531,7 +2531,7 @@ input[type="checkbox"]:disabled + label {
     color: #fff;
     font-size: 25px;
     font-weight: bold;
-    text-shadow: 0 0 5px rgba(0,0,0,0.5);
+    text-shadow: 0 0 2px rgba(0,0,0,0.8);
     pointer-events: none;
     animation: floatUp 1s ease-out forwards;
     z-index: 1000;
@@ -2540,7 +2540,7 @@ input[type="checkbox"]:disabled + label {
 .floating-points[data-type="blackbot"] {
     font-size: 35px;
     color: #ffd700;
-    text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+    text-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
 }
 
 @keyframes floatUp {

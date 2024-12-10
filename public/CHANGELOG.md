@@ -1,6 +1,11 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
 
+## [0.7.12] - 2024-12-10
+### Corrections
+- Fix du bug du bonus d'invicibilité non actif après le premier timer si bonus cumulé plusieurs fois
+- Fix du bug des sons de capture des bots des joueurs capturés qui ne devaient pas être joués
+
 ## [0.7.11] - 2024-12-08
 ### Ajout
 - Ajout des sons de capture de joueur, joueur capturé, capture de blackbot

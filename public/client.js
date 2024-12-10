@@ -11,7 +11,7 @@ const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
 const nicknameInput = document.getElementById('nicknameInput');
 
-const GAME_VERSION = "v0.7.11";  // À mettre à jour à chaque déploiement
+const GAME_VERSION = "v0.7.12";  // À mettre à jour à chaque déploiement
 
 // Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
@@ -2189,44 +2189,30 @@ async function startGame() {
     if (!socket.hasListeners('updateEntities')) {
         socket.on('updateEntities', (data) => {
             if (isPaused || isGameOver) return;
-
+    
             // Mise à jour du timer
             updateTimer(data.timeLeft || 0);
             timeRemaining = data.timeLeft;
-
-        // Vérifier si un bonus ou malus a été collecté
-        if (data.bonusCollected && data.collectorId === socket.id) {
-            if (audioManager) {
-                audioManager.playSound('collectBonus');
-            }
-        }
     
-         if (data.malusCollected && data.collectorId === socket.id) {
-        if (audioManager) {
-            audioManager.playSound('collectMalus');
-           }
-        }
-            
-            // Mise à jour des bonus
+            // Gestion des bonus/malus (code inchangé)
+            if (data.bonusCollected && data.collectorId === socket.id) {
+                if (audioManager) {
+                    audioManager.playSound('collectBonus');
+                }
+            }
+        
+            if (data.malusCollected && data.collectorId === socket.id) {
+                if (audioManager) {
+                    audioManager.playSound('collectMalus');
+                }
+            }
+                
+            // Mise à jour des bonus (code inchangé)
             bonuses = data.bonuses || [];
             socket.malus = data.malus || [];
             specialZones = data.zones || [];
-
-                // Comparer les anciens et nouveaux bonus/malus pour détecter les collectes
-            if (audioManager) {
-            // Pour les bonus
-            if (data.bonusCollected) {
-            console.log('Bonus collecté !');
-                audioManager.playSound('bonusCollect');
-            }
-            // Pour les malus
-            if (data.malusCollected) {
-                console.log('Malus collecté !');
-                    audioManager.playSound('malusCollect');
-            }
-        }
-            
-            // Trouver d'abord notre joueur dans les scores
+    
+            // Trouver notre joueur dans les scores
             const currentPlayer = data.playerScores.find(p => p.id === socket.id);
             if (currentPlayer) {
                 playerColor = currentPlayer.color;
@@ -2234,16 +2220,30 @@ async function startGame() {
                 const totalScore = currentPlayer.currentBots;
                 scoreDisplay.textContent = `${currentPlayer.nickname}: ${totalScore} points`;
             }
-
+    
+            // Stocker les entités actuelles avant la mise à jour
+            const previousEntities = [...entities];
+    
+            // Mettre à jour les entités
+            entities = data.entities;
+    
+            // Vérifier les changements dans les bots
             data.entities.forEach(newEntity => {
                 if (newEntity.type === 'bot') {
-                    const oldEntity = entities.find(e => e.id === newEntity.id);
+                    const oldEntity = previousEntities.find(e => e.id === newEntity.id);
                     if (oldEntity && oldEntity.color !== newEntity.color) {
                         const screenPos = worldToScreen(newEntity.x, newEntity.y);
                         
-                        if (newEntity.color === playerColor) {
+                        // Vérifier si c'est une capture normale de bot (et non une conséquence d'une capture de joueur)
+                        const isPlayerCapture = previousEntities.some(e => 
+                            e.type === 'player' && 
+                            e.color === oldEntity.color && 
+                            e.color !== newEntity.color
+                        );
+    
+                        if (newEntity.color === playerColor && !isPlayerCapture) {
                             createFloatingPoints(screenPos.x, screenPos.y, 1, '#fff');
-                            // Jouer le son quand c'est une capture par le joueur
+                            // Jouer le son uniquement si ce n'est pas une capture de joueur
                             if (audioManager) {
                                 const player = entities.find(e => e.id === socket.id);
                                 if (player) {
@@ -2259,9 +2259,8 @@ async function startGame() {
                     }
                 }
             });
-            
-            // Mettre à jour les entités et la caméra
-            entities = data.entities;
+                
+            // Mettre à jour l'interface
             updatePlayerList(data.playerScores);
             updateCamera();
             drawEntities();

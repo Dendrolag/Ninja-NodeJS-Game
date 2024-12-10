@@ -725,13 +725,14 @@ function handlePlayerCapture(attacker, victim) {
     attacker.lastCapture = Date.now();
     victim.respawn([attacker.color], false); // Capture normale, on change la couleur
 
-    // Notifications
+    // Notifications avec les sons appropriés
     if (victimSocket) {
         victimSocket.emit('playerCaptured', {
             newColor: victim.color,
             capturedBy: attacker.nickname,
             totalTimesCaptured: Object.values(victim.capturedBy)
-                .reduce((sum, cap) => sum + cap.count, 0)
+                .reduce((sum, cap) => sum + cap.count, 0),
+            playSound: 'player-captured' // Indiquer explicitement quel son jouer
         });
     }
 
@@ -742,11 +743,12 @@ function handlePlayerCapture(attacker, victim) {
             botsControlled: attacker.botsControlled,
             captureDetails: attacker.capturedPlayers,
             capturedId: victim.id,
-            botsGained: botsToCapture // Ajout du nombre de bots gagnés
+            botsGained: botsToCapture, 
+            playSound: 'player-capture' // Indiquer explicitement quel son jouer
         });
     }
-
 }
+
 function manageSpecialZones() {
     if (!currentGameSettings.enableSpecialZones) {
         specialZones.clear();
@@ -1570,9 +1572,16 @@ function handleBonusCollection(player, bonus) {
             break;
         case 'invincibility':
             player.invincibilityActive = true;
-            player.bonusTimers.invincibility = duration;
+            // Initialiser les timers si nécessaire
+            if (!player.bonusTimers) {
+                player.bonusTimers = {};
+            }
+            // Cumuler le temps d'invincibilité au lieu de le remplacer
+            if (!player.bonusTimers.invincibility) {
+                player.bonusTimers.invincibility = 0;
+            }
+            player.bonusTimers.invincibility += duration;
             player.bonusStartTime = Date.now();
-            //console.log(`Invincibilité activée pour ${player.nickname} pour ${duration} secondes`);
             break;
         case 'reveal':
             player.revealActive = true;
