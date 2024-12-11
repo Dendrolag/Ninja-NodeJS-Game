@@ -12,7 +12,7 @@ const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
 const nicknameInput = document.getElementById('nicknameInput');
 
-const GAME_VERSION = "v0.7.13";  // À mettre à jour à chaque déploiement
+const GAME_VERSION = "v0.7.14";  // À mettre à jour à chaque déploiement
 
 // Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
@@ -32,6 +32,8 @@ const playersList = document.getElementById('waitingRoomPlayers');
 const startGameButton = document.getElementById('startGameButton');
 const settingsButton = document.getElementById('waitingRoomSettings'); // Un seul bouton de paramètres
 const leaveRoomButton = document.getElementById('leaveRoomButton');
+
+let countdownInitialized = false; // Variable pour suivre l'état du countdown
 
 const GAME_VIRTUAL_WIDTH = 2000;  // Taille virtuelle de la zone de jeu
 const GAME_VIRTUAL_HEIGHT = 1500;
@@ -655,6 +657,21 @@ class VisualEffect {
     remove() {
         this.element.remove();
     }
+}
+
+// Définir la fonction handleCancelClick hors de l'événement
+function handleCancelClick() {
+    const countdownOverlay = document.getElementById('countdownOverlay');
+    socket.emit('cancelGameStart');
+    countdownOverlay.classList.remove('visible');
+    // Attendre la fin de la transition avant de reset complètement
+    setTimeout(() => {
+        countdownOverlay.removeAttribute('style');
+        countdownOverlay.className = 'countdown-overlay';
+    }, 300);
+    
+    // Reset du flag
+    countdownInitialized = false;
 }
 
 function switchTab(tabName) {
@@ -1475,73 +1492,107 @@ startButton.addEventListener('click', () => {
         }, 3000);
     }
 
-    socket.on('gameStartCountdown', (data) => {
-        const startGameButton = document.getElementById('startGameButton');
-        if (startGameButton) {
-            if (isRoomOwner) {
-                startGameButton.disabled = false;
-                startGameButton.classList.add('countdown');
-                startGameButton.textContent = `Annuler (${data.countdown}s)`;
-                startGameButton.onclick = () => {
-                    startGameButton.classList.remove('countdown');
-                    socket.emit('cancelGameStart');
-                };
-            } else {
-                startGameButton.disabled = true;
-                startGameButton.textContent = `La partie commence dans ${data.countdown}s...`;
-            }
+// Modification de la réception de l'événement gameStartCountdown
+socket.on('gameStartCountdown', (data) => {
+    const countdownOverlay = document.getElementById('countdownOverlay');
+    const countdownValue = document.getElementById('countdownValue');
+    const cancelButton = document.getElementById('cancelCountdown');
+    const startGameButton = document.getElementById('startGameButton');
     
-            if (data.countdown <= 2) {
-                startGameButton.disabled = true;
-                audioManager.fadeOutMusic(2000);
-            }
-
-        // Jouer les sons de compte à rebours
+    // Si c'est le premier appel du countdown
+    if (!countdownInitialized) {
+        countdownOverlay.removeAttribute('style');
+        countdownOverlay.className = 'countdown-overlay';
+        requestAnimationFrame(() => {
+            countdownOverlay.classList.add('visible');
+        });
+        countdownInitialized = true;
+                // Ajouter l'écouteur d'événement pour le bouton d'annulation
+                if (isRoomOwner && cancelButton) {
+                    // Retirer l'ancien écouteur s'il existe pour éviter les doublons
+                    cancelButton.removeEventListener('click', handleCancelClick);
+                    // Ajouter le nouvel écouteur
+                    cancelButton.addEventListener('click', handleCancelClick);
+                }
+            
+    }
+    
+    // Mise à jour du compteur
+    countdownValue.textContent = data.countdown;
+    
+    // Gestion du bouton d'annulation
+    if (isRoomOwner) {
+        cancelButton.classList.add('owner');
+        cancelButton.disabled = !data.canCancel;
+    }
+    
+    // Cacher le bouton de démarrage
+    if (startGameButton) {
+        startGameButton.style.display = 'none';
+    }
+    
+    // Animation urgente pour les 3 dernières secondes
+    countdownValue.classList.remove('countdown-urgent'); // Reset d'abord
+    if (data.countdown <= 3) {
+        countdownValue.classList.add('countdown-urgent');
         if (audioManager) {
-            if (data.countdown <= 3 && data.countdown > 0) {
-                audioManager.playSound('countdownTick');
-            } else if (data.countdown === 0) {
-                audioManager.playSound('finalTick');
-            }
+            audioManager.playSound('countdownTick');
         }
+    }
+
+    // Reset du flag quand le countdown est terminé
+    if (data.countdown === 0) {
+        countdownInitialized = false;
+    }
+});
+
+// Dans l'événement gameStartCancelled, on doit restaurer l'affichage du bouton
+socket.on('gameStartCancelled', () => {
+    countdownInitialized = false;
+    const countdownOverlay = document.getElementById('countdownOverlay');
+    const startGameButton = document.getElementById('startGameButton');
     
-            // Préchargement
-            if (data.countdown === GAME_START_COUNTDOWN) {
-                preloadGameResources();
-            }
+    if (countdownOverlay) {
+        countdownOverlay.classList.remove('visible');
+        // Attendre la fin de la transition avant de reset complètement
+        setTimeout(() => {
+            countdownOverlay.removeAttribute('style');
+            countdownOverlay.className = 'countdown-overlay';
+        }, 300);
+    }
+
+    // Restaurer le bouton
+    if (startGameButton) {
+        startGameButton.style.display = 'block';
+        startGameButton.classList.remove('countdown');
+        startGameButton.disabled = !isRoomOwner;
+        startGameButton.innerHTML = createStartButtonContent('Lancer la partie', isMobile());
+        startGameButton.onclick = () => {
+            socket.emit('startGameFromRoom', {
+                nickname: playerNickname,
+                settings: gameSettings
+            });
+        };
+    }
+});
+    
+socket.on('gameStarting', async () => {
+    countdownInitialized = false;
+    // Masquer l'overlay de countdown de manière définitive s'il existe
+    const countdownOverlay = document.getElementById('countdownOverlay');
+    if (countdownOverlay) {
+        // Forcer la disparition avec style
+        countdownOverlay.style.display = 'none';
+        countdownOverlay.style.opacity = '0';
+        // Nettoyer aussi toutes les classes
+        countdownOverlay.className = 'countdown-overlay';
+        
+        // Réinitialiser le compteur
+        const countdownValue = document.getElementById('countdownValue');
+        if (countdownValue) {
+            countdownValue.classList.remove('countdown-urgent');
         }
-    });
-    
-    socket.on('gameStartCancelled', () => {
-        const startGameButton = document.getElementById('startGameButton');
-        if (startGameButton) {
-            startGameButton.classList.remove('countdown');
-            startGameButton.disabled = !isRoomOwner;
-            startGameButton.innerHTML = createStartButtonContent('Lancer la partie', isMobile());
-            startGameButton.onclick = () => {
-                socket.emit('startGameFromRoom', {
-                    nickname: playerNickname,
-                    settings: gameSettings
-                });
-            };
-        }
-    });
-    
-    socket.on('gameStartCancelled', () => {
-        const startGameButton = document.getElementById('startGameButton');
-        if (startGameButton) {
-            startGameButton.disabled = !isRoomOwner;
-            startGameButton.innerHTML = createStartButtonContent('Lancer la partie', isMobile());
-            startGameButton.onclick = () => {
-                socket.emit('startGameFromRoom', {
-                    nickname: playerNickname,
-                    settings: gameSettings
-                });
-            };
-        }
-    });
-    
-    socket.on('gameStarting', async () => {
+    }
         console.log('Réception de gameStarting, paramètres actuels:', {
             map: gameSettings?.selectedMap,
             mirror: gameSettings?.mirrorMode
@@ -3787,6 +3838,13 @@ function showCaptureNotification(message) {
 
 // Nouvelle fonction pour retourner à la salle d'attente
 function returnToWaitingRoom() {
+    countdownInitialized = false;
+    // Nettoyer l'overlay countdown
+    const countdownOverlay = document.getElementById('countdownOverlay');
+    if (countdownOverlay) {
+        countdownOverlay.removeAttribute('style');
+        countdownOverlay.className = 'countdown-overlay';
+    }
     // Réinitialiser les états du jeu
     isGameOver = false;
     isPaused = false;

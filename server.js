@@ -2499,58 +2499,56 @@ io.on('connection', (socket) => {
         const player = players[socket.id];
         if (!player || !data.isMoving) return;
     
+        // Calculer la vitesse normalisée une seule fois au début
+        const baseSpeed = SPEED_CONFIG.PLAYER_BASE_SPEED;
+        const speedMultiplier = data.speedBoostActive ? SPEED_CONFIG.SPEED_BOOST_MULTIPLIER : 1;
+        const mobileFactor = data.isMobile ? SPEED_CONFIG.MOBILE_SPEED_FACTOR : 1;
+        const normalizedSpeed = baseSpeed * speedMultiplier * mobileFactor;
+    
         // Normaliser le vecteur de mouvement reçu
         const magnitude = Math.sqrt(data.x * data.x + data.y * data.y);
         if (magnitude > 0) {
-            // Appliquer la vitesse de base et le facteur mobile si c'est un appareil mobile
-            const baseSpeed = SPEED_CONFIG.PLAYER_BASE_SPEED;
-            const speedMultiplier = data.speedBoostActive ? SPEED_CONFIG.SPEED_BOOST_MULTIPLIER : 1;
-            const mobileFactor = data.isMobile ? SPEED_CONFIG.MOBILE_SPEED_FACTOR : 1; // Nouveau
-            const normalizedSpeed = baseSpeed * speedMultiplier * mobileFactor;
-            
             data.x = (data.x / magnitude) * normalizedSpeed;
             data.y = (data.y / magnitude) * normalizedSpeed;
         }
-
-    const oldX = player.x;
-    const oldY = player.y;
     
-    // Le reste de votre code existant inchangé...
-    let desiredX = player.x + data.x;
-    let desiredY = player.y + data.y;
-    
-    // Test du mouvement complet
-    if (collisionMap.canMove(oldX, oldY, desiredX, desiredY)) {
-        player.x = desiredX;
-        player.y = desiredY;
-    } else {
-        // Essayer les mouvements séparés
-        const canMoveX = collisionMap.canMove(oldX, oldY, desiredX, oldY);
-        const canMoveY = collisionMap.canMove(oldX, oldY, oldX, desiredY);
+        const oldX = player.x;
+        const oldY = player.y;
         
-        // Appliquer les mouvements valides
-        if (canMoveX) player.x = desiredX;
-        if (canMoveY) player.y = desiredY;
+        let desiredX = player.x + data.x;
+        let desiredY = player.y + data.y;
         
-        // Si les deux mouvements sont bloqués, essayer le glissement
-        if (!canMoveX && !canMoveY) {
-            const angles = [30, -30, 45, -45, 60, -60];
-            let moved = false;
+        // Test du mouvement complet
+        if (collisionMap.canMove(oldX, oldY, desiredX, desiredY)) {
+            player.x = desiredX;
+            player.y = desiredY;
+        } else {
+            // Essayer les mouvements séparés
+            const canMoveX = collisionMap.canMove(oldX, oldY, desiredX, oldY);
+            const canMoveY = collisionMap.canMove(oldX, oldY, oldX, desiredY);
             
-            for (const angle of angles) {
-                const rad = (angle * Math.PI) / 180;
-                const testX = oldX + Math.cos(rad) * normalizedSpeed;
-                const testY = oldY + Math.sin(rad) * normalizedSpeed;
+            if (canMoveX) player.x = desiredX;
+            if (canMoveY) player.y = desiredY;
+            
+            if (!canMoveX && !canMoveY) {
+                const angles = [30, -30, 45, -45, 60, -60];
+                let moved = false;
                 
-                if (collisionMap.canMove(oldX, oldY, testX, testY)) {
-                    player.x = testX;
-                    player.y = testY;
-                    moved = true;
-                    break;
+                for (const angle of angles) {
+                    const rad = (angle * Math.PI) / 180;
+                    // Utiliser normalizedSpeed qui est maintenant disponible dans cette portée
+                    const testX = oldX + Math.cos(rad) * normalizedSpeed;
+                    const testY = oldY + Math.sin(rad) * normalizedSpeed;
+                    
+                    if (collisionMap.canMove(oldX, oldY, testX, testY)) {
+                        player.x = testX;
+                        player.y = testY;
+                        moved = true;
+                        break;
+                    }
                 }
             }
         }
-    }
     
     // S'assurer que le joueur reste dans les limites
     player.x = Math.max(0, Math.min(GAME_CONFIG.WIDTH, player.x));

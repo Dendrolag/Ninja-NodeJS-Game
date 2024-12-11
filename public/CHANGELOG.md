@@ -1,5 +1,12 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
+## [0.7.14] - 2024-12-11
+### Corrections
+- Fix d'un bug de normalisation de la vitesse
+### Ajout
+- Décompte de lancement de partie en plein écran
+### Modifications
+- Démarrage de la refonte UX/UI avec changement des arrondis des éléments
 
 ## [0.7.13] - 2024-12-10
 ### Corrections

@@ -95,6 +95,7 @@ body, html {
     background: radial-gradient(circle, rgba(63,94,251,1) 0%, rgba(252,70,107,1) 100%);
 }
 
+
 /* Styles des menus */
 #mainMenu, #settingsMenu {
     display: none;
@@ -134,16 +135,18 @@ body, html {
     background-color: rgba(2, 3, 5, 0.5);
     backdrop-filter: blur(10px);
     animation: fadeIn 0.3s ease-out;
-    border: 1px solid var(--primary);
-    box-shadow: var(--glow-subtle);
+    /*border: 1px solid var(--primary);
+    box-shadow: var(--glow-subtle);*/
     
     /* Création du cercle parfait */
     aspect-ratio: 1;
-    border-radius: 50%;
+    /*border-radius: 50%;*/
     
     /* Gestion de la taille responsive */
-    width: min(80vw, 80vh, 600px);
-    height: min(80vw, 80vh, 600px);
+    /*width: min(80vw, 80vh, 600px);
+    height: min(80vw, 80vh, 600px);*/
+    width: 100%;
+    height: 100%;
     
     /* Centrage du contenu */
     display: flex;
@@ -222,29 +225,35 @@ h3 {
 .menu-form input[type="text"] {
     width: 100%;
     padding: 1.5vmin 2vmin;
-    font-size: clamp(14px, 2.5vmin, 16px);
+    font-size: clamp(12px, 1.5vmin, 13px);
     border: none;
-    border-radius: 25px;
-    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 3px;
+    color: white;
+    font-weight: bold;
+    background-color: rgba(255, 255, 255, 0.1);
     text-align: center;
+    backdrop-filter: blur(40px);
 }
 
 .menu-form button {
     margin-top: 2vmin;
-    padding: 1.5vmin 3vmin;
+    padding: 2vmin 3vmin;
     font-size: clamp(14px, 2.5vmin, 16px);
-    min-width: 60%;
+    letter-spacing: 0.5px;
+    /*min-width: 60%;*/
+    font-family: Arial;
 }
 
 input[type="text"] {
     padding: 12px 20px;
     font-size: 16px;
     border: none;
-    border-radius: 25px;
+    border-radius: 3px;
     background-color: rgba(255, 255, 255, 0.9);
     width: 100%;
     max-width: 300px;
     transition: all 0.3s ease;
+    font-family: Arial;
 }
 
 input[type="text"]:focus, input[type="number"]:focus {
@@ -258,9 +267,8 @@ input[type="text"]:focus, input[type="number"]:focus {
     padding: 0.8rem 1rem;
     font-size: 16px;
     border: 2px solid transparent;
-    border-radius: 25px;
+    border-radius: 3px;
     cursor: pointer;
-    font-weight: bold;
     text-transform: uppercase;
     position: relative;
     background-color: rgba(204, 153, 255, 0.1);
@@ -268,21 +276,24 @@ input[type="text"]:focus, input[type="number"]:focus {
     transition: all 0.3s ease;
     overflow: hidden;
     margin: 10px 0;
+    font-family: Arial;
 }
 
 /* Effet néon de base */
 .primary-button {
-    box-shadow: 0 0 10px rgba(204, 153, 255, 0.2),
-                inset 0 0 10px rgba(204, 153, 255, 0.1);
+    box-shadow: 0 0 10px rgba(204, 153, 255, 0.5),
+                inset 0 0 10px rgba(204, 153, 255, 0.2);
     border-color: rgba(204, 153, 255, 0.3);
+    font-weight: bold;
+    background-color: rgba(204, 153, 255, 0.3);
 }
 
 /* Animation de lueur au survol */
 .primary-button:hover {
     background-color: rgba(204, 153, 255, 0.2);
     border-color: rgba(204, 153, 255, 0.8);
-    box-shadow: 0 0 20px rgba(204, 153, 255, 0.4),
-                inset 0 0 15px rgba(204, 153, 255, 0.2);
+    box-shadow: 0 0 20px rgba(204, 153, 255, 0.8),
+                inset 0 0 15px rgba(204, 153, 255, 0.4);
     transform: translateY(-2px);
 }
 
@@ -342,7 +353,7 @@ input[type="text"]:focus, input[type="number"]:focus {
     margin: 20px auto;
     padding: 30px;
     background-color: rgba(0, 0, 0, 0.3);
-    border-radius: 20px;
+    border-radius: 3px;
     backdrop-filter: blur(10px);
     border: 1px solid var(--primary);
     box-shadow: var(--glow-subtle);
@@ -352,7 +363,7 @@ input[type="text"]:focus, input[type="number"]:focus {
     margin-bottom: 25px;
     background-color: rgba(0, 0, 0, 0.4);
     padding: 20px;
-    border-radius: 15px;
+    border-radius: 3px;
     transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
@@ -397,7 +408,7 @@ input[type="text"]:focus, input[type="number"]:focus {
     text-align: right;
     font-size: 16px;
     border: none;
-    border-radius: 25px;
+    border-radius: 3px;
     background-color: rgba(255, 255, 255, 0.9);
     transition: all 0.3s ease;
 }
@@ -411,7 +422,7 @@ input[type="text"]:focus, input[type="number"]:focus {
     text-align: center;
     font-size: 16px;
     border: none;
-    border-radius: 5px;
+    border-radius: 3px;
     background-color: rgba(255, 255, 255, 0.9);
     transition: all 0.3s ease;
 }
@@ -422,6 +433,7 @@ input[type="text"]:focus, input[type="number"]:focus {
     justify-content: center;
     margin-top: 20px;
     flex-wrap: wrap;
+    font-family: Arial;
 }
 
 .reset-button {
@@ -430,6 +442,7 @@ input[type="text"]:focus, input[type="number"]:focus {
     right: 20px;
     padding: 8px 16px;
     font-size: 14px;
+    font-family: Arial;
 }
 
 /* Interface de jeu */
@@ -468,7 +481,7 @@ canvas {
     background: rgba(0, 0, 0, 0.2);
     margin: 0;
     padding: 20px 20px 10px 20px;
-    border-radius: 15px 15px 0 0;
+    border-radius: 3px 3px 0 0;
     backdrop-filter: blur(10px);
     justify-content: center;
     display: flex;
@@ -479,7 +492,7 @@ canvas {
 .tab-button {
     padding: 12px 12px;
     border: none;
-    border-radius: 10px;
+    border-radius: 3px;
     background: rgba(255, 255, 255, 0.1);
     color: white;
     cursor: pointer;
@@ -488,6 +501,7 @@ canvas {
     position: relative;
     overflow: hidden;
     width: 33%;
+    font-family: Arial;
 }
 
 /* État au survol des onglets */
@@ -573,7 +587,7 @@ canvas {
 .zones-info {
     background: rgba(0, 0, 0, 0.2);
     padding: 20px;
-    border-radius: 10px;
+    border-radius: 3px;
     margin: 15px 0;
 }
 
@@ -587,7 +601,7 @@ canvas {
     padding: 10px;
     margin: 8px 0;
     background: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
+    border-radius: 3px;
     transition: all 0.3s ease;
 }
 
@@ -618,7 +632,7 @@ canvas {
     gap: 15px;
     padding: 20px;
     background: rgba(0, 0, 0, 0.2);
-    border-radius: 10px;
+    border-radius: 3px;
 }
 
 /* Items de commande */
@@ -628,7 +642,7 @@ canvas {
     gap: 15px;
     padding: 12px;
     background: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
+    border-radius: 3px;
     transition: all 0.3s ease;
 }
 
@@ -636,7 +650,7 @@ canvas {
 .key {
     background: rgba(204, 153, 255, 0.2);
     padding: 5px 10px;
-    border-radius: 5px;
+    border-radius: 3px;
     min-width: 30px;
     text-align: center;
     font-family: monospace;
@@ -722,7 +736,7 @@ canvas {
             height: 50px;
             min-width: 50px; /* Forcer la taille minimale */
             padding: 12px;
-            border-radius: 25px;
+            border-radius: 3px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -772,7 +786,7 @@ canvas {
             background: rgba(0, 0, 0, 0.8);
             color: white;
             padding: 5px 10px;
-            border-radius: 5px;
+            border-radius: 3px;
             font-size: 12px;
             opacity: 0;
             pointer-events: none;
@@ -832,7 +846,7 @@ canvas {
     /*background-color: rgba(0, 0, 0, 0.6);*/
     color: white;
     padding: 10px 20px;
-    border-radius: 20px;
+    border-radius: 3px;
     font-size: 18px;
     margin-bottom: 10px;
     backdrop-filter: blur(5px);
@@ -843,7 +857,7 @@ canvas {
     background-color: rgba(0, 0, 0, 0.45);
     color: white;
     padding: 15px 25px;
-    border-radius: 25px;
+    border-radius: 3px;
     margin-bottom: 10px;
     backdrop-filter: blur(5px);
     border: 2px solid rgba(204, 153, 255, 0.3);
@@ -912,7 +926,7 @@ canvas {
     /*background-color: rgba(0, 0, 0, 0.2);*/
     color: white;
     padding: 10px;
-    border-radius: 15px;
+    border-radius: 3px;
     min-width: 200px;
     max-height: 80vh;
     overflow-y: auto;
@@ -931,7 +945,7 @@ canvas {
     padding: 3px 10px;
     margin: 5px 0;
     background-color: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
+    border-radius: 3px;
     transition: all 0.3s ease;
 }
 
@@ -1034,7 +1048,7 @@ canvas {
     background-color: rgba(0, 0, 0, 0.3);
     color: #ffffff;
     padding: 10px 20px;
-    border-radius: 15px;
+    border-radius: 3px;
     font-size: 2rem;
     font-family: 'PermanentMarker-Regular', sans-serif;
     z-index: 2000;
@@ -1068,7 +1082,7 @@ canvas {
     width: 900px;
     max-height: 90vh;
     padding: 20px;
-    border-radius: 20px;
+    border-radius: 3px;
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -1098,12 +1112,12 @@ canvas {
 
 .game-over-scrollable-content::-webkit-scrollbar-track {
     background: rgba(255, 255, 255, 0.1);
-    border-radius: 5px;
+    border-radius: 3px;
 }
 
 .game-over-scrollable-content::-webkit-scrollbar-thumb {
     background: rgba(241, 196, 15, 0.5);
-    border-radius: 5px;
+    border-radius: 3px;
 }
 
 .game-over-scrollable-content::-webkit-scrollbar-thumb:hover {
@@ -1142,7 +1156,7 @@ canvas {
 
 .podium-block {
     width: 80px;
-    border-radius: 8px 8px 0 0;
+    border-radius: 3px 3px 0 0;
 }
 
 .first .podium-block {
@@ -1216,7 +1230,7 @@ canvas {
     top: 20px;
     left: 20px;
     padding: 12px 20px;
-    border-radius: 8px;
+    border-radius: 3px;
     background-color: rgba(204, 153, 255, 0.9);
     color: white;
     z-index: 999;
@@ -1262,7 +1276,7 @@ canvas {
     background-color: rgba(204, 153, 255, 0.2);
     padding: 12px;
     margin-bottom: 15px;
-    border-radius: 10px;
+    border-radius: 3px;
     animation: fadeIn 0.3s ease-out;
 }
 
@@ -1321,7 +1335,7 @@ canvas {
 .final-scores {
     margin-top: 30px;
     background-color: rgba(0, 0, 0, 0.3);
-    border-radius: 10px;
+    border-radius: 3px;
     padding: 20px;
 }
 
@@ -1332,7 +1346,7 @@ canvas {
     padding: 10px;
     margin: 5px 0;
     background-color: rgba(255, 255, 255, 0.1);
-    border-radius: 5px;
+    border-radius: 3px;
 }
 
 .score-item.current-player {
@@ -1376,7 +1390,7 @@ canvas {
 
 .podium-block {
     width: 100%;
-    border-radius: 8px 8px 0 0;
+    border-radius: 3px 3px 0 0;
     background: linear-gradient(to bottom, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
 }
 
@@ -1463,7 +1477,7 @@ canvas {
     position: fixed;
     background-color: rgba(255, 255, 255, 0.25);
     color: #353535;
-    border-radius: 15px;
+    border-radius: 3px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
     z-index: 1000;
     width: 300px;
@@ -1532,7 +1546,7 @@ canvas {
     max-width: 800px;
     width: 90%;
     padding: 40px;
-    border-radius: 20px;
+    border-radius: 3px;
     color: white;
     animation: modalSlideIn 0.3s ease-out;
 }
@@ -1541,7 +1555,7 @@ canvas {
 .player-stats-card {
     flex: 0 0 280px;
     background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
+    border-radius: 3px;
     padding: 15px;
 }
 
@@ -1562,7 +1576,7 @@ canvas {
     color: #2c3e50;
     width: 24px;
     height: 24px;
-    border-radius: 50%;
+    border-radius: 3px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1595,7 +1609,7 @@ canvas {
 .slider-btn {
     width: 30px;
     height: 30px;
-    border-radius: 50%;
+    border-radius: 3px;
     background: rgba(255, 255, 255, 0.2);
     border: none;
     color: white;
@@ -1616,7 +1630,7 @@ canvas {
 .detailed-stats {
    /* margin-top: 30px;*/
     background-color: rgba(0, 0, 0, 0.3);
-    border-radius: 15px;
+    border-radius: 3px;
     padding: 20px;
     flex: 1;
 }
@@ -1678,7 +1692,7 @@ canvas {
 .waiting-room-content {
     background-color: rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(10px);
-    border-radius: 20px;
+    border-radius: 3px;
     max-width: 600px;
     animation: fadeIn 0.3s ease-out;
     border: 1px solid var(--primary);
@@ -1703,12 +1717,12 @@ canvas {
 
 .waiting-room-content::-webkit-scrollbar-track {
     background: rgba(0, 0, 0, 0.2);
-    border-radius: 4px;
+    border-radius: 3px;
 }
 
 .waiting-room-content::-webkit-scrollbar-thumb {
     background-color: rgba(204, 153, 255, 0.5);
-    border-radius: 4px;
+    border-radius: 3px;
 }
 
 .waiting-room-container {
@@ -1725,17 +1739,17 @@ canvas {
 
 .waiting-room-container::-webkit-scrollbar-track {
     background: rgba(0, 0, 0, 0.2);
-    border-radius: 4px;
+    border-radius: 3px;
 }
 
 .waiting-room-container::-webkit-scrollbar-thumb {
     background-color: rgba(204, 153, 255, 0.5);
-    border-radius: 4px;
+    border-radius: 3px;
 }
 
 .players-list-container {
     background-color: rgba(0, 0, 0, 0.2);
-    border-radius: 15px;
+    border-radius: 3px;
     padding: 20px;
     min-height: 200px;
 }
@@ -1750,7 +1764,7 @@ canvas {
     background-color: rgba(255, 255, 255, 0.1);
     padding: 12px 20px;
     margin: 8px 0;
-    border-radius: 10px;
+    border-radius: 3px;
     transition: all 0.3s ease;
 }
 
@@ -1769,7 +1783,7 @@ canvas {
     display: flex;
     gap: 10px;
     justify-content: center;
-    border-radius: 0 0 15px 15px;
+    border-radius: 0 0 3px 3px;
 }
 
 #startGameButton:disabled {
@@ -1811,7 +1825,7 @@ input[type="checkbox"]:disabled + label {
     width: 300px;
     height: 50vh;
     background-color: rgba(0, 0, 0, 0.5);
-    border-radius: 0 15px 15px 0;
+    border-radius: 0 3px 3px 0;
     backdrop-filter: blur(10px);
     display: flex;
     flex-direction: column;
@@ -1827,7 +1841,7 @@ input[type="checkbox"]:disabled + label {
 .chat-header {
     padding: 15px;
     background-color: rgba(204, 153, 255, 0.2);
-    border-radius: 0 15px 0 0;
+    border-radius: 0 3px 0 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1865,7 +1879,7 @@ input[type="checkbox"]:disabled + label {
 .chat-message {
     background-color: rgba(255, 255, 255, 0.1);
     padding: 10px;
-    border-radius: 10px;
+    border-radius: 3px;
     word-break: break-word;
     max-width: 95%;
 }
@@ -1873,7 +1887,7 @@ input[type="checkbox"]:disabled + label {
 .chat-message.own-message {
     background-color: rgba(204, 153, 255, 0.2);
     margin-left: auto;
-    border-radius: 10px 10px 2px 10px;
+    border-radius: 3px 3px 2px 3px;
     border-right: 2px solid #cc99ff;
 }
 
@@ -1905,14 +1919,14 @@ input[type="checkbox"]:disabled + label {
     gap: 8px;
     padding: 5px;
     background-color: rgba(0, 0, 0, 0.3);
-    border-radius: 10px;
+    border-radius: 3px;
 }
 
 #chatInput {
     flex: 1;
     padding: 8px 15px;
     border: none;
-    border-radius: 10px;
+    border-radius: 3px;
     background-color: rgba(255, 255, 255, 0.9);
     font-size: 14px;
 }
@@ -1921,7 +1935,7 @@ input[type="checkbox"]:disabled + label {
     padding: 0.8rem 1rem;
     font-size: 14px;
     border: 1px solid #cc99ff;
-    border-radius: 25px;
+    border-radius: 3px;
     cursor: pointer;
     text-transform: uppercase;
     position: relative;
@@ -2012,7 +2026,7 @@ input[type="checkbox"]:disabled + label {
     border: 2px solid rgba(204, 153, 255, 0.5);
     border-radius: 50%;
     position: relative;
-    backdrop-filter: blur(5px);
+    backdrop-filter: blur(3px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
@@ -2252,7 +2266,7 @@ input[type="checkbox"]:disabled + label {
     background-color: rgba(255, 68, 68, 0.9);
     color: white;
     padding: 15px 30px;
-    border-radius: 15px;
+    border-radius: 3px;
     font-family: 'PermanentMarker-Regular', sans-serif;
     position: fixed;
     top: 40%;
@@ -2378,10 +2392,10 @@ input[type="checkbox"]:disabled + label {
         transform: translateX(-270px);
     }
 
-    .menu-content {
+   /* .menu-content {
         width: min(90vw, 90vh, 400px);
         height: min(90vw, 90vh, 400px);
-    }
+    }*/
 }
 
 /* Pour les très petits écrans */
@@ -2632,7 +2646,7 @@ input[type="checkbox"]:disabled + label {
     background-color: rgba(255, 255, 255, 0.9);
     color: #2c3e50;
     border: none;
-    border-radius: 25px;
+    border-radius: 3px;
     padding: 8px 15px;
     font-size: 14px;
     width: 150px;
@@ -2760,7 +2774,7 @@ input[type="checkbox"]:disabled + label {
     right: 0;
     background: rgba(0, 0, 0, 0.4);
     padding: 15px;
-    border-radius: 10px;
+    border-radius: 3px;
     backdrop-filter: blur(10px);
     transition: all 0.3s ease;
     min-width: 250px;
@@ -2815,4 +2829,91 @@ input[type="checkbox"]:disabled + label {
     opacity: 0;
     pointer-events: none;
     transform: translateY(10px);
+}
+
+/* Overlay de compte à rebours */
+.countdown-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    z-index: 2000;
+    display: none; /* Au lieu de flex par défaut */
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.countdown-overlay.visible {
+    display: flex;
+    opacity: 1;
+}
+
+.countdown-content {
+    padding: 40px;
+    text-align: center;
+    animation: countdownAppear 0.5s ease;
+}
+
+.countdown-timer {
+    font-family: 'PermanentMarker-Regular', sans-serif;
+    font-size: 72px;
+    color: #cc99ff;
+    margin: 20px 0;
+    text-shadow: 0 0 15px rgba(204, 153, 255, 0.5);
+}
+
+.countdown-text {
+    font-size: 24px;
+    margin-left: 10px;
+}
+
+@keyframes countdownAppear {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Le bouton d'annulation n'est visible que pour le propriétaire */
+#cancelCountdown {
+    display: none;
+    align-content: center;
+}
+
+#cancelCountdown.owner {
+    display: block;
+    margin-top: 20px;
+}
+
+/* Animation du compte à rebours */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.countdown-urgent {
+    color: #ff3333;
+    animation: pulse 1s infinite;
+    font-family: 'PermanentMarker-Regular', sans-serif;
+}
+
+/* Par défaut, les éléments owner-only sont cachés */
+.owner-only {
+    display: none;
+}
+
+/* Si l'élément a les classes owner-only ET owner, alors il est affiché */
+.owner-only.owner {
+    display: block;
+    margin: auto;
 }
