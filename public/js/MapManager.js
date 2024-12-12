@@ -1,6 +1,62 @@
 import { DEFAULT_GAME_SETTINGS } from './game-constants.js';
 
 // MapManager.js
+
+// Classe pour gérer l'effet de pluie spécifique à certaines maps
+class RainEffect {
+    constructor(basePath) {
+        this.spriteSheet = new Image();
+        // Utiliser le même chemin que les autres assets de la map
+        this.spriteSheet.src = `${basePath}/rain.png`;
+        
+        // Configuration de l'animation
+        this.frameWidth = 3000;   // 9000px ÷ 3 frames = 3000px par frame
+        this.frameHeight = 2000;  // Hauteur totale du spritesheet
+        this.totalFrames = 3;     // Nombre total de frames
+        this.currentFrame = 0;    // Frame actuelle
+        this.frameInterval = 100; // Intervalle entre les frames en ms
+        this.lastFrameTime = 0;
+        
+        // Paramètres de la pluie
+        this.opacity = 0.3;       // Transparence de la pluie
+        this.scale = 0.67;        // Scale pour adapter à une map de 2000x1500
+    }
+
+    update(currentTime) {
+        if (currentTime - this.lastFrameTime > this.frameInterval) {
+            this.currentFrame = (this.currentFrame + 1) % this.totalFrames;
+            this.lastFrameTime = currentTime;
+        }
+    }
+
+    draw(context, camera, mapWidth, mapHeight, canvas) {
+        if (!this.spriteSheet.complete) return;
+
+        context.save();
+        context.globalAlpha = this.opacity;
+        
+        const translateX = Math.round(canvas.width / 2 - camera.x * camera.scale);
+        const translateY = Math.round(canvas.height / 2 - camera.y * camera.scale);
+        
+        context.setTransform(
+            camera.scale * this.scale, 0,
+            0, camera.scale * this.scale,
+            translateX, translateY
+        );
+        
+        // Dessiner une seule fois l'effet de pluie car les dimensions correspondent déjà à la map
+        context.drawImage(
+            this.spriteSheet,
+            this.currentFrame * this.frameWidth, 0,  // Position source X et Y dans le spritesheet
+            this.frameWidth, this.frameHeight,       // Dimensions source dans le spritesheet
+            0, 0,                                    // Position de destination
+            this.frameWidth, this.frameHeight        // Dimensions de destination
+        );
+        
+        context.restore();
+    }
+}
+
 export class MapManager {
     constructor(canvas, options = {}) {
         if (!canvas) {
@@ -9,6 +65,10 @@ export class MapManager {
         
         this.canvas = canvas;
         this.debugMode = options.debugMode || false;
+        // Stocker la map sélectionnée comme propriété de la classe
+        this.selectedMap = options.selectedMap || 'map1';
+        this.mirrorMode = options.mirrorMode || false;
+        
         this.layers = {
             background: new Image(),
             collision: new Image(),
@@ -20,16 +80,15 @@ export class MapManager {
             collision: new Image(),
             foreground: new Image()
         };
-        // Récupérer la map sélectionnée ou utiliser map1 par défaut
-        const selectedMap = options.selectedMap || 'map1';
-        const mirrorMode = options.mirrorMode || false;
         
         // Construction du chemin en fonction de la map sélectionnée
-        const basePath = `/assets/maps/${selectedMap}/${mirrorMode ? 'mirror' : 'normal'}`;
+        const basePath = `/assets/maps/${this.selectedMap}/${this.mirrorMode ? 'mirror' : 'normal'}`;
         
         this.mapImages.background.src = `${basePath}/background.png`;
         this.mapImages.collision.src = `${basePath}/collision.png`;
         this.mapImages.foreground.src = `${basePath}/foreground.png`;
+
+        this.rainEffect = this.selectedMap === 'map1' ? new RainEffect(basePath) : null;
         
         // Récupérer les dimensions depuis les options
         this.mapWidth = options.mapWidth || 2000;
@@ -46,8 +105,9 @@ export class MapManager {
     async loadLayers() {
         try {
             const gameSettings = waitingRoom.settings || DEFAULT_GAME_SETTINGS;
-            const mapId = gameSettings.selectedMap || 'map1'; // au lieu de 'tokyo'
-            const mirrorMode = gameSettings.mirrorMode || false;
+            // Utiliser la propriété stockée de la classe
+            const mapId = this.selectedMap;
+            const mirrorMode = this.mirrorMode;
             
             const basePath = `/assets/maps/${mapId}/${mirrorMode ? 'mirror' : 'normal'}`;
             
@@ -60,6 +120,9 @@ export class MapManager {
             this.layers.background.src = `${basePath}/background.png`;
             this.layers.collision.src = `${basePath}/collision.png`;
             this.layers.foreground.src = `${basePath}/foreground.png`;
+
+            // Mettre à jour l'effet de pluie en fonction de la map
+            this.rainEffect = mapId === 'map1' ? new RainEffect(basePath) : null;
 
             // Vérifier que les chemins sont corrects
             console.log('Chemins des images:', {
@@ -113,17 +176,12 @@ export class MapManager {
 
     async updateMap(selectedMap = 'map1', mirrorMode = false) {
         try {
-            // Utiliser les valeurs par défaut si undefined
-            selectedMap = selectedMap || 'map1';
-            mirrorMode = mirrorMode ?? false;
+            // Mettre à jour les propriétés de la classe
+            this.selectedMap = selectedMap || 'map1';
+            this.mirrorMode = mirrorMode ?? false;
     
-            console.log('Début de la mise à jour de la map:', {
-                selectedMap,
-                mirrorMode,
-                mapManagerExists: !!this
-            });
-    
-            const basePath = `/assets/maps/${selectedMap}/${mirrorMode ? 'mirror' : 'normal'}`;
+            const basePath = `/assets/maps/${this.selectedMap}/${this.mirrorMode ? 'mirror' : 'normal'}`;
+            this.rainEffect = this.selectedMap === 'map1' ? new RainEffect(basePath) : null;
     
             // Créer des promesses pour le chargement des images
             const loadPromises = [];
@@ -240,10 +298,9 @@ export class MapManager {
             console.error('Canvas not initialized in MapManager');
             return;
         }
-
-        context.save();
     
-        // Appliquer la transformation de la caméra
+        context.save();
+        
         const translateX = Math.round(this.canvas.width / 2 - camera.x * camera.scale);
         const translateY = Math.round(this.canvas.height / 2 - camera.y * camera.scale);
         
@@ -253,8 +310,14 @@ export class MapManager {
             translateX, translateY
         );
     
-        // Dessiner le fond avec des dimensions fixes
+        // Dessiner le fond
         context.drawImage(this.layers.background, 0, 0, this.mapWidth, this.mapHeight);
+    
+        // Dessiner l'effet de pluie si présent
+        if (this.rainEffect) {
+            this.rainEffect.update(Date.now());
+            this.rainEffect.draw(context, camera, this.mapWidth, this.mapHeight, this.canvas);
+        }
     
         // Debug : afficher le calque de collision
         if (this.debugMode) {
