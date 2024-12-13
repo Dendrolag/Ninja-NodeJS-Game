@@ -4,6 +4,7 @@ Tous les changements notables de ce projet seront documentés dans ce fichier.
 ## [0.7.16] - 2024-12-13
 ### Corrections
 - Fix de l'alignement du calque de pluie map1
+- Nouveaux assets map1 mirror
 ### Modifications
 - Amélioration du feedback du score (modification de l'affichage du classement, floating point se déplacent vers le classement)
 
