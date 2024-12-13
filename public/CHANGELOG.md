@@ -1,5 +1,18 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
+
+## [0.7.16] - 2024-12-13
+### Corrections
+- Fix de l'alignement du calque de pluie map1
+### Modifications
+- Amélioration du feedback du score (modification de l'affichage du classement, floating point se déplacent vers le classement)
+
+## [0.7.15] - 2024-12-12
+### Ajout
+- Ajout de la pluie map1
+### Modifications
+- Upgrade des assets map1
+
 ## [0.7.14] - 2024-12-11
 ### Corrections
 - Fix d'un bug de normalisation de la vitesse

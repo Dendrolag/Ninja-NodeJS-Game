@@ -110,7 +110,7 @@ export class AudioManager {
         clone.playbackRate = 1.0;
         
         clone.play()
-            .then(() => console.log('Son joué avec succès'))
+           // .then(() => console.log('Son joué avec succès'))
             .catch(err => console.warn('Erreur de lecture audio:', err));
     }
 

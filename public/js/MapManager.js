@@ -17,9 +17,11 @@ class RainEffect {
         this.frameInterval = 100; // Intervalle entre les frames en ms
         this.lastFrameTime = 0;
         
-        // Paramètres de la pluie
-        this.opacity = 0.3;       // Transparence de la pluie
-        this.scale = 0.67;        // Scale pour adapter à une map de 2000x1500
+        // Calcul du scale pour adapter aux dimensions de la map (2000x1500)
+        this.scaleX = 2000 / 3000;  // Pour passer de 3000 à 2000 en largeur
+        this.scaleY = 1500 / 2000;  // Pour passer de 2000 à 1500 en hauteur
+        
+        this.opacity = 0.3;     
     }
 
     update(currentTime) {
@@ -38,19 +40,19 @@ class RainEffect {
         const translateX = Math.round(canvas.width / 2 - camera.x * camera.scale);
         const translateY = Math.round(canvas.height / 2 - camera.y * camera.scale);
         
+        // Appliquer la transformation de la caméra et notre scale pour les dimensions
         context.setTransform(
-            camera.scale * this.scale, 0,
-            0, camera.scale * this.scale,
+            camera.scale * this.scaleX, 0,
+            0, camera.scale * this.scaleY,
             translateX, translateY
         );
         
-        // Dessiner une seule fois l'effet de pluie car les dimensions correspondent déjà à la map
         context.drawImage(
             this.spriteSheet,
-            this.currentFrame * this.frameWidth, 0,  // Position source X et Y dans le spritesheet
-            this.frameWidth, this.frameHeight,       // Dimensions source dans le spritesheet
-            0, 0,                                    // Position de destination
-            this.frameWidth, this.frameHeight        // Dimensions de destination
+            this.currentFrame * this.frameWidth, 0,
+            this.frameWidth, this.frameHeight,
+            0, 0,
+            this.frameWidth, this.frameHeight
         );
         
         context.restore();

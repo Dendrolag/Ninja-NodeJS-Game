@@ -927,11 +927,54 @@ canvas {
     color: white;
     padding: 10px;
     border-radius: 3px;
-    min-width: 200px;
+    min-width: 250px;
     max-height: 80vh;
     overflow-y: auto;
     /*backdrop-filter: blur(4px);*/
     z-index: 900;
+}
+
+.player-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 15px;
+    margin: 5px 0;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.player-list-item.current-player {
+    background-color: rgba(204, 153, 255, 0.2);
+    border: 1px solid #cc99ff;
+    box-shadow: 0 0 10px rgba(204, 153, 255, 0.2);
+}
+
+.player-score {
+    font-family: 'PermanentMarker-Regular', sans-serif;
+    transition: transform 0.3s ease;
+    text-shadow: 1px 1px 2px #00000091;
+}
+
+/* Tailles différentes selon le rang */
+.player-list-item:nth-child(1) .player-score {
+    font-size: 32px;
+    color: #ffd700; /* Or pour le premier */
+}
+
+.player-list-item:nth-child(2) .player-score {
+    font-size: 28px;
+    color: #c0c0c0; /* Argent pour le second */
+}
+
+.player-list-item:nth-child(3) .player-score {
+    font-size: 24px;
+    color: #cd7f32; /* Bronze pour le troisième */
+}
+
+.player-list-item:nth-child(n+4) .player-score {
+    font-size: 20px;
 }
 
 #players {
@@ -952,6 +995,27 @@ canvas {
 #players li.current-player {
     background-color: rgba(241, 196, 15, 0.3);
     border: 1px solid #cc99ff;
+}
+
+/* Animations pour les changements de score */
+@keyframes scoreIncrease {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); color: #7fff7f; }
+    100% { transform: scale(1); }
+}
+
+@keyframes scoreDecrease {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.8); color: #ff7f7f; }
+    100% { transform: scale(1); }
+}
+
+.score-increase {
+    animation: scoreIncrease 0.5s ease;
+}
+
+.score-decrease {
+    animation: scoreDecrease 0.5s ease;
 }
 
 /* Bonus actifs */
@@ -2541,13 +2605,11 @@ input[type="checkbox"]:disabled + label {
 
 .floating-points {
     position: absolute;
-    font-family: 'PermanentMarker-Regular', sans-serif; 
-    color: #fff;
+    pointer-events: none;
+    font-family: 'PermanentMarker-Regular', sans-serif;
     font-size: 25px;
     font-weight: bold;
     text-shadow: 0 0 2px rgba(0,0,0,0.8);
-    pointer-events: none;
-    animation: floatUp 1s ease-out forwards;
     z-index: 1000;
 }
 
@@ -2557,15 +2619,104 @@ input[type="checkbox"]:disabled + label {
     text-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
 }
 
+/* Animation du score qui augmente (effet de battement de cœur) */
+@keyframes scoreIncrease {
+    0% { 
+        transform: scale(1); 
+        color: inherit;
+    }
+    25% { 
+        transform: scale(1.4); 
+        color: #7fff7f;
+    }
+    50% { 
+        transform: scale(1.2);
+        color: #7fff7f;
+    }
+    75% { 
+        transform: scale(1.3);
+        color: #7fff7f;
+    }
+    100% { 
+        transform: scale(1);
+        color: inherit;
+    }
+}
+
+/* Animation du score qui diminue (clignotement) */
+@keyframes scoreDecrease {
+    0% { 
+        opacity: 1;
+        color: inherit;
+    }
+    25% { 
+        opacity: 0.3;
+        color: #ff7f7f;
+    }
+    50% { 
+        opacity: 1;
+        color: #ff7f7f;
+    }
+    75% { 
+        opacity: 0.3;
+        color: #ff7f7f;
+    }
+    100% { 
+        opacity: 1;
+        color: inherit;
+    }
+}
+
+.score-increase {
+    animation: scoreIncrease 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.score-decrease {
+    animation: scoreDecrease 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Phase 1 : Monter */
 @keyframes floatUp {
     0% {
         transform: translateY(0);
+        opacity: 0;
+    }
+    20% {
+        transform: translateY(-50px);
         opacity: 1;
     }
     100% {
         transform: translateY(-50px);
+        opacity: 1;
+    }
+}
+
+/* Phase 2 : Se déplacer vers le score */
+@keyframes moveToScore {
+    0% {
+        transform: translate(0, -50px);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(var(--targetX), var(--targetY));
         opacity: 0;
     }
+}
+
+.floating-points.phase1 {
+    animation: floatUp 0.5s ease-out forwards;
+}
+
+.floating-points.phase2 {
+    animation: moveToScore 0.8s ease-in forwards;
+}
+
+/* Ajustements responsive */
+@media (max-width: 768px) {
+    .player-list-item:nth-child(1) .player-score { font-size: 24px; }
+    .player-list-item:nth-child(2) .player-score { font-size: 22px; }
+    .player-list-item:nth-child(3) .player-score { font-size: 20px; }
+    .player-list-item:nth-child(n+4) .player-score { font-size: 18px; }
 }
 
 /* Base pour tous les effets visuels */

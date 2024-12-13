@@ -12,7 +12,7 @@ const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
 const nicknameInput = document.getElementById('nicknameInput');
 
-const GAME_VERSION = "v0.7.15";  // À mettre à jour à chaque déploiement
+const GAME_VERSION = "v0.7.16";  // À mettre à jour à chaque déploiement
 
 // Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
@@ -968,18 +968,47 @@ async function loadGameAssets() {
 
 function createFloatingPoints(x, y, points, color) {
     const element = document.createElement('div');
-    element.className = 'floating-points';
+    element.className = 'floating-points phase1';
+    
+    if (points === 15) {
+        element.setAttribute('data-type', 'blackbot');
+    }
+    
     element.textContent = points > 0 ? `+${points}` : points;
     element.style.left = `${x}px`;
     element.style.top = `${y}px`;
-    element.style.color = color || '#fff';
+    
+    if (color) {
+        element.style.color = color;
+    }
     
     document.getElementById('gameContainer').appendChild(element);
-    
-    // Supprimer l'élément après l'animation
+
+    // Après la première phase (monter), démarrer la seconde phase (déplacement vers le score)
+    setTimeout(() => {
+        const playerScoreElement = playerListContainer.querySelector('.current-player .player-score');
+        if (playerScoreElement) {
+            const rect = playerScoreElement.getBoundingClientRect();
+            const startRect = element.getBoundingClientRect();
+            
+            // Calculer le déplacement nécessaire
+            const targetX = rect.left - startRect.left + (rect.width / 2);
+            const targetY = rect.top - startRect.top + (rect.height / 2);
+
+            // Définir les variables CSS pour l'animation
+            element.style.setProperty('--targetX', `${targetX}px`);
+            element.style.setProperty('--targetY', `${targetY}px`);
+
+            // Démarrer la seconde phase
+            element.classList.remove('phase1');
+            element.classList.add('phase2');
+        }
+    }, 500); // Durée de la première phase
+
+    // Supprimer l'élément après la fin des animations
     setTimeout(() => {
         element.remove();
-    }, 1000);
+    }, 1300); // Durée totale des deux phases
 }
 
 // Événements de redimensionnement
@@ -1682,11 +1711,9 @@ socket.on('gameStarting', async () => {
     });
     
     socket.on('malusCollected', (data) => {
-        console.log('Malus collecté', data.type);
     
         if (audioManager) {
             audioManager.playSound('malusCollect');
-            console.log('Son de collecte de malus joué');
         }
         
         if (!MALUS_MESSAGES) {
@@ -2335,14 +2362,14 @@ async function startGame() {
     }
 
     socket.on('playerSound', (data) => {
-        console.log('Son reçu:', data); // Debug
+        //console.log('Son reçu:', data); // Debug
         if (audioManager && data.playerId !== playerId) { // Notez le changement de socket.id à playerId
             if (data.type === 'footstep') {
                 const now = Date.now();
                 const interval = data.isSpeedBoost ? 200 : 300;
                 
-                // Ajouter un log de debug
-                console.log('Son de pas d\'un autre joueur - Volume:', data.volume, 'Distance:', data.distance);
+                /* Ajouter un log de debug
+                console.log('Son de pas d\'un autre joueur - Volume:', data.volume, 'Distance:', data.distance);*/
                 
                 if (!audioManager.lastRemoteFootstepTimes) {
                     audioManager.lastRemoteFootstepTimes = new Map();
@@ -2422,13 +2449,13 @@ socket.on('playerCapturedEnemy', (data) => {
     if (!socket.hasListeners('activateBonus')) {
         socket.on('activateBonus', (data) => {
             const { type, duration } = data;
-            console.log('Bonus activé:', type); // Debug
+           // console.log('Bonus activé:', type); // Debug
         
             // Jouer le son de collecte
             if (audioManager) {
                 // Jouer immédiatement le son de collecte
                 audioManager.playSound('bonusCollect');
-                console.log('Son de collecte de bonus joué');
+               // console.log('Son de collecte de bonus joué');
         
                 // Le son continu
                 const soundMap = {
@@ -3575,25 +3602,53 @@ function getBonusName(bonusType) {
 
 // Mise à jour de la liste des joueurs
 function updatePlayerList(playerScores) {
+    const previousScores = new Map();
+    const listItems = playerListContainer.querySelectorAll('.player-list-item');
+    listItems.forEach(item => {
+        const id = item.dataset.playerId;
+        const score = parseInt(item.dataset.score);
+        previousScores.set(id, score);
+    });
+
     playerListContainer.innerHTML = '';
     
     playerScores.forEach((player, index) => {
         const li = document.createElement('li');
+        li.className = 'player-list-item';
+        li.dataset.playerId = player.id;
+        li.dataset.score = player.currentBots;
+        
         if (player.id === playerId) {
-            li.className = 'current-player';
+            li.classList.add('current-player');
         }
 
-        // Calcul du score total (bots actuels + captures)
-        const totalScore = player.currentBots + player.captures;
+        const scoreSpan = document.createElement('span');
+        scoreSpan.className = 'player-score';
+        scoreSpan.textContent = player.currentBots;
 
-        li.innerHTML = `
-            <div class="player-rank">#${index + 1}</div>
-            <div class="player-info">
-                <div class="player-name">${player.nickname}</div>
-                <div class="player-score">${totalScore}</div>
-            </div>
-        `;
+        // Animation du score si changement
+        if (previousScores.has(player.id)) {
+            const oldScore = previousScores.get(player.id);
+            if (player.currentBots > oldScore) {
+                // Retirer l'ancienne animation si elle existe
+                scoreSpan.addEventListener('animationend', () => {
+                    scoreSpan.classList.remove('score-increase');
+                });
+                scoreSpan.classList.add('score-increase');
+            } else if (player.currentBots < oldScore) {
+                scoreSpan.addEventListener('animationend', () => {
+                    scoreSpan.classList.remove('score-decrease');
+                });
+                scoreSpan.classList.add('score-decrease');
+            }
+        }
 
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'player-name';
+        nameSpan.textContent = player.nickname;
+
+        li.appendChild(scoreSpan);
+        li.appendChild(nameSpan);
         playerListContainer.appendChild(li);
     });
 }
