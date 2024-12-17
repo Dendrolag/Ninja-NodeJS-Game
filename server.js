@@ -2271,49 +2271,57 @@ io.on('connection', (socket) => {
         if (player?.isOwner) {
             // Filtrer les paramètres audio s'ils sont présents
             const { musicVolume, soundVolume, ...gameSettings } = settings;
-            
+                
             try {
-                // Vérifier si la map ou le mode miroir change
-                if (gameSettings.selectedMap !== waitingRoom.settings.selectedMap || 
-                    gameSettings.mirrorMode !== waitingRoom.settings.mirrorMode) {
-                    
+                // Mise à jour normale
+                waitingRoom.settings = {
+                    ...waitingRoom.settings,
+                    ...gameSettings,
+                    enabledZones: {
+                        ...waitingRoom.settings.enabledZones,
+                        ...settings.enabledZones
+                    },
+                };
+                
+                // Informer tous les joueurs des changements
+                io.emit('gameSettingsUpdated', waitingRoom.settings);
+            } catch (error) {
+                console.error('Erreur lors de la mise à jour des paramètres:', error);
+                socket.emit('error', 'Erreur lors de la mise à jour des paramètres');
+            }
+        }
+    });
+
+            // Gestion séparée pour les paramètres de map
+    socket.on('updateMapSettings', async (mapSettings) => {
+        const player = waitingRoom.players.get(socket.id);
+        if (player?.isOwner) {
+            try {
+                // Vérifier si les paramètres de map changent réellement
+                if (mapSettings.selectedMap !== waitingRoom.settings.selectedMap || 
+                    mapSettings.mirrorMode !== waitingRoom.settings.mirrorMode) {
+                        
                     // Mettre à jour les collisions en premier
-                    await collisionMap.updateCollisions(gameSettings.selectedMap, gameSettings.mirrorMode);
-                    
+                    await collisionMap.updateCollisions(mapSettings.selectedMap, mapSettings.mirrorMode);
+                
                     // Attendre un petit délai pour s'assurer que tout est bien initialisé
                     await new Promise(resolve => setTimeout(resolve, 100));
-                    
-                    // Puis mettre à jour les paramètres
+                
+                    // Mettre à jour les paramètres de map
                     waitingRoom.settings = {
                         ...waitingRoom.settings,
-                        ...gameSettings,
-                        enabledZones: {
-                            ...waitingRoom.settings.enabledZones,
-                            ...settings.enabledZones
-                        },
+                        selectedMap: mapSettings.selectedMap,
+                        mirrorMode: mapSettings.mirrorMode
                     };
-                    
+
                     // Informer tous les joueurs des changements
                     io.emit('gameSettingsUpdated', {
                         ...waitingRoom.settings,
-                        mapUpdateRequired: true // Indicateur pour forcer la mise à jour
+                        mapUpdateRequired: true // Flag pour forcer la mise à jour de la map
                     });
-                } else {
-                    // Si pas de changement de map, mise à jour normale
-                    waitingRoom.settings = {
-                        ...waitingRoom.settings,
-                        ...gameSettings,
-                        enabledZones: {
-                            ...waitingRoom.settings.enabledZones,
-                            ...settings.enabledZones
-                        },
-                    };
-                    
-                    // Informer tous les joueurs des changements
-                    io.emit('gameSettingsUpdated', waitingRoom.settings);
                 }
             } catch (error) {
-                console.error('Erreur lors de la mise à jour des paramètres:', error);
+                console.error('Erreur lors de la mise à jour de la map:', error);
                 socket.emit('error', 'Erreur lors de la mise à jour de la map');
             }
         }

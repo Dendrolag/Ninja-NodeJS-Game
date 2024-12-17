@@ -12,7 +12,7 @@ const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
 const nicknameInput = document.getElementById('nicknameInput');
 
-const GAME_VERSION = "v0.7.16";  // À mettre à jour à chaque déploiement
+const GAME_VERSION = "v0.8.0";  // À mettre à jour à chaque déploiement
 
 // Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
@@ -23,15 +23,27 @@ const WARNING_THRESHOLD = 3000; // 3 secondes avant disparition
 const mapSelector = document.getElementById('mapSelector');
 const mirrorModeCheckbox = document.getElementById('mirrorMode');
 
-mapSelector.addEventListener('change', updateGameSettings);
-mirrorModeCheckbox.addEventListener('change', updateGameSettings);
-
 // Éléments de la salle d'attente
 const waitingRoomScreen = document.getElementById('waitingRoom');
 const playersList = document.getElementById('waitingRoomPlayers');
 const startGameButton = document.getElementById('startGameButton');
 const settingsButton = document.getElementById('waitingRoomSettings'); // Un seul bouton de paramètres
 const leaveRoomButton = document.getElementById('leaveRoomButton');
+
+// Gestionnaire pour la modale de sélection de map
+const mapSelectionMenu = document.getElementById('mapSelectionMenu');
+const mapSelectionButton = document.getElementById('mapSelectionButton');
+const backFromMapButton = document.getElementById('backFromMapButton');
+const saveMapButton = document.getElementById('saveMapButton');
+const mapSelectorModal = document.getElementById('mapSelectorModal');
+const mirrorModeModal = document.getElementById('mirrorModeModal');
+
+// Gestion de la modale d'aide
+const helpButton = document.getElementById('helpButton');
+const helpMenu = document.getElementById('helpMenu');
+const closeHelpButton = document.getElementById('closeHelpButton');
+const helpTabs = document.querySelectorAll('#helpMenu .tab-button');
+const helpContents = document.querySelectorAll('#helpMenu .tab-content');
 
 let countdownInitialized = false; // Variable pour suivre l'état du countdown
 
@@ -267,6 +279,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         initializeNicknameValidation();
         addVersionDisplay();
+        initializeButtonHoverEffects();
     } catch (error) {
         console.error('Erreur d\'initialisation:', error);
     }
@@ -342,6 +355,42 @@ let gameSettings = {
         STEALTH: true
     }
 };
+
+function initializeButtonHoverEffects() {
+    // Sélectionner tous les boutons
+    const buttons = document.querySelectorAll('.primary-button, .secondary-button, .map-selection-button');
+    
+    buttons.forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            const randomHue = Math.random();
+            this.style.setProperty('--hue', randomHue);
+        });
+    });
+}
+
+// Ouvrir la modale d'aide
+helpButton.addEventListener('click', () => {
+    helpMenu.style.display = 'block';
+});
+
+// Fermer la modale d'aide
+closeHelpButton.addEventListener('click', () => {
+    helpMenu.style.display = 'none';
+});
+
+// Gestion des onglets dans l'aide
+helpTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+        // Retirer la classe active de tous les onglets et contenus
+        helpTabs.forEach(t => t.classList.remove('active'));
+        helpContents.forEach(c => c.classList.remove('active'));
+        
+        // Activer l'onglet cliqué
+        tab.classList.add('active');
+        const content = document.getElementById(`${tab.dataset.tab}-tab`);
+        if (content) content.classList.add('active');
+    });
+});
 
 class AssetCache {
     constructor() {
@@ -946,6 +995,45 @@ function resetSettings() {
 
 resetSettingsButton.addEventListener('click', resetSettings);
 
+// Fonction pour mettre à jour le texte du bouton de sélection de map
+function updateMapButtonText() {
+    const mapName = mapSelectorModal.options[mapSelectorModal.selectedIndex].text;
+    const mode = mirrorModeModal.checked ? 'Miroir' : 'Normal';
+    
+    const mapValue = document.querySelector('.map-value');
+    const modeValue = document.querySelector('.mode-value');
+    
+    if (mapValue) mapValue.textContent = mapName;
+    if (modeValue) modeValue.textContent = mode;
+}
+
+// Ouvrir la modale de sélection de map
+mapSelectionButton.addEventListener('click', () => {
+    if (!isRoomOwner) return;
+    mapSelectionMenu.style.display = 'block';
+});
+
+// Fermer la modale sans sauvegarder
+backFromMapButton.addEventListener('click', () => {
+    mapSelectionMenu.style.display = 'none';
+});
+
+// Sauvegarder les paramètres de map
+saveMapButton.addEventListener('click', () => {
+    const newSettings = {
+        ...waitingRoom.settings,
+        selectedMap: mapSelectorModal.value,
+        mirrorMode: mirrorModeModal.checked
+    };
+
+    if (isRoomOwner) {
+        socket.emit('updateGameSettings', newSettings);
+    }
+    
+    updateMapButtonText();
+    mapSelectionMenu.style.display = 'none';
+});
+
 // Images des bonus
 const bonusImages = {};
 const malusImages = {};
@@ -1192,8 +1280,7 @@ window.addEventListener('resize', showMobileControls);
 
 // Menu des paramètres
 settingsButton.addEventListener('click', () => {
-    mainMenu.classList.remove('active');
-    settingsMenu.style.display = 'block';
+    settingsMenu.style.display = 'flex'; // Utiliser flex au lieu de block
 });
 
 saveSettingsButton.addEventListener('click', () => {
@@ -1207,8 +1294,6 @@ saveSettingsButton.addEventListener('click', () => {
     if (isRoomOwner) {
         const newSettings = {
             gameDuration: parseInt(gameDurationInput.value),
-            selectedMap: mapSelector.value,
-            mirrorMode: mirrorModeCheckbox.checked,
             initialBotCount: parseInt(initialBotCountInput.value),
             enableSpecialZones: enableSpecialZonesCheckbox.checked,
             enabledZones: {
@@ -1414,6 +1499,7 @@ startButton.addEventListener('click', () => {
     // Initialiser le chat après la connexion socket
     socket.on('connect', () => {
         initializeWaitingRoomTabs();
+        initializeChat();
     });
 
     socket.on('playerLeft', (data) => {
@@ -1470,6 +1556,13 @@ startButton.addEventListener('click', () => {
         // D'abord mettre à jour l'UI et les paramètres
         updateSettingsUI(settings);
         gameSettings = settings;
+
+            // Mettre à jour les sélecteurs de la modale
+    mapSelectorModal.value = settings.selectedMap || 'map1';
+    mirrorModeModal.checked = settings.mirrorMode || false;
+    
+    // Mettre à jour le texte du bouton
+    updateMapButtonText();
     
         try {
             // Si mapManager n'existe pas encore, l'initialiser
@@ -1833,6 +1926,13 @@ function updateWaitingRoomPlayers(data) {
         return;
     }
 
+    // Récupérer les éléments pour le compteur
+    const playersCounter = document.getElementById('playersCounter');
+    const playerCount = players.length;
+    const ninja = playerCount > 1 ? 'ninjas' : 'ninja';
+    const connected = playerCount > 1 ? 'connectés' : 'connecté';
+    playersCounter.textContent = `${playerCount} ${ninja} ${connected}`;
+
     playersList.innerHTML = '';
 
     // Mettre à jour isRoomOwner
@@ -2051,10 +2151,6 @@ function handlePauseClick() {
 function updateSettingsUI(settings) {
     // Mettre à jour tous les champs avec les nouvelles valeurs
     gameDurationInput.value = settings.gameDuration;
-    // Mise à jour des paramètres de map
-    mapSelector.value = settings.selectedMap || 'map1';
-    mirrorModeCheckbox.checked = settings.mirrorMode || false;
-
     enableSpeedBoostCheckbox.checked = settings.enableSpeedBoost;
     speedBoostDurationInput.value = settings.speedBoostDuration;
     enableInvincibilityCheckbox.checked = settings.enableInvincibility;
@@ -2899,6 +2995,21 @@ function initializeSocket(socket) {
     return socket;
 }
 
+function initializeChat() {
+    const chatSection = document.querySelector('.chat-section');
+    const toggleIcon = document.querySelector('.toggle-icon');
+    
+    if (isMobile()) {
+        toggleIcon.addEventListener('click', () => {
+            chatSection.classList.toggle('collapsed');
+            toggleIcon.textContent = chatSection.classList.contains('collapsed') ? '◀' : '▶';
+        });
+    } else {
+        toggleIcon.style.display = 'none';
+        chatSection.classList.remove('collapsed');
+    }
+}
+
 function initializeAnimations() {
     // Initialiser les animations des bonus
     bonusAnimations = {};
@@ -3644,7 +3755,7 @@ function updatePlayerList(playerScores) {
         }
 
         const nameSpan = document.createElement('span');
-        nameSpan.className = 'player-name';
+        nameSpan.className = 'player-name-interface';
         nameSpan.textContent = player.nickname;
 
         li.appendChild(scoreSpan);
@@ -3938,6 +4049,12 @@ function returnToWaitingRoom() {
         socket.on('gameSettingsUpdated', (settings) => {
             updateSettingsUI(settings);
             gameSettings = settings;
+                // Mettre à jour les sélecteurs de la modale
+    mapSelectorModal.value = settings.selectedMap || 'map1';
+    mirrorModeModal.checked = settings.mirrorMode || false;
+    
+    // Mettre à jour le texte du bouton
+    updateMapButtonText();
         });
     }
 
@@ -3969,6 +4086,11 @@ function returnToWaitingRoom() {
     if (gameLoopInterval) {
         clearInterval(gameLoopInterval);
     }
+}
+
+// Désactiver le bouton si on n'est pas propriétaire
+function updateMapButtonState() {
+    mapSelectionButton.disabled = !isRoomOwner;
 }
 
 function showCaptureModal(capturedNickname) {

@@ -77,6 +77,12 @@
     src: url('/assets/fonts/BrunoAce-Regular.ttf') format('truetype');
 }
 
+@property --hue {
+    syntax: '<number>';
+    initial-value: 0;
+    inherits: false;
+  }
+
 /* Reset et styles de base */
 *, *::before, *::after {
     box-sizing: border-box;
@@ -187,6 +193,12 @@ h1, h2, h3 {
     margin-bottom: 30px;
 }
 
+h4 {
+    color: rgba(255, 255, 255, 0.5);
+    font-weight: bold;
+    font-size: 15px;
+}
+
 .menu-content h1 {
     font-size: clamp(24px, 5vmin, 48px);
     margin-bottom: 1vmin;
@@ -235,6 +247,10 @@ h3 {
     backdrop-filter: blur(40px);
 }
 
+#nicknameInput {
+    max-width: 300px;
+}
+
 .menu-form button {
     margin-top: 2vmin;
     padding: 2vmin 3vmin;
@@ -251,7 +267,6 @@ input[type="text"] {
     border-radius: 3px;
     background-color: rgba(255, 255, 255, 0.9);
     width: 100%;
-    max-width: 300px;
     transition: all 0.3s ease;
     font-family: Arial;
 }
@@ -263,43 +278,45 @@ input[type="text"]:focus, input[type="number"]:focus {
 }
 
 /* Boutons */
-.primary-button, .secondary-button, .game-button {
-    padding: 0.8rem 1rem;
+.primary-button, .secondary-button, .game-button, .map-selection-button {
+    height: 70px;
+    padding: 0 2rem;
     font-size: 16px;
-    border: 2px solid transparent;
     border-radius: 3px;
     cursor: pointer;
-    text-transform: uppercase;
     position: relative;
-    background-color: rgba(204, 153, 255, 0.1);
-    color: white;
     transition: all 0.3s ease;
     overflow: hidden;
     margin: 10px 0;
     font-family: Arial;
+    border: none;
+    --hue: 0;
+    transition: all 0.3s ease, background-color 0.3s ease;
 }
 
-/* Effet néon de base */
+.secondary-button, .game-button {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(40px);
+}
+
+.modal-buttons {
+    height: 50px;
+    margin: 0;
+}
+
 .primary-button {
-    box-shadow: 0 0 10px rgba(204, 153, 255, 0.5),
-                inset 0 0 10px rgba(204, 153, 255, 0.2);
-    border-color: rgba(204, 153, 255, 0.3);
+    --lightness: 85%; /* Base claire */
+    background-color: rgb(255, 255, 255);
+    color: #000;
     font-weight: bold;
-    background-color: rgba(204, 153, 255, 0.3);
+    text-transform: uppercase;
 }
 
 /* Animation de lueur au survol */
 .primary-button:hover {
-    background-color: rgba(204, 153, 255, 0.2);
-    border-color: rgba(204, 153, 255, 0.8);
-    box-shadow: 0 0 20px rgba(204, 153, 255, 0.8),
-                inset 0 0 15px rgba(204, 153, 255, 0.4);
+    animation: randomLightColor 0.3s forwards;
     transform: translateY(-2px);
-}
-
-/* Animation de pulsation subtile */
-.primary-button:not(:disabled) {
-    animation: buttonPulse 2s infinite;
 }
 
 /* État désactivé */
@@ -308,6 +325,40 @@ input[type="text"]:focus, input[type="number"]:focus {
     cursor: not-allowed;
     animation: none;
     box-shadow: none;
+}
+
+/* Style spécifique pour les boutons secondaires (fond foncé, texte clair) */
+.secondary-button,
+.map-selection-button {
+    --lightness: 25%; /* Base foncée */
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #fff;
+}
+
+.secondary-button:hover,
+.map-selection-button:hover {
+    animation: randomDarkColor 0.3s forwards;
+    transform: translateY(-2px);
+}
+
+/* Animation pour les couleurs claires */
+@keyframes randomLightColor {
+    from {
+        background-color: rgb(255, 255, 255);
+    }
+    to {
+        background-color: hsl(calc(var(--hue) * 360), 70%, var(--lightness));
+    }
+}
+
+/* Animation pour les couleurs foncées */
+@keyframes randomDarkColor {
+    from {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+    to {
+        background-color: hsl(calc(var(--hue) * 360), 70%, var(--lightness));
+    }
 }
 
 /* Animation de pulsation */
@@ -326,42 +377,61 @@ input[type="text"]:focus, input[type="number"]:focus {
     }
 }
 
-/* Style pour le bouton secondaire */
-.secondary-button {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.1),
-                inset 0 0 10px rgba(255, 255, 255, 0.05);
-}
-
-.secondary-button:hover {
-    background-color: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.4);
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.2),
-                inset 0 0 15px rgba(255, 255, 255, 0.1);
-    transform: translateY(-2px);
-}
-
 /* Menu des paramètres */
 #settingsMenu {
-    padding: 20px;
-    overflow-y: auto;
+    position: fixed; /* Au lieu de position absolue */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #1d1d1d93;
+    z-index: 1000;
+    display: none; /* Par défaut caché */
+    justify-content: center;
+    align-items: center;
+    overflow: hidden; /* Important: empêche le scroll de la modale */
 }
 
 .settings-content {
-    max-width: 650px;
-    margin: 20px auto;
+    max-width: 800px;
+    width: 90%;
+    max-height: 90vh; /* Limite la hauteur à 90% de la vue */
+    margin: 40px auto;
     padding: 30px;
-    background-color: rgba(0, 0, 0, 0.3);
+    background-color: #1D1D1D;
     border-radius: 3px;
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--primary);
-    box-shadow: var(--glow-subtle);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden; /* Cache tout débordement */
+}
+
+/* Nouveau : Conteneur pour le contenu scrollable */
+.settings-scrollable-content {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 15px; /* Espace pour la scrollbar */
+}
+
+/* Style de la scrollbar */
+.settings-scrollable-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.settings-scrollable-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+.settings-scrollable-content::-webkit-scrollbar-thumb {
+    background: rgba(204, 153, 255, 0.5);
+    border-radius: 3px;
 }
 
 .setting-group {
-    margin-bottom: 25px;
-    background-color: rgba(0, 0, 0, 0.4);
+    margin-bottom: 20px;
+    background-color: rgba(255, 255, 255, 0.05);
     padding: 20px;
     border-radius: 3px;
     transition: all 0.3s ease;
@@ -370,25 +440,11 @@ input[type="text"]:focus, input[type="number"]:focus {
     /*gap: 15px;*/
 }
 
-.setting-group:hover {
-    background-color: rgba(0, 0, 0, 0.3);
-    transform: translateX(5px);
-    box-shadow: var(--glow-subtle);
-}
-
 .setting-header {
     display: flex;
     align-items: center;
     gap: 15px;
-    margin-bottom: 10px;
     flex-wrap: wrap;
-}
-
-.setting-details {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    margin-left: 0;
 }
 
 .zone-type {
@@ -428,12 +484,12 @@ input[type="text"]:focus, input[type="number"]:focus {
 }
 
 .settings-buttons {
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     gap: 15px;
-    justify-content: center;
-    margin-top: 20px;
-    flex-wrap: wrap;
-    font-family: Arial;
+    justify-content: right;
+    flex-shrink: 0; /* Empêche les boutons de rétrécir */
 }
 
 .reset-button {
@@ -478,11 +534,8 @@ canvas {
     position: sticky;
     top: 0;
     z-index: 10;
-    background: rgba(0, 0, 0, 0.2);
     margin: 0;
     padding: 20px 20px 10px 20px;
-    border-radius: 3px 3px 0 0;
-    backdrop-filter: blur(10px);
     justify-content: center;
     display: flex;
     gap: 10px;
@@ -492,29 +545,28 @@ canvas {
 .tab-button {
     padding: 12px 12px;
     border: none;
-    border-radius: 3px;
-    background: rgba(255, 255, 255, 0.1);
     color: white;
     cursor: pointer;
     transition: all 0.3s ease;
-    font-size: 16px;
+    font-size: 15px;
     position: relative;
     overflow: hidden;
-    width: 33%;
+    font-weight: bold;
+    width: 50%;
     font-family: Arial;
+    text-transform: uppercase;
+    background: #1d1d1d;
+    border-bottom: 1px solid #ffffff11;
 }
 
 /* État au survol des onglets */
 .tab-button:hover {
-    background: rgba(204, 153, 255, 0.2);
     transform: translateY(-2px);
 }
 
 /* Style de l'onglet actif */
 .tab-button.active {
-    background: rgba(204, 153, 255, 0.3);
-    border: 1px solid #cc99ff;
-    box-shadow: 0 0 15px rgba(204, 153, 255, 0.2);
+    border-bottom: 2px solid #fff;
 }
 
 .button-icon {
@@ -530,7 +582,6 @@ canvas {
 .tab-content {
     display: none;
     animation: fadeIn 0.3s ease-out;
-    background: rgba(0, 0, 0, 0.2);
     padding: 20px;
     min-height: 200px; /* Hauteur minimum pour éviter des transitions trop petites */
 }
@@ -579,6 +630,21 @@ canvas {
 .info-content h4 {
     font-size: 20px;
     margin-top: 0px;
+}
+
+.settings-content h2 {
+    font-size: 24px;
+    font-weight: bold;
+    font-family: Arial;
+    text-align: left;
+}
+
+.settings-content h3 {
+    font-size: 20px;
+    font-weight: bold;
+    font-family: Arial;
+    text-align: left;
+    color: rgba(255, 255, 255, 0.8);
 }
 
 /* Sections d'informations (bonus, malus, zones) */
@@ -727,8 +793,6 @@ canvas {
             width: 100%; /* S'assurer que le conteneur prend toute la largeur */
             position: sticky;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.2);
-            backdrop-filter: blur(10px);
         }
     
         .waiting-room-buttons button {
@@ -927,7 +991,7 @@ canvas {
     color: white;
     padding: 10px;
     border-radius: 3px;
-    min-width: 250px;
+    min-width: 200px;
     max-height: 80vh;
     overflow-y: auto;
     /*backdrop-filter: blur(4px);*/
@@ -1243,13 +1307,18 @@ canvas {
     margin-bottom: 5px;
 }
 
-.player-name {
+.player-name, .player-name-interface {
     font-weight: bold;
     font-size: 14px;
+    flex: 1;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 100px;
+    text-align: right;
+}
+
+.player-name {
+text-align: left;
 }
 
 .player-rank {
@@ -1564,8 +1633,33 @@ canvas {
     bottom: 20px;
 }
 
+#helpMenu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    display: none;
+}
+
 .help-content {
-    padding: 20px;
+    max-width: 800px;
+    margin: 40px auto;
+    height: calc(100vh - 80px);
+    overflow-y: auto;
+}
+
+.help-tabs {
+    display: flex;
+    margin-bottom: 20px;
+}
+
+.help-container {
+    flex: 1;
+    overflow-y: auto;
+    color: #fff;
 }
 
 .help-header {
@@ -1598,7 +1692,7 @@ canvas {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.8);
+    background-color: #111;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -1606,7 +1700,7 @@ canvas {
 }
 
 .modal-content {
-    background-color: rgba(44, 62, 80, 0.95);
+    background-color: #111;
     max-width: 800px;
     width: 90%;
     padding: 40px;
@@ -1717,6 +1811,114 @@ canvas {
     color: white;
 }
 
+#waitingRoomSettings .button-icon {
+    width: 24px;
+    height: 24px;
+    filter: brightness(0) invert(1); /* SVG en blanc */
+}
+
+#waitingRoomSettings:hover .button-icon {
+    filter: brightness(0) invert(1) drop-shadow(0 0 4px rgba(255, 255, 255, 0.6));
+}
+
+/* Style du bouton de sélection de map */
+.map-selection-button {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(40px);
+    height: 70px;
+    padding: 0 2rem;
+    border-radius: 3px;
+}
+
+.map-selection-button .button-icon {
+    width: 24px;
+    height: 24px;
+    filter: brightness(0) invert(1);
+}
+
+.map-selection-button:hover .button-icon {
+    filter: brightness(0) invert(1) drop-shadow(0 0 4px rgba(255, 255, 255, 0.6));
+}
+
+.map-info {
+    text-align: left;
+}
+
+.map-name {
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 2px;
+}
+
+.map-mode {
+    font-family: Arial, sans-serif;
+    font-size: 15px;
+    font-weight: bold;
+    color: white;
+}
+
+.top-buttons {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 100;
+    display: flex;
+    gap: 15px;
+}
+
+.top-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+/* Style des icônes */
+.top-button .button-icon {
+    width: 20px;
+    height: 20px;
+    filter: brightness(0) invert(1); /* SVG en blanc */
+    display: block; /* Toujours affiché */
+}
+
+.settings-icon, .map-icon {
+    width: 30px;
+    height: 30px;
+    filter: brightness(0) invert(1); /* SVG en blanc */
+    display: block; /* Toujours affiché */
+}
+
+/* Style du texte */
+.top-button .button-text {
+    /* Capitaliser seulement la première lettre */
+    text-transform: none;
+}
+
+
+/* Effet de hover */
+.top-button:hover {
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+}
+
+.top-button:hover .button-icon {
+    filter: brightness(0) invert(1) drop-shadow(0 0 4px rgba(255, 255, 255, 0.6));
+}
+
 #waitingRoom.active {
     display: flex;
     align-items: center;
@@ -1748,21 +1950,47 @@ canvas {
     width: 100%;
 }
 
+/* Layout principal avec grid */
+.waiting-room-layout-grid {
+    display: grid;
+    grid-template-columns: 4fr 1fr; /* 4/5 - 1/5 */
+    height: 100%;
+    width: 100%;
+    /*padding: 20px;*/
+    gap: 20px;
+}
+
+/* Section principale */
+.waiting-room-main {
+    background-color: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+    border-radius: 3px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    /*padding: 8rem 5rem 0rem 10rem;*/
+    padding: 2rem 1rem 0rem 5rem;
+}
+
+/* Section chat */
+.chat-section {
+    position: relative;
+    height: 90vh;
+    transition: transform 0.3s ease;
+}
+
+
 #waitingRoom .waiting-room-content {
     display: flex;
     flex-direction: column;
 }
 
 .waiting-room-content {
-    background-color: rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(10px);
-    border-radius: 3px;
-    max-width: 600px;
-    animation: fadeIn 0.3s ease-out;
-    border: 1px solid var(--primary);
-    box-shadow: var(--glow-subtle);
-    max-height: 90vh;
-    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Prend toute la hauteur disponible */
+    background: none; /* Supprime le background car déjà sur le parent */
+    border: none;
 }
 
 /* Pour que la transition fonctionne sur le contenu interne */
@@ -1791,7 +2019,8 @@ canvas {
 
 .waiting-room-container {
     transition: height 0.3s ease-in-out;
-    max-height: calc(90vh - 230px); /* Hauteur max en tenant compte du header et des boutons */
+    /*max-height: calc(90vh - 230px); /* Hauteur max en tenant compte du header et des boutons */
+    height: 100%;
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: rgba(204, 153, 255, 0.5) rgba(0, 0, 0, 0.2);
@@ -1812,22 +2041,35 @@ canvas {
 }
 
 .players-list-container {
-    background-color: rgba(0, 0, 0, 0.2);
-    border-radius: 3px;
-    padding: 20px;
+    padding: 20px 0;
     min-height: 200px;
 }
 
+.players-list-container h3 {
+    display: flex;
+    gap: 5px;
+}
+
+#connectedPlayersCount {
+    font-family: 'PermanentMarker-Regular', sans-serif;
+    color: #cc99ff; /* Couleur d'accent existante */
+    min-width: 1.5em; /* Pour éviter les sauts de mise en page lors des changements */
+    display: inline-block;
+    text-align: center;
+}
+
 #waitingRoomPlayers {
-    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 4 colonnes par défaut */
+    gap: 15px;
     padding: 0;
     margin: 20px 0 0 0;
+    list-style: none;
 }
 
 .waiting-room-player {
     background-color: rgba(255, 255, 255, 0.1);
-    padding: 12px 20px;
-    margin: 8px 0;
+    padding: 12px 15px;
     border-radius: 3px;
     transition: all 0.3s ease;
 }
@@ -1841,13 +2083,23 @@ canvas {
 .waiting-room-buttons {
     position: sticky;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.2);
-    backdrop-filter: blur(10px);
-    padding: 5px 20px;
+    padding: 15px 0px 5px 0;
+    display: flex;
+    justify-content: space-between; /* Au lieu de center */
+    align-items: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Créer un conteneur pour les boutons de gauche */
+.left-buttons {
     display: flex;
     gap: 10px;
-    justify-content: center;
-    border-radius: 0 0 3px 3px;
+    align-items: center;
+}
+
+/* Ajuster le style du bouton de lancement */
+#startGameButton {
+    margin-left: auto; /* Pour le pousser à droite */
 }
 
 #startGameButton:disabled {
@@ -1866,6 +2118,38 @@ canvas {
     align-items: center;
 }
 
+/* Media queries pour la grille responsive */
+/* Grand écran : 4 colonnes (par défaut) */
+
+/* Écran moyen : 3 colonnes */
+@media (max-width: 1200px) {
+    #waitingRoomPlayers {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Écran tablette : 2 colonnes */
+@media (max-width: 900px) {
+    #waitingRoomPlayers {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Mobile : 1 colonne */
+@media (max-width: 600px) {
+    #waitingRoomPlayers {
+        grid-template-columns: 1fr;
+    }
+
+    .players-list-container {
+        padding: 15px;
+    }
+
+    .waiting-room-player {
+        padding: 10px;
+    }
+}
+
 /* Style pour les inputs désactivés */
 input:disabled, 
 select:disabled, 
@@ -1882,23 +2166,158 @@ input[type="checkbox"]:disabled + label {
 
 /* Chatbox flottante */
 .floating-chat {
-    position: fixed;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 300px;
-    height: 50vh;
+    position: relative;
+    width: 100%;
+    height: 100%;
     background-color: rgba(0, 0, 0, 0.5);
-    border-radius: 0 3px 3px 0;
+    border-radius: 3px;
     backdrop-filter: blur(10px);
     display: flex;
     flex-direction: column;
-    z-index: 1000;
-    transition: all 0.3s ease;
 }
 
-.floating-chat.collapsed {
-    transform: translateX(-270px) translateY(-50%);
+/* Adaptations mobiles */
+@media (max-width: 768px) {
+    .waiting-room-buttons {
+        padding: 10px;
+        gap: 5px;
+    }
+
+    .left-buttons {
+        gap: 5px;
+    }
+
+    /* Ajuster les tailles des boutons en mobile */
+    #waitingRoomSettings,
+    #mapSelectionButton {
+        padding: 8px;
+    }
+    #startGameButton {
+        padding: 8px 15px;
+    }
+    .map-selection-button {
+        gap: 8px;
+    }
+    
+    .map-info {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .map-name, .map-mode {
+        font-size: 11px; /* Plus petit sur mobile */
+        white-space: nowrap;
+    }
+
+    .map-name {
+        margin-bottom: 0;
+    }
+    .top-buttons {
+        top: 10px;
+        left: 10px;
+        gap: 10px;
+    }
+
+    .top-button {
+        padding: 8px;
+    }
+
+    .top-button .button-text {
+        display: none;
+    }
+
+    .top-button .button-icon {
+        width: 24px;
+        height: 24px;
+    }
+
+    .help-content {
+        margin: 20px;
+        height: calc(100vh - 40px);
+    }
+    
+    #waitingRoom #leaveRoomButton {
+        top: 10px;
+        left: 10px;
+        padding: 8px 15px;
+        
+        /* Cacher le texte sur mobile et ne montrer que l'icône */
+        .button-text {
+            display: none;
+        }
+        
+        .button-icon {
+            display: block;
+            width: 24px;
+            height: 24px;
+        }
+    }
+
+    .waiting-room-layout-grid {
+        grid-template-columns: 1fr; /* Full width sur mobile */
+        padding: 10px;
+    }
+
+    .chat-section {
+        position: fixed;
+        right: 0;
+        top: 10vh;
+        width: 280px;
+        height: 90vh;
+        z-index: 1000;
+        transition: transform 0.3s ease;
+    }
+
+    /* État replié */
+    .chat-section.collapsed {
+        transform: translateX(100%);
+    }
+
+    /* Style du toggle */
+    .toggle-icon {
+        position: absolute; /* Retour à absolute pour le positionner par rapport au chat */
+        left: -40px; /* Le faire sortir à gauche du chat */
+        top: 0;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 10px 15px;
+        cursor: pointer;
+        border-radius: 3px 0 0 3px;
+        backdrop-filter: blur(5px);
+    }
+
+    /* Style du header du chat */
+    .chat-header {
+        position: relative; /* Pour le positionnement absolu du toggle */
+        padding: 15px;
+        display: flex;
+        justify-content: center;
+        background-color: rgba(204, 153, 255, 0.2);
+        cursor: default;
+    }
+
+    .chat-header-title {
+        text-align: center;
+    }
+
+    /* Le contenu principal prend toute la largeur quand le chat est replié */
+    .waiting-room-main {
+        width: 100%;
+    }
+
+    /* Masquer le toggle sur desktop */
+    @media (min-width: 769px) {
+        .toggle-icon {
+            display: none;
+        }
+    }
+}
+
+/* Optimisations pour les très petits écrans */
+@media (max-width: 480px) {
+    .waiting-room-layout-grid {
+        padding: 5px;
+    }
 }
 
 /* En-tête du chat */
@@ -1987,28 +2406,32 @@ input[type="checkbox"]:disabled + label {
 }
 
 #chatInput {
-    flex: 1;
-    padding: 8px 15px;
+    width: 100%;
+    padding: 1.5vmin 2vmin;
     border: none;
     border-radius: 3px;
-    background-color: rgba(255, 255, 255, 0.9);
-    font-size: 14px;
+    color: white;
+    background-color: rgba(255, 255, 255, 0.1);
+    text-align: left;
+    backdrop-filter: blur(40px);
 }
 
 .chat-send-button {
     padding: 0.8rem 1rem;
     font-size: 14px;
-    border: 1px solid #cc99ff;
     border-radius: 3px;
     cursor: pointer;
     text-transform: uppercase;
     position: relative;
-    background-color: rgba(204, 153, 255, 0.1);
-    color: white;
+    color: #000;
+    font-weight: bold;
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(40px);
     transition: all 0.3s ease;
     overflow: hidden;
     margin: 10px 0;
     width: 100%;
+    border: None;
 }
 
 .chat-send-button:hover {
@@ -2158,10 +2581,29 @@ input[type="checkbox"]:disabled + label {
         margin-bottom: 15px;
     }
 
-    .setting-details {
-        flex-direction: column;
+    .setting-details, .setting-header {
+        display: flex;
+        flex-direction: column; /* Garde l'empilement vertical */
+        gap: 15px;
+        margin-left: 0;
+        color: #fff;
+    }
+
+    .setting-details > div, 
+    .setting-header > div,
+    .setting-details > label,
+    .setting-header > label {
+        display: flex;
+        align-items: center; /* Centre verticalement */
         gap: 10px;
-        width: 100%;
+    }
+
+    .setting-details label,
+    .setting-header label {
+        display: flex;
+        align-items: center; /* Centre verticalement */
+        gap: 10px;
+        text-align: left;
     }
 
     .zone-type {
@@ -2176,9 +2618,24 @@ input[type="checkbox"]:disabled + label {
     }
 
     .number-input {
-        width: 75px;
-        font-size: 14px;
+        width: 80px;
+        min-width: 60px;
+        max-width: 100px;
+        padding: 8px 10px;
+        text-align: right;
+        font-size: 16px;
+        border: none;
+        border-radius: 3px;
+        background-color: rgba(255, 255, 255, 0.9);
+        transition: all 0.3s ease;
+        align-self: center; /* Centre l'input verticalement */
     }
+
+    /* Style des inputs checkbox à l'intérieur de setting-details */
+.setting-header input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+}
 
     /* Ajustement pour les groupes de bonus */
     .settings-group .setting-group {
@@ -2279,7 +2736,7 @@ input[type="checkbox"]:disabled + label {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        max-width: 60px;
+        max-width: 100px;
       }
 
     /* Adapter le timer */
@@ -2428,38 +2885,12 @@ input[type="checkbox"]:disabled + label {
         width: 95%;
     }
 
-    .floating-chat {
-        width: 280px;
-        height: 50vh;
-    }
-
-    .floating-chat.collapsed {
-        transform: translateX(-250px) translateY(-50%);
-    }
-
     .mobile-controls * {
         backface-visibility: hidden;
         -webkit-backface-visibility: hidden;
         transform-style: preserve-3d;
         -webkit-transform-style: preserve-3d;
     }
-    
-    /* Ajuster la position de la chatbox pour ne pas interférer avec les contrôles */
-    .floating-chat {
-        height: 40vh;
-        bottom: 200px;
-        top: auto;
-        transform: none;
-    }
-    
-    .floating-chat.collapsed {
-        transform: translateX(-270px);
-    }
-
-   /* .menu-content {
-        width: min(90vw, 90vh, 400px);
-        height: min(90vw, 90vh, 400px);
-    }*/
 }
 
 /* Pour les très petits écrans */
@@ -2544,6 +2975,13 @@ input[type="checkbox"]:disabled + label {
 
 /* Désactiver les interactions par défaut sur mobile */
 @media (max-width: 768px) {
+    .setting-details > div {
+        flex: 1 1 100%; /* En mobile, prendre toute la largeur */
+    }
+
+    .setting-details label {
+        min-width: 150px; /* Réduire la largeur minimum sur mobile */
+    }
     * {
         touch-action: manipulation;
         -webkit-tap-highlight-color: transparent;

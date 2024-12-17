@@ -55,7 +55,7 @@ export class AudioManager {
             // Définition des musiques
             const musicToLoad = {
                 menu: '/assets/audio/menu-music.mp3',
-                game: '/assets/audio/game-music.mp3',
+                game: '/assets/audio/game-music-2.mp3',
                 gameOver: '/assets/audio/game-over-music.wav'
             };
 

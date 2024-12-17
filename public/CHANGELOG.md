@@ -1,6 +1,10 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
 
+## [0.8.0] - 2024-12-17
+### Améliorations
+- Nouvelle interface de la salle d'attente
+
 ## [0.7.16] - 2024-12-13
 ### Corrections
 - Fix de l'alignement du calque de pluie map1
