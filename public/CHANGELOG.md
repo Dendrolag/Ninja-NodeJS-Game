@@ -1,6 +1,11 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
 
+## [0.8.1] - 2024-12-17
+### Améliorations
+- Nouveau bouton send du chat
+- Fix modale Pause
+
 ## [0.8.0] - 2024-12-17
 ### Améliorations
 - Nouvelle interface de la salle d'attente
