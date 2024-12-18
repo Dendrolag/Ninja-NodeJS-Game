@@ -280,10 +280,55 @@ document.addEventListener('DOMContentLoaded', async () => {
         initializeNicknameValidation();
         addVersionDisplay();
         initializeButtonHoverEffects();
+
+        // Nouvelle initialisation pour la sélection des maps
+        initializeMapSelection();
     } catch (error) {
         console.error('Erreur d\'initialisation:', error);
     }
 });
+
+// Fonction d'initialisation de la sélection des maps
+function initializeMapSelection() {
+    // Sélectionner toutes les vignettes de map
+    const mapPreviews = document.querySelectorAll('.map-preview-wrapper');
+    const mapSelector = document.getElementById('mapSelectorModal');
+
+    mapPreviews.forEach(preview => {
+        preview.addEventListener('click', function() {
+            // Ne rien faire si la map est désactivée
+            if (this.classList.contains('disabled')) return;
+
+            // Retirer la sélection de toutes les vignettes
+            mapPreviews.forEach(p => p.classList.remove('selected'));
+            
+            // Ajouter la sélection à la vignette cliquée
+            this.classList.add('selected');
+            
+            // Mettre à jour le select caché
+            if (mapSelector) {
+                mapSelector.value = this.dataset.map;
+                
+                // Émettre un événement change pour déclencher les handlers existants
+                mapSelector.dispatchEvent(new Event('change'));
+            }
+
+            // Mettre à jour le texte du bouton si nécessaire
+            updateMapButtonText();
+        });
+    });
+
+    // Sélectionner la première map par défaut si aucune n'est sélectionnée
+    if (!document.querySelector('.map-preview-wrapper.selected')) {
+        const firstMap = mapPreviews[0];
+        if (firstMap) {
+            firstMap.classList.add('selected');
+            if (mapSelector) {
+                mapSelector.value = firstMap.dataset.map;
+            }
+        }
+    }
+}
 
 // Dimensions du jeu
 let GAME_WIDTH = window.innerWidth;

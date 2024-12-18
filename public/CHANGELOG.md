@@ -1,6 +1,11 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
 
+## [0.8.3] - 2024-12-18
+### Améliorations
+- Amélioration de la modale de sélection de map
+- Ajout de la map2 (Tokyo sans pluie)
+
 ## [0.8.2] - 2024-12-18
 ### Correction
 - Fix bug mode miroir

@@ -152,32 +152,53 @@
         </div>
     </div>
     <!-- Nouvelle modale pour la sélection de map -->
-<div id="mapSelectionMenu" style="display: none;">
-    <div class="settings-content">
-        <h2>Sélection de la carte</h2>
-        <div class="setting-group">
-            <div class="setting-details">
-                <div>
-                    <span>Choisir une map :</span>
-                    <select id="mapSelectorModal" class="text-input">
-                        <option value="map1" selected>Tokyo</option>
-                    </select>
-                </div>
-                
-                <div>
-                    <span>Mode miroir :</span>
-                    <input type="checkbox" id="mirrorModeModal" class="toggle-input">
+    <div id="mapSelectionMenu" style="display: none;">
+        <div class="settings-content">
+            <h2>Choisissez votre mode et carte de jeu</h2>
+            
+            <div class="maps-container">
+                <h3>Carte</h3>
+                <div class="map-preview-container">
+                    <!-- Map Tokyo -->
+                    <div class="map-preview-card">
+                        <div class="map-preview-wrapper selected" data-map="map1">
+                            <img src="/assets/images/map1.png" alt="Rainy Tokyo" class="map-preview-image">
+                            <span class="map-name-square">Rainy Tokyo</span>
+                        </div>
+                        
+                        <div class="mode-toggle-container">
+                            <!-- Select caché pour maintenir la logique existante -->
+                            <select id="mapSelectorModal" style="display: none;">
+                                <option value="map1" selected>Rainy Tokyo</option>
+                                <option value="map2">Tokyo</option>
+                            </select>
+                            <!-- Un seul toggle pour le mode miroir -->
+                            <label class="mode-toggle">
+                                <input type="checkbox" id="mirrorModeModal">
+                                <div class="toggle-track">
+                                    <span class="toggle-option">Normal</span>
+                                    <span class="toggle-option">Miroir</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+    
+                    <!-- Map Neo Tokyo -->
+                    <div class="map-preview-card">
+                        <div class="map-preview-wrapper" data-map="map2">
+                            <img src="/assets/images/map2.png" alt="Tokyo" class="map-preview-image">
+                            <span class="map-name-square">Tokyo</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Boutons -->
-        <div class="settings-buttons">
-            <button id="backFromMapButton" class="secondary-button modal-buttons">Retour</button>
-            <button id="saveMapButton" class="primary-button modal-buttons">Enregistrer</button>
+    
+            <div class="settings-buttons">
+                <button id="backFromMapButton" class="secondary-button">Retour</button>
+                <button id="saveMapButton" class="primary-button">Enregistrer</button>
+            </div>
         </div>
     </div>
-</div>
 
 <div id="helpMenu" style="display: none;">
     <div class="settings-content help-content">
