@@ -12,7 +12,7 @@ const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
 const nicknameInput = document.getElementById('nicknameInput');
 
-const GAME_VERSION = "v0.8.1";  // À mettre à jour à chaque déploiement
+const GAME_VERSION = "v0.8.2";  // À mettre à jour à chaque déploiement
 
 // Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
@@ -1027,7 +1027,11 @@ saveMapButton.addEventListener('click', () => {
     };
 
     if (isRoomOwner) {
-        socket.emit('updateGameSettings', newSettings);
+        // Envoyer d'abord une mise à jour spécifique pour la map
+        socket.emit('updateMapSettings', {
+            selectedMap: mapSelectorModal.value,
+            mirrorMode: mirrorModeModal.checked
+        });
     }
     
     updateMapButtonText();

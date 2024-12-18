@@ -1,6 +1,10 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
 
+## [0.8.2] - 2024-12-18
+### Correction
+- Fix bug mode miroir
+
 ## [0.8.1] - 2024-12-17
 ### Améliorations
 - Nouveau bouton send du chat

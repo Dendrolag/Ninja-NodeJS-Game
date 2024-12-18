@@ -2293,39 +2293,65 @@ io.on('connection', (socket) => {
     });
 
             // Gestion séparée pour les paramètres de map
-    socket.on('updateMapSettings', async (mapSettings) => {
-        const player = waitingRoom.players.get(socket.id);
-        if (player?.isOwner) {
-            try {
-                // Vérifier si les paramètres de map changent réellement
-                if (mapSettings.selectedMap !== waitingRoom.settings.selectedMap || 
-                    mapSettings.mirrorMode !== waitingRoom.settings.mirrorMode) {
-                        
-                    // Mettre à jour les collisions en premier
-                    await collisionMap.updateCollisions(mapSettings.selectedMap, mapSettings.mirrorMode);
-                
-                    // Attendre un petit délai pour s'assurer que tout est bien initialisé
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                
-                    // Mettre à jour les paramètres de map
-                    waitingRoom.settings = {
-                        ...waitingRoom.settings,
-                        selectedMap: mapSettings.selectedMap,
-                        mirrorMode: mapSettings.mirrorMode
-                    };
-
-                    // Informer tous les joueurs des changements
-                    io.emit('gameSettingsUpdated', {
-                        ...waitingRoom.settings,
-                        mapUpdateRequired: true // Flag pour forcer la mise à jour de la map
-                    });
+            socket.on('updateMapSettings', async (mapSettings) => {
+                const player = waitingRoom.players.get(socket.id);
+                if (player?.isOwner) {
+                    try {
+                        console.log('Réception updateMapSettings:', {
+                            newMap: mapSettings.selectedMap,
+                            newMirrorMode: mapSettings.mirrorMode,
+                            currentMap: waitingRoom.settings.selectedMap,
+                            currentMirrorMode: waitingRoom.settings.mirrorMode
+                        });
+            
+                        // Vérifier si les paramètres de map changent réellement
+                        if (mapSettings.selectedMap !== waitingRoom.settings.selectedMap || 
+                            mapSettings.mirrorMode !== waitingRoom.settings.mirrorMode) {
+                            
+                            console.log('Changement de map détecté, mise à jour des collisions...');
+                            
+                            // Mettre à jour les collisions en premier
+                            const collisionsUpdated = await collisionMap.updateCollisions(
+                                mapSettings.selectedMap, 
+                                mapSettings.mirrorMode
+                            );
+            
+                            if (!collisionsUpdated) {
+                                throw new Error('Échec de la mise à jour des collisions');
+                            }
+            
+                            console.log('Collisions mises à jour avec succès');
+                            
+                            // Attendre un petit délai pour s'assurer que tout est bien initialisé
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                            
+                            // Mettre à jour les paramètres de map
+                            waitingRoom.settings = {
+                                ...waitingRoom.settings,
+                                selectedMap: mapSettings.selectedMap,
+                                mirrorMode: mapSettings.mirrorMode
+                            };
+            
+                            console.log('Paramètres de map mis à jour, notification des clients...');
+            
+                            // Informer tous les joueurs des changements
+                            io.emit('gameSettingsUpdated', {
+                                ...waitingRoom.settings,
+                                mapUpdateRequired: true // Flag pour forcer la mise à jour de la map
+                            });
+            
+                            console.log('Notification envoyée aux clients');
+                        } else {
+                            console.log('Aucun changement de map détecté');
+                        }
+                    } catch (error) {
+                        console.error('Erreur lors de la mise à jour de la map:', error);
+                        socket.emit('error', 'Erreur lors de la mise à jour de la map');
+                    }
+                } else {
+                    console.log('Tentative de mise à jour de map par un non-propriétaire');
                 }
-            } catch (error) {
-                console.error('Erreur lors de la mise à jour de la map:', error);
-                socket.emit('error', 'Erreur lors de la mise à jour de la map');
-            }
-        }
-    });
+            });
 
         // Paramètres audio (accessible à tous les joueurs)
     socket.on('updateAudioSettings', (audioSettings) => {
