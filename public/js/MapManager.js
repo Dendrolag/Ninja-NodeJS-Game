@@ -1,4 +1,4 @@
-import { DEFAULT_GAME_SETTINGS } from './game-constants.js';
+import { DEFAULT_GAME_SETTINGS, MAP_DIMENSIONS } from './game-constants.js';
 
 // MapManager.js
 
@@ -67,16 +67,32 @@ export class MapManager {
         
         this.canvas = canvas;
         this.debugMode = options.debugMode || false;
-        // Stocker la map sélectionnée comme propriété de la classe
         this.selectedMap = options.selectedMap || 'map1';
         this.mirrorMode = options.mirrorMode || false;
+        
+        // Récupérer les dimensions de la map sélectionnée
+        const mapDimensions = MAP_DIMENSIONS[this.selectedMap];
+        if (!mapDimensions) {
+            throw new Error(`Dimensions non trouvées pour la map: ${this.selectedMap}`);
+        }
+    
+        // Initialiser les dimensions avec celles spécifiques à la map
+        this.mapWidth = mapDimensions.width;
+        this.mapHeight = mapDimensions.height;
+    
+        console.log('Initialisation MapManager avec dimensions:', {
+            map: this.selectedMap,
+            width: this.mapWidth,
+            height: this.mapHeight,
+            mirrorMode: this.mirrorMode
+        });
         
         this.layers = {
             background: new Image(),
             collision: new Image(),
             foreground: new Image()
         };
-
+    
         this.mapImages = {
             background: new Image(),
             collision: new Image(),
@@ -86,20 +102,22 @@ export class MapManager {
         // Construction du chemin en fonction de la map sélectionnée
         const basePath = `/assets/maps/${this.selectedMap}/${this.mirrorMode ? 'mirror' : 'normal'}`;
         
+        // Configuration des images avec les bonnes dimensions
+        Object.values(this.mapImages).forEach(img => {
+            img.width = this.mapWidth;
+            img.height = this.mapHeight;
+        });
+    
         this.mapImages.background.src = `${basePath}/background.png`;
         this.mapImages.collision.src = `${basePath}/collision.png`;
         this.mapImages.foreground.src = `${basePath}/foreground.png`;
-
+    
         this.rainEffect = this.selectedMap === 'map1' ? new RainEffect(basePath) : null;
-        
-        // Récupérer les dimensions depuis les options
-        this.mapWidth = options.mapWidth || 2000;
-        this.mapHeight = options.mapHeight || 1500;
         
         this.collisionData = null;
         this.isLoaded = false;
         this.loadPromise = this.loadLayers();
-
+    
         this.debugMode = options.debugMode || false;
         this.debugCollisions = options.debugCollisions || false;
     }
@@ -178,21 +196,36 @@ export class MapManager {
 
     async updateMap(selectedMap = 'map1', mirrorMode = false) {
         try {
-            // Mettre à jour les propriétés de la classe
-            this.selectedMap = selectedMap || 'map1';
-            this.mirrorMode = mirrorMode ?? false;
+            // Récupérer les dimensions spécifiques à la map
+            const dimensions = MAP_DIMENSIONS[selectedMap];
+            if (!dimensions) {
+                throw new Error(`Dimensions non trouvées pour la map: ${selectedMap}`);
+            }
+    
+            console.log('Mise à jour de la map avec dimensions:', dimensions);
+    
+            // Mettre à jour les dimensions
+            this.mapWidth = dimensions.width;
+            this.mapHeight = dimensions.height;
+    
+            // Mettre à jour les propriétés
+            this.selectedMap = selectedMap;
+            this.mirrorMode = mirrorMode;
     
             const basePath = `/assets/maps/${this.selectedMap}/${this.mirrorMode ? 'mirror' : 'normal'}`;
             this.rainEffect = this.selectedMap === 'map1' ? new RainEffect(basePath) : null;
     
-            // Créer des promesses pour le chargement des images
-            const loadPromises = [];
-    
-            // Fonction helper pour charger une image
+            // Fonction helper pour charger une image et préserver ses dimensions natives
             const loadImageWithPromise = (imageSrc) => {
                 return new Promise((resolve, reject) => {
                     const img = new Image();
-                    img.onload = () => resolve(img);
+                    img.onload = () => {
+                        // Vérifier que l'image chargée a les bonnes dimensions
+                        if (img.width !== dimensions.width || img.height !== dimensions.height) {
+                            console.warn(`Attention: L'image ${imageSrc} a des dimensions (${img.width}x${img.height}) différentes des dimensions attendues (${dimensions.width}x${dimensions.height})`);
+                        }
+                        resolve(img);
+                    };
                     img.onerror = () => reject(new Error(`Échec du chargement de ${imageSrc}`));
                     img.src = imageSrc;
                 });
@@ -210,10 +243,15 @@ export class MapManager {
             this.layers.collision = collision;
             this.layers.foreground = foreground;
     
-            // Réinitialiser les données de collision
+            // Réinitialiser les données de collision avec les nouvelles dimensions
             await this.initializeCollisionData();
     
-            console.log('Map mise à jour avec succès');
+            console.log('Map mise à jour avec succès:', {
+                map: selectedMap,
+                dimensions: `${this.mapWidth}x${this.mapHeight}`,
+                mirrorMode: mirrorMode
+            });
+    
             return true;
         } catch (error) {
             console.error('Erreur lors de la mise à jour de la map:', error);
@@ -222,22 +260,30 @@ export class MapManager {
     }
 
     async initializeCollisionData() {
+        // S'assurer d'utiliser les bonnes dimensions pour la map actuelle
+        const dimensions = MAP_DIMENSIONS[this.selectedMap];
+        const mapWidth = dimensions.width;
+        const mapHeight = dimensions.height;
+    
         // Créer un canvas hors-écran pour analyser l'image de collision
         const offscreenCanvas = document.createElement('canvas');
-        offscreenCanvas.width = this.mapWidth;
-        offscreenCanvas.height = this.mapHeight;
+        offscreenCanvas.width = mapWidth;
+        offscreenCanvas.height = mapHeight;
         
         const ctx = offscreenCanvas.getContext('2d');
-        ctx.drawImage(this.layers.collision, 0, 0, this.mapWidth, this.mapHeight);
+        ctx.imageSmoothingEnabled = false; // Pour une meilleure détection des collisions
+    
+        // Dessiner l'image de collision avec ses dimensions natives
+        ctx.drawImage(this.layers.collision, 0, 0, mapWidth, mapHeight);
         
-        const imageData = ctx.getImageData(0, 0, this.mapWidth, this.mapHeight);
+        const imageData = ctx.getImageData(0, 0, mapWidth, mapHeight);
         
-        // Créer le tableau de collision
-        this.collisionData = new Array(this.mapHeight);
-        for (let y = 0; y < this.mapHeight; y++) {
-            this.collisionData[y] = new Array(this.mapWidth);
-            for (let x = 0; x < this.mapWidth; x++) {
-                const index = (y * this.mapWidth + x) * 4;
+        // Créer le tableau de collision aux bonnes dimensions
+        this.collisionData = new Array(mapHeight);
+        for (let y = 0; y < mapHeight; y++) {
+            this.collisionData[y] = new Array(mapWidth);
+            for (let x = 0; x < mapWidth; x++) {
+                const index = (y * mapWidth + x) * 4;
                 const r = imageData.data[index];
                 const g = imageData.data[index + 1];
                 const b = imageData.data[index + 2];
@@ -246,9 +292,11 @@ export class MapManager {
             }
         }
     
-        // Debug log pour vérifier que les collisions sont bien détectées
+        // Log de debug pour vérifier les dimensions
         console.log('Collision data initialized:', {
-            samplePoint: this.collisionData[0][0],
+            map: this.selectedMap,
+            width: mapWidth,
+            height: mapHeight,
             hasCollisions: this.collisionData.some(row => row.some(cell => cell))
         });
     }
@@ -256,14 +304,18 @@ export class MapManager {
     // Vérifier la collision à une position donnée
     checkCollision(x, y) {
         if (!this.isLoaded || !this.collisionData) return false;
-
+    
+        const dimensions = MAP_DIMENSIONS[this.selectedMap];
+        const mapWidth = dimensions.width;
+        const mapHeight = dimensions.height;
+    
         // Convertir les coordonnées du monde en indices du tableau
         const pixelX = Math.floor(x);
         const pixelY = Math.floor(y);
     
         // Vérifier les limites de la map
-        if (pixelX < 0 || pixelX >= this.mapWidth || 
-            pixelY < 0 || pixelY >= this.mapHeight) {
+        if (pixelX < 0 || pixelX >= mapWidth || 
+            pixelY < 0 || pixelY >= mapHeight) {
             return true; // Collision avec les bords de la map
         }
     
@@ -271,27 +323,40 @@ export class MapManager {
         return this.collisionData[pixelY][pixelX];
     }
 
-    // Vérifier si un mouvement est valide
     canMove(fromX, fromY, toX, toY, radius = 16) {
-    // Vérifier le point central d'abord
-    if (this.checkCollision(toX, toY)) {
-        return false;
-    }
-
-    // Vérifier plusieurs points autour de l'entité
-    const points = 8;
-    for (let i = 0; i < points; i++) {
-        const angle = (i / points) * Math.PI * 2;
-        const checkX = toX + Math.cos(angle) * radius;
-        const checkY = toY + Math.sin(angle) * radius;
-
-        if (this.checkCollision(checkX, checkY)) {
+        if (!this.collisionData) return false;
+    
+        const dimensions = MAP_DIMENSIONS[this.selectedMap];
+        const mapWidth = dimensions.width;
+        const mapHeight = dimensions.height;
+    
+        // Vérifier les limites de la map
+        if (toX < 0 || toX >= mapWidth || 
+            toY < 0 || toY >= mapHeight) {
             return false;
         }
+    
+        // Vérifier plusieurs points autour de l'entité
+        const points = 8;
+        for (let i = 0; i < points; i++) {
+            const angle = (i / points) * Math.PI * 2;
+            const checkX = Math.floor(toX + Math.cos(angle) * radius);
+            const checkY = Math.floor(toY + Math.sin(angle) * radius);
+    
+            // Vérifier que le point est dans les limites
+            if (checkX < 0 || checkX >= mapWidth || 
+                checkY < 0 || checkY >= mapHeight) {
+                return false;
+            }
+    
+            // Vérifier la collision
+            if (this.collisionData[checkY][checkX]) {
+                return false;
+            }
+        }
+    
+        return true;
     }
-
-    return true;
-}
 
     // Dessiner les calques avec la caméra
     draw(context, camera) {
@@ -300,6 +365,10 @@ export class MapManager {
             console.error('Canvas not initialized in MapManager');
             return;
         }
+    
+        const dimensions = MAP_DIMENSIONS[this.selectedMap];
+        const mapWidth = dimensions.width;
+        const mapHeight = dimensions.height;
     
         context.save();
         
@@ -313,25 +382,23 @@ export class MapManager {
         );
     
         // Dessiner le fond
-        context.drawImage(this.layers.background, 0, 0, this.mapWidth, this.mapHeight);
+        context.drawImage(this.layers.background, 0, 0, mapWidth, mapHeight);
     
         // Dessiner l'effet de pluie si présent
         if (this.rainEffect) {
             this.rainEffect.update(Date.now());
-            this.rainEffect.draw(context, camera, this.mapWidth, this.mapHeight, this.canvas);
+            this.rainEffect.draw(context, camera, mapWidth, mapHeight, this.canvas);
         }
     
         // Debug : afficher le calque de collision
         if (this.debugMode) {
-            // Dessiner le calque de collision en semi-transparent
             context.globalAlpha = 0;
-            context.drawImage(this.layers.collision, 0, 0, this.mapWidth, this.mapHeight);
+            context.drawImage(this.layers.collision, 0, 0, mapWidth, mapHeight);
             
             if (this.debugCollisions) {
-                // Visualiser les points de collision
                 context.fillStyle = 'rgba(255, 0, 0, 0.5)';
-                for (let y = 0; y < this.mapHeight; y += 32) {
-                    for (let x = 0; x < this.mapWidth; x += 32) {
+                for (let y = 0; y < mapHeight; y += 32) {
+                    for (let x = 0; x < mapWidth; x += 32) {
                         if (this.checkCollision(x, y)) {
                             context.fillRect(x - 2, y - 2, 4, 4);
                         }
@@ -343,15 +410,18 @@ export class MapManager {
     
         context.restore();
     }
-
-    // Dessiner le calque de premier plan (à appeler après avoir dessiné toutes les entités)
+    
     drawForeground(context, camera) {
         if (!this.isLoaded) return;
         if (!this.canvas) {
             console.error('Canvas not initialized in MapManager');
             return;
         }
-
+    
+        const dimensions = MAP_DIMENSIONS[this.selectedMap];
+        const mapWidth = dimensions.width;
+        const mapHeight = dimensions.height;
+    
         context.save();
     
         const translateX = Math.round(this.canvas.width / 2 - camera.x * camera.scale);
@@ -363,17 +433,22 @@ export class MapManager {
             translateX, translateY
         );
     
-        context.drawImage(this.layers.foreground, 0, 0, this.mapWidth, this.mapHeight);
+        context.drawImage(this.layers.foreground, 0, 0, mapWidth, mapHeight);
         
         context.restore();
     }
+    
     findValidPosition(radius = 16) {
+        const dimensions = MAP_DIMENSIONS[this.selectedMap];
+        const mapWidth = dimensions.width;
+        const mapHeight = dimensions.height;
+    
         const maxAttempts = 100;
         let attempts = 0;
     
         while (attempts < maxAttempts) {
-            const x = Math.floor(Math.random() * this.mapWidth);
-            const y = Math.floor(Math.random() * this.mapHeight);
+            const x = Math.floor(Math.random() * mapWidth);
+            const y = Math.floor(Math.random() * mapHeight);
     
             // Vérifier si la position est valide (pas de collision)
             if (this.canMove(x, y, x, y, radius)) {
@@ -383,7 +458,7 @@ export class MapManager {
         }
     
         console.warn('Impossible de trouver une position valide après', maxAttempts, 'tentatives');
-        return { x: this.mapWidth / 2, y: this.mapHeight / 2 }; // Position par défaut
+        return { x: mapWidth / 2, y: mapHeight / 2 }; // Position par défaut
     }
 }
 

@@ -57,7 +57,8 @@ import {
     DEFAULT_GAME_SETTINGS, 
     SPAWN_CONFIG,
     TIME_CONFIG,
-    SPEED_CONFIG 
+    SPEED_CONFIG,
+    MAP_DIMENSIONS 
 } from './game-constants.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -225,18 +226,21 @@ class PositionManager {
     }
 
     getValidPosition(radius = 16) {
-        const startTime = performance.now();
+        const currentMap = currentGameSettings.selectedMap || 'map1';
+        const mapDimensions = MAP_DIMENSIONS[currentMap];
+        const currentWidth = mapDimensions.width;
+        const currentHeight = mapDimensions.height;
+    
         const maxAttempts = SPAWN_CONFIG.MAX_ATTEMPTS;
         let attempts = 0;
         
         while (attempts < maxAttempts) {
             const x = GAME_CONFIG.SPAWN_MARGIN + 
-                     Math.random() * (GAME_CONFIG.WIDTH - 2 * GAME_CONFIG.SPAWN_MARGIN);
+                     Math.random() * (currentWidth - 2 * GAME_CONFIG.SPAWN_MARGIN);
             const y = GAME_CONFIG.SPAWN_MARGIN + 
-                     Math.random() * (GAME_CONFIG.HEIGHT - 2 * GAME_CONFIG.SPAWN_MARGIN);
+                     Math.random() * (currentHeight - 2 * GAME_CONFIG.SPAWN_MARGIN);
             
             if (this.isValidPosition(x, y, radius)) {
-                const endTime = performance.now();
                 return { x, y };
             }
             attempts++;
@@ -271,12 +275,18 @@ class PositionManager {
         if (!this.collisionMap.canMove(fromX, fromY, toX, toY, radius)) {
             return false;
         }
-
-        // Vérification des limites du jeu
-        if (toX < 0 || toX > GAME_CONFIG.WIDTH || toY < 0 || toY > GAME_CONFIG.HEIGHT) {
+    
+        // Récupérer les dimensions actuelles de la map
+        const currentMap = currentGameSettings.selectedMap || 'map1';
+        const mapDimensions = MAP_DIMENSIONS[currentMap];
+        const currentWidth = mapDimensions.width;
+        const currentHeight = mapDimensions.height;
+    
+        // Vérification des limites avec les dimensions actuelles
+        if (toX < 0 || toX > currentWidth || toY < 0 || toY > currentHeight) {
             return false;
         }
-
+    
         return true;
     }
 
@@ -322,29 +332,43 @@ class CollisionMap {
 
     async initialize(mapId = 'map1', mirrorMode = false) {
         try {
+            // Récupérer les dimensions spécifiques à la map
+            const mapDimensions = MAP_DIMENSIONS[mapId];
+            const mapWidth = mapDimensions.width;
+            const mapHeight = mapDimensions.height;
+    
+            // Construction du chemin vers l'image de collision
             const collisionPath = path.join(__dirname, 'public', 'assets', 'maps', mapId, mirrorMode ? 'mirror' : 'normal', 'collision.png');
             
             console.log('Chargement de la carte de collision depuis:', collisionPath);
+            console.log('Dimensions de la map:', { width: mapWidth, height: mapHeight });
             
+            // Charger l'image de collision
             const originalImage = await loadImage(collisionPath);
             
-            const canvas = createCanvas(GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
+            // Créer un canvas avec les dimensions spécifiques à la map
+            const canvas = createCanvas(mapWidth, mapHeight);
             const ctx = canvas.getContext('2d');
             
-            ctx.drawImage(originalImage, 0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
+            // Dessiner l'image avec les dimensions correctes
+            ctx.drawImage(originalImage, 0, 0, mapWidth, mapHeight);
             
-            const imageData = ctx.getImageData(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
+            // Obtenir les données de l'image pour l'analyse des collisions
+            const imageData = ctx.getImageData(0, 0, mapWidth, mapHeight);
             
-            this.collisionData = new Array(GAME_CONFIG.HEIGHT);
+            // Initialiser le tableau de collision avec les bonnes dimensions
+            this.collisionData = new Array(mapHeight);
             let collisionCount = 0;
             
-            for (let y = 0; y < GAME_CONFIG.HEIGHT; y++) {
-                this.collisionData[y] = new Array(GAME_CONFIG.WIDTH);
-                for (let x = 0; x < GAME_CONFIG.WIDTH; x++) {
-                    const index = (y * GAME_CONFIG.WIDTH + x) * 4;
+            // Parcourir chaque pixel pour créer la carte de collision
+            for (let y = 0; y < mapHeight; y++) {
+                this.collisionData[y] = new Array(mapWidth);
+                for (let x = 0; x < mapWidth; x++) {
+                    const index = (y * mapWidth + x) * 4;
                     const r = imageData.data[index];
                     const g = imageData.data[index + 1];
                     const b = imageData.data[index + 2];
+                    // Un pixel est considéré comme une collision si sa luminosité moyenne est < 128
                     const isCollision = (r + g + b) / 3 < 128;
                     this.collisionData[y][x] = isCollision;
                     if (isCollision) collisionCount++;
@@ -352,11 +376,12 @@ class CollisionMap {
             }
             
             console.log(`Carte de collision initialisée: ${collisionCount} points de collision`);
+            console.log(`Dimensions finales de la collision: ${mapWidth}x${mapHeight}`);
             return true;
             
         } catch (error) {
             console.error('Erreur lors du chargement de la carte de collision:', error);
-            this.initializeEmptyCollisionMap();
+            this.initializeEmptyCollisionMap(mapId);
             return false;
         }
     }
@@ -369,6 +394,15 @@ class CollisionMap {
     canMove(fromX, fromY, toX, toY, radius = 16) {
         // Vérifier d'abord le point central
         if (this.checkCollision(toX, toY)) {
+            return false;
+        }
+    
+        const mapDimensions = MAP_DIMENSIONS[currentGameSettings?.selectedMap || 'map1'];
+        const currentWidth = mapDimensions.width;
+        const currentHeight = mapDimensions.height;
+    
+        // Vérifier si le point est dans les limites de la map
+        if (toX < 0 || toX > currentWidth || toY < 0 || toY > currentHeight) {
             return false;
         }
     
@@ -395,30 +429,45 @@ class CollisionMap {
 
     checkCollision(x, y) {
         if (!this.collisionData) return false;
-
+    
+        // Récupérer les dimensions de la map actuelle
+        const mapDimensions = MAP_DIMENSIONS[currentGameSettings?.selectedMap || 'map1'];
+        const currentWidth = mapDimensions.width;
+        const currentHeight = mapDimensions.height;
+    
         const pixelX = Math.floor(x);
         const pixelY = Math.floor(y);
-
-        if (pixelX < 0 || pixelX >= GAME_CONFIG.WIDTH || pixelY < 0 || pixelY >= GAME_CONFIG.HEIGHT) {
+    
+        if (pixelX < 0 || pixelX >= currentWidth || pixelY < 0 || pixelY >= currentHeight) {
             return true;
         }
-
+    
         if (!this.collisionData[pixelY] || typeof this.collisionData[pixelY][pixelX] === 'undefined') {
             return true;
         }
-
+    
         return this.collisionData[pixelY][pixelX];
     }
 
     // Les autres méthodes restent les mêmes, juste mettre à jour les références aux constantes
 
-    initializeEmptyCollisionMap() {
-        console.warn('Initialisation d\'une carte de collision vide');
-        this.collisionData = new Array(GAME_CONFIG.HEIGHT);
-        for (let y = 0; y < GAME_CONFIG.HEIGHT; y++) {
-            this.collisionData[y] = new Array(GAME_CONFIG.WIDTH).fill(false);
+    initializeEmptyCollisionMap(mapId = 'map1') {
+        const mapDimensions = MAP_DIMENSIONS[mapId];
+        const mapWidth = mapDimensions.width;
+        const mapHeight = mapDimensions.height;
+    
+        console.warn(`Initialisation d'une carte de collision vide pour ${mapId} (${mapWidth}x${mapHeight})`);
+        this.collisionData = new Array(mapHeight);
+        for (let y = 0; y < mapHeight; y++) {
+            this.collisionData[y] = new Array(mapWidth).fill(false);
         }
     }
+}
+
+// Fonction utilitaire pour obtenir les dimensions actuelles de la map
+function getCurrentMapDimensions() {
+    const currentMap = currentGameSettings?.selectedMap || 'map1';
+    return MAP_DIMENSIONS[currentMap] || MAP_DIMENSIONS['map1'];
 }
 
 let currentGameSettings = { ...DEFAULT_GAME_SETTINGS };  // Initialisation avec les paramètres par défaut
@@ -461,29 +510,30 @@ class SpecialZone {
         );
     }
 
-// Zones rondes :
-generateRandomShape() {
-    // Calculer la taille maximale (1/5 de la zone de jeu)
-    const maxArea = (GAME_CONFIG.WIDTH * GAME_CONFIG.HEIGHT) / 5;
-    
-    // Calculer le rayon maximal à partir de l'aire
-    const maxRadius = Math.sqrt(maxArea / Math.PI);
-    
-    // Générer un rayon aléatoire entre 150 et maxRadius
-    const minRadius = 150;
-    const radius = Math.random() * (maxRadius - minRadius) + minRadius;
-    
-    // Positionner le cercle en s'assurant qu'il reste dans les limites du jeu
-    const x = radius + Math.random() * (GAME_CONFIG.WIDTH - 2 * radius);
-    const y = radius + Math.random() * (GAME_CONFIG.HEIGHT - 2 * radius);
-    
-    return {
-        type: 'circle',
-        x,
-        y,
-        radius
-    };
-}
+    generateRandomShape() {
+        const { width: currentWidth, height: currentHeight } = getCurrentMapDimensions();
+        
+        // Calculer la taille maximale (1/5 de la zone de jeu)
+        const maxArea = (currentWidth * currentHeight) / 5;
+        
+        // Calculer le rayon maximal à partir de l'aire
+        const maxRadius = Math.sqrt(maxArea / Math.PI);
+        
+        // Générer un rayon aléatoire entre 150 et maxRadius
+        const minRadius = 150;
+        const radius = Math.random() * (maxRadius - minRadius) + minRadius;
+        
+        // Positionner le cercle en s'assurant qu'il reste dans les limites du jeu
+        const x = radius + Math.random() * (currentWidth - 2 * radius);
+        const y = radius + Math.random() * (currentHeight - 2 * radius);
+        
+        return {
+            type: 'circle',
+            x,
+            y,
+            radius
+        };
+    }
 
     isExpired() {
         return Date.now() - this.createdAt > this.duration;
@@ -814,6 +864,13 @@ class Entity {
     updateDirection(dx, dy) {
         this.direction = this.determineDirection(dx, dy);
     }
+    validatePosition(x, y) {
+        const mapDimensions = MAP_DIMENSIONS[currentGameSettings?.selectedMap || 'map1'];
+        const currentWidth = mapDimensions.width;
+        const currentHeight = mapDimensions.height;
+
+        return x >= 0 && x <= currentWidth && y >= 0 && y <= currentHeight;
+    }
 }
 
 class Player extends Entity {
@@ -1009,17 +1066,21 @@ class Bot extends Entity {
     }
 
     move() {
+        const mapDimensions = MAP_DIMENSIONS[currentGameSettings?.selectedMap || 'map1'];
+        const currentWidth = mapDimensions.width;
+        const currentHeight = mapDimensions.height;
+    
         const now = Date.now();
-
+    
         if (now - this.lastDirectionChange > this.changeDirectionInterval) {
             this.changeDirection();
             this.lastDirectionChange = now;
             this.changeDirectionInterval = Math.random() * 2000 + 1000;
         }
-
+    
         const newX = this.x + this.vx * GAME_CONFIG.BOT_SPEED;
         const newY = this.y + this.vy * GAME_CONFIG.BOT_SPEED;
-
+    
         if (collisionMap.canMove(this.x, this.y, newX, newY, 8)) {
             this.x = newX;
             this.y = newY;
@@ -1027,10 +1088,10 @@ class Bot extends Entity {
         } else {
             this.changeDirection();
         }
-
-        // S'assurer que le bot reste dans les limites
-        this.x = Math.max(0, Math.min(GAME_CONFIG.WIDTH, this.x));
-        this.y = Math.max(0, Math.min(GAME_CONFIG.HEIGHT, this.y));
+    
+        // S'assurer que le bot reste dans les limites actuelles de la map
+        this.x = Math.max(0, Math.min(currentWidth, this.x));
+        this.y = Math.max(0, Math.min(currentHeight, this.y));
     }
 
     changeDirection() {
@@ -1164,6 +1225,11 @@ class BlackBot extends Bot {
     }
 
     pursueTarget() {
+        // Récupérer les dimensions de la map actuelle
+        const mapDimensions = MAP_DIMENSIONS[currentGameSettings?.selectedMap || 'map1'];
+        const currentWidth = mapDimensions.width;
+        const currentHeight = mapDimensions.height;
+    
         const dx = this.targetEntity.x - this.x;
         const dy = this.targetEntity.y - this.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -1178,16 +1244,16 @@ class BlackBot extends Bot {
         const newX = this.x + this.vx;
         const newY = this.y + this.vy;
     
-        // Garder dans les limites
-        this.x = Math.max(0, Math.min(GAME_CONFIG.WIDTH, newX));
-        this.y = Math.max(0, Math.min(GAME_CONFIG.HEIGHT, newY));
+        // Garder dans les limites de la map actuelle
+        this.x = Math.max(0, Math.min(currentWidth, newX));
+        this.y = Math.max(0, Math.min(currentHeight, newY));
     
         // Vérifier collision avec la cible
         if (distance < 20) {  
             this.captureEntity(this.targetEntity);
         }
     }
-
+    
     captureEntity(entity) {
         const now = Date.now();
         if (now - this.lastCaptureTime < this.captureCooldown) return;
@@ -1282,12 +1348,14 @@ class Bonus {
     constructor(type) {
         this.id = `bonus_${Date.now()}_${Math.random()}`;
         this.type = type;
+        const { width: currentWidth, height: currentHeight } = getCurrentMapDimensions();
         
         // Trouver une position valide
-        const pos = positionManager.getValidPosition();
-        this.x = pos.x;
-        this.y = pos.y;
-    
+        const x = Math.random() * currentWidth;
+        const y = Math.random() * currentHeight;
+        
+        this.x = x;
+        this.y = y;
         this.createdAt = Date.now();
         this.lifetime = 8000;
         this.warningThreshold = 3000;
@@ -1337,10 +1405,14 @@ class Malus {
         this.id = `malus_${Date.now()}_${Math.random()}`;
         this.type = type;
         
-        const pos = positionManager.getValidPosition();
-        this.x = pos.x;
-        this.y = pos.y;
-    
+        const { width: currentWidth, height: currentHeight } = getCurrentMapDimensions();
+        
+        // Position aléatoire dans les limites de la map actuelle
+        const x = Math.random() * currentWidth;
+        const y = Math.random() * currentHeight;
+        
+        this.x = x;
+        this.y = y;
         this.createdAt = Date.now();
         this.lifetime = 8000;
         this.warningThreshold = 3000;
@@ -1914,6 +1986,9 @@ function handleGameStart(socket, data) {
         resetGame();
     }
 
+    const mapDimensions = MAP_DIMENSIONS[data.settings?.selectedMap || 'map1'];
+    currentMapWidth = mapDimensions.width;
+    currentMapHeight = mapDimensions.height;
     const nickname = data.nickname || 'Joueur';
     
     // Vérifier si le joueur existe déjà
@@ -2378,6 +2453,9 @@ io.on('connection', (socket) => {
     });
 
     socket.on('startGameFromRoom', (data) => {
+        const mapDimensions = MAP_DIMENSIONS[data.settings.selectedMap || 'map1'];
+        const gameWidth = mapDimensions.width;
+        const gameHeight = mapDimensions.height;
         const player = waitingRoom.players.get(socket.id);
         if (player?.isOwner) {
             // Si un countdown est déjà en cours, ne rien faire
@@ -2532,6 +2610,10 @@ io.on('connection', (socket) => {
     
         const player = players[socket.id];
         if (!player || !data.isMoving) return;
+
+        const mapDimensions = MAP_DIMENSIONS[currentGameSettings?.selectedMap || 'map1'];
+        const currentWidth = mapDimensions.width;
+        const currentHeight = mapDimensions.height;
     
         // Calculer la vitesse normalisée une seule fois au début
         const baseSpeed = SPEED_CONFIG.PLAYER_BASE_SPEED;
@@ -2585,8 +2667,8 @@ io.on('connection', (socket) => {
         }
     
     // S'assurer que le joueur reste dans les limites
-    player.x = Math.max(0, Math.min(GAME_CONFIG.WIDTH, player.x));
-    player.y = Math.max(0, Math.min(GAME_CONFIG.HEIGHT, player.y));
+    player.x = Math.max(0, Math.min(currentWidth, player.x));
+    player.y = Math.max(0, Math.min(currentHeight, player.y));
     
     // Mettre à jour la direction
     if (player.x !== oldX || player.y !== oldY) {

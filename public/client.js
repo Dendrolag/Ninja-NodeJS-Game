@@ -5,14 +5,14 @@ let socket;
 
 import { MapManager } from './js/MapManager.js';
 import { AudioManager } from './js/AudioManager.js';
-import { SPEED_CONFIG } from './js/game-constants.js';
+import { SPEED_CONFIG, MAP_DIMENSIONS } from './js/game-constants.js';
 
 // Éléments DOM principaux
 const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
 const nicknameInput = document.getElementById('nicknameInput');
 
-const GAME_VERSION = "v0.8.2";  // À mettre à jour à chaque déploiement
+const GAME_VERSION = "v0.8.4";  // À mettre à jour à chaque déploiement
 
 // Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
@@ -47,8 +47,15 @@ const helpContents = document.querySelectorAll('#helpMenu .tab-content');
 
 let countdownInitialized = false; // Variable pour suivre l'état du countdown
 
-const GAME_VIRTUAL_WIDTH = 2000;  // Taille virtuelle de la zone de jeu
-const GAME_VIRTUAL_HEIGHT = 1500;
+const DEFAULT_MAP_DIMENSIONS = MAP_DIMENSIONS['map1'];
+let GAME_WIDTH = DEFAULT_MAP_DIMENSIONS.width;
+let GAME_HEIGHT = DEFAULT_MAP_DIMENSIONS.height;
+
+// Variables pour les dimensions actuelles de la map
+let currentMapWidth = GAME_WIDTH;
+let currentMapHeight = GAME_HEIGHT;
+
+
 let camera = {
     x: 0,
     y: 0,
@@ -268,8 +275,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         mapManager = new MapManager(canvas, {
             debugMode: true,
             debugCollisions: true,
-            mapWidth: GAME_VIRTUAL_WIDTH,
-            mapHeight: GAME_VIRTUAL_HEIGHT
+            mapWidth: currentMapWidth,
+            mapHeight: currentMapHeight
         });
         
         await audioManager.loadPromise;
@@ -330,10 +337,6 @@ function initializeMapSelection() {
     }
 }
 
-// Dimensions du jeu
-let GAME_WIDTH = window.innerWidth;
-let GAME_HEIGHT = window.innerHeight;
-
 // Variables d'état du jeu
 let entities = [];
 let bonuses = [];
@@ -391,7 +394,7 @@ let gameSettings = {
     invincibilityDuration: 10,
     enableReveal: true,
     revealDuration: 10,
-    initialBotCount: 30,
+    initialBotCount: 50,
     enableSpecialZones: true,
     enabledZones: {
         CHAOS: true,
@@ -677,6 +680,27 @@ class SpriteManager {
     }
 }
 
+function randomColor() {
+    const letters = '0123456789ABCDEF';
+    return '#' + Array.from({ length: 6 }, () => letters[Math.floor(Math.random() * 16)]).join('');
+  }
+  
+  function updateNeonColors() {
+    const neonColor = randomColor();
+    const neonColorLight = randomColor();
+  
+    // Met à jour les variables CSS pour les couleurs
+    document.documentElement.style.setProperty('--neon-color', neonColor);
+    document.documentElement.style.setProperty('--neon-color-light', neonColorLight);
+  }
+  
+  // Met à jour les couleurs toutes les 3 secondes (durée de l'animation et de la transition)
+  setInterval(updateNeonColors, 3000);
+  
+  // Initialise les couleurs au chargement
+  updateNeonColors();  
+
+
 // Créer l'instance globale du SpriteManager
 const spriteManager = new SpriteManager();
 
@@ -686,6 +710,20 @@ function addVersionDisplay() {
     versionDisplay.className = 'version-display';
     versionDisplay.textContent = GAME_VERSION;
     document.body.appendChild(versionDisplay);
+}
+
+// Fonction pour mettre à jour les dimensions quand la map change
+function updateGameDimensions(selectedMap) {
+    const dimensions = MAP_DIMENSIONS[selectedMap];
+    if (dimensions) {
+        currentMapWidth = dimensions.width;
+        currentMapHeight = dimensions.height;
+        console.log('Dimensions du jeu mises à jour:', {
+            map: selectedMap,
+            width: currentMapWidth,
+            height: currentMapHeight
+        });
+    }
 }
 
 function worldToScreen(worldX, worldY) {
@@ -1010,11 +1048,11 @@ function updateCamera() {
     // Calculer la position cible (centrée sur le joueur avec limites)
     const targetX = Math.max(
         viewWidth / 2,
-        Math.min(GAME_VIRTUAL_WIDTH - viewWidth / 2, myPlayer.x)
+        Math.min(currentMapWidth - viewWidth / 2, myPlayer.x)
     );
     const targetY = Math.max(
         viewHeight / 2,
-        Math.min(GAME_VIRTUAL_HEIGHT - viewHeight / 2, myPlayer.y)
+        Math.min(currentMapHeight - viewHeight / 2, myPlayer.y)
     );
 
     const lerpFactor = 0.08; // Réduire cette valeur pour un mouvement plus lisse (0.05 - 0.15)
@@ -1026,8 +1064,8 @@ function updateCamera() {
     });
 
     // S'assurer que la caméra reste dans les limites
-    camera.x = Math.max(viewWidth / 2, Math.min(GAME_VIRTUAL_WIDTH - viewWidth / 2, camera.x));
-    camera.y = Math.max(viewHeight / 2, Math.min(GAME_VIRTUAL_HEIGHT - viewHeight / 2, camera.y));
+    camera.x = Math.max(viewWidth / 2, Math.min(currentMapWidth - viewWidth / 2, camera.x));
+    camera.y = Math.max(viewHeight / 2, Math.min(currentMapHeight - viewHeight / 2, camera.y));
 }
 
 // Fonction de réinitialisation des paramètres
@@ -1165,7 +1203,7 @@ function resizeCanvas() {
 }
 
 function initializeCamera() {
-    const aspectRatio = GAME_VIRTUAL_WIDTH / GAME_VIRTUAL_HEIGHT;
+    const aspectRatio = currentMapWidth / currentMapHeight;
     const screenAspectRatio = window.innerWidth / window.innerHeight;
     
     if (isMobile()) {
@@ -1189,8 +1227,8 @@ function initializeCamera() {
     }
 
     if (!camera.x || !camera.y) {
-        camera.x = GAME_VIRTUAL_WIDTH / 2;
-        camera.y = GAME_VIRTUAL_HEIGHT / 2;
+        camera.x = currentMapWidth / 2;
+        camera.y = currentMapHeight / 2;
     }
 }
 
@@ -1606,12 +1644,24 @@ startButton.addEventListener('click', () => {
         updateSettingsUI(settings);
         gameSettings = settings;
 
+        const mapDimensions = MAP_DIMENSIONS[settings.selectedMap || 'map1'];
+        if (mapDimensions) {
+            currentMapWidth = mapDimensions.width;
+            currentMapHeight = mapDimensions.height;
+            
+            console.log('Dimensions du jeu mises à jour:', {
+                map: settings.selectedMap,
+                width: currentMapWidth,
+                height: currentMapHeight
+            });
+        }
+
             // Mettre à jour les sélecteurs de la modale
-    mapSelectorModal.value = settings.selectedMap || 'map1';
-    mirrorModeModal.checked = settings.mirrorMode || false;
+        mapSelectorModal.value = settings.selectedMap || 'map1';
+        mirrorModeModal.checked = settings.mirrorMode || false;
     
-    // Mettre à jour le texte du bouton
-    updateMapButtonText();
+        // Mettre à jour le texte du bouton
+        updateMapButtonText();
     
         try {
             // Si mapManager n'existe pas encore, l'initialiser
@@ -1619,8 +1669,8 @@ startButton.addEventListener('click', () => {
                 mapManager = new MapManager(canvas, {
                     debugMode: true,
                     debugCollisions: true,
-                    mapWidth: GAME_VIRTUAL_WIDTH,
-                    mapHeight: GAME_VIRTUAL_HEIGHT,
+                    mapWidth: currentMapWidth,
+                    mapHeight: currentMapHeight,
                     selectedMap: settings.selectedMap,
                     mirrorMode: settings.mirrorMode
                 });
@@ -1810,8 +1860,8 @@ socket.on('gameStarting', async () => {
                 mapManager = new MapManager(canvas, {
                     debugMode: true,
                     debugCollisions: true,
-                    mapWidth: GAME_VIRTUAL_WIDTH,
-                    mapHeight: GAME_VIRTUAL_HEIGHT,
+                    mapWidth: currentMapWidth,
+                    mapHeight: currentMapHeight,
                     selectedMap: gameSettings.selectedMap || 'map1',
                     mirrorMode: gameSettings.mirrorMode || false
                 });
@@ -2086,7 +2136,6 @@ function updateWaitingRoomPlayers(data) {
     }
 
     // Gérer l'état des inputs dans le menu paramètres
-    // Gérer l'état des inputs dans le menu paramètres
     const settingsInputs = settingsMenu.querySelectorAll('input, select, button');
     settingsInputs.forEach(input => {
         // Exclure le bouton retour et les contrôles audio de la désactivation
@@ -2313,6 +2362,16 @@ async function startGame() {
             // Précharger la map
             mapManager.loadPromise
         ]);
+        
+        const mapDimensions = MAP_DIMENSIONS[gameSettings?.selectedMap || 'map1'];
+        currentMapWidth = mapDimensions.width;
+        currentMapHeight = mapDimensions.height;
+    
+        // Mise à jour du MapManager avec les nouvelles dimensions
+        if (mapManager) {
+            mapManager.mapWidth = currentMapWidth;
+            mapManager.mapHeight = currentMapHeight;
+        }
 
     initializeCamera();
     // Attendre que la map soit chargée
@@ -2386,8 +2445,8 @@ async function startGame() {
             ...gameSettings,
             gameDuration: duration
         },
-        gameWidth: GAME_VIRTUAL_WIDTH,  // Utiliser les dimensions virtuelles
-        gameHeight: GAME_VIRTUAL_HEIGHT
+        gameWidth: currentMapWidth,  // Utiliser les dimensions virtuelles
+        gameHeight: currentMapHeight
     });
 
         // Initialiser le MapManager avec les bons paramètres
@@ -2395,8 +2454,8 @@ async function startGame() {
             mapManager = new MapManager(canvas, {
                 debugMode: true,
                 debugCollisions: true,
-                mapWidth: GAME_VIRTUAL_WIDTH,
-                mapHeight: GAME_VIRTUAL_HEIGHT,
+                mapWidth: currentMapWidth,
+                mapHeight: currentMapHeight,
                 selectedMap: gameSettings.selectedMap,
                 mirrorMode: gameSettings.mirrorMode
             });
@@ -3101,7 +3160,7 @@ function drawEntities() {
     // Dessiner les limites de la zone de jeu
     context.strokeStyle = 'rgba(255, 255, 255, 0.5)';
     context.lineWidth = 4;
-    context.strokeRect(0, 0, GAME_VIRTUAL_WIDTH, GAME_VIRTUAL_HEIGHT);
+    context.strokeRect(0, 0, currentMapWidth, currentMapHeight);
 
     // Dessiner les zones spéciales
     if (specialZones) {
@@ -3937,7 +3996,7 @@ function showGameOverModal(scores) {
 
     // Bouton Retour à la salle d'attente
     const waitingRoomButton = document.createElement('button');
-    waitingRoomButton.className = 'primary-button';
+    waitingRoomButton.className = 'primary-button modal-buttons';
     waitingRoomButton.textContent = 'Retour à la salle d\'attente';
     addButtonClickSound(waitingRoomButton); // Ajouter le son
     waitingRoomButton.addEventListener('click', () => {
@@ -3947,7 +4006,7 @@ function showGameOverModal(scores) {
 
     // Bouton Menu Principal
     const mainMenuButton = document.createElement('button');
-    mainMenuButton.className = 'secondary-button';
+    mainMenuButton.className = 'secondary-button modal-buttons';
     mainMenuButton.textContent = 'Menu Principal';
     addButtonClickSound(mainMenuButton); // Ajouter le son
     mainMenuButton.addEventListener('click', () => {

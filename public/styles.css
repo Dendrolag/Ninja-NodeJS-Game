@@ -103,7 +103,7 @@ body, html {
 
 
 /* Styles des menus */
-#mainMenu, #settingsMenu {
+#mainMenu, #mapSelectionMenu {
     display: none;
     position: fixed;
     top: 0;
@@ -113,6 +113,17 @@ body, html {
     color: white;
     text-align: center;
     overflow: hidden;
+}
+
+#helpMenu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    display: none;
 }
 
 #mainMenu::before {
@@ -175,10 +186,40 @@ body, html {
     font-family: 'BrunoAce', sans-serif;
     font-size: 4rem;
     color: #fff;
-    text-shadow: 0 0 10px #0ff,
-                 0 0 20px #0ff,
-                 0 0 30px #0ff;
-}
+    text-shadow: 
+      0 0 10px var(--neon-color),
+      0 0 20px var(--neon-color),
+      0 0 30px var(--neon-color),
+      0 0 40px var(--neon-color-light),
+      0 0 50px var(--neon-color-light),
+      0 0 60px var(--neon-color-light),
+      0 0 70px var(--neon-color-light);
+      animation: neon-glow 3s infinite; /* Synchronisé avec JavaScript */
+      transition: text-shadow 3s ease-in-out; /* Transition fluide sur 3s */
+  }
+  
+  @keyframes neon-glow {
+    0%, 100% {
+      text-shadow: 
+        0 0 10px var(--neon-color),
+        0 0 20px var(--neon-color),
+        0 0 30px var(--neon-color),
+        0 0 40px var(--neon-color-light),
+        0 0 50px var(--neon-color-light),
+        0 0 60px var(--neon-color-light),
+        0 0 70px var(--neon-color-light);
+    }
+    50% {
+      text-shadow: 
+        0 0 10px var(--neon-color),
+        0 0 20px var(--neon-color),
+        0 0 30px var(--neon-color),
+        0 0 40px var(--neon-color-light),
+        0 0 50px var(--neon-color-light),
+        0 0 60px var(--neon-color-light),
+        0 0 70px var(--neon-color-light);
+    }
+  }
 
 .game-title .ninja {
     font-family: 'PermanentMarker-Regular', cursive;
@@ -209,7 +250,6 @@ h4 {
 h1 {
     font-size: 48px;
     color: #cc99ff;
-    text-transform: uppercase;
 }
 
 h2 {
@@ -378,7 +418,7 @@ input[type="text"]:focus, input[type="number"]:focus {
 }
 
 /* Menu des paramètres */
-#settingsMenu {
+#settingsMenu, #mapSelectionMenu {
     position: fixed; /* Au lieu de position absolue */
     top: 0;
     left: 0;
@@ -1633,17 +1673,6 @@ text-align: left;
     bottom: 20px;
 }
 
-#helpMenu {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.8);
-    z-index: 1000;
-    display: none;
-}
-
 .help-content {
     max-width: 800px;
     margin: 40px auto;
@@ -1770,14 +1799,17 @@ text-align: left;
     color: white;
     padding: 5px;
     text-align: center;
-    font-size: 14px;
+    font-size: 12px;
+    line-height: 1.2;
 }
 
 /* Toggle Mode */
 .mode-toggle-container {
+    margin-top: 20px;
     width: 100%;
     display: flex;
     justify-content: center;
+    padding: 10px 0;
 }
 
 .mode-toggle {
@@ -1824,12 +1856,16 @@ text-align: left;
 /* Adaptation mobile */
 @media (max-width: 768px) {
     .map-preview-container {
-        gap: 20px;
+        gap: 15px;
     }
 
     .map-preview-wrapper {
         width: 100px;
         height: 100px;
+    }
+
+    .map-name {
+        font-size: 11px;
     }
 
     .toggle-track {
@@ -1839,6 +1875,18 @@ text-align: left;
     .toggle-option {
         padding: 6px 10px;
         font-size: 14px;
+    }
+}
+
+/* Pour très petits écrans */
+@media (max-width: 380px) {
+    .map-preview-container {
+        gap: 10px;
+    }
+
+    .map-preview-wrapper {
+        width: 90px;
+        height: 90px;
     }
 }
 
@@ -2775,6 +2823,9 @@ input[type="checkbox"]:disabled + label {
         padding: 20px;
         margin: 10px auto;
     }
+    .menu-form input[type="text"] {
+      height: 50px;
+    }
 
     .setting-group {
         padding: 15px;
@@ -2890,7 +2941,7 @@ input[type="checkbox"]:disabled + label {
 
     .menu-content, .settings-content {
        /* width: 95%;*/
-        padding: 40px;
+        padding: 15px;
     }
 
     h1 {
@@ -3163,13 +3214,12 @@ input[type="checkbox"]:disabled + label {
         padding: 12px;
         margin-bottom: 12px;
     }
-    .menu-content {
-        height: 80vh;
-        width: 80vh;
-      }
     .settings-content {
         max-height: auto;
         margin: 10px auto;
+    }
+    .primary-button, .secondary-button {
+        height:40px;
     }
 }
 
@@ -3185,6 +3235,10 @@ input[type="checkbox"]:disabled + label {
     * {
         touch-action: manipulation;
         -webkit-tap-highlight-color: transparent;
+    }
+    .primary-button, .secondary-button {
+        height:40px;
+        font-size: 14px;
     }
 }
 

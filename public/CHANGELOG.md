@@ -1,6 +1,16 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
 
+## [0.8.4] - 2024-12-19
+### Améliorations
+- Ajout fond full screen pour la modale de sélection de map
+- Animation glowing écran titre
+- Ajustements responsives (marges, boutons)
+### Ajout
+- Ajout de la map3 test (Room Of Spirit and Time) grande taille
+### Modifications
+- Passage du nombre de bots par défaut de 30 à 50
+
 ## [0.8.3] - 2024-12-18
 ### Améliorations
 - Amélioration de la modale de sélection de map

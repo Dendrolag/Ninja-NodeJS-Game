@@ -165,22 +165,6 @@
                             <img src="/assets/images/map1.png" alt="Rainy Tokyo" class="map-preview-image">
                             <span class="map-name-square">Rainy Tokyo</span>
                         </div>
-                        
-                        <div class="mode-toggle-container">
-                            <!-- Select caché pour maintenir la logique existante -->
-                            <select id="mapSelectorModal" style="display: none;">
-                                <option value="map1" selected>Rainy Tokyo</option>
-                                <option value="map2">Tokyo</option>
-                            </select>
-                            <!-- Un seul toggle pour le mode miroir -->
-                            <label class="mode-toggle">
-                                <input type="checkbox" id="mirrorModeModal">
-                                <div class="toggle-track">
-                                    <span class="toggle-option">Normal</span>
-                                    <span class="toggle-option">Miroir</span>
-                                </div>
-                            </label>
-                        </div>
                     </div>
     
                     <!-- Map Neo Tokyo -->
@@ -190,6 +174,30 @@
                             <span class="map-name-square">Tokyo</span>
                         </div>
                     </div>
+    
+                    <!-- Room Of Spirit and Time -->
+                    <div class="map-preview-card">
+                        <div class="map-preview-wrapper" data-map="map3">
+                            <img src="/assets/images/map3.png" alt="Room Of Spirit and Time" class="map-preview-image">
+                            <span class="map-name-square">Room Of Spirit and Time</span>
+                        </div>
+                    </div>
+                </div>
+    
+                <!-- Un seul toggle pour toutes les maps -->
+                <div class="mode-toggle-container">
+                    <select id="mapSelectorModal" style="display: none;">
+                        <option value="map1" selected>Rainy Tokyo</option>
+                        <option value="map2">Tokyo</option>
+                        <option value="map3">Room Of Spirit and Time</option>
+                    </select>
+                    <label class="mode-toggle">
+                        <input type="checkbox" id="mirrorModeModal">
+                        <div class="toggle-track">
+                            <span class="toggle-option">Normal</span>
+                            <span class="toggle-option">Miroir</span>
+                        </div>
+                    </label>
                 </div>
             </div>
     
@@ -330,7 +338,7 @@
                 <div class="setting-group">
                     <div class="setting-header">
                         <label for="initialBotCount">Nombre de faux Ninjas au départ:</label>
-                        <input type="number" id="initialBotCount" class="number-input" value="30" min="10" max="100">
+                        <input type="number" id="initialBotCount" class="number-input" value="50" min="10" max="150">
                     </div>
                 </div>
                 <div class="setting-group">

@@ -7,6 +7,12 @@ export const SPEED_CONFIG = {
     MOBILE_SPEED_FACTOR: 2               // Facteur de sensibilité pour le joystick mobile
 };
 
+export const MAP_DIMENSIONS = {
+    map1: { width: 2000, height: 1500 },
+    map2: { width: 2000, height: 1500 },
+    map3: { width: 3000, height: 2000 }
+};
+
 export const DEFAULT_GAME_SETTINGS = {
     // Durée de la partie
     gameDuration: 180,         // Durée en secondes
@@ -15,7 +21,7 @@ export const DEFAULT_GAME_SETTINGS = {
     mirrorMode: false,
     
     // Configuration des bots
-    initialBotCount: 30,       // Nombre de bots au démarrage
+    initialBotCount: 50,       // Nombre de bots au démarrage
     
     // Configuration des bonus
     bonusSpawnInterval: 4,     // Intervalle entre les bonus en secondes

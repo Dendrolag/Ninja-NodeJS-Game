@@ -11,16 +11,27 @@ export const SPEED_CONFIG = {
     MOBILE_SPEED_FACTOR: 2               // Facteur de sensibilité pour le joystick mobile
 };
 
+export const MAP_DIMENSIONS = {
+    map1: { width: 2000, height: 1500 },
+    map2: { width: 2000, height: 1500 },
+    map3: { width: 3000, height: 2000 }
+};
+
 export const GAME_CONFIG = {
-    // Dimensions de la zone de jeu
-    WIDTH: 2000,
-    HEIGHT: 1500,
+    // Les dimensions de base sont maintenant des getters dynamiques
+    get WIDTH() {
+        // Récupérer la map sélectionnée des settings ou utiliser map1 par défaut
+        const currentMap = (typeof waitingRoom !== 'undefined' && waitingRoom?.settings?.selectedMap) || 'map1';
+        return MAP_DIMENSIONS[currentMap]?.width || 2000; // 2000 comme fallback
+    },
+    get HEIGHT() {
+        const currentMap = (typeof waitingRoom !== 'undefined' && waitingRoom?.settings?.selectedMap) || 'map1';
+        return MAP_DIMENSIONS[currentMap]?.height || 1500; // 1500 comme fallback
+    },
     
-    // Configuration des marges et distances
-    SPAWN_MARGIN: 100,           // Marge depuis les bords pour le spawn
-    SAFE_SPAWN_DISTANCE: 100,    // Distance minimale entre les entités au spawn
-    
-    // Paramètres de mouvement
+    // Le reste reste inchangé
+    SPAWN_MARGIN: 100,
+    SAFE_SPAWN_DISTANCE: 100,
     BOT_SPEED: SPEED_CONFIG.BOT_SPEED,
     PLAYER_BASE_SPEED: SPEED_CONFIG.PLAYER_BASE_SPEED,
 };
@@ -73,7 +84,7 @@ export const DEFAULT_GAME_SETTINGS = {
     mirrorMode: false,
     
     // Configuration des bots
-    initialBotCount: 30,       // Nombre de bots au démarrage
+    initialBotCount: 50,       // Nombre de bots au démarrage
     
     // Configuration des bonus
     bonusSpawnInterval: 4,     // Intervalle entre les bonus en secondes
