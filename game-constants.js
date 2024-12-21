@@ -17,6 +17,21 @@ export const MAP_DIMENSIONS = {
     map3: { width: 3000, height: 2000 }
 };
 
+export const GAME_MODES = {
+    CLASSIC: 'classic',
+    TACTICAL: 'tactical'
+};
+
+export const TACTICAL_MODE_CONFIG = {
+    INITIAL_BOTS_COUNT: 45,      // Plus de bots au départ
+    CAPTURE_ATTEMPTS_MAX: 5,     // Nombre maximum de tentatives
+    CAPTURE_RECHARGE_TIME: 5000, // 5 secondes par recharge
+    CAPTURE_CONE_ANGLE: 90,      // Angle du cône de capture en degrés
+    CAPTURE_RANGE: 100,           // Portée de la capture
+    CAPTURE_ANIMATION_DURATION: 300, // Durée de l'animation en ms
+};
+
+
 export const GAME_CONFIG = {
     // Les dimensions de base sont maintenant des getters dynamiques
     get WIDTH() {
@@ -77,6 +92,10 @@ export const DIRECTIONS = {
  * Configuration par défaut d'une partie
  */
 export const DEFAULT_GAME_SETTINGS = {
+    gameMode: GAME_MODES.CLASSIC,  // Mode par défaut
+    // Paramètres spécifiques au mode tactique
+    enableCaptureSystem: true,     // Active le système de capture tactique
+    showCaptureIndicator: true,    // Affiche l'indicateur de tentatives
     // Durée de la partie
     gameDuration: 180,         // Durée en secondes
 

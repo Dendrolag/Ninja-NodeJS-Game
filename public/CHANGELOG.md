@@ -1,6 +1,12 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
 
+## [0.9.0] - 2024-12-20
+### Ajout
+- Ajout du mode de jeu stratégique
+### Corrections
+- Fix de la régression du spawn des bonus/malus dans les zones de collisions
+
 ## [0.8.4] - 2024-12-19
 ### Améliorations
 - Ajout fond full screen pour la modale de sélection de map

@@ -58,7 +58,9 @@ import {
     SPAWN_CONFIG,
     TIME_CONFIG,
     SPEED_CONFIG,
-    MAP_DIMENSIONS 
+    MAP_DIMENSIONS,
+    GAME_MODES,
+    TACTICAL_MODE_CONFIG 
 } from './game-constants.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -893,7 +895,28 @@ class Player extends Entity {
         this.speedBoostActive = false;
         this.bonusStartTime = 0;
         this.blackBotsDestroyed = 0; 
+        // Ajouter pour le mode tactique
+        this.captureAttempts = TACTICAL_MODE_CONFIG.CAPTURE_ATTEMPTS_MAX;
+        this.lastCaptureRecharge = Date.now();
+        this.isCaptureActive = false;
     }
+
+    rechargeCaptureAttempts() {
+        const now = Date.now();
+        if (this.captureAttempts < TACTICAL_MODE_CONFIG.CAPTURE_ATTEMPTS_MAX && 
+            now - this.lastCaptureRecharge >= TACTICAL_MODE_CONFIG.CAPTURE_RECHARGE_TIME) {
+            this.captureAttempts++;
+            this.lastCaptureRecharge = now;
+            // Notifier le client
+            const socket = activeSockets[this.id];
+            if (socket) {
+                socket.emit('captureAttemptRecharged', {
+                    attempts: this.captureAttempts
+                });
+            }
+        }
+    }
+
 
     get invincibilityActive() {
         return this._invincibilityActive;
@@ -1253,7 +1276,7 @@ class BlackBot extends Bot {
             this.captureEntity(this.targetEntity);
         }
     }
-    
+
     captureEntity(entity) {
         const now = Date.now();
         if (now - this.lastCaptureTime < this.captureCooldown) return;
@@ -1351,11 +1374,10 @@ class Bonus {
         const { width: currentWidth, height: currentHeight } = getCurrentMapDimensions();
         
         // Trouver une position valide
-        const x = Math.random() * currentWidth;
-        const y = Math.random() * currentHeight;
+        const spawnPos = positionManager.getValidPosition();
+        this.x = spawnPos.x;
+        this.y = spawnPos.y;
         
-        this.x = x;
-        this.y = y;
         this.createdAt = Date.now();
         this.lifetime = 8000;
         this.warningThreshold = 3000;
@@ -1408,11 +1430,10 @@ class Malus {
         const { width: currentWidth, height: currentHeight } = getCurrentMapDimensions();
         
         // Position aléatoire dans les limites de la map actuelle
-        const x = Math.random() * currentWidth;
-        const y = Math.random() * currentHeight;
+        const spawnPos = positionManager.getValidPosition();
+        this.x = spawnPos.x;
+        this.y = spawnPos.y;
         
-        this.x = x;
-        this.y = y;
         this.createdAt = Date.now();
         this.lifetime = 8000;
         this.warningThreshold = 3000;
@@ -1671,8 +1692,8 @@ function handleBonusCollection(player, bonus) {
     });
 }
 
-// Collisions et captures
-function detectCollisions(entity, entityId) {
+// Gestion des collisions pour le mode de jeu classique
+function classicModeCollisions(entity, entityId) {
     // Collisions avec les joueurs
     Object.entries(players).forEach(([playerId, player]) => {
         if (playerId === entityId) return;
@@ -1684,7 +1705,7 @@ function detectCollisions(entity, entityId) {
         if (distance < 20) {
             if (entity.type === 'player' && player.type === 'player') {
                 // Vérifier si le joueur cible a l'invincibilité
-                if (entity.color !== player.color && !player.invincibilityActive) {
+                if (entity.color !== player.color && !player.invincibilityActive && !player.isInvulnerable()) {
                     handlePlayerCapture(entity, player);
                 }
             } else if (entity.type === 'player' && player.type === 'bot') {
@@ -1710,31 +1731,29 @@ function detectCollisions(entity, entityId) {
         }
     });
 
-    // Collisions avec les bots noirs
+    // Si c'est un joueur, vérifier les collisions avec les bonus et malus
     if (entity.type === 'player') {
-        const player = players[entity.id];
-    
+        // Collisions avec les bots noirs
         Object.entries(blackBots).forEach(([blackBotId, blackBot]) => {
             const dx = entity.x - blackBot.x;
             const dy = entity.y - blackBot.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
-    
+
             if (distance < 20) {
                 const player = players[entity.id];
                 if (player && player.invincibilityActive === true) {
                     delete blackBots[blackBotId];
-                    player.blackBotsDestroyed++; // Incrémenter le compteur
+                    player.blackBotsDestroyed++;
                     const socket = activeSockets[entity.id];
                     if (socket) {
                         socket.emit('playerCapturedEnemy', {
                             capturedNickname: 'Bot Noir',
                             message: 'Vous avez détruit un Bot Noir !',
-                            pointsGained: 15, // Points gagnés pour la capture
+                            pointsGained: 15,
                             position: { x: blackBot.x, y: blackBot.y }
                         });
                     }
                 }
-                // Si le joueur n'est pas invincible, le bot noir gère lui-même la capture
             }
         });
 
@@ -1762,6 +1781,223 @@ function detectCollisions(entity, entityId) {
                 return false;
             }
             return true;
+        });
+    }
+}
+
+// Collisions et captures
+function detectCollisions(entity, entityId) {
+    if (entity.type !== 'player') return;
+
+    // Pour les bonus et malus, utiliser toujours le système classique
+    checkBonusMalusCollisions(entity);
+
+    // Pour les captures, utiliser le mode approprié
+    if (currentGameSettings.gameMode === GAME_MODES.CLASSIC) {
+        classicModeCollisions(entity, entityId);
+    } else {
+        tacticalModeCollisions(entity, entityId);
+    }
+}
+
+function checkBonusMalusCollisions(entity) {
+    // Collisions avec les bonus
+    bonuses = bonuses.filter(bonus => {
+        const dx = entity.x - bonus.x;
+        const dy = entity.y - bonus.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < 15) {
+            handleBonusCollection(entity, bonus);
+            return false;
+        }
+        return true;
+    });
+
+    // Collisions avec les malus
+    malusItems = malusItems.filter(malus => {
+        const dx = entity.x - malus.x;
+        const dy = entity.y - malus.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < 15) {
+            handleMalusCollection(entity, malus);
+            return false;
+        }
+        return true;
+    });
+}
+
+function tacticalModeCollisions(entity, entityId) {
+    // Vérifier que c'est bien un joueur et qu'il est en mode capture
+    if (entity.type !== 'player' || !entity.isCaptureActive) return;
+
+    console.log('Tentative de capture tactique par', entity.nickname);
+
+    // Ne rien faire si pas de tentatives disponibles
+    if (entity.captureAttempts <= 0) {
+        console.log('Plus de tentatives disponibles pour', entity.nickname);
+        return;
+    }
+
+    // Récupérer les entités dans la zone de capture
+    const entitiesInRange = getEntitiesInCaptureRange(entity);
+    console.log('Entités dans la zone:', entitiesInRange.length);
+
+    // Ne consommer une tentative que si on a des cibles potentielles
+    if (entitiesInRange.length > 0) {
+        entity.captureAttempts--;
+        const socket = activeSockets[entity.id];
+
+        let successfulCaptures = [];
+
+        entitiesInRange.forEach(target => {
+            // Gérer la capture des bots
+            if (target.type === 'bot' && target.color !== entity.color) {
+                target.color = entity.color;
+                successfulCaptures.push(target);
+            }
+            // Gérer la capture des joueurs
+            else if (target.type === 'player' && target.id !== entity.id) {
+                if (!target.invincibilityActive && !target.isInvulnerable()) {
+                    handlePlayerCapture(entity, target);
+                    successfulCaptures.push(target);
+                }
+            }
+        });
+
+        // Notifier le client uniquement si on a consommé une tentative
+        if (socket) {
+            socket.emit('captureAttemptUsed', {
+                attemptsLeft: entity.captureAttempts,
+                successfulCaptures: successfulCaptures.length
+            });
+        }
+        
+        console.log('Captures réussies:', successfulCaptures.length);
+    }
+}
+
+function updateCaptureAttempts() {
+    if (currentGameSettings.gameMode !== GAME_MODES.TACTICAL) return;
+
+    console.log('Vérification des recharges de tentatives');
+
+    Object.values(players).forEach(player => {
+        const now = Date.now();
+        
+        // S'assurer que lastRechargeTime est initialisé
+        if (!player.lastRechargeTime) {
+            player.lastRechargeTime = now;
+            return;
+        }
+
+        // Vérifier le temps écoulé depuis la dernière recharge
+        const timeElapsed = now - player.lastRechargeTime;
+        console.log(`Joueur ${player.nickname}: ${player.captureAttempts}/${TACTICAL_MODE_CONFIG.CAPTURE_ATTEMPTS_MAX} tentatives, temps écoulé: ${timeElapsed}ms`);
+
+        if (player.captureAttempts < TACTICAL_MODE_CONFIG.CAPTURE_ATTEMPTS_MAX && 
+            timeElapsed >= TACTICAL_MODE_CONFIG.CAPTURE_RECHARGE_TIME) {
+            
+            player.captureAttempts++;
+            player.lastRechargeTime = now;
+            
+            const socket = activeSockets[player.id];
+            if (socket) {
+                console.log(`Recharge de tentative pour ${player.nickname}: ${player.captureAttempts}`);
+                socket.emit('captureAttemptRecharged', {
+                    attemptsLeft: player.captureAttempts
+                });
+            }
+        }
+    });
+}
+
+// S'assurer que l'intervalle est démarré
+setInterval(updateCaptureAttempts, 1000);  // Vérifier chaque seconde
+
+// Helper function pour vérifier si une entité est dans le cône
+function checkEntityInCone(sourceEntity, targetEntity, halfAngle, dirVector, targets) {
+    const dx = targetEntity.x - sourceEntity.x;
+    const dy = targetEntity.y - sourceEntity.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    if (distance <= TACTICAL_MODE_CONFIG.CAPTURE_RANGE) {
+        // Calculer l'angle avec le vecteur de direction
+        const angle = Math.abs(getAngleBetweenVectors(dirVector, {x: dx, y: dy}));
+        if (angle <= halfAngle) {
+            targets.push(targetEntity);
+        }
+    }
+}
+
+// Helper function pour obtenir le vecteur de direction
+function getDirectionVector(direction) {
+    switch(direction) {
+        case DIRECTIONS.NORTH: return {x: 0, y: -1};
+        case DIRECTIONS.NORTH_EAST: return {x: 0.707, y: -0.707};
+        case DIRECTIONS.EAST: return {x: 1, y: 0};
+        case DIRECTIONS.SOUTH_EAST: return {x: 0.707, y: 0.707};
+        case DIRECTIONS.SOUTH: return {x: 0, y: 1};
+        case DIRECTIONS.SOUTH_WEST: return {x: -0.707, y: 0.707};
+        case DIRECTIONS.WEST: return {x: -1, y: 0};
+        case DIRECTIONS.NORTH_WEST: return {x: -0.707, y: -0.707};
+        default: return {x: 1, y: 0};
+    }
+}
+
+function getAngleBetweenVectors(v1, v2) {
+    return Math.acos(
+        (v1.x * v2.x + v1.y * v2.y) / 
+        (Math.sqrt(v1.x * v1.x + v1.y * v1.y) * Math.sqrt(v2.x * v2.x + v2.y * v2.y))
+    ) * (180 / Math.PI);
+}
+
+// Ajouter l'intervalle
+setInterval(updateCaptureAttempts, 1000); // Vérifier chaque seconde
+
+// Nouveau helper pour calculer les entités dans le cône de capture
+function getEntitiesInCaptureRange(entity) {
+    const targets = [];
+    const halfAngle = TACTICAL_MODE_CONFIG.CAPTURE_CONE_ANGLE / 2;
+    const dirVector = getDirectionVector(entity.direction);
+    const range = TACTICAL_MODE_CONFIG.CAPTURE_RANGE;
+
+    // Vérifier les joueurs d'abord
+    Object.values(players).forEach(player => {
+        if (player.id !== entity.id) {
+            const dx = player.x - entity.x;
+            const dy = player.y - entity.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance <= range) {
+                const angle = Math.abs(getAngleBetweenVectors(dirVector, {x: dx, y: dy}));
+                if (angle <= halfAngle) {
+                    console.log('Joueur détecté dans la zone:', player.nickname);
+                    targets.push(player);
+                }
+            }
+        }
+    });
+
+    // Vérifier les bots ensuite
+    Object.values(bots).forEach(bot => {
+        if (checkEntityInCone(entity, bot, halfAngle, dirVector, targets)) {
+            targets.push(bot);
+        }
+    });
+
+    return targets;
+}
+
+// Animation de capture côté serveur
+function handleCaptureAnimation(player, targets) {
+    const socket = activeSockets[player.id];
+    if (socket) {
+        socket.emit('captureAnimation', {
+            position: {x: player.x, y: player.y},
+            direction: player.direction,
+            targets: targets.map(t => ({id: t.id, type: t.type}))
         });
     }
 }
@@ -1916,10 +2152,26 @@ function sendUpdates() {
 
 function checkGameEndConditions() {
     if (waitingRoom.playersInGame.size === 0 && waitingRoom.isGameStarted) {
+        // La partie se termine car plus aucun joueur n'est présent
         waitingRoom.isGameStarted = false;
+        
+        // Réinitialiser proprement la partie
+        resetGame();
+        
+        // Informer tous les clients de la mise à jour de la salle d'attente
+        // et des paramètres actuels
         io.emit('updateWaitingRoom', {
             players: Array.from(waitingRoom.players.values()),
             gameInProgress: false
+        });
+        
+        // S'assurer que tous les clients ont les bons paramètres
+        io.emit('gameSettingsUpdated', currentGameSettings);
+        
+        console.log('Partie terminée, paramètres réinitialisés:', {
+            map: currentGameSettings.selectedMap,
+            mirror: currentGameSettings.mirrorMode,
+            mode: currentGameSettings.gameMode
         });
     }
 }
@@ -1960,12 +2212,23 @@ function resetGame() {
     pauseStartTime = null;
     gameStartTime = Date.now();
     
+    // S'assurer que les paramètres courants sont synchronisés avec les paramètres de la salle d'attente
+    currentGameSettings = { ...DEFAULT_GAME_SETTINGS, ...waitingRoom.settings };
+    
+    // Mettre à jour la carte de collision avec les nouveaux paramètres
+    collisionMap.initialize(
+        currentGameSettings.selectedMap, 
+        currentGameSettings.mirrorMode
+    ).catch(error => {
+        console.error('Erreur lors de la réinitialisation de la carte:', error);
+    });
+    
     // Réinitialiser TOUS les joueurs avec la nouvelle fonction
     Object.values(players).forEach(player => {
         resetPlayer(player);
     });
 
-    // Réinitialiser les bots
+    // Réinitialiser les bots et autres entités
     blackBots = {};
     bots = {};
     botsInitialized = false;
@@ -1973,68 +2236,107 @@ function resetGame() {
     // Nettoyer les malus
     clearMalusEffects();
 
-    // Réinitialiser les bonus
+    // Réinitialiser les bonus et zones
     bonuses = [];
-    // Redémarrer le spawn des bonus
-    setTimeout(spawnBonus, 3000);
+    specialZones.clear();
 
-    setTimeout(spawnMalus, 4000);
+    // Informer tous les clients des nouveaux paramètres
+    io.emit('gameSettingsUpdated', currentGameSettings);
 }
 
+// Dans server.js
 function handleGameStart(socket, data) {
     if (isGameOver) {
         resetGame();
     }
 
-    const mapDimensions = MAP_DIMENSIONS[data.settings?.selectedMap || 'map1'];
+    // Log initial des paramètres reçus
+    console.log('Paramètres reçus au démarrage:', {
+        waitingRoomSettings: waitingRoom.settings,
+        receivedSettings: data.settings
+    });
+
+    // S'assurer que les paramètres sont cohérents et complets en utilisant
+    // la bonne cascade de priorité
+    const gameSettings = {
+        ...DEFAULT_GAME_SETTINGS,
+        ...waitingRoom.settings,
+        ...data.settings, // Inclure les paramètres envoyés lors du démarrage
+        // Forcer les paramètres critiques depuis la salle d'attente
+        selectedMap: waitingRoom.settings.selectedMap || 'map1',
+        mirrorMode: waitingRoom.settings.mirrorMode || false,
+        gameMode: waitingRoom.settings.gameMode || GAME_MODES.CLASSIC
+    };
+
+    console.log('Paramètres finaux de démarrage:', gameSettings);
+    currentGameSettings = gameSettings;
+
+    // Mettre à jour les dimensions de la map en fonction des paramètres
+    const mapDimensions = MAP_DIMENSIONS[gameSettings.selectedMap];
     currentMapWidth = mapDimensions.width;
     currentMapHeight = mapDimensions.height;
+
+    // Mettre à jour la carte de collision avec les bons paramètres
+    collisionMap.initialize(currentGameSettings.selectedMap, currentGameSettings.mirrorMode)
+        .then(() => {
+            console.log('Carte de collision mise à jour pour', {
+                map: currentGameSettings.selectedMap,
+                mirror: currentGameSettings.mirrorMode
+            });
+        })
+        .catch(error => {
+            console.error('Erreur lors de la mise à jour de la carte de collision:', error);
+        });
+    
     const nickname = data.nickname || 'Joueur';
     
-    // Vérifier si le joueur existe déjà
+    // Gestion du joueur
     if (!players[socket.id]) {
         // Créer un nouveau joueur
         players[socket.id] = new Player(socket.id, nickname);
         activeSockets[socket.id] = socket;
     } else {
-        // Si le joueur existe déjà, réinitialiser ses scores
-        const player = players[socket.id];
-        player.captures = 0;
-        player.capturedPlayers = {};
-        player.capturedBy = {};
-        player.botsControlled = 0;
-        player.totalBotsCaptures = 0;
-        player.capturedByBlackBot = 0;
-        player.blackBotsDestroyed = 0;  // Réinitialisation du compteur de black bots
-        player.speedBoostActive = false;
-        player.invincibilityActive = false;
-        player.revealActive = false;
-        player.bonusStartTime = 0;
-        // Réinitialiser les timers de bonus si ils existent
-        if (player.bonusTimers) {
-            player.bonusTimers = {
-                speed: 0,
-                invincibility: 0,
-                reveal: 0
-            };
-        }
+        // Réinitialiser le joueur existant
+        resetPlayer(players[socket.id]);
     }
 
-    // Mettre à jour les paramètres du jeu
-    currentGameSettings = {
-        ...DEFAULT_GAME_SETTINGS,
-        ...data.settings,
-        enabledZones: {
-            ...DEFAULT_GAME_SETTINGS.enabledZones,
-            ...(data.settings?.enabledZones || {})
-        }
-    };
+    // Propager les paramètres à tous les joueurs avant de démarrer
+    io.emit('gameSettingsUpdated', currentGameSettings);
 
     // Initialiser les bots si nécessaire
     if (!botsInitialized) {
-        createBots(currentGameSettings.initialBotCount);
+        // Ajuster le nombre de bots selon le mode de jeu
+        const botCount = currentGameSettings.gameMode === GAME_MODES.TACTICAL 
+            ? TACTICAL_MODE_CONFIG.INITIAL_BOTS_COUNT 
+            : currentGameSettings.initialBotCount;
+
+        createBots(botCount);
         botsInitialized = true;
     }
+    
+    // Initialiser les propriétés du mode tactique si nécessaire
+    if (currentGameSettings.gameMode === GAME_MODES.TACTICAL) {
+        Object.values(players).forEach(player => {
+            if (!player.hasOwnProperty('captureAttempts')) {
+                player.captureAttempts = TACTICAL_MODE_CONFIG.CAPTURE_ATTEMPTS_MAX;
+            }
+            if (!player.hasOwnProperty('lastCaptureRecharge')) {
+                player.lastCaptureRecharge = Date.now();
+            }
+            if (!player.hasOwnProperty('isCaptureActive')) {
+                player.isCaptureActive = false;
+            }
+        });
+    }
+
+    // Log final de vérification
+    console.log('État final au démarrage:', {
+        map: currentGameSettings.selectedMap,
+        mirror: currentGameSettings.mirrorMode,
+        mode: currentGameSettings.gameMode,
+        dimensions: `${currentMapWidth}x${currentMapHeight}`,
+        botsCount: Object.keys(bots).length
+    });
 }
 
 // Configuration Socket.IO
@@ -2167,6 +2469,12 @@ io.on('connection', (socket) => {
         // Ajouter le joueur à la partie
         players[socket.id] = new Player(socket.id, data.nickname);
         activeSockets[socket.id] = socket;
+
+            // IMPORTANT : Envoyer d'abord les paramètres actuels de la partie
+        socket.emit('gameSettingsUpdated', {
+            ...currentGameSettings,
+            mapUpdateRequired: true // Forcer la mise à jour de la map et des paramètres
+        });
         
         // Faire apparaître le joueur à une position sûre
         players[socket.id].respawn();
@@ -2367,68 +2675,53 @@ io.on('connection', (socket) => {
         }
     });
 
-            // Gestion séparée pour les paramètres de map
-            socket.on('updateMapSettings', async (mapSettings) => {
-                const player = waitingRoom.players.get(socket.id);
-                if (player?.isOwner) {
-                    try {
-                        console.log('Réception updateMapSettings:', {
-                            newMap: mapSettings.selectedMap,
-                            newMirrorMode: mapSettings.mirrorMode,
-                            currentMap: waitingRoom.settings.selectedMap,
-                            currentMirrorMode: waitingRoom.settings.mirrorMode
-                        });
-            
-                        // Vérifier si les paramètres de map changent réellement
-                        if (mapSettings.selectedMap !== waitingRoom.settings.selectedMap || 
-                            mapSettings.mirrorMode !== waitingRoom.settings.mirrorMode) {
-                            
-                            console.log('Changement de map détecté, mise à jour des collisions...');
-                            
-                            // Mettre à jour les collisions en premier
-                            const collisionsUpdated = await collisionMap.updateCollisions(
-                                mapSettings.selectedMap, 
-                                mapSettings.mirrorMode
-                            );
-            
-                            if (!collisionsUpdated) {
-                                throw new Error('Échec de la mise à jour des collisions');
-                            }
-            
-                            console.log('Collisions mises à jour avec succès');
-                            
-                            // Attendre un petit délai pour s'assurer que tout est bien initialisé
-                            await new Promise(resolve => setTimeout(resolve, 100));
-                            
-                            // Mettre à jour les paramètres de map
-                            waitingRoom.settings = {
-                                ...waitingRoom.settings,
-                                selectedMap: mapSettings.selectedMap,
-                                mirrorMode: mapSettings.mirrorMode
-                            };
-            
-                            console.log('Paramètres de map mis à jour, notification des clients...');
-            
-                            // Informer tous les joueurs des changements
-                            io.emit('gameSettingsUpdated', {
-                                ...waitingRoom.settings,
-                                mapUpdateRequired: true // Flag pour forcer la mise à jour de la map
-                            });
-            
-                            console.log('Notification envoyée aux clients');
-                        } else {
-                            console.log('Aucun changement de map détecté');
-                        }
-                    } catch (error) {
-                        console.error('Erreur lors de la mise à jour de la map:', error);
-                        socket.emit('error', 'Erreur lors de la mise à jour de la map');
-                    }
-                } else {
-                    console.log('Tentative de mise à jour de map par un non-propriétaire');
+    // Gestion séparée pour les paramètres de map
+    socket.on('updateMapSettings', async (mapSettings) => {
+        const player = waitingRoom.players.get(socket.id);
+        if (player?.isOwner) {
+            try {
+                console.log('Réception des paramètres de map:', mapSettings);
+                
+                // Si les paramètres de map changent réellement
+                if (mapSettings.selectedMap !== waitingRoom.settings.selectedMap || 
+                    mapSettings.mirrorMode !== waitingRoom.settings.mirrorMode ||
+                    mapSettings.gameMode !== waitingRoom.settings.gameMode) {  
+        
+                    console.log('Mise à jour des paramètres détectée');
+                    
+                    // Mettre à jour les paramètres
+                    waitingRoom.settings = {
+                        ...waitingRoom.settings,
+                        ...mapSettings
+                    };
+        
+                    currentGameSettings = { 
+                        ...DEFAULT_GAME_SETTINGS, 
+                        ...waitingRoom.settings 
+                    };
+    
+                    // Mettre à jour la carte de collision
+                    await collisionMap.initialize(
+                        currentGameSettings.selectedMap, 
+                        currentGameSettings.mirrorMode
+                    );
+    
+                    // Informer tous les joueurs des changements
+                    io.emit('gameSettingsUpdated', {
+                        ...waitingRoom.settings,
+                        mapUpdateRequired: true
+                    });
+        
+                    console.log('Nouveaux paramètres propagés:', waitingRoom.settings);
                 }
-            });
+            } catch (error) {
+                console.error('Erreur lors de la mise à jour de la map:', error);
+                socket.emit('error', 'Erreur lors de la mise à jour de la map');
+            }
+        }
+    });
 
-        // Paramètres audio (accessible à tous les joueurs)
+    // Paramètres audio (accessible à tous les joueurs)
     socket.on('updateAudioSettings', (audioSettings) => {
         const player = waitingRoom.players.get(socket.id);
         if (player) {
@@ -2453,13 +2746,19 @@ io.on('connection', (socket) => {
     });
 
     socket.on('startGameFromRoom', (data) => {
-        const mapDimensions = MAP_DIMENSIONS[data.settings.selectedMap || 'map1'];
-        const gameWidth = mapDimensions.width;
-        const gameHeight = mapDimensions.height;
         const player = waitingRoom.players.get(socket.id);
         if (player?.isOwner) {
             // Si un countdown est déjà en cours, ne rien faire
             if (startCountdown) return;
+    
+            // IMPORTANT: Capturer les paramètres AVANT le countdown
+            // Assurer une copie profonde des paramètres
+            const definedSettings = JSON.parse(JSON.stringify({
+                ...DEFAULT_GAME_SETTINGS,
+                ...waitingRoom.settings
+            }));
+    
+            console.log('Paramètres capturés avant countdown:', definedSettings);
     
             socket.removeAllListeners('cancelGameStart');
             let countdown = TIME_CONFIG.GAME_START_COUNTDOWN;
@@ -2487,7 +2786,14 @@ io.on('connection', (socket) => {
                     pauseStartTime = null;
                     gameStartTime = Date.now();
                     
-                    // Réinitialiser d'abord les bots et bonus
+                    // IMPORTANT: Utiliser les paramètres capturés au début
+                    currentGameSettings = definedSettings;
+                    waitingRoom.settings = definedSettings;
+    
+                    // Propager immédiatement les paramètres finaux
+                    io.emit('gameSettingsUpdated', currentGameSettings);
+                    
+                    // Réinitialiser d'abord les bots et bonus avec les bons paramètres
                     blackBots = {};
                     bots = {};
                     bonuses = [];
@@ -2499,38 +2805,43 @@ io.on('connection', (socket) => {
                         resetPlayer(player);
                     });
     
-                    // Le reste du code reste identique...
                     waitingRoom.isGameStarted = true;
                     
-                    // Initialiser la partie pour tous les joueurs de la salle d'attente
+                    // Initialiser la partie pour tous les joueurs
                     waitingRoom.players.forEach((waitingPlayer, socketId) => {
-                        // Mettre à jour le statut du joueur en attente
                         waitingPlayer.status = 'playing';  
                         waitingRoom.playersInGame.add(socketId);
     
                         const playerSocket = io.sockets.sockets.get(socketId);
                         if (playerSocket) {
-                            // Créer un nouveau joueur s'il n'existe pas déjà
                             if (!players[socketId]) {
                                 players[socketId] = new Player(socketId, waitingPlayer.nickname);
                                 activeSockets[socketId] = playerSocket;
                             }
-                            // Faire respawn tous les joueurs avec une nouvelle couleur
                             players[socketId].respawn();
                         }
                     });
-    
-                    // Réinitialiser les paramètres avec ceux de la salle d'attente
-                    currentGameSettings = { ...waitingRoom.settings };
                     
-                    // Initialiser les bots une seule fois pour la partie
-                    createBots(currentGameSettings.initialBotCount);
+                    // Initialiser les bots selon le mode de jeu
+                    const botCount = currentGameSettings.gameMode === GAME_MODES.TACTICAL 
+                        ? TACTICAL_MODE_CONFIG.INITIAL_BOTS_COUNT 
+                        : currentGameSettings.initialBotCount;
+                    
+                    createBots(botCount);
                     botsInitialized = true;
+    
+                    // Log de vérification final
+                    console.log('État final de la partie au démarrage:', {
+                        settings: currentGameSettings,
+                        map: currentGameSettings.selectedMap,
+                        mirror: currentGameSettings.mirrorMode,
+                        mode: currentGameSettings.gameMode
+                    });
     
                     // Informer tous les joueurs que la partie commence
                     io.emit('gameStarting');
                     
-                    // Redémarrer le spawn des bonus
+                    // Redémarrer les spawns
                     setTimeout(spawnBonus, 3000);
                     setTimeout(spawnMalus, 4000);
                 }
@@ -2709,6 +3020,31 @@ io.on('connection', (socket) => {
     });
     playerLastSoundEmit.set(socket.id, now);
     }
+    });
+
+    socket.on('startCapture', () => {
+        const player = players[socket.id];
+        if (player && currentGameSettings.gameMode === GAME_MODES.TACTICAL && player.captureAttempts > 0) {
+            player.isCaptureActive = true;
+            // Notifier tous les clients pour la mise à jour d'état
+            io.emit('updatePlayerCaptureState', {
+                playerId: player.id,
+                isCaptureActive: true
+            });
+            // Déclencher immédiatement une tentative de capture
+            tacticalModeCollisions(player, socket.id);
+        }
+    });
+    
+    socket.on('endCapture', () => {
+        const player = players[socket.id];
+        if (player) {
+            player.isCaptureActive = false;
+            io.emit('updatePlayerCaptureState', {
+                playerId: socket.id,
+                isCaptureActive: false
+            });
+        }
     });
 
     socket.on('togglePause', () => {

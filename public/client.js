@@ -5,14 +5,20 @@ let socket;
 
 import { MapManager } from './js/MapManager.js';
 import { AudioManager } from './js/AudioManager.js';
-import { SPEED_CONFIG, MAP_DIMENSIONS } from './js/game-constants.js';
+import { 
+    SPEED_CONFIG, 
+    MAP_DIMENSIONS,
+    DEFAULT_GAME_SETTINGS,  // Ajout de l'import
+    GAME_MODES,            // On ajoute aussi GAME_MODES qu'on utilisera
+    TACTICAL_MODE_CONFIG   // Et TACTICAL_MODE_CONFIG
+} from './js/game-constants.js';
 
 // Éléments DOM principaux
 const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
 const nicknameInput = document.getElementById('nicknameInput');
 
-const GAME_VERSION = "v0.8.4";  // À mettre à jour à chaque déploiement
+const GAME_VERSION = "v0.9.0";  // À mettre à jour à chaque déploiement
 
 // Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
@@ -235,7 +241,15 @@ const additionalStyles = `
 }
 `;
 
+// Fonction pour s'assurer que currentGameSettings est toujours défini
+function initializeGameSettings() {
+    if (!currentGameSettings) {
+        currentGameSettings = { ...DEFAULT_GAME_SETTINGS };
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
+    initializeGameSettings();
     audioManager = new AudioManager({
         volume: 0.5,
         musicVolume: 0.3,
@@ -297,44 +311,175 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Fonction d'initialisation de la sélection des maps
 function initializeMapSelection() {
-    // Sélectionner toutes les vignettes de map
+    // Sélectionner tous les éléments nécessaires
     const mapPreviews = document.querySelectorAll('.map-preview-wrapper');
-    const mapSelector = document.getElementById('mapSelectorModal');
+    const mapSelectorModal = document.getElementById('mapSelectorModal');
+    const mirrorModeModal = document.getElementById('mirrorModeModal');
+    const modeButtons = document.querySelectorAll('.mode-button');
 
+    // Fonction utilitaire pour la synchronisation des sélections visuelles
+    function syncVisualSelections() {
+        // Synchroniser la map
+        const selectedMap = mapSelectorModal.value;
+        mapPreviews.forEach(preview => {
+            preview.classList.toggle('selected', preview.dataset.map === selectedMap);
+        });
+
+        // Synchroniser le mode miroir
+        mirrorModeModal.checked = waitingRoom?.settings?.mirrorMode || false;
+
+        // Synchroniser le mode de jeu
+        const currentMode = waitingRoom?.settings?.gameMode || 'classic';
+        modeButtons.forEach(button => {
+            button.classList.toggle('selected', button.dataset.mode === currentMode);
+        });
+
+        // Mettre à jour le texte du bouton
+        const mapName = document.querySelector('.map-preview-wrapper.selected')?.dataset.map || 'map1';
+        const mode = mirrorModeModal.checked ? 'Miroir' : 'Normal';
+        const mapValue = document.querySelector('.map-value');
+        const modeValue = document.querySelector('.mode-value');
+        
+        // Convertir le nom de la map pour l'affichage
+        const mapDisplayNames = {
+            'map1': 'Rainy Tokyo',
+            'map2': 'Tokyo',
+            'map3': 'Room Of Spirit and Time'
+        };
+        
+        if (mapValue) mapValue.textContent = mapDisplayNames[mapName] || mapName;
+        if (modeValue) modeValue.textContent = mode;
+    }
+
+    // Gestion du clic sur les vignettes de map
     mapPreviews.forEach(preview => {
         preview.addEventListener('click', function() {
-            // Ne rien faire si la map est désactivée
             if (this.classList.contains('disabled')) return;
 
-            // Retirer la sélection de toutes les vignettes
-            mapPreviews.forEach(p => p.classList.remove('selected'));
-            
-            // Ajouter la sélection à la vignette cliquée
-            this.classList.add('selected');
-            
-            // Mettre à jour le select caché
-            if (mapSelector) {
-                mapSelector.value = this.dataset.map;
-                
-                // Émettre un événement change pour déclencher les handlers existants
-                mapSelector.dispatchEvent(new Event('change'));
-            }
+            const selectedMap = this.dataset.map;
+            mapSelectorModal.value = selectedMap;
 
-            // Mettre à jour le texte du bouton si nécessaire
+            // Mise à jour visuelle
+            mapPreviews.forEach(p => p.classList.remove('selected'));
+            this.classList.add('selected');
+
+            console.log('Nouvelle map sélectionnée:', selectedMap);
+            syncVisualSelections();
+        });
+    });
+
+    // Gestion du changement de mode miroir
+    mirrorModeModal.addEventListener('change', function() {
+        // Sauvegarder l'état temporairement
+        const tempSettings = {
+            ...waitingRoom.settings,
+            mirrorMode: this.checked
+        };
+        console.log('Mode miroir changé:', this.checked);
+        
+        // Mettre à jour l'état visuel
+        updateMapButtonText();
+    });
+
+    // Gestion des boutons de mode de jeu
+    modeButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            if (this.classList.contains('disabled')) return;
+
+            // Retirer la sélection visuelle de tous les boutons
+            modeButtons.forEach(b => b.classList.remove('selected'));
+            // Ajouter la sélection au bouton cliqué
+            this.classList.add('selected');
+
+            console.log('Mode de jeu sélectionné:', this.dataset.mode);
+            
+            // Mettre à jour l'état visuel
             updateMapButtonText();
         });
     });
 
-    // Sélectionner la première map par défaut si aucune n'est sélectionnée
+    // Fonction de mise à jour du texte du bouton avec le nouveau format
+    function updateMapButtonText() {
+        const mapName = document.querySelector('.map-preview-wrapper.selected')?.dataset.map || 'map1';
+        const mapValue = document.querySelector('.map-value');
+        const modeValue = document.querySelector('.mode-value');
+        
+        // Convertir le nom de la map pour l'affichage
+        const mapDisplayNames = {
+            'map1': 'Rainy Tokyo',
+            'map2': 'Tokyo',
+            'map3': 'Room Of Spirit'
+        };
+
+        // Mise à jour du nom de la map et icône miroir si activé
+        if (mapValue) {
+            let mapText = mapDisplayNames[mapName] || mapName;
+            if (mirrorModeModal.checked) {
+                mapText += ` <img src="/assets/images/mirror.svg" alt="Mirror" class="mirror-icon" style="height: 16px; vertical-align: middle;">`;
+            }
+            mapValue.innerHTML = mapText;
+        }
+
+        // Mise à jour du mode de jeu
+        if (modeValue) {
+            const selectedMode = document.querySelector('.mode-button.selected')?.dataset.mode;
+            const modeDisplayNames = {
+                'classic': 'Classique',
+                'tactical': 'Tactique'
+            };
+            modeValue.textContent = modeDisplayNames[selectedMode] || 'Classique';
+        }
+    }
+
+    // Gestion de la sauvegarde des paramètres
+    const saveMapButton = document.getElementById('saveMapButton');
+    saveMapButton.addEventListener('click', function() {
+        if (!isRoomOwner) return;
+
+        // Récupérer le mode de jeu depuis le bouton sélectionné
+        const selectedMode = document.querySelector('.mode-button.selected')?.dataset.mode || 'classic';
+
+        const newSettings = {
+            ...waitingRoom.settings,
+            selectedMap: mapSelectorModal.value,
+            mirrorMode: mirrorModeModal.checked,
+            gameMode: selectedMode
+        };
+
+        console.log('Sauvegarde des nouveaux paramètres:', newSettings);
+
+        // Mise à jour des paramètres locaux et envoi au serveur
+        waitingRoom.settings = newSettings;
+        currentGameSettings = { ...DEFAULT_GAME_SETTINGS, ...newSettings };
+        socket.emit('updateGameSettings', newSettings);
+
+        // Fermer la modale
+        mapSelectionMenu.style.display = 'none';
+    });
+
+    // Sélection par défaut si aucune map n'est sélectionnée
     if (!document.querySelector('.map-preview-wrapper.selected')) {
         const firstMap = mapPreviews[0];
         if (firstMap) {
             firstMap.classList.add('selected');
-            if (mapSelector) {
-                mapSelector.value = firstMap.dataset.map;
+            if (mapSelectorModal) {
+                mapSelectorModal.value = firstMap.dataset.map;
             }
         }
     }
+
+    // Synchroniser l'état initial
+    syncVisualSelections();
+
+    // Log de debug initial
+    console.log('État initial des paramètres:', {
+        map: mapSelectorModal.value,
+        mirror: mirrorModeModal.checked,
+        mode: document.querySelector('.mode-button.selected')?.dataset.mode
+    });
+        // Synchronisation initiale
+        syncVisualSelections();
+        updateMapButtonText();
 }
 
 // Variables d'état du jeu
@@ -342,6 +487,7 @@ let entities = [];
 let bonuses = [];
 let maluses = [];
 let malusItems = [];
+let currentGameSettings = { ...DEFAULT_GAME_SETTINGS }; // Initialisation immédiate
 let playerId = null;
 let playerNickname = null;
 let timeRemaining = 180;
@@ -355,6 +501,10 @@ let lastEntityPositions = new Map(); // Pour tracker les mouvements
 let entityMovementStates = new Map(); // Pour tracker l'état de mouvement
 let audioManager;
 let lastUrgentTickTime = 0;
+let isCaptureActive = false;  // État de la capture tactique
+let captureAnimations = [];
+const CAPTURE_ANIMATION_DURATION = 300; // durée de l'animation en ms
+const FAIL_ANIMATION_DURATION = 500; // durée de l'animation d'échec
 
 // Nouvelles variables pour les contrôles mobiles
 let isMoving = false;
@@ -1103,19 +1253,25 @@ backFromMapButton.addEventListener('click', () => {
 
 // Sauvegarder les paramètres de map
 saveMapButton.addEventListener('click', () => {
+    const selectedMode = document.querySelector('.mode-button.selected')?.dataset.mode;
+    console.log('Mode sélectionné lors de la sauvegarde:', selectedMode);
+    
     const newSettings = {
         ...waitingRoom.settings,
         selectedMap: mapSelectorModal.value,
-        mirrorMode: mirrorModeModal.checked
+        mirrorMode: mirrorModeModal.checked,
+        gameMode: selectedMode || 'classic'  // Ajouter le mode
     };
 
+    console.log('Paramètres sauvegardés:', newSettings);
+
     if (isRoomOwner) {
-        // Envoyer d'abord une mise à jour spécifique pour la map
-        socket.emit('updateMapSettings', {
-            selectedMap: mapSelectorModal.value,
-            mirrorMode: mirrorModeModal.checked
-        });
+        socket.emit('updateMapSettings', newSettings);
     }
+    
+    // Mettre à jour les paramètres locaux
+    currentGameSettings = { ...DEFAULT_GAME_SETTINGS, ...newSettings };
+    console.log('currentGameSettings mis à jour:', currentGameSettings);
     
     updateMapButtonText();
     mapSelectionMenu.style.display = 'none';
@@ -1554,6 +1710,40 @@ function checkGameEndConditions() {
     }
 }
 
+// Créer l'indicateur de tentatives
+function createCaptureAttemptsIndicator() {
+    // Supprimer l'ancien indicateur s'il existe
+    const existingIndicator = document.getElementById('captureAttemptsIndicator');
+    if (existingIndicator) {
+        existingIndicator.remove();
+    }
+
+    // Ne créer l'indicateur que si on est en mode tactique
+    if (currentGameSettings.gameMode !== GAME_MODES.TACTICAL) {
+        return;
+    }
+
+    const indicator = document.createElement('div');
+    indicator.id = 'captureAttemptsIndicator';
+    indicator.className = 'capture-attempts-indicator';
+    document.getElementById('gameScreen').appendChild(indicator);
+    updateCaptureAttemptsDisplay(TACTICAL_MODE_CONFIG.CAPTURE_ATTEMPTS_MAX);
+    return indicator;
+}
+
+// Mettre à jour l'affichage
+function updateCaptureAttemptsDisplay(attempts) {
+    const indicator = document.getElementById('captureAttemptsIndicator');
+    if (!indicator) return;
+
+    indicator.innerHTML = '';
+    for (let i = 0; i < TACTICAL_MODE_CONFIG.CAPTURE_ATTEMPTS_MAX; i++) {
+        const dot = document.createElement('div');
+        dot.className = `attempt-dot ${i < attempts ? 'available' : 'used'}`;
+        indicator.appendChild(dot);
+    }
+}
+
 function createStartButtonContent(text, isMobile = false) {
     if (isMobile) {
         return `<span class="button-text">${text}</span>
@@ -1597,6 +1787,37 @@ startButton.addEventListener('click', () => {
             showNotification('Vous êtes maintenant propriétaire de la salle', 'success');
         }
     });  
+
+    socket.on('captureAttemptUsed', (data) => {
+        updateCaptureAttemptsDisplay(data.attemptsLeft);
+        
+        if (data.successfulCaptures > 0) {
+            // Animation de succès
+            captureAnimations = []; // Nettoyer les animations existantes
+            captureAnimations.push({
+                type: 'success',
+                startTime: Date.now(),
+                duration: CAPTURE_ANIMATION_DURATION
+            });
+            
+            if (audioManager) {
+                audioManager.playSound('capture');
+            }
+    
+            // Effet visuel existant
+            const captureEffect = document.createElement('div');
+            captureEffect.className = 'capture-effect';
+            gameScreen.appendChild(captureEffect);
+            
+            setTimeout(() => {
+                captureEffect.remove();
+            }, 300);
+        }
+    });
+    
+    socket.on('captureAttemptRecharged', (data) => {
+        updateCaptureAttemptsDisplay(data.attemptsLeft);
+    });
 
     socket.on('clearMalusEffects', () => {
         // Retirer tous les effets visuels
@@ -1642,7 +1863,39 @@ startButton.addEventListener('click', () => {
     socket.on('gameSettingsUpdated', async (settings) => {
         // D'abord mettre à jour l'UI et les paramètres
         updateSettingsUI(settings);
-        gameSettings = settings;
+        currentGameSettings = { ...DEFAULT_GAME_SETTINGS, ...settings };
+
+            // Mettre à jour le mapManager si nécessaire
+    if (mapManager && (settings.selectedMap || settings.mirrorMode)) {
+        console.log('Mise à jour map:', {
+            map: settings.selectedMap,
+            mirror: settings.mirrorMode
+        });
+        
+        try {
+            await mapManager.updateMap(
+                settings.selectedMap || 'map1',
+                settings.mirrorMode || false
+            );
+        } catch (error) {
+            console.error('Erreur mise à jour map:', error);
+        }
+    }
+
+            // Si la partie est déjà en cours, réinitialiser les contrôles selon le mode
+    if (waitingRoom.isGameStarted) {
+        // Supprimer tous les anciens écouteurs
+        document.removeEventListener('keydown', handleTacticalKeyDown);
+        document.removeEventListener('keyup', handleTacticalKeyUp);
+        
+        // Réinitialiser selon le mode actuel
+        if (currentGameSettings.gameMode === GAME_MODES.TACTICAL) {
+            console.log('Activation du mode tactique');
+            document.addEventListener('keydown', handleTacticalKeyDown);
+            document.addEventListener('keyup', handleTacticalKeyUp);
+            createCaptureAttemptsIndicator();
+        }
+    }
 
         const mapDimensions = MAP_DIMENSIONS[settings.selectedMap || 'map1'];
         if (mapDimensions) {
@@ -1691,6 +1944,16 @@ startButton.addEventListener('click', () => {
     // Écouter les mises à jour de la salle d'attente
     socket.on('updateWaitingRoom', (players) => {
         updateWaitingRoomPlayers(players);
+    });
+
+    socket.on('updatePlayerCaptureState', (data) => {
+        console.log('Réception mise à jour état capture:', data);
+        const playerEntity = entities.find(e => e.id === data.playerId);
+        if (playerEntity) {
+            playerEntity.isCaptureActive = data.isCaptureActive;
+            // Force un rerendering immédiat
+            requestAnimationFrame(drawEntities);
+        }
     });
 
     socket.on('playerJoined', (data) => {
@@ -1850,6 +2113,15 @@ socket.on('gameStarting', async () => {
                     });
                 });
             }
+
+                // S'assurer que tous les joueurs ont leurs tentatives initialisées
+                if (currentGameSettings.gameMode === GAME_MODES.TACTICAL) {
+                    entities.forEach(entity => {
+                        if (entity.type === 'player') {
+                            entity.captureAttempts = TACTICAL_MODE_CONFIG.CAPTURE_ATTEMPTS_MAX;
+                        }
+                    });
+                }
     
             // Maintenant que nous avons les paramètres, initialiser ou mettre à jour le mapManager
             if (!mapManager && canvas) {
@@ -2333,7 +2605,50 @@ async function preloadGameResources() {
 // Fonction de démarrage du jeu
 async function startGame() {
     console.log('Starting game...'); // Debug log
+    console.log('Mode de jeu actuel:', currentGameSettings.gameMode);
 
+    // Mettre à jour les paramètres courants avec ceux de la salle d'attente
+    if (waitingRoom && waitingRoom.settings) {
+        currentGameSettings = { ...DEFAULT_GAME_SETTINGS, ...waitingRoom.settings };
+    }
+
+    if (currentGameSettings.gameMode === GAME_MODES.TACTICAL) {
+        // Ajouter les écouteurs pour la capture tactique
+        document.removeEventListener('keydown', handleTacticalKeyDown);
+        
+        document.addEventListener('keydown', handleTacticalKeyDown);
+        
+        // Créer l'indicateur de tentatives
+        createCaptureAttemptsIndicator();
+    }
+    
+    function handleTacticalKeyDown(event) {
+        if (event.code === 'Space' && !event.repeat) {
+            const currentPlayer = entities.find(e => e.id === playerId);
+            if (!currentPlayer) return;
+    
+            // Nettoyer les animations existantes
+            captureAnimations = [];
+    
+            // Vérifier le nombre de tentatives directement depuis le serveur
+            if (currentPlayer.captureAttempts > 0) {
+                // Ne pas ajouter d'animation immédiatement - attendons le retour du serveur
+                socket.emit('startCapture');
+            } else {
+                // Animation d'échec uniquement quand pas de tentatives disponibles
+                captureAnimations.push({
+                    type: 'fail',
+                    startTime: Date.now(),
+                    duration: FAIL_ANIMATION_DURATION
+                });
+                
+                if (audioManager) {
+                    audioManager.playSound('error');
+                }
+            }
+        }
+    }
+    
     // Nettoyer les effets des malus au démarrage d'une nouvelle partie
     const gameCanvas = document.getElementById('gameCanvas');
     gameCanvas.style.filter = 'none';
@@ -2603,22 +2918,22 @@ async function startGame() {
         });
     }
     
-// Quand on est capturé
-socket.on('playerCaptured', (data) => {
-    playerColor = data.newColor;
-    showCaptureNotification(`Capturé par ${data.capturedBy} !`);
-    if (audioManager) {
-        audioManager.playSound('playerCaptured'); // Son spécifique quand on est capturé
-    }
-    showPlayerLocator = true;
-    locatorFadeStartTime = Date.now() + 3000;
-    setTimeout(() => {
-        showPlayerLocator = false;
-    }, 3500);
-});
+    // Quand on est capturé
+    socket.on('playerCaptured', (data) => {
+        playerColor = data.newColor;
+        showCaptureNotification(`Capturé par ${data.capturedBy} !`);
+        if (audioManager) {
+            audioManager.playSound('playerCaptured'); // Son spécifique quand on est capturé
+        }
+        showPlayerLocator = true;
+        locatorFadeStartTime = Date.now() + 3000;
+        setTimeout(() => {
+            showPlayerLocator = false;
+        }, 3500);
+    });
 
-// Quand on capture quelqu'un ou quelque chose
-socket.on('playerCapturedEnemy', (data) => {
+    // Quand on capture quelqu'un ou quelque chose
+    socket.on('playerCapturedEnemy', (data) => {
     if (data.capturedNickname === 'Bot Noir') {
         // Capture d'un black bot
         if (data.position) {
@@ -2642,7 +2957,7 @@ socket.on('playerCapturedEnemy', (data) => {
         }
     }
     showCaptureNotification(data.message || `Vous avez capturé ${data.capturedNickname} !`);
-});
+    });
 
     if (!socket.hasListeners('gameOver')) {
         socket.on('gameOver', (data) => {
@@ -2742,6 +3057,21 @@ socket.on('playerCapturedEnemy', (data) => {
 
     pauseButton.removeEventListener('click', handlePauseClick);
     pauseButton.addEventListener('click', handlePauseClick);
+
+        // Ajouter ici les nouveaux écouteurs pour le mode tactique
+        if (currentGameSettings.gameMode === GAME_MODES.TACTICAL) {
+            document.addEventListener('keydown', (event) => {
+                if (event.code === 'Space' && !event.repeat) {
+                    socket.emit('startCapture');
+                }
+            });
+    
+            document.addEventListener('keyup', (event) => {
+                if (event.code === 'Space') {
+                    socket.emit('endCapture');
+                }
+            });
+        }
 
     // Réinitialiser la boucle de jeu
     if (gameLoopInterval) {
@@ -3132,6 +3462,101 @@ function initializeAnimations() {
     }
 }
 
+// Dans client.js
+function drawCaptureRange(player) {
+    if (!player) return;
+
+    context.save();
+
+    const angle = getAngleFromDirection(player.direction);
+    const halfConeAngle = (TACTICAL_MODE_CONFIG.CAPTURE_CONE_ANGLE / 2) * (Math.PI / 180);
+    const range = TACTICAL_MODE_CONFIG.CAPTURE_RANGE;
+
+    // Dessin du cône permanent - plus discret
+    context.strokeStyle = 'rgba(255, 255, 255, 0.01)';  // Opacité réduite
+    context.fillStyle = 'rgba(204, 153, 255, 0.05)';   // Opacité très réduite
+    context.lineWidth = 1;  // Ligne plus fine
+
+    // Dessin du cône de base
+    context.beginPath();
+    context.moveTo(player.x, player.y);
+    context.arc(
+        player.x, 
+        player.y, 
+        range,
+        angle - halfConeAngle, 
+        angle + halfConeAngle
+    );
+    context.lineTo(player.x, player.y);
+    context.fill();
+    context.stroke();
+
+    // Gérer les animations de capture
+    captureAnimations = captureAnimations.filter(anim => {
+        const progress = (Date.now() - anim.startTime) / anim.duration;
+        if (progress >= 1) return false;
+
+        if (anim.type === 'success') {
+            const alpha = 1 - progress;
+            const scale = 1 + progress * 0.5;
+            
+            context.strokeStyle = `rgba(204, 153, 255, ${alpha * 0.8})`;
+            context.fillStyle = `rgba(204, 153, 255, ${alpha * 0.3})`;
+            
+            context.beginPath();
+            context.moveTo(player.x, player.y);
+            context.arc(
+                player.x, 
+                player.y, 
+                range * scale,
+                angle - halfConeAngle,
+                angle + halfConeAngle
+            );
+            context.lineTo(player.x, player.y);
+            context.fill();
+            context.stroke();
+        }
+        else if (anim.type === 'fail') {
+            const alpha = 1 - progress;
+            context.strokeStyle = `rgba(255, 0, 0, ${alpha * 0.8})`;
+            context.lineWidth = 3;
+
+            // Réduire la taille de la croix
+            const cross_size = range * 0.2 * (1 + Math.sin(progress * Math.PI) * 0.2);
+            // Dessiner la croix uniquement devant le joueur
+            const crossCenterX = player.x + Math.cos(angle) * (range * 0.5);
+            const crossCenterY = player.y + Math.sin(angle) * (range * 0.5);
+            
+            context.beginPath();
+            context.moveTo(crossCenterX - cross_size, crossCenterY - cross_size);
+            context.lineTo(crossCenterX + cross_size, crossCenterY + cross_size);
+            context.moveTo(crossCenterX + cross_size, crossCenterY - cross_size);
+            context.lineTo(crossCenterX - cross_size, crossCenterY + cross_size);
+            context.stroke();
+        }
+
+        return true;
+    });
+
+    context.restore();
+}
+
+// Helper pour convertir la direction en angle
+function getAngleFromDirection(direction) {
+    console.log('Conversion direction:', direction);
+    switch(direction) {
+        case DIRECTIONS.NORTH: return -Math.PI/2;
+        case DIRECTIONS.NORTH_EAST: return -Math.PI/4;
+        case DIRECTIONS.EAST: return 0;
+        case DIRECTIONS.SOUTH_EAST: return Math.PI/4;
+        case DIRECTIONS.SOUTH: return Math.PI/2;
+        case DIRECTIONS.SOUTH_WEST: return 3*Math.PI/4;
+        case DIRECTIONS.WEST: return Math.PI;
+        case DIRECTIONS.NORTH_WEST: return -3*Math.PI/4;
+        default: return 0;
+    }
+}
+
 // Rendu du jeu
 function drawEntities() {
     spriteManager.updateAnimation();
@@ -3161,6 +3586,15 @@ function drawEntities() {
     context.strokeStyle = 'rgba(255, 255, 255, 0.5)';
     context.lineWidth = 4;
     context.strokeRect(0, 0, currentMapWidth, currentMapHeight);
+
+    if (currentGameSettings.gameMode === GAME_MODES.TACTICAL) {
+        // Ne dessiner le cône que pour le joueur courant
+        const currentPlayer = entities.find(e => e.id === playerId);
+        if (currentPlayer) {
+            // Dessiner le cône avant toutes les autres entités pour qu'il soit en dessous
+            drawCaptureRange(currentPlayer);
+        }
+    }
 
     // Dessiner les zones spéciales
     if (specialZones) {
@@ -3378,7 +3812,7 @@ function drawEntities() {
         // Mettre à jour les effets visuels
         updateVisualEffects();
 
-    context.restore();
+        context.restore();
 }
 
 // Nettoyer les entités qui ne sont plus présentes
@@ -4157,12 +4591,13 @@ function returnToWaitingRoom() {
         socket.on('gameSettingsUpdated', (settings) => {
             updateSettingsUI(settings);
             gameSettings = settings;
+            currentGameSettings = { ...DEFAULT_GAME_SETTINGS, ...settings };
                 // Mettre à jour les sélecteurs de la modale
-    mapSelectorModal.value = settings.selectedMap || 'map1';
-    mirrorModeModal.checked = settings.mirrorMode || false;
+            mapSelectorModal.value = settings.selectedMap || 'map1';
+            mirrorModeModal.checked = settings.mirrorMode || false;
     
-    // Mettre à jour le texte du bouton
-    updateMapButtonText();
+            // Mettre à jour le texte du bouton
+            updateMapButtonText();
         });
     }
 
@@ -4352,6 +4787,15 @@ function returnToMainMenu() {
 
     // Réinitialiser le champ de pseudo
     nicknameInput.value = '';
+}
+
+// Ajouter l'indicateur de tentatives de capture
+function createCaptureIndicator() {
+    const indicator = document.createElement('div');
+    indicator.id = 'captureIndicator';
+    indicator.className = 'capture-indicator';
+    gameScreen.appendChild(indicator);
+    return indicator;
 }
 
 // Fonction pour mettre à jour la position des effets
