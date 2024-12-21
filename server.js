@@ -1351,11 +1351,9 @@ class Bonus {
         const { width: currentWidth, height: currentHeight } = getCurrentMapDimensions();
         
         // Trouver une position valide
-        const x = Math.random() * currentWidth;
-        const y = Math.random() * currentHeight;
-        
-        this.x = x;
-        this.y = y;
+        const spawnPos = positionManager.getValidPosition();
+        this.x = spawnPos.x;
+        this.y = spawnPos.y;
         this.createdAt = Date.now();
         this.lifetime = 8000;
         this.warningThreshold = 3000;
@@ -1408,11 +1406,9 @@ class Malus {
         const { width: currentWidth, height: currentHeight } = getCurrentMapDimensions();
         
         // Position aléatoire dans les limites de la map actuelle
-        const x = Math.random() * currentWidth;
-        const y = Math.random() * currentHeight;
-        
-        this.x = x;
-        this.y = y;
+        const spawnPos = positionManager.getValidPosition();
+        this.x = spawnPos.x;
+        this.y = spawnPos.y;
         this.createdAt = Date.now();
         this.lifetime = 8000;
         this.warningThreshold = 3000;

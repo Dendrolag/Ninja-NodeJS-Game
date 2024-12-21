@@ -1,6 +1,10 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
 
+## [0.8.5] - 2024-12-21
+### Correction
+- Fix spawn bonus/malus dans les zones de collisions
+
 ## [0.8.4] - 2024-12-19
 ### Améliorations
 - Ajout fond full screen pour la modale de sélection de map
