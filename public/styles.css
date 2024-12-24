@@ -3760,3 +3760,33 @@ input[type="checkbox"]:disabled + label {
     display: block;
     margin: auto;
 }
+
+/* Ajouter dans votre fichier CSS */
+.tablet-controls .joystick-base {
+    width: 180px;  /* Plus grand pour les tablettes */
+    height: 180px;
+}
+
+.tablet-controls .joystick-stick {
+    width: 80px;   /* Plus grand pour les tablettes */
+    height: 80px;
+}
+
+.tablet-controls #mobileLocateButton {
+    width: 70px;   /* Plus grand pour les tablettes */
+    height: 70px;
+    font-size: 24px;
+}
+
+/* Ajuster la position des contrôles pour les tablettes en mode paysage */
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+    .tablet-controls .joystick-base {
+        bottom: 40px;
+        left: 40px;
+    }
+    
+    .tablet-controls #mobileLocateButton {
+        bottom: 40px;
+        right: 40px;
+    }
+}

@@ -12,7 +12,7 @@ const mainMenu = document.getElementById('mainMenu');
 const gameScreen = document.getElementById('gameScreen');
 const nicknameInput = document.getElementById('nicknameInput');
 
-const GAME_VERSION = "v0.8.5";  // À mettre à jour à chaque déploiement
+const GAME_VERSION = "v0.8.6";  // À mettre à jour à chaque déploiement
 
 // Menu des paramètres et ses éléments
 const settingsMenu = document.getElementById('settingsMenu');
@@ -735,31 +735,42 @@ function worldToScreen(worldX, worldY) {
 // Fonction utilitaire pour détecter si on est sur mobile
 function isMobile() {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-        || window.innerWidth <= 768;
+        || window.innerWidth <= 1024;
 }
 
 function showMobileControls() {
     const mobileControls = document.getElementById('mobileControls');
-if (mobileControls) {
-    // Réinitialiser l'état des contrôles mobiles
-    isMoving = false;
-    currentMove = { x: 0, y: 0 };
-    if (moveInterval) {
-        clearInterval(moveInterval);
-        moveInterval = null;
+    if (mobileControls) {
+        // Réinitialiser l'état des contrôles mobiles
+        isMoving = false;
+        currentMove = { x: 0, y: 0 };
+        if (moveInterval) {
+            clearInterval(moveInterval);
+            moveInterval = null;
+        }
+        
+        const isTabletDevice = /(iPad|tablet|Nexus 9)/i.test(navigator.userAgent) ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        
+        // Force le ré-affichage des contrôles
+        if (isMobile()) {
+            mobileControls.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+            document.body.style.position = 'fixed';
+            
+            // Ajuster la taille des contrôles pour les tablettes
+            if (isTabletDevice) {
+                mobileControls.classList.add('tablet-controls');
+            } else {
+                mobileControls.classList.remove('tablet-controls');
+            }
+        } else {
+            mobileControls.style.display = 'none';
+            document.body.style.overflow = '';
+            document.body.style.position = '';
+            mobileControls.classList.remove('tablet-controls');
+        }
     }
-    
-    // Force le ré-affichage des contrôles
-    if (isMobile()) {
-        mobileControls.style.display = 'block';
-        document.body.style.overflow = 'hidden';
-        document.body.style.position = 'fixed';
-    } else {
-        mobileControls.style.display = 'none';
-        document.body.style.overflow = '';
-        document.body.style.position = '';
-    }
-}
 }
 
 class VisualEffect {

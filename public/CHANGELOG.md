@@ -1,6 +1,10 @@
 # Changelog
 Tous les changements notables de ce projet seront documentés dans ce fichier.
 
+## [0.8.6] - 2024-12-24
+### Correction
+- Ajout contrôles sur tablette
+
 ## [0.8.5] - 2024-12-21
 ### Correction
 - Fix spawn bonus/malus dans les zones de collisions
