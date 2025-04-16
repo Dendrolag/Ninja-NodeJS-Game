@@ -2,7 +2,7 @@
 
 **Neon Ninja** is a small multiplayer web game prototype built entirely as a learning project.
 
-![Gameplay Screenshot](assets/img/screenshot.png)
+![Gameplay Screenshot](public/assets/images/gameplay_screenshot.png)
 
 ## 🎮 Concept
 
@@ -43,10 +43,6 @@ I'm sharing the code publicly:
 
 Currently inactive — I haven't had time to work on this in several months, but I still have many ideas for the future.  
 If you'd like to help or fork it, feel free!
-
-## 📸 Screenshot
-
-![Gameplay Screenshot](public/assets/images/gameplay_screenshot.png)
 
 ## 🙏 Credits
 
