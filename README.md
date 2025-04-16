@@ -2,6 +2,8 @@
 
 **Neon Ninja** is a small multiplayer web game prototype built entirely as a learning project.
 
+![Gameplay Screenshot](assets/img/screenshot.png)
+
 ## 🎮 Concept
 
 In *Neon Ninja*, players take control of a randomly colored ninja and must blend in among a crowd of color-matching bots.  
@@ -42,14 +44,16 @@ I'm sharing the code publicly:
 Currently inactive — I haven't had time to work on this in several months, but I still have many ideas for the future.  
 If you'd like to help or fork it, feel free!
 
+## 📸 Screenshot
+
+![Gameplay Screenshot](public/assets/images/gameplay_screenshot.png)
+
+## 🙏 Credits
+
+- **Bribz**: Asset creation (characters, maps)
+- **Flo**: Interface mockups
+
 ---
 
-**Demo (free hosting on Render):** _[(https://to-the-point.onrender.com/)]_  
-**License:** MIT (or specify otherwise)  
+**Demo (free hosting on Render):** _(https://to-the-point.onrender.com/)_  
 **Author:** [Dendrolag](https://github.com/Dendrolag)
-
-👥 Credits
-
-    🎨 Bribz – Designed all in-game assets (characters, map elements, style)
-    🧠 Flo – Designed the UI/UX mockups and menu layout
-    🧑‍💻 Dendrolag – Game logic, code, gameplay design and chaos
