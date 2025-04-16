@@ -46,4 +46,10 @@ If you'd like to help or fork it, feel free!
 
 **Demo (free hosting on Render):** _[(https://to-the-point.onrender.com/)]_  
 **License:** MIT (or specify otherwise)  
-**Author:** [Dnedrolag](https://github.com/Dendrolag)
+**Author:** [Dendrolag](https://github.com/Dendrolag)
+
+👥 Credits
+
+    🎨 Bribz – Designed all in-game assets (characters, map elements, style)
+    🧠 Flo – Designed the UI/UX mockups and menu layout
+    🧑‍💻 Dendrolag – Game logic, code, gameplay design and chaos
