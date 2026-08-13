@@ -1,17 +1,38 @@
 {
-  "name": "neon_ninja",
-  "version": "0.7.0",
-  "description": "Jeu web multijoueur de capture de Ninjas",
-  "main": "server.js",
+  "name": "neon-ninja",
+  "version": "0.0.0",
+  "description": "Jeu web multijoueur de capture de Ninjas - reecriture",
+  "private": true,
   "type": "module",
-  "scripts": {
-    "start": "node server.js"
-  },
   "author": "Dendrolag",
   "license": "ISC",
-  "dependencies": {
-    "canvas": "^2.11.2",
-    "express": "^4.18.2",
-    "socket.io": "^4.7.2"
+  "packageManager": "pnpm@11.21.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "tsc --build",
+    "typecheck:clean": "tsc --build --clean",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "verify": "pnpm typecheck && pnpm lint && pnpm test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^22.10.2",
+    "@vitest/coverage-v8": "^2.1.8",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.1",
+    "vitest": "^2.1.8"
   }
 }

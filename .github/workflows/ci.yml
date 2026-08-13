@@ -1,0 +1,91 @@
+# Integration continue.
+#
+# C'est le mecanisme qui transforme les tests en garantie reelle: si ce workflow
+# est rouge, la fusion est bloquee. Aucune evolution n'entre dans la branche
+# principale sans passer le filet.
+#
+# Ordre volontaire, du plus rapide au plus lent, pour echouer tot:
+# formatage, types, linter, tests unitaires, puis bout en bout.
+
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+# Une nouvelle poussee sur la meme branche annule l'execution precedente.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '24'
+
+jobs:
+  verification:
+    name: Types, linter et tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v4
+
+      - name: Installer pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Installer Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Installer les dependances
+        run: pnpm install --frozen-lockfile
+
+      - name: Verifier le formatage
+        run: pnpm format:check
+
+      - name: Verifier les types
+        run: pnpm typecheck
+
+      - name: Linter (dont l'invariant de purete de packages/sim)
+        run: pnpm lint
+
+      - name: Tests unitaires et d'integration
+        run: pnpm test
+
+  bout-en-bout:
+    name: Bout en bout
+    runs-on: ubuntu-latest
+    # Inutile de lancer les navigateurs si la verification rapide a deja echoue.
+    needs: verification
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v4
+
+      - name: Installer pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Installer Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Installer les dependances
+        run: pnpm install --frozen-lockfile
+
+      - name: Installer les navigateurs Playwright
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Scenarios de bout en bout
+        run: pnpm test:e2e
+
+      - name: Conserver le rapport en cas d'echec
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: rapport-playwright
+          path: playwright-report/
+          retention-days: 7

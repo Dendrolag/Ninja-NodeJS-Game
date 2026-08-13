@@ -1,0 +1,3792 @@
+/* ==========================================================================
+   Neon Ninja - Main Stylesheet
+   Organisation et optimisation des styles avec thème cyber subtil
+   ========================================================================== */
+
+/* -----------------------------------------------------------------------------
+   1. Configuration et Variables
+   -------------------------------------------------------------------------- */
+
+   :root {
+    /* Couleurs principales */
+    --dark-bg: #0A0A0F;
+    --cyber-bg: #1A1A2E;
+    --cyber-light: rgba(255, 255, 255, 0.1);
+    
+    /* Couleurs néon (plus subtiles) */
+    --neon-pink: rgba(255, 0, 128, 0.8);
+    --neon-blue: rgba(0, 255, 255, 0.8);
+    --neon-purple: rgba(160, 32, 240, 0.8);
+    --neon-green: rgba(57, 255, 20, 0.8);
+    
+    /* Couleurs UI */
+    --primary: var(--neon-blue);
+    --secondary: var(--neon-pink);
+    --accent: var(--neon-purple);
+    --success: var(--neon-green);
+    
+    /* Effets de lueur (atténués) */
+    --glow-subtle: 0 0 5px rgba(0, 255, 255, 0.3);
+    --glow-medium: 0 0 10px rgba(0, 255, 255, 0.4);
+    --glow-strong: 0 0 15px rgba(0, 255, 255, 0.5);
+    
+    /* Transitions */
+    --transition-fast: 0.2s ease;
+    --transition-normal: 0.3s ease;
+    --transition-slow: 0.5s ease;
+    
+    /* Z-index layers */
+    --z-game: 1;
+    --z-interface: 100;
+    --z-overlay: 1000;
+    --z-modal: 2000;
+    --z-top: 3000;
+}
+
+/* Effet de lueur pour les éléments actifs */
+.glow {
+    &-subtle { box-shadow: var(--glow-subtle); }
+    &-medium { box-shadow: var(--glow-medium); }
+    &-strong { box-shadow: var(--glow-strong); }
+}
+
+/* Effet de surbrillance au hover */
+.hover-glow {
+    transition: box-shadow var(--transition-normal);
+    
+    &:hover {
+        box-shadow: var(--glow-medium);
+    }
+}
+
+/* Animation de base */
+@keyframes subtle-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+/* Police personnalisée */
+@font-face {
+    font-family: 'PermanentMarker-Regular';
+    src: url('/assets/fonts/PermanentMarker-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+@font-face {
+    font-family: 'BrunoAce';
+    src: url('/assets/fonts/BrunoAce-Regular.ttf') format('truetype');
+}
+
+@property --hue {
+    syntax: '<number>';
+    initial-value: 0;
+    inherits: false;
+  }
+
+/* Reset et styles de base */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body, html {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+    background: rgb(63,94,251);
+    background: radial-gradient(circle, rgba(63,94,251,1) 0%, rgba(252,70,107,1) 100%);
+}
+
+
+/* Styles des menus */
+#mainMenu, #mapSelectionMenu {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    color: white;
+    text-align: center;
+    overflow: hidden;
+}
+
+#helpMenu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    display: none;
+}
+
+#mainMenu::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("/assets/images/background-home.jpg");
+    background-size: cover;
+    background-position: center center;
+    filter: blur(8px);
+    z-index: -1;
+    transform: scale(1.1);
+}
+
+#mainMenu.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.menu-content {
+    position: relative;
+    background-color: rgba(2, 3, 5, 0.5);
+    backdrop-filter: blur(10px);
+    animation: fadeIn 0.3s ease-out;
+    /*border: 1px solid var(--primary);
+    box-shadow: var(--glow-subtle);*/
+    
+    /* Création du cercle parfait */
+    aspect-ratio: 1;
+    /*border-radius: 50%;*/
+    
+    /* Gestion de la taille responsive */
+    /*width: min(80vw, 80vh, 600px);
+    height: min(80vw, 80vh, 600px);*/
+    width: 100%;
+    height: 100%;
+    
+    /* Centrage du contenu */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 5vmin;
+}
+
+/* Titres */
+.game-title {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+.game-title .neon {
+    font-family: 'BrunoAce', sans-serif;
+    font-size: 4rem;
+    color: #fff;
+    text-shadow: 
+      0 0 10px var(--neon-color),
+      0 0 20px var(--neon-color),
+      0 0 30px var(--neon-color),
+      0 0 40px var(--neon-color-light),
+      0 0 50px var(--neon-color-light),
+      0 0 60px var(--neon-color-light),
+      0 0 70px var(--neon-color-light);
+      animation: neon-glow 3s infinite; /* Synchronisé avec JavaScript */
+      transition: text-shadow 3s ease-in-out; /* Transition fluide sur 3s */
+  }
+  
+  @keyframes neon-glow {
+    0%, 100% {
+      text-shadow: 
+        0 0 10px var(--neon-color),
+        0 0 20px var(--neon-color),
+        0 0 30px var(--neon-color),
+        0 0 40px var(--neon-color-light),
+        0 0 50px var(--neon-color-light),
+        0 0 60px var(--neon-color-light),
+        0 0 70px var(--neon-color-light);
+    }
+    50% {
+      text-shadow: 
+        0 0 10px var(--neon-color),
+        0 0 20px var(--neon-color),
+        0 0 30px var(--neon-color),
+        0 0 40px var(--neon-color-light),
+        0 0 50px var(--neon-color-light),
+        0 0 60px var(--neon-color-light),
+        0 0 70px var(--neon-color-light);
+    }
+  }
+
+.game-title .ninja {
+    font-family: 'PermanentMarker-Regular', cursive;
+    font-size: 7rem;
+    color: #fff;
+    margin-top: -65px;
+}
+
+h1, h2, h3 {
+    font-family: 'PermanentMarker-Regular', sans-serif;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    margin-bottom: 30px;
+}
+
+h4 {
+    color: rgba(255, 255, 255, 0.5);
+    font-weight: bold;
+    font-size: 15px;
+}
+
+.menu-content h1 {
+    font-size: clamp(24px, 5vmin, 48px);
+    margin-bottom: 1vmin;
+    color: #cc99ff;
+    text-transform: uppercase;
+}
+
+h1 {
+    font-size: 48px;
+    color: #cc99ff;
+}
+
+h2 {
+    font-size: 36px;
+    color: white;
+}
+
+h3 {
+    font-size: 22px;
+    color: #cc99ff;
+    margin-bottom: 5px;
+}
+
+/* Formulaires et inputs */
+.menu-form {
+    width: 100%;
+    max-width: 80%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2vmin;
+}
+
+
+.menu-form input[type="text"] {
+    width: 100%;
+    padding: 1.5vmin 2vmin;
+    font-size: clamp(12px, 1.5vmin, 13px);
+    border: none;
+    border-radius: 3px;
+    color: white;
+    font-weight: bold;
+    background-color: rgba(255, 255, 255, 0.1);
+    text-align: center;
+    backdrop-filter: blur(40px);
+}
+
+#nicknameInput {
+    max-width: 300px;
+}
+
+.menu-form button {
+    margin-top: 2vmin;
+    padding: 2vmin 3vmin;
+    font-size: clamp(14px, 2.5vmin, 16px);
+    letter-spacing: 0.5px;
+    /*min-width: 60%;*/
+    font-family: Arial;
+}
+
+input[type="text"] {
+    padding: 12px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 3px;
+    background-color: rgba(255, 255, 255, 0.9);
+    width: 100%;
+    transition: all 0.3s ease;
+    font-family: Arial;
+}
+
+input[type="text"]:focus, input[type="number"]:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(160, 15, 241, 0.5);
+    transform: scale(1.02);
+}
+
+/* Boutons */
+.primary-button, .secondary-button, .game-button, .map-selection-button {
+    height: 70px;
+    padding: 0 2rem;
+    font-size: 16px;
+    border-radius: 3px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s ease;
+    overflow: hidden;
+    margin: 10px 0;
+    font-family: Arial;
+    border: none;
+    --hue: 0;
+    transition: all 0.3s ease, background-color 0.3s ease;
+}
+
+.secondary-button, .game-button {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(40px);
+}
+
+.modal-buttons {
+    height: 50px;
+    margin: 0;
+}
+
+.primary-button {
+    --lightness: 85%; /* Base claire */
+    background-color: rgb(255, 255, 255);
+    color: #000;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+/* Animation de lueur au survol */
+.primary-button:hover {
+    animation: randomLightColor 0.3s forwards;
+    transform: translateY(-2px);
+}
+
+/* État désactivé */
+.primary-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    animation: none;
+    box-shadow: none;
+}
+
+/* Style spécifique pour les boutons secondaires (fond foncé, texte clair) */
+.secondary-button,
+.map-selection-button {
+    --lightness: 25%; /* Base foncée */
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #fff;
+}
+
+.secondary-button:hover,
+.map-selection-button:hover {
+    animation: randomDarkColor 0.3s forwards;
+    transform: translateY(-2px);
+}
+
+/* Animation pour les couleurs claires */
+@keyframes randomLightColor {
+    from {
+        background-color: rgb(255, 255, 255);
+    }
+    to {
+        background-color: hsl(calc(var(--hue) * 360), 70%, var(--lightness));
+    }
+}
+
+/* Animation pour les couleurs foncées */
+@keyframes randomDarkColor {
+    from {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+    to {
+        background-color: hsl(calc(var(--hue) * 360), 70%, var(--lightness));
+    }
+}
+
+/* Animation de pulsation */
+@keyframes buttonPulse {
+    0% {
+        box-shadow: 0 0 10px rgba(204, 153, 255, 0.2),
+                    inset 0 0 10px rgba(204, 153, 255, 0.1);
+    }
+    50% {
+        box-shadow: 0 0 15px rgba(204, 153, 255, 0.3),
+                    inset 0 0 12px rgba(204, 153, 255, 0.2);
+    }
+    100% {
+        box-shadow: 0 0 10px rgba(204, 153, 255, 0.2),
+                    inset 0 0 10px rgba(204, 153, 255, 0.1);
+    }
+}
+
+/* Menu des paramètres */
+#settingsMenu, #mapSelectionMenu {
+    position: fixed; /* Au lieu de position absolue */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #1d1d1d93;
+    z-index: 1000;
+    display: none; /* Par défaut caché */
+    justify-content: center;
+    align-items: center;
+    overflow: hidden; /* Important: empêche le scroll de la modale */
+}
+
+.settings-content {
+    max-width: 800px;
+    width: 90%;
+    max-height: 90vh; /* Limite la hauteur à 90% de la vue */
+    margin: 40px auto;
+    padding: 30px;
+    background-color: #1D1D1D;
+    border-radius: 3px;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden; /* Cache tout débordement */
+}
+
+/* Nouveau : Conteneur pour le contenu scrollable */
+.settings-scrollable-content {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 15px; /* Espace pour la scrollbar */
+}
+
+/* Style de la scrollbar */
+.settings-scrollable-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.settings-scrollable-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+.settings-scrollable-content::-webkit-scrollbar-thumb {
+    background: rgba(204, 153, 255, 0.5);
+    border-radius: 3px;
+}
+
+.setting-group {
+    margin-bottom: 20px;
+    background-color: rgba(255, 255, 255, 0.05);
+    padding: 20px;
+    border-radius: 3px;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    /*gap: 15px;*/
+}
+
+.setting-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.zone-type {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 200px;
+    flex: 1 1 calc(50% - 15px);
+}
+
+.number-input {
+    width: 80px;
+    min-width: 60px;
+    max-width: 100px;
+    padding: 8px 10px;
+    margin-top: 5px;
+    text-align: right;
+    font-size: 16px;
+    border: none;
+    border-radius: 3px;
+    background-color: rgba(255, 255, 255, 0.9);
+    transition: all 0.3s ease;
+}
+
+.text-input {
+    width: auto;
+    min-width: 60px;
+    max-width: 100px;
+    padding: 8px 10px;
+    margin-top: 5px;
+    text-align: center;
+    font-size: 16px;
+    border: none;
+    border-radius: 3px;
+    background-color: rgba(255, 255, 255, 0.9);
+    transition: all 0.3s ease;
+}
+
+.settings-buttons {
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    gap: 15px;
+    justify-content: right;
+    flex-shrink: 0; /* Empêche les boutons de rétrécir */
+}
+
+.reset-button {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-family: Arial;
+}
+
+/* Interface de jeu */
+#gameScreen {
+    display: none;
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+#gameScreen.active {
+    display: block;
+}
+
+#gameContainer {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* ==========================================================================
+   Styles des onglets de la salle d'attente
+   ========================================================================== */
+
+/* Conteneur principal des onglets */
+.waiting-room-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    margin: 0;
+    padding: 20px 20px 10px 20px;
+    justify-content: center;
+    display: flex;
+    gap: 10px;
+}
+
+/* Style des boutons d'onglets */
+.tab-button {
+    padding: 12px 12px;
+    border: none;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 15px;
+    position: relative;
+    overflow: hidden;
+    font-weight: bold;
+    width: 50%;
+    font-family: Arial;
+    text-transform: uppercase;
+    background: #1d1d1d;
+    border-bottom: 1px solid #ffffff11;
+}
+
+/* État au survol des onglets */
+.tab-button:hover {
+    transform: translateY(-2px);
+}
+
+/* Style de l'onglet actif */
+.tab-button.active {
+    border-bottom: 2px solid #fff;
+}
+
+.button-icon {
+    display: none;
+    width: 24px;
+    height: 24px;
+}
+
+/* ==========================================================================
+   Contenus des onglets
+   ========================================================================== */
+
+.tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease-out;
+    padding: 20px;
+    min-height: 200px; /* Hauteur minimum pour éviter des transitions trop petites */
+}
+
+/* Contenu d'onglet actif */
+.tab-content.active {
+    display: block;
+}
+
+/* Animation d'apparition */
+@keyframes fadeIn {
+    from { 
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==========================================================================
+   Styles du contenu informatif
+   ========================================================================== */
+
+/* Conteneur d'informations */
+.info-content {
+    color: white;
+    line-height: 1.6;
+}
+
+/* En-têtes des sections */
+.info-content h3,
+.info-content h4 {
+    color: #cc99ff;
+    margin: 20px 0 15px;
+    text-shadow: 0 0 10px rgba(204, 153, 255, 0.3);
+}
+
+.info-content h3 {
+    font-size: 24px;
+    border-bottom: 2px solid rgba(204, 153, 255, 0.3);
+    padding-bottom: 10px;
+}
+
+.info-content h4 {
+    font-size: 20px;
+    margin-top: 0px;
+}
+
+.settings-content h2 {
+    font-size: 24px;
+    font-weight: bold;
+    font-family: Arial;
+    text-align: left;
+}
+
+.settings-content h3 {
+    font-size: 20px;
+    font-weight: bold;
+    font-family: Arial;
+    text-align: left;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Sections d'informations (bonus, malus, zones) */
+.bonus-info,
+.malus-info,
+.zones-info {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 20px;
+    border-radius: 3px;
+    margin: 15px 0;
+}
+
+/* Items dans les sections */
+.bonus-item,
+.malus-item,
+.zone-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 10px;
+    margin: 8px 0;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+    transition: all 0.3s ease;
+}
+
+/* État au survol des items */
+.bonus-item:hover,
+.malus-item:hover,
+.zone-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateX(5px);
+}
+
+/* Images des bonus et malus */
+.bonus-item img,
+.malus-item img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    filter: drop-shadow(0px 0px 3px rgb(204, 170, 255));
+}
+
+/* ==========================================================================
+   Styles des commandes
+   ========================================================================== */
+
+/* Grille des commandes */
+.controls-grid {
+    display: grid;
+    gap: 15px;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}
+
+/* Items de commande */
+.control-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+    transition: all 0.3s ease;
+}
+
+/* Touches */
+.key {
+    background: rgba(204, 153, 255, 0.2);
+    padding: 5px 10px;
+    border-radius: 3px;
+    min-width: 30px;
+    text-align: center;
+    font-family: monospace;
+    border: 1px solid rgba(204, 153, 255, 0.3);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Description de l'action */
+.action {
+    color: white;
+    flex-grow: 1;
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    /* Adaptation des onglets pour mobile */
+    #waitingRoom.active {
+        padding-top: 60px;
+    }
+    .waiting-room-tabs {
+        padding: 10px;
+        gap: 5px;
+        justify-content: space-between;
+    }
+
+    .tab-button {
+        flex: 1;
+        padding: 8px;
+        font-size: 12px;
+        min-width: 0; /* Permet la réduction */
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+
+    /* Adaptation du contenu pour mobile */
+    .tab-content {
+        padding: 15px;
+    }
+
+    .info-content h3 {
+        font-size: 20px;
+    }
+
+    .info-content h4 {
+        font-size: 18px;
+    }
+
+    /* Adaptation des items pour mobile */
+    .bonus-item,
+    .malus-item,
+    .zone-item,
+    .control-item {
+        padding: 8px;
+        font-size: 14px;
+    }
+
+    /* Ajustement des images pour mobile */
+    .bonus-item img,
+    .malus-item img {
+        width: 20px;
+        height: 20px;
+    }
+        /* Style des boutons en mode compact */
+        .waiting-room-buttons {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between; /* Changé de space-around à space-between */
+            padding: 10px 20px;
+            gap: 10px;
+            width: 100%; /* S'assurer que le conteneur prend toute la largeur */
+            position: sticky;
+            bottom: 0;
+        }
+    
+        .waiting-room-buttons button {
+            min-width: 50px; /* Taille fixe au lieu de flex */
+            height: 50px;
+            min-width: 50px; /* Forcer la taille minimale */
+            padding: 12px;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0; /* Retirer les marges par défaut */
+        }
+        .button-text {
+            display: none !important; /* Forcer le masquage */
+        }
+    
+        /* Masquer le texte et afficher les icônes sur mobile */
+        .waiting-room-buttons button span.button-text {
+            display: none;
+        }
+        .button-icon {
+            display: block;
+            width: 24px;
+            height: 24px;
+        }
+    
+        /* Styles spécifiques pour chaque bouton */
+        #startGameButton {
+            background-color: rgba(204, 153, 255, 0.3);
+        }
+    
+        #waitingRoomSettings {
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+    
+        #leaveRoomButton {
+            background-color: rgba(255, 70, 70, 0.2);
+        }
+    
+        /* Ajuster le conteneur principal pour le nouveau layout */
+        .waiting-room-content {
+            padding: 20px 10px;
+        }
+    
+        .waiting-room-container {
+            max-height: calc(90vh - 160px); /* Ajusté pour les nouveaux boutons */
+        }
+        .waiting-room-buttons button::after {
+            content: attr(title);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            white-space: nowrap;
+        }
+    
+        .waiting-room-buttons button:active::after {
+            opacity: 1;
+        }
+        #waitingRoom > h2 {
+            font-size: 26px !important;
+        }
+}
+
+/* Pour les très petits écrans */
+@media (max-width: 480px) {
+    .tab-button {
+        flex: 1 1 100%;
+    }
+
+    .controls-grid {
+        padding: 10px;
+    }
+
+    .key {
+        min-width: 25px;
+        padding: 3px 8px;
+    }
+}
+
+/* Overlay et informations de jeu */
+#gameOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+#gameInfo {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: auto;
+}
+
+#score {
+    /*background-color: rgba(0, 0, 0, 0.6);*/
+    color: white;
+    padding: 10px 20px;
+    border-radius: 3px;
+    font-size: 18px;
+    margin-bottom: 10px;
+    backdrop-filter: blur(5px);
+    display: none;
+}
+
+#timer {
+    background-color: rgba(0, 0, 0, 0.45);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 3px;
+    margin-bottom: 10px;
+    backdrop-filter: blur(5px);
+    border: 2px solid rgba(204, 153, 255, 0.3);
+    transition: all 0.3s ease;
+}
+
+#timerContent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+#timerLabel {
+    font-family: 'Arial', sans-serif;
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.8;
+}
+
+#time {
+    font-family: 'PermanentMarker-Regular', sans-serif;
+    font-size: 36px;
+    color: #cc99ff;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+    line-height: 1;
+    margin-top: 5px;
+}
+
+/* Style pour les 10 dernières secondes */
+#timer.urgent {
+    background-color: rgba(255, 0, 0, 0.2);
+    border-color: rgba(255, 0, 0, 0.6);
+    transform: scale(1.1);
+    animation: urgentPulse 1s infinite;
+}
+
+#timer.urgent #time {
+    color: #ff3333;
+    font-size: 48px;
+    text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+}
+
+@keyframes urgentPulse {
+    0% {
+        transform: scale(1.1);
+        box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.4);
+    }
+    70% {
+        transform: scale(1.15);
+        box-shadow: 0 0 0 10px rgba(255, 0, 0, 0);
+    }
+    100% {
+        transform: scale(1.1);
+        box-shadow: 0 0 0 0 rgba(255, 0, 0, 0);
+    }
+}
+
+/* Classement des joueurs */
+#playerList {
+    position: fixed;
+    top: 50%;
+    right: 5px;
+    transform: translateY(-50%);
+    /*background-color: rgba(0, 0, 0, 0.2);*/
+    color: white;
+    padding: 10px;
+    border-radius: 3px;
+    min-width: 200px;
+    max-height: 80vh;
+    overflow-y: auto;
+    /*backdrop-filter: blur(4px);*/
+    z-index: 900;
+}
+
+.player-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 15px;
+    margin: 5px 0;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.player-list-item.current-player {
+    background-color: rgba(204, 153, 255, 0.2);
+    border: 1px solid #cc99ff;
+    box-shadow: 0 0 10px rgba(204, 153, 255, 0.2);
+}
+
+.player-score {
+    font-family: 'PermanentMarker-Regular', sans-serif;
+    transition: transform 0.3s ease;
+    text-shadow: 1px 1px 2px #00000091;
+}
+
+/* Tailles différentes selon le rang */
+.player-list-item:nth-child(1) .player-score {
+    font-size: 32px;
+    color: #ffd700; /* Or pour le premier */
+}
+
+.player-list-item:nth-child(2) .player-score {
+    font-size: 28px;
+    color: #c0c0c0; /* Argent pour le second */
+}
+
+.player-list-item:nth-child(3) .player-score {
+    font-size: 24px;
+    color: #cd7f32; /* Bronze pour le troisième */
+}
+
+.player-list-item:nth-child(n+4) .player-score {
+    font-size: 20px;
+}
+
+#players {
+    list-style: none;
+}
+
+#players li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 10px;
+    margin: 5px 0;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    transition: all 0.3s ease;
+}
+
+#players li.current-player {
+    background-color: rgba(241, 196, 15, 0.3);
+    border: 1px solid #cc99ff;
+}
+
+/* Animations pour les changements de score */
+@keyframes scoreIncrease {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); color: #7fff7f; }
+    100% { transform: scale(1); }
+}
+
+@keyframes scoreDecrease {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.8); color: #ff7f7f; }
+    100% { transform: scale(1); }
+}
+
+.score-increase {
+    animation: scoreIncrease 0.5s ease;
+}
+
+.score-decrease {
+    animation: scoreDecrease 0.5s ease;
+}
+
+/* Bonus actifs */
+#activeBonuses {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 15px;
+    z-index: 1000;
+    padding: 10px;
+    border-radius: 30px;
+    /*background-color: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(5px);*/
+}
+
+.activeBonus {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background-color: rgba(0, 0, 0, 0.8);
+    padding: 8px 15px;
+    border-radius: 20px;
+    color: white;
+    backdrop-filter: blur(5px);
+    transform: translateZ(0);
+    will-change: transform;
+    /* Supprimer l'animation par défaut */
+}
+
+/* Timer à l'intérieur du bonus */
+.activeBonus .timer {
+    min-width: 1.5em;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+    font-family: monospace;
+    white-space: nowrap;
+}
+
+/* Animation de pulsation pour le bonus actif */
+.activeBonus:not(.new-bonus) {
+    animation: bonusActive 2s ease-in-out infinite;
+}
+
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0.2; }
+    100% { opacity: 1; }
+}
+
+.blinking {
+    animation: blink 0.6s infinite; /* Clignotement avec une durée de 600 ms */
+}
+
+@keyframes bonusPulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.activeBonus img {
+    width: 24px;
+    height: 24px;
+    filter: brightness(0) invert(1);
+    animation: bonusIconPulse 2s infinite;
+}
+
+@keyframes bonusIconPulse {
+    0% {
+        filter: brightness(1);
+    }
+    50% {
+        filter: brightness(1.3);
+    }
+    100% {
+        filter: brightness(1);
+    }
+}
+
+/* Notification de bonus */
+#collectedBonusDisplay {
+    position: fixed;
+    top: 35%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.3);
+    color: #ffffff;
+    padding: 10px 20px;
+    border-radius: 3px;
+    font-size: 2rem;
+    font-family: 'PermanentMarker-Regular', sans-serif;
+    z-index: 2000;
+    transition: opacity 0.5s ease;
+    text-align: center;
+    min-width: 300px;
+}
+
+@keyframes notificationSlide {
+    0% { transform: translate(-50%, -30%); opacity: 0; }
+    10% { transform: translate(-50%, -50%); opacity: 1; }
+    90% { transform: translate(-50%, -50%); opacity: 1; }
+    100% { transform: translate(-50%, -70%); opacity: 0; }
+}
+
+#collectedBonusDisplay:not(.hidden) {
+    animation: notificationSlide 3s ease-in-out forwards;
+}
+
+/* Modale de fin de partie */
+.game-over-modal {
+    background-color: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.game-over-content {
+    background-color: rgba(44, 62, 80, 0.95);
+    max-width: 90vw;
+    width: 900px;
+    max-height: 90vh;
+    padding: 20px;
+    border-radius: 3px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.game-over-title {
+    color: #cc99ff;
+    font-size: 36px;
+    text-align: center;
+    margin: 0 0 20px 0;
+    flex-shrink: 0;
+}
+
+/* Container pour le contenu scrollable */
+.game-over-scrollable-content {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Style du scrollbar pour une meilleure intégration */
+.game-over-scrollable-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.game-over-scrollable-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+.game-over-scrollable-content::-webkit-scrollbar-thumb {
+    background: rgba(241, 196, 15, 0.5);
+    border-radius: 3px;
+}
+
+.game-over-scrollable-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(241, 196, 15, 0.7);
+}
+
+/* Container des boutons fixé en bas */
+
+
+.podium-container {
+    display: flex;
+    flex-shrink: 0;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 15px;
+    height: 200px;
+    /*margin: 20px 0;*/
+}
+
+.podium-place {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 120px;
+}
+
+.podium-badge {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.podium-symbol {
+    font-size: 24px;
+    margin-bottom: 5px;
+}
+
+.podium-block {
+    width: 80px;
+    border-radius: 3px 3px 0 0;
+}
+
+.first .podium-block {
+    height: 120px;
+    background-color: #cc99ff;
+}
+
+.second .podium-block {
+    height: 90px;
+    background-color: #bdc3c7;
+}
+
+.third .podium-block {
+    height: 60px;
+    background-color: #d35400;
+}
+
+.podium-crown {
+    font-size: 24px;
+    margin-bottom: 5px;
+}
+
+.player-name, .player-name-interface {
+    font-weight: bold;
+    font-size: 14px;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: right;
+}
+
+.player-name {
+text-align: left;
+}
+
+.player-rank {
+    padding-right: 10px;
+  }
+
+.score {
+    color: #f1c40f;
+    font-size: 14px;
+}
+
+.player-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.player-badges {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.status-badge {
+    font-size: 1.2em;
+    opacity: 0.8;
+    transition: all 0.3s ease;
+}
+
+.status-badge:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.status-badge.playing {
+    color: #7fff7f;
+}
+
+.game-notification {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    padding: 12px 20px;
+    border-radius: 3px;
+    background-color: rgba(204, 153, 255, 0.9);
+    color: white;
+    z-index: 999;
+    animation: slideInLeft 0.3s ease-out;
+    transition: opacity 0.3s ease;
+    font-family: 'PermanentMarker-Regular', sans-serif;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(5px);
+}
+
+.game-notification.success {
+    background-color: rgba(204, 153, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.game-notification.info {
+    background-color: rgba(204, 153, 255, 0.7);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.game-notification.fade-out {
+    opacity: 0;
+    transform: translateX(-10px);
+}
+
+@keyframes slideInLeft {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.game-notification + .game-notification {
+    margin-top: 10px;
+}
+
+.game-status {
+    background-color: rgba(204, 153, 255, 0.2);
+    padding: 12px;
+    margin-bottom: 15px;
+    border-radius: 3px;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.game-status-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.game-status-icon {
+    font-size: 1.2em;
+    animation: pulse 2s infinite;
+}
+
+.join-game {
+    background-color: #4c8caf;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Ajustements responsive */
+@media (max-width: 768px) {
+    .player-content {
+        font-size: 14px;
+    }
+
+    .player-badges {
+        gap: 6px;
+    }
+
+    .status-badge {
+        font-size: 1.1em;
+    }
+}
+
+.player-score {
+    text-align: right;
+  }
+
+.final-score {
+    color: #cc99ff;
+}
+
+.final-scores {
+    margin-top: 30px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+    padding: 20px;
+}
+
+.score-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    margin: 5px 0;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+.score-item.current-player {
+    background-color: rgba(241, 196, 15, 0.2);
+    border: 1px solid #cc99ff;
+}
+
+.game-over-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 0px;
+}
+
+.game-over-buttons button {
+    min-width: 180px;
+    padding: 12px 20px;
+}
+
+.game-over-buttons button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Podium */
+.podium {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    margin: 40px 0;
+    min-height: 300px;
+    gap: 20px;
+}
+
+.podium-place {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+.podium-block {
+    width: 100%;
+    border-radius: 3px 3px 0 0;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+}
+
+.first .podium-block { height: 120px; }
+.second .podium-block { height: 90px; }
+.third .podium-block { height: 60px; }
+
+.first .podium-block {
+    background-color: #ffe199;
+}
+
+.second .podium-block {
+    background-color: #bdc3c7;
+}
+
+.third .podium-block {
+    background-color: #d35400;
+}
+
+.stats-slider-container {
+    position: relative;
+    overflow: hidden;
+    padding: 0 40px;
+    min-height: 0;
+}
+
+.stats-slider {
+    display: flex;
+    gap: 15px;
+    transition: transform 0.3s ease;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes bonusCollected {
+    0% {
+        transform: translate(-50%, -50%) scale(0.8);
+        opacity: 0;
+    }
+    50% {
+        transform: translate(-50%, -50%) scale(1.2);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0;
+    }
+}
+
+/* Classes utilitaires */
+.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+@keyframes simpleAppear {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Panneau d'aide en jeu */
+.game-help-panel {
+    position: fixed;
+    background-color: rgba(255, 255, 255, 0.25);
+    color: #353535;
+    border-radius: 3px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    width: 300px;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(5px);
+}
+
+.game-help-panel h3 {
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.9);
+    color: #fff;
+}
+
+#instructions {
+    left: 20px;
+    bottom: 20px;
+}
+
+#controls {
+    right: 20px;
+    bottom: 20px;
+}
+
+.help-content {
+    max-width: 800px;
+    margin: 40px auto;
+    height: calc(100vh - 80px);
+    overflow-y: auto;
+}
+
+.help-tabs {
+    display: flex;
+    margin-bottom: 20px;
+}
+
+.help-container {
+    flex: 1;
+    overflow-y: auto;
+    color: #fff;
+}
+
+.help-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.close-button {
+    background: none;
+    border: none;
+    color: #353535;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 5px;
+    transition: color 0.3s ease;
+}
+
+.close-button:hover {
+    color: #cc99ff;
+}
+
+/* Conteneur des aperçus de map */
+.maps-container {
+    margin: 20px 0;
+}
+
+.maps-container h3 {
+    color: #cc99ff;
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.map-preview-container {
+    display: flex;
+    justify-content: left;
+    gap: 20px; /* Augmenté pour plus d'espace entre les maps */
+    margin-top: 15px;
+    flex-wrap: wrap; /* Pour la responsivité */
+}
+
+.map-preview-container input[type="checkbox"] {
+    display: none;
+}
+
+/* Carte de prévisualisation */
+.map-preview-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    opacity: 1;
+    transition: all 0.3s ease;
+}
+
+/* Style pour les cartes non disponibles */
+.map-preview-card.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.map-preview-card.disabled .map-preview-wrapper {
+    cursor: not-allowed;
+}
+
+.map-preview-card.disabled .mode-toggle {
+    pointer-events: none;
+}
+
+/* Conteneur de l'image pour maintenir le ratio */
+.map-preview-wrapper {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    border: 2px solid transparent;
+    border-radius: 4px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.map-preview-wrapper:hover:not(.disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Style quand la map est sélectionnée */
+.map-preview-wrapper.selected {
+    border-color: white;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.map-preview-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.map-name-square {
+    position: absolute;
+    bottom: 44px;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 5px;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.2;
+}
+
+/* Toggle Mode */
+.mode-toggle-container {
+    margin-top: 20px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 10px 0;
+}
+
+.mode-toggle {
+    position: relative;
+    display: inline-flex;
+    cursor: pointer;
+}
+
+.toggle-track {
+    display: flex;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 20px;
+    padding: 2px;
+    width: 160px;
+    position: relative;
+}
+
+.toggle-option {
+    flex: 1;
+    text-align: center;
+    padding: 8px 12px;
+    color: rgba(255, 255, 255, 0.6);
+    transition: all 0.3s ease;
+    border-radius: 18px;
+    z-index: 1;
+}
+
+/* État actif du toggle */
+#mirrorModeModal:checked + .toggle-track .toggle-option:last-child,
+#mirrorModeModal:not(:checked) + .toggle-track .toggle-option:first-child {
+    color: white;
+    background: rgba(204, 153, 255, 0.3);
+}
+
+/* Cache la checkbox originale */
+#mirrorModeModal {
+    display: none;
+}
+
+.map-preview-card + .map-preview-card {
+    margin-left: 20px;
+}
+
+/* Adaptation mobile */
+@media (max-width: 768px) {
+    .map-preview-container {
+        gap: 15px;
+    }
+
+    .map-preview-wrapper {
+        width: 100px;
+        height: 100px;
+    }
+
+    .map-name {
+        font-size: 11px;
+    }
+
+    .toggle-track {
+        width: 140px;
+    }
+
+    .toggle-option {
+        padding: 6px 10px;
+        font-size: 14px;
+    }
+}
+
+/* Pour très petits écrans */
+@media (max-width: 380px) {
+    .map-preview-container {
+        gap: 10px;
+    }
+
+    .map-preview-wrapper {
+        width: 90px;
+        height: 90px;
+    }
+}
+
+/* Styles pour les modales */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 3000;
+    backdrop-filter: blur(10px);
+}
+
+.modal-content {
+    background-color: #111;
+    max-width: 800px;
+    width: 90%;
+    padding: 40px;
+    border-radius: 3px;
+    color: white;
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+.pause-modal .modal-content {
+    max-width: 800px; /* Largeur maximale limitée */
+    width: 90%; /* Prend 90% de la largeur disponible jusqu'au max-width */
+    max-height: 90vh; /* Hauteur maximale de 90% de la vue */
+    background-color: #111;
+    border-radius: 3px;
+    padding: 30px;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+/* Style du titre */
+.pause-modal h2 {
+    font-family: 'PermanentMarker-Regular', sans-serif;
+    color: #cc99ff;
+    text-align: center;
+    margin: 0;
+}
+
+/* Style des boutons dans la modale de pause */
+.pause-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+    max-width: 300px; /* Limiter la largeur des boutons */
+}
+
+/* Adaptation mobile */
+@media (max-width: 768px) {
+    .pause-modal .modal-content {
+        padding: 20px;
+        width: 95%;
+    }
+    
+    .pause-buttons {
+        max-width: 100%;
+    }
+}
+
+/* Styles spécifiques au classement */
+.player-stats-card {
+    flex: 0 0 280px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    padding: 15px;
+}
+
+.player-stats-card.current-player {
+    background-color: rgba(226, 121, 255, 0.2);
+    border: 1px solid #cc99ff;
+}
+
+.player-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.rank {
+    background-color: #cc99ff;
+    color: #2c3e50;
+    width: 24px;
+    height: 24px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.stats-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.stat-row {
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.slider-controls {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    transform: translateY(-50%);
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+}
+
+.slider-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: all 0.3s ease;
+}
+
+.slider-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.slider-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.detailed-stats {
+   /* margin-top: 30px;*/
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+    padding: 20px;
+    flex: 1;
+}
+
+.stats-list {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+#waitingRoom {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("/assets/images/background-home.jpg");
+    background-size: cover;
+    color: white;
+}
+
+#waitingRoomSettings .button-icon {
+    width: 24px;
+    height: 24px;
+    filter: brightness(0) invert(1); /* SVG en blanc */
+}
+
+#waitingRoomSettings:hover .button-icon {
+    filter: brightness(0) invert(1) drop-shadow(0 0 4px rgba(255, 255, 255, 0.6));
+}
+
+/* Style du bouton de sélection de map */
+.map-selection-button {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(40px);
+    height: 70px;
+    padding: 0 2rem;
+    border-radius: 3px;
+}
+
+.map-selection-button .button-icon {
+    width: 24px;
+    height: 24px;
+    filter: brightness(0) invert(1);
+}
+
+.map-selection-button:hover .button-icon {
+    filter: brightness(0) invert(1) drop-shadow(0 0 4px rgba(255, 255, 255, 0.6));
+}
+
+.map-info {
+    text-align: left;
+}
+
+.map-name {
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 2px;
+}
+
+.map-mode {
+    font-family: Arial, sans-serif;
+    font-size: 15px;
+    font-weight: bold;
+    color: white;
+}
+
+.top-buttons {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 100;
+    display: flex;
+    gap: 15px;
+}
+
+.top-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+/* Style des icônes */
+.top-button .button-icon {
+    width: 20px;
+    height: 20px;
+    filter: brightness(0) invert(1); /* SVG en blanc */
+    display: block; /* Toujours affiché */
+}
+
+.settings-icon, .map-icon {
+    width: 30px;
+    height: 30px;
+    filter: brightness(0) invert(1); /* SVG en blanc */
+    display: block; /* Toujours affiché */
+}
+
+/* Style du texte */
+.top-button .button-text {
+    /* Capitaliser seulement la première lettre */
+    text-transform: none;
+}
+
+
+/* Effet de hover */
+.top-button:hover {
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+}
+
+.top-button:hover .button-icon {
+    filter: brightness(0) invert(1) drop-shadow(0 0 4px rgba(255, 255, 255, 0.6));
+}
+
+#waitingRoom.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: 80px; /* Ajouter de l'espace pour le titre */
+
+}
+
+/* Style pour le titre extérieur */
+#waitingRoom > h2 {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'PermanentMarker-Regular', sans-serif;
+    font-size: 48px;
+    color: #fff;
+    text-shadow: 0 0 15px rgba(204, 153, 255, 0.5),
+                 0 0 30px rgba(204, 153, 255, 0.3);
+    margin: 0;
+    z-index: 1;
+}
+
+/* Container principal avec une structure en grille */
+.waiting-room-layout {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    height: 100%;
+    width: 100%;
+}
+
+/* Layout principal avec grid */
+.waiting-room-layout-grid {
+    display: grid;
+    grid-template-columns: 4fr 1fr; /* 4/5 - 1/5 */
+    height: 100%;
+    width: 100%;
+    /*padding: 20px;*/
+    gap: 20px;
+}
+
+/* Section principale */
+.waiting-room-main {
+    background-color: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+    border-radius: 3px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    /*padding: 8rem 5rem 0rem 10rem;*/
+    padding: 2rem 1rem 0rem 5rem;
+}
+
+/* Section chat */
+.chat-section {
+    position: relative;
+    height: 90vh;
+    transition: transform 0.3s ease;
+}
+
+
+#waitingRoom .waiting-room-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.waiting-room-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Prend toute la hauteur disponible */
+    background: none; /* Supprime le background car déjà sur le parent */
+    border: none;
+}
+
+/* Pour que la transition fonctionne sur le contenu interne */
+.waiting-room-content > * {
+    transition: opacity 0.3s ease-in-out;
+}
+
+/* Optionnel : animation du contenu lors du changement */
+.waiting-room-content.changing > * {
+    opacity: 0;
+}
+
+.waiting-room-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.waiting-room-content::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}
+
+.waiting-room-content::-webkit-scrollbar-thumb {
+    background-color: rgba(204, 153, 255, 0.5);
+    border-radius: 3px;
+}
+
+.waiting-room-container {
+    transition: height 0.3s ease-in-out;
+    /*max-height: calc(90vh - 230px); /* Hauteur max en tenant compte du header et des boutons */
+    height: 100%;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(204, 153, 255, 0.5) rgba(0, 0, 0, 0.2);
+}
+
+.waiting-room-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.waiting-room-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}
+
+.waiting-room-container::-webkit-scrollbar-thumb {
+    background-color: rgba(204, 153, 255, 0.5);
+    border-radius: 3px;
+}
+
+.players-list-container {
+    padding: 20px 0;
+    min-height: 200px;
+}
+
+.players-list-container h3 {
+    display: flex;
+    gap: 5px;
+}
+
+#connectedPlayersCount {
+    font-family: 'PermanentMarker-Regular', sans-serif;
+    color: #cc99ff; /* Couleur d'accent existante */
+    min-width: 1.5em; /* Pour éviter les sauts de mise en page lors des changements */
+    display: inline-block;
+    text-align: center;
+}
+
+#waitingRoomPlayers {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 4 colonnes par défaut */
+    gap: 15px;
+    padding: 0;
+    margin: 20px 0 0 0;
+    list-style: none;
+}
+
+.waiting-room-player {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 12px 15px;
+    border-radius: 3px;
+    transition: all 0.3s ease;
+}
+
+.waiting-room-player.current-player {
+    background-color: rgba(255, 101, 202, 0.3);
+    border: 1px solid #cc99ff;
+}
+
+/* Barre de boutons fixe en bas */
+.waiting-room-buttons {
+    position: sticky;
+    bottom: 0;
+    padding: 15px 0px 5px 0;
+    display: flex;
+    justify-content: space-between; /* Au lieu de center */
+    align-items: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Créer un conteneur pour les boutons de gauche */
+.left-buttons {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* Ajuster le style du bouton de lancement */
+#startGameButton {
+    margin-left: auto; /* Pour le pousser à droite */
+}
+
+#startGameButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.owner-badge {
+    margin-left: 8px;
+    font-size: 1.2em;
+}
+
+.waiting-room-player {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Media queries pour la grille responsive */
+/* Grand écran : 4 colonnes (par défaut) */
+
+/* Écran moyen : 3 colonnes */
+@media (max-width: 1200px) {
+    #waitingRoomPlayers {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Écran tablette : 2 colonnes */
+@media (max-width: 900px) {
+    #waitingRoomPlayers {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Mobile : 1 colonne */
+@media (max-width: 600px) {
+    #waitingRoomPlayers {
+        grid-template-columns: 1fr;
+    }
+
+    .players-list-container {
+        padding: 15px;
+    }
+
+    .waiting-room-player {
+        padding: 10px;
+    }
+}
+
+/* Style pour les inputs désactivés */
+input:disabled, 
+select:disabled, 
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+input[type="checkbox"]:disabled + label {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Chatbox flottante */
+.floating-chat {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 3px;
+    backdrop-filter: blur(10px);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Adaptations mobiles */
+@media (max-width: 768px) {
+    .waiting-room-buttons {
+        padding: 10px;
+        gap: 5px;
+    }
+
+    .left-buttons {
+        gap: 5px;
+    }
+
+    /* Ajuster les tailles des boutons en mobile */
+    #waitingRoomSettings,
+    #mapSelectionButton {
+        padding: 8px;
+    }
+    #startGameButton {
+        padding: 8px 15px;
+    }
+    .map-selection-button {
+        gap: 8px;
+    }
+    
+    .map-info {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .map-name, .map-mode {
+        font-size: 11px; /* Plus petit sur mobile */
+        white-space: nowrap;
+    }
+
+    .map-name {
+        margin-bottom: 0;
+    }
+    .top-buttons {
+        top: 10px;
+        left: 10px;
+        gap: 10px;
+    }
+
+    .top-button {
+        padding: 8px;
+    }
+
+    .top-button .button-text {
+        display: none;
+    }
+
+    .top-button .button-icon {
+        width: 24px;
+        height: 24px;
+    }
+
+    .help-content {
+        margin: 20px;
+        height: calc(100vh - 40px);
+    }
+    
+    #waitingRoom #leaveRoomButton {
+        top: 10px;
+        left: 10px;
+        padding: 8px 15px;
+        
+        /* Cacher le texte sur mobile et ne montrer que l'icône */
+        .button-text {
+            display: none;
+        }
+        
+        .button-icon {
+            display: block;
+            width: 24px;
+            height: 24px;
+        }
+    }
+
+    .waiting-room-layout-grid {
+        grid-template-columns: 1fr; /* Full width sur mobile */
+        padding: 10px;
+    }
+
+    .chat-section {
+        position: fixed;
+        right: 0;
+        top: 10vh;
+        width: 280px;
+        height: 90vh;
+        z-index: 1000;
+        transition: transform 0.3s ease;
+    }
+
+    /* État replié */
+    .chat-section.collapsed {
+        transform: translateX(100%);
+    }
+
+    /* Style du toggle */
+    .toggle-icon {
+        position: absolute; /* Retour à absolute pour le positionner par rapport au chat */
+        left: -40px; /* Le faire sortir à gauche du chat */
+        top: 0;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 10px 15px;
+        cursor: pointer;
+        border-radius: 3px 0 0 3px;
+        backdrop-filter: blur(5px);
+    }
+
+    /* Style du header du chat */
+    .chat-header {
+        position: relative; /* Pour le positionnement absolu du toggle */
+        padding: 15px;
+        display: flex;
+        justify-content: center;
+        background-color: rgba(204, 153, 255, 0.2);
+        cursor: default;
+    }
+
+    .chat-header-title {
+        text-align: center;
+    }
+
+    /* Le contenu principal prend toute la largeur quand le chat est replié */
+    .waiting-room-main {
+        width: 100%;
+    }
+
+    /* Masquer le toggle sur desktop */
+    @media (min-width: 769px) {
+        .toggle-icon {
+            display: none;
+        }
+    }
+}
+
+/* Optimisations pour les très petits écrans */
+@media (max-width: 480px) {
+    .waiting-room-layout-grid {
+        padding: 5px;
+    }
+}
+
+/* En-tête du chat */
+.chat-header {
+    padding: 15px;
+    background-color: rgba(204, 153, 255, 0.2);
+    border-radius: 0 3px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
+.chat-header h3 {
+    margin: 0;
+    color: #a54bff;
+    font-size: 18px;
+}
+
+/* Structure principale du chat */
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 54px); /* Hauteur totale moins la hauteur du header */
+    overflow: hidden;
+    padding: 10px;
+}
+
+/* Zone des messages */
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 5px;
+    margin-bottom: 10px;
+}
+
+/* Messages */
+.chat-message {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 10px;
+    border-radius: 3px;
+    word-break: break-word;
+    max-width: 95%;
+}
+
+.chat-message.own-message {
+    background-color: rgba(204, 153, 255, 0.2);
+    margin-left: auto;
+    border-radius: 3px 3px 2px 3px;
+    border-right: 2px solid #cc99ff;
+}
+
+.chat-message-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 5px;
+}
+
+.chat-message-author {
+    font-weight: bold;
+    color: #cc99ff;
+}
+
+.chat-message-time {
+    font-size: 0.8em;
+    opacity: 0.7;
+    margin-left: 10px;
+}
+
+.chat-message-content {
+    color: white;
+}
+
+/* Zone de saisie */
+.chat-input-container {
+    display: flex;
+    gap: 8px;
+    padding: 5px;
+}
+
+#chatInput {
+    flex: 1; /* Prend tout l'espace disponible */
+    padding: 8px 12px;
+    border: none;
+    border-radius: 3px;
+    color: white;
+    background-color: rgba(255, 255, 255, 0.1);
+    text-align: left;
+    backdrop-filter: blur(40px);
+}
+
+.chat-send-button {
+    width: 36px; /* Taille fixe pour le bouton */
+    height: 36px;
+    padding: 8px;
+    border: none;
+    border-radius: 3px;
+    background-color: rgba(204, 153, 255, 0.2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.chat-send-button:hover {
+    background-color: rgba(204, 153, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+.send-icon {
+    width: 20px;
+    height: 20px;
+    filter: brightness(0) invert(1); /* Pour rendre l'icône blanche */
+}
+
+/* Scrollbar personnalisée */
+.chat-messages::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+    background: rgba(204, 153, 255, 0.5);
+    border-radius: 3px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+    background: rgba(204, 153, 255, 0.7);
+}
+
+/* Bouton toggle */
+.toggle-icon {
+    font-size: 18px;
+    color: white;
+}
+
+
+
+.chat-header-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.chat-icon {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    /* Filtre pour rendre l'icône de la même couleur que le texte 
+    filter: brightness(0) saturate(100%) invert(83%) sepia(14%) saturate(1615%) hue-rotate(213deg) brightness(106%) contrast(96%);*/
+}
+
+
+/* Contrôles mobiles */
+.mobile-controls {
+    display: none; /* Caché par défaut, affiché seulement sur mobile */
+    position: fixed;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    padding: 20px;
+    z-index: 1000;
+    pointer-events: none; /* Permet de cliquer à travers le container */
+}
+
+/* Joystick */
+.joystick {
+    position: fixed;
+    bottom: 100px;
+    left: 50px;
+    pointer-events: auto;
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    z-index: 1001;
+}
+
+.joystick-base {
+    width: 120px;
+    height: 120px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(204, 153, 255, 0.5);
+    border-radius: 50%;
+    position: relative;
+    backdrop-filter: blur(3px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.joystick-stick {
+    width: 50px;
+    height: 50px;
+    background: rgba(204, 153, 255, 0.8);
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    will-change: transform;
+    transition: background-color 0.2s ease;
+}
+
+/* Bouton d'action mobile */
+.mobile-action-button {
+    position: fixed;
+    bottom: 100px;
+    right: 50px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: rgba(204, 153, 255, 0.8);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    cursor: pointer;
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(5px);
+}
+
+.mobile-action-button img {
+    width: 30px;
+    height: 30px;
+    filter: brightness(0) invert(1);
+    transition: transform 0.2s ease;
+}
+
+.mobile-action-button.active {
+    background: rgba(204, 153, 255, 0.95);
+    transform: scale(0.95);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.mobile-action-button:active {
+    transform: scale(0.9);
+}
+
+/* Adaptation mobile */
+@media (max-width: 768px) {
+
+    .settings-content {
+        width: 95%;
+        padding: 20px;
+        margin: 10px auto;
+    }
+    .menu-form input[type="text"] {
+      height: 50px;
+    }
+
+    .setting-group {
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+
+    .setting-details, .setting-header {
+        display: flex;
+        flex-direction: column; /* Garde l'empilement vertical */
+        gap: 15px;
+        margin-left: 0;
+        color: #fff;
+    }
+
+    .setting-details > div, 
+    .setting-header > div,
+    .setting-details > label,
+    .setting-header > label {
+        display: flex;
+        align-items: center; /* Centre verticalement */
+        gap: 10px;
+    }
+
+    .setting-details label,
+    .setting-header label {
+        display: flex;
+        align-items: center; /* Centre verticalement */
+        gap: 10px;
+        text-align: left;
+    }
+
+    .zone-type {
+        flex: 1 1 100%;
+        min-width: unset;
+    }
+
+    .setting-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+
+    .number-input {
+        width: 80px;
+        min-width: 60px;
+        max-width: 100px;
+        padding: 8px 10px;
+        text-align: right;
+        font-size: 16px;
+        border: none;
+        border-radius: 3px;
+        background-color: rgba(255, 255, 255, 0.9);
+        transition: all 0.3s ease;
+        align-self: center; /* Centre l'input verticalement */
+    }
+
+    /* Style des inputs checkbox à l'intérieur de setting-details */
+.setting-header input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+}
+
+    /* Ajustement pour les groupes de bonus */
+    .settings-group .setting-group {
+        padding: 10px;
+    }
+
+    .is-mobile #gameContainer {
+        transform: translateZ(0);
+        backface-visibility: hidden;
+        perspective: 1000;
+    }
+
+    .is-mobile canvas {
+        touch-action: none;
+    }
+
+    /* Optimiser les animations sur mobile */
+    .is-mobile .activeBonus,
+    .is-mobile .mobile-action-button,
+    .is-mobile .joystick-stick {
+        will-change: transform;
+    }
+
+    /* Améliorer la réactivité du joystick */
+    .is-mobile .joystick-stick {
+        transition: none;
+    }
+
+    /* Éviter le flou sur les textes */
+    .is-mobile #timer,
+    .is-mobile #score,
+    .is-mobile .player-name {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    #timer {
+        padding: 10px 20px;
+    }
+    
+    #timerLabel {
+        font-size: 14px;
+    }
+    
+    #time {
+        font-size: 32px;
+    }
+    
+    #timer.urgent #time {
+        font-size: 40px;
+    }
+
+    .menu-content, .settings-content {
+       /* width: 95%;*/
+        padding: 15px;
+    }
+
+    h1 {
+        font-size: 36px;
+    }
+
+    .game-over-content {
+        padding: 20px;
+    }
+
+    .podium-block {
+        width: 80px;
+    }
+
+    .first .podium-block { height: 160px; }
+    .second .podium-block { height: 120px; }
+    .third .podium-block { height: 80px; }
+
+    #playerList {
+        top: 100px;
+        right: 5px;
+        transform: none;
+        min-width: 80px;
+        max-width: 150px;
+        max-height: 200px;
+        font-size: 12px;
+        padding: 8px;
+    }
+
+    h3 {
+        font-size: 1.5rem;
+        text-align: center;
+    }
+
+    #players li {
+        padding: 2px 10px;
+        margin: 3px 0;
+    }
+
+    .player-name {
+        font-weight: bold;
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100px;
+      }
+
+    /* Adapter le timer */
+    #timer {
+        padding: 8px 15px;
+    }
+
+    #timerLabel {
+        font-size: 12px;
+    }
+
+    #time {
+        font-size: 24px;
+    }
+
+    #timer.urgent #time {
+        font-size: 32px;
+    }
+
+    /* Masquer le score sous le timer */
+    #score {
+        display: none;
+    }
+
+    /* Masquer les panneaux d'aide */
+    #instructions, 
+    #controls {
+        display: none !important;
+    }
+
+    /* Ajuster les bonus actifs pour qu'ils ne gênent pas les contrôles */
+    #activeBonuses {
+        bottom: 180px;
+    }
+
+    .activeBonus {
+        padding: 5px 10px;
+        font-size: 12px;
+    }
+
+    .activeBonus img {
+        width: 18px;
+        height: 18px;
+    }
+
+    /* Styles pour les malus */
+.malus-notification {
+    background-color: rgba(255, 68, 68, 0.9);
+    color: white;
+    padding: 15px 30px;
+    border-radius: 3px;
+    font-family: 'PermanentMarker-Regular', sans-serif;
+    position: fixed;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2001;
+    text-align: center;
+    min-width: 300px;
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.3);
+    animation: malusNotification 3s ease-out forwards;
+}
+
+.malus-notification.trigger {
+    background-color: rgba(68, 68, 255, 0.9);
+    box-shadow: 0 0 20px rgba(0, 0, 255, 0.3);
+}
+
+.malus-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
+    filter: brightness(0) invert(1);
+}
+
+.malus-notification.receive {
+    background-color: rgba(255, 68, 68, 0.9);
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.3);
+}
+
+@keyframes malusNotification {
+    0% { 
+        transform: translate(-50%, -30%); 
+        opacity: 0; 
+    }
+    10% { 
+        transform: translate(-50%, -50%); 
+        opacity: 1; 
+    }
+    90% { 
+        transform: translate(-50%, -50%); 
+        opacity: 1; 
+    }
+    100% { 
+        transform: translate(-50%, -70%); 
+        opacity: 0; 
+    }
+}
+
+    /* Ajustement du conteneur principal du jeu pour le zoom */
+    #gameContainer {
+        overflow: hidden;
+    }
+
+    /* Améliorer la netteté du rendu */
+    canvas {
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+        image-rendering: pixelated;
+    }
+
+    #mobileLocateButton {
+        transition: all 0.2s ease;
+    }
+    
+    #mobileLocateButton.active {
+        transform: scale(0.9);
+        background-color: rgba(204, 153, 255, 0.9);
+    }
+
+    #controls {
+        bottom: 90px;
+    }
+
+    #activeBonuses {
+        bottom: 10px;
+        padding: 8px;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+        width: 90%;
+        max-width: 400px;
+    }
+
+    .activeBonus {
+        padding: 6px 12px;
+        font-size: 14px;
+    }
+    
+    #gameInfo {
+        width: 90%;
+        max-width: 300px;
+    }
+
+    .waiting-room-content {
+        width: 95%;
+    }
+
+    .mobile-controls * {
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+        transform-style: preserve-3d;
+        -webkit-transform-style: preserve-3d;
+    }
+}
+
+/* Pour les très petits écrans */
+@media (max-width: 380px) {
+    #playerList {
+        max-width: 120px;
+        font-size: 11px;
+    }
+
+    #activeBonuses {
+        bottom: 200px;
+    }
+}
+
+/* Pour les écrans en mode paysage */
+@media (max-width: 900px) and (orientation: landscape) {
+
+    #playerList {
+        max-width: 180px;
+        max-height: 150px;
+    }
+
+    #activeBonuses {
+        bottom: 100px;
+    }
+}
+
+/* Ajustements spécifiques pour les petits écrans */
+@media (max-width: 360px) {
+    .mobile-action-button {
+        width: 50px;
+        height: 50px;
+        bottom: 80px;
+        right: 30px;
+    }
+
+    .mobile-action-button img {
+        width: 25px;
+        height: 25px;
+    }
+    .settings-content {
+        padding: 15px;
+    }
+
+    .setting-group {
+        padding: 10px;
+    }
+
+    .settings-buttons {
+        flex-direction: column;
+    }
+
+    .settings-buttons button {
+        width: 100%;
+    }
+}
+
+/* Correction pour les écrans en mode paysage */
+@media (max-height: 600px) and (orientation: landscape) {
+    .mobile-action-button {
+        bottom: 20px;
+        right: 20px;
+    }
+    .settings-content {
+        max-height: 230vh;
+        margin: 10px auto;
+    }
+
+    .setting-group {
+        padding: 12px;
+        margin-bottom: 12px;
+    }
+    .settings-content {
+        max-height: auto;
+        margin: 10px auto;
+    }
+    .primary-button, .secondary-button {
+        height:40px;
+    }
+}
+
+/* Désactiver les interactions par défaut sur mobile */
+@media (max-width: 768px) {
+    .setting-details > div {
+        flex: 1 1 100%; /* En mobile, prendre toute la largeur */
+    }
+
+    .setting-details label {
+        min-width: 150px; /* Réduire la largeur minimum sur mobile */
+    }
+    * {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .primary-button, .secondary-button {
+        height:40px;
+        font-size: 14px;
+    }
+}
+
+@media (max-height: 450px) and (orientation: landscape) {
+    .menu-content {
+        width: 70vh;
+        height: 70vh;
+    }
+    
+    .menu-content h1 {
+        font-size: clamp(20px, 4vmin, 36px);
+        margin-bottom: 2vmin;
+    }
+    
+    .menu-form {
+        gap: 1.5vmin;
+    }
+}
+
+.version-display {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    font-family: monospace;
+    z-index: 1000;
+    pointer-events: none;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Style pour la version dans le menu principal */
+#mainMenu .version-display {
+    bottom: 20px;
+    left: 20px;
+    font-size: 14px;
+}
+
+/* Style pour la version en jeu */
+#gameScreen .version-display {
+    opacity: 0.3;
+}
+
+/* Animation subtile au survol */
+.version-display:hover {
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.redirect-timer {
+    margin-top: 5px;
+    text-align: center;
+    color: #888;
+    font-size: 0.9em;
+}
+
+.floating-points {
+    position: absolute;
+    pointer-events: none;
+    font-family: 'PermanentMarker-Regular', sans-serif;
+    font-size: 25px;
+    font-weight: bold;
+    text-shadow: 0 0 2px rgba(0,0,0,0.8);
+    z-index: 1000;
+}
+
+.floating-points[data-type="blackbot"] {
+    font-size: 35px;
+    color: #ffd700;
+    text-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
+}
+
+/* Animation du score qui augmente (effet de battement de cœur) */
+@keyframes scoreIncrease {
+    0% { 
+        transform: scale(1); 
+        color: inherit;
+    }
+    25% { 
+        transform: scale(1.4); 
+        color: #7fff7f;
+    }
+    50% { 
+        transform: scale(1.2);
+        color: #7fff7f;
+    }
+    75% { 
+        transform: scale(1.3);
+        color: #7fff7f;
+    }
+    100% { 
+        transform: scale(1);
+        color: inherit;
+    }
+}
+
+/* Animation du score qui diminue (clignotement) */
+@keyframes scoreDecrease {
+    0% { 
+        opacity: 1;
+        color: inherit;
+    }
+    25% { 
+        opacity: 0.3;
+        color: #ff7f7f;
+    }
+    50% { 
+        opacity: 1;
+        color: #ff7f7f;
+    }
+    75% { 
+        opacity: 0.3;
+        color: #ff7f7f;
+    }
+    100% { 
+        opacity: 1;
+        color: inherit;
+    }
+}
+
+.score-increase {
+    animation: scoreIncrease 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.score-decrease {
+    animation: scoreDecrease 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Phase 1 : Monter */
+@keyframes floatUp {
+    0% {
+        transform: translateY(0);
+        opacity: 0;
+    }
+    20% {
+        transform: translateY(-50px);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-50px);
+        opacity: 1;
+    }
+}
+
+/* Phase 2 : Se déplacer vers le score */
+@keyframes moveToScore {
+    0% {
+        transform: translate(0, -50px);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(var(--targetX), var(--targetY));
+        opacity: 0;
+    }
+}
+
+.floating-points.phase1 {
+    animation: floatUp 0.5s ease-out forwards;
+}
+
+.floating-points.phase2 {
+    animation: moveToScore 0.8s ease-in forwards;
+}
+
+/* Ajustements responsive */
+@media (max-width: 768px) {
+    .player-list-item:nth-child(1) .player-score { font-size: 24px; }
+    .player-list-item:nth-child(2) .player-score { font-size: 22px; }
+    .player-list-item:nth-child(3) .player-score { font-size: 20px; }
+    .player-list-item:nth-child(n+4) .player-score { font-size: 18px; }
+}
+
+/* Base pour tous les effets visuels */
+.visual-effect {
+    position: absolute;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    z-index: 999;
+}
+
+/* Effet de flash */
+.capture-flash {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    animation: captureFlash 0.4s ease-out forwards;
+    background: rgba(255, 255, 255, 0.8);
+}
+
+/* Effet d'explosion pour les black bots */
+.explosion-effect {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    animation: explode 1s ease-out forwards;
+    background: radial-gradient(circle, rgba(255,215,0,0.8) 0%, rgba(255,215,0,0) 70%);
+}
+
+/* Effet de capture sur le bot */
+.bot-being-captured {
+    animation: botCapture 0.4s ease-out;
+}
+
+/* Animations */
+@keyframes captureFlash {
+    0% {
+        transform: translate(-50%, -50%) scale(0.8);
+        opacity: 0.8;
+    }
+    50% {
+        transform: translate(-50%, -50%) scale(1.5);
+        opacity: 0.6;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(2);
+        opacity: 0;
+    }
+}
+
+@keyframes explode {
+    0% {
+        transform: translate(-50%, -50%) scale(0.5);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(2);
+        opacity: 0;
+    }
+}
+
+@keyframes botCapture {
+    0% {
+        filter: brightness(2) saturate(0);
+        transform: scale(1);
+    }
+    50% {
+        filter: brightness(3) saturate(0);
+        transform: scale(1.2);
+    }
+    100% {
+        filter: brightness(1) saturate(1);
+        transform: scale(1);
+    }
+}
+
+/* Styles pour le sélecteur de map */
+.map-select {
+    background-color: rgba(255, 255, 255, 0.9);
+    color: #2c3e50;
+    border: none;
+    border-radius: 3px;
+    padding: 8px 15px;
+    font-size: 14px;
+    width: 150px;
+    transition: all 0.3s ease;
+}
+
+.map-select:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 1);
+    transform: translateY(-2px);
+}
+
+.map-select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Style pour la checkbox du mode miroir */
+.map-mirror {
+    margin-left: 10px;
+    cursor: pointer;
+}
+
+.map-mirror:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* Style pour le bouton pause */
+#pauseButton {
+    pointer-events: auto;
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: none;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(5px);
+    transition: all 0.3s ease;
+    border: 2px solid rgba(204, 153, 255, 0.3);
+}
+
+#pauseButton:hover {
+    background: rgba(0, 0, 0, 0.7);
+    transform: scale(1.1);
+}
+
+#pauseButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pause-icon {
+    width: 25px;
+    height: 25px;
+    filter: invert(1);
+}
+
+/* Styles pour la pause */
+.pause-content {
+    text-align: center;
+}
+
+.pause-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+
+/* Contrôles audio flottants */
+.audio-controls {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+    color: #2c3e50;
+    transition: all 0.3s ease;
+    color: white;
+    backdrop-filter: blur(4px);
+    border: 2px solid rgba(204, 153, 255, 0.3);
+    border-radius: 50%;
+}
+
+.audio-toggle {
+    background: rgba(0, 0, 0, 0.5);
+    border: none;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(5px);
+    transition: all 0.3s ease;
+}
+
+.audio-toggle:hover {
+    background: rgba(0, 0, 0, 0.7);
+    transform: scale(1.1);
+}
+
+.audio-icon {
+    width: 25px;
+    height: 25px;
+    filter: invert(1);
+}
+
+.mute-icon {
+    width: 25px;
+    height: 25px;
+    filter: invert(1);
+}
+
+.audio-panel {
+    position: absolute;
+    top: 50px;
+    right: 0;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 15px;
+    border-radius: 3px;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    min-width: 250px;
+}
+
+.audio-panel h3 {
+    color: #fff;
+    margin: 0 0 15px 0;
+    font-size: 16px;
+}
+
+.audio-settings .setting-group {
+    margin-bottom: 10px;
+}
+
+.audio-settings label {
+    display: block;
+    color: #fff;
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+.audio-settings input[type="range"] {
+    width: 100%;
+    margin: 5px 0;
+}
+
+.volume-value {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+    float: right;
+}
+
+.mute-toggle {
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.mute-toggle.muted {
+    background: rgba(255, 0, 0, 0.2);
+}
+
+.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(10px);
+}
+
+/* Overlay de compte à rebours */
+.countdown-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    z-index: 2000;
+    display: none; /* Au lieu de flex par défaut */
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.countdown-overlay.visible {
+    display: flex;
+    opacity: 1;
+}
+
+.countdown-content {
+    padding: 40px;
+    text-align: center;
+    animation: countdownAppear 0.5s ease;
+}
+
+.countdown-timer {
+    font-family: 'PermanentMarker-Regular', sans-serif;
+    font-size: 72px;
+    color: #cc99ff;
+    margin: 20px 0;
+    text-shadow: 0 0 15px rgba(204, 153, 255, 0.5);
+}
+
+.countdown-text {
+    font-size: 24px;
+    margin-left: 10px;
+}
+
+@keyframes countdownAppear {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Le bouton d'annulation n'est visible que pour le propriétaire */
+#cancelCountdown {
+    display: none;
+    align-content: center;
+}
+
+#cancelCountdown.owner {
+    display: block;
+    margin-top: 20px;
+}
+
+/* Animation du compte à rebours */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.countdown-urgent {
+    color: #ff3333;
+    animation: pulse 1s infinite;
+    font-family: 'PermanentMarker-Regular', sans-serif;
+}
+
+/* Par défaut, les éléments owner-only sont cachés */
+.owner-only {
+    display: none;
+}
+
+/* Si l'élément a les classes owner-only ET owner, alors il est affiché */
+.owner-only.owner {
+    display: block;
+    margin: auto;
+}
+
+/* Ajouter dans votre fichier CSS */
+.tablet-controls .joystick-base {
+    width: 180px;  /* Plus grand pour les tablettes */
+    height: 180px;
+}
+
+.tablet-controls .joystick-stick {
+    width: 80px;   /* Plus grand pour les tablettes */
+    height: 80px;
+}
+
+.tablet-controls #mobileLocateButton {
+    width: 70px;   /* Plus grand pour les tablettes */
+    height: 70px;
+    font-size: 24px;
+}
+
+/* Ajuster la position des contrôles pour les tablettes en mode paysage */
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+    .tablet-controls .joystick-base {
+        bottom: 40px;
+        left: 40px;
+    }
+    
+    .tablet-controls #mobileLocateButton {
+        bottom: 40px;
+        right: 40px;
+    }
+}

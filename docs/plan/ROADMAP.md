@@ -3,6 +3,7 @@
 Plan d'exécution découpé en étapes calibrées pour une conversation Claude Code chacune. Ce fichier est la carte. La fiche détaillée de chaque étape est dans docs/plan/etape-X-Y.md, à lire avant d'attaquer l'étape.
 
 Ce document distingue deux choses:
+
 - **L'ordre d'exécution** (section 3), qui organise le travail en jalons livrables.
 - **La carte thématique** (section 4), qui regroupe les étapes par domaine.
 

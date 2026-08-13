@@ -16,18 +16,18 @@ Il y a un ecart total entre la constitution du projet et le code reel.
 
 Verifie concretement:
 
-| Element promis par CLAUDE.md | Etat reel |
-| --- | --- |
-| `packages/*` | N'existe pas |
-| TypeScript | Aucun fichier `.ts`, aucun `tsconfig.json` |
-| PixiJS | Absent. Le rendu est en Canvas 2D natif |
-| PostgreSQL / Neon | Absent. Aucune persistance, aucune dependance base de donnees |
-| Vitest / Playwright | Absents du `package.json`. Aucune dependance de test installee |
-| GitHub Actions | Aucun repertoire `.github/` |
-| `docs/plan/ROADMAP.md`, `docs/plan/PROTOCOLE.md` | N'existent pas |
-| `docs/handoffs/` et son `_TEMPLATE.md` | N'existent pas |
-| `.claude/rules/` (regle de purete de sim) | N'existe pas |
-| Section "Commandes" de CLAUDE.md | Laissee vide, "a completer a la fin de l'etape 0.1" |
+| Element promis par CLAUDE.md                     | Etat reel                                                      |
+| ------------------------------------------------ | -------------------------------------------------------------- |
+| `packages/*`                                     | N'existe pas                                                   |
+| TypeScript                                       | Aucun fichier `.ts`, aucun `tsconfig.json`                     |
+| PixiJS                                           | Absent. Le rendu est en Canvas 2D natif                        |
+| PostgreSQL / Neon                                | Absent. Aucune persistance, aucune dependance base de donnees  |
+| Vitest / Playwright                              | Absents du `package.json`. Aucune dependance de test installee |
+| GitHub Actions                                   | Aucun repertoire `.github/`                                    |
+| `docs/plan/ROADMAP.md`, `docs/plan/PROTOCOLE.md` | N'existent pas                                                 |
+| `docs/handoffs/` et son `_TEMPLATE.md`           | N'existent pas                                                 |
+| `.claude/rules/` (regle de purete de sim)        | N'existe pas                                                   |
+| Section "Commandes" de CLAUDE.md                 | Laissee vide, "a completer a la fin de l'etape 0.1"            |
 
 Deux fiches d'etape sont presentes a la racine, `etape-3-1.md` (base de donnees) et `etape-5-3.md` (deploiement en parallele), mais elles ne sont pas dans `docs/plan/`, elles ne sont pas suivies d'un ROADMAP, et elles decrivent des etapes tres avancees d'un plan dont les etapes 0, 1 et 2 n'ont jamais ete faites. Ces deux fiches sont orphelines.
 
@@ -75,16 +75,16 @@ Point de conception important: le score est un **stock, pas un cumul**. Se faire
 
 ### Inventaire des fichiers
 
-| Fichier | Lignes | Role |
-| --- | --- | --- |
-| `server.js` | 2 812 | Tout le serveur: Express, Socket.IO, etat, entites, boucle de jeu |
-| `public/client.js` | 4 367 | Tout le client: interface, rendu, entrees, reseau, audio |
-| `public/styles.css` | 3 761 | Styles |
-| `public/index.html` | 592 | Structure |
-| `public/js/MapManager.js` | 465 | Rendu des cartes et collisions cote client |
-| `public/js/AudioManager.js` | 364 | Sons et musiques |
-| `game-constants.js` | 134 | Constantes serveur |
-| `public/js/game-constants.js` | 71 | Constantes client (duplication partielle) |
+| Fichier                       | Lignes | Role                                                              |
+| ----------------------------- | ------ | ----------------------------------------------------------------- |
+| `server.js`                   | 2 812  | Tout le serveur: Express, Socket.IO, etat, entites, boucle de jeu |
+| `public/client.js`            | 4 367  | Tout le client: interface, rendu, entrees, reseau, audio          |
+| `public/styles.css`           | 3 761  | Styles                                                            |
+| `public/index.html`           | 592    | Structure                                                         |
+| `public/js/MapManager.js`     | 465    | Rendu des cartes et collisions cote client                        |
+| `public/js/AudioManager.js`   | 364    | Sons et musiques                                                  |
+| `game-constants.js`           | 134    | Constantes serveur                                                |
+| `public/js/game-constants.js` | 71     | Constantes client (duplication partielle)                         |
 
 Deux fichiers concentrent 7 179 lignes, soit l'essentiel de la logique.
 
@@ -157,12 +157,14 @@ Cote serveur, la representation est un tableau de tableaux de booleens de la tai
 ### Failles de securite
 
 **S1. Injection de code par le pseudonyme (stored XSS).** Le pseudonyme n'est valide nulle part: le client verifie seulement qu'il n'est pas vide, le serveur ne verifie rien du tout (ni longueur, ni caracteres, ni unicite). Il est ensuite injecte tel quel dans du HTML a plusieurs endroits:
+
 - `public/client.js:3937` et `:3970`, modale de fin de partie
 - `public/client.js:4211`, modale de capture
 
 Un pseudonyme contenant du code s'execute donc dans le navigateur de **tous** les autres joueurs a la fin de la partie. Le chat, lui, est correctement protege (il utilise `textContent`), ce qui montre que la protection a ete pensee a un endroit et oubliee aux autres.
 
 **S2. Vitesse de deplacement non controlee.** Trois problemes cumulables dans le gestionnaire `move` (`server.js:2604`):
+
 - `data.speedBoostActive` est cru sur parole: envoyer `true` en permanence donne un bonus de vitesse permanent (x1,7).
 - `data.isMobile` est cru sur parole: l'envoyer donne le facteur mobile (x2). Cumule avec le precedent: x3,4.
 - **Aucune limitation du debit de messages**: la vitesse etant appliquee par message recu, un client modifie qui emet 1 000 messages par seconde se deplace 50 fois plus vite qu'un joueur normal.
@@ -215,13 +217,13 @@ C'est le point le plus important pour ne pas repeter les memes erreurs.
 
 Le depot contient huit branches. Trois racontent des tentatives de refonte abandonnees:
 
-| Branche | Derniere activite | Contenu |
-| --- | --- | --- |
-| `refacto` | nov. 2024 | "refacto complete 1.0", arborescence `src/`, abandonnee |
-| `team-mode` | nov. 2024 | Mode equipe, commit intitule "non fonctionnel" |
-| `mode-strategique` | aout 2025 | Documentation d'architecture, premiers tests |
-| `refactoring/modular-architecture` | aout 2025 | Refonte modulaire complete, 24 modules, tests, optimisations |
-| `modular-architecture-broken` | 13 aout 2025 | Suite de la precedente, +149 000 lignes, **nom explicite** |
+| Branche                            | Derniere activite | Contenu                                                      |
+| ---------------------------------- | ----------------- | ------------------------------------------------------------ |
+| `refacto`                          | nov. 2024         | "refacto complete 1.0", arborescence `src/`, abandonnee      |
+| `team-mode`                        | nov. 2024         | Mode equipe, commit intitule "non fonctionnel"               |
+| `mode-strategique`                 | aout 2025         | Documentation d'architecture, premiers tests                 |
+| `refactoring/modular-architecture` | aout 2025         | Refonte modulaire complete, 24 modules, tests, optimisations |
+| `modular-architecture-broken`      | 13 aout 2025      | Suite de la precedente, +149 000 lignes, **nom explicite**   |
 
 ### La lecon a retenir
 

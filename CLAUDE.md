@@ -55,13 +55,25 @@ Note: `server.js` est identique entre v0.8.5 et v0.8.6, seuls le client et les s
 
 ## Commandes
 
-À compléter à la fin de l'étape 0.1, une fois l'outillage en place.
+Gestionnaire de paquets: **pnpm**. Node 24. Si `pnpm` est absent: `npm i -g pnpm` (corepack échoue sans droits administrateur sur cette machine).
 
-- Installer les dépendances:
-- Lancer tous les tests:
-- Lancer un sous-ensemble de tests:
-- Démarrer en mode développement:
-- Lancer les tests de bout en bout:
+```bash
+pnpm install              # installer les dépendances
+pnpm verify               # types, linter et tests: à lancer avant tout commit
+pnpm typecheck            # vérifier les types sur tous les paquets
+pnpm lint                 # linter, dont l'invariant de pureté de packages/sim
+pnpm format               # formater; pnpm format:check pour vérifier sans écrire
+pnpm test                 # tests unitaires et d'intégration (Vitest)
+pnpm test:watch           # les mêmes, en surveillance
+pnpm test:coverage        # couverture, mesurée sur sim et shared
+pnpm test:e2e             # tests de bout en bout (Playwright)
+```
+
+Lancer un sous-ensemble de tests: `pnpm test <motif>`, par exemple `pnpm test purity` ou `pnpm test packages/sim`.
+
+Il n'y a pas encore de mode développement: aucun serveur ni client exécutable avant les étapes 2.2 et 4.1. Pour jouer à la version d'origine, utiliser la branche `master`.
+
+Première utilisation de Playwright sur une machine neuve: `pnpm exec playwright install chromium`.
 
 ## Conventions de code
 

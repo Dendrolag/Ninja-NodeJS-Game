@@ -26,18 +26,18 @@ Proposition complémentaire pertinente: **TypeScript**. Vous faites une réécri
 
 Ce qu'on récupère du code existant, fichier par fichier. L'objectif est de préserver les deux ans de réglage de gameplay, pas de tout retaper.
 
-| Fichier legacy | Destination | Traitement |
-|---|---|---|
-| `game-constants.js` | `packages/shared` | Conservé quasi tel quel, déjà propre et partagé |
-| `server.js` (classes et fonctions de jeu) | `packages/sim` | Porté dans le cœur pur, rendu sans I/O ni horloge |
-| `server.js` (Socket.IO, routes, état global) | `packages/server` | Reconstruit autour de `GameRoom` et `RoomManager` |
-| `MapManager.js` | `packages/client` | Déjà modulaire, portage quasi direct |
-| `AudioManager.js` | `packages/client` | Déjà modulaire, portage quasi direct |
-| `client.js` (boucle de rendu) | `packages/client` | Logique de rendu portée vers PixiJS |
-| `client.js` (140 variables globales, menus) | `packages/client` | Reconstruit avec séparation état et rendu |
-| `styles.css` | `packages/client` | Repris et élagué (3965 lignes, code mort probable) |
-| `index.html` | `packages/client` | Reconstruit selon le nouveau client |
-| `server-v0-8-5.js` | supprimé | Doublon d'ancienne version, à retirer |
+| Fichier legacy                               | Destination       | Traitement                                         |
+| -------------------------------------------- | ----------------- | -------------------------------------------------- |
+| `game-constants.js`                          | `packages/shared` | Conservé quasi tel quel, déjà propre et partagé    |
+| `server.js` (classes et fonctions de jeu)    | `packages/sim`    | Porté dans le cœur pur, rendu sans I/O ni horloge  |
+| `server.js` (Socket.IO, routes, état global) | `packages/server` | Reconstruit autour de `GameRoom` et `RoomManager`  |
+| `MapManager.js`                              | `packages/client` | Déjà modulaire, portage quasi direct               |
+| `AudioManager.js`                            | `packages/client` | Déjà modulaire, portage quasi direct               |
+| `client.js` (boucle de rendu)                | `packages/client` | Logique de rendu portée vers PixiJS                |
+| `client.js` (140 variables globales, menus)  | `packages/client` | Reconstruit avec séparation état et rendu          |
+| `styles.css`                                 | `packages/client` | Repris et élagué (3965 lignes, code mort probable) |
+| `index.html`                                 | `packages/client` | Reconstruit selon le nouveau client                |
+| `server-v0-8-5.js`                           | supprimé          | Doublon d'ancienne version, à retirer              |
 
 ## 3. Structure du dépôt
 
@@ -71,6 +71,7 @@ La pyramide est large à la base (beaucoup de tests unitaires rapides) et fine a
 La fondation. Ils testent le cœur pur, fonction par fonction, sans réseau ni rendu.
 
 Exemples concrets sur ce jeu.
+
 - Étant donné deux entités à des positions données, la détection de collision renvoie le bon résultat.
 - Étant donné un joueur en mode capture orienté dans une direction, le cône inclut bien telle cible et exclut telle autre (les fonctions `checkEntityInCone`, `getAngleBetweenVectors`, `getEntitiesInCaptureRange`).
 - Étant donné un bonus ramassé, l'effet correct est appliqué pour la bonne durée.
@@ -94,6 +95,7 @@ Outil: Vitest pour l'orchestration, socket.io-client pour les clients simulés, 
 Ils rejouent les parcours réels d'un joueur dans un vrai navigateur. C'est ici que le multijoueur se teste vraiment.
 
 Exemples de parcours critiques.
+
 - Inscription puis connexion, rejoindre une partie publique, jouer, capturer un bot, voir le score, vérifier que la progression est sauvegardée.
 - Deux clients simultanés dans une même partie privée (via code d'invitation), l'un capture l'autre, les deux voient un état cohérent. C'est le test multijoueur fondamental.
 - Rendu PixiJS: le canvas se monte, le nombre d'entités affichées correspond à l'état serveur, la fréquence d'images ne s'effondre pas.

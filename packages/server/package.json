@@ -1,0 +1,22 @@
+{
+  "name": "@neon-ninja/server",
+  "version": "0.0.0",
+  "description": "Express, Socket.IO, GameRoom et RoomManager. Depend de sim",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build"
+  },
+  "dependencies": {
+    "@neon-ninja/shared": "workspace:*",
+    "@neon-ninja/sim": "workspace:*"
+  }
+}

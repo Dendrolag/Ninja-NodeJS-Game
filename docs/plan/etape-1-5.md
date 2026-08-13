@@ -21,8 +21,7 @@ Intégrer dans packages/sim le comportement des bots (déplacement, ciblage, dé
 3. Porter createBots (ligne 1547), addBot (ligne 1553), updateBots (ligne 1558) et spawnBlackBots (ligne 1333), en faisant passer toute apparition et tout choix aléatoire par la graine.
 4. Porter resetPlayer (ligne 1456) si la réinitialisation relève de la logique de jeu plutôt que du serveur. Si elle relève du cycle de vie serveur, la laisser pour la phase 2 et le noter dans le handoff.
 
-Ne pas porter Bot.unstuck (ligne 1034): elle n'est jamais appelée dans le legacy et invoque une méthode collisionMap.findValidSpawnPosition qui n'existe pas. C'est du code mort. Le dégagement effectif se fait par findEscapePath (ligne 1007).
-5. Brancher la mise à jour des bots dans la boucle tick.
+Ne pas porter Bot.unstuck (ligne 1034): elle n'est jamais appelée dans le legacy et invoque une méthode collisionMap.findValidSpawnPosition qui n'existe pas. C'est du code mort. Le dégagement effectif se fait par findEscapePath (ligne 1007). 5. Brancher la mise à jour des bots dans la boucle tick.
 
 ## Hors périmètre
 

@@ -9,3 +9,14 @@ node_modules/
 
 # Reglages Claude Code propres a la machine
 .claude/settings.local.json
+
+# Sorties de compilation TypeScript
+dist/
+*.tsbuildinfo
+
+# Rapports de tests
+coverage/
+playwright-report/
+test-results/
+blob-report/
+.playwright/

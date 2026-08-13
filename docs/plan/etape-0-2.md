@@ -17,6 +17,7 @@ Produire une suite de tests de caractérisation (golden master) qui enregistre, 
 Le legacy (server.js dans legacy/) est un module à état global, mêlé aux sockets et au temps. On ne teste donc pas ses fonctions internes de façon isolée et fragile. On capture le comportement au niveau le plus stable: le résultat d'un traitement de jeu sur un état connu.
 
 Démarche:
+
 1. Identifier le plus petit ensemble de fonctions legacy qui calculent la logique d'un instant de jeu sur un état donné, en neutralisant la diffusion réseau (remplacer l'émission de sendUpdates par un espion) et le temps (valeurs fixes).
 2. Construire une poignée de scénarios déterministes (positions, directions, états des entités fixés à la main).
 3. Exécuter le traitement et enregistrer la sortie comme référence (instantané).
