@@ -8,6 +8,14 @@ Lire CLAUDE.md, puis le handoff de l'étape 0.1 dans docs/handoffs/, puis cette 
 
 Base legacy: master v0.8.6, figée en lecture seule dans legacy/ à l'étape 0.1. Tous les numéros de ligne de cette fiche s'y réfèrent.
 
+## Réconciliation avec le dépôt (session du 13 août 2026)
+
+Note ajoutée pendant l'exécution, conformément à la règle « réconcilier avant d'exécuter » de CLAUDE.md. Trois écarts, tous mineurs, la fiche est par ailleurs exacte: les numéros de ligne cités correspondent au caractère près à `legacy/server.js`.
+
+1. **Zone dédiée retenue: `tests/caracterisation/`.** La fiche demandait une zone dédiée sans la nommer.
+2. **Le glissement le long d'un mur n'est pas dans `canMove`.** La fiche le range sous les collisions de terrain. En réalité `CollisionMap.canMove` ne renvoie qu'un booléen; la résolution qui fait glisser le joueur (essai du mouvement complet, puis des axes séparés, puis de six angles) vit dans le gestionnaire `move`, ligne 2604. C'est là qu'elle a été caractérisée.
+3. **`CollisionMap.initialize` dépend de la bibliothèque native `canvas`**, absente du dépôt réécrit et non installable sans compilation. Le décodage de l'image lui est substitué par des pixels connus; le seuillage à 128 exercé par les tests est bien celui du legacy.
+
 ## Objectif
 
 Produire une suite de tests de caractérisation (golden master) qui enregistre, pour des situations de jeu précises, ce que le legacy produit aujourd'hui: qui capture qui, quels scores, quelles collisions, quels effets de bonus et de malus. Si le portage en phase 1 reproduit ces mêmes sorties, le ressenti de jeu est préservé.

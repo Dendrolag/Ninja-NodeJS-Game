@@ -1,0 +1,40 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`classement > produit l instantane de reference du classement complet 1`] = `
+[
+  {
+    "blackBotsDestroyed": 1,
+    "capturedBy": {
+      "a": {
+        "count": 2,
+        "nickname": "Alice",
+      },
+    },
+    "capturedByBlackBot": 3,
+    "capturedPlayers": {},
+    "captures": 0,
+    "color": "#0000FF",
+    "currentBots": 21,
+    "id": "b",
+    "nickname": "Bob",
+    "totalBotsControlled": 0,
+  },
+  {
+    "blackBotsDestroyed": 0,
+    "capturedBy": {},
+    "capturedByBlackBot": 0,
+    "capturedPlayers": {
+      "b": {
+        "count": 2,
+        "nickname": "Bob",
+      },
+    },
+    "captures": 2,
+    "color": "#FF0000",
+    "currentBots": 6,
+    "id": "a",
+    "nickname": "Alice",
+    "totalBotsControlled": 11,
+  },
+]
+`;
