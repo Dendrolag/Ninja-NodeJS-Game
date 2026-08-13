@@ -215,6 +215,20 @@ Ajoutes le 13 aout 2026. Contrairement aux precedents, ceux-ci ont ete constates
 
 **X15. `canMove` ignore son point de depart.** Ses deux premiers arguments (`fromX`, `fromY`) ne sont lus nulle part dans le corps de la methode (`:394`). C'est un echantillonnage ponctuel de la position d'arrivee, pas un balayage du trajet. Consequence mesuree: un mur de deux pixels de large se traverse en un seul deplacement, aucun des seize points du contour ne tombant dessus. Ce n'est pas un reglage de jeu, c'est une limite de methode, a traiter par conception a l'etape 1.2.
 
+### Defauts decouverts a l'etape 1.1
+
+Ajoutes le 13 aout 2026, en portant les classes `Entity` et `Player` dans le coeur de simulation.
+
+**X16. `Entity.lastX` et `Entity.lastY` sont des champs morts.** Le constructeur les initialise (`server.js:840`), et plus rien ne les lit ni ne les met a jour dans tout le fichier. Un lecteur suppose naturellement qu'ils portent la position precedente, utile pour un calcul de deplacement: c'est faux. Non portes.
+
+**X17. Les vitesses du legacy ne sont pas rapportees a la meme horloge.** Un joueur avance de 3 pixels **par message recu**, et son client de bureau en envoie un toutes les 20 millisecondes (`client.js:2770`). Un bot avance de 5 pixels **par battement de la boucle serveur**, qui tourne toutes les 50 millisecondes. Les deux nombres, 3 et 5, ne se comparent donc pas: ramenes a la seconde, le joueur va a 150 pixels par seconde et le bot a 100. Le joueur est en realite une fois et demie plus rapide qu'un bot, la ou la lecture du code laisse croire l'inverse.
+
+Consequences:
+
+- La formule « joueur 3, bot 5 » du point 5 de la section 6 decrit l'ecriture du legacy, pas le jeu ressenti. Elle reste utile comme reference du code d'origine, a condition de savoir ce qu'elle mesure.
+- Sur mobile, la manette envoie un deplacement toutes les 16 millisecondes avec le facteur 2, soit 375 pixels par seconde: plus du double du bureau. Ce n'est pas un reglage d'equilibrage, c'est la faille S2 vue sous un autre angle.
+- Le portage exprime les vitesses en pixels par seconde et fait avancer les entites proportionnellement au temps ecoule, ce qui preserve la vitesse reellement jouee et supprime la dependance au debit de messages.
+
 ### Poids et proprete du depot
 
 **P1. 72 Mo d'audio dont l'essentiel est mort.** `game-music-1.wav` pese 44,8 Mo et `menu-music-1.wav` 13,9 Mo. **Ni l'un ni l'autre n'est reference par le code.** S'y ajoutent `game-music.mp3` (3,7 Mo) et une dizaine de fichiers `.wav` doublons de `.mp3` effectivement utilises, eux aussi non references.
@@ -277,7 +291,7 @@ Le gameplay est regle depuis deux ans. Ce sont les comportements a couvrir par d
 2. **Une capture de joueur transfere tous ses bots d'un coup.** C'est le pic d'intensite du jeu.
 3. **Un bot noir fait perdre 50 pour cent des points**, un bot noir detruit en rapporte 15.
 4. **Un malus ramasse frappe les autres, pas soi.** Contre-intuitif, mais voulu.
-5. **Les vitesses relatives**: joueur 3, bot 5, bot noir 6, bonus de vitesse x1,7, facteur mobile x2. Le journal des versions montre au moins quatre corrections successives sur ce seul reglage (0.7.12, 0.7.13, 0.7.14, plus deux commits dedies). C'est fragile et cela demande des tests.
+5. **Les vitesses relatives**: joueur 3, bot 5, bot noir 5, bonus de vitesse x1,7, facteur mobile x2. Le journal des versions montre au moins quatre corrections successives sur ce seul reglage (0.7.12, 0.7.13, 0.7.14, plus deux commits dedies). C'est fragile et cela demande des tests. Deux corrections apportees depuis: le bot noir avance a 5 et non a 6 (defaut X13, corrige ici le 13 aout 2026), et ces nombres ne sont pas comparables entre eux tels quels, faute d'etre rapportes a la meme horloge (defaut X17).
 6. **La protection de 3 secondes au spawn** et le delai de 1 seconde entre deux captures.
 7. **Le compte a rebours de 5 secondes annulable jusqu'a 2 secondes.**
 8. **La cinematique de transfert de propriete** du salon quand le proprietaire part.

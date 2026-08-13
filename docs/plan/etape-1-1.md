@@ -49,6 +49,18 @@ Conditions de ROADMAP réunies, plus:
 3. Le linter confirme l'absence d'import ou d'appel interdit dans packages/sim.
 4. Les TU ci-dessus passent.
 
+## Réconciliation avec le dépôt
+
+Ajoutée le 13 août 2026, pendant l'exécution de l'étape. La fiche reste valable; ces précisions lèvent ses ambiguïtés.
+
+1. **Le point 2 du périmètre est reformulé.** Il demande de « remplacer les usages de hasard du legacy par ce générateur déterministe ». `legacy/` étant figé en lecture seule, rien n'y est remplacé: `getRandomColor` et `getUniqueColor` sont **portés** dans `packages/sim`, en versions qui reçoivent le générateur en paramètre.
+
+2. **Les constantes sont portées, les réglages de partie ne le sont que partiellement.** `game-constants.js` mélange deux choses: des constantes de moteur (vitesses, dimensions, durées, directions) et `DEFAULT_GAME_SETTINGS`, la configuration que l'hôte choisit dans le salon. Les premières sont portées en entier. Les seconds ne le sont qu'au fur et à mesure des étapes qui savent s'en servir: poser dès maintenant les réglages de bonus, de malus, de zones et de bots noirs reviendrait à tirer en avant du travail des étapes 1.4 et 1.5. Ce qui manque est listé en tête de `packages/shared/src/reglages.ts`.
+
+3. **Les vitesses changent d'unité.** Le legacy les exprime par pas, sans jamais regarder le temps. Le contrat `tick(etat, entrees, dt)` impose de les exprimer par seconde. La conversion et sa justification sont au défaut X17 de l'audit et au journal de `docs/design/README.md`.
+
+4. **`Bot` n'est pas porté.** La fiche ne demande que `Entity` et `Player`, et les bots relèvent de l'étape 1.5. Le type `Entite` est en place pour les accueillir.
+
 ## Rituel de fin de session
 
 Écrire docs/handoffs/etape-1-1-handoff.md. Décrire le modèle d'état retenu et la forme exacte du contrat tick (les fiches suivantes s'y appuient). Prochaine action exacte pour l'étape 1.2: porter PositionManager et CollisionMap, et les fonctions de collision, validées contre la caractérisation. Commiter.
