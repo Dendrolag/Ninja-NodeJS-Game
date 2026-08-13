@@ -1,2 +1,11 @@
 node_modules/
 .env
+
+# Fichiers systeme
+.DS_Store
+
+# Rapports generes par l'extension VS Code Counter
+.VSCodeCounter/
+
+# Reglages Claude Code propres a la machine
+.claude/settings.local.json
