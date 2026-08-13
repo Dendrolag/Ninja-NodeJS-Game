@@ -106,7 +106,7 @@ Classement selon les trois catégories de la fiche.
 ### A. Comportements de jeu, caractérisés tels quels
 
 1. **Un malus frappe les autres, pas son ramasseur.** Contre-intuitif, mais c'est le quatrième comportement à préserver de CLAUDE.md. Figé.
-2. **Les durées de bonus se cumulent** au lieu de se remplacer. Ramasser deux bonus de vitesse donne vingt secondes. Figé, mais à confirmer: est-ce voulu, ou un effet de bord de l'écriture?
+2. **Les durées de bonus se cumulent** au lieu de se remplacer. Ramasser deux bonus de vitesse donne vingt secondes. **Tranché le 13 août 2026: c'est voulu.** Inscrit dans les comportements à préserver de CLAUDE.md (point 10) et au journal de `docs/design/README.md`. À porter tel quel à l'étape 1.4.
 3. **La distance de sécurité au spawn ne s'applique jamais.** `registerEntity` n'est appelée nulle part, donc le registre de `PositionManager` reste vide et `SAFE_SPAWN_DISTANCE` est lettre morte. Un joueur peut réapparaître collé à un bot noir. Cité par la fiche comme exemple à caractériser tel quel: c'est fait, avec en plus un test montrant que le mécanisme fonctionnerait si on l'alimentait.
 4. **Les points de bots noirs sont définitivement acquis.** Une capture remet les bots à zéro mais pas ces 15 points par bot noir. Un joueur capturé peut donc rester en tête du classement. Figé.
 
@@ -131,7 +131,7 @@ Les quatre premiers étaient déjà dans l'audit, les cinq suivants sont nouveau
 4. **X5, les accesseurs dynamiques de `GAME_CONFIG` ne fonctionnent pas.** Confirmé: `GAME_CONFIG.WIDTH` renvoie toujours 2000.
 5. **`botsControlled` n'est jamais incrémenté.** Il est mis à zéro à cinq endroits, lu à un seul (`server.js:794`), où le serveur l'envoie au client dans `playerCapturedEnemy`. Le client reçoit donc toujours zéro. C'est `totalBotsCaptures` qui porte la vraie valeur.
 6. **La population de bots augmente à chaque capture par un bot noir.** `captureEntity` repeint en blanc les bots perdus, puis appelle `createWhiteBots(pointsLost)` qui en crée **autant de nouveaux**. Sur huit bots rouges: quatre repeints, quatre créés, soit huit bots blancs et douze bots au total au lieu de huit. Caractérisé avec un commentaire explicite.
-7. **Le bot noir avance à 5, pas à 6.** `BlackBot.baseSpeed` lit `GAME_CONFIG.BOT_SPEED`, qui vaut 5. Le réglage `blackBotSpeed: 6` de `DEFAULT_GAME_SETTINGS` n'est lu **nulle part** dans le legacy. Le commentaire du code le dit d'ailleurs: « Utiliser la même vitesse que les autres bots ». **CLAUDE.md et l'audit annoncent tous les deux 6: ils se trompent sur la base v0.8.6.** Deux tests figent la valeur réelle. À trancher à l'étape 1.5: rétablir 6 comme annoncé, ou garder 5 comme joué depuis deux ans. C'est un vrai choix de gameplay, pas une correction évidente.
+7. **Le bot noir avance à 5, pas à 6.** `BlackBot.baseSpeed` lit `GAME_CONFIG.BOT_SPEED`, qui vaut 5. Le réglage `blackBotSpeed: 6` de `DEFAULT_GAME_SETTINGS` n'est lu **nulle part** dans le legacy. Le commentaire du code le dit d'ailleurs: « Utiliser la même vitesse que les autres bots ». CLAUDE.md et l'audit annonçaient tous les deux 6: ils se trompaient sur la base v0.8.6. **Tranché le 13 août 2026: on garde 5**, la valeur réellement jouée depuis deux ans. CLAUDE.md et l'audit ont été corrigés dans la foulée. Le réglage `blackBotSpeed` est à retirer ou à brancher pour de bon lors du portage (étape 1.5).
 8. **Deux réglages de partie sont ignorés au profit des valeurs par défaut.** `captureEntity` lit `DEFAULT_GAME_SETTINGS.pointsLossPercent` et le constructeur de `BlackBot` lit `DEFAULT_GAME_SETTINGS.blackBotDetectionRadius`, au lieu de `currentGameSettings`. Changer ces réglages dans le salon n'a donc aucun effet sur la partie. Pire pour le rayon de détection: `sendUpdates` envoie au client la valeur de `currentGameSettings`, si bien que le client affiche un rayon que le serveur n'applique pas.
 9. **`canMove` ignore son point de départ.** Ses deux premiers arguments ne sont lus nulle part: c'est un échantillonnage ponctuel, pas un balayage. Conséquence caractérisée: un mur de deux pixels de large se traverse en un seul déplacement. Ce n'est pas un réglage, c'est une limite de méthode. À traiter par conception à l'étape 1.2.
 
@@ -151,9 +151,20 @@ Les quatre premiers étaient déjà dans l'audit, les cinq suivants sont nouveau
 - **`tests/` n'est pas couvert par `tsc --build`.** Le `tsconfig.json` racine ne référence que les quatre paquets. Les fichiers de test sont donc vérifiés par ESLint et transpilés par Vitest, mais leurs types ne sont jamais contrôlés. C'était déjà le cas avant cette session, pour `tests/purity/`. À traiter si on veut la garantie, hors périmètre ici.
 - **L'IA des bots n'est pas caractérisée.** Hors périmètre de la fiche, c'est l'objet de l'étape 1.5. Seule la vitesse de poursuite du bot noir l'est, parce qu'elle relève des vitesses relatives.
 - **Les zones spéciales ne sont pas caractérisées.** La fiche ne les demande pas. Elles arrivent à l'étape 1.4. À prévoir: leur constructeur tire une durée et une forme au hasard, et `manageSpecialZones` s'appuie sur `setTimeout`.
-- **Le point A.2 (cumul des durées de bonus) est à trancher.** Figé pour l'instant, comme le veut la règle: il est moins coûteux de figer un comportement qu'on changera que de perdre un réglage sans s'en apercevoir.
-- **Le point C.7 (vitesse du bot noir) demande une décision**, et il contredit CLAUDE.md. À traiter à l'étape 1.5. La constitution devra être corrigée dans un cas comme dans l'autre.
+- Les deux questions ouvertes de cette étape (cumul des durées de bonus, vitesse du bot noir) ont été tranchées le 13 août 2026, voir A.2 et C.7. Il ne reste rien en attente d'arbitrage.
 - Le dépôt pèse toujours 157 Mo, et `master` reste 6 commits en retard sur `origin/master`. Inchangé depuis le handoff 0.1.
+- L'URL du dépôt distant a changé: `git push` fonctionne par redirection mais signale que le projet a été déplacé vers `Ninja-NodeJS-Game.git`. `git remote set-url origin` à passer un jour.
+
+## Suites données aux découvertes (règle 7 de CLAUDE.md)
+
+Traitées pendant la session, sans attendre l'étape concernée.
+
+- `CLAUDE.md`: vitesse du bot noir corrigée de 6 à 5 au point 5 des comportements à préserver; cumul des durées de bonus ajouté au point 10; règle 7 « aucun bug ni incohérence n'est laissé en place » ajoutée aux règles non négociables.
+- `docs/audit/AUDIT-EXISTANT.md`: vitesse du bot noir corrigée dans la section 2, avec l'explication de l'erreur; nouvelle sous-section « Défauts découverts à l'étape 0.2 » ajoutant X11 à X15.
+- `docs/design/README.md`: les deux décisions consignées au journal, avec leur raison et l'étape qu'elles touchent.
+- Commentaires des tests concernés mis à jour pour renvoyer aux numéros de défaut de l'audit plutôt qu'à des questions ouvertes.
+
+Les défauts X11, X12, X14 et X15 restent à traiter par conception lors du portage (étapes 1.2, 1.3 et 1.5). Ils sont numérotés dans l'audit pour être repris nommément, et non simplement mentionnés en prose.
 
 ## Prochaine action exacte
 

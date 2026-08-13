@@ -17,6 +17,7 @@ Constitution stable du projet, lue par Claude Code au début de chaque session. 
 4. **Le legacy fait foi sur le gameplay.** Les tests de caractérisation de l'étape 0.2 sont la référence du comportement attendu. Le portage doit les faire passer.
 5. **Aucun état global mutable.** C'était la cause des blocages du legacy.
 6. **Une étape égale une conversation.** On ne fusionne jamais deux étapes.
+7. **Aucun bug ni incohérence n'est laissé en place.** Tout défaut découvert en cours de route se traite immédiatement, y compris hors du périmètre de l'étape en cours: code, documentation, constitution. On ne reporte pas, on ne se contente pas de le noter. Deux précisions: `legacy/` reste figé en lecture seule, ses bugs se notent et ne se portent pas; et un défaut trop gros pour l'étape en cours devient une étape à part entière, planifiée dans le ROADMAP, jamais une ligne de dette.
 
 ## Cible de couverture
 
@@ -91,11 +92,12 @@ Réglages de gameplay à couvrir par des tests de caractérisation avant toute m
 2. Capturer un joueur transfère **tous** ses bots d'un coup.
 3. Un bot noir fait perdre 50 pour cent des points; un bot noir détruit en rapporte 15.
 4. Un malus ramassé frappe **les autres**, pas celui qui le ramasse.
-5. Vitesses relatives: joueur 3, bot 5, bot noir 6, bonus de vitesse x1,7, facteur mobile x2. Déjà corrigé quatre fois dans le legacy, très fragile.
+5. Vitesses relatives: joueur 3, bot 5, **bot noir 5**, bonus de vitesse x1,7, facteur mobile x2. Déjà corrigé quatre fois dans le legacy, très fragile. Correction du 13 août 2026: ce fichier et l'audit annonçaient 6 pour le bot noir. C'est faux. `BlackBot` lit `GAME_CONFIG.BOT_SPEED`, qui vaut 5, et le réglage `blackBotSpeed: 6` n'est lu nulle part. Vérifié et couvert par les tests de caractérisation. Décision du 13 août 2026: on garde 5, la vitesse réellement jouée depuis deux ans.
 6. Protection de 3 secondes au spawn, délai de 1 seconde entre deux captures.
 7. Compte à rebours de 5 secondes, annulable jusqu'à 2 secondes.
 8. Transfert de propriété du salon quand le propriétaire part.
 9. Collisions dérivées d'une image `collision.png`, seuil de luminosité à 128. C'est du contenu, pas du code.
+10. **Les durées de bonus se cumulent** au lieu de se remplacer: deux bonus de vitesse ramassés coup sur coup donnent vingt secondes. Confirmé comme voulu le 13 août 2026.
 
 ## Sécurité: la règle qui prime sur la caractérisation
 

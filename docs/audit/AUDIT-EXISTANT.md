@@ -49,7 +49,9 @@ Point de conception important: le score est un **stock, pas un cumul**. Se faire
 
 **Bots standards** (50 par defaut): errance aleatoire avec changement de direction periodique, detection de blocage et tentative de degagement.
 
-**Bots noirs** (2 par defaut, apparition a 50 pour cent du temps de partie): poursuivent les joueurs dans un rayon de detection de 150 pixels, a vitesse 6 contre 3 pour un joueur. Capturer un joueur lui fait perdre 50 pour cent de ses points. Un joueur invincible qui les touche les detruit et gagne 15 points.
+**Bots noirs** (2 par defaut, apparition a 50 pour cent du temps de partie): poursuivent les joueurs dans un rayon de detection de 150 pixels, a vitesse 5 contre 3 pour un joueur. Capturer un joueur lui fait perdre 50 pour cent de ses points. Un joueur invincible qui les touche les detruit et gagne 15 points.
+
+> **Correction du 13 aout 2026 (etape 0.2).** Cette section annoncait une vitesse de 6, valeur reprise du reglage `blackBotSpeed: 6` de `DEFAULT_GAME_SETTINGS`. C'est faux: `BlackBot` initialise `this.baseSpeed = GAME_CONFIG.BOT_SPEED` (`server.js:1142`), qui vaut 5, et `blackBotSpeed` n'est lu **nulle part** dans le legacy. Le bot noir avance donc exactement a la vitesse d'un bot ordinaire. Verifie et couvert par les tests de caracterisation. Voir aussi les defauts X11 a X13 ci-dessous.
 
 **Bonus** (apparition periodique, taux configurables): vitesse (multiplicateur 1,7), invincibilite, revelation (montre les vrais joueurs parmi les bots).
 
@@ -198,6 +200,20 @@ Le serveur normalise bien la norme du vecteur recu, ce qui bloque la triche la p
 **X9. `MapManager.loadLayers` lit une variable serveur.** `public/js/MapManager.js:127` fait `waitingRoom.settings`, or `waitingRoom` n'existe que cote serveur. Cela leve une `ReferenceError` interceptee par le `catch` de la fonction, qui renvoie alors `false` en silence. La variable n'etant pas utilisee ensuite, l'effet reel depend du moment, mais le chargement des calques peut echouer silencieusement.
 
 **X10. Code mort et pieges.** `handleGameStart` (`server.js:1980`) n'est jamais appelee et referencerait deux variables non declarees si elle l'etait. `Bot.unstuck` (`:1034`) n'est jamais appelee et appelle une methode `collisionMap.findValidSpawnPosition` qui n'existe pas.
+
+### Defauts decouverts a l'etape 0.2
+
+Ajoutes le 13 aout 2026. Contrairement aux precedents, ceux-ci ont ete constates a l'execution, par les tests de caracterisation, et non par lecture seule.
+
+**X11. `botsControlled` n'est jamais incremente.** Le champ est remis a zero a cinq endroits (`server.js:886`, `:1461`, `:2001`, `:2297`, `:2560`) et lu a un seul (`:794`), ou le serveur l'envoie au client dans `playerCapturedEnemy`. Le client recoit donc toujours zero. C'est `totalBotsCaptures` qui porte la valeur reelle, alimentee par `addCapturedBots`.
+
+**X12. La population de bots augmente a chaque capture par un bot noir.** `BlackBot.captureEntity` (`:1274`) repeint en blanc les bots perdus par le joueur, puis appelle `createWhiteBots(pointsLost)` (`:1282`) qui en cree **autant de nouveaux**. Sur huit bots rouges: quatre repeints, quatre crees, soit huit bots blancs et douze bots au total la ou il y en avait huit. Le nombre de bots derive donc a la hausse au fil de la partie, ce qui contredit le reglage `initialBotCount`.
+
+**X13. Le reglage `blackBotSpeed` n'est lu nulle part.** `BlackBot` initialise `this.baseSpeed = GAME_CONFIG.BOT_SPEED` (`:1142`), qui vaut 5, et le commentaire du code l'assume: « Utiliser la meme vitesse que les autres bots ». Le reglage `blackBotSpeed: 6` de `DEFAULT_GAME_SETTINGS` est mort. Corrige dans la section 2 de ce document et dans CLAUDE.md, qui annoncaient tous les deux 6. Decision du 13 aout 2026: on garde 5, la valeur reellement jouee.
+
+**X14. Deux reglages de partie sont ignores au profit des valeurs par defaut.** `BlackBot.captureEntity` lit `DEFAULT_GAME_SETTINGS.pointsLossPercent` (`:1270`) et le constructeur de `BlackBot` lit `DEFAULT_GAME_SETTINGS.blackBotDetectionRadius` (`:1140`), au lieu de `currentGameSettings`. Regler ces valeurs dans le salon n'a donc aucun effet sur la partie. Le rayon de detection est pire: `sendUpdates` envoie au client `currentGameSettings.blackBotDetectionRadius` (`:1857`), si bien que le client affiche un rayon que le serveur n'applique pas.
+
+**X15. `canMove` ignore son point de depart.** Ses deux premiers arguments (`fromX`, `fromY`) ne sont lus nulle part dans le corps de la methode (`:394`). C'est un echantillonnage ponctuel de la position d'arrivee, pas un balayage du trajet. Consequence mesuree: un mur de deux pixels de large se traverse en un seul deplacement, aucun des seize points du contour ne tombant dessus. Ce n'est pas un reglage de jeu, c'est une limite de methode, a traiter par conception a l'etape 1.2.
 
 ### Poids et proprete du depot
 

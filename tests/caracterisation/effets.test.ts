@@ -56,6 +56,8 @@ describe('ramassage d un bonus', () => {
   });
 
   it('cumule les durees quand le meme bonus est ramasse deux fois', () => {
+    // Confirme comme voulu le 13 aout 2026: c'est un reglage de jeu, pas un
+    // effet de bord. Inscrit dans les comportements a preserver de CLAUDE.md.
     harnais.handleBonusCollection(alice, harnais.creerBonus('speed'));
     harnais.handleBonusCollection(alice, harnais.creerBonus('speed'));
 

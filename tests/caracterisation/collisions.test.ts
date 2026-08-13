@@ -312,10 +312,11 @@ describe('vitesses relatives', () => {
   });
 
   it('deplace le bot noir en poursuite de cinq pixels, et non de six', () => {
-    // Ecart a signaler: le reglage blackBotSpeed vaut 6 et CLAUDE.md annonce 6,
-    // mais BlackBot lit GAME_CONFIG.BOT_SPEED, qui vaut 5. Le bot noir avance
-    // donc exactement a la vitesse d'un bot ordinaire. Le reglage blackBotSpeed
-    // n'est lu nulle part dans le legacy.
+    // Le reglage blackBotSpeed vaut 6, mais BlackBot lit GAME_CONFIG.BOT_SPEED,
+    // qui vaut 5: le bot noir avance exactement a la vitesse d'un bot ordinaire.
+    // Le reglage n'est lu nulle part (defaut X13 de l'audit).
+    // Decision du 13 aout 2026: on garde 5, la valeur reellement jouee. CLAUDE.md
+    // et l'audit, qui annoncaient 6, ont ete corriges.
     const botNoir = harnais.ajouterBotNoir('bn1', 500, 500);
     botNoir.targetEntity = harnais.ajouterBot('cible', BLEU, 800, 500);
 

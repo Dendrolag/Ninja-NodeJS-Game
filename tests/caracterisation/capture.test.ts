@@ -291,7 +291,8 @@ describe('capture d un joueur par un bot noir', () => {
 
     // Surprenant: le legacy repeint en blanc les bots perdus, puis en cree
     // autant de nouveaux. La population de bots augmente donc a chaque capture
-    // par un bot noir. Signale dans le handoff, a trancher avant le portage.
+    // par un bot noir, ce qui contredit le reglage initialBotCount. Classe en
+    // bug franc (defaut X12 de l'audit): a ne pas porter tel quel a l'etape 1.3.
     expect(Object.keys(harnais.bots).length).toBe(nombreDeBotsAvant + 2);
     expect(botsParCouleur(harnais)[BLANC]).toBe(4);
   });
