@@ -10,7 +10,35 @@
  * n'est jamais d'assouplir la regle: c'est de deplacer l'entree-sortie vers
  * packages/server et d'injecter ce dont le moteur a besoin.
  *
- * Le contenu reel (modele d'etat, contrat tick) arrive a l'etape 1.1.
+ * Le contrat du moteur tient en une fonction:
+ *
+ *     tick(etat, entrees, dt) -> nouvel etat
  */
 
-export {};
+export type { Couleur } from './couleurs.js';
+export { couleurAleatoire, couleurUnique } from './couleurs.js';
+
+export { aLaLongueur, determinerDirection, directionDuVecteur, norme } from './direction.js';
+
+export type {
+  Entite,
+  EtatPartie,
+  IdentifiantEntite,
+  Joueur,
+  OptionsAjoutJoueur,
+  OptionsEtatInitial,
+  TypeEntite,
+} from './etat.js';
+export {
+  COMPTEUR_CAPTURE_PRET,
+  ajouterJoueur,
+  couleursUtilisees,
+  creerEtatInitial,
+  estInvulnerable,
+  peutCapturer,
+  positionDApparition,
+  retirerJoueur,
+} from './etat.js';
+
+export type { EntreeJoueur, Entrees, EvaluationFinDePartie } from './moteur.js';
+export { evaluerFinDePartie, tick } from './moteur.js';

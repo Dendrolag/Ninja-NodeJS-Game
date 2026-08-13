@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // Verification des types des fichiers de test et de la configuration.
+  //
+  // Le tsconfig.json racine ne reference que les quatre paquets, et chaque
+  // paquet exclut ses propres fichiers de test de sa compilation: sans ce
+  // fichier, aucun test n'aurait ses types verifies. Ils seraient seulement
+  // transpiles par Vitest, qui ne signale pas les erreurs de type, et le filet
+  // aurait un trou exactement la ou il est cense proteger.
+  //
+  // Rien n'est emis ici: on ne verifie que les types.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false,
+    "incremental": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "types": ["node"],
+    // Les tests lisent les paquets dans leurs sources, comme Vitest le fait via
+    // ses alias. Sans cela, ils seraient verifies contre une compilation qui
+    // peut avoir pris du retard.
+    "baseUrl": ".",
+    "paths": {
+      "@neon-ninja/shared": ["./packages/shared/src/index.ts"],
+      "@neon-ninja/sim": ["./packages/sim/src/index.ts"]
+    }
+  },
+  "include": ["packages/**/*.test.ts", "tests/**/*.ts", "*.config.ts"],
+  // Les scenarios de bout en bout ont leur propre configuration: eux seuls ont
+  // le droit de parler au navigateur. Voir tsconfig.e2e.json.
+  "exclude": ["node_modules", "dist", "legacy", "tests/e2e"]
+}
