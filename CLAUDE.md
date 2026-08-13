@@ -109,6 +109,8 @@ En cas de doute sur la nature d'un comportement (réglage de jeu ou faille), le 
 
 Le contexte d'une conversation ne survit pas d'une session à l'autre. Seuls ce fichier et docs/ survivent.
 
+**Le cadrage complet d'une session est dans docs/plan/PROTOCOLE.md**, section « Démarrage d'une session »: ordre de lecture, carte du contexte accumulé, et cadre permanent de travail (branche, legacy, rôle exact des tests de caractérisation, autorisation de commiter et pousser). Un prompt de démarrage n'a donc besoin d'indiquer que l'étape à exécuter. Si une session a manqué d'une information de cadrage, la corriger dans PROTOCOLE.md plutôt que de la remettre dans le prompt suivant.
+
 - Début de session: lire le dernier handoff dans docs/handoffs/, puis la fiche de l'étape courante dans docs/plan/.
 - Fin de session: écrire un handoff depuis docs/handoffs/_TEMPLATE.md, puis commiter.
 - Entre deux étapes, repartir d'un contexte neuf avec `/clear`.
