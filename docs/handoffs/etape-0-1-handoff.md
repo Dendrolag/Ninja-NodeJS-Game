@@ -58,7 +58,7 @@ Legacy et documentation
 - Ajoutés: trois tests unitaires sur la fonction de démonstration, douze tests sur l'invariant de pureté, deux scénarios de bout en bout exécutés sur deux profils d'appareil.
 - Résultat: **15 tests Vitest passent, 0 échec. 4 tests Playwright passent, 0 échec.**
 - Couverture de `packages/sim`: sans objet, le paquet est vide. La mesure commence à l'étape 1.1.
-- État de la CI: le workflow est écrit mais **n'a jamais été exécuté**, la branche n'ayant pas été poussée. C'est le seul point de la définition de terminé qui n'est pas prouvé. Voir Problèmes connus.
+- État de la CI: **verte**. Branche `reecriture` poussée, les deux travaux passent (exécution 31690765093). Les actions ont ensuite été portées de v4 à v7, et `pnpm/action-setup` à v6, pour lever l'avertissement de dépréciation de Node 20 sur les exécuteurs GitHub.
 
 ### Comment l'invariant de pureté est vérifié
 
@@ -90,19 +90,30 @@ Vérifié en plus à la main, hors des tests: un vrai fichier en violation dépo
 
 Seules les images `collision.png` des trois cartes ont été reprises des ressources. L'audio et les images de fond, 72 Mo dont plusieurs fichiers morts, ne servent à aucun test de caractérisation et restent accessibles sur `master`.
 
+## Retrait de l'ancien jeu de cette branche
+
+Décidé après coup, hors du périmètre de la fiche, sur demande explicite. `server.js`, `game-constants.js`, `nodemon.json`, `public/` et `server/` ont été retirés de la branche `reecriture`. Le code de référence reste dans `legacy/`, et `master` conserve l'ensemble intact.
+
+Motif: deux copies de `server.js` cohabitaient, celle de la racine et celle de `legacy/`. Rien ne garantissait qu'elles restent identiques, et une session future aurait pu modifier la mauvaise en croyant toucher la référence.
+
+Trois conséquences à connaître.
+
+1. **Les ressources graphiques et sonores ne sont plus sur cette branche.** Sprites, sons, musiques, fonds de carte: tout est sur `master`. À rapatrier, en triant, à l'étape 4.2. La marche à suivre est dans `legacy/README.md`.
+2. **Le dépôt ne s'allège pas.** Les 157 Mo sont dans l'historique Git, une suppression de fichiers ne les enlève pas. Le gain est en clarté.
+3. **Danger de fusion.** Fusionner `reecriture` dans `master` avant que la nouvelle version soit jouable propagerait ces suppressions et casserait le jeu. C'est l'objectif de l'étape 6.1, pas avant.
+
+`public/CHANGELOG.md` a été conservé et déplacé en `docs/legacy-CHANGELOG.md`: c'est la mémoire des versions du jeu, elle a de la valeur.
+
 ## Problèmes connus et dette
 
-- **La CI n'a jamais tourné.** La branche `reecriture` n'est pas poussée. Le workflow est écrit mais non prouvé. La condition 6 de la définition de terminé de la fiche n'est donc pas remplie. Deux inconnues à surveiller à la première exécution: l'action `pnpm/action-setup@v4` sans version explicite (elle lit le champ `packageManager`), et l'installation des navigateurs Playwright sur Ubuntu.
 - `master` est resté **6 commits en retard** sur `origin/master`, par choix, pour ne pas risquer de casser la version jouable. À rattraper un jour, hors de ce chantier.
 - Le dépôt pèse 157 Mo à cause des binaires versionnés, et `docs/design/` en ajoute 3,7 Mo de captures. Non traité, hors périmètre.
 - `tests/purity/sim-purity.test.ts` instancie ESLint, ce qui prend environ 1,3 seconde. C'est le test le plus lent de la suite, pour un total qui reste sous 2,5 secondes.
-- **L'ancien jeu est toujours à la racine de cette branche**: `server.js`, `game-constants.js`, `public/`, `server/` et `nodemon.json` y cohabitent avec le monorepo. Il existe donc deux copies de `server.js`, celle de la racine et celle de `legacy/`. Elles sont identiques aujourd'hui, mais rien ne l'impose. Le linter et le formateur les ignorent, et `legacy/` seul fait référence. Décider à l'étape 0.2 s'il faut les retirer de cette branche: `master` les conserve de toute façon. La fiche 0.1 ne le demandait pas, donc rien n'a été supprimé.
+- Les deux fichiers de démonstration de `packages/shared` (`demo.ts` et son test) sont à supprimer à l'étape 1.1, dès que le paquet contiendra du vrai code.
 
 ## Prochaine action exacte
 
-Pousser la branche `reecriture` sur `origin` et vérifier que le workflow GitHub Actions passe au vert. C'est la seule condition de la définition de terminé de l'étape 0.1 qui reste à prouver. Si le workflow échoue, le corriger avant d'ouvrir l'étape 0.2.
-
-Ensuite, dans une conversation neuve: lire `legacy/server.js` et écrire les premiers scénarios de caractérisation de la capture, en commençant par `handlePlayerCapture` (ligne 737).
+Dans une conversation neuve: lire `legacy/server.js` et écrire les premiers scénarios de caractérisation de la capture, en commençant par `handlePlayerCapture` (ligne 737).
 
 ## Étape suivante
 

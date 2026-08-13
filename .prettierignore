@@ -1,13 +1,6 @@
 # Reference en lecture seule, jamais reformatee
 legacy/
 
-# Ancien jeu, conserve sur la branche master
-public/
-server/
-server.js
-game-constants.js
-nodemon.json
-
 # Genere
 node_modules/
 dist/

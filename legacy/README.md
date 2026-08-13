@@ -41,6 +41,26 @@ Conséquence pratique: le portage du moteur en phase 1 est insensible à cette d
 
 Seules les images `collision.png` des trois cartes ont été reprises, car l'étape 0.2 et l'étape 1.2 en ont besoin pour caractériser les collisions de terrain.
 
+## Où sont passées les ressources du jeu
+
+L'ancien jeu a été retiré de cette branche: `server.js`, `game-constants.js`, `nodemon.json`, `public/` et `server/` n'y figurent plus. Le code de référence est ici, dans `legacy/`.
+
+**Les ressources graphiques et sonores ne sont pas dans ce dossier.** Sprites du ninja (huit directions, deux images chacune), sons, musiques, images de bonus et de malus, fonds et premiers plans des cartes: tout cela vit sur la branche `master`, dans `public/assets/`.
+
+C'est volontaire. Ces fichiers ne servent à aucun test de caractérisation, ils pèsent 72 Mo, et l'audit y a relevé beaucoup de contenu mort (dont un fichier audio de 45 Mo jamais référencé). Les rapatrier en bloc reviendrait à traîner ce poids sans l'avoir trié.
+
+**À faire à l'étape 4.2**, quand le rendu PixiJS aura besoin des ressources: les reprendre depuis `master`, en ne gardant que ce qui est réellement référencé. La liste des fichiers morts est dans docs/audit/AUDIT-EXISTANT.md, section « Poids et propreté du dépôt ».
+
+Récupérer un fichier depuis `master` se fait sans changer de branche:
+
+```bash
+git show master:public/assets/images/ninja/north_1.png > destination.png
+```
+
 ## Faire tourner le jeu d'origine
 
-Ce dossier n'est pas exécutable en l'état: les chemins et les ressources ont changé. Pour rejouer la version d'origine, utiliser la branche `master`, qui reste fonctionnelle et intacte.
+Ce dossier n'est pas exécutable en l'état: il ne contient que du code, sans les ressources ni l'arborescence attendue. Pour rejouer la version d'origine, utiliser la branche `master`, qui reste fonctionnelle et intacte.
+
+## Attention en cas de fusion
+
+Cette branche a supprimé l'ancien jeu. **Fusionner `reecriture` dans `master` avant que la nouvelle version soit jouable propagerait ces suppressions et casserait le jeu en ligne.** Le retrait du monolithe est bien l'objectif final du plan, mais c'est l'étape 6.1, pas avant.
