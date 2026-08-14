@@ -8,6 +8,7 @@
 
 import {
   APPARITION,
+  BOTS,
   CARTES,
   COULEUR_BOT_NEUTRE,
   COULEUR_BOT_NOIR,
@@ -364,13 +365,43 @@ describe('ajouterBot', () => {
       position: { x: 400, y: 300 },
     });
 
-    expect(etat.bots['b1']).toEqual({
+    expect(etat.bots['b1']).toMatchObject({
       id: 'b1',
       type: 'bot',
       position: { x: 400, y: 300 },
       couleur: COULEUR_BOT_NEUTRE,
       direction: 'immobile',
     });
+  });
+
+  it('pose un bot pret a errer: en mouvement, avec un cap unitaire', () => {
+    const bot = ajouterBot(creerEtatInitial({ graine: 1 }), {
+      id: 'b1',
+      position: { x: 400, y: 300 },
+    }).bots['b1'];
+
+    expect(bot?.enMouvement).toBe(true);
+    expect(Math.hypot(bot?.cap.x ?? 0, bot?.cap.y ?? 0)).toBeCloseTo(1, 10);
+    expect(bot?.controlesSansAvancer).toBe(0);
+    expect(bot?.positionAuDernierControle).toEqual({ x: 400, y: 300 });
+    expect(bot?.avantChangementDEtatMs).toBeGreaterThanOrEqual(BOTS.DUREE_ETAT_MINIMUM_MS);
+    expect(bot?.avantChangementDEtatMs).toBeLessThan(BOTS.DUREE_ETAT_MAXIMUM_MS);
+    expect(bot?.avantChangementDeCapMs).toBeGreaterThanOrEqual(BOTS.INTERVALLE_DE_CAP_MINIMUM_MS);
+    expect(bot?.avantChangementDeCapMs).toBeLessThan(BOTS.INTERVALLE_DE_CAP_MAXIMUM_MS);
+  });
+
+  it('donne au bot noir sa proie vide, son controle rapproche et ses deux compteurs', () => {
+    const bot = ajouterBot(creerEtatInitial({ graine: 1 }), { id: 'bn', type: 'botNoir' }).bots[
+      'bn'
+    ];
+
+    expect(bot?.type).toBe('botNoir');
+    expect(bot?.avantControleDeBlocageMs).toBe(BOTS.CONTROLE_DE_BLOCAGE_BOT_NOIR_MS);
+
+    // Un bot noir cherche une proie et peut capturer des son premier battement.
+    expect(bot?.type === 'botNoir' ? bot.cible : 'absent').toBeUndefined();
+    expect(bot?.type === 'botNoir' ? bot.avantRechercheDeCibleMs : -1).toBe(0);
+    expect(bot?.type === 'botNoir' ? bot.avantProchaineCaptureMs : -1).toBe(0);
   });
 
   it('donne le noir aux bots noirs', () => {

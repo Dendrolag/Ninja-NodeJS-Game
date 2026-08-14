@@ -211,6 +211,66 @@ export const ZONES = {
   },
 } as const;
 
+/**
+ * Errance des bots: comment ils alternent marche et pause, changent de cap, et
+ * se degagent quand ils butent sur un mur.
+ *
+ * Portage de la classe Bot (legacy/server.js:941). Les durees sont celles du
+ * legacy, exprimees en millisecondes, et elles n'ont pas eu besoin d'etre
+ * converties: le legacy les comparait deja a une horloge, contrairement a ses
+ * vitesses, qui se comptaient par battement.
+ *
+ * Les deux distances en pixels, elles, valaient « deux pas de bot » dans le
+ * legacy. Ce sont des distances de test, pas des vitesses: un bot ne les
+ * parcourt pas en une seconde, il les utilise pour verifier qu'un cap est
+ * praticable. Elles restent donc telles quelles.
+ */
+export const BOTS = {
+  /** Duree minimale d'une phase de marche ou de pause (legacy :952). */
+  DUREE_ETAT_MINIMUM_MS: 1000,
+  /** Duree maximale d'une phase de marche ou de pause. */
+  DUREE_ETAT_MAXIMUM_MS: 3000,
+  /** Delai minimal avant un changement de cap spontane (legacy :949). */
+  INTERVALLE_DE_CAP_MINIMUM_MS: 1000,
+  /** Delai maximal avant un changement de cap spontane. */
+  INTERVALLE_DE_CAP_MAXIMUM_MS: 3000,
+  /** Periode du controle de blocage d'un bot ordinaire (legacy :955). */
+  CONTROLE_DE_BLOCAGE_MS: 500,
+  /** Periode du controle de blocage d'un bot noir, plus attentif (legacy :1145). */
+  CONTROLE_DE_BLOCAGE_BOT_NOIR_MS: 300,
+  /** En dessous de cette distance parcourue entre deux controles, le bot est juge bloque. */
+  DEPLACEMENT_MINIMUM_PX: 1,
+  /** Nombre de controles sans avancer avant d'essayer un autre cap (legacy :988). */
+  CONTROLES_AVANT_CHANGEMENT_DE_CAP: 3,
+  /** Nombre de controles sans avancer avant de forcer un degagement (legacy :990). */
+  CONTROLES_AVANT_DEGAGEMENT: 5,
+  /** Nombre de caps tires au sort avant de renoncer et de faire demi-tour (legacy :1100). */
+  TENTATIVES_DE_CAP_MAXIMUM: 8,
+  /** Distance a laquelle on verifie qu'un cap envisage est praticable (legacy :1110). */
+  PORTEE_DU_TEST_DE_CAP_PX: 2 * DEPLACEMENTS_LEGACY_PAR_PAS.BOT,
+  /** Longueur du bond tente pour se degager d'un blocage (legacy :1013). */
+  DISTANCE_DE_DEGAGEMENT_PX: 2 * DEPLACEMENTS_LEGACY_PAR_PAS.BOT,
+  /** Les huit caps essayes dans l'ordre pour se degager (legacy :1008). */
+  ANGLES_DE_DEGAGEMENT_DEGRES: [0, 45, 90, 135, 180, 225, 270, 315],
+} as const;
+
+/**
+ * Chasse des bots noirs. Portage de la classe BlackBot (legacy/server.js:1130).
+ *
+ * Le rayon de detection et la part de bots perdue ne sont pas ici: ce sont des
+ * reglages de partie, choisis dans le salon, et le defaut X14 de l'audit vient
+ * precisement de ce que le legacy allait les chercher ailleurs que dans les
+ * reglages de la partie en cours.
+ */
+export const BOTS_NOIRS = {
+  /** Delai impose a un bot noir entre deux captures (legacy :1139). */
+  DELAI_ENTRE_CAPTURES_MS: 2000,
+  /** Periode a laquelle un bot noir reconsidere sa proie (legacy :1144). */
+  INTERVALLE_DE_RECHERCHE_MS: 500,
+  /** Distance a laquelle un bot noir attrape sa proie (legacy :1252). */
+  SEUIL_DE_CAPTURE_PX: 20,
+} as const;
+
 /** Reglages de l'apparition des entites. */
 export const APPARITION = {
   /** Bande interdite le long des bords de la carte, en pixels. */

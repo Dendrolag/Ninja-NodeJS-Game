@@ -25,24 +25,28 @@
  *   1. le journal du battement precedent est efface;
  *   2. chaque joueur applique son entree et se deplace contre le terrain, puis
  *      voit ses protections et ses effets se rapprocher de leur fin;
- *   3. les zones speciales vieillissent, apparaissent, et agissent sur les bots;
- *   4. les bonus et malus poses vieillissent, et de nouveaux apparaissent;
- *   5. on releve les contacts entre entites et on en tire les consequences,
+ *   3. les bots errent, les bots noirs chassent, et de nouveaux bots noirs
+ *      entrent en jeu quand leur heure est venue;
+ *   4. les zones speciales vieillissent, apparaissent, et agissent sur les bots;
+ *   5. les bonus et malus poses vieillissent, et de nouveaux apparaissent;
+ *   6. on releve les contacts entre entites et on en tire les consequences,
  *      captures comprises;
- *   6. les joueurs ramassent les objets sur lesquels ils se trouvent.
+ *   7. les joueurs ramassent les objets sur lesquels ils se trouvent.
  *
- * L'ordre des deux dernieres etapes est celui du legacy: dans detectCollisions,
- * un joueur resolvait ses captures avant de ramasser ce qui trainait a ses pieds.
- * Un bonus d'invincibilite ramasse ne protege donc qu'a partir du battement
- * suivant.
+ * Les bots avancent avant les zones parce que c'est l'ordre du legacy: sa boucle
+ * appelait updateBots puis sendUpdates, et c'est cette derniere qui appliquait
+ * les effets de zone (server.js:2799).
  *
- * Le deplacement des bots arrive a l'etape 1.5. Le moteur l'accueillera en un
- * systeme de plus, appele dans ce meme tick.
+ * L'ordre des deux dernieres etapes est celui du legacy lui aussi: dans
+ * detectCollisions, un joueur resolvait ses captures avant de ramasser ce qui
+ * trainait a ses pieds. Un bonus d'invincibilite ramasse ne protege donc qu'a
+ * partir du battement suivant.
  */
 
 import type { Vecteur } from '@neon-ninja/shared';
 import { VITESSES } from '@neon-ninja/shared';
 
+import { avancerLesBots } from './bots.js';
 import { detecterContacts, resoudreContacts } from './contacts.js';
 import { resoudreDeplacement } from './deplacement.js';
 import { aLaLongueur, directionDuVecteur, norme } from './direction.js';
@@ -113,7 +117,8 @@ export function tick(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPart
     evenements: [],
   };
 
-  const zones = appliquerLesEffetsDeZone(avancerLesZones(deplace, dtMs), dtMs);
+  const bots = avancerLesBots(deplace, dtMs);
+  const zones = appliquerLesEffetsDeZone(avancerLesZones(bots, dtMs), dtMs);
   const objets = faireApparaitreLesObjets(fairePasserLeTempsSurLesObjets(zones, dtMs), dtMs);
   const contacts = resoudreContacts(objets, detecterContacts(objets));
 

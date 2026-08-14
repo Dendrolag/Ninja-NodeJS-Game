@@ -50,6 +50,20 @@ Cette étape clôt le portage du gameplay dans le moteur pur.
 
 La porte des maquettes ne se situe plus ici. Dans l'ordre d'exécution retenu (voir la section 3 de docs/plan/ROADMAP.md), le jalon 1 continue avec 1.6, 2.1, 2.2 puis la phase 4, qui ne dépendent pas des maquettes. Les maquettes sont exigées au jalon 2, avant l'étape 0.3 et l'étape 2.4.
 
+## Réconciliation, 14 août 2026
+
+Écarts entre cette fiche et ce qui a réellement été fait, notés en exécutant l'étape.
+
+1. **Le périmètre ne parle pas des réglages du bot noir.** Il fallait les ajouter à `ReglagesPartie`, comme le handoff 1.4 l'avait anticipé: nombre, moment d'apparition, rayon de détection, part de bots perdue. Sans eux, les défauts X14 et X26 se seraient reproduits.
+
+2. **Point 4 tranché: `resetPlayer` n'est pas portée.** Elle relève du cycle de vie serveur, pas de la logique de jeu. Ses deux appelants du legacy (`server.js:1961` dans `resetGame`, `:2495` au lancement du compte à rebours) remettent à zéro les compteurs d'un joueur entre deux parties. Dans le moteur, une partie neuve est un état neuf: il n'y a rien à remettre à zéro. Le seul élément utile de cette fonction, le compteur `capturedByBlackBot`, est porté comme champ de joueur sous le nom `capturesParBotNoirSubies`.
+
+3. **La numérotation du périmètre saute.** Le point 5, « brancher la mise à jour des bots dans la boucle tick », est collé à la fin du paragraphe sur `Bot.unstuck` dans la fiche d'origine. Il a bien été fait: `avancerLesBots` est appelée par `tick`, entre le déplacement des joueurs et les zones, ce qui est l'ordre du legacy (`updateBots` puis `sendUpdates`).
+
+4. **Le test de partie complète compare un résumé, pas l'état brut.** Un état de fin de partie contient une trentaine de bots avec leurs caps et leurs compteurs: un instantané brut ferait plusieurs centaines de lignes illisibles. Le résumé retenu contient l'état du générateur à graine, qui suffit à détecter toute divergence de tirage. Voir l'en-tête de `packages/sim/src/partie.test.ts`.
+
+5. **Quatre défauts découverts en portant**, X26 à X29, tous consignés dans l'audit et corrigés par conception. C'est l'application de la règle 7 de CLAUDE.md.
+
 ## Rituel de fin de session
 
 Écrire docs/handoffs/etape-1-5-handoff.md. Confirmer que le moteur simule une partie complète et donner la couverture atteinte. Prochaine action exacte pour l'étape 1.6: durcissement et autorité serveur (validation des entrées, plafonnement du déplacement, limitation de débit). Commiter.

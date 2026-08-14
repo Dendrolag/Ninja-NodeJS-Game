@@ -15,6 +15,8 @@
  *     tick(etat, entrees, dt) -> nouvel etat
  */
 
+export { avancerLesBots, faireApparaitreLesBotsNoirs, peuplerDeBots } from './bots.js';
+
 export { captureAutorisee, capturerBot, capturerJoueur, detruireBotNoir } from './capture.js';
 
 export type { CarteCollisions } from './collisions.js';
@@ -60,7 +62,10 @@ export type {
   BonusPose,
   BonusRamasse,
   Bot,
+  BotNoir,
+  BotOrdinaire,
   CaptureDeJoueur,
+  CaptureParBotNoir,
   DestructionDeBotNoir,
   Entite,
   EtatPartie,

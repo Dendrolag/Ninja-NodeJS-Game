@@ -259,6 +259,23 @@ Ajoutes le 14 aout 2026, en portant les bonus, les malus et les zones speciales.
 
 **X25. Les zones speciales poussent les bots a travers les murs.** `applyEffect` ajoute la poussee directement aux coordonnees du bot (`:584` pour REPEL, `:612` pour ATTRACT), sans consulter la carte de collisions. Un bot repousse contre un mur le traverse. Corrige par conception a l'etape 1.4: la poussee passe par la resolution de deplacement, comme tout autre mouvement.
 
+### Defauts decouverts a l'etape 1.5
+
+Ajoutes le 14 aout 2026, en portant l'intelligence des bots et des bots noirs.
+
+**X26. Le reglage `blackBotStartPercent` n'est lu nulle part.** `DEFAULT_GAME_SETTINGS` annonce `blackBotStartPercent: 50` avec le commentaire « Apparition a 50% du temps de partie » (`game-constants.js:120`), mais `spawnBlackBots` (`server.js:1336`) coupe la partie en deux en dur: `const halfGameTime = currentGameSettings.gameDuration / 2`. Verifie: le nom `blackBotStartPercent` n'apparait que dans les deux fichiers de constantes, jamais dans le code qui s'en servirait. C'est le meme motif que X13 (`blackBotSpeed`), a une difference pres qui change la decision: la vitesse morte contredisait un comportement joue depuis deux ans, alors qu'ici le reglage mort et le code en dur disent exactement la meme chose. Le reglage est donc porte **et branche**, sous le nom `momentApparitionPourCent`; sa valeur par defaut, cinquante, reproduit le jeu tel qu'il se joue.
+
+**X27. Le bot noir traverse les murs quand il poursuit.** `BlackBot.pursueTarget` (`:1243`) ajoute son deplacement directement aux coordonnees et se contente de les borner a la carte: `collisionMap.canMove` n'est jamais consulte. Un bot noir lance sur un joueur traverse donc tout ce qui se trouve entre eux, alors que le meme bot noir sans proie, qui erre par `Bot.move`, respecte les murs. C'est le cousin de X25 pour les zones. Corrige par conception a l'etape 1.5: la poursuite passe par la resolution de deplacement, comme tout autre mouvement.
+
+**X28. La vitesse d'un bot depend d'un vecteur qui n'est pas unitaire.** `Bot` range sa direction dans `vx` et `vy`, puis `move` avance de `vx * BOT_SPEED` (`:1081`). Le calcul suppose donc un vecteur de longueur un, ce que le code ne garantit jamais:
+
+- Le constructeur tire `vx = (Math.random() - 0.5) * 2` et `vy` de meme (`:947`), soit deux composantes independantes entre moins un et un. La longueur du vecteur va de zero a un virgule quarante et un: un bot fraichement pose avance donc a une vitesse tiree au sort entre zero et une fois et demie la vitesse annoncee. Seul `changeDirection` (`:1107`), qui pose `cos` et `sin`, remet le vecteur a l'unite, une a trois secondes plus tard.
+- Pire pour le bot noir: `pursueTarget` (`:1239`) ecrit `vx = (dx / distance) * this.baseSpeed`, donc un vecteur de longueur **cinq**. S'il perd sa proie, il retombe sur l'errance ordinaire, qui multiplie encore par cinq: il erre a vingt-cinq pixels par battement, soit cinq cents pixels par seconde, jusqu'a son prochain changement de cap.
+
+Corrige par conception a l'etape 1.5: le cap est toujours unitaire, et la vitesse est une constante a part. Un cap se tire comme un angle, plus comme deux composantes.
+
+**X29. Le bot noir pose deux fois la meme question de deux facons differentes.** `findNewTarget` ecarte les joueurs invulnerables au complet, `!entity.invincibilityActive && !entity.isInvulnerable()` (`:1200`). Mais la verification faite entre deux recherches, quand un joueur entre dans le rayon pendant la poursuite d'un bot, ne regarde que `!e.invincibilityActive` (`:1161`) et ignore la protection d'apparition. Un bot noir peut donc lacher sa proie pour se lancer aux trousses d'un joueur qui vient d'apparaitre, et se voir refuser la prise a l'arrivee par `captureEntity`, qui teste les deux (`:1263`). Corrige a l'etape 1.5: la question est posee une seule fois, par `estInvulnerable`.
+
 ### Poids et proprete du depot
 
 **P1. 72 Mo d'audio dont l'essentiel est mort.** `game-music-1.wav` pese 44,8 Mo et `menu-music-1.wav` 13,9 Mo. **Ni l'un ni l'autre n'est reference par le code.** S'y ajoutent `game-music.mp3` (3,7 Mo) et une dizaine de fichiers `.wav` doublons de `.mp3` effectivement utilises, eux aussi non references.

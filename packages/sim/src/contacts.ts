@@ -150,8 +150,9 @@ function sansEffet(etat: EtatPartie): Resolution {
  *
  * Un contact entre deux bots noirs, ou entre un bot et un bot noir, ne produit
  * rien: le legacy les rangeait dans des tables separees qui ne se rencontraient
- * jamais. La capture d'un joueur PAR un bot noir n'est pas ici non plus: elle
- * appartient au comportement du bot noir, donc a l'etape 1.5.
+ * jamais. La capture d'un joueur PAR un bot noir n'est pas ici non plus: dans le
+ * legacy comme ici, un bot noir ne prend que la proie qu'il poursuit, ce qui
+ * appartient a son comportement. Elle vit donc dans bots.ts.
  */
 function resoudreUnContact(
   etat: EtatPartie,

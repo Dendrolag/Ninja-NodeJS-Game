@@ -26,16 +26,18 @@
  * dont personne ne sait encore se servir.
  *
  * Ajouts de l'etape 1.3: les compteurs de capture des joueurs, une population de
- * bots reduite a ses donnees, et le journal des evenements du battement. Les bots
- * n'ont ici aucun comportement: ils se placent, ils portent une couleur, et c'est
- * tout. Leur deplacement et leur intelligence arrivent a l'etape 1.5. Ils
- * existent des maintenant parce que la capture et le score n'ont aucun sens sans
- * eux: le score d'un joueur est le nombre de bots qui portent sa couleur.
+ * bots, et le journal des evenements du battement. Les bots existent des cette
+ * etape-la parce que la capture et le score n'ont aucun sens sans eux: le score
+ * d'un joueur est le nombre de bots qui portent sa couleur.
  *
  * Ajouts de l'etape 1.4: les effets portes par les joueurs, les objets a ramasser
  * poses sur la carte, les zones speciales, et de quoi planifier leurs apparitions
  * sans minuterie. Ce fichier decrit ces donnees; les regles qui les font vivre
  * sont dans effets.ts, objets.ts et zones.ts.
+ *
+ * Ajouts de l'etape 1.5: ce qu'un bot porte pour errer, et ce qu'un bot noir
+ * porte en plus pour chasser. Meme partage des roles: ce fichier decrit les
+ * donnees, bots.ts porte le comportement.
  */
 
 import type {
@@ -48,9 +50,11 @@ import type {
   TypeBonus,
   TypeMalus,
   TypeZone,
+  Vecteur,
 } from '@neon-ninja/shared';
 import {
   APPARITION,
+  BOTS,
   CARTES,
   COULEUR_BOT_NEUTRE,
   COULEUR_BOT_NOIR,
@@ -84,21 +88,66 @@ export interface Entite {
 }
 
 /**
+ * Ce que tout bot porte pour errer sur la carte.
+ *
+ * Portage des champs de la classe Bot (legacy/server.js:941). Comme partout
+ * ailleurs dans le moteur, les instants absolus du legacy deviennent des durees
+ * restantes que le battement fait decroitre: lastDirectionChange, lastStateChange
+ * et lastMoveCheck etaient trois lectures de Date.now(), interdites ici.
+ *
+ * Le cap est un vecteur UNITAIRE, et c'est une correction. Le legacy rangeait
+ * dans vx et vy un vecteur dont la longueur variait, puis le multipliait par la
+ * vitesse des bots: la vitesse reelle d'un bot dependait donc de la longueur de
+ * ce vecteur, entre zero et une fois et demie la vitesse annoncee. Voir le defaut
+ * X28 de l'audit. Ici, un cap dit ou l'on va, une constante dit a quelle vitesse.
+ */
+interface TraitsDeBot extends Entite {
+  /** Direction suivie quand le bot avance. Vecteur unitaire. */
+  readonly cap: Vecteur;
+  /** Le bot avance-t-il, ou observe-t-il une pause ? */
+  readonly enMouvement: boolean;
+  /** Temps avant de basculer entre marche et pause, en millisecondes. */
+  readonly avantChangementDEtatMs: number;
+  /** Temps avant un changement de cap spontane, en millisecondes. */
+  readonly avantChangementDeCapMs: number;
+  /** Temps avant le prochain controle de blocage, en millisecondes. */
+  readonly avantControleDeBlocageMs: number;
+  /** Ou le bot se trouvait lors du dernier controle de blocage. */
+  readonly positionAuDernierControle: Position;
+  /** Nombre de controles consecutifs pendant lesquels le bot n'a pas avance. */
+  readonly controlesSansAvancer: number;
+}
+
+/** Un bot ordinaire: il erre, et sa couleur dit a qui il appartient. */
+export interface BotOrdinaire extends TraitsDeBot {
+  readonly type: 'bot';
+}
+
+/**
+ * Un bot noir: il erre comme les autres, mais chasse ce qui passe a sa portee.
+ *
+ * Portage de la classe BlackBot (legacy/server.js:1130), qui etendait Bot. La
+ * relation d'heritage devient ici une variante: un bot noir a tout ce qu'un bot
+ * ordinaire a, plus une proie et deux comptes a rebours.
+ */
+export interface BotNoir extends TraitsDeBot {
+  readonly type: 'botNoir';
+  /** Identifiant de l'entite poursuivie, si le bot noir en a repere une. */
+  readonly cible: IdentifiantEntite | undefined;
+  /** Temps avant de reconsiderer sa proie, en millisecondes. */
+  readonly avantRechercheDeCibleMs: number;
+  /** Temps avant de pouvoir capturer a nouveau, en millisecondes. */
+  readonly avantProchaineCaptureMs: number;
+}
+
+/**
  * Une entite non joueuse: un bot ordinaire, ou un bot noir.
  *
- * A ce stade du portage, un bot n'est que des donnees: une place, une couleur.
- * Son deplacement, ses changements de direction et la chasse du bot noir sont
- * l'etape 1.5. Ce type n'a donc encore rien de plus qu'une entite; il existe pour
- * que la capture et le score aient sur quoi s'appliquer, et il s'enrichira sans
- * changer de nom.
- *
- * Les bots ordinaires et les bots noirs vivent dans la meme collection, la ou le
- * legacy tenait deux tables separees (bots et blackBots). Un seul releve de
- * contacts les parcourt donc tous, et leur nature se lit dans leur champ type.
+ * Les deux vivent dans la meme collection, la ou le legacy tenait deux tables
+ * separees (bots et blackBots). Un seul releve de contacts les parcourt donc
+ * tous, et leur nature se lit dans leur champ type.
  */
-export interface Bot extends Entite {
-  readonly type: 'bot' | 'botNoir';
-}
+export type Bot = BotOrdinaire | BotNoir;
 
 /** Combien de fois un joueur en a capture un autre, et sous quel nom. */
 export interface HistoriqueCapture {
@@ -162,6 +211,11 @@ export interface Joueur extends Entite {
   readonly botsGagnesAuTotal: number;
   /** Nombre de bots noirs detruits. Chacun vaut quinze points au score. */
   readonly botsNoirsDetruits: number;
+  /**
+   * Nombre de fois ou un bot noir a capture ce joueur. Portage de
+   * capturedByBlackBot. C'est un cumul, comme captures.
+   */
+  readonly capturesParBotNoirSubies: number;
 }
 
 /**
@@ -265,6 +319,24 @@ export interface MalusRamasse {
   readonly position: Position;
 }
 
+/**
+ * Un bot noir vient de capturer un joueur.
+ *
+ * Portage de la notification capturedByBlackBot (legacy/server.js:1318). La
+ * victime ne perd pas tout, contrairement a une capture par un autre joueur: elle
+ * garde sa couleur et une part seulement de ses bots redevient neutre. Elle
+ * reapparait ailleurs, avec une protection neuve.
+ */
+export interface CaptureParBotNoir {
+  readonly type: 'captureParBotNoir';
+  readonly botNoir: IdentifiantEntite;
+  readonly victime: IdentifiantEntite;
+  /** Nombre de bots de la victime redevenus neutres. */
+  readonly botsPerdus: number;
+  /** Ou la victime se trouvait au moment du contact. */
+  readonly position: Position;
+}
+
 /** Un joueur invincible vient de detruire un bot noir. */
 export interface DestructionDeBotNoir {
   readonly type: 'botNoirDetruit';
@@ -287,7 +359,8 @@ export interface DestructionDeBotNoir {
  * vient de se passer, pas l'histoire de la partie. Celle-ci se lit dans les
  * compteurs des joueurs.
  */
-export type EvenementPartie = CaptureDeJoueur | DestructionDeBotNoir | BonusRamasse | MalusRamasse;
+export type EvenementPartie =
+  CaptureDeJoueur | CaptureParBotNoir | DestructionDeBotNoir | BonusRamasse | MalusRamasse;
 
 /** L'etat complet d'une partie a un instant donne. */
 export interface EtatPartie {
@@ -606,6 +679,7 @@ export function ajouterJoueur(etat: EtatPartie, options: OptionsAjoutJoueur): Et
     capturesSubies: {},
     botsGagnesAuTotal: 0,
     botsNoirsDetruits: 0,
+    capturesParBotNoirSubies: 0,
   };
 
   return { ...etat, joueurs: { ...etat.joueurs, [options.id]: joueur }, alea };
@@ -635,11 +709,16 @@ export interface OptionsAjoutBot {
 }
 
 /**
- * Pose un bot sur la carte.
+ * Pose un bot sur la carte, pret a errer.
  *
- * A ce stade, c'est une fonction de placement, rien de plus: le bot n'a aucun
- * comportement, il attend l'etape 1.5. Elle existe pour que la capture, la
- * contagion de couleur et le score aient sur quoi s'appliquer.
+ * Portage des constructeurs de Bot (legacy/server.js:942) et de BlackBot (:1131).
+ * Le bot nait en mouvement, avec un cap tire au sort et deux comptes a rebours
+ * eux aussi tires au sort, exactement comme dans le legacy.
+ *
+ * Une difference: le cap est tire comme un ANGLE, ce qui donne toujours un
+ * vecteur unitaire. Le legacy tirait separement deux composantes entre moins un
+ * et un, dont la longueur variait: un bot fraichement pose avancait donc a une
+ * vitesse aleatoire, parfois nulle. Voir le defaut X28 de l'audit.
  *
  * Comme pour un joueur, une position imposee n'est pas verifiee, et une position
  * tiree au sort evite les murs et les entites deja en place.
@@ -655,15 +734,43 @@ export function ajouterBot(etat: EtatPartie, options: OptionsAjoutBot): EtatPart
     alea = tirage.alea;
   }
 
-  const bot: Bot = {
+  const capTire = reel(alea, 0, 2 * Math.PI);
+  const dureeDeCap = reel(
+    capTire.alea,
+    BOTS.INTERVALLE_DE_CAP_MINIMUM_MS,
+    BOTS.INTERVALLE_DE_CAP_MAXIMUM_MS,
+  );
+  const dureeDEtat = reel(dureeDeCap.alea, BOTS.DUREE_ETAT_MINIMUM_MS, BOTS.DUREE_ETAT_MAXIMUM_MS);
+
+  const traits = {
     id: options.id,
-    type,
     position,
     couleur: options.couleur ?? (type === 'botNoir' ? COULEUR_BOT_NOIR : COULEUR_BOT_NEUTRE),
-    direction: 'immobile',
+    direction: 'immobile' as const,
+    cap: { x: Math.cos(capTire.valeur), y: Math.sin(capTire.valeur) },
+    enMouvement: true,
+    avantChangementDEtatMs: dureeDEtat.valeur,
+    avantChangementDeCapMs: dureeDeCap.valeur,
+    avantControleDeBlocageMs:
+      type === 'botNoir' ? BOTS.CONTROLE_DE_BLOCAGE_BOT_NOIR_MS : BOTS.CONTROLE_DE_BLOCAGE_MS,
+    positionAuDernierControle: position,
+    controlesSansAvancer: 0,
   };
 
-  return { ...etat, bots: { ...etat.bots, [options.id]: bot }, alea };
+  // Un bot noir cherche une proie des son premier battement et peut capturer
+  // aussitot: dans le legacy, lastTargetSearch et lastCaptureTime valent zero.
+  const bot: Bot =
+    type === 'botNoir'
+      ? {
+          ...traits,
+          type,
+          cible: undefined,
+          avantRechercheDeCibleMs: 0,
+          avantProchaineCaptureMs: 0,
+        }
+      : { ...traits, type };
+
+  return { ...etat, bots: { ...etat.bots, [options.id]: bot }, alea: dureeDEtat.alea };
 }
 
 /** Retire un bot de la carte. Sans effet s'il n'y etait pas. */

@@ -21,6 +21,8 @@ export type {
 } from './constantes.js';
 export {
   APPARITION,
+  BOTS,
+  BOTS_NOIRS,
   CADENCES_LEGACY_MS,
   CARTES,
   COULEUR_BOT_NEUTRE,
@@ -46,6 +48,7 @@ export type {
   ReglageBonus,
   ReglageMalus,
   ReglagesBonus,
+  ReglagesBotsNoirs,
   ReglagesMalus,
   ReglagesPartie,
   ReglagesPartiels,

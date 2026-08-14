@@ -1,17 +1,18 @@
 /**
  * Reglages d'une partie: ce que l'hote choisit dans le salon avant de lancer.
  *
- * Portage progressif de DEFAULT_GAME_SETTINGS (legacy/game-constants.js:79). On
- * ne porte a chaque etape que les reglages dont le moteur sait deja se servir.
- * Ce qui manque, et ou cela arrive:
- *
- *   - bots noirs (nombre, moment d'apparition, rayon de detection, pourcentage
- *     de points perdus): etape 1.5.
+ * Portage de DEFAULT_GAME_SETTINGS (legacy/game-constants.js:79). Depuis
+ * l'etape 1.5, tous les reglages dont le moteur se sert sont ici.
  *
  * Le reglage blackBotSpeed du legacy n'est deliberement pas porte: il n'etait lu
  * nulle part, le bot noir avancant a la vitesse d'un bot ordinaire (defaut X13
  * de l'audit, decision du 13 aout 2026 de conserver ce comportement). Porter un
  * reglage mort aurait ete recopier le piege.
+ *
+ * A l'inverse, blackBotStartPercent etait mort lui aussi (defaut X26), mais il
+ * est porte ET rendu vivant sous le nom momentApparitionPourCent: contrairement
+ * au precedent, ce reglage designe quelque chose que l'hote croit regler dans le
+ * salon, et sa valeur par defaut reproduit exactement le comportement joue.
  *
  * POURQUOI CES REGLAGES VOYAGENT DANS L'ETAT. Dans le legacy, deux endroits
  * lisaient les valeurs par defaut au lieu des reglages de la partie en cours
@@ -83,6 +84,27 @@ export interface ReglagesZones {
   readonly types: Readonly<Record<TypeZone, boolean>>;
 }
 
+/**
+ * Reglages des bots noirs: les chasseurs qui entrent en jeu en cours de partie.
+ *
+ * Les quatre valeurs viennent de DEFAULT_GAME_SETTINGS, et trois d'entre elles
+ * n'avaient aucun effet dans le legacy: le rayon de detection et la part de bots
+ * perdue etaient lus dans les valeurs par defaut au lieu des reglages de la
+ * partie (defaut X14), et le moment d'apparition n'etait lu nulle part (defaut
+ * X26). Ici elles agissent toutes les quatre.
+ */
+export interface ReglagesBotsNoirs {
+  readonly actifs: boolean;
+  /** Nombre de bots noirs qui entrent en jeu ensemble. */
+  readonly nombre: number;
+  /** A quel pourcentage de la partie ecoule les bots noirs apparaissent. */
+  readonly momentApparitionPourCent: number;
+  /** Distance a laquelle un bot noir repere une proie, en pixels. */
+  readonly rayonDetectionPx: number;
+  /** Part des bots d'un joueur qu'une capture par bot noir lui fait perdre. */
+  readonly partDeBotsPerduePourCent: number;
+}
+
 /** Reglages d'une partie, figes au lancement. */
 export interface ReglagesPartie {
   /** Duree de la partie, en secondes. */
@@ -96,6 +118,7 @@ export interface ReglagesPartie {
   readonly bonus: ReglagesBonus;
   readonly malus: ReglagesMalus;
   readonly zones: ReglagesZones;
+  readonly botsNoirs: ReglagesBotsNoirs;
 }
 
 /** Reglages appliques quand l'hote ne change rien. Valeurs du legacy. */
@@ -128,6 +151,13 @@ export const REGLAGES_PAR_DEFAUT: ReglagesPartie = {
     dureeMaximumS: 30,
     intervalleApparitionS: 15,
     types: { chaos: true, repulsion: true, attraction: true, invisibilite: true },
+  },
+  botsNoirs: {
+    actifs: true,
+    nombre: 2,
+    momentApparitionPourCent: 50,
+    rayonDetectionPx: 150,
+    partDeBotsPerduePourCent: 50,
   },
 };
 
