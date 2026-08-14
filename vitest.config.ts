@@ -32,7 +32,13 @@ export default defineConfig({
       // Exclus: les tests eux-memes, et les fichiers sans code executable (les
       // points d'entree qui ne font que reexporter, les fichiers de types).
       // Les compter reviendrait a mesurer la couverture de lignes vides.
-      exclude: ['**/*.test.ts', '**/index.ts', '**/geometrie.ts', '**/entrees.ts'],
+      exclude: [
+        '**/*.test.ts',
+        '**/index.ts',
+        '**/geometrie.ts',
+        '**/entrees.ts',
+        '**/evenements.ts',
+      ],
     },
   },
 });

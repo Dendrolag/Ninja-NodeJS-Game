@@ -80,6 +80,26 @@ export const BORNES_CHAT = {
 } as const;
 
 /**
+ * Identifiant de partie, tel qu'un joueur le fournit pour rejoindre.
+ *
+ * Le legacy n'avait qu'une partie et n'en nommait donc aucune. Des l'instant ou
+ * il en existe plusieurs (etape 2.1), un joueur doit dire laquelle il rejoint,
+ * et ce texte vient de lui: il se valide comme tout le reste.
+ *
+ * Le jeu de caracteres est une liste blanche, pour la meme raison que celui du
+ * pseudo: cet identifiant sert de cle de recherche et de nom de salle Socket.IO,
+ * deux endroits ou un caractere inattendu n'a rien a faire. La longueur est
+ * large: le RoomManager fabrique aujourd'hui des « room-1 », et l'etape 2.4
+ * introduira des codes d'invitation.
+ */
+export const BORNES_ROOM = {
+  /** Longueur de l'identifiant, en caracteres. */
+  longueur: { minimum: 1, maximum: 64 } satisfies Intervalle,
+  /** Lettres latines sans accent, chiffres, tiret et tiret bas. */
+  caracteresAdmis: /^[A-Za-z0-9_-]+$/u,
+} as const;
+
+/**
  * Bornes des reglages de partie choisis par l'hote dans le salon.
  *
  * La structure suit exactement celle de ReglagesPartie, groupe par groupe, pour

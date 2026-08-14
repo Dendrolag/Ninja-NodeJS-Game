@@ -492,3 +492,148 @@ describe('GameRoom, classement', () => {
     room.arreter();
   });
 });
+
+describe('GameRoom, changement des reglages dans le salon', () => {
+  it('applique les nouveaux reglages', () => {
+    const { room } = roomDeTest();
+
+    room.changerReglages({ dureePartieS: 120, nombreBotsInitial: 42 });
+
+    expect(room.reglages.dureePartieS).toBe(120);
+    expect(room.reglages.nombreBotsInitial).toBe(42);
+  });
+
+  it('garde les joueurs presents, dans leur ordre d arrivee, avec leur hote', () => {
+    const { room } = roomDeTest();
+    room.accueillir(session('un', 'Alice'));
+    room.accueillir(session('deux', 'Bob'));
+
+    room.changerReglages({ carte: 'map3' });
+
+    expect(room.joueurs).toEqual([
+      { id: 'un', pseudo: 'Alice', hote: true },
+      { id: 'deux', pseudo: 'Bob', hote: false },
+    ]);
+  });
+
+  it('replace les joueurs sur la nouvelle carte, jamais hors de ses bords', () => {
+    const { room } = roomDeTest();
+    room.accueillir(session('un', 'Alice'));
+
+    room.changerReglages({ carte: 'map3' });
+
+    const position = room.etat.joueurs['un']?.position;
+
+    expect(room.etat.carte).toEqual({ largeur: 3000, hauteur: 2000 });
+    expect(position?.x).toBeGreaterThanOrEqual(0);
+    expect(position?.x).toBeLessThanOrEqual(3000);
+    expect(position?.y).toBeGreaterThanOrEqual(0);
+    expect(position?.y).toBeLessThanOrEqual(2000);
+  });
+
+  it('donne le meme resultat qu une room creee d emblee avec ces reglages', () => {
+    const modifiee = new GameRoom({ id: 'room-a', graine: 42, reglages: REGLAGES });
+    modifiee.changerReglages({ dureePartieS: 120, nombreBotsInitial: 20 });
+
+    const dEmblee = new GameRoom({
+      id: 'room-b',
+      graine: 42,
+      reglages: { dureePartieS: 120, nombreBotsInitial: 20 },
+    });
+
+    expect(modifiee.reglages).toEqual(dEmblee.reglages);
+    expect(modifiee.etat.dureeMs).toBe(dEmblee.etat.dureeMs);
+    expect(modifiee.etat.carte).toEqual(dEmblee.etat.carte);
+  });
+
+  it('refuse de changer les reglages d une partie commencee', () => {
+    const { room } = partieLancee();
+
+    expect(() => {
+      room.changerReglages({ dureePartieS: 120 });
+    }).toThrow(/n'est plus dans son salon|ne changent plus/);
+  });
+
+  it('remet le temps de jeu a zero: on n a pas encore commence', () => {
+    const { room } = roomDeTest();
+
+    room.changerReglages({ dureePartieS: 120 });
+
+    expect(room.etat.tempsEcouleMs).toBe(0);
+    expect(room.etat.tick).toBe(0);
+  });
+});
+
+describe('GameRoom, rappel de battement', () => {
+  it('previent apres chaque battement, avec l etat deja avance', () => {
+    const horloge = creerHorlogeManuelle();
+    const ticksVus: number[] = [];
+    const room = new GameRoom({
+      id: 'room-battement',
+      graine: 42,
+      reglages: REGLAGES,
+      cadenceMs: BATTEMENT_MS,
+      horloge,
+      surBattement: (observee) => {
+        ticksVus.push(observee.etat.tick);
+      },
+    });
+
+    room.accueillir(session('un', 'Alice'));
+    room.lancer();
+    horloge.avancerDe(BATTEMENT_MS * 3);
+
+    expect(ticksVus).toEqual([1, 2, 3]);
+  });
+
+  it('previent aussi au dernier battement, avant d annoncer la fin', () => {
+    const horloge = creerHorlogeManuelle();
+    const ordre: string[] = [];
+    const room = new GameRoom({
+      id: 'room-fin',
+      graine: 42,
+      reglages: { dureePartieS: 1, nombreBotsInitial: 3 },
+      cadenceMs: BATTEMENT_MS,
+      horloge,
+      surBattement: () => {
+        ordre.push('battement');
+      },
+      surFinDePartie: () => {
+        ordre.push('fin');
+      },
+    });
+
+    room.accueillir(session('un', 'Alice'));
+    room.lancer();
+    horloge.avancerDe(2000);
+
+    // Le dernier fait de la partie doit partir avant l'annonce de la fin.
+    expect(ordre[ordre.length - 2]).toBe('battement');
+    expect(ordre[ordre.length - 1]).toBe('fin');
+    expect(ordre.filter((etape) => etape === 'fin')).toHaveLength(1);
+  });
+
+  it('cesse de prevenir une fois la partie terminee', () => {
+    const horloge = creerHorlogeManuelle();
+    let battements = 0;
+    const room = new GameRoom({
+      id: 'room-apres',
+      graine: 42,
+      reglages: { dureePartieS: 1, nombreBotsInitial: 3 },
+      cadenceMs: BATTEMENT_MS,
+      horloge,
+      surBattement: () => {
+        battements += 1;
+      },
+    });
+
+    room.accueillir(session('un', 'Alice'));
+    room.lancer();
+    horloge.avancerDe(2000);
+
+    const apresLaFin = battements;
+    horloge.avancerDe(5000);
+
+    expect(battements).toBe(apresLaFin);
+  });
+});

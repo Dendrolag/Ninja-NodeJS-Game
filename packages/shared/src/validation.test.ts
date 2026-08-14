@@ -14,12 +14,13 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { BORNES_CHAT, BORNES_PSEUDO, BORNES_REGLAGES } from './bornes.js';
+import { BORNES_CHAT, BORNES_PSEUDO, BORNES_REGLAGES, BORNES_ROOM } from './bornes.js';
 import type { SessionJoueur } from './entrees.js';
 import { REGLAGES_PAR_DEFAUT } from './reglages.js';
 import type { ResultatValidation } from './validation.js';
 import {
   normaliserTexte,
+  validerDemandeRejoindre,
   validerIntentionDeplacement,
   validerMessageChat,
   validerPseudo,
@@ -383,5 +384,75 @@ describe('validerReglages', () => {
     expect(reglages.dureePartieS).toBe(300);
     expect(Object.hasOwn(reglages, 'pollue')).toBe(false);
     expect(({} as Record<string, unknown>)['pollue']).toBeUndefined();
+  });
+});
+
+describe('validerDemandeRejoindre', () => {
+  it('accepte un pseudo seul: sans partie visee, le serveur choisira', () => {
+    const demande = valeurAcceptee(validerDemandeRejoindre({ pseudo: 'Alice' }));
+
+    expect(demande).toEqual({ pseudo: 'Alice' });
+  });
+
+  it('normalise le pseudo comme partout ailleurs', () => {
+    const demande = valeurAcceptee(validerDemandeRejoindre({ pseudo: '  Alice   B  ' }));
+
+    expect(demande.pseudo).toBe('Alice B');
+  });
+
+  it('accepte un identifiant de partie bien forme', () => {
+    const demande = valeurAcceptee(validerDemandeRejoindre({ pseudo: 'Alice', idRoom: 'room-12' }));
+
+    expect(demande).toEqual({ pseudo: 'Alice', idRoom: 'room-12' });
+  });
+
+  it('refuse ce qui n est pas un objet', () => {
+    expect(champsRefuses(validerDemandeRejoindre(undefined))).toEqual(['rejoindre']);
+    expect(champsRefuses(validerDemandeRejoindre('Alice'))).toEqual(['rejoindre']);
+    expect(champsRefuses(validerDemandeRejoindre(['Alice']))).toEqual(['rejoindre']);
+  });
+
+  it('refuse un pseudo invalide en nommant le pseudo, pas la demande', () => {
+    expect(champsRefuses(validerDemandeRejoindre({ pseudo: '' }))).toEqual(['pseudo']);
+    expect(champsRefuses(validerDemandeRejoindre({ pseudo: 42 }))).toEqual(['pseudo']);
+    expect(champsRefuses(validerDemandeRejoindre({}))).toEqual(['pseudo']);
+  });
+
+  it('refuse un identifiant de partie qui n est pas du texte', () => {
+    expect(champsRefuses(validerDemandeRejoindre({ pseudo: 'Alice', idRoom: 7 }))).toEqual([
+      'idRoom',
+    ]);
+  });
+
+  it('accepte la longueur maximale et refuse celle qui la depasse d un caractere', () => {
+    const maximum = 'a'.repeat(BORNES_ROOM.longueur.maximum);
+
+    expect(
+      valeurAcceptee(validerDemandeRejoindre({ pseudo: 'Alice', idRoom: maximum })).idRoom,
+    ).toBe(maximum);
+    expect(
+      champsRefuses(validerDemandeRejoindre({ pseudo: 'Alice', idRoom: `${maximum}a` })),
+    ).toEqual(['idRoom']);
+    expect(champsRefuses(validerDemandeRejoindre({ pseudo: 'Alice', idRoom: '' }))).toEqual([
+      'idRoom',
+    ]);
+  });
+
+  it('refuse un identifiant de partie hors de la liste blanche', () => {
+    // Cet identifiant sert de cle de recherche et de nom de salle Socket.IO: on
+    // n y laisse entrer que ce dont il a besoin.
+    for (const suspect of ['room 1', 'room/1', 'room.1', '../room', '__proto__ ']) {
+      expect(champsRefuses(validerDemandeRejoindre({ pseudo: 'Alice', idRoom: suspect }))).toEqual([
+        'idRoom',
+      ]);
+    }
+  });
+
+  it('ignore les champs que la demande ajoute d elle-meme', () => {
+    const demande = valeurAcceptee(
+      validerDemandeRejoindre({ pseudo: 'Alice', hote: true, score: 9999 }),
+    );
+
+    expect(demande).toEqual({ pseudo: 'Alice' });
   });
 });

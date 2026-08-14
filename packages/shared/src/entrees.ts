@@ -77,6 +77,32 @@ export interface SessionJoueur {
 }
 
 /**
+ * Ce qu'un joueur envoie pour entrer dans une partie.
+ *
+ * Il annonce un pseudo, et eventuellement la partie qu'il vise. Le pseudo est
+ * une DEMANDE, pas une identite: le serveur le valide, verifie qu'il est libre
+ * dans la partie, et c'est seulement apres qu'il fabrique la SessionJoueur qui
+ * fera foi pour tout le reste de la connexion. Rien de ce qui suit ne relira ce
+ * message.
+ *
+ * L'identifiant de partie absent signifie « n'importe laquelle »: le serveur
+ * choisit. C'est ce que faisait le legacy, qui n'avait qu'un seul salon. Le
+ * choix explicite d'une partie prendra tout son sens a l'etape 2.4, avec les
+ * codes d'invitation.
+ */
+export interface DemandeRejoindre {
+  /** Pseudo souhaite, a valider. */
+  readonly pseudo: string;
+  /** Partie visee. Absent: le serveur en choisit une. */
+  readonly idRoom?: string;
+}
+
+/** Ce qu'un joueur envoie pour parler dans le chat: un texte, et rien d'autre. */
+export interface DemandeChat {
+  readonly texte: string;
+}
+
+/**
  * Un message de chat pret a etre diffuse.
  *
  * L'auteur et le pseudo viennent de la session, le texte vient du joueur. Ce

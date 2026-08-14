@@ -12,14 +12,52 @@ export type { Alea, Tirage } from './alea.js';
 export { creerAlea, element, entier, nombre, reel } from './alea.js';
 
 export type { Intervalle, LimiteDebit } from './bornes.js';
-export { BORNES_CHAT, BORNES_PSEUDO, BORNES_REGLAGES, LIMITES_DEBIT } from './bornes.js';
+export {
+  BORNES_CHAT,
+  BORNES_PSEUDO,
+  BORNES_REGLAGES,
+  BORNES_ROOM,
+  LIMITES_DEBIT,
+} from './bornes.js';
 
 export type { Consommation, SeauAJetons } from './debit.js';
 export { consommer, seauNeuf } from './debit.js';
 
-export type { IntentionDeplacement, MessageChat, SessionJoueur } from './entrees.js';
+export type {
+  DemandeChat,
+  DemandeRejoindre,
+  IntentionDeplacement,
+  MessageChat,
+  SessionJoueur,
+} from './entrees.js';
 
 export type {
+  BonusActive,
+  BotNoirDetruit,
+  BotVu,
+  CaptureParBotNoirSubie,
+  CaptureReussie,
+  CaptureSubie,
+  EntiteVue,
+  EtatCompteARebours,
+  EvenementsClientVersServeur,
+  EvenementsServeurVersClient,
+  FinDePartie,
+  InfosSalon,
+  InstantanePartie,
+  JoueurDuSalon,
+  JoueurVu,
+  LigneClassement,
+  MalusRamasseParMoi,
+  MalusSubi,
+  ObjetVu,
+  Refus,
+  StatutPartie,
+  ZoneVue,
+} from './evenements.js';
+
+export type {
+  Couleur,
   DimensionsCarte,
   Direction,
   IdentifiantCarte,
@@ -67,6 +105,7 @@ export { REGLAGES_PAR_DEFAUT, completerReglages } from './reglages.js';
 export type { ErreurValidation, ResultatValidation } from './validation.js';
 export {
   normaliserTexte,
+  validerDemandeRejoindre,
   validerIntentionDeplacement,
   validerMessageChat,
   validerPseudo,

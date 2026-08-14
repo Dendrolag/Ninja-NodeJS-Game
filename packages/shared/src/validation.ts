@@ -32,10 +32,15 @@
  */
 
 import type { Intervalle } from './bornes.js';
-import { BORNES_CHAT, BORNES_PSEUDO, BORNES_REGLAGES } from './bornes.js';
+import { BORNES_CHAT, BORNES_PSEUDO, BORNES_REGLAGES, BORNES_ROOM } from './bornes.js';
 import type { IdentifiantCarte } from './constantes.js';
 import { CARTES, TYPES_BONUS, TYPES_MALUS, TYPES_ZONE } from './constantes.js';
-import type { IntentionDeplacement, MessageChat, SessionJoueur } from './entrees.js';
+import type {
+  DemandeRejoindre,
+  IntentionDeplacement,
+  MessageChat,
+  SessionJoueur,
+} from './entrees.js';
 import type { ReglagesPartie, ReglagesPartiels } from './reglages.js';
 import { completerReglages } from './reglages.js';
 
@@ -112,6 +117,54 @@ export function validerPseudo(brut: unknown): ResultatValidation<string> {
   }
 
   return accepte(pseudo);
+}
+
+/**
+ * Valide la demande d'entree en partie: un pseudo, et eventuellement une partie.
+ *
+ * L'identifiant de partie est du texte fourni par un joueur, donc suspect au
+ * meme titre que le reste. Il sert ensuite de cle de recherche dans le
+ * RoomManager et de nom de salle Socket.IO: le laisser passer tel quel
+ * reviendrait a laisser un client choisir ou ses messages atterrissent. Un
+ * identifiant absent n'est pas une erreur, il signifie « n'importe quelle
+ * partie ».
+ */
+export function validerDemandeRejoindre(brut: unknown): ResultatValidation<DemandeRejoindre> {
+  const source = objetOuRien(brut);
+  if (source === undefined) {
+    return refuse('rejoindre', 'Une demande d entree doit etre un objet.');
+  }
+
+  const verdictPseudo = validerPseudo(champ(source, 'pseudo'));
+  if (!verdictPseudo.valide) {
+    return { valide: false, erreurs: verdictPseudo.erreurs };
+  }
+
+  const brutRoom = champ(source, 'idRoom');
+  if (brutRoom === undefined) {
+    return accepte({ pseudo: verdictPseudo.valeur });
+  }
+
+  if (typeof brutRoom !== 'string') {
+    return refuse('idRoom', 'L identifiant d une partie doit etre du texte.');
+  }
+
+  const taille = nombreDeCaracteres(brutRoom);
+  if (taille < BORNES_ROOM.longueur.minimum || taille > BORNES_ROOM.longueur.maximum) {
+    return refuse(
+      'idRoom',
+      `L identifiant d une partie fait au plus ${BORNES_ROOM.longueur.maximum} caracteres.`,
+    );
+  }
+
+  if (!BORNES_ROOM.caracteresAdmis.test(brutRoom)) {
+    return refuse(
+      'idRoom',
+      'L identifiant d une partie n accepte que des lettres sans accent, des chiffres, le tiret et le tiret bas.',
+    );
+  }
+
+  return accepte({ pseudo: verdictPseudo.valeur, idRoom: brutRoom });
 }
 
 /**

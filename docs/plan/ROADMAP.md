@@ -36,9 +36,9 @@ Le plan d'origine était découpé par couches: tout le moteur, puis tout le ré
 
 L'ordre ci-dessous découpe en **tranches verticales**. La première tranche traverse le moteur, le serveur et le client pour redonner un jeu jouable, à parité avec l'existant. Les fonctionnalités nouvelles viennent ensuite, sur une base qui tourne.
 
-### Jalon 1 - Le jeu actuel sur socle sain (14 étapes)
+### Jalon 1 - Le jeu actuel sur socle sain (15 étapes)
 
-`0.1` `0.2` `1.1` `1.2` `1.3` `1.4` `1.5` `1.6` `2.1` `2.2` `4.1` `4.2` `4.3` `4.4`
+`0.1` `0.2` `1.1` `1.2` `1.3` `1.4` `1.5` `1.6` `2.1` `2.2` `1.7` `4.1` `4.2` `4.3` `4.4`
 
 À l'arrivée: le jeu d'aujourd'hui, entièrement porté, couvert par des tests, avec une seule partie à la fois. Rien de neuf fonctionnellement, tout de neuf structurellement.
 
@@ -107,6 +107,9 @@ Tests requis: TU sur les décisions des bots dans des situations données, repro
 **1.6. Durcissement et autorité serveur.** Étape ajoutée, absente du plan d'origine. Validation des entrées, autorité du serveur sur le mouvement, limitation de débit, échappement des données fournies par le joueur. Les défauts de sécurité relevés dans docs/audit/AUDIT-EXISTANT.md ne se caractérisent pas, ils se corrigent par conception.
 Tests requis: TU et TI sur le rejet des entrées invalides, le plafonnement du déplacement par unité de temps, le refus d'un débit excessif.
 
+**1.7. Pause de partie.** Étape ajoutée le 14 août 2026, découverte à l'exécution de l'étape 2.2. Le legacy propose une pause (`togglePause`, `pauseGame`, `resumeGame`), et aucune étape de la phase 1 ne l'a portée : ni `EtatPartie` ni `tick` ne connaissent la notion. Elle ne pouvait pas être ajoutée dans la couche réseau, qui n'a le droit de contenir aucune logique de jeu. Périmètre : un état de pause dans le moteur, le temps de jeu qui cesse de s'écouler pendant, l'exposition par `GameRoom`, et les trois événements réseau correspondants. À placer après 2.2 parce qu'elle traverse le moteur, la room et le réseau, et avant le client, qui a besoin du contrat complet.
+Tests requis : TU sur l'arrêt de l'écoulement du temps et le gel des entités pendant la pause, TI sur la mise en pause et la reprise par le réseau, plus la vérification qu'une partie en pause ne se termine pas.
+
 ### Phase 2. Serveur et réseau
 
 **2.1. GameRoom et RoomManager.** Envelopper le moteur pur dans une GameRoom qui détient l'état d'une partie, et un RoomManager qui en instancie plusieurs. Boucle de tick par room, temps injecté.
@@ -171,4 +174,5 @@ Consignés ici pour que la décision reste traçable.
 2. **Base legacy: master v0.8.6** et non mode-strategique v0.9.0. Le corpus d'origine visait la v0.9.0 (vérifié: styles.css à 3 965 lignes, et huit fonctions du système de capture par cône qui n'existent que là). La v0.8.6 est Classique-seul, ce qui correspond au périmètre v1 figé le 29 juin, alors que les fiches 0.2 et 1.3 portaient le mode tactique dès la phase 1. Le mode tactique revient au jalon 5, comme mode enfichable. Note: server.js est identique entre v0.8.5 et v0.8.6, seul le client diffère.
 3. **Étape 1.6 ajoutée.** Le plan d'origine ne traitait ni la validation des entrées, ni l'autorité serveur, ni la limitation de débit, alors que l'audit y a relevé des failles exploitables. La règle « caractériser sans corriger » de l'étape 0.2 est juste pour le gameplay et dangereuse pour la sécurité.
 4. **2.3 conditionné à la mesure** et déplacé au jalon 4, pour respecter le principe posé en 5.2.
-5. **5.3 et 6.1 simplifiés.** Le legacy n'a pas de joueurs en ligne: déploiement en parallèle, drapeaux de fonctionnalité et migration progressive sont sans objet.
+5. **Étape 1.7 ajoutée le 14 août 2026.** La pause de partie du legacy n'avait été portée par aucune étape de la phase 1, et l'étape 2.2 l'a découvert en relevant les événements du legacy. Elle ne pouvait pas se rattraper dans la couche réseau, qui ne contient aucune logique de jeu. Traitée selon la règle 7 de CLAUDE.md: un défaut trop gros pour l'étape en cours devient une étape à part entière, jamais une ligne de dette.
+6. **5.3 et 6.1 simplifiés.** Le legacy n'a pas de joueurs en ligne: déploiement en parallèle, drapeaux de fonctionnalité et migration progressive sont sans objet.

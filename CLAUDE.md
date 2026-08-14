@@ -72,7 +72,11 @@ pnpm test:e2e             # tests de bout en bout (Playwright)
 
 Lancer un sous-ensemble de tests: `pnpm test <motif>`, par exemple `pnpm test purity` ou `pnpm test packages/sim`.
 
-Il n'y a pas encore de mode développement: aucun serveur ni client exécutable avant les étapes 2.2 et 4.1. Pour jouer à la version d'origine, utiliser la branche `master`.
+```bash
+pnpm dev:server           # compiler puis lancer le serveur de jeu (port 3000 par défaut)
+```
+
+Le serveur existe depuis l'étape 2.2. Il n'a pas encore de client: il se pilote avec un client Socket.IO, comme le font ses tests d'intégration. Variables d'environnement: `PORT`, et `ORIGINES_AUTORISEES` (liste séparée par des virgules) pour le contrôle d'accès du navigateur. Le client arrive à l'étape 4.1. Pour jouer à la version d'origine, utiliser la branche `master`.
 
 Première utilisation de Playwright sur une machine neuve: `pnpm exec playwright install chromium`.
 

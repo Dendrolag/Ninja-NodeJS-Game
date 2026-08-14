@@ -13,10 +13,16 @@
     }
   },
   "scripts": {
-    "build": "tsc --build"
+    "build": "tsc --build",
+    "dev": "tsc --build && node dist/principal.js",
+    "start": "node dist/principal.js"
   },
   "dependencies": {
     "@neon-ninja/shared": "workspace:*",
-    "@neon-ninja/sim": "workspace:*"
+    "@neon-ninja/sim": "workspace:*",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.1"
   }
 }

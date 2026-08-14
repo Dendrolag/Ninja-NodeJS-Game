@@ -21,6 +21,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "dev:server": "pnpm --filter @neon-ninja/server dev",
     "verify": "pnpm typecheck && pnpm lint && pnpm test"
   },
   "devDependencies": {

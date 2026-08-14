@@ -306,6 +306,16 @@ export const DIRECTIONS = [
 export type Direction = (typeof DIRECTIONS)[number];
 
 /**
+ * Une couleur au format hexadecimal, par exemple '#FF0000'.
+ *
+ * Ce type vit ici, avec la palette, parce que les trois paquets en parlent: le
+ * moteur peint les entites, le serveur les diffuse, le client les dessine. Le
+ * moteur le republie sous le meme nom depuis packages/sim, pour qu'il n'existe
+ * qu'une seule definition de ce qu'est une couleur dans tout le projet.
+ */
+export type Couleur = string;
+
+/**
  * Palette des couleurs attribuees aux joueurs.
  *
  * Portage de la liste availableColors du legacy (server.js:174).

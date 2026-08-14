@@ -54,6 +54,8 @@ export interface OptionsCreationRoom {
   readonly reglages?: ReglagesPartiels;
   /** Terrain de la partie, decode hors du moteur. Sans lui, une carte sans mur. */
   readonly terrain?: CarteCollisions;
+  /** Appele apres chaque battement. C'est par la que la couche reseau diffuse. */
+  readonly surBattement?: (room: GameRoom) => void;
   /** Appele au battement ou la partie se termine. */
   readonly surFinDePartie?: (room: GameRoom) => void;
 }
@@ -112,6 +114,7 @@ export class RoomManager {
       graine: options.graine ?? this.genererGraine(),
       ...(options.reglages === undefined ? {} : { reglages: options.reglages }),
       ...(options.terrain === undefined ? {} : { terrain: options.terrain }),
+      ...(options.surBattement === undefined ? {} : { surBattement: options.surBattement }),
       ...(options.surFinDePartie === undefined ? {} : { surFinDePartie: options.surFinDePartie }),
       ...(this.horloge === undefined ? {} : { horloge: this.horloge }),
       ...(this.cadenceMs === undefined ? {} : { cadenceMs: this.cadenceMs }),

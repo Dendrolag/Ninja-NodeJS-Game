@@ -8,11 +8,17 @@
  * parties de meme graine attribuent donc exactement les memes couleurs.
  */
 
-import type { Alea, Tirage } from '@neon-ninja/shared';
+import type { Alea, Couleur, Tirage } from '@neon-ninja/shared';
 import { COULEURS_JOUEURS, element, entier } from '@neon-ninja/shared';
 
-/** Une couleur au format hexadecimal, par exemple '#FF0000'. */
-export type Couleur = string;
+/**
+ * Une couleur au format hexadecimal, par exemple '#FF0000'.
+ *
+ * La definition vit dans @neon-ninja/shared, avec la palette des joueurs: le
+ * serveur et le client parlent de la meme chose que le moteur. Elle est
+ * republiee ici pour que le moteur reste lisible sans sortir de son paquet.
+ */
+export type { Couleur };
 
 const CHIFFRES_HEXADECIMAUX = '0123456789ABCDEF';
 

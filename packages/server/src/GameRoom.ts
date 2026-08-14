@@ -43,6 +43,7 @@ import type {
   ReglagesPartiels,
   ResultatValidation,
   SessionJoueur,
+  StatutPartie,
 } from '@neon-ninja/shared';
 import { normaliserTexte } from '@neon-ninja/shared';
 import type {
@@ -91,8 +92,15 @@ export const CADENCE_BATTEMENT_MS = 50;
  */
 export const DT_MAXIMUM_MS = 250;
 
-/** Ou en est une room: on attend, on joue, c'est fini. */
-export type StatutRoom = 'salon' | 'enCours' | 'terminee';
+/**
+ * Ou en est une room: on attend, on joue, c'est fini.
+ *
+ * C'est le meme type que celui du contrat reseau, ou il se nomme StatutPartie.
+ * Une seule definition, dans @neon-ninja/shared: le statut qu'une room porte est
+ * exactement celui qu'un client recoit, et il ne peut pas y avoir de traduction
+ * a tenir a jour entre les deux.
+ */
+export type StatutRoom = StatutPartie;
 
 /** Ce que la room sait d'un joueur en tant que membre du salon. */
 export interface JoueurDeRoom {
@@ -119,6 +127,17 @@ export interface OptionsGameRoom {
   readonly horloge?: Horloge;
   /** Cadence de la boucle, en millisecondes. */
   readonly cadenceMs?: number;
+  /**
+   * Appele apres chaque battement, une fois l'etat avance.
+   *
+   * C'est le seul lien de la room vers le monde exterieur, et il va dans le bon
+   * sens: la room ne connait toujours personne, c'est l'exterieur qui demande a
+   * etre prevenu. La couche Socket.IO de l'etape 2.2 s'en sert pour diffuser
+   * l'instantane et les evenements du battement. Le journal etat.evenements
+   * etant remis a zero au battement suivant, c'est le seul moment ou il peut
+   * etre lu sans en perdre.
+   */
+  readonly surBattement?: (room: GameRoom) => void;
   /** Appele une fois, au battement ou la partie se termine. */
   readonly surFinDePartie?: (room: GameRoom) => void;
 }
@@ -133,7 +152,11 @@ export class GameRoom {
 
   private readonly horloge: Horloge;
   private readonly cadenceMs: number;
+  private readonly surBattement: ((room: GameRoom) => void) | undefined;
   private readonly surFinDePartie: ((room: GameRoom) => void) | undefined;
+
+  /** Terrain de la partie, conserve pour pouvoir refaire l'etat si les reglages changent. */
+  private terrain: CarteCollisions | undefined;
 
   /** L'etat de la partie, tel que le dernier battement l'a laisse. */
   private partie: EtatPartie;
@@ -179,17 +202,11 @@ export class GameRoom {
     this.graine = options.graine;
     this.horloge = options.horloge ?? horlogeSysteme;
     this.cadenceMs = options.cadenceMs ?? CADENCE_BATTEMENT_MS;
+    this.surBattement = options.surBattement;
     this.surFinDePartie = options.surFinDePartie;
+    this.terrain = options.terrain;
 
-    // Les champs facultatifs sont omis plutot que poses a undefined: le projet
-    // compile avec exactOptionalPropertyTypes, qui distingue les deux.
-    const depart: OptionsEtatInitial = {
-      graine: options.graine,
-      ...(options.reglages === undefined ? {} : { reglages: options.reglages }),
-      ...(options.terrain === undefined ? {} : { terrain: options.terrain }),
-    };
-
-    this.partie = creerEtatInitial(depart);
+    this.partie = this.etatNeuf(options.reglages);
   }
 
   /** Ou en est la room. */
@@ -299,6 +316,45 @@ export class GameRoom {
   }
 
   /**
+   * Change les reglages de la partie, tant qu'elle n'a pas commence.
+   *
+   * L'ETAT EST REFAIT A NEUF, PAS RETOUCHE. Changer la carte change ses
+   * dimensions, donc les positions tenables, donc la place de chacun: retoucher
+   * un champ dans l'etat existant laisserait des joueurs dans un mur. On repart
+   * donc de la meme graine, avec les nouveaux reglages, puis on refait entrer les
+   * joueurs dans leur ordre d'arrivee. Le resultat est exactement celui qu'aurait
+   * donne une room creee d'emblee avec ces reglages-la, ce qui est la seule
+   * definition solide de « les reglages ont change ».
+   *
+   * Le legacy, lui, ecrivait dans currentGameSettings a la volee, y compris
+   * pendant une partie: la carte pouvait changer sous les pieds des joueurs. Le
+   * refus ci-dessous ferme cette porte.
+   *
+   * @param reglages Reglages complets, deja valides par la couche reseau.
+   * @param terrain Terrain de la nouvelle carte. Absent: carte sans mur.
+   * @throws Si la partie a deja commence. L'appelant verifie le statut avant.
+   */
+  changerReglages(reglages: ReglagesPartiels, terrain?: CarteCollisions): void {
+    if (this.statutCourant !== 'salon') {
+      throw new Error(
+        `Les reglages de la room ${this.id} ne changent plus: statut ${this.statutCourant}.`,
+      );
+    }
+
+    const membres = this.ordreDArrivee.map((id) => ({
+      id,
+      pseudo: this.partie.joueurs[id]?.pseudo ?? '',
+    }));
+
+    this.terrain = terrain;
+    this.partie = this.etatNeuf(reglages);
+
+    for (const membre of membres) {
+      this.partie = ajouterJoueur(this.partie, membre);
+    }
+  }
+
+  /**
    * Lance la partie: les bots entrent en jeu, et la boucle se met a battre.
    *
    * Le peuplement en bots n'appartient pas a la creation de l'etat (decision du
@@ -359,6 +415,12 @@ export class GameRoom {
 
     this.partie = tick(this.partie, this.intentions, dtMs);
 
+    // Prevenir AVANT de constater la fin: le dernier battement d'une partie est
+    // un battement comme les autres, et ce qui s'y est passe doit partir comme le
+    // reste. Sans cela, une capture faite dans la derniere demi-seconde ne serait
+    // jamais annoncee.
+    this.surBattement?.(this);
+
     if (evaluerFinDePartie(this.partie).terminee) {
       this.statutCourant = 'terminee';
       this.arreter();
@@ -381,6 +443,22 @@ export class GameRoom {
   /** Le classement de la partie, du meilleur au moins bon. */
   classement(): readonly LigneScore[] {
     return calculerScores(this.partie);
+  }
+
+  /**
+   * Fabrique un etat de depart avec les reglages donnes et le terrain courant.
+   *
+   * Les champs facultatifs sont omis plutot que poses a undefined: le projet
+   * compile avec exactOptionalPropertyTypes, qui distingue les deux.
+   */
+  private etatNeuf(reglages: ReglagesPartiels | undefined): EtatPartie {
+    const depart: OptionsEtatInitial = {
+      graine: this.graine,
+      ...(reglages === undefined ? {} : { reglages }),
+      ...(this.terrain === undefined ? {} : { terrain: this.terrain }),
+    };
+
+    return creerEtatInitial(depart);
   }
 
   /** Ce joueur est-il l'hote. */
