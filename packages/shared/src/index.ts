@@ -11,6 +11,14 @@
 export type { Alea, Tirage } from './alea.js';
 export { creerAlea, element, entier, nombre, reel } from './alea.js';
 
+export type { Intervalle, LimiteDebit } from './bornes.js';
+export { BORNES_CHAT, BORNES_PSEUDO, BORNES_REGLAGES, LIMITES_DEBIT } from './bornes.js';
+
+export type { Consommation, SeauAJetons } from './debit.js';
+export { consommer, seauNeuf } from './debit.js';
+
+export type { IntentionDeplacement, MessageChat, SessionJoueur } from './entrees.js';
+
 export type {
   DimensionsCarte,
   Direction,
@@ -55,3 +63,12 @@ export type {
   ReglagesZones,
 } from './reglages.js';
 export { REGLAGES_PAR_DEFAUT, completerReglages } from './reglages.js';
+
+export type { ErreurValidation, ResultatValidation } from './validation.js';
+export {
+  normaliserTexte,
+  validerIntentionDeplacement,
+  validerMessageChat,
+  validerPseudo,
+  validerReglages,
+} from './validation.js';

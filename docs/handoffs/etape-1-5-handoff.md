@@ -26,8 +26,8 @@ Le contrat de `tick(etat, entrees, dtMs)` est inchangé, y compris son nombre d'
 
 ```ts
 interface TraitsDeBot extends Entite {
-  readonly cap: Vecteur;                       // toujours unitaire
-  readonly enMouvement: boolean;               // marche ou pause
+  readonly cap: Vecteur; // toujours unitaire
+  readonly enMouvement: boolean; // marche ou pause
   readonly avantChangementDEtatMs: number;
   readonly avantChangementDeCapMs: number;
   readonly avantControleDeBlocageMs: number;
@@ -35,7 +35,9 @@ interface TraitsDeBot extends Entite {
   readonly controlesSansAvancer: number;
 }
 
-export interface BotOrdinaire extends TraitsDeBot { readonly type: 'bot' }
+export interface BotOrdinaire extends TraitsDeBot {
+  readonly type: 'bot';
+}
 
 export interface BotNoir extends TraitsDeBot {
   readonly type: 'botNoir';
@@ -61,8 +63,7 @@ readonly capturesParBotNoirSubies: number;   // portage de capturedByBlackBot
 
 ```ts
 type EvenementPartie =
-  | CaptureDeJoueur | CaptureParBotNoir | DestructionDeBotNoir
-  | BonusRamasse | MalusRamasse;
+  CaptureDeJoueur | CaptureParBotNoir | DestructionDeBotNoir | BonusRamasse | MalusRamasse;
 ```
 
 `CaptureParBotNoir` porte `botsPerdus`: le serveur de l'étape 2.2 y trouvera le nombre à annoncer, que le legacy recalculait au moment d'émettre.

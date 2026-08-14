@@ -245,6 +245,8 @@ Ajoutes le 14 aout 2026, en portant les captures et le score.
 
 Precision sur le sens du contact, verifiee en portant: dans un meme passage de `updateBots`, les bots sont parcourus dans leur ordre d'arrivee, et le premier repeint le second, qui ne repeint plus rien ensuite puisqu'il porte deja la meme couleur. Ce n'est donc pas un clignotement: le plus ancien des deux l'emporte. Le portage reproduit exactement cette regle.
 
+**Tranche le 14 aout 2026, a l'etape 1.6.** Reponse du porteur du projet: effet de bord jamais voulu, a corriger. Seule une entite portant la couleur d'un joueur repeint desormais un bot; la contagion entre bots de joueurs, elle, reste entiere. Mesure de l'ecart sur vingt parties d'une minute a trois joueurs et trente bots: 149 bots portes en fin de partie contre 111 avant la correction, soit environ un tiers de score en plus, et 332 bots restes neutres contre 372. Le chiffre couvre aussi la correction de X30, decouvert au meme endroit. Voir `aUneCouleurADonner` dans `packages/sim/src/capture.ts`.
+
 **X21. `handlePlayerCapture` ne verifie pas la couleur de sa victime.** La condition « couleurs differentes » vit dans `detectCollisions` (`:1687`), pas dans `handlePlayerCapture` (`:738`). Appelee directement sur deux joueurs de meme couleur, la fonction compte donc une capture et « transfere » a l'attaquant ses propres bots. Le legacy n'a qu'un seul appelant, la faute n'est donc jamais commise, mais la fonction n'est pas sure par elle-meme. Corrige par conception a l'etape 1.3: la verification est dans la regle d'autorisation, appelee par la capture elle-meme, donc aucun appelant ne peut l'oublier.
 
 ### Defauts decouverts a l'etape 1.4
@@ -275,6 +277,28 @@ Ajoutes le 14 aout 2026, en portant l'intelligence des bots et des bots noirs.
 Corrige par conception a l'etape 1.5: le cap est toujours unitaire, et la vitesse est une constante a part. Un cap se tire comme un angle, plus comme deux composantes.
 
 **X29. Le bot noir pose deux fois la meme question de deux facons differentes.** `findNewTarget` ecarte les joueurs invulnerables au complet, `!entity.invincibilityActive && !entity.isInvulnerable()` (`:1200`). Mais la verification faite entre deux recherches, quand un joueur entre dans le rayon pendant la poursuite d'un bot, ne regarde que `!e.invincibilityActive` (`:1161`) et ignore la protection d'apparition. Un bot noir peut donc lacher sa proie pour se lancer aux trousses d'un joueur qui vient d'apparaitre, et se voir refuser la prise a l'arrivee par `captureEntity`, qui teste les deux (`:1263`). Corrige a l'etape 1.5: la question est posee une seule fois, par `estInvulnerable`.
+
+### Defauts decouverts a l'etape 1.6
+
+Ajoutes le 14 aout 2026, en durcissant le moteur contre les entrees malveillantes.
+
+**X30. Un bot noir repeint en noir le bot ordinaire qu'il frole.** Celui-la n'est pas un defaut du legacy: c'est une regression introduite par le portage, entre les etapes 1.3 et 1.5. Le releve des contacts confie a `capturerBot` n'importe quelle paire d'entites non joueuses, bots noirs compris; comme un bot noir porte la couleur noire et que la fonction se contentait de verifier que les deux couleurs different, il imposait la sienne. Et selon l'ordre de la table des bots seulement, ce qui rendait l'effet intermittent.
+
+Le legacy ne pouvait pas faire cela pour deux raisons independantes: `updateBots` (`server.js:1567`) n'appelait jamais `detectCollisions` sur un bot noir, et le test de contagion entre bots exigeait `entity.type === 'bot'` (`:1701`), ce qu'un bot noir n'est pas (`:1137`). Le commentaire d'aiguillage de `contacts.ts` annoncait d'ailleurs deja le bon comportement, que le code ne tenait pas.
+
+Corrige a l'etape 1.6 par la meme regle que X20: seule une entite portant la couleur d'un joueur repeint un bot. Un bot noir n'a pas de couleur a donner, pas plus qu'un bot blanc.
+
+### Statut des failles de securite apres l'etape 1.6
+
+Recapitulatif au 14 aout 2026. Les failles S1 a S4 sont traitees par conception dans `packages/shared` et `packages/sim`; leur fermeture effective demande en plus le branchement de l'etape 2.2 (couche reseau) et de l'etape 4.3 (ecrans).
+
+| Faille | Etat                 | Ou                                                                                                                                      |
+| ------ | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| S1     | Traitee cote donnees | `validerPseudo` impose une liste blanche de caracteres et une longueur bornee. L'echappement a l'affichage reste exige en 4.3.          |
+| S2     | Fermee               | Le deplacement depend de dt et de la seule orientation recue; aucun champ d'etat du client n'est lu; le facteur mobile n'est pas porte. |
+| S3     | Fermee               | `validerMessageChat` appose l'identite de la session au lieu de lire celle du message.                                                  |
+| S4     | Traitee              | `LIMITES_DEBIT` et le seau a jetons de `debit.ts`. L'application par connexion revient a l'etape 2.2.                                   |
+| S5     | Ouverte              | Dependances du legacy. Sans objet pour le nouveau code, qui ne reprend aucune de ces dependances.                                       |
 
 ### Poids et proprete du depot
 

@@ -46,9 +46,19 @@ export function directionDuVecteur(vecteur: Vecteur): Direction {
   return determinerDirection(vecteur.x, vecteur.y);
 }
 
-/** Norme d'un vecteur. */
+/**
+ * Norme d'un vecteur.
+ *
+ * Math.hypot plutot que la racine de la somme des carres, et ce n'est pas une
+ * coquetterie: le carre d'une coordonnee tres grande deborde vers l'infini, ce
+ * qui donnerait une norme infinie, donc un vecteur ramene a zero par aLaLongueur.
+ * Un client qui enverrait une intention de deplacement de norme absurde
+ * immobiliserait ainsi son propre joueur au lieu d'avancer normalement. Math.hypot
+ * met les coordonnees a l'echelle avant de les elever au carre et rend la bonne
+ * valeur quelle que soit leur taille. Durcissement de l'etape 1.6.
+ */
 export function norme(vecteur: Vecteur): number {
-  return Math.sqrt(vecteur.x * vecteur.x + vecteur.y * vecteur.y);
+  return Math.hypot(vecteur.x, vecteur.y);
 }
 
 /**

@@ -13,6 +13,7 @@ import { describe, expect, it } from 'vitest';
 import type { CarteCollisions } from './collisions.js';
 import { creerCarteCollisions } from './collisions.js';
 import { SEUIL_CONTACT_PX } from './contacts.js';
+import { AUCUN_BONUS } from './effets.js';
 import type { EtatPartie, Joueur } from './etat.js';
 import {
   COMPTEUR_CAPTURE_PRET,
@@ -298,6 +299,119 @@ describe('deplacement des joueurs', () => {
     expect(joueurDe(etat, 'j1').direction).toBe('est');
     expect(joueurDe(etat, 'j2').direction).toBe('nord');
     expect(joueurDe(etat, 'j2').position.x).toBe(800);
+  });
+});
+
+/**
+ * Durcissement de l'etape 1.6: ce que le moteur refuse de croire.
+ *
+ * Ces tests ne verifient pas un reglage de jeu, ils verifient qu'un client
+ * modifie n'obtient rien de plus qu'un client honnete. Les failles visees sont
+ * S2 et S4 de docs/audit/AUDIT-EXISTANT.md.
+ */
+describe('durcissement des entrees', () => {
+  /** Ce qu'un serveur fait de plusieurs messages recus entre deux battements. */
+  function derniereIntentionRecue(messages: readonly Vecteur[]): Entrees {
+    let entrees: Entrees = {};
+    for (const deplacement of messages) {
+      entrees = { ...entrees, j1: { deplacement, enMouvement: true } };
+    }
+    return entrees;
+  }
+
+  it('ne deplace pas davantage un joueur qui envoie cent messages qu un qui en envoie un', () => {
+    // C'est le coeur de la faille S2: dans le legacy, le deplacement etait
+    // applique a chaque message recu, donc la vitesse valait le debit du client.
+    const bavard = tick(
+      partieAvecUnJoueur(),
+      derniereIntentionRecue(Array.from({ length: 100 }, () => ({ x: 1, y: 0 }))),
+      BATTEMENT_MS,
+    );
+    const discret = tick(
+      partieAvecUnJoueur(),
+      derniereIntentionRecue([{ x: 1, y: 0 }]),
+      BATTEMENT_MS,
+    );
+
+    expect(joueurDe(bavard, 'j1').position).toEqual(joueurDe(discret, 'j1').position);
+  });
+
+  it('avance de la distance permise par dt, quel que soit le nombre de battements', () => {
+    // Meme chose vue du serveur: cadencer le moteur plus souvent ne fait pas
+    // courir les joueurs plus vite. Une seconde de jeu vaut une seconde de
+    // deplacement, en un seul battement comme en cent.
+    const parcourue = (battements: number): number => {
+      let etat = partieAvecUnJoueur();
+      for (let numero = 0; numero < battements; numero += 1) {
+        etat = tick(etat, vers({ x: 1, y: 0 }), 1000 / battements);
+      }
+      return joueurDe(etat, 'j1').position.x - 500;
+    };
+
+    expect(parcourue(1)).toBeCloseTo(VITESSES.JOUEUR_PX_PAR_SECONDE, 10);
+    expect(parcourue(20)).toBeCloseTo(VITESSES.JOUEUR_PX_PAR_SECONDE, 10);
+    expect(parcourue(100)).toBeCloseTo(VITESSES.JOUEUR_PX_PAR_SECONDE, 10);
+  });
+
+  it('immobilise le joueur dont l intention porte une coordonnee absurde', () => {
+    // Sans cette barriere, NaN se propage a la position, puis a toutes les
+    // distances, et corrompt la partie entiere sans lever la moindre erreur.
+    for (const absurde of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      const etat = tick(partieAvecUnJoueur(), vers({ x: absurde, y: 0 }), BATTEMENT_MS);
+      const joueur = joueurDe(etat, 'j1');
+
+      expect(joueur.position).toEqual({ x: 500, y: 500 });
+      expect(joueur.direction).toBe('immobile');
+    }
+  });
+
+  it('avance normalement malgre un vecteur de norme gigantesque', () => {
+    // Le carre d'une telle coordonnee deborde vers l'infini: sans Math.hypot, le
+    // joueur serait immobilise au lieu d'avancer a sa vitesse normale.
+    const enorme = tick(partieAvecUnJoueur(), vers({ x: 1e300, y: 1e300 }), BATTEMENT_MS);
+    const normal = tick(partieAvecUnJoueur(), vers({ x: 1, y: 1 }), BATTEMENT_MS);
+
+    expect(joueurDe(enorme, 'j1').position.x).toBeCloseTo(joueurDe(normal, 'j1').position.x, 10);
+    expect(joueurDe(enorme, 'j1').position.y).toBeCloseTo(joueurDe(normal, 'j1').position.y, 10);
+  });
+
+  it('n accorde aucune vitesse a un bonus que le client declare', () => {
+    // Le legacy lisait data.speedBoostActive et data.isMobile dans le message et
+    // les appliquait comme multiplicateurs, cumulables a trois virgule quatre.
+    // Ici ces champs ne sont pas lus, donc ils n'accordent rien.
+    const menteur = {
+      j1: {
+        deplacement: { x: 1, y: 0 },
+        enMouvement: true,
+        speedBoostActive: true,
+        isMobile: true,
+        invincibilityActive: true,
+      },
+    } as unknown as Entrees;
+
+    const trichee = tick(partieAvecUnJoueur(), menteur, BATTEMENT_MS);
+    const honnete = tick(partieAvecUnJoueur(), vers({ x: 1, y: 0 }), BATTEMENT_MS);
+
+    expect(joueurDe(trichee, 'j1').position).toEqual(joueurDe(honnete, 'j1').position);
+    expect(estInvulnerable(joueurDe(trichee, 'j1'))).toBe(estInvulnerable(joueurDe(honnete, 'j1')));
+  });
+
+  it('accorde le bonus de vitesse uniquement quand le moteur l a lui-meme donne', () => {
+    const avecBonus = partieAvecUnJoueur();
+    const porteur = {
+      ...avecBonus,
+      joueurs: {
+        j1: { ...joueurDe(avecBonus, 'j1'), bonusRestantsMs: { ...AUCUN_BONUS, vitesse: 10_000 } },
+      },
+    };
+
+    const rapide = tick(porteur, vers({ x: 1, y: 0 }), 1000);
+    const ordinaire = tick(partieAvecUnJoueur(), vers({ x: 1, y: 0 }), 1000);
+
+    expect(joueurDe(rapide, 'j1').position.x - 500).toBeCloseTo(
+      (joueurDe(ordinaire, 'j1').position.x - 500) * VITESSES.MULTIPLICATEUR_BONUS,
+      10,
+    );
   });
 });
 

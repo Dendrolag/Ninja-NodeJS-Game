@@ -98,6 +98,7 @@ Réglages de gameplay à couvrir par des tests de caractérisation avant toute m
 8. Transfert de propriété du salon quand le propriétaire part.
 9. Collisions dérivées d'une image `collision.png`, seuil de luminosité à 128. C'est du contenu, pas du code.
 10. **Les durées de bonus se cumulent** au lieu de se remplacer: deux bonus de vitesse ramassés coup sur coup donnent vingt secondes. Confirmé comme voulu le 13 août 2026.
+11. **Les bots se transmettent leur couleur au contact, mais seule une couleur de joueur se transmet.** Un troupeau rouge qui traverse un troupeau bleu le retourne. Un bot blanc, lui, ne repeint rien: il n'a pas de couleur à donner. Le legacy ne posait aucune condition, si bien que le blanc effaçait les scores par simple diffusion. Corrigé le 14 août 2026 sur décision du porteur du projet, défauts X20 et X30 de l'audit. C'est le seul écart de gameplay volontaire du portage.
 
 ## Sécurité: la règle qui prime sur la caractérisation
 

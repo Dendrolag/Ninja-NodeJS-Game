@@ -302,6 +302,27 @@ describe('capturerBot', () => {
     expect(capturerBot(etat, 'a', 'bn')).toBe(etat);
   });
 
+  // Defaut X20 de l'audit, tranche le 14 aout 2026: un bot que personne n'a
+  // capture n'a pas de couleur a donner. Sans cette regle, un joueur perdait des
+  // points par simple diffusion, sans que personne ne l'attaque.
+  it('ne laisse pas un bot neutre effacer la couleur d un bot capture', () => {
+    let etat = situationDeDepart();
+    etat = ajouterBot(etat, { id: 'blanc', position: { x: 800, y: 800 } });
+    etat = ajouterBot(etat, { id: 'rouge', couleur: ROUGE, position: { x: 810, y: 800 } });
+
+    expect(capturerBot(etat, 'blanc', 'rouge')).toBe(etat);
+  });
+
+  // Defaut X30: regression du portage, absente du legacy, ou detectCollisions
+  // n'etait jamais appelee sur un bot noir.
+  it('ne laisse pas un bot noir repeindre un bot en noir', () => {
+    let etat = situationDeDepart();
+    etat = ajouterBot(etat, { id: 'bn', type: 'botNoir', position: { x: 800, y: 800 } });
+    etat = ajouterBot(etat, { id: 'rouge', couleur: ROUGE, position: { x: 810, y: 800 } });
+
+    expect(capturerBot(etat, 'bn', 'rouge')).toBe(etat);
+  });
+
   it('ne fait rien quand une des deux entites n existe pas', () => {
     const etat = situationDeDepart();
 

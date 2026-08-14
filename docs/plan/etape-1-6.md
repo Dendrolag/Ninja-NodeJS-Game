@@ -82,6 +82,20 @@ Conditions de ROADMAP réunies, plus:
 
 Si un durcissement change un comportement de jeu observable (par exemple la vitesse réelle d'un joueur, parce que le legacy la calculait par message), c'est un écart légitime mais il doit être **mesuré, expliqué et consigné** dans le handoff, pas subi. Le legacy a connu au moins quatre corrections successives sur le réglage de la vitesse: c'est un point fragile, à traiter avec attention.
 
+## Réconciliation, faite le 14 août 2026
+
+Écarts entre cette fiche et l'état réel du dépôt au moment de l'exécuter. La fiche a été écrite avant les étapes 1.1 à 1.5, et une partie de son périmètre était déjà acquise.
+
+1. **Le point 1 était acquis à 90 pour cent.** Le déplacement est calculé par le moteur à partir de dt depuis l'étape 1.1, et les entrées forment une table d'une intention par joueur et par battement: plusieurs intentions dans le même tick ne pouvaient déjà pas produire plusieurs déplacements. Restait à borner ce que le vecteur reçu peut valoir. Fait: une coordonnée non finie immobilise le joueur au lieu d'empoisonner la partie, et la norme passe par `Math.hypot`, ce qui évite qu'un vecteur gigantesque ne se ramène à zéro par débordement.
+
+2. **Le point 2 était acquis en entier.** Le bonus de vitesse est détenu par le moteur depuis l'étape 1.4, et le facteur mobile n'a jamais été porté. Restait la décision à consigner: il ne le sera pas. Voir le journal de `docs/design/README.md`.
+
+3. **Le point 3 était bien le gros du travail**, comme annoncé par le handoff 1.5. Trois fichiers neufs dans `packages/shared`.
+
+4. **Le point 5 va un cran plus loin que la fiche.** Elle demandait des données seules, l'application revenant à l'étape 2.2. Les tests requis de ROADMAP.md demandaient en revanche « le refus d'un débit excessif », ce qu'aucune donnée seule ne permet de vérifier. Le seau à jetons est donc écrit ici, comme fonction pure à temps injecté, et l'étape 2.2 n'aura plus qu'à le brancher par connexion.
+
+5. **Deux défauts hors périmètre traités au titre de la règle 7.** X20, la contagion du blanc entre bots, question ouverte depuis l'étape 1.3 et tranchée par le porteur du projet au début de cette session. X30, la contagion du noir, découvert en lisant le relevé des contacts: une régression du portage, absente du legacy. Les deux se corrigent par la même règle.
+
 ## Rituel de fin de session
 
 Écrire docs/handoffs/etape-1-6-handoff.md. Lister les règles de validation retenues, les limites de débit décidées, et tout écart de comportement mesuré par rapport au legacy. Prochaine action exacte pour l'étape 2.1: envelopper le moteur dans une GameRoom et un RoomManager. Commiter.

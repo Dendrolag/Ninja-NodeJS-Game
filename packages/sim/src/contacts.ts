@@ -181,6 +181,12 @@ function resoudreUnContact(
   // Deux bots. Le legacy laissait celui qui bougeait repeindre l'autre; ici c'est
   // le premier releve, donc le plus ancien des deux, ce qui evite que deux bots
   // superposes se repeignent l'un l'autre a chaque battement.
+  //
+  // La paire peut comprendre un bot noir, et c'est capturerBot qui le refuse: un
+  // bot noir n'a pas de couleur a donner, pas plus qu'un bot blanc. Voir les
+  // defauts X30 et X20 de l'audit. La regle vit la-bas plutot qu'ici pour qu'un
+  // futur mode de jeu qui ecrirait sa propre regle de resolution ne puisse pas
+  // l'oublier.
   return sansEffet(capturerBot(etat, premierId, secondId));
 }
 

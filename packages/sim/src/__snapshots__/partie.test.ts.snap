@@ -2,7 +2,7 @@
 
 exports[`partie complete > produit l instantane de reference apres une minute de jeu 1`] = `
 {
-  "alea": 1859126937,
+  "alea": 403632006,
   "bots": {
     "noirs": 2,
     "ordinaires": 30,
@@ -17,8 +17,8 @@ exports[`partie complete > produit l instantane de reference apres une minute de
     {
       "botsNoirsDetruits": 0,
       "botsPortes": 5,
-      "captures": 0,
-      "id": "alice",
+      "captures": 1,
+      "id": "chloe",
       "points": 5,
     },
     {
@@ -30,18 +30,18 @@ exports[`partie complete > produit l instantane de reference apres une minute de
     },
     {
       "botsNoirsDetruits": 0,
-      "botsPortes": 1,
-      "captures": 1,
-      "id": "chloe",
-      "points": 1,
+      "botsPortes": 0,
+      "captures": 0,
+      "id": "alice",
+      "points": 0,
     },
   ],
-  "compteurIdentifiants": 49,
+  "compteurIdentifiants": 53,
   "evenements": {
     "captureJoueur": 1,
     "captureParBotNoir": 1,
   },
-  "objetsPoses": 0,
+  "objetsPoses": 3,
   "partieTerminee": true,
   "positions": {
     "alice": {
@@ -60,7 +60,7 @@ exports[`partie complete > produit l instantane de reference apres une minute de
   "tempsEcouleMs": 60000,
   "tick": 1200,
   "zonesActives": [
-    "attraction",
+    "invisibilite",
     "repulsion",
   ],
 }

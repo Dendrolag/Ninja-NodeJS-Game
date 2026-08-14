@@ -43,7 +43,7 @@
  * partir du battement suivant.
  */
 
-import type { Vecteur } from '@neon-ninja/shared';
+import type { IntentionDeplacement, Vecteur } from '@neon-ninja/shared';
 import { VITESSES } from '@neon-ninja/shared';
 
 import { avancerLesBots } from './bots.js';
@@ -60,18 +60,33 @@ import {
 } from './objets.js';
 import { appliquerLesEffetsDeZone, avancerLesZones } from './zones.js';
 
-/** Ce qu'un joueur demande au moteur pendant un battement. */
-export interface EntreeJoueur {
-  /**
-   * Direction souhaitee. Seule son orientation compte: le moteur la ramene a la
-   * vitesse du joueur. Un client ne decide donc pas de sa propre vitesse.
-   */
-  readonly deplacement: Vecteur;
-  /** Faux quand le joueur relache ses touches: il s'arrete et regarde devant lui. */
-  readonly enMouvement: boolean;
-}
+/**
+ * Ce qu'un joueur demande au moteur pendant un battement.
+ *
+ * Le contrat lui-meme vit dans packages/shared sous le nom IntentionDeplacement,
+ * parce que trois couches doivent en parler: le client qui l'emet, la couche
+ * reseau qui le valide, et le moteur qui le consomme. Le nom local est conserve
+ * pour que le moteur garde son vocabulaire: une entree, c'est ce qui entre dans
+ * un battement.
+ *
+ * Il ne contient QUE l'intention. Aucun champ d'etat n'y a sa place: ni bonus, ni
+ * appareil, ni vitesse. Voir le commentaire de IntentionDeplacement pour ce que
+ * le legacy y mettait, et ce que cela permettait.
+ */
+export type EntreeJoueur = IntentionDeplacement;
 
-/** Les entrees de tous les joueurs pour un battement, indexees par identifiant. */
+/**
+ * Les entrees de tous les joueurs pour un battement, indexees par identifiant.
+ *
+ * UN JOUEUR, UNE INTENTION, UN BATTEMENT. Cette table est ce qui rend impossible
+ * la faille S2 du legacy: le serveur y range la derniere intention connue de
+ * chaque joueur, et le moteur en tire un seul deplacement, borne par dt. Qu'un
+ * client ait envoye un message ou mille depuis le battement precedent ne change
+ * donc rien a la distance qu'il parcourt. Le legacy, lui, deplacait le joueur a
+ * chaque message recu.
+ *
+ * Une entree portant l'identifiant d'un joueur absent de la partie est ignoree.
+ */
 export type Entrees = Readonly<Record<IdentifiantEntite, EntreeJoueur>>;
 
 /** Verdict sur la fin d'une partie, sans aucune action declenchee. */
@@ -180,6 +195,11 @@ function avancerJoueur(
  *
  * La direction suit le deplacement effectivement realise: un joueur bloque
  * regarde devant lui, comme dans le legacy.
+ *
+ * LA DISTANCE NE DEPEND QUE DE dt. Elle vaut la vitesse du joueur multipliee par
+ * le temps ecoule, et rien d'autre. Ni la longueur du vecteur recu, ni le nombre
+ * de messages envoyes n'y peuvent quoi que ce soit: c'est la correction de fond
+ * de la faille S2, deja acquise depuis l'etape 1.1.
  */
 function deplacerJoueur(
   etat: EtatPartie,
@@ -187,7 +207,7 @@ function deplacerJoueur(
   entree: EntreeJoueur | undefined,
   dtMs: number,
 ): Joueur {
-  if (entree === undefined || !entree.enMouvement || norme(entree.deplacement) === 0) {
+  if (entree === undefined || !entree.enMouvement || !intentionExploitable(entree.deplacement)) {
     return { ...joueur, direction: 'immobile' };
   }
 
@@ -198,6 +218,33 @@ function deplacerJoueur(
   const effectif = { x: position.x - joueur.position.x, y: position.y - joueur.position.y };
 
   return { ...joueur, position, direction: directionDuVecteur(effectif) };
+}
+
+/**
+ * Le vecteur recu dit-il quelque chose d'exploitable ?
+ *
+ * Une derniere barriere, apres celle de la couche reseau. La couche reseau refuse
+ * deja le message (validerIntentionDeplacement de packages/shared), et le moteur
+ * verifie quand meme, pour deux raisons.
+ *
+ * La premiere est le cout d'une erreur. Une coordonnee valant NaN ne leve aucune
+ * exception: elle se propage silencieusement a la position du joueur, puis a
+ * toutes les distances qui la font intervenir, donc aux contacts, donc aux
+ * captures. Une seule entree mal formee suffirait a rendre une partie entiere
+ * incoherente sans qu'aucun message d'erreur ne soit jamais emis.
+ *
+ * La seconde est que le moteur ne connait pas ses appelants. Un test, un rejeu de
+ * partie, un futur mode spectateur, un serveur de developpement: rien ne garantit
+ * que tous passent par la validation reseau. Un moteur qui se defend lui-meme
+ * n'oblige personne a s'en souvenir.
+ *
+ * Un vecteur nul est refuse lui aussi, mais pour une raison ordinaire: il ne
+ * designe aucune direction. Le joueur s'arrete, comme s'il relachait ses touches.
+ */
+function intentionExploitable(deplacement: Vecteur): boolean {
+  const longueur = norme(deplacement);
+
+  return Number.isFinite(longueur) && longueur > 0;
 }
 
 /**

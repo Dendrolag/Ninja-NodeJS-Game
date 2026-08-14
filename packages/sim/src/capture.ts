@@ -30,9 +30,11 @@
  *     joueurs de meme couleur: elle comptait alors une capture et « transferait »
  *     a l'attaquant ses propres bots. Ici la verification est dans la regle
  *     d'autorisation, donc elle ne peut plus etre oubliee par un appelant.
+ *   - Seule une entite portant la couleur d'un joueur repeint un bot. Voir
+ *     aUneCouleurADonner plus bas: c'est la correction des defauts X20 et X30.
  */
 
-import { DUREES, SCORE } from '@neon-ninja/shared';
+import { COULEUR_BOT_NEUTRE, DUREES, SCORE } from '@neon-ninja/shared';
 
 import type { Couleur } from './couleurs.js';
 import { couleurUnique } from './couleurs.js';
@@ -146,14 +148,14 @@ export function capturerJoueur(
  * groupe de bots les fait passer a sa couleur, et son score monte d'autant.
  *
  * Le legacy laissait aussi les bots se repeindre entre eux (:1704): un bot en
- * mouvement teint celui qu'il touche. Cette contagion est portee telle quelle,
- * elle fait partie du jeu depuis toujours. Sa consequence surprenante est qu'un
- * bot blanc repeint en blanc un bot de couleur, donc qu'un joueur peut perdre des
- * points sans que personne ne l'attaque. Signale dans le handoff de l'etape.
+ * mouvement teint celui qu'il touche. Cette contagion fait partie du jeu depuis
+ * toujours, et elle est conservee ENTRE BOTS DE JOUEURS: elle est ce qui fait
+ * qu'un troupeau rouge qui traverse un troupeau bleu le retourne.
  *
  * Renvoie l'etat inchange si les deux portent deja la meme couleur, si la cible
- * n'est pas un bot ordinaire, ou si l'une des deux entites a disparu. Un bot noir
- * ne se repeint jamais: il vivait dans une table a part dans le legacy.
+ * n'est pas un bot ordinaire, si le capteur n'a pas de couleur a donner, ou si
+ * l'une des deux entites a disparu. Un bot noir ne se repeint jamais: il vivait
+ * dans une table a part dans le legacy.
  */
 export function capturerBot(
   etat: EtatPartie,
@@ -167,11 +169,42 @@ export function capturerBot(
     return etat;
   }
 
-  if (capteur.couleur === bot.couleur) {
+  if (!aUneCouleurADonner(capteur) || capteur.couleur === bot.couleur) {
     return etat;
   }
 
   return { ...etat, bots: { ...etat.bots, [botId]: { ...bot, couleur: capteur.couleur } } };
+}
+
+/**
+ * Une entite a-t-elle une couleur a imposer a un bot qu'elle touche ?
+ *
+ * Un joueur, toujours. Un bot, seulement s'il porte deja la couleur d'un joueur:
+ * un bot n'invente pas de couleur, il transmet celle de son proprietaire.
+ *
+ * CETTE REGLE CORRIGE DEUX DEFAUTS D'UN COUP, TOUS DEUX A L'ETAPE 1.6.
+ *
+ * X20, la contagion du blanc. Le legacy ne posait aucune condition sur la couleur
+ * du capteur: un bot BLANC, c'est-a-dire un bot que personne n'a capture, repeignait
+ * en blanc un bot de couleur. Comme les bots se croisent en permanence, un joueur
+ * voyait son score fondre sans que personne ne l'attaque. Ce n'etait pas une faute
+ * d'ecriture mais un comportement reel du jeu depuis deux ans, porte tel quel a
+ * l'etape 1.3 avec la question posee au porteur du projet. Decision du 14 aout
+ * 2026: c'est un effet de bord jamais voulu, on le corrige. La contagion entre
+ * bots de joueurs, elle, reste entiere.
+ *
+ * X30, la contagion du noir. Celui-la n'est pas un defaut du legacy mais une
+ * regression du portage: le releve des contacts confie a capturerBot n'importe
+ * quelle paire de bots, bots noirs compris, si bien qu'un bot noir repeignait en
+ * noir le bot ordinaire qu'il frolait, et selon l'ordre de la table seulement. Le
+ * legacy n'appelait jamais detectCollisions sur un bot noir (updateBots :1567) et
+ * son test de contagion exigeait entity.type === 'bot' (:1701), ce qu'un bot noir
+ * n'est pas: la chose n'existait pas dans le jeu d'origine.
+ */
+function aUneCouleurADonner(capteur: Joueur | Bot): boolean {
+  return (
+    capteur.type === 'joueur' || (capteur.type === 'bot' && capteur.couleur !== COULEUR_BOT_NEUTRE)
+  );
 }
 
 /**
