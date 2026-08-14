@@ -6,7 +6,7 @@
  * viendront brancher leurs systemes.
  */
 
-import type { Vecteur } from '@neon-ninja/shared';
+import type { ReglagesPartiels, Vecteur } from '@neon-ninja/shared';
 import { CARTES, RAYON_ENTITE, VITESSES } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
@@ -14,13 +14,33 @@ import type { CarteCollisions } from './collisions.js';
 import { creerCarteCollisions } from './collisions.js';
 import { SEUIL_CONTACT_PX } from './contacts.js';
 import type { EtatPartie, Joueur } from './etat.js';
-import { COMPTEUR_CAPTURE_PRET, ajouterBot, ajouterJoueur, creerEtatInitial } from './etat.js';
+import {
+  COMPTEUR_CAPTURE_PRET,
+  ajouterBot,
+  ajouterJoueur,
+  creerEtatInitial,
+  estInvulnerable,
+} from './etat.js';
 import type { Entrees } from './moteur.js';
 import { evaluerFinDePartie, tick } from './moteur.js';
+import { poserObjet } from './objets.js';
 import { calculerScores } from './score.js';
 
 /** Duree d'un battement a la cadence du serveur, en millisecondes. */
 const BATTEMENT_MS = 50;
+
+/** Reglages ou rien n'apparait tout seul: le test pose lui-meme ce qu'il veut. */
+const AUCUNE_APPARITION: ReglagesPartiels = {
+  bonus: {
+    types: {
+      vitesse: { tauxApparitionPourCent: 0 },
+      invincibilite: { tauxApparitionPourCent: 0 },
+      revelation: { tauxApparitionPourCent: 0 },
+    },
+  },
+  malus: { tauxApparitionPourCent: 0 },
+  zones: { actives: false },
+};
 
 /** Partie d'un joueur, place ou on veut, pour partir d'une situation nette. */
 function partieAvecUnJoueur(position = { x: 500, y: 500 }, terrain?: CarteCollisions): EtatPartie {
@@ -447,5 +467,184 @@ describe('captures dans le battement', () => {
     };
 
     expect(resultat()).toEqual(resultat());
+  });
+});
+
+describe('effets dans le battement', () => {
+  /** Une partie calme ou rien n'apparait tout seul, avec Alice au milieu. */
+  function partieCalme(position = { x: 500, y: 500 }): EtatPartie {
+    return ajouterJoueur(creerEtatInitial({ graine: 1, reglages: AUCUNE_APPARITION }), {
+      id: 'j1',
+      pseudo: 'Alice',
+      position,
+      couleur: '#FF0000',
+    });
+  }
+
+  /** Donne un bonus a Alice, comme le ferait un ramassage. */
+  function avecBonus(
+    etat: EtatPartie,
+    nature: 'vitesse' | 'invincibilite',
+    dureeMs: number,
+  ): EtatPartie {
+    const joueur = joueurDe(etat, 'j1');
+
+    return {
+      ...etat,
+      joueurs: {
+        ...etat.joueurs,
+        j1: { ...joueur, bonusRestantsMs: { ...joueur.bonusRestantsMs, [nature]: dureeMs } },
+      },
+    };
+  }
+
+  it('multiplie la vitesse du porteur du bonus de vitesse', () => {
+    const normal = tick(partieCalme(), vers({ x: 1, y: 0 }), 1000);
+    const presse = tick(avecBonus(partieCalme(), 'vitesse', 10_000), vers({ x: 1, y: 0 }), 1000);
+
+    expect(joueurDe(presse, 'j1').position.x - 500).toBeCloseTo(
+      (joueurDe(normal, 'j1').position.x - 500) * VITESSES.MULTIPLICATEUR_BONUS,
+      6,
+    );
+  });
+
+  it('rend sa vitesse normale au joueur des que le bonus expire', () => {
+    let etat = avecBonus(partieCalme(), 'vitesse', 100);
+    etat = tick(etat, vers({ x: 1, y: 0 }), 100);
+    const apresExpiration = tick(etat, vers({ x: 1, y: 0 }), 1000);
+
+    expect(joueurDe(etat, 'j1').bonusRestantsMs.vitesse).toBe(0);
+    expect(apresExpiration.joueurs['j1']?.position.x).toBeCloseTo(
+      joueurDe(etat, 'j1').position.x + VITESSES.JOUEUR_PX_PAR_SECONDE,
+      6,
+    );
+  });
+
+  it('inverse le deplacement du joueur qui subit les controles inverses', () => {
+    const depart = partieCalme();
+    const joueur = joueurDe(depart, 'j1');
+    const empoisonne: EtatPartie = {
+      ...depart,
+      joueurs: {
+        j1: {
+          ...joueur,
+          malusRestantsMs: { ...joueur.malusRestantsMs, controlesInverses: 10_000 },
+        },
+      },
+    };
+
+    const apres = tick(empoisonne, vers({ x: 1, y: 0 }), 1000);
+
+    expect(joueurDe(apres, 'j1').position.x).toBeCloseTo(500 - VITESSES.JOUEUR_PX_PAR_SECONDE, 6);
+  });
+
+  it('fait fondre bonus et malus au fil des battements', () => {
+    let etat = avecBonus(partieCalme(), 'invincibilite', 10_000);
+    for (let battement = 0; battement < 100; battement += 1) {
+      etat = tick(etat, {}, BATTEMENT_MS);
+    }
+
+    expect(joueurDe(etat, 'j1').bonusRestantsMs.invincibilite).toBe(5_000);
+  });
+
+  it('protege le porteur de l invincibilite tant qu il lui reste du temps', () => {
+    // Le legacy n'expirait que l'invincibilite cote serveur, et le faisait a
+    // partir d'une date absolue. Ici c'est un compte a rebours, et il gouverne la
+    // regle: a l'expiration, le joueur redevient capturable.
+    let etat = avecBonus(partieCalme(), 'invincibilite', 10_000);
+    etat = { ...etat, joueurs: { j1: { ...joueurDe(etat, 'j1'), protectionSpawnRestanteMs: 0 } } };
+
+    expect(estInvulnerable(joueurDe(tick(etat, {}, 9_999), 'j1'))).toBe(true);
+    expect(estInvulnerable(joueurDe(tick(etat, {}, 10_000), 'j1'))).toBe(false);
+  });
+
+  it('ramasse dans le battement un bonus pose sous les pieds du joueur', () => {
+    const etat = poserObjet(partieCalme(), {
+      categorie: 'bonus',
+      nature: 'revelation',
+      position: { x: 500, y: 500 },
+    });
+
+    const apres = tick(etat, {}, BATTEMENT_MS);
+
+    expect(apres.objets).toEqual({});
+    expect(joueurDe(apres, 'j1').bonusRestantsMs.revelation).toBe(10_000);
+    expect(apres.evenements[0]?.type).toBe('bonusRamasse');
+  });
+
+  it('ramasse un bonus que le joueur atteint en se deplacant', () => {
+    const etat = poserObjet(partieCalme(), {
+      categorie: 'bonus',
+      nature: 'revelation',
+      position: { x: 507, y: 500 },
+    });
+
+    const apres = tick(etat, vers({ x: 1, y: 0 }), BATTEMENT_MS);
+
+    expect(apres.objets).toEqual({});
+  });
+
+  it('fait vieillir les objets poses jusqu a leur disparition', () => {
+    let etat = poserObjet(partieCalme({ x: 100, y: 100 }), {
+      categorie: 'bonus',
+      nature: 'vitesse',
+      position: { x: 900, y: 900 },
+    });
+
+    for (let battement = 0; battement < 159; battement += 1) {
+      etat = tick(etat, {}, BATTEMENT_MS);
+    }
+    expect(Object.keys(etat.objets)).toHaveLength(1);
+
+    expect(Object.keys(tick(etat, {}, BATTEMENT_MS).objets)).toHaveLength(0);
+  });
+
+  it('fait apparaitre bonus, malus et zones au fil de la partie', () => {
+    let etat = creerEtatInitial({ graine: 2026 });
+    for (let battement = 0; battement < 1_200; battement += 1) {
+      etat = tick(etat, {}, BATTEMENT_MS);
+    }
+
+    expect(Object.keys(etat.objets).length).toBeGreaterThan(0);
+    expect(Object.keys(etat.zones).length).toBeGreaterThan(0);
+  });
+
+  it('fait apparaitre exactement les memes choses a graine egale', () => {
+    const derouler = (graine: number): unknown => {
+      let etat = creerEtatInitial({ graine });
+      for (let battement = 0; battement < 600; battement += 1) {
+        etat = tick(etat, {}, BATTEMENT_MS);
+      }
+      return { objets: etat.objets, zones: etat.zones };
+    };
+
+    expect(derouler(2026)).toEqual(derouler(2026));
+    expect(derouler(2026)).not.toEqual(derouler(1789));
+  });
+
+  it('applique les effets de zone aux bots pendant le battement', () => {
+    // Les zones doivent rester activees dans les reglages, sinon le battement
+    // commence par vider la carte de ses zones.
+    let etat = ajouterJoueur(
+      creerEtatInitial({ graine: 1, reglages: { ...AUCUNE_APPARITION, zones: { actives: true } } }),
+      { id: 'j1', pseudo: 'Alice', position: { x: 500, y: 500 }, couleur: '#FF0000' },
+    );
+    etat = ajouterBot(etat, { id: 'b1', position: { x: 560, y: 500 } });
+    etat = {
+      ...etat,
+      zones: {
+        'zone-1': {
+          id: 'zone-1',
+          type: 'attraction',
+          centre: { x: 550, y: 500 },
+          rayon: 200,
+          dureeRestanteMs: 30_000,
+        },
+      },
+    };
+
+    const apres = tick(etat, {}, 1000);
+
+    expect(apres.bots['b1']?.position.x).toBeLessThan(560);
   });
 });

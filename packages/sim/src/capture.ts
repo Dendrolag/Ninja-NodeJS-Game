@@ -39,6 +39,7 @@ import { couleurUnique } from './couleurs.js';
 import type { Bot, EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
 import {
   couleursUtilisees,
+  estInvincible,
   estInvulnerable,
   peutCapturer,
   positionDApparition,
@@ -199,7 +200,7 @@ export function detruireBotNoir(
     return etat;
   }
 
-  if (!joueur.invincibiliteActive) {
+  if (!estInvincible(joueur)) {
     return etat;
   }
 

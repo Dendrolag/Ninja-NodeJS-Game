@@ -51,6 +51,18 @@ Conditions de ROADMAP réunies, plus:
 3. Les scénarios d'effets de l'étape 0.2 passent à l'identique.
 4. Le linter confirme la pureté de packages/sim, et la couverture ne baisse pas.
 
+## Réconciliation, faite le 14 août 2026
+
+Écarts entre le plan ci-dessus et ce qui a réellement été fait, consignés au moment de l'exécution.
+
+1. **Quatre fichiers au lieu d'un.** Le handoff de l'étape 1.3 annonçait `bonus.ts`. Le portage a produit `effets.ts` (ce qu'un joueur porte et pour combien de temps), `objets.ts` (les bonus et malus posés sur la carte), `zones.ts` (les zones spéciales) et `planification.ts` (les apparitions, sans minuterie). Chacun a une responsabilité, conformément aux conventions de CLAUDE.md.
+2. **Une seule collection d'objets ramassables.** Les classes `Bonus` et `Malus` du legacy étaient identiques à la ligne près; elles deviennent un seul type distingué par sa catégorie. Même choix qu'à l'étape 1.3 pour les bots et les bots noirs.
+3. **Une seule fonction de vieillissement.** `cleanExpiredBonuses`, `updateBonusItems` et `updateMalusItems` faisaient tous la même chose, à des tables différentes.
+4. **`clearMalusEffects` n'est pas portée.** Elle ne fait que demander aux clients d'effacer leurs effets visuels. Dans le moteur, un malus s'éteint quand sa durée est épuisée; il n'y a pas d'effet visuel à effacer.
+5. **Deux effets sont appliqués au déplacement, ce que la fiche ne prévoyait pas.** Le multiplicateur du bonus de vitesse et l'inversion des commandes sont désormais dans le moteur, parce que c'est lui qui déplace les joueurs. Dans le legacy, le premier était accordé sur la foi du client et le second calculé par le client. Voir le journal des décisions du 14 août 2026.
+6. **`updatePlayerBonuses` est généralisée aux trois bonus.** Le legacy n'expirait que l'invincibilité côté serveur (défauts X23 et X24 de l'audit).
+7. **Les zones spéciales n'avaient pas été caractérisées à l'étape 0.2**, leur forme, leur durée et leurs effets dépendant tous de `Math.random` et de `Date.now`. Leurs tests s'appuient donc sur la lecture du code d'origine, et non sur un instantané.
+
 ## Rituel de fin de session
 
 Écrire docs/handoffs/etape-1-4-handoff.md. Lister les types d'effets portés et leurs durées. Prochaine action exacte pour l'étape 1.5: porter l'IA des bots standards et des BlackBot, rendue déterministe. Commiter.

@@ -15,12 +15,16 @@ import {
   resoudreContacts,
 } from './contacts.js';
 import type { Couleur } from './couleurs.js';
+import { AUCUN_BONUS } from './effets.js';
 import type { EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
 import { ajouterBot, ajouterJoueur, creerEtatInitial } from './etat.js';
 
 const ROUGE = '#FF0000';
 const BLEU = '#0000FF';
 const VERT = '#00FF00';
+
+/** Un joueur qui porte le bonus d'invincibilite, avec dix secondes devant lui. */
+const INVINCIBLE = { ...AUCUN_BONUS, invincibilite: 10_000 };
 
 /** Partie peuplee de joueurs places ou on veut. */
 function partieAvec(places: Readonly<Record<string, { x: number; y: number }>>): EtatPartie {
@@ -209,7 +213,7 @@ describe('regleClassique, contacts avec des bots', () => {
 
   it('detruit le bot noir touche par un joueur invincible', () => {
     let etat = joueursPrets(1, [['j1', ROUGE, { x: 500, y: 500 }]]);
-    etat = reglerJoueur(etat, 'j1', { invincibiliteActive: true });
+    etat = reglerJoueur(etat, 'j1', { bonusRestantsMs: INVINCIBLE });
     etat = ajouterBot(etat, { id: 'bn', type: 'botNoir', position: { x: 505, y: 500 } });
 
     const apres = resoudre(etat);
@@ -235,8 +239,8 @@ describe('regleClassique, contacts avec des bots', () => {
       ['j1', ROUGE, { x: 500, y: 500 }],
       ['j2', BLEU, { x: 505, y: 500 }],
     ]);
-    etat = reglerJoueur(etat, 'j1', { invincibiliteActive: true });
-    etat = reglerJoueur(etat, 'j2', { invincibiliteActive: true });
+    etat = reglerJoueur(etat, 'j1', { bonusRestantsMs: INVINCIBLE });
+    etat = reglerJoueur(etat, 'j2', { bonusRestantsMs: INVINCIBLE });
     etat = ajouterBot(etat, { id: 'bn', type: 'botNoir', position: { x: 502, y: 500 } });
 
     const apres = resoudre(etat);

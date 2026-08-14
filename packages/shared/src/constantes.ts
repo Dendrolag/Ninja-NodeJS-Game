@@ -114,6 +114,103 @@ export const SCORE = {
   POINTS_PAR_BOT_NOIR: 15,
 } as const;
 
+/**
+ * Les trois bonus ramassables. Un bonus profite a celui qui le ramasse.
+ *
+ * Portage des types manipules par spawnBonus (legacy/server.js:1579): speed,
+ * invincibility et reveal.
+ */
+export const TYPES_BONUS = ['vitesse', 'invincibilite', 'revelation'] as const;
+
+/** Nature d'un bonus. */
+export type TypeBonus = (typeof TYPES_BONUS)[number];
+
+/**
+ * Les trois malus ramassables. Un malus frappe les AUTRES joueurs, pas celui qui
+ * le ramasse: c'est le comportement a preserver numero 4 de CLAUDE.md.
+ *
+ * Portage des types manipules par spawnMalus (legacy/server.js:651): reverse,
+ * blur et negative.
+ */
+export const TYPES_MALUS = ['controlesInverses', 'flou', 'negatif'] as const;
+
+/** Nature d'un malus. */
+export type TypeMalus = (typeof TYPES_MALUS)[number];
+
+/**
+ * Les quatre zones speciales. Portage de ZONE_TYPES (legacy/server.js:187).
+ *
+ * Le legacy leur donnait aussi un nom et deux couleurs d'affichage. Ces
+ * trois-la sont de la presentation: elles appartiennent au client, pas au
+ * moteur, qui ne connait que la nature de la zone et sa geometrie.
+ */
+export const TYPES_ZONE = ['chaos', 'repulsion', 'attraction', 'invisibilite'] as const;
+
+/** Nature d'une zone speciale. */
+export type TypeZone = (typeof TYPES_ZONE)[number];
+
+/**
+ * Objets ramassables poses sur la carte: les bonus et les malus.
+ *
+ * Valeurs du legacy (classes Bonus :1347 et Malus :1401, identiques a la ligne
+ * pres), sauf le seuil de clignotement, qui ne sert qu'a l'affichage et que le
+ * moteur transmet sans s'en servir.
+ */
+export const OBJETS = {
+  /** Duree pendant laquelle un objet reste pose avant de disparaitre. */
+  DUREE_DE_VIE_MS: 8000,
+  /** En dessous de cette duree restante, le client fait clignoter l'objet. */
+  SEUIL_CLIGNOTEMENT_MS: 3000,
+  /**
+   * Distance de ramassage, en pixels. Plus courte que le seuil de contact entre
+   * entites, qui vaut vingt: un objet se ramasse en marchant dessus, pas en
+   * passant a cote.
+   */
+  SEUIL_RAMASSAGE_PX: 15,
+  /** Nombre maximal de malus poses en meme temps. Les bonus n'ont pas de plafond. */
+  MALUS_SIMULTANES_MAXIMUM: 5,
+  /**
+   * Amplitude du hasard sur l'intervalle entre deux apparitions. A 0,5, un
+   * intervalle de quatre secondes devient un tirage entre trois et cinq
+   * secondes. Formule du legacy (:1610 et :672).
+   */
+  VARIATION_INTERVALLE: 0.5,
+} as const;
+
+/**
+ * Zones speciales: leur taille, leur nombre, et la force de leurs effets.
+ *
+ * Les forces du legacy s'exprimaient par battement de la boucle serveur, comme
+ * les vitesses. Elles sont converties en pixels par seconde pour la meme raison:
+ * le moteur avance proportionnellement au temps ecoule, pas au nombre d'appels.
+ */
+export const ZONES = {
+  /** Nombre maximal de zones actives en meme temps (legacy :817). */
+  SIMULTANEES_MAXIMUM: 3,
+  /** Rayon minimal d'une zone, en pixels (legacy :523). */
+  RAYON_MINIMUM_PX: 150,
+  /** Une zone couvre au plus cette fraction de la carte (legacy :517). */
+  PART_DE_CARTE: 5,
+  /**
+   * Probabilite qu'une zone de chaos repeigne un bot donne, par battement de
+   * cinquante millisecondes (legacy :558). Le moteur la ramene au temps ecoule
+   * reel, pour que le resultat ne depende pas de la cadence d'appel.
+   */
+  CHAOS_PROBABILITE_PAR_BATTEMENT: 0.05,
+  /** Force de repulsion exercee par chaque joueur present dans la zone. */
+  REPULSION: {
+    FORCE_PX_PAR_SECONDE: (4 * 1000) / CADENCES_LEGACY_MS.BOUCLE_SERVEUR,
+    /** Au-dela de cette distance, un joueur ne repousse plus (legacy :576). */
+    PORTEE_PX: 200,
+    /** Deplacement maximal impose a un bot sur un axe, toutes forces cumulees. */
+    PLAFOND_PX_PAR_SECONDE: (5 * 1000) / CADENCES_LEGACY_MS.BOUCLE_SERVEUR,
+  },
+  /** Force d'attraction vers le joueur le plus proche. */
+  ATTRACTION: {
+    FORCE_PX_PAR_SECONDE: (3 * 1000) / CADENCES_LEGACY_MS.BOUCLE_SERVEUR,
+  },
+} as const;
+
 /** Reglages de l'apparition des entites. */
 export const APPARITION = {
   /** Bande interdite le long des bords de la carte, en pixels. */

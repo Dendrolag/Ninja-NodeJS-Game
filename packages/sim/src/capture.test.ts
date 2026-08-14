@@ -12,12 +12,16 @@ import { describe, expect, it } from 'vitest';
 
 import { captureAutorisee, capturerBot, capturerJoueur, detruireBotNoir } from './capture.js';
 import type { Couleur } from './couleurs.js';
+import { AUCUN_BONUS } from './effets.js';
 import type { EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
 import { ajouterBot, ajouterJoueur, creerEtatInitial } from './etat.js';
 
 const ROUGE = '#FF0000';
 const BLEU = '#0000FF';
 const VERT = '#00FF00';
+
+/** Un joueur qui porte le bonus d'invincibilite, avec dix secondes devant lui. */
+const INVINCIBLE = { ...AUCUN_BONUS, invincibilite: 10_000 };
 
 /** Lit un joueur dont on sait qu'il est present. */
 function joueurDe(etat: EtatPartie, id: IdentifiantEntite): Joueur {
@@ -214,7 +218,7 @@ describe('refus de capture', () => {
   }
 
   it('refuse quand la victime porte le bonus d invincibilite', () => {
-    const etat = reglerJoueur(situationDeDepart(), 'v', { invincibiliteActive: true });
+    const etat = reglerJoueur(situationDeDepart(), 'v', { bonusRestantsMs: INVINCIBLE });
 
     rienNAEuLieu(capturerJoueur(etat, 'a', 'v'));
   });
@@ -315,7 +319,7 @@ describe('detruireBotNoir', () => {
       position: { x: 505, y: 500 },
     });
 
-    return reglerJoueur(etat, 'a', { invincibiliteActive: invincible });
+    return reglerJoueur(etat, 'a', { bonusRestantsMs: invincible ? INVINCIBLE : AUCUN_BONUS });
   }
 
   it('supprime le bot noir et cree quinze points pour le joueur invincible', () => {

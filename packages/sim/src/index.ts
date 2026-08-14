@@ -43,7 +43,22 @@ export { resoudreDeplacement } from './deplacement.js';
 
 export { aLaLongueur, determinerDirection, directionDuVecteur, norme } from './direction.js';
 
+export type { DureesRestantes } from './effets.js';
+export {
+  AUCUN_BONUS,
+  AUCUN_MALUS,
+  bonusEnCours,
+  cumuler,
+  effetsEnCours,
+  estActif,
+  fairePasserLeTemps,
+  malusEnCours,
+  remplacer,
+} from './effets.js';
+
 export type {
+  BonusPose,
+  BonusRamasse,
   Bot,
   CaptureDeJoueur,
   DestructionDeBotNoir,
@@ -53,19 +68,28 @@ export type {
   HistoriqueCapture,
   IdentifiantEntite,
   Joueur,
+  MalusPose,
+  MalusRamasse,
+  ObjetRamassable,
   OptionsAjoutBot,
   OptionsAjoutJoueur,
   OptionsEtatInitial,
+  ProchainesApparitions,
   TypeEntite,
+  ZoneSpeciale,
 } from './etat.js';
 export {
   COMPTEUR_CAPTURE_PRET,
   ajouterBot,
   ajouterJoueur,
+  bonusActif,
   couleursUtilisees,
   creerEtatInitial,
   entiteDe,
+  estInvincible,
   estInvulnerable,
+  identifiantSuivant,
+  malusActif,
   peutCapturer,
   positionDApparition,
   positionsOccupees,
@@ -73,6 +97,21 @@ export {
   retirerJoueur,
   toutesLesEntites,
 } from './etat.js';
+
+export type { OptionsPoseObjet } from './objets.js';
+export {
+  faireApparaitreLesObjets,
+  fairePasserLeTempsSurLesObjets,
+  nombreDeMalusPoses,
+  poserObjet,
+  ramasser,
+  ramasserLesObjets,
+  retirerObjet,
+} from './objets.js';
+
+export { avancerUneEcheance, intervalleFixe, intervalleVariable } from './planification.js';
+
+export { appliquerLesEffetsDeZone, avancerLesZones, estCache, zoneContient } from './zones.js';
 
 export type { EntreeJoueur, Entrees, EvaluationFinDePartie } from './moteur.js';
 export { evaluerFinDePartie, tick } from './moteur.js';

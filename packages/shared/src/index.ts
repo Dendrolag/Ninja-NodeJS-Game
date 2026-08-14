@@ -11,7 +11,14 @@
 export type { Alea, Tirage } from './alea.js';
 export { creerAlea, element, entier, nombre, reel } from './alea.js';
 
-export type { DimensionsCarte, Direction, IdentifiantCarte } from './constantes.js';
+export type {
+  DimensionsCarte,
+  Direction,
+  IdentifiantCarte,
+  TypeBonus,
+  TypeMalus,
+  TypeZone,
+} from './constantes.js';
 export {
   APPARITION,
   CADENCES_LEGACY_MS,
@@ -22,12 +29,26 @@ export {
   DEPLACEMENTS_LEGACY_PAR_PAS,
   DIRECTIONS,
   DUREES,
+  OBJETS,
   RAYON_ENTITE,
   SCORE,
+  TYPES_BONUS,
+  TYPES_MALUS,
+  TYPES_ZONE,
   VITESSES,
+  ZONES,
 } from './constantes.js';
 
 export type { Position, Vecteur } from './geometrie.js';
 
-export type { ReglagesPartie } from './reglages.js';
-export { REGLAGES_PAR_DEFAUT } from './reglages.js';
+export type {
+  PartielProfond,
+  ReglageBonus,
+  ReglageMalus,
+  ReglagesBonus,
+  ReglagesMalus,
+  ReglagesPartie,
+  ReglagesPartiels,
+  ReglagesZones,
+} from './reglages.js';
+export { REGLAGES_PAR_DEFAUT, completerReglages } from './reglages.js';

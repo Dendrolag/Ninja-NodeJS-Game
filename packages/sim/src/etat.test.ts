@@ -18,6 +18,7 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import { carteSansMur, creerCarteCollisions, estMur } from './collisions.js';
+import { AUCUN_BONUS, AUCUN_MALUS } from './effets.js';
 import type { EtatPartie, Joueur } from './etat.js';
 import {
   COMPTEUR_CAPTURE_PRET,
@@ -323,7 +324,9 @@ describe('estInvulnerable', () => {
     const etat = ajouterJoueur(creerEtatInitial({ graine: 1 }), { id: 'j1', pseudo: 'Alice' });
     const joueur = { ...joueurDe(etat, 'j1'), protectionSpawnRestanteMs: 0 };
 
-    expect(estInvulnerable({ ...joueur, invincibiliteActive: true })).toBe(true);
+    expect(
+      estInvulnerable({ ...joueur, bonusRestantsMs: { ...AUCUN_BONUS, invincibilite: 10_000 } }),
+    ).toBe(true);
   });
 });
 
@@ -349,7 +352,8 @@ describe('compteurs de capture d un joueur', () => {
     expect(joueur.capturesSubies).toEqual({});
     expect(joueur.botsGagnesAuTotal).toBe(0);
     expect(joueur.botsNoirsDetruits).toBe(0);
-    expect(joueur.invincibiliteActive).toBe(false);
+    expect(joueur.bonusRestantsMs).toEqual(AUCUN_BONUS);
+    expect(joueur.malusRestantsMs).toEqual(AUCUN_MALUS);
   });
 });
 

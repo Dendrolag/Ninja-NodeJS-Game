@@ -20,12 +20,24 @@
  * client qui envoyait ses deplacements deux fois plus vite se deplacait deux
  * fois plus vite. Ici, le deplacement est proportionnel au temps ecoule.
  *
- * Un battement se deroule dans cet ordre: le journal du battement precedent est
- * efface, chaque joueur applique son entree et se deplace contre le terrain, on
- * releve les contacts qui en resultent, et enfin on en tire les consequences,
- * captures comprises. Les bonus et malus arrivent a l'etape 1.4, le deplacement
- * des bots a la 1.5. Le moteur les accueillera en systemes appeles dans ce meme
- * tick.
+ * Un battement se deroule dans cet ordre:
+ *
+ *   1. le journal du battement precedent est efface;
+ *   2. chaque joueur applique son entree et se deplace contre le terrain, puis
+ *      voit ses protections et ses effets se rapprocher de leur fin;
+ *   3. les zones speciales vieillissent, apparaissent, et agissent sur les bots;
+ *   4. les bonus et malus poses vieillissent, et de nouveaux apparaissent;
+ *   5. on releve les contacts entre entites et on en tire les consequences,
+ *      captures comprises;
+ *   6. les joueurs ramassent les objets sur lesquels ils se trouvent.
+ *
+ * L'ordre des deux dernieres etapes est celui du legacy: dans detectCollisions,
+ * un joueur resolvait ses captures avant de ramasser ce qui trainait a ses pieds.
+ * Un bonus d'invincibilite ramasse ne protege donc qu'a partir du battement
+ * suivant.
+ *
+ * Le deplacement des bots arrive a l'etape 1.5. Le moteur l'accueillera en un
+ * systeme de plus, appele dans ce meme tick.
  */
 
 import type { Vecteur } from '@neon-ninja/shared';
@@ -34,8 +46,15 @@ import { VITESSES } from '@neon-ninja/shared';
 import { detecterContacts, resoudreContacts } from './contacts.js';
 import { resoudreDeplacement } from './deplacement.js';
 import { aLaLongueur, directionDuVecteur, norme } from './direction.js';
+import { fairePasserLeTemps } from './effets.js';
 import type { EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
-import { COMPTEUR_CAPTURE_PRET } from './etat.js';
+import { COMPTEUR_CAPTURE_PRET, bonusActif, malusActif } from './etat.js';
+import {
+  faireApparaitreLesObjets,
+  fairePasserLeTempsSurLesObjets,
+  ramasserLesObjets,
+} from './objets.js';
+import { appliquerLesEffetsDeZone, avancerLesZones } from './zones.js';
 
 /** Ce qu'un joueur demande au moteur pendant un battement. */
 export interface EntreeJoueur {
@@ -94,7 +113,11 @@ export function tick(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPart
     evenements: [],
   };
 
-  return resoudreContacts(deplace, detecterContacts(deplace));
+  const zones = appliquerLesEffetsDeZone(avancerLesZones(deplace, dtMs), dtMs);
+  const objets = faireApparaitreLesObjets(fairePasserLeTempsSurLesObjets(zones, dtMs), dtMs);
+  const contacts = resoudreContacts(objets, detecterContacts(objets));
+
+  return ramasserLesObjets(contacts);
 }
 
 /**
@@ -110,7 +133,14 @@ export function evaluerFinDePartie(etat: EtatPartie): EvaluationFinDePartie {
   return { terminee: restant <= 0, tempsRestantMs: Math.max(restant, 0) };
 }
 
-/** Applique a un joueur son entree et l'ecoulement du temps. */
+/**
+ * Applique a un joueur son entree et l'ecoulement du temps.
+ *
+ * Le deplacement se calcule avec les effets tels qu'ils sont au debut du
+ * battement, et c'est seulement ensuite que le temps les rapproche de leur fin:
+ * un bonus de vitesse dont il reste dix millisecondes vaut encore pour ce
+ * battement-ci. C'est deja le traitement reserve a la protection d'apparition.
+ */
 function avancerJoueur(
   etat: EtatPartie,
   joueur: Joueur,
@@ -126,6 +156,8 @@ function avancerJoueur(
       joueur.tempsDepuisDerniereCaptureMs + dtMs,
       COMPTEUR_CAPTURE_PRET,
     ),
+    bonusRestantsMs: fairePasserLeTemps(joueur.bonusRestantsMs, dtMs),
+    malusRestantsMs: fairePasserLeTemps(joueur.malusRestantsMs, dtMs),
   };
 }
 
@@ -154,11 +186,48 @@ function deplacerJoueur(
     return { ...joueur, direction: 'immobile' };
   }
 
-  const distance = (VITESSES.JOUEUR_PX_PAR_SECONDE * dtMs) / 1000;
-  const pas = aLaLongueur(entree.deplacement, distance);
+  const distance = (VITESSES.JOUEUR_PX_PAR_SECONDE * multiplicateurDeVitesse(joueur) * dtMs) / 1000;
+  const pas = aLaLongueur(voulu(joueur, entree.deplacement), distance);
   const position = resoudreDeplacement(etat.terrain, joueur.position, pas);
 
   const effectif = { x: position.x - joueur.position.x, y: position.y - joueur.position.y };
 
   return { ...joueur, position, direction: directionDuVecteur(effectif) };
+}
+
+/**
+ * De combien la vitesse d'un joueur est multipliee par ses effets.
+ *
+ * Portage du calcul du gestionnaire move (legacy/server.js:2616), moins ce qui en
+ * faisait une faille: le legacy croyait sur parole le client qui annoncait son
+ * bonus de vitesse, et lui accordait en plus un facteur deux s'il se declarait
+ * sur mobile (faille S2). Ici le bonus est celui que le moteur a lui-meme
+ * accorde, et il n'existe aucun facteur mobile: la vitesse ne depend plus de
+ * l'appareil ni de ce que le client raconte.
+ *
+ * Le plafond du legacy est conserve bien qu'il ne serve pas encore: aucun cumul
+ * ne peut aujourd'hui depasser 1,7.
+ */
+function multiplicateurDeVitesse(joueur: Joueur): number {
+  const multiplicateur = bonusActif(joueur, 'vitesse') ? VITESSES.MULTIPLICATEUR_BONUS : 1;
+
+  return Math.min(multiplicateur, VITESSES.MULTIPLICATEUR_MAXIMUM);
+}
+
+/**
+ * Le deplacement reellement voulu, une fois les commandes inversees prises en
+ * compte.
+ *
+ * Dans le legacy, c'est le client qui inversait ses propres commandes avant
+ * d'envoyer son deplacement. Un client modifie n'avait donc qu'a ne pas le faire
+ * pour ignorer le malus. Le moteur s'en charge maintenant: le client envoie la
+ * direction demandee par le joueur, telle quelle, et le moteur applique l'effet.
+ *
+ * A retenir pour l'etape 4.1: le client ne doit surtout pas inverser de son cote,
+ * sous peine d'annuler le malus en le doublant.
+ */
+function voulu(joueur: Joueur, deplacement: Vecteur): Vecteur {
+  return malusActif(joueur, 'controlesInverses')
+    ? { x: -deplacement.x, y: -deplacement.y }
+    : deplacement;
 }

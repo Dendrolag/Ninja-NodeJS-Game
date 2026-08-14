@@ -5,9 +5,6 @@
  * ne porte a chaque etape que les reglages dont le moteur sait deja se servir.
  * Ce qui manque, et ou cela arrive:
  *
- *   - bonus (activation, durees, taux d'apparition): etape 1.4;
- *   - malus (activation, durees, taux): etape 1.4;
- *   - zones speciales (types actifs, durees, intervalle): etape 1.4;
  *   - bots noirs (nombre, moment d'apparition, rayon de detection, pourcentage
  *     de points perdus): etape 1.5.
  *
@@ -22,9 +19,69 @@
  * n'avait aucun effet. Ici il n'existe aucun objet de reglages accessible
  * globalement: le moteur ne connait que celui que porte l'etat qu'on lui passe.
  * Le defaut ne peut donc plus se reproduire.
+ *
+ * POURQUOI DES GROUPES. Le legacy alignait quarante reglages a plat, avec des
+ * prefixes en guise de rangement (enableSpeedBoost, speedBoostDuration,
+ * speedBoostSpawnRate). Ici bonus, malus et zones forment trois groupes: on voit
+ * d'un coup d'oeil ce qui appartient a quoi, et l'ecran de reglages du salon
+ * (etape 4.3) se dessine en suivant cette structure. Le prix a payer est qu'un
+ * appelant qui ne change qu'une valeur doit pouvoir le faire sans reecrire tout
+ * le groupe: c'est le role de completerReglages.
  */
 
-import type { IdentifiantCarte } from './constantes.js';
+import type { IdentifiantCarte, TypeBonus, TypeMalus, TypeZone } from './constantes.js';
+
+/** Reglages d'un bonus: est-il en jeu, combien de temps dure-t-il, apparait-il souvent. */
+export interface ReglageBonus {
+  readonly actif: boolean;
+  /** Duree de l'effet une fois ramasse, en secondes. */
+  readonly dureeS: number;
+  /** Chance sur cent d'apparaitre a chaque tentative d'apparition. */
+  readonly tauxApparitionPourCent: number;
+}
+
+/** Reglages des bonus dans leur ensemble. */
+export interface ReglagesBonus {
+  /** Delai moyen entre deux tentatives d'apparition, en secondes. */
+  readonly intervalleApparitionS: number;
+  readonly types: Readonly<Record<TypeBonus, ReglageBonus>>;
+}
+
+/** Reglages d'un malus: est-il en jeu, et combien de temps dure-t-il. */
+export interface ReglageMalus {
+  readonly actif: boolean;
+  /** Duree de l'effet subi par les autres joueurs, en secondes. */
+  readonly dureeS: number;
+}
+
+/**
+ * Reglages des malus dans leur ensemble.
+ *
+ * Les malus partagent un seul taux d'apparition, la ou chaque bonus a le sien:
+ * c'est ainsi dans le legacy, ou une tentative d'apparition de malus tire
+ * d'abord si un malus apparait, puis lequel.
+ */
+export interface ReglagesMalus {
+  readonly actifs: boolean;
+  /** Delai moyen entre deux tentatives d'apparition, en secondes. */
+  readonly intervalleApparitionS: number;
+  /** Chance sur cent qu'une tentative fasse apparaitre un malus. */
+  readonly tauxApparitionPourCent: number;
+  readonly types: Readonly<Record<TypeMalus, ReglageMalus>>;
+}
+
+/** Reglages des zones speciales. */
+export interface ReglagesZones {
+  readonly actives: boolean;
+  /** Duree de vie minimale d'une zone, en secondes. */
+  readonly dureeMinimumS: number;
+  /** Duree de vie maximale d'une zone, en secondes. */
+  readonly dureeMaximumS: number;
+  /** Delai entre deux apparitions de zone, en secondes. */
+  readonly intervalleApparitionS: number;
+  /** Quelles natures de zone peuvent apparaitre. */
+  readonly types: Readonly<Record<TypeZone, boolean>>;
+}
 
 /** Reglages d'une partie, figes au lancement. */
 export interface ReglagesPartie {
@@ -36,6 +93,9 @@ export interface ReglagesPartie {
   readonly modeMiroir: boolean;
   /** Nombre de bots presents au demarrage. */
   readonly nombreBotsInitial: number;
+  readonly bonus: ReglagesBonus;
+  readonly malus: ReglagesMalus;
+  readonly zones: ReglagesZones;
 }
 
 /** Reglages appliques quand l'hote ne change rien. Valeurs du legacy. */
@@ -44,4 +104,86 @@ export const REGLAGES_PAR_DEFAUT: ReglagesPartie = {
   carte: 'map1',
   modeMiroir: false,
   nombreBotsInitial: 50,
+  bonus: {
+    intervalleApparitionS: 4,
+    types: {
+      vitesse: { actif: true, dureeS: 10, tauxApparitionPourCent: 25 },
+      invincibilite: { actif: true, dureeS: 10, tauxApparitionPourCent: 15 },
+      revelation: { actif: true, dureeS: 10, tauxApparitionPourCent: 20 },
+    },
+  },
+  malus: {
+    actifs: true,
+    intervalleApparitionS: 8,
+    tauxApparitionPourCent: 20,
+    types: {
+      controlesInverses: { actif: true, dureeS: 10 },
+      flou: { actif: true, dureeS: 12 },
+      negatif: { actif: true, dureeS: 14 },
+    },
+  },
+  zones: {
+    actives: true,
+    dureeMinimumS: 10,
+    dureeMaximumS: 30,
+    intervalleApparitionS: 15,
+    types: { chaos: true, repulsion: true, attraction: true, invisibilite: true },
+  },
 };
+
+/**
+ * Une version d'un type dont chaque champ est facultatif, a tous les niveaux.
+ *
+ * Sert a ne fournir que les reglages que l'on veut changer: le reste vient des
+ * valeurs par defaut.
+ */
+export type PartielProfond<T> = {
+  readonly [Champ in keyof T]?: T[Champ] extends object ? PartielProfond<T[Champ]> : T[Champ];
+};
+
+/** Des reglages incomplets, tels qu'un appelant peut les fournir. */
+export type ReglagesPartiels = PartielProfond<ReglagesPartie>;
+
+/**
+ * Complete des reglages partiels avec les valeurs par defaut.
+ *
+ * La fusion descend dans les groupes: ne donner que la duree du bonus de vitesse
+ * laisse intacts son taux d'apparition et tous les autres bonus.
+ */
+export function completerReglages(partiels?: ReglagesPartiels): ReglagesPartie {
+  return fusionner(REGLAGES_PAR_DEFAUT, partiels);
+}
+
+/**
+ * Recouvre une valeur de reference par les champs fournis, groupe par groupe.
+ *
+ * La fonction ne traite que des objets simples, ce que sont tous les reglages.
+ * Les conversions de type sont inevitables ici: TypeScript ne sait pas exprimer
+ * qu'une table de champs facultatifs recouvre exactement la table complete.
+ */
+function fusionner<T>(reference: T, recouvrement: PartielProfond<T> | undefined): T {
+  if (recouvrement === undefined) {
+    return reference;
+  }
+
+  const resultat: Record<string, unknown> = { ...(reference as Record<string, unknown>) };
+
+  for (const [champ, valeur] of Object.entries(recouvrement as Record<string, unknown>)) {
+    if (valeur === undefined) {
+      continue;
+    }
+
+    const actuelle = resultat[champ];
+    resultat[champ] =
+      estObjetSimple(actuelle) && estObjetSimple(valeur)
+        ? fusionner(actuelle, valeur as PartielProfond<Record<string, unknown>>)
+        : valeur;
+  }
+
+  return resultat as T;
+}
+
+/** Un objet dans lequel la fusion doit descendre, par opposition a une valeur. */
+function estObjetSimple(valeur: unknown): valeur is Record<string, unknown> {
+  return typeof valeur === 'object' && valeur !== null && !Array.isArray(valeur);
+}
