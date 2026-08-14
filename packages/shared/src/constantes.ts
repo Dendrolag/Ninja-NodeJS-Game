@@ -108,6 +108,11 @@ export const APPARITION = {
   DISTANCE_DE_SECURITE: 100,
   /** Nombre maximal de tirages avant d'abandonner la recherche d'une position. */
   TENTATIVES_MAXIMUM: 100,
+  /**
+   * Ecart entre deux anneaux de la recherche en spirale, en pixels. C'est le
+   * chemin de secours emprunte quand tous les tirages au sort ont echoue.
+   */
+  PAS_SPIRALE: 50,
 } as const;
 
 /** Rayon de collision d'une entite, en pixels. */

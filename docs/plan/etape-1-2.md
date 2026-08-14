@@ -52,6 +52,18 @@ Conditions de ROADMAP réunies, plus:
 3. Le linter confirme la pureté de packages/sim.
 4. La couverture de packages/sim ne baisse pas.
 
+## Réconciliation avec le dépôt
+
+Ajoutée le 14 août 2026, au début de l'exécution. La fiche a été écrite avant l'étape 1.1: quatre de ses hypothèses ont bougé depuis.
+
+1. **Le point 3 est déjà fait.** `getCurrentMapDimensions` a été porté à l'étape 1.1: les dimensions arrivent par `etat.carte`, et les accesseurs trompeurs de `GAME_CONFIG` n'ont jamais été portés. Il restait à garantir que le terrain et les dimensions ne puissent pas diverger, ce que fait la vérification de `creerEtatInitial`.
+
+2. **Le point 5 se limite à la détection.** La fiche demande de porter la partie entité contre entité de `detectCollisions`, mais ses conséquences appartiennent aux étapes suivantes: la capture de joueur et le changement de couleur d'un bot sont l'étape 1.3, et les bots eux-mêmes l'étape 1.5. L'étape 1.2 porte donc le constat (`detecterContacts`) et le point de branchement de la règle de résolution (`resoudreContacts`), qui ne fait encore rien. C'est précisément la séparation que demande la note sur les modes en fin de périmètre.
+
+3. **La définition de terminé, condition 2, se lit dans le sens du PROTOCOLE.** Les tests de caractérisation s'exécutent contre le legacy et restent inchangés: ils ne sont pas une cible que `packages/sim` doit faire passer. Ce qui est vérifié ici, c'est que le portage reproduit leurs sorties, y compris l'instantané des positions tenables autour d'un mur, qui est identique au caractère près. Une seule sortie diverge volontairement, la traversée d'un mur fin, que la caractérisation elle-même désigne comme un défaut à corriger et non comme un réglage à préserver.
+
+4. **La distance de sécurité au spawn: décidée.** La fiche demandait de trancher consciemment. Décision du 14 août 2026: on la fait vivre. Détail dans le handoff et au journal de `docs/design/README.md`.
+
 ## Rituel de fin de session
 
 Écrire docs/handoffs/etape-1-2-handoff.md. Noter tout écart constaté avec la caractérisation et comment il a été résolu. Prochaine action exacte pour l'étape 1.3: porter le système de capture (cônes, angles, résolution). Commiter.

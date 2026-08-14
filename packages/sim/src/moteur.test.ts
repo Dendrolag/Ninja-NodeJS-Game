@@ -7,9 +7,11 @@
  */
 
 import type { Vecteur } from '@neon-ninja/shared';
-import { VITESSES } from '@neon-ninja/shared';
+import { CARTES, RAYON_ENTITE, VITESSES } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
+import type { CarteCollisions } from './collisions.js';
+import { creerCarteCollisions } from './collisions.js';
 import type { EtatPartie, Joueur } from './etat.js';
 import { ajouterJoueur, creerEtatInitial } from './etat.js';
 import type { Entrees } from './moteur.js';
@@ -19,8 +21,13 @@ import { evaluerFinDePartie, tick } from './moteur.js';
 const BATTEMENT_MS = 50;
 
 /** Partie d'un joueur, place ou on veut, pour partir d'une situation nette. */
-function partieAvecUnJoueur(position = { x: 500, y: 500 }): EtatPartie {
-  return ajouterJoueur(creerEtatInitial({ graine: 1 }), {
+function partieAvecUnJoueur(position = { x: 500, y: 500 }, terrain?: CarteCollisions): EtatPartie {
+  const depart =
+    terrain === undefined
+      ? creerEtatInitial({ graine: 1 })
+      : creerEtatInitial({ graine: 1, terrain });
+
+  return ajouterJoueur(depart, {
     id: 'j1',
     pseudo: 'Alice',
     position,
@@ -175,13 +182,19 @@ describe('deplacement des joueurs', () => {
     expect(Object.keys(etat.joueurs)).toEqual(['j1']);
   });
 
-  it('garde le joueur sur la carte', () => {
-    let etat = partieAvecUnJoueur({ x: 10, y: 10 });
-    for (let battement = 0; battement < 20; battement += 1) {
+  it('garde le joueur sur la carte, a son rayon du bord', () => {
+    // Hors de la carte, tout est mur: le joueur s'arrete donc quand son contour
+    // atteint le bord, et non quand son centre l'atteint.
+    let etat = partieAvecUnJoueur({ x: 200, y: 200 });
+    for (let battement = 0; battement < 100; battement += 1) {
       etat = tick(etat, vers({ x: -1, y: -1 }), BATTEMENT_MS);
     }
 
-    expect(joueurDe(etat, 'j1').position).toEqual({ x: 0, y: 0 });
+    const position = joueurDe(etat, 'j1').position;
+    expect(position.x).toBeGreaterThanOrEqual(RAYON_ENTITE);
+    expect(position.x).toBeLessThan(RAYON_ENTITE + 10);
+    expect(position.y).toBeGreaterThanOrEqual(RAYON_ENTITE);
+    expect(position.y).toBeLessThan(RAYON_ENTITE + 10);
   });
 
   it('declare immobile un joueur bloque contre le bord', () => {
@@ -192,12 +205,55 @@ describe('deplacement des joueurs', () => {
 
   it('fait glisser le long du bord quand un seul axe est bloque', () => {
     // Colle au bord gauche, une poussee vers le nord-ouest ne garde que le nord.
-    const etat = tick(partieAvecUnJoueur({ x: 0, y: 500 }), vers({ x: -1, y: -1 }), BATTEMENT_MS);
+    const etat = tick(
+      partieAvecUnJoueur({ x: RAYON_ENTITE, y: 500 }),
+      vers({ x: -1, y: -1 }),
+      BATTEMENT_MS,
+    );
     const joueur = joueurDe(etat, 'j1');
 
-    expect(joueur.position.x).toBe(0);
+    expect(joueur.position.x).toBe(RAYON_ENTITE);
     expect(joueur.position.y).toBeLessThan(500);
     expect(joueur.direction).toBe('nord');
+  });
+
+  it('arrete le joueur contre un mur de la carte', () => {
+    const terrain = creerCarteCollisions(CARTES.map1, (x) => x >= 600);
+    let etat = partieAvecUnJoueur({ x: 500, y: 500 }, terrain);
+
+    for (let battement = 0; battement < 60; battement += 1) {
+      etat = tick(etat, vers({ x: 1, y: 0 }), BATTEMENT_MS);
+    }
+
+    const position = joueurDe(etat, 'j1').position;
+    expect(position.x).toBeGreaterThan(560);
+    expect(position.x).toBeLessThanOrEqual(600 - RAYON_ENTITE);
+  });
+
+  it('fait longer un mur au lieu de coller le joueur dessus', () => {
+    const terrain = creerCarteCollisions(CARTES.map1, (x) => x >= 600);
+    const etat = tick(partieAvecUnJoueur({ x: 583, y: 500 }, terrain), vers({ x: 1, y: 1 }), 100);
+    const joueur = joueurDe(etat, 'j1');
+
+    expect(joueur.position.x).toBe(583);
+    expect(joueur.position.y).toBeGreaterThan(500);
+    expect(joueur.direction).toBe('sud');
+  });
+
+  it('ne traverse pas un mur fin, meme avec un tres grand pas de temps', () => {
+    // Le legacy laissait passer: il ne testait que le point d'arrivee du
+    // deplacement (defaut X15 de l'audit).
+    const terrain = creerCarteCollisions(CARTES.map1, (x) => x === 700 || x === 701);
+    const etat = tick(partieAvecUnJoueur({ x: 500, y: 500 }, terrain), vers({ x: 1, y: 0 }), 5000);
+
+    expect(joueurDe(etat, 'j1').position.x).toBeLessThan(700);
+  });
+
+  it('partage le terrain entre les etats successifs au lieu de le recopier', () => {
+    const depart = partieAvecUnJoueur();
+    const apres = tick(depart, vers({ x: 1, y: 0 }), BATTEMENT_MS);
+
+    expect(apres.terrain).toBe(depart.terrain);
   });
 
   it('deplace chaque joueur selon sa propre entree', () => {

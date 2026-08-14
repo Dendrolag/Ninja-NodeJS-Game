@@ -229,6 +229,14 @@ Consequences:
 - Sur mobile, la manette envoie un deplacement toutes les 16 millisecondes avec le facteur 2, soit 375 pixels par seconde: plus du double du bureau. Ce n'est pas un reglage d'equilibrage, c'est la faille S2 vue sous un autre angle.
 - Le portage exprime les vitesses en pixels par seconde et fait avancer les entites proportionnellement au temps ecoule, ce qui preserve la vitesse reellement jouee et supprime la dependance au debit de messages.
 
+### Defauts decouverts a l'etape 1.2
+
+Ajoutes le 14 aout 2026, en portant la carte de collisions et la resolution du deplacement. Tous deux sont dans le gestionnaire `move` (`server.js:2604`), et tous deux ont ete corriges par conception au moment du portage.
+
+**X18. Les directions de contournement partent de l'axe des abscisses, pas de la direction voulue.** Quand les deux axes sont bloques, le legacy essaie six directions de secours (`:2645`): `Math.cos(rad)` et `Math.sin(rad)` sont calcules sur les angles bruts 30, -30, 45, -45, 60 et -60 degres, sans jamais tenir compte de la direction que le joueur demandait. Ces six directions pointent donc toujours vers l'est, a soixante degres pres. Un joueur bloque en allant vers l'ouest repart vers l'est, c'est-a-dire a l'oppose de ce qu'il demande. L'intention du code est evidente, l'ecart d'angle devait etre relatif au cap voulu. Corrige en 1.2: les ecarts s'appliquent a la direction demandee.
+
+**X19. Le glissement le long d'un mur repose l'entite sur une position deja refusee.** Toujours dans `move` (`:2637`), quand le mouvement complet echoue, le legacy teste separement l'axe horizontal et l'axe vertical **depuis la meme position de depart**, puis applique les deux resultats: `if (canMoveX) player.x = desiredX; if (canMoveY) player.y = desiredY;`. Si les deux axes passent separement alors que la diagonale ne passait pas, le joueur se retrouve exactement sur la position que `canMove` venait de refuser. Autrement dit, il coupe l'angle du mur en diagonale. Corrige en 1.2: les deux axes s'enchainent, le second partant de la position atteinte par le premier, ce qui decrit le meme glissement par un chemin reellement parcouru.
+
 ### Poids et proprete du depot
 
 **P1. 72 Mo d'audio dont l'essentiel est mort.** `game-music-1.wav` pese 44,8 Mo et `menu-music-1.wav` 13,9 Mo. **Ni l'un ni l'autre n'est reference par le code.** S'y ajoutent `game-music.mp3` (3,7 Mo) et une dizaine de fichiers `.wav` doublons de `.mp3` effectivement utilises, eux aussi non references.

@@ -7,9 +7,12 @@
  *
  *   1. Rien n'est modifie sur place. tick renvoie un nouvel etat.
  *   2. Le temps arrive par dt, en millisecondes. Le moteur ne lit jamais
- *      l'horloge. Il n'y a donc aucune cadence implicite: appeler le moteur
- *      vingt fois avec dt de 50, ou une fois avec dt de 1000, produit le meme
- *      deplacement.
+ *      l'horloge. Il n'y a donc aucune cadence implicite: en terrain degage,
+ *      appeler le moteur vingt fois avec dt de 50, ou une fois avec dt de 1000,
+ *      produit le meme deplacement. Pres d'un mur, en revanche, un pas de temps
+ *      fin approche davantage du mur qu'un pas grossier: un deplacement bloque
+ *      n'a pas lieu du tout, et plus le pas est grand, plus tot il est refuse.
+ *      C'est la contrepartie normale d'un monde solide.
  *   3. Le hasard passe par le generateur a graine transporte dans l'etat.
  *
  * La consequence la plus visible est que la vitesse ne depend plus du debit de
@@ -17,15 +20,18 @@
  * client qui envoyait ses deplacements deux fois plus vite se deplacait deux
  * fois plus vite. Ici, le deplacement est proportionnel au temps ecoule.
  *
- * Perimetre de cette etape: appliquer les entrees de deplacement et faire
- * avancer le temps. Les collisions arrivent a l'etape 1.2, les captures a la
- * 1.3, les bonus et malus a la 1.4, les bots a la 1.5. Le moteur les accueillera
- * en systemes appeles dans ce meme tick.
+ * Un battement se deroule dans cet ordre: chaque joueur applique son entree et
+ * se deplace contre le terrain, puis on releve les contacts qui en resultent, et
+ * enfin on en tire les consequences. Les captures arrivent a l'etape 1.3, les
+ * bonus et malus a la 1.4, les bots a la 1.5. Le moteur les accueillera en
+ * systemes appeles dans ce meme tick.
  */
 
 import type { Vecteur } from '@neon-ninja/shared';
 import { VITESSES } from '@neon-ninja/shared';
 
+import { detecterContacts, resoudreContacts } from './contacts.js';
+import { resoudreDeplacement } from './deplacement.js';
 import { aLaLongueur, directionDuVecteur, norme } from './direction.js';
 import type { EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
 import { COMPTEUR_CAPTURE_PRET } from './etat.js';
@@ -76,12 +82,14 @@ export function tick(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPart
     joueurs[id] = avancerJoueur(etat, joueur, entrees[id], dtMs);
   }
 
-  return {
+  const deplace: EtatPartie = {
     ...etat,
     tick: etat.tick + 1,
     tempsEcouleMs: etat.tempsEcouleMs + dtMs,
     joueurs,
   };
+
+  return resoudreContacts(deplace, detecterContacts(deplace));
 }
 
 /**
@@ -117,11 +125,19 @@ function avancerJoueur(
 }
 
 /**
- * Deplace un joueur selon son entree.
+ * Deplace un joueur selon son entree, contre le terrain.
  *
- * Le vecteur recu est ramene a la distance parcourue pendant dt, puis la
- * position est bornee a la carte. Le legacy bornait de la meme facon, sur le
- * centre de l'entite (server.js:2665). Les murs arrivent a l'etape 1.2.
+ * Le vecteur recu est ramene a la distance parcourue pendant dt, puis confie a
+ * la resolution du deplacement, qui longe les murs et tente de les contourner.
+ *
+ * Le bornage explicite a la carte du legacy (server.js:2665) n'est plus utile:
+ * hors de la carte, tout est mur, donc aucun deplacement ne peut en sortir. La
+ * consequence visible est que le joueur s'arrete a son rayon du bord, et non le
+ * centre colle au bord. C'est deja ce que le legacy faisait reellement, son
+ * bornage n'ayant jamais rien eu a corriger.
+ *
+ * La direction suit le deplacement effectivement realise: un joueur bloque
+ * regarde devant lui, comme dans le legacy.
  */
 function deplacerJoueur(
   etat: EtatPartie,
@@ -135,18 +151,9 @@ function deplacerJoueur(
 
   const distance = (VITESSES.JOUEUR_PX_PAR_SECONDE * dtMs) / 1000;
   const pas = aLaLongueur(entree.deplacement, distance);
-
-  const position = {
-    x: borner(joueur.position.x + pas.x, 0, etat.carte.largeur),
-    y: borner(joueur.position.y + pas.y, 0, etat.carte.hauteur),
-  };
+  const position = resoudreDeplacement(etat.terrain, joueur.position, pas);
 
   const effectif = { x: position.x - joueur.position.x, y: position.y - joueur.position.y };
 
   return { ...joueur, position, direction: directionDuVecteur(effectif) };
-}
-
-/** Ramene une valeur entre deux bornes. */
-function borner(valeur: number, minimum: number, maximum: number): number {
-  return Math.max(minimum, Math.min(maximum, valeur));
 }

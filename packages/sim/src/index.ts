@@ -15,8 +15,24 @@
  *     tick(etat, entrees, dt) -> nouvel etat
  */
 
+export type { CarteCollisions } from './collisions.js';
+export {
+  SEUIL_MUR_LUMINOSITE,
+  carteDepuisPixels,
+  carteSansMur,
+  creerCarteCollisions,
+  estMur,
+  positionTenable,
+  trajetTenable,
+} from './collisions.js';
+
+export type { Contact } from './contacts.js';
+export { SEUIL_CONTACT_PX, detecterContacts, resoudreContacts } from './contacts.js';
+
 export type { Couleur } from './couleurs.js';
 export { couleurAleatoire, couleurUnique } from './couleurs.js';
+
+export { resoudreDeplacement } from './deplacement.js';
 
 export { aLaLongueur, determinerDirection, directionDuVecteur, norme } from './direction.js';
 
@@ -37,6 +53,7 @@ export {
   estInvulnerable,
   peutCapturer,
   positionDApparition,
+  positionsOccupees,
   retirerJoueur,
 } from './etat.js';
 
