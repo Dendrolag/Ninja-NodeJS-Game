@@ -22,9 +22,15 @@
  *     defaut X11 de l'audit, un compteur remis a zero a cinq endroits, jamais
  *     incremente, et envoye au client qui recoit donc toujours zero.
  *
- * Les compteurs de capture et les effets de bonus arrivent avec leurs etapes
- * (1.3 et 1.4). Les bots arrivent a l'etape 1.5. On ne pose pas ici des champs
+ * Les effets de bonus arrivent avec l'etape 1.4. On ne pose pas ici des champs
  * dont personne ne sait encore se servir.
+ *
+ * Ajouts de l'etape 1.3: les compteurs de capture des joueurs, une population de
+ * bots reduite a ses donnees, et le journal des evenements du battement. Les bots
+ * n'ont ici aucun comportement: ils se placent, ils portent une couleur, et c'est
+ * tout. Leur deplacement et leur intelligence arrivent a l'etape 1.5. Ils
+ * existent des maintenant parce que la capture et le score n'ont aucun sens sans
+ * eux: le score d'un joueur est le nombre de bots qui portent sa couleur.
  */
 
 import type {
@@ -37,6 +43,8 @@ import type {
 import {
   APPARITION,
   CARTES,
+  COULEUR_BOT_NEUTRE,
+  COULEUR_BOT_NOIR,
   DUREES,
   RAYON_ENTITE,
   REGLAGES_PAR_DEFAUT,
@@ -64,6 +72,31 @@ export interface Entite {
   readonly direction: Direction;
 }
 
+/**
+ * Une entite non joueuse: un bot ordinaire, ou un bot noir.
+ *
+ * A ce stade du portage, un bot n'est que des donnees: une place, une couleur.
+ * Son deplacement, ses changements de direction et la chasse du bot noir sont
+ * l'etape 1.5. Ce type n'a donc encore rien de plus qu'une entite; il existe pour
+ * que la capture et le score aient sur quoi s'appliquer, et il s'enrichira sans
+ * changer de nom.
+ *
+ * Les bots ordinaires et les bots noirs vivent dans la meme collection, la ou le
+ * legacy tenait deux tables separees (bots et blackBots). Un seul releve de
+ * contacts les parcourt donc tous, et leur nature se lit dans leur champ type.
+ */
+export interface Bot extends Entite {
+  readonly type: 'bot' | 'botNoir';
+}
+
+/** Combien de fois un joueur en a capture un autre, et sous quel nom. */
+export interface HistoriqueCapture {
+  /** Pseudo de l'autre joueur au moment de la capture. */
+  readonly pseudo: string;
+  /** Nombre de captures cumulees entre ces deux joueurs. */
+  readonly nombre: number;
+}
+
 /** Un joueur connecte a la partie. */
 export interface Joueur extends Entite {
   readonly type: 'joueur';
@@ -88,6 +121,31 @@ export interface Joueur extends Entite {
    * etat que l'on serialise vingt fois par seconde.
    */
   readonly tempsDepuisDerniereCaptureMs: number;
+  /**
+   * Le joueur porte-t-il le bonus d'invincibilite ?
+   *
+   * Portage de Player.invincibilityActive (legacy/server.js:876). A l'etape 1.3,
+   * ce n'est qu'un indicateur: rien ne l'active ni ne l'eteint, et il vaut donc
+   * toujours faux en partie. Son cycle de vie, c'est-a-dire le ramassage du bonus
+   * et l'expiration de sa duree, arrive a l'etape 1.4. Il est deja lu par deux
+   * regles: un joueur invincible ne peut pas etre capture, et lui seul detruit
+   * les bots noirs qu'il touche.
+   */
+  readonly invincibiliteActive: boolean;
+  /** Nombre de joueurs captures depuis le debut de la partie. Un cumul, pas un stock. */
+  readonly captures: number;
+  /** Qui ce joueur a capture, et combien de fois. Portage de capturedPlayers. */
+  readonly joueursCaptures: Readonly<Record<IdentifiantEntite, HistoriqueCapture>>;
+  /** Qui a capture ce joueur, et combien de fois. Portage de capturedBy. */
+  readonly capturesSubies: Readonly<Record<IdentifiantEntite, HistoriqueCapture>>;
+  /**
+   * Nombre total de bots gagnes en capturant des joueurs. Portage de
+   * totalBotsCaptures. C'est un cumul qui ne redescend jamais, a ne pas confondre
+   * avec le score, qui est un stock.
+   */
+  readonly botsGagnesAuTotal: number;
+  /** Nombre de bots noirs detruits. Chacun vaut quinze points au score. */
+  readonly botsNoirsDetruits: number;
 }
 
 /**
@@ -96,6 +154,43 @@ export interface Joueur extends Entite {
  * lastCapture vaut zero face a une horloge absolue.
  */
 export const COMPTEUR_CAPTURE_PRET = DUREES.DELAI_ENTRE_CAPTURES_MS + 1;
+
+/** Un joueur vient d'en capturer un autre. */
+export interface CaptureDeJoueur {
+  readonly type: 'captureJoueur';
+  readonly attaquant: IdentifiantEntite;
+  readonly victime: IdentifiantEntite;
+  /** Nombre de bots passes de la victime a l'attaquant. */
+  readonly botsTransferes: number;
+  /** Couleur tiree pour la victime a sa reapparition. */
+  readonly nouvelleCouleurVictime: Couleur;
+  /** Ou la victime se trouvait au moment du contact. */
+  readonly position: Position;
+}
+
+/** Un joueur invincible vient de detruire un bot noir. */
+export interface DestructionDeBotNoir {
+  readonly type: 'botNoirDetruit';
+  readonly joueur: IdentifiantEntite;
+  readonly botNoir: IdentifiantEntite;
+  /** Ou le bot noir se trouvait quand il a ete detruit. */
+  readonly position: Position;
+  /** Points rapportes par cette destruction. */
+  readonly points: number;
+}
+
+/**
+ * Un fait notable survenu pendant un battement.
+ *
+ * C'est ce que le moteur laisse a la couche qui l'appelle: le serveur en fait des
+ * messages, le client en fait des sons et des animations. Le moteur, lui, ne
+ * connait ni son ni animation ni notification. Il constate, il n'annonce pas.
+ *
+ * La liste est remise a zero au debut de chaque battement: elle decrit ce qui
+ * vient de se passer, pas l'histoire de la partie. Celle-ci se lit dans les
+ * compteurs des joueurs.
+ */
+export type EvenementPartie = CaptureDeJoueur | DestructionDeBotNoir;
 
 /** L'etat complet d'une partie a un instant donne. */
 export interface EtatPartie {
@@ -122,6 +217,13 @@ export interface EtatPartie {
   readonly terrain: CarteCollisions;
   /** Les joueurs de la partie, indexes par identifiant. */
   readonly joueurs: Readonly<Record<IdentifiantEntite, Joueur>>;
+  /** Les bots et les bots noirs de la partie, indexes par identifiant. */
+  readonly bots: Readonly<Record<IdentifiantEntite, Bot>>;
+  /**
+   * Ce qui vient de se passer pendant le dernier battement. Remis a zero au
+   * debut du battement suivant.
+   */
+  readonly evenements: readonly EvenementPartie[];
   /** Generateur a graine de la partie. Tout tirage le fait avancer. */
   readonly alea: Alea;
 }
@@ -176,6 +278,8 @@ export function creerEtatInitial(options: OptionsEtatInitial): EtatPartie {
     carte,
     terrain,
     joueurs: {},
+    bots: {},
+    evenements: [],
     alea: creerAlea(options.graine),
   };
 }
@@ -332,6 +436,12 @@ export function ajouterJoueur(etat: EtatPartie, options: OptionsAjoutJoueur): Et
     direction: 'immobile',
     protectionSpawnRestanteMs: DUREES.PROTECTION_SPAWN_MS,
     tempsDepuisDerniereCaptureMs: COMPTEUR_CAPTURE_PRET,
+    invincibiliteActive: false,
+    captures: 0,
+    joueursCaptures: {},
+    capturesSubies: {},
+    botsGagnesAuTotal: 0,
+    botsNoirsDetruits: 0,
   };
 
   return { ...etat, joueurs: { ...etat.joueurs, [options.id]: joueur }, alea };
@@ -349,6 +459,77 @@ export function retirerJoueur(etat: EtatPartie, id: IdentifiantEntite): EtatPart
   return { ...etat, joueurs };
 }
 
+/** Ce qu'il faut pour poser un bot sur la carte. */
+export interface OptionsAjoutBot {
+  readonly id: IdentifiantEntite;
+  /** Bot ordinaire par defaut. */
+  readonly type?: 'bot' | 'botNoir';
+  /** Position imposee. Sinon elle est tiree de la graine. */
+  readonly position?: Position;
+  /** Couleur imposee. Sinon le blanc des bots neutres, ou le noir des bots noirs. */
+  readonly couleur?: Couleur;
+}
+
+/**
+ * Pose un bot sur la carte.
+ *
+ * A ce stade, c'est une fonction de placement, rien de plus: le bot n'a aucun
+ * comportement, il attend l'etape 1.5. Elle existe pour que la capture, la
+ * contagion de couleur et le score aient sur quoi s'appliquer.
+ *
+ * Comme pour un joueur, une position imposee n'est pas verifiee, et une position
+ * tiree au sort evite les murs et les entites deja en place.
+ */
+export function ajouterBot(etat: EtatPartie, options: OptionsAjoutBot): EtatPartie {
+  const type = options.type ?? 'bot';
+  let alea = etat.alea;
+
+  let position = options.position;
+  if (position === undefined) {
+    const tirage = positionDApparition(alea, etat.terrain, positionsOccupees(etat));
+    position = tirage.valeur;
+    alea = tirage.alea;
+  }
+
+  const bot: Bot = {
+    id: options.id,
+    type,
+    position,
+    couleur: options.couleur ?? (type === 'botNoir' ? COULEUR_BOT_NOIR : COULEUR_BOT_NEUTRE),
+    direction: 'immobile',
+  };
+
+  return { ...etat, bots: { ...etat.bots, [options.id]: bot }, alea };
+}
+
+/** Retire un bot de la carte. Sans effet s'il n'y etait pas. */
+export function retirerBot(etat: EtatPartie, id: IdentifiantEntite): EtatPartie {
+  if (etat.bots[id] === undefined) {
+    return etat;
+  }
+
+  const bots = { ...etat.bots };
+  delete bots[id];
+
+  return { ...etat, bots };
+}
+
+/**
+ * Retrouve une entite par son identifiant, qu'elle soit joueur ou bot.
+ *
+ * Renvoie undefined si l'entite n'existe pas ou plus: un bot noir detruit en
+ * debut de battement peut encore figurer dans un contact releve avant sa
+ * destruction.
+ */
+export function entiteDe(etat: EtatPartie, id: IdentifiantEntite): Joueur | Bot | undefined {
+  return etat.joueurs[id] ?? etat.bots[id];
+}
+
+/** Toutes les entites de la partie, joueurs d'abord, dans leur ordre d'arrivee. */
+export function toutesLesEntites(etat: EtatPartie): readonly (Joueur | Bot)[] {
+  return [...Object.values(etat.joueurs), ...Object.values(etat.bots)];
+}
+
 /** Les couleurs deja portees par un joueur de la partie. */
 export function couleursUtilisees(etat: EtatPartie): readonly Couleur[] {
   return Object.values(etat.joueurs).map((joueur) => joueur.couleur);
@@ -362,18 +543,19 @@ export function couleursUtilisees(etat: EtatPartie): readonly Couleur[] {
  * peut pas etre oubliee.
  */
 export function positionsOccupees(etat: EtatPartie): readonly Position[] {
-  return Object.values(etat.joueurs).map((joueur) => joueur.position);
+  return toutesLesEntites(etat).map((entite) => entite.position);
 }
 
 /**
  * Un joueur est-il a l'abri d'une capture ?
  *
- * Portage de Player.isInvulnerable (legacy/server.js:915), limite pour l'instant
- * a la protection d'apparition. L'invincibilite donnee par un bonus s'ajoutera a
- * l'etape 1.4, quand les bonus existeront.
+ * Portage de Player.isInvulnerable (legacy/server.js:915): la protection donnee a
+ * l'apparition, ou le bonus d'invincibilite. Le legacy testait souvent les deux
+ * separement, alors que le second contient deja le premier; ici il n'y a qu'une
+ * seule facon de poser la question.
  */
 export function estInvulnerable(joueur: Joueur): boolean {
-  return joueur.protectionSpawnRestanteMs > 0;
+  return joueur.invincibiliteActive || joueur.protectionSpawnRestanteMs > 0;
 }
 
 /**

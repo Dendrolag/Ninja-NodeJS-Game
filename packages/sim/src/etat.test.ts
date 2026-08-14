@@ -6,21 +6,33 @@
  * que rien ne se modifie sur place.
  */
 
-import { APPARITION, CARTES, DUREES, REGLAGES_PAR_DEFAUT, creerAlea } from '@neon-ninja/shared';
+import {
+  APPARITION,
+  CARTES,
+  COULEUR_BOT_NEUTRE,
+  COULEUR_BOT_NOIR,
+  DUREES,
+  REGLAGES_PAR_DEFAUT,
+  creerAlea,
+} from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
 import { carteSansMur, creerCarteCollisions, estMur } from './collisions.js';
 import type { EtatPartie, Joueur } from './etat.js';
 import {
   COMPTEUR_CAPTURE_PRET,
+  ajouterBot,
   ajouterJoueur,
   couleursUtilisees,
   creerEtatInitial,
+  entiteDe,
   estInvulnerable,
   peutCapturer,
   positionDApparition,
   positionsOccupees,
+  retirerBot,
   retirerJoueur,
+  toutesLesEntites,
 } from './etat.js';
 
 /** Lit un joueur dont on sait qu'il est present, sans alourdir chaque test. */
@@ -306,6 +318,13 @@ describe('estInvulnerable', () => {
 
     expect(estInvulnerable({ ...joueur, protectionSpawnRestanteMs: 0 })).toBe(false);
   });
+
+  it('protege aussi le porteur du bonus d invincibilite', () => {
+    const etat = ajouterJoueur(creerEtatInitial({ graine: 1 }), { id: 'j1', pseudo: 'Alice' });
+    const joueur = { ...joueurDe(etat, 'j1'), protectionSpawnRestanteMs: 0 };
+
+    expect(estInvulnerable({ ...joueur, invincibiliteActive: true })).toBe(true);
+  });
 });
 
 describe('peutCapturer', () => {
@@ -317,5 +336,102 @@ describe('peutCapturer', () => {
 
     expect(peutCapturer({ ...joueur, tempsDepuisDerniereCaptureMs: 1000 })).toBe(false);
     expect(peutCapturer({ ...joueur, tempsDepuisDerniereCaptureMs: 1001 })).toBe(true);
+  });
+});
+
+describe('compteurs de capture d un joueur', () => {
+  it('part de zero partout', () => {
+    const etat = ajouterJoueur(creerEtatInitial({ graine: 1 }), { id: 'j1', pseudo: 'Alice' });
+    const joueur = joueurDe(etat, 'j1');
+
+    expect(joueur.captures).toBe(0);
+    expect(joueur.joueursCaptures).toEqual({});
+    expect(joueur.capturesSubies).toEqual({});
+    expect(joueur.botsGagnesAuTotal).toBe(0);
+    expect(joueur.botsNoirsDetruits).toBe(0);
+    expect(joueur.invincibiliteActive).toBe(false);
+  });
+});
+
+describe('ajouterBot', () => {
+  it('pose un bot neutre, immobile, a la place demandee', () => {
+    const etat = ajouterBot(creerEtatInitial({ graine: 1 }), {
+      id: 'b1',
+      position: { x: 400, y: 300 },
+    });
+
+    expect(etat.bots['b1']).toEqual({
+      id: 'b1',
+      type: 'bot',
+      position: { x: 400, y: 300 },
+      couleur: COULEUR_BOT_NEUTRE,
+      direction: 'immobile',
+    });
+  });
+
+  it('donne le noir aux bots noirs', () => {
+    const etat = ajouterBot(creerEtatInitial({ graine: 1 }), { id: 'bn', type: 'botNoir' });
+
+    expect(etat.bots['bn']?.couleur).toBe(COULEUR_BOT_NOIR);
+    expect(etat.bots['bn']?.type).toBe('botNoir');
+  });
+
+  it('tire une position quand on ne lui en donne pas, et fait avancer la graine', () => {
+    const avant = creerEtatInitial({ graine: 1 });
+    const apres = ajouterBot(avant, { id: 'b1' });
+
+    expect(apres.bots['b1']?.position).toBeDefined();
+    expect(apres.alea).not.toEqual(avant.alea);
+  });
+
+  it('ne modifie pas l etat recu', () => {
+    const avant = creerEtatInitial({ graine: 1 });
+
+    ajouterBot(avant, { id: 'b1', position: { x: 400, y: 300 } });
+
+    expect(avant.bots).toEqual({});
+  });
+
+  it('compte les bots parmi les places deja prises', () => {
+    const etat = ajouterBot(creerEtatInitial({ graine: 1 }), {
+      id: 'b1',
+      position: { x: 400, y: 300 },
+    });
+
+    expect(positionsOccupees(etat)).toEqual([{ x: 400, y: 300 }]);
+  });
+});
+
+describe('retirerBot', () => {
+  it('retire le bot sans toucher a l etat d origine', () => {
+    const avec = ajouterBot(creerEtatInitial({ graine: 1 }), { id: 'b1' });
+    const sans = retirerBot(avec, 'b1');
+
+    expect(sans.bots['b1']).toBeUndefined();
+    expect(avec.bots['b1']).toBeDefined();
+  });
+
+  it('ne fait rien pour un bot absent', () => {
+    const etat = creerEtatInitial({ graine: 1 });
+
+    expect(retirerBot(etat, 'inconnu')).toBe(etat);
+  });
+});
+
+describe('entiteDe et toutesLesEntites', () => {
+  it('retrouve aussi bien un joueur qu un bot', () => {
+    let etat = ajouterJoueur(creerEtatInitial({ graine: 1 }), { id: 'j1', pseudo: 'Alice' });
+    etat = ajouterBot(etat, { id: 'b1' });
+
+    expect(entiteDe(etat, 'j1')?.type).toBe('joueur');
+    expect(entiteDe(etat, 'b1')?.type).toBe('bot');
+    expect(entiteDe(etat, 'inconnu')).toBeUndefined();
+  });
+
+  it('enumere les joueurs avant les bots', () => {
+    let etat = ajouterBot(creerEtatInitial({ graine: 1 }), { id: 'b1' });
+    etat = ajouterJoueur(etat, { id: 'j1', pseudo: 'Alice' });
+
+    expect(toutesLesEntites(etat).map((entite) => entite.id)).toEqual(['j1', 'b1']);
   });
 });

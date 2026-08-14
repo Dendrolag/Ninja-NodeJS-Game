@@ -237,6 +237,16 @@ Ajoutes le 14 aout 2026, en portant la carte de collisions et la resolution du d
 
 **X19. Le glissement le long d'un mur repose l'entite sur une position deja refusee.** Toujours dans `move` (`:2637`), quand le mouvement complet echoue, le legacy teste separement l'axe horizontal et l'axe vertical **depuis la meme position de depart**, puis applique les deux resultats: `if (canMoveX) player.x = desiredX; if (canMoveY) player.y = desiredY;`. Si les deux axes passent separement alors que la diagonale ne passait pas, le joueur se retrouve exactement sur la position que `canMove` venait de refuser. Autrement dit, il coupe l'angle du mur en diagonale. Corrige en 1.2: les deux axes s'enchainent, le second partant de la position atteinte par le premier, ce qui decrit le meme glissement par un chemin reellement parcouru.
 
+### Defauts decouverts a l'etape 1.3
+
+Ajoutes le 14 aout 2026, en portant les captures et le score.
+
+**X20. Les bots se repeignent entre eux, y compris en blanc.** Dans `detectCollisions` (`:1704`), un bot qui touche un autre bot de couleur differente lui impose la sienne, sans aucune condition sur la couleur. Or `updateBots` (`:1564`) appelle `detectCollisions` pour chaque bot a chaque battement du serveur. La consequence n'est pas celle qu'on attend: un bot **blanc**, c'est-a-dire non capture, repeint en blanc un bot de couleur. Un joueur perd donc des points sans que personne ne l'attaque, par simple diffusion. Ce n'est pas un bug d'ecriture, c'est un comportement reel du jeu depuis deux ans, caracterise a l'etape 0.2 (« propage la couleur d un bot a un autre bot au contact »). Porte tel quel a l'etape 1.3, avec la question posee dans le handoff: mecanique voulue, ou effet de bord jamais remarque ?
+
+Precision sur le sens du contact, verifiee en portant: dans un meme passage de `updateBots`, les bots sont parcourus dans leur ordre d'arrivee, et le premier repeint le second, qui ne repeint plus rien ensuite puisqu'il porte deja la meme couleur. Ce n'est donc pas un clignotement: le plus ancien des deux l'emporte. Le portage reproduit exactement cette regle.
+
+**X21. `handlePlayerCapture` ne verifie pas la couleur de sa victime.** La condition « couleurs differentes » vit dans `detectCollisions` (`:1687`), pas dans `handlePlayerCapture` (`:738`). Appelee directement sur deux joueurs de meme couleur, la fonction compte donc une capture et « transfere » a l'attaquant ses propres bots. Le legacy n'a qu'un seul appelant, la faute n'est donc jamais commise, mais la fonction n'est pas sure par elle-meme. Corrige par conception a l'etape 1.3: la verification est dans la regle d'autorisation, appelee par la capture elle-meme, donc aucun appelant ne peut l'oublier.
+
 ### Poids et proprete du depot
 
 **P1. 72 Mo d'audio dont l'essentiel est mort.** `game-music-1.wav` pese 44,8 Mo et `menu-music-1.wav` 13,9 Mo. **Ni l'un ni l'autre n'est reference par le code.** S'y ajoutent `game-music.mp3` (3,7 Mo) et une dizaine de fichiers `.wav` doublons de `.mp3` effectivement utilises, eux aussi non references.

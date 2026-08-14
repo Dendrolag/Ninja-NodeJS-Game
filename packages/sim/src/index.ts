@@ -15,6 +15,8 @@
  *     tick(etat, entrees, dt) -> nouvel etat
  */
 
+export { captureAutorisee, capturerBot, capturerJoueur, detruireBotNoir } from './capture.js';
+
 export type { CarteCollisions } from './collisions.js';
 export {
   SEUIL_MUR_LUMINOSITE,
@@ -26,8 +28,13 @@ export {
   trajetTenable,
 } from './collisions.js';
 
-export type { Contact } from './contacts.js';
-export { SEUIL_CONTACT_PX, detecterContacts, resoudreContacts } from './contacts.js';
+export type { Contact, RegleDeResolution } from './contacts.js';
+export {
+  SEUIL_CONTACT_PX,
+  detecterContacts,
+  regleClassique,
+  resoudreContacts,
+} from './contacts.js';
 
 export type { Couleur } from './couleurs.js';
 export { couleurAleatoire, couleurUnique } from './couleurs.js';
@@ -37,25 +44,38 @@ export { resoudreDeplacement } from './deplacement.js';
 export { aLaLongueur, determinerDirection, directionDuVecteur, norme } from './direction.js';
 
 export type {
+  Bot,
+  CaptureDeJoueur,
+  DestructionDeBotNoir,
   Entite,
   EtatPartie,
+  EvenementPartie,
+  HistoriqueCapture,
   IdentifiantEntite,
   Joueur,
+  OptionsAjoutBot,
   OptionsAjoutJoueur,
   OptionsEtatInitial,
   TypeEntite,
 } from './etat.js';
 export {
   COMPTEUR_CAPTURE_PRET,
+  ajouterBot,
   ajouterJoueur,
   couleursUtilisees,
   creerEtatInitial,
+  entiteDe,
   estInvulnerable,
   peutCapturer,
   positionDApparition,
   positionsOccupees,
+  retirerBot,
   retirerJoueur,
+  toutesLesEntites,
 } from './etat.js';
 
 export type { EntreeJoueur, Entrees, EvaluationFinDePartie } from './moteur.js';
 export { evaluerFinDePartie, tick } from './moteur.js';
+
+export type { LigneScore } from './score.js';
+export { calculerScores, scoreDe } from './score.js';

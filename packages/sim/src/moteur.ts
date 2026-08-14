@@ -20,11 +20,12 @@
  * client qui envoyait ses deplacements deux fois plus vite se deplacait deux
  * fois plus vite. Ici, le deplacement est proportionnel au temps ecoule.
  *
- * Un battement se deroule dans cet ordre: chaque joueur applique son entree et
- * se deplace contre le terrain, puis on releve les contacts qui en resultent, et
- * enfin on en tire les consequences. Les captures arrivent a l'etape 1.3, les
- * bonus et malus a la 1.4, les bots a la 1.5. Le moteur les accueillera en
- * systemes appeles dans ce meme tick.
+ * Un battement se deroule dans cet ordre: le journal du battement precedent est
+ * efface, chaque joueur applique son entree et se deplace contre le terrain, on
+ * releve les contacts qui en resultent, et enfin on en tire les consequences,
+ * captures comprises. Les bonus et malus arrivent a l'etape 1.4, le deplacement
+ * des bots a la 1.5. Le moteur les accueillera en systemes appeles dans ce meme
+ * tick.
  */
 
 import type { Vecteur } from '@neon-ninja/shared';
@@ -64,9 +65,10 @@ export interface EvaluationFinDePartie {
  * @param entrees Ce que les joueurs demandent. Un joueur absent de cette table
  *                ne bouge pas.
  * @param dtMs Temps ecoule depuis le battement precedent, en millisecondes.
- * @returns Le nouvel etat. L'etat recu est renvoye tel quel si la partie est
- *          deja terminee: le legacy sortait de meme des que isGameOver etait
- *          vrai.
+ * @returns Le nouvel etat. Son journal d'evenements ne contient que ce qui vient
+ *          de se produire pendant ce battement. L'etat recu est renvoye tel quel
+ *          si la partie est deja terminee, journal compris: le legacy sortait de
+ *          meme des que isGameOver etait vrai.
  */
 export function tick(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPartie {
   if (!Number.isFinite(dtMs) || dtMs < 0) {
@@ -82,11 +84,14 @@ export function tick(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPart
     joueurs[id] = avancerJoueur(etat, joueur, entrees[id], dtMs);
   }
 
+  // Le journal repart vide: il decrit ce battement-ci, pas l'histoire de la
+  // partie. Celle-ci se lit dans les compteurs des joueurs.
   const deplace: EtatPartie = {
     ...etat,
     tick: etat.tick + 1,
     tempsEcouleMs: etat.tempsEcouleMs + dtMs,
     joueurs,
+    evenements: [],
   };
 
   return resoudreContacts(deplace, detecterContacts(deplace));

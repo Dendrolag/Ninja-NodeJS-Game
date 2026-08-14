@@ -100,6 +100,20 @@ export const DUREES = {
   COMPTE_A_REBOURS_S: 5,
 } as const;
 
+/**
+ * Bareme du score.
+ *
+ * Le score d'un joueur est un stock, pas un cumul: il vaut le nombre de bots
+ * portant sa couleur a l'instant present, plus les points acquis en detruisant
+ * des bots noirs. Se faire capturer le ramene donc a ses seuls points de bots
+ * noirs. C'est le comportement a preserver numero 1 de CLAUDE.md, celui qui fait
+ * la tension de fin de partie.
+ */
+export const SCORE = {
+  /** Points accordes a un joueur pour la destruction d'un bot noir. */
+  POINTS_PAR_BOT_NOIR: 15,
+} as const;
+
 /** Reglages de l'apparition des entites. */
 export const APPARITION = {
   /** Bande interdite le long des bords de la carte, en pixels. */

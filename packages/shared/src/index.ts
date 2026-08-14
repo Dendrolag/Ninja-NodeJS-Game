@@ -23,6 +23,7 @@ export {
   DIRECTIONS,
   DUREES,
   RAYON_ENTITE,
+  SCORE,
   VITESSES,
 } from './constantes.js';
 

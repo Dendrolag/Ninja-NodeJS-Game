@@ -64,6 +64,20 @@ Conditions de ROADMAP réunies, plus:
 4. Le linter confirme la pureté de packages/sim.
 5. La couverture de packages/sim ne baisse pas.
 
+## Réconciliation avec le dépôt
+
+Écarts constatés à l'exécution, le 14 août 2026. Une fiche est un plan, pas un contrat figé.
+
+1. **Les bots sont portés ici, en données seulement.** La fiche les supposait présents (points 2, 3 et 4), le handoff de l'étape 1.2 les annonçait pour l'étape 1.5. Ils entrent donc dans l'état à cette étape, réduits à une identité, une place, une couleur et une nature. Leur déplacement et leur intelligence restent en 1.5. Sans eux, ni la capture de bot, ni la destruction de bot noir, ni le score n'auraient eu la moindre entité sur laquelle s'appliquer.
+
+2. **Le score n'est pas rangé dans l'état.** Le point 4 demandait « qu'une capture mette à jour les scores dans l'état ». C'est bien le cas, mais indirectement: une capture repeint des bots, et le score se déduit des bots. Le stocker aurait créé une seconde vérité à tenir à jour, ce qui est la maladie que le projet cherche à quitter. Décision consignée au journal de conception.
+
+3. **La capture d'un joueur par un bot noir n'est pas ici.** La fiche ne la demandait pas, et le domaine de caractérisation la couvre pourtant. Elle relève du comportement du bot noir, donc de l'étape 1.5. Le compteur `capturedByBlackBot` n'est pas porté non plus: on ne pose pas un champ dont personne ne sait encore se servir.
+
+4. **L'invincibilité est portée comme un simple indicateur**, conformément à la section hors périmètre. Rien ne l'active à cette étape; elle est déjà lue par deux règles (un joueur invincible ne peut pas être capturé, et lui seul détruit les bots noirs qu'il touche). Son cycle de vie vient en 1.4.
+
+5. **Deux défauts découverts en portant**, X20 et X21, ajoutés à l'audit. Le second est corrigé par conception; le premier est porté tel quel avec une question posée dans le handoff.
+
 ## Rituel de fin de session
 
 Écrire docs/handoffs/etape-1-3-handoff.md. Indiquer comment l'état signale une capture au futur client (forme retenue), et par quel point d'extension une autre règle de capture pourra être branchée. Prochaine action exacte pour l'étape 1.4: porter bonus, malus et zones spéciales avec leurs effets et durées. Commiter.

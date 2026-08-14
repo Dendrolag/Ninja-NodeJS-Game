@@ -12,10 +12,12 @@ import { describe, expect, it } from 'vitest';
 
 import type { CarteCollisions } from './collisions.js';
 import { creerCarteCollisions } from './collisions.js';
+import { SEUIL_CONTACT_PX } from './contacts.js';
 import type { EtatPartie, Joueur } from './etat.js';
-import { ajouterJoueur, creerEtatInitial } from './etat.js';
+import { COMPTEUR_CAPTURE_PRET, ajouterBot, ajouterJoueur, creerEtatInitial } from './etat.js';
 import type { Entrees } from './moteur.js';
 import { evaluerFinDePartie, tick } from './moteur.js';
+import { calculerScores } from './score.js';
 
 /** Duree d'un battement a la cadence du serveur, en millisecondes. */
 const BATTEMENT_MS = 50;
@@ -347,5 +349,103 @@ describe('partie terminee', () => {
     const apres = tick(finie, vers({ x: 1, y: 0 }), BATTEMENT_MS);
 
     expect(apres).toBe(finie);
+  });
+});
+
+describe('captures dans le battement', () => {
+  /**
+   * Deux joueurs de couleurs differentes, places ou on veut, sortis de leur
+   * protection d'apparition et prets a capturer.
+   *
+   * Quand un test a besoin de savoir qui l'emporte, il impose l'attaquant: son
+   * adversaire garde alors son delai entre captures, ce qui le met hors jeu pour
+   * ce battement. Sans cela le duel se joue au tirage au sort, ce qui est
+   * justement le sujet du dernier test du groupe.
+   */
+  function duel(
+    distance: number,
+    options: { graine?: number; attaquant?: 'j1' | 'j2' } = {},
+  ): EtatPartie {
+    let etat = creerEtatInitial({ graine: options.graine ?? 1 });
+    etat = ajouterJoueur(etat, {
+      id: 'j1',
+      pseudo: 'Alice',
+      position: { x: 500, y: 500 },
+      couleur: '#FF0000',
+    });
+    etat = ajouterJoueur(etat, {
+      id: 'j2',
+      pseudo: 'Bob',
+      position: { x: 500 + distance, y: 500 },
+      couleur: '#0000FF',
+    });
+
+    const ecarte =
+      options.attaquant === undefined ? undefined : options.attaquant === 'j1' ? 'j2' : 'j1';
+    const joueurs = { ...etat.joueurs };
+    for (const id of ['j1', 'j2']) {
+      joueurs[id] = {
+        ...joueurDe(etat, id),
+        protectionSpawnRestanteMs: 0,
+        tempsDepuisDerniereCaptureMs: id === ecarte ? 0 : COMPTEUR_CAPTURE_PRET,
+      };
+    }
+
+    return { ...etat, joueurs };
+  }
+
+  it('resout une capture quand deux joueurs se touchent', () => {
+    const apres = tick(duel(10), {}, BATTEMENT_MS);
+
+    expect(apres.evenements).toHaveLength(1);
+    expect(apres.evenements[0]?.type).toBe('captureJoueur');
+  });
+
+  it('ne resout rien a exactement la distance limite', () => {
+    // Cas limite fige par la caracterisation: le test est distance < 20, borne
+    // exclue. A vingt pixels pile, personne ne capture personne.
+    const apres = tick(duel(SEUIL_CONTACT_PX), {}, BATTEMENT_MS);
+
+    expect(apres.evenements).toEqual([]);
+  });
+
+  it('transfere les bots de la victime dans le meme battement', () => {
+    let etat = duel(10, { attaquant: 'j1' });
+    etat = ajouterBot(etat, { id: 'b1', couleur: '#0000FF', position: { x: 200, y: 200 } });
+    etat = ajouterBot(etat, { id: 'b2', couleur: '#0000FF', position: { x: 260, y: 200 } });
+
+    const apres = tick(etat, {}, BATTEMENT_MS);
+    const capture = apres.evenements[0];
+
+    expect(capture).toMatchObject({ type: 'captureJoueur', attaquant: 'j1', botsTransferes: 2 });
+    expect(calculerScores(apres)[0]).toMatchObject({ id: 'j1', points: 2 });
+  });
+
+  it('efface le journal du battement precedent', () => {
+    const capture = tick(duel(10), {}, BATTEMENT_MS);
+    expect(capture.evenements).toHaveLength(1);
+
+    // Rien ne se passe au battement suivant: la victime a ete replacee ailleurs.
+    const suivant = tick(capture, {}, BATTEMENT_MS);
+
+    expect(suivant.evenements).toEqual([]);
+  });
+
+  it('repeint les bots traverses par un joueur', () => {
+    let etat = partieAvecUnJoueur({ x: 500, y: 500 });
+    etat = ajouterBot(etat, { id: 'b1', position: { x: 508, y: 500 } });
+
+    const apres = tick(etat, {}, BATTEMENT_MS);
+
+    expect(apres.bots['b1']?.couleur).toBe('#FF0000');
+  });
+
+  it('reste deterministe malgre le tirage au sort du duel', () => {
+    const resultat = (): unknown => {
+      const apres = tick(duel(10, { graine: 2026 }), {}, BATTEMENT_MS);
+      return { joueurs: apres.joueurs, evenements: apres.evenements };
+    };
+
+    expect(resultat()).toEqual(resultat());
   });
 });
