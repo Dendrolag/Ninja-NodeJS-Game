@@ -107,6 +107,7 @@ Aucune modification de `packages/sim`, `packages/server`, `packages/shared`, `le
 - Types, linter, formatage: verts. `pnpm verify` passe.
 - Aucune régression de caractérisation: les 93 tests de `tests/caracterisation/` passent, inchangés.
 - Bout en bout: les 4 scénarios Playwright passent, inchangés. Ils ne touchent pas encore au client, qui n'affiche rien.
+- CI: **verte**. Run 32153958688 sur `reecriture`, tous les travaux au vert.
 
 **Ce que couvre le test d'intégration**, parce que c'est lui qui prouve le point 2 de la définition de terminé: l'identifiant reçu à la connexion, l'entrée en partie et son salon, le refus d'un pseudo déjà pris, l'arrivée d'un second joueur, un message de chat signé par la session, le compte à rebours puis le lancement puis le premier instantané reconstruit, la pause et la reprise vues à la fois par l'annonce et par le flux, et le retour à l'accueil quand le serveur ferme.
 
