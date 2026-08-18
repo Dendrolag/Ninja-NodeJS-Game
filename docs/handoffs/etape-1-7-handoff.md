@@ -77,7 +77,7 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
 - Couverture: **99,73 pour cent** des instructions sur `packages/sim` et `packages/shared`, inchangée. `pause.ts` et `moteur.ts` sont à 100 pour cent sur les quatre indicateurs.
 - Types, linter, formatage: verts. `pnpm verify` passe.
 - Aucune régression de caractérisation: les 93 tests de `tests/caracterisation/` passent, inchangés. Ils ne couvraient pas la pause, et ne la couvrent toujours pas: le legacy n'en avait aucun test et la caractérisation de l'étape 0.2 ne l'a pas relevée.
-- CI: à vérifier après la poussée. Rien dans cette étape ne dépend de l'environnement, et tout tourne en local.
+- CI: **verte**. Run 32150492816 sur `reecriture`, tous les travaux au vert, y compris les quatre scénarios Playwright de bout en bout.
 
 ## Décisions et écarts au plan
 
