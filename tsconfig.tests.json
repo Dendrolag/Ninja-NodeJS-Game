@@ -24,7 +24,9 @@
     "baseUrl": ".",
     "paths": {
       "@neon-ninja/shared": ["./packages/shared/src/index.ts"],
-      "@neon-ninja/sim": ["./packages/sim/src/index.ts"]
+      "@neon-ninja/sim": ["./packages/sim/src/index.ts"],
+      "@neon-ninja/server": ["./packages/server/src/index.ts"],
+      "@neon-ninja/client": ["./packages/client/src/index.ts"]
     }
   },
   "include": ["packages/**/*.test.ts", "tests/**/*.ts", "*.config.ts"],

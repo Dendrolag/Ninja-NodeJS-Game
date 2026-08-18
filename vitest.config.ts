@@ -14,6 +14,10 @@ export default defineConfig({
     alias: {
       '@neon-ninja/shared': chemin('./packages/shared/src/index.ts'),
       '@neon-ninja/sim': chemin('./packages/sim/src/index.ts'),
+      // Ajoutes a l'etape 4.1: le test d'integration client-serveur est le seul
+      // a monter les deux paquets ensemble, et il ne vit dans aucun des deux.
+      '@neon-ninja/server': chemin('./packages/server/src/index.ts'),
+      '@neon-ninja/client': chemin('./packages/client/src/index.ts'),
     },
   },
   test: {

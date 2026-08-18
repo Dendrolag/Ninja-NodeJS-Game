@@ -16,6 +16,7 @@
     "build": "tsc --build"
   },
   "dependencies": {
-    "@neon-ninja/shared": "workspace:*"
+    "@neon-ninja/shared": "workspace:*",
+    "socket.io-client": "^4.8.1"
   }
 }
