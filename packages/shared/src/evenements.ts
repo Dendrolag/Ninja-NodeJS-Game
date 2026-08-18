@@ -160,6 +160,15 @@ export interface InstantanePartie {
   readonly tick: number;
   /** Temps de jeu restant, en millisecondes. Jamais negatif. */
   readonly tempsRestantMs: number;
+  /**
+   * La partie est suspendue: rien ne bouge et le temps ne descend plus.
+   *
+   * La pause est un ETAT, elle a donc sa place dans le flux d'etat et pas
+   * seulement dans les deux annonces. C'est ce qui permet a un joueur entrant
+   * dans une partie deja suspendue de le savoir tout de suite, sans avoir eu a
+   * assister a l'annonce.
+   */
+  readonly enPause: boolean;
   readonly entites: readonly EntiteVue[];
   readonly objets: readonly ObjetVu[];
   readonly zones: readonly ZoneVue[];
@@ -257,6 +266,18 @@ export interface MalusSubi {
   readonly parPseudo: string;
 }
 
+/**
+ * La partie vient d'etre suspendue.
+ *
+ * Elle dit QUI l'a suspendue, pour que le bandeau puisse le nommer. Ce n'est pas
+ * une information dont le client a besoin pour agir: seul l'hote peut reprendre,
+ * et il le sait deja.
+ */
+export interface PartieEnPause {
+  /** Pseudo de celui qui a demande la pause. */
+  readonly parPseudo: string;
+}
+
 /** La partie est finie. Le classement est definitif. */
 export interface FinDePartie {
   readonly classement: readonly LigneClassement[];
@@ -337,6 +358,21 @@ export interface EvenementsClientVersServeur {
 
   /** Annuler le compte a rebours tant qu'il est annulable. Reserve a l'hote. */
   annulerDemarrage: () => void;
+
+  /**
+   * Suspendre la partie. Reserve a l'hote. Remplace la moitie de togglePause.
+   *
+   * DEUX EVENEMENTS EXPLICITES PLUTOT QU'UNE BASCULE, contrairement au legacy.
+   * Une bascule n'est pas idempotente: un message reemis, ou deux clics trop
+   * rapproches, laissent la partie dans l'etat inverse de celui que le joueur
+   * voit sur son ecran. Demander ce que l'on veut plutot que le contraire de ce
+   * qui est evite entierement la question, et c'est deja la forme retenue pour
+   * demarrer et annulerDemarrage.
+   */
+  mettreEnPause: () => void;
+
+  /** Reprendre la partie. Reserve a l'hote. Remplace l'autre moitie de togglePause. */
+  reprendre: () => void;
 }
 
 /**
@@ -373,6 +409,19 @@ export interface EvenementsServeurVersClient {
 
   /** Le compte a rebours a ete annule. Remplace gameStartCancelled. */
   demarrageAnnule: () => void;
+
+  /**
+   * La partie vient d'etre suspendue. Remplace pauseGame.
+   *
+   * L'indicateur enPause de l'instantane dit la meme chose, et les deux ne font
+   * pas double emploi: celui-ci est l'ANNONCE, qui declenche le bandeau et le
+   * son au moment ou cela arrive; l'autre est l'ETAT, qui renseigne aussi celui
+   * qui entre dans une partie deja suspendue.
+   */
+  partieEnPause: (pause: PartieEnPause) => void;
+
+  /** La partie repart. Remplace resumeGame. */
+  partieReprise: () => void;
 
   /** La partie commence. Remplace gameStarting. */
   partieLancee: () => void;
@@ -424,11 +473,6 @@ export interface EvenementsServeurVersClient {
  *   - resetAndReturnToWaitingRoom et resetAndStartGame. Le retour au salon apres
  *     une partie n'existe pas encore: une room terminee se detruit quand elle se
  *     vide. Voir le handoff de l'etape 2.1.
- *   - togglePause, pauseGame, resumeGame. La pause est un etat de la PARTIE, donc
- *     du moteur, et le moteur ne la connait pas: elle n'a ete portee par aucune
- *     etape de la phase 1. La brancher ici reviendrait a mettre de la logique de
- *     jeu dans la couche reseau, ce que la fiche de l'etape 2.2 interdit
- *     explicitement. C'est un manque reel du portage, consigne comme tel.
  *   - playerSound, updateAudioSettings, audioSettingsUpdated. Le son est un
  *     reglage local du client: le faire transiter par le serveur n'apportait rien.
  *   - playerStatusUpdate, gameInProgress. Remplaces par le champ statut de

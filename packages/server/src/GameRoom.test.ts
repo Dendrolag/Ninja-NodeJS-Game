@@ -637,3 +637,84 @@ describe('GameRoom, rappel de battement', () => {
     expect(battements).toBe(apresLaFin);
   });
 });
+
+describe('GameRoom, pause de la partie', () => {
+  it('nait sans pause et suspend le temps de jeu a la demande', () => {
+    const { room, horloge } = partieLancee();
+
+    expect(room.enPause).toBe(false);
+
+    room.mettreEnPause();
+    horloge.avancerDe(BATTEMENT_MS * 5);
+
+    expect(room.enPause).toBe(true);
+    expect(room.etat.tempsEcouleMs).toBe(0);
+  });
+
+  it('continue de faire battre sa boucle pendant la pause', () => {
+    // La pause arrete le temps de jeu, pas le battement. Arreter la boucle
+    // rendrait la room sourde, et il faudrait penser a la relancer.
+    const { room, horloge } = partieLancee();
+
+    room.mettreEnPause();
+    horloge.avancerDe(BATTEMENT_MS * 4);
+
+    expect(room.enMarche).toBe(true);
+    expect(room.etat.tick).toBeGreaterThan(0);
+  });
+
+  it('rend son temps a la partie a la reprise', () => {
+    const { room, horloge } = partieLancee();
+
+    horloge.avancerDe(BATTEMENT_MS * 2);
+    const avant = room.etat.tempsEcouleMs;
+
+    room.mettreEnPause();
+    horloge.avancerDe(BATTEMENT_MS * 20);
+    room.reprendre();
+    horloge.avancerDe(BATTEMENT_MS * 2);
+
+    expect(room.enPause).toBe(false);
+    expect(avant).toBeGreaterThan(0);
+    expect(room.etat.tempsEcouleMs).toBeCloseTo(avant * 2, 0);
+  });
+
+  it('empeche une partie suspendue de se terminer', () => {
+    // La partie dure une seconde: sans pause, elle serait finie depuis
+    // longtemps au bout de cinq.
+    const { room, horloge } = partieLancee();
+
+    room.mettreEnPause();
+    horloge.avancerDe(5000);
+
+    expect(room.statut).toBe('enCours');
+
+    room.reprendre();
+    horloge.avancerDe(1100);
+
+    expect(room.statut).toBe('terminee');
+  });
+
+  it('accepte une demande qui ne change rien', () => {
+    const { room } = partieLancee();
+
+    room.reprendre();
+    room.mettreEnPause();
+    room.mettreEnPause();
+
+    expect(room.enPause).toBe(true);
+  });
+
+  it('refuse de suspendre une partie qui n est pas en cours', () => {
+    // Faute d'appelant et non refus de joueur: la couche reseau verifie le
+    // statut avant d'appeler.
+    const { room } = roomDeTest();
+
+    expect(() => {
+      room.mettreEnPause();
+    }).toThrow(/statut salon/);
+    expect(() => {
+      room.reprendre();
+    }).toThrow(/statut salon/);
+  });
+});

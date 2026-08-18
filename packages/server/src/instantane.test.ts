@@ -14,7 +14,7 @@
 
 import { CARTES } from '@neon-ninja/shared';
 import type { EtatPartie } from '@neon-ninja/sim';
-import { ajouterJoueur, creerEtatInitial, poserObjet, tick } from '@neon-ninja/sim';
+import { ajouterJoueur, creerEtatInitial, mettreEnPause, poserObjet, tick } from '@neon-ninja/sim';
 import { describe, expect, it } from 'vitest';
 
 import { GameRoom } from './GameRoom.js';
@@ -52,6 +52,15 @@ describe('instantaneDe', () => {
     expect(alice?.y).toBe(etat.joueurs['alice']?.position.y);
   });
 
+  it('dit si la partie est suspendue', () => {
+    // La pause est un etat, elle voyage donc dans le flux et pas seulement dans
+    // l'annonce: un joueur qui entre dans une partie suspendue doit le savoir.
+    const partie = partieADeux();
+
+    expect(instantaneDe(partie).enPause).toBe(false);
+    expect(instantaneDe(mettreEnPause(partie)).enPause).toBe(true);
+  });
+
   it('ne laisse fuir ni le terrain ni la graine', () => {
     const instantane = instantaneDe(partieADeux());
     const serialise = JSON.stringify(instantane);
@@ -61,6 +70,7 @@ describe('instantaneDe', () => {
     expect(serialise).not.toContain('graine');
     expect(Object.keys(instantane).sort()).toEqual([
       'classement',
+      'enPause',
       'entites',
       'objets',
       'tempsRestantMs',

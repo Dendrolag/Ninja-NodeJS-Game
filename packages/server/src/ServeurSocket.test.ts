@@ -803,11 +803,177 @@ describe('contrats typés', () => {
 
     expect(Object.keys(recu).sort()).toEqual([
       'classement',
+      'enPause',
       'entites',
       'objets',
       'tempsRestantMs',
       'tick',
       'zones',
     ]);
+  });
+});
+
+describe('pause de la partie', () => {
+  it('suspend la partie a la demande de l hote et previent tout le monde', async () => {
+    const hote = await connecterUnClient();
+    const invite = await connecterUnClient();
+
+    const idRoom = await entrer(hote, 'Alice');
+    await entrer(invite, 'Bob', idRoom);
+    await lancerLaPartie(hote);
+
+    const chezLHote = prochain(hote, 'partieEnPause');
+    const chezLInvite = prochain(invite, 'partieEnPause');
+
+    hote.emit('mettreEnPause');
+
+    expect(await chezLHote).toEqual({ parPseudo: 'Alice' });
+    expect(await chezLInvite).toEqual({ parPseudo: 'Alice' });
+  });
+
+  it('porte la suspension dans le flux d etat, pour qui n a pas vu l annonce', async () => {
+    const hote = await connecterUnClient();
+
+    await entrer(hote, 'Alice');
+    await lancerLaPartie(hote);
+
+    hote.emit('mettreEnPause');
+    await laisserPasserLesMessages();
+
+    const instantane = prochain(hote, 'etat');
+    horloge.avancerDe(50);
+
+    expect((await instantane).enPause).toBe(true);
+  });
+
+  it('arrete le temps de jeu sans arreter la diffusion', async () => {
+    const hote = await connecterUnClient();
+
+    await entrer(hote, 'Alice');
+    hote.emit('reglages', { dureePartieS: 30 });
+    await laisserPasserLesMessages();
+    await lancerLaPartie(hote);
+
+    hote.emit('mettreEnPause');
+    await laisserPasserLesMessages();
+
+    const etats = collecter(hote, 'etat');
+    horloge.avancerDe(10_000);
+    await laisserPasserLesMessages();
+
+    // Le battement continue, donc des instantanes arrivent; le temps restant,
+    // lui, n'a pas bouge d'une milliseconde.
+    expect(etats.length).toBeGreaterThan(0);
+    expect(new Set(etats.map((etat) => etat.tempsRestantMs)).size).toBe(1);
+  });
+
+  it('empeche une partie suspendue de se terminer, et la laisse finir apres la reprise', async () => {
+    const hote = await connecterUnClient();
+
+    await entrer(hote, 'Alice');
+    hote.emit('reglages', { dureePartieS: 30 });
+    await laisserPasserLesMessages();
+    await lancerLaPartie(hote);
+
+    const fins = collecter(hote, 'partieTerminee');
+
+    hote.emit('mettreEnPause');
+    await laisserPasserLesMessages();
+    horloge.avancerDe(60_000);
+    await laisserPasserLesMessages();
+
+    expect(fins).toHaveLength(0);
+
+    const fin = prochain(hote, 'partieTerminee');
+
+    hote.emit('reprendre');
+    await laisserPasserLesMessages();
+    horloge.avancerDe(31_000);
+
+    await fin;
+  });
+
+  it('annonce la reprise', async () => {
+    const hote = await connecterUnClient();
+
+    await entrer(hote, 'Alice');
+    await lancerLaPartie(hote);
+
+    hote.emit('mettreEnPause');
+    await laisserPasserLesMessages();
+
+    const reprise = prochain(hote, 'partieReprise');
+
+    hote.emit('reprendre');
+    await reprise;
+  });
+
+  it('refuse la demande a qui n est pas l hote, sans toucher a la partie', async () => {
+    // Le legacy laissait n'importe qui suspendre la partie de tous les autres,
+    // et reservait la reprise a celui qui l'avait suspendue. Ici la pause suit
+    // la meme autorite que les reglages et le lancement.
+    const hote = await connecterUnClient();
+    const invite = await connecterUnClient();
+
+    const idRoom = await entrer(hote, 'Alice');
+    await entrer(invite, 'Bob', idRoom);
+    await lancerLaPartie(hote);
+
+    const refuse = prochain(invite, 'refus');
+
+    invite.emit('mettreEnPause');
+    const recu = await refuse;
+
+    expect(recu.action).toBe('mettreEnPause');
+    expect(recu.erreurs[0]?.champ).toBe('hote');
+    expect(serveur.jeu.rooms.room(idRoom)?.enPause).toBe(false);
+  });
+
+  it('refuse la demande tant que la partie n a pas commence', async () => {
+    const hote = await connecterUnClient();
+
+    await entrer(hote, 'Alice');
+
+    const refuse = prochain(hote, 'refus');
+
+    hote.emit('mettreEnPause');
+    const recu = await refuse;
+
+    expect(recu.action).toBe('mettreEnPause');
+    expect(recu.erreurs[0]?.champ).toBe('partie');
+  });
+
+  it('ne rediffuse rien quand la demande ne change rien', async () => {
+    // Sans cette porte, un client qui reemet sa demande ferait clignoter le
+    // bandeau de tous les autres.
+    const hote = await connecterUnClient();
+
+    await entrer(hote, 'Alice');
+    await lancerLaPartie(hote);
+
+    const annonces = collecter(hote, 'partieEnPause');
+
+    hote.emit('mettreEnPause');
+    await laisserPasserLesMessages();
+    hote.emit('mettreEnPause');
+    await laisserPasserLesMessages();
+
+    expect(annonces).toHaveLength(1);
+  });
+
+  it('ne franchit pas la frontiere d une partie vers une autre', async () => {
+    const hote = await connecterUnClient();
+    const voisin = await connecterUnClient();
+
+    await entrer(hote, 'Alice');
+    await entrer(voisin, 'Bob', serveur.jeu.ouvrirUneRoom().id);
+    await lancerLaPartie(hote);
+
+    const annonces = collecter(voisin, 'partieEnPause');
+
+    hote.emit('mettreEnPause');
+    await laisserPasserLesMessages();
+
+    expect(annonces).toHaveLength(0);
   });
 });

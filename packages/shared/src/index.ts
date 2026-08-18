@@ -51,6 +51,7 @@ export type {
   MalusRamasseParMoi,
   MalusSubi,
   ObjetVu,
+  PartieEnPause,
   Refus,
   StatutPartie,
   ZoneVue,

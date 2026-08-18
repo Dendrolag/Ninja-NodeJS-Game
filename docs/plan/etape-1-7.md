@@ -113,6 +113,16 @@ Le piège de cette étape est le journal d'événements décrit au point 2 du p�
 
 Second point, plus mineur: pendant une pause, l'instantané continue de partir vingt fois par seconde pour dire que rien n'a changé. C'est assumé ici, parce que c'est ce qui permet à un joueur d'entrer dans une partie suspendue et d'y voir quelque chose. Si la mesure de l'étape 5.1 montre que cela coûte, c'est l'étape 2.3 qui le traitera, comme pour tout le reste du flux.
 
+## Réconciliation, faite le 18 août 2026
+
+Écarts entre le plan et ce qui a été fait. Cette fiche ayant été rédigée le jour de son exécution, ils sont peu nombreux; ils portent tous sur l'entrée ROADMAP dont elle est tirée.
+
+1. **Quatre événements réseau et non trois.** L'entrée ROADMAP annonçait « les trois événements réseau correspondants », par report direct du legacy qui avait une bascule montante et deux annonces descendantes. Une bascule n'est pas idempotente: un message réémis, ou deux clics trop rapprochés, laissent la partie dans l'état inverse de celui que le joueur voit. Deux demandes explicites ont donc été retenues, comme pour `demarrer` et `annulerDemarrage`. L'entrée ROADMAP a été corrigée en conséquence.
+
+2. **La question de l'autorité était posée, pas tranchée.** Le handoff 2.2 demandait de la trancher dans cette étape. C'est fait, au point 4 du périmètre, et consigné au journal de conception.
+
+3. **Un piège découvert en cours de route, traité ici.** Le journal d'événements du battement, décrit au point 2 du périmètre et repris au point de vigilance, n'était prévu par aucun document. Il a été trouvé en écrivant le gel du battement, et il a sa propre couverture de test.
+
 ## Rituel de fin de session
 
 Écrire `docs/handoffs/etape-1-7-handoff.md`. Consigner la décision sur l'autorité, les écarts au legacy, et l'état de la dette ouverte reprise du handoff 2.2. Prochaine action exacte pour l'étape suivante du jalon 1, `4.1`: squelette client et couche réseau isolée derrière une interface. Commiter.

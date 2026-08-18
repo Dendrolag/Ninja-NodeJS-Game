@@ -193,6 +193,12 @@ export class ServeurSocket {
     socket.on('annulerDemarrage', () => {
       this.surAnnulerDemarrage(socket);
     });
+    socket.on('mettreEnPause', () => {
+      this.surPause(socket, true);
+    });
+    socket.on('reprendre', () => {
+      this.surPause(socket, false);
+    });
     socket.on('disconnect', () => {
       this.surQuitter(socket);
       this.connexions.delete(socket.id);
@@ -439,6 +445,52 @@ export class ServeurSocket {
 
     this.decomptes.delete(room.id);
     this.io.to(room.id).emit('demarrageAnnule');
+  }
+
+  /**
+   * Suspension et reprise de la partie par l'hote.
+   *
+   * UN SEUL GESTIONNAIRE POUR LES DEUX DEMANDES, parce qu'elles ne different que
+   * par l'etat vise. Le legacy avait au contraire une bascule unique, et devait
+   * donc retenir qui l'avait actionnee pour savoir qui pouvait la defaire.
+   *
+   * LA DEMANDE EST IDEMPOTENTE. Suspendre une partie deja suspendue ne fait rien
+   * et ne diffuse rien: sans cette porte, un client qui reemet sa demande ferait
+   * clignoter le bandeau de tous les autres.
+   *
+   * Aucune logique de jeu ici: la couche verifie qui demande et dans quel etat se
+   * trouve la partie, puis appelle la room. Ce que la pause fait au jeu est ecrit
+   * dans le moteur, et nulle part ailleurs.
+   */
+  private surPause(socket: SocketTypee, suspendre: boolean): void {
+    const action = suspendre ? 'mettreEnPause' : 'reprendre';
+    const room = this.roomDeLHote(socket, action);
+
+    if (room === undefined) {
+      return;
+    }
+
+    if (room.statut !== 'enCours') {
+      socket.emit('refus', {
+        action,
+        erreurs: [{ champ: 'partie', motif: "La partie n'est pas en cours." }],
+      });
+      return;
+    }
+
+    if (room.enPause === suspendre) {
+      return;
+    }
+
+    if (suspendre) {
+      room.mettreEnPause();
+      const parPseudo = this.connexions.get(socket.id)?.session?.pseudo ?? '';
+      this.io.to(room.id).emit('partieEnPause', { parPseudo });
+      return;
+    }
+
+    room.reprendre();
+    this.io.to(room.id).emit('partieReprise');
   }
 
   // ------------------------------------------------------------------------

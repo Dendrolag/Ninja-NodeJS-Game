@@ -59,7 +59,9 @@ import {
   calculerScores,
   creerEtatInitial,
   evaluerFinDePartie,
+  mettreEnPause,
   peuplerDeBots,
+  reprendre,
   retirerJoueur,
   tick,
 } from '@neon-ninja/sim';
@@ -249,6 +251,16 @@ export class GameRoom {
   }
 
   /**
+   * La partie est-elle suspendue.
+   *
+   * A ne pas confondre avec enMarche, qui dit si la BOUCLE tourne. Une partie
+   * suspendue bat toujours: son temps de jeu, lui, ne s'ecoule plus.
+   */
+  get enPause(): boolean {
+    return this.partie.enPause;
+  }
+
+  /**
    * Fait entrer un joueur dans la room.
    *
    * L'identite vient de la session, etablie a la connexion, et de nulle part
@@ -381,6 +393,44 @@ export class GameRoom {
   }
 
   /**
+   * Suspend la partie: le temps de jeu s'arrete, la boucle continue de battre.
+   *
+   * LA BOUCLE N'EST PAS ARRETEE, ET C'EST DELIBERE. L'arreter rendrait la room
+   * sourde a ce qui arrive pendant la pause, et il faudrait penser a la relancer,
+   * ce qui est exactement la forme du defaut X1 de l'audit. Le battement a donc
+   * bien lieu; c'est le moteur qui decide que rien ne s'y passe.
+   *
+   * QUI A LE DROIT DE DEMANDER LA PAUSE N'EST PAS TRANCHE ICI mais a la frontiere
+   * reseau, qui verifie la qualite d'hote avant d'appeler, comme pour les
+   * reglages et le lancement. Le legacy ouvrait la pause a tout le monde et
+   * reservait la reprise a celui qui l'avait demandee: chaque joueur disposait
+   * ainsi d'un moyen d'interrompre la partie des autres aussi longtemps qu'il le
+   * voulait. Decision du 18 aout 2026: la pause est reservee a l'hote.
+   *
+   * Suspendre une partie deja suspendue ne fait rien.
+   *
+   * @throws Si la partie n'est pas en cours. L'appelant verifie le statut avant.
+   */
+  mettreEnPause(): void {
+    this.exigerUnePartieEnCours('suspendue');
+    this.partie = mettreEnPause(this.partie);
+  }
+
+  /**
+   * Rend son temps a une partie suspendue.
+   *
+   * Reprendre une partie qui ne l'etait pas ne fait rien. Le jeu repart ou il
+   * s'etait arrete: aucune duree n'a couru pendant la suspension, donc il n'y a
+   * rien a rattraper.
+   *
+   * @throws Si la partie n'est pas en cours. L'appelant verifie le statut avant.
+   */
+  reprendre(): void {
+    this.exigerUnePartieEnCours('reprise');
+    this.partie = reprendre(this.partie);
+  }
+
+  /**
    * Range la derniere intention connue d'un joueur.
    *
    * Une intention portant l'identifiant d'un joueur absent est ignoree: le
@@ -459,6 +509,21 @@ export class GameRoom {
     };
 
     return creerEtatInitial(depart);
+  }
+
+  /**
+   * Refuse d'agir sur une partie qui n'est pas en cours.
+   *
+   * C'est une faute d'appelant, pas un refus adresse a un joueur: la couche
+   * reseau verifie le statut avant d'appeler, et lui rend un refus explique. La
+   * regle est celle du 14 aout 2026, deja appliquee a lancer et changerReglages.
+   */
+  private exigerUnePartieEnCours(manoeuvre: string): void {
+    if (this.statutCourant !== 'enCours') {
+      throw new Error(
+        `La partie de la room ${this.id} ne peut pas etre ${manoeuvre}: statut ${this.statutCourant}.`,
+      );
+    }
   }
 
   /** Ce joueur est-il l'hote. */

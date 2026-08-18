@@ -370,6 +370,19 @@ export interface EtatPartie {
   readonly tempsEcouleMs: number;
   /** Duree totale prevue pour la partie, en millisecondes. */
   readonly dureeMs: number;
+  /**
+   * La partie est suspendue: le temps de jeu ne s'ecoule plus, rien ne bouge.
+   *
+   * Le moteur ne retient PAS qui a demande la pause. Savoir qui commande une
+   * partie est une affaire de salon, donc de GameRoom; le moteur n'a jamais
+   * connu ni session ni hote, et n'a aucune raison de commencer.
+   *
+   * Le legacy tenait en plus une duree cumulee de pause (totalPauseDuration,
+   * server.js:125), qu'il retranchait du temps ecoule a chaque lecture de son
+   * horloge. Elle n'a plus d'objet: ici le temps de jeu n'avance que de ce que
+   * tick lui donne, et pendant la pause il ne lui donne rien.
+   */
+  readonly enPause: boolean;
   /** Reglages choisis par l'hote. Le moteur ne connait que ceux-la. */
   readonly reglages: ReglagesPartie;
   /** Dimensions de la carte jouee. */
@@ -482,6 +495,7 @@ export function creerEtatInitial(options: OptionsEtatInitial): EtatPartie {
     tick: 0,
     tempsEcouleMs: 0,
     dureeMs: reglages.dureePartieS * 1000,
+    enPause: false,
     reglages,
     carte,
     terrain,

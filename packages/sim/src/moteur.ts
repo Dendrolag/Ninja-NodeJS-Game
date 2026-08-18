@@ -33,6 +33,9 @@
  *      captures comprises;
  *   7. les joueurs ramassent les objets sur lesquels ils se trouvent.
  *
+ * Une partie SUSPENDUE ne fait rien de tout cela. Le battement a bien lieu, mais
+ * le temps de jeu ne s'ecoule pas: voir battementSuspendu, plus bas.
+ *
  * Les bots avancent avant les zones parce que c'est l'ordre du legacy: sa boucle
  * appelait updateBots puis sendUpdates, et c'est cette derniere qui appliquait
  * les effets de zone (server.js:2799).
@@ -117,6 +120,10 @@ export function tick(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPart
     return etat;
   }
 
+  if (etat.enPause) {
+    return battementSuspendu(etat);
+  }
+
   const joueurs: Record<IdentifiantEntite, Joueur> = {};
   for (const [id, joueur] of Object.entries(etat.joueurs)) {
     joueurs[id] = avancerJoueur(etat, joueur, entrees[id], dtMs);
@@ -138,6 +145,33 @@ export function tick(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPart
   const contacts = resoudreContacts(objets, detecterContacts(objets));
 
   return ramasserLesObjets(contacts);
+}
+
+/**
+ * Le battement d'une partie suspendue: il a lieu, et il ne fait rien.
+ *
+ * PENDANT LA PAUSE, LE TEMPS DE JEU NE S'ECOULE PAS. Le dt recu n'est pas
+ * consomme: personne ne se deplace, aucune duree de bonus ne se rapproche de sa
+ * fin, aucun objet ne vieillit, aucun compte a rebours d'apparition ne descend,
+ * et tempsEcouleMs ne bouge pas. Cette derniere consequence est la plus visible:
+ * evaluerFinDePartie ne peut donc pas conclure, et une partie suspendue ne se
+ * termine jamais d'elle-meme.
+ *
+ * DEUX CHOSES CHANGENT QUAND MEME, et chacune pour une raison precise.
+ *
+ *   1. LE COMPTEUR DE BATTEMENTS AVANCE, parce qu'un battement a reellement eu
+ *      lieu. C'est ce qui tient la promesse faite par le contrat reseau, ou le
+ *      numero de battement d'un instantane croit de un a chaque envoi.
+ *   2. LE JOURNAL REPART VIDE, et ce n'est pas un detail. Le journal d'un
+ *      battement est lu par la couche reseau juste apres, puis efface au
+ *      battement suivant. Rendre l'etat strictement inchange rejouerait donc le
+ *      journal du dernier battement actif a chaque battement de la pause, soit
+ *      vingt fois par seconde: un joueur capture juste avant la pause recevrait
+ *      la meme notification en boucle jusqu'a la reprise. Rien dans les types ne
+ *      le signalerait, et seul un test l'empeche de revenir.
+ */
+function battementSuspendu(etat: EtatPartie): EtatPartie {
+  return { ...etat, tick: etat.tick + 1, evenements: [] };
 }
 
 /**

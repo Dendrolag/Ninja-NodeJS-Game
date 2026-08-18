@@ -66,6 +66,7 @@ export function instantaneDe(etat: EtatPartie): InstantanePartie {
   return {
     tick: etat.tick,
     tempsRestantMs: evaluerFinDePartie(etat).tempsRestantMs,
+    enPause: etat.enPause,
     entites: toutesLesEntites(etat).map(entiteVue),
     objets: Object.values(etat.objets).map(objetVu),
     zones: Object.values(etat.zones).map(zoneVue),

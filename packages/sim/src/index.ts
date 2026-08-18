@@ -114,6 +114,8 @@ export {
   retirerObjet,
 } from './objets.js';
 
+export { mettreEnPause, reprendre } from './pause.js';
+
 export { avancerUneEcheance, intervalleFixe, intervalleVariable } from './planification.js';
 
 export { appliquerLesEffetsDeZone, avancerLesZones, estCache, zoneContient } from './zones.js';
