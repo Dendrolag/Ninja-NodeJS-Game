@@ -6,14 +6,27 @@ import { defineConfig, devices } from '@playwright/test';
  * A l'etape 0.1, il n'y avait qu'un scenario de fumee qui ne demarrait aucun
  * serveur. L'etape 4.2 a ajoute le banc de mesure du rendu, qui charge la
  * compilation du paquet client dans un vrai navigateur: d'ou l'etape de
- * compilation ci-dessous. Le vrai parcours multi-clients arrive a l'etape 4.4,
- * et c'est alors qu'un bloc webServer sera ajoute pour lancer le jeu.
+ * compilation ci-dessous. Les etapes 4.3 et 4.4 ont ajoute les parcours sur le
+ * vrai jeu: la navigation, le parcours solo et la partie a deux joueurs.
  *
- * Le projet mobile est declare des maintenant parce que la decision du 29 juin
- * exige une verification en fenetre mobile, meme si le bureau reste prioritaire.
+ * AUCUN BLOC webServer. Chaque scenario de parcours demarre son propre serveur de
+ * jeu dans son processus (harnais/serveur-de-jeu.ts), sur un port libre: deux
+ * scenarios paralleles ne se retrouvent donc pas dans le meme salon, et le
+ * scenario peut lire l'etat du serveur pour arbitrer ce que les pages affichent.
+ *
+ * Le projet mobile existe parce que la decision du 29 juin exige une verification
+ * en fenetre mobile, meme si le bureau reste prioritaire.
  */
 /** Le banc de mesure du rendu, joue par son propre projet et par lui seul. */
 const BANC = '**/banc-rendu.spec.ts';
+
+/**
+ * La partie a deux joueurs, jouee par le seul projet bureau.
+ *
+ * Elle fabrique elle-meme ses deux appareils, un ordinateur et un telephone: la
+ * rejouer dans le projet mobile doublerait sa duree pour la meme verification.
+ */
+const MULTIJOUEUR = '**/multijoueur.spec.ts';
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -28,6 +41,11 @@ export default defineConfig({
   reporter: process.env['CI'] ? [['github'], ['html', { open: 'never' }]] : [['list']],
   use: {
     trace: 'on-first-retry',
+    // Sans limite, une action qui ne trouve jamais son element attend jusqu'au
+    // delai du scenario entier, soit trois minutes pour la partie a deux joueurs,
+    // et l'echec ne dit pas ou. Quinze secondes couvrent largement une page qui
+    // se charge sur une machine lente.
+    actionTimeout: 15_000,
   },
   projects: [
     {
@@ -38,7 +56,7 @@ export default defineConfig({
     {
       name: 'mobile',
       use: { ...devices['Pixel 7'] },
-      testIgnore: BANC,
+      testIgnore: [BANC, MULTIJOUEUR],
     },
     // Le banc de mesure du rendu a son propre projet, et une seule execution:
     // il mesure le moteur de rendu, pas la taille de la fenetre. Le jouer dans

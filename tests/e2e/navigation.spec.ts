@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { releverLesErreurs } from './harnais/parcours.js';
 import type { ServeurDeJeu } from './harnais/serveur-de-jeu.js';
 import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
 
@@ -10,15 +11,15 @@ import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
  * refuse puis accepte, le salon et ses reglages refuses puis enregistres, le chat,
  * le lancement et son compte a rebours, la partie affichee par PixiJS, puis le
  * retour a l'accueil. La fin de partie n'y est pas: une partie dure au moins trente
- * secondes, et l'ecran de fin est couvert dans un document par
- * packages/client/src/interface/ecrans/fin.test.ts.
+ * secondes. Elle est jouee jusqu'au bout par parcours-solo.spec.ts et
+ * multijoueur.spec.ts, qui y ajoutent les deplacements, la capture et la
+ * coherence des scores.
  *
  * AUCUNE ERREUR NE DOIT APPARAITRE DANS LA CONSOLE. C'est ce qui verifie que la
  * politique de securite du contenu posee par le serveur ne bloque rien de ce dont
  * la page a besoin: le navigateur y signale chaque ressource refusee.
  *
- * Il tourne dans les deux cadrages, bureau et mobile. Le parcours a plusieurs
- * clients, la capture et la cohérence des scores appartiennent a l'etape 4.4.
+ * Il tourne dans les deux cadrages, bureau et mobile.
  */
 
 let jeu: ServeurDeJeu;
@@ -32,16 +33,7 @@ test.afterEach(async () => {
 });
 
 test('de l accueil a la partie, puis retour a l accueil', async ({ page }) => {
-  const erreurs: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') {
-      erreurs.push(message.text());
-    }
-  });
-  page.on('pageerror', (erreur) => {
-    erreurs.push(erreur.message);
-  });
-
+  const erreurs = releverLesErreurs(page);
   const ecran = page.locator('.application');
 
   // -- L'accueil --------------------------------------------------------------

@@ -19,9 +19,10 @@
  * soi, apres confirmation, et la pause, reservee a l'hote comme au serveur.
  *
  * CE FICHIER N'EST PAS COUVERT PAR LES TESTS UNITAIRES: il monte PixiJS, qui a
- * besoin d'un vrai navigateur. Il est joue par le scenario de navigation de bout
- * en bout (tests/e2e/navigation.spec.ts). L'application, elle, est testee avec un
- * ecran de jeu d'essai.
+ * besoin d'un vrai navigateur. Il est joue par les scenarios de bout en bout: la
+ * navigation (tests/e2e/navigation.spec.ts), et des parties entieres, au clavier
+ * et au pouce, dans parcours-solo.spec.ts et multijoueur.spec.ts. L'application,
+ * elle, est testee avec un ecran de jeu d'essai.
  */
 
 import { CARTES, REGLAGES_PAR_DEFAUT } from '@neon-ninja/shared';

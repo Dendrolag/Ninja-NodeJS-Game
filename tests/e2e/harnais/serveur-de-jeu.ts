@@ -16,6 +16,7 @@
  */
 
 import { DOSSIER_WEB } from '../../../packages/client/scripts/empaqueter.js';
+import type { GameRoom } from '../../../packages/server/dist/index.js';
 import {
   ChargeurDeTerrain,
   demarrerServeur,
@@ -26,6 +27,20 @@ import {
 export interface ServeurDeJeu {
   /** L'adresse de la page, par exemple http://127.0.0.1:51234. */
   readonly url: string;
+  /**
+   * La partie ouverte sur ce serveur, lue dans le serveur lui-meme.
+   *
+   * C'EST L'ARBITRE DES SCENARIOS, ET IL NE SERT QU'A LIRE. Le serveur tourne dans
+   * le processus du scenario: celui-ci peut donc consulter l'etat qui fait foi,
+   * pour savoir ou se trouvent les joueurs et pour comparer ce que chaque page
+   * affiche a ce que le moteur a decide. Un scenario n'y ecrit jamais: tout ce qui
+   * change la partie passe par les pages, comme pour un vrai joueur.
+   *
+   * Tant que la regle du premier salon en attente tient (etape 2.4), un serveur de
+   * scenario n'a qu'une partie: en trouver zero ou plusieurs est une erreur du
+   * scenario, signalee comme telle.
+   */
+  partie(): GameRoom;
   arreter(): Promise<void>;
 }
 
@@ -44,6 +59,18 @@ export async function demarrerLeJeu(): Promise<ServeurDeJeu> {
 
   return {
     url: `http://127.0.0.1:${String(adresse.port)}`,
+    partie: () => {
+      const parties = serveur.jeu.rooms.toutesLesRooms;
+      const [unique] = parties;
+
+      if (parties.length !== 1 || unique === undefined) {
+        throw new Error(
+          `Le scenario attend une seule partie sur son serveur, il y en a ${String(parties.length)}.`,
+        );
+      }
+
+      return unique;
+    },
     arreter: async () => serveur.fermer(),
   };
 }
