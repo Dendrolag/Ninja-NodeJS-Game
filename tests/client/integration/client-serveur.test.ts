@@ -209,7 +209,7 @@ describe('le client parle a un vrai serveur', () => {
     await attendreQue(() => client.etat.salon !== undefined, 'le salon');
 
     await serveur.fermer();
-    await attendreQue(() => client.etat.connexion === 'horsLigne', 'la perte du lien');
+    await attendreQue(() => client.etat.connexion === 'perdue', 'la perte du lien');
 
     expect(client.etat.ecran).toBe('accueil');
     expect(client.etat.salon).toBeUndefined();

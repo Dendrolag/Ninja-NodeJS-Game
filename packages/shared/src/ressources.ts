@@ -77,6 +77,17 @@ export function cheminPluie(carte: string, modeMiroir: boolean): string | undefi
 }
 
 /**
+ * Chemin relatif de la vignette d'une carte, montree dans les reglages du salon.
+ *
+ * Une seule vignette par carte, mode miroir compris, comme dans le jeu d'origine.
+ * Celles de map1 et map2 sont le meme fichier, et ce n'est pas une erreur: les
+ * deux cartes partagent leur decor, la premiere y ajoute la pluie.
+ */
+export function cheminApercuCarte(carte: string): string {
+  return `cartes/${carte}/preview.png`;
+}
+
+/**
  * Correspondance entre les directions du moteur et les noms de fichiers du jeu
  * d'origine, qui sont en anglais et qu'on ne renomme pas.
  */
@@ -188,6 +199,8 @@ export const SONS = {
   tempsPresqueEcoule: 'urgent-tick.mp3',
   /** Quelqu'un a parle dans le chat. */
   chat: 'chat-message.mp3',
+  /** Un bouton des menus vient d'etre actionne. Ajoute a l'etape 4.3. */
+  clic: 'button-click.wav',
 } as const;
 
 /** Nom d'un son ponctuel. */
@@ -213,8 +226,23 @@ export const SONS_DE_PAS = [
   'footstep4.mp3',
 ] as const;
 
-/** La musique jouee pendant une partie. */
-export const MUSIQUE_DE_JEU = 'game-music-2.mp3';
+/**
+ * Les deux musiques du jeu, nommees par le moment ou elles jouent.
+ *
+ * Le jeu d'origine en declarait une troisieme, pour la fin de partie, dont le
+ * fichier n'a jamais existe (defaut X32 de l'audit): elle n'est pas reprise. La
+ * fin de partie garde la musique des menus, comme elle l'a toujours fait en
+ * pratique.
+ */
+export const MUSIQUES = {
+  /** L'accueil, le salon et la fin de partie. Ajoutee a l'etape 4.3. */
+  menu: 'menu-music.mp3',
+  /** La partie en cours. */
+  jeu: 'game-music-2.mp3',
+} as const;
+
+/** Le nom d'une musique. */
+export type PisteMusicale = keyof typeof MUSIQUES;
 
 /** Chemin relatif d'un fichier de son, depuis la racine des ressources. */
 export function cheminSon(fichier: string): string {

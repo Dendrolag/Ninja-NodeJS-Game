@@ -24,7 +24,7 @@
  *   - client, le cablage entre les trois, et les commandes du joueur.
  *   - selecteurs, les questions que l'affichage pose a l'etat.
  *
- * CE QUE L'ETAPE 4.2 A AJOUTE, dans trois dossiers:
+ * CE QUE L'ETAPE 4.2 A AJOUTE, dans quatre dossiers:
  *
  *   - rendu/, l'affichage du terrain. Un coeur pur (camera, lissage, scene) que
  *     l'on teste sans navigateur, et un adaptateur PixiJS qui pose la scene sur
@@ -35,10 +35,16 @@
  *     ecrivain de document qui ne decide rien.
  *   - sons/, le son. Une table de declencheurs pure, et un lecteur.
  *
- * CE QUI N'EST PAS ENCORE LA: la page qui assemble tout cela, les ecrans de menu
- * et l'empaqueteur qui les sert (etape 4.3). Le jeu ne se lance donc toujours pas
- * dans un navigateur: ses pieces existent et sont couvertes, il leur manque une
- * page d'accueil.
+ * CE QUE L'ETAPE 4.3 A AJOUTE: la page.
+ *
+ *   - interface/, les ecrans (accueil, salon, jeu, fin) et l'application qui les
+ *     enchaine. Meme decoupage que partout ailleurs: des modeles purs dans
+ *     interface/modeles, des ecrivains de document qui ne decident rien.
+ *   - annonces, les phrases qui disent ce qui vient d'arriver.
+ *   - rendu/localisation, les fleches qui designent notre personnage.
+ *   - principal.ts, le point de depart dans le navigateur. Il n'est pas exporte
+ *     ici: l'importer lancerait l'application. L'empaqueteur
+ *     (scripts/empaqueter.ts) part de lui.
  */
 
 export type { Action } from './actions.js';
@@ -100,13 +106,23 @@ export { borner, cameraSur, echellePour, suivre, versEcran, zoneVisible } from '
 export type { EntiteLissee, VueLissee } from './rendu/interpolation.js';
 export { TamponDeLissage, lisserUneEntite } from './rendu/interpolation.js';
 
-export type { DisqueScene, Scene, SpriteScene, ZoneScene } from './rendu/scene.js';
+export type { DisqueScene, FlecheScene, Scene, SpriteScene, ZoneScene } from './rendu/scene.js';
 export { SCENE_VIDE, construireScene, couleurEnNombre } from './rendu/scene.js';
 
 export { imageDeMarche, opaciteObjet, rayonPulsant } from './rendu/animation.js';
 
 export type { Halo, Teinte } from './rendu/apparence.js';
-export { APPARENCE_OBJET, APPARENCE_ZONE, LUEUR, TAILLE_SPRITE } from './rendu/apparence.js';
+export {
+  APPARENCE_OBJET,
+  APPARENCE_ZONE,
+  DUREES_LOCALISATION,
+  LUEUR,
+  REPERE_LOCALISATION,
+  TAILLE_SPRITE,
+} from './rendu/apparence.js';
+
+export type { Localisation } from './rendu/localisation.js';
+export { flechesDeLocalisation, localiser, opaciteDeLocalisation } from './rendu/localisation.js';
 
 export type { Boucle, OptionsBoucle } from './rendu/boucle.js';
 export { lancerLaBoucle } from './rendu/boucle.js';
@@ -126,6 +142,7 @@ export {
 export {
   TOUCHES,
   TOUCHES_DU_JEU,
+  TOUCHE_LOCALISER,
   directionsDepuisTouches,
   nomDeTouche,
 } from './controles/touches.js';
@@ -153,3 +170,57 @@ export {
 
 export type { LecteurDeSons, OptionsLecteur } from './sons/lecteur.js';
 export { creerLecteurDeSons } from './sons/lecteur.js';
+
+// --------------------------------------------------------------------------
+// Etape 4.3: les ecrans et l'application
+// --------------------------------------------------------------------------
+
+export type { Annonce, TonAnnonce } from './annonces.js';
+export { annonceDuFait, annonceDuRefus, annoncesDuChangement } from './annonces.js';
+
+export type { Application, OptionsApplication } from './interface/application.js';
+export { monterApplication } from './interface/application.js';
+
+export type { ContexteEcran, EcranAffiche, MonteurEcran } from './interface/ecrans/types.js';
+
+export type { EtatDuLien, ModeleAccueil } from './interface/modeles/accueil.js';
+export { modeleAccueil } from './interface/modeles/accueil.js';
+
+export type {
+  CompteAffiche,
+  JoueurAffiche,
+  LigneRecapitulatif,
+  MessageDuChat,
+  ModeleSalon,
+} from './interface/modeles/salon.js';
+export { initiales, modeleSalon } from './interface/modeles/salon.js';
+
+export type { LigneFin, ModeleFin, Place } from './interface/modeles/fin.js';
+export { modeleFin } from './interface/modeles/fin.js';
+
+export type { PresentationCarte } from './interface/modeles/cartes.js';
+export { NOM_DU_MODE, PRESENTATION_CARTES, nomDeCarte } from './interface/modeles/cartes.js';
+
+export type {
+  ChampReglage,
+  GroupeReglages,
+  SectionReglages,
+  ValeurDeChamp,
+  ValeursFormulaire,
+} from './interface/modeles/reglages.js';
+export {
+  GROUPES_REGLAGES,
+  erreursParChamp,
+  reglagesDepuisValeurs,
+  tousLesChamps,
+  valeursDepuisReglages,
+  verifierLesValeurs,
+} from './interface/modeles/reglages.js';
+
+export type { PreferencesSon } from './interface/preferences.js';
+export {
+  CLE_PREFERENCES_SON,
+  PREFERENCES_SON_PAR_DEFAUT,
+  ecrirePreferencesSon,
+  lirePreferencesSon,
+} from './interface/preferences.js';

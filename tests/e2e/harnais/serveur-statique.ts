@@ -1,15 +1,16 @@
 /**
- * Un petit serveur de fichiers, pour donner au navigateur de quoi tourner.
+ * Un petit serveur de fichiers, pour donner au banc de mesure de quoi tourner.
  *
- * POURQUOI IL EXISTE. L'etape 4.2 produit le rendu, mais pas la page qui le
- * sert: l'empaqueteur et l'accueil appartiennent a l'etape 4.3. Le banc de mesure
- * a pourtant besoin d'un vrai navigateur, avec un vrai GPU, chargeant NOTRE code
- * et NOS images. Ce serveur est le strict minimum pour cela: il sert trois
- * dossiers du depot et rien d'autre.
+ * POURQUOI IL EXISTE ENCORE. Le banc de mesure du rendu (etape 4.2) importe des
+ * modules precis du paquet client (monterRendu, construireScene, la camera) pour
+ * composer sa propre page de mesure. Depuis l'etape 4.3, le vrai serveur sert bien
+ * la page du jeu et ses ressources, mais le client y est EMPAQUETE en un seul
+ * fichier: ses modules n'y sont plus adressables un par un. Ce serveur reste donc
+ * le strict minimum pour le banc: il sert trois dossiers du depot et rien d'autre.
  *
- * IL NE PREFIGURE PAS LE SERVEUR DU JEU. Celui-la sera monte a l'etape 4.3, avec
- * Express, a cote de Socket.IO. Ce fichier vit dans tests/, il n'est jamais
- * empaquete, et il disparaitra le jour ou le vrai servira les memes fichiers.
+ * IL NE SERT PAS AU JEU. Le scenario de navigation, lui, monte le vrai serveur
+ * (harnais/serveur-de-jeu.ts), avec Express, la page empaquetee et sa politique
+ * de securite. Ce fichier vit dans tests/ et n'est jamais empaquete.
  *
  * LE CODE SERVI EST LA COMPILATION DU PAQUET CLIENT, pas une version speciale
  * pour la mesure. Un banc qui mesurerait autre chose que le vrai code ne
@@ -159,8 +160,8 @@ function resoudre(chemin: string): string | undefined {
  * La carte d'importation a poser dans une page.
  *
  * Elle traduit les noms de paquets que notre code importe en adresses que le
- * navigateur sait charger. C'est ce qui permet de faire tourner la compilation
- * telle quelle, sans empaqueteur, ce qui n'existera qu'a l'etape 4.3.
+ * navigateur sait charger. C'est ce qui permet au banc de faire tourner la
+ * compilation module par module, sans passer par l'empaquetage de la page.
  */
 export const CARTE_IMPORTATION = JSON.stringify({
   imports: {

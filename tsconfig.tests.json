@@ -40,7 +40,12 @@
       "@neon-ninja/client": ["./packages/client/src/index.ts"]
     }
   },
-  "include": ["packages/**/*.test.ts", "tests/**/*.ts", "*.config.ts"],
+  "include": [
+    "packages/**/*.test.ts",
+    "packages/*/scripts/**/*.ts",
+    "tests/**/*.ts",
+    "*.config.ts"
+  ],
   // Les scenarios de bout en bout ont leur propre configuration: eux seuls ont
   // le droit de parler au navigateur. Voir tsconfig.e2e.json.
   "exclude": ["node_modules", "dist", "legacy", "tests/e2e"]

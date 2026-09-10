@@ -12,8 +12,12 @@
  * d'abord, ferme les connexions ensuite, et rend la main.
  */
 
+import { existsSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { PORT_PAR_DEFAUT, demarrerServeur } from './serveur.js';
-import { ChargeurDeTerrain } from './terrain.js';
+import { ChargeurDeTerrain, racineRessources } from './terrain.js';
 
 /** Lit un port depuis l'environnement, en refusant ce qui n'en est pas un. */
 function portDemande(brut: string | undefined): number {
@@ -42,19 +46,51 @@ function originesAutorisees(brut: string | undefined): readonly string[] {
     .filter((origine) => origine.length > 0);
 }
 
+/**
+ * Le dossier du client empaquete.
+ *
+ * Il se deduit de l'emplacement de ce fichier, comme la racine des ressources:
+ * packages/server/dist/principal.js a pour voisin packages/client/web. La
+ * variable CHEMIN_CLIENT prend le dessus, pour un deploiement ou le client serait
+ * range ailleurs.
+ */
+function dossierDuClient(): string {
+  const surcharge = process.env['CHEMIN_CLIENT'];
+
+  if (surcharge !== undefined && surcharge.length > 0) {
+    return resolve(surcharge);
+  }
+
+  return resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', 'client', 'web');
+}
+
+const client = dossierDuClient();
+
+// Un client absent ne doit pas empecher le serveur de jeu de tourner, mais il ne
+// doit pas non plus passer inapercu: la page repondrait « introuvable » sans
+// explication.
+if (!existsSync(join(client, 'index.html'))) {
+  console.warn(
+    `Le client n'est pas empaquete dans ${client}: la page ne s'affichera pas. Lancer « pnpm build ».`,
+  );
+}
+
 // C'est ici, et seulement ici, que le serveur decide de lire les images de
-// collision des cartes sur le disque. Un serveur monte a la main dans un test
-// n'a pas de murs tant qu'il n'en demande pas.
+// collision des cartes et de servir la page. Un serveur monte a la main dans un
+// test n'a ni murs ni page tant qu'il ne les demande pas.
 const serveur = await demarrerServeur(portDemande(process.env['PORT']), {
   originesAutorisees: originesAutorisees(process.env['ORIGINES_AUTORISEES']),
   terrains: new ChargeurDeTerrain(),
+  fichiers: { client, ressources: racineRessources() },
 });
 
 const adresse = serveur.http.address();
 const port = typeof adresse === 'object' && adresse !== null ? adresse.port : '?';
 
 // eslint-disable-next-line no-console
-console.log(`Neon Ninja: serveur a l'ecoute sur le port ${port}.`);
+console.log(
+  `Neon Ninja: serveur a l'ecoute sur le port ${port}, jeu sur http://localhost:${port}/`,
+);
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, () => {

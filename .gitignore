@@ -20,3 +20,6 @@ playwright-report/
 test-results/
 blob-report/
 .playwright/
+
+# Client empaquete, produit par pnpm build
+packages/client/web/

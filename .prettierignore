@@ -11,3 +11,4 @@ pnpm-lock.yaml
 
 # Maquettes exportees, non reformatees
 docs/design/
+packages/client/web/

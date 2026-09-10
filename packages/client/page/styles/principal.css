@@ -1,0 +1,17 @@
+/*
+ * La feuille de style du jeu, point d'entree de l'empaqueteur.
+ *
+ * L'identite visuelle est celle de la maquette (docs/design): fond presque noir,
+ * accents neon, trois polices. Les jetons de conception y etaient directement
+ * reutilisables (tension 9 du journal de conception), et ils sont repris dans
+ * jetons.css, seul endroit ou une couleur ou une police est ecrite en dur.
+ *
+ * L'ordre compte: les jetons, puis les briques communes, puis les ecrans.
+ */
+
+@import './polices.css';
+@import './jetons.css';
+@import './base.css';
+@import './composants.css';
+@import './ecrans.css';
+@import './jeu.css';

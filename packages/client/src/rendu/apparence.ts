@@ -149,7 +149,7 @@ export const APPARENCE_ZONE: Readonly<
     bordure: { couleur: 0xff4040, alpha: 0.6 },
   },
   repulsion: {
-    libelle: 'Zone repulsive',
+    libelle: 'Zone répulsive',
     fond: { couleur: 0x4040ff, alpha: 0.2 },
     bordure: { couleur: 0x4040ff, alpha: 0.6 },
   },
@@ -159,23 +159,64 @@ export const APPARENCE_ZONE: Readonly<
     bordure: { couleur: 0x40ff40, alpha: 0.6 },
   },
   invisibilite: {
-    libelle: "Zone d'invisibilite",
+    libelle: "Zone d'invisibilité",
     fond: { couleur: 0x800080, alpha: 0.2 },
     bordure: { couleur: 0x800080, alpha: 0.6 },
   },
 };
 
-/** Couleur et libelle de chaque bonus et de chaque malus, portage des tables du client d'origine. */
+/**
+ * Couleur et libelle de chaque bonus et de chaque malus, portage des tables du client d'origine.
+ *
+ * Les libelles sont lus par le joueur: ils portent leurs accents. L'etape 4.2 les
+ * avait ecrits sans, ce qui ne se voyait pas tant qu'aucune page ne les affichait.
+ */
 export const APPARENCE_OBJET: Readonly<
   Record<TypeBonus | TypeMalus, { readonly libelle: string; readonly couleur: number }>
 > = {
   vitesse: { libelle: 'Boost', couleur: 0x00ff00 },
-  invincibilite: { libelle: 'Invincibilite', couleur: 0xffd700 },
-  revelation: { libelle: 'Revelation', couleur: 0xff00ff },
-  controlesInverses: { libelle: 'Controles inverses', couleur: 0xff4444 },
+  invincibilite: { libelle: 'Invincibilité', couleur: 0xffd700 },
+  revelation: { libelle: 'Révélation', couleur: 0xff00ff },
+  controlesInverses: { libelle: 'Contrôles inversés', couleur: 0xff4444 },
   flou: { libelle: 'Vision floue', couleur: 0x44aaff },
-  negatif: { libelle: 'Vision negative', couleur: 0xaa44ff },
+  negatif: { libelle: 'Vision négative', couleur: 0xaa44ff },
 };
+
+/**
+ * Les quatre fleches qui designent notre personnage quand on le cherche.
+ *
+ * Valeurs du jeu d'origine (drawPlayerLocator, client.js:3498): des triangles
+ * rouges cernes de blanc, poses a quatre-vingts pixels du personnage et pointes
+ * vers lui, qui respirent de huit pixels.
+ */
+export const REPERE_LOCALISATION = {
+  /** Distance entre le personnage et la base de chaque fleche, en pixels de la carte. */
+  distance: 80,
+  /** Longueur d'une fleche, de sa base a sa pointe. */
+  longueur: 40,
+  /** Moitie de la largeur de la base. */
+  demiLargeur: 30,
+  /** Amplitude de la respiration, en pixels. */
+  amplitude: 8,
+  /** Vitesse de la respiration, en radians par milliseconde. */
+  cadence: 0.004,
+  remplissage: 0xff1e1e,
+  contour: 0xffffff,
+  epaisseur: 3,
+} as const;
+
+/**
+ * Combien de temps les fleches restent visibles, en millisecondes, fondu compris.
+ *
+ * Valeurs du jeu d'origine: deux secondes a la demande du joueur, trois secondes
+ * et demie a l'entree en partie et apres une capture, avec une demi-seconde de
+ * fondu dans les deux cas.
+ */
+export const DUREES_LOCALISATION = {
+  demandeeMs: 2000,
+  automatiqueMs: 3500,
+  fonduMs: 500,
+} as const;
 
 /** Rayon du halo pose sous un objet ramassable. */
 export const RAYON_HALO_OBJET = 22;

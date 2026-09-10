@@ -27,8 +27,17 @@ export const TOUCHES: Readonly<Record<keyof DirectionsDemandees, readonly string
   droite: ['d', 'arrowright'],
 };
 
-/** Toutes les touches que le jeu consomme, pour savoir lesquelles intercepter. */
+/** Toutes les touches de deplacement, pour savoir lesquelles intercepter. */
 export const TOUCHES_DU_JEU: ReadonlySet<string> = new Set(Object.values(TOUCHES).flat());
+
+/**
+ * La touche qui fait apparaitre les fleches autour de notre personnage.
+ *
+ * F, comme dans le jeu d'origine (client.js:2169), qui l'annoncait dans son aide.
+ * Elle n'est pas dans TOUCHES_DU_JEU: ce n'est pas une direction, et elle n'a
+ * rien a intercepter.
+ */
+export const TOUCHE_LOCALISER = 'f';
 
 /** Normalise le nom d'une touche tel que le navigateur le donne. */
 export function nomDeTouche(touche: string): string {

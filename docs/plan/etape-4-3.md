@@ -43,6 +43,23 @@ Conditions de ROADMAP réunies, plus:
 4. L'identité visuelle est cohérente.
 5. Les tests passent.
 
+## Réconciliation, faite le 10 septembre 2026
+
+Cette fiche décrit les écrans de la maquette complète, qui supposent le matchmaking (2.4), les comptes (3.2) et la progression (3.3). La section 3 du ROADMAP place l'étape dans le jalon 1, avant ces trois étapes, et en restreint le périmètre: **seuls les écrans du legacy sont construits**. Le ROADMAP fait foi. Les écarts, point par point.
+
+1. **Quatre écrans, pas six.** Accueil et pseudo, salon, jeu, fin de partie: ce sont les écrans du legacy (`mainMenu`, `waitingRoom`, `gameScreen` et sa fenêtre de fin). Le navigateur de parties publiques et la création de partie arrivent avec l'étape 2.4, le profil et la fin enrichie avec l'étape 3.3, comme le prévoit le jalon 3 (« reprise des écrans de 4.3 »).
+2. **La création de partie devient le panneau de réglages du salon.** C'est ainsi que le legacy fonctionne: on entre dans un salon, puis l'hôte règle la carte, le mode miroir, la durée, les bots, les bonus, les malus et les zones. Le test « une configuration invalide est signalée côté client, cohérente avec le refus serveur » porte donc sur ce panneau. La cohérence est garantie par construction: le client appelle `validerReglages`, la fonction même que le serveur applique.
+3. **Pas d'état « prêt ».** Il n'existe ni dans le legacy ni dans le contrat d'événements. Le test du salon porte sur l'affichage des joueurs, le badge d'hôte, et le lancement réservé à l'hôte.
+4. **Ni places libres, ni capacité, ni code d'invitation, ni visibilité.** Tous dépendent de l'étape 2.4. Le salon affiche le nombre de joueurs présents.
+5. **Fin de partie sans progression.** Pas de niveau, de pièces, de points de ligue ni de défi: ils appartiennent à l'étape 3.3. L'écran montre le podium et le classement complet reçus dans `partieTerminee`.
+6. **« Rejouer » ouvre un nouveau salon.** Le retour au salon d'une partie terminée n'existe pas (handoff 2.1): une partie finie refuse les nouveaux venus. Rejouer quitte la partie finie et redemande à entrer avec le même pseudo, ce qui place le joueur dans le premier salon en attente, ou en ouvre un.
+7. **Pas de navigation latérale.** Ses quatre entrées (Jouer, Parties, Créer, Profil) mènent à trois écrans qui n'existent pas encore. La décision du 29 juin 2026 est de masquer entièrement ce qui est reporté plutôt que de le griser. L'en-tête de marque et l'identité visuelle de la maquette sont repris.
+8. **La page, l'empaqueteur et le service des fichiers sont à construire ici.** Le handoff 4.2 le prévoyait: rien ne servait le client à un navigateur.
+9. **Deux fonctions du jeu en partie manquaient à l'étape 4.2**, et l'écran de jeu en a besoin pour être à parité avec le legacy: la localisation de son ninja (touche F, bouton sur mobile, et automatiquement au départ et après une capture), et les annonces en jeu (« Capturé par X ! », le nom du bonus ramassé, le malus subi). Traitées ici selon la règle 7 de CLAUDE.md.
+10. **Le bouton « Terminer » du HUD de la maquette** (tension 7 du journal de conception) est tranché: voir le journal du 10 septembre 2026.
+
+Les tests requis sont ajustés en conséquence: navigation entre les quatre écrans, panneau de réglages et cohérence avec le refus du serveur, salon (joueurs, hôte, lancement réservé), fin de partie (classement affiché égal au classement reçu).
+
 ## Rituel de fin de session
 
 Écrire docs/handoffs/etape-4-3-handoff.md. Lister les écrans construits et les écarts éventuels avec la maquette. Prochaine action exacte pour l'étape 4.4: couvrir les parcours critiques en bout en bout Playwright, multi-clients et en fenêtre mobile. Commiter.

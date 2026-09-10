@@ -71,6 +71,10 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
 
   const manette = element(doc, 'div', 'hud-manette', racine);
   const pouce = element(doc, 'div', 'hud-manette-pouce', manette);
+  // Cachee tant qu'aucun doigt ne la tient. L'etape 4.2 l'oubliait: la manette
+  // restait affichee dans un coin tant que personne n'avait touche l'ecran, ce
+  // qui ne se voyait pas faute de page pour afficher le HUD.
+  manette.hidden = true;
 
   options.hote.append(racine);
 

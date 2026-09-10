@@ -94,7 +94,7 @@ describe('le lien', () => {
     reseau.simulerConnexion();
     reseau.simulerDeconnexion();
 
-    expect(client.etat.connexion).toBe('horsLigne');
+    expect(client.etat.connexion).toBe('perdue');
     expect(client.etat.ecran).toBe('accueil');
   });
 });
@@ -129,7 +129,7 @@ describe('les commandes du joueur', () => {
     client.rejoindre('Alice');
     repondreALEntree({
       valide: false,
-      erreurs: [{ champ: 'pseudo', motif: 'Ce pseudo est deja pris dans cette partie.' }],
+      erreurs: [{ champ: 'pseudo', motif: 'Ce pseudo est déjà pris dans cette partie.' }],
     });
 
     expect(client.etat.ecran).toBe('accueil');

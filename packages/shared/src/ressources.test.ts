@@ -18,11 +18,12 @@ import { describe, expect, it } from 'vitest';
 
 import { TYPES_BONUS, TYPES_MALUS } from './constantes.js';
 import {
-  MUSIQUE_DE_JEU,
+  MUSIQUES,
   RACINE_RESSOURCES,
   SONS,
   SONS_DE_PAS,
   SONS_EN_BOUCLE,
+  cheminApercuCarte,
   cheminCarte,
   cheminNinja,
   cheminObjet,
@@ -95,7 +96,15 @@ describe('cheminObjet', () => {
 describe('cheminSon', () => {
   it('range les sons dans leur dossier', () => {
     expect(cheminSon(SONS.bonusRamasse)).toBe('sons/collect-bonus.wav');
-    expect(cheminSon(MUSIQUE_DE_JEU)).toBe('sons/game-music-2.mp3');
+    expect(cheminSon(MUSIQUES.jeu)).toBe('sons/game-music-2.mp3');
+    expect(cheminSon(MUSIQUES.menu)).toBe('sons/menu-music.mp3');
+  });
+});
+
+describe('cheminApercuCarte', () => {
+  it('range la vignette de chaque carte avec ses couches', () => {
+    expect(cheminApercuCarte('map1')).toBe('cartes/map1/preview.png');
+    expect(cheminApercuCarte('map3')).toBe('cartes/map3/preview.png');
   });
 });
 
@@ -132,7 +141,8 @@ describe('les ressources annoncees existent sur le disque', () => {
       ...Object.values(SONS).map((fichier) => cheminSon(fichier)),
       ...Object.values(SONS_EN_BOUCLE).map((fichier) => cheminSon(fichier)),
       ...SONS_DE_PAS.map((fichier) => cheminSon(fichier)),
-      cheminSon(MUSIQUE_DE_JEU),
+      ...Object.values(MUSIQUES).map((fichier) => cheminSon(fichier)),
+      ...(['map1', 'map2', 'map3'] as const).map((carte) => cheminApercuCarte(carte)),
     ];
 
     expect(attendus.filter((chemin) => !present(chemin))).toEqual([]);

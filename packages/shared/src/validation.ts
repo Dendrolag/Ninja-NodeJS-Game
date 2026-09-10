@@ -95,24 +95,24 @@ export function normaliserTexte(brut: string): string {
  */
 export function validerPseudo(brut: unknown): ResultatValidation<string> {
   if (typeof brut !== 'string') {
-    return refuse('pseudo', 'Un pseudo doit etre du texte.');
+    return refuse('pseudo', 'Un pseudo doit être du texte.');
   }
 
   const pseudo = normaliserTexte(brut);
   const taille = nombreDeCaracteres(pseudo);
 
   if (taille < BORNES_PSEUDO.longueur.minimum) {
-    return refuse('pseudo', 'Un pseudo ne peut pas etre vide.');
+    return refuse('pseudo', 'Un pseudo ne peut pas être vide.');
   }
 
   if (taille > BORNES_PSEUDO.longueur.maximum) {
-    return refuse('pseudo', `Un pseudo fait au plus ${BORNES_PSEUDO.longueur.maximum} caracteres.`);
+    return refuse('pseudo', `Un pseudo fait au plus ${BORNES_PSEUDO.longueur.maximum} caractères.`);
   }
 
   if (!BORNES_PSEUDO.caracteresAdmis.test(pseudo)) {
     return refuse(
       'pseudo',
-      'Un pseudo n accepte que des lettres, des chiffres, l espace, le tiret, le tiret bas et le point.',
+      "Un pseudo n'accepte que des lettres, des chiffres, l'espace, le tiret, le tiret bas et le point.",
     );
   }
 
@@ -132,7 +132,7 @@ export function validerPseudo(brut: unknown): ResultatValidation<string> {
 export function validerDemandeRejoindre(brut: unknown): ResultatValidation<DemandeRejoindre> {
   const source = objetOuRien(brut);
   if (source === undefined) {
-    return refuse('rejoindre', 'Une demande d entree doit etre un objet.');
+    return refuse('rejoindre', "Une demande d'entrée doit être un objet.");
   }
 
   const verdictPseudo = validerPseudo(champ(source, 'pseudo'));
@@ -146,21 +146,21 @@ export function validerDemandeRejoindre(brut: unknown): ResultatValidation<Deman
   }
 
   if (typeof brutRoom !== 'string') {
-    return refuse('idRoom', 'L identifiant d une partie doit etre du texte.');
+    return refuse('idRoom', "L'identifiant d'une partie doit être du texte.");
   }
 
   const taille = nombreDeCaracteres(brutRoom);
   if (taille < BORNES_ROOM.longueur.minimum || taille > BORNES_ROOM.longueur.maximum) {
     return refuse(
       'idRoom',
-      `L identifiant d une partie fait au plus ${BORNES_ROOM.longueur.maximum} caracteres.`,
+      `L'identifiant d'une partie fait au plus ${BORNES_ROOM.longueur.maximum} caractères.`,
     );
   }
 
   if (!BORNES_ROOM.caracteresAdmis.test(brutRoom)) {
     return refuse(
       'idRoom',
-      'L identifiant d une partie n accepte que des lettres sans accent, des chiffres, le tiret et le tiret bas.',
+      "L'identifiant d'une partie n'accepte que des lettres sans accent, des chiffres, le tiret et le tiret bas.",
     );
   }
 
@@ -187,25 +187,25 @@ export function validerMessageChat(
 ): ResultatValidation<MessageChat> {
   const source = objetOuRien(brut);
   if (source === undefined) {
-    return refuse('message', 'Un message de chat doit etre un objet.');
+    return refuse('message', 'Un message de chat doit être un objet.');
   }
 
   const brutTexte = champ(source, 'texte');
   if (typeof brutTexte !== 'string') {
-    return refuse('message.texte', 'Le texte d un message doit etre du texte.');
+    return refuse('message.texte', "Le texte d'un message doit être du texte.");
   }
 
   const texte = normaliserTexte(brutTexte);
   const taille = nombreDeCaracteres(texte);
 
   if (taille < BORNES_CHAT.longueur.minimum) {
-    return refuse('message.texte', 'Un message vide ne s envoie pas.');
+    return refuse('message.texte', "Un message vide ne s'envoie pas.");
   }
 
   if (taille > BORNES_CHAT.longueur.maximum) {
     return refuse(
       'message.texte',
-      `Un message fait au plus ${BORNES_CHAT.longueur.maximum} caracteres.`,
+      `Un message fait au plus ${BORNES_CHAT.longueur.maximum} caractères.`,
     );
   }
 
@@ -237,17 +237,17 @@ export function validerIntentionDeplacement(
 ): ResultatValidation<IntentionDeplacement> {
   const source = objetOuRien(brut);
   if (source === undefined) {
-    return refuse('intention', 'Une intention de deplacement doit etre un objet.');
+    return refuse('intention', 'Une intention de déplacement doit être un objet.');
   }
 
   const enMouvement = champ(source, 'enMouvement');
   if (typeof enMouvement !== 'boolean') {
-    return refuse('intention.enMouvement', 'L indicateur de mouvement doit etre un booleen.');
+    return refuse('intention.enMouvement', "L'indicateur de mouvement doit être un booléen.");
   }
 
   const vecteur = objetOuRien(champ(source, 'deplacement'));
   if (vecteur === undefined) {
-    return refuse('intention.deplacement', 'Le deplacement doit etre un vecteur.');
+    return refuse('intention.deplacement', 'Le déplacement doit être un vecteur.');
   }
 
   const erreurs: ErreurValidation[] = [];
@@ -286,7 +286,7 @@ export function validerReglages(brut: unknown): ResultatValidation<ReglagesParti
 
   const source = objetOuRien(brut);
   if (source === undefined) {
-    return refuse('reglages', 'Les reglages doivent etre un objet.');
+    return refuse('reglages', 'Les réglages doivent être un objet.');
   }
 
   const erreurs: ErreurValidation[] = [];
@@ -324,7 +324,7 @@ export function validerReglages(brut: unknown): ResultatValidation<ReglagesParti
   if (reglages.zones.dureeMinimumS > reglages.zones.dureeMaximumS) {
     return refuse(
       'zones.dureeMinimumS',
-      'La duree minimale d une zone ne peut pas depasser sa duree maximale.',
+      "La durée minimale d'une zone ne peut pas dépasser sa durée maximale.",
     );
   }
 
@@ -599,7 +599,7 @@ function groupe(
 
   const objet = objetOuRien(valeur);
   if (objet === undefined) {
-    erreurs.push({ champ: chemin, motif: 'Ce groupe de reglages doit etre un objet.' });
+    erreurs.push({ champ: chemin, motif: 'Ce groupe de réglages doit être un objet.' });
     return undefined;
   }
 
@@ -619,7 +619,7 @@ function booleen(
   }
 
   if (typeof valeur !== 'boolean') {
-    erreurs.push({ champ: cheminDe(prefixe, cle), motif: 'Ce reglage doit valoir vrai ou faux.' });
+    erreurs.push({ champ: cheminDe(prefixe, cle), motif: 'Ce réglage doit valoir vrai ou faux.' });
     return undefined;
   }
 
@@ -642,14 +642,14 @@ function entier(
   const chemin = cheminDe(prefixe, cle);
 
   if (typeof valeur !== 'number' || !Number.isInteger(valeur)) {
-    erreurs.push({ champ: chemin, motif: 'Ce reglage doit etre un nombre entier.' });
+    erreurs.push({ champ: chemin, motif: 'Ce réglage doit être un nombre entier.' });
     return undefined;
   }
 
   if (valeur < intervalle.minimum || valeur > intervalle.maximum) {
     erreurs.push({
       champ: chemin,
-      motif: `Ce reglage doit se trouver entre ${intervalle.minimum} et ${intervalle.maximum}, bornes comprises.`,
+      motif: `Ce réglage doit se trouver entre ${intervalle.minimum} et ${intervalle.maximum}, bornes comprises.`,
     });
     return undefined;
   }
@@ -670,7 +670,7 @@ function identifiantDeCarte(
   if (typeof valeur !== 'string' || !Object.hasOwn(CARTES, valeur)) {
     erreurs.push({
       champ: 'carte',
-      motif: `La carte doit etre l une de ${Object.keys(CARTES).join(', ')}.`,
+      motif: `La carte doit être l'une de ${Object.keys(CARTES).join(', ')}.`,
     });
     return undefined;
   }
@@ -689,7 +689,7 @@ function coordonnee(
   if (typeof valeur !== 'number' || !Number.isFinite(valeur)) {
     erreurs.push({
       champ: `intention.deplacement.${cle}`,
-      motif: 'Une coordonnee doit etre un nombre fini.',
+      motif: 'Une coordonnée doit être un nombre fini.',
     });
     return undefined;
   }

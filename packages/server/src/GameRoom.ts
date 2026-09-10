@@ -284,11 +284,11 @@ export class GameRoom {
     }
 
     if (this.partie.joueurs[session.id] !== undefined) {
-      return refus('session', 'Cette connexion est deja dans la partie.');
+      return refus('session', 'Cette connexion est déjà dans la partie.');
     }
 
     if (this.pseudoDejaPris(session.pseudo)) {
-      return refus('pseudo', 'Ce pseudo est deja pris dans cette partie.');
+      return refus('pseudo', 'Ce pseudo est déjà pris dans cette partie.');
     }
 
     this.partie = ajouterJoueur(this.partie, { id: session.id, pseudo: session.pseudo });

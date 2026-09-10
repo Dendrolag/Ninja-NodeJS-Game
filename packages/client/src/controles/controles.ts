@@ -126,6 +126,33 @@ export class Controles {
     return voulue;
   }
 
+  /** Une demande de localisation attend-elle d'etre servie. */
+  private localisationDemandee = false;
+
+  /**
+   * Le joueur demande a retrouver son personnage: touche F, ou bouton sur mobile.
+   *
+   * Ce n'est pas une intention: rien ne part sur le reseau. Les fleches qui
+   * designent le personnage sont un affichage local, que la boucle de rendu
+   * declenche en lisant cette demande.
+   */
+  demanderLaLocalisation(): void {
+    this.localisationDemandee = true;
+  }
+
+  /**
+   * Y a-t-il une demande de localisation en attente. La lire la consomme.
+   *
+   * Lire et effacer d'un coup garantit qu'une demande n'est servie qu'une fois,
+   * meme si la boucle la lit a chaque image.
+   */
+  prendreLaDemandeDeLocalisation(): boolean {
+    const demandee = this.localisationDemandee;
+    this.localisationDemandee = false;
+
+    return demandee;
+  }
+
   /**
    * Repart de zero: plus rien d'enfonce, et la prochaine intention sera emise.
    *
@@ -137,5 +164,6 @@ export class Controles {
   reinitialiser(): void {
     this.toutRelacher();
     this.derniereEmise = IMMOBILE;
+    this.localisationDemandee = false;
   }
 }

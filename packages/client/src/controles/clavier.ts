@@ -13,7 +13,7 @@
  */
 
 import type { Controles } from './controles.js';
-import { TOUCHES_DU_JEU, nomDeTouche } from './touches.js';
+import { TOUCHES_DU_JEU, TOUCHE_LOCALISER, nomDeTouche } from './touches.js';
 
 /** Ce qu'il faut pour ecouter un clavier. */
 export interface OptionsClavier {
@@ -40,6 +40,11 @@ export function brancherClavier(controles: Controles, options: OptionsClavier = 
 
   const surEnfoncement = (evenement: Event): void => {
     const touche = nomDeTouche((evenement as KeyboardEvent).key);
+
+    if (touche === TOUCHE_LOCALISER) {
+      controles.demanderLaLocalisation();
+      return;
+    }
 
     if (!TOUCHES_DU_JEU.has(touche)) {
       return;

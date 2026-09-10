@@ -28,7 +28,8 @@
  *
  * CE FICHIER N'EST PAS COUVERT PAR LES TESTS UNITAIRES, et c'est assume: il n'y a
  * rien a y verifier sans GPU. Ce qu'il fait est verifie par le banc de mesure de
- * tests/e2e/banc-rendu.spec.ts, qui le fait tourner dans un vrai navigateur.
+ * tests/e2e/banc-rendu.spec.ts, qui le fait tourner dans un vrai navigateur, et
+ * depuis l'etape 4.3 par le scenario de navigation, qui joue une vraie partie.
  */
 
 import type { DimensionsCarte } from '@neon-ninja/shared';
@@ -39,7 +40,17 @@ import { Application, Assets, Container, Graphics, Sprite, Text } from 'pixi.js'
 
 import { BORDURE_TERRAIN, COULEUR_FOND, LUEUR } from './apparence.js';
 import type { Camera } from './camera.js';
-import type { DisqueScene, Scene, SpriteScene, ZoneScene } from './scene.js';
+import type { DisqueScene, FlecheScene, Scene, SpriteScene, ZoneScene } from './scene.js';
+
+/**
+ * La police des libelles de zone.
+ *
+ * Celle des titres de l'interface depuis l'etape 4.3, pour que le terrain et les
+ * menus parlent la meme langue visuelle. La page la charge; ecranDeJeu.ts attend
+ * qu'elle soit prete avant de monter le rendu, sans quoi PixiJS mesurerait le
+ * texte dans la police de secours et ne le referait jamais.
+ */
+const POLICE_DES_LIBELLES = ['Chakra Petch', 'sans-serif'];
 
 /**
  * Charge d'avance toutes les images des personnages et des objets.
@@ -94,10 +105,10 @@ export interface Rendu {
  * Monte le rendu et rend de quoi le piloter.
  *
  * L'ORDRE DES CALQUES EST L'ORDRE DU JEU, et il n'est ecrit qu'ici: le decor, les
- * zones, les disques, les objets, les entites, puis le premier plan qui passe
- * devant tout le monde. Le jeu d'origine obtenait le meme ordre par la seule
- * succession de ses appels de dessin, si bien que le deplacer revenait a
- * reordonner trois cents lignes.
+ * zones, les disques, les objets, les entites, le premier plan qui passe devant
+ * tout le monde, puis les reperes qui passent devant le premier plan. Le jeu
+ * d'origine obtenait le meme ordre par la seule succession de ses appels de
+ * dessin, si bien que le deplacer revenait a reordonner trois cents lignes.
  */
 export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   const application = new Application();
@@ -124,8 +135,9 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   const objets = new Container();
   const entites = new Container();
   const premierPlan = new Container();
+  const reperes = new Graphics();
 
-  monde.addChild(decor, zones, libelles, disques, objets, entites, premierPlan);
+  monde.addChild(decor, zones, libelles, disques, objets, entites, premierPlan, reperes);
   application.stage.addChild(monde);
 
   if (options.lueur !== false) {
@@ -192,6 +204,7 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       dessinerLesDisques(disques, scene.disques);
       majSprites(spritesObjets, objets, scene.objets);
       majSprites(spritesEntites, entites, scene.entites);
+      dessinerLesReperes(reperes, scene.reperes);
     },
 
     redimensionner(largeur: number, hauteur: number) {
@@ -249,6 +262,21 @@ function dessinerLesDisques(graphique: Graphics, disques: readonly DisqueScene[]
   }
 }
 
+/** Redessine les reperes, par-dessus tout le reste. Meme principe que les disques. */
+function dessinerLesReperes(graphique: Graphics, fleches: readonly FlecheScene[]): void {
+  graphique.clear();
+
+  for (const fleche of fleches) {
+    graphique.poly([...fleche.points]);
+    graphique.fill({ color: fleche.remplissage.couleur, alpha: fleche.remplissage.alpha });
+    graphique.stroke({
+      color: fleche.contour.couleur,
+      alpha: fleche.contour.alpha,
+      width: fleche.contour.epaisseur,
+    });
+  }
+}
+
 /** Redessine les zones speciales et place leur libelle. */
 function dessinerLesZones(
   graphique: Graphics,
@@ -278,7 +306,10 @@ function dessinerLesZones(
     let texte = textes.get(zone.id);
 
     if (texte === undefined) {
-      texte = new Text({ text: zone.libelle, style: { fill: 0xffffff, fontSize: 20 } });
+      texte = new Text({
+        text: zone.libelle,
+        style: { fill: 0xffffff, fontSize: 20, fontFamily: POLICE_DES_LIBELLES, fontWeight: '600' },
+      });
       texte.anchor.set(0.5);
       libelles.addChild(texte);
       textes.set(zone.id, texte);

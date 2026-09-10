@@ -1,0 +1,373 @@
+/*
+ * L'ecran de jeu et le HUD.
+ *
+ * Les classes du HUD sont celles que pose hud/surcouche.ts depuis l'etape 4.2,
+ * qui les avait livrees sans mise en forme. Les panneaux suivent la maquette:
+ * verre sombre floute, bordure fine, chiffres en police de donnees.
+ *
+ * LE HUD NE RECOIT AUCUN CLIC. La surcouche le declare elle-meme; seuls les
+ * boutons d'action le recoivent, et le terrain recoit le pouce de la manette.
+ */
+
+.ecran-jeu {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--fond);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.terrain,
+.zone-hud {
+  position: absolute;
+  inset: 0;
+}
+
+.terrain canvas {
+  display: block;
+}
+
+.zone-hud {
+  pointer-events: none;
+}
+
+.jeu-chargement {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--fond);
+  color: var(--texte-secondaire);
+  font-family: var(--police-donnees);
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* -- Actions ------------------------------------------------------------- */
+
+.jeu-actions {
+  position: absolute;
+  top: max(14px, env(safe-area-inset-top));
+  right: max(14px, env(safe-area-inset-right));
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jeu-actions .bouton {
+  min-height: 42px;
+  padding: 0 14px;
+  font-size: 12.5px;
+  backdrop-filter: blur(8px);
+}
+
+.jeu-actions .bouton-secondaire,
+.jeu-actions .bouton-icone {
+  background: var(--fond-verre);
+  backdrop-filter: blur(8px);
+}
+
+.jeu-rappel {
+  padding: 10px 12px;
+  border: 1px solid var(--bordure);
+  border-radius: 10px;
+  background: var(--fond-verre);
+  backdrop-filter: blur(8px);
+  color: var(--texte-tertiaire);
+  font-family: var(--police-donnees);
+  font-size: 11px;
+}
+
+/*
+ * Le rappel des touches prend de la place: sous cette largeur, il toucherait le
+ * temps restant, centre en haut. Les touches restent decrites dans l'aide.
+ */
+@media (max-width: 1100px) {
+  .jeu-rappel {
+    display: none;
+  }
+}
+
+/* Le bouton de localisation remplace la touche F sur les ecrans tactiles. */
+.jeu-localiser {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .jeu-rappel {
+    display: none;
+  }
+
+  .jeu-localiser {
+    display: inline-grid;
+  }
+}
+
+/* -- HUD ----------------------------------------------------------------- */
+
+.hud {
+  position: absolute;
+  inset: 0;
+}
+
+.hud-temps {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  padding: 8px 22px 10px;
+  border: 1px solid rgba(45, 230, 224, 0.3);
+  border-radius: 14px;
+  background: var(--fond-verre);
+  backdrop-filter: blur(8px);
+  color: var(--cyan);
+  font-family: var(--police-titre);
+  font-size: 30px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+.hud-temps::before {
+  content: 'Temps restant';
+  display: block;
+  margin-bottom: 4px;
+  color: var(--texte-tertiaire);
+  font-family: var(--police-donnees);
+  font-size: 9.5px;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.hud-temps:empty {
+  display: none;
+}
+
+.hud-temps.urgence {
+  border-color: rgba(255, 46, 126, 0.5);
+  color: var(--rose);
+  animation: pulsation 1s ease-in-out infinite;
+}
+
+.hud-pause {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  padding: 16px 28px;
+  border: 1px solid var(--bordure-survol);
+  border-radius: var(--rayon-carte);
+  background: rgba(7, 12, 20, 0.88);
+  font-family: var(--police-titre);
+  font-size: 22px;
+  font-weight: 600;
+  transform: translate(-50%, -50%);
+}
+
+.hud-pause:empty {
+  display: none;
+}
+
+.hud-classement {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 220px;
+  margin: 0;
+  padding: 8px;
+  border: 1px solid var(--bordure);
+  border-radius: 14px;
+  background: var(--fond-verre);
+  backdrop-filter: blur(8px);
+  list-style: none;
+}
+
+.hud-classement:empty {
+  display: none;
+}
+
+.hud-ligne {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.hud-ligne::before {
+  content: '';
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--couleur-joueur);
+  box-shadow: 0 0 6px var(--couleur-joueur);
+}
+
+.hud-ligne.moi {
+  background: rgba(45, 230, 224, 0.1);
+}
+
+.hud-pseudo {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hud-ligne.moi .hud-pseudo {
+  color: var(--cyan);
+  font-weight: 600;
+}
+
+.hud-points {
+  font-family: var(--police-donnees);
+  font-size: 12.5px;
+}
+
+.hud-effets {
+  position: absolute;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  left: 14px;
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hud-effet {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border: 1px solid color-mix(in srgb, var(--couleur-effet) 45%, transparent);
+  border-radius: 12px;
+  background: var(--fond-verre);
+  backdrop-filter: blur(8px);
+}
+
+.hud-effet::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--couleur-effet);
+  box-shadow: 0 0 8px var(--couleur-effet);
+}
+
+.hud-effet-libelle {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.hud-effet-reste {
+  color: var(--texte-secondaire);
+  font-family: var(--police-donnees);
+  font-size: 12px;
+}
+
+.hud-minimap {
+  position: absolute;
+  right: 14px;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  overflow: hidden;
+  border: 1px solid var(--bordure);
+  border-radius: 14px;
+  background-color: var(--fond-verre);
+  background-image:
+    linear-gradient(rgba(45, 230, 224, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(45, 230, 224, 0.07) 1px, transparent 1px);
+  background-size: 20px 20px;
+  backdrop-filter: blur(8px);
+}
+
+.hud-point {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+}
+
+.hud-point.moi {
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  box-shadow:
+    0 0 0 2px var(--fond),
+    0 0 10px var(--cyan);
+}
+
+/*
+ * La manette: son centre est pose la ou le pouce touche l'ecran. La surcouche
+ * place le pouce par rapport au bord de la manette; la marge le recentre.
+ */
+.hud-manette {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  margin: -60px 0 0 -60px;
+  border-radius: 50%;
+  background: rgba(45, 230, 224, 0.06);
+  box-shadow: inset 0 0 0 2px rgba(45, 230, 224, 0.4);
+}
+
+.hud-manette-pouce {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  margin: 36px 0 0 36px;
+  border-radius: 50%;
+  background: rgba(45, 230, 224, 0.45);
+  box-shadow: 0 0 16px rgba(45, 230, 224, 0.5);
+}
+
+/* -- Petits ecrans ------------------------------------------------------- */
+
+@media (max-width: 640px) {
+  .hud-temps {
+    top: 66px;
+    padding: 6px 16px 8px;
+    font-size: 22px;
+  }
+
+  .hud-classement {
+    width: 150px;
+    font-size: 12px;
+  }
+
+  .hud-minimap {
+    transform: scale(0.72);
+    transform-origin: bottom right;
+  }
+
+  /* Le texte des boutons reste lu par les lecteurs d'ecran, sans prendre de place. */
+  .jeu-actions .bouton span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .jeu-actions .bouton {
+    width: 42px;
+    padding: 0;
+  }
+
+  .application[data-ecran='jeu'] .annonces {
+    top: 130px;
+  }
+}

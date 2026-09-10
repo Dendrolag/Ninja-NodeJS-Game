@@ -3,17 +3,15 @@
  *
  * C'est le seul fichier du paquet qui ouvre un port. Il assemble, il ne decide
  * rien: la validation est dans @neon-ninja/shared, les parties dans GameRoom et
- * RoomManager, le routage dans ServeurSocket, le jeu dans @neon-ninja/sim.
+ * RoomManager, le routage dans ServeurSocket, le jeu dans @neon-ninja/sim, et le
+ * service des fichiers dans fichiers.ts.
  *
- * POURQUOI PAS EXPRESS, ALORS QUE LA PILE DU PROJET L'ANNONCE. Parce qu'a cette
- * etape il n'y a rien a servir: pas de fichier client, pas de route d'interface
- * de programmation. Express arrivera avec le client de la phase 4, quand il aura
- * un travail. Une dependance ajoutee sans usage est une dependance que personne
- * ne surveille, et la faille S5 de l'audit portait precisement sur des
- * dependances non tenues a jour. Le module http de Node suffit ici, et il ne
- * s'installe pas.
- *
- * La seule route repond a la question qu'un hebergeur pose: est-ce que ca tourne.
+ * EXPRESS REPOND AUX REQUETES HTTP, SOCKET.IO AUX CONNEXIONS DU JEU. Les deux
+ * partagent le meme serveur HTTP et le meme port: Socket.IO intercepte ses propres
+ * adresses avant qu'Express ne les voie. Express n'est arrive qu'a l'etape 4.3,
+ * quand il y a eu une page a servir; jusque-la, le module http de Node suffisait,
+ * et une dependance sans usage est une dependance que personne ne surveille
+ * (faille S5 de l'audit).
  */
 
 import { createServer } from 'node:http';
@@ -22,6 +20,8 @@ import type { Server as ServeurHttp } from 'node:http';
 import type { EvenementsClientVersServeur, EvenementsServeurVersClient } from '@neon-ninja/shared';
 import { Server } from 'socket.io';
 
+import type { DossiersServis } from './fichiers.js';
+import { applicationWeb } from './fichiers.js';
 import type { Horloge } from './horloge.js';
 import type { ServeurTypee } from './ServeurSocket.js';
 import { ServeurSocket } from './ServeurSocket.js';
@@ -37,8 +37,8 @@ export interface OptionsServeur {
    *
    * Le legacy acceptait toutes les origines (son cors valait '*'), ce qui
    * permettait a n'importe quelle page de piloter une partie au nom de qui la
-   * visitait. Ici la liste est explicite, et vide par defaut: en developpement,
-   * le client est servi par la meme origine et n'a rien a declarer.
+   * visitait. Ici la liste est explicite, et vide par defaut: le client est servi
+   * par la meme origine et n'a rien a declarer.
    */
   readonly originesAutorisees?: readonly string[];
   /** Horloge du serveur. Celle du systeme par defaut. */
@@ -54,6 +54,13 @@ export interface OptionsServeur {
    * ChargeurDeTerrain.
    */
   readonly terrains?: SourceDeTerrain;
+  /**
+   * Les dossiers de la page et des ressources a servir.
+   *
+   * AUCUN FICHIER PAR DEFAUT, pour la meme raison que les murs: seul le serveur
+   * reel, et le scenario de bout en bout qui le reproduit, ont une page a servir.
+   */
+  readonly fichiers?: DossiersServis;
 }
 
 /** Un serveur monte, pret a ecouter. */
@@ -76,10 +83,7 @@ export interface ServeurMonte {
  * refermer, sans jamais dependre d'un numero de port fixe.
  */
 export function creerServeur(options: OptionsServeur = {}): ServeurMonte {
-  const http = createServer((_requete, reponse) => {
-    reponse.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' });
-    reponse.end('Neon Ninja: le serveur tourne.');
-  });
+  const http = createServer(applicationWeb(options.fichiers));
 
   const io: ServeurTypee = new Server<EvenementsClientVersServeur, EvenementsServeurVersClient>(
     http,

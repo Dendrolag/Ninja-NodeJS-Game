@@ -35,10 +35,20 @@ import type { VuePartie } from './reconstruction.js';
 
 /** Ou en est le transport. */
 export type EtatConnexion =
-  /** Aucun lien avec le serveur. */
+  /** Le lien n'a pas encore ete etabli. */
   | 'horsLigne'
   /** Le lien est etabli: on peut demander a entrer dans une partie. */
-  | 'connecte';
+  | 'connecte'
+  /**
+   * Le lien a ete etabli, puis perdu.
+   *
+   * Ajoute a l'etape 4.3. Distinguer une perte d'une attente est ce qui permet a
+   * l'accueil de dire au joueur que la connexion est tombee, plutot que de lui
+   * faire attendre une connexion qui ne viendra pas: la reconnexion automatique
+   * est coupee (handoff 4.1). L'information ne pouvait pas vivre dans l'ecran
+   * d'accueil, qui est monte a neuf au moment meme ou le lien tombe.
+   */
+  | 'perdue';
 
 /**
  * Un message de chat, date a son arrivee chez nous.
@@ -97,6 +107,15 @@ export interface EtatClient {
    * fait foi est celui du salon.
    */
   readonly pseudoDemande: string | undefined;
+  /**
+   * Une demande d'entree est partie, et sa reponse n'est pas arrivee.
+   *
+   * Ajoute a l'etape 4.3. Sans lui, l'accueil laisserait redemander a entrer
+   * pendant l'attente, et le serveur refuserait la seconde demande d'une
+   * connexion deja entree. Le cas se produit en rejouant: on quitte la partie
+   * finie, on passe un instant par l'accueil, et on redemande aussitot.
+   */
+  readonly entreeEnCours: boolean;
   /** Le salon de la partie ou l'on se trouve, reglages compris. */
   readonly salon: InfosSalon | undefined;
   /** Le compte a rebours de demarrage, tant qu'il tourne. */
@@ -141,6 +160,7 @@ export const ETAT_INITIAL: EtatClient = {
   connexion: 'horsLigne',
   moi: undefined,
   pseudoDemande: undefined,
+  entreeEnCours: false,
   salon: undefined,
   compteARebours: undefined,
   partie: undefined,

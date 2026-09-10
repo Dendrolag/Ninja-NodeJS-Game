@@ -1,0 +1,124 @@
+/*
+ * Les fondations: la page, son ambiance, la typographie.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--fond);
+  color: var(--texte);
+  font-family: var(--police-texte);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Les halos colores de la maquette, fixes derriere tout le contenu. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(1100px 700px at 14% -8%, rgba(45, 230, 224, 0.1), transparent 60%),
+    radial-gradient(900px 650px at 92% 8%, rgba(255, 46, 126, 0.1), transparent 58%),
+    radial-gradient(800px 800px at 60% 120%, rgba(139, 123, 255, 0.08), transparent 60%);
+}
+
+/* La grille fine, estompee vers les bords. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: radial-gradient(circle at 50% 30%, #000 0%, transparent 80%);
+}
+
+/* L'attribut hidden doit gagner contre toute regle d'affichage d'un composant. */
+[hidden] {
+  display: none !important;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-family: var(--police-titre);
+  font-weight: 700;
+}
+
+p {
+  margin: 0;
+}
+
+button,
+input,
+output {
+  font: inherit;
+  color: inherit;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+.accent {
+  color: var(--cyan);
+}
+
+.icone {
+  display: block;
+  flex: none;
+}
+
+/*
+ * L'entree d'un ecran ou d'une fenetre: un leger glissement, SANS FONDU. Une
+ * animation qui part d'une opacite nulle cache le contenu tant qu'elle ne
+ * progresse pas, et un navigateur peut la suspendre (onglet en arriere-plan,
+ * economie d'energie): on l'a constate a l'etape 4.3, fenetre de reglages
+ * invisible. Un glissement suspendu laisse tout lisible.
+ */
+@keyframes apparition {
+  from {
+    transform: translateY(6px);
+  }
+}
+
+@keyframes pulsation {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

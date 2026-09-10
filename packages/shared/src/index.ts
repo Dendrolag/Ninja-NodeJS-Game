@@ -90,14 +90,15 @@ export {
 
 export type { Position, Vecteur } from './geometrie.js';
 
-export type { CoucheCarte, NomDeSon } from './ressources.js';
+export type { CoucheCarte, NomDeSon, PisteMusicale } from './ressources.js';
 export {
   IMAGES_DE_MARCHE,
-  MUSIQUE_DE_JEU,
+  MUSIQUES,
   RACINE_RESSOURCES,
   SONS,
   SONS_DE_PAS,
   SONS_EN_BOUCLE,
+  cheminApercuCarte,
   cheminCarte,
   cheminNinja,
   cheminObjet,

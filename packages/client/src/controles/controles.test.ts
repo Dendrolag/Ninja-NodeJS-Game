@@ -282,3 +282,27 @@ describe('memeIntention', () => {
     ).toBe(false);
   });
 });
+
+describe('la demande de localisation', () => {
+  it('part de la touche F, une seule fois, sans rien envoyer au serveur', () => {
+    const controles = new Controles();
+    const cible = cibleDEssai();
+    brancherClavier(controles, { cible, fenetre: cibleDEssai() });
+
+    // En majuscule aussi: la touche F se lit F quand les majuscules sont verrouillees.
+    cible.declencher('keydown', 'F');
+
+    expect(controles.prendreLaDemandeDeLocalisation()).toBe(true);
+    expect(controles.prendreLaDemandeDeLocalisation()).toBe(false);
+    expect(controles.aEmettre()).toBeUndefined();
+  });
+
+  it('est oubliee a l entree en partie', () => {
+    const controles = new Controles();
+
+    controles.demanderLaLocalisation();
+    controles.reinitialiser();
+
+    expect(controles.prendreLaDemandeDeLocalisation()).toBe(false);
+  });
+});

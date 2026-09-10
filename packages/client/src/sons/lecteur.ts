@@ -28,9 +28,9 @@
  * d'une partie ne vaut pas une gestion d'erreur bruyante.
  */
 
-import type { NomDeSon, TypeBonus } from '@neon-ninja/shared';
+import type { NomDeSon, PisteMusicale, TypeBonus } from '@neon-ninja/shared';
 import {
-  MUSIQUE_DE_JEU,
+  MUSIQUES,
   RACINE_RESSOURCES,
   SONS,
   SONS_DE_PAS,
@@ -48,9 +48,14 @@ export interface LecteurDeSons {
   demarrerLaBoucle(bonus: TypeBonus): void;
   /** Arrete la boucle sonore d'un bonus. */
   arreterLaBoucle(bonus: TypeBonus): void;
-  /** Demarre la musique de partie. */
-  demarrerLaMusique(): void;
-  /** Arrete la musique de partie. */
+  /**
+   * Fait jouer une musique, et arrete l'autre.
+   *
+   * Une seule musique a la fois: celle des menus s'arrete quand la partie
+   * commence, et reprend quand on revient au salon ou a la fin.
+   */
+  demarrerLaMusique(piste: PisteMusicale): void;
+  /** Arrete la musique en cours. */
   arreterLaMusique(): void;
   /** Coupe tout: boucles, musique, sons en cours. */
   toutArreter(): void;
@@ -97,7 +102,10 @@ export function creerLecteurDeSons(options: OptionsLecteur = {}): LecteurDeSons 
   const ponctuels = new Map<NomDeSon, HTMLAudioElement>();
   const pas: HTMLAudioElement[] = [];
   const boucles = new Map<TypeBonus, HTMLAudioElement>();
+  /** Les musiques deja fabriquees, pour ne pas recharger un fichier a chaque ecran. */
+  const musiques = new Map<PisteMusicale, HTMLAudioElement>();
   let musique: HTMLAudioElement | undefined;
+  let pisteEnCours: PisteMusicale | undefined;
 
   /** Fabrique un element audio pour un fichier de ressource. */
   const audioDe = (fichier: string): HTMLAudioElement =>
@@ -180,8 +188,20 @@ export function creerLecteurDeSons(options: OptionsLecteur = {}): LecteurDeSons 
       arreter(boucles.get(bonus));
     },
 
-    demarrerLaMusique() {
-      musique ??= audioDe(MUSIQUE_DE_JEU);
+    demarrerLaMusique(piste) {
+      // Changer de piste arrete la precedente; redemander la meme la laisse
+      // continuer, sans la reprendre du debut.
+      if (pisteEnCours !== piste) {
+        arreter(musique);
+        musique = musiques.get(piste) ?? audioDe(MUSIQUES[piste]);
+        musiques.set(piste, musique);
+        pisteEnCours = piste;
+      }
+
+      if (musique === undefined) {
+        return;
+      }
+
       musique.loop = true;
       musique.volume = volumeMusique;
 

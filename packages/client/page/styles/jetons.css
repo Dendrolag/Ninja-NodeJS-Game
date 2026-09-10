@@ -1,0 +1,52 @@
+/*
+ * Les jetons de conception: toutes les couleurs, polices, rayons et durees.
+ *
+ * Valeurs de la maquette (HANDOFF-CLAUDE-DESIGN.md, section Design Tokens). Le
+ * reste des feuilles n'ecrit que des var(): changer une teinte se fait ici, une
+ * fois.
+ *
+ * UN SEUL THEME, SOMBRE. L'identite neon du jeu repose sur un fond presque noir;
+ * un theme clair serait un autre jeu. La page le declare au navigateur, pour que
+ * ses propres controles (barres de defilement, curseurs) suivent.
+ */
+
+:root {
+  color-scheme: dark;
+
+  --fond: #06080e;
+  --fond-panneau: #0d111b;
+  --fond-verre: rgba(7, 12, 20, 0.72);
+  --surface: rgba(255, 255, 255, 0.03);
+  --surface-survol: rgba(255, 255, 255, 0.05);
+  --bordure: rgba(255, 255, 255, 0.08);
+  --bordure-survol: rgba(255, 255, 255, 0.14);
+
+  --texte: #eaf0ff;
+  --texte-secondaire: #9aa6c2;
+  --texte-tertiaire: #828fad;
+  --texte-faible: #6b7793;
+
+  --cyan: #2de6e0;
+  --cyan-fonce: #13b6c9;
+  --sur-cyan: #04141a;
+  --rose: #ff2e7e;
+  --rose-clair: #ff6ba3;
+  --violet: #8b7bff;
+  --or: #ffb23e;
+  --vert: #4df08a;
+
+  --police-titre: 'Chakra Petch', 'Segoe UI', system-ui, sans-serif;
+  --police-texte: 'Space Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --police-donnees: 'Space Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+
+  --rayon-bouton: 11px;
+  --rayon-controle: 12px;
+  --rayon-carte: 16px;
+  --rayon-panneau: 20px;
+
+  --ombre-primaire: 0 12px 30px rgba(45, 230, 224, 0.35);
+  --transition: 0.16s ease;
+
+  --marge-page: clamp(16px, 4vw, 44px);
+  --largeur-page: 1368px;
+}

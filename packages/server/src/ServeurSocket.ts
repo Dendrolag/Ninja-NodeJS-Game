@@ -252,7 +252,7 @@ export class ServeurSocket {
     }
 
     if (connexion.idRoom !== undefined) {
-      repondre(refus('session', 'Cette connexion est deja dans une partie.'));
+      repondre(refus('session', 'Cette connexion est déjà dans une partie.'));
       return;
     }
 
@@ -395,7 +395,7 @@ export class ServeurSocket {
     if (room.statut !== 'salon') {
       socket.emit('refus', {
         action: 'reglages',
-        erreurs: [{ champ: 'reglages', motif: 'La partie a deja commence.' }],
+        erreurs: [{ champ: 'reglages', motif: 'La partie a déjà commencé.' }],
       });
       return;
     }
@@ -423,7 +423,7 @@ export class ServeurSocket {
     if (room.statut !== 'salon') {
       socket.emit('refus', {
         action: 'demarrer',
-        erreurs: [{ champ: 'partie', motif: 'La partie a deja commence.' }],
+        erreurs: [{ champ: 'partie', motif: 'La partie a déjà commencé.' }],
       });
       return;
     }
@@ -597,7 +597,7 @@ export class ServeurSocket {
     if (room.hote !== connexion.session.id) {
       socket.emit('refus', {
         action,
-        erreurs: [{ champ: 'hote', motif: "Seul l'hote de la partie peut faire cela." }],
+        erreurs: [{ champ: 'hote', motif: "Seul l'hôte de la partie peut faire cela." }],
       });
       return undefined;
     }

@@ -88,7 +88,7 @@ describe('le lien et l entree en partie', () => {
       { type: 'entreeDemandee', pseudo: 'Alice' },
       {
         type: 'entreeRefusee',
-        erreurs: [{ champ: 'pseudo', motif: 'Ce pseudo est deja pris dans cette partie.' }],
+        erreurs: [{ champ: 'pseudo', motif: 'Ce pseudo est déjà pris dans cette partie.' }],
       },
     ]);
 
@@ -127,7 +127,7 @@ describe('le lien et l entree en partie', () => {
     const etat = apres([...JUSQU_AU_JEU, { type: 'connexionPerdue' }]);
 
     expect(etat.ecran).toBe('accueil');
-    expect(etat.connexion).toBe('horsLigne');
+    expect(etat.connexion).toBe('perdue');
     expect(etat.moi).toBeUndefined();
     expect(etat.salon).toBeUndefined();
     // Le pseudo saisi survit: c'est ce qu'on repropose pour se reconnecter.
@@ -419,6 +419,15 @@ describe('le cycle de la partie', () => {
     ]);
 
     expect(etat.salon?.joueurs).toHaveLength(1);
+  });
+
+  it('sait qu une entree attend sa reponse, jusqu a ce qu elle arrive', () => {
+    const demande = { type: 'entreeDemandee', pseudo: 'Alice' } as const;
+
+    expect(apres([demande]).entreeEnCours).toBe(true);
+    expect(apres([demande, { type: 'entreeAcceptee', salon: salon() }]).entreeEnCours).toBe(false);
+    expect(apres([demande, { type: 'entreeRefusee', erreurs: [] }]).entreeEnCours).toBe(false);
+    expect(apres([demande, { type: 'connexionPerdue' }]).entreeEnCours).toBe(false);
   });
 
   it('garde le dernier refus recu du serveur', () => {

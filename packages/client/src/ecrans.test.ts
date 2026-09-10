@@ -74,7 +74,7 @@ describe('transitions d ecran', () => {
     expect(
       ecranSuivant('accueil', {
         type: 'entreeRefusee',
-        erreurs: [{ champ: 'pseudo', motif: 'Ce pseudo est deja pris dans cette partie.' }],
+        erreurs: [{ champ: 'pseudo', motif: 'Ce pseudo est déjà pris dans cette partie.' }],
       }),
     ).toBe('accueil');
   });

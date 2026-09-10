@@ -52,6 +52,8 @@ import {
   TEINTE_DETECTION_BOT_NOIR,
 } from './apparence.js';
 import type { VueLissee } from './interpolation.js';
+import type { Localisation } from './localisation.js';
+import { flechesDeLocalisation, opaciteDeLocalisation } from './localisation.js';
 
 /** Un sprite a poser sur la carte. */
 export interface SpriteScene {
@@ -84,6 +86,15 @@ export interface ZoneScene extends DisqueScene {
   readonly libelle: string;
 }
 
+/** Un triangle plein, cerne d'un trait. */
+export interface FlecheScene {
+  readonly id: string;
+  /** Les trois sommets a plat, en coordonnees de carte: x1, y1, x2, y2, x3, y3. */
+  readonly points: readonly number[];
+  readonly remplissage: Teinte;
+  readonly contour: Teinte & { readonly epaisseur: number };
+}
+
 /** Tout ce qu'une image contient, hors decor et interface. */
 export interface Scene {
   /** Les disques poses SOUS les entites: zones, halos, ombres, rayons de detection. */
@@ -94,10 +105,16 @@ export interface Scene {
   readonly objets: readonly SpriteScene[];
   /** Les personnages: joueurs, faux ninjas et bots noirs. */
   readonly entites: readonly SpriteScene[];
+  /**
+   * Les reperes poses par-dessus tout, premier plan compris: les fleches qui
+   * designent notre personnage. Un toit ne doit pas les cacher, puisque c'est
+   * justement quand on ne se voit plus qu'on les demande.
+   */
+  readonly reperes: readonly FlecheScene[];
 }
 
 /** Une scene vide, celle d'un ecran sans partie en cours. */
-export const SCENE_VIDE: Scene = { disques: [], zones: [], objets: [], entites: [] };
+export const SCENE_VIDE: Scene = { disques: [], zones: [], objets: [], entites: [], reperes: [] };
 
 /**
  * Convertit une couleur du contrat, ecrite en hexadecimal, en nombre.
@@ -123,11 +140,13 @@ function adresse(relatif: string): string {
  * @param etat       L'etat du client, lu tel quel a chaque image.
  * @param lissee     Les positions lissees du battement en cours d'affichage.
  * @param maintenant Instant local, lu sur l'horloge du client.
+ * @param localisation Le reperage de notre personnage en cours, s'il y en a un.
  */
 export function construireScene(
   etat: EtatClient,
   lissee: VueLissee | undefined,
   maintenant: number,
+  localisation?: Localisation,
 ): Scene {
   if (lissee === undefined) {
     return SCENE_VIDE;
@@ -269,7 +288,19 @@ export function construireScene(
     });
   }
 
-  return { disques, zones, objets, entites };
+  // Les fleches suivent la position AFFICHEE de notre personnage, pas celle du
+  // dernier battement: sinon elles le devanceraient d'un battement.
+  const monEntite = lissee.entites.find(({ entite }) => entite.id === moi);
+  const reperes =
+    monEntite === undefined
+      ? []
+      : flechesDeLocalisation(
+          monEntite,
+          opaciteDeLocalisation(localisation, maintenant),
+          maintenant,
+        );
+
+  return { disques, zones, objets, entites, reperes };
 }
 
 /**

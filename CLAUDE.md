@@ -73,10 +73,12 @@ pnpm test:e2e             # tests de bout en bout (Playwright)
 Lancer un sous-ensemble de tests: `pnpm test <motif>`, par exemple `pnpm test purity` ou `pnpm test packages/sim`.
 
 ```bash
-pnpm dev:server           # compiler puis lancer le serveur de jeu (port 3000 par défaut)
+pnpm build                # compiler les paquets et empaqueter la page du jeu
+pnpm dev                  # compiler, empaqueter, puis lancer le jeu sur http://localhost:3000
+pnpm dev:server           # compiler puis lancer le serveur seul, sans refaire la page
 ```
 
-Le serveur existe depuis l'étape 2.2. Variables d'environnement: `PORT`, et `ORIGINES_AUTORISEES` (liste séparée par des virgules) pour le contrôle d'accès du navigateur. Depuis l'étape 4.2, `packages/client` porte l'état, la couche réseau, le rendu PixiJS, les contrôles, le HUD et les sons, et le serveur décode les murs des cartes depuis `assets/`. **Il n'y a toujours pas de page**: rien ne sert le client à un navigateur, donc on ne peut pas encore jouer. Le serveur se pilote par un client Socket.IO écrit à la main, comme le font ses tests d'intégration. Le jeu redevient jouable à l'étape 4.3. Pour jouer à la version d'origine, utiliser la branche `master`.
+**Le jeu est jouable dans un navigateur depuis l'étape 4.3**: `pnpm dev`, puis ouvrir http://localhost:3000. Le serveur sert la page empaquetée par esbuild (`packages/client/web`, produite par `pnpm build`) et les ressources de `assets/`, et décode les murs des cartes. Variables d'environnement: `PORT`; `ORIGINES_AUTORISEES` (liste séparée par des virgules) pour le contrôle d'accès du navigateur; `CHEMIN_CLIENT` et `CHEMIN_RESSOURCES` pour servir la page et les ressources depuis un autre dossier. Sans code de partie (étape 2.4), un joueur entre dans le premier salon en attente. Pour jouer à la version d'origine, utiliser la branche `master`.
 
 Première utilisation de Playwright sur une machine neuve: `pnpm exec playwright install chromium`.
 

@@ -41,16 +41,27 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
     // Le lien est tombe: on ne sait plus rien de la partie, et on ne peut plus
     // rien en apprendre. Seul le pseudo saisi survit, pour reproposer la saisie.
     case 'connexionPerdue':
-      return { ...ETAT_INITIAL, ecran, pseudoDemande: etat.pseudoDemande };
+      return { ...ETAT_INITIAL, ecran, connexion: 'perdue', pseudoDemande: etat.pseudoDemande };
 
     case 'entreeDemandee':
-      return { ...etat, ecran, pseudoDemande: action.pseudo, refus: undefined };
+      return {
+        ...etat,
+        ecran,
+        pseudoDemande: action.pseudo,
+        entreeEnCours: true,
+        refus: undefined,
+      };
 
     case 'entreeAcceptee':
-      return { ...etat, ecran, salon: action.salon, refus: undefined };
+      return { ...etat, ecran, salon: action.salon, entreeEnCours: false, refus: undefined };
 
     case 'entreeRefusee':
-      return { ...etat, ecran, refus: refusDe('rejoindre', action.erreurs) };
+      return {
+        ...etat,
+        ecran,
+        entreeEnCours: false,
+        refus: refusDe('rejoindre', action.erreurs),
+      };
 
     // On quitte de soi-meme: le lien reste, tout le reste s'efface.
     case 'sortie':

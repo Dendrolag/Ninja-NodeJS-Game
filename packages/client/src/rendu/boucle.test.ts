@@ -237,3 +237,60 @@ describe('lancerLaBoucle', () => {
     expect(sons.arrets).toBe(1);
   });
 });
+
+describe('les fleches qui designent notre personnage', () => {
+  /** Joue assez d'images pour que des fleches automatiques aient disparu. */
+  function laisserPasserLesFleches(): void {
+    for (let image = 0; image < 80; image += 1) {
+      uneImage();
+    }
+  }
+
+  beforeEach(() => {
+    reseau.recevoir('partieLancee');
+    reseau.recevoir('etat', instantane(1, [joueur('moi', 100, 100)]));
+  });
+
+  it('apparaissent quand notre personnage apparait', () => {
+    uneImage();
+
+    expect(rendu.scenes.at(-1)?.reperes).toHaveLength(4);
+  });
+
+  it('disparaissent seules, sans minuterie a annuler', () => {
+    laisserPasserLesFleches();
+
+    expect(rendu.scenes.at(-1)?.reperes).toHaveLength(0);
+  });
+
+  it('reviennent quand le joueur les demande', () => {
+    laisserPasserLesFleches();
+
+    controles.demanderLaLocalisation();
+    uneImage();
+
+    expect(rendu.scenes.at(-1)?.reperes).toHaveLength(4);
+  });
+
+  it('reviennent apres une capture, qui nous fait reapparaitre ailleurs', () => {
+    laisserPasserLesFleches();
+
+    reseau.recevoir('captureSubie', {
+      parPseudo: 'Bob',
+      nouvelleCouleur: '#00FF00',
+      botsPerdus: 2,
+    });
+    uneImage();
+
+    expect(rendu.scenes.at(-1)?.reperes).toHaveLength(4);
+  });
+
+  it('ne servent pas une demande faite avant l apparition de notre personnage', () => {
+    // La demande est consommee a chaque image, qu'on puisse la servir ou non: un
+    // appui sur F dans le vide ne doit pas ressurgir plus tard.
+    controles.demanderLaLocalisation();
+    laisserPasserLesFleches();
+
+    expect(rendu.scenes.at(-1)?.reperes).toHaveLength(0);
+  });
+});

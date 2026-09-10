@@ -1,0 +1,29 @@
+/*
+ * Les polices de la maquette, embarquees avec la page.
+ *
+ * Chakra Petch pour les titres et les chiffres de jeu, Space Grotesk pour le
+ * texte, Space Mono pour les donnees. Elles viennent des paquets Fontsource, sous
+ * licence libre, et sont servies par le serveur du jeu: la page ne demande rien a
+ * un service tiers, qui apprendrait l'adresse de chaque joueur a chaque visite.
+ *
+ * Seuls les jeux de caracteres latins sont repris, avec leur extension pour les
+ * pseudos accentues des autres langues europeennes. Un pseudo dans un autre
+ * alphabet s'affiche dans la police de secours du systeme.
+ */
+
+@import '@fontsource/chakra-petch/latin-500.css';
+@import '@fontsource/chakra-petch/latin-ext-500.css';
+@import '@fontsource/chakra-petch/latin-600.css';
+@import '@fontsource/chakra-petch/latin-ext-600.css';
+@import '@fontsource/chakra-petch/latin-700.css';
+@import '@fontsource/chakra-petch/latin-ext-700.css';
+@import '@fontsource/space-grotesk/latin-400.css';
+@import '@fontsource/space-grotesk/latin-ext-400.css';
+@import '@fontsource/space-grotesk/latin-500.css';
+@import '@fontsource/space-grotesk/latin-ext-500.css';
+@import '@fontsource/space-grotesk/latin-600.css';
+@import '@fontsource/space-grotesk/latin-ext-600.css';
+@import '@fontsource/space-mono/latin-400.css';
+@import '@fontsource/space-mono/latin-ext-400.css';
+@import '@fontsource/space-mono/latin-700.css';
+@import '@fontsource/space-mono/latin-ext-700.css';
