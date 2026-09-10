@@ -231,7 +231,13 @@ Fermé par cette étape:
 - Le banc, joué seul: 4,6, 4,4 et 3,6 images par seconde avec lueur à 100, 200 et 500 sprites, pour 1,09, 1,66 et 2,95 ms par image. Revenu à l'ordre des étapes 4.2 et 4.3.
 - **La fragilité.** `.hud-ligne.moi .hud-points` affichait « 0 » cinq secondes après que le serveur a compté un faux ninja à Alice. Deux causes possibles, non départagées: le score réellement retombé, puisqu'un Black Ninja rend neutre le faux ninja qu'il attrape et que le parcours solo les garde en jeu; ou un HUD qui ne suit plus le serveur. **Correction**: la vérification exige que le HUD affiche exactement le score du serveur, ce qui n'échoue que dans le second cas. Jouée en local en bureau et en mobile: 2 sur 2.
 
-Quatrième passage: à compléter.
+**Quatrième passage, run 34521877123, commit 941323b: vert, sans aucun nouvel essai.**
+
+- « Types, linter et tests »: vert, 1080 tests.
+- « Bout en bout »: **10 scénarios sur 10 verts au premier essai**, aucun fragile: fumée, navigation en bureau et en mobile, parcours solo en bureau et en mobile, partie à deux, banc.
+- Banc, joué seul: 4,0, 3,8 et 3,0 images par seconde avec lueur à 100, 200 et 500 sprites, pour 1,25, 1,33 et 2,61 ms par image.
+
+C'est ce passage qui ferme l'étape. À surveiller dans les prochaines CI: une nouvelle immobilité de Bob, dont la cause n'est pas établie; le message d'échec dira désormais si sa page dessinait encore.
 
 ## Prochaine action exacte
 
