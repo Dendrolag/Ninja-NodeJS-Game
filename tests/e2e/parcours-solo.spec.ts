@@ -8,9 +8,11 @@ import {
   classementAffiche,
   classementDuServeur,
   entrer,
+  expliquerLEchec,
   lancer,
   regler,
   releverLesErreurs,
+  releverLesSignesVitaux,
 } from './harnais/parcours.js';
 import { accomplir } from './harnais/pilote.js';
 import type { ServeurDeJeu } from './harnais/serveur-de-jeu.js';
@@ -58,6 +60,7 @@ test('capturer un faux ninja, puis retrouver son score au classement final', asy
   test.setTimeout(120_000);
 
   const erreurs = releverLesErreurs(page);
+  const signes = await releverLesSignesVitaux(page);
   const ecran = page.locator('.application');
   const manette = page.locator('.hud-manette');
 
@@ -79,7 +82,9 @@ test('capturer un faux ninja, puis retrouver son score au classement final', asy
     await expect(manette).toBeVisible();
   }
 
-  await accomplir(capturerUnFauxNinja(partie, 'Alice', commande));
+  await expliquerLEchec({ Alice: signes }, async () =>
+    accomplir(capturerUnFauxNinja(partie, 'Alice', commande)),
+  );
 
   if (hasTouch) {
     await expect(manette).toBeHidden();

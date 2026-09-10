@@ -3,6 +3,7 @@ import { devices, expect, test } from '@playwright/test';
 
 import type { Joueur } from '../../packages/sim/dist/index.js';
 import { commandeAuClavier, commandeAuPouce } from './harnais/commandes.js';
+import type { SignesVitaux } from './harnais/parcours.js';
 import {
   allerAuContact,
   attendreLaFin,
@@ -11,11 +12,13 @@ import {
   classementAffiche,
   classementDuServeur,
   entrer,
+  expliquerLEchec,
   joueurNomme,
   lancer,
   regler,
   releverLesAnnonces,
   releverLesErreurs,
+  releverLesSignesVitaux,
 } from './harnais/parcours.js';
 import { accomplir } from './harnais/pilote.js';
 import type { ServeurDeJeu } from './harnais/serveur-de-jeu.js';
@@ -99,6 +102,8 @@ interface Appareil {
   readonly erreurs: readonly string[];
   /** Les annonces montrees a ce joueur, dans leur ordre d'apparition. */
   readonly annonces: readonly string[];
+  /** Ce que la page dit d'elle-meme, pour expliquer un echec. */
+  readonly signes: SignesVitaux;
   fermer(): Promise<void>;
 }
 
@@ -169,18 +174,20 @@ test('deux joueurs, une capture, un seul et meme classement', async ({ browser }
     const clavier = commandeAuClavier(alice.page);
     const pouce = await commandeAuPouce(bob.page);
 
-    // Chacun prend d'abord des ninjas, pour que la capture en transfere.
-    await Promise.all([
-      accomplir(capturerUnFauxNinja(partie, 'Alice', clavier)),
-      accomplir(capturerUnFauxNinja(partie, 'Bob', pouce)),
-    ]);
+    await expliquerLEchec({ Alice: alice.signes, Bob: bob.signes }, async () => {
+      // Chacun prend d'abord des ninjas, pour que la capture en transfere.
+      await Promise.all([
+        accomplir(capturerUnFauxNinja(partie, 'Alice', clavier)),
+        accomplir(capturerUnFauxNinja(partie, 'Bob', pouce)),
+      ]);
 
-    // Puis Bob va jusqu'a Alice, qui l'attend.
-    await accomplir(
-      allerAuContact(partie, 'Bob', 'Alice', pouce, () =>
-        Object.values(partie.etat.joueurs).some((joueur) => joueur.captures > 0),
-      ),
-    );
+      // Puis Bob va jusqu'a Alice, qui l'attend.
+      await accomplir(
+        allerAuContact(partie, 'Bob', 'Alice', pouce, () =>
+          Object.values(partie.etat.joueurs).some((joueur) => joueur.captures > 0),
+        ),
+      );
+    });
 
     const { attaquant, victime } = rolesDeLaCapture(
       joueurNomme(partie, 'Alice'),
@@ -229,6 +236,7 @@ async function ouvrir(browser: Browser, options: BrowserContextOptions): Promise
     page,
     erreurs: releverLesErreurs(page),
     annonces: await releverLesAnnonces(page),
+    signes: await releverLesSignesVitaux(page),
     fermer: async () => contexte.close(),
   };
 }

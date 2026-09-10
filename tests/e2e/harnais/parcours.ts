@@ -93,6 +93,139 @@ export async function releverLesAnnonces(page: Page): Promise<readonly string[]>
   return annonces;
 }
 
+/** Ce qu'une page dit d'elle-meme a un instant, en une phrase lisible. */
+export type SignesVitaux = () => Promise<string>;
+
+/** Combien d'avertissements et d'erreurs de la page un bilan retient, les plus recents. */
+const MESSAGES_RETENUS = 8;
+
+/** Au-dela de ce delai, une page qui ne repond plus est declaree comme telle. */
+const DELAI_DE_LECTURE_MS = 3_000;
+
+/**
+ * Releve les signes vitaux d'une page, pour qu'un echec se comprenne sans rejouer.
+ *
+ * UNE PAGE LENTE ET UNE PAGE ARRETEE NE SE DISTINGUENT PAS DEPUIS LE SERVEUR: dans
+ * les deux cas, le joueur ne bouge pas. Or le client n'emet la direction demandee
+ * qu'a chaque image dessinee. Le bilan dit donc combien d'images la page a dessinees
+ * pendant les deux dernieres secondes, depuis quand elle n'en a plus dessine, quels
+ * contacts tactiles elle a recus, si la manette se croit tenue, quel ecran elle
+ * montre, et ses derniers avertissements et erreurs.
+ *
+ * A appeler avant d'ouvrir l'adresse du jeu: l'observateur est pose a chaque
+ * chargement. Il ne fait qu'observer, il ne change rien a la page.
+ */
+export async function releverLesSignesVitaux(page: Page): Promise<SignesVitaux> {
+  const messages: string[] = [];
+  const retenir = (message: string): void => {
+    messages.push(message);
+    messages.splice(0, Math.max(messages.length - MESSAGES_RETENUS, 0));
+  };
+
+  page.on('console', (message) => {
+    if (message.type() === 'warning' || message.type() === 'error') {
+      retenir(`${message.type()}: ${message.text()}`);
+    }
+  });
+  page.on('pageerror', (erreur) => {
+    retenir(`exception: ${erreur.message}`);
+  });
+
+  await page.addInitScript(() => {
+    const vitaux = {
+      images: [] as number[],
+      contacts: { debut: 0, deplacement: 0, fin: 0, annulation: 0 },
+    };
+    (window as unknown as { signesVitaux: typeof vitaux }).signesVitaux = vitaux;
+
+    const compter = (instant: number): void => {
+      vitaux.images.push(instant);
+      while ((vitaux.images[0] ?? instant) < instant - 2000) {
+        vitaux.images.shift();
+      }
+      requestAnimationFrame(compter);
+    };
+    requestAnimationFrame(compter);
+
+    const natures = {
+      touchstart: 'debut',
+      touchmove: 'deplacement',
+      touchend: 'fin',
+      touchcancel: 'annulation',
+    } as const;
+    for (const [evenement, nature] of Object.entries(natures)) {
+      addEventListener(
+        evenement,
+        () => {
+          vitaux.contacts[nature] += 1;
+        },
+        true,
+      );
+    }
+  });
+
+  return async () => {
+    const lecture = page.evaluate(() => {
+      const vitaux = (
+        window as unknown as {
+          signesVitaux: { images: number[]; contacts: Record<string, number> };
+        }
+      ).signesVitaux;
+      const maintenant = performance.now();
+      const manette = document.querySelector<HTMLElement>('.hud-manette');
+
+      return {
+        images: vitaux.images.filter((instant) => instant >= maintenant - 2000).length,
+        depuisLaDerniereMs: Math.round(maintenant - (vitaux.images.at(-1) ?? 0)),
+        contacts: vitaux.contacts,
+        manette: manette === null ? 'absente' : manette.hidden ? 'au repos' : 'tenue',
+        ecran: document.querySelector('.application')?.getAttribute('data-ecran') ?? 'inconnu',
+      };
+    });
+
+    const delai = new Promise<undefined>((resoudre) => {
+      setTimeout(resoudre, DELAI_DE_LECTURE_MS);
+    });
+    const etat = await Promise.race([lecture.catch(() => undefined), delai]);
+    const derniers = messages.length === 0 ? 'aucun' : messages.join(' | ');
+
+    if (etat === undefined) {
+      return `la page ne repond pas en ${String(DELAI_DE_LECTURE_MS)} ms; derniers messages: ${derniers}.`;
+    }
+
+    const { debut, deplacement, fin, annulation } = etat.contacts;
+
+    return (
+      `ecran ${etat.ecran}, ${String(etat.images)} images en 2 s, ` +
+      `derniere image il y a ${String(etat.depuisLaDerniereMs)} ms, ` +
+      `contacts recus ${String(debut)} debuts, ${String(deplacement)} deplacements, ` +
+      `${String(fin)} fins, ${String(annulation)} annulations, manette ${etat.manette}; ` +
+      `derniers messages: ${derniers}.`
+    );
+  };
+}
+
+/**
+ * Joue une action, et si elle echoue, ajoute a l'erreur l'etat de chaque page.
+ *
+ * @param pages Les signes vitaux de chaque page, par nom de joueur.
+ */
+export async function expliquerLEchec(
+  pages: Readonly<Record<string, SignesVitaux>>,
+  action: () => Promise<void>,
+): Promise<void> {
+  try {
+    await action();
+  } catch (erreur) {
+    const etats = await Promise.all(
+      Object.entries(pages).map(async ([nom, signes]) => `Page de ${nom}: ${await signes()}`),
+    );
+    const message = erreur instanceof Error ? erreur.message : String(erreur);
+
+    throw new Error([message, ...etats].join('\n'), { cause: erreur });
+  }
+}
+
 /** Ouvre la page, choisit un pseudo, et entre dans le premier salon en attente. */
 export async function entrer(page: Page, url: string, pseudo: string): Promise<void> {
   await page.goto(url);
