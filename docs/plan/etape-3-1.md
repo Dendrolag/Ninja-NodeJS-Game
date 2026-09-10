@@ -46,6 +46,16 @@ Conditions de ROADMAP réunies, plus:
 4. Les points d'extension sont documentés, sans table spéculative.
 5. Les TI passent.
 
+## Ajustements venus du cadrage, étape 0.3 (10 septembre 2026)
+
+`docs/design/cadrage.md`, section 5, précise le schéma sur trois points. Le cadrage fait foi.
+
+1. **La progression ne stocke ni niveau, ni palier de rang.** Elle stocke l'XP totale, les pièces et les points de ligue; niveau et palier se déduisent, comme le score. Le périmètre 2 de cette fiche est réduit d'autant.
+2. **Pas de gemmes en v1.** Elles arrivent avec une boutique, par ajout.
+3. **Pas de table de défis du jour**: ils sont reportés. Le périmètre 4 de cette fiche est sans objet.
+
+Le résultat de partie porte aussi, d'après le cadrage: l'identifiant commun de la partie, le mode miroir, la durée, le nombre de joueurs, les captures et les Black Ninjas détruits. Et la question de l'accès sans compte, laissée au porteur du projet, doit être tranchée avant l'étape 3.2.
+
 ## Rituel de fin de session
 
 Écrire docs/handoffs/etape-3-1-handoff.md. Décrire le schéma retenu, l'outil d'accès choisi, et les points d'extension. Prochaine action exacte pour l'étape 3.2: inscription, connexion, gestion de session, et authentification de la connexion Socket.IO. Commiter.

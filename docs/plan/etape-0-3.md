@@ -61,6 +61,18 @@ Produire docs/design/cadrage.md. Ce document acte le tri de périmètre validé,
 2. Il couvre le tri de périmètre, l'inventaire des écrans, le contrat de configuration de partie, la forme des données de progression, et le principe des modes.
 3. Il est cohérent avec les maquettes et réconcilié avec les cartes du legacy.
 
+## Réconciliation, faite le 10 septembre 2026
+
+Cette fiche a été écrite pour une étape exécutée avant la phase 1. La section 3 du ROADMAP la place au jalon 2, après la fermeture du jalon 1: quand elle s'exécute, le moteur, le serveur, le contrat de réglages et quatre écrans tournent déjà. Les écarts, point par point.
+
+1. **Le cadrage part du jeu qui tourne.** Le contrat de configuration étend `ReglagesPartie` et `BORNES_REGLAGES`, qui existent depuis les étapes 1.4 à 1.6, au lieu d'en écrire un à partir de la maquette.
+2. **La tension 3 de cette fiche, « Terminer », est déjà tranchée** par l'étape 4.3, comme la tension 8 sur le framework. Le cadrage les reprend sans les rouvrir.
+3. **Les cartes se réconcilient avec `legacy/game-constants.js`** (`MAP_DIMENSIONS`) et `legacy/js/MapManager.js`: le chemin `legacy/MapManager.js` cité par la fiche n'existe pas.
+4. **« Cinq autres modes (Miroir, Chasse, Battle Royale, Équipes, Chaos) »**: le miroir n'étant pas un mode (tension 1), il en reste quatre, plus le mode tactique prévu au jalon 5.
+5. **La progression ne stocke ni niveau, ni palier, ni gemmes.** La fiche les liste parmi les données; le niveau et le palier se déduisent de l'XP et des points de ligue, et les gemmes sont reportées avec une boutique. Voir la section 5 du cadrage.
+6. **Défis du jour: reportés.** La fiche les laissait optionnels.
+7. **La prochaine action exacte de la fiche pointe vers l'étape 1.1**, faite depuis longtemps. La section 3 du ROADMAP désigne l'étape 2.4.
+
 ## Rituel de fin de session
 
 Écrire docs/handoffs/etape-0-3-handoff.md. Résumer le contrat de configuration de partie et la forme des données de progression, car les fiches de la phase 2 et de la phase 3 s'appuieront dessus. Prochaine action exacte: étape 1.1, créer le squelette du moteur pur et le modèle d'état, en notant que le moteur acceptera le contrat de configuration de partie défini ici. Commiter.

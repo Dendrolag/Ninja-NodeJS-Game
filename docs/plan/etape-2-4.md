@@ -50,6 +50,19 @@ Conditions de ROADMAP réunies, plus:
 
 Cette étape clôt la phase 2. Le serveur fait tourner plusieurs parties en parallèle, publiques et privées, jouables de bout en bout côté réseau, sans encore de persistance ni d'interface.
 
+## Ajustements venus du cadrage, étape 0.3 (10 septembre 2026)
+
+`docs/design/cadrage.md` précise ou corrige cette fiche sur six points. Le cadrage fait foi; la réconciliation complète reste à faire au début de l'étape, contre l'état réel du dépôt.
+
+1. **Aucune latence par salon.** Le navigateur n'affiche pas de ping: toutes les parties tournent sur le même serveur. Section 2 du cadrage, tension 6.
+2. **Aucun état « prêt ».** L'hôte lance, le compte à rebours annulable sert de préavis. Le périmètre 4 de cette fiche est réduit d'autant.
+3. **Capacité du Classique: 12, et 1 joueur suffit pour lancer.** La capacité est une propriété du mode, pas un champ.
+4. **Mode et visibilité sont figés à la création**; le code d'invitation est fabriqué par le serveur. Les réglages de `ReglagesPartie` restent modifiables par l'hôte jusqu'au lancement.
+5. **Le contrat de configuration étend `ReglagesPartie`**, qui existe et est déjà validé par `validerReglages`: il ne se réécrit pas.
+6. **Brancher le mode sur le moteur**: `tick` appelle aujourd'hui la règle Classique par défaut. Section 6 du cadrage.
+
+Et un point du dépôt à ne pas oublier: les scénarios de bout en bout `parcours-solo.spec.ts` et `multijoueur.spec.ts` s'appuient sur la règle provisoire du premier salon en attente, que cette étape remplace. Ils sont à adapter (handoff 4.4).
+
 ## Rituel de fin de session
 
 Écrire docs/handoffs/etape-2-4-handoff.md. Décrire le flux de création, de jonction et de salon, et la source temporaire du pseudo et du niveau en attendant la phase 3. Prochaine action exacte pour l'étape 3.1: mettre en place PostgreSQL et le schéma comptes, progression et résultats de partie, à partir du cadrage. Commiter.

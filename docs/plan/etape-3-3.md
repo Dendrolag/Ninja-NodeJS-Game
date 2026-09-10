@@ -46,6 +46,14 @@ Conditions de ROADMAP réunies, plus:
 
 Cette étape clôt la phase 3. Les comptes sont persistants et progressent après chaque partie. Avec les phases 1 à 3, le jeu est complet côté serveur et données, prêt pour la construction du client.
 
+## Ajustements venus du cadrage, étape 0.3 (10 septembre 2026)
+
+`docs/design/cadrage.md` précise cette fiche sur trois points. Le cadrage fait foi.
+
+1. **Les défis du jour sont reportés.** Le périmètre 5 de cette fiche est sans objet.
+2. **Le niveau et le palier se déduisent** de l'XP totale et des points de ligue, par des fonctions pures à écrire dans `packages/shared`, pour que serveur et client calculent la même chose. Seuls l'XP, les pièces et les points de ligue sont persistés.
+3. **Les valeurs des récompenses** (XP, seuils de niveau, pièces, points de ligue, seuils de palier) sont à proposer ici et à faire valider par le porteur du projet: le cadrage n'en fixe que la forme.
+
 ## Rituel de fin de session
 
 Écrire docs/handoffs/etape-3-3-handoff.md. Documenter les règles de récompense et la forme du récapitulatif de fin, car l'écran de fin de la phase 4 s'en sert. Prochaine action exacte pour l'étape 4.1: squelette client avec séparation état et rendu, et décodage du flux delta binaire. Commiter.

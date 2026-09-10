@@ -40,6 +40,14 @@ Conditions de ROADMAP réunies, plus:
 4. Le salon affiche le pseudo et le niveau réels du compte.
 5. Les TI passent.
 
+## Ajustements venus du cadrage, étape 0.3 (10 septembre 2026)
+
+`docs/design/cadrage.md` laisse une question au porteur du projet, qui touche directement cette fiche (section 8 du cadrage).
+
+1. **Peut-on jouer sans compte ?** Cette fiche exige un compte pour rejoindre une partie. Le jeu est né comme un jeu entre amis, où l'on entre avec un pseudo. Deux voies: le compte obligatoire, ou un accès invité sans progression, le compte n'apportant que la progression. **La réponse est à obtenir avant d'exécuter cette étape**: elle change le test « une connexion non authentifiée ne peut pas rejoindre de room ».
+2. **Le pseudo du compte suit les règles du pseudo de partie** (`BORNES_PSEUDO`: 1 à 20 caractères, liste blanche), unique et comparé sans distinction de casse après normalisation.
+3. **Le niveau affiché au salon se déduit de l'XP totale** du compte: il n'est pas stocké (section 5 du cadrage).
+
 ## Rituel de fin de session
 
 Écrire docs/handoffs/etape-3-2-handoff.md. Décrire le mécanisme de session retenu et la façon dont la connexion réseau est authentifiée. Prochaine action exacte pour l'étape 3.3: brancher la progression sur la fin de partie (XP, niveau, pièces, points de ligue, rang) et enregistrer le résultat. Commiter.
