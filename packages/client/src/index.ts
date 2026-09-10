@@ -24,8 +24,21 @@
  *   - client, le cablage entre les trois, et les commandes du joueur.
  *   - selecteurs, les questions que l'affichage pose a l'etat.
  *
- * CE QUI N'EST PAS ENCORE LA: le rendu PixiJS (etape 4.2), les ecrans construits
- * pour de vrai et la saisie clavier (etape 4.3).
+ * CE QUE L'ETAPE 4.2 A AJOUTE, dans trois dossiers:
+ *
+ *   - rendu/, l'affichage du terrain. Un coeur pur (camera, lissage, scene) que
+ *     l'on teste sans navigateur, et un adaptateur PixiJS qui pose la scene sur
+ *     le GPU. La lueur neon y est un filtre de calque, plus un flou par entite.
+ *   - controles/, la saisie. Une table de touches et un calcul d'intention,
+ *     purs; deux branchements minces sur le clavier et le tactile.
+ *   - hud/, la surcouche. Un modele pur de ce qu'il faut afficher, et un
+ *     ecrivain de document qui ne decide rien.
+ *   - sons/, le son. Une table de declencheurs pure, et un lecteur.
+ *
+ * CE QUI N'EST PAS ENCORE LA: la page qui assemble tout cela, les ecrans de menu
+ * et l'empaqueteur qui les sert (etape 4.3). Le jeu ne se lance donc toujours pas
+ * dans un navigateur: ses pieces existent et sont couvertes, il leur manque une
+ * page d'accueil.
  */
 
 export type { Action } from './actions.js';
@@ -76,3 +89,67 @@ export {
   partieEnMouvement,
   resteDeLEffet,
 } from './selecteurs.js';
+
+// --------------------------------------------------------------------------
+// Etape 4.2: rendu, controles, HUD et sons
+// --------------------------------------------------------------------------
+
+export type { Camera, TailleEcran, ZoneVisible } from './rendu/camera.js';
+export { borner, cameraSur, echellePour, suivre, versEcran, zoneVisible } from './rendu/camera.js';
+
+export type { EntiteLissee, VueLissee } from './rendu/interpolation.js';
+export { TamponDeLissage, lisserUneEntite } from './rendu/interpolation.js';
+
+export type { DisqueScene, Scene, SpriteScene, ZoneScene } from './rendu/scene.js';
+export { SCENE_VIDE, construireScene, couleurEnNombre } from './rendu/scene.js';
+
+export { imageDeMarche, opaciteObjet, rayonPulsant } from './rendu/animation.js';
+
+export type { Halo, Teinte } from './rendu/apparence.js';
+export { APPARENCE_OBJET, APPARENCE_ZONE, LUEUR, TAILLE_SPRITE } from './rendu/apparence.js';
+
+export type { Boucle, OptionsBoucle } from './rendu/boucle.js';
+export { lancerLaBoucle } from './rendu/boucle.js';
+
+export type { OptionsRendu, Rendu } from './rendu/pixi.js';
+export { monterRendu, prechargerLesSprites } from './rendu/pixi.js';
+
+export type { DirectionsDemandees } from './controles/intention.js';
+export {
+  AUCUNE_DIRECTION,
+  IMMOBILE,
+  intentionDepuisDirections,
+  intentionDepuisManette,
+  memeIntention,
+} from './controles/intention.js';
+
+export {
+  TOUCHES,
+  TOUCHES_DU_JEU,
+  directionsDepuisTouches,
+  nomDeTouche,
+} from './controles/touches.js';
+
+export { Controles } from './controles/controles.js';
+
+export type { OptionsClavier } from './controles/clavier.js';
+export { brancherClavier } from './controles/clavier.js';
+
+export type { EtatManette, OptionsTactile } from './controles/tactile.js';
+export { MANETTE_AU_REPOS, RAYON_MANETTE, brancherTactile } from './controles/tactile.js';
+
+export type { EffetHud, Hud, LigneHud, PointMinimap } from './hud/modele.js';
+export { HUD_VIDE, SEUIL_URGENCE_MS, construireHud, formaterDuree } from './hud/modele.js';
+
+export type { OptionsSurcouche, Surcouche } from './hud/surcouche.js';
+export { COTE_MINIMAP, monterSurcouche } from './hud/surcouche.js';
+
+export {
+  SEUIL_TEMPS_PRESSE_MS,
+  battementDeFin,
+  sonDuFait,
+  sonsDuChangement,
+} from './sons/declencheurs.js';
+
+export type { LecteurDeSons, OptionsLecteur } from './sons/lecteur.js';
+export { creerLecteurDeSons } from './sons/lecteur.js';

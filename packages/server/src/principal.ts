@@ -13,6 +13,7 @@
  */
 
 import { PORT_PAR_DEFAUT, demarrerServeur } from './serveur.js';
+import { ChargeurDeTerrain } from './terrain.js';
 
 /** Lit un port depuis l'environnement, en refusant ce qui n'en est pas un. */
 function portDemande(brut: string | undefined): number {
@@ -41,8 +42,12 @@ function originesAutorisees(brut: string | undefined): readonly string[] {
     .filter((origine) => origine.length > 0);
 }
 
+// C'est ici, et seulement ici, que le serveur decide de lire les images de
+// collision des cartes sur le disque. Un serveur monte a la main dans un test
+// n'a pas de murs tant qu'il n'en demande pas.
 const serveur = await demarrerServeur(portDemande(process.env['PORT']), {
   originesAutorisees: originesAutorisees(process.env['ORIGINES_AUTORISEES']),
+  terrains: new ChargeurDeTerrain(),
 });
 
 const adresse = serveur.http.address();

@@ -76,7 +76,7 @@ Lancer un sous-ensemble de tests: `pnpm test <motif>`, par exemple `pnpm test pu
 pnpm dev:server           # compiler puis lancer le serveur de jeu (port 3000 par défaut)
 ```
 
-Le serveur existe depuis l'étape 2.2. Variables d'environnement: `PORT`, et `ORIGINES_AUTORISEES` (liste séparée par des virgules) pour le contrôle d'accès du navigateur. Depuis l'étape 4.1, `packages/client` porte l'état, la couche réseau et les écrans du client, mais **rien ne s'affiche encore**: il n'y a ni rendu, ni page, ni saisie clavier, et donc aucun moyen de jouer dans un navigateur. Le serveur se pilote toujours par un client Socket.IO écrit à la main, comme le font ses tests d'intégration. Le jeu redevient jouable aux étapes 4.2 et 4.3. Pour jouer à la version d'origine, utiliser la branche `master`.
+Le serveur existe depuis l'étape 2.2. Variables d'environnement: `PORT`, et `ORIGINES_AUTORISEES` (liste séparée par des virgules) pour le contrôle d'accès du navigateur. Depuis l'étape 4.2, `packages/client` porte l'état, la couche réseau, le rendu PixiJS, les contrôles, le HUD et les sons, et le serveur décode les murs des cartes depuis `assets/`. **Il n'y a toujours pas de page**: rien ne sert le client à un navigateur, donc on ne peut pas encore jouer. Le serveur se pilote par un client Socket.IO écrit à la main, comme le font ses tests d'intégration. Le jeu redevient jouable à l'étape 4.3. Pour jouer à la version d'origine, utiliser la branche `master`.
 
 Première utilisation de Playwright sur une machine neuve: `pnpm exec playwright install chromium`.
 

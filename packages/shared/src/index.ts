@@ -90,6 +90,23 @@ export {
 
 export type { Position, Vecteur } from './geometrie.js';
 
+export type { CoucheCarte, NomDeSon } from './ressources.js';
+export {
+  IMAGES_DE_MARCHE,
+  MUSIQUE_DE_JEU,
+  RACINE_RESSOURCES,
+  SONS,
+  SONS_DE_PAS,
+  SONS_EN_BOUCLE,
+  cheminCarte,
+  cheminNinja,
+  cheminObjet,
+  cheminPluie,
+  cheminSon,
+  tousLesNinjas,
+  tousLesObjets,
+} from './ressources.js';
+
 export type {
   PartielProfond,
   ReglageBonus,

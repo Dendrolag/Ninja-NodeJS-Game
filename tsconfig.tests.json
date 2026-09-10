@@ -18,6 +18,17 @@
     "declarationMap": false,
     "sourceMap": false,
     "types": ["node"],
+    // DOM ajoute a l'etape 4.2. Ce fichier s'en passait tant qu'aucun code de
+    // paquet ne parlait au navigateur, et la restriction avait alors un sens:
+    // elle interdisait a un test unitaire de toucher au document. Depuis, le
+    // paquet client porte le rendu, la saisie et le HUD, dont c'est justement le
+    // travail; packages/client/tsconfig.json leur donne deja DOM. Les tests
+    // important ces modules, il leur faut la meme bibliotheque, sans quoi ils
+    // seraient verifies contre un langage different de celui qui les compile.
+    // Les tests eux-memes n'ouvrent toujours aucun navigateur: c'est Vitest en
+    // environnement node qui les execute, et une reference a document y echoue
+    // a l'execution.
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     // Les tests lisent les paquets dans leurs sources, comme Vitest le fait via
     // ses alias. Sans cela, ils seraient verifies contre une compilation qui
     // peut avoir pris du retard.

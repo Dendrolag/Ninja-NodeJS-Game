@@ -52,3 +52,12 @@ export { ServeurSocket } from './ServeurSocket.js';
 
 export type { OptionsServeur, ServeurMonte } from './serveur.js';
 export { PORT_PAR_DEFAUT, creerServeur, demarrerServeur } from './serveur.js';
+
+export type { CleDeTerrain, SourceDeTerrain } from './terrain.js';
+export {
+  ChargeurDeTerrain,
+  SANS_TERRAIN,
+  racineRessources,
+  redimensionner,
+  terrainDepuisImage,
+} from './terrain.js';

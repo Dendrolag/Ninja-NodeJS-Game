@@ -42,6 +42,26 @@ Conditions de ROADMAP réunies, plus:
 4. Les contrôles émettent les bons événements.
 5. La fréquence d'images mesurée valide la charge cible, valeurs consignées.
 
+## Réconciliation, faite le 10 septembre 2026
+
+La fiche supposait trois choses que le dépôt contredit, et en ignorait une quatrième. Les écarts sont repris ici, avec ce qui s'est ajouté à l'exécution.
+
+1. **Les événements `startCapture` et `endCapture` n'existent pas.** Ils appartiennent à la capture par cône du mode tactique de la v0.9.0, écartée du périmètre v1 (section 5 du ROADMAP), et le contrat d'événements de l'étape 2.2 les recense explicitement comme non portés. Dans le mode Classique, on capture en touchant: le moteur résout le contact, le joueur n'a rien à déclencher. Conséquences: aucune commande de capture au clavier, aucune « zone de tap pour la capture » sur mobile, et le test des contrôles ne porte que sur `deplacer`.
+
+2. **L'événement `playerSound` n'existe pas.** Sa suppression est une décision de l'étape 2.2: le son est un réglage local, il n'a rien à faire sur le réseau. Les sons sont déclenchés chez le client, par les notifications reçues et par la comparaison de deux états successifs.
+
+3. **Les ressources n'étaient pas sur la branche.** Seules les six `collision.png` avaient été copiées dans `legacy/` à l'étape 0.1. Fonds, premiers plans, sprites, icônes et sons ont été rapatriés de `master` dans `assets/`, à la racine, en ne gardant que ce qui est réellement affiché ou joué (18 Mo sur 72). Provenance dans `assets/README.md`.
+
+4. **La dette du terrain est soldée ici.** Dessiner une carte sans savoir où sont ses murs n'avait pas de sens: `packages/server/src/terrain.ts` décode l'image de collision et la fournit au moteur. Les six images mesurent 3000x2000 alors que map1 et map2 font 2000x1500: le jeu d'origine les redimensionne sans garder les proportions, le décodage et le décor font de même.
+
+5. **Il n'y a ni page ni empaqueteur.** Ils appartiennent à l'étape 4.3. Le rendu est donc livré comme bibliothèque. Le banc de mesure fait tourner la compilation du paquet client dans Chromium, servie par un petit serveur de fichiers de test et une carte d'importation; la configuration Playwright compile les paquets avant les scénarios.
+
+6. **Le HUD livre sa structure et son contenu, pas son apparence.** La feuille de style se décidera avec les écrans de l'étape 4.3. La minimap ne montre que les joueurs. Les libellés des effets sont ceux du jeu d'origine; « Invincibilité » et « Révélation » de la maquette correspondent aux bonus du même nom, ce qui répond pour moitié à la question ouverte 6 du journal de conception (les trois malus n'apparaissent pas dans la maquette).
+
+7. **Le banc mesure deux choses, et ses seuils portent sur celle qui ne dépend pas du matériel.** L'intégration continue n'a pas de carte graphique: tout y est rasterisé par le processeur, à une dizaine d'images par seconde quelle que soit la charge. Les seuils stricts portent donc sur le coût par image de notre propre code et sur la mise à l'échelle entre 100 et 500 sprites; la cadence absolue n'a qu'un plancher. Les valeurs mesurées sur carte graphique sont consignées dans le handoff.
+
+8. **`tsconfig.tests.json` reçoit la bibliothèque DOM.** Les tests importent désormais des modules du client qui parlent au navigateur; ils doivent être vérifiés avec le même langage que celui qui compile ces modules.
+
 ## Rituel de fin de session
 
 Écrire docs/handoffs/etape-4-2-handoff.md. Donner les fréquences d'images mesurées et la structure du rendu. Prochaine action exacte pour l'étape 4.3: construire les écrans de menu (accueil, navigateur, création, salon, fin, profil) en version réduite v1. Commiter.

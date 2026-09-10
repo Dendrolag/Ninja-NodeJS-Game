@@ -25,6 +25,7 @@ import { Server } from 'socket.io';
 import type { Horloge } from './horloge.js';
 import type { ServeurTypee } from './ServeurSocket.js';
 import { ServeurSocket } from './ServeurSocket.js';
+import type { SourceDeTerrain } from './terrain.js';
 
 /** Port par defaut du serveur de jeu. */
 export const PORT_PAR_DEFAUT = 3000;
@@ -42,6 +43,17 @@ export interface OptionsServeur {
   readonly originesAutorisees?: readonly string[];
   /** Horloge du serveur. Celle du systeme par defaut. */
   readonly horloge?: Horloge;
+  /**
+   * D'ou viennent les murs des cartes.
+   *
+   * SANS MUR PAR DEFAUT, ET C'EST UN CHOIX. Decoder une image de collision est
+   * une lecture de disque de plusieurs centaines de millisecondes: la faire sans
+   * qu'on l'ait demandee alourdirait chaque montage de serveur, y compris les
+   * dizaines que font les tests, qui verifient des messages et pas des murs. Le
+   * serveur reel la demande dans principal.ts, en fournissant un
+   * ChargeurDeTerrain.
+   */
+  readonly terrains?: SourceDeTerrain;
 }
 
 /** Un serveur monte, pret a ecouter. */
@@ -79,6 +91,7 @@ export function creerServeur(options: OptionsServeur = {}): ServeurMonte {
   const jeu = new ServeurSocket({
     io,
     ...(options.horloge === undefined ? {} : { horloge: options.horloge }),
+    ...(options.terrains === undefined ? {} : { terrains: options.terrains }),
   });
 
   return {

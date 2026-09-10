@@ -288,6 +288,20 @@ Le legacy ne pouvait pas faire cela pour deux raisons independantes: `updateBots
 
 Corrige a l'etape 1.6 par la meme regle que X20: seule une entite portant la couleur d'un joueur repeint un bot. Un bot noir n'a pas de couleur a donner, pas plus qu'un bot blanc.
 
+### Defauts decouverts a l'etape 4.2
+
+Ajoutes le 10 septembre 2026, en portant le rendu, les controles et le son du client.
+
+**X31. Les sons de ramassage n'ont jamais ete joues.** Le gestionnaire audio range ses sons sous les noms `bonus` et `malus` (`js/AudioManager.js:33-34`). Le client les demande sous d'autres noms: `collectBonus` et `collectMalus` (`client.js:2493`, `:2499`), `bonusCollect` (`:2672`, `:3588`), `malusCollect` (`:1919`). `playSound` commence par `if (this.isMuted || !this.sounds.has(soundName)) return;`: la demande echoue en silence, a chaque ramassage, depuis toujours. Corrige par conception a l'etape 4.2: les sons sont une table typee dans `packages/shared/src/ressources.ts`, et un nom absent ne compile pas.
+
+**X32. Le chargement de l'audio echoue toujours.** `loadAudio` charge une musique `game-over-music.wav` (`js/AudioManager.js:59`) qui n'existe pas sur `master`. Son `Promise.all` est donc rejete a chaque demarrage, et `isLoaded` ne passe jamais a vrai; les sons restent jouables uniquement parce qu'ils ont ete ranges dans la table avant l'attente. Au passage, `gameStart`, `gameOver` et `countdown` sont charges et jamais joues. Corrige a l'etape 4.2: chaque son se charge pour son compte, le debut et la fin de partie sont branches, et `countdown.wav` n'est pas repris.
+
+**X33. La camera suit plus ou moins vite selon l'ecran.** `updateCamera` rattrape huit pour cent de l'ecart par image (`client.js:1068`), ce qui depend de la frequence de rafraichissement: la camera colle au joueur a 144 hertz et traine a 30. La meme fonction ecrit la position dans un rappel `requestAnimationFrame` execute APRES le bornage aux limites de la carte (`:1072-1079`), si bien que la camera peut deborder de la carte pendant une image. Corrige a l'etape 4.2: rattrapage exponentiel en fonction du temps ecoule, borne apres calcul (`packages/client/src/rendu/camera.ts`).
+
+**X34. Deux touches opposees ne s'annulent pas.** `movePlayer` ecrit `move.y` pour la touche haut, puis l'ecrase pour la touche bas (`client.js:2197-2212`): haut et bas ensemble font descendre, gauche et droite ensemble vont a droite. Corrige a l'etape 4.2: deux directions opposees s'annulent (`controles/intention.ts`).
+
+**X35. Changer de fenetre en courant laisse le joueur courir.** Le client ne vide `keysPressed` qu'au lancement et au retour au menu (`client.js:2401`, `:4342`) et n'ecoute pas la perte de focus de la fenetre. Une touche relachee pendant que la fenetre n'a pas le focus n'est jamais signalee, et le personnage continue d'avancer. Corrige a l'etape 4.2: la perte de focus relache tout (`controles/clavier.ts`). Le relachement tactile, lui, etait deja gere par `touchcancel` (`:987`).
+
 ### Statut des failles de securite apres l'etape 1.6
 
 Recapitulatif au 14 aout 2026. Les failles S1 a S4 sont traitees par conception dans `packages/shared` et `packages/sim`; leur fermeture effective demande en plus le branchement de l'etape 2.2 (couche reseau) et de l'etape 4.3 (ecrans).

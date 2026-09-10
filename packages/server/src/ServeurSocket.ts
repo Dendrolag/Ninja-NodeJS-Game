@@ -43,6 +43,7 @@ import type {
 } from '@neon-ninja/shared';
 import {
   LIMITES_DEBIT,
+  completerReglages,
   consommer,
   seauNeuf,
   validerDemandeRejoindre,
@@ -50,6 +51,7 @@ import {
   validerMessageChat,
   validerReglages,
 } from '@neon-ninja/shared';
+import type { CarteCollisions } from '@neon-ninja/sim';
 import type { Server, Socket } from 'socket.io';
 
 import { CompteARebours } from './compteARebours.js';
@@ -66,6 +68,8 @@ import {
 } from './instantane.js';
 import type { OptionsCreationRoom } from './RoomManager.js';
 import { RoomManager } from './RoomManager.js';
+import type { SourceDeTerrain } from './terrain.js';
+import { SANS_TERRAIN } from './terrain.js';
 
 /** Le serveur Socket.IO, type par les deux contrats d'evenements. */
 export type ServeurTypee = Server<EvenementsClientVersServeur, EvenementsServeurVersClient>;
@@ -105,6 +109,14 @@ export interface OptionsServeurSocket {
   readonly rooms?: RoomManager;
   /** L'horloge du serveur. Celle du systeme par defaut. */
   readonly horloge?: Horloge;
+  /**
+   * D'ou viennent les murs des cartes.
+   *
+   * Sans mur par defaut, ce qui est le bon defaut pour un montage a la main:
+   * lire le disque est une decision, elle se prend explicitement. Le serveur
+   * reel la prend dans principal.ts.
+   */
+  readonly terrains?: SourceDeTerrain;
 }
 
 /** La couche reseau d'un serveur de jeu. */
@@ -120,10 +132,14 @@ export class ServeurSocket {
   /** Le decompte de demarrage de chaque partie qui en a un en cours. */
   private readonly decomptes = new Map<string, CompteARebours>();
 
+  /** D'ou viennent les murs, partage par toutes les parties de ce serveur. */
+  private readonly terrains: SourceDeTerrain;
+
   constructor(options: OptionsServeurSocket) {
     this.io = options.io;
     this.horloge = options.horloge ?? horlogeSysteme;
     this.rooms = options.rooms ?? new RoomManager({ horloge: this.horloge });
+    this.terrains = options.terrains ?? SANS_TERRAIN;
 
     this.io.on('connection', (socket) => {
       this.accueillirLaConnexion(socket);
@@ -390,7 +406,10 @@ export class ServeurSocket {
       return;
     }
 
-    room.changerReglages(verdict.valeur);
+    // Les reglages peuvent changer de carte, donc de murs. Le terrain se
+    // recharge avec eux: sans cela, la partie garderait les murs de la carte
+    // precedente sous le decor de la nouvelle.
+    room.changerReglages(verdict.valeur, this.terrainDe(verdict.valeur));
     this.diffuserLeSalon(room);
   }
 
@@ -637,8 +656,11 @@ export class ServeurSocket {
   ouvrirUneRoom(
     options: Omit<OptionsCreationRoom, 'surBattement' | 'surFinDePartie'> = {},
   ): GameRoom {
+    const terrain = options.terrain ?? this.terrainDe(options.reglages);
+
     return this.rooms.creer({
       ...options,
+      ...(terrain === undefined ? {} : { terrain }),
       surBattement: (room) => {
         this.diffuserLeBattement(room);
       },
@@ -646,6 +668,38 @@ export class ServeurSocket {
         this.diffuserLaFin(room);
       },
     });
+  }
+
+  /**
+   * Le terrain correspondant a des reglages, ou rien s'il ne se charge pas.
+   *
+   * UN TERRAIN QUI MANQUE NE FAIT PAS TOMBER LE SERVEUR, mais il se voit. Une
+   * image de collision absente ou illisible est une anomalie d'installation, pas
+   * une situation de jeu: la partie continue sur une carte sans mur, comme elle
+   * le faisait avant cette etape, et l'incident est journalise. Le jeu d'origine
+   * remplacait lui aussi la carte manquante par une carte vide, mais en silence,
+   * si bien que personne ne savait pourquoi les murs avaient disparu.
+   *
+   * C'est aussi ce qui permet aux tests d'integration de tourner sans jamais
+   * toucher au disque: leur chargeur pointe vers un dossier qui n'existe pas, et
+   * ils jouent sur une carte sans mur, ce qui est exactement ce qu'ils veulent.
+   */
+  private terrainDe(reglages: ReglagesPartiels | undefined): CarteCollisions | undefined {
+    const complets = completerReglages(reglages);
+
+    try {
+      return this.terrains.charger({
+        carte: complets.carte,
+        modeMiroir: complets.modeMiroir,
+      });
+    } catch (erreur) {
+      console.warn(
+        `Terrain de la carte ${complets.carte} illisible, la partie se jouera sans mur.`,
+        erreur,
+      );
+
+      return undefined;
+    }
   }
 }
 

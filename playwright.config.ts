@@ -3,15 +3,24 @@ import { defineConfig, devices } from '@playwright/test';
 /**
  * Configuration Playwright pour les tests de bout en bout.
  *
- * A l'etape 0.1, il n'y a qu'un scenario de fumee qui ne demarre aucun serveur.
- * Le vrai parcours multi-clients arrive a l'etape 4.4, et c'est alors qu'un
- * bloc webServer sera ajoute pour lancer le jeu avant les tests.
+ * A l'etape 0.1, il n'y avait qu'un scenario de fumee qui ne demarrait aucun
+ * serveur. L'etape 4.2 a ajoute le banc de mesure du rendu, qui charge la
+ * compilation du paquet client dans un vrai navigateur: d'ou l'etape de
+ * compilation ci-dessous. Le vrai parcours multi-clients arrive a l'etape 4.4,
+ * et c'est alors qu'un bloc webServer sera ajoute pour lancer le jeu.
  *
  * Le projet mobile est declare des maintenant parce que la decision du 29 juin
  * exige une verification en fenetre mobile, meme si le bureau reste prioritaire.
  */
+/** Le banc de mesure du rendu, joue par son propre projet et par lui seul. */
+const BANC = '**/banc-rendu.spec.ts';
+
 export default defineConfig({
   testDir: './tests/e2e',
+  // Les paquets sont compiles une fois avant les scenarios: le banc de mesure du
+  // rendu charge packages/client/dist dans le navigateur, et une compilation
+  // perimee lui ferait mesurer un code qui n'est plus le notre.
+  globalSetup: './tests/e2e/harnais/compiler.ts',
   fullyParallel: true,
   // Interdit un test.only oublie dans une branche poussee.
   forbidOnly: Boolean(process.env['CI']),
@@ -24,10 +33,36 @@ export default defineConfig({
     {
       name: 'bureau',
       use: { ...devices['Desktop Chrome'] },
+      testIgnore: BANC,
     },
     {
       name: 'mobile',
       use: { ...devices['Pixel 7'] },
+      testIgnore: BANC,
+    },
+    // Le banc de mesure du rendu a son propre projet, et une seule execution:
+    // il mesure le moteur de rendu, pas la taille de la fenetre. Le jouer dans
+    // les deux cadrages doublerait la duree de l'integration continue pour un
+    // second chiffre qui ne dirait rien de plus.
+    {
+      name: 'banc',
+      use: {
+        ...devices['Desktop Chrome'],
+        launchOptions: {
+          // On demande la carte graphique quand il y en a une. Sans ces options,
+          // Chromium sans interface rasterise tout au processeur, et la mesure
+          // ne dit plus rien du moteur de rendu. La ou il n'y a pas de carte,
+          // comme en integration continue, elles sont sans effet et le rendu
+          // logiciel reprend la main: c'est pourquoi les seuils de ce banc
+          // portent sur la mise a l'echelle et sur notre propre cout, et non sur
+          // une cadence absolue.
+          args: ['--use-angle=default', '--enable-gpu', '--ignore-gpu-blocklist'],
+        },
+      },
+      testMatch: BANC,
+      // Une mesure ne se rejoue pas: un banc qui echoue a la premiere tentative
+      // et passe a la seconde ne dit rien, sinon que la machine etait occupee.
+      retries: 0,
     },
   ],
 });
