@@ -112,7 +112,12 @@ Repris du handoff 4.4, inchangé: voir sa section « Problèmes connus et dette 
 
 ## État de la CI
 
-À compléter après la poussée.
+**Run 34522355452, commit 9f624bd: rouge, mais pas à cause de cette étape.**
+
+- « Types, linter et tests »: vert. Le formatage des documents de l'étape y est vérifié.
+- « Bout en bout »: la seule partie à deux a échoué aux trois essais. C'est un défaut de l'étape 4.4, révélé par ses signes vitaux, et traité dans son handoff (cinquième passage): cette étape ne touche aucun code.
+
+**Run 34523549580, commit 43ad67e, qui contient cette étape et les corrections de l'étape 4.4: vert.** Les deux travaux au vert, 1080 tests, 10 scénarios de bout en bout sur 10 au premier essai.
 
 ## Prochaine action exacte
 
