@@ -138,7 +138,7 @@ Aucune modification de `packages/sim`, `legacy/` ni `tests/caracterisation/`.
 - Couverture: **99,74 pour cent** sur `packages/sim` et `packages/shared`, contre 99,73. `ressources.ts` entre dans la mesure et est couvert.
 - Types, linter, formatage: verts. `pnpm verify` passe.
 - Aucune régression de caractérisation: les 93 tests de `tests/caracterisation/` passent, inchangés.
-- CI: le premier passage (run 34461454807) était rouge sur le seul banc de mesure, les tests unitaires verts. Cause et correction au point 7 des décisions. État après correction: à confirmer après la poussée.
+- CI: **verte**. Run 34461999690 sur `reecriture`, les deux travaux au vert. Le premier passage (run 34461454807) était rouge sur le seul banc de mesure, les tests unitaires verts: cause et correction au point 7 des décisions. Au second passage, SwiftShader a donné 4,7, 4,5 et 3,2 images par seconde avec lueur à 100, 200 et 500 sprites, pour un coût de notre code de 1,25, 1,41 et 3,46 ms par image: les seuils du rendu logiciel tiennent avec de la marge.
 
 ## Décisions et écarts au plan
 
