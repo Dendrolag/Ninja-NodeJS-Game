@@ -121,7 +121,7 @@ Aucune modification de `packages/sim`, `legacy/` ni `tests/caracterisation/`.
 - Couverture: **99,74 pour cent** sur `packages/sim` et `packages/shared`, inchangée.
 - Types, linter, formatage: verts. `pnpm verify` passe.
 - Aucune régression de caractérisation: les 93 tests de `tests/caracterisation/` passent, inchangés.
-- CI: en attente au moment du commit de l'étape; son résultat est confirmé dans le commit qui suit.
+- CI: **verte**. Run 34491097814 sur `reecriture`, commit 29fcedc: les deux travaux au vert, « Types, linter et tests » et « Bout en bout », qui joue maintenant le scénario de navigation en cadrage bureau et mobile.
 
 **Vérifié à la main dans un vrai navigateur**, sur le serveur lancé par `principal.ts`: l'accueil; le salon; le panneau de réglages; le compte à rebours; une partie avec HUD, flèches de localisation et libellés de zone; la confirmation de sortie; une partie de trente secondes jusqu'à l'écran de fin; Rejouer vers un salon neuf; le salon en fenêtre mobile de 375 pixels. C'est cette vérification qui a trouvé la fenêtre invisible et le chevauchement du rappel des touches.
 
