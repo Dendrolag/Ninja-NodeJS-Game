@@ -78,6 +78,13 @@ export default defineConfig({
         },
       },
       testMatch: BANC,
+      // Le banc joue apres tous les autres scenarios, donc seul. Depuis l'etape
+      // 4.4, les parcours jouent des parties entieres qui dessinent pendant une
+      // quarantaine de secondes. Joue en parallele d'eux, le banc partageait le
+      // processeur et mesurait aussi leur charge: en integration continue, notre
+      // code a couru 8,04 ms par image a 500 sprites, au-dela de son seuil, contre
+      // 3,01 a 3,46 ms aux etapes 4.2 et 4.3.
+      dependencies: ['bureau', 'mobile'],
       // Une mesure ne se rejoue pas: un banc qui echoue a la premiere tentative
       // et passe a la seconde ne dit rien, sinon que la machine etait occupee.
       retries: 0,

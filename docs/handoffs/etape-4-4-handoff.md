@@ -72,7 +72,7 @@ Modifiés
 - `tests/e2e/harnais/serveur-de-jeu.ts`: la méthode `partie()`, pour que le scénario lise l'état qui fait foi.
 - `tests/e2e/navigation.spec.ts`: son commentaire renvoyait la fin de partie à cette étape; le relevé des erreurs passe par `releverLesErreurs`.
 - `tests/e2e/fumee.spec.ts`: son commentaire disait que le jeu n'existait pas encore.
-- `playwright.config.ts`: son commentaire annonçait un bloc webServer; la partie à deux est retirée du projet mobile; `actionTimeout` à 15 secondes.
+- `playwright.config.ts`: son commentaire annonçait un bloc webServer; la partie à deux est retirée du projet mobile; `actionTimeout` à 15 secondes; le banc de mesure joue après les autres projets, seul (voir « État de la CI »).
 - `packages/client/src/interface/ecrans/jeu.ts`: son commentaire cite les scénarios qui le jouent.
 - `docs/plan/etape-4-4.md`: section « Réconciliation » à six points.
 - `docs/design/README.md`: quatre décisions du 10 septembre 2026.
@@ -83,7 +83,7 @@ Aucune modification de `packages/sim`, `packages/shared`, `packages/server`, `le
 
 - Ajoutés: deux scénarios Playwright, qui donnent trois exécutions (solo en bureau, solo en mobile, partie à deux). Aucun test Vitest: l'étape ne touche aucun code du jeu.
 - Résultat: **1080 tests Vitest passent, 0 échec**, inchangé. **10 scénarios Playwright passent**: les 4 de fumée, la navigation en bureau et en mobile, le parcours solo en bureau et en mobile, la partie à deux, et le banc de mesure du rendu.
-- Banc de mesure, joué dans la suite complète avec deux autres scénarios en parallèle: 58,4, 60,1 et 57,1 images par seconde avec lueur à 100, 200 et 500 sprites, pour un coût de notre code de 0,66, 0,36 et 2,32 ms par image. Dans ses seuils.
+- Banc de mesure, sur carte graphique, joué seul en fin de suite: 59,5, 60,1 et 60,0 images par seconde avec lueur à 100, 200 et 500 sprites, pour un coût de notre code de 0,30, 0,33 et 1,07 ms par image. Joué en parallèle des parties, avant la correction décrite dans « État de la CI », le même banc relevait 2,32 ms à 500 sprites: la charge des autres scénarios se voyait déjà en local.
 - Couverture: **99,74 pour cent** sur `packages/sim` et `packages/shared`, inchangée.
 - Types, linter, formatage: verts. `pnpm verify` passe.
 - Aucune régression de caractérisation: les 93 tests de `tests/caracterisation/` passent, inchangés.
@@ -208,7 +208,15 @@ Fermé par cette étape:
 
 ## État de la CI
 
-À compléter après la poussée.
+**Premier passage, run 34499406964, commit 98b14ae: rouge**, et c'était un défaut de cette étape.
+
+- « Types, linter et tests »: vert, 1080 tests.
+- « Bout en bout »: 9 scénarios sur 10 verts **au premier essai**, sans aucun nouvel essai. Les deux parcours solo et la partie à deux en font partie.
+- Le seul rouge est le banc de mesure du rendu. À 500 sprites, notre code a coûté 8,04 ms par image, pour un seuil de 8 ms. Relevé complet: 4,6, 2,6 et 2,1 images par seconde avec lueur à 100, 200 et 500 sprites, pour 1,19, 2,65 et 8,04 ms par image. Les étapes 4.2 et 4.3 relevaient 3,01 à 3,46 ms à 500 sprites.
+- **Cause.** La CI joue les scénarios sur deux travailleurs, donc le banc partageait la machine avec d'autres scénarios. Depuis cette étape, ce sont des parties entières qui dessinent une quarantaine de secondes sans carte graphique: le banc mesurait aussi leur charge. Le rapport de la CI ne date pas chaque scénario; le chevauchement est certain, sa part exacte ne l'est pas.
+- **Correction, faite aussitôt (règle 7).** Le projet `banc` dépend désormais des projets `bureau` et `mobile` (`playwright.config.ts`): il joue après eux, seul. Le seuil n'a pas été touché: le relever aurait caché ce que le banc doit mesurer.
+
+Second passage: à compléter.
 
 ## Prochaine action exacte
 
