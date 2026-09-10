@@ -38,6 +38,13 @@ export default defineConfig({
   // Interdit un test.only oublie dans une branche poussee.
   forbidOnly: Boolean(process.env['CI']),
   retries: process.env['CI'] ? 2 : 0,
+  // Une seule partie a la fois en integration continue. Sans carte graphique et
+  // sur deux processeurs, deux scenarios de parties en parallele faisaient
+  // dessiner quatre pages a la fois: les signes vitaux du run 34522355452 en
+  // relevaient deux a sept images en deux secondes, et la partie a deux se
+  // terminait avant que les joueurs se soient rejoints. En local, la valeur par
+  // defaut de Playwright reste.
+  ...(process.env['CI'] ? { workers: 1 } : {}),
   reporter: process.env['CI'] ? [['github'], ['html', { open: 'never' }]] : [['list']],
   use: {
     trace: 'on-first-retry',

@@ -22,6 +22,18 @@ import type { Commande } from './pilote.js';
  */
 const COURSE_DU_POUCE_PX = 45;
 
+/**
+ * En deca de cet ecart d'angle, cinq degres, le pouce ne bouge pas.
+ *
+ * Chaque contact envoye attend l'accuse de reception de la page. Le pilote corrige
+ * sa direction dix fois par seconde, d'un angle souvent infime: en integration
+ * continue, ou une page dessine a quelques images par seconde, ces envois
+ * etouffaient le pilote, qui ne relisait plus la situation qu'une fois en deux
+ * secondes (signes vitaux du run 34522355452). Cinq degres de moins ne changent
+ * rien au chemin, le pilote corrigeant de toute facon a l'instant suivant.
+ */
+const COSINUS_ECART_MINIMUM = Math.cos((5 * Math.PI) / 180);
+
 /** Les fleches, une par direction. */
 const FLECHES = {
   droite: 'ArrowRight',
@@ -83,7 +95,10 @@ export async function commandeAuPouce(page: Page): Promise<Commande> {
 
   const centre = { x: terrain.x + terrain.width / 2, y: terrain.y + terrain.height / 2 };
   const protocole = await page.context().newCDPSession(page);
-  let dernier: { x: number; y: number } | undefined;
+  /** Le doigt est-il pose. */
+  let pose = false;
+  /** La derniere direction reellement envoyee a la page, doigt pose. */
+  let envoyee: Vecteur | undefined;
 
   const toucher = async (
     type: 'touchStart' | 'touchMove' | 'touchEnd',
@@ -97,29 +112,36 @@ export async function commandeAuPouce(page: Page): Promise<Commande> {
 
   return {
     async orienter(direction) {
-      if (dernier === undefined) {
-        dernier = centre;
+      if (!pose) {
+        pose = true;
+        envoyee = undefined;
         await toucher('touchStart', centre);
       }
 
-      const point = {
+      if (envoyee !== undefined && produitScalaire(direction, envoyee) > COSINUS_ECART_MINIMUM) {
+        return;
+      }
+
+      envoyee = direction;
+      await toucher('touchMove', {
         x: Math.round(centre.x + direction.x * COURSE_DU_POUCE_PX),
         y: Math.round(centre.y + direction.y * COURSE_DU_POUCE_PX),
-      };
-
-      if (point.x !== dernier.x || point.y !== dernier.y) {
-        dernier = point;
-        await toucher('touchMove', point);
-      }
+      });
     },
 
     async relacher() {
-      if (dernier !== undefined) {
-        dernier = undefined;
+      if (pose) {
+        pose = false;
+        envoyee = undefined;
         await toucher('touchEnd');
       }
     },
   };
+}
+
+/** Le produit scalaire de deux vecteurs: le cosinus de leur ecart s'ils sont unitaires. */
+function produitScalaire(un: Vecteur, autre: Vecteur): number {
+  return un.x * autre.x + un.y * autre.y;
 }
 
 /** Les fleches de la direction de clavier la plus proche de celle demandee. */

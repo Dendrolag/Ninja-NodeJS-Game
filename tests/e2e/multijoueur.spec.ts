@@ -53,21 +53,29 @@ import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
  * atteinte.
  *
  * UNE PARTIE EPUREE, reglee par l'hote dans le salon comme n'importe quel joueur
- * pourrait le faire. Trois choses du jeu empecheraient le contact voulu dans les
- * trente secondes d'une partie courte: l'invincibilite rend un joueur imprenable
- * dix secondes, un malus de controles inverses envoie le joueur a l'oppose de ce
- * qu'il demande, et les zones le poussent ou l'attirent. Les Black Ninjas sont
- * retires aussi, pour que le seul moyen de perdre ses ninjas soit la capture
- * verifiee. Le parcours solo, lui, joue avec tout.
+ * pourrait le faire. Trois choses du jeu empecheraient le contact voulu dans le
+ * temps d'une partie courte: l'invincibilite rend un joueur imprenable dix
+ * secondes, un malus de controles inverses envoie le joueur a l'oppose de ce qu'il
+ * demande, et les zones le poussent ou l'attirent. Les Black Ninjas sont retires
+ * aussi, pour que le seul moyen de perdre ses ninjas soit la capture verifiee. Le
+ * parcours solo, lui, joue avec tout.
  *
  * UN SEUL CADRAGE. Ce scenario fabrique lui-meme ses deux appareils: le rejouer
  * dans le projet mobile doublerait sa duree sans rien verifier de plus. Voir
  * playwright.config.ts.
  */
 
-/** Une partie courte, peuplee, sans ce qui empecherait deux joueurs de se toucher. */
+/**
+ * Une partie d'une minute, peuplee, sans ce qui empecherait deux joueurs de se toucher.
+ *
+ * UNE MINUTE ET NON TRENTE SECONDES. En integration continue, les deux pages
+ * dessinent sans carte graphique a quelques images par seconde, et chaque commande
+ * part en retard. Avec trente secondes, la partie s'est terminee pendant que Bob
+ * allait au contact: ses signes vitaux montraient deja l'ecran de fin (run
+ * 34522355452).
+ */
 const PARTIE_EPUREE = {
-  dureePartieS: '30',
+  dureePartieS: '60',
   nombreBotsInitial: '100',
   'bonus.types.invincibilite.actif': false,
   'malus.actifs': false,
@@ -118,7 +126,7 @@ test.afterEach(async () => {
 });
 
 test('deux joueurs, une capture, un seul et meme classement', async ({ browser }) => {
-  // Deux chargements de carte, une partie de trente secondes et son compte a rebours.
+  // Deux chargements de carte, une partie d'une minute et son compte a rebours.
   test.setTimeout(180_000);
 
   const alice = await ouvrir(browser, devices['Desktop Chrome']);
@@ -147,7 +155,7 @@ test('deux joueurs, une capture, un seul et meme classement', async ({ browser }
 
     const recapitulatifs = [alice, bob].map(({ page }) => page.locator('.recapitulatif'));
     for (const recapitulatif of recapitulatifs) {
-      await expect(recapitulatif).toContainText('0:30');
+      await expect(recapitulatif).toContainText('1:00');
       await expect(recapitulatif).toContainText('100');
     }
     const [chezAlice, chezBob] = await Promise.all(

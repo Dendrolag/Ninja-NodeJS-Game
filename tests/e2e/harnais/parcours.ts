@@ -29,8 +29,13 @@ export type SaisieDeReglages = Readonly<Record<string, string | boolean>>;
  */
 const DELAI_CAPTURE_DE_BOT_MS = 12_000;
 
-/** Temps laisse a deux joueurs pour se rejoindre d'un bout a l'autre de la carte. */
-const DELAI_CONTACT_MS = 20_000;
+/**
+ * Temps laisse a un joueur pour en rejoindre un autre, d'un bout a l'autre de la carte.
+ *
+ * Quarante secondes, pour une partie d'une minute: en integration continue, les
+ * pages dessinent a quelques images par seconde et chaque commande part en retard.
+ */
+const DELAI_CONTACT_MS = 40_000;
 
 // ---------------------------------------------------------------------------
 // Les gestes d'un joueur
