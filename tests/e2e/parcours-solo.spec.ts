@@ -90,8 +90,18 @@ test('capturer un faux ninja, puis retrouver son score au classement final', asy
     await expect(manette).toBeHidden();
   }
 
-  // Le score est un stock de faux ninjas: il n'est plus nul, et le HUD le montre.
-  await expect(page.locator('.hud-ligne.moi .hud-points')).not.toHaveText('0');
+  // Le HUD montre le score du serveur. On compare au serveur plutot que d'exiger
+  // un score non nul: le score est un stock, et les Black Ninjas, en jeu ici,
+  // rendent neutres les faux ninjas qu'ils attrapent. Un faux ninja a peine
+  // capture peut donc etre repris, et un HUD a zero est alors exact. L'exigence
+  // « non nul » a echoue une fois en integration continue, sans que l'on sache si
+  // le score etait vraiment retombe ou si le HUD ne suivait plus: cette
+  // verification-ci echoue dans le second cas, et seulement dans lui.
+  const pointsAffiches = page.locator('.hud-ligne.moi .hud-points');
+  await expect(async () => {
+    const auServeur = partie.classement().find((ligne) => ligne.pseudo === 'Alice')?.points;
+    await expect(pointsAffiches).toHaveText(String(auServeur), { timeout: 500 });
+  }).toPass({ timeout: 10_000 });
 
   // -- La fin -----------------------------------------------------------------
   await attendreLaFin(page);

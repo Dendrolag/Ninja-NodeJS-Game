@@ -108,7 +108,7 @@ La fiche demande de noter toute instabilité résiduelle. Voici chaque série jo
 | **Pilote final**, suite complète           | 1 passage                      | 10/10    |                                                                                                                                                                                                          |
 | **Pilote final**, partie à deux            | 6 passages, 3 à la fois        | 6/6      |                                                                                                                                                                                                          |
 
-**Instabilité résiduelle connue: aucune.** Le pilote final a passé 28 exécutions sans échec, dont 11 parties à deux, avec jusqu'à six pages dessinées sans carte graphique en même temps. Deux réserves, dites franchement:
+**Instabilité résiduelle connue: en local, aucune; en CI, deux épisodes**, décrits dans « État de la CI »: Bob immobile aux trois essais d'un passage, cause non établie et non reproduite en local, puis un score du HUD vérifié trop strictement, corrigé. En local, le pilote final a passé 28 exécutions sans échec, dont 11 parties à deux, avec jusqu'à six pages dessinées sans carte graphique en même temps. Deux réserves, dites franchement:
 
 - **la CI est la vraie inconnue**: SwiftShader sur deux processeurs, et `retries: 2`, qui ferait passer un échec isolé au second essai. Le rapport de la CI dit si un scénario n'est passé qu'après un nouvel essai: voir « État de la CI »;
 - **les échecs du pilote se lisent directement**: le message donne les positions récentes, la phase, la cible et le point visé. Un échec en CI se diagnostique donc sans rejouer.
@@ -216,7 +216,22 @@ Fermé par cette étape:
 - **Cause.** La CI joue les scénarios sur deux travailleurs, donc le banc partageait la machine avec d'autres scénarios. Depuis cette étape, ce sont des parties entières qui dessinent une quarantaine de secondes sans carte graphique: le banc mesurait aussi leur charge. Le rapport de la CI ne date pas chaque scénario; le chevauchement est certain, sa part exacte ne l'est pas.
 - **Correction, faite aussitôt (règle 7).** Le projet `banc` dépend désormais des projets `bureau` et `mobile` (`playwright.config.ts`): il joue après eux, seul. Le seuil n'a pas été touché: le relever aurait caché ce que le banc doit mesurer.
 
-Second passage: à compléter.
+**Second passage, run 34500244374, commit de8ce7b: rouge.**
+
+- Le banc n'a pas été joué, par construction: il attend désormais les projets `bureau` et `mobile`, et l'un d'eux a échoué.
+- **La partie à deux a échoué aux trois essais**, toujours sur « Bob va au contact de Alice ». Dans les trois, Bob était rigoureusement immobile pendant deux secondes, avec un chemin trouvé. Sa première mission avait réussi, mais un faux ninja errant peut toucher un Bob immobile: ce succès ne prouve pas que son pouce agissait.
+- Le parcours solo en bureau a échoué au premier essai (Alice lente près d'un bord) et réussi au second.
+- **Diagnostic en local.** La page de Bob ralentie six fois (`Emulation.setCPUThrottlingRate`), environ huit images par seconde: 3 passages sur 3. Les contacts envoyés et reçus concordent (trois débuts, trois fins, aucune annulation) et la manette se cache à chaque fin. L'hypothèse d'un « doigt fantôme » qui bloquerait `tactile.ts` n'est pas reproduite, et `tactile.ts` n'est pas modifié. **La cause de l'immobilité de Bob en CI n'est pas établie.**
+- **Réponse**, commit f652dd0: un échec de mission joint désormais les signes vitaux de chaque page (images dessinées sur deux secondes, ancienneté de la dernière image, contacts reçus, état de la manette, écran, derniers avertissements et erreurs). S'il se reproduit, le message dira si la page dessinait encore.
+
+**Troisième passage, run 34520628031, commit f652dd0: vert.**
+
+- « Types, linter et tests »: vert, 1080 tests.
+- « Bout en bout »: 9 scénarios verts au premier essai, dont la partie à deux, et 1 fragile: le parcours solo en bureau, vert au second essai.
+- Le banc, joué seul: 4,6, 4,4 et 3,6 images par seconde avec lueur à 100, 200 et 500 sprites, pour 1,09, 1,66 et 2,95 ms par image. Revenu à l'ordre des étapes 4.2 et 4.3.
+- **La fragilité.** `.hud-ligne.moi .hud-points` affichait « 0 » cinq secondes après que le serveur a compté un faux ninja à Alice. Deux causes possibles, non départagées: le score réellement retombé, puisqu'un Black Ninja rend neutre le faux ninja qu'il attrape et que le parcours solo les garde en jeu; ou un HUD qui ne suit plus le serveur. **Correction**: la vérification exige que le HUD affiche exactement le score du serveur, ce qui n'échoue que dans le second cas. Jouée en local en bureau et en mobile: 2 sur 2.
+
+Quatrième passage: à compléter.
 
 ## Prochaine action exacte
 
