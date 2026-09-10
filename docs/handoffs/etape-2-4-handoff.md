@@ -129,7 +129,7 @@ Repris du handoff 0.3, inchangé: **deux questions attendent le porteur du proje
 
 ## État de la CI
 
-À compléter après la poussée.
+**Run 34531261511, commit 8819f21: vert.** « Types, linter et tests » au vert (1131 tests), « Bout en bout » au vert (10 scénarios sur 10 au premier essai, aucun marqué instable).
 
 ## Prochaine action exacte
 
