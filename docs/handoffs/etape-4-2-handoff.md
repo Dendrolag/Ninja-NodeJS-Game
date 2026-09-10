@@ -36,7 +36,7 @@ Sur carte graphique (NVIDIA GeForce RTX 2080 Ti, Direct3D 11 via ANGLE, Chromium
 
 La cadence est plafonnée par la synchronisation de l'écran à 60: la charge n'entame pas la cadence. Le coût de notre code (construire la scène et la transmettre à PixiJS) reste sous 1,2 ms à 500 sprites, soit 7 pour cent du budget d'une image.
 
-Sans carte graphique (même machine, avant l'ajout des options GPU au projet `banc`; c'est la situation de l'intégration continue, où tout est rasterisé par le processeur):
+Sans carte graphique, sur la même machine (avant l'ajout des options GPU au projet `banc`):
 
 | Sprites | Images/s avec lueur | Images/s sans lueur | Coût de notre code par image |
 | ------: | ------------------: | ------------------: | ---------------------------: |
@@ -44,15 +44,22 @@ Sans carte graphique (même machine, avant l'ajout des options GPU au projet `ba
 |     200 |                10,5 |                17,2 |                      0,73 ms |
 |     500 |                 8,8 |                12,0 |                      2,24 ms |
 
-**Ce que ces chiffres disent.** Passer de 100 à 500 sprites ne coûte presque rien, même en rendu logiciel, où la lueur coûte cher parce que le processeur la calcule pour toute la surface de l'écran. C'est exactement la propriété recherchée: le coût de la lueur dépend de la surface, plus du nombre d'entités.
+En intégration continue (GitHub Actions, Ubuntu, SwiftShader sur Vulkan, sans carte graphique), relevé au premier passage:
 
-**Pourquoi les seuils du banc portent sur autre chose que la cadence.** Un seuil calibré à 60 ferait échouer la CI sans qu'aucune régression ait eu lieu. Le banc exige donc trois choses:
+| Sprites | Images/s avec lueur | Images/s sans lueur | Coût de notre code par image | Pointe |
+| ------: | ------------------: | ------------------: | ---------------------------: | -----: |
+|     100 |                 4,0 |                 4,9 |                      1,05 ms | 2,5 ms |
+|     200 |                 3,8 |                 4,3 |                      1,41 ms | 3,0 ms |
+|     500 |                 2,7 |                 3,8 |                      3,01 ms | 4,1 ms |
 
-- un coût de notre code sous 8 ms par image;
-- une cadence à 500 sprites supérieure à la moitié de celle à 100;
-- un plancher absolu de 4 images par seconde.
+**Ce que ces chiffres disent.** Sur carte graphique, la charge ne coûte rien à la cadence: c'est la propriété recherchée, et la validation de la cible de plus de 100 bots. En rendu logiciel, la cadence baisse avec la charge, parce que chaque sprite y coûte ses pixels calculés un par un par le processeur: ces chiffres mesurent SwiftShader, pas notre rendu. Le coût de notre propre code, lui, reste du même ordre partout, 3 ms au pire sur la machine la plus lente.
 
-Il écrit dans le rapport quel moteur a dessiné, pour que deux mesures écartées d'un facteur six restent compréhensibles.
+**Pourquoi les seuils du banc dépendent du moteur qui dessine.** Le banc lit le nom du moteur de rendu et annote le rapport Playwright avec le mode retenu. Partout, il exige un coût de notre code sous 8 ms par image et toutes les entités dessinées. Ensuite:
+
+- **sur carte graphique**, une cadence d'au moins 30 images par seconde à chaque charge, et une cadence à 500 sprites supérieure à la moitié de celle à 100;
+- **en rendu logiciel**, seulement des images qui avancent, soit plus d'une par seconde.
+
+Un seuil de cadence commun aux deux a été essayé d'abord, et il a fait échouer la CI sans qu'aucune régression ait eu lieu: voir « Décisions », point 7.
 
 ## Structure du rendu
 
@@ -131,7 +138,7 @@ Aucune modification de `packages/sim`, `legacy/` ni `tests/caracterisation/`.
 - Couverture: **99,74 pour cent** sur `packages/sim` et `packages/shared`, contre 99,73. `ressources.ts` entre dans la mesure et est couvert.
 - Types, linter, formatage: verts. `pnpm verify` passe.
 - Aucune régression de caractérisation: les 93 tests de `tests/caracterisation/` passent, inchangés.
-- CI: à confirmer après la poussée.
+- CI: le premier passage (run 34461454807) était rouge sur le seul banc de mesure, les tests unitaires verts. Cause et correction au point 7 des décisions. État après correction: à confirmer après la poussée.
 
 ## Décisions et écarts au plan
 
@@ -178,6 +185,14 @@ Corrigé en lisant `effetsEnCours(etat, maintenant)`. Le test « démarre la bou
 
 Même famille de piège que celle signalée par le handoff 4.1 pour les sélecteurs: toute lecture d'effets destinée à l'affichage doit passer par `effetsEnCours`.
 
+### 7. Les seuils de cadence du banc dépendent du moteur qui dessine
+
+Le premier banc appliquait un plancher de 4 images par seconde partout, calibré sur le rendu logiciel de ma machine, qui en faisait 9 à 11. En CI, SwiftShader en fait 2,7 à 4,9: le banc a échoué à 200 sprites avec 3,8, sans aucune régression. Baisser le plancher aurait seulement déplacé le problème à la prochaine machine plus lente.
+
+Le banc détecte donc le moteur qui dessine. Sur carte graphique, il exige la cadence et la mise à l'échelle, qui valident vraiment la charge. En rendu logiciel, il n'exige que ce qui ne dépend pas du matériel, et le dit dans le rapport.
+
+**Conséquence à connaître**: la CI ne valide plus la cadence, seulement notre propre coût par image. La cadence se valide en lançant `pnpm exec playwright test --project=banc` sur une machine équipée d'une carte graphique, comme pour les valeurs de ce handoff.
+
 ### Ce que cette étape rend structurellement impossible
 
 - **La cadence d'affichage ne peut plus dépendre du réseau.** La boucle lit l'état, elle ne s'y abonne pas.
@@ -197,7 +212,7 @@ Nouveau, ouvert par cette étape:
   - le branchement du clavier est testé avec une cible d'essai;
   - `surcouche.ts` et `tactile.ts` ne tournent encore nulle part. Ils le feront à l'étape 4.3, et l'étape 4.4 les couvrira en bout en bout, fenêtre mobile comprise.
 - **Le HUD n'a pas de feuille de style.** Ses éléments portent des classes (`hud`, `hud-temps`, `hud-classement`, `hud-effets`, `hud-minimap`, `hud-manette`, et leurs dérivées), mais ne sont pas mis en forme. La manette virtuelle n'a pas d'habillage.
-- **Les valeurs du banc en CI ne sont pas encore connues.** Elles apparaîtront dans le rapport du travail `bout-en-bout`. Les seuils ont été choisis pour tenir en rendu logiciel, d'après la mesure sans GPU ci-dessus.
+- **La CI ne valide pas la cadence du rendu**, faute de carte graphique: seulement le coût de notre code et la bonne marche du rendu. La cadence ne se vérifie qu'en local, sur une machine équipée. Si la cible de plus de 100 bots doit être tenue sur des machines modestes, c'est à l'étape 5.2 de mesurer sur un matériel représentatif.
 - **Le dépôt s'alourdit de 18 Mo** de ressources, dont 9,3 Mo pour les quatre fonds de map1 et map2.
 - **Les libellés des zones sont écrits dans la police par défaut de PixiJS.** Les polices du jeu restent sur `master`, à rapatrier avec les menus.
 

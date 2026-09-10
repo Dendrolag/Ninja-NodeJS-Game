@@ -22,12 +22,22 @@
  *     donc lui qui porte les seuils stricts. Il doit rester une petite fraction
  *     du budget d'une image.
  *
- * POURQUOI LE SEUIL D'IMAGES PAR SECONDE EST BAS. En integration continue, le
- * navigateur tourne sans carte graphique: tout est rasterise par le processeur.
- * Un seuil calibre sur une machine equipee ferait echouer la CI sans qu'aucune
- * regression n'ait eu lieu. Le seuil garde ici est un plancher: il attrape
- * l'effondrement, pas la baisse de quelques images. Les valeurs reellement
- * mesurees sont consignees dans le handoff de l'etape, avec la machine.
+ * LES SEUILS DE CADENCE DEPENDENT DE QUI DESSINE. En integration continue, le
+ * navigateur n'a pas de carte graphique: SwiftShader rasterise tout au
+ * processeur, a trois ou quatre images par seconde quelle que soit la charge,
+ * et chaque sprite y coute son poids en pixels calcules un par un. Mesurer la
+ * cadence la-bas, c'est mesurer SwiftShader, pas notre rendu: le premier passage
+ * en CI l'a montre en echouant sur un plancher calibre sur une autre machine.
+ * Le banc detecte donc le moteur qui dessine.
+ *
+ *   - Sur une vraie carte graphique, il exige la cadence et la mise a l'echelle:
+ *     c'est la que la charge visee se valide.
+ *   - En rendu logiciel, il n'exige que ce qui ne depend pas du materiel: notre
+ *     propre cout par image, toutes les entites dessinees, des images qui
+ *     avancent.
+ *
+ * Les valeurs mesurees dans les deux situations sont consignees dans le handoff
+ * de l'etape, avec la machine.
  */
 
 import { expect, test } from '@playwright/test';
@@ -42,16 +52,35 @@ const CHARGES = [100, 200, 500] as const;
 const DUREE_MESURE_MS = 3_000;
 
 /**
- * Plancher d'images par seconde, tous nombres de sprites confondus.
+ * Plancher d'images par seconde sur une vraie carte graphique, a toutes les
+ * charges.
  *
- * Volontairement tres bas: voir la note en tete de fichier. Sous ce seuil, ce
- * n'est plus une machine sans carte graphique, c'est un rendu qui ne rend plus.
- * Ce n'est pas ce seuil qui garde la performance, ce sont les deux suivants.
+ * La moitie de la cadence d'un ecran ordinaire. Mesure sur carte graphique a
+ * l'etape 4.2: soixante, plafonne par la synchronisation de l'ecran, a 100, 200
+ * et 500 sprites.
  */
-const PLANCHER_IMAGES_PAR_SECONDE = 4;
+const PLANCHER_GPU_IMAGES_PAR_SECONDE = 30;
 
 /**
- * Part de la cadence a cent sprites qui doit survivre a cinq cents.
+ * Plancher d'images par seconde en rendu logiciel: les images doivent avancer,
+ * rien de plus.
+ *
+ * Mesure en integration continue a l'etape 4.2: 2,7 images par seconde au plus
+ * bas, a 500 sprites avec lueur. Sous un, le rendu ne rend plus.
+ */
+const PLANCHER_LOGICIEL_IMAGES_PAR_SECONDE = 1;
+
+/**
+ * Les moteurs de rendu qui ne sont pas une carte graphique.
+ *
+ * SwiftShader est celui de Chromium sans GPU, llvmpipe et softpipe ceux de Mesa
+ * sous Linux, et le pilote de base de Windows s'annonce comme tel.
+ */
+const RENDU_LOGICIEL = /swiftshader|llvmpipe|softpipe|software|basic render/iu;
+
+/**
+ * Part de la cadence a cent sprites qui doit survivre a cinq cents, sur carte
+ * graphique.
  *
  * C'est le seuil qui valide reellement le choix du moteur de rendu: voir la note
  * qui accompagne son usage.
@@ -321,6 +350,17 @@ test.describe('banc de mesure du rendu PixiJS', () => {
       (window as unknown as { quiDessine: () => string }).quiDessine(),
     )) as string;
 
+    const logiciel = RENDU_LOGICIEL.test(dessinePar);
+
+    // Le mode retenu apparait dans le rapport de Playwright: un banc qui a
+    // renonce a une exigence doit le dire, pas le taire.
+    test.info().annotations.push({
+      type: 'rendu',
+      description: logiciel
+        ? `logiciel (${dessinePar}): cadence et mise a l'echelle non exigees`
+        : `carte graphique (${dessinePar})`,
+    });
+
     const avecLueur = await serie(true);
     const sansLueur = await serie(false);
 
@@ -346,14 +386,19 @@ test.describe('banc de mesure du rendu PixiJS', () => {
       ].join('\n'),
     );
 
+    const plancher = logiciel
+      ? PLANCHER_LOGICIEL_IMAGES_PAR_SECONDE
+      : PLANCHER_GPU_IMAGES_PAR_SECONDE;
+
     for (const mesure of [...avecLueur, ...sansLueur]) {
       expect(
         mesure.entitesDessinees,
         `${String(mesure.sprites)} sprites demandes doivent etre dessines`,
       ).toBe(mesure.sprites);
 
-      // Le seuil qui porte vraiment: notre propre code doit rester une petite
-      // fraction du budget d'une image, quelle que soit la charge.
+      // Le seuil qui porte partout: notre propre code doit rester une petite
+      // fraction du budget d'une image, quelle que soit la charge et quel que
+      // soit le materiel.
       expect(
         mesure.coutMoyenMs,
         `${String(mesure.sprites)} sprites: notre propre code coute trop cher par image`,
@@ -361,8 +406,8 @@ test.describe('banc de mesure du rendu PixiJS', () => {
 
       expect(
         mesure.imagesParSeconde,
-        `${String(mesure.sprites)} sprites: plus rien ne s'affiche`,
-      ).toBeGreaterThan(PLANCHER_IMAGES_PAR_SECONDE);
+        `${String(mesure.sprites)} sprites: cadence insuffisante en rendu ${logiciel ? 'logiciel' : 'GPU'}`,
+      ).toBeGreaterThan(plancher);
     }
 
     // LA PROPRIETE QUI VALIDE LE CHOIX DU MOTEUR. Multiplier par cinq le nombre
@@ -370,6 +415,14 @@ test.describe('banc de mesure du rendu PixiJS', () => {
     // d'une lueur posee en filtre de calque plutot qu'en flou par entite. Le jeu
     // d'origine, lui, payait le flou une fois par entite, donc son cout croissait
     // proportionnellement.
+    //
+    // Elle ne s'exige que sur carte graphique. En rendu logiciel, chaque sprite
+    // coute ses pixels calcules par le processeur: la cadence y baisse avec la
+    // charge par nature, et le rapport mesurerait SwiftShader, pas notre rendu.
+    if (logiciel) {
+      return;
+    }
+
     const cent = avecLueur[0];
     const cinqCents = avecLueur[avecLueur.length - 1];
 
