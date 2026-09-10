@@ -111,7 +111,7 @@ describe('le client parle a un vrai serveur', () => {
     await attendreQue(() => premier.etat.salon !== undefined, 'le salon du premier');
 
     const second = await connecterUnClient();
-    second.rejoindre('Alice', premier.etat.salon?.idRoom);
+    second.rejoindre('Alice', { idRoom: premier.etat.salon?.idRoom ?? '' });
     await attendreQue(() => second.etat.refus !== undefined, 'le refus');
 
     expect(second.etat.ecran).toBe('accueil');
@@ -125,7 +125,7 @@ describe('le client parle a un vrai serveur', () => {
     await attendreQue(() => premier.etat.salon !== undefined, 'le salon');
 
     const second = await connecterUnClient();
-    second.rejoindre('Bob', premier.etat.salon?.idRoom);
+    second.rejoindre('Bob', { idRoom: premier.etat.salon?.idRoom ?? '' });
 
     await attendreQue(() => premier.etat.salon?.joueurs.length === 2, 'le second joueur');
 
@@ -139,7 +139,7 @@ describe('le client parle a un vrai serveur', () => {
     await attendreQue(() => premier.etat.salon !== undefined, 'le salon');
 
     const second = await connecterUnClient();
-    second.rejoindre('Bob', premier.etat.salon?.idRoom);
+    second.rejoindre('Bob', { idRoom: premier.etat.salon?.idRoom ?? '' });
     await attendreQue(() => second.etat.salon !== undefined, 'le salon du second');
 
     second.parler('salut');

@@ -199,7 +199,7 @@ export type { LigneFin, ModeleFin, Place } from './interface/modeles/fin.js';
 export { modeleFin } from './interface/modeles/fin.js';
 
 export type { PresentationCarte } from './interface/modeles/cartes.js';
-export { NOM_DU_MODE, PRESENTATION_CARTES, nomDeCarte } from './interface/modeles/cartes.js';
+export { NOMS_DES_MODES, PRESENTATION_CARTES, nomDeCarte } from './interface/modeles/cartes.js';
 
 export type {
   ChampReglage,

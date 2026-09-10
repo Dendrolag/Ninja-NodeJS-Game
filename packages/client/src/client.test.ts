@@ -32,6 +32,9 @@ function salon(modifications: Partial<InfosSalon> = {}): InfosSalon {
   return {
     idRoom: 'partie-1',
     statut: 'salon',
+    mode: 'classique',
+    visibilite: 'publique',
+    capacite: 12,
     joueurs: [{ id: 'session-de-test', pseudo: 'Alice', hote: true }],
     reglages: REGLAGES_PAR_DEFAUT,
     ...modifications,
@@ -110,7 +113,7 @@ describe('les commandes du joueur', () => {
 
   it('joint l identifiant de partie seulement quand il y en a un', () => {
     reseau.simulerConnexion();
-    client.rejoindre('Alice', 'partie-7');
+    client.rejoindre('Alice', { idRoom: 'partie-7' });
 
     expect(reseau.dernier('rejoindre')?.[0]).toEqual({ pseudo: 'Alice', idRoom: 'partie-7' });
   });

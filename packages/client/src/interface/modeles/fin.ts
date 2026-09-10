@@ -18,7 +18,7 @@
 import type { LigneClassement } from '@neon-ninja/shared';
 
 import type { EtatClient } from '../../etat.js';
-import { NOM_DU_MODE, nomDeCarte } from './cartes.js';
+import { NOMS_DES_MODES, nomDeCarte } from './cartes.js';
 
 /** Une ligne du classement final, telle qu'on l'affiche. */
 export interface LigneFin {
@@ -66,13 +66,14 @@ export function modeleFin(etat: EtatClient): ModeleFin | undefined {
 
   const lignes = fin.classement.map((ligne, index) => ligneFin(ligne, index + 1, etat.moi));
   const mienne = lignes.find((ligne) => ligne.moi);
-  const reglages = etat.salon?.reglages;
+  const salon = etat.salon;
 
   return {
+    // Sans salon, ni le mode ni la carte ne sont connus: on ne les invente pas.
     contexte:
-      reglages === undefined
-        ? `Partie terminée · ${NOM_DU_MODE}`
-        : `Partie terminée · ${NOM_DU_MODE} · ${nomDeCarte(reglages.carte, reglages.modeMiroir)}`,
+      salon === undefined
+        ? 'Partie terminée'
+        : `Partie terminée · ${NOMS_DES_MODES[salon.mode]} · ${nomDeCarte(salon.reglages.carte, salon.reglages.modeMiroir)}`,
     place:
       mienne === undefined
         ? undefined

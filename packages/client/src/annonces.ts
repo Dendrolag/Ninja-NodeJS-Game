@@ -120,9 +120,14 @@ export function annonceDuFait(fait: FaitDeJeu): Annonce {
 /**
  * Les refus qui s'affichent a cote de leur champ, et pas en annonce.
  *
- * L'entree en partie montre son refus sous le pseudo, le chat sous le message.
+ * L'entree en partie montre son refus sous le pseudo, le chat sous le message, et
+ * la creation d'une partie sous son formulaire (ecran du jalon 3).
  */
-const REFUS_AFFICHES_SUR_PLACE: ReadonlySet<Refus['action']> = new Set(['rejoindre', 'chat']);
+const REFUS_AFFICHES_SUR_PLACE: ReadonlySet<Refus['action']> = new Set([
+  'rejoindre',
+  'creerPartie',
+  'chat',
+]);
 
 /** La phrase qui annonce un refus, ou rien s'il s'affiche a cote de son champ. */
 export function annonceDuRefus(refus: Refus): Annonce | undefined {

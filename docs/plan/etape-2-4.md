@@ -63,6 +63,18 @@ Cette étape clôt la phase 2. Le serveur fait tourner plusieurs parties en para
 
 Et un point du dépôt à ne pas oublier: les scénarios de bout en bout `parcours-solo.spec.ts` et `multijoueur.spec.ts` s'appuient sur la règle provisoire du premier salon en attente, que cette étape remplace. Ils sont à adapter (handoff 4.4).
 
+## Réconciliation au début de l'étape (10 septembre 2026)
+
+Écarts entre cette fiche et le dépôt réel, constatés avant d'écrire le code. Le dépôt et le cadrage font foi.
+
+1. **Pas de handoff de l'étape 2.3.** Le delta binaire est rattaché au jalon 4 et conditionné à la mesure de l'étape 5.1 (section 3 du ROADMAP). Le dernier handoff lu est celui de l'étape 0.3.
+2. **Le salon existe déjà**, construit aux étapes 2.1 et 2.2 puis affiché à l'étape 4.3: joueurs, hôte, réglages par l'hôte, lancement par l'hôte seulement, compte à rebours annulable, transfert de propriété. Le périmètre 4 se réduit donc à ce qui manque: le mode, la visibilité, le code et la capacité dans ce que reçoit le salon. Ses tests d'intégration existent (`ServeurSocket.test.ts`) et restent verts.
+3. **Pas d'état « prêt » ni de latence** (ajustements 1 et 2 du cadrage).
+4. **Pas de niveau au salon.** Il n'existe aucune source, même temporaire, avant la phase 3: le pseudo vient de la demande d'entrée, comme depuis l'étape 2.2, et le niveau arrivera avec les comptes (étape 3.2) puis sa déduction de l'XP (étape 3.3). Ajouter un niveau factice aurait mis à l'écran une donnée fausse.
+5. **Le bornage de la configuration existe** (`validerReglages`, `BORNES_REGLAGES`, étape 1.6). La capacité n'étant pas un champ, « capacité dépassée » se vérifie à l'entrée: la treizième personne est refusée.
+6. **La « file » des parties publiques devient la partie rapide** du cadrage: rejoindre sans identifiant ni code mène à la première partie publique en attente et non pleine, ou en crée une. C'est exactement la règle provisoire du premier salon en attente, restreinte aux parties publiques: les scénarios de bout en bout n'ont donc **rien à adapter**, contrairement à ce que prévoyait le handoff 0.3. Seuls deux commentaires de leur harnais ont changé.
+7. **Aucun écran** (hors périmètre de la fiche): le client sait créer, lister et rejoindre par code depuis cette étape, et l'écran « Jouer » de l'étape 4.3 appelle la partie rapide. Le navigateur et la création arrivent avec la reprise des écrans du jalon 3.
+
 ## Rituel de fin de session
 
 Écrire docs/handoffs/etape-2-4-handoff.md. Décrire le flux de création, de jonction et de salon, et la source temporaire du pseudo et du niveau en attendant la phase 3. Prochaine action exacte pour l'étape 3.1: mettre en place PostgreSQL et le schéma comptes, progression et résultats de partie, à partir du cadrage. Commiter.

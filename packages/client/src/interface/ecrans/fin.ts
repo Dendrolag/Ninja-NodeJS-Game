@@ -10,7 +10,8 @@
  *   2. « REJOUER » OUVRE UN NOUVEAU SALON. Le retour au salon d'une partie finie
  *      n'existe pas (handoff 2.1): la partie terminee refuse les nouveaux venus.
  *      Rejouer quitte donc la partie et redemande a entrer avec le meme pseudo,
- *      ce qui mene au premier salon en attente, ou en ouvre un. Des joueurs qui
+ *      c'est-a-dire la partie rapide: la premiere partie publique en attente, ou
+ *      une nouvelle (etape 2.4). Des joueurs qui
  *      rejouent ensemble se retrouvent ainsi dans le meme salon. La minuterie de
  *      trente secondes du jeu d'origine, qui renvoyait d'office au salon, n'est
  *      pas reprise: elle n'aurait nulle part ou renvoyer.

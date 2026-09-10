@@ -20,6 +20,9 @@ function salon(statut: StatutPartie): InfosSalon {
   return {
     idRoom: 'partie-1',
     statut,
+    mode: 'classique',
+    visibilite: 'publique',
+    capacite: 12,
     joueurs: [{ id: 'j1', pseudo: 'Alice', hote: true }],
     reglages: REGLAGES_PAR_DEFAUT,
   };
@@ -74,6 +77,7 @@ describe('transitions d ecran', () => {
     expect(
       ecranSuivant('accueil', {
         type: 'entreeRefusee',
+        action: 'rejoindre',
         erreurs: [{ champ: 'pseudo', motif: 'Ce pseudo est déjà pris dans cette partie.' }],
       }),
     ).toBe('accueil');

@@ -14,6 +14,7 @@ export { creerAlea, element, entier, nombre, reel } from './alea.js';
 export type { Intervalle, LimiteDebit } from './bornes.js';
 export {
   BORNES_CHAT,
+  BORNES_CODE_INVITATION,
   BORNES_PSEUDO,
   BORNES_REGLAGES,
   BORNES_ROOM,
@@ -24,7 +25,9 @@ export type { Consommation, SeauAJetons } from './debit.js';
 export { consommer, seauNeuf } from './debit.js';
 
 export type {
+  ConfigurationPartie,
   DemandeChat,
+  DemandeCreation,
   DemandeRejoindre,
   IntentionDeplacement,
   MessageChat,
@@ -52,6 +55,7 @@ export type {
   MalusSubi,
   ObjetVu,
   PartieEnPause,
+  PartiePublique,
   Refus,
   StatutPartie,
   ZoneVue,
@@ -62,15 +66,18 @@ export type {
   DimensionsCarte,
   Direction,
   IdentifiantCarte,
+  Mode,
   TypeBonus,
   TypeMalus,
   TypeZone,
+  Visibilite,
 } from './constantes.js';
 export {
   APPARITION,
   BOTS,
   BOTS_NOIRS,
   CADENCES_LEGACY_MS,
+  CAPACITES,
   CARTES,
   COULEUR_BOT_NEUTRE,
   COULEUR_BOT_NOIR,
@@ -78,12 +85,14 @@ export {
   DEPLACEMENTS_LEGACY_PAR_PAS,
   DIRECTIONS,
   DUREES,
+  MODES,
   OBJETS,
   RAYON_ENTITE,
   SCORE,
   TYPES_BONUS,
   TYPES_MALUS,
   TYPES_ZONE,
+  VISIBILITES,
   VITESSES,
   ZONES,
 } from './constantes.js';
@@ -124,6 +133,8 @@ export { REGLAGES_PAR_DEFAUT, completerReglages } from './reglages.js';
 export type { ErreurValidation, ResultatValidation } from './validation.js';
 export {
   normaliserTexte,
+  validerCodeInvitation,
+  validerDemandeCreation,
   validerDemandeRejoindre,
   validerIntentionDeplacement,
   validerMessageChat,

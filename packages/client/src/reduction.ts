@@ -60,7 +60,7 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
         ...etat,
         ecran,
         entreeEnCours: false,
-        refus: refusDe('rejoindre', action.erreurs),
+        refus: refusDe(action.action, action.erreurs),
       };
 
     // On quitte de soi-meme: le lien reste, tout le reste s'efface.
@@ -72,6 +72,10 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
         moi: etat.moi,
         pseudoDemande: etat.pseudoDemande,
       };
+
+    // Une photographie de la liste, qui remplace la precedente.
+    case 'partiesListees':
+      return { ...etat, ecran, partiesPubliques: action.parties };
 
     case 'salon':
       return { ...etat, ecran, salon: action.salon };

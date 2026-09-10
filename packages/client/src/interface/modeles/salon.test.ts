@@ -27,6 +27,9 @@ function salon(hote: string, modifications: Partial<InfosSalon> = {}): InfosSalo
   return {
     idRoom: 'room-1',
     statut: 'salon',
+    mode: 'classique',
+    visibilite: 'publique',
+    capacite: 12,
     joueurs: joueurs(hote),
     reglages: REGLAGES_PAR_DEFAUT,
     ...modifications,

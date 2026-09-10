@@ -8,26 +8,44 @@
  *
  * IL N'Y A TOUJOURS AUCUN ETAT GLOBAL. Le RoomManager n'est pas une variable de
  * module: c'est une classe que l'on instancie. Le point d'entree du serveur en
- * creera un a l'etape 2.2, et les tests en creent autant qu'ils veulent, sans
- * qu'ils se voient.
+ * cree un, et les tests en creent autant qu'ils veulent, sans qu'ils se voient.
  *
  * UNE ROOM VIDE EST DETRUITE. Le dernier joueur qui part emporte la partie avec
  * lui: la boucle s'arrete, l'etat est libere. Sans cette regle, un serveur
  * accumulerait des parties fantomes qui continueraient de battre pour personne,
  * ce qui est la forme que prenait le defaut X1 de l'audit.
  *
- * CE QUI N'EST PAS ICI. Le code d'invitation des parties privees et la file des
- * parties publiques appartiennent a l'etape 2.4; la couche Socket.IO qui appelle
- * ces methodes appartient a l'etape 2.2. Ce fichier ne connait ni reseau, ni
- * code d'invitation, ni capacite maximale.
+ * TROIS FACONS DE TROUVER UNE PARTIE, depuis l'etape 2.4: par son identifiant,
+ * par son code d'invitation si elle est privee, et parmi les parties publiques
+ * ouvertes. Ce fichier sait les retrouver; decider laquelle un joueur a le droit
+ * de viser appartient a la couche reseau (ServeurSocket).
  */
 
-import type { ReglagesPartiels, ResultatValidation, SessionJoueur } from '@neon-ninja/shared';
+import { randomInt } from 'node:crypto';
+
+import type {
+  Mode,
+  ReglagesPartiels,
+  ResultatValidation,
+  SessionJoueur,
+  Visibilite,
+} from '@neon-ninja/shared';
+import { BORNES_CODE_INVITATION } from '@neon-ninja/shared';
 import type { CarteCollisions } from '@neon-ninja/sim';
 
 import type { JoueurDeRoom, OptionsGameRoom } from './GameRoom.js';
 import { GameRoom } from './GameRoom.js';
 import type { Horloge } from './horloge.js';
+
+/**
+ * Combien de codes tirer au plus avant de renoncer a en trouver un libre.
+ *
+ * Avec un milliard de codes possibles, un tirage ne tombe sur un code pris que
+ * si le serveur porte des centaines de millions de parties privees. Vingt
+ * tirages manques de suite signalent donc un tirage defaillant, pas un manque de
+ * chance: mieux vaut une erreur franche qu'une boucle sans fin.
+ */
+const TIRAGES_DE_CODE_MAXIMUM = 20;
 
 /** Reglages communs a toutes les rooms d'un meme gestionnaire. */
 export interface OptionsRoomManager {
@@ -44,12 +62,24 @@ export interface OptionsRoomManager {
    * propre tirage, ou leur propre graine.
    */
   readonly genererGraine?: () => number;
+  /**
+   * Comment tirer un code d'invitation.
+   *
+   * Par defaut, le generateur cryptographique de Node: un code ne doit pas se
+   * deviner a partir des precedents, ce que la graine d'une partie, elle, n'a
+   * pas a garantir. Les tests fournissent leur propre tirage.
+   */
+  readonly tirerCode?: () => string;
 }
 
 /** Ce qu'il faut pour ouvrir une partie. */
 export interface OptionsCreationRoom {
   /** Graine de la partie. Tiree automatiquement si elle n'est pas fournie. */
   readonly graine?: number;
+  /** Mode de la partie. Le Classique par defaut. */
+  readonly mode?: Mode;
+  /** Visibilite de la partie. Publique par defaut; privee, elle recoit un code. */
+  readonly visibilite?: Visibilite;
   /** Reglages choisis par l'hote. Ceux qui manquent prennent la valeur par defaut. */
   readonly reglages?: ReglagesPartiels;
   /** Terrain de la partie, decode hors du moteur. Sans lui, une carte sans mur. */
@@ -65,12 +95,20 @@ function graineAuHasard(): number {
   return Math.floor(Math.random() * 0x100000000);
 }
 
+/** Tirage par defaut d'un code d'invitation, lettre par lettre dans l'alphabet des codes. */
+function codeAuHasard(): string {
+  const { alphabet, longueur } = BORNES_CODE_INVITATION;
+
+  return Array.from({ length: longueur }, () => alphabet[randomInt(alphabet.length)]).join('');
+}
+
 /** Le gestionnaire des parties d'un serveur. */
 export class RoomManager {
   private readonly rooms = new Map<string, GameRoom>();
   private readonly horloge: Horloge | undefined;
   private readonly cadenceMs: number | undefined;
   private readonly genererGraine: () => number;
+  private readonly tirerCode: () => string;
 
   /**
    * Numero de la prochaine room.
@@ -85,6 +123,7 @@ export class RoomManager {
     this.horloge = options.horloge;
     this.cadenceMs = options.cadenceMs;
     this.genererGraine = options.genererGraine ?? graineAuHasard;
+    this.tirerCode = options.tirerCode ?? codeAuHasard;
   }
 
   /** Le nombre de parties ouvertes. */
@@ -101,17 +140,26 @@ export class RoomManager {
    * Ouvre une partie, vide, dans son salon.
    *
    * Elle n'a ni joueur, ni bot, ni hote: c'est le premier joueur accueilli qui
-   * devient hote, et c'est le lancement qui pose les bots.
+   * devient hote, et c'est le lancement qui pose les bots. Une partie privee
+   * recoit un code d'invitation qu'aucune autre partie ouverte ne porte.
+   *
+   * @throws Si aucun code libre n'a pu etre tire. Voir TIRAGES_DE_CODE_MAXIMUM.
    */
   creer(options: OptionsCreationRoom = {}): GameRoom {
     const id = `room-${this.prochainNumero}`;
     this.prochainNumero += 1;
+
+    const visibilite = options.visibilite ?? 'publique';
+    const code = visibilite === 'privee' ? this.codeLibre() : undefined;
 
     // Les champs facultatifs sont omis plutot que poses a undefined: le projet
     // compile avec exactOptionalPropertyTypes, qui distingue les deux.
     const parametres: OptionsGameRoom = {
       id,
       graine: options.graine ?? this.genererGraine(),
+      visibilite,
+      ...(code === undefined ? {} : { code }),
+      ...(options.mode === undefined ? {} : { mode: options.mode }),
       ...(options.reglages === undefined ? {} : { reglages: options.reglages }),
       ...(options.terrain === undefined ? {} : { terrain: options.terrain }),
       ...(options.surBattement === undefined ? {} : { surBattement: options.surBattement }),
@@ -129,6 +177,25 @@ export class RoomManager {
   /** Retrouve une partie par son identifiant. */
   room(id: string): GameRoom | undefined {
     return this.rooms.get(id);
+  }
+
+  /**
+   * Retrouve une partie privee par son code d'invitation.
+   *
+   * Le code attendu est sous sa forme canonique, celle que la validation rend.
+   */
+  parCode(code: string): GameRoom | undefined {
+    return this.toutesLesRooms.find((room) => room.code === code);
+  }
+
+  /**
+   * Les parties publiques qu'un joueur peut rejoindre depuis la liste: dans leur
+   * salon, et pas pleines. Dans leur ordre de creation, la plus ancienne d'abord.
+   */
+  partiesPubliquesOuvertes(): readonly GameRoom[] {
+    return this.toutesLesRooms.filter(
+      (room) => room.visibilite === 'publique' && room.statut === 'salon' && !room.estPleine,
+    );
   }
 
   /**
@@ -197,5 +264,24 @@ export class RoomManager {
     for (const id of [...this.rooms.keys()]) {
       this.detruire(id);
     }
+  }
+
+  /**
+   * Un code d'invitation qu'aucune partie ouverte ne porte.
+   *
+   * Le code d'une partie detruite redevient libre: il ne designe plus rien.
+   */
+  private codeLibre(): string {
+    for (let tirage = 0; tirage < TIRAGES_DE_CODE_MAXIMUM; tirage += 1) {
+      const code = this.tirerCode();
+
+      if (this.parCode(code) === undefined) {
+        return code;
+      }
+    }
+
+    throw new Error(
+      `Aucun code d'invitation libre en ${String(TIRAGES_DE_CODE_MAXIMUM)} tirages: le tirage des codes est defaillant.`,
+    );
   }
 }

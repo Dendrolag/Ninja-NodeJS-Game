@@ -23,7 +23,12 @@
  *   - CompteARebours, le decompte de demarrage annulable.
  *   - serveur, le montage HTTP plus Socket.IO, et principal, le demarrage.
  *
- * Ce qui reste a venir: le matchmaking et les parties privees (etape 2.4).
+ * Ce que l'etape 2.4 a ajoute:
+ *
+ *   - la creation de partie, publique ou privee, avec un code d'invitation
+ *     fabrique par le serveur;
+ *   - la liste des parties publiques ouvertes, et la partie rapide;
+ *   - la capacite d'une partie, et le mode, branche jusqu'au moteur.
  */
 
 export type { JoueurDeRoom, OptionsGameRoom, StatutRoom } from './GameRoom.js';

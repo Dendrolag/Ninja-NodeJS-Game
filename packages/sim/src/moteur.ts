@@ -50,7 +50,8 @@ import type { IntentionDeplacement, Vecteur } from '@neon-ninja/shared';
 import { VITESSES } from '@neon-ninja/shared';
 
 import { avancerLesBots } from './bots.js';
-import { detecterContacts, resoudreContacts } from './contacts.js';
+import type { RegleDeResolution } from './contacts.js';
+import { detecterContacts, regleClassique, resoudreContacts } from './contacts.js';
 import { resoudreDeplacement } from './deplacement.js';
 import { aLaLongueur, directionDuVecteur, norme } from './direction.js';
 import { fairePasserLeTemps } from './effets.js';
@@ -91,6 +92,19 @@ export type EntreeJoueur = IntentionDeplacement;
  * Une entree portant l'identifiant d'un joueur absent de la partie est ignoree.
  */
 export type Entrees = Readonly<Record<IdentifiantEntite, EntreeJoueur>>;
+
+/**
+ * La regle de resolution des contacts de chaque mode de jeu.
+ *
+ * C'EST LE BRANCHEMENT DU MODE SUR LE MOTEUR (cadrage de l'etape 0.3, section 6).
+ * Le moteur reste agnostique: il detecte les contacts, et laisse le mode de la
+ * partie decider de ce qu'ils produisent. Ajouter un mode, c'est ajouter sa regle
+ * ici; oublier de le faire est une erreur de compilation, la table etant indexee
+ * par tous les modes du contrat.
+ */
+export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], RegleDeResolution>> = {
+  classique: regleClassique,
+};
 
 /** Verdict sur la fin d'une partie, sans aucune action declenchee. */
 export interface EvaluationFinDePartie {
@@ -142,7 +156,11 @@ export function tick(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPart
   const bots = avancerLesBots(deplace, dtMs);
   const zones = appliquerLesEffetsDeZone(avancerLesZones(bots, dtMs), dtMs);
   const objets = faireApparaitreLesObjets(fairePasserLeTempsSurLesObjets(zones, dtMs), dtMs);
-  const contacts = resoudreContacts(objets, detecterContacts(objets));
+  const contacts = resoudreContacts(
+    objets,
+    detecterContacts(objets),
+    REGLES_DES_MODES[objets.mode],
+  );
 
   return ramasserLesObjets(contacts);
 }

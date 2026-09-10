@@ -52,7 +52,7 @@ Adaptations à appliquer aux fiches de la phase 4 dans ce jalon, parce qu'elles 
 
 `0.3` `2.4`
 
-Le cadrage fonctionnel puis le matchmaking, les parties privées par code et les publiques en file. `2.1` ayant déjà encapsulé l'état par partie, il ne s'agit que d'en instancier plusieurs et d'y router les joueurs.
+Le cadrage fonctionnel puis le matchmaking, les parties privées par code et les publiques par liste et partie rapide. `2.1` ayant déjà encapsulé l'état par partie, il ne s'agit que d'en instancier plusieurs et d'y router les joueurs.
 
 Les maquettes ont été déposées le 13 août 2026: ce jalon n'est plus bloqué. Elles sont à traiter comme des propositions à challenger, pas comme une spécification. Voir l'avertissement et les tensions relevées dans docs/design/README.md.
 
@@ -121,7 +121,7 @@ Tests requis: TI avec des clients simulés, vérification des séquences et de l
 **2.3. Diffusion en delta binaire.** Remplacer la diffusion d'état complet en JSON par un delta binaire. **Conditionné à la mesure de l'étape 5.1.**
 Tests requis: TI sur la correction du delta, plus une mesure avant-après de la taille des messages.
 
-**2.4. Matchmaking, parties privées et publiques.** Code d'invitation pour les privées, file pour les publiques.
+**2.4. Matchmaking, parties privées et publiques.** Code d'invitation pour les privées, liste et partie rapide pour les publiques (le cadrage de l'étape 0.3 a remplacé la file).
 Tests requis: TI sur la création et la jonction par code, et l'attribution en file publique.
 
 ### Phase 3. Persistance et comptes

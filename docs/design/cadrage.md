@@ -125,7 +125,7 @@ Entrée de l'étape 2.4 et du moteur. **Il étend le contrat qui tourne déjà**
 | ------------ | ------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `mode`       | énumération `'classique'` | `classique` | Un seul membre en v1. **Figé à la création**: changer de mode change la capacité, et pourrait exclure des joueurs déjà présents.                           |
 | `visibilite` | `'publique'` ou `'privee'` | `publique`  | **Figée à la création**, pour qu'une partie ne disparaisse pas du navigateur sous les yeux de ceux qui la rejoignent.                                       |
-| code         | texte, 6 caractères        | aucun       | **Fabriqué par le serveur** pour une partie privée, jamais fourni par le client. Proposition pour 2.4: majuscules et chiffres, sans les caractères ambigus (O, 0, I, 1). Compatible avec `BORNES_ROOM`. |
+| code         | texte, 6 caractères        | aucun       | **Fabriqué par le serveur** pour une partie privée, jamais fourni par le client. Retenu à l'étape 2.4: majuscules et chiffres, sans les caractères ambigus (O, 0, I, 1), tiré par `node:crypto` et unique parmi les parties ouvertes (`BORNES_CODE_INVITATION`). |
 | capacité     | entier, déduit du mode     | 12          | **Pas un champ**: une propriété du mode. Classique: 12 au plus, 1 pour lancer.                                                                               |
 
 ### 4.2 Ce que l'hôte règle dans le salon, avant le lancement

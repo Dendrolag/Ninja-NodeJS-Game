@@ -14,12 +14,20 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { BORNES_CHAT, BORNES_PSEUDO, BORNES_REGLAGES, BORNES_ROOM } from './bornes.js';
+import {
+  BORNES_CHAT,
+  BORNES_CODE_INVITATION,
+  BORNES_PSEUDO,
+  BORNES_REGLAGES,
+  BORNES_ROOM,
+} from './bornes.js';
 import type { SessionJoueur } from './entrees.js';
 import { REGLAGES_PAR_DEFAUT } from './reglages.js';
 import type { ResultatValidation } from './validation.js';
 import {
   normaliserTexte,
+  validerCodeInvitation,
+  validerDemandeCreation,
   validerDemandeRejoindre,
   validerIntentionDeplacement,
   validerMessageChat,
@@ -387,8 +395,130 @@ describe('validerReglages', () => {
   });
 });
 
+describe('validerCodeInvitation', () => {
+  it('ramene un code saisi a sa forme canonique', () => {
+    expect(valeurAcceptee(validerCodeInvitation('  nx7k2p '))).toBe('NX7K2P');
+  });
+
+  it('accepte chaque caractere de l alphabet des codes', () => {
+    const { alphabet, longueur } = BORNES_CODE_INVITATION;
+
+    for (let debut = 0; debut < alphabet.length; debut += longueur) {
+      const code = alphabet.slice(debut, debut + longueur).padEnd(longueur, 'A');
+
+      expect(valeurAcceptee(validerCodeInvitation(code))).toBe(code);
+    }
+  });
+
+  it('refuse les caracteres qui se confondent, et toute autre longueur', () => {
+    for (const faux of ['NX7K2O', 'NX7K20', 'NX7K2I', 'NX7K21', 'NX7K2', 'NX7K2PP', 'NX-K2P', '']) {
+      expect(champsRefuses(validerCodeInvitation(faux))).toEqual(['code']);
+    }
+  });
+
+  it('refuse ce qui n est pas du texte', () => {
+    expect(champsRefuses(validerCodeInvitation(123456))).toEqual(['code']);
+  });
+});
+
+describe('validerDemandeCreation', () => {
+  it('accepte une partie privee et complete ses reglages', () => {
+    const demande = valeurAcceptee(
+      validerDemandeCreation({
+        pseudo: ' Alice ',
+        configuration: { mode: 'classique', visibilite: 'privee' },
+      }),
+    );
+
+    expect(demande).toEqual({
+      pseudo: 'Alice',
+      configuration: { mode: 'classique', visibilite: 'privee', reglages: REGLAGES_PAR_DEFAUT },
+    });
+  });
+
+  it('garde les reglages de depart demandes', () => {
+    const demande = valeurAcceptee(
+      validerDemandeCreation({
+        pseudo: 'Alice',
+        configuration: {
+          mode: 'classique',
+          visibilite: 'publique',
+          reglages: { carte: 'map3', dureePartieS: 60 },
+        },
+      }),
+    );
+
+    expect(demande.configuration.reglages).toMatchObject({ carte: 'map3', dureePartieS: 60 });
+  });
+
+  it('refuse un mode ou une visibilite inconnus, sans les remplacer par un defaut', () => {
+    expect(
+      champsRefuses(
+        validerDemandeCreation({
+          pseudo: 'Alice',
+          configuration: { mode: 'chasse', visibilite: 'publique' },
+        }),
+      ),
+    ).toEqual(['configuration.mode']);
+    expect(
+      champsRefuses(
+        validerDemandeCreation({ pseudo: 'Alice', configuration: { mode: 'classique' } }),
+      ),
+    ).toEqual(['configuration.visibilite']);
+  });
+
+  it('refuse des reglages aberrants avec le motif meme du salon', () => {
+    const verdict = validerDemandeCreation({
+      pseudo: 'Alice',
+      configuration: {
+        mode: 'classique',
+        visibilite: 'publique',
+        reglages: { dureePartieS: 5000 },
+      },
+    });
+
+    expect(champsRefuses(verdict)).toEqual(champsRefuses(validerReglages({ dureePartieS: 5000 })));
+    expect(champsRefuses(verdict)).toEqual(['dureePartieS']);
+  });
+
+  it('refuse une demande, une configuration ou un pseudo mal formes', () => {
+    expect(champsRefuses(validerDemandeCreation(undefined))).toEqual(['creerPartie']);
+    expect(champsRefuses(validerDemandeCreation({ pseudo: 'Alice' }))).toEqual(['configuration']);
+    expect(
+      champsRefuses(
+        validerDemandeCreation({
+          pseudo: '',
+          configuration: { mode: 'classique', visibilite: 'publique' },
+        }),
+      ),
+    ).toEqual(['pseudo']);
+  });
+});
+
+describe('validerDemandeRejoindre, par code d invitation', () => {
+  it('accepte un code et le ramene a sa forme canonique', () => {
+    expect(valeurAcceptee(validerDemandeRejoindre({ pseudo: 'Alice', code: 'nx7k2p' }))).toEqual({
+      pseudo: 'Alice',
+      code: 'NX7K2P',
+    });
+  });
+
+  it('refuse un code mal forme en nommant le code', () => {
+    expect(champsRefuses(validerDemandeRejoindre({ pseudo: 'Alice', code: 'NX7K2O' }))).toEqual([
+      'code',
+    ]);
+    expect(champsRefuses(validerDemandeRejoindre({ pseudo: 'Alice', code: 42 }))).toEqual(['code']);
+  });
+
+  it('refuse un identifiant et un code ensemble: la demande serait ambigue', () => {
+    expect(
+      champsRefuses(validerDemandeRejoindre({ pseudo: 'Alice', idRoom: 'room-1', code: 'NX7K2P' })),
+    ).toEqual(['rejoindre']);
+  });
+});
+
 describe('validerDemandeRejoindre', () => {
-  it('accepte un pseudo seul: sans partie visee, le serveur choisira', () => {
+  it('accepte un pseudo seul: sans partie visee, c est la partie rapide', () => {
     const demande = valeurAcceptee(validerDemandeRejoindre({ pseudo: 'Alice' }));
 
     expect(demande).toEqual({ pseudo: 'Alice' });

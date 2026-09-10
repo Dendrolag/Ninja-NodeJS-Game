@@ -44,6 +44,7 @@ import type {
   Alea,
   DimensionsCarte,
   Direction,
+  Mode,
   Position,
   ReglagesPartie,
   ReglagesPartiels,
@@ -383,6 +384,15 @@ export interface EtatPartie {
    * tick lui donne, et pendant la pause il ne lui donne rien.
    */
   readonly enPause: boolean;
+  /**
+   * Le mode de la partie: le jeu de regles que le moteur applique.
+   *
+   * Il voyage dans l'etat pour la meme raison que les reglages: le moteur ne
+   * connait que ce qu'on lui passe. Fige a la creation de la partie, il choisit
+   * notamment la regle de resolution des contacts (voir REGLES_DES_MODES dans
+   * moteur.ts). Un seul mode existe en v1, le Classique.
+   */
+  readonly mode: Mode;
   /** Reglages choisis par l'hote. Le moteur ne connait que ceux-la. */
   readonly reglages: ReglagesPartie;
   /** Dimensions de la carte jouee. */
@@ -453,6 +463,8 @@ export interface ProchainesApparitions {
 export interface OptionsEtatInitial {
   /** Graine de la partie. Deux parties de meme graine et memes entrees sont identiques. */
   readonly graine: number;
+  /** Mode de la partie. Le Classique par defaut, seul mode de la v1. */
+  readonly mode?: Mode;
   /** Reglages a appliquer. Ceux qui manquent prennent la valeur par defaut. */
   readonly reglages?: ReglagesPartiels;
   /**
@@ -496,6 +508,7 @@ export function creerEtatInitial(options: OptionsEtatInitial): EtatPartie {
     tempsEcouleMs: 0,
     dureeMs: reglages.dureePartieS * 1000,
     enPause: false,
+    mode: options.mode ?? 'classique',
     reglages,
     carte,
     terrain,

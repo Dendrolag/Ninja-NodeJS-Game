@@ -65,6 +65,9 @@ function instantane(tick: number, entites: readonly EntiteVue[]): InstantanePart
 const SALON: InfosSalon = {
   idRoom: 'room-1',
   statut: 'salon',
+  mode: 'classique',
+  visibilite: 'publique',
+  capacite: 12,
   joueurs: [{ id: 'moi', pseudo: 'Alice', hote: true }],
   reglages: REGLAGES_PAR_DEFAUT,
 };

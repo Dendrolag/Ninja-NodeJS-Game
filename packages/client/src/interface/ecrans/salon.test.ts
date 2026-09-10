@@ -34,6 +34,9 @@ function salon(hote: 'moi' | 'bob', pseudoDeBob = 'Bob'): InfosSalon {
   return {
     idRoom: 'room-1',
     statut: 'salon',
+    mode: 'classique',
+    visibilite: 'publique',
+    capacite: 12,
     joueurs: [
       { id: 'moi', pseudo: 'Alice', hote: hote === 'moi' },
       { id: 'bob', pseudo: pseudoDeBob, hote: hote === 'bob' },

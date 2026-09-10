@@ -89,14 +89,35 @@ export const BORNES_CHAT = {
  * Le jeu de caracteres est une liste blanche, pour la meme raison que celui du
  * pseudo: cet identifiant sert de cle de recherche et de nom de salle Socket.IO,
  * deux endroits ou un caractere inattendu n'a rien a faire. La longueur est
- * large: le RoomManager fabrique aujourd'hui des « room-1 », et l'etape 2.4
- * introduira des codes d'invitation.
+ * large: le RoomManager fabrique des « room-1 ». Les codes d'invitation, eux, ont
+ * leurs propres bornes, ci-dessous.
  */
 export const BORNES_ROOM = {
   /** Longueur de l'identifiant, en caracteres. */
   longueur: { minimum: 1, maximum: 64 } satisfies Intervalle,
   /** Lettres latines sans accent, chiffres, tiret et tiret bas. */
   caracteresAdmis: /^[A-Za-z0-9_-]+$/u,
+} as const;
+
+/**
+ * Code d'invitation d'une partie privee.
+ *
+ * SIX CARACTERES, FABRIQUES PAR LE SERVEUR, jamais choisis par un joueur. Leur
+ * alphabet ecarte les caracteres qui se confondent a la lecture ou a la dictee:
+ * O et 0, I et 1. Il en reste trente-deux, soit un peu plus d'un milliard de
+ * codes: on ne tombe pas sur une partie privee en essayant au hasard, d'autant
+ * que chaque essai consomme un jeton de la limite de debit.
+ *
+ * Un joueur peut saisir le code en minuscules, ou avec des espaces autour: la
+ * validation le ramene a sa forme canonique avant toute comparaison.
+ */
+export const BORNES_CODE_INVITATION = {
+  /** Nombre de caracteres d'un code. */
+  longueur: 6,
+  /** Les caracteres dont un code est fait. */
+  alphabet: 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789',
+  /** La forme canonique d'un code: six caracteres de l'alphabet. */
+  forme: /^[A-HJ-NP-Z2-9]{6}$/u,
 } as const;
 
 /**

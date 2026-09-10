@@ -5,8 +5,9 @@
  * navigateur de parties, creation, salon, jeu, fin, profil). Le jalon 1 porte le
  * jeu d'aujourd'hui a l'identique: ses ecrans sont donc ceux du legacy, soit
  * mainMenu, waitingRoom, gameScreen et sa fenetre de fin. Le navigateur de
- * parties et la creation arrivent avec le matchmaking de l'etape 2.4, le profil
- * avec les comptes de la phase 3. Voir la section 3 de docs/plan/ROADMAP.md.
+ * parties et la creation ont leurs contrats depuis l'etape 2.4; leurs ecrans
+ * arrivent au jalon 3, avec le profil et les comptes. Voir la section 3 de
+ * docs/plan/ROADMAP.md.
  *
  * POURQUOI UNE FONCTION PURE PLUTOT QUE DES APPELS DISPERSES. Dans le client
  * d'origine, chaque gestionnaire d'evenement montrait et cachait des div lui-meme.

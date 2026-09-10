@@ -1,16 +1,17 @@
 /**
- * Comment les cartes et le mode de jeu se presentent au joueur.
+ * Comment les cartes et les modes de jeu se presentent au joueur.
  *
- * Les noms sont ceux retenus le 29 juin 2026 pour la version 1 (journal de
- * conception): Rainy Tokyo, Tokyo et Spirit & Time. Le jeu d'origine appelait la
- * troisieme « Room Of Spirit and Time ». Les ambiances viennent de la maquette.
+ * Les noms des cartes sont ceux retenus le 29 juin 2026 pour la version 1
+ * (journal de conception): Rainy Tokyo, Tokyo et Spirit & Time. Le jeu d'origine
+ * appelait la troisieme « Room Of Spirit and Time ». Les ambiances viennent de la
+ * maquette.
  *
- * LA TABLE EST INDEXEE PAR L'IDENTIFIANT DE CARTE DU CONTRAT. Ajouter une carte
- * au contrat sans lui donner de nom ici est donc une erreur de compilation: une
- * carte ne peut pas apparaitre dans le salon sous son identifiant technique.
+ * LES TABLES SONT INDEXEES PAR LES IDENTIFIANTS DU CONTRAT. Ajouter une carte ou
+ * un mode au contrat sans lui donner de nom ici est donc une erreur de
+ * compilation: rien ne peut apparaitre a l'ecran sous son identifiant technique.
  */
 
-import type { IdentifiantCarte } from '@neon-ninja/shared';
+import type { IdentifiantCarte, Mode } from '@neon-ninja/shared';
 
 /** Ce que le joueur lit d'une carte. */
 export interface PresentationCarte {
@@ -26,13 +27,14 @@ export const PRESENTATION_CARTES: Readonly<Record<IdentifiantCarte, Presentation
 };
 
 /**
- * Le nom du seul mode jouable en version 1.
+ * Le nom de chaque mode de jeu, tel que le joueur le lit.
  *
- * Le mode est un jeu de regles enfichable (decision du 29 juin 2026), mais tant
- * qu'il n'en existe qu'un, le contrat ne le transporte pas: il n'y a rien a
- * choisir, donc rien a lire ailleurs qu'ici.
+ * Le mode est un jeu de regles enfichable (decision du 29 juin 2026), et le salon
+ * le transporte depuis l'etape 2.4. Un seul existe en version 1.
  */
-export const NOM_DU_MODE = 'Classique';
+export const NOMS_DES_MODES: Readonly<Record<Mode, string>> = {
+  classique: 'Classique',
+};
 
 /** Le nom d'une carte tel qu'on l'affiche, mode miroir compris. */
 export function nomDeCarte(carte: IdentifiantCarte, modeMiroir: boolean): string {

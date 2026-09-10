@@ -121,7 +121,7 @@ export { avancerUneEcheance, intervalleFixe, intervalleVariable } from './planif
 export { appliquerLesEffetsDeZone, avancerLesZones, estCache, zoneContient } from './zones.js';
 
 export type { EntreeJoueur, Entrees, EvaluationFinDePartie } from './moteur.js';
-export { evaluerFinDePartie, tick } from './moteur.js';
+export { REGLES_DES_MODES, evaluerFinDePartie, tick } from './moteur.js';
 
 export type { LigneScore } from './score.js';
 export { calculerScores, scoreDe } from './score.js';

@@ -45,6 +45,9 @@ function etat(classement: readonly LigneClassement[], moi = 'moi'): EtatClient {
     salon: {
       idRoom: 'room-1',
       statut: 'terminee',
+      mode: 'classique',
+      visibilite: 'publique',
+      capacite: 12,
       joueurs: [],
       reglages: REGLAGES_PAR_DEFAUT,
     },

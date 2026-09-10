@@ -6,9 +6,10 @@
  * c'etait l'un des trois points d'entree de la faille S1. Ici le modele ne
  * contient que des chaines, et l'ecran les pose avec textContent.
  *
- * CE QUI N'EXISTE PAS ENCORE, et n'est donc pas ici: l'etat « pret », les places
- * libres et la capacite, le code d'invitation. Ils dependent du matchmaking de
- * l'etape 2.4. Voir la reconciliation de la fiche 4.3.
+ * CE QUI N'EST PAS ICI. Les places libres, la capacite et le code d'invitation
+ * arrivent dans le salon depuis l'etape 2.4, mais leur affichage appartient a la
+ * reprise des ecrans au jalon 3. L'etat « pret » n'existe pas: le cadrage de
+ * l'etape 0.3 ne le retient pas.
  */
 
 import type { ReglagesPartie } from '@neon-ninja/shared';
@@ -17,7 +18,7 @@ import { TYPES_BONUS, TYPES_MALUS, TYPES_ZONE } from '@neon-ninja/shared';
 import type { EtatClient } from '../../etat.js';
 import { formaterDuree } from '../../hud/modele.js';
 import { jeSuisHote } from '../../selecteurs.js';
-import { NOM_DU_MODE, nomDeCarte } from './cartes.js';
+import { NOMS_DES_MODES, nomDeCarte } from './cartes.js';
 
 /** Un joueur du salon, tel qu'on l'affiche. */
 export interface JoueurAffiche {
@@ -104,7 +105,7 @@ export function modeleSalon(etat: EtatClient): ModeleSalon | undefined {
 
   return {
     titre: hote === undefined ? 'Salon' : `Salon de ${hote.pseudo}`,
-    sousTitre: `${NOM_DU_MODE} · ${nomDeCarte(salon.reglages.carte, salon.reglages.modeMiroir)}`,
+    sousTitre: `${NOMS_DES_MODES[salon.mode]} · ${nomDeCarte(salon.reglages.carte, salon.reglages.modeMiroir)}`,
     joueurs: salon.joueurs.map((joueur) => ({
       id: joueur.id,
       pseudo: joueur.pseudo,

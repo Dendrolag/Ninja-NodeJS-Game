@@ -13,7 +13,8 @@
  *      autres en souffre. C'est la faille S4 de l'audit.
  *   3. Elle ROUTE. Une connexion appartient a une partie et a une seule. Les
  *      emissions sont cantonnees a la salle Socket.IO de cette partie, jamais
- *      diffusees a tout le serveur.
+ *      diffusees a tout le serveur. Elle decide aussi quelle partie un joueur a
+ *      le droit de viser: une partie privee ne se rejoint que par son code.
  *   4. Elle TRADUIT. Un instantane part a chaque battement, et les faits du
  *      moteur deviennent des notifications adressees.
  *
@@ -29,6 +30,7 @@
 
 import type {
   DemandeChat,
+  DemandeCreation,
   DemandeRejoindre,
   ErreurValidation,
   EvenementsClientVersServeur,
@@ -36,6 +38,7 @@ import type {
   InfosSalon,
   IntentionDeplacement,
   LimiteDebit,
+  PartiePublique,
   ReglagesPartiels,
   ResultatValidation,
   SeauAJetons,
@@ -46,6 +49,7 @@ import {
   completerReglages,
   consommer,
   seauNeuf,
+  validerDemandeCreation,
   validerDemandeRejoindre,
   validerIntentionDeplacement,
   validerMessageChat,
@@ -64,6 +68,7 @@ import {
   instantaneDe,
   joueurDuSalon,
   notificationsDe,
+  partiePubliqueDe,
   salonDe,
 } from './instantane.js';
 import type { OptionsCreationRoom } from './RoomManager.js';
@@ -100,6 +105,9 @@ interface Connexion {
   /** Instant du dernier message accepte ou refuse, par famille. */
   readonly derniereFois: Record<FamilleDebit, number>;
 }
+
+/** La reponse a une demande d'entree ou de creation. */
+type ReponseDEntree = (reponse: ResultatValidation<InfosSalon>) => void;
 
 /** Ce qu'il faut pour monter la couche reseau. */
 export interface OptionsServeurSocket {
@@ -191,6 +199,12 @@ export class ServeurSocket {
     socket.on('rejoindre', (demande, accuse) => {
       this.surRejoindre(socket, demande, accuse);
     });
+    socket.on('creerPartie', (demande, accuse) => {
+      this.surCreerPartie(socket, demande, accuse);
+    });
+    socket.on('listerParties', (accuse) => {
+      this.surListerParties(socket, accuse);
+    });
     socket.on('quitter', () => {
       this.surQuitter(socket);
     });
@@ -226,33 +240,21 @@ export class ServeurSocket {
   // ------------------------------------------------------------------------
 
   /**
-   * Entree en partie.
+   * Entree dans une partie existante: par son code, par son identifiant, ou en
+   * partie rapide.
    *
-   * L'ORDRE DES OPERATIONS EST LE POINT IMPORTANT. On valide la demande, puis on
-   * trouve la partie, puis on demande a la room d'accueillir, et c'est SEULEMENT
-   * SI elle accepte que l'on fabrique la session et que l'on rejoint la salle
-   * Socket.IO. Une entree refusee ne laisse donc aucune trace: ni session, ni
-   * appartenance a une salle, ni message aux autres.
+   * Une entree refusee ne laisse aucune trace: ni session, ni appartenance a une
+   * salle, ni message aux autres. Voir faireEntrer.
    */
   private surRejoindre(
     socket: SocketTypee,
     demande: DemandeRejoindre,
-    accuse: (reponse: ResultatValidation<InfosSalon>) => void,
+    accuse: ReponseDEntree,
   ): void {
-    const repondre = typeof accuse === 'function' ? accuse : () => undefined;
-    const connexion = this.connexions.get(socket.id);
+    const repondre = accuseOuRien(accuse);
+    const connexion = this.connexionLibre(socket, 'rejoindre', repondre);
 
     if (connexion === undefined) {
-      return;
-    }
-
-    if (!this.autorise(connexion, 'autresActions')) {
-      repondre(refus('rejoindre', 'Trop de demandes. Ralentissez.'));
-      return;
-    }
-
-    if (connexion.idRoom !== undefined) {
-      repondre(refus('session', 'Cette connexion est déjà dans une partie.'));
       return;
     }
 
@@ -264,33 +266,84 @@ export class ServeurSocket {
       return;
     }
 
-    const room = this.trouverLaRoom(verdict.valeur.idRoom);
-    if (room === undefined) {
-      repondre(refus('idRoom', "Cette partie n'existe plus."));
+    const trouvee = this.trouverLaRoom(verdict.valeur);
+    if (!trouvee.valide) {
+      repondre({ valide: false, erreurs: trouvee.erreurs });
       return;
     }
 
-    const session: SessionJoueur = { id: socket.id, pseudo: verdict.valeur.pseudo };
-    const entree = room.accueillir(session);
-    if (!entree.valide) {
-      repondre({ valide: false, erreurs: entree.erreurs });
+    this.faireEntrer(socket, connexion, trouvee.valeur, verdict.valeur.pseudo, repondre);
+  }
+
+  /**
+   * Creation d'une partie par un joueur, qui en devient l'hote.
+   *
+   * La partie n'est ouverte qu'une fois la demande entierement validee: une
+   * demande refusee ne cree rien. Son terrain est charge d'apres ses reglages de
+   * depart, comme lorsque l'hote les change dans le salon.
+   */
+  private surCreerPartie(
+    socket: SocketTypee,
+    demande: DemandeCreation,
+    accuse: ReponseDEntree,
+  ): void {
+    const repondre = accuseOuRien(accuse);
+    const connexion = this.connexionLibre(socket, 'creerPartie', repondre);
+
+    if (connexion === undefined) {
       return;
     }
 
-    connexion.session = session;
-    connexion.idRoom = room.id;
-    void socket.join(room.id);
-
-    repondre({ valide: true, valeur: salonDe(room) });
-
-    socket.to(room.id).emit('joueurArrive', joueurDuSalon(entree.valeur));
-    this.diffuserLeSalon(room);
-
-    // Rejoindre une partie deja commencee est autorise, comme dans le legacy. Le
-    // nouveau venu doit alors basculer tout de suite vers l'ecran de jeu.
-    if (room.statut === 'enCours') {
-      socket.emit('partieLancee');
+    const verdict = validerDemandeCreation(demande as unknown);
+    if (!verdict.valide) {
+      repondre({ valide: false, erreurs: verdict.erreurs });
+      return;
     }
+
+    const { configuration, pseudo } = verdict.valeur;
+    const room = this.ouvrirUneRoom({
+      mode: configuration.mode,
+      visibilite: configuration.visibilite,
+      ...(configuration.reglages === undefined ? {} : { reglages: configuration.reglages }),
+    });
+
+    // Une partie neuve accueille toujours son createur. Si ce n'etait un jour plus
+    // le cas, la partie vide ne doit pas survivre a la creation manquee: elle
+    // apparaitrait dans la liste publique sans hote.
+    if (!this.faireEntrer(socket, connexion, room, pseudo, repondre)) {
+      this.rooms.detruire(room.id);
+    }
+  }
+
+  /**
+   * Liste des parties publiques ouvertes: dans leur salon, et pas pleines.
+   *
+   * Pas besoin d'etre dans une partie pour la demander: c'est justement avant
+   * d'entrer qu'on la consulte. Elle compte dans la limite de debit comme les
+   * autres actions. Une demande de trop recoit une liste vide et un refus
+   * explique, pour que le client ne reste pas a attendre une reponse.
+   */
+  private surListerParties(
+    socket: SocketTypee,
+    accuse: (parties: readonly PartiePublique[]) => void,
+  ): void {
+    const repondre = typeof accuse === 'function' ? accuse : () => undefined;
+    const connexion = this.connexions.get(socket.id);
+
+    if (connexion === undefined) {
+      return;
+    }
+
+    if (!this.autorise(connexion, 'autresActions')) {
+      socket.emit('refus', {
+        action: 'listerParties',
+        erreurs: [{ champ: 'debit', motif: 'Trop de demandes. Ralentissez.' }],
+      });
+      repondre([]);
+      return;
+    }
+
+    repondre(this.rooms.partiesPubliquesOuvertes().map(partiePubliqueDe));
   }
 
   /** Sortie de partie, volontaire ou par deconnexion. */
@@ -563,6 +616,80 @@ export class ServeurSocket {
   // ------------------------------------------------------------------------
 
   /**
+   * La connexion d'un joueur qui demande a entrer ou a creer, si elle en a le droit.
+   *
+   * Deux conditions communes aux deux demandes: le debit, et le fait de n'etre
+   * encore dans aucune partie. Un refus est rendu a l'appelant, et rien n'est
+   * rendu.
+   */
+  private connexionLibre(
+    socket: SocketTypee,
+    action: 'rejoindre' | 'creerPartie',
+    repondre: ReponseDEntree,
+  ): Connexion | undefined {
+    const connexion = this.connexions.get(socket.id);
+
+    if (connexion === undefined) {
+      return undefined;
+    }
+
+    if (!this.autorise(connexion, 'autresActions')) {
+      repondre(refus(action, 'Trop de demandes. Ralentissez.'));
+      return undefined;
+    }
+
+    if (connexion.idRoom !== undefined) {
+      repondre(refus('session', 'Cette connexion est déjà dans une partie.'));
+      return undefined;
+    }
+
+    return connexion;
+  }
+
+  /**
+   * Fait entrer une connexion dans une partie, trouvee ou tout juste creee.
+   *
+   * L'ORDRE DES OPERATIONS EST LE POINT IMPORTANT. On demande a la room
+   * d'accueillir, et c'est SEULEMENT SI elle accepte que l'on retient la session
+   * et que l'on rejoint la salle Socket.IO. Une entree refusee ne laisse donc
+   * aucune trace: ni session, ni appartenance a une salle, ni message aux autres.
+   *
+   * @returns Vrai si la room a accueilli le joueur.
+   */
+  private faireEntrer(
+    socket: SocketTypee,
+    connexion: Connexion,
+    room: GameRoom,
+    pseudo: string,
+    repondre: ReponseDEntree,
+  ): boolean {
+    const session: SessionJoueur = { id: socket.id, pseudo };
+    const entree = room.accueillir(session);
+
+    if (!entree.valide) {
+      repondre({ valide: false, erreurs: entree.erreurs });
+      return false;
+    }
+
+    connexion.session = session;
+    connexion.idRoom = room.id;
+    void socket.join(room.id);
+
+    repondre({ valide: true, valeur: salonDe(room) });
+
+    socket.to(room.id).emit('joueurArrive', joueurDuSalon(entree.valeur));
+    this.diffuserLeSalon(room);
+
+    // Rejoindre une partie deja commencee est autorise, comme dans le legacy. Le
+    // nouveau venu doit alors basculer tout de suite vers l'ecran de jeu.
+    if (room.statut === 'enCours') {
+      socket.emit('partieLancee');
+    }
+
+    return true;
+  }
+
+  /**
    * Retrouve la partie que ce socket commande, ou refuse avec une explication.
    *
    * Trois conditions, et un seul endroit qui les verifie: le debit, la presence
@@ -625,23 +752,42 @@ export class ServeurSocket {
   }
 
   /**
-   * Trouve la partie visee, ou en ouvre une.
+   * Trouve la partie qu'une demande d'entree vise, ou dit pourquoi il n'y en a pas.
    *
-   * SANS IDENTIFIANT, ON PREND LA PREMIERE PARTIE QUI ATTEND DANS SON SALON, et on
-   * en cree une s'il n'y en a aucune. C'est le comportement du legacy, qui n'avait
-   * qu'un salon unique, et c'est provisoire: l'etape 2.4 apporte les codes
-   * d'invitation pour les parties privees et une file pour les publiques, et
-   * remplacera cette regle. Avec un identifiant, aucune partie n'est creee: on
-   * rejoint celle qui est demandee, ou personne.
+   * TROIS CAS, ET UNE REGLE DE SECURITE.
+   *
+   *   - Par CODE: la partie privee qui le porte.
+   *   - Par IDENTIFIANT: une partie publique seulement. Les identifiants se
+   *     devinent (room-1, room-2): accepter d'y entrer ferait d'un code
+   *     d'invitation une simple formalite. Une partie privee visee par son
+   *     identifiant recoit donc le meme refus qu'une partie qui n'existe pas,
+   *     pour ne pas meme confirmer qu'elle existe.
+   *   - SANS RIEN, c'est la partie rapide du cadrage de l'etape 0.3: la premiere
+   *     partie publique encore dans son salon et non pleine, ou une nouvelle
+   *     partie publique aux reglages par defaut. Elle remplace la regle
+   *     provisoire du jalon 1, qui prenait n'importe quel salon en attente.
    */
-  private trouverLaRoom(idRoom: string | undefined): GameRoom | undefined {
-    if (idRoom !== undefined) {
-      return this.rooms.room(idRoom);
+  private trouverLaRoom(demande: DemandeRejoindre): ResultatValidation<GameRoom> {
+    if (demande.code !== undefined) {
+      const room = this.rooms.parCode(demande.code);
+
+      return room === undefined
+        ? refus('code', 'Aucune partie ne correspond à ce code.')
+        : { valide: true, valeur: room };
     }
 
-    const enAttente = this.rooms.toutesLesRooms.find((room) => room.statut === 'salon');
+    if (demande.idRoom !== undefined) {
+      const room = this.rooms.room(demande.idRoom);
 
-    return enAttente ?? this.ouvrirUneRoom();
+      return room?.visibilite === 'publique'
+        ? { valide: true, valeur: room }
+        : refus('idRoom', "Cette partie n'existe plus.");
+    }
+
+    return {
+      valide: true,
+      valeur: this.rooms.partiesPubliquesOuvertes()[0] ?? this.ouvrirUneRoom(),
+    };
   }
 
   /**
@@ -741,6 +887,16 @@ function envoyer(socket: SocketTypee, notification: Notification): void {
       socket.emit('malusSubi', notification.charge);
       return;
   }
+}
+
+/**
+ * L'accuse de reception fourni par le client, ou une fonction qui ne fait rien.
+ *
+ * Un client modifie peut omettre l'accuse: le serveur ne doit pas tomber en
+ * appelant ce qui n'est pas une fonction.
+ */
+function accuseOuRien(accuse: unknown): ReponseDEntree {
+  return typeof accuse === 'function' ? (accuse as ReponseDEntree) : () => undefined;
 }
 
 /** Un refus a un seul motif, mis a la forme d'un resultat de validation. */

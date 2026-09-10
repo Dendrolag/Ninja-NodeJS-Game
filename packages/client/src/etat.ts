@@ -24,6 +24,7 @@ import type {
   FinDePartie,
   InfosSalon,
   MessageChat,
+  PartiePublique,
   Refus,
   TypeBonus,
   TypeMalus,
@@ -116,6 +117,15 @@ export interface EtatClient {
    * finie, on passe un instant par l'accueil, et on redemande aussitot.
    */
   readonly entreeEnCours: boolean;
+  /**
+   * Les parties publiques ouvertes, telles que le serveur les a listees la
+   * derniere fois qu'on le lui a demande.
+   *
+   * Ajoute a l'etape 2.4. C'est une photographie, pas un flux: elle ne se met pas
+   * a jour d'elle-meme, et l'ecran qui la montre (jalon 3) la redemande quand il
+   * en a besoin.
+   */
+  readonly partiesPubliques: readonly PartiePublique[];
   /** Le salon de la partie ou l'on se trouve, reglages compris. */
   readonly salon: InfosSalon | undefined;
   /** Le compte a rebours de demarrage, tant qu'il tourne. */
@@ -161,6 +171,7 @@ export const ETAT_INITIAL: EtatClient = {
   moi: undefined,
   pseudoDemande: undefined,
   entreeEnCours: false,
+  partiesPubliques: [],
   salon: undefined,
   compteARebours: undefined,
   partie: undefined,

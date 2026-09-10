@@ -30,7 +30,9 @@
  * parlent donc du meme contrat, ecrit une seule fois.
  */
 
+import type { Mode, Visibilite } from './constantes.js';
 import type { Vecteur } from './geometrie.js';
+import type { ReglagesPartiels } from './reglages.js';
 
 /**
  * Ce qu'un joueur demande pendant un battement: une direction, et rien d'autre.
@@ -77,7 +79,7 @@ export interface SessionJoueur {
 }
 
 /**
- * Ce qu'un joueur envoie pour entrer dans une partie.
+ * Ce qu'un joueur envoie pour entrer dans une partie existante.
  *
  * Il annonce un pseudo, et eventuellement la partie qu'il vise. Le pseudo est
  * une DEMANDE, pas une identite: le serveur le valide, verifie qu'il est libre
@@ -85,16 +87,53 @@ export interface SessionJoueur {
  * fera foi pour tout le reste de la connexion. Rien de ce qui suit ne relira ce
  * message.
  *
- * L'identifiant de partie absent signifie « n'importe laquelle »: le serveur
- * choisit. C'est ce que faisait le legacy, qui n'avait qu'un seul salon. Le
- * choix explicite d'une partie prendra tout son sens a l'etape 2.4, avec les
- * codes d'invitation.
+ * TROIS FACONS D'ENTRER, ET UNE SEULE A LA FOIS:
+ *
+ *   - par un CODE D'INVITATION, pour une partie privee;
+ *   - par l'IDENTIFIANT d'une partie choisie dans la liste publique. Une partie
+ *     privee ne se rejoint jamais ainsi: ses identifiants se devinent (room-1,
+ *     room-2), son code non;
+ *   - SANS RIEN, et c'est la partie rapide du cadrage de l'etape 0.3: la premiere
+ *     partie publique encore dans son salon et non pleine, ou une nouvelle partie
+ *     publique aux reglages par defaut s'il n'y en a aucune.
+ *
+ * Un identifiant et un code ensemble sont refuses: la demande serait ambigue.
  */
 export interface DemandeRejoindre {
   /** Pseudo souhaite, a valider. */
   readonly pseudo: string;
-  /** Partie visee. Absent: le serveur en choisit une. */
+  /** Partie publique visee, choisie dans la liste. */
   readonly idRoom?: string;
+  /** Code d'invitation d'une partie privee. */
+  readonly code?: string;
+}
+
+/**
+ * Ce qui se choisit a la creation d'une partie, et ne change plus ensuite.
+ *
+ * Le mode est fige parce qu'il fixe la capacite: le changer pourrait exclure des
+ * joueurs deja presents. La visibilite est figee pour qu'une partie ne disparaisse
+ * pas de la liste sous les yeux de ceux qui la rejoignent. Les reglages, eux,
+ * restent modifiables par l'hote dans le salon jusqu'au lancement. Voir la
+ * section 4 du cadrage (docs/design/cadrage.md).
+ */
+export interface ConfigurationPartie {
+  readonly mode: Mode;
+  readonly visibilite: Visibilite;
+  /** Reglages de depart. Ceux qui manquent prennent la valeur par defaut. */
+  readonly reglages?: ReglagesPartiels;
+}
+
+/**
+ * Ce qu'un joueur envoie pour creer une partie et en devenir l'hote.
+ *
+ * Le code d'invitation d'une partie privee n'y figure pas: c'est le serveur qui
+ * le fabrique, et qui le rend dans le salon.
+ */
+export interface DemandeCreation {
+  /** Pseudo souhaite, a valider. */
+  readonly pseudo: string;
+  readonly configuration: ConfigurationPartie;
 }
 
 /** Ce qu'un joueur envoie pour parler dans le chat: un texte, et rien d'autre. */

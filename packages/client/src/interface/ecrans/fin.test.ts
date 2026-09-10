@@ -51,6 +51,9 @@ const CLASSEMENT: readonly LigneClassement[] = [
 const SALON: InfosSalon = {
   idRoom: 'room-1',
   statut: 'salon',
+  mode: 'classique',
+  visibilite: 'publique',
+  capacite: 12,
   joueurs: [
     { id: 'moi', pseudo: 'Alice', hote: true },
     { id: 'carol', pseudo: 'Carol', hote: false },

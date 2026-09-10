@@ -27,6 +27,7 @@ import type {
   InstantanePartie,
   MessageChat,
   PartieEnPause,
+  PartiePublique,
   Refus,
 } from '@neon-ninja/shared';
 
@@ -38,14 +39,25 @@ export type Action =
   | { readonly type: 'connexionEtablie'; readonly identifiant: string }
   /** Le transport est tombe. Tout ce qui dependait de la partie est perdu. */
   | { readonly type: 'connexionPerdue' }
-  /** Le joueur demande a entrer, avec le pseudo qu'il souhaite. */
+  /** Le joueur demande a entrer, ou a creer une partie, avec le pseudo qu'il souhaite. */
   | { readonly type: 'entreeDemandee'; readonly pseudo: string }
   /** Le serveur a accepte l'entree et decrit le salon. */
   | { readonly type: 'entreeAcceptee'; readonly salon: InfosSalon }
-  /** Le serveur a refuse l'entree, en disant pourquoi. */
-  | { readonly type: 'entreeRefusee'; readonly erreurs: readonly ErreurValidation[] }
+  /**
+   * Le serveur a refuse l'entree ou la creation, en disant pourquoi.
+   *
+   * Le refus retient a quelle demande il repond: un formulaire d'entree et un
+   * formulaire de creation ne montrent pas leurs motifs au meme endroit.
+   */
+  | {
+      readonly type: 'entreeRefusee';
+      readonly action: 'rejoindre' | 'creerPartie';
+      readonly erreurs: readonly ErreurValidation[];
+    }
   /** Le joueur quitte la partie de lui-meme. */
   | { readonly type: 'sortie' }
+  /** Le serveur a rendu la liste des parties publiques ouvertes. */
+  | { readonly type: 'partiesListees'; readonly parties: readonly PartiePublique[] }
   /** L'etat du salon a change. */
   | { readonly type: 'salon'; readonly salon: InfosSalon }
   /** Quelqu'un a parle. La date est celle de l'arrivee, cote client. */

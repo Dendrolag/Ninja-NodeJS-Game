@@ -78,7 +78,7 @@ pnpm dev                  # compiler, empaqueter, puis lancer le jeu sur http://
 pnpm dev:server           # compiler puis lancer le serveur seul, sans refaire la page
 ```
 
-**Le jeu est jouable dans un navigateur depuis l'étape 4.3**: `pnpm dev`, puis ouvrir http://localhost:3000. Le serveur sert la page empaquetée par esbuild (`packages/client/web`, produite par `pnpm build`) et les ressources de `assets/`, et décode les murs des cartes. Variables d'environnement: `PORT`; `ORIGINES_AUTORISEES` (liste séparée par des virgules) pour le contrôle d'accès du navigateur; `CHEMIN_CLIENT` et `CHEMIN_RESSOURCES` pour servir la page et les ressources depuis un autre dossier. Sans code de partie (étape 2.4), un joueur entre dans le premier salon en attente. Pour jouer à la version d'origine, utiliser la branche `master`.
+**Le jeu est jouable dans un navigateur depuis l'étape 4.3**: `pnpm dev`, puis ouvrir http://localhost:3000. Le serveur sert la page empaquetée par esbuild (`packages/client/web`, produite par `pnpm build`) et les ressources de `assets/`, et décode les murs des cartes. Variables d'environnement: `PORT`; `ORIGINES_AUTORISEES` (liste séparée par des virgules) pour le contrôle d'accès du navigateur; `CHEMIN_CLIENT` et `CHEMIN_RESSOURCES` pour servir la page et les ressources depuis un autre dossier. « Jouer » est la partie rapide: la première partie publique en attente, ou une nouvelle partie publique. Depuis l'étape 2.4, le serveur sait aussi créer une partie privée et la faire rejoindre par son code d'invitation; les écrans correspondants arrivent au jalon 3. Pour jouer à la version d'origine, utiliser la branche `master`.
 
 Première utilisation de Playwright sur une machine neuve: `pnpm exec playwright install chromium`.
 

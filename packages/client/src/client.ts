@@ -9,16 +9,25 @@
  * c'est ce qui permet de lire d'un coup d'oeil la liste complete de ce que le
  * client sait recevoir et de ce qu'il sait demander.
  *
- * TOUS LES EVENEMENTS DESCENDANTS DU CONTRAT SONT BRANCHES, sans exception. Un
- * evenement recu que personne n'ecoute est un silence qu'on ne remarque qu'en
- * jouant, et c'est ce qui rendait le client d'origine si difficile a corriger.
+ * TOUS LES EVENEMENTS DU CONTRAT SONT BRANCHES, sans exception, dans les deux
+ * sens. Un evenement recu que personne n'ecoute est un silence qu'on ne remarque
+ * qu'en jouant, et c'est ce qui rendait le client d'origine si difficile a
+ * corriger. Depuis l'etape 2.4, cela comprend la creation de partie et la liste
+ * des parties publiques, que les ecrans du jalon 3 appelleront.
  *
  * IL SE FERME. Toutes les ecoutes posees sont retenues et retirees par fermer().
  * Le legacy empilait des ecoutes a chaque entree en partie, si bien qu'un joueur
  * qui rejoignait trois fois traitait chaque message trois fois.
  */
 
-import type { DemandeRejoindre, IntentionDeplacement, ReglagesPartiels } from '@neon-ninja/shared';
+import type {
+  ConfigurationPartie,
+  DemandeRejoindre,
+  InfosSalon,
+  IntentionDeplacement,
+  ReglagesPartiels,
+  ResultatValidation,
+} from '@neon-ninja/shared';
 
 import type { EtatClient } from './etat.js';
 import { fait } from './faits.js';
@@ -39,19 +48,35 @@ export interface OptionsClient {
 }
 
 /**
+ * Comment viser une partie precise en y entrant.
+ *
+ * Par son identifiant, choisi dans la liste des parties publiques, ou par le code
+ * d'invitation d'une partie privee. Sans l'un ni l'autre, c'est la partie rapide.
+ */
+export type AccesPartie = { readonly idRoom: string } | { readonly code: string };
+
+/**
  * Un client monte: son etat, et ce que le joueur peut demander.
  *
  * Les commandes portent le nom de l'action du joueur, pas celui de l'evenement
- * reseau. C'est ce que l'interface de l'etape 4.3 appellera, et elle n'a pas a
- * connaitre le protocole.
+ * reseau. C'est ce que l'interface appelle, et elle n'a pas a connaitre le
+ * protocole.
  */
 export interface Client {
   /** L'etat courant. C'est ce que le rendu lit a chaque image. */
   readonly etat: EtatClient;
   /** S'abonne aux changements d'etat. Rend la fonction qui desabonne. */
   abonner(observateur: Observateur): () => void;
-  /** Demande a entrer dans une partie, avec ce pseudo. */
-  rejoindre(pseudo: string, idRoom?: string): void;
+  /**
+   * Demande a entrer dans une partie, avec ce pseudo.
+   *
+   * @param acces La partie visee. Absent: la partie rapide.
+   */
+  rejoindre(pseudo: string, acces?: AccesPartie): void;
+  /** Cree une partie et en devient l'hote, avec ce pseudo. */
+  creerPartie(pseudo: string, configuration: ConfigurationPartie): void;
+  /** Demande la liste des parties publiques ouvertes. Elle arrive dans l'etat. */
+  listerParties(): void;
   /** Quitte la partie sans couper le lien. */
   quitter(): void;
   /** Annonce ou l'on veut aller. */
@@ -92,6 +117,21 @@ export function creerClient(options: OptionsClient): Client {
 
   /** Instant local, lu une seule fois par message. */
   const maintenant = (): number => horloge.maintenant();
+
+  /**
+   * Ce que devient l'etat quand le serveur repond a une entree ou a une creation.
+   *
+   * Un refus retient a quelle demande il repond.
+   */
+  const surReponseDEntree =
+    (demande: 'rejoindre' | 'creerPartie') =>
+    (reponse: ResultatValidation<InfosSalon>): void => {
+      magasin.appliquer(
+        reponse.valide
+          ? { type: 'entreeAcceptee', salon: reponse.valeur }
+          : { type: 'entreeRefusee', action: demande, erreurs: reponse.erreurs },
+      );
+    };
 
   // -- L'etat du lien -------------------------------------------------------
 
@@ -238,20 +278,25 @@ export function creerClient(options: OptionsClient): Client {
 
     abonner: (observateur) => magasin.abonner(observateur),
 
-    rejoindre: (pseudo, idRoom) => {
+    rejoindre: (pseudo, acces) => {
       magasin.appliquer({ type: 'entreeDemandee', pseudo });
 
-      // L'identifiant absent signifie n'importe quelle partie, et le contrat le
-      // declare optionnel: le poser a undefined n'est pas la meme chose que ne
-      // pas le poser du tout.
-      const demande: DemandeRejoindre = idRoom === undefined ? { pseudo } : { pseudo, idRoom };
+      // Sans acces, la demande ne porte que le pseudo: le contrat declare
+      // l'identifiant et le code optionnels, et les poser a undefined n'est pas
+      // la meme chose que ne pas les poser du tout.
+      const demande: DemandeRejoindre = { pseudo, ...acces };
 
-      reseau.emettre('rejoindre', demande, (reponse) => {
-        magasin.appliquer(
-          reponse.valide
-            ? { type: 'entreeAcceptee', salon: reponse.valeur }
-            : { type: 'entreeRefusee', erreurs: reponse.erreurs },
-        );
+      reseau.emettre('rejoindre', demande, surReponseDEntree('rejoindre'));
+    },
+
+    creerPartie: (pseudo, configuration) => {
+      magasin.appliquer({ type: 'entreeDemandee', pseudo });
+      reseau.emettre('creerPartie', { pseudo, configuration }, surReponseDEntree('creerPartie'));
+    },
+
+    listerParties: () => {
+      reseau.emettre('listerParties', (parties) => {
+        magasin.appliquer({ type: 'partiesListees', parties });
       });
     },
 

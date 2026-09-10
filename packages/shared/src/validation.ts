@@ -32,10 +32,17 @@
  */
 
 import type { Intervalle } from './bornes.js';
-import { BORNES_CHAT, BORNES_PSEUDO, BORNES_REGLAGES, BORNES_ROOM } from './bornes.js';
+import {
+  BORNES_CHAT,
+  BORNES_CODE_INVITATION,
+  BORNES_PSEUDO,
+  BORNES_REGLAGES,
+  BORNES_ROOM,
+} from './bornes.js';
 import type { IdentifiantCarte } from './constantes.js';
-import { CARTES, TYPES_BONUS, TYPES_MALUS, TYPES_ZONE } from './constantes.js';
+import { CARTES, MODES, TYPES_BONUS, TYPES_MALUS, TYPES_ZONE, VISIBILITES } from './constantes.js';
 import type {
+  DemandeCreation,
   DemandeRejoindre,
   IntentionDeplacement,
   MessageChat,
@@ -126,8 +133,12 @@ export function validerPseudo(brut: unknown): ResultatValidation<string> {
  * meme titre que le reste. Il sert ensuite de cle de recherche dans le
  * RoomManager et de nom de salle Socket.IO: le laisser passer tel quel
  * reviendrait a laisser un client choisir ou ses messages atterrissent. Un
- * identifiant absent n'est pas une erreur, il signifie « n'importe quelle
- * partie ».
+ * identifiant absent n'est pas une erreur: sans identifiant ni code, c'est la
+ * partie rapide.
+ *
+ * Le code d'invitation se valide de meme, une fois ramene a sa forme canonique.
+ * Un identifiant et un code ensemble sont refuses: la demande serait ambigue, et
+ * le serveur n'a pas a choisir lequel croire.
  */
 export function validerDemandeRejoindre(brut: unknown): ResultatValidation<DemandeRejoindre> {
   const source = objetOuRien(brut);
@@ -141,6 +152,23 @@ export function validerDemandeRejoindre(brut: unknown): ResultatValidation<Deman
   }
 
   const brutRoom = champ(source, 'idRoom');
+  const brutCode = champ(source, 'code');
+
+  if (brutRoom !== undefined && brutCode !== undefined) {
+    return refuse(
+      'rejoindre',
+      "Une demande d'entrée vise une partie par son identifiant ou par son code, pas les deux.",
+    );
+  }
+
+  if (brutCode !== undefined) {
+    const verdictCode = validerCodeInvitation(brutCode);
+
+    return verdictCode.valide
+      ? accepte({ pseudo: verdictPseudo.valeur, code: verdictCode.valeur })
+      : { valide: false, erreurs: verdictCode.erreurs };
+  }
+
   if (brutRoom === undefined) {
     return accepte({ pseudo: verdictPseudo.valeur });
   }
@@ -165,6 +193,83 @@ export function validerDemandeRejoindre(brut: unknown): ResultatValidation<Deman
   }
 
   return accepte({ pseudo: verdictPseudo.valeur, idRoom: brutRoom });
+}
+
+/**
+ * Valide un code d'invitation saisi par un joueur, et le rend sous sa forme canonique.
+ *
+ * Les espaces autour sont retires et les lettres passees en majuscules: un code
+ * dicte ou recopie se tape souvent ainsi, et ce n'est pas une erreur. Pour le
+ * reste, le code doit avoir exactement la forme de ceux que le serveur fabrique.
+ */
+export function validerCodeInvitation(brut: unknown): ResultatValidation<string> {
+  if (typeof brut !== 'string') {
+    return refuse('code', "Un code d'invitation doit être du texte.");
+  }
+
+  const code = brut.trim().toUpperCase();
+
+  if (!BORNES_CODE_INVITATION.forme.test(code)) {
+    return refuse(
+      'code',
+      `Un code d'invitation compte ${String(BORNES_CODE_INVITATION.longueur)} lettres ou chiffres.`,
+    );
+  }
+
+  return accepte(code);
+}
+
+/**
+ * Valide une demande de creation de partie: un pseudo, un mode, une visibilite,
+ * et des reglages de depart.
+ *
+ * Les reglages passent par validerReglages, la regle meme qui s'applique quand
+ * l'hote les change dans le salon: une partie ne peut pas naitre avec des
+ * reglages qu'elle refuserait ensuite. Ils sont rendus complets, valeurs par
+ * defaut comprises. Un mode ou une visibilite inconnus sont refuses, jamais
+ * remplaces par une valeur par defaut: le joueur doit savoir que sa demande n'a
+ * pas ete comprise.
+ */
+export function validerDemandeCreation(brut: unknown): ResultatValidation<DemandeCreation> {
+  const source = objetOuRien(brut);
+  if (source === undefined) {
+    return refuse('creerPartie', 'Une demande de création doit être un objet.');
+  }
+
+  const verdictPseudo = validerPseudo(champ(source, 'pseudo'));
+  if (!verdictPseudo.valide) {
+    return { valide: false, erreurs: verdictPseudo.erreurs };
+  }
+
+  const configuration = objetOuRien(champ(source, 'configuration'));
+  if (configuration === undefined) {
+    return refuse('configuration', 'La configuration de la partie doit être un objet.');
+  }
+
+  const mode = champ(configuration, 'mode');
+  if (!estUnDe(MODES, mode)) {
+    return refuse('configuration.mode', "Ce mode de jeu n'existe pas.");
+  }
+
+  const visibilite = champ(configuration, 'visibilite');
+  if (!estUnDe(VISIBILITES, visibilite)) {
+    return refuse('configuration.visibilite', 'Une partie est publique ou privée.');
+  }
+
+  const verdictReglages = validerReglages(champ(configuration, 'reglages'));
+  if (!verdictReglages.valide) {
+    return { valide: false, erreurs: verdictReglages.erreurs };
+  }
+
+  return accepte({
+    pseudo: verdictPseudo.valeur,
+    configuration: { mode, visibilite, reglages: verdictReglages.valeur },
+  });
+}
+
+/** Une valeur est-elle l'un des textes d'une liste fermee. */
+function estUnDe<T extends string>(liste: readonly T[], valeur: unknown): valeur is T {
+  return typeof valeur === 'string' && (liste as readonly string[]).includes(valeur);
 }
 
 /**

@@ -6,10 +6,10 @@
  * securite du contenu. Seul le port change: zero, pour que le systeme en choisisse
  * un libre et que deux scenarios paralleles ne se marchent pas dessus.
  *
- * UN SERVEUR PAR SCENARIO. Sans identifiant de partie, un joueur entre dans le
- * premier salon en attente (regle provisoire jusqu'a l'etape 2.4): deux scenarios
- * qui partageraient un serveur se retrouveraient dans le meme salon, et l'hote de
- * l'un serait l'invite de l'autre.
+ * UN SERVEUR PAR SCENARIO. Sans code ni identifiant, « Jouer » est la partie
+ * rapide (etape 2.4): la premiere partie publique qui attend dans son salon. Deux
+ * scenarios qui partageraient un serveur se retrouveraient donc dans le meme
+ * salon, et l'hote de l'un serait l'invite de l'autre.
  *
  * Le serveur est importe depuis sa compilation, que la configuration Playwright
  * produit avant les scenarios (harnais/compiler.ts), comme le client empaquete.
@@ -36,9 +36,10 @@ export interface ServeurDeJeu {
    * affiche a ce que le moteur a decide. Un scenario n'y ecrit jamais: tout ce qui
    * change la partie passe par les pages, comme pour un vrai joueur.
    *
-   * Tant que la regle du premier salon en attente tient (etape 2.4), un serveur de
-   * scenario n'a qu'une partie: en trouver zero ou plusieurs est une erreur du
-   * scenario, signalee comme telle.
+   * Les scenarios entrent par la partie rapide, qui reunit tous les joueurs dans
+   * la premiere partie publique en attente: un serveur de scenario n'a donc
+   * qu'une partie. En trouver zero ou plusieurs est une erreur du scenario,
+   * signalee comme telle.
    */
   partie(): GameRoom;
   arreter(): Promise<void>;

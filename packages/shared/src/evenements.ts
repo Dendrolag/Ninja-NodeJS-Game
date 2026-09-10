@@ -43,9 +43,19 @@
  * par une notification qui lui est adressee, exactement comme dans le legacy.
  */
 
-import type { Couleur, Direction, TypeBonus, TypeMalus, TypeZone } from './constantes.js';
+import type {
+  Couleur,
+  Direction,
+  IdentifiantCarte,
+  Mode,
+  TypeBonus,
+  TypeMalus,
+  TypeZone,
+  Visibilite,
+} from './constantes.js';
 import type {
   DemandeChat,
+  DemandeCreation,
   DemandeRejoindre,
   IntentionDeplacement,
   MessageChat,
@@ -177,7 +187,7 @@ export interface InstantanePartie {
 }
 
 // --------------------------------------------------------------------------
-// Le salon
+// Le salon et la liste des parties
 // --------------------------------------------------------------------------
 
 /** Un membre du salon, tel que les autres le voient. */
@@ -194,14 +204,47 @@ export interface JoueurDuSalon {
  * Il remplace a lui seul les evenements updateWaitingRoom et gameSettingsUpdated
  * du legacy, qui partaient separement et pouvaient donc se contredire. Un seul
  * message decrit tout le salon, et il est reemis a chaque changement.
+ *
+ * Il ne part qu'aux membres de la partie. C'est ce qui permet d'y mettre le code
+ * d'invitation d'une partie privee: ceux qui le recoivent sont ceux qui le
+ * partagent.
  */
 export interface InfosSalon {
   readonly idRoom: string;
   readonly statut: StatutPartie;
+  /** Le mode de la partie, choisi a la creation. */
+  readonly mode: Mode;
+  /** Publique ou privee, choisi a la creation. */
+  readonly visibilite: Visibilite;
+  /** Le code d'invitation, pour une partie privee seulement. */
+  readonly code?: string;
+  /** Combien de joueurs la partie accepte au plus. Une propriete du mode. */
+  readonly capacite: number;
   /** Les membres, dans leur ordre d'arrivee. */
   readonly joueurs: readonly JoueurDuSalon[];
   /** Les reglages complets de la partie, valeurs par defaut comprises. */
   readonly reglages: ReglagesPartie;
+}
+
+/**
+ * Une partie publique ouverte, telle que la liste des parties la montre.
+ *
+ * Seulement de quoi choisir: ni code, ni detail des joueurs. Ni latence non
+ * plus, ni statut « en jeu »: toutes les parties tournent sur le meme serveur,
+ * et seules les parties qui attendent dans leur salon sont listees (cadrage de
+ * l'etape 0.3, tension 6).
+ */
+export interface PartiePublique {
+  readonly idRoom: string;
+  /** Pseudo de l'hote. */
+  readonly hote: string;
+  readonly mode: Mode;
+  readonly carte: IdentifiantCarte;
+  readonly modeMiroir: boolean;
+  /** Nombre de joueurs presents. */
+  readonly joueurs: number;
+  /** Nombre de joueurs accueillis au plus. */
+  readonly capacite: number;
 }
 
 // --------------------------------------------------------------------------
@@ -317,20 +360,37 @@ export interface Refus {
  * Alice »: le premier est su par le moteur, le deuxieme ne donne plus aucun
  * avantage, et le troisieme est fixe par la session a l'entree en partie.
  *
- * Seule la demande d'entree porte un accuse de reception, parce que c'est la
- * seule dont le joueur ne peut pas deviner le resultat en regardant l'ecran: il
- * doit savoir s'il est entre, et sinon pourquoi. Tous les autres refus arrivent
- * par l'evenement refus.
+ * Trois demandes portent un accuse de reception, parce que ce sont les seules
+ * dont le joueur ne peut pas deviner le resultat en regardant l'ecran: entrer
+ * dans une partie, en creer une, et lister les parties publiques. Tous les autres
+ * refus arrivent par l'evenement refus.
  */
 export interface EvenementsClientVersServeur {
   /**
-   * Entrer dans une partie. Remplace joinWaitingRoom, rejoinWaitingRoom et
-   * joinRunningGame du legacy, qui faisaient tous les trois la meme chose.
+   * Entrer dans une partie existante: par son code, par son identifiant dans la
+   * liste publique, ou sans rien pour la partie rapide. Remplace joinWaitingRoom,
+   * rejoinWaitingRoom et joinRunningGame du legacy, qui faisaient tous les trois
+   * la meme chose.
    */
   rejoindre: (
     demande: DemandeRejoindre,
     accuse: (reponse: ResultatValidation<InfosSalon>) => void,
   ) => void;
+
+  /**
+   * Creer une partie et en devenir l'hote. Le legacy n'avait qu'un salon, qu'on
+   * ne creait pas: il existait.
+   */
+  creerPartie: (
+    demande: DemandeCreation,
+    accuse: (reponse: ResultatValidation<InfosSalon>) => void,
+  ) => void;
+
+  /**
+   * Lister les parties publiques qui attendent dans leur salon et ne sont pas
+   * pleines. Sans equivalent dans le legacy.
+   */
+  listerParties: (accuse: (parties: readonly PartiePublique[]) => void) => void;
 
   /** Sortir de la partie sans se deconnecter. Remplace leaveWaitingRoom. */
   quitter: () => void;
@@ -480,4 +540,7 @@ export interface EvenementsServeurVersClient {
  *   - startCapture et endCapture. Ils n'existent pas dans la base de reference
  *     (master v0.8.6): ils appartiennent a la capture par cone du mode tactique de
  *     la v0.9.0, ecartee du perimetre v1. Voir la section 5 de ROADMAP.md.
+ *   - Un etat « pret » des joueurs du salon, que la maquette propose. Ni le legacy
+ *     ni le cadrage de l'etape 0.3 ne le retiennent: l'hote lance, et le compte a
+ *     rebours annulable sert de preavis.
  */

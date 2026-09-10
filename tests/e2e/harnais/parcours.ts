@@ -231,7 +231,10 @@ export async function expliquerLEchec(
   }
 }
 
-/** Ouvre la page, choisit un pseudo, et entre dans le premier salon en attente. */
+/**
+ * Ouvre la page, choisit un pseudo, et entre par la partie rapide: la premiere
+ * partie publique en attente, ou une nouvelle.
+ */
 export async function entrer(page: Page, url: string, pseudo: string): Promise<void> {
   await page.goto(url);
   await page.getByPlaceholder('Votre pseudo').fill(pseudo);

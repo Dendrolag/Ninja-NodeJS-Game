@@ -19,12 +19,16 @@
  */
 
 import type {
+  DemandeCreation,
+  DemandeRejoindre,
   EvenementsClientVersServeur,
   EvenementsServeurVersClient,
   InfosSalon,
   InstantanePartie,
+  PartiePublique,
   ResultatValidation,
 } from '@neon-ninja/shared';
+import { BORNES_CODE_INVITATION, CAPACITES } from '@neon-ninja/shared';
 import type { Socket as SocketClient } from 'socket.io-client';
 import { io as connecter } from 'socket.io-client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -975,5 +979,271 @@ describe('pause de la partie', () => {
     await laisserPasserLesMessages();
 
     expect(annonces).toHaveLength(0);
+  });
+});
+
+// --------------------------------------------------------------------------
+// Parties publiques et privees (etape 2.4)
+// --------------------------------------------------------------------------
+
+/** Attend l'accuse de reception d'une demande, ou echoue si le serveur ne repond pas. */
+async function attendreAccuse<T>(emettre: (accuse: (reponse: T) => void) => void): Promise<T> {
+  return new Promise((resoudre, rejeter) => {
+    const minuterie = setTimeout(() => {
+      rejeter(new Error("Le serveur n'a pas repondu a la demande."));
+    }, DELAI_ATTENTE_MS);
+
+    emettre((reponse) => {
+      clearTimeout(minuterie);
+      resoudre(reponse);
+    });
+  });
+}
+
+/** Demande a entrer avec une demande complete: code, identifiant, ou rien. */
+async function rejoindreAvec(
+  client: ClientTypee,
+  demande: DemandeRejoindre,
+): Promise<ResultatValidation<InfosSalon>> {
+  return attendreAccuse((accuse) => {
+    client.emit('rejoindre', demande, accuse);
+  });
+}
+
+/** Demande a creer une partie. */
+async function creer(
+  client: ClientTypee,
+  demande: DemandeCreation,
+): Promise<ResultatValidation<InfosSalon>> {
+  return attendreAccuse((accuse) => {
+    client.emit('creerPartie', demande, accuse);
+  });
+}
+
+/** Demande la liste des parties publiques ouvertes. */
+async function lister(client: ClientTypee): Promise<readonly PartiePublique[]> {
+  return attendreAccuse((accuse) => {
+    client.emit('listerParties', accuse);
+  });
+}
+
+/** Le salon d'une reponse acceptee, ou un echec de test explicite. */
+function salonAccepte(reponse: ResultatValidation<InfosSalon>): InfosSalon {
+  if (!reponse.valide) {
+    throw new Error(`Refus inattendu: ${reponse.erreurs.map((erreur) => erreur.motif).join(', ')}`);
+  }
+
+  return reponse.valeur;
+}
+
+/** Les champs refuses d'une reponse, ou un echec de test explicite. */
+function champsDuRefus(reponse: ResultatValidation<InfosSalon>): readonly string[] {
+  if (reponse.valide) {
+    throw new Error('Acceptation inattendue.');
+  }
+
+  return reponse.erreurs.map((erreur) => erreur.champ);
+}
+
+/** Une partie privee aux reglages par defaut. */
+const PARTIE_PRIVEE: DemandeCreation['configuration'] = { mode: 'classique', visibilite: 'privee' };
+
+/** Une partie publique aux reglages par defaut. */
+const PARTIE_PUBLIQUE: DemandeCreation['configuration'] = {
+  mode: 'classique',
+  visibilite: 'publique',
+};
+
+describe('parties privees', () => {
+  it('cree une partie privee avec un code, et la fait rejoindre par ce code', async () => {
+    const hote = await connecterUnClient();
+    const invite = await connecterUnClient();
+
+    const salon = salonAccepte(
+      await creer(hote, { pseudo: 'Alice', configuration: PARTIE_PRIVEE }),
+    );
+
+    expect(salon.visibilite).toBe('privee');
+    expect(salon.code).toMatch(BORNES_CODE_INVITATION.forme);
+    expect(salon.joueurs).toEqual([{ id: expect.any(String), pseudo: 'Alice', hote: true }]);
+
+    // Un code se tape souvent en minuscules, avec des espaces autour.
+    const saisi = ` ${(salon.code ?? '').toLowerCase()} `;
+    const rejoint = salonAccepte(await rejoindreAvec(invite, { pseudo: 'Bob', code: saisi }));
+
+    expect(rejoint.idRoom).toBe(salon.idRoom);
+    expect(rejoint.joueurs.map((joueur) => joueur.pseudo)).toEqual(['Alice', 'Bob']);
+  });
+
+  it('refuse un code inconnu ou mal forme, en nommant le code', async () => {
+    const hote = await connecterUnClient();
+    const curieux = await connecterUnClient();
+
+    await creer(hote, { pseudo: 'Alice', configuration: PARTIE_PRIVEE });
+
+    expect(champsDuRefus(await rejoindreAvec(curieux, { pseudo: 'Eve', code: 'ZZZZZZ' }))).toEqual([
+      'code',
+    ]);
+    expect(champsDuRefus(await rejoindreAvec(curieux, { pseudo: 'Eve', code: 'abc' }))).toEqual([
+      'code',
+    ]);
+  });
+
+  it('ne se rejoint pas par son identifiant, et repond comme pour une partie inexistante', async () => {
+    const hote = await connecterUnClient();
+    const curieux = await connecterUnClient();
+
+    const salon = salonAccepte(
+      await creer(hote, { pseudo: 'Alice', configuration: PARTIE_PRIVEE }),
+    );
+
+    const parIdentifiant = await rejoindre(curieux, 'Eve', salon.idRoom);
+    const inexistante = await rejoindre(curieux, 'Eve', 'room-inconnue');
+
+    expect(champsDuRefus(parIdentifiant)).toEqual(['idRoom']);
+    expect(parIdentifiant).toEqual(inexistante);
+  });
+
+  it('n apparait ni dans la liste ni dans la partie rapide', async () => {
+    const hote = await connecterUnClient();
+    const passant = await connecterUnClient();
+
+    const privee = salonAccepte(
+      await creer(hote, { pseudo: 'Alice', configuration: PARTIE_PRIVEE }),
+    );
+
+    expect(await lister(passant)).toEqual([]);
+
+    const rapide = salonAccepte(await rejoindreAvec(passant, { pseudo: 'Bob' }));
+
+    expect(rapide.idRoom).not.toBe(privee.idRoom);
+    expect(rapide.visibilite).toBe('publique');
+  });
+
+  it('reserve le lancement a l hote, et diffuse ses reglages aux membres sans perdre le code', async () => {
+    const hote = await connecterUnClient();
+    const invite = await connecterUnClient();
+
+    const salon = salonAccepte(
+      await creer(hote, { pseudo: 'Alice', configuration: PARTIE_PRIVEE }),
+    );
+    salonAccepte(await rejoindreAvec(invite, { pseudo: 'Bob', code: salon.code ?? '' }));
+    await laisserPasserLesMessages();
+
+    const refusAuLancement = prochain(invite, 'refus');
+    invite.emit('demarrer');
+
+    expect((await refusAuLancement).erreurs[0]?.champ).toBe('hote');
+
+    const salonMisAJour = prochain(invite, 'salon');
+    hote.emit('reglages', { carte: 'map2' });
+
+    expect(await salonMisAJour).toMatchObject({
+      code: salon.code,
+      visibilite: 'privee',
+      reglages: { carte: 'map2' },
+    });
+  });
+});
+
+describe('parties publiques', () => {
+  it('cree une partie publique, la montre dans la liste, et la fait rejoindre depuis la liste', async () => {
+    const hote = await connecterUnClient();
+    const passant = await connecterUnClient();
+
+    const salon = salonAccepte(
+      await creer(hote, {
+        pseudo: 'Alice',
+        configuration: { ...PARTIE_PUBLIQUE, reglages: { carte: 'map2' } },
+      }),
+    );
+
+    expect(salon).not.toHaveProperty('code');
+
+    const liste = await lister(passant);
+
+    expect(liste).toEqual([
+      {
+        idRoom: salon.idRoom,
+        hote: 'Alice',
+        mode: 'classique',
+        carte: 'map2',
+        modeMiroir: false,
+        joueurs: 1,
+        capacite: CAPACITES.classique,
+      },
+    ]);
+
+    const rejoint = salonAccepte(await rejoindre(passant, 'Bob', liste[0]?.idRoom));
+
+    expect(rejoint.idRoom).toBe(salon.idRoom);
+    expect((await lister(passant))[0]?.joueurs).toBe(2);
+  });
+
+  it('retire de la liste une partie lancee', async () => {
+    const hote = await connecterUnClient();
+    const passant = await connecterUnClient();
+
+    await creer(hote, { pseudo: 'Alice', configuration: PARTIE_PUBLIQUE });
+    await lancerLaPartie(hote);
+
+    expect(await lister(passant)).toEqual([]);
+  });
+
+  it('refuse le joueur de trop, et ne montre plus une partie pleine', async () => {
+    const hote = await connecterUnClient();
+    const salon = salonAccepte(
+      await creer(hote, { pseudo: 'Hote', configuration: PARTIE_PUBLIQUE }),
+    );
+
+    for (let rang = 1; rang < CAPACITES.classique; rang += 1) {
+      const joueur = await connecterUnClient();
+      salonAccepte(await rejoindre(joueur, `Joueur ${String(rang)}`, salon.idRoom));
+    }
+
+    const retardataire = await connecterUnClient();
+
+    expect(await rejoindre(retardataire, 'Tard', salon.idRoom)).toEqual({
+      valide: false,
+      erreurs: [{ champ: 'partie', motif: 'Cette partie est complète.' }],
+    });
+    expect(await lister(retardataire)).toEqual([]);
+
+    // La partie rapide ne l'envoie pas non plus dans la partie pleine.
+    const rapide = salonAccepte(await rejoindreAvec(retardataire, { pseudo: 'Tard' }));
+
+    expect(rapide.idRoom).not.toBe(salon.idRoom);
+  });
+});
+
+describe('creation de partie refusee', () => {
+  it('refuse une configuration aberrante sans rien creer', async () => {
+    const client = await connecterUnClient();
+
+    const tropLongue = await creer(client, {
+      pseudo: 'Alice',
+      configuration: { ...PARTIE_PUBLIQUE, reglages: { dureePartieS: 5000 } },
+    });
+
+    // Un client modifie peut envoyer un mode que le contrat ne connait pas.
+    const modeInconnu = {
+      pseudo: 'Alice',
+      configuration: { mode: 'chasse', visibilite: 'publique' },
+    } as unknown as DemandeCreation;
+
+    expect(champsDuRefus(tropLongue)).toEqual(['dureePartieS']);
+    expect(champsDuRefus(await creer(client, modeInconnu))).toEqual(['configuration.mode']);
+    expect(serveur.jeu.rooms.nombreDeRooms).toBe(0);
+  });
+
+  it('refuse de creer depuis une connexion deja entree dans une partie', async () => {
+    const client = await connecterUnClient();
+
+    await creer(client, { pseudo: 'Alice', configuration: PARTIE_PUBLIQUE });
+
+    expect(
+      champsDuRefus(await creer(client, { pseudo: 'Alice', configuration: PARTIE_PRIVEE })),
+    ).toEqual(['session']);
+    expect(serveur.jeu.rooms.nombreDeRooms).toBe(1);
   });
 });

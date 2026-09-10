@@ -28,6 +28,9 @@ function salon(statut: StatutPartie = 'salon'): InfosSalon {
   return {
     idRoom: 'partie-1',
     statut,
+    mode: 'classique',
+    visibilite: 'publique',
+    capacite: 12,
     joueurs: [
       { id: 'moi', pseudo: 'Alice', hote: true },
       { id: 'autre', pseudo: 'Bob', hote: false },
@@ -88,6 +91,7 @@ describe('le lien et l entree en partie', () => {
       { type: 'entreeDemandee', pseudo: 'Alice' },
       {
         type: 'entreeRefusee',
+        action: 'rejoindre',
         erreurs: [{ champ: 'pseudo', motif: 'Ce pseudo est déjà pris dans cette partie.' }],
       },
     ]);
@@ -101,7 +105,11 @@ describe('le lien et l entree en partie', () => {
   it('efface le refus precedent des qu on redemande a entrer', () => {
     const etat = apres([
       { type: 'entreeDemandee', pseudo: 'Alice' },
-      { type: 'entreeRefusee', erreurs: [{ champ: 'pseudo', motif: 'Deja pris.' }] },
+      {
+        type: 'entreeRefusee',
+        action: 'rejoindre',
+        erreurs: [{ champ: 'pseudo', motif: 'Deja pris.' }],
+      },
       { type: 'entreeDemandee', pseudo: 'Alice2' },
     ]);
 
@@ -426,7 +434,9 @@ describe('le cycle de la partie', () => {
 
     expect(apres([demande]).entreeEnCours).toBe(true);
     expect(apres([demande, { type: 'entreeAcceptee', salon: salon() }]).entreeEnCours).toBe(false);
-    expect(apres([demande, { type: 'entreeRefusee', erreurs: [] }]).entreeEnCours).toBe(false);
+    expect(
+      apres([demande, { type: 'entreeRefusee', action: 'rejoindre', erreurs: [] }]).entreeEnCours,
+    ).toBe(false);
     expect(apres([demande, { type: 'connexionPerdue' }]).entreeEnCours).toBe(false);
   });
 

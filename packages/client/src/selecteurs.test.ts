@@ -32,6 +32,9 @@ function enPartie(modifications: Partial<EtatClient> = {}): EtatClient {
     salon: {
       idRoom: 'partie-1',
       statut: 'enCours',
+      mode: 'classique',
+      visibilite: 'publique',
+      capacite: 12,
       joueurs: [
         { id: 'moi', pseudo: 'Alice', hote: true },
         { id: 'autre', pseudo: 'Bob', hote: false },

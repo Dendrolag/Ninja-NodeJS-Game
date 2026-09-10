@@ -36,6 +36,7 @@ import type {
   MalusRamasseParMoi,
   MalusSubi,
   ObjetVu,
+  PartiePublique,
   ZoneVue,
 } from '@neon-ninja/shared';
 import type {
@@ -147,13 +148,40 @@ export function classementDe(etat: EtatPartie): readonly LigneClassement[] {
   return calculerScores(etat).map(ligneClassement);
 }
 
-/** L'etat du salon d'une room, tel qu'il part sur le reseau. */
+/**
+ * L'etat du salon d'une room, tel qu'il part sur le reseau.
+ *
+ * Il ne part qu'aux membres de la partie. Le code d'invitation d'une partie
+ * privee peut donc y figurer: ce sont eux qui le partagent.
+ */
 export function salonDe(room: GameRoom): InfosSalon {
   return {
     idRoom: room.id,
     statut: room.statut,
+    mode: room.mode,
+    visibilite: room.visibilite,
+    ...(room.code === undefined ? {} : { code: room.code }),
+    capacite: room.capacite,
     joueurs: room.joueurs.map(joueurDuSalon),
     reglages: room.reglages,
+  };
+}
+
+/**
+ * Une partie publique ouverte, telle que la liste des parties la montre.
+ *
+ * Seulement de quoi choisir: le pseudo de l'hote, le mode, la carte et le nombre
+ * de places. Ni le code, qu'une partie publique n'a pas, ni le detail des joueurs.
+ */
+export function partiePubliqueDe(room: GameRoom): PartiePublique {
+  return {
+    idRoom: room.id,
+    hote: room.joueurs.find((joueur) => joueur.hote)?.pseudo ?? '',
+    mode: room.mode,
+    carte: room.reglages.carte,
+    modeMiroir: room.reglages.modeMiroir,
+    joueurs: room.joueurs.length,
+    capacite: room.capacite,
   };
 }
 

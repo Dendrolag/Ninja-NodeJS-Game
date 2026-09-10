@@ -36,16 +36,24 @@
  *     lancer une partie deja lancee, faire avancer une partie qui n'a pas
  *     commence. L'etape 2.2 verifie le statut et la qualite d'hote avant
  *     d'appeler ces methodes-la.
+ *
+ * CE QUE L'ETAPE 2.4 A AJOUTE: le mode, la visibilite et le code d'invitation,
+ * choisis a la creation et figes ensuite, et la capacite, qui en decoule. Une
+ * room ne sait pas COMMENT on la trouve (liste publique, code, partie rapide):
+ * c'est le travail du RoomManager et de la couche reseau. Elle sait seulement ce
+ * qu'elle est, et combien de joueurs elle accueille.
  */
 
 import type {
+  Mode,
   ReglagesPartie,
   ReglagesPartiels,
   ResultatValidation,
   SessionJoueur,
   StatutPartie,
+  Visibilite,
 } from '@neon-ninja/shared';
-import { normaliserTexte } from '@neon-ninja/shared';
+import { CAPACITES, normaliserTexte } from '@neon-ninja/shared';
 import type {
   CarteCollisions,
   EntreeJoueur,
@@ -118,6 +126,15 @@ export interface OptionsGameRoom {
   readonly id: string;
   /** Graine de la partie. Deux rooms de meme graine et memes entrees sont identiques. */
   readonly graine: number;
+  /** Mode de la partie. Le Classique par defaut, seul mode de la v1. */
+  readonly mode?: Mode;
+  /** Visibilite de la partie. Publique par defaut. */
+  readonly visibilite?: Visibilite;
+  /**
+   * Code d'invitation, pour une partie privee. Fabrique par le RoomManager, qui
+   * seul sait quels codes sont deja pris.
+   */
+  readonly code?: string;
   /** Reglages choisis par l'hote. Ceux qui manquent prennent la valeur par defaut. */
   readonly reglages?: ReglagesPartiels;
   /**
@@ -151,6 +168,15 @@ export class GameRoom {
 
   /** Graine de la partie, conservee pour pouvoir la rejouer a l'identique. */
   readonly graine: number;
+
+  /** Mode de la partie. Fige a la creation: il fixe la capacite. */
+  readonly mode: Mode;
+
+  /** Visibilite de la partie. Figee a la creation. */
+  readonly visibilite: Visibilite;
+
+  /** Code d'invitation d'une partie privee. Absent pour une partie publique. */
+  readonly code: string | undefined;
 
   private readonly horloge: Horloge;
   private readonly cadenceMs: number;
@@ -202,6 +228,9 @@ export class GameRoom {
   constructor(options: OptionsGameRoom) {
     this.id = options.id;
     this.graine = options.graine;
+    this.mode = options.mode ?? 'classique';
+    this.visibilite = options.visibilite ?? 'publique';
+    this.code = options.code;
     this.horloge = options.horloge ?? horlogeSysteme;
     this.cadenceMs = options.cadenceMs ?? CADENCE_BATTEMENT_MS;
     this.surBattement = options.surBattement;
@@ -224,6 +253,16 @@ export class GameRoom {
   /** Les reglages de la partie, completes par les valeurs par defaut. */
   get reglages(): ReglagesPartie {
     return this.partie.reglages;
+  }
+
+  /** Combien de joueurs la room accueille au plus. Une propriete de son mode. */
+  get capacite(): number {
+    return CAPACITES[this.mode];
+  }
+
+  /** La room a-t-elle atteint sa capacite. */
+  get estPleine(): boolean {
+    return this.ordreDArrivee.length >= this.capacite;
   }
 
   /** Qui commande la room. Personne quand elle est vide. */
@@ -271,6 +310,9 @@ export class GameRoom {
    * lui aussi, et le joueur apparait alors sur la carte avec sa protection de
    * trois secondes.
    *
+   * UNE PARTIE PLEINE REFUSE LES NOUVEAUX VENUS. Le legacy n'avait aucune limite:
+   * son unique salon accueillait tout le monde. La capacite vient du mode.
+   *
    * DEUX PSEUDOS IDENTIQUES SONT REFUSES. Le legacy ne verifiait rien, et deux
    * joueurs pouvaient porter le meme nom: le classement, le chat et les
    * notifications de capture devenaient alors indechiffrables, et se faire
@@ -280,11 +322,15 @@ export class GameRoom {
    */
   accueillir(session: SessionJoueur): ResultatValidation<JoueurDeRoom> {
     if (this.statutCourant === 'terminee') {
-      return refus('partie', 'Cette partie est terminee.');
+      return refus('partie', 'Cette partie est terminée.');
     }
 
     if (this.partie.joueurs[session.id] !== undefined) {
       return refus('session', 'Cette connexion est déjà dans la partie.');
+    }
+
+    if (this.estPleine) {
+      return refus('partie', 'Cette partie est complète.');
     }
 
     if (this.pseudoDejaPris(session.pseudo)) {
@@ -337,6 +383,8 @@ export class GameRoom {
    * joueurs dans leur ordre d'arrivee. Le resultat est exactement celui qu'aurait
    * donne une room creee d'emblee avec ces reglages-la, ce qui est la seule
    * definition solide de « les reglages ont change ».
+   *
+   * Le mode et la visibilite ne sont pas des reglages: ils ne changent pas ici.
    *
    * Le legacy, lui, ecrivait dans currentGameSettings a la volee, y compris
    * pendant une partie: la carte pouvait changer sous les pieds des joueurs. Le
@@ -496,7 +544,7 @@ export class GameRoom {
   }
 
   /**
-   * Fabrique un etat de depart avec les reglages donnes et le terrain courant.
+   * Fabrique un etat de depart avec le mode, les reglages donnes et le terrain courant.
    *
    * Les champs facultatifs sont omis plutot que poses a undefined: le projet
    * compile avec exactOptionalPropertyTypes, qui distingue les deux.
@@ -504,6 +552,7 @@ export class GameRoom {
   private etatNeuf(reglages: ReglagesPartiels | undefined): EtatPartie {
     const depart: OptionsEtatInitial = {
       graine: this.graine,
+      mode: this.mode,
       ...(reglages === undefined ? {} : { reglages }),
       ...(this.terrain === undefined ? {} : { terrain: this.terrain }),
     };

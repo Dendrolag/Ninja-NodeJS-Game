@@ -90,6 +90,43 @@ export interface DimensionsCarte {
   readonly hauteur: number;
 }
 
+/**
+ * Les modes de jeu jouables.
+ *
+ * UN SEUL EN V1, le Classique (cadrage de l'etape 0.3). Un mode est un jeu de
+ * regles enfichable: en ajouter un, c'est ajouter une valeur a cette liste, sa
+ * capacite ci-dessous, et sa regle de resolution dans le moteur, sans refonte.
+ * Le miroir n'est pas un mode: c'est un reglage de carte (tension 1 du journal de
+ * conception), qui se combine avec n'importe quel mode.
+ */
+export const MODES = ['classique'] as const;
+
+/** Un mode de jeu. */
+export type Mode = (typeof MODES)[number];
+
+/**
+ * Combien de joueurs une partie accepte au plus, selon son mode.
+ *
+ * La capacite est une propriete du mode, pas un reglage: l'hote ne la choisit
+ * pas. Douze pour le Classique, la borne haute de la maquette (decision du 10
+ * septembre 2026). Il n'y a pas de minimum a imposer: un joueur seul peut lancer,
+ * comme dans le legacy. La borne haute sera confrontee a la mesure de l'etape 5.1.
+ */
+export const CAPACITES: Readonly<Record<Mode, number>> = {
+  classique: 12,
+};
+
+/**
+ * Qui peut trouver une partie.
+ *
+ * Une partie publique apparait dans la liste et accueille la partie rapide; une
+ * partie privee ne se rejoint que par son code d'invitation.
+ */
+export const VISIBILITES = ['publique', 'privee'] as const;
+
+/** La visibilite d'une partie. */
+export type Visibilite = (typeof VISIBILITES)[number];
+
 /** Durees et delais du jeu, en millisecondes sauf mention contraire. */
 export const DUREES = {
   /** Duree d'invulnerabilite accordee a l'apparition d'un joueur. */
