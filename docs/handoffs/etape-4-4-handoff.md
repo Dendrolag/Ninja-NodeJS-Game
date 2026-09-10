@@ -183,7 +183,7 @@ Nouveau, ouvert par cette étape:
 - **Sur un matériel qui dessine lentement, chaque commande part en retard.** Voir le point 3. Ce n'est pas un défaut, mais c'est une propriété mesurée qui touche la cible mobile: à 5 images par seconde, 200 ms de retard. L'étape 5.2 prévoit déjà de mesurer le rendu sur un matériel représentatif; c'est là qu'il faudra dire si émettre l'intention au moment de la saisie, plutôt qu'à l'image suivante, vaut la peine.
 - **Les contacts tactiles des scénarios passent par le protocole de Chromium.** Les scénarios ne tournent donc que sous Chromium, comme avant. La compatibilité des navigateurs reste à mesurer avant le déploiement (5.3).
 - **Les scénarios supposent une seule partie par serveur, et la règle du premier salon en attente.** `jeu.partie()` refuse d'en trouver zéro ou plusieurs, et Bob rejoint Alice sans code. **L'étape 2.4 devra adapter les deux scénarios de parties** quand elle remplacera cette règle par les codes et la file.
-- **La suite de bout en bout est plus longue**: trois parties de trente secondes s'y ajoutent, avec leur compte à rebours et le chargement de la carte, soit environ quarante secondes chacune. La suite complète a pris 46 secondes en local, scénarios en parallèle; sa durée en CI se lit dans le run.
+- **La suite de bout en bout est plus longue**: deux parcours solo de trente secondes et une partie à deux d'une minute s'y ajoutent, avec leur compte à rebours et le chargement de la carte. En local, scénarios en parallèle, la suite complète prend environ une minute; en CI, où une seule partie tourne à la fois depuis le cinquième passage, sa durée se lit dans le run.
 - **Le pilote n'a pas de test unitaire.** C'est du code de test, exercé par les scénarios qui l'utilisent, et son message d'échec donne la géométrie de la situation.
 
 Repris du handoff 4.3, inchangé:
@@ -237,7 +237,30 @@ Fermé par cette étape:
 - « Bout en bout »: **10 scénarios sur 10 verts au premier essai**, aucun fragile: fumée, navigation en bureau et en mobile, parcours solo en bureau et en mobile, partie à deux, banc.
 - Banc, joué seul: 4,0, 3,8 et 3,0 images par seconde avec lueur à 100, 200 et 500 sprites, pour 1,25, 1,33 et 2,61 ms par image.
 
-C'est ce passage qui ferme l'étape. À surveiller dans les prochaines CI: une nouvelle immobilité de Bob, dont la cause n'est pas établie; le message d'échec dira désormais si sa page dessinait encore.
+Ce passage semblait fermer l'étape. Le suivant a montré que non.
+
+**Cinquième passage, run 34522355452, commit 9f624bd (l'étape 0.3, sans code): rouge**, sur la seule partie à deux, aux trois essais. Les signes vitaux ajoutés au troisième passage donnent enfin la cause:
+
+- **les pages vivent, mais très lentement**: deux à sept images en deux secondes, la dernière vieille de quelques centaines de millisecondes;
+- **la boucle du pilote est étouffée**: au deuxième essai, un seul relevé en deux secondes. Chaque contact tactile attend l'accusé de la page, et le pouce en envoyait un pour chaque infime changement d'angle;
+- **la partie était finie avant le contact**: au premier essai, la page de Bob montrait déjà l'écran de fin. **C'est l'explication de l'« immobilité » de Bob des passages précédents**: une partie de trente secondes terminée, dans laquelle le serveur ne fait plus bouger personne;
+- chaque page répète « GPU stall due to ReadPixels ». **Mesuré en local: aucun appel à `readPixels` depuis la page pendant quinze secondes de partie**, en comptant chaque appel sur les contextes WebGL. Ces relectures sont internes à Chromium quand il dessine sans carte graphique: ni notre code ni PixiJS, aucun défaut du jeu.
+
+**Corrections**, commit 43ad67e:
+
+- une seule partie à la fois en CI (`workers: 1`), pour que deux scénarios de parties ne fassent plus dessiner quatre pages ensemble;
+- une partie à deux d'une minute au lieu de trente secondes, et quarante secondes pour aller au contact;
+- le pouce n'envoie plus de contact pour un écart d'angle de moins de cinq degrés.
+
+En local: parcours solo en bureau et en mobile, partie à deux, 3 sur 3.
+
+**Sixième passage, run 34523549580, commit 43ad67e: vert, sans aucun nouvel essai.**
+
+- « Types, linter et tests »: vert, 1080 tests.
+- « Bout en bout »: une seule partie à la fois (« Running 10 tests using 1 worker »), **10 scénarios sur 10 verts au premier essai**, en 3,3 minutes.
+- Banc, joué seul: 4,7, 4,4 et 3,6 images par seconde avec lueur à 100, 200 et 500 sprites, pour 0,99, 1,49 et 2,89 ms par image.
+
+**C'est ce passage qui ferme l'étape.** À surveiller dans les prochaines CI: un échec de la partie à deux dirait désormais, par ses signes vitaux, si la partie était finie, si les pages dessinaient, et si le pilote relisait la situation.
 
 ## Prochaine action exacte
 
