@@ -235,11 +235,12 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
         pausePar: undefined,
       };
 
-    // UN INSTANTANE QUI N'APPREND RIEN REND L'ETAT LUI-MEME, et pas une copie
-    // identique. C'est ce qui permet au magasin de ne reveiller personne, et
-    // cela compte: ce message arrive vingt fois par seconde.
+    // UNE TRAME QUI N'APPREND RIEN REND L'ETAT LUI-MEME, et pas une copie
+    // identique: une trame perimee, un delta qui ne s'applique pas, une trame
+    // illisible. C'est ce qui permet au magasin de ne reveiller personne, et cela
+    // compte: ce message arrive vingt fois par seconde.
     case 'etat': {
-      const partie = reconstruire(etat.partie, action.instantane);
+      const partie = reconstruire(etat.partie, action.trame);
 
       return partie === etat.partie ? etat : { ...etat, ecran, partie };
     }

@@ -3,15 +3,18 @@
  *
  * Ce sont les tests que la fiche de l'etape 4.1 exige en premier: une suite de
  * messages du serveur doit reconstruire chez le client le meme etat que celui
- * dont le serveur est parti. Aujourd'hui le flux est fait d'instantanes complets
- * en JSON; ces memes tests garderont leur sens le jour ou l'etape 2.3 le
- * remplacera par un delta binaire, parce qu'ils portent sur le RESULTAT de la
- * reconstruction et pas sur la maniere dont elle s'y prend.
+ * dont le serveur est parti. Depuis l'etape 2.3, ces messages sont des trames
+ * binaires, codees ici par les fonctions memes du serveur (encoderImage et
+ * encoderDelta de @neon-ninja/shared). Les tests d'origine gardent leur sens,
+ * parce qu'ils portent sur le RESULTAT de la reconstruction; ceux qui s'ajoutent
+ * portent sur ce que le delta change: une trame qui ne s'applique pas est ignoree.
  */
 
 import type { InstantanePartie } from '@neon-ninja/shared';
+import { encoderDelta, encoderImage } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
+import type { VuePartie } from './reconstruction.js';
 import { entiteDe, reconstruire } from './reconstruction.js';
 
 /** Un instantane minimal, complete par ce que le test veut examiner. */
@@ -28,9 +31,25 @@ function instantane(modifications: Partial<InstantanePartie> = {}): InstantanePa
   };
 }
 
+/** L'image d'un instantane, telle que le serveur l'envoie. */
+function image(modifications: Partial<InstantanePartie> = {}): Uint8Array {
+  return encoderImage(instantane(modifications)).octets;
+}
+
+/** Reconstruit une trame qui doit s'appliquer, et echoue sinon. */
+function appliquer(vue: VuePartie | undefined, trame: Uint8Array): VuePartie {
+  const resultat = reconstruire(vue, trame);
+
+  if (resultat === undefined) {
+    throw new Error("La trame aurait du s'appliquer.");
+  }
+
+  return resultat;
+}
+
 describe('reconstruction du flux d etat', () => {
-  it('adopte le premier instantane recu', () => {
-    const vue = reconstruire(undefined, instantane({ tick: 7, tempsRestantMs: 42_000 }));
+  it('adopte la premiere image recue', () => {
+    const vue = appliquer(undefined, image({ tick: 7, tempsRestantMs: 42_000 }));
 
     expect(vue.tick).toBe(7);
     expect(vue.tempsRestantMs).toBe(42_000);
@@ -80,7 +99,7 @@ describe('reconstruction du flux d etat', () => {
       ],
     });
 
-    const vue = reconstruire(undefined, envoye);
+    const vue = appliquer(undefined, encoderImage(envoye).octets);
 
     // La vue porte exactement ce que le serveur a envoye, champ par champ.
     expect(vue).toEqual({
@@ -94,41 +113,88 @@ describe('reconstruction du flux d etat', () => {
     });
   });
 
-  it('suit une suite d instantanes jusqu au dernier', () => {
-    let vue = reconstruire(undefined, instantane({ tick: 1, tempsRestantMs: 180_000 }));
-    vue = reconstruire(vue, instantane({ tick: 2, tempsRestantMs: 179_500 }));
-    vue = reconstruire(vue, instantane({ tick: 3, tempsRestantMs: 179_000 }));
+  it('suit une image puis des deltas jusqu au dernier battement', () => {
+    const premier = encoderImage(instantane({ tick: 1, tempsRestantMs: 180_000 }));
+    const deuxieme = encoderDelta(
+      premier.reference,
+      instantane({
+        tick: 2,
+        tempsRestantMs: 179_950,
+        entites: [{ type: 'bot', id: 'b1', x: 1, y: 2, couleur: '#FFFFFF', direction: 'nord' }],
+      }),
+    );
+    const troisieme = encoderDelta(
+      deuxieme.reference,
+      instantane({
+        tick: 3,
+        tempsRestantMs: 179_900,
+        entites: [{ type: 'bot', id: 'b1', x: 5, y: 2, couleur: '#FF0000', direction: 'est' }],
+      }),
+    );
 
-    expect(vue.tick).toBe(3);
-    expect(vue.tempsRestantMs).toBe(179_000);
+    let vue = appliquer(undefined, premier.octets);
+    vue = appliquer(vue, deuxieme.octets);
+    vue = appliquer(vue, troisieme.octets);
+
+    expect(vue).toEqual(troisieme.reference);
   });
 
-  it('ignore un instantane perime', () => {
-    const vue = reconstruire(undefined, instantane({ tick: 5, tempsRestantMs: 100_000 }));
-    const apres = reconstruire(vue, instantane({ tick: 4, tempsRestantMs: 200_000 }));
+  it('ignore une trame perimee', () => {
+    const vue = appliquer(undefined, image({ tick: 5, tempsRestantMs: 100_000 }));
+    const apres = reconstruire(vue, image({ tick: 4, tempsRestantMs: 200_000 }));
 
     expect(apres).toBe(vue);
   });
 
-  it('ignore un instantane deja recu', () => {
-    const vue = reconstruire(undefined, instantane({ tick: 5 }));
-    const apres = reconstruire(vue, instantane({ tick: 5, tempsRestantMs: 1 }));
+  it('ignore une trame deja recue', () => {
+    const vue = appliquer(undefined, image({ tick: 5 }));
+    const apres = reconstruire(vue, image({ tick: 5, tempsRestantMs: 1 }));
 
     expect(apres).toBe(vue);
-    expect(apres.tempsRestantMs).toBe(180_000);
+    expect(apres?.tempsRestantMs).toBe(180_000);
+  });
+
+  it('ignore un delta qui ne s applique pas a la partie detenue, puis se recale sur l image', () => {
+    // Le joueur qui entre dans une partie en cours: le delta de la salle arrive
+    // avant son image.
+    const avant = encoderImage(instantane({ tick: 40 }));
+    const delta = encoderDelta(avant.reference, instantane({ tick: 41, tempsRestantMs: 1000 }));
+
+    expect(reconstruire(undefined, delta.octets)).toBeUndefined();
+
+    const autre = appliquer(undefined, image({ tick: 12 }));
+    expect(reconstruire(autre, delta.octets)).toBe(autre);
+
+    const recale = appliquer(undefined, image({ tick: 41, tempsRestantMs: 1000 }));
+    expect(recale.tempsRestantMs).toBe(1000);
+  });
+
+  it('garde ce qu il affiche quand une trame est illisible, sans tomber', () => {
+    const vue = appliquer(undefined, image({ tick: 5 }));
+
+    expect(reconstruire(vue, Uint8Array.of(255, 1, 2))).toBe(vue);
+    expect(reconstruire(undefined, new Uint8Array())).toBeUndefined();
+  });
+
+  it('lit une trame arrivee en ArrayBuffer, comme dans un navigateur', () => {
+    const octets = image({ tick: 8 });
+    const tampon = new ArrayBuffer(octets.byteLength);
+    new Uint8Array(tampon).set(octets);
+
+    expect(reconstruire(undefined, tampon)?.tick).toBe(8);
   });
 
   it('ne modifie jamais la vue precedente', () => {
-    const vue = reconstruire(undefined, instantane({ tick: 1, tempsRestantMs: 180_000 }));
-    reconstruire(vue, instantane({ tick: 2, tempsRestantMs: 179_000 }));
+    const vue = appliquer(undefined, image({ tick: 1, tempsRestantMs: 180_000 }));
+    reconstruire(vue, image({ tick: 2, tempsRestantMs: 179_000 }));
 
     expect(vue.tempsRestantMs).toBe(180_000);
   });
 
   it('suit la pause telle que le flux la rapporte', () => {
-    const enCours = reconstruire(undefined, instantane({ tick: 1, enPause: false }));
-    const suspendue = reconstruire(enCours, instantane({ tick: 2, enPause: true }));
-    const reprise = reconstruire(suspendue, instantane({ tick: 3, enPause: false }));
+    const enCours = appliquer(undefined, image({ tick: 1, enPause: false }));
+    const suspendue = appliquer(enCours, image({ tick: 2, enPause: true }));
+    const reprise = appliquer(suspendue, image({ tick: 3, enPause: false }));
 
     expect(enCours.enPause).toBe(false);
     expect(suspendue.enPause).toBe(true);
@@ -136,9 +202,9 @@ describe('reconstruction du flux d etat', () => {
   });
 
   it('retrouve une entite par son identifiant', () => {
-    const vue = reconstruire(
+    const vue = appliquer(
       undefined,
-      instantane({
+      image({
         entites: [
           { type: 'bot', id: 'b1', x: 1, y: 2, couleur: '#FFFFFF', direction: 'nord' },
           { type: 'botNoir', id: 'n1', x: 3, y: 4, couleur: '#000000', direction: 'sud' },

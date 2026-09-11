@@ -24,6 +24,17 @@ L'étape 5.2 a levé le mur de la cadence (`docs/mesures/charge-serveur.md`, mes
 
 La fiche a été écrite avant le client. Trois écarts sont à réconcilier en début de session: le client existe et décode déjà le flux JSON derrière l'interface réseau de l'étape 4.1, qui est ce qu'il faut remplacer (point 4 du périmètre, rituel de fin); l'événement diffusé s'appelle `etat` (`InstantanePartie`), pas `updateEntities`; la prochaine action du rituel de fin, l'étape 2.4, est faite depuis longtemps.
 
+## Réconciliation du 12 septembre 2026, en début d'exécution
+
+La fiche date d'avant le client et d'avant l'étape 2.2. Ce qui change dans son périmètre, et pourquoi:
+
+1. **Un seul delta par partie, pas un par client.** La fiche parle d'un delta « par client ». L'étape 2.2 a fait de l'instantané un message identique pour toute la salle, construit et sérialisé une fois; le delta garde cette propriété: il se calcule une fois par battement, par rapport à la trame précédente de la partie, et part à toute la salle. Le transport (WebSocket seul, sans reconnexion) livre tout, dans l'ordre: un client présent depuis le début détient toujours la trame qu'un delta suppose.
+2. **L'état de référence d'un client qui arrive (point 5)** est une image complète, envoyée à lui seul juste après le delta du battement où il entre; il ignore ce delta, puis applique les suivants. Une image part aussi à toute la salle au premier battement, et à intervalle régulier: un client qui aurait décroché, par une faute que rien ne laisse prévoir, se recale sans qu'aucun message ne remonte au serveur.
+3. **Le point 4 est déjà fait.** Le client existe: son décodage se pose dans `packages/client/src/reconstruction.ts`, derrière l'interface réseau de l'étape 4.1. Le format et son décodeur vivent dans `packages/shared` (`flux.ts`), utilisés par le serveur et le client.
+4. **L'événement s'appelle `etat`**, pas `updateEntities`; il porte désormais des octets.
+5. **Le format arrondit**: positions au huitième de pixel, durées à la milliseconde, couleurs en majuscules. Le client ne simule rien, il dessine; l'arrondi est fait de la même façon des deux côtés, si bien que la reconstruction est exacte. Un élément est désigné par son rang dans la liste précédente, et un champ modifié par l'écart à sa valeur précédente: un bot qui avance de cinq pixels tient sur quatre octets.
+6. **La prochaine action du rituel de fin** (étape 2.4) est faite depuis longtemps: après 2.3, le jalon 4 est terminé, et c'est la section 3 du ROADMAP qui désigne la suite.
+
 ## Rituel de début de session
 
 Lire CLAUDE.md, le handoff de l'étape 2.2 (charge utile du flux d'état), puis cette fiche.

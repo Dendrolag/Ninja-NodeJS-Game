@@ -15,8 +15,9 @@
  *      emissions sont cantonnees a la salle Socket.IO de cette partie, jamais
  *      diffusees a tout le serveur. Elle decide aussi quelle partie un joueur a
  *      le droit de viser: une partie privee ne se rejoint que par son code.
- *   4. Elle TRADUIT. Un instantane part a chaque battement, et les faits du
- *      moteur deviennent des notifications adressees.
+ *   4. Elle TRADUIT. Une trame du flux d'etat part a chaque battement (etape 2.3,
+ *      voir fluxDEtat.ts), et les faits du moteur deviennent des notifications
+ *      adressees.
  *
  * CE QU'ELLE NE FAIT PAS, ET NE DOIT JAMAIS FAIRE. Aucun calcul de jeu. Elle ne
  * deplace personne, ne resout aucune capture, ne decide d'aucun score. Elle
@@ -78,6 +79,7 @@ import { CompteARebours } from './compteARebours.js';
 import type { AnnuaireDesComptes } from './comptes/annuaire.js';
 import type { FinPourLesComptes } from './finDePartie.js';
 import { finPourLesComptes, progressionEnregistree } from './finDePartie.js';
+import { FluxDEtat } from './fluxDEtat.js';
 import type { GameRoom } from './GameRoom.js';
 import type { Horloge } from './horloge.js';
 import { horlogeSysteme } from './horloge.js';
@@ -199,6 +201,14 @@ export class ServeurSocket {
 
   /** Le decompte de demarrage de chaque partie qui en a un en cours. */
   private readonly decomptes = new Map<string, CompteARebours>();
+
+  /**
+   * Le flux d'etat de chaque partie qui a battu (etape 2.3).
+   *
+   * Range par partie, et non par identifiant: une partie detruite emporte son flux,
+   * sans qu'aucun chemin de destruction n'ait a penser a l'oublier.
+   */
+  private readonly flux = new WeakMap<GameRoom, FluxDEtat>();
 
   /** D'ou viennent les murs, partage par toutes les parties de ce serveur. */
   private readonly terrains: SourceDeTerrain;
@@ -726,13 +736,27 @@ export class ServeurSocket {
   /**
    * Diffuse l'etat d'une partie apres un battement.
    *
-   * L'instantane part a la salle entiere, en un seul message identique pour tous.
-   * Les notifications, elles, sont adressees: chacune ne va qu'a celui qu'elle
-   * concerne. Un joueur qui a quitte la partie entre-temps n'a plus de connexion,
-   * et son message est simplement omis.
+   * La trame du flux d'etat part a la salle entiere, en un seul message identique
+   * pour tous: une image ou un delta (fluxDEtat.ts). Qui vient d'entrer dans la
+   * partie recoit ensuite sa propre image, du meme battement. Les notifications,
+   * elles, sont adressees: chacune ne va qu'a celui qu'elle concerne. Un joueur qui
+   * a quitte la partie entre-temps n'a plus de connexion, et son message est
+   * simplement omis.
    */
   private diffuserLeBattement(room: GameRoom): void {
-    this.io.to(room.id).emit('etat', instantaneDe(room.etat));
+    const flux = this.fluxDe(room);
+
+    this.io.to(room.id).emit('etat', flux.trameDuBattement(instantaneDe(room.etat)));
+
+    const images = flux.imagesAttendues();
+
+    for (const idConnexion of images?.destinataires ?? []) {
+      const destinataire = this.connexions.get(idConnexion);
+
+      if (images !== undefined && destinataire?.idRoom === room.id) {
+        destinataire.socket.emit('etat', images.image);
+      }
+    }
 
     for (const notification of notificationsDe(room.etat)) {
       const destinataire = this.connexions.get(notification.pour);
@@ -741,6 +765,20 @@ export class ServeurSocket {
         envoyer(destinataire.socket, notification);
       }
     }
+  }
+
+  /** Le flux d'etat d'une partie, cree a son premier besoin. */
+  private fluxDe(room: GameRoom): FluxDEtat {
+    const existant = this.flux.get(room);
+
+    if (existant !== undefined) {
+      return existant;
+    }
+
+    const flux = new FluxDEtat();
+    this.flux.set(room, flux);
+
+    return flux;
   }
 
   /** Annonce la fin d'une partie et son classement definitif. */
@@ -997,9 +1035,12 @@ export class ServeurSocket {
     this.diffuserLeSalon(room);
 
     // Rejoindre une partie deja commencee est autorise, comme dans le legacy. Le
-    // nouveau venu doit alors basculer tout de suite vers l'ecran de jeu.
+    // nouveau venu doit alors basculer tout de suite vers l'ecran de jeu, et
+    // recevoir au prochain battement une image complete: les deltas de la salle
+    // supposent une partie qu'il n'a pas.
     if (room.statut === 'enCours') {
       socket.emit('partieLancee');
+      this.fluxDe(room).attendreUneImage(socket.id);
     }
 
     return true;

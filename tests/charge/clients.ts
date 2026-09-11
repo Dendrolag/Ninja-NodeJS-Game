@@ -21,7 +21,9 @@
  *
  * LA TAILLE MESUREE EST CELLE DU FIL. Chaque paquet recu par Engine.IO est compte
  * avec son type, avant tout decodage par Socket.IO: c'est la taille de la trame
- * WebSocket, entetes du protocole WebSocket exclus.
+ * WebSocket, entetes du protocole WebSocket exclus. Depuis l'etape 2.3, un message
+ * « etat » arrive en deux paquets, un en-tete en texte puis les octets de la trame:
+ * les deux sont comptes ensemble, comme un seul message.
  *
  * LE DIALOGUE AVEC LE PROCESSUS PARENT est une suite de messages types ci-dessous:
  * preparer, lancer, mesurer, rapporter, fermer. Chaque etape repond une fois
@@ -141,6 +143,8 @@ interface ClientSimule {
   restant: number;
   /** Instant de reception du dernier instantane, pendant la mesure. */
   dernierEtat: number | undefined;
+  /** Taille de l'en-tete d'un message « etat » dont les octets n'ont pas encore suivi. */
+  enTeteDEtat: number | undefined;
   lance: boolean;
 }
 
@@ -209,32 +213,49 @@ async function connecter(
     rang,
     restant: 0,
     dernierEtat: undefined,
+    enTeteDEtat: undefined,
     lance: false,
   };
 
   socket.io.on('open', () => {
     socket.io.engine.on('packet', (paquet) => {
-      if (!etat.mesureEnCours || paquet.type !== 'message' || typeof paquet.data !== 'string') {
+      if (!etat.mesureEnCours || paquet.type !== 'message') {
         return;
       }
 
-      // Un octet pour le type du paquet Engine.IO, puis sa charge.
-      const octets = Buffer.byteLength(paquet.data) + 1;
+      if (typeof paquet.data === 'string') {
+        // Un octet pour le type du paquet Engine.IO, puis sa charge.
+        const octets = Buffer.byteLength(paquet.data) + 1;
 
-      if (paquet.data.startsWith('2["etat"')) {
-        const maintenant = performance.now();
-        etat.compteurs.messagesEtat += 1;
-        etat.compteurs.octetsEtat += octets;
-
-        if (client.dernierEtat !== undefined) {
-          etat.compteurs.intervalles.push(maintenant - client.dernierEtat);
+        // L'en-tete d'une trame du flux d'etat: ses octets suivent dans le paquet
+        // binaire d'apres.
+        if (paquet.data.startsWith('51-["etat"')) {
+          client.enTeteDEtat = octets;
+          return;
         }
 
-        client.dernierEtat = maintenant;
+        etat.compteurs.octetsAutres += octets;
         return;
       }
 
-      etat.compteurs.octetsAutres += octets;
+      // Un paquet binaire voyage tel quel, sans octet de type.
+      const binaires = (paquet.data as Uint8Array | ArrayBuffer).byteLength;
+
+      if (client.enTeteDEtat === undefined) {
+        etat.compteurs.octetsAutres += binaires;
+        return;
+      }
+
+      const maintenant = performance.now();
+      etat.compteurs.messagesEtat += 1;
+      etat.compteurs.octetsEtat += client.enTeteDEtat + binaires;
+      client.enTeteDEtat = undefined;
+
+      if (client.dernierEtat !== undefined) {
+        etat.compteurs.intervalles.push(maintenant - client.dernierEtat);
+      }
+
+      client.dernierEtat = maintenant;
     });
   });
 

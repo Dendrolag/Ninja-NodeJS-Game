@@ -259,8 +259,8 @@ export function creerClient(options: OptionsClient): Client {
   // -- Le flux d'etat -------------------------------------------------------
 
   ecouter(
-    reseau.sur('etat', (instantane) => {
-      magasin.appliquer({ type: 'etat', instantane });
+    reseau.sur('etat', (trame) => {
+      magasin.appliquer({ type: 'etat', trame });
     }),
   );
 

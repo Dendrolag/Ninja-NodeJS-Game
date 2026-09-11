@@ -126,14 +126,16 @@ export const PARTIE_DE_REFERENCE = {
 } as const;
 
 /**
- * Taille moyenne d'un instantane de la partie de reference, sur le fil, en octets.
+ * Taille moyenne d'un message du flux d'etat de la partie de reference, sur le fil,
+ * en octets: en-tete Socket.IO et trame binaire, images periodiques comprises.
  *
- * Mesuree a l'etape 5.1, le 11 septembre 2026, sur le flux JSON de l'etape 2.2.
- * Une modification qui la fait sortir de la tolerance change la bande passante de
- * tous les joueurs: elle doit etre voulue, mesuree, et reportee ici et dans
+ * Mesuree a l'etape 2.3, le 12 septembre 2026, sur le flux binaire en delta. Elle
+ * valait 21 518 octets a l'etape 5.1, sur le flux JSON de l'etape 2.2. Une
+ * modification qui la fait sortir de la tolerance change la bande passante de tous
+ * les joueurs: elle doit etre voulue, mesuree, et reportee ici et dans
  * docs/mesures/charge-serveur.md.
  */
-export const OCTETS_PAR_MESSAGE_DE_REFERENCE = 21_518;
+export const OCTETS_PAR_MESSAGE_DE_REFERENCE = 453;
 
 /**
  * Ecart tolere autour de la taille de reference, en part de celle-ci.

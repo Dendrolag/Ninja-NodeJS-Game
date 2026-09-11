@@ -9,15 +9,16 @@
  * cadence du reseau.
  */
 
+import { encoderImage } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
 import type { EtatClient } from './etat.js';
 import { ETAT_INITIAL } from './etat.js';
 import { creerMagasin } from './magasin.js';
 
-/** Un instantane minimal, au numero de battement demande. */
-function instantane(tick: number) {
-  return {
+/** L'image d'une partie minimale, au numero de battement demande. */
+function trame(tick: number): Uint8Array {
+  return encoderImage({
     tick,
     tempsRestantMs: 180_000,
     enPause: false,
@@ -25,7 +26,7 @@ function instantane(tick: number) {
     objets: [],
     zones: [],
     classement: [],
-  };
+  }).octets;
 }
 
 describe('magasin', () => {
@@ -105,12 +106,12 @@ describe('magasin', () => {
 
     magasin.appliquer({ type: 'connexionEtablie', identifiant: 'moi' });
     magasin.appliquer({ type: 'partieLancee' });
-    magasin.appliquer({ type: 'etat', instantane: instantane(5) });
+    magasin.appliquer({ type: 'etat', trame: trame(5) });
 
     magasin.abonner(() => (appels += 1));
 
     // Un instantane perime ne change rien: personne ne doit etre reveille.
-    magasin.appliquer({ type: 'etat', instantane: instantane(3) });
+    magasin.appliquer({ type: 'etat', trame: trame(3) });
 
     expect(appels).toBe(0);
     expect(magasin.etat.partie?.tick).toBe(5);

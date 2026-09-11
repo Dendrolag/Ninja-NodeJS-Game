@@ -10,14 +10,8 @@
  * qu'on lui demande de dessiner, et les images sont jouees a la main.
  */
 
-import type {
-  EntiteVue,
-  InfosSalon,
-  InstantanePartie,
-  NomDeSon,
-  TypeBonus,
-} from '@neon-ninja/shared';
-import { REGLAGES_PAR_DEFAUT } from '@neon-ninja/shared';
+import type { EntiteVue, InfosSalon, NomDeSon, TypeBonus } from '@neon-ninja/shared';
+import { REGLAGES_PAR_DEFAUT, encoderImage } from '@neon-ninja/shared';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { Client } from '../client.js';
@@ -48,9 +42,9 @@ function joueur(id: string, x: number, y: number): EntiteVue {
   };
 }
 
-/** Un instantane de partie, avec les entites voulues. */
-function instantane(tick: number, entites: readonly EntiteVue[]): InstantanePartie {
-  return {
+/** L'image d'une partie, avec les entites voulues, telle que le serveur l'envoie. */
+function trame(tick: number, entites: readonly EntiteVue[]): Uint8Array {
+  return encoderImage({
     tick,
     tempsRestantMs: 120_000,
     enPause: false,
@@ -58,7 +52,7 @@ function instantane(tick: number, entites: readonly EntiteVue[]): InstantanePart
     objets: [],
     zones: [],
     classement: [],
-  };
+  }).octets;
 }
 
 /** Le salon d'une partie dont nous sommes l'hote. */
@@ -169,7 +163,7 @@ beforeEach(() => {
 describe('lancerLaBoucle', () => {
   it('dessine a chaque image autant d entites que l etat en contient', () => {
     reseau.recevoir('partieLancee');
-    reseau.recevoir('etat', instantane(1, [joueur('moi', 100, 100), joueur('autre', 300, 300)]));
+    reseau.recevoir('etat', trame(1, [joueur('moi', 100, 100), joueur('autre', 300, 300)]));
 
     uneImage();
 
@@ -178,7 +172,7 @@ describe('lancerLaBoucle', () => {
 
   it('lit l etat a chaque image, sans attendre un nouveau message', () => {
     reseau.recevoir('partieLancee');
-    reseau.recevoir('etat', instantane(1, [joueur('moi', 100, 100)]));
+    reseau.recevoir('etat', trame(1, [joueur('moi', 100, 100)]));
 
     uneImage();
     uneImage();
@@ -251,7 +245,7 @@ describe('les fleches qui designent notre personnage', () => {
 
   beforeEach(() => {
     reseau.recevoir('partieLancee');
-    reseau.recevoir('etat', instantane(1, [joueur('moi', 100, 100)]));
+    reseau.recevoir('etat', trame(1, [joueur('moi', 100, 100)]));
   });
 
   it('apparaissent quand notre personnage apparait', () => {

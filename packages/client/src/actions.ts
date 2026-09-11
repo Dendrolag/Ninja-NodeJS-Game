@@ -24,7 +24,6 @@ import type {
   EtatCompteARebours,
   FinDePartie,
   InfosSalon,
-  InstantanePartie,
   MaProgression,
   MessageChat,
   PartieEnPause,
@@ -32,6 +31,7 @@ import type {
   ProfilDuCompte,
   ProgressionDeFin,
   Refus,
+  TrameDEtat,
 } from '@neon-ninja/shared';
 
 import type { EcranDeMenu } from './ecrans.js';
@@ -111,8 +111,8 @@ export type Action =
   | { readonly type: 'demarrageAnnule' }
   /** La partie commence. */
   | { readonly type: 'partieLancee' }
-  /** Un instantane du flux d'etat vient d'arriver. */
-  | { readonly type: 'etat'; readonly instantane: InstantanePartie }
+  /** Une trame du flux d'etat vient d'arriver: une image complete ou un delta. */
+  | { readonly type: 'etat'; readonly trame: TrameDEtat }
   /** La partie vient d'etre suspendue par l'hote. */
   | { readonly type: 'partieEnPause'; readonly pause: PartieEnPause }
   /** La partie repart. */

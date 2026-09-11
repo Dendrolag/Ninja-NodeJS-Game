@@ -31,13 +31,19 @@ import type {
   PartiePublique,
   ResultatValidation,
 } from '@neon-ninja/shared';
-import { BORNES_CODE_INVITATION, CAPACITES } from '@neon-ninja/shared';
+import {
+  BORNES_CODE_INVITATION,
+  CAPACITES,
+  appliquerTrame,
+  quantifierInstantane,
+} from '@neon-ninja/shared';
 import type { Socket as SocketClient } from 'socket.io-client';
 import { io as connecter } from 'socket.io-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { HorlogeManuelle } from './horloge.js';
 import { creerHorlogeManuelle } from './horloge.js';
+import { instantaneDe } from './instantane.js';
 import type { ServeurMonte } from './serveur.js';
 import { demarrerServeur } from './serveur.js';
 
@@ -242,6 +248,44 @@ async function lancerLaPartie(hote: ClientTypee): Promise<void> {
   await lancee;
 }
 
+/** Ce qu'un client reconstruit du flux d'etat, trame apres trame. */
+interface FluxSuivi {
+  /** La partie reconstruite par la derniere trame appliquee. */
+  readonly partie: InstantanePartie | undefined;
+  /** Chaque partie reconstruite, dans l'ordre. */
+  readonly parties: readonly InstantanePartie[];
+  /** Trames recues, appliquees ou non. */
+  readonly trames: number;
+}
+
+/**
+ * Suit le flux d'etat d'un client comme le fait le vrai client: chaque trame est
+ * appliquee a la partie reconstruite jusque-la.
+ *
+ * A brancher avant le premier battement que le test veut lire: depuis l'etape 2.3,
+ * un delta ne se lit pas seul. Branche avant les attentes du test, il applique
+ * chaque trame avant qu'elles ne se resolvent.
+ */
+function suivreLeFlux(client: ClientTypee): FluxSuivi {
+  const suivi: {
+    partie: InstantanePartie | undefined;
+    parties: InstantanePartie[];
+    trames: number;
+  } = { partie: undefined, parties: [], trames: 0 };
+
+  client.on('etat', (trame) => {
+    suivi.trames += 1;
+    const partie = appliquerTrame(suivi.partie, trame);
+
+    if (partie !== undefined) {
+      suivi.partie = partie;
+      suivi.parties.push(partie);
+    }
+  });
+
+  return suivi;
+}
+
 describe('entree en partie', () => {
   it('accepte un joueur et lui rend l etat du salon', async () => {
     const client = await connecterUnClient();
@@ -344,21 +388,76 @@ describe('entree en partie', () => {
 });
 
 describe('flux d etat et notifications', () => {
-  it('diffuse un instantane a chaque battement', async () => {
+  it('diffuse la partie a chaque battement, en commencant par une image complete', async () => {
     const hote = await connecterUnClient();
 
     await entrer(hote, 'Alice');
     await lancerLaPartie(hote);
 
-    const instantane = prochain(hote, 'etat');
+    const trame = prochain(hote, 'etat');
     horloge.avancerDe(50);
 
-    const recu = await instantane;
+    // La premiere trame d'une partie est une image: elle se lit seule.
+    const recu = appliquerTrame(undefined, await trame);
 
-    expect(recu.tick).toBeGreaterThan(0);
-    expect(recu.tempsRestantMs).toBeGreaterThan(0);
-    expect(recu.entites.some((entite) => entite.type === 'joueur')).toBe(true);
-    expect(recu.classement).toHaveLength(1);
+    expect(recu?.tick).toBeGreaterThan(0);
+    expect(recu?.tempsRestantMs).toBeGreaterThan(0);
+    expect(recu?.entites.some((entite) => entite.type === 'joueur')).toBe(true);
+    expect(recu?.classement).toHaveLength(1);
+  });
+
+  it('envoie a toute la salle des trames qui reconstruisent exactement la partie du serveur', async () => {
+    const hote = await connecterUnClient();
+    const invite = await connecterUnClient();
+
+    const idRoom = await entrer(hote, 'Alice');
+    await entrer(invite, 'Bob', idRoom);
+
+    const chezLHote = suivreLeFlux(hote);
+    const chezLInvite = suivreLeFlux(invite);
+
+    await lancerLaPartie(hote);
+    horloge.avancerDe(500);
+    await jusquA(() => chezLHote.trames >= 10 && chezLInvite.trames >= 10);
+
+    const room = serveur.jeu.rooms.room(idRoom);
+    if (room === undefined) {
+      throw new Error('La partie devrait exister.');
+    }
+
+    const attendue = quantifierInstantane(instantaneDe(room.etat));
+
+    expect(chezLHote.partie).toEqual(attendue);
+    expect(chezLInvite.partie).toEqual(attendue);
+  });
+
+  it('donne une image a qui entre dans une partie en cours, puis les deltas de la salle', async () => {
+    const hote = await connecterUnClient();
+    const retardataire = await connecterUnClient();
+
+    const idRoom = await entrer(hote, 'Alice');
+    const chezLHote = suivreLeFlux(hote);
+    await lancerLaPartie(hote);
+    horloge.avancerDe(200);
+    await jusquA(() => chezLHote.trames >= 4);
+
+    const chezLeRetardataire = suivreLeFlux(retardataire);
+    await entrer(retardataire, 'Bob', idRoom);
+    horloge.avancerDe(150);
+    await jusquA(
+      () =>
+        chezLHote.trames >= 7 &&
+        chezLeRetardataire.partie !== undefined &&
+        chezLeRetardataire.partie.tick === chezLHote.partie?.tick,
+    );
+
+    // Il a recu le delta de son premier battement, qu'il n'a pas pu appliquer,
+    // puis son image, puis les deltas suivants.
+    expect(chezLeRetardataire.trames).toBe(4);
+    expect(chezLeRetardataire.partie).toEqual(chezLHote.partie);
+    expect(
+      chezLeRetardataire.partie?.entites.filter((entite) => entite.type === 'joueur'),
+    ).toHaveLength(2);
   });
 
   it('deplace le joueur dans la direction demandee, et pas plus vite s il insiste', async () => {
@@ -866,19 +965,23 @@ describe('contrats typés', () => {
     expect(client.connected).toBe(true);
   });
 
-  it('donne au flux d etat la forme que l etape 2.3 convertira en binaire', async () => {
+  it('fait porter au flux d etat des octets, qui se relisent en instantane complet', async () => {
     const hote = await connecterUnClient();
 
     await entrer(hote, 'Alice');
     await lancerLaPartie(hote);
 
-    const instantane = prochain(hote, 'etat');
+    const trame = prochain(hote, 'etat');
     horloge.avancerDe(50);
 
-    // Le type est verifie a la compilation; la forme reelle l'est ici.
-    const recu: InstantanePartie = await instantane;
+    // Le type est verifie a la compilation; la forme reelle l'est ici: des octets,
+    // et non plus un objet JSON (etape 2.3), qui redonnent un instantane entier.
+    const recu = await trame;
+    expect(ArrayBuffer.isView(recu)).toBe(true);
 
-    expect(Object.keys(recu).sort()).toEqual([
+    const partie = appliquerTrame(undefined, recu) as InstantanePartie;
+
+    expect(Object.keys(partie).sort()).toEqual([
       'classement',
       'enPause',
       'entites',
@@ -912,14 +1015,16 @@ describe('pause de la partie', () => {
     const hote = await connecterUnClient();
 
     await entrer(hote, 'Alice');
+    const flux = suivreLeFlux(hote);
     await lancerLaPartie(hote);
 
     await suspendre(hote);
 
-    const instantane = prochain(hote, 'etat');
+    const trame = prochain(hote, 'etat');
     horloge.avancerDe(50);
+    await trame;
 
-    expect((await instantane).enPause).toBe(true);
+    expect(flux.partie?.enPause).toBe(true);
   });
 
   it('arrete le temps de jeu sans arreter la diffusion', async () => {
@@ -927,18 +1032,17 @@ describe('pause de la partie', () => {
 
     await entrer(hote, 'Alice');
     await reglerLaDuree(hote, 30);
+    const flux = suivreLeFlux(hote);
     await lancerLaPartie(hote);
 
     await suspendre(hote);
 
-    const etats = collecter(hote, 'etat');
     horloge.avancerDe(10_000);
-    await laisserPasserLesMessages();
+    await jusquA(() => flux.parties.length >= 200);
 
-    // Le battement continue, donc des instantanes arrivent; le temps restant,
-    // lui, n'a pas bouge d'une milliseconde.
-    expect(etats.length).toBeGreaterThan(0);
-    expect(new Set(etats.map((etat) => etat.tempsRestantMs)).size).toBe(1);
+    // Le battement continue, donc des trames arrivent; le temps restant, lui, n'a
+    // pas bouge d'une milliseconde.
+    expect(new Set(flux.parties.map((partie) => partie.tempsRestantMs)).size).toBe(1);
   });
 
   it('empeche une partie suspendue de se terminer, et la laisse finir apres la reprise', async () => {

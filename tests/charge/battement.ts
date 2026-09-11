@@ -14,16 +14,18 @@
  *     que vivraient une grille spatiale ou un niveau de detail d'IA (etape 5.2).
  *   - LA PROJECTION: instantaneDe et notificationsDe, de l'etat du moteur vers ce
  *     qui part sur le reseau.
- *   - LA SERIALISATION: le texte que Socket.IO fabrique pour le message « etat ».
- *     C'est ce que l'etape 2.3 (delta binaire) remplacerait.
+ *   - LE CODAGE: la trame binaire du flux d'etat (etape 2.3), image ou delta,
+ *     codee par le meme FluxDEtat que la couche reseau. Jusqu'a l'etape 2.3,
+ *     c'etait la serialisation JSON de l'instantane.
  *
- * LA TAILLE DU MESSAGE EST CELLE DU FIL. Socket.IO encode un evenement en
- * « 2 » suivi du tableau JSON [nom, charge], et Engine.IO fait preceder le tout
- * de « 4 », le type d'un message: la trame WebSocket d'un instantane est donc
- * `42["etat",{...}]`. Le harnais reseau (charge-reseau.ts) mesure ces trames sur de
- * vrais clients, ce qui verifie ce calcul. La taille compressee est donnee a
- * titre d'information: la compression des WebSockets est desactivee par defaut
- * dans Socket.IO, et la question de l'activer appartient a l'etape 2.3.
+ * LA TAILLE DU MESSAGE EST CELLE DU FIL. Socket.IO envoie une trame binaire en deux
+ * paquets: un en-tete en texte, `451-["etat",{"_placeholder":true,"num":0}]`, ou
+ * « 4 » est le type d'un message Engine.IO et « 51- » celui d'un evenement a une
+ * piece binaire, puis les octets de la trame, tels quels. Le harnais reseau
+ * (charge-reseau.ts) mesure ces deux paquets sur de vrais clients, ce qui verifie
+ * ce calcul. La taille qu'aurait eue l'ancien message JSON, `42["etat",{...}]`, et
+ * la taille de la trame compressee sont donnees a titre de comparaison, sur un
+ * battement sur vingt.
  *
  * LE BANC EST DETERMINISTE, sauf pour les durees. Meme graine, memes intentions
  * tirees au generateur a graine, meme pas de temps: la partie jouee est la meme a
@@ -43,6 +45,7 @@ import type { Alea, IdentifiantCarte } from '../../packages/shared/dist/index.js
 import { creerAlea, entier, nombre } from '../../packages/shared/dist/index.js';
 import {
   CADENCE_BATTEMENT_MS,
+  FluxDEtat,
   GameRoom,
   creerHorlogeManuelle,
   instantaneDe,
@@ -53,19 +56,31 @@ import type { Resume } from './statistiques.ts';
 import { resumer } from './statistiques.ts';
 
 /**
- * Octets ajoutes par Socket.IO et Engine.IO autour du JSON d'un evenement: le
- * type de message Engine.IO (« 4 ») et le type d'evenement Socket.IO (« 2 »).
+ * L'en-tete que Socket.IO envoie avant les octets d'une trame du flux d'etat: le
+ * type de message Engine.IO (« 4 »), le type d'evenement binaire a une piece
+ * (« 51- »), et le nom de l'evenement avec l'emplacement de la piece.
  */
-export const OCTETS_D_ENVELOPPE = 2;
+export const EN_TETE_DE_TRAME = `451-${JSON.stringify(['etat', { _placeholder: true, num: 0 }])}`;
+
+/** Octets ajoutes par Socket.IO et Engine.IO autour d'une trame binaire du flux. */
+export const OCTETS_D_ENVELOPPE = EN_TETE_DE_TRAME.length;
 
 /**
- * Un battement sur combien voit sa taille compressee calculee.
- *
- * Compresser coute plus cher que serialiser: le faire a chaque battement fausserait
- * la duree totale mesuree, qui n'en tient pourtant pas compte. Un echantillon
- * regulier suffit a une information de taille.
+ * Octets ajoutes autour du JSON d'un evenement texte: le type de message Engine.IO
+ * (« 4 ») et le type d'evenement Socket.IO (« 2 »). C'etait l'enveloppe du flux
+ * d'etat jusqu'a l'etape 2.3.
  */
-const PERIODE_COMPRESSION = 20;
+export const OCTETS_D_ENVELOPPE_JSON = 2;
+
+/**
+ * Un battement sur combien voit ses tailles de comparaison calculees.
+ *
+ * Compresser, ou serialiser en JSON un instantane que plus personne n'envoie, coute
+ * plus cher que coder la trame: le faire a chaque battement fausserait la duree
+ * totale mesuree, qui n'en tient pourtant pas compte. Un echantillon regulier suffit
+ * a une information de taille.
+ */
+const PERIODE_ECHANTILLON = 20;
 
 /** Plus petit et plus grand nombre de battements entre deux changements de cap d'un joueur. */
 const CAP_TENU_BATTEMENTS = { minimum: 10, maximum: 30 } as const;
@@ -101,18 +116,23 @@ export interface ResultatBancBattement {
   readonly moteurMs: Resume;
   /** Duree de la projection: instantane et notifications. */
   readonly projectionMs: Resume;
-  /** Duree de la serialisation du message « etat ». */
+  /** Duree du codage de la trame du flux d'etat. */
   readonly serialisationMs: Resume;
-  /** Duree du battement complet: moteur, projection et serialisation. */
+  /** Duree du battement complet: moteur, projection et codage. */
   readonly totalMs: Resume;
-  /** Taille de la trame « etat » sur le fil. */
+  /** Taille d'un message « etat » sur le fil: en-tete et trame, images comprises. */
   readonly octetsParMessage: Resume;
-  /** Taille de cette trame compressee (deflate), sur un battement sur vingt. */
+  /** Taille du meme message si sa trame etait compressee (deflate), sur un battement sur vingt. */
   readonly octetsCompressesParMessage: Resume;
+  /**
+   * Taille qu'aurait eue le message en JSON, comme jusqu'a l'etape 2.3, sur un
+   * battement sur vingt.
+   */
+  readonly octetsJsonParMessage: Resume;
   /** Nombre d'entites (joueurs, bots, bots noirs) dans l'instantane, en moyenne. */
   readonly entitesParMessage: number;
   /**
-   * Somme des tailles de toutes les trames mesurees.
+   * Somme des tailles de tous les messages mesures.
    *
    * C'est l'empreinte de la partie jouee: deux executions de meme graine rendent
    * exactement la meme somme. Un test s'en sert pour verifier la reproductibilite.
@@ -126,6 +146,7 @@ interface MesureDUnBattement {
   serialisationMs: number;
   octets: number;
   octetsCompresses: number | undefined;
+  octetsJson: number | undefined;
   entites: number;
 }
 
@@ -142,6 +163,9 @@ export function mesurerLeBattement(options: OptionsBancBattement): ResultatBancB
   let alea = creerAlea(options.graine ^ 0x5bd1e995);
   const avantChangement = new Map<string, number>();
 
+  // Le flux de la partie, comme la couche reseau en tient un par partie.
+  const flux = new FluxDEtat();
+
   // Ce que le rappel de battement a releve. La room l'appelle a l'interieur de
   // avancer(): la boucle ci-dessous le lit juste apres.
   let mesure: MesureDUnBattement | undefined;
@@ -150,19 +174,22 @@ export function mesurerLeBattement(options: OptionsBancBattement): ResultatBancB
     const instantane = instantaneDe(partie.etat);
     notificationsDe(partie.etat);
     const finProjection = performance.now();
-    const texte = JSON.stringify(['etat', instantane]);
-    const finSerialisation = performance.now();
+    const trame = flux.trameDuBattement(instantane);
+    const finCodage = performance.now();
 
     mesure = {
       projectionMs: finProjection - debutProjection,
-      serialisationMs: finSerialisation - finProjection,
-      octets: Buffer.byteLength(texte) + OCTETS_D_ENVELOPPE,
+      serialisationMs: finCodage - finProjection,
+      octets: trame.byteLength + OCTETS_D_ENVELOPPE,
       octetsCompresses: undefined,
+      octetsJson: undefined,
       entites: instantane.entites.length,
     };
 
-    if (partie.etat.tick % PERIODE_COMPRESSION === 0) {
-      mesure.octetsCompresses = deflateRawSync(texte).length + OCTETS_D_ENVELOPPE;
+    if (partie.etat.tick % PERIODE_ECHANTILLON === 0) {
+      mesure.octetsCompresses = deflateRawSync(trame).length + OCTETS_D_ENVELOPPE;
+      mesure.octetsJson =
+        Buffer.byteLength(JSON.stringify(['etat', instantane])) + OCTETS_D_ENVELOPPE_JSON;
     }
   };
 
@@ -174,6 +201,7 @@ export function mesurerLeBattement(options: OptionsBancBattement): ResultatBancB
   const total: number[] = [];
   const octets: number[] = [];
   const compresses: number[] = [];
+  const json: number[] = [];
   let entites = 0;
 
   for (let battement = 0; battement < joues; battement += 1) {
@@ -205,6 +233,10 @@ export function mesurerLeBattement(options: OptionsBancBattement): ResultatBancB
     if (releve.octetsCompresses !== undefined) {
       compresses.push(releve.octetsCompresses);
     }
+
+    if (releve.octetsJson !== undefined) {
+      json.push(releve.octetsJson);
+    }
   }
 
   room.arreter();
@@ -219,6 +251,7 @@ export function mesurerLeBattement(options: OptionsBancBattement): ResultatBancB
     totalMs: resumer(total),
     octetsParMessage: resumer(octets),
     octetsCompressesParMessage: resumer(compresses),
+    octetsJsonParMessage: resumer(json),
     entitesParMessage: entites / Math.max(options.battements, 1),
     octetsTotal: octets.reduce((somme, valeur) => somme + valeur, 0),
   };

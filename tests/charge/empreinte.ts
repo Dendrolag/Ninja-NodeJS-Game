@@ -4,10 +4,18 @@
  * POURQUOI CET OUTIL. Une optimisation du moteur ne doit rien changer a ce qui se
  * passe dans une partie (fiche de l'etape 5.2). Les tests unitaires le verifient
  * cas par cas; cet outil le verifie en bloc. Il joue quatre parties deterministes,
- * longues et animees (captures, bots noirs, bonus, malus, zones), et resume en une
- * empreinte chaque etat complet du moteur, chaque instantane diffuse et chaque
- * notification, a chaque battement. Deux versions du code qui rendent les memes
- * empreintes jouent les memes parties, a l'octet pres.
+ * longues et animees (captures, bots noirs, bonus, malus, zones), et en tire deux
+ * empreintes par partie:
+ *
+ *   - L'EMPREINTE DU JEU resume, a chaque battement, l'etat complet du moteur,
+ *     l'instantane projete et les notifications. Deux versions du code qui rendent
+ *     la meme jouent les memes parties, a l'octet pres. Elle ne depend pas du format
+ *     du flux: l'etape 2.3 l'a laissee intacte.
+ *   - L'EMPREINTE DU FLUX resume les trames binaires envoyees (etape 2.3). Elle
+ *     change quand le format change, ou la politique d'envoi des images.
+ *
+ * A chaque battement, l'outil verifie en plus que la trame reconstruit exactement
+ * l'instantane arrondi, comme le ferait un client present depuis le debut.
  *
  * Il se lance sur la compilation, avant puis apres une modification, et les deux
  * sorties se comparent ligne a ligne:
@@ -22,6 +30,7 @@
  */
 
 import { createHash } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
 
 import type { Entrees, EtatPartie } from '../../packages/sim/dist/index.js';
 import {
@@ -30,9 +39,17 @@ import {
   peuplerDeBots,
   tick,
 } from '../../packages/sim/dist/index.js';
-import { creerAlea, entier, nombre } from '../../packages/shared/dist/index.js';
+import type { InstantanePartie } from '../../packages/shared/dist/index.js';
+import {
+  appliquerTrame,
+  creerAlea,
+  entier,
+  nombre,
+  quantifierInstantane,
+} from '../../packages/shared/dist/index.js';
 import {
   ChargeurDeTerrain,
+  FluxDEtat,
   instantaneDe,
   notificationsDe,
 } from '../../packages/server/dist/index.js';
@@ -91,7 +108,7 @@ function sansTerrain(cle: string, valeur: unknown): unknown {
   return cle === 'terrain' ? undefined : valeur;
 }
 
-/** Joue une partie et rend sa ligne de sortie: son empreinte, et ce qui s'y est passe. */
+/** Joue une partie et rend sa ligne de sortie: ses deux empreintes, et ce qui s'y est passe. */
 function empreinteDe(partie: PartieDEmpreinte, murs: EtatPartie['terrain']): string {
   let etat = creerEtatInitial({
     graine: partie.graine,
@@ -113,7 +130,10 @@ function empreinteDe(partie: PartieDEmpreinte, murs: EtatPartie['terrain']): str
 
   let alea = creerAlea(partie.graine ^ 0x1234);
   const entrees: Record<string, Entrees[string]> = {};
-  const empreinte = createHash('sha256');
+  const empreinteDuJeu = createHash('sha256');
+  const empreinteDuFlux = createHash('sha256');
+  const flux = new FluxDEtat();
+  let reconstruite: InstantanePartie | undefined;
   const faits = new Map<string, number>();
 
   for (let battement = 0; battement < partie.battements; battement += 1) {
@@ -139,9 +159,20 @@ function empreinteDe(partie: PartieDEmpreinte, murs: EtatPartie['terrain']): str
     alea = pas.alea;
     etat = tick(etat, entrees, 20 + pas.valeur);
 
-    empreinte.update(JSON.stringify(etat, sansTerrain));
-    empreinte.update(JSON.stringify(instantaneDe(etat)));
-    empreinte.update(JSON.stringify(notificationsDe(etat)));
+    const instantane = instantaneDe(etat);
+    empreinteDuJeu.update(JSON.stringify(etat, sansTerrain));
+    empreinteDuJeu.update(JSON.stringify(instantane));
+    empreinteDuJeu.update(JSON.stringify(notificationsDe(etat)));
+
+    const trame = flux.trameDuBattement(instantane);
+    empreinteDuFlux.update(trame);
+    reconstruite = appliquerTrame(reconstruite, trame);
+
+    if (!isDeepStrictEqual(reconstruite, quantifierInstantane(instantane))) {
+      throw new Error(
+        `${partie.nom}, battement ${String(etat.tick)}: la trame ne reconstruit pas l'instantane.`,
+      );
+    }
 
     for (const fait of etat.evenements) {
       faits.set(fait.type, (faits.get(fait.type) ?? 0) + 1);
@@ -153,7 +184,7 @@ function empreinteDe(partie: PartieDEmpreinte, murs: EtatPartie['terrain']): str
     .map(([type, nombreDeFaits]) => `${type}=${String(nombreDeFaits)}`)
     .join(' ');
 
-  return `${partie.nom}: ${empreinte.digest('hex')} | ${resume}`;
+  return `${partie.nom}: jeu ${empreinteDuJeu.digest('hex')} | flux ${empreinteDuFlux.digest('hex')} | ${resume}`;
 }
 
 const murs = new ChargeurDeTerrain().charger({ carte: 'map1', modeMiroir: false });

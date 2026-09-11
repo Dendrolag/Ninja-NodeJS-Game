@@ -19,12 +19,12 @@
  *
  * DEUX NATURES DE MESSAGES DESCENDANTS, ET C'EST LA DISTINCTION STRUCTURANTE.
  *
- *   1. Le FLUX D'ETAT: un instantane complet de la partie, emis a chaque
- *      battement, soit vingt fois par seconde. Il decrit ce qui EST. C'est lui,
- *      et lui seul, que l'etape 2.3 remplacera par un delta binaire: la mesure de
- *      l'etape 5.1 l'a justifie, a 21,5 Ko par message pour 150 bots, soit
- *      3,4 Mbit/s par joueur (docs/mesures/charge-serveur.md). Il est donc isole
- *      dans un seul type, InstantanePartie, et n'est jamais melange au reste.
+ *   1. Le FLUX D'ETAT: la partie, emise a chaque battement, soit vingt fois par
+ *      seconde. Il decrit ce qui EST. Depuis l'etape 2.3, il voyage en trames
+ *      binaires (flux.ts): une image complete, puis des deltas. La mesure de
+ *      l'etape 5.1 l'avait justifie, a 21,5 Ko de JSON par message pour 150 bots,
+ *      soit 3,4 Mbit/s par joueur (docs/mesures/charge-serveur.md). Ce qu'une
+ *      trame decrit est un InstantanePartie, et n'est jamais melange au reste.
  *   2. Les NOTIFICATIONS DISCRETES: une capture vient d'avoir lieu, un bonus
  *      s'active, quelqu'un a parle. Elles decrivent ce qui VIENT D'ARRIVER, elles
  *      sont rares, et elles restent des messages d'evenement. Le client
@@ -39,7 +39,7 @@
  *
  * UN SEUL INSTANTANE POUR TOUTE LA PARTIE. Il est identique pour tous les membres
  * d'une salle, ce qui permet de le construire une fois et de le diffuser d'un
- * coup, et ce qui rendra le delta binaire de l'etape 2.3 possible. Tout ce qui ne
+ * coup, et ce qui permet un seul delta binaire par partie (etape 2.3). Tout ce qui ne
  * concerne qu'un joueur (son bonus qui demarre, le malus qu'il subit) passe donc
  * par une notification qui lui est adressee, exactement comme dans le legacy.
  */
@@ -61,12 +61,13 @@ import type {
   IntentionDeplacement,
   MessageChat,
 } from './entrees.js';
+import type { TrameDEtat } from './flux.js';
 import type { IdentifiantPalier } from './progression.js';
 import type { ReglagesPartie, ReglagesPartiels } from './reglages.js';
 import type { ErreurValidation, ResultatValidation } from './validation.js';
 
 // --------------------------------------------------------------------------
-// Le flux d'etat: ce que l'etape 2.3 convertira en binaire
+// Le flux d'etat: ce que les trames binaires de l'etape 2.3 decrivent
 // --------------------------------------------------------------------------
 
 /** Ou en est une partie: on attend dans le salon, on joue, c'est fini. */
@@ -162,10 +163,10 @@ export interface LigneClassement {
 /**
  * L'etat de la partie a un battement donne, tel qu'il part sur le reseau.
  *
- * C'EST LA CHARGE UTILE QUE L'ETAPE 2.3 CONVERTIRA EN DELTA BINAIRE. Elle est
+ * C'EST CE QUE DECRIVENT LES TRAMES BINAIRES DE L'ETAPE 2.3 (flux.ts). Elle est
  * volontairement plate et sans surprise: des nombres, des chaines courtes, aucune
- * table imbriquee profonde, aucune valeur absente. Un format binaire se derive
- * directement d'une forme pareille.
+ * table imbriquee profonde, aucune valeur absente. C'est ce qui a permis d'en
+ * deriver directement le format binaire.
  */
 export interface InstantanePartie {
   /** Numero du battement. Il croit de un a chaque instantane d'une meme partie. */
@@ -522,9 +523,10 @@ export interface EvenementsServeurVersClient {
   /**
    * Le flux d'etat, emis a chaque battement. Remplace updateEntities.
    *
-   * C'est le seul evenement a fort debit, et le seul que l'etape 2.3 touchera.
+   * C'est le seul evenement a fort debit. Depuis l'etape 2.3, il porte une trame
+   * binaire, image complete ou delta, a relire par appliquerTrame (flux.ts).
    */
-  etat: (instantane: InstantanePartie) => void;
+  etat: (trame: TrameDEtat) => void;
 
   /** L'etat du salon a change. Remplace updateWaitingRoom et gameSettingsUpdated. */
   salon: (infos: InfosSalon) => void;

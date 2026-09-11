@@ -8,7 +8,7 @@
  */
 
 import type { InfosSalon, StatutPartie } from '@neon-ninja/shared';
-import { REGLAGES_PAR_DEFAUT } from '@neon-ninja/shared';
+import { REGLAGES_PAR_DEFAUT, encoderImage } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
 import type { Action } from './actions.js';
@@ -87,7 +87,7 @@ describe('transitions d ecran', () => {
     const ordinaires: readonly Action[] = [
       {
         type: 'etat',
-        instantane: {
+        trame: encoderImage({
           tick: 1,
           tempsRestantMs: 1000,
           enPause: false,
@@ -95,7 +95,7 @@ describe('transitions d ecran', () => {
           objets: [],
           zones: [],
           classement: [],
-        },
+        }).octets,
       },
       { type: 'chat', message: { auteur: 'j1', pseudo: 'Alice', texte: 'salut' }, instant: 0 },
       { type: 'compteARebours', compte: { secondesRestantes: 3, annulable: false } },

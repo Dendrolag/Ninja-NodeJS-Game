@@ -13,6 +13,7 @@
  */
 
 import type { InfosSalon, InstantanePartie, ResultatValidation } from '@neon-ninja/shared';
+import { encoderImage } from '@neon-ninja/shared';
 import { REGLAGES_PAR_DEFAUT } from '@neon-ninja/shared';
 import { beforeEach, describe, expect, it } from 'vitest';
 
@@ -42,8 +43,8 @@ function salon(modifications: Partial<InfosSalon> = {}): InfosSalon {
 }
 
 /** Un instantane minimal. */
-function instantane(modifications: Partial<InstantanePartie> = {}): InstantanePartie {
-  return {
+function trame(modifications: Partial<InstantanePartie> = {}): Uint8Array {
+  return encoderImage({
     tick: 1,
     tempsRestantMs: 180_000,
     enPause: false,
@@ -52,7 +53,7 @@ function instantane(modifications: Partial<InstantanePartie> = {}): InstantanePa
     zones: [],
     classement: [],
     ...modifications,
-  };
+  }).octets;
 }
 
 /**
@@ -241,8 +242,8 @@ describe('les messages du serveur', () => {
 
   it('reconstruit l etat de la partie a partir du flux', () => {
     entrerEtLancer();
-    reseau.recevoir('etat', instantane({ tick: 1, tempsRestantMs: 180_000 }));
-    reseau.recevoir('etat', instantane({ tick: 2, tempsRestantMs: 179_500 }));
+    reseau.recevoir('etat', trame({ tick: 1, tempsRestantMs: 180_000 }));
+    reseau.recevoir('etat', trame({ tick: 2, tempsRestantMs: 179_500 }));
 
     expect(client.etat.ecran).toBe('jeu');
     expect(client.etat.partie?.tick).toBe(2);
@@ -252,7 +253,7 @@ describe('les messages du serveur', () => {
   it('suit la pause et la reprise', () => {
     entrerEtLancer();
     reseau.recevoir('partieEnPause', { parPseudo: 'Alice' });
-    reseau.recevoir('etat', instantane({ tick: 4, enPause: true }));
+    reseau.recevoir('etat', trame({ tick: 4, enPause: true }));
 
     expect(client.etat.pausePar).toBe('Alice');
     expect(client.etat.partie?.enPause).toBe(true);
@@ -326,7 +327,7 @@ describe('fermeture', () => {
     entrerEtLancer();
     client.fermer();
 
-    reseau.recevoir('etat', instantane({ tick: 99 }));
+    reseau.recevoir('etat', trame({ tick: 99 }));
 
     // Le banc d'essai a bien delivre le message; plus personne ne l'ecoutait.
     expect(client.etat.partie).toBeUndefined();

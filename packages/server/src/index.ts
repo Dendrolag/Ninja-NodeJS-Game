@@ -74,6 +74,9 @@ export { creerHorlogeManuelle, horlogeSysteme } from './horloge.js';
 export type { OptionsCompteARebours } from './compteARebours.js';
 export { CompteARebours, SEUIL_ANNULATION_S } from './compteARebours.js';
 
+export type { ImagesAttendues } from './fluxDEtat.js';
+export { BATTEMENTS_ENTRE_DEUX_IMAGES, FluxDEtat } from './fluxDEtat.js';
+
 export type { Notification } from './instantane.js';
 export {
   classementDe,

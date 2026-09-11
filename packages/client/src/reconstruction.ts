@@ -2,12 +2,12 @@
  * La reconstruction de l'etat de partie a partir du flux recu du serveur.
  *
  * C'EST LE SEUL ENDROIT DU CLIENT QUI SACHE COMMENT LE FLUX EST FAIT, et c'est
- * tout l'interet de ce fichier. Aujourd'hui le serveur envoie un instantane
- * complet en JSON a chaque battement (etape 2.2): reconstruire revient donc a
- * adopter ce qui arrive. Si l'etape 2.3 remplace ce flux par un delta binaire,
- * c'est ici, et nulle part ailleurs, que le decodage et l'application du delta
- * viendront se poser. Le magasin, les ecrans et le rendu ne verront pas la
- * difference: ils continueront de lire une VuePartie.
+ * tout l'interet de ce fichier. Depuis l'etape 2.3, le serveur envoie des trames
+ * binaires: une image complete de la partie de temps en temps, et entre deux, des
+ * deltas qui ne disent que ce qui a change. Le decodage lui-meme vit dans
+ * @neon-ninja/shared (flux.ts), partage avec le serveur qui code: ce fichier
+ * decide seulement quoi faire de chaque trame. Le magasin, les ecrans et le rendu
+ * n'ont rien vu du changement: ils lisent toujours une VuePartie.
  *
  * C'est la meme separation que cote serveur, ou instantane.ts est le seul a
  * savoir traduire l'etat du moteur vers le reseau.
@@ -15,7 +15,7 @@
  * LE CLIENT NE SIMULE RIEN. Il n'extrapole pas les positions entre deux
  * battements, il ne devine pas ce qui va arriver, il n'applique aucune regle de
  * jeu. Il affiche ce que le serveur lui dit. Le lissage de l'affichage entre deux
- * instantanes est une affaire de rendu (etape 4.2), et il travaillera sur deux
+ * instantanes est une affaire de rendu (etape 4.2), et il travaille sur deux
  * vues successives sans jamais inventer d'etat.
  */
 
@@ -24,20 +24,25 @@ import type {
   InstantanePartie,
   LigneClassement,
   ObjetVu,
+  TrameDEtat,
   ZoneVue,
 } from '@neon-ninja/shared';
+import { ErreurDeTrame, appliquerTrame, lireEnTete } from '@neon-ninja/shared';
 
 /**
  * L'etat de la partie tel que le client le detient, a un battement donne.
  *
  * Sa forme est celle de InstantanePartie, et ce n'est pas un doublon inutile:
- * l'un est un MESSAGE, dont la forme appartient au contrat reseau, l'autre est
- * l'ETAT du client, dont la forme appartient au client. Le jour ou le message
- * devient un delta binaire, le message change et cet etat ne bouge pas. Le rendu
- * de l'etape 4.2 lit ce type, jamais le message.
+ * l'un decrit ce que le serveur ENVOIE, dont la forme appartient au contrat
+ * reseau, l'autre est l'ETAT du client, dont la forme appartient au client. Le
+ * passage au delta binaire de l'etape 2.3 l'a montre: le message a change, cet
+ * etat n'a pas bouge. Le rendu de l'etape 4.2 lit ce type, jamais le message.
+ *
+ * C'est aussi la reference du delta suivant: le client n'a rien d'autre a retenir
+ * pour appliquer le prochain delta que la derniere partie qu'il affiche.
  */
 export interface VuePartie {
-  /** Numero du dernier battement recu. Il croit de un a chaque instantane. */
+  /** Numero du dernier battement recu. Il croit a chaque trame d'une meme partie. */
   readonly tick: number;
   /** Temps de jeu restant, en millisecondes. */
   readonly tempsRestantMs: number;
@@ -51,37 +56,58 @@ export interface VuePartie {
 }
 
 /**
- * Reconstruit l'etat de la partie a l'arrivee d'un instantane.
+ * Reconstruit l'etat de la partie a l'arrivee d'une trame.
  *
- * UN INSTANTANE PERIME EST IGNORE. Le numero de battement croit de un a chaque
- * envoi d'une meme partie: un message dont le numero n'est pas plus grand que
- * celui deja detenu ne peut etre qu'un doublon ou un retardataire, et l'adopter
- * ferait reculer la partie a l'ecran. La regle ne coute rien aujourd'hui, ou le
- * transport garantit l'ordre; elle sera indispensable a un flux delta, ou
- * appliquer deux fois le meme delta donne un etat faux.
+ * TROIS TRAMES SONT IGNOREES, et la vue detenue est rendue telle quelle: la meme
+ * vue, et non une copie, ce qui permet au magasin de ne reveiller personne.
+ *
+ *   - UNE TRAME PERIMEE, dont le battement n'est pas plus recent que celui de la
+ *     vue: un doublon ou un retardataire, qui ferait reculer la partie a l'ecran.
+ *   - UN DELTA QUI NE S'APPLIQUE PAS a la vue detenue, parce qu'il decrit ce qui a
+ *     change depuis un battement que le client n'a pas. C'est le cas ordinaire du
+ *     joueur qui entre dans une partie en cours: il recoit le delta de la salle
+ *     juste avant son image. Appliquer ce delta a autre chose fabriquerait un etat
+ *     faux; l'ignorer ne coute qu'une attente jusqu'a l'image.
+ *   - UNE TRAME ILLISIBLE. Elle ne peut venir que d'une faute: le client garde ce
+ *     qu'il affiche plutot que de tomber, et la prochaine image le recale.
  *
  * ELLE SUPPOSE QUE LE COMPTEUR NE REPART PAS EN ARRIERE PENDANT UNE PARTIE, ce
  * que le contrat garantit. Il repart bien de zero a la partie SUIVANTE, et c'est
  * pour cela que le magasin oublie sa vue quand la partie est lancee: sans cet
  * oubli, la regle ci-dessus rejetterait toute la partie suivante.
  *
- * @param vue        Ce que le client detient deja, ou rien avant le premier
- *                   instantane.
- * @param instantane Ce qui vient d'arriver du serveur.
+ * @param vue   Ce que le client detient deja, ou rien avant la premiere image.
+ * @param trame Ce qui vient d'arriver du serveur.
+ * @returns La partie reconstruite, ou la vue detenue si la trame est ignoree.
  */
-export function reconstruire(vue: VuePartie | undefined, instantane: InstantanePartie): VuePartie {
-  if (vue !== undefined && instantane.tick <= vue.tick) {
-    return vue;
-  }
+export function reconstruire(vue: VuePartie | undefined, trame: TrameDEtat): VuePartie | undefined {
+  try {
+    if (vue !== undefined && lireEnTete(trame).tick <= vue.tick) {
+      return vue;
+    }
 
+    const partie = appliquerTrame(vue, trame);
+
+    return partie === undefined ? vue : vueDe(partie);
+  } catch (erreur) {
+    if (erreur instanceof ErreurDeTrame) {
+      return vue;
+    }
+
+    throw erreur;
+  }
+}
+
+/** La partie decodee, rangee comme l'etat du client la detient. */
+function vueDe(partie: InstantanePartie): VuePartie {
   return {
-    tick: instantane.tick,
-    tempsRestantMs: instantane.tempsRestantMs,
-    enPause: instantane.enPause,
-    entites: instantane.entites,
-    objets: instantane.objets,
-    zones: instantane.zones,
-    classement: instantane.classement,
+    tick: partie.tick,
+    tempsRestantMs: partie.tempsRestantMs,
+    enPause: partie.enPause,
+    entites: partie.entites,
+    objets: partie.objets,
+    zones: partie.zones,
+    classement: partie.classement,
   };
 }
 

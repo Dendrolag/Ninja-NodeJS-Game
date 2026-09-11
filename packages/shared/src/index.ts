@@ -143,6 +143,18 @@ export {
   ZONES,
 } from './constantes.js';
 
+export type { EnTeteDeTrame, NatureDeTrame, TrameDEtat, TrameEncodee } from './flux.js';
+export {
+  ErreurDeTrame,
+  SUBDIVISIONS_DU_PIXEL,
+  VERSION_DU_FLUX,
+  appliquerTrame,
+  encoderDelta,
+  encoderImage,
+  lireEnTete,
+  quantifierInstantane,
+} from './flux.js';
+
 export type { Position, Vecteur } from './geometrie.js';
 
 export type { CoucheCarte, NomDeSon, PisteMusicale } from './ressources.js';

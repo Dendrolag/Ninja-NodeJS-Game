@@ -9,6 +9,7 @@
  */
 
 import type { InfosSalon, InstantanePartie, StatutPartie } from '@neon-ninja/shared';
+import { encoderImage } from '@neon-ninja/shared';
 import { REGLAGES_PAR_DEFAUT } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
@@ -40,8 +41,8 @@ function salon(statut: StatutPartie = 'salon'): InfosSalon {
 }
 
 /** Un instantane minimal. */
-function instantane(modifications: Partial<InstantanePartie> = {}): InstantanePartie {
-  return {
+function trame(modifications: Partial<InstantanePartie> = {}): Uint8Array {
+  return encoderImage({
     tick: 1,
     tempsRestantMs: 180_000,
     enPause: false,
@@ -50,7 +51,7 @@ function instantane(modifications: Partial<InstantanePartie> = {}): InstantanePa
     zones: [],
     classement: [],
     ...modifications,
-  };
+  }).octets;
 }
 
 /** La suite d'actions qui amene un client jusqu'au debut d'une partie. */
@@ -118,11 +119,7 @@ describe('le lien et l entree en partie', () => {
   });
 
   it('oublie tout ce qui touche a la partie quand on quitte, mais garde le lien', () => {
-    const etat = apres([
-      ...JUSQU_AU_JEU,
-      { type: 'etat', instantane: instantane() },
-      { type: 'sortie' },
-    ]);
+    const etat = apres([...JUSQU_AU_JEU, { type: 'etat', trame: trame() }, { type: 'sortie' }]);
 
     expect(etat.ecran).toBe('accueil');
     expect(etat.connexion).toBe('connecte');
@@ -147,8 +144,8 @@ describe('le flux d etat', () => {
   it('remplace la vue de partie a chaque instantane', () => {
     const etat = apres([
       ...JUSQU_AU_JEU,
-      { type: 'etat', instantane: instantane({ tick: 1, tempsRestantMs: 180_000 }) },
-      { type: 'etat', instantane: instantane({ tick: 2, tempsRestantMs: 179_500 }) },
+      { type: 'etat', trame: trame({ tick: 1, tempsRestantMs: 180_000 }) },
+      { type: 'etat', trame: trame({ tick: 2, tempsRestantMs: 179_500 }) },
     ]);
 
     expect(etat.partie?.tick).toBe(2);
@@ -156,8 +153,8 @@ describe('le flux d etat', () => {
   });
 
   it('ne diffuse rien quand l instantane est perime', () => {
-    const avant = apres([...JUSQU_AU_JEU, { type: 'etat', instantane: instantane({ tick: 5 }) }]);
-    const apresPerime = reduire(avant, { type: 'etat', instantane: instantane({ tick: 3 }) });
+    const avant = apres([...JUSQU_AU_JEU, { type: 'etat', trame: trame({ tick: 5 }) }]);
+    const apresPerime = reduire(avant, { type: 'etat', trame: trame({ tick: 3 }) });
 
     // L'etat rendu est le meme objet: c'est ce qui permet au magasin de ne
     // reveiller personne.
@@ -170,10 +167,10 @@ describe('le flux d etat', () => {
     // messages perimes.
     const etat = apres([
       ...JUSQU_AU_JEU,
-      { type: 'etat', instantane: instantane({ tick: 300 }) },
+      { type: 'etat', trame: trame({ tick: 300 }) },
       { type: 'partieTerminee', fin: { classement: [] } },
       { type: 'partieLancee' },
-      { type: 'etat', instantane: instantane({ tick: 1, tempsRestantMs: 180_000 }) },
+      { type: 'etat', trame: trame({ tick: 1, tempsRestantMs: 180_000 }) },
     ]);
 
     expect(etat.partie?.tick).toBe(1);
@@ -185,7 +182,7 @@ describe('les notifications posees par-dessus l etat', () => {
   it('ajoute chaque fait au journal, dans l ordre d arrivee', () => {
     const etat = apres([
       ...JUSQU_AU_JEU,
-      { type: 'etat', instantane: instantane() },
+      { type: 'etat', trame: trame() },
       {
         type: 'fait',
         fait: fait(
@@ -211,7 +208,7 @@ describe('les notifications posees par-dessus l etat', () => {
   it('laisse l etat reconstruit intact quand un fait arrive', () => {
     const etat = apres([
       ...JUSQU_AU_JEU,
-      { type: 'etat', instantane: instantane({ tick: 9, tempsRestantMs: 1234 }) },
+      { type: 'etat', trame: trame({ tick: 9, tempsRestantMs: 1234 }) },
       { type: 'fait', fait: fait('botNoirDetruit', { points: 15, x: 1, y: 2 }, 500) },
     ]);
 
@@ -458,7 +455,7 @@ describe('l immuabilite de l etat', () => {
     const depart = apres(JUSQU_AU_JEU);
     const copie = structuredClone(depart);
 
-    reduire(depart, { type: 'etat', instantane: instantane({ tick: 12 }) });
+    reduire(depart, { type: 'etat', trame: trame({ tick: 12 }) });
     reduire(depart, { type: 'fait', fait: fait('botNoirDetruit', { points: 15, x: 0, y: 0 }, 1) });
     reduire(depart, { type: 'sortie' });
 

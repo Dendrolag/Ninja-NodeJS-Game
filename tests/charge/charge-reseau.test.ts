@@ -158,12 +158,15 @@ describe('mesurerLaCharge', () => {
       expect(resultat.messagesParClientHz).toBeLessThan(battementsParSeconde * 1.2);
 
       // La taille relevee sur le fil concorde avec celle que le banc calcule pour la
-      // meme population: c'est ce qui valide le calcul de l'enveloppe du banc.
+      // meme population: c'est ce qui valide le calcul de l'enveloppe du banc. Le
+      // banc mesure les memes battements que la fenetre de la charge, apres une
+      // seconde de jeu: ni l'un ni l'autre ne compte d'image, qui repart toutes les
+      // cinq secondes et pese bien plus qu'un delta.
       const banc = mesurerLeBattement({
         bots: 150,
         joueurs: 3,
-        battements: 60,
-        echauffement: 0,
+        battements: 40,
+        echauffement: 20,
         graine: 3,
         terrain: new ChargeurDeTerrain().charger({ carte: 'map1', modeMiroir: false }),
       });
