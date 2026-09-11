@@ -156,7 +156,10 @@ Repris du handoff de la reprise des écrans du jalon 3, inchangé: les erreurs d
 
 ## État de la CI
 
-À REPORTER.
+**Verte** sur le commit de l'étape, `6ed41cc`: exécution GitHub Actions 34637473454, sur `reecriture`.
+
+- « Types, linter et tests »: réussi, en 1 min 51 s. Il comprend la suite unitaire avec les 32 tests du harnais (dont la charge courte sur le vrai serveur, sous Linux), le seuil de taille de la partie de référence, et les tests de la base contre une branche Neon neuve.
+- « Bout en bout »: réussi, en 4 min 50 s, 13 scénarios sur 13.
 
 `master` n'a pas été touché. Aucune fusion de `reecriture` avant l'étape 6.1.
 
