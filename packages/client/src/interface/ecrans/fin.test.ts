@@ -2,10 +2,11 @@
 /**
  * Tests de l'ecran de fin, dans un document: le test exige par la fiche 4.3.
  *
- * Les donnees affichees correspondent au recapitulatif recu. En jalon 1, ce
- * recapitulatif est le classement definitif de partieTerminee; la progression
- * (experience, pieces, points de ligue) arrive avec l'etape 3.3 et devra etre
- * ajoutee a ce test ce jour-la.
+ * Les donnees affichees correspondent au recapitulatif recu: le classement
+ * definitif de partieTerminee. La progression d'un compte (experience, pieces,
+ * points de ligue), envoyee par le serveur depuis l'etape 3.3 dans
+ * progressionDeFin, devra etre ajoutee a ce test quand l'ecran l'affichera, a la
+ * reprise des ecrans du jalon 3.
  */
 
 import type { InfosSalon, LigneClassement } from '@neon-ninja/shared';

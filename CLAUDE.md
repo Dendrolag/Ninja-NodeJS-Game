@@ -74,7 +74,7 @@ pnpm base:migrer          # appliquer les migrations à la base de DATABASE_URL
 
 Lancer un sous-ensemble de tests: `pnpm test <motif>`, par exemple `pnpm test purity` ou `pnpm test packages/sim`. Les tests sont répartis en deux projets Vitest (`vitest.workspace.ts`): `unitaires`, et `base`, qui crée une branche Neon neuve, la migre, puis la supprime; `pnpm test --project unitaires` s'en passe.
 
-Base de données (depuis l'étape 3.1): PostgreSQL sur Neon, projet `neon-ninja`. Trois variables d'environnement, jamais commitées: `DATABASE_URL`, l'adresse par le pooler; `NEON_API_KEY` et `NEON_PROJECT_ID`, pour les branches de test. Les deux dernières sont aussi des secrets du dépôt GitHub. Sans elles, les tests de la base sont sautés en local et font échouer la CI. Le jeu, lui, tourne sans base, en invités seulement; avec `DATABASE_URL`, le serveur branche les comptes (étape 3.2: inscription, connexion, session par jeton), sur une base migrée par `pnpm base:migrer`.
+Base de données (depuis l'étape 3.1): PostgreSQL sur Neon, projet `neon-ninja`. Trois variables d'environnement, jamais commitées: `DATABASE_URL`, l'adresse par le pooler; `NEON_API_KEY` et `NEON_PROJECT_ID`, pour les branches de test. Les deux dernières sont aussi des secrets du dépôt GitHub. Sans elles, les tests de la base sont sautés en local et font échouer la CI. Le jeu, lui, tourne sans base, en invités seulement; avec `DATABASE_URL`, le serveur branche les comptes (étape 3.2: inscription, connexion, session par jeton) et leur progression de fin de partie (étape 3.3), sur une base migrée par `pnpm base:migrer`.
 
 ```bash
 pnpm build                # compiler les paquets et empaqueter la page du jeu

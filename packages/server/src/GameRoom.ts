@@ -42,6 +42,12 @@
  * room ne sait pas COMMENT on la trouve (liste publique, code, partie rapide):
  * c'est le travail du RoomManager et de la couche reseau. Elle sait seulement ce
  * qu'elle est, et combien de joueurs elle accueille.
+ *
+ * CE QUE L'ETAPE 3.3 A AJOUTE: le bilan de la partie. La room retient, a cote de
+ * l'etat, ce que le moteur n'a pas a savoir et dont la fin de partie a besoin pour
+ * les comptes: a quel moment du jeu chaque joueur est entre, et qui est parti
+ * pendant la partie. Elle ne calcule aucun gain: les regles sont dans
+ * @neon-ninja/shared, et l'enregistrement dans la couche reseau.
  */
 
 import type {
@@ -121,6 +127,46 @@ export interface JoueurDeRoom {
   readonly hote: boolean;
   /** Le compte de ce joueur, tel que sa session l'a etabli. Absent: un invite. */
   readonly compte?: CompteDeSession;
+}
+
+/** Un joueur dans le bilan d'une partie: present a la fin, ou parti avant. */
+export interface JoueurDuBilan {
+  /** La connexion d'un joueur present a la fin. Absente pour un abandon. */
+  readonly id?: IdentifiantEntite;
+  readonly pseudo: string;
+  /** Absent: un invite. */
+  readonly compte?: CompteDeSession;
+  /**
+   * 1 pour le premier: l'ordre du classement final. Tous les abandons sont places
+   * derniers, a egalite, au nombre de joueurs.
+   */
+  readonly placement: number;
+  /** Le score final. Zero pour un abandon: le score est un stock, et il ne porte plus rien. */
+  readonly points: number;
+  readonly captures: number;
+  readonly botsNoirsDetruits: number;
+  /** Temps de jeu passe dans la partie, en millisecondes. Zero pour un abandon. */
+  readonly tempsJoueMs: number;
+  /** Le joueur a quitte la partie pendant qu'elle se jouait. */
+  readonly abandon: boolean;
+}
+
+/** Ce qu'il faut savoir de la partie pour la fin: qui, a quelle place, combien de temps. */
+export interface BilanDePartie {
+  /** Presents a la fin et abandons, invites compris. */
+  readonly nombreJoueurs: number;
+  /** Duree reglee de la partie, en millisecondes. */
+  readonly dureePartieMs: number;
+  /** Les presents dans l'ordre du classement, puis les abandons. */
+  readonly joueurs: readonly JoueurDuBilan[];
+}
+
+/** Un joueur parti pendant la partie, tel qu'il etait a son depart. */
+interface Abandon {
+  readonly pseudo: string;
+  readonly compte?: CompteDeSession;
+  readonly captures: number;
+  readonly botsNoirsDetruits: number;
 }
 
 /** Ce qu'il faut pour ouvrir une room. */
@@ -215,10 +261,26 @@ export class GameRoom {
    *
    * Le moteur ne connait pas les comptes, et n'a pas a les connaitre: un compte ne
    * change rien a la facon de jouer. La room les retient a cote de l'etat, comme
-   * l'ordre d'arrivee, pour le salon aujourd'hui et pour les resultats de fin de
-   * partie a l'etape 3.3. Un invite n'y figure pas.
+   * l'ordre d'arrivee, pour le salon et pour le bilan de fin de partie. Un invite
+   * n'y figure pas.
    */
   private readonly comptesDesMembres = new Map<IdentifiantEntite, CompteDeSession>();
+
+  /**
+   * Le temps de jeu ecoule quand chaque membre est entre (etape 3.3).
+   *
+   * Zero pour qui etait dans le salon au lancement. Un joueur entre en cours de
+   * partie n'est paye que du temps qu'il y a passe.
+   */
+  private readonly entreesEnJeuMs = new Map<IdentifiantEntite, number>();
+
+  /**
+   * Les joueurs partis pendant que la partie se jouait (etape 3.3).
+   *
+   * Partir du salon, ou d'une partie terminee, n'est pas un abandon. Un joueur qui
+   * revient dans la partie n'est plus un abandon: il sera classe avec les autres.
+   */
+  private abandons: Abandon[] = [];
 
   /**
    * La derniere intention connue de chaque joueur.
@@ -354,6 +416,9 @@ export class GameRoom {
       this.comptesDesMembres.set(session.id, session.compte);
     }
 
+    this.entreesEnJeuMs.set(session.id, this.partie.tempsEcouleMs);
+    this.oublierLAbandon(session);
+
     return { valide: true, valeur: this.membre(session.id) };
   }
 
@@ -365,6 +430,9 @@ export class GameRoom {
    * legacy la recopiait a quatre reprises, avec des conditions legerement
    * differentes a chaque fois.
    *
+   * Sortir d'une partie en cours est un abandon, retenu pour le bilan: que ce soit
+   * volontaire ou par deconnexion, la room ne peut pas faire la difference.
+   *
    * @returns Vrai si le joueur etait la.
    */
   faireSortir(id: IdentifiantEntite): boolean {
@@ -372,9 +440,12 @@ export class GameRoom {
       return false;
     }
 
+    this.retenirLAbandon(id);
+
     this.partie = retirerJoueur(this.partie, id);
     this.ordreDArrivee = this.ordreDArrivee.filter((present) => present !== id);
     this.comptesDesMembres.delete(id);
+    this.entreesEnJeuMs.delete(id);
     delete this.intentions[id];
 
     if (this.hoteCourant === id) {
@@ -555,6 +626,50 @@ export class GameRoom {
   }
 
   /**
+   * Le bilan de la partie: qui l'a jouee, a quelle place, et combien de temps.
+   *
+   * A lire une fois la partie terminee; c'est de lui que la fin de partie tire les
+   * resultats des comptes. Les presents sont dans l'ordre du classement final, a
+   * egalite departagee comme le classement lui-meme. Les abandons suivent, tous
+   * places derniers: ils ont quitte la partie, ils ne peuvent devancer personne.
+   *
+   * Le temps joue d'un present va de son entree a la fin du temps de jeu, qui ne
+   * compte pas le temps de pause et s'arrete a la duree reglee.
+   */
+  bilan(): BilanDePartie {
+    const classement = this.classement();
+    const nombreJoueurs = classement.length + this.abandons.length;
+    const finDuJeuMs = Math.min(this.partie.tempsEcouleMs, this.partie.dureeMs);
+
+    const presents = classement.map((ligne, index): JoueurDuBilan => {
+      const compte = this.comptesDesMembres.get(ligne.id);
+      const entreeMs = this.entreesEnJeuMs.get(ligne.id) ?? 0;
+
+      return {
+        id: ligne.id,
+        pseudo: ligne.pseudo,
+        ...(compte === undefined ? {} : { compte }),
+        placement: index + 1,
+        points: ligne.points,
+        captures: ligne.captures,
+        botsNoirsDetruits: ligne.botsNoirsDetruits,
+        tempsJoueMs: Math.max(finDuJeuMs - entreeMs, 0),
+        abandon: false,
+      };
+    });
+
+    const partis = this.abandons.map((abandon): JoueurDuBilan => ({
+      ...abandon,
+      placement: nombreJoueurs,
+      points: 0,
+      tempsJoueMs: 0,
+      abandon: true,
+    }));
+
+    return { nombreJoueurs, dureePartieMs: this.partie.dureeMs, joueurs: [...presents, ...partis] };
+  }
+
+  /**
    * Fabrique un etat de depart avec le mode, les reglages donnes et le terrain courant.
    *
    * Les champs facultatifs sont omis plutot que poses a undefined: le projet
@@ -601,6 +716,46 @@ export class GameRoom {
       hote: id === this.hoteCourant,
       ...(compte === undefined ? {} : { compte }),
     };
+  }
+
+  /**
+   * Retient le depart de ce joueur comme un abandon, si la partie se joue.
+   *
+   * Ses captures et ses bots noirs detruits sont lus avant qu'il ne quitte l'etat;
+   * son score, lui, ne se garde pas: c'est un stock, et il ne porte plus rien.
+   */
+  private retenirLAbandon(id: IdentifiantEntite): void {
+    const joueur = this.partie.joueurs[id];
+
+    if (this.statutCourant !== 'enCours' || joueur === undefined) {
+      return;
+    }
+
+    const compte = this.comptesDesMembres.get(id);
+
+    this.abandons.push({
+      pseudo: joueur.pseudo,
+      ...(compte === undefined ? {} : { compte }),
+      captures: joueur.captures,
+      botsNoirsDetruits: joueur.botsNoirsDetruits,
+    });
+  }
+
+  /**
+   * Efface l'abandon d'un joueur qui revient dans la partie.
+   *
+   * Un compte se reconnait a son identifiant, quelle que soit sa connexion. Un
+   * invite n'a que son pseudo, compare comme a l'entree du salon.
+   */
+  private oublierLAbandon(session: SessionJoueur): void {
+    const compte = session.compte;
+    const repere = reperePseudo(session.pseudo);
+
+    this.abandons = this.abandons.filter((abandon) =>
+      compte === undefined
+        ? abandon.compte !== undefined || reperePseudo(abandon.pseudo) !== repere
+        : abandon.compte?.id !== compte.id,
+    );
   }
 
   /** Ce pseudo est-il deja porte par quelqu'un dans la room. */

@@ -47,10 +47,22 @@
  *     d'une connexion Socket.IO: un compte entre en partie sous son pseudo et avec
  *     son niveau, un invite sous un pseudo qui n'est celui d'aucun compte.
  *
- * Les resultats de fin de partie restent a brancher, a l'etape 3.3.
+ * Ce que l'etape 3.3 a ajoute:
+ *
+ *   - le bilan d'une partie dans la GameRoom: placement, temps joue, abandons;
+ *   - finDePartie, qui en tire le resultat et les gains de chaque compte, par les
+ *     regles de progression de @neon-ninja/shared;
+ *   - l'enregistrement de la partie, des resultats et des gains en une seule
+ *     transaction, et le recapitulatif de progression envoye a chaque compte.
  */
 
-export type { JoueurDeRoom, OptionsGameRoom, StatutRoom } from './GameRoom.js';
+export type {
+  BilanDePartie,
+  JoueurDeRoom,
+  JoueurDuBilan,
+  OptionsGameRoom,
+  StatutRoom,
+} from './GameRoom.js';
 export { CADENCE_BATTEMENT_MS, DT_MAXIMUM_MS, GameRoom } from './GameRoom.js';
 
 export type { OptionsCreationRoom, OptionsRoomManager } from './RoomManager.js';
@@ -124,8 +136,17 @@ export { routesDesComptes } from './comptes/routes.js';
 export type { Progression, ValeursProgression } from './base/progression.js';
 export { ecrireProgression, lireProgression } from './base/progression.js';
 
-export type { NouveauResultat, NouvellePartie, ResultatDePartie } from './base/parties.js';
+export type {
+  NouveauResultat,
+  NouvellePartie,
+  PartieEnregistree,
+  ProgressionAppliquee,
+  ResultatDePartie,
+} from './base/parties.js';
 export { enregistrerPartie, lireHistorique } from './base/parties.js';
+
+export type { FinPourLesComptes } from './finDePartie.js';
+export { finPourLesComptes, progressionEnregistree } from './finDePartie.js';
 
 export type { CleDeTerrain, SourceDeTerrain } from './terrain.js';
 export {

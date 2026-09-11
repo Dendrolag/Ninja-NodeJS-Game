@@ -2,7 +2,13 @@
  * La progression d'un compte: la lire, l'ecrire.
  *
  * Trois nombres, jamais negatifs: l'XP totale, les pieces, les points de ligue.
- * Le niveau et le palier de rang ne sont pas ici: ils s'en deduisent (etape 3.3).
+ * Le niveau et le palier de rang ne sont pas ici: ils s'en deduisent, par les
+ * fonctions de packages/shared/src/progression.ts.
+ *
+ * ECRIRE REMPLACE, CE N'EST PAS AJOUTER. Les gains d'une partie ne passent jamais
+ * par ecrireProgression: ils s'ajoutent dans la transaction qui enregistre la
+ * partie (enregistrerPartie, parties.ts), pour que deux parties rapprochees d'un
+ * meme compte ne s'effacent pas l'une l'autre.
  *
  * Une valeur negative ou un compte inconnu ne peuvent venir que d'une faute du
  * code serveur, pas d'une demande de joueur: ils levent une erreur. La base

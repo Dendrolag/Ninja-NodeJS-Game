@@ -11,8 +11,11 @@
  * un pseudo contenant du code s'executait chez tous les joueurs a la fin de la
  * partie. Le modele ne contient que du texte, et l'ecran le pose avec textContent.
  *
- * CE QUI N'EST PAS ICI: l'experience, les pieces, les points de ligue et les
- * defis de la maquette. Ils arrivent avec la progression de l'etape 3.3.
+ * CE QUI N'EST PAS ICI: l'experience, les pieces et les points de ligue. Depuis
+ * l'etape 3.3, le serveur les envoie a chaque compte par progressionDeFin; leur
+ * affichage vient avec la reprise des ecrans du jalon 3, qui donnera aussi au
+ * client le moyen de se connecter a un compte. Les defis de la maquette sont
+ * reportes apres la v1 (cadrage, question 7).
  */
 
 import type { LigneClassement } from '@neon-ninja/shared';

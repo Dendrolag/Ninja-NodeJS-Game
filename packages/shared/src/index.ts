@@ -35,7 +35,22 @@ export type {
 } from './comptes.js';
 export { PREFIXE_JETON_HTTP, RACINE_API_COMPTES, ROUTES_COMPTES } from './comptes.js';
 
-export { XP_PAR_NIVEAU_PROVISOIRE, niveauDeXp } from './progression.js';
+export type {
+  AvancementDuNiveau,
+  IdentifiantPalier,
+  Palier,
+  PlaceEnFinDePartie,
+  Recompenses,
+} from './progression.js';
+export {
+  PALIERS,
+  REGLES_DE_PROGRESSION,
+  avancementDuNiveau,
+  niveauDeXp,
+  palierDePoints,
+  recompensesDePartie,
+  xpDuNiveau,
+} from './progression.js';
 
 export type { Consommation, SeauAJetons } from './debit.js';
 export { consommer, seauNeuf } from './debit.js';
@@ -61,6 +76,7 @@ export type {
   CompteDuSalon,
   EntiteVue,
   EtatCompteARebours,
+  EtatDeProgression,
   EvenementsClientVersServeur,
   EvenementsServeurVersClient,
   FinDePartie,
@@ -74,6 +90,9 @@ export type {
   ObjetVu,
   PartieEnPause,
   PartiePublique,
+  ProgressionDeFin,
+  ProgressionEnregistree,
+  ProgressionNonEnregistree,
   Refus,
   StatutPartie,
   ZoneVue,

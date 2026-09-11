@@ -61,6 +61,18 @@ Cette étape clôt la phase 3. Les comptes sont persistants et progressent aprè
 3. **Appliquer les gains sans perdre d'écriture.** `ecrireProgression` remplace les valeurs. Ajouter les gains (XP, pièces, variation de points de ligue) dans la même transaction que l'enregistrement de la partie, plutôt que lire la progression puis la réécrire: deux écritures rapprochées ne peuvent alors pas s'effacer.
 4. **Le palier de rang n'est pas stocké** (ajustement 2 ci-dessus): le périmètre 3 met à jour les points de ligue, et le palier s'en déduit.
 
+## Réconciliation pendant l'étape (11 septembre 2026)
+
+Écarts entre la fiche et ce qui a été construit, tous consignés au journal de `docs/design/README.md`.
+
+1. **Les valeurs des récompenses ont été proposées puis validées** par le porteur du projet avant d'être codées (ajustement 3 du cadrage): XP au temps joué et aux joueurs devancés, pièces au dixième de l'XP, niveau n + 1 à 100 × n XP, points de ligue de +20 à -10 selon la place (deux joueurs et trois minutes au moins), paliers Bronze 0, Argent 100, Or 300, Platine 600, Diamant 1 000. Elles remplacent le niveau provisoire de l'étape 3.2.
+2. **Une règle absente de la fiche a été ajoutée, et validée: l'abandon.** Un compte qui quitte une partie en cours est compté dernier. Sans elle, le périmètre 3 laissait quitter la partie avant la fin pour éviter toute perte de points de ligue. La room retient désormais les départs pendant la partie et le temps d'entrée de chacun (`GameRoom.bilan`).
+3. **Périmètre 1: la détection de fin existait déjà** (étape 2.1, `surFinDePartie`). L'étape y branche le traitement de fin, dans `ServeurSocket`.
+4. **Périmètre 6: le récapitulatif est un message à part, `progressionDeFin`**, adressé à chaque compte présent, qui suit `partieTerminee` sans le retarder. Le récapitulatif d'un invité reste le classement de `partieTerminee` (ajustement 1 du 11 septembre). Un échec d'enregistrement est annoncé au compte.
+5. **`enregistrerPartie` change de contrat**: elle ajoute les gains dans sa transaction et rend l'évolution appliquée (`PartieEnregistree`), l'heure de fin devient facultative (celle de la base), et un compte inconnu lève une erreur explicite avant toute écriture. Les tests de l'étape 3.1 ont suivi.
+6. **Une partie jouée uniquement par des invités n'est pas enregistrée**: sans résultat, elle n'apporterait rien à aucun profil.
+7. **Prochaine étape**: la ligne « prochaine action exacte » ci-dessous suit la numérotation thématique et désigne 4.1, déjà faite. La section 3 du ROADMAP fait foi: le jalon 3 se termine par la reprise des écrans de 4.3.
+
 ## Rituel de fin de session
 
 Écrire docs/handoffs/etape-3-3-handoff.md. Documenter les règles de récompense et la forme du récapitulatif de fin, car l'écran de fin de la phase 4 s'en sert. Prochaine action exacte pour l'étape 4.1: squelette client avec séparation état et rendu, et décodage du flux delta binaire. Commiter.

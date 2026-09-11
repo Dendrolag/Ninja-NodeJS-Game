@@ -8,8 +8,9 @@
  *
  * CE QUI SE DEDUIT NE SE STOCKE PAS (cadrage de l'etape 0.3, section 5). La
  * progression garde l'XP totale, les pieces et les points de ligue; le niveau et
- * le palier de rang s'en deduisent par des fonctions pures, a l'etape 3.3. Meme
- * principe que le score depuis le 14 aout 2026.
+ * le palier de rang s'en deduisent par des fonctions pures, dans
+ * packages/shared/src/progression.ts (etape 3.3). Meme principe que le score
+ * depuis le 14 aout 2026.
  *
  * CE QUI N'EST PAS ICI, VOLONTAIREMENT. Ni gemmes, ni defis du jour, ni pass de
  * saison, ni skins, ni clans. Chacun s'ajoutera par de nouvelles tables qui

@@ -60,6 +60,7 @@ import type {
   IntentionDeplacement,
   MessageChat,
 } from './entrees.js';
+import type { IdentifiantPalier } from './progression.js';
 import type { ReglagesPartie, ReglagesPartiels } from './reglages.js';
 import type { ErreurValidation, ResultatValidation } from './validation.js';
 
@@ -335,10 +336,68 @@ export interface PartieEnPause {
   readonly parPseudo: string;
 }
 
-/** La partie est finie. Le classement est definitif. */
+/**
+ * La partie est finie. Le classement est definitif.
+ *
+ * C'est tout ce qu'un invite apprend de la fin: son classement. Un compte recoit en
+ * plus, par progressionDeFin, ce que la partie lui a rapporte (etape 3.3).
+ */
 export interface FinDePartie {
   readonly classement: readonly LigneClassement[];
 }
+
+/**
+ * La progression d'un compte a un instant: avant ou apres une partie.
+ *
+ * Le niveau et le palier se deduisent de l'XP et des points de ligue, par les
+ * fonctions de progression.ts. Ils partent quand meme: l'ecran de fin n'a pas a
+ * refaire le calcul, et il ne peut pas y avoir deux verites, puisque le serveur
+ * appelle les memes fonctions que le client appellerait.
+ */
+export interface EtatDeProgression {
+  readonly xpTotale: number;
+  readonly niveau: number;
+  readonly pieces: number;
+  readonly pointsLigue: number;
+  readonly palier: IdentifiantPalier;
+}
+
+/**
+ * Ce qu'une partie a rapporte a un compte, une fois enregistre.
+ *
+ * TOUT CE QUI EST ICI A ETE REELLEMENT APPLIQUE, pas seulement calcule. Les gains
+ * sont la difference entre la progression d'apres et celle d'avant, telles que la
+ * base les a rendues dans la transaction qui les a ecrites. Une perte de points de
+ * ligue reduite pour ne pas descendre sous zero apparait donc reduite.
+ */
+export interface ProgressionEnregistree {
+  readonly enregistree: true;
+  /** 1 pour le premier. */
+  readonly placement: number;
+  /** Tous les joueurs de la partie, invites et abandons compris. */
+  readonly nombreJoueurs: number;
+  readonly xpGagnee: number;
+  readonly piecesGagnees: number;
+  /** Signee. */
+  readonly variationPointsLigue: number;
+  readonly avant: EtatDeProgression;
+  readonly apres: EtatDeProgression;
+}
+
+/**
+ * La partie n'a pas pu etre enregistree pour ce compte.
+ *
+ * Elle se dit, plutot que de laisser l'ecran de fin attendre des gains qui ne
+ * viendront pas: un joueur qui a un compte doit savoir que cette partie ne compte
+ * pas.
+ */
+export interface ProgressionNonEnregistree {
+  readonly enregistree: false;
+  readonly motif: string;
+}
+
+/** Le recapitulatif de progression d'un compte a la fin d'une partie. */
+export type ProgressionDeFin = ProgressionEnregistree | ProgressionNonEnregistree;
 
 /** Ou en est le compte a rebours de demarrage. */
 export interface EtatCompteARebours {
@@ -502,6 +561,17 @@ export interface EvenementsServeurVersClient {
 
   /** La partie est finie. Remplace gameOver. */
   partieTerminee: (fin: FinDePartie) => void;
+
+  /**
+   * Ce que la partie a rapporte a ce compte. Adresse a chaque compte present a la
+   * fin, jamais a un invite. Sans equivalent dans le legacy.
+   *
+   * Il SUIT partieTerminee, sans l'accompagner: l'enregistrement interroge la base,
+   * et le classement de tous ne doit pas attendre la base. Un compte qui a quitte la
+   * partie avant la fin ne le recoit pas: son abandon est enregistre, mais il n'a
+   * plus d'ecran de fin a remplir.
+   */
+  progressionDeFin: (progression: ProgressionDeFin) => void;
 
   /** Ce joueur vient de se faire capturer. Remplace playerCaptured. */
   captureSubie: (capture: CaptureSubie) => void;

@@ -106,7 +106,7 @@ Sept écrans dans la maquette. Pour chacun: son statut en v1, les données qu'il
 
 - **Statut**: v1 enrichi au jalon 3. Existant pour le classement.
 - **Données existantes**: contexte (mode, carte), place, podium, classement complet (points, ninjas, captures, Black Ninjas), Rejouer, Accueil.
-- **Données ajoutées (3.3)**: XP gagnée, niveau avant et après avec sa barre, pièces gagnées, variation des points de ligue, palier avant et après.
+- **Données ajoutées (3.3)**: XP gagnée, niveau avant et après avec sa barre, pièces gagnées, variation des points de ligue, palier avant et après. **Fournies depuis l'étape 3.3** par le message `progressionDeFin` (`ProgressionDeFin`, `packages/shared/src/evenements.ts`), adressé à chaque compte présent à la fin, après `partieTerminee`; la barre se calcule par `avancementDuNiveau`. Un invité n'a que le classement.
 - **Masqué**: défi accompli.
 
 ### 7. Profil
@@ -195,7 +195,18 @@ Entrée de l'étape 3.1. **Principe, le même que pour le score depuis le 14 ao�
 | points de ligue    | Entier positif ou nul        | Le palier de rang s'en déduit                           |
 | mise à jour        | Horodatage                   |                                                         |
 
-Les règles de déduction (seuils de niveau, seuils de palier) et les règles de gain (XP, pièces, points par placement) sont des fonctions pures, à écrire dans `packages/shared` à l'étape 3.3, pour que serveur et client calculent la même chose.
+Les règles de déduction (seuils de niveau, seuils de palier) et les règles de gain (XP, pièces, points par placement) sont des fonctions pures, écrites dans `packages/shared/src/progression.ts` à l'étape 3.3, pour que serveur et client calculent la même chose. Valeurs validées par le porteur du projet le 11 septembre 2026:
+
+| Règle              | Valeur                                                                                                   |
+| ------------------ | -------------------------------------------------------------------------------------------------------- |
+| XP d'une partie    | 10 XP par minute passée en partie, plus 20 XP par minute par joueur devancé au classement final          |
+| Pièces             | Un dixième de l'XP gagnée, arrondi en dessous                                                            |
+| Niveaux            | Passer du niveau n au niveau n + 1 coûte 100 × n XP                                                      |
+| Points de ligue    | +20 au premier, -10 au dernier, en ligne droite; 2 joueurs et 3 minutes au moins; jamais sous zéro       |
+| Paliers            | Bronze 0, Argent 100, Or 300, Platine 600, Diamant 1 000                                                 |
+| Abandon            | Compté dernier: aucune XP ni pièce, la perte de points de ligue du dernier                               |
+
+Les gains s'ajoutent à la progression dans la transaction qui enregistre la partie et les résultats. Une partie jouée uniquement par des invités n'est pas enregistrée.
 
 ### Résultat de partie, un par compte et par partie
 
@@ -253,4 +264,4 @@ Décision du 29 juin 2026, précisée ici.
 Elles engagent le produit au-delà de ce que les maquettes et le périmètre du 29 juin permettent de trancher. Elles sont à décider avant l'étape indiquée.
 
 1. **Peut-on jouer sans compte ? Tranché le 11 septembre 2026 par le porteur du projet: oui.** On entre en invité avec un pseudo, comme aujourd'hui; le compte est optionnel et n'apporte que la progression. Un résultat de partie n'est enregistré que pour un joueur qui a un compte, ce que le schéma de l'étape 3.1 prévoit déjà. Détail et conséquences au journal de `docs/design/README.md`, et dans la fiche 3.2, récrite en conséquence.
-2. **Les valeurs des récompenses.** XP par partie et par placement, seuils de niveau, gains de pièces, gains et pertes de points de ligue, seuils de palier. Le cadrage n'en fixe que la forme. **À proposer et valider à l'étape 3.3.**
+2. **Les valeurs des récompenses. Tranché le 11 septembre 2026 par le porteur du projet, à l'étape 3.3.** XP au temps joué et aux joueurs devancés, pièces au dixième de l'XP, niveau n + 1 à 100 × n XP, points de ligue de +20 à -10 selon la place, cinq paliers, abandon compté dernier. Le tableau est dans la section 5, le détail et les raisons au journal de `docs/design/README.md`.

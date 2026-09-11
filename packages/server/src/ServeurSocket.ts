@@ -30,6 +30,12 @@
  * celui d'un compte. Un jeton invalide fait refuser la connexion: un joueur qui se
  * croit connecte ne doit pas jouer en invite sans le savoir.
  *
+ * ELLE ENREGISTRE LA FIN, DEPUIS L'ETAPE 3.3. Quand une partie se termine, le
+ * classement part a tous aussitot; puis, si la partie avait des comptes, leurs
+ * resultats et leurs gains s'enregistrent par l'annuaire, et chaque compte present
+ * recoit ce qui a ete reellement applique a sa progression. Les gains ne se
+ * calculent pas ici: les regles sont dans @neon-ninja/shared.
+ *
  * AUCUN ETAT GLOBAL, une fois de plus. Tout tient dans l'instance: ses
  * connexions, ses decomptes, son RoomManager. Deux serveurs peuvent tourner dans
  * le meme processus sans se voir, ce dont les tests profitent largement.
@@ -47,6 +53,7 @@ import type {
   IntentionDeplacement,
   LimiteDebit,
   PartiePublique,
+  ProgressionDeFin,
   ReglagesPartiels,
   ResultatValidation,
   SeauAJetons,
@@ -69,6 +76,8 @@ import type { DefaultEventsMap, Server, Socket } from 'socket.io';
 
 import { CompteARebours } from './compteARebours.js';
 import type { AnnuaireDesComptes } from './comptes/annuaire.js';
+import type { FinPourLesComptes } from './finDePartie.js';
+import { finPourLesComptes, progressionEnregistree } from './finDePartie.js';
 import type { GameRoom } from './GameRoom.js';
 import type { Horloge } from './horloge.js';
 import { horlogeSysteme } from './horloge.js';
@@ -121,6 +130,10 @@ interface IdentiteDEntree {
 
 /** Motif du refus d'une session presentee qui n'ouvre rien. */
 const SESSION_INVALIDE = 'Session invalide ou expirée. Reconnectez-vous.';
+
+/** Ce qu'apprend un compte dont la partie n'a pas pu etre enregistree. */
+const PROGRESSION_NON_ENREGISTREE =
+  "Cette partie n'a pas pu être enregistrée: elle ne compte pas pour votre progression.";
 
 /**
  * Les familles de messages, chacune avec son propre seau a jetons.
@@ -193,6 +206,9 @@ export class ServeurSocket {
   /** L'annuaire des comptes, s'il y en a. */
   private readonly comptes: AnnuaireDesComptes | undefined;
 
+  /** Les enregistrements de fin de partie qui n'ont pas encore abouti. */
+  private readonly enregistrements = new Set<Promise<void>>();
+
   constructor(options: OptionsServeurSocket) {
     this.io = options.io;
     this.horloge = options.horloge ?? horlogeSysteme;
@@ -227,6 +243,17 @@ export class ServeurSocket {
     this.decomptes.clear();
     this.connexions.clear();
     this.rooms.toutFermer();
+  }
+
+  /**
+   * Attend que les fins de partie en cours d'enregistrement aient abouti.
+   *
+   * A appeler a l'extinction, apres fermer(), qui empeche toute nouvelle fin: une
+   * partie terminee juste avant un redemarrage du serveur ne doit couter a personne
+   * sa progression. Ne leve jamais: un echec d'enregistrement est deja journalise.
+   */
+  async enregistrementsTermines(): Promise<void> {
+    await Promise.all([...this.enregistrements]);
   }
 
   // ------------------------------------------------------------------------
@@ -721,6 +748,90 @@ export class ServeurSocket {
     this.io.to(room.id).emit('partieTerminee', { classement: classementDe(room.etat) });
   }
 
+  /**
+   * Enregistre la fin d'une partie pour ses comptes, sans faire attendre personne.
+   *
+   * Le bilan est lu tout de suite, au battement de la fin: la room peut se vider et
+   * disparaitre pendant que la base travaille. Rien ne s'enregistre sur un serveur
+   * sans comptes, ni pour une partie jouee uniquement par des invites: une partie
+   * sans resultat n'apporterait rien a aucun profil.
+   */
+  private enregistrerLaFin(room: GameRoom): void {
+    if (this.comptes === undefined) {
+      return;
+    }
+
+    const fin = finPourLesComptes(room);
+    if (fin.resultats.length === 0) {
+      return;
+    }
+
+    const enregistrement = this.enregistrerPuisPrevenir(this.comptes, room.id, fin);
+    this.enregistrements.add(enregistrement);
+    void enregistrement.finally(() => {
+      this.enregistrements.delete(enregistrement);
+    });
+  }
+
+  /**
+   * Enregistre, puis envoie a chaque compte present sa progression.
+   *
+   * UN ECHEC SE DIT, IL NE SE TAIT PAS. Si la base refuse ou ne repond pas, rien
+   * n'est ecrit (une seule transaction), l'incident est journalise, et chaque compte
+   * present apprend que cette partie ne compte pas. Ne leve jamais.
+   */
+  private async enregistrerPuisPrevenir(
+    comptes: AnnuaireDesComptes,
+    idRoom: string,
+    fin: FinPourLesComptes,
+  ): Promise<void> {
+    try {
+      const progressions = await comptes.enregistrerFinDePartie(fin.partie, fin.resultats);
+      const parCompte = new Map(progressions.map((appliquee) => [appliquee.compteId, appliquee]));
+
+      for (const resultat of fin.resultats) {
+        const connexion = fin.connexions.get(resultat.compteId);
+        const appliquee = parCompte.get(resultat.compteId);
+
+        if (connexion !== undefined && appliquee !== undefined) {
+          this.envoyerLaProgression(
+            idRoom,
+            connexion,
+            progressionEnregistree(resultat, fin.partie.nombreJoueurs, appliquee),
+          );
+        }
+      }
+    } catch (erreur) {
+      console.error(`La fin de la partie ${idRoom} n'a pas pu etre enregistree:`, erreur);
+
+      for (const connexion of fin.connexions.values()) {
+        this.envoyerLaProgression(idRoom, connexion, {
+          enregistree: false,
+          motif: PROGRESSION_NON_ENREGISTREE,
+        });
+      }
+    }
+  }
+
+  /**
+   * Envoie son recapitulatif a un compte, s'il est toujours dans cette partie.
+   *
+   * Un joueur qui s'est deconnecte, ou qui est deja entre dans une autre partie
+   * pendant l'enregistrement, n'a plus d'ecran de fin: le message n'est pas envoye,
+   * plutot que d'arriver au milieu d'un autre salon.
+   */
+  private envoyerLaProgression(
+    idRoom: string,
+    idConnexion: string,
+    progression: ProgressionDeFin,
+  ): void {
+    const connexion = this.connexions.get(idConnexion);
+
+    if (connexion?.idRoom === idRoom) {
+      connexion.socket.emit('progressionDeFin', progression);
+    }
+  }
+
   /** Reemet l'etat du salon a tous ses membres. */
   private diffuserLeSalon(room: GameRoom): void {
     this.io.to(room.id).emit('salon', salonDe(room));
@@ -1017,6 +1128,7 @@ export class ServeurSocket {
       },
       surFinDePartie: (room) => {
         this.diffuserLaFin(room);
+        this.enregistrerLaFin(room);
       },
     });
   }

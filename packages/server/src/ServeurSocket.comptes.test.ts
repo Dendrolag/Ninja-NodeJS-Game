@@ -14,12 +14,14 @@ import type {
   InfosSalon,
   ResultatValidation,
 } from '@neon-ninja/shared';
-import { reperePseudo } from '@neon-ninja/shared';
+import { niveauDeXp, reperePseudo } from '@neon-ninja/shared';
 import type { Socket as SocketClient } from 'socket.io-client';
 import { io as connecter } from 'socket.io-client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type { NouveauResultat, NouvellePartie } from './base/parties.js';
 import type { IdentiteDeCompte, ServiceDeComptes } from './comptes/annuaire.js';
+import type { HorlogeManuelle } from './horloge.js';
 import { creerHorlogeManuelle } from './horloge.js';
 import type { ServeurMonte } from './serveur.js';
 import { demarrerServeur } from './serveur.js';
@@ -39,10 +41,20 @@ const JETON_INCONNU = 'Z'.repeat(43);
 /** Un annuaire en memoire, que chaque test peut derегler. */
 interface AnnuaireDEssai extends ServiceDeComptes {
   readonly comptes: Map<string, IdentiteDeCompte>;
+  /** Les fins de partie enregistrees, dans l'ordre. */
+  readonly finsEnregistrees: {
+    readonly partie: NouvellePartie;
+    readonly resultats: readonly NouveauResultat[];
+  }[];
   /** Toute question leve une erreur, comme une base injoignable. */
   panne: boolean;
   /** Chaque question met ce temps a repondre, en millisecondes reelles. */
   delaiMs: number;
+  /**
+   * Un enregistrement de fin de partie n'aboutit qu'une fois cette promesse tenue.
+   * Deja tenue par defaut; un test la remplace pour garder un enregistrement en cours.
+   */
+  verrouDEnregistrement: Promise<void>;
 }
 
 /** Un annuaire qui connait Alice, et la session JETON_ALICE. */
@@ -54,8 +66,27 @@ function annuaireDEssai(): AnnuaireDEssai {
 
   const annuaire: AnnuaireDEssai = {
     comptes: new Map([['compte-alice', { pseudo: 'Alice', niveau: 7 }]]),
+    finsEnregistrees: [],
     panne: false,
     delaiMs: 0,
+    verrouDEnregistrement: Promise.resolve(),
+    // Chaque compte part d'une progression vide, et une perte de points de ligue
+    // est ramenee a zero, comme en base.
+    enregistrerFinDePartie: async (partie, resultats) => {
+      await repondre();
+      await annuaire.verrouDEnregistrement;
+      annuaire.finsEnregistrees.push({ partie, resultats });
+
+      return resultats.map((resultat) => ({
+        compteId: resultat.compteId,
+        avant: { xpTotale: 0, pieces: 0, pointsLigue: 0 },
+        apres: {
+          xpTotale: resultat.xpGagnee,
+          pieces: resultat.piecesGagnees,
+          pointsLigue: Math.max(resultat.variationPointsLigue, 0),
+        },
+      }));
+    },
     compteDeSession: async (jeton) => {
       await repondre();
       return sessions.get(jeton);
@@ -90,6 +121,7 @@ function annuaireDEssai(): AnnuaireDEssai {
 }
 
 let serveur: ServeurMonte | undefined;
+let horloge: HorlogeManuelle = creerHorlogeManuelle();
 let url = '';
 const clients: ClientTypee[] = [];
 
@@ -105,8 +137,9 @@ afterEach(async () => {
 
 /** Monte un serveur, avec cet annuaire ou sans comptes. */
 async function monter(annuaire?: AnnuaireDEssai): Promise<ServeurMonte> {
+  horloge = creerHorlogeManuelle();
   serveur = await demarrerServeur(0, {
-    horloge: creerHorlogeManuelle(),
+    horloge,
     ...(annuaire === undefined ? {} : { comptes: annuaire }),
   });
 
@@ -219,6 +252,75 @@ async function prochain<Nom extends keyof EvenementsServeurVersClient>(
       resoudre(charge);
     }) as never);
   });
+}
+
+/** Collecte tous les messages de ce nom recus a partir de maintenant. */
+function collecter<Nom extends keyof EvenementsServeurVersClient>(
+  client: ClientTypee,
+  nom: Nom,
+): Parameters<EvenementsServeurVersClient[Nom]>[0][] {
+  const recus: Parameters<EvenementsServeurVersClient[Nom]>[0][] = [];
+
+  client.on(nom, ((charge: Parameters<EvenementsServeurVersClient[Nom]>[0]) => {
+    recus.push(charge);
+  }) as never);
+
+  return recus;
+}
+
+/** Laisse le reseau acheminer ce qui est deja parti. */
+async function laisserPasserLesMessages(): Promise<void> {
+  await new Promise((resoudre) => setTimeout(resoudre, 30));
+}
+
+/**
+ * Attend un etat du salon qui remplit cette condition.
+ *
+ * Attendre simplement le prochain message du salon ne suffit pas: celui qui suit
+ * une entree peut encore etre en route, et arriver avant celui qu'on attend.
+ */
+async function salonQui(
+  client: ClientTypee,
+  condition: (salon: InfosSalon) => boolean,
+): Promise<InfosSalon> {
+  return new Promise((resoudre, rejeter) => {
+    const minuterie = setTimeout(() => {
+      rejeter(new Error('Le salon attendu n est pas arrive.'));
+    }, DELAI_ATTENTE_MS);
+
+    const ecouter = (salon: InfosSalon): void => {
+      if (condition(salon)) {
+        clearTimeout(minuterie);
+        client.off('salon', ecouter);
+        resoudre(salon);
+      }
+    };
+
+    client.on('salon', ecouter);
+  });
+}
+
+/**
+ * L'hote regle une partie courte et peu peuplee, puis la lance: decompte complet,
+ * jusqu'au premier battement.
+ *
+ * CHAQUE ETAPE ATTEND SA PREUVE, JAMAIS UN DELAI. L'horloge du jeu est manuelle,
+ * celle du reseau non: faire avancer le jeu avant que le serveur ait traite les
+ * reglages, ou la demande de demarrage, jouerait une autre partie que celle voulue.
+ * Sur une machine chargee, un delai fixe ne le garantit pas.
+ */
+async function lancerUnePartieCourte(hote: ClientTypee): Promise<void> {
+  const reglee = salonQui(hote, (salon) => salon.reglages.dureePartieS === 30);
+  hote.emit('reglages', { dureePartieS: 30, nombreBotsInitial: 10 });
+  await reglee;
+
+  // Le decompte annonce sa premiere seconde des que la demande est traitee.
+  const decompte = prochain(hote, 'compteARebours');
+  const lancee = prochain(hote, 'partieLancee');
+  hote.emit('demarrer');
+  await decompte;
+  horloge.avancerDe(5000);
+  await lancee;
 }
 
 describe('une connexion authentifiee', () => {
@@ -427,5 +529,161 @@ describe('entree pendant l identification', () => {
     await new Promise((resoudre) => setTimeout(resoudre, 120));
 
     expect(serveur?.jeu.rooms.nombreDeRooms).toBe(0);
+  });
+});
+
+describe('fin de partie (etape 3.3)', () => {
+  it('enregistre le resultat du compte et lui envoie ce qui a ete applique, rien a l invite', async () => {
+    const annuaire = annuaireDEssai();
+    await monter(annuaire);
+    const alice = await connecterUnClient({ jeton: JETON_ALICE });
+    const idRoom = salonAccepte(await rejoindre(alice, {})).idRoom;
+    const bob = await connecterUnClient();
+    salonAccepte(await rejoindre(bob, { pseudo: 'Bob', idRoom }));
+    await lancerUnePartieCourte(alice);
+
+    const progression = prochain(alice, 'progressionDeFin');
+    const pourBob = collecter(bob, 'progressionDeFin');
+    horloge.avancerDe(31_000);
+    const recue = await progression;
+    await laisserPasserLesMessages();
+
+    const [fin] = annuaire.finsEnregistrees;
+    const resultat = fin?.resultats[0];
+
+    expect(annuaire.finsEnregistrees).toHaveLength(1);
+    expect(fin?.partie).toEqual({
+      mode: 'classique',
+      carte: 'map1',
+      modeMiroir: false,
+      dureeS: 30,
+      nombreJoueurs: 2,
+    });
+    expect(fin?.resultats).toHaveLength(1);
+    expect(resultat?.compteId).toBe('compte-alice');
+    expect(recue).toEqual({
+      enregistree: true,
+      placement: resultat?.placement,
+      nombreJoueurs: 2,
+      xpGagnee: resultat?.xpGagnee,
+      piecesGagnees: resultat?.piecesGagnees,
+      variationPointsLigue: 0,
+      avant: { xpTotale: 0, niveau: 1, pieces: 0, pointsLigue: 0, palier: 'bronze' },
+      apres: {
+        xpTotale: resultat?.xpGagnee,
+        niveau: niveauDeXp(resultat?.xpGagnee ?? 0),
+        pieces: resultat?.piecesGagnees,
+        pointsLigue: 0,
+        palier: 'bronze',
+      },
+    });
+    expect(resultat?.xpGagnee).toBeGreaterThan(0);
+    expect(pourBob).toEqual([]);
+  });
+
+  it('n enregistre rien pour une partie jouee par des invites', async () => {
+    const annuaire = annuaireDEssai();
+    const enregistrer = vi.spyOn(annuaire, 'enregistrerFinDePartie');
+    await monter(annuaire);
+    const bob = await connecterUnClient();
+    salonAccepte(await rejoindre(bob, { pseudo: 'Bob' }));
+    await lancerUnePartieCourte(bob);
+
+    const fin = prochain(bob, 'partieTerminee');
+    horloge.avancerDe(31_000);
+    await fin;
+    await laisserPasserLesMessages();
+
+    expect(enregistrer).not.toHaveBeenCalled();
+  });
+
+  it('dit au compte que sa partie ne compte pas si l enregistrement echoue, et le journalise', async () => {
+    const journal = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const annuaire = annuaireDEssai();
+    await monter(annuaire);
+    const alice = await connecterUnClient({ jeton: JETON_ALICE });
+    salonAccepte(await rejoindre(alice, {}));
+    await lancerUnePartieCourte(alice);
+
+    annuaire.panne = true;
+    const progression = prochain(alice, 'progressionDeFin');
+    horloge.avancerDe(31_000);
+
+    expect(await progression).toEqual({
+      enregistree: false,
+      motif: expect.stringContaining('ne compte pas') as string,
+    });
+    expect(journal).toHaveBeenCalled();
+  });
+
+  it('enregistre l abandon d un compte parti avant la fin, sans lui envoyer de progression', async () => {
+    const annuaire = annuaireDEssai();
+    await monter(annuaire);
+    const bob = await connecterUnClient();
+    const idRoom = salonAccepte(await rejoindre(bob, { pseudo: 'Bob' })).idRoom;
+    const alice = await connecterUnClient({ jeton: JETON_ALICE });
+    salonAccepte(await rejoindre(alice, { idRoom }));
+    await lancerUnePartieCourte(bob);
+
+    horloge.avancerDe(10_000);
+    // Le depart doit etre traite AVANT que l'horloge n'amene la fin: on attend que
+    // Bob l'apprenne, plutot qu'un delai qui ne suffit plus sur une machine chargee.
+    const depart = prochain(bob, 'joueurParti');
+    alice.emit('quitter');
+    await depart;
+
+    const pourAlice = collecter(alice, 'progressionDeFin');
+    const fin = prochain(bob, 'partieTerminee');
+    horloge.avancerDe(21_000);
+    await fin;
+    await laisserPasserLesMessages();
+
+    expect(annuaire.finsEnregistrees.map((enregistree) => enregistree.resultats)).toEqual([
+      [
+        expect.objectContaining({
+          compteId: 'compte-alice',
+          placement: 2,
+          points: 0,
+          xpGagnee: 0,
+          piecesGagnees: 0,
+          variationPointsLigue: 0,
+        }),
+      ],
+    ]);
+    expect(annuaire.finsEnregistrees[0]?.partie.nombreJoueurs).toBe(2);
+    expect(pourAlice).toEqual([]);
+  });
+
+  it('attend, pour s eteindre, la fin d un enregistrement en cours', async () => {
+    const annuaire = annuaireDEssai();
+    const monte = await monter(annuaire);
+    const alice = await connecterUnClient({ jeton: JETON_ALICE });
+    salonAccepte(await rejoindre(alice, {}));
+    await lancerUnePartieCourte(alice);
+
+    // L'enregistrement reste en cours tant que le test ne le libere pas: aucun
+    // pari sur un delai.
+    let liberer: () => void = () => undefined;
+    annuaire.verrouDEnregistrement = new Promise((resoudre) => {
+      liberer = resoudre;
+    });
+    const fin = prochain(alice, 'partieTerminee');
+    horloge.avancerDe(31_000);
+    await fin;
+
+    let eteint = false;
+    const extinction = monte.fermer().then(() => {
+      eteint = true;
+    });
+    serveur = undefined;
+    await laisserPasserLesMessages();
+
+    expect(eteint).toBe(false);
+    expect(annuaire.finsEnregistrees).toHaveLength(0);
+
+    liberer();
+    await extinction;
+
+    expect(annuaire.finsEnregistrees).toHaveLength(1);
   });
 });

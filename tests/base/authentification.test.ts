@@ -383,7 +383,7 @@ describe.runIf(baseDisponible())('authentification', () => {
       expect(reponse.statut).toBe(200);
       expect(reponse.corps).toEqual({
         pseudo,
-        niveau: 3,
+        niveau: 7,
         xpTotale: 2500,
         pieces: 40,
         pointsLigue: 12,
@@ -440,7 +440,7 @@ describe.runIf(baseDisponible())('authentification', () => {
       expect(reponse).toEqual({
         valide: true,
         valeur: expect.objectContaining({
-          joueurs: [{ id: client.id, pseudo, hote: true, compte: { niveau: 3 } }],
+          joueurs: [{ id: client.id, pseudo, hote: true, compte: { niveau: 7 } }],
         }),
       });
     });

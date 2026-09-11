@@ -63,6 +63,7 @@ function serviceFactice(remplacements: Partial<ServiceDeComptes> = {}): ServiceD
     compteDeSession: vi.fn(async () => undefined),
     identiteDe: vi.fn(async () => undefined),
     pseudoDeCompte: vi.fn(async () => false),
+    enregistrerFinDePartie: vi.fn(async () => []),
     ...remplacements,
   };
 }

@@ -1,5 +1,6 @@
 /**
- * L'authentification: inscrire, connecter, reconnaitre une session.
+ * L'authentification: inscrire, connecter, reconnaitre une session. Et, depuis
+ * l'etape 3.3, enregistrer la fin d'une partie pour les comptes qui l'ont jouee.
  *
  * C'est l'implementation, avec la base, de l'annuaire et du service de
  * annuaire.ts. Elle assemble des briques qui ont chacune leur fichier: la
@@ -41,6 +42,8 @@ import {
   trouverCompteParPseudo,
 } from '../base/comptes.js';
 import type { BaseDeDonnees } from '../base/connexion.js';
+import type { NouveauResultat, NouvellePartie, ProgressionAppliquee } from '../base/parties.js';
+import { enregistrerPartie } from '../base/parties.js';
 import { compteDeLaSession, fermerSession, ouvrirSession } from '../base/sessions.js';
 import type { Horloge } from '../horloge.js';
 import { horlogeSysteme } from '../horloge.js';
@@ -222,6 +225,13 @@ export class Authentification implements ServiceDeComptes {
 
   async pseudoDeCompte(pseudo: string): Promise<boolean> {
     return (await trouverCompteParPseudo(this.db, pseudo)) !== undefined;
+  }
+
+  async enregistrerFinDePartie(
+    partie: NouvellePartie,
+    resultats: readonly NouveauResultat[],
+  ): Promise<readonly ProgressionAppliquee[]> {
+    return (await enregistrerPartie(this.db, partie, resultats)).progressions;
   }
 
   // ------------------------------------------------------------------------

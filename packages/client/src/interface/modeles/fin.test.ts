@@ -2,9 +2,10 @@
  * Tests du modele de l'ecran de fin.
  *
  * Le test exige par la fiche 4.3: les donnees affichees correspondent au
- * recapitulatif recu. En jalon 1, ce recapitulatif est le classement definitif de
- * partieTerminee; la progression arrive avec l'etape 3.3. Le meme test est rejoue
- * sur la page construite dans ecrans/fin.test.ts.
+ * recapitulatif recu. Ce recapitulatif est le classement definitif de
+ * partieTerminee. La progression d'un compte, que le serveur envoie depuis l'etape
+ * 3.3 par progressionDeFin, s'y ajoutera avec la reprise des ecrans du jalon 3. Le
+ * meme test est rejoue sur la page construite dans ecrans/fin.test.ts.
  */
 
 import type { LigneClassement } from '@neon-ninja/shared';

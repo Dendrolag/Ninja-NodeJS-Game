@@ -1,11 +1,13 @@
 /**
  * Ce que le reste du serveur attend des comptes, sans savoir qu'une base existe.
  *
- * DEUX INTERFACES, PARCE QUE DEUX CLIENTS. La couche Socket.IO n'a besoin que de
- * trois questions: a quel compte ce jeton ouvre-t-il une session, sous quel pseudo
- * et a quel niveau ce compte entre-t-il en partie, et ce pseudo appartient-il a un
- * compte. C'est l'annuaire. Les routes HTTP ont besoin, en plus, d'inscrire, de
- * connecter, de deconnecter et de lire la progression. C'est le service.
+ * DEUX INTERFACES, PARCE QUE DEUX CLIENTS. La couche Socket.IO a besoin de trois
+ * questions et d'une ecriture: a quel compte ce jeton ouvre-t-il une session, sous
+ * quel pseudo et a quel niveau ce compte entre-t-il en partie, ce pseudo
+ * appartient-il a un compte, et, depuis l'etape 3.3, enregistrer la fin d'une
+ * partie pour ses comptes. C'est l'annuaire. Les routes HTTP ont besoin, en plus,
+ * d'inscrire, de connecter, de deconnecter et de lire la progression. C'est le
+ * service.
  *
  * Ni l'un ni l'autre ne nomme la base: Authentification les implemente avec elle,
  * et les tests de la couche reseau peuvent leur substituer une version en memoire.
@@ -14,14 +16,28 @@
 
 import type { ErreurValidation, MaProgression, SessionOuverte } from '@neon-ninja/shared';
 
+import type { NouveauResultat, NouvellePartie, ProgressionAppliquee } from '../base/parties.js';
+
 /** Ce sous quoi un compte entre en partie. */
 export interface IdentiteDeCompte {
   readonly pseudo: string;
   readonly niveau: number;
 }
 
-/** Les trois questions de la couche reseau. */
+/** Ce que la couche reseau demande aux comptes. */
 export interface AnnuaireDesComptes {
+  /**
+   * Enregistre une partie terminee: la partie, le resultat de chacun de ses comptes,
+   * et leurs gains ajoutes a leur progression, en une seule fois (etape 3.3).
+   *
+   * @returns L'evolution reellement appliquee a la progression de chaque compte.
+   * @throws Si l'enregistrement n'a pas pu se faire: rien n'a alors ete ecrit.
+   */
+  enregistrerFinDePartie(
+    partie: NouvellePartie,
+    resultats: readonly NouveauResultat[],
+  ): Promise<readonly ProgressionAppliquee[]>;
+
   /**
    * Le compte dont ce jeton ouvre une session encore valable, ou undefined.
    *

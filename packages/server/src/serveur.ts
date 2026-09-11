@@ -96,7 +96,10 @@ export interface ServeurMonte {
   readonly io: ServeurTypee;
   /** La couche jeu: ses parties, ses connexions. */
   readonly jeu: ServeurSocket;
-  /** Arrete tout: les parties, Socket.IO, puis le serveur HTTP. */
+  /**
+   * Arrete tout: les parties, puis les enregistrements de fin de partie en cours,
+   * Socket.IO, et le serveur HTTP.
+   */
   fermer(): Promise<void>;
 }
 
@@ -140,6 +143,9 @@ export function creerServeur(options: OptionsServeur = {}): ServeurMonte {
     jeu,
     fermer: async () => {
       jeu.fermer();
+      // Plus aucune partie ne peut se terminer; celles qui viennent de le faire
+      // finissent d'ecrire leurs resultats avant que la base ne soit refermee.
+      await jeu.enregistrementsTermines();
       await io.close();
       await new Promise<void>((resoudre) => {
         http.close(() => {

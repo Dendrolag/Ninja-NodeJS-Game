@@ -10,7 +10,10 @@
  * ATTENTION EN LISANT CES TESTS: le temps du JEU est manuel, celui du RESEAU ne
  * l'est pas. Un message met un vrai aller-retour a arriver, donc chaque
  * verification passe par une attente explicite. Faire avancer l'horloge ne suffit
- * pas a avoir recu.
+ * pas a avoir recu. Et un delai ne prouve pas qu'une demande a ete traitee: avant
+ * de faire avancer le jeu, on attend la preuve que le serveur l'a prise en compte,
+ * un message en retour ou l'etat du serveur lui-meme. Sur une machine chargee, un
+ * delai fixe laissait passer l'horloge avant la demande (constate a l'etape 3.3).
  *
  * Consequence a connaitre: les seaux a jetons se remplissent avec l'horloge
  * manuelle. Tant qu'un test ne la fait pas avancer, chaque connexion ne dispose
@@ -31,7 +34,7 @@ import type {
 import { BORNES_CODE_INVITATION, CAPACITES } from '@neon-ninja/shared';
 import type { Socket as SocketClient } from 'socket.io-client';
 import { io as connecter } from 'socket.io-client';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { HorlogeManuelle } from './horloge.js';
 import { creerHorlogeManuelle } from './horloge.js';
@@ -166,12 +169,74 @@ async function entrer(client: ClientTypee, pseudo: string, idRoom?: string): Pro
   return reponse.valeur.idRoom;
 }
 
+/**
+ * Attend que cette condition sur le serveur soit remplie.
+ *
+ * Pour ce qui ne renvoie rien au client (un deplacement, une deconnexion): on
+ * regarde le serveur plutot que de parier sur un delai.
+ */
+async function jusquA(condition: () => boolean): Promise<void> {
+  const limite = Date.now() + DELAI_ATTENTE_MS;
+
+  while (!condition()) {
+    if (Date.now() > limite) {
+      throw new Error("La condition attendue n'a jamais ete remplie.");
+    }
+
+    await new Promise((resoudre) => setTimeout(resoudre, 5));
+  }
+}
+
+/**
+ * Attend un etat du salon qui remplit cette condition.
+ *
+ * Attendre simplement le prochain message du salon ne suffit pas: celui qui suit
+ * une entree peut encore etre en route, et arriver avant celui qu'on attend.
+ */
+async function salonQui(
+  client: ClientTypee,
+  condition: (salon: InfosSalon) => boolean,
+): Promise<InfosSalon> {
+  return new Promise((resoudre, rejeter) => {
+    const minuterie = setTimeout(() => {
+      rejeter(new Error('Le salon attendu n est pas arrive.'));
+    }, DELAI_ATTENTE_MS);
+
+    const ecouter = (salon: InfosSalon): void => {
+      if (condition(salon)) {
+        clearTimeout(minuterie);
+        client.off('salon', ecouter);
+        resoudre(salon);
+      }
+    };
+
+    client.on('salon', ecouter);
+  });
+}
+
+/** L'hote regle la duree de la partie, et attend que le salon la montre. */
+async function reglerLaDuree(hote: ClientTypee, dureePartieS: number): Promise<void> {
+  const reglee = salonQui(hote, (salon) => salon.reglages.dureePartieS === dureePartieS);
+  hote.emit('reglages', { dureePartieS });
+  await reglee;
+}
+
+/** L'hote suspend la partie, et attend l'annonce qui prouve que c'est fait. */
+async function suspendre(hote: ClientTypee): Promise<void> {
+  const annonce = prochain(hote, 'partieEnPause');
+  hote.emit('mettreEnPause');
+  await annonce;
+}
+
 /** Lance la partie pour de bon: decompte complet, puis premier battement. */
 async function lancerLaPartie(hote: ClientTypee): Promise<void> {
+  const decompte = prochain(hote, 'compteARebours');
   const lancee = prochain(hote, 'partieLancee');
 
   hote.emit('demarrer');
-  await laisserPasserLesMessages();
+  // Le decompte annonce sa premiere seconde des que la demande est traitee: c'est
+  // seulement alors que faire avancer l'horloge le fait avancer.
+  await decompte;
 
   horloge.avancerDe(5000);
   await lancee;
@@ -307,6 +372,9 @@ describe('flux d etat et notifications', () => {
     const room = serveur.jeu.rooms.room(idRoom);
     const departBavard = room?.etat.joueurs[bavard.id ?? '']?.position;
     const departDiscret = room?.etat.joueurs[discret.id ?? '']?.position;
+    // Un deplacement n'a pas d'accuse de reception: on observe la room pour savoir
+    // que les deux intentions sont arrivees avant de faire battre la partie.
+    const intentions = room === undefined ? undefined : vi.spyOn(room, 'enregistrerIntention');
 
     // Le bavard emet cinq fois, le discret une seule. Ils doivent parcourir la
     // meme distance: c'est la faille S2 du legacy, tenue a distance.
@@ -315,9 +383,8 @@ describe('flux d etat et notifications', () => {
     }
     discret.emit('deplacer', { deplacement: { x: 1, y: 0 }, enMouvement: true });
 
-    await laisserPasserLesMessages();
+    await jusquA(() => new Set(intentions?.mock.calls.map(([id]) => id)).size === 2);
     horloge.avancerDe(50);
-    await laisserPasserLesMessages();
 
     const arriveeBavard = room?.etat.joueurs[bavard.id ?? '']?.position;
     const arriveeDiscret = room?.etat.joueurs[discret.id ?? '']?.position;
@@ -358,8 +425,7 @@ describe('flux d etat et notifications', () => {
     const hote = await connecterUnClient();
 
     await entrer(hote, 'Alice');
-    hote.emit('reglages', { dureePartieS: 30 });
-    await laisserPasserLesMessages();
+    await reglerLaDuree(hote, 30);
 
     await lancerLaPartie(hote);
 
@@ -376,8 +442,7 @@ describe('flux d etat et notifications', () => {
     const hote = await connecterUnClient();
 
     await entrer(hote, 'Alice');
-    hote.emit('reglages', { dureePartieS: 30 });
-    await laisserPasserLesMessages();
+    await reglerLaDuree(hote, 30);
     await lancerLaPartie(hote);
 
     const fin = prochain(hote, 'partieTerminee');
@@ -503,7 +568,9 @@ describe('reglages et autorite de l hote', () => {
     const idRoom = await entrer(hote, 'Alice');
     await entrer(invite, 'Bob', idRoom);
 
-    const salon = prochain(invite, 'salon');
+    // Le salon qui suit l'entree de Bob peut encore etre en route: on attend celui
+    // des nouveaux reglages.
+    const salon = salonQui(invite, (infos) => infos.reglages.dureePartieS === 120);
     hote.emit('reglages', { dureePartieS: 120, nombreBotsInitial: 42 });
 
     const recu = await salon;
@@ -550,8 +617,9 @@ describe('reglages et autorite de l hote', () => {
     const idRoom = await entrer(hote, 'Alice');
     await entrer(invite, 'Bob', idRoom);
 
+    const reglee = salonQui(hote, (infos) => infos.reglages.carte === 'map3');
     hote.emit('reglages', { carte: 'map3' });
-    await laisserPasserLesMessages();
+    await reglee;
 
     const room = serveur.jeu.rooms.room(idRoom);
 
@@ -582,10 +650,11 @@ describe('compte a rebours de demarrage', () => {
     await entrer(invite, 'Bob', idRoom);
 
     const annonces = collecter(invite, 'compteARebours');
+    const premiereAnnonce = prochain(invite, 'compteARebours');
     const lancee = prochain(invite, 'partieLancee');
 
     hote.emit('demarrer');
-    await laisserPasserLesMessages();
+    await premiereAnnonce;
     horloge.avancerDe(5000);
     await lancee;
 
@@ -605,8 +674,9 @@ describe('compte a rebours de demarrage', () => {
     const idRoom = await entrer(hote, 'Alice');
 
     const annule = prochain(hote, 'demarrageAnnule');
+    const decompte = prochain(hote, 'compteARebours');
     hote.emit('demarrer');
-    await laisserPasserLesMessages();
+    await decompte;
 
     horloge.avancerDe(2000);
     hote.emit('annulerDemarrage');
@@ -624,8 +694,9 @@ describe('compte a rebours de demarrage', () => {
     const idRoom = await entrer(hote, 'Alice');
 
     const lancee = prochain(hote, 'partieLancee');
+    const decompte = prochain(hote, 'compteARebours');
     hote.emit('demarrer');
-    await laisserPasserLesMessages();
+    await decompte;
 
     horloge.avancerDe(3000);
     const refus = prochain(hote, 'refus');
@@ -696,7 +767,7 @@ describe('sortie et deconnexion', () => {
     expect(serveur.jeu.rooms.room(idRoom)).toBeDefined();
 
     client.disconnect();
-    await laisserPasserLesMessages();
+    await jusquA(() => serveur.jeu.rooms.room(idRoom) === undefined);
 
     expect(serveur.jeu.rooms.room(idRoom)).toBeUndefined();
     expect(serveur.jeu.rooms.nombreDeRooms).toBe(0);
@@ -706,11 +777,12 @@ describe('sortie et deconnexion', () => {
     const client = await connecterUnClient();
 
     const idRoom = await entrer(client, 'Alice');
+    const decompte = prochain(client, 'compteARebours');
     client.emit('demarrer');
-    await laisserPasserLesMessages();
+    await decompte;
 
     client.disconnect();
-    await laisserPasserLesMessages();
+    await jusquA(() => serveur.jeu.rooms.room(idRoom) === undefined);
 
     // Sans arret du decompte, ce saut ferait partir une partie sans personne.
     expect(() => {
@@ -842,8 +914,7 @@ describe('pause de la partie', () => {
     await entrer(hote, 'Alice');
     await lancerLaPartie(hote);
 
-    hote.emit('mettreEnPause');
-    await laisserPasserLesMessages();
+    await suspendre(hote);
 
     const instantane = prochain(hote, 'etat');
     horloge.avancerDe(50);
@@ -855,12 +926,10 @@ describe('pause de la partie', () => {
     const hote = await connecterUnClient();
 
     await entrer(hote, 'Alice');
-    hote.emit('reglages', { dureePartieS: 30 });
-    await laisserPasserLesMessages();
+    await reglerLaDuree(hote, 30);
     await lancerLaPartie(hote);
 
-    hote.emit('mettreEnPause');
-    await laisserPasserLesMessages();
+    await suspendre(hote);
 
     const etats = collecter(hote, 'etat');
     horloge.avancerDe(10_000);
@@ -876,14 +945,12 @@ describe('pause de la partie', () => {
     const hote = await connecterUnClient();
 
     await entrer(hote, 'Alice');
-    hote.emit('reglages', { dureePartieS: 30 });
-    await laisserPasserLesMessages();
+    await reglerLaDuree(hote, 30);
     await lancerLaPartie(hote);
 
     const fins = collecter(hote, 'partieTerminee');
 
-    hote.emit('mettreEnPause');
-    await laisserPasserLesMessages();
+    await suspendre(hote);
     horloge.avancerDe(60_000);
     await laisserPasserLesMessages();
 
@@ -891,8 +958,9 @@ describe('pause de la partie', () => {
 
     const fin = prochain(hote, 'partieTerminee');
 
+    const reprise = prochain(hote, 'partieReprise');
     hote.emit('reprendre');
-    await laisserPasserLesMessages();
+    await reprise;
     horloge.avancerDe(31_000);
 
     await fin;
@@ -904,8 +972,7 @@ describe('pause de la partie', () => {
     await entrer(hote, 'Alice');
     await lancerLaPartie(hote);
 
-    hote.emit('mettreEnPause');
-    await laisserPasserLesMessages();
+    await suspendre(hote);
 
     const reprise = prochain(hote, 'partieReprise');
 
@@ -958,8 +1025,7 @@ describe('pause de la partie', () => {
 
     const annonces = collecter(hote, 'partieEnPause');
 
-    hote.emit('mettreEnPause');
-    await laisserPasserLesMessages();
+    await suspendre(hote);
     hote.emit('mettreEnPause');
     await laisserPasserLesMessages();
 
@@ -976,7 +1042,7 @@ describe('pause de la partie', () => {
 
     const annonces = collecter(voisin, 'partieEnPause');
 
-    hote.emit('mettreEnPause');
+    await suspendre(hote);
     await laisserPasserLesMessages();
 
     expect(annonces).toHaveLength(0);
@@ -1136,7 +1202,7 @@ describe('parties privees', () => {
 
     expect((await refusAuLancement).erreurs[0]?.champ).toBe('hote');
 
-    const salonMisAJour = prochain(invite, 'salon');
+    const salonMisAJour = salonQui(invite, (infos) => infos.reglages.carte === 'map2');
     hote.emit('reglages', { carte: 'map2' });
 
     expect(await salonMisAJour).toMatchObject({
