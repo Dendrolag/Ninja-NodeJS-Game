@@ -190,12 +190,26 @@ export interface InstantanePartie {
 // Le salon et la liste des parties
 // --------------------------------------------------------------------------
 
-/** Un membre du salon, tel que les autres le voient. */
+/**
+ * Un membre du salon, tel que les autres le voient.
+ *
+ * LE SALON DISTINGUE LES COMPTES DES INVITES (etape 3.2). Un compte y porte son
+ * niveau; un invite n'a pas de champ compte. L'identifiant du compte en base ne
+ * part pas: les autres joueurs n'en ont aucun usage.
+ */
 export interface JoueurDuSalon {
   readonly id: string;
   readonly pseudo: string;
   /** Ce joueur commande: il change les reglages et lance la partie. */
   readonly hote: boolean;
+  /** Present pour un joueur connecte a son compte, absent pour un invite. */
+  readonly compte?: CompteDuSalon;
+}
+
+/** Ce que le salon montre du compte d'un joueur. */
+export interface CompteDuSalon {
+  /** Le niveau du compte a son entree dans la partie. */
+  readonly niveau: number;
 }
 
 /**

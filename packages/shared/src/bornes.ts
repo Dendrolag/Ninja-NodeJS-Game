@@ -121,6 +121,35 @@ export const BORNES_CODE_INVITATION = {
 } as const;
 
 /**
+ * Mot de passe d'un compte (etape 3.2).
+ *
+ * UNE LONGUEUR, ET AUCUNE REGLE DE COMPOSITION. Exiger une majuscule, un chiffre
+ * et un symbole pousse a des mots de passe courts et previsibles (« Motdepasse1! »)
+ * sans les rendre plus surs; les recommandations actuelles demandent au contraire
+ * une longueur minimale et laissent libre le reste. Huit caracteres au moins.
+ *
+ * Le maximum n'est pas une regle de securite, c'est une protection du serveur: le
+ * hachage d'un mot de passe coute du calcul, et un texte d'un megaoctet en
+ * couterait sans raison. Cent vingt-huit caracteres laissent toute la place a une
+ * phrase de passe.
+ */
+export const BORNES_MOT_DE_PASSE = {
+  /** Longueur, en caracteres, apres composition Unicode. */
+  longueur: { minimum: 8, maximum: 128 } satisfies Intervalle,
+} as const;
+
+/**
+ * Jeton de session d'un compte (etape 3.2).
+ *
+ * Fabrique par le serveur: trente-deux octets tires au hasard, ecrits en base 64
+ * pour adresse, soit quarante-trois caracteres. Un texte d'une autre forme n'a
+ * jamais ete emis par le serveur: il est refuse avant de consulter la base.
+ */
+export const BORNES_JETON = {
+  forme: /^[A-Za-z0-9_-]{43}$/u,
+} as const;
+
+/**
  * Bornes des reglages de partie choisis par l'hote dans le salon.
  *
  * La structure suit exactement celle de ReglagesPartie, groupe par groupe, pour
@@ -202,4 +231,29 @@ export const LIMITES_DEBIT = {
   reglages: { parSeconde: 5, rafale: 10 } satisfies LimiteDebit,
   /** Tout le reste: rejoindre, quitter, lancer, se declarer pret. */
   autresActions: { parSeconde: 5, rafale: 10 } satisfies LimiteDebit,
+} as const;
+
+/**
+ * Combien de tentatives d'inscription et de connexion sont admises (etape 3.2).
+ *
+ * Meme modele que LIMITES_DEBIT, mais a une tout autre echelle de temps: il ne
+ * s'agit plus de proteger le processeur contre un client bavard, mais un compte
+ * contre qui essaie des mots de passe les uns apres les autres.
+ *
+ * DEUX SEAUX POUR LA CONNEXION, PARCE QUE DEUX ATTAQUES. Essayer beaucoup de mots
+ * de passe sur UN compte, depuis beaucoup d'adresses: le seau par pseudo l'arrete,
+ * cinq essais puis un par minute. Essayer un mot de passe courant sur BEAUCOUP de
+ * comptes depuis une adresse: le seau par adresse l'arrete. Le seau par adresse
+ * est large, parce que plusieurs amis derriere la meme box partagent une adresse.
+ *
+ * L'inscription n'a qu'un seau, par adresse, contre la fabrication de comptes en
+ * serie. Dix d'un coup laissent une soiree entre amis s'inscrire ensemble.
+ */
+export const LIMITES_COMPTES = {
+  /** Connexions a un meme compte, quelle que soit l'adresse: cinq, puis une par minute. */
+  connexionParPseudo: { parSeconde: 1 / 60, rafale: 5 } satisfies LimiteDebit,
+  /** Connexions depuis une meme adresse, tous comptes confondus: vingt, puis dix par minute. */
+  connexionParAdresse: { parSeconde: 1 / 6, rafale: 20 } satisfies LimiteDebit,
+  /** Inscriptions depuis une meme adresse: dix, puis une toutes les deux minutes. */
+  inscriptionParAdresse: { parSeconde: 1 / 120, rafale: 10 } satisfies LimiteDebit,
 } as const;

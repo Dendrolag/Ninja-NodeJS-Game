@@ -16,8 +16,14 @@ import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import type { BaseOuverte } from './base/connexion.js';
+import { ouvrirBase } from './base/connexion.js';
+import { Authentification } from './comptes/Authentification.js';
 import { PORT_PAR_DEFAUT, demarrerServeur } from './serveur.js';
 import { ChargeurDeTerrain, racineRessources } from './terrain.js';
+
+/** Plus grand nombre de mandataires qu'on accepte de croire. Au-dela, c'est une erreur de saisie. */
+const MANDATAIRES_MAXIMUM = 10;
 
 /** Lit un port depuis l'environnement, en refusant ce qui n'en est pas un. */
 function portDemande(brut: string | undefined): number {
@@ -44,6 +50,42 @@ function originesAutorisees(brut: string | undefined): readonly string[] {
     .split(',')
     .map((origine) => origine.trim())
     .filter((origine) => origine.length > 0);
+}
+
+/** Lit le nombre de mandataires de confiance, zero par defaut. Voir OptionsServeur. */
+function mandatairesDeConfiance(brut: string | undefined): number {
+  if (brut === undefined || brut.length === 0) {
+    return 0;
+  }
+
+  const nombre = Number(brut);
+
+  if (!Number.isInteger(nombre) || nombre < 0 || nombre > MANDATAIRES_MAXIMUM) {
+    throw new Error(
+      `MANDATAIRES_DE_CONFIANCE doit etre un entier de 0 a ${String(MANDATAIRES_MAXIMUM)}, recu « ${brut} ».`,
+    );
+  }
+
+  return nombre;
+}
+
+/**
+ * La base des comptes, si DATABASE_URL est definie.
+ *
+ * SANS BASE, LE JEU TOURNE, EN INVITES SEULEMENT. C'est le cas du developpement
+ * local sans acces a Neon. Ce n'est pas une panne, mais cela se dit au demarrage,
+ * pour que personne ne cherche pourquoi la connexion a un compte est refusee.
+ *
+ * La base n'est pas migree ici: les migrations s'appliquent a part, par
+ * « pnpm base:migrer », qui passe par l'adresse directe.
+ */
+function baseDesComptes(adresse: string | undefined): BaseOuverte | undefined {
+  if (adresse === undefined || adresse.length === 0) {
+    console.warn('DATABASE_URL absente: les comptes sont desactives, on joue en invite seulement.');
+    return undefined;
+  }
+
+  return ouvrirBase(adresse);
 }
 
 /**
@@ -75,13 +117,18 @@ if (!existsSync(join(client, 'index.html'))) {
   );
 }
 
+const base = baseDesComptes(process.env['DATABASE_URL']);
+
 // C'est ici, et seulement ici, que le serveur decide de lire les images de
-// collision des cartes et de servir la page. Un serveur monte a la main dans un
-// test n'a ni murs ni page tant qu'il ne les demande pas.
+// collision des cartes, de servir la page et de brancher les comptes. Un serveur
+// monte a la main dans un test n'a ni murs, ni page, ni comptes tant qu'il ne les
+// demande pas.
 const serveur = await demarrerServeur(portDemande(process.env['PORT']), {
   originesAutorisees: originesAutorisees(process.env['ORIGINES_AUTORISEES']),
   terrains: new ChargeurDeTerrain(),
   fichiers: { client, ressources: racineRessources() },
+  mandatairesDeConfiance: mandatairesDeConfiance(process.env['MANDATAIRES_DE_CONFIANCE']),
+  ...(base === undefined ? {} : { comptes: new Authentification({ db: base.db }) }),
 });
 
 const adresse = serveur.http.address();
@@ -94,8 +141,13 @@ console.log(
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, () => {
-    void serveur.fermer().then(() => {
-      process.exit(0);
-    });
+    // Le serveur d'abord, qui ne pose plus aucune question a la base; la base
+    // ensuite.
+    void serveur
+      .fermer()
+      .then(async () => base?.fermer())
+      .then(() => {
+        process.exit(0);
+      });
   });
 }

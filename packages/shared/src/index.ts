@@ -15,16 +15,33 @@ export type { Intervalle, LimiteDebit } from './bornes.js';
 export {
   BORNES_CHAT,
   BORNES_CODE_INVITATION,
+  BORNES_JETON,
+  BORNES_MOT_DE_PASSE,
   BORNES_PSEUDO,
   BORNES_REGLAGES,
   BORNES_ROOM,
+  LIMITES_COMPTES,
   LIMITES_DEBIT,
 } from './bornes.js';
+
+export type {
+  AuthentificationReseau,
+  CompteConnecte,
+  DemandeConnexion,
+  DemandeInscription,
+  MaProgression,
+  ReponseRefusee,
+  SessionOuverte,
+} from './comptes.js';
+export { PREFIXE_JETON_HTTP, RACINE_API_COMPTES, ROUTES_COMPTES } from './comptes.js';
+
+export { XP_PAR_NIVEAU_PROVISOIRE, niveauDeXp } from './progression.js';
 
 export type { Consommation, SeauAJetons } from './debit.js';
 export { consommer, seauNeuf } from './debit.js';
 
 export type {
+  CompteDeSession,
   ConfigurationPartie,
   DemandeChat,
   DemandeCreation,
@@ -41,6 +58,7 @@ export type {
   CaptureParBotNoirSubie,
   CaptureReussie,
   CaptureSubie,
+  CompteDuSalon,
   EntiteVue,
   EtatCompteARebours,
   EvenementsClientVersServeur,
@@ -135,10 +153,14 @@ export {
   normaliserTexte,
   reperePseudo,
   validerCodeInvitation,
+  validerDemandeConnexion,
   validerDemandeCreation,
+  validerDemandeInscription,
   validerDemandeRejoindre,
   validerIntentionDeplacement,
+  validerJeton,
   validerMessageChat,
+  validerMotDePasse,
   validerPseudo,
   validerReglages,
 } from './validation.js';

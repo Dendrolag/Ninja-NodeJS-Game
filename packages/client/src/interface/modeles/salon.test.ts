@@ -64,6 +64,22 @@ describe('modeleSalon', () => {
     ]);
   });
 
+  it('montre le niveau d un compte, et aucun pour un invite', () => {
+    const infos = salon('bob', {
+      joueurs: [
+        { id: 'moi', pseudo: 'Alice', hote: false, compte: { niveau: 7 } },
+        { id: 'bob', pseudo: 'Bob', hote: true },
+      ],
+    });
+
+    expect(
+      modeleSalon(etat(infos))?.joueurs.map((joueur) => [joueur.pseudo, joueur.niveau]),
+    ).toEqual([
+      ['Alice', 7],
+      ['Bob', undefined],
+    ]);
+  });
+
   it('reserve le lancement a l hote', () => {
     expect(modeleSalon(etat(salon('moi')))?.peutLancer).toBe(true);
     expect(modeleSalon(etat(salon('bob')))?.peutLancer).toBe(false);

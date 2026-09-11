@@ -23,12 +23,20 @@
  * appelle des methodes de GameRoom, qui appelle le moteur. Si une regle de jeu
  * devait apparaitre ici, c'est qu'elle manque dans packages/sim.
  *
+ * ELLE IDENTIFIE AUSSI, DEPUIS L'ETAPE 3.2. A l'ouverture d'une connexion, un
+ * jeton de session presente est verifie une fois pour toutes: la connexion est
+ * alors celle d'un compte, qui entre en partie sous son pseudo et avec son niveau.
+ * Sans jeton, c'est un invite, qui choisit un pseudo, pourvu que ce ne soit pas
+ * celui d'un compte. Un jeton invalide fait refuser la connexion: un joueur qui se
+ * croit connecte ne doit pas jouer en invite sans le savoir.
+ *
  * AUCUN ETAT GLOBAL, une fois de plus. Tout tient dans l'instance: ses
  * connexions, ses decomptes, son RoomManager. Deux serveurs peuvent tourner dans
  * le meme processus sans se voir, ce dont les tests profitent largement.
  */
 
 import type {
+  CompteDeSession,
   DemandeChat,
   DemandeCreation,
   DemandeRejoindre,
@@ -52,13 +60,15 @@ import {
   validerDemandeCreation,
   validerDemandeRejoindre,
   validerIntentionDeplacement,
+  validerJeton,
   validerMessageChat,
   validerReglages,
 } from '@neon-ninja/shared';
 import type { CarteCollisions } from '@neon-ninja/sim';
-import type { Server, Socket } from 'socket.io';
+import type { DefaultEventsMap, Server, Socket } from 'socket.io';
 
 import { CompteARebours } from './compteARebours.js';
+import type { AnnuaireDesComptes } from './comptes/annuaire.js';
 import type { GameRoom } from './GameRoom.js';
 import type { Horloge } from './horloge.js';
 import { horlogeSysteme } from './horloge.js';
@@ -76,11 +86,41 @@ import { RoomManager } from './RoomManager.js';
 import type { SourceDeTerrain } from './terrain.js';
 import { SANS_TERRAIN } from './terrain.js';
 
+/**
+ * Ce que le serveur attache a une connexion lors de son ouverture.
+ *
+ * Rempli par la verification du jeton, avant que la connexion ne soit acceptee, et
+ * jamais par un message.
+ */
+export interface DonneesDeConnexion {
+  /** Le compte dont la connexion a presente la session. Absent: un invite. */
+  compteId?: string;
+}
+
 /** Le serveur Socket.IO, type par les deux contrats d'evenements. */
-export type ServeurTypee = Server<EvenementsClientVersServeur, EvenementsServeurVersClient>;
+export type ServeurTypee = Server<
+  EvenementsClientVersServeur,
+  EvenementsServeurVersClient,
+  DefaultEventsMap,
+  DonneesDeConnexion
+>;
 
 /** Une connexion Socket.IO, typee par les deux contrats d'evenements. */
-export type SocketTypee = Socket<EvenementsClientVersServeur, EvenementsServeurVersClient>;
+export type SocketTypee = Socket<
+  EvenementsClientVersServeur,
+  EvenementsServeurVersClient,
+  DefaultEventsMap,
+  DonneesDeConnexion
+>;
+
+/** Ce sous quoi une connexion entre en partie: la session, moins l'identifiant de connexion. */
+interface IdentiteDEntree {
+  readonly pseudo: string;
+  readonly compte?: CompteDeSession;
+}
+
+/** Motif du refus d'une session presentee qui n'ouvre rien. */
+const SESSION_INVALIDE = 'Session invalide ou expirée. Reconnectez-vous.';
 
 /**
  * Les familles de messages, chacune avec son propre seau a jetons.
@@ -93,6 +133,8 @@ type FamilleDebit = keyof typeof LIMITES_DEBIT;
 /** Ce que le serveur sait d'une connexion. */
 interface Connexion {
   readonly socket: SocketTypee;
+  /** Le compte identifie a l'ouverture de la connexion. Absent: un invite. */
+  readonly compteId: string | undefined;
   /**
    * L'identite du joueur, etablie a l'entree en partie et jamais relue d'un
    * message. Absente tant que la connexion n'est entree nulle part.
@@ -125,6 +167,11 @@ export interface OptionsServeurSocket {
    * reel la prend dans principal.ts.
    */
   readonly terrains?: SourceDeTerrain;
+  /**
+   * L'annuaire des comptes (etape 3.2). Absent: tout le monde joue en invite, et
+   * une connexion qui presente un jeton est refusee.
+   */
+  readonly comptes?: AnnuaireDesComptes;
 }
 
 /** La couche reseau d'un serveur de jeu. */
@@ -143,11 +190,23 @@ export class ServeurSocket {
   /** D'ou viennent les murs, partage par toutes les parties de ce serveur. */
   private readonly terrains: SourceDeTerrain;
 
+  /** L'annuaire des comptes, s'il y en a. */
+  private readonly comptes: AnnuaireDesComptes | undefined;
+
   constructor(options: OptionsServeurSocket) {
     this.io = options.io;
     this.horloge = options.horloge ?? horlogeSysteme;
     this.rooms = options.rooms ?? new RoomManager({ horloge: this.horloge });
     this.terrains = options.terrains ?? SANS_TERRAIN;
+    this.comptes = options.comptes;
+
+    // L'identification passe AVANT l'acceptation de la connexion: une connexion
+    // dont la session est refusee n'existe jamais pour la couche jeu.
+    this.io.use((socket, suite) => {
+      void this.identifierLaConnexion(socket).then((refusDeConnexion) => {
+        suite(refusDeConnexion);
+      });
+    });
 
     this.io.on('connection', (socket) => {
       this.accueillirLaConnexion(socket);
@@ -174,12 +233,61 @@ export class ServeurSocket {
   // Cycle de vie d'une connexion
   // ------------------------------------------------------------------------
 
+  /**
+   * Identifie le compte d'une connexion qui s'ouvre, ou dit pourquoi la refuser.
+   *
+   * Trois issues. Sans jeton: un invite, accepte. Avec un jeton qui ouvre une
+   * session valable: la connexion est celle de ce compte. Avec un jeton qui n'ouvre
+   * rien, ou sans comptes sur ce serveur, ou si la base ne repond pas: la connexion
+   * est refusee avec une explication, que le client recoit comme erreur de
+   * connexion. Aucune de ces issues ne rabat en silence un compte sur un invite.
+   *
+   * @returns L'erreur qui refuse la connexion, ou undefined pour l'accepter.
+   */
+  private async identifierLaConnexion(socket: SocketTypee): Promise<Error | undefined> {
+    const authentification: unknown = socket.handshake.auth;
+    const brut =
+      typeof authentification === 'object' &&
+      authentification !== null &&
+      Object.hasOwn(authentification, 'jeton')
+        ? (authentification as Record<string, unknown>)['jeton']
+        : undefined;
+
+    if (brut === undefined) {
+      return undefined;
+    }
+
+    if (this.comptes === undefined) {
+      return new Error('Les comptes sont indisponibles sur ce serveur.');
+    }
+
+    const jeton = validerJeton(brut);
+    if (!jeton.valide) {
+      return new Error(SESSION_INVALIDE);
+    }
+
+    try {
+      const compteId = await this.comptes.compteDeSession(jeton.valeur);
+
+      if (compteId === undefined) {
+        return new Error(SESSION_INVALIDE);
+      }
+
+      socket.data.compteId = compteId;
+      return undefined;
+    } catch (erreur) {
+      console.error("La session d'une connexion n'a pas pu etre verifiee:", erreur);
+      return new Error("La session n'a pas pu être vérifiée. Réessayez.");
+    }
+  }
+
   /** Enregistre une nouvelle connexion et branche ses gestionnaires. */
   private accueillirLaConnexion(socket: SocketTypee): void {
     const maintenant = this.horloge.maintenant();
 
     this.connexions.set(socket.id, {
       socket,
+      compteId: socket.data.compteId,
       session: undefined,
       idRoom: undefined,
       seaux: {
@@ -245,6 +353,9 @@ export class ServeurSocket {
    *
    * Une entree refusee ne laisse aucune trace: ni session, ni appartenance a une
    * salle, ni message aux autres. Voir faireEntrer.
+   *
+   * La partie visee n'est cherchee qu'APRES l'identification, qui peut interroger
+   * la base: pendant ce temps, la partie trouvee aurait pu se remplir ou se vider.
    */
   private surRejoindre(
     socket: SocketTypee,
@@ -266,13 +377,15 @@ export class ServeurSocket {
       return;
     }
 
-    const trouvee = this.trouverLaRoom(verdict.valeur);
-    if (!trouvee.valide) {
-      repondre({ valide: false, erreurs: trouvee.erreurs });
-      return;
-    }
+    this.apresIdentification(socket, connexion, verdict.valeur.pseudo, repondre, (identite) => {
+      const trouvee = this.trouverLaRoom(verdict.valeur);
+      if (!trouvee.valide) {
+        repondre({ valide: false, erreurs: trouvee.erreurs });
+        return;
+      }
 
-    this.faireEntrer(socket, connexion, trouvee.valeur, verdict.valeur.pseudo, repondre);
+      this.faireEntrer(socket, connexion, trouvee.valeur, identite, repondre);
+    });
   }
 
   /**
@@ -301,18 +414,21 @@ export class ServeurSocket {
     }
 
     const { configuration, pseudo } = verdict.valeur;
-    const room = this.ouvrirUneRoom({
-      mode: configuration.mode,
-      visibilite: configuration.visibilite,
-      ...(configuration.reglages === undefined ? {} : { reglages: configuration.reglages }),
-    });
 
-    // Une partie neuve accueille toujours son createur. Si ce n'etait un jour plus
-    // le cas, la partie vide ne doit pas survivre a la creation manquee: elle
-    // apparaitrait dans la liste publique sans hote.
-    if (!this.faireEntrer(socket, connexion, room, pseudo, repondre)) {
-      this.rooms.detruire(room.id);
-    }
+    this.apresIdentification(socket, connexion, pseudo, repondre, (identite) => {
+      const room = this.ouvrirUneRoom({
+        mode: configuration.mode,
+        visibilite: configuration.visibilite,
+        ...(configuration.reglages === undefined ? {} : { reglages: configuration.reglages }),
+      });
+
+      // Une partie neuve accueille toujours son createur. Si ce n'etait un jour plus
+      // le cas, la partie vide ne doit pas survivre a la creation manquee: elle
+      // apparaitrait dans la liste publique sans hote.
+      if (!this.faireEntrer(socket, connexion, room, identite, repondre)) {
+        this.rooms.detruire(room.id);
+      }
+    });
   }
 
   /**
@@ -356,8 +472,7 @@ export class ServeurSocket {
 
     const room = this.rooms.room(connexion.idRoom);
     const partant = joueurDuSalon({
-      id: connexion.session.id,
-      pseudo: connexion.session.pseudo,
+      ...connexion.session,
       hote: room?.hote === connexion.session.id,
     });
     const idRoom = connexion.idRoom;
@@ -647,6 +762,96 @@ export class ServeurSocket {
   }
 
   /**
+   * Etablit sous quelle identite une connexion entre en partie, puis continue.
+   *
+   * L'identification peut interroger la base, donc prendre du temps. Au retour,
+   * deux choses ont pu changer, et elles sont reverifiees avant de continuer: la
+   * connexion a pu se fermer, et une autre demande de la meme connexion a pu la
+   * faire entrer ailleurs entre-temps. Ce qui suit (chercher ou creer la partie, y
+   * entrer) se fait ensuite d'un seul tenant, sans attente.
+   *
+   * Une panne de la base refuse l'entree avec une explication, et se journalise:
+   * laisser entrer un invite sans avoir pu verifier son pseudo ouvrirait la porte
+   * a l'usurpation que la verification empeche.
+   */
+  private apresIdentification(
+    socket: SocketTypee,
+    connexion: Connexion,
+    pseudoDemande: string | undefined,
+    repondre: ReponseDEntree,
+    suite: (identite: IdentiteDEntree) => void,
+  ): void {
+    void this.identiteDEntree(connexion, pseudoDemande)
+      .then((identite) => {
+        if (this.connexions.get(socket.id) !== connexion) {
+          return;
+        }
+
+        if (!identite.valide) {
+          repondre({ valide: false, erreurs: identite.erreurs });
+          return;
+        }
+
+        if (connexion.idRoom !== undefined) {
+          repondre(refus('session', 'Cette connexion est déjà dans une partie.'));
+          return;
+        }
+
+        suite(identite.valeur);
+      })
+      .catch((erreur: unknown) => {
+        console.error("L'identite d'un joueur n'a pas pu etre verifiee:", erreur);
+        repondre(refus('serveur', "Votre identité n'a pas pu être vérifiée. Réessayez."));
+      });
+  }
+
+  /**
+   * L'identite sous laquelle cette connexion demande a entrer.
+   *
+   * UN COMPTE entre sous le pseudo et avec le niveau que la base lui connait a cet
+   * instant; le pseudo de la demande n'est pas lu.
+   *
+   * UN INVITE entre sous le pseudo qu'il demande, a une condition: ce pseudo ne
+   * doit etre celui d'aucun compte, quelle que soit la facon de l'ecrire. C'est la
+   * regle retenue a l'etape 3.2 pour qu'un invite ne puisse pas se faire passer
+   * pour un compte. Elle est verifiee a l'entree: un invite deja en partie sous un
+   * pseudo qui vient d'etre inscrit le garde jusqu'a ce qu'il en sorte.
+   */
+  private async identiteDEntree(
+    connexion: Connexion,
+    pseudoDemande: string | undefined,
+  ): Promise<ResultatValidation<IdentiteDEntree>> {
+    if (connexion.compteId !== undefined) {
+      const identite = await this.comptes?.identiteDe(connexion.compteId);
+
+      if (identite === undefined) {
+        return refus('session', "Ce compte n'existe plus. Reconnectez-vous.");
+      }
+
+      return {
+        valide: true,
+        valeur: {
+          pseudo: identite.pseudo,
+          compte: { id: connexion.compteId, niveau: identite.niveau },
+        },
+      };
+    }
+
+    if (pseudoDemande === undefined) {
+      return refus('pseudo', 'Choisissez un pseudo pour jouer en invité.');
+    }
+
+    if (this.comptes !== undefined && (await this.comptes.pseudoDeCompte(pseudoDemande))) {
+      return refus(
+        'pseudo',
+        'Ce pseudo appartient à un compte. Connectez-vous pour le prendre, ou choisissez-en un autre.',
+      );
+    }
+
+    return { valide: true, valeur: { pseudo: pseudoDemande } };
+  }
+
+  /**
    * Fait entrer une connexion dans une partie, trouvee ou tout juste creee.
    *
    * L'ORDRE DES OPERATIONS EST LE POINT IMPORTANT. On demande a la room
@@ -660,10 +865,10 @@ export class ServeurSocket {
     socket: SocketTypee,
     connexion: Connexion,
     room: GameRoom,
-    pseudo: string,
+    identite: IdentiteDEntree,
     repondre: ReponseDEntree,
   ): boolean {
-    const session: SessionJoueur = { id: socket.id, pseudo };
+    const session: SessionJoueur = { id: socket.id, ...identite };
     const entree = room.accueillir(session);
 
     if (!entree.valide) {

@@ -14,9 +14,10 @@
  * a personne en face; les nommer explicitement evite l'erreur.
  *
  * LA RECONNEXION AUTOMATIQUE EST COUPEE. Socket.IO la propose, mais retrouver sa
- * place suppose une session qui survive au transport, ce qui n'existe pas avant
- * l'etape 3.2: une reconnexion silencieuse redonnerait un identifiant neuf, donc
- * un joueur inconnu du serveur, et le client afficherait une partie dans laquelle
+ * place suppose que la place survive au transport. La session de compte de
+ * l'etape 3.2 survit, mais la place dans une partie, elle, reste attachee a la
+ * connexion: une reconnexion silencieuse redonnerait un identifiant neuf, donc un
+ * joueur inconnu de la partie, et le client afficherait une partie dans laquelle
  * il n'est plus. Mieux vaut une deconnexion franche, que l'etat du client
  * enregistre et que l'ecran peut annoncer.
  */

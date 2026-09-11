@@ -361,6 +361,12 @@
   font-size: 12px;
 }
 
+/* Le niveau d'un joueur connecte a son compte. Un invite n'en a pas. */
+.carte-joueur-niveau {
+  color: var(--texte-secondaire);
+  font-size: 12px;
+}
+
 .salon-reglages {
   display: grid;
   gap: 12px;

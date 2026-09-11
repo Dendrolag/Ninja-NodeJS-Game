@@ -17,7 +17,8 @@ import { eq } from 'drizzle-orm';
 
 import type { BaseDeDonnees } from './connexion.js';
 import { CODES_POSTGRES, erreurPostgres } from './erreurs.js';
-import { comptes, progressions } from './schema.js';
+import type { ValeursProgression } from './progression.js';
+import { comptes, motsDePasse, progressions } from './schema.js';
 
 /** Un compte, tel que le serveur le manipule. */
 export interface Compte {
@@ -34,6 +35,18 @@ const COLONNES_COMPTE = {
   creeLe: comptes.creeLe,
 };
 
+/** Ce qui accompagne, au besoin, la creation d'un compte. */
+export interface OptionsCreationCompte {
+  /**
+   * L'empreinte du mot de passe, deja calculee (etape 3.2).
+   *
+   * Ecrite dans la meme transaction que le compte: il n'existe jamais de compte
+   * inscrit par mot de passe qui n'en aurait pas. Absente, le compte n'a pas de
+   * mot de passe, ce que le schema permet (voir motsDePasse).
+   */
+  readonly empreinteMotDePasse?: string;
+}
+
 /**
  * Cree un compte et sa progression, a partir du pseudo tel que le joueur l'a saisi.
  *
@@ -42,6 +55,7 @@ const COLONNES_COMPTE = {
 export async function creerCompte(
   db: BaseDeDonnees,
   pseudoSaisi: unknown,
+  options: OptionsCreationCompte = {},
 ): Promise<ResultatValidation<Compte>> {
   const pseudo = validerPseudo(pseudoSaisi);
   if (!pseudo.valide) {
@@ -60,6 +74,12 @@ export async function creerCompte(
       }
 
       await transaction.insert(progressions).values({ compteId: cree.id });
+
+      if (options.empreinteMotDePasse !== undefined) {
+        await transaction
+          .insert(motsDePasse)
+          .values({ compteId: cree.id, empreinte: options.empreinteMotDePasse });
+      }
 
       return cree;
     });
@@ -90,4 +110,61 @@ export async function trouverCompteParPseudo(
     .where(eq(comptes.reperePseudo, reperePseudo(pseudo)));
 
   return compte;
+}
+
+/** Ce qu'il faut pour verifier la connexion a un compte. */
+export interface Identifiants {
+  readonly compteId: string;
+  readonly pseudo: string;
+  /** L'empreinte du mot de passe. Absente pour un compte sans mot de passe. */
+  readonly empreinte: string | undefined;
+  /** L'XP totale, d'ou se deduit le niveau rendu a la connexion. */
+  readonly xpTotale: number;
+}
+
+/**
+ * Les identifiants du compte qui porte ce pseudo, en une seule requete.
+ *
+ * Le mot de passe est joint a gauche: un compte sans mot de passe est rendu, avec
+ * une empreinte absente, et c'est a l'appelant de refuser la connexion.
+ */
+export async function identifiantsParPseudo(
+  db: BaseDeDonnees,
+  pseudo: string,
+): Promise<Identifiants | undefined> {
+  const [ligne] = await db
+    .select({
+      compteId: comptes.id,
+      pseudo: comptes.pseudo,
+      empreinte: motsDePasse.empreinte,
+      xpTotale: progressions.xpTotale,
+    })
+    .from(comptes)
+    .innerJoin(progressions, eq(progressions.compteId, comptes.id))
+    .leftJoin(motsDePasse, eq(motsDePasse.compteId, comptes.id))
+    .where(eq(comptes.reperePseudo, reperePseudo(pseudo)));
+
+  return ligne === undefined ? undefined : { ...ligne, empreinte: ligne.empreinte ?? undefined };
+}
+
+/** Un compte et sa progression, lus ensemble. */
+export interface Profil extends Compte, ValeursProgression {}
+
+/** Le compte et la progression de cet identifiant, ou undefined s'il n'existe pas. */
+export async function profilDuCompte(
+  db: BaseDeDonnees,
+  compteId: string,
+): Promise<Profil | undefined> {
+  const [profil] = await db
+    .select({
+      ...COLONNES_COMPTE,
+      xpTotale: progressions.xpTotale,
+      pieces: progressions.pieces,
+      pointsLigue: progressions.pointsLigue,
+    })
+    .from(comptes)
+    .innerJoin(progressions, eq(progressions.compteId, comptes.id))
+    .where(eq(comptes.id, compteId));
+
+  return profil;
 }

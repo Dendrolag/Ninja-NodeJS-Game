@@ -53,6 +53,17 @@ Conditions de ROADMAP réunies, plus:
 4. **Point à anticiper pour le choix cookie ou jeton**: le client est prévu sur Vercel et le serveur sur Render, donc sur deux domaines différents. Les navigateurs restreignent de plus en plus les cookies envoyés d'un domaine à l'autre. Un nom de domaine commun aux deux (par exemple `jeu.domaine.fr` et `api.domaine.fr`) ou une session par jeton lèvent la difficulté; le choix est à consigner.
 5. **Le serveur de jeu ne dépend pas encore de la base** (handoff 3.1): prévoir qu'il continue de fonctionner en invités seulement sans `DATABASE_URL`, pour le développement local et les scénarios de bout en bout, ou consigner une autre décision.
 
+## Réconciliation pendant l'étape (11 septembre 2026)
+
+Le dépôt correspondait aux hypothèses de la fiche. Six précisions, prises en exécutant, et consignées au journal de conception:
+
+1. **Le pseudo devient facultatif dans `DemandeRejoindre` et `DemandeCreation`.** Un compte entre sous le sien et le pseudo de sa demande n'est pas lu; la couche réseau exige un pseudo d'un invité. La validation accepte donc une demande sans pseudo, et refuse toujours un pseudo mal formé.
+2. **Les routes HTTP des comptes** (`ROUTES_COMPTES`, sous `/api/comptes`) portent l'inscription, la connexion, la déconnexion et la lecture de sa progression, l'action réservée aux comptes des tests requis. Le jeu reste sur Socket.IO.
+3. **Deux tables, pas une**: `mots_de_passe` et `sessions`, par la migration `0001_authentification`. La fiche parlait du seul mot de passe haché; une session par jeton révocable demande sa table.
+4. **La règle des pseudos des invités** est la première proposée par la fiche: les pseudos des comptes sont refusés aux invités, à l'entrée en partie.
+5. **Le salon du client montre le niveau d'un compte** (« Niveau N »), et rien pour un invité. Aucun écran de connexion n'est construit, comme le prévoit le hors périmètre.
+6. **La migration est appliquée à la base principale**, le serveur réel s'en servant dès que `DATABASE_URL` est définie.
+
 ## Rituel de fin de session
 
 Écrire docs/handoffs/etape-3-2-handoff.md. Décrire le mécanisme de session retenu, la façon dont la connexion réseau est authentifiée, et la règle retenue pour les pseudos des invités. Prochaine action exacte pour l'étape 3.3: brancher la progression sur la fin de partie pour les joueurs qui ont un compte (XP, niveau, pièces, points de ligue, rang) et enregistrer leurs résultats. Commiter.

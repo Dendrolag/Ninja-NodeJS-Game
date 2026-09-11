@@ -29,6 +29,11 @@ export interface JoueurAffiche {
   readonly hote: boolean;
   /** Ce joueur, c'est nous. */
   readonly moi: boolean;
+  /**
+   * Le niveau de son compte (etape 3.2). Absent pour un invite, qui n'en a pas:
+   * c'est ce qui distingue les deux dans le salon.
+   */
+  readonly niveau: number | undefined;
 }
 
 /** Une ligne du recapitulatif des reglages. */
@@ -112,6 +117,7 @@ export function modeleSalon(etat: EtatClient): ModeleSalon | undefined {
       initiales: initiales(joueur.pseudo),
       hote: joueur.hote,
       moi: joueur.id === etat.moi,
+      niveau: joueur.compte?.niveau,
     })),
     effectif: `${String(nombre)} ${nombre > 1 ? 'joueurs' : 'joueur'}`,
     jeSuisHote: commande,

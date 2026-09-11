@@ -74,8 +74,26 @@ export interface IntentionDeplacement {
 export interface SessionJoueur {
   /** Identifiant de la connexion. Cote serveur, l'identifiant de la socket. */
   readonly id: string;
-  /** Pseudo valide au moment de l'entree en jeu. */
+  /**
+   * Pseudo au moment de l'entree en jeu: celui du compte pour un compte, le
+   * pseudo demande et valide pour un invite.
+   */
   readonly pseudo: string;
+  /**
+   * Le compte de ce joueur. Absent: le joueur est un invite (etape 3.2).
+   *
+   * Il vient de la session de compte presentee a l'ouverture de la connexion
+   * reseau, jamais d'un message.
+   */
+  readonly compte?: CompteDeSession;
+}
+
+/** Le compte d'un joueur en partie, tel que le serveur le connait. */
+export interface CompteDeSession {
+  /** Identifiant du compte en base. Ne part jamais vers les autres joueurs. */
+  readonly id: string;
+  /** Niveau du compte a l'entree en partie, deduit de son XP. */
+  readonly niveau: number;
 }
 
 /**
@@ -86,6 +104,11 @@ export interface SessionJoueur {
  * dans la partie, et c'est seulement apres qu'il fabrique la SessionJoueur qui
  * fera foi pour tout le reste de la connexion. Rien de ce qui suit ne relira ce
  * message.
+ *
+ * LE PSEUDO EST FACULTATIF POUR UN COMPTE (etape 3.2). Une connexion authentifiee
+ * entre sous le pseudo de son compte: le pseudo de la demande, s'il y en a un,
+ * n'est pas lu. Un invite, lui, doit en fournir un, et il ne peut pas prendre
+ * celui d'un compte.
  *
  * TROIS FACONS D'ENTRER, ET UNE SEULE A LA FOIS:
  *
@@ -100,8 +123,8 @@ export interface SessionJoueur {
  * Un identifiant et un code ensemble sont refuses: la demande serait ambigue.
  */
 export interface DemandeRejoindre {
-  /** Pseudo souhaite, a valider. */
-  readonly pseudo: string;
+  /** Pseudo souhaite, a valider. Exige d'un invite, ignore pour un compte. */
+  readonly pseudo?: string;
   /** Partie publique visee, choisie dans la liste. */
   readonly idRoom?: string;
   /** Code d'invitation d'une partie privee. */
@@ -131,8 +154,8 @@ export interface ConfigurationPartie {
  * le fabrique, et qui le rend dans le salon.
  */
 export interface DemandeCreation {
-  /** Pseudo souhaite, a valider. */
-  readonly pseudo: string;
+  /** Pseudo souhaite, a valider. Exige d'un invite, ignore pour un compte. */
+  readonly pseudo?: string;
   readonly configuration: ConfigurationPartie;
 }
 

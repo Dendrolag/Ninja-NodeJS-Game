@@ -184,7 +184,7 @@ Entrée de l'étape 3.1. **Principe, le même que pour le score depuis le 14 ao�
 | identifiant         | Opaque, fabriqué par le serveur                                                     |
 | pseudo              | Unique, comparé sans distinction de casse après normalisation, règles de `BORNES_PSEUDO` (1 à 20 caractères, liste blanche) |
 | date d'inscription  | Horodatage                                                                          |
-| mot de passe haché  | Ajouté à l'étape 3.2, dans la table du compte ou une table d'identifiants à part: choix de 3.2 |
+| mot de passe haché  | Ajouté à l'étape 3.2, dans une table à part `mots_de_passe` (empreinte scrypt) |
 
 ### Progression, une par compte
 

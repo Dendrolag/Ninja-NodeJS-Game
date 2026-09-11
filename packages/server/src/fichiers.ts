@@ -21,7 +21,7 @@
  * refuserait d'executer le script qu'il contiendrait.
  */
 
-import { RACINE_RESSOURCES } from '@neon-ninja/shared';
+import { RACINE_API_COMPTES, RACINE_RESSOURCES } from '@neon-ninja/shared';
 import type { Express, Request, RequestHandler, Response } from 'express';
 import express from 'express';
 
@@ -73,12 +73,18 @@ export const MESSAGE_DE_SANTE = 'Neon Ninja: le serveur tourne.';
  * messages et n'ont pas de page a servir, et c'etait le comportement du serveur
  * avant cette etape.
  */
-export function applicationWeb(dossiers?: DossiersServis): Express {
+export function applicationWeb(dossiers?: DossiersServis, comptes?: RequestHandler): Express {
   const application = express();
 
   // Annoncer la bibliotheque et sa version n'aide que celui qui cherche une faille.
   application.disable('x-powered-by');
   application.get('/sante', repondreSante);
+
+  // Les routes des comptes (etape 3.2) passent avant les fichiers: une adresse de
+  // l'API ne doit jamais tomber sur un fichier du meme nom.
+  if (comptes !== undefined) {
+    application.use(RACINE_API_COMPTES, comptes);
+  }
 
   if (dossiers === undefined) {
     application.get('/', repondreSante);

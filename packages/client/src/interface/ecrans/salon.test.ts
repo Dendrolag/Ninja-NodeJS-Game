@@ -104,6 +104,23 @@ describe('les joueurs du salon', () => {
     expect(document.querySelector('.salon-joueurs img')).toBeNull();
   });
 
+  it('montre le niveau d un compte, et rien de tel pour un invite', () => {
+    const infos = salon('bob');
+
+    monter({
+      ...infos,
+      joueurs: [
+        { id: 'moi', pseudo: 'Alice', hote: false },
+        { id: 'bob', pseudo: 'Bob', hote: true, compte: { niveau: 4 } },
+      ],
+    });
+
+    expect(obligatoire(document, '[data-joueur="bob"] .carte-joueur-niveau').textContent).toBe(
+      'Niveau 4',
+    );
+    expect(document.querySelector('[data-joueur="moi"] .carte-joueur-niveau')).toBeNull();
+  });
+
   it('suit le transfert de l hote', () => {
     monter(salon('bob'));
     expect(boutonNomme(document, 'Lancer la partie')).toBeUndefined();

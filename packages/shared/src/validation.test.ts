@@ -561,7 +561,16 @@ describe('validerDemandeRejoindre', () => {
   it('refuse un pseudo invalide en nommant le pseudo, pas la demande', () => {
     expect(champsRefuses(validerDemandeRejoindre({ pseudo: '' }))).toEqual(['pseudo']);
     expect(champsRefuses(validerDemandeRejoindre({ pseudo: 42 }))).toEqual(['pseudo']);
-    expect(champsRefuses(validerDemandeRejoindre({}))).toEqual(['pseudo']);
+    expect(champsRefuses(validerDemandeRejoindre({ pseudo: null }))).toEqual(['pseudo']);
+  });
+
+  it('accepte une demande sans pseudo: un compte entre sous le sien', () => {
+    // Depuis l'etape 3.2. C'est la couche reseau, qui sait si la connexion est
+    // celle d'un compte, qui exige un pseudo d'un invite.
+    expect(valeurAcceptee(validerDemandeRejoindre({}))).toEqual({});
+    expect(valeurAcceptee(validerDemandeRejoindre({ code: 'abcdef' }))).toEqual({
+      code: 'ABCDEF',
+    });
   });
 
   it('refuse un identifiant de partie qui n est pas du texte', () => {

@@ -13,9 +13,8 @@
  *
  * CE QUI N'EST PAS ICI, VOLONTAIREMENT. Ni gemmes, ni defis du jour, ni pass de
  * saison, ni skins, ni clans. Chacun s'ajoutera par de nouvelles tables qui
- * referencent le compte, sans colonne ajoutee a celles-ci. Le mot de passe hache
- * arrive a l'etape 3.2, qui choisira entre une colonne du compte et une table a
- * part.
+ * referencent le compte, sans colonne ajoutee a celles-ci. C'est deja le cas de
+ * l'etape 3.2: le mot de passe et les sessions ont chacun leur table.
  *
  * DEUX TABLES POUR UNE PARTIE JOUEE. Le mode, la carte, la duree, le nombre de
  * joueurs et l'heure de fin sont les memes pour tous les joueurs d'une partie: ils
@@ -80,6 +79,51 @@ export const comptes = pgTable('comptes', {
   reperePseudo: text('repere_pseudo').notNull().unique('comptes_repere_pseudo_unique'),
   creeLe: horodatage('cree_le').notNull().defaultNow(),
 });
+
+/**
+ * Le mot de passe d'un compte, sous forme d'empreinte (etape 3.2).
+ *
+ * UNE TABLE A PART, ET NON UNE COLONNE DE `comptes`. Un compte n'a pas forcement
+ * de mot de passe: le compte invisible par navigateur (voie C de la decision du
+ * 11 septembre 2026) ou une connexion par un fournisseur tiers en creeraient sans.
+ * Chacun de ces moyens d'identification aura sa table, et `comptes` reste ce qu'il
+ * est: une identite, sans colonne vide selon la facon dont on s'y connecte.
+ *
+ * L'empreinte decrit sa propre recette (algorithme, parametres, sel): voir
+ * comptes/motDePasse.ts. Jamais le mot de passe lui-meme.
+ */
+export const motsDePasse = pgTable('mots_de_passe', {
+  compteId: uuid('compte_id')
+    .primaryKey()
+    .references(() => comptes.id, { onDelete: 'cascade' }),
+  empreinte: text('empreinte').notNull(),
+  modifieLe: horodatage('modifie_le').notNull().defaultNow(),
+});
+
+/**
+ * Les sessions ouvertes (etape 3.2).
+ *
+ * La cle est l'EMPREINTE du jeton, jamais le jeton: qui lit cette table ne peut
+ * pas s'en servir pour se connecter. Fermer une session, c'est effacer sa ligne.
+ * Une session expiree n'ouvre plus rien, et les lignes expirees sont effacees a
+ * l'ouverture des sessions suivantes, d'ou l'index sur l'expiration.
+ */
+export const sessions = pgTable(
+  'sessions',
+  {
+    empreinteJeton: text('empreinte_jeton').primaryKey(),
+    compteId: uuid('compte_id')
+      .notNull()
+      .references(() => comptes.id, { onDelete: 'cascade' }),
+    creeLe: horodatage('cree_le').notNull().defaultNow(),
+    expireLe: horodatage('expire_le').notNull(),
+  },
+  (table) => [
+    index('sessions_par_compte').on(table.compteId),
+    index('sessions_par_expiration').on(table.expireLe),
+    check('sessions_expire_apres_creation', sql`${table.expireLe} > ${table.creeLe}`),
+  ],
+);
 
 /** La progression d'un compte. Une et une seule par compte, creee avec lui. */
 export const progressions = pgTable(

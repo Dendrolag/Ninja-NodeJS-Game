@@ -783,8 +783,9 @@ describe('contrats typés', () => {
       // @ts-expect-error un message de chat n'a pas de champ pseudo: la session le signe
       client.emit('chat', { texte: 'Bonjour', pseudo: 'quelqu un d autre' });
 
-      // @ts-expect-error une entree en partie sans pseudo n'a pas de sens
-      client.emit('rejoindre', {}, () => undefined);
+      // @ts-expect-error un pseudo est du texte. Il peut manquer depuis l'etape 3.2
+      // (un compte entre sous le sien), mais jamais etre d'un autre type.
+      client.emit('rejoindre', { pseudo: 42 }, () => undefined);
 
       // @ts-expect-error un reglage inconnu du contrat
       client.emit('reglages', { vitesseDuJoueur: 999 });

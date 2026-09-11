@@ -35,10 +35,13 @@ import type { Intervalle } from './bornes.js';
 import {
   BORNES_CHAT,
   BORNES_CODE_INVITATION,
+  BORNES_JETON,
+  BORNES_MOT_DE_PASSE,
   BORNES_PSEUDO,
   BORNES_REGLAGES,
   BORNES_ROOM,
 } from './bornes.js';
+import type { DemandeConnexion, DemandeInscription } from './comptes.js';
 import type { IdentifiantCarte } from './constantes.js';
 import { CARTES, MODES, TYPES_BONUS, TYPES_MALUS, TYPES_ZONE, VISIBILITES } from './constantes.js';
 import type {
@@ -159,11 +162,12 @@ export function validerDemandeRejoindre(brut: unknown): ResultatValidation<Deman
     return refuse('rejoindre', "Une demande d'entrée doit être un objet.");
   }
 
-  const verdictPseudo = validerPseudo(champ(source, 'pseudo'));
+  const verdictPseudo = pseudoFacultatif(source);
   if (!verdictPseudo.valide) {
     return { valide: false, erreurs: verdictPseudo.erreurs };
   }
 
+  const pseudo = verdictPseudo.valeur;
   const brutRoom = champ(source, 'idRoom');
   const brutCode = champ(source, 'code');
 
@@ -178,12 +182,12 @@ export function validerDemandeRejoindre(brut: unknown): ResultatValidation<Deman
     const verdictCode = validerCodeInvitation(brutCode);
 
     return verdictCode.valide
-      ? accepte({ pseudo: verdictPseudo.valeur, code: verdictCode.valeur })
+      ? accepte({ ...pseudo, code: verdictCode.valeur })
       : { valide: false, erreurs: verdictCode.erreurs };
   }
 
   if (brutRoom === undefined) {
-    return accepte({ pseudo: verdictPseudo.valeur });
+    return accepte(pseudo);
   }
 
   if (typeof brutRoom !== 'string') {
@@ -205,7 +209,33 @@ export function validerDemandeRejoindre(brut: unknown): ResultatValidation<Deman
     );
   }
 
-  return accepte({ pseudo: verdictPseudo.valeur, idRoom: brutRoom });
+  return accepte({ ...pseudo, idRoom: brutRoom });
+}
+
+/**
+ * Le pseudo d'une demande d'entree ou de creation, s'il y en a un.
+ *
+ * Absent n'est pas une erreur ici: une connexion authentifiee entre sous le pseudo
+ * de son compte (etape 3.2). C'est la couche reseau, qui sait si la connexion est
+ * celle d'un compte, qui exige un pseudo d'un invite. Present, il est valide comme
+ * n'importe quel pseudo, meme s'il ne sera pas lu: une demande mal formee reste
+ * une demande mal formee.
+ *
+ * Rendu sous la forme d'un objet a etaler, vide ou portant le pseudo: le projet
+ * compile avec exactOptionalPropertyTypes, qui distingue un champ absent d'un
+ * champ qui vaut undefined.
+ */
+function pseudoFacultatif(
+  source: Enregistrement,
+): ResultatValidation<{ readonly pseudo?: string }> {
+  const brut = champ(source, 'pseudo');
+  if (brut === undefined) {
+    return accepte({});
+  }
+
+  const verdict = validerPseudo(brut);
+
+  return verdict.valide ? accepte({ pseudo: verdict.valeur }) : verdict;
 }
 
 /**
@@ -249,7 +279,7 @@ export function validerDemandeCreation(brut: unknown): ResultatValidation<Demand
     return refuse('creerPartie', 'Une demande de création doit être un objet.');
   }
 
-  const verdictPseudo = validerPseudo(champ(source, 'pseudo'));
+  const verdictPseudo = pseudoFacultatif(source);
   if (!verdictPseudo.valide) {
     return { valide: false, erreurs: verdictPseudo.erreurs };
   }
@@ -275,9 +305,124 @@ export function validerDemandeCreation(brut: unknown): ResultatValidation<Demand
   }
 
   return accepte({
-    pseudo: verdictPseudo.valeur,
+    ...verdictPseudo.valeur,
     configuration: { mode, visibilite, reglages: verdictReglages.valeur },
   });
+}
+
+/**
+ * Valide le mot de passe choisi a l'inscription.
+ *
+ * Seule la longueur compte (voir BORNES_MOT_DE_PASSE). Le mot de passe est rendu
+ * en composition Unicode, et c'est cette forme qui sera hachee: une lettre
+ * accentuee tapee sur deux systemes differents peut arriver ecrite de deux facons,
+ * et le meme mot de passe doit ouvrir le meme compte. Rien d'autre n'est touche:
+ * ni les espaces, ni la casse, qui font partie du secret.
+ */
+export function validerMotDePasse(brut: unknown): ResultatValidation<string> {
+  if (typeof brut !== 'string') {
+    return refuse('motDePasse', 'Un mot de passe doit être du texte.');
+  }
+
+  const motDePasse = brut.normalize('NFC');
+  const taille = nombreDeCaracteres(motDePasse);
+
+  if (taille < BORNES_MOT_DE_PASSE.longueur.minimum) {
+    return refuse(
+      'motDePasse',
+      `Un mot de passe fait au moins ${BORNES_MOT_DE_PASSE.longueur.minimum} caractères.`,
+    );
+  }
+
+  if (taille > BORNES_MOT_DE_PASSE.longueur.maximum) {
+    return refuse(
+      'motDePasse',
+      `Un mot de passe fait au plus ${BORNES_MOT_DE_PASSE.longueur.maximum} caractères.`,
+    );
+  }
+
+  return accepte(motDePasse);
+}
+
+/**
+ * Valide une demande d'inscription: un pseudo de partie, et un mot de passe.
+ *
+ * Toutes les erreurs sont rendues ensemble, pour que le formulaire les montre d'un
+ * coup. L'unicite du pseudo n'est pas verifiee ici: elle est tenue par la base.
+ */
+export function validerDemandeInscription(brut: unknown): ResultatValidation<DemandeInscription> {
+  const source = objetOuRien(brut);
+  if (source === undefined) {
+    return refuse('inscription', "Une demande d'inscription doit être un objet.");
+  }
+
+  const pseudo = validerPseudo(champ(source, 'pseudo'));
+  const motDePasse = validerMotDePasse(champ(source, 'motDePasse'));
+
+  if (!pseudo.valide || !motDePasse.valide) {
+    return {
+      valide: false,
+      erreurs: [
+        ...(pseudo.valide ? [] : pseudo.erreurs),
+        ...(motDePasse.valide ? [] : motDePasse.erreurs),
+      ],
+    };
+  }
+
+  return accepte({ pseudo: pseudo.valeur, motDePasse: motDePasse.valeur });
+}
+
+/**
+ * Valide une demande de connexion.
+ *
+ * LE MOT DE PASSE N'Y EST PAS SOUMIS A LA LONGUEUR MINIMALE. Cette borne s'applique
+ * a la creation d'un mot de passe; si elle se relevait un jour, les comptes
+ * existants devraient pouvoir se connecter encore. Seul le maximum s'applique, qui
+ * protege le serveur d'un hachage demesure.
+ *
+ * Un pseudo invalide est refuse avec son motif: aucun compte ne peut le porter, et
+ * le dire n'apprend rien a personne. Un pseudo valide mais inconnu, en revanche,
+ * recoit la meme reponse qu'un mauvais mot de passe; c'est le travail du serveur.
+ */
+export function validerDemandeConnexion(brut: unknown): ResultatValidation<DemandeConnexion> {
+  const source = objetOuRien(brut);
+  if (source === undefined) {
+    return refuse('connexion', 'Une demande de connexion doit être un objet.');
+  }
+
+  const pseudo = validerPseudo(champ(source, 'pseudo'));
+  if (!pseudo.valide) {
+    return pseudo;
+  }
+
+  const brutMotDePasse = champ(source, 'motDePasse');
+  if (typeof brutMotDePasse !== 'string') {
+    return refuse('motDePasse', 'Un mot de passe doit être du texte.');
+  }
+
+  const motDePasse = brutMotDePasse.normalize('NFC');
+  if (nombreDeCaracteres(motDePasse) > BORNES_MOT_DE_PASSE.longueur.maximum) {
+    return refuse(
+      'motDePasse',
+      `Un mot de passe fait au plus ${BORNES_MOT_DE_PASSE.longueur.maximum} caractères.`,
+    );
+  }
+
+  return accepte({ pseudo: pseudo.valeur, motDePasse });
+}
+
+/**
+ * Valide un jeton de session presente par un client.
+ *
+ * Un texte qui n'a pas la forme des jetons fabriques par le serveur est refuse
+ * sans consulter la base: il n'a jamais ete emis.
+ */
+export function validerJeton(brut: unknown): ResultatValidation<string> {
+  if (typeof brut !== 'string' || !BORNES_JETON.forme.test(brut)) {
+    return refuse('jeton', 'Ce jeton de session est mal formé.');
+  }
+
+  return accepte(brut);
 }
 
 /** Une valeur est-elle l'un des textes d'une liste fermee. */

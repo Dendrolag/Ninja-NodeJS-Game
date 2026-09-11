@@ -38,8 +38,16 @@
  *   - les operations de base: creer un compte, lire et ecrire sa progression,
  *     enregistrer une partie et relire l'historique d'un compte.
  *
- * Rien ne s'y branche encore: les comptes arrivent a l'etape 3.2, les resultats
- * de fin de partie a l'etape 3.3.
+ * Ce que l'etape 3.2 a ajoute, dans comptes/ et base/:
+ *
+ *   - l'inscription et la connexion par pseudo et mot de passe, hache par scrypt;
+ *   - la session par jeton, dont la base ne garde que l'empreinte;
+ *   - la limite des tentatives, par pseudo et par adresse;
+ *   - les routes HTTP des comptes, et l'identification du compte a l'ouverture
+ *     d'une connexion Socket.IO: un compte entre en partie sous son pseudo et avec
+ *     son niveau, un invite sous un pseudo qui n'est celui d'aucun compte.
+ *
+ * Les resultats de fin de partie restent a brancher, a l'etape 3.3.
  */
 
 export type { JoueurDeRoom, OptionsGameRoom, StatutRoom } from './GameRoom.js';
@@ -63,7 +71,12 @@ export {
   salonDe,
 } from './instantane.js';
 
-export type { OptionsServeurSocket, ServeurTypee, SocketTypee } from './ServeurSocket.js';
+export type {
+  DonneesDeConnexion,
+  OptionsServeurSocket,
+  ServeurTypee,
+  SocketTypee,
+} from './ServeurSocket.js';
 export { ServeurSocket } from './ServeurSocket.js';
 
 export type { OptionsServeur, ServeurMonte } from './serveur.js';
@@ -82,8 +95,31 @@ export { DOSSIER_MIGRATIONS, appliquerMigrations } from './base/migrations.js';
 
 export * as schema from './base/schema.js';
 
-export type { Compte } from './base/comptes.js';
-export { creerCompte, trouverCompteParPseudo } from './base/comptes.js';
+export type { Compte, Identifiants, OptionsCreationCompte, Profil } from './base/comptes.js';
+export {
+  creerCompte,
+  identifiantsParPseudo,
+  profilDuCompte,
+  trouverCompteParPseudo,
+} from './base/comptes.js';
+
+export { compteDeLaSession, fermerSession, ouvrirSession } from './base/sessions.js';
+
+export type {
+  AnnuaireDesComptes,
+  IdentiteDeCompte,
+  MotifDeRefus,
+  ReponseDeCompte,
+  ServiceDeComptes,
+} from './comptes/annuaire.js';
+export type { LimitesDesComptes, OptionsAuthentification } from './comptes/Authentification.js';
+export { Authentification, DUREE_SESSION_MS } from './comptes/Authentification.js';
+export { empreinteDuJeton, fabriquerJeton } from './comptes/jetons.js';
+export type { VerdictTentative } from './comptes/limiteur.js';
+export { LimiteurDeTentatives } from './comptes/limiteur.js';
+export type { ParametresScrypt } from './comptes/motDePasse.js';
+export { PARAMETRES_SCRYPT, hacherMotDePasse, verifierMotDePasse } from './comptes/motDePasse.js';
+export { routesDesComptes } from './comptes/routes.js';
 
 export type { Progression, ValeursProgression } from './base/progression.js';
 export { ecrireProgression, lireProgression } from './base/progression.js';

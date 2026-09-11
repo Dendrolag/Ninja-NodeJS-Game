@@ -45,6 +45,7 @@
  */
 
 import type {
+  CompteDeSession,
   Mode,
   ReglagesPartie,
   ReglagesPartiels,
@@ -118,6 +119,8 @@ export interface JoueurDeRoom {
   readonly pseudo: string;
   /** Ce joueur commande-t-il la room: reglages et lancement de la partie. */
   readonly hote: boolean;
+  /** Le compte de ce joueur, tel que sa session l'a etabli. Absent: un invite. */
+  readonly compte?: CompteDeSession;
 }
 
 /** Ce qu'il faut pour ouvrir une room. */
@@ -208,6 +211,16 @@ export class GameRoom {
   private hoteCourant: IdentifiantEntite | undefined;
 
   /**
+   * Le compte de chaque membre qui en a un (etape 3.2).
+   *
+   * Le moteur ne connait pas les comptes, et n'a pas a les connaitre: un compte ne
+   * change rien a la facon de jouer. La room les retient a cote de l'etat, comme
+   * l'ordre d'arrivee, pour le salon aujourd'hui et pour les resultats de fin de
+   * partie a l'etape 3.3. Un invite n'y figure pas.
+   */
+  private readonly comptesDesMembres = new Map<IdentifiantEntite, CompteDeSession>();
+
+  /**
    * La derniere intention connue de chaque joueur.
    *
    * UN JOUEUR, UNE INTENTION, UN BATTEMENT. Le legacy deplacait le joueur a
@@ -272,11 +285,7 @@ export class GameRoom {
 
   /** Les membres de la room, dans leur ordre d'arrivee. */
   get joueurs(): readonly JoueurDeRoom[] {
-    return this.ordreDArrivee.map((id) => ({
-      id,
-      pseudo: this.partie.joueurs[id]?.pseudo ?? '',
-      hote: id === this.hoteCourant,
-    }));
+    return this.ordreDArrivee.map((id) => this.membre(id));
   }
 
   /** La room n'a plus personne: le RoomManager la detruira. */
@@ -341,10 +350,11 @@ export class GameRoom {
     this.ordreDArrivee.push(session.id);
     this.hoteCourant ??= session.id;
 
-    return {
-      valide: true,
-      valeur: { id: session.id, pseudo: session.pseudo, hote: this.estHote(session.id) },
-    };
+    if (session.compte !== undefined) {
+      this.comptesDesMembres.set(session.id, session.compte);
+    }
+
+    return { valide: true, valeur: this.membre(session.id) };
   }
 
   /**
@@ -364,6 +374,7 @@ export class GameRoom {
 
     this.partie = retirerJoueur(this.partie, id);
     this.ordreDArrivee = this.ordreDArrivee.filter((present) => present !== id);
+    this.comptesDesMembres.delete(id);
     delete this.intentions[id];
 
     if (this.hoteCourant === id) {
@@ -575,9 +586,21 @@ export class GameRoom {
     }
   }
 
-  /** Ce joueur est-il l'hote. */
-  private estHote(id: IdentifiantEntite): boolean {
-    return this.hoteCourant === id;
+  /**
+   * Un membre, tel que la room le decrit.
+   *
+   * Le champ compte est omis pour un invite plutot que pose a undefined: le projet
+   * compile avec exactOptionalPropertyTypes, qui distingue les deux.
+   */
+  private membre(id: IdentifiantEntite): JoueurDeRoom {
+    const compte = this.comptesDesMembres.get(id);
+
+    return {
+      id,
+      pseudo: this.partie.joueurs[id]?.pseudo ?? '',
+      hote: id === this.hoteCourant,
+      ...(compte === undefined ? {} : { compte }),
+    };
   }
 
   /** Ce pseudo est-il deja porte par quelqu'un dans la room. */

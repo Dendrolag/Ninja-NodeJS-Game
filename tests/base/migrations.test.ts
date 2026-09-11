@@ -37,16 +37,18 @@ describe.runIf(baseDisponible())('migrations', () => {
     return rows[0]?.nombre ?? 0;
   }
 
-  it('creent les quatre tables du schema v1, et aucune autre', async () => {
+  it('creent les tables du schema v1 et de l authentification, et aucune autre', async () => {
     const { rows } = await db().execute<{ table_name: string }>(
       sql`select table_name from information_schema.tables where table_schema = 'public' order by table_name`,
     );
 
     expect(rows.map((ligne) => ligne.table_name)).toEqual([
       'comptes',
+      'mots_de_passe',
       'parties',
       'progressions',
       'resultats',
+      'sessions',
     ]);
   });
 

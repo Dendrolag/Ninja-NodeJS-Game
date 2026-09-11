@@ -11,19 +11,23 @@
  * adresses avant qu'Express ne les voie. Express n'est arrive qu'a l'etape 4.3,
  * quand il y a eu une page a servir; jusque-la, le module http de Node suffisait,
  * et une dependance sans usage est une dependance que personne ne surveille
- * (faille S5 de l'audit).
+ * (faille S5 de l'audit). Depuis l'etape 3.2, Express repond aussi aux routes des
+ * comptes, et Socket.IO identifie le compte d'une connexion a son ouverture.
  */
 
 import { createServer } from 'node:http';
 import type { Server as ServeurHttp } from 'node:http';
 
 import type { EvenementsClientVersServeur, EvenementsServeurVersClient } from '@neon-ninja/shared';
+import type { DefaultEventsMap } from 'socket.io';
 import { Server } from 'socket.io';
 
+import type { ServiceDeComptes } from './comptes/annuaire.js';
+import { routesDesComptes } from './comptes/routes.js';
 import type { DossiersServis } from './fichiers.js';
 import { applicationWeb } from './fichiers.js';
 import type { Horloge } from './horloge.js';
-import type { ServeurTypee } from './ServeurSocket.js';
+import type { DonneesDeConnexion, ServeurTypee } from './ServeurSocket.js';
 import { ServeurSocket } from './ServeurSocket.js';
 import type { SourceDeTerrain } from './terrain.js';
 
@@ -61,6 +65,27 @@ export interface OptionsServeur {
    * reel, et le scenario de bout en bout qui le reproduit, ont une page a servir.
    */
   readonly fichiers?: DossiersServis;
+  /**
+   * Les comptes (etape 3.2): inscription, connexion, et identification des
+   * connexions reseau.
+   *
+   * SANS COMPTES PAR DEFAUT, et le jeu tourne quand meme: tout le monde joue en
+   * invite, les routes des comptes repondent qu'ils sont indisponibles, et une
+   * connexion reseau qui presente un jeton est refusee. C'est le cas des tests et
+   * des scenarios de bout en bout. Le serveur reel les branche dans principal.ts
+   * quand DATABASE_URL est definie.
+   */
+  readonly comptes?: ServiceDeComptes;
+  /**
+   * Nombre de mandataires places devant le serveur, dont on croit l'en-tete
+   * X-Forwarded-For pour connaitre l'adresse d'un joueur. Zero par defaut.
+   *
+   * Utile aux limites de tentatives de connexion: derriere le mandataire d'un
+   * hebergeur, sans ce reglage, tous les joueurs auraient la meme adresse. Le
+   * poser sans mandataire reel permettrait au contraire a un client de s'inventer
+   * une adresse.
+   */
+  readonly mandatairesDeConfiance?: number;
 }
 
 /** Un serveur monte, pret a ecouter. */
@@ -83,19 +108,30 @@ export interface ServeurMonte {
  * refermer, sans jamais dependre d'un numero de port fixe.
  */
 export function creerServeur(options: OptionsServeur = {}): ServeurMonte {
-  const http = createServer(applicationWeb(options.fichiers));
+  const origines = options.originesAutorisees ?? [];
+  const application = applicationWeb(options.fichiers, routesDesComptes(options.comptes, origines));
+  const mandataires = options.mandatairesDeConfiance ?? 0;
 
-  const io: ServeurTypee = new Server<EvenementsClientVersServeur, EvenementsServeurVersClient>(
-    http,
-    {
-      cors: { origin: [...(options.originesAutorisees ?? [])] },
-    },
-  );
+  if (mandataires > 0) {
+    application.set('trust proxy', mandataires);
+  }
+
+  const http = createServer(application);
+
+  const io: ServeurTypee = new Server<
+    EvenementsClientVersServeur,
+    EvenementsServeurVersClient,
+    DefaultEventsMap,
+    DonneesDeConnexion
+  >(http, {
+    cors: { origin: [...origines] },
+  });
 
   const jeu = new ServeurSocket({
     io,
     ...(options.horloge === undefined ? {} : { horloge: options.horloge }),
     ...(options.terrains === undefined ? {} : { terrains: options.terrains }),
+    ...(options.comptes === undefined ? {} : { comptes: options.comptes }),
   });
 
   return {

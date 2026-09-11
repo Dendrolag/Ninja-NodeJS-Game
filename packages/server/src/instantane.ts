@@ -28,6 +28,7 @@ import type {
   CaptureParBotNoirSubie,
   CaptureReussie,
   CaptureSubie,
+  CompteDeSession,
   EntiteVue,
   InfosSalon,
   InstantanePartie,
@@ -185,13 +186,24 @@ export function partiePubliqueDe(room: GameRoom): PartiePublique {
   };
 }
 
-/** Un membre du salon, tel que les autres le voient. */
+/**
+ * Un membre du salon, tel que les autres le voient.
+ *
+ * Un compte montre son niveau, et rien d'autre: l'identifiant du compte en base
+ * reste au serveur. Un invite n'a pas de champ compte.
+ */
 export function joueurDuSalon(joueur: {
-  id: IdentifiantEntite;
-  pseudo: string;
-  hote: boolean;
+  readonly id: IdentifiantEntite;
+  readonly pseudo: string;
+  readonly hote: boolean;
+  readonly compte?: CompteDeSession;
 }): JoueurDuSalon {
-  return { id: joueur.id, pseudo: joueur.pseudo, hote: joueur.hote };
+  return {
+    id: joueur.id,
+    pseudo: joueur.pseudo,
+    hote: joueur.hote,
+    ...(joueur.compte === undefined ? {} : { compte: { niveau: joueur.compte.niveau } }),
+  };
 }
 
 /**

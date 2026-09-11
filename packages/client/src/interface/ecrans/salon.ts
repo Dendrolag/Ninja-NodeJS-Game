@@ -171,7 +171,10 @@ export function monterSalon(contexte: ContexteEcran): EcranAffiche {
 
   const majJoueurs = (joueurs: readonly JoueurAffiche[]): void => {
     const signature = joueurs
-      .map((joueur) => `${joueur.id}|${joueur.pseudo}|${String(joueur.hote)}|${String(joueur.moi)}`)
+      .map(
+        (joueur) =>
+          `${joueur.id}|${joueur.pseudo}|${String(joueur.hote)}|${String(joueur.moi)}|${String(joueur.niveau)}`,
+      )
       .join('\n');
 
     if (signature === signatureJoueurs) {
@@ -262,6 +265,12 @@ function carteJoueur(doc: Document, joueur: JoueurAffiche): HTMLElement {
       'span',
       { classe: 'carte-joueur-identite' },
       creer(doc, 'span', { classe: 'carte-joueur-pseudo', texte: joueur.pseudo }),
+      joueur.niveau === undefined
+        ? undefined
+        : creer(doc, 'span', {
+            classe: 'carte-joueur-niveau',
+            texte: `Niveau ${String(joueur.niveau)}`,
+          }),
       joueur.moi ? creer(doc, 'span', { classe: 'carte-joueur-note', texte: 'Vous' }) : undefined,
     ),
     joueur.hote
