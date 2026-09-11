@@ -131,7 +131,11 @@ Repris du handoff 3.1: les **valeurs des récompenses** sont à faire valider pa
 
 ## État de la CI
 
-À confirmer après la poussée du commit de cette étape.
+**Run 34584293025, commit 925392b: vert.**
+
+- « Types, linter et tests »: vert, contrôle des migrations compris (la migration `0001_authentification` suit le schéma), tests de la base contre une branche Neon.
+- « Bout en bout »: vert.
+- Après ce run, seule la branche `production` reste dans le projet Neon.
 
 ## Prochaine action exacte
 
