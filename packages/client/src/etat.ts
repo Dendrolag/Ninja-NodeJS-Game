@@ -23,6 +23,7 @@ import type {
   EtatCompteARebours,
   FinDePartie,
   InfosSalon,
+  MaProgression,
   MessageChat,
   PartiePublique,
   Refus,
@@ -49,7 +50,60 @@ export type EtatConnexion =
    * est coupee (handoff 4.1). L'information ne pouvait pas vivre dans l'ecran
    * d'accueil, qui est monte a neuf au moment meme ou le lien tombe.
    */
-  | 'perdue';
+  | 'perdue'
+  /**
+   * Le lien n'a pas pu s'ouvrir: le serveur l'a refuse, ou ne repond pas.
+   *
+   * Ajoute a la reprise des ecrans du jalon 3. Un jeton qui n'ouvre plus aucune
+   * session fait refuser le lien (etape 3.2); sans cet etat, l'accueil attendrait
+   * une connexion qui ne viendra jamais.
+   */
+  | 'refusee';
+
+/**
+ * La session: jouer en invite, ou avec un compte.
+ *
+ * Le compte est optionnel et n'apporte que la progression (decision du 11
+ * septembre 2026). Le jeton, lui, n'est pas ici: c'est un secret, et l'etat se
+ * serialise et se montre. Seul le coffre du jeton le connait (comptes/coffre.ts).
+ */
+export type SessionDuClient =
+  /** Une session gardee est en cours de verification, au demarrage. */
+  | { readonly nature: 'verification' }
+  /** On joue en invite, avec un pseudo choisi a l'entree. */
+  | {
+      readonly nature: 'invite';
+      /** La session gardee n'etait plus valable: l'accueil le dit, plutot que de le taire. */
+      readonly sessionExpiree: boolean;
+    }
+  /** On joue avec un compte, sous son pseudo. */
+  | { readonly nature: 'compte'; readonly progression: MaProgression };
+
+/** Ce qu'une demande de compte cherche a obtenir. */
+export type NatureDemandeDeCompte = 'connexion' | 'inscription';
+
+/**
+ * La derniere demande de connexion ou d'inscription, et ce qu'elle a donne.
+ *
+ * Elle retient sa nature et le pseudo qu'elle portait: son refus ne s'affiche que
+ * sous la saisie qui l'a provoque, comme le refus d'entree de l'accueil.
+ */
+export interface DemandeDeCompte {
+  /** La demande est partie, et sa reponse n'est pas arrivee. */
+  readonly enCours: boolean;
+  readonly nature: NatureDemandeDeCompte | undefined;
+  readonly pseudo: string | undefined;
+  /** Les motifs du refus, vides tant qu'il n'y en a pas. */
+  readonly erreurs: readonly ErreurValidation[];
+}
+
+/** Aucune demande de compte en cours ni refusee. */
+export const AUCUNE_DEMANDE_DE_COMPTE: DemandeDeCompte = {
+  enCours: false,
+  nature: undefined,
+  pseudo: undefined,
+  erreurs: [],
+};
 
 /**
  * Un message de chat, date a son arrivee chez nous.
@@ -92,6 +146,12 @@ export interface EtatClient {
   readonly ecran: Ecran;
   /** Ou en est le transport. */
   readonly connexion: EtatConnexion;
+  /** Pourquoi le lien n'a pas pu s'ouvrir, tant qu'il est refuse. */
+  readonly refusDeConnexion: string | undefined;
+  /** Invite ou compte. */
+  readonly session: SessionDuClient;
+  /** La derniere demande de connexion ou d'inscription. */
+  readonly demandeDeCompte: DemandeDeCompte;
   /**
    * Notre identifiant de session, donne par le serveur a la connexion.
    *
@@ -168,6 +228,9 @@ export const MAX_JOURNAL = 50;
 export const ETAT_INITIAL: EtatClient = {
   ecran: 'accueil',
   connexion: 'horsLigne',
+  refusDeConnexion: undefined,
+  session: { nature: 'invite', sessionExpiree: false },
+  demandeDeCompte: AUCUNE_DEMANDE_DE_COMPTE,
   moi: undefined,
   pseudoDemande: undefined,
   entreeEnCours: false,

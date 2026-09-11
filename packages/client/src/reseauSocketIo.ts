@@ -13,6 +13,11 @@
  * contrats dans l'autre ordre. Les intervertir compile chez soi et ne parle plus
  * a personne en face; les nommer explicitement evite l'erreur.
  *
+ * LE LIEN S'OUVRE SUR DEMANDE, AVEC OU SANS JETON (reprise des ecrans du jalon 3).
+ * Le serveur identifie le compte a l'ouverture, une fois pour toutes: le client
+ * doit donc savoir quel jeton presenter avant d'ouvrir, et rouvrir quand la session
+ * change. Jusque-la, le lien partait des la creation du transport.
+ *
  * LA RECONNEXION AUTOMATIQUE EST COUPEE. Socket.IO la propose, mais retrouver sa
  * place suppose que la place survive au transport. La session de compte de
  * l'etape 3.2 survit, mais la place dans une partie, elle, reste attachee a la
@@ -42,18 +47,24 @@ export interface OptionsReseauSocketIo {
   readonly url?: string;
 }
 
+/** La raison que donne Socket.IO quand c'est le client lui-meme qui ferme le lien. */
+const FERMETURE_VOLONTAIRE = 'io client disconnect';
+
+/** Ce que le joueur lit quand le serveur de jeu ne repond pas. */
+export const SERVEUR_INJOIGNABLE =
+  'Le serveur de jeu ne répond pas. Vérifiez votre connexion, puis réessayez.';
+
 /**
- * Ouvre un lien Socket.IO avec le serveur de jeu.
+ * Cree un transport Socket.IO, sans ouvrir le lien.
  *
- * La connexion part immediatement. Le client s'abonne d'abord, se connecte
- * ensuite: c'est pourquoi le cablage de client.ts pose ses ecoutes avant que le
- * lien ne soit etabli, et non l'inverse.
+ * Le client s'abonne d'abord, et ouvre ensuite: aucun message ne peut donc arriver
+ * avant que quelqu'un ne l'attende.
  */
 export function creerReseauSocketIo(options: OptionsReseauSocketIo = {}): Reseau {
   const socket: SocketCliente =
     options.url === undefined
-      ? io({ transports: ['websocket'], reconnection: false })
-      : io(options.url, { transports: ['websocket'], reconnection: false });
+      ? io({ transports: ['websocket'], reconnection: false, autoConnect: false })
+      : io(options.url, { transports: ['websocket'], reconnection: false, autoConnect: false });
 
   return {
     get identifiant() {
@@ -62,6 +73,17 @@ export function creerReseauSocketIo(options: OptionsReseauSocketIo = {}): Reseau
 
     get connecte() {
       return socket.connected;
+    },
+
+    ouvrir: (authentification) => {
+      // Un lien ouvert, ou en train de s'ouvrir, est d'abord ferme: le jeton ne se
+      // presente qu'a l'ouverture.
+      if (socket.active) {
+        socket.disconnect();
+      }
+
+      socket.auth = { ...authentification };
+      socket.connect();
     },
 
     emettre: <Nom extends NomMontant>(nom: Nom, ...arguments_: ArgumentsMontants<Nom>) => {
@@ -87,10 +109,30 @@ export function creerReseauSocketIo(options: OptionsReseauSocketIo = {}): Reseau
     },
 
     surDeconnexion: (gestionnaire) => {
-      socket.on('disconnect', gestionnaire);
+      // Un lien que le client ferme lui-meme, pour le rouvrir avec une autre
+      // session, n'est pas un lien perdu.
+      const surFermeture = (raison: string): void => {
+        if (raison !== FERMETURE_VOLONTAIRE) {
+          gestionnaire();
+        }
+      };
+
+      socket.on('disconnect', surFermeture);
 
       return () => {
-        socket.off('disconnect', gestionnaire);
+        socket.off('disconnect', surFermeture);
+      };
+    },
+
+    surRefus: (gestionnaire) => {
+      const surErreur = (erreur: Error): void => {
+        gestionnaire(motifDuRefus(erreur));
+      };
+
+      socket.on('connect_error', surErreur);
+
+      return () => {
+        socket.off('connect_error', surErreur);
       };
     },
 
@@ -99,4 +141,15 @@ export function creerReseauSocketIo(options: OptionsReseauSocketIo = {}): Reseau
       socket.disconnect();
     },
   };
+}
+
+/**
+ * Le motif d'un lien qui n'a pas pu s'ouvrir.
+ *
+ * Un refus du serveur (un jeton qui n'ouvre aucune session) arrive avec son
+ * explication, et la bibliotheque lui ajoute un champ data. Une panne de transport
+ * n'en a pas: son message technique (« websocket error ») ne dirait rien au joueur.
+ */
+function motifDuRefus(erreur: Error): string {
+  return 'data' in erreur ? erreur.message : SERVEUR_INJOIGNABLE;
 }

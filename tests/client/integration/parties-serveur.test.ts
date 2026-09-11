@@ -50,6 +50,7 @@ afterEach(async () => {
 async function connecterUnClient(): Promise<Client> {
   const client = creerClient({ reseau: creerReseauSocketIo({ url }) });
   clients.push(client);
+  client.ouvrir();
 
   await attendreQue(() => client.etat.connexion === 'connecte', 'la connexion');
 

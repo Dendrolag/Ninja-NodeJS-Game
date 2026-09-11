@@ -34,9 +34,11 @@ import { sonsDuChangement } from '../sons/declencheurs.js';
 import type { LecteurDeSons } from '../sons/lecteur.js';
 import { monterAide } from './composants/aide.js';
 import { monterFilDAnnonces } from './composants/annonces.js';
+import { monterCompteDeLEntete } from './composants/compte.js';
 import { monterPanneauSon } from './composants/son.js';
 import { bouton, creer, ecrireTexte } from './dom.js';
 import { monterAccueil } from './ecrans/accueil.js';
+import { monterConnexion } from './ecrans/connexion.js';
 import { monterFin } from './ecrans/fin.js';
 import { monterSalon } from './ecrans/salon.js';
 import type { ContexteEcran, EcranAffiche, MonteurEcran } from './ecrans/types.js';
@@ -64,6 +66,7 @@ export interface Application {
 /** Les ecrans de menu, et qui les monte. */
 const MONTEURS_DE_MENU: Readonly<Record<Exclude<Ecran, 'jeu'>, MonteurEcran>> = {
   accueil: monterAccueil,
+  connexion: monterConnexion,
   salon: monterSalon,
   fin: monterFin,
 };
@@ -71,6 +74,7 @@ const MONTEURS_DE_MENU: Readonly<Record<Exclude<Ecran, 'jeu'>, MonteurEcran>> = 
 /** Le nom de chaque ecran, ecrit dans l'en-tete. Les libelles de la maquette. */
 const LIBELLES_ECRAN: Readonly<Record<Ecran, string>> = {
   accueil: 'Accueil',
+  connexion: 'Compte',
   salon: 'Salon',
   jeu: 'En jeu',
   fin: 'Résultats',
@@ -101,6 +105,7 @@ export function monterApplication(options: OptionsApplication): Application {
     },
   });
   const annonces = monterFilDAnnonces(doc);
+  const compte = monterCompteDeLEntete(doc, client);
 
   const libelle = creer(doc, 'span', { classe: 'marque-ecran' });
   const scene = creer(doc, 'main', { classe: 'scene-ecran' });
@@ -131,6 +136,7 @@ export function monterApplication(options: OptionsApplication): Application {
         doc,
         'div',
         { classe: 'entete-actions' },
+        compte.racine,
         bouton(
           doc,
           { classe: 'bouton-icone', icone: 'keyboard', etiquette: 'Aide et commandes' },
@@ -185,6 +191,7 @@ export function monterApplication(options: OptionsApplication): Application {
   let precedent = client.etat;
   let ecran = monter(ecranCourant);
   ecran.afficher(precedent);
+  compte.afficher(precedent);
 
   const surChangement = (): void => {
     const etat = client.etat;
@@ -198,6 +205,7 @@ export function monterApplication(options: OptionsApplication): Application {
     }
 
     ecran.afficher(etat);
+    compte.afficher(etat);
 
     if (sons !== undefined && !(precedent.ecran === 'jeu' && etat.ecran === 'jeu')) {
       for (const nom of sonsDuChangement(precedent, etat)) {
@@ -241,6 +249,7 @@ export function monterApplication(options: OptionsApplication): Application {
       doc.removeEventListener('pointerdown', deverrouillerLeSon);
       doc.removeEventListener('keydown', deverrouillerLeSon);
       ecran.demonter();
+      compte.demonter();
       aide.demonter();
       panneauSon.demonter();
       annonces.demonter();

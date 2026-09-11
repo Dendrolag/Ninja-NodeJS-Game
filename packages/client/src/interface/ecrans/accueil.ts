@@ -1,18 +1,17 @@
 /**
- * L'ecran d'accueil: saisir son pseudo et entrer dans une partie.
+ * L'ecran d'accueil: choisir comment jouer, et entrer dans une partie.
  *
  * Portage du mainMenu du jeu d'origine, dans l'identite de la maquette. La
- * maquette y met aussi le resume du compte, les modes, les defis et le pass de
- * saison: tout cela depend des comptes, du matchmaking et de la progression, et
- * n'existe donc pas encore. Conformement a la decision du 29 juin 2026, ce qui est
- * reporte est absent, pas grise.
+ * maquette y met aussi les modes, les defis et le pass de saison: les defis et le
+ * pass sont reportes apres la v1, et un seul mode existe. Conformement a la
+ * decision du 29 juin 2026, ce qui est reporte est absent, pas grise.
  *
  * CET ECRAN NE DECIDE RIEN, ET NE RETIENT RIEN. Peut-on jouer, pourquoi le pseudo
- * est refuse, ou en est le lien: tout vient de modeleAccueil, qui ne lit que
- * l'etat du client et le texte du champ. L'ecran est monte a neuf a chaque retour a
- * l'accueil; une information qu'il aurait gardee pour lui serait perdue a ce
- * moment-la, et c'est justement ce que le test de navigation a montre pour la
- * perte de connexion.
+ * est refuse, ou en est le lien, faut-il un pseudo: tout vient de modeleAccueil,
+ * qui ne lit que l'etat du client et le texte du champ. L'ecran est monte a neuf a
+ * chaque retour a l'accueil; une information qu'il aurait gardee pour lui serait
+ * perdue a ce moment-la, et c'est justement ce que le test de navigation a montre
+ * pour la perte de connexion.
  */
 
 import { BORNES_PSEUDO, normaliserTexte } from '@neon-ninja/shared';
@@ -51,8 +50,8 @@ const REGLES: readonly {
   },
 ];
 
-/** Ce que l'accueil dit du lien avec le serveur. */
-const TEXTES_DU_LIEN: Readonly<Record<EtatDuLien, string>> = {
+/** Ce que l'accueil dit du lien avec le serveur. Un refus, lui, dit son propre motif. */
+const TEXTES_DU_LIEN: Readonly<Record<Exclude<EtatDuLien, 'refuse'>, string>> = {
   enCours: 'Connexion au serveur…',
   etabli: '',
   perdu: 'La connexion au serveur a été perdue.',
@@ -61,6 +60,7 @@ const TEXTES_DU_LIEN: Readonly<Record<EtatDuLien, string>> = {
 /** Monte l'ecran d'accueil. */
 export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
   const doc = contexte.document;
+  const client = contexte.client;
 
   const saisie = creer(doc, 'input', {
     classe: 'champ-texte',
@@ -73,12 +73,30 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
       placeholder: 'Votre pseudo',
     },
   });
+  const champPseudo = creer(
+    doc,
+    'label',
+    { classe: 'champ-pseudo' },
+    creer(doc, 'span', { classe: 'etiquette', texte: 'Pseudo' }),
+    saisie,
+  );
   const jouer = bouton(doc, {
     classe: 'bouton bouton-primaire bouton-large',
     texte: 'Jouer',
     icone: 'play',
     type: 'submit',
   });
+
+  const nomDuCompte = creer(doc, 'strong');
+  const ligneDuCompte = creer(
+    doc,
+    'p',
+    { classe: 'accueil-compte' },
+    doc.createTextNode('Vous jouez avec votre compte, '),
+    nomDuCompte,
+    doc.createTextNode('.'),
+  );
+  const avis = creer(doc, 'p', { classe: 'accueil-avis', attributs: { role: 'status' } });
   const erreur = creer(doc, 'p', { classe: 'accueil-erreur', attributs: { role: 'alert' } });
   erreur.hidden = true;
   const lien = creer(doc, 'p', { classe: 'accueil-lien', attributs: { role: 'status' } });
@@ -89,21 +107,22 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
       contexte.recharger();
     },
   );
-  recharger.hidden = true;
-
-  const formulaire = creer(
+  const reessayer = bouton(
     doc,
-    'form',
-    { classe: 'accueil-formulaire' },
-    creer(
-      doc,
-      'label',
-      { classe: 'champ-pseudo' },
-      creer(doc, 'span', { classe: 'etiquette', texte: 'Pseudo' }),
-      saisie,
-    ),
-    jouer,
+    { classe: 'bouton bouton-secondaire', texte: 'Réessayer', icone: 'replay' },
+    () => {
+      client.reessayer();
+    },
   );
+  const continuerEnInvite = bouton(
+    doc,
+    { classe: 'bouton bouton-discret', texte: 'Continuer en invité' },
+    () => {
+      client.continuerEnInvite();
+    },
+  );
+
+  const formulaire = creer(doc, 'form', { classe: 'accueil-formulaire' }, champPseudo, jouer);
 
   const racine = creer(
     doc,
@@ -136,9 +155,19 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
           texte:
             'Ralliez les faux ninjas, volez les troupeaux des autres joueurs, et gardez le plus grand jusqu’au bout.',
         }),
+        avis,
+        ligneDuCompte,
         formulaire,
         erreur,
-        creer(doc, 'div', { classe: 'accueil-etat' }, lien, recharger),
+        creer(
+          doc,
+          'div',
+          { classe: 'accueil-etat' },
+          lien,
+          recharger,
+          reessayer,
+          continuerEnInvite,
+        ),
       ),
       creer(doc, 'span', {
         classe: 'accueil-kanji',
@@ -172,15 +201,29 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
 
     const modele = modeleAccueil(etatCourant, saisie.value);
 
+    montrer(champPseudo, modele.pseudoRequis);
+    ecrireTexte(nomDuCompte, modele.pseudoDuCompte ?? '');
+    montrer(ligneDuCompte, modele.pseudoDuCompte !== undefined);
+    ecrireTexte(avis, modele.avis ?? '');
+    montrer(avis, modele.avis !== undefined);
+
     ecrireTexte(erreur, modele.erreur ?? '');
     montrer(erreur, modele.erreur !== undefined);
     saisie.toggleAttribute('aria-invalid', modele.erreur !== undefined);
     jouer.disabled = !modele.peutJouer;
     jouer.toggleAttribute('aria-busy', modele.enAttente);
 
-    ecrireTexte(lien, modele.enAttente ? 'Entrée dans une partie…' : TEXTES_DU_LIEN[modele.lien]);
-    montrer(lien, modele.enAttente || modele.lien !== 'etabli');
+    const texteDuLien = modele.enAttente
+      ? 'Entrée dans une partie…'
+      : modele.lien === 'refuse'
+        ? (modele.motifDuLien ?? '')
+        : TEXTES_DU_LIEN[modele.lien];
+
+    ecrireTexte(lien, texteDuLien);
+    montrer(lien, texteDuLien !== '');
     montrer(recharger, modele.lien === 'perdu');
+    montrer(reessayer, modele.lien === 'refuse');
+    montrer(continuerEnInvite, modele.peutContinuerEnInvite);
   };
 
   const surSaisie = (): void => {
@@ -190,13 +233,19 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
   const surEnvoi = (evenement: Event): void => {
     evenement.preventDefault();
 
-    // La meme question que celle qui active le bouton: la touche Entree ne doit
-    // pas envoyer ce que le bouton refuse.
-    if (etatCourant === undefined || !modeleAccueil(etatCourant, saisie.value).peutJouer) {
+    if (etatCourant === undefined) {
       return;
     }
 
-    contexte.client.rejoindre(normaliserTexte(saisie.value));
+    // La meme question que celle qui active le bouton: la touche Entree ne doit
+    // pas envoyer ce que le bouton refuse.
+    const modele = modeleAccueil(etatCourant, saisie.value);
+
+    if (!modele.peutJouer) {
+      return;
+    }
+
+    client.rejoindre(modele.pseudoRequis ? normaliserTexte(saisie.value) : undefined);
   };
 
   saisie.addEventListener('input', surSaisie);

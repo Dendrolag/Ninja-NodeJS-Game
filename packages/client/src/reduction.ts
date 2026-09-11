@@ -20,8 +20,15 @@
 
 import type { Action } from './actions.js';
 import { ecranSuivant } from './ecrans.js';
-import type { EffetActif, EtatClient, MessageAffiche } from './etat.js';
-import { ETAT_INITIAL, MAX_JOURNAL, MAX_MESSAGES, refusDe } from './etat.js';
+import type { Ecran } from './ecrans.js';
+import type { EffetActif, EtatClient, MessageAffiche, SessionDuClient } from './etat.js';
+import {
+  AUCUNE_DEMANDE_DE_COMPTE,
+  ETAT_INITIAL,
+  MAX_JOURNAL,
+  MAX_MESSAGES,
+  refusDe,
+} from './etat.js';
 import type { FaitDeJeu } from './faits.js';
 import { reconstruire } from './reconstruction.js';
 
@@ -35,19 +42,100 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
   const ecran = ecranSuivant(etat.ecran, action);
 
   switch (action.type) {
+    // On rouvre: l'identifiant de l'ancien lien ne vaudra plus rien.
+    case 'ouvertureDemandee':
+      return {
+        ...etat,
+        ecran,
+        connexion: 'horsLigne',
+        moi: undefined,
+        refusDeConnexion: undefined,
+      };
+
     case 'connexionEtablie':
-      return { ...etat, ecran, connexion: 'connecte', moi: action.identifiant };
+      return {
+        ...etat,
+        ecran,
+        connexion: 'connecte',
+        moi: action.identifiant,
+        refusDeConnexion: undefined,
+      };
 
     // Le lien est tombe: on ne sait plus rien de la partie, et on ne peut plus
-    // rien en apprendre. Seul le pseudo saisi survit, pour reproposer la saisie.
+    // rien en apprendre. Survivent le pseudo saisi, pour reproposer la saisie, et
+    // la session, qui ne depend pas du lien.
     case 'connexionPerdue':
-      return { ...ETAT_INITIAL, ecran, connexion: 'perdue', pseudoDemande: etat.pseudoDemande };
+      return {
+        ...ETAT_INITIAL,
+        ecran,
+        connexion: 'perdue',
+        pseudoDemande: etat.pseudoDemande,
+        session: etat.session,
+      };
+
+    case 'connexionRefusee':
+      return {
+        ...etat,
+        ecran,
+        connexion: 'refusee',
+        refusDeConnexion: action.motif,
+        entreeEnCours: false,
+      };
+
+    case 'sessionEnVerification':
+      return { ...etat, ecran, session: { nature: 'verification' } };
+
+    case 'sessionDInvite':
+      return {
+        ...etat,
+        ecran: ecranPourLaSession(ecran, { nature: 'invite', sessionExpiree: action.expiree }),
+        session: { nature: 'invite', sessionExpiree: action.expiree },
+        demandeDeCompte: AUCUNE_DEMANDE_DE_COMPTE,
+      };
+
+    case 'sessionDeCompte':
+      return {
+        ...etat,
+        ecran,
+        session: { nature: 'compte', progression: action.progression },
+        demandeDeCompte: AUCUNE_DEMANDE_DE_COMPTE,
+      };
+
+    case 'demandeDeCompteEnvoyee':
+      return {
+        ...etat,
+        ecran,
+        demandeDeCompte: {
+          enCours: true,
+          nature: action.nature,
+          pseudo: action.pseudo,
+          erreurs: [],
+        },
+      };
+
+    case 'demandeDeCompteRefusee':
+      return {
+        ...etat,
+        ecran,
+        demandeDeCompte: { ...etat.demandeDeCompte, enCours: false, erreurs: action.erreurs },
+      };
+
+    // Un refus de compte ne suit pas le joueur sur un autre ecran. Une demande
+    // en cours, elle, continue: sa reponse arrivera.
+    case 'navigation':
+      return {
+        ...etat,
+        ecran: ecranPourLaSession(ecran, etat.session),
+        demandeDeCompte: etat.demandeDeCompte.enCours
+          ? etat.demandeDeCompte
+          : AUCUNE_DEMANDE_DE_COMPTE,
+      };
 
     case 'entreeDemandee':
       return {
         ...etat,
         ecran,
-        pseudoDemande: action.pseudo,
+        pseudoDemande: action.pseudo ?? etat.pseudoDemande,
         entreeEnCours: true,
         refus: undefined,
       };
@@ -63,7 +151,7 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
         refus: refusDe(action.action, action.erreurs),
       };
 
-    // On quitte de soi-meme: le lien reste, tout le reste s'efface.
+    // On quitte de soi-meme: le lien et la session restent, tout le reste s'efface.
     case 'sortie':
       return {
         ...ETAT_INITIAL,
@@ -71,6 +159,7 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
         connexion: etat.connexion,
         moi: etat.moi,
         pseudoDemande: etat.pseudoDemande,
+        session: etat.session,
       };
 
     // Une photographie de la liste, qui remplace la precedente.
@@ -141,6 +230,20 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
     case 'refus':
       return { ...etat, ecran, refus: action.refus };
   }
+}
+
+/**
+ * L'ecran de menu qui convient a la session.
+ *
+ * Un compte n'a rien a faire sur l'ecran de connexion. Les ecrans reserves aux
+ * comptes arriveront avec le profil.
+ */
+function ecranPourLaSession(ecran: Ecran, session: SessionDuClient): Ecran {
+  if (ecran === 'connexion' && session.nature === 'compte') {
+    return 'accueil';
+  }
+
+  return ecran;
 }
 
 /**

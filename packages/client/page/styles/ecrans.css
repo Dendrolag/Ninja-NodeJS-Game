@@ -62,7 +62,107 @@
 
 .entete-actions {
   display: flex;
+  align-items: center;
   gap: 8px;
+}
+
+/* -- Le compte dans l'en-tete -------------------------------------------- */
+
+.entete-compte {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: 6px;
+}
+
+.entete-compte:not(:has(> :not([hidden]))) {
+  display: none;
+}
+
+.pastille-pieces {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 178, 62, 0.22);
+  border-radius: var(--rayon-bouton);
+  background: rgba(255, 178, 62, 0.08);
+  color: var(--or);
+  font-family: var(--police-donnees);
+  font-weight: 700;
+}
+
+.carte-compte {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 4px 14px 4px 4px;
+  border: 1px solid var(--bordure);
+  border-radius: 14px;
+  background: var(--surface);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background var(--transition),
+    border-color var(--transition);
+}
+
+.carte-compte:disabled {
+  cursor: default;
+}
+
+.carte-compte:hover:not(:disabled) {
+  border-color: var(--bordure-survol);
+  background: var(--surface-survol);
+}
+
+/* L'anneau se remplit de la part du niveau deja faite. */
+.anneau-niveau {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: conic-gradient(var(--cyan) var(--avancement, 0%), rgba(255, 255, 255, 0.1) 0);
+  font-family: var(--police-titre);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.anneau-niveau::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--fond-panneau);
+}
+
+.anneau-niveau span {
+  position: relative;
+}
+
+.carte-compte-identite {
+  display: grid;
+  line-height: 1.25;
+}
+
+.carte-compte-pseudo {
+  max-width: 16ch;
+  overflow: hidden;
+  font-family: var(--police-titre);
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.carte-compte-palier {
+  color: var(--texte-tertiaire);
+  font-size: 11px;
 }
 
 .scene-ecran {
@@ -209,6 +309,100 @@
   color: var(--texte-tertiaire);
   font-family: var(--police-donnees);
   font-size: 12px;
+}
+
+.accueil-compte {
+  color: var(--texte-secondaire);
+}
+
+.accueil-compte strong {
+  color: var(--cyan);
+  font-weight: 600;
+}
+
+.accueil-avis {
+  justify-self: start;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 178, 62, 0.3);
+  border-radius: var(--rayon-controle);
+  background: rgba(255, 178, 62, 0.08);
+  color: #ffd9a0;
+  font-size: 13px;
+}
+
+/* -- Connexion ----------------------------------------------------------- */
+
+.ecran-connexion {
+  display: grid;
+  justify-items: center;
+}
+
+.connexion-panneau {
+  display: grid;
+  gap: 18px;
+  width: min(460px, 100%);
+  padding: clamp(22px, 4vw, 34px);
+}
+
+.connexion-titre {
+  font-size: clamp(24px, 3.4vw, 30px);
+}
+
+.connexion-intro {
+  color: var(--texte-secondaire);
+}
+
+.onglets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-controle);
+  background: rgba(6, 8, 14, 0.5);
+}
+
+.onglet {
+  min-height: 40px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--texte-tertiaire);
+  font-family: var(--police-titre);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--transition),
+    color var(--transition);
+}
+
+.onglet[aria-selected='true'] {
+  background: rgba(45, 230, 224, 0.14);
+  color: var(--cyan);
+}
+
+.connexion-formulaire {
+  display: grid;
+  gap: 14px;
+}
+
+.champ-compte {
+  display: grid;
+  gap: 6px;
+}
+
+.connexion-aide {
+  color: var(--texte-faible);
+  font-size: 12px;
+}
+
+.connexion-erreur {
+  color: var(--rose-clair);
+  font-size: 13px;
+}
+
+.connexion-panneau > .bouton-discret {
+  justify-self: center;
 }
 
 .accueil-kanji {
@@ -970,6 +1164,24 @@
 
   .marque-ecran {
     display: none;
+  }
+
+  /* L'anneau du niveau suffit a designer le compte. */
+  .carte-compte {
+    padding: 3px;
+  }
+
+  .carte-compte-identite,
+  .entete-connexion span {
+    display: none;
+  }
+
+  .entete-connexion {
+    padding: 0 12px;
+  }
+
+  .pastille-pieces {
+    padding: 0 10px;
   }
 
   .scene-ecran {

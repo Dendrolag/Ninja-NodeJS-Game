@@ -29,6 +29,12 @@ import type {
   ResultatValidation,
 } from '@neon-ninja/shared';
 
+import type { ApiComptes } from './comptes/api.js';
+import type { CoffreDeJeton } from './comptes/coffre.js';
+import { creerCoffreDeJeton } from './comptes/coffre.js';
+import type { CommandesDeSession } from './comptes/session.js';
+import { brancherLaSession } from './comptes/session.js';
+import type { EcranDeMenu } from './ecrans.js';
 import type { EtatClient } from './etat.js';
 import { fait } from './faits.js';
 import type { HorlogeClient } from './horloge.js';
@@ -45,6 +51,10 @@ export interface OptionsClient {
   readonly horloge?: HorlogeClient;
   /** Le magasin. Un neuf par defaut. */
   readonly magasin?: Magasin;
+  /** Les requetes des comptes. Absentes, on ne joue qu'en invite. */
+  readonly comptes?: ApiComptes;
+  /** Le coffre du jeton de session. Un coffre en memoire par defaut. */
+  readonly coffre?: CoffreDeJeton;
 }
 
 /**
@@ -62,19 +72,22 @@ export type AccesPartie = { readonly idRoom: string } | { readonly code: string 
  * reseau. C'est ce que l'interface appelle, et elle n'a pas a connaitre le
  * protocole.
  */
-export interface Client {
+export interface Client extends CommandesDeSession {
   /** L'etat courant. C'est ce que le rendu lit a chaque image. */
   readonly etat: EtatClient;
   /** S'abonne aux changements d'etat. Rend la fonction qui desabonne. */
   abonner(observateur: Observateur): () => void;
+  /** Va vers un ecran de menu. Sans effet pendant une partie: on en sort en la quittant. */
+  naviguer(vers: EcranDeMenu): void;
   /**
-   * Demande a entrer dans une partie, avec ce pseudo.
+   * Demande a entrer dans une partie.
    *
-   * @param acces La partie visee. Absent: la partie rapide.
+   * @param pseudo Le pseudo souhaite. Absent pour un compte, qui entre sous le sien.
+   * @param acces  La partie visee. Absent: la partie rapide.
    */
-  rejoindre(pseudo: string, acces?: AccesPartie): void;
-  /** Cree une partie et en devient l'hote, avec ce pseudo. */
-  creerPartie(pseudo: string, configuration: ConfigurationPartie): void;
+  rejoindre(pseudo: string | undefined, acces?: AccesPartie): void;
+  /** Cree une partie et en devient l'hote. Le pseudo est absent pour un compte. */
+  creerPartie(pseudo: string | undefined, configuration: ConfigurationPartie): void;
   /** Demande la liste des parties publiques ouvertes. Elle arrive dans l'etat. */
   listerParties(): void;
   /** Quitte la partie sans couper le lien. */
@@ -146,6 +159,22 @@ export function creerClient(options: OptionsClient): Client {
       magasin.appliquer({ type: 'connexionPerdue' });
     }),
   );
+
+  ecouter(
+    reseau.surRefus((motif) => {
+      magasin.appliquer({ type: 'connexionRefusee', motif });
+    }),
+  );
+
+  // -- La session ------------------------------------------------------------
+
+  const session = brancherLaSession({
+    magasin,
+    reseau,
+    api: options.comptes,
+    coffre: options.coffre ?? creerCoffreDeJeton(),
+    ecouter,
+  });
 
   // -- Le salon -------------------------------------------------------------
 
@@ -278,20 +307,29 @@ export function creerClient(options: OptionsClient): Client {
 
     abonner: (observateur) => magasin.abonner(observateur),
 
+    ...session,
+
+    naviguer: (vers) => {
+      magasin.appliquer({ type: 'navigation', vers });
+    },
+
     rejoindre: (pseudo, acces) => {
       magasin.appliquer({ type: 'entreeDemandee', pseudo });
 
-      // Sans acces, la demande ne porte que le pseudo: le contrat declare
-      // l'identifiant et le code optionnels, et les poser a undefined n'est pas
-      // la meme chose que ne pas les poser du tout.
-      const demande: DemandeRejoindre = { pseudo, ...acces };
+      // Le contrat declare le pseudo, l'identifiant et le code optionnels, et les
+      // poser a undefined n'est pas la meme chose que ne pas les poser du tout.
+      const demande: DemandeRejoindre = { ...pseudoDe(pseudo), ...acces };
 
       reseau.emettre('rejoindre', demande, surReponseDEntree('rejoindre'));
     },
 
     creerPartie: (pseudo, configuration) => {
       magasin.appliquer({ type: 'entreeDemandee', pseudo });
-      reseau.emettre('creerPartie', { pseudo, configuration }, surReponseDEntree('creerPartie'));
+      reseau.emettre(
+        'creerPartie',
+        { ...pseudoDe(pseudo), configuration },
+        surReponseDEntree('creerPartie'),
+      );
     },
 
     listerParties: () => {
@@ -348,4 +386,9 @@ export function creerClient(options: OptionsClient): Client {
       reseau.fermer();
     },
   };
+}
+
+/** Le pseudo d'une demande, a etaler: absent pour un compte. */
+function pseudoDe(pseudo: string | undefined): { readonly pseudo?: string } {
+  return pseudo === undefined ? {} : { pseudo };
 }

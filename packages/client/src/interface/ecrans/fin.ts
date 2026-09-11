@@ -38,11 +38,18 @@ export function monterFin(contexte: ContexteEcran): EcranAffiche {
 
   const rejouer = (): void => {
     const etat = client.etat;
+
+    client.quitter();
+
+    // Un compte entre sous son propre pseudo, et n'en envoie pas.
+    if (etat.session.nature !== 'invite') {
+      client.rejoindre(undefined);
+      return;
+    }
+
     // Le pseudo retenu par le serveur, s'il est connu: il a deja ete valide et
     // normalise, donc il sera accepte de nouveau.
     const pseudo = moiDansLeSalon(etat)?.pseudo ?? etat.pseudoDemande;
-
-    client.quitter();
 
     if (pseudo !== undefined) {
       client.rejoindre(pseudo);

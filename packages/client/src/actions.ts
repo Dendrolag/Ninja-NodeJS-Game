@@ -25,22 +25,53 @@ import type {
   FinDePartie,
   InfosSalon,
   InstantanePartie,
+  MaProgression,
   MessageChat,
   PartieEnPause,
   PartiePublique,
   Refus,
 } from '@neon-ninja/shared';
 
+import type { EcranDeMenu } from './ecrans.js';
+import type { NatureDemandeDeCompte } from './etat.js';
 import type { FaitDeJeu } from './faits.js';
 
 /** Tout ce qui peut arriver au client. */
 export type Action =
+  /** Le client ouvre le lien, ou le rouvre avec une autre session. */
+  | { readonly type: 'ouvertureDemandee' }
   /** Le transport est etabli. L'identifiant est celui que le serveur a donne. */
   | { readonly type: 'connexionEtablie'; readonly identifiant: string }
   /** Le transport est tombe. Tout ce qui dependait de la partie est perdu. */
   | { readonly type: 'connexionPerdue' }
-  /** Le joueur demande a entrer, ou a creer une partie, avec le pseudo qu'il souhaite. */
-  | { readonly type: 'entreeDemandee'; readonly pseudo: string }
+  /** Le lien n'a pas pu s'ouvrir, pour ce motif. */
+  | { readonly type: 'connexionRefusee'; readonly motif: string }
+  /** La session gardee par le navigateur est en cours de verification. */
+  | { readonly type: 'sessionEnVerification' }
+  /**
+   * On joue desormais en invite.
+   *
+   * Expiree: la session gardee n'etait plus valable, et le joueur doit l'apprendre.
+   */
+  | { readonly type: 'sessionDInvite'; readonly expiree: boolean }
+  /** On joue desormais avec un compte, dont voici la progression. */
+  | { readonly type: 'sessionDeCompte'; readonly progression: MaProgression }
+  /** Une demande de connexion ou d'inscription est partie, pour ce pseudo. */
+  | {
+      readonly type: 'demandeDeCompteEnvoyee';
+      readonly nature: NatureDemandeDeCompte;
+      readonly pseudo: string;
+    }
+  /** La demande de connexion ou d'inscription a ete refusee. */
+  | { readonly type: 'demandeDeCompteRefusee'; readonly erreurs: readonly ErreurValidation[] }
+  /** Le joueur va vers un ecran de menu. */
+  | { readonly type: 'navigation'; readonly vers: EcranDeMenu }
+  /**
+   * Le joueur demande a entrer, ou a creer une partie.
+   *
+   * Le pseudo souhaite est absent pour un compte, qui entre sous le sien.
+   */
+  | { readonly type: 'entreeDemandee'; readonly pseudo: string | undefined }
   /** Le serveur a accepte l'entree et decrit le salon. */
   | { readonly type: 'entreeAcceptee'; readonly salon: InfosSalon }
   /**

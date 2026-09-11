@@ -110,6 +110,34 @@ const GLYPHES = {
       { trace: 'M21 10l-5 5' },
     ],
   },
+  // Ajoutes a la reprise des ecrans du jalon 3, dans le meme style.
+  coin: { formes: [{ cercle: [12, 12, 8.5] }, { cercle: [12, 12, 4.5] }] },
+  user: { formes: [{ cercle: [12, 8, 4] }, { trace: 'M4.5 20.5a7.5 7.5 0 0 1 15 0' }] },
+  diamond: { formes: [{ trace: 'M12 3l8.5 9-8.5 9-8.5-9z' }] },
+  globe: {
+    formes: [
+      { cercle: [12, 12, 9] },
+      { trace: 'M3 12h18' },
+      { trace: 'M12 3a13.5 13.5 0 0 1 0 18' },
+      { trace: 'M12 3a13.5 13.5 0 0 0 0 18' },
+    ],
+  },
+  plus: { formes: [{ trace: 'M12 5v14' }, { trace: 'M5 12h14' }] },
+  cadenas: { formes: [{ rectangle: [5, 11, 14, 10, 2] }, { trace: 'M8 11V7.5a4 4 0 0 1 8 0V11' }] },
+  copier: {
+    formes: [
+      { rectangle: [9, 9, 11, 11, 2] },
+      { trace: 'M5.5 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v.5' },
+    ],
+  },
+  cle: { formes: [{ cercle: [8, 15, 4] }, { trace: 'M11 12l9-9' }, { trace: 'M17 6l3 3' }] },
+  sortir: {
+    formes: [
+      { trace: 'M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4' },
+      { trace: 'M9 16l-4-4 4-4' },
+      { trace: 'M5 12h11' },
+    ],
+  },
 } satisfies Readonly<Record<string, DefinitionGlyphe>>;
 
 /** Le nom d'un pictogramme. */

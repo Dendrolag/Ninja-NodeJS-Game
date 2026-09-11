@@ -49,14 +49,53 @@
 
 export type { Action } from './actions.js';
 
-export type { Client, OptionsClient } from './client.js';
+export type { AccesPartie, Client, OptionsClient } from './client.js';
 export { creerClient } from './client.js';
 
-export type { Ecran } from './ecrans.js';
-export { ecranSuivant } from './ecrans.js';
+export type { Ecran, EcranDeMenu } from './ecrans.js';
+export { ECRANS_DE_MENU, ecranSuivant, estUnEcranDeMenu } from './ecrans.js';
 
-export type { EffetActif, EtatClient, EtatConnexion, MessageAffiche } from './etat.js';
-export { ETAT_INITIAL, MAX_JOURNAL, MAX_MESSAGES, refusDe } from './etat.js';
+export type {
+  DemandeDeCompte,
+  EffetActif,
+  EtatClient,
+  EtatConnexion,
+  MessageAffiche,
+  NatureDemandeDeCompte,
+  SessionDuClient,
+} from './etat.js';
+export {
+  AUCUNE_DEMANDE_DE_COMPTE,
+  ETAT_INITIAL,
+  MAX_JOURNAL,
+  MAX_MESSAGES,
+  refusDe,
+} from './etat.js';
+
+export type {
+  ApiComptes,
+  ApiComptesFactice,
+  AppelDesComptes,
+  EnvoiHttp,
+  OptionsApiComptesHttp,
+  ReponseDesComptes,
+  ReponsesDesComptes,
+} from './comptes/api.js';
+export {
+  JETON_DESSAI,
+  MOTIF_INJOIGNABLE,
+  STATUT_INJOIGNABLE,
+  STATUT_SESSION_ABSENTE,
+  creerApiComptesFactice,
+  creerApiComptesHttp,
+  progressionDEssai,
+} from './comptes/api.js';
+
+export type { CoffreDeJeton } from './comptes/coffre.js';
+export { CLE_JETON, creerCoffreDeJeton } from './comptes/coffre.js';
+
+export type { CommandesDeSession, OptionsSession } from './comptes/session.js';
+export { brancherLaSession } from './comptes/session.js';
 
 export type { ChargesDeFait, FaitDeJeu, NatureDeFait } from './faits.js';
 export { fait } from './faits.js';
@@ -84,7 +123,7 @@ export type {
 export { creerReseauFactice } from './reseau.js';
 
 export type { OptionsReseauSocketIo } from './reseauSocketIo.js';
-export { creerReseauSocketIo } from './reseauSocketIo.js';
+export { SERVEUR_INJOIGNABLE, creerReseauSocketIo } from './reseauSocketIo.js';
 
 export {
   effetsEnCours,
@@ -184,7 +223,25 @@ export { monterApplication } from './interface/application.js';
 export type { ContexteEcran, EcranAffiche, MonteurEcran } from './interface/ecrans/types.js';
 
 export type { EtatDuLien, ModeleAccueil } from './interface/modeles/accueil.js';
-export { modeleAccueil } from './interface/modeles/accueil.js';
+export { AVIS_SESSION_EXPIREE, modeleAccueil } from './interface/modeles/accueil.js';
+
+export type {
+  EnvoiDeCompte,
+  ModeleConnexion,
+  SaisieDeCompte,
+} from './interface/modeles/connexion.js';
+export { modeleConnexion } from './interface/modeles/connexion.js';
+
+export type { ModeleCompteDeLEntete } from './interface/modeles/entete.js';
+export { modeleCompteDeLEntete } from './interface/modeles/entete.js';
+
+export type { BarreDeNiveau } from './interface/modeles/progression.js';
+export {
+  NOMS_DES_PALIERS,
+  barreDeNiveau,
+  formaterNombre,
+  formaterVariation,
+} from './interface/modeles/progression.js';
 
 export type {
   CompteAffiche,

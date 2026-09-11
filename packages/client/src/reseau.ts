@@ -25,7 +25,11 @@
  * souvent.
  */
 
-import type { EvenementsClientVersServeur, EvenementsServeurVersClient } from '@neon-ninja/shared';
+import type {
+  AuthentificationReseau,
+  EvenementsClientVersServeur,
+  EvenementsServeurVersClient,
+} from '@neon-ninja/shared';
 
 /** Le nom d'un message que le client peut envoyer. */
 export type NomMontant = keyof EvenementsClientVersServeur;
@@ -61,6 +65,17 @@ export interface Reseau {
   /** Le lien est-il etabli. */
   readonly connecte: boolean;
 
+  /**
+   * Ouvre le lien, en invite ou avec un jeton de session.
+   *
+   * LE LIEN NE S'OUVRE QUE SUR DEMANDE (reprise des ecrans du jalon 3): le serveur
+   * identifie le compte a l'ouverture, une fois pour toutes (etape 3.2), et le
+   * client doit donc d'abord savoir quel jeton presenter. Un lien deja ouvert est
+   * ferme avant d'etre rouvert. Cette fermeture est volontaire: surDeconnexion ne
+   * previent pas, puisque rien n'a ete perdu.
+   */
+  ouvrir(authentification: AuthentificationReseau): void;
+
   /** Envoie un message au serveur. */
   emettre<Nom extends NomMontant>(nom: Nom, ...arguments_: ArgumentsMontants<Nom>): void;
 
@@ -73,8 +88,18 @@ export interface Reseau {
   /** Previent quand le lien est etabli. Rend la fonction qui arrete d'ecouter. */
   surConnexion(gestionnaire: () => void): () => void;
 
-  /** Previent quand le lien est perdu. Rend la fonction qui arrete d'ecouter. */
+  /**
+   * Previent quand le lien est perdu sans que le client l'ait ferme. Rend la
+   * fonction qui arrete d'ecouter.
+   */
   surDeconnexion(gestionnaire: () => void): () => void;
+
+  /**
+   * Previent quand le lien n'a pas pu s'ouvrir: le serveur l'a refuse, par exemple
+   * pour un jeton qui n'ouvre plus aucune session, ou il ne repond pas. Le motif est
+   * ecrit pour le joueur. Rend la fonction qui arrete d'ecouter.
+   */
+  surRefus(gestionnaire: (motif: string) => void): () => void;
 
   /** Coupe le lien et oublie tous les abonnements. */
   fermer(): void;
@@ -99,10 +124,14 @@ export interface MessageEmis {
 export interface ReseauFactice extends Reseau {
   /** Tout ce que le client a envoye, dans l'ordre. */
   readonly emis: readonly MessageEmis[];
+  /** Chaque demande d'ouverture du lien, dans l'ordre, avec ce qu'elle presentait. */
+  readonly ouvertures: readonly AuthentificationReseau[];
   /** Etablit le lien, avec l'identifiant que le serveur aurait donne. */
   simulerConnexion(identifiant?: string): void;
   /** Coupe le lien, comme le ferait une perte de reseau. */
   simulerDeconnexion(): void;
+  /** Refuse l'ouverture du lien, comme le ferait le serveur, avec ce motif. */
+  simulerRefus(motif: string): void;
   /** Delivre un message descendant, comme le ferait le serveur. */
   recevoir<Nom extends NomDescendant>(nom: Nom, ...arguments_: ArgumentsDescendants<Nom>): void;
   /** Les arguments du dernier message de ce nom, s'il y en a eu un. */
@@ -115,9 +144,11 @@ export function creerReseauFactice(): ReseauFactice {
   let connecte = false;
 
   const emis: MessageEmis[] = [];
+  const ouvertures: AuthentificationReseau[] = [];
   const gestionnaires = new Map<NomDescendant, Set<(...arguments_: never[]) => void>>();
   const surConnexion = new Set<() => void>();
   const surDeconnexion = new Set<() => void>();
+  const surRefus = new Set<(motif: string) => void>();
 
   return {
     get identifiant() {
@@ -130,6 +161,18 @@ export function creerReseauFactice(): ReseauFactice {
 
     get emis() {
       return emis;
+    },
+
+    get ouvertures() {
+      return ouvertures;
+    },
+
+    // Comme le vrai transport, un lien rouvert est ferme sans prevenir de perte.
+    // Il ne s'etablit que quand le test le decide, par simulerConnexion.
+    ouvrir: (authentification) => {
+      ouvertures.push(authentification);
+      connecte = false;
+      identifiant = undefined;
     },
 
     emettre: (nom, ...arguments_) => {
@@ -162,12 +205,30 @@ export function creerReseauFactice(): ReseauFactice {
       };
     },
 
+    surRefus: (gestionnaire) => {
+      surRefus.add(gestionnaire);
+
+      return () => {
+        surRefus.delete(gestionnaire);
+      };
+    },
+
     fermer: () => {
       connecte = false;
       identifiant = undefined;
       gestionnaires.clear();
       surConnexion.clear();
       surDeconnexion.clear();
+      surRefus.clear();
+    },
+
+    simulerRefus: (motif) => {
+      connecte = false;
+      identifiant = undefined;
+
+      for (const gestionnaire of [...surRefus]) {
+        gestionnaire(motif);
+      }
     },
 
     simulerConnexion: (nouvelIdentifiant = 'session-de-test') => {

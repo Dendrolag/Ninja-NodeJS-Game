@@ -95,6 +95,16 @@ img {
   flex: none;
 }
 
+/* Un texte lu par les lecteurs d'ecran, sans place a l'ecran. */
+.visuellement-cache {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /*
  * L'entree d'un ecran ou d'une fenetre: un leger glissement, SANS FONDU. Une
  * animation qui part d'une opacite nulle cache le contenu tant qu'elle ne

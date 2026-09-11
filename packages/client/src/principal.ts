@@ -20,6 +20,8 @@
 import 'pixi.js/unsafe-eval';
 
 import { creerClient } from './client.js';
+import { creerApiComptesHttp } from './comptes/api.js';
+import { creerCoffreDeJeton } from './comptes/coffre.js';
 import { horlogeNavigateur } from './horloge.js';
 import { monterApplication } from './interface/application.js';
 import { monterJeu } from './interface/ecrans/jeu.js';
@@ -48,11 +50,21 @@ if (hote === null) {
 
 const stockage = stockageDuNavigateur();
 
+const client = creerClient({
+  reseau: creerReseauSocketIo(),
+  horloge: horlogeNavigateur,
+  comptes: creerApiComptesHttp(),
+  coffre: creerCoffreDeJeton(stockage),
+});
+
 monterApplication({
   hote,
-  client: creerClient({ reseau: creerReseauSocketIo(), horloge: horlogeNavigateur }),
+  client,
   sons: creerLecteurDeSons(),
   horloge: horlogeNavigateur,
   monterLeJeu: monterJeu,
   ...(stockage === undefined ? {} : { stockage }),
 });
+
+// Le lien s'ouvre une fois l'application montee: elle montre deja qu'il s'etablit.
+client.ouvrir();

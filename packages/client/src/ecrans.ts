@@ -1,40 +1,56 @@
 /**
  * Les ecrans du client, et les seules transitions autorisees entre eux.
  *
- * QUATRE ECRANS, PAS SEPT. La maquette de docs/design en propose sept (accueil,
- * navigateur de parties, creation, salon, jeu, fin, profil). Le jalon 1 porte le
- * jeu d'aujourd'hui a l'identique: ses ecrans sont donc ceux du legacy, soit
- * mainMenu, waitingRoom, gameScreen et sa fenetre de fin. Le navigateur de
- * parties et la creation ont leurs contrats depuis l'etape 2.4; leurs ecrans
- * arrivent au jalon 3, avec le profil et les comptes. Voir la section 3 de
- * docs/plan/ROADMAP.md.
+ * DEUX FAMILLES D'ECRANS. Les ecrans de MENU, ou l'on va de soi-meme (l'accueil, la
+ * connexion a un compte, et au fil du jalon 3 les parties, la creation et le
+ * profil). Et les ecrans de PARTIE (salon, jeu, fin), ou l'on n'arrive que parce que
+ * le serveur a accepte une entree ou fait avancer la partie. Le jalon 1 ne portait
+ * que les ecrans du legacy; la reprise des ecrans du jalon 3 ajoute ceux de la
+ * maquette, dans la version reduite du cadrage (section 3).
+ *
+ * ON NE QUITTE PAS UNE PARTIE EN NAVIGUANT. Une navigation n'a d'effet que depuis
+ * un ecran de menu. Depuis le salon, le jeu ou la fin, on sort en quittant la
+ * partie, ce qui la dit au serveur; un clic qui changerait d'ecran sans rien lui
+ * dire laisserait le joueur dans une partie qu'il ne voit plus.
  *
  * POURQUOI UNE FONCTION PURE PLUTOT QUE DES APPELS DISPERSES. Dans le client
  * d'origine, chaque gestionnaire d'evenement montrait et cachait des div lui-meme.
  * Il y avait donc autant de reponses a la question « quand passe-t-on au salon »
  * qu'il y avait d'endroits ou la question se posait, et elles ne s'accordaient
- * pas toutes. Ici il y a une seule reponse, elle tient en vingt lignes, et elle
- * se lit sans lancer le jeu.
+ * pas toutes. Ici il y a une seule reponse, et elle se lit sans lancer le jeu.
  *
  * CE QUE CETTE FONCTION NE FAIT PAS: elle ne touche a aucun element de page.
- * Elle dit quel ecran DOIT etre affiche; le montrer est le travail de l'etape
- * 4.3, qui lira cette valeur dans le magasin.
+ * Elle dit quel ecran DOIT etre affiche; le montrer est le travail de
+ * l'application (interface/application.ts), qui lit cette valeur dans le magasin.
  */
 
 import type { StatutPartie } from '@neon-ninja/shared';
 
 import type { Action } from './actions.js';
 
+/** Les ecrans ou l'on va de soi-meme, hors de toute partie. */
+export const ECRANS_DE_MENU = ['accueil', 'connexion'] as const;
+
+/** Un ecran de menu. */
+export type EcranDeMenu = (typeof ECRANS_DE_MENU)[number];
+
 /** L'ecran affiche. */
 export type Ecran =
-  /** Accueil: on saisit son pseudo et on demande a entrer. Le mainMenu du legacy. */
+  /** Accueil: on choisit comment jouer. Le mainMenu du legacy, enrichi. */
   | 'accueil'
+  /** Connexion: se connecter a un compte, ou en creer un. */
+  | 'connexion'
   /** Salon: on attend, on discute, l'hote regle et lance. Le waitingRoom du legacy. */
   | 'salon'
   /** Jeu: la partie se joue. Le gameScreen du legacy. */
   | 'jeu'
-  /** Fin: le classement definitif. La fenetre de fin du legacy. */
+  /** Fin: le classement definitif, et ce que la partie a rapporte. */
   | 'fin';
+
+/** Cet ecran est-il un ecran de menu, ou l'on peut naviguer. */
+export function estUnEcranDeMenu(ecran: Ecran): ecran is EcranDeMenu {
+  return (ECRANS_DE_MENU as readonly Ecran[]).includes(ecran);
+}
 
 /**
  * Quel ecran afficher apres cette action.
@@ -67,6 +83,13 @@ export function ecranSuivant(ecran: Ecran, action: Action): Ecran {
     case 'sortie':
     case 'connexionPerdue':
       return 'accueil';
+
+    case 'navigation':
+      return estUnEcranDeMenu(ecran) ? action.vers : ecran;
+
+    // Connecte: l'ecran de connexion a fait son travail.
+    case 'sessionDeCompte':
+      return ecran === 'connexion' ? 'accueil' : ecran;
 
     default:
       return ecran;

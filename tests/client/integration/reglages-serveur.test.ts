@@ -55,6 +55,7 @@ beforeEach(async () => {
   client = creerClient({
     reseau: creerReseauSocketIo({ url: `http://localhost:${String(adresse.port)}` }),
   });
+  client.ouvrir();
 
   await attendreQue(() => client.etat.connexion === 'connecte', 'la connexion');
   client.rejoindre('Alice');
