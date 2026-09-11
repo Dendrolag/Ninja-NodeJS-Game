@@ -16,6 +16,12 @@
  * vrai mot de passe n'y passe.
  *
  * Rien de ce fichier n'est ajoute au jeu: il est fourni au serveur par le test.
+ *
+ * LES PAQUETS SONT IMPORTES DEPUIS LEUR COMPILATION, PAR CHEMIN. Les scenarios de
+ * bout en bout le chargent aussi, et ils ne resolvent pas les noms de paquets
+ * (@neon-ninja/...), que seul Vitest sait ramener aux sources. C'est ce que fait deja
+ * tout le harnais de bout en bout; la compilation est produite avant les tests, en
+ * local comme en integration continue (tsc --build).
  */
 
 import type {
@@ -25,13 +31,13 @@ import type {
   ProgressionAppliquee,
   ReponseDeCompte,
   ServiceDeComptes,
-} from '@neon-ninja/server';
+} from '../../packages/server/dist/index.js';
 import type {
   ErreurValidation,
   MaProgression,
   PartieDuProfil,
   SessionOuverte,
-} from '@neon-ninja/shared';
+} from '../../packages/shared/dist/index.js';
 import {
   JOUEURS_POUR_UNE_VICTOIRE,
   PARTIES_DU_PROFIL,
@@ -39,7 +45,7 @@ import {
   reperePseudo,
   validerDemandeConnexion,
   validerDemandeInscription,
-} from '@neon-ninja/shared';
+} from '../../packages/shared/dist/index.js';
 
 /** Un compte tenu en memoire. */
 interface CompteEnMemoire {

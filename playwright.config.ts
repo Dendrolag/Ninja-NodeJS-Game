@@ -28,6 +28,16 @@ const BANC = '**/banc-rendu.spec.ts';
  */
 const MULTIJOUEUR = '**/multijoueur.spec.ts';
 
+/**
+ * Les scenarios de la reprise des ecrans du jalon 3, joues par le seul projet bureau.
+ *
+ * Celui des parties fabrique lui-meme ses deux appareils. Celui du compte joue une
+ * partie entiere; le cadrage mobile, deja eprouve par la navigation et le parcours
+ * solo, doublerait sa duree sans rien verifier de plus.
+ */
+const PARTIES = '**/parties.spec.ts';
+const COMPTE = '**/compte.spec.ts';
+
 export default defineConfig({
   testDir: './tests/e2e',
   // Les paquets sont compiles une fois avant les scenarios: le banc de mesure du
@@ -63,7 +73,7 @@ export default defineConfig({
     {
       name: 'mobile',
       use: { ...devices['Pixel 7'] },
-      testIgnore: [BANC, MULTIJOUEUR],
+      testIgnore: [BANC, MULTIJOUEUR, PARTIES, COMPTE],
     },
     // Le banc de mesure du rendu a son propre projet, et une seule execution:
     // il mesure le moteur de rendu, pas la taille de la fenetre. Le jouer dans

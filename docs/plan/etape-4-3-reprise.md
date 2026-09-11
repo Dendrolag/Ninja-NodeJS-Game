@@ -135,6 +135,21 @@ Conditions de ROADMAP réunies, plus:
 5. Les tests passent, dont les scénarios de bout en bout existants.
 6. Le cadrage, le journal de conception et CLAUDE.md décrivent ce qui a été construit.
 
+## Réconciliation pendant l'étape (11 septembre 2026)
+
+Écarts entre la fiche et ce qui a été construit, tous consignés au journal de `docs/design/README.md`.
+
+1. **Les cinq lots ont été exécutés dans l'ordre, un commit chacun**: A (session de compte), B (fin enrichie), C (profil), D (parties, création, salon, navigation), E (bout en bout).
+2. **Les six décisions de la fiche sont tranchées** comme proposé: jeton dans le stockage local, en mémoire si le navigateur refuse; victoire à la première place d'une partie d'au moins deux joueurs (`JOUEURS_POUR_UNE_VICTOIRE`); navigation latérale hors partie seulement; « Partie rapide »; pseudo d'invité dans l'état du client (`pseudoSaisi`); transport ouvert sur demande (`Reseau.ouvrir`).
+3. **« Continuer en invité » n'est pas une déconnexion.** Le refus du lien peut venir d'une base momentanément injoignable: le jeton est oublié par le navigateur, mais la session n'est pas fermée côté serveur.
+4. **La lecture du profil et de la liste des parties part de la navigation** (`client.naviguer`), pas du montage de l'écran: un changement d'état au milieu d'un montage arrivait à l'écran qu'on quitte.
+5. **Un refus d'entrée s'efface en changeant d'écran**: il concernait l'écran quitté.
+6. **Le formulaire de réglages est extrait du panneau du salon** pour servir aussi à la création, réglages avancés repliés sous un titre. Aucun réglage n'est décrit deux fois.
+7. **L'en-tête suit la progression sans rien redemander**: celle d'après la partie (`progressionDeFin`) et celle que porte le profil.
+8. **Défaut trouvé hors périmètre, corrigé (règle 7).** La politique de sécurité du contenu, posée à l'étape 4.3, bloquait la lecture d'une image `data:` par laquelle PixiJS vérifie qu'un travailleur sait décoder les images. PixiJS concluait à tort que non. `connect-src` accepte désormais `data:`. Les erreurs vivaient dans la console du travailleur, que Playwright ne relaie pas: le scénario de navigation ne pouvait pas les voir.
+9. **Bout en bout**: le serveur de scénario accepte des comptes en mémoire (`tests/outils/comptes-en-memoire.ts`), importés par chemin de compilation comme le reste du harnais. Les scénarios des parties et du compte ne tournent qu'en bureau: le premier fabrique ses deux appareils, le second joue une partie entière que le cadrage mobile rejouerait sans rien vérifier de plus.
+10. **Écarts avec la maquette**, voulus: ni latence, ni filtres de mode, ni compteur de joueurs en ligne; le salon dit les places libres en texte sans dessiner d'emplacements vides; la fin n'a pas de défi; le profil n'a ni ratio, ni série, ni temps de jeu, ni rang mondial. Tous écartés ou reportés par le cadrage.
+
 ## Rituel de fin de session
 
 Écrire `docs/handoffs/etape-4-3-reprise-handoff.md`. Lister les écrans construits et leurs écarts avec la maquette, les décisions prises, et l'état de la CI. Prochaine action exacte: la section 3 du ROADMAP désigne le jalon 4, qui commence par l'étape 5.1, tests de charge serveur. Commiter.

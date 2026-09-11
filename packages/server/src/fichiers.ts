@@ -41,6 +41,13 @@ export interface DossiersServis {
  *   - les images acceptent aussi data: et blob:, parce que PixiJS decode les
  *     textures dans un travailleur qui lui rend des objets blob;
  *   - les travailleurs acceptent blob: pour la meme raison;
+ *   - les connexions acceptent aussi data:. Avant de decoder dans un travailleur,
+ *     PixiJS y lit une image de un pixel ecrite en data:, pour savoir si le
+ *     navigateur en est capable. Bloquee, cette lecture lui faisait conclure a tort
+ *     que non, et decoder les textures dans la page, avec deux erreurs dans la
+ *     console du travailleur, que les scenarios de bout en bout ne voient pas
+ *     (trouve a la reprise des ecrans du jalon 3). Une adresse data: ne sort pas
+ *     du navigateur: rien ne peut fuir par elle;
  *   - rien ne peut encadrer la page, ni changer l'adresse de base de ses liens, ni
  *     envoyer un formulaire ailleurs.
  *
@@ -54,7 +61,7 @@ export const POLITIQUE_DE_CONTENU = [
   "img-src 'self' data: blob:",
   "media-src 'self'",
   "font-src 'self'",
-  "connect-src 'self'",
+  "connect-src 'self' data:",
   "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'none'",

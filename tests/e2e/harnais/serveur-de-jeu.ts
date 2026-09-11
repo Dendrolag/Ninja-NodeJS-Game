@@ -6,22 +6,32 @@
  * securite du contenu. Seul le port change: zero, pour que le systeme en choisisse
  * un libre et que deux scenarios paralleles ne se marchent pas dessus.
  *
- * UN SERVEUR PAR SCENARIO. Sans code ni identifiant, « Jouer » est la partie
- * rapide (etape 2.4): la premiere partie publique qui attend dans son salon. Deux
- * scenarios qui partageraient un serveur se retrouveraient donc dans le meme
- * salon, et l'hote de l'un serait l'invite de l'autre.
+ * UN SERVEUR PAR SCENARIO. « Partie rapide » mene a la premiere partie publique
+ * qui attend dans son salon (etape 2.4). Deux scenarios qui partageraient un serveur
+ * se retrouveraient donc dans le meme salon, et l'hote de l'un serait l'invite de
+ * l'autre.
+ *
+ * SANS BASE, ET SANS COMPTES PAR DEFAUT, comme le serveur reel sans DATABASE_URL: on
+ * joue en invites. Un scenario qui a besoin de comptes en fournit, tenus en memoire
+ * (tests/outils/comptes-en-memoire.ts); rien n'est ajoute au jeu pour lui.
  *
  * Le serveur est importe depuis sa compilation, que la configuration Playwright
  * produit avant les scenarios (harnais/compiler.ts), comme le client empaquete.
  */
 
 import { DOSSIER_WEB } from '../../../packages/client/scripts/empaqueter.js';
-import type { GameRoom } from '../../../packages/server/dist/index.js';
+import type { GameRoom, ServiceDeComptes } from '../../../packages/server/dist/index.js';
 import {
   ChargeurDeTerrain,
   demarrerServeur,
   racineRessources,
 } from '../../../packages/server/dist/index.js';
+
+/** Ce qu'un scenario peut ajouter au serveur. */
+export interface OptionsDuJeu {
+  /** Des comptes, pour les scenarios qui en ont besoin. */
+  readonly comptes?: ServiceDeComptes;
+}
 
 /** Un serveur de jeu en marche. */
 export interface ServeurDeJeu {
@@ -36,20 +46,20 @@ export interface ServeurDeJeu {
    * affiche a ce que le moteur a decide. Un scenario n'y ecrit jamais: tout ce qui
    * change la partie passe par les pages, comme pour un vrai joueur.
    *
-   * Les scenarios entrent par la partie rapide, qui reunit tous les joueurs dans
-   * la premiere partie publique en attente: un serveur de scenario n'a donc
-   * qu'une partie. En trouver zero ou plusieurs est une erreur du scenario,
-   * signalee comme telle.
+   * Les scenarios reunissent leurs joueurs dans une seule partie: par la partie
+   * rapide, par la liste ou par un code. En trouver zero ou plusieurs est une
+   * erreur du scenario, signalee comme telle.
    */
   partie(): GameRoom;
   arreter(): Promise<void>;
 }
 
 /** Demarre le serveur de jeu sur un port libre. */
-export async function demarrerLeJeu(): Promise<ServeurDeJeu> {
+export async function demarrerLeJeu(options: OptionsDuJeu = {}): Promise<ServeurDeJeu> {
   const serveur = await demarrerServeur(0, {
     terrains: new ChargeurDeTerrain(),
     fichiers: { client: DOSSIER_WEB, ressources: racineRessources() },
+    ...(options.comptes === undefined ? {} : { comptes: options.comptes }),
   });
 
   const adresse = serveur.http.address();

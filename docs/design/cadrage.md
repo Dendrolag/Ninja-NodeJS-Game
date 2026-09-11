@@ -66,33 +66,33 @@ Sept écrans dans la maquette. Pour chacun: son statut en v1, les données qu'il
 
 ### En-tête commun
 
-- **v1**: marque, libellé d'écran, et, une fois connecté (3.2), niveau avec sa progression, pseudo, palier et pièces.
-- **Navigation latérale**: reprise quand ses quatre destinations existent (Jouer, Parties, Créer, Profil), au jalon 3. Masquée jusque-là (décision du 10 septembre 2026).
+- **v1**: marque, libellé d'écran, et, une fois connecté (3.2), niveau avec sa progression, pseudo, palier et pièces. Construit au jalon 3; un invité y trouve « Se connecter ».
+- **Navigation latérale**: reprise au jalon 3, ses quatre destinations existant (Jouer, Parties, Créer, Profil). Proposée hors partie seulement, repliée en barre en fenêtre étroite (décision du 11 septembre 2026).
 - **Écarté**: pastille de gemmes.
 
 ### 1. Accueil
 
-- **Statut**: v1 réduit. Existant, à enrichir au jalon 3.
+- **Statut**: v1 réduit. Construit (4.3), enrichi au jalon 3: « Partie rapide », « Créer une partie », « Parcourir », et pas de pseudo à choisir pour un compte.
 - **Données v1**: pseudo et niveau du compte; boutons « Partie rapide », « Créer une partie », « Parcourir »; présentation du mode Classique et tuile « à venir »; règles du jeu (existant).
 - **Masqué**: bandeau de saison, défis du jour, pass de saison, grille des six modes.
 - **« Partie rapide »**: rejoindre la première partie publique encore dans son salon et non pleine, ou en ouvrir une publique aux réglages par défaut s'il n'y en a aucune. C'est la règle provisoire du jalon 1, restreinte aux parties publiques.
 
 ### 2. Parties publiques
 
-- **Statut**: v1. Données au 2.4, écran au jalon 3.
+- **Statut**: v1. Données au 2.4, écran construit au jalon 3. La liste se redemande à chaque arrivée sur l'écran et sur demande.
 - **Données v1, par salon listé**: pseudo de l'hôte, mode, carte (nom, et « Miroir » le cas échéant), joueurs présents sur capacité, et l'action « Rejoindre ».
 - **Liste**: seulement les parties publiques dans leur salon et non pleines. Champ de code privé, bouton « Créer ».
 - **Écarté**: latence, compteur global de joueurs en ligne, filtres par mode (un seul mode), statut « En jeu » (une partie commencée n'est pas listée).
 
 ### 3. Créer une partie
 
-- **Statut**: v1 réduit. Écran au jalon 3; le panneau de réglages existe déjà dans le salon (4.3) et se réutilise.
+- **Statut**: v1 réduit. Écran construit au jalon 3; le formulaire du panneau de réglages du salon (4.3) s'y réutilise, réglages avancés repliés.
 - **Données v1**: mode (tuile Classique sélectionnée, tuile « à venir »); carte parmi trois, avec l'aperçu et le mode miroir; visibilité publique ou privée; durée, faux ninjas, Black Ninjas, bonus, malus, zones (tout le contrat de la section 4); récapitulatif avec la capacité déduite du mode.
 - **Écarté**: Shibuya Cross, les cinq autres tuiles de mode.
 
 ### 4. Salon
 
-- **Statut**: v1. Existant, étendu au 2.4.
+- **Statut**: v1. Existant (4.3), données étendues au 2.4, écran étendu au jalon 3: visibilité, code avec bouton de copie, places libres dites en texte (sans dessiner les emplacements vides de la maquette).
 - **Données v1**: titre « Salon de {hôte} »; visibilité et, si privée, le code d'invitation avec un bouton de copie; joueurs présents (pseudo, initiales, badge d'hôte, niveau dès 3.2); places libres sur la capacité; récapitulatif des réglages; chat; compte à rebours annulable; « Lancer » et « Réglages » pour l'hôte; « Quitter ».
 - **Écarté en v1**: l'état « prêt ». L'hôte lance, et le compte à rebours de cinq secondes, annulable jusqu'à deux (comportement à préserver 7), sert de préavis. À réévaluer si des parties publiques entre inconnus le réclament.
 
@@ -104,14 +104,14 @@ Sept écrans dans la maquette. Pour chacun: son statut en v1, les données qu'il
 
 ### 6. Fin de partie
 
-- **Statut**: v1 enrichi au jalon 3. Existant pour le classement.
+- **Statut**: v1, enrichi au jalon 3. Le classement s'affiche aussitôt; la progression le rejoint quand le serveur l'a écrite, « Enregistrement de la partie… » en attendant, ou le motif d'un échec.
 - **Données existantes**: contexte (mode, carte), place, podium, classement complet (points, ninjas, captures, Black Ninjas), Rejouer, Accueil.
 - **Données ajoutées (3.3)**: XP gagnée, niveau avant et après avec sa barre, pièces gagnées, variation des points de ligue, palier avant et après. **Fournies depuis l'étape 3.3** par le message `progressionDeFin` (`ProgressionDeFin`, `packages/shared/src/evenements.ts`), adressé à chaque compte présent à la fin, après `partieTerminee`; la barre se calcule par `avancementDuNiveau`. Un invité n'a que le classement.
 - **Masqué**: défi accompli.
 
 ### 7. Profil
 
-- **Statut**: v1 réduit, au jalon 3.
+- **Statut**: v1 réduit, construit au jalon 3. Route `GET /api/comptes/profil` (`ProfilDuCompte`); les dix dernières parties; une victoire est une première place dans une partie d'au moins deux joueurs (décision du 11 septembre 2026). Un invité est mené à la connexion.
 - **Données v1**: pseudo, date d'inscription, niveau et XP, palier et points de ligue, pièces; statistiques déduites de l'historique (parties jouées, victoires, meilleur score); dernières parties (mode, carte, placement, score, gains, date).
 - **Masqué**: pass de saison, skins, succès, clan, gemmes, rang mondial, ratio, meilleure série, temps de jeu, ninjas capturés au total.
 
