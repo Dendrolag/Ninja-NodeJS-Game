@@ -64,6 +64,8 @@ Les maquettes ont été déposées le 13 août 2026: ce jalon n'est plus bloqué
 
 `5.1` puis `5.2`. **`2.3` (delta binaire) est rattaché ici et conditionné à la mesure de `5.1`.** Le plan d'origine le plaçait en phase 2, avant toute mesure, ce qui contredisait son propre principe « optimisations validées par la mesure ». S'il n'est pas justifié, il ne se fait pas.
 
+**Mesure du 11 septembre 2026 (étape 5.1): `2.3` est justifié, et se fait après `5.2`.** Ordre du jalon: `5.1` `5.2` `2.3`. Un instantané de partie à 150 bots pèse 21,5 Ko, soit 3,4 Mbit/s par joueur; mais le premier mur atteint en charge est la cadence du serveur, vers 16 à 24 parties pleines par processus, qui relève de `5.2`. Chiffres et raisonnement: `docs/mesures/charge-serveur.md`, et le journal de `docs/design/README.md`.
+
 ### Jalon 5 - Extension
 
 Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision du 29 juin). Puis les autres modes. Puis `5.3` et `6.1`, ramenés à un déploiement simple: le legacy n'a pas de joueurs en ligne, la bascule progressive et les drapeaux de fonctionnalité sont sans objet.

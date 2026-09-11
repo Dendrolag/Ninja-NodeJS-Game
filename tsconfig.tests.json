@@ -29,6 +29,12 @@
     // environnement node qui les execute, et une reference a document y echoue
     // a l'execution.
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    // Ajoute a l'etape 5.1: le harnais de charge (tests/charge) est lance par Node
+    // lui-meme, qui retire les types a la volee mais ne reecrit pas les chemins
+    // d'importation. Ses modules s'importent donc entre eux avec l'extension .ts,
+    // ce que TypeScript n'accepte que sur demande. Rien n'etant emis ici, la
+    // demande est sans consequence sur les compilations des paquets.
+    "allowImportingTsExtensions": true,
     // Les tests lisent les paquets dans leurs sources, comme Vitest le fait via
     // ses alias. Sans cela, ils seraient verifies contre une compilation qui
     // peut avoir pris du retard.

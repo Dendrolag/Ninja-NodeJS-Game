@@ -23,6 +23,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "charge": "tsc --build && node --disable-warning=ExperimentalWarning tests/charge/charge.ts",
     "dev:server": "pnpm --filter @neon-ninja/server dev",
     "base:generer": "pnpm --filter @neon-ninja/server base:generer",
     "base:migrer": "pnpm --filter @neon-ninja/server base:migrer",

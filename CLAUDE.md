@@ -45,6 +45,7 @@ Couvrir profond là où vit le gameplay, léger ailleurs. **80 à 90 pour cent s
 - `docs/handoffs/`, les recaps de fin de session.
 - `docs/audit/`, l'audit de l'existant.
 - `tests/e2e/`, les scénarios Playwright.
+- `tests/charge/`, le harnais de charge du serveur (étape 5.1); ses chiffres de référence sont dans `docs/mesures/`.
 
 ## Base legacy de référence
 
@@ -68,6 +69,7 @@ pnpm test                 # tests unitaires et d'intégration (Vitest), base com
 pnpm test:watch           # les mêmes, en surveillance
 pnpm test:coverage        # couverture, mesurée sur sim et shared
 pnpm test:e2e             # tests de bout en bout (Playwright)
+pnpm charge               # harnais de charge du serveur (--banc, --melange, --reseau, --rapide, --sortie fichier.json)
 pnpm base:generer         # écrire la migration qui suit un changement de packages/server/src/base/schema.ts
 pnpm base:migrer          # appliquer les migrations à la base de DATABASE_URL
 ```
@@ -140,3 +142,4 @@ Les règles d'enchaînement autonome et les conditions d'arrêt sont dans docs/p
 - Audit de l'existant: `docs/audit/AUDIT-EXISTANT.md`
 - Journal de conception et décisions: `docs/design/README.md`
 - Invariant de pureté: `.claude/rules/sim-purity.md`
+- Mesures de charge et seuils de performance: `docs/mesures/charge-serveur.md`

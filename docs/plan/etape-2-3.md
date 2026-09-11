@@ -2,6 +2,18 @@
 
 Brief de session. Objectif unique: remplacer la diffusion de l'état complet en JSON par un delta binaire, qui n'envoie que ce qui a changé. C'est le plus gros levier de bande passante et de coût serveur pour les parties à plus de 100 bots.
 
+## Note du 11 septembre 2026: justifiée par la mesure de l'étape 5.1
+
+Cette étape était conditionnée à la mesure de 5.1 (section 3 du ROADMAP). **La mesure la justifie**, et place l'étape après 5.2. Chiffres de départ, dans `docs/mesures/charge-serveur.md`:
+
+- un instantané JSON pèse 21,5 Ko pour une partie de 150 bots et 12 joueurs, et 117 octets de plus par entité;
+- soit 3,4 Mbit/s vers chaque joueur, 42 Mbit/s pour une partie pleine;
+- compressé (deflate), il pèse 4,3 fois moins: c'est le point de comparaison qu'un format binaire doit battre;
+- la sérialisation JSON ne coûte que 0,08 ms par battement à 150 bots: le gain attendu est de bande passante, pas de processeur;
+- seuil de régression existant: `OCTETS_PAR_MESSAGE_DE_REFERENCE` dans `tests/charge/seuils.ts`, à mettre à jour avec la nouvelle taille.
+
+La fiche a été écrite avant le client. Trois écarts sont à réconcilier en début de session: le client existe et décode déjà le flux JSON derrière l'interface réseau de l'étape 4.1, qui est ce qu'il faut remplacer (point 4 du périmètre, rituel de fin); l'événement diffusé s'appelle `etat` (`InstantanePartie`), pas `updateEntities`; la prochaine action du rituel de fin, l'étape 2.4, est faite depuis longtemps.
+
 ## Rituel de début de session
 
 Lire CLAUDE.md, le handoff de l'étape 2.2 (charge utile du flux d'état), puis cette fiche.

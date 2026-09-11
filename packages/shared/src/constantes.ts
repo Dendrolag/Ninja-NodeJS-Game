@@ -110,7 +110,15 @@ export type Mode = (typeof MODES)[number];
  * La capacite est une propriete du mode, pas un reglage: l'hote ne la choisit
  * pas. Douze pour le Classique, la borne haute de la maquette (decision du 10
  * septembre 2026). Il n'y a pas de minimum a imposer: un joueur seul peut lancer,
- * comme dans le legacy. La borne haute sera confrontee a la mesure de l'etape 5.1.
+ * comme dans le legacy.
+ *
+ * CONFRONTEE A LA MESURE DE L'ETAPE 5.1 (docs/mesures/charge-serveur.md). Le calcul
+ * d'une partie ne depend presque pas de ses joueurs: douze tiennent sans peine. Ce
+ * qui grandit avec eux est le flux d'etat, envoye a chacun: une partie pleine de
+ * 150 bots ecrit 42 Mbit/s, soit 3,4 Mbit/s par joueur, la premiere limite cote
+ * joueur. Douze joueurs ajoutent aussi une dizaine de points d'occupation du fil
+ * du serveur par rapport a un seul. La capacite reste a douze; c'est le flux qui
+ * doit maigrir (etape 2.3).
  */
 export const CAPACITES: Readonly<Record<Mode, number>> = {
   classique: 12,

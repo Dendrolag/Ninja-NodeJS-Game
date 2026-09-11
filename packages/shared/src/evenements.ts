@@ -21,9 +21,10 @@
  *
  *   1. Le FLUX D'ETAT: un instantane complet de la partie, emis a chaque
  *      battement, soit vingt fois par seconde. Il decrit ce qui EST. C'est lui,
- *      et lui seul, que l'etape 2.3 remplacera par un delta binaire si la mesure
- *      de l'etape 5.1 le justifie. Il est donc isole dans un seul type,
- *      InstantanePartie, et n'est jamais melange au reste.
+ *      et lui seul, que l'etape 2.3 remplacera par un delta binaire: la mesure de
+ *      l'etape 5.1 l'a justifie, a 21,5 Ko par message pour 150 bots, soit
+ *      3,4 Mbit/s par joueur (docs/mesures/charge-serveur.md). Il est donc isole
+ *      dans un seul type, InstantanePartie, et n'est jamais melange au reste.
  *   2. Les NOTIFICATIONS DISCRETES: une capture vient d'avoir lieu, un bonus
  *      s'active, quelqu'un a parle. Elles decrivent ce qui VIENT D'ARRIVER, elles
  *      sont rares, et elles restent des messages d'evenement. Le client
