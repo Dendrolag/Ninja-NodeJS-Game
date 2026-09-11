@@ -11,7 +11,9 @@ name: CI
 
 on:
   push:
-    branches: ['**']
+    # Les branches mesure-charge/ ne portent aucun code nouveau: elles ne servent
+    # qu'a lancer la mesure de charge sous Linux (charge.yml).
+    branches: ['**', '!mesure-charge/**']
   pull_request:
     branches: ['**']
 

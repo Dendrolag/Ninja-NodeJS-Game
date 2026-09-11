@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { CarteCollisions } from './collisions.js';
 import { creerCarteCollisions } from './collisions.js';
+import { peuplerDeBots } from './bots.js';
 import { SEUIL_CONTACT_PX } from './contacts.js';
 import { AUCUN_BONUS } from './effets.js';
 import type { EtatPartie, Joueur } from './etat.js';
@@ -67,6 +68,28 @@ function joueurDe(etat: EtatPartie, id: string): Joueur {
   return joueur;
 }
 
+/**
+ * Gele un etat et tout ce qu'il contient: une ecriture leverait une erreur.
+ *
+ * Le terrain est laisse tel quel: un tableau d'octets ne se gele pas. Une partie deja
+ * gelee n'est pas reparcourue, ses parties l'etant forcement avant elle.
+ */
+function gelerEnProfondeur(valeur: unknown): void {
+  if (typeof valeur !== 'object' || valeur === null || ArrayBuffer.isView(valeur)) {
+    return;
+  }
+
+  if (Object.isFrozen(valeur)) {
+    return;
+  }
+
+  for (const enfant of Object.values(valeur)) {
+    gelerEnProfondeur(enfant);
+  }
+
+  Object.freeze(valeur);
+}
+
 /** Entree de deplacement pour un joueur unique. */
 function vers(deplacement: Vecteur): Entrees {
   return { j1: { deplacement, enMouvement: true } };
@@ -117,6 +140,40 @@ describe('purete et determinisme', () => {
     };
 
     expect(derouler()).toEqual(derouler());
+  });
+
+  it('n ecrit jamais dans un etat recu, sur une longue partie peuplee', () => {
+    // Depuis l'etape 5.2, le moteur range les bots dans une copie de travail de leur
+    // table, au lieu de recopier la table pour chaque bot. Ce test gele chaque etat
+    // avant de le passer au moteur: la moindre ecriture dans un etat recu, ou dans
+    // une de ses tables, leverait une erreur. La partie est assez longue et peuplee
+    // pour que les bots noirs chassent, et que zones et objets apparaissent.
+    let etat = creerEtatInitial({
+      graine: 5,
+      reglages: {
+        nombreBotsInitial: 60,
+        dureePartieS: 60,
+        zones: { intervalleApparitionS: 5 },
+        botsNoirs: { momentApparitionPourCent: 0 },
+      },
+    });
+    for (const id of ['j1', 'j2', 'j3', 'j4']) {
+      etat = ajouterJoueur(etat, { id, pseudo: id });
+    }
+    etat = peuplerDeBots(etat);
+
+    let evenements = 0;
+    for (let battement = 0; battement < 600; battement += 1) {
+      gelerEnProfondeur(etat);
+      const angle = battement / 7;
+      const entree = { deplacement: { x: Math.cos(angle), y: Math.sin(angle) }, enMouvement: true };
+      etat = tick(etat, { j1: entree, j2: entree, j3: entree, j4: entree }, BATTEMENT_MS);
+      evenements += etat.evenements.length;
+    }
+
+    expect(etat.tick).toBe(600);
+    expect(Object.values(etat.bots).some((bot) => bot.type === 'botNoir')).toBe(true);
+    expect(evenements).toBeGreaterThan(0);
   });
 
   it('produit des parties differentes pour des graines differentes', () => {

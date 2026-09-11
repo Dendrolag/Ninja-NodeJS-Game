@@ -69,17 +69,32 @@ export type RegleDeResolution = (etat: EtatPartie, contacts: readonly Contact[])
  * dans l'etat, les joueurs d'abord, puis les bots, chacun dans son ordre
  * d'arrivee: a etat egal, la liste produite est toujours la meme, ce qui est
  * indispensable au rejeu d'une partie.
+ *
+ * C'est le premier poste du moteur dans le profil d'un serveur charge (etape 5.2):
+ * chaque paire est examinee. Deux choses le rendent moins cher sans rien changer a
+ * ce qu'il releve. Aucun tableau n'est plus fabrique par entite pour parcourir les
+ * suivantes. Et une paire eloignee d'au moins le seuil sur un seul axe est ecartee
+ * sans calculer sa distance: la distance entre deux points n'est jamais plus petite
+ * que leur ecart sur un axe, Math.hypot compris. Les paires restantes sont jugees
+ * exactement comme avant, par la meme distance.
  */
 export function detecterContacts(etat: EtatPartie): readonly Contact[] {
   const entites = toutesLesEntites(etat);
   const contacts: Contact[] = [];
 
-  for (const [rang, unePart] of entites.entries()) {
-    for (const autrePart of entites.slice(rang + 1)) {
-      const distance = Math.hypot(
-        unePart.position.x - autrePart.position.x,
-        unePart.position.y - autrePart.position.y,
-      );
+  for (let rang = 0; rang < entites.length; rang += 1) {
+    const unePart = entites[rang] as Joueur | Bot;
+
+    for (let suivant = rang + 1; suivant < entites.length; suivant += 1) {
+      const autrePart = entites[suivant] as Joueur | Bot;
+      const ecartX = unePart.position.x - autrePart.position.x;
+      const ecartY = unePart.position.y - autrePart.position.y;
+
+      if (horsDePortee(ecartX) || horsDePortee(ecartY)) {
+        continue;
+      }
+
+      const distance = Math.hypot(ecartX, ecartY);
 
       if (distance < SEUIL_CONTACT_PX) {
         contacts.push({ premier: unePart.id, second: autrePart.id, distance });
@@ -88,6 +103,16 @@ export function detecterContacts(etat: EtatPartie): readonly Contact[] {
   }
 
   return contacts;
+}
+
+/**
+ * Un ecart sur un axe suffit-il a exclure le contact ?
+ *
+ * Une valeur non numerique ne l'exclut pas ici: elle passe au calcul de la distance,
+ * qui la refuse comme il l'a toujours fait.
+ */
+function horsDePortee(ecart: number): boolean {
+  return ecart >= SEUIL_CONTACT_PX || ecart <= -SEUIL_CONTACT_PX;
 }
 
 /**

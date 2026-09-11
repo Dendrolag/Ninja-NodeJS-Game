@@ -6,8 +6,10 @@
  * a vingt pixels pile il n'y a pas contact, juste en dessous il y en a un.
  */
 
+import { creerAlea, reel } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
+import type { Contact } from './contacts.js';
 import {
   SEUIL_CONTACT_PX,
   detecterContacts,
@@ -17,7 +19,7 @@ import {
 import type { Couleur } from './couleurs.js';
 import { AUCUN_BONUS } from './effets.js';
 import type { EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
-import { ajouterBot, ajouterJoueur, creerEtatInitial } from './etat.js';
+import { ajouterBot, ajouterJoueur, creerEtatInitial, toutesLesEntites } from './etat.js';
 
 const ROUGE = '#FF0000';
 const BLEU = '#0000FF';
@@ -141,6 +143,87 @@ describe('detecterContacts', () => {
     detecterContacts(etat);
 
     expect({ joueurs: etat.joueurs, tick: etat.tick }).toEqual(avant);
+  });
+});
+
+/**
+ * Le releve d'origine, ecrit le plus simplement possible: toutes les paires, toutes
+ * les distances. L'etape 5.2 a rendu detecterContacts moins cher; ces tests
+ * verifient qu'il releve toujours exactement la meme chose, dans le meme ordre.
+ */
+function releveDeReference(etat: EtatPartie): Contact[] {
+  const entites = toutesLesEntites(etat);
+  const contacts: Contact[] = [];
+
+  entites.forEach((unePart, rang) => {
+    for (const autrePart of entites.slice(rang + 1)) {
+      const distance = Math.hypot(
+        unePart.position.x - autrePart.position.x,
+        unePart.position.y - autrePart.position.y,
+      );
+
+      if (distance < SEUIL_CONTACT_PX) {
+        contacts.push({ premier: unePart.id, second: autrePart.id, distance });
+      }
+    }
+  });
+
+  return contacts;
+}
+
+describe('detecterContacts, meme releve que la comparaison de toutes les distances', () => {
+  it('releve les memes paires, dans le meme ordre, avec les memes distances, dans une melee', () => {
+    // Douze joueurs et quatre-vingts bots tires dans un carre de cent vingt pixels:
+    // des dizaines de contacts, et des paires proches du seuil dans tous les sens.
+    let etat = creerEtatInitial({ graine: 3 });
+    let alea = creerAlea(2026);
+    const tirerUnePlace = (): { x: number; y: number } => {
+      const x = reel(alea, 500, 620);
+      const y = reel(x.alea, 500, 620);
+      alea = y.alea;
+      return { x: x.valeur, y: y.valeur };
+    };
+
+    for (let rang = 0; rang < 12; rang += 1) {
+      etat = ajouterJoueur(etat, { id: `j${rang}`, pseudo: `j${rang}`, position: tirerUnePlace() });
+    }
+    for (let rang = 0; rang < 80; rang += 1) {
+      etat = ajouterBot(etat, { id: `b${rang}`, position: tirerUnePlace() });
+    }
+
+    const attendus = releveDeReference(etat);
+
+    expect(attendus.length).toBeGreaterThan(50);
+    expect(detecterContacts(etat)).toEqual(attendus);
+  });
+
+  it('juge a la distance une paire proche sur les deux axes, et non sur chacun', () => {
+    // Moins de vingt pixels sur chaque axe, mais plus de vingt en diagonale.
+    const loin = partieAvec({ j1: { x: 500, y: 500 }, j2: { x: 515, y: 515 } });
+    // Moins de vingt pixels sur chaque axe, et en diagonale.
+    const pres = partieAvec({ j1: { x: 500, y: 500 }, j2: { x: 512, y: 485 } });
+
+    expect(detecterContacts(loin)).toEqual([]);
+    expect(detecterContacts(pres)).toEqual([
+      { premier: 'j1', second: 'j2', distance: Math.hypot(-12, 15) },
+    ]);
+  });
+
+  it('applique le seuil de la meme facon des deux cotes de chaque axe', () => {
+    const aGauche = partieAvec({ j1: { x: 500, y: 500 }, j2: { x: 481, y: 500 } });
+    const auSeuilAGauche = partieAvec({ j1: { x: 500, y: 500 }, j2: { x: 480, y: 500 } });
+    const auSeuilEnHaut = partieAvec({ j1: { x: 500, y: 500 }, j2: { x: 500, y: 480 } });
+
+    expect(detecterContacts(aGauche)).toHaveLength(1);
+    expect(detecterContacts(auSeuilAGauche)).toEqual([]);
+    expect(detecterContacts(auSeuilEnHaut)).toEqual([]);
+  });
+
+  it('ne releve aucun contact avec une entite dont la position n est pas un nombre', () => {
+    const etat = partieAvec({ j1: { x: 500, y: 500 }, j2: { x: Number.NaN, y: 500 } });
+
+    expect(detecterContacts(etat)).toEqual(releveDeReference(etat));
+    expect(detecterContacts(etat)).toEqual([]);
   });
 });
 

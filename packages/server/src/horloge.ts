@@ -43,20 +43,77 @@ export interface Horloge {
   repeter(rappel: () => void, intervalleMs: number): () => void;
 }
 
+/** Le prochain rappel d'une boucle: quand il est du, et dans combien de temps le lancer. */
+export interface RappelSuivant {
+  /** Instant ou le rappel suivant est du, sur l'horloge qui a servi au calcul. */
+  readonly echeance: number;
+  /** Delai a donner a la minuterie, en millisecondes entieres. Jamais moins d'une. */
+  readonly delaiMs: number;
+}
+
+/**
+ * Quand relancer un rappel repete, sachant quand il etait du et quand il a vraiment eu lieu.
+ *
+ * LE RYTHME VISE L'HEURE PREVUE, PAS L'HEURE D'ARRIVEE (etape 5.2). Une minuterie
+ * repetee de Node repart de l'instant ou son rappel a commence: chaque retard est donc
+ * perdu pour de bon, et les retards s'additionnent. Sur un serveur charge, ou chaque
+ * battement attend quelques millisecondes que le fil se libere, les parties battaient
+ * ainsi 18 fois par seconde au lieu de 20, alors que le fil avait encore du temps
+ * libre. Ici l'echeance suivante se compte depuis l'echeance precedente: un rappel en
+ * retard de trois millisecondes fait partir le suivant trois millisecondes plus tot,
+ * et la frequence moyenne reste exactement celle demandee.
+ *
+ * UN RETARD D'UN INTERVALLE OU PLUS NE SE RATTRAPE PAS. Si le serveur s'est fige, la
+ * boucle repart de maintenant au lieu d'enchainer les rappels en rafale pour combler
+ * le trou. Le moteur, lui, recoit toujours le temps reellement ecoule, borne par la
+ * boucle de la partie: rattraper ou non ne change rien a la vitesse du jeu.
+ *
+ * Le delai est arrondi a la milliseconde, la resolution des minuteries de Node: un
+ * delai a virgule ne serait pas plus precis, et chaque duree differente coute a Node
+ * une file de minuteries de plus.
+ *
+ * @param echeance Instant ou le rappel qui vient d'avoir lieu etait du.
+ * @param maintenant Instant ou il a eu lieu.
+ * @param intervalleMs Intervalle vise entre deux rappels.
+ */
+export function rappelSuivant(
+  echeance: number,
+  maintenant: number,
+  intervalleMs: number,
+): RappelSuivant {
+  const prevue = echeance + intervalleMs;
+  const suivante = prevue > maintenant ? prevue : maintenant + intervalleMs;
+
+  return { echeance: suivante, delaiMs: Math.max(Math.round(suivante - maintenant), 1) };
+}
+
 /**
  * L'horloge du systeme: celle de la production.
  *
  * performance.now() plutot que Date.now(): la premiere est monotone, la seconde
  * peut reculer quand le systeme se resynchronise sur un serveur de temps. Un dt
  * negatif ferait lever le moteur, qui refuse un temps qui recule.
+ *
+ * Un rappel repete est une suite de minuteries simples, dont chacune vise l'echeance
+ * prevue: voir rappelSuivant. La minuterie suivante est programmee AVANT d'appeler le
+ * rappel, pour qu'un rappel qui arrete sa propre boucle, comme le fait une partie qui
+ * se termine, annule bien celle-la.
  */
 export const horlogeSysteme: Horloge = {
   maintenant: () => performance.now(),
   repeter: (rappel, intervalleMs) => {
-    const minuterie = setInterval(rappel, intervalleMs);
+    let echeance = performance.now() + intervalleMs;
+    let minuterie = setTimeout(battre, intervalleMs);
+
+    function battre(): void {
+      const suivant = rappelSuivant(echeance, performance.now(), intervalleMs);
+      echeance = suivant.echeance;
+      minuterie = setTimeout(battre, suivant.delaiMs);
+      rappel();
+    }
 
     return () => {
-      clearInterval(minuterie);
+      clearTimeout(minuterie);
     };
   },
 };

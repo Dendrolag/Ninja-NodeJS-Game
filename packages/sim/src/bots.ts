@@ -89,12 +89,23 @@ interface AvancementDeBotNoir {
  *
  * Les bots sont parcourus dans leur ordre d'arrivee, chacun agissant sur l'etat
  * laisse par le precedent. C'est ce qui rend le resultat reproductible.
+ *
+ * UNE SEULE COPIE DE LA TABLE DES BOTS PAR BATTEMENT (etape 5.2). Ranger chaque bot
+ * en recopiant toute la table faisait autant de copies que de bots, soit un travail
+ * qui croit comme le carre de la population: c'etait le premier poste du profil
+ * d'un serveur charge. La table est donc copiee une fois, au debut du parcours, et
+ * chaque bot y est range a sa place. L'etat recu n'est jamais modifie: seule cette
+ * copie l'est, avant d'etre rendue. Si l'avancement d'un bot rend une autre table,
+ * parce qu'un bot noir vient de repeindre sa proie, c'est cette nouvelle table qui
+ * est copiee et poursuivie. Le resultat est identique, a l'octet pres, a celui de la
+ * recopie integrale.
  */
 export function avancerLesBots(etat: EtatPartie, dtMs: number): EtatPartie {
-  let courant = etat;
+  let table: Record<IdentifiantEntite, Bot> = { ...etat.bots };
+  let courant: EtatPartie = { ...etat, bots: table };
 
   for (const id of Object.keys(etat.bots)) {
-    const bot = courant.bots[id];
+    const bot = table[id];
 
     // Un bot peut avoir disparu depuis le debut du parcours: rien ne le fait
     // aujourd'hui, mais la regle du jeu peut changer et l'oubli couterait cher.
@@ -105,7 +116,13 @@ export function avancerLesBots(etat: EtatPartie, dtMs: number): EtatPartie {
     const avancement =
       bot.type === 'botNoir' ? avancerUnBotNoir(courant, bot, dtMs) : errer(courant, bot, dtMs);
 
-    courant = poser(avancement.etat, avancement.bot);
+    if (avancement.etat.bots !== table) {
+      table = { ...avancement.etat.bots };
+    }
+
+    table[avancement.bot.id] = avancement.bot;
+    courant =
+      avancement.etat.bots === table ? avancement.etat : { ...avancement.etat, bots: table };
   }
 
   return faireApparaitreLesBotsNoirs(courant);
