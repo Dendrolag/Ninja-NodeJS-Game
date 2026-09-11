@@ -537,3 +537,105 @@ describe('une trame fausse est refusee', () => {
     }
   });
 });
+
+describe('chaque garde du decodage refuse sa trame fausse', () => {
+  /**
+   * Le debut d'une image: version 1, battement 1, temps restant nul, sans pause,
+   * puis une liste d'entites d'un seul element nouveau, au rang zero.
+   */
+  const IMAGE_A_UNE_ENTITE = [2, 1, 0, 0, 1, 1, 1, 0] as const;
+
+  /** Une entite dont l'identifiant est ce texte-la, code tel quel. */
+  const avecIdentifiant = (...texte: number[]): Uint8Array =>
+    Uint8Array.of(...IMAGE_A_UNE_ENTITE, ...texte);
+
+  it('refuse un entier ecrit sur trop d octets', () => {
+    expect(() =>
+      appliquerTrame(
+        undefined,
+        Uint8Array.of(2, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 1),
+      ),
+    ).toThrow(ErreurDeTrame);
+  });
+
+  it('refuse un texte qui depasse la fin de la trame', () => {
+    expect(() => appliquerTrame(undefined, avecIdentifiant(50))).toThrow(ErreurDeTrame);
+  });
+
+  it('refuse un texte UTF-8 mal forme', () => {
+    // Un debut de caractere sur deux octets, suivi d'un octet qui n'est pas une suite.
+    expect(() => appliquerTrame(undefined, avecIdentifiant(2, 0xc3, 0x41))).toThrow(ErreurDeTrame);
+    // Un caractere au-dela du dernier que l'Unicode definit.
+    expect(() => appliquerTrame(undefined, avecIdentifiant(4, 0xf4, 0x90, 0x80, 0x80))).toThrow(
+      ErreurDeTrame,
+    );
+    // Un octet qui ne peut commencer aucun caractere.
+    expect(() => appliquerTrame(undefined, avecIdentifiant(1, 0xff))).toThrow(ErreurDeTrame);
+  });
+
+  it('refuse des indicateurs de joueur inconnus', () => {
+    // Identifiant « a », joueur, en (0, 0), noir, immobile, pseudo « a », indicateurs 9.
+    const trame = avecIdentifiant(1, 0x61, 0, 0, 0, 0, 0, 0, 0, 1, 0x61, 9);
+
+    expect(() => appliquerTrame(undefined, trame)).toThrow(ErreurDeTrame);
+  });
+
+  it('refuse une liste qui annonce plus d elements qu il n y a d octets', () => {
+    expect(() => appliquerTrame(undefined, Uint8Array.of(2, 1, 0, 0, 50, 1))).toThrow(
+      ErreurDeTrame,
+    );
+  });
+
+  it('refuse un element nouveau annonce sans son contenu', () => {
+    expect(() => appliquerTrame(undefined, Uint8Array.of(2, 1, 0, 0, 1, 1, 0))).toThrow(
+      ErreurDeTrame,
+    );
+  });
+
+  it('refuse un delta qui reprend un element que la partie detenue n a pas', () => {
+    const reference = encoderImage(instantane({ tick: 1, entites: [bot('b', 0, 0)] })).reference;
+    // Delta, battement 2 apres 1, temps inchange, sans pause, une entite qui reprendrait
+    // le cinquieme element d'une liste qui n'en a qu'un.
+    const trame = Uint8Array.of(3, 2, 1, 0, 0, 1, 2, 5);
+
+    expect(() => appliquerTrame(reference, trame)).toThrow(ErreurDeTrame);
+  });
+
+  it('refuse une duree qui deviendrait negative', () => {
+    const objet = (dureeDeVieRestanteMs: number): InstantanePartie['objets'][number] => ({
+      id: 'o',
+      categorie: 'bonus',
+      nature: 'vitesse',
+      x: 10,
+      y: 10,
+      dureeDeVieRestanteMs,
+    });
+    const reference = encoderImage(instantane({ tick: 1, objets: [objet(10)] })).reference;
+    const delta = encoderDelta(reference, instantane({ tick: 2, objets: [objet(5)] }));
+
+    // Le meme delta, applique a une partie ou l'objet n'avait plus que 3 ms.
+    const autre = quantifierInstantane(instantane({ tick: 1, objets: [objet(3)] }));
+
+    expect(() => appliquerTrame(autre, delta.octets)).toThrow(ErreurDeTrame);
+  });
+
+  it('suit un objet qui bouge et une zone qui grandit sans que leur duree change', () => {
+    const avant = instantane({
+      tick: 1,
+      objets: [
+        { id: 'o', categorie: 'malus', nature: 'flou', x: 10, y: 10, dureeDeVieRestanteMs: 4000 },
+      ],
+      zones: [{ id: 'z', type: 'attraction', x: 50, y: 50, rayon: 150, dureeRestanteMs: 9000 }],
+    });
+    const apres = instantane({
+      tick: 2,
+      objets: [
+        { id: 'o', categorie: 'malus', nature: 'flou', x: 12, y: 10, dureeDeVieRestanteMs: 4000 },
+      ],
+      zones: [{ id: 'z', type: 'attraction', x: 50, y: 50, rayon: 180, dureeRestanteMs: 9000 }],
+    });
+    const reference = encoderImage(avant).reference;
+
+    expect(appliquerTrame(reference, encoderDelta(reference, apres).octets)).toEqual(apres);
+  });
+});

@@ -35,6 +35,22 @@ La fiche date d'avant le client et d'avant l'étape 2.2. Ce qui change dans son 
 5. **Le format arrondit**: positions au huitième de pixel, durées à la milliseconde, couleurs en majuscules. Le client ne simule rien, il dessine; l'arrondi est fait de la même façon des deux côtés, si bien que la reconstruction est exacte. Un élément est désigné par son rang dans la liste précédente, et un champ modifié par l'écart à sa valeur précédente: un bot qui avance de cinq pixels tient sur quatre octets.
 6. **La prochaine action du rituel de fin** (étape 2.4) est faite depuis longtemps: après 2.3, le jalon 4 est terminé, et c'est la section 3 du ROADMAP qui désigne la suite.
 
+## Résultat de l'étape (12 septembre 2026)
+
+Rapport: section 12 de `docs/mesures/charge-serveur.md`. Chiffres bruts: `docs/mesures/charge-serveur-2-3.json`.
+
+| Grandeur                                        | JSON (5.2)    | Trames binaires (2.3) |
+| ----------------------------------------------- | ------------- | --------------------- |
+| Message, partie de référence du banc            | 21 518 octets | 453 octets            |
+| Message, 150 bots et 12 joueurs, sur le fil     | 21 855 octets | 456 octets            |
+| Débit par joueur, partie pleine                 | 3,4 Mbit/s    | 0,07 Mbit/s           |
+| Débit sortant, 48 parties pleines               | 2 014 Mbit/s  | 42,0 Mbit/s           |
+| Codage au serveur, 150 bots                     | 0,082 ms      | 0,051 ms              |
+| Décodage chez le client, processeur ralenti × 6 | 0,481 ms      | 0,052 ms              |
+| Parties pleines tenues par processus            | 48            | 48                    |
+
+Le jeu n'a pas changé: l'empreinte du jeu est identique à celle de 5.2. La capacité d'un processus ne change pas: son mur reste un fil plein. La question du filtrage par zone d'intérêt, reportée ici par 5.2, est tranchée par la mesure: non justifié (section 12.9 du rapport).
+
 ## Rituel de début de session
 
 Lire CLAUDE.md, le handoff de l'étape 2.2 (charge utile du flux d'état), puis cette fiche.

@@ -4,6 +4,8 @@ Document de référence de l'étape 5.1. Il consigne ce que coûte le serveur so
 
 **Mise à jour du 12 septembre 2026, étape 5.2.** La section 11 consigne la mesure d'après les optimisations, sur la même machine et avec la même commande. Ses seuils (section 11.11) remplacent ceux de la section 7 comme référence. Les sections 1 à 10 restent la mesure de l'étape 5.1.
 
+**Mise à jour du 12 septembre 2026, étape 2.3.** La section 12 consigne la mesure d'après le passage du flux d'état en trames binaires, sur la même machine et avec la même commande. Ses valeurs de comparaison (section 12.7) remplacent celles de la section 11.11 pour la taille des messages et la bande passante.
+
 Chiffres bruts de cette mesure: `docs/mesures/charge-serveur-5-1.json`, écrit par le harnais lui-même.
 
 ## 1. L'essentiel
@@ -450,3 +452,151 @@ Les deux seuils vérifiés en intégration continue (section 9) ne changent pas:
 - **Le niveau de détail d'IA.** Le comportement des bots n'a jamais dominé un profil. Ce qui pesait dans `avancerLesBots` était la recopie de la table, pas l'intelligence des bots.
 - **Toute optimisation du client** (section 11.9).
 - **Le filtrage du flux par zone d'intérêt, reporté après l'étape 2.3.** La bande passante est bien la première limite, et la caméra d'un téléphone ne montre qu'une partie de la carte. La minicarte ne dessine que les joueurs: filtrer les bots hors champ ne la priverait de rien. Mais le levier retenu pour la bande passante est le flux delta de 2.3, qui n'envoie déjà plus ce qui ne bouge pas, et le gain d'un filtrage dépend de ce format. Il se mesure donc à la fin de 2.3 (voir la fiche 2.3).
+
+## 12. Mesure de l'étape 2.3 (12 septembre 2026)
+
+Chiffres bruts: `docs/mesures/charge-serveur-2-3.json`, écrit par le harnais sur le commit `bed2441`, même machine et même commande qu'aux sections 2 et 11.
+
+### 12.1 L'essentiel
+
+- **Un message du flux d'état pèse 46 fois moins.** Une partie pleine (150 bots, 12 joueurs) envoie 464 octets par battement au lieu de 21 572: 0,07 Mbit/s par joueur au lieu de 3,4. Une partie de trois minutes fait recevoir 1,7 Mo à chaque joueur au lieu de 78.
+- **Le jeu n'a pas changé.** L'empreinte du jeu des quatre parties de `tests/charge/empreinte.ts` est identique à celle de l'étape 5.2; et à chaque battement de ces parties, la trame reconstruit exactement l'instantané arrondi.
+- **Coder coûte moins cher que sérialiser en JSON**, au serveur (0,051 ms contre 0,082 à 150 bots), et **décoder dix fois moins cher chez le client** (0,052 ms contre 0,481 sur un téléphone lent simulé).
+- **Le débit sortant d'un serveur est divisé par 48**: 42 Mbit/s pour 48 parties pleines, au lieu de 2 Gbit/s. **Sa capacité, elle, ne change pas**: 48 parties pleines et 64 parties mêlées par processus, arrêtées au même palier par un fil plein. Écrire moins d'octets n'a pas rendu une partie moins chère au processeur du serveur (section 12.6).
+- **Le filtrage par zone d'intérêt est écarté par la mesure** (section 12.9).
+
+### 12.2 Le format, en bref
+
+Détail et justification: en tête de `packages/shared/src/flux.ts`, et journal de `docs/design/README.md` au 12 septembre 2026.
+
+- Une **image** décrit toute la partie; un **delta** ne décrit que ce qui a changé depuis la trame précédente, et nomme le battement auquel il s'applique.
+- **Une trame par battement pour toute la salle**, codée une fois. L'image part au premier battement, à qui entre dans une partie en cours, et à toute la salle tous les cent battements (cinq secondes).
+- **Arrondis**: positions au huitième de pixel, durées à la milliseconde, couleurs en majuscules; faits de la même façon des deux côtés, si bien que la reconstruction est exacte.
+- **Sur le fil**, Socket.IO envoie une trame binaire en deux paquets: un en-tête en texte de 42 octets (`451-["etat",{"_placeholder":true,"num":0}]`), puis les octets de la trame. Les tailles de ce rapport comptent les deux.
+
+### 12.3 La taille des messages
+
+Banc du battement, douze joueurs, carte map1, un processus neuf par ligne. Tailles en octets par message sur le fil, images comprises. « JSON » est la taille qu'aurait eue l'ancien message, calculée sur la même partie; « deflate » la taille de la trame compressée, pour information.
+
+| Bots | Message 2.3 | Message JSON | Rapport | Trame compressée | Débit par joueur 2.3 |   Débit par joueur JSON |
+| ---: | ----------: | -----------: | ------: | ---------------: | -------------------: | ----------------------: |
+|   50 |         230 |        9 913 |    × 43 |              189 |  5 Ko/s, 0,04 Mbit/s |    198 Ko/s, 1,6 Mbit/s |
+|  100 |         342 |       15 788 |    × 46 |              257 |  7 Ko/s, 0,05 Mbit/s |    316 Ko/s, 2,5 Mbit/s |
+|  150 |         464 |       21 572 |    × 46 |              333 |  9 Ko/s, 0,07 Mbit/s |    431 Ko/s, 3,4 Mbit/s |
+|  200 |         595 |       27 454 |    × 46 |              417 | 12 Ko/s, 0,10 Mbit/s |    549 Ko/s, 4,4 Mbit/s |
+|  300 |         799 |       39 038 |    × 49 |              527 | 16 Ko/s, 0,13 Mbit/s |    781 Ko/s, 6,2 Mbit/s |
+|  500 |       1 378 |       62 478 |    × 45 |              886 | 28 Ko/s, 0,22 Mbit/s | 1 249 Ko/s, 10,0 Mbit/s |
+| 1000 |       2 485 |      120 854 |    × 49 |            1 497 | 50 Ko/s, 0,40 Mbit/s | 2 417 Ko/s, 19,3 Mbit/s |
+
+Ce que le tableau dit:
+
+- **Un message ne croît plus que de 2,4 octets par entité ajoutée** (de 150 à 1000 bots), contre 117 en JSON: la plupart des bots ne changent, d'un battement à l'autre, que leur position, codée par écart en deux octets.
+- **L'image pèse de l'ordre de 3,4 Ko** à 150 bots (3 403 octets dans la partie de référence). Repartie toutes les cinq secondes, elle compte pour environ 7 pour cent du débit du flux: c'est le prix de l'assurance qu'un client décroché se recale seul.
+- **Compresser la trame gagnerait encore d'un quart à deux cinquièmes** selon la population, sans commune mesure avec le facteur 46 déjà acquis; la compression reste désactivée.
+
+Partie de référence du banc (150 bots, 12 joueurs, graine 42, 600 battements après 100 d'échauffement): **453 octets par message**, contre 21 518; le seuil vérifié en CI (`OCTETS_PAR_MESSAGE_DE_REFERENCE`) est mis à jour.
+
+### 12.4 Le coût du codage, et le banc
+
+Durées en millisecondes par battement, en processus neufs. « Codage » est la trame binaire (2.3) ou la sérialisation JSON (5.2); la projection ne change pas.
+
+| Bots | Codage 2.3 | Sérialisation JSON 5.2 | Total 2.3 | Total 5.2 |
+| ---: | ---------: | ---------------------: | --------: | --------: |
+|   50 |      0,027 |                  0,037 |     0,143 |     0,157 |
+|  100 |      0,036 |                  0,060 |     0,246 |     0,284 |
+|  150 |      0,051 |                  0,082 |     0,403 |     0,434 |
+|  200 |      0,060 |                  0,106 |     0,599 |     0,650 |
+|  300 |      0,087 |                  0,149 |     0,996 |     1,078 |
+|  500 |      0,128 |                  0,236 |     2,378 |     2,523 |
+| 1000 |      0,256 |                  0,470 |     7,504 |     7,804 |
+
+**Le codage est 27 à 46 pour cent moins cher que la sérialisation qu'il remplace**, l'écart grandissant avec la population, et le battement complet 4 à 13 pour cent moins cher. Le moteur est inchangé (0,31 ms à 150 bots). Populations mêlées: 150 après 50, × 0,97; 50 après 150, × 0,86; 300 après 150, × 1,05.
+
+### 12.5 Le coût du client
+
+Même méthode qu'à la section 11.9: Chromium, vrai code du client, processeur ralenti par Chromium. 400 trames successives d'une partie pleine (413 octets en moyenne, quatre images comprises), reconstruites comme le fait le client, contre le décodage JSON des 200 instantanés de la section 11.9.
+
+| Processeur  | Décoder un message JSON | Reconstruire une trame binaire |
+| ----------- | ----------------------: | -----------------------------: |
+| normal      |                0,069 ms |                       0,007 ms |
+| ralenti × 4 |                0,299 ms |                       0,033 ms |
+| ralenti × 6 |                0,481 ms |                       0,052 ms |
+
+**Décoder coûte dix fois moins cher.** Une trame n'est pas un texte à analyser: la reconstruction lit quelques centaines d'octets et ne recrée que les éléments qui ont changé, les autres étant repris de la partie précédente.
+
+Les scénarios de bout en bout jouent le vrai jeu avec le flux binaire dans Chromium, en bureau et en fenêtre mobile: tous passent (section 12.8 pour une fragilité locale sans rapport).
+
+### 12.6 La charge du serveur complet
+
+Mêmes conditions et mêmes colonnes qu'aux sections 6 et 11.7, durées en millisecondes. Les octets par message comptent l'en-tête et la trame.
+
+Parties pleines, 150 bots et 12 joueurs:
+
+| Parties | Battement moyen (p99) | Écart p99 | Fréquence min | Fil occupé | Ramasse-miettes | Processeur | Processeur par partie | Mémoire | Octets par message | Débit sortant | Verdict  |
+| ------: | --------------------: | --------: | ------------: | ---------: | --------------: | ---------: | --------------------: | ------: | -----------------: | ------------: | -------- |
+|       1 |           1,09 (2,13) |      51,8 |       20,0 Hz |        3 % |           0,1 % |        7 % |                  3,40 |   93 Mo |                451 |    0,9 Mbit/s | tenu     |
+|       2 |           0,99 (1,60) |      51,8 |       20,0 Hz |        6 % |           0,1 % |        6 % |                  1,58 |   98 Mo |                451 |    1,7 Mbit/s | tenu     |
+|       4 |           0,88 (1,43) |      51,8 |       20,0 Hz |        9 % |           0,0 % |       13 % |                  1,58 |  290 Mo |                465 |    3,6 Mbit/s | tenu     |
+|       8 |           0,77 (1,06) |      51,8 |       20,0 Hz |       16 % |           0,1 % |        8 % |                  0,48 |  241 Mo |                456 |    7,0 Mbit/s | tenu     |
+|      16 |           0,75 (1,25) |      52,7 |       20,0 Hz |       31 % |           0,3 % |       38 % |                  1,19 |  243 Mo |                454 |   14,0 Mbit/s | tenu     |
+|      24 |           0,73 (1,23) |      52,8 |       20,0 Hz |       45 % |           0,5 % |       45 % |                  0,93 |  243 Mo |                456 |   21,0 Mbit/s | tenu     |
+|      32 |           0,71 (1,10) |      53,0 |       20,0 Hz |       58 % |           0,9 % |       56 % |                  0,88 |  245 Mo |                456 |   28,0 Mbit/s | tenu     |
+|      48 |           0,70 (1,10) |      55,9 |       20,0 Hz |       84 % |           1,6 % |       92 % |                  0,96 |  318 Mo |                456 |   42,0 Mbit/s | tenu     |
+|      64 |           0,71 (1,24) |      96,1 |       17,4 Hz |      100 % |           2,3 % |      110 % |                  0,97 |  329 Mo |                467 |   51,1 Mbit/s | non tenu |
+
+Parties mêlées, une sur deux à 50 bots, l'autre à 150, 12 joueurs:
+
+| Parties | Battement moyen (p99) | Écart p99 | Fréquence min | Fil occupé | Ramasse-miettes | Processeur | Processeur par partie | Mémoire | Octets par message | Débit sortant | Verdict  |
+| ------: | --------------------: | --------: | ------------: | ---------: | --------------: | ---------: | --------------------: | ------: | -----------------: | ------------: | -------- |
+|       1 |           0,75 (1,28) |      51,9 |       20,0 Hz |        3 % |           0,1 % |        6 % |                  2,93 |   91 Mo |                231 |    0,4 Mbit/s | tenu     |
+|       2 |           0,69 (1,20) |      51,6 |       20,0 Hz |        4 % |           0,1 % |        6 % |                  1,39 |   98 Mo |                341 |    1,3 Mbit/s | tenu     |
+|       4 |           0,66 (1,19) |      52,1 |       20,0 Hz |        8 % |           0,1 % |       11 % |                  1,35 |  113 Mo |                339 |    2,6 Mbit/s | tenu     |
+|       8 |           0,59 (1,11) |      52,2 |       20,0 Hz |       13 % |           0,1 % |       10 % |                  0,60 |  234 Mo |                342 |    5,3 Mbit/s | tenu     |
+|      16 |           0,55 (0,93) |      52,6 |       20,0 Hz |       23 % |           0,1 % |       24 % |                  0,74 |  248 Mo |                343 |   10,5 Mbit/s | tenu     |
+|      24 |           0,55 (0,90) |      52,6 |       20,0 Hz |       35 % |           0,3 % |       38 % |                  0,79 |  242 Mo |                342 |   15,7 Mbit/s | tenu     |
+|      32 |           0,55 (1,12) |      53,0 |       20,0 Hz |       46 % |           0,5 % |       50 % |                  0,78 |  264 Mo |                344 |   21,1 Mbit/s | tenu     |
+|      48 |           0,54 (1,00) |      54,6 |       20,0 Hz |       68 % |           0,9 % |       72 % |                  0,75 |  320 Mo |                343 |   31,6 Mbit/s | tenu     |
+|      64 |           0,54 (0,98) |      57,6 |       20,0 Hz |       90 % |           1,5 % |       97 % |                  0,76 |  327 Mo |                344 |   42,3 Mbit/s | tenu     |
+|      96 |           0,54 (0,96) |     100,3 |       14,4 Hz |      100 % |           1,9 % |      109 % |                  0,77 |  379 Mo |                356 |   48,7 Mbit/s | non tenu |
+
+Ce que les tableaux disent:
+
+- **Le débit sortant est divisé par 48**: 42,0 Mbit/s pour 48 parties pleines contre 2 014 en 5.2, 42,3 pour 64 parties mêlées contre 1 971. Un message pèse 456 octets sur le fil, ce que le banc calcule (464): l'enveloppe en deux paquets est juste.
+- **La capacité ne change pas.** Mêmes paliers qu'en 5.2 (48 parties pleines tenues, 64 non; 64 mêlées tenues, 96 non), même occupation du fil au dernier palier tenu (84 et 90 pour cent), même processeur par partie à 48 parties pleines (0,96 ms). Le battement lui-même, codage et envoi compris, est un peu moins cher (0,70 ms contre 0,81 à 48 parties pleines), mais le processeur total du serveur par partie ne baisse pas: ce que coûte une partie en dehors de son battement ne tenait pas à la taille de ses messages. Ce reste n'est pas diagnostiqué ici; il le sera si la capacité d'un processus doit monter.
+- **À faible charge, le processeur par partie est bruité** (0,48 ms à 8 parties pleines, 1,19 à 16, 0,93 à 24): il divise un processeur de quelques pour cent par un petit nombre de battements, et le relevé du processeur de Windows a une résolution grossière. Les paliers de saturation, eux, se comparent sans ambiguïté.
+- **Les clients simulés suivent sans effort**: 5 à 9 pour cent d'un cœur par processus au dernier palier, contre 25 à 38 pour cent en 5.2. Décoder une trame coûte moins que décoder du JSON, chez eux aussi.
+
+### 12.7 Les valeurs de comparaison après l'étape 2.3
+
+À comparer sur la même machine, dans les conditions de la section 10. Le budget par cœur et le seuil de référence de la section 11.11 ne changent pas: 48 parties pleines et 64 parties mêlées par processus.
+
+| Grandeur                                                     | Référence 5.2      | Référence 2.3      | Tolérance avant de parler de changement |
+| ------------------------------------------------------------ | ------------------ | ------------------ | --------------------------------------- |
+| Taille d'un message, partie de référence du banc             | 21 518 octets      | 453 octets         | exacte, vérifiée en CI à 5 pour cent    |
+| Taille d'un message, 150 bots et 12 joueurs, sur le fil      | 21 855 octets      | 456 octets         | 5 pour cent (parties à graine libre)    |
+| Débit sortant, 48 parties pleines                            | 2 014 Mbit/s       | 42,0 Mbit/s        | 5 pour cent                             |
+| Codage du flux au banc, 150 bots                             | 0,082 ms (JSON)    | 0,051 ms           | 10 pour cent                            |
+| Battement du banc, 150 bots, 12 joueurs                      | 0,43 ms (p99 0,89) | 0,40 ms (p99 0,81) | 5 pour cent                             |
+| Processeur par partie pleine, 48 parties                     | 0,96 ms            | 0,96 ms            | 10 pour cent                            |
+| Dernier palier tenu, parties pleines                         | 48 parties         | 48 parties         | un palier                               |
+| Dernier palier tenu, parties mêlées                          | 64 parties         | 64 parties         | un palier                               |
+| Décodage d'un message chez le client, processeur ralenti × 6 | 0,481 ms (JSON)    | 0,052 ms           | 10 pour cent                            |
+
+### 12.8 Limites et fragilités
+
+- **La capacité d'un processus reste bornée par son fil**, et le coût d'une partie en dehors de son battement n'a pas baissé avec la taille des messages (section 12.6). Si l'hébergement demande plus de parties par processus, c'est ce reste qu'il faudra profiler.
+- **Le réseau est local**: la bande passante divisée par 46 est une mesure de taille, exacte partout; la latence et le débit réels d'un hébergement se mesurent à l'étape 5.3.
+- **En local, un scénario de bout en bout peut échouer sous charge**: le scénario mobile « capturer un faux ninja » a manqué sa cible une fois quand les douze scénarios jouaient en parallèle, et passe joué seul. Il pilote le joueur à partir de l'état du serveur, pas du flux: la cause est la charge de la machine, pas le format. La CI joue un scénario à la fois.
+- **Le seuil de taille vérifié en CI est désormais étroit**, 5 pour cent de 453 octets: une modification du jeu qui change le mouvement des bots, donc la taille des deltas, le fera échouer, et la nouvelle taille devra se mesurer et se reporter.
+
+### 12.9 Le filtrage par zone d'intérêt: écarté par la mesure
+
+C'était la question reportée de l'étape 5.2 (section 11.12): ne plus envoyer à un joueur les bots qu'il ne voit pas.
+
+**Ce qu'un joueur voit.** Sur ordinateur, la caméra montre 900 pixels de carte en hauteur (`HAUTEUR_DE_VUE_PX`), soit environ 1 600 sur 900 dans une fenêtre en 16:9: 48 pour cent de la carte map1 (2 000 sur 1 500), 24 pour cent de la carte map3 (3 000 sur 2 000). Sur téléphone, le cadrage est de 600 sur 451 (`CADRAGE_MOBILE`): 9 pour cent de map1, 4,5 pour cent de map3. Les bots étant répartis sur toute la carte, c'est à peu près la part des bots visibles.
+
+**Ce que le filtrage gagnerait, au mieux.** Un joueur reçoit 9 Ko/s de flux d'état (section 12.3). Sans les bots hors champ, un joueur sur téléphone en recevrait de l'ordre de 1 à 2 Ko/s: une économie d'environ 7 Ko/s, soit 60 kbit/s, bien en dessous de ce que n'importe quel accès mobile encaisse. Pour un serveur de 48 parties pleines, les 576 joueurs reçoivent ensemble environ 41 Mbit/s.
+
+**Ce qu'il coûterait.** La trame ne serait plus la même pour toute la salle: douze codages par battement au lieu d'un, soit environ 0,6 ms de plus par partie pleine, plus que le coût actuel d'une partie au banc (0,40 ms). Chaque bot entrant dans le champ d'un joueur devrait lui être envoyé en entier, et chaque joueur aurait sa propre référence de delta à tenir.
+
+**Verdict: non justifié.** La bande passante, première limite après l'étape 5.2, a été divisée par 46; le gain restant ne vaut pas de doubler le coût d'une partie. La question ne se rouvre que si les cartes grandissent nettement, ou si le coût du débit sortant de l'hébergement, mesuré à l'étape 5.3, le demande.
