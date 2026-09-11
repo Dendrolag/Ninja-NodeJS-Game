@@ -54,6 +54,13 @@ Cette étape clôt la phase 3. Les comptes sont persistants et progressent aprè
 2. **Le niveau et le palier se déduisent** de l'XP totale et des points de ligue, par des fonctions pures à écrire dans `packages/shared`, pour que serveur et client calculent la même chose. Seuls l'XP, les pièces et les points de ligue sont persistés.
 3. **Les valeurs des récompenses** (XP, seuils de niveau, pièces, points de ligue, seuils de palier) sont à proposer ici et à faire valider par le porteur du projet: le cadrage n'en fixe que la forme.
 
+## Ajustements venus de la décision du 11 septembre 2026 et de l'étape 3.1
+
+1. **On joue sans compte; le compte n'apporte que la progression** (décision du porteur du projet, journal de `docs/design/README.md`). À la fin d'une partie, seuls les joueurs qui ont un compte reçoivent des récompenses et un résultat enregistré. Un invité ne gagne ni ne perd rien, points de ligue compris, mais il compte dans le nombre de joueurs de la partie et dans le placement des autres. Le récapitulatif de fin d'un invité montre le classement, sans gains ni progression.
+2. **Le schéma existe** (handoff 3.1): une partie s'écrit dans `parties`, et le résultat de chaque compte dans `resultats`, par `enregistrerPartie`, en une seule transaction. Le « score » de cette fiche s'appelle `points`, comme dans `LigneClassement`.
+3. **Appliquer les gains sans perdre d'écriture.** `ecrireProgression` remplace les valeurs. Ajouter les gains (XP, pièces, variation de points de ligue) dans la même transaction que l'enregistrement de la partie, plutôt que lire la progression puis la réécrire: deux écritures rapprochées ne peuvent alors pas s'effacer.
+4. **Le palier de rang n'est pas stocké** (ajustement 2 ci-dessus): le périmètre 3 met à jour les points de ligue, et le palier s'en déduit.
+
 ## Rituel de fin de session
 
 Écrire docs/handoffs/etape-3-3-handoff.md. Documenter les règles de récompense et la forme du récapitulatif de fin, car l'écran de fin de la phase 4 s'en sert. Prochaine action exacte pour l'étape 4.1: squelette client avec séparation état et rendu, et décodage du flux delta binaire. Commiter.

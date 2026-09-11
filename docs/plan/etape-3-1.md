@@ -54,7 +54,7 @@ Conditions de ROADMAP réunies, plus:
 2. **Pas de gemmes en v1.** Elles arrivent avec une boutique, par ajout.
 3. **Pas de table de défis du jour**: ils sont reportés. Le périmètre 4 de cette fiche est sans objet.
 
-Le résultat de partie porte aussi, d'après le cadrage: l'identifiant commun de la partie, le mode miroir, la durée, le nombre de joueurs, les captures et les Black Ninjas détruits. Et la question de l'accès sans compte, laissée au porteur du projet, doit être tranchée avant l'étape 3.2.
+Le résultat de partie porte aussi, d'après le cadrage: l'identifiant commun de la partie, le mode miroir, la durée, le nombre de joueurs, les captures et les Black Ninjas détruits. Et la question de l'accès sans compte, laissée au porteur du projet, doit être tranchée avant l'étape 3.2. Tranchée le 11 septembre 2026: on joue sans compte, le compte n'apporte que la progression (voir la fiche 3.2).
 
 ## Réconciliation au début de l'étape (11 septembre 2026)
 

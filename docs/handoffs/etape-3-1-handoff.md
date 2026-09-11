@@ -126,7 +126,7 @@ Nouveau, ouvert par cette étape:
 - **L'écriture de la progression remplace les valeurs.** L'étape 3.3 appliquera les gains d'une partie; pour qu'une écriture ne puisse pas en effacer une autre, elle devra ajouter les gains dans la même transaction que l'enregistrement de la partie, plutôt que lire puis réécrire.
 - **Observation sur l'outillage local**: pendant l'étape, `rtk pnpm typecheck` a annoncé « No errors found » alors que les tests importaient des fonctions que l'index du serveur n'exportait pas encore, et qu'aucun fichier n'avait été produit dans `dist/base`. Cause non établie. La vérification a été refaite en appelant `tsc` directement, puis la suite complète. La CI, qui n'utilise pas `rtk`, reste le filet.
 
-Repris du handoff 2.4: **l'accès sans compte** est à trancher par le porteur du projet **avant l'étape 3.2**, et les **valeurs des récompenses** à l'étape 3.3 (section 8 du cadrage). Le reste: voir le handoff 4.4.
+Repris du handoff 2.4: les **valeurs des récompenses** sont à faire valider par le porteur du projet à l'étape 3.3 (section 8 du cadrage). **L'accès sans compte, lui, a été tranché le 11 septembre 2026, après la fin de cette étape**: on joue sans compte, et le compte n'apporte que la progression (journal de conception; fiches 3.2 et 3.3 mises à jour). Le reste: voir le handoff 4.4.
 
 ## État de la CI
 
@@ -142,9 +142,9 @@ Dans une conversation neuve: exécuter l'étape 3.2, inscription, connexion, ges
 
 Trois points à avoir en tête dès le début:
 
-1. **La question de l'accès sans compte doit être tranchée avant d'écrire du code** (cadrage, section 8; ajustements de la fiche 3.2). Le jeu est né comme un jeu entre amis où l'on entre avec un pseudo, et la fiche 3.2 exige un compte pour rejoindre une partie. Si le porteur du projet ne l'a pas tranchée, c'est une décision produit: la lui poser avant tout.
+1. **L'accès sans compte est tranché: on joue sans compte, le compte n'apporte que la progression** (voie B, décision du porteur du projet du 11 septembre 2026, au journal de `docs/design/README.md`). **La fiche 3.2 a été récrite en conséquence**: une connexion non authentifiée rejoint une room en invité avec un pseudo, une connexion authentifiée sous le pseudo et le niveau de son compte, et l'étape doit choisir la règle qui empêche un invité de se faire passer pour un compte. Lire sa section d'ajustements, points 1 à 5.
 2. **La base est prête**: `creerCompte`, `trouverCompteParPseudo` et le schéma sont exportés par `@neon-ninja/server`. Le mot de passe haché s'ajoute par une migration (`pnpm base:generer`), dans `comptes` ou dans une table d'identifiants.
-3. **Appliquer la migration à la base principale** (`pnpm base:migrer`) quand le serveur commencera à s'en servir, et prévoir que le jeu démarre encore sans base tant que l'accès sans compte existe.
+3. **Appliquer la migration à la base principale** (`pnpm base:migrer`) quand le serveur commencera à s'en servir, et prévoir que le jeu continue de fonctionner en invités seulement sans `DATABASE_URL` (développement local, scénarios de bout en bout).
 
 ## Étape suivante
 

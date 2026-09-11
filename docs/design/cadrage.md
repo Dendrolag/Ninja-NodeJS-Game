@@ -252,5 +252,5 @@ Décision du 29 juin 2026, précisée ici.
 
 Elles engagent le produit au-delà de ce que les maquettes et le périmètre du 29 juin permettent de trancher. Elles sont à décider avant l'étape indiquée.
 
-1. **Peut-on jouer sans compte ?** La fiche 3.2 exige un compte pour rejoindre une partie. Le jeu est né comme un jeu entre amis, où l'on entre avec un pseudo. Deux voies: un compte obligatoire, ou un accès invité sans progression, le compte n'apportant que la progression. **À décider avant l'étape 3.2.** Le cadrage ne suppose ni l'une ni l'autre: un résultat de partie n'est enregistré que pour un joueur qui a un compte.
+1. **Peut-on jouer sans compte ? Tranché le 11 septembre 2026 par le porteur du projet: oui.** On entre en invité avec un pseudo, comme aujourd'hui; le compte est optionnel et n'apporte que la progression. Un résultat de partie n'est enregistré que pour un joueur qui a un compte, ce que le schéma de l'étape 3.1 prévoit déjà. Détail et conséquences au journal de `docs/design/README.md`, et dans la fiche 3.2, récrite en conséquence.
 2. **Les valeurs des récompenses.** XP par partie et par placement, seuils de niveau, gains de pièces, gains et pertes de points de ligue, seuils de palier. Le cadrage n'en fixe que la forme. **À proposer et valider à l'étape 3.3.**
