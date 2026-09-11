@@ -240,6 +240,12 @@ export function creerClient(options: OptionsClient): Client {
     }),
   );
 
+  ecouter(
+    reseau.sur('progressionDeFin', (progression) => {
+      magasin.appliquer({ type: 'progressionDeFin', progression });
+    }),
+  );
+
   // -- Le flux d'etat -------------------------------------------------------
 
   ecouter(

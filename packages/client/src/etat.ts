@@ -26,6 +26,7 @@ import type {
   MaProgression,
   MessageChat,
   PartiePublique,
+  ProgressionDeFin,
   Refus,
   TypeBonus,
   TypeMalus,
@@ -208,6 +209,14 @@ export interface EtatClient {
   readonly pausePar: string | undefined;
   /** Le classement definitif, une fois la partie finie. */
   readonly fin: FinDePartie | undefined;
+  /**
+   * Ce que la partie a rapporte a notre compte (etape 3.3).
+   *
+   * Il suit le classement de quelques instants, le temps que le serveur ecrive en
+   * base: l'ecran de fin montre le classement tout de suite, puis la progression.
+   * Un invite n'en recoit jamais.
+   */
+  readonly progressionDeFin: ProgressionDeFin | undefined;
   /** Le dernier refus recu, a montrer au joueur. */
   readonly refus: Refus | undefined;
 }
@@ -243,6 +252,7 @@ export const ETAT_INITIAL: EtatClient = {
   journal: [],
   pausePar: undefined,
   fin: undefined,
+  progressionDeFin: undefined,
   refus: undefined,
 };
 

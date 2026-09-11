@@ -29,6 +29,7 @@ import type {
   MessageChat,
   PartieEnPause,
   PartiePublique,
+  ProgressionDeFin,
   Refus,
 } from '@neon-ninja/shared';
 
@@ -107,6 +108,8 @@ export type Action =
   | { readonly type: 'partieReprise' }
   /** La partie est finie, le classement est definitif. */
   | { readonly type: 'partieTerminee'; readonly fin: FinDePartie }
+  /** Ce que la partie a rapporte a notre compte, une fois enregistre. */
+  | { readonly type: 'progressionDeFin'; readonly progression: ProgressionDeFin }
   /** Un fait vient d'arriver: capture, bonus, arrivee, depart. */
   | { readonly type: 'fait'; readonly fait: FaitDeJeu }
   /** Une demande du joueur a ete refusee. */

@@ -1104,6 +1104,149 @@
   height: 104px;
 }
 
+.fin-cote {
+  display: grid;
+  align-content: start;
+  gap: 24px;
+}
+
+/* -- Progression de fin de partie ---------------------------------------- */
+
+.fin-progression {
+  display: grid;
+  gap: 14px;
+  padding: 20px 22px;
+  border-color: rgba(45, 230, 224, 0.25);
+  background: linear-gradient(160deg, rgba(45, 230, 224, 0.08), transparent 60%), var(--surface);
+}
+
+.fin-progression-entete {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fin-progression h2 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.fin-xp {
+  color: var(--cyan);
+  font-family: var(--police-titre);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.fin-progression-details {
+  display: grid;
+  gap: 10px;
+}
+
+.barre-niveau {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--texte-secondaire);
+  font-family: var(--police-titre);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.barre {
+  position: relative;
+  flex: 1;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.barre-remplie {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--remplissage, 0%);
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--cyan-fonce), var(--cyan));
+  box-shadow: 0 0 12px rgba(45, 230, 224, 0.5);
+}
+
+.barre-niveau-xp {
+  justify-self: end;
+  color: var(--texte-tertiaire);
+  font-family: var(--police-donnees);
+  font-size: 12px;
+}
+
+.fin-passage {
+  color: var(--vert);
+  font-weight: 600;
+}
+
+.fin-gains {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.gain {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 4px;
+  padding: 16px 12px;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-carte);
+  background: rgba(13, 17, 27, 0.6);
+  text-align: center;
+}
+
+.gain strong {
+  font-family: var(--police-donnees);
+  font-size: 22px;
+}
+
+.gain span {
+  color: var(--texte-tertiaire);
+  font-size: 12.5px;
+}
+
+.gain-pieces .icone,
+.gain-pieces strong {
+  color: var(--or);
+}
+
+.gain-ligue .icone,
+.gain-ligue strong {
+  color: var(--violet);
+}
+
+.gain-ligue[data-sens='baisse'] strong {
+  color: var(--rose-clair);
+}
+
+.gain .gain-palier {
+  color: var(--texte-secondaire);
+}
+
+.gain .gain-changement {
+  color: var(--vert);
+  font-weight: 600;
+}
+
+.fin-attente {
+  color: var(--texte-secondaire);
+  font-family: var(--police-donnees);
+  font-size: 12.5px;
+}
+
+.fin-non-enregistree {
+  color: var(--rose-clair);
+}
+
 .fin-classement {
   display: grid;
   gap: 12px;

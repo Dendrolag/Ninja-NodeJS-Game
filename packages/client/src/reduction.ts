@@ -18,6 +18,8 @@
  * defaut du client d'origine.
  */
 
+import type { ProgressionDeFin } from '@neon-ninja/shared';
+
 import type { Action } from './actions.js';
 import { ecranSuivant } from './ecrans.js';
 import type { Ecran } from './ecrans.js';
@@ -191,6 +193,7 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
         effets: [],
         journal: [],
         fin: undefined,
+        progressionDeFin: undefined,
         pausePar: undefined,
       };
 
@@ -219,6 +222,16 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
     case 'partieTerminee':
       return { ...etat, ecran, fin: action.fin, effets: [] };
 
+    // La progression du compte, dans l'en-tete, suit ce que la base a ecrit: rien
+    // n'est redemande au serveur.
+    case 'progressionDeFin':
+      return {
+        ...etat,
+        ecran,
+        progressionDeFin: action.progression,
+        session: sessionApresLaPartie(etat.session, action.progression),
+      };
+
     case 'fait':
       return {
         ...etat,
@@ -230,6 +243,28 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
     case 'refus':
       return { ...etat, ecran, refus: action.refus };
   }
+}
+
+/**
+ * La session d'un compte, une fois les gains d'une partie enregistres.
+ *
+ * Seule une partie enregistree change quelque chose, et seulement pour un compte:
+ * la progression d'apres remplace celle d'avant, telle que la base l'a rendue.
+ */
+function sessionApresLaPartie(
+  session: SessionDuClient,
+  progression: ProgressionDeFin,
+): SessionDuClient {
+  if (session.nature !== 'compte' || !progression.enregistree) {
+    return session;
+  }
+
+  const { xpTotale, niveau, pieces, pointsLigue } = progression.apres;
+
+  return {
+    nature: 'compte',
+    progression: { ...session.progression, xpTotale, niveau, pieces, pointsLigue },
+  };
 }
 
 /**

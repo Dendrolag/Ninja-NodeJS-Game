@@ -1,27 +1,32 @@
 /**
- * L'ecran de fin: le podium, le classement, et les deux sorties.
+ * L'ecran de fin: le podium, le classement, ce que la partie a rapporte, et les deux
+ * sorties.
  *
  * Portage de la fenetre de fin du jeu d'origine (showGameOverModal), dans la mise
- * en page de la maquette. Deux differences de fond.
+ * en page de la maquette. Trois differences de fond.
  *
  *   1. LES PSEUDOS SONT DU TEXTE. La fenetre d'origine concatenait les pseudos
  *      dans du HTML: c'est la que la faille S1 frappait tous les joueurs a la
  *      fois, a la fin de chaque partie.
  *   2. « REJOUER » OUVRE UN NOUVEAU SALON. Le retour au salon d'une partie finie
  *      n'existe pas (handoff 2.1): la partie terminee refuse les nouveaux venus.
- *      Rejouer quitte donc la partie et redemande a entrer avec le meme pseudo,
- *      c'est-a-dire la partie rapide: la premiere partie publique en attente, ou
- *      une nouvelle (etape 2.4). Des joueurs qui
- *      rejouent ensemble se retrouvent ainsi dans le meme salon. La minuterie de
- *      trente secondes du jeu d'origine, qui renvoyait d'office au salon, n'est
- *      pas reprise: elle n'aurait nulle part ou renvoyer.
+ *      Rejouer quitte donc la partie et redemande a entrer, c'est-a-dire la partie
+ *      rapide: la premiere partie publique en attente, ou une nouvelle (etape 2.4).
+ *      Des joueurs qui rejouent ensemble se retrouvent ainsi dans le meme salon. La
+ *      minuterie de trente secondes du jeu d'origine, qui renvoyait d'office au
+ *      salon, n'est pas reprise: elle n'aurait nulle part ou renvoyer.
+ *   3. UN COMPTE VOIT SA PROGRESSION (reprise des ecrans du jalon 3). Le classement
+ *      s'affiche aussitot; la progression le rejoint quand le serveur a fini de
+ *      l'ecrire, et le panneau l'annonce aux lecteurs d'ecran a son arrivee.
  */
 
 import type { FinDePartie } from '@neon-ninja/shared';
 
+import type { EtatClient } from '../../etat.js';
 import { moiDansLeSalon } from '../../selecteurs.js';
-import { bouton, creer, ecrireTexte } from '../dom.js';
-import type { LigneFin, ModeleFin } from '../modeles/fin.js';
+import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
+import { icone } from '../icones.js';
+import type { LigneFin, ModeleFin, ProgressionAffichee } from '../modeles/fin.js';
 import { modeleFin } from '../modeles/fin.js';
 import { initiales } from '../modeles/salon.js';
 import type { ContexteEcran, EcranAffiche } from './types.js';
@@ -35,6 +40,7 @@ export function monterFin(contexte: ContexteEcran): EcranAffiche {
   const titre = creer(doc, 'h1', { classe: 'fin-titre' });
   const podium = creer(doc, 'div', { classe: 'podium' });
   const corpsTableau = creer(doc, 'tbody');
+  const progression = monterPanneauDeProgression(doc);
 
   const rejouer = (): void => {
     const etat = client.etat;
@@ -68,31 +74,37 @@ export function monterFin(contexte: ContexteEcran): EcranAffiche {
       creer(doc, 'div', { classe: 'panneau fin-podium' }, podium),
       creer(
         doc,
-        'section',
-        { classe: 'panneau fin-classement' },
-        creer(doc, 'h2', { texte: 'Classement final' }),
+        'div',
+        { classe: 'fin-cote' },
+        progression.racine,
         creer(
           doc,
-          'div',
-          { classe: 'tableau-defilant' },
+          'section',
+          { classe: 'panneau fin-classement' },
+          creer(doc, 'h2', { texte: 'Classement final' }),
           creer(
             doc,
-            'table',
-            { classe: 'tableau' },
+            'div',
+            { classe: 'tableau-defilant' },
             creer(
               doc,
-              'thead',
-              {},
+              'table',
+              { classe: 'tableau' },
               creer(
                 doc,
-                'tr',
+                'thead',
                 {},
-                ...['Rang', 'Joueur', 'Points', 'Ninjas', 'Captures', 'Black Ninjas'].map(
-                  (entete) => creer(doc, 'th', { texte: entete, attributs: { scope: 'col' } }),
+                creer(
+                  doc,
+                  'tr',
+                  {},
+                  ...['Rang', 'Joueur', 'Points', 'Ninjas', 'Captures', 'Black Ninjas'].map(
+                    (entete) => creer(doc, 'th', { texte: entete, attributs: { scope: 'col' } }),
+                  ),
                 ),
               ),
+              corpsTableau,
             ),
-            corpsTableau,
           ),
         ),
       ),
@@ -115,7 +127,7 @@ export function monterFin(contexte: ContexteEcran): EcranAffiche {
   /** Le classement deja affiche: il est definitif, on ne le redessine pas. */
   let finAffichee: FinDePartie | undefined;
 
-  const dessiner = (modele: ModeleFin): void => {
+  const dessinerLeClassement = (modele: ModeleFin): void => {
     ecrireTexte(ligneContexte, modele.contexte);
 
     titre.replaceChildren();
@@ -143,21 +155,145 @@ export function monterFin(contexte: ContexteEcran): EcranAffiche {
   return {
     racine,
 
-    afficher(etat) {
-      if (etat.fin === finAffichee) {
+    afficher(etat: EtatClient) {
+      const modele = modeleFin(etat);
+
+      if (modele === undefined) {
         return;
       }
 
-      finAffichee = etat.fin;
-      const modele = modeleFin(etat);
-
-      if (modele !== undefined) {
-        dessiner(modele);
+      if (etat.fin !== finAffichee) {
+        finAffichee = etat.fin;
+        dessinerLeClassement(modele);
       }
+
+      progression.afficher(modele.progression);
     },
 
     demonter() {
       racine.remove();
+    },
+  };
+}
+
+/** Le panneau de progression, monte. */
+interface PanneauDeProgression {
+  readonly racine: HTMLElement;
+  afficher(progression: ProgressionAffichee | undefined): void;
+}
+
+/**
+ * Le panneau de ce que la partie a rapporte.
+ *
+ * Tous ses elements existent des le montage, et l'affichage ne fait que les
+ * remplir et les montrer: un lecteur d'ecran annonce ainsi le changement du panneau
+ * vivant, sans que rien ne soit reconstruit a chaque etat.
+ */
+function monterPanneauDeProgression(doc: Document): PanneauDeProgression {
+  const attente = creer(doc, 'p', {
+    classe: 'fin-attente',
+    texte: 'Enregistrement de la partie…',
+  });
+  const nonEnregistree = creer(doc, 'p', { classe: 'fin-non-enregistree' });
+
+  const xp = creer(doc, 'span', { classe: 'fin-xp' });
+  const niveauDebut = creer(doc, 'span');
+  const niveauSuivant = creer(doc, 'span');
+  const remplissage = creer(doc, 'span', { classe: 'barre-remplie' });
+  const xpDuNiveau = creer(doc, 'p', { classe: 'barre-niveau-xp' });
+  const passage = creer(doc, 'p', { classe: 'fin-passage' });
+  const pieces = creer(doc, 'strong');
+  const variationLigue = creer(doc, 'strong');
+  const palier = creer(doc, 'span', { classe: 'gain-palier' });
+  const changementDePalier = creer(doc, 'span', { classe: 'gain-changement' });
+  const gainLigue = creer(
+    doc,
+    'div',
+    { classe: 'gain gain-ligue' },
+    icone(doc, 'diamond', 22),
+    variationLigue,
+    creer(doc, 'span', { texte: 'Points de ligue' }),
+    palier,
+    changementDePalier,
+  );
+
+  const details = creer(
+    doc,
+    'div',
+    { classe: 'fin-progression-details' },
+    creer(
+      doc,
+      'div',
+      { classe: 'barre-niveau' },
+      niveauDebut,
+      creer(doc, 'span', { classe: 'barre' }, remplissage),
+      niveauSuivant,
+    ),
+    xpDuNiveau,
+    passage,
+    creer(
+      doc,
+      'div',
+      { classe: 'fin-gains' },
+      creer(
+        doc,
+        'div',
+        { classe: 'gain gain-pieces' },
+        icone(doc, 'coin', 22),
+        pieces,
+        creer(doc, 'span', { texte: 'Pièces' }),
+      ),
+      gainLigue,
+    ),
+  );
+
+  const racine = creer(
+    doc,
+    'section',
+    { classe: 'panneau fin-progression', attributs: { 'aria-live': 'polite' } },
+    creer(
+      doc,
+      'div',
+      { classe: 'fin-progression-entete' },
+      creer(doc, 'h2', { texte: 'Progression' }),
+      xp,
+    ),
+    attente,
+    nonEnregistree,
+    details,
+  );
+
+  return {
+    racine,
+
+    afficher(progression) {
+      montrer(racine, progression !== undefined);
+      montrer(attente, progression?.nature === 'attente');
+      montrer(nonEnregistree, progression?.nature === 'nonEnregistree');
+      montrer(details, progression?.nature === 'enregistree');
+      montrer(xp, progression?.nature === 'enregistree');
+
+      if (progression?.nature === 'nonEnregistree') {
+        ecrireTexte(nonEnregistree, progression.motif);
+      }
+
+      if (progression?.nature !== 'enregistree') {
+        return;
+      }
+
+      ecrireTexte(xp, progression.xp);
+      ecrireTexte(niveauDebut, `Niv. ${String(progression.barre.niveau)}`);
+      ecrireTexte(niveauSuivant, `Niv. ${String(progression.barre.niveau + 1)}`);
+      remplissage.style.setProperty('--remplissage', `${String(progression.barre.pourCent)}%`);
+      ecrireTexte(xpDuNiveau, progression.barre.xp);
+      ecrireTexte(passage, progression.passageDeNiveau ?? '');
+      montrer(passage, progression.passageDeNiveau !== undefined);
+      ecrireTexte(pieces, progression.pieces);
+      ecrireTexte(variationLigue, progression.variationLigue);
+      gainLigue.dataset['sens'] = progression.sensDeLaLigue;
+      ecrireTexte(palier, progression.palier);
+      ecrireTexte(changementDePalier, progression.changementDePalier ?? '');
+      montrer(changementDePalier, progression.changementDePalier !== undefined);
     },
   };
 }
