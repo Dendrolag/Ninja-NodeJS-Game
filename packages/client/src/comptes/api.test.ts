@@ -18,6 +18,7 @@ import {
   MOTIF_INJOIGNABLE,
   STATUT_INJOIGNABLE,
   creerApiComptesHttp,
+  profilDEssai,
   progressionDEssai,
 } from './api.js';
 
@@ -98,6 +99,18 @@ describe('les requetes qui partent', () => {
     expect(vues[0]?.init.method).toBe('GET');
     expect(entetes(vues[0]).get('Authorization')).toBe(`Bearer ${JETON_DESSAI}`);
     expect(vues[0]?.adresse).not.toContain(JETON_DESSAI);
+  });
+
+  it('lisent le profil a sa route, avec le jeton en en-tete', async () => {
+    const { vues, envoyer } = envoiDEssai(() => json(200, profilDEssai('Alice')));
+    const api = creerApiComptesHttp({ url: ORIGINE, envoyer });
+
+    expect(await api.profil(JETON_DESSAI)).toEqual({
+      acceptee: true,
+      valeur: profilDEssai('Alice'),
+    });
+    expect(vues[0]?.adresse).toBe(`${ORIGINE}${ROUTES_COMPTES.profil}`);
+    expect(entetes(vues[0]).get('Authorization')).toBe(`Bearer ${JETON_DESSAI}`);
   });
 
   it('partent vers l origine de la page quand aucune adresse n est donnee', async () => {

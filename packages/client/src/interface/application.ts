@@ -40,6 +40,7 @@ import { bouton, creer, ecrireTexte } from './dom.js';
 import { monterAccueil } from './ecrans/accueil.js';
 import { monterConnexion } from './ecrans/connexion.js';
 import { monterFin } from './ecrans/fin.js';
+import { monterProfil } from './ecrans/profil.js';
 import { monterSalon } from './ecrans/salon.js';
 import type { ContexteEcran, EcranAffiche, MonteurEcran } from './ecrans/types.js';
 
@@ -67,6 +68,7 @@ export interface Application {
 const MONTEURS_DE_MENU: Readonly<Record<Exclude<Ecran, 'jeu'>, MonteurEcran>> = {
   accueil: monterAccueil,
   connexion: monterConnexion,
+  profil: monterProfil,
   salon: monterSalon,
   fin: monterFin,
 };
@@ -75,6 +77,7 @@ const MONTEURS_DE_MENU: Readonly<Record<Exclude<Ecran, 'jeu'>, MonteurEcran>> = 
 const LIBELLES_ECRAN: Readonly<Record<Ecran, string>> = {
   accueil: 'Accueil',
   connexion: 'Compte',
+  profil: 'Profil',
   salon: 'Salon',
   jeu: 'En jeu',
   fin: 'Résultats',

@@ -315,8 +315,15 @@ export function creerClient(options: OptionsClient): Client {
 
     ...session,
 
+    // Le profil se relit a chaque arrivee sur son ecran. La lecture part apres la
+    // navigation, et non pendant le montage de l'ecran: un changement d'etat au
+    // milieu d'un montage arriverait a l'ecran qu'on quitte.
     naviguer: (vers) => {
       magasin.appliquer({ type: 'navigation', vers });
+
+      if (magasin.etat.ecran === 'profil') {
+        session.chargerLeProfil();
+      }
     },
 
     rejoindre: (pseudo, acces) => {

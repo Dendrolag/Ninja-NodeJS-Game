@@ -64,6 +64,8 @@ export interface CommandesDeSession {
   sInscrire(demande: DemandeInscription): void;
   /** Ferme la session, et rouvre le lien en invite. */
   seDeconnecter(): void;
+  /** Lit le profil du compte. Sans effet pour un invite, ou pendant qu'une lecture attend. */
+  chargerLeProfil(): void;
 }
 
 /** Le motif d'une demande de compte sans comptes a joindre. */
@@ -241,6 +243,46 @@ export function brancherLaSession(options: OptionsSession): CommandesDeSession {
       if (jeton !== undefined && api !== undefined) {
         void api.deconnecter(jeton);
       }
+    },
+
+    // Une session expiree decouverte en lisant le profil se traite comme au
+    // demarrage: le jeton est oublie, le lien rouvert en invite, et l'accueil le dit.
+    chargerLeProfil: () => {
+      const jeton = coffre.lire();
+
+      if (
+        api === undefined ||
+        jeton === undefined ||
+        magasin.etat.session.nature === 'invite' ||
+        magasin.etat.profil.statut === 'chargement'
+      ) {
+        return;
+      }
+
+      magasin.appliquer({ type: 'profilDemande' });
+
+      void api.profil(jeton).then((reponse) => {
+        if (coffre.lire() !== jeton) {
+          return;
+        }
+
+        if (reponse.acceptee) {
+          magasin.appliquer({ type: 'profilRecu', profil: reponse.valeur });
+          return;
+        }
+
+        if (reponse.statut === STATUT_SESSION_ABSENTE && horsPartie()) {
+          coffre.oublier();
+          magasin.appliquer({ type: 'sessionDInvite', expiree: true });
+          ouvrirLeLien(undefined);
+          return;
+        }
+
+        magasin.appliquer({
+          type: 'profilRefuse',
+          motif: reponse.erreurs.map((erreur) => erreur.motif).join(' '),
+        });
+      });
     },
   };
 }

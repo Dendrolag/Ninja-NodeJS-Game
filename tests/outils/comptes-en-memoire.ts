@@ -26,8 +26,15 @@ import type {
   ReponseDeCompte,
   ServiceDeComptes,
 } from '@neon-ninja/server';
-import type { ErreurValidation, MaProgression, SessionOuverte } from '@neon-ninja/shared';
+import type {
+  ErreurValidation,
+  MaProgression,
+  PartieDuProfil,
+  SessionOuverte,
+} from '@neon-ninja/shared';
 import {
+  JOUEURS_POUR_UNE_VICTOIRE,
+  PARTIES_DU_PROFIL,
   niveauDeXp,
   reperePseudo,
   validerDemandeConnexion,
@@ -43,6 +50,8 @@ interface CompteEnMemoire {
   xpTotale: number;
   pieces: number;
   pointsLigue: number;
+  /** Les parties jouees, de la plus recente a la plus ancienne. */
+  readonly historique: PartieDuProfil[];
 }
 
 /** Une fin de partie enregistree. */
@@ -122,6 +131,7 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
         xpTotale: 0,
         pieces: 0,
         pointsLigue: 0,
+        historique: [],
       };
       comptes.set(compte.id, compte);
 
@@ -157,6 +167,32 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
         : { acceptee: true, valeur: progressionDe(compte) };
     },
 
+    // Les statistiques se deduisent de tout l'historique, comme en base.
+    profil: async (jeton) => {
+      const compte = comptes.get(sessions.get(jeton) ?? '');
+
+      if (compte === undefined) {
+        return refusee('sessionAbsente', [{ champ: 'session', motif: MOTIFS.sessionAbsente }]);
+      }
+
+      const victoires = compte.historique.filter(
+        (partie) => partie.placement === 1 && partie.nombreJoueurs >= JOUEURS_POUR_UNE_VICTOIRE,
+      ).length;
+      const scores = compte.historique.map((partie) => partie.points);
+
+      return {
+        acceptee: true,
+        valeur: {
+          ...progressionDe(compte),
+          statistiques:
+            scores.length === 0
+              ? { partiesJouees: 0, victoires }
+              : { partiesJouees: scores.length, victoires, meilleurScore: Math.max(...scores) },
+          dernieresParties: compte.historique.slice(0, PARTIES_DU_PROFIL),
+        },
+      };
+    },
+
     compteDeSession: async (jeton) => sessions.get(jeton),
 
     identiteDe: async (compteId): Promise<IdentiteDeCompte | undefined> => {
@@ -187,9 +223,23 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
           pointsLigue: compte.pointsLigue,
         };
 
+        const variationPointsLigue = Math.max(resultat.variationPointsLigue, -compte.pointsLigue);
+
         compte.xpTotale += resultat.xpGagnee;
         compte.pieces += resultat.piecesGagnees;
-        compte.pointsLigue += Math.max(resultat.variationPointsLigue, -compte.pointsLigue);
+        compte.pointsLigue += variationPointsLigue;
+        compte.historique.unshift({
+          mode: partie.mode,
+          carte: partie.carte,
+          modeMiroir: partie.modeMiroir,
+          placement: resultat.placement,
+          nombreJoueurs: partie.nombreJoueurs,
+          points: resultat.points,
+          xpGagnee: resultat.xpGagnee,
+          piecesGagnees: resultat.piecesGagnees,
+          variationPointsLigue,
+          termineeLe: (partie.termineeLe ?? new Date()).toISOString(),
+        });
 
         return {
           compteId: compte.id,

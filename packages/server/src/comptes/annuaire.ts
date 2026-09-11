@@ -14,7 +14,12 @@
  * Un serveur sans base n'a ni annuaire ni service, et joue en invites seulement.
  */
 
-import type { ErreurValidation, MaProgression, SessionOuverte } from '@neon-ninja/shared';
+import type {
+  ErreurValidation,
+  MaProgression,
+  ProfilDuCompte,
+  SessionOuverte,
+} from '@neon-ninja/shared';
 
 import type { NouveauResultat, NouvellePartie, ProgressionAppliquee } from '../base/parties.js';
 
@@ -99,4 +104,10 @@ export interface ServiceDeComptes extends AnnuaireDesComptes {
 
   /** La progression du compte dont ce jeton ouvre la session. */
   maProgression(jeton: string): Promise<ReponseDeCompte<MaProgression>>;
+
+  /**
+   * Le profil du compte dont ce jeton ouvre la session: sa progression, ses
+   * statistiques et ses dernieres parties (reprise des ecrans du jalon 3).
+   */
+  profil(jeton: string): Promise<ReponseDeCompte<ProfilDuCompte>>;
 }

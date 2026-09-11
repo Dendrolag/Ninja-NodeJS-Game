@@ -143,7 +143,8 @@ export type {
   ProgressionAppliquee,
   ResultatDePartie,
 } from './base/parties.js';
-export { enregistrerPartie, lireHistorique } from './base/parties.js';
+export { enregistrerPartie, lireHistorique, statistiquesDuCompte } from './base/parties.js';
+export type { StatistiquesEnregistrees } from './base/parties.js';
 
 export type { FinPourLesComptes } from './finDePartie.js';
 export { finPourLesComptes, progressionEnregistree } from './finDePartie.js';

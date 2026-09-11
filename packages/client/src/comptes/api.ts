@@ -25,6 +25,7 @@ import type {
   DemandeInscription,
   ErreurValidation,
   MaProgression,
+  ProfilDuCompte,
   SessionOuverte,
 } from '@neon-ninja/shared';
 import { PREFIXE_JETON_HTTP, ROUTES_COMPTES } from '@neon-ninja/shared';
@@ -55,6 +56,8 @@ export interface ApiComptes {
   deconnecter(jeton: string): Promise<ReponseDesComptes<undefined>>;
   /** La progression du compte dont ce jeton ouvre la session. */
   moi(jeton: string): Promise<ReponseDesComptes<MaProgression>>;
+  /** Le profil du compte dont ce jeton ouvre la session. */
+  profil(jeton: string): Promise<ReponseDesComptes<ProfilDuCompte>>;
 }
 
 /** Ce qui envoie une requete HTTP: fetch, ou une piece d'essai qui lui ressemble. */
@@ -151,6 +154,8 @@ export function creerApiComptesHttp(options: OptionsApiComptesHttp = {}): ApiCom
       ),
     moi: (jeton) =>
       demander(ROUTES_COMPTES.moi, { method: 'GET', headers: entetesDuJeton(jeton) }, true),
+    profil: (jeton) =>
+      demander(ROUTES_COMPTES.profil, { method: 'GET', headers: entetesDuJeton(jeton) }, true),
   };
 }
 
@@ -254,6 +259,15 @@ export function progressionDEssai(pseudo: string): MaProgression {
   };
 }
 
+/** Le profil d'un compte neuf, qui n'a jamais joue, pour les tests. */
+export function profilDEssai(pseudo: string): ProfilDuCompte {
+  return {
+    ...progressionDEssai(pseudo),
+    statistiques: { partiesJouees: 0, victoires: 0 },
+    dernieresParties: [],
+  };
+}
+
 /** Cree des comptes pilotes a la main. */
 export function creerApiComptesFactice(): ApiComptesFactice {
   const appels: AppelDesComptes[] = [];
@@ -276,6 +290,7 @@ export function creerApiComptesFactice(): ApiComptesFactice {
     },
     deconnecter: async () => ({ acceptee: true, valeur: undefined }),
     moi: async () => ({ acceptee: true, valeur: progressionDEssai(dernierPseudo) }),
+    profil: async () => ({ acceptee: true, valeur: profilDEssai(dernierPseudo) }),
   };
 
   return {
@@ -296,6 +311,10 @@ export function creerApiComptesFactice(): ApiComptesFactice {
     moi: (jeton) => {
       appels.push({ nom: 'moi', argument: jeton });
       return reponses.moi(jeton);
+    },
+    profil: (jeton) => {
+      appels.push({ nom: 'profil', argument: jeton });
+      return reponses.profil(jeton);
     },
   };
 }

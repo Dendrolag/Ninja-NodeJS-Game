@@ -105,6 +105,7 @@ function annuaireDEssai(): AnnuaireDEssai {
     connecter: nonUtilise,
     deconnecter: nonUtilise,
     maProgression: nonUtilise,
+    profil: nonUtilise,
   };
 
   async function repondre(): Promise<void> {

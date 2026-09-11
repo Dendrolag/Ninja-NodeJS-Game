@@ -1287,6 +1287,138 @@
   gap: 14px;
 }
 
+/* -- Profil -------------------------------------------------------------- */
+
+.ecran-profil,
+.profil-contenu {
+  display: grid;
+  gap: 24px;
+}
+
+.profil-chargement {
+  color: var(--texte-secondaire);
+  font-family: var(--police-donnees);
+  font-size: 12.5px;
+}
+
+.profil-echec {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  color: var(--rose-clair);
+}
+
+.profil-entete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 22px;
+  padding: clamp(20px, 4vw, 30px);
+}
+
+.avatar-profil {
+  width: 84px;
+  height: 84px;
+  font-size: 28px;
+}
+
+.profil-identite {
+  display: grid;
+  flex: 1;
+  gap: 8px;
+  min-width: 220px;
+}
+
+.profil-nom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.profil-nom h1 {
+  overflow-wrap: anywhere;
+  font-size: clamp(26px, 4vw, 34px);
+}
+
+.badge-palier {
+  border: 1px solid rgba(139, 123, 255, 0.35);
+  background: rgba(139, 123, 255, 0.12);
+  color: #c3baff;
+}
+
+.profil-inscription {
+  color: var(--texte-tertiaire);
+  font-size: 13px;
+}
+
+.profil-identite .barre-niveau {
+  max-width: 440px;
+}
+
+.profil-identite .barre-niveau-xp {
+  justify-self: start;
+}
+
+.profil-statistiques,
+.profil-parties {
+  display: grid;
+  gap: 12px;
+}
+
+.profil-parties {
+  padding: 18px 20px;
+}
+
+.profil-statistiques h2,
+.profil-parties h2 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.statistiques {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.statistique {
+  display: grid;
+  gap: 2px;
+  padding: 16px 18px;
+  border-radius: var(--rayon-carte);
+}
+
+.statistique strong {
+  font-family: var(--police-donnees);
+  font-size: 24px;
+}
+
+.statistique span {
+  color: var(--texte-tertiaire);
+  font-size: 12.5px;
+}
+
+.profil-vide {
+  color: var(--texte-secondaire);
+}
+
+.profil-date {
+  white-space: nowrap;
+}
+
+.tableau .ligue-hausse {
+  color: var(--vert);
+}
+
+.tableau .ligue-baisse {
+  color: var(--rose-clair);
+}
+
 /* -- Petits ecrans ------------------------------------------------------- */
 
 @media (max-width: 960px) {

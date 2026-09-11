@@ -26,6 +26,7 @@ import type {
   MaProgression,
   MessageChat,
   PartiePublique,
+  ProfilDuCompte,
   ProgressionDeFin,
   Refus,
   TypeBonus,
@@ -107,6 +108,21 @@ export const AUCUNE_DEMANDE_DE_COMPTE: DemandeDeCompte = {
 };
 
 /**
+ * Le profil du compte, tel que le client l'a lu.
+ *
+ * Il se relit a chaque ouverture de l'ecran du profil: une partie jouee entre-temps
+ * l'a change, et une photographie ancienne montrerait des statistiques fausses.
+ */
+export type EtatDuProfil =
+  | { readonly statut: 'inconnu' }
+  | { readonly statut: 'chargement' }
+  | { readonly statut: 'charge'; readonly profil: ProfilDuCompte }
+  | { readonly statut: 'echec'; readonly motif: string };
+
+/** Un profil que le client n'a pas lu. */
+export const PROFIL_INCONNU: EtatDuProfil = { statut: 'inconnu' };
+
+/**
  * Un message de chat, date a son arrivee chez nous.
  *
  * Le serveur n'envoie aucune heure, et c'est delibere: la sienne est monotone et
@@ -153,6 +169,8 @@ export interface EtatClient {
   readonly session: SessionDuClient;
   /** La derniere demande de connexion ou d'inscription. */
   readonly demandeDeCompte: DemandeDeCompte;
+  /** Le profil du compte, lu a l'ouverture de son ecran. */
+  readonly profil: EtatDuProfil;
   /**
    * Notre identifiant de session, donne par le serveur a la connexion.
    *
@@ -240,6 +258,7 @@ export const ETAT_INITIAL: EtatClient = {
   refusDeConnexion: undefined,
   session: { nature: 'invite', sessionExpiree: false },
   demandeDeCompte: AUCUNE_DEMANDE_DE_COMPTE,
+  profil: PROFIL_INCONNU,
   moi: undefined,
   pseudoDemande: undefined,
   entreeEnCours: false,

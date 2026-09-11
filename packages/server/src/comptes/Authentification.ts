@@ -25,10 +25,13 @@ import type {
   ErreurValidation,
   LimiteDebit,
   MaProgression,
+  PartieDuProfil,
+  ProfilDuCompte,
   SessionOuverte,
 } from '@neon-ninja/shared';
 import {
   LIMITES_COMPTES,
+  PARTIES_DU_PROFIL,
   niveauDeXp,
   reperePseudo,
   validerDemandeConnexion,
@@ -42,8 +45,14 @@ import {
   trouverCompteParPseudo,
 } from '../base/comptes.js';
 import type { BaseDeDonnees } from '../base/connexion.js';
-import type { NouveauResultat, NouvellePartie, ProgressionAppliquee } from '../base/parties.js';
-import { enregistrerPartie } from '../base/parties.js';
+import type {
+  NouveauResultat,
+  NouvellePartie,
+  ProgressionAppliquee,
+  ResultatDePartie,
+  StatistiquesEnregistrees,
+} from '../base/parties.js';
+import { enregistrerPartie, lireHistorique, statistiquesDuCompte } from '../base/parties.js';
 import { compteDeLaSession, fermerSession, ouvrirSession } from '../base/sessions.js';
 import type { Horloge } from '../horloge.js';
 import { horlogeSysteme } from '../horloge.js';
@@ -188,22 +197,27 @@ export class Authentification implements ServiceDeComptes {
   }
 
   async maProgression(jeton: string): Promise<ReponseDeCompte<MaProgression>> {
-    const compteId = await this.compteDeSession(jeton);
-    const profil = compteId === undefined ? undefined : await profilDuCompte(this.db, compteId);
+    const compte = await this.compteDeLaSession(jeton);
 
-    if (profil === undefined) {
-      return refusee('sessionAbsente', [
-        { champ: 'session', motif: 'Session absente ou expirée. Connectez-vous.' },
-      ]);
+    return compte === undefined ? sessionAbsente() : acceptee(compte.progression);
+  }
+
+  async profil(jeton: string): Promise<ReponseDeCompte<ProfilDuCompte>> {
+    const compte = await this.compteDeLaSession(jeton);
+
+    if (compte === undefined) {
+      return sessionAbsente();
     }
 
+    const [statistiques, historique] = await Promise.all([
+      statistiquesDuCompte(this.db, compte.id),
+      lireHistorique(this.db, compte.id, PARTIES_DU_PROFIL),
+    ]);
+
     return acceptee({
-      pseudo: profil.pseudo,
-      niveau: niveauDeXp(profil.xpTotale),
-      xpTotale: profil.xpTotale,
-      pieces: profil.pieces,
-      pointsLigue: profil.pointsLigue,
-      inscritLe: profil.creeLe.toISOString(),
+      ...compte.progression,
+      statistiques: statistiquesDuProfil(statistiques),
+      dernieresParties: historique.map(partieDuProfil),
     });
   }
 
@@ -238,6 +252,35 @@ export class Authentification implements ServiceDeComptes {
   // Briques
   // ------------------------------------------------------------------------
 
+  /**
+   * Le compte dont ce jeton ouvre une session valable, et sa progression, ou
+   * undefined.
+   *
+   * Le niveau se deduit de l'XP a cette lecture, et n'est garde nulle part.
+   */
+  private async compteDeLaSession(
+    jeton: string,
+  ): Promise<{ readonly id: string; readonly progression: MaProgression } | undefined> {
+    const compteId = await this.compteDeSession(jeton);
+    const profil = compteId === undefined ? undefined : await profilDuCompte(this.db, compteId);
+
+    if (profil === undefined) {
+      return undefined;
+    }
+
+    return {
+      id: profil.id,
+      progression: {
+        pseudo: profil.pseudo,
+        niveau: niveauDeXp(profil.xpTotale),
+        xpTotale: profil.xpTotale,
+        pieces: profil.pieces,
+        pointsLigue: profil.pointsLigue,
+        inscritLe: profil.creeLe.toISOString(),
+      },
+    };
+  }
+
   /** Ouvre une session pour ce compte, et rend ce que le client doit en savoir. */
   private async ouvrirUneSession(
     compteId: string,
@@ -271,6 +314,45 @@ function acceptee<T>(valeur: T): ReponseDeCompte<T> {
 /** Une reponse refusee. */
 function refusee<T>(motif: MotifDeRefus, erreurs: readonly ErreurValidation[]): ReponseDeCompte<T> {
   return { acceptee: false, motif, erreurs };
+}
+
+/** Une reponse refusee faute de session valable. */
+function sessionAbsente<T>(): ReponseDeCompte<T> {
+  return refusee('sessionAbsente', [
+    { champ: 'session', motif: 'Session absente ou expirée. Connectez-vous.' },
+  ]);
+}
+
+/**
+ * Les statistiques d'un compte, a la forme du contrat.
+ *
+ * Un meilleur score absent n'est pas ecrit: le contrat le declare facultatif, et un
+ * champ absent n'est pas un champ qui vaut undefined.
+ */
+function statistiquesDuProfil(
+  statistiques: StatistiquesEnregistrees,
+): ProfilDuCompte['statistiques'] {
+  const { partiesJouees, victoires, meilleurScore } = statistiques;
+
+  return meilleurScore === undefined
+    ? { partiesJouees, victoires }
+    : { partiesJouees, victoires, meilleurScore };
+}
+
+/** Une ligne de l'historique, a la forme du contrat. */
+function partieDuProfil(ligne: ResultatDePartie): PartieDuProfil {
+  return {
+    mode: ligne.mode,
+    carte: ligne.carte,
+    modeMiroir: ligne.modeMiroir,
+    placement: ligne.placement,
+    nombreJoueurs: ligne.nombreJoueurs,
+    points: ligne.points,
+    xpGagnee: ligne.xpGagnee,
+    piecesGagnees: ligne.piecesGagnees,
+    variationPointsLigue: ligne.variationPointsLigue,
+    termineeLe: ligne.termineeLe.toISOString(),
+  };
 }
 
 /** Une reponse refusee pour exces de tentatives, avec le delai avant de reessayer. */

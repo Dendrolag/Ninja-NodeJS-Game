@@ -30,10 +30,19 @@ export type {
   DemandeConnexion,
   DemandeInscription,
   MaProgression,
+  PartieDuProfil,
+  ProfilDuCompte,
   ReponseRefusee,
   SessionOuverte,
+  StatistiquesDuCompte,
 } from './comptes.js';
-export { PREFIXE_JETON_HTTP, RACINE_API_COMPTES, ROUTES_COMPTES } from './comptes.js';
+export {
+  JOUEURS_POUR_UNE_VICTOIRE,
+  PARTIES_DU_PROFIL,
+  PREFIXE_JETON_HTTP,
+  RACINE_API_COMPTES,
+  ROUTES_COMPTES,
+} from './comptes.js';
 
 export type {
   AvancementDuNiveau,

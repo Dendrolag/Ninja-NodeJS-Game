@@ -60,6 +60,7 @@ export type {
   EffetActif,
   EtatClient,
   EtatConnexion,
+  EtatDuProfil,
   MessageAffiche,
   NatureDemandeDeCompte,
   SessionDuClient,
@@ -69,6 +70,7 @@ export {
   ETAT_INITIAL,
   MAX_JOURNAL,
   MAX_MESSAGES,
+  PROFIL_INCONNU,
   refusDe,
 } from './etat.js';
 
@@ -88,6 +90,7 @@ export {
   STATUT_SESSION_ABSENTE,
   creerApiComptesFactice,
   creerApiComptesHttp,
+  profilDEssai,
   progressionDEssai,
 } from './comptes/api.js';
 
@@ -235,6 +238,14 @@ export { modeleConnexion } from './interface/modeles/connexion.js';
 export type { ModeleCompteDeLEntete } from './interface/modeles/entete.js';
 export { modeleCompteDeLEntete } from './interface/modeles/entete.js';
 
+export type {
+  LigneDHistorique,
+  ModeleProfil,
+  SensDUneVariation,
+  StatistiqueAffichee,
+} from './interface/modeles/profil.js';
+export { formaterFinDePartie, formaterJour, modeleProfil } from './interface/modeles/profil.js';
+
 export type { BarreDeNiveau } from './interface/modeles/progression.js';
 export {
   NOMS_DES_PALIERS,
@@ -252,8 +263,14 @@ export type {
 } from './interface/modeles/salon.js';
 export { initiales, modeleSalon } from './interface/modeles/salon.js';
 
-export type { LigneFin, ModeleFin, Place } from './interface/modeles/fin.js';
-export { modeleFin } from './interface/modeles/fin.js';
+export type {
+  LigneFin,
+  ModeleFin,
+  Place,
+  ProgressionAffichee,
+  SensDeLaLigue,
+} from './interface/modeles/fin.js';
+export { modeleFin, progressionAffichee } from './interface/modeles/fin.js';
 
 export type { PresentationCarte } from './interface/modeles/cartes.js';
 export { NOMS_DES_MODES, PRESENTATION_CARTES, nomDeCarte } from './interface/modeles/cartes.js';

@@ -18,7 +18,7 @@
  * defaut du client d'origine.
  */
 
-import type { ProgressionDeFin } from '@neon-ninja/shared';
+import type { ProfilDuCompte, ProgressionDeFin } from '@neon-ninja/shared';
 
 import type { Action } from './actions.js';
 import { ecranSuivant } from './ecrans.js';
@@ -29,6 +29,7 @@ import {
   ETAT_INITIAL,
   MAX_JOURNAL,
   MAX_MESSAGES,
+  PROFIL_INCONNU,
   refusDe,
 } from './etat.js';
 import type { FaitDeJeu } from './faits.js';
@@ -87,12 +88,18 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
     case 'sessionEnVerification':
       return { ...etat, ecran, session: { nature: 'verification' } };
 
+    // Un joueur qui quitte son compte depuis le profil revient a l'accueil, pas a
+    // l'ecran de connexion.
     case 'sessionDInvite':
       return {
         ...etat,
-        ecran: ecranPourLaSession(ecran, { nature: 'invite', sessionExpiree: action.expiree }),
+        ecran:
+          ecran === 'profil'
+            ? 'accueil'
+            : ecranPourLaSession(ecran, { nature: 'invite', sessionExpiree: action.expiree }),
         session: { nature: 'invite', sessionExpiree: action.expiree },
         demandeDeCompte: AUCUNE_DEMANDE_DE_COMPTE,
+        profil: PROFIL_INCONNU,
       };
 
     case 'sessionDeCompte':
@@ -101,6 +108,7 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
         ecran,
         session: { nature: 'compte', progression: action.progression },
         demandeDeCompte: AUCUNE_DEMANDE_DE_COMPTE,
+        profil: PROFIL_INCONNU,
       };
 
     case 'demandeDeCompteEnvoyee':
@@ -121,6 +129,21 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
         ecran,
         demandeDeCompte: { ...etat.demandeDeCompte, enCours: false, erreurs: action.erreurs },
       };
+
+    case 'profilDemande':
+      return { ...etat, ecran, profil: { statut: 'chargement' } };
+
+    // Le profil porte la progression du moment: l'en-tete la suit.
+    case 'profilRecu':
+      return {
+        ...etat,
+        ecran,
+        profil: { statut: 'charge', profil: action.profil },
+        session: sessionDuProfil(etat.session, action.profil),
+      };
+
+    case 'profilRefuse':
+      return { ...etat, ecran, profil: { statut: 'echec', motif: action.motif } };
 
     // Un refus de compte ne suit pas le joueur sur un autre ecran. Une demande
     // en cours, elle, continue: sa reponse arrivera.
@@ -267,15 +290,33 @@ function sessionApresLaPartie(
   };
 }
 
+/** La session d'un compte, avec la progression que porte son profil. */
+function sessionDuProfil(session: SessionDuClient, profil: ProfilDuCompte): SessionDuClient {
+  if (session.nature !== 'compte') {
+    return session;
+  }
+
+  const { pseudo, niveau, xpTotale, pieces, pointsLigue, inscritLe } = profil;
+
+  return {
+    nature: 'compte',
+    progression: { pseudo, niveau, xpTotale, pieces, pointsLigue, inscritLe },
+  };
+}
+
 /**
  * L'ecran de menu qui convient a la session.
  *
- * Un compte n'a rien a faire sur l'ecran de connexion. Les ecrans reserves aux
- * comptes arriveront avec le profil.
+ * Un compte n'a rien a faire sur l'ecran de connexion, et le profil d'un invite
+ * n'existe pas: il y est mene a la connexion, qui lui en ouvre un.
  */
 function ecranPourLaSession(ecran: Ecran, session: SessionDuClient): Ecran {
   if (ecran === 'connexion' && session.nature === 'compte') {
     return 'accueil';
+  }
+
+  if (ecran === 'profil' && session.nature === 'invite') {
+    return 'connexion';
   }
 
   return ecran;

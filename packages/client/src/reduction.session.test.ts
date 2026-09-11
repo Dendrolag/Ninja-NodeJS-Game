@@ -182,3 +182,50 @@ describe('les demandes de compte', () => {
     expect(etat.demandeDeCompte.enCours).toBe(true);
   });
 });
+
+describe('le profil', () => {
+  it('n existe pas pour un invite, mene a la connexion', () => {
+    expect(apres([{ type: 'navigation', vers: 'profil' }]).ecran).toBe('connexion');
+  });
+
+  it('se quitte vers l accueil quand le compte redevient invite', () => {
+    const etat = apres([
+      { type: 'sessionDeCompte', progression: PROGRESSION },
+      { type: 'navigation', vers: 'profil' },
+      { type: 'profilDemande' },
+      { type: 'sessionDInvite', expiree: false },
+    ]);
+
+    expect(etat.ecran).toBe('accueil');
+    expect(etat.profil).toEqual({ statut: 'inconnu' });
+  });
+
+  it('se lit, puis se garde avec la progression qu il porte', () => {
+    const profil = {
+      ...PROGRESSION,
+      xpTotale: 400,
+      niveau: 3,
+      statistiques: { partiesJouees: 3, victoires: 1, meilleurScore: 12 },
+      dernieresParties: [],
+    };
+    const etat = apres([
+      { type: 'sessionDeCompte', progression: PROGRESSION },
+      { type: 'navigation', vers: 'profil' },
+      { type: 'profilDemande' },
+      { type: 'profilRecu', profil },
+    ]);
+
+    expect(etat.profil).toEqual({ statut: 'charge', profil });
+    expect(etat.session).toEqual({
+      nature: 'compte',
+      progression: { ...PROGRESSION, xpTotale: 400, niveau: 3 },
+    });
+  });
+
+  it('retient le motif d une lecture refusee', () => {
+    expect(apres([{ type: 'profilRefuse', motif: 'Le serveur ne répond pas.' }]).profil).toEqual({
+      statut: 'echec',
+      motif: 'Le serveur ne répond pas.',
+    });
+  });
+});

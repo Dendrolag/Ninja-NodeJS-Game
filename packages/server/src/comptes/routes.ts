@@ -1,5 +1,6 @@
 /**
- * Les routes HTTP des comptes: inscription, connexion, deconnexion, progression.
+ * Les routes HTTP des comptes: inscription, connexion, deconnexion, progression et
+ * profil.
  *
  * CE FICHIER TRADUIT, IL NE DECIDE RIEN. Il lit la requete (corps JSON, jeton en
  * en-tete, adresse), appelle le service, et traduit sa reponse en code HTTP. Toute
@@ -87,6 +88,16 @@ export function routesDesComptes(
     }
 
     repondre(reponse, await service.maProgression(jeton), 200);
+  });
+
+  routes.get('/profil', async (requete, reponse) => {
+    const jeton = jetonDe(requete);
+    if (jeton === undefined) {
+      refuserSansSession(reponse);
+      return;
+    }
+
+    repondre(reponse, await service.profil(jeton), 200);
   });
 
   routes.use((_requete, reponse) => {

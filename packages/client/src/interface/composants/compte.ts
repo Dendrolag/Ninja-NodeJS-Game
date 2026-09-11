@@ -56,6 +56,11 @@ export function monterCompteDeLEntete(doc: Document, client: Client): CompteDeLE
     creer(doc, 'span', { classe: 'carte-compte-identite' }, pseudo, palier),
   );
 
+  const ouvrirLeProfil = (): void => {
+    client.naviguer('profil');
+  };
+  carte.addEventListener('click', ouvrirLeProfil);
+
   const racine = creer(doc, 'div', { classe: 'entete-compte' }, seConnecter, pieces, carte);
 
   return {
@@ -86,6 +91,7 @@ export function monterCompteDeLEntete(doc: Document, client: Client): CompteDeLE
     },
 
     demonter() {
+      carte.removeEventListener('click', ouvrirLeProfil);
       racine.remove();
     },
   };

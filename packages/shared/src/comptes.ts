@@ -22,6 +22,7 @@
  * demande recue est revalidee par validation.ts avant d'aller plus loin.
  */
 
+import type { IdentifiantCarte, Mode } from './constantes.js';
 import type { ErreurValidation } from './validation.js';
 
 /** La racine des routes HTTP des comptes. */
@@ -41,6 +42,8 @@ export const ROUTES_COMPTES = {
   deconnexion: `${RACINE_API_COMPTES}/deconnexion`,
   /** GET, jeton en en-tete. 200 et MaProgression; 401 sans session valide. */
   moi: `${RACINE_API_COMPTES}/moi`,
+  /** GET, jeton en en-tete. 200 et ProfilDuCompte; 401 sans session valide. */
+  profil: `${RACINE_API_COMPTES}/profil`,
 } as const;
 
 /**
@@ -96,6 +99,69 @@ export interface MaProgression extends CompteConnecte {
   readonly pointsLigue: number;
   /** Date d'inscription, au format ISO 8601. */
   readonly inscritLe: string;
+}
+
+/**
+ * Combien de parties le profil montre.
+ *
+ * Les statistiques, elles, portent sur tout l'historique: le profil ne les calcule
+ * pas a partir des seules parties affichees.
+ */
+export const PARTIES_DU_PROFIL = 10;
+
+/**
+ * Le nombre de joueurs a partir duquel une premiere place compte comme une victoire.
+ *
+ * Une partie jouee seul se termine a la premiere place a coup sur: la compter ferait
+ * monter les victoires sans le moindre adversaire. Le seuil est celui des points de
+ * ligue (progression.ts), pour la meme raison, mais il n'en depend pas: changer
+ * l'une des deux regles n'a pas a changer l'autre.
+ */
+export const JOUEURS_POUR_UNE_VICTOIRE = 2;
+
+/**
+ * Ce que l'historique d'un compte dit de lui (cadrage, section 3, profil).
+ *
+ * Ces nombres se deduisent des resultats enregistres, a chaque lecture: aucune
+ * colonne ne les tient a jour (cadrage, section 5).
+ */
+export interface StatistiquesDuCompte {
+  readonly partiesJouees: number;
+  /** Premieres places dans une partie d'au moins JOUEURS_POUR_UNE_VICTOIRE joueurs. */
+  readonly victoires: number;
+  /** Le meilleur score d'une partie. Absent tant qu'aucune partie n'est enregistree. */
+  readonly meilleurScore?: number;
+}
+
+/** Une partie de l'historique d'un compte, telle que son profil la montre. */
+export interface PartieDuProfil {
+  readonly mode: Mode;
+  readonly carte: IdentifiantCarte;
+  readonly modeMiroir: boolean;
+  /** 1 pour le premier. */
+  readonly placement: number;
+  /** Tous les joueurs de la partie, invites et abandons compris. */
+  readonly nombreJoueurs: number;
+  readonly points: number;
+  readonly xpGagnee: number;
+  readonly piecesGagnees: number;
+  /** Signee, telle qu'appliquee. */
+  readonly variationPointsLigue: number;
+  /** Fin de la partie, au format ISO 8601. */
+  readonly termineeLe: string;
+}
+
+/**
+ * Le profil d'un compte, tel que son proprietaire le lit (cadrage, section 3).
+ *
+ * Reserve, comme la progression, a une demande qui presente une session valide: le
+ * profil d'un compte n'est montre qu'a lui. Pas de rang mondial, de pass de saison,
+ * de skins, de succes ni de clan: reportes apres la v1.
+ */
+export interface ProfilDuCompte extends MaProgression {
+  readonly statistiques: StatistiquesDuCompte;
+  /** Les PARTIES_DU_PROFIL dernieres parties, de la plus recente a la plus ancienne. */
+  readonly dernieresParties: readonly PartieDuProfil[];
 }
 
 /** Le corps d'une reponse HTTP refusee. */

@@ -7,7 +7,12 @@
  * tests/base/authentification.test.ts.
  */
 
-import type { MaProgression, ReponseRefusee, SessionOuverte } from '@neon-ninja/shared';
+import type {
+  MaProgression,
+  ProfilDuCompte,
+  ReponseRefusee,
+  SessionOuverte,
+} from '@neon-ninja/shared';
 import { ROUTES_COMPTES } from '@neon-ninja/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -26,6 +31,25 @@ const PROGRESSION: MaProgression = {
   pieces: 40,
   pointsLigue: 12,
   inscritLe: '2026-09-11T10:00:00.000Z',
+};
+
+const PROFIL: ProfilDuCompte = {
+  ...PROGRESSION,
+  statistiques: { partiesJouees: 1, victoires: 1, meilleurScore: 30 },
+  dernieresParties: [
+    {
+      mode: 'classique',
+      carte: 'map1',
+      modeMiroir: false,
+      placement: 1,
+      nombreJoueurs: 3,
+      points: 30,
+      xpGagnee: 150,
+      piecesGagnees: 15,
+      variationPointsLigue: 20,
+      termineeLe: '2026-09-11T12:00:00.000Z',
+    },
+  ],
 };
 
 let serveur: ServeurMonte | undefined;
@@ -60,6 +84,7 @@ function serviceFactice(remplacements: Partial<ServiceDeComptes> = {}): ServiceD
     connecter: vi.fn(async () => acceptee(SESSION)),
     deconnecter: vi.fn(async () => undefined),
     maProgression: vi.fn(async () => acceptee(PROGRESSION)),
+    profil: vi.fn(async () => acceptee(PROFIL)),
     compteDeSession: vi.fn(async () => undefined),
     identiteDe: vi.fn(async () => undefined),
     pseudoDeCompte: vi.fn(async () => false),
@@ -270,6 +295,23 @@ describe('routes reservees a une session', () => {
     expect(service.maProgression).toHaveBeenCalledWith(JETON);
     expect(deconnexion.statut).toBe(204);
     expect(service.deconnecter).toHaveBeenCalledWith(JETON);
+  });
+
+  it('rendent le profil a qui presente son jeton, et le refusent sans deranger le service', async () => {
+    const service = serviceFactice();
+    const url = await monter({ comptes: service });
+
+    const profil = await requete(url, ROUTES_COMPTES.profil, {
+      methode: 'GET',
+      entetes: { Authorization: `Bearer ${JETON}` },
+    });
+    const sansJeton = await requete(url, ROUTES_COMPTES.profil, { methode: 'GET' });
+
+    expect([profil.statut, profil.corps]).toEqual([200, PROFIL]);
+    expect(profil.entetes.get('cache-control')).toBe('no-store');
+    expect(sansJeton.statut).toBe(401);
+    expect(service.profil).toHaveBeenCalledTimes(1);
+    expect(service.profil).toHaveBeenCalledWith(JETON);
   });
 
   it('traduisent une session absente en 401', async () => {

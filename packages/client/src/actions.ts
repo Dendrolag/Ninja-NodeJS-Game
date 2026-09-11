@@ -29,6 +29,7 @@ import type {
   MessageChat,
   PartieEnPause,
   PartiePublique,
+  ProfilDuCompte,
   ProgressionDeFin,
   Refus,
 } from '@neon-ninja/shared';
@@ -67,6 +68,12 @@ export type Action =
   | { readonly type: 'demandeDeCompteRefusee'; readonly erreurs: readonly ErreurValidation[] }
   /** Le joueur va vers un ecran de menu. */
   | { readonly type: 'navigation'; readonly vers: EcranDeMenu }
+  /** La lecture du profil du compte est partie. */
+  | { readonly type: 'profilDemande' }
+  /** Le profil du compte est arrive. */
+  | { readonly type: 'profilRecu'; readonly profil: ProfilDuCompte }
+  /** Le profil n'a pas pu etre lu, pour ce motif. */
+  | { readonly type: 'profilRefuse'; readonly motif: string }
   /**
    * Le joueur demande a entrer, ou a creer une partie.
    *

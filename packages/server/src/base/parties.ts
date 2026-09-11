@@ -25,6 +25,7 @@
  */
 
 import type { IdentifiantCarte, Mode } from '@neon-ninja/shared';
+import { JOUEURS_POUR_UNE_VICTOIRE } from '@neon-ninja/shared';
 import { desc, eq, inArray, sql } from 'drizzle-orm';
 
 import type { BaseDeDonnees } from './connexion.js';
@@ -262,4 +263,45 @@ export async function lireHistorique(
     .where(eq(resultats.compteId, compteId))
     .orderBy(desc(parties.termineeLe))
     .limit(limite);
+}
+
+/** Ce que les resultats d'un compte disent de lui, sur tout son historique. */
+export interface StatistiquesEnregistrees {
+  readonly partiesJouees: number;
+  /** Premieres places dans une partie d'au moins JOUEURS_POUR_UNE_VICTOIRE joueurs. */
+  readonly victoires: number;
+  /** Absent tant qu'aucune partie n'est enregistree. */
+  readonly meilleurScore: number | undefined;
+}
+
+/**
+ * Les statistiques d'un compte, deduites de ses resultats (reprise des ecrans du
+ * jalon 3, profil).
+ *
+ * CE QUI SE DEDUIT NE SE STOCKE PAS (cadrage, section 5): aucune colonne ne tient
+ * ces compteurs, qu'une partie oubliee ou enregistree deux fois ferait diverger.
+ * Une seule requete d'agregat, sur tout l'historique, et non sur les dernieres
+ * parties que le profil affiche.
+ *
+ * Une partie jouee seul n'est pas une victoire: voir JOUEURS_POUR_UNE_VICTOIRE.
+ */
+export async function statistiquesDuCompte(
+  db: BaseDeDonnees,
+  compteId: string,
+): Promise<StatistiquesEnregistrees> {
+  const [ligne] = await db
+    .select({
+      partiesJouees: sql<number>`count(*)::int`,
+      victoires: sql<number>`(count(*) filter (where ${resultats.placement} = 1 and ${parties.nombreJoueurs} >= ${JOUEURS_POUR_UNE_VICTOIRE}))::int`,
+      meilleurScore: sql<number | null>`max(${resultats.points})`,
+    })
+    .from(resultats)
+    .innerJoin(parties, eq(resultats.partieId, parties.id))
+    .where(eq(resultats.compteId, compteId));
+
+  return {
+    partiesJouees: ligne?.partiesJouees ?? 0,
+    victoires: ligne?.victoires ?? 0,
+    meilleurScore: ligne?.meilleurScore ?? undefined,
+  };
 }

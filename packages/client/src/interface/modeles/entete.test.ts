@@ -65,4 +65,19 @@ describe('modeleCompteDeLEntete', () => {
       pieces: formaterNombre(1280),
     });
   });
+
+  it('mene au profil depuis un ecran de menu, mais ni pendant une partie ni depuis le profil', () => {
+    const peutOuvrir = (ecran: EtatClient['ecran']): boolean => {
+      const modele = modeleCompteDeLEntete({ ...COMPTE, ecran });
+
+      return modele.nature === 'compte' && modele.peutOuvrirLeProfil;
+    };
+
+    expect(peutOuvrir('accueil')).toBe(true);
+    expect(peutOuvrir('connexion')).toBe(true);
+    expect(peutOuvrir('profil')).toBe(false);
+    expect(peutOuvrir('salon')).toBe(false);
+    expect(peutOuvrir('jeu')).toBe(false);
+    expect(peutOuvrir('fin')).toBe(false);
+  });
 });

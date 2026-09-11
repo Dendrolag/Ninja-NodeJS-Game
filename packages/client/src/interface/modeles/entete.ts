@@ -66,7 +66,7 @@ export function modeleCompteDeLEntete(etat: EtatClient): ModeleCompteDeLEntete {
         xp: barre.xp,
         palier: NOMS_DES_PALIERS[palierDePoints(progression.pointsLigue)],
         pieces: formaterNombre(progression.pieces),
-        peutOuvrirLeProfil: false,
+        peutOuvrirLeProfil: horsPartie && etat.ecran !== 'profil',
       };
     }
   }
