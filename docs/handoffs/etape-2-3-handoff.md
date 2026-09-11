@@ -115,7 +115,7 @@ Repris du handoff de 5.2, inchangé: le relevé des contacts et le lissage du cl
 ## État de la CI
 
 - Commit du code, `bed2441`: **verte**, exécution GitHub Actions 34658234243 (« Types, linter et tests » et « Bout en bout », dont le scénario mobile « capturer un faux ninja »).
-- Commit de documentation: voir le commit qui suit, qui confirme sa CI dans ce handoff.
+- Commit de documentation et des tests des gardes, `3187401`: **verte**, exécution GitHub Actions 34659290293 (« Types, linter et tests » et « Bout en bout »).
 
 `master` n'a pas été touché. Aucune fusion de `reecriture` avant l'étape 6.1.
 
