@@ -2,10 +2,11 @@
  * Jouer un palier de charge reseau dans un processus neuf.
  *
  * La meme raison que pour le banc du battement (battement-isole.ts): le
- * compilateur a la volee de Node garde l'empreinte des parties qu'il a vu passer,
- * et une partie plus peuplee que les precedentes coute jusqu'a trois fois et demie
- * plus cher. Un serveur remonte dans le processus d'un palier precedent heriterait
- * aussi de sa memoire. Chaque palier lance donc son serveur dans un processus a
+ * compilateur a la volee de Node garde l'empreinte des parties qu'il a vu passer:
+ * a l'etape 5.1, une partie plus peuplee que les precedentes coutait jusqu'a trois
+ * fois et demie plus cher, un effet que l'etape 5.2 a ramene a quelques pour cent.
+ * Un serveur remonte dans le processus d'un palier precedent heriterait aussi de sa
+ * memoire. Chaque palier lance donc son serveur dans un processus a
  * lui: ses chiffres ne dependent ni de l'ordre des paliers, ni de celui des
  * scenarios.
  *

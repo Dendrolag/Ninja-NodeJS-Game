@@ -28,6 +28,28 @@ Rapport complet: `docs/mesures/charge-serveur.md`. Harnais: `pnpm charge`, qui r
 
 La candidate « niveau de détail d'IA » n'est pas désignée par la mesure: les bots (`avancerLesBots`) pèsent peu dans le profil, loin derrière le relevé des contacts.
 
+## Résultat de l'étape (12 septembre 2026)
+
+Rapport: section 11 de `docs/mesures/charge-serveur.md`. Trois optimisations retenues, aucune écartée faute de gain, et aucun changement de jeu (empreinte des parties identique, tests du moteur au vert).
+
+| Optimisation                                             | Point chaud                          | Gain mesuré                                                            |
+| -------------------------------------------------------- | ------------------------------------ | ---------------------------------------------------------------------- |
+| La table des bots copiée une fois par battement          | populations mêlées (point 2)         | banc à 150 bots: 0,772 à 0,670 ms; populations mêlées: × 2,70 à × 1,01 |
+| Relevé des contacts sans tableau par entité, tri par axe | moteur en carré (point 3)            | banc à 150 bots: 0,670 à 0,441 ms; à 1000 bots: 16,9 à 7,6 ms          |
+| La boucle d'une partie vise l'heure prévue               | cadence avant un fil plein (point 1) | 48 parties pleines: 19,4 à 19,9 Hz; 64 parties mêlées: 19,3 à 20,0 Hz  |
+
+Ensemble: un processus tient 48 parties pleines au lieu de 16, et 64 mêlées au lieu de 24; une partie pleine coûte 0,95 ms sur le vrai serveur au lieu de 1,92. Confirmé sous Linux. Seuils mis à jour: section 11.11 du rapport.
+
+### Réconciliation
+
+1. **Les deux premiers points chauds avaient une cause commune possible, elles étaient distinctes.** Les populations mêlées venaient de `avancerLesBots` (la table recopiée pour chaque bot), et la perte de cadence de `setInterval`. La remarque ci-dessus sur le niveau de détail d'IA reste juste sur le fond, mais `avancerLesBots` pesait bien dans le profil du serveur (8,4 pour cent): par sa recopie, pas par l'intelligence des bots.
+2. **Les deux optimisations du moteur relèvent de la candidate 3** (allocations inutiles par battement repérées au profileur), pas de la candidate 1: le relevé des contacts reste en carré, sans grille.
+3. **Le coût du client a été mesuré ici**, bien que cette fiche ne le cite pas: le handoff de 5.1 et la section 3.4 du rapport le confiaient à 5.2. Aucune optimisation n'est justifiée (section 11.9 du rapport).
+4. **La mesure sous Linux passe par une machine d'intégration**, faute de WSL et de Docker sur la machine de mesure. GitHub n'acceptant le lancement manuel que pour un workflow présent sur `master`, le workflow `charge.yml` se lance en poussant une branche `mesure-charge/`.
+5. **Un outil d'empreinte des parties a été ajouté** (`tests/charge/empreinte.ts`), pour prouver en bloc, en plus des tests du moteur, qu'une optimisation ne change rien au jeu.
+6. **Le filtrage par zone d'intérêt (candidate 4)** est reporté à la fin de l'étape 2.3, dont le format de flux décide du gain.
+7. **Les seuils vérifiés en CI ne changent pas**: la taille des messages est inchangée à l'octet.
+
 ## Hors périmètre
 
 - Aucune optimisation non justifiée par une mesure.

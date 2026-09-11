@@ -45,7 +45,7 @@ Couvrir profond là où vit le gameplay, léger ailleurs. **80 à 90 pour cent s
 - `docs/handoffs/`, les recaps de fin de session.
 - `docs/audit/`, l'audit de l'existant.
 - `tests/e2e/`, les scénarios Playwright.
-- `tests/charge/`, le harnais de charge du serveur (étape 5.1); ses chiffres de référence sont dans `docs/mesures/`.
+- `tests/charge/`, le harnais de charge du serveur (étape 5.1) et l'outil d'empreinte des parties, qui prouve qu'une optimisation ne change rien au jeu (étape 5.2); ses chiffres de référence sont dans `docs/mesures/`. La mesure sous Linux se lance en poussant une branche `mesure-charge/` (`.github/workflows/charge.yml`).
 
 ## Base legacy de référence
 

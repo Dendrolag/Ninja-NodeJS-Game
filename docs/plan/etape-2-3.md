@@ -12,6 +12,16 @@ Cette étape était conditionnée à la mesure de 5.1 (section 3 du ROADMAP). **
 - la sérialisation JSON ne coûte que 0,08 ms par battement à 150 bots: le gain attendu est de bande passante, pas de processeur;
 - seuil de régression existant: `OCTETS_PAR_MESSAGE_DE_REFERENCE` dans `tests/charge/seuils.ts`, à mettre à jour avec la nouvelle taille.
 
+## Note du 12 septembre 2026: après l'étape 5.2
+
+L'étape 5.2 a levé le mur de la cadence (`docs/mesures/charge-serveur.md`, mesure de l'étape 5.2). Un processus tient 48 parties pleines au lieu de 16, et c'est désormais un fil réellement plein qui l'arrête. **La bande passante devient la première limite**: 48 parties pleines écrivent 2 Gbit/s. Quatre points à garder en tête:
+
+- la taille des messages n'a pas changé (21 518 octets pour la partie de référence): le point de départ ci-dessus reste exact;
+- côté client, décoder un instantané JSON coûte 0,48 ms dans Chromium au processeur ralenti six fois: le gain à viser est de taille, pas de calcul, chez le client comme au serveur;
+- l'outil `tests/charge/empreinte.ts` résume l'état du moteur, l'instantané et les notifications de chaque battement. Un changement de format change l'empreinte de l'instantané sans que le jeu change: l'adapter pour résumer séparément ce qui doit rester identique (l'état et les notifications);
+- la mesure sous Linux se lance par une branche `mesure-charge/` (`.github/workflows/charge.yml`), pour comparer le flux JSON et le delta sur la même machine;
+- **une question à trancher par la mesure en fin d'étape**: le filtrage du flux par zone d'intérêt (candidate 4 de l'étape 5.2), reporté ici. La caméra d'un téléphone ne montre qu'une partie de la carte, et la minicarte ne dessine que les joueurs. Mesurer, avec le format delta, la part du flux qui décrit des bots hors du champ de chaque joueur; si elle est grande et que la bande passante reste la première limite, planifier une étape dédiée au ROADMAP plutôt que de l'ajouter ici. Le point 1 du hors périmètre ci-dessous reste valable pour cette étape.
+
 La fiche a été écrite avant le client. Trois écarts sont à réconcilier en début de session: le client existe et décode déjà le flux JSON derrière l'interface réseau de l'étape 4.1, qui est ce qu'il faut remplacer (point 4 du périmètre, rituel de fin); l'événement diffusé s'appelle `etat` (`InstantanePartie`), pas `updateEntities`; la prochaine action du rituel de fin, l'étape 2.4, est faite depuis longtemps.
 
 ## Rituel de début de session

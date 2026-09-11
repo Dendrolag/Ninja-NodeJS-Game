@@ -37,7 +37,8 @@ describe('la partie de reference du banc', () => {
 
     // Un seuil tres large, fait pour ne jamais dependre de la machine: une partie
     // pleine au maximum des bornes doit tenir, seule, dans la part utilisable d'un
-    // battement. Mesuree a 0,78 ms a l'etape 5.1, elle en est a quarante fois.
+    // battement. Mesuree a 0,78 ms a l'etape 5.1, puis a 0,43 ms apres les
+    // optimisations de l'etape 5.2: elle en est a quatre-vingts fois.
     expect(resultat.totalMs.moyenne).toBeLessThan(CADENCE_MS * PART_DU_BATTEMENT_UTILISABLE);
 
     // Le seuil de bande passante, lui, est exact sur toutes les machines: le banc

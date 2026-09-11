@@ -66,6 +66,8 @@ Les maquettes ont été déposées le 13 août 2026: ce jalon n'est plus bloqué
 
 **Mesure du 11 septembre 2026 (étape 5.1): `2.3` est justifié, et se fait après `5.2`.** Ordre du jalon: `5.1` `5.2` `2.3`. Un instantané de partie à 150 bots pèse 21,5 Ko, soit 3,4 Mbit/s par joueur; mais le premier mur atteint en charge est la cadence du serveur, vers 16 à 24 parties pleines par processus, qui relève de `5.2`. Chiffres et raisonnement: `docs/mesures/charge-serveur.md`, et le journal de `docs/design/README.md`.
 
+**Mesure du 12 septembre 2026 (étape 5.2): le mur de la cadence est levé, `2.3` suit.** Trois optimisations validées par la mesure, sans changement de jeu, font passer un processus de 16 à 48 parties pleines tenues, et de 24 à 64 parties mêlées. Le coût d'une partie pleine sur le vrai serveur est divisé par deux (1,92 à 0,95 ms par battement), et la perte de cadence de 5.1 est expliquée et corrigée: un processus ne décroche plus que lorsque son fil est réellement plein. La première limite est désormais la bande passante: 3,4 Mbit/s par joueur, 2 Gbit/s sortants pour 48 parties pleines. C'est l'objet de `2.3`.
+
 ### Jalon 5 - Extension
 
 Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision du 29 juin). Puis les autres modes. Puis `5.3` et `6.1`, ramenés à un déploiement simple: le legacy n'a pas de joueurs en ligne, la bascule progressive et les drapeaux de fonctionnalité sont sans objet.

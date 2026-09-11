@@ -3,11 +3,12 @@
  *
  * POURQUOI UN PROCESSUS NEUF PAR MESURE. Le compilateur a la volee de Node
  * optimise le moteur pour les parties qu'il voit passer. Mesure a l'etape 5.1, sur
- * une partie strictement identique a l'octet pres: 300 bots coutent 2,3 ms par
- * battement dans un processus neuf, et 8,0 ms dans un processus qui vient de jouer
- * une partie de 150 bots. Rejouer la meme population ne degrade rien; en changer,
- * si. Des mesures enchainees dans un seul processus dependraient donc de l'ordre
- * dans lequel on les joue, et ne seraient pas reproductibles.
+ * une partie strictement identique a l'octet pres: 300 bots coutaient 2,3 ms par
+ * battement dans un processus neuf, et 8,0 ms dans un processus qui venait de jouer
+ * une partie de 150 bots. L'etape 5.2 en a trouve la cause, la table des bots
+ * recopiee pour chaque bot, et l'a corrigee: l'ecart est tombe a quelques pour cent.
+ * La regle reste, parce qu'elle ne coute rien et qu'aucune mesure ne doit plus
+ * jamais dependre de l'ordre dans lequel on la joue.
  *
  * Ce fichier lance un processus, lui fait jouer une suite de configurations dans
  * l'ordre donne, et rend leurs resultats. Une suite d'une seule configuration est
