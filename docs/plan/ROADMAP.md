@@ -58,7 +58,7 @@ Les maquettes ont été déposées le 13 août 2026: ce jalon n'est plus bloqué
 
 ### Jalon 3 - Comptes et progression
 
-`3.1` `3.2` `3.3`, puis reprise des écrans de `4.3` (navigateur, création, profil, fin de partie enrichie).
+`3.1` `3.2` `3.3`, puis reprise des écrans de `4.3` (navigateur, création, profil, fin de partie enrichie). Sa fiche est `docs/plan/etape-4-3-reprise.md`, rédigée le 11 septembre 2026 selon le cas de repli du PROTOCOLE.
 
 ### Jalon 4 - Performance et charge
 
