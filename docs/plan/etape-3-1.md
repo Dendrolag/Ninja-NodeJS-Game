@@ -56,6 +56,17 @@ Conditions de ROADMAP réunies, plus:
 
 Le résultat de partie porte aussi, d'après le cadrage: l'identifiant commun de la partie, le mode miroir, la durée, le nombre de joueurs, les captures et les Black Ninjas détruits. Et la question de l'accès sans compte, laissée au porteur du projet, doit être tranchée avant l'étape 3.2.
 
+## Réconciliation au début de l'étape (11 septembre 2026)
+
+Écarts entre cette fiche et le dépôt réel. Le dépôt et le cadrage font foi.
+
+1. **L'étape avait été bloquée le 10 septembre** faute d'accès à Neon (handoff 3.1 au statut bloquée, remplacé par le handoff de fin de cette étape). Le porteur du projet a créé le projet `neon-ninja` (AWS Francfort, PostgreSQL 18) et fourni `DATABASE_URL`, `NEON_API_KEY` et `NEON_PROJECT_ID` sur la machine. Son organisation Neon d'origine était gérée par Vercel, qui interdit d'y créer un projet: il a fallu une organisation gérée par Neon.
+2. **Le résultat de partie devient deux tables.** Ce qui est commun à tous les joueurs d'une partie (mode, carte, miroir, durée, nombre de joueurs, heure de fin) vit dans `parties`; ce qui est propre à un compte dans `resultats`. Les champs sont exactement ceux du cadrage, rangés sans répétition. Le « score » de la fiche s'appelle `points`, comme dans `LigneClassement`, et « l'horodatage » est l'heure de fin de la partie.
+3. **La place de l'authentification** n'est pas réservée par une colonne vide: la fiche 3.2 et le cadrage lui laissent le choix entre une colonne du compte et une table à part, qu'une migration ajoutera.
+4. **Rien ne se branche encore sur la base.** Le serveur de jeu ne l'ouvre pas au démarrage: aucun code ne s'en sert avant l'étape 3.2, et le jeu doit continuer de tourner sans `DATABASE_URL`, dans les scénarios de bout en bout comme en local.
+5. **Le pseudo d'un compte suit la règle d'unicité du salon.** Sa fonction, privée dans `GameRoom.ts`, est déplacée dans `packages/shared` (`reperePseudo`) pour que salon et comptes ne puissent pas diverger.
+6. **Base de test**: une branche Neon par exécution, créée sans les données de sa parente et avec une date d'expiration, vidée puis migrée. Les tests de la base forment un projet Vitest à part, qui ne sollicite Neon que si l'un de ses tests est sélectionné.
+
 ## Rituel de fin de session
 
 Écrire docs/handoffs/etape-3-1-handoff.md. Décrire le schéma retenu, l'outil d'accès choisi, et les points d'extension. Prochaine action exacte pour l'étape 3.2: inscription, connexion, gestion de session, et authentification de la connexion Socket.IO. Commiter.

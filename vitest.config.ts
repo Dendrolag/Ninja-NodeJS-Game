@@ -21,11 +21,10 @@ export default defineConfig({
     },
   },
   test: {
-    // Les tests unitaires vivent a cote du code qu'ils couvrent, dans packages/.
-    // Les tests transverses (dont la verification de l'invariant de purete)
-    // vivent dans tests/, hors du dossier e2e qui appartient a Playwright.
-    include: ['packages/**/*.test.ts', 'tests/**/*.test.ts'],
-    exclude: ['**/node_modules/**', '**/dist/**', 'tests/e2e/**', 'legacy/**'],
+    // Quels fichiers sont des tests: voir vitest.workspace.ts, qui separe les
+    // tests sans base des tests de la base. Ne pas remettre include ni exclude
+    // ici: Vitest concatene les listes d'une configuration etendue, et chaque
+    // projet recevrait alors aussi les fichiers de l'autre.
     environment: 'node',
     coverage: {
       provider: 'v8',

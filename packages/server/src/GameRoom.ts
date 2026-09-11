@@ -53,7 +53,7 @@ import type {
   StatutPartie,
   Visibilite,
 } from '@neon-ninja/shared';
-import { CAPACITES, normaliserTexte } from '@neon-ninja/shared';
+import { CAPACITES, reperePseudo } from '@neon-ninja/shared';
 import type {
   CarteCollisions,
   EntreeJoueur,
@@ -612,11 +612,6 @@ export class GameRoom {
       this.avancer(ecoule);
     }, this.cadenceMs);
   }
-}
-
-/** Deux ecritures d'un meme pseudo se ramenent a la meme empreinte. */
-function reperePseudo(pseudo: string): string {
-  return normaliserTexte(pseudo).toLowerCase();
 }
 
 /** Un refus, redige pour etre montre au joueur. */

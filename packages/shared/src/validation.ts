@@ -94,6 +94,19 @@ export function normaliserTexte(brut: string): string {
 }
 
 /**
+ * Le repere d'un pseudo: deux ecritures d'un meme pseudo ont le meme repere.
+ *
+ * Normalise, puis en minuscules: « Alice », « alice » et « Alice  » designent la
+ * meme personne. C'est LA regle d'unicite des pseudos, partout ou elle s'applique:
+ * dans un salon (etape 2.1) et entre comptes (etape 3.1), ou la base garde ce
+ * repere dans une colonne unique. Une seule fonction, pour que les deux ne
+ * refusent jamais des pseudos differents.
+ */
+export function reperePseudo(pseudo: string): string {
+  return normaliserTexte(pseudo).toLowerCase();
+}
+
+/**
  * Valide le pseudo choisi par un joueur.
  *
  * Le legacy ne verifiait rien cote serveur: ni longueur, ni caracteres. C'etait

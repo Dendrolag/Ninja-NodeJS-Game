@@ -26,6 +26,7 @@ import { REGLAGES_PAR_DEFAUT } from './reglages.js';
 import type { ResultatValidation } from './validation.js';
 import {
   normaliserTexte,
+  reperePseudo,
   validerCodeInvitation,
   validerDemandeCreation,
   validerDemandeRejoindre,
@@ -52,6 +53,21 @@ function champsRefuses<T>(resultat: ResultatValidation<T>): readonly string[] {
   }
   return resultat.erreurs.map((erreur) => erreur.champ);
 }
+
+describe('reperePseudo', () => {
+  it('donne le meme repere a deux ecritures d un meme pseudo', () => {
+    expect(reperePseudo('  Alice   La Rapide ')).toBe(reperePseudo('alice la rapide'));
+  });
+
+  it('distingue deux pseudos differents', () => {
+    expect(reperePseudo('Alice')).not.toBe(reperePseudo('Alicia'));
+  });
+
+  it('ramene aussi les lettres accentuees et composees a une seule forme', () => {
+    // « E » majuscule suivi d'un accent aigu combinant, contre « e accent aigu ».
+    expect(reperePseudo('Élodie')).toBe(reperePseudo('élodie'));
+  });
+});
 
 describe('normaliserTexte', () => {
   it('rogne les bords et ramene les suites d espaces a un seul', () => {

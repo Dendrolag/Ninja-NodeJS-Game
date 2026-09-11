@@ -15,18 +15,24 @@
   "scripts": {
     "build": "tsc --build",
     "dev": "tsc --build && node dist/principal.js",
-    "start": "node dist/principal.js"
+    "start": "node dist/principal.js",
+    "base:generer": "drizzle-kit generate",
+    "base:migrer": "tsc --build && node dist/base/migrer.js"
   },
   "dependencies": {
     "@neon-ninja/shared": "workspace:*",
     "@neon-ninja/sim": "workspace:*",
+    "drizzle-orm": "^0.45.2",
     "express": "^5.2.1",
+    "pg": "^8.23.0",
     "pngjs": "^7.0.0",
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
+    "@types/pg": "^8.23.1",
     "@types/pngjs": "^6.0.5",
+    "drizzle-kit": "^0.31.10",
     "socket.io-client": "^4.8.1"
   }
 }

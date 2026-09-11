@@ -29,6 +29,17 @@
  *     fabrique par le serveur;
  *   - la liste des parties publiques ouvertes, et la partie rapide;
  *   - la capacite d'une partie, et le mode, branche jusqu'au moteur.
+ *
+ * Ce que l'etape 3.1 a ajoute, dans base/:
+ *
+ *   - le schema de la base (comptes, progressions, parties, resultats) et ses
+ *     migrations versionnees, ecrites par drizzle-kit;
+ *   - l'ouverture de la base par le pooler de Neon, et les migrations en direct;
+ *   - les operations de base: creer un compte, lire et ecrire sa progression,
+ *     enregistrer une partie et relire l'historique d'un compte.
+ *
+ * Rien ne s'y branche encore: les comptes arrivent a l'etape 3.2, les resultats
+ * de fin de partie a l'etape 3.3.
  */
 
 export type { JoueurDeRoom, OptionsGameRoom, StatutRoom } from './GameRoom.js';
@@ -60,6 +71,25 @@ export { PORT_PAR_DEFAUT, creerServeur, demarrerServeur } from './serveur.js';
 
 export type { DossiersServis } from './fichiers.js';
 export { MESSAGE_DE_SANTE, POLITIQUE_DE_CONTENU, applicationWeb } from './fichiers.js';
+
+export type { BaseDeDonnees, BaseOuverte, OptionsBase } from './base/connexion.js';
+export { adresseChiffree, adresseDirecte, adressePooler, ouvrirBase } from './base/connexion.js';
+
+export type { ErreurPostgres } from './base/erreurs.js';
+export { CODES_POSTGRES, erreurPostgres } from './base/erreurs.js';
+
+export { DOSSIER_MIGRATIONS, appliquerMigrations } from './base/migrations.js';
+
+export * as schema from './base/schema.js';
+
+export type { Compte } from './base/comptes.js';
+export { creerCompte, trouverCompteParPseudo } from './base/comptes.js';
+
+export type { Progression, ValeursProgression } from './base/progression.js';
+export { ecrireProgression, lireProgression } from './base/progression.js';
+
+export type { NouveauResultat, NouvellePartie, ResultatDePartie } from './base/parties.js';
+export { enregistrerPartie, lireHistorique } from './base/parties.js';
 
 export type { CleDeTerrain, SourceDeTerrain } from './terrain.js';
 export {

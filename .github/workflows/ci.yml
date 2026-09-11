@@ -27,6 +27,11 @@ jobs:
   verification:
     name: Types, linter et tests
     runs-on: ubuntu-latest
+    # Les tests de la base creent leur propre branche Neon, puis la suppriment.
+    # Sans ces secrets, ils font echouer la CI plutot que d'etre sautes.
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+      NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
     steps:
       - name: Recuperer le depot
         uses: actions/checkout@v7
@@ -48,6 +53,15 @@ jobs:
 
       - name: Verifier les types
         run: pnpm typecheck
+
+      # Le schema de la base et ses migrations ne divergent jamais: on regenere
+      # les migrations, et le moindre fichier ajoute ou modifie fait echouer la CI.
+      # Place apres les types, parce que drizzle-kit lit la compilation de shared.
+      - name: Verifier que les migrations suivent le schema de la base
+        run: |
+          pnpm base:generer
+          git status --porcelain packages/server/migrations
+          test -z "$(git status --porcelain packages/server/migrations)"
 
       - name: Linter (dont l'invariant de purete de packages/sim)
         run: pnpm lint

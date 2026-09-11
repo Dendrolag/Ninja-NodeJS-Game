@@ -64,13 +64,17 @@ pnpm verify               # types, linter et tests: à lancer avant tout commit
 pnpm typecheck            # vérifier les types sur tous les paquets
 pnpm lint                 # linter, dont l'invariant de pureté de packages/sim
 pnpm format               # formater; pnpm format:check pour vérifier sans écrire
-pnpm test                 # tests unitaires et d'intégration (Vitest)
+pnpm test                 # tests unitaires et d'intégration (Vitest), base comprise
 pnpm test:watch           # les mêmes, en surveillance
 pnpm test:coverage        # couverture, mesurée sur sim et shared
 pnpm test:e2e             # tests de bout en bout (Playwright)
+pnpm base:generer         # écrire la migration qui suit un changement de packages/server/src/base/schema.ts
+pnpm base:migrer          # appliquer les migrations à la base de DATABASE_URL
 ```
 
-Lancer un sous-ensemble de tests: `pnpm test <motif>`, par exemple `pnpm test purity` ou `pnpm test packages/sim`.
+Lancer un sous-ensemble de tests: `pnpm test <motif>`, par exemple `pnpm test purity` ou `pnpm test packages/sim`. Les tests sont répartis en deux projets Vitest (`vitest.workspace.ts`): `unitaires`, et `base`, qui crée une branche Neon neuve, la migre, puis la supprime; `pnpm test --project unitaires` s'en passe.
+
+Base de données (depuis l'étape 3.1): PostgreSQL sur Neon, projet `neon-ninja`. Trois variables d'environnement, jamais commitées: `DATABASE_URL`, l'adresse par le pooler; `NEON_API_KEY` et `NEON_PROJECT_ID`, pour les branches de test. Les deux dernières sont aussi des secrets du dépôt GitHub. Sans elles, les tests de la base sont sautés en local et font échouer la CI. Le jeu, lui, tourne sans base jusqu'à l'étape 3.2.
 
 ```bash
 pnpm build                # compiler les paquets et empaqueter la page du jeu

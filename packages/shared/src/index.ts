@@ -133,6 +133,7 @@ export { REGLAGES_PAR_DEFAUT, completerReglages } from './reglages.js';
 export type { ErreurValidation, ResultatValidation } from './validation.js';
 export {
   normaliserTexte,
+  reperePseudo,
   validerCodeInvitation,
   validerDemandeCreation,
   validerDemandeRejoindre,
