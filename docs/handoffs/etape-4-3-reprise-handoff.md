@@ -187,7 +187,7 @@ Fermé par cette étape:
 - « Types, linter et tests »: réussi, en 1 min 42 s. Il comprend la suite unitaire, la couverture et les tests de la base contre une branche Neon neuve, dont le nouveau `tests/base/profil.test.ts`.
 - « Bout en bout »: réussi, en 4 min 50 s, avec les trois nouveaux scénarios.
 
-Ce handoff ne touche que la documentation; sa propre exécution est à confirmer comme les précédentes.
+Verte aussi sur le commit du handoff, `82c6978`: exécution 34628433053, les deux travaux réussis.
 
 `master` n'a pas été touché. Aucune fusion de `reecriture` avant l'étape 6.1.
 
