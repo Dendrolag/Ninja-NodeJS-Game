@@ -24,15 +24,15 @@ Statut: terminée
 
 La fiche demande de les documenter ici, pour l'écran de fin de la reprise des écrans. Code: `packages/shared/src/progression.ts`. Validées par le porteur du projet le 11 septembre 2026.
 
-| Règle           | Valeur                                                                                                                         |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| XP              | `minutes jouées × (10 + 20 × joueurs devancés)`, arrondi en dessous. Joueurs devancés: invités et abandons compris             |
-| Pièces          | `XP ÷ 10`, arrondi en dessous                                                                                                  |
-| Niveaux         | Passer du niveau n au niveau n + 1 coûte `100 × n` XP; seuil du niveau L: `50 × L × (L − 1)` (niveau 2 à 100, 10 à 4 500)      |
-| Points de ligue | `−10 + 30 × devancés ÷ (joueurs − 1)`, arrondi au plus proche (une demie vers le haut); +20 au premier, −10 au dernier         |
-| Conditions      | Ligue: au moins 2 joueurs et une partie réglée à 3 minutes ou plus, sinon 0. Jamais sous zéro (appliqué à l'enregistrement)     |
-| Paliers         | `bronze` 0, `argent` 100, `or` 300, `platine` 600, `diamant` 1 000. Les noms affichés appartiennent au client                   |
-| Abandon         | Compté dernier: 0 XP, 0 pièce, la variation du dernier. Tous les abandons sont placés derniers, à égalité                      |
+| Règle           | Valeur                                                                                                                      |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| XP              | `minutes jouées × (10 + 20 × joueurs devancés)`, arrondi en dessous. Joueurs devancés: invités et abandons compris          |
+| Pièces          | `XP ÷ 10`, arrondi en dessous                                                                                               |
+| Niveaux         | Passer du niveau n au niveau n + 1 coûte `100 × n` XP; seuil du niveau L: `50 × L × (L − 1)` (niveau 2 à 100, 10 à 4 500)   |
+| Points de ligue | `−10 + 30 × devancés ÷ (joueurs − 1)`, arrondi au plus proche (une demie vers le haut); +20 au premier, −10 au dernier      |
+| Conditions      | Ligue: au moins 2 joueurs et une partie réglée à 3 minutes ou plus, sinon 0. Jamais sous zéro (appliqué à l'enregistrement) |
+| Paliers         | `bronze` 0, `argent` 100, `or` 300, `platine` 600, `diamant` 1 000. Les noms affichés appartiennent au client               |
+| Abandon         | Compté dernier: 0 XP, 0 pièce, la variation du dernier. Tous les abandons sont placés derniers, à égalité                   |
 
 Exemple, partie de trois minutes à quatre joueurs: 210, 150, 90 et 30 XP; 21, 15, 9 et 3 pièces; +20, +10, 0 et −10 points de ligue.
 
