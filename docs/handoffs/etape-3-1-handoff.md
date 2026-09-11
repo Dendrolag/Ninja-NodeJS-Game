@@ -130,7 +130,11 @@ Repris du handoff 2.4: **l'accès sans compte** est à trancher par le porteur d
 
 ## État de la CI
 
-À compléter après la poussée.
+**Run 34580272863, commit 9a5d41a: vert.** Première exécution des tests de la base en CI, avec les secrets Neon.
+
+- « Types, linter et tests »: vert. Le contrôle des migrations répond « No schema changes, nothing to migrate »; 72 fichiers de test sur 72, base comprise.
+- « Bout en bout »: vert, 10 scénarios sur 10.
+- Après ce run, seule la branche `production` reste dans le projet Neon: la CI supprime sa branche de test comme en local.
 
 ## Prochaine action exacte
 
