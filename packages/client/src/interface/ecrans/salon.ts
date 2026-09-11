@@ -33,6 +33,62 @@ export function monterSalon(contexte: ContexteEcran): EcranAffiche {
   const titre = creer(doc, 'h1', { classe: 'salon-titre' });
   const sousTitre = creer(doc, 'p', { classe: 'salon-sous-titre' });
   const effectif = creer(doc, 'span', { classe: 'salon-effectif' });
+  const placesLibres = creer(doc, 'span', { classe: 'salon-places' });
+
+  // La visibilite, et le code d'une partie privee avec de quoi le copier.
+  const iconePublique = creer(doc, 'span', {}, icone(doc, 'globe', 13));
+  const iconePrivee = creer(doc, 'span', {}, icone(doc, 'cadenas', 13));
+  const texteVisibilite = creer(doc, 'span');
+  const badgeVisibilite = creer(
+    doc,
+    'span',
+    { classe: 'badge badge-visibilite' },
+    iconePublique,
+    iconePrivee,
+    texteVisibilite,
+  );
+  const code = creer(doc, 'strong', { classe: 'salon-code-valeur' });
+  const retourDeCopie = creer(doc, 'span', {
+    classe: 'salon-copie',
+    attributs: { role: 'status' },
+  });
+  const blocCode = creer(
+    doc,
+    'span',
+    { classe: 'salon-code' },
+    creer(doc, 'span', { texte: 'Code d’invitation :' }),
+    code,
+    bouton(doc, { classe: 'bouton-icone', icone: 'copier', etiquette: 'Copier le code' }, () => {
+      void copierLeCode();
+    }),
+    retourDeCopie,
+  );
+
+  /**
+   * Copie le code dans le presse-papiers.
+   *
+   * Un navigateur peut refuser (page servie sans chiffrement hors de la machine,
+   * permission retiree): le joueur l'apprend, et le code reste selectionnable.
+   */
+  const copierLeCode = async (): Promise<void> => {
+    const valeur = etatCourant?.salon?.code;
+    const pressePapiers = doc.defaultView?.navigator.clipboard;
+
+    if (valeur === undefined) {
+      return;
+    }
+
+    try {
+      if (pressePapiers === undefined) {
+        throw new Error('Presse-papiers indisponible.');
+      }
+
+      await pressePapiers.writeText(valeur);
+      ecrireTexte(retourDeCopie, 'Code copié');
+    } catch {
+      ecrireTexte(retourDeCopie, 'Copie impossible : sélectionnez le code pour le copier.');
+    }
+  };
   const listeJoueurs = creer(doc, 'ul', { classe: 'salon-joueurs' });
   const recapitulatif = creer(doc, 'dl', { classe: 'recapitulatif' });
   const consigne = creer(doc, 'p', { classe: 'salon-consigne' });
@@ -109,7 +165,14 @@ export function monterSalon(contexte: ContexteEcran): EcranAffiche {
         { classe: 'bouton-icone bouton-retour', icone: 'arrowLeft', etiquette: 'Quitter le salon' },
         quitter,
       ),
-      creer(doc, 'div', { classe: 'salon-intitule' }, titre, sousTitre),
+      creer(
+        doc,
+        'div',
+        { classe: 'salon-intitule' },
+        titre,
+        sousTitre,
+        creer(doc, 'div', { classe: 'salon-meta' }, badgeVisibilite, blocCode),
+      ),
       creer(
         doc,
         'div',
@@ -136,6 +199,7 @@ export function monterSalon(contexte: ContexteEcran): EcranAffiche {
           { classe: 'titre-de-section' },
           creer(doc, 'h2', { texte: 'Joueurs' }),
           effectif,
+          placesLibres,
         ),
         listeJoueurs,
         creer(
@@ -215,6 +279,13 @@ export function monterSalon(contexte: ContexteEcran): EcranAffiche {
       ecrireTexte(titre, modele.titre);
       ecrireTexte(sousTitre, modele.sousTitre);
       ecrireTexte(effectif, modele.effectif);
+      ecrireTexte(placesLibres, modele.placesLibres);
+      ecrireTexte(texteVisibilite, modele.visibilite);
+      badgeVisibilite.dataset['visibilite'] = modele.privee ? 'privee' : 'publique';
+      montrer(iconePublique, !modele.privee);
+      montrer(iconePrivee, modele.privee);
+      ecrireTexte(code, modele.code ?? '');
+      montrer(blocCode, modele.code !== undefined);
       ecrireTexte(consigne, modele.consigne);
       montrer(ouvrirReglages, modele.jeSuisHote);
       montrer(lancer, modele.peutLancer);

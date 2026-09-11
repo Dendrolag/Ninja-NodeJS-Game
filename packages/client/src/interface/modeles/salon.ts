@@ -6,10 +6,10 @@
  * c'etait l'un des trois points d'entree de la faille S1. Ici le modele ne
  * contient que des chaines, et l'ecran les pose avec textContent.
  *
- * CE QUI N'EST PAS ICI. Les places libres, la capacite et le code d'invitation
- * arrivent dans le salon depuis l'etape 2.4, mais leur affichage appartient a la
- * reprise des ecrans au jalon 3. L'etat « pret » n'existe pas: le cadrage de
- * l'etape 0.3 ne le retient pas.
+ * LA VISIBILITE, LE CODE ET LES PLACES LIBRES (reprise des ecrans du jalon 3). Ils
+ * arrivent dans le salon depuis l'etape 2.4; le code d'une partie privee n'est
+ * transmis qu'a ses membres, qui le partagent. L'etat « pret » n'existe pas: le
+ * cadrage de l'etape 0.3 ne le retient pas.
  */
 
 import type { ReglagesPartie } from '@neon-ninja/shared';
@@ -66,6 +66,13 @@ export interface ModeleSalon {
   readonly joueurs: readonly JoueurAffiche[];
   /** Le nombre de joueurs, en toutes lettres: « 3 joueurs ». */
   readonly effectif: string;
+  /** « 9 places libres », « 1 place libre » ou « Partie complète ». */
+  readonly placesLibres: string;
+  /** « Partie publique » ou « Partie privée ». */
+  readonly visibilite: string;
+  readonly privee: boolean;
+  /** Le code d'invitation d'une partie privee, a partager. */
+  readonly code: string | undefined;
   readonly jeSuisHote: boolean;
   /** Le bouton de lancement est-il propose. Reserve a l'hote. */
   readonly peutLancer: boolean;
@@ -120,6 +127,10 @@ export function modeleSalon(etat: EtatClient): ModeleSalon | undefined {
       niveau: joueur.compte?.niveau,
     })),
     effectif: `${String(nombre)} ${nombre > 1 ? 'joueurs' : 'joueur'}`,
+    placesLibres: placesLibres(salon.capacite - nombre),
+    visibilite: salon.visibilite === 'privee' ? 'Partie privée' : 'Partie publique',
+    privee: salon.visibilite === 'privee',
+    code: salon.visibilite === 'privee' ? salon.code : undefined,
     jeSuisHote: commande,
     peutLancer: commande && salon.statut === 'salon' && compte === undefined,
     consigne: consigne(commande, compte !== undefined, hote?.pseudo),
@@ -135,6 +146,15 @@ export function modeleSalon(etat: EtatClient): ModeleSalon | undefined {
       moi: message.auteur === etat.moi,
     })),
   };
+}
+
+/** Les places qui restent, en toutes lettres. */
+function placesLibres(restantes: number): string {
+  if (restantes <= 0) {
+    return 'Partie complète';
+  }
+
+  return `${String(restantes)} ${restantes > 1 ? 'places libres' : 'place libre'}`;
 }
 
 /** La phrase qui dit ce qu'on attend, selon qui l'on est. */

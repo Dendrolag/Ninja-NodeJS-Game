@@ -1,11 +1,11 @@
 /**
- * Le panneau des reglages de la partie, reserve a l'hote.
+ * Les reglages d'une partie: le formulaire, et le panneau de l'hote qui le contient.
  *
- * C'EST LA « CREATION DE PARTIE » DU JALON 1. La maquette propose un ecran de
- * creation avant le salon; le jeu d'origine, lui, fait regler la partie dans le
- * salon, et c'est ce que le jalon 1 porte (reconciliation de la fiche 4.3). Les
- * reglages de la maquette y sont tous, et au-dela: le jeu d'origine en exposait
- * davantage que la maquette.
+ * UN FORMULAIRE, DEUX ENDROITS. Le panneau du salon (etape 4.3) le montre dans une
+ * fenetre, pour l'hote qui change les reglages avant le lancement. L'ecran de
+ * creation (reprise des ecrans du jalon 3) le montre dans la page, pour les
+ * reglages de depart. C'est le meme formulaire: une partie ne peut pas se creer
+ * avec un reglage que le salon ne saurait pas changer, ni l'inverse.
  *
  * CE FICHIER NE CONNAIT AUCUN REGLAGE PAR SON NOM. Il dessine les champs en
  * parcourant GROUPES_REGLAGES, lit ce que le joueur a saisi, et fait verifier le
@@ -13,9 +13,9 @@
  * reglage au contrat ajoute un champ ici sans toucher a ce fichier.
  *
  * UNE CONFIGURATION INVALIDE NE PART PAS. Chaque champ fautif porte son motif, et
- * le bouton d'enregistrement reste inactif tant qu'il en reste un. C'est le test
- * exige par la fiche: une configuration invalide est signalee cote client, avec
- * le motif que le serveur donnerait.
+ * l'enregistrement reste inactif tant qu'il en reste un. C'est le test exige par
+ * la fiche: une configuration invalide est signalee cote client, avec le motif que
+ * le serveur donnerait.
  */
 
 import type { IdentifiantCarte, ReglagesPartie, ResultatValidation } from '@neon-ninja/shared';
@@ -28,7 +28,7 @@ import {
 
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import { PRESENTATION_CARTES } from '../modeles/cartes.js';
-import type { ChampReglage, ValeursFormulaire } from '../modeles/reglages.js';
+import type { ChampReglage, GroupeReglages, ValeursFormulaire } from '../modeles/reglages.js';
 import {
   GROUPES_REGLAGES,
   erreursParChamp,
@@ -38,34 +38,43 @@ import {
 } from '../modeles/reglages.js';
 import { monterFenetre } from './fenetre.js';
 
-/** Ce qu'il faut pour monter le panneau des reglages. */
-export interface OptionsPanneauReglages {
+// --------------------------------------------------------------------------
+// Le formulaire
+// --------------------------------------------------------------------------
+
+/** Ce qu'il faut pour monter le formulaire des reglages. */
+export interface OptionsFormulaireReglages {
   readonly document: Document;
-  /** Appele avec des reglages verifies, quand l'hote enregistre. */
-  readonly surEnregistrer: (reglages: ReglagesPartie) => void;
+  /**
+   * Replier les reglages avances sous un titre: tous les groupes sauf le premier
+   * (carte, miroir, duree, faux ninjas). Pour l'ecran de creation, ou ils
+   * noieraient l'essentiel.
+   */
+  readonly avancesRepliables?: boolean;
+  /** Appele apres chaque saisie, avec le verdict de la regle du serveur. */
+  readonly surChangement?: (verdict: ResultatValidation<ReglagesPartie>) => void;
+  /** Appele quand le joueur valide le formulaire, par la touche Entree. */
+  readonly surSoumission?: () => void;
 }
 
-/** Le panneau des reglages, monte. */
-export interface PanneauReglages {
-  readonly racine: HTMLElement;
-  readonly ouvert: boolean;
-  /** Ouvre le panneau, rempli avec ces reglages. */
-  ouvrirAvec(reglages: ReglagesPartie): void;
-  fermer(): void;
+/** Le formulaire des reglages, monte. */
+export interface FormulaireReglages {
+  readonly racine: HTMLFormElement;
+  /** Ce que le joueur a saisi, champ par champ. */
+  lire(): ValeursFormulaire;
+  /** Remplit les champs avec ces valeurs. */
+  ecrire(valeurs: ValeursFormulaire): void;
+  /** Verifie la saisie, montre les motifs, et rend le verdict. */
+  verifier(): ResultatValidation<ReglagesPartie>;
   demonter(): void;
 }
 
-/** Le nom du groupe de boutons radio des cartes. Un seul panneau par page. */
+/** Le nom du groupe de boutons radio des cartes. Un seul formulaire par page. */
 const NOM_CHOIX_CARTE = 'reglages-carte';
 
-/** Monte le panneau des reglages, ferme. */
-export function monterPanneauReglages(options: OptionsPanneauReglages): PanneauReglages {
+/** Monte le formulaire des reglages, rempli des valeurs par defaut. */
+export function monterFormulaireReglages(options: OptionsFormulaireReglages): FormulaireReglages {
   const doc = options.document;
-  const fenetre = monterFenetre({
-    document: doc,
-    titre: 'Réglages de la partie',
-    classe: 'fenetre-reglages',
-  });
 
   /** Les saisies de chaque champ, par chemin: une seule, ou une par carte. */
   const saisies = new Map<string, HTMLInputElement[]>();
@@ -76,7 +85,7 @@ export function monterPanneauReglages(options: OptionsPanneauReglages): PanneauR
 
   const formulaire = creer(doc, 'form', { classe: 'reglages', attributs: { novalidate: '' } });
 
-  for (const groupe of GROUPES_REGLAGES) {
+  const groupeEnElement = (groupe: GroupeReglages): HTMLElement => {
     const ensemble = creer(
       doc,
       'fieldset',
@@ -98,18 +107,43 @@ export function monterPanneauReglages(options: OptionsPanneauReglages): PanneauR
       );
     }
 
-    formulaire.append(ensemble);
+    return ensemble;
+  };
+
+  const [essentiel, ...avances] = GROUPES_REGLAGES;
+
+  if (options.avancesRepliables === true && essentiel !== undefined) {
+    formulaire.append(
+      groupeEnElement(essentiel),
+      creer(
+        doc,
+        'details',
+        { classe: 'reglages-avances' },
+        creer(
+          doc,
+          'summary',
+          {},
+          creer(doc, 'strong', { texte: 'Réglages avancés' }),
+          creer(doc, 'span', {
+            texte: avances.map((groupe) => groupe.titre.toLocaleLowerCase('fr')).join(' · '),
+          }),
+        ),
+        creer(doc, 'div', { classe: 'reglages-groupes' }, ...avances.map(groupeEnElement)),
+      ),
+    );
+  } else {
+    formulaire.append(...GROUPES_REGLAGES.map(groupeEnElement));
   }
 
-  fenetre.corps.append(formulaire);
-
+  // Un motif sans champ correspondant ne devrait pas exister: chaque reglage a son
+  // champ. S'il en arrivait un, il ne serait pas perdu pour autant.
   const erreurGenerale = creer(doc, 'p', {
     classe: 'reglages-erreur',
     attributs: { role: 'alert' },
   });
   erreurGenerale.hidden = true;
+  formulaire.append(erreurGenerale);
 
-  /** Lit ce que le joueur a saisi, champ par champ. */
   const lire = (): ValeursFormulaire => {
     const valeurs: Record<string, string | boolean> = {};
 
@@ -128,7 +162,6 @@ export function monterPanneauReglages(options: OptionsPanneauReglages): PanneauR
     return valeurs;
   };
 
-  /** Remplit les champs avec ces valeurs. */
   const ecrire = (valeurs: ValeursFormulaire): void => {
     for (const champ of tousLesChamps()) {
       const valeur = valeurs[champ.chemin];
@@ -145,7 +178,6 @@ export function monterPanneauReglages(options: OptionsPanneauReglages): PanneauR
     }
   };
 
-  /** Verifie la saisie, montre les motifs, et rend le verdict. */
   const verifier = (): ResultatValidation<ReglagesPartie> => {
     const verdict = verifierLesValeurs(lire());
     const parChamp = verdict.valide ? new Map<string, string>() : erreursParChamp(verdict.erreurs);
@@ -160,8 +192,6 @@ export function monterPanneauReglages(options: OptionsPanneauReglages): PanneauR
       }
     }
 
-    // Un motif sans champ correspondant ne devrait pas exister: chaque reglage a
-    // son champ. S'il en arrivait un, il ne serait pas perdu pour autant.
     const orphelins = [...parChamp].filter(([chemin]) => !motifs.has(chemin));
     ecrireTexte(erreurGenerale, orphelins.map(([, motif]) => motif).join(' '));
     montrer(erreurGenerale, orphelins.length > 0);
@@ -171,10 +201,70 @@ export function monterPanneauReglages(options: OptionsPanneauReglages): PanneauR
       ecrireTexte(sortie, unite === '' ? valeur : `${valeur} ${unite}`);
     }
 
-    enregistrer.disabled = !verdict.valide;
-
     return verdict;
   };
+
+  const surSaisie = (): void => {
+    const verdict = verifier();
+    options.surChangement?.(verdict);
+  };
+
+  const surSoumission = (evenement: Event): void => {
+    evenement.preventDefault();
+    options.surSoumission?.();
+  };
+
+  formulaire.addEventListener('input', surSaisie);
+  formulaire.addEventListener('change', surSaisie);
+  formulaire.addEventListener('submit', surSoumission);
+
+  ecrire(valeursDepuisReglages(REGLAGES_PAR_DEFAUT));
+  verifier();
+
+  return {
+    racine: formulaire,
+    lire,
+    ecrire,
+    verifier,
+
+    demonter() {
+      formulaire.removeEventListener('input', surSaisie);
+      formulaire.removeEventListener('change', surSaisie);
+      formulaire.removeEventListener('submit', surSoumission);
+      formulaire.remove();
+    },
+  };
+}
+
+// --------------------------------------------------------------------------
+// Le panneau de l'hote, dans le salon
+// --------------------------------------------------------------------------
+
+/** Ce qu'il faut pour monter le panneau des reglages. */
+export interface OptionsPanneauReglages {
+  readonly document: Document;
+  /** Appele avec des reglages verifies, quand l'hote enregistre. */
+  readonly surEnregistrer: (reglages: ReglagesPartie) => void;
+}
+
+/** Le panneau des reglages, monte. */
+export interface PanneauReglages {
+  readonly racine: HTMLElement;
+  readonly ouvert: boolean;
+  /** Ouvre le panneau, rempli avec ces reglages. */
+  ouvrirAvec(reglages: ReglagesPartie): void;
+  fermer(): void;
+  demonter(): void;
+}
+
+/** Monte le panneau des reglages, ferme. */
+export function monterPanneauReglages(options: OptionsPanneauReglages): PanneauReglages {
+  const doc = options.document;
+  const fenetre = monterFenetre({
+    document: doc,
+    titre: 'Réglages de la partie',
+    classe: 'fenetre-reglages',
+  });
 
   /**
    * Enregistre, si la saisie est valide.
@@ -183,7 +273,8 @@ export function monterPanneauReglages(options: OptionsPanneauReglages): PanneauR
    * inactif empeche le clic, il n'empeche pas la touche Entree dans un champ.
    */
   const soumettre = (): void => {
-    const verdict = verifier();
+    const verdict = formulaire.verifier();
+    enregistrer.disabled = !verdict.valide;
 
     if (verdict.valide) {
       options.surEnregistrer(verdict.valeur);
@@ -191,10 +282,15 @@ export function monterPanneauReglages(options: OptionsPanneauReglages): PanneauR
     }
   };
 
-  const surSoumission = (evenement: Event): void => {
-    evenement.preventDefault();
-    soumettre();
-  };
+  const formulaire = monterFormulaireReglages({
+    document: doc,
+    surChangement: (verdict) => {
+      enregistrer.disabled = !verdict.valide;
+    },
+    surSoumission: soumettre,
+  });
+
+  fenetre.corps.append(formulaire.racine);
 
   const enregistrer = bouton(
     doc,
@@ -203,24 +299,15 @@ export function monterPanneauReglages(options: OptionsPanneauReglages): PanneauR
   );
 
   fenetre.pied.append(
-    erreurGenerale,
     bouton(doc, { classe: 'bouton bouton-discret', texte: 'Valeurs par défaut' }, () => {
-      ecrire(valeursDepuisReglages(REGLAGES_PAR_DEFAUT));
-      verifier();
+      formulaire.ecrire(valeursDepuisReglages(REGLAGES_PAR_DEFAUT));
+      enregistrer.disabled = !formulaire.verifier().valide;
     }),
     bouton(doc, { classe: 'bouton bouton-secondaire', texte: 'Annuler' }, () => {
       fenetre.fermer();
     }),
     enregistrer,
   );
-
-  const surSaisie = (): void => {
-    verifier();
-  };
-
-  formulaire.addEventListener('input', surSaisie);
-  formulaire.addEventListener('change', surSaisie);
-  formulaire.addEventListener('submit', surSoumission);
 
   return {
     racine: fenetre.racine,
@@ -230,8 +317,8 @@ export function monterPanneauReglages(options: OptionsPanneauReglages): PanneauR
     },
 
     ouvrirAvec(reglages) {
-      ecrire(valeursDepuisReglages(reglages));
-      verifier();
+      formulaire.ecrire(valeursDepuisReglages(reglages));
+      enregistrer.disabled = !formulaire.verifier().valide;
       fenetre.ouvrir();
     },
 
@@ -240,9 +327,7 @@ export function monterPanneauReglages(options: OptionsPanneauReglages): PanneauR
     },
 
     demonter() {
-      formulaire.removeEventListener('input', surSaisie);
-      formulaire.removeEventListener('change', surSaisie);
-      formulaire.removeEventListener('submit', surSoumission);
+      formulaire.demonter();
       fenetre.demonter();
     },
   };

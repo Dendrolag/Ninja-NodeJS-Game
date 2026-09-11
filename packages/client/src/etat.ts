@@ -188,6 +188,14 @@ export interface EtatClient {
    */
   readonly pseudoDemande: string | undefined;
   /**
+   * Le pseudo qu'un invite est en train de saisir, tel quel.
+   *
+   * Ajoute a la reprise des ecrans du jalon 3. L'accueil, la liste des parties et la
+   * creation le demandent tous les trois: il vit ici pour se saisir une seule fois,
+   * et survivre au passage d'un ecran a l'autre.
+   */
+  readonly pseudoSaisi: string;
+  /**
    * Une demande d'entree est partie, et sa reponse n'est pas arrivee.
    *
    * Ajoute a l'etape 4.3. Sans lui, l'accueil laisserait redemander a entrer
@@ -205,6 +213,8 @@ export interface EtatClient {
    * en a besoin.
    */
   readonly partiesPubliques: readonly PartiePublique[];
+  /** Une demande de liste attend sa reponse. */
+  readonly listeEnCours: boolean;
   /** Le salon de la partie ou l'on se trouve, reglages compris. */
   readonly salon: InfosSalon | undefined;
   /** Le compte a rebours de demarrage, tant qu'il tourne. */
@@ -261,8 +271,10 @@ export const ETAT_INITIAL: EtatClient = {
   profil: PROFIL_INCONNU,
   moi: undefined,
   pseudoDemande: undefined,
+  pseudoSaisi: '',
   entreeEnCours: false,
   partiesPubliques: [],
+  listeEnCours: false,
   salon: undefined,
   compteARebours: undefined,
   partie: undefined,

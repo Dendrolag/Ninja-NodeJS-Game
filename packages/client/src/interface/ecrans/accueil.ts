@@ -1,22 +1,22 @@
 /**
- * L'ecran d'accueil: choisir comment jouer, et entrer dans une partie.
+ * L'ecran d'accueil: choisir comment jouer.
  *
- * Portage du mainMenu du jeu d'origine, dans l'identite de la maquette. La
- * maquette y met aussi les modes, les defis et le pass de saison: les defis et le
- * pass sont reportes apres la v1, et un seul mode existe. Conformement a la
- * decision du 29 juin 2026, ce qui est reporte est absent, pas grise.
+ * Portage du mainMenu du jeu d'origine, dans l'identite de la maquette. Trois
+ * chemins, ceux du cadrage (section 3, accueil): la partie rapide, la creation
+ * d'une partie, et la liste des parties publiques. La maquette y met aussi les
+ * modes, les defis et le pass de saison: les defis et le pass sont reportes apres
+ * la v1, et un seul mode existe. Conformement a la decision du 29 juin 2026, ce qui
+ * est reporte est absent, pas grise.
  *
  * CET ECRAN NE DECIDE RIEN, ET NE RETIENT RIEN. Peut-on jouer, pourquoi le pseudo
  * est refuse, ou en est le lien, faut-il un pseudo: tout vient de modeleAccueil,
- * qui ne lit que l'etat du client et le texte du champ. L'ecran est monte a neuf a
- * chaque retour a l'accueil; une information qu'il aurait gardee pour lui serait
- * perdue a ce moment-la, et c'est justement ce que le test de navigation a montre
- * pour la perte de connexion.
+ * qui ne lit que l'etat du client. Le pseudo saisi lui-meme vit dans l'etat
+ * (composants/champPseudo.ts): l'ecran est monte a neuf a chaque retour, et une
+ * information qu'il garderait pour lui serait perdue.
  */
 
-import { BORNES_PSEUDO, normaliserTexte } from '@neon-ninja/shared';
-
 import type { EtatClient } from '../../etat.js';
+import { monterChampPseudo } from '../composants/champPseudo.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import type { Glyphe } from '../icones.js';
 import { icone } from '../icones.js';
@@ -62,27 +62,10 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
   const doc = contexte.document;
   const client = contexte.client;
 
-  const saisie = creer(doc, 'input', {
-    classe: 'champ-texte',
-    attributs: {
-      type: 'text',
-      name: 'pseudo',
-      maxlength: String(BORNES_PSEUDO.longueur.maximum),
-      autocomplete: 'nickname',
-      spellcheck: 'false',
-      placeholder: 'Votre pseudo',
-    },
-  });
-  const champPseudo = creer(
-    doc,
-    'label',
-    { classe: 'champ-pseudo' },
-    creer(doc, 'span', { classe: 'etiquette', texte: 'Pseudo' }),
-    saisie,
-  );
-  const jouer = bouton(doc, {
+  const champPseudo = monterChampPseudo(doc, client);
+  const partieRapide = bouton(doc, {
     classe: 'bouton bouton-primaire bouton-large',
-    texte: 'Jouer',
+    texte: 'Partie rapide',
     icone: 'play',
     type: 'submit',
   });
@@ -122,7 +105,13 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
     },
   );
 
-  const formulaire = creer(doc, 'form', { classe: 'accueil-formulaire' }, champPseudo, jouer);
+  const formulaire = creer(
+    doc,
+    'form',
+    { classe: 'accueil-formulaire' },
+    champPseudo.racine,
+    partieRapide,
+  );
 
   const racine = creer(
     doc,
@@ -162,6 +151,25 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
         creer(
           doc,
           'div',
+          { classe: 'accueil-actions' },
+          bouton(
+            doc,
+            { classe: 'bouton bouton-secondaire', texte: 'Créer une partie', icone: 'plus' },
+            () => {
+              client.naviguer('creation');
+            },
+          ),
+          bouton(
+            doc,
+            { classe: 'bouton bouton-secondaire', texte: 'Parcourir', icone: 'globe' },
+            () => {
+              client.naviguer('parties');
+            },
+          ),
+        ),
+        creer(
+          doc,
+          'div',
           { classe: 'accueil-etat' },
           lien,
           recharger,
@@ -194,42 +202,6 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
 
   let etatCourant: EtatClient | undefined;
 
-  const rendre = (): void => {
-    if (etatCourant === undefined) {
-      return;
-    }
-
-    const modele = modeleAccueil(etatCourant, saisie.value);
-
-    montrer(champPseudo, modele.pseudoRequis);
-    ecrireTexte(nomDuCompte, modele.pseudoDuCompte ?? '');
-    montrer(ligneDuCompte, modele.pseudoDuCompte !== undefined);
-    ecrireTexte(avis, modele.avis ?? '');
-    montrer(avis, modele.avis !== undefined);
-
-    ecrireTexte(erreur, modele.erreur ?? '');
-    montrer(erreur, modele.erreur !== undefined);
-    saisie.toggleAttribute('aria-invalid', modele.erreur !== undefined);
-    jouer.disabled = !modele.peutJouer;
-    jouer.toggleAttribute('aria-busy', modele.enAttente);
-
-    const texteDuLien = modele.enAttente
-      ? 'Entrée dans une partie…'
-      : modele.lien === 'refuse'
-        ? (modele.motifDuLien ?? '')
-        : TEXTES_DU_LIEN[modele.lien];
-
-    ecrireTexte(lien, texteDuLien);
-    montrer(lien, texteDuLien !== '');
-    montrer(recharger, modele.lien === 'perdu');
-    montrer(reessayer, modele.lien === 'refuse');
-    montrer(continuerEnInvite, modele.peutContinuerEnInvite);
-  };
-
-  const surSaisie = (): void => {
-    rendre();
-  };
-
   const surEnvoi = (evenement: Event): void => {
     evenement.preventDefault();
 
@@ -239,35 +211,49 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
 
     // La meme question que celle qui active le bouton: la touche Entree ne doit
     // pas envoyer ce que le bouton refuse.
-    const modele = modeleAccueil(etatCourant, saisie.value);
+    const modele = modeleAccueil(etatCourant, etatCourant.pseudoSaisi);
 
-    if (!modele.peutJouer) {
-      return;
+    if (modele.peutJouer) {
+      client.rejoindre(modele.pseudo);
     }
-
-    client.rejoindre(modele.pseudoRequis ? normaliserTexte(saisie.value) : undefined);
   };
 
-  saisie.addEventListener('input', surSaisie);
   formulaire.addEventListener('submit', surEnvoi);
 
   return {
     racine,
 
     afficher(etat) {
-      // A la premiere image, le champ reprend le pseudo deja demande: celui du
-      // joueur qui revient d'une partie, ou qui a perdu la connexion.
-      if (etatCourant === undefined && etat.pseudoDemande !== undefined) {
-        saisie.value = etat.pseudoDemande;
-      }
-
       etatCourant = etat;
-      rendre();
+      const modele = modeleAccueil(etat, etat.pseudoSaisi);
+
+      champPseudo.afficher(etat, modele.pseudoRequis, modele.erreur);
+      ecrireTexte(nomDuCompte, modele.pseudoDuCompte ?? '');
+      montrer(ligneDuCompte, modele.pseudoDuCompte !== undefined);
+      ecrireTexte(avis, modele.avis ?? '');
+      montrer(avis, modele.avis !== undefined);
+
+      ecrireTexte(erreur, modele.erreur ?? '');
+      montrer(erreur, modele.erreur !== undefined);
+      partieRapide.disabled = !modele.peutJouer;
+      partieRapide.toggleAttribute('aria-busy', modele.enAttente);
+
+      const texteDuLien = modele.enAttente
+        ? 'Entrée dans une partie…'
+        : modele.lien === 'refuse'
+          ? (modele.motifDuLien ?? '')
+          : TEXTES_DU_LIEN[modele.lien];
+
+      ecrireTexte(lien, texteDuLien);
+      montrer(lien, texteDuLien !== '');
+      montrer(recharger, modele.lien === 'perdu');
+      montrer(reessayer, modele.lien === 'refuse');
+      montrer(continuerEnInvite, modele.peutContinuerEnInvite);
     },
 
     demonter() {
-      saisie.removeEventListener('input', surSaisie);
       formulaire.removeEventListener('submit', surEnvoi);
+      champPseudo.demonter();
       racine.remove();
     },
   };

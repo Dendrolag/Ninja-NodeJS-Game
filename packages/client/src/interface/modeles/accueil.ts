@@ -50,6 +50,8 @@ export interface ModeleAccueil {
   readonly erreur: string | undefined;
   /** Une demande d'entree attend sa reponse. */
   readonly enAttente: boolean;
+  /** Le pseudo a envoyer, normalise comme le serveur; absent pour un compte, ou tant qu'il est invalide. */
+  readonly pseudo: string | undefined;
   /** Le bouton pour jouer est-il actif. */
   readonly peutJouer: boolean;
   /** Le lien refuse presentait une session: on peut y renoncer et jouer en invite. */
@@ -95,6 +97,7 @@ export function modeleAccueil(etat: EtatClient, saisie: string): ModeleAccueil {
     avis: session.nature === 'invite' && session.sessionExpiree ? AVIS_SESSION_EXPIREE : undefined,
     erreur: erreurLocale ?? refusDuServeur(etat, saisie, pseudoRequis),
     enAttente: etat.entreeEnCours,
+    pseudo: pseudoRequis && verdict.valide ? verdict.valeur : undefined,
     peutJouer: lien === 'etabli' && !etat.entreeEnCours && (!pseudoRequis || verdict.valide),
     peutContinuerEnInvite: lien === 'refuse' && !pseudoRequis,
   };

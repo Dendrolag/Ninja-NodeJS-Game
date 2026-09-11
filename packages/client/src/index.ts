@@ -238,6 +238,26 @@ export { modeleConnexion } from './interface/modeles/connexion.js';
 export type { ModeleCompteDeLEntete } from './interface/modeles/entete.js';
 export { modeleCompteDeLEntete } from './interface/modeles/entete.js';
 
+export type { PseudoDEntree } from './interface/modeles/pseudo.js';
+export { pseudoDEntree } from './interface/modeles/pseudo.js';
+
+export type { ModeleParties, PartieAffichee } from './interface/modeles/parties.js';
+export { modeleParties } from './interface/modeles/parties.js';
+
+export type {
+  EnvoiDeCreation,
+  ModeleCreation,
+  SaisieDeCreation,
+} from './interface/modeles/creation.js';
+export { MODE_DE_CREATION, modeleCreation } from './interface/modeles/creation.js';
+
+export type {
+  DestinationDeNavigation,
+  EntreeDeNavigation,
+  ModeleNavigation,
+} from './interface/modeles/navigation.js';
+export { DESTINATIONS, modeleNavigation } from './interface/modeles/navigation.js';
+
 export type {
   LigneDHistorique,
   ModeleProfil,

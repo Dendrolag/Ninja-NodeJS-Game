@@ -95,6 +95,10 @@ export type Action =
     }
   /** Le joueur quitte la partie de lui-meme. */
   | { readonly type: 'sortie' }
+  /** Un invite modifie le pseudo qu'il saisit. */
+  | { readonly type: 'pseudoSaisi'; readonly pseudo: string }
+  /** La liste des parties publiques est demandee au serveur. */
+  | { readonly type: 'listeDemandee' }
   /** Le serveur a rendu la liste des parties publiques ouvertes. */
   | { readonly type: 'partiesListees'; readonly parties: readonly PartiePublique[] }
   /** L'etat du salon a change. */

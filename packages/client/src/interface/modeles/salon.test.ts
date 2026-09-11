@@ -139,6 +139,28 @@ describe('modeleSalon', () => {
     expect(valeur('Black Ninjas')).toBe('Désactivés');
   });
 
+  it('dit la visibilite et les places libres d une partie publique, sans code', () => {
+    const modele = modeleSalon(etat(salon('bob')));
+
+    expect(modele?.visibilite).toBe('Partie publique');
+    expect(modele?.privee).toBe(false);
+    expect(modele?.code).toBeUndefined();
+    expect(modele?.placesLibres).toBe('10 places libres');
+  });
+
+  it('donne le code d une partie privee, a partager', () => {
+    const modele = modeleSalon(etat(salon('bob', { visibilite: 'privee', code: 'NX7K2P' })));
+
+    expect(modele?.visibilite).toBe('Partie privée');
+    expect(modele?.privee).toBe(true);
+    expect(modele?.code).toBe('NX7K2P');
+  });
+
+  it('dit la derniere place libre, puis que la partie est complete', () => {
+    expect(modeleSalon(etat(salon('bob', { capacite: 3 })))?.placesLibres).toBe('1 place libre');
+    expect(modeleSalon(etat(salon('bob', { capacite: 2 })))?.placesLibres).toBe('Partie complète');
+  });
+
   it('distingue nos messages de ceux des autres', () => {
     const modele = modeleSalon(
       etat(salon('bob'), {

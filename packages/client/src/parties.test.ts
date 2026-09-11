@@ -131,4 +131,22 @@ describe('lister les parties publiques', () => {
     expect(ETAT_INITIAL.partiesPubliques).toEqual([]);
     expect(reduire(avecUnePartie, { type: 'connexionPerdue' }).partiesPubliques).toEqual([]);
   });
+
+  it('marque la liste en attente jusqu a sa reponse', () => {
+    client.listerParties();
+
+    expect(client.etat.listeEnCours).toBe(true);
+
+    reseau.dernier('listerParties')?.[0]([PARTIE]);
+
+    expect(client.etat.listeEnCours).toBe(false);
+  });
+
+  it('redemande la liste a chaque arrivee sur l ecran des parties', () => {
+    client.naviguer('parties');
+    client.naviguer('accueil');
+    client.naviguer('parties');
+
+    expect(reseau.emis.filter((message) => message.nom === 'listerParties')).toHaveLength(2);
+  });
 });

@@ -53,6 +53,7 @@ describe('modeleAccueil', () => {
       motifDuLien: undefined,
       pseudoRequis: true,
       pseudoDuCompte: undefined,
+      pseudo: 'Alice',
       avis: undefined,
       erreur: undefined,
       enAttente: false,

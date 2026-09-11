@@ -123,7 +123,7 @@ describe('l en-tete et la connexion', () => {
       'Vous jouez avec votre compte, Alice.',
     );
 
-    boutonObligatoire(hote, 'Jouer').click();
+    boutonObligatoire(hote, 'Partie rapide').click();
 
     expect(reseau.dernier('rejoindre')?.[0]).toEqual({});
   });
@@ -133,7 +133,7 @@ describe('l en-tete et la connexion', () => {
     client.ouvrir();
     await laisserRepondre();
     reseau.simulerConnexion('moi');
-    boutonObligatoire(hote, 'Jouer').click();
+    boutonObligatoire(hote, 'Partie rapide').click();
     reseau.dernier('rejoindre')?.[1]({ valide: true, valeur: SALON });
 
     const carte = obligatoire<HTMLButtonElement>(hote, '.carte-compte');

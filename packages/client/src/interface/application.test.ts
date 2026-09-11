@@ -79,7 +79,7 @@ function champPseudo(): HTMLInputElement {
 /** Saisit un pseudo et clique sur Jouer, sans repondre a la place du serveur. */
 function demanderAEntrer(pseudo: string): void {
   saisir(champPseudo(), pseudo);
-  boutonObligatoire(hote, 'Jouer').click();
+  boutonObligatoire(hote, 'Partie rapide').click();
 }
 
 /** Se connecte, entre, et recoit l'accord du serveur. */
@@ -125,7 +125,7 @@ afterEach(() => {
 describe('l accueil', () => {
   it('s ouvre en attendant la connexion, sans laisser jouer', () => {
     expect(ecranAffiche()).toBe('accueil');
-    expect(boutonObligatoire(hote, 'Jouer').disabled).toBe(true);
+    expect(boutonObligatoire(hote, 'Partie rapide').disabled).toBe(true);
     expect(obligatoire(hote, '.accueil-lien').textContent).toBe('Connexion au serveur…');
   });
 
@@ -137,7 +137,7 @@ describe('l accueil', () => {
 
     expect(estCache(erreur)).toBe(false);
     expect(erreur.textContent).toContain("n'accepte que");
-    expect(boutonObligatoire(hote, 'Jouer').disabled).toBe(true);
+    expect(boutonObligatoire(hote, 'Partie rapide').disabled).toBe(true);
 
     obligatoire<HTMLFormElement>(hote, '.accueil-formulaire').dispatchEvent(
       new Event('submit', { bubbles: true, cancelable: true }),
@@ -151,7 +151,7 @@ describe('l accueil', () => {
     demanderAEntrer('Alice');
 
     expect(reseau.dernier('rejoindre')?.[0]).toEqual({ pseudo: 'Alice' });
-    expect(boutonObligatoire(hote, 'Jouer').disabled).toBe(true);
+    expect(boutonObligatoire(hote, 'Partie rapide').disabled).toBe(true);
     expect(obligatoire(hote, '.accueil-lien').textContent).toBe('Entrée dans une partie…');
   });
 

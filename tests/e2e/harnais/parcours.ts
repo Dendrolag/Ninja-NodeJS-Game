@@ -238,7 +238,7 @@ export async function expliquerLEchec(
 export async function entrer(page: Page, url: string, pseudo: string): Promise<void> {
   await page.goto(url);
   await page.getByPlaceholder('Votre pseudo').fill(pseudo);
-  await page.getByRole('button', { name: 'Jouer' }).click();
+  await page.getByRole('button', { name: 'Partie rapide' }).click();
   await expect(page.locator('.application')).toHaveAttribute('data-ecran', 'salon');
 }
 

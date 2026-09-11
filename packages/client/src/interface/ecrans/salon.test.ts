@@ -231,3 +231,59 @@ describe('le chat', () => {
     expect(messages.map((message) => message.classList.contains('moi'))).toEqual([false, true]);
   });
 });
+
+describe('la visibilite et le code d invitation', () => {
+  /** Donne au navigateur d'essai un presse-papiers, et rend ce qu'on y a ecrit. */
+  function pressePapiersDEssai(): string[] {
+    const ecrits: string[] = [];
+
+    Object.defineProperty(window.navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async (texte: string) => {
+          ecrits.push(texte);
+        },
+      },
+    });
+
+    return ecrits;
+  }
+
+  afterEach(() => {
+    Object.defineProperty(window.navigator, 'clipboard', { configurable: true, value: undefined });
+  });
+
+  it('montre le code d une partie privee, et le copie dans le presse-papiers', async () => {
+    const ecrits = pressePapiersDEssai();
+    monter({ ...salon('moi'), visibilite: 'privee', code: 'NX7K2P' });
+
+    expect(obligatoire(document, '.badge-visibilite').textContent).toBe('Partie privée');
+    expect(estCache(obligatoire(document, '.salon-code'))).toBe(false);
+    expect(obligatoire(document, '.salon-code-valeur').textContent).toBe('NX7K2P');
+
+    boutonObligatoire(document, 'Copier le code').click();
+    await new Promise((resoudre) => setTimeout(resoudre, 0));
+
+    expect(ecrits).toEqual(['NX7K2P']);
+    expect(obligatoire(document, '.salon-copie').textContent).toBe('Code copié');
+  });
+
+  it('dit que la copie est impossible quand le navigateur la refuse', async () => {
+    monter({ ...salon('moi'), visibilite: 'privee', code: 'NX7K2P' });
+
+    boutonObligatoire(document, 'Copier le code').click();
+    await new Promise((resoudre) => setTimeout(resoudre, 0));
+
+    expect(obligatoire(document, '.salon-copie').textContent).toBe(
+      'Copie impossible : sélectionnez le code pour le copier.',
+    );
+  });
+
+  it('ne montre aucun code pour une partie publique, mais les places libres', () => {
+    monter(salon('moi'));
+
+    expect(obligatoire(document, '.badge-visibilite').textContent).toBe('Partie publique');
+    expect(estCache(obligatoire(document, '.salon-code'))).toBe(true);
+    expect(obligatoire(document, '.salon-places').textContent).toBe('10 places libres');
+  });
+});

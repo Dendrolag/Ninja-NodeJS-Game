@@ -73,6 +73,7 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
         ecran,
         connexion: 'perdue',
         pseudoDemande: etat.pseudoDemande,
+        pseudoSaisi: etat.pseudoSaisi,
         session: etat.session,
       };
 
@@ -147,6 +148,7 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
 
     // Un refus de compte ne suit pas le joueur sur un autre ecran. Une demande
     // en cours, elle, continue: sa reponse arrivera.
+    // Un refus d'entree non plus: il concernait l'ecran que l'on quitte.
     case 'navigation':
       return {
         ...etat,
@@ -154,13 +156,25 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
         demandeDeCompte: etat.demandeDeCompte.enCours
           ? etat.demandeDeCompte
           : AUCUNE_DEMANDE_DE_COMPTE,
+        refus: undefined,
       };
+
+    // Rendre l'etat lui-meme quand rien ne change evite de reveiller l'application
+    // a chaque touche qui ne modifie pas le champ.
+    case 'pseudoSaisi':
+      return action.pseudo === etat.pseudoSaisi
+        ? etat
+        : { ...etat, ecran, pseudoSaisi: action.pseudo };
+
+    case 'listeDemandee':
+      return { ...etat, ecran, listeEnCours: true };
 
     case 'entreeDemandee':
       return {
         ...etat,
         ecran,
         pseudoDemande: action.pseudo ?? etat.pseudoDemande,
+        pseudoSaisi: action.pseudo ?? etat.pseudoSaisi,
         entreeEnCours: true,
         refus: undefined,
       };
@@ -184,12 +198,13 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
         connexion: etat.connexion,
         moi: etat.moi,
         pseudoDemande: etat.pseudoDemande,
+        pseudoSaisi: etat.pseudoSaisi,
         session: etat.session,
       };
 
     // Une photographie de la liste, qui remplace la precedente.
     case 'partiesListees':
-      return { ...etat, ecran, partiesPubliques: action.parties };
+      return { ...etat, ecran, partiesPubliques: action.parties, listeEnCours: false };
 
     case 'salon':
       return { ...etat, ecran, salon: action.salon };

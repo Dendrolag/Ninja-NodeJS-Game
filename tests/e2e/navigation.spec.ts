@@ -41,7 +41,7 @@ test('de l accueil a la partie, puis retour a l accueil', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /Prêt à frapper/u })).toBeVisible();
 
   const pseudo = page.getByPlaceholder('Votre pseudo');
-  const jouer = page.getByRole('button', { name: 'Jouer' });
+  const jouer = page.getByRole('button', { name: 'Partie rapide' });
 
   await pseudo.fill('Al<i>ce');
   await expect(page.locator('.accueil-erreur')).toContainText("n'accepte que");

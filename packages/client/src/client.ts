@@ -79,6 +79,8 @@ export interface Client extends CommandesDeSession {
   abonner(observateur: Observateur): () => void;
   /** Va vers un ecran de menu. Sans effet pendant une partie: on en sort en la quittant. */
   naviguer(vers: EcranDeMenu): void;
+  /** Retient le pseudo qu'un invite saisit, pour tous les ecrans qui le demandent. */
+  saisirPseudo(pseudo: string): void;
   /**
    * Demande a entrer dans une partie.
    *
@@ -175,6 +177,14 @@ export function creerClient(options: OptionsClient): Client {
     coffre: options.coffre ?? creerCoffreDeJeton(),
     ecouter,
   });
+
+  /** Demande la liste des parties publiques ouvertes. */
+  const listerParties = (): void => {
+    magasin.appliquer({ type: 'listeDemandee' });
+    reseau.emettre('listerParties', (parties) => {
+      magasin.appliquer({ type: 'partiesListees', parties });
+    });
+  };
 
   // -- Le salon -------------------------------------------------------------
 
@@ -321,9 +331,17 @@ export function creerClient(options: OptionsClient): Client {
     naviguer: (vers) => {
       magasin.appliquer({ type: 'navigation', vers });
 
+      // La liste des parties aussi: une photographie ancienne proposerait des
+      // parties deja pleines ou lancees.
       if (magasin.etat.ecran === 'profil') {
         session.chargerLeProfil();
+      } else if (magasin.etat.ecran === 'parties') {
+        listerParties();
       }
+    },
+
+    saisirPseudo: (pseudo) => {
+      magasin.appliquer({ type: 'pseudoSaisi', pseudo });
     },
 
     rejoindre: (pseudo, acces) => {
@@ -345,11 +363,7 @@ export function creerClient(options: OptionsClient): Client {
       );
     },
 
-    listerParties: () => {
-      reseau.emettre('listerParties', (parties) => {
-        magasin.appliquer({ type: 'partiesListees', parties });
-      });
-    },
+    listerParties,
 
     quitter: () => {
       reseau.emettre('quitter');

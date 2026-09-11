@@ -183,6 +183,50 @@ describe('les demandes de compte', () => {
   });
 });
 
+describe('le pseudo saisi et la liste des parties', () => {
+  it('garde le pseudo saisi, sans changer d etat quand rien ne change', () => {
+    const saisi = apres([{ type: 'pseudoSaisi', pseudo: 'Ali' }]);
+
+    expect(saisi.pseudoSaisi).toBe('Ali');
+    expect(reduire(saisi, { type: 'pseudoSaisi', pseudo: 'Ali' })).toBe(saisi);
+  });
+
+  it('garde le pseudo saisi a la sortie d une partie et a la perte du lien', () => {
+    const debut: readonly Action[] = [
+      { type: 'pseudoSaisi', pseudo: 'Alice' },
+      { type: 'connexionEtablie', identifiant: 'moi' },
+    ];
+
+    expect(apres([...debut, { type: 'sortie' }]).pseudoSaisi).toBe('Alice');
+    expect(apres([...debut, { type: 'connexionPerdue' }]).pseudoSaisi).toBe('Alice');
+  });
+
+  it('reprend le pseudo d une entree demandee', () => {
+    expect(apres([{ type: 'entreeDemandee', pseudo: 'Bob' }]).pseudoSaisi).toBe('Bob');
+  });
+
+  it('marque la liste en attente jusqu a sa reponse', () => {
+    const demandee = apres([{ type: 'listeDemandee' }]);
+
+    expect(demandee.listeEnCours).toBe(true);
+    expect(reduire(demandee, { type: 'partiesListees', parties: [] }).listeEnCours).toBe(false);
+  });
+
+  it('efface un refus d entree en changeant d ecran', () => {
+    const etat = apres([
+      { type: 'entreeDemandee', pseudo: 'Alice' },
+      {
+        type: 'entreeRefusee',
+        action: 'rejoindre',
+        erreurs: [{ champ: 'code', motif: 'Aucune partie ne correspond à ce code.' }],
+      },
+      { type: 'navigation', vers: 'parties' },
+    ]);
+
+    expect(etat.refus).toBeUndefined();
+  });
+});
+
 describe('le profil', () => {
   it('n existe pas pour un invite, mene a la connexion', () => {
     expect(apres([{ type: 'navigation', vers: 'profil' }]).ecran).toBe('connexion');
