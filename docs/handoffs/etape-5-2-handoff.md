@@ -129,7 +129,7 @@ Repris du handoff de 5.1, inchangé ou précisé: tout est mesuré sur un résea
 
 - Commit des optimisations, `1eaccd3`: **verte**, exécution GitHub Actions 34654055650 (« Types, linter et tests » et « Bout en bout »).
 - Mesure sous Linux: exécution 34654057859 du workflow « Charge », réussie, branche `mesure-charge/5-2` supprimée ensuite.
-- Commit de documentation: voir le commit qui suit, qui confirme sa CI dans ce handoff.
+- Commit de documentation, `8ec214f`: **verte**, exécution GitHub Actions 34655697885 (« Types, linter et tests » et « Bout en bout »).
 
 `master` n'a pas été touché. Aucune fusion de `reecriture` avant l'étape 6.1.
 
