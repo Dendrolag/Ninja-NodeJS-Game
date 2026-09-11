@@ -148,7 +148,12 @@ Repris des handoffs précédents: les limites de tentatives vivent en mémoire d
 
 ## État de la CI
 
-À confirmer après la poussée du commit de l'étape.
+**Run 34599816191, commit 6d5dd9b: vert.**
+
+- « Types, linter et tests »: vert, contrôle des migrations compris (aucune migration: le schéma n'a changé que dans ses commentaires), tests de la base contre une branche Neon.
+- « Bout en bout »: vert.
+- Après ce run, seule la branche `production` reste dans le projet Neon.
+- Le commit de l'étape, 6fead4f, avait été poussé avec le handoff non formaté: la vérification du formatage avait échoué, mais son code de sortie était masqué par un filtre en fin de commande. Corrigé aussitôt par 6d5dd9b; le run de 6fead4f (34599786733) a été annulé par la CI au profit du suivant, sans aller au bout.
 
 ## Prochaine action exacte
 
