@@ -481,6 +481,129 @@ describe('les formes que le reseau rend', () => {
   });
 });
 
+describe('l etat du mode Tactique', () => {
+  type TactiqueDuTest = NonNullable<JoueurVu['tactique']>;
+
+  const ORIENTATIONS_DU_TEST = DIRECTIONS.filter(
+    (direction) => direction !== 'immobile',
+  ) as TactiqueDuTest['orientation'][];
+
+  const tactique = (champs: Partial<TactiqueDuTest> = {}): TactiqueDuTest => ({
+    orientation: 'est',
+    charges: 5,
+    avantProchaineChargeMs: 5000,
+    ...champs,
+  });
+
+  it('fait l aller-retour d une image, l attente arrondie a la milliseconde', () => {
+    const partie = instantane({
+      entites: [
+        joueur('a', 10, 10, { tactique: tactique({ avantProchaineChargeMs: 1234.6 }) }),
+        joueur('b', 20, 20),
+      ],
+    });
+
+    const image = encoderImage(partie);
+
+    expect(appliquerTrame(undefined, image.octets)).toEqual(quantifierInstantane(partie));
+    expect(image.reference.entites[0]).toMatchObject({
+      tactique: { avantProchaineChargeMs: 1235 },
+    });
+  });
+
+  it('reconstruit chaque battement ou l orientation, les charges et l attente changent', () => {
+    const hasard = tirages(5);
+    let courante = tactique();
+    let reference = encoderImage(
+      instantane({ tick: 1, entites: [joueur('a', 0, 0, { tactique: courante })] }),
+    ).reference;
+
+    for (let tick = 2; tick <= 400; tick += 1) {
+      courante = {
+        orientation:
+          hasard.nombre() < 0.1 ? hasard.element(ORIENTATIONS_DU_TEST) : courante.orientation,
+        charges: hasard.nombre() < 0.05 ? hasard.entier(6) : courante.charges,
+        avantProchaineChargeMs:
+          hasard.nombre() < 0.5 ? hasard.entier(5001) : courante.avantProchaineChargeMs,
+      };
+      const partie = instantane({
+        tick,
+        entites: [joueur('a', 0, 0, { tactique: courante }), bot('b', tick, 0)],
+      });
+      const delta = encoderDelta(reference, partie);
+
+      expect(appliquerTrame(reference, delta.octets)).toEqual(delta.reference);
+      reference = delta.reference;
+    }
+  });
+
+  it('suit un joueur qui se met a porter l etat tactique, puis cesse de le porter', () => {
+    const parties = [
+      instantane({ tick: 1, entites: [joueur('a', 0, 0)] }),
+      // L'etat dont part un joueur qui n'en portait pas: aucun champ ne change.
+      instantane({
+        tick: 2,
+        entites: [
+          joueur('a', 0, 0, {
+            tactique: tactique({ orientation: 'nord', charges: 0, avantProchaineChargeMs: 0 }),
+          }),
+        ],
+      }),
+      instantane({ tick: 3, entites: [joueur('a', 0, 0, { tactique: tactique() })] }),
+      instantane({ tick: 4, entites: [joueur('a', 0, 0)] }),
+      instantane({ tick: 5, entites: [joueur('a', 0, 0, { tactique: tactique() })] }),
+    ];
+
+    let reference = encoderImage(parties[0] as InstantanePartie).reference;
+
+    for (const partie of parties.slice(1)) {
+      const delta = encoderDelta(reference, partie);
+
+      expect(appliquerTrame(reference, delta.octets)).toEqual(quantifierInstantane(partie));
+      reference = delta.reference;
+    }
+  });
+
+  it('coute quatre octets par joueur dans une image', () => {
+    const classique = instantane({ entites: [joueur('a', 10, 10), joueur('b', 20, 20)] });
+    const tactiqueEnPlus = instantane({
+      entites: [
+        joueur('a', 10, 10, { tactique: tactique() }),
+        joueur('b', 20, 20, { tactique: tactique() }),
+      ],
+    });
+
+    expect(encoderImage(tactiqueEnPlus).octets.length - encoderImage(classique).octets.length).toBe(
+      2 * 4,
+    );
+  });
+
+  it('refuse de coder une orientation inconnue ou des charges hors d un octet', () => {
+    const avec = (champs: Partial<TactiqueDuTest>): InstantanePartie =>
+      instantane({ entites: [joueur('a', 0, 0, { tactique: tactique(champs) })] });
+
+    expect(() => quantifierInstantane(avec({ orientation: 'immobile' as never }))).toThrow();
+    expect(() => quantifierInstantane(avec({ charges: 256 }))).toThrow();
+  });
+
+  it('refuse un bot qui porterait un changement tactique', () => {
+    const reference = encoderImage(instantane({ tick: 1, entites: [bot('b', 0, 0)] })).reference;
+    // Delta, battement 2 apres 1, temps inchange, sans pause; une entite, ordre inchange,
+    // un changement au rang zero, de masque 64.
+    const trame = Uint8Array.of(5, 2, 1, 0, 0, 1, 0, 1, 0, 64, 0);
+
+    expect(() => appliquerTrame(reference, trame)).toThrow(ErreurDeTrame);
+  });
+
+  it('refuse un joueur sans etat tactique qui en changerait un', () => {
+    const reference = encoderImage(instantane({ tick: 1, entites: [joueur('a', 0, 0)] })).reference;
+    // Meme debut, un changement de masque 128 sur un joueur qui ne porte rien du mode.
+    const trame = Uint8Array.of(5, 2, 1, 0, 0, 1, 0, 1, 0, 128, 5, 0);
+
+    expect(() => appliquerTrame(reference, trame)).toThrow(ErreurDeTrame);
+  });
+});
+
 describe('une trame fausse est refusee', () => {
   const [premiere, seconde] = [...partieAuHasard(10, 2)] as [InstantanePartie, InstantanePartie];
   const image = encoderImage(premiere);
@@ -496,11 +619,14 @@ describe('une trame fausse est refusee', () => {
     }
   });
 
-  it('refuse une autre version du format', () => {
-    const autre = image.octets.slice();
-    autre[0] = 6;
+  it('refuse une autre version du format, l ancienne comprise', () => {
+    // Le premier octet vaut deux fois la version, plus la nature de la trame.
+    for (const version of [1, 3]) {
+      const autre = image.octets.slice();
+      autre[0] = version * 2;
 
-    expect(() => appliquerTrame(undefined, autre)).toThrow(ErreurDeTrame);
+      expect(() => appliquerTrame(undefined, autre)).toThrow(ErreurDeTrame);
+    }
   });
 
   it('refuse des octets en trop', () => {
@@ -511,13 +637,13 @@ describe('une trame fausse est refusee', () => {
   });
 
   it('refuse un delta dont le battement de reference precede zero', () => {
-    // Nature delta, battement 1, ecart de 2.
-    expect(() => appliquerTrame(undefined, Uint8Array.of(3, 1, 2))).toThrow(ErreurDeTrame);
+    // Version 2, nature delta, battement 1, ecart de 2.
+    expect(() => appliquerTrame(undefined, Uint8Array.of(5, 1, 2))).toThrow(ErreurDeTrame);
   });
 
   it('refuse un code de liste fermee hors de la liste', () => {
     // Image, battement 1, 1000 ms, sans pause, une entite nouvelle de type inconnu.
-    const trame = Uint8Array.of(2, 1, 0xe8, 0x07, 0, 1, 1, 1, 0, 1, 0x62, 9);
+    const trame = Uint8Array.of(4, 1, 0xe8, 0x07, 0, 1, 1, 1, 0, 1, 0x62, 9);
 
     expect(() => appliquerTrame(undefined, trame)).toThrow(ErreurDeTrame);
   });
@@ -540,10 +666,10 @@ describe('une trame fausse est refusee', () => {
 
 describe('chaque garde du decodage refuse sa trame fausse', () => {
   /**
-   * Le debut d'une image: version 1, battement 1, temps restant nul, sans pause,
+   * Le debut d'une image: version 2, battement 1, temps restant nul, sans pause,
    * puis une liste d'entites d'un seul element nouveau, au rang zero.
    */
-  const IMAGE_A_UNE_ENTITE = [2, 1, 0, 0, 1, 1, 1, 0] as const;
+  const IMAGE_A_UNE_ENTITE = [4, 1, 0, 0, 1, 1, 1, 0] as const;
 
   /** Une entite dont l'identifiant est ce texte-la, code tel quel. */
   const avecIdentifiant = (...texte: number[]): Uint8Array =>
@@ -553,7 +679,7 @@ describe('chaque garde du decodage refuse sa trame fausse', () => {
     expect(() =>
       appliquerTrame(
         undefined,
-        Uint8Array.of(2, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 1),
+        Uint8Array.of(4, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 1),
       ),
     ).toThrow(ErreurDeTrame);
   });
@@ -581,13 +707,13 @@ describe('chaque garde du decodage refuse sa trame fausse', () => {
   });
 
   it('refuse une liste qui annonce plus d elements qu il n y a d octets', () => {
-    expect(() => appliquerTrame(undefined, Uint8Array.of(2, 1, 0, 0, 50, 1))).toThrow(
+    expect(() => appliquerTrame(undefined, Uint8Array.of(4, 1, 0, 0, 50, 1))).toThrow(
       ErreurDeTrame,
     );
   });
 
   it('refuse un element nouveau annonce sans son contenu', () => {
-    expect(() => appliquerTrame(undefined, Uint8Array.of(2, 1, 0, 0, 1, 1, 0))).toThrow(
+    expect(() => appliquerTrame(undefined, Uint8Array.of(4, 1, 0, 0, 1, 1, 0))).toThrow(
       ErreurDeTrame,
     );
   });
@@ -596,7 +722,7 @@ describe('chaque garde du decodage refuse sa trame fausse', () => {
     const reference = encoderImage(instantane({ tick: 1, entites: [bot('b', 0, 0)] })).reference;
     // Delta, battement 2 apres 1, temps inchange, sans pause, une entite qui reprendrait
     // le cinquieme element d'une liste qui n'en a qu'un.
-    const trame = Uint8Array.of(3, 2, 1, 0, 0, 1, 2, 5);
+    const trame = Uint8Array.of(5, 2, 1, 0, 0, 1, 2, 5);
 
     expect(() => appliquerTrame(reference, trame)).toThrow(ErreurDeTrame);
   });

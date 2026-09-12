@@ -104,6 +104,8 @@ export type {
   ProgressionNonEnregistree,
   Refus,
   StatutPartie,
+  TactiqueVue,
+  TirDeCaptureVu,
   ZoneVue,
 } from './evenements.js';
 

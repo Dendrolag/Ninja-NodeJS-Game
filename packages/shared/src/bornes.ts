@@ -229,6 +229,13 @@ export const LIMITES_DEBIT = {
   chat: { parSeconde: 1, rafale: 5 } satisfies LimiteDebit,
   /** Changements de reglages par l'hote du salon. */
   reglages: { parSeconde: 5, rafale: 10 } satisfies LimiteDebit,
+  /**
+   * Demandes de tir, dans le mode Tactique (etape 7.1). Un tir ne part qu'au battement
+   * suivant, et plusieurs demandes du meme battement n'en font qu'une: au-dela de
+   * quelques-unes par seconde, un client ne demande rien de plus. Une rafale de cinq
+   * laisse vider ses cinq charges d'affilee.
+   */
+  capture: { parSeconde: 5, rafale: 5 } satisfies LimiteDebit,
   /** Tout le reste: rejoindre, quitter, lancer, se declarer pret. */
   autresActions: { parSeconde: 5, rafale: 10 } satisfies LimiteDebit,
 } as const;

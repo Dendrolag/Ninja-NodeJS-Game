@@ -12,7 +12,7 @@
  *      test pour survivre.
  */
 
-import { CARTES } from '@neon-ninja/shared';
+import { CARTES, TACTIQUE } from '@neon-ninja/shared';
 import type { EtatPartie } from '@neon-ninja/sim';
 import { ajouterJoueur, creerEtatInitial, mettreEnPause, poserObjet, tick } from '@neon-ninja/sim';
 import { describe, expect, it } from 'vitest';
@@ -28,6 +28,76 @@ function partieADeux(): EtatPartie {
 
   return etat;
 }
+
+describe('le mode Tactique dans la projection', () => {
+  /** Une partie Tactique a deux joueurs eloignes, sans bot. */
+  function partieTactiqueADeux(): EtatPartie {
+    let etat = creerEtatInitial({ graine: 7, mode: 'tactique' });
+    etat = ajouterJoueur(etat, { id: 'alice', pseudo: 'Alice', position: { x: 500, y: 500 } });
+    etat = ajouterJoueur(etat, { id: 'bob', pseudo: 'Bob', position: { x: 1500, y: 1000 } });
+
+    return etat;
+  }
+
+  it('montre ou vise chaque joueur, et ses charges', () => {
+    const etat = tick(
+      partieTactiqueADeux(),
+      { alice: { deplacement: { x: 0, y: 1 }, enMouvement: true } },
+      50,
+    );
+    const alice = instantaneDe(etat).entites.find((entite) => entite.id === 'alice');
+
+    expect(alice).toMatchObject({
+      tactique: {
+        orientation: 'sud',
+        charges: TACTIQUE.CHARGES_MAXIMUM,
+        avantProchaineChargeMs: TACTIQUE.RECHARGE_MS,
+      },
+    });
+  });
+
+  it('montre l etat de depart d un joueur que le moteur n a pas encore fait battre', () => {
+    const bob = instantaneDe(partieTactiqueADeux()).entites.find((entite) => entite.id === 'bob');
+
+    expect(bob).toMatchObject({
+      tactique: {
+        orientation: TACTIQUE.ORIENTATION_DE_DEPART,
+        charges: TACTIQUE.CHARGES_MAXIMUM,
+      },
+    });
+  });
+
+  it('ne montre rien du mode Tactique dans une partie Classique', () => {
+    const instantane = instantaneDe(tick(partieADeux(), {}, 50));
+
+    expect(
+      instantane.entites.some(
+        (entite) => entite.type === 'joueur' && entite.tactique !== undefined,
+      ),
+    ).toBe(false);
+  });
+
+  it('annonce un tir a chaque joueur de la partie', () => {
+    const etat = tick(
+      partieTactiqueADeux(),
+      { alice: { deplacement: { x: 0, y: 0 }, enMouvement: false, capturer: true } },
+      50,
+    );
+
+    const tirs = notificationsDe(etat).filter(
+      (notification) => notification.nom === 'tirDeCapture',
+    );
+
+    expect(tirs.map((tir) => tir.pour)).toEqual(['alice', 'bob']);
+    expect(tirs[0]?.charge).toEqual({
+      tireur: 'alice',
+      x: 500,
+      y: 500,
+      orientation: 'est',
+      captures: 0,
+    });
+  });
+});
 
 describe('instantaneDe', () => {
   it('projette chaque joueur avec son pseudo et ses deux indicateurs publics', () => {

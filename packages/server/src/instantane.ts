@@ -38,11 +38,14 @@ import type {
   MalusSubi,
   ObjetVu,
   PartiePublique,
+  TactiqueVue,
+  TirDeCaptureVu,
   ZoneVue,
 } from '@neon-ninja/shared';
 import type {
   Bot,
   EtatPartie,
+  EtatTactiqueDuJoueur,
   EvenementPartie,
   IdentifiantEntite,
   Joueur,
@@ -50,7 +53,13 @@ import type {
   ObjetRamassable,
   ZoneSpeciale,
 } from '@neon-ninja/sim';
-import { bonusActif, calculerScores, evaluerFinDePartie, toutesLesEntites } from '@neon-ninja/sim';
+import {
+  bonusActif,
+  calculerScores,
+  etatTactiqueDe,
+  evaluerFinDePartie,
+  toutesLesEntites,
+} from '@neon-ninja/sim';
 
 import type { GameRoom } from './GameRoom.js';
 
@@ -69,15 +78,29 @@ export function instantaneDe(etat: EtatPartie): InstantanePartie {
     tick: etat.tick,
     tempsRestantMs: evaluerFinDePartie(etat).tempsRestantMs,
     enPause: etat.enPause,
-    entites: toutesLesEntites(etat).map(entiteVue),
+    entites: toutesLesEntites(etat).map((entite) => entiteVue(etat, entite)),
     objets: Object.values(etat.objets).map(objetVu),
     zones: Object.values(etat.zones).map(zoneVue),
     classement: calculerScores(etat).map(ligneClassement),
   };
 }
 
-/** Convertit une entite du moteur en ce que tout le monde a le droit d'en voir. */
-function entiteVue(entite: Joueur | Bot): EntiteVue {
+/** L'etat tactique d'un joueur, tel qu'il part sur le reseau. */
+function tactiqueVue(tactique: EtatTactiqueDuJoueur): TactiqueVue {
+  return {
+    orientation: tactique.orientation,
+    charges: tactique.charges,
+    avantProchaineChargeMs: tactique.avantProchaineChargeMs,
+  };
+}
+
+/**
+ * Convertit une entite du moteur en ce que tout le monde a le droit d'en voir.
+ *
+ * Dans une partie Tactique, un joueur montre en plus ou il vise et ce qu'il lui reste
+ * de charges (etape 7.1). Ailleurs, rien de ce mode ne part.
+ */
+function entiteVue(etat: EtatPartie, entite: Joueur | Bot): EntiteVue {
   const commun = {
     id: entite.id,
     x: entite.position.x,
@@ -93,6 +116,9 @@ function entiteVue(entite: Joueur | Bot): EntiteVue {
       pseudo: entite.pseudo,
       invincible: bonusActif(entite, 'invincibilite'),
       protege: entite.protectionSpawnRestanteMs > 0,
+      ...(etat.mode === 'tactique'
+        ? { tactique: tactiqueVue(etatTactiqueDe(etat, entite.id)) }
+        : {}),
     };
   }
 
@@ -242,7 +268,12 @@ export type Notification =
       readonly pour: IdentifiantEntite;
       readonly charge: MalusRamasseParMoi;
     }
-  | { readonly nom: 'malusSubi'; readonly pour: IdentifiantEntite; readonly charge: MalusSubi };
+  | { readonly nom: 'malusSubi'; readonly pour: IdentifiantEntite; readonly charge: MalusSubi }
+  | {
+      readonly nom: 'tirDeCapture';
+      readonly pour: IdentifiantEntite;
+      readonly charge: TirDeCaptureVu;
+    };
 
 /**
  * Traduit les faits d'un battement en notifications adressees.
@@ -301,9 +332,18 @@ function notificationsDUnFait(
       return malusRamasse(etat, evenement);
 
     case 'tirDeCapture':
-      // Un tir ne s'adresse a personne en particulier. Ce qu'il montre a la salle
-      // se decide avec le contrat reseau du mode Tactique (etape 7.1, lot B).
-      return [];
+      // Un tir se voit de toute la partie: chaque joueur present en est prevenu.
+      return Object.keys(etat.joueurs).map((pour): Notification => ({
+        nom: 'tirDeCapture',
+        pour,
+        charge: {
+          tireur: evenement.joueur,
+          x: evenement.position.x,
+          y: evenement.position.y,
+          orientation: evenement.orientation,
+          captures: evenement.captures,
+        },
+      }));
   }
 }
 

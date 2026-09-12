@@ -332,12 +332,14 @@ export class ServeurSocket {
         chat: seauNeuf(LIMITES_DEBIT.chat),
         reglages: seauNeuf(LIMITES_DEBIT.reglages),
         autresActions: seauNeuf(LIMITES_DEBIT.autresActions),
+        capture: seauNeuf(LIMITES_DEBIT.capture),
       },
       derniereFois: {
         deplacement: maintenant,
         chat: maintenant,
         reglages: maintenant,
         autresActions: maintenant,
+        capture: maintenant,
       },
     });
 
@@ -355,6 +357,9 @@ export class ServeurSocket {
     });
     socket.on('deplacer', (intention) => {
       this.surDeplacer(socket, intention);
+    });
+    socket.on('capturer', () => {
+      this.surCapturer(socket);
     });
     socket.on('chat', (demande) => {
       this.surChat(socket, demande);
@@ -563,6 +568,34 @@ export class ServeurSocket {
     }
 
     room.enregistrerIntention(connexion.session.id, verdict.valeur);
+  }
+
+  /**
+   * Demande de tir, dans le mode Tactique (etape 7.1).
+   *
+   * Comme un deplacement, une demande en trop ou hors de propos est ignoree en silence:
+   * au-dela du debit, ou hors d'une partie en cours. Le message ne porte rien: qui tire,
+   * la session le dit; d'ou et vers ou, le moteur le sait. Dans une partie qui n'est
+   * pas Tactique, c'est le moteur qui ignore la demande: la couche reseau ne connait
+   * aucune regle de jeu.
+   */
+  private surCapturer(socket: SocketTypee): void {
+    const connexion = this.connexions.get(socket.id);
+
+    if (connexion?.session === undefined || connexion.idRoom === undefined) {
+      return;
+    }
+
+    if (!this.autorise(connexion, 'capture')) {
+      return;
+    }
+
+    const room = this.rooms.room(connexion.idRoom);
+    if (room?.statut !== 'enCours') {
+      return;
+    }
+
+    room.demanderUnTir(connexion.session.id);
   }
 
   /** Message de chat, signe par la session et diffuse a la seule partie. */
@@ -1243,6 +1276,10 @@ function envoyer(socket: SocketTypee, notification: Notification): void {
 
     case 'malusSubi':
       socket.emit('malusSubi', notification.charge);
+      return;
+
+    case 'tirDeCapture':
+      socket.emit('tirDeCapture', notification.charge);
       return;
   }
 }

@@ -14,7 +14,7 @@
  *      (defaut X1).
  */
 
-import type { ReglagesPartiels, SessionJoueur } from '@neon-ninja/shared';
+import type { Mode, ReglagesPartiels, SessionJoueur } from '@neon-ninja/shared';
 import { APPARITION, DUREES, VITESSES } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
@@ -40,11 +40,12 @@ interface CadreDeTest {
 }
 
 /** Une room prete a l'emploi, avec une horloge que le test fait avancer. */
-function roomDeTest(): CadreDeTest {
+function roomDeTest(mode: Mode = 'classique'): CadreDeTest {
   const horloge = creerHorlogeManuelle();
   const room = new GameRoom({
     id: 'room-test',
     graine: 42,
+    mode,
     reglages: REGLAGES,
     cadenceMs: BATTEMENT_MS,
     horloge,
@@ -54,8 +55,11 @@ function roomDeTest(): CadreDeTest {
 }
 
 /** Une room lancee, avec les joueurs demandes deja en place. */
-function partieLancee(pseudos: readonly string[] = ['Alice']): CadreDeTest {
-  const cadre = roomDeTest();
+function partieLancee(
+  pseudos: readonly string[] = ['Alice'],
+  mode: Mode = 'classique',
+): CadreDeTest {
+  const cadre = roomDeTest(mode);
 
   for (const pseudo of pseudos) {
     cadre.room.accueillir(session(pseudo.toLowerCase(), pseudo));
@@ -355,6 +359,84 @@ describe('GameRoom, un battement', () => {
     expect(() => {
       room.avancer(50);
     }).not.toThrow();
+
+    room.arreter();
+  });
+
+  /** Les joueurs qui ont tire pendant le dernier battement. */
+  function tirsDuBattement(room: GameRoom): readonly string[] {
+    return room.etat.evenements.flatMap((evenement) =>
+      evenement.type === 'tirDeCapture' ? [evenement.joueur] : [],
+    );
+  }
+
+  it('joue une demande de tir au battement suivant, et une seule fois', () => {
+    const { room } = partieLancee(['Alice'], 'tactique');
+
+    room.demanderUnTir('alice');
+    room.demanderUnTir('alice');
+    room.avancer(50);
+
+    expect(tirsDuBattement(room)).toEqual(['alice']);
+
+    // Aucun nouveau message: le battement suivant ne rejoue pas la demande.
+    room.avancer(50);
+
+    expect(tirsDuBattement(room)).toEqual([]);
+
+    room.arreter();
+  });
+
+  it('garde l intention de deplacement de qui tire', () => {
+    const { room } = partieLancee(['Alice'], 'tactique');
+    const depart = room.etat.joueurs['alice']?.position.x ?? 0;
+
+    room.enregistrerIntention('alice', { deplacement: { x: 1, y: 0 }, enMouvement: true });
+    room.demanderUnTir('alice');
+    room.avancer(50);
+    room.avancer(50);
+
+    const attendu = (VITESSES.JOUEUR_PX_PAR_SECONDE * 100) / 1000;
+    expect(room.etat.joueurs['alice']?.position.x).toBeCloseTo(depart + attendu, 6);
+
+    room.arreter();
+  });
+
+  it('ignore une demande de tir faite dans le salon, qui ne part pas au lancement', () => {
+    const { room } = roomDeTest('tactique');
+    room.accueillir(session('alice', 'Alice'));
+
+    room.demanderUnTir('alice');
+    room.lancer();
+    room.avancer(50);
+
+    expect(tirsDuBattement(room)).toEqual([]);
+
+    room.arreter();
+  });
+
+  it('ignore la demande de tir d un joueur absent, et oublie celle d un joueur qui part', () => {
+    const { room } = partieLancee(['Alice', 'Bob'], 'tactique');
+
+    room.demanderUnTir('fantome');
+    room.demanderUnTir('bob');
+    room.faireSortir('bob');
+    room.accueillir(session('bob', 'Bob'));
+    room.avancer(50);
+
+    expect(tirsDuBattement(room)).toEqual([]);
+
+    room.arreter();
+  });
+
+  it('transmet la demande au moteur, qui l ignore dans une partie Classique', () => {
+    const { room } = partieLancee();
+
+    room.demanderUnTir('alice');
+    room.avancer(50);
+
+    expect(tirsDuBattement(room)).toEqual([]);
+    expect(room.etat.tactique).toBeUndefined();
 
     room.arreter();
   });

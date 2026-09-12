@@ -34,6 +34,8 @@ import type {
 import {
   BORNES_CODE_INVITATION,
   CAPACITES,
+  LIMITES_DEBIT,
+  TACTIQUE,
   appliquerTrame,
   quantifierInstantane,
 } from '@neon-ninja/shared';
@@ -1224,6 +1226,174 @@ const PARTIE_PUBLIQUE: DemandeCreation['configuration'] = {
   mode: 'classique',
   visibilite: 'publique',
 };
+
+/** Une partie Tactique publique aux reglages par defaut. */
+const PARTIE_TACTIQUE: DemandeCreation['configuration'] = {
+  mode: 'tactique',
+  visibilite: 'publique',
+};
+
+describe('tir du mode Tactique', () => {
+  /** Cree une partie Tactique dont ce client est l'hote, et y fait entrer les autres. */
+  async function partieTactique(hote: ClientTypee, ...invites: ClientTypee[]): Promise<string> {
+    const salon = salonAccepte(
+      await creer(hote, { pseudo: 'Alice', configuration: PARTIE_TACTIQUE }),
+    );
+
+    for (const [rang, invite] of invites.entries()) {
+      await entrer(invite, `Invite${String(rang)}`, salon.idRoom);
+    }
+
+    return salon.idRoom;
+  }
+
+  /** Observe les demandes de tir qui atteignent la room: un tir n'a pas d'accuse. */
+  function demandesDeTir(idRoom: string): { readonly nombre: number } {
+    const room = serveur.jeu.rooms.room(idRoom);
+    const espion = room === undefined ? undefined : vi.spyOn(room, 'demanderUnTir');
+
+    return {
+      get nombre() {
+        return espion?.mock.calls.length ?? 0;
+      },
+    };
+  }
+
+  it('annonce le tir a toute la salle, et le flux porte les charges du tireur', async () => {
+    const hote = await connecterUnClient();
+    const invite = await connecterUnClient();
+
+    const idRoom = await partieTactique(hote, invite);
+    const flux = suivreLeFlux(invite);
+    await lancerLaPartie(hote);
+
+    const demandes = demandesDeTir(idRoom);
+    const chezLHote = prochain(hote, 'tirDeCapture');
+    const chezLInvite = prochain(invite, 'tirDeCapture');
+
+    hote.emit('capturer');
+    await jusquA(() => demandes.nombre === 1);
+    horloge.avancerDe(50);
+
+    const tir = await chezLInvite;
+    expect(await chezLHote).toEqual(tir);
+    expect(tir.tireur).toBe(hote.id);
+
+    const room = serveur.jeu.rooms.room(idRoom);
+    await jusquA(() => flux.partie !== undefined && flux.partie.tick === room?.etat.tick);
+    const tireur = flux.partie?.entites.find((entite) => entite.id === hote.id);
+
+    expect(tireur?.type === 'joueur' ? tireur.tactique?.charges : undefined).toBe(
+      TACTIQUE.CHARGES_MAXIMUM - (tir.captures > 0 ? 1 : 0),
+    );
+  });
+
+  it('ne joue une demande qu une fois, meme sans nouveau message', async () => {
+    const hote = await connecterUnClient();
+
+    const idRoom = await partieTactique(hote);
+    await lancerLaPartie(hote);
+
+    const demandes = demandesDeTir(idRoom);
+    const tirs = collecter(hote, 'tirDeCapture');
+
+    hote.emit('capturer');
+    await jusquA(() => demandes.nombre === 1);
+    horloge.avancerDe(500);
+    await laisserPasserLesMessages();
+
+    expect(tirs).toHaveLength(1);
+  });
+
+  it('limite le debit des demandes', async () => {
+    const hote = await connecterUnClient();
+
+    const idRoom = await partieTactique(hote);
+    await lancerLaPartie(hote);
+
+    const demandes = demandesDeTir(idRoom);
+    const room = serveur.jeu.rooms.room(idRoom);
+    const intentions = room === undefined ? undefined : vi.spyOn(room, 'enregistrerIntention');
+
+    for (let envoi = 0; envoi < 20; envoi += 1) {
+      hote.emit('capturer');
+    }
+    // Un deplacement emis apres les tirs prouve, a son arrivee, que les vingt demandes
+    // ont ete traitees: les messages d'une connexion arrivent dans l'ordre.
+    hote.emit('deplacer', { deplacement: { x: 1, y: 0 }, enMouvement: true });
+    await jusquA(() => (intentions?.mock.calls.length ?? 0) === 1);
+
+    // L'horloge n'a pas avance: le seau n'a donne que sa rafale.
+    expect(demandes.nombre).toBe(LIMITES_DEBIT.capture.rafale);
+  });
+
+  it('ignore une demande faite avant le lancement, qui ne part pas au lancement', async () => {
+    const hote = await connecterUnClient();
+
+    const idRoom = await partieTactique(hote);
+    const demandes = demandesDeTir(idRoom);
+    const tirs = collecter(hote, 'tirDeCapture');
+
+    hote.emit('capturer');
+    // Le chat, diffuse a la salle, prouve que la demande de tir le precedant est traitee.
+    const echo = prochain(hote, 'chat');
+    hote.emit('chat', { texte: 'pret' });
+    await echo;
+
+    await lancerLaPartie(hote);
+    horloge.avancerDe(50);
+    await laisserPasserLesMessages();
+
+    expect(demandes.nombre).toBe(0);
+    expect(tirs).toHaveLength(0);
+  });
+
+  it('reste sans effet dans une partie Classique', async () => {
+    const hote = await connecterUnClient();
+
+    const idRoom = await entrer(hote, 'Alice');
+    const flux = suivreLeFlux(hote);
+    await lancerLaPartie(hote);
+
+    const demandes = demandesDeTir(idRoom);
+    const tirs = collecter(hote, 'tirDeCapture');
+
+    hote.emit('capturer');
+    await jusquA(() => demandes.nombre === 1);
+    horloge.avancerDe(50);
+    await laisserPasserLesMessages();
+
+    expect(tirs).toHaveLength(0);
+    expect(serveur.jeu.rooms.room(idRoom)?.etat.tactique).toBeUndefined();
+    expect(
+      flux.partie?.entites.some(
+        (entite) => entite.type === 'joueur' && entite.tactique !== undefined,
+      ),
+    ).toBe(false);
+  });
+
+  it('ne franchit pas la frontiere d une partie vers une autre', async () => {
+    const hote = await connecterUnClient();
+    const voisin = await connecterUnClient();
+
+    const idRoom = await partieTactique(hote);
+    salonAccepte(await creer(voisin, { pseudo: 'Bob', configuration: PARTIE_TACTIQUE }));
+    await lancerLaPartie(hote);
+    await lancerLaPartie(voisin);
+
+    const demandes = demandesDeTir(idRoom);
+    const chezLeVoisin = collecter(voisin, 'tirDeCapture');
+    const chezLHote = prochain(hote, 'tirDeCapture');
+
+    hote.emit('capturer');
+    await jusquA(() => demandes.nombre === 1);
+    horloge.avancerDe(50);
+    await chezLHote;
+    await laisserPasserLesMessages();
+
+    expect(chezLeVoisin).toHaveLength(0);
+  });
+});
 
 describe('parties privees', () => {
   it('cree une partie privee avec un code, et la fait rejoindre par ce code', async () => {

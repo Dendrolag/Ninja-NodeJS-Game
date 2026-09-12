@@ -64,6 +64,7 @@ import { CAPACITES, reperePseudo } from '@neon-ninja/shared';
 import type {
   CarteCollisions,
   EntreeJoueur,
+  Entrees,
   EtatPartie,
   IdentifiantEntite,
   LigneScore,
@@ -297,6 +298,16 @@ export class GameRoom {
    */
   private intentions: Record<IdentifiantEntite, EntreeJoueur> = {};
 
+  /**
+   * Les joueurs qui ont demande un tir depuis le battement precedent (etape 7.1).
+   *
+   * A L'INVERSE DES INTENTIONS, CES DEMANDES S'EFFACENT A CHAQUE BATTEMENT. Un
+   * deplacement vaut jusqu'au suivant; un tir est un geste ponctuel. Garder la demande
+   * d'un battement a l'autre ferait tirer le joueur vingt fois par seconde, et aucun
+   * type ne le signalerait. Plusieurs demandes du meme battement n'en font qu'une.
+   */
+  private readonly tirsDemandes = new Set<IdentifiantEntite>();
+
   /** De quoi arreter la boucle, quand elle tourne. */
   private arreterLaBoucle: (() => void) | undefined;
 
@@ -447,6 +458,7 @@ export class GameRoom {
     this.comptesDesMembres.delete(id);
     this.entreesEnJeuMs.delete(id);
     delete this.intentions[id];
+    this.tirsDemandes.delete(id);
 
     if (this.hoteCourant === id) {
       this.hoteCourant = this.ordreDArrivee[0];
@@ -575,6 +587,44 @@ export class GameRoom {
   }
 
   /**
+   * Retient qu'un joueur tire au prochain battement (etape 7.1).
+   *
+   * La demande d'un joueur absent, ou faite hors d'une partie en cours, est ignoree:
+   * aucune ne doit partir plus tard, au lancement par exemple. La room ne sait pas
+   * quels modes tirent: dans une partie Classique, c'est le moteur qui ignore la
+   * demande.
+   */
+  demanderUnTir(id: IdentifiantEntite): void {
+    if (this.statutCourant !== 'enCours' || this.partie.joueurs[id] === undefined) {
+      return;
+    }
+
+    this.tirsDemandes.add(id);
+  }
+
+  /**
+   * Les entrees du battement: les intentions conservees, et les tirs demandes depuis le
+   * precedent. Sans tir demande, ce sont les intentions elles-memes.
+   */
+  private entreesDuBattement(): Entrees {
+    if (this.tirsDemandes.size === 0) {
+      return this.intentions;
+    }
+
+    const entrees: Record<IdentifiantEntite, EntreeJoueur> = { ...this.intentions };
+
+    for (const id of this.tirsDemandes) {
+      // Un joueur qui tire sans s'etre encore deplace reste immobile.
+      entrees[id] = {
+        ...(this.intentions[id] ?? { deplacement: { x: 0, y: 0 }, enMouvement: false }),
+        capturer: true,
+      };
+    }
+
+    return entrees;
+  }
+
+  /**
    * Fait avancer la partie d'un battement.
    *
    * C'est le seul point du serveur qui appelle le moteur. Le dt est fidele: la
@@ -593,7 +643,8 @@ export class GameRoom {
       );
     }
 
-    this.partie = tick(this.partie, this.intentions, dtMs);
+    this.partie = tick(this.partie, this.entreesDuBattement(), dtMs);
+    this.tirsDemandes.clear();
 
     // Prevenir AVANT de constater la fin: le dernier battement d'une partie est
     // un battement comme les autres, et ce qui s'y est passe doit partir comme le

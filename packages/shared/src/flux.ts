@@ -44,7 +44,14 @@
  * l'appelant decide de traiter.
  */
 
-import type { Couleur, Direction, TypeBonus, TypeMalus, TypeZone } from './constantes.js';
+import type {
+  Couleur,
+  Direction,
+  Orientation,
+  TypeBonus,
+  TypeMalus,
+  TypeZone,
+} from './constantes.js';
 import { DIRECTIONS, TYPES_BONUS, TYPES_MALUS, TYPES_ZONE } from './constantes.js';
 import type {
   BotVu,
@@ -53,6 +60,7 @@ import type {
   JoueurVu,
   LigneClassement,
   ObjetVu,
+  TactiqueVue,
   ZoneVue,
 } from './evenements.js';
 
@@ -65,8 +73,12 @@ import type {
  */
 export type TrameDEtat = Uint8Array | ArrayBuffer;
 
-/** Version du format. Une trame d'une autre version est refusee, jamais devinee. */
-export const VERSION_DU_FLUX = 1;
+/**
+ * Version du format. Une trame d'une autre version est refusee, jamais devinee.
+ *
+ * 2 depuis l'etape 7.1: un joueur peut porter l'etat du mode Tactique.
+ */
+export const VERSION_DU_FLUX = 2;
 
 /** Les positions voyagent au huitieme de pixel. */
 export const SUBDIVISIONS_DU_PIXEL = 8;
@@ -455,10 +467,38 @@ function entiteArrondie(entite: EntiteVue): EntiteVue {
       pseudo: entite.pseudo,
       invincible: entite.invincible,
       protege: entite.protege,
+      ...(entite.tactique === undefined ? {} : { tactique: tactiqueArrondie(entite.tactique) }),
     };
   }
 
   return { ...commun, type: entite.type };
+}
+
+/** Les orientations, dans l'ordre de leur code: les directions, sans l'immobilite. */
+const ORIENTATIONS: readonly Orientation[] = DIRECTIONS.filter(
+  (direction): direction is Orientation => direction !== 'immobile',
+);
+
+/** Les charges d'un joueur voyagent sur un octet. */
+const CHARGES_CODABLES = 255;
+
+/** L'etat tactique d'un joueur tel qu'il voyage: charges sur un octet, attente a la milliseconde. */
+function tactiqueArrondie(tactique: TactiqueVue): TactiqueVue {
+  codeDans(ORIENTATIONS, tactique.orientation, 'orientation');
+  const charges = positifArrondi(tactique.charges, 'charges');
+
+  if (charges > CHARGES_CODABLES) {
+    throw new Error(`Le flux d'etat ne sait pas coder charges = ${String(tactique.charges)}.`);
+  }
+
+  return {
+    orientation: tactique.orientation,
+    charges,
+    avantProchaineChargeMs: positifArrondi(
+      tactique.avantProchaineChargeMs,
+      'avantProchaineChargeMs',
+    ),
+  };
 }
 
 function objetArrondi(objet: ObjetVu): ObjetVu {
@@ -553,29 +593,75 @@ function lireCode<T>(lecteur: Lecteur, liste: readonly T[]): T {
   return valeurDe(liste, lecteur.octet());
 }
 
-/** Les deux indicateurs publics d'un joueur, sur un octet. */
+/**
+ * Les indicateurs d'un joueur, sur un octet: 1 invincible, 2 protege, et 4 quand il
+ * porte l'etat du mode Tactique.
+ */
 function drapeauxDuJoueur(joueur: JoueurVu): number {
-  return (joueur.invincible ? 1 : 0) | (joueur.protege ? 2 : 0);
+  return (
+    (joueur.invincible ? 1 : 0) | (joueur.protege ? 2 : 0) | (joueur.tactique === undefined ? 0 : 4)
+  );
 }
 
-function lireDrapeauxDuJoueur(lecteur: Lecteur): { invincible: boolean; protege: boolean } {
+/** Les indicateurs d'un joueur, relus. */
+interface DrapeauxDuJoueur {
+  readonly invincible: boolean;
+  readonly protege: boolean;
+  readonly avecTactique: boolean;
+}
+
+function lireDrapeauxDuJoueur(lecteur: Lecteur): DrapeauxDuJoueur {
   const drapeaux = lecteur.octet();
 
-  if (drapeaux > 3) {
+  if (drapeaux > 7) {
     throw new ErreurDeTrame("les indicateurs d'un joueur y sont inconnus");
   }
 
-  return { invincible: (drapeaux & 1) !== 0, protege: (drapeaux & 2) !== 0 };
+  return {
+    invincible: (drapeaux & 1) !== 0,
+    protege: (drapeaux & 2) !== 0,
+    avecTactique: (drapeaux & 4) !== 0,
+  };
+}
+
+/**
+ * L'etat tactique dont part un joueur qui n'en portait pas encore.
+ *
+ * Un delta ecrit l'etat tactique d'un joueur par rapport a celui qu'il portait, ou,
+ * s'il n'en portait pas, par rapport a celui-ci. Codage et decodage partent du meme.
+ */
+const TACTIQUE_DE_REFERENCE: TactiqueVue = {
+  orientation: 'nord',
+  charges: 0,
+  avantProchaineChargeMs: 0,
+};
+
+/** Les bits du masque d'un joueur qui portent son etat tactique. */
+const BITS_TACTIQUES = 64 | 128;
+
+function ecrireTactique(ecrivain: Ecrivain, tactique: TactiqueVue): void {
+  ecrireCode(ecrivain, ORIENTATIONS, tactique.orientation, 'orientation');
+  ecrivain.octet(tactique.charges);
+  ecrivain.entierPositif(tactique.avantProchaineChargeMs);
+}
+
+function lireTactique(lecteur: Lecteur): TactiqueVue {
+  return {
+    orientation: lireCode(lecteur, ORIENTATIONS),
+    charges: lecteur.octet(),
+    avantProchaineChargeMs: lecteur.entierPositif(),
+  };
 }
 
 /**
  * Les entites. Bits du masque: 1 x, 2 y, 4 couleur, 8 direction, et pour un joueur,
- * 16 pseudo et 32 indicateurs.
+ * 16 pseudo, 32 indicateurs, puis, dans le mode Tactique, 64 orientation et 128
+ * charges et attente de la prochaine.
  */
 const ENTITES: Genre<EntiteVue> = {
   cle: (entite) => entite.id,
   memeNature: (ancienne, nouvelle) => ancienne.type === nouvelle.type,
-  bitsDuMasque: 63,
+  bitsDuMasque: 255,
 
   ecrireEntier: (ecrivain, entite) => {
     ecrivain.texte(entite.id);
@@ -588,6 +674,10 @@ const ENTITES: Genre<EntiteVue> = {
     if (entite.type === 'joueur') {
       ecrivain.texte(entite.pseudo);
       ecrivain.octet(drapeauxDuJoueur(entite));
+
+      if (entite.tactique !== undefined) {
+        ecrireTactique(ecrivain, entite.tactique);
+      }
     }
   },
 
@@ -604,8 +694,15 @@ const ENTITES: Genre<EntiteVue> = {
 
     if (type === 'joueur') {
       const pseudo = lecteur.texte();
+      const { avecTactique, ...drapeaux } = lireDrapeauxDuJoueur(lecteur);
 
-      return { ...commun, type, pseudo, ...lireDrapeauxDuJoueur(lecteur) };
+      return {
+        ...commun,
+        type,
+        pseudo,
+        ...drapeaux,
+        ...(avecTactique ? { tactique: lireTactique(lecteur) } : {}),
+      };
     }
 
     const bot: BotVu = { ...commun, type };
@@ -623,6 +720,19 @@ const ENTITES: Genre<EntiteVue> = {
     if (ancienne.type === 'joueur' && nouvelle.type === 'joueur') {
       if (ancienne.pseudo !== nouvelle.pseudo) masque |= 16;
       if (drapeauxDuJoueur(ancienne) !== drapeauxDuJoueur(nouvelle)) masque |= 32;
+
+      if (nouvelle.tactique !== undefined) {
+        const avant = ancienne.tactique ?? TACTIQUE_DE_REFERENCE;
+        const apres = nouvelle.tactique;
+
+        if (avant.orientation !== apres.orientation) masque |= 64;
+        if (
+          avant.charges !== apres.charges ||
+          avant.avantProchaineChargeMs !== apres.avantProchaineChargeMs
+        ) {
+          masque |= 128;
+        }
+      }
     }
 
     return masque;
@@ -637,6 +747,18 @@ const ENTITES: Genre<EntiteVue> = {
     if (nouvelle.type === 'joueur') {
       if (masque & 16) ecrivain.texte(nouvelle.pseudo);
       if (masque & 32) ecrivain.octet(drapeauxDuJoueur(nouvelle));
+
+      if (nouvelle.tactique !== undefined) {
+        const avant =
+          (ancienne.type === 'joueur' ? ancienne.tactique : undefined) ?? TACTIQUE_DE_REFERENCE;
+        const apres = nouvelle.tactique;
+
+        if (masque & 64) ecrireCode(ecrivain, ORIENTATIONS, apres.orientation, 'orientation');
+        if (masque & 128) {
+          ecrivain.octet(apres.charges);
+          ecrivain.entier(apres.avantProchaineChargeMs - avant.avantProchaineChargeMs);
+        }
+      }
     }
   },
 
@@ -650,7 +772,7 @@ const ENTITES: Genre<EntiteVue> = {
     };
 
     if (ancienne.type !== 'joueur') {
-      if (masque & 48) {
+      if (masque & (48 | BITS_TACTIQUES)) {
         throw new ErreurDeTrame('un bot y porte un champ de joueur');
       }
 
@@ -659,12 +781,35 @@ const ENTITES: Genre<EntiteVue> = {
     }
 
     const pseudo = masque & 16 ? lecteur.texte() : ancienne.pseudo;
-    const drapeaux =
+    const { avecTactique, ...drapeaux } =
       masque & 32
         ? lireDrapeauxDuJoueur(lecteur)
-        : { invincible: ancienne.invincible, protege: ancienne.protege };
+        : {
+            invincible: ancienne.invincible,
+            protege: ancienne.protege,
+            avecTactique: ancienne.tactique !== undefined,
+          };
 
-    return { ...commun, type: 'joueur', pseudo, ...drapeaux };
+    if (!avecTactique) {
+      if (masque & BITS_TACTIQUES) {
+        throw new ErreurDeTrame('un joueur sans etat tactique y en change un');
+      }
+
+      return { ...commun, type: 'joueur', pseudo, ...drapeaux };
+    }
+
+    const avant = ancienne.tactique ?? TACTIQUE_DE_REFERENCE;
+    const orientation = masque & 64 ? lireCode(lecteur, ORIENTATIONS) : avant.orientation;
+    const tactique: TactiqueVue =
+      masque & 128
+        ? {
+            orientation,
+            charges: lecteur.octet(),
+            avantProchaineChargeMs: positifLu(avant.avantProchaineChargeMs + lecteur.entier()),
+          }
+        : { ...avant, orientation };
+
+    return { ...commun, type: 'joueur', pseudo, ...drapeaux, tactique };
   },
 };
 

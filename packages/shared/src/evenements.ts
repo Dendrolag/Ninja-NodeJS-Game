@@ -49,6 +49,7 @@ import type {
   Direction,
   IdentifiantCarte,
   Mode,
+  Orientation,
   TypeBonus,
   TypeMalus,
   TypeZone,
@@ -98,6 +99,25 @@ export interface JoueurVu extends EntiteVueCommune {
   readonly invincible: boolean;
   /** Le joueur vient d'apparaitre et beneficie encore de sa protection. */
   readonly protege: boolean;
+  /** Ou il vise, et ce qu'il lui reste pour tirer. Absent hors du mode Tactique. */
+  readonly tactique?: TactiqueVue;
+}
+
+/**
+ * Ce que le mode Tactique montre d'un joueur (etape 7.1).
+ *
+ * PUBLIC, POUR LA RAISON QUI REND PUBLICS LES DEUX INDICATEURS: les charges d'un
+ * joueur changent l'issue d'une rencontre, et l'on doit pouvoir voir qu'un adversaire
+ * est desarme avant de s'en approcher. Le flux reste ainsi le meme pour toute la
+ * salle, une seule trame par battement (etape 2.3).
+ */
+export interface TactiqueVue {
+  /** La direction de son dernier deplacement: celle ou part son cone. */
+  readonly orientation: Orientation;
+  /** Charges disponibles. */
+  readonly charges: number;
+  /** Temps avant qu'une charge revienne, en millisecondes. Une attente entiere aux charges pleines. */
+  readonly avantProchaineChargeMs: number;
 }
 
 /** Un bot ordinaire ou un bot noir, tel que tout le monde le voit. */
@@ -165,8 +185,9 @@ export interface LigneClassement {
  *
  * C'EST CE QUE DECRIVENT LES TRAMES BINAIRES DE L'ETAPE 2.3 (flux.ts). Elle est
  * volontairement plate et sans surprise: des nombres, des chaines courtes, aucune
- * table imbriquee profonde, aucune valeur absente. C'est ce qui a permis d'en
- * deriver directement le format binaire.
+ * table imbriquee profonde, et une seule valeur facultative, l'etat tactique d'un
+ * joueur (etape 7.1). C'est ce qui a permis d'en deriver directement le format
+ * binaire.
  */
 export interface InstantanePartie {
   /** Numero du battement. Il croit de un a chaque instantane d'une meme partie. */
@@ -327,6 +348,25 @@ export interface MalusSubi {
 }
 
 /**
+ * Un joueur vient de tirer, dans le mode Tactique (etape 7.1). Adresse a chaque joueur
+ * de la partie: tout le monde voit partir un tir, qu'il capture ou non.
+ *
+ * Ses effets arrivent par ailleurs: les bots repeints et les charges par le flux
+ * d'etat, la capture d'un joueur par captureSubie et captureReussie.
+ */
+export interface TirDeCaptureVu {
+  /** Identifiant du joueur qui a tire. */
+  readonly tireur: string;
+  /** D'ou le tir est parti. */
+  readonly x: number;
+  readonly y: number;
+  /** Dans quelle direction. */
+  readonly orientation: Orientation;
+  /** Nombre d'entites capturees, joueurs et bots confondus. Zero pour un tir sans effet. */
+  readonly captures: number;
+}
+
+/**
  * La partie vient d'etre suspendue.
  *
  * Elle dit QUI l'a suspendue, pour que le bandeau puisse le nommer. Ce n'est pas
@@ -479,6 +519,16 @@ export interface EvenementsClientVersServeur {
    */
   deplacer: (intention: IntentionDeplacement) => void;
 
+  /**
+   * Tirer, dans le mode Tactique (etape 7.1). Remplace startCapture et endCapture de la
+   * version 0.9.0 du jeu d'origine.
+   *
+   * Le message ne porte rien: qui tire, la session le dit; d'ou et vers ou, le moteur
+   * le sait. Le tir part au battement suivant, et plusieurs demandes du meme battement
+   * n'en font qu'une. Sans effet hors d'une partie Tactique en cours.
+   */
+  capturer: () => void;
+
   /** Parler dans le chat. Remplace chatMessage. */
   chat: (demande: DemandeChat) => void;
 
@@ -597,6 +647,13 @@ export interface EvenementsServeurVersClient {
   /** Ce joueur subit le malus ramasse par un autre. Remplace applyMalus. */
   malusSubi: (malus: MalusSubi) => void;
 
+  /**
+   * Un joueur de la partie vient de tirer, dans le mode Tactique (etape 7.1). Remplace
+   * captureAttemptUsed et captureAnimation de la version 0.9.0, qui ne prevenaient que
+   * le tireur, ou tout le serveur.
+   */
+  tirDeCapture: (tir: TirDeCaptureVu) => void;
+
   /** Une demande de ce joueur a ete refusee. Remplace error. */
   refus: (refus: Refus) => void;
 }
@@ -624,9 +681,12 @@ export interface EvenementsServeurVersClient {
  *     reglage local du client: le faire transiter par le serveur n'apportait rien.
  *   - playerStatusUpdate, gameInProgress. Remplaces par le champ statut de
  *     InfosSalon.
- *   - startCapture et endCapture. Ils n'existent pas dans la base de reference
- *     (master v0.8.6): ils appartiennent a la capture par cone du mode tactique de
- *     la v0.9.0, ecartee du perimetre v1. Voir la section 5 de ROADMAP.md.
+ *   - startCapture et endCapture, de la v0.9.0 (ils n'existent pas dans la base de
+ *     reference). Le mode Tactique de l'etape 7.1 les remplace par une seule demande,
+ *     capturer: la v0.9.0 jouait deja le tir entier a startCapture, et endCapture ne
+ *     faisait qu'eteindre un indicateur. De meme, captureAttemptRecharged et
+ *     showCaptureIndicator ne sont pas portes: les charges voyagent dans le flux
+ *     d'etat.
  *   - Un etat « pret » des joueurs du salon, que la maquette propose. Ni le legacy
  *     ni le cadrage de l'etape 0.3 ne le retiennent: l'hote lance, et le compte a
  *     rebours annulable sert de preavis.
