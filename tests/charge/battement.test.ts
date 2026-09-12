@@ -107,4 +107,15 @@ describe('mesurerLeBattement', () => {
 
     expect(resultat.entitesParMessage).toBeGreaterThanOrEqual(204);
   });
+
+  it('joue une partie Tactique, ou les joueurs tirent, et la rejoue a l identique', () => {
+    const premiere = mesurerLeBattement({ ...courte, mode: 'tactique', terrain });
+    const seconde = mesurerLeBattement({ ...courte, mode: 'tactique', terrain });
+    const classique = mesurerLeBattement({ ...courte, terrain });
+
+    expect(premiere.mode).toBe('tactique');
+    expect(classique.mode).toBe('classique');
+    expect(seconde.octetsTotal).toBe(premiere.octetsTotal);
+    expect(premiere.octetsTotal).not.toBe(classique.octetsTotal);
+  });
 });

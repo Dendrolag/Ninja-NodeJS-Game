@@ -244,6 +244,7 @@ pnpm charge --sortie docs/mesures/charge-serveur-5-2.json
 - `--bots-banc 150,300` pour le banc; `--sequence 50,150` (répétable) pour les populations mêlées.
 - `--rooms 8,16,24`, `--bots 150` ou `--bots 50,150` (répétable), `--joueurs 12`, `--duree-mesure 20`, `--echauffement 5`, `--processus 7` pour la charge du serveur; `--sans-arret` pour jouer tous les paliers même après un palier non tenu.
 - `--rapide` pour vérifier en une minute que le harnais fonctionne.
+- `--mode tactique` pour jouer le banc et les populations mêlées dans le mode Tactique (étape 7.1, section 13); le Classique par défaut.
 
 Pour comparer deux mesures, garder la même machine et les mêmes options, puis rapprocher les deux fichiers JSON. Trois précautions, toutes tirées de l'étape 5.1:
 
@@ -600,3 +601,40 @@ C'était la question reportée de l'étape 5.2 (section 11.12): ne plus envoyer 
 **Ce qu'il coûterait.** La trame ne serait plus la même pour toute la salle: douze codages par battement au lieu d'un, soit environ 0,6 ms de plus par partie pleine, plus que le coût actuel d'une partie au banc (0,40 ms). Chaque bot entrant dans le champ d'un joueur devrait lui être envoyé en entier, et chaque joueur aurait sa propre référence de delta à tenir.
 
 **Verdict: non justifié.** La bande passante, première limite après l'étape 5.2, a été divisée par 46; le gain restant ne vaut pas de doubler le coût d'une partie. La question ne se rouvre que si les cartes grandissent nettement, ou si le coût du débit sortant de l'hébergement, mesuré à l'étape 5.3, le demande.
+
+## 13. Mesure de l'étape 7.1: le mode Tactique (12 septembre 2026)
+
+Chiffres bruts: `docs/mesures/charge-serveur-7-1-classique.json` et `docs/mesures/charge-serveur-7-1-tactique.json`, écrits par le harnais l'un après l'autre, sur le même code et la même machine qu'aux sections 2, 11 et 12.
+
+### 13.1 L'essentiel
+
+- **Le mode Tactique ne change pas le coût d'une partie.** Au banc, 0,409 ms par battement à 150 bots et 12 joueurs, contre 0,403 en Classique sur le même code: l'écart est dans le bruit d'une exécution à l'autre (section 8). Le tir, les charges et la visée ne pèsent rien devant les déplacements, les bots et les contacts. 85 parties pleines par cœur au banc, contre 86.
+- **Un message pèse 17 à 24 octets de plus**, 4 à 10 pour cent: l'orientation, les charges et l'attente de la prochaine charge de chaque joueur. 481 octets à 150 bots, soit 0,08 Mbit/s par joueur.
+- **Le Classique n'a pas bougé.** Mêmes tailles qu'à l'étape 2.3, à l'octet (230, 464 et 799 octets), même empreinte du jeu des quatre parties de `tests/charge/empreinte.ts`; la partie de référence du banc reste à 453 octets.
+
+### 13.2 Méthode
+
+`pnpm charge --banc --bots-banc 50,150,300`, puis la même commande avec `--mode tactique`. Dans une partie Tactique, chaque joueur du banc tire à chaque changement de cap, soit toutes les demi-secondes à une seconde et demie, tirs vides compris: plus souvent qu'un vrai joueur, que ses cinq charges retiennent. Une partie Classique du banc tire au sort exactement ce qu'elle tirait avant l'arrivée du mode (`tests/charge/battement.ts`).
+
+### 13.3 Le banc
+
+Douze joueurs, carte map1, un processus neuf par ligne. Durées en millisecondes par battement, tailles en octets par message sur le fil, images comprises.
+
+| Bots | Mode      | Moteur | Projection | Codage | Total | Total p99 | Octets par message | Débit par joueur     | Parties par cœur |
+| ---: | --------- | -----: | ---------: | -----: | ----: | --------: | -----------------: | -------------------- | ---------------: |
+|   50 | Classique |  0,111 |      0,018 |  0,028 | 0,157 |     0,410 |                230 | 5 Ko/s, 0,04 Mbit/s  |              223 |
+|   50 | Tactique  |  0,112 |      0,018 |  0,028 | 0,158 |     0,456 |                254 | 5 Ko/s, 0,04 Mbit/s  |              222 |
+|  150 | Classique |  0,310 |      0,041 |  0,052 | 0,403 |     0,781 |                464 | 9 Ko/s, 0,07 Mbit/s  |               86 |
+|  150 | Tactique  |  0,314 |      0,043 |  0,052 | 0,409 |     0,865 |                481 | 10 Ko/s, 0,08 Mbit/s |               85 |
+|  300 | Classique |  0,850 |      0,075 |  0,086 | 1,011 |     1,474 |                799 | 16 Ko/s, 0,13 Mbit/s |               34 |
+|  300 | Tactique  |  0,833 |      0,075 |  0,082 | 0,990 |     1,600 |                820 | 16 Ko/s, 0,13 Mbit/s |               35 |
+
+Ce que le tableau dit:
+
+- **Le supplément de taille ne dépend pas du nombre de bots** (24, 17 et 21 octets): il tient aux douze joueurs. Un joueur dont une charge revient écrit ses charges et l'écart de son attente à chaque battement; son orientation ne s'écrit qu'à un changement de direction; une image porte quatre octets de plus par joueur.
+- **Le p99 du battement est un peu plus haut en Tactique** (0,865 ms contre 0,781 à 150 bots): un tir juge le cône sur tous les bots, et plusieurs tirs du même battement tirent leur ordre au sort. Il reste à plus de cinquante fois sous le budget d'un battement.
+
+### 13.4 Ce qui n'est pas mesuré
+
+- **La charge du serveur complet en Tactique.** Le banc montre qu'une partie coûte le même temps; la capacité d'un processus reste donc celle de la section 12.6, que la taille des messages ne bornait déjà plus.
+- **Le coût du client.** Le cône et l'éclair d'un tir sont quelques tracés par image, sans commune mesure avec les sprites mesurés à l'étape 4.2.

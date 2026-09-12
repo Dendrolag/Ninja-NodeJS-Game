@@ -51,7 +51,7 @@ Couvrir profond là où vit le gameplay, léger ailleurs. **80 à 90 pour cent s
 
 **master v0.8.6.** C'est la version qui a réellement tourné, et elle correspond au périmètre v1 figé le 29 juin: mode Classique seul.
 
-À savoir: le corpus de fiches d'origine visait `mode-strategique` v0.9.0, qui contient un mode tactique avec capture par cône. Cette version a été écartée. Les fiches concernées (0.1, 0.2, 1.1 à 1.5) ont été rebasées. Le mode tactique reviendra plus tard comme mode enfichable. Détail dans la section 5 de docs/plan/ROADMAP.md.
+À savoir: le corpus de fiches d'origine visait `mode-strategique` v0.9.0, qui contient un mode tactique avec capture par cône. Cette version a été écartée. Les fiches concernées (0.1, 0.2, 1.1 à 1.5) ont été rebasées. Le mode tactique est revenu à l'étape 7.1, comme mode enfichable, avec les valeurs de la v0.9.0 et des règles tranchées par le porteur du projet le 12 septembre 2026 (`docs/plan/etape-7-1.md`). Détail dans la section 5 de docs/plan/ROADMAP.md.
 
 Note: `server.js` est identique entre v0.8.5 et v0.8.6, seuls le client et les styles diffèrent.
 
@@ -69,7 +69,7 @@ pnpm test                 # tests unitaires et d'intégration (Vitest), base com
 pnpm test:watch           # les mêmes, en surveillance
 pnpm test:coverage        # couverture, mesurée sur sim et shared
 pnpm test:e2e             # tests de bout en bout (Playwright)
-pnpm charge               # harnais de charge du serveur (--banc, --melange, --reseau, --rapide, --sortie fichier.json)
+pnpm charge               # harnais de charge du serveur (--banc, --melange, --reseau, --rapide, --mode tactique, --sortie fichier.json)
 pnpm base:generer         # écrire la migration qui suit un changement de packages/server/src/base/schema.ts
 pnpm base:migrer          # appliquer les migrations à la base de DATABASE_URL
 ```

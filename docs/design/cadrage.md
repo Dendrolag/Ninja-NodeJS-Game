@@ -16,6 +16,7 @@ Le périmètre validé le 29 juin 2026 est repris tel quel, et précisé pour ch
 | Catégorie                                          | Élément                                                                   | Étape                   |
 | -------------------------------------------------- | ------------------------------------------------------------------------- | ----------------------- |
 | **Construire en v1**                               | Mode Classique                                                            | Fait (phase 1)          |
+|                                                    | Mode Tactique, capture par cône (jalon 5)                                 | Fait (7.1)              |
 |                                                    | Création de partie, publique ou privée par code d'invitation              | 2.4, écran au jalon 3   |
 |                                                    | Navigateur des parties publiques et « Partie rapide »                     | 2.4, écran au jalon 3   |
 |                                                    | Salon: joueurs, hôte, réglages, chat, lancement                           | Fait (4.3), étendu 2.4  |
@@ -24,7 +25,7 @@ Le périmètre validé le 29 juin 2026 est repris tel quel, et précisé pour ch
 |                                                    | Historique des parties d'un compte                                        | 3.1, 3.3                |
 |                                                    | Profil réduit et fin de partie enrichie                                   | Jalon 3                 |
 | **Modéliser de façon extensible, sans construire** | Pass de saison, skins, clans                                              | Points d'extension, 3.1 |
-| **Reporter entièrement**                           | Les autres modes: Chasse, Battle Royale, Équipes, Chaos, mode tactique    | Jalon 5                 |
+| **Reporter entièrement**                           | Les autres modes: Chasse, Battle Royale, Équipes, Chaos                   | Jalon 5                 |
 |                                                    | Pass de saison, boutique de skins, clans                                  | Après la v1             |
 |                                                    | Échelle de ligue détaillée, appariement par niveau, rang mondial          | Après la v1             |
 |                                                    | Gemmes (monnaie premium)                                                  | Avec une boutique       |
@@ -82,24 +83,24 @@ Sept écrans dans la maquette. Pour chacun: son statut en v1, les données qu'il
 - **Statut**: v1. Données au 2.4, écran construit au jalon 3. La liste se redemande à chaque arrivée sur l'écran et sur demande.
 - **Données v1, par salon listé**: pseudo de l'hôte, mode, carte (nom, et « Miroir » le cas échéant), joueurs présents sur capacité, et l'action « Rejoindre ».
 - **Liste**: seulement les parties publiques dans leur salon et non pleines. Champ de code privé, bouton « Créer ».
-- **Écarté**: latence, compteur global de joueurs en ligne, filtres par mode (un seul mode), statut « En jeu » (une partie commencée n'est pas listée).
+- **Écarté**: latence, compteur global de joueurs en ligne, filtres par mode (deux modes, dont le nom figure sur chaque ligne), statut « En jeu » (une partie commencée n'est pas listée).
 
 ### 3. Créer une partie
 
 - **Statut**: v1 réduit. Écran construit au jalon 3; le formulaire du panneau de réglages du salon (4.3) s'y réutilise, réglages avancés repliés.
-- **Données v1**: mode (tuile Classique sélectionnée, tuile « à venir »); carte parmi trois, avec l'aperçu et le mode miroir; visibilité publique ou privée; durée, faux ninjas, Black Ninjas, bonus, malus, zones (tout le contrat de la section 4); récapitulatif avec la capacité déduite du mode.
-- **Écarté**: Shibuya Cross, les cinq autres tuiles de mode.
+- **Données v1**: mode (une tuile par mode jouable, Classique choisi d'abord, Tactique depuis l'étape 7.1; tuile « à venir »); carte parmi trois, avec l'aperçu et le mode miroir; visibilité publique ou privée; durée, faux ninjas, Black Ninjas, bonus, malus, zones (tout le contrat de la section 4); récapitulatif avec la capacité déduite du mode.
+- **Écarté**: Shibuya Cross, les quatre tuiles de mode proposées par la maquette et non validées (Chasse, Battle Royale, Équipes, Chaos), et la tuile « Miroir », qui est un réglage de carte.
 
 ### 4. Salon
 
 - **Statut**: v1. Existant (4.3), données étendues au 2.4, écran étendu au jalon 3: visibilité, code avec bouton de copie, places libres dites en texte (sans dessiner les emplacements vides de la maquette).
-- **Données v1**: titre « Salon de {hôte} »; visibilité et, si privée, le code d'invitation avec un bouton de copie; joueurs présents (pseudo, initiales, badge d'hôte, niveau dès 3.2); places libres sur la capacité; récapitulatif des réglages; chat; compte à rebours annulable; « Lancer » et « Réglages » pour l'hôte; « Quitter ».
+- **Données v1**: titre « Salon de {hôte} »; comment on capture dans le mode de la partie (7.1); visibilité et, si privée, le code d'invitation avec un bouton de copie; joueurs présents (pseudo, initiales, badge d'hôte, niveau dès 3.2); places libres sur la capacité; récapitulatif des réglages; chat; compte à rebours annulable; « Lancer » et « Réglages » pour l'hôte; « Quitter ».
 - **Écarté en v1**: l'état « prêt ». L'hôte lance, et le compte à rebours de cinq secondes, annulable jusqu'à deux (comportement à préserver 7), sert de préavis. À réévaluer si des parties publiques entre inconnus le réclament.
 
 ### 5. Jeu en cours
 
-- **Statut**: v1. Existant (4.2, 4.3), sans changement de données.
-- **Données**: temps restant; classement en direct; effets actifs sur soi avec leur reste; minimap des joueurs; localisation; Pause et Reprendre pour l'hôte; Quitter.
+- **Statut**: v1. Existant (4.2, 4.3); enrichi à l'étape 7.1 pour le mode Tactique: cône de visée devant son ninja, éclair de chaque tir, bouton « Capturer » portant les charges, barre d'espace.
+- **Données**: temps restant; classement en direct; effets actifs sur soi avec leur reste; minimap des joueurs; localisation; Pause et Reprendre pour l'hôte; Quitter. En Tactique, l'orientation et les charges de chaque joueur (flux d'état, `JoueurVu.tactique`) et l'annonce de chaque tir (`tirDeCapture`).
 - **Écarté**: « Terminer ».
 
 ### 6. Fin de partie

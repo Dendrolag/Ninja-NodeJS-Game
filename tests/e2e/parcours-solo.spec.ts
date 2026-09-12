@@ -73,6 +73,9 @@ test('capturer un faux ninja, puis retrouver son score au classement final', asy
   // -- La partie --------------------------------------------------------------
   await attendreLaPartie(page);
   const partie = jeu.partie();
+
+  // Le bouton de capture n'appartient qu'au mode Tactique (etape 7.1).
+  await expect(page.locator('.hud-capture')).toHaveCount(0);
   const commande = hasTouch ? await commandeAuPouce(page) : commandeAuClavier(page);
 
   if (hasTouch) {

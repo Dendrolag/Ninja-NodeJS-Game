@@ -164,6 +164,20 @@ Conditions de ROADMAP réunies, plus:
 3. **Le cône se calcule sur la position du battement**; le client dessine une position lissée. Un léger décalage visuel est attendu, et ne se corrige pas côté serveur.
 4. **La taille du flux Classique** est vérifiée en CI à une vingtaine d'octets près: ajouter des champs de joueur peut la faire échouer.
 
+## Réconciliation pendant l'étape (12 septembre 2026)
+
+Écarts entre la fiche et ce qui a été construit, tous consignés au journal de `docs/design/README.md`.
+
+1. **Les quatre lots ont été exécutés dans l'ordre, un commit chacun**: A (`98295f6`, et `3830a5e` pour deux erreurs de types de ses tests), B (`2bcd9ad`), C (`98e9767`), D.
+2. **Lot A, points 1 et 4, comme proposé.** Le jeu de règles d'un mode agit sur les entrées puis résout les contacts; l'état tactique vit dans `EtatPartie.tactique`, absent d'une partie Classique. L'empreinte du jeu des quatre parties de référence est restée identique à chaque lot.
+3. **Décision 8 précisée.** Quand plusieurs joueurs tirent dans le même battement, l'ordre est tiré au sort par le générateur à graine, comme les duels de contacts; un joueur capturé par un tir perd le sien. Un seul tireur ne consomme aucun tirage.
+4. **Lot B, point 4, tranché**: un tir est annoncé à chaque joueur de la partie par la notification `tirDeCapture`, qu'il capture ou non. Les charges sont publiques, dans le flux (version 2): une partie Classique n'y écrit pas un octet de plus.
+5. **Lot B, point 1**: la couche réseau et `GameRoom` ne savent pas quels modes tirent; c'est le moteur qui ignore une demande en Classique. Famille de débit `capture`, cinq par seconde, rafale de cinq.
+6. **Lot C, écarts à la fiche.** Le bouton Capturer est posé pour tous les appareils, au-dessus de la minimap, pas seulement au tactile: il porte les charges, que le bureau doit voir aussi. Il n'est jamais en focus, pour ne pas priver le clavier de la barre d'espace. Tout le monde voit l'éclair d'un tir; seul notre cône de visée est dessiné. Seul notre tir qui capture fait un son; aucun tir ne fait de phrase. La règle de capture du mode s'affiche au salon et dans l'aide.
+7. **Lot D.** Le scénario `tests/e2e/tactique.spec.ts` joue dans les deux cadrages; le parcours solo vérifie qu'une partie Classique n'a pas de bouton de capture. Le banc du battement accepte un mode, et `pnpm charge --banc --mode tactique` mesure une partie Tactique; chiffres à la section 13 de `docs/mesures/charge-serveur.md`.
+8. **Défaut trouvé hors périmètre, corrigé (règle 7).** `rtk pnpm typecheck` répond « aucune erreur » sans exécuter le script du dépôt: la compilation n'était pas refaite et la vérification des types des tests n'avait pas lieu. Le commit du lot A est parti avec deux erreurs de types, que la CI a relevées. La vérification se lance désormais en appelant `tsc` et `vitest` directement.
+9. **Incohérences de documentation corrigées en route (règle 7)**: le nombre de fiches cité par `PROTOCOLE.md` et `CLAUDE.md`; le commentaire de `CAPACITES` qui annonçait l'étape 2.3 au futur; celui de `contacts.ts` qui annonçait l'étape 1.5; ceux de `controles.ts`, `tactile.ts`, `controles.test.ts` et de la liste des événements non portés, qui disaient qu'aucune capture n'était à déclencher.
+
 ## Rituel de fin de session
 
 Écrire `docs/handoffs/etape-7-1-handoff.md`: les décisions construites, les écarts à la v0.9.0 et à cette fiche, les chiffres du banc, l'état de la CI. Prochaine action exacte: la section 3 du ROADMAP place ensuite « les autres modes », qu'aucune décision n'a validés (cadrage, tension 2); la session suivante pose d'abord la question au porteur du projet, et passe à `5.3` si aucun mode n'est retenu. Commiter.

@@ -20,7 +20,7 @@ import { fork } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import { ChargeurDeTerrain } from '../../packages/server/dist/index.js';
-import type { IdentifiantCarte } from '../../packages/shared/dist/index.js';
+import type { IdentifiantCarte, Mode } from '../../packages/shared/dist/index.js';
 
 import type { ResultatBancBattement } from './battement.ts';
 import { mesurerLeBattement } from './battement.ts';
@@ -36,6 +36,8 @@ export interface ConfigurationDeBanc {
   readonly echauffement: number;
   readonly graine: number;
   readonly carte?: IdentifiantCarte;
+  /** Le mode de la partie. Le Classique par defaut. */
+  readonly mode?: Mode;
 }
 
 /** Ce que le processus de banc repond. */

@@ -33,6 +33,12 @@
  * durees, elles, dependent de la machine, et varient d'une execution a l'autre:
  * c'est pour cela qu'elles sont resumees par des centiles.
  *
+ * LE MODE (etape 7.1). Le banc joue une partie Classique par defaut. Dans une partie
+ * Tactique, chaque joueur tire en changeant de cap, soit toutes les demi-secondes a
+ * une seconde et demie, tirs vides compris: une partie aussi animee qu'une vraie. Une
+ * partie Classique tire au sort exactement ce qu'elle tirait avant l'arrivee du mode,
+ * et sa taille de reference ne bouge donc pas.
+ *
  * AUCUN CODE DU JEU N'EST MODIFIE NI IMITE. La room est celle du serveur, lue dans
  * sa compilation, c'est-a-dire le code qui tourne en production. Seul le rappel
  * de battement, que la room offre a qui veut etre prevenu, est fourni ici.
@@ -41,7 +47,7 @@
 import { deflateRawSync } from 'node:zlib';
 
 import type { CarteCollisions } from '../../packages/sim/dist/index.js';
-import type { Alea, IdentifiantCarte } from '../../packages/shared/dist/index.js';
+import type { Alea, IdentifiantCarte, Mode } from '../../packages/shared/dist/index.js';
 import { creerAlea, entier, nombre } from '../../packages/shared/dist/index.js';
 import {
   CADENCE_BATTEMENT_MS,
@@ -105,6 +111,8 @@ export interface OptionsBancBattement {
   readonly terrain: CarteCollisions | undefined;
   /** La carte jouee. map1 par defaut, la carte par defaut du jeu. */
   readonly carte?: IdentifiantCarte;
+  /** Le mode de la partie. Le Classique par defaut. */
+  readonly mode?: Mode;
 }
 
 /** Ce que le banc a mesure. Les durees sont en millisecondes, les tailles en octets. */
@@ -112,6 +120,8 @@ export interface ResultatBancBattement {
   readonly bots: number;
   readonly joueurs: number;
   readonly battements: number;
+  /** Le mode de la partie jouee. */
+  readonly mode: Mode;
   /** Duree de tick(), le moteur pur. */
   readonly moteurMs: Resume;
   /** Duree de la projection: instantane et notifications. */
@@ -245,6 +255,7 @@ export function mesurerLeBattement(options: OptionsBancBattement): ResultatBancB
     bots: options.bots,
     joueurs: options.joueurs,
     battements: options.battements,
+    mode: room.mode,
     moteurMs: resumer(moteur),
     projectionMs: resumer(projection),
     serialisationMs: resumer(serialisation),
@@ -273,6 +284,7 @@ function ouvrirLaPartie(
   const room = new GameRoom({
     id: 'banc',
     graine: options.graine,
+    mode: options.mode ?? 'classique',
     reglages: {
       carte: options.carte ?? 'map1',
       nombreBotsInitial: options.bots,
@@ -304,6 +316,9 @@ function ouvrirLaPartie(
  * rien, ne ramassent rien, et laissent le moteur sans conflit a resoudre. Des caps
  * tires au generateur a graine rendent la partie aussi animee qu'une vraie, et
  * identique d'une execution a l'autre.
+ *
+ * Dans une partie Tactique, le joueur tire aussi a chaque changement de cap. Le tir ne
+ * consomme aucun tirage: une partie Classique reste celle qu'elle etait.
  */
 function orienterLesJoueurs(
   room: GameRoom,
@@ -330,6 +345,10 @@ function orienterLesJoueurs(
       enMouvement: true,
     });
     avantChangement.set(joueur.id, CAP_TENU_BATTEMENTS.minimum + tenue.valeur);
+
+    if (room.mode === 'tactique') {
+      room.demanderUnTir(joueur.id);
+    }
   }
 
   return suivant;

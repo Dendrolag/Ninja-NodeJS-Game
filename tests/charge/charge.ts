@@ -34,6 +34,9 @@ import { availableParallelism, cpus, release, totalmem, type as systeme } from '
 import { dirname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
+import type { Mode } from '../../packages/shared/dist/index.js';
+import { MODES } from '../../packages/shared/dist/index.js';
+
 import type { ConfigurationDeBanc } from './battement-isole.ts';
 import { mesurerEnProcessusNeuf } from './battement-isole.ts';
 import type { ResultatBancBattement } from './battement.ts';
@@ -96,6 +99,8 @@ interface Plan {
   readonly processus: number;
   readonly sansArret: boolean;
   readonly sortie: string | undefined;
+  /** Le mode des parties du banc et des populations melees. Le Classique par defaut. */
+  readonly mode: Mode;
 }
 
 /** Une ligne du banc, avec le budget qui en decoule. */
@@ -188,6 +193,7 @@ function lirePlan(argumentsRecus: readonly string[]): Plan {
       processus: { type: 'string' },
       'sans-arret': { type: 'boolean', default: false },
       sortie: { type: 'string' },
+      mode: { type: 'string' },
     },
   });
 
@@ -214,7 +220,23 @@ function lirePlan(argumentsRecus: readonly string[]): Plan {
       Math.max(Math.floor(availableParallelism() / 2) - 1, 1),
     sansArret: options['sans-arret'],
     sortie: options.sortie,
+    mode: modeDe(options.mode),
   };
+}
+
+/** Lit le mode demande, le Classique s'il n'y en a pas. */
+function modeDe(texte: string | undefined): Mode {
+  if (texte === undefined) {
+    return 'classique';
+  }
+
+  const mode = MODES.find((candidat) => candidat === texte);
+
+  if (mode === undefined) {
+    throw new Error(`--mode attend l'un de ${MODES.join(', ')}, recu « ${texte} ».`);
+  }
+
+  return mode;
 }
 
 /** Formate un nombre avec un nombre fixe de decimales. */
@@ -241,6 +263,7 @@ function configuration(plan: Plan, bots: number): ConfigurationDeBanc {
     battements: plan.battements,
     echauffement: plan.echauffement,
     graine: GRAINE,
+    mode: plan.mode,
   };
 }
 
@@ -267,7 +290,7 @@ async function jouerLeBanc(plan: Plan): Promise<LigneDeBanc[]> {
   console.log(
     [
       '',
-      `Banc du battement: ${String(plan.joueurs)} joueurs, ${String(plan.battements)} battements mesures, carte map1 avec ses murs, un processus neuf par ligne`,
+      `Banc du battement: mode ${plan.mode}, ${String(plan.joueurs)} joueurs, ${String(plan.battements)} battements mesures, carte map1 avec ses murs, un processus neuf par ligne`,
       tableau(
         [
           'bots',

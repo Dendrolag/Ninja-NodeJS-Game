@@ -371,14 +371,57 @@ export function capturerUnFauxNinja(partie: GameRoom, pseudo: string, commande: 
       return {
         terrain: partie.etat.terrain,
         position: joueur.position,
-        cibles: Object.values(partie.etat.bots)
-          .filter((bot) => bot.type === 'bot' && bot.couleur !== joueur.couleur)
-          .map((bot) => bot.position),
+        cibles: fauxNinjasAPrendre(partie, joueur),
       };
     },
     accomplie: () =>
       partie.classement().some((ligne) => ligne.pseudo === pseudo && ligne.botsPortes > 0),
   };
+}
+
+/**
+ * Mission, dans le mode Tactique: ce joueur s'approche d'un faux ninja, a portee de tir.
+ *
+ * Elle est accomplie des qu'un faux ninja qui n'est pas a sa couleur est plus pres que
+ * la distance donnee. Le pilote relache alors les commandes: le joueur s'arrete, et
+ * regarde dans la direction de son dernier pas, c'est-a-dire vers sa cible. Le
+ * toucher en route ne l'aurait pas capturee.
+ */
+export function approcherUnFauxNinja(
+  partie: GameRoom,
+  pseudo: string,
+  commande: Commande,
+  distancePx: number,
+): Mission {
+  return {
+    nom: `${pseudo} s'approche d'un faux ninja`,
+    commande,
+    delaiMs: DELAI_CAPTURE_DE_BOT_MS,
+    situation: () => {
+      const joueur = joueurNomme(partie, pseudo);
+
+      return {
+        terrain: partie.etat.terrain,
+        position: joueur.position,
+        cibles: fauxNinjasAPrendre(partie, joueur),
+      };
+    },
+    accomplie: () => {
+      const joueur = joueurNomme(partie, pseudo);
+
+      return fauxNinjasAPrendre(partie, joueur).some(
+        (position) =>
+          Math.hypot(position.x - joueur.position.x, position.y - joueur.position.y) < distancePx,
+      );
+    },
+  };
+}
+
+/** Ou sont les faux ninjas que ce joueur peut encore prendre: ceux qui ne portent pas sa couleur. */
+function fauxNinjasAPrendre(partie: GameRoom, joueur: Joueur): readonly Joueur['position'][] {
+  return Object.values(partie.etat.bots)
+    .filter((bot) => bot.type === 'bot' && bot.couleur !== joueur.couleur)
+    .map((bot) => bot.position);
 }
 
 /**

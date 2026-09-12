@@ -74,6 +74,8 @@ Les maquettes ont été déposées le 13 août 2026: ce jalon n'est plus bloqué
 
 Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision du 29 juin): étape `7.1`, fiche rédigée le 12 septembre 2026 selon le cas de repli du PROTOCOLE, après quatre décisions de jeu du porteur du projet. Puis les autres modes. Puis `5.3` et `6.1`, ramenés à un déploiement simple: le legacy n'a pas de joueurs en ligne, la bascule progressive et les drapeaux de fonctionnalité sont sans objet.
 
+**Étape 7.1 terminée le 12 septembre 2026.** Le mode Tactique se crée, se joue et s'enregistre depuis la page, au clavier et au tactile: capture par un cône de 90 degrés et 100 pixels, cinq charges, une qui revient toutes les cinq secondes. Ajouter le mode n'a demandé que des ajouts aux points d'extension, plus l'élargissement du jeu de règles d'un mode, qui agit sur les entrées avant de résoudre les contacts. Le Classique est inchangé, empreinte des parties comprise; une partie Tactique coûte le même temps au serveur et 4 à 10 pour cent d'octets de plus par message (section 13 de `docs/mesures/charge-serveur.md`). Les autres modes (Chasse, Battle Royale, Équipes, Chaos) restent des propositions non validées (cadrage, tension 2): la suite du jalon 5 se décide avec le porteur du projet.
+
 ---
 
 ## 4. Carte thématique des étapes

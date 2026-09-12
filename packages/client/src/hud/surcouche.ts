@@ -159,6 +159,10 @@ function monterCapture(doc: Document, parent: HTMLElement, capturer: () => void)
   bouton.type = 'button';
   bouton.className = 'hud-capture';
   bouton.style.pointerEvents = 'auto';
+  // Hors du parcours au clavier, et jamais en focus: un bouton qui a le focus garde
+  // la barre d'espace pour lui (controles/clavier.ts), et un clic de souris sur le
+  // bouton empecherait alors de tirer au clavier.
+  bouton.tabIndex = -1;
   bouton.hidden = true;
   element(doc, 'span', 'hud-capture-libelle', bouton).textContent = 'Capturer';
   const jauge = element(doc, 'span', 'hud-charges', bouton);
