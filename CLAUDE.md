@@ -40,7 +40,7 @@ Couvrir profond là où vit le gameplay, léger ailleurs. **80 à 90 pour cent s
 - `packages/client`, PixiJS et interface.
 - `packages/shared`, constantes, types partagés, générateur à graine, schémas de validation.
 - `legacy/`, le code d'origine en lecture seule. **Jamais modifié.**
-- `docs/plan/`, la carte et les 24 fiches d'étape.
+- `docs/plan/`, la carte et les fiches d'étape.
 - `docs/design/`, les maquettes et le journal de conception.
 - `docs/handoffs/`, les recaps de fin de session.
 - `docs/audit/`, l'audit de l'existant.

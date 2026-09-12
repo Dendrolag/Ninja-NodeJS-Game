@@ -72,7 +72,7 @@ Les maquettes ont été déposées le 13 août 2026: ce jalon n'est plus bloqué
 
 ### Jalon 5 - Extension
 
-Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision du 29 juin). Puis les autres modes. Puis `5.3` et `6.1`, ramenés à un déploiement simple: le legacy n'a pas de joueurs en ligne, la bascule progressive et les drapeaux de fonctionnalité sont sans objet.
+Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision du 29 juin): étape `7.1`, fiche rédigée le 12 septembre 2026 selon le cas de repli du PROTOCOLE, après quatre décisions de jeu du porteur du projet. Puis les autres modes. Puis `5.3` et `6.1`, ramenés à un déploiement simple: le legacy n'a pas de joueurs en ligne, la bascule progressive et les drapeaux de fonctionnalité sont sans objet.
 
 ---
 
@@ -170,6 +170,13 @@ Tests requis: vérification que la version se déploie et démarre dans l'enviro
 
 **6.1. Extinction.** Retirer l'ancien monolithe une fois la nouvelle version en service.
 
+### Phase 7. Modes de jeu
+
+Phase ajoutée le 12 septembre 2026. Ajouter des jeux de règles au moteur, par ajout et non par refonte (cadrage de l'étape 0.3, section 6).
+
+**7.1. Mode tactique.** Capture par un cône directionnel à charges limitées, au lieu de la capture au contact. Reprend l'intention et les valeurs de la v0.9.0 (branche `mode-strategique`), sans ses régressions, selon quatre décisions de jeu du porteur du projet du 12 septembre 2026.
+Tests requis: TU sur la géométrie du cône, le tir, les charges et la visée; TI sur la commande de capture par le réseau; bout en bout d'une partie tactique, au clavier et au tactile; Classique inchangé, empreinte des parties comprise.
+
 ---
 
 ## 5. Écarts assumés par rapport au plan d'origine
@@ -182,3 +189,4 @@ Consignés ici pour que la décision reste traçable.
 4. **2.3 conditionné à la mesure** et déplacé au jalon 4, pour respecter le principe posé en 5.2.
 5. **Étape 1.7 ajoutée le 14 août 2026.** La pause de partie du legacy n'avait été portée par aucune étape de la phase 1, et l'étape 2.2 l'a découvert en relevant les événements du legacy. Elle ne pouvait pas se rattraper dans la couche réseau, qui ne contient aucune logique de jeu. Traitée selon la règle 7 de CLAUDE.md: un défaut trop gros pour l'étape en cours devient une étape à part entière, jamais une ligne de dette.
 6. **5.3 et 6.1 simplifiés.** Le legacy n'a pas de joueurs en ligne: déploiement en parallèle, drapeaux de fonctionnalité et migration progressive sont sans objet.
+7. **Phase 7 ajoutée le 12 septembre 2026, avec l'étape 7.1.** Le mode tactique n'avait ni numéro ni fiche. Il reçoit une phase à part plutôt qu'une place dans la phase 1: il n'est pas un portage de la base de référence, il traverse toutes les couches, et les modes suivants s'y rangeront.

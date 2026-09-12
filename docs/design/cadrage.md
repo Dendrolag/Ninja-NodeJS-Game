@@ -246,7 +246,7 @@ Décision du 29 juin 2026, précisée ici.
 - **Le point d'extension existe.** `RegleDeResolution` (`packages/sim/src/contacts.ts`) décrit ce qu'un mode fait des contacts relevés, et `regleClassique` en est la première valeur. Le mode voyage dans l'état de la partie (`EtatPartie.mode`), et `tick` choisit sa règle dans `REGLES_DES_MODES` (`packages/sim/src/moteur.ts`), une table indexée par tous les modes du contrat: oublier la règle d'un mode ajouté est une erreur de compilation. Branché avec le champ `mode` de la configuration, à l'étape 2.4, sans changer le comportement tant qu'un seul mode existe. Correction du 12 septembre 2026: ce paragraphe décrivait encore l'état d'avant 2.4.
 - **Ajouter un mode est un ajout, pas une refonte**: une valeur d'énumération, sa capacité, son jeu de règles. Le contrat de configuration est l'interface stable.
 - **Le miroir n'est pas un mode** (tension 1). Il se combine avec n'importe quel mode, sans combinatoire.
-- **Le premier ajout prévu est le mode tactique** (capture par cône), au jalon 5.
+- **Le premier ajout prévu est le mode tactique** (capture par cône), au jalon 5: étape 7.1. Ses règles ont été tranchées par le porteur du projet le 12 septembre 2026: le cône seul capture, avec les valeurs de la v0.9.0 (90 degrés, 100 pixels, cinq charges, une charge toutes les cinq secondes, tir sans effet gratuit); un joueur vise dans la direction de son dernier déplacement; un bouton dédié sert au tactile. Détail et raisons dans `docs/plan/etape-7-1.md` et au journal de `docs/design/README.md`.
 
 ## 7. Renvois
 

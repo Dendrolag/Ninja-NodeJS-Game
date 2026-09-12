@@ -40,7 +40,7 @@ Vrai pour toutes les étapes, à ne pas redemander ni rappeler dans un prompt.
 ## Boucle d'une étape (une session)
 
 1. Début. Appliquer la section « Démarrage d'une session » ci-dessus: lecture d'ouverture dans l'ordre, puis prise de connaissance du cadre permanent. Ne pas dupliquer cette liste ailleurs, elle a un seul endroit.
-2. Fiche fournie. Les fiches des 23 étapes sont fournies dans docs/plan/. Cas de repli seulement: si une fiche manquait, la rédiger à partir de l'entrée ROADMAP.md correspondante, de la structure des fiches existantes prise comme modèle, de l'état réel du dépôt et du dernier handoff, puis la commiter avant de l'exécuter.
+2. Fiche fournie. Les fiches des étapes sont fournies dans docs/plan/. Cas de repli seulement: si une fiche manquait, la rédiger à partir de l'entrée ROADMAP.md correspondante, de la structure des fiches existantes prise comme modèle, de l'état réel du dépôt et du dernier handoff, puis la commiter avant de l'exécuter.
 3. Réconcilier avant d'exécuter. Une fiche est un plan, pas un contrat figé. Si l'état du dépôt ou des décisions antérieures divergent des hypothèses de la fiche, mettre la fiche à jour et noter l'écart dans le handoff de fin.
 4. Exécuter. Rester strictement dans le périmètre de l'étape. Ne jamais tirer en avant du travail des étapes suivantes.
 5. Vérifier. Contrôler la définition de terminé de la fiche et la définition commune de ROADMAP.md. Tous les tests au vert, CI verte, aucune régression de caractérisation.
