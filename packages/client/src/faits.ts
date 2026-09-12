@@ -28,6 +28,7 @@ import type {
   JoueurDuSalon,
   MalusRamasseParMoi,
   MalusSubi,
+  TirDeCaptureVu,
 } from '@neon-ninja/shared';
 
 /**
@@ -56,6 +57,8 @@ export interface ChargesDeFait {
   malusRamasse: MalusRamasseParMoi;
   /** Ce joueur subit le malus qu'un autre a ramasse. */
   malusSubi: MalusSubi;
+  /** Un joueur de la partie vient de tirer, dans le mode Tactique. */
+  tirDeCapture: TirDeCaptureVu;
   /** Quelqu'un vient d'entrer dans la partie. */
   joueurArrive: JoueurDuSalon;
   /** Quelqu'un vient de quitter la partie. */

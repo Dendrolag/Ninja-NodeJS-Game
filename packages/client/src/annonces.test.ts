@@ -3,7 +3,7 @@
  *
  * Deux choses a verifier: que chaque fait trouve sa phrase, avec les textes du
  * jeu d'origine, et qu'une meme phrase n'est dite qu'une fois quand on compare
- * deux etats successifs.
+ * deux etats successifs. Le tir du mode Tactique est le seul fait sans phrase.
  */
 
 import type { InfosSalon } from '@neon-ninja/shared';
@@ -53,8 +53,8 @@ describe('annonceDuFait', () => {
       fait('captureReussie', { victimePseudo: 'Bob', botsGagnes: 4, capturesTotal: 2 }, 0),
     );
 
-    expect(un.texte).toBe('Vous avez capturé Bob : +1 ninja');
-    expect(quatre.texte).toBe('Vous avez capturé Bob : +4 ninjas');
+    expect(un?.texte).toBe('Vous avez capturé Bob : +1 ninja');
+    expect(quatre?.texte).toBe('Vous avez capturé Bob : +4 ninjas');
   });
 
   it('nomme celui qui a lance le malus que l on subit', () => {
@@ -81,13 +81,24 @@ describe('annonceDuFait', () => {
       fait('bonusActive', { nature: 'invincibilite', dureeMs: 10_000 }, 0),
     );
 
-    expect(annonce.texte).toBe('Bonus : Invincibilité');
+    expect(annonce?.texte).toBe('Bonus : Invincibilité');
   });
 
   it('signale le depart de l hote', () => {
     const annonce = annonceDuFait(fait('joueurParti', { id: 'bob', pseudo: 'Bob', hote: true }, 0));
 
-    expect(annonce.texte).toBe('Bob a quitté la partie (était hôte)');
+    expect(annonce?.texte).toBe('Bob a quitté la partie (était hôte)');
+  });
+
+  it('ne fait pas de phrase pour un tir du mode Tactique', () => {
+    // Un tir se voit sur le terrain; la capture d'un joueur, elle, s'annonce.
+    const tir = fait(
+      'tirDeCapture',
+      { tireur: 'bob', x: 0, y: 0, orientation: 'est', captures: 3 },
+      0,
+    );
+
+    expect(annonceDuFait(tir)).toBeUndefined();
   });
 });
 
@@ -120,6 +131,21 @@ describe('annoncesDuChangement', () => {
       'Carol a rejoint la partie',
     ]);
     expect(annoncesDuChangement(apres, ensuite)).toEqual([]);
+  });
+
+  it('passe un tir sous silence, sans taire ce qui arrive avec lui', () => {
+    const tir = fait(
+      'tirDeCapture',
+      { tireur: 'moi', x: 0, y: 0, orientation: 'est', captures: 1 },
+      5,
+    );
+    const arrivee = fait('joueurArrive', { id: 'carol', pseudo: 'Carol', hote: false }, 10);
+
+    expect(
+      annoncesDuChangement(etat(), etat({ journal: [tir, arrivee] })).map(
+        (annonce) => annonce.texte,
+      ),
+    ).toEqual(['Carol a rejoint la partie']);
   });
 
   it('n annonce rien quand le journal repart a zero au lancement', () => {

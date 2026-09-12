@@ -13,7 +13,7 @@
  */
 
 import type { Controles } from './controles.js';
-import { TOUCHES_DU_JEU, TOUCHE_LOCALISER, nomDeTouche } from './touches.js';
+import { TOUCHES_DU_JEU, TOUCHE_CAPTURER, TOUCHE_LOCALISER, nomDeTouche } from './touches.js';
 
 /** Ce qu'il faut pour ecouter un clavier. */
 export interface OptionsClavier {
@@ -27,7 +27,15 @@ export interface OptionsClavier {
   readonly cible?: EventTarget;
   /** L'objet dont la perte de focus relache tout. La fenetre par defaut. */
   readonly fenetre?: EventTarget;
+  /**
+   * La barre d'espace tire-t-elle: vrai dans une partie Tactique (etape 7.1). Faux par
+   * defaut: en Classique, la touche reste au navigateur.
+   */
+  readonly capture?: boolean;
 }
+
+/** Les elements qui ont deja l'usage de la barre d'espace. */
+const CONTROLES_DE_PAGE: ReadonlySet<string> = new Set(['BUTTON', 'INPUT', 'SELECT', 'TEXTAREA']);
 
 /**
  * Branche le clavier sur des controles.
@@ -37,12 +45,34 @@ export interface OptionsClavier {
 export function brancherClavier(controles: Controles, options: OptionsClavier = {}): () => void {
   const cible = options.cible ?? document;
   const fenetre = options.fenetre ?? window;
+  const capture = options.capture ?? false;
+
+  /**
+   * La barre d'espace tire. Maintenue, elle ne tire qu'une fois: le navigateur repete
+   * l'evenement, et la repetition est ignoree. Sur un bouton qui a le focus, elle
+   * garde son role et l'actionne: le joueur qui vient de fermer une fenetre ne tire
+   * pas par megarde.
+   */
+  const tirer = (evenement: KeyboardEvent): void => {
+    if (evenement.repeat || surUnControleDePage(evenement.target)) {
+      return;
+    }
+
+    evenement.preventDefault();
+    controles.demanderUnTir();
+  };
 
   const surEnfoncement = (evenement: Event): void => {
-    const touche = nomDeTouche((evenement as KeyboardEvent).key);
+    const clavier = evenement as KeyboardEvent;
+    const touche = nomDeTouche(clavier.key);
 
     if (touche === TOUCHE_LOCALISER) {
       controles.demanderLaLocalisation();
+      return;
+    }
+
+    if (capture && touche === TOUCHE_CAPTURER) {
+      tirer(clavier);
       return;
     }
 
@@ -74,4 +104,16 @@ export function brancherClavier(controles: Controles, options: OptionsClavier = 
     cible.removeEventListener('keyup', surRelachement);
     fenetre.removeEventListener('blur', surPerteDeFocus);
   };
+}
+
+/**
+ * La touche vise-t-elle un element de la page qui a l'usage de l'espace.
+ *
+ * Lu par le nom de balise plutot que par instanceof: les tests tournent sans
+ * navigateur, avec des cibles d'essai.
+ */
+function surUnControleDePage(cible: EventTarget | null): boolean {
+  const balise = (cible as { readonly tagName?: unknown } | null)?.tagName;
+
+  return typeof balise === 'string' && CONTROLES_DE_PAGE.has(balise);
 }

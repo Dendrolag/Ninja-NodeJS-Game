@@ -40,7 +40,14 @@ import { Application, Assets, Container, Graphics, Sprite, Text } from 'pixi.js'
 
 import { BORDURE_TERRAIN, COULEUR_FOND, LUEUR } from './apparence.js';
 import type { Camera } from './camera.js';
-import type { DisqueScene, FlecheScene, Scene, SpriteScene, ZoneScene } from './scene.js';
+import type {
+  ConeScene,
+  DisqueScene,
+  FlecheScene,
+  Scene,
+  SpriteScene,
+  ZoneScene,
+} from './scene.js';
 
 /**
  * La police des libelles de zone.
@@ -202,6 +209,7 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
 
       dessinerLesZones(zones, libelles, textesZones, scene.zones);
       dessinerLesDisques(disques, scene.disques);
+      dessinerLesCones(disques, scene.cones);
       majSprites(spritesObjets, objets, scene.objets);
       majSprites(spritesEntites, entites, scene.entites);
       dessinerLesReperes(reperes, scene.reperes);
@@ -257,6 +265,34 @@ function dessinerLesDisques(graphique: Graphics, disques: readonly DisqueScene[]
         color: disque.contour.couleur,
         alpha: disque.contour.alpha,
         width: disque.contour.epaisseur,
+      });
+    }
+  }
+}
+
+/**
+ * Dessine les cones du mode Tactique dans l'objet graphique des disques, sans
+ * l'effacer: ils passent par-dessus les halos et sous les entites.
+ */
+function dessinerLesCones(graphique: Graphics, cones: readonly ConeScene[]): void {
+  for (const cone of cones) {
+    graphique
+      .moveTo(cone.x, cone.y)
+      .arc(
+        cone.x,
+        cone.y,
+        Math.max(cone.rayon, 0),
+        cone.angle - cone.demiOuverture,
+        cone.angle + cone.demiOuverture,
+      )
+      .closePath();
+    graphique.fill({ color: cone.remplissage.couleur, alpha: cone.remplissage.alpha });
+
+    if (cone.contour !== undefined) {
+      graphique.stroke({
+        color: cone.contour.couleur,
+        alpha: cone.contour.alpha,
+        width: cone.contour.epaisseur,
       });
     }
   }

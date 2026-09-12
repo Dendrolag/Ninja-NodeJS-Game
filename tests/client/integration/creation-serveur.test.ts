@@ -74,7 +74,9 @@ describe('l ecran de creation et le serveur', () => {
     };
     const verdictDeLEcran = verifierLesValeurs(valeurs);
 
-    expect(modeleCreation(client.etat, { visibilite: 'privee', valeurs }).envoi).toBeUndefined();
+    expect(
+      modeleCreation(client.etat, { mode: 'classique', visibilite: 'privee', valeurs }).envoi,
+    ).toBeUndefined();
     expect(verdictDeLEcran.valide).toBe(false);
 
     // Contourner l'ecran, comme un client modifie.
@@ -94,6 +96,7 @@ describe('l ecran de creation et le serveur', () => {
 
   it('acceptent la creation que l ecran prepare, et le salon la decrit', async () => {
     const envoi = modeleCreation(client.etat, {
+      mode: 'classique',
       visibilite: 'privee',
       valeurs: { ...valeursDepuisReglages(REGLAGES_PAR_DEFAUT), carte: 'map3', dureePartieS: '60' },
     }).envoi;

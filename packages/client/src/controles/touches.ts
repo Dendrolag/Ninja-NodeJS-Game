@@ -39,6 +39,13 @@ export const TOUCHES_DU_JEU: ReadonlySet<string> = new Set(Object.values(TOUCHES
  */
 export const TOUCHE_LOCALISER = 'f';
 
+/**
+ * La touche qui tire, dans le mode Tactique (etape 7.1): la barre d'espace, comme
+ * dans la version 0.9.0 du jeu d'origine. Le navigateur la nomme par une espace.
+ * Comme F, ce n'est pas une direction.
+ */
+export const TOUCHE_CAPTURER = ' ';
+
 /** Normalise le nom d'une touche tel que le navigateur le donne. */
 export function nomDeTouche(touche: string): string {
   return touche.toLowerCase();

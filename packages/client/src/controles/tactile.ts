@@ -10,8 +10,10 @@
  * joueur de chercher un cercle a l'aveugle sur un ecran qu'il ne regarde pas. Le
  * pouce s'ecarte, la direction suit; il se leve, le personnage s'arrete.
  *
- * IL N'Y A PAS DE ZONE DE CAPTURE, et ce n'est pas un oubli. Dans le mode
- * Classique, on capture en touchant l'autre: il n'y a rien a declencher. Voir la
+ * LA CAPTURE N'EST PAS ICI. En Classique, on capture en touchant l'autre: il n'y a
+ * rien a declencher. En Tactique (etape 7.1), un bouton de capture la declenche. Il
+ * est pose par la surcouche, HORS de cette zone: un doigt pose dessus ne plante pas
+ * la manette, et le pouce qui tient la manette laisse un autre doigt tirer. Voir la
  * note en tete de controles.ts.
  *
  * COMME POUR LE CLAVIER, ce fichier ne decide rien: il traduit des evenements en

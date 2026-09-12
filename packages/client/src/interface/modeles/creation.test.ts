@@ -36,9 +36,13 @@ const COMPTE: MaProgression = {
   inscritLe: '2026-09-11T10:00:00.000Z',
 };
 
+/** Une partie Classique publique, aux reglages par defaut. */
+const PUBLIQUE = { mode: 'classique', visibilite: 'publique', valeurs: VALEURS } as const;
+
 describe('modeleCreation', () => {
   it('prepare la demande d une partie privee, aux reglages saisis', () => {
     const modele = modeleCreation(INVITE, {
+      mode: 'classique',
       visibilite: 'privee',
       valeurs: { ...VALEURS, carte: 'map3', modeMiroir: true },
     });
@@ -60,9 +64,17 @@ describe('modeleCreation', () => {
     ]);
   });
 
+  it('prepare la demande d une partie Tactique, au nom et a la capacite de son mode', () => {
+    const modele = modeleCreation(INVITE, { ...PUBLIQUE, mode: 'tactique' });
+
+    expect(modele.envoi?.configuration.mode).toBe('tactique');
+    expect(modele.titre).toBe('Tactique · Rainy Tokyo');
+    expect(modele.recapitulatif[3]).toEqual({ libelle: 'Capacité', valeur: '12 joueurs' });
+  });
+
   it('signale une configuration invalide, et ne la laisse pas partir', () => {
     const modele = modeleCreation(INVITE, {
-      visibilite: 'publique',
+      ...PUBLIQUE,
       valeurs: { ...VALEURS, dureePartieS: '700' },
     });
 
@@ -72,14 +84,8 @@ describe('modeleCreation', () => {
   });
 
   it('demande un pseudo valide a un invite', () => {
-    const sansPseudo = modeleCreation(
-      { ...INVITE, pseudoSaisi: '' },
-      { visibilite: 'publique', valeurs: VALEURS },
-    );
-    const invalide = modeleCreation(
-      { ...INVITE, pseudoSaisi: 'Al<b>' },
-      { visibilite: 'publique', valeurs: VALEURS },
-    );
+    const sansPseudo = modeleCreation({ ...INVITE, pseudoSaisi: '' }, PUBLIQUE);
+    const invalide = modeleCreation({ ...INVITE, pseudoSaisi: 'Al<b>' }, PUBLIQUE);
 
     expect(sansPseudo.envoi).toBeUndefined();
     expect(sansPseudo.aidePseudo).toBe('Choisissez un pseudo pour créer une partie.');
@@ -90,7 +96,7 @@ describe('modeleCreation', () => {
   it('laisse un compte creer sans pseudo', () => {
     const modele = modeleCreation(
       { ...INVITE, pseudoSaisi: '', session: { nature: 'compte', progression: COMPTE } },
-      { visibilite: 'publique', valeurs: VALEURS },
+      PUBLIQUE,
     );
 
     expect(modele.pseudoRequis).toBe(false);
@@ -107,18 +113,14 @@ describe('modeleCreation', () => {
       },
     });
 
-    expect(
-      modeleCreation(refus('creerPartie'), { visibilite: 'publique', valeurs: VALEURS }).refus,
-    ).toBe("Ce mode de jeu n'existe pas.");
-    expect(
-      modeleCreation(refus('rejoindre'), { visibilite: 'publique', valeurs: VALEURS }).refus,
-    ).toBeUndefined();
+    expect(modeleCreation(refus('creerPartie'), PUBLIQUE).refus).toBe(
+      "Ce mode de jeu n'existe pas.",
+    );
+    expect(modeleCreation(refus('rejoindre'), PUBLIQUE).refus).toBeUndefined();
   });
 
   it('n envoie rien sans lien, ni pendant qu une demande attend', () => {
-    const saisie = { visibilite: 'publique' as const, valeurs: VALEURS };
-
-    expect(modeleCreation({ ...INVITE, connexion: 'horsLigne' }, saisie).envoi).toBeUndefined();
-    expect(modeleCreation({ ...INVITE, entreeEnCours: true }, saisie).envoi).toBeUndefined();
+    expect(modeleCreation({ ...INVITE, connexion: 'horsLigne' }, PUBLIQUE).envoi).toBeUndefined();
+    expect(modeleCreation({ ...INVITE, entreeEnCours: true }, PUBLIQUE).envoi).toBeUndefined();
   });
 });

@@ -249,7 +249,7 @@ export type {
   ModeleCreation,
   SaisieDeCreation,
 } from './interface/modeles/creation.js';
-export { MODE_DE_CREATION, modeleCreation } from './interface/modeles/creation.js';
+export { MODE_PAR_DEFAUT, modeleCreation } from './interface/modeles/creation.js';
 
 export type {
   DestinationDeNavigation,
@@ -293,7 +293,12 @@ export type {
 export { modeleFin, progressionAffichee } from './interface/modeles/fin.js';
 
 export type { PresentationCarte } from './interface/modeles/cartes.js';
-export { NOMS_DES_MODES, PRESENTATION_CARTES, nomDeCarte } from './interface/modeles/cartes.js';
+export {
+  CAPTURES_DES_MODES,
+  NOMS_DES_MODES,
+  PRESENTATION_CARTES,
+  nomDeCarte,
+} from './interface/modeles/cartes.js';
 
 export type {
   ChampReglage,

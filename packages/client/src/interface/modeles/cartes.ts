@@ -38,6 +38,17 @@ export const NOMS_DES_MODES: Readonly<Record<Mode, string>> = {
   tactique: 'Tactique',
 };
 
+/**
+ * Comment on capture dans chaque mode, en une phrase: ce que le salon rappelle avant
+ * le lancement, pour qu'un joueur arrive par la partie rapide sache a quoi il joue.
+ */
+export const CAPTURES_DES_MODES: Readonly<Record<Mode, string>> = {
+  classique:
+    'On capture en touchant : un faux ninja rejoint votre couleur, un joueur vous cède tous les siens.',
+  tactique:
+    'On capture à distance : Espace, ou le bouton Capturer, prend tout ce qui est dans le cône devant vous. Cinq charges, et une qui revient toutes les cinq secondes.',
+};
+
 /** Le nom d'une carte tel qu'on l'affiche, mode miroir compris. */
 export function nomDeCarte(carte: IdentifiantCarte, modeMiroir: boolean): string {
   const nom = PRESENTATION_CARTES[carte].nom;

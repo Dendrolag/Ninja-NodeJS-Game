@@ -32,6 +32,7 @@ export function monterSalon(contexte: ContexteEcran): EcranAffiche {
 
   const titre = creer(doc, 'h1', { classe: 'salon-titre' });
   const sousTitre = creer(doc, 'p', { classe: 'salon-sous-titre' });
+  const regle = creer(doc, 'p', { classe: 'salon-regle' });
   const effectif = creer(doc, 'span', { classe: 'salon-effectif' });
   const placesLibres = creer(doc, 'span', { classe: 'salon-places' });
 
@@ -171,6 +172,7 @@ export function monterSalon(contexte: ContexteEcran): EcranAffiche {
         { classe: 'salon-intitule' },
         titre,
         sousTitre,
+        regle,
         creer(doc, 'div', { classe: 'salon-meta' }, badgeVisibilite, blocCode),
       ),
       creer(
@@ -278,6 +280,7 @@ export function monterSalon(contexte: ContexteEcran): EcranAffiche {
 
       ecrireTexte(titre, modele.titre);
       ecrireTexte(sousTitre, modele.sousTitre);
+      ecrireTexte(regle, modele.regle);
       ecrireTexte(effectif, modele.effectif);
       ecrireTexte(placesLibres, modele.placesLibres);
       ecrireTexte(texteVisibilite, modele.visibilite);

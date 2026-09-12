@@ -17,7 +17,7 @@
  *      defilement et la selection en cours.
  *   3. LA SURCOUCHE NE RECOIT PAS LES CLICS, sauf ce qui en a besoin. Sans cela,
  *      un panneau transparent poserait au joueur un mur invisible entre son doigt
- *      et le terrain.
+ *      et le terrain. Seul le bouton de capture du mode Tactique les recoit.
  *
  * LA MISE EN FORME N'EST PAS ICI. Les elements portent des classes; la feuille de
  * style arrive avec les ecrans de l'etape 4.3, qui decidera de l'apparence a
@@ -27,7 +27,7 @@
 import type { DimensionsCarte } from '@neon-ninja/shared';
 
 import type { EtatManette } from '../controles/tactile.js';
-import type { Hud, LigneHud, PointMinimap } from './modele.js';
+import type { ChargesHud, Hud, LigneHud, PointMinimap } from './modele.js';
 
 /** Cote de la minimap, en pixels d'ecran. */
 export const COTE_MINIMAP = 160;
@@ -40,6 +40,11 @@ export interface OptionsSurcouche {
   readonly carte: DimensionsCarte;
   /** Le document a utiliser. Celui de la page par defaut. */
   readonly document?: Document;
+  /**
+   * Ce que fait le bouton de capture: tirer (etape 7.1). A fournir dans une partie
+   * Tactique seulement; sans lui, la surcouche ne pose ni bouton ni charges.
+   */
+  readonly capturer?: () => void;
 }
 
 /** Une surcouche montee, qui se met a jour et se demonte. */
@@ -76,6 +81,9 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
   // qui ne se voyait pas faute de page pour afficher le HUD.
   manette.hidden = true;
 
+  const capture =
+    options.capturer === undefined ? undefined : monterCapture(doc, racine, options.capturer);
+
   options.hote.append(racine);
 
   /** Les lignes du classement deja creees, retrouvees par identifiant. */
@@ -95,6 +103,7 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
       majClassement(doc, classement, lignes, hud.classement);
       majEffets(doc, effets, hud);
       majMinimap(doc, minimap, points, hud.minimap, options.carte);
+      capture?.afficher(hud.charges);
     },
 
     afficherLaManette(etat: EtatManette) {
@@ -111,6 +120,7 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
     },
 
     demonter() {
+      capture?.demonter();
       racine.remove();
       lignes.clear();
       points.clear();
@@ -125,6 +135,80 @@ function element(doc: Document, balise: string, classe: string, parent: Element)
   parent.append(cree);
 
   return cree as HTMLElement;
+}
+
+/** Le bouton de capture, qui montre aussi nos charges. */
+interface BoutonDeCapture {
+  afficher(charges: ChargesHud | undefined): void;
+  demonter(): void;
+}
+
+/**
+ * Pose le bouton de capture du mode Tactique (etape 7.1).
+ *
+ * IL REAGIT A L'APPUI, PAS AU CLIC. Un clic attend que le doigt se leve, et il
+ * n'arrive pas toujours quand un autre doigt tient la manette: sur telephone, le
+ * pouce gauche court et le pouce droit tire. Il n'est pas dans la zone de la
+ * manette, qui est le terrain: un doigt pose dessus ne la plante pas.
+ *
+ * Un point par charge: plein pour une charge disponible, et celui de la charge qui
+ * revient se remplit a mesure.
+ */
+function monterCapture(doc: Document, parent: HTMLElement, capturer: () => void): BoutonDeCapture {
+  const bouton = doc.createElement('button');
+  bouton.type = 'button';
+  bouton.className = 'hud-capture';
+  bouton.style.pointerEvents = 'auto';
+  bouton.hidden = true;
+  element(doc, 'span', 'hud-capture-libelle', bouton).textContent = 'Capturer';
+  const jauge = element(doc, 'span', 'hud-charges', bouton);
+  parent.append(bouton);
+
+  const surAppui = (evenement: Event): void => {
+    evenement.preventDefault();
+    capturer();
+  };
+
+  bouton.addEventListener('pointerdown', surAppui);
+
+  /** Les points deja poses, un par charge. */
+  const points: HTMLElement[] = [];
+  let etiquette = '';
+
+  return {
+    afficher(charges) {
+      bouton.hidden = charges === undefined;
+
+      if (charges === undefined) {
+        return;
+      }
+
+      while (points.length < charges.maximum) {
+        points.push(element(doc, 'span', 'hud-charge', jauge));
+      }
+
+      points.forEach((point, rang) => {
+        const revient = rang === charges.disponibles && charges.disponibles < charges.maximum;
+
+        point.classList.toggle('pleine', rang < charges.disponibles);
+        point.classList.toggle('en-recharge', revient);
+        point.style.setProperty('--recharge', String(revient ? charges.recharge : 0));
+      });
+
+      bouton.classList.toggle('vide', charges.disponibles === 0);
+
+      const nouvelle = `Capturer, ${String(charges.disponibles)} charges sur ${String(charges.maximum)}`;
+
+      if (nouvelle !== etiquette) {
+        etiquette = nouvelle;
+        bouton.setAttribute('aria-label', nouvelle);
+      }
+    },
+
+    demonter() {
+      bouton.removeEventListener('pointerdown', surAppui);
+    },
+  };
 }
 
 /** Met le classement affiche en accord avec le modele, sans tout reconstruire. */

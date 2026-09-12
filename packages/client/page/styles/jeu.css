@@ -333,6 +333,79 @@
   box-shadow: 0 0 16px rgba(45, 230, 224, 0.5);
 }
 
+/*
+ * Le bouton de capture du mode Tactique, au-dessus de la minimap. Il porte les
+ * charges: un point par charge, et celui de la charge qui revient se remplit. Il
+ * est hors du terrain: un doigt pose dessus ne plante pas la manette.
+ */
+.hud-capture {
+  position: absolute;
+  right: 14px;
+  bottom: calc(max(14px, env(safe-area-inset-bottom)) + 172px);
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  min-width: 96px;
+  padding: 10px 14px;
+  border: 1px solid rgba(204, 153, 255, 0.45);
+  border-radius: 14px;
+  background: var(--fond-verre);
+  backdrop-filter: blur(8px);
+  color: inherit;
+  font-family: var(--police-titre);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.hud-capture[hidden] {
+  display: none;
+}
+
+.hud-capture.vide {
+  border-color: var(--bordure);
+  color: var(--texte-tertiaire);
+}
+
+.hud-charges {
+  display: flex;
+  gap: 5px;
+}
+
+.hud-charge {
+  position: relative;
+  width: 10px;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(204, 153, 255, 0.6);
+}
+
+.hud-charge.pleine {
+  background: #cc99ff;
+  box-shadow: 0 0 6px rgba(204, 153, 255, 0.8);
+}
+
+.hud-charge.en-recharge::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: calc(var(--recharge, 0) * 100%);
+  background: rgba(204, 153, 255, 0.5);
+}
+
+@media (pointer: coarse) {
+  .hud-capture {
+    min-width: 120px;
+    padding: 16px 18px;
+    font-size: 15px;
+  }
+}
+
 /* -- Petits ecrans ------------------------------------------------------- */
 
 @media (max-width: 640px) {

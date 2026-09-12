@@ -22,14 +22,17 @@
  *
  * ELLE NE DECIDE AUCUNE REGLE DE JEU. Elle lit ce que le serveur a envoye et
  * choisit une apparence. Si une question du genre « ce joueur peut-il en capturer
- * un autre » se posait ici, c'est qu'elle manquerait dans packages/sim.
+ * un autre » se posait ici, c'est qu'elle manquerait dans packages/sim. Le cone du
+ * mode Tactique en est l'exemple: la scene le dessine d'apres l'orientation et les
+ * charges recues, sans jamais calculer ce qu'il contient.
  */
 
-import type { Couleur, EntiteVue, TypeBonus, TypeZone } from '@neon-ninja/shared';
+import type { Couleur, EntiteVue, Orientation, TypeBonus, TypeZone } from '@neon-ninja/shared';
 import {
   COULEUR_BOT_NEUTRE,
   RACINE_RESSOURCES,
   REGLAGES_PAR_DEFAUT,
+  TACTIQUE,
   cheminNinja,
   cheminObjet,
 } from '@neon-ninja/shared';
@@ -41,6 +44,7 @@ import type { Teinte } from './apparence.js';
 import {
   ALPHA_INVISIBLE,
   APPARENCE_OBJET,
+  APPARENCE_TIR,
   APPARENCE_ZONE,
   HALO_BONUS,
   HALO_BOT_NOIR,
@@ -95,10 +99,30 @@ export interface FlecheScene {
   readonly contour: Teinte & { readonly epaisseur: number };
 }
 
+/** Un cone: la portee d'un tir du mode Tactique, devant un joueur (etape 7.1). */
+export interface ConeScene {
+  readonly id: string;
+  /** Le sommet du cone, en coordonnees de carte. */
+  readonly x: number;
+  readonly y: number;
+  /** Direction du milieu du cone, en radians. L'axe des y descend: le sud vaut un quart de tour. */
+  readonly angle: number;
+  /** Demi-ouverture, en radians. */
+  readonly demiOuverture: number;
+  readonly rayon: number;
+  readonly remplissage: Teinte;
+  readonly contour: (Teinte & { readonly epaisseur: number }) | undefined;
+}
+
 /** Tout ce qu'une image contient, hors decor et interface. */
 export interface Scene {
   /** Les disques poses SOUS les entites: zones, halos, ombres, rayons de detection. */
   readonly disques: readonly DisqueScene[];
+  /**
+   * Les cones du mode Tactique, poses sous les entites, par-dessus les disques: notre
+   * visee, et les tirs qui viennent de partir.
+   */
+  readonly cones: readonly ConeScene[];
   /** Les zones speciales, qui portent en plus un libelle a ecrire. */
   readonly zones: readonly ZoneScene[];
   /** Les objets ramassables poses sur la carte. */
@@ -114,7 +138,29 @@ export interface Scene {
 }
 
 /** Une scene vide, celle d'un ecran sans partie en cours. */
-export const SCENE_VIDE: Scene = { disques: [], zones: [], objets: [], entites: [], reperes: [] };
+export const SCENE_VIDE: Scene = {
+  disques: [],
+  cones: [],
+  zones: [],
+  objets: [],
+  entites: [],
+  reperes: [],
+};
+
+/** La direction de chaque orientation, en radians. L'axe des y descend. */
+const ANGLES: Readonly<Record<Orientation, number>> = {
+  est: 0,
+  sud_est: Math.PI / 4,
+  sud: Math.PI / 2,
+  sud_ouest: (3 * Math.PI) / 4,
+  ouest: Math.PI,
+  nord_ouest: (-3 * Math.PI) / 4,
+  nord: -Math.PI / 2,
+  nord_est: -Math.PI / 4,
+};
+
+/** La demi-ouverture du cone, en radians. */
+const DEMI_OUVERTURE = (TACTIQUE.ANGLE_DU_CONE_DEGRES / 2) * (Math.PI / 180);
 
 /**
  * Convertit une couleur du contrat, ecrite en hexadecimal, en nombre.
@@ -300,7 +346,79 @@ export function construireScene(
           maintenant,
         );
 
-  return { disques, zones, objets, entites, reperes };
+  const cones = [...maVisee(monEntite), ...tirsRecents(etat, maintenant)];
+
+  return { disques, cones, zones, objets, entites, reperes };
+}
+
+/**
+ * Notre cone de visee, devant notre personnage, a sa position affichee.
+ *
+ * Seulement le notre, comme dans la version 0.9.0: douze cones sur le terrain
+ * cacheraient les ninjas que l'on cherche. Il palit quand il ne reste aucune charge.
+ * Il n'existe que dans une partie Tactique, la seule ou le flux porte une orientation.
+ */
+function maVisee(mien: VueLissee['entites'][number] | undefined): readonly ConeScene[] {
+  if (mien === undefined || mien.entite.type !== 'joueur' || mien.entite.tactique === undefined) {
+    return [];
+  }
+
+  const { orientation, charges } = mien.entite.tactique;
+  const apparence = charges > 0 ? APPARENCE_TIR.visee : APPARENCE_TIR.viseeDesarmee;
+
+  return [
+    {
+      id: `${mien.entite.id}:visee`,
+      x: mien.x,
+      y: mien.y,
+      angle: ANGLES[orientation],
+      demiOuverture: DEMI_OUVERTURE,
+      rayon: TACTIQUE.PORTEE_PX,
+      remplissage: apparence.remplissage,
+      contour: apparence.contour,
+    },
+  ];
+}
+
+/**
+ * Les tirs qui viennent de partir, de n'importe quel joueur: l'eclair du cone, qui
+ * grandit et s'efface.
+ *
+ * Il part d'ou le tir est parti, et non du joueur affiche: c'est de la qu'il a
+ * capture. Un tir qui a pris quelque chose n'a pas la meme couleur qu'un tir dans le
+ * vide.
+ */
+function tirsRecents(etat: EtatClient, maintenant: number): readonly ConeScene[] {
+  const cones: ConeScene[] = [];
+
+  etat.journal.forEach((fait, rang) => {
+    if (fait.nature !== 'tirDeCapture') {
+      return;
+    }
+
+    const progression = (maintenant - fait.instant) / APPARENCE_TIR.dureeMs;
+
+    if (progression < 0 || progression >= 1) {
+      return;
+    }
+
+    const tir = fait.charge;
+    const couleur = tir.captures > 0 ? APPARENCE_TIR.reussi : APPARENCE_TIR.manque;
+    const opacite = 1 - progression;
+
+    cones.push({
+      id: `tir:${tir.tireur}:${String(rang)}`,
+      x: tir.x,
+      y: tir.y,
+      angle: ANGLES[tir.orientation],
+      demiOuverture: DEMI_OUVERTURE,
+      rayon: TACTIQUE.PORTEE_PX * (1 + progression * APPARENCE_TIR.agrandissement),
+      remplissage: { couleur, alpha: opacite * 0.3 },
+      contour: { couleur, alpha: opacite * 0.8, epaisseur: 2 },
+    });
+  });
+
+  return cones;
 }
 
 /**

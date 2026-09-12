@@ -9,11 +9,12 @@
  * CET ECRAN NE DECIDE RIEN. Le recapitulatif, ce qui cloche et la demande prete a
  * partir viennent de modeleCreation. Les reglages sont saisis dans le formulaire du
  * panneau du salon (composants/reglages.ts), le meme: une partie ne peut pas naitre
- * avec un reglage que le salon ne saurait pas changer. L'ecran ne retient que la
- * visibilite choisie.
+ * avec un reglage que le salon ne saurait pas changer. L'ecran ne retient que le mode
+ * et la visibilite choisis.
  */
 
 import type { Mode, Visibilite } from '@neon-ninja/shared';
+import { MODES } from '@neon-ninja/shared';
 
 import type { EtatClient } from '../../etat.js';
 import { monterChampPseudo } from '../composants/champPseudo.js';
@@ -22,16 +23,23 @@ import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import type { Glyphe } from '../icones.js';
 import { icone } from '../icones.js';
 import { NOMS_DES_MODES } from '../modeles/cartes.js';
-import { MODE_DE_CREATION, modeleCreation } from '../modeles/creation.js';
+import { MODE_PAR_DEFAUT, modeleCreation } from '../modeles/creation.js';
 import type { LigneRecapitulatif } from '../modeles/salon.js';
 import type { ContexteEcran, EcranAffiche } from './types.js';
 
-/** Ce que la tuile de chaque mode dit de lui. */
-const DESCRIPTIONS_DES_MODES: Readonly<Record<Mode, string>> = {
-  classique:
-    'Ralliez les faux ninjas et capturez les autres joueurs pour leur voler leur troupeau.',
-  tactique:
-    'Capturez à distance tout ce qui se trouve dans le cône devant vous, avec cinq charges qui reviennent peu à peu.',
+/** Ce que la tuile de chaque mode dit de lui, et son pictogramme. */
+const TUILES_DES_MODES: Readonly<
+  Record<Mode, { readonly texte: string; readonly glyphe: Glyphe }>
+> = {
+  classique: {
+    texte: 'Ralliez les faux ninjas et capturez les autres joueurs pour leur voler leur troupeau.',
+    glyphe: 'ninja',
+  },
+  tactique: {
+    texte:
+      'Capturez à distance tout ce qui se trouve dans le cône devant vous, avec cinq charges qui reviennent peu à peu.',
+    glyphe: 'target',
+  },
 };
 
 /** Les deux visibilites, telles que leurs tuiles les presentent. */
@@ -61,6 +69,7 @@ export function monterCreation(contexte: ContexteEcran): EcranAffiche {
   const client = contexte.client;
 
   let etatCourant: EtatClient | undefined;
+  let mode: Mode = MODE_PAR_DEFAUT;
   let visibilite: Visibilite = 'publique';
 
   const formulaire = monterFormulaireReglages({
@@ -72,6 +81,23 @@ export function monterCreation(contexte: ContexteEcran): EcranAffiche {
     surSoumission: () => {
       creer_();
     },
+  });
+
+  const choixDeMode = MODES.map((valeur) => {
+    const saisie = creer(doc, 'input', {
+      attributs: { type: 'radio', name: 'mode', value: valeur },
+    });
+    saisie.checked = valeur === mode;
+
+    return creer(
+      doc,
+      'label',
+      { classe: 'tuile tuile-choix', attributs: { 'data-mode': valeur } },
+      saisie,
+      icone(doc, TUILES_DES_MODES[valeur].glyphe, 22),
+      creer(doc, 'strong', { texte: NOMS_DES_MODES[valeur] }),
+      creer(doc, 'span', { texte: TUILES_DES_MODES[valeur].texte }),
+    );
   });
 
   const choixDeVisibilite = VISIBILITES.map((choix) => {
@@ -131,23 +157,14 @@ export function monterCreation(contexte: ContexteEcran): EcranAffiche {
         { classe: 'creation-etapes' },
         creer(
           doc,
-          'section',
+          'fieldset',
           { classe: 'creation-etape' },
-          creer(doc, 'h2', { texte: '01 · Mode de jeu' }),
+          creer(doc, 'legend', { texte: '01 · Mode de jeu' }),
           creer(
             doc,
             'div',
             { classe: 'tuiles' },
-            ...[MODE_DE_CREATION].map((mode) =>
-              creer(
-                doc,
-                'div',
-                { classe: 'tuile tuile-choisie', attributs: { 'data-mode': mode } },
-                icone(doc, 'ninja', 22),
-                creer(doc, 'strong', { texte: NOMS_DES_MODES[mode] }),
-                creer(doc, 'span', { texte: DESCRIPTIONS_DES_MODES[mode] }),
-              ),
-            ),
+            ...choixDeMode,
             creer(
               doc,
               'div',
@@ -199,7 +216,11 @@ export function monterCreation(contexte: ContexteEcran): EcranAffiche {
       return;
     }
 
-    const envoi = modeleCreation(etatCourant, { visibilite, valeurs: formulaire.lire() }).envoi;
+    const envoi = modeleCreation(etatCourant, {
+      mode,
+      visibilite,
+      valeurs: formulaire.lire(),
+    }).envoi;
 
     if (envoi !== undefined) {
       client.creerPartie(envoi.pseudo, envoi.configuration);
@@ -229,7 +250,7 @@ export function monterCreation(contexte: ContexteEcran): EcranAffiche {
       return;
     }
 
-    const modele = modeleCreation(etatCourant, { visibilite, valeurs: formulaire.lire() });
+    const modele = modeleCreation(etatCourant, { mode, visibilite, valeurs: formulaire.lire() });
 
     ecrireTexte(titre, modele.titre);
     majRecapitulatif(modele.recapitulatif);
@@ -248,16 +269,24 @@ export function monterCreation(contexte: ContexteEcran): EcranAffiche {
     creerLeSalon.toggleAttribute('aria-busy', modele.enAttente);
   }
 
-  const surVisibilite = (evenement: Event): void => {
+  /** Un mode ou une visibilite vient d'etre choisi. Les reglages ont leur propre ecoute. */
+  const surChoix = (evenement: Event): void => {
     const cible = evenement.target;
 
-    if (cible instanceof HTMLInputElement && cible.name === 'visibilite' && cible.checked) {
+    if (!(cible instanceof HTMLInputElement) || !cible.checked) {
+      return;
+    }
+
+    if (cible.name === 'visibilite') {
       visibilite = cible.value === 'privee' ? 'privee' : 'publique';
+      rendre();
+    } else if (cible.name === 'mode') {
+      mode = MODES.find((candidat) => candidat === cible.value) ?? MODE_PAR_DEFAUT;
       rendre();
     }
   };
 
-  racine.addEventListener('change', surVisibilite);
+  racine.addEventListener('change', surChoix);
 
   return {
     racine,
@@ -268,7 +297,7 @@ export function monterCreation(contexte: ContexteEcran): EcranAffiche {
     },
 
     demonter() {
-      racine.removeEventListener('change', surVisibilite);
+      racine.removeEventListener('change', surChoix);
       formulaire.demonter();
       champPseudo.demonter();
       racine.remove();

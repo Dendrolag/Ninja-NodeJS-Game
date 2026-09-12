@@ -96,6 +96,8 @@ export interface Client extends CommandesDeSession {
   quitter(): void;
   /** Annonce ou l'on veut aller. */
   deplacer(intention: IntentionDeplacement): void;
+  /** Tire, dans une partie Tactique. Ailleurs, le serveur ignore la demande. */
+  capturer(): void;
   /** Parle dans le chat. */
   parler(texte: string): void;
   /** Change les reglages de la partie. Reserve a l'hote. */
@@ -308,6 +310,12 @@ export function creerClient(options: OptionsClient): Client {
     }),
   );
 
+  ecouter(
+    reseau.sur('tirDeCapture', (charge) => {
+      magasin.appliquer({ type: 'fait', fait: fait('tirDeCapture', charge, maintenant()) });
+    }),
+  );
+
   // -- Les refus ------------------------------------------------------------
 
   ecouter(
@@ -379,6 +387,10 @@ export function creerClient(options: OptionsClient): Client {
      */
     deplacer: (intention) => {
       reseau.emettre('deplacer', intention);
+    },
+
+    capturer: () => {
+      reseau.emettre('capturer');
     },
 
     parler: (texte) => {

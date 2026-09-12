@@ -228,6 +228,29 @@ export const TAILLE_OBJET = 30;
 export const CADENCE_CLIGNOTEMENT = 0.01;
 
 /**
+ * Le cone du mode Tactique (etape 7.1): notre visee, et l'eclair d'un tir.
+ *
+ * Valeurs de la version 0.9.0 du jeu d'origine (drawCaptureRange): un violet pale,
+ * a peine visible pour la visee et franc pour un tir reussi, rouge pour un tir sans
+ * effet, et une animation de 300 millisecondes ou le cone grandit de moitie en
+ * s'effacant. La visee palit quand il ne reste aucune charge.
+ */
+export const APPARENCE_TIR = {
+  visee: {
+    remplissage: { couleur: 0xcc99ff, alpha: 0.08 },
+    contour: { couleur: 0xcc99ff, alpha: 0.25, epaisseur: 1 },
+  },
+  viseeDesarmee: {
+    remplissage: { couleur: 0x808080, alpha: 0.04 },
+    contour: { couleur: 0x808080, alpha: 0.15, epaisseur: 1 },
+  },
+  reussi: 0xcc99ff,
+  manque: 0xff4444,
+  dureeMs: 300,
+  agrandissement: 0.5,
+} as const;
+
+/**
  * Reglage de la lueur neon, appliquee en filtre GPU sur le calque des entites.
  *
  * C'EST LE CHANGEMENT DE FOND DE CETTE ETAPE. Le jeu d'origine obtenait sa lueur

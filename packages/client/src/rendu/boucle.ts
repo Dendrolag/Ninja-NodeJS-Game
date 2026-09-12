@@ -127,6 +127,11 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
       options.client.deplacer(intention);
     }
 
+    // Un tir demande part aussi, une seule fois (mode Tactique, etape 7.1).
+    if (options.controles.prendreLaDemandeDeTir()) {
+      options.client.capturer();
+    }
+
     // 2. Les faits recus depuis l'image precedente. Le journal est borne: quand
     //    il deborde, sa longueur cesse de croitre et les faits nouveaux poussent
     //    les anciens dehors. On repart donc du plus petit des deux comptes, ce
@@ -217,7 +222,7 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
     }
 
     for (const fait of faitsNouveaux) {
-      const nom = sonDuFait(fait);
+      const nom = sonDuFait(fait, etat.moi);
 
       if (nom !== undefined) {
         sons.jouer(nom);

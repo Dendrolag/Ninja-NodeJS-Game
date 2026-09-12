@@ -18,7 +18,7 @@ import { TYPES_BONUS, TYPES_MALUS, TYPES_ZONE } from '@neon-ninja/shared';
 import type { EtatClient } from '../../etat.js';
 import { formaterDuree } from '../../hud/modele.js';
 import { jeSuisHote } from '../../selecteurs.js';
-import { NOMS_DES_MODES, nomDeCarte } from './cartes.js';
+import { CAPTURES_DES_MODES, NOMS_DES_MODES, nomDeCarte } from './cartes.js';
 
 /** Un joueur du salon, tel qu'on l'affiche. */
 export interface JoueurAffiche {
@@ -63,6 +63,8 @@ export interface CompteAffiche {
 export interface ModeleSalon {
   readonly titre: string;
   readonly sousTitre: string;
+  /** Comment on capture dans le mode de la partie. */
+  readonly regle: string;
   readonly joueurs: readonly JoueurAffiche[];
   /** Le nombre de joueurs, en toutes lettres: « 3 joueurs ». */
   readonly effectif: string;
@@ -118,6 +120,7 @@ export function modeleSalon(etat: EtatClient): ModeleSalon | undefined {
   return {
     titre: hote === undefined ? 'Salon' : `Salon de ${hote.pseudo}`,
     sousTitre: `${NOMS_DES_MODES[salon.mode]} · ${nomDeCarte(salon.reglages.carte, salon.reglages.modeMiroir)}`,
+    regle: CAPTURES_DES_MODES[salon.mode],
     joueurs: salon.joueurs.map((joueur) => ({
       id: joueur.id,
       pseudo: joueur.pseudo,

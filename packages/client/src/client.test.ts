@@ -144,6 +144,7 @@ describe('les commandes du joueur', () => {
     entrerEtLancer();
 
     client.deplacer({ deplacement: { x: 1, y: 0 }, enMouvement: true });
+    client.capturer();
     client.parler('salut');
     client.changerReglages({ dureePartieS: 120 });
     client.demarrer();
@@ -155,6 +156,7 @@ describe('les commandes du joueur', () => {
     expect(reseau.emis.map((message) => message.nom)).toEqual([
       'rejoindre',
       'deplacer',
+      'capturer',
       'chat',
       'reglages',
       'demarrer',
@@ -288,6 +290,21 @@ describe('les messages du serveur', () => {
     ]);
     // Trois d'entre elles portent un effet a afficher.
     expect(client.etat.effets).toHaveLength(3);
+  });
+
+  it('garde un tir du mode Tactique au journal, sans effet a afficher', () => {
+    entrerEtLancer();
+
+    reseau.recevoir('tirDeCapture', {
+      tireur: 'autre',
+      x: 5,
+      y: 6,
+      orientation: 'nord',
+      captures: 1,
+    });
+
+    expect(client.etat.journal.map((entree) => entree.nature)).toEqual(['tirDeCapture']);
+    expect(client.etat.effets).toEqual([]);
   });
 
   it('garde le classement definitif quand la partie se termine', () => {

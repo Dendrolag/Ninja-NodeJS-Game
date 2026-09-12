@@ -1,11 +1,11 @@
 /**
  * La creation d'une partie, sous forme de donnees.
  *
- * CE QUE DIT LE CADRAGE (section 3, creer une partie): le mode (la tuile Classique,
- * et une tuile « a venir »), la carte avec son apercu et le miroir, la visibilite
- * publique ou privee, tous les reglages de la section 4, et un recapitulatif avec la
- * capacite deduite du mode. Mode et visibilite se choisissent ici et ne changent
- * plus; les reglages restent modifiables par l'hote dans le salon.
+ * CE QUE DIT LE CADRAGE (section 3, creer une partie): le mode (une tuile par mode
+ * jouable, et une tuile « a venir »), la carte avec son apercu et le miroir, la
+ * visibilite publique ou privee, tous les reglages de la section 4, et un
+ * recapitulatif avec la capacite deduite du mode. Mode et visibilite se choisissent
+ * ici et ne changent plus; les reglages restent modifiables par l'hote dans le salon.
  *
  * LA VALIDATION EST CELLE DU SERVEUR. Les reglages sont verifies par
  * verifierLesValeurs (validerReglages), et la demande entiere par
@@ -18,7 +18,7 @@
  */
 
 import type { ConfigurationPartie, IdentifiantCarte, Mode, Visibilite } from '@neon-ninja/shared';
-import { CAPACITES, CARTES, MODES, validerDemandeCreation } from '@neon-ninja/shared';
+import { CAPACITES, CARTES, validerDemandeCreation } from '@neon-ninja/shared';
 
 import type { EtatClient } from '../../etat.js';
 import { formaterDuree } from '../../hud/modele.js';
@@ -28,16 +28,13 @@ import type { ValeursFormulaire } from './reglages.js';
 import { erreursParChamp, verifierLesValeurs } from './reglages.js';
 import type { LigneRecapitulatif } from './salon.js';
 
-/**
- * Le mode des parties creees depuis la page.
- *
- * Le Tactique existe dans le contrat depuis l'etape 7.1, mais ne se choisit pas
- * encore ici: l'ecran ne propose que ce mode-ci.
- */
-export const MODE_DE_CREATION: Mode = MODES[0];
+/** Le mode propose d'abord a la creation: le Classique, le jeu d'origine. */
+export const MODE_PAR_DEFAUT: Mode = 'classique';
 
 /** Ce que le joueur a choisi. */
 export interface SaisieDeCreation {
+  /** Le mode de la partie. Le Tactique se choisit depuis l'etape 7.1. */
+  readonly mode: Mode;
   readonly visibilite: Visibilite;
   /** Les valeurs du formulaire des reglages, telles que saisies. */
   readonly valeurs: ValeursFormulaire;
@@ -83,7 +80,7 @@ export function modeleCreation(etat: EtatClient, saisie: SaisieDeCreation): Mode
   const lienEtabli = etat.connexion === 'connecte';
 
   const configuration: ConfigurationPartie | undefined = verdict.valide
-    ? { mode: MODE_DE_CREATION, visibilite: saisie.visibilite, reglages: verdict.valeur }
+    ? { mode: saisie.mode, visibilite: saisie.visibilite, reglages: verdict.valeur }
     : undefined;
 
   // La derniere verification est celle du serveur, sur la demande entiere.
@@ -95,7 +92,7 @@ export function modeleCreation(etat: EtatClient, saisie: SaisieDeCreation): Mode
     }).valide;
 
   return {
-    titre: `${NOMS_DES_MODES[MODE_DE_CREATION]} · ${carteSaisie(saisie.valeurs)}`,
+    titre: `${NOMS_DES_MODES[saisie.mode]} · ${carteSaisie(saisie.valeurs)}`,
     recapitulatif: [
       { libelle: 'Visibilité', valeur: VISIBILITES_AFFICHEES[saisie.visibilite] },
       {
@@ -108,7 +105,7 @@ export function modeleCreation(etat: EtatClient, saisie: SaisieDeCreation): Mode
         libelle: 'Faux ninjas',
         valeur: fautes.has('nombreBotsInitial') ? '—' : String(saisie.valeurs['nombreBotsInitial']),
       },
-      { libelle: 'Capacité', valeur: `${String(CAPACITES[MODE_DE_CREATION])} joueurs` },
+      { libelle: 'Capacité', valeur: `${String(CAPACITES[saisie.mode])} joueurs` },
     ],
     pseudoRequis: pseudo.requis,
     erreurPseudo: pseudo.erreur,

@@ -70,9 +70,18 @@ function ninjas(nombre: number): string {
   return `${String(nombre)} ${nombre > 1 ? 'ninjas' : 'ninja'}`;
 }
 
-/** La phrase qui annonce un fait recu. Tous les faits en ont une. */
-export function annonceDuFait(fait: FaitDeJeu): Annonce {
+/**
+ * La phrase qui annonce un fait recu, ou rien.
+ *
+ * Tous les faits en ont une, sauf le tir du mode Tactique: il se voit sur le terrain,
+ * et, s'il prend un joueur, la capture s'annonce elle-meme. Une phrase de plus a
+ * chaque tir noierait les autres.
+ */
+export function annonceDuFait(fait: FaitDeJeu): Annonce | undefined {
   switch (fait.nature) {
+    case 'tirDeCapture':
+      return undefined;
+
     case 'captureSubie':
       return { texte: `Capturé par ${fait.charge.parPseudo} !`, ton: 'alerte' };
 
@@ -154,8 +163,10 @@ export function annoncesDuChangement(avant: EtatClient, apres: EtatClient): read
     const connus = new Set(avant.journal);
 
     for (const fait of apres.journal) {
-      if (!connus.has(fait)) {
-        annonces.push(annonceDuFait(fait));
+      const annonce = connus.has(fait) ? undefined : annonceDuFait(fait);
+
+      if (annonce !== undefined) {
+        annonces.push(annonce);
       }
     }
   }

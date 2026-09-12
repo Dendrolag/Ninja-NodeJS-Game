@@ -43,9 +43,16 @@ import type { FaitDeJeu } from '../faits.js';
  *
  * Rendre undefined est un cas ordinaire: tous les faits ne font pas de bruit. Une
  * arrivee et un depart, par exemple, s'ecrivent dans le fil sans s'entendre.
+ *
+ * @param moi Notre identifiant. Un tir ne s'entend que chez celui qui l'a tire, et
+ *            seulement s'il a pris quelque chose: douze joueurs qui tirent feraient
+ *            sinon un vacarme ou le sien se perdrait.
  */
-export function sonDuFait(fait: FaitDeJeu): NomDeSon | undefined {
+export function sonDuFait(fait: FaitDeJeu, moi?: string): NomDeSon | undefined {
   switch (fait.nature) {
+    case 'tirDeCapture':
+      return fait.charge.tireur === moi && fait.charge.captures > 0 ? 'capture' : undefined;
+
     case 'bonusActive':
       return 'bonusRamasse';
 

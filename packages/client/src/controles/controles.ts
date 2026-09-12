@@ -20,12 +20,12 @@
  * recue. Si le transport changeait pour un canal sans garantie, il faudrait
  * reintroduire une repetition, et c'est ici qu'elle se poserait.
  *
- * LA CAPTURE N'A AUCUNE TOUCHE, ET CE N'EST PAS UN OUBLI. Dans le mode Classique,
- * qui est le perimetre de la version 1, on capture EN TOUCHANT: le contact est
- * resolu par le moteur, le joueur n'a rien a declencher. Les evenements
- * startCapture et endCapture que la fiche de cette etape mentionnait
- * appartiennent a la capture par cone du mode tactique, ecarte du perimetre. Le
- * contrat d'evenements ne les porte pas: les brancher serait impossible.
+ * LA CAPTURE N'EST PAS UNE INTENTION, ET ELLE N'EXISTE QU'EN MODE TACTIQUE. En
+ * Classique, on capture en touchant: le moteur resout le contact, il n'y a rien a
+ * declencher. En Tactique (etape 7.1), le joueur tire, par la barre d'espace ou par
+ * le bouton de capture. Un tir est un geste ponctuel, pas un etat qui dure: il ne se
+ * compare pas a la demande precedente, il est retenu jusqu'a ce que la boucle le
+ * prenne, puis il part une fois.
  */
 
 import type { IntentionDeplacement, Vecteur } from '@neon-ninja/shared';
@@ -153,6 +153,27 @@ export class Controles {
     return demandee;
   }
 
+  /** Une demande de tir attend-elle d'etre envoyee. */
+  private tirDemande = false;
+
+  /** Le joueur tire: barre d'espace, ou bouton de capture (mode Tactique). */
+  demanderUnTir(): void {
+    this.tirDemande = true;
+  }
+
+  /**
+   * Y a-t-il un tir a envoyer. La lire la consomme, comme la demande de localisation:
+   * un tir demande part une fois, meme si la boucle la lit a chaque image. Deux
+   * demandes entre deux images n'en font qu'une, comme deux demandes entre deux
+   * battements cote serveur.
+   */
+  prendreLaDemandeDeTir(): boolean {
+    const demande = this.tirDemande;
+    this.tirDemande = false;
+
+    return demande;
+  }
+
   /**
    * Repart de zero: plus rien d'enfonce, et la prochaine intention sera emise.
    *
@@ -165,5 +186,6 @@ export class Controles {
     this.toutRelacher();
     this.derniereEmise = IMMOBILE;
     this.localisationDemandee = false;
+    this.tirDemande = false;
   }
 }

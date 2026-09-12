@@ -12,12 +12,14 @@
  * d'invisibilite, les halos de bonus, le clignotement des objets.
  */
 
-import type { EntiteVue, InfosSalon, ObjetVu, ZoneVue } from '@neon-ninja/shared';
-import { OBJETS, REGLAGES_PAR_DEFAUT } from '@neon-ninja/shared';
+import type { EntiteVue, InfosSalon, ObjetVu, Orientation, ZoneVue } from '@neon-ninja/shared';
+import { OBJETS, REGLAGES_PAR_DEFAUT, TACTIQUE } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
 import type { EffetActif, EtatClient } from '../etat.js';
 import { ETAT_INITIAL } from '../etat.js';
+import type { FaitDeJeu } from '../faits.js';
+import { fait } from '../faits.js';
 import type { VuePartie } from '../reconstruction.js';
 import type { VueLissee } from './interpolation.js';
 import { SCENE_VIDE, construireScene, couleurEnNombre } from './scene.js';
@@ -322,6 +324,101 @@ describe('construireScene', () => {
     expect(scene.zones).toHaveLength(1);
     expect(scene.zones[0]?.libelle).toBe('Zone de chaos');
     expect(scene.zones[0]?.rayon).toBe(60);
+  });
+});
+
+describe('le cone du mode Tactique', () => {
+  /** Un joueur qui porte l'etat du mode Tactique. */
+  function tacticien(
+    id: string,
+    x: number,
+    y: number,
+    orientation: Orientation,
+    charges: number = TACTIQUE.CHARGES_MAXIMUM,
+  ): EntiteVue {
+    return {
+      ...joueur(id, x, y),
+      tactique: { orientation, charges, avantProchaineChargeMs: TACTIQUE.RECHARGE_MS },
+    } as EntiteVue;
+  }
+
+  /** Un tir annonce, arrive a cet instant. */
+  function tir(tireur: string, captures: number, instant: number): FaitDeJeu {
+    return fait('tirDeCapture', { tireur, x: 10, y: 20, orientation: 'est', captures }, instant);
+  }
+
+  it('pose notre visee a la position affichee de notre personnage, dans sa direction', () => {
+    const scene = construireScene(
+      etatEnJeu('moi'),
+      lissee(vue([tacticien('moi', 100, 200, 'sud')])),
+      0,
+    );
+
+    expect(scene.cones).toHaveLength(1);
+    expect(scene.cones[0]).toMatchObject({
+      id: 'moi:visee',
+      x: 100,
+      y: 200,
+      rayon: TACTIQUE.PORTEE_PX,
+    });
+    expect(scene.cones[0]?.angle).toBeCloseTo(Math.PI / 2);
+    expect(scene.cones[0]?.demiOuverture).toBeCloseTo(Math.PI / 4);
+  });
+
+  it('ne montre pas la visee des autres joueurs', () => {
+    const scene = construireScene(
+      etatEnJeu('moi'),
+      lissee(vue([tacticien('moi', 0, 0, 'est'), tacticien('autre', 50, 50, 'nord')])),
+      0,
+    );
+
+    expect(scene.cones.map((cone) => cone.id)).toEqual(['moi:visee']);
+  });
+
+  it('palit la visee quand il ne reste aucune charge', () => {
+    const armee = construireScene(
+      etatEnJeu('moi'),
+      lissee(vue([tacticien('moi', 0, 0, 'est')])),
+      0,
+    );
+    const desarmee = construireScene(
+      etatEnJeu('moi'),
+      lissee(vue([tacticien('moi', 0, 0, 'est', 0)])),
+      0,
+    );
+
+    expect(desarmee.cones[0]?.remplissage.alpha).toBeLessThan(
+      armee.cones[0]?.remplissage.alpha ?? 0,
+    );
+  });
+
+  it('ne pose aucun cone dans une partie Classique', () => {
+    const scene = construireScene(etatEnJeu('moi'), lissee(vue([joueur('moi', 0, 0)])), 0);
+
+    expect(scene.cones).toEqual([]);
+  });
+
+  it('fait partir l eclair d un tir de n importe qui, qui grandit, s efface et disparait', () => {
+    const etat = { ...etatEnJeu('moi'), journal: [tir('autre', 2, 1_000)] };
+    const partie = lissee(vue([joueur('moi', 0, 0)]));
+
+    const depart = construireScene(etat, partie, 1_000).cones;
+    const milieu = construireScene(etat, partie, 1_150).cones;
+    const fin = construireScene(etat, partie, 1_300).cones;
+
+    expect(depart).toHaveLength(1);
+    expect(depart[0]).toMatchObject({ x: 10, y: 20, angle: 0, rayon: TACTIQUE.PORTEE_PX });
+    expect(milieu[0]?.rayon).toBeGreaterThan(TACTIQUE.PORTEE_PX);
+    expect(milieu[0]?.remplissage.alpha).toBeLessThan(depart[0]?.remplissage.alpha ?? 0);
+    expect(fin).toEqual([]);
+  });
+
+  it('donne a un tir sans effet une autre couleur qu a un tir qui a capture', () => {
+    const partie = lissee(vue([joueur('moi', 0, 0)]));
+    const reussi = construireScene({ ...etatEnJeu('moi'), journal: [tir('moi', 1, 0)] }, partie, 0);
+    const manque = construireScene({ ...etatEnJeu('moi'), journal: [tir('moi', 0, 0)] }, partie, 0);
+
+    expect(reussi.cones[0]?.remplissage.couleur).not.toBe(manque.cones[0]?.remplissage.couleur);
   });
 });
 

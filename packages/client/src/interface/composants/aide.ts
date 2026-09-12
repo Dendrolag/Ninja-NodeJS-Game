@@ -15,7 +15,7 @@
  */
 
 import type { TypeBonus, TypeMalus, TypeZone } from '@neon-ninja/shared';
-import { RACINE_RESSOURCES, SCORE, cheminObjet } from '@neon-ninja/shared';
+import { RACINE_RESSOURCES, SCORE, TACTIQUE, cheminObjet } from '@neon-ninja/shared';
 
 import { APPARENCE_OBJET, APPARENCE_ZONE } from '../../rendu/apparence.js';
 import { creer } from '../dom.js';
@@ -51,7 +51,9 @@ const COMMANDES: readonly (readonly [string, string])[] = [
   ['Q, A ou flèche gauche', 'Aller à gauche'],
   ['D ou flèche droite', 'Aller à droite'],
   ['F', 'Localiser votre ninja'],
+  ['Espace', 'Capturer, dans le mode Tactique'],
   ['Pouce sur l’écran', 'Se déplacer, sur téléphone et tablette'],
+  ['Bouton Capturer', 'Capturer sur téléphone et tablette, dans le mode Tactique'],
 ];
 
 /** Monte la fenetre d'aide, fermee. */
@@ -74,6 +76,9 @@ export function monterAide(doc: Document): Fenetre {
       }),
       creer(doc, 'p', {
         texte: `Les Black Ninjas entrent en jeu en cours de partie et chassent les joueurs. S’ils vous prennent, vous perdez une partie de vos ninjas. Invincible, vous pouvez les détruire : chacun rapporte ${String(SCORE.POINTS_PAR_BOT_NOIR)} points.`,
+      }),
+      creer(doc, 'p', {
+        texte: `Dans le mode Tactique, toucher ne capture plus : Espace, ou le bouton Capturer, prend tout ce qui se trouve dans le cône, à courte distance devant vous. Vous avez ${String(TACTIQUE.CHARGES_MAXIMUM)} charges ; un tir qui prend quelque chose en coûte une, qui revient en ${String(TACTIQUE.RECHARGE_MS / 1000)} secondes, et un tir dans le vide ne coûte rien.`,
       }),
     ),
     liste(doc, 'Bonus', Object.entries(EFFETS_BONUS) as [TypeBonus, string][], true),

@@ -488,6 +488,15 @@
   letter-spacing: 0.08em;
 }
 
+/* Comment on capture dans le mode de la partie (etape 7.1). */
+.salon-regle {
+  max-width: 62ch;
+  margin: 6px 0 0;
+  color: var(--texte-secondaire);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .salon-entete-actions {
   display: flex;
   gap: 10px;

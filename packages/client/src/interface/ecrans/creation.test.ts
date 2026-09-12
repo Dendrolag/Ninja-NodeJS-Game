@@ -5,7 +5,7 @@
  * Le test exige par la fiche pour le formulaire de creation: une configuration
  * invalide est signalee cote client sur son champ, et elle ne part pas. On y verifie
  * aussi qu'une partie privee se cree aux reglages choisis et mene a son salon, code
- * compris, et qu'un seul mode est propose.
+ * compris, et que chaque mode jouable se choisit (etape 7.1).
  */
 
 import type { InfosSalon } from '@neon-ninja/shared';
@@ -67,14 +67,33 @@ afterEach(() => {
 });
 
 describe('l ecran de creation', () => {
-  it('ne propose que le mode Classique, et annonce les autres sans les proposer', () => {
+  it('propose chaque mode jouable, le Classique d abord, et annonce les autres sans les proposer', () => {
     expect(ecranAffiche()).toBe('creation');
-    expect(obligatoire(hote, '.tuile-choisie').textContent).toContain('Classique');
+
+    const modes = [...hote.querySelectorAll<HTMLInputElement>('input[name="mode"]')];
+
+    expect(modes.map((mode) => mode.value)).toEqual(['classique', 'tactique']);
+    expect(champ('input[name="mode"][value="classique"]').checked).toBe(true);
 
     const aVenir = obligatoire(hote, '.tuile-a-venir');
 
     expect(aVenir.getAttribute('aria-disabled')).toBe('true');
     expect(aVenir.querySelector('input')).toBeNull();
+  });
+
+  it('cree une partie Tactique quand on choisit son mode', () => {
+    cocher(champ('input[name="mode"][value="tactique"]'), true);
+
+    expect(obligatoire(hote, '.creation-recapitulatif h2').textContent).toBe(
+      'Tactique · Rainy Tokyo',
+    );
+
+    creerLeSalon().click();
+
+    expect(reseau.dernier('creerPartie')?.[0]).toMatchObject({
+      pseudo: 'Alice',
+      configuration: { mode: 'tactique', visibilite: 'publique' },
+    });
   });
 
   it('signale une configuration invalide sur son champ, et ne la laisse pas partir', () => {

@@ -189,4 +189,41 @@ describe('construireHud', () => {
       expect(hud.minimap[0]).toMatchObject({ x: 1_234, y: 567 });
     });
   });
+
+  describe('charges du mode Tactique', () => {
+    /** Un joueur qui porte l'etat du mode Tactique. */
+    function tacticien(id: string, charges: number, avantProchaineChargeMs: number): EntiteVue {
+      return {
+        ...joueur(id, 0, 0),
+        tactique: { orientation: 'est', charges, avantProchaineChargeMs },
+      } as EntiteVue;
+    }
+
+    it('montre nos charges, et ou en est celle qui revient', () => {
+      const hud = construireHud(etatEnJeu(vue({ entites: [tacticien('moi', 3, 1_250)] })), 0);
+
+      expect(hud.charges).toEqual({ disponibles: 3, maximum: 5, recharge: 0.75 });
+    });
+
+    it('montre une jauge pleine aux charges pleines', () => {
+      const hud = construireHud(etatEnJeu(vue({ entites: [tacticien('moi', 5, 5_000)] })), 0);
+
+      expect(hud.charges?.recharge).toBe(1);
+    });
+
+    it('ne montre que nos charges, pas celles des autres', () => {
+      const hud = construireHud(
+        etatEnJeu(vue({ entites: [joueur('moi', 0, 0), tacticien('autre', 2, 100)] })),
+        0,
+      );
+
+      expect(hud.charges).toBeUndefined();
+    });
+
+    it('ne montre aucune charge hors du mode Tactique', () => {
+      const hud = construireHud(etatEnJeu(vue({ entites: [joueur('moi', 0, 0)] })), 0);
+
+      expect(hud.charges).toBeUndefined();
+    });
+  });
 });

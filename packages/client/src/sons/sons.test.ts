@@ -57,6 +57,15 @@ describe('sonDuFait', () => {
     expect(arrivee).toBeUndefined();
   });
 
+  it('fait entendre notre tir s il a capture, et ni nos tirs vides ni ceux des autres', () => {
+    const tir = (tireur: string, captures: number): ReturnType<typeof fait> =>
+      fait('tirDeCapture', { tireur, x: 0, y: 0, orientation: 'est', captures }, 0);
+
+    expect(sonDuFait(tir('moi', 2), 'moi')).toBe('capture');
+    expect(sonDuFait(tir('moi', 0), 'moi')).toBeUndefined();
+    expect(sonDuFait(tir('autre', 3), 'moi')).toBeUndefined();
+  });
+
   it('ne nomme que des sons qui existent', () => {
     // Le defaut exact du jeu d'origine. Ici le compilateur le rend impossible,
     // et ce test le verifie une seconde fois a l'execution, au cas ou la table

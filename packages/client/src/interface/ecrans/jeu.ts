@@ -18,6 +18,10 @@
  * sur la partie des autres. L'ecran propose ce qui existe: quitter la partie pour
  * soi, apres confirmation, et la pause, reservee a l'hote comme au serveur.
  *
+ * DANS UNE PARTIE TACTIQUE (etape 7.1), la barre d'espace tire, et la surcouche pose
+ * le bouton de capture avec les charges. Le mode est lu dans le salon, fige depuis la
+ * creation de la partie.
+ *
  * CE FICHIER N'EST PAS COUVERT PAR LES TESTS UNITAIRES: il monte PixiJS, qui a
  * besoin d'un vrai navigateur. Il est joue par les scenarios de bout en bout: la
  * navigation (tests/e2e/navigation.spec.ts), et des parties entieres, au clavier
@@ -47,6 +51,7 @@ export function monterJeu(contexte: ContexteEcran): EcranAffiche {
   // Les reglages sont figes au lancement: ceux du salon sont ceux de la partie.
   const reglages = client.etat.salon?.reglages ?? REGLAGES_PAR_DEFAUT;
   const carte = CARTES[reglages.carte];
+  const tactique = client.etat.salon?.mode === 'tactique';
 
   const controles = new Controles();
   controles.reinitialiser();
@@ -101,7 +106,12 @@ export function monterJeu(contexte: ContexteEcran): EcranAffiche {
     doc,
     'div',
     { classe: 'jeu-actions' },
-    creer(doc, 'span', { classe: 'jeu-rappel', texte: 'ZQSD ou flèches · F pour vous localiser' }),
+    creer(doc, 'span', {
+      classe: 'jeu-rappel',
+      texte: tactique
+        ? 'ZQSD ou flèches · Espace pour capturer · F pour vous localiser'
+        : 'ZQSD ou flèches · F pour vous localiser',
+    }),
     bouton(
       doc,
       { classe: 'bouton-icone jeu-localiser', icone: 'target', etiquette: 'Localiser mon ninja' },
@@ -169,12 +179,25 @@ export function monterJeu(contexte: ContexteEcran): EcranAffiche {
       return;
     }
 
-    const surcouche = monterSurcouche({ hote: zoneHud, carte, document: doc });
+    const surcouche = monterSurcouche({
+      hote: zoneHud,
+      carte,
+      document: doc,
+      ...(tactique
+        ? {
+            capturer: () => {
+              controles.demanderUnTir();
+            },
+          }
+        : {}),
+    });
     aRetirer.push(() => {
       surcouche.demonter();
     });
 
-    aRetirer.push(brancherClavier(controles, { cible: doc, fenetre: navigateur ?? doc }));
+    aRetirer.push(
+      brancherClavier(controles, { cible: doc, fenetre: navigateur ?? doc, capture: tactique }),
+    );
     aRetirer.push(
       brancherTactile(terrain, controles, {
         surChangement: (manette) => {

@@ -3,8 +3,9 @@
  *
  * FONCTION PURE, COMME LA SCENE. On lui donne l'etat et l'instant, elle rend la
  * description de ce qu'il faut afficher: le temps restant deja mis en forme, les
- * lignes du classement, les effets en cours avec leur reste, et les points de la
- * minimap. Ecrire cela dans le document est le travail d'un autre fichier.
+ * lignes du classement, les effets en cours avec leur reste, les points de la
+ * minimap, et, dans le mode Tactique, nos charges. Ecrire cela dans le document est
+ * le travail d'un autre fichier.
  *
  * POURQUOI CE DECOUPAGE ICI AUSSI. Le client d'origine avait quinze fonctions qui
  * ecrivaient dans le document, chacune allant chercher ses donnees dans une
@@ -20,10 +21,11 @@
  */
 
 import type { Couleur, LigneClassement, TypeBonus, TypeMalus } from '@neon-ninja/shared';
+import { TACTIQUE } from '@neon-ninja/shared';
 
 import type { EtatClient } from '../etat.js';
 import { APPARENCE_OBJET } from '../rendu/apparence.js';
-import { effetsEnCours, resteDeLEffet } from '../selecteurs.js';
+import { effetsEnCours, moiDansLaPartie, resteDeLEffet } from '../selecteurs.js';
 
 /** Sous cette duree restante, le temps s'affiche en alerte. */
 export const SEUIL_URGENCE_MS = 30_000;
@@ -62,6 +64,17 @@ export interface PointMinimap {
   readonly moi: boolean;
 }
 
+/** Nos charges, dans le mode Tactique (etape 7.1). */
+export interface ChargesHud {
+  readonly disponibles: number;
+  readonly maximum: number;
+  /**
+   * Ou en est la charge qui revient, de zero a un. Un aux charges pleines: rien n'est
+   * en cours.
+   */
+  readonly recharge: number;
+}
+
 /** Tout ce que la surcouche affiche a un instant donne. */
 export interface Hud {
   /** Le temps restant, mis en forme minutes deux-points secondes. */
@@ -77,6 +90,8 @@ export interface Hud {
   readonly classement: readonly LigneHud[];
   readonly effets: readonly EffetHud[];
   readonly minimap: readonly PointMinimap[];
+  /** Nos charges. Absentes hors du mode Tactique, ou tant qu'on n'est pas sur la carte. */
+  readonly charges: ChargesHud | undefined;
 }
 
 /** Un HUD vide, celui d'un ecran hors partie. */
@@ -89,6 +104,7 @@ export const HUD_VIDE: Hud = {
   classement: [],
   effets: [],
   minimap: [],
+  charges: undefined,
 };
 
 /**
@@ -127,6 +143,7 @@ export function construireHud(etat: EtatClient, maintenant: number): Hud {
     classement: classementHud(partie.classement, etat.moi),
     effets: effetsHud(etat, maintenant),
     minimap: minimapHud(etat),
+    charges: chargesHud(etat),
   };
 }
 
@@ -185,4 +202,27 @@ function minimapHud(etat: EtatClient): readonly PointMinimap[] {
       couleur: entite.couleur,
       moi: entite.id === etat.moi,
     }));
+}
+
+/**
+ * Nos charges, d'apres le flux d'etat.
+ *
+ * L'attente de la prochaine vient du dernier battement recu: elle avance par
+ * vingtiemes de seconde, ce qui ne se voit pas sur une jauge de cinq secondes.
+ */
+function chargesHud(etat: EtatClient): ChargesHud | undefined {
+  const moi = moiDansLaPartie(etat);
+
+  if (moi?.type !== 'joueur' || moi.tactique === undefined) {
+    return undefined;
+  }
+
+  const { charges, avantProchaineChargeMs } = moi.tactique;
+  const enCours = 1 - avantProchaineChargeMs / TACTIQUE.RECHARGE_MS;
+
+  return {
+    disponibles: charges,
+    maximum: TACTIQUE.CHARGES_MAXIMUM,
+    recharge: charges >= TACTIQUE.CHARGES_MAXIMUM ? 1 : Math.min(Math.max(enCours, 0), 1),
+  };
 }

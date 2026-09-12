@@ -6,14 +6,11 @@
  * client relie a un transport d'essai, pour verifier que la chaine complete
  * fonctionne et pas seulement le calcul de direction.
  *
- * RECONCILIATION AVEC LA FICHE. Elle demandait aussi un test verifiant que la
- * capture emet startCapture et endCapture. Ces deux evenements n'existent pas: ils
- * appartiennent a la capture par cone du mode tactique de la version 0.9.0,
- * ecartee du perimetre v1 (section 5 du ROADMAP), et le contrat d'evenements les
- * recense explicitement comme non portes. Dans le mode Classique, on capture en
- * touchant, et le moteur resout le contact: il n'y a aucune commande de capture a
- * emettre. Le test correspondant serait donc impossible a ecrire, et son absence
- * est une consequence du perimetre, pas un manque.
+ * LA CAPTURE. La fiche de l'etape 4.2 demandait un test verifiant que la capture
+ * emet startCapture et endCapture, deux evenements de la version 0.9.0 qui n'ont
+ * jamais ete portes. Dans le mode Classique, on capture en touchant, et il n'y a
+ * rien a emettre. Le mode Tactique de l'etape 7.1 a remplace les deux par une seule
+ * demande, capturer: ses tests sont en fin de fichier.
  */
 
 import type { IntentionDeplacement } from '@neon-ninja/shared';
@@ -304,5 +301,108 @@ describe('la demande de localisation', () => {
     controles.reinitialiser();
 
     expect(controles.prendreLaDemandeDeLocalisation()).toBe(false);
+  });
+});
+
+describe('le tir du mode Tactique', () => {
+  /**
+   * Une cible d'essai qui transmet l'evenement tel qu'on le decrit: touche maintenue,
+   * element vise. Elle dit si l'evenement a ete intercepte.
+   */
+  function cibleDeClavier(): EventTarget & {
+    envoyer(type: string, evenement: Record<string, unknown>): boolean;
+  } {
+    const ecoutes = new Map<string, EventListenerOrEventListenerObject[]>();
+
+    return {
+      addEventListener(type: string, ecoute: EventListenerOrEventListenerObject) {
+        ecoutes.set(type, [...(ecoutes.get(type) ?? []), ecoute]);
+      },
+      removeEventListener(type: string, ecoute: EventListenerOrEventListenerObject) {
+        ecoutes.set(
+          type,
+          (ecoutes.get(type) ?? []).filter((autre) => autre !== ecoute),
+        );
+      },
+      dispatchEvent() {
+        return true;
+      },
+      envoyer(type: string, evenement: Record<string, unknown>) {
+        let intercepte = false;
+        const complet = {
+          ...evenement,
+          preventDefault: () => {
+            intercepte = true;
+          },
+        } as unknown as Event;
+
+        for (const ecoute of ecoutes.get(type) ?? []) {
+          if (typeof ecoute === 'function') {
+            ecoute(complet);
+          } else {
+            ecoute.handleEvent(complet);
+          }
+        }
+
+        return intercepte;
+      },
+    };
+  }
+
+  it('part de la barre d espace dans une partie Tactique, une seule fois', () => {
+    const controles = new Controles();
+    const cible = cibleDeClavier();
+    brancherClavier(controles, { cible, fenetre: cibleDEssai(), capture: true });
+
+    expect(cible.envoyer('keydown', { key: ' ' })).toBe(true);
+    expect(controles.prendreLaDemandeDeTir()).toBe(true);
+    expect(controles.prendreLaDemandeDeTir()).toBe(false);
+    // Un tir n'est pas une intention de deplacement.
+    expect(controles.aEmettre()).toBeUndefined();
+  });
+
+  it('ne tire qu une fois quand la touche est maintenue', () => {
+    const controles = new Controles();
+    const cible = cibleDeClavier();
+    brancherClavier(controles, { cible, fenetre: cibleDEssai(), capture: true });
+
+    cible.envoyer('keydown', { key: ' ' });
+    controles.prendreLaDemandeDeTir();
+    cible.envoyer('keydown', { key: ' ', repeat: true });
+
+    expect(controles.prendreLaDemandeDeTir()).toBe(false);
+  });
+
+  it('laisse la barre d espace a un bouton qui a le focus', () => {
+    const controles = new Controles();
+    const cible = cibleDeClavier();
+    brancherClavier(controles, { cible, fenetre: cibleDEssai(), capture: true });
+
+    expect(cible.envoyer('keydown', { key: ' ', target: { tagName: 'BUTTON' } })).toBe(false);
+    expect(controles.prendreLaDemandeDeTir()).toBe(false);
+  });
+
+  it('laisse la barre d espace au navigateur dans une partie Classique', () => {
+    const controles = new Controles();
+    const cible = cibleDeClavier();
+    brancherClavier(controles, { cible, fenetre: cibleDEssai() });
+
+    expect(cible.envoyer('keydown', { key: ' ' })).toBe(false);
+    expect(controles.prendreLaDemandeDeTir()).toBe(false);
+  });
+
+  it('fait d une rafale entre deux images une seule demande, oubliee a l entree en partie', () => {
+    const controles = new Controles();
+
+    controles.demanderUnTir();
+    controles.demanderUnTir();
+
+    expect(controles.prendreLaDemandeDeTir()).toBe(true);
+    expect(controles.prendreLaDemandeDeTir()).toBe(false);
+
+    controles.demanderUnTir();
+    controles.reinitialiser();
+
+    expect(controles.prendreLaDemandeDeTir()).toBe(false);
   });
 });

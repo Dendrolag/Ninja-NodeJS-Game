@@ -53,6 +53,14 @@ describe('modeleSalon', () => {
     expect(modeleSalon(ETAT_INITIAL)).toBeUndefined();
   });
 
+  it('rappelle comment on capture dans le mode de la partie', () => {
+    const classique = modeleSalon(etat(salon('bob')));
+    const tactique = modeleSalon(etat({ ...salon('bob'), mode: 'tactique' }));
+
+    expect(classique?.regle).toContain('en touchant');
+    expect(tactique?.regle).toContain('cône');
+  });
+
   it('nomme le salon d apres son hote et marque l hote et nous-memes', () => {
     const modele = modeleSalon(etat(salon('bob')));
 
