@@ -45,6 +45,7 @@ import type {
   DimensionsCarte,
   Direction,
   Mode,
+  Orientation,
   Position,
   ReglagesPartie,
   ReglagesPartiels,
@@ -361,7 +362,49 @@ export interface DestructionDeBotNoir {
  * compteurs des joueurs.
  */
 export type EvenementPartie =
-  CaptureDeJoueur | CaptureParBotNoir | DestructionDeBotNoir | BonusRamasse | MalusRamasse;
+  | CaptureDeJoueur
+  | CaptureParBotNoir
+  | DestructionDeBotNoir
+  | BonusRamasse
+  | MalusRamasse
+  | TirDeCapture;
+
+/**
+ * Un joueur a tire, dans le mode Tactique (etape 7.1).
+ *
+ * Le tir a eu lieu, qu'il ait capture quelque chose ou non: un joueur sans charge,
+ * lui, ne tire pas, et ne laisse rien au journal. Les captures qu'il a produites
+ * laissent en plus leurs propres evenements, celui d'une capture de joueur par
+ * exemple.
+ */
+export interface TirDeCapture {
+  readonly type: 'tirDeCapture';
+  readonly joueur: IdentifiantEntite;
+  /** D'ou le tir est parti. */
+  readonly position: Position;
+  /** Dans quelle direction. */
+  readonly orientation: Orientation;
+  /** Nombre d'entites capturees, joueurs et bots confondus. Zero pour un tir sans effet. */
+  readonly captures: number;
+}
+
+/**
+ * Ce que le mode Tactique retient d'un joueur (etape 7.1).
+ *
+ * Rien de cela n'est dans Joueur, pour qu'une partie Classique n'en porte aucune
+ * trace. Voir EtatPartie.tactique.
+ */
+export interface EtatTactiqueDuJoueur {
+  /** La direction de son dernier deplacement: celle dans laquelle il vise. */
+  readonly orientation: Orientation;
+  /** Charges disponibles, de zero a TACTIQUE.CHARGES_MAXIMUM. */
+  readonly charges: number;
+  /**
+   * Temps avant qu'une charge revienne, en millisecondes. Il ne s'ecoule que si des
+   * charges manquent: aux charges pleines, il vaut une attente entiere.
+   */
+  readonly avantProchaineChargeMs: number;
+}
 
 /** L'etat complet d'une partie a un instant donne. */
 export interface EtatPartie {
@@ -388,11 +431,20 @@ export interface EtatPartie {
    * Le mode de la partie: le jeu de regles que le moteur applique.
    *
    * Il voyage dans l'etat pour la meme raison que les reglages: le moteur ne
-   * connait que ce qu'on lui passe. Fige a la creation de la partie, il choisit
-   * notamment la regle de resolution des contacts (voir REGLES_DES_MODES dans
-   * moteur.ts). Un seul mode existe en v1, le Classique.
+   * connait que ce qu'on lui passe. Fige a la creation de la partie, il choisit le
+   * jeu de regles du battement (voir REGLES_DES_MODES dans moteur.ts).
    */
   readonly mode: Mode;
+  /**
+   * L'orientation et les charges de chaque joueur, dans une partie Tactique.
+   *
+   * ABSENT D'UNE PARTIE CLASSIQUE, et c'est voulu: l'etat d'une partie Classique
+   * reste exactement celui d'avant l'arrivee du mode Tactique, ce que l'empreinte
+   * des parties verifie (tests/charge/empreinte.ts). Le jeu de regles Tactique pose
+   * ce champ a son premier battement; un joueur qui n'y figure pas encore a l'etat
+   * de depart (voir etatTactiqueDe dans tactique.ts).
+   */
+  readonly tactique?: Readonly<Record<IdentifiantEntite, EtatTactiqueDuJoueur>>;
   /** Reglages choisis par l'hote. Le moteur ne connait que ceux-la. */
   readonly reglages: ReglagesPartie;
   /** Dimensions de la carte jouee. */
@@ -463,7 +515,7 @@ export interface ProchainesApparitions {
 export interface OptionsEtatInitial {
   /** Graine de la partie. Deux parties de meme graine et memes entrees sont identiques. */
   readonly graine: number;
-  /** Mode de la partie. Le Classique par defaut, seul mode de la v1. */
+  /** Mode de la partie. Le Classique par defaut. */
   readonly mode?: Mode;
   /** Reglages a appliquer. Ceux qui manquent prennent la valeur par defaut. */
   readonly reglages?: ReglagesPartiels;

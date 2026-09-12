@@ -8,11 +8,10 @@
  *
  *   - detecterContacts constate. C'est de la geometrie, elle ne change rien.
  *   - resoudreContacts decide. C'est la regle du jeu, et elle change avec le
- *     mode: le mode Classique capture par simple proximite, le mode tactique
- *     prevu plus tard capturera par cone. Le point de branchement existe donc
- *     des maintenant, la ou le legacy melangeait tout.
+ *     mode: le mode Classique capture par simple proximite, le mode Tactique ne
+ *     capture pas au contact, puisqu'il capture par un cone (tactique.ts).
  *   - Le ramassage des bonus et des malus n'est pas un contact entre entites:
- *     il arrive avec l'etape 1.4.
+ *     il vit dans objets.ts.
  *
  * QUI ATTAQUE QUI. Le legacy appelait detectCollisions sur la seule entite qui
  * venait de bouger, et cette entite etait l'attaquant. Deux joueurs qui se
@@ -55,10 +54,8 @@ export interface Contact {
 /**
  * Une regle de resolution: ce qu'un mode de jeu fait des contacts releves.
  *
- * C'est le point d'extension du moteur. Le mode Classique est fourni ci-dessous
- * sous le nom regleClassique. Un mode tactique, qui capturera par cone
- * directionnel et non par simple proximite, s'ecrira comme une autre fonction de
- * ce type et se passera au moteur sans qu'aucune autre ligne ne change.
+ * Chaque mode en fournit une dans son jeu de regles (REGLES_DES_MODES, moteur.ts):
+ * regleClassique et regleTactique ci-dessous.
  */
 export type RegleDeResolution = (etat: EtatPartie, contacts: readonly Contact[]) => EtatPartie;
 
@@ -116,6 +113,78 @@ function horsDePortee(ecart: number): boolean {
 }
 
 /**
+ * Ce qu'un mode fait d'un contact ou figure au moins un joueur.
+ *
+ * Le reste est commun a tous les modes et ne se redecide pas: l'ordre de
+ * resolution, les entites disparues ou deplacees en cours de route, et la
+ * contagion entre bots, qui est une regle du monde et non une facon de capturer.
+ */
+interface ReglesDeContact {
+  /** Deux joueurs se touchent. */
+  readonly entreJoueurs: (etat: EtatPartie, premier: Joueur, second: Joueur) => Resolution;
+  /** Un joueur touche un bot ou un bot noir. */
+  readonly joueurEtBot: (etat: EtatPartie, joueur: Joueur, bot: Bot) => EtatPartie;
+}
+
+/**
+ * Fabrique la regle de resolution d'un mode a partir de ce qu'il fait des contacts
+ * ou figure un joueur.
+ *
+ * Les contacts sont resolus l'un apres l'autre, chacun sur l'etat laisse par le
+ * precedent. Une capture deplace la victime a l'autre bout de la carte: les
+ * contacts releves plus tot qui la concernaient encore n'ont donc plus lieu
+ * d'etre, et ils sont ecartes. Sans cela, une victime tout juste capturee
+ * pourrait capturer a son tour un joueur qu'elle ne touche plus.
+ */
+function regleDeContacts(regles: ReglesDeContact): RegleDeResolution {
+  return (etat, contacts) => {
+    let courant = etat;
+    const replacees = new Set<IdentifiantEntite>();
+
+    for (const contact of contacts) {
+      if (replacees.has(contact.premier) || replacees.has(contact.second)) {
+        continue;
+      }
+
+      const resolution = resoudreUnContact(courant, contact.premier, contact.second, regles);
+      courant = resolution.etat;
+
+      if (resolution.replacee !== undefined) {
+        replacees.add(resolution.replacee);
+      }
+    }
+
+    return courant;
+  };
+}
+
+/**
+ * La regle du mode Classique: on capture par simple proximite.
+ *
+ * Deux joueurs qui se touchent se disputent une capture; un joueur repeint le bot
+ * qu'il touche, ou detruit le bot noir qu'il touche s'il est invincible.
+ */
+export const regleClassique: RegleDeResolution = regleDeContacts({
+  entreJoueurs: duelDeJoueurs,
+  joueurEtBot: contactJoueurBot,
+});
+
+/**
+ * La regle du mode Tactique: toucher ne capture rien.
+ *
+ * On y capture par un cone (tactique.ts). Ce que le contact produit encore n'est
+ * pas une capture de joueur par un joueur, et c'est la decision du porteur du
+ * projet du 12 septembre 2026: les bots se transmettent toujours leur couleur, et
+ * un joueur invincible detruit toujours le bot noir qu'il touche. La v0.9.0 ne
+ * faisait ni l'un ni l'autre, par regression plus que par intention (fiche 7.1).
+ */
+export const regleTactique: RegleDeResolution = regleDeContacts({
+  entreJoueurs: (etat) => sansEffet(etat),
+  joueurEtBot: (etat, joueur, bot) =>
+    bot.type === 'botNoir' ? detruireBotNoir(etat, joueur.id, bot.id) : etat,
+});
+
+/**
  * Applique les consequences des contacts releves.
  *
  * Par defaut, la regle du mode Classique. Passer une autre regle en troisieme
@@ -127,35 +196,6 @@ export function resoudreContacts(
   regle: RegleDeResolution = regleClassique,
 ): EtatPartie {
   return regle(etat, contacts);
-}
-
-/**
- * La regle du mode Classique: on capture par simple proximite.
- *
- * Les contacts sont resolus l'un apres l'autre, chacun sur l'etat laisse par le
- * precedent. Une capture deplace la victime a l'autre bout de la carte: les
- * contacts releves plus tot qui la concernaient encore n'ont donc plus lieu
- * d'etre, et ils sont ecartes. Sans cela, une victime tout juste capturee
- * pourrait capturer a son tour un joueur qu'elle ne touche plus.
- */
-export function regleClassique(etat: EtatPartie, contacts: readonly Contact[]): EtatPartie {
-  let courant = etat;
-  const replacees = new Set<IdentifiantEntite>();
-
-  for (const contact of contacts) {
-    if (replacees.has(contact.premier) || replacees.has(contact.second)) {
-      continue;
-    }
-
-    const resolution = resoudreUnContact(courant, contact.premier, contact.second);
-    courant = resolution.etat;
-
-    if (resolution.replacee !== undefined) {
-      replacees.add(resolution.replacee);
-    }
-  }
-
-  return courant;
 }
 
 /** Ce qu'un contact resolu laisse derriere lui. */
@@ -183,6 +223,7 @@ function resoudreUnContact(
   etat: EtatPartie,
   premierId: IdentifiantEntite,
   secondId: IdentifiantEntite,
+  regles: ReglesDeContact,
 ): Resolution {
   const premier = entiteDe(etat, premierId);
   const second = entiteDe(etat, secondId);
@@ -195,12 +236,12 @@ function resoudreUnContact(
 
   if (premier.type === 'joueur') {
     return second.type === 'joueur'
-      ? duelDeJoueurs(etat, premier, second)
-      : sansEffet(contactJoueurBot(etat, premier, second));
+      ? regles.entreJoueurs(etat, premier, second)
+      : sansEffet(regles.joueurEtBot(etat, premier, second));
   }
 
   if (second.type === 'joueur') {
-    return sansEffet(contactJoueurBot(etat, second, premier));
+    return sansEffet(regles.joueurEtBot(etat, second, premier));
   }
 
   // Deux bots. Le legacy laissait celui qui bougeait repeindre l'autre; ici c'est
@@ -210,15 +251,14 @@ function resoudreUnContact(
   // La paire peut comprendre un bot noir, et c'est capturerBot qui le refuse: un
   // bot noir n'a pas de couleur a donner, pas plus qu'un bot blanc. Voir les
   // defauts X30 et X20 de l'audit. La regle vit la-bas plutot qu'ici pour qu'un
-  // futur mode de jeu qui ecrirait sa propre regle de resolution ne puisse pas
-  // l'oublier.
+  // mode de jeu qui ecrirait sa propre regle de resolution ne puisse pas l'oublier.
   return sansEffet(capturerBot(etat, premierId, secondId));
 }
 
 /**
- * Un joueur touche un bot: il le repeint, ou il detruit un bot noir s'il est
- * invincible. Un joueur ordinaire qui touche un bot noir ne provoque rien ici:
- * c'est le bot noir qui l'attaque, et cela vient a l'etape 1.5.
+ * Un joueur touche un bot, en Classique: il le repeint, ou il detruit un bot noir
+ * s'il est invincible. Un joueur ordinaire qui touche un bot noir ne provoque rien
+ * ici: c'est le bot noir qui l'attaque, et cela vit dans bots.ts.
  */
 function contactJoueurBot(etat: EtatPartie, joueur: Joueur, bot: Bot): EtatPartie {
   return bot.type === 'botNoir'
@@ -227,7 +267,7 @@ function contactJoueurBot(etat: EtatPartie, joueur: Joueur, bot: Bot): EtatParti
 }
 
 /**
- * Deux joueurs se touchent: l'un capture l'autre, ou rien ne se passe.
+ * Deux joueurs se touchent, en Classique: l'un capture l'autre, ou rien ne se passe.
  *
  * Quand les deux ont le droit de capturer, le generateur a graine tranche. Voir
  * l'explication en tete de fichier.

@@ -35,6 +35,7 @@ export {
   SEUIL_CONTACT_PX,
   detecterContacts,
   regleClassique,
+  regleTactique,
   resoudreContacts,
 } from './contacts.js';
 
@@ -69,6 +70,7 @@ export type {
   DestructionDeBotNoir,
   Entite,
   EtatPartie,
+  EtatTactiqueDuJoueur,
   EvenementPartie,
   HistoriqueCapture,
   IdentifiantEntite,
@@ -80,6 +82,7 @@ export type {
   OptionsAjoutJoueur,
   OptionsEtatInitial,
   ProchainesApparitions,
+  TirDeCapture,
   TypeEntite,
   ZoneSpeciale,
 } from './etat.js';
@@ -118,9 +121,18 @@ export { mettreEnPause, reprendre } from './pause.js';
 
 export { avancerUneEcheance, intervalleFixe, intervalleVariable } from './planification.js';
 
+export {
+  ETAT_TACTIQUE_DE_DEPART,
+  agirEnTactique,
+  dansLeCone,
+  etatTactiqueDe,
+  recharger,
+  tirer,
+} from './tactique.js';
+
 export { appliquerLesEffetsDeZone, avancerLesZones, estCache, zoneContient } from './zones.js';
 
-export type { EntreeJoueur, Entrees, EvaluationFinDePartie } from './moteur.js';
+export type { EntreeJoueur, Entrees, EvaluationFinDePartie, JeuDeRegles } from './moteur.js';
 export { REGLES_DES_MODES, evaluerFinDePartie, tick } from './moteur.js';
 
 export type { LigneScore } from './score.js';

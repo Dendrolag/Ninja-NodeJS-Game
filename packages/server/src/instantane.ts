@@ -299,6 +299,11 @@ function notificationsDUnFait(
 
     case 'malusRamasse':
       return malusRamasse(etat, evenement);
+
+    case 'tirDeCapture':
+      // Un tir ne s'adresse a personne en particulier. Ce qu'il montre a la salle
+      // se decide avec le contrat reseau du mode Tactique (etape 7.1, lot B).
+      return [];
   }
 }
 

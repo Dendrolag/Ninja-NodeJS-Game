@@ -29,9 +29,11 @@
  *      entrent en jeu quand leur heure est venue;
  *   4. les zones speciales vieillissent, apparaissent, et agissent sur les bots;
  *   5. les bonus et malus poses vieillissent, et de nouveaux apparaissent;
- *   6. on releve les contacts entre entites et on en tire les consequences,
- *      captures comprises;
- *   7. les joueurs ramassent les objets sur lesquels ils se trouvent.
+ *   6. le mode de jeu agit sur les entrees: rien en Classique; en Tactique, les
+ *      joueurs s'orientent, rechargent et tirent;
+ *   7. on releve les contacts entre entites et on en tire les consequences,
+ *      captures comprises, selon le mode;
+ *   8. les joueurs ramassent les objets sur lesquels ils se trouvent.
  *
  * Une partie SUSPENDUE ne fait rien de tout cela. Le battement a bien lieu, mais
  * le temps de jeu ne s'ecoule pas: voir battementSuspendu, plus bas.
@@ -51,7 +53,7 @@ import { VITESSES } from '@neon-ninja/shared';
 
 import { avancerLesBots } from './bots.js';
 import type { RegleDeResolution } from './contacts.js';
-import { detecterContacts, regleClassique, resoudreContacts } from './contacts.js';
+import { detecterContacts, regleClassique, regleTactique, resoudreContacts } from './contacts.js';
 import { resoudreDeplacement } from './deplacement.js';
 import { aLaLongueur, directionDuVecteur, norme } from './direction.js';
 import { fairePasserLeTemps } from './effets.js';
@@ -62,22 +64,32 @@ import {
   fairePasserLeTempsSurLesObjets,
   ramasserLesObjets,
 } from './objets.js';
+import { agirEnTactique } from './tactique.js';
 import { appliquerLesEffetsDeZone, avancerLesZones } from './zones.js';
 
 /**
  * Ce qu'un joueur demande au moteur pendant un battement.
  *
- * Le contrat lui-meme vit dans packages/shared sous le nom IntentionDeplacement,
- * parce que trois couches doivent en parler: le client qui l'emet, la couche
- * reseau qui le valide, et le moteur qui le consomme. Le nom local est conserve
- * pour que le moteur garde son vocabulaire: une entree, c'est ce qui entre dans
- * un battement.
+ * Le contrat du deplacement vit dans packages/shared sous le nom
+ * IntentionDeplacement, parce que trois couches doivent en parler: le client qui
+ * l'emet, la couche reseau qui le valide, et le moteur qui le consomme. Le nom
+ * local est conserve pour que le moteur garde son vocabulaire: une entree, c'est
+ * ce qui entre dans un battement.
  *
- * Il ne contient QUE l'intention. Aucun champ d'etat n'y a sa place: ni bonus, ni
- * appareil, ni vitesse. Voir le commentaire de IntentionDeplacement pour ce que
+ * Il ne contient QUE des intentions. Aucun champ d'etat n'y a sa place: ni bonus,
+ * ni appareil, ni vitesse. Voir le commentaire de IntentionDeplacement pour ce que
  * le legacy y mettait, et ce que cela permettait.
+ *
+ * UNE DEMANDE DE TIR S'Y AJOUTE pour le mode Tactique (etape 7.1). Elle est
+ * PONCTUELLE, a l'inverse du deplacement: le moteur la joue dans le battement qui
+ * la recoit, et c'est a l'appelant de ne pas la lui repasser au battement suivant.
+ * Le deplacement, lui, vaut jusqu'a ce qu'un autre le remplace. Dans une partie
+ * Classique, la demande est ignoree.
  */
-export type EntreeJoueur = IntentionDeplacement;
+export interface EntreeJoueur extends IntentionDeplacement {
+  /** Le joueur tire pendant ce battement. */
+  readonly capturer?: true;
+}
 
 /**
  * Les entrees de tous les joueurs pour un battement, indexees par identifiant.
@@ -94,16 +106,38 @@ export type EntreeJoueur = IntentionDeplacement;
 export type Entrees = Readonly<Record<IdentifiantEntite, EntreeJoueur>>;
 
 /**
- * La regle de resolution des contacts de chaque mode de jeu.
+ * Ce qui distingue un mode de jeu, vu du moteur.
+ *
+ * Le moteur fait avancer le monde de la meme facon dans tous les modes: joueurs,
+ * bots, zones, objets. Un mode decide de deux choses seulement.
+ */
+export interface JeuDeRegles {
+  /**
+   * Ce que le mode fait des entrees du battement, une fois tout le monde deplace et
+   * avant le releve des contacts. Le Classique n'y fait rien; le Tactique y oriente
+   * ses joueurs, recharge leurs charges et joue leurs tirs.
+   */
+  readonly agir: (etat: EtatPartie, entrees: Entrees, dtMs: number) => EtatPartie;
+  /** Ce que produisent les contacts releves. */
+  readonly resoudreContacts: RegleDeResolution;
+}
+
+/**
+ * Le jeu de regles de chaque mode.
  *
  * C'EST LE BRANCHEMENT DU MODE SUR LE MOTEUR (cadrage de l'etape 0.3, section 6).
- * Le moteur reste agnostique: il detecte les contacts, et laisse le mode de la
- * partie decider de ce qu'ils produisent. Ajouter un mode, c'est ajouter sa regle
- * ici; oublier de le faire est une erreur de compilation, la table etant indexee
- * par tous les modes du contrat.
+ * Le moteur reste agnostique: il fait avancer le monde, et laisse le mode de la
+ * partie decider de ce qui les distingue. Ajouter un mode, c'est ajouter son jeu de
+ * regles ici; oublier de le faire est une erreur de compilation, la table etant
+ * indexee par tous les modes du contrat.
+ *
+ * Jusqu'a l'etape 7.1, un mode ne fournissait que sa regle de contacts. Un tir
+ * n'est pas un contact: le mode Tactique a demande qu'un mode puisse aussi agir sur
+ * les entrees. Le Classique rend l'etat qu'il recoit, tel quel.
  */
-export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], RegleDeResolution>> = {
-  classique: regleClassique,
+export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>> = {
+  classique: { agir: sansAction, resoudreContacts: regleClassique },
+  tactique: { agir: agirEnTactique, resoudreContacts: regleTactique },
 };
 
 /** Verdict sur la fin d'une partie, sans aucune action declenchee. */
@@ -156,13 +190,16 @@ export function tick(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPart
   const bots = avancerLesBots(deplace, dtMs);
   const zones = appliquerLesEffetsDeZone(avancerLesZones(bots, dtMs), dtMs);
   const objets = faireApparaitreLesObjets(fairePasserLeTempsSurLesObjets(zones, dtMs), dtMs);
-  const contacts = resoudreContacts(
-    objets,
-    detecterContacts(objets),
-    REGLES_DES_MODES[objets.mode],
-  );
+  const regles = REGLES_DES_MODES[objets.mode];
+  const actions = regles.agir(objets, entrees, dtMs);
+  const contacts = resoudreContacts(actions, detecterContacts(actions), regles.resoudreContacts);
 
   return ramasserLesObjets(contacts);
+}
+
+/** Un mode qui n'agit pas sur les entrees: l'etat est rendu tel quel. */
+function sansAction(etat: EtatPartie): EtatPartie {
+  return etat;
 }
 
 /**

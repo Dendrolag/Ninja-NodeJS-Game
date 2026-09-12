@@ -175,7 +175,7 @@ export interface OptionsGameRoom {
   readonly id: string;
   /** Graine de la partie. Deux rooms de meme graine et memes entrees sont identiques. */
   readonly graine: number;
-  /** Mode de la partie. Le Classique par defaut, seul mode de la v1. */
+  /** Mode de la partie. Le Classique par defaut. */
   readonly mode?: Mode;
   /** Visibilite de la partie. Publique par defaut. */
   readonly visibilite?: Visibilite;

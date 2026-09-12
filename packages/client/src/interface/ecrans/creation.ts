@@ -14,7 +14,6 @@
  */
 
 import type { Mode, Visibilite } from '@neon-ninja/shared';
-import { MODES } from '@neon-ninja/shared';
 
 import type { EtatClient } from '../../etat.js';
 import { monterChampPseudo } from '../composants/champPseudo.js';
@@ -23,7 +22,7 @@ import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import type { Glyphe } from '../icones.js';
 import { icone } from '../icones.js';
 import { NOMS_DES_MODES } from '../modeles/cartes.js';
-import { modeleCreation } from '../modeles/creation.js';
+import { MODE_DE_CREATION, modeleCreation } from '../modeles/creation.js';
 import type { LigneRecapitulatif } from '../modeles/salon.js';
 import type { ContexteEcran, EcranAffiche } from './types.js';
 
@@ -31,6 +30,8 @@ import type { ContexteEcran, EcranAffiche } from './types.js';
 const DESCRIPTIONS_DES_MODES: Readonly<Record<Mode, string>> = {
   classique:
     'Ralliez les faux ninjas et capturez les autres joueurs pour leur voler leur troupeau.',
+  tactique:
+    'Capturez à distance tout ce qui se trouve dans le cône devant vous, avec cinq charges qui reviennent peu à peu.',
 };
 
 /** Les deux visibilites, telles que leurs tuiles les presentent. */
@@ -137,7 +138,7 @@ export function monterCreation(contexte: ContexteEcran): EcranAffiche {
             doc,
             'div',
             { classe: 'tuiles' },
-            ...MODES.map((mode) =>
+            ...[MODE_DE_CREATION].map((mode) =>
               creer(
                 doc,
                 'div',

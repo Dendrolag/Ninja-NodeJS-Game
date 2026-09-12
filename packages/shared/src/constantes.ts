@@ -93,13 +93,20 @@ export interface DimensionsCarte {
 /**
  * Les modes de jeu jouables.
  *
- * UN SEUL EN V1, le Classique (cadrage de l'etape 0.3). Un mode est un jeu de
- * regles enfichable: en ajouter un, c'est ajouter une valeur a cette liste, sa
- * capacite ci-dessous, et sa regle de resolution dans le moteur, sans refonte.
- * Le miroir n'est pas un mode: c'est un reglage de carte (tension 1 du journal de
- * conception), qui se combine avec n'importe quel mode.
+ * Un mode est un jeu de regles enfichable (cadrage de l'etape 0.3, section 6): en
+ * ajouter un, c'est ajouter une valeur a cette liste, sa capacite ci-dessous, et
+ * son jeu de regles dans le moteur, sans refonte. Le miroir n'est pas un mode:
+ * c'est un reglage de carte (tension 1 du journal de conception), qui se combine
+ * avec n'importe quel mode.
+ *
+ *   - Le Classique capture au contact. C'est le jeu d'origine.
+ *   - Le Tactique capture par un cone, devant soi, avec des charges limitees
+ *     (etape 7.1). Voir TACTIQUE plus bas.
+ *
+ * Ajouter un mode demande aussi une migration de la base, dont l'enumeration des
+ * modes est tiree de cette liste.
  */
-export const MODES = ['classique'] as const;
+export const MODES = ['classique', 'tactique'] as const;
 
 /** Un mode de jeu. */
 export type Mode = (typeof MODES)[number];
@@ -118,11 +125,48 @@ export type Mode = (typeof MODES)[number];
  * 150 bots ecrit 42 Mbit/s, soit 3,4 Mbit/s par joueur, la premiere limite cote
  * joueur. Douze joueurs ajoutent aussi une dizaine de points d'occupation du fil
  * du serveur par rapport a un seul. La capacite reste a douze; c'est le flux qui
- * doit maigrir (etape 2.3).
+ * a maigri (etape 2.3): 464 octets par battement pour une partie pleine, soit
+ * 0,07 Mbit/s par joueur.
+ *
+ * Le Tactique en accueille autant: rien dans ses regles ne change ce que coute un
+ * joueur (etape 7.1).
  */
 export const CAPACITES: Readonly<Record<Mode, number>> = {
   classique: 12,
+  tactique: 12,
 };
+
+/**
+ * La capture par cone du mode Tactique (etape 7.1).
+ *
+ * Valeurs de la version 0.9.0 du jeu d'origine (TACTICAL_MODE_CONFIG, branche
+ * mode-strategique), la seule ou le mode ait tourne, retenues telles quelles par le
+ * porteur du projet le 12 septembre 2026. Le nombre de bots que cette version
+ * imposait (45) n'est pas repris: il ecrasait le reglage de l'hote.
+ */
+export const TACTIQUE = {
+  /** Ouverture totale du cone, en degres: la moitie de chaque cote de l'orientation. */
+  ANGLE_DU_CONE_DEGRES: 90,
+  /** Distance maximale entre le centre du tireur et celui de sa cible, en pixels. */
+  PORTEE_PX: 100,
+  /** Charges d'un joueur au plus, et a son arrivee. */
+  CHARGES_MAXIMUM: 5,
+  /** Temps qu'il faut a une charge pour revenir, en millisecondes. */
+  RECHARGE_MS: 5000,
+  /** Orientation d'un joueur qui ne s'est pas encore deplace. */
+  ORIENTATION_DE_DEPART: 'est',
+} as const satisfies {
+  readonly ORIENTATION_DE_DEPART: Orientation;
+  readonly [reglage: string]: number | Orientation;
+};
+
+/**
+ * Une direction dans laquelle un joueur regarde: toutes, sauf l'immobilite.
+ *
+ * Dans le mode Tactique, un joueur arrete garde l'orientation de son dernier
+ * deplacement, et c'est dans cette direction qu'il vise.
+ */
+export type Orientation = Exclude<Direction, 'immobile'>;
 
 /**
  * Qui peut trouver une partie.

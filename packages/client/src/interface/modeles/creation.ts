@@ -28,7 +28,12 @@ import type { ValeursFormulaire } from './reglages.js';
 import { erreursParChamp, verifierLesValeurs } from './reglages.js';
 import type { LigneRecapitulatif } from './salon.js';
 
-/** Le mode des parties creees. Un seul existe en v1. */
+/**
+ * Le mode des parties creees depuis la page.
+ *
+ * Le Tactique existe dans le contrat depuis l'etape 7.1, mais ne se choisit pas
+ * encore ici: l'ecran ne propose que ce mode-ci.
+ */
 export const MODE_DE_CREATION: Mode = MODES[0];
 
 /** Ce que le joueur a choisi. */

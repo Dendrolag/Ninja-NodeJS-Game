@@ -30,10 +30,12 @@ export const PRESENTATION_CARTES: Readonly<Record<IdentifiantCarte, Presentation
  * Le nom de chaque mode de jeu, tel que le joueur le lit.
  *
  * Le mode est un jeu de regles enfichable (decision du 29 juin 2026), et le salon
- * le transporte depuis l'etape 2.4. Un seul existe en version 1.
+ * le transporte depuis l'etape 2.4. Le Tactique s'est ajoute au Classique a l'etape
+ * 7.1.
  */
 export const NOMS_DES_MODES: Readonly<Record<Mode, string>> = {
   classique: 'Classique',
+  tactique: 'Tactique',
 };
 
 /** Le nom d'une carte tel qu'on l'affiche, mode miroir compris. */

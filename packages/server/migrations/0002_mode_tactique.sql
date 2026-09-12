@@ -1,0 +1,1 @@
+ALTER TYPE "public"."mode_de_jeu" ADD VALUE 'tactique';

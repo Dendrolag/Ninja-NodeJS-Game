@@ -15,6 +15,13 @@
       "when": 1789117489849,
       "tag": "0001_authentification",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789201661555,
+      "tag": "0002_mode_tactique",
+      "breakpoints": true
     }
   ]
 }
