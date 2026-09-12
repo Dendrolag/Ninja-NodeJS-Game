@@ -51,7 +51,9 @@ describe('REGLES_DES_MODES', () => {
     // C'est ce qui garde l'etat d'une partie Classique identique a ce qu'il etait
     // avant l'etape 7.1, et l'empreinte des parties capable de le prouver.
     const depart = ajouterJoueur(creerEtatInitial({ graine: 1 }), { id: 'alice', pseudo: 'Alice' });
-    const entrees = { alice: { deplacement: { x: 1, y: 0 }, enMouvement: true, capturer: true } };
+    const entrees = {
+      alice: { deplacement: { x: 1, y: 0 }, enMouvement: true, capturer: true as const },
+    };
 
     expect('tactique' in tick(depart, entrees, 50)).toBe(false);
   });

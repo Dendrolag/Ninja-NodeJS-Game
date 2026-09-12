@@ -322,7 +322,11 @@ describe('recharger', () => {
   });
 
   it('reporte le reste de l attente: le decoupage du temps ne change rien', () => {
-    const depart = { orientation: 'sud' as const, charges: 0, avantProchaineChargeMs: 5000 };
+    const depart: EtatTactiqueDuJoueur = {
+      orientation: 'sud',
+      charges: 0,
+      avantProchaineChargeMs: 5000,
+    };
 
     let parBattements = depart;
     for (let battement = 0; battement < 257; battement += 1) {
