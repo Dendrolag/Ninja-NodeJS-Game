@@ -142,8 +142,8 @@ Repris des handoffs précédents, inchangé: les erreurs d'un travailleur échap
 
 ## Prochaine action exacte
 
-La section 3 du ROADMAP place ensuite **l'étape 6.1, retrait du legacy** (`docs/plan/etape-6-1.md`, réconciliée pendant cette étape). Dans une conversation neuve: vérifier que la liste des ressources de la version d'origine y est toujours juste (API Render et Vercel, clés dans les variables Windows `RENDER_API_KEY` et `VERCEL_TOKEN`), puis demander au porteur du projet son accord explicite avant toute suppression.
+La section 3 du ROADMAP place ensuite **l'étape 5.4, recette fonctionnelle** (`docs/plan/etape-5-4.md`), ajoutée à la fin de cette session à la demande du porteur du projet, qui a cru voir des défauts, dont l'attribution aléatoire des couleurs. Dans une conversation neuve: recueillir d'abord ce que le porteur du projet a observé, et lui présenter les manques connus listés ci-dessus pour qu'il décide de leur sort; puis écrire et dérouler la grille de recette. L'étape 6.1, retrait du legacy, vient après.
 
 ## Étape suivante
 
-Fiche à lire: `docs/plan/etape-6-1.md`
+Fiche à lire: `docs/plan/etape-5-4.md`

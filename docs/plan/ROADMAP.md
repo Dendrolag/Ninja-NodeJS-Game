@@ -78,6 +78,10 @@ Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision 
 
 **Décision du 14 septembre 2026: les autres modes attendent la fin du socle.** Le porteur du projet a tranché, « d'abord on finalise le socle, ensuite on l'enrichit »: aucun nouveau mode ne se construit avant la fin de la réécriture. Ordre du jalon: `7.1` (terminée), `5.3`, `6.1`. Les autres modes viendront ensuite, en phase 7, chacun avec ses règles tranchées par le porteur du projet.
 
+**Étape 5.3 terminée le 14 septembre 2026.** La page est en ligne sur Vercel, le serveur de jeu sur Render en offre gratuite, et chaque commit vert de `reecriture` se met en ligne seul, vérifié. Voir `docs/deploiement.md`.
+
+**Décision du 14 septembre 2026: une recette fonctionnelle avant le retrait du legacy.** Le porteur du projet a cru voir des manques ou des défauts, dont l'attribution aléatoire des couleurs, et demande une étape qui teste fonctionnellement tout ce qui a été fait: étape `5.4`, fiche rédigée le même jour. Ordre du jalon: `7.1` et `5.3` (terminées), `5.4`, `6.1`.
+
 ---
 
 ## 4. Carte thématique des étapes
@@ -170,6 +174,9 @@ Tests requis: comparaison avant-après chiffrée, TU inchangés au vert.
 **5.3. Déploiement.** Ramené à un déploiement simple, sans bascule progressive ni drapeau de fonctionnalité. Fiche réécrite le 14 septembre 2026: page sur Vercel, serveur de jeu sur Render, base sur Neon, sur des offres gratuites, avec un déploiement automatique et vérifié par la CI.
 Tests requis: TU et TI du contrôle de version entre la page et le serveur, de la politique de sécurité partagée et de la route de santé; vérification que la version se déploie, démarre et répond dans l'environnement cible.
 
+**5.4. Recette fonctionnelle.** Étape ajoutée le 14 septembre 2026, à la demande du porteur du projet. Dérouler une grille de recette de tout le jeu (écrans, règles, comptes, mode Tactique, cartes, multijoueur, mobile, production), en local et en production, en comparant au jeu d'origine là où il fait foi; corriger chaque défaut trouvé, dont l'attribution aléatoire des couleurs signalée.
+Tests requis: un test qui échouait avant chaque correction; la grille complète, chaque cas avec son verdict.
+
 ### Phase 6. Retrait du legacy
 
 **6.1. Extinction.** Retirer l'ancien monolithe une fois la nouvelle version en service.
@@ -195,3 +202,4 @@ Consignés ici pour que la décision reste traçable.
 6. **5.3 et 6.1 simplifiés.** Le legacy n'a pas de joueurs en ligne: déploiement en parallèle, drapeaux de fonctionnalité et migration progressive sont sans objet.
 7. **Phase 7 ajoutée le 12 septembre 2026, avec l'étape 7.1.** Le mode tactique n'avait ni numéro ni fiche. Il reçoit une phase à part plutôt qu'une place dans la phase 1: il n'est pas un portage de la base de référence, il traverse toutes les couches, et les modes suivants s'y rangeront.
 8. **Les autres modes après la fin du socle**, décision du porteur du projet du 14 septembre 2026. Le jalon 5 les plaçait entre 7.1 et 5.3; ils viennent désormais après 6.1.
+9. **Étape 5.4 ajoutée le 14 septembre 2026, une recette fonctionnelle.** Aucune étape n'avait déroulé le jeu entier tel qu'un joueur le vit, et le porteur du projet a cru voir des défauts, dont l'attribution aléatoire des couleurs. Elle se place avant 6.1: on ne retire pas la version d'origine sans avoir vérifié que la nouvelle la remplace.

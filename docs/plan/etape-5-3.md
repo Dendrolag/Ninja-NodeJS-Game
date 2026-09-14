@@ -67,4 +67,4 @@ Conditions de ROADMAP réunies, plus :
 
 ## Rituel de fin de session
 
-Écrire `docs/handoffs/etape-5-3-handoff.md` : adresses de production, mécanisme de déploiement, retour arrière, indicateurs surveillés, mesures. Prochaine action exacte : l'étape suivante de la section 3 du ROADMAP (6.1). Commiter.
+Écrire `docs/handoffs/etape-5-3-handoff.md` : adresses de production, mécanisme de déploiement, retour arrière, indicateurs surveillés, mesures. Prochaine action exacte : l'étape suivante de la section 3 du ROADMAP (5.4, recette fonctionnelle, ajoutée le 14 septembre 2026, puis 6.1). Commiter.

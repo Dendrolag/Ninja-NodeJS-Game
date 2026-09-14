@@ -4,7 +4,7 @@ Brief de session. Objectif unique : faire de la réécriture la seule version du
 
 ## Rituel de début de session
 
-Lire CLAUDE.md, le handoff de l'étape 5.3 (`docs/handoffs/etape-5-3-handoff.md` : adresses de production, mise en ligne, exploitation), puis cette fiche.
+Lire CLAUDE.md, le handoff de l'étape 5.4 (`docs/handoffs/etape-5-4-handoff.md` : recette fonctionnelle, défauts corrigés), puis cette fiche. Pour la production (adresses, mise en ligne, exploitation) : le handoff de l'étape 5.3 et `docs/deploiement.md`.
 
 ## Réconciliation du 14 septembre 2026
 
