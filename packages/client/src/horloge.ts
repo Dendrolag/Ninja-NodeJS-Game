@@ -15,7 +15,8 @@
  * client ne fait battre personne: sa boucle de rendu (etape 4.2) est cadencee
  * par le navigateur, pas par une minuterie. Deux besoins differents, deux
  * interfaces differentes; les reunir aurait donne au client une capacite dont il
- * n'a pas l'usage.
+ * n'a pas l'usage. Le seul rappel differe du client, reessayer d'ouvrir le lien
+ * quand le serveur dort (etape 5.3), a sa propre minuterie, dans minuterie.ts.
  *
  * LA VALEUR N'EST PAS UNE HEURE DU MUR. performance.now() est monotone, ce que
  * Date.now() n'est pas: cette derniere peut reculer quand le systeme se

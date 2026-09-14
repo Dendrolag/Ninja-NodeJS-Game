@@ -48,6 +48,8 @@ export type Action =
   | { readonly type: 'connexionPerdue' }
   /** Le lien n'a pas pu s'ouvrir, pour ce motif. */
   | { readonly type: 'connexionRefusee'; readonly motif: string }
+  /** Le serveur ne repond pas encore: un nouvel essai est planifie (etape 5.3). */
+  | { readonly type: 'serveurEnReveil' }
   /** La session gardee par le navigateur est en cours de verification. */
   | { readonly type: 'sessionEnVerification' }
   /**

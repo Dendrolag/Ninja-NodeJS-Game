@@ -20,7 +20,7 @@ import type { CoffreDeJeton } from '../comptes/coffre.js';
 import { creerCoffreDeJeton } from '../comptes/coffre.js';
 import { creerHorlogeClientManuelle } from '../horloge.js';
 import type { ReseauFactice } from '../reseau.js';
-import { creerReseauFactice } from '../reseau.js';
+import { SERVEUR_INJOIGNABLE, creerReseauFactice } from '../reseau.js';
 import type { Application } from './application.js';
 import { monterApplication } from './application.js';
 import {
@@ -163,6 +163,19 @@ describe('l accueil et la session', () => {
     expect(coffre.lire()).toBeUndefined();
     expect(boutonNomme(hote, 'Continuer en invité')).toBeUndefined();
     expect(estCache(obligatoire(hote, '.champ-pseudo'))).toBe(false);
+  });
+
+  it('dit que le serveur demarre quand il ne repond pas encore, sans bouton a presser', async () => {
+    client.ouvrir();
+    await laisserRepondre();
+    reseau.simulerRefus(SERVEUR_INJOIGNABLE);
+
+    expect(obligatoire(hote, '.accueil-lien').textContent).toBe(
+      'Le serveur de jeu démarre, cela peut prendre jusqu’à une minute. Nouvel essai automatique…',
+    );
+    expect(boutonNomme(hote, 'Réessayer')).toBeUndefined();
+    expect(boutonNomme(hote, 'Recharger la page')).toBeUndefined();
+    expect(boutonNomme(hote, 'Continuer en invité')).toBeUndefined();
   });
 
   it('dit a une page d une autre version de se recharger, et ne propose rien d autre', async () => {

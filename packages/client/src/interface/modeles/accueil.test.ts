@@ -187,6 +187,19 @@ describe('modeleAccueil, quand le lien est refuse', () => {
   });
 });
 
+describe('modeleAccueil, pendant le reveil du serveur', () => {
+  it('dit que le lien attend, sans rien proposer: la page reessaie d elle-meme', () => {
+    expect(modeleAccueil({ ...ETAT_INITIAL, connexion: 'reveil' }, 'Alice')).toMatchObject({
+      lien: 'reveil',
+      motifDuLien: undefined,
+      peutJouer: false,
+      peutRecharger: false,
+      peutReessayer: false,
+      peutContinuerEnInvite: false,
+    });
+  });
+});
+
 describe('modeleAccueil, quand la page n est pas de la version du serveur', () => {
   const PERIMEE: EtatClient = {
     ...ETAT_INITIAL,

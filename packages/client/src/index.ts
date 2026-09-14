@@ -123,10 +123,16 @@ export type {
   Reseau,
   ReseauFactice,
 } from './reseau.js';
-export { creerReseauFactice } from './reseau.js';
+export { SERVEUR_INJOIGNABLE, creerReseauFactice } from './reseau.js';
 
 export type { OptionsReseauSocketIo } from './reseauSocketIo.js';
-export { SERVEUR_INJOIGNABLE, creerReseauSocketIo } from './reseauSocketIo.js';
+export { creerReseauSocketIo } from './reseauSocketIo.js';
+
+export type { Annulation, Minuterie, MinuterieManuelle } from './minuterie.js';
+export { creerMinuterieManuelle, minuterieNavigateur } from './minuterie.js';
+
+export type { OptionsReveil } from './reveil.js';
+export { ATTENTE_ENTRE_DEUX_ESSAIS_MS, DUREE_DU_REVEIL_MS, brancherLeReveil } from './reveil.js';
 
 export {
   effetsEnCours,

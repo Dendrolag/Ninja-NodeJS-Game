@@ -17,10 +17,14 @@ import type { Server } from 'node:http';
 
 import type { Client, CoffreDeJeton } from '@neon-ninja/client';
 import {
+  ATTENTE_ENTRE_DEUX_ESSAIS_MS,
+  DUREE_DU_REVEIL_MS,
   SERVEUR_INJOIGNABLE,
   creerApiComptesHttp,
   creerClient,
   creerCoffreDeJeton,
+  creerHorlogeClientManuelle,
+  creerMinuterieManuelle,
   creerReseauSocketIo,
 } from '@neon-ninja/client';
 import type { ServeurMonte } from '@neon-ninja/server';
@@ -207,7 +211,7 @@ describe('les comptes, du client au serveur', () => {
     expect(await comptes.compteDeSession(jeton)).toBeUndefined();
   });
 
-  it('dit que le serveur de jeu ne repond pas', async () => {
+  it('attend le reveil d un serveur de jeu qui ne repond pas, puis dit qu il ne repond pas', async () => {
     // Un serveur HTTP qui coupe toute demande de lien, sans faire attendre.
     const muet = createServer();
     muet.on('upgrade', (_requete, socket) => {
@@ -216,8 +220,21 @@ describe('les comptes, du client au serveur', () => {
     autresServeurs.push(muet);
     await new Promise<void>((resoudre) => muet.listen(0, resoudre));
 
-    const client = monterUnClient(creerCoffreDeJeton(), { adresse: adresseDe(muet) });
+    // Le temps du reveil passe a la main: le test n'attend pas une minute et demie.
+    const horloge = creerHorlogeClientManuelle();
+    const minuterie = creerMinuterieManuelle();
+    const client = creerClient({
+      reseau: creerReseauSocketIo({ url: adresseDe(muet) }),
+      horloge,
+      minuterie,
+    });
+    clients.push(client);
+
     client.ouvrir();
+    await attendreQue(() => client.etat.connexion === 'reveil', 'l attente du reveil');
+
+    horloge.avancerDe(DUREE_DU_REVEIL_MS);
+    minuterie.avancerDe(ATTENTE_ENTRE_DEUX_ESSAIS_MS);
     await attendreQue(() => client.etat.connexion === 'refusee', 'le refus du lien');
 
     expect(client.etat.refusDeConnexion).toBe(SERVEUR_INJOIGNABLE);

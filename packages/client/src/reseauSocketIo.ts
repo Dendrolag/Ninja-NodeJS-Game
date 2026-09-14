@@ -36,6 +36,7 @@ import type { Socket } from 'socket.io-client';
 import { io } from 'socket.io-client';
 
 import type { ArgumentsMontants, NomDescendant, NomMontant, Reseau } from './reseau.js';
+import { SERVEUR_INJOIGNABLE } from './reseau.js';
 
 /** La socket du client: les contrats vus a l'envers de ceux du serveur. */
 type SocketCliente = Socket<EvenementsServeurVersClient, EvenementsClientVersServeur>;
@@ -62,10 +63,6 @@ export interface OptionsReseauSocketIo {
 
 /** La raison que donne Socket.IO quand c'est le client lui-meme qui ferme le lien. */
 const FERMETURE_VOLONTAIRE = 'io client disconnect';
-
-/** Ce que le joueur lit quand le serveur de jeu ne repond pas. */
-export const SERVEUR_INJOIGNABLE =
-  'Le serveur de jeu ne répond pas. Vérifiez votre connexion, puis réessayez.';
 
 /**
  * Cree un transport Socket.IO, sans ouvrir le lien.

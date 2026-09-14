@@ -86,7 +86,7 @@ Le serveur et la page doivent toujours être du même commit, sans quoi le serve
 
 - **`/sante`** du serveur : version en ligne, nombre de parties, de joueurs et de connexions, et adresse sous laquelle le serveur voit le demandeur.
 - **Journaux** : tableau de bord Render, onglet Logs du service ; la CI, job « Mise en ligne ».
-- **Mise en veille** : en offre gratuite, le serveur s'endort après quinze minutes sans trafic, et se réveille en une minute environ à la visite suivante. Une partie en cours le garde éveillé.
+- **Mise en veille** : en offre gratuite, le serveur s'endort après quinze minutes sans trafic, et se réveille à la visite suivante : quinze secondes mesurées le 14 septembre 2026, jusqu'à une minute selon Render. Pendant ce temps, la page dit que le serveur démarre et réessaie d'elle-même, toutes les trois secondes pendant une minute et demie. Une partie en cours le garde éveillé.
 - **Heures gratuites** : 750 heures par mois pour tout l'espace de travail Render, partagées avec le service « To The Point » de la version d'origine tant qu'il existe.
 - **Échéances** : le jeton Vercel expire le 14 septembre 2027. Le renouveler avant : nouveau jeton, puis variable `VERCEL_TOKEN` de la machine de développement et secret GitHub du même nom.
 

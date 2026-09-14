@@ -105,6 +105,16 @@ export interface Reseau {
   fermer(): void;
 }
 
+/**
+ * Ce que le joueur lit quand le serveur de jeu ne repond pas.
+ *
+ * Un transport rend ce motif pour une panne de transport, par opposition a un refus
+ * du serveur, qui porte le sien. Le client s'en sert pour attendre qu'un serveur
+ * endormi se reveille (reveil.ts), avant de le montrer.
+ */
+export const SERVEUR_INJOIGNABLE =
+  'Le serveur de jeu ne répond pas. Vérifiez votre connexion, puis réessayez.';
+
 /** Un message envoye par le client, tel que le banc d'essai le retient. */
 export interface MessageEmis {
   readonly nom: NomMontant;

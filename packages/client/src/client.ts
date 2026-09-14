@@ -41,7 +41,10 @@ import type { HorlogeClient } from './horloge.js';
 import { horlogeNavigateur } from './horloge.js';
 import type { Magasin, Observateur } from './magasin.js';
 import { creerMagasin } from './magasin.js';
+import type { Minuterie } from './minuterie.js';
+import { minuterieNavigateur } from './minuterie.js';
 import type { Reseau } from './reseau.js';
+import { brancherLeReveil } from './reveil.js';
 
 /** Ce qu'il faut pour monter un client. */
 export interface OptionsClient {
@@ -49,6 +52,8 @@ export interface OptionsClient {
   readonly reseau: Reseau;
   /** L'horloge locale. Celle du navigateur par defaut. */
   readonly horloge?: HorlogeClient;
+  /** La minuterie des essais d'ouverture, quand le serveur dort. Celle du navigateur par defaut. */
+  readonly minuterie?: Minuterie;
   /** Le magasin. Un neuf par defaut. */
   readonly magasin?: Magasin;
   /** Les requetes des comptes. Absentes, on ne joue qu'en invite. */
@@ -164,12 +169,6 @@ export function creerClient(options: OptionsClient): Client {
     }),
   );
 
-  ecouter(
-    reseau.surRefus((motif) => {
-      magasin.appliquer({ type: 'connexionRefusee', motif });
-    }),
-  );
-
   // -- La session ------------------------------------------------------------
 
   const session = brancherLaSession({
@@ -177,6 +176,20 @@ export function creerClient(options: OptionsClient): Client {
     reseau,
     api: options.comptes,
     coffre: options.coffre ?? creerCoffreDeJeton(),
+    ecouter,
+  });
+
+  // Un lien qui ne s'ouvre pas: refuse par le serveur, ou en attente de son reveil
+  // quand il ne repond pas (etape 5.3). Les nouveaux essais passent par la session,
+  // qui presente celle qui est gardee.
+  brancherLeReveil({
+    magasin,
+    reseau,
+    horloge,
+    minuterie: options.minuterie ?? minuterieNavigateur,
+    reessayer: () => {
+      session.reessayer();
+    },
     ecouter,
   });
 

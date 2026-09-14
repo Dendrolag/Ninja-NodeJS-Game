@@ -86,6 +86,16 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
         entreeEnCours: false,
       };
 
+    // Aucun refus a montrer: la page attend le serveur, et reessaie d'elle-meme.
+    case 'serveurEnReveil':
+      return {
+        ...etat,
+        ecran,
+        connexion: 'reveil',
+        refusDeConnexion: undefined,
+        entreeEnCours: false,
+      };
+
     case 'sessionEnVerification':
       return { ...etat, ecran, session: { nature: 'verification' } };
 

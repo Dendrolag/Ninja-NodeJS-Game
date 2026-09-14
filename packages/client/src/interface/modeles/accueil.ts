@@ -36,8 +36,10 @@ export type EtatDuLien =
   | 'etabli'
   /** Le lien a ete perdu. La reconnexion automatique n'existe pas. */
   | 'perdu'
-  /** Le lien n'a pas pu s'ouvrir: le serveur l'a refuse, ou ne repond pas. */
-  | 'refuse';
+  /** Le lien n'a pas pu s'ouvrir: le serveur l'a refuse, ou ne repond toujours pas. */
+  | 'refuse'
+  /** Le serveur ne repond pas encore: la page reessaie d'elle-meme (etape 5.3). */
+  | 'reveil';
 
 /** Ce que l'accueil affiche. */
 export interface ModeleAccueil {
@@ -72,6 +74,7 @@ const LIEN_SELON_LA_CONNEXION: Readonly<Record<EtatConnexion, EtatDuLien>> = {
   connecte: 'etabli',
   perdue: 'perdu',
   refusee: 'refuse',
+  reveil: 'reveil',
 };
 
 /** Ce que l'accueil dit a un joueur dont la session gardee a expire. */

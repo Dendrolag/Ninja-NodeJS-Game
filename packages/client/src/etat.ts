@@ -60,7 +60,15 @@ export type EtatConnexion =
    * session fait refuser le lien (etape 3.2); sans cet etat, l'accueil attendrait
    * une connexion qui ne viendra jamais.
    */
-  | 'refusee';
+  | 'refusee'
+  /**
+   * Le serveur ne repond pas encore: la page reessaie d'elle-meme.
+   *
+   * Ajoute a l'etape 5.3. Le serveur de production s'endort faute de trafic, et met
+   * du temps a se reveiller: pendant ce temps, l'accueil dit qu'il demarre, au lieu
+   * d'un refus que le joueur croirait definitif. Voir reveil.ts.
+   */
+  | 'reveil';
 
 /**
  * La session: jouer en invite, ou avec un compte.
