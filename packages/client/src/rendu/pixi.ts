@@ -113,6 +113,26 @@ export async function prechargerLesSprites(): Promise<void> {
 }
 
 /**
+ * Precharge tout ce qu'une partie affichera: les images des personnages et des objets,
+ * et le decor de sa carte.
+ *
+ * APPELE DES LE COMPTE A REBOURS DU SALON (recette de l'etape 5.4). Le decor d'une
+ * carte pese pres de trois megaoctets: telecharge au lancement meme, il se chargeait
+ * pendant que la partie tournait deja. Le montage de l'ecran de jeu retrouve ensuite
+ * ces textures deja chargees.
+ */
+export async function prechargerLaPartie(carte: string, modeMiroir: boolean): Promise<void> {
+  const adresse = (couche: 'background' | 'foreground'): string =>
+    `${RACINE_RESSOURCES}/${cheminCarte(carte, modeMiroir, couche)}`;
+
+  await Promise.all([
+    prechargerLesSprites(),
+    Assets.load<Texture>(adresse('background')),
+    Assets.load<Texture>(adresse('foreground')),
+  ]);
+}
+
+/**
  * Coupe une image de ninja en son corps et ses details, et range les deux textures.
  *
  * Les pixels se lisent en posant l'image sur un canevas, comme le faisait le jeu

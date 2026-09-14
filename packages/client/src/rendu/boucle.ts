@@ -51,6 +51,7 @@ import type { Localisation } from './localisation.js';
 import { localiser, opaciteDeLocalisation } from './localisation.js';
 import type { Rendu } from './pixi.js';
 import { construireScene } from './scene.js';
+import { creerJugeDeStabilite } from './stabilite.js';
 
 /** Ce qu'il faut pour faire tourner une partie a l'ecran. */
 export interface OptionsBoucle {
@@ -65,6 +66,11 @@ export interface OptionsBoucle {
   readonly sons?: LecteurDeSons;
   /** L'affichage des points gagnes. Absent, les gains ne se voient qu'au classement. */
   readonly pointsFlottants?: Pick<AfficheurDePoints, 'montrer'>;
+  /**
+   * Appele une fois, quand la partie est dessinee a une cadence fluide (stabilite.ts):
+   * l'ecran de jeu leve alors son ecran de preparation.
+   */
+  readonly surStabilite?: () => void;
   /** Le cadrage est-il celui d'un appareil tactile. */
   readonly mobile?: boolean;
   /** Taille de la zone d'affichage, relue a chaque image. */
@@ -116,6 +122,8 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
   let apparitionMontree = false;
   let vivante = true;
   let prochaineImage: number | undefined;
+  const juge = creerJugeDeStabilite();
+  let stabiliteAnnoncee = false;
 
   const uneImage = (instant: number): void => {
     const etat = options.client.etat;
@@ -166,6 +174,13 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
 
     options.rendu.dessiner(construireScene(etat, lissee, maintenant, localisation), camera);
     options.surcouche?.afficher(construireHud(etat, maintenant));
+
+    // Les premieres images dessinees preparent le decor et la lueur, et rament: on
+    // annonce le moment ou l'affichage devient fluide (recette de l'etape 5.4).
+    if (!stabiliteAnnoncee && juge.observer(instant, lissee !== undefined)) {
+      stabiliteAnnoncee = true;
+      options.surStabilite?.();
+    }
 
     // 6. Les points gagnes naissent a leur place sur l'ecran, vue par la camera de
     //    cette image.

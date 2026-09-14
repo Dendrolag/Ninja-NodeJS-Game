@@ -19,8 +19,9 @@ Vérifier en jouant, écran par écran et règle par règle, que la réécriture
 - **Liste des parties vivante** : elle se redemande toutes les cinq secondes sur son écran, sans montrer de recherche ni empiler les demandes.
 - **Mise en ligne ciblée** : elle lit la version en ligne et ne part que si un fichier du jeu a changé depuis ; un commit de documentation ne coupe plus les parties.
 - **Scénarios de bout en bout** : le parcours de navigation, seul à garder le délai par défaut de trente secondes, en manquait sous charge ; délais alignés sur les autres parcours.
-- **Seconde série de signalements, sur iPhone en production** : bots tous blancs, joueur invisible, caméra pas assez zoomée, saccades, bouton de localisation introuvable. Reproduite en pilotant WebKit en émulation iPhone contre la production. Cause principale : la caméra plaçait son point visé en divisant deux fois la taille de l'écran par la densité ; à densité 3, le joueur et ses bots tombaient sous le HUD et la carte s'arrêtait aux deux tiers de l'écran. Corrigée, avec la densité du rendu plafonnée à 2 et un vrai bouton de localisation sous le pouce. Le zoom mobile est celui du legacy : question posée au porteur du projet.
-- **Grille de recette** : `docs/recette/recette-5-4.md`, 70 cas (11 signalements, 59 cas de recette), chacun avec son attendu, sa source, ses preuves et son verdict. Déroulée en local (un joueur, deux onglets, fenêtre mobile, trois cartes dont une en miroir, mode Tactique) et en production.
+- **Seconde série de signalements, sur iPhone en production** : bots tous blancs, joueur invisible, caméra pas assez zoomée, saccades, bouton de localisation introuvable. Reproduite en pilotant WebKit en émulation iPhone contre la production. Cause principale : la caméra plaçait son point visé en divisant deux fois la taille de l'écran par la densité ; à densité 3, le joueur et ses bots tombaient sous le HUD et la carte s'arrêtait aux deux tiers de l'écran. Corrigée, avec la densité du rendu plafonnée à 2 et un vrai bouton de localisation sous le pouce. Le zoom mobile, celui du legacy, est resserré à 360 pixels de carte en largeur sur décision du porteur du projet.
+- **Lancement d'une partie qui rame sur téléphone** : mesuré, les premières images dessinées portaient des tâches longues pendant que le décor partait vers la carte graphique. Le décor et les images se préchargent maintenant dès le compte à rebours du salon, et un écran « Préparation de la partie… » reste posé au-delà du lancement jusqu'à un affichage fluide, trois secondes au plus.
+- **Grille de recette** : `docs/recette/recette-5-4.md`, 71 cas (12 signalements, 59 cas de recette), chacun avec son attendu, sa source, ses preuves et son verdict. Déroulée en local (un joueur, deux onglets, fenêtre mobile, trois cartes dont une en miroir, mode Tactique) et en production.
 - **Jeu d'origine comme référence** : le déploiement encore en ligne sert exactement le `client.js` et le `styles.css` de `legacy/`, vérifié par empreinte.
 
 ## Fichiers créés ou modifiés
@@ -74,6 +75,16 @@ Commit `79c6cb9`, caméra sur téléphone, densité, bouton de localisation :
 - `tests/e2e/rendu-couleurs.spec.ts`, `playwright.config.ts` : l'écran relu, les ninjas visés au milieu, sur le projet mobile aussi.
 - `tests/e2e/navigation.spec.ts` : sur téléphone, un bouton de localisation à la taille d'un pouce, dans la moitié basse de l'écran.
 
+Commit du cadrage mobile et du lancement :
+
+- `packages/client/src/rendu/apparence.ts` et `camera.test.ts` : `CADRAGE_MOBILE` à 360 par 271 pixels de carte ; `STABILITE`.
+- `packages/client/src/rendu/stabilite.ts` et test (créés) : le juge d'un affichage fluide.
+- `packages/client/src/rendu/boucle.ts` et test : l'annonce `surStabilite`.
+- `packages/client/src/rendu/pixi.ts` : `prechargerLaPartie`, le décor et les images.
+- `packages/client/src/interface/application.ts` et test : `prechargerLeJeu`, appelé au début du compte à rebours.
+- `packages/client/src/principal.ts` : le préchargement branché.
+- `packages/client/src/interface/ecrans/jeu.ts` : l'écran « Préparation de la partie… », levé à l'annonce de stabilité.
+
 Commits de ce handoff :
 
 - `docs/recette/recette-5-4.md` (créé) : la grille.
@@ -94,15 +105,19 @@ Aucune modification de `legacy/`, `tests/caracterisation/` ni `master`.
   - **session** : continuer en invité ferme la session côté serveur ;
   - **mise en ligne** : lecture de la version en ligne ; documentation, tests, `legacy/` et `.claude/` écartés, tout le reste et l'inconnu gardés ;
   - **fin de partie** : échec puis réussite sous le même identifiant, échec annoncé seulement après le dernier essai ; en base, une partie enregistrée deux fois ne compte qu'une fois et rend la même évolution ; deux fins de partie n'ont jamais le même identifiant ;
-  - **liste vivante** : redemandée toutes les cinq secondes sur son écran, sans recherche affichée, sans empilement, arrêtée en quittant l'écran et à la fermeture.
-- Résultat : **1 722 tests unitaires sur 1 722** (projet `unitaires`) ; **53 tests de base sur 53** contre une branche Neon neuve ; types (paquets, tests, bout en bout), linter et formatage verts.
-- Bout en bout en local, bureau et mobile : 15 sur 15 ; joués deux fois en parallèle, 29 sur 30 avant l'alignement des délais, **30 sur 30** après.
+  - **liste vivante** : redemandée toutes les cinq secondes sur son écran, sans recherche affichée, sans empilement, arrêtée en quittant l'écran et à la fermeture ;
+  - **cadrage mobile** : 360 pixels de carte en largeur sur un téléphone tenu droit, les proportions gardées couché ;
+  - **stabilité de l'affichage** : rien avant que la partie soit dessinée, stable après trois images rapides d'affilée, compte remis à zéro par une image lente, stable au plus tard après trois secondes, et pour de bon ; la boucle l'annonce une seule fois ;
+  - **préchargement** : l'application précharge la partie dès le début du compte à rebours, une fois, avec les réglages du salon.
+- Résultat : **1 732 tests unitaires sur 1 732** (projet `unitaires`) ; **53 tests de base sur 53** contre une branche Neon neuve ; types (paquets, tests, bout en bout), linter et formatage verts.
+- Bout en bout en local, bureau et mobile : 15 sur 15 ; joués deux fois en parallèle, 29 sur 30 avant l'alignement des délais, **30 sur 30** après ; **16 sur 16** avec le scénario des couleurs rejoué sur mobile et l'écran de préparation.
+- Lancement mesuré sur un téléphone simulé (Chromium, carte graphique, taille Pixel 7, processeur ralenti quatre fois). Avant : deux tâches longues de 134 et 104 millisecondes sur les premières images visibles. Après : les tâches longues (242 et 70 millisecondes) tombent pendant l'écran de préparation, levé à 581 millisecondes du lancement ; aucune ensuite, et l'image la plus longue des trois premières secondes visibles dure 17 millisecondes.
 - Couverture des instructions : **99,84 pour cent** sur `sim` et `shared` (99,84 au handoff 5.3) ; `sim` à **99,67** (99,66) ; `shared` à 100.
 - Aucune régression de caractérisation.
 
 ## Décisions et écarts au plan
 
-Cinq entrées au journal de `docs/design/README.md`, datées du 14 septembre 2026 : la recoloration par calques, l'animation des icônes, le retour des points flottants, les quatre manques connus traités, et la caméra en pixels CSS avec la densité plafonnée. Points à lire ici.
+Sept entrées au journal de `docs/design/README.md`, datées du 14 septembre 2026 : la recoloration par calques, l'animation des icônes, le retour des points flottants, les quatre manques connus traités, la caméra en pixels CSS avec la densité plafonnée, le cadrage mobile à 360 pixels, et la partie préparée pendant le compte à rebours. Points à lire ici.
 
 ### 1. La fiche supposait un défaut d'attribution, c'était un défaut d'affichage
 
@@ -136,7 +151,7 @@ Nouveau, ouvert par cette étape :
 
 - **Un point flottant a manqué une fois en jeu.** En Classique, pendant une série de ralliements, le score est passé de 1 à 7 sans qu'aucun point flottant ne soit relevé dans la page. Dans une autre partie, la capture suivante en a bien posé un. Ce n'était pas reproductible ; la cause la plus probable est un onglet en arrière-plan, où le navigateur suspend la boucle de rendu. À surveiller en jeu.
 - **La fluidité sur iPhone reste à confirmer.** La densité plafonnée divise par plus de deux les pixels de chaque image, mais WebKit sans carte graphique ne mesure pas la cadence d'un téléphone. Si les saccades persistent, les pistes suivantes sont la lueur, calculée sur tout l'écran, et les deux sprites par personnage de la recoloration.
-- **Le zoom mobile est celui du legacy**, 600 par 451 pixels de carte ; le porteur du projet le trouve trop large. Sa décision, une fois la caméra corrigée en ligne, se reporte dans `CADRAGE_MOBILE` (`packages/client/src/rendu/apparence.ts`).
+- **Le lancement sur téléphone reste à confirmer.** Le préchargement et l'écran de préparation déplacent le coût des premières images hors du jeu visible, mesuré sur un téléphone simulé ; seul un vrai iPhone dit si trois secondes suffisent. Si la partie rame encore après l'écran, les pistes suivantes sont un décor réduit sur téléphone (deux textures de 3 000 par 2 000 pixels) et la lueur.
 - **En haut ou en bas de la carte, le joueur passe sous le HUD sur téléphone** : la caméra s'arrête au bord de la carte, comme dans le legacy, et le panneau du temps couvre le haut de l'écran.
 
 Repris des handoffs précédents, inchangé : les erreurs d'un travailleur échappent aux scénarios de bout en bout ; les limites de tentatives vivent en mémoire de l'instance ; le filtrage du flux par zone d'intérêt est écarté par la mesure ; le relevé des contacts et le lissage du client restent en carré du nombre d'entités ; l'outil de Vercel est téléchargé par npx à chaque mise en ligne ; des déploiements Vercel non promus restent de la première mise en ligne ; les heures gratuites de Render sont partagées avec « To The Point » jusqu'à l'étape 6.1 ; le jeton Vercel expire le 14 septembre 2027.

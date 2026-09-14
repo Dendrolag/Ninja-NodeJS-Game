@@ -31,6 +31,20 @@ describe('echellePour', () => {
 
     expect(mobile).toBeGreaterThan(bureau);
   });
+
+  // Decision du porteur du projet a la recette de l'etape 5.4: le cadrage mobile du
+  // jeu d'origine, 600 pixels de carte en largeur, etait trop large sur telephone.
+  it('montre 360 pixels de carte en largeur sur un telephone tenu droit', () => {
+    const echelle = echellePour({ largeur: 390, hauteur: 664 }, CARTE, true);
+
+    expect(390 / echelle).toBeCloseTo(360);
+  });
+
+  it('garde les proportions du cadrage sur un telephone couche', () => {
+    const echelle = echellePour({ largeur: 844, hauteur: 390 }, CARTE, true);
+
+    expect(390 / echelle).toBeCloseTo(271);
+  });
 });
 
 describe('borner', () => {

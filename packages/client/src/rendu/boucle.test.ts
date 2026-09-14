@@ -385,3 +385,46 @@ describe('les points flottants', () => {
     expect(montres.map((point) => [point.texte, point.genre])).toEqual([['+15', 'botNoir']]);
   });
 });
+
+// Recette de l'etape 5.4: au lancement, le jeu ramait avant de se stabiliser. L'ecran
+// de preparation attend que la boucle annonce un affichage fluide.
+describe('l annonce d un affichage stable', () => {
+  let annonces: number;
+
+  beforeEach(() => {
+    boucle.arreter();
+    annonces = 0;
+    boucle = lancerLaBoucle({
+      client,
+      rendu,
+      controles,
+      horloge,
+      carte: { largeur: 2_000, hauteur: 1_500 },
+      taille: () => ({ largeur: 1_280, hauteur: 720 }),
+      demanderUneImage: () => 1,
+      annulerUneImage: () => undefined,
+      surStabilite: () => {
+        annonces += 1;
+      },
+    });
+  });
+
+  it('n annonce rien tant que la partie n est pas dessinee', () => {
+    for (let image = 0; image < 100; image += 1) {
+      uneImage();
+    }
+
+    expect(annonces).toBe(0);
+  });
+
+  it('annonce une seule fois, une fois la partie dessinee a une cadence fluide', () => {
+    reseau.recevoir('partieLancee');
+    reseau.recevoir('etat', trame(1, [joueur('moi', 1_000, 750)]));
+
+    for (let image = 0; image < 20; image += 1) {
+      uneImage();
+    }
+
+    expect(annonces).toBe(1);
+  });
+});

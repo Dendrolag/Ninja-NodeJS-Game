@@ -12,7 +12,7 @@
  * page, pas seulement la valeur de etat.ecran, deja couverte par ecrans.test.ts.
  */
 
-import type { InfosSalon, LigneClassement } from '@neon-ninja/shared';
+import type { InfosSalon, LigneClassement, ReglagesPartie } from '@neon-ninja/shared';
 import { REGLAGES_PAR_DEFAUT } from '@neon-ninja/shared';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -65,6 +65,8 @@ let sons: SonsDEssai;
 let jeu: JeuDEssai;
 let application: Application;
 let recharges: number;
+/** Les reglages de chaque partie dont le prechargement a ete demande. */
+let precharges: ReglagesPartie[];
 
 /** L'ecran affiche par l'application. */
 function ecranAffiche(): string | undefined {
@@ -104,6 +106,7 @@ beforeEach(() => {
   sons = sonsDEssai();
   jeu = jeuDEssai();
   recharges = 0;
+  precharges = [];
 
   application = monterApplication({
     hote,
@@ -111,6 +114,9 @@ beforeEach(() => {
     sons,
     horloge: creerHorlogeClientManuelle(),
     monterLeJeu: jeu.monteur,
+    prechargerLeJeu: (reglages) => {
+      precharges.push(reglages);
+    },
     recharger: () => {
       recharges += 1;
     },
@@ -275,6 +281,18 @@ describe('ce qui accompagne les ecrans', () => {
     reseau.recevoir('compteARebours', { secondesRestantes: 5, annulable: true });
 
     expect(sons.joues).toContain('compteARebours');
+  });
+
+  // Recette de l'etape 5.4: le decor de la carte ne se telechargeait qu'au lancement,
+  // pendant que la partie tournait deja. Il se precharge des le compte a rebours.
+  it('precharge la partie des le compte a rebours, une seule fois, avec ses reglages', () => {
+    entrerDansLeSalon();
+    expect(precharges).toEqual([]);
+
+    reseau.recevoir('compteARebours', { secondesRestantes: 5, annulable: true });
+    reseau.recevoir('compteARebours', { secondesRestantes: 4, annulable: true });
+
+    expect(precharges).toEqual([REGLAGES_PAR_DEFAUT]);
   });
 
   it('fait entendre le clic des boutons', () => {

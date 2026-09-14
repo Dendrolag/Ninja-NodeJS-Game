@@ -180,6 +180,11 @@ export function monterJeu(contexte: ContexteEcran): EcranAffiche {
       return;
     }
 
+    // L'ecran de preparation reste pose jusqu'a un affichage fluide: les premieres
+    // images envoient le decor a la carte graphique et preparent la lueur, et le jeu
+    // ramait pendant ce temps sur telephone (recette de l'etape 5.4).
+    ecrireTexte(chargement, 'Préparation de la partie…');
+
     const surcouche = monterSurcouche({
       hote: zoneHud,
       carte,
@@ -225,6 +230,9 @@ export function monterJeu(contexte: ContexteEcran): EcranAffiche {
       carte,
       surcouche,
       pointsFlottants,
+      surStabilite: () => {
+        montrer(chargement, false);
+      },
       ...(contexte.sons === undefined ? {} : { sons: contexte.sons }),
       mobile: navigateur?.matchMedia('(pointer: coarse)').matches ?? false,
       taille: () => ({ largeur: terrain.clientWidth, hauteur: terrain.clientHeight }),
@@ -241,8 +249,6 @@ export function monterJeu(contexte: ContexteEcran): EcranAffiche {
     aRetirer.push(() => {
       navigateur?.removeEventListener('resize', redimensionner);
     });
-
-    montrer(chargement, false);
   };
 
   assembler().catch((erreur: unknown) => {

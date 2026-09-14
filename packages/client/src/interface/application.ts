@@ -23,7 +23,7 @@
  * navigation avec un ecran de jeu d'essai.
  */
 
-import type { PisteMusicale } from '@neon-ninja/shared';
+import type { PisteMusicale, ReglagesPartie } from '@neon-ninja/shared';
 
 import { annoncesDuChangement } from '../annonces.js';
 import type { Client } from '../client.js';
@@ -55,6 +55,12 @@ export interface OptionsApplication {
   readonly client: Client;
   /** L'ecran de jeu. Celui de ecrans/jeu.ts en production, un ecran d'essai dans les tests. */
   readonly monterLeJeu: MonteurEcran;
+  /**
+   * Precharge ce que la partie affichera, des le debut du compte a rebours du salon
+   * (recette de l'etape 5.4): le decor de la carte ne se telecharge plus pendant que
+   * la partie tourne. Absent, rien n'est precharge.
+   */
+  readonly prechargerLeJeu?: (reglages: ReglagesPartie) => void;
   readonly sons?: LecteurDeSons;
   readonly horloge?: HorlogeClient;
   /** Le stockage du navigateur, pour retenir les reglages du son. */
@@ -232,6 +238,16 @@ export function monterApplication(options: OptionsApplication): Application {
 
     for (const annonce of annoncesDuChangement(precedent, etat)) {
       annonces.ajouter(annonce);
+    }
+
+    // Le compte a rebours vient de commencer: ses cinq secondes servent a charger la
+    // partie, plutot que ses premieres secondes de jeu.
+    if (
+      precedent.compteARebours === undefined &&
+      etat.compteARebours !== undefined &&
+      etat.salon !== undefined
+    ) {
+      options.prechargerLeJeu?.(etat.salon.reglages);
     }
 
     precedent = etat;

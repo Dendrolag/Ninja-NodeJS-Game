@@ -51,6 +51,22 @@ export const TAILLE_SPRITE = 32;
 export const DENSITE_MAXIMALE = 2;
 
 /**
+ * Quand l'affichage d'une partie qui commence est juge fluide (stabilite.ts).
+ *
+ * Mesure de la recette de l'etape 5.4, sur un telephone simule: les premieres images
+ * dessinees portaient des taches longues de 100 a 150 millisecondes (le decor envoye a
+ * la carte graphique, la lueur preparee), puis l'affichage tenait soixante images par
+ * seconde. L'ecran de preparation reste pose tant que trois images d'affilee ne sont
+ * pas passees sous 100 millisecondes, et jamais plus de trois secondes: au-dela, le
+ * joueur voit la partie meme si elle rame, plutot qu'un ecran qui ne se leve pas.
+ */
+export const STABILITE = {
+  imagesRapidesRequises: 3,
+  dureeImageRapideMs: 100,
+  attenteMaximaleMs: 3000,
+} as const;
+
+/**
  * Quels pixels du sprite de ninja prennent la couleur de son proprietaire.
  *
  * LE SPRITE EST DESSINE EN ROUGE, pas en niveaux de gris. Le jeu d'origine
@@ -312,5 +328,12 @@ export const VITESSE_CAMERA_PAR_SECONDE = 5;
  */
 export const HAUTEUR_DE_VUE_PX = 900;
 
-/** Largeur et hauteur de reference du cadrage mobile, plus serre. */
-export const CADRAGE_MOBILE = { largeur: 600, hauteur: 451 } as const;
+/**
+ * Largeur et hauteur de reference du cadrage mobile, plus serre.
+ *
+ * ECART VOULU AVEC LE JEU D'ORIGINE, qui montrait 600 par 451 pixels de carte
+ * (initializeCamera, client.js:1222). Sur telephone, le porteur du projet l'a juge
+ * trop large a la recette de l'etape 5.4, et a choisi 360 pixels de large; la
+ * hauteur garde les proportions d'origine.
+ */
+export const CADRAGE_MOBILE = { largeur: 360, hauteur: 271 } as const;

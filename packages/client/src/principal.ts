@@ -31,6 +31,7 @@ import { configurationDeLaPage } from './configuration.js';
 import { horlogeNavigateur } from './horloge.js';
 import { monterApplication } from './interface/application.js';
 import { monterJeu } from './interface/ecrans/jeu.js';
+import { prechargerLaPartie } from './rendu/pixi.js';
 import { creerReseauSocketIo } from './reseauSocketIo.js';
 import { creerLecteurDeSons } from './sons/lecteur.js';
 
@@ -76,6 +77,11 @@ monterApplication({
   sons: creerLecteurDeSons(),
   horloge: horlogeNavigateur,
   monterLeJeu: monterJeu,
+  // Un prechargement qui echoue n'a rien de grave: l'ecran de jeu recharge lui-meme
+  // ce qui lui manque, et dit s'il n'y parvient pas.
+  prechargerLeJeu: (reglages) => {
+    prechargerLaPartie(reglages.carte, reglages.modeMiroir).catch(() => undefined);
+  },
   ...(stockage === undefined ? {} : { stockage }),
 });
 
