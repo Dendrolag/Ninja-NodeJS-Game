@@ -19,7 +19,8 @@ Vérifier en jouant, écran par écran et règle par règle, que la réécriture
 - **Liste des parties vivante** : elle se redemande toutes les cinq secondes sur son écran, sans montrer de recherche ni empiler les demandes.
 - **Mise en ligne ciblée** : elle lit la version en ligne et ne part que si un fichier du jeu a changé depuis ; un commit de documentation ne coupe plus les parties.
 - **Scénarios de bout en bout** : le parcours de navigation, seul à garder le délai par défaut de trente secondes, en manquait sous charge ; délais alignés sur les autres parcours.
-- **Grille de recette** : `docs/recette/recette-5-4.md`, 65 cas (6 signalements, 59 cas de recette), chacun avec son attendu, sa source, ses preuves et son verdict. Déroulée en local (un joueur, deux onglets, fenêtre mobile, trois cartes dont une en miroir, mode Tactique) et en production.
+- **Seconde série de signalements, sur iPhone en production** : bots tous blancs, joueur invisible, caméra pas assez zoomée, saccades, bouton de localisation introuvable. Reproduite en pilotant WebKit en émulation iPhone contre la production. Cause principale : la caméra plaçait son point visé en divisant deux fois la taille de l'écran par la densité ; à densité 3, le joueur et ses bots tombaient sous le HUD et la carte s'arrêtait aux deux tiers de l'écran. Corrigée, avec la densité du rendu plafonnée à 2 et un vrai bouton de localisation sous le pouce. Le zoom mobile est celui du legacy : question posée au porteur du projet.
+- **Grille de recette** : `docs/recette/recette-5-4.md`, 70 cas (11 signalements, 59 cas de recette), chacun avec son attendu, sa source, ses preuves et son verdict. Déroulée en local (un joueur, deux onglets, fenêtre mobile, trois cartes dont une en miroir, mode Tactique) et en production.
 - **Jeu d'origine comme référence** : le déploiement encore en ligne sert exactement le `client.js` et le `styles.css` de `legacy/`, vérifié par empreinte.
 
 ## Fichiers créés ou modifiés
@@ -65,7 +66,15 @@ Commit `5502c11`, CI rouge corrigée et délais des parcours :
 - `packages/server/src/finDePartie.test.ts` : l'identifiant attendu, et deux fins de partie qui n'en partagent jamais un.
 - `tests/e2e/navigation.spec.ts`, `tests/e2e/harnais/parcours.ts` : délais des parcours et du chargement de carte.
 
-Commit de ce handoff :
+Commit `79c6cb9`, caméra sur téléphone, densité, bouton de localisation :
+
+- `packages/client/src/rendu/pixi.ts` : la caméra placée par `versEcran` avec l'écran de l'application, en pixels CSS ; densité du rendu plafonnée.
+- `packages/client/src/rendu/apparence.ts` : `DENSITE_MAXIMALE`.
+- `packages/client/page/styles/jeu.css` : le bouton de localisation en bas à droite sur écran tactile, « Capturer » au-dessus de lui.
+- `tests/e2e/rendu-couleurs.spec.ts`, `playwright.config.ts` : l'écran relu, les ninjas visés au milieu, sur le projet mobile aussi.
+- `tests/e2e/navigation.spec.ts` : sur téléphone, un bouton de localisation à la taille d'un pouce, dans la moitié basse de l'écran.
+
+Commits de ce handoff :
 
 - `docs/recette/recette-5-4.md` (créé) : la grille.
 - `docs/plan/etape-5-4.md` : la réconciliation avec ce que la recette a établi.
@@ -78,7 +87,8 @@ Aucune modification de `legacy/`, `tests/caracterisation/` ni `master`.
 
 - Ajoutés :
   - **recoloration** : un pixel proche du rouge va au corps, en blanc, les autres restent aux détails ; tolérance de 140 ; opacité gardée ; aucun pixel dans les deux calques ; sur les 17 vraies images et les huit couleurs (palette, blanc, noir), corps teinté et détails redonnent au pixel près la recoloration du legacy ; le sprite n'est pas en niveaux de gris ;
-  - **rendu réel** (`rendu-couleurs.spec.ts`) : un joueur vert et un faux ninja blanc dessinés par PixiJS montrent du vert, du blanc, et aucun pixel rouge ;
+  - **rendu réel** (`rendu-couleurs.spec.ts`), au bureau et en émulation mobile : un joueur vert et un faux ninja blanc dessinés par PixiJS montrent du vert, du blanc, aucun pixel rouge, et presque tous leurs pixels au milieu de l'écran, là où vise la caméra ;
+  - **bouton de localisation** (`navigation.spec.ts`, mobile) : au moins 56 pixels, dans la moitié basse de l'écran ;
   - **icônes** : la texture d'un objet est l'image courante de sa planche, qui change toutes les 125 millisecondes ;
   - **points flottants** : un point pour un faux ninja neutre rallié, rien pour un ninja passé à un autre ou pris à un joueur, les points d'un Black Ninja détruit et d'un joueur capturé à leur place, rien deux fois ; l'affichage pose le texte comme du texte, file vers le milieu du score puis disparaît ; la boucle les place à l'écran, trames delta comprises ;
   - **session** : continuer en invité ferme la session côté serveur ;
@@ -92,7 +102,7 @@ Aucune modification de `legacy/`, `tests/caracterisation/` ni `master`.
 
 ## Décisions et écarts au plan
 
-Quatre entrées au journal de `docs/design/README.md`, datées du 14 septembre 2026 : la recoloration par calques, l'animation des icônes, le retour des points flottants, et les quatre manques connus traités. Points à lire ici.
+Cinq entrées au journal de `docs/design/README.md`, datées du 14 septembre 2026 : la recoloration par calques, l'animation des icônes, le retour des points flottants, les quatre manques connus traités, et la caméra en pixels CSS avec la densité plafonnée. Points à lire ici.
 
 ### 1. La fiche supposait un défaut d'attribution, c'était un défaut d'affichage
 
@@ -110,7 +120,11 @@ Retenter un enregistrement expose à un essai abouti dont la réponse s'est perd
 
 Depuis la mise en ligne ciblée, un commit qui ne touche que la documentation, les tests, `legacy/` ou `.claude/` ne part plus en ligne. `/sante` rend donc la version du dernier commit qui touche le jeu, et plus forcément du dernier commit de la branche. Tout fichier inconnu de la règle déclenche la mise en ligne.
 
-### 5. Écarts à la fiche
+### 5. Sur téléphone, la caméra en pixels CSS et une densité plafonnée à 2
+
+Le défaut de caméra était invisible partout où la densité vaut 1 : au bureau, et dans le navigateur de recette. Il ne s'est vu que sur l'iPhone du porteur du projet, puis en pilotant WebKit à densité 3. Leçon de recette : une vérification mobile doit émuler la densité d'un vrai téléphone. Le projet mobile de Playwright le fait (2,625), et son scénario des couleurs, relancé sur ce projet, garde le défaut fermé. Plafonner la densité à 2 est un choix de coût : l'œil n'y perd rien, le téléphone y gagne plus de la moitié des pixels. Le gain de cadence reste à confirmer sur un vrai iPhone.
+
+### 6. Écarts à la fiche
 
 - La recette et les corrections n'ont pas été coupées en deux étapes : les défauts se sont corrigés au fil de la grille.
 - Les étapes 2.5 et 3.4 sont placées après 6.1, qui n'en dépend pas. Ordre à confirmer ou réordonner par le porteur du projet.
@@ -121,7 +135,9 @@ Depuis la mise en ligne ciblée, un commit qui ne touche que la documentation, l
 Nouveau, ouvert par cette étape :
 
 - **Un point flottant a manqué une fois en jeu.** En Classique, pendant une série de ralliements, le score est passé de 1 à 7 sans qu'aucun point flottant ne soit relevé dans la page. Dans une autre partie, la capture suivante en a bien posé un. Ce n'était pas reproductible ; la cause la plus probable est un onglet en arrière-plan, où le navigateur suspend la boucle de rendu. À surveiller en jeu.
-- **Le scénario des couleurs ne joue que sur le projet bureau.** Sous l'émulation du téléphone de Playwright, la relecture des pixels par PixiJS rend une image vide ; le jeu, vérifié à l'œil en fenêtre mobile, affiche bien ses couleurs.
+- **La fluidité sur iPhone reste à confirmer.** La densité plafonnée divise par plus de deux les pixels de chaque image, mais WebKit sans carte graphique ne mesure pas la cadence d'un téléphone. Si les saccades persistent, les pistes suivantes sont la lueur, calculée sur tout l'écran, et les deux sprites par personnage de la recoloration.
+- **Le zoom mobile est celui du legacy**, 600 par 451 pixels de carte ; le porteur du projet le trouve trop large. Sa décision, une fois la caméra corrigée en ligne, se reporte dans `CADRAGE_MOBILE` (`packages/client/src/rendu/apparence.ts`).
+- **En haut ou en bas de la carte, le joueur passe sous le HUD sur téléphone** : la caméra s'arrête au bord de la carte, comme dans le legacy, et le panneau du temps couvre le haut de l'écran.
 
 Repris des handoffs précédents, inchangé : les erreurs d'un travailleur échappent aux scénarios de bout en bout ; les limites de tentatives vivent en mémoire de l'instance ; le filtrage du flux par zone d'intérêt est écarté par la mesure ; le relevé des contacts et le lissage du client restent en carré du nombre d'entités ; l'outil de Vercel est téléchargé par npx à chaque mise en ligne ; des déploiements Vercel non promus restent de la première mise en ligne ; les heures gratuites de Render sont partagées avec « To The Point » jusqu'à l'étape 6.1 ; le jeton Vercel expire le 14 septembre 2027.
 
@@ -134,7 +150,9 @@ Résolu par cette étape, repris du handoff 5.3 : la mise en ligne qui coupait l
 - `7accbf0` (fin de partie retentée, liste vivante) : **rouge**, exécution 34882583601 : `finDePartie.test.ts` attendait une partie sans identifiant. La suite unitaire complète n'avait pas été lancée avant de commiter.
 - `5502c11` (correction de ce test, délais des parcours) : **verte**, exécution 34883777772 : « Types, linter et tests », « Bout en bout » et « Mise en ligne ». La production sert ce commit, vérifié sur `/sante`, et une partie y a été jouée (cas J4 de la grille).
 - `71f1862` (grille, handoff, ROADMAP) : **verte**, exécution 34885103948. Documentation seule : la mise en ligne s'est arrêtée d'elle-même, « seuls des fichiers sans effet sur le jeu ont change » (cas J5 de la grille). La production reste `5502c11`, ce qui est attendu.
-- Le commit qui consigne ce dernier cas ne touche lui aussi que la documentation.
+- `4e804bc` (dernier cas de la grille) : documentation seule.
+- `79c6cb9` (caméra sur téléphone, densité, bouton de localisation) : **verte**, exécution 34889157459 : « Types, linter et tests », « Bout en bout » et « Mise en ligne ». La production sert ce commit, vérifié sur `/sante`. En émulation iPhone (WebKit, densité 3) contre la production : canevas de 780 par 1 328 pixels, joueur au centre de l'écran entouré de ses flèches, carte sur tout l'écran, bouton de localisation de 60 pixels en bas à droite.
+- Le commit qui consigne cette seconde série ne touche que la documentation.
 
 `master` n'a pas été touché.
 
