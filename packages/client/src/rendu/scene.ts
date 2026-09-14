@@ -346,7 +346,7 @@ export function construireScene(
           maintenant,
         );
 
-  const cones = [...maVisee(monEntite), ...tirsRecents(etat, maintenant)];
+  const cones = [...maVisee(monEntite), ...tirsRecents(etat, lissee, maintenant)];
 
   return { disques, cones, zones, objets, entites, reperes };
 }
@@ -387,12 +387,26 @@ function maVisee(mien: VueLissee['entites'][number] | undefined): readonly ConeS
  * Il part d'ou le tir est parti, et non du joueur affiche: c'est de la qu'il a
  * capture. Un tir qui a pris quelque chose n'a pas la meme couleur qu'un tir dans le
  * vide.
+ *
+ * Le tir d'un autre joueur parti d'une zone d'invisibilite ne se montre pas: le tireur
+ * y est cache, et l'eclair le trahirait. Le notre se voit toujours, comme notre
+ * personnage.
  */
-function tirsRecents(etat: EtatClient, maintenant: number): readonly ConeScene[] {
+function tirsRecents(
+  etat: EtatClient,
+  lissee: VueLissee,
+  maintenant: number,
+): readonly ConeScene[] {
   const cones: ConeScene[] = [];
 
   etat.journal.forEach((fait, rang) => {
     if (fait.nature !== 'tirDeCapture') {
+      return;
+    }
+
+    const { tireur, x, y } = fait.charge;
+
+    if (tireur !== etat.moi && dansUneZoneInvisible(lissee, x, y)) {
       return;
     }
 

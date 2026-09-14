@@ -420,6 +420,29 @@ describe('le cone du mode Tactique', () => {
 
     expect(reussi.cones[0]?.remplissage.couleur).not.toBe(manque.cones[0]?.remplissage.couleur);
   });
+
+  it('cache l eclair d un tir parti d une zone d invisibilite, sauf le notre', () => {
+    // Le tireur y est cache aux autres: l'eclair de son tir ne doit pas le trahir.
+    const zone: ZoneVue = {
+      id: 'zone-1',
+      type: 'invisibilite',
+      x: 10,
+      y: 20,
+      rayon: 50,
+      dureeRestanteMs: 5_000,
+    };
+    const partie = lissee(vue([joueur('moi', 300, 300)], [], [zone]));
+
+    const autre = construireScene(
+      { ...etatEnJeu('moi'), journal: [tir('autre', 1, 0)] },
+      partie,
+      0,
+    );
+    const mien = construireScene({ ...etatEnJeu('moi'), journal: [tir('moi', 1, 0)] }, partie, 0);
+
+    expect(autre.cones).toEqual([]);
+    expect(mien.cones).toHaveLength(1);
+  });
 });
 
 describe('couleurEnNombre', () => {
