@@ -23,3 +23,6 @@ blob-report/
 
 # Client empaquete, produit par pnpm build
 packages/client/web/
+
+# Sortie Vercel de la page, produite au deploiement (etape 5.3)
+.vercel/

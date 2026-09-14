@@ -62,6 +62,7 @@ import type {
 } from '@neon-ninja/shared';
 import {
   LIMITES_DEBIT,
+  MOTIF_VERSION_DIFFERENTE,
   completerReglages,
   consommer,
   seauNeuf,
@@ -71,6 +72,7 @@ import {
   validerJeton,
   validerMessageChat,
   validerReglages,
+  versionAcceptee,
 } from '@neon-ninja/shared';
 import type { CarteCollisions } from '@neon-ninja/sim';
 import type { DefaultEventsMap, Server, Socket } from 'socket.io';
@@ -187,6 +189,12 @@ export interface OptionsServeurSocket {
    * une connexion qui presente un jeton est refusee.
    */
   readonly comptes?: AnnuaireDesComptes;
+  /**
+   * La version du jeu que ce serveur fait tourner (etape 5.3). Presente, une page
+   * qui ne joint pas la meme a l'ouverture se voit refuser le lien. Absente: aucun
+   * controle.
+   */
+  readonly version?: string;
 }
 
 /** La couche reseau d'un serveur de jeu. */
@@ -219,12 +227,16 @@ export class ServeurSocket {
   /** Les enregistrements de fin de partie qui n'ont pas encore abouti. */
   private readonly enregistrements = new Set<Promise<void>>();
 
+  /** La version du jeu que ce serveur fait tourner, s'il en a une. */
+  private readonly version: string | undefined;
+
   constructor(options: OptionsServeurSocket) {
     this.io = options.io;
     this.horloge = options.horloge ?? horlogeSysteme;
     this.rooms = options.rooms ?? new RoomManager({ horloge: this.horloge });
     this.terrains = options.terrains ?? SANS_TERRAIN;
     this.comptes = options.comptes;
+    this.version = options.version;
 
     // L'identification passe AVANT l'acceptation de la connexion: une connexion
     // dont la session est refusee n'existe jamais pour la couche jeu.
@@ -266,6 +278,11 @@ export class ServeurSocket {
     await Promise.all([...this.enregistrements]);
   }
 
+  /** Le nombre de connexions ouvertes, pour la route de sante (etape 5.3). */
+  get nombreDeConnexions(): number {
+    return this.connexions.size;
+  }
+
   // ------------------------------------------------------------------------
   // Cycle de vie d'une connexion
   // ------------------------------------------------------------------------
@@ -279,10 +296,19 @@ export class ServeurSocket {
    * est refusee avec une explication, que le client recoit comme erreur de
    * connexion. Aucune de ces issues ne rabat en silence un compte sur un invite.
    *
+   * LA VERSION PASSE AVANT LA SESSION (etape 5.3). Une page d'une autre version
+   * est refusee sans qu'on interroge la base: quelle que soit sa session, elle ne
+   * parlerait pas la meme langue que le serveur.
+   *
    * @returns L'erreur qui refuse la connexion, ou undefined pour l'accepter.
    */
   private async identifierLaConnexion(socket: SocketTypee): Promise<Error | undefined> {
     const authentification: unknown = socket.handshake.auth;
+
+    if (!versionAcceptee(this.version, authentification)) {
+      return new Error(MOTIF_VERSION_DIFFERENTE);
+    }
+
     const brut =
       typeof authentification === 'object' &&
       authentification !== null &&

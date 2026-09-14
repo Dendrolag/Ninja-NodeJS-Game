@@ -9,7 +9,7 @@
  */
 
 import type { InfosSalon } from '@neon-ninja/shared';
-import { REGLAGES_PAR_DEFAUT } from '@neon-ninja/shared';
+import { MOTIF_VERSION_DIFFERENTE, REGLAGES_PAR_DEFAUT } from '@neon-ninja/shared';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Client } from '../client.js';
@@ -163,6 +163,18 @@ describe('l accueil et la session', () => {
     expect(coffre.lire()).toBeUndefined();
     expect(boutonNomme(hote, 'Continuer en invité')).toBeUndefined();
     expect(estCache(obligatoire(hote, '.champ-pseudo'))).toBe(false);
+  });
+
+  it('dit a une page d une autre version de se recharger, et ne propose rien d autre', async () => {
+    coffre.garder(JETON_DESSAI);
+    client.ouvrir();
+    await laisserRepondre();
+    reseau.simulerRefus(MOTIF_VERSION_DIFFERENTE);
+
+    expect(obligatoire(hote, '.accueil-lien').textContent).toBe(MOTIF_VERSION_DIFFERENTE);
+    expect(boutonNomme(hote, 'Recharger la page')).toBeDefined();
+    expect(boutonNomme(hote, 'Réessayer')).toBeUndefined();
+    expect(boutonNomme(hote, 'Continuer en invité')).toBeUndefined();
   });
 
   it('annonce qu une session gardee a expire', async () => {

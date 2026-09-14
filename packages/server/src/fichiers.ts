@@ -1,5 +1,6 @@
 /**
  * Le service des fichiers: la page du jeu, son code empaquete, et ses ressources.
+ * Et la route de sante.
  *
  * EXPRESS ARRIVE ICI, ET POUR CE TRAVAIL-LA. Le handoff 2.2 avait refuse de
  * l'ajouter tant qu'il n'y avait rien a servir (decision du 14 aout 2026). Il y a
@@ -14,15 +15,25 @@
  * (RACINE_RESSOURCES, dans le paquet partage). Un serveur qui servirait le depot
  * entier servirait aussi ce qui traine a cote.
  *
- * LA PAGE PORTE UNE POLITIQUE DE SECURITE DU CONTENU. Elle interdit a la page de
- * charger ou d'executer quoi que ce soit qui ne vienne pas du serveur lui-meme.
- * C'est une defense de plus contre la faille S1 du jeu d'origine: meme si un texte
- * de joueur parvenait un jour a s'inserer comme du balisage, le navigateur
- * refuserait d'executer le script qu'il contiendrait.
+ * EN PRODUCTION, LE SERVEUR NE SERT AUCUN FICHIER (etape 5.3). La page et les
+ * ressources y sont servies par Vercel, et le serveur de jeu garde son processeur
+ * pour les parties. Ce service reste celui du developpement et des scenarios de
+ * bout en bout.
+ *
+ * LA PAGE PORTE UNE POLITIQUE DE SECURITE DU CONTENU, ecrite dans le paquet
+ * partage (page.ts) pour que l'hebergement de la page en production pose la meme.
+ *
+ * LA ROUTE DE SANTE DIT CE QUE LE SERVEUR FAIT TOURNER (etape 5.3). L'hebergeur
+ * l'interroge pour savoir si une mise en ligne a demarre; le deploiement, pour
+ * verifier que la version en ligne est la bonne; l'exploitation, pour voir combien
+ * de parties et de joueurs le serveur porte. Elle rend aussi l'adresse sous
+ * laquelle le serveur voit celui qui demande: c'est la seule facon de verifier, une
+ * fois en ligne, que MANDATAIRES_DE_CONFIANCE correspond aux mandataires de
+ * l'hebergeur. Le demandeur n'y apprend que sa propre adresse.
  */
 
-import { RACINE_API_COMPTES, RACINE_RESSOURCES } from '@neon-ninja/shared';
-import type { Express, Request, RequestHandler, Response } from 'express';
+import { RACINE_API_COMPTES, RACINE_RESSOURCES, politiqueDeContenu } from '@neon-ninja/shared';
+import type { Express, RequestHandler } from 'express';
 import express from 'express';
 
 /** Les dossiers a servir. */
@@ -33,55 +44,58 @@ export interface DossiersServis {
   readonly ressources: string;
 }
 
-/**
- * La politique de securite du contenu de la page.
- *
- * Chaque ligne a sa raison:
- *   - tout vient du serveur lui-meme, scripts, styles, polices, sons et connexion;
- *   - les images acceptent aussi data: et blob:, parce que PixiJS decode les
- *     textures dans un travailleur qui lui rend des objets blob;
- *   - les travailleurs acceptent blob: pour la meme raison;
- *   - les connexions acceptent aussi data:. Avant de decoder dans un travailleur,
- *     PixiJS y lit une image de un pixel ecrite en data:, pour savoir si le
- *     navigateur en est capable. Bloquee, cette lecture lui faisait conclure a tort
- *     que non, et decoder les textures dans la page, avec deux erreurs dans la
- *     console du travailleur, que les scenarios de bout en bout ne voient pas
- *     (trouve a la reprise des ecrans du jalon 3). Une adresse data: ne sort pas
- *     du navigateur: rien ne peut fuir par elle;
- *   - rien ne peut encadrer la page, ni changer l'adresse de base de ses liens, ni
- *     envoyer un formulaire ailleurs.
- *
- * Elle interdit aussi l'evaluation de code fabrique a la volee; le client charge
- * pour cela le module unsafe-eval de PixiJS, qui s'en passe.
- */
-export const POLITIQUE_DE_CONTENU = [
-  "default-src 'self'",
-  "script-src 'self'",
-  "style-src 'self'",
-  "img-src 'self' data: blob:",
-  "media-src 'self'",
-  "font-src 'self'",
-  "connect-src 'self' data:",
-  "worker-src 'self' blob:",
-  "object-src 'none'",
-  "base-uri 'none'",
-  "form-action 'none'",
-  "frame-ancestors 'none'",
-].join('; ');
+/** La politique de securite du contenu de la page, quand ce serveur la sert lui-meme. */
+export const POLITIQUE_DE_CONTENU = politiqueDeContenu();
 
 /** Ce que repond le serveur a qui demande s'il tourne. */
 export const MESSAGE_DE_SANTE = 'Neon Ninja: le serveur tourne.';
+
+/** Ce que le serveur sait de son activite, lu a chaque question de sante. */
+export interface ActiviteDuServeur {
+  /** La version du jeu, le commit dont le serveur est construit. Absente en developpement. */
+  readonly version: string | undefined;
+  /** Les parties ouvertes, salons compris. */
+  readonly parties: number;
+  /** Les joueurs presents dans ces parties. */
+  readonly joueurs: number;
+  /** Les connexions ouvertes, entrees dans une partie ou non. */
+  readonly connexions: number;
+}
+
+/** La reponse de la route de sante, en JSON. */
+export interface ReponseDeSante {
+  readonly message: string;
+  /** La version du jeu, ou null en developpement. */
+  readonly version: string | null;
+  readonly parties: number;
+  readonly joueurs: number;
+  readonly connexions: number;
+  /** L'adresse sous laquelle le serveur voit le demandeur, mandataires de confiance compris. */
+  readonly adresse: string | null;
+}
+
+/** L'activite d'une application montee sans couche jeu. */
+function sansActivite(): ActiviteDuServeur {
+  return { version: undefined, parties: 0, joueurs: 0, connexions: 0 };
+}
 
 /**
  * L'application web: la route de sante, et les fichiers si on les demande.
  *
  * SANS DOSSIERS, AUCUN FICHIER N'EST SERVI, et la racine repond comme la route de
  * sante. C'est le cas des serveurs montes par les tests, qui verifient des
- * messages et n'ont pas de page a servir, et c'etait le comportement du serveur
- * avant cette etape.
+ * messages et n'ont pas de page a servir, et celui du serveur de production.
+ *
+ * @param activite Lue a chaque question de sante: la couche jeu n'existe pas
+ *                 encore quand l'application est montee.
  */
-export function applicationWeb(dossiers?: DossiersServis, comptes?: RequestHandler): Express {
+export function applicationWeb(
+  dossiers?: DossiersServis,
+  comptes?: RequestHandler,
+  activite: () => ActiviteDuServeur = sansActivite,
+): Express {
   const application = express();
+  const repondreSante = routeDeSante(activite);
 
   // Annoncer la bibliotheque et sa version n'aide que celui qui cherche une faille.
   application.disable('x-powered-by');
@@ -106,9 +120,23 @@ export function applicationWeb(dossiers?: DossiersServis, comptes?: RequestHandl
   return application;
 }
 
-/** Repond a la question de sante. */
-function repondreSante(_requete: Request, reponse: Response): void {
-  reponse.type('text/plain; charset=utf-8').send(MESSAGE_DE_SANTE);
+/** La route qui repond a la question de sante. */
+function routeDeSante(activite: () => ActiviteDuServeur): RequestHandler {
+  return (requete, reponse) => {
+    const { version, parties, joueurs, connexions } = activite();
+    const corps: ReponseDeSante = {
+      message: MESSAGE_DE_SANTE,
+      version: version ?? null,
+      parties,
+      joueurs,
+      connexions,
+      adresse: requete.ip ?? null,
+    };
+
+    // Une reponse d'hier ne dit rien du serveur d'aujourd'hui.
+    reponse.setHeader('Cache-Control', 'no-store');
+    reponse.json(corps);
+  };
 }
 
 /** Pose les en-tetes de securite sur toutes les reponses de fichiers. */

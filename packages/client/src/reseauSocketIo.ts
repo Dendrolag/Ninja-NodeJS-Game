@@ -18,6 +18,10 @@
  * doit donc savoir quel jeton presenter avant d'ouvrir, et rouvrir quand la session
  * change. Jusque-la, le lien partait des la creation du transport.
  *
+ * LA VERSION DE LA PAGE PART A CHAQUE OUVERTURE (etape 5.3). Le serveur refuse une
+ * page d'un autre commit que le sien; la session n'a pas a le savoir, c'est le
+ * transport qui la joint.
+ *
  * LA RECONNEXION AUTOMATIQUE EST COUPEE. Socket.IO la propose, mais retrouver sa
  * place suppose que la place survive au transport. La session de compte de
  * l'etape 3.2 survit, mais la place dans une partie, elle, reste attachee a la
@@ -41,10 +45,19 @@ export interface OptionsReseauSocketIo {
   /**
    * Adresse du serveur.
    *
-   * Absente, la bibliotheque se connecte a l'origine de la page, ce qui est le
-   * cas courant en production ou le client et le serveur sont servis ensemble.
+   * Absente, la bibliotheque se connecte a l'origine de la page: c'est le cas du
+   * developpement, ou le serveur de jeu sert la page lui-meme. En production, la
+   * page est servie ailleurs, et l'adresse est fixee a l'empaquetage
+   * (configuration.ts).
    */
   readonly url?: string;
+  /**
+   * La version de la page, le commit dont elle est construite (etape 5.3).
+   *
+   * Jointe a chaque ouverture: un serveur construit d'un autre commit refuse le
+   * lien. Absente, rien n'est joint, et seul un serveur sans version accepte.
+   */
+  readonly version?: string;
 }
 
 /** La raison que donne Socket.IO quand c'est le client lui-meme qui ferme le lien. */
@@ -82,7 +95,10 @@ export function creerReseauSocketIo(options: OptionsReseauSocketIo = {}): Reseau
         socket.disconnect();
       }
 
-      socket.auth = { ...authentification };
+      socket.auth =
+        options.version === undefined
+          ? { ...authentification }
+          : { ...authentification, version: options.version };
       socket.connect();
     },
 
@@ -146,9 +162,10 @@ export function creerReseauSocketIo(options: OptionsReseauSocketIo = {}): Reseau
 /**
  * Le motif d'un lien qui n'a pas pu s'ouvrir.
  *
- * Un refus du serveur (un jeton qui n'ouvre aucune session) arrive avec son
- * explication, et la bibliotheque lui ajoute un champ data. Une panne de transport
- * n'en a pas: son message technique (« websocket error ») ne dirait rien au joueur.
+ * Un refus du serveur (un jeton qui n'ouvre aucune session, une page d'une autre
+ * version) arrive avec son explication, et la bibliotheque lui ajoute un champ
+ * data. Une panne de transport n'en a pas: son message technique (« websocket
+ * error ») ne dirait rien au joueur.
  */
 function motifDuRefus(erreur: Error): string {
   return 'data' in erreur ? erreur.message : SERVEUR_INJOIGNABLE;

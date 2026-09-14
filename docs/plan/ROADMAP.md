@@ -76,6 +76,8 @@ Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision 
 
 **Étape 7.1 terminée le 12 septembre 2026.** Le mode Tactique se crée, se joue et s'enregistre depuis la page, au clavier et au tactile: capture par un cône de 90 degrés et 100 pixels, cinq charges, une qui revient toutes les cinq secondes. Ajouter le mode n'a demandé que des ajouts aux points d'extension, plus l'élargissement du jeu de règles d'un mode, qui agit sur les entrées avant de résoudre les contacts. Le Classique est inchangé, empreinte des parties comprise; une partie Tactique coûte le même temps au serveur et 4 à 10 pour cent d'octets de plus par message (section 13 de `docs/mesures/charge-serveur.md`). Les autres modes (Chasse, Battle Royale, Équipes, Chaos) restent des propositions non validées (cadrage, tension 2): la suite du jalon 5 se décide avec le porteur du projet.
 
+**Décision du 14 septembre 2026: les autres modes attendent la fin du socle.** Le porteur du projet a tranché, « d'abord on finalise le socle, ensuite on l'enrichit »: aucun nouveau mode ne se construit avant la fin de la réécriture. Ordre du jalon: `7.1` (terminée), `5.3`, `6.1`. Les autres modes viendront ensuite, en phase 7, chacun avec ses règles tranchées par le porteur du projet.
+
 ---
 
 ## 4. Carte thématique des étapes
@@ -165,8 +167,8 @@ Tests requis: rapport de charge chiffré, seuils de référence définis.
 **5.2. Optimisations validées par la mesure.** Grille spatiale, niveau de détail sur l'IA des bots lointains, seulement si la mesure les justifie.
 Tests requis: comparaison avant-après chiffrée, TU inchangés au vert.
 
-**5.3. Déploiement.** Ramené à un déploiement simple, sans bascule progressive ni drapeau de fonctionnalité.
-Tests requis: vérification que la version se déploie et démarre dans l'environnement cible.
+**5.3. Déploiement.** Ramené à un déploiement simple, sans bascule progressive ni drapeau de fonctionnalité. Fiche réécrite le 14 septembre 2026: page sur Vercel, serveur de jeu sur Render, base sur Neon, sur des offres gratuites, avec un déploiement automatique et vérifié par la CI.
+Tests requis: TU et TI du contrôle de version entre la page et le serveur, de la politique de sécurité partagée et de la route de santé; vérification que la version se déploie, démarre et répond dans l'environnement cible.
 
 ### Phase 6. Retrait du legacy
 
@@ -192,3 +194,4 @@ Consignés ici pour que la décision reste traçable.
 5. **Étape 1.7 ajoutée le 14 août 2026.** La pause de partie du legacy n'avait été portée par aucune étape de la phase 1, et l'étape 2.2 l'a découvert en relevant les événements du legacy. Elle ne pouvait pas se rattraper dans la couche réseau, qui ne contient aucune logique de jeu. Traitée selon la règle 7 de CLAUDE.md: un défaut trop gros pour l'étape en cours devient une étape à part entière, jamais une ligne de dette.
 6. **5.3 et 6.1 simplifiés.** Le legacy n'a pas de joueurs en ligne: déploiement en parallèle, drapeaux de fonctionnalité et migration progressive sont sans objet.
 7. **Phase 7 ajoutée le 12 septembre 2026, avec l'étape 7.1.** Le mode tactique n'avait ni numéro ni fiche. Il reçoit une phase à part plutôt qu'une place dans la phase 1: il n'est pas un portage de la base de référence, il traverse toutes les couches, et les modes suivants s'y rangeront.
+8. **Les autres modes après la fin du socle**, décision du porteur du projet du 14 septembre 2026. Le jalon 5 les plaçait entre 7.1 et 5.3; ils viennent désormais après 6.1.

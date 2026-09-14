@@ -73,6 +73,7 @@ export default tseslint.config(
       'playwright-report/**',
       'test-results/**',
       'packages/client/web/**',
+      '.vercel/**',
     ],
   },
 

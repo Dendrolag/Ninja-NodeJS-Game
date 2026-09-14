@@ -24,7 +24,7 @@ import { Server } from 'socket.io';
 
 import type { ServiceDeComptes } from './comptes/annuaire.js';
 import { routesDesComptes } from './comptes/routes.js';
-import type { DossiersServis } from './fichiers.js';
+import type { ActiviteDuServeur, DossiersServis } from './fichiers.js';
 import { applicationWeb } from './fichiers.js';
 import type { Horloge } from './horloge.js';
 import type { DonneesDeConnexion, ServeurTypee } from './ServeurSocket.js';
@@ -41,8 +41,9 @@ export interface OptionsServeur {
    *
    * Le legacy acceptait toutes les origines (son cors valait '*'), ce qui
    * permettait a n'importe quelle page de piloter une partie au nom de qui la
-   * visitait. Ici la liste est explicite, et vide par defaut: le client est servi
-   * par la meme origine et n'a rien a declarer.
+   * visitait. Ici la liste est explicite, et vide par defaut: le client servi par
+   * la meme origine n'a rien a declarer. En production, la page est servie par
+   * Vercel, dont l'origine est declaree ici (etape 5.3).
    */
   readonly originesAutorisees?: readonly string[];
   /** Horloge du serveur. Celle du systeme par defaut. */
@@ -61,8 +62,9 @@ export interface OptionsServeur {
   /**
    * Les dossiers de la page et des ressources a servir.
    *
-   * AUCUN FICHIER PAR DEFAUT, pour la meme raison que les murs: seul le serveur
-   * reel, et le scenario de bout en bout qui le reproduit, ont une page a servir.
+   * AUCUN FICHIER PAR DEFAUT, pour la meme raison que les murs: seuls le serveur
+   * de developpement, et le scenario de bout en bout qui le reproduit, ont une
+   * page a servir.
    */
   readonly fichiers?: DossiersServis;
   /**
@@ -86,6 +88,13 @@ export interface OptionsServeur {
    * une adresse.
    */
   readonly mandatairesDeConfiance?: number;
+  /**
+   * La version du jeu que ce serveur fait tourner: le commit dont il est construit
+   * (etape 5.3). Une page construite d'un autre commit se voit refuser le lien, et
+   * la route de sante la donne. Absente par defaut: aucun controle, comme en
+   * developpement et dans les tests. Voir version.ts dans le paquet partage.
+   */
+  readonly version?: string;
 }
 
 /** Un serveur monte, pret a ecouter. */
@@ -112,8 +121,17 @@ export interface ServeurMonte {
  */
 export function creerServeur(options: OptionsServeur = {}): ServeurMonte {
   const origines = options.originesAutorisees ?? [];
-  const application = applicationWeb(options.fichiers, routesDesComptes(options.comptes, origines));
   const mandataires = options.mandatairesDeConfiance ?? 0;
+
+  // La route de sante lit l'activite de la couche jeu, qui ne peut naitre qu'une
+  // fois le serveur HTTP monte sur l'application: elle la lit donc a chaque
+  // question, jamais au montage. Aucune question ne peut arriver avant la fin de
+  // cette fonction: le serveur n'ecoute pas encore.
+  const application = applicationWeb(
+    options.fichiers,
+    routesDesComptes(options.comptes, origines),
+    () => activiteDe(jeu, options.version),
+  );
 
   if (mandataires > 0) {
     application.set('trust proxy', mandataires);
@@ -135,6 +153,7 @@ export function creerServeur(options: OptionsServeur = {}): ServeurMonte {
     ...(options.horloge === undefined ? {} : { horloge: options.horloge }),
     ...(options.terrains === undefined ? {} : { terrains: options.terrains }),
     ...(options.comptes === undefined ? {} : { comptes: options.comptes }),
+    ...(options.version === undefined ? {} : { version: options.version }),
   });
 
   return {
@@ -153,6 +172,21 @@ export function creerServeur(options: OptionsServeur = {}): ServeurMonte {
         });
       });
     },
+  };
+}
+
+/** L'activite d'un serveur, telle que la route de sante la rend. */
+function activiteDe(
+  jeu: ServeurSocket | undefined,
+  version: string | undefined,
+): ActiviteDuServeur {
+  const parties = jeu?.rooms.toutesLesRooms ?? [];
+
+  return {
+    version,
+    parties: parties.length,
+    joueurs: parties.reduce((total, partie) => total + partie.joueurs.length, 0),
+    connexions: jeu?.nombreDeConnexions ?? 0,
   };
 }
 

@@ -50,6 +50,8 @@
     "packages/**/*.test.ts",
     "packages/*/scripts/**/*.ts",
     "tests/**/*.ts",
+    // Les outils de mise en ligne (etape 5.3), lances par Node comme le harnais de charge.
+    "deploiement/**/*.ts",
     "*.config.ts",
     "vitest.workspace.ts",
     "packages/*/drizzle.config.ts"

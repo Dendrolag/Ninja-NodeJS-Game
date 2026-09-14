@@ -61,6 +61,10 @@ export {
   xpDuNiveau,
 } from './progression.js';
 
+export { origineValide, politiqueDeContenu } from './page.js';
+
+export { MOTIF_VERSION_DIFFERENTE, versionAcceptee } from './version.js';
+
 export type { Consommation, SeauAJetons } from './debit.js';
 export { consommer, seauNeuf } from './debit.js';
 

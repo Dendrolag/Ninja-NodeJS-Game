@@ -23,7 +23,7 @@ export default defineWorkspace([
     extends: './vitest.config.ts',
     test: {
       name: 'unitaires',
-      include: ['packages/**/*.test.ts', 'tests/**/*.test.ts'],
+      include: ['packages/**/*.test.ts', 'tests/**/*.test.ts', 'deploiement/**/*.test.ts'],
       exclude: ['**/node_modules/**', '**/dist/**', 'tests/e2e/**', 'tests/base/**', 'legacy/**'],
     },
   },

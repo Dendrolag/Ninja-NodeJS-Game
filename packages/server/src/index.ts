@@ -97,7 +97,7 @@ export { ServeurSocket } from './ServeurSocket.js';
 export type { OptionsServeur, ServeurMonte } from './serveur.js';
 export { PORT_PAR_DEFAUT, creerServeur, demarrerServeur } from './serveur.js';
 
-export type { DossiersServis } from './fichiers.js';
+export type { ActiviteDuServeur, DossiersServis, ReponseDeSante } from './fichiers.js';
 export { MESSAGE_DE_SANTE, POLITIQUE_DE_CONTENU, applicationWeb } from './fichiers.js';
 
 export type { BaseDeDonnees, BaseOuverte, OptionsBase } from './base/connexion.js';

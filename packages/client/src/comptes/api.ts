@@ -68,8 +68,10 @@ export interface OptionsApiComptesHttp {
   /**
    * L'origine du serveur, sans barre finale.
    *
-   * Absente, les requetes partent vers l'origine de la page, ce qui est le cas
-   * courant: le serveur sert la page et les routes ensemble.
+   * Absente, les requetes partent vers l'origine de la page: c'est le cas du
+   * developpement, ou le serveur sert la page et les routes ensemble. En
+   * production, la page est servie ailleurs, et l'origine du serveur est fixee a
+   * l'empaquetage (configuration.ts, etape 5.3).
    */
   readonly url?: string;
   /** L'envoi des requetes. fetch par defaut. */

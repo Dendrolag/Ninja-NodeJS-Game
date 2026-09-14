@@ -4,10 +4,13 @@
  * Ce qu'ils protegent: le joueur ne peut pas envoyer un pseudo que le serveur
  * refuserait pour sa forme, il sait pourquoi, et un refus du serveur ne reste pas
  * affiche sous un pseudo qu'il n'a pas concerne. Depuis la reprise des ecrans du
- * jalon 3: un compte n'a pas de pseudo a choisir, et un lien refuse se dit.
+ * jalon 3: un compte n'a pas de pseudo a choisir, et un lien refuse se dit. Depuis
+ * l'etape 5.3: une page d'une autre version que le serveur ne propose que de se
+ * recharger.
  */
 
 import type { MaProgression } from '@neon-ninja/shared';
+import { MOTIF_VERSION_DIFFERENTE } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
 import type { EtatClient } from '../../etat.js';
@@ -40,11 +43,14 @@ describe('modeleAccueil', () => {
     expect(modele.peutJouer).toBe(false);
   });
 
-  it('distingue un lien perdu d un lien qui s etablit', () => {
+  it('distingue un lien perdu d un lien qui s etablit, et propose de recharger', () => {
     const modele = modeleAccueil({ ...ETAT_INITIAL, connexion: 'perdue' }, 'Alice');
 
     expect(modele.lien).toBe('perdu');
     expect(modele.peutJouer).toBe(false);
+    expect(modele.peutRecharger).toBe(true);
+    expect(modele.peutReessayer).toBe(false);
+    expect(modeleAccueil(ETAT_INITIAL, 'Alice').peutRecharger).toBe(false);
   });
 
   it('laisse jouer avec un pseudo valide', () => {
@@ -58,6 +64,8 @@ describe('modeleAccueil', () => {
       erreur: undefined,
       enAttente: false,
       peutJouer: true,
+      peutRecharger: false,
+      peutReessayer: false,
       peutContinuerEnInvite: false,
     });
   });
@@ -148,12 +156,14 @@ describe('modeleAccueil, quand le lien est refuse', () => {
     refusDeConnexion: 'Session invalide ou expirée. Reconnectez-vous.',
   };
 
-  it('montre le motif, sans laisser jouer', () => {
+  it('montre le motif, sans laisser jouer, et propose de reessayer', () => {
     const modele = modeleAccueil(REFUSE, 'Alice');
 
     expect(modele.lien).toBe('refuse');
     expect(modele.motifDuLien).toBe('Session invalide ou expirée. Reconnectez-vous.');
     expect(modele.peutJouer).toBe(false);
+    expect(modele.peutReessayer).toBe(true);
+    expect(modele.peutRecharger).toBe(false);
   });
 
   it('ne propose de continuer en invite que si le lien presentait une session', () => {
@@ -174,5 +184,32 @@ describe('modeleAccueil, quand le lien est refuse', () => {
     );
 
     expect(modele.avis).toBe(AVIS_SESSION_EXPIREE);
+  });
+});
+
+describe('modeleAccueil, quand la page n est pas de la version du serveur', () => {
+  const PERIMEE: EtatClient = {
+    ...ETAT_INITIAL,
+    connexion: 'refusee',
+    refusDeConnexion: MOTIF_VERSION_DIFFERENTE,
+  };
+
+  it('dit de recharger, et ne propose rien d autre', () => {
+    const modele = modeleAccueil(PERIMEE, 'Alice');
+
+    expect(modele.motifDuLien).toBe(MOTIF_VERSION_DIFFERENTE);
+    expect(modele.peutRecharger).toBe(true);
+    expect(modele.peutReessayer).toBe(false);
+    expect(modele.peutContinuerEnInvite).toBe(false);
+    expect(modele.peutJouer).toBe(false);
+  });
+
+  it('ne propose pas de continuer en invite, meme a une page qui presentait une session', () => {
+    const modele = modeleAccueil(
+      { ...PERIMEE, session: { nature: 'compte', progression: PROGRESSION } },
+      '',
+    );
+
+    expect(modele.peutContinuerEnInvite).toBe(false);
   });
 });

@@ -25,7 +25,7 @@ Le périmètre validé le 29 juin 2026 est repris tel quel, et précisé pour ch
 |                                                    | Historique des parties d'un compte                                        | 3.1, 3.3                |
 |                                                    | Profil réduit et fin de partie enrichie                                   | Jalon 3                 |
 | **Modéliser de façon extensible, sans construire** | Pass de saison, skins, clans                                              | Points d'extension, 3.1 |
-| **Reporter entièrement**                           | Les autres modes: Chasse, Battle Royale, Équipes, Chaos                   | Jalon 5                 |
+| **Reporter entièrement**                           | Les autres modes: Chasse, Battle Royale, Équipes, Chaos                   | Après le socle (6.1)    |
 |                                                    | Pass de saison, boutique de skins, clans                                  | Après la v1             |
 |                                                    | Échelle de ligue détaillée, appariement par niveau, rang mondial          | Après la v1             |
 |                                                    | Gemmes (monnaie premium)                                                  | Avec une boutique       |

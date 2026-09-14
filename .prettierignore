@@ -16,3 +16,4 @@ packages/server/migrations/
 # Maquettes exportees, non reformatees
 docs/design/
 packages/client/web/
+.vercel/

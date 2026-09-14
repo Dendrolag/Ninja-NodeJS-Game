@@ -176,7 +176,11 @@ export interface ReponseRefusee {
  * d'un compte, ou elle est refusee si la session n'est pas valide: un joueur qui
  * se croit connecte ne doit pas jouer en invite sans le savoir, et perdre la
  * progression de sa partie.
+ *
+ * La version (etape 5.3) est le commit dont la page est construite: un serveur
+ * construit d'un autre commit refuse le lien. Voir version.ts.
  */
 export interface AuthentificationReseau {
   readonly jeton?: string;
+  readonly version?: string;
 }

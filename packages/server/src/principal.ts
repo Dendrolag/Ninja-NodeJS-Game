@@ -1,5 +1,6 @@
 /**
- * Le point de demarrage du serveur, celui que « pnpm dev » lance.
+ * Le point de demarrage du serveur, celui que « pnpm dev » lance, et celui de la
+ * production.
  *
  * Il ne contient aucune logique: il lit la configuration de l'environnement,
  * monte le serveur, et l'arrete proprement quand on le lui demande. Tout le reste
@@ -10,6 +11,11 @@
  * processus, ce qui suffisait sur une machine de developpement et laissait des
  * joueurs sans explication en production. Ici l'extinction arrete les parties
  * d'abord, ferme les connexions ensuite, et rend la main.
+ *
+ * EN PRODUCTION (etape 5.3), l'hebergeur pose SERVIR_LA_PAGE a « non », puisque la
+ * page est servie par Vercel, VERSION_DU_JEU au commit deploye, ORIGINES_AUTORISEES
+ * a l'origine de la page, et MANDATAIRES_DE_CONFIANCE au nombre de ses mandataires.
+ * La procedure est dans docs/deploiement.md.
  */
 
 import { existsSync } from 'node:fs';
@@ -19,6 +25,7 @@ import { fileURLToPath } from 'node:url';
 import type { BaseOuverte } from './base/connexion.js';
 import { ouvrirBase } from './base/connexion.js';
 import { Authentification } from './comptes/Authentification.js';
+import type { DossiersServis } from './fichiers.js';
 import { PORT_PAR_DEFAUT, demarrerServeur } from './serveur.js';
 import { ChargeurDeTerrain, racineRessources } from './terrain.js';
 
@@ -69,6 +76,30 @@ function mandatairesDeConfiance(brut: string | undefined): number {
   return nombre;
 }
 
+/** Lit la version du jeu, absente en developpement. Voir OptionsServeur. */
+function versionDuJeu(brut: string | undefined): string | undefined {
+  return brut === undefined || brut.trim().length === 0 ? undefined : brut.trim();
+}
+
+/**
+ * Le serveur sert-il la page du jeu, « oui » par defaut.
+ *
+ * Toute autre valeur que « oui » ou « non » est une erreur de saisie, et arrete le
+ * demarrage: un serveur de production qui se mettrait a servir la page par erreur
+ * le ferait en silence.
+ */
+function servirLaPage(brut: string | undefined): boolean {
+  if (brut === undefined || brut === '' || brut === 'oui') {
+    return true;
+  }
+
+  if (brut === 'non') {
+    return false;
+  }
+
+  throw new Error(`SERVIR_LA_PAGE vaut « oui » ou « non », recu « ${brut} ».`);
+}
+
 /**
  * La base des comptes, si DATABASE_URL est definie.
  *
@@ -77,7 +108,8 @@ function mandatairesDeConfiance(brut: string | undefined): number {
  * pour que personne ne cherche pourquoi la connexion a un compte est refusee.
  *
  * La base n'est pas migree ici: les migrations s'appliquent a part, par
- * « pnpm base:migrer », qui passe par l'adresse directe.
+ * « pnpm base:migrer », qui passe par l'adresse directe. En production, la
+ * commande de demarrage les applique juste avant de lancer ce fichier.
  */
 function baseDesComptes(adresse: string | undefined): BaseOuverte | undefined {
   if (adresse === undefined || adresse.length === 0) {
@@ -89,34 +121,38 @@ function baseDesComptes(adresse: string | undefined): BaseOuverte | undefined {
 }
 
 /**
- * Le dossier du client empaquete.
+ * Les dossiers de la page et des ressources a servir, si le serveur sert la page.
  *
- * Il se deduit de l'emplacement de ce fichier, comme la racine des ressources:
- * packages/server/dist/principal.js a pour voisin packages/client/web. La
- * variable CHEMIN_CLIENT prend le dessus, pour un deploiement ou le client serait
- * range ailleurs.
+ * Le client se deduit de l'emplacement de ce fichier, comme la racine des
+ * ressources: packages/server/dist/principal.js a pour voisin packages/client/web.
+ * La variable CHEMIN_CLIENT prend le dessus, pour un deploiement ou le client
+ * serait range ailleurs.
  */
-function dossierDuClient(): string {
-  const surcharge = process.env['CHEMIN_CLIENT'];
-
-  if (surcharge !== undefined && surcharge.length > 0) {
-    return resolve(surcharge);
+function dossiersServis(): DossiersServis | undefined {
+  if (!servirLaPage(process.env['SERVIR_LA_PAGE'])) {
+    return undefined;
   }
 
-  return resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', 'client', 'web');
+  const surcharge = process.env['CHEMIN_CLIENT'];
+  const client =
+    surcharge !== undefined && surcharge.length > 0
+      ? resolve(surcharge)
+      : resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', 'client', 'web');
+
+  // Un client absent ne doit pas empecher le serveur de jeu de tourner, mais il ne
+  // doit pas non plus passer inapercu: la page repondrait « introuvable » sans
+  // explication.
+  if (!existsSync(join(client, 'index.html'))) {
+    console.warn(
+      `Le client n'est pas empaquete dans ${client}: la page ne s'affichera pas. Lancer « pnpm build ».`,
+    );
+  }
+
+  return { client, ressources: racineRessources() };
 }
 
-const client = dossierDuClient();
-
-// Un client absent ne doit pas empecher le serveur de jeu de tourner, mais il ne
-// doit pas non plus passer inapercu: la page repondrait « introuvable » sans
-// explication.
-if (!existsSync(join(client, 'index.html'))) {
-  console.warn(
-    `Le client n'est pas empaquete dans ${client}: la page ne s'affichera pas. Lancer « pnpm build ».`,
-  );
-}
-
+const fichiers = dossiersServis();
+const version = versionDuJeu(process.env['VERSION_DU_JEU']);
 const base = baseDesComptes(process.env['DATABASE_URL']);
 
 // C'est ici, et seulement ici, que le serveur decide de lire les images de
@@ -126,8 +162,9 @@ const base = baseDesComptes(process.env['DATABASE_URL']);
 const serveur = await demarrerServeur(portDemande(process.env['PORT']), {
   originesAutorisees: originesAutorisees(process.env['ORIGINES_AUTORISEES']),
   terrains: new ChargeurDeTerrain(),
-  fichiers: { client, ressources: racineRessources() },
   mandatairesDeConfiance: mandatairesDeConfiance(process.env['MANDATAIRES_DE_CONFIANCE']),
+  ...(fichiers === undefined ? {} : { fichiers }),
+  ...(version === undefined ? {} : { version }),
   ...(base === undefined ? {} : { comptes: new Authentification({ db: base.db }) }),
 });
 
@@ -136,7 +173,9 @@ const port = typeof adresse === 'object' && adresse !== null ? adresse.port : '?
 
 // eslint-disable-next-line no-console
 console.log(
-  `Neon Ninja: serveur a l'ecoute sur le port ${port}, jeu sur http://localhost:${port}/`,
+  fichiers === undefined
+    ? `Neon Ninja: serveur de jeu a l'ecoute sur le port ${port}, sans la page, version ${version ?? 'de developpement'}.`
+    : `Neon Ninja: serveur a l'ecoute sur le port ${port}, jeu sur http://localhost:${port}/`,
 );
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {

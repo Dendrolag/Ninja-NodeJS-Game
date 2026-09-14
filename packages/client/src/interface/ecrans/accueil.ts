@@ -246,8 +246,8 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
 
       ecrireTexte(lien, texteDuLien);
       montrer(lien, texteDuLien !== '');
-      montrer(recharger, modele.lien === 'perdu');
-      montrer(reessayer, modele.lien === 'refuse');
+      montrer(recharger, modele.peutRecharger);
+      montrer(reessayer, modele.peutReessayer);
       montrer(continuerEnInvite, modele.peutContinuerEnInvite);
     },
 

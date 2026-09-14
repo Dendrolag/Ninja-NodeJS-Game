@@ -10,11 +10,16 @@
  * imports et produit un seul fichier pour la page. Ce fichier n'est pas exporte
  * par le paquet: l'importer executerait l'application.
  *
+ * L'ADRESSE DU SERVEUR ET LA VERSION SONT ECRITES PAR L'EMPAQUETEUR (etape 5.3). Il
+ * remplace les deux constantes declarees ci-dessous par leur valeur; vides, la page
+ * parle au serveur qui l'a servie, sans version, comme en developpement. Voir
+ * configuration.ts.
+ *
  * LA POLITIQUE DE SECURITE DU CONTENU interdit a la page d'evaluer du code fabrique
  * a la volee. PixiJS le fait par defaut pour accelerer ses shaders; son module
- * unsafe-eval le remplace par une version qui s'en passe. Le serveur pose cette
- * politique dans packages/server/src/fichiers.ts: c'est une defense de plus
- * contre une injection de code, la faille S1 du jeu d'origine.
+ * unsafe-eval le remplace par une version qui s'en passe. La politique est ecrite
+ * dans le paquet partage (page.ts): c'est une defense de plus contre une injection
+ * de code, la faille S1 du jeu d'origine.
  */
 
 import 'pixi.js/unsafe-eval';
@@ -22,11 +27,18 @@ import 'pixi.js/unsafe-eval';
 import { creerClient } from './client.js';
 import { creerApiComptesHttp } from './comptes/api.js';
 import { creerCoffreDeJeton } from './comptes/coffre.js';
+import { configurationDeLaPage } from './configuration.js';
 import { horlogeNavigateur } from './horloge.js';
 import { monterApplication } from './interface/application.js';
 import { monterJeu } from './interface/ecrans/jeu.js';
 import { creerReseauSocketIo } from './reseauSocketIo.js';
 import { creerLecteurDeSons } from './sons/lecteur.js';
+
+/** L'origine du serveur de jeu, ecrite par l'empaqueteur. Vide: celle de la page. */
+declare const __SERVEUR_DE_JEU__: string;
+
+/** Le commit dont la page est construite, ecrit par l'empaqueteur. Vide en developpement. */
+declare const __VERSION_DU_JEU__: string;
 
 /**
  * Le stockage du navigateur, s'il est permis d'y toucher.
@@ -49,11 +61,12 @@ if (hote === null) {
 }
 
 const stockage = stockageDuNavigateur();
+const configuration = configurationDeLaPage(__SERVEUR_DE_JEU__, __VERSION_DU_JEU__);
 
 const client = creerClient({
-  reseau: creerReseauSocketIo(),
+  reseau: creerReseauSocketIo(configuration),
   horloge: horlogeNavigateur,
-  comptes: creerApiComptesHttp(),
+  comptes: creerApiComptesHttp(configuration.url === undefined ? {} : { url: configuration.url }),
   coffre: creerCoffreDeJeton(stockage),
 });
 

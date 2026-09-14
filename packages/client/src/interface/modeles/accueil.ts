@@ -18,9 +18,13 @@
  * UN LIEN REFUSE SE DIT, ET LE JOUEUR CHOISIT (decision du 11 septembre 2026). Un
  * jeton qui n'ouvre plus rien fait refuser le lien; l'accueil montre le motif, et
  * propose de reessayer ou, s'il presentait une session, de continuer en invite.
+ *
+ * UNE PAGE D'UNE AUTRE VERSION SE RECHARGE (etape 5.3). Le serveur la refusera a
+ * chaque essai, avec ou sans session: seul un rechargement lui donne la page qui
+ * va avec le serveur. L'accueil ne propose alors que cela.
  */
 
-import { normaliserTexte, validerPseudo } from '@neon-ninja/shared';
+import { MOTIF_VERSION_DIFFERENTE, normaliserTexte, validerPseudo } from '@neon-ninja/shared';
 
 import type { EtatClient, EtatConnexion } from '../../etat.js';
 
@@ -54,6 +58,10 @@ export interface ModeleAccueil {
   readonly pseudo: string | undefined;
   /** Le bouton pour jouer est-il actif. */
   readonly peutJouer: boolean;
+  /** Recharger la page est la seule issue: le lien est perdu, ou la page n'est pas de la version du serveur. */
+  readonly peutRecharger: boolean;
+  /** Le lien refuse peut s'ouvrir a un nouvel essai: tout refus, sauf celui de la version. */
+  readonly peutReessayer: boolean;
   /** Le lien refuse presentait une session: on peut y renoncer et jouer en invite. */
   readonly peutContinuerEnInvite: boolean;
 }
@@ -81,6 +89,7 @@ export function modeleAccueil(etat: EtatClient, saisie: string): ModeleAccueil {
   const session = etat.session;
   const pseudoRequis = session.nature === 'invite';
   const verdict = validerPseudo(saisie);
+  const pagePerimee = lien === 'refuse' && etat.refusDeConnexion === MOTIF_VERSION_DIFFERENTE;
 
   // Un champ vide n'est pas une faute a signaler: c'est un champ pas encore
   // rempli. Le bouton reste simplement inactif.
@@ -99,7 +108,9 @@ export function modeleAccueil(etat: EtatClient, saisie: string): ModeleAccueil {
     enAttente: etat.entreeEnCours,
     pseudo: pseudoRequis && verdict.valide ? verdict.valeur : undefined,
     peutJouer: lien === 'etabli' && !etat.entreeEnCours && (!pseudoRequis || verdict.valide),
-    peutContinuerEnInvite: lien === 'refuse' && !pseudoRequis,
+    peutRecharger: lien === 'perdu' || pagePerimee,
+    peutReessayer: lien === 'refuse' && !pagePerimee,
+    peutContinuerEnInvite: lien === 'refuse' && !pseudoRequis && !pagePerimee,
   };
 }
 
