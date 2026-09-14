@@ -135,7 +135,8 @@ Repris des handoffs précédents, inchangé: les erreurs d'un travailleur échap
 
 - `c5aaa63` (page à deux origines, contrôle de version): **verte**, exécution 34826305914.
 - `6e9d013` (mise en ligne par la CI): **verte**, exécution 34863746129: « Types, linter et tests », « Bout en bout » (15 scénarios) et **« Mise en ligne »** (2 min 6 s). Le serveur et la page publique sont de ce commit.
-- `7a8fa65` (réveil du serveur endormi): **verte**, exécution 34867725120: « Types, linter et tests », « Bout en bout » (15 scénarios) et « Mise en ligne ». Le serveur et la page publique sont de ce commit.
+- `7a8fa65` (réveil du serveur endormi): **verte**, exécution 34867725120: « Types, linter et tests », « Bout en bout » (15 scénarios) et « Mise en ligne ».
+- `d2c2e71` (ce handoff): **verte**, exécution 34870866132, mise en ligne comprise. La production est de ce commit, qui ne change que la documentation: le jeu en ligne est celui de `7a8fa65`.
 
 `master` n'a pas été touché.
 
