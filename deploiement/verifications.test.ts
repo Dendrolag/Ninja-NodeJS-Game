@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 import { politiqueDeContenu } from '../packages/shared/dist/index.js';
 import type { PageLue } from './verifications.ts';
 import {
+  adresseDuDeploiementVercel,
   deploiementDuCommit,
   issueDuDeploiement,
   problemesDeLaPage,
@@ -58,6 +59,40 @@ describe('issueDuDeploiement', () => {
     ]) {
       expect(issueDuDeploiement(statut), String(statut)).toBe('echoue');
     }
+  });
+});
+
+describe('adresseDuDeploiementVercel', () => {
+  it('lit l adresse dans la sortie JSON du mode non interactif', () => {
+    // Forme relevee le 14 septembre 2026, outil 59.16.0, raccourcie.
+    const sortie = JSON.stringify({
+      status: 'ok',
+      deployment: {
+        id: 'dpl_BHCtMkqaHyhzZUncW4tN3Y2dGNPa',
+        url: 'https://neon-ninja-iado5tkei-dendrolags-projects.vercel.app',
+        readyState: 'READY',
+        target: 'production',
+      },
+      next: [{ command: 'vercel curl https://ailleurs.vercel.app', when: 'Verify deployment' }],
+    });
+
+    expect(adresseDuDeploiementVercel(sortie)).toBe(
+      'https://neon-ninja-iado5tkei-dendrolags-projects.vercel.app',
+    );
+  });
+
+  it('lit encore l ancien format, l adresse seule sur la derniere ligne', () => {
+    expect(
+      adresseDuDeploiementVercel(
+        'Vercel CLI\nhttps://neon-ninja-abc-dendrolags-projects.vercel.app\n',
+      ),
+    ).toBe('https://neon-ninja-abc-dendrolags-projects.vercel.app');
+  });
+
+  it('ne rend rien d une sortie sans adresse', () => {
+    expect(adresseDuDeploiementVercel('')).toBeUndefined();
+    expect(adresseDuDeploiementVercel('{"status":"error","deployment":{}}')).toBeUndefined();
+    expect(adresseDuDeploiementVercel('Inspect https://vercel.com/quelque-part')).toBeUndefined();
   });
 });
 

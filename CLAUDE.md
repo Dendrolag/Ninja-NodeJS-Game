@@ -29,7 +29,7 @@ Couvrir profond là où vit le gameplay, léger ailleurs. **80 à 90 pour cent s
 - Serveur: Node.js, Express, Socket.IO. État encapsulé par partie (GameRoom), plusieurs parties via RoomManager.
 - Client: PixiJS pour le rendu in-game (lueur néon en filtre GPU), DOM pour les menus.
 - Persistance: PostgreSQL via Neon, accès par le pooler. Le branchement Neon fournit les bases de test isolées.
-- Hébergement: client sur Vercel, serveur sur Render, base sur Neon. Fly.io si la latence le justifie plus tard.
+- Hébergement (depuis l'étape 5.3): la page sur Vercel, le serveur de jeu sur Render en offre gratuite à Francfort, la base sur Neon. Mise en ligne par la CI après les tests, procédure et exploitation dans `docs/deploiement.md`. Fly.io si la latence le justifie plus tard.
 - Tests: Vitest en unitaire et intégration, Playwright en bout en bout.
 - Intégration continue: GitHub Actions, fusion bloquée si la CI est rouge.
 
@@ -45,6 +45,7 @@ Couvrir profond là où vit le gameplay, léger ailleurs. **80 à 90 pour cent s
 - `docs/handoffs/`, les recaps de fin de session.
 - `docs/audit/`, l'audit de l'existant.
 - `tests/e2e/`, les scénarios Playwright.
+- `deploiement/`, la mise en ligne d'un commit et ses vérifications (étape 5.3), lancée par la CI.
 - `tests/charge/`, le harnais de charge du serveur (étape 5.1) et l'outil d'empreinte des parties, qui prouve qu'une optimisation ne change rien au jeu (étape 5.2); ses chiffres de référence sont dans `docs/mesures/`. La mesure sous Linux se lance en poussant une branche `mesure-charge/` (`.github/workflows/charge.yml`).
 
 ## Base legacy de référence
@@ -84,7 +85,7 @@ pnpm dev                  # compiler, empaqueter, puis lancer le jeu sur http://
 pnpm dev:server           # compiler puis lancer le serveur seul, sans refaire la page
 ```
 
-**Le jeu est jouable dans un navigateur depuis l'étape 4.3**: `pnpm dev`, puis ouvrir http://localhost:3000. Le serveur sert la page empaquetée par esbuild (`packages/client/web`, produite par `pnpm build`) et les ressources de `assets/`, et décode les murs des cartes. Variables d'environnement: `PORT`; `ORIGINES_AUTORISEES` (liste séparée par des virgules) pour le contrôle d'accès du navigateur, Socket.IO et routes des comptes; `MANDATAIRES_DE_CONFIANCE`, nombre de mandataires devant le serveur dont on croit `X-Forwarded-For`, zéro par défaut; `CHEMIN_CLIENT` et `CHEMIN_RESSOURCES` pour servir la page et les ressources depuis un autre dossier. « Partie rapide » mène à la première partie publique en attente, ou à une nouvelle partie publique. Depuis la reprise des écrans du jalon 3, la page permet aussi de parcourir les parties publiques, de rejoindre une partie privée par son code, de créer une partie publique ou privée, de se connecter à un compte et de consulter son profil. Pour jouer à la version d'origine, utiliser la branche `master`.
+**Le jeu est jouable dans un navigateur depuis l'étape 4.3**: `pnpm dev`, puis ouvrir http://localhost:3000. Le serveur sert la page empaquetée par esbuild (`packages/client/web`, produite par `pnpm build`) et les ressources de `assets/`, et décode les murs des cartes. Variables d'environnement: `PORT`; `ORIGINES_AUTORISEES` (liste séparée par des virgules) pour le contrôle d'accès du navigateur, Socket.IO et routes des comptes; `MANDATAIRES_DE_CONFIANCE`, nombre de mandataires devant le serveur dont on croit `X-Forwarded-For`, zéro par défaut; `CHEMIN_CLIENT` et `CHEMIN_RESSOURCES` pour servir la page et les ressources depuis un autre dossier; `SERVIR_LA_PAGE` (« non » en production, où Vercel sert la page) et `VERSION_DU_JEU` (le commit en production: une page d'un autre commit est refusée). La route `/sante` rend la version, l'activité du serveur et l'adresse vue du demandeur. « Partie rapide » mène à la première partie publique en attente, ou à une nouvelle partie publique. Depuis la reprise des écrans du jalon 3, la page permet aussi de parcourir les parties publiques, de rejoindre une partie privée par son code, de créer une partie publique ou privée, de se connecter à un compte et de consulter son profil. Pour jouer à la version d'origine, utiliser la branche `master`.
 
 Première utilisation de Playwright sur une machine neuve: `pnpm exec playwright install chromium`.
 
@@ -143,3 +144,4 @@ Les règles d'enchaînement autonome et les conditions d'arrêt sont dans docs/p
 - Journal de conception et décisions: `docs/design/README.md`
 - Invariant de pureté: `.claude/rules/sim-purity.md`
 - Mesures de charge et seuils de performance: `docs/mesures/charge-serveur.md`
+- Mise en ligne et exploitation de la production: `docs/deploiement.md`

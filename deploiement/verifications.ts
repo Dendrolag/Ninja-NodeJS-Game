@@ -74,6 +74,34 @@ export function deploiementDuCommit(reponse: unknown, version: string): string |
 }
 
 /**
+ * L'adresse d'un deploiement Vercel, dans ce que l'outil de Vercel ecrit.
+ *
+ * En mode non interactif, celui de la CI, l'outil ecrit un objet JSON dont
+ * « deployment.url » est l'adresse (constate le 14 septembre 2026, version 59.16.0).
+ * Un outil qui ecrirait encore l'ancien format, l'adresse seule sur sa ligne, est
+ * lu aussi.
+ *
+ * @returns L'adresse, ou undefined si la sortie n'en porte aucune.
+ */
+export function adresseDuDeploiementVercel(sortie: string): string | undefined {
+  try {
+    const url = objet(objet(JSON.parse(sortie) as unknown)?.['deployment'])?.['url'];
+
+    if (typeof url === 'string' && url.startsWith('https://')) {
+      return url;
+    }
+  } catch {
+    // Pas du JSON: l'ancien format, lu ci-dessous.
+  }
+
+  return sortie
+    .split(/\r?\n/u)
+    .map((ligne) => ligne.trim())
+    .filter((ligne) => /^https:\/\/\S+$/u.test(ligne))
+    .at(-1);
+}
+
+/**
  * Ce qui ne va pas dans la reponse de sante du serveur en ligne.
  *
  * @param corps   La reponse de /sante, lue comme du JSON.

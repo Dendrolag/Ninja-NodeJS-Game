@@ -35,6 +35,7 @@ import { pathToFileURL } from 'node:url';
 import { preparerLaSortieVercel } from '../packages/client/scripts/sortieVercel.ts';
 import type { PageLue } from './verifications.ts';
 import {
+  adresseDuDeploiementVercel,
   deploiementDuCommit,
   issueDuDeploiement,
   problemesDeLaPage,
@@ -105,16 +106,24 @@ async function demanderARender(
   return texte === '' ? undefined : (JSON.parse(texte) as unknown);
 }
 
-/** Lance l'outil de Vercel avec ces arguments, et rend ce qu'il ecrit. */
+/**
+ * Lance l'outil de Vercel avec ces arguments, et rend ce qu'il ecrit.
+ *
+ * PAR NPX, ET NON PAR « PNPM DLX ». L'outil n'est pas une dependance du depot: il
+ * tire une quarantaine de paquets dont le jeu n'a aucun usage. pnpm le range a sa
+ * facon, stricte, et l'outil n'y retrouve pas l'une de ses propres dependances
+ * (@vercel/cli-auth, constate le 14 septembre 2026); npx l'installe a plat, comme
+ * il s'attend a l'etre.
+ */
 async function lancerVercel(argumentsVercel: readonly string[]): Promise<string> {
-  const commande = ['dlx', OUTIL_VERCEL, ...argumentsVercel, '--non-interactive'];
+  const commande = ['--yes', OUTIL_VERCEL, ...argumentsVercel, '--non-interactive'];
 
-  // Sous Windows, pnpm est un script de commandes que seul l'interpreteur sait
+  // Sous Windows, npx est un script de commandes que seul l'interpreteur sait
   // lancer. Aucun argument ne porte de secret.
   const [programme, argumentsDuProgramme] =
     process.platform === 'win32'
-      ? ['cmd.exe', ['/d', '/s', '/c', 'pnpm', ...commande]]
-      : ['pnpm', commande];
+      ? ['cmd.exe', ['/d', '/s', '/c', 'npx', ...commande]]
+      : ['npx', commande];
 
   return new Promise((resoudre, rejeter) => {
     execFile(
@@ -135,13 +144,9 @@ async function lancerVercel(argumentsVercel: readonly string[]): Promise<string>
   });
 }
 
-/** L'adresse d'un deploiement Vercel, que l'outil ecrit en derniere ligne. */
-function adresseDuDeploiementVercel(sortie: string): string {
-  const adresse = sortie
-    .split(/\r?\n/u)
-    .map((ligne) => ligne.trim())
-    .filter((ligne) => ligne.startsWith('https://'))
-    .at(-1);
+/** L'adresse du deploiement Vercel que l'outil vient de creer, ou un echec qui le dit. */
+function adresseObligatoire(sortie: string): string {
+  const adresse = adresseDuDeploiementVercel(sortie);
 
   if (adresse === undefined) {
     throw new Error("L'outil de Vercel n'a pas donne l'adresse du deploiement.");
@@ -263,7 +268,7 @@ export async function deployer(configuration: ConfigurationDuDeploiement): Promi
   await preparerLaSortieVercel({ serveurDeJeu, version });
 
   annoncer('Envoi de la page a Vercel, sans la promouvoir');
-  const deploiementDeLaPage = adresseDuDeploiementVercel(
+  const deploiementDeLaPage = adresseObligatoire(
     await lancerVercel(['deploy', '--prebuilt', '--prod', '--skip-domain', '--yes']),
   );
   process.stdout.write(`Page envoyee: ${deploiementDeLaPage}\n`);
