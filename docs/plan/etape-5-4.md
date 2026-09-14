@@ -6,6 +6,12 @@ Brief de session. Objectif unique : vérifier en jouant, écran par écran et r�
 
 Ajoutée le 14 septembre 2026, à la fin de l'étape 5.3, à la demande du porteur du projet. Il a cru voir des manques ou des défauts, dont **l'attribution aléatoire des couleurs, qui ne fonctionnerait pas**. Les tests automatiques couvrent le moteur, le serveur et les parcours principaux, mais aucune étape n'a déroulé une recette complète du jeu tel qu'un joueur le vit. Elle se place avant 6.1 : on ne retire pas la version d'origine sans avoir vérifié que la nouvelle la remplace.
 
+## Réconciliation du 14 septembre 2026
+
+- **L'hypothèse de départ était fausse, le défaut réel plus large.** L'attribution aléatoire des couleurs fonctionnait : tirage dans la palette du legacy, graine propre à chaque partie. C'est leur affichage qui était faux : le sprite du ninja est rouge, et le rendu le teintait en entier. Tout le monde paraissait rouge ou noir, et plus aucune capture ne se voyait.
+- **La recette et les corrections n'ont pas eu à être coupées en deux étapes.** Les défauts se sont corrigés au fil de la grille, chacun avec son test.
+- **Deux manques connus sont devenus des étapes** (2.5 et 3.4 du ROADMAP), les autres ont été traités ici.
+
 ## Rituel de début de session
 
 Lire CLAUDE.md (dont « Comportements à préserver »), le handoff de l'étape 5.3, cette fiche, puis `docs/design/cadrage.md` (sections 3 et 4 : écrans et contrat de réglages) et `docs/deploiement.md`.

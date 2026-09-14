@@ -82,6 +82,8 @@ Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision 
 
 **Décision du 14 septembre 2026: une recette fonctionnelle avant le retrait du legacy.** Le porteur du projet a cru voir des manques ou des défauts, dont l'attribution aléatoire des couleurs, et demande une étape qui teste fonctionnellement tout ce qui a été fait: étape `5.4`, fiche rédigée le même jour. Ordre du jalon: `7.1` et `5.3` (terminées), `5.4`, `6.1`.
 
+**Décision du 14 septembre 2026, à la recette: deux manques connus deviennent des étapes.** Présentés au porteur du projet au début de l'étape 5.4, la reconnexion en cours de partie et la gestion du mot de passe n'ont pas été retenus dans celle-ci: ils deviennent les étapes `2.5` et `3.4`. Aucune ne conditionne le retrait du legacy, qui n'avait ni l'une ni l'autre: elles le suivent. Ordre du jalon: `5.4`, `6.1`, `2.5`, `3.4`, que le porteur du projet peut réordonner. Leurs fiches se rédigent au début de chacune, selon le cas de repli du PROTOCOLE.
+
 ---
 
 ## 4. Carte thématique des étapes
@@ -138,6 +140,9 @@ Tests requis: TI sur la correction du delta, plus une mesure avant-après de la 
 **2.4. Matchmaking, parties privées et publiques.** Code d'invitation pour les privées, liste et partie rapide pour les publiques (le cadrage de l'étape 0.3 a remplacé la file).
 Tests requis: TI sur la création et la jonction par code, et l'attribution en file publique.
 
+**2.5. Reconnexion en cours de partie.** Étape ajoutée le 14 septembre 2026, à la recette de l'étape 5.4, sur décision du porteur du projet. Un joueur dont le lien se coupe, ou qui recharge la page, retrouve sa partie, sa couleur et ses ninjas, dans un délai borné; au-delà, son départ est un abandon, comme aujourd'hui. La reconnexion automatique de Socket.IO reste coupée (étape 4.1): le retour est une demande explicite, authentifiée, que le serveur accepte ou refuse.
+Tests requis: TI sur le retour dans la partie dans le délai et le refus au-delà, sur le refus d'un retour usurpé; bout en bout d'un rechargement de page en pleine partie.
+
 ### Phase 3. Persistance et comptes
 
 **3.1. Base de données et schéma.** PostgreSQL, schéma comptes, progression et résultats, migrations versionnées.
@@ -148,6 +153,9 @@ Tests requis: TI sur les parcours d'inscription et de connexion, et le rejet des
 
 **3.3. Progression branchée sur la fin de partie.**
 Tests requis: TI vérifiant que résultats et progression persistent après une partie.
+
+**3.4. Gestion du mot de passe.** Étape ajoutée le 14 septembre 2026, à la recette de l'étape 5.4, sur décision du porteur du projet. Changer son mot de passe depuis le profil, en fermant les autres sessions du compte. La réinitialisation d'un mot de passe oublié demande un moyen de joindre le joueur, que les comptes n'ont pas: son périmètre se tranche avec le porteur du projet au début de l'étape.
+Tests requis: TI sur le changement accepté avec l'ancien mot de passe et refusé sans, sur la fermeture des autres sessions; bout en bout du changement depuis le profil.
 
 ### Phase 4. Client et rendu PixiJS
 
