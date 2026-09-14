@@ -133,7 +133,8 @@ Résolu par cette étape, repris du handoff 5.3 : la mise en ligne qui coupait l
 - `794e568` (session, mise en ligne ciblée) : **verte**, exécution 34881897038 ; même raison.
 - `7accbf0` (fin de partie retentée, liste vivante) : **rouge**, exécution 34882583601 : `finDePartie.test.ts` attendait une partie sans identifiant. La suite unitaire complète n'avait pas été lancée avant de commiter.
 - `5502c11` (correction de ce test, délais des parcours) : **verte**, exécution 34883777772 : « Types, linter et tests », « Bout en bout » et « Mise en ligne ». La production sert ce commit, vérifié sur `/sante`, et une partie y a été jouée (cas J4 de la grille).
-- Le commit de ce handoff ne touche que la documentation : sa CI doit s'arrêter avant de mettre en ligne (cas J5 de la grille).
+- `71f1862` (grille, handoff, ROADMAP) : **verte**, exécution 34885103948. Documentation seule : la mise en ligne s'est arrêtée d'elle-même, « seuls des fichiers sans effet sur le jeu ont change » (cas J5 de la grille). La production reste `5502c11`, ce qui est attendu.
+- Le commit qui consigne ce dernier cas ne touche lui aussi que la documentation.
 
 `master` n'a pas été touché.
 
