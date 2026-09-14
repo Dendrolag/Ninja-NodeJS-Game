@@ -290,8 +290,11 @@ export async function attendreLaPartie(page: Page): Promise<void> {
   await expect(page.locator('.application')).toHaveAttribute('data-ecran', 'jeu', {
     timeout: 15_000,
   });
-  await expect(page.locator('.terrain canvas')).toBeVisible({ timeout: 20_000 });
-  await expect(page.locator('.jeu-chargement')).toBeHidden({ timeout: 20_000 });
+  // Quarante secondes: sur la machine de developpement, quatorze scenarios qui jouent
+  // en parallele depassaient les vingt secondes de chargement d'une carte (handoffs
+  // 5.3 et 5.4). Le scenario ne verifie pas une duree de chargement, mais la partie.
+  await expect(page.locator('.terrain canvas')).toBeVisible({ timeout: 40_000 });
+  await expect(page.locator('.jeu-chargement')).toBeHidden({ timeout: 40_000 });
   await expect(page.locator('.hud-temps')).toHaveText(/\d:\d\d/u);
 }
 

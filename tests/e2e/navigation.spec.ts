@@ -33,6 +33,11 @@ test.afterEach(async () => {
 });
 
 test('de l accueil a la partie, puis retour a l accueil', async ({ page }) => {
+  // Un parcours entier, chargement de la carte compris, comme les autres parcours.
+  // Avec le delai par defaut de trente secondes, il etait le seul a en manquer quand
+  // les scenarios jouent en parallele sur la machine de developpement (etape 5.4).
+  test.setTimeout(90_000);
+
   const erreurs = releverLesErreurs(page);
   const ecran = page.locator('.application');
 
@@ -79,7 +84,7 @@ test('de l accueil a la partie, puis retour a l accueil', async ({ page }) => {
 
   // -- La partie --------------------------------------------------------------
   await expect(ecran).toHaveAttribute('data-ecran', 'jeu', { timeout: 15_000 });
-  await expect(page.locator('.terrain canvas')).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('.terrain canvas')).toBeVisible({ timeout: 40_000 });
   await expect(page.locator('.hud-temps')).toHaveText(/\d:\d\d/u, { timeout: 10_000 });
   await expect(page.locator('.hud-classement')).toContainText('Alice');
 

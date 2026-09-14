@@ -53,12 +53,27 @@ describe('finPourLesComptes', () => {
     jouer(room, 31_000);
 
     expect(finPourLesComptes(room).partie).toEqual({
+      id: expect.stringMatching(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u,
+      ) as string,
       mode: 'classique',
       carte: 'map2',
       modeMiroir: true,
       dureeS: 30,
       nombreJoueurs: 2,
     });
+  });
+
+  // Recette de l'etape 5.4: l'identifiant est tire avant le premier essai
+  // d'enregistrement, et c'est lui qui empeche un nouvel essai de compter deux fois.
+  // Deux fins de partie ne doivent donc jamais partager le leur.
+  it('donne a chaque fin de partie un identifiant qui n appartient qu a elle', () => {
+    const premiere = roomLancee(ALICE, BOB);
+    const seconde = roomLancee(ALICE, BOB);
+    jouer(premiere, 31_000);
+    jouer(seconde, 31_000);
+
+    expect(finPourLesComptes(premiere).partie.id).not.toBe(finPourLesComptes(seconde).partie.id);
   });
 
   it('ne rend un resultat qu aux comptes, avec les gains de leur place', () => {
