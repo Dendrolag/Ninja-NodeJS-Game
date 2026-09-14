@@ -302,6 +302,12 @@ Ajoutes le 10 septembre 2026, en portant le rendu, les controles et le son du cl
 
 **X35. Changer de fenetre en courant laisse le joueur courir.** Le client ne vide `keysPressed` qu'au lancement et au retour au menu (`client.js:2401`, `:4342`) et n'ecoute pas la perte de focus de la fenetre. Une touche relachee pendant que la fenetre n'a pas le focus n'est jamais signalee, et le personnage continue d'avancer. Corrige a l'etape 4.2: la perte de focus relache tout (`controles/clavier.ts`). Le relachement tactile, lui, etait deja gere par `touchcancel` (`:987`).
 
+### Defauts decouverts a l'etape 5.4
+
+Ajoutes le 14 septembre 2026, pendant la recette fonctionnelle.
+
+**X36. Les bots naissaient blancs, et la regle de contagion laissait passer des couleurs sans proprietaire.** Ce n'est pas un defaut du legacy, c'est une regression du portage, en deux morceaux lies. D'abord, le constructeur d'`Entity` donne a chaque bot une couleur quelconque par `getRandomColor` (`server.js:838`), et `addBot` (`:1553`) ne la change pas: la carte du jeu d'origine se remplit de bots de toutes les couleurs. Le portage de l'etape 1.5 les faisait naitre blancs, le blanc n'etant, dans le legacy, que la couleur des bots rendus par un bot noir (`:1276`, `:1289`). Releve par le porteur du projet a la recette: « les bots sont tous blancs au depart au lieu d'avoir des couleurs aleatoires ». Ensuite, la regle retenue pour X20 et X30, « seule une entite portant la couleur d'un joueur repeint un bot », etait ecrite « tout bot qui n'est pas blanc »: rendre aux bots leur couleur de naissance l'aurait laissee se repandre, et les couleurs tirees par une zone de chaos, qui evitent justement celles des joueurs, se repandaient deja. Corrige a l'etape 5.4: les bots naissent d'une couleur tiree de la graine qui n'est ni de la palette des joueurs, ni blanche, ni noire (`couleurDeBot`, `packages/sim/src/couleurs.ts`), et un bot ne transmet sa couleur que si un joueur present la porte (`aUneCouleurADonner`, `packages/sim/src/capture.ts`). Consequences, toutes deux fideles au jeu d'origine: les bots noirs chassent aussi ces bots de couleur, qu'ils rendent blancs, et un bot de couleur quelconque rapporte un point a celui qui le touche, comme un bot blanc.
+
 ### Statut des failles de securite apres l'etape 1.6
 
 Recapitulatif au 14 aout 2026. Les failles S1 a S4 sont traitees par conception dans `packages/shared` et `packages/sim`; leur fermeture effective demande en plus le branchement de l'etape 2.2 (couche reseau) et de l'etape 4.3 (ecrans).

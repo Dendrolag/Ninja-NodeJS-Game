@@ -21,7 +21,8 @@ Vérifier en jouant, écran par écran et règle par règle, que la réécriture
 - **Scénarios de bout en bout** : le parcours de navigation, seul à garder le délai par défaut de trente secondes, en manquait sous charge ; délais alignés sur les autres parcours.
 - **Seconde série de signalements, sur iPhone en production** : bots tous blancs, joueur invisible, caméra pas assez zoomée, saccades, bouton de localisation introuvable. Reproduite en pilotant WebKit en émulation iPhone contre la production. Cause principale : la caméra plaçait son point visé en divisant deux fois la taille de l'écran par la densité ; à densité 3, le joueur et ses bots tombaient sous le HUD et la carte s'arrêtait aux deux tiers de l'écran. Corrigée, avec la densité du rendu plafonnée à 2 et un vrai bouton de localisation sous le pouce. Le zoom mobile, celui du legacy, est resserré à 360 pixels de carte en largeur sur décision du porteur du projet.
 - **Lancement d'une partie qui rame sur téléphone** : mesuré, les premières images dessinées portaient des tâches longues pendant que le décor partait vers la carte graphique. Le décor et les images se préchargent maintenant dès le compte à rebours du salon, et un écran « Préparation de la partie… » reste posé au-delà du lancement jusqu'à un affichage fluide, trois secondes au plus.
-- **Grille de recette** : `docs/recette/recette-5-4.md`, 71 cas (12 signalements, 59 cas de recette), chacun avec son attendu, sa source, ses preuves et son verdict. Déroulée en local (un joueur, deux onglets, fenêtre mobile, trois cartes dont une en miroir, mode Tactique) et en production.
+- **Troisième série, en production** : le zoom à 360 ne se voyait pas encore, la mise en ligne de `a781c98` n'étant pas terminée ; en ligne quelques minutes plus tard, vérifié en émulation iPhone. Et les bots naissaient tous blancs, alors que le jeu d'origine leur donne une couleur quelconque (`getRandomColor`) : régression du portage (défaut X36). Ils naissent maintenant d'une couleur tirée de la graine, jamais celle d'un joueur ; la règle 11 se précise pour que ces couleurs ne se répandent pas : seule la couleur d'un joueur présent se transmet.
+- **Grille de recette** : `docs/recette/recette-5-4.md`, 72 cas (13 signalements, 59 cas de recette), chacun avec son attendu, sa source, ses preuves et son verdict. Déroulée en local (un joueur, deux onglets, fenêtre mobile, trois cartes dont une en miroir, mode Tactique) et en production.
 - **Jeu d'origine comme référence** : le déploiement encore en ligne sert exactement le `client.js` et le `styles.css` de `legacy/`, vérifié par empreinte.
 
 ## Fichiers créés ou modifiés
@@ -85,6 +86,16 @@ Commit du cadrage mobile et du lancement :
 - `packages/client/src/principal.ts` : le préchargement branché.
 - `packages/client/src/interface/ecrans/jeu.ts` : l'écran « Préparation de la partie… », levé à l'annonce de stabilité.
 
+Commit des couleurs de naissance des bots :
+
+- `packages/sim/src/couleurs.ts` et test : `couleurDeBot`, une couleur quelconque qui n'est celle de personne ; `couleurUnique` et elle partagent une seule boucle de tirage, dont le repli théorique n'est plus une instruction jamais exécutée.
+- `packages/sim/src/bots.ts` et test : `peuplerDeBots` donne cette couleur à chaque bot ordinaire.
+- `packages/sim/src/capture.ts` et test : `aUneCouleurADonner` exige la couleur d'un joueur présent.
+- `packages/sim/src/contacts.test.ts` : la contagion entre bots, avec les joueurs qui portent leurs couleurs.
+- `packages/sim/src/moteur.test.ts` : une graine où bots noirs, zones et objets jouent tous.
+- `packages/sim/src/__snapshots__/partie.test.ts.snap` : l'instantané de la partie de référence, le jeu ayant changé.
+- `CLAUDE.md` (comportement à préserver 11), `docs/audit/AUDIT-EXISTANT.md` (X36), `docs/design/README.md`, `docs/plan/ROADMAP.md` (la contrainte que l'étape 2.5 hérite de la règle 11), la grille et ce handoff.
+
 Commits de ce handoff :
 
 - `docs/recette/recette-5-4.md` (créé) : la grille.
@@ -108,16 +119,17 @@ Aucune modification de `legacy/`, `tests/caracterisation/` ni `master`.
   - **liste vivante** : redemandée toutes les cinq secondes sur son écran, sans recherche affichée, sans empilement, arrêtée en quittant l'écran et à la fermeture ;
   - **cadrage mobile** : 360 pixels de carte en largeur sur un téléphone tenu droit, les proportions gardées couché ;
   - **stabilité de l'affichage** : rien avant que la partie soit dessinée, stable après trois images rapides d'affilée, compte remis à zéro par une image lente, stable au plus tard après trois secondes, et pour de bon ; la boucle l'annonce une seule fois ;
-  - **préchargement** : l'application précharge la partie dès le début du compte à rebours, une fois, avec les réglages du salon.
-- Résultat : **1 732 tests unitaires sur 1 732** (projet `unitaires`) ; **53 tests de base sur 53** contre une branche Neon neuve ; types (paquets, tests, bout en bout), linter et formatage verts.
+  - **préchargement** : l'application précharge la partie dès le début du compte à rebours, une fois, avec les réglages du salon ;
+  - **couleurs de naissance** : une couleur tirée au sort, variée, reproductible, jamais de la palette, blanche, noire ou exclue ; chaque bot peuplé en porte une, jamais celle d'un joueur même hors palette ; un bot de couleur sans propriétaire ne repeint rien, la couleur d'un joueur parti ne se transmet plus, un joueur repeint un bot de couleur quelconque.
+- Résultat : **1 740 tests unitaires sur 1 740** (projet `unitaires`) ; **53 tests de base sur 53** contre une branche Neon neuve ; types (paquets, tests, bout en bout), linter et formatage verts.
 - Bout en bout en local, bureau et mobile : 15 sur 15 ; joués deux fois en parallèle, 29 sur 30 avant l'alignement des délais, **30 sur 30** après ; **16 sur 16** avec le scénario des couleurs rejoué sur mobile et l'écran de préparation.
 - Lancement mesuré sur un téléphone simulé (Chromium, carte graphique, taille Pixel 7, processeur ralenti quatre fois). Avant : deux tâches longues de 134 et 104 millisecondes sur les premières images visibles. Après : les tâches longues (242 et 70 millisecondes) tombent pendant l'écran de préparation, levé à 581 millisecondes du lancement ; aucune ensuite, et l'image la plus longue des trois premières secondes visibles dure 17 millisecondes.
-- Couverture des instructions : **99,84 pour cent** sur `sim` et `shared` (99,84 au handoff 5.3) ; `sim` à **99,67** (99,66) ; `shared` à 100.
+- Couverture des instructions : **99,89 pour cent** sur `sim` et `shared` (99,84 au handoff 5.3) ; `sim` à **99,77** (99,66) ; `shared` à 100.
 - Aucune régression de caractérisation.
 
 ## Décisions et écarts au plan
 
-Sept entrées au journal de `docs/design/README.md`, datées du 14 septembre 2026 : la recoloration par calques, l'animation des icônes, le retour des points flottants, les quatre manques connus traités, la caméra en pixels CSS avec la densité plafonnée, le cadrage mobile à 360 pixels, et la partie préparée pendant le compte à rebours. Points à lire ici.
+Huit entrées au journal de `docs/design/README.md`, datées du 14 septembre 2026 : la recoloration par calques, l'animation des icônes, le retour des points flottants, les quatre manques connus traités, la caméra en pixels CSS avec la densité plafonnée, le cadrage mobile à 360 pixels, la partie préparée pendant le compte à rebours, et les couleurs de naissance des bots. Points à lire ici.
 
 ### 1. La fiche supposait un défaut d'attribution, c'était un défaut d'affichage
 
@@ -139,7 +151,13 @@ Depuis la mise en ligne ciblée, un commit qui ne touche que la documentation, l
 
 Le défaut de caméra était invisible partout où la densité vaut 1 : au bureau, et dans le navigateur de recette. Il ne s'est vu que sur l'iPhone du porteur du projet, puis en pilotant WebKit à densité 3. Leçon de recette : une vérification mobile doit émuler la densité d'un vrai téléphone. Le projet mobile de Playwright le fait (2,625), et son scénario des couleurs, relancé sur ce projet, garde le défaut fermé. Plafonner la densité à 2 est un choix de coût : l'œil n'y perd rien, le téléphone y gagne plus de la moitié des pixels. Le gain de cadence reste à confirmer sur un vrai iPhone.
 
-### 6. Écarts à la fiche
+### 6. Les bots naissent de couleurs quelconques, et la règle 11 se précise
+
+Aucun test ni aucune décision ne voulait des bots blancs au départ : le portage de l'étape 1.5 les a posés ainsi, et la recette les a pris pour la norme (cas C4 et J4). Rendre la couleur du legacy obligeait à relire la règle 11. Écrite « tout bot non blanc transmet sa couleur », elle aurait laissé des dizaines de couleurs sans propriétaire se répandre, ce que la décision du 14 août voulait justement empêcher pour le blanc. Elle devient « seule la couleur d'un joueur présent se transmet ». Deux effets de bord, assumés et consignés : les couleurs d'une zone de chaos, qui évitent celles des joueurs, ne se répandent plus ; et les bots d'un joueur parti gardent sa couleur sans plus la transmettre. L'étape 2.5 (reconnexion) devra garder le joueur dans la partie pendant son délai de retour, sans quoi ses bots cesseraient de se transmettre sa couleur pendant la coupure.
+
+Conséquence fidèle au jeu d'origine : les bots noirs chassent aussi ces bots de couleur et les rendent blancs. Le scénario du test de pureté sur longue partie (quatre joueurs qui tournent en rond, soixante bots, bots noirs dès le départ), rejoué sur huit graines après la correction : entre 1 et 14 bots rendus blancs par partie, et un joueur attrapé dans deux parties seulement. La graine 5 du test n'en voyait plus aucun ; il est passé à la graine 2 pour garder des captures à observer. Aucune mesure avant la correction n'a été faite : l'effet sur la fréquence des captures de joueurs n'est donc pas chiffré.
+
+### 7. Écarts à la fiche
 
 - La recette et les corrections n'ont pas été coupées en deux étapes : les défauts se sont corrigés au fil de la grille.
 - Les étapes 2.5 et 3.4 sont placées après 6.1, qui n'en dépend pas. Ordre à confirmer ou réordonner par le porteur du projet.
@@ -167,7 +185,8 @@ Résolu par cette étape, repris du handoff 5.3 : la mise en ligne qui coupait l
 - `71f1862` (grille, handoff, ROADMAP) : **verte**, exécution 34885103948. Documentation seule : la mise en ligne s'est arrêtée d'elle-même, « seuls des fichiers sans effet sur le jeu ont change » (cas J5 de la grille). La production reste `5502c11`, ce qui est attendu.
 - `4e804bc` (dernier cas de la grille) : documentation seule.
 - `79c6cb9` (caméra sur téléphone, densité, bouton de localisation) : **verte**, exécution 34889157459 : « Types, linter et tests », « Bout en bout » et « Mise en ligne ». La production sert ce commit, vérifié sur `/sante`. En émulation iPhone (WebKit, densité 3) contre la production : canevas de 780 par 1 328 pixels, joueur au centre de l'écran entouré de ses flèches, carte sur tout l'écran, bouton de localisation de 60 pixels en bas à droite.
-- Le commit qui consigne cette seconde série ne touche que la documentation.
+- `a99b63d` (seconde série consignée) : documentation seule.
+- `a781c98` (cadrage mobile à 360, partie préparée) : **verte**, exécution 34892564825 : « Types, linter et tests », « Bout en bout » et « Mise en ligne ». La production sert ce commit, vérifié sur `/sante`. En émulation iPhone contre la production : vue resserrée, canevas de 780 par 1 328 pixels, bouton de localisation en place. Lancement mesuré contre la production (Chromium, taille Pixel 7, processeur ralenti quatre fois) : écran de préparation levé à 522 millisecondes, tâches longues de 202 et 71 millisecondes sous l'écran, aucune ensuite, image la plus longue des trois premières secondes visibles à 33 millisecondes. Les trois refus de feuille de style relevés dans la console de WebKit viennent des captures d'écran de Playwright : aucun sans capture, un par capture.
 
 `master` n'a pas été touché.
 

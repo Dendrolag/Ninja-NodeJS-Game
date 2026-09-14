@@ -147,9 +147,12 @@ describe('purete et determinisme', () => {
     // table, au lieu de recopier la table pour chaque bot. Ce test gele chaque etat
     // avant de le passer au moteur: la moindre ecriture dans un etat recu, ou dans
     // une de ses tables, leverait une erreur. La partie est assez longue et peuplee
-    // pour que les bots noirs chassent, et que zones et objets apparaissent.
+    // pour que les bots noirs chassent, et que zones et objets apparaissent. La
+    // graine est choisie pour que tout cela arrive: depuis que les bots naissent
+    // de couleurs quelconques (etape 5.4), les bots noirs chassent aussi ces
+    // bots-la, et sur bien des graines aucun joueur n'est attrape en trente secondes.
     let etat = creerEtatInitial({
-      graine: 5,
+      graine: 2,
       reglages: {
         nombreBotsInitial: 60,
         dureePartieS: 60,

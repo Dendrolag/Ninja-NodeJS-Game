@@ -18,7 +18,9 @@ import {
   BOTS,
   BOTS_NOIRS,
   CARTES,
+  COULEURS_JOUEURS,
   COULEUR_BOT_NEUTRE,
+  COULEUR_BOT_NOIR,
   DUREES,
   RAYON_ENTITE,
   VITESSES,
@@ -736,11 +738,27 @@ describe('peuplement de la carte', () => {
     expect(peuplerDeBots(partie(), 10).bots).toEqual(peuplerDeBots(partie(), 10).bots);
   });
 
-  it('pose des bots neutres, a l ecart les uns des autres', () => {
+  it('pose des bots a l ecart les uns des autres', () => {
     const bots = Object.values(peuplerDeBots(partie(), 8).bots);
 
-    expect(bots.every((bot) => bot.couleur === COULEUR_BOT_NEUTRE)).toBe(true);
     expect(new Set(bots.map((bot) => `${bot.position.x},${bot.position.y}`)).size).toBe(8);
+  });
+
+  // Legacy: le constructeur d'Entity tire une couleur quelconque (server.js:838).
+  // Le portage les faisait naitre blancs, ecart releve a la recette de l'etape 5.4.
+  it('fait naitre chaque bot d une couleur tiree au sort, qui n est celle de personne', () => {
+    let etat = ajouterJoueur(partie(), {
+      id: 'j1',
+      pseudo: 'Hors palette',
+      couleur: '#123456',
+      position: { x: 100, y: 100 },
+    });
+    etat = peuplerDeBots(etat, 30);
+    const couleurs = Object.values(etat.bots).map((bot) => bot.couleur);
+    const interdites = [...COULEURS_JOUEURS, COULEUR_BOT_NEUTRE, COULEUR_BOT_NOIR, '#123456'];
+
+    expect(couleurs.every((couleur) => !interdites.includes(couleur))).toBe(true);
+    expect(new Set(couleurs).size).toBeGreaterThan(20);
   });
 });
 

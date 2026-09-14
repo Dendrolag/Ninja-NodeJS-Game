@@ -2,66 +2,66 @@
 
 exports[`partie complete > produit l instantane de reference apres une minute de jeu 1`] = `
 {
-  "alea": 403632006,
+  "alea": 208477618,
   "bots": {
     "noirs": 2,
     "ordinaires": 30,
     "total": 32,
   },
   "capturesParBotNoirSubies": {
-    "alice": 1,
+    "alice": 0,
     "bob": 0,
-    "chloe": 0,
+    "chloe": 1,
   },
   "classement": [
     {
       "botsNoirsDetruits": 0,
       "botsPortes": 5,
-      "captures": 1,
-      "id": "chloe",
+      "captures": 0,
+      "id": "alice",
       "points": 5,
+    },
+    {
+      "botsNoirsDetruits": 0,
+      "botsPortes": 4,
+      "captures": 1,
+      "id": "bob",
+      "points": 4,
     },
     {
       "botsNoirsDetruits": 0,
       "botsPortes": 3,
       "captures": 0,
-      "id": "bob",
+      "id": "chloe",
       "points": 3,
     },
-    {
-      "botsNoirsDetruits": 0,
-      "botsPortes": 0,
-      "captures": 0,
-      "id": "alice",
-      "points": 0,
-    },
   ],
-  "compteurIdentifiants": 53,
+  "compteurIdentifiants": 51,
   "evenements": {
+    "bonusRamasse": 1,
     "captureJoueur": 1,
     "captureParBotNoir": 1,
   },
-  "objetsPoses": 3,
+  "objetsPoses": 2,
   "partieTerminee": true,
   "positions": {
     "alice": {
-      "x": 790.67,
-      "y": 116.26,
+      "x": 400,
+      "y": 400,
     },
     "bob": {
-      "x": 1445.27,
-      "y": 732.38,
+      "x": 1200,
+      "y": 900,
     },
     "chloe": {
-      "x": 701.38,
-      "y": 942.17,
+      "x": 900.94,
+      "y": 528.73,
     },
   },
   "tempsEcouleMs": 60000,
   "tick": 1200,
   "zonesActives": [
     "invisibilite",
-    "repulsion",
   ],
 }
 `;

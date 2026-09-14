@@ -272,7 +272,12 @@ describe('regleClassique, contacts avec des bots', () => {
   });
 
   it('laisse le bot le plus ancien repeindre l autre', () => {
-    let etat = creerEtatInitial({ graine: 1 });
+    // Deux joueurs au large portent ces couleurs: seule une couleur de joueur se
+    // transmet d'un bot a l'autre (comportement a preserver 11).
+    let etat = joueursPrets(1, [
+      ['rouge', ROUGE, { x: 100, y: 100 }],
+      ['bleu', BLEU, { x: 1500, y: 1000 }],
+    ]);
     etat = ajouterBot(etat, { id: 'ancien', couleur: ROUGE, position: { x: 500, y: 500 } });
     etat = ajouterBot(etat, { id: 'recent', couleur: BLEU, position: { x: 505, y: 500 } });
 

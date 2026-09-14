@@ -9,7 +9,13 @@
  */
 
 import type { Alea, Couleur, Tirage } from '@neon-ninja/shared';
-import { COULEURS_JOUEURS, element, entier } from '@neon-ninja/shared';
+import {
+  COULEURS_JOUEURS,
+  COULEUR_BOT_NEUTRE,
+  COULEUR_BOT_NOIR,
+  element,
+  entier,
+} from '@neon-ninja/shared';
 
 /**
  * Une couleur au format hexadecimal, par exemple '#FF0000'.
@@ -62,18 +68,50 @@ export function couleurUnique(alea: Alea, couleursExclues: readonly Couleur[]): 
     return element(alea, libres);
   }
 
-  let courant = alea;
-  for (let tentative = 0; tentative < TENTATIVES_MAXIMUM; tentative += 1) {
-    const tirage = couleurAleatoire(courant);
-    courant = tirage.alea;
+  return couleurAleatoireHorsDe(alea, couleursExclues);
+}
 
-    if (!couleursExclues.includes(tirage.valeur)) {
-      return tirage;
-    }
+/**
+ * Tire des couleurs quelconques jusqu'a en trouver une qui n'est pas interdite.
+ *
+ * Au bout de TENTATIVES_MAXIMUM tirages, cas theorique, on rend la derniere
+ * couleur tiree plutot que de boucler ou de lever une erreur. Une couleur en
+ * double est un desagrement, pas une partie interrompue.
+ */
+function couleurAleatoireHorsDe(alea: Alea, interdites: readonly Couleur[]): Tirage<Couleur> {
+  let tirage = couleurAleatoire(alea);
+
+  for (
+    let tentative = 1;
+    tentative < TENTATIVES_MAXIMUM && interdites.includes(tirage.valeur);
+    tentative += 1
+  ) {
+    tirage = couleurAleatoire(tirage.alea);
   }
 
-  // Cas theorique: on rend la derniere couleur tiree plutot que de boucler ou
-  // de lever une erreur. Une couleur en double est un desagrement, pas une
-  // partie interrompue.
-  return couleurAleatoire(courant);
+  return tirage;
+}
+
+/**
+ * Tire la couleur d'un bot qui nait.
+ *
+ * Portage du constructeur d'Entity (legacy/server.js:838), qui donne a chaque bot
+ * une couleur quelconque par getRandomColor: la carte se remplit de bots de
+ * toutes les couleurs, que les joueurs viennent ensuite repeindre.
+ *
+ * Une precaution que le legacy ne prenait pas: la couleur tiree n'est jamais
+ * celle d'un joueur, ni une couleur de la palette qu'un joueur pourrait recevoir,
+ * ni le blanc des bots neutres, ni le noir des bots noirs. Une chance sur deux
+ * millions par bot, dans le legacy, de naitre deja compte dans un score.
+ *
+ * @param couleursExclues Les couleurs des joueurs presents, qui peuvent sortir de
+ *                        la palette quand elle est epuisee.
+ */
+export function couleurDeBot(alea: Alea, couleursExclues: readonly Couleur[]): Tirage<Couleur> {
+  return couleurAleatoireHorsDe(alea, [
+    ...COULEURS_JOUEURS,
+    COULEUR_BOT_NEUTRE,
+    COULEUR_BOT_NOIR,
+    ...couleursExclues,
+  ]);
 }

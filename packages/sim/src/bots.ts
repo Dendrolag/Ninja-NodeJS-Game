@@ -51,11 +51,13 @@ import type { Position, Vecteur } from '@neon-ninja/shared';
 import { BOTS, BOTS_NOIRS, COULEUR_BOT_NEUTRE, DUREES, VITESSES, reel } from '@neon-ninja/shared';
 
 import { trajetTenable } from './collisions.js';
+import { couleurDeBot } from './couleurs.js';
 import { resoudreDeplacement } from './deplacement.js';
 import { aLaLongueur, directionDuVecteur } from './direction.js';
 import type { Bot, BotNoir, EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
 import {
   ajouterBot,
+  couleursUtilisees,
   estInvulnerable,
   identifiantSuivant,
   positionDApparition,
@@ -141,6 +143,10 @@ function poser(etat: EtatPartie, bot: Bot): EtatPartie {
  * avec Date.now() et Math.random(): a graine egale, deux parties peuplent donc la
  * carte exactement de la meme facon.
  *
+ * Chaque bot nait d'une couleur tiree au sort, comme dans le legacy, et qui n'est
+ * celle d'aucun joueur: il ne compte pour personne tant qu'on ne l'a pas touche.
+ * Voir couleurDeBot.
+ *
  * Cette fonction n'est pas appelee par creerEtatInitial: c'est le serveur qui
  * decide du moment ou une partie se peuple, au lancement et non a la creation du
  * salon.
@@ -198,13 +204,24 @@ export function faireApparaitreLesBotsNoirs(etat: EtatPartie): EtatPartie {
   return courant;
 }
 
-/** Pose un bot de plus, avec un identifiant tire du compteur de l'etat. */
+/**
+ * Pose un bot de plus, avec un identifiant tire du compteur de l'etat.
+ *
+ * Un bot ordinaire recoit une couleur tiree au sort; un bot noir garde son noir.
+ */
 function ajouterUnBot(etat: EtatPartie, type: 'bot' | 'botNoir'): EtatPartie {
   const identifiant = identifiantSuivant(etat, type);
+  const numerote = { ...etat, compteurIdentifiants: identifiant.compteur };
+
+  if (type === 'botNoir') {
+    return ajouterBot(numerote, { id: identifiant.valeur, type });
+  }
+
+  const teinte = couleurDeBot(numerote.alea, couleursUtilisees(numerote));
 
   return ajouterBot(
-    { ...etat, compteurIdentifiants: identifiant.compteur },
-    { id: identifiant.valeur, type },
+    { ...numerote, alea: teinte.alea },
+    { id: identifiant.valeur, type, couleur: teinte.valeur },
   );
 }
 

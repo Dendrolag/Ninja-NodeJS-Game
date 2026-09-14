@@ -34,7 +34,7 @@
  *     aUneCouleurADonner plus bas: c'est la correction des defauts X20 et X30.
  */
 
-import { COULEUR_BOT_NEUTRE, DUREES, SCORE } from '@neon-ninja/shared';
+import { DUREES, SCORE } from '@neon-ninja/shared';
 
 import type { Couleur } from './couleurs.js';
 import { couleurUnique } from './couleurs.js';
@@ -169,7 +169,7 @@ export function capturerBot(
     return etat;
   }
 
-  if (!aUneCouleurADonner(capteur) || capteur.couleur === bot.couleur) {
+  if (!aUneCouleurADonner(etat, capteur) || capteur.couleur === bot.couleur) {
     return etat;
   }
 
@@ -179,8 +179,11 @@ export function capturerBot(
 /**
  * Une entite a-t-elle une couleur a imposer a un bot qu'elle touche ?
  *
- * Un joueur, toujours. Un bot, seulement s'il porte deja la couleur d'un joueur:
- * un bot n'invente pas de couleur, il transmet celle de son proprietaire.
+ * Un joueur, toujours. Un bot, seulement s'il porte la couleur d'un joueur de la
+ * partie: un bot n'invente pas de couleur, il transmet celle de son proprietaire.
+ * Un bot sans proprietaire n'a donc rien a donner, qu'il soit blanc, ne d'une
+ * couleur quelconque, repeint par une zone de chaos, ou qu'il porte encore la
+ * couleur d'un joueur parti.
  *
  * CETTE REGLE CORRIGE DEUX DEFAUTS D'UN COUP, TOUS DEUX A L'ETAPE 1.6.
  *
@@ -200,10 +203,19 @@ export function capturerBot(
  * legacy n'appelait jamais detectCollisions sur un bot noir (updateBots :1567) et
  * son test de contagion exigeait entity.type === 'bot' (:1701), ce qu'un bot noir
  * n'est pas: la chose n'existait pas dans le jeu d'origine.
+ *
+ * La regle a ete precisee a l'etape 5.4, quand les bots ont retrouve la couleur
+ * quelconque que le legacy leur donnait a la naissance: tester seulement « pas
+ * blanc » aurait laisse ces couleurs-la, et celles du chaos, se repandre.
  */
-function aUneCouleurADonner(capteur: Joueur | Bot): boolean {
+function aUneCouleurADonner(etat: EtatPartie, capteur: Joueur | Bot): boolean {
+  if (capteur.type === 'joueur') {
+    return true;
+  }
+
   return (
-    capteur.type === 'joueur' || (capteur.type === 'bot' && capteur.couleur !== COULEUR_BOT_NEUTRE)
+    capteur.type === 'bot' &&
+    Object.values(etat.joueurs).some((joueur) => joueur.couleur === capteur.couleur)
   );
 }
 

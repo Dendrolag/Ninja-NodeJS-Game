@@ -14,7 +14,7 @@ import { captureAutorisee, capturerBot, capturerJoueur, detruireBotNoir } from '
 import type { Couleur } from './couleurs.js';
 import { AUCUN_BONUS } from './effets.js';
 import type { EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
-import { ajouterBot, ajouterJoueur, creerEtatInitial } from './etat.js';
+import { ajouterBot, ajouterJoueur, creerEtatInitial, retirerJoueur } from './etat.js';
 
 const ROUGE = '#FF0000';
 const BLEU = '#0000FF';
@@ -311,6 +311,39 @@ describe('capturerBot', () => {
     etat = ajouterBot(etat, { id: 'rouge', couleur: ROUGE, position: { x: 810, y: 800 } });
 
     expect(capturerBot(etat, 'blanc', 'rouge')).toBe(etat);
+  });
+
+  // Comportement a preserver 11: seule une couleur de joueur se transmet. Un bot
+  // ne de couleur quelconque, ou repeint par une zone de chaos, ne porte la
+  // couleur de personne: il n'a donc rien a donner, pas plus qu'un bot blanc.
+  it('ne laisse pas un bot d une couleur qui n est celle d aucun joueur en repeindre un autre', () => {
+    let etat = situationDeDepart();
+    etat = ajouterBot(etat, { id: 'sauvage', couleur: '#123456', position: { x: 800, y: 800 } });
+    etat = ajouterBot(etat, { id: 'blanc', position: { x: 810, y: 800 } });
+    etat = ajouterBot(etat, { id: 'rouge', couleur: ROUGE, position: { x: 820, y: 800 } });
+
+    expect(capturerBot(etat, 'sauvage', 'blanc')).toBe(etat);
+    expect(capturerBot(etat, 'sauvage', 'rouge')).toBe(etat);
+    // b6 est vert, et aucun joueur de la situation de depart ne l'est.
+    expect(capturerBot(etat, 'b6', 'blanc')).toBe(etat);
+  });
+
+  it('cesse de transmettre la couleur d un joueur qui a quitte la partie', () => {
+    let etat = situationDeDepart();
+    etat = ajouterBot(etat, { id: 'bleu', couleur: BLEU, position: { x: 800, y: 800 } });
+    etat = ajouterBot(etat, { id: 'blanc', position: { x: 810, y: 800 } });
+
+    expect(capturerBot(etat, 'bleu', 'blanc').bots['blanc']?.couleur).toBe(BLEU);
+
+    const sansLaVictime = retirerJoueur(etat, 'v');
+    expect(capturerBot(sansLaVictime, 'bleu', 'blanc')).toBe(sansLaVictime);
+  });
+
+  it('laisse un joueur repeindre un bot de couleur quelconque', () => {
+    let etat = situationDeDepart();
+    etat = ajouterBot(etat, { id: 'sauvage', couleur: '#123456', position: { x: 800, y: 800 } });
+
+    expect(capturerBot(etat, 'a', 'sauvage').bots['sauvage']?.couleur).toBe(ROUGE);
   });
 
   // Defaut X30: regression du portage, absente du legacy, ou detectCollisions
