@@ -41,6 +41,19 @@ export const BORDURE_TERRAIN = {
 export const TAILLE_SPRITE = 32;
 
 /**
+ * Quels pixels du sprite de ninja prennent la couleur de son proprietaire.
+ *
+ * LE SPRITE EST DESSINE EN ROUGE, pas en niveaux de gris. Le jeu d'origine
+ * repeignait tout pixel dont chaque composante est a moins de la tolerance du
+ * rouge pur, et laissait les autres intacts: le contour, les yeux, les ombres
+ * gardent leurs couleurs (TARGET_COLOR et COLOR_TOLERANCE, legacy/client.js:493).
+ */
+export const REPEINTE_DU_NINJA = {
+  cible: { r: 255, v: 0, b: 0 },
+  tolerance: 140,
+} as const;
+
+/**
  * Cadence d'alternance des deux images de marche, en millisecondes.
  *
  * Le gestionnaire de sprites d'origine changeait d'image toutes les 150
@@ -226,6 +239,14 @@ export const TAILLE_OBJET = 30;
 
 /** Cadence du clignotement d'un objet sur le point de disparaitre, en radians par milliseconde. */
 export const CADENCE_CLIGNOTEMENT = 0.01;
+
+/**
+ * Duree de chaque image de l'icone animee d'un objet, en millisecondes.
+ *
+ * Le jeu d'origine animait ses icones a huit images par seconde (BONUS_SPRITES et
+ * MALUS_SPRITES, legacy/client.js:2888).
+ */
+export const CADENCE_OBJET_MS = 125;
 
 /**
  * Le cone du mode Tactique (etape 7.1): notre visee, et l'eclair d'un tir.

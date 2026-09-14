@@ -22,9 +22,12 @@
  * micro-saccades regulieres.
  *
  * LES TEXTURES SONT PARTAGEES. Dix-sept images de ninja suffisent a cinq cents
- * personnages: la couleur est appliquee par TEINTE sur le GPU. Le jeu d'origine
- * fabriquait un canevas colore PAR ENTITE ET PAR COULEUR, qu'il gardait dans un
- * cache sans borne.
+ * personnages: chaque image est coupee une fois en deux calques, et la couleur est
+ * appliquee par TEINTE sur le GPU, au seul calque du corps (recoloration.ts). Le
+ * jeu d'origine fabriquait un canevas colore PAR ENTITE ET PAR COULEUR, qu'il
+ * gardait dans un cache sans borne. Teinter l'image entiere, comme le faisait ce
+ * fichier jusqu'a l'etape 5.4, noircissait tout ninja qui n'etait ni rouge ni jaune:
+ * le sprite est rouge, et une teinte multiplie.
  *
  * CE FICHIER N'EST PAS COUVERT PAR LES TESTS UNITAIRES, et c'est assume: il n'y a
  * rien a y verifier sans GPU. Ce qu'il fait est verifie par le banc de mesure de
@@ -33,13 +36,31 @@
  */
 
 import type { DimensionsCarte } from '@neon-ninja/shared';
-import { RACINE_RESSOURCES, cheminCarte, tousLesNinjas, tousLesObjets } from '@neon-ninja/shared';
+import {
+  COTE_IMAGE_OBJET_PX,
+  IMAGES_PAR_OBJET,
+  RACINE_RESSOURCES,
+  cheminCarte,
+  tousLesNinjas,
+  tousLesObjets,
+} from '@neon-ninja/shared';
 import { AdvancedBloomFilter } from 'pixi-filters';
-import type { Container as ConteneurPixi, Renderer, Texture } from 'pixi.js';
-import { Application, Assets, Container, Graphics, Sprite, Text } from 'pixi.js';
+import type { Container as ConteneurPixi, Renderer } from 'pixi.js';
+import {
+  Application,
+  Assets,
+  Container,
+  Graphics,
+  Rectangle,
+  Sprite,
+  Text,
+  Texture,
+} from 'pixi.js';
 
 import { BORDURE_TERRAIN, COULEUR_FOND, LUEUR } from './apparence.js';
 import type { Camera } from './camera.js';
+import { separerLesCalques } from './recoloration.js';
+import { adresseDImage, adresseDesDetails, adresseDuCorps } from './textures.js';
 import type {
   ConeScene,
   DisqueScene,
@@ -60,21 +81,100 @@ import type {
 const POLICE_DES_LIBELLES = ['Chakra Petch', 'sans-serif'];
 
 /**
- * Charge d'avance toutes les images des personnages et des objets.
+ * Charge d'avance toutes les images des personnages et des objets, et fabrique
+ * les textures qui s'en deduisent.
  *
  * A APPELER AVANT LA PREMIERE IMAGE. Une texture demandee en cours de partie
  * arriverait une ou deux images plus tard, et le personnage clignoterait a chaque
  * changement de direction. Dix-sept sprites et six icones se chargent en un
- * instant, et servent ensuite a cinq cents entites: la couleur est appliquee par
- * teinte sur le GPU, pas en fabriquant une image par joueur comme le faisait le
- * jeu d'origine.
+ * instant, et servent ensuite a cinq cents entites.
+ *
+ * Chaque image de ninja est coupee en ses deux calques, et chaque planche d'objet
+ * en ses images (textures.ts). C'est fait une fois: une deuxieme partie retrouve
+ * les textures deja rangees.
  */
 export async function prechargerLesSprites(): Promise<void> {
-  const adresses = [...tousLesNinjas(), ...tousLesObjets()].map(
-    (relatif) => `${RACINE_RESSOURCES}/${relatif}`,
-  );
+  const versAdresse = (relatif: string): string => `${RACINE_RESSOURCES}/${relatif}`;
+  const ninjas = tousLesNinjas().map(versAdresse);
+  const objets = tousLesObjets().map(versAdresse);
 
-  await Promise.all(adresses.map(async (adresse) => Assets.load<Texture>(adresse)));
+  const [imagesDeNinja, planches] = await Promise.all([
+    Promise.all(ninjas.map(async (adresse) => Assets.load<Texture>(adresse))),
+    Promise.all(objets.map(async (adresse) => Assets.load<Texture>(adresse))),
+  ]);
+
+  imagesDeNinja.forEach((texture, rang) => {
+    rangerLesCalques(ninjas[rang] as string, texture);
+  });
+  planches.forEach((planche, rang) => {
+    rangerLesImages(objets[rang] as string, planche);
+  });
+}
+
+/**
+ * Coupe une image de ninja en son corps et ses details, et range les deux textures.
+ *
+ * Les pixels se lisent en posant l'image sur un canevas, comme le faisait le jeu
+ * d'origine; mais c'est fait une fois par image chargee, et non une fois par
+ * entite et par couleur.
+ */
+function rangerLesCalques(adresse: string, texture: Texture): void {
+  if (Assets.cache.has(adresseDuCorps(adresse))) {
+    return;
+  }
+
+  const largeur = texture.source.pixelWidth;
+  const hauteur = texture.source.pixelHeight;
+  const contexte = contexteDeCanevas(largeur, hauteur);
+
+  contexte.drawImage(texture.source.resource as CanvasImageSource, 0, 0);
+
+  const calques = separerLesCalques(contexte.getImageData(0, 0, largeur, hauteur).data);
+
+  Assets.cache.set(adresseDuCorps(adresse), textureDePixels(calques.corps, largeur, hauteur));
+  Assets.cache.set(adresseDesDetails(adresse), textureDePixels(calques.details, largeur, hauteur));
+}
+
+/** Range chaque image d'une planche d'objet comme une texture, qui partage l'image chargee. */
+function rangerLesImages(adresse: string, planche: Texture): void {
+  for (let rang = 0; rang < IMAGES_PAR_OBJET; rang += 1) {
+    const nom = adresseDImage(adresse, rang);
+
+    if (!Assets.cache.has(nom)) {
+      const cadre = new Rectangle(
+        rang * COTE_IMAGE_OBJET_PX,
+        0,
+        COTE_IMAGE_OBJET_PX,
+        COTE_IMAGE_OBJET_PX,
+      );
+
+      Assets.cache.set(nom, new Texture({ source: planche.source, frame: cadre }));
+    }
+  }
+}
+
+/** Une texture faite de ces pixels. */
+function textureDePixels(pixels: Uint8ClampedArray, largeur: number, hauteur: number): Texture {
+  const contexte = contexteDeCanevas(largeur, hauteur);
+
+  contexte.putImageData(new ImageData(Uint8ClampedArray.from(pixels), largeur, hauteur), 0, 0);
+
+  return Texture.from(contexte.canvas);
+}
+
+/** Le contexte de dessin d'un canevas neuf, de cette taille. */
+function contexteDeCanevas(largeur: number, hauteur: number): CanvasRenderingContext2D {
+  const canevas = document.createElement('canvas');
+  canevas.width = largeur;
+  canevas.height = hauteur;
+
+  const contexte = canevas.getContext('2d', { willReadFrequently: true });
+
+  if (contexte === null) {
+    throw new Error('Le navigateur ne fournit pas de canevas 2D pour preparer les sprites.');
+  }
+
+  return contexte;
 }
 
 /** Ce qu'il faut pour monter le rendu. */
@@ -160,7 +260,7 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   }
 
   /** Les objets d'affichage deja crees, retrouves par identifiant de scene. */
-  const spritesEntites = new Map<string, Sprite>();
+  const spritesEntites = new Map<string, Personnage>();
   const spritesObjets = new Map<string, Sprite>();
   const textesZones = new Map<string, Text>();
 
@@ -211,7 +311,7 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       dessinerLesDisques(disques, scene.disques);
       dessinerLesCones(disques, scene.cones);
       majSprites(spritesObjets, objets, scene.objets);
-      majSprites(spritesEntites, entites, scene.entites);
+      majPersonnages(spritesEntites, entites, scene.entites);
       dessinerLesReperes(reperes, scene.reperes);
     },
 
@@ -409,4 +509,66 @@ function majSprites(
       connus.delete(id);
     }
   }
+}
+
+/** Un personnage affiche: ses details intacts, et son corps teinte par-dessus. */
+interface Personnage {
+  readonly racine: Container;
+  readonly details: Sprite;
+  readonly corps: Sprite;
+}
+
+/**
+ * Met les personnages en accord avec la scene.
+ *
+ * Meme principe que majSprites, avec deux sprites par personnage. SEUL LE CORPS
+ * EST TEINTE: teinter l'image entiere multiplierait aussi le contour et les yeux,
+ * et, sur un sprite rouge, ferait du vert un noir (recoloration.ts). L'opacite se
+ * pose sur le conteneur, pour que les deux calques s'effacent ensemble.
+ */
+function majPersonnages(
+  connus: Map<string, Personnage>,
+  parent: ConteneurPixi,
+  modele: readonly SpriteScene[],
+): void {
+  const vus = new Set<string>();
+
+  for (const decrit of modele) {
+    vus.add(decrit.id);
+    let personnage = connus.get(decrit.id);
+
+    if (personnage === undefined) {
+      personnage = { racine: new Container(), details: new Sprite(), corps: new Sprite() };
+      personnage.details.anchor.set(0.5);
+      personnage.corps.anchor.set(0.5);
+      personnage.racine.addChild(personnage.details, personnage.corps);
+      parent.addChild(personnage.racine);
+      connus.set(decrit.id, personnage);
+    }
+
+    poserLaTexture(personnage.details, adresseDesDetails(decrit.texture), decrit.taille);
+    poserLaTexture(personnage.corps, adresseDuCorps(decrit.texture), decrit.taille);
+    personnage.corps.tint = decrit.teinte;
+    personnage.racine.position.set(decrit.x, decrit.y);
+    personnage.racine.alpha = decrit.alpha;
+  }
+
+  for (const [id, personnage] of connus) {
+    if (!vus.has(id)) {
+      personnage.racine.destroy({ children: true });
+      connus.delete(id);
+    }
+  }
+}
+
+/** Donne a un sprite la texture rangee sous ce nom, s'il ne l'a pas deja, et sa taille. */
+function poserLaTexture(sprite: Sprite, nom: string, taille: number): void {
+  const texture = Assets.get<Texture>(nom);
+
+  if (texture !== undefined && sprite.texture !== texture) {
+    sprite.texture = texture;
+  }
+
+  sprite.width = taille;
+  sprite.height = taille;
 }

@@ -235,6 +235,74 @@
   font-size: 12.5px;
 }
 
+/*
+ * Les points flottants (hud/pointsFlottants.ts): le gain nait la ou il a eu lieu,
+ * monte, puis file vers notre score. Durees, tailles et couleurs du jeu d'origine
+ * (.floating-points, legacy/styles.css:3298). Le point est centre sur son origine
+ * par translate, et anime par transform: les deux se composent.
+ */
+.points-flottants {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.point-flottant {
+  position: absolute;
+  color: #fff;
+  font-family: var(--police-titre);
+  font-size: 25px;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+  translate: -50% -50%;
+}
+
+.point-flottant-botNoir {
+  color: #ffd700;
+  font-size: 35px;
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
+}
+
+.point-flottant-joueur {
+  color: #cc99ff;
+}
+
+.point-flottant.monte {
+  animation: point-monte 0.5s ease-out forwards;
+}
+
+.point-flottant.rejoint {
+  animation: point-rejoint 0.8s ease-in forwards;
+}
+
+@keyframes point-monte {
+  0% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+
+  20%,
+  100% {
+    opacity: 1;
+    transform: translateY(-50px);
+  }
+}
+
+@keyframes point-rejoint {
+  0% {
+    opacity: 1;
+    transform: translate(0, -50px);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(var(--cible-x, 0), var(--cible-y, 0));
+  }
+}
+
 .hud-effets {
   position: absolute;
   bottom: max(14px, env(safe-area-inset-bottom));

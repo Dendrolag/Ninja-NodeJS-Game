@@ -36,14 +36,16 @@ import type { Controles } from '../controles/controles.js';
 import type { EtatClient } from '../etat.js';
 import type { FaitDeJeu } from '../faits.js';
 import type { HorlogeClient } from '../horloge.js';
+import type { AfficheurDePoints } from '../hud/pointsFlottants.js';
 import type { Surcouche } from '../hud/surcouche.js';
 import { construireHud } from '../hud/modele.js';
+import { pointsDuChangement, texteDesPoints } from '../pointsFlottants.js';
 import { effetsEnCours, moiDansLaPartie } from '../selecteurs.js';
 import { sonDuFait, sonsDuChangement } from '../sons/declencheurs.js';
 import type { LecteurDeSons } from '../sons/lecteur.js';
 import { DUREES_LOCALISATION } from './apparence.js';
 import type { Camera } from './camera.js';
-import { cameraSur, suivre } from './camera.js';
+import { cameraSur, suivre, versEcran } from './camera.js';
 import { TamponDeLissage } from './interpolation.js';
 import type { Localisation } from './localisation.js';
 import { localiser, opaciteDeLocalisation } from './localisation.js';
@@ -61,6 +63,8 @@ export interface OptionsBoucle {
   readonly surcouche?: Surcouche;
   /** Le lecteur de sons. Absent, le jeu est muet. */
   readonly sons?: LecteurDeSons;
+  /** L'affichage des points gagnes. Absent, les gains ne se voient qu'au classement. */
+  readonly pointsFlottants?: Pick<AfficheurDePoints, 'montrer'>;
   /** Le cadrage est-il celui d'un appareil tactile. */
   readonly mobile?: boolean;
   /** Taille de la zone d'affichage, relue a chaque image. */
@@ -140,7 +144,8 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
     faitsTraites = etat.journal.length;
 
     // 3. Les sons naissent de ce qui vient d'arriver.
-    faireEntendre(etat, etatPrecedent, faitsNouveaux, maintenant);
+    const precedent = etatPrecedent;
+    faireEntendre(etat, precedent, faitsNouveaux, maintenant);
     etatPrecedent = etat;
 
     // 4. Faut-il montrer ou se trouve notre personnage.
@@ -162,7 +167,21 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
     options.rendu.dessiner(construireScene(etat, lissee, maintenant, localisation), camera);
     options.surcouche?.afficher(construireHud(etat, maintenant));
 
-    // 6. Les pas suivent le mouvement affiche, pas la touche enfoncee: un joueur
+    // 6. Les points gagnes naissent a leur place sur l'ecran, vue par la camera de
+    //    cette image.
+    const afficheur = options.pointsFlottants;
+
+    if (afficheur !== undefined) {
+      for (const gain of pointsDuChangement(precedent, etat)) {
+        afficheur.montrer({
+          texte: texteDesPoints(gain.valeur),
+          genre: gain.genre,
+          ...versEcran(gain, camera, taille),
+        });
+      }
+    }
+
+    // 7. Les pas suivent le mouvement affiche, pas la touche enfoncee: un joueur
     //    bloque contre un mur tient sa touche sans avancer, et le jeu d'origine
     //    lui faisait entendre une course sur place.
     const monEntite = lissee?.entites.find(({ entite }) => entite.id === etat.moi);

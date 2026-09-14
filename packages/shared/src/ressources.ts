@@ -156,6 +156,18 @@ export function cheminObjet(nature: TypeBonus | TypeMalus): string {
   return `objets/${ICONE_OBJET[nature]}.png`;
 }
 
+/**
+ * Nombre d'images de l'icone animee d'un objet.
+ *
+ * CHAQUE ICONE EST UNE PLANCHE: deux images carrees cote a cote, qui s'affichent
+ * une a la fois. C'est la forme des fichiers du jeu d'origine, qui les decoupait
+ * a l'affichage (BONUS_SPRITES, legacy/client.js:2888).
+ */
+export const IMAGES_PAR_OBJET = 2;
+
+/** Cote d'une image de la planche d'un objet, en pixels du fichier. */
+export const COTE_IMAGE_OBJET_PX = 50;
+
 /** Toutes les icones d'objet a charger. */
 export function tousLesObjets(): readonly string[] {
   return Object.values(ICONE_OBJET).map((icone) => `objets/${icone}.png`);

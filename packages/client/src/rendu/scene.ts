@@ -39,7 +39,7 @@ import {
 
 import type { EtatClient } from '../etat.js';
 import { effetsEnCours } from '../selecteurs.js';
-import { imageDeMarche, opaciteObjet, rayonPulsant } from './animation.js';
+import { imageDObjet, imageDeMarche, opaciteObjet, rayonPulsant } from './animation.js';
 import type { Teinte } from './apparence.js';
 import {
   ALPHA_INVISIBLE,
@@ -58,18 +58,26 @@ import {
 import type { VueLissee } from './interpolation.js';
 import type { Localisation } from './localisation.js';
 import { flechesDeLocalisation, opaciteDeLocalisation } from './localisation.js';
+import { adresseDImage } from './textures.js';
 
 /** Un sprite a poser sur la carte. */
 export interface SpriteScene {
   /** Identifiant stable, qui permet au rendu de retrouver l'objet d'une image a l'autre. */
   readonly id: string;
-  /** Adresse de la texture a utiliser. */
+  /**
+   * Adresse de la texture a utiliser. Pour un personnage, celle de l'image dont le
+   * rendu tire ses deux calques; pour un objet, celle de l'image de sa planche.
+   */
   readonly texture: string;
   readonly x: number;
   readonly y: number;
   /** Cote du carre d'affichage, en pixels de la carte. */
   readonly taille: number;
-  /** Couleur appliquee au sprite, qui est dessine en niveaux de gris. */
+  /**
+   * Couleur du proprietaire. Pour un personnage, le rendu la pose sur son corps
+   * seul, jamais sur ses details (recoloration.ts). Pour un objet, le blanc: l'image
+   * telle quelle.
+   */
   readonly teinte: number;
   readonly alpha: number;
 }
@@ -325,7 +333,7 @@ export function construireScene(
 
     objets.push({
       id: objet.id,
-      texture: adresse(cheminObjet(objet.nature)),
+      texture: adresseDImage(adresse(cheminObjet(objet.nature)), imageDObjet(maintenant)),
       x: objet.x,
       y: objet.y,
       taille: TAILLE_OBJET,
@@ -438,9 +446,9 @@ function tirsRecents(
 /**
  * De quelle couleur peindre une entite.
  *
- * Le sprite du ninja est dessine en clair et prend la couleur de son
- * proprietaire par teinte. Un bot non capture reste blanc, ce qui le rend
- * indiscernable d'un joueur blanc: c'est voulu, c'est meme tout le jeu.
+ * Le corps rouge du sprite prend la couleur de son proprietaire, ses details
+ * gardent la leur (recoloration.ts). Un bot non capture a le corps blanc, ce qui
+ * le rend indiscernable d'un joueur blanc: c'est voulu, c'est meme tout le jeu.
  *
  * Le parametre enMouvement ne sert pas encore a la couleur; il est la parce que
  * l'appelant l'a et que la signature restera juste si une apparence de marche

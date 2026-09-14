@@ -34,6 +34,7 @@ import { CARTES, REGLAGES_PAR_DEFAUT } from '@neon-ninja/shared';
 import { brancherClavier } from '../../controles/clavier.js';
 import { Controles } from '../../controles/controles.js';
 import { brancherTactile } from '../../controles/tactile.js';
+import { monterPointsFlottants } from '../../hud/pointsFlottants.js';
 import { monterSurcouche } from '../../hud/surcouche.js';
 import { lancerLaBoucle } from '../../rendu/boucle.js';
 import { monterRendu, prechargerLesSprites } from '../../rendu/pixi.js';
@@ -195,6 +196,16 @@ export function monterJeu(contexte: ContexteEcran): EcranAffiche {
       surcouche.demonter();
     });
 
+    // Les points gagnes filent vers notre ligne du classement, posee par la surcouche.
+    const pointsFlottants = monterPointsFlottants({
+      hote: zoneHud,
+      document: doc,
+      cible: () => zoneHud.querySelector<HTMLElement>('.hud-ligne.moi .hud-points'),
+    });
+    aRetirer.push(() => {
+      pointsFlottants.demonter();
+    });
+
     aRetirer.push(
       brancherClavier(controles, { cible: doc, fenetre: navigateur ?? doc, capture: tactique }),
     );
@@ -213,6 +224,7 @@ export function monterJeu(contexte: ContexteEcran): EcranAffiche {
       horloge: contexte.horloge,
       carte,
       surcouche,
+      pointsFlottants,
       ...(contexte.sons === undefined ? {} : { sons: contexte.sons }),
       mobile: navigateur?.matchMedia('(pointer: coarse)').matches ?? false,
       taille: () => ({ largeur: terrain.clientWidth, hauteur: terrain.clientHeight }),

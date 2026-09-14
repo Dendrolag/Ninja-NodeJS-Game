@@ -38,6 +38,16 @@ const MULTIJOUEUR = '**/multijoueur.spec.ts';
 const PARTIES = '**/parties.spec.ts';
 const COMPTE = '**/compte.spec.ts';
 
+/**
+ * Les couleurs des ninjas relues dans l'image dessinee, jouees par le seul projet bureau.
+ *
+ * Comme le banc, ce scenario verifie le moteur de rendu, pas le cadrage. Sous
+ * l'emulation du telephone, la relecture des pixels par PixiJS rend une image vide,
+ * alors que le jeu, verifie a l'oeil dans une fenetre mobile a l'etape 5.4, montre
+ * ses ninjas en couleurs.
+ */
+const COULEURS = '**/rendu-couleurs.spec.ts';
+
 export default defineConfig({
   testDir: './tests/e2e',
   // Les paquets sont compiles une fois avant les scenarios: le banc de mesure du
@@ -73,7 +83,7 @@ export default defineConfig({
     {
       name: 'mobile',
       use: { ...devices['Pixel 7'] },
-      testIgnore: [BANC, MULTIJOUEUR, PARTIES, COMPTE],
+      testIgnore: [BANC, MULTIJOUEUR, PARTIES, COMPTE, COULEURS],
     },
     // Le banc de mesure du rendu a son propre projet, et une seule execution:
     // il mesure le moteur de rendu, pas la taille de la fenetre. Le jouer dans

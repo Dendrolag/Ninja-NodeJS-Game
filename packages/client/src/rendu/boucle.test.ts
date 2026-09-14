@@ -11,12 +11,13 @@
  */
 
 import type { EntiteVue, InfosSalon, NomDeSon, TypeBonus } from '@neon-ninja/shared';
-import { REGLAGES_PAR_DEFAUT, encoderImage } from '@neon-ninja/shared';
+import { REGLAGES_PAR_DEFAUT, encoderDelta, encoderImage } from '@neon-ninja/shared';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { Client } from '../client.js';
 import { creerClient } from '../client.js';
 import { Controles } from '../controles/controles.js';
+import type { PointAAfficher } from '../hud/pointsFlottants.js';
 import type { HorlogeClientManuelle } from '../horloge.js';
 import { creerHorlogeClientManuelle } from '../horloge.js';
 import type { ReseauFactice } from '../reseau.js';
@@ -24,6 +25,7 @@ import { creerReseauFactice } from '../reseau.js';
 import type { LecteurDeSons } from '../sons/lecteur.js';
 import type { Boucle } from './boucle.js';
 import { lancerLaBoucle } from './boucle.js';
+import { echellePour } from './camera.js';
 import type { Rendu } from './pixi.js';
 import type { Scene } from './scene.js';
 
@@ -289,5 +291,97 @@ describe('les fleches qui designent notre personnage', () => {
     laisserPasserLesFleches();
 
     expect(rendu.scenes.at(-1)?.reperes).toHaveLength(0);
+  });
+});
+
+describe('les points flottants', () => {
+  const TAILLE = { largeur: 1_280, hauteur: 720 };
+  const CARTE = { largeur: 2_000, hauteur: 1_500 };
+
+  /** Un faux ninja sur la ligne de notre personnage, de cette couleur. */
+  function bot(id: string, x: number, couleur: string): EntiteVue {
+    return { type: 'bot', id, x, y: 750, couleur, direction: 'nord' };
+  }
+
+  let montres: PointAAfficher[];
+
+  beforeEach(() => {
+    boucle.arreter();
+    montres = [];
+    boucle = lancerLaBoucle({
+      client,
+      rendu,
+      controles,
+      horloge,
+      carte: CARTE,
+      taille: () => TAILLE,
+      demanderUneImage: () => 1,
+      annulerUneImage: () => undefined,
+      pointsFlottants: {
+        montrer: (point) => {
+          montres.push(point);
+        },
+      },
+    });
+
+    reseau.recevoir('partieLancee');
+    reseau.recevoir(
+      'etat',
+      trame(1, [
+        joueur('moi', 1_000, 750),
+        bot('b1', 1_040, '#FFFFFF'),
+        bot('b2', 1_100, '#FFFFFF'),
+      ]),
+    );
+    uneImage();
+  });
+
+  it('montre un point par faux ninja rallie, une seule fois, a sa place sur l ecran', () => {
+    reseau.recevoir(
+      'etat',
+      trame(2, [
+        joueur('moi', 1_000, 750),
+        bot('b1', 1_040, '#FF0000'),
+        bot('b2', 1_100, '#FF0000'),
+      ]),
+    );
+    uneImage();
+    uneImage();
+
+    expect(montres.map((point) => [point.texte, point.genre])).toEqual([
+      ['+1', 'bot'],
+      ['+1', 'bot'],
+    ]);
+    // Soixante pixels de carte separent les deux ninjas: la camera les convertit.
+    expect((montres[1]?.x ?? 0) - (montres[0]?.x ?? 0)).toBeCloseTo(
+      60 * echellePour(TAILLE, CARTE, false),
+    );
+  });
+
+  it('voit aussi les ralliements portes par un delta, comme les envoie le serveur', () => {
+    const partie = (tick: number, couleur: string) => ({
+      tick,
+      tempsRestantMs: 120_000,
+      enPause: false,
+      entites: [joueur('moi', 1_000, 750), bot('b1', 1_040, couleur)],
+      objets: [],
+      zones: [],
+      classement: [],
+    });
+    const image = encoderImage(partie(10, '#FFFFFF'));
+
+    reseau.recevoir('etat', image.octets);
+    uneImage();
+    reseau.recevoir('etat', encoderDelta(image.reference, partie(11, '#FF0000')).octets);
+    uneImage();
+
+    expect(montres.map((point) => point.texte)).toEqual(['+1']);
+  });
+
+  it('montre les points d un Black Ninja detruit', () => {
+    reseau.recevoir('botNoirDetruit', { points: 15, x: 1_000, y: 750 });
+    uneImage();
+
+    expect(montres.map((point) => [point.texte, point.genre])).toEqual([['+15', 'botNoir']]);
   });
 });

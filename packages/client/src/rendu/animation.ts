@@ -14,10 +14,10 @@
  * a partir de la duree de vie restante que le contrat transporte deja.
  */
 
-import { IMAGES_DE_MARCHE, OBJETS } from '@neon-ninja/shared';
+import { IMAGES_DE_MARCHE, IMAGES_PAR_OBJET, OBJETS } from '@neon-ninja/shared';
 
 import type { Halo } from './apparence.js';
-import { CADENCE_CLIGNOTEMENT, CADENCE_MARCHE_MS } from './apparence.js';
+import { CADENCE_CLIGNOTEMENT, CADENCE_MARCHE_MS, CADENCE_OBJET_MS } from './apparence.js';
 
 /**
  * Quelle image de marche montrer a cet instant.
@@ -32,6 +32,20 @@ import { CADENCE_CLIGNOTEMENT, CADENCE_MARCHE_MS } from './apparence.js';
  */
 export function imageDeMarche(maintenant: number): number {
   return (Math.floor(maintenant / CADENCE_MARCHE_MS) % IMAGES_DE_MARCHE) + 1;
+}
+
+/**
+ * Quelle image de l'icone d'un objet montrer a cet instant.
+ *
+ * Comme la marche, tous les objets sont en phase. Le jeu d'origine tenait une
+ * animation par nature d'objet, si bien que deux bonus de vitesse battaient deja
+ * ensemble.
+ *
+ * @param maintenant Instant local, en millisecondes.
+ * @returns Rang de l'image dans la planche, a partir de zero.
+ */
+export function imageDObjet(maintenant: number): number {
+  return Math.floor(maintenant / CADENCE_OBJET_MS) % IMAGES_PAR_OBJET;
 }
 
 /**

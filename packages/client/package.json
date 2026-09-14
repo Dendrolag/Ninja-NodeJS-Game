@@ -26,6 +26,8 @@
     "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
-    "esbuild": "^0.28.2"
+    "@types/pngjs": "^6.0.5",
+    "esbuild": "^0.28.2",
+    "pngjs": "^7.0.0"
   }
 }

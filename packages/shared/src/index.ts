@@ -167,7 +167,9 @@ export type { Position, Vecteur } from './geometrie.js';
 
 export type { CoucheCarte, NomDeSon, PisteMusicale } from './ressources.js';
 export {
+  COTE_IMAGE_OBJET_PX,
   IMAGES_DE_MARCHE,
+  IMAGES_PAR_OBJET,
   MUSIQUES,
   RACINE_RESSOURCES,
   SONS,

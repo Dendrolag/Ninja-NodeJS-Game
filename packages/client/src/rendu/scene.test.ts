@@ -13,7 +13,13 @@
  */
 
 import type { EntiteVue, InfosSalon, ObjetVu, Orientation, ZoneVue } from '@neon-ninja/shared';
-import { OBJETS, REGLAGES_PAR_DEFAUT, TACTIQUE } from '@neon-ninja/shared';
+import {
+  OBJETS,
+  RACINE_RESSOURCES,
+  REGLAGES_PAR_DEFAUT,
+  TACTIQUE,
+  cheminObjet,
+} from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
 import type { EffetActif, EtatClient } from '../etat.js';
@@ -23,6 +29,7 @@ import { fait } from '../faits.js';
 import type { VuePartie } from '../reconstruction.js';
 import type { VueLissee } from './interpolation.js';
 import { SCENE_VIDE, construireScene, couleurEnNombre } from './scene.js';
+import { adresseDImage } from './textures.js';
 
 /** Un joueur pose a un endroit, avec le minimum de champs. */
 function joueur(id: string, x: number, y: number, couleur = '#FF0000'): EntiteVue {
@@ -289,6 +296,20 @@ describe('construireScene', () => {
 
       expect(scene.objets.map((sprite) => sprite.id)).toEqual(['bonus-1']);
       expect(scene.disques.map((disque) => disque.id)).toContain('bonus-1:halo');
+    });
+
+    // Defaut releve a la recette de l'etape 5.4: l'icone est une planche de deux
+    // images cote a cote, et le rendu l'affichait entiere, les deux etats a la
+    // fois. Le jeu d'origine en montrait une a la fois, huit fois par seconde.
+    it('montre l icone d un objet image par image, jamais la planche entiere', () => {
+      const textureA = (instant: number): string | undefined =>
+        construireScene(etatEnJeu('moi'), lissee(vue([], [bonus])), instant).objets[0]?.texture;
+      const planche = `${RACINE_RESSOURCES}/${cheminObjet('vitesse')}`;
+
+      expect(textureA(0)).toBe(adresseDImage(planche, 0));
+      expect(textureA(124)).toBe(adresseDImage(planche, 0));
+      expect(textureA(125)).toBe(adresseDImage(planche, 1));
+      expect(textureA(250)).toBe(adresseDImage(planche, 0));
     });
 
     it('laisse un objet frais pleinement opaque', () => {
