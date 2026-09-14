@@ -39,6 +39,39 @@ export function issueDuDeploiement(statut: unknown): IssueDuDeploiement {
   return typeof statut === 'string' && STATUTS_EN_COURS.has(statut) ? 'enCours' : 'echoue';
 }
 
+/** La version que dit servir la route de sante du serveur de jeu, ou rien si elle ne la dit pas. */
+export function versionEnLigne(corps: unknown): string | undefined {
+  if (typeof corps !== 'object' || corps === null) {
+    return undefined;
+  }
+
+  const version = (corps as Record<string, unknown>)['version'];
+
+  return typeof version === 'string' && version !== '' ? version : undefined;
+}
+
+/** Les dossiers dont rien ne part en ligne. */
+const DOSSIERS_HORS_DU_JEU: readonly string[] = ['docs/', 'tests/', 'legacy/', '.claude/'];
+
+/** Les fins de nom des fichiers qui ne partent jamais en ligne: la documentation et les tests. */
+const FICHIERS_HORS_DU_JEU: readonly string[] = ['.md', '.test.ts', '.spec.ts'];
+
+/**
+ * Parmi ces fichiers changes, ceux qui composent le jeu en ligne ou sa mise en ligne.
+ *
+ * UNE MISE EN LIGNE COUPE LES PARTIES EN COURS: elle ne se justifie que si quelque
+ * chose de ce qui tourne a change (recette de l'etape 5.4). La liste est ecrite a
+ * l'envers, par ce qui ne part jamais en ligne: un fichier qu'elle ne connait pas
+ * compte comme faisant partie du jeu, et, dans le doute, on met en ligne.
+ */
+export function fichiersQuiChangentLeJeu(fichiers: readonly string[]): readonly string[] {
+  return fichiers.filter(
+    (fichier) =>
+      !DOSSIERS_HORS_DU_JEU.some((dossier) => fichier.startsWith(dossier)) &&
+      !FICHIERS_HORS_DU_JEU.some((fin) => fichier.endsWith(fin)),
+  );
+}
+
 /** Un objet JSON, lu sans rien supposer de ses champs. */
 function objet(valeur: unknown): Record<string, unknown> | undefined {
   return typeof valeur === 'object' && valeur !== null && !Array.isArray(valeur)

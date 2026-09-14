@@ -145,13 +145,15 @@ describe('apres un refus du lien', () => {
     expect(client.etat.refusDeConnexion).toBeUndefined();
   });
 
-  it('continue en invite sans fermer la session cote serveur', () => {
+  // Recette de l'etape 5.4, sur decision du porteur du projet: la session laissee
+  // derriere soi restait valide cote serveur jusqu'a son expiration.
+  it('continue en invite en fermant la session cote serveur, sans attendre sa reponse', () => {
     client.continuerEnInvite();
 
     expect(coffre.lire()).toBeUndefined();
     expect(client.etat.session).toEqual({ nature: 'invite', sessionExpiree: false });
     expect(reseau.ouvertures.at(-1)).toEqual({});
-    expect(requetes()).not.toContain('deconnecter');
+    expect(api.appels.at(-1)).toEqual({ nom: 'deconnecter', argument: JETON_DESSAI });
   });
 });
 

@@ -134,8 +134,12 @@ jobs:
       PAGE_DU_JEU: https://neon-ninja-jeu.vercel.app
       VERSION_DU_JEU: ${{ github.sha }}
     steps:
+      # Tout l'historique: la mise en ligne compare ce commit a celui qui est en ligne,
+      # et ne part pas si rien de ce qui compose le jeu n'a change entre les deux.
       - name: Recuperer le depot
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       # Deux executions de reecriture peuvent finir leurs tests dans le desordre:
       # seul le dernier commit de la branche se met en ligne, jamais un plus ancien

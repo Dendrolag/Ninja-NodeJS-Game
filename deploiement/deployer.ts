@@ -37,9 +37,11 @@ import type { PageLue } from './verifications.ts';
 import {
   adresseDuDeploiementVercel,
   deploiementDuCommit,
+  fichiersQuiChangentLeJeu,
   issueDuDeploiement,
   problemesDeLaPage,
   problemesDeSante,
+  versionEnLigne,
 } from './verifications.ts';
 
 /** La version de l'outil de Vercel, epinglee: une mise a jour ne doit pas changer une mise en ligne. */
@@ -57,6 +59,12 @@ const INTERVALLE_RENDER_MS = 10_000;
  * quelque chose ne va pas.
  */
 const DELAI_RENDER_MS = 25 * 60_000;
+
+/**
+ * Le temps laisse au serveur de jeu pour dire sa version avant la mise en ligne. Il
+ * dort peut-etre: il se reveille en quinze secondes, jusqu'a une minute selon Render.
+ */
+const DELAI_DE_REVEIL_MS = 90_000;
 
 /** Combien de fois, et a quel intervalle, relire un service qui vient de changer de version. */
 const ESSAIS_DE_VERIFICATION = 12;
@@ -260,9 +268,86 @@ async function lireLaPage(pageDuJeu: string): Promise<PageLue> {
   };
 }
 
+/** La version que sert le serveur de jeu en ce moment, ou rien s'il ne la dit pas a temps. */
+async function lireLaVersionEnLigne(serveurDeJeu: string): Promise<string | undefined> {
+  try {
+    const reponse = await fetch(`${serveurDeJeu}/sante`, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(DELAI_DE_REVEIL_MS),
+    });
+
+    return versionEnLigne((await reponse.json()) as unknown);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Les fichiers changes d'un commit a l'autre, ou rien si git ne sait pas les comparer:
+ * un commit absent de l'historique recupere, par exemple.
+ */
+async function fichiersChanges(
+  depuis: string,
+  jusqua: string,
+): Promise<readonly string[] | undefined> {
+  return new Promise((resoudre) => {
+    execFile(
+      'git',
+      ['diff', '--name-only', depuis, jusqua],
+      { maxBuffer: 16 * 1024 * 1024 },
+      (erreur, sortie) => {
+        resoudre(
+          erreur === null
+            ? sortie
+                .split('\n')
+                .map((ligne) => ligne.trim())
+                .filter((ligne) => ligne !== '')
+            : undefined,
+        );
+      },
+    );
+  });
+}
+
+/**
+ * Pourquoi ce commit n'a pas a partir en ligne, ou rien s'il le doit.
+ *
+ * Il n'y part pas s'il y est deja, ni si rien de ce qui a change depuis la version en
+ * ligne ne compose le jeu: une mise en ligne coupe les parties en cours. Dans le
+ * doute (serveur muet, historique incomplet), il part.
+ */
+async function raisonDeNePasMettreEnLigne(
+  serveurDeJeu: string,
+  version: string,
+): Promise<string | undefined> {
+  const enLigne = await lireLaVersionEnLigne(serveurDeJeu);
+
+  if (enLigne === undefined) {
+    return undefined;
+  }
+
+  if (enLigne === version) {
+    return `le commit ${version} est deja en ligne.`;
+  }
+
+  const changes = await fichiersChanges(enLigne, version);
+
+  return changes !== undefined && fichiersQuiChangentLeJeu(changes).length === 0
+    ? `depuis le commit en ligne ${enLigne}, seuls des fichiers sans effet sur le jeu ont change.`
+    : undefined;
+}
+
 /** Met ce commit en ligne, page et serveur, en verifiant chaque etape. */
 export async function deployer(configuration: ConfigurationDuDeploiement): Promise<void> {
   const { version, serveurDeJeu, pageDuJeu } = configuration;
+
+  annoncer('Faut-il mettre en ligne');
+  const raison = await raisonDeNePasMettreEnLigne(serveurDeJeu, version);
+
+  if (raison !== undefined) {
+    annoncer(`Rien a mettre en ligne: ${raison}`);
+    return;
+  }
 
   annoncer(`Preparation de la page du commit ${version}`);
   await preparerLaSortieVercel({ serveurDeJeu, version });

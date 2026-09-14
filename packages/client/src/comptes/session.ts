@@ -206,17 +206,25 @@ export function brancherLaSession(options: OptionsSession): CommandesDeSession {
       }
     },
 
-    // Ce n'est pas une deconnexion: la session n'est pas fermee cote serveur, elle
-    // n'est plus presentee. Le refus pouvait venir d'une base momentanement
-    // injoignable, et le compte reste intact.
+    // La session laissee derriere soi est fermee cote serveur, comme a la
+    // deconnexion, sans attendre la reponse: sinon elle restait valide jusqu'a son
+    // expiration (recette de l'etape 5.4). Le compte, lui, reste intact. Si le
+    // refus venait d'une base injoignable, la fermeture echoue en silence, et la
+    // session expirera d'elle-meme.
     continuerEnInvite: () => {
       if (!horsPartie()) {
         return;
       }
 
+      const jeton = coffre.lire();
+
       coffre.oublier();
       magasin.appliquer({ type: 'sessionDInvite', expiree: false });
       ouvrirLeLien(undefined);
+
+      if (jeton !== undefined && api !== undefined) {
+        void api.deconnecter(jeton);
+      }
     },
 
     seConnecter: (demande) => {

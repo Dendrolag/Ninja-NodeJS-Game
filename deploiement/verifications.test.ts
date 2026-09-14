@@ -14,9 +14,11 @@ import type { PageLue } from './verifications.ts';
 import {
   adresseDuDeploiementVercel,
   deploiementDuCommit,
+  fichiersQuiChangentLeJeu,
   issueDuDeploiement,
   problemesDeLaPage,
   problemesDeSante,
+  versionEnLigne,
 } from './verifications.ts';
 
 const VERSION = '4f48889c1d2e3f4a';
@@ -29,6 +31,58 @@ const PAGE_CONFORME: PageLue = {
   statutDuCode: 200,
   code: `var a=f("${SERVEUR}","${VERSION}");`,
 };
+
+// Recette de l'etape 5.4, sur decision du porteur du projet: chaque poussee, meme
+// de documentation, remettait le serveur en ligne et coupait les parties en cours.
+describe('versionEnLigne', () => {
+  it('lit la version dans la reponse de la route de sante', () => {
+    expect(versionEnLigne({ message: 'Neon Ninja: le serveur tourne.', version: VERSION })).toBe(
+      VERSION,
+    );
+  });
+
+  it('ne rend rien pour une reponse sans version lisible', () => {
+    for (const corps of [undefined, null, 'texte', {}, { version: '' }, { version: 12 }]) {
+      expect(versionEnLigne(corps), JSON.stringify(corps)).toBeUndefined();
+    }
+  });
+});
+
+describe('fichiersQuiChangentLeJeu', () => {
+  it('ecarte ce qui ne part pas en ligne: documentation, tests, legacy, reglages de l agent', () => {
+    expect(
+      fichiersQuiChangentLeJeu([
+        'docs/handoffs/etape-5-4-handoff.md',
+        'CLAUDE.md',
+        'tests/e2e/rendu-couleurs.spec.ts',
+        'tests/caracterisation/score.test.ts',
+        'legacy/server.js',
+        '.claude/launch.json',
+        'packages/client/src/rendu/scene.test.ts',
+        'deploiement/verifications.test.ts',
+      ]),
+    ).toEqual([]);
+  });
+
+  it('garde tout ce qui compose la page, le serveur ou leur mise en ligne', () => {
+    const jeu = [
+      'packages/client/src/rendu/pixi.ts',
+      'packages/client/page/styles/jeu.css',
+      'packages/server/migrations/0004_quelque_chose.sql',
+      'assets/ninja/idle.png',
+      'package.json',
+      'pnpm-lock.yaml',
+      'deploiement/deployer.ts',
+      '.github/workflows/ci.yml',
+    ];
+
+    expect(fichiersQuiChangentLeJeu(jeu)).toEqual(jeu);
+  });
+
+  it('garde un fichier qu elle ne connait pas: dans le doute, on met en ligne', () => {
+    expect(fichiersQuiChangentLeJeu(['nouveau/fichier.ts'])).toEqual(['nouveau/fichier.ts']);
+  });
+});
 
 describe('issueDuDeploiement', () => {
   it('attend tant que le serveur se construit ou demarre', () => {

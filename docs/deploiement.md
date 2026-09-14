@@ -49,6 +49,7 @@ Route de santé surveillée par Render : `/sante`.
 
 Le job « Mise en ligne » de la CI (`.github/workflows/ci.yml`) part après les deux autres jobs verts, pour une poussée sur `reecriture`, et seulement si le commit est encore le dernier de la branche. Il lance `deploiement/deployer.ts`, qui :
 
+0. lit la version en ligne sur `/sante`, et s'arrête sans rien changer si ce commit y est déjà, ou si rien de ce qui compose le jeu n'a changé depuis : documentation (`docs/`, fichiers `.md`), tests (`tests/`, fichiers `.test.ts` et `.spec.ts`), `legacy/` et `.claude/` ne partent jamais en ligne. Une mise en ligne coupe les parties en cours : un commit de documentation n'en coupe plus aucune (étape 5.4). Tout autre fichier, même inconnu, déclenche la mise en ligne, comme un serveur qui ne dit pas sa version ou un historique qui ne permet pas de comparer. La production est donc celle du dernier commit qui touche le jeu, pas forcément du dernier commit ;
 1. empaquette la page pour ce commit (adresse du serveur et version écrites dans `app.js`) et l'envoie à Vercel **sans la promouvoir** ;
 2. demande à Render de déployer ce commit, attend qu'il soit en ligne, et vérifie que `/sante` rend sa version ;
 3. promeut la page, qui devient celle de l'adresse publique ;
