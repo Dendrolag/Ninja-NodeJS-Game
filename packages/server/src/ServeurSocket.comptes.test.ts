@@ -21,6 +21,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { NouveauResultat, NouvellePartie } from './base/parties.js';
 import type { IdentiteDeCompte, ServiceDeComptes } from './comptes/annuaire.js';
+import { ATTENTE_ENTRE_DEUX_ENREGISTREMENTS_MS, ESSAIS_D_ENREGISTREMENT } from './finDePartie.js';
 import type { HorlogeManuelle } from './horloge.js';
 import { creerHorlogeManuelle } from './horloge.js';
 import type { ServeurMonte } from './serveur.js';
@@ -55,6 +56,10 @@ interface AnnuaireDEssai extends ServiceDeComptes {
    * Deja tenue par defaut; un test la remplace pour garder un enregistrement en cours.
    */
   verrouDEnregistrement: Promise<void>;
+  /** Combien des prochains enregistrements de fin de partie echoueront, comme une base injoignable. */
+  enregistrementsEnEchec: number;
+  /** La partie de chaque essai d'enregistrement recu, qu'il ait abouti ou non. */
+  readonly essaisDEnregistrement: NouvellePartie[];
 }
 
 /** Un annuaire qui connait Alice, et la session JETON_ALICE. */
@@ -70,10 +75,19 @@ function annuaireDEssai(): AnnuaireDEssai {
     panne: false,
     delaiMs: 0,
     verrouDEnregistrement: Promise.resolve(),
+    enregistrementsEnEchec: 0,
+    essaisDEnregistrement: [],
     // Chaque compte part d'une progression vide, et une perte de points de ligue
     // est ramenee a zero, comme en base.
     enregistrerFinDePartie: async (partie, resultats) => {
+      annuaire.essaisDEnregistrement.push(partie);
       await repondre();
+
+      if (annuaire.enregistrementsEnEchec > 0) {
+        annuaire.enregistrementsEnEchec -= 1;
+        throw new Error('base injoignable');
+      }
+
       await annuaire.verrouDEnregistrement;
       annuaire.finsEnregistrees.push({ partie, resultats });
 
@@ -554,6 +568,7 @@ describe('fin de partie (etape 3.3)', () => {
 
     expect(annuaire.finsEnregistrees).toHaveLength(1);
     expect(fin?.partie).toEqual({
+      id: expect.any(String) as string,
       mode: 'classique',
       carte: 'map1',
       modeMiroir: false,
@@ -598,7 +613,7 @@ describe('fin de partie (etape 3.3)', () => {
     expect(enregistrer).not.toHaveBeenCalled();
   });
 
-  it('dit au compte que sa partie ne compte pas si l enregistrement echoue, et le journalise', async () => {
+  it('dit au compte que sa partie ne compte pas si tous les essais echouent, et le journalise', async () => {
     const journal = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const annuaire = annuaireDEssai();
     await monter(annuaire);
@@ -607,14 +622,51 @@ describe('fin de partie (etape 3.3)', () => {
     await lancerUnePartieCourte(alice);
 
     annuaire.panne = true;
-    const progression = prochain(alice, 'progressionDeFin');
+    const recues = collecter(alice, 'progressionDeFin');
     horloge.avancerDe(31_000);
 
-    expect(await progression).toEqual({
-      enregistree: false,
-      motif: expect.stringContaining('ne compte pas') as string,
-    });
+    // Recette de l'etape 5.4: un enregistrement qui echoue est retente, et l'echec
+    // ne se dit qu'une fois le dernier essai tombe.
+    for (let essai = 1; essai < ESSAIS_D_ENREGISTREMENT; essai += 1) {
+      await laisserPasserLesMessages();
+      expect(recues).toEqual([]);
+      horloge.avancerDe(ATTENTE_ENTRE_DEUX_ENREGISTREMENTS_MS);
+    }
+
+    await laisserPasserLesMessages();
+
+    expect(annuaire.essaisDEnregistrement).toHaveLength(ESSAIS_D_ENREGISTREMENT);
+    expect(recues).toEqual([
+      { enregistree: false, motif: expect.stringContaining('ne compte pas') as string },
+    ]);
     expect(journal).toHaveBeenCalled();
+  });
+
+  it('retente un enregistrement qui echoue, sous le meme identifiant, et envoie la progression une fois enregistree', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const annuaire = annuaireDEssai();
+    await monter(annuaire);
+    const alice = await connecterUnClient({ jeton: JETON_ALICE });
+    salonAccepte(await rejoindre(alice, {}));
+    await lancerUnePartieCourte(alice);
+
+    annuaire.enregistrementsEnEchec = 1;
+    const recues = collecter(alice, 'progressionDeFin');
+    horloge.avancerDe(31_000);
+    await laisserPasserLesMessages();
+
+    expect(recues).toEqual([]);
+
+    horloge.avancerDe(ATTENTE_ENTRE_DEUX_ENREGISTREMENTS_MS);
+    await laisserPasserLesMessages();
+
+    const [premier, second] = annuaire.essaisDEnregistrement;
+
+    expect(annuaire.essaisDEnregistrement).toHaveLength(2);
+    expect(second?.id).toBe(premier?.id);
+    expect(annuaire.finsEnregistrees).toHaveLength(1);
+    expect(recues).toHaveLength(1);
+    expect(recues[0]?.enregistree).toBe(true);
   });
 
   it('enregistre l abandon d un compte parti avant la fin, sans lui envoyer de progression', async () => {

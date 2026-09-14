@@ -37,6 +37,14 @@ type Transaction = Parameters<Parameters<BaseDeDonnees['transaction']>[0]>[0];
 
 /** Une partie qui vient de se terminer. */
 export interface NouvellePartie {
+  /**
+   * L'identifiant de la partie. Absent: la base en tire un.
+   *
+   * Le serveur de jeu le tire avant son premier essai d'enregistrement: une partie
+   * deja enregistree sous cet identifiant ne s'enregistre pas une seconde fois
+   * (recette de l'etape 5.4).
+   */
+  readonly id?: string;
   readonly mode: Mode;
   readonly carte: IdentifiantCarte;
   readonly modeMiroir: boolean;
@@ -88,7 +96,7 @@ export interface PartieEnregistree {
 
 /** Une ligne de l'historique d'un compte: sa partie, et son resultat dans celle-ci. */
 export interface ResultatDePartie
-  extends Omit<NouvellePartie, 'termineeLe'>, Omit<NouveauResultat, 'compteId'> {
+  extends Omit<NouvellePartie, 'id' | 'termineeLe'>, Omit<NouveauResultat, 'compteId'> {
   readonly partieId: string;
   readonly termineeLe: Date;
 }
@@ -115,13 +123,24 @@ export async function enregistrerPartie(
   }
 
   return db.transaction(async (transaction) => {
+    // Une partie deja enregistree sous cet identifiant ne s'ecrit pas deux fois: c'est
+    // le serveur qui retente une fin de partie dont un essai avait abouti sans que sa
+    // reponse arrive. Ce que cet essai a applique est relu, et rien n'est ajoute.
     const [enregistree] = await transaction
       .insert(parties)
       .values({ ...partie, termineeLe: partie.termineeLe ?? sql`now()` })
+      .onConflictDoNothing({ target: parties.id })
       .returning({ id: parties.id });
 
     if (enregistree === undefined) {
-      throw new Error("La base n'a rendu aucune ligne pour la partie enregistree.");
+      if (partie.id === undefined) {
+        throw new Error("La base n'a rendu aucune ligne pour la partie enregistree.");
+      }
+
+      return {
+        partieId: partie.id,
+        progressions: await progressionsDejaAppliquees(transaction, partie.id, lignes),
+      };
     }
 
     if (lignes.length === 0) {
@@ -195,6 +214,59 @@ function progressionDe(
   }
 
   return avant;
+}
+
+/**
+ * Ce qu'un enregistrement precedent de cette partie a applique a chacun de ses comptes.
+ *
+ * L'apres est la progression d'aujourd'hui; l'avant s'en deduit en retirant les gains
+ * ecrits dans le resultat. C'est exact tant qu'aucune autre partie de ces comptes ne
+ * s'est enregistree entre les deux essais, qui ne sont separes que de quelques secondes.
+ */
+async function progressionsDejaAppliquees(
+  transaction: Transaction,
+  partieId: string,
+  lignes: readonly NouveauResultat[],
+): Promise<readonly ProgressionAppliquee[]> {
+  if (lignes.length === 0) {
+    return [];
+  }
+
+  const enregistres = await transaction
+    .select({
+      compteId: resultats.compteId,
+      xpGagnee: resultats.xpGagnee,
+      piecesGagnees: resultats.piecesGagnees,
+      variationPointsLigue: resultats.variationPointsLigue,
+    })
+    .from(resultats)
+    .where(eq(resultats.partieId, partieId));
+  const gains = new Map(enregistres.map(({ compteId, ...gain }) => [compteId, gain] as const));
+  const actuelles = await verrouillerLesProgressions(
+    transaction,
+    lignes.map((ligne) => ligne.compteId),
+  );
+
+  return lignes.map((ligne) => {
+    const gain = gains.get(ligne.compteId);
+    const apres = progressionDe(actuelles, ligne);
+
+    if (gain === undefined) {
+      throw new Error(
+        `La partie ${partieId} est deja enregistree, sans resultat pour le compte ${ligne.compteId}.`,
+      );
+    }
+
+    return {
+      compteId: ligne.compteId,
+      avant: {
+        xpTotale: apres.xpTotale - gain.xpGagnee,
+        pieces: apres.pieces - gain.piecesGagnees,
+        pointsLigue: apres.pointsLigue - gain.variationPointsLigue,
+      },
+      apres,
+    };
+  });
 }
 
 /** La variation de points de ligue reellement applicable: jamais sous zero. */

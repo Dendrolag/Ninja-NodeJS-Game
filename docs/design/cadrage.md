@@ -80,7 +80,7 @@ Sept écrans dans la maquette. Pour chacun: son statut en v1, les données qu'il
 
 ### 2. Parties publiques
 
-- **Statut**: v1. Données au 2.4, écran construit au jalon 3. La liste se redemande à chaque arrivée sur l'écran et sur demande.
+- **Statut**: v1. Données au 2.4, écran construit au jalon 3. La liste se redemande à chaque arrivée sur l'écran, sur demande, et d'elle-même toutes les cinq secondes tant que l'écran est affiché, sans montrer de recherche en cours (étape 5.4).
 - **Données v1, par salon listé**: pseudo de l'hôte, mode, carte (nom, et « Miroir » le cas échéant), joueurs présents sur capacité, et l'action « Rejoindre ».
 - **Liste**: seulement les parties publiques dans leur salon et non pleines. Champ de code privé, bouton « Créer ».
 - **Écarté**: latence, compteur global de joueurs en ligne, filtres par mode (deux modes, dont le nom figure sur chaque ligne), statut « En jeu » (une partie commencée n'est pas listée).

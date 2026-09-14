@@ -44,6 +44,7 @@ import { creerMagasin } from './magasin.js';
 import type { Minuterie } from './minuterie.js';
 import { minuterieNavigateur } from './minuterie.js';
 import type { Reseau } from './reseau.js';
+import { brancherLeRafraichissement } from './rafraichissement.js';
 import { brancherLeReveil } from './reveil.js';
 
 /** Ce qu'il faut pour monter un client. */
@@ -200,6 +201,20 @@ export function creerClient(options: OptionsClient): Client {
       magasin.appliquer({ type: 'partiesListees', parties });
     });
   };
+
+  // Tant que l'ecran des parties est affiche, la liste se redemande d'elle-meme,
+  // discretement (recette de l'etape 5.4).
+  brancherLeRafraichissement({
+    magasin,
+    minuterie: options.minuterie ?? minuterieNavigateur,
+    redemander: (reponseArrivee) => {
+      reseau.emettre('listerParties', (parties) => {
+        reponseArrivee();
+        magasin.appliquer({ type: 'partiesListees', parties });
+      });
+    },
+    ecouter,
+  });
 
   // -- Le salon -------------------------------------------------------------
 

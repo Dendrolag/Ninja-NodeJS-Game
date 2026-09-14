@@ -276,4 +276,29 @@ describe.runIf(baseDisponible())('parties et resultats', () => {
     });
     expect(await lireHistorique(db(), compte)).toHaveLength(1);
   });
+
+  // Recette de l'etape 5.4: le serveur retente un enregistrement qui a echoue. Si le
+  // premier essai avait en fait abouti, et que seule sa reponse s'est perdue, le
+  // second ne doit rien compter deux fois.
+  it('ne compte qu une fois une partie enregistree deux fois sous le meme identifiant, et rend la meme evolution', async () => {
+    const compte = await nouveauCompte();
+    await ecrireProgression(db(), compte, { xpTotale: 1000, pieces: 50, pointsLigue: 40 });
+    const jouee = partie({ id: randomUUID() });
+    const lignes = [
+      resultat(compte, 1, { xpGagnee: 210, piecesGagnees: 21, variationPointsLigue: 20 }),
+    ];
+
+    const premiere = await enregistrerPartie(db(), jouee, lignes);
+    const seconde = await enregistrerPartie(db(), jouee, lignes);
+
+    expect(premiere.partieId).toBe(jouee.id);
+    expect(seconde).toEqual(premiere);
+    expect(await lireProgression(db(), compte)).toMatchObject({
+      xpTotale: 1210,
+      pieces: 71,
+      pointsLigue: 60,
+    });
+    expect(await partiesTermineesA(jouee.termineeLe)).toBe(1);
+    expect(await lireHistorique(db(), compte)).toHaveLength(1);
+  });
 });

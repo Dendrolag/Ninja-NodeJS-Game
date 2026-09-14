@@ -80,7 +80,12 @@ import type { DefaultEventsMap, Server, Socket } from 'socket.io';
 import { CompteARebours } from './compteARebours.js';
 import type { AnnuaireDesComptes } from './comptes/annuaire.js';
 import type { FinPourLesComptes } from './finDePartie.js';
-import { finPourLesComptes, progressionEnregistree } from './finDePartie.js';
+import {
+  ATTENTE_ENTRE_DEUX_ENREGISTREMENTS_MS,
+  ESSAIS_D_ENREGISTREMENT,
+  finPourLesComptes,
+  progressionEnregistree,
+} from './finDePartie.js';
 import { FluxDEtat } from './fluxDEtat.js';
 import type { GameRoom } from './GameRoom.js';
 import type { Horloge } from './horloge.js';
@@ -227,6 +232,15 @@ export class ServeurSocket {
   /** Les enregistrements de fin de partie qui n'ont pas encore abouti. */
   private readonly enregistrements = new Set<Promise<void>>();
 
+  /**
+   * Les attentes entre deux essais d'enregistrement, et de quoi les finir aussitot.
+   * La fermeture du serveur les finit: l'extinction n'attend pas une horloge.
+   */
+  private readonly attentes = new Set<() => void>();
+
+  /** La couche reseau est fermee: plus aucune attente entre deux essais. */
+  private ferme = false;
+
   /** La version du jeu que ce serveur fait tourner, s'il en a une. */
   private readonly version: string | undefined;
 
@@ -265,6 +279,14 @@ export class ServeurSocket {
     this.decomptes.clear();
     this.connexions.clear();
     this.rooms.toutFermer();
+
+    // Les essais d'enregistrement restants partent sans attendre: l'extinction
+    // attend leur issue, pas l'horloge.
+    this.ferme = true;
+
+    for (const finir of [...this.attentes]) {
+      finir();
+    }
   }
 
   /**
@@ -873,41 +895,90 @@ export class ServeurSocket {
   /**
    * Enregistre, puis envoie a chaque compte present sa progression.
    *
-   * UN ECHEC SE DIT, IL NE SE TAIT PAS. Si la base refuse ou ne repond pas, rien
-   * n'est ecrit (une seule transaction), l'incident est journalise, et chaque compte
-   * present apprend que cette partie ne compte pas. Ne leve jamais.
+   * UN ECHEC SE RETENTE, PUIS SE DIT (recette de l'etape 5.4). Si la base refuse ou ne
+   * repond pas, rien n'est ecrit (une seule transaction), l'incident est journalise,
+   * et l'enregistrement est retente sous le meme identifiant de partie: si un essai
+   * avait abouti sans que sa reponse arrive, la base le reconnait et ne compte rien
+   * deux fois. Apres le dernier essai, chaque compte present apprend que cette partie
+   * ne compte pas. Ne leve jamais.
    */
   private async enregistrerPuisPrevenir(
     comptes: AnnuaireDesComptes,
     idRoom: string,
     fin: FinPourLesComptes,
   ): Promise<void> {
-    try {
-      const progressions = await comptes.enregistrerFinDePartie(fin.partie, fin.resultats);
-      const parCompte = new Map(progressions.map((appliquee) => [appliquee.compteId, appliquee]));
+    const progressions = await this.enregistrerAvecPatience(comptes, idRoom, fin);
 
-      for (const resultat of fin.resultats) {
-        const connexion = fin.connexions.get(resultat.compteId);
-        const appliquee = parCompte.get(resultat.compteId);
-
-        if (connexion !== undefined && appliquee !== undefined) {
-          this.envoyerLaProgression(
-            idRoom,
-            connexion,
-            progressionEnregistree(resultat, fin.partie.nombreJoueurs, appliquee),
-          );
-        }
-      }
-    } catch (erreur) {
-      console.error(`La fin de la partie ${idRoom} n'a pas pu etre enregistree:`, erreur);
-
+    if (progressions === undefined) {
       for (const connexion of fin.connexions.values()) {
         this.envoyerLaProgression(idRoom, connexion, {
           enregistree: false,
           motif: PROGRESSION_NON_ENREGISTREE,
         });
       }
+
+      return;
     }
+
+    const parCompte = new Map(progressions.map((appliquee) => [appliquee.compteId, appliquee]));
+
+    for (const resultat of fin.resultats) {
+      const connexion = fin.connexions.get(resultat.compteId);
+      const appliquee = parCompte.get(resultat.compteId);
+
+      if (connexion !== undefined && appliquee !== undefined) {
+        this.envoyerLaProgression(
+          idRoom,
+          connexion,
+          progressionEnregistree(resultat, fin.partie.nombreJoueurs, appliquee),
+        );
+      }
+    }
+  }
+
+  /** Ce que le premier essai d'enregistrement qui aboutit a applique, ou rien si tous echouent. */
+  private async enregistrerAvecPatience(
+    comptes: AnnuaireDesComptes,
+    idRoom: string,
+    fin: FinPourLesComptes,
+  ): Promise<Awaited<ReturnType<AnnuaireDesComptes['enregistrerFinDePartie']>> | undefined> {
+    for (let essai = 1; essai <= ESSAIS_D_ENREGISTREMENT; essai += 1) {
+      try {
+        return await comptes.enregistrerFinDePartie(fin.partie, fin.resultats);
+      } catch (erreur) {
+        console.error(
+          `La fin de la partie ${idRoom} n'a pas pu etre enregistree (essai ${String(essai)} sur ${String(ESSAIS_D_ENREGISTREMENT)}):`,
+          erreur,
+        );
+
+        if (essai < ESSAIS_D_ENREGISTREMENT) {
+          await this.patienter(ATTENTE_ENTRE_DEUX_ENREGISTREMENTS_MS);
+        }
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Attend ce delai sur l'horloge du serveur, qu'un test fait passer a la main.
+   * La fermeture du serveur finit l'attente aussitot.
+   */
+  private async patienter(delaiMs: number): Promise<void> {
+    if (this.ferme) {
+      return;
+    }
+
+    await new Promise<void>((resoudre) => {
+      const finir = (): void => {
+        arreter();
+        this.attentes.delete(finir);
+        resoudre();
+      };
+      const arreter = this.horloge.repeter(finir, delaiMs);
+
+      this.attentes.add(finir);
+    });
   }
 
   /**

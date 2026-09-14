@@ -19,6 +19,8 @@
  * teste sans monter de serveur.
  */
 
+import { randomUUID } from 'node:crypto';
+
 import type { EtatDeProgression, ProgressionEnregistree } from '@neon-ninja/shared';
 import { niveauDeXp, palierDePoints, recompensesDePartie } from '@neon-ninja/shared';
 import type { IdentifiantEntite } from '@neon-ninja/sim';
@@ -26,6 +28,20 @@ import type { IdentifiantEntite } from '@neon-ninja/sim';
 import type { NouveauResultat, NouvellePartie, ProgressionAppliquee } from './base/parties.js';
 import type { ValeursProgression } from './base/progression.js';
 import type { GameRoom } from './GameRoom.js';
+
+/**
+ * Combien de fois essayer d'enregistrer une fin de partie avant de dire qu'elle ne
+ * compte pas (recette de l'etape 5.4).
+ *
+ * Une base qui se reveille ou une coupure passagere ne doit pas couter sa partie a un
+ * joueur. Trois essais, trois secondes d'ecart: le recapitulatif arrive au plus six
+ * secondes plus tard, l'ecran de fin disant pendant ce temps que la partie
+ * s'enregistre.
+ */
+export const ESSAIS_D_ENREGISTREMENT = 3;
+
+/** L'attente entre deux essais d'enregistrement d'une fin de partie. */
+export const ATTENTE_ENTRE_DEUX_ENREGISTREMENTS_MS = 3000;
 
 /** Ce qu'une partie terminee laisse a enregistrer pour ses comptes. */
 export interface FinPourLesComptes {
@@ -78,6 +94,9 @@ export function finPourLesComptes(room: GameRoom): FinPourLesComptes {
 
   return {
     partie: {
+      // Tire ici, avant tout essai: tous les essais d'enregistrement portent le meme,
+      // et la base reconnait une partie qu'un essai precedent a deja ecrite.
+      id: randomUUID(),
       mode: room.mode,
       carte: room.reglages.carte,
       modeMiroir: room.reglages.modeMiroir,
