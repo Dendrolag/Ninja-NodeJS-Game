@@ -7,9 +7,15 @@
  * yeux verts. Les tests unitaires couvrent le decoupage en calques
  * (recoloration.test.ts); seul un vrai navigateur dit ce que PixiJS en fait.
  *
+ * LE SECOND DEFAUT QU'IL FERME, releve a la meme recette, sur telephone. Le rendu
+ * placait le point vise par la camera en divisant la taille de l'ecran par sa
+ * densite, une fois de trop: sur un ecran de densite 3, le joueur tombait au tiers de
+ * l'ecran, sous le HUD. Invisible au bureau, ou la densite vaut 1; le projet mobile de
+ * Playwright en emule une de 2,625, et ce scenario y relisait une image vide.
+ *
  * La page monte le rendu du paquet client, sans decor ni lueur, pose un joueur
- * vert et un faux ninja blanc au centre, grossis quatre fois, puis relit les
- * pixels dessines.
+ * vert et un faux ninja blanc au point vise par la camera, grossis quatre fois, puis
+ * relit les pixels de l'ecran.
  */
 
 import { expect, test } from '@playwright/test';
@@ -22,6 +28,8 @@ interface Comptes {
   readonly verts: number;
   readonly blancs: number;
   readonly rouges: number;
+  /** Pixels verts ou blancs dans la moitie centrale de l'ecran. */
+  readonly auCentre: number;
 }
 
 /** La page: elle dessine les deux ninjas avec le vrai rendu et compte les pixels. */
@@ -54,28 +62,40 @@ function pageDesCouleurs(): string {
   rendu.dessiner(
     {
       disques: [], cones: [], zones: [], objets: [], reperes: [],
-      entites: [ninja('joueur-vert', 960, 0x00ff00), ninja('bot-blanc', 1040, 0xffffff)],
+      entites: [ninja('joueur-vert', 980, 0x00ff00), ninja('bot-blanc', 1020, 0xffffff)],
     },
     { x: 1000, y: 750, echelle: 4 },
   );
   rendu.application.render();
 
-  const { pixels } = await Promise.resolve(
-    rendu.application.renderer.extract.pixels(rendu.application.stage),
+  // L'ecran lui-meme, et non le seul contenu dessine, ou qu'il soit: c'est ce qui dit
+  // si la camera pose le point vise au milieu.
+  const { pixels, width, height } = await Promise.resolve(
+    rendu.application.renderer.extract.pixels({
+      target: rendu.application.stage,
+      frame: rendu.application.screen,
+    }),
   );
   let verts = 0;
   let blancs = 0;
   let rouges = 0;
+  let auCentre = 0;
 
   for (let index = 0; index < pixels.length; index += 4) {
     const [r, v, b] = [pixels[index], pixels[index + 1], pixels[index + 2]];
+    const x = (index / 4) % width;
+    const y = Math.floor(index / 4 / width);
+    const central = x > width / 4 && x < (3 * width) / 4 && y > height / 4 && y < (3 * height) / 4;
+    const vert = v > 180 && r < 90 && b < 90;
+    const blanc = r > 200 && v > 200 && b > 200;
 
-    if (v > 180 && r < 90 && b < 90) verts += 1;
-    if (r > 200 && v > 200 && b > 200) blancs += 1;
+    if (vert) verts += 1;
+    if (blanc) blancs += 1;
     if (r > 180 && v < 90 && b < 90) rouges += 1;
+    if (central && (vert || blanc)) auCentre += 1;
   }
 
-  window.comptes = { verts, blancs, rouges };
+  window.comptes = { verts, blancs, rouges, auCentre };
 </script>`;
 }
 
@@ -113,4 +133,11 @@ test('un ninja prend la couleur de son proprietaire, sans noircir ni rougir', as
     1_000,
   );
   expect(comptes.rouges, `aucun ninja ne doit rester rouge ${detail}`).toBe(0);
+  // Les deux ninjas encadrent le point vise: presque tous leurs pixels doivent etre
+  // dans la moitie centrale de l'ecran. Une proportion, et non un nombre de pixels,
+  // pour valoir a toutes les densites.
+  expect(
+    comptes.auCentre / (comptes.verts + comptes.blancs),
+    `les ninjas vises doivent etre au milieu ${detail}`,
+  ).toBeGreaterThan(0.9);
 });

@@ -92,9 +92,23 @@
   }
 }
 
-/* Le bouton de localisation remplace la touche F sur les ecrans tactiles. */
+/*
+ * Le bouton de localisation remplace la touche F sur les ecrans tactiles.
+ *
+ * SOUS LE POUCE, COMME DANS LE JEU D'ORIGINE (.mobile-action-button). Une petite
+ * icone parmi celles du haut de l'ecran, il n'a pas ete trouve a la recette de
+ * l'etape 5.4. Il est pose en bas a droite, juste au-dessus de la minimap: un rond
+ * de soixante pixels, du violet d'origine. Place en fixe, il sort de la barre
+ * d'actions sans la deranger.
+ */
 .jeu-localiser {
   display: none;
+}
+
+.ecran-jeu {
+  /* Hauteur affichee de la minimap, pour empiler les boutons au-dessus d'elle. */
+  --hauteur-minimap: 160px;
+  --marge-du-bas: max(14px, env(safe-area-inset-bottom));
 }
 
 @media (pointer: coarse) {
@@ -102,8 +116,29 @@
     display: none;
   }
 
-  .jeu-localiser {
+  .jeu-actions .jeu-localiser {
+    position: fixed;
+    right: 14px;
+    bottom: calc(var(--marge-du-bas) + var(--hauteur-minimap) + 12px);
     display: inline-grid;
+    place-items: center;
+    width: 60px;
+    min-width: 60px;
+    height: 60px;
+    padding: 0;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    background: rgba(204, 153, 255, 0.8);
+    color: #fff;
+  }
+
+  .jeu-actions .jeu-localiser svg {
+    width: 30px;
+    height: 30px;
+  }
+
+  .jeu-actions .jeu-localiser:active {
+    transform: scale(0.9);
   }
 }
 
@@ -409,7 +444,7 @@
 .hud-capture {
   position: absolute;
   right: 14px;
-  bottom: calc(max(14px, env(safe-area-inset-bottom)) + 172px);
+  bottom: calc(var(--marge-du-bas) + var(--hauteur-minimap) + 12px);
   display: grid;
   justify-items: center;
   gap: 6px;
@@ -467,7 +502,9 @@
 }
 
 @media (pointer: coarse) {
+  /* Au-dessus du bouton de localisation, qui occupe le dessus de la minimap. */
   .hud-capture {
+    bottom: calc(var(--marge-du-bas) + var(--hauteur-minimap) + 84px);
     min-width: 120px;
     padding: 16px 18px;
     font-size: 15px;
@@ -491,6 +528,10 @@
   .hud-minimap {
     transform: scale(0.72);
     transform-origin: bottom right;
+  }
+
+  .ecran-jeu {
+    --hauteur-minimap: 116px;
   }
 
   /* Le texte des boutons reste lu par les lecteurs d'ecran, sans prendre de place. */

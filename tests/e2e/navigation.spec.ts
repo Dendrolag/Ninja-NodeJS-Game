@@ -32,7 +32,7 @@ test.afterEach(async () => {
   await jeu.arreter();
 });
 
-test('de l accueil a la partie, puis retour a l accueil', async ({ page }) => {
+test('de l accueil a la partie, puis retour a l accueil', async ({ page, hasTouch }) => {
   // Un parcours entier, chargement de la carte compris, comme les autres parcours.
   // Avec le delai par defaut de trente secondes, il etait le seul a en manquer quand
   // les scenarios jouent en parallele sur la machine de developpement (etape 5.4).
@@ -87,6 +87,20 @@ test('de l accueil a la partie, puis retour a l accueil', async ({ page }) => {
   await expect(page.locator('.terrain canvas')).toBeVisible({ timeout: 40_000 });
   await expect(page.locator('.hud-temps')).toHaveText(/\d:\d\d/u, { timeout: 10_000 });
   await expect(page.locator('.hud-classement')).toContainText('Alice');
+
+  if (hasTouch) {
+    // Recette de l'etape 5.4: sur telephone, le bouton qui montre ou est notre ninja
+    // n'etait qu'une petite icone parmi celles du haut de l'ecran, et le porteur du
+    // projet ne l'a pas trouve. Le jeu d'origine le posait en bas, sous le pouce.
+    const localiser = page.getByRole('button', { name: 'Localiser mon ninja' });
+    await expect(localiser).toBeVisible();
+
+    const boite = await localiser.boundingBox();
+    const hauteurDeLEcran = page.viewportSize()?.height ?? 0;
+
+    expect(boite?.height ?? 0, 'un bouton a la taille d un pouce').toBeGreaterThanOrEqual(56);
+    expect(boite?.y ?? 0, 'dans la moitie basse de l ecran').toBeGreaterThan(hauteurDeLEcran / 2);
+  }
 
   await page.locator('.jeu-actions').getByRole('button', { name: 'Quitter' }).click();
   const confirmation = page.getByRole('dialog', { name: 'Quitter la partie ?' });

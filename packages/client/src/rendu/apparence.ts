@@ -41,6 +41,16 @@ export const BORDURE_TERRAIN = {
 export const TAILLE_SPRITE = 32;
 
 /**
+ * Densite de pixels maximale du rendu.
+ *
+ * Au-dela, l'oeil ne gagne rien et le telephone paie tout: a densite 3, chaque image
+ * et la lueur qui la recouvre coutent neuf fois les pixels d'un ecran ordinaire, et
+ * la partie saccadait sur iPhone (recette de l'etape 5.4). Le jeu d'origine dessinait
+ * a densite 1.
+ */
+export const DENSITE_MAXIMALE = 2;
+
+/**
  * Quels pixels du sprite de ninja prennent la couleur de son proprietaire.
  *
  * LE SPRITE EST DESSINE EN ROUGE, pas en niveaux de gris. Le jeu d'origine

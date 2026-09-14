@@ -45,7 +45,7 @@ import {
   tousLesObjets,
 } from '@neon-ninja/shared';
 import { AdvancedBloomFilter } from 'pixi-filters';
-import type { Container as ConteneurPixi, Renderer } from 'pixi.js';
+import type { Container as ConteneurPixi } from 'pixi.js';
 import {
   Application,
   Assets,
@@ -57,8 +57,9 @@ import {
   Texture,
 } from 'pixi.js';
 
-import { BORDURE_TERRAIN, COULEUR_FOND, LUEUR } from './apparence.js';
+import { BORDURE_TERRAIN, COULEUR_FOND, DENSITE_MAXIMALE, LUEUR } from './apparence.js';
 import type { Camera } from './camera.js';
+import { versEcran } from './camera.js';
 import { separerLesCalques } from './recoloration.js';
 import { adresseDImage, adresseDesDetails, adresseDuCorps } from './textures.js';
 import type {
@@ -225,9 +226,10 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
     width: options.largeur ?? options.hote.clientWidth,
     height: options.hauteur ?? options.hote.clientHeight,
     antialias: true,
-    // Le rendu suit la densite de l'ecran: sans cela, le jeu est flou sur un
-    // ecran haute definition et sur un telephone.
-    resolution: globalThis.devicePixelRatio,
+    // Le rendu suit la densite de l'ecran, pour ne pas etre flou, mais jamais
+    // au-dela de DENSITE_MAXIMALE (apparence.ts): un telephone de densite 3 faisait
+    // dessiner neuf fois plus de pixels qu'un ecran ordinaire, lueur comprise.
+    resolution: Math.min(globalThis.devicePixelRatio, DENSITE_MAXIMALE),
     autoDensity: true,
   });
 
@@ -305,7 +307,7 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
     },
 
     dessiner(scene: Scene, camera: Camera) {
-      placerLaCamera(monde, camera, application.renderer);
+      placerLaCamera(monde, camera, application);
 
       dessinerLesZones(zones, libelles, textesZones, scene.zones);
       dessinerLesDisques(disques, scene.disques);
@@ -333,13 +335,19 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
  *
  * Deplacer un seul conteneur plutot que chaque objet est ce qui rend la camera
  * gratuite: le GPU applique une matrice, quel que soit le nombre de sprites.
+ *
+ * L'ECRAN SE MESURE EN PIXELS CSS, CEUX DE LA CAMERA. Dans PixiJS 8, l'ecran de
+ * l'application l'est deja. Ce fichier divisait jusqu'a l'etape 5.4 la largeur du
+ * rendu par sa densite, une fois de trop: invisible sur un ecran de densite 1, mais
+ * sur un telephone de densite 3 le point vise tombait au tiers de l'ecran, le
+ * joueur sous le HUD et la carte arretee aux deux tiers (recette de l'etape 5.4).
  */
-function placerLaCamera(monde: Container, camera: Camera, moteur: Renderer): void {
+function placerLaCamera(monde: Container, camera: Camera, application: Application): void {
+  const ecran = { largeur: application.screen.width, hauteur: application.screen.height };
+  const origine = versEcran({ x: 0, y: 0 }, camera, ecran);
+
   monde.scale.set(camera.echelle);
-  monde.position.set(
-    moteur.width / moteur.resolution / 2 - camera.x * camera.echelle,
-    moteur.height / moteur.resolution / 2 - camera.y * camera.echelle,
-  );
+  monde.position.set(origine.x, origine.y);
 }
 
 /**
