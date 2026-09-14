@@ -114,7 +114,7 @@ Repris des handoffs précédents, inchangé: le filtrage du flux par zone d'int�
 - `2bcd9ad` (lot B, qui porte aussi la correction): **verte**.
 - `98e9767` (lot C): **verte**, exécution 34685171494.
 - `402a6f0` (lot D): **verte**, exécution 34685808712, « Types, linter et tests » et « Bout en bout ».
-- Commit de ce handoff et de la correction de la zone d'invisibilité: à confirmer.
+- `460a9b6` (handoff, et correction de la zone d'invisibilité): **verte**, exécution 34819224265, « Types, linter et tests » et « Bout en bout ».
 
 `master` n'a pas été touché. Aucune fusion de `reecriture` avant l'étape 6.1.
 
