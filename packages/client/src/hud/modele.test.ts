@@ -123,6 +123,11 @@ describe('construireHud', () => {
     expect(hud.pausePar).toBe('Alice');
   });
 
+  it('dit que la page tente de revenir quand le lien est tombe en pleine partie (etape 2.5)', () => {
+    expect(construireHud(etatEnJeu(vue()), 0).retourEnCours).toBe(false);
+    expect(construireHud(etatEnJeu(vue(), { connexion: 'retour' }), 0).retourEnCours).toBe(true);
+  });
+
   describe('effets en cours', () => {
     const effets: readonly EffetActif[] = [
       { categorie: 'bonus', nature: 'vitesse', finPrevueA: 10_000 },

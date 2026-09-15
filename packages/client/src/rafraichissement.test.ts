@@ -33,7 +33,7 @@ function monter() {
   const client = creerClient({ reseau, horloge: creerHorlogeClientManuelle(), minuterie });
 
   client.ouvrir();
-  reseau.simulerConnexion('moi');
+  reseau.simulerConnexion();
 
   const demandes = (): number =>
     reseau.emis.filter((message) => message.nom === 'listerParties').length;

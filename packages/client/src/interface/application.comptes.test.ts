@@ -88,7 +88,7 @@ afterEach(() => {
 describe('l en-tete et la connexion', () => {
   it('mene un invite a l ecran de connexion, puis lui montre son compte', async () => {
     client.ouvrir();
-    reseau.simulerConnexion('invite');
+    reseau.simulerConnexion();
 
     const seConnecter = obligatoire(hote, '.entete-connexion');
     expect(estCache(seConnecter)).toBe(false);
@@ -116,7 +116,7 @@ describe('l en-tete et la connexion', () => {
     coffre.garder(JETON_DESSAI);
     client.ouvrir();
     await laisserRepondre();
-    reseau.simulerConnexion('moi');
+    reseau.simulerConnexion();
 
     expect(estCache(obligatoire(hote, '.champ-pseudo'))).toBe(true);
     expect(obligatoire(hote, '.accueil-compte').textContent).toBe(
@@ -132,7 +132,7 @@ describe('l en-tete et la connexion', () => {
     coffre.garder(JETON_DESSAI);
     client.ouvrir();
     await laisserRepondre();
-    reseau.simulerConnexion('moi');
+    reseau.simulerConnexion();
     boutonObligatoire(hote, 'Partie rapide').click();
     reseau.dernier('rejoindre')?.[1]({ valide: true, valeur: SALON });
 

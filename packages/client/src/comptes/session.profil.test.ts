@@ -46,7 +46,7 @@ describe('le profil d un compte', () => {
     coffre.garder(JETON_DESSAI);
     client.ouvrir();
     await laisserRepondre();
-    reseau.simulerConnexion('moi');
+    reseau.simulerConnexion();
   });
 
   it('se lit a l arrivee sur son ecran, et l en-tete suit la progression qu il porte', async () => {
@@ -141,7 +141,7 @@ describe('le profil d un compte', () => {
 describe('le profil d un invite', () => {
   it('n existe pas: l invite est mene a la connexion, sans requete', () => {
     client.ouvrir();
-    reseau.simulerConnexion('invite');
+    reseau.simulerConnexion();
 
     client.naviguer('profil');
 

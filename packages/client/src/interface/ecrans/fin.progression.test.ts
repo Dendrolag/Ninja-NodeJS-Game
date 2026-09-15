@@ -83,7 +83,7 @@ beforeEach(async () => {
 
   client.ouvrir();
   await new Promise((resoudre) => setTimeout(resoudre, 0));
-  reseau.simulerConnexion('moi');
+  reseau.simulerConnexion();
   client.rejoindre(undefined);
   reseau.dernier('rejoindre')?.[1]({ valide: true, valeur: SALON });
   reseau.recevoir('partieLancee');

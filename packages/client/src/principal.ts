@@ -26,7 +26,7 @@ import 'pixi.js/unsafe-eval';
 
 import { creerClient } from './client.js';
 import { creerApiComptesHttp } from './comptes/api.js';
-import { creerCoffreDeJeton } from './comptes/coffre.js';
+import { CLE_RETOUR, creerCoffreDeJeton } from './comptes/coffre.js';
 import { configurationDeLaPage } from './configuration.js';
 import { horlogeNavigateur } from './horloge.js';
 import { monterApplication } from './interface/application.js';
@@ -55,6 +55,20 @@ function stockageDuNavigateur(): Storage | undefined {
   }
 }
 
+/**
+ * Le stockage de session du navigateur, s'il est permis d'y toucher (etape 2.5).
+ *
+ * Il garde le jeton de retour en partie: il survit au rechargement de l'onglet, pas
+ * a sa fermeture. Refuse, le jeton vit en memoire, et un rechargement perd la place.
+ */
+function stockageDeSession(): Storage | undefined {
+  try {
+    return globalThis.sessionStorage;
+  } catch {
+    return undefined;
+  }
+}
+
 const hote = document.getElementById('application');
 
 if (hote === null) {
@@ -69,6 +83,7 @@ const client = creerClient({
   horloge: horlogeNavigateur,
   comptes: creerApiComptesHttp(configuration.url === undefined ? {} : { url: configuration.url }),
   coffre: creerCoffreDeJeton(stockage),
+  coffreDeRetour: creerCoffreDeJeton(stockageDeSession(), CLE_RETOUR),
 });
 
 monterApplication({

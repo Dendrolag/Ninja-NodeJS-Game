@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { JETON_DESSAI } from './api.js';
-import { CLE_JETON, creerCoffreDeJeton } from './coffre.js';
+import { CLE_JETON, CLE_RETOUR, creerCoffreDeJeton } from './coffre.js';
 
 /** Un stockage de navigateur, en memoire. */
 function stockageEnMemoire(): Storage {
@@ -99,5 +99,23 @@ describe('le coffre du jeton', () => {
     coffre.garder(JETON_DESSAI);
 
     expect(coffre.lire()).toBe(JETON_DESSAI);
+  });
+
+  it('garde le jeton de retour sous sa propre cle, sans toucher a la session (etape 2.5)', () => {
+    const stockage = stockageEnMemoire();
+    const session = creerCoffreDeJeton(stockage);
+    const retour = creerCoffreDeJeton(stockage, CLE_RETOUR);
+    const jetonDeRetour = 'R'.repeat(43);
+
+    session.garder(JETON_DESSAI);
+    retour.garder(jetonDeRetour);
+
+    expect(stockage.getItem(CLE_RETOUR)).toBe(jetonDeRetour);
+    expect(session.lire()).toBe(JETON_DESSAI);
+
+    retour.oublier();
+
+    expect(retour.lire()).toBeUndefined();
+    expect(session.lire()).toBe(JETON_DESSAI);
   });
 });

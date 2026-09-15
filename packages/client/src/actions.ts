@@ -42,10 +42,29 @@ import type { FaitDeJeu } from './faits.js';
 export type Action =
   /** Le client ouvre le lien, ou le rouvre avec une autre session. */
   | { readonly type: 'ouvertureDemandee' }
-  /** Le transport est etabli. L'identifiant est celui que le serveur a donne. */
-  | { readonly type: 'connexionEtablie'; readonly identifiant: string }
+  /** Le transport est etabli. */
+  | { readonly type: 'connexionEtablie' }
   /** Le transport est tombe. Tout ce qui dependait de la partie est perdu. */
   | { readonly type: 'connexionPerdue' }
+  /**
+   * Le transport est tombe en pleine partie, et la page tente d'y revenir (etape 2.5).
+   * La partie reste affichee telle qu'elle etait.
+   */
+  | { readonly type: 'lienPerduEnPartie' }
+  /**
+   * Le lien vient de s'ouvrir, et la place gardee est presentee au serveur (etape
+   * 2.5): apres une coupure, ou au chargement de la page.
+   */
+  | { readonly type: 'retourDemande' }
+  /** Le serveur a rendu sa place au joueur, et decrit la partie (etape 2.5). */
+  | { readonly type: 'retourAccepte'; readonly salon: InfosSalon }
+  /**
+   * La place n'a pas pu etre reprise, ou a ete reprise ailleurs, pour ce motif
+   * (etape 2.5). Le lien, lui, est ouvert.
+   */
+  | { readonly type: 'retourRefuse'; readonly motif: string }
+  /** Le serveur dit quel est notre joueur dans la partie ou l'on entre (etape 2.5). */
+  | { readonly type: 'placeAttribuee'; readonly joueur: string }
   /** Le lien n'a pas pu s'ouvrir, pour ce motif. */
   | { readonly type: 'connexionRefusee'; readonly motif: string }
   /** Le serveur ne repond pas encore: un nouvel essai est planifie (etape 5.3). */

@@ -31,6 +31,15 @@
  * celui d'un compte. Un jeton invalide fait refuser la connexion: un joueur qui se
  * croit connecte ne doit pas jouer en invite sans le savoir.
  *
+ * ELLE GARDE LA PLACE, DEPUIS L'ETAPE 2.5. Un joueur n'est plus sa connexion: il
+ * garde l'identifiant de celle par laquelle il est entre, et le registre des places
+ * (places.ts) dit quelle connexion le joue. Chaque entree lui remet un jeton de
+ * retour secret. Si son lien tombe pendant une partie en cours, il reste dans la
+ * partie, absent et immobile, le temps du delai de retour; une connexion qui
+ * presente son jeton, sous la meme identite, reprend sa place. Au-dela du delai, il
+ * sort de la partie, comme s'il l'avait quittee. Dans le salon, ou apres la fin, une
+ * deconnexion reste un depart immediat.
+ *
  * ELLE ENREGISTRE LA FIN, DEPUIS L'ETAPE 3.3. Quand une partie se termine, le
  * classement part a tous aussitot; puis, si la partie avait des comptes, leurs
  * resultats et leurs gains s'enregistrent par l'annuaire, et chaque compte present
@@ -47,6 +56,7 @@ import type {
   DemandeChat,
   DemandeCreation,
   DemandeRejoindre,
+  DemandeRetour,
   ErreurValidation,
   EvenementsClientVersServeur,
   EvenementsServeurVersClient,
@@ -68,6 +78,7 @@ import {
   seauNeuf,
   validerDemandeCreation,
   validerDemandeRejoindre,
+  validerDemandeRetour,
   validerIntentionDeplacement,
   validerJeton,
   validerMessageChat,
@@ -99,6 +110,8 @@ import {
   partiePubliqueDe,
   salonDe,
 } from './instantane.js';
+import type { Place } from './places.js';
+import { RegistreDesPlaces } from './places.js';
 import type { OptionsCreationRoom } from './RoomManager.js';
 import { RoomManager } from './RoomManager.js';
 import type { SourceDeTerrain } from './terrain.js';
@@ -160,6 +173,9 @@ interface Connexion {
   /**
    * L'identite du joueur, etablie a l'entree en partie et jamais relue d'un
    * message. Absente tant que la connexion n'est entree nulle part.
+   *
+   * Son identifiant est celui du joueur, pas forcement celui de cette connexion: une
+   * connexion revenue apres une coupure joue la place d'une connexion precedente.
    */
   session: SessionJoueur | undefined;
   /** La partie dans laquelle cette connexion se trouve. */
@@ -170,8 +186,11 @@ interface Connexion {
   readonly derniereFois: Record<FamilleDebit, number>;
 }
 
-/** La reponse a une demande d'entree ou de creation. */
+/** La reponse a une demande d'entree, de creation ou de retour. */
 type ReponseDEntree = (reponse: ResultatValidation<InfosSalon>) => void;
+
+/** Ce que lit qui presente un jeton valable pour une partie qui ne se joue plus. */
+const PARTIE_PLUS_EN_COURS = "Cette partie n'est plus en cours.";
 
 /** Ce qu'il faut pour monter la couche reseau. */
 export interface OptionsServeurSocket {
@@ -212,6 +231,9 @@ export class ServeurSocket {
 
   private readonly connexions = new Map<string, Connexion>();
 
+  /** La place de chaque joueur entre en partie, et de quoi la reprendre (etape 2.5). */
+  private readonly places: RegistreDesPlaces;
+
   /** Le decompte de demarrage de chaque partie qui en a un en cours. */
   private readonly decomptes = new Map<string, CompteARebours>();
 
@@ -248,6 +270,7 @@ export class ServeurSocket {
     this.io = options.io;
     this.horloge = options.horloge ?? horlogeSysteme;
     this.rooms = options.rooms ?? new RoomManager({ horloge: this.horloge });
+    this.places = new RegistreDesPlaces({ horloge: this.horloge });
     this.terrains = options.terrains ?? SANS_TERRAIN;
     this.comptes = options.comptes;
     this.version = options.version;
@@ -278,6 +301,7 @@ export class ServeurSocket {
 
     this.decomptes.clear();
     this.connexions.clear();
+    this.places.fermer();
     this.rooms.toutFermer();
 
     // Les essais d'enregistrement restants partent sans attendre: l'extinction
@@ -400,6 +424,9 @@ export class ServeurSocket {
     socket.on('listerParties', (accuse) => {
       this.surListerParties(socket, accuse);
     });
+    socket.on('revenir', (demande, accuse) => {
+      this.surRevenir(socket, demande, accuse);
+    });
     socket.on('quitter', () => {
       this.surQuitter(socket);
     });
@@ -428,8 +455,7 @@ export class ServeurSocket {
       this.surPause(socket, false);
     });
     socket.on('disconnect', () => {
-      this.surQuitter(socket);
-      this.connexions.delete(socket.id);
+      this.surDeconnexion(socket);
     });
   }
 
@@ -552,7 +578,71 @@ export class ServeurSocket {
     repondre(this.rooms.partiesPubliquesOuvertes().map(partiePubliqueDe));
   }
 
-  /** Sortie de partie, volontaire ou par deconnexion. */
+  /**
+   * Retour dans une partie en cours apres une coupure, avec le jeton de retour
+   * (etape 2.5).
+   *
+   * TOUT EST VERIFIE AVANT QUE RIEN NE CHANGE: le debit, une connexion qui n'est
+   * dans aucune partie, la forme du jeton, la place qu'il ouvre a cette identite, et
+   * une partie encore en cours. Un retour refuse ne laisse donc aucune trace, et ne
+   * prend sa place a personne.
+   *
+   * Admis, le joueur retrouve sa place telle qu'il l'a laissee: l'etat de la partie
+   * ne le connait que par son identifiant, qui n'a pas change. Il recoit un jeton
+   * neuf, puis le salon, puis partieLancee et une image complete du flux, comme qui
+   * entre dans une partie commencee. Une connexion qui tenait encore la place, faute
+   * pour le serveur d'avoir constate sa fin, en est detachee et prevenue.
+   */
+  private surRevenir(socket: SocketTypee, demande: DemandeRetour, accuse: ReponseDEntree): void {
+    const repondre = accuseOuRien(accuse);
+    const connexion = this.connexionLibre(socket, 'revenir', repondre);
+
+    if (connexion === undefined) {
+      return;
+    }
+
+    const verdict = validerDemandeRetour(demande as unknown);
+    if (!verdict.valide) {
+      repondre({ valide: false, erreurs: verdict.erreurs });
+      return;
+    }
+
+    const visee = this.places.verifier(verdict.valeur.jeton, connexion.compteId);
+    if (!visee.valide) {
+      repondre({ valide: false, erreurs: visee.erreurs });
+      return;
+    }
+
+    const room = this.rooms.room(visee.valeur.idRoom);
+    if (room?.statut !== 'enCours') {
+      repondre(refus('partie', PARTIE_PLUS_EN_COURS));
+      return;
+    }
+
+    const { place, connexionRemplacee } = this.places.reprendre(visee.valeur.session.id, socket.id);
+
+    if (connexionRemplacee !== undefined) {
+      this.detacherLaConnexionRemplacee(connexionRemplacee);
+    }
+
+    const hoteAvant = room.hote;
+    room.marquerPresent(place.session.id);
+
+    connexion.session = place.session;
+    connexion.idRoom = room.id;
+    void socket.join(room.id);
+
+    this.annoncerLaPlace(socket, place);
+    repondre({ valide: true, valeur: salonDe(room) });
+    socket.emit('partieLancee');
+    this.fluxDe(room).attendreUneImage(socket.id);
+
+    if (room.hote !== hoteAvant) {
+      this.diffuserLeSalon(room);
+    }
+  }
+
+  /** Sortie volontaire de la partie: la place est rendue aussitot. */
   private surQuitter(socket: SocketTypee): void {
     const connexion = this.connexions.get(socket.id);
 
@@ -560,18 +650,69 @@ export class ServeurSocket {
       return;
     }
 
-    const room = this.rooms.room(connexion.idRoom);
-    const partant = joueurDuSalon({
-      ...connexion.session,
-      hote: room?.hote === connexion.session.id,
-    });
-    const idRoom = connexion.idRoom;
+    const { idRoom, session } = connexion;
 
     connexion.session = undefined;
     connexion.idRoom = undefined;
     void socket.leave(idRoom);
 
-    this.rooms.quitter(idRoom, partant.id);
+    this.places.liberer(session.id);
+    this.faireSortir(idRoom, session);
+  }
+
+  /**
+   * Fin d'une connexion.
+   *
+   * PENDANT UNE PARTIE EN COURS, LA PLACE ATTEND SON JOUEUR (etape 2.5). Il reste
+   * dans la partie, absent et immobile, et son hote passe la main s'il l'etait; au
+   * bout du delai de retour, il sort comme s'il avait quitte, ce qui est un abandon.
+   * Rester dans l'etat est ce qui permet a ses bots de continuer a transmettre sa
+   * couleur pendant la coupure (comportement a preserver 11).
+   *
+   * Dans le salon, ou une fois la partie terminee, rien n'est a garder: c'est un
+   * depart immediat, comme avant l'etape 2.5. Une place fantome bloquerait l'hote et
+   * la capacite d'un salon, et une partie terminee a deja envoye son classement.
+   */
+  private surDeconnexion(socket: SocketTypee): void {
+    const connexion = this.connexions.get(socket.id);
+    this.connexions.delete(socket.id);
+
+    if (connexion?.idRoom === undefined || connexion.session === undefined) {
+      return;
+    }
+
+    const { idRoom, session } = connexion;
+    const room = this.rooms.room(idRoom);
+
+    if (room?.statut !== 'enCours') {
+      this.places.liberer(session.id);
+      this.faireSortir(idRoom, session);
+      return;
+    }
+
+    const hoteAvant = room.hote;
+    room.marquerAbsent(session.id);
+
+    this.places.suspendre(session.id, (place) => {
+      this.faireSortir(place.idRoom, place.session);
+    });
+
+    if (room.hote !== hoteAvant) {
+      this.diffuserLeSalon(room);
+    }
+  }
+
+  /**
+   * Fait sortir un joueur de sa partie, et le dit a ceux qui restent.
+   *
+   * Sert au depart volontaire, a la deconnexion hors d'une partie en cours, et a
+   * l'expiration du delai de retour. La place du joueur est deja rendue.
+   */
+  private faireSortir(idRoom: string, session: SessionJoueur): void {
+    const room = this.rooms.room(idRoom);
+    const partant = joueurDuSalon({ ...session, hote: room?.hote === session.id });
+
+    this.rooms.quitter(idRoom, session.id);
 
     const restante = this.rooms.room(idRoom);
     if (restante === undefined) {
@@ -584,6 +725,41 @@ export class ServeurSocket {
 
     this.io.to(idRoom).emit('joueurParti', partant);
     this.diffuserLeSalon(restante);
+  }
+
+  /**
+   * Detache de sa partie une connexion dont la place vient d'etre reprise ailleurs.
+   *
+   * Le lien n'est pas coupe: la connexion revient hors partie, comme apres avoir
+   * quitte, et apprend pourquoi. La couper ferait croire a sa page que le lien est
+   * tombe, et elle tenterait de revenir a son tour.
+   */
+  private detacherLaConnexionRemplacee(idConnexion: string): void {
+    const ancienne = this.connexions.get(idConnexion);
+
+    if (ancienne?.idRoom === undefined) {
+      return;
+    }
+
+    void ancienne.socket.leave(ancienne.idRoom);
+    ancienne.session = undefined;
+    ancienne.idRoom = undefined;
+    ancienne.socket.emit('placeReprise');
+  }
+
+  /** Remet a sa connexion la place d'un joueur: son identifiant, et son jeton de retour. */
+  private annoncerLaPlace(socket: SocketTypee, place: Place): void {
+    socket.emit('placeAttribuee', {
+      joueur: place.session.id,
+      jetonDeRetour: place.jetonDeRetour,
+    });
+  }
+
+  /** La connexion qui joue ce joueur, s'il est present. */
+  private connexionDuJoueur(idJoueur: string): Connexion | undefined {
+    const idConnexion = this.places.connexionDuJoueur(idJoueur);
+
+    return idConnexion === undefined ? undefined : this.connexions.get(idConnexion);
   }
 
   /**
@@ -819,10 +995,10 @@ export class ServeurSocket {
    *
    * La trame du flux d'etat part a la salle entiere, en un seul message identique
    * pour tous: une image ou un delta (fluxDEtat.ts). Qui vient d'entrer dans la
-   * partie recoit ensuite sa propre image, du meme battement. Les notifications,
-   * elles, sont adressees: chacune ne va qu'a celui qu'elle concerne. Un joueur qui
-   * a quitte la partie entre-temps n'a plus de connexion, et son message est
-   * simplement omis.
+   * partie, ou d'y revenir, recoit ensuite sa propre image, du meme battement. Les
+   * notifications, elles, sont adressees: chacune ne va qu'a la connexion qui joue
+   * le joueur qu'elle concerne. Un joueur qui a quitte la partie entre-temps, ou
+   * dont le lien est tombe, n'a pas de connexion, et son message est simplement omis.
    */
   private diffuserLeBattement(room: GameRoom): void {
     const flux = this.fluxDe(room);
@@ -840,7 +1016,7 @@ export class ServeurSocket {
     }
 
     for (const notification of notificationsDe(room.etat)) {
-      const destinataire = this.connexions.get(notification.pour);
+      const destinataire = this.connexionDuJoueur(notification.pour);
 
       if (destinataire?.idRoom === room.id) {
         envoyer(destinataire.socket, notification);
@@ -910,8 +1086,8 @@ export class ServeurSocket {
     const progressions = await this.enregistrerAvecPatience(comptes, idRoom, fin);
 
     if (progressions === undefined) {
-      for (const connexion of fin.connexions.values()) {
-        this.envoyerLaProgression(idRoom, connexion, {
+      for (const idJoueur of fin.joueurs.values()) {
+        this.envoyerLaProgression(idRoom, idJoueur, {
           enregistree: false,
           motif: PROGRESSION_NON_ENREGISTREE,
         });
@@ -923,13 +1099,13 @@ export class ServeurSocket {
     const parCompte = new Map(progressions.map((appliquee) => [appliquee.compteId, appliquee]));
 
     for (const resultat of fin.resultats) {
-      const connexion = fin.connexions.get(resultat.compteId);
+      const idJoueur = fin.joueurs.get(resultat.compteId);
       const appliquee = parCompte.get(resultat.compteId);
 
-      if (connexion !== undefined && appliquee !== undefined) {
+      if (idJoueur !== undefined && appliquee !== undefined) {
         this.envoyerLaProgression(
           idRoom,
-          connexion,
+          idJoueur,
           progressionEnregistree(resultat, fin.partie.nombreJoueurs, appliquee),
         );
       }
@@ -990,10 +1166,10 @@ export class ServeurSocket {
    */
   private envoyerLaProgression(
     idRoom: string,
-    idConnexion: string,
+    idJoueur: string,
     progression: ProgressionDeFin,
   ): void {
-    const connexion = this.connexions.get(idConnexion);
+    const connexion = this.connexionDuJoueur(idJoueur);
 
     if (connexion?.idRoom === idRoom) {
       connexion.socket.emit('progressionDeFin', progression);
@@ -1010,15 +1186,16 @@ export class ServeurSocket {
   // ------------------------------------------------------------------------
 
   /**
-   * La connexion d'un joueur qui demande a entrer ou a creer, si elle en a le droit.
+   * La connexion d'un joueur qui demande a entrer, a creer ou a revenir, si elle en
+   * a le droit.
    *
-   * Deux conditions communes aux deux demandes: le debit, et le fait de n'etre
+   * Deux conditions communes aux trois demandes: le debit, et le fait de n'etre
    * encore dans aucune partie. Un refus est rendu a l'appelant, et rien n'est
    * rendu.
    */
   private connexionLibre(
     socket: SocketTypee,
-    action: 'rejoindre' | 'creerPartie',
+    action: 'rejoindre' | 'creerPartie' | 'revenir',
     repondre: ReponseDEntree,
   ): Connexion | undefined {
     const connexion = this.connexions.get(socket.id);
@@ -1138,6 +1315,9 @@ export class ServeurSocket {
    * et que l'on rejoint la salle Socket.IO. Une entree refusee ne laisse donc
    * aucune trace: ni session, ni appartenance a une salle, ni message aux autres.
    *
+   * Le joueur prend l'identifiant de cette connexion, et recoit sa place et son
+   * jeton de retour avant la reponse a sa demande (etape 2.5).
+   *
    * @returns Vrai si la room a accueilli le joueur.
    */
   private faireEntrer(
@@ -1159,6 +1339,7 @@ export class ServeurSocket {
     connexion.idRoom = room.id;
     void socket.join(room.id);
 
+    this.annoncerLaPlace(socket, this.places.attribuer(room.id, session, socket.id));
     repondre({ valide: true, valeur: salonDe(room) });
 
     socket.to(room.id).emit('joueurArrive', joueurDuSalon(entree.valeur));

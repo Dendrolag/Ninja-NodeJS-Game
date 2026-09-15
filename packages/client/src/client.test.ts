@@ -87,11 +87,18 @@ beforeEach(() => {
 });
 
 describe('le lien', () => {
-  it('enregistre la connexion et l identifiant recu', () => {
-    reseau.simulerConnexion('session-42');
+  it('enregistre la connexion, sans joueur tant qu on n est entre nulle part', () => {
+    reseau.simulerConnexion();
 
     expect(client.etat.connexion).toBe('connecte');
-    expect(client.etat.moi).toBe('session-42');
+    expect(client.etat.moi).toBeUndefined();
+  });
+
+  it('apprend son identifiant de joueur de la place remise a l entree (etape 2.5)', () => {
+    reseau.simulerConnexion();
+    reseau.recevoir('placeAttribuee', { joueur: 'j-42', jetonDeRetour: 'R'.repeat(43) });
+
+    expect(client.etat.moi).toBe('j-42');
   });
 
   it('enregistre la perte du lien', () => {
@@ -355,8 +362,10 @@ describe('fermeture', () => {
     const autreReseau = creerReseauFactice();
     const autre = creerClient({ reseau: autreReseau, horloge });
 
-    reseau.simulerConnexion('un');
-    autreReseau.simulerConnexion('deux');
+    reseau.simulerConnexion();
+    autreReseau.simulerConnexion();
+    reseau.recevoir('placeAttribuee', { joueur: 'un', jetonDeRetour: 'U'.repeat(43) });
+    autreReseau.recevoir('placeAttribuee', { joueur: 'deux', jetonDeRetour: 'D'.repeat(43) });
 
     expect(client.etat.moi).toBe('un');
     expect(autre.etat.moi).toBe('deux');

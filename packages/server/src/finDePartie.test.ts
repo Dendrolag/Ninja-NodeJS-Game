@@ -103,7 +103,7 @@ describe('finPourLesComptes', () => {
       },
     ]);
     expect(gains.xp).toBeGreaterThan(0);
-    expect([...fin.connexions]).toEqual([['c-alice', 's-alice']]);
+    expect([...fin.joueurs]).toEqual([['c-alice', 's-alice']]);
   });
 
   it('enregistre l abandon d un compte, sans connexion a prevenir', () => {
@@ -123,7 +123,7 @@ describe('finPourLesComptes', () => {
         piecesGagnees: 0,
       }),
     ]);
-    expect(fin.connexions.size).toBe(0);
+    expect(fin.joueurs.size).toBe(0);
   });
 
   it('ne rend aucun resultat pour une partie jouee par des invites', () => {
@@ -133,7 +133,7 @@ describe('finPourLesComptes', () => {
     const fin = finPourLesComptes(room);
 
     expect(fin.resultats).toEqual([]);
-    expect(fin.connexions.size).toBe(0);
+    expect(fin.joueurs.size).toBe(0);
   });
 });
 

@@ -43,7 +43,7 @@ const SALON: InfosSalon = {
 /** Un compte connecte, dans son salon. */
 const COMPTE_AU_SALON: readonly Action[] = [
   { type: 'sessionDeCompte', progression: PROGRESSION },
-  { type: 'connexionEtablie', identifiant: 'moi' },
+  { type: 'connexionEtablie' },
   { type: 'entreeDemandee', pseudo: undefined },
   { type: 'entreeAcceptee', salon: SALON },
 ];
@@ -96,7 +96,7 @@ describe('le lien', () => {
 
   it('se rouvre en oubliant l identifiant de l ancien lien et le refus', () => {
     const etat = apres([
-      { type: 'connexionEtablie', identifiant: 'ancien' },
+      { type: 'connexionEtablie' },
       { type: 'connexionRefusee', motif: 'Le serveur de jeu ne répond pas.' },
       { type: 'ouvertureDemandee' },
     ]);
@@ -109,7 +109,7 @@ describe('le lien', () => {
   it('s etablit en effacant un refus precedent', () => {
     const etat = apres([
       { type: 'connexionRefusee', motif: 'Le serveur de jeu ne répond pas.' },
-      { type: 'connexionEtablie', identifiant: 'moi' },
+      { type: 'connexionEtablie' },
     ]);
 
     expect(etat.refusDeConnexion).toBeUndefined();
@@ -194,7 +194,7 @@ describe('le pseudo saisi et la liste des parties', () => {
   it('garde le pseudo saisi a la sortie d une partie et a la perte du lien', () => {
     const debut: readonly Action[] = [
       { type: 'pseudoSaisi', pseudo: 'Alice' },
-      { type: 'connexionEtablie', identifiant: 'moi' },
+      { type: 'connexionEtablie' },
     ];
 
     expect(apres([...debut, { type: 'sortie' }]).pseudoSaisi).toBe('Alice');

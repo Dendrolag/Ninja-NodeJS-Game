@@ -64,6 +64,17 @@ Conditions de ROADMAP réunies, plus:
 3. Pendant l'absence, le joueur reste dans l'état et ses bots transmettent sa couleur.
 4. Classique inchangé: la couverture de `packages/sim` ne baisse pas, l'empreinte des parties ne change pas (aucun changement du moteur attendu).
 
+## Réconciliation en cours d'exécution (15 septembre 2026)
+
+Écarts entre cette fiche et ce qui a été construit. Le code et le journal de `docs/design/README.md` font foi.
+
+1. **Vérifier puis reprendre, en deux temps.** Le registre des places vérifie d'abord le jeton et l'identité sans rien changer (`verifier`), puis la couche réseau vérifie que la partie est en cours, et seulement alors la place est reprise (`reprendre`). Un retour refusé ne prend ainsi sa place à personne, pas même à une page du salon qui tient encore la sienne.
+2. **Une partie terminée pendant l'absence** refuse le retour avec son propre motif (« Cette partie n'est plus en cours. »); un jeton inconnu, déjà servi ou d'une autre identité reçoit un motif unique, qui ne dit pas lequel des cas s'applique.
+3. **Une partie dont tous les joueurs sont absents n'est pas détruite** tant que leurs délais courent: ils en sont encore membres. Le dernier délai expiré la ferme, comme le départ du dernier joueur.
+4. **Côté client, le transport n'expose plus d'identifiant** (`Reseau.identifiant`), devenu sans usage; les tests qui s'en servaient reçoivent la place du joueur. Pendant l'attente de la réponse du serveur, l'état reste « retour », après une coupure comme après un rechargement: le bandeau ne disparaît pas avant que la place soit rendue.
+5. **Un test d'intégration de plus**, non prévu: le client contre un vrai serveur, fermé en pleine partie puis rouvert avec le même coffre de retour (`tests/client/integration/client-serveur.test.ts`).
+6. **Le scénario de bout en bout ne joue que dans le projet bureau**: il vérifie le lien et la place, que le cadrage de l'écran ne change pas.
+
 ## Rituel de fin de session
 
 Écrire `docs/handoffs/etape-2-5-handoff.md`. Consigner les décisions au journal de `docs/design/README.md`, et revoir celle du 11 septembre sur l'abandon. Prochaine action exacte pour l'étape 3.4, gestion du mot de passe, dont la fiche se rédige au début de la session. Commiter.

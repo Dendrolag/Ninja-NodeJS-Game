@@ -16,12 +16,20 @@
  * UN NAVIGATEUR QUI REFUSE LE STOCKAGE N'EMPECHE PAS DE SE CONNECTER. Le jeton est
  * alors garde en memoire, le temps de la page. Aucune operation de ce fichier ne
  * leve.
+ *
+ * LE MEME COFFRE GARDE LE JETON DE RETOUR EN PARTIE (etape 2.5), sous une autre cle
+ * et dans le STOCKAGE DE SESSION: la place ne vaut que trente secondes, elle doit
+ * survivre au rechargement de l'onglet, pas a sa fermeture, et deux onglets ne
+ * doivent pas se disputer la meme. Les deux jetons ont la meme forme.
  */
 
 import { validerJeton } from '@neon-ninja/shared';
 
-/** La cle sous laquelle le jeton est range dans le navigateur. */
+/** La cle sous laquelle le jeton de session est range dans le navigateur. */
 export const CLE_JETON = 'neon-ninja.session';
+
+/** La cle sous laquelle le jeton de retour en partie est range (etape 2.5). */
+export const CLE_RETOUR = 'neon-ninja.retour';
 
 /** Ce qui garde le jeton de session. */
 export interface CoffreDeJeton {
@@ -37,15 +45,16 @@ export interface CoffreDeJeton {
  * Cree un coffre.
  *
  * @param stockage Le stockage du navigateur. Absent, le jeton ne vit qu'en memoire.
+ * @param cle      La cle du jeton dans ce stockage. Celle du jeton de session par defaut.
  */
-export function creerCoffreDeJeton(stockage?: Storage): CoffreDeJeton {
+export function creerCoffreDeJeton(stockage?: Storage, cle: string = CLE_JETON): CoffreDeJeton {
   let enMemoire: string | undefined;
 
   return {
     lire: () => {
       // Un stockage illisible, ou qui n'a rien garde parce que l'ecriture avait
       // echoue, laisse la place au jeton garde en memoire.
-      const brut = essayer(() => stockage?.getItem(CLE_JETON)) ?? enMemoire;
+      const brut = essayer(() => stockage?.getItem(cle)) ?? enMemoire;
 
       if (brut === undefined) {
         return undefined;
@@ -59,14 +68,14 @@ export function creerCoffreDeJeton(stockage?: Storage): CoffreDeJeton {
     garder: (jeton) => {
       enMemoire = jeton;
       essayer(() => {
-        stockage?.setItem(CLE_JETON, jeton);
+        stockage?.setItem(cle, jeton);
       });
     },
 
     oublier: () => {
       enMemoire = undefined;
       essayer(() => {
-        stockage?.removeItem(CLE_JETON);
+        stockage?.removeItem(cle);
       });
     },
   };

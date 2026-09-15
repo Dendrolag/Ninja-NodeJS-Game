@@ -51,7 +51,9 @@ let ecran: EcranAffiche;
 
 /** Entre dans ce salon et monte l'ecran. */
 function monter(infos: InfosSalon): void {
-  reseau.simulerConnexion('moi');
+  reseau.simulerConnexion();
+  // Notre joueur, tel que le serveur le remet a l'entree en partie (etape 2.5).
+  reseau.recevoir('placeAttribuee', { joueur: 'moi', jetonDeRetour: 'M'.repeat(43) });
   client.rejoindre('Alice');
   reseau.dernier('rejoindre')?.[1]({ valide: true, valeur: infos });
 

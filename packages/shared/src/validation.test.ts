@@ -30,6 +30,7 @@ import {
   validerCodeInvitation,
   validerDemandeCreation,
   validerDemandeRejoindre,
+  validerDemandeRetour,
   validerIntentionDeplacement,
   validerMessageChat,
   validerPseudo,
@@ -530,6 +531,35 @@ describe('validerDemandeRejoindre, par code d invitation', () => {
     expect(
       champsRefuses(validerDemandeRejoindre({ pseudo: 'Alice', idRoom: 'room-1', code: 'NX7K2P' })),
     ).toEqual(['rejoindre']);
+  });
+});
+
+describe('validerDemandeRetour (etape 2.5)', () => {
+  const JETON = 'Ab0_-'.repeat(8).concat('xyz');
+
+  it('accepte un jeton de la forme de ceux que le serveur fabrique, et ne garde que lui', () => {
+    expect(valeurAcceptee(validerDemandeRetour({ jeton: JETON, idRoom: 'room-1' }))).toEqual({
+      jeton: JETON,
+    });
+  });
+
+  it('refuse un jeton d une autre forme, sans le chercher', () => {
+    expect(champsRefuses(validerDemandeRetour({ jeton: 'a'.repeat(42) }))).toEqual(['retour']);
+    expect(champsRefuses(validerDemandeRetour({ jeton: 'a'.repeat(44) }))).toEqual(['retour']);
+    expect(champsRefuses(validerDemandeRetour({ jeton: `${'a'.repeat(42)}=` }))).toEqual([
+      'retour',
+    ]);
+    expect(champsRefuses(validerDemandeRetour({ jeton: 42 }))).toEqual(['retour']);
+    expect(champsRefuses(validerDemandeRetour({}))).toEqual(['retour']);
+  });
+
+  it('refuse ce qui n est pas un objet, et un jeton herite plutot qu ecrit', () => {
+    expect(champsRefuses(validerDemandeRetour(JETON))).toEqual(['retour']);
+    expect(champsRefuses(validerDemandeRetour(undefined))).toEqual(['retour']);
+    expect(champsRefuses(validerDemandeRetour([JETON]))).toEqual(['retour']);
+    expect(champsRefuses(validerDemandeRetour(Object.create({ jeton: JETON }) as unknown))).toEqual(
+      ['retour'],
+    );
   });
 });
 

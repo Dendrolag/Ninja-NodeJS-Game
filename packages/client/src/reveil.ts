@@ -69,6 +69,12 @@ export function brancherLeReveil(options: OptionsReveil): void {
 
   options.ecouter(
     reseau.surRefus((motif) => {
+      // Pendant un retour en partie (etape 2.5), c'est retour.ts qui reessaie: un
+      // serveur qui ne repond pas n'y est pas un serveur qui dort.
+      if (magasin.etat.connexion === 'retour') {
+        return;
+      }
+
       const maintenant = horloge.maintenant();
 
       if (motif === SERVEUR_INJOIGNABLE) {

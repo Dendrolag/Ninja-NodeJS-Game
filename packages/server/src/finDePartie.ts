@@ -49,19 +49,20 @@ export interface FinPourLesComptes {
   /** Un par compte, present a la fin ou parti avant. Vide si personne n'avait de compte. */
   readonly resultats: readonly NouveauResultat[];
   /**
-   * La connexion de chaque compte present a la fin, par identifiant de compte.
+   * L'identifiant de joueur de chaque compte present a la fin, par identifiant de
+   * compte: c'est par lui que la couche reseau retrouve la connexion a prevenir.
    *
    * Un compte parti avant la fin n'y figure pas: son abandon s'enregistre, mais il
    * n'a plus d'ecran de fin a qui envoyer un recapitulatif.
    */
-  readonly connexions: ReadonlyMap<string, IdentifiantEntite>;
+  readonly joueurs: ReadonlyMap<string, IdentifiantEntite>;
 }
 
 /** Ce que la fin de cette partie laisse a enregistrer pour ses comptes. */
 export function finPourLesComptes(room: GameRoom): FinPourLesComptes {
   const bilan = room.bilan();
   const resultats: NouveauResultat[] = [];
-  const connexions = new Map<string, IdentifiantEntite>();
+  const joueurs = new Map<string, IdentifiantEntite>();
 
   for (const joueur of bilan.joueurs) {
     if (joueur.compte === undefined) {
@@ -88,7 +89,7 @@ export function finPourLesComptes(room: GameRoom): FinPourLesComptes {
     });
 
     if (joueur.id !== undefined) {
-      connexions.set(joueur.compte.id, joueur.id);
+      joueurs.set(joueur.compte.id, joueur.id);
     }
   }
 
@@ -104,7 +105,7 @@ export function finPourLesComptes(room: GameRoom): FinPourLesComptes {
       nombreJoueurs: bilan.nombreJoueurs,
     },
     resultats,
-    connexions,
+    joueurs,
   };
 }
 

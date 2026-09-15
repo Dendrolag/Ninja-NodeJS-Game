@@ -72,7 +72,13 @@ export interface IntentionDeplacement {
  * le signe. Voir validerMessageChat.
  */
 export interface SessionJoueur {
-  /** Identifiant de la connexion. Cote serveur, l'identifiant de la socket. */
+  /**
+   * Identifiant du joueur dans la partie.
+   *
+   * C'est celui de la connexion par laquelle il est entre, et il ne change plus: un
+   * joueur qui revient apres une coupure (etape 2.5) arrive par une autre connexion,
+   * mais garde cet identifiant, et avec lui sa place dans l'etat de la partie.
+   */
   readonly id: string;
   /**
    * Pseudo au moment de l'entree en jeu: celui du compte pour un compte, le
@@ -129,6 +135,19 @@ export interface DemandeRejoindre {
   readonly idRoom?: string;
   /** Code d'invitation d'une partie privee. */
   readonly code?: string;
+}
+
+/**
+ * Ce qu'un joueur envoie pour revenir dans sa partie apres une coupure (etape 2.5).
+ *
+ * Seulement le jeton de retour que le serveur lui a remis a l'entree, et rien qui
+ * designe la partie ni le joueur: le serveur retrouve l'un et l'autre a partir du
+ * jeton, qu'il est seul a avoir fabrique. Un client ne peut donc pas viser la place
+ * d'un autre en changeant un identifiant.
+ */
+export interface DemandeRetour {
+  /** Le jeton de retour recu a l'entree en partie, ou au dernier retour. */
+  readonly jeton: string;
 }
 
 /**

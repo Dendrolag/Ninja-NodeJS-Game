@@ -86,7 +86,7 @@ function demanderAEntrer(pseudo: string): void {
 
 /** Se connecte, entre, et recoit l'accord du serveur. */
 function entrerDansLeSalon(): void {
-  reseau.simulerConnexion('moi');
+  reseau.simulerConnexion();
   demanderAEntrer('Alice');
   reseau.dernier('rejoindre')?.[1]({ valide: true, valeur: SALON });
 }
@@ -136,7 +136,7 @@ describe('l accueil', () => {
   });
 
   it('refuse d envoyer un pseudo invalide, et dit pourquoi', () => {
-    reseau.simulerConnexion('moi');
+    reseau.simulerConnexion();
     saisir(champPseudo(), 'Al<ice>');
 
     const erreur = obligatoire(hote, '.accueil-erreur');
@@ -153,7 +153,7 @@ describe('l accueil', () => {
   });
 
   it('ne laisse pas redemander pendant que la demande attend sa reponse', () => {
-    reseau.simulerConnexion('moi');
+    reseau.simulerConnexion();
     demanderAEntrer('Alice');
 
     expect(reseau.dernier('rejoindre')?.[0]).toEqual({ pseudo: 'Alice' });
@@ -162,7 +162,7 @@ describe('l accueil', () => {
   });
 
   it('montre le refus du serveur sous le pseudo, sans quitter l accueil', () => {
-    reseau.simulerConnexion('moi');
+    reseau.simulerConnexion();
     demanderAEntrer('Alice');
     reseau.dernier('rejoindre')?.[1]({
       valide: false,

@@ -38,6 +38,13 @@ const MULTIJOUEUR = '**/multijoueur.spec.ts';
 const PARTIES = '**/parties.spec.ts';
 const COMPTE = '**/compte.spec.ts';
 
+/**
+ * Le retour dans sa partie apres un rechargement (etape 2.5), joue par le seul projet
+ * bureau: il verifie le lien et la place, que le cadrage de l'ecran ne change pas, et
+ * charge deux fois la carte.
+ */
+const RETOUR = '**/retour.spec.ts';
+
 export default defineConfig({
   testDir: './tests/e2e',
   // Les paquets sont compiles une fois avant les scenarios: le banc de mesure du
@@ -81,7 +88,7 @@ export default defineConfig({
     {
       name: 'mobile',
       use: { ...devices['Pixel 7'] },
-      testIgnore: [BANC, MULTIJOUEUR, PARTIES, COMPTE],
+      testIgnore: [BANC, MULTIJOUEUR, PARTIES, COMPTE, RETOUR],
     },
     // Le banc de mesure du rendu a son propre projet, et une seule execution:
     // il mesure le moteur de rendu, pas la taille de la fenetre. Le jouer dans

@@ -59,6 +59,7 @@ import type {
   DemandeChat,
   DemandeCreation,
   DemandeRejoindre,
+  DemandeRetour,
   IntentionDeplacement,
   MessageChat,
 } from './entrees.js';
@@ -441,6 +442,26 @@ export interface ProgressionNonEnregistree {
 /** Le recapitulatif de progression d'un compte a la fin d'une partie. */
 export type ProgressionDeFin = ProgressionEnregistree | ProgressionNonEnregistree;
 
+/**
+ * La place d'un joueur dans sa partie, adressee a lui seul (etape 2.5).
+ *
+ * Elle part a chaque entree en partie, et a chaque retour apres une coupure.
+ *
+ * L'IDENTIFIANT DU JOUEUR ne se deduit plus du lien: c'est celui de la connexion
+ * par laquelle il est entre, et un joueur revenu arrive par une autre. C'est la cle
+ * qui permet au client de se reconnaitre parmi les entites et dans le salon.
+ *
+ * LE JETON DE RETOUR EST UN SECRET. Il ne part qu'a ce joueur, jamais dans le salon
+ * qui part a tous, et il change a chaque retour: un jeton deja servi ne rouvre plus
+ * rien. C'est lui, et lui seul, que la demande revenir presente.
+ */
+export interface PlaceEnPartie {
+  /** L'identifiant de ce joueur dans la partie. */
+  readonly joueur: string;
+  /** De quoi revenir dans la partie si le lien tombe. */
+  readonly jetonDeRetour: string;
+}
+
 /** Ou en est le compte a rebours de demarrage. */
 export interface EtatCompteARebours {
   /** Secondes restantes avant le lancement. Zero signifie « on part ». */
@@ -475,10 +496,10 @@ export interface Refus {
  * Alice »: le premier est su par le moteur, le deuxieme ne donne plus aucun
  * avantage, et le troisieme est fixe par la session a l'entree en partie.
  *
- * Trois demandes portent un accuse de reception, parce que ce sont les seules
+ * Quatre demandes portent un accuse de reception, parce que ce sont les seules
  * dont le joueur ne peut pas deviner le resultat en regardant l'ecran: entrer
- * dans une partie, en creer une, et lister les parties publiques. Tous les autres
- * refus arrivent par l'evenement refus.
+ * dans une partie, en creer une, y revenir apres une coupure, et lister les
+ * parties publiques. Tous les autres refus arrivent par l'evenement refus.
  */
 export interface EvenementsClientVersServeur {
   /**
@@ -506,6 +527,21 @@ export interface EvenementsClientVersServeur {
    * pleines. Sans equivalent dans le legacy.
    */
   listerParties: (accuse: (parties: readonly PartiePublique[]) => void) => void;
+
+  /**
+   * Revenir dans sa partie en cours apres une coupure, avec le jeton de retour
+   * (etape 2.5). Sans equivalent dans la base de reference.
+   *
+   * Accepte, le joueur retrouve sa place, sa couleur et ses ninjas: il recoit sa
+   * place (placeAttribuee), puis partieLancee et une image complete du flux, comme
+   * qui entre dans une partie deja commencee. Refuse si le jeton n'ouvre aucune
+   * place, si la place n'appartient pas a la meme identite (le meme compte, ou un
+   * invite), ou si la partie n'est plus en cours.
+   */
+  revenir: (
+    demande: DemandeRetour,
+    accuse: (reponse: ResultatValidation<InfosSalon>) => void,
+  ) => void;
 
   /** Sortir de la partie sans se deconnecter. Remplace leaveWaitingRoom. */
   quitter: () => void;
@@ -580,6 +616,19 @@ export interface EvenementsServeurVersClient {
 
   /** L'etat du salon a change. Remplace updateWaitingRoom et gameSettingsUpdated. */
   salon: (infos: InfosSalon) => void;
+
+  /**
+   * La place de ce joueur dans la partie, et son jeton de retour (etape 2.5). Part a
+   * lui seul, a l'entree et a chaque retour, avant la reponse a sa demande.
+   */
+  placeAttribuee: (place: PlaceEnPartie) => void;
+
+  /**
+   * La place de ce joueur a ete reprise par une autre page, qui a presente son jeton
+   * de retour (etape 2.5). Cette connexion n'est plus dans la partie, mais le lien
+   * reste ouvert.
+   */
+  placeReprise: () => void;
 
   /** Quelqu'un vient d'entrer. Remplace playerJoined. */
   joueurArrive: (joueur: JoueurDuSalon) => void;

@@ -64,7 +64,7 @@ beforeEach(() => {
   api = creerApiComptesFactice();
   client = creerClient({ reseau, comptes: api, horloge: creerHorlogeClientManuelle() });
   client.ouvrir();
-  reseau.simulerConnexion('moi');
+  reseau.simulerConnexion();
   client.naviguer('connexion');
 
   ecran = monterConnexion(contexteDEssai(client));

@@ -49,7 +49,7 @@ describe('le reveil du serveur', () => {
     expect(reseau.ouvertures).toHaveLength(2);
     expect(client.etat.connexion).toBe('horsLigne');
 
-    reseau.simulerConnexion('moi');
+    reseau.simulerConnexion();
     expect(client.etat.connexion).toBe('connecte');
   });
 
@@ -89,7 +89,7 @@ describe('le reveil du serveur', () => {
 
     reseau.simulerRefus(SERVEUR_INJOIGNABLE);
     avancer(ATTENTE_ENTRE_DEUX_ESSAIS_MS);
-    reseau.simulerConnexion('moi');
+    reseau.simulerConnexion();
     avancer(DUREE_DU_REVEIL_MS * 2);
 
     client.reessayer();

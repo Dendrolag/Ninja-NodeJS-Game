@@ -55,7 +55,7 @@ beforeEach(() => {
     monterLeJeu: jeuDEssai().monteur,
     recharger: () => undefined,
   });
-  reseau.simulerConnexion('moi');
+  reseau.simulerConnexion();
 
   saisir(champ('input[name="pseudo"]'), 'Alice');
   boutonObligatoire(hote, 'Créer une partie').click();

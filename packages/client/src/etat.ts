@@ -68,7 +68,16 @@ export type EtatConnexion =
    * du temps a se reveiller: pendant ce temps, l'accueil dit qu'il demarre, au lieu
    * d'un refus que le joueur croirait definitif. Voir reveil.ts.
    */
-  | 'reveil';
+  | 'reveil'
+  /**
+   * Une place en partie attend le joueur, et la page tente de la reprendre.
+   *
+   * Ajoute a l'etape 2.5. Soit le lien est tombe en pleine partie, et la page le
+   * rouvre pendant le delai de retour, la partie restant affichee; soit la page
+   * vient d'etre rechargee, et elle presente la place gardee. Dans les deux cas, le
+   * joueur ne peut pas entrer ailleurs en attendant. Voir retour.ts.
+   */
+  | 'retour';
 
 /**
  * La session: jouer en invite, ou avec un compte.
@@ -180,11 +189,14 @@ export interface EtatClient {
   /** Le profil du compte, lu a l'ouverture de son ecran. */
   readonly profil: EtatDuProfil;
   /**
-   * Notre identifiant de session, donne par le serveur a la connexion.
+   * Notre identifiant de joueur, donne par le serveur a l'entree en partie.
    *
    * C'est la clef qui permet de se reconnaitre parmi les entites et les lignes
    * du classement, donc de savoir ou centrer la camera et quelle ligne mettre en
-   * avant. Absent tant que le lien n'est pas etabli.
+   * avant. Absent hors d'une partie.
+   *
+   * Il ne vient plus du lien depuis l'etape 2.5: un joueur revenu apres une coupure
+   * arrive par un autre lien, mais reste le meme joueur.
    */
   readonly moi: string | undefined;
   /**
@@ -255,6 +267,11 @@ export interface EtatClient {
   readonly progressionDeFin: ProgressionDeFin | undefined;
   /** Le dernier refus recu, a montrer au joueur. */
   readonly refus: Refus | undefined;
+  /**
+   * Pourquoi la place en partie n'a pas pu etre reprise, ou a ete reprise dans une
+   * autre page (etape 2.5). L'accueil le dit, jusqu'a la prochaine entree.
+   */
+  readonly avisDeRetour: string | undefined;
 }
 
 /**
@@ -293,6 +310,7 @@ export const ETAT_INITIAL: EtatClient = {
   fin: undefined,
   progressionDeFin: undefined,
   refus: undefined,
+  avisDeRetour: undefined,
 };
 
 /** Un refus fabrique a partir d'erreurs de validation, pour un evenement donne. */

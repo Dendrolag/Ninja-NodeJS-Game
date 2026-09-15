@@ -208,6 +208,23 @@
   display: none;
 }
 
+/* Le lien est tombe en pleine partie, et la page tente d'y revenir (etape 2.5). */
+.hud-retour {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  max-width: calc(100% - 32px);
+  padding: 16px 28px;
+  border: 1px solid var(--bordure-survol);
+  border-radius: var(--rayon-carte);
+  background: rgba(7, 12, 20, 0.88);
+  font-family: var(--police-titre);
+  font-size: 22px;
+  font-weight: 600;
+  text-align: center;
+  transform: translate(-50%, -50%);
+}
+
 .hud-classement {
   position: absolute;
   top: 14px;

@@ -86,6 +86,8 @@ Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision 
 
 **Étape 6.1 terminée le 15 septembre 2026: la réécriture est la seule version du jeu.** `reecriture` est fusionnée dans `master`, qui porte désormais le travail et la production, et la branche `reecriture` est supprimée. Plus rien en ligne ne sert la version d'origine: le service Render « To The Point » et les projets Vercel `ttp` et `neon-ninja` sont supprimés, sur décision du porteur du projet. Elle reste archivée sous l'étiquette `v0.8.6` et dans `legacy/`. Suite: `2.5` puis `3.4`, puis les fonctionnalités reportées (autres modes, pass de saison, skins, clans), chacune avec sa fiche.
 
+**Étape 2.5 terminée le 15 septembre 2026: une coupure ne coûte plus la partie.** Un joueur dont le lien tombe en pleine partie, ou qui recharge sa page, retrouve sa place, sa couleur et ses ninjas dans les trente secondes; pendant ce temps, il reste dans la partie, immobile, et ses bots transmettent sa couleur. Revenir est une demande explicite, avec un jeton de retour secret et renouvelé, que le serveur refuse au-delà du délai, à une autre identité ou pour une partie terminée. Dans le salon, une déconnexion reste un départ. Fiche: `docs/plan/etape-2-5.md`. Suite: `3.4`, gestion du mot de passe.
+
 ---
 
 ## 4. Carte thématique des étapes

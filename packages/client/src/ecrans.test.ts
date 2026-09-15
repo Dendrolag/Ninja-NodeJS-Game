@@ -53,6 +53,22 @@ describe('transitions d ecran', () => {
     );
   });
 
+  it('laisse la partie affichee quand le lien tombe en pleine partie (etape 2.5)', () => {
+    expect(ecranSuivant('jeu', { type: 'lienPerduEnPartie' })).toBe('jeu');
+    expect(ecranSuivant('accueil', { type: 'retourDemande' })).toBe('accueil');
+  });
+
+  it('mene a l ecran de la partie retrouvee apres un retour accepte (etape 2.5)', () => {
+    expect(ecranSuivant('accueil', { type: 'retourAccepte', salon: salon('enCours') })).toBe('jeu');
+    expect(ecranSuivant('jeu', { type: 'retourAccepte', salon: salon('enCours') })).toBe('jeu');
+  });
+
+  it('ramene a l accueil apres un retour refuse, de n importe quel ecran (etape 2.5)', () => {
+    for (const ecran of TOUS_LES_ECRANS) {
+      expect(ecranSuivant(ecran, { type: 'retourRefuse', motif: 'Place perdue.' })).toBe('accueil');
+    }
+  });
+
   it('mene au jeu quand la partie est lancee', () => {
     expect(ecranSuivant('salon', { type: 'partieLancee' })).toBe('jeu');
   });
@@ -116,8 +132,6 @@ describe('transitions d ecran', () => {
   it('ne quitte pas l accueil sur une connexion etablie', () => {
     // Se connecter ne fait pas entrer dans une partie: on reste sur l'accueil,
     // ou le joueur saisit son pseudo.
-    expect(ecranSuivant('accueil', { type: 'connexionEtablie', identifiant: 'abc' })).toBe(
-      'accueil',
-    );
+    expect(ecranSuivant('accueil', { type: 'connexionEtablie' })).toBe('accueil');
   });
 });

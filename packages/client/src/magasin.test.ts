@@ -43,7 +43,7 @@ describe('magasin', () => {
   it('remplace son etat quand une action arrive', () => {
     const magasin = creerMagasin();
 
-    magasin.appliquer({ type: 'connexionEtablie', identifiant: 'abc' });
+    magasin.appliquer({ type: 'placeAttribuee', joueur: 'abc' });
 
     expect(magasin.etat.moi).toBe('abc');
     expect(magasin.etat).not.toBe(ETAT_INITIAL);
@@ -54,7 +54,7 @@ describe('magasin', () => {
     const vus: EtatClient[] = [];
 
     magasin.abonner((etat) => vus.push(etat));
-    magasin.appliquer({ type: 'connexionEtablie', identifiant: 'abc' });
+    magasin.appliquer({ type: 'connexionEtablie' });
 
     expect(vus).toHaveLength(1);
     expect(vus[0]).toBe(magasin.etat);
@@ -67,7 +67,7 @@ describe('magasin', () => {
 
     magasin.abonner(() => (premier += 1));
     magasin.abonner(() => (second += 1));
-    magasin.appliquer({ type: 'connexionEtablie', identifiant: 'abc' });
+    magasin.appliquer({ type: 'connexionEtablie' });
 
     expect(premier).toBe(1);
     expect(second).toBe(1);
@@ -78,7 +78,7 @@ describe('magasin', () => {
     let appels = 0;
 
     const desabonner = magasin.abonner(() => (appels += 1));
-    magasin.appliquer({ type: 'connexionEtablie', identifiant: 'abc' });
+    magasin.appliquer({ type: 'connexionEtablie' });
     desabonner();
     magasin.appliquer({ type: 'entreeDemandee', pseudo: 'Alice' });
 
@@ -94,7 +94,7 @@ describe('magasin', () => {
     });
     magasin.abonner(() => (voisin += 1));
 
-    magasin.appliquer({ type: 'connexionEtablie', identifiant: 'abc' });
+    magasin.appliquer({ type: 'connexionEtablie' });
 
     // Le voisin doit avoir ete prevenu malgre le desabonnement du premier.
     expect(voisin).toBe(1);
@@ -104,7 +104,7 @@ describe('magasin', () => {
     const magasin = creerMagasin();
     let appels = 0;
 
-    magasin.appliquer({ type: 'connexionEtablie', identifiant: 'moi' });
+    magasin.appliquer({ type: 'connexionEtablie' });
     magasin.appliquer({ type: 'partieLancee' });
     magasin.appliquer({ type: 'etat', trame: trame(5) });
 
@@ -123,8 +123,8 @@ describe('magasin', () => {
     const premier = creerMagasin();
     const second = creerMagasin();
 
-    premier.appliquer({ type: 'connexionEtablie', identifiant: 'un' });
-    second.appliquer({ type: 'connexionEtablie', identifiant: 'deux' });
+    premier.appliquer({ type: 'placeAttribuee', joueur: 'un' });
+    second.appliquer({ type: 'placeAttribuee', joueur: 'deux' });
 
     expect(premier.etat.moi).toBe('un');
     expect(second.etat.moi).toBe('deux');

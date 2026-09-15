@@ -150,6 +150,22 @@ export const BORNES_JETON = {
 } as const;
 
 /**
+ * Combien de temps une partie en cours garde la place d'un joueur dont le lien est
+ * tombe (etape 2.5), en millisecondes.
+ *
+ * Trente secondes: de quoi recharger une page, ou laisser un telephone retrouver
+ * du reseau. Au-dela, son depart est un abandon, comme s'il avait quitte la
+ * partie. Pendant ce temps, le joueur reste dans la partie, immobile: sa couleur
+ * continue de se transmettre, et il reste capturable. Le serveur compte ce delai
+ * a partir du moment ou il constate la coupure; le client reessaie pendant la meme
+ * duree a partir du moment ou il la constate lui-meme.
+ *
+ * Un jeton de retour a la forme d'un jeton de session (BORNES_JETON): trente-deux
+ * octets tires au hasard par le serveur.
+ */
+export const DELAI_DE_RETOUR_MS = 30_000;
+
+/**
  * Bornes des reglages de partie choisis par l'hote dans le salon.
  *
  * La structure suit exactement celle de ReglagesPartie, groupe par groupe, pour

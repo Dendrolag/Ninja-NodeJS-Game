@@ -56,13 +56,7 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
       };
 
     case 'connexionEtablie':
-      return {
-        ...etat,
-        ecran,
-        connexion: 'connecte',
-        moi: action.identifiant,
-        refusDeConnexion: undefined,
-      };
+      return { ...etat, ecran, connexion: 'connecte', refusDeConnexion: undefined };
 
     // Le lien est tombe: on ne sait plus rien de la partie, et on ne peut plus
     // rien en apprendre. Survivent le pseudo saisi, pour reproposer la saisie, et
@@ -76,6 +70,41 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
         pseudoSaisi: etat.pseudoSaisi,
         session: etat.session,
       };
+
+    // Tombe en pleine partie, le lien peut revenir: rien de la partie n'est oublie,
+    // l'ecran reste figé sur ce qu'il montrait, et le decompte n'a plus cours.
+    case 'lienPerduEnPartie':
+      return { ...etat, ecran, connexion: 'retour', compteARebours: undefined };
+
+    case 'retourDemande':
+      return { ...etat, ecran, connexion: 'retour', avisDeRetour: undefined };
+
+    case 'retourAccepte':
+      return {
+        ...etat,
+        ecran,
+        connexion: 'connecte',
+        salon: action.salon,
+        entreeEnCours: false,
+        refus: undefined,
+        avisDeRetour: undefined,
+      };
+
+    // La place est perdue, mais le lien est ouvert: on repart de l'accueil, avec le
+    // motif, comme apres une sortie.
+    case 'retourRefuse':
+      return {
+        ...ETAT_INITIAL,
+        ecran,
+        connexion: 'connecte',
+        pseudoDemande: etat.pseudoDemande,
+        pseudoSaisi: etat.pseudoSaisi,
+        session: etat.session,
+        avisDeRetour: action.motif,
+      };
+
+    case 'placeAttribuee':
+      return { ...etat, ecran, moi: action.joueur };
 
     case 'connexionRefusee':
       return {
@@ -187,6 +216,7 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
         pseudoSaisi: action.pseudo ?? etat.pseudoSaisi,
         entreeEnCours: true,
         refus: undefined,
+        avisDeRetour: undefined,
       };
 
     case 'entreeAcceptee':
@@ -200,13 +230,14 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
         refus: refusDe(action.action, action.erreurs),
       };
 
-    // On quitte de soi-meme: le lien et la session restent, tout le reste s'efface.
+    // On quitte de soi-meme: le lien et la session restent, tout le reste s'efface,
+    // notre identifiant de joueur compris. Quitter pendant un retour y renonce: le
+    // lien, qui etait tombe, va se rouvrir.
     case 'sortie':
       return {
         ...ETAT_INITIAL,
         ecran,
-        connexion: etat.connexion,
-        moi: etat.moi,
+        connexion: etat.connexion === 'retour' ? 'horsLigne' : etat.connexion,
         pseudoDemande: etat.pseudoDemande,
         pseudoSaisi: etat.pseudoSaisi,
         session: etat.session,

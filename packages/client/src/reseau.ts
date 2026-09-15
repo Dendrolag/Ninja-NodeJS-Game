@@ -49,19 +49,6 @@ export type ArgumentsDescendants<Nom extends NomDescendant> = Parameters<
 
 /** Ce que le client attend de son transport. */
 export interface Reseau {
-  /**
-   * Notre identifiant de session, donne par le serveur a la connexion.
-   *
-   * C'est aussi l'identifiant de notre joueur dans la partie: le serveur fabrique
-   * la session a partir de la connexion (voir SessionJoueur dans
-   * @neon-ninja/shared). C'est ce qui permet de se reconnaitre parmi les entites.
-   *
-   * Absent tant que le lien n'est pas etabli. Il change a chaque nouvelle
-   * connexion: retrouver sa place apres une coupure suppose une session qui
-   * survive au transport, ce qui appartient a l'etape 3.2.
-   */
-  readonly identifiant: string | undefined;
-
   /** Le lien est-il etabli. */
   readonly connecte: boolean;
 
@@ -136,8 +123,8 @@ export interface ReseauFactice extends Reseau {
   readonly emis: readonly MessageEmis[];
   /** Chaque demande d'ouverture du lien, dans l'ordre, avec ce qu'elle presentait. */
   readonly ouvertures: readonly AuthentificationReseau[];
-  /** Etablit le lien, avec l'identifiant que le serveur aurait donne. */
-  simulerConnexion(identifiant?: string): void;
+  /** Etablit le lien. */
+  simulerConnexion(): void;
   /** Coupe le lien, comme le ferait une perte de reseau. */
   simulerDeconnexion(): void;
   /** Refuse l'ouverture du lien, comme le ferait le serveur, avec ce motif. */
@@ -150,7 +137,6 @@ export interface ReseauFactice extends Reseau {
 
 /** Cree un transport pilote a la main. */
 export function creerReseauFactice(): ReseauFactice {
-  let identifiant: string | undefined;
   let connecte = false;
 
   const emis: MessageEmis[] = [];
@@ -161,10 +147,6 @@ export function creerReseauFactice(): ReseauFactice {
   const surRefus = new Set<(motif: string) => void>();
 
   return {
-    get identifiant() {
-      return identifiant;
-    },
-
     get connecte() {
       return connecte;
     },
@@ -182,7 +164,6 @@ export function creerReseauFactice(): ReseauFactice {
     ouvrir: (authentification) => {
       ouvertures.push(authentification);
       connecte = false;
-      identifiant = undefined;
     },
 
     emettre: (nom, ...arguments_) => {
@@ -225,7 +206,6 @@ export function creerReseauFactice(): ReseauFactice {
 
     fermer: () => {
       connecte = false;
-      identifiant = undefined;
       gestionnaires.clear();
       surConnexion.clear();
       surDeconnexion.clear();
@@ -234,15 +214,13 @@ export function creerReseauFactice(): ReseauFactice {
 
     simulerRefus: (motif) => {
       connecte = false;
-      identifiant = undefined;
 
       for (const gestionnaire of [...surRefus]) {
         gestionnaire(motif);
       }
     },
 
-    simulerConnexion: (nouvelIdentifiant = 'session-de-test') => {
-      identifiant = nouvelIdentifiant;
+    simulerConnexion: () => {
       connecte = true;
 
       for (const gestionnaire of [...surConnexion]) {
@@ -252,7 +230,6 @@ export function creerReseauFactice(): ReseauFactice {
 
     simulerDeconnexion: () => {
       connecte = false;
-      identifiant = undefined;
 
       for (const gestionnaire of [...surDeconnexion]) {
         gestionnaire();

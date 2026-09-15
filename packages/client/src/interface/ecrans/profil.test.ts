@@ -74,7 +74,7 @@ beforeEach(async () => {
 
   client.ouvrir();
   await laisserRepondre();
-  reseau.simulerConnexion('moi');
+  reseau.simulerConnexion();
 });
 
 afterEach(() => {

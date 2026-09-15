@@ -19,6 +19,10 @@
  * jeton qui n'ouvre plus rien fait refuser le lien; l'accueil montre le motif, et
  * propose de reessayer ou, s'il presentait une session, de continuer en invite.
  *
+ * UNE PLACE EN PARTIE SE REPREND AVANT TOUT (etape 2.5). Une page rechargee en
+ * pleine partie y retourne d'elle-meme: pendant ce temps, on ne joue pas ailleurs,
+ * et si la place est perdue, l'accueil dit pourquoi.
+ *
  * UNE PAGE D'UNE AUTRE VERSION SE RECHARGE (etape 5.3). Le serveur la refusera a
  * chaque essai, avec ou sans session: seul un rechargement lui donne la page qui
  * va avec le serveur. L'accueil ne propose alors que cela.
@@ -34,12 +38,14 @@ export type EtatDuLien =
   | 'enCours'
   /** Le lien est etabli: on peut jouer. */
   | 'etabli'
-  /** Le lien a ete perdu. La reconnexion automatique n'existe pas. */
+  /** Le lien a ete perdu, et aucune place en partie n'a pu etre reprise. */
   | 'perdu'
   /** Le lien n'a pas pu s'ouvrir: le serveur l'a refuse, ou ne repond toujours pas. */
   | 'refuse'
   /** Le serveur ne repond pas encore: la page reessaie d'elle-meme (etape 5.3). */
-  | 'reveil';
+  | 'reveil'
+  /** Une place en partie attend: la page tente d'y revenir (etape 2.5). */
+  | 'retour';
 
 /** Ce que l'accueil affiche. */
 export interface ModeleAccueil {
@@ -75,6 +81,7 @@ const LIEN_SELON_LA_CONNEXION: Readonly<Record<EtatConnexion, EtatDuLien>> = {
   perdue: 'perdu',
   refusee: 'refuse',
   reveil: 'reveil',
+  retour: 'retour',
 };
 
 /** Ce que l'accueil dit a un joueur dont la session gardee a expire. */
@@ -106,7 +113,10 @@ export function modeleAccueil(etat: EtatClient, saisie: string): ModeleAccueil {
     motifDuLien: lien === 'refuse' ? etat.refusDeConnexion : undefined,
     pseudoRequis,
     pseudoDuCompte: session.nature === 'compte' ? session.progression.pseudo : undefined,
-    avis: session.nature === 'invite' && session.sessionExpiree ? AVIS_SESSION_EXPIREE : undefined,
+    // Une place perdue passe avant une session expiree: elle vient d'arriver.
+    avis:
+      etat.avisDeRetour ??
+      (session.nature === 'invite' && session.sessionExpiree ? AVIS_SESSION_EXPIREE : undefined),
     erreur: erreurLocale ?? refusDuServeur(etat, saisie, pseudoRequis),
     enAttente: etat.entreeEnCours,
     pseudo: pseudoRequis && verdict.valide ? verdict.valeur : undefined,

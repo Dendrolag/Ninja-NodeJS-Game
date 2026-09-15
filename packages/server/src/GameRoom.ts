@@ -48,6 +48,11 @@
  * les comptes: a quel moment du jeu chaque joueur est entre, et qui est parti
  * pendant la partie. Elle ne calcule aucun gain: les regles sont dans
  * @neon-ninja/shared, et l'enregistrement dans la couche reseau.
+ *
+ * CE QUE L'ETAPE 2.5 A AJOUTE: l'absence. Un joueur dont le lien est tombe en
+ * pleine partie reste membre de la room et reste dans l'etat, le temps que la
+ * couche reseau lui laisse pour revenir. La room l'immobilise et donne la main a un
+ * joueur present s'il etait l'hote; elle ne sait rien du delai, ni du reseau.
  */
 
 import type {
@@ -258,6 +263,18 @@ export class GameRoom {
   private hoteCourant: IdentifiantEntite | undefined;
 
   /**
+   * Les membres dont le lien est tombe, et qui peuvent encore revenir (etape 2.5).
+   *
+   * UN ABSENT RESTE UN MEMBRE: il est dans l'etat, compte dans la capacite, garde
+   * son pseudo, sa couleur et ses ninjas. C'est ce qui permet a ses bots de
+   * continuer a transmettre sa couleur pendant la coupure (comportement a preserver
+   * 11, qui ne transmet que la couleur d'un joueur present dans l'etat). Il ne
+   * commande simplement plus rien: il est immobile, et ne peut pas etre l'hote tant
+   * qu'un joueur present peut l'etre.
+   */
+  private readonly absents = new Set<IdentifiantEntite>();
+
+  /**
    * Le compte de chaque membre qui en a un (etape 3.2).
    *
    * Le moteur ne connait pas les comptes, et n'a pas a les connaitre: un compte ne
@@ -457,11 +474,65 @@ export class GameRoom {
     this.ordreDArrivee = this.ordreDArrivee.filter((present) => present !== id);
     this.comptesDesMembres.delete(id);
     this.entreesEnJeuMs.delete(id);
+    this.absents.delete(id);
     delete this.intentions[id];
     this.tirsDemandes.delete(id);
 
     if (this.hoteCourant === id) {
-      this.hoteCourant = this.ordreDArrivee[0];
+      this.hoteCourant = this.successeur();
+    }
+
+    return true;
+  }
+
+  /** Ce membre est-il absent: son lien est tombe, et il peut encore revenir. */
+  estAbsent(id: IdentifiantEntite): boolean {
+    return this.absents.has(id);
+  }
+
+  /**
+   * Retient que le lien de ce membre est tombe (etape 2.5).
+   *
+   * Il reste dans la partie, mais immobile: sa derniere intention est effacee, sans
+   * quoi il continuerait de marcher dans la direction qu'il tenait au moment de la
+   * coupure. S'il etait l'hote, le plus ancien des joueurs presents prend la main,
+   * pour qu'une partie suspendue puisse reprendre; s'il n'y a personne de present,
+   * il la garde.
+   *
+   * @returns Vrai si le joueur etait un membre present.
+   */
+  marquerAbsent(id: IdentifiantEntite): boolean {
+    if (this.partie.joueurs[id] === undefined || this.absents.has(id)) {
+      return false;
+    }
+
+    this.absents.add(id);
+    delete this.intentions[id];
+    this.tirsDemandes.delete(id);
+
+    if (this.hoteCourant === id) {
+      this.hoteCourant = this.presentLePlusAncien() ?? id;
+    }
+
+    return true;
+  }
+
+  /**
+   * Retient qu'un membre absent est revenu (etape 2.5).
+   *
+   * Il retrouve tout ce qu'il avait, sauf la main s'il l'a cedee: un hote ne la
+   * reprend pas a celui qui l'a recue pendant son absence. Il ne la recoit que si
+   * l'hote actuel est absent lui aussi.
+   *
+   * @returns Vrai si le joueur etait un membre absent.
+   */
+  marquerPresent(id: IdentifiantEntite): boolean {
+    if (!this.absents.delete(id)) {
+      return false;
+    }
+
+    if (this.hoteCourant === undefined || this.absents.has(this.hoteCourant)) {
+      this.hoteCourant = id;
     }
 
     return true;
@@ -807,6 +878,19 @@ export class GameRoom {
         ? abandon.compte !== undefined || reperePseudo(abandon.pseudo) !== repere
         : abandon.compte?.id !== compte.id,
     );
+  }
+
+  /**
+   * Qui doit commander la room: le plus ancien des membres presents, ou a defaut le
+   * plus ancien des absents. Personne dans une room vide.
+   */
+  private successeur(): IdentifiantEntite | undefined {
+    return this.presentLePlusAncien() ?? this.ordreDArrivee[0];
+  }
+
+  /** Le plus ancien des membres presents, s'il y en a un. */
+  private presentLePlusAncien(): IdentifiantEntite | undefined {
+    return this.ordreDArrivee.find((id) => !this.absents.has(id));
   }
 
   /** Ce pseudo est-il deja porte par quelqu'un dans la room. */

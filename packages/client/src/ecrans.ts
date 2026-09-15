@@ -75,6 +75,7 @@ export function ecranSuivant(ecran: Ecran, action: Action): Ecran {
     // Aller directement au bon ecran evite d'afficher le salon le temps d'un
     // aller-retour.
     case 'entreeAcceptee':
+    case 'retourAccepte':
       return ecranDuStatut(action.salon.statut);
 
     case 'partieLancee':
@@ -86,8 +87,11 @@ export function ecranSuivant(ecran: Ecran, action: Action): Ecran {
     // On n'est plus dans aucune partie, volontairement ou non: retour a l'accueil.
     // Une entree refusee n'a jamais fait quitter l'accueil, la citer ici n'aurait
     // donc rien change; c'est justement pour cela qu'elle n'y est pas.
+    // Un lien tombe en pleine partie, lui, laisse la partie affichee le temps d'y
+    // revenir (etape 2.5): seule sa perte definitive ramene a l'accueil.
     case 'sortie':
     case 'connexionPerdue':
+    case 'retourRefuse':
       return 'accueil';
 
     case 'navigation':

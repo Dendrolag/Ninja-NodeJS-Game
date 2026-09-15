@@ -108,7 +108,7 @@ describe('au demarrage', () => {
     expect(coffre.lire()).toBe(JETON_DESSAI);
 
     api.reponses.moi = reponseNormale;
-    reseau.simulerConnexion('moi');
+    reseau.simulerConnexion();
     await laisserRepondre();
 
     expect(client.etat.session.nature).toBe('compte');
@@ -160,7 +160,7 @@ describe('apres un refus du lien', () => {
 describe('se connecter et s inscrire', () => {
   beforeEach(() => {
     client.ouvrir();
-    reseau.simulerConnexion('invite-1');
+    reseau.simulerConnexion();
     client.naviguer('connexion');
   });
 
@@ -291,7 +291,7 @@ describe('pendant une partie', () => {
     api.reponses.moi = async () => ({ acceptee: true, valeur: PROGRESSION });
     client.ouvrir();
     await laisserRepondre();
-    reseau.simulerConnexion('moi');
+    reseau.simulerConnexion();
   });
 
   it('un compte entre sans envoyer de pseudo', () => {

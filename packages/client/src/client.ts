@@ -15,6 +15,11 @@
  * corriger. Depuis l'etape 2.4, cela comprend la creation de partie et la liste
  * des parties publiques, que les ecrans du jalon 3 appelleront.
  *
+ * TROIS BRANCHEMENTS VIVENT A COTE, parce qu'ils retiennent quelque chose: la
+ * session (comptes/session.ts), le reveil d'un serveur endormi (reveil.ts), et,
+ * depuis l'etape 2.5, la place en partie et le retour apres une coupure
+ * (retour.ts), qui ecoute la perte du lien, la place attribuee et la place reprise.
+ *
  * IL SE FERME. Toutes les ecoutes posees sont retenues et retirees par fermer().
  * Le legacy empilait des ecoutes a chaque entree en partie, si bien qu'un joueur
  * qui rejoignait trois fois traitait chaque message trois fois.
@@ -45,6 +50,7 @@ import type { Minuterie } from './minuterie.js';
 import { minuterieNavigateur } from './minuterie.js';
 import type { Reseau } from './reseau.js';
 import { brancherLeRafraichissement } from './rafraichissement.js';
+import { brancherLeRetour } from './retour.js';
 import { brancherLeReveil } from './reveil.js';
 
 /** Ce qu'il faut pour monter un client. */
@@ -61,6 +67,8 @@ export interface OptionsClient {
   readonly comptes?: ApiComptes;
   /** Le coffre du jeton de session. Un coffre en memoire par defaut. */
   readonly coffre?: CoffreDeJeton;
+  /** Le coffre du jeton de retour en partie (etape 2.5). Un coffre en memoire par defaut. */
+  readonly coffreDeRetour?: CoffreDeJeton;
 }
 
 /**
@@ -158,25 +166,24 @@ export function creerClient(options: OptionsClient): Client {
 
   // -- L'etat du lien -------------------------------------------------------
 
+  // La perte du lien est ecoutee par le retour, plus bas: en pleine partie, elle
+  // n'est pas une perte tant que la page peut y revenir.
   ecouter(
     reseau.surConnexion(() => {
-      magasin.appliquer({ type: 'connexionEtablie', identifiant: reseau.identifiant ?? '' });
-    }),
-  );
-
-  ecouter(
-    reseau.surDeconnexion(() => {
-      magasin.appliquer({ type: 'connexionPerdue' });
+      magasin.appliquer({ type: 'connexionEtablie' });
     }),
   );
 
   // -- La session ------------------------------------------------------------
 
+  const coffre = options.coffre ?? creerCoffreDeJeton();
+  const minuterie = options.minuterie ?? minuterieNavigateur;
+
   const session = brancherLaSession({
     magasin,
     reseau,
     api: options.comptes,
-    coffre: options.coffre ?? creerCoffreDeJeton(),
+    coffre,
     ecouter,
   });
 
@@ -187,8 +194,25 @@ export function creerClient(options: OptionsClient): Client {
     magasin,
     reseau,
     horloge,
-    minuterie: options.minuterie ?? minuterieNavigateur,
+    minuterie,
     reessayer: () => {
+      session.reessayer();
+    },
+    ecouter,
+  });
+
+  // La place en partie, et le retour apres une coupure (etape 2.5).
+  const retour = brancherLeRetour({
+    magasin,
+    reseau,
+    horloge,
+    minuterie,
+    coffre: options.coffreDeRetour ?? creerCoffreDeJeton(),
+    authentification: () => {
+      const jeton = coffre.lire();
+      return jeton === undefined ? {} : { jeton };
+    },
+    rouvrir: () => {
       session.reessayer();
     },
     ecouter,
@@ -206,7 +230,7 @@ export function creerClient(options: OptionsClient): Client {
   // discretement (recette de l'etape 5.4).
   brancherLeRafraichissement({
     magasin,
-    minuterie: options.minuterie ?? minuterieNavigateur,
+    minuterie,
     redemander: (reponseArrivee) => {
       reseau.emettre('listerParties', (parties) => {
         reponseArrivee();
@@ -404,6 +428,7 @@ export function creerClient(options: OptionsClient): Client {
     quitter: () => {
       reseau.emettre('quitter');
       magasin.appliquer({ type: 'sortie' });
+      retour.renoncer();
     },
 
     /**

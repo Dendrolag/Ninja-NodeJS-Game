@@ -43,7 +43,7 @@ Présentés au porteur du projet, qui a décidé de leur sort.
 | Un échec d'enregistrement de fin de partie n'est pas retenté     | Traité dans l'étape           | Trois essais, sans double compte (`ServeurSocket.ts`, `base/parties.ts`)                |
 | Continuer en invité laisse la session ouverte côté serveur       | Traité dans l'étape           | La session est fermée (`packages/client/src/comptes/session.ts`)                        |
 | Scénarios de bout en bout instables en local                     | Traité dans l'étape (règle 7) | Voir le cas I2                                                                          |
-| Reconnexion en cours de partie                                   | Planifié                      | Étape 2.5 du ROADMAP                                                                    |
+| Reconnexion en cours de partie                                   | Planifié, puis traité         | Étape 2.5 du ROADMAP, terminée le 15 septembre 2026                                     |
 | Gestion du mot de passe                                          | Planifié                      | Étape 3.4 du ROADMAP                                                                    |
 
 ## 3. La grille

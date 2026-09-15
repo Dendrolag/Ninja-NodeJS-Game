@@ -87,6 +87,11 @@ export interface Hud {
   readonly enPause: boolean;
   /** Qui a suspendu la partie, quand on le sait. */
   readonly pausePar: string | undefined;
+  /**
+   * Le lien est tombe, et la page tente de revenir dans la partie (etape 2.5). La
+   * partie affichee est figee sur ce qu'elle etait: le HUD le dit.
+   */
+  readonly retourEnCours: boolean;
   readonly classement: readonly LigneHud[];
   readonly effets: readonly EffetHud[];
   readonly minimap: readonly PointMinimap[];
@@ -101,6 +106,7 @@ export const HUD_VIDE: Hud = {
   urgence: false,
   enPause: false,
   pausePar: undefined,
+  retourEnCours: false,
   classement: [],
   effets: [],
   minimap: [],
@@ -140,6 +146,7 @@ export function construireHud(etat: EtatClient, maintenant: number): Hud {
     urgence: partie.tempsRestantMs <= SEUIL_URGENCE_MS,
     enPause: partie.enPause,
     pausePar: etat.pausePar,
+    retourEnCours: etat.connexion === 'retour',
     classement: classementHud(partie.classement, etat.moi),
     effets: effetsHud(etat, maintenant),
     minimap: minimapHud(etat),

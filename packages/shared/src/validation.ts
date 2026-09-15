@@ -47,6 +47,7 @@ import { CARTES, MODES, TYPES_BONUS, TYPES_MALUS, TYPES_ZONE, VISIBILITES } from
 import type {
   DemandeCreation,
   DemandeRejoindre,
+  DemandeRetour,
   IntentionDeplacement,
   MessageChat,
   SessionJoueur,
@@ -423,6 +424,24 @@ export function validerJeton(brut: unknown): ResultatValidation<string> {
   }
 
   return accepte(brut);
+}
+
+/**
+ * Valide une demande de retour en partie (etape 2.5): un objet qui porte un jeton
+ * de retour, de la forme de ceux que le serveur fabrique.
+ *
+ * Un texte d'une autre forme n'a jamais ete emis par le serveur: il est refuse sans
+ * meme etre cherche. Rien d'autre n'est lu dans la demande.
+ */
+export function validerDemandeRetour(brut: unknown): ResultatValidation<DemandeRetour> {
+  const source = objetOuRien(brut);
+  const jeton = source === undefined ? undefined : champ(source, 'jeton');
+
+  if (typeof jeton !== 'string' || !BORNES_JETON.forme.test(jeton)) {
+    return refuse('retour', 'Ce jeton de retour est mal formé.');
+  }
+
+  return accepte({ jeton });
 }
 
 /** Une valeur est-elle l'un des textes d'une liste fermee. */

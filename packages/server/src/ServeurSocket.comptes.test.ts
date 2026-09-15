@@ -547,6 +547,102 @@ describe('entree pendant l identification', () => {
   });
 });
 
+describe('retour en partie d un compte (etape 2.5)', () => {
+  /** Demande a revenir avec ce jeton, et attend le verdict. */
+  async function revenir(
+    client: ClientTypee,
+    jeton: string,
+  ): Promise<ResultatValidation<InfosSalon>> {
+    return new Promise((resoudre, rejeter) => {
+      const minuterie = setTimeout(() => {
+        rejeter(new Error("Le serveur n'a pas repondu a la demande de retour."));
+      }, DELAI_ATTENTE_MS);
+
+      client.emit('revenir', { jeton }, (reponse) => {
+        clearTimeout(minuterie);
+        resoudre(reponse);
+      });
+    });
+  }
+
+  /** Coupe la connexion de ce client, et attend que le serveur l'ait constate. */
+  async function couper(client: ClientTypee): Promise<void> {
+    const avant = serveur?.jeu.nombreDeConnexions ?? 0;
+    client.disconnect();
+
+    const limite = Date.now() + DELAI_ATTENTE_MS;
+    while ((serveur?.jeu.nombreDeConnexions ?? 0) >= avant) {
+      if (Date.now() > limite) {
+        throw new Error("Le serveur n'a pas constate la coupure.");
+      }
+
+      await new Promise((resoudre) => setTimeout(resoudre, 5));
+    }
+  }
+
+  it('une place de compte ne se reprend que depuis une connexion de ce meme compte', async () => {
+    await monter(annuaireDEssai());
+    const alice = await connecterUnClient({ jeton: JETON_ALICE });
+    const place = prochain(alice, 'placeAttribuee');
+    const idRoom = salonAccepte(await rejoindre(alice, {})).idRoom;
+    const { jetonDeRetour, joueur } = await place;
+    const bob = await connecterUnClient();
+    salonAccepte(await rejoindre(bob, { pseudo: 'Bob', idRoom }));
+    await lancerUnePartieCourte(alice);
+
+    await couper(alice);
+
+    const invite = await connecterUnClient();
+    expect(champRefuse(await revenir(invite, jetonDeRetour))).toBe('retour');
+
+    const aliceRevenue = await connecterUnClient({ jeton: JETON_ALICE });
+    const nouvellePlace = prochain(aliceRevenue, 'placeAttribuee');
+    expect(salonAccepte(await revenir(aliceRevenue, jetonDeRetour)).idRoom).toBe(idRoom);
+    expect((await nouvellePlace).joueur).toBe(joueur);
+  });
+
+  it('une place d invite ne se reprend pas depuis une connexion de compte', async () => {
+    await monter(annuaireDEssai());
+    const bob = await connecterUnClient();
+    const place = prochain(bob, 'placeAttribuee');
+    salonAccepte(await rejoindre(bob, { pseudo: 'Bob' }));
+    const { jetonDeRetour } = await place;
+    const alice = await connecterUnClient({ jeton: JETON_ALICE });
+    salonAccepte(await rejoindre(alice, { idRoom: 'room-1' }));
+    await lancerUnePartieCourte(bob);
+
+    await couper(bob);
+
+    const compte = await connecterUnClient({ jeton: JETON_ALICE });
+    expect(champRefuse(await revenir(compte, jetonDeRetour))).toBe('retour');
+  });
+
+  it('un compte revenu est classe comme present, et recoit sa progression de fin', async () => {
+    const annuaire = annuaireDEssai();
+    await monter(annuaire);
+    const alice = await connecterUnClient({ jeton: JETON_ALICE });
+    const place = prochain(alice, 'placeAttribuee');
+    salonAccepte(await rejoindre(alice, {}));
+    const { jetonDeRetour } = await place;
+    await lancerUnePartieCourte(alice);
+
+    horloge.avancerDe(10_000);
+    await couper(alice);
+
+    const aliceRevenue = await connecterUnClient({ jeton: JETON_ALICE });
+    salonAccepte(await revenir(aliceRevenue, jetonDeRetour));
+
+    const progression = prochain(aliceRevenue, 'progressionDeFin');
+    horloge.avancerDe(21_000);
+    const recue = await progression;
+
+    expect(recue.enregistree).toBe(true);
+    expect(annuaire.finsEnregistrees[0]?.resultats).toEqual([
+      expect.objectContaining({ compteId: 'compte-alice', placement: 1 }),
+    ]);
+  });
+});
+
 describe('fin de partie (etape 3.3)', () => {
   it('enregistre le resultat du compte et lui envoie ce qui a ete applique, rien a l invite', async () => {
     const annuaire = annuaireDEssai();

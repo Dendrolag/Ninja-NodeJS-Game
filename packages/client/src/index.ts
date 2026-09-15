@@ -95,7 +95,7 @@ export {
 } from './comptes/api.js';
 
 export type { CoffreDeJeton } from './comptes/coffre.js';
-export { CLE_JETON, creerCoffreDeJeton } from './comptes/coffre.js';
+export { CLE_JETON, CLE_RETOUR, creerCoffreDeJeton } from './comptes/coffre.js';
 
 export type { CommandesDeSession, OptionsSession } from './comptes/session.js';
 export { brancherLaSession } from './comptes/session.js';
@@ -130,6 +130,9 @@ export { creerReseauSocketIo } from './reseauSocketIo.js';
 
 export type { Annulation, Minuterie, MinuterieManuelle } from './minuterie.js';
 export { creerMinuterieManuelle, minuterieNavigateur } from './minuterie.js';
+
+export type { CommandesDeRetour, OptionsRetour } from './retour.js';
+export { ATTENTE_ENTRE_DEUX_RETOURS_MS, AVIS_PLACE_REPRISE, brancherLeRetour } from './retour.js';
 
 export type { OptionsReveil } from './reveil.js';
 export { ATTENTE_ENTRE_DEUX_ESSAIS_MS, DUREE_DU_REVEIL_MS, brancherLeReveil } from './reveil.js';

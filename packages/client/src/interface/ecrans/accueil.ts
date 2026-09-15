@@ -57,6 +57,7 @@ const TEXTES_DU_LIEN: Readonly<Record<Exclude<EtatDuLien, 'refuse'>, string>> = 
   perdu: 'La connexion au serveur a été perdue.',
   reveil:
     'Le serveur de jeu démarre, cela peut prendre jusqu’à une minute. Nouvel essai automatique…',
+  retour: 'Retour dans votre partie…',
 };
 
 /** Monte l'ecran d'accueil. */

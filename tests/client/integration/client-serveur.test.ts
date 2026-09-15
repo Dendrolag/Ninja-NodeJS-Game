@@ -21,7 +21,7 @@
  */
 
 import type { Client } from '@neon-ninja/client';
-import { creerClient, creerReseauSocketIo } from '@neon-ninja/client';
+import { creerClient, creerCoffreDeJeton, creerReseauSocketIo } from '@neon-ninja/client';
 import type { HorlogeManuelle, ServeurMonte } from '@neon-ninja/server';
 import { creerHorlogeManuelle, demarrerServeur } from '@neon-ninja/server';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -85,14 +85,14 @@ async function attendreQue(
 }
 
 describe('le client parle a un vrai serveur', () => {
-  it('recoit son identifiant de session a la connexion', async () => {
+  it('etablit le lien, sans joueur tant qu il n est entre nulle part', async () => {
     const client = await connecterUnClient();
 
-    expect(client.etat.moi).toBeTruthy();
+    expect(client.etat.moi).toBeUndefined();
     expect(client.etat.ecran).toBe('accueil');
   });
 
-  it('entre dans une partie et recoit son salon', async () => {
+  it('entre dans une partie, recoit son salon, et s y reconnait', async () => {
     const client = await connecterUnClient();
 
     client.rejoindre('Alice');
@@ -100,6 +100,8 @@ describe('le client parle a un vrai serveur', () => {
 
     expect(client.etat.ecran).toBe('salon');
     expect(client.etat.salon?.joueurs.map((joueur) => joueur.pseudo)).toEqual(['Alice']);
+    // L'identifiant de joueur arrive avec la place, avant le salon (etape 2.5).
+    expect(client.etat.moi).toBe(client.etat.salon?.joueurs[0]?.id);
     // Le premier arrive commande la partie.
     expect(client.etat.salon?.joueurs[0]?.hote).toBe(true);
     // Les reglages complets voyagent avec le salon, valeurs par defaut comprises.
@@ -202,6 +204,44 @@ describe('le client parle a un vrai serveur', () => {
 
     client.reprendre();
     await attendreQue(() => client.etat.pausePar === undefined, 'la reprise');
+  });
+
+  it('revient dans sa partie apres un rechargement, sous le meme joueur (etape 2.5)', async () => {
+    // Le coffre du jeton de retour survit au rechargement: c'est le stockage de
+    // session du navigateur. Ici, un coffre partage par les deux clients.
+    const coffreDeRetour = creerCoffreDeJeton();
+    const avant = creerClient({ reseau: creerReseauSocketIo({ url }), coffreDeRetour });
+    clients.push(avant);
+    avant.ouvrir();
+    await attendreQue(() => avant.etat.connexion === 'connecte', 'le lien');
+
+    avant.rejoindre('Alice');
+    await attendreQue(() => avant.etat.salon !== undefined, 'le salon');
+    avant.demarrer();
+    await attendreQue(() => avant.etat.compteARebours !== undefined, 'le compte a rebours');
+    horloge.avancerDe(6000);
+    await attendreQue(() => avant.etat.ecran === 'jeu', 'le lancement de la partie');
+    const moi = avant.etat.moi;
+
+    // La page se ferme: le serveur garde la place.
+    avant.fermer();
+    await attendreQue(
+      () => serveur.jeu.rooms.toutesLesRooms[0]?.estAbsent(moi ?? '') === true,
+      'l absence constatee par le serveur',
+    );
+
+    const apres = creerClient({ reseau: creerReseauSocketIo({ url }), coffreDeRetour });
+    clients.push(apres);
+    apres.ouvrir();
+    await attendreQue(() => apres.etat.ecran === 'jeu', 'le retour dans la partie');
+
+    expect(apres.etat.connexion).toBe('connecte');
+    expect(apres.etat.moi).toBe(moi);
+
+    horloge.avancerDe(200);
+    await attendreQue(() => apres.etat.partie !== undefined, 'le flux de la partie retrouvee');
+
+    expect(apres.etat.partie?.entites.some((entite) => entite.id === moi)).toBe(true);
   });
 
   it('revient a l accueil quand le lien tombe', async () => {

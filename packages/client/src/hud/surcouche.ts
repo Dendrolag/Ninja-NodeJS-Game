@@ -68,6 +68,10 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
 
   const temps = element(doc, 'div', 'hud-temps', racine);
   const pause = element(doc, 'div', 'hud-pause', racine);
+  const retour = element(doc, 'div', 'hud-retour', racine);
+  retour.setAttribute('role', 'status');
+  retour.textContent = 'Connexion perdue. Retour dans la partie…';
+  retour.hidden = true;
   const classement = element(doc, 'ol', 'hud-classement', racine);
   const effets = element(doc, 'ul', 'hud-effets', racine);
   const minimap = element(doc, 'div', 'hud-minimap', racine);
@@ -98,7 +102,9 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
 
       pause.textContent =
         hud.pausePar === undefined ? 'Partie suspendue' : `Partie suspendue par ${hud.pausePar}`;
-      pause.hidden = !hud.enPause;
+      // Un lien perdu passe avant la pause: rien de ce qui est affiche n'est plus a jour.
+      pause.hidden = !hud.enPause || hud.retourEnCours;
+      retour.hidden = !hud.retourEnCours;
 
       majClassement(doc, classement, lignes, hud.classement);
       majEffets(doc, effets, hud);

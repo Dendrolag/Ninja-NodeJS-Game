@@ -187,6 +187,40 @@ describe('modeleAccueil, quand le lien est refuse', () => {
   });
 });
 
+describe('modeleAccueil, pendant un retour en partie (etape 2.5)', () => {
+  it('dit que la page retourne dans sa partie, sans laisser jouer ailleurs ni rien proposer', () => {
+    const modele = modeleAccueil({ ...CONNECTE, connexion: 'retour' }, 'Alice');
+
+    expect(modele.lien).toBe('retour');
+    expect(modele.peutJouer).toBe(false);
+    expect(modele.peutRecharger).toBe(false);
+    expect(modele.peutReessayer).toBe(false);
+    expect(modele.peutContinuerEnInvite).toBe(false);
+  });
+
+  it('dit pourquoi une place n a pas pu etre reprise, et laisse jouer', () => {
+    const modele = modeleAccueil(
+      { ...CONNECTE, avisDeRetour: "Cette partie n'est plus en cours." },
+      'Alice',
+    );
+
+    expect(modele.avis).toBe("Cette partie n'est plus en cours.");
+    expect(modele.peutJouer).toBe(true);
+  });
+
+  it('fait passer la place perdue avant la session expiree, qui revient ensuite', () => {
+    const expiree: EtatClient = {
+      ...CONNECTE,
+      session: { nature: 'invite', sessionExpiree: true },
+    };
+
+    expect(modeleAccueil({ ...expiree, avisDeRetour: 'Place perdue.' }, '').avis).toBe(
+      'Place perdue.',
+    );
+    expect(modeleAccueil(expiree, '').avis).toBe(AVIS_SESSION_EXPIREE);
+  });
+});
+
 describe('modeleAccueil, pendant le reveil du serveur', () => {
   it('dit que le lien attend, sans rien proposer: la page reessaie d elle-meme', () => {
     expect(modeleAccueil({ ...ETAT_INITIAL, connexion: 'reveil' }, 'Alice')).toMatchObject({

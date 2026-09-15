@@ -56,18 +56,25 @@ function trame(modifications: Partial<InstantanePartie> = {}): Uint8Array {
 
 /** La suite d'actions qui amene un client jusqu'au debut d'une partie. */
 const JUSQU_AU_JEU: readonly Action[] = [
-  { type: 'connexionEtablie', identifiant: 'moi' },
+  { type: 'connexionEtablie' },
   { type: 'entreeDemandee', pseudo: 'Alice' },
+  { type: 'placeAttribuee', joueur: 'moi' },
   { type: 'entreeAcceptee', salon: salon() },
   { type: 'partieLancee' },
 ];
 
 describe('le lien et l entree en partie', () => {
-  it('retient l identifiant donne par le serveur a la connexion', () => {
-    const etat = apres([{ type: 'connexionEtablie', identifiant: 'session-42' }]);
+  it('enregistre le lien etabli, sans identifiant de joueur tant qu on n est entre nulle part', () => {
+    const etat = apres([{ type: 'connexionEtablie' }]);
 
     expect(etat.connexion).toBe('connecte');
-    expect(etat.moi).toBe('session-42');
+    expect(etat.moi).toBeUndefined();
+  });
+
+  it('retient l identifiant de joueur que le serveur remet a l entree (etape 2.5)', () => {
+    const etat = apres([{ type: 'connexionEtablie' }, { type: 'placeAttribuee', joueur: 'j-42' }]);
+
+    expect(etat.moi).toBe('j-42');
   });
 
   it('retient le pseudo demande avant meme la reponse du serveur', () => {
@@ -118,12 +125,12 @@ describe('le lien et l entree en partie', () => {
     expect(etat.pseudoDemande).toBe('Alice2');
   });
 
-  it('oublie tout ce qui touche a la partie quand on quitte, mais garde le lien', () => {
+  it('oublie tout ce qui touche a la partie quand on quitte, notre joueur compris, mais garde le lien', () => {
     const etat = apres([...JUSQU_AU_JEU, { type: 'etat', trame: trame() }, { type: 'sortie' }]);
 
     expect(etat.ecran).toBe('accueil');
     expect(etat.connexion).toBe('connecte');
-    expect(etat.moi).toBe('moi');
+    expect(etat.moi).toBeUndefined();
     expect(etat.salon).toBeUndefined();
     expect(etat.partie).toBeUndefined();
   });
@@ -137,6 +144,77 @@ describe('le lien et l entree en partie', () => {
     expect(etat.salon).toBeUndefined();
     // Le pseudo saisi survit: c'est ce qu'on repropose pour se reconnecter.
     expect(etat.pseudoDemande).toBe('Alice');
+  });
+});
+
+describe('le retour en partie (etape 2.5)', () => {
+  it('garde la partie affichee quand le lien tombe en pleine partie', () => {
+    const avant = apres([...JUSQU_AU_JEU, { type: 'etat', trame: trame() }]);
+    const etat = reduire(avant, { type: 'lienPerduEnPartie' });
+
+    expect(etat.connexion).toBe('retour');
+    expect(etat.ecran).toBe('jeu');
+    expect(etat.partie).toBe(avant.partie);
+    expect(etat.salon).toBe(avant.salon);
+    expect(etat.moi).toBe('moi');
+  });
+
+  it('dit qu un retour est demande au chargement, et efface l avis precedent', () => {
+    const etat = apres([
+      { type: 'connexionEtablie' },
+      { type: 'retourRefuse', motif: 'Ancien motif.' },
+      { type: 'retourDemande' },
+    ]);
+
+    expect(etat.connexion).toBe('retour');
+    expect(etat.ecran).toBe('accueil');
+    expect(etat.avisDeRetour).toBeUndefined();
+  });
+
+  it('un retour accepte rouvre le lien et mene a l ecran de la partie', () => {
+    const etat = apres([
+      { type: 'connexionEtablie' },
+      { type: 'retourDemande' },
+      { type: 'placeAttribuee', joueur: 'moi' },
+      { type: 'retourAccepte', salon: salon('enCours') },
+    ]);
+
+    expect(etat.connexion).toBe('connecte');
+    expect(etat.ecran).toBe('jeu');
+    expect(etat.salon?.statut).toBe('enCours');
+    expect(etat.moi).toBe('moi');
+  });
+
+  it('un retour refuse ramene a l accueil, lien ouvert, avec le motif et sans rien de la partie', () => {
+    const etat = apres([
+      ...JUSQU_AU_JEU,
+      { type: 'lienPerduEnPartie' },
+      { type: 'retourRefuse', motif: 'Place perdue.' },
+    ]);
+
+    expect(etat.ecran).toBe('accueil');
+    expect(etat.connexion).toBe('connecte');
+    expect(etat.avisDeRetour).toBe('Place perdue.');
+    expect(etat.salon).toBeUndefined();
+    expect(etat.partie).toBeUndefined();
+    expect(etat.moi).toBeUndefined();
+    expect(etat.pseudoDemande).toBe('Alice');
+  });
+
+  it('quitter pendant un retour laisse le lien a rouvrir', () => {
+    const etat = apres([...JUSQU_AU_JEU, { type: 'lienPerduEnPartie' }, { type: 'sortie' }]);
+
+    expect(etat.ecran).toBe('accueil');
+    expect(etat.connexion).toBe('horsLigne');
+  });
+
+  it('une nouvelle entree efface l avis de retour', () => {
+    const etat = apres([
+      { type: 'retourRefuse', motif: 'Place perdue.' },
+      { type: 'entreeDemandee', pseudo: 'Alice' },
+    ]);
+
+    expect(etat.avisDeRetour).toBeUndefined();
   });
 });
 

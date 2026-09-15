@@ -103,7 +103,7 @@ beforeEach(() => {
     monterLeJeu: jeuDEssai().monteur,
     recharger: () => undefined,
   });
-  reseau.simulerConnexion('moi');
+  reseau.simulerConnexion();
 });
 
 afterEach(() => {

@@ -22,13 +22,12 @@
  * page d'un autre commit que le sien; la session n'a pas a le savoir, c'est le
  * transport qui la joint.
  *
- * LA RECONNEXION AUTOMATIQUE EST COUPEE. Socket.IO la propose, mais retrouver sa
- * place suppose que la place survive au transport. La session de compte de
- * l'etape 3.2 survit, mais la place dans une partie, elle, reste attachee a la
- * connexion: une reconnexion silencieuse redonnerait un identifiant neuf, donc un
- * joueur inconnu de la partie, et le client afficherait une partie dans laquelle
- * il n'est plus. Mieux vaut une deconnexion franche, que l'etat du client
- * enregistre et que l'ecran peut annoncer.
+ * LA RECONNEXION AUTOMATIQUE EST COUPEE. Socket.IO la propose, mais une reconnexion
+ * silencieuse redonnerait une connexion que la partie ne connait pas, et le client
+ * afficherait une partie dans laquelle il n'est plus. Depuis l'etape 2.5, la place
+ * en partie survit a la connexion, mais la reprendre est une DEMANDE, que le
+ * serveur accepte ou refuse: retour.ts rouvre le lien par ouvrir(), puis presente
+ * le jeton de retour. Rien de cela ne se fait ici.
  */
 
 import type { EvenementsClientVersServeur, EvenementsServeurVersClient } from '@neon-ninja/shared';
@@ -77,10 +76,6 @@ export function creerReseauSocketIo(options: OptionsReseauSocketIo = {}): Reseau
       : io(options.url, { transports: ['websocket'], reconnection: false, autoConnect: false });
 
   return {
-    get identifiant() {
-      return socket.id;
-    },
-
     get connecte() {
       return socket.connected;
     },
