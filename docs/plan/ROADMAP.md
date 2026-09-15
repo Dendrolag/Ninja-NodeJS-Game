@@ -92,6 +92,8 @@ Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision 
 
 **Étape 2.6 terminée le 15 septembre 2026: hors partie, un lien perdu se rétablit sans recharger.** Sur l'accueil, dans les menus et devant le classement de fin, le joueur reste sur son écran pendant que la page rouvre le lien, toutes les trois secondes pendant une minute et demie, puis propose « Réessayer »; elle réessaie aussi dès qu'elle revient au premier plan. Dans le salon, le lien revenu y ramène le joueur, comme un nouvel arrivant. Deux défauts trouvés en route sont corrigés: le transport renvoyait sur le lien rétabli les messages émis pendant la coupure, et l'arrêt du serveur restait suspendu aux connexions qu'un navigateur ouvre d'avance. Fiche: `docs/plan/etape-2-6.md`. Suite: les fonctionnalités reportées (autres modes, pass de saison, skins, clans), dans l'ordre que fixe le porteur du projet, chacune avec sa fiche.
 
+**Décision du 15 septembre 2026: le mode Équipes ouvre les fonctionnalités reportées.** Le porteur du projet l'a choisi parmi les quatre modes proposés, le pass de saison, les skins et les clans, puis a tranché ses règles: deux équipes d'une couleur chacune, douze joueurs, choix de l'équipe au salon, capture d'un adversaire qui rapporte sa part des bots de son équipe, malus sur l'équipe adverse, récompenses par équipe. Étape `7.2`, fiche rédigée le même jour selon le cas de repli du PROTOCOLE. Les autres fonctionnalités reportées suivent, dans l'ordre que fixera le porteur du projet.
+
 ---
 
 ## 4. Carte thématique des étapes
@@ -206,6 +208,9 @@ Phase ajoutée le 12 septembre 2026. Ajouter des jeux de règles au moteur, par 
 
 **7.1. Mode tactique.** Capture par un cône directionnel à charges limitées, au lieu de la capture au contact. Reprend l'intention et les valeurs de la v0.9.0 (branche `mode-strategique`), sans ses régressions, selon quatre décisions de jeu du porteur du projet du 12 septembre 2026.
 Tests requis: TU sur la géométrie du cône, le tir, les charges et la visée; TI sur la commande de capture par le réseau; bout en bout d'une partie tactique, au clavier et au tactile; Classique inchangé, empreinte des parties comprise.
+
+**7.2. Mode Équipes.** Deux équipes d'une couleur chacune, douze joueurs au plus, qui se disputent les bots de la carte. Première fonctionnalité reportée, choisie par le porteur du projet le 15 septembre 2026 avec neuf décisions de jeu: choix de l'équipe au salon, capture d'un adversaire qui rapporte sa part au plus près, bot noir qui en retire la moitié, malus sur l'équipe adverse, récompenses par équipe, lancement avec un joueur par équipe.
+Tests requis: TU sur la part d'un joueur, la capture, le bot noir et le malus en équipes, le classement des équipes et les récompenses; TI sur le salon (arrivée, changement d'équipe, condition de lancement) et sur une partie Équipes à travers le vrai serveur et la base; bout en bout d'une partie préparée au salon et lancée; Classique et Tactique inchangés, empreinte des parties comprise.
 
 ---
 
