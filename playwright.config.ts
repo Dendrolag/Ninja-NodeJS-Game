@@ -52,9 +52,17 @@ export default defineConfig({
   // sur deux processeurs, deux scenarios de parties en parallele faisaient
   // dessiner quatre pages a la fois: les signes vitaux du run 34522355452 en
   // relevaient deux a sept images en deux secondes, et la partie a deux se
-  // terminait avant que les joueurs se soient rejoints. En local, la valeur par
-  // defaut de Playwright reste.
-  ...(process.env['CI'] ? { workers: 1 } : {}),
+  // terminait avant que les joueurs se soient rejoints.
+  //
+  // Quatre a la fois en local. La valeur par defaut de Playwright, la moitie des
+  // processeurs logiques, en lance huit sur la machine de developpement; sans carte
+  // graphique, les pages des parcours s'y privaient de processeur au point de perdre
+  // leur connexion au serveur de jeu ou de depasser leurs delais. Mesure a l'etape
+  // 5.4: cinq passages complets sur six a huit en parallele comptaient un ou deux
+  // echecs, jamais sur le meme scenario, sur la version courante comme sur celle
+  // d'avant la pluie de Rainy Tokyo; deux passages a quatre, 25 scenarios sur 25,
+  // en un peu plus de deux minutes, soit la meme duree.
+  workers: process.env['CI'] ? 1 : 4,
   reporter: process.env['CI'] ? [['github'], ['html', { open: 'never' }]] : [['list']],
   use: {
     trace: 'on-first-retry',

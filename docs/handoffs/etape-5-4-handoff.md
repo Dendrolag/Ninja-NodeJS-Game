@@ -117,6 +117,11 @@ Commit du classement, du halo et de la pluie :
 - `tests/e2e/hud-telephone.spec.ts` et `tests/e2e/rendu-pluie.spec.ts` (créés), `tests/e2e/rendu-couleurs.spec.ts` (aucun ninja ne rayonne), `tests/e2e/harnais/serveur-statique.ts` (la feuille de style de la page), `tests/e2e/banc-rendu.spec.ts` (commentaires de la lueur).
 - `docs/design/README.md`, la grille et ce handoff.
 
+Commit des passages locaux de bout en bout :
+
+- `playwright.config.ts` : quatre scénarios à la fois en local, au lieu de la moitié des processeurs logiques.
+- La grille (I2) et ce handoff.
+
 Commits de ce handoff :
 
 - `docs/recette/recette-5-4.md` (créé) : la grille.
@@ -145,6 +150,7 @@ Aucune modification de `legacy/`, `tests/caracterisation/` ni `master`.
   - **classement sur téléphone** (`hud-telephone.spec.ts`) : la vraie surcouche, la vraie feuille de style et huit joueurs ; à 360, 390 et 412 pixels de large, le classement commence sous le temps restant et tient dans l'écran ;
   - **halo** (`rendu-couleurs.spec.ts`) : des ninjas jaune, blanc et cyan dessinés au pixel près de la même façon, lueur allumée ou non ;
   - **pluie** : la planche se découpe en trois images de la taille des couches de la carte ; l'image change toutes les 100 millisecondes, en boucle ; sur Rainy Tokyo, changer d'image de pluie change le décor (933 pixels sur 120 000 au bureau), sur Tokyo rien ne bouge.
+- **Bout en bout en local, fermé à nouveau le 15 septembre.** À huit scénarios en parallèle, valeur par défaut de Playwright sur cette machine de seize processeurs logiques, cinq passages complets sur six ont compté un ou deux échecs, chaque fois sur un scénario différent (Tactique, parties, parcours solo, multijoueur, navigation mobile) : délais dépassés, ou page qui perd sa connexion au serveur. Ce n'est ni la pluie ni les nouveaux scénarios de rendu : mêmes parcours joués deux fois sur `5dae93a`, d'avant la pluie, et deux fois sur la version courante, un échec de chaque côté ou presque ; et un passage où les scénarios de rendu ne jouaient pas a échoué aussi. La machine était au repos hors des tests. À quatre scénarios à la fois : 25 sur 25, deux fois, en 2,1 et 2,0 minutes, soit la même durée. `playwright.config.ts` fixe désormais quatre en local ; la CI reste à un.
 - Résultat : **1 742 tests unitaires sur 1 742** (projet `unitaires`) ; **53 tests de base sur 53** contre une branche Neon neuve ; types (paquets, tests, bout en bout), linter et formatage verts.
 - Bout en bout en local, bureau et mobile : 15 sur 15 ; joués deux fois en parallèle, 29 sur 30 avant l'alignement des délais, **30 sur 30** après ; **16 sur 16** avec le scénario des couleurs rejoué sur mobile et l'écran de préparation.
 - Lancement mesuré sur un téléphone simulé (Chromium, carte graphique, taille Pixel 7, processeur ralenti quatre fois). Avant : deux tâches longues de 134 et 104 millisecondes sur les premières images visibles. Après : les tâches longues (242 et 70 millisecondes) tombent pendant l'écran de préparation, levé à 581 millisecondes du lancement ; aucune ensuite, et l'image la plus longue des trois premières secondes visibles dure 17 millisecondes.
@@ -199,6 +205,9 @@ Le plan de l'étape 4.2, le journal et les commentaires du rendu répétaient qu
 
 Nouveau, ouvert par cette étape :
 
+- **Une page privée de processeur perd sa connexion au serveur, et ne la rétablit pas.** Vu en local, avec huit scénarios en parallèle : la page du scénario Tactique est revenue à l'accueil avec « La connexion au serveur a été perdue », la reconnexion automatique de Socket.IO étant coupée depuis l'étape 4.1. Les échecs de bout en bout en local sont fermés en jouant quatre scénarios à la fois (voir « Tests »). La fragilité du jeu, elle, relève de l'étape 2.5 (reconnexion en cours de partie) : un téléphone lent ou une connexion mobile qui hésite produiront la même coupure.
+- **La pluie coûte au chargement du décor.** Mesuré sur un téléphone simulé (Chromium, taille Pixel 7, processeur ralenti quatre fois) : décor chargé en 1 166 à 1 254 millisecondes sur Rainy Tokyo, contre 485 à 508 sur Tokyo, et pire image des premières images à 335 à 361 millisecondes contre 208 à 213. Ce temps tombe pendant le compte à rebours du salon, où le décor se précharge, et les premières images sous l'écran de préparation. Trois images de 2 000 par 1 500 pixels restent en mémoire graphique pendant la partie.
+
 - **Un point flottant a manqué une fois en jeu.** En Classique, pendant une série de ralliements, le score est passé de 1 à 7 sans qu'aucun point flottant ne soit relevé dans la page. Dans une autre partie, la capture suivante en a bien posé un. Ce n'était pas reproductible ; la cause la plus probable est un onglet en arrière-plan, où le navigateur suspend la boucle de rendu. À surveiller en jeu.
 - **La fluidité sur iPhone reste à confirmer.** La densité plafonnée divise par plus de deux les pixels de chaque image, mais WebKit sans carte graphique ne mesure pas la cadence d'un téléphone. Si les saccades persistent, les pistes suivantes sont la lueur, calculée sur tout l'écran, et les deux sprites par personnage de la recoloration.
 - **Le lancement sur téléphone reste à confirmer.** Le préchargement et l'écran de préparation déplacent le coût des premières images hors du jeu visible, mesuré sur un téléphone simulé ; seul un vrai iPhone dit si trois secondes suffisent. Si la partie rame encore après l'écran, les pistes suivantes sont un décor réduit sur téléphone (deux textures de 3 000 par 2 000 pixels) et la lueur.
@@ -220,7 +229,8 @@ Résolu par cette étape, repris du handoff 5.3 : la mise en ligne qui coupait l
 - `a99b63d` (seconde série consignée) : documentation seule.
 - `a781c98` (cadrage mobile à 360, partie préparée) : **verte**, exécution 34892564825 : « Types, linter et tests », « Bout en bout » et « Mise en ligne ». La production sert ce commit, vérifié sur `/sante`. En émulation iPhone contre la production : vue resserrée, canevas de 780 par 1 328 pixels, bouton de localisation en place. Lancement mesuré contre la production (Chromium, taille Pixel 7, processeur ralenti quatre fois) : écran de préparation levé à 522 millisecondes, tâches longues de 202 et 71 millisecondes sous l'écran, aucune ensuite, image la plus longue des trois premières secondes visibles à 33 millisecondes. Les trois refus de feuille de style relevés dans la console de WebKit viennent des captures d'écran de Playwright : aucun sans capture, un par capture.
 - `92fb347` (couleurs de naissance des bots) : **verte**, exécution 34895399195. La production sert ce commit, vérifié sur `/sante`.
-- Le commit qui consigne la vitesse sur téléphone ne touche que la documentation.
+- `5dae93a` (vitesse sur téléphone) : documentation seule.
+- `1befc5e` (classement sous le temps, aucun halo, pluie de Rainy Tokyo) : **verte**, exécution 34943551024 : « Types, linter et tests », « Bout en bout » (6,5 minutes, contre 6,0 et 5,8 aux deux commits précédents, avec sept scénarios de plus) et « Mise en ligne ». La production sert ce commit, vérifié sur `/sante`.
 
 `master` n'a pas été touché.
 
