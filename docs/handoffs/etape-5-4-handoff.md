@@ -24,6 +24,7 @@ Vérifier en jouant, écran par écran et règle par règle, que la réécriture
 - **Troisième série, en production** : le zoom à 360 ne se voyait pas encore, la mise en ligne de `a781c98` n'étant pas terminée ; en ligne quelques minutes plus tard, vérifié en émulation iPhone. Et les bots naissaient tous blancs, alors que le jeu d'origine leur donne une couleur quelconque (`getRandomColor`) : régression du portage (défaut X36). Ils naissent maintenant d'une couleur tirée de la graine, jamais celle d'un joueur ; la règle 11 se précise pour que ces couleurs ne se répandent pas : seule la couleur d'un joueur présent se transmet.
 - **Bonus de vitesse trop rapide sur téléphone** : le moteur n'a pas de défaut, il applique le multiplicateur d'origine. Mais sur téléphone, le jeu d'origine allait moins vite que la réécriture (120 pixels par seconde, mesuré sur son déploiement, contre 150) et montrait une vue plus large (600 pixels contre 360) : à l'écran, près de deux fois plus lent. L'audit et le journal annonçaient à tort 375 pixels par seconde ; corrigés. Le porteur du projet a choisi de garder la même vitesse sur tous les appareils.
 - **Trois derniers défauts sur téléphone** : le classement descendait sur le temps restant dès le deuxième joueur, il passe dessous ; les ninjas de couleur claire rayonnaient, la lueur étant posée sur tout le calque des personnages alors que le jeu d'origine ne faisait briller que les flèches de localisation ; la pluie de Rainy Tokyo n'avait jamais été portée, elle revient, découpée pour tenir dans la mémoire graphique d'un téléphone.
+- **Bout en bout en local, et mise en ligne ciblée resserrée** : la suite échouait par intermittence à huit scénarios en parallèle, fermée en en jouant quatre ; le commit qui l'a fixé, `9dadf92`, ne touchait que `playwright.config.ts` et la documentation, et a pourtant remis le serveur en ligne. L'outillage des tests, du linter et du formateur posé à la racine ne déclenche plus de mise en ligne.
 - **Grille de recette** : `docs/recette/recette-5-4.md`, 76 cas (17 signalements, 59 cas de recette), chacun avec son attendu, sa source, ses preuves et son verdict. Déroulée en local (un joueur, deux onglets, fenêtre mobile, trois cartes dont une en miroir, mode Tactique) et en production.
 - **Jeu d'origine comme référence** : le déploiement encore en ligne sert exactement le `client.js` et le `styles.css` de `legacy/`, vérifié par empreinte.
 
@@ -121,6 +122,12 @@ Commit des passages locaux de bout en bout :
 
 - `playwright.config.ts` : quatre scénarios à la fois en local, au lieu de la moitié des processeurs logiques.
 - La grille (I2) et ce handoff.
+
+Commit de la mise en ligne ciblée resserrée :
+
+- `deploiement/verifications.ts` et test : l'outillage des tests, du linter et du formateur posé à la racine est écarté par son nom exact ; `tsconfig.base.json`, `tsconfig.json`, `package.json`, `pnpm-workspace.yaml` et `.node-version` restent des fichiers du jeu.
+- `docs/deploiement.md` : la règle.
+- La grille (J5) et ce handoff.
 
 Commits de ce handoff :
 
@@ -231,6 +238,8 @@ Résolu par cette étape, repris du handoff 5.3 : la mise en ligne qui coupait l
 - `92fb347` (couleurs de naissance des bots) : **verte**, exécution 34895399195. La production sert ce commit, vérifié sur `/sante`.
 - `5dae93a` (vitesse sur téléphone) : documentation seule.
 - `1befc5e` (classement sous le temps, aucun halo, pluie de Rainy Tokyo) : **verte**, exécution 34943551024 : « Types, linter et tests », « Bout en bout » (6,5 minutes, contre 6,0 et 5,8 aux deux commits précédents, avec sept scénarios de plus) et « Mise en ligne ». La production sert ce commit, vérifié sur `/sante`.
+- `9dadf92` (quatre scénarios de bout en bout à la fois en local) : **verte**, exécution 34945922796, mise en ligne comprise. Elle n'aurait pas dû partir : ce commit ne changeait que `playwright.config.ts` et la documentation. Défaut de la règle de mise en ligne ciblée, corrigé au commit suivant.
+- Le commit de la mise en ligne ciblée resserrée change le code de mise en ligne lui-même : il part en ligne, ce qui est attendu.
 
 `master` n'a pas été touché.
 

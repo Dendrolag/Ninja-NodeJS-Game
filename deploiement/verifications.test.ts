@@ -64,6 +64,23 @@ describe('fichiersQuiChangentLeJeu', () => {
     ).toEqual([]);
   });
 
+  // Recette de l'etape 5.4: le commit 9dadf92, qui ne changeait que le nombre de
+  // scenarios de bout en bout joues a la fois en local, a remis le serveur en ligne.
+  it('ecarte l outillage des tests, du linter et du formateur pose a la racine', () => {
+    expect(
+      fichiersQuiChangentLeJeu([
+        'playwright.config.ts',
+        'vitest.config.ts',
+        'vitest.workspace.ts',
+        'tsconfig.tests.json',
+        'tsconfig.e2e.json',
+        'eslint.config.js',
+        '.prettierrc.json',
+        '.prettierignore',
+      ]),
+    ).toEqual([]);
+  });
+
   it('garde tout ce qui compose la page, le serveur ou leur mise en ligne', () => {
     const jeu = [
       'packages/client/src/rendu/pixi.ts',
@@ -72,6 +89,10 @@ describe('fichiersQuiChangentLeJeu', () => {
       'assets/ninja/idle.png',
       'package.json',
       'pnpm-lock.yaml',
+      'pnpm-workspace.yaml',
+      'tsconfig.base.json',
+      'tsconfig.json',
+      '.node-version',
       'deploiement/deployer.ts',
       '.github/workflows/ci.yml',
     ];

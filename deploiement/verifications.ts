@@ -57,6 +57,24 @@ const DOSSIERS_HORS_DU_JEU: readonly string[] = ['docs/', 'tests/', 'legacy/', '
 const FICHIERS_HORS_DU_JEU: readonly string[] = ['.md', '.test.ts', '.spec.ts'];
 
 /**
+ * L'outillage pose a la racine du depot, qui ne sert qu'aux tests, au linter ou au
+ * formateur: aucun ne change ce qui tourne en ligne. Noms exacts, et non motifs:
+ * tsconfig.base.json et tsconfig.json, eux, construisent les paquets du jeu.
+ * Ajoute a la recette de l'etape 5.4, apres qu'un commit ne changeant que
+ * playwright.config.ts eut remis le serveur en ligne.
+ */
+const OUTILLAGE_HORS_DU_JEU: readonly string[] = [
+  'playwright.config.ts',
+  'vitest.config.ts',
+  'vitest.workspace.ts',
+  'tsconfig.tests.json',
+  'tsconfig.e2e.json',
+  'eslint.config.js',
+  '.prettierrc.json',
+  '.prettierignore',
+];
+
+/**
  * Parmi ces fichiers changes, ceux qui composent le jeu en ligne ou sa mise en ligne.
  *
  * UNE MISE EN LIGNE COUPE LES PARTIES EN COURS: elle ne se justifie que si quelque
@@ -68,7 +86,8 @@ export function fichiersQuiChangentLeJeu(fichiers: readonly string[]): readonly 
   return fichiers.filter(
     (fichier) =>
       !DOSSIERS_HORS_DU_JEU.some((dossier) => fichier.startsWith(dossier)) &&
-      !FICHIERS_HORS_DU_JEU.some((fin) => fichier.endsWith(fin)),
+      !FICHIERS_HORS_DU_JEU.some((fin) => fichier.endsWith(fin)) &&
+      !OUTILLAGE_HORS_DU_JEU.includes(fichier),
   );
 }
 
