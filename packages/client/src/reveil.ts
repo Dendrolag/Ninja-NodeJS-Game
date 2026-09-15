@@ -69,9 +69,10 @@ export function brancherLeReveil(options: OptionsReveil): void {
 
   options.ecouter(
     reseau.surRefus((motif) => {
-      // Pendant un retour en partie (etape 2.5), c'est retour.ts qui reessaie: un
-      // serveur qui ne repond pas n'y est pas un serveur qui dort.
-      if (magasin.etat.connexion === 'retour') {
+      // Pendant un retour en partie (etape 2.5) ou le retablissement d'un lien perdu
+      // (etape 2.6), c'est retour.ts ou retablissement.ts qui reessaie: un serveur qui
+      // ne repond pas n'y est pas un serveur qui dort.
+      if (magasin.etat.connexion === 'retour' || magasin.etat.connexion === 'retablissement') {
         return;
       }
 

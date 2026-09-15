@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { Action } from './actions.js';
 import type { Ecran } from './ecrans.js';
-import { ecranSuivant } from './ecrans.js';
+import { ECRANS_DE_MENU, ecranSuivant } from './ecrans.js';
 
 /** Un salon minimal, dans le statut que le test veut examiner. */
 function salon(statut: StatutPartie): InfosSalon {
@@ -83,9 +83,32 @@ describe('transitions d ecran', () => {
     }
   });
 
-  it('ramene a l accueil quand le lien est perdu, depuis n importe quel ecran', () => {
-    for (const ecran of TOUS_LES_ECRANS) {
-      expect(ecranSuivant(ecran, { type: 'connexionPerdue' })).toBe('accueil');
+  it('laisse le joueur sur son ecran pendant que le lien se retablit, sauf le jeu (etape 2.6)', () => {
+    for (const ecran of [...ECRANS_DE_MENU, 'salon', 'fin'] as const) {
+      expect(ecranSuivant(ecran, { type: 'lienPerdu' })).toBe(ecran);
+    }
+
+    expect(ecranSuivant('jeu', { type: 'lienPerdu', avis: 'Place perdue.' })).toBe('accueil');
+    expect(ecranSuivant('salon', { type: 'salonRedemande' })).toBe('salon');
+  });
+
+  it('ne quitte que le salon et le jeu quand le lien n a pas pu etre retabli (etape 2.6)', () => {
+    expect(ecranSuivant('salon', { type: 'connexionPerdue' })).toBe('accueil');
+    expect(ecranSuivant('jeu', { type: 'connexionPerdue' })).toBe('accueil');
+    expect(ecranSuivant('fin', { type: 'connexionPerdue' })).toBe('fin');
+
+    for (const ecran of ECRANS_DE_MENU) {
+      expect(ecranSuivant(ecran, { type: 'connexionPerdue' })).toBe(ecran);
+    }
+  });
+
+  it('ne laisse aucun ecran de partie quand le lien est refuse (etape 2.6)', () => {
+    for (const ecran of ['salon', 'jeu', 'fin'] as const) {
+      expect(ecranSuivant(ecran, { type: 'connexionRefusee', motif: 'Refus.' })).toBe('accueil');
+    }
+
+    for (const ecran of ECRANS_DE_MENU) {
+      expect(ecranSuivant(ecran, { type: 'connexionRefusee', motif: 'Refus.' })).toBe(ecran);
     }
   });
 

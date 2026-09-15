@@ -291,17 +291,20 @@ export function monterSalon(contexte: ContexteEcran): EcranAffiche {
       montrer(blocCode, modele.code !== undefined);
       ecrireTexte(consigne, modele.consigne);
       montrer(ouvrirReglages, modele.jeSuisHote);
+      ouvrirReglages.disabled = !modele.lienEtabli;
       montrer(lancer, modele.peutLancer);
 
       // Un hote qui cede sa place ne garde pas un panneau qu'il ne peut plus
-      // enregistrer.
-      if (!modele.jeSuisHote && panneau.ouvert) {
+      // enregistrer. Sans lien non plus: l'enregistrement ne partirait pas, et le salon
+      // retrouve peut avoir un autre hote (etape 2.6).
+      if ((!modele.jeSuisHote || !modele.lienEtabli) && panneau.ouvert) {
         panneau.fermer();
       }
 
       majJoueurs(modele.joueurs);
       majRecapitulatif(modele.recapitulatif);
       chat.afficher(modele.messages, etat.refus?.action === 'chat' ? etat.refus : undefined);
+      chat.activer(modele.lienEtabli);
 
       const compte = modele.compteARebours;
       montrer(compteARebours, compte !== undefined);

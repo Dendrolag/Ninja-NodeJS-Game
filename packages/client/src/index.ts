@@ -131,6 +131,15 @@ export { creerReseauSocketIo } from './reseauSocketIo.js';
 export type { Annulation, Minuterie, MinuterieManuelle } from './minuterie.js';
 export { creerMinuterieManuelle, minuterieNavigateur } from './minuterie.js';
 
+export type { CommandesDuRetablissement, OptionsRetablissement } from './retablissement.js';
+export {
+  ATTENTE_ENTRE_DEUX_RETABLISSEMENTS_MS,
+  AVIS_PARTIE_PERDUE,
+  AVIS_SALON_PERDU,
+  DUREE_DU_RETABLISSEMENT_MS,
+  brancherLeRetablissement,
+} from './retablissement.js';
+
 export type { CommandesDeRetour, OptionsRetour } from './retour.js';
 export { ATTENTE_ENTRE_DEUX_RETOURS_MS, AVIS_PLACE_REPRISE, brancherLeRetour } from './retour.js';
 
@@ -236,8 +245,17 @@ export { monterApplication } from './interface/application.js';
 
 export type { ContexteEcran, EcranAffiche, MonteurEcran } from './interface/ecrans/types.js';
 
-export type { EtatDuLien, ModeleAccueil } from './interface/modeles/accueil.js';
+export type { ModeleAccueil } from './interface/modeles/accueil.js';
 export { AVIS_SESSION_EXPIREE, modeleAccueil } from './interface/modeles/accueil.js';
+
+export type { EtatDuLien, ModeleDuLien } from './interface/modeles/lien.js';
+export {
+  TEXTE_LIEN_PERDU,
+  TEXTE_RETABLISSEMENT,
+  TEXTE_RETABLISSEMENT_DU_SALON,
+  lienAMontrer,
+  modeleDuLien,
+} from './interface/modeles/lien.js';
 
 export type {
   EnvoiDeCompte,

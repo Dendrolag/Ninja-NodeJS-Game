@@ -21,6 +21,7 @@ import { creerCoffreDeJeton } from './comptes/coffre.js';
 import { creerHorlogeClientManuelle } from './horloge.js';
 import { creerMinuterieManuelle } from './minuterie.js';
 import { SERVEUR_INJOIGNABLE, creerReseauFactice } from './reseau.js';
+import { AVIS_PARTIE_PERDUE } from './retablissement.js';
 import { ATTENTE_ENTRE_DEUX_RETOURS_MS, AVIS_PLACE_REPRISE } from './retour.js';
 
 /** Le jeton remis a l'entree. */
@@ -121,7 +122,7 @@ describe('la place en partie', () => {
     expect(client.etat.moi).toBeUndefined();
   });
 
-  it('oublie la place a la fin de la partie, et un lien tombe ensuite est une perte', () => {
+  it('oublie la place a la fin de la partie: un lien tombe ensuite se retablit sans place a reprendre', () => {
     const { reseau, client, coffreDeRetour, entrerEnPartie } = monter();
 
     entrerEnPartie();
@@ -130,7 +131,11 @@ describe('la place en partie', () => {
     expect(coffreDeRetour.lire()).toBeUndefined();
 
     reseau.simulerDeconnexion();
-    expect(client.etat.connexion).toBe('perdue');
+    expect(client.etat.connexion).toBe('retablissement');
+    expect(client.etat.ecran).toBe('fin');
+
+    reseau.simulerConnexion();
+    expect(reseau.dernier('revenir')).toBeUndefined();
   });
 
   it('une place reprise dans une autre page ramene a l accueil, le dit, et est oubliee', () => {
@@ -198,11 +203,15 @@ describe('le retour apres un lien tombe en pleine partie', () => {
       ouvertures + DELAI_DE_RETOUR_MS / ATTENTE_ENTRE_DEUX_RETOURS_MS,
     );
 
+    const ouverturesAuDelai = reseau.ouvertures.length;
     reseau.simulerRefus(SERVEUR_INJOIGNABLE);
 
-    expect(client.etat.connexion).toBe('perdue');
+    // La place est perdue; le lien, lui, continue d'etre retabli (etape 2.6).
+    expect(client.etat.connexion).toBe('retablissement');
     expect(client.etat.ecran).toBe('accueil');
+    expect(client.etat.avisDeRetour).toBe(AVIS_PARTIE_PERDUE);
     expect(coffreDeRetour.lire()).toBeUndefined();
+    expect(reseau.ouvertures).toHaveLength(ouverturesAuDelai + 1);
     expect(minuterie.enAttente).toBe(0);
   });
 
@@ -282,17 +291,22 @@ describe('le retour apres un lien tombe en pleine partie', () => {
     expect(client.etat.connexion).toBe('connecte');
   });
 
-  it('dans le salon, un lien tombe est une perte: la place n y est pas gardee', () => {
+  it('dans le salon, la place n est pas gardee: seul le lien se retablit (etape 2.6)', () => {
     const { reseau, client, coffreDeRetour, entrerAuSalon } = monter();
 
     entrerAuSalon();
     const ouvertures = reseau.ouvertures.length;
     reseau.simulerDeconnexion();
 
-    expect(client.etat.connexion).toBe('perdue');
-    expect(client.etat.ecran).toBe('accueil');
+    expect(client.etat.connexion).toBe('retablissement');
+    expect(client.etat.ecran).toBe('salon');
     expect(coffreDeRetour.lire()).toBeUndefined();
-    expect(reseau.ouvertures).toHaveLength(ouvertures);
+    expect(reseau.ouvertures).toHaveLength(ouvertures + 1);
+
+    reseau.simulerConnexion();
+
+    expect(reseau.dernier('revenir')).toBeUndefined();
+    expect(reseau.dernier('rejoindre')?.[0]).toStrictEqual({ idRoom: 'partie-1', pseudo: 'Alice' });
   });
 
   it('n oublie aucun essai planifie en se fermant', () => {

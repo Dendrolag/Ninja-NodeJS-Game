@@ -37,6 +37,7 @@ import { monterAide } from './composants/aide.js';
 import { monterFilDAnnonces } from './composants/annonces.js';
 import { monterFenetreDuCode } from './composants/codeDeSecours.js';
 import { monterCompteDeLEntete } from './composants/compte.js';
+import { monterLigneDuLien } from './composants/lien.js';
 import { monterNavigation } from './composants/navigation.js';
 import { monterPanneauSon } from './composants/son.js';
 import { bouton, creer, ecrireTexte } from './dom.js';
@@ -128,6 +129,16 @@ export function monterApplication(options: OptionsApplication): Application {
   const compte = monterCompteDeLEntete(doc, client);
   const navigation = monterNavigation(doc, client);
 
+  const recharger =
+    options.recharger ??
+    (() => {
+      doc.defaultView?.location.reload();
+    });
+
+  // Ce qui se passe entre la page et le serveur, sur les ecrans qui ne le disent pas
+  // eux-memes (etape 2.6).
+  const ligneDuLien = monterLigneDuLien(doc, client, recharger);
+
   const libelle = creer(doc, 'span', { classe: 'marque-ecran' });
   const scene = creer(doc, 'main', { classe: 'scene-ecran' });
 
@@ -171,6 +182,7 @@ export function monterApplication(options: OptionsApplication): Application {
         }),
       ),
     ),
+    ligneDuLien.racine,
     scene,
     annonces.racine,
     aide.racine,
@@ -191,11 +203,7 @@ export function monterApplication(options: OptionsApplication): Application {
     ouvrirSon: () => {
       panneauSon.ouvrir();
     },
-    recharger:
-      options.recharger ??
-      (() => {
-        doc.defaultView?.location.reload();
-      }),
+    recharger,
   };
 
   /** Monte un ecran, l'installe dans la page, et lance sa musique. */
@@ -219,6 +227,7 @@ export function monterApplication(options: OptionsApplication): Application {
   compte.afficher(precedent);
   navigation.afficher(precedent);
   fenetreDuCode.afficher(precedent);
+  ligneDuLien.afficher(precedent);
 
   const surChangement = (): void => {
     const etat = client.etat;
@@ -235,6 +244,7 @@ export function monterApplication(options: OptionsApplication): Application {
     compte.afficher(etat);
     navigation.afficher(etat);
     fenetreDuCode.afficher(etat);
+    ligneDuLien.afficher(etat);
 
     if (sons !== undefined && !(precedent.ecran === 'jeu' && etat.ecran === 'jeu')) {
       for (const nom of sonsDuChangement(precedent, etat)) {
@@ -293,6 +303,7 @@ export function monterApplication(options: OptionsApplication): Application {
       aide.demonter();
       panneauSon.demonter();
       fenetreDuCode.demonter();
+      ligneDuLien.demonter();
       annonces.demonter();
       racine.remove();
     },

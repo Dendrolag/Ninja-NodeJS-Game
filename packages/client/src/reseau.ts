@@ -63,7 +63,15 @@ export interface Reseau {
    */
   ouvrir(authentification: AuthentificationReseau): void;
 
-  /** Envoie un message au serveur. */
+  /**
+   * Envoie un message au serveur.
+   *
+   * SANS LIEN ETABLI, LE MESSAGE EST PERDU (etape 2.6). Aucune file d'attente: une
+   * commande emise pendant une coupure ne doit pas partir sur le lien suivant, avant
+   * la demande qui fait revenir le joueur dans sa partie ou dans son salon. Un
+   * message qui attend une reponse n'en recoit alors aucune: c'est a l'appelant de ne
+   * le demander qu'avec un lien.
+   */
   emettre<Nom extends NomMontant>(nom: Nom, ...arguments_: ArgumentsMontants<Nom>): void;
 
   /** Ecoute un message du serveur. Rend la fonction qui arrete d'ecouter. */
@@ -166,8 +174,11 @@ export function creerReseauFactice(): ReseauFactice {
       connecte = false;
     },
 
+    // Comme le vrai transport, rien ne part sans lien etabli (etape 2.6).
     emettre: (nom, ...arguments_) => {
-      emis.push({ nom, arguments_ });
+      if (connecte) {
+        emis.push({ nom, arguments_ });
+      }
     },
 
     sur: (nom, gestionnaire) => {

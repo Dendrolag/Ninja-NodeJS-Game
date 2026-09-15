@@ -69,6 +69,27 @@ function stockageDeSession(): Storage | undefined {
   }
 }
 
+/**
+ * Previent quand la page a une raison de croire le reseau revenu (etape 2.6): elle
+ * repasse au premier plan, ou le navigateur annonce le reseau retrouve. Un lien perdu
+ * se rouvre alors sans attendre son prochain essai. Rend de quoi arreter d'ecouter.
+ */
+function surReseauRetrouve(gestionnaire: () => void): () => void {
+  const surVisibilite = (): void => {
+    if (document.visibilityState === 'visible') {
+      gestionnaire();
+    }
+  };
+
+  document.addEventListener('visibilitychange', surVisibilite);
+  globalThis.addEventListener('online', gestionnaire);
+
+  return () => {
+    document.removeEventListener('visibilitychange', surVisibilite);
+    globalThis.removeEventListener('online', gestionnaire);
+  };
+}
+
 const hote = document.getElementById('application');
 
 if (hote === null) {
@@ -84,6 +105,7 @@ const client = creerClient({
   comptes: creerApiComptesHttp(configuration.url === undefined ? {} : { url: configuration.url }),
   coffre: creerCoffreDeJeton(stockage),
   coffreDeRetour: creerCoffreDeJeton(stockageDeSession(), CLE_RETOUR),
+  surReseauRetrouve,
 });
 
 monterApplication({

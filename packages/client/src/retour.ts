@@ -13,8 +13,11 @@
  *   - LIEN TOMBE EN PLEINE PARTIE: la partie reste affichee, et la page rouvre le
  *     lien, toutes les ATTENTE_ENTRE_DEUX_RETOURS_MS, pendant DELAI_DE_RETOUR_MS a
  *     compter de la coupure. Des que le lien s'ouvre, elle presente le jeton.
- *     Au-dela du delai, ou si le serveur refuse le lien lui-meme (une autre version,
- *     une session expiree), la perte est definitive, comme avant l'etape 2.5.
+ *     Au-dela du delai, la place est perdue, et le lien seul continue d'etre
+ *     retabli (retablissement.ts, etape 2.6). Si le serveur refuse le lien lui-meme
+ *     (une autre version, une session expiree), la perte est definitive.
+ *   - LIEN TOMBE AILLEURS (menus, salon, fin): la place ne vaut rien, et c'est le
+ *     retablissement qui prend la main.
  *   - PAGE RECHARGEE: le coffre du jeton de retour vit dans le stockage de session,
  *     qui survit au rechargement. Des que le lien s'ouvre, le jeton est presente.
  *
@@ -56,6 +59,12 @@ export interface OptionsRetour {
   readonly authentification: () => AuthentificationReseau;
   /** Rouvre le lien comme au demarrage, quand le joueur renonce a revenir. */
   readonly rouvrir: () => void;
+  /**
+   * Passe la main au retablissement du lien (etape 2.6), a compter de cet instant: le
+   * lien est tombe hors d'une partie en cours, ou la place n'a pas pu etre reprise a
+   * temps.
+   */
+  readonly lienPerdu: (depuis: number) => void;
   /** Retient une ecoute posee, pour que le client la retire en se fermant. */
   readonly ecouter: (retirer: () => void) => void;
 }
@@ -88,11 +97,10 @@ export function brancherLeRetour(options: OptionsRetour): CommandesDeRetour {
     derniereDemande += 1;
   };
 
-  /** La place est perdue pour de bon: on l'oublie, et le lien perdu se dit. */
-  const perdreLaPlace = (): void => {
+  /** La place ne vaut plus rien: on l'oublie, et plus rien du retour ne court. */
+  const oublierLaPlace = (): void => {
     arreter();
     coffre.oublier();
-    magasin.appliquer({ type: 'connexionPerdue' });
   };
 
   /** Rouvre le lien, si la coupure court encore. */
@@ -110,8 +118,13 @@ export function brancherLeRetour(options: OptionsRetour): CommandesDeRetour {
       return;
     }
 
+    // La place est perdue, mais le lien, lui, peut encore revenir: le retablissement
+    // continue a compter de la coupure (etape 2.6).
     if (horloge.maintenant() - coupureDepuis >= DELAI_DE_RETOUR_MS) {
-      perdreLaPlace();
+      const depuis = coupureDepuis;
+
+      oublierLaPlace();
+      options.lienPerdu(depuis);
       return;
     }
 
@@ -199,10 +212,12 @@ export function brancherLeRetour(options: OptionsRetour): CommandesDeRetour {
         return;
       }
 
-      // Seule une partie en cours garde la place: dans le salon, ou pendant un retour
-      // demande au chargement, la perte du lien est une perte, comme avant.
+      // Seule une partie en cours garde la place: ailleurs, dans le salon, ou pendant un
+      // retour demande au chargement, la place ne vaut plus rien, et c'est le lien seul
+      // qui se retablit (etape 2.6).
       if (coffre.lire() === undefined || magasin.etat.ecran !== 'jeu') {
-        perdreLaPlace();
+        oublierLaPlace();
+        options.lienPerdu(horloge.maintenant());
         return;
       }
 
@@ -224,7 +239,7 @@ export function brancherLeRetour(options: OptionsRetour): CommandesDeRetour {
       }
 
       // Le serveur refuse le lien lui-meme: reessayer ne changera rien.
-      perdreLaPlace();
+      oublierLaPlace();
       magasin.appliquer({ type: 'connexionRefusee', motif });
     }),
   );

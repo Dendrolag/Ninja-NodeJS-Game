@@ -44,8 +44,19 @@ export type Action =
   | { readonly type: 'ouvertureDemandee' }
   /** Le transport est etabli. */
   | { readonly type: 'connexionEtablie' }
-  /** Le transport est tombe. Tout ce qui dependait de la partie est perdu. */
-  | { readonly type: 'connexionPerdue' }
+  /**
+   * Le lien n'a pas pu etre retabli (etape 2.6). Ce qu'on attendait du serveur ne
+   * viendra pas; un salon ou une partie sont quittes, avec cet avis s'il y en a un.
+   */
+  | { readonly type: 'connexionPerdue'; readonly avis?: string }
+  /**
+   * Le lien est tombe hors d'une partie en cours, et la page le retablit (etape 2.6).
+   * Le joueur reste sur son ecran, sauf celui du jeu: la place en partie vient alors
+   * d'etre perdue, et l'accueil le dit par cet avis.
+   */
+  | { readonly type: 'lienPerdu'; readonly avis?: string }
+  /** Le lien est retabli, et la page redemande a entrer dans le salon qu'elle montrait (etape 2.6). */
+  | { readonly type: 'salonRedemande' }
   /**
    * Le transport est tombe en pleine partie, et la page tente d'y revenir (etape 2.5).
    * La partie reste affichee telle qu'elle etait.
@@ -56,11 +67,14 @@ export type Action =
    * 2.5): apres une coupure, ou au chargement de la page.
    */
   | { readonly type: 'retourDemande' }
-  /** Le serveur a rendu sa place au joueur, et decrit la partie (etape 2.5). */
+  /**
+   * Le serveur a rendu sa place au joueur (etape 2.5), ou l'a fait rentrer dans le
+   * salon qu'il avait perdu (etape 2.6), et decrit la partie.
+   */
   | { readonly type: 'retourAccepte'; readonly salon: InfosSalon }
   /**
-   * La place n'a pas pu etre reprise, ou a ete reprise ailleurs, pour ce motif
-   * (etape 2.5). Le lien, lui, est ouvert.
+   * La place n'a pas pu etre reprise, ou a ete reprise ailleurs (etape 2.5), ou le
+   * salon n'a pas pu etre retrouve (etape 2.6), pour ce motif. Le lien, lui, est ouvert.
    */
   | { readonly type: 'retourRefuse'; readonly motif: string }
   /** Le serveur dit quel est notre joueur dans la partie ou l'on entre (etape 2.5). */

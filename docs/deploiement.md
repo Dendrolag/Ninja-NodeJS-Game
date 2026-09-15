@@ -69,7 +69,7 @@ node --disable-warning=ExperimentalWarning deploiement/deployer.ts
 
 ### Pendant la mise en ligne
 
-Entre la mise en ligne du serveur et la promotion de la page, quelques secondes, une page de l'ancienne version est refusée par le nouveau serveur avec « Une nouvelle version du jeu est en ligne. Rechargez la page. ». Les parties en cours sur l'ancien serveur s'arrêtent quand Render l'éteint : chaque mise en ligne coupe les parties en cours.
+Entre la mise en ligne du serveur et la promotion de la page, quelques secondes, une page de l'ancienne version est refusée par le nouveau serveur avec « Une nouvelle version du jeu est en ligne. Rechargez la page. ». Les parties en cours sur l'ancien serveur s'arrêtent quand Render l'éteint : chaque mise en ligne coupe les parties en cours. Hors partie, une page ouverte rétablit son lien d'elle-même pendant une minute et demie (étape 2.6) ; une page de l'ancienne version se voit alors refuser, et propose de se recharger.
 
 ## Migrations de la base
 

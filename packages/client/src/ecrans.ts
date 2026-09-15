@@ -87,12 +87,27 @@ export function ecranSuivant(ecran: Ecran, action: Action): Ecran {
     // On n'est plus dans aucune partie, volontairement ou non: retour a l'accueil.
     // Une entree refusee n'a jamais fait quitter l'accueil, la citer ici n'aurait
     // donc rien change; c'est justement pour cela qu'elle n'y est pas.
-    // Un lien tombe en pleine partie, lui, laisse la partie affichee le temps d'y
-    // revenir (etape 2.5): seule sa perte definitive ramene a l'accueil.
     case 'sortie':
-    case 'connexionPerdue':
     case 'retourRefuse':
       return 'accueil';
+
+    // UN LIEN PERDU NE FAIT QUITTER QUE LE JEU. Tombe en pleine partie, il laisse la
+    // partie affichee le temps d'y revenir (etape 2.5), et n'arrive ici qu'une fois
+    // la place perdue. Ailleurs, le joueur reste ou il est pendant que la page
+    // retablit le lien (etape 2.6): le salon, le temps d'y revenir, la fin, avec son
+    // classement, et les menus, avec ce qui y est saisi.
+    case 'lienPerdu':
+      return ecran === 'jeu' ? 'accueil' : ecran;
+
+    // Un lien qui ne revient pas laisse un salon ou une partie qui ne sont plus les
+    // notres.
+    case 'connexionPerdue':
+      return ecran === 'salon' || ecran === 'jeu' ? 'accueil' : ecran;
+
+    // Un lien refuse ne laisse aucun ecran de partie: la suite se choisit sur
+    // l'accueil (reessayer, continuer en invite, recharger).
+    case 'connexionRefusee':
+      return estUnEcranDeMenu(ecran) ? ecran : 'accueil';
 
     case 'navigation':
       return estUnEcranDeMenu(ecran) ? action.vers : ecran;

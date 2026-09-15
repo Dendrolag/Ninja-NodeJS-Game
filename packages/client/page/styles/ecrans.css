@@ -173,6 +173,33 @@
   padding: 28px var(--marge-page) 48px;
 }
 
+/* La ligne d'etat du lien, entre l'en-tete et l'ecran (etape 2.6). */
+.ligne-lien {
+  width: 100%;
+  max-width: var(--largeur-page);
+  margin: 16px auto 0;
+  padding: 0 var(--marge-page);
+}
+
+.ligne-lien-contenu {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 178, 62, 0.3);
+  border-radius: var(--rayon-controle);
+  background: rgba(255, 178, 62, 0.08);
+  color: #ffd9a0;
+  font-size: 13px;
+}
+
+.ligne-lien-texte {
+  flex: 1;
+  min-width: 12em;
+  margin: 0;
+}
+
 /* En partie, le terrain prend tout l'ecran: l'en-tete s'efface. */
 .application[data-ecran='jeu'] .entete {
   display: none;
@@ -1481,12 +1508,6 @@
 .creation-erreur {
   color: var(--rose-clair);
   font-size: 13px;
-}
-
-.parties-lien {
-  color: var(--texte-tertiaire);
-  font-family: var(--police-donnees);
-  font-size: 12px;
 }
 
 .parties-liste {

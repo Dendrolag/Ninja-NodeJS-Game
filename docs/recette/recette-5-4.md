@@ -45,6 +45,7 @@ Présentés au porteur du projet, qui a décidé de leur sort.
 | Scénarios de bout en bout instables en local                     | Traité dans l'étape (règle 7) | Voir le cas I2                                                                          |
 | Reconnexion en cours de partie                                   | Planifié, puis traité         | Étape 2.5 du ROADMAP, terminée le 15 septembre 2026                                     |
 | Gestion du mot de passe                                          | Planifié, puis traité         | Étape 3.4 du ROADMAP, terminée le 15 septembre 2026                                     |
+| Une page qui perd son lien hors partie ne le rétablit pas        | Planifié, puis traité         | Étape 2.6 du ROADMAP, terminée le 15 septembre 2026                                     |
 
 ## 3. La grille
 

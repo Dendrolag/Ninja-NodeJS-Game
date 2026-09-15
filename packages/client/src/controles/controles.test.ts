@@ -64,6 +64,8 @@ describe('une touche de deplacement emet l evenement deplacer', () => {
   it('envoie une intention vers le haut quand on enfonce Z', () => {
     const reseau = creerReseauFactice();
     const client = creerClient({ reseau, horloge: creerHorlogeClientManuelle() });
+    // Rien ne part sans lien (etape 2.6).
+    reseau.simulerConnexion();
     const controles = new Controles();
     const cible = cibleDEssai();
     brancherClavier(controles, { cible, fenetre: cibleDEssai() });
@@ -87,6 +89,8 @@ describe('une touche de deplacement emet l evenement deplacer', () => {
   it('envoie un arret quand on relache la touche', () => {
     const reseau = creerReseauFactice();
     const client = creerClient({ reseau, horloge: creerHorlogeClientManuelle() });
+    // Rien ne part sans lien (etape 2.6).
+    reseau.simulerConnexion();
     const controles = new Controles();
     const cible = cibleDEssai();
     brancherClavier(controles, { cible, fenetre: cibleDEssai() });

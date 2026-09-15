@@ -15,12 +15,22 @@
  * joue en invites. Un scenario qui a besoin de comptes en fournit, tenus en memoire
  * (tests/outils/comptes-en-memoire.ts); rien n'est ajoute au jeu pour lui.
  *
+ * IL S'ETEINT ET SE RALLUME SUR LE MEME PORT (etape 2.6), comme un serveur qui
+ * redemarre pour une mise en ligne: les pages ouvertes perdent leur lien, ne
+ * joignent plus rien, puis retrouvent le serveur a la meme adresse. Les parties,
+ * elles, ne survivent pas a l'extinction, comme en production.
+ *
  * Le serveur est importe depuis sa compilation, que la configuration Playwright
  * produit avant les scenarios (harnais/compiler.ts), comme le client empaquete.
  */
 
 import { DOSSIER_WEB } from '../../../packages/client/scripts/empaqueter.js';
-import type { GameRoom, ServiceDeComptes } from '../../../packages/server/dist/index.js';
+import type {
+  GameRoom,
+  OptionsServeur,
+  ServeurMonte,
+  ServiceDeComptes,
+} from '../../../packages/server/dist/index.js';
 import {
   ChargeurDeTerrain,
   demarrerServeur,
@@ -51,16 +61,22 @@ export interface ServeurDeJeu {
    * erreur du scenario, signalee comme telle.
    */
   partie(): GameRoom;
+  /** Eteint le serveur: les pages perdent leur lien, et ne le retrouvent pas. */
+  eteindre(): Promise<void>;
+  /** Rallume le serveur eteint, sur le meme port. */
+  rallumer(): Promise<void>;
   arreter(): Promise<void>;
 }
 
 /** Demarre le serveur de jeu sur un port libre. */
 export async function demarrerLeJeu(options: OptionsDuJeu = {}): Promise<ServeurDeJeu> {
-  const serveur = await demarrerServeur(0, {
+  const montage: OptionsServeur = {
     terrains: new ChargeurDeTerrain(),
     fichiers: { client: DOSSIER_WEB, ressources: racineRessources() },
     ...(options.comptes === undefined ? {} : { comptes: options.comptes }),
-  });
+  };
+
+  let serveur: ServeurMonte | undefined = await demarrerServeur(0, montage);
 
   const adresse = serveur.http.address();
 
@@ -68,10 +84,27 @@ export async function demarrerLeJeu(options: OptionsDuJeu = {}): Promise<Serveur
     throw new Error("Le serveur de jeu n'a pas d'adresse.");
   }
 
+  const port = adresse.port;
+
+  /** Le serveur allume, en echouant clairement s'il est eteint. */
+  const allume = (): ServeurMonte => {
+    if (serveur === undefined) {
+      throw new Error('Le serveur de jeu est eteint.');
+    }
+
+    return serveur;
+  };
+
+  const eteindre = async (): Promise<void> => {
+    const enMarche = serveur;
+    serveur = undefined;
+    await enMarche?.fermer();
+  };
+
   return {
-    url: `http://127.0.0.1:${String(adresse.port)}`,
+    url: `http://127.0.0.1:${String(port)}`,
     partie: () => {
-      const parties = serveur.jeu.rooms.toutesLesRooms;
+      const parties = allume().jeu.rooms.toutesLesRooms;
       const [unique] = parties;
 
       if (parties.length !== 1 || unique === undefined) {
@@ -82,6 +115,12 @@ export async function demarrerLeJeu(options: OptionsDuJeu = {}): Promise<Serveur
 
       return unique;
     },
-    arreter: async () => serveur.fermer(),
+    eteindre,
+    rallumer: async () => {
+      if (serveur === undefined) {
+        serveur = await demarrerServeur(port, montage);
+      }
+    },
+    arreter: eteindre,
   };
 }

@@ -76,7 +76,12 @@ export interface ModeleSalon {
   /** Le code d'invitation d'une partie privee, a partager. */
   readonly code: string | undefined;
   readonly jeSuisHote: boolean;
-  /** Le bouton de lancement est-il propose. Reserve a l'hote. */
+  /**
+   * Le lien est-il etabli. Pendant qu'il se retablit, le salon affiche n'est plus tenu
+   * a jour: lancer, regler et ecrire attendent (etape 2.6).
+   */
+  readonly lienEtabli: boolean;
+  /** Le bouton de lancement est-il propose. Reserve a l'hote, et avec un lien. */
   readonly peutLancer: boolean;
   /** La phrase qui dit ce qu'on attend. */
   readonly consigne: string;
@@ -116,6 +121,9 @@ export function modeleSalon(etat: EtatClient): ModeleSalon | undefined {
   const commande = jeSuisHote(etat);
   const compte = etat.compteARebours;
   const nombre = salon.joueurs.length;
+  // Pendant que le lien se retablit, le salon affiche n'est plus tenu a jour, et rien
+  // de ce qu'on y demanderait ne partirait (etape 2.6).
+  const lienEtabli = etat.connexion === 'connecte';
 
   return {
     titre: hote === undefined ? 'Salon' : `Salon de ${hote.pseudo}`,
@@ -135,7 +143,8 @@ export function modeleSalon(etat: EtatClient): ModeleSalon | undefined {
     privee: salon.visibilite === 'privee',
     code: salon.visibilite === 'privee' ? salon.code : undefined,
     jeSuisHote: commande,
-    peutLancer: commande && salon.statut === 'salon' && compte === undefined,
+    lienEtabli,
+    peutLancer: commande && lienEtabli && salon.statut === 'salon' && compte === undefined,
     consigne: consigne(commande, compte !== undefined, hote?.pseudo),
     recapitulatif: recapitulatif(salon.reglages),
     compteARebours:

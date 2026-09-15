@@ -20,7 +20,6 @@ import { monterChampPseudo } from '../composants/champPseudo.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import type { Glyphe } from '../icones.js';
 import { icone } from '../icones.js';
-import type { EtatDuLien } from '../modeles/accueil.js';
 import { modeleAccueil } from '../modeles/accueil.js';
 import type { ContexteEcran, EcranAffiche } from './types.js';
 
@@ -49,16 +48,6 @@ const REGLES: readonly {
       'Ils chassent les joueurs en cours de partie. Avec le bonus d’invincibilité, c’est vous qui les détruisez.',
   },
 ];
-
-/** Ce que l'accueil dit du lien avec le serveur. Un refus, lui, dit son propre motif. */
-const TEXTES_DU_LIEN: Readonly<Record<Exclude<EtatDuLien, 'refuse'>, string>> = {
-  enCours: 'Connexion au serveur…',
-  etabli: '',
-  perdu: 'La connexion au serveur a été perdue.',
-  reveil:
-    'Le serveur de jeu démarre, cela peut prendre jusqu’à une minute. Nouvel essai automatique…',
-  retour: 'Retour dans votre partie…',
-};
 
 /** Monte l'ecran d'accueil. */
 export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
@@ -241,11 +230,7 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
       partieRapide.disabled = !modele.peutJouer;
       partieRapide.toggleAttribute('aria-busy', modele.enAttente);
 
-      const texteDuLien = modele.enAttente
-        ? 'Entrée dans une partie…'
-        : modele.lien === 'refuse'
-          ? (modele.motifDuLien ?? '')
-          : TEXTES_DU_LIEN[modele.lien];
+      const texteDuLien = modele.enAttente ? 'Entrée dans une partie…' : modele.texteDuLien;
 
       ecrireTexte(lien, texteDuLien);
       montrer(lien, texteDuLien !== '');

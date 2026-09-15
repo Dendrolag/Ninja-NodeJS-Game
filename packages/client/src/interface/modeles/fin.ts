@@ -96,6 +96,11 @@ export interface ModeleFin {
   readonly lignes: readonly LigneFin[];
   /** Ce que la partie a rapporte a notre compte. Absent pour un invite. */
   readonly progression: ProgressionAffichee | undefined;
+  /**
+   * « Rejouer » est-il actif. Il demande a entrer dans une partie: pendant que le lien
+   * se retablit, la demande ne partirait pas (etape 2.6).
+   */
+  readonly peutRejouer: boolean;
 }
 
 /** Calcule l'ecran de fin, ou rien tant que la partie n'est pas finie. */
@@ -130,6 +135,7 @@ export function modeleFin(etat: EtatClient): ModeleFin | undefined {
     // c'est un compte, dont la progression arrivera.
     progression:
       etat.session.nature === 'invite' ? undefined : progressionAffichee(etat.progressionDeFin),
+    peutRejouer: etat.connexion === 'connecte',
   };
 }
 

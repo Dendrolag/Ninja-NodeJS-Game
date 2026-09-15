@@ -21,7 +21,12 @@
  */
 
 import type { Client } from '@neon-ninja/client';
-import { creerClient, creerCoffreDeJeton, creerReseauSocketIo } from '@neon-ninja/client';
+import {
+  AVIS_SALON_PERDU,
+  creerClient,
+  creerCoffreDeJeton,
+  creerReseauSocketIo,
+} from '@neon-ninja/client';
 import type { HorlogeManuelle, ServeurMonte } from '@neon-ninja/server';
 import { creerHorlogeManuelle, demarrerServeur } from '@neon-ninja/server';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -243,18 +248,126 @@ describe('le client parle a un vrai serveur', () => {
 
     expect(apres.etat.partie?.entites.some((entite) => entite.id === moi)).toBe(true);
   });
+});
 
-  it('revient a l accueil quand le lien tombe', async () => {
+describe('le lien perdu hors partie se retablit (etape 2.6)', () => {
+  /** Les etats du lien par lesquels un client est passe. */
+  function suivreLeLien(client: Client): readonly string[] {
+    const vus: string[] = [];
+
+    client.abonner((etat) => {
+      vus.push(etat.connexion);
+    });
+
+    return vus;
+  }
+
+  /** L'identifiant, cote serveur, de la connexion ouverte par ce geste. */
+  async function connexionOuvertePar(ouvrir: () => Promise<Client>): Promise<[Client, string]> {
+    const avant = new Set(serveur.io.sockets.sockets.keys());
+    const client = await ouvrir();
+    const nouvelle = [...serveur.io.sockets.sockets.keys()].find((id) => !avant.has(id));
+
+    if (nouvelle === undefined) {
+      throw new Error('Aucune connexion nouvelle sur le serveur.');
+    }
+
+    return [client, nouvelle];
+  }
+
+  it('sur l accueil, le lien coupe par le serveur revient de lui-meme, et le joueur peut entrer', async () => {
+    const client = await connecterUnClient();
+    const vus = suivreLeLien(client);
+
+    serveur.io.disconnectSockets(true);
+    await attendreQue(
+      () => vus.includes('retablissement') && client.etat.connexion === 'connecte',
+      'le lien retabli',
+    );
+
+    expect(client.etat.ecran).toBe('accueil');
+
+    client.rejoindre('Alice');
+    await attendreQue(() => client.etat.salon !== undefined, 'le salon');
+  });
+
+  it('dans un salon prive, le joueur coupe revient dans le meme salon', async () => {
+    const alice = await connecterUnClient();
+    alice.creerPartie('Alice', { mode: 'classique', visibilite: 'privee' });
+    await attendreQue(() => alice.etat.salon !== undefined, 'le salon d Alice');
+    const code = alice.etat.salon?.code;
+
+    const [bob, connexionDeBob] = await connexionOuvertePar(connecterUnClient);
+    bob.rejoindre('Bob', { code: code ?? '' });
+    await attendreQue(() => bob.etat.salon !== undefined, 'le salon de Bob');
+    const bobAvant = bob.etat.moi;
+    const vus = suivreLeLien(bob);
+
+    serveur.io.sockets.sockets.get(connexionDeBob)?.disconnect(true);
+    await attendreQue(
+      () =>
+        vus.includes('retablissement') &&
+        bob.etat.connexion === 'connecte' &&
+        bob.etat.moi !== bobAvant,
+      'le retour de Bob dans le salon',
+    );
+
+    expect(bob.etat.ecran).toBe('salon');
+    expect(bob.etat.salon?.code).toBe(code);
+    await attendreQue(
+      () => alice.etat.salon?.joueurs.map((joueur) => joueur.pseudo).join() === 'Alice,Bob',
+      'Bob de nouveau dans le salon d Alice',
+    );
+  });
+
+  it('un salon qui n existe plus ramene a l accueil, et le dit', async () => {
     const client = await connecterUnClient();
     client.rejoindre('Alice');
     await attendreQue(() => client.etat.salon !== undefined, 'le salon');
 
-    await serveur.fermer();
-    await attendreQue(() => client.etat.connexion === 'perdue', 'la perte du lien');
+    // Seule dans son salon, Alice le fait disparaitre en perdant son lien.
+    serveur.io.disconnectSockets(true);
+    await attendreQue(() => client.etat.avisDeRetour !== undefined, 'l avis du salon perdu');
 
     expect(client.etat.ecran).toBe('accueil');
+    expect(client.etat.connexion).toBe('connecte');
+    expect(client.etat.avisDeRetour).toContain(AVIS_SALON_PERDU);
     expect(client.etat.salon).toBeUndefined();
-    // Le pseudo saisi survit, pour reproposer la saisie.
-    expect(client.etat.pseudoDemande).toBe('Alice');
+  });
+
+  it('un message emis sans lien ne part pas sur le lien suivant', async () => {
+    const reseau = creerReseauSocketIo({ url });
+    let connexions = 0;
+    reseau.surConnexion(() => {
+      connexions += 1;
+    });
+
+    try {
+      reseau.ouvrir({});
+      await attendreQue(() => connexions === 1, 'le premier lien');
+
+      serveur.io.disconnectSockets(true);
+      await attendreQue(() => !reseau.connecte, 'la coupure');
+
+      let reponsesPerdues = 0;
+      reseau.emettre('listerParties', () => {
+        reponsesPerdues += 1;
+      });
+
+      reseau.ouvrir({});
+      await attendreQue(() => connexions === 2, 'le second lien');
+
+      // Une demande emise sur le nouveau lien a sa reponse: celle d'avant, si elle
+      // etait partie, aurait eu la sienne en premier.
+      let temoin = false;
+      reseau.emettre('listerParties', () => {
+        temoin = true;
+      });
+      await attendreQue(() => temoin, 'la reponse temoin');
+
+      expect(reponsesPerdues).toBe(0);
+    } finally {
+      reseau.fermer();
+    }
   });
 });

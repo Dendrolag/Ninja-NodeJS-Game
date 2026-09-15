@@ -102,6 +102,15 @@ describe('modeleSalon', () => {
     expect(modele?.compteARebours).toEqual({ secondes: 4, peutAnnuler: true });
   });
 
+  it('suspend le lancement pendant que le lien se retablit, et le dit (etape 2.6)', () => {
+    const modele = modeleSalon(etat(salon('moi'), { connexion: 'retablissement' }));
+
+    expect(modele?.lienEtabli).toBe(false);
+    expect(modele?.jeSuisHote).toBe(true);
+    expect(modele?.peutLancer).toBe(false);
+    expect(modeleSalon(etat(salon('moi')))?.lienEtabli).toBe(true);
+  });
+
   it('reserve l annulation a l hote, tant qu il est encore temps', () => {
     const tardif = { secondesRestantes: 2, annulable: false };
     const tot = { secondesRestantes: 4, annulable: true };

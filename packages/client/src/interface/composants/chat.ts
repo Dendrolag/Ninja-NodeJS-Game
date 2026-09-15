@@ -25,6 +25,8 @@ export interface Chat {
   readonly racine: HTMLElement;
   /** Met les messages affiches en accord avec ceux recus, et montre un refus du serveur. */
   afficher(messages: readonly MessageDuChat[], refus: Refus | undefined): void;
+  /** Laisse ecrire, ou non: sans lien, un message ne partirait pas (etape 2.6). */
+  activer(actif: boolean): void;
   demonter(): void;
 }
 
@@ -53,18 +55,13 @@ export function monterChat(doc: Document, client: Client): Chat {
   const erreur = creer(doc, 'p', { classe: 'chat-erreur', attributs: { role: 'alert' } });
   erreur.hidden = true;
 
-  const formulaire = creer(
-    doc,
-    'form',
-    { classe: 'chat-formulaire' },
-    saisie,
-    bouton(doc, {
-      classe: 'bouton-icone bouton-envoyer',
-      icone: 'send',
-      etiquette: 'Envoyer',
-      type: 'submit',
-    }),
-  );
+  const envoyer = bouton(doc, {
+    classe: 'bouton-icone bouton-envoyer',
+    icone: 'send',
+    etiquette: 'Envoyer',
+    type: 'submit',
+  });
+  const formulaire = creer(doc, 'form', { classe: 'chat-formulaire' }, saisie, envoyer);
 
   const racine = creer(
     doc,
@@ -163,6 +160,11 @@ export function monterChat(doc: Document, client: Client): Chat {
       }
 
       liste.scrollTop = liste.scrollHeight;
+    },
+
+    activer(actif) {
+      saisie.disabled = !actif;
+      envoyer.disabled = !actif;
     },
 
     demonter() {

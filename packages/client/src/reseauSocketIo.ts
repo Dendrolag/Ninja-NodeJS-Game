@@ -8,6 +8,11 @@
  * ressemble a une decision est ailleurs, et c'est ce qui rend ce fichier
  * remplacable.
  *
+ * LA FILE D'ATTENTE DE LA BIBLIOTHEQUE EST ECARTEE (etape 2.6). Socket.IO garde ce qui
+ * est emis sans lien et l'envoie a l'ouverture suivante: une commande emise pendant
+ * une coupure serait partie sur le lien retabli, avant la demande qui ramene le
+ * joueur dans sa partie ou son salon. Sans lien, emettre n'envoie rien.
+ *
  * LE TYPAGE EST INVERSE PAR RAPPORT AU SERVEUR, et ce n'est pas une coquetterie:
  * ce que le serveur ecoute, le client l'emet. Socket.IO prend donc les deux
  * contrats dans l'autre ordre. Les intervertir compile chez soi et ne parle plus
@@ -95,6 +100,13 @@ export function creerReseauSocketIo(options: OptionsReseauSocketIo = {}): Reseau
     },
 
     emettre: <Nom extends NomMontant>(nom: Nom, ...arguments_: ArgumentsMontants<Nom>) => {
+      // Socket.IO garde les messages emis sans lien, et les envoie a l'ouverture du
+      // lien suivant, avant meme de prevenir de la connexion. Ils sont perdus ici,
+      // comme l'interface le promet (etape 2.6).
+      if (!socket.connected) {
+        return;
+      }
+
       // La signature generique d'emit ne sait pas exprimer l'accord entre le nom
       // et ses arguments, que le contrat garantit par ailleurs.
       socket.emit(nom, ...(arguments_ as never));

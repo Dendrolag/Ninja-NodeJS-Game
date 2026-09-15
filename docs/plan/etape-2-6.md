@@ -68,6 +68,17 @@ Conditions de ROADMAP réunies, plus:
 3. Le retour en partie de l'étape 2.5 est inchangé: ses tests passent.
 4. Classique inchangé: aucun changement du moteur ni du serveur attendu, la couverture de `packages/sim` ne baisse pas.
 
+## Réconciliation en cours d'exécution (15 septembre 2026)
+
+Écarts entre cette fiche et ce qui a été construit. Le code et le journal de `docs/design/README.md` font foi.
+
+1. **L'arrêt du serveur est corrigé, hors du périmètre prévu.** À la vérification à l'écran, l'arrêt du serveur de test restait suspendu tant qu'une page était ouverte. Reproduit en Node: une connexion ouverte sans requête, comme un navigateur en ouvre d'avance, retient `server.close()` jusqu'à son expiration, et `io.close()` de Socket.IO ne rend la main qu'après. En production, l'arrêt d'une mise en ligne aurait attendu le délai de l'hébergeur, sans fermer la base. Traité selon la règle 7 dans `packages/server/src/serveur.ts`, avec ses tests (`serveur.arret.test.ts`). La définition de terminé disait « aucun changement du serveur attendu »: c'est le seul, et il ne touche pas au jeu.
+2. **Le banc d'essai du transport perd lui aussi les messages sans lien**, pour rester fidèle au vrai: deux tests des contrôles établissent désormais le lien avant d'appuyer sur une touche.
+3. **Une session qui rouvre le lien pendant un rétablissement ne l'interrompt pas** (connexion ou inscription réussie depuis un menu pendant la coupure): l'état reste en rétablissement, et ses essais continuent avec la nouvelle session.
+4. **La ligne d'état commune** se nomme `ligne-lien` (`monterLigneDuLien`); elle se montre aussi pendant l'établissement du lien et le réveil du serveur, que les écrans hors de l'accueil ne disaient pas.
+5. **Le scénario de bout en bout éteint et rallume le serveur** sur le même port (`harnais/serveur-de-jeu.ts`), plutôt que de couper le lien d'une page: la page vit ainsi des essais sur un serveur injoignable, comme lors d'une mise en ligne. Le retour dans le salon est vérifié en intégration, où le serveur coupe une seule connexion.
+6. **La vérification à l'écran** s'est faite par un script Playwright temporaire sur le serveur de test sans base, supprimé ensuite: le serveur de développement local parle à la base de production (question du handoff 3.4).
+
 ## Rituel de fin de session
 
 Écrire `docs/handoffs/etape-2-6-handoff.md`. Consigner les décisions au journal de `docs/design/README.md`, mettre à jour le ROADMAP (étape terminée) et la grille de recette 5.4. Prochaine action exacte: les fonctionnalités reportées, dont l'ordre se décide avec le porteur du projet. Commiter.

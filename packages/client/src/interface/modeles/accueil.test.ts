@@ -16,6 +16,7 @@ import { describe, expect, it } from 'vitest';
 import type { EtatClient } from '../../etat.js';
 import { ETAT_INITIAL } from '../../etat.js';
 import { AVIS_SESSION_EXPIREE, modeleAccueil } from './accueil.js';
+import { TEXTE_LIEN_PERDU, TEXTE_RETABLISSEMENT } from './lien.js';
 
 /** Un client dont le lien est etabli. */
 const CONNECTE: EtatClient = { ...ETAT_INITIAL, connexion: 'connecte', moi: 'moi' };
@@ -43,19 +44,32 @@ describe('modeleAccueil', () => {
     expect(modele.peutJouer).toBe(false);
   });
 
-  it('distingue un lien perdu d un lien qui s etablit, et propose de recharger', () => {
+  it('distingue un lien perdu d un lien qui s etablit, et propose de reessayer sans recharger (etape 2.6)', () => {
     const modele = modeleAccueil({ ...ETAT_INITIAL, connexion: 'perdue' }, 'Alice');
 
     expect(modele.lien).toBe('perdu');
+    expect(modele.texteDuLien).toBe(TEXTE_LIEN_PERDU);
     expect(modele.peutJouer).toBe(false);
-    expect(modele.peutRecharger).toBe(true);
-    expect(modele.peutReessayer).toBe(false);
-    expect(modeleAccueil(ETAT_INITIAL, 'Alice').peutRecharger).toBe(false);
+    expect(modele.peutRecharger).toBe(false);
+    expect(modele.peutReessayer).toBe(true);
+    expect(modeleAccueil(ETAT_INITIAL, 'Alice').texteDuLien).toBe('Connexion au serveur…');
+  });
+
+  it('dit que le lien se retablit, sans laisser jouer ni rien proposer (etape 2.6)', () => {
+    expect(modeleAccueil({ ...CONNECTE, connexion: 'retablissement' }, 'Alice')).toMatchObject({
+      lien: 'retablissement',
+      texteDuLien: TEXTE_RETABLISSEMENT,
+      peutJouer: false,
+      peutRecharger: false,
+      peutReessayer: false,
+      peutContinuerEnInvite: false,
+    });
   });
 
   it('laisse jouer avec un pseudo valide', () => {
     expect(modeleAccueil(CONNECTE, 'Alice')).toEqual({
       lien: 'etabli',
+      texteDuLien: '',
       motifDuLien: undefined,
       pseudoRequis: true,
       pseudoDuCompte: undefined,

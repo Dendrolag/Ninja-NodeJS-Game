@@ -17,6 +17,7 @@
 
 import { createServer } from 'node:http';
 import type { Server as ServeurHttp } from 'node:http';
+import type { Socket } from 'node:net';
 
 import type { EvenementsClientVersServeur, EvenementsServeurVersClient } from '@neon-ninja/shared';
 import type { DefaultEventsMap } from 'socket.io';
@@ -33,6 +34,33 @@ import type { SourceDeTerrain } from './terrain.js';
 
 /** Port par defaut du serveur de jeu. */
 export const PORT_PAR_DEFAUT = 3000;
+
+/**
+ * Combien de temps une reponse HTTP en cours peut finir de partir, a l'arret du
+ * serveur, avant que sa connexion ne soit fermee (etape 2.6).
+ *
+ * Cinq secondes: une requete des comptes attend la base, rarement plus d'une seconde,
+ * et l'hebergeur laisse bien davantage a un serveur pour s'eteindre.
+ */
+export const DELAI_DE_GRACE_A_L_ARRET_MS = 5000;
+
+/** Attend que ces promesses aboutissent, mais jamais plus longtemps que ce delai. */
+async function attendreAuPlus(promesses: readonly Promise<void>[], delaiMs: number): Promise<void> {
+  if (promesses.length === 0) {
+    return;
+  }
+
+  let minuterie: NodeJS.Timeout | undefined;
+
+  await Promise.race([
+    Promise.all(promesses),
+    new Promise<void>((resoudre) => {
+      minuterie = setTimeout(resoudre, delaiMs);
+    }),
+  ]);
+
+  clearTimeout(minuterie);
+}
 
 /** Ce qu'il faut pour monter un serveur. */
 export interface OptionsServeur {
@@ -139,6 +167,31 @@ export function creerServeur(options: OptionsServeur = {}): ServeurMonte {
 
   const http = createServer(application);
 
+  // Ce que l'arret doit connaitre du serveur HTTP (etape 2.6): les connexions ouvertes,
+  // et les reponses qui n'ont pas fini de partir. Voir fermer().
+  const connexionsOuvertes = new Set<Socket>();
+  const reponsesEnCours = new Set<Promise<void>>();
+
+  http.on('connection', (connexion) => {
+    connexionsOuvertes.add(connexion);
+    connexion.once('close', () => {
+      connexionsOuvertes.delete(connexion);
+    });
+  });
+
+  http.on('request', (_requete, reponse) => {
+    const partie = new Promise<void>((resoudre) => {
+      reponse.once('close', () => {
+        resoudre();
+      });
+    });
+
+    reponsesEnCours.add(partie);
+    void partie.then(() => {
+      reponsesEnCours.delete(partie);
+    });
+  });
+
   const io: ServeurTypee = new Server<
     EvenementsClientVersServeur,
     EvenementsServeurVersClient,
@@ -165,12 +218,32 @@ export function creerServeur(options: OptionsServeur = {}): ServeurMonte {
       // Plus aucune partie ne peut se terminer; celles qui viennent de le faire
       // finissent d'ecrire leurs resultats avant que la base ne soit refermee.
       await jeu.enregistrementsTermines();
-      await io.close();
-      await new Promise<void>((resoudre) => {
+
+      // LE SERVEUR CESSE D'ACCEPTER DES CONNEXIONS AVANT DE COUPER CELLES DU JEU. Depuis
+      // l'etape 2.6, une page qui perd son lien le rouvre aussitot: elle ne doit pas
+      // retrouver un serveur qui s'en va.
+      const ecouteFermee = new Promise<void>((resoudre) => {
         http.close(() => {
           resoudre();
         });
       });
+
+      // Socket.IO coupe aussitot les connexions du jeu, puis attend, lui aussi, que le
+      // serveur HTTP ait ferme toutes les siennes: on ne l'attend donc pas ici.
+      const jeuFerme = io.close();
+
+      // PUIS CE QUI RESTE OUVERT EST FERME, une fois les reponses en cours parties, dans
+      // la limite du delai de grace. Un navigateur ouvre des connexions d'avance, sans y
+      // envoyer de requete, d'autant plus qu'une page rouvre souvent son lien: le
+      // serveur HTTP attendrait qu'elles expirent, une minute, et l'arret d'une mise en
+      // ligne avec lui (constate a l'etape 2.6).
+      await attendreAuPlus([...reponsesEnCours], DELAI_DE_GRACE_A_L_ARRET_MS);
+
+      for (const connexion of connexionsOuvertes) {
+        connexion.destroy();
+      }
+
+      await Promise.all([jeuFerme, ecouteFermee]);
     },
   };
 }

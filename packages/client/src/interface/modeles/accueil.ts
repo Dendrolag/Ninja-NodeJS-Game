@@ -15,41 +15,31 @@
  * UN INVITE CHOISIT UN PSEUDO, UN COMPTE ENTRE SOUS LE SIEN (etape 3.2). L'accueil
  * ne demande donc de pseudo qu'a un invite.
  *
- * UN LIEN REFUSE SE DIT, ET LE JOUEUR CHOISIT (decision du 11 septembre 2026). Un
- * jeton qui n'ouvre plus rien fait refuser le lien; l'accueil montre le motif, et
- * propose de reessayer ou, s'il presentait une session, de continuer en invite.
+ * CE QUE L'ACCUEIL DIT DU LIEN vient de modeles/lien.ts, que la ligne d'etat des
+ * autres ecrans partage (etape 2.6):
  *
- * UNE PLACE EN PARTIE SE REPREND AVANT TOUT (etape 2.5). Une page rechargee en
- * pleine partie y retourne d'elle-meme: pendant ce temps, on ne joue pas ailleurs,
- * et si la place est perdue, l'accueil dit pourquoi.
- *
- * UNE PAGE D'UNE AUTRE VERSION SE RECHARGE (etape 5.3). Le serveur la refusera a
- * chaque essai, avec ou sans session: seul un rechargement lui donne la page qui
- * va avec le serveur. L'accueil ne propose alors que cela.
+ *   - UN LIEN REFUSE SE DIT, ET LE JOUEUR CHOISIT (decision du 11 septembre 2026): le
+ *     motif, puis reessayer ou, s'il presentait une session, continuer en invite;
+ *   - UNE PLACE EN PARTIE SE REPREND AVANT TOUT (etape 2.5): pendant qu'une page
+ *     rechargee y retourne, on ne joue pas ailleurs, et si la place est perdue,
+ *     l'accueil dit pourquoi;
+ *   - UN LIEN PERDU SE RETABLIT (etape 2.6): la page le dit, puis propose de
+ *     reessayer si elle n'y parvient pas, sans avoir a recharger;
+ *   - UNE PAGE D'UNE AUTRE VERSION SE RECHARGE (etape 5.3): seul un rechargement lui
+ *     donne la page qui va avec le serveur.
  */
 
-import { MOTIF_VERSION_DIFFERENTE, normaliserTexte, validerPseudo } from '@neon-ninja/shared';
+import { normaliserTexte, validerPseudo } from '@neon-ninja/shared';
 
-import type { EtatClient, EtatConnexion } from '../../etat.js';
-
-/** Ou en est le lien avec le serveur, du point de vue de l'accueil. */
-export type EtatDuLien =
-  /** Le lien s'etablit: on attend. */
-  | 'enCours'
-  /** Le lien est etabli: on peut jouer. */
-  | 'etabli'
-  /** Le lien a ete perdu, et aucune place en partie n'a pu etre reprise. */
-  | 'perdu'
-  /** Le lien n'a pas pu s'ouvrir: le serveur l'a refuse, ou ne repond toujours pas. */
-  | 'refuse'
-  /** Le serveur ne repond pas encore: la page reessaie d'elle-meme (etape 5.3). */
-  | 'reveil'
-  /** Une place en partie attend: la page tente d'y revenir (etape 2.5). */
-  | 'retour';
+import type { EtatClient } from '../../etat.js';
+import type { EtatDuLien } from './lien.js';
+import { modeleDuLien } from './lien.js';
 
 /** Ce que l'accueil affiche. */
 export interface ModeleAccueil {
   readonly lien: EtatDuLien;
+  /** Ce que l'accueil dit du lien. Vide quand il est etabli. */
+  readonly texteDuLien: string;
   /** Pourquoi le lien est refuse, tant qu'il l'est. */
   readonly motifDuLien: string | undefined;
   /** Le joueur doit-il choisir un pseudo: un invite oui, un compte non. */
@@ -66,23 +56,13 @@ export interface ModeleAccueil {
   readonly pseudo: string | undefined;
   /** Le bouton pour jouer est-il actif. */
   readonly peutJouer: boolean;
-  /** Recharger la page est la seule issue: le lien est perdu, ou la page n'est pas de la version du serveur. */
+  /** Recharger la page est la seule issue: la page n'est pas de la version du serveur. */
   readonly peutRecharger: boolean;
-  /** Le lien refuse peut s'ouvrir a un nouvel essai: tout refus, sauf celui de la version. */
+  /** Le lien peut s'ouvrir a un nouvel essai: il est perdu, ou refuse pour autre chose que la version. */
   readonly peutReessayer: boolean;
   /** Le lien refuse presentait une session: on peut y renoncer et jouer en invite. */
   readonly peutContinuerEnInvite: boolean;
 }
-
-/** Ce que l'accueil dit de chaque etat du transport. */
-const LIEN_SELON_LA_CONNEXION: Readonly<Record<EtatConnexion, EtatDuLien>> = {
-  horsLigne: 'enCours',
-  connecte: 'etabli',
-  perdue: 'perdu',
-  refusee: 'refuse',
-  reveil: 'reveil',
-  retour: 'retour',
-};
 
 /** Ce que l'accueil dit a un joueur dont la session gardee a expire. */
 export const AVIS_SESSION_EXPIREE =
@@ -95,11 +75,10 @@ export const AVIS_SESSION_EXPIREE =
  * @param saisie Le texte du champ de pseudo, tel quel.
  */
 export function modeleAccueil(etat: EtatClient, saisie: string): ModeleAccueil {
-  const lien = LIEN_SELON_LA_CONNEXION[etat.connexion];
+  const lien = modeleDuLien(etat);
   const session = etat.session;
   const pseudoRequis = session.nature === 'invite';
   const verdict = validerPseudo(saisie);
-  const pagePerimee = lien === 'refuse' && etat.refusDeConnexion === MOTIF_VERSION_DIFFERENTE;
 
   // Un champ vide n'est pas une faute a signaler: c'est un champ pas encore
   // rempli. Le bouton reste simplement inactif.
@@ -109,8 +88,9 @@ export function modeleAccueil(etat: EtatClient, saisie: string): ModeleAccueil {
       : verdict.erreurs[0]?.motif;
 
   return {
-    lien,
-    motifDuLien: lien === 'refuse' ? etat.refusDeConnexion : undefined,
+    lien: lien.lien,
+    texteDuLien: lien.texte,
+    motifDuLien: lien.motif,
     pseudoRequis,
     pseudoDuCompte: session.nature === 'compte' ? session.progression.pseudo : undefined,
     // Une place perdue passe avant une session expiree: elle vient d'arriver.
@@ -120,10 +100,10 @@ export function modeleAccueil(etat: EtatClient, saisie: string): ModeleAccueil {
     erreur: erreurLocale ?? refusDuServeur(etat, saisie, pseudoRequis),
     enAttente: etat.entreeEnCours,
     pseudo: pseudoRequis && verdict.valide ? verdict.valeur : undefined,
-    peutJouer: lien === 'etabli' && !etat.entreeEnCours && (!pseudoRequis || verdict.valide),
-    peutRecharger: lien === 'perdu' || pagePerimee,
-    peutReessayer: lien === 'refuse' && !pagePerimee,
-    peutContinuerEnInvite: lien === 'refuse' && !pseudoRequis && !pagePerimee,
+    peutJouer: lien.lien === 'etabli' && !etat.entreeEnCours && (!pseudoRequis || verdict.valide),
+    peutRecharger: lien.peutRecharger,
+    peutReessayer: lien.peutReessayer,
+    peutContinuerEnInvite: lien.peutContinuerEnInvite,
   };
 }
 

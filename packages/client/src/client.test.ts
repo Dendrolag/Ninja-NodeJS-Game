@@ -101,12 +101,20 @@ describe('le lien', () => {
     expect(client.etat.moi).toBe('j-42');
   });
 
-  it('enregistre la perte du lien', () => {
+  it('enregistre la perte du lien, et le rouvre d elle-meme hors partie (etape 2.6)', () => {
     reseau.simulerConnexion();
     reseau.simulerDeconnexion();
 
-    expect(client.etat.connexion).toBe('perdue');
+    expect(client.etat.connexion).toBe('retablissement');
     expect(client.etat.ecran).toBe('accueil');
+    expect(reseau.ouvertures).toHaveLength(1);
+  });
+
+  it('n envoie rien tant que le lien n est pas etabli (etape 2.6)', () => {
+    client.parler('perdu');
+    client.demarrer();
+
+    expect(reseau.emis).toEqual([]);
   });
 });
 

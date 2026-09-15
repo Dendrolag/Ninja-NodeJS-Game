@@ -125,11 +125,15 @@ describe('lister les parties publiques', () => {
     expect(videe.partiesPubliques).toEqual([]);
   });
 
-  it('part vide, et se vide quand la connexion tombe', () => {
-    const avecUnePartie = reduire(ETAT_INITIAL, { type: 'partiesListees', parties: [PARTIE] });
+  it('part vide, et reste affichee quand le lien tombe hors partie (etape 2.6)', () => {
+    const avecUnePartie = reduire(
+      { ...ETAT_INITIAL, ecran: 'parties' },
+      { type: 'partiesListees', parties: [PARTIE] },
+    );
 
     expect(ETAT_INITIAL.partiesPubliques).toEqual([]);
-    expect(reduire(avecUnePartie, { type: 'connexionPerdue' }).partiesPubliques).toEqual([]);
+    expect(reduire(avecUnePartie, { type: 'lienPerdu' }).partiesPubliques).toEqual([PARTIE]);
+    expect(reduire(avecUnePartie, { type: 'connexionPerdue' }).partiesPubliques).toEqual([PARTIE]);
   });
 
   it('marque la liste en attente jusqu a sa reponse', () => {

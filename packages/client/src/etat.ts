@@ -44,15 +44,26 @@ export type EtatConnexion =
   /** Le lien est etabli: on peut demander a entrer dans une partie. */
   | 'connecte'
   /**
-   * Le lien a ete etabli, puis perdu.
+   * Le lien a ete etabli, puis perdu, et la page n'a pas pu le retablir.
    *
    * Ajoute a l'etape 4.3. Distinguer une perte d'une attente est ce qui permet a
    * l'accueil de dire au joueur que la connexion est tombee, plutot que de lui
    * faire attendre une connexion qui ne viendra pas: la reconnexion automatique
    * est coupee (handoff 4.1). L'information ne pouvait pas vivre dans l'ecran
    * d'accueil, qui est monte a neuf au moment meme ou le lien tombe.
+   *
+   * Depuis l'etape 2.6, c'est une perte definitive: la page a essaye de retablir le
+   * lien pendant une minute et demie, et le joueur peut relancer les essais.
    */
   | 'perdue'
+  /**
+   * Le lien est tombe hors d'une partie en cours, et la page le retablit d'elle-meme.
+   *
+   * Ajoute a l'etape 2.6. Le joueur reste sur son ecran; dans le salon, la page
+   * redemande a y entrer des que le lien revient, et l'etat ne quitte le
+   * retablissement qu'a la reponse. Voir retablissement.ts.
+   */
+  | 'retablissement'
   /**
    * Le lien n'a pas pu s'ouvrir: le serveur l'a refuse, ou ne repond pas.
    *
@@ -293,7 +304,9 @@ export interface EtatClient {
   readonly refus: Refus | undefined;
   /**
    * Pourquoi la place en partie n'a pas pu etre reprise, ou a ete reprise dans une
-   * autre page (etape 2.5). L'accueil le dit, jusqu'a la prochaine entree.
+   * autre page (etape 2.5), ou pourquoi le salon ou l'on attendait n'a pas pu etre
+   * retrouve apres une coupure (etape 2.6). L'accueil le dit, jusqu'a la prochaine
+   * entree.
    */
   readonly avisDeRetour: string | undefined;
 }

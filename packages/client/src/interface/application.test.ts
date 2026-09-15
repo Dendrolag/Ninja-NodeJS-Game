@@ -25,6 +25,7 @@ import type { Application } from './application.js';
 import { monterApplication } from './application.js';
 import type { JeuDEssai, SonsDEssai } from './essais.js';
 import {
+  boutonNomme,
   boutonObligatoire,
   estCache,
   jeuDEssai,
@@ -242,18 +243,51 @@ describe('la navigation entre les ecrans', () => {
     expect(ecranAffiche()).toBe('accueil');
   });
 
-  it('revient a l accueil quand la connexion tombe, et propose de recharger la page', () => {
-    entrerDansLeSalon();
+  it('garde le salon quand la connexion tombe, le dit, suspend ce qui a besoin du lien, et y revient (etape 2.6)', () => {
+    reseau.simulerConnexion();
+    demanderAEntrer('Alice');
+    reseau.recevoir('placeAttribuee', { joueur: 'moi', jetonDeRetour: 'R'.repeat(43) });
+    reseau.dernier('rejoindre')?.[1]({ valide: true, valeur: SALON });
+
+    const ligne = obligatoire(hote, '.ligne-lien');
+    const message = obligatoire<HTMLInputElement>(hote, 'input[name="message"]');
+    expect(estCache(ligne)).toBe(true);
+    boutonObligatoire(hote, 'Lancer la partie');
+
+    reseau.simulerDeconnexion();
+
+    expect(ecranAffiche()).toBe('salon');
+    expect(estCache(ligne)).toBe(false);
+    expect(ligne.textContent).toContain('Connexion perdue. Retour dans le salon…');
+    expect(boutonNomme(hote, 'Lancer la partie')).toBeUndefined();
+    expect(boutonObligatoire(hote, 'Réglages').disabled).toBe(true);
+    expect(message.disabled).toBe(true);
+
+    reseau.simulerConnexion();
+    reseau.recevoir('placeAttribuee', { joueur: 'moi', jetonDeRetour: 'N'.repeat(43) });
+    reseau.dernier('rejoindre')?.[1]({ valide: true, valeur: SALON });
+
+    expect(ecranAffiche()).toBe('salon');
+    expect(estCache(ligne)).toBe(true);
+    boutonObligatoire(hote, 'Lancer la partie');
+    expect(boutonObligatoire(hote, 'Réglages').disabled).toBe(false);
+    expect(message.disabled).toBe(false);
+    expect(recharges).toBe(0);
+  });
+
+  it('dit sur l accueil que la connexion est perdue, et la retablit sans recharger (etape 2.6)', () => {
+    reseau.simulerConnexion();
     reseau.simulerDeconnexion();
 
     expect(ecranAffiche()).toBe('accueil');
-    expect(obligatoire(hote, '.accueil-lien').textContent).toBe(
-      'La connexion au serveur a été perdue.',
-    );
+    expect(obligatoire(hote, '.accueil-lien').textContent).toBe('Connexion perdue. Reconnexion…');
+    expect(boutonNomme(hote, 'Recharger la page')).toBeUndefined();
+    expect(boutonObligatoire(hote, 'Partie rapide').disabled).toBe(true);
 
-    boutonObligatoire(hote, 'Recharger la page').click();
+    reseau.simulerConnexion();
+    saisir(champPseudo(), 'Alice');
 
-    expect(recharges).toBe(1);
+    expect(boutonObligatoire(hote, 'Partie rapide').disabled).toBe(false);
   });
 
   it('n empile jamais deux ecrans', () => {

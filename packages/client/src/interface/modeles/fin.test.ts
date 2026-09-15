@@ -125,6 +125,16 @@ describe('modeleFin', () => {
   });
 });
 
+describe('rejouer (etape 2.6)', () => {
+  it('n est actif qu avec un lien etabli', () => {
+    expect(modeleFin({ ...etat(CLASSEMENT), connexion: 'connecte' })?.peutRejouer).toBe(true);
+    expect(modeleFin({ ...etat(CLASSEMENT), connexion: 'retablissement' })?.peutRejouer).toBe(
+      false,
+    );
+    expect(modeleFin({ ...etat(CLASSEMENT), connexion: 'perdue' })?.peutRejouer).toBe(false);
+  });
+});
+
 describe('la progression de fin', () => {
   const COMPTE: MaProgression = {
     pseudo: 'Moi',

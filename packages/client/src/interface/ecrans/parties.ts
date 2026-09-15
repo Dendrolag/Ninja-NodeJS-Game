@@ -32,11 +32,6 @@ export function monterParties(contexte: ContexteEcran): EcranAffiche {
   const champPseudo = monterChampPseudo(doc, client);
   const aidePseudo = creer(doc, 'p', { classe: 'parties-aide' });
   const erreur = creer(doc, 'p', { classe: 'parties-erreur', attributs: { role: 'alert' } });
-  const lien = creer(doc, 'p', {
-    classe: 'parties-lien',
-    texte: 'Connexion au serveur…',
-    attributs: { role: 'status' },
-  });
 
   const saisieCode = creer(doc, 'input', {
     attributs: {
@@ -113,7 +108,6 @@ export function monterParties(contexte: ContexteEcran): EcranAffiche {
     ),
     creer(doc, 'div', { classe: 'parties-invite' }, champPseudo.racine, aidePseudo),
     erreur,
-    lien,
     creer(
       doc,
       'section',
@@ -217,7 +211,6 @@ export function monterParties(contexte: ContexteEcran): EcranAffiche {
     ecrireTexte(erreur, texteErreur ?? '');
     montrer(erreur, texteErreur !== undefined);
     saisieCode.toggleAttribute('aria-invalid', modele.erreurCode !== undefined);
-    montrer(lien, !modele.lienEtabli);
 
     montrer(chargement, modele.enChargement);
     montrer(vide, modele.vide);

@@ -26,6 +26,7 @@
  */
 
 import type {
+  AuthentificationReseau,
   ConfigurationPartie,
   DemandeRejoindre,
   InfosSalon,
@@ -50,6 +51,7 @@ import type { Minuterie } from './minuterie.js';
 import { minuterieNavigateur } from './minuterie.js';
 import type { Reseau } from './reseau.js';
 import { brancherLeRafraichissement } from './rafraichissement.js';
+import { brancherLeRetablissement } from './retablissement.js';
 import { brancherLeRetour } from './retour.js';
 import { brancherLeReveil } from './reveil.js';
 
@@ -69,6 +71,12 @@ export interface OptionsClient {
   readonly coffre?: CoffreDeJeton;
   /** Le coffre du jeton de retour en partie (etape 2.5). Un coffre en memoire par defaut. */
   readonly coffreDeRetour?: CoffreDeJeton;
+  /**
+   * Previent quand la page a une raison de croire le reseau revenu: elle repasse au
+   * premier plan, ou le navigateur annonce le reseau retrouve (etape 2.6). Rend de quoi
+   * arreter d'ecouter. Absent, un lien perdu ne se rouvre qu'a ses essais planifies.
+   */
+  readonly surReseauRetrouve?: (gestionnaire: () => void) => () => void;
 }
 
 /**
@@ -167,10 +175,18 @@ export function creerClient(options: OptionsClient): Client {
   // -- L'etat du lien -------------------------------------------------------
 
   // La perte du lien est ecoutee par le retour, plus bas: en pleine partie, elle
-  // n'est pas une perte tant que la page peut y revenir.
+  // n'est pas une perte tant que la page peut y revenir, et ailleurs le lien se
+  // retablit (etape 2.6).
   ecouter(
     reseau.surConnexion(() => {
       magasin.appliquer({ type: 'connexionEtablie' });
+
+      // La liste des parties affichee se demande des que le lien le permet: sans lien,
+      // la demande ne partirait pas. C'est le cas d'une page ouverte sur cet ecran avant
+      // la connexion, ou dont le lien vient d'etre retabli.
+      if (magasin.etat.ecran === 'parties') {
+        listerParties();
+      }
     }),
   );
 
@@ -201,6 +217,27 @@ export function creerClient(options: OptionsClient): Client {
     ecouter,
   });
 
+  /** Ce qu'un lien rouvert presente: la session gardee, s'il y en a une. */
+  const authentification = (): AuthentificationReseau => {
+    const jeton = coffre.lire();
+    return jeton === undefined ? {} : { jeton };
+  };
+
+  // Le lien perdu hors d'une partie en cours, retabli par la page (etape 2.6). Il ecoute
+  // les refus du lien avant le retour: quand le delai de retour s'ecoule sur un refus,
+  // le retour lui passe la main, et ce refus-la ne doit pas compter deux fois.
+  const retablissement = brancherLeRetablissement({
+    magasin,
+    reseau,
+    horloge,
+    minuterie,
+    authentification,
+    ...(options.surReseauRetrouve === undefined
+      ? {}
+      : { surReseauRetrouve: options.surReseauRetrouve }),
+    ecouter,
+  });
+
   // La place en partie, et le retour apres une coupure (etape 2.5).
   const retour = brancherLeRetour({
     magasin,
@@ -208,18 +245,27 @@ export function creerClient(options: OptionsClient): Client {
     horloge,
     minuterie,
     coffre: options.coffreDeRetour ?? creerCoffreDeJeton(),
-    authentification: () => {
-      const jeton = coffre.lire();
-      return jeton === undefined ? {} : { jeton };
-    },
+    authentification,
     rouvrir: () => {
       session.reessayer();
+    },
+    lienPerdu: (depuis) => {
+      retablissement.commencer(depuis);
     },
     ecouter,
   });
 
-  /** Demande la liste des parties publiques ouvertes. */
+  /**
+   * Demande la liste des parties publiques ouvertes.
+   *
+   * Sans lien, la demande ne partirait pas, et la liste attendrait une reponse qui ne
+   * viendra jamais: elle est demandee a l'etablissement du lien (etape 2.6).
+   */
   const listerParties = (): void => {
+    if (!reseau.connecte) {
+      return;
+    }
+
     magasin.appliquer({ type: 'listeDemandee' });
     reseau.emettre('listerParties', (parties) => {
       magasin.appliquer({ type: 'partiesListees', parties });
@@ -385,6 +431,18 @@ export function creerClient(options: OptionsClient): Client {
 
     ...session,
 
+    // Apres un lien que la page n'a pas pu retablir, reessayer relance les essais du
+    // retablissement (etape 2.6): un serveur qui ne repond pas n'y est pas un serveur
+    // qui dort. Apres un refus du lien, la session rouvre le lien, comme avant.
+    reessayer: () => {
+      if (magasin.etat.connexion === 'perdue') {
+        retablissement.relancer();
+        return;
+      }
+
+      session.reessayer();
+    },
+
     // Le profil se relit a chaque arrivee sur son ecran. La lecture part apres la
     // navigation, et non pendant le montage de l'ecran: un changement d'etat au
     // milieu d'un montage arriverait a l'ecran qu'on quitte.
@@ -425,10 +483,13 @@ export function creerClient(options: OptionsClient): Client {
 
     listerParties,
 
+    // Quitter un salon dont le lien se retablit y renonce: rien n'y sera redemande
+    // (etape 2.6). Le message de depart, lui, ne part que si le lien est la.
     quitter: () => {
       reseau.emettre('quitter');
       magasin.appliquer({ type: 'sortie' });
       retour.renoncer();
+      retablissement.renoncerAuSalon();
     },
 
     /**

@@ -62,6 +62,12 @@ export function monterFin(contexte: ContexteEcran): EcranAffiche {
     }
   };
 
+  const boutonRejouer = bouton(
+    doc,
+    { classe: 'bouton bouton-primaire bouton-large', texte: 'Rejouer', icone: 'replay' },
+    rejouer,
+  );
+
   const racine = creer(
     doc,
     'section',
@@ -113,11 +119,7 @@ export function monterFin(contexte: ContexteEcran): EcranAffiche {
       doc,
       'div',
       { classe: 'fin-actions' },
-      bouton(
-        doc,
-        { classe: 'bouton bouton-primaire bouton-large', texte: 'Rejouer', icone: 'replay' },
-        rejouer,
-      ),
+      boutonRejouer,
       bouton(doc, { classe: 'bouton bouton-secondaire bouton-large', texte: 'Accueil' }, () => {
         client.quitter();
       }),
@@ -168,6 +170,7 @@ export function monterFin(contexte: ContexteEcran): EcranAffiche {
       }
 
       progression.afficher(modele.progression);
+      boutonRejouer.disabled = !modele.peutRejouer;
     },
 
     demonter() {

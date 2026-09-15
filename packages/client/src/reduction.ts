@@ -21,9 +21,15 @@
 import type { ProfilDuCompte, ProgressionDeFin } from '@neon-ninja/shared';
 
 import type { Action } from './actions.js';
-import { ecranSuivant } from './ecrans.js';
+import { ecranSuivant, estUnEcranDeMenu } from './ecrans.js';
 import type { Ecran } from './ecrans.js';
-import type { EffetActif, EtatClient, MessageAffiche, SessionDuClient } from './etat.js';
+import type {
+  EffetActif,
+  EtatClient,
+  EtatConnexion,
+  MessageAffiche,
+  SessionDuClient,
+} from './etat.js';
 import {
   AUCUNE_DEMANDE_DE_COMPTE,
   ETAT_INITIAL,
@@ -45,12 +51,14 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
   const ecran = ecranSuivant(etat.ecran, action);
 
   switch (action.type) {
-    // On rouvre: l'identifiant de l'ancien lien ne vaudra plus rien.
+    // On rouvre: l'identifiant de l'ancien lien ne vaudra plus rien. Pendant qu'un
+    // lien perdu se retablit (etape 2.6), une session qui change rouvre le lien a son
+    // tour, et les essais continuent: c'est toujours un retablissement.
     case 'ouvertureDemandee':
       return {
         ...etat,
         ecran,
-        connexion: 'horsLigne',
+        connexion: etat.connexion === 'retablissement' ? 'retablissement' : 'horsLigne',
         moi: undefined,
         refusDeConnexion: undefined,
       };
@@ -58,19 +66,40 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
     case 'connexionEtablie':
       return { ...etat, ecran, connexion: 'connecte', refusDeConnexion: undefined };
 
-    // Le lien est tombe: on ne sait plus rien de la partie, et on ne peut plus
-    // rien en apprendre. Survivent le pseudo saisi, pour reproposer la saisie, la
-    // session, qui ne depend pas du lien, et un code de secours pas encore note, que
-    // le serveur ne rendra plus.
+    // Le lien n'a pas pu etre retabli (etape 2.6). Ce qu'on attendait du serveur ne
+    // viendra pas. Un salon n'est plus le notre: on repart de l'accueil, avec l'avis.
+    // Un menu ou la fin restent affiches, pour que le joueur puisse relancer les essais.
     case 'connexionPerdue':
+      return quitteLaPartie(etat.ecran, ecran)
+        ? { ...horsDeLaPartie(etat, ecran, 'perdue'), avisDeRetour: action.avis }
+        : { ...etat, ecran, connexion: 'perdue', entreeEnCours: false, listeEnCours: false };
+
+    // Tombe hors d'une partie en cours, le lien se retablit (etape 2.6): l'ecran reste,
+    // ce qu'on attendait du serveur ne viendra pas, et un decompte affiche n'est plus
+    // suivi. Si c'est la place en partie qui vient d'etre perdue, on repart de
+    // l'accueil, avec l'avis.
+    case 'lienPerdu':
+      return quitteLaPartie(etat.ecran, ecran)
+        ? { ...horsDeLaPartie(etat, ecran, 'retablissement'), avisDeRetour: action.avis }
+        : {
+            ...etat,
+            ecran,
+            connexion: 'retablissement',
+            refusDeConnexion: undefined,
+            entreeEnCours: false,
+            listeEnCours: false,
+            compteARebours: undefined,
+          };
+
+    // Le lien est revenu, et la demande d'entree dans le salon est partie (etape 2.6):
+    // tant que le serveur n'a pas repondu, le salon affiche n'est pas le vrai.
+    case 'salonRedemande':
       return {
-        ...ETAT_INITIAL,
+        ...etat,
         ecran,
-        connexion: 'perdue',
-        pseudoDemande: etat.pseudoDemande,
-        pseudoSaisi: etat.pseudoSaisi,
-        session: etat.session,
-        codeDeSecours: etat.codeDeSecours,
+        connexion: 'retablissement',
+        entreeEnCours: true,
+        refus: undefined,
       };
 
     // Tombe en pleine partie, le lien peut revenir: rien de la partie n'est oublie,
@@ -92,31 +121,25 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
         avisDeRetour: undefined,
       };
 
-    // La place est perdue, mais le lien est ouvert: on repart de l'accueil, avec le
-    // motif, comme apres une sortie.
+    // La place est perdue, ou le salon introuvable, mais le lien est ouvert: on repart
+    // de l'accueil, avec le motif, comme apres une sortie.
     case 'retourRefuse':
-      return {
-        ...ETAT_INITIAL,
-        ecran,
-        connexion: 'connecte',
-        pseudoDemande: etat.pseudoDemande,
-        pseudoSaisi: etat.pseudoSaisi,
-        session: etat.session,
-        codeDeSecours: etat.codeDeSecours,
-        avisDeRetour: action.motif,
-      };
+      return { ...horsDeLaPartie(etat, ecran, 'connecte'), avisDeRetour: action.motif };
 
     case 'placeAttribuee':
       return { ...etat, ecran, moi: action.joueur };
 
+    // Un lien refuse ne laisse aucun ecran de partie (etape 2.6): on repart de l'accueil.
     case 'connexionRefusee':
-      return {
-        ...etat,
-        ecran,
-        connexion: 'refusee',
-        refusDeConnexion: action.motif,
-        entreeEnCours: false,
-      };
+      return quitteLaPartie(etat.ecran, ecran)
+        ? { ...horsDeLaPartie(etat, ecran, 'refusee'), refusDeConnexion: action.motif }
+        : {
+            ...etat,
+            ecran,
+            connexion: 'refusee',
+            refusDeConnexion: action.motif,
+            entreeEnCours: false,
+          };
 
     // Aucun refus a montrer: la page attend le serveur, et reessaie d'elle-meme.
     case 'serveurEnReveil':
@@ -265,17 +288,14 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
 
     // On quitte de soi-meme: le lien et la session restent, tout le reste s'efface,
     // notre identifiant de joueur compris. Quitter pendant un retour y renonce: le
-    // lien, qui etait tombe, va se rouvrir.
+    // lien, qui etait tombe, va se rouvrir. Quitter un salon dont le lien se retablit
+    // laisse les essais continuer, depuis l'accueil (etape 2.6).
     case 'sortie':
-      return {
-        ...ETAT_INITIAL,
+      return horsDeLaPartie(
+        etat,
         ecran,
-        connexion: etat.connexion === 'retour' ? 'horsLigne' : etat.connexion,
-        pseudoDemande: etat.pseudoDemande,
-        pseudoSaisi: etat.pseudoSaisi,
-        session: etat.session,
-        codeDeSecours: etat.codeDeSecours,
-      };
+        etat.connexion === 'retour' ? 'horsLigne' : etat.connexion,
+      );
 
     // Une photographie de la liste, qui remplace la precedente.
     case 'partiesListees':
@@ -357,6 +377,30 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
     case 'refus':
       return { ...etat, ecran, refus: action.refus };
   }
+}
+
+/**
+ * L'etat d'un joueur qui n'est plus dans aucune partie, de lui-meme ou non.
+ *
+ * Tout ce qui tenait a la partie s'efface, notre identifiant de joueur compris.
+ * Survivent le pseudo saisi, pour reproposer la saisie, la session, qui ne depend pas
+ * du lien, et un code de secours pas encore note, que le serveur ne rendra plus.
+ */
+function horsDeLaPartie(etat: EtatClient, ecran: Ecran, connexion: EtatConnexion): EtatClient {
+  return {
+    ...ETAT_INITIAL,
+    ecran,
+    connexion,
+    pseudoDemande: etat.pseudoDemande,
+    pseudoSaisi: etat.pseudoSaisi,
+    session: etat.session,
+    codeDeSecours: etat.codeDeSecours,
+  };
+}
+
+/** L'action fait-elle passer d'un ecran de partie (salon, jeu, fin) a un ecran de menu. */
+function quitteLaPartie(avant: Ecran, apres: Ecran): boolean {
+  return !estUnEcranDeMenu(avant) && estUnEcranDeMenu(apres);
 }
 
 /**

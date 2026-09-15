@@ -51,6 +51,12 @@ const RETOUR = '**/retour.spec.ts';
  */
 const MOT_DE_PASSE = '**/mot-de-passe.spec.ts';
 
+/**
+ * Le lien perdu hors partie (etape 2.6), joue par le seul projet bureau: il eteint et
+ * rallume le serveur sous une page, ce que le cadrage de l'ecran ne change pas.
+ */
+const LIEN = '**/lien.spec.ts';
+
 export default defineConfig({
   testDir: './tests/e2e',
   // Les paquets sont compiles une fois avant les scenarios: le banc de mesure du
@@ -100,7 +106,7 @@ export default defineConfig({
     {
       name: 'mobile',
       use: { ...devices['Pixel 7'] },
-      testIgnore: [BANC, MULTIJOUEUR, PARTIES, COMPTE, RETOUR, MOT_DE_PASSE],
+      testIgnore: [BANC, MULTIJOUEUR, PARTIES, COMPTE, RETOUR, MOT_DE_PASSE, LIEN],
     },
     // Le banc de mesure du rendu a son propre projet, et une seule execution:
     // il mesure le moteur de rendu, pas la taille de la fenetre. Le jouer dans
