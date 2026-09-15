@@ -16,6 +16,10 @@ La fiche d'origine prévoyait une **bascule progressive** des joueurs, palier pa
 - Vercel, projets `ttp` et `neon-ninja`, reliés au dépôt, branche de production `master`, qui servent l'ancienne page (`ttp-eight.vercel.app`, `neon-ninja-gules.vercel.app`) depuis le 16 avril 2025. Depuis le 14 septembre 2026, leur étape de construction ignorée n'accepte que `master`.
 - Le service Render « Neon Ninja » n'en fait plus partie : il a été repris à l'étape 5.3 pour le serveur de jeu de la réécriture.
 
+## Réconciliation du 15 septembre 2026
+
+Vérifié au début de la session : les trois ressources listées ci-dessus servaient toujours la version d'origine, au fichier près (`client.js` et `styles.css` identiques à ceux de `legacy/`). Le service « To The Point » n'avait plus de déploiement automatique ; les deux projets Vercel, eux, construisaient tout commit poussé sur `master` : ils devaient donc disparaître avant la fusion. Trois écarts, décidés avec le porteur du projet : la branche `reecriture` est supprimée après la fusion ; l'ancien sommet de `master` est archivé sous l'étiquette `v0.8.6` ; la documentation qui annonçait une fusion bloquée par une CI rouge est corrigée, la poussée directe étant gardée.
+
 ## Périmètre
 
 1. **Le dépôt** : fusionner `reecriture` dans `master`, qui redevient la branche principale et celle de la production. Le dossier `legacy/` reste en archive de référence.

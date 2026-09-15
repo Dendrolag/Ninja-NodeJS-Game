@@ -84,6 +84,8 @@ Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision 
 
 **Décision du 14 septembre 2026, à la recette: deux manques connus deviennent des étapes.** Présentés au porteur du projet au début de l'étape 5.4, la reconnexion en cours de partie et la gestion du mot de passe n'ont pas été retenus dans celle-ci: ils deviennent les étapes `2.5` et `3.4`. Aucune ne conditionne le retrait du legacy, qui n'avait ni l'une ni l'autre: elles le suivent. Ordre du jalon: `5.4`, `6.1`, `2.5`, `3.4`, que le porteur du projet peut réordonner. Leurs fiches se rédigent au début de chacune, selon le cas de repli du PROTOCOLE.
 
+**Étape 6.1 terminée le 15 septembre 2026: la réécriture est la seule version du jeu.** `reecriture` est fusionnée dans `master`, qui porte désormais le travail et la production, et la branche `reecriture` est supprimée. Plus rien en ligne ne sert la version d'origine: le service Render « To The Point » et les projets Vercel `ttp` et `neon-ninja` sont supprimés, sur décision du porteur du projet. Elle reste archivée sous l'étiquette `v0.8.6` et dans `legacy/`. Suite: `2.5` puis `3.4`, puis les fonctionnalités reportées (autres modes, pass de saison, skins, clans), chacune avec sa fiche.
+
 ---
 
 ## 4. Carte thématique des étapes
