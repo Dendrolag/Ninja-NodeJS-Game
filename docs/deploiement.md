@@ -6,11 +6,12 @@ Mis en place à l'étape 5.3, le 14 septembre 2026. Ce document dit ce qui tourn
 
 | Rôle           | Hébergement                                                            | Adresse                              |
 | -------------- | ---------------------------------------------------------------------- | ------------------------------------ |
-| Page du jeu    | Vercel, projet `neon-ninja-jeu` (`prj_x2NAYxrQy1D88sjkjGRewy96hbua`)   | https://neon-ninja-jeu.vercel.app    |
+| Page du jeu    | Vercel, projet `neon-ninja-jeu` (`prj_x2NAYxrQy1D88sjkjGRewy96hbua`)   | https://ninja.dendrolag.fr           |
 | Serveur de jeu | Render, service « Neon Ninja » (`srv-csrnm30gph6c73b9jmt0`), Francfort | https://neon-ninja.onrender.com      |
 | Base           | Neon, projet `neon-ninja`, branche `production` (principale), pooler   | Dans `DATABASE_URL`, jamais en clair |
 
 - **Vercel** : équipe `team_v9SkLK1zKjpRjtkmzq8Q9TM7` (« dendrolag's projects »). Le projet n'est relié à aucun dépôt : seule la mise en ligne ci-dessous y envoie une page.
+- **Domaine** : `ninja.dendrolag.fr`, rattaché au projet Vercel le 15 septembre 2026. La zone DNS de `dendrolag.fr` est chez Hostinger (hPanel, serveurs `ns1` et `ns2.dns-parking.com`) : une seule entrée pour ce nom, un CNAME `ninja` vers `a3d44510bf05d743.vercel-dns-017.com`, la cible que Vercel recommande pour ce projet. Aucune entrée A ne doit coexister avec lui. Vercel émet et renouvelle le certificat. L'adresse https://neon-ninja-jeu.vercel.app reste en service et sert la même page.
 - **Render** : espace de travail `tea-csp5tt3gbbvc73fph8v0`, offre gratuite, branche `master` (depuis l'étape 6.1), déploiement automatique coupé. Le service a été repris de l'ancien service « Neon Ninja » de la version d'origine, suspendu depuis 2025, sur décision du porteur du projet.
 - **Base** : `DATABASE_URL` vit dans le groupe d'environnement Render `neon-ninja-production` (`evg-dak0g56q1p3s739qm7b0`), lié au service. Les branches de test de la CI sont créées sans les données de la branche principale.
 
@@ -30,16 +31,16 @@ node packages/server/dist/base/migrer.js && VERSION_DU_JEU=$RENDER_GIT_COMMIT ex
 
 Route de santé surveillée par Render : `/sante`.
 
-| Variable                          | Valeur                              | Pourquoi                                                                |
-| --------------------------------- | ----------------------------------- | ----------------------------------------------------------------------- |
-| `NODE_VERSION`                    | `24`                                | La version de Node du projet, sans suivre la dernière parue.            |
-| `COREPACK_ENABLE_DOWNLOAD_PROMPT` | `0`                                 | corepack installe pnpm (champ `packageManager`) sans poser de question. |
-| `SERVIR_LA_PAGE`                  | `non`                               | La page est servie par Vercel.                                          |
-| `ORIGINES_AUTORISEES`             | `https://neon-ninja-jeu.vercel.app` | La page peut appeler les routes des comptes.                            |
-| `MANDATAIRES_DE_CONFIANCE`        | `3`                                 | Mesuré, voir « Mandataires » ci-dessous.                                |
-| `DATABASE_URL`                    | groupe `neon-ninja-production`      | La base, par le pooler. Un secret.                                      |
-| `VERSION_DU_JEU`                  | posée par la commande de démarrage  | Le commit en ligne, lu par le contrôle de version et la route de santé. |
-| `PORT`                            | posée par Render                    | Le port d'écoute.                                                       |
+| Variable                          | Valeur                                                         | Pourquoi                                                                           |
+| --------------------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `NODE_VERSION`                    | `24`                                                           | La version de Node du projet, sans suivre la dernière parue.                       |
+| `COREPACK_ENABLE_DOWNLOAD_PROMPT` | `0`                                                            | corepack installe pnpm (champ `packageManager`) sans poser de question.            |
+| `SERVIR_LA_PAGE`                  | `non`                                                          | La page est servie par Vercel.                                                     |
+| `ORIGINES_AUTORISEES`             | `https://neon-ninja-jeu.vercel.app,https://ninja.dendrolag.fr` | La page, sous ses deux adresses, peut joindre Socket.IO et les routes des comptes. |
+| `MANDATAIRES_DE_CONFIANCE`        | `3`                                                            | Mesuré, voir « Mandataires » ci-dessous.                                           |
+| `DATABASE_URL`                    | groupe `neon-ninja-production`                                 | La base, par le pooler. Un secret.                                                 |
+| `VERSION_DU_JEU`                  | posée par la commande de démarrage                             | Le commit en ligne, lu par le contrôle de version et la route de santé.            |
+| `PORT`                            | posée par Render                                               | Le port d'écoute.                                                                  |
 
 **Une variable modifiée ne s'applique qu'au déploiement suivant.** Redémarrer le service garde les anciennes valeurs (constaté le 14 septembre 2026). Après un changement, redéployer le commit en ligne, ou pousser.
 

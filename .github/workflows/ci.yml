@@ -133,7 +133,7 @@ jobs:
       VERCEL_ORG_ID: team_v9SkLK1zKjpRjtkmzq8Q9TM7
       VERCEL_PROJECT_ID: prj_x2NAYxrQy1D88sjkjGRewy96hbua
       SERVEUR_DE_JEU: https://neon-ninja.onrender.com
-      PAGE_DU_JEU: https://neon-ninja-jeu.vercel.app
+      PAGE_DU_JEU: https://ninja.dendrolag.fr
       VERSION_DU_JEU: ${{ github.sha }}
     steps:
       # Tout l'historique: la mise en ligne compare ce commit a celui qui est en ligne,

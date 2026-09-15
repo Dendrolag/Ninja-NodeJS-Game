@@ -2,7 +2,7 @@
 
 Jeu multijoueur en temps réel, dans le navigateur : capturer les faux ninjas en les touchant, et capturer les autres joueurs pour leur prendre tous les leurs d'un coup.
 
-Jouer : https://neon-ninja-jeu.vercel.app
+Jouer : https://ninja.dendrolag.fr
 
 ## Le dépôt
 
