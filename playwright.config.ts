@@ -69,7 +69,13 @@ export default defineConfig({
   // echecs, jamais sur le meme scenario, sur la version courante comme sur celle
   // d'avant la pluie de Rainy Tokyo; deux passages a quatre, 25 scenarios sur 25,
   // en un peu plus de deux minutes, soit la meme duree.
-  workers: process.env['CI'] ? 1 : 4,
+  //
+  // Trois a la fois depuis l'etape 2.5, qui a ajoute le scenario du rechargement de
+  // page, et avec lui deux chargements de carte. A quatre, deux passages complets
+  // sur trois ont compte un echec: une page restee a l'accueil avait perdu son lien,
+  // la fragilite relevee a l'etape 5.4. Sans ce scenario, 26 sur 26 a quatre; avec
+  // lui, a trois, 26 sur 26 deux fois, en 2,6 et 2,8 minutes.
+  workers: process.env['CI'] ? 1 : 3,
   reporter: process.env['CI'] ? [['github'], ['html', { open: 'never' }]] : [['list']],
   use: {
     trace: 'on-first-retry',
