@@ -75,6 +75,8 @@ export function finPourLesComptes(room: GameRoom): FinPourLesComptes {
       tempsJoueMs: joueur.tempsJoueMs,
       dureePartieMs: bilan.dureePartieMs,
       abandon: joueur.abandon,
+      // Une partie Equipes dit ce que chacun devance: son placement ne le dit pas.
+      ...(joueur.devancement === undefined ? {} : { devancement: joueur.devancement }),
     });
 
     resultats.push({

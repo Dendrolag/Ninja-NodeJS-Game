@@ -47,6 +47,7 @@
 import type {
   Couleur,
   Direction,
+  Equipe,
   IdentifiantCarte,
   Mode,
   Orientation,
@@ -229,6 +230,8 @@ export interface JoueurDuSalon {
   readonly hote: boolean;
   /** Present pour un joueur connecte a son compte, absent pour un invite. */
   readonly compte?: CompteDuSalon;
+  /** Son equipe, dans une partie Equipes seulement (etape 7.2). */
+  readonly equipe?: Equipe;
 }
 
 /** Ce que le salon montre du compte d'un joueur. */
@@ -294,7 +297,10 @@ export interface PartiePublique {
 export interface CaptureSubie {
   /** Pseudo de celui qui l'a capture. */
   readonly parPseudo: string;
-  /** Couleur tiree pour la victime a sa reapparition. */
+  /**
+   * Couleur de la victime a sa reapparition: tiree au sort, ou, dans une partie Equipes,
+   * celle de son equipe, qu'elle garde (etape 7.2).
+   */
   readonly nouvelleCouleur: Couleur;
   /** Nombre de bots qui viennent de changer de camp. */
   readonly botsPerdus: number;
@@ -564,6 +570,16 @@ export interface EvenementsClientVersServeur {
    * n'en font qu'une. Sans effet hors d'une partie Tactique en cours.
    */
   capturer: () => void;
+
+  /**
+   * Passer dans une equipe, dans le salon d'une partie Equipes (etape 7.2). Sans
+   * equivalent dans le jeu d'origine.
+   *
+   * Ouvert a tout membre, pas seulement a l'hote. Refuse hors d'une partie Equipes, une
+   * fois la partie lancee, et vers une equipe complete. Accepte, le salon est diffuse de
+   * nouveau.
+   */
+  changerDEquipe: (equipe: Equipe) => void;
 
   /** Parler dans le chat. Remplace chatMessage. */
   chat: (demande: DemandeChat) => void;

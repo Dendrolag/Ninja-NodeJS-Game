@@ -53,6 +53,7 @@ export {
 
 export type {
   AvancementDuNiveau,
+  Devancement,
   IdentifiantPalier,
   Palier,
   PlaceEnFinDePartie,
@@ -164,7 +165,20 @@ export {
   ZONES,
 } from './constantes.js';
 
-export { equipeDeCouleur } from './equipes.js';
+export type {
+  ClassementDesEquipes,
+  IssueDesEquipes,
+  LigneDEquipe,
+  LigneDeJoueurEnEquipe,
+  PlaceDansLesEquipes,
+} from './equipes.js';
+export {
+  classementDesEquipes,
+  equipeDArrivee,
+  equipeDeCouleur,
+  placeDansLesEquipes,
+  pointsEnEquipe,
+} from './equipes.js';
 
 export type { EnTeteDeTrame, NatureDeTrame, TrameDEtat, TrameEncodee } from './flux.js';
 export {
@@ -229,6 +243,7 @@ export {
   validerDemandeReinitialisation,
   validerDemandeRejoindre,
   validerDemandeRetour,
+  validerEquipe,
   validerIntentionDeplacement,
   validerJeton,
   validerMessageChat,

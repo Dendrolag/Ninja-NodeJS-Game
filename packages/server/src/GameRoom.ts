@@ -56,7 +56,10 @@
  */
 
 import type {
+  ClassementDesEquipes,
   CompteDeSession,
+  Devancement,
+  Equipe,
   Mode,
   ReglagesPartie,
   ReglagesPartiels,
@@ -65,7 +68,18 @@ import type {
   StatutPartie,
   Visibilite,
 } from '@neon-ninja/shared';
-import { CAPACITES, reperePseudo } from '@neon-ninja/shared';
+import {
+  CAPACITES,
+  COULEURS_DES_EQUIPES,
+  EQUIPES,
+  MEMBRES_PAR_EQUIPE_MAXIMUM,
+  classementDesEquipes,
+  equipeDArrivee,
+  equipeDeCouleur,
+  placeDansLesEquipes,
+  pointsEnEquipe,
+  reperePseudo,
+} from '@neon-ninja/shared';
 import type {
   CarteCollisions,
   EntreeJoueur,
@@ -78,6 +92,7 @@ import type {
 import {
   ajouterJoueur,
   calculerScores,
+  changerDeCouleur,
   creerEtatInitial,
   evaluerFinDePartie,
   mettreEnPause,
@@ -133,6 +148,8 @@ export interface JoueurDeRoom {
   readonly hote: boolean;
   /** Le compte de ce joueur, tel que sa session l'a etabli. Absent: un invite. */
   readonly compte?: CompteDeSession;
+  /** Son equipe, dans une partie Equipes seulement (etape 7.2). */
+  readonly equipe?: Equipe;
 }
 
 /** Un joueur dans le bilan d'une partie: present a la fin, ou parti avant. */
@@ -155,6 +172,11 @@ export interface JoueurDuBilan {
   readonly tempsJoueMs: number;
   /** Le joueur a quitte la partie pendant qu'elle se jouait. */
   readonly abandon: boolean;
+  /**
+   * Ce que ce joueur devance, quand son placement ne le dit pas: un present d'une partie
+   * Equipes (etape 7.2). Absent en Classique et en Tactique, et pour un abandon.
+   */
+  readonly devancement?: Devancement;
 }
 
 /** Ce qu'il faut savoir de la partie pour la fin: qui, a quelle place, combien de temps. */
@@ -418,6 +440,10 @@ export class GameRoom {
    * passer pour quelqu'un d'autre ne demandait aucun effort. La comparaison se
    * fait sur le texte normalise et sans distinction de casse, sans quoi
    * « Alice » et « alice » passeraient pour deux personnes.
+   *
+   * DANS UNE PARTIE EQUIPES (etape 7.2), le joueur entre dans une equipe et en porte la
+   * couleur: la moins nombreuse, ou, a nombre egal, celle qui a le moins de points. Au
+   * salon, il pourra en changer; dans une partie deja lancee, il y reste.
    */
   accueillir(session: SessionJoueur): ResultatValidation<JoueurDeRoom> {
     if (this.statutCourant === 'terminee') {
@@ -436,7 +462,12 @@ export class GameRoom {
       return refus('pseudo', 'Ce pseudo est déjà pris dans cette partie.');
     }
 
-    this.partie = ajouterJoueur(this.partie, { id: session.id, pseudo: session.pseudo });
+    const equipe = this.equipeDUnArrivant();
+    this.partie = ajouterJoueur(this.partie, {
+      id: session.id,
+      pseudo: session.pseudo,
+      ...(equipe === undefined ? {} : { couleur: COULEURS_DES_EQUIPES[equipe] }),
+    });
     this.ordreDArrivee.push(session.id);
     this.hoteCourant ??= session.id;
 
@@ -539,6 +570,67 @@ export class GameRoom {
   }
 
   /**
+   * L'equipe d'un membre, dans une partie Equipes (etape 7.2). Undefined dans un autre
+   * mode, et pour qui n'est pas membre.
+   *
+   * LA COULEUR DU JOUEUR DANS L'ETAT EST LA SEULE TRACE DE SON EQUIPE. La room ne la
+   * retient pas a part: une seconde verite, tenue a la main, pourrait diverger de celle
+   * que le moteur applique.
+   */
+  equipeDe(id: IdentifiantEntite): Equipe | undefined {
+    const joueur = this.partie.joueurs[id];
+
+    return this.mode !== 'equipes' || joueur === undefined
+      ? undefined
+      : equipeDeCouleur(joueur.couleur);
+  }
+
+  /**
+   * Fait passer un membre dans une equipe, dans le salon d'une partie Equipes (etape 7.2).
+   *
+   * Refuse hors du mode Equipes, une fois la partie lancee, pour qui n'est pas membre, et
+   * vers une equipe complete. Rejoindre son equipe actuelle est accepte et ne change rien.
+   * Le compte a rebours ne l'empeche pas: la condition de lancement est verifiee de
+   * nouveau a son terme.
+   */
+  changerDEquipe(id: IdentifiantEntite, equipe: Equipe): ResultatValidation<JoueurDeRoom> {
+    if (this.mode !== 'equipes') {
+      return refus('equipe', 'Cette partie ne se joue pas en équipes.');
+    }
+
+    if (this.statutCourant !== 'salon') {
+      return refus('partie', 'La partie a déjà commencé.');
+    }
+
+    if (this.partie.joueurs[id] === undefined) {
+      return refus('session', "Cette connexion n'est pas dans la partie.");
+    }
+
+    if (this.equipeDe(id) !== equipe && this.membresDe(equipe) >= MEMBRES_PAR_EQUIPE_MAXIMUM) {
+      return refus('equipe', 'Cette équipe est complète.');
+    }
+
+    this.partie = changerDeCouleur(this.partie, id, COULEURS_DES_EQUIPES[equipe]);
+
+    return { valide: true, valeur: this.membre(id) };
+  }
+
+  /**
+   * La partie peut-elle etre lancee, selon son mode ?
+   *
+   * Toujours en Classique et en Tactique, ou un joueur seul peut lancer, comme dans le
+   * legacy. En Equipes, il faut au moins un joueur dans chaque equipe (decision 9 du
+   * porteur du projet); des equipes inegales sont permises.
+   */
+  conditionDeLancement(): ResultatValidation<true> {
+    if (this.mode === 'equipes' && EQUIPES.some((equipe) => this.membresDe(equipe) === 0)) {
+      return refus('equipes', 'Il faut au moins un joueur dans chaque équipe.');
+    }
+
+    return { valide: true, valeur: true };
+  }
+
+  /**
    * Change les reglages de la partie, tant qu'elle n'a pas commence.
    *
    * L'ETAT EST REFAIT A NEUF, PAS RETOUCHE. Changer la carte change ses
@@ -566,10 +658,17 @@ export class GameRoom {
       );
     }
 
-    const membres = this.ordreDArrivee.map((id) => ({
-      id,
-      pseudo: this.partie.joueurs[id]?.pseudo ?? '',
-    }));
+    // Dans une partie Equipes, chacun revient dans son equipe: sa couleur est la seule
+    // trace de son choix, et l'etat neuf la lui rend.
+    const membres = this.ordreDArrivee.map((id) => {
+      const equipe = this.equipeDe(id);
+
+      return {
+        id,
+        pseudo: this.partie.joueurs[id]?.pseudo ?? '',
+        ...(equipe === undefined ? {} : { couleur: COULEURS_DES_EQUIPES[equipe] }),
+      };
+    });
 
     this.terrain = terrain;
     this.partie = this.etatNeuf(reglages);
@@ -591,12 +690,20 @@ export class GameRoom {
    * decide et s'annule par messages, donc a l'etape 2.2. Cette methode lance la
    * partie pour de bon.
    *
-   * @throws Si la partie a deja commence. L'appelant verifie le statut avant.
+   * @throws Si la partie a deja commence, ou si la condition de lancement de son mode
+   *         n'est pas remplie. L'appelant verifie les deux avant.
    */
   lancer(): void {
     if (this.statutCourant !== 'salon') {
       throw new Error(
         `La room ${this.id} n'est plus dans son salon: statut ${this.statutCourant}.`,
+      );
+    }
+
+    const condition = this.conditionDeLancement();
+    if (!condition.valide) {
+      throw new Error(
+        `La room ${this.id} ne peut pas etre lancee: ${condition.erreurs.map((erreur) => erreur.motif).join(' ')}`,
       );
     }
 
@@ -757,22 +864,34 @@ export class GameRoom {
    *
    * Le temps joue d'un present va de son entree a la fin du temps de jeu, qui ne
    * compte pas le temps de pause et s'arrete a la duree reglee.
+   *
+   * DANS UNE PARTIE EQUIPES (etape 7.2), on se place par equipe: les vainqueurs d'abord,
+   * les perdants ensuite, et chacun avec ce qu'il devance, que son placement ne dit plus
+   * (placeDansLesEquipes). Ses points sont sa part des bots de son equipe, plus ses
+   * propres points de bots noirs (pointsEnEquipe): le score de toute l'equipe gonflerait
+   * le meilleur score de son profil.
    */
   bilan(): BilanDePartie {
     const classement = this.classement();
     const nombreJoueurs = classement.length + this.abandons.length;
     const finDuJeuMs = Math.min(this.partie.tempsEcouleMs, this.partie.dureeMs);
+    const equipes = this.mode === 'equipes' ? classementDesEquipes(classement) : undefined;
+    const ordre = equipes === undefined ? classement : dansLOrdreDesEquipes(classement, equipes);
 
-    const presents = classement.map((ligne, index): JoueurDuBilan => {
+    const presents = ordre.map((ligne, index): JoueurDuBilan => {
       const compte = this.comptesDesMembres.get(ligne.id);
       const entreeMs = this.entreesEnJeuMs.get(ligne.id) ?? 0;
+      const place =
+        equipes === undefined
+          ? { placement: index + 1 }
+          : placeDansLesEquipes(equipes, equipeDeCouleur(ligne.couleur), nombreJoueurs);
 
       return {
         id: ligne.id,
         pseudo: ligne.pseudo,
         ...(compte === undefined ? {} : { compte }),
-        placement: index + 1,
-        points: ligne.points,
+        ...place,
+        points: equipes === undefined ? ligne.points : pointsEnEquipe(equipes, ligne),
         captures: ligne.captures,
         botsNoirsDetruits: ligne.botsNoirsDetruits,
         tempsJoueMs: Math.max(finDuJeuMs - entreeMs, 0),
@@ -831,13 +950,43 @@ export class GameRoom {
    */
   private membre(id: IdentifiantEntite): JoueurDeRoom {
     const compte = this.comptesDesMembres.get(id);
+    const equipe = this.equipeDe(id);
 
     return {
       id,
       pseudo: this.partie.joueurs[id]?.pseudo ?? '',
       hote: id === this.hoteCourant,
       ...(compte === undefined ? {} : { compte }),
+      ...(equipe === undefined ? {} : { equipe }),
     };
+  }
+
+  /** Combien de membres porte une equipe. */
+  private membresDe(equipe: Equipe): number {
+    return this.ordreDArrivee.filter((id) => this.equipeDe(id) === equipe).length;
+  }
+
+  /**
+   * L'equipe d'un joueur qui entre, dans une partie Equipes: voir equipeDArrivee. Undefined
+   * dans un autre mode, ou le joueur recoit une couleur libre.
+   */
+  private equipeDUnArrivant(): Equipe | undefined {
+    if (this.mode !== 'equipes') {
+      return undefined;
+    }
+
+    const lignes = classementDesEquipes(this.classement()).equipes;
+    const points = Object.fromEntries(
+      EQUIPES.map((equipe) => [
+        equipe,
+        lignes.find((ligne) => ligne.equipe === equipe)?.points ?? 0,
+      ]),
+    ) as Record<Equipe, number>;
+    const membres = Object.fromEntries(
+      EQUIPES.map((equipe) => [equipe, this.membresDe(equipe)]),
+    ) as Record<Equipe, number>;
+
+    return equipeDArrivee(membres, points);
   }
 
   /**
@@ -930,4 +1079,21 @@ export class GameRoom {
 /** Un refus, redige pour etre montre au joueur. */
 function refus<T>(champ: string, motif: string): ResultatValidation<T> {
   return { valide: false, erreurs: [{ champ, motif }] };
+}
+
+/**
+ * Le classement des joueurs, range par equipe: celles du classement des equipes dans
+ * leur ordre, et, dans chacune, les membres dans l'ordre du classement recu.
+ */
+function dansLOrdreDesEquipes(
+  classement: readonly LigneScore[],
+  equipes: ClassementDesEquipes,
+): readonly LigneScore[] {
+  const rang = (ligne: LigneScore): number => {
+    const trouve = equipes.equipes.findIndex((equipe) => equipe.membres.includes(ligne.id));
+
+    return trouve === -1 ? equipes.equipes.length : trouve;
+  };
+
+  return [...classement].sort((une, autre) => rang(une) - rang(autre));
 }

@@ -49,8 +49,16 @@ import type {
   DemandeInscription,
   DemandeReinitialisation,
 } from './comptes.js';
-import type { IdentifiantCarte } from './constantes.js';
-import { CARTES, MODES, TYPES_BONUS, TYPES_MALUS, TYPES_ZONE, VISIBILITES } from './constantes.js';
+import type { Equipe, IdentifiantCarte } from './constantes.js';
+import {
+  CARTES,
+  EQUIPES,
+  MODES,
+  TYPES_BONUS,
+  TYPES_MALUS,
+  TYPES_ZONE,
+  VISIBILITES,
+} from './constantes.js';
 import type {
   DemandeCreation,
   DemandeRejoindre,
@@ -316,6 +324,14 @@ export function validerDemandeCreation(brut: unknown): ResultatValidation<Demand
     ...verdictPseudo.valeur,
     configuration: { mode, visibilite, reglages: verdictReglages.valeur },
   });
+}
+
+/**
+ * Valide l'equipe demandee par un joueur qui en change, dans le salon d'une partie
+ * Equipes (etape 7.2): l'identifiant de l'une des equipes, et rien d'autre.
+ */
+export function validerEquipe(brut: unknown): ResultatValidation<Equipe> {
+  return estUnDe(EQUIPES, brut) ? accepte(brut) : refuse('equipe', "Cette équipe n'existe pas.");
 }
 
 /**

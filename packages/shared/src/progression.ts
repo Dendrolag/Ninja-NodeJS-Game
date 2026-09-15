@@ -31,6 +31,11 @@
  *   4. Un compte qui quitte une partie en cours est compte dernier: aucune XP, aucune
  *      piece, et la perte de points de ligue du dernier. Sans cela, quitter juste
  *      avant la fin eviterait toute perte.
+ *
+ * Dans une partie Equipes (etape 7.2), on devance par equipe: un vainqueur devance les
+ * perdants sans devancer ses coequipiers. Le placement ne suffit plus a le dire, et le
+ * serveur donne alors le devancement lui-meme (placeDansLesEquipes, dans equipes.ts).
+ * Les regles ci-dessus ne changent pas.
  */
 
 /** Les nombres des regles de progression. */
@@ -171,6 +176,22 @@ export function palierDePoints(pointsLigue: number): IdentifiantPalier {
 // Ce qu'une partie rapporte
 // --------------------------------------------------------------------------
 
+/**
+ * Ce qu'un compte a devance au classement final, quand son placement ne le dit pas.
+ *
+ * Dans une partie Equipes, un vainqueur est place premier sans devancer ses
+ * coequipiers (etape 7.2).
+ */
+export interface Devancement {
+  /** Combien de joueurs il devance: c'est ce que paie l'XP. */
+  readonly joueursDevances: number;
+  /**
+   * Ou il se place entre le dernier (zero) et le premier (un): c'est ce que paient les
+   * points de ligue, en ligne droite entre les deux.
+   */
+  readonly partDevancee: number;
+}
+
 /** Ce qu'il faut savoir d'un compte a la fin d'une partie pour calculer ses gains. */
 export interface PlaceEnFinDePartie {
   /** 1 pour le premier. Un abandon est place dernier, au nombre de joueurs. */
@@ -183,6 +204,11 @@ export interface PlaceEnFinDePartie {
   readonly dureePartieMs: number;
   /** Le compte a quitte la partie avant la fin. */
   readonly abandon: boolean;
+  /**
+   * Ce qu'il a devance, quand le placement ne le dit pas (partie Equipes). Absent: il
+   * devance les joueurs places apres lui. Sans effet sur un abandon, compte dernier.
+   */
+  readonly devancement?: Devancement;
 }
 
 /** Ce qu'une partie rapporte a un compte. */
@@ -206,8 +232,11 @@ export function recompensesDePartie(place: PlaceEnFinDePartie): Recompenses {
   exigerUnePlacePossible(place);
 
   const placement = place.abandon ? place.nombreJoueurs : place.placement;
+  const devancement = place.abandon
+    ? devancementDuPlacement(placement, place.nombreJoueurs)
+    : (place.devancement ?? devancementDuPlacement(placement, place.nombreJoueurs));
   const variationPointsLigue = variationDeLigue(
-    placement,
+    devancement.partDevancee,
     place.nombreJoueurs,
     place.dureePartieMs,
   );
@@ -216,7 +245,7 @@ export function recompensesDePartie(place: PlaceEnFinDePartie): Recompenses {
     return { xp: 0, pieces: 0, variationPointsLigue };
   }
 
-  const xp = xpDePartie(place.nombreJoueurs - placement, place.tempsJoueMs, place.dureePartieMs);
+  const xp = xpDePartie(devancement.joueursDevances, place.tempsJoueMs, place.dureePartieMs);
 
   return {
     xp,
@@ -241,11 +270,28 @@ function xpDePartie(joueursDevances: number, tempsJoueMs: number, dureePartieMs:
 }
 
 /**
+ * Ce que devance un placement: les joueurs places apres lui, et la part du chemin du
+ * dernier au premier. Une partie jouee seul ne devance rien.
+ */
+function devancementDuPlacement(placement: number, nombreJoueurs: number): Devancement {
+  return {
+    joueursDevances: nombreJoueurs - placement,
+    partDevancee: nombreJoueurs <= 1 ? 0 : (nombreJoueurs - placement) / (nombreJoueurs - 1),
+  };
+}
+
+/**
  * La variation de points de ligue d'une place: +20 au premier, -10 au dernier, en
  * ligne droite entre les deux, arrondie a l'entier le plus proche (une demie vers
  * le haut).
+ *
+ * @param partDevancee Zero pour le dernier, un pour le premier.
  */
-function variationDeLigue(placement: number, nombreJoueurs: number, dureePartieMs: number): number {
+function variationDeLigue(
+  partDevancee: number,
+  nombreJoueurs: number,
+  dureePartieMs: number,
+): number {
   const { variationDuPremier, variationDuDernier, joueursMinimum, dureeMinimumMs } =
     REGLES_DE_PROGRESSION.ligue;
 
@@ -253,7 +299,6 @@ function variationDeLigue(placement: number, nombreJoueurs: number, dureePartieM
     return 0;
   }
 
-  const partDevancee = (nombreJoueurs - placement) / (nombreJoueurs - 1);
   const arrondie = Math.round(
     variationDuDernier + (variationDuPremier - variationDuDernier) * partDevancee,
   );
@@ -277,6 +322,19 @@ function exigerUnePlacePossible(place: PlaceEnFinDePartie): void {
   ) {
     throw new Error(
       `Placement ${String(place.placement)} impossible dans une partie de ${String(place.nombreJoueurs)} joueurs.`,
+    );
+  }
+
+  const devancement = place.devancement;
+  if (
+    devancement !== undefined &&
+    (!Number.isInteger(devancement.joueursDevances) ||
+      devancement.joueursDevances < 0 ||
+      devancement.joueursDevances >= place.nombreJoueurs ||
+      !(devancement.partDevancee >= 0 && devancement.partDevancee <= 1))
+  ) {
+    throw new Error(
+      `Devancement impossible dans une partie de ${String(place.nombreJoueurs)} joueurs: ${String(devancement.joueursDevances)} joueurs devances, part ${String(devancement.partDevancee)}.`,
     );
   }
 

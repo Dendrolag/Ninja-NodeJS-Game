@@ -107,6 +107,25 @@ describe.runIf(baseDisponible())('parties et resultats', () => {
     ]);
   });
 
+  it('enregistre une partie Equipes, ou deux comptes a egalite partagent leur rang', async () => {
+    // Etape 7.2: la valeur equipes de l'enumeration des modes (migration 0004), et une
+    // egalite ou tous les presents d'une partie de quatre sont places troisiemes.
+    const alice = await nouveauCompte();
+    const bob = await nouveauCompte();
+    const jouee = partie({ mode: 'equipes', nombreJoueurs: 4 });
+
+    const { partieId } = await enregistrerPartie(db(), jouee, [
+      resultat(alice, 3, { variationPointsLigue: 5 }),
+      resultat(bob, 3, { variationPointsLigue: 5 }),
+    ]);
+
+    for (const compte of [alice, bob]) {
+      expect(await lireHistorique(db(), compte)).toMatchObject([
+        { partieId, mode: 'equipes', nombreJoueurs: 4, placement: 3, variationPointsLigue: 5 },
+      ]);
+    }
+  });
+
   it('rend l historique de la partie la plus recente a la plus ancienne', async () => {
     const compte = await nouveauCompte();
     const ancienne = partie({ termineeLe: new Date('2026-03-01T10:00:00Z') });

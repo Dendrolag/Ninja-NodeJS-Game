@@ -57,6 +57,7 @@ import type {
   DemandeCreation,
   DemandeRejoindre,
   DemandeRetour,
+  Equipe,
   ErreurValidation,
   EvenementsClientVersServeur,
   EvenementsServeurVersClient,
@@ -79,6 +80,7 @@ import {
   validerDemandeCreation,
   validerDemandeRejoindre,
   validerDemandeRetour,
+  validerEquipe,
   validerIntentionDeplacement,
   validerJeton,
   validerMessageChat,
@@ -494,6 +496,9 @@ export class ServeurSocket {
     socket.on('capturer', () => {
       this.surCapturer(socket);
     });
+    socket.on('changerDEquipe', (equipe) => {
+      this.surChangerDEquipe(socket, equipe);
+    });
     socket.on('chat', (demande) => {
       this.surChat(socket, demande);
     });
@@ -905,6 +910,46 @@ export class ServeurSocket {
     this.io.to(connexion.idRoom).emit('chat', verdict.valeur);
   }
 
+  /**
+   * Changement d'equipe d'un membre, dans le salon d'une partie Equipes (etape 7.2).
+   *
+   * Tout membre peut changer d'equipe, pas seulement l'hote. Aucune regle ici: la room
+   * dit ce qui est permis; la couche reseau valide le message, limite son debit, et
+   * diffuse le salon quand le changement est accepte.
+   */
+  private surChangerDEquipe(socket: SocketTypee, equipe: Equipe): void {
+    const connexion = this.connexions.get(socket.id);
+    const room = connexion?.idRoom === undefined ? undefined : this.rooms.room(connexion.idRoom);
+
+    if (connexion?.session === undefined || room === undefined) {
+      socket.emit('refus', {
+        action: 'changerDEquipe',
+        erreurs: [{ champ: 'partie', motif: "Vous n'êtes dans aucune partie." }],
+      });
+      return;
+    }
+
+    if (!this.autorise(connexion, 'autresActions')) {
+      socket.emit('refus', {
+        action: 'changerDEquipe',
+        erreurs: [{ champ: 'equipe', motif: 'Trop de demandes. Ralentissez.' }],
+      });
+      return;
+    }
+
+    const verdict = validerEquipe(equipe as unknown);
+    const change = verdict.valide
+      ? room.changerDEquipe(connexion.session.id, verdict.valeur)
+      : verdict;
+
+    if (!change.valide) {
+      socket.emit('refus', { action: 'changerDEquipe', erreurs: change.erreurs });
+      return;
+    }
+
+    this.diffuserLeSalon(room);
+  }
+
   /** Changement des reglages par l'hote, dans le salon uniquement. */
   private surReglages(socket: SocketTypee, reglages: ReglagesPartiels): void {
     const room = this.roomDeLHote(socket, 'reglages');
@@ -945,6 +990,13 @@ export class ServeurSocket {
         action: 'demarrer',
         erreurs: [{ champ: 'partie', motif: 'La partie a déjà commencé.' }],
       });
+      return;
+    }
+
+    // Une partie Equipes ne part pas sans un joueur dans chaque equipe (etape 7.2).
+    const condition = room.conditionDeLancement();
+    if (!condition.valide) {
+      socket.emit('refus', { action: 'demarrer', erreurs: condition.erreurs });
       return;
     }
 
@@ -1041,6 +1093,14 @@ export class ServeurSocket {
     this.decomptes.delete(room.id);
 
     if (room.statut !== 'salon') {
+      return;
+    }
+
+    // Un depart ou un changement d'equipe pendant le decompte a pu vider une equipe: la
+    // condition de lancement se verifie de nouveau, et le demarrage est annule si elle
+    // ne tient plus (micro-decision 8 de la fiche 7.2). Le salon dit pourquoi.
+    if (!room.conditionDeLancement().valide) {
+      this.io.to(room.id).emit('demarrageAnnule');
       return;
     }
 

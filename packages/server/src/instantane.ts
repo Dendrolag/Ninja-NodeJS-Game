@@ -223,12 +223,15 @@ export function joueurDuSalon(joueur: {
   readonly pseudo: string;
   readonly hote: boolean;
   readonly compte?: CompteDeSession;
+  readonly equipe?: JoueurDuSalon['equipe'];
 }): JoueurDuSalon {
   return {
     id: joueur.id,
     pseudo: joueur.pseudo,
     hote: joueur.hote,
     ...(joueur.compte === undefined ? {} : { compte: { niveau: joueur.compte.niveau } }),
+    // L'equipe d'un membre, dans une partie Equipes seulement (etape 7.2).
+    ...(joueur.equipe === undefined ? {} : { equipe: joueur.equipe }),
   };
 }
 
