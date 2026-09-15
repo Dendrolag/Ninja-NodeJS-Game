@@ -126,6 +126,7 @@ export type {
   Couleur,
   DimensionsCarte,
   Direction,
+  Equipe,
   IdentifiantCarte,
   Mode,
   Orientation,
@@ -143,10 +144,13 @@ export {
   CARTES,
   COULEUR_BOT_NEUTRE,
   COULEUR_BOT_NOIR,
+  COULEURS_DES_EQUIPES,
   COULEURS_JOUEURS,
   DEPLACEMENTS_LEGACY_PAR_PAS,
   DIRECTIONS,
   DUREES,
+  EQUIPES,
+  MEMBRES_PAR_EQUIPE_MAXIMUM,
   MODES,
   OBJETS,
   RAYON_ENTITE,
@@ -159,6 +163,8 @@ export {
   VITESSES,
   ZONES,
 } from './constantes.js';
+
+export { equipeDeCouleur } from './equipes.js';
 
 export type { EnTeteDeTrame, NatureDeTrame, TrameDEtat, TrameEncodee } from './flux.js';
 export {

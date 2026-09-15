@@ -15,9 +15,21 @@
  *     tick(etat, entrees, dt) -> nouvel etat
  */
 
-export { avancerLesBots, faireApparaitreLesBotsNoirs, peuplerDeBots } from './bots.js';
+export type { PerteFaceAuBotNoir } from './bots.js';
+export {
+  avancerLesBots,
+  faireApparaitreLesBotsNoirs,
+  perteClassique,
+  peuplerDeBots,
+} from './bots.js';
 
-export { captureAutorisee, capturerBot, capturerJoueur, detruireBotNoir } from './capture.js';
+export {
+  captureAutorisee,
+  capturerBot,
+  capturerEnEquipe,
+  capturerJoueur,
+  detruireBotNoir,
+} from './capture.js';
 
 export type { CarteCollisions } from './collisions.js';
 export {
@@ -35,6 +47,7 @@ export {
   SEUIL_CONTACT_PX,
   detecterContacts,
   regleClassique,
+  regleEquipes,
   regleTactique,
   resoudreContacts,
 } from './contacts.js';
@@ -58,6 +71,8 @@ export {
   malusEnCours,
   remplacer,
 } from './effets.js';
+
+export { malusEnEquipe, partDuJoueur, perteEnEquipe } from './equipes.js';
 
 export type {
   BonusPose,
@@ -91,6 +106,7 @@ export {
   ajouterBot,
   ajouterJoueur,
   bonusActif,
+  changerDeCouleur,
   couleursUtilisees,
   creerEtatInitial,
   entiteDe,
@@ -106,10 +122,11 @@ export {
   toutesLesEntites,
 } from './etat.js';
 
-export type { OptionsPoseObjet } from './objets.js';
+export type { OptionsPoseObjet, VictimeDuMalus } from './objets.js';
 export {
   faireApparaitreLesObjets,
   fairePasserLeTempsSurLesObjets,
+  malusClassique,
   nombreDeMalusPoses,
   poserObjet,
   ramasser,

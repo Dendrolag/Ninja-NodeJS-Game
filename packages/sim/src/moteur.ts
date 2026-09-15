@@ -51,17 +51,27 @@
 import type { IntentionDeplacement, Vecteur } from '@neon-ninja/shared';
 import { VITESSES } from '@neon-ninja/shared';
 
-import { avancerLesBots } from './bots.js';
+import type { PerteFaceAuBotNoir } from './bots.js';
+import { avancerLesBots, perteClassique } from './bots.js';
 import type { RegleDeResolution } from './contacts.js';
-import { detecterContacts, regleClassique, regleTactique, resoudreContacts } from './contacts.js';
+import {
+  detecterContacts,
+  regleClassique,
+  regleEquipes,
+  regleTactique,
+  resoudreContacts,
+} from './contacts.js';
 import { resoudreDeplacement } from './deplacement.js';
 import { aLaLongueur, directionDuVecteur, norme } from './direction.js';
 import { fairePasserLeTemps } from './effets.js';
+import { malusEnEquipe, perteEnEquipe } from './equipes.js';
 import type { EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
 import { COMPTEUR_CAPTURE_PRET, bonusActif, malusActif } from './etat.js';
+import type { VictimeDuMalus } from './objets.js';
 import {
   faireApparaitreLesObjets,
   fairePasserLeTempsSurLesObjets,
+  malusClassique,
   ramasserLesObjets,
 } from './objets.js';
 import { agirEnTactique } from './tactique.js';
@@ -109,7 +119,7 @@ export type Entrees = Readonly<Record<IdentifiantEntite, EntreeJoueur>>;
  * Ce qui distingue un mode de jeu, vu du moteur.
  *
  * Le moteur fait avancer le monde de la meme facon dans tous les modes: joueurs,
- * bots, zones, objets. Un mode decide de deux choses seulement.
+ * bots, zones, objets. Un mode decide de quatre choses seulement.
  */
 export interface JeuDeRegles {
   /**
@@ -120,6 +130,13 @@ export interface JeuDeRegles {
   readonly agir: (etat: EtatPartie, entrees: Entrees, dtMs: number) => EtatPartie;
   /** Ce que produisent les contacts releves. */
   readonly resoudreContacts: RegleDeResolution;
+  /**
+   * Les bots que perd un joueur attrape par un bot noir. Une part de tous ses bots en
+   * Classique et en Tactique; une part de sa part en Equipes.
+   */
+  readonly perteFaceAuBotNoir: PerteFaceAuBotNoir;
+  /** Qui subit un malus ramasse: tous les autres, ou l'equipe adverse en Equipes. */
+  readonly victimeDuMalus: VictimeDuMalus;
 }
 
 /**
@@ -134,10 +151,31 @@ export interface JeuDeRegles {
  * Jusqu'a l'etape 7.1, un mode ne fournissait que sa regle de contacts. Un tir
  * n'est pas un contact: le mode Tactique a demande qu'un mode puisse aussi agir sur
  * les entrees. Le Classique rend l'etat qu'il recoit, tel quel.
+ *
+ * L'etape 7.2 l'a elargi une seconde fois. Le mode Equipes change ce que perd un
+ * joueur attrape par un bot noir et qui subit un malus, deux decisions qui vivaient
+ * dans le comportement des bots et dans le ramassage des objets sans consulter le
+ * mode. Le Classique et le Tactique y gardent exactement le code d'avant.
  */
 export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>> = {
-  classique: { agir: sansAction, resoudreContacts: regleClassique },
-  tactique: { agir: agirEnTactique, resoudreContacts: regleTactique },
+  classique: {
+    agir: sansAction,
+    resoudreContacts: regleClassique,
+    perteFaceAuBotNoir: perteClassique,
+    victimeDuMalus: malusClassique,
+  },
+  tactique: {
+    agir: agirEnTactique,
+    resoudreContacts: regleTactique,
+    perteFaceAuBotNoir: perteClassique,
+    victimeDuMalus: malusClassique,
+  },
+  equipes: {
+    agir: sansAction,
+    resoudreContacts: regleEquipes,
+    perteFaceAuBotNoir: perteEnEquipe,
+    victimeDuMalus: malusEnEquipe,
+  },
 };
 
 /** Verdict sur la fin d'une partie, sans aucune action declenchee. */
@@ -187,14 +225,14 @@ export function tick(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPart
     evenements: [],
   };
 
-  const bots = avancerLesBots(deplace, dtMs);
+  const regles = REGLES_DES_MODES[etat.mode];
+  const bots = avancerLesBots(deplace, dtMs, regles.perteFaceAuBotNoir);
   const zones = appliquerLesEffetsDeZone(avancerLesZones(bots, dtMs), dtMs);
   const objets = faireApparaitreLesObjets(fairePasserLeTempsSurLesObjets(zones, dtMs), dtMs);
-  const regles = REGLES_DES_MODES[objets.mode];
   const actions = regles.agir(objets, entrees, dtMs);
   const contacts = resoudreContacts(actions, detecterContacts(actions), regles.resoudreContacts);
 
-  return ramasserLesObjets(contacts);
+  return ramasserLesObjets(contacts, regles.victimeDuMalus);
 }
 
 /** Un mode qui n'agit pas sur les entrees: l'etat est rendu tel quel. */

@@ -29,6 +29,13 @@
       "when": 1789481197393,
       "tag": "0003_codes_de_secours",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789503662319,
+      "tag": "0004_mode_equipes",
+      "breakpoints": true
     }
   ]
 }

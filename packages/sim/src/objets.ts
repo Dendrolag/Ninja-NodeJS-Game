@@ -11,7 +11,8 @@
  *
  * 1. Un malus frappe les AUTRES joueurs, pas celui qui le ramasse. C'est
  *    contre-intuitif et c'est voulu: comportement a preserver numero 4 de
- *    CLAUDE.md. Ramasser un malus est donc une attaque, pas un accident.
+ *    CLAUDE.md. Ramasser un malus est donc une attaque, pas un accident. Qui sont
+ *    « les autres » depend du mode: en Equipes, l'equipe adverse (etape 7.2).
  *
  * 2. Le ramassage n'est pas un contact entre entites. Il se joue a quinze pixels
  *    la ou deux entites se touchent a vingt, et il ne concerne que les joueurs:
@@ -219,12 +220,29 @@ function tirerUneChance(
 }
 
 /**
+ * Un malus ramasse frappe-t-il cet autre joueur ?
+ *
+ * C'est une decision du mode de jeu (JeuDeRegles, dans moteur.ts). Le ramasseur, lui,
+ * n'est jamais frappe: la question n'est posee que pour les autres.
+ */
+export type VictimeDuMalus = (ramasseur: Joueur, autre: Joueur) => boolean;
+
+/** Le malus du Classique et du Tactique: tous les autres joueurs le subissent. */
+export const malusClassique: VictimeDuMalus = () => true;
+
+/**
  * Ramasse tous les objets sur lesquels un joueur se trouve.
  *
  * Les joueurs sont parcourus dans leur ordre d'arrivee, et chacun peut ramasser
  * plusieurs objets d'un coup s'il en couvre plusieurs, comme dans le legacy.
+ *
+ * Qui subit un malus depend du mode: le moteur passe la regle de son jeu de regles, et
+ * celle du Classique vaut par defaut (etape 7.2).
  */
-export function ramasserLesObjets(etat: EtatPartie): EtatPartie {
+export function ramasserLesObjets(
+  etat: EtatPartie,
+  victime: VictimeDuMalus = malusClassique,
+): EtatPartie {
   let courant = etat;
 
   // Les positions sont celles de ce battement et aucun ramassage ne les change:
@@ -232,7 +250,7 @@ export function ramasserLesObjets(etat: EtatPartie): EtatPartie {
   for (const joueur of Object.values(etat.joueurs)) {
     for (const objet of Object.values(courant.objets)) {
       if (aPortee(joueur.position, objet.position)) {
-        courant = ramasser(courant, joueur.id, objet.id);
+        courant = ramasser(courant, joueur.id, objet.id, victime);
       }
     }
   }
@@ -256,6 +274,7 @@ export function ramasser(
   etat: EtatPartie,
   joueurId: IdentifiantEntite,
   objetId: IdentifiantEntite,
+  victime: VictimeDuMalus = malusClassique,
 ): EtatPartie {
   const joueur = etat.joueurs[joueurId];
   const objet = etat.objets[objetId];
@@ -268,7 +287,7 @@ export function ramasser(
 
   return objet.categorie === 'bonus'
     ? accorderLeBonus(sansObjet, joueur, objet)
-    : infligerLeMalus(sansObjet, joueur, objet);
+    : infligerLeMalus(sansObjet, joueur, objet, victime);
 }
 
 /**
@@ -309,14 +328,22 @@ function accorderLeBonus(etat: EtatPartie, joueur: Joueur, bonus: BonusPose): Et
  * zero pour chaque victime au lieu de s'ajouter, ce qui est la regle du malus
  * dans le legacy: son client inscrivait une fin a « maintenant plus la duree »,
  * ecrasant la precedente.
+ *
+ * Parmi les autres, le mode dit qui subit: tous en Classique, l'equipe adverse en
+ * Equipes.
  */
-function infligerLeMalus(etat: EtatPartie, ramasseur: Joueur, malus: MalusPose): EtatPartie {
+function infligerLeMalus(
+  etat: EtatPartie,
+  ramasseur: Joueur,
+  malus: MalusPose,
+  victime: VictimeDuMalus,
+): EtatPartie {
   const dureeMs = etat.reglages.malus.types[malus.nature].dureeS * 1000;
   const joueurs: Record<IdentifiantEntite, Joueur> = { ...etat.joueurs };
   const victimes: IdentifiantEntite[] = [];
 
   for (const [id, joueur] of Object.entries(etat.joueurs)) {
-    if (id === ramasseur.id) {
+    if (id === ramasseur.id || !victime(ramasseur, joueur)) {
       continue;
     }
 

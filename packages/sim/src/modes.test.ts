@@ -1,17 +1,19 @@
 /**
- * Tests du branchement du mode de jeu sur le moteur (etapes 2.4 et 7.1).
+ * Tests du branchement du mode de jeu sur le moteur (etapes 2.4, 7.1 et 7.2).
  *
- * Deux modes existent, le Classique et le Tactique. Ces tests verifient que le mode
- * voyage dans l'etat, qu'il ne change pas d'un battement a l'autre, et que le moteur
- * trouve le jeu de regles a partir de lui. Ce que fait le jeu de regles Tactique se
- * teste dans tactique.test.ts.
+ * Trois modes existent, le Classique, le Tactique et les Equipes. Ces tests verifient
+ * que le mode voyage dans l'etat, qu'il ne change pas d'un battement a l'autre, et que
+ * le moteur trouve le jeu de regles a partir de lui. Ce que font les jeux de regles
+ * Tactique et Equipes se teste dans tactique.test.ts et equipes.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
 
+import { perteClassique } from './bots.js';
 import { regleClassique, regleTactique } from './contacts.js';
 import { ajouterJoueur, creerEtatInitial } from './etat.js';
 import { REGLES_DES_MODES, tick } from './moteur.js';
+import { malusClassique } from './objets.js';
 import { agirEnTactique } from './tactique.js';
 
 describe('le mode de la partie', () => {
@@ -22,6 +24,7 @@ describe('le mode de la partie', () => {
   it('est celui demande a la creation', () => {
     expect(creerEtatInitial({ graine: 1, mode: 'classique' }).mode).toBe('classique');
     expect(creerEtatInitial({ graine: 1, mode: 'tactique' }).mode).toBe('tactique');
+    expect(creerEtatInitial({ graine: 1, mode: 'equipes' }).mode).toBe('equipes');
   });
 
   it('ne change pas d un battement a l autre', () => {
@@ -45,6 +48,15 @@ describe('REGLES_DES_MODES', () => {
   it('donne au Tactique la capture par cone, et des contacts qui ne capturent pas', () => {
     expect(REGLES_DES_MODES.tactique.agir).toBe(agirEnTactique);
     expect(REGLES_DES_MODES.tactique.resoudreContacts).toBe(regleTactique);
+  });
+
+  it('garde au Classique et au Tactique la perte face au bot noir et le malus d avant', () => {
+    // Le jeu de regles s'est elargi a l'etape 7.2 pour le mode Equipes: ces deux modes y
+    // recoivent exactement le code qui s'appliquait avant.
+    for (const mode of ['classique', 'tactique'] as const) {
+      expect(REGLES_DES_MODES[mode].perteFaceAuBotNoir).toBe(perteClassique);
+      expect(REGLES_DES_MODES[mode].victimeDuMalus).toBe(malusClassique);
+    }
   });
 
   it('ne laisse aucune trace du mode Tactique dans une partie Classique', () => {

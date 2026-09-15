@@ -102,11 +102,13 @@ export interface DimensionsCarte {
  *   - Le Classique capture au contact. C'est le jeu d'origine.
  *   - Le Tactique capture par un cone, devant soi, avec des charges limitees
  *     (etape 7.1). Voir TACTIQUE plus bas.
+ *   - Les Equipes opposent deux equipes d'une couleur chacune, qui capturent au
+ *     contact (etape 7.2). Voir EQUIPES plus bas.
  *
  * Ajouter un mode demande aussi une migration de la base, dont l'enumeration des
  * modes est tiree de cette liste.
  */
-export const MODES = ['classique', 'tactique'] as const;
+export const MODES = ['classique', 'tactique', 'equipes'] as const;
 
 /** Un mode de jeu. */
 export type Mode = (typeof MODES)[number];
@@ -129,11 +131,13 @@ export type Mode = (typeof MODES)[number];
  * 0,07 Mbit/s par joueur.
  *
  * Le Tactique en accueille autant: rien dans ses regles ne change ce que coute un
- * joueur (etape 7.1).
+ * joueur (etape 7.1). Les Equipes aussi, deux equipes de six: decision du porteur du
+ * projet du 15 septembre 2026 (etape 7.2).
  */
 export const CAPACITES: Readonly<Record<Mode, number>> = {
   classique: 12,
   tactique: 12,
+  equipes: 12,
 };
 
 /**
@@ -417,6 +421,33 @@ export const COULEURS_JOUEURS = [
   '#FF00FF',
   '#00FFFF',
 ] as const;
+
+/**
+ * Les deux equipes du mode Equipes (etape 7.2).
+ *
+ * UNE COULEUR PAR EQUIPE, decision du porteur du projet du 15 septembre 2026: tous
+ * les membres d'une equipe la portent, et le moteur n'a pas d'autre notion d'equipe
+ * que la couleur. Deux joueurs de meme couleur sont coequipiers, et les bots de cette
+ * couleur font le score de leur equipe.
+ *
+ * Deux couleurs de la palette des joueurs, neon et eloignees l'une de l'autre. Etre
+ * dans la palette les met a l'abri des bots: aucun bot ne nait d'une couleur de la
+ * palette (couleurDeBot, dans le moteur), et une zone de chaos ne donne pas une
+ * couleur qu'un joueur porte.
+ */
+export const EQUIPES = ['cyan', 'magenta'] as const;
+
+/** Une equipe du mode Equipes. */
+export type Equipe = (typeof EQUIPES)[number];
+
+/** La couleur de chaque equipe. */
+export const COULEURS_DES_EQUIPES: Readonly<Record<Equipe, Couleur>> = {
+  cyan: '#00FFFF',
+  magenta: '#FF00FF',
+};
+
+/** Combien de joueurs une equipe accepte au plus: la moitie de la capacite du mode. */
+export const MEMBRES_PAR_EQUIPE_MAXIMUM = 6;
 
 /** Couleur d'un bot non capture. */
 export const COULEUR_BOT_NEUTRE = '#FFFFFF';

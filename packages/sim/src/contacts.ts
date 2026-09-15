@@ -9,7 +9,8 @@
  *   - detecterContacts constate. C'est de la geometrie, elle ne change rien.
  *   - resoudreContacts decide. C'est la regle du jeu, et elle change avec le
  *     mode: le mode Classique capture par simple proximite, le mode Tactique ne
- *     capture pas au contact, puisqu'il capture par un cone (tactique.ts).
+ *     capture pas au contact, puisqu'il capture par un cone (tactique.ts), et le
+ *     mode Equipes capture au contact un adversaire qui ne cede que sa part.
  *   - Le ramassage des bonus et des malus n'est pas un contact entre entites:
  *     il vit dans objets.ts.
  *
@@ -32,7 +33,13 @@
 
 import { entier } from '@neon-ninja/shared';
 
-import { capturerBot, captureAutorisee, capturerJoueur, detruireBotNoir } from './capture.js';
+import {
+  capturerBot,
+  captureAutorisee,
+  capturerEnEquipe,
+  capturerJoueur,
+  detruireBotNoir,
+} from './capture.js';
 import type { Bot, EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
 import { entiteDe, toutesLesEntites } from './etat.js';
 
@@ -55,7 +62,7 @@ export interface Contact {
  * Une regle de resolution: ce qu'un mode de jeu fait des contacts releves.
  *
  * Chaque mode en fournit une dans son jeu de regles (REGLES_DES_MODES, moteur.ts):
- * regleClassique et regleTactique ci-dessous.
+ * regleClassique, regleTactique et regleEquipes ci-dessous.
  */
 export type RegleDeResolution = (etat: EtatPartie, contacts: readonly Contact[]) => EtatPartie;
 
@@ -165,7 +172,21 @@ function regleDeContacts(regles: ReglesDeContact): RegleDeResolution {
  * qu'il touche, ou detruit le bot noir qu'il touche s'il est invincible.
  */
 export const regleClassique: RegleDeResolution = regleDeContacts({
-  entreJoueurs: duelDeJoueurs,
+  entreJoueurs: duelDeJoueurs(capturerJoueur),
+  joueurEtBot: contactJoueurBot,
+});
+
+/**
+ * La regle du mode Equipes: celle du Classique, entre adversaires (etape 7.2).
+ *
+ * On capture toujours au contact, et les bots se transmettent toujours leur couleur,
+ * qui est celle d'une equipe. Deux coequipiers portent la meme couleur: ils ne se
+ * capturent pas, et un joueur ne repeint pas un bot de son equipe, ce que les
+ * fonctions de capture refusent deja. Ce qui change est l'issue d'une capture de
+ * joueur: la victime garde sa couleur et ne cede que sa part (capturerEnEquipe).
+ */
+export const regleEquipes: RegleDeResolution = regleDeContacts({
+  entreJoueurs: duelDeJoueurs(capturerEnEquipe),
   joueurEtBot: contactJoueurBot,
 });
 
@@ -266,36 +287,46 @@ function contactJoueurBot(etat: EtatPartie, joueur: Joueur, bot: Bot): EtatParti
     : capturerBot(etat, joueur.id, bot.id);
 }
 
+/** Ce que produit la capture d'un joueur par un autre: capturerJoueur ou capturerEnEquipe. */
+type CaptureDUnJoueur = (
+  etat: EtatPartie,
+  attaquantId: IdentifiantEntite,
+  victimeId: IdentifiantEntite,
+) => EtatPartie;
+
 /**
- * Deux joueurs se touchent, en Classique: l'un capture l'autre, ou rien ne se passe.
+ * Deux joueurs se touchent, en Classique et en Equipes: l'un capture l'autre, ou rien
+ * ne se passe. Le mode dit seulement ce que produit la capture.
  *
  * Quand les deux ont le droit de capturer, le generateur a graine tranche. Voir
  * l'explication en tete de fichier.
  */
-function duelDeJoueurs(etat: EtatPartie, premier: Joueur, second: Joueur): Resolution {
-  const premierPeut = captureAutorisee(premier, second);
-  const secondPeut = captureAutorisee(second, premier);
+function duelDeJoueurs(capturer: CaptureDUnJoueur): ReglesDeContact['entreJoueurs'] {
+  return (etat, premier, second) => {
+    const premierPeut = captureAutorisee(premier, second);
+    const secondPeut = captureAutorisee(second, premier);
 
-  if (!premierPeut && !secondPeut) {
-    return sansEffet(etat);
-  }
+    if (!premierPeut && !secondPeut) {
+      return sansEffet(etat);
+    }
 
-  let courant = etat;
-  let attaquant = premier;
-  let victime = second;
+    let courant = etat;
+    let attaquant = premier;
+    let victime = second;
 
-  if (premierPeut && secondPeut) {
-    const tirage = entier(etat.alea, 2);
-    courant = { ...etat, alea: tirage.alea };
+    if (premierPeut && secondPeut) {
+      const tirage = entier(etat.alea, 2);
+      courant = { ...etat, alea: tirage.alea };
 
-    if (tirage.valeur === 1) {
+      if (tirage.valeur === 1) {
+        attaquant = second;
+        victime = premier;
+      }
+    } else if (secondPeut) {
       attaquant = second;
       victime = premier;
     }
-  } else if (secondPeut) {
-    attaquant = second;
-    victime = premier;
-  }
 
-  return { etat: capturerJoueur(courant, attaquant.id, victime.id), replacee: victime.id };
+    return { etat: capturer(courant, attaquant.id, victime.id), replacee: victime.id };
+  };
 }

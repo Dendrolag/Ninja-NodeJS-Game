@@ -776,6 +776,31 @@ export function retirerJoueur(etat: EtatPartie, id: IdentifiantEntite): EtatPart
   return { ...etat, joueurs };
 }
 
+/**
+ * Change la couleur d'un joueur, sans rien changer d'autre.
+ *
+ * Sert au salon du mode Equipes (etape 7.2), ou changer d'equipe, c'est changer de
+ * couleur: la couleur est la seule notion d'equipe du moteur. Le joueur garde sa place
+ * dans la table, donc dans l'ordre des contacts. Sans effet s'il n'est pas dans la
+ * partie.
+ *
+ * Une partie en cours n'a pas a s'en servir: les bots de l'ancienne couleur ne
+ * suivraient pas le joueur.
+ */
+export function changerDeCouleur(
+  etat: EtatPartie,
+  id: IdentifiantEntite,
+  couleur: Couleur,
+): EtatPartie {
+  const joueur = etat.joueurs[id];
+
+  if (joueur === undefined) {
+    return etat;
+  }
+
+  return { ...etat, joueurs: { ...etat.joueurs, [id]: { ...joueur, couleur } } };
+}
+
 /** Ce qu'il faut pour poser un bot sur la carte. */
 export interface OptionsAjoutBot {
   readonly id: IdentifiantEntite;

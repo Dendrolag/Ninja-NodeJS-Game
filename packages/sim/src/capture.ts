@@ -32,13 +32,19 @@
  *     d'autorisation, donc elle ne peut plus etre oubliee par un appelant.
  *   - Seule une entite portant la couleur d'un joueur repeint un bot. Voir
  *     aUneCouleurADonner plus bas: c'est la correction des defauts X20 et X30.
+ *
+ * Le mode Equipes (etape 7.2) capture un joueur autrement: la victime garde la couleur
+ * de son equipe et ne cede que sa part. Les verifications, elles, sont les memes pour
+ * tous les modes: voir capturerEnEquipe.
  */
 
+import type { Alea, Tirage } from '@neon-ninja/shared';
 import { DUREES, SCORE } from '@neon-ninja/shared';
 
 import type { Couleur } from './couleurs.js';
 import { couleurUnique } from './couleurs.js';
-import type { Bot, EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
+import { partDuJoueur } from './equipes.js';
+import type { Bot, BotOrdinaire, EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
 import {
   couleursUtilisees,
   estInvincible,
@@ -66,6 +72,48 @@ export function captureAutorisee(attaquant: Joueur, victime: Joueur): boolean {
 }
 
 /**
+ * Ce qu'une capture de joueur fait de la victime, selon le mode.
+ *
+ * Tout le reste d'une capture est commun: les verifications, la reapparition a une
+ * autre place avec une protection neuve, les compteurs, le journal.
+ */
+interface IssueDeCapture {
+  /** Les bots que la victime cede a l'attaquant, lus avant sa reapparition. */
+  readonly butin: (etat: EtatPartie, victime: Joueur) => readonly BotOrdinaire[];
+  /** La couleur de la victime quand elle reapparait, et le generateur apres le tirage. */
+  readonly couleurDeReapparition: (
+    etat: EtatPartie,
+    victime: Joueur,
+    alea: Alea,
+  ) => Tirage<Couleur>;
+}
+
+/**
+ * L'issue du Classique et du Tactique: tous les bots de la victime, et une couleur
+ * nouvelle.
+ *
+ * Les couleurs a eviter sont celles de tous les joueurs presents, ce qui comprend deja
+ * celle de l'attaquant et celle que la victime portait: le legacy excluait la premiere
+ * une seconde fois, sans effet.
+ */
+const ISSUE_CLASSIQUE: IssueDeCapture = {
+  butin: (etat, victime) =>
+    Object.values(etat.bots).filter(
+      (bot): bot is BotOrdinaire => bot.type === 'bot' && bot.couleur === victime.couleur,
+    ),
+  couleurDeReapparition: (etat, _victime, alea) => couleurUnique(alea, couleursUtilisees(etat)),
+};
+
+/**
+ * L'issue des Equipes: la part de la victime, qui garde la couleur de son equipe, sans
+ * aucun tirage.
+ */
+const ISSUE_EN_EQUIPE: IssueDeCapture = {
+  butin: partDuJoueur,
+  couleurDeReapparition: (_etat, victime, alea) => ({ valeur: victime.couleur, alea }),
+};
+
+/**
  * Un joueur en capture un autre.
  *
  * Tous les bots portant la couleur de la victime passent d'un seul coup a
@@ -81,6 +129,36 @@ export function capturerJoueur(
   attaquantId: IdentifiantEntite,
   victimeId: IdentifiantEntite,
 ): EtatPartie {
+  return capturerAvec(etat, attaquantId, victimeId, ISSUE_CLASSIQUE);
+}
+
+/**
+ * Un joueur en capture un adversaire, dans le mode Equipes (etape 7.2).
+ *
+ * Decision du porteur du projet du 15 septembre 2026: prendre tous les bots de la
+ * victime reviendrait a prendre ceux de toute son equipe, qui portent la meme couleur.
+ * L'attaquant gagne donc la PART de la victime, les bots de son equipe les plus proches
+ * d'elle (partDuJoueur, dans equipes.ts), et la victime reapparait dans son equipe, avec
+ * sa couleur. En un contre un, sa part est tous ses bots: c'est le Classique.
+ *
+ * Deux coequipiers ne se capturent pas: ils portent la meme couleur, ce que
+ * captureAutorisee refuse deja. Renvoie l'etat inchange si la capture n'est pas permise.
+ */
+export function capturerEnEquipe(
+  etat: EtatPartie,
+  attaquantId: IdentifiantEntite,
+  victimeId: IdentifiantEntite,
+): EtatPartie {
+  return capturerAvec(etat, attaquantId, victimeId, ISSUE_EN_EQUIPE);
+}
+
+/** Une capture de joueur, avec l'issue que le mode lui donne. */
+function capturerAvec(
+  etat: EtatPartie,
+  attaquantId: IdentifiantEntite,
+  victimeId: IdentifiantEntite,
+  issue: IssueDeCapture,
+): EtatPartie {
   const attaquant = etat.joueurs[attaquantId];
   const victime = etat.joueurs[victimeId];
 
@@ -88,27 +166,21 @@ export function capturerJoueur(
     return etat;
   }
 
-  const couleurPerdue = victime.couleur;
   const positionDuContact = victime.position;
-  const botsTransferes = Object.values(etat.bots).filter(
-    (bot) => bot.type === 'bot' && bot.couleur === couleurPerdue,
-  ).length;
+  const cedes = issue.butin(etat, victime);
 
-  // La victime reapparait: nouvelle place, nouvelle couleur, protection neuve.
-  // Portage de Player.respawn (legacy/server.js:922), dans l'ordre d'origine:
-  // la position d'abord, la couleur ensuite. Les couleurs a eviter sont celles
-  // de tous les joueurs presents, ce qui comprend deja celle de l'attaquant et
-  // celle que la victime portait: le legacy excluait la premiere une seconde
-  // fois, sans effet.
+  // La victime reapparait: nouvelle place, protection neuve, et la couleur que le mode
+  // lui donne. Portage de Player.respawn (legacy/server.js:922), dans l'ordre
+  // d'origine: la position d'abord, la couleur ensuite.
   const place = positionDApparition(etat.alea, etat.terrain, positionsOccupees(etat));
-  const teinte = couleurUnique(place.alea, couleursUtilisees(etat));
+  const teinte = issue.couleurDeReapparition(etat, victime, place.alea);
 
   const joueurs: Record<IdentifiantEntite, Joueur> = {
     ...etat.joueurs,
     [attaquantId]: {
       ...attaquant,
       captures: attaquant.captures + 1,
-      botsGagnesAuTotal: attaquant.botsGagnesAuTotal + botsTransferes,
+      botsGagnesAuTotal: attaquant.botsGagnesAuTotal + cedes.length,
       joueursCaptures: inscrireAuJournal(attaquant.joueursCaptures, victimeId, victime.pseudo),
       tempsDepuisDerniereCaptureMs: 0,
     },
@@ -125,14 +197,14 @@ export function capturerJoueur(
   return {
     ...etat,
     joueurs,
-    bots: repeindre(etat.bots, couleurPerdue, attaquant.couleur),
+    bots: repeindre(etat.bots, cedes, attaquant.couleur),
     evenements: [
       ...etat.evenements,
       {
         type: 'captureJoueur',
         attaquant: attaquantId,
         victime: victimeId,
-        botsTransferes,
+        botsTransferes: cedes.length,
         nouvelleCouleurVictime: teinte.valeur,
         position: positionDuContact,
       },
@@ -281,17 +353,17 @@ function inscrireAuJournal(
   return { ...journal, [autreId]: { pseudo, nombre: (ligne?.nombre ?? 0) + 1 } };
 }
 
-/** Fait passer tous les bots d'une couleur a une autre. */
+/** Fait passer des bots donnes a une nouvelle couleur, chacun gardant sa place dans la table. */
 function repeindre(
   bots: EtatPartie['bots'],
-  ancienne: Couleur,
+  cedes: readonly BotOrdinaire[],
   nouvelle: Couleur,
 ): EtatPartie['bots'] {
+  const aRepeindre = new Set(cedes.map((bot) => bot.id));
   const repeints: Record<IdentifiantEntite, Bot> = {};
 
   for (const [id, bot] of Object.entries(bots)) {
-    repeints[id] =
-      bot.type === 'bot' && bot.couleur === ancienne ? { ...bot, couleur: nouvelle } : bot;
+    repeints[id] = aRepeindre.has(id) ? { ...bot, couleur: nouvelle } : bot;
   }
 
   return repeints;

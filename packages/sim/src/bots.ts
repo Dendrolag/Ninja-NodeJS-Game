@@ -54,7 +54,7 @@ import { trajetTenable } from './collisions.js';
 import { couleurDeBot } from './couleurs.js';
 import { resoudreDeplacement } from './deplacement.js';
 import { aLaLongueur, directionDuVecteur } from './direction.js';
-import type { Bot, BotNoir, EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
+import type { Bot, BotNoir, BotOrdinaire, EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
 import {
   ajouterBot,
   couleursUtilisees,
@@ -83,6 +83,30 @@ interface AvancementDeBotNoir {
 }
 
 /**
+ * Les bots que perd un joueur attrape par un bot noir: ils redeviennent blancs.
+ *
+ * C'est une decision du mode de jeu (JeuDeRegles, dans moteur.ts): le Classique et le
+ * Tactique retirent une part de tous les bots du joueur, les Equipes une part de sa
+ * part (etape 7.2, equipes.ts). Le reste de la prise est commun a tous les modes.
+ */
+export type PerteFaceAuBotNoir = (etat: EtatPartie, victime: Joueur) => readonly BotOrdinaire[];
+
+/**
+ * La perte du Classique et du Tactique: la part reglee de tous les bots qui portent la
+ * couleur du joueur, arrondie en dessous, les premiers dans l'ordre de l'etat.
+ */
+export const perteClassique: PerteFaceAuBotNoir = (etat, victime) => {
+  const portes = Object.values(etat.bots).filter(
+    (bot): bot is BotOrdinaire => bot.type === 'bot' && bot.couleur === victime.couleur,
+  );
+  const perdus = Math.floor(
+    (portes.length * etat.reglages.botsNoirs.partDeBotsPerduePourCent) / 100,
+  );
+
+  return portes.slice(0, perdus);
+};
+
+/**
  * Fait avancer tous les bots d'un battement, puis fait entrer les bots noirs si
  * leur heure est venue.
  *
@@ -101,8 +125,15 @@ interface AvancementDeBotNoir {
  * parce qu'un bot noir vient de repeindre sa proie, c'est cette nouvelle table qui
  * est copiee et poursuivie. Le resultat est identique, a l'octet pres, a celui de la
  * recopie integrale.
+ *
+ * Ce que perd un joueur attrape par un bot noir depend du mode de jeu: le moteur passe
+ * la perte de son jeu de regles, et celle du Classique vaut par defaut (etape 7.2).
  */
-export function avancerLesBots(etat: EtatPartie, dtMs: number): EtatPartie {
+export function avancerLesBots(
+  etat: EtatPartie,
+  dtMs: number,
+  perte: PerteFaceAuBotNoir = perteClassique,
+): EtatPartie {
   let table: Record<IdentifiantEntite, Bot> = { ...etat.bots };
   let courant: EtatPartie = { ...etat, bots: table };
 
@@ -116,7 +147,9 @@ export function avancerLesBots(etat: EtatPartie, dtMs: number): EtatPartie {
     }
 
     const avancement =
-      bot.type === 'botNoir' ? avancerUnBotNoir(courant, bot, dtMs) : errer(courant, bot, dtMs);
+      bot.type === 'botNoir'
+        ? avancerUnBotNoir(courant, bot, dtMs, perte)
+        : errer(courant, bot, dtMs);
 
     if (avancement.etat.bots !== table) {
       table = { ...avancement.etat.bots };
@@ -463,7 +496,12 @@ function capPraticable(
  *
  * Portage de BlackBot.update (legacy/server.js:1148).
  */
-function avancerUnBotNoir(etat: EtatPartie, botNoir: BotNoir, dtMs: number): Avancement {
+function avancerUnBotNoir(
+  etat: EtatPartie,
+  botNoir: BotNoir,
+  dtMs: number,
+  perte: PerteFaceAuBotNoir,
+): Avancement {
   const refroidi: BotNoir = {
     ...botNoir,
     avantProchaineCaptureMs: Math.max(botNoir.avantProchaineCaptureMs - dtMs, 0),
@@ -472,7 +510,7 @@ function avancerUnBotNoir(etat: EtatPartie, botNoir: BotNoir, dtMs: number): Ava
 
   return vise.bot.cible === undefined
     ? errer(vise.etat, vise.bot, dtMs)
-    : poursuivre(vise.etat, vise.bot, dtMs);
+    : poursuivre(vise.etat, vise.bot, dtMs, perte);
 }
 
 /**
@@ -620,7 +658,12 @@ function leJoueurLePlusProcheAPortee(
  *    pas est court; avec un pas de temps grossier, un chasseur qui ne s'arrete
  *    pas sur sa proie la depasserait sans la voir.
  */
-function poursuivre(etat: EtatPartie, bot: BotNoir, dtMs: number): Avancement {
+function poursuivre(
+  etat: EtatPartie,
+  bot: BotNoir,
+  dtMs: number,
+  perte: PerteFaceAuBotNoir,
+): Avancement {
   const proie = bot.cible === undefined ? undefined : proieDe(etat, bot.cible);
 
   if (proie === undefined) {
@@ -630,7 +673,7 @@ function poursuivre(etat: EtatPartie, bot: BotNoir, dtMs: number): Avancement {
   const chasseur = seRapprocherDe(etat, bot, proie.position, dtMs);
 
   return distanceEntre(chasseur.position, proie.position) < BOTS_NOIRS.SEUIL_DE_CAPTURE_PX
-    ? attraper(etat, chasseur, proie)
+    ? attraper(etat, chasseur, proie, perte)
     : { etat, bot: chasseur };
 }
 
@@ -672,7 +715,12 @@ function seRapprocherDe(etat: EtatPartie, bot: BotNoir, but: Position, dtMs: num
  * Un joueur protege, lui, ne consomme rien: le bot noir reste arme et pourra
  * attraper quelqu'un d'autre au battement suivant.
  */
-function attraper(etat: EtatPartie, bot: BotNoir, proie: Joueur | Bot): Avancement {
+function attraper(
+  etat: EtatPartie,
+  bot: BotNoir,
+  proie: Joueur | Bot,
+  perte: PerteFaceAuBotNoir,
+): Avancement {
   if (bot.avantProchaineCaptureMs > 0) {
     return { etat, bot };
   }
@@ -684,7 +732,7 @@ function attraper(etat: EtatPartie, bot: BotNoir, proie: Joueur | Bot): Avanceme
   if (proie.type === 'joueur') {
     return estInvulnerable(proie)
       ? { etat, bot }
-      : { etat: depouiller(etat, bot, proie), bot: apresLaPrise(bot) };
+      : { etat: depouiller(etat, bot, proie, perte), bot: apresLaPrise(bot) };
   }
 
   const rendu =
@@ -718,17 +766,19 @@ function apresLaPrise(bot: BotNoir): BotNoir {
  *     a chaque capture: c'est le defaut X12 de l'audit.
  *   - La part perdue vient des reglages de la partie, pas des valeurs par defaut
  *     (defaut X14).
+ *
+ * Quels bots sont perdus est la decision du mode de jeu: voir PerteFaceAuBotNoir.
  */
-function depouiller(etat: EtatPartie, botNoir: BotNoir, victime: Joueur): EtatPartie {
-  const portes = Object.values(etat.bots).filter(
-    (bot) => bot.type === 'bot' && bot.couleur === victime.couleur,
-  );
-  const perdus = Math.floor(
-    (portes.length * etat.reglages.botsNoirs.partDeBotsPerduePourCent) / 100,
-  );
+function depouiller(
+  etat: EtatPartie,
+  botNoir: BotNoir,
+  victime: Joueur,
+  perte: PerteFaceAuBotNoir,
+): EtatPartie {
+  const perdus = perte(etat, victime);
 
   const bots = { ...etat.bots };
-  for (const bot of portes.slice(0, perdus)) {
+  for (const bot of perdus) {
     bots[bot.id] = { ...bot, couleur: COULEUR_BOT_NEUTRE };
   }
 
@@ -753,7 +803,7 @@ function depouiller(etat: EtatPartie, botNoir: BotNoir, victime: Joueur): EtatPa
         type: 'captureParBotNoir',
         botNoir: botNoir.id,
         victime: victime.id,
-        botsPerdus: perdus,
+        botsPerdus: perdus.length,
         position: victime.position,
       },
     ],
