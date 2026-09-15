@@ -1,0 +1,304 @@
+/**
+ * Tests des parties, de leurs resultats et des gains appliques, contre une vraie
+ * base Neon.
+ */
+
+import { randomInt, randomUUID } from 'node:crypto';
+
+import type { NouveauResultat, NouvellePartie } from '@neon-ninja/server';
+import {
+  CODES_POSTGRES,
+  creerCompte,
+  ecrireProgression,
+  enregistrerPartie,
+  erreurPostgres,
+  lireHistorique,
+  lireProgression,
+  schema,
+} from '@neon-ninja/server';
+import type { IdentifiantCarte } from '@neon-ninja/shared';
+import { eq } from 'drizzle-orm';
+import { describe, expect, it } from 'vitest';
+
+import { accepte, baseDeTest, baseDisponible, erreurDe, pseudoNeuf } from './contexte.js';
+
+/**
+ * Une partie terminee a une heure unique, pour la retrouver sans connaitre son
+ * identifiant (quand son enregistrement a echoue, par exemple).
+ */
+function partie(surcharge: Partial<NouvellePartie> = {}): NouvellePartie {
+  return {
+    mode: 'classique',
+    carte: 'map2',
+    modeMiroir: true,
+    dureeS: 180,
+    nombreJoueurs: 3,
+    termineeLe: new Date(Date.UTC(2026, 0, 1) + randomInt(0, 2 ** 40)),
+    ...surcharge,
+  };
+}
+
+/** Le resultat d'un compte, avec des valeurs ordinaires. */
+function resultat(
+  compteId: string,
+  placement: number,
+  surcharge: Partial<NouveauResultat> = {},
+): NouveauResultat {
+  return {
+    compteId,
+    placement,
+    points: 42,
+    captures: 2,
+    botsNoirsDetruits: 1,
+    xpGagnee: 120,
+    piecesGagnees: 15,
+    variationPointsLigue: -3,
+    ...surcharge,
+  };
+}
+
+describe.runIf(baseDisponible())('parties et resultats', () => {
+  const db = baseDeTest();
+
+  /** Un compte neuf, pour un seul test. */
+  async function nouveauCompte(): Promise<string> {
+    return accepte(await creerCompte(db(), pseudoNeuf('Joueur'))).id;
+  }
+
+  /** Nombre de parties terminees a cette heure precise. */
+  async function partiesTermineesA(termineeLe: Date | undefined): Promise<number> {
+    if (termineeLe === undefined) {
+      throw new Error('Ce test a besoin d une heure de fin.');
+    }
+
+    const lignes = await db()
+      .select()
+      .from(schema.parties)
+      .where(eq(schema.parties.termineeLe, termineeLe));
+
+    return lignes.length;
+  }
+
+  it('enregistre une partie et ses resultats, relus dans l historique de chaque compte', async () => {
+    const alice = await nouveauCompte();
+    const bob = await nouveauCompte();
+    const jouee = partie();
+
+    const { partieId } = await enregistrerPartie(db(), jouee, [
+      resultat(alice, 1, { points: 80, variationPointsLigue: 12 }),
+      resultat(bob, 3, { variationPointsLigue: 0 }),
+    ]);
+
+    expect(await lireHistorique(db(), alice)).toEqual([
+      {
+        partieId,
+        ...jouee,
+        placement: 1,
+        points: 80,
+        captures: 2,
+        botsNoirsDetruits: 1,
+        xpGagnee: 120,
+        piecesGagnees: 15,
+        variationPointsLigue: 12,
+      },
+    ]);
+    expect(await lireHistorique(db(), bob)).toMatchObject([
+      { partieId, placement: 3, variationPointsLigue: 0 },
+    ]);
+  });
+
+  it('rend l historique de la partie la plus recente a la plus ancienne', async () => {
+    const compte = await nouveauCompte();
+    const ancienne = partie({ termineeLe: new Date('2026-03-01T10:00:00Z') });
+    const recente = partie({ termineeLe: new Date('2026-03-02T10:00:00Z') });
+
+    const idAncienne = (await enregistrerPartie(db(), ancienne, [resultat(compte, 1)])).partieId;
+    const idRecente = (await enregistrerPartie(db(), recente, [resultat(compte, 2)])).partieId;
+
+    const historique = await lireHistorique(db(), compte);
+    expect(historique.map((ligne) => ligne.partieId)).toEqual([idRecente, idAncienne]);
+    expect(await lireHistorique(db(), compte, 1)).toHaveLength(1);
+  });
+
+  it('date une partie sans heure de fin a l heure de la base', async () => {
+    const compte = await nouveauCompte();
+    const { termineeLe: _ignoree, ...sansHeure } = partie();
+
+    await enregistrerPartie(db(), sansHeure, [resultat(compte, 1)]);
+
+    const [ligne] = await lireHistorique(db(), compte);
+    expect(Math.abs((ligne?.termineeLe.getTime() ?? 0) - Date.now())).toBeLessThan(60_000);
+  });
+
+  it('ajoute les gains a la progression, sans la remplacer, et rend l avant et l apres', async () => {
+    const compte = await nouveauCompte();
+    await ecrireProgression(db(), compte, { xpTotale: 1000, pieces: 50, pointsLigue: 40 });
+
+    const { progressions } = await enregistrerPartie(db(), partie(), [
+      resultat(compte, 1, { xpGagnee: 210, piecesGagnees: 21, variationPointsLigue: 20 }),
+    ]);
+
+    expect(progressions).toEqual([
+      {
+        compteId: compte,
+        avant: { xpTotale: 1000, pieces: 50, pointsLigue: 40 },
+        apres: { xpTotale: 1210, pieces: 71, pointsLigue: 60 },
+      },
+    ]);
+    expect(await lireProgression(db(), compte)).toMatchObject({
+      xpTotale: 1210,
+      pieces: 71,
+      pointsLigue: 60,
+    });
+  });
+
+  it('ne fait jamais descendre les points de ligue sous zero, et enregistre la perte reduite', async () => {
+    const compte = await nouveauCompte();
+    await ecrireProgression(db(), compte, { xpTotale: 0, pieces: 0, pointsLigue: 3 });
+
+    const { progressions } = await enregistrerPartie(db(), partie(), [
+      resultat(compte, 3, { variationPointsLigue: -10 }),
+    ]);
+
+    expect(progressions[0]?.apres.pointsLigue).toBe(0);
+    expect((await lireProgression(db(), compte))?.pointsLigue).toBe(0);
+    expect((await lireHistorique(db(), compte))[0]?.variationPointsLigue).toBe(-3);
+  });
+
+  it('applique deux parties terminees en meme temps pour un meme compte, sans en perdre une', async () => {
+    const compte = await nouveauCompte();
+
+    const enregistrees = await Promise.all([
+      enregistrerPartie(db(), partie(), [
+        resultat(compte, 1, { xpGagnee: 150, piecesGagnees: 15, variationPointsLigue: 20 }),
+      ]),
+      enregistrerPartie(db(), partie(), [
+        resultat(compte, 2, { xpGagnee: 30, piecesGagnees: 3, variationPointsLigue: -10 }),
+      ]),
+    ]);
+
+    expect(await lireProgression(db(), compte)).toMatchObject({
+      xpTotale: 180,
+      pieces: 18,
+      pointsLigue: 10,
+    });
+    // L'une s'est appliquee apres l'autre: la seconde a lu ce que la premiere avait ecrit.
+    const avants = enregistrees.map((enregistree) => enregistree.progressions[0]?.avant.xpTotale);
+    expect(avants.sort((a, b) => (a ?? 0) - (b ?? 0))).toEqual([0, expect.any(Number)]);
+    expect(avants[1]).toBeGreaterThan(0);
+  });
+
+  it('n ecrit rien si un compte des resultats n existe pas', async () => {
+    const compte = await nouveauCompte();
+    const jouee = partie();
+
+    await expect(
+      enregistrerPartie(db(), jouee, [resultat(compte, 1), resultat(randomUUID(), 2)]),
+    ).rejects.toThrow("n'existe pas");
+
+    expect(await partiesTermineesA(jouee.termineeLe)).toBe(0);
+    expect(await lireHistorique(db(), compte)).toEqual([]);
+    expect((await lireProgression(db(), compte))?.xpTotale).toBe(0);
+  });
+
+  it('refuse deux resultats du meme compte dans une meme partie, sans rien appliquer', async () => {
+    const compte = await nouveauCompte();
+
+    const erreur = await erreurDe(
+      enregistrerPartie(db(), partie(), [resultat(compte, 1), resultat(compte, 2)]),
+    );
+
+    expect(erreurPostgres(erreur)).toEqual({
+      code: CODES_POSTGRES.unicite,
+      contrainte: 'resultats_partie_compte',
+    });
+    expect((await lireProgression(db(), compte))?.xpTotale).toBe(0);
+  });
+
+  it('refuse un placement au-dela du nombre de joueurs, avant d ecrire', async () => {
+    const compte = await nouveauCompte();
+    const jouee = partie({ nombreJoueurs: 3 });
+
+    await expect(enregistrerPartie(db(), jouee, [resultat(compte, 4)])).rejects.toThrow(
+      'Placement 4 impossible',
+    );
+    expect(await partiesTermineesA(jouee.termineeLe)).toBe(0);
+  });
+
+  it('laisse la base refuser un gain negatif', async () => {
+    const compte = await nouveauCompte();
+
+    const erreur = await erreurDe(
+      enregistrerPartie(db(), partie(), [resultat(compte, 1, { xpGagnee: -1 })]),
+    );
+
+    expect(erreurPostgres(erreur)).toEqual({
+      code: CODES_POSTGRES.controle,
+      contrainte: 'resultats_xp_positive',
+    });
+  });
+
+  it('laisse la base refuser une carte qui n existe pas', async () => {
+    const erreur = await erreurDe(
+      db()
+        .insert(schema.parties)
+        .values({ ...partie({ carte: 'map9' as IdentifiantCarte }), termineeLe: new Date() }),
+    );
+
+    // 22P02: valeur hors du type enumere.
+    expect(erreurPostgres(erreur)?.code).toBe('22P02');
+  });
+
+  it('supprime les resultats avec le compte, et garde la partie', async () => {
+    const partant = await nouveauCompte();
+    const restant = await nouveauCompte();
+    const jouee = partie();
+    await enregistrerPartie(db(), jouee, [resultat(partant, 1), resultat(restant, 2)]);
+
+    await db().delete(schema.comptes).where(eq(schema.comptes.id, partant));
+
+    expect(await lireHistorique(db(), partant)).toEqual([]);
+    expect(await lireHistorique(db(), restant)).toHaveLength(1);
+    expect(await partiesTermineesA(jouee.termineeLe)).toBe(1);
+  });
+
+  it('refuse de supprimer une partie qui a encore des resultats', async () => {
+    const compte = await nouveauCompte();
+    const { partieId } = await enregistrerPartie(db(), partie(), [resultat(compte, 1)]);
+
+    const erreur = await erreurDe(
+      db().delete(schema.parties).where(eq(schema.parties.id, partieId)),
+    );
+
+    expect(erreurPostgres(erreur)).toEqual({
+      code: CODES_POSTGRES.restriction,
+      contrainte: 'resultats_partie_id_parties_id_fk',
+    });
+    expect(await lireHistorique(db(), compte)).toHaveLength(1);
+  });
+
+  // Recette de l'etape 5.4: le serveur retente un enregistrement qui a echoue. Si le
+  // premier essai avait en fait abouti, et que seule sa reponse s'est perdue, le
+  // second ne doit rien compter deux fois.
+  it('ne compte qu une fois une partie enregistree deux fois sous le meme identifiant, et rend la meme evolution', async () => {
+    const compte = await nouveauCompte();
+    await ecrireProgression(db(), compte, { xpTotale: 1000, pieces: 50, pointsLigue: 40 });
+    const jouee = partie({ id: randomUUID() });
+    const lignes = [
+      resultat(compte, 1, { xpGagnee: 210, piecesGagnees: 21, variationPointsLigue: 20 }),
+    ];
+
+    const premiere = await enregistrerPartie(db(), jouee, lignes);
+    const seconde = await enregistrerPartie(db(), jouee, lignes);
+
+    expect(premiere.partieId).toBe(jouee.id);
+    expect(seconde).toEqual(premiere);
+    expect(await lireProgression(db(), compte)).toMatchObject({
+      xpTotale: 1210,
+      pieces: 71,
+      pointsLigue: 60,
+    });
+    expect(await partiesTermineesA(jouee.termineeLe)).toBe(1);
+    expect(await lireHistorique(db(), compte)).toHaveLength(1);
+  });
+});

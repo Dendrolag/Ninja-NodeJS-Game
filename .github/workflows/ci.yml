@@ -1,0 +1,181 @@
+# Integration continue.
+#
+# C'est le mecanisme qui transforme les tests en garantie reelle: si ce workflow
+# est rouge, rien ne part en ligne. On pousse directement sur master, sans
+# protection de branche (decision du 15 septembre 2026): c'est la mise en ligne,
+# et non la poussee, qui attend que le filet soit passe.
+#
+# Ordre volontaire, du plus rapide au plus lent, pour echouer tot:
+# formatage, types, linter, tests unitaires, puis bout en bout.
+
+name: CI
+
+on:
+  push:
+    # Les branches mesure-charge/ ne portent aucun code nouveau: elles ne servent
+    # qu'a lancer la mesure de charge sous Linux (charge.yml).
+    branches: ['**', '!mesure-charge/**']
+  pull_request:
+    branches: ['**']
+
+# Une nouvelle poussee sur la meme branche annule l'execution precedente, sauf sur
+# master: son execution peut etre en train de mettre en ligne, et une mise en
+# ligne interrompue laisserait le serveur et la page de deux versions differentes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+env:
+  NODE_VERSION: '24'
+
+jobs:
+  verification:
+    name: Types, linter et tests
+    runs-on: ubuntu-latest
+    # Les tests de la base creent leur propre branche Neon, puis la suppriment.
+    # Sans ces secrets, ils font echouer la CI plutot que d'etre sautes.
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+      NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v7
+
+      - name: Installer pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Installer Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Installer les dependances
+        run: pnpm install --frozen-lockfile
+
+      - name: Verifier le formatage
+        run: pnpm format:check
+
+      - name: Verifier les types
+        run: pnpm typecheck
+
+      # Le schema de la base et ses migrations ne divergent jamais: on regenere
+      # les migrations, et le moindre fichier ajoute ou modifie fait echouer la CI.
+      # Place apres les types, parce que drizzle-kit lit la compilation de shared.
+      - name: Verifier que les migrations suivent le schema de la base
+        run: |
+          pnpm base:generer
+          git status --porcelain packages/server/migrations
+          test -z "$(git status --porcelain packages/server/migrations)"
+
+      - name: Linter (dont l'invariant de purete de packages/sim)
+        run: pnpm lint
+
+      - name: Tests unitaires et d'integration
+        run: pnpm test
+
+  bout-en-bout:
+    name: Bout en bout
+    runs-on: ubuntu-latest
+    # Inutile de lancer les navigateurs si la verification rapide a deja echoue.
+    needs: verification
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v7
+
+      - name: Installer pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Installer Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Installer les dependances
+        run: pnpm install --frozen-lockfile
+
+      - name: Installer les navigateurs Playwright
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Scenarios de bout en bout
+        run: pnpm test:e2e
+
+      - name: Conserver le rapport en cas d'echec
+        uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: rapport-playwright
+          path: playwright-report/
+          retention-days: 7
+
+  # La mise en ligne (etape 5.3): la page sur Vercel, le serveur de jeu sur Render.
+  # Seulement apres les deux jobs verts, et seulement pour une poussee sur master,
+  # la branche de la production depuis l'etape 6.1. Le deroulement et ses
+  # verifications sont dans deploiement/deployer.ts, l'exploitation dans
+  # docs/deploiement.md.
+  mise-en-ligne:
+    name: Mise en ligne
+    runs-on: ubuntu-latest
+    needs: [verification, bout-en-bout]
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+    # Une seule mise en ligne a la fois, jamais interrompue par la suivante.
+    concurrency:
+      group: mise-en-ligne
+      cancel-in-progress: false
+    env:
+      # Les deux secrets du depot.
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      # Ce qui suit n'a rien de secret: ce sont des identifiants et des adresses
+      # publiques.
+      RENDER_SERVICE_ID: srv-csrnm30gph6c73b9jmt0
+      VERCEL_ORG_ID: team_v9SkLK1zKjpRjtkmzq8Q9TM7
+      VERCEL_PROJECT_ID: prj_x2NAYxrQy1D88sjkjGRewy96hbua
+      SERVEUR_DE_JEU: https://neon-ninja.onrender.com
+      PAGE_DU_JEU: https://neon-ninja-jeu.vercel.app
+      VERSION_DU_JEU: ${{ github.sha }}
+    steps:
+      # Tout l'historique: la mise en ligne compare ce commit a celui qui est en ligne,
+      # et ne part pas si rien de ce qui compose le jeu n'a change entre les deux.
+      - name: Recuperer le depot
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # Deux executions de master peuvent finir leurs tests dans le desordre:
+      # seul le dernier commit de la branche se met en ligne, jamais un plus ancien
+      # apres un plus recent.
+      - name: Verifier que ce commit est le dernier de la branche
+        id: dernier
+        run: |
+          dernier="$(git ls-remote origin refs/heads/master | cut -f1)"
+          if [ "$dernier" = "$GITHUB_SHA" ]; then
+            echo "a-mettre-en-ligne=oui" >> "$GITHUB_OUTPUT"
+          else
+            echo "Un commit plus recent ($dernier) est sur la branche: celui-ci ne se met pas en ligne."
+            echo "a-mettre-en-ligne=non" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Installer pnpm
+        if: ${{ steps.dernier.outputs.a-mettre-en-ligne == 'oui' }}
+        uses: pnpm/action-setup@v6
+
+      - name: Installer Node
+        if: ${{ steps.dernier.outputs.a-mettre-en-ligne == 'oui' }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Installer les dependances
+        if: ${{ steps.dernier.outputs.a-mettre-en-ligne == 'oui' }}
+        run: pnpm install --frozen-lockfile
+
+      - name: Compiler les paquets
+        if: ${{ steps.dernier.outputs.a-mettre-en-ligne == 'oui' }}
+        run: pnpm exec tsc --build
+
+      - name: Mettre en ligne la page et le serveur de jeu
+        if: ${{ steps.dernier.outputs.a-mettre-en-ligne == 'oui' }}
+        run: node --disable-warning=ExperimentalWarning deploiement/deployer.ts

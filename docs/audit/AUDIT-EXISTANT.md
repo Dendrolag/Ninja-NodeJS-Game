@@ -1,0 +1,411 @@
+# Audit de l'existant - Neon Ninja
+
+Date de l'audit: 13 aout 2026. Branche auditee: `master`, commit `fe8c955` (version 0.8.5).
+
+Ce document est la base de connaissance du projet tel qu'il est reellement, par opposition au projet tel qu'il est decrit dans CLAUDE.md. Il sert de point de depart a toute remise sur les rails. Il ne propose pas de plan, il constate.
+
+---
+
+## 1. Constat central: deux projets coexistent sur le papier
+
+Il y a un ecart total entre la constitution du projet et le code reel.
+
+**Ce que decrit CLAUDE.md** (le projet cible): un depot en paquets separes (`packages/sim`, `packages/server`, `packages/client`, `packages/shared`), du TypeScript partout, un coeur de simulation pur et deterministe, PixiJS pour le rendu, PostgreSQL via Neon pour les comptes, Vitest et Playwright pour les tests, une integration continue GitHub Actions, et une methode de travail par etapes avec `docs/plan/ROADMAP.md`, `docs/plan/PROTOCOLE.md` et `docs/handoffs/`.
+
+**Ce qui existe reellement**: un monolithe JavaScript de deux fichiers. Aucun des repertoires cites ci-dessus n'existe. Aucun des fichiers cites n'existe.
+
+Verifie concretement:
+
+| Element promis par CLAUDE.md                     | Etat reel                                                      |
+| ------------------------------------------------ | -------------------------------------------------------------- |
+| `packages/*`                                     | N'existe pas                                                   |
+| TypeScript                                       | Aucun fichier `.ts`, aucun `tsconfig.json`                     |
+| PixiJS                                           | Absent. Le rendu est en Canvas 2D natif                        |
+| PostgreSQL / Neon                                | Absent. Aucune persistance, aucune dependance base de donnees  |
+| Vitest / Playwright                              | Absents du `package.json`. Aucune dependance de test installee |
+| GitHub Actions                                   | Aucun repertoire `.github/`                                    |
+| `docs/plan/ROADMAP.md`, `docs/plan/PROTOCOLE.md` | N'existent pas                                                 |
+| `docs/handoffs/` et son `_TEMPLATE.md`           | N'existent pas                                                 |
+| `.claude/rules/` (regle de purete de sim)        | N'existe pas                                                   |
+| Section "Commandes" de CLAUDE.md                 | Laissee vide, "a completer a la fin de l'etape 0.1"            |
+
+Deux fiches d'etape sont presentes a la racine, `etape-3-1.md` (base de donnees) et `etape-5-3.md` (deploiement en parallele), mais elles ne sont pas dans `docs/plan/`, elles ne sont pas suivies d'un ROADMAP, et elles decrivent des etapes tres avancees d'un plan dont les etapes 0, 1 et 2 n'ont jamais ete faites. Ces deux fiches sont orphelines.
+
+**Consequence pratique**: une session Claude Code qui suit CLAUDE.md a la lettre cherchera des fichiers inexistants, croira que l'etape 0.1 est faite, et travaillera dans le vide. C'est le premier point a corriger, avant toute ligne de code.
+
+---
+
+## 2. Le produit tel qu'il fonctionne aujourd'hui
+
+Le jeu est fonctionnel et joue. C'est un jeu de capture en temps reel dans un navigateur.
+
+### Boucle de jeu
+
+Les joueurs se deplacent sur une carte en vue de dessus peuplee de bots. Toucher un bot le convertit a sa couleur. Le score d'un joueur est le nombre de bots portant sa couleur a l'instant present, plus 15 points par bot noir detruit. Toucher un autre joueur le capture: on lui vole d'un coup tous ses bots, et il reapparait ailleurs avec une nouvelle couleur. La partie dure un temps configurable (180 secondes par defaut) et se termine par un classement.
+
+Point de conception important: le score est un **stock, pas un cumul**. Se faire capturer remet le compteur a zero. C'est ce qui rend la fin de partie tendue, et c'est un comportement a preserver absolument.
+
+### Elements de jeu
+
+**Bots standards** (50 par defaut): errance aleatoire avec changement de direction periodique, detection de blocage et tentative de degagement.
+
+**Bots noirs** (2 par defaut, apparition a 50 pour cent du temps de partie): poursuivent les joueurs dans un rayon de detection de 150 pixels, a vitesse 5 contre 3 pour un joueur. Capturer un joueur lui fait perdre 50 pour cent de ses points. Un joueur invincible qui les touche les detruit et gagne 15 points.
+
+> **Correction du 13 aout 2026 (etape 0.2).** Cette section annoncait une vitesse de 6, valeur reprise du reglage `blackBotSpeed: 6` de `DEFAULT_GAME_SETTINGS`. C'est faux: `BlackBot` initialise `this.baseSpeed = GAME_CONFIG.BOT_SPEED` (`server.js:1142`), qui vaut 5, et `blackBotSpeed` n'est lu **nulle part** dans le legacy. Le bot noir avance donc exactement a la vitesse d'un bot ordinaire. Verifie et couvert par les tests de caracterisation. Voir aussi les defauts X11 a X13 ci-dessous.
+
+**Bonus** (apparition periodique, taux configurables): vitesse (multiplicateur 1,7), invincibilite, revelation (montre les vrais joueurs parmi les bots).
+
+**Malus**: controles inverses, vision floue, vision en negatif. Un malus ramasse s'applique aux **autres** joueurs, pas a celui qui le ramasse.
+
+**Zones speciales** (maximum 3 simultanees): Chaos, Repulsive, Attractive, Invisibilite. Elles apparaissent et expirent au fil de la partie.
+
+**Cartes**: map1 (2000x1500), map2 Tokyo (2000x1500), map3 Room of Spirit and Time (3000x2000, marquee "test"). Chaque carte a une variante miroir. Les collisions sont derivees d'une image `collision.png`: un pixel dont la luminosite moyenne est inferieure a 128 est un mur.
+
+**Salle d'attente**: un joueur est proprietaire (le premier arrive, ou le suivant par transfert automatique). Seul le proprietaire regle les parametres et lance la partie, avec un compte a rebours de 5 secondes annulable jusqu'a 2 secondes. Chat integre. Un joueur peut rejoindre une partie en cours.
+
+**Autres**: support mobile avec joystick virtuel, gestion audio complete (musiques et sons spatialises), mode miroir, systeme de pause.
+
+### Ce qui n'existe pas dans master, contrairement a ce qu'annonce CLAUDE.md
+
+- **Le mode tactique n'existe pas.** CLAUDE.md parle de "modes classique et tactique". Aucune trace de mode tactique dans `master` (recherche exhaustive sur `tactic`, `tactique`, `strateg`, `captureCone`: zero resultat). Il n'existe que dans la branche abandonnee `modular-architecture-broken`, sous `server/game/TacticalMode.js`.
+- **Les parties privees et publiques n'existent pas.** Il n'y a qu'une seule partie globale pour tout le serveur (voir section 3).
+- **La progression de compte n'existe pas.** Aucune persistance d'aucune sorte.
+
+---
+
+## 3. Architecture reelle
+
+### Inventaire des fichiers
+
+| Fichier                       | Lignes | Role                                                              |
+| ----------------------------- | ------ | ----------------------------------------------------------------- |
+| `server.js`                   | 2 812  | Tout le serveur: Express, Socket.IO, etat, entites, boucle de jeu |
+| `public/client.js`            | 4 367  | Tout le client: interface, rendu, entrees, reseau, audio          |
+| `public/styles.css`           | 3 761  | Styles                                                            |
+| `public/index.html`           | 592    | Structure                                                         |
+| `public/js/MapManager.js`     | 465    | Rendu des cartes et collisions cote client                        |
+| `public/js/AudioManager.js`   | 364    | Sons et musiques                                                  |
+| `game-constants.js`           | 134    | Constantes serveur                                                |
+| `public/js/game-constants.js` | 71     | Constantes client (duplication partielle)                         |
+
+Deux fichiers concentrent 7 179 lignes, soit l'essentiel de la logique.
+
+### Le probleme structurant: l'etat global mutable unique
+
+`server.js` declare son etat en variables de module (lignes 121 a 164):
+
+```
+let players = {};          let bots = {};        let blackBots = {};
+let bonuses = [];          let malusItems = [];  let specialZones = new Set();
+let isPaused = false;      let isGameOver = false;
+const waitingRoom = { players: new Map(), settings: {...}, ... };
+```
+
+Il n'y a **pas de notion de partie ni de salon**. Il y a une seule partie, un seul salon d'attente, un seul chat, pour tout le serveur. Toutes les diffusions sont des `io.emit(...)`, c'est-a-dire vers tous les clients connectes, sans exception. Les rooms de Socket.IO ne sont jamais utilisees.
+
+**Consequence directe**: deux groupes de joueurs ne peuvent pas jouer en meme temps. Si un second groupe arrive, il rejoint la partie du premier. Les parties privees et publiques annoncees comme objectif sont structurellement impossibles sans refonte de cette couche. C'est le blocage numero un du projet.
+
+C'est aussi la cause de fond identifiee par CLAUDE.md lui-meme: "Aucune variable globale mutable, c'etait la cause des blocages du legacy."
+
+### La boucle de jeu
+
+```
+setInterval(() => {
+    if (!isPaused && !isGameOver) { updateBots(); updatePlayerBonuses(); sendUpdates(); }
+}, 50);   // 20 fois par seconde
+```
+
+Elle demarre au lancement du serveur et tourne en permanence, y compris quand personne ne joue. `sendUpdates()` serialise l'integralite de l'etat (toutes les entites, tous les scores, tous les bonus, tous les malus, toutes les zones) et l'envoie a chaque socket, 20 fois par seconde. Pas de compression differentielle, pas de filtrage par champ de vision, pas d'arrondi des coordonnees. Avec 50 bots et 100 bots vises, la charge reseau croit lineairement et sans plafond.
+
+### Le modele de mouvement
+
+Le client calcule lui-meme son deplacement et l'envoie au serveur:
+
+```
+socket.emit('move', { x: move.x, y: move.y, speedBoostActive, isMoving: true });
+```
+
+Le serveur applique ce deplacement a la reception de chaque message. Deux consequences majeures:
+
+1. **La vitesse d'un joueur est proportionnelle a son debit de messages**, pas au temps ecoule. Le client emet toutes les 20 millisecondes via `setInterval`, mais rien cote serveur ne le verifie ni ne le limite.
+2. **Il n'y a ni prediction cote client, ni interpolation.** La position affichee est la position brute recue du serveur.
+
+### Le rendu client: le point noir de la fluidite
+
+Il n'existe **aucune boucle de rendu**. `drawEntities()` n'est appelee qu'a un seul endroit: dans le gestionnaire de l'evenement reseau `updateEntities` (`public/client.js:2548`).
+
+Autrement dit, **le jeu s'affiche a la cadence du reseau, soit 20 images par seconde au mieux**, et chaque gigue ou perte de paquet se traduit par un a-coup visible. Un ecran 60 ou 144 Hz n'apporte rien. La camera aggrave le probleme: elle interpole vers sa cible avec un facteur de 0,08 par appel, mais comme elle n'est appelee qu'une fois par tick reseau, elle traine loin derriere le joueur.
+
+C'est probablement la cause principale de la sensation de manque de fluidite, et c'est corrigeable independamment du reste.
+
+### Duplication de la logique de collision
+
+La carte de collision est analysee **deux fois**, une fois cote serveur (`CollisionMap` dans `server.js`) et une fois cote client (`MapManager.initializeCollisionData`). Deux implementations distinctes du meme calcul, avec deux seuils et deux representations. Le client s'en sert pour bloquer l'envoi du mouvement, le serveur pour valider. Toute divergence entre les deux produit un joueur qui se voit bouger sans que le serveur suive, ou l'inverse.
+
+Cote serveur, la representation est un tableau de tableaux de booleens de la taille de la carte en pixels: 3 millions d'entrees pour map1, 6 millions pour map3. C'est tres couteux en memoire, et cet objet est unique et partage, donc non transposable tel quel a plusieurs parties simultanees.
+
+---
+
+## 4. Defauts identifies, par gravite
+
+### Bloquants pour les objectifs annonces
+
+**B1. Une seule partie possible sur tout le serveur.** Detaille en section 3. Empeche parties privees, parties publiques, et toute montee en charge.
+
+**B2. Le rendu est pilote par le reseau.** Detaille en section 3. Plafonne le jeu a 20 images par seconde.
+
+**B3. Aucun test, d'aucune sorte.** Le repertoire `tests/` existe mais est **entierement vide** (seuls subsistent `tests/client/unit/` et `tests/client/integration/`, vides, vestiges d'un basculement de branche). Aucune dependance de test dans `package.json`. Aucun script de test. La regle "Tests d'abord" de CLAUDE.md n'a aucun support.
+
+### Failles de securite
+
+**S1. Injection de code par le pseudonyme (stored XSS).** Le pseudonyme n'est valide nulle part: le client verifie seulement qu'il n'est pas vide, le serveur ne verifie rien du tout (ni longueur, ni caracteres, ni unicite). Il est ensuite injecte tel quel dans du HTML a plusieurs endroits:
+
+- `public/client.js:3937` et `:3970`, modale de fin de partie
+- `public/client.js:4211`, modale de capture
+
+Un pseudonyme contenant du code s'execute donc dans le navigateur de **tous** les autres joueurs a la fin de la partie. Le chat, lui, est correctement protege (il utilise `textContent`), ce qui montre que la protection a ete pensee a un endroit et oubliee aux autres.
+
+**S2. Vitesse de deplacement non controlee.** Trois problemes cumulables dans le gestionnaire `move` (`server.js:2604`):
+
+- `data.speedBoostActive` est cru sur parole: envoyer `true` en permanence donne un bonus de vitesse permanent (x1,7).
+- `data.isMobile` est cru sur parole: l'envoyer donne le facteur mobile (x2). Cumule avec le precedent: x3,4.
+- **Aucune limitation du debit de messages**: la vitesse etant appliquee par message recu, un client modifie qui emet 1 000 messages par seconde se deplace 50 fois plus vite qu'un joueur normal.
+
+Le serveur normalise bien la norme du vecteur recu, ce qui bloque la triche la plus naive, mais pas celles-ci.
+
+**S3. Usurpation d'identite dans le chat.** `chatMessage` diffuse le champ `nickname` fourni par le client sans le comparer a l'identite de la socket. N'importe qui peut ecrire sous le nom de n'importe qui.
+
+**S4. Deni de service trivial.** Chaque message `move` declenche `detectCollisions`, qui parcourt tous les joueurs, tous les bots et tous les bots noirs. Un client qui inonde le serveur de `move` sature un coeur processeur. Aucune limitation de debit n'existe sur aucun evenement.
+
+**S5. Dependances vulnerables.** `npm audit` remonte 12 vulnerabilites, dont 1 critique et 8 elevees, notamment sur `ws` via `socket.io-adapter`.
+
+### Bugs confirmes dans le code
+
+**X1. Fuite de minuteries, degradation progressive du jeu.** `spawnBonus` et `spawnMalus` se replanifient elles-memes via `setTimeout`. Elles sont demarrees au lancement du serveur, **et** a chaque `startGameFromRoom` (`server.js:2530`), **et** a chaque `resetAndStartGame` (`:2598`), **et** a chaque `resetGame` (`:1975`, appelee notamment quand le dernier joueur quitte). Aucun `clearTimeout` n'existe nulle part dans `server.js` (verifie: seuls deux `clearInterval` sur le compte a rebours). Chaque partie ajoute donc une chaine de minuteries parallele qui ne s'arrete jamais. Apres cinq parties, les bonus apparaissent environ cinq fois plus vite. **Cela explique la sensation que le jeu devient incoherent au fil des parties et redevient normal apres un redemarrage du serveur.**
+
+**X2. Gestionnaire `joinRunningGame` declare deux fois.** Aux lignes 2082 et 2157. Socket.IO execute **les deux**. Rejoindre une partie en cours cree donc le joueur deux fois, calcule deux positions de spawn dont la premiere est jetee, perd la protection au spawn appliquee par la premiere version, et emet `gameStarting` deux fois.
+
+**X3. `getValidPosition` plante sur son chemin de secours.** `server.js:252` utilise une variable `startTime` qui n'est jamais declaree. En module ES, c'est une `ReferenceError`. Ce chemin est atteint lorsque 100 tirages aleatoires de position echouent d'affilee, ce qui devient probable sur une carte tres encombree.
+
+**X4. La distance de securite au spawn ne s'applique jamais.** `PositionManager` maintient une carte `entitiesPositions` pour empecher deux entites d'apparaitre l'une sur l'autre, mais `registerEntity`, `updateEntityPosition` et `removeEntity` ne sont **jamais appelees**. La carte reste vide, donc `SAFE_SPAWN_DISTANCE` (100 pixels) est lettre morte. Un joueur peut reapparaitre colle a un bot noir.
+
+**X5. Les dimensions dynamiques de `GAME_CONFIG` ne fonctionnent pas.** Les accesseurs `GAME_CONFIG.WIDTH` et `HEIGHT` (`game-constants.js:22-30`) lisent une variable `waitingRoom` qui n'existe pas dans ce module. La condition `typeof waitingRoom !== 'undefined'` est toujours fausse, donc ils renvoient toujours 2000x1500, meme sur map3 qui fait 3000x2000. Utilises seulement dans `_findBackupPosition`, donc l'impact est limite, mais le mecanisme est trompeur.
+
+**X6. La route `/test-maps` plante systematiquement.** `server.js:98` appelle `fs.existsSync` alors que `fs` n'est jamais importe.
+
+**X7. Le message de depart dans le chat n'est jamais envoye.** Le gestionnaire `disconnect` supprime `players[socket.id]` a la ligne 2742, puis teste `if (players[socket.id])` a la ligne 2786. La condition est toujours fausse.
+
+**X8. Contrat `updateWaitingRoom` incoherent.** Partout le serveur emet un objet `{ players, gameInProgress }`, sauf dans `rejoinWaitingRoom` (`server.js:2216`) ou il emet un tableau nu.
+
+**X9. `MapManager.loadLayers` lit une variable serveur.** `public/js/MapManager.js:127` fait `waitingRoom.settings`, or `waitingRoom` n'existe que cote serveur. Cela leve une `ReferenceError` interceptee par le `catch` de la fonction, qui renvoie alors `false` en silence. La variable n'etant pas utilisee ensuite, l'effet reel depend du moment, mais le chargement des calques peut echouer silencieusement.
+
+**X10. Code mort et pieges.** `handleGameStart` (`server.js:1980`) n'est jamais appelee et referencerait deux variables non declarees si elle l'etait. `Bot.unstuck` (`:1034`) n'est jamais appelee et appelle une methode `collisionMap.findValidSpawnPosition` qui n'existe pas.
+
+### Defauts decouverts a l'etape 0.2
+
+Ajoutes le 13 aout 2026. Contrairement aux precedents, ceux-ci ont ete constates a l'execution, par les tests de caracterisation, et non par lecture seule.
+
+**X11. `botsControlled` n'est jamais incremente.** Le champ est remis a zero a cinq endroits (`server.js:886`, `:1461`, `:2001`, `:2297`, `:2560`) et lu a un seul (`:794`), ou le serveur l'envoie au client dans `playerCapturedEnemy`. Le client recoit donc toujours zero. C'est `totalBotsCaptures` qui porte la valeur reelle, alimentee par `addCapturedBots`.
+
+**X12. La population de bots augmente a chaque capture par un bot noir.** `BlackBot.captureEntity` (`:1274`) repeint en blanc les bots perdus par le joueur, puis appelle `createWhiteBots(pointsLost)` (`:1282`) qui en cree **autant de nouveaux**. Sur huit bots rouges: quatre repeints, quatre crees, soit huit bots blancs et douze bots au total la ou il y en avait huit. Le nombre de bots derive donc a la hausse au fil de la partie, ce qui contredit le reglage `initialBotCount`.
+
+**X13. Le reglage `blackBotSpeed` n'est lu nulle part.** `BlackBot` initialise `this.baseSpeed = GAME_CONFIG.BOT_SPEED` (`:1142`), qui vaut 5, et le commentaire du code l'assume: « Utiliser la meme vitesse que les autres bots ». Le reglage `blackBotSpeed: 6` de `DEFAULT_GAME_SETTINGS` est mort. Corrige dans la section 2 de ce document et dans CLAUDE.md, qui annoncaient tous les deux 6. Decision du 13 aout 2026: on garde 5, la valeur reellement jouee.
+
+**X14. Deux reglages de partie sont ignores au profit des valeurs par defaut.** `BlackBot.captureEntity` lit `DEFAULT_GAME_SETTINGS.pointsLossPercent` (`:1270`) et le constructeur de `BlackBot` lit `DEFAULT_GAME_SETTINGS.blackBotDetectionRadius` (`:1140`), au lieu de `currentGameSettings`. Regler ces valeurs dans le salon n'a donc aucun effet sur la partie. Le rayon de detection est pire: `sendUpdates` envoie au client `currentGameSettings.blackBotDetectionRadius` (`:1857`), si bien que le client affiche un rayon que le serveur n'applique pas.
+
+**X15. `canMove` ignore son point de depart.** Ses deux premiers arguments (`fromX`, `fromY`) ne sont lus nulle part dans le corps de la methode (`:394`). C'est un echantillonnage ponctuel de la position d'arrivee, pas un balayage du trajet. Consequence mesuree: un mur de deux pixels de large se traverse en un seul deplacement, aucun des seize points du contour ne tombant dessus. Ce n'est pas un reglage de jeu, c'est une limite de methode, a traiter par conception a l'etape 1.2.
+
+### Defauts decouverts a l'etape 1.1
+
+Ajoutes le 13 aout 2026, en portant les classes `Entity` et `Player` dans le coeur de simulation.
+
+**X16. `Entity.lastX` et `Entity.lastY` sont des champs morts.** Le constructeur les initialise (`server.js:840`), et plus rien ne les lit ni ne les met a jour dans tout le fichier. Un lecteur suppose naturellement qu'ils portent la position precedente, utile pour un calcul de deplacement: c'est faux. Non portes.
+
+**X17. Les vitesses du legacy ne sont pas rapportees a la meme horloge.** Un joueur avance de 3 pixels **par message recu**, et son client de bureau en envoie un toutes les 20 millisecondes (`client.js:2770`). Un bot avance de 5 pixels **par battement de la boucle serveur**, qui tourne toutes les 50 millisecondes. Les deux nombres, 3 et 5, ne se comparent donc pas: ramenes a la seconde, le joueur va a 150 pixels par seconde et le bot a 100. Le joueur est en realite une fois et demie plus rapide qu'un bot, la ou la lecture du code laisse croire l'inverse.
+
+Consequences:
+
+- La formule « joueur 3, bot 5 » du point 5 de la section 6 decrit l'ecriture du legacy, pas le jeu ressenti. Elle reste utile comme reference du code d'origine, a condition de savoir ce qu'elle mesure.
+- Sur mobile, la manette envoie un deplacement de 6 pixels (facteur 2) toutes les 50 millisecondes, soit 120 pixels par seconde, et 204 avec le bonus: moins vite que le bureau. Correction du 15 septembre 2026: ce paragraphe annoncait 16 millisecondes et 375 pixels par seconde. `handleMove` pose bien un intervalle de 16 millisecondes (`client.js:929`), mais `handleStart`, qui l'appelle, le remplace aussitot par un intervalle de 50 (`:871`). Mesure sur le deploiement d'origine, manette tactile emulee pendant trois secondes: 60 messages `move`, chacun de 6 pixels. Le facteur deux compensait donc a peu pres une cadence plus lente; il reste une faille (S2), puisque le serveur croit `isMobile` sur parole.
+- Le portage exprime les vitesses en pixels par seconde et fait avancer les entites proportionnellement au temps ecoule, ce qui preserve la vitesse reellement jouee et supprime la dependance au debit de messages.
+
+### Defauts decouverts a l'etape 1.2
+
+Ajoutes le 14 aout 2026, en portant la carte de collisions et la resolution du deplacement. Tous deux sont dans le gestionnaire `move` (`server.js:2604`), et tous deux ont ete corriges par conception au moment du portage.
+
+**X18. Les directions de contournement partent de l'axe des abscisses, pas de la direction voulue.** Quand les deux axes sont bloques, le legacy essaie six directions de secours (`:2645`): `Math.cos(rad)` et `Math.sin(rad)` sont calcules sur les angles bruts 30, -30, 45, -45, 60 et -60 degres, sans jamais tenir compte de la direction que le joueur demandait. Ces six directions pointent donc toujours vers l'est, a soixante degres pres. Un joueur bloque en allant vers l'ouest repart vers l'est, c'est-a-dire a l'oppose de ce qu'il demande. L'intention du code est evidente, l'ecart d'angle devait etre relatif au cap voulu. Corrige en 1.2: les ecarts s'appliquent a la direction demandee.
+
+**X19. Le glissement le long d'un mur repose l'entite sur une position deja refusee.** Toujours dans `move` (`:2637`), quand le mouvement complet echoue, le legacy teste separement l'axe horizontal et l'axe vertical **depuis la meme position de depart**, puis applique les deux resultats: `if (canMoveX) player.x = desiredX; if (canMoveY) player.y = desiredY;`. Si les deux axes passent separement alors que la diagonale ne passait pas, le joueur se retrouve exactement sur la position que `canMove` venait de refuser. Autrement dit, il coupe l'angle du mur en diagonale. Corrige en 1.2: les deux axes s'enchainent, le second partant de la position atteinte par le premier, ce qui decrit le meme glissement par un chemin reellement parcouru.
+
+### Defauts decouverts a l'etape 1.3
+
+Ajoutes le 14 aout 2026, en portant les captures et le score.
+
+**X20. Les bots se repeignent entre eux, y compris en blanc.** Dans `detectCollisions` (`:1704`), un bot qui touche un autre bot de couleur differente lui impose la sienne, sans aucune condition sur la couleur. Or `updateBots` (`:1564`) appelle `detectCollisions` pour chaque bot a chaque battement du serveur. La consequence n'est pas celle qu'on attend: un bot **blanc**, c'est-a-dire non capture, repeint en blanc un bot de couleur. Un joueur perd donc des points sans que personne ne l'attaque, par simple diffusion. Ce n'est pas un bug d'ecriture, c'est un comportement reel du jeu depuis deux ans, caracterise a l'etape 0.2 (« propage la couleur d un bot a un autre bot au contact »). Porte tel quel a l'etape 1.3, avec la question posee dans le handoff: mecanique voulue, ou effet de bord jamais remarque ?
+
+Precision sur le sens du contact, verifiee en portant: dans un meme passage de `updateBots`, les bots sont parcourus dans leur ordre d'arrivee, et le premier repeint le second, qui ne repeint plus rien ensuite puisqu'il porte deja la meme couleur. Ce n'est donc pas un clignotement: le plus ancien des deux l'emporte. Le portage reproduit exactement cette regle.
+
+**Tranche le 14 aout 2026, a l'etape 1.6.** Reponse du porteur du projet: effet de bord jamais voulu, a corriger. Seule une entite portant la couleur d'un joueur repeint desormais un bot; la contagion entre bots de joueurs, elle, reste entiere. Mesure de l'ecart sur vingt parties d'une minute a trois joueurs et trente bots: 149 bots portes en fin de partie contre 111 avant la correction, soit environ un tiers de score en plus, et 332 bots restes neutres contre 372. Le chiffre couvre aussi la correction de X30, decouvert au meme endroit. Voir `aUneCouleurADonner` dans `packages/sim/src/capture.ts`.
+
+**X21. `handlePlayerCapture` ne verifie pas la couleur de sa victime.** La condition « couleurs differentes » vit dans `detectCollisions` (`:1687`), pas dans `handlePlayerCapture` (`:738`). Appelee directement sur deux joueurs de meme couleur, la fonction compte donc une capture et « transfere » a l'attaquant ses propres bots. Le legacy n'a qu'un seul appelant, la faute n'est donc jamais commise, mais la fonction n'est pas sure par elle-meme. Corrige par conception a l'etape 1.3: la verification est dans la regle d'autorisation, appelee par la capture elle-meme, donc aucun appelant ne peut l'oublier.
+
+### Defauts decouverts a l'etape 1.4
+
+Ajoutes le 14 aout 2026, en portant les bonus, les malus et les zones speciales.
+
+**X22. La zone d'invisibilite n'a aucun effet cote serveur, et sa remise a zero depend de l'ordre des zones.** `SpecialZone.applyEffect` ecrit `entity.isInvisible = true` pour un joueur dans une zone STEALTH (`server.js:620`), et `sendUpdates` remet ce champ a `false` pour un joueur hors de la zone en cours d'examen (`:1815`). Or **rien ne lit jamais `isInvisible`**: `sendUpdates` construit les entites envoyees au client sans ce champ (`:1830`). L'invisibilite fonctionne quand meme en jeu, mais entierement cote client, qui la recalcule a partir des zones qu'il recoit (`client.js:3220`). Deux consequences: le champ serveur est mort, et sa remise a zero est en plus fautive, puisqu'un joueur dans une zone d'invisibilite se fait effacer son indicateur des qu'une autre zone est examinee apres elle. Non porte: le moteur expose les zones, le client en deduit ce qu'il dessine. La fonction `estCache` de `packages/sim/src/zones.ts` lui donne la reponse toute faite.
+
+**X23. L'expiration serveur de l'invincibilite cumulee repart de la derniere collecte.** `handleBonusCollection` ajoute la duree au compteur ET reinitialise l'instant de depart (`bonusStartTime = Date.now()`, `:1654`), tandis que `updatePlayerBonuses` compare le temps ecoule depuis cet instant a la duree totale (`:634`). Ramasser deux invincibilites de dix secondes a neuf secondes d'intervalle donne donc vingt secondes comptees a partir de la seconde collecte, soit une fin a vingt-neuf secondes cote serveur, alors que le client, qui decompte, s'arrete a vingt. Serveur et client ne s'accordent pas sur la duree reelle de la protection. Corrige par conception a l'etape 1.4: il n'y a qu'un compte a rebours, et il decroit.
+
+**X24. Le serveur n'expire ni la vitesse ni la revelation.** `updatePlayerBonuses` (`:627`) ne traite que l'invincibilite. Les compteurs `bonusTimers.speed` et `bonusTimers.reveal` restent armes indefiniment cote serveur, et c'est le client qui decide d'arreter ces deux effets. Constate a l'etape 0.2 par la caracterisation, consigne ici. Sans consequence visible dans le legacy, ou la vitesse etait de toute facon appliquee sur la foi de ce que le client annoncait (faille S2), mais inacceptable dans un moteur qui fait autorite. Corrige a l'etape 1.4: le moteur expire les trois effets de la meme facon. La duree jouee, dix secondes, est preservee.
+
+**X25. Les zones speciales poussent les bots a travers les murs.** `applyEffect` ajoute la poussee directement aux coordonnees du bot (`:584` pour REPEL, `:612` pour ATTRACT), sans consulter la carte de collisions. Un bot repousse contre un mur le traverse. Corrige par conception a l'etape 1.4: la poussee passe par la resolution de deplacement, comme tout autre mouvement.
+
+### Defauts decouverts a l'etape 1.5
+
+Ajoutes le 14 aout 2026, en portant l'intelligence des bots et des bots noirs.
+
+**X26. Le reglage `blackBotStartPercent` n'est lu nulle part.** `DEFAULT_GAME_SETTINGS` annonce `blackBotStartPercent: 50` avec le commentaire « Apparition a 50% du temps de partie » (`game-constants.js:120`), mais `spawnBlackBots` (`server.js:1336`) coupe la partie en deux en dur: `const halfGameTime = currentGameSettings.gameDuration / 2`. Verifie: le nom `blackBotStartPercent` n'apparait que dans les deux fichiers de constantes, jamais dans le code qui s'en servirait. C'est le meme motif que X13 (`blackBotSpeed`), a une difference pres qui change la decision: la vitesse morte contredisait un comportement joue depuis deux ans, alors qu'ici le reglage mort et le code en dur disent exactement la meme chose. Le reglage est donc porte **et branche**, sous le nom `momentApparitionPourCent`; sa valeur par defaut, cinquante, reproduit le jeu tel qu'il se joue.
+
+**X27. Le bot noir traverse les murs quand il poursuit.** `BlackBot.pursueTarget` (`:1243`) ajoute son deplacement directement aux coordonnees et se contente de les borner a la carte: `collisionMap.canMove` n'est jamais consulte. Un bot noir lance sur un joueur traverse donc tout ce qui se trouve entre eux, alors que le meme bot noir sans proie, qui erre par `Bot.move`, respecte les murs. C'est le cousin de X25 pour les zones. Corrige par conception a l'etape 1.5: la poursuite passe par la resolution de deplacement, comme tout autre mouvement.
+
+**X28. La vitesse d'un bot depend d'un vecteur qui n'est pas unitaire.** `Bot` range sa direction dans `vx` et `vy`, puis `move` avance de `vx * BOT_SPEED` (`:1081`). Le calcul suppose donc un vecteur de longueur un, ce que le code ne garantit jamais:
+
+- Le constructeur tire `vx = (Math.random() - 0.5) * 2` et `vy` de meme (`:947`), soit deux composantes independantes entre moins un et un. La longueur du vecteur va de zero a un virgule quarante et un: un bot fraichement pose avance donc a une vitesse tiree au sort entre zero et une fois et demie la vitesse annoncee. Seul `changeDirection` (`:1107`), qui pose `cos` et `sin`, remet le vecteur a l'unite, une a trois secondes plus tard.
+- Pire pour le bot noir: `pursueTarget` (`:1239`) ecrit `vx = (dx / distance) * this.baseSpeed`, donc un vecteur de longueur **cinq**. S'il perd sa proie, il retombe sur l'errance ordinaire, qui multiplie encore par cinq: il erre a vingt-cinq pixels par battement, soit cinq cents pixels par seconde, jusqu'a son prochain changement de cap.
+
+Corrige par conception a l'etape 1.5: le cap est toujours unitaire, et la vitesse est une constante a part. Un cap se tire comme un angle, plus comme deux composantes.
+
+**X29. Le bot noir pose deux fois la meme question de deux facons differentes.** `findNewTarget` ecarte les joueurs invulnerables au complet, `!entity.invincibilityActive && !entity.isInvulnerable()` (`:1200`). Mais la verification faite entre deux recherches, quand un joueur entre dans le rayon pendant la poursuite d'un bot, ne regarde que `!e.invincibilityActive` (`:1161`) et ignore la protection d'apparition. Un bot noir peut donc lacher sa proie pour se lancer aux trousses d'un joueur qui vient d'apparaitre, et se voir refuser la prise a l'arrivee par `captureEntity`, qui teste les deux (`:1263`). Corrige a l'etape 1.5: la question est posee une seule fois, par `estInvulnerable`.
+
+### Defauts decouverts a l'etape 1.6
+
+Ajoutes le 14 aout 2026, en durcissant le moteur contre les entrees malveillantes.
+
+**X30. Un bot noir repeint en noir le bot ordinaire qu'il frole.** Celui-la n'est pas un defaut du legacy: c'est une regression introduite par le portage, entre les etapes 1.3 et 1.5. Le releve des contacts confie a `capturerBot` n'importe quelle paire d'entites non joueuses, bots noirs compris; comme un bot noir porte la couleur noire et que la fonction se contentait de verifier que les deux couleurs different, il imposait la sienne. Et selon l'ordre de la table des bots seulement, ce qui rendait l'effet intermittent.
+
+Le legacy ne pouvait pas faire cela pour deux raisons independantes: `updateBots` (`server.js:1567`) n'appelait jamais `detectCollisions` sur un bot noir, et le test de contagion entre bots exigeait `entity.type === 'bot'` (`:1701`), ce qu'un bot noir n'est pas (`:1137`). Le commentaire d'aiguillage de `contacts.ts` annoncait d'ailleurs deja le bon comportement, que le code ne tenait pas.
+
+Corrige a l'etape 1.6 par la meme regle que X20: seule une entite portant la couleur d'un joueur repeint un bot. Un bot noir n'a pas de couleur a donner, pas plus qu'un bot blanc.
+
+### Defauts decouverts a l'etape 4.2
+
+Ajoutes le 10 septembre 2026, en portant le rendu, les controles et le son du client.
+
+**X31. Les sons de ramassage n'ont jamais ete joues.** Le gestionnaire audio range ses sons sous les noms `bonus` et `malus` (`js/AudioManager.js:33-34`). Le client les demande sous d'autres noms: `collectBonus` et `collectMalus` (`client.js:2493`, `:2499`), `bonusCollect` (`:2672`, `:3588`), `malusCollect` (`:1919`). `playSound` commence par `if (this.isMuted || !this.sounds.has(soundName)) return;`: la demande echoue en silence, a chaque ramassage, depuis toujours. Corrige par conception a l'etape 4.2: les sons sont une table typee dans `packages/shared/src/ressources.ts`, et un nom absent ne compile pas.
+
+**X32. Le chargement de l'audio echoue toujours.** `loadAudio` charge une musique `game-over-music.wav` (`js/AudioManager.js:59`) qui n'existe pas sur `master`. Son `Promise.all` est donc rejete a chaque demarrage, et `isLoaded` ne passe jamais a vrai; les sons restent jouables uniquement parce qu'ils ont ete ranges dans la table avant l'attente. Au passage, `gameStart`, `gameOver` et `countdown` sont charges et jamais joues. Corrige a l'etape 4.2: chaque son se charge pour son compte, le debut et la fin de partie sont branches, et `countdown.wav` n'est pas repris.
+
+**X33. La camera suit plus ou moins vite selon l'ecran.** `updateCamera` rattrape huit pour cent de l'ecart par image (`client.js:1068`), ce qui depend de la frequence de rafraichissement: la camera colle au joueur a 144 hertz et traine a 30. La meme fonction ecrit la position dans un rappel `requestAnimationFrame` execute APRES le bornage aux limites de la carte (`:1072-1079`), si bien que la camera peut deborder de la carte pendant une image. Corrige a l'etape 4.2: rattrapage exponentiel en fonction du temps ecoule, borne apres calcul (`packages/client/src/rendu/camera.ts`).
+
+**X34. Deux touches opposees ne s'annulent pas.** `movePlayer` ecrit `move.y` pour la touche haut, puis l'ecrase pour la touche bas (`client.js:2197-2212`): haut et bas ensemble font descendre, gauche et droite ensemble vont a droite. Corrige a l'etape 4.2: deux directions opposees s'annulent (`controles/intention.ts`).
+
+**X35. Changer de fenetre en courant laisse le joueur courir.** Le client ne vide `keysPressed` qu'au lancement et au retour au menu (`client.js:2401`, `:4342`) et n'ecoute pas la perte de focus de la fenetre. Une touche relachee pendant que la fenetre n'a pas le focus n'est jamais signalee, et le personnage continue d'avancer. Corrige a l'etape 4.2: la perte de focus relache tout (`controles/clavier.ts`). Le relachement tactile, lui, etait deja gere par `touchcancel` (`:987`).
+
+### Defauts decouverts a l'etape 5.4
+
+Ajoutes le 14 septembre 2026, pendant la recette fonctionnelle.
+
+**X36. Les bots naissaient blancs, et la regle de contagion laissait passer des couleurs sans proprietaire.** Ce n'est pas un defaut du legacy, c'est une regression du portage, en deux morceaux lies. D'abord, le constructeur d'`Entity` donne a chaque bot une couleur quelconque par `getRandomColor` (`server.js:838`), et `addBot` (`:1553`) ne la change pas: la carte du jeu d'origine se remplit de bots de toutes les couleurs. Le portage de l'etape 1.5 les faisait naitre blancs, le blanc n'etant, dans le legacy, que la couleur des bots rendus par un bot noir (`:1276`, `:1289`). Releve par le porteur du projet a la recette: « les bots sont tous blancs au depart au lieu d'avoir des couleurs aleatoires ». Ensuite, la regle retenue pour X20 et X30, « seule une entite portant la couleur d'un joueur repeint un bot », etait ecrite « tout bot qui n'est pas blanc »: rendre aux bots leur couleur de naissance l'aurait laissee se repandre, et les couleurs tirees par une zone de chaos, qui evitent justement celles des joueurs, se repandaient deja. Corrige a l'etape 5.4: les bots naissent d'une couleur tiree de la graine qui n'est ni de la palette des joueurs, ni blanche, ni noire (`couleurDeBot`, `packages/sim/src/couleurs.ts`), et un bot ne transmet sa couleur que si un joueur present la porte (`aUneCouleurADonner`, `packages/sim/src/capture.ts`). Consequences, toutes deux fideles au jeu d'origine: les bots noirs chassent aussi ces bots de couleur, qu'ils rendent blancs, et un bot de couleur quelconque rapporte un point a celui qui le touche, comme un bot blanc.
+
+### Statut des failles de securite apres l'etape 1.6
+
+Recapitulatif au 14 aout 2026. Les failles S1 a S4 sont traitees par conception dans `packages/shared` et `packages/sim`; leur fermeture effective demande en plus le branchement de l'etape 2.2 (couche reseau) et de l'etape 4.3 (ecrans).
+
+| Faille | Etat    | Ou                                                                                                                                                                                                                                                                                                                                                           |
+| ------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| S1     | Fermee  | `validerPseudo` impose une liste blanche de caracteres et une longueur bornee. Depuis l'etape 4.3, l'interface pose tout texte de joueur avec `textContent` (aucun `innerHTML`), des tests le verifient sur le salon, le chat et la fin de partie, et la page porte une politique de securite du contenu qui refuse tout script qui ne vient pas du serveur. |
+| S2     | Fermee  | Le deplacement depend de dt et de la seule orientation recue; aucun champ d'etat du client n'est lu; le facteur mobile n'est pas porte.                                                                                                                                                                                                                      |
+| S3     | Fermee  | `validerMessageChat` appose l'identite de la session au lieu de lire celle du message.                                                                                                                                                                                                                                                                       |
+| S4     | Traitee | `LIMITES_DEBIT` et le seau a jetons de `debit.ts`. L'application par connexion revient a l'etape 2.2.                                                                                                                                                                                                                                                        |
+| S5     | Ouverte | Dependances du legacy. Sans objet pour le nouveau code, qui ne reprend aucune de ces dependances.                                                                                                                                                                                                                                                            |
+
+### Poids et proprete du depot
+
+**P1. 72 Mo d'audio dont l'essentiel est mort.** `game-music-1.wav` pese 44,8 Mo et `menu-music-1.wav` 13,9 Mo. **Ni l'un ni l'autre n'est reference par le code.** S'y ajoutent `game-music.mp3` (3,7 Mo) et une dizaine de fichiers `.wav` doublons de `.mp3` effectivement utilises, eux aussi non references.
+
+**P2. Le depot Git pese 157 Mo** a cause de ces binaires versionnes. Chaque clone les telecharge.
+
+**P3. Autres elements morts**: `public/assets/map/` (1,2 Mo, ancienne carte remplacee par `public/assets/maps/`), `public/assets/images/background.mp4` (581 Ko), `public/styles-neon-test.css` (1 574 lignes non chargees par `index.html`), le repertoire `server/` (7 fichiers, architecture modulaire inachevee jamais branchee: `package.json` demarre `server.js` a la racine), un repertoire vide nomme `-p` a la racine (residu d'un `mkdir -p` mal forme), des fichiers `.DS_Store` versionnes.
+
+**P4. Aucun outillage.** Pas de linter, pas de formateur, pas de `.editorconfig`, pas d'integration continue. Le `package.json` ne contient qu'un script `start`. La version y est figee a 0.7.0 alors que le jeu affiche 0.8.5.
+
+---
+
+## 5. Historique: ce qui a deja ete tente
+
+C'est le point le plus important pour ne pas repeter les memes erreurs.
+
+Le depot contient huit branches. Trois racontent des tentatives de refonte abandonnees:
+
+| Branche                            | Derniere activite | Contenu                                                      |
+| ---------------------------------- | ----------------- | ------------------------------------------------------------ |
+| `refacto`                          | nov. 2024         | "refacto complete 1.0", arborescence `src/`, abandonnee      |
+| `team-mode`                        | nov. 2024         | Mode equipe, commit intitule "non fonctionnel"               |
+| `mode-strategique`                 | aout 2025         | Documentation d'architecture, premiers tests                 |
+| `refactoring/modular-architecture` | aout 2025         | Refonte modulaire complete, 24 modules, tests, optimisations |
+| `modular-architecture-broken`      | 13 aout 2025      | Suite de la precedente, +149 000 lignes, **nom explicite**   |
+
+### La lecon a retenir
+
+La branche `refactoring/modular-architecture` contient des documents qui declarent la refonte terminee et reussie. Extraits litteraux de `REFACTORING-STATUS.md` et `MIGRATION-COMPLETE.md`:
+
+- "Refactoring Termine avec Succes"
+- "Zero regression : Toutes fonctionnalites preservees"
+- "Performance : +30-50% gain global"
+- "Tests complets : Couverture > 80% avec benchmarks"
+- "L'ancien serveur monolithique a ete officiellement decommissionne"
+
+La suite de cette meme branche s'appelle `modular-architecture-broken`, et `master` n'a jamais integre une seule ligne de ce travail. Le monolithe pretendument decommissionne est toujours en production aujourd'hui.
+
+**Autrement dit: la refonte precedente a echoue en se declarant reussie.** Les indicateurs de succes etaient auto-proclames dans des documents, jamais mesures contre le comportement reel du jeu. C'est exactement le risque que la regle "Tests d'abord" et les "tests de caracterisation" de CLAUDE.md cherchent a prevenir, et c'est vraisemblablement pourquoi cette regle y figure.
+
+### Ce qui reste recuperable dans ces branches
+
+A ne pas jeter sans examen:
+
+- `tests/client/comprehensive-monolith.test.js`, `tests/server.test.js`, `tests/zones-tactical.test.js`, `tests/blackbot-shield-bug.test.js` et le reste de `tests/` sur `modular-architecture-broken`. Meme imparfaits, ce sont des descriptions ecrites du comportement attendu, matiere premiere pour des tests de caracterisation.
+- `server/core/GameRoom.js` et `server/core/RoomManager.js`: une premiere modelisation du multi-parties, le blocage numero un.
+- `server/game/TacticalMode.js`: la seule implementation existante du mode tactique.
+- `RESUME-ANALYSE-COMPLETE.md`: un inventaire fonctionnel du client (95 fonctions, 30 evenements Socket.IO, 19 sons) avec une auto-evaluation par domaine plus honnete que les autres documents (audio a 30 pour cent, rendu a 72 pour cent, reseau a 75 pour cent).
+- `ARCHITECTURE.md`, `FUNCTION.MD`, `SERVER-FUNCTION.MD`.
+
+Ces documents doivent etre lus comme des **temoignages**, pas comme des references: leurs affirmations de succes sont dementies par les faits.
+
+---
+
+## 6. Ce qu'il faut preserver a tout prix
+
+Le gameplay est regle depuis deux ans. Ce sont les comportements a couvrir par des tests de caracterisation avant toute modification:
+
+1. **Le score est un stock, pas un cumul.** Se faire capturer remet a zero. C'est ce qui fait la tension de fin de partie.
+2. **Une capture de joueur transfere tous ses bots d'un coup.** C'est le pic d'intensite du jeu.
+3. **Un bot noir fait perdre 50 pour cent des points**, un bot noir detruit en rapporte 15.
+4. **Un malus ramasse frappe les autres, pas soi.** Contre-intuitif, mais voulu.
+5. **Les vitesses relatives**: joueur 3, bot 5, bot noir 5, bonus de vitesse x1,7, facteur mobile x2. Le journal des versions montre au moins quatre corrections successives sur ce seul reglage (0.7.12, 0.7.13, 0.7.14, plus deux commits dedies). C'est fragile et cela demande des tests. Deux corrections apportees depuis: le bot noir avance a 5 et non a 6 (defaut X13, corrige ici le 13 aout 2026), et ces nombres ne sont pas comparables entre eux tels quels, faute d'etre rapportes a la meme horloge (defaut X17).
+6. **La protection de 3 secondes au spawn** et le delai de 1 seconde entre deux captures.
+7. **Le compte a rebours de 5 secondes annulable jusqu'a 2 secondes.**
+8. **La cinematique de transfert de propriete** du salon quand le proprietaire part.
+9. **Les collisions derivees d'une image**, seuil de luminosite a 128. Le journal montre plusieurs series d'ajustements manuels des cartes: ce reglage est du contenu, pas du code.
+
+Le journal des versions est d'ailleurs un indicateur de fragilite en soi: sur les 30 dernieres entrees, la grande majorite sont des corrections de regressions, souvent dans les memes zones (mode miroir, vitesse, audio, chat, invincibilite, persistance des malus d'une partie a l'autre). Chaque ajout casse quelque chose d'autre. C'est la signature d'un systeme sans filet de tests.
+
+---
+
+## 7. Synthese
+
+Le jeu **fonctionne et est joue**. Ce n'est pas un echec technique, c'est un prototype qui a reussi et qui a atteint sa limite structurelle.
+
+Trois blocages empechent d'aller plus loin:
+
+1. **Une seule partie par serveur.** Verrouille les parties privees et publiques.
+2. **Le rendu cadence par le reseau.** Verrouille la fluidite a 20 images par seconde.
+3. **Aucun test.** Verrouille toute modification sure, et a deja fait echouer une refonte complete.
+
+Trois risques immediats, independants de toute refonte:
+
+1. **L'injection par le pseudonyme** touche tous les joueurs d'une partie.
+2. **La vitesse non controlee** rend la triche triviale.
+3. **La fuite de minuteries** degrade le jeu au fil des parties.
+
+Et un prealable de methode: **CLAUDE.md decrit un projet qui n'existe pas.** Tant que la constitution et le depot ne parlent pas du meme projet, chaque session repartira sur de fausses bases. C'est le tout premier point a traiter, avant toute decision technique.

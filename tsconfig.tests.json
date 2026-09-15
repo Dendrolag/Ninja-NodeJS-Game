@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // Verification des types des fichiers de test et de la configuration.
+  //
+  // Le tsconfig.json racine ne reference que les quatre paquets, et chaque
+  // paquet exclut ses propres fichiers de test de sa compilation: sans ce
+  // fichier, aucun test n'aurait ses types verifies. Ils seraient seulement
+  // transpiles par Vitest, qui ne signale pas les erreurs de type, et le filet
+  // aurait un trou exactement la ou il est cense proteger.
+  //
+  // Rien n'est emis ici: on ne verifie que les types.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false,
+    "incremental": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "types": ["node"],
+    // DOM ajoute a l'etape 4.2. Ce fichier s'en passait tant qu'aucun code de
+    // paquet ne parlait au navigateur, et la restriction avait alors un sens:
+    // elle interdisait a un test unitaire de toucher au document. Depuis, le
+    // paquet client porte le rendu, la saisie et le HUD, dont c'est justement le
+    // travail; packages/client/tsconfig.json leur donne deja DOM. Les tests
+    // important ces modules, il leur faut la meme bibliotheque, sans quoi ils
+    // seraient verifies contre un langage different de celui qui les compile.
+    // Les tests eux-memes n'ouvrent toujours aucun navigateur: c'est Vitest en
+    // environnement node qui les execute, et une reference a document y echoue
+    // a l'execution.
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    // Ajoute a l'etape 5.1: le harnais de charge (tests/charge) est lance par Node
+    // lui-meme, qui retire les types a la volee mais ne reecrit pas les chemins
+    // d'importation. Ses modules s'importent donc entre eux avec l'extension .ts,
+    // ce que TypeScript n'accepte que sur demande. Rien n'etant emis ici, la
+    // demande est sans consequence sur les compilations des paquets.
+    "allowImportingTsExtensions": true,
+    // Les tests lisent les paquets dans leurs sources, comme Vitest le fait via
+    // ses alias. Sans cela, ils seraient verifies contre une compilation qui
+    // peut avoir pris du retard.
+    "baseUrl": ".",
+    "paths": {
+      "@neon-ninja/shared": ["./packages/shared/src/index.ts"],
+      "@neon-ninja/sim": ["./packages/sim/src/index.ts"],
+      "@neon-ninja/server": ["./packages/server/src/index.ts"],
+      "@neon-ninja/client": ["./packages/client/src/index.ts"]
+    }
+  },
+  "include": [
+    "packages/**/*.test.ts",
+    "packages/*/scripts/**/*.ts",
+    "tests/**/*.ts",
+    // Les outils de mise en ligne (etape 5.3), lances par Node comme le harnais de charge.
+    "deploiement/**/*.ts",
+    "*.config.ts",
+    "vitest.workspace.ts",
+    "packages/*/drizzle.config.ts"
+  ],
+  // Les scenarios de bout en bout ont leur propre configuration: eux seuls ont
+  // le droit de parler au navigateur. Voir tsconfig.e2e.json.
+  "exclude": ["node_modules", "dist", "legacy", "tests/e2e"]
+}

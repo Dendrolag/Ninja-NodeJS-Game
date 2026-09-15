@@ -1,0 +1,19 @@
+# Reference en lecture seule, jamais reformatee
+legacy/
+
+# Genere
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+pnpm-lock.yaml
+
+# Migrations ecrites par drizzle-kit: la CI verifie qu'elles sont exactement
+# ce que l'outil produit, les reformater les ferait diverger.
+packages/server/migrations/
+
+# Maquettes exportees, non reformatees
+docs/design/
+packages/client/web/
+.vercel/

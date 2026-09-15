@@ -1,0 +1,977 @@
+/**
+ * Les schemas de validation: ce qui a le droit d'entrer dans le jeu.
+ *
+ * Une seule idee gouverne ce fichier. Tout ce qui vient d'un joueur est INCONNU
+ * jusqu'a preuve du contraire, et la preuve se fait ici, a la frontiere. En
+ * dessous de cette frontiere, dans le moteur, plus rien n'a besoin de se mefier.
+ *
+ * Chaque fonction prend un unknown, parce que c'est ce qu'un message reseau est
+ * reellement, et rend un resultat qui dit oui avec une valeur propre, ou non avec
+ * la liste de ce qui cloche. Il n'y a pas de troisieme possibilite: aucune de ces
+ * fonctions ne rogne une valeur en silence pour la faire entrer. Un reglage hors
+ * bornes est refuse, il n'est pas ramene a la borne, parce qu'un hote qui demande
+ * une partie de deux heures doit apprendre qu'elle est refusee, et non decouvrir
+ * apres coup qu'elle dure dix minutes.
+ *
+ * La seule exception est la NORMALISATION du texte, qui n'est pas un rognage: un
+ * pseudo entoure d'espaces est le meme pseudo, et deux ecritures Unicode de la
+ * meme lettre accentuee sont la meme lettre. Normaliser rend comparable ce qui
+ * doit l'etre, sans rien changer de ce que le joueur a voulu ecrire.
+ *
+ * OU S'APPLIQUE CE FICHIER. La couche reseau de l'etape 2.2 appelle ces fonctions
+ * sur chaque message recu, avant de toucher a quoi que ce soit. Le moteur, lui,
+ * ne les appelle pas: il se defend autrement, en ne lisant jamais un champ d'etat
+ * fourni par un client et en bornant lui-meme le deplacement par dt.
+ *
+ * CE QUE LA VALIDATION NE REMPLACE PAS. Valider un pseudo a l'entree ne dispense
+ * jamais de l'echapper a l'affichage. La faille S1 du legacy venait d'un pseudo
+ * pose dans du HTML par innerHTML: le client de l'etape 4.3 posera tout texte
+ * venu d'un joueur avec textContent, sans exception. Les deux protections sont
+ * exigees parce qu'elles ne protegent pas de la meme chose: l'une empeche
+ * d'entrer, l'autre empeche de nuire si quelque chose entrait quand meme.
+ */
+
+import type { Intervalle } from './bornes.js';
+import {
+  BORNES_CHAT,
+  BORNES_CODE_INVITATION,
+  BORNES_JETON,
+  BORNES_MOT_DE_PASSE,
+  BORNES_PSEUDO,
+  BORNES_REGLAGES,
+  BORNES_ROOM,
+} from './bornes.js';
+import type { DemandeConnexion, DemandeInscription } from './comptes.js';
+import type { IdentifiantCarte } from './constantes.js';
+import { CARTES, MODES, TYPES_BONUS, TYPES_MALUS, TYPES_ZONE, VISIBILITES } from './constantes.js';
+import type {
+  DemandeCreation,
+  DemandeRejoindre,
+  IntentionDeplacement,
+  MessageChat,
+  SessionJoueur,
+} from './entrees.js';
+import type { ReglagesPartie, ReglagesPartiels } from './reglages.js';
+import { completerReglages } from './reglages.js';
+
+/** Ce qui cloche dans une entree refusee: ou, et pourquoi. */
+export interface ErreurValidation {
+  /** Chemin du champ fautif, par exemple « bonus.types.vitesse.dureeS ». */
+  readonly champ: string;
+  /** Explication en francais, destinee a etre montree au joueur. */
+  readonly motif: string;
+}
+
+/**
+ * Le verdict d'une validation.
+ *
+ * C'est une union discriminee, et non une valeur eventuellement nulle: le
+ * compilateur oblige donc l'appelant a regarder le champ valide avant de lire
+ * quoi que ce soit. On ne peut pas oublier de traiter le refus.
+ */
+export type ResultatValidation<T> =
+  | { readonly valide: true; readonly valeur: T }
+  | { readonly valide: false; readonly erreurs: readonly ErreurValidation[] };
+
+/**
+ * Normalise un texte fourni par un joueur.
+ *
+ * Quatre passes, dans cet ordre:
+ *
+ *   1. Composition Unicode. « e » suivi d'un accent aigu devient « e accent
+ *      aigu »: deux ecritures d'un meme mot deviennent une seule chaine.
+ *   2. Suppression des caracteres de format, invisibles a l'ecran. Ils ne
+ *      servent qu'a fabriquer deux pseudos qui se ressemblent, ou a inverser le
+ *      sens de lecture d'une ligne de chat.
+ *   3. Les caracteres de controle, retours a la ligne compris, deviennent des
+ *      espaces. Un pseudo sur trois lignes casse toute mise en page.
+ *   4. Les suites d'espaces sont ramenees a un seul, et les bords sont rognes.
+ */
+export function normaliserTexte(brut: string): string {
+  return brut
+    .normalize('NFC')
+    .replace(/\p{Cf}/gu, '')
+    .replace(/\p{Cc}/gu, ' ')
+    .replace(/\s+/gu, ' ')
+    .trim();
+}
+
+/**
+ * Le repere d'un pseudo: deux ecritures d'un meme pseudo ont le meme repere.
+ *
+ * Normalise, puis en minuscules: « Alice », « alice » et « Alice  » designent la
+ * meme personne. C'est LA regle d'unicite des pseudos, partout ou elle s'applique:
+ * dans un salon (etape 2.1) et entre comptes (etape 3.1), ou la base garde ce
+ * repere dans une colonne unique. Une seule fonction, pour que les deux ne
+ * refusent jamais des pseudos differents.
+ */
+export function reperePseudo(pseudo: string): string {
+  return normaliserTexte(pseudo).toLowerCase();
+}
+
+/**
+ * Valide le pseudo choisi par un joueur.
+ *
+ * Le legacy ne verifiait rien cote serveur: ni longueur, ni caracteres. C'etait
+ * la moitie de la faille S1. Voir BORNES_PSEUDO pour le detail de ce qui passe,
+ * et surtout pourquoi c'est une liste blanche.
+ */
+export function validerPseudo(brut: unknown): ResultatValidation<string> {
+  if (typeof brut !== 'string') {
+    return refuse('pseudo', 'Un pseudo doit être du texte.');
+  }
+
+  const pseudo = normaliserTexte(brut);
+  const taille = nombreDeCaracteres(pseudo);
+
+  if (taille < BORNES_PSEUDO.longueur.minimum) {
+    return refuse('pseudo', 'Un pseudo ne peut pas être vide.');
+  }
+
+  if (taille > BORNES_PSEUDO.longueur.maximum) {
+    return refuse('pseudo', `Un pseudo fait au plus ${BORNES_PSEUDO.longueur.maximum} caractères.`);
+  }
+
+  if (!BORNES_PSEUDO.caracteresAdmis.test(pseudo)) {
+    return refuse(
+      'pseudo',
+      "Un pseudo n'accepte que des lettres, des chiffres, l'espace, le tiret, le tiret bas et le point.",
+    );
+  }
+
+  return accepte(pseudo);
+}
+
+/**
+ * Valide la demande d'entree en partie: un pseudo, et eventuellement une partie.
+ *
+ * L'identifiant de partie est du texte fourni par un joueur, donc suspect au
+ * meme titre que le reste. Il sert ensuite de cle de recherche dans le
+ * RoomManager et de nom de salle Socket.IO: le laisser passer tel quel
+ * reviendrait a laisser un client choisir ou ses messages atterrissent. Un
+ * identifiant absent n'est pas une erreur: sans identifiant ni code, c'est la
+ * partie rapide.
+ *
+ * Le code d'invitation se valide de meme, une fois ramene a sa forme canonique.
+ * Un identifiant et un code ensemble sont refuses: la demande serait ambigue, et
+ * le serveur n'a pas a choisir lequel croire.
+ */
+export function validerDemandeRejoindre(brut: unknown): ResultatValidation<DemandeRejoindre> {
+  const source = objetOuRien(brut);
+  if (source === undefined) {
+    return refuse('rejoindre', "Une demande d'entrée doit être un objet.");
+  }
+
+  const verdictPseudo = pseudoFacultatif(source);
+  if (!verdictPseudo.valide) {
+    return { valide: false, erreurs: verdictPseudo.erreurs };
+  }
+
+  const pseudo = verdictPseudo.valeur;
+  const brutRoom = champ(source, 'idRoom');
+  const brutCode = champ(source, 'code');
+
+  if (brutRoom !== undefined && brutCode !== undefined) {
+    return refuse(
+      'rejoindre',
+      "Une demande d'entrée vise une partie par son identifiant ou par son code, pas les deux.",
+    );
+  }
+
+  if (brutCode !== undefined) {
+    const verdictCode = validerCodeInvitation(brutCode);
+
+    return verdictCode.valide
+      ? accepte({ ...pseudo, code: verdictCode.valeur })
+      : { valide: false, erreurs: verdictCode.erreurs };
+  }
+
+  if (brutRoom === undefined) {
+    return accepte(pseudo);
+  }
+
+  if (typeof brutRoom !== 'string') {
+    return refuse('idRoom', "L'identifiant d'une partie doit être du texte.");
+  }
+
+  const taille = nombreDeCaracteres(brutRoom);
+  if (taille < BORNES_ROOM.longueur.minimum || taille > BORNES_ROOM.longueur.maximum) {
+    return refuse(
+      'idRoom',
+      `L'identifiant d'une partie fait au plus ${BORNES_ROOM.longueur.maximum} caractères.`,
+    );
+  }
+
+  if (!BORNES_ROOM.caracteresAdmis.test(brutRoom)) {
+    return refuse(
+      'idRoom',
+      "L'identifiant d'une partie n'accepte que des lettres sans accent, des chiffres, le tiret et le tiret bas.",
+    );
+  }
+
+  return accepte({ ...pseudo, idRoom: brutRoom });
+}
+
+/**
+ * Le pseudo d'une demande d'entree ou de creation, s'il y en a un.
+ *
+ * Absent n'est pas une erreur ici: une connexion authentifiee entre sous le pseudo
+ * de son compte (etape 3.2). C'est la couche reseau, qui sait si la connexion est
+ * celle d'un compte, qui exige un pseudo d'un invite. Present, il est valide comme
+ * n'importe quel pseudo, meme s'il ne sera pas lu: une demande mal formee reste
+ * une demande mal formee.
+ *
+ * Rendu sous la forme d'un objet a etaler, vide ou portant le pseudo: le projet
+ * compile avec exactOptionalPropertyTypes, qui distingue un champ absent d'un
+ * champ qui vaut undefined.
+ */
+function pseudoFacultatif(
+  source: Enregistrement,
+): ResultatValidation<{ readonly pseudo?: string }> {
+  const brut = champ(source, 'pseudo');
+  if (brut === undefined) {
+    return accepte({});
+  }
+
+  const verdict = validerPseudo(brut);
+
+  return verdict.valide ? accepte({ pseudo: verdict.valeur }) : verdict;
+}
+
+/**
+ * Valide un code d'invitation saisi par un joueur, et le rend sous sa forme canonique.
+ *
+ * Les espaces autour sont retires et les lettres passees en majuscules: un code
+ * dicte ou recopie se tape souvent ainsi, et ce n'est pas une erreur. Pour le
+ * reste, le code doit avoir exactement la forme de ceux que le serveur fabrique.
+ */
+export function validerCodeInvitation(brut: unknown): ResultatValidation<string> {
+  if (typeof brut !== 'string') {
+    return refuse('code', "Un code d'invitation doit être du texte.");
+  }
+
+  const code = brut.trim().toUpperCase();
+
+  if (!BORNES_CODE_INVITATION.forme.test(code)) {
+    return refuse(
+      'code',
+      `Un code d'invitation compte ${String(BORNES_CODE_INVITATION.longueur)} lettres ou chiffres.`,
+    );
+  }
+
+  return accepte(code);
+}
+
+/**
+ * Valide une demande de creation de partie: un pseudo, un mode, une visibilite,
+ * et des reglages de depart.
+ *
+ * Les reglages passent par validerReglages, la regle meme qui s'applique quand
+ * l'hote les change dans le salon: une partie ne peut pas naitre avec des
+ * reglages qu'elle refuserait ensuite. Ils sont rendus complets, valeurs par
+ * defaut comprises. Un mode ou une visibilite inconnus sont refuses, jamais
+ * remplaces par une valeur par defaut: le joueur doit savoir que sa demande n'a
+ * pas ete comprise.
+ */
+export function validerDemandeCreation(brut: unknown): ResultatValidation<DemandeCreation> {
+  const source = objetOuRien(brut);
+  if (source === undefined) {
+    return refuse('creerPartie', 'Une demande de création doit être un objet.');
+  }
+
+  const verdictPseudo = pseudoFacultatif(source);
+  if (!verdictPseudo.valide) {
+    return { valide: false, erreurs: verdictPseudo.erreurs };
+  }
+
+  const configuration = objetOuRien(champ(source, 'configuration'));
+  if (configuration === undefined) {
+    return refuse('configuration', 'La configuration de la partie doit être un objet.');
+  }
+
+  const mode = champ(configuration, 'mode');
+  if (!estUnDe(MODES, mode)) {
+    return refuse('configuration.mode', "Ce mode de jeu n'existe pas.");
+  }
+
+  const visibilite = champ(configuration, 'visibilite');
+  if (!estUnDe(VISIBILITES, visibilite)) {
+    return refuse('configuration.visibilite', 'Une partie est publique ou privée.');
+  }
+
+  const verdictReglages = validerReglages(champ(configuration, 'reglages'));
+  if (!verdictReglages.valide) {
+    return { valide: false, erreurs: verdictReglages.erreurs };
+  }
+
+  return accepte({
+    ...verdictPseudo.valeur,
+    configuration: { mode, visibilite, reglages: verdictReglages.valeur },
+  });
+}
+
+/**
+ * Valide le mot de passe choisi a l'inscription.
+ *
+ * Seule la longueur compte (voir BORNES_MOT_DE_PASSE). Le mot de passe est rendu
+ * en composition Unicode, et c'est cette forme qui sera hachee: une lettre
+ * accentuee tapee sur deux systemes differents peut arriver ecrite de deux facons,
+ * et le meme mot de passe doit ouvrir le meme compte. Rien d'autre n'est touche:
+ * ni les espaces, ni la casse, qui font partie du secret.
+ */
+export function validerMotDePasse(brut: unknown): ResultatValidation<string> {
+  if (typeof brut !== 'string') {
+    return refuse('motDePasse', 'Un mot de passe doit être du texte.');
+  }
+
+  const motDePasse = brut.normalize('NFC');
+  const taille = nombreDeCaracteres(motDePasse);
+
+  if (taille < BORNES_MOT_DE_PASSE.longueur.minimum) {
+    return refuse(
+      'motDePasse',
+      `Un mot de passe fait au moins ${BORNES_MOT_DE_PASSE.longueur.minimum} caractères.`,
+    );
+  }
+
+  if (taille > BORNES_MOT_DE_PASSE.longueur.maximum) {
+    return refuse(
+      'motDePasse',
+      `Un mot de passe fait au plus ${BORNES_MOT_DE_PASSE.longueur.maximum} caractères.`,
+    );
+  }
+
+  return accepte(motDePasse);
+}
+
+/**
+ * Valide une demande d'inscription: un pseudo de partie, et un mot de passe.
+ *
+ * Toutes les erreurs sont rendues ensemble, pour que le formulaire les montre d'un
+ * coup. L'unicite du pseudo n'est pas verifiee ici: elle est tenue par la base.
+ */
+export function validerDemandeInscription(brut: unknown): ResultatValidation<DemandeInscription> {
+  const source = objetOuRien(brut);
+  if (source === undefined) {
+    return refuse('inscription', "Une demande d'inscription doit être un objet.");
+  }
+
+  const pseudo = validerPseudo(champ(source, 'pseudo'));
+  const motDePasse = validerMotDePasse(champ(source, 'motDePasse'));
+
+  if (!pseudo.valide || !motDePasse.valide) {
+    return {
+      valide: false,
+      erreurs: [
+        ...(pseudo.valide ? [] : pseudo.erreurs),
+        ...(motDePasse.valide ? [] : motDePasse.erreurs),
+      ],
+    };
+  }
+
+  return accepte({ pseudo: pseudo.valeur, motDePasse: motDePasse.valeur });
+}
+
+/**
+ * Valide une demande de connexion.
+ *
+ * LE MOT DE PASSE N'Y EST PAS SOUMIS A LA LONGUEUR MINIMALE. Cette borne s'applique
+ * a la creation d'un mot de passe; si elle se relevait un jour, les comptes
+ * existants devraient pouvoir se connecter encore. Seul le maximum s'applique, qui
+ * protege le serveur d'un hachage demesure.
+ *
+ * Un pseudo invalide est refuse avec son motif: aucun compte ne peut le porter, et
+ * le dire n'apprend rien a personne. Un pseudo valide mais inconnu, en revanche,
+ * recoit la meme reponse qu'un mauvais mot de passe; c'est le travail du serveur.
+ */
+export function validerDemandeConnexion(brut: unknown): ResultatValidation<DemandeConnexion> {
+  const source = objetOuRien(brut);
+  if (source === undefined) {
+    return refuse('connexion', 'Une demande de connexion doit être un objet.');
+  }
+
+  const pseudo = validerPseudo(champ(source, 'pseudo'));
+  if (!pseudo.valide) {
+    return pseudo;
+  }
+
+  const brutMotDePasse = champ(source, 'motDePasse');
+  if (typeof brutMotDePasse !== 'string') {
+    return refuse('motDePasse', 'Un mot de passe doit être du texte.');
+  }
+
+  const motDePasse = brutMotDePasse.normalize('NFC');
+  if (nombreDeCaracteres(motDePasse) > BORNES_MOT_DE_PASSE.longueur.maximum) {
+    return refuse(
+      'motDePasse',
+      `Un mot de passe fait au plus ${BORNES_MOT_DE_PASSE.longueur.maximum} caractères.`,
+    );
+  }
+
+  return accepte({ pseudo: pseudo.valeur, motDePasse });
+}
+
+/**
+ * Valide un jeton de session presente par un client.
+ *
+ * Un texte qui n'a pas la forme des jetons fabriques par le serveur est refuse
+ * sans consulter la base: il n'a jamais ete emis.
+ */
+export function validerJeton(brut: unknown): ResultatValidation<string> {
+  if (typeof brut !== 'string' || !BORNES_JETON.forme.test(brut)) {
+    return refuse('jeton', 'Ce jeton de session est mal formé.');
+  }
+
+  return accepte(brut);
+}
+
+/** Une valeur est-elle l'un des textes d'une liste fermee. */
+function estUnDe<T extends string>(liste: readonly T[], valeur: unknown): valeur is T {
+  return typeof valeur === 'string' && (liste as readonly string[]).includes(valeur);
+}
+
+/**
+ * Valide un message de chat et le SIGNE avec l'identite de la session.
+ *
+ * C'est la correction de la faille S3. Le legacy rediffusait le champ nickname du
+ * message recu (server.js:2234), si bien que n'importe qui pouvait ecrire sous le
+ * nom de n'importe qui. Ici la signature n'est pas verifiee, elle est APPOSEE:
+ * les champs auteur et pseudo du resultat viennent de la session et de nulle part
+ * ailleurs. Le message entrant a beau en declarer d'autres, ils ne sont jamais
+ * lus. Une fonction qui verifierait la concordance pourrait etre oubliee; une
+ * fonction qui ne lit pas le champ ne peut pas l'etre.
+ *
+ * @param session Identite etablie a la connexion, hors de portee du client.
+ * @param brut Le message recu, dont seul le champ texte est lu.
+ */
+export function validerMessageChat(
+  session: SessionJoueur,
+  brut: unknown,
+): ResultatValidation<MessageChat> {
+  const source = objetOuRien(brut);
+  if (source === undefined) {
+    return refuse('message', 'Un message de chat doit être un objet.');
+  }
+
+  const brutTexte = champ(source, 'texte');
+  if (typeof brutTexte !== 'string') {
+    return refuse('message.texte', "Le texte d'un message doit être du texte.");
+  }
+
+  const texte = normaliserTexte(brutTexte);
+  const taille = nombreDeCaracteres(texte);
+
+  if (taille < BORNES_CHAT.longueur.minimum) {
+    return refuse('message.texte', "Un message vide ne s'envoie pas.");
+  }
+
+  if (taille > BORNES_CHAT.longueur.maximum) {
+    return refuse(
+      'message.texte',
+      `Un message fait au plus ${BORNES_CHAT.longueur.maximum} caractères.`,
+    );
+  }
+
+  return accepte({ auteur: session.id, pseudo: session.pseudo, texte });
+}
+
+/**
+ * Valide l'intention de deplacement recue d'un joueur.
+ *
+ * Deux verifications, et deux silences volontaires.
+ *
+ * Les verifications: les deux coordonnees sont des nombres FINIS, et l'indicateur
+ * de mouvement est un booleen. La finitude n'est pas une coquetterie: une
+ * coordonnee valant NaN traverse tous les calculs sans jamais lever d'erreur et
+ * finit par empoisonner la position du joueur, donc les distances, donc les
+ * captures. C'est le seul type d'entree capable de corrompre un etat entier.
+ *
+ * Le premier silence: la LONGUEUR du vecteur n'est pas verifiee, parce qu'elle
+ * n'a aucune importance. Le moteur ne lit que l'orientation et fixe lui-meme la
+ * distance a partir de dt et de la vitesse du joueur. Un vecteur de longueur mille
+ * fait donc exactement le meme pas qu'un vecteur de longueur un.
+ *
+ * Le second silence: tout champ supplementaire est IGNORE. Un client qui joint
+ * speedBoostActive ou isMobile a son message, comme le legacy le lui permettait,
+ * n'obtient rien: ces champs ne sont pas lus, donc ils ne peuvent rien accorder.
+ */
+export function validerIntentionDeplacement(
+  brut: unknown,
+): ResultatValidation<IntentionDeplacement> {
+  const source = objetOuRien(brut);
+  if (source === undefined) {
+    return refuse('intention', 'Une intention de déplacement doit être un objet.');
+  }
+
+  const enMouvement = champ(source, 'enMouvement');
+  if (typeof enMouvement !== 'boolean') {
+    return refuse('intention.enMouvement', "L'indicateur de mouvement doit être un booléen.");
+  }
+
+  const vecteur = objetOuRien(champ(source, 'deplacement'));
+  if (vecteur === undefined) {
+    return refuse('intention.deplacement', 'Le déplacement doit être un vecteur.');
+  }
+
+  const erreurs: ErreurValidation[] = [];
+  const x = coordonnee(vecteur, 'x', erreurs);
+  const y = coordonnee(vecteur, 'y', erreurs);
+
+  if (x === undefined || y === undefined) {
+    return { valide: false, erreurs };
+  }
+
+  return accepte({ deplacement: { x, y }, enMouvement });
+}
+
+/**
+ * Valide les reglages proposes par l'hote d'un salon.
+ *
+ * Les reglages absents prennent leur valeur par defaut: l'hote n'envoie que ce
+ * qu'il change. Les reglages presents sont verifies un par un, et TOUTES les
+ * erreurs sont rendues d'un coup plutot que la premiere seule, pour que l'ecran
+ * de reglages puisse les montrer toutes ensemble.
+ *
+ * Seuls les champs CONNUS sont recopies dans les reglages retenus. Ce n'est pas
+ * qu'une question de proprete: recopier a l'aveugle les champs d'un objet fourni
+ * par un client permettrait d'y glisser une cle speciale du langage et de
+ * modifier le comportement d'objets qui n'ont rien a voir. Ici, une cle inconnue
+ * n'est pas refusee, elle est simplement ignoree, donc elle ne va nulle part.
+ *
+ * Tous les nombres attendus sont des ENTIERS. Le salon du legacy les saisissait
+ * deja ainsi, et une partie de cent quatre-vingts virgule sept secondes n'a
+ * aucun sens.
+ */
+export function validerReglages(brut: unknown): ResultatValidation<ReglagesPartie> {
+  if (brut === undefined || brut === null) {
+    return accepte(completerReglages());
+  }
+
+  const source = objetOuRien(brut);
+  if (source === undefined) {
+    return refuse('reglages', 'Les réglages doivent être un objet.');
+  }
+
+  const erreurs: ErreurValidation[] = [];
+  const retenus: Enregistrement = {};
+
+  poser(
+    retenus,
+    'dureePartieS',
+    entier(source, 'dureePartieS', BORNES_REGLAGES.dureePartieS, erreurs),
+  );
+  poser(retenus, 'carte', identifiantDeCarte(source, erreurs));
+  poser(retenus, 'modeMiroir', booleen(source, 'modeMiroir', erreurs));
+  poser(
+    retenus,
+    'nombreBotsInitial',
+    entier(source, 'nombreBotsInitial', BORNES_REGLAGES.nombreBotsInitial, erreurs),
+  );
+  poser(retenus, 'bonus', groupeBonus(source, erreurs));
+  poser(retenus, 'malus', groupeMalus(source, erreurs));
+  poser(retenus, 'zones', groupeZones(source, erreurs));
+  poser(retenus, 'botsNoirs', groupeBotsNoirs(source, erreurs));
+
+  if (erreurs.length > 0) {
+    return { valide: false, erreurs };
+  }
+
+  // La conversion est sure: retenus ne contient que des cles connues, chacune
+  // portant une valeur deja verifiee. TypeScript ne sait pas l'exprimer, comme
+  // pour la fusion des reglages partiels dans reglages.ts.
+  const reglages = completerReglages(retenus as ReglagesPartiels);
+
+  // Seule regle qui met deux reglages en rapport, donc la seule qui ne puisse
+  // pas se verifier champ par champ. Elle se juge apres completion, parce que
+  // l'hote peut n'avoir change qu'une des deux durees.
+  if (reglages.zones.dureeMinimumS > reglages.zones.dureeMaximumS) {
+    return refuse(
+      'zones.dureeMinimumS',
+      "La durée minimale d'une zone ne peut pas dépasser sa durée maximale.",
+    );
+  }
+
+  return accepte(reglages);
+}
+
+// --------------------------------------------------------------------------
+// Lecture des groupes de reglages
+// --------------------------------------------------------------------------
+
+/** Un objet quelconque en cours de lecture ou de construction. */
+type Enregistrement = Record<string, unknown>;
+
+/** Reglages des bonus: l'intervalle commun, puis chaque nature de bonus. */
+function groupeBonus(
+  source: Enregistrement,
+  erreurs: ErreurValidation[],
+): Enregistrement | undefined {
+  const brut = groupe(source, 'bonus', 'bonus', erreurs);
+  if (brut === undefined) {
+    return undefined;
+  }
+
+  const retenu: Enregistrement = {};
+  poser(
+    retenu,
+    'intervalleApparitionS',
+    entier(
+      brut,
+      'intervalleApparitionS',
+      BORNES_REGLAGES.bonus.intervalleApparitionS,
+      erreurs,
+      'bonus',
+    ),
+  );
+
+  const types: Enregistrement = {};
+  const brutTypes = groupe(brut, 'types', 'bonus.types', erreurs);
+
+  for (const nature of TYPES_BONUS) {
+    const chemin = `bonus.types.${nature}`;
+    const brutNature = groupe(brutTypes ?? {}, nature, chemin, erreurs);
+    if (brutNature === undefined) {
+      continue;
+    }
+
+    const reglage: Enregistrement = {};
+    poser(reglage, 'actif', booleen(brutNature, 'actif', erreurs, chemin));
+    poser(
+      reglage,
+      'dureeS',
+      entier(brutNature, 'dureeS', BORNES_REGLAGES.bonus.dureeS, erreurs, chemin),
+    );
+    poser(
+      reglage,
+      'tauxApparitionPourCent',
+      entier(
+        brutNature,
+        'tauxApparitionPourCent',
+        BORNES_REGLAGES.bonus.tauxApparitionPourCent,
+        erreurs,
+        chemin,
+      ),
+    );
+    poser(types, nature, siRempli(reglage));
+  }
+
+  poser(retenu, 'types', siRempli(types));
+
+  return siRempli(retenu);
+}
+
+/** Reglages des malus: un interrupteur, un intervalle, un taux, puis chaque nature. */
+function groupeMalus(
+  source: Enregistrement,
+  erreurs: ErreurValidation[],
+): Enregistrement | undefined {
+  const brut = groupe(source, 'malus', 'malus', erreurs);
+  if (brut === undefined) {
+    return undefined;
+  }
+
+  const retenu: Enregistrement = {};
+  poser(retenu, 'actifs', booleen(brut, 'actifs', erreurs, 'malus'));
+  poser(
+    retenu,
+    'intervalleApparitionS',
+    entier(
+      brut,
+      'intervalleApparitionS',
+      BORNES_REGLAGES.malus.intervalleApparitionS,
+      erreurs,
+      'malus',
+    ),
+  );
+  poser(
+    retenu,
+    'tauxApparitionPourCent',
+    entier(
+      brut,
+      'tauxApparitionPourCent',
+      BORNES_REGLAGES.malus.tauxApparitionPourCent,
+      erreurs,
+      'malus',
+    ),
+  );
+
+  const types: Enregistrement = {};
+  const brutTypes = groupe(brut, 'types', 'malus.types', erreurs);
+
+  for (const nature of TYPES_MALUS) {
+    const chemin = `malus.types.${nature}`;
+    const brutNature = groupe(brutTypes ?? {}, nature, chemin, erreurs);
+    if (brutNature === undefined) {
+      continue;
+    }
+
+    const reglage: Enregistrement = {};
+    poser(reglage, 'actif', booleen(brutNature, 'actif', erreurs, chemin));
+    poser(
+      reglage,
+      'dureeS',
+      entier(brutNature, 'dureeS', BORNES_REGLAGES.malus.dureeS, erreurs, chemin),
+    );
+    poser(types, nature, siRempli(reglage));
+  }
+
+  poser(retenu, 'types', siRempli(types));
+
+  return siRempli(retenu);
+}
+
+/** Reglages des zones: un interrupteur, deux durees, un intervalle, quatre natures. */
+function groupeZones(
+  source: Enregistrement,
+  erreurs: ErreurValidation[],
+): Enregistrement | undefined {
+  const brut = groupe(source, 'zones', 'zones', erreurs);
+  if (brut === undefined) {
+    return undefined;
+  }
+
+  const retenu: Enregistrement = {};
+  poser(retenu, 'actives', booleen(brut, 'actives', erreurs, 'zones'));
+  poser(
+    retenu,
+    'dureeMinimumS',
+    entier(brut, 'dureeMinimumS', BORNES_REGLAGES.zones.dureeS, erreurs, 'zones'),
+  );
+  poser(
+    retenu,
+    'dureeMaximumS',
+    entier(brut, 'dureeMaximumS', BORNES_REGLAGES.zones.dureeS, erreurs, 'zones'),
+  );
+  poser(
+    retenu,
+    'intervalleApparitionS',
+    entier(
+      brut,
+      'intervalleApparitionS',
+      BORNES_REGLAGES.zones.intervalleApparitionS,
+      erreurs,
+      'zones',
+    ),
+  );
+
+  const types: Enregistrement = {};
+  const brutTypes = groupe(brut, 'types', 'zones.types', erreurs);
+
+  for (const nature of TYPES_ZONE) {
+    poser(types, nature, booleen(brutTypes ?? {}, nature, erreurs, 'zones.types'));
+  }
+
+  poser(retenu, 'types', siRempli(types));
+
+  return siRempli(retenu);
+}
+
+/** Reglages des bots noirs: un interrupteur et quatre nombres. */
+function groupeBotsNoirs(
+  source: Enregistrement,
+  erreurs: ErreurValidation[],
+): Enregistrement | undefined {
+  const brut = groupe(source, 'botsNoirs', 'botsNoirs', erreurs);
+  if (brut === undefined) {
+    return undefined;
+  }
+
+  const bornes = BORNES_REGLAGES.botsNoirs;
+  const retenu: Enregistrement = {};
+  poser(retenu, 'actifs', booleen(brut, 'actifs', erreurs, 'botsNoirs'));
+  poser(retenu, 'nombre', entier(brut, 'nombre', bornes.nombre, erreurs, 'botsNoirs'));
+  poser(
+    retenu,
+    'momentApparitionPourCent',
+    entier(brut, 'momentApparitionPourCent', bornes.momentApparitionPourCent, erreurs, 'botsNoirs'),
+  );
+  poser(
+    retenu,
+    'rayonDetectionPx',
+    entier(brut, 'rayonDetectionPx', bornes.rayonDetectionPx, erreurs, 'botsNoirs'),
+  );
+  poser(
+    retenu,
+    'partDeBotsPerduePourCent',
+    entier(brut, 'partDeBotsPerduePourCent', bornes.partDeBotsPerduePourCent, erreurs, 'botsNoirs'),
+  );
+
+  return siRempli(retenu);
+}
+
+// --------------------------------------------------------------------------
+// Briques de lecture, communes a tous les schemas
+// --------------------------------------------------------------------------
+
+/** Un resultat accepte. */
+function accepte<T>(valeur: T): ResultatValidation<T> {
+  return { valide: true, valeur };
+}
+
+/** Un resultat refuse, avec un seul motif. */
+function refuse<T>(champFautif: string, motif: string): ResultatValidation<T> {
+  return { valide: false, erreurs: [{ champ: champFautif, motif }] };
+}
+
+/**
+ * Lit une cle d'un objet inconnu, sans jamais remonter sa chaine de prototypes.
+ *
+ * Une cle absente et une cle heritee se valent ici: ni l'une ni l'autre n'a ete
+ * ecrite par l'appelant.
+ */
+function champ(source: Enregistrement, cle: string): unknown {
+  return Object.hasOwn(source, cle) ? source[cle] : undefined;
+}
+
+/** La valeur si c'est un objet ordinaire, rien sinon. Un tableau n'en est pas un. */
+function objetOuRien(valeur: unknown): Enregistrement | undefined {
+  return typeof valeur === 'object' && valeur !== null && !Array.isArray(valeur)
+    ? (valeur as Enregistrement)
+    : undefined;
+}
+
+/** Range une valeur dans un objet en construction, sauf si elle est absente. */
+function poser(cible: Enregistrement, cle: string, valeur: unknown): void {
+  if (valeur !== undefined) {
+    cible[cle] = valeur;
+  }
+}
+
+/** L'objet s'il porte au moins un champ, rien s'il est reste vide. */
+function siRempli(construit: Enregistrement): Enregistrement | undefined {
+  return Object.keys(construit).length > 0 ? construit : undefined;
+}
+
+/**
+ * Lit un sous-groupe de reglages.
+ *
+ * Un groupe absent rend un objet vide plutot que rien, pour que la lecture des
+ * champs qu'il contient se poursuive sans cas particulier: chacun sera absent a
+ * son tour, donc chacun prendra sa valeur par defaut.
+ */
+function groupe(
+  source: Enregistrement,
+  cle: string,
+  chemin: string,
+  erreurs: ErreurValidation[],
+): Enregistrement | undefined {
+  const valeur = champ(source, cle);
+  if (valeur === undefined) {
+    return {};
+  }
+
+  const objet = objetOuRien(valeur);
+  if (objet === undefined) {
+    erreurs.push({ champ: chemin, motif: 'Ce groupe de réglages doit être un objet.' });
+    return undefined;
+  }
+
+  return objet;
+}
+
+/** Lit un booleen. Absent: rien. Present et d'un autre type: une erreur. */
+function booleen(
+  source: Enregistrement,
+  cle: string,
+  erreurs: ErreurValidation[],
+  prefixe?: string,
+): boolean | undefined {
+  const valeur = champ(source, cle);
+  if (valeur === undefined) {
+    return undefined;
+  }
+
+  if (typeof valeur !== 'boolean') {
+    erreurs.push({ champ: cheminDe(prefixe, cle), motif: 'Ce réglage doit valoir vrai ou faux.' });
+    return undefined;
+  }
+
+  return valeur;
+}
+
+/** Lit un entier borne. Absent: rien. Hors bornes ou d'un autre type: une erreur. */
+function entier(
+  source: Enregistrement,
+  cle: string,
+  intervalle: Intervalle,
+  erreurs: ErreurValidation[],
+  prefixe?: string,
+): number | undefined {
+  const valeur = champ(source, cle);
+  if (valeur === undefined) {
+    return undefined;
+  }
+
+  const chemin = cheminDe(prefixe, cle);
+
+  if (typeof valeur !== 'number' || !Number.isInteger(valeur)) {
+    erreurs.push({ champ: chemin, motif: 'Ce réglage doit être un nombre entier.' });
+    return undefined;
+  }
+
+  if (valeur < intervalle.minimum || valeur > intervalle.maximum) {
+    erreurs.push({
+      champ: chemin,
+      motif: `Ce réglage doit se trouver entre ${intervalle.minimum} et ${intervalle.maximum}, bornes comprises.`,
+    });
+    return undefined;
+  }
+
+  return valeur;
+}
+
+/** Lit l'identifiant de la carte jouee, parmi celles qui existent. */
+function identifiantDeCarte(
+  source: Enregistrement,
+  erreurs: ErreurValidation[],
+): IdentifiantCarte | undefined {
+  const valeur = champ(source, 'carte');
+  if (valeur === undefined) {
+    return undefined;
+  }
+
+  if (typeof valeur !== 'string' || !Object.hasOwn(CARTES, valeur)) {
+    erreurs.push({
+      champ: 'carte',
+      motif: `La carte doit être l'une de ${Object.keys(CARTES).join(', ')}.`,
+    });
+    return undefined;
+  }
+
+  return valeur as IdentifiantCarte;
+}
+
+/** Lit une coordonnee de vecteur: un nombre fini, et rien d'autre. */
+function coordonnee(
+  vecteur: Enregistrement,
+  cle: string,
+  erreurs: ErreurValidation[],
+): number | undefined {
+  const valeur = champ(vecteur, cle);
+
+  if (typeof valeur !== 'number' || !Number.isFinite(valeur)) {
+    erreurs.push({
+      champ: `intention.deplacement.${cle}`,
+      motif: 'Une coordonnée doit être un nombre fini.',
+    });
+    return undefined;
+  }
+
+  return valeur;
+}
+
+/** Assemble le chemin d'un champ pour un message d'erreur lisible. */
+function cheminDe(prefixe: string | undefined, cle: string): string {
+  return prefixe === undefined ? cle : `${prefixe}.${cle}`;
+}
+
+/**
+ * Compte les caracteres d'un texte, et non ses unites de codage.
+ *
+ * Une lettre hors de l'alphabet latin peut occuper deux unites en memoire. Sans
+ * cette precaution, la limite de vingt caracteres d'un pseudo n'en autoriserait
+ * que dix a un joueur qui ecrit dans son alphabet.
+ */
+function nombreDeCaracteres(texte: string): number {
+  return [...texte].length;
+}

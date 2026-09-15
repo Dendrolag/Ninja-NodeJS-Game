@@ -1,0 +1,50 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`capture d un joueur par un autre > produit l instantane de reference de la capture 1`] = `
+{
+  "attaquant": {
+    "blackBotsDestroyed": 0,
+    "botsControlled": 0,
+    "capturedBy": {},
+    "capturedByBlackBot": 0,
+    "capturedPlayers": {
+      "v": {
+        "count": 1,
+        "nickname": "Victime",
+      },
+    },
+    "captures": 1,
+    "pseudo": "Attaquant",
+    "totalBotsCaptures": 3,
+  },
+  "bots": {
+    "#00FF00": 1,
+    "#FF0000": 5,
+  },
+  "emissions": [
+    {
+      "cible": "v",
+      "evenement": "playerCaptured",
+    },
+    {
+      "cible": "a",
+      "evenement": "playerCapturedEnemy",
+    },
+  ],
+  "victime": {
+    "blackBotsDestroyed": 0,
+    "botsControlled": 0,
+    "capturedBy": {
+      "a": {
+        "count": 1,
+        "nickname": "Attaquant",
+      },
+    },
+    "capturedByBlackBot": 0,
+    "capturedPlayers": {},
+    "captures": 0,
+    "pseudo": "Victime",
+    "totalBotsCaptures": 0,
+  },
+}
+`;

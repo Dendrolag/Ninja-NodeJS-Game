@@ -1,17 +1,49 @@
 {
-  "name": "neon_ninja",
-  "version": "0.7.0",
+  "name": "neon-ninja",
+  "version": "0.0.0",
   "description": "Jeu web multijoueur de capture de Ninjas",
-  "main": "server.js",
+  "private": true,
   "type": "module",
-  "scripts": {
-    "start": "node server.js"
-  },
   "author": "Dendrolag",
   "license": "ISC",
-  "dependencies": {
-    "canvas": "^2.11.2",
-    "express": "^4.18.2",
-    "socket.io": "^4.7.2"
+  "packageManager": "pnpm@11.21.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc --build && pnpm --filter @neon-ninja/client empaqueter",
+    "dev": "pnpm build && pnpm --filter @neon-ninja/server start",
+    "typecheck": "tsc --build && tsc -p tsconfig.tests.json && tsc -p tsconfig.e2e.json",
+    "typecheck:clean": "tsc --build --clean",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "charge": "tsc --build && node --disable-warning=ExperimentalWarning tests/charge/charge.ts",
+    "dev:server": "pnpm --filter @neon-ninja/server dev",
+    "base:generer": "pnpm --filter @neon-ninja/server base:generer",
+    "base:migrer": "pnpm --filter @neon-ninja/server base:migrer",
+    "verify": "pnpm typecheck && pnpm lint && pnpm test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^22.10.2",
+    "@types/pg": "^8.23.1",
+    "@vitest/coverage-v8": "^2.1.8",
+    "drizzle-orm": "^0.45.2",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "jsdom": "^30.0.1",
+    "pg": "^8.23.0",
+    "prettier": "^3.4.2",
+    "socket.io-client": "^4.8.3",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.1",
+    "vitest": "^2.1.8"
   }
 }

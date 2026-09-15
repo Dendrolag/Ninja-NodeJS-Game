@@ -1,2 +1,28 @@
 node_modules/
 .env
+
+# Fichiers systeme
+.DS_Store
+
+# Rapports generes par l'extension VS Code Counter
+.VSCodeCounter/
+
+# Reglages Claude Code propres a la machine
+.claude/settings.local.json
+
+# Sorties de compilation TypeScript
+dist/
+*.tsbuildinfo
+
+# Rapports de tests
+coverage/
+playwright-report/
+test-results/
+blob-report/
+.playwright/
+
+# Client empaquete, produit par pnpm build
+packages/client/web/
+
+# Sortie Vercel de la page, produite au deploiement (etape 5.3)
+.vercel/

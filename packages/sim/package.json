@@ -1,0 +1,21 @@
+{
+  "name": "@neon-ninja/sim",
+  "version": "0.0.0",
+  "description": "Coeur de simulation pur. Aucune entree-sortie, voir .claude/rules/sim-purity.md",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build"
+  },
+  "dependencies": {
+    "@neon-ninja/shared": "workspace:*"
+  }
+}

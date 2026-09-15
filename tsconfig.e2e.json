@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // Verification des types des scenarios de bout en bout.
+  //
+  // Ils sont separes des autres tests pour une seule raison: ce sont les seuls
+  // fichiers du depot qui pilotent un navigateur, donc les seuls autorises a
+  // parler au DOM. Leur donner la bibliotheque DOM ici evite de l'ouvrir aux
+  // tests unitaires, ou une reference a document serait une erreur.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM"],
+    "noEmit": true,
+    "composite": false,
+    "incremental": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "types": ["node"]
+  },
+  "include": ["tests/e2e/**/*.ts", "playwright.config.ts"],
+  "exclude": ["node_modules", "dist", "legacy"]
+}

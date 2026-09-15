@@ -1,0 +1,7 @@
+packages:
+  - 'packages/*'
+# pnpm exige une decision explicite pour chaque dependance qui execute un script
+# a l'installation. esbuild est le compilateur utilise par Vitest: il telecharge
+# son binaire natif a l'installation, ce script est donc necessaire.
+allowBuilds:
+  esbuild: true

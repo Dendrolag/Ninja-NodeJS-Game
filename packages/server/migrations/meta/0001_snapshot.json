@@ -1,0 +1,501 @@
+{
+  "id": "f3acb56c-4cf8-4ca2-8969-d713e79245ae",
+  "prevId": "12bc19bc-f8ae-4a09-8ec2-5f85ff1aa8b5",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.comptes": {
+      "name": "comptes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "pseudo": {
+          "name": "pseudo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "repere_pseudo": {
+          "name": "repere_pseudo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cree_le": {
+          "name": "cree_le",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "comptes_repere_pseudo_unique": {
+          "name": "comptes_repere_pseudo_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "repere_pseudo"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.mots_de_passe": {
+      "name": "mots_de_passe",
+      "schema": "",
+      "columns": {
+        "compte_id": {
+          "name": "compte_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "empreinte": {
+          "name": "empreinte",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "modifie_le": {
+          "name": "modifie_le",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "mots_de_passe_compte_id_comptes_id_fk": {
+          "name": "mots_de_passe_compte_id_comptes_id_fk",
+          "tableFrom": "mots_de_passe",
+          "tableTo": "comptes",
+          "columnsFrom": [
+            "compte_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.parties": {
+      "name": "parties",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "mode": {
+          "name": "mode",
+          "type": "mode_de_jeu",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "carte": {
+          "name": "carte",
+          "type": "carte",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mode_miroir": {
+          "name": "mode_miroir",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "duree_s": {
+          "name": "duree_s",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nombre_joueurs": {
+          "name": "nombre_joueurs",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "terminee_le": {
+          "name": "terminee_le",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "parties_duree_positive": {
+          "name": "parties_duree_positive",
+          "value": "\"parties\".\"duree_s\" > 0"
+        },
+        "parties_au_moins_un_joueur": {
+          "name": "parties_au_moins_un_joueur",
+          "value": "\"parties\".\"nombre_joueurs\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.progressions": {
+      "name": "progressions",
+      "schema": "",
+      "columns": {
+        "compte_id": {
+          "name": "compte_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "xp_totale": {
+          "name": "xp_totale",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "pieces": {
+          "name": "pieces",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "points_ligue": {
+          "name": "points_ligue",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "mis_a_jour_le": {
+          "name": "mis_a_jour_le",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "progressions_compte_id_comptes_id_fk": {
+          "name": "progressions_compte_id_comptes_id_fk",
+          "tableFrom": "progressions",
+          "tableTo": "comptes",
+          "columnsFrom": [
+            "compte_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "progressions_xp_positive": {
+          "name": "progressions_xp_positive",
+          "value": "\"progressions\".\"xp_totale\" >= 0"
+        },
+        "progressions_pieces_positives": {
+          "name": "progressions_pieces_positives",
+          "value": "\"progressions\".\"pieces\" >= 0"
+        },
+        "progressions_points_ligue_positifs": {
+          "name": "progressions_points_ligue_positifs",
+          "value": "\"progressions\".\"points_ligue\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.resultats": {
+      "name": "resultats",
+      "schema": "",
+      "columns": {
+        "partie_id": {
+          "name": "partie_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "compte_id": {
+          "name": "compte_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "placement": {
+          "name": "placement",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "points": {
+          "name": "points",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "captures": {
+          "name": "captures",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bots_noirs_detruits": {
+          "name": "bots_noirs_detruits",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "xp_gagnee": {
+          "name": "xp_gagnee",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pieces_gagnees": {
+          "name": "pieces_gagnees",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "variation_points_ligue": {
+          "name": "variation_points_ligue",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "resultats_par_compte": {
+          "name": "resultats_par_compte",
+          "columns": [
+            {
+              "expression": "compte_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "resultats_partie_id_parties_id_fk": {
+          "name": "resultats_partie_id_parties_id_fk",
+          "tableFrom": "resultats",
+          "tableTo": "parties",
+          "columnsFrom": [
+            "partie_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "resultats_compte_id_comptes_id_fk": {
+          "name": "resultats_compte_id_comptes_id_fk",
+          "tableFrom": "resultats",
+          "tableTo": "comptes",
+          "columnsFrom": [
+            "compte_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "resultats_partie_compte": {
+          "name": "resultats_partie_compte",
+          "columns": [
+            "partie_id",
+            "compte_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "resultats_placement_positif": {
+          "name": "resultats_placement_positif",
+          "value": "\"resultats\".\"placement\" >= 1"
+        },
+        "resultats_points_positifs": {
+          "name": "resultats_points_positifs",
+          "value": "\"resultats\".\"points\" >= 0"
+        },
+        "resultats_captures_positives": {
+          "name": "resultats_captures_positives",
+          "value": "\"resultats\".\"captures\" >= 0"
+        },
+        "resultats_bots_noirs_positifs": {
+          "name": "resultats_bots_noirs_positifs",
+          "value": "\"resultats\".\"bots_noirs_detruits\" >= 0"
+        },
+        "resultats_xp_positive": {
+          "name": "resultats_xp_positive",
+          "value": "\"resultats\".\"xp_gagnee\" >= 0"
+        },
+        "resultats_pieces_positives": {
+          "name": "resultats_pieces_positives",
+          "value": "\"resultats\".\"pieces_gagnees\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.sessions": {
+      "name": "sessions",
+      "schema": "",
+      "columns": {
+        "empreinte_jeton": {
+          "name": "empreinte_jeton",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "compte_id": {
+          "name": "compte_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cree_le": {
+          "name": "cree_le",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "expire_le": {
+          "name": "expire_le",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "sessions_par_compte": {
+          "name": "sessions_par_compte",
+          "columns": [
+            {
+              "expression": "compte_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "sessions_par_expiration": {
+          "name": "sessions_par_expiration",
+          "columns": [
+            {
+              "expression": "expire_le",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "sessions_compte_id_comptes_id_fk": {
+          "name": "sessions_compte_id_comptes_id_fk",
+          "tableFrom": "sessions",
+          "tableTo": "comptes",
+          "columnsFrom": [
+            "compte_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "sessions_expire_apres_creation": {
+          "name": "sessions_expire_apres_creation",
+          "value": "\"sessions\".\"expire_le\" > \"sessions\".\"cree_le\""
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.carte": {
+      "name": "carte",
+      "schema": "public",
+      "values": [
+        "map1",
+        "map2",
+        "map3"
+      ]
+    },
+    "public.mode_de_jeu": {
+      "name": "mode_de_jeu",
+      "schema": "public",
+      "values": [
+        "classique"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

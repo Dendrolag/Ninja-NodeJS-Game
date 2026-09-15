@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"]
+  },
+  "include": ["src/**/*.ts"],
+  // essais.ts rassemble les pieces d'essai des tests de l'interface: comme les
+  // tests, il n'a rien a faire dans la compilation du paquet. Il reste verifie par
+  // tsconfig.tests.json, a travers les tests qui l'importent.
+  "exclude": ["src/**/*.test.ts", "src/interface/essais.ts", "dist", "node_modules"],
+  "references": [{ "path": "../shared" }]
+}

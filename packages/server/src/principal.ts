@@ -1,0 +1,192 @@
+/**
+ * Le point de demarrage du serveur, celui que « pnpm dev » lance, et celui de la
+ * production.
+ *
+ * Il ne contient aucune logique: il lit la configuration de l'environnement,
+ * monte le serveur, et l'arrete proprement quand on le lui demande. Tout le reste
+ * est dans serveur.ts, qui se teste sans jamais ouvrir de port fixe.
+ *
+ * ARRETER PROPREMENT N'EST PAS UN DETAIL. Le legacy n'ecoutait aucun signal
+ * d'extinction: ses parties, ses minuteries et ses connexions mouraient avec le
+ * processus, ce qui suffisait sur une machine de developpement et laissait des
+ * joueurs sans explication en production. Ici l'extinction arrete les parties
+ * d'abord, ferme les connexions ensuite, et rend la main.
+ *
+ * EN PRODUCTION (etape 5.3), l'hebergeur pose SERVIR_LA_PAGE a « non », puisque la
+ * page est servie par Vercel, VERSION_DU_JEU au commit deploye, ORIGINES_AUTORISEES
+ * a l'origine de la page, et MANDATAIRES_DE_CONFIANCE au nombre de ses mandataires.
+ * La procedure est dans docs/deploiement.md.
+ */
+
+import { existsSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import type { BaseOuverte } from './base/connexion.js';
+import { ouvrirBase } from './base/connexion.js';
+import { Authentification } from './comptes/Authentification.js';
+import type { DossiersServis } from './fichiers.js';
+import { PORT_PAR_DEFAUT, demarrerServeur } from './serveur.js';
+import { ChargeurDeTerrain, racineRessources } from './terrain.js';
+
+/** Plus grand nombre de mandataires qu'on accepte de croire. Au-dela, c'est une erreur de saisie. */
+const MANDATAIRES_MAXIMUM = 10;
+
+/** Lit un port depuis l'environnement, en refusant ce qui n'en est pas un. */
+function portDemande(brut: string | undefined): number {
+  if (brut === undefined) {
+    return PORT_PAR_DEFAUT;
+  }
+
+  const port = Number(brut);
+
+  if (!Number.isInteger(port) || port < 0 || port > 65535) {
+    throw new Error(`PORT doit etre un numero de port valide, recu « ${brut} ».`);
+  }
+
+  return port;
+}
+
+/** Lit la liste des origines autorisees, separees par des virgules. */
+function originesAutorisees(brut: string | undefined): readonly string[] {
+  if (brut === undefined) {
+    return [];
+  }
+
+  return brut
+    .split(',')
+    .map((origine) => origine.trim())
+    .filter((origine) => origine.length > 0);
+}
+
+/** Lit le nombre de mandataires de confiance, zero par defaut. Voir OptionsServeur. */
+function mandatairesDeConfiance(brut: string | undefined): number {
+  if (brut === undefined || brut.length === 0) {
+    return 0;
+  }
+
+  const nombre = Number(brut);
+
+  if (!Number.isInteger(nombre) || nombre < 0 || nombre > MANDATAIRES_MAXIMUM) {
+    throw new Error(
+      `MANDATAIRES_DE_CONFIANCE doit etre un entier de 0 a ${String(MANDATAIRES_MAXIMUM)}, recu « ${brut} ».`,
+    );
+  }
+
+  return nombre;
+}
+
+/** Lit la version du jeu, absente en developpement. Voir OptionsServeur. */
+function versionDuJeu(brut: string | undefined): string | undefined {
+  return brut === undefined || brut.trim().length === 0 ? undefined : brut.trim();
+}
+
+/**
+ * Le serveur sert-il la page du jeu, « oui » par defaut.
+ *
+ * Toute autre valeur que « oui » ou « non » est une erreur de saisie, et arrete le
+ * demarrage: un serveur de production qui se mettrait a servir la page par erreur
+ * le ferait en silence.
+ */
+function servirLaPage(brut: string | undefined): boolean {
+  if (brut === undefined || brut === '' || brut === 'oui') {
+    return true;
+  }
+
+  if (brut === 'non') {
+    return false;
+  }
+
+  throw new Error(`SERVIR_LA_PAGE vaut « oui » ou « non », recu « ${brut} ».`);
+}
+
+/**
+ * La base des comptes, si DATABASE_URL est definie.
+ *
+ * SANS BASE, LE JEU TOURNE, EN INVITES SEULEMENT. C'est le cas du developpement
+ * local sans acces a Neon. Ce n'est pas une panne, mais cela se dit au demarrage,
+ * pour que personne ne cherche pourquoi la connexion a un compte est refusee.
+ *
+ * La base n'est pas migree ici: les migrations s'appliquent a part, par
+ * « pnpm base:migrer », qui passe par l'adresse directe. En production, la
+ * commande de demarrage les applique juste avant de lancer ce fichier.
+ */
+function baseDesComptes(adresse: string | undefined): BaseOuverte | undefined {
+  if (adresse === undefined || adresse.length === 0) {
+    console.warn('DATABASE_URL absente: les comptes sont desactives, on joue en invite seulement.');
+    return undefined;
+  }
+
+  return ouvrirBase(adresse);
+}
+
+/**
+ * Les dossiers de la page et des ressources a servir, si le serveur sert la page.
+ *
+ * Le client se deduit de l'emplacement de ce fichier, comme la racine des
+ * ressources: packages/server/dist/principal.js a pour voisin packages/client/web.
+ * La variable CHEMIN_CLIENT prend le dessus, pour un deploiement ou le client
+ * serait range ailleurs.
+ */
+function dossiersServis(): DossiersServis | undefined {
+  if (!servirLaPage(process.env['SERVIR_LA_PAGE'])) {
+    return undefined;
+  }
+
+  const surcharge = process.env['CHEMIN_CLIENT'];
+  const client =
+    surcharge !== undefined && surcharge.length > 0
+      ? resolve(surcharge)
+      : resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', 'client', 'web');
+
+  // Un client absent ne doit pas empecher le serveur de jeu de tourner, mais il ne
+  // doit pas non plus passer inapercu: la page repondrait « introuvable » sans
+  // explication.
+  if (!existsSync(join(client, 'index.html'))) {
+    console.warn(
+      `Le client n'est pas empaquete dans ${client}: la page ne s'affichera pas. Lancer « pnpm build ».`,
+    );
+  }
+
+  return { client, ressources: racineRessources() };
+}
+
+const fichiers = dossiersServis();
+const version = versionDuJeu(process.env['VERSION_DU_JEU']);
+const base = baseDesComptes(process.env['DATABASE_URL']);
+
+// C'est ici, et seulement ici, que le serveur decide de lire les images de
+// collision des cartes, de servir la page et de brancher les comptes. Un serveur
+// monte a la main dans un test n'a ni murs, ni page, ni comptes tant qu'il ne les
+// demande pas.
+const serveur = await demarrerServeur(portDemande(process.env['PORT']), {
+  originesAutorisees: originesAutorisees(process.env['ORIGINES_AUTORISEES']),
+  terrains: new ChargeurDeTerrain(),
+  mandatairesDeConfiance: mandatairesDeConfiance(process.env['MANDATAIRES_DE_CONFIANCE']),
+  ...(fichiers === undefined ? {} : { fichiers }),
+  ...(version === undefined ? {} : { version }),
+  ...(base === undefined ? {} : { comptes: new Authentification({ db: base.db }) }),
+});
+
+const adresse = serveur.http.address();
+const port = typeof adresse === 'object' && adresse !== null ? adresse.port : '?';
+
+// eslint-disable-next-line no-console
+console.log(
+  fichiers === undefined
+    ? `Neon Ninja: serveur de jeu a l'ecoute sur le port ${port}, sans la page, version ${version ?? 'de developpement'}.`
+    : `Neon Ninja: serveur a l'ecoute sur le port ${port}, jeu sur http://localhost:${port}/`,
+);
+
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  process.once(signal, () => {
+    // Le serveur d'abord, qui ne pose plus aucune question a la base; la base
+    // ensuite.
+    void serveur
+      .fermer()
+      .then(async () => base?.fermer())
+      .then(() => {
+        process.exit(0);
+      });
+  });
+}

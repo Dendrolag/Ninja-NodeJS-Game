@@ -1,0 +1,91 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ramassage d un bonus > produit l instantane de reference d un enchainement de bonus 1`] = `
+{
+  "effets": {
+    "invincibilityActive": true,
+    "revealActive": true,
+    "speedBoostActive": true,
+  },
+  "emissions": [
+    {
+      "cible": "a",
+      "donnees": {
+        "duration": 10,
+        "type": "speed",
+      },
+      "evenement": "activateBonus",
+    },
+    {
+      "cible": "a",
+      "donnees": {
+        "duration": 10,
+        "type": "invincibility",
+      },
+      "evenement": "activateBonus",
+    },
+    {
+      "cible": "a",
+      "donnees": {
+        "duration": 10,
+        "type": "reveal",
+      },
+      "evenement": "activateBonus",
+    },
+    {
+      "cible": "a",
+      "donnees": {
+        "duration": 10,
+        "type": "speed",
+      },
+      "evenement": "activateBonus",
+    },
+  ],
+  "minuteries": {
+    "invincibility": 10,
+    "reveal": 10,
+    "speed": 20,
+  },
+}
+`;
+
+exports[`ramassage d un malus > produit l instantane de reference de la diffusion d un malus 1`] = `
+[
+  {
+    "cible": "io",
+    "donnees": {
+      "collectorId": "a",
+      "collectorNickname": "Alice",
+      "duration": 10,
+      "type": "reverse",
+    },
+    "evenement": "malusEvent",
+  },
+  {
+    "cible": "a",
+    "donnees": {
+      "duration": 10,
+      "type": "reverse",
+    },
+    "evenement": "malusCollected",
+  },
+  {
+    "cible": "b",
+    "donnees": {
+      "collectedBy": "Alice",
+      "duration": 10,
+      "type": "reverse",
+    },
+    "evenement": "applyMalus",
+  },
+  {
+    "cible": "c",
+    "donnees": {
+      "collectedBy": "Alice",
+      "duration": 10,
+      "type": "reverse",
+    },
+    "evenement": "applyMalus",
+  },
+]
+`;

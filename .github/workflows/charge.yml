@@ -1,0 +1,109 @@
+# Mesure de charge sous Linux, a la demande.
+#
+# Le serveur de production tournera sous Linux, et les mesures de reference sont
+# prises sous Windows (docs/mesures/charge-serveur.md). Ce workflow joue le harnais
+# de charge (pnpm charge) sur une machine d'integration Linux, pour un ou plusieurs
+# commits joues l'un apres l'autre SUR LA MEME MACHINE: c'est la seule facon de
+# comparer deux versions, la puissance d'une machine d'integration changeant d'une
+# execution a l'autre. Les resultats sont conserves comme artefact.
+#
+# COMMENT LE LANCER. GitHub n'accepte le lancement manuel (workflow_dispatch) que
+# pour un workflow present sur la branche par defaut, master, qui ne doit pas etre
+# touchee avant l'etape 6.1. Le workflow se lance donc en poussant une branche
+# temporaire mesure-charge/<nom>, dont le dernier commit porte deux lignes finales:
+#
+#   git switch -c mesure-charge/5-2
+#   git commit --allow-empty -m "Mesure de charge" \
+#     -m "Mesurer: 8b3992d 1a2b3c4" \
+#     -m "Options: --reseau --bots 150 --rooms 2,4,8 --sans-arret --processus 2"
+#   git push origin mesure-charge/5-2
+#
+# puis, une fois les mesures recuperees, supprimer la branche. Sans ligne
+# « Mesurer », le commit pousse lui-meme est mesure; sans ligne « Options », les
+# options par defaut ci-dessous s'appliquent. Le lancement manuel reste declare
+# pour le jour ou ce fichier sera sur master.
+#
+# Il ne bloque rien, et ne remplace pas la mesure de reference: une machine
+# d'integration est partagee, plus lente, et n'a que quatre coeurs, que le serveur
+# mesure partage avec ses clients simules.
+
+name: Charge
+
+on:
+  push:
+    branches: ['mesure-charge/**']
+  workflow_dispatch:
+    inputs:
+      commits:
+        description: 'Commits a mesurer, separes par des espaces, joues dans cet ordre (vide: celui de la branche)'
+        required: false
+        default: ''
+      options:
+        description: 'Options de pnpm charge (vide: les options par defaut)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '24'
+  OPTIONS_PAR_DEFAUT: '--reseau --bots 150 --rooms 2,4,8,12,16 --sans-arret --processus 2 --duree-mesure 15'
+
+jobs:
+  charge:
+    name: Harnais de charge
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Recuperer le depot, historique compris
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Installer pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Installer Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      # Les valeurs passent par l'environnement, jamais directement dans le script:
+      # c'est ce qui empeche un texte saisi de devenir une commande. Les lignes du
+      # message de commit sont lues avant de changer de commit.
+      - name: Mesurer chaque commit
+        env:
+          COMMITS: ${{ inputs.commits }}
+          OPTIONS: ${{ inputs.options }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            COMMITS="$(git log -1 --format='%(trailers:key=Mesurer,valueonly,separator= )')"
+            OPTIONS="$(git log -1 --format='%(trailers:key=Options,valueonly,separator= )')"
+          fi
+          COMMITS="${COMMITS:-$GITHUB_SHA}"
+          OPTIONS="${OPTIONS:-$OPTIONS_PAR_DEFAUT}"
+          echo "Commits: $COMMITS"
+          echo "Options: $OPTIONS"
+          echo "Coeurs: $(nproc)"
+          mkdir -p "$RUNNER_TEMP/mesures"
+
+          for commit in $COMMITS; do
+            git checkout --quiet --force "$commit"
+            court="$(git rev-parse --short HEAD)"
+            echo "::group::Commit $court"
+            pnpm install --frozen-lockfile
+            # Les options sont volontairement decoupees en mots.
+            # shellcheck disable=SC2086
+            pnpm charge $OPTIONS --sortie "$RUNNER_TEMP/mesures/charge-$court.json"
+            echo "::endgroup::"
+          done
+
+      - name: Conserver les mesures
+        uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: mesures-de-charge
+          path: ${{ runner.temp }}/mesures/
+          retention-days: 30

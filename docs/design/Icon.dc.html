@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<span style="display:inline-flex; align-items:center; justify-content:center; line-height:0;">{{ svg }}</span>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:48,&quot;height&quot;:48},&quot;glyph&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;target&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;size&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:22,&quot;tsType&quot;:&quot;number&quot;},&quot;color&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;currentColor&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const size = Number(this.props.size) || 22;
+    const color = this.props.color || 'currentColor';
+    const sw = Number(this.props.stroke) || 1.8;
+    const P = (d, o) => ['path', Object.assign({ d }, o || {})];
+    const C = (cx, cy, r, o) => ['circle', Object.assign({ cx, cy, r }, o || {})];
+    const R = (x, y, w, h, rx, o) => ['rect', Object.assign({ x, y, width: w, height: h, rx }, o || {})];
+
+    const defs = {
+      play:      { fill:1, parts:[ P('M8 5l11 7-11 7z') ] },
+      globe:     { parts:[ C(12,12,9), P('M3 12h18'), P('M12 3c2.6 2.7 2.6 15.3 0 18'), P('M12 3c-2.6 2.7-2.6 15.3 0 18') ] },
+      plus:      { parts:[ P('M12 5v14'), P('M5 12h14') ] },
+      diamond:   { parts:[ P('M12 3l8 9-8 9-8-9z') ] },
+      ninja:     { parts:[ P('M12 2.5l2.3 7.2L21.5 12l-7.2 2.3L12 21.5l-2.3-7.2L2.5 12l7.2-2.3z'), C(12,12,1.8,{fill:color}) ] },
+      mirror:    { parts:[ P('M12 3v18'), P('M9.2 7l-5 5 5 5z',{fill:color}), P('M14.8 7l5 5-5 5z',{fill:color}) ] },
+      target:    { parts:[ C(12,12,8.5), C(12,12,4.5), C(12,12,1.4,{fill:color}) ] },
+      royale:    { parts:[ C(12,12,8.5,{strokeDasharray:'3 3'}), C(12,12,4) ] },
+      swords:    { parts:[ P('M5.5 5.5l13 13'), P('M18.5 5.5l-13 13'), P('M14.5 7.5l2 2'), P('M9.5 7.5l-2 2') ] },
+      tornado:   { parts:[ P('M4 6h16'), P('M6 10.5h12'), P('M9 15h7'), P('M11 19h3') ] },
+      coin:      { parts:[ C(12,12,8.5), C(12,12,5), C(12,12,1.2,{fill:color}) ] },
+      gem:       { parts:[ P('M12 3l6 5-6 13L6 8z'), P('M6 8h12'), P('M12 3L9.5 8l2.5 13 2.5-13z') ] },
+      key:       { parts:[ C(8.5,8.5,3.5), P('M11 11l8.5 8.5'), P('M16.5 16.5l2-2'), P('M14.5 14.5l2-2') ] },
+      gear:      { parts:[ C(12,12,3.2), P('M12 2v3'),P('M12 19v3'),P('M2 12h3'),P('M19 12h3'),P('M4.9 4.9l2.1 2.1'),P('M17 17l2.1 2.1'),P('M19.1 4.9l-2.1 2.1'),P('M7 17l-2.1 2.1') ] },
+      chat:      { parts:[ P('M5 4h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H9l-4 4v-4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z') ] },
+      send:      { parts:[ P('M21 3L10 14'), P('M21 3l-7 18-4-8-8-4z') ] },
+      arrowLeft: { parts:[ P('M19 12H5'), P('M12 19l-7-7 7-7') ] },
+      check:     { parts:[ P('M5 12.5l4.5 4.5L19 7') ] },
+      shield:    { parts:[ P('M12 3l8 3v6c0 5-4 7.7-8 9-4-1.3-8-4-8-9V6z') ] },
+      eye:       { parts:[ P('M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z'), C(12,12,3) ] },
+      bolt:      { fill:1, parts:[ P('M13 2L5 13h5l-1 9 9-12h-6z') ] },
+      swirl:     { parts:[ P('M19 12a7 7 0 1 1-7-7 5 5 0 0 1 5 5 3.3 3.3 0 0 1-3.3 3.3 1.8 1.8 0 0 1-1.8-1.8') ] },
+      zone:      { parts:[ P('M12 4l9 16H3z'), P('M12 10v4'), P('M12 17h.01') ] },
+      crown:     { parts:[ P('M4 8l4 4 4-7 4 7 4-4-1.6 11H5.6z'), P('M5 21h14') ] },
+      lock:      { parts:[ R(5.5,11,13,9,2), P('M8.5 11V8a3.5 3.5 0 0 1 7 0v3') ] },
+      star:      { fill:1, parts:[ P('M12 3.5l2.5 6.2 6.7.5-5.1 4.4 1.6 6.5L12 17.6 6.3 21l1.6-6.5L2.8 10.2l6.7-.5z') ] },
+      replay:    { parts:[ P('M4 12a8 8 0 1 1 2.5 5.8'), P('M4 21v-5h5') ] },
+      stop:      { fill:1, parts:[ R(6,6,12,12,2) ] },
+      keyboard:  { parts:[ R(3,7,18,10,1.5), P('M7 10h.01'),P('M11 10h.01'),P('M15 10h.01'),P('M7 13h10') ] },
+      palette:   { parts:[ P('M12 3a9 9 0 1 0 0 18c1 0 1.7-.8 1.7-1.7 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.1 0-1 .8-1.7 1.7-1.7H17a4 4 0 0 0 4-4c0-4.4-4-8.3-9-8.3z'), C(8,11,1,{fill:color}), C(12,8,1,{fill:color}), C(16,11,1,{fill:color}) ] },
+      sparkle:   { fill:1, parts:[ P('M12 3c.6 4.2 1.8 5.4 6 6-4.2.6-5.4 1.8-6 6-.6-4.2-1.8-5.4-6-6 4.2-.6 5.4-1.8 6-6z') ] },
+      emote:     { parts:[ C(12,12,9), P('M8.5 14a4.5 3 0 0 0 7 0'), C(9,10,0.8,{fill:color}), C(15,10,0.8,{fill:color}) ] },
+      banner:    { parts:[ P('M6 3h12v18l-6-4-6 4z') ] },
+      gift:      { parts:[ R(4,9,16,11,1), R(3,6,18,3,1), P('M12 6v14'), P('M12 6C11 3 7.5 3 7.5 5.2 7.5 7 10 6.6 12 6z'), P('M12 6c1-3 4.5-3 4.5-.8C16.5 7 14 6.6 12 6z') ] },
+      flame:     { parts:[ P('M12 22a6 6 0 0 0 6-6c0-4-3-6-4-9-1 2-1 4-2 4-1-1-1-3-1-5-3 2-5 5-5 10a6 6 0 0 0 6 6z') ] },
+      medal:     { parts:[ P('M9 3l2.5 7'), P('M15 3l-2.5 7'), C(12,15,5), P('M12 12.6l1 2 2.1.2-1.6 1.4.5 2.1-2-1.1-2 1.1.5-2.1-1.6-1.4 2.1-.2z',{fill:color}) ] },
+      trophy:    { parts:[ P('M7 4h10v5a5 5 0 0 1-10 0z'), P('M7 5H4.5v1.5A3.5 3.5 0 0 0 8 10'), P('M17 5h2.5v1.5A3.5 3.5 0 0 1 16 10'), P('M12 14v3'), P('M8.5 20h7'), P('M10 17h4') ] },
+      copy:      { parts:[ R(9,9,10,10,1.5), P('M5 15V6a1 1 0 0 1 1-1h9') ] },
+      chevron:   { parts:[ P('M6 9l6 6 6-6') ] },
+    };
+
+    const g = defs[this.props.glyph] || defs.target;
+    const isFill = !!g.fill;
+    const children = g.parts.map((p, i) => React.createElement(p[0], Object.assign({ key:i }, p[1])));
+    const svg = React.createElement('svg', {
+      width:size, height:size, viewBox:'0 0 24 24',
+      fill: isFill ? color : 'none',
+      stroke: isFill ? 'none' : color,
+      strokeWidth: sw, strokeLinecap:'round', strokeLinejoin:'round',
+      style:{ display:'block' },
+    }, children);
+
+    return { svg };
+  }
+}
+</script>
+</body>
+</html>

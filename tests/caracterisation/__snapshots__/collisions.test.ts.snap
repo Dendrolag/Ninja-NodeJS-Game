@@ -1,0 +1,12 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`deplacement au contact d un mur > produit l instantane de reference des positions tenables autour du mur 1`] = `
+[
+  "####.................##########",
+  "####.................##########",
+  "####.................##########",
+  "####.................##########",
+  "####.................##########",
+  "####.................##########",
+]
+`;

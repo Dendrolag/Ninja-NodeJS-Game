@@ -1,0 +1,89 @@
+/**
+ * Le point de depart du jeu dans le navigateur: le seul fichier que la page charge.
+ *
+ * IL NE CONTIENT AUCUNE LOGIQUE. Il fabrique les pieces de production (le
+ * transport Socket.IO, l'horloge du navigateur, le lecteur de sons, l'ecran de
+ * jeu PixiJS) et les donne a l'application. Tout le reste se teste sans
+ * navigateur, avec des pieces d'essai a la place de celles-ci.
+ *
+ * L'EMPAQUETEUR PART D'ICI (packages/client/scripts/empaqueter.ts). Il suit les
+ * imports et produit un seul fichier pour la page. Ce fichier n'est pas exporte
+ * par le paquet: l'importer executerait l'application.
+ *
+ * L'ADRESSE DU SERVEUR ET LA VERSION SONT ECRITES PAR L'EMPAQUETEUR (etape 5.3). Il
+ * remplace les deux constantes declarees ci-dessous par leur valeur; vides, la page
+ * parle au serveur qui l'a servie, sans version, comme en developpement. Voir
+ * configuration.ts.
+ *
+ * LA POLITIQUE DE SECURITE DU CONTENU interdit a la page d'evaluer du code fabrique
+ * a la volee. PixiJS le fait par defaut pour accelerer ses shaders; son module
+ * unsafe-eval le remplace par une version qui s'en passe. La politique est ecrite
+ * dans le paquet partage (page.ts): c'est une defense de plus contre une injection
+ * de code, la faille S1 du jeu d'origine.
+ */
+
+import 'pixi.js/unsafe-eval';
+
+import { creerClient } from './client.js';
+import { creerApiComptesHttp } from './comptes/api.js';
+import { creerCoffreDeJeton } from './comptes/coffre.js';
+import { configurationDeLaPage } from './configuration.js';
+import { horlogeNavigateur } from './horloge.js';
+import { monterApplication } from './interface/application.js';
+import { monterJeu } from './interface/ecrans/jeu.js';
+import { prechargerLaPartie } from './rendu/pixi.js';
+import { creerReseauSocketIo } from './reseauSocketIo.js';
+import { creerLecteurDeSons } from './sons/lecteur.js';
+
+/** L'origine du serveur de jeu, ecrite par l'empaqueteur. Vide: celle de la page. */
+declare const __SERVEUR_DE_JEU__: string;
+
+/** Le commit dont la page est construite, ecrit par l'empaqueteur. Vide en developpement. */
+declare const __VERSION_DU_JEU__: string;
+
+/**
+ * Le stockage du navigateur, s'il est permis d'y toucher.
+ *
+ * Un navigateur regle pour refuser les donnees de site leve une erreur a la
+ * simple lecture de localStorage: le jeu doit demarrer quand meme.
+ */
+function stockageDuNavigateur(): Storage | undefined {
+  try {
+    return globalThis.localStorage;
+  } catch {
+    return undefined;
+  }
+}
+
+const hote = document.getElementById('application');
+
+if (hote === null) {
+  throw new Error("La page ne contient pas l'element #application ou monter le jeu.");
+}
+
+const stockage = stockageDuNavigateur();
+const configuration = configurationDeLaPage(__SERVEUR_DE_JEU__, __VERSION_DU_JEU__);
+
+const client = creerClient({
+  reseau: creerReseauSocketIo(configuration),
+  horloge: horlogeNavigateur,
+  comptes: creerApiComptesHttp(configuration.url === undefined ? {} : { url: configuration.url }),
+  coffre: creerCoffreDeJeton(stockage),
+});
+
+monterApplication({
+  hote,
+  client,
+  sons: creerLecteurDeSons(),
+  horloge: horlogeNavigateur,
+  monterLeJeu: monterJeu,
+  // Un prechargement qui echoue n'a rien de grave: l'ecran de jeu recharge lui-meme
+  // ce qui lui manque, et dit s'il n'y parvient pas.
+  prechargerLeJeu: (reglages) => {
+    prechargerLaPartie(reglages.carte, reglages.modeMiroir).catch(() => undefined);
+  },
+  ...(stockage === undefined ? {} : { stockage }),
+});
+
+// Le lien s'ouvre une fois l'application montee: elle montre deja qu'il s'etablit.
+client.ouvrir();
