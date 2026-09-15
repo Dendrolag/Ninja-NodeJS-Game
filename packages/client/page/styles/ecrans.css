@@ -405,6 +405,13 @@
   justify-self: center;
 }
 
+/* Le code de secours se recopie: des caracteres de largeur egale, en capitales. */
+.champ-code {
+  font-family: var(--police-donnees);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .accueil-kanji {
   position: absolute;
   top: -40px;
@@ -1912,6 +1919,50 @@
 
 .profil-date {
   white-space: nowrap;
+}
+
+/* La securite du compte (etape 3.4): deux formulaires cote a cote, empiles sur un
+   ecran etroit. */
+.profil-securite {
+  display: grid;
+  gap: 12px;
+}
+
+.profil-securite h2 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.securite-formulaires {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+  gap: 12px;
+}
+
+.securite-formulaire {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  padding: 18px 20px;
+}
+
+.securite-formulaire h3 {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.securite-formulaire > .bouton {
+  justify-self: start;
+}
+
+.securite-aide {
+  color: var(--texte-secondaire);
+  font-size: 13px;
+}
+
+.securite-confirmation {
+  color: var(--vert);
+  font-size: 13px;
 }
 
 .tableau .ligue-hausse {

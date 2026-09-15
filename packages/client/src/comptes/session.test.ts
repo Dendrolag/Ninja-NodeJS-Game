@@ -172,6 +172,7 @@ describe('se connecter et s inscrire', () => {
       nature: 'connexion',
       pseudo: 'Alice',
       erreurs: [],
+      acceptee: false,
     });
 
     await laisserRepondre();
@@ -210,6 +211,7 @@ describe('se connecter et s inscrire', () => {
       nature: 'connexion',
       pseudo: 'Alice',
       erreurs: [{ champ: 'connexion', motif: 'Pseudo ou mot de passe incorrect.' }],
+      acceptee: false,
     });
     expect(coffre.lire()).toBeUndefined();
     expect(client.etat.ecran).toBe('connexion');

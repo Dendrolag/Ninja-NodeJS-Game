@@ -9,15 +9,23 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { BORNES_JETON, BORNES_MOT_DE_PASSE } from './bornes.js';
+import { BORNES_CODE_DE_SECOURS, BORNES_JETON, BORNES_MOT_DE_PASSE } from './bornes.js';
 import type { ResultatValidation } from './validation.js';
 import {
+  formaterCodeDeSecours,
+  validerCodeDeSecours,
+  validerDemandeChangementMotDePasse,
+  validerDemandeCodeDeSecours,
   validerDemandeConnexion,
   validerDemandeCreation,
   validerDemandeInscription,
+  validerDemandeReinitialisation,
   validerJeton,
   validerMotDePasse,
 } from './validation.js';
+
+/** Un code de secours normalise, de la forme de ceux que le serveur fabrique. */
+const CODE = 'K7QM3X9DTP4W8HNE';
 
 /** La valeur acceptee, ou un echec de test explicite si elle a ete refusee. */
 function valeurAcceptee<T>(resultat: ResultatValidation<T>): T {
@@ -71,6 +79,121 @@ describe('validerMotDePasse', () => {
   it('refuse ce qui n est pas du texte', () => {
     expect(champsRefuses(validerMotDePasse(12345678))).toEqual(['motDePasse']);
     expect(champsRefuses(validerMotDePasse(undefined))).toEqual(['motDePasse']);
+  });
+
+  it('nomme le champ demande dans ses erreurs', () => {
+    expect(champsRefuses(validerMotDePasse('court', 'nouveauMotDePasse'))).toEqual([
+      'nouveauMotDePasse',
+    ]);
+  });
+});
+
+describe('validerCodeDeSecours', () => {
+  it('accepte un code normalise, et le rend tel quel', () => {
+    expect(BORNES_CODE_DE_SECOURS.forme.test(CODE)).toBe(true);
+    expect(valeurAcceptee(validerCodeDeSecours(CODE))).toBe(CODE);
+  });
+
+  it('pardonne la casse, les espaces et les tirets d une recopie', () => {
+    expect(valeurAcceptee(validerCodeDeSecours(' k7qm-3x9d tp4w-8hne '))).toBe(CODE);
+  });
+
+  it('lit O comme zero, I et L comme un', () => {
+    expect(valeurAcceptee(validerCodeDeSecours('OOOO-IIII-LLLL-oil0'))).toBe('0000111111110110');
+  });
+
+  it('accepte chacun des trente-deux caracteres de l alphabet', () => {
+    const { alphabet } = BORNES_CODE_DE_SECOURS;
+
+    expect(alphabet).toHaveLength(32);
+    expect(valeurAcceptee(validerCodeDeSecours(alphabet.slice(0, 16)))).toBe(alphabet.slice(0, 16));
+    expect(valeurAcceptee(validerCodeDeSecours(alphabet.slice(16)))).toBe(alphabet.slice(16));
+  });
+
+  it('refuse un code trop court, trop long, ou qui porte un U', () => {
+    expect(champsRefuses(validerCodeDeSecours(CODE.slice(1)))).toEqual(['codeDeSecours']);
+    expect(champsRefuses(validerCodeDeSecours(`${CODE}0`))).toEqual(['codeDeSecours']);
+    expect(champsRefuses(validerCodeDeSecours(`U${CODE.slice(1)}`))).toEqual(['codeDeSecours']);
+  });
+
+  it('refuse une saisie demesuree, meme faite d espaces, et ce qui n est pas du texte', () => {
+    const noye = `${' '.repeat(BORNES_CODE_DE_SECOURS.saisieMaximum)}${CODE}`;
+
+    expect(champsRefuses(validerCodeDeSecours(noye))).toEqual(['codeDeSecours']);
+    expect(champsRefuses(validerCodeDeSecours(42))).toEqual(['codeDeSecours']);
+  });
+});
+
+describe('formaterCodeDeSecours', () => {
+  it('ecrit quatre groupes de quatre separes par des tirets, que la validation relit', () => {
+    const affiche = formaterCodeDeSecours(CODE);
+
+    expect(affiche).toBe('K7QM-3X9D-TP4W-8HNE');
+    expect(valeurAcceptee(validerCodeDeSecours(affiche))).toBe(CODE);
+  });
+});
+
+describe('validerDemandeChangementMotDePasse', () => {
+  it('accepte le mot de passe actuel sans longueur minimale, et un nouveau conforme', () => {
+    expect(
+      valeurAcceptee(
+        validerDemandeChangementMotDePasse({ motDePasse: 'x', nouveauMotDePasse: 'secret123' }),
+      ),
+    ).toEqual({ motDePasse: 'x', nouveauMotDePasse: 'secret123' });
+  });
+
+  it('rend toutes les erreurs ensemble, chacune sous son champ', () => {
+    expect(
+      champsRefuses(validerDemandeChangementMotDePasse({ motDePasse: 3, nouveauMotDePasse: 'a' })),
+    ).toEqual(['motDePasse', 'nouveauMotDePasse']);
+  });
+
+  it('refuse ce qui n est pas un objet', () => {
+    expect(champsRefuses(validerDemandeChangementMotDePasse('secret123'))).toEqual(['changement']);
+  });
+});
+
+describe('validerDemandeCodeDeSecours', () => {
+  it('accepte le mot de passe actuel, et refuse ce qui n en est pas un', () => {
+    expect(valeurAcceptee(validerDemandeCodeDeSecours({ motDePasse: 'x' }))).toEqual({
+      motDePasse: 'x',
+    });
+    expect(champsRefuses(validerDemandeCodeDeSecours({}))).toEqual(['motDePasse']);
+    expect(champsRefuses(validerDemandeCodeDeSecours(null))).toEqual(['code']);
+  });
+
+  it('refuse un mot de passe demesure', () => {
+    const demesure = 'a'.repeat(BORNES_MOT_DE_PASSE.longueur.maximum + 1);
+
+    expect(champsRefuses(validerDemandeCodeDeSecours({ motDePasse: demesure }))).toEqual([
+      'motDePasse',
+    ]);
+  });
+});
+
+describe('validerDemandeReinitialisation', () => {
+  it('accepte une demande valide, pseudo et code normalises', () => {
+    expect(
+      valeurAcceptee(
+        validerDemandeReinitialisation({
+          pseudo: ' Alice ',
+          codeDeSecours: 'k7qm-3x9d-tp4w-8hne',
+          nouveauMotDePasse: 'secret123',
+        }),
+      ),
+    ).toEqual({ pseudo: 'Alice', codeDeSecours: CODE, nouveauMotDePasse: 'secret123' });
+  });
+
+  it('rend toutes les erreurs ensemble', () => {
+    expect(
+      champsRefuses(
+        validerDemandeReinitialisation({ pseudo: '', codeDeSecours: 'abc', nouveauMotDePasse: '' }),
+      ),
+    ).toEqual(['pseudo', 'codeDeSecours', 'nouveauMotDePasse']);
+  });
+
+  it('refuse ce qui n est pas un objet', () => {
+    expect(champsRefuses(validerDemandeReinitialisation(undefined))).toEqual(['reinitialisation']);
   });
 });
 

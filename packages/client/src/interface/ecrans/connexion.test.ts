@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Client } from '../../client.js';
 import { creerClient } from '../../client.js';
 import type { ApiComptesFactice } from '../../comptes/api.js';
-import { creerApiComptesFactice } from '../../comptes/api.js';
+import { CODE_DESSAI, creerApiComptesFactice } from '../../comptes/api.js';
 import { creerHorlogeClientManuelle } from '../../horloge.js';
 import { creerReseauFactice } from '../../reseau.js';
 import {
@@ -157,5 +157,62 @@ describe('l ecran de connexion', () => {
     boutonObligatoire(document, 'Continuer en invité').click();
 
     expect(client.etat.ecran).toBe('accueil');
+  });
+});
+
+describe('le mot de passe oublie (etape 3.4)', () => {
+  it('ne demande le code de secours que dans le mot de passe oublie, et en revient', () => {
+    expect(estCache(champ('code-de-secours'))).toBe(true);
+
+    boutonObligatoire(document, 'Mot de passe oublié ?').click();
+
+    expect(estCache(champ('code-de-secours'))).toBe(false);
+    expect(estCache(obligatoire(document, '.onglets'))).toBe(true);
+    expect(obligatoire(document, '.connexion-titre').textContent).toBe('Mot de passe oublié');
+
+    boutonObligatoire(document, 'Retour à la connexion').click();
+
+    expect(estCache(champ('code-de-secours'))).toBe(true);
+    expect(envoi().textContent).toBe('Se connecter');
+  });
+
+  it('efface le mot de passe saisi en changeant de formulaire', () => {
+    saisir(champ('mot-de-passe'), 'mauvais');
+
+    boutonObligatoire(document, 'Mot de passe oublié ?').click();
+
+    expect(champ('mot-de-passe').value).toBe('');
+    expect(champ('mot-de-passe').getAttribute('autocomplete')).toBe('new-password');
+  });
+
+  it('reinitialise avec le code de secours, et connecte', async () => {
+    boutonObligatoire(document, 'Mot de passe oublié ?').click();
+    saisir(champ('pseudo'), 'Alice');
+    saisir(champ('code-de-secours'), 'k7qm-3x9d-tp4w-8hne');
+    saisir(champ('mot-de-passe'), 'nouveau secret');
+    soumettre(formulaire());
+    await laisserRepondre();
+
+    expect(api.appels[0]).toEqual({
+      nom: 'reinitialiser',
+      argument: {
+        pseudo: 'Alice',
+        codeDeSecours: 'K7QM3X9DTP4W8HNE',
+        nouveauMotDePasse: 'nouveau secret',
+      },
+    });
+    expect(client.etat.session.nature).toBe('compte');
+    expect(client.etat.codeDeSecours).toBe(CODE_DESSAI);
+  });
+
+  it('montre un code mal forme a la tentative d envoi, sans rien envoyer', () => {
+    boutonObligatoire(document, 'Mot de passe oublié ?').click();
+    saisir(champ('pseudo'), 'Alice');
+    saisir(champ('code-de-secours'), 'abc');
+    saisir(champ('mot-de-passe'), 'nouveau secret');
+    soumettre(formulaire());
+
+    expect(fautesVisibles()).toEqual([expect.stringContaining('16')]);
+    expect(api.appels).toEqual([]);
   });
 });

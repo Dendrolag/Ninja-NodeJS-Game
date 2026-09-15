@@ -28,9 +28,25 @@
  *
  * LE JETON N'ENTRE PAS DANS L'ETAT. L'etat se serialise, se compare et se montre
  * dans les tests: un secret n'a rien a y faire. Seul le coffre le connait.
+ *
+ * LE MOT DE PASSE SE GERE ICI AUSSI (etape 3.4). Un mot de passe oublie se
+ * reinitialise avec le code de secours, comme une connexion: la session obtenue
+ * remplace celle d'invite. Changer son mot de passe et demander un nouveau code se
+ * font depuis le profil, avec la session du compte, qui ne change pas. Chacune de
+ * ces demandes, et l'inscription, remet un code de secours: il entre dans l'etat
+ * pour s'afficher, a l'inverse du jeton, et en sort des que le joueur l'a note.
  */
 
-import type { DemandeConnexion, DemandeInscription, SessionOuverte } from '@neon-ninja/shared';
+import type {
+  CodeDeSecoursEmis,
+  DemandeChangementMotDePasse,
+  DemandeCodeDeSecours,
+  DemandeConnexion,
+  DemandeInscription,
+  DemandeReinitialisation,
+  SessionInscrite,
+  SessionOuverte,
+} from '@neon-ninja/shared';
 
 import type { NatureDemandeDeCompte } from '../etat.js';
 import type { Magasin } from '../magasin.js';
@@ -66,6 +82,17 @@ export interface CommandesDeSession {
   seDeconnecter(): void;
   /** Lit le profil du compte. Sans effet pour un invite, ou pendant qu'une lecture attend. */
   chargerLeProfil(): void;
+  /**
+   * Choisit un nouveau mot de passe avec le code de secours, puis rouvre le lien avec
+   * la session obtenue (etape 3.4).
+   */
+  reinitialiserMotDePasse(demande: DemandeReinitialisation): void;
+  /** Change le mot de passe du compte connecte (etape 3.4). Sans effet pour un invite. */
+  changerMotDePasse(demande: DemandeChangementMotDePasse): void;
+  /** Demande un nouveau code de secours pour le compte connecte (etape 3.4). */
+  demanderUnCodeDeSecours(demande: DemandeCodeDeSecours): void;
+  /** Le joueur a note son code de secours: il est oublie (etape 3.4). */
+  noterLeCodeDeSecours(): void;
 }
 
 /** Le motif d'une demande de compte sans comptes a joindre. */
@@ -81,6 +108,16 @@ export function brancherLaSession(options: OptionsSession): CommandesDeSession {
   const ouvrirLeLien = (jeton: string | undefined): void => {
     magasin.appliquer({ type: 'ouvertureDemandee' });
     reseau.ouvrir(jeton === undefined ? {} : { jeton });
+  };
+
+  /**
+   * La session gardee n'ouvre plus rien: on l'oublie, on rouvre le lien en invite, et
+   * l'accueil dira qu'elle a expire.
+   */
+  const perdreLaSession = (): void => {
+    coffre.oublier();
+    magasin.appliquer({ type: 'sessionDInvite', expiree: true });
+    ouvrirLeLien(undefined);
   };
 
   /** Le demarrage: verifier la session gardee, puis ouvrir. */
@@ -113,9 +150,7 @@ export function brancherLaSession(options: OptionsSession): CommandesDeSession {
     }
 
     if (reponse.statut === STATUT_SESSION_ABSENTE) {
-      coffre.oublier();
-      magasin.appliquer({ type: 'sessionDInvite', expiree: true });
-      ouvrirLeLien(undefined);
+      perdreLaSession();
       return;
     }
 
@@ -149,15 +184,17 @@ export function brancherLaSession(options: OptionsSession): CommandesDeSession {
   );
 
   /**
-   * Envoie une demande de connexion ou d'inscription, puis ouvre la session obtenue.
+   * Envoie une demande de connexion, d'inscription ou de reinitialisation, puis ouvre
+   * la session obtenue.
    *
    * Le jeton n'est garde qu'une fois la progression lue: un compte dont on ne sait
-   * rien afficher ne doit pas remplacer la session d'invite.
+   * rien afficher ne doit pas remplacer la session d'invite. Le code de secours, lui,
+   * se montre des qu'il arrive, meme si la suite echoue: le serveur ne le rendra plus.
    */
   const demanderUneSession = (
     nature: NatureDemandeDeCompte,
     pseudo: string,
-    envoyer: (comptes: ApiComptes) => Promise<ReponseDesComptes<SessionOuverte>>,
+    envoyer: (comptes: ApiComptes) => Promise<ReponseDesComptes<SessionOuverte | SessionInscrite>>,
   ): void => {
     if (magasin.etat.demandeDeCompte.enCours || !horsPartie()) {
       return;
@@ -181,6 +218,10 @@ export function brancherLaSession(options: OptionsSession): CommandesDeSession {
         return;
       }
 
+      if ('codeDeSecours' in session.valeur) {
+        magasin.appliquer({ type: 'codeDeSecoursEmis', code: session.valeur.codeDeSecours });
+      }
+
       const { jeton } = session.valeur;
       const progression = await api.moi(jeton);
 
@@ -193,6 +234,53 @@ export function brancherLaSession(options: OptionsSession): CommandesDeSession {
       magasin.appliquer({ type: 'sessionDeCompte', progression: progression.valeur });
       ouvrirLeLien(jeton);
     })();
+  };
+
+  /**
+   * Envoie une demande faite depuis le profil, qui porte sur le compte connecte et
+   * rend un nouveau code de secours (etape 3.4).
+   *
+   * Une session que le serveur ne reconnait plus se traite comme a la lecture du
+   * profil. Un mot de passe faux, lui, est un refus comme un autre (403): il ne
+   * deconnecte pas.
+   */
+  const demanderDepuisLeProfil = (
+    nature: 'motDePasse' | 'codeDeSecours',
+    envoyer: (comptes: ApiComptes, jeton: string) => Promise<ReponseDesComptes<CodeDeSecoursEmis>>,
+  ): void => {
+    const jeton = coffre.lire();
+
+    if (
+      api === undefined ||
+      jeton === undefined ||
+      magasin.etat.session.nature !== 'compte' ||
+      magasin.etat.demandeDeCompte.enCours ||
+      !horsPartie()
+    ) {
+      return;
+    }
+
+    magasin.appliquer({ type: 'demandeDeCompteEnvoyee', nature, pseudo: undefined });
+
+    void envoyer(api, jeton).then((reponse) => {
+      // Le joueur a change de session pendant l'attente: la reponse ne le concerne plus.
+      if (coffre.lire() !== jeton) {
+        return;
+      }
+
+      if (reponse.acceptee) {
+        magasin.appliquer({ type: 'codeDeSecoursEmis', code: reponse.valeur.codeDeSecours });
+        magasin.appliquer({ type: 'demandeDeCompteAcceptee' });
+        return;
+      }
+
+      if (reponse.statut === STATUT_SESSION_ABSENTE && horsPartie()) {
+        perdreLaSession();
+        return;
+      }
+
+      magasin.appliquer({ type: 'demandeDeCompteRefusee', erreurs: reponse.erreurs });
+    });
   };
 
   return {
@@ -280,9 +368,7 @@ export function brancherLaSession(options: OptionsSession): CommandesDeSession {
         }
 
         if (reponse.statut === STATUT_SESSION_ABSENTE && horsPartie()) {
-          coffre.oublier();
-          magasin.appliquer({ type: 'sessionDInvite', expiree: true });
-          ouvrirLeLien(undefined);
+          perdreLaSession();
           return;
         }
 
@@ -291,6 +377,30 @@ export function brancherLaSession(options: OptionsSession): CommandesDeSession {
           motif: reponse.erreurs.map((erreur) => erreur.motif).join(' '),
         });
       });
+    },
+
+    reinitialiserMotDePasse: (demande) => {
+      demanderUneSession('reinitialisation', demande.pseudo, (comptes) =>
+        comptes.reinitialiser(demande),
+      );
+    },
+
+    changerMotDePasse: (demande) => {
+      demanderDepuisLeProfil('motDePasse', (comptes, jeton) =>
+        comptes.changerMotDePasse(jeton, demande),
+      );
+    },
+
+    demanderUnCodeDeSecours: (demande) => {
+      demanderDepuisLeProfil('codeDeSecours', (comptes, jeton) =>
+        comptes.nouveauCodeDeSecours(jeton, demande),
+      );
+    },
+
+    noterLeCodeDeSecours: () => {
+      if (magasin.etat.codeDeSecours !== undefined) {
+        magasin.appliquer({ type: 'codeDeSecoursNote' });
+      }
     },
   };
 }

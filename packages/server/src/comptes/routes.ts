@@ -1,6 +1,7 @@
 /**
- * Les routes HTTP des comptes: inscription, connexion, deconnexion, progression et
- * profil.
+ * Les routes HTTP des comptes: inscription, connexion, deconnexion, progression,
+ * profil et, depuis l'etape 3.4, changement de mot de passe, code de secours et
+ * reinitialisation.
  *
  * CE FICHIER TRADUIT, IL NE DECIDE RIEN. Il lit la requete (corps JSON, jeton en
  * en-tete, adresse), appelle le service, et traduit sa reponse en code HTTP. Toute
@@ -36,6 +37,7 @@ const CODES_DES_REFUS: Record<MotifDeRefus, number> = {
   pseudoPris: 409,
   identifiantsIncorrects: 401,
   sessionAbsente: 401,
+  motDePasseIncorrect: 403,
   tropDeTentatives: 429,
 };
 
@@ -98,6 +100,38 @@ export function routesDesComptes(
     }
 
     repondre(reponse, await service.profil(jeton), 200);
+  });
+
+  routes.post('/mot-de-passe', async (requete, reponse) => {
+    const jeton = jetonDe(requete);
+    if (jeton === undefined) {
+      refuserSansSession(reponse);
+      return;
+    }
+
+    repondre(
+      reponse,
+      await service.changerMotDePasse(jeton, requete.body, adresseDe(requete)),
+      200,
+    );
+  });
+
+  routes.post('/code-de-secours', async (requete, reponse) => {
+    const jeton = jetonDe(requete);
+    if (jeton === undefined) {
+      refuserSansSession(reponse);
+      return;
+    }
+
+    repondre(
+      reponse,
+      await service.nouveauCodeDeSecours(jeton, requete.body, adresseDe(requete)),
+      200,
+    );
+  });
+
+  routes.post('/reinitialisation', async (requete, reponse) => {
+    repondre(reponse, await service.reinitialiser(requete.body, adresseDe(requete)), 200);
   });
 
   routes.use((_requete, reponse) => {

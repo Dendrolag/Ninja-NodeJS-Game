@@ -150,6 +150,38 @@ export const BORNES_JETON = {
 } as const;
 
 /**
+ * Code de secours d'un compte (etape 3.4).
+ *
+ * CE QUI REMPLACE LE MOT DE PASSE OUBLIE. Les comptes n'ont aucun moyen de joindre
+ * le joueur: a chaque nouveau mot de passe, le serveur lui remet un code a noter,
+ * qui permet d'en choisir un autre sans session. Decision du porteur du projet du
+ * 15 septembre 2026.
+ *
+ * SEIZE CARACTERES DE L'ALPHABET DE CROCKFORD, soit quatre-vingts bits tires au
+ * hasard par le serveur. Cet alphabet ecarte les lettres qu'on confond en les
+ * recopiant: ni I ni L (pris pour 1), ni O (pris pour 0), ni U. Le code s'affiche
+ * en quatre groupes de quatre, separes par des tirets.
+ *
+ * LA SAISIE PARDONNE. La casse, les espaces et les tirets ne comptent pas, et O se
+ * lit 0, I et L se lisent 1: un code recopie a la main doit ouvrir le compte.
+ */
+export const BORNES_CODE_DE_SECOURS = {
+  /** Les trente-deux caracteres admis, dans l'ordre de leur valeur. */
+  alphabet: '0123456789ABCDEFGHJKMNPQRSTVWXYZ',
+  /** Longueur du code, sans ses tirets. */
+  longueur: 16,
+  /** Taille d'un groupe a l'affichage. */
+  groupe: 4,
+  /** La forme d'un code une fois normalise. */
+  forme: /^[0-9A-HJKMNP-TV-Z]{16}$/u,
+  /**
+   * Longueur maximale d'une saisie, espaces et tirets compris, avant normalisation.
+   * Au-dela, ce n'est pas un code recopie avec des espaces en trop.
+   */
+  saisieMaximum: 64,
+} as const;
+
+/**
  * Combien de temps une partie en cours garde la place d'un joueur dont le lien est
  * tombe (etape 2.5), en millisecondes.
  *

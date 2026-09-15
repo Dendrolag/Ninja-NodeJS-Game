@@ -126,6 +126,11 @@ import { SANS_TERRAIN } from './terrain.js';
 export interface DonneesDeConnexion {
   /** Le compte dont la connexion a presente la session. Absent: un invite. */
   compteId?: string;
+  /**
+   * Le jeton de cette session, garde pour revoir plus tard si elle ouvre toujours
+   * quelque chose (etape 3.4). Il ne quitte jamais le serveur.
+   */
+  jeton?: string;
 }
 
 /** Le serveur Socket.IO, type par les deux contrats d'evenements. */
@@ -170,6 +175,8 @@ interface Connexion {
   readonly socket: SocketTypee;
   /** Le compte identifie a l'ouverture de la connexion. Absent: un invite. */
   readonly compteId: string | undefined;
+  /** Le jeton de la session presentee a l'ouverture. Absent: un invite. */
+  readonly jeton: string | undefined;
   /**
    * L'identite du joueur, etablie a l'entree en partie et jamais relue d'un
    * message. Absente tant que la connexion n'est entree nulle part.
@@ -266,6 +273,9 @@ export class ServeurSocket {
   /** La version du jeu que ce serveur fait tourner, s'il en a une. */
   private readonly version: string | undefined;
 
+  /** Retire l'ecoute des sessions fermees, posee aupres de l'annuaire (etape 3.4). */
+  private readonly arreterLEcouteDesSessions: (() => void) | undefined;
+
   constructor(options: OptionsServeurSocket) {
     this.io = options.io;
     this.horloge = options.horloge ?? horlogeSysteme;
@@ -274,6 +284,10 @@ export class ServeurSocket {
     this.terrains = options.terrains ?? SANS_TERRAIN;
     this.comptes = options.comptes;
     this.version = options.version;
+
+    this.arreterLEcouteDesSessions = this.comptes?.surSessionsFermees((compteId) => {
+      void this.couperLesSessionsFermees(compteId);
+    });
 
     // L'identification passe AVANT l'acceptation de la connexion: une connexion
     // dont la session est refusee n'existe jamais pour la couche jeu.
@@ -295,6 +309,8 @@ export class ServeurSocket {
    * l'appelant, qui l'a monte sur son serveur HTTP et sait quand l'eteindre.
    */
   fermer(): void {
+    this.arreterLEcouteDesSessions?.();
+
     for (const decompte of this.decomptes.values()) {
       decompte.arreter();
     }
@@ -383,11 +399,52 @@ export class ServeurSocket {
       }
 
       socket.data.compteId = compteId;
+      socket.data.jeton = jeton.valeur;
       return undefined;
     } catch (erreur) {
       console.error("La session d'une connexion n'a pas pu etre verifiee:", erreur);
       return new Error("La session n'a pas pu être vérifiée. Réessayez.");
     }
+  }
+
+  /**
+   * Coupe les connexions de ce compte dont la session vient d'etre fermee (etape 3.4).
+   *
+   * Un changement de mot de passe ferme les autres sessions du compte, une
+   * reinitialisation les ferme toutes. Sans cette coupure, un intrus deja connecte
+   * garderait sa connexion, et sa partie, jusqu'a ce qu'il la quitte. Chaque connexion
+   * du compte revoit donc sa session: celles qui n'en ouvrent plus sont coupees, les
+   * autres restent, dont celle de la page qui a fait la demande. Coupee en pleine
+   * partie, une connexion laisse sa place comme toute coupure (etape 2.5); pour la
+   * reprendre, il lui faudrait une session.
+   *
+   * Si la base ne repond pas, la connexion est gardee: la couper sur un doute ferait
+   * sortir de sa partie le joueur meme qui vient de changer son mot de passe.
+   */
+  private async couperLesSessionsFermees(compteId: string): Promise<void> {
+    const comptes = this.comptes;
+
+    if (comptes === undefined) {
+      return;
+    }
+
+    const duCompte = [...this.connexions.values()].filter(
+      (connexion) => connexion.compteId === compteId,
+    );
+
+    await Promise.all(
+      duCompte.map(async ({ socket, jeton }) => {
+        try {
+          const ouvre = jeton === undefined ? undefined : await comptes.compteDeSession(jeton);
+
+          if (ouvre !== compteId) {
+            socket.disconnect();
+          }
+        } catch (erreur) {
+          console.error("La session d'une connexion n'a pas pu etre revue:", erreur);
+        }
+      }),
+    );
   }
 
   /** Enregistre une nouvelle connexion et branche ses gestionnaires. */
@@ -397,6 +454,7 @@ export class ServeurSocket {
     this.connexions.set(socket.id, {
       socket,
       compteId: socket.data.compteId,
+      jeton: socket.data.jeton,
       session: undefined,
       idRoom: undefined,
       seaux: {

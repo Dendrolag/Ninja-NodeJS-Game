@@ -21,11 +21,16 @@
  */
 
 import type {
+  CodeDeSecoursEmis,
+  DemandeChangementMotDePasse,
+  DemandeCodeDeSecours,
   DemandeConnexion,
   DemandeInscription,
+  DemandeReinitialisation,
   ErreurValidation,
   MaProgression,
   ProfilDuCompte,
+  SessionInscrite,
   SessionOuverte,
 } from '@neon-ninja/shared';
 import { PREFIXE_JETON_HTTP, ROUTES_COMPTES } from '@neon-ninja/shared';
@@ -48,8 +53,8 @@ export const STATUT_SESSION_ABSENTE = 401;
 
 /** Ce que le client demande aux comptes. */
 export interface ApiComptes {
-  /** Cree un compte et ouvre sa premiere session. */
-  inscrire(demande: DemandeInscription): Promise<ReponseDesComptes<SessionOuverte>>;
+  /** Cree un compte, ouvre sa premiere session, et rend son code de secours. */
+  inscrire(demande: DemandeInscription): Promise<ReponseDesComptes<SessionInscrite>>;
   /** Verifie des identifiants et ouvre une session. */
   connecter(demande: DemandeConnexion): Promise<ReponseDesComptes<SessionOuverte>>;
   /** Ferme la session de ce jeton. */
@@ -58,6 +63,24 @@ export interface ApiComptes {
   moi(jeton: string): Promise<ReponseDesComptes<MaProgression>>;
   /** Le profil du compte dont ce jeton ouvre la session. */
   profil(jeton: string): Promise<ReponseDesComptes<ProfilDuCompte>>;
+  /**
+   * Change le mot de passe du compte de cette session, et rend son nouveau code de
+   * secours (etape 3.4). Un mot de passe actuel faux est refuse en 403.
+   */
+  changerMotDePasse(
+    jeton: string,
+    demande: DemandeChangementMotDePasse,
+  ): Promise<ReponseDesComptes<CodeDeSecoursEmis>>;
+  /** Remplace le code de secours du compte de cette session (etape 3.4). */
+  nouveauCodeDeSecours(
+    jeton: string,
+    demande: DemandeCodeDeSecours,
+  ): Promise<ReponseDesComptes<CodeDeSecoursEmis>>;
+  /**
+   * Choisit un nouveau mot de passe avec le code de secours, sans session, et ouvre
+   * une session neuve (etape 3.4).
+   */
+  reinitialiser(demande: DemandeReinitialisation): Promise<ReponseDesComptes<SessionInscrite>>;
 }
 
 /** Ce qui envoie une requete HTTP: fetch, ou une piece d'essai qui lui ressemble. */
@@ -158,14 +181,25 @@ export function creerApiComptesHttp(options: OptionsApiComptesHttp = {}): ApiCom
       demander(ROUTES_COMPTES.moi, { method: 'GET', headers: entetesDuJeton(jeton) }, true),
     profil: (jeton) =>
       demander(ROUTES_COMPTES.profil, { method: 'GET', headers: entetesDuJeton(jeton) }, true),
+    changerMotDePasse: (jeton, demande) =>
+      demander(ROUTES_COMPTES.motDePasse, envoiJson(demande, jeton), true),
+    nouveauCodeDeSecours: (jeton, demande) =>
+      demander(ROUTES_COMPTES.codeDeSecours, envoiJson(demande, jeton), true),
+    reinitialiser: (demande) => demander(ROUTES_COMPTES.reinitialisation, envoiJson(demande), true),
   };
 }
 
-/** Une requete POST qui porte une demande en JSON. */
-function envoiJson(demande: DemandeConnexion | DemandeInscription): RequestInit {
+/**
+ * Une requete POST qui porte une demande en JSON, et le jeton de la session s'il y
+ * en a un.
+ */
+function envoiJson(demande: object, jeton?: string): RequestInit {
   return {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(jeton === undefined ? {} : entetesDuJeton(jeton)),
+    },
     body: JSON.stringify(demande),
   };
 }
@@ -226,6 +260,9 @@ function refusee<T>(statut: number, motif: string): ReponseDesComptes<T> {
 /** Le jeton que rend la version d'essai. Il a la forme des vrais. */
 export const JETON_DESSAI = 'j'.repeat(43);
 
+/** Le code de secours que rend la version d'essai. Il a la forme des vrais. */
+export const CODE_DESSAI = 'K7QM-3X9D-TP4W-8HNE';
+
 /** Une requete recue par la version d'essai. */
 export interface AppelDesComptes {
   readonly nom: keyof ApiComptes;
@@ -280,9 +317,26 @@ export function creerApiComptesFactice(): ApiComptesFactice {
       dernierPseudo = demande.pseudo;
       return {
         acceptee: true,
-        valeur: { jeton: JETON_DESSAI, compte: { pseudo: demande.pseudo, niveau: 1 } },
+        valeur: {
+          jeton: JETON_DESSAI,
+          compte: { pseudo: demande.pseudo, niveau: 1 },
+          codeDeSecours: CODE_DESSAI,
+        },
       };
     },
+    reinitialiser: async (demande) => {
+      dernierPseudo = demande.pseudo;
+      return {
+        acceptee: true,
+        valeur: {
+          jeton: JETON_DESSAI,
+          compte: { pseudo: demande.pseudo, niveau: 1 },
+          codeDeSecours: CODE_DESSAI,
+        },
+      };
+    },
+    changerMotDePasse: async () => ({ acceptee: true, valeur: { codeDeSecours: CODE_DESSAI } }),
+    nouveauCodeDeSecours: async () => ({ acceptee: true, valeur: { codeDeSecours: CODE_DESSAI } }),
     connecter: async (demande) => {
       dernierPseudo = demande.pseudo;
       return {
@@ -317,6 +371,18 @@ export function creerApiComptesFactice(): ApiComptesFactice {
     profil: (jeton) => {
       appels.push({ nom: 'profil', argument: jeton });
       return reponses.profil(jeton);
+    },
+    changerMotDePasse: (jeton, demande) => {
+      appels.push({ nom: 'changerMotDePasse', argument: { jeton, demande } });
+      return reponses.changerMotDePasse(jeton, demande);
+    },
+    nouveauCodeDeSecours: (jeton, demande) => {
+      appels.push({ nom: 'nouveauCodeDeSecours', argument: { jeton, demande } });
+      return reponses.nouveauCodeDeSecours(jeton, demande);
+    },
+    reinitialiser: (demande) => {
+      appels.push({ nom: 'reinitialiser', argument: demande });
+      return reponses.reinitialiser(demande);
     },
   };
 }

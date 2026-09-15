@@ -1,6 +1,8 @@
 /**
  * L'authentification: inscrire, connecter, reconnaitre une session. Et, depuis
  * l'etape 3.3, enregistrer la fin d'une partie pour les comptes qui l'ont jouee.
+ * Depuis l'etape 3.4, gerer le mot de passe: le changer, obtenir un code de secours,
+ * et reinitialiser avec ce code un mot de passe oublie.
  *
  * C'est l'implementation, avec la base, de l'annuaire et du service de
  * annuaire.ts. Elle assemble des briques qui ont chacune leur fichier: la
@@ -16,26 +18,37 @@
  *      leurre, pour que la duree ne revele pas lequel des deux etait faux.
  *   2. LA LIMITE DE TENTATIVES PASSE AVANT LE MOT DE PASSE. Une tentative de trop
  *      est refusee sans calcul ni requete: le mot de passe n'est pas examine, si
- *      bien qu'un bon mot de passe trouve pendant la penalite ne sert a rien.
+ *      bien qu'un bon mot de passe trouve pendant la penalite ne sert a rien. Toute
+ *      verification d'un secret passe par les memes seaux, ceux de la connexion:
+ *      changer son mot de passe, demander un code de secours et reinitialiser
+ *      n'ouvrent pas un essai de plus que se connecter (etape 3.4).
  *   3. LE NIVEAU SE DEDUIT DE L'XP A CHAQUE LECTURE (niveauDeXp, paquet partage).
  *      Il n'est jamais stocke, ni en base ni dans la session.
  */
 
+import { timingSafeEqual } from 'node:crypto';
+
 import type {
+  CodeDeSecoursEmis,
   ErreurValidation,
   LimiteDebit,
   MaProgression,
   PartieDuProfil,
   ProfilDuCompte,
+  SessionInscrite,
   SessionOuverte,
 } from '@neon-ninja/shared';
 import {
   LIMITES_COMPTES,
   PARTIES_DU_PROFIL,
+  formaterCodeDeSecours,
   niveauDeXp,
   reperePseudo,
+  validerDemandeChangementMotDePasse,
+  validerDemandeCodeDeSecours,
   validerDemandeConnexion,
   validerDemandeInscription,
+  validerDemandeReinitialisation,
 } from '@neon-ninja/shared';
 
 import {
@@ -53,6 +66,13 @@ import type {
   StatistiquesEnregistrees,
 } from '../base/parties.js';
 import { enregistrerPartie, lireHistorique, statistiquesDuCompte } from '../base/parties.js';
+import {
+  codeParPseudo,
+  consommerCodeDeSecours,
+  remplacerCodeDeSecours,
+  remplacerMotDePasse,
+  secretsDuCompte,
+} from '../base/secrets.js';
 import { compteDeLaSession, fermerSession, ouvrirSession } from '../base/sessions.js';
 import type { Horloge } from '../horloge.js';
 import { horlogeSysteme } from '../horloge.js';
@@ -62,6 +82,7 @@ import type {
   ReponseDeCompte,
   ServiceDeComptes,
 } from './annuaire.js';
+import { empreinteDuCode, fabriquerCodeDeSecours } from './codeDeSecours.js';
 import { empreinteDuJeton, fabriquerJeton } from './jetons.js';
 import { LimiteurDeTentatives } from './limiteur.js';
 import type { ParametresScrypt } from './motDePasse.js';
@@ -99,6 +120,15 @@ export interface OptionsAuthentification {
 /** Le motif unique d'identifiants refuses, qu'il s'agisse du pseudo ou du mot de passe. */
 const IDENTIFIANTS_INCORRECTS = 'Pseudo ou mot de passe incorrect.';
 
+/**
+ * Le motif unique d'une reinitialisation refusee: pseudo inconnu, compte sans code,
+ * code faux ou deja servi (etape 3.4).
+ */
+export const CODE_DE_SECOURS_INCORRECT = 'Pseudo ou code de secours incorrect.';
+
+/** Le motif d'un mot de passe actuel faux, exige par une demande faite depuis le profil. */
+export const MOT_DE_PASSE_INCORRECT = 'Mot de passe incorrect.';
+
 /** L'authentification des comptes, avec la base. */
 export class Authentification implements ServiceDeComptes {
   private readonly db: BaseDeDonnees;
@@ -110,6 +140,9 @@ export class Authentification implements ServiceDeComptes {
 
   /** L'empreinte leurre, calculee une fois, a la premiere connexion qui en a besoin. */
   private empreinteLeurre: Promise<string> | undefined;
+
+  /** Ceux qui ecoutent les sessions fermees d'un compte: la couche reseau (etape 3.4). */
+  private readonly ecouteursDesFermetures = new Set<(compteId: string) => void>();
 
   constructor(options: OptionsAuthentification) {
     const horloge = options.horloge ?? horlogeSysteme;
@@ -127,7 +160,7 @@ export class Authentification implements ServiceDeComptes {
   // Le service: ce que les routes HTTP demandent
   // ------------------------------------------------------------------------
 
-  async inscrire(brut: unknown, adresse: string): Promise<ReponseDeCompte<SessionOuverte>> {
+  async inscrire(brut: unknown, adresse: string): Promise<ReponseDeCompte<SessionInscrite>> {
     const demande = validerDemandeInscription(brut);
     if (!demande.valide) {
       return refusee('demandeInvalide', demande.erreurs);
@@ -139,8 +172,10 @@ export class Authentification implements ServiceDeComptes {
     }
 
     const empreinte = await hacherMotDePasse(demande.valeur.motDePasse, this.parametresScrypt);
+    const code = fabriquerCodeDeSecours();
     const compte = await creerCompte(this.db, demande.valeur.pseudo, {
       empreinteMotDePasse: empreinte,
+      empreinteCodeDeSecours: empreinteDuCode(code),
     });
 
     // Le pseudo vient d'etre valide par la meme regle: le seul refus possible de
@@ -149,7 +184,9 @@ export class Authentification implements ServiceDeComptes {
       return refusee('pseudoPris', compte.erreurs);
     }
 
-    return acceptee(await this.ouvrirUneSession(compte.valeur.id, compte.valeur.pseudo, 0));
+    const session = await this.ouvrirUneSession(compte.valeur.id, compte.valeur.pseudo, 0);
+
+    return acceptee({ ...session, codeDeSecours: formaterCodeDeSecours(code) });
   }
 
   async connecter(brut: unknown, adresse: string): Promise<ReponseDeCompte<SessionOuverte>> {
@@ -160,17 +197,9 @@ export class Authentification implements ServiceDeComptes {
 
     const { pseudo, motDePasse } = demande.valeur;
 
-    // L'adresse d'abord: une tentative refusee a ce titre ne consomme rien du
-    // seau du compte vise, que l'attaquant ne doit pas pouvoir vider a distance
-    // plus vite que sa propre limite ne le permet.
-    const parAdresse = this.connexionsParAdresse.tenter(adresse);
-    if (!parAdresse.accepte) {
-      return tropDeTentatives(parAdresse.reessayerDansMs);
-    }
-
-    const parPseudo = this.connexionsParPseudo.tenter(reperePseudo(pseudo));
-    if (!parPseudo.accepte) {
-      return tropDeTentatives(parPseudo.reessayerDansMs);
+    const attente = this.attenteAvantDEssayer(adresse, pseudo);
+    if (attente !== undefined) {
+      return tropDeTentatives(attente);
     }
 
     const identifiants = await identifiantsParPseudo(this.db, pseudo);
@@ -221,6 +250,112 @@ export class Authentification implements ServiceDeComptes {
     });
   }
 
+  async changerMotDePasse(
+    jeton: string,
+    brut: unknown,
+    adresse: string,
+  ): Promise<ReponseDeCompte<CodeDeSecoursEmis>> {
+    const demande = validerDemandeChangementMotDePasse(brut);
+    if (!demande.valide) {
+      return refusee('demandeInvalide', demande.erreurs);
+    }
+
+    const verification = await this.verifierLeMotDePasseActuel(
+      jeton,
+      demande.valeur.motDePasse,
+      adresse,
+    );
+    if (!verification.acceptee) {
+      return verification;
+    }
+
+    const { compteId, empreinte } = verification.valeur;
+    const code = fabriquerCodeDeSecours();
+    const remplace = await remplacerMotDePasse(this.db, compteId, {
+      ancienneEmpreinte: empreinte,
+      nouvelleEmpreinte: await hacherMotDePasse(
+        demande.valeur.nouveauMotDePasse,
+        this.parametresScrypt,
+      ),
+      empreinteCode: empreinteDuCode(code),
+      sessionGardee: empreinteDuJeton(jeton),
+    });
+
+    // Un autre changement est passe entre-temps: le mot de passe verifie n'est plus
+    // celui du compte.
+    if (!remplace) {
+      return motDePasseIncorrect();
+    }
+
+    this.annoncerSessionsFermees(compteId);
+
+    return acceptee({ codeDeSecours: formaterCodeDeSecours(code) });
+  }
+
+  async nouveauCodeDeSecours(
+    jeton: string,
+    brut: unknown,
+    adresse: string,
+  ): Promise<ReponseDeCompte<CodeDeSecoursEmis>> {
+    const demande = validerDemandeCodeDeSecours(brut);
+    if (!demande.valide) {
+      return refusee('demandeInvalide', demande.erreurs);
+    }
+
+    const verification = await this.verifierLeMotDePasseActuel(
+      jeton,
+      demande.valeur.motDePasse,
+      adresse,
+    );
+    if (!verification.acceptee) {
+      return verification;
+    }
+
+    const code = fabriquerCodeDeSecours();
+    await remplacerCodeDeSecours(this.db, verification.valeur.compteId, empreinteDuCode(code));
+
+    return acceptee({ codeDeSecours: formaterCodeDeSecours(code) });
+  }
+
+  async reinitialiser(brut: unknown, adresse: string): Promise<ReponseDeCompte<SessionInscrite>> {
+    const demande = validerDemandeReinitialisation(brut);
+    if (!demande.valide) {
+      return refusee('demandeInvalide', demande.erreurs);
+    }
+
+    const { pseudo, codeDeSecours, nouveauMotDePasse } = demande.valeur;
+
+    const attente = this.attenteAvantDEssayer(adresse, pseudo);
+    if (attente !== undefined) {
+      return tropDeTentatives(attente);
+    }
+
+    const compte = await codeParPseudo(this.db, reperePseudo(pseudo));
+    const presente = empreinteDuCode(codeDeSecours);
+
+    if (compte?.empreinteCode === undefined || !memesEmpreintes(presente, compte.empreinteCode)) {
+      return codeDeSecoursIncorrect();
+    }
+
+    const code = fabriquerCodeDeSecours();
+    const consomme = await consommerCodeDeSecours(this.db, compte.compteId, {
+      ancienCode: presente,
+      nouveauCode: empreinteDuCode(code),
+      empreinteMotDePasse: await hacherMotDePasse(nouveauMotDePasse, this.parametresScrypt),
+    });
+
+    // Une autre reinitialisation vient de consommer ce code: il ne vaut plus rien.
+    if (!consomme) {
+      return codeDeSecoursIncorrect();
+    }
+
+    this.annoncerSessionsFermees(compte.compteId);
+
+    const session = await this.ouvrirUneSession(compte.compteId, compte.pseudo, compte.xpTotale);
+
+    return acceptee({ ...session, codeDeSecours: formaterCodeDeSecours(code) });
+  }
+
   // ------------------------------------------------------------------------
   // L'annuaire: ce que la couche reseau demande
   // ------------------------------------------------------------------------
@@ -246,6 +381,14 @@ export class Authentification implements ServiceDeComptes {
     resultats: readonly NouveauResultat[],
   ): Promise<readonly ProgressionAppliquee[]> {
     return (await enregistrerPartie(this.db, partie, resultats)).progressions;
+  }
+
+  surSessionsFermees(ecouteur: (compteId: string) => void): () => void {
+    this.ecouteursDesFermetures.add(ecouteur);
+
+    return () => {
+      this.ecouteursDesFermetures.delete(ecouteur);
+    };
   }
 
   // ------------------------------------------------------------------------
@@ -281,6 +424,77 @@ export class Authentification implements ServiceDeComptes {
     };
   }
 
+  /**
+   * Dans combien de temps une tentative sur ce compte, depuis cette adresse, sera
+   * admise; undefined si elle l'est maintenant, et elle est alors comptee.
+   *
+   * L'adresse d'abord: une tentative refusee a ce titre ne consomme rien du seau du
+   * compte vise, que l'attaquant ne doit pas pouvoir vider a distance plus vite que
+   * sa propre limite ne le permet.
+   */
+  private attenteAvantDEssayer(adresse: string, pseudo: string): number | undefined {
+    const parAdresse = this.connexionsParAdresse.tenter(adresse);
+    if (!parAdresse.accepte) {
+      return parAdresse.reessayerDansMs;
+    }
+
+    const parPseudo = this.connexionsParPseudo.tenter(reperePseudo(pseudo));
+
+    return parPseudo.accepte ? undefined : parPseudo.reessayerDansMs;
+  }
+
+  /**
+   * Verifie le mot de passe actuel du compte dont ce jeton ouvre la session, pour une
+   * demande faite depuis le profil (etape 3.4).
+   *
+   * Dans l'ordre: la session, la limite de tentatives, puis le mot de passe, compare
+   * a une empreinte leurre pour un compte qui n'en a pas.
+   *
+   * @returns Le compte et l'empreinte verifiee, ou le refus a rendre tel quel.
+   */
+  private async verifierLeMotDePasseActuel(
+    jeton: string,
+    motDePasse: string,
+    adresse: string,
+  ): Promise<ReponseDeCompte<{ readonly compteId: string; readonly empreinte: string }>> {
+    const compteId = await this.compteDeSession(jeton);
+    const secrets = compteId === undefined ? undefined : await secretsDuCompte(this.db, compteId);
+
+    if (compteId === undefined || secrets === undefined) {
+      return sessionAbsente();
+    }
+
+    const attente = this.attenteAvantDEssayer(adresse, secrets.pseudo);
+    if (attente !== undefined) {
+      return tropDeTentatives(attente);
+    }
+
+    const empreinte = secrets.empreinteMotDePasse;
+    const correct = await verifierMotDePasse(motDePasse, empreinte ?? (await this.leurre()));
+
+    if (empreinte === undefined || !correct) {
+      return motDePasseIncorrect();
+    }
+
+    return acceptee({ compteId, empreinte });
+  }
+
+  /**
+   * Previent les ecouteurs que des sessions de ce compte viennent d'etre fermees.
+   *
+   * Un ecouteur qui echoue ne change rien a la reponse: le mot de passe est deja
+   * change. L'echec est journalise.
+   */
+  private annoncerSessionsFermees(compteId: string): void {
+    for (const ecouteur of [...this.ecouteursDesFermetures]) {
+      try {
+        ecouteur(compteId);
+      } catch (erreur) {
+        console.error('Un ecouteur des sessions fermees a echoue:', erreur);
+      }
+    }
+  }
+
   /** Ouvre une session pour ce compte, et rend ce que le client doit en savoir. */
   private async ouvrirUneSession(
     compteId: string,
@@ -314,6 +528,29 @@ function acceptee<T>(valeur: T): ReponseDeCompte<T> {
 /** Une reponse refusee. */
 function refusee<T>(motif: MotifDeRefus, erreurs: readonly ErreurValidation[]): ReponseDeCompte<T> {
   return { acceptee: false, motif, erreurs };
+}
+
+/** Une reponse refusee parce que le mot de passe actuel est faux. */
+function motDePasseIncorrect<T>(): ReponseDeCompte<T> {
+  return refusee('motDePasseIncorrect', [{ champ: 'motDePasse', motif: MOT_DE_PASSE_INCORRECT }]);
+}
+
+/**
+ * Une reinitialisation refusee. Le meme motif pour un pseudo inconnu, un compte sans
+ * code et un code faux: le refus n'apprend pas quels pseudos sont des comptes.
+ */
+function codeDeSecoursIncorrect<T>(): ReponseDeCompte<T> {
+  return refusee('identifiantsIncorrects', [
+    { champ: 'reinitialisation', motif: CODE_DE_SECOURS_INCORRECT },
+  ]);
+}
+
+/** Deux empreintes hexadecimales sont-elles egales, comparees en temps constant. */
+function memesEmpreintes(gauche: string, droite: string): boolean {
+  const a = Buffer.from(gauche, 'hex');
+  const b = Buffer.from(droite, 'hex');
+
+  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 /** Une reponse refusee faute de session valable. */

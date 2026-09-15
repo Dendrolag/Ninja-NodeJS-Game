@@ -126,6 +126,22 @@ export const sessions = pgTable(
   ],
 );
 
+/**
+ * Le code de secours d'un compte, sous forme d'empreinte (etape 3.4).
+ *
+ * Un seul par compte: chaque nouveau code remplace le precedent. Un compte cree
+ * avant l'etape 3.4 n'en a pas tant qu'il n'en a pas demande un. L'empreinte est un
+ * SHA-256 du code normalise, comme pour les jetons: le code, tire au hasard sur
+ * quatre-vingts bits, ne se devine pas par essais. Voir comptes/codeDeSecours.ts.
+ */
+export const codesDeSecours = pgTable('codes_de_secours', {
+  compteId: uuid('compte_id')
+    .primaryKey()
+    .references(() => comptes.id, { onDelete: 'cascade' }),
+  empreinte: text('empreinte').notNull(),
+  creeLe: horodatage('cree_le').notNull().defaultNow(),
+});
+
 /** La progression d'un compte. Une et une seule par compte, creee avec lui. */
 export const progressions = pgTable(
   'progressions',

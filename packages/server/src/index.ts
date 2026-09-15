@@ -54,6 +54,13 @@
  *     regles de progression de @neon-ninja/shared;
  *   - l'enregistrement de la partie, des resultats et des gains en une seule
  *     transaction, et le recapitulatif de progression envoye a chaque compte.
+ *
+ * Ce que l'etape 3.4 a ajoute:
+ *
+ *   - le changement de mot de passe contre l'ancien, qui ferme les autres sessions;
+ *   - le code de secours, remis a chaque nouveau mot de passe, qui reinitialise un
+ *     mot de passe oublie;
+ *   - la coupure des connexions de jeu dont la session vient d'etre fermee.
  */
 
 export type {
@@ -121,6 +128,20 @@ export {
 export { compteDeLaSession, fermerSession, ouvrirSession } from './base/sessions.js';
 
 export type {
+  ChangementDeMotDePasse,
+  CodeDuCompte,
+  Reinitialisation,
+  SecretsDuCompte,
+} from './base/secrets.js';
+export {
+  codeParPseudo,
+  consommerCodeDeSecours,
+  remplacerCodeDeSecours,
+  remplacerMotDePasse,
+  secretsDuCompte,
+} from './base/secrets.js';
+
+export type {
   AnnuaireDesComptes,
   IdentiteDeCompte,
   MotifDeRefus,
@@ -128,7 +149,13 @@ export type {
   ServiceDeComptes,
 } from './comptes/annuaire.js';
 export type { LimitesDesComptes, OptionsAuthentification } from './comptes/Authentification.js';
-export { Authentification, DUREE_SESSION_MS } from './comptes/Authentification.js';
+export {
+  Authentification,
+  CODE_DE_SECOURS_INCORRECT,
+  DUREE_SESSION_MS,
+  MOT_DE_PASSE_INCORRECT,
+} from './comptes/Authentification.js';
+export { empreinteDuCode, fabriquerCodeDeSecours } from './comptes/codeDeSecours.js';
 export { empreinteDuJeton, fabriquerJeton } from './comptes/jetons.js';
 export type { VerdictTentative } from './comptes/limiteur.js';
 export { LimiteurDeTentatives } from './comptes/limiteur.js';

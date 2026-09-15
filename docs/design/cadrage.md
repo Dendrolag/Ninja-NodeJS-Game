@@ -186,6 +186,7 @@ Entrée de l'étape 3.1. **Principe, le même que pour le score depuis le 14 ao�
 | pseudo              | Unique, comparé sans distinction de casse après normalisation, règles de `BORNES_PSEUDO` (1 à 20 caractères, liste blanche) |
 | date d'inscription  | Horodatage                                                                          |
 | mot de passe haché  | Ajouté à l'étape 3.2, dans une table à part `mots_de_passe` (empreinte scrypt) |
+| code de secours     | Ajouté à l'étape 3.4, dans une table à part `codes_de_secours` (empreinte SHA-256), remplacé à chaque nouveau mot de passe; absent d'un compte créé avant qui n'en a pas demandé |
 
 ### Progression, une par compte
 

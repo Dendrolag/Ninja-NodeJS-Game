@@ -321,6 +321,38 @@
   color: var(--texte-secondaire);
 }
 
+/* Le code de secours (etape 3.4): gros, en caracteres de largeur egale, et
+   selectionnable d'un clic pour etre copie. */
+.fenetre-code {
+  width: min(480px, 100%);
+}
+
+.code-de-secours {
+  justify-self: center;
+  padding: 12px 18px;
+  border: 1px dashed var(--bordure-survol);
+  border-radius: var(--rayon-controle);
+  font-family: var(--police-donnees);
+  font-size: clamp(18px, 5.5vw, 26px);
+  letter-spacing: 0.08em;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.code-avertissement {
+  color: var(--texte-secondaire);
+  font-size: 13px;
+}
+
+.code-copie {
+  color: var(--vert);
+  font-size: 12.5px;
+}
+
+.code-copie:empty {
+  display: none;
+}
+
 /* -- Annonces ------------------------------------------------------------ */
 
 .annonces {

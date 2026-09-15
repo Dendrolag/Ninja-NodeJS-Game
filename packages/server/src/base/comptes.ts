@@ -18,7 +18,7 @@ import { eq } from 'drizzle-orm';
 import type { BaseDeDonnees } from './connexion.js';
 import { CODES_POSTGRES, erreurPostgres } from './erreurs.js';
 import type { ValeursProgression } from './progression.js';
-import { comptes, motsDePasse, progressions } from './schema.js';
+import { codesDeSecours, comptes, motsDePasse, progressions } from './schema.js';
 
 /** Un compte, tel que le serveur le manipule. */
 export interface Compte {
@@ -45,6 +45,11 @@ export interface OptionsCreationCompte {
    * mot de passe, ce que le schema permet (voir motsDePasse).
    */
   readonly empreinteMotDePasse?: string;
+  /**
+   * L'empreinte du code de secours remis a l'inscription (etape 3.4), ecrite dans la
+   * meme transaction. Absente, le compte n'a pas de code.
+   */
+  readonly empreinteCodeDeSecours?: string;
 }
 
 /**
@@ -79,6 +84,12 @@ export async function creerCompte(
         await transaction
           .insert(motsDePasse)
           .values({ compteId: cree.id, empreinte: options.empreinteMotDePasse });
+      }
+
+      if (options.empreinteCodeDeSecours !== undefined) {
+        await transaction
+          .insert(codesDeSecours)
+          .values({ compteId: cree.id, empreinte: options.empreinteCodeDeSecours });
       }
 
       return cree;

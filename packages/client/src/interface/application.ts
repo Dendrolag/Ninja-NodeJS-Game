@@ -35,6 +35,7 @@ import { sonsDuChangement } from '../sons/declencheurs.js';
 import type { LecteurDeSons } from '../sons/lecteur.js';
 import { monterAide } from './composants/aide.js';
 import { monterFilDAnnonces } from './composants/annonces.js';
+import { monterFenetreDuCode } from './composants/codeDeSecours.js';
 import { monterCompteDeLEntete } from './composants/compte.js';
 import { monterNavigation } from './composants/navigation.js';
 import { monterPanneauSon } from './composants/son.js';
@@ -122,6 +123,8 @@ export function monterApplication(options: OptionsApplication): Application {
     },
   });
   const annonces = monterFilDAnnonces(doc);
+  // Le code de secours s'affiche par-dessus n'importe quel ecran (etape 3.4).
+  const fenetreDuCode = monterFenetreDuCode(doc, client);
   const compte = monterCompteDeLEntete(doc, client);
   const navigation = monterNavigation(doc, client);
 
@@ -172,6 +175,7 @@ export function monterApplication(options: OptionsApplication): Application {
     annonces.racine,
     aide.racine,
     panneauSon.racine,
+    fenetreDuCode.racine,
   );
 
   options.hote.append(racine);
@@ -214,6 +218,7 @@ export function monterApplication(options: OptionsApplication): Application {
   ecran.afficher(precedent);
   compte.afficher(precedent);
   navigation.afficher(precedent);
+  fenetreDuCode.afficher(precedent);
 
   const surChangement = (): void => {
     const etat = client.etat;
@@ -229,6 +234,7 @@ export function monterApplication(options: OptionsApplication): Application {
     ecran.afficher(etat);
     compte.afficher(etat);
     navigation.afficher(etat);
+    fenetreDuCode.afficher(etat);
 
     if (sons !== undefined && !(precedent.ecran === 'jeu' && etat.ecran === 'jeu')) {
       for (const nom of sonsDuChangement(precedent, etat)) {
@@ -286,6 +292,7 @@ export function monterApplication(options: OptionsApplication): Application {
       navigation.demonter();
       aide.demonter();
       panneauSon.demonter();
+      fenetreDuCode.demonter();
       annonces.demonter();
       racine.remove();
     },

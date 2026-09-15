@@ -88,6 +88,8 @@ Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision 
 
 **Étape 2.5 terminée le 15 septembre 2026: une coupure ne coûte plus la partie.** Un joueur dont le lien tombe en pleine partie, ou qui recharge sa page, retrouve sa place, sa couleur et ses ninjas dans les trente secondes; pendant ce temps, il reste dans la partie, immobile, et ses bots transmettent sa couleur. Revenir est une demande explicite, avec un jeton de retour secret et renouvelé, que le serveur refuse au-delà du délai, à une autre identité ou pour une partie terminée. Dans le salon, une déconnexion reste un départ. Fiche: `docs/plan/etape-2-5.md`. Suite: `3.4`, gestion du mot de passe, puis `2.6`, le lien perdu hors partie, ajoutée à l'exécution de l'étape 2.5 selon la règle 7; ordre que le porteur du projet peut changer.
 
+**Étape 3.4 terminée le 15 septembre 2026: un compte gère son mot de passe.** Depuis son profil, un joueur change son mot de passe contre l'ancien, ce qui ferme ses autres sessions et coupe leurs connexions de jeu. Un mot de passe oublié se retrouve par un code de secours, voie choisie par le porteur du projet au début de l'étape: seize caractères remis à chaque nouveau mot de passe, montrés une seule fois, à usage unique. Fiche: `docs/plan/etape-3-4.md`. Suite: `2.6`, le lien perdu hors partie, puis les fonctionnalités reportées.
+
 ---
 
 ## 4. Carte thématique des étapes
@@ -161,7 +163,7 @@ Tests requis: TI sur les parcours d'inscription et de connexion, et le rejet des
 **3.3. Progression branchée sur la fin de partie.**
 Tests requis: TI vérifiant que résultats et progression persistent après une partie.
 
-**3.4. Gestion du mot de passe.** Étape ajoutée le 14 septembre 2026, à la recette de l'étape 5.4, sur décision du porteur du projet. Changer son mot de passe depuis le profil, en fermant les autres sessions du compte. La réinitialisation d'un mot de passe oublié demande un moyen de joindre le joueur, que les comptes n'ont pas: son périmètre se tranche avec le porteur du projet au début de l'étape.
+**3.4. Gestion du mot de passe.** Étape ajoutée le 14 septembre 2026, à la recette de l'étape 5.4, sur décision du porteur du projet. Changer son mot de passe depuis le profil, en fermant les autres sessions du compte. La réinitialisation d'un mot de passe oublié demande un moyen de joindre le joueur, que les comptes n'ont pas: son périmètre se tranche avec le porteur du projet au début de l'étape. Tranché le 15 septembre 2026: un code de secours, remis à chaque nouveau mot de passe.
 Tests requis: TI sur le changement accepté avec l'ancien mot de passe et refusé sans, sur la fermeture des autres sessions; bout en bout du changement depuis le profil.
 
 ### Phase 4. Client et rendu PixiJS

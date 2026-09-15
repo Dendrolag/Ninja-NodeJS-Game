@@ -163,6 +163,7 @@ describe('les demandes de compte', () => {
       nature: 'connexion',
       pseudo: 'Alice',
       erreurs: [{ champ: 'connexion', motif: 'Pseudo ou mot de passe incorrect.' }],
+      acceptee: false,
     });
   });
 

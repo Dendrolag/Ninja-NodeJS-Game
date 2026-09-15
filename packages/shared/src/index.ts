@@ -14,6 +14,7 @@ export { creerAlea, element, entier, nombre, reel } from './alea.js';
 export type { Intervalle, LimiteDebit } from './bornes.js';
 export {
   BORNES_CHAT,
+  BORNES_CODE_DE_SECOURS,
   BORNES_CODE_INVITATION,
   BORNES_JETON,
   BORNES_MOT_DE_PASSE,
@@ -27,13 +28,18 @@ export {
 
 export type {
   AuthentificationReseau,
+  CodeDeSecoursEmis,
   CompteConnecte,
+  DemandeChangementMotDePasse,
+  DemandeCodeDeSecours,
   DemandeConnexion,
   DemandeInscription,
+  DemandeReinitialisation,
   MaProgression,
   PartieDuProfil,
   ProfilDuCompte,
   ReponseRefusee,
+  SessionInscrite,
   SessionOuverte,
   StatistiquesDuCompte,
 } from './comptes.js';
@@ -204,12 +210,17 @@ export { REGLAGES_PAR_DEFAUT, completerReglages } from './reglages.js';
 
 export type { ErreurValidation, ResultatValidation } from './validation.js';
 export {
+  formaterCodeDeSecours,
   normaliserTexte,
   reperePseudo,
+  validerCodeDeSecours,
   validerCodeInvitation,
+  validerDemandeChangementMotDePasse,
+  validerDemandeCodeDeSecours,
   validerDemandeConnexion,
   validerDemandeCreation,
   validerDemandeInscription,
+  validerDemandeReinitialisation,
   validerDemandeRejoindre,
   validerDemandeRetour,
   validerIntentionDeplacement,

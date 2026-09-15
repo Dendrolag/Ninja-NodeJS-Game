@@ -60,16 +60,48 @@ interface AnnuaireDEssai extends ServiceDeComptes {
   enregistrementsEnEchec: number;
   /** La partie de chaque essai d'enregistrement recu, qu'il ait abouti ou non. */
   readonly essaisDEnregistrement: NouvellePartie[];
+  /** Les sessions ouvertes: jeton vers compte. */
+  readonly sessions: Map<string, string>;
+  /**
+   * Ferme les sessions de ce compte, sauf celle de ce jeton, et previent les
+   * ecouteurs, comme un changement de mot de passe (etape 3.4).
+   */
+  fermerLesSessions(compteId: string, sauf?: string): void;
+  /** Le nombre d'ecouteurs des sessions fermees. */
+  readonly nombreDEcouteurs: number;
 }
 
 /** Un annuaire qui connait Alice, et la session JETON_ALICE. */
 function annuaireDEssai(): AnnuaireDEssai {
   const sessions = new Map([[JETON_ALICE, 'compte-alice']]);
+  const ecouteurs = new Set<(compteId: string) => void>();
   const nonUtilise = async (): Promise<never> => {
     throw new Error('Les routes HTTP ne sont pas utilisees par ces tests.');
   };
 
   const annuaire: AnnuaireDEssai = {
+    sessions,
+    get nombreDEcouteurs() {
+      return ecouteurs.size;
+    },
+    fermerLesSessions: (compteId, sauf) => {
+      for (const [jeton, compte] of sessions) {
+        if (compte === compteId && jeton !== sauf) {
+          sessions.delete(jeton);
+        }
+      }
+
+      for (const ecouteur of ecouteurs) {
+        ecouteur(compteId);
+      }
+    },
+    surSessionsFermees: (ecouteur) => {
+      ecouteurs.add(ecouteur);
+
+      return () => {
+        ecouteurs.delete(ecouteur);
+      };
+    },
     comptes: new Map([['compte-alice', { pseudo: 'Alice', niveau: 7 }]]),
     finsEnregistrees: [],
     panne: false,
@@ -120,6 +152,9 @@ function annuaireDEssai(): AnnuaireDEssai {
     deconnecter: nonUtilise,
     maProgression: nonUtilise,
     profil: nonUtilise,
+    changerMotDePasse: nonUtilise,
+    nouveauCodeDeSecours: nonUtilise,
+    reinitialiser: nonUtilise,
   };
 
   async function repondre(): Promise<void> {
@@ -640,6 +675,107 @@ describe('retour en partie d un compte (etape 2.5)', () => {
     expect(annuaire.finsEnregistrees[0]?.resultats).toEqual([
       expect.objectContaining({ compteId: 'compte-alice', placement: 1 }),
     ]);
+  });
+});
+
+describe('sessions fermees par un changement de mot de passe (etape 3.4)', () => {
+  /** Une seconde session d'Alice, ouverte sur un autre appareil. */
+  const JETON_ALICE_BIS = 'B'.repeat(43);
+
+  /** Attend que le serveur coupe ce client, et rend la raison donnee par Socket.IO. */
+  async function coupure(client: ClientTypee): Promise<string> {
+    return new Promise((resoudre, rejeter) => {
+      const minuterie = setTimeout(() => {
+        rejeter(new Error("Le client n'a pas ete coupe."));
+      }, DELAI_ATTENTE_MS);
+
+      client.once('disconnect', (raison) => {
+        clearTimeout(minuterie);
+        resoudre(raison);
+      });
+    });
+  }
+
+  it('coupe la connexion d une session fermee, et garde la session restante et les invites', async () => {
+    const annuaire = annuaireDEssai();
+    annuaire.sessions.set(JETON_ALICE_BIS, 'compte-alice');
+    const { jeu } = await monter(annuaire);
+
+    const gardee = await connecterUnClient({ jeton: JETON_ALICE });
+    const fermee = await connecterUnClient({ jeton: JETON_ALICE_BIS });
+    const invite = await connecterUnClient();
+    const coupee = coupure(fermee);
+
+    annuaire.fermerLesSessions('compte-alice', JETON_ALICE);
+
+    expect(await coupee).toBe('io server disconnect');
+    await laisserPasserLesMessages();
+    expect(gardee.connected).toBe(true);
+    expect(invite.connected).toBe(true);
+    expect(jeu.nombreDeConnexions).toBe(2);
+  });
+
+  it('ne coupe aucune connexion d un autre compte', async () => {
+    const annuaire = annuaireDEssai();
+    annuaire.comptes.set('compte-bob', { pseudo: 'Bob', niveau: 1 });
+    annuaire.sessions.set('C'.repeat(43), 'compte-bob');
+    await monter(annuaire);
+
+    const alice = await connecterUnClient({ jeton: JETON_ALICE });
+    const bob = await connecterUnClient({ jeton: 'C'.repeat(43) });
+    const coupee = coupure(alice);
+
+    annuaire.fermerLesSessions('compte-alice');
+
+    await coupee;
+    await laisserPasserLesMessages();
+    expect(bob.connected).toBe(true);
+  });
+
+  it('fait sortir de son salon une connexion coupee, et les autres le voient', async () => {
+    const annuaire = annuaireDEssai();
+    await monter(annuaire);
+
+    const invite = await connecterUnClient();
+    const salon = salonAccepte(await rejoindre(invite, { pseudo: 'Invite' }));
+    const alice = await connecterUnClient({ jeton: JETON_ALICE });
+    salonAccepte(await rejoindre(alice, { idRoom: salon.idRoom }));
+    // Le salon part avec le depart: on l'attend avant de declencher la coupure.
+    const depart = prochain(invite, 'joueurParti');
+    const salonSansAlice = salonQui(invite, (etat) => etat.joueurs.length === 1);
+
+    annuaire.fermerLesSessions('compte-alice');
+
+    expect((await depart).pseudo).toBe('Alice');
+    expect((await salonSansAlice).joueurs.map((joueur) => joueur.pseudo)).toEqual(['Invite']);
+  });
+
+  it('garde la connexion si sa session ne peut pas etre revue, et le journalise', async () => {
+    const journal = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const annuaire = annuaireDEssai();
+    await monter(annuaire);
+
+    const alice = await connecterUnClient({ jeton: JETON_ALICE });
+    annuaire.panne = true;
+
+    annuaire.fermerLesSessions('compte-alice');
+
+    await vi.waitFor(() => {
+      expect(journal).toHaveBeenCalled();
+    });
+    expect(alice.connected).toBe(true);
+  });
+
+  it('retire son ecoute des sessions fermees quand le serveur se ferme', async () => {
+    const annuaire = annuaireDEssai();
+    const monte = await monter(annuaire);
+
+    expect(annuaire.nombreDEcouteurs).toBe(1);
+
+    await monte.fermer();
+    serveur = undefined;
+
+    expect(annuaire.nombreDEcouteurs).toBe(0);
   });
 });
 

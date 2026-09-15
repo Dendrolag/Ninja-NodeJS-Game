@@ -45,6 +45,12 @@ const COMPTE = '**/compte.spec.ts';
  */
 const RETOUR = '**/retour.spec.ts';
 
+/**
+ * La gestion du mot de passe (etape 3.4), jouee par le seul projet bureau: elle
+ * verifie des formulaires et des sessions, que le cadrage de l'ecran ne change pas.
+ */
+const MOT_DE_PASSE = '**/mot-de-passe.spec.ts';
+
 export default defineConfig({
   testDir: './tests/e2e',
   // Les paquets sont compiles une fois avant les scenarios: le banc de mesure du
@@ -94,7 +100,7 @@ export default defineConfig({
     {
       name: 'mobile',
       use: { ...devices['Pixel 7'] },
-      testIgnore: [BANC, MULTIJOUEUR, PARTIES, COMPTE, RETOUR],
+      testIgnore: [BANC, MULTIJOUEUR, PARTIES, COMPTE, RETOUR, MOT_DE_PASSE],
     },
     // Le banc de mesure du rendu a son propre projet, et une seule execution:
     // il mesure le moteur de rendu, pas la taille de la fenetre. Le jouer dans

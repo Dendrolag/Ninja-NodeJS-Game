@@ -79,14 +79,23 @@ export type Action =
   | { readonly type: 'sessionDInvite'; readonly expiree: boolean }
   /** On joue desormais avec un compte, dont voici la progression. */
   | { readonly type: 'sessionDeCompte'; readonly progression: MaProgression }
-  /** Une demande de connexion ou d'inscription est partie, pour ce pseudo. */
+  /**
+   * Une demande de compte est partie, pour ce pseudo. Le pseudo est absent d'une
+   * demande faite depuis le profil, qui porte sur le compte connecte.
+   */
   | {
       readonly type: 'demandeDeCompteEnvoyee';
       readonly nature: NatureDemandeDeCompte;
-      readonly pseudo: string;
+      readonly pseudo: string | undefined;
     }
-  /** La demande de connexion ou d'inscription a ete refusee. */
+  /** La demande de compte a ete refusee. */
   | { readonly type: 'demandeDeCompteRefusee'; readonly erreurs: readonly ErreurValidation[] }
+  /** La demande faite depuis le profil a abouti; la session reste la meme (etape 3.4). */
+  | { readonly type: 'demandeDeCompteAcceptee' }
+  /** Le serveur vient d'emettre ce code de secours, a montrer une fois (etape 3.4). */
+  | { readonly type: 'codeDeSecoursEmis'; readonly code: string }
+  /** Le joueur dit avoir note son code de secours: il est oublie (etape 3.4). */
+  | { readonly type: 'codeDeSecoursNote' }
   /** Le joueur va vers un ecran de menu. */
   | { readonly type: 'navigation'; readonly vers: EcranDeMenu }
   /** La lecture du profil du compte est partie. */

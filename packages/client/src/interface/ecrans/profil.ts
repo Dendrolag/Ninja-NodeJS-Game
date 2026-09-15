@@ -6,10 +6,12 @@
  *
  * CET ECRAN NE DECIDE RIEN. Ce qu'il montre vient de modeleProfil; la lecture du
  * profil part de la navigation vers cet ecran (client.ts), pas de son montage. Il
- * ne propose qu'une action qui lui soit propre: se deconnecter, qui ramene a
- * l'accueil en invite.
+ * propose deux actions qui lui soient propres: se deconnecter, qui ramene a
+ * l'accueil en invite, et, depuis l'etape 3.4, gerer son mot de passe et son code
+ * de secours (composants/securiteDuCompte.ts).
  */
 
+import { monterSecuriteDuCompte } from '../composants/securiteDuCompte.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import { icone } from '../icones.js';
 import type { LigneDHistorique, ModeleProfil } from '../modeles/profil.js';
@@ -78,6 +80,8 @@ export function monterProfil(contexte: ContexteEcran): EcranAffiche {
       corpsHistorique,
     ),
   );
+  const securite = monterSecuriteDuCompte(doc, client);
+
   const historiqueVide = creer(doc, 'p', {
     classe: 'profil-vide',
     texte:
@@ -138,6 +142,7 @@ export function monterProfil(contexte: ContexteEcran): EcranAffiche {
       historiqueVide,
       historique,
     ),
+    securite.racine,
   );
 
   const racine = creer(
@@ -197,9 +202,12 @@ export function monterProfil(contexte: ContexteEcran): EcranAffiche {
         dessine = etat.profil;
         dessiner(modele);
       }
+
+      securite.afficher(etat);
     },
 
     demonter() {
+      securite.demonter();
       racine.remove();
     },
   };

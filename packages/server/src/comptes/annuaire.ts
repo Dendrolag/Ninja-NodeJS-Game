@@ -5,9 +5,10 @@
  * questions et d'une ecriture: a quel compte ce jeton ouvre-t-il une session, sous
  * quel pseudo et a quel niveau ce compte entre-t-il en partie, ce pseudo
  * appartient-il a un compte, et, depuis l'etape 3.3, enregistrer la fin d'une
- * partie pour ses comptes. C'est l'annuaire. Les routes HTTP ont besoin, en plus,
- * d'inscrire, de connecter, de deconnecter et de lire la progression. C'est le
- * service.
+ * partie pour ses comptes. Depuis l'etape 3.4, elle ecoute aussi les sessions
+ * fermees, pour couper les connexions ouvertes avec elles. C'est l'annuaire. Les
+ * routes HTTP ont besoin, en plus, d'inscrire, de connecter, de deconnecter, de lire
+ * la progression et, depuis l'etape 3.4, de gerer le mot de passe. C'est le service.
  *
  * Ni l'un ni l'autre ne nomme la base: Authentification les implemente avec elle,
  * et les tests de la couche reseau peuvent leur substituer une version en memoire.
@@ -15,9 +16,11 @@
  */
 
 import type {
+  CodeDeSecoursEmis,
   ErreurValidation,
   MaProgression,
   ProfilDuCompte,
+  SessionInscrite,
   SessionOuverte,
 } from '@neon-ninja/shared';
 
@@ -60,6 +63,18 @@ export interface AnnuaireDesComptes {
 
   /** Ce pseudo, quelle que soit son ecriture, est-il celui d'un compte. */
   pseudoDeCompte(pseudo: string): Promise<boolean>;
+
+  /**
+   * Ecoute les fermetures de sessions d'un compte qui ne viennent pas de leur propre
+   * deconnexion: un changement de mot de passe ferme les autres, une reinitialisation
+   * les ferme toutes (etape 3.4).
+   *
+   * L'ecouteur recoit le compte, pas les sessions: c'est a lui de revoir quelles
+   * connexions n'en ouvrent plus (compteDeSession).
+   *
+   * @returns La fonction qui retire l'ecouteur.
+   */
+  surSessionsFermees(ecouteur: (compteId: string) => void): () => void;
 }
 
 /** Pourquoi une demande de compte est refusee. */
@@ -72,6 +87,11 @@ export type MotifDeRefus =
   | 'identifiantsIncorrects'
   /** Aucune session valable n'accompagne la demande: 401. */
   | 'sessionAbsente'
+  /**
+   * Le mot de passe actuel, exige par une demande faite avec une session, est faux:
+   * 403 (etape 3.4). Pas 401, que le client lit comme une session expiree.
+   */
+  | 'motDePasseIncorrect'
   /** Trop de tentatives recentes: 429. */
   | 'tropDeTentatives';
 
@@ -94,7 +114,7 @@ export interface ServiceDeComptes extends AnnuaireDesComptes {
    * @param demande Le corps de la requete, a valider.
    * @param adresse L'adresse du demandeur, pour la limite de tentatives.
    */
-  inscrire(demande: unknown, adresse: string): Promise<ReponseDeCompte<SessionOuverte>>;
+  inscrire(demande: unknown, adresse: string): Promise<ReponseDeCompte<SessionInscrite>>;
 
   /** Verifie des identifiants et ouvre une session. */
   connecter(demande: unknown, adresse: string): Promise<ReponseDeCompte<SessionOuverte>>;
@@ -110,4 +130,28 @@ export interface ServiceDeComptes extends AnnuaireDesComptes {
    * statistiques et ses dernieres parties (reprise des ecrans du jalon 3).
    */
   profil(jeton: string): Promise<ReponseDeCompte<ProfilDuCompte>>;
+
+  /**
+   * Change le mot de passe du compte dont ce jeton ouvre la session, contre le mot de
+   * passe actuel. Ferme toutes ses autres sessions et remplace son code de secours
+   * (etape 3.4).
+   */
+  changerMotDePasse(
+    jeton: string,
+    demande: unknown,
+    adresse: string,
+  ): Promise<ReponseDeCompte<CodeDeSecoursEmis>>;
+
+  /** Remplace le code de secours de ce compte, contre le mot de passe actuel (etape 3.4). */
+  nouveauCodeDeSecours(
+    jeton: string,
+    demande: unknown,
+    adresse: string,
+  ): Promise<ReponseDeCompte<CodeDeSecoursEmis>>;
+
+  /**
+   * Choisit un nouveau mot de passe avec le code de secours, sans session (etape 3.4).
+   * Ferme toutes les sessions du compte, puis en ouvre une neuve.
+   */
+  reinitialiser(demande: unknown, adresse: string): Promise<ReponseDeCompte<SessionInscrite>>;
 }

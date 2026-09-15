@@ -34,6 +34,7 @@
 import type { Intervalle } from './bornes.js';
 import {
   BORNES_CHAT,
+  BORNES_CODE_DE_SECOURS,
   BORNES_CODE_INVITATION,
   BORNES_JETON,
   BORNES_MOT_DE_PASSE,
@@ -41,7 +42,13 @@ import {
   BORNES_REGLAGES,
   BORNES_ROOM,
 } from './bornes.js';
-import type { DemandeConnexion, DemandeInscription } from './comptes.js';
+import type {
+  DemandeChangementMotDePasse,
+  DemandeCodeDeSecours,
+  DemandeConnexion,
+  DemandeInscription,
+  DemandeReinitialisation,
+} from './comptes.js';
 import type { IdentifiantCarte } from './constantes.js';
 import { CARTES, MODES, TYPES_BONUS, TYPES_MALUS, TYPES_ZONE, VISIBILITES } from './constantes.js';
 import type {
@@ -319,10 +326,13 @@ export function validerDemandeCreation(brut: unknown): ResultatValidation<Demand
  * accentuee tapee sur deux systemes differents peut arriver ecrite de deux facons,
  * et le meme mot de passe doit ouvrir le meme compte. Rien d'autre n'est touche:
  * ni les espaces, ni la casse, qui font partie du secret.
+ *
+ * @param champ Le nom du champ dans les erreurs: « nouveauMotDePasse » quand le
+ *              mot de passe choisi remplace un autre (etape 3.4).
  */
-export function validerMotDePasse(brut: unknown): ResultatValidation<string> {
+export function validerMotDePasse(brut: unknown, champ = 'motDePasse'): ResultatValidation<string> {
   if (typeof brut !== 'string') {
-    return refuse('motDePasse', 'Un mot de passe doit être du texte.');
+    return refuse(champ, 'Un mot de passe doit être du texte.');
   }
 
   const motDePasse = brut.normalize('NFC');
@@ -330,12 +340,36 @@ export function validerMotDePasse(brut: unknown): ResultatValidation<string> {
 
   if (taille < BORNES_MOT_DE_PASSE.longueur.minimum) {
     return refuse(
-      'motDePasse',
+      champ,
       `Un mot de passe fait au moins ${BORNES_MOT_DE_PASSE.longueur.minimum} caractères.`,
     );
   }
 
   if (taille > BORNES_MOT_DE_PASSE.longueur.maximum) {
+    return refuse(
+      champ,
+      `Un mot de passe fait au plus ${BORNES_MOT_DE_PASSE.longueur.maximum} caractères.`,
+    );
+  }
+
+  return accepte(motDePasse);
+}
+
+/**
+ * Valide un mot de passe tape pour prouver qui l'on est: a la connexion, ou pour
+ * confirmer une demande depuis le profil (etape 3.4).
+ *
+ * LA LONGUEUR MINIMALE NE S'Y APPLIQUE PAS. Elle vaut pour creer un mot de passe;
+ * si elle se relevait un jour, les comptes existants devraient pouvoir se prouver
+ * encore. Seul le maximum s'applique, qui protege le serveur d'un hachage demesure.
+ */
+function validerMotDePasseSaisi(brut: unknown): ResultatValidation<string> {
+  if (typeof brut !== 'string') {
+    return refuse('motDePasse', 'Un mot de passe doit être du texte.');
+  }
+
+  const motDePasse = brut.normalize('NFC');
+  if (nombreDeCaracteres(motDePasse) > BORNES_MOT_DE_PASSE.longueur.maximum) {
     return refuse(
       'motDePasse',
       `Un mot de passe fait au plus ${BORNES_MOT_DE_PASSE.longueur.maximum} caractères.`,
@@ -376,10 +410,8 @@ export function validerDemandeInscription(brut: unknown): ResultatValidation<Dem
 /**
  * Valide une demande de connexion.
  *
- * LE MOT DE PASSE N'Y EST PAS SOUMIS A LA LONGUEUR MINIMALE. Cette borne s'applique
- * a la creation d'un mot de passe; si elle se relevait un jour, les comptes
- * existants devraient pouvoir se connecter encore. Seul le maximum s'applique, qui
- * protege le serveur d'un hachage demesure.
+ * Le mot de passe n'y est pas soumis a la longueur minimale: voir
+ * validerMotDePasseSaisi.
  *
  * Un pseudo invalide est refuse avec son motif: aucun compte ne peut le porter, et
  * le dire n'apprend rien a personne. Un pseudo valide mais inconnu, en revanche,
@@ -396,20 +428,127 @@ export function validerDemandeConnexion(brut: unknown): ResultatValidation<Deman
     return pseudo;
   }
 
-  const brutMotDePasse = champ(source, 'motDePasse');
-  if (typeof brutMotDePasse !== 'string') {
-    return refuse('motDePasse', 'Un mot de passe doit être du texte.');
+  const motDePasse = validerMotDePasseSaisi(champ(source, 'motDePasse'));
+  if (!motDePasse.valide) {
+    return motDePasse;
   }
 
-  const motDePasse = brutMotDePasse.normalize('NFC');
-  if (nombreDeCaracteres(motDePasse) > BORNES_MOT_DE_PASSE.longueur.maximum) {
-    return refuse(
-      'motDePasse',
-      `Un mot de passe fait au plus ${BORNES_MOT_DE_PASSE.longueur.maximum} caractères.`,
-    );
+  return accepte({ pseudo: pseudo.valeur, motDePasse: motDePasse.valeur });
+}
+
+/**
+ * Normalise et valide un code de secours saisi (etape 3.4).
+ *
+ * La saisie pardonne ce qu'une recopie a la main change sans le vouloir: la casse,
+ * les espaces, les tirets, et les lettres confondues avec un chiffre (O pour 0, I et
+ * L pour 1). Voir BORNES_CODE_DE_SECOURS. Le code rendu est la forme normalisee,
+ * seize caracteres sans tiret: c'est elle dont le serveur tire l'empreinte.
+ */
+export function validerCodeDeSecours(brut: unknown): ResultatValidation<string> {
+  const motif = `Un code de secours compte ${String(BORNES_CODE_DE_SECOURS.longueur)} lettres et chiffres, comme K7QM-3X9D-TP4W-8HNE.`;
+
+  if (typeof brut !== 'string' || brut.length > BORNES_CODE_DE_SECOURS.saisieMaximum) {
+    return refuse('codeDeSecours', motif);
   }
 
-  return accepte({ pseudo: pseudo.valeur, motDePasse });
+  const code = brut.toUpperCase().replace(/[\s-]/gu, '').replace(/O/gu, '0').replace(/[IL]/gu, '1');
+
+  return BORNES_CODE_DE_SECOURS.forme.test(code) ? accepte(code) : refuse('codeDeSecours', motif);
+}
+
+/**
+ * Ecrit un code de secours normalise tel qu'on le montre: quatre groupes separes par
+ * des tirets.
+ */
+export function formaterCodeDeSecours(code: string): string {
+  const groupes: string[] = [];
+
+  for (let debut = 0; debut < code.length; debut += BORNES_CODE_DE_SECOURS.groupe) {
+    groupes.push(code.slice(debut, debut + BORNES_CODE_DE_SECOURS.groupe));
+  }
+
+  return groupes.join('-');
+}
+
+/**
+ * Valide une demande de changement de mot de passe (etape 3.4).
+ *
+ * Le mot de passe actuel suit la regle de la connexion, le nouveau celle de
+ * l'inscription. Toutes les erreurs sont rendues ensemble.
+ */
+export function validerDemandeChangementMotDePasse(
+  brut: unknown,
+): ResultatValidation<DemandeChangementMotDePasse> {
+  const source = objetOuRien(brut);
+  if (source === undefined) {
+    return refuse('changement', 'Une demande de changement de mot de passe doit être un objet.');
+  }
+
+  const motDePasse = validerMotDePasseSaisi(champ(source, 'motDePasse'));
+  const nouveau = validerMotDePasse(champ(source, 'nouveauMotDePasse'), 'nouveauMotDePasse');
+
+  if (!motDePasse.valide || !nouveau.valide) {
+    return {
+      valide: false,
+      erreurs: [
+        ...(motDePasse.valide ? [] : motDePasse.erreurs),
+        ...(nouveau.valide ? [] : nouveau.erreurs),
+      ],
+    };
+  }
+
+  return accepte({ motDePasse: motDePasse.valeur, nouveauMotDePasse: nouveau.valeur });
+}
+
+/** Valide une demande de nouveau code de secours (etape 3.4): le seul mot de passe actuel. */
+export function validerDemandeCodeDeSecours(
+  brut: unknown,
+): ResultatValidation<DemandeCodeDeSecours> {
+  const source = objetOuRien(brut);
+  if (source === undefined) {
+    return refuse('code', 'Une demande de code de secours doit être un objet.');
+  }
+
+  const motDePasse = validerMotDePasseSaisi(champ(source, 'motDePasse'));
+
+  return motDePasse.valide ? accepte({ motDePasse: motDePasse.valeur }) : motDePasse;
+}
+
+/**
+ * Valide une demande de reinitialisation du mot de passe (etape 3.4).
+ *
+ * Le code rendu est normalise. Toutes les erreurs sont rendues ensemble. Un pseudo
+ * inconnu ou un code faux ne se voient pas ici: c'est le travail du serveur, qui
+ * leur donne la meme reponse.
+ */
+export function validerDemandeReinitialisation(
+  brut: unknown,
+): ResultatValidation<DemandeReinitialisation> {
+  const source = objetOuRien(brut);
+  if (source === undefined) {
+    return refuse('reinitialisation', 'Une demande de réinitialisation doit être un objet.');
+  }
+
+  const pseudo = validerPseudo(champ(source, 'pseudo'));
+  const code = validerCodeDeSecours(champ(source, 'codeDeSecours'));
+  const nouveau = validerMotDePasse(champ(source, 'nouveauMotDePasse'), 'nouveauMotDePasse');
+
+  if (!pseudo.valide || !code.valide || !nouveau.valide) {
+    return {
+      valide: false,
+      erreurs: [
+        ...(pseudo.valide ? [] : pseudo.erreurs),
+        ...(code.valide ? [] : code.erreurs),
+        ...(nouveau.valide ? [] : nouveau.erreurs),
+      ],
+    };
+  }
+
+  return accepte({
+    pseudo: pseudo.valeur,
+    codeDeSecours: code.valeur,
+    nouveauMotDePasse: nouveau.valeur,
+  });
 }
 
 /**

@@ -8,9 +8,11 @@
  */
 
 import type {
+  CodeDeSecoursEmis,
   MaProgression,
   ProfilDuCompte,
   ReponseRefusee,
+  SessionInscrite,
   SessionOuverte,
 } from '@neon-ninja/shared';
 import { ROUTES_COMPTES } from '@neon-ninja/shared';
@@ -18,11 +20,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { OptionsServeur, ServeurMonte } from '../serveur.js';
 import { demarrerServeur } from '../serveur.js';
-import type { ReponseDeCompte, ServiceDeComptes } from './annuaire.js';
+import type { MotifDeRefus, ReponseDeCompte, ServiceDeComptes } from './annuaire.js';
 
 const JETON = 'J'.repeat(43);
 
 const SESSION: SessionOuverte = { jeton: JETON, compte: { pseudo: 'Alice', niveau: 1 } };
+
+const CODE: CodeDeSecoursEmis = { codeDeSecours: 'K7QM-3X9D-TP4W-8HNE' };
+
+const SESSION_INSCRITE: SessionInscrite = { ...SESSION, ...CODE };
 
 const PROGRESSION: MaProgression = {
   pseudo: 'Alice',
@@ -80,17 +86,30 @@ function acceptee<T>(valeur: T): ReponseDeCompte<T> {
 /** Un service dont chaque methode peut etre remplacee, et dont les appels sont notes. */
 function serviceFactice(remplacements: Partial<ServiceDeComptes> = {}): ServiceDeComptes {
   return {
-    inscrire: vi.fn(async () => acceptee(SESSION)),
+    inscrire: vi.fn(async () => acceptee(SESSION_INSCRITE)),
     connecter: vi.fn(async () => acceptee(SESSION)),
     deconnecter: vi.fn(async () => undefined),
     maProgression: vi.fn(async () => acceptee(PROGRESSION)),
     profil: vi.fn(async () => acceptee(PROFIL)),
+    changerMotDePasse: vi.fn(async () => acceptee(CODE)),
+    nouveauCodeDeSecours: vi.fn(async () => acceptee(CODE)),
+    reinitialiser: vi.fn(async () => acceptee(SESSION_INSCRITE)),
     compteDeSession: vi.fn(async () => undefined),
     identiteDe: vi.fn(async () => undefined),
     pseudoDeCompte: vi.fn(async () => false),
     enregistrerFinDePartie: vi.fn(async () => []),
+    surSessionsFermees: vi.fn(() => () => undefined),
     ...remplacements,
   };
+}
+
+/** Une reponse refusee du service, pour ce motif. */
+function refusDuService(motif: MotifDeRefus) {
+  return vi.fn(async () => ({
+    acceptee: false as const,
+    motif,
+    erreurs: [{ champ: motif, motif: 'refuse' }],
+  }));
 }
 
 /** Ce qu'une requete a rendu. */
@@ -138,10 +157,12 @@ describe('un serveur sans comptes', () => {
 
     const inscription = await requete(url, ROUTES_COMPTES.inscription, { corps: '{}' });
     const moi = await requete(url, ROUTES_COMPTES.moi, { methode: 'GET' });
+    const reinitialisation = await requete(url, ROUTES_COMPTES.reinitialisation, { corps: '{}' });
 
     expect(inscription.statut).toBe(503);
     expect(premierChamp(inscription.corps)).toBe('comptes');
     expect(moi.statut).toBe(503);
+    expect(reinitialisation.statut).toBe(503);
   });
 });
 
@@ -155,7 +176,7 @@ describe('inscription et connexion', () => {
     });
 
     expect(reponse.statut).toBe(201);
-    expect(reponse.corps).toEqual(SESSION);
+    expect(reponse.corps).toEqual(SESSION_INSCRITE);
     expect(reponse.entetes.get('cache-control')).toBe('no-store');
     expect(service.inscrire).toHaveBeenCalledWith(
       { pseudo: 'Alice', motDePasse: 'secret123' },
@@ -332,6 +353,104 @@ describe('routes reservees a une session', () => {
 
     expect(reponse.statut).toBe(401);
     expect(reponse.entetes.get('www-authenticate')).toBe('Bearer');
+  });
+});
+
+describe('gestion du mot de passe (etape 3.4)', () => {
+  const entetes = { Authorization: `Bearer ${JETON}` };
+
+  it('changent le mot de passe et emettent un code pour qui presente son jeton', async () => {
+    const service = serviceFactice();
+    const url = await monter({ comptes: service });
+
+    const changement = await requete(url, ROUTES_COMPTES.motDePasse, {
+      corps: JSON.stringify({ motDePasse: 'ancien', nouveauMotDePasse: 'nouveau123' }),
+      entetes,
+    });
+    const code = await requete(url, ROUTES_COMPTES.codeDeSecours, {
+      corps: JSON.stringify({ motDePasse: 'ancien' }),
+      entetes,
+    });
+
+    expect([changement.statut, changement.corps]).toEqual([200, CODE]);
+    expect(changement.entetes.get('cache-control')).toBe('no-store');
+    expect(service.changerMotDePasse).toHaveBeenCalledWith(
+      JETON,
+      { motDePasse: 'ancien', nouveauMotDePasse: 'nouveau123' },
+      expect.any(String),
+    );
+    expect([code.statut, code.corps]).toEqual([200, CODE]);
+    expect(service.nouveauCodeDeSecours).toHaveBeenCalledWith(
+      JETON,
+      { motDePasse: 'ancien' },
+      expect.any(String),
+    );
+  });
+
+  it('refusent le changement et le code sans jeton, sans deranger le service', async () => {
+    const service = serviceFactice();
+    const url = await monter({ comptes: service });
+
+    const changement = await requete(url, ROUTES_COMPTES.motDePasse, { corps: '{}' });
+    const code = await requete(url, ROUTES_COMPTES.codeDeSecours, {
+      corps: '{}',
+      entetes: { Authorization: 'Bearer trop-court' },
+    });
+
+    for (const reponse of [changement, code]) {
+      expect(reponse.statut).toBe(401);
+      expect(reponse.entetes.get('www-authenticate')).toBe('Bearer');
+    }
+    expect(service.changerMotDePasse).not.toHaveBeenCalled();
+    expect(service.nouveauCodeDeSecours).not.toHaveBeenCalled();
+  });
+
+  it('traduisent un mot de passe actuel faux en 403, sans demander de s authentifier', async () => {
+    const url = await monter({
+      comptes: serviceFactice({
+        changerMotDePasse: refusDuService('motDePasseIncorrect'),
+        nouveauCodeDeSecours: refusDuService('motDePasseIncorrect'),
+      }),
+    });
+
+    const changement = await requete(url, ROUTES_COMPTES.motDePasse, { corps: '{}', entetes });
+    const code = await requete(url, ROUTES_COMPTES.codeDeSecours, { corps: '{}', entetes });
+
+    for (const reponse of [changement, code]) {
+      expect(reponse.statut).toBe(403);
+      expect(reponse.entetes.get('www-authenticate')).toBeNull();
+    }
+  });
+
+  it('reinitialisent sans jeton, et rendent la session et le code', async () => {
+    const service = serviceFactice();
+    const url = await monter({ comptes: service });
+    const demande = { pseudo: 'Alice', codeDeSecours: CODE.codeDeSecours, nouveauMotDePasse: 'x' };
+
+    const reponse = await requete(url, ROUTES_COMPTES.reinitialisation, {
+      corps: JSON.stringify(demande),
+    });
+
+    expect([reponse.statut, reponse.corps]).toEqual([200, SESSION_INSCRITE]);
+    expect(service.reinitialiser).toHaveBeenCalledWith(demande, expect.any(String));
+  });
+
+  it('traduisent un code refuse en 401, et trop de tentatives en 429', async () => {
+    const url = await monter({
+      comptes: serviceFactice({ reinitialiser: refusDuService('identifiantsIncorrects') }),
+    });
+
+    const refus = await requete(url, ROUTES_COMPTES.reinitialisation, { corps: '{}' });
+
+    expect([refus.statut, premierChamp(refus.corps)]).toEqual([401, 'identifiantsIncorrects']);
+
+    await serveur?.fermer();
+    const autre = await monter({
+      comptes: serviceFactice({ reinitialiser: refusDuService('tropDeTentatives') }),
+    });
+    expect((await requete(autre, ROUTES_COMPTES.reinitialisation, { corps: '{}' })).statut).toBe(
+      429,
+    );
   });
 });
 

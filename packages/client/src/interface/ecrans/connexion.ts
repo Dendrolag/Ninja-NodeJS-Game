@@ -1,5 +1,6 @@
 /**
- * L'ecran de connexion: se connecter a un compte, ou en creer un.
+ * L'ecran de connexion: se connecter a un compte, en creer un, ou retrouver l'acces
+ * au sien avec son code de secours (etape 3.4).
  *
  * Sans equivalent dans le legacy, qui ne connaissait que des pseudos. LE COMPTE EST
  * FACULTATIF (decision du 11 septembre 2026): l'ecran le dit, et propose de
@@ -7,8 +8,8 @@
  *
  * CET ECRAN NE DECIDE RIEN. Ce qui cloche dans la saisie, ce qui peut partir et ce
  * que le serveur a refuse viennent de modeleConnexion. Il ne retient que ce que le
- * joueur est en train de faire (l'onglet choisi, les champs visites), qui n'a pas a
- * survivre a l'ecran.
+ * joueur est en train de faire (le formulaire choisi, les champs visites), qui n'a
+ * pas a survivre a l'ecran.
  *
  * UN FORMULAIRE, POUR LE NAVIGATEUR. Les champs portent les indications que les
  * gestionnaires de mots de passe reconnaissent. L'envoi est intercepte: la page ne
@@ -16,11 +17,11 @@
  * a un formulaire de partir ailleurs.
  */
 
-import { BORNES_MOT_DE_PASSE, BORNES_PSEUDO } from '@neon-ninja/shared';
+import { BORNES_CODE_DE_SECOURS, BORNES_MOT_DE_PASSE, BORNES_PSEUDO } from '@neon-ninja/shared';
 
-import type { EtatClient, NatureDemandeDeCompte } from '../../etat.js';
+import type { EtatClient } from '../../etat.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
-import type { SaisieDeCompte } from '../modeles/connexion.js';
+import type { FormulaireDeCompte, SaisieDeCompte } from '../modeles/connexion.js';
 import { modeleConnexion } from '../modeles/connexion.js';
 import type { ContexteEcran, EcranAffiche } from './types.js';
 
@@ -29,12 +30,13 @@ export function monterConnexion(contexte: ContexteEcran): EcranAffiche {
   const doc = contexte.document;
   const client = contexte.client;
 
-  let nature: NatureDemandeDeCompte = 'connexion';
+  let nature: FormulaireDeCompte = 'connexion';
   let pseudoVisite = false;
   let motDePasseVisite = false;
+  let codeVisite = false;
   let etatCourant: EtatClient | undefined;
 
-  const onglet = (valeur: NatureDemandeDeCompte, texte: string): HTMLButtonElement => {
+  const onglet = (valeur: 'connexion' | 'inscription', texte: string): HTMLButtonElement => {
     const element = bouton(doc, { classe: 'onglet', texte }, () => {
       nature = valeur;
       rendre();
@@ -57,6 +59,18 @@ export function monterConnexion(contexte: ContexteEcran): EcranAffiche {
       spellcheck: 'false',
     },
   });
+  const champCode = creer(doc, 'input', {
+    classe: 'champ-texte champ-code',
+    attributs: {
+      type: 'text',
+      name: 'code-de-secours',
+      autocomplete: 'off',
+      autocapitalize: 'characters',
+      maxlength: String(BORNES_CODE_DE_SECOURS.saisieMaximum),
+      spellcheck: 'false',
+      placeholder: 'XXXX-XXXX-XXXX-XXXX',
+    },
+  });
   const champMotDePasse = creer(doc, 'input', {
     classe: 'champ-texte',
     attributs: {
@@ -66,8 +80,12 @@ export function monterConnexion(contexte: ContexteEcran): EcranAffiche {
     },
   });
 
+  const titre = creer(doc, 'h1', { classe: 'connexion-titre' });
+  const intro = creer(doc, 'p', { classe: 'connexion-intro' });
   const erreurPseudo = creer(doc, 'span', { classe: 'champ-erreur' });
+  const erreurCode = creer(doc, 'span', { classe: 'champ-erreur' });
   const erreurMotDePasse = creer(doc, 'span', { classe: 'champ-erreur' });
+  const libelleMotDePasse = creer(doc, 'span', { classe: 'etiquette' });
   const aideMotDePasse = creer(doc, 'span', { classe: 'connexion-aide' });
   const erreurGenerale = creer(doc, 'p', {
     classe: 'connexion-erreur',
@@ -76,6 +94,15 @@ export function monterConnexion(contexte: ContexteEcran): EcranAffiche {
   const envoyer = bouton(doc, { classe: 'bouton bouton-primaire bouton-large', type: 'submit' });
   const texteEnvoyer = creer(doc, 'span');
   envoyer.append(texteEnvoyer);
+
+  const etiquetteCode = creer(
+    doc,
+    'label',
+    { classe: 'champ-compte' },
+    creer(doc, 'span', { classe: 'etiquette', texte: 'Code de secours' }),
+    champCode,
+    erreurCode,
+  );
 
   const formulaire = creer(
     doc,
@@ -89,17 +116,58 @@ export function monterConnexion(contexte: ContexteEcran): EcranAffiche {
       champPseudo,
       erreurPseudo,
     ),
+    etiquetteCode,
     creer(
       doc,
       'label',
       { classe: 'champ-compte' },
-      creer(doc, 'span', { classe: 'etiquette', texte: 'Mot de passe' }),
+      libelleMotDePasse,
       champMotDePasse,
       aideMotDePasse,
       erreurMotDePasse,
     ),
     erreurGenerale,
     envoyer,
+  );
+
+  const onglets = creer(
+    doc,
+    'div',
+    {
+      classe: 'onglets',
+      attributs: { role: 'tablist', 'aria-label': 'Connexion ou inscription' },
+    },
+    ongletConnexion,
+    ongletInscription,
+  );
+
+  /**
+   * Passe d'un formulaire a l'autre entre la connexion et le mot de passe oublie.
+   *
+   * Le mot de passe saisi est efface: le mot de passe errone d'une connexion ne doit
+   * pas devenir, sans qu'on le voie, le nouveau mot de passe d'une reinitialisation.
+   */
+  const passerA = (vers: FormulaireDeCompte): void => {
+    nature = vers;
+    champMotDePasse.value = '';
+    motDePasseVisite = false;
+    codeVisite = false;
+    rendre();
+  };
+
+  const motDePasseOublie = bouton(
+    doc,
+    { classe: 'bouton bouton-discret', texte: 'Mot de passe oublié ?' },
+    () => {
+      passerA('reinitialisation');
+    },
+  );
+  const retourALaConnexion = bouton(
+    doc,
+    { classe: 'bouton bouton-discret', texte: 'Retour à la connexion' },
+    () => {
+      passerA('connexion');
+    },
   );
 
   const racine = creer(
@@ -110,23 +178,12 @@ export function monterConnexion(contexte: ContexteEcran): EcranAffiche {
       doc,
       'div',
       { classe: 'panneau connexion-panneau' },
-      creer(doc, 'h1', { classe: 'connexion-titre', texte: 'Votre compte' }),
-      creer(doc, 'p', {
-        classe: 'connexion-intro',
-        texte:
-          'Le compte est facultatif : il garde votre XP, vos pièces et vos points de ligue. Sans compte, vous jouez en invité, avec un simple pseudo.',
-      }),
-      creer(
-        doc,
-        'div',
-        {
-          classe: 'onglets',
-          attributs: { role: 'tablist', 'aria-label': 'Connexion ou inscription' },
-        },
-        ongletConnexion,
-        ongletInscription,
-      ),
+      titre,
+      intro,
+      onglets,
       formulaire,
+      motDePasseOublie,
+      retourALaConnexion,
       bouton(doc, { classe: 'bouton bouton-discret', texte: 'Continuer en invité' }, () => {
         client.naviguer('accueil');
       }),
@@ -137,8 +194,10 @@ export function monterConnexion(contexte: ContexteEcran): EcranAffiche {
     nature,
     pseudo: champPseudo.value,
     motDePasse: champMotDePasse.value,
+    codeDeSecours: champCode.value,
     pseudoVisite,
     motDePasseVisite,
+    codeVisite,
   });
 
   function rendre(): void {
@@ -148,6 +207,14 @@ export function monterConnexion(contexte: ContexteEcran): EcranAffiche {
 
     const modele = modeleConnexion(etatCourant, saisie());
 
+    ecrireTexte(titre, modele.titre);
+    ecrireTexte(intro, modele.intro);
+    montrer(onglets, modele.onglets);
+    montrer(etiquetteCode, modele.demandeLeCode);
+    montrer(motDePasseOublie, nature === 'connexion');
+    montrer(retourALaConnexion, nature === 'reinitialisation');
+    ecrireTexte(libelleMotDePasse, modele.libelleMotDePasse);
+
     ongletConnexion.setAttribute('aria-selected', String(nature === 'connexion'));
     ongletInscription.setAttribute('aria-selected', String(nature === 'inscription'));
     champMotDePasse.setAttribute('autocomplete', modele.autocompletion);
@@ -155,6 +222,10 @@ export function monterConnexion(contexte: ContexteEcran): EcranAffiche {
     ecrireTexte(erreurPseudo, modele.erreurPseudo ?? '');
     montrer(erreurPseudo, modele.erreurPseudo !== undefined);
     champPseudo.toggleAttribute('aria-invalid', modele.erreurPseudo !== undefined);
+
+    ecrireTexte(erreurCode, modele.erreurCode ?? '');
+    montrer(erreurCode, modele.erreurCode !== undefined);
+    champCode.toggleAttribute('aria-invalid', modele.erreurCode !== undefined);
 
     ecrireTexte(erreurMotDePasse, modele.erreurMotDePasse ?? '');
     montrer(erreurMotDePasse, modele.erreurMotDePasse !== undefined);
@@ -185,12 +256,18 @@ export function monterConnexion(contexte: ContexteEcran): EcranAffiche {
     rendre();
   };
 
+  const surSortieCode = (): void => {
+    codeVisite = true;
+    rendre();
+  };
+
   // Tenter d'envoyer montre toutes les fautes d'un coup: c'est le moment ou le
   // joueur veut savoir ce qui manque.
   const surEnvoi = (evenement: Event): void => {
     evenement.preventDefault();
     pseudoVisite = true;
     motDePasseVisite = true;
+    codeVisite = true;
 
     if (etatCourant !== undefined) {
       const envoi = modeleConnexion(etatCourant, saisie()).envoi;
@@ -199,6 +276,8 @@ export function monterConnexion(contexte: ContexteEcran): EcranAffiche {
         client.seConnecter(envoi.demande);
       } else if (envoi?.nature === 'inscription') {
         client.sInscrire(envoi.demande);
+      } else if (envoi?.nature === 'reinitialisation') {
+        client.reinitialiserMotDePasse(envoi.demande);
       }
     }
 
@@ -208,6 +287,7 @@ export function monterConnexion(contexte: ContexteEcran): EcranAffiche {
   formulaire.addEventListener('input', surSaisie);
   champPseudo.addEventListener('blur', surSortiePseudo);
   champMotDePasse.addEventListener('blur', surSortieMotDePasse);
+  champCode.addEventListener('blur', surSortieCode);
   formulaire.addEventListener('submit', surEnvoi);
 
   return {
@@ -222,6 +302,7 @@ export function monterConnexion(contexte: ContexteEcran): EcranAffiche {
       formulaire.removeEventListener('input', surSaisie);
       champPseudo.removeEventListener('blur', surSortiePseudo);
       champMotDePasse.removeEventListener('blur', surSortieMotDePasse);
+      champCode.removeEventListener('blur', surSortieCode);
       formulaire.removeEventListener('submit', surEnvoi);
       racine.remove();
     },

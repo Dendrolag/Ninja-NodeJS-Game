@@ -12,8 +12,8 @@
  * paquet partage, les motifs sont ceux d'Authentification, et les gains arrivent
  * deja calcules par le serveur de jeu. Ce que seul la base garantit (hachage,
  * limites de tentatives, transactions) est verifie contre Neon, dans tests/base.
- * Le mot de passe est garde en clair: ce fichier ne sert qu'aux tests, et aucun
- * vrai mot de passe n'y passe.
+ * Le mot de passe et le code de secours sont gardes en clair: ce fichier ne sert
+ * qu'aux tests, et aucun vrai secret n'y passe.
  *
  * Rien de ce fichier n'est ajoute au jeu: il est fourni au serveur par le test.
  *
@@ -26,32 +26,45 @@
 
 import type {
   IdentiteDeCompte,
+  MotifDeRefus,
   NouveauResultat,
   NouvellePartie,
   ProgressionAppliquee,
   ReponseDeCompte,
   ServiceDeComptes,
 } from '../../packages/server/dist/index.js';
+import {
+  CODE_DE_SECOURS_INCORRECT,
+  MOT_DE_PASSE_INCORRECT,
+  fabriquerCodeDeSecours,
+} from '../../packages/server/dist/index.js';
 import type {
   ErreurValidation,
   MaProgression,
   PartieDuProfil,
+  SessionInscrite,
   SessionOuverte,
 } from '../../packages/shared/dist/index.js';
 import {
   JOUEURS_POUR_UNE_VICTOIRE,
   PARTIES_DU_PROFIL,
+  formaterCodeDeSecours,
   niveauDeXp,
   reperePseudo,
+  validerDemandeChangementMotDePasse,
+  validerDemandeCodeDeSecours,
   validerDemandeConnexion,
   validerDemandeInscription,
+  validerDemandeReinitialisation,
 } from '../../packages/shared/dist/index.js';
 
 /** Un compte tenu en memoire. */
 interface CompteEnMemoire {
   readonly id: string;
   readonly pseudo: string;
-  readonly motDePasse: string;
+  motDePasse: string;
+  /** Le code de secours normalise, sans tiret. */
+  codeDeSecours: string;
   readonly inscritLe: Date;
   xpTotale: number;
   pieces: number;
@@ -72,6 +85,8 @@ export interface ComptesEnMemoire extends ServiceDeComptes {
   readonly fins: readonly FinEnregistree[];
   /** Le compte qui porte ce pseudo, s'il existe. */
   compteNomme(pseudo: string): Readonly<CompteEnMemoire> | undefined;
+  /** Le nombre de sessions ouvertes de ce compte (etape 3.4). */
+  sessionsDe(pseudo: string): number;
 }
 
 /** Les motifs d'Authentification, pour que la page lise les memes phrases qu'en production. */
@@ -85,13 +100,17 @@ const MOTIFS = {
 export function creerComptesEnMemoire(): ComptesEnMemoire {
   const comptes = new Map<string, CompteEnMemoire>();
   const sessions = new Map<string, string>();
+  const ecouteurs = new Set<(compteId: string) => void>();
   const fins: FinEnregistree[] = [];
   let compteur = 0;
 
   const refusee = <T>(
-    motif: 'demandeInvalide' | 'pseudoPris' | 'identifiantsIncorrects' | 'sessionAbsente',
+    motif: MotifDeRefus,
     erreurs: readonly ErreurValidation[],
   ): ReponseDeCompte<T> => ({ acceptee: false, motif, erreurs });
+
+  const sessionAbsente = <T>(): ReponseDeCompte<T> =>
+    refusee('sessionAbsente', [{ champ: 'session', motif: MOTIFS.sessionAbsente }]);
 
   const parPseudo = (pseudo: string): CompteEnMemoire | undefined =>
     [...comptes.values()].find((compte) => reperePseudo(compte.pseudo) === reperePseudo(pseudo));
@@ -103,6 +122,39 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
     sessions.set(jeton, compte.id);
 
     return { jeton, compte: { pseudo: compte.pseudo, niveau: niveauDeXp(compte.xpTotale) } };
+  };
+
+  /** Ferme les sessions de ce compte, sauf celle de ce jeton, et previent les ecouteurs. */
+  const fermerLesSessions = (compte: CompteEnMemoire, sauf?: string): void => {
+    for (const [jeton, compteId] of sessions) {
+      if (compteId === compte.id && jeton !== sauf) {
+        sessions.delete(jeton);
+      }
+    }
+
+    for (const ecouteur of ecouteurs) {
+      ecouteur(compte.id);
+    }
+  };
+
+  /** Un nouveau code pour ce compte, rendu tel qu'on le montre. */
+  const renouvelerLeCode = (compte: CompteEnMemoire): string => {
+    compte.codeDeSecours = fabriquerCodeDeSecours();
+
+    return formaterCodeDeSecours(compte.codeDeSecours);
+  };
+
+  /** Le compte de cette session, si ce mot de passe est le sien. */
+  const verifier = (jeton: string, motDePasse: string): ReponseDeCompte<CompteEnMemoire> => {
+    const compte = comptes.get(sessions.get(jeton) ?? '');
+
+    if (compte === undefined) {
+      return sessionAbsente();
+    }
+
+    return compte.motDePasse === motDePasse
+      ? { acceptee: true, valeur: compte }
+      : refusee('motDePasseIncorrect', [{ champ: 'motDePasse', motif: MOT_DE_PASSE_INCORRECT }]);
   };
 
   const progressionDe = (compte: CompteEnMemoire): MaProgression => ({
@@ -119,7 +171,13 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
 
     compteNomme: parPseudo,
 
-    inscrire: async (brut) => {
+    sessionsDe: (pseudo) => {
+      const compte = parPseudo(pseudo);
+
+      return [...sessions.values()].filter((compteId) => compteId === compte?.id).length;
+    },
+
+    inscrire: async (brut): Promise<ReponseDeCompte<SessionInscrite>> => {
       const demande = validerDemandeInscription(brut);
       if (!demande.valide) {
         return refusee('demandeInvalide', demande.erreurs);
@@ -133,6 +191,7 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
         id: `compte-${String(comptes.size + 1)}`,
         pseudo: demande.valeur.pseudo,
         motDePasse: demande.valeur.motDePasse,
+        codeDeSecours: '',
         inscritLe: new Date('2026-09-11T10:00:00.000Z'),
         xpTotale: 0,
         pieces: 0,
@@ -140,8 +199,9 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
         historique: [],
       };
       comptes.set(compte.id, compte);
+      const codeDeSecours = renouvelerLeCode(compte);
 
-      return { acceptee: true, valeur: ouvrirUneSession(compte) };
+      return { acceptee: true, valeur: { ...ouvrirUneSession(compte), codeDeSecours } };
     },
 
     connecter: async (brut) => {
@@ -169,7 +229,7 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
       const compte = comptes.get(sessions.get(jeton) ?? '');
 
       return compte === undefined
-        ? refusee('sessionAbsente', [{ champ: 'session', motif: MOTIFS.sessionAbsente }])
+        ? sessionAbsente()
         : { acceptee: true, valeur: progressionDe(compte) };
     },
 
@@ -178,7 +238,7 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
       const compte = comptes.get(sessions.get(jeton) ?? '');
 
       if (compte === undefined) {
-        return refusee('sessionAbsente', [{ champ: 'session', motif: MOTIFS.sessionAbsente }]);
+        return sessionAbsente();
       }
 
       const victoires = compte.historique.filter(
@@ -199,6 +259,61 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
       };
     },
 
+    // Comme Authentification: les autres sessions se ferment, le code est renouvele.
+    changerMotDePasse: async (jeton, brut) => {
+      const demande = validerDemandeChangementMotDePasse(brut);
+      if (!demande.valide) {
+        return refusee('demandeInvalide', demande.erreurs);
+      }
+
+      const verification = verifier(jeton, demande.valeur.motDePasse);
+      if (!verification.acceptee) {
+        return verification;
+      }
+
+      const compte = verification.valeur;
+      compte.motDePasse = demande.valeur.nouveauMotDePasse;
+      const codeDeSecours = renouvelerLeCode(compte);
+      fermerLesSessions(compte, jeton);
+
+      return { acceptee: true, valeur: { codeDeSecours } };
+    },
+
+    nouveauCodeDeSecours: async (jeton, brut) => {
+      const demande = validerDemandeCodeDeSecours(brut);
+      if (!demande.valide) {
+        return refusee('demandeInvalide', demande.erreurs);
+      }
+
+      const verification = verifier(jeton, demande.valeur.motDePasse);
+
+      return verification.acceptee
+        ? { acceptee: true, valeur: { codeDeSecours: renouvelerLeCode(verification.valeur) } }
+        : verification;
+    },
+
+    // Comme Authentification: toutes les sessions se ferment, puis une neuve s'ouvre.
+    reinitialiser: async (brut): Promise<ReponseDeCompte<SessionInscrite>> => {
+      const demande = validerDemandeReinitialisation(brut);
+      if (!demande.valide) {
+        return refusee('demandeInvalide', demande.erreurs);
+      }
+
+      const compte = parPseudo(demande.valeur.pseudo);
+
+      if (compte === undefined || compte.codeDeSecours !== demande.valeur.codeDeSecours) {
+        return refusee('identifiantsIncorrects', [
+          { champ: 'reinitialisation', motif: CODE_DE_SECOURS_INCORRECT },
+        ]);
+      }
+
+      compte.motDePasse = demande.valeur.nouveauMotDePasse;
+      const codeDeSecours = renouvelerLeCode(compte);
+      fermerLesSessions(compte);
+
+      return { acceptee: true, valeur: { ...ouvrirUneSession(compte), codeDeSecours } };
+    },
+
     compteDeSession: async (jeton) => sessions.get(jeton),
 
     identiteDe: async (compteId): Promise<IdentiteDeCompte | undefined> => {
@@ -210,6 +325,14 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
     },
 
     pseudoDeCompte: async (pseudo) => parPseudo(pseudo) !== undefined,
+
+    surSessionsFermees: (ecouteur) => {
+      ecouteurs.add(ecouteur);
+
+      return () => {
+        ecouteurs.delete(ecouteur);
+      };
+    },
 
     // Les gains arrivent calcules; comme en base, une perte de points de ligue
     // plus grande que le solde est ramenee au solde.

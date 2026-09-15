@@ -14,6 +14,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { EnvoiHttp } from './api.js';
 import {
+  CODE_DESSAI,
   JETON_DESSAI,
   MOTIF_INJOIGNABLE,
   STATUT_INJOIGNABLE,
@@ -111,6 +112,46 @@ describe('les requetes qui partent', () => {
     });
     expect(vues[0]?.adresse).toBe(`${ORIGINE}${ROUTES_COMPTES.profil}`);
     expect(entetes(vues[0]).get('Authorization')).toBe(`Bearer ${JETON_DESSAI}`);
+  });
+
+  it('envoient le changement de mot de passe et la demande de code, jeton en en-tete', async () => {
+    const { vues, envoyer } = envoiDEssai(() => json(200, { codeDeSecours: CODE_DESSAI }));
+    const api = creerApiComptesHttp({ url: ORIGINE, envoyer });
+
+    const changement = await api.changerMotDePasse(JETON_DESSAI, {
+      motDePasse: 'ancien',
+      nouveauMotDePasse: 'nouveau secret',
+    });
+    await api.nouveauCodeDeSecours(JETON_DESSAI, { motDePasse: 'ancien' });
+
+    expect(changement).toEqual({ acceptee: true, valeur: { codeDeSecours: CODE_DESSAI } });
+    expect(vues.map((vue) => vue.adresse)).toEqual([
+      `${ORIGINE}${ROUTES_COMPTES.motDePasse}`,
+      `${ORIGINE}${ROUTES_COMPTES.codeDeSecours}`,
+    ]);
+    for (const vue of vues) {
+      expect(vue.init.method).toBe('POST');
+      expect(entetes(vue).get('Authorization')).toBe(`Bearer ${JETON_DESSAI}`);
+      expect(entetes(vue).get('Content-Type')).toBe('application/json');
+      expect(vue.adresse).not.toContain(JETON_DESSAI);
+    }
+    expect(JSON.parse(String(vues[0]?.init.body))).toEqual({
+      motDePasse: 'ancien',
+      nouveauMotDePasse: 'nouveau secret',
+    });
+    expect(JSON.parse(String(vues[1]?.init.body))).toEqual({ motDePasse: 'ancien' });
+  });
+
+  it('envoient la reinitialisation a sa route, sans jeton', async () => {
+    const reinitialisee = { ...SESSION, codeDeSecours: CODE_DESSAI };
+    const { vues, envoyer } = envoiDEssai(() => json(200, reinitialisee));
+    const api = creerApiComptesHttp({ url: ORIGINE, envoyer });
+    const demande = { pseudo: 'Alice', codeDeSecours: 'K7QM3X9DTP4W8HNE', nouveauMotDePasse: 'x' };
+
+    expect(await api.reinitialiser(demande)).toEqual({ acceptee: true, valeur: reinitialisee });
+    expect(vues[0]?.adresse).toBe(`${ORIGINE}${ROUTES_COMPTES.reinitialisation}`);
+    expect(entetes(vues[0]).get('Authorization')).toBeNull();
+    expect(JSON.parse(String(vues[0]?.init.body))).toEqual(demande);
   });
 
   it('partent vers l origine de la page quand aucune adresse n est donnee', async () => {

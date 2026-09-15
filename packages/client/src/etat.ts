@@ -98,11 +98,18 @@ export type SessionDuClient =
   /** On joue avec un compte, sous son pseudo. */
   | { readonly nature: 'compte'; readonly progression: MaProgression };
 
-/** Ce qu'une demande de compte cherche a obtenir. */
-export type NatureDemandeDeCompte = 'connexion' | 'inscription';
+/**
+ * Ce qu'une demande de compte cherche a obtenir.
+ *
+ * Les trois dernieres viennent de l'etape 3.4: reinitialiser un mot de passe oublie,
+ * depuis l'ecran de connexion; changer son mot de passe et obtenir un nouveau code
+ * de secours, depuis le profil.
+ */
+export type NatureDemandeDeCompte =
+  'connexion' | 'inscription' | 'reinitialisation' | 'motDePasse' | 'codeDeSecours';
 
 /**
- * La derniere demande de connexion ou d'inscription, et ce qu'elle a donne.
+ * La derniere demande de compte, et ce qu'elle a donne.
  *
  * Elle retient sa nature et le pseudo qu'elle portait: son refus ne s'affiche que
  * sous la saisie qui l'a provoque, comme le refus d'entree de l'accueil.
@@ -111,9 +118,16 @@ export interface DemandeDeCompte {
   /** La demande est partie, et sa reponse n'est pas arrivee. */
   readonly enCours: boolean;
   readonly nature: NatureDemandeDeCompte | undefined;
+  /** Le pseudo de la demande. Absent pour une demande faite depuis le profil. */
   readonly pseudo: string | undefined;
   /** Les motifs du refus, vides tant qu'il n'y en a pas. */
   readonly erreurs: readonly ErreurValidation[];
+  /**
+   * La demande a abouti (etape 3.4). Une connexion reussie change la session et
+   * efface la demande; une demande du profil, elle, laisse la session en place, et
+   * son formulaire doit pouvoir le dire.
+   */
+  readonly acceptee: boolean;
 }
 
 /** Aucune demande de compte en cours ni refusee. */
@@ -122,6 +136,7 @@ export const AUCUNE_DEMANDE_DE_COMPTE: DemandeDeCompte = {
   nature: undefined,
   pseudo: undefined,
   erreurs: [],
+  acceptee: false,
 };
 
 /**
@@ -184,8 +199,17 @@ export interface EtatClient {
   readonly refusDeConnexion: string | undefined;
   /** Invite ou compte. */
   readonly session: SessionDuClient;
-  /** La derniere demande de connexion ou d'inscription. */
+  /** La derniere demande de compte: connexion, inscription, ou gestion du mot de passe. */
   readonly demandeDeCompte: DemandeDeCompte;
+  /**
+   * Le code de secours que le serveur vient d'emettre, a montrer au joueur (etape 3.4).
+   *
+   * C'EST UN SECRET, MAIS IL EST FAIT POUR ETRE LU. Contrairement au jeton, que le
+   * joueur ne voit jamais, ce code doit s'afficher: le serveur ne le rendra plus.
+   * Il ne vit ici que le temps de l'affichage, et il est oublie des que le joueur
+   * dit l'avoir note. Il ne survit pas au rechargement de la page.
+   */
+  readonly codeDeSecours: string | undefined;
   /** Le profil du compte, lu a l'ouverture de son ecran. */
   readonly profil: EtatDuProfil;
   /**
@@ -293,6 +317,7 @@ export const ETAT_INITIAL: EtatClient = {
   refusDeConnexion: undefined,
   session: { nature: 'invite', sessionExpiree: false },
   demandeDeCompte: AUCUNE_DEMANDE_DE_COMPTE,
+  codeDeSecours: undefined,
   profil: PROFIL_INCONNU,
   moi: undefined,
   pseudoDemande: undefined,

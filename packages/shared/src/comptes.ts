@@ -44,6 +44,22 @@ export const ROUTES_COMPTES = {
   moi: `${RACINE_API_COMPTES}/moi`,
   /** GET, jeton en en-tete. 200 et ProfilDuCompte; 401 sans session valide. */
   profil: `${RACINE_API_COMPTES}/profil`,
+  /**
+   * POST, jeton en en-tete, DemandeChangementMotDePasse (etape 3.4). 200 et
+   * CodeDeSecoursEmis; 400, 401 sans session valide, 403 si le mot de passe actuel
+   * est faux, 429.
+   */
+  motDePasse: `${RACINE_API_COMPTES}/mot-de-passe`,
+  /**
+   * POST, jeton en en-tete, DemandeCodeDeSecours (etape 3.4). 200 et
+   * CodeDeSecoursEmis; 400, 401, 403 ou 429 sinon.
+   */
+  codeDeSecours: `${RACINE_API_COMPTES}/code-de-secours`,
+  /**
+   * POST, sans jeton, DemandeReinitialisation (etape 3.4). 200 et SessionInscrite;
+   * 400, 401 si le pseudo ou le code ne correspondent pas, 429.
+   */
+  reinitialisation: `${RACINE_API_COMPTES}/reinitialisation`,
 } as const;
 
 /**
@@ -85,6 +101,54 @@ export interface CompteConnecte {
 export interface SessionOuverte {
   readonly jeton: string;
   readonly compte: CompteConnecte;
+}
+
+/**
+ * Un code de secours que le serveur vient d'emettre (etape 3.4).
+ *
+ * C'EST LA SEULE FOIS QUE LE CODE EST MONTRE. Le serveur n'en garde que l'empreinte
+ * et ne peut pas le relire: le joueur doit le noter maintenant. Il remplace le code
+ * precedent, qui ne vaut plus rien.
+ */
+export interface CodeDeSecoursEmis {
+  /** Le code, en quatre groupes separes par des tirets: « K7QM-3X9D-TP4W-8HNE ». */
+  readonly codeDeSecours: string;
+}
+
+/**
+ * La reponse a une inscription ou a une reinitialisation reussie: une session, et
+ * le code de secours qui accompagne le nouveau mot de passe.
+ */
+export interface SessionInscrite extends SessionOuverte, CodeDeSecoursEmis {}
+
+/**
+ * Ce qu'un compte connecte envoie pour changer son mot de passe (etape 3.4).
+ *
+ * Le mot de passe actuel est exige meme avec une session ouverte: un jeton vole ne
+ * doit pas suffire a s'approprier le compte.
+ */
+export interface DemandeChangementMotDePasse {
+  /** Le mot de passe actuel. */
+  readonly motDePasse: string;
+  /** Le nouveau, soumis a la regle de l'inscription. */
+  readonly nouveauMotDePasse: string;
+}
+
+/** Ce qu'un compte connecte envoie pour obtenir un nouveau code de secours (etape 3.4). */
+export interface DemandeCodeDeSecours {
+  /** Le mot de passe actuel. */
+  readonly motDePasse: string;
+}
+
+/**
+ * Ce qu'un joueur qui a oublie son mot de passe envoie pour en choisir un autre
+ * (etape 3.4). Aucune session: c'est le code de secours qui fait preuve.
+ */
+export interface DemandeReinitialisation {
+  readonly pseudo: string;
+  /** Le code tel que saisi: casse, espaces et tirets n'y comptent pas. */
+  readonly codeDeSecours: string;
+  readonly nouveauMotDePasse: string;
 }
 
 /**

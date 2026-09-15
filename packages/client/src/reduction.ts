@@ -59,8 +59,9 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
       return { ...etat, ecran, connexion: 'connecte', refusDeConnexion: undefined };
 
     // Le lien est tombe: on ne sait plus rien de la partie, et on ne peut plus
-    // rien en apprendre. Survivent le pseudo saisi, pour reproposer la saisie, et
-    // la session, qui ne depend pas du lien.
+    // rien en apprendre. Survivent le pseudo saisi, pour reproposer la saisie, la
+    // session, qui ne depend pas du lien, et un code de secours pas encore note, que
+    // le serveur ne rendra plus.
     case 'connexionPerdue':
       return {
         ...ETAT_INITIAL,
@@ -69,6 +70,7 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
         pseudoDemande: etat.pseudoDemande,
         pseudoSaisi: etat.pseudoSaisi,
         session: etat.session,
+        codeDeSecours: etat.codeDeSecours,
       };
 
     // Tombe en pleine partie, le lien peut revenir: rien de la partie n'est oublie,
@@ -100,6 +102,7 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
         pseudoDemande: etat.pseudoDemande,
         pseudoSaisi: etat.pseudoSaisi,
         session: etat.session,
+        codeDeSecours: etat.codeDeSecours,
         avisDeRetour: action.motif,
       };
 
@@ -160,6 +163,7 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
           nature: action.nature,
           pseudo: action.pseudo,
           erreurs: [],
+          acceptee: false,
         },
       };
 
@@ -167,8 +171,28 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
       return {
         ...etat,
         ecran,
-        demandeDeCompte: { ...etat.demandeDeCompte, enCours: false, erreurs: action.erreurs },
+        demandeDeCompte: {
+          ...etat.demandeDeCompte,
+          enCours: false,
+          erreurs: action.erreurs,
+          acceptee: false,
+        },
       };
+
+    case 'demandeDeCompteAcceptee':
+      return {
+        ...etat,
+        ecran,
+        demandeDeCompte: { ...etat.demandeDeCompte, enCours: false, erreurs: [], acceptee: true },
+      };
+
+    // Le code se montre par-dessus n'importe quel ecran, jusqu'a ce que le joueur l'ait
+    // note: un code emis remplace celui qui attendait encore, qui ne vaut plus rien.
+    case 'codeDeSecoursEmis':
+      return { ...etat, ecran, codeDeSecours: action.code };
+
+    case 'codeDeSecoursNote':
+      return { ...etat, ecran, codeDeSecours: undefined };
 
     case 'profilDemande':
       return { ...etat, ecran, profil: { statut: 'chargement' } };
@@ -241,6 +265,7 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
         pseudoDemande: etat.pseudoDemande,
         pseudoSaisi: etat.pseudoSaisi,
         session: etat.session,
+        codeDeSecours: etat.codeDeSecours,
       };
 
     // Une photographie de la liste, qui remplace la precedente.
