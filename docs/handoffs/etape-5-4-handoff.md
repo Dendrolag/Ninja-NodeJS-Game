@@ -239,7 +239,8 @@ Résolu par cette étape, repris du handoff 5.3 : la mise en ligne qui coupait l
 - `5dae93a` (vitesse sur téléphone) : documentation seule.
 - `1befc5e` (classement sous le temps, aucun halo, pluie de Rainy Tokyo) : **verte**, exécution 34943551024 : « Types, linter et tests », « Bout en bout » (6,5 minutes, contre 6,0 et 5,8 aux deux commits précédents, avec sept scénarios de plus) et « Mise en ligne ». La production sert ce commit, vérifié sur `/sante`.
 - `9dadf92` (quatre scénarios de bout en bout à la fois en local) : **verte**, exécution 34945922796, mise en ligne comprise. Elle n'aurait pas dû partir : ce commit ne changeait que `playwright.config.ts` et la documentation. Défaut de la règle de mise en ligne ciblée, corrigé au commit suivant.
-- Le commit de la mise en ligne ciblée resserrée change le code de mise en ligne lui-même : il part en ligne, ce qui est attendu.
+- `4317096` (mise en ligne ciblée resserrée) : **verte**, exécution 34947191450, mise en ligne comprise, attendue puisque le code de mise en ligne a changé. La production sert ce commit, vérifié sur `/sante`.
+- Le commit qui consigne ce résultat ne touche que ce handoff : sa mise en ligne doit s'arrêter d'elle-même, la production restant sur `4317096`.
 
 `master` n'a pas été touché.
 
