@@ -1,8 +1,9 @@
 # Integration continue.
 #
 # C'est le mecanisme qui transforme les tests en garantie reelle: si ce workflow
-# est rouge, la fusion est bloquee. Aucune evolution n'entre dans la branche
-# principale sans passer le filet.
+# est rouge, rien ne part en ligne. On pousse directement sur master, sans
+# protection de branche (decision du 15 septembre 2026): c'est la mise en ligne,
+# et non la poussee, qui attend que le filet soit passe.
 #
 # Ordre volontaire, du plus rapide au plus lent, pour echouer tot:
 # formatage, types, linter, tests unitaires, puis bout en bout.
@@ -18,11 +19,11 @@ on:
     branches: ['**']
 
 # Une nouvelle poussee sur la meme branche annule l'execution precedente, sauf sur
-# reecriture: son execution peut etre en train de mettre en ligne, et une mise en
+# master: son execution peut etre en train de mettre en ligne, et une mise en
 # ligne interrompue laisserait le serveur et la page de deux versions differentes.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/reecriture' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 env:
   NODE_VERSION: '24'
@@ -109,14 +110,15 @@ jobs:
           retention-days: 7
 
   # La mise en ligne (etape 5.3): la page sur Vercel, le serveur de jeu sur Render.
-  # Seulement apres les deux jobs verts, et seulement pour une poussee sur
-  # reecriture. Le deroulement et ses verifications sont dans deploiement/deployer.ts,
-  # l'exploitation dans docs/deploiement.md.
+  # Seulement apres les deux jobs verts, et seulement pour une poussee sur master,
+  # la branche de la production depuis l'etape 6.1. Le deroulement et ses
+  # verifications sont dans deploiement/deployer.ts, l'exploitation dans
+  # docs/deploiement.md.
   mise-en-ligne:
     name: Mise en ligne
     runs-on: ubuntu-latest
     needs: [verification, bout-en-bout]
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/reecriture' }}
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
     # Une seule mise en ligne a la fois, jamais interrompue par la suivante.
     concurrency:
       group: mise-en-ligne
@@ -141,13 +143,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Deux executions de reecriture peuvent finir leurs tests dans le desordre:
+      # Deux executions de master peuvent finir leurs tests dans le desordre:
       # seul le dernier commit de la branche se met en ligne, jamais un plus ancien
       # apres un plus recent.
       - name: Verifier que ce commit est le dernier de la branche
         id: dernier
         run: |
-          dernier="$(git ls-remote origin refs/heads/reecriture | cut -f1)"
+          dernier="$(git ls-remote origin refs/heads/master | cut -f1)"
           if [ "$dernier" = "$GITHUB_SHA" ]; then
             echo "a-mettre-en-ligne=oui" >> "$GITHUB_OUTPUT"
           else

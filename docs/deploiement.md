@@ -11,7 +11,7 @@ Mis en place à l'étape 5.3, le 14 septembre 2026. Ce document dit ce qui tourn
 | Base           | Neon, projet `neon-ninja`, branche `production` (principale), pooler   | Dans `DATABASE_URL`, jamais en clair |
 
 - **Vercel** : équipe `team_v9SkLK1zKjpRjtkmzq8Q9TM7` (« dendrolag's projects »). Le projet n'est relié à aucun dépôt : seule la mise en ligne ci-dessous y envoie une page.
-- **Render** : espace de travail `tea-csp5tt3gbbvc73fph8v0`, offre gratuite, branche `reecriture`, déploiement automatique coupé. Le service a été repris de l'ancien service « Neon Ninja » de la version d'origine, suspendu depuis 2025, sur décision du porteur du projet.
+- **Render** : espace de travail `tea-csp5tt3gbbvc73fph8v0`, offre gratuite, branche `master` (depuis l'étape 6.1), déploiement automatique coupé. Le service a été repris de l'ancien service « Neon Ninja » de la version d'origine, suspendu depuis 2025, sur décision du porteur du projet.
 - **Base** : `DATABASE_URL` vit dans le groupe d'environnement Render `neon-ninja-production` (`evg-dak0g56q1p3s739qm7b0`), lié au service. Les branches de test de la CI sont créées sans les données de la branche principale.
 
 ## Réglages du serveur de jeu
@@ -47,7 +47,7 @@ Route de santé surveillée par Render : `/sante`.
 
 ### Automatique
 
-Le job « Mise en ligne » de la CI (`.github/workflows/ci.yml`) part après les deux autres jobs verts, pour une poussée sur `reecriture`, et seulement si le commit est encore le dernier de la branche. Il lance `deploiement/deployer.ts`, qui :
+Le job « Mise en ligne » de la CI (`.github/workflows/ci.yml`) part après les deux autres jobs verts, pour une poussée sur `master`, et seulement si le commit est encore le dernier de la branche. Il lance `deploiement/deployer.ts`, qui :
 
 0. lit la version en ligne sur `/sante`, et s'arrête sans rien changer si ce commit y est déjà, ou si rien de ce qui compose le jeu n'a changé depuis : documentation (`docs/`, fichiers `.md`), tests (`tests/`, fichiers `.test.ts` et `.spec.ts`), `legacy/`, `.claude/`, et l'outillage posé à la racine qui ne sert qu'aux tests, au linter ou au formateur (`playwright.config.ts`, `vitest.config.ts`, `vitest.workspace.ts`, `tsconfig.tests.json`, `tsconfig.e2e.json`, `eslint.config.js`, `.prettierrc.json`, `.prettierignore`) ne partent jamais en ligne. `tsconfig.base.json` et `tsconfig.json`, qui construisent les paquets, en font partie. Une mise en ligne coupe les parties en cours : un commit de documentation n'en coupe plus aucune (étape 5.4). Tout autre fichier, même inconnu, déclenche la mise en ligne, comme un serveur qui ne dit pas sa version ou un historique qui ne permet pas de comparer. La production est donc celle du dernier commit qui touche le jeu, pas forcément du dernier commit ;
 1. empaquette la page pour ce commit (adresse du serveur et version écrites dans `app.js`) et l'envoie à Vercel **sans la promouvoir** ;
@@ -79,7 +79,7 @@ Elles s'appliquent au démarrage du serveur, avant qu'il n'écoute (la commande 
 
 Le serveur et la page doivent toujours être du même commit, sans quoi le serveur refuse la page.
 
-- **Le plus sûr** : annuler le commit fautif sur `reecriture` (`git revert`), et pousser. La CI met en ligne l'ensemble, vérifié.
+- **Le plus sûr** : annuler le commit fautif sur `master` (`git revert`), et pousser. La CI met en ligne l'ensemble, vérifié.
 - **En urgence**, sans attendre la CI : relancer la mise en ligne à la main avec `VERSION_DU_JEU` égal au dernier commit sain.
 - **Depuis les tableaux de bord** : Render, liste des déploiements, « Rollback » sur le déploiement sain ; puis Vercel, projet `neon-ninja-jeu`, liste des déploiements, « Promote » sur la page du même commit. Les deux, dans cet ordre.
 
@@ -88,7 +88,7 @@ Le serveur et la page doivent toujours être du même commit, sans quoi le serve
 - **`/sante`** du serveur : version en ligne, nombre de parties, de joueurs et de connexions, et adresse sous laquelle le serveur voit le demandeur.
 - **Journaux** : tableau de bord Render, onglet Logs du service ; la CI, job « Mise en ligne ».
 - **Mise en veille** : en offre gratuite, le serveur s'endort après quinze minutes sans trafic, et se réveille à la visite suivante : quinze secondes mesurées le 14 septembre 2026, jusqu'à une minute selon Render. Pendant ce temps, la page dit que le serveur démarre et réessaie d'elle-même, toutes les trois secondes pendant une minute et demie. Une partie en cours le garde éveillé.
-- **Heures gratuites** : 750 heures par mois pour tout l'espace de travail Render, partagées avec le service « To The Point » de la version d'origine tant qu'il existe.
+- **Heures gratuites** : 750 heures par mois pour tout l'espace de travail Render, dont le serveur de jeu est le seul service depuis l'étape 6.1.
 - **Échéances** : le jeton Vercel expire le 14 septembre 2027. Le renouveler avant : nouveau jeton, puis variable `VERCEL_TOKEN` de la machine de développement et secret GitHub du même nom.
 
 ## Mandataires
@@ -101,4 +101,4 @@ Pour le vérifier après un changement d'hébergement : interroger `/sante` depu
 
 ## Ressources de la version d'origine
 
-Toujours en ligne au 14 septembre 2026, à retirer à l'étape 6.1 : le service Render « To The Point » (`https://to-the-point.onrender.com`, branche `master`), et les projets Vercel `ttp` et `neon-ninja` (ancienne page, branche `master`), dont la construction ne suit plus que `master`.
+Retirées à l'étape 6.1, le 15 septembre 2026, sur décision du porteur du projet : le service Render « To The Point » (`https://to-the-point.onrender.com`), suspendu puis supprimé, et les projets Vercel `ttp` et `neon-ninja` (`ttp-eight.vercel.app`, `neon-ninja-gules.vercel.app`), supprimés. Aucune ne portait de données. Plus rien en ligne ne sert la version d'origine : elle reste archivée sous l'étiquette git `v0.8.6`, et copiée en lecture seule dans `legacy/`.

@@ -31,7 +31,7 @@ Couvrir profond là où vit le gameplay, léger ailleurs. **80 à 90 pour cent s
 - Persistance: PostgreSQL via Neon, accès par le pooler. Le branchement Neon fournit les bases de test isolées.
 - Hébergement (depuis l'étape 5.3): la page sur Vercel, le serveur de jeu sur Render en offre gratuite à Francfort, la base sur Neon. Mise en ligne par la CI après les tests, procédure et exploitation dans `docs/deploiement.md`. Fly.io si la latence le justifie plus tard.
 - Tests: Vitest en unitaire et intégration, Playwright en bout en bout.
-- Intégration continue: GitHub Actions, fusion bloquée si la CI est rouge.
+- Intégration continue: GitHub Actions. On pousse directement sur `master`, sans protection de branche: rien ne part en ligne tant que la CI est rouge.
 
 ## Structure du dépôt
 
@@ -50,7 +50,7 @@ Couvrir profond là où vit le gameplay, léger ailleurs. **80 à 90 pour cent s
 
 ## Base legacy de référence
 
-**master v0.8.6.** C'est la version qui a réellement tourné, et elle correspond au périmètre v1 figé le 29 juin: mode Classique seul.
+**v0.8.6**, l'ancien sommet de `master` (commit `bc44b32`), archivé sous l'étiquette `v0.8.6` depuis que l'étape 6.1 a fusionné la réécriture dans `master`. C'est la version qui a réellement tourné, et elle correspond au périmètre v1 figé le 29 juin: mode Classique seul.
 
 À savoir: le corpus de fiches d'origine visait `mode-strategique` v0.9.0, qui contient un mode tactique avec capture par cône. Cette version a été écartée. Les fiches concernées (0.1, 0.2, 1.1 à 1.5) ont été rebasées. Le mode tactique est revenu à l'étape 7.1, comme mode enfichable, avec les valeurs de la v0.9.0 et des règles tranchées par le porteur du projet le 12 septembre 2026 (`docs/plan/etape-7-1.md`). Détail dans la section 5 de docs/plan/ROADMAP.md.
 
@@ -85,7 +85,7 @@ pnpm dev                  # compiler, empaqueter, puis lancer le jeu sur http://
 pnpm dev:server           # compiler puis lancer le serveur seul, sans refaire la page
 ```
 
-**Le jeu est jouable dans un navigateur depuis l'étape 4.3**: `pnpm dev`, puis ouvrir http://localhost:3000. Le serveur sert la page empaquetée par esbuild (`packages/client/web`, produite par `pnpm build`) et les ressources de `assets/`, et décode les murs des cartes. Variables d'environnement: `PORT`; `ORIGINES_AUTORISEES` (liste séparée par des virgules) pour le contrôle d'accès du navigateur, Socket.IO et routes des comptes; `MANDATAIRES_DE_CONFIANCE`, nombre de mandataires devant le serveur dont on croit `X-Forwarded-For`, zéro par défaut; `CHEMIN_CLIENT` et `CHEMIN_RESSOURCES` pour servir la page et les ressources depuis un autre dossier; `SERVIR_LA_PAGE` (« non » en production, où Vercel sert la page) et `VERSION_DU_JEU` (le commit en production: une page d'un autre commit est refusée). La route `/sante` rend la version, l'activité du serveur et l'adresse vue du demandeur. « Partie rapide » mène à la première partie publique en attente, ou à une nouvelle partie publique. Depuis la reprise des écrans du jalon 3, la page permet aussi de parcourir les parties publiques, de rejoindre une partie privée par son code, de créer une partie publique ou privée, de se connecter à un compte et de consulter son profil. Pour jouer à la version d'origine, utiliser la branche `master`.
+**Le jeu est jouable dans un navigateur depuis l'étape 4.3**: `pnpm dev`, puis ouvrir http://localhost:3000. Le serveur sert la page empaquetée par esbuild (`packages/client/web`, produite par `pnpm build`) et les ressources de `assets/`, et décode les murs des cartes. Variables d'environnement: `PORT`; `ORIGINES_AUTORISEES` (liste séparée par des virgules) pour le contrôle d'accès du navigateur, Socket.IO et routes des comptes; `MANDATAIRES_DE_CONFIANCE`, nombre de mandataires devant le serveur dont on croit `X-Forwarded-For`, zéro par défaut; `CHEMIN_CLIENT` et `CHEMIN_RESSOURCES` pour servir la page et les ressources depuis un autre dossier; `SERVIR_LA_PAGE` (« non » en production, où Vercel sert la page) et `VERSION_DU_JEU` (le commit en production: une page d'un autre commit est refusée). La route `/sante` rend la version, l'activité du serveur et l'adresse vue du demandeur. « Partie rapide » mène à la première partie publique en attente, ou à une nouvelle partie publique. Depuis la reprise des écrans du jalon 3, la page permet aussi de parcourir les parties publiques, de rejoindre une partie privée par son code, de créer une partie publique ou privée, de se connecter à un compte et de consulter son profil. La version d'origine n'est plus en ligne depuis l'étape 6.1: pour y jouer, extraire l'étiquette `v0.8.6`, puis `npm install` et `npm start`.
 
 Première utilisation de Playwright sur une machine neuve: `pnpm exec playwright install chromium`.
 

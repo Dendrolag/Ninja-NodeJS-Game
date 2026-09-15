@@ -2,7 +2,7 @@
  * La mise en ligne d'un commit: la page sur Vercel, le serveur de jeu sur Render
  * (etape 5.3).
  *
- * LANCE PAR LA CI, apres les deux jobs verts, sur la branche reecriture seulement
+ * LANCE PAR LA CI, apres les deux jobs verts, sur la branche master seulement
  * (.github/workflows/ci.yml, job « Mise en ligne »). Il peut aussi se lancer a la
  * main, depuis la racine du depot compile, avec les memes variables; voir
  * docs/deploiement.md.

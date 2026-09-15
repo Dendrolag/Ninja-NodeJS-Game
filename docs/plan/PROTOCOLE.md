@@ -31,7 +31,7 @@ Aucun de ces documents n'a besoin d'être résumé dans un prompt. Ils se consul
 
 Vrai pour toutes les étapes, à ne pas redemander ni rappeler dans un prompt.
 
-- **Branche `reecriture`.** Tout le travail s'y fait. `master` porte le jeu d'origine encore jouable et **ne doit jamais être touchée**. Ne pas fusionner `reecriture` dans `master` avant l'étape 6.1: cela propagerait les suppressions et casserait le jeu.
+- **Branche `master`.** Tout le travail s'y fait, en poussée directe, depuis que l'étape 6.1 y a fusionné la réécriture, le 15 septembre 2026. C'est la branche de la production: une poussée verte qui touche le jeu part en ligne et coupe les parties en cours (`docs/deploiement.md`). La version d'origine est archivée sous l'étiquette `v0.8.6`, et dans `legacy/`.
 - **Commit et poussée autorisés** dès qu'une tâche est terminée, sans demander. La CI doit être verte avant de considérer une étape terminée.
 - **`legacy/` est une référence en lecture seule.** Jamais modifiée, jamais corrigée, jamais reformatée.
 - **Les tests de `tests/caracterisation/` sont l'étalon du comportement attendu.** Attention à ne pas se méprendre sur leur rôle: ils s'exécutent **contre le legacy**, pas contre le nouveau code. Ils ne sont donc pas une cible que `packages/sim` doit faire passer. On les lit avant de porter, pour savoir ce que le portage doit reproduire, et on écrit les tests unitaires équivalents dans le nouveau paquet.
@@ -73,5 +73,4 @@ Suivre ROADMAP.md dans l'ordre. Point important sur les dépendances:
 - Ne jamais modifier le contenu de legacy/.
 - Une étape égale une session. Ne pas fusionner deux étapes.
 - CLAUDE.md reste stable. L'état d'avancement va dans les handoffs, jamais dans CLAUDE.md.
-- Ne jamais toucher à `master`, ni fusionner `reecriture` dedans avant l'étape 6.1.
 - Terminer chaque étape en fournissant le prompt à lancer dans la conversation suivante, sans attendre qu'on le demande. Il tient en deux lignes: ce protocole porte le reste.
