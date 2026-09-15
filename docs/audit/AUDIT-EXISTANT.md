@@ -226,7 +226,7 @@ Ajoutes le 13 aout 2026, en portant les classes `Entity` et `Player` dans le coe
 Consequences:
 
 - La formule « joueur 3, bot 5 » du point 5 de la section 6 decrit l'ecriture du legacy, pas le jeu ressenti. Elle reste utile comme reference du code d'origine, a condition de savoir ce qu'elle mesure.
-- Sur mobile, la manette envoie un deplacement toutes les 16 millisecondes avec le facteur 2, soit 375 pixels par seconde: plus du double du bureau. Ce n'est pas un reglage d'equilibrage, c'est la faille S2 vue sous un autre angle.
+- Sur mobile, la manette envoie un deplacement de 6 pixels (facteur 2) toutes les 50 millisecondes, soit 120 pixels par seconde, et 204 avec le bonus: moins vite que le bureau. Correction du 15 septembre 2026: ce paragraphe annoncait 16 millisecondes et 375 pixels par seconde. `handleMove` pose bien un intervalle de 16 millisecondes (`client.js:929`), mais `handleStart`, qui l'appelle, le remplace aussitot par un intervalle de 50 (`:871`). Mesure sur le deploiement d'origine, manette tactile emulee pendant trois secondes: 60 messages `move`, chacun de 6 pixels. Le facteur deux compensait donc a peu pres une cadence plus lente; il reste une faille (S2), puisque le serveur croit `isMobile` sur parole.
 - Le portage exprime les vitesses en pixels par seconde et fait avancer les entites proportionnellement au temps ecoule, ce qui preserve la vitesse reellement jouee et supprime la dependance au debit de messages.
 
 ### Defauts decouverts a l'etape 1.2

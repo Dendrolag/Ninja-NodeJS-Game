@@ -22,7 +22,8 @@ Vérifier en jouant, écran par écran et règle par règle, que la réécriture
 - **Seconde série de signalements, sur iPhone en production** : bots tous blancs, joueur invisible, caméra pas assez zoomée, saccades, bouton de localisation introuvable. Reproduite en pilotant WebKit en émulation iPhone contre la production. Cause principale : la caméra plaçait son point visé en divisant deux fois la taille de l'écran par la densité ; à densité 3, le joueur et ses bots tombaient sous le HUD et la carte s'arrêtait aux deux tiers de l'écran. Corrigée, avec la densité du rendu plafonnée à 2 et un vrai bouton de localisation sous le pouce. Le zoom mobile, celui du legacy, est resserré à 360 pixels de carte en largeur sur décision du porteur du projet.
 - **Lancement d'une partie qui rame sur téléphone** : mesuré, les premières images dessinées portaient des tâches longues pendant que le décor partait vers la carte graphique. Le décor et les images se préchargent maintenant dès le compte à rebours du salon, et un écran « Préparation de la partie… » reste posé au-delà du lancement jusqu'à un affichage fluide, trois secondes au plus.
 - **Troisième série, en production** : le zoom à 360 ne se voyait pas encore, la mise en ligne de `a781c98` n'étant pas terminée ; en ligne quelques minutes plus tard, vérifié en émulation iPhone. Et les bots naissaient tous blancs, alors que le jeu d'origine leur donne une couleur quelconque (`getRandomColor`) : régression du portage (défaut X36). Ils naissent maintenant d'une couleur tirée de la graine, jamais celle d'un joueur ; la règle 11 se précise pour que ces couleurs ne se répandent pas : seule la couleur d'un joueur présent se transmet.
-- **Grille de recette** : `docs/recette/recette-5-4.md`, 72 cas (13 signalements, 59 cas de recette), chacun avec son attendu, sa source, ses preuves et son verdict. Déroulée en local (un joueur, deux onglets, fenêtre mobile, trois cartes dont une en miroir, mode Tactique) et en production.
+- **Bonus de vitesse trop rapide sur téléphone** : le moteur n'a pas de défaut, il applique le multiplicateur d'origine. Mais sur téléphone, le jeu d'origine allait moins vite que la réécriture (120 pixels par seconde, mesuré sur son déploiement, contre 150) et montrait une vue plus large (600 pixels contre 360) : à l'écran, près de deux fois plus lent. L'audit et le journal annonçaient à tort 375 pixels par seconde ; corrigés. Le porteur du projet a choisi de garder la même vitesse sur tous les appareils.
+- **Grille de recette** : `docs/recette/recette-5-4.md`, 73 cas (14 signalements, 59 cas de recette), chacun avec son attendu, sa source, ses preuves et son verdict. Déroulée en local (un joueur, deux onglets, fenêtre mobile, trois cartes dont une en miroir, mode Tactique) et en production.
 - **Jeu d'origine comme référence** : le déploiement encore en ligne sert exactement le `client.js` et le `styles.css` de `legacy/`, vérifié par empreinte.
 
 ## Fichiers créés ou modifiés
@@ -96,6 +97,13 @@ Commit des couleurs de naissance des bots :
 - `packages/sim/src/__snapshots__/partie.test.ts.snap` : l'instantané de la partie de référence, le jeu ayant changé.
 - `CLAUDE.md` (comportement à préserver 11), `docs/audit/AUDIT-EXISTANT.md` (X36), `docs/design/README.md`, `docs/plan/ROADMAP.md` (la contrainte que l'étape 2.5 hérite de la règle 11), la grille et ce handoff.
 
+Commit de la vitesse sur téléphone, documentation seule :
+
+- `docs/audit/AUDIT-EXISTANT.md` : la cadence réelle de la manette d'origine, 50 millisecondes et non 16.
+- `docs/design/README.md` : l'entrée du 14 août corrigée, la décision du 15 septembre.
+- `CLAUDE.md` : précision du comportement à préserver 5.
+- La grille (S14) et ce handoff.
+
 Commits de ce handoff :
 
 - `docs/recette/recette-5-4.md` (créé) : la grille.
@@ -129,7 +137,7 @@ Aucune modification de `legacy/`, `tests/caracterisation/` ni `master`.
 
 ## Décisions et écarts au plan
 
-Huit entrées au journal de `docs/design/README.md`, datées du 14 septembre 2026 : la recoloration par calques, l'animation des icônes, le retour des points flottants, les quatre manques connus traités, la caméra en pixels CSS avec la densité plafonnée, le cadrage mobile à 360 pixels, la partie préparée pendant le compte à rebours, et les couleurs de naissance des bots. Points à lire ici.
+Huit entrées au journal de `docs/design/README.md`, datées du 14 septembre 2026 : la recoloration par calques, l'animation des icônes, le retour des points flottants, les quatre manques connus traités, la caméra en pixels CSS avec la densité plafonnée, le cadrage mobile à 360 pixels, la partie préparée pendant le compte à rebours, et les couleurs de naissance des bots ; et une du 15 septembre, la même vitesse sur tous les appareils. Points à lire ici.
 
 ### 1. La fiche supposait un défaut d'attribution, c'était un défaut d'affichage
 
@@ -157,7 +165,11 @@ Aucun test ni aucune décision ne voulait des bots blancs au départ : le portag
 
 Conséquence fidèle au jeu d'origine : les bots noirs chassent aussi ces bots de couleur et les rendent blancs. Le scénario du test de pureté sur longue partie (quatre joueurs qui tournent en rond, soixante bots, bots noirs dès le départ), rejoué sur huit graines après la correction : entre 1 et 14 bots rendus blancs par partie, et un joueur attrapé dans deux parties seulement. La graine 5 du test n'en voyait plus aucun ; il est passé à la graine 2 pour garder des captures à observer. Aucune mesure avant la correction n'a été faite : l'effet sur la fréquence des captures de joueurs n'est donc pas chiffré.
 
-### 7. Écarts à la fiche
+### 7. Sur téléphone, la vitesse reste celle du bureau
+
+Le facteur mobile avait été écarté à l'étape 1.6 sur un chiffre faux : l'audit croyait la manette d'origine à 375 pixels par seconde, elle allait à 120. Mesuré le 15 septembre 2026 sur le déploiement d'origine, en émulant la manette tactile : 60 messages de 6 pixels en trois secondes. Présenté au porteur du projet avec trois voies ; il garde la même vitesse partout, équitable entre un joueur au bureau et un joueur sur téléphone. Si le bonus paraît encore trop vif, les deux leviers restants sont le multiplicateur du bonus, pour tous, et le cadrage mobile à 360 pixels, qui grossit tout mouvement à l'écran.
+
+### 8. Écarts à la fiche
 
 - La recette et les corrections n'ont pas été coupées en deux étapes : les défauts se sont corrigés au fil de la grille.
 - Les étapes 2.5 et 3.4 sont placées après 6.1, qui n'en dépend pas. Ordre à confirmer ou réordonner par le porteur du projet.
@@ -187,6 +199,8 @@ Résolu par cette étape, repris du handoff 5.3 : la mise en ligne qui coupait l
 - `79c6cb9` (caméra sur téléphone, densité, bouton de localisation) : **verte**, exécution 34889157459 : « Types, linter et tests », « Bout en bout » et « Mise en ligne ». La production sert ce commit, vérifié sur `/sante`. En émulation iPhone (WebKit, densité 3) contre la production : canevas de 780 par 1 328 pixels, joueur au centre de l'écran entouré de ses flèches, carte sur tout l'écran, bouton de localisation de 60 pixels en bas à droite.
 - `a99b63d` (seconde série consignée) : documentation seule.
 - `a781c98` (cadrage mobile à 360, partie préparée) : **verte**, exécution 34892564825 : « Types, linter et tests », « Bout en bout » et « Mise en ligne ». La production sert ce commit, vérifié sur `/sante`. En émulation iPhone contre la production : vue resserrée, canevas de 780 par 1 328 pixels, bouton de localisation en place. Lancement mesuré contre la production (Chromium, taille Pixel 7, processeur ralenti quatre fois) : écran de préparation levé à 522 millisecondes, tâches longues de 202 et 71 millisecondes sous l'écran, aucune ensuite, image la plus longue des trois premières secondes visibles à 33 millisecondes. Les trois refus de feuille de style relevés dans la console de WebKit viennent des captures d'écran de Playwright : aucun sans capture, un par capture.
+- `92fb347` (couleurs de naissance des bots) : **verte**, exécution 34895399195. La production sert ce commit, vérifié sur `/sante`.
+- Le commit qui consigne la vitesse sur téléphone ne touche que la documentation.
 
 `master` n'a pas été touché.
 
