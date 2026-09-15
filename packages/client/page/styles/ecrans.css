@@ -1965,6 +1965,11 @@
   font-size: 13px;
 }
 
+/* Un compte sans code de secours: l'aide devient un avertissement. */
+.securite-aide.securite-alerte {
+  color: var(--rose-clair);
+}
+
 .tableau .ligue-hausse {
   color: var(--vert);
 }

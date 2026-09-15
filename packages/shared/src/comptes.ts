@@ -226,6 +226,12 @@ export interface ProfilDuCompte extends MaProgression {
   readonly statistiques: StatistiquesDuCompte;
   /** Les PARTIES_DU_PROFIL dernieres parties, de la plus recente a la plus ancienne. */
   readonly dernieresParties: readonly PartieDuProfil[];
+  /**
+   * Le compte a un code de secours (etape 3.4). Le code lui-meme ne se relit jamais:
+   * le profil dit seulement s'il en existe un, pour qu'un compte cree avant l'etape,
+   * qui n'en a pas, le sache et en cree un.
+   */
+  readonly codeDeSecours: boolean;
 }
 
 /** Le corps d'une reponse HTTP refusee. */

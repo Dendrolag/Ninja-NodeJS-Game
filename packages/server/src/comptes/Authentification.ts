@@ -67,6 +67,7 @@ import type {
 } from '../base/parties.js';
 import { enregistrerPartie, lireHistorique, statistiquesDuCompte } from '../base/parties.js';
 import {
+  aUnCodeDeSecours,
   codeParPseudo,
   consommerCodeDeSecours,
   remplacerCodeDeSecours,
@@ -238,15 +239,17 @@ export class Authentification implements ServiceDeComptes {
       return sessionAbsente();
     }
 
-    const [statistiques, historique] = await Promise.all([
+    const [statistiques, historique, codeDeSecours] = await Promise.all([
       statistiquesDuCompte(this.db, compte.id),
       lireHistorique(this.db, compte.id, PARTIES_DU_PROFIL),
+      aUnCodeDeSecours(this.db, compte.id),
     ]);
 
     return acceptee({
       ...compte.progression,
       statistiques: statistiquesDuProfil(statistiques),
       dernieresParties: historique.map(partieDuProfil),
+      codeDeSecours,
     });
   }
 

@@ -255,6 +255,7 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
               ? { partiesJouees: 0, victoires }
               : { partiesJouees: scores.length, victoires, meilleurScore: Math.max(...scores) },
           dernieresParties: compte.historique.slice(0, PARTIES_DU_PROFIL),
+          codeDeSecours: compte.codeDeSecours !== '',
         },
       };
     },

@@ -304,6 +304,7 @@ export function profilDEssai(pseudo: string): ProfilDuCompte {
     ...progressionDEssai(pseudo),
     statistiques: { partiesJouees: 0, victoires: 0 },
     dernieresParties: [],
+    codeDeSecours: true,
   };
 }
 

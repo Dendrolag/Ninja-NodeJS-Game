@@ -12,12 +12,22 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Client } from '../../client.js';
 import { creerClient } from '../../client.js';
 import type { ApiComptesFactice } from '../../comptes/api.js';
-import { CODE_DESSAI, JETON_DESSAI, creerApiComptesFactice } from '../../comptes/api.js';
+import {
+  CODE_DESSAI,
+  JETON_DESSAI,
+  creerApiComptesFactice,
+  profilDEssai,
+} from '../../comptes/api.js';
 import { creerCoffreDeJeton } from '../../comptes/coffre.js';
 import { creerHorlogeClientManuelle } from '../../horloge.js';
 import { creerReseauFactice } from '../../reseau.js';
 import { estCache, obligatoire, saisir, soumettre } from '../essais.js';
-import { CONFIRMATION_DU_CHANGEMENT, CONFIRMATION_DU_CODE } from '../modeles/securite.js';
+import {
+  AIDE_DU_CODE,
+  AIDE_SANS_CODE,
+  CONFIRMATION_DU_CHANGEMENT,
+  CONFIRMATION_DU_CODE,
+} from '../modeles/securite.js';
 import type { SecuriteDuCompte } from './securiteDuCompte.js';
 import { monterSecuriteDuCompte } from './securiteDuCompte.js';
 
@@ -140,6 +150,27 @@ describe('la securite du compte', () => {
     });
     expect(champ('mot-de-passe-du-code').value).toBe('');
     expect(visibles('.securite-confirmation')).toEqual([CONFIRMATION_DU_CODE]);
+  });
+
+  it('avertit un compte qui n a pas de code, jusqu a ce qu il en cree un', async () => {
+    api.reponses.profil = async () => ({
+      acceptee: true,
+      valeur: { ...profilDEssai('Alice'), codeDeSecours: false },
+    });
+    client.chargerLeProfil();
+    await laisserRepondre();
+
+    const aide = obligatoire(document, '.securite-aide');
+
+    expect(aide.textContent).toBe(AIDE_SANS_CODE);
+    expect(aide.classList.contains('securite-alerte')).toBe(true);
+
+    saisir(champ('mot-de-passe-du-code'), 'correct cheval');
+    soumettre(formulaires()[1] as HTMLFormElement);
+    await laisserRepondre();
+
+    expect(aide.textContent).toBe(AIDE_DU_CODE);
+    expect(aide.classList.contains('securite-alerte')).toBe(false);
   });
 
   it('dit au gestionnaire de mots de passe quel compte change de mot de passe', () => {

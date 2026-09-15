@@ -67,7 +67,23 @@ export interface ModeleChangement extends ModeleDeFormulaire<DemandeChangementMo
 }
 
 /** Ce que le formulaire du nouveau code de secours affiche. */
-export type ModeleCode = ModeleDeFormulaire<DemandeCodeDeSecours>;
+export interface ModeleCode extends ModeleDeFormulaire<DemandeCodeDeSecours> {
+  /** Ce que le formulaire dit du code. */
+  readonly aide: string;
+  /**
+   * Le profil lu dit que le compte n'a pas de code: un compte cree avant l'etape 3.4,
+   * dont un mot de passe oublie ne se retrouverait pas. Le formulaire le signale.
+   */
+  readonly sansCode: boolean;
+}
+
+/** Ce que dit le formulaire du code, pour un compte qui en a un. */
+export const AIDE_DU_CODE =
+  'Il remplace votre mot de passe si vous l’oubliez. Un nouveau code annule le précédent.';
+
+/** Ce que dit le formulaire du code, pour un compte qui n'en a pas. */
+export const AIDE_SANS_CODE =
+  'Ce compte n’a pas encore de code de secours : sans lui, un mot de passe oublié ne se retrouve pas. Créez-en un.';
 
 /** Ce que dit le profil apres un changement de mot de passe. */
 export const CONFIRMATION_DU_CHANGEMENT =
@@ -110,8 +126,12 @@ export function modeleNouveauCode(etat: EtatClient, saisie: SaisieDeCode): Model
   const suivi = suiviDeLaDemande(etat, 'codeDeSecours', saisie.modifieeDepuisLEnvoi);
   const verdict = validerDemandeCodeDeSecours({ motDePasse: saisie.motDePasse });
   const fautes = verdict.valide ? [] : verdict.erreurs;
+  // Tant que le profil n'est pas lu, rien ne dit que le code manque.
+  const sansCode = etat.profil.statut === 'charge' && !etat.profil.profil.codeDeSecours;
 
   return {
+    aide: sansCode ? AIDE_SANS_CODE : AIDE_DU_CODE,
+    sansCode,
     bouton: suivi.enCours ? 'Un instant…' : 'Créer un nouveau code',
     erreurMotDePasse:
       (saisie.motDePasseVisite ? motifDu(fautes, 'motDePasse') : undefined) ??

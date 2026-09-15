@@ -188,8 +188,17 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
 
     // Le code se montre par-dessus n'importe quel ecran, jusqu'a ce que le joueur l'ait
     // note: un code emis remplace celui qui attendait encore, qui ne vaut plus rien.
+    // Le profil deja lu sait desormais que le compte en a un.
     case 'codeDeSecoursEmis':
-      return { ...etat, ecran, codeDeSecours: action.code };
+      return {
+        ...etat,
+        ecran,
+        codeDeSecours: action.code,
+        profil:
+          etat.profil.statut === 'charge'
+            ? { statut: 'charge', profil: { ...etat.profil.profil, codeDeSecours: true } }
+            : etat.profil,
+      };
 
     case 'codeDeSecoursNote':
       return { ...etat, ecran, codeDeSecours: undefined };

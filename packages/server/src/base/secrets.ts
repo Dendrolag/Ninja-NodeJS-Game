@@ -182,6 +182,16 @@ export async function consommerCodeDeSecours(
   });
 }
 
+/** Ce compte a-t-il un code de secours. Le profil le dit, sans jamais rendre le code. */
+export async function aUnCodeDeSecours(db: BaseDeDonnees, compteId: string): Promise<boolean> {
+  const lignes = await db
+    .select({ compteId: codesDeSecours.compteId })
+    .from(codesDeSecours)
+    .where(eq(codesDeSecours.compteId, compteId));
+
+  return lignes.length > 0;
+}
+
 /** Ecrit le code de secours d'un compte, a la place du precedent s'il en avait un. */
 export async function remplacerCodeDeSecours(
   db: BaseDeDonnees,

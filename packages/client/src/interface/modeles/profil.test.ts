@@ -47,6 +47,7 @@ const PROFIL: ProfilDuCompte = {
       termineeLe: '2026-09-12T17:00:00.000Z',
     },
   ],
+  codeDeSecours: true,
 };
 
 describe('modeleProfil', () => {

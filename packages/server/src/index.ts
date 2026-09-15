@@ -134,6 +134,7 @@ export type {
   SecretsDuCompte,
 } from './base/secrets.js';
 export {
+  aUnCodeDeSecours,
   codeParPseudo,
   consommerCodeDeSecours,
   remplacerCodeDeSecours,

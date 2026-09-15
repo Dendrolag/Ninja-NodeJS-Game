@@ -10,11 +10,13 @@
 import { BORNES_MOT_DE_PASSE } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
-import { progressionDEssai } from '../../comptes/api.js';
+import { profilDEssai, progressionDEssai } from '../../comptes/api.js';
 import type { DemandeDeCompte, EtatClient } from '../../etat.js';
 import { AUCUNE_DEMANDE_DE_COMPTE, ETAT_INITIAL } from '../../etat.js';
 import type { SaisieDeChangement, SaisieDeCode } from './securite.js';
 import {
+  AIDE_DU_CODE,
+  AIDE_SANS_CODE,
   CONFIRMATION_DU_CHANGEMENT,
   CONFIRMATION_DU_CODE,
   modeleChangementMotDePasse,
@@ -162,5 +164,27 @@ describe('modeleNouveauCode', () => {
     expect(modeleNouveauCode(refuse, code()).erreurMotDePasse).toBe('Mot de passe incorrect.');
     expect(modeleNouveauCode(cree, code()).confirmation).toBe(CONFIRMATION_DU_CODE);
     expect(modeleChangementMotDePasse(refuse, changement()).erreurMotDePasse).toBeUndefined();
+  });
+
+  it('signale un compte sans code, une fois le profil lu, et seulement alors', () => {
+    const profil = { ...profilDEssai('Alice'), codeDeSecours: false };
+    const sansCode = { ...compte(), profil: { statut: 'charge' as const, profil } };
+    const avecCode = {
+      ...compte(),
+      profil: { statut: 'charge' as const, profil: { ...profil, codeDeSecours: true } },
+    };
+
+    expect(modeleNouveauCode(sansCode, code())).toMatchObject({
+      aide: AIDE_SANS_CODE,
+      sansCode: true,
+    });
+    expect(modeleNouveauCode(avecCode, code())).toMatchObject({
+      aide: AIDE_DU_CODE,
+      sansCode: false,
+    });
+    expect(modeleNouveauCode(compte(), code())).toMatchObject({
+      aide: AIDE_DU_CODE,
+      sansCode: false,
+    });
   });
 });

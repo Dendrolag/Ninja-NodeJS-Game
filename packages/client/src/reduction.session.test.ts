@@ -252,6 +252,7 @@ describe('le profil', () => {
       niveau: 3,
       statistiques: { partiesJouees: 3, victoires: 1, meilleurScore: 12 },
       dernieresParties: [],
+      codeDeSecours: false,
     };
     const etat = apres([
       { type: 'sessionDeCompte', progression: PROGRESSION },
@@ -264,6 +265,27 @@ describe('le profil', () => {
     expect(etat.session).toEqual({
       nature: 'compte',
       progression: { ...PROGRESSION, xpTotale: 400, niveau: 3 },
+    });
+  });
+
+  it('sait que le compte a un code des qu un code est emis (etape 3.4)', () => {
+    const profil = {
+      ...PROGRESSION,
+      statistiques: { partiesJouees: 0, victoires: 0 },
+      dernieresParties: [],
+      codeDeSecours: false,
+    };
+    const lu = apres([
+      { type: 'sessionDeCompte', progression: PROGRESSION },
+      { type: 'profilRecu', profil },
+    ]);
+
+    expect(reduire(lu, { type: 'codeDeSecoursEmis', code: 'K7QM-3X9D-TP4W-8HNE' }).profil).toEqual({
+      statut: 'charge',
+      profil: { ...profil, codeDeSecours: true },
+    });
+    expect(apres([{ type: 'codeDeSecoursEmis', code: 'K7QM-3X9D-TP4W-8HNE' }]).profil).toEqual({
+      statut: 'inconnu',
     });
   });
 

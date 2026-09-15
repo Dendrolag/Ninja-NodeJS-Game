@@ -164,6 +164,7 @@ export function monterSecuriteDuCompte(doc: Document, client: Client): SecuriteD
 
   // -- Nouveau code de secours ------------------------------------------------
 
+  const aideDuCode = creer(doc, 'p', { classe: 'securite-aide' });
   const duCode = champDeMotDePasse(
     doc,
     'mot-de-passe-du-code',
@@ -179,11 +180,7 @@ export function monterSecuriteDuCompte(doc: Document, client: Client): SecuriteD
     'form',
     { classe: 'panneau securite-formulaire', attributs: { novalidate: '' } },
     creer(doc, 'h3', { texte: 'Code de secours' }),
-    creer(doc, 'p', {
-      classe: 'securite-aide',
-      texte:
-        'Il remplace votre mot de passe si vous l’oubliez. Un nouveau code annule le précédent.',
-    }),
+    aideDuCode,
     pseudoCode,
     duCode.etiquette,
     piedCode.erreur,
@@ -250,6 +247,8 @@ export function monterSecuriteDuCompte(doc: Document, client: Client): SecuriteD
     ecrirePied(piedChangement, modeleChangement);
 
     const modeleCode = modeleNouveauCode(etatCourant, saisieDeCode());
+    ecrireTexte(aideDuCode, modeleCode.aide);
+    aideDuCode.classList.toggle('securite-alerte', modeleCode.sansCode);
     ecrireFaute(duCode, modeleCode.erreurMotDePasse);
     ecrirePied(piedCode, modeleCode);
   }

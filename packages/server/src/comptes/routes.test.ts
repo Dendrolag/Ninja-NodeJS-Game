@@ -56,6 +56,7 @@ const PROFIL: ProfilDuCompte = {
       termineeLe: '2026-09-11T12:00:00.000Z',
     },
   ],
+  codeDeSecours: true,
 };
 
 let serveur: ServeurMonte | undefined;

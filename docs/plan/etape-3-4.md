@@ -72,6 +72,18 @@ Conditions de ROADMAP réunies, plus:
 4. La migration est compatible avec la version précédente du serveur (une table ajoutée, rien de retiré).
 5. `packages/sim` non touché: couverture et empreinte des parties inchangées.
 
+## Réconciliation en cours d'exécution (15 septembre 2026)
+
+Écarts entre cette fiche et ce qui a été construit. Le code et le journal de `docs/design/README.md` font foi.
+
+1. **Les requêtes des secrets vivent dans `packages/server/src/base/secrets.ts`**: lire le pseudo et l'empreinte du mot de passe d'un compte, lire son code par pseudo, remplacer le mot de passe (`remplacerMotDePasse`), consommer le code (`consommerCodeDeSecours`), remplacer le code, dire si un compte a un code. Chaque remplacement est conditionnel à l'empreinte vérifiée.
+2. **Une réinitialisation refusée répond 401**, motif `identifiantsIncorrects`, sous le champ `reinitialisation`: la même réponse pour un pseudo inconnu, un compte sans code, un code faux ou déjà servi.
+3. **La couche réseau ne reçoit pas la liste des sessions fermées**: prévenue qu'un compte en a perdu, elle revérifie la session de chacune de ses connexions (`compteDeSession`) et coupe celles qui n'ouvrent plus rien. Une connexion dont la session ne peut pas être revue, base injoignable, est gardée.
+4. **Côté client, le code se montre dès que le serveur l'émet**, avant la lecture de la progression qui suit une inscription ou une réinitialisation: si cette lecture échoue, le code n'est pas perdu pour autant. Il survit à la perte du lien, pas au rechargement.
+5. **Ajouté en exécutant: le profil dit si le compte a un code** (`ProfilDuCompte.codeDeSecours`). La décision 6 fait du profil le chemin des comptes créés avant l'étape, qui n'en ont pas; sans cette indication, rien ne le leur disait. Le formulaire du code les avertit, jusqu'à ce qu'ils en créent un.
+6. **Le scénario de bout en bout ne joue que dans le projet bureau**, et les comptes en mémoire comptent les sessions ouvertes d'un compte (`sessionsDe`), pour vérifier la fermeture des autres.
+7. **La vérification à l'écran s'est faite par un script Playwright temporaire**, sur un serveur à comptes en mémoire, et non par le serveur de l'aperçu: celui-ci démarre avec la `DATABASE_URL` de l'environnement, et y aurait créé des comptes d'essai, dans une base qui n'a la table des codes qu'après la mise en ligne.
+
 ## Rituel de fin de session
 
 Écrire `docs/handoffs/etape-3-4-handoff.md`. Consigner les décisions au journal de `docs/design/README.md`, mettre à jour le cadrage (tables des comptes) et la grille de recette 5.4. Prochaine action exacte pour l'étape 2.6, le lien perdu hors partie, dont la fiche se rédige au début de la session. Commiter.

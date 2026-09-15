@@ -16,6 +16,7 @@ import type {
   CodeDeSecoursEmis,
   EvenementsClientVersServeur,
   EvenementsServeurVersClient,
+  ProfilDuCompte,
   ReponseRefusee,
   SessionInscrite,
 } from '@neon-ninja/shared';
@@ -426,6 +427,15 @@ describe.runIf(baseDisponible())('gestion du mot de passe', () => {
       expect(await empreinteEnBase(pseudo)).toBeUndefined();
 
       const jeton = await jetonDeConnexion(url, pseudo, MOT_DE_PASSE);
+      /** Ce que le profil dit du code de secours. */
+      const profilDitUnCode = async (): Promise<unknown> =>
+        (
+          (await requete(url, ROUTES_COMPTES.profil, { methode: 'GET', jeton }))
+            .corps as ProfilDuCompte
+        ).codeDeSecours;
+
+      expect(await profilDitUnCode()).toBe(false);
+
       const reponse = await requete(url, ROUTES_COMPTES.codeDeSecours, {
         jeton,
         corps: { motDePasse: MOT_DE_PASSE },
@@ -433,6 +443,7 @@ describe.runIf(baseDisponible())('gestion du mot de passe', () => {
       const { codeDeSecours } = reponse.corps as CodeDeSecoursEmis;
 
       expect(reponse.statut).toBe(200);
+      expect(await profilDitUnCode()).toBe(true);
       expect(await empreinteEnBase(pseudo)).toBe(empreinteAffichee(codeDeSecours));
       expect((await reinitialiser(url, pseudo, codeDeSecours)).statut).toBe(200);
     });
