@@ -6,14 +6,13 @@
  * decide, pas de visibilite evaluee. Si une condition de jeu apparaissait dans ce
  * fichier, elle serait au mauvais endroit.
  *
- * C'EST ICI QUE LA LUEUR NEON CHANGE DE NATURE, et c'est la raison d'etre de
- * cette etape. Le jeu d'origine posait un shadowBlur sur le contexte 2D avant
- * chaque trace: le flou etait donc recalcule par le PROCESSEUR une fois par
- * entite et par image. A cent entites, cette seule ligne dominait le cout de la
- * boucle de rendu, et c'est ce qui interdisait de depasser la cinquantaine de
- * bots. Ici, la lueur est un FILTRE POSE SUR UN CALQUE ENTIER: une passe GPU dont
- * le cout depend de la surface de l'ecran et non du nombre d'entites. Passer de
- * cent a cinq cents sprites ne change rien a son prix.
+ * LA LUEUR NEON EST UN FILTRE POSE SUR UN CALQUE ENTIER: une passe GPU dont le
+ * cout depend de la surface dessinee et non du nombre d'objets. Elle ne couvre que
+ * les fleches de localisation. Correction de l'etape 5.4: ce fichier affirmait que
+ * le jeu d'origine faisait rayonner chaque entite par un shadowBlur; il n'en posait
+ * qu'un seul, sur ces fleches (client.js:3556). La lueur posee sur tout le calque
+ * des ninjas faisait rayonner les couleurs claires, un halo que le jeu d'origine
+ * n'avait pas.
  *
  * LES OBJETS D'AFFICHAGE SONT REUTILISES, JAMAIS RECONSTRUITS. Chaque entite
  * garde son sprite d'une image a l'autre, retrouve par identifiant; seules ses
@@ -35,12 +34,15 @@
  * depuis l'etape 4.3 par le scenario de navigation, qui joue une vraie partie.
  */
 
-import type { DimensionsCarte } from '@neon-ninja/shared';
+import type { DimensionsCarte, IdentifiantCarte } from '@neon-ninja/shared';
 import {
+  CARTES,
   COTE_IMAGE_OBJET_PX,
+  IMAGES_DE_PLUIE,
   IMAGES_PAR_OBJET,
   RACINE_RESSOURCES,
   cheminCarte,
+  cheminPluie,
   tousLesNinjas,
   tousLesObjets,
 } from '@neon-ninja/shared';
@@ -57,7 +59,7 @@ import {
   Texture,
 } from 'pixi.js';
 
-import { BORDURE_TERRAIN, COULEUR_FOND, DENSITE_MAXIMALE, LUEUR } from './apparence.js';
+import { BORDURE_TERRAIN, COULEUR_FOND, DENSITE_MAXIMALE, LUEUR, PLUIE } from './apparence.js';
 import type { Camera } from './camera.js';
 import { versEcran } from './camera.js';
 import { separerLesCalques } from './recoloration.js';
@@ -124,12 +126,67 @@ export async function prechargerLesSprites(): Promise<void> {
 export async function prechargerLaPartie(carte: string, modeMiroir: boolean): Promise<void> {
   const adresse = (couche: 'background' | 'foreground'): string =>
     `${RACINE_RESSOURCES}/${cheminCarte(carte, modeMiroir, couche)}`;
+  const dimensions = CARTES[carte as IdentifiantCarte] as DimensionsCarte | undefined;
 
   await Promise.all([
     prechargerLesSprites(),
     Assets.load<Texture>(adresse('background')),
     Assets.load<Texture>(adresse('foreground')),
+    dimensions === undefined ? [] : imagesDePluie(carte, modeMiroir, dimensions),
   ]);
+}
+
+/**
+ * Les images de pluie d'une carte, a sa taille; aucune pour une carte sans pluie.
+ *
+ * LA PLANCHE N'EST JAMAIS ENVOYEE A LA CARTE GRAPHIQUE. Elle mesure 9000 pixels de
+ * large, au-dela de la plus grande texture qu'acceptent bien des telephones (4096 ou
+ * 8192). Elle est decodee comme une simple image, chacune de ses images est recopiee
+ * sur un canevas a la taille de la carte, puis la planche est abandonnee. Le jeu
+ * d'origine etirait deja chaque image aux dimensions de la carte (RainEffect,
+ * legacy/js/MapManager.js:44): ce sont celles qui s'affichent.
+ *
+ * Fait une fois: une deuxieme partie retrouve les images rangees.
+ */
+async function imagesDePluie(
+  carte: string,
+  modeMiroir: boolean,
+  dimensions: DimensionsCarte,
+): Promise<readonly Texture[]> {
+  const chemin = cheminPluie(carte, modeMiroir);
+
+  if (chemin === undefined) {
+    return [];
+  }
+
+  const adresse = `${RACINE_RESSOURCES}/${chemin}`;
+  const noms = Array.from({ length: IMAGES_DE_PLUIE }, (_, rang) => adresseDImage(adresse, rang));
+
+  if (!noms.every((nom) => Assets.cache.has(nom))) {
+    const planche = new Image();
+    planche.src = adresse;
+    await planche.decode();
+
+    const largeurImage = planche.naturalWidth / IMAGES_DE_PLUIE;
+
+    noms.forEach((nom, rang) => {
+      const contexte = contexteDeCanevas(dimensions.largeur, dimensions.hauteur);
+      contexte.drawImage(
+        planche,
+        rang * largeurImage,
+        0,
+        largeurImage,
+        planche.naturalHeight,
+        0,
+        0,
+        dimensions.largeur,
+        dimensions.hauteur,
+      );
+      Assets.cache.set(nom, Texture.from(contexte.canvas));
+    });
+  }
+
+  return noms.map((nom) => Assets.get<Texture>(nom));
 }
 
 /**
@@ -270,15 +327,17 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   application.stage.addChild(monde);
 
   if (options.lueur !== false) {
-    // Un seul filtre, sur le calque des entites et de leurs halos. C'est la
-    // difference de fond avec le shadowBlur par entite du jeu d'origine.
+    // Un seul filtre, sur le calque des reperes: les fleches de localisation, seul
+    // dessin que le jeu d'origine faisait rayonner (shadowBlur, client.js:3556).
+    // Pose sur le calque des entites jusqu'a l'etape 5.4, il faisait rayonner tout
+    // ninja de couleur claire, ce que le porteur du projet ne veut pas.
     const bloom = new AdvancedBloomFilter({
       threshold: LUEUR.seuil,
       bloomScale: LUEUR.intensite,
       blur: LUEUR.flou,
     });
 
-    entites.filters = [bloom];
+    reperes.filters = [bloom];
   }
 
   /** Les objets d'affichage deja crees, retrouves par identifiant de scene. */
@@ -288,7 +347,14 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
 
   const fond = new Sprite();
   const dessus = new Sprite();
-  decor.addChild(fond);
+  // La pluie tombe sur le fond et sous tout le reste, comme dans le jeu d'origine
+  // (MapManager.draw, legacy/js/MapManager.js:388). Cachee sur une carte sans pluie.
+  const pluie = new Sprite();
+  pluie.alpha = PLUIE.opacite;
+  pluie.visible = false;
+  /** Les images de pluie de la carte, une fois le decor charge. */
+  let imagesPluie: readonly Texture[] = [];
+  decor.addChild(fond, pluie);
   premierPlan.addChild(dessus);
 
   /** Le trait qui marque les limites du terrain, dessine une seule fois. */
@@ -307,13 +373,24 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       const adresse = (couche: 'background' | 'foreground'): string =>
         `${RACINE_RESSOURCES}/${cheminCarte(options.identifiantCarte, options.modeMiroir, couche)}`;
 
-      const [texteFond, texteDessus] = await Promise.all([
+      const [texteFond, texteDessus, images] = await Promise.all([
         Assets.load<Texture>(adresse('background')),
         Assets.load<Texture>(adresse('foreground')),
+        imagesDePluie(options.identifiantCarte, options.modeMiroir, options.carte),
       ]);
 
       fond.texture = texteFond;
       dessus.texture = texteDessus;
+
+      imagesPluie = images;
+      const premiere = images[0];
+
+      if (premiere !== undefined) {
+        pluie.texture = premiere;
+        pluie.width = options.carte.largeur;
+        pluie.height = options.carte.hauteur;
+        pluie.visible = true;
+      }
 
       // Les images de carte mesurent toutes 3000x2000, y compris celles des
       // cartes de 2000x1500: le jeu d'origine les etire aux dimensions de la
@@ -328,6 +405,17 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
 
     dessiner(scene: Scene, camera: Camera) {
       placerLaCamera(monde, camera, application);
+
+      // Toutes les images de la planche ont la meme taille: changer de texture garde
+      // l'etirement pose au chargement.
+      const imagePluie =
+        scene.imageDePluie === undefined
+          ? undefined
+          : imagesPluie[scene.imageDePluie % imagesPluie.length];
+
+      if (imagePluie !== undefined && pluie.texture !== imagePluie) {
+        pluie.texture = imagePluie;
+      }
 
       dessinerLesZones(zones, libelles, textesZones, scene.zones);
       dessinerLesDisques(disques, scene.disques);

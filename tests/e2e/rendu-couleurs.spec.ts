@@ -99,10 +99,82 @@ function pageDesCouleurs(): string {
 </script>`;
 }
 
+/**
+ * La page du halo: la meme scene dessinee deux fois, avec et sans la lueur neon.
+ *
+ * LE DEFAUT QU'ELLE FERME, releve a la recette de l'etape 5.4 sur telephone: la
+ * lueur etait posee sur le calque des ninjas, et tout ninja de couleur claire
+ * rayonnait. Le jeu d'origine ne faisait briller aucun personnage. Des ninjas
+ * jaune, blanc et cyan, les couleurs les plus claires, doivent donc etre dessines
+ * au pixel pres de la meme facon, lueur allumee ou non.
+ */
+function pageDuHalo(): string {
+  return `<!doctype html>
+<meta charset="utf-8">
+<title>Halo des ninjas</title>
+<style>html,body{margin:0;height:100%;overflow:hidden}.hote{width:320px;height:240px}</style>
+<div class="hote" id="avec"></div>
+<div class="hote" id="sans"></div>
+<script type="importmap">${CARTE_IMPORTATION}</script>
+<script type="module">
+  import { monterRendu, prechargerLesSprites } from '/paquets/client/rendu/pixi.js';
+
+  await prechargerLesSprites();
+
+  const ninja = (id, x, teinte) => ({
+    id, texture: '/assets/ninja/idle.png', x, y: 750, taille: 32, teinte, alpha: 1,
+  });
+  const scene = {
+    disques: [], cones: [], zones: [], objets: [], reperes: [],
+    entites: [
+      ninja('jaune', 970, 0xffff00),
+      ninja('blanc', 1000, 0xffffff),
+      ninja('cyan', 1030, 0x00ffff),
+    ],
+  };
+
+  const pixelsDe = async (hote, lueur) => {
+    const rendu = await monterRendu({
+      hote, carte: { largeur: 2000, hauteur: 1500 }, identifiantCarte: 'map1',
+      modeMiroir: false, lueur, largeur: 320, hauteur: 240,
+    });
+    rendu.dessiner(scene, { x: 1000, y: 750, echelle: 3 });
+    rendu.application.render();
+    const { pixels } = await Promise.resolve(
+      rendu.application.renderer.extract.pixels({
+        target: rendu.application.stage,
+        frame: rendu.application.screen,
+      }),
+    );
+    return pixels;
+  };
+
+  const avec = await pixelsDe(document.querySelector('#avec'), true);
+  const sans = await pixelsDe(document.querySelector('#sans'), false);
+  let differents = 0;
+  let allumes = 0;
+
+  for (let index = 0; index < sans.length; index += 4) {
+    const ecart = Math.max(
+      Math.abs(avec[index] - sans[index]),
+      Math.abs(avec[index + 1] - sans[index + 1]),
+      Math.abs(avec[index + 2] - sans[index + 2]),
+    );
+    if (ecart > 8) differents += 1;
+    if (sans[index] > 200 && sans[index + 1] > 200) allumes += 1;
+  }
+
+  window.halo = { differents, allumes, total: sans.length / 4 };
+</script>`;
+}
+
 let serveur: ServeurStatique;
 
 test.beforeAll(async () => {
-  serveur = await demarrerServeurStatique({ '/couleurs.html': pageDesCouleurs() });
+  serveur = await demarrerServeurStatique({
+    '/couleurs.html': pageDesCouleurs(),
+    '/halo.html': pageDuHalo(),
+  });
 });
 
 test.afterAll(async () => {
@@ -140,4 +212,26 @@ test('un ninja prend la couleur de son proprietaire, sans noircir ni rougir', as
     comptes.auCentre / (comptes.verts + comptes.blancs),
     `les ninjas vises doivent etre au milieu ${detail}`,
   ).toBeGreaterThan(0.9);
+});
+
+test('aucun ninja ne rayonne, meme de la couleur la plus claire', async ({ page }) => {
+  const erreurs: string[] = [];
+  page.on('pageerror', (erreur) => erreurs.push(erreur.message));
+
+  await page.goto(`${serveur.url}/halo.html`);
+  await page.waitForFunction(() => (window as unknown as { halo?: unknown }).halo, null, {
+    timeout: 30_000,
+  });
+
+  expect(erreurs, 'la page ne doit lever aucune erreur').toEqual([]);
+
+  const halo = (await page.evaluate(
+    () => (window as unknown as { halo: { differents: number; allumes: number } }).halo,
+  )) as { differents: number; allumes: number };
+  const detail = JSON.stringify(halo);
+
+  // Les ninjas sont bien dessines, et en couleurs claires: sinon l'egalite des deux
+  // images ne prouverait rien.
+  expect(halo.allumes, `les ninjas clairs doivent etre dessines ${detail}`).toBeGreaterThan(500);
+  expect(halo.differents, `la lueur ne doit changer aucun pixel des ninjas ${detail}`).toBe(0);
 });

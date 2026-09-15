@@ -23,7 +23,8 @@ Vérifier en jouant, écran par écran et règle par règle, que la réécriture
 - **Lancement d'une partie qui rame sur téléphone** : mesuré, les premières images dessinées portaient des tâches longues pendant que le décor partait vers la carte graphique. Le décor et les images se préchargent maintenant dès le compte à rebours du salon, et un écran « Préparation de la partie… » reste posé au-delà du lancement jusqu'à un affichage fluide, trois secondes au plus.
 - **Troisième série, en production** : le zoom à 360 ne se voyait pas encore, la mise en ligne de `a781c98` n'étant pas terminée ; en ligne quelques minutes plus tard, vérifié en émulation iPhone. Et les bots naissaient tous blancs, alors que le jeu d'origine leur donne une couleur quelconque (`getRandomColor`) : régression du portage (défaut X36). Ils naissent maintenant d'une couleur tirée de la graine, jamais celle d'un joueur ; la règle 11 se précise pour que ces couleurs ne se répandent pas : seule la couleur d'un joueur présent se transmet.
 - **Bonus de vitesse trop rapide sur téléphone** : le moteur n'a pas de défaut, il applique le multiplicateur d'origine. Mais sur téléphone, le jeu d'origine allait moins vite que la réécriture (120 pixels par seconde, mesuré sur son déploiement, contre 150) et montrait une vue plus large (600 pixels contre 360) : à l'écran, près de deux fois plus lent. L'audit et le journal annonçaient à tort 375 pixels par seconde ; corrigés. Le porteur du projet a choisi de garder la même vitesse sur tous les appareils.
-- **Grille de recette** : `docs/recette/recette-5-4.md`, 73 cas (14 signalements, 59 cas de recette), chacun avec son attendu, sa source, ses preuves et son verdict. Déroulée en local (un joueur, deux onglets, fenêtre mobile, trois cartes dont une en miroir, mode Tactique) et en production.
+- **Trois derniers défauts sur téléphone** : le classement descendait sur le temps restant dès le deuxième joueur, il passe dessous ; les ninjas de couleur claire rayonnaient, la lueur étant posée sur tout le calque des personnages alors que le jeu d'origine ne faisait briller que les flèches de localisation ; la pluie de Rainy Tokyo n'avait jamais été portée, elle revient, découpée pour tenir dans la mémoire graphique d'un téléphone.
+- **Grille de recette** : `docs/recette/recette-5-4.md`, 76 cas (17 signalements, 59 cas de recette), chacun avec son attendu, sa source, ses preuves et son verdict. Déroulée en local (un joueur, deux onglets, fenêtre mobile, trois cartes dont une en miroir, mode Tactique) et en production.
 - **Jeu d'origine comme référence** : le déploiement encore en ligne sert exactement le `client.js` et le `styles.css` de `legacy/`, vérifié par empreinte.
 
 ## Fichiers créés ou modifiés
@@ -104,6 +105,18 @@ Commit de la vitesse sur téléphone, documentation seule :
 - `CLAUDE.md` : précision du comportement à préserver 5.
 - La grille (S14) et ce handoff.
 
+Commit du classement, du halo et de la pluie :
+
+- `packages/client/page/styles/jeu.css` : le classement sous le temps restant, sous 640 pixels de large.
+- `packages/client/src/rendu/pixi.ts` : la lueur sur le calque des repères ; la pluie découpée, préchargée et posée sur le fond.
+- `packages/client/src/rendu/apparence.ts` : `PLUIE`, et la documentation de `LUEUR`.
+- `packages/client/src/rendu/animation.ts` : `imageDePluie`.
+- `packages/client/src/rendu/scene.ts` et test : l'image de pluie de la scène.
+- `packages/client/src/index.ts` : commentaire de la lueur.
+- `packages/shared/src/ressources.ts` et test, `index.ts` : `IMAGES_DE_PLUIE`, et la planche vérifiée sur le disque.
+- `tests/e2e/hud-telephone.spec.ts` et `tests/e2e/rendu-pluie.spec.ts` (créés), `tests/e2e/rendu-couleurs.spec.ts` (aucun ninja ne rayonne), `tests/e2e/harnais/serveur-statique.ts` (la feuille de style de la page), `tests/e2e/banc-rendu.spec.ts` (commentaires de la lueur).
+- `docs/design/README.md`, la grille et ce handoff.
+
 Commits de ce handoff :
 
 - `docs/recette/recette-5-4.md` (créé) : la grille.
@@ -129,7 +142,10 @@ Aucune modification de `legacy/`, `tests/caracterisation/` ni `master`.
   - **stabilité de l'affichage** : rien avant que la partie soit dessinée, stable après trois images rapides d'affilée, compte remis à zéro par une image lente, stable au plus tard après trois secondes, et pour de bon ; la boucle l'annonce une seule fois ;
   - **préchargement** : l'application précharge la partie dès le début du compte à rebours, une fois, avec les réglages du salon ;
   - **couleurs de naissance** : une couleur tirée au sort, variée, reproductible, jamais de la palette, blanche, noire ou exclue ; chaque bot peuplé en porte une, jamais celle d'un joueur même hors palette ; un bot de couleur sans propriétaire ne repeint rien, la couleur d'un joueur parti ne se transmet plus, un joueur repeint un bot de couleur quelconque.
-- Résultat : **1 740 tests unitaires sur 1 740** (projet `unitaires`) ; **53 tests de base sur 53** contre une branche Neon neuve ; types (paquets, tests, bout en bout), linter et formatage verts.
+  - **classement sur téléphone** (`hud-telephone.spec.ts`) : la vraie surcouche, la vraie feuille de style et huit joueurs ; à 360, 390 et 412 pixels de large, le classement commence sous le temps restant et tient dans l'écran ;
+  - **halo** (`rendu-couleurs.spec.ts`) : des ninjas jaune, blanc et cyan dessinés au pixel près de la même façon, lueur allumée ou non ;
+  - **pluie** : la planche se découpe en trois images de la taille des couches de la carte ; l'image change toutes les 100 millisecondes, en boucle ; sur Rainy Tokyo, changer d'image de pluie change le décor (933 pixels sur 120 000 au bureau), sur Tokyo rien ne bouge.
+- Résultat : **1 742 tests unitaires sur 1 742** (projet `unitaires`) ; **53 tests de base sur 53** contre une branche Neon neuve ; types (paquets, tests, bout en bout), linter et formatage verts.
 - Bout en bout en local, bureau et mobile : 15 sur 15 ; joués deux fois en parallèle, 29 sur 30 avant l'alignement des délais, **30 sur 30** après ; **16 sur 16** avec le scénario des couleurs rejoué sur mobile et l'écran de préparation.
 - Lancement mesuré sur un téléphone simulé (Chromium, carte graphique, taille Pixel 7, processeur ralenti quatre fois). Avant : deux tâches longues de 134 et 104 millisecondes sur les premières images visibles. Après : les tâches longues (242 et 70 millisecondes) tombent pendant l'écran de préparation, levé à 581 millisecondes du lancement ; aucune ensuite, et l'image la plus longue des trois premières secondes visibles dure 17 millisecondes.
 - Couverture des instructions : **99,89 pour cent** sur `sim` et `shared` (99,84 au handoff 5.3) ; `sim` à **99,77** (99,66) ; `shared` à 100.
@@ -137,7 +153,7 @@ Aucune modification de `legacy/`, `tests/caracterisation/` ni `master`.
 
 ## Décisions et écarts au plan
 
-Huit entrées au journal de `docs/design/README.md`, datées du 14 septembre 2026 : la recoloration par calques, l'animation des icônes, le retour des points flottants, les quatre manques connus traités, la caméra en pixels CSS avec la densité plafonnée, le cadrage mobile à 360 pixels, la partie préparée pendant le compte à rebours, et les couleurs de naissance des bots ; et une du 15 septembre, la même vitesse sur tous les appareils. Points à lire ici.
+Huit entrées au journal de `docs/design/README.md`, datées du 14 septembre 2026 : la recoloration par calques, l'animation des icônes, le retour des points flottants, les quatre manques connus traités, la caméra en pixels CSS avec la densité plafonnée, le cadrage mobile à 360 pixels, la partie préparée pendant le compte à rebours, et les couleurs de naissance des bots ; et quatre du 15 septembre : la même vitesse sur tous les appareils, aucun personnage qui rayonne, le classement sous le temps sur téléphone, le retour de la pluie. Points à lire ici.
 
 ### 1. La fiche supposait un défaut d'attribution, c'était un défaut d'affichage
 
@@ -169,7 +185,11 @@ Conséquence fidèle au jeu d'origine : les bots noirs chassent aussi ces bots d
 
 Le facteur mobile avait été écarté à l'étape 1.6 sur un chiffre faux : l'audit croyait la manette d'origine à 375 pixels par seconde, elle allait à 120. Mesuré le 15 septembre 2026 sur le déploiement d'origine, en émulant la manette tactile : 60 messages de 6 pixels en trois secondes. Présenté au porteur du projet avec trois voies ; il garde la même vitesse partout, équitable entre un joueur au bureau et un joueur sur téléphone. Si le bonus paraît encore trop vif, les deux leviers restants sont le multiplicateur du bonus, pour tous, et le cadrage mobile à 360 pixels, qui grossit tout mouvement à l'écran.
 
-### 8. Écarts à la fiche
+### 8. La lueur ne couvre plus que les flèches, et une idée reçue tombe
+
+Le plan de l'étape 4.2, le journal et les commentaires du rendu répétaient que le jeu d'origine faisait rayonner chaque entité par un `shadowBlur`, et que c'était sa dépense principale. Vérifié dans tout `legacy/` : il n'en posait qu'un, sur les flèches de localisation. La lueur posée sur le calque des ninjas était donc un ajout du portage, et c'est lui qui entourait d'un halo les couleurs claires. Le filtre est déplacé sur le calque des repères. Le banc de rendu garde ses deux séries, avec et sans lueur, qui doivent désormais rester proches ; ses seuils portent sur la mise à l'échelle des sprites, que le déplacement ne change pas. Les handoffs et fiches passés ne sont pas réécrits : ils racontent ce qui était cru à l'époque.
+
+### 9. Écarts à la fiche
 
 - La recette et les corrections n'ont pas été coupées en deux étapes : les défauts se sont corrigés au fil de la grille.
 - Les étapes 2.5 et 3.4 sont placées après 6.1, qui n'en dépend pas. Ordre à confirmer ou réordonner par le porteur du projet.

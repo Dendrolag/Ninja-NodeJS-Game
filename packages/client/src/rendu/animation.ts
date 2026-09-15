@@ -14,10 +14,10 @@
  * a partir de la duree de vie restante que le contrat transporte deja.
  */
 
-import { IMAGES_DE_MARCHE, IMAGES_PAR_OBJET, OBJETS } from '@neon-ninja/shared';
+import { IMAGES_DE_MARCHE, IMAGES_DE_PLUIE, IMAGES_PAR_OBJET, OBJETS } from '@neon-ninja/shared';
 
 import type { Halo } from './apparence.js';
-import { CADENCE_CLIGNOTEMENT, CADENCE_MARCHE_MS, CADENCE_OBJET_MS } from './apparence.js';
+import { CADENCE_CLIGNOTEMENT, CADENCE_MARCHE_MS, CADENCE_OBJET_MS, PLUIE } from './apparence.js';
 
 /**
  * Quelle image de marche montrer a cet instant.
@@ -46,6 +46,18 @@ export function imageDeMarche(maintenant: number): number {
  */
 export function imageDObjet(maintenant: number): number {
   return Math.floor(maintenant / CADENCE_OBJET_MS) % IMAGES_PAR_OBJET;
+}
+
+/**
+ * Quelle image de la planche de pluie montrer a cet instant.
+ *
+ * Le rendu l'ignore sur une carte sans pluie.
+ *
+ * @param maintenant Instant local, en millisecondes.
+ * @returns Rang de l'image dans la planche, a partir de zero.
+ */
+export function imageDePluie(maintenant: number): number {
+  return Math.floor(maintenant / PLUIE.cadenceMs) % IMAGES_DE_PLUIE;
 }
 
 /**

@@ -180,6 +180,7 @@ export {
   cheminNinja,
   cheminObjet,
   cheminPluie,
+  IMAGES_DE_PLUIE,
   cheminSon,
   tousLesNinjas,
   tousLesObjets,

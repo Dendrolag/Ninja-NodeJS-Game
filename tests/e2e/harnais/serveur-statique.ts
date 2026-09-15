@@ -37,6 +37,10 @@ export const RACINE_DEPOT = resolve(fileURLToPath(import.meta.url), '..', '..', 
  */
 const DOSSIERS: Readonly<Record<string, string>> = {
   '/assets': join(RACINE_DEPOT, 'assets'),
+  // La feuille de style empaquetee de la page, pour les scenarios qui verifient une
+  // disposition (hud-telephone.spec.ts). Le code de la page, lui, reste servi module
+  // par module depuis dist.
+  '/page': join(RACINE_DEPOT, 'packages', 'client', 'web'),
   '/paquets/client': join(RACINE_DEPOT, 'packages', 'client', 'dist'),
   '/paquets/shared': join(RACINE_DEPOT, 'packages', 'shared', 'dist'),
   // PixiJS est une dependance du seul paquet client, et pnpm range les
@@ -56,6 +60,7 @@ const DOSSIERS: Readonly<Record<string, string>> = {
 /** Le type de contenu de chaque extension servie. */
 const TYPES: Readonly<Record<string, string>> = {
   '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.mjs': 'text/javascript; charset=utf-8',
   '.map': 'application/json; charset=utf-8',

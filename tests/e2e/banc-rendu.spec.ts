@@ -9,8 +9,9 @@
  * IL FAIT TOURNER LE VRAI CODE. Un banc qui mesurerait un extrait ecrit pour
  * l'occasion ne dirait rien: la page charge la compilation du paquet client,
  * construit ses scenes avec construireScene et les pose avec monterRendu, exactement
- * comme le fera le jeu. La lueur neon est active, puisque c'est elle qui coutait
- * cher dans l'ancienne version.
+ * comme le fera le jeu. La lueur neon est active. Depuis l'etape 5.4, elle ne couvre
+ * plus que les fleches de localisation et non les sprites: les series avec et sans
+ * lueur doivent donc rester proches.
  *
  * DEUX NOMBRES SONT RELEVES, ET ILS NE DISENT PAS LA MEME CHOSE.
  *
@@ -411,10 +412,8 @@ test.describe('banc de mesure du rendu PixiJS', () => {
     }
 
     // LA PROPRIETE QUI VALIDE LE CHOIX DU MOTEUR. Multiplier par cinq le nombre
-    // de sprites ne doit pas diviser la cadence par cinq: c'est tout l'interet
-    // d'une lueur posee en filtre de calque plutot qu'en flou par entite. Le jeu
-    // d'origine, lui, payait le flou une fois par entite, donc son cout croissait
-    // proportionnellement.
+    // de sprites ne doit pas diviser la cadence par cinq: des sprites regroupes sur
+    // le GPU, aux textures partagees, coutent peu chacun.
     //
     // Elle ne s'exige que sur carte graphique. En rendu logiciel, chaque sprite
     // coute ses pixels calcules par le processeur: la cadence y baisse avec la

@@ -10,7 +10,7 @@
  * rapatriement ne se decouvrirait qu'a l'etape 4.3, quand une page les demande.
  */
 
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -18,6 +18,7 @@ import { describe, expect, it } from 'vitest';
 
 import { TYPES_BONUS, TYPES_MALUS } from './constantes.js';
 import {
+  IMAGES_DE_PLUIE,
   MUSIQUES,
   RACINE_RESSOURCES,
   SONS,
@@ -35,6 +36,14 @@ import {
 
 /** Le dossier assets du depot, retrouve depuis ce fichier de test. */
 const RACINE_DISQUE = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'assets');
+
+/** Largeur et hauteur d'une image PNG, lues dans son en-tete. */
+function dimensionsPng(relatif: string): { largeur: number; hauteur: number } {
+  const octets = readFileSync(join(RACINE_DISQUE, relatif));
+
+  // Signature de huit octets, longueur et nom du bloc IHDR, puis largeur et hauteur.
+  return { largeur: octets.readUInt32BE(16), hauteur: octets.readUInt32BE(20) };
+}
 
 describe('cheminCarte', () => {
   it('range les trois couches par carte et par mode', () => {
@@ -56,6 +65,19 @@ describe('cheminPluie', () => {
     // la demande.
     expect(cheminPluie('map2', false)).toBeUndefined();
     expect(cheminPluie('map3', true)).toBeUndefined();
+  });
+
+  it('se decoupe en IMAGES_DE_PLUIE images, chacune de la taille des couches de sa carte', () => {
+    // RainEffect (legacy/js/MapManager.js:13): une planche de 9000 pixels de large,
+    // trois images de 3000 par 2000. Le rendu la decoupe avant de l'envoyer a la
+    // carte graphique, les telephones refusant souvent une texture aussi large.
+    for (const modeMiroir of [false, true]) {
+      const planche = dimensionsPng(cheminPluie('map1', modeMiroir) as string);
+      const fond = dimensionsPng(cheminCarte('map1', modeMiroir, 'background'));
+
+      expect(planche.largeur).toBe(fond.largeur * IMAGES_DE_PLUIE);
+      expect(planche.hauteur).toBe(fond.hauteur);
+    }
   });
 });
 

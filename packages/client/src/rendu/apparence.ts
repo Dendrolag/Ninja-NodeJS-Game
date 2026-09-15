@@ -275,6 +275,19 @@ export const CADENCE_CLIGNOTEMENT = 0.01;
 export const CADENCE_OBJET_MS = 125;
 
 /**
+ * La pluie de la carte Rainy Tokyo.
+ *
+ * Valeurs du jeu d'origine (RainEffect, legacy/js/MapManager.js): une image toutes
+ * les cent millisecondes, posee par-dessus le fond a trente pour cent d'opacite.
+ */
+export const PLUIE = {
+  /** Duree de chaque image de la planche, en millisecondes. */
+  cadenceMs: 100,
+  /** Opacite de la pluie posee sur le fond. */
+  opacite: 0.3,
+} as const;
+
+/**
  * Le cone du mode Tactique (etape 7.1): notre visee, et l'eclair d'un tir.
  *
  * Valeurs de la version 0.9.0 du jeu d'origine (drawCaptureRange): un violet pale,
@@ -298,14 +311,12 @@ export const APPARENCE_TIR = {
 } as const;
 
 /**
- * Reglage de la lueur neon, appliquee en filtre GPU sur le calque des entites.
+ * Reglage de la lueur neon, appliquee en filtre GPU sur le calque des reperes.
  *
- * C'EST LE CHANGEMENT DE FOND DE CETTE ETAPE. Le jeu d'origine obtenait sa lueur
- * en posant un shadowBlur sur le contexte 2D avant chaque trace, ce qui la fait
- * recalculer par le processeur une fois PAR ENTITE, a chaque image. A cent
- * entites, c'etait la depense dominante de la boucle de rendu. Ici la lueur est
- * une passe GPU sur le calque entier: son cout ne depend plus du nombre
- * d'entites, mais de la surface de l'ecran.
+ * Elle fait rayonner les fleches de localisation, comme le shadowBlur rouge du jeu
+ * d'origine (client.js:3556), le seul qu'il posait. Aucun personnage ne rayonne:
+ * posee sur le calque des ninjas jusqu'a l'etape 5.4, elle entourait d'un halo
+ * tout ninja de couleur claire.
  */
 export const LUEUR = {
   /** Force du halo lumineux ajoute autour de ce qui est clair. */

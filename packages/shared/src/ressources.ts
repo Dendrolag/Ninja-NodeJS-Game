@@ -77,6 +77,15 @@ export function cheminPluie(carte: string, modeMiroir: boolean): string | undefi
 }
 
 /**
+ * Nombre d'images de la planche de pluie.
+ *
+ * La planche aligne ses images cote a cote, chacune de la taille des couches de la
+ * carte: 9000 pixels de large pour trois images de 3000 par 2000 (RainEffect,
+ * legacy/js/MapManager.js:13).
+ */
+export const IMAGES_DE_PLUIE = 3;
+
+/**
  * Chemin relatif de la vignette d'une carte, montree dans les reglages du salon.
  *
  * Une seule vignette par carte, mode miroir compris, comme dans le jeu d'origine.

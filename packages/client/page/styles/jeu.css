@@ -520,7 +520,13 @@
     font-size: 22px;
   }
 
+  /*
+   * Sous le temps restant, que la rangee des boutons pousse a 66 pixels du haut et
+   * qui en mesure une cinquantaine. Laisse en haut a gauche, le classement
+   * descendait sur lui des le deuxieme joueur (recette de l'etape 5.4).
+   */
   .hud-classement {
+    top: 128px;
     width: 150px;
     font-size: 12px;
   }

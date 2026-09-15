@@ -312,6 +312,20 @@ describe('construireScene', () => {
       expect(textureA(250)).toBe(adresseDImage(planche, 0));
     });
 
+    // Defaut releve a la recette de l'etape 5.4: la pluie de Rainy Tokyo n'avait
+    // jamais ete portee. Le jeu d'origine changeait d'image toutes les cent
+    // millisecondes, sur une planche de trois (RainEffect, legacy/js/MapManager.js).
+    it('fait tomber la pluie image par image, dix fois par seconde', () => {
+      const imageA = (instant: number): number | undefined =>
+        construireScene(etatEnJeu('moi'), lissee(vue([], [])), instant).imageDePluie;
+
+      expect(imageA(0)).toBe(0);
+      expect(imageA(99)).toBe(0);
+      expect(imageA(100)).toBe(1);
+      expect(imageA(250)).toBe(2);
+      expect(imageA(300)).toBe(0);
+    });
+
     it('laisse un objet frais pleinement opaque', () => {
       const scene = construireScene(etatEnJeu('moi'), lissee(vue([], [bonus])), 0);
 

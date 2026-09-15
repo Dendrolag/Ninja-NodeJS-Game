@@ -39,7 +39,13 @@ import {
 
 import type { EtatClient } from '../etat.js';
 import { effetsEnCours } from '../selecteurs.js';
-import { imageDObjet, imageDeMarche, opaciteObjet, rayonPulsant } from './animation.js';
+import {
+  imageDObjet,
+  imageDeMarche,
+  imageDePluie,
+  opaciteObjet,
+  rayonPulsant,
+} from './animation.js';
 import type { Teinte } from './apparence.js';
 import {
   ALPHA_INVISIBLE,
@@ -143,6 +149,11 @@ export interface Scene {
    * justement quand on ne se voit plus qu'on les demande.
    */
   readonly reperes: readonly FlecheScene[];
+  /**
+   * L'image de la planche de pluie a montrer, sur une carte qui en a une. Absente
+   * d'une scene vide; le rendu l'ignore sur une carte sans pluie.
+   */
+  readonly imageDePluie?: number;
 }
 
 /** Une scene vide, celle d'un ecran sans partie en cours. */
@@ -356,7 +367,15 @@ export function construireScene(
 
   const cones = [...maVisee(monEntite), ...tirsRecents(etat, lissee, maintenant)];
 
-  return { disques, cones, zones, objets, entites, reperes };
+  return {
+    disques,
+    cones,
+    zones,
+    objets,
+    entites,
+    reperes,
+    imageDePluie: imageDePluie(maintenant),
+  };
 }
 
 /**

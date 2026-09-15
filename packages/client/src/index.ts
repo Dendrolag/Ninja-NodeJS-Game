@@ -28,7 +28,7 @@
  *
  *   - rendu/, l'affichage du terrain. Un coeur pur (camera, lissage, scene) que
  *     l'on teste sans navigateur, et un adaptateur PixiJS qui pose la scene sur
- *     le GPU. La lueur neon y est un filtre de calque, plus un flou par entite.
+ *     le GPU. La lueur neon y est un filtre de calque, sur les seules fleches de localisation.
  *   - controles/, la saisie. Une table de touches et un calcul d'intention,
  *     purs; deux branchements minces sur le clavier et le tactile.
  *   - hud/, la surcouche. Un modele pur de ce qu'il faut afficher, et un
