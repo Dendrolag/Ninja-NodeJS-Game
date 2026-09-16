@@ -676,3 +676,35 @@ Ce que le tableau dit:
 
 - **La charge du serveur complet en Équipes.** Le banc suffit à situer le coût d'une partie; la capacité d'un processus reste celle de la section 12.6, avec une marge un peu plus courte (70 parties pleines par cœur au banc contre 74).
 - **Le coût du client.** Le mode ne dessine rien de nouveau: les mêmes ninjas, à deux couleurs au lieu de douze.
+
+## 15. Mesure de l'étape 7.3: le mode Chasse (16 septembre 2026)
+
+Chiffres bruts: `docs/mesures/charge-serveur-7-3-chasse.json` et `docs/mesures/charge-serveur-7-3-classique.json`, écrits par le harnais l'un après l'autre, sur le même code (commit `dac9e06`) et la même machine qu'aux sections 2 et 11 à 14.
+
+### 15.1 L'essentiel
+
+- **Une partie Chasse coûte un peu moins qu'une partie Classique**: 0,365 ms par battement à 150 bots et 10 joueurs, contre 0,406, et 95 parties pleines par cœur au banc contre 86. Le mode ajoute le parcours des proies et l'arme des traqueurs à chaque battement, mais il retire les Black Ninjas et la contagion entre bots de joueurs: personne ne repeint de ninja.
+- **Un message pèse le même poids**: 444 octets à 150 bots contre 454. Le classement change pourtant plus souvent, les points d'une proie montant avec chaque pas; l'arme d'un traqueur passe par l'état tactique déjà codé.
+- **Le Classique n'a pas bougé**: l'empreinte du jeu des quatre parties de `tests/charge/empreinte.ts` est identique à celle d'avant l'étape.
+
+### 15.2 Méthode
+
+`pnpm charge --banc --mode chasse --joueurs 10`, puis la même commande sans `--mode`. Dix joueurs, la capacité du mode, pour les deux. Les joueurs se déplacent comme dans n'importe quel mode; en Chasse, personne ne tire (voir `tests/charge/battement.ts`): des tirs au hasard élimineraient les traqueurs en quelques secondes, et la partie décidée s'arrêterait avant la fin de la mesure.
+
+### 15.3 Le banc
+
+Dix joueurs, carte map1, un processus neuf par ligne. Durées en millisecondes par battement, tailles en octets par message sur le fil, images comprises.
+
+| Bots | Mode      | Moteur | Projection | Codage | Total | Total p99 | Octets par message | Parties par cœur |
+| ---: | --------- | -----: | ---------: | -----: | ----: | --------: | -----------------: | ---------------: |
+|   50 | Classique |  0,107 |      0,018 |  0,030 | 0,154 |     0,438 |                222 |              227 |
+|   50 | Chasse    |  0,092 |      0,016 |  0,029 | 0,138 |     0,389 |                223 |              254 |
+|  150 | Classique |  0,313 |      0,040 |  0,054 | 0,406 |     0,920 |                454 |               86 |
+|  150 | Chasse    |  0,277 |      0,037 |  0,051 | 0,365 |     0,663 |                444 |               95 |
+|  300 | Classique |  0,880 |      0,078 |  0,103 | 1,061 |     1,826 |                813 |               32 |
+|  300 | Chasse    |  0,834 |      0,078 |  0,095 | 1,006 |     1,985 |                769 |               34 |
+
+### 15.4 Ce qui n'est pas mesuré
+
+- **Le coût d'un tir.** Un traqueur tire au plus une fois par seconde, et un tir parcourt les entités une fois: un coût borné, que le banc ne sait pas jouer sans terminer la partie.
+- **La charge du serveur complet en Chasse**, ni le coût du client: le mode dessine le cône du Tactique pour le seul traqueur qui regarde, et rien d'autre de nouveau.

@@ -150,6 +150,19 @@ Conditions de ROADMAP réunies, plus:
 3. **Épuisement et départ** mènent à deux issues différentes: le test doit couvrir les deux ordres (un éliminé puis un départ, un départ puis une élimination).
 4. **Les charges d'un traqueur sont ses vies**: aucun écran ne doit les présenter comme des charges du Tactique.
 
+## Réconciliation pendant l'étape (16 septembre 2026)
+
+Écarts entre la fiche et ce qui a été construit, consignés au journal de `docs/design/README.md` quand ils touchent une décision.
+
+1. **Les règles ont changé en cours d'étape.** Les lots A (`d70c719`) et B (`a23af12`) ont construit la première version; la fiche a été réécrite (`2891319`), puis les lots A2 et B2 (`2288659`), C (`dac9e06`) et D ont construit la seconde. Rien de la première version ne subsiste qui la contredise: l'infection au contact, le score de survie, le classement « proies d'abord », `placeDansLaChasse` et `campVainqueur` sont retirés.
+2. **La place par camp reste partagée** (`packages/shared/src/camps.ts`), extraite des Équipes pendant la première version. Les Équipes s'en servent seules, avec les mêmes résultats.
+3. **L'écran de fin est celui du Classique**, podium compris, sans issue par camp au titre (lot C, point 4): un classement individuel aux points n'a pas de camp vainqueur, et le titre dit la place du joueur comme ailleurs.
+4. **Un traqueur éliminé** lit « Éliminé » dans le bandeau du rôle, et la minimap lui montre les traqueurs: son camp se lit à sa couleur dans le classement, où il reste.
+5. **Le bandeau du rôle est à droite, sous les boutons**, et non sous le temps restant: le haut du centre est celui des annonces en jeu, qu'il cachait. Vérifié à l'écran, au bureau et sur téléphone.
+6. **Le banc se joue à dix joueurs, sans tir** (lot D, point 2): la capacité du mode, pour la Chasse comme pour le Classique qui lui est comparé; des tirs au hasard élimineraient les traqueurs et termineraient la partie avant la fin de la mesure.
+7. **Le scénario de bout en bout ne joue que le bureau**, comme celui des Équipes: il fabrique son ordinateur et son téléphone. Personne n'y tire; le tir est vérifié par les tests du moteur et du serveur, dont une chasse jouée à travers le vrai serveur jusqu'à l'infection de la dernière proie.
+8. **Défauts corrigés en route (règle 7)**: la documentation de l'événement de capture annonçait une couleur « tirée » pour la victime, ce qui n'était plus vrai depuis les Équipes; deux tests prenaient `chasse` comme exemple de mode inconnu.
+
 ## Rituel de fin de session
 
 Écrire `docs/handoffs/etape-7-3-handoff.md`: les décisions construites, la révision des règles en cours d'étape, les écarts à cette fiche, les chiffres du banc, l'état de la CI. Prochaine action exacte: demander au porteur du projet la fonctionnalité reportée suivante (Battle Royale, Chaos, pass de saison, skins, clans), trancher ses règles, puis rédiger sa fiche. Commiter.

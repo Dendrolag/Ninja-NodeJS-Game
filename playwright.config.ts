@@ -63,6 +63,12 @@ const LIEN = '**/lien.spec.ts';
  */
 const EQUIPES = '**/equipes.spec.ts';
 
+/**
+ * Le mode Chasse (etape 7.3), joue par le seul projet bureau, pour la meme raison que le
+ * mode Equipes.
+ */
+const CHASSE = '**/chasse.spec.ts';
+
 export default defineConfig({
   testDir: './tests/e2e',
   // Les paquets sont compiles une fois avant les scenarios: le banc de mesure du
@@ -112,7 +118,7 @@ export default defineConfig({
     {
       name: 'mobile',
       use: { ...devices['Pixel 7'] },
-      testIgnore: [BANC, MULTIJOUEUR, PARTIES, COMPTE, RETOUR, MOT_DE_PASSE, LIEN, EQUIPES],
+      testIgnore: [BANC, MULTIJOUEUR, PARTIES, COMPTE, RETOUR, MOT_DE_PASSE, LIEN, EQUIPES, CHASSE],
     },
     // Le banc de mesure du rendu a son propre projet, et une seule execution:
     // il mesure le moteur de rendu, pas la taille de la fenetre. Le jouer dans

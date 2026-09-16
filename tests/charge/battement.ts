@@ -39,6 +39,12 @@
  * partie Classique tire au sort exactement ce qu'elle tirait avant l'arrivee du mode,
  * et sa taille de reference ne bouge donc pas.
  *
+ * En Chasse (etape 7.3), personne ne tire: des tirs au hasard feraient perdre leurs vies
+ * aux traqueurs en quelques secondes, et la partie, decidee, s'arreterait avant la fin
+ * de la mesure. Ce que le mode coute a chaque battement, le parcours des proies et l'arme
+ * des traqueurs, est mesure; un tir, rare et borne a une seconde d'attente, ne l'est pas.
+ * Le mode accueille dix joueurs: le banc se lance avec --joueurs 10.
+ *
  * AUCUN CODE DU JEU N'EST MODIFIE NI IMITE. La room est celle du serveur, lue dans
  * sa compilation, c'est-a-dire le code qui tourne en production. Seul le rappel
  * de battement, que la room offre a qui veut etre prevenu, est fourni ici.

@@ -522,6 +522,7 @@ describe('le hors-jeu d un traqueur elimine', () => {
       expect(REGLES_DES_MODES[mode].horsJeu(etat)).toBe(PERSONNE_HORS_JEU);
     }
     expect(horsJeuEnChasse(chasseAvec())).toBe(PERSONNE_HORS_JEU);
+    expect(horsJeuEnChasse(partie())).toBe(PERSONNE_HORS_JEU);
   });
 });
 

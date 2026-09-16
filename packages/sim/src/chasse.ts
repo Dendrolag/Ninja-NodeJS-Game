@@ -276,7 +276,7 @@ export function tirerEnChasse(etat: EtatPartie, tireurId: IdentifiantEntite): Et
     captures = apres === courant ? 0 : 1;
     courant = apres;
   } else if (cible !== undefined) {
-    courant = perdreUneVie(courant, tireurId, cible.position);
+    courant = perdreUneVie(courant, tireurId, arme, cible.position);
   }
 
   return {
@@ -347,14 +347,14 @@ function armer(etat: EtatPartie, id: IdentifiantEntite, arme: TraqueurEnChasse):
  * Un traqueur perd une vie sur un faux ninja. A zero, il est elimine, et, s'il etait le
  * dernier traqueur en jeu, les traqueurs sont epuises.
  */
-function perdreUneVie(etat: EtatPartie, id: IdentifiantEntite, position: Position): EtatPartie {
-  const arme = etat.chasse?.traqueurs[id];
-
-  if (arme === undefined) {
-    return etat;
-  }
-
-  const viesRestantes = Math.max(arme.vies - 1, 0);
+function perdreUneVie(
+  etat: EtatPartie,
+  id: IdentifiantEntite,
+  arme: TraqueurEnChasse,
+  position: Position,
+): EtatPartie {
+  // Un traqueur qui tire est en jeu: il a au moins une vie a perdre.
+  const viesRestantes = arme.vies - 1;
   const touche = armer(etat, id, { ...arme, vies: viesRestantes });
   const epuises =
     viesRestantes === 0 &&
