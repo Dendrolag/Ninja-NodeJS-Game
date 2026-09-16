@@ -156,6 +156,21 @@ Conditions de ROADMAP réunies, plus:
 4. **Les points d'un joueur en Équipes** comptent tous les bots de son équipe: aucun écran ne doit les présenter comme un score personnel.
 5. **Le décompte et les départs.** Un joueur qui quitte le salon pendant le décompte peut vider une équipe: la seconde vérification (micro-décision 8) est ce qui l'empêche de lancer une partie à une équipe.
 
+## Réconciliation pendant l'étape (16 septembre 2026)
+
+Écarts entre la fiche et ce qui a été construit, tous consignés au journal de `docs/design/README.md`.
+
+1. **Les quatre lots ont été exécutés dans l'ordre, un commit chacun**: A (`7e6db39`), B (`acb4cde`), C (`7a4b440`), D.
+2. **Le jeu de règles s'est élargi à deux questions, et non trois** (lot A, point 1). La capture d'un joueur n'en est pas une: elle vit déjà dans la règle de contacts du mode, qui choisit `capturerJoueur` ou `capturerEnEquipe`. Restent la perte face au bot noir et la victime du malus.
+3. **`GameRoom` ne retient pas les équipes à part** (lot B, point 3). La couleur du joueur dans l'état les dit déjà: une seconde table aurait pu diverger de celle que le moteur applique. C'est aussi ce qui fait revenir chacun dans son équipe quand les réglages changent.
+4. **Micro-décision ajoutée: les points enregistrés d'un joueur en Équipes sont sa part**, plus ses propres points de bots noirs, et non le score de son équipe. Défaut relevé en construisant le bilan: le meilleur score du profil aurait été gonflé à la taille de l'équipe. Même raison pour le classement du HUD, qui classe les équipes et non les joueurs.
+5. **Le devancement est devenu explicite** (lot B, point 2): `PlaceEnFinDePartie` porte un `Devancement` que le serveur donne en Équipes, et que le Classique déduit de son placement comme avant. La fiche disait « accepte le nombre de joueurs devancés et la part de ligue »; c'est la même chose, sous un nom.
+6. **Le changement d'équipe partage la famille de débit `autresActions`** (lot B, point 4), avec les autres demandes de salon, plutôt que d'en créer une.
+7. **Le mode est resté hors de la création jusqu'au lot C** (lot A, point 2), par une liste `MODES_PROPOSES` dans le modèle de création, retirée au lot C quand le salon a su montrer les équipes.
+8. **Le scénario de bout en bout ne joue qu'un cadrage** (lot D, points 1 et 2): il fabrique lui-même son ordinateur et son téléphone, comme la partie à deux joueurs, et lit le salon en équipes sur les deux. Le projet mobile l'ignore.
+9. **Vérifié à l'écran avant le commit du lot C**: une partie Équipes créée depuis la page montre ses deux colonnes à leurs couleurs, « Votre équipe », le bouton de l'autre équipe et la consigne du lancement, sans erreur de console.
+10. **Défaut de documentation corrigé en route (règle 7)**: la notification de capture annonçait une couleur « tirée » pour la victime, ce qui n'est plus vrai en Équipes, où elle garde celle de son équipe.
+
 ## Rituel de fin de session
 
 Écrire `docs/handoffs/etape-7-2-handoff.md`: les décisions construites, les écarts à cette fiche, les chiffres du banc, l'état de la CI. Prochaine action exacte: demander au porteur du projet la fonctionnalité reportée suivante (Chasse, Battle Royale, Chaos, pass de saison, skins, clans), trancher ses règles, puis rédiger sa fiche. Commiter.

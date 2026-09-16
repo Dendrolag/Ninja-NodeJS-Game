@@ -638,3 +638,41 @@ Ce que le tableau dit:
 
 - **La charge du serveur complet en Tactique.** Le banc montre qu'une partie coûte le même temps; la capacité d'un processus reste donc celle de la section 12.6, que la taille des messages ne bornait déjà plus.
 - **Le coût du client.** Le cône et l'éclair d'un tir sont quelques tracés par image, sans commune mesure avec les sprites mesurés à l'étape 4.2.
+
+## 14. Mesure de l'étape 7.2: le mode Équipes (16 septembre 2026)
+
+Chiffres bruts: `docs/mesures/charge-serveur-7-2-equipes.json` et `docs/mesures/charge-serveur-7-2-classique.json`, écrits par le harnais l'un après l'autre, sur le même code (commit `7a4b440`) et la même machine qu'aux sections 2 et 11 à 13.
+
+### 14.1 L'essentiel
+
+- **Une partie Équipes coûte un peu plus qu'une partie Classique**: 0,494 ms par battement à 150 bots et 12 joueurs, contre 0,467, soit 6 pour cent; 70 parties pleines par cœur au banc, contre 74. L'écart tient au jeu, pas au code du mode: deux grands troupeaux de couleurs opposées se croisent sans arrêt, et chaque contact entre bots adverses en repeint un. Le mode n'ajoute aucun champ à l'état et aucun calcul par battement.
+- **Un message pèse le même poids**: 463 octets à 150 bots contre 453, et 799 contre 813 à 300 bots. La différence est dans le bruit d'une exécution à l'autre (section 8): le flux d'état ne porte rien de nouveau, une équipe étant une couleur.
+- **Le Classique n'a pas bougé**: 453 octets à 150 bots, exactement la partie de référence du flux, et l'empreinte du jeu des quatre parties de `tests/charge/empreinte.ts` est identique à celle d'avant l'étape.
+
+### 14.2 Méthode
+
+`pnpm charge --banc --mode equipes`, puis la même commande sans `--mode`. Le banc place ses douze joueurs dans les deux équipes, comme le serveur le ferait au salon, et ils s'y déplacent comme dans n'importe quel mode.
+
+### 14.3 Le banc
+
+Douze joueurs, carte map1, un processus neuf par ligne. Durées en millisecondes par battement, tailles en octets par message sur le fil, images comprises.
+
+| Bots | Mode      | Moteur | Projection | Codage | Total | Total p99 | Octets par message | Débit par joueur     | Parties par cœur |
+| ---: | --------- | -----: | ---------: | -----: | ----: | --------: | -----------------: | -------------------- | ---------------: |
+|   50 | Classique |  0,119 |      0,020 |  0,032 | 0,171 |     0,542 |                232 | 5 Ko/s, 0,04 Mbit/s  |              205 |
+|   50 | Équipes   |  0,137 |      0,023 |  0,037 | 0,198 |     0,677 |                228 | 5 Ko/s, 0,04 Mbit/s  |              177 |
+|  150 | Classique |  0,353 |      0,053 |  0,061 | 0,467 |     1,086 |                453 | 9 Ko/s, 0,07 Mbit/s  |               74 |
+|  150 | Équipes   |  0,369 |      0,060 |  0,064 | 0,494 |     1,493 |                463 | 9 Ko/s, 0,07 Mbit/s  |               70 |
+|  300 | Classique |  0,991 |      0,094 |  0,101 | 1,187 |     2,056 |                813 | 16 Ko/s, 0,13 Mbit/s |               29 |
+|  300 | Équipes   |  1,074 |      0,113 |  0,116 | 1,303 |     2,235 |                799 | 16 Ko/s, 0,13 Mbit/s |               26 |
+
+Ce que le tableau dit:
+
+- **Le supplément est dans le moteur, et il croît avec la population** (0,018 ms à 50 bots, 0,016 à 150, 0,083 à 300): ce sont les contacts entre bots de couleurs adverses, qui repeignent, donc qui écrivent dans l'état et dans le delta. En Classique, la plupart des bots sont blancs et ne se repeignent pas entre eux.
+- **Le p99 du battement est plus haut** (1,493 ms contre 1,086 à 150 bots), pour la même raison. Il reste à plus de trente fois sous le budget d'un battement.
+- **La taille d'un message ne dit rien de plus** que le nombre de bots repeints dans le battement, qui varie d'une partie à l'autre.
+
+### 14.4 Ce qui n'est pas mesuré
+
+- **La charge du serveur complet en Équipes.** Le banc suffit à situer le coût d'une partie; la capacité d'un processus reste celle de la section 12.6, avec une marge un peu plus courte (70 parties pleines par cœur au banc contre 74).
+- **Le coût du client.** Le mode ne dessine rien de nouveau: les mêmes ninjas, à deux couleurs au lieu de douze.

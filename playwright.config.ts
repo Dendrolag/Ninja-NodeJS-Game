@@ -57,6 +57,12 @@ const MOT_DE_PASSE = '**/mot-de-passe.spec.ts';
  */
 const LIEN = '**/lien.spec.ts';
 
+/**
+ * Le mode Equipes (etape 7.2), joue par le seul projet bureau: il fabrique lui-meme son
+ * ordinateur et son telephone, et lit le salon en equipes sur les deux.
+ */
+const EQUIPES = '**/equipes.spec.ts';
+
 export default defineConfig({
   testDir: './tests/e2e',
   // Les paquets sont compiles une fois avant les scenarios: le banc de mesure du
@@ -106,7 +112,7 @@ export default defineConfig({
     {
       name: 'mobile',
       use: { ...devices['Pixel 7'] },
-      testIgnore: [BANC, MULTIJOUEUR, PARTIES, COMPTE, RETOUR, MOT_DE_PASSE, LIEN],
+      testIgnore: [BANC, MULTIJOUEUR, PARTIES, COMPTE, RETOUR, MOT_DE_PASSE, LIEN, EQUIPES],
     },
     // Le banc de mesure du rendu a son propre projet, et une seule execution:
     // il mesure le moteur de rendu, pas la taille de la fenetre. Le jouer dans
