@@ -30,7 +30,7 @@
  * le groupe: c'est le role de completerReglages.
  */
 
-import type { IdentifiantCarte, TypeBonus, TypeMalus, TypeZone } from './constantes.js';
+import type { IdentifiantCarte, Mode, TypeBonus, TypeMalus, TypeZone } from './constantes.js';
 
 /** Reglages d'un bonus: est-il en jeu, combien de temps dure-t-il, apparait-il souvent. */
 export interface ReglageBonus {
@@ -182,6 +182,26 @@ export type ReglagesPartiels = PartielProfond<ReglagesPartie>;
  */
 export function completerReglages(partiels?: ReglagesPartiels): ReglagesPartie {
   return fusionner(REGLAGES_PAR_DEFAUT, partiels);
+}
+
+/**
+ * Les reglages d'une partie, une fois appliques ceux que son mode impose.
+ *
+ * Un mode peut retirer du jeu ce que ses regles n'admettent pas, quoi que l'hote ait
+ * choisi. Le moteur applique cette fonction en creant l'etat, et c'est donc elle qui
+ * fait foi; le salon lit les reglages de l'etat, et montre ce qui se jouera.
+ *
+ *   - La Chasse n'a pas de bots noirs (etape 7.3, decision 9 du porteur du projet): ses
+ *     ninjas ne font aucun score, et un bot noir n'aurait rien a prendre.
+ *   - Les autres modes n'imposent rien: leurs reglages sont rendus tels quels, le meme
+ *     objet, ce qui laisse leurs parties identiques a ce qu'elles etaient.
+ */
+export function imposerLesReglagesDuMode(mode: Mode, reglages: ReglagesPartie): ReglagesPartie {
+  if (mode !== 'chasse' || !reglages.botsNoirs.actifs) {
+    return reglages;
+  }
+
+  return { ...reglages, botsNoirs: { ...reglages.botsNoirs, actifs: false } };
 }
 
 /**

@@ -86,6 +86,15 @@ const GLYPHES = {
     ],
   },
   shield: { formes: [{ trace: 'M12 3l8 3v6c0 5-4 7.7-8 9-4-1.3-8-4-8-9V6z' }] },
+  viseur: {
+    formes: [
+      { cercle: [12, 12, 7] },
+      { trace: 'M12 2v5' },
+      { trace: 'M12 17v5' },
+      { trace: 'M2 12h5' },
+      { trace: 'M17 12h5' },
+    ],
+  },
   trophy: {
     formes: [
       { trace: 'M7 4h10v5a5 5 0 0 1-10 0z' },

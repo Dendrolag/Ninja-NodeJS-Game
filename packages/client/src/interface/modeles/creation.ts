@@ -18,7 +18,7 @@
  */
 
 import type { ConfigurationPartie, IdentifiantCarte, Mode, Visibilite } from '@neon-ninja/shared';
-import { CAPACITES, CARTES, validerDemandeCreation } from '@neon-ninja/shared';
+import { CAPACITES, CARTES, MODES, validerDemandeCreation } from '@neon-ninja/shared';
 
 import type { EtatClient } from '../../etat.js';
 import { formaterDuree } from '../../hud/modele.js';
@@ -30,6 +30,16 @@ import type { LigneRecapitulatif } from './salon.js';
 
 /** Le mode propose d'abord a la creation: le Classique, le jeu d'origine. */
 export const MODE_PAR_DEFAUT: Mode = 'classique';
+
+/**
+ * Les modes que l'ecran de creation propose, dans l'ordre de leurs tuiles.
+ *
+ * La Chasse existe dans le contrat depuis le lot A de l'etape 7.3, mais le serveur ne
+ * tire ses traqueurs qu'avec le lot B, et la page ne montre les roles qu'avec le lot C:
+ * une partie Chasse creee avant n'aurait pas de traqueurs. Elle rejoint la creation au
+ * lot C.
+ */
+export const MODES_PROPOSES: readonly Mode[] = MODES.filter((mode) => mode !== 'chasse');
 
 /** Ce que le joueur a choisi. */
 export interface SaisieDeCreation {

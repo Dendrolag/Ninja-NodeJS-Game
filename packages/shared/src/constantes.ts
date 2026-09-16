@@ -104,11 +104,13 @@ export interface DimensionsCarte {
  *     (etape 7.1). Voir TACTIQUE plus bas.
  *   - Les Equipes opposent deux equipes d'une couleur chacune, qui capturent au
  *     contact (etape 7.2). Voir EQUIPES plus bas.
+ *   - La Chasse oppose des traqueurs, qui infectent les proies qu'ils attrapent, a des
+ *     proies qui doivent tenir jusqu'au bout (etape 7.3). Voir CHASSE plus bas.
  *
  * Ajouter un mode demande aussi une migration de la base, dont l'enumeration des
  * modes est tiree de cette liste.
  */
-export const MODES = ['classique', 'tactique', 'equipes'] as const;
+export const MODES = ['classique', 'tactique', 'equipes', 'chasse'] as const;
 
 /** Un mode de jeu. */
 export type Mode = (typeof MODES)[number];
@@ -132,12 +134,14 @@ export type Mode = (typeof MODES)[number];
  *
  * Le Tactique en accueille autant: rien dans ses regles ne change ce que coute un
  * joueur (etape 7.1). Les Equipes aussi, deux equipes de six: decision du porteur du
- * projet du 15 septembre 2026 (etape 7.2).
+ * projet du 15 septembre 2026 (etape 7.2). La Chasse en accueille dix, la borne haute de
+ * la maquette: decision du porteur du projet du 16 septembre 2026 (etape 7.3).
  */
 export const CAPACITES: Readonly<Record<Mode, number>> = {
   classique: 12,
   tactique: 12,
   equipes: 12,
+  chasse: 10,
 };
 
 /**
@@ -448,6 +452,36 @@ export const COULEURS_DES_EQUIPES: Readonly<Record<Equipe, Couleur>> = {
 
 /** Combien de joueurs une equipe accepte au plus: la moitie de la capacite du mode. */
 export const MEMBRES_PAR_EQUIPE_MAXIMUM = 6;
+
+/**
+ * La couleur commune des traqueurs du mode Chasse (etape 7.3).
+ *
+ * Decision du porteur du projet du 16 septembre 2026: tous les traqueurs portent le
+ * rose-rouge de la tuile Chasse, et les proies gardent leur couleur. Une proie infectee
+ * change donc de couleur a l'ecran, et deux traqueurs, de meme couleur, ne se capturent
+ * pas, ce que le moteur refuse deja.
+ *
+ * C'EST UNE COULEUR RESERVEE. Elle n'est pas dans la palette des joueurs, et le moteur
+ * l'exclut de tous ses tirages: aucun joueur, aucun bot a sa naissance, aucune zone de
+ * chaos ne la recoit. Seul le role de traqueur la donne.
+ */
+export const COULEUR_DES_TRAQUEURS = '#FF2E7E';
+
+/**
+ * Les regles chiffrees du mode Chasse (etape 7.3), tranchees par le porteur du projet le
+ * 16 septembre 2026.
+ */
+export const CHASSE = {
+  /** Un traqueur par tranche de cinq joueurs au lancement, arrondi au-dessus. */
+  JOUEURS_PAR_TRAQUEUR: 5,
+  /**
+   * Temps pendant lequel un nouveau traqueur ne capture pas, en millisecondes. Sans lui,
+   * dans un groupe de proies, l'infection se propagerait en chaine dans le meme instant.
+   */
+  DELAI_NOUVEAU_TRAQUEUR_MS: 3000,
+  /** Combien de joueurs il faut au moins pour lancer: un traqueur et une proie. */
+  JOUEURS_MINIMUM: 2,
+} as const;
 
 /** Couleur d'un bot non capture. */
 export const COULEUR_BOT_NEUTRE = '#FFFFFF';

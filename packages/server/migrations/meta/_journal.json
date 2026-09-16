@@ -36,6 +36,13 @@
       "when": 1789503662319,
       "tag": "0004_mode_equipes",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789550428612,
+      "tag": "0005_mode_chasse",
+      "breakpoints": true
     }
   ]
 }

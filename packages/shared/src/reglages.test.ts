@@ -10,7 +10,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ReglagesPartiels } from './reglages.js';
-import { REGLAGES_PAR_DEFAUT, completerReglages } from './reglages.js';
+import { REGLAGES_PAR_DEFAUT, completerReglages, imposerLesReglagesDuMode } from './reglages.js';
 
 describe('completerReglages', () => {
   it('rend les valeurs par defaut quand on ne fournit rien', () => {
@@ -80,5 +80,29 @@ describe('completerReglages', () => {
     expect(reglages.malus.types.negatif.dureeS).toBe(14);
     expect(reglages.zones.intervalleApparitionS).toBe(15);
     expect(reglages.zones.dureeMaximumS).toBe(30);
+  });
+});
+
+describe('imposerLesReglagesDuMode', () => {
+  it('retire les bots noirs d une partie Chasse, quoi que l hote ait choisi', () => {
+    const reglages = imposerLesReglagesDuMode('chasse', completerReglages({ dureePartieS: 60 }));
+
+    expect(reglages.botsNoirs.actifs).toBe(false);
+    expect(reglages.botsNoirs.nombre).toBe(REGLAGES_PAR_DEFAUT.botsNoirs.nombre);
+    expect(reglages.dureePartieS).toBe(60);
+  });
+
+  it('rend tels quels, le meme objet, les reglages des autres modes', () => {
+    const reglages = completerReglages();
+
+    for (const mode of ['classique', 'tactique', 'equipes'] as const) {
+      expect(imposerLesReglagesDuMode(mode, reglages)).toBe(reglages);
+    }
+  });
+
+  it('rend tels quels les reglages d une Chasse deja sans bots noirs', () => {
+    const reglages = completerReglages({ botsNoirs: { actifs: false } });
+
+    expect(imposerLesReglagesDuMode('chasse', reglages)).toBe(reglages);
   });
 });

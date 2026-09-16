@@ -13,6 +13,7 @@ import {
   COULEURS_JOUEURS,
   COULEUR_BOT_NEUTRE,
   COULEUR_BOT_NOIR,
+  COULEUR_DES_TRAQUEURS,
   element,
   entier,
 } from '@neon-ninja/shared';
@@ -55,7 +56,8 @@ export function couleurAleatoire(alea: Alea): Tirage<Couleur> {
  *
  * Tant que la palette des joueurs contient une couleur libre, on y puise: ce
  * sont les six couleurs vives et bien distinctes du jeu. Une fois la palette
- * epuisee, on tire une couleur quelconque, en evitant celles interdites.
+ * epuisee, on tire une couleur quelconque, en evitant celles interdites, et la
+ * couleur des traqueurs du mode Chasse, reservee a leur role (etape 7.3).
  *
  * @param couleursExclues Couleurs a ne pas attribuer: celles des autres joueurs,
  *                        et, lors d'une reapparition, celle de l'attaquant et
@@ -68,7 +70,7 @@ export function couleurUnique(alea: Alea, couleursExclues: readonly Couleur[]): 
     return element(alea, libres);
   }
 
-  return couleurAleatoireHorsDe(alea, couleursExclues);
+  return couleurAleatoireHorsDe(alea, [...couleursExclues, COULEUR_DES_TRAQUEURS]);
 }
 
 /**
@@ -102,7 +104,8 @@ function couleurAleatoireHorsDe(alea: Alea, interdites: readonly Couleur[]): Tir
  * Une precaution que le legacy ne prenait pas: la couleur tiree n'est jamais
  * celle d'un joueur, ni une couleur de la palette qu'un joueur pourrait recevoir,
  * ni le blanc des bots neutres, ni le noir des bots noirs. Une chance sur deux
- * millions par bot, dans le legacy, de naitre deja compte dans un score.
+ * millions par bot, dans le legacy, de naitre deja compte dans un score. Ni, depuis
+ * l'etape 7.3, la couleur des traqueurs du mode Chasse, reservee a leur role.
  *
  * @param couleursExclues Les couleurs des joueurs presents, qui peuvent sortir de
  *                        la palette quand elle est epuisee.
@@ -112,6 +115,7 @@ export function couleurDeBot(alea: Alea, couleursExclues: readonly Couleur[]): T
     ...COULEURS_JOUEURS,
     COULEUR_BOT_NEUTRE,
     COULEUR_BOT_NOIR,
+    COULEUR_DES_TRAQUEURS,
     ...couleursExclues,
   ]);
 }

@@ -1569,7 +1569,7 @@ describe('creation de partie refusee', () => {
     // Un client modifie peut envoyer un mode que le contrat ne connait pas.
     const modeInconnu = {
       pseudo: 'Alice',
-      configuration: { mode: 'chasse', visibilite: 'publique' },
+      configuration: { mode: 'royale', visibilite: 'publique' },
     } as unknown as DemandeCreation;
 
     expect(champsDuRefus(tropLongue)).toEqual(['dureePartieS']);

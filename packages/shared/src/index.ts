@@ -143,8 +143,10 @@ export {
   CADENCES_LEGACY_MS,
   CAPACITES,
   CARTES,
+  CHASSE,
   COULEUR_BOT_NEUTRE,
   COULEUR_BOT_NOIR,
+  COULEUR_DES_TRAQUEURS,
   COULEURS_DES_EQUIPES,
   COULEURS_JOUEURS,
   DEPLACEMENTS_LEGACY_PAR_PAS,
@@ -226,7 +228,7 @@ export type {
   ReglagesPartiels,
   ReglagesZones,
 } from './reglages.js';
-export { REGLAGES_PAR_DEFAUT, completerReglages } from './reglages.js';
+export { REGLAGES_PAR_DEFAUT, completerReglages, imposerLesReglagesDuMode } from './reglages.js';
 
 export type { ErreurValidation, ResultatValidation } from './validation.js';
 export {

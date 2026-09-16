@@ -342,8 +342,12 @@ export function detruireBotNoir(
   };
 }
 
-/** Ajoute une capture au journal d'un joueur, ou incremente celle qui s'y trouve. */
-function inscrireAuJournal(
+/**
+ * Ajoute une capture au journal d'un joueur, ou incremente celle qui s'y trouve.
+ *
+ * Exportee pour l'infection du mode Chasse (chasse.ts), qui tient le meme journal.
+ */
+export function inscrireAuJournal(
   journal: Joueur['joueursCaptures'],
   autreId: IdentifiantEntite,
   pseudo: string,

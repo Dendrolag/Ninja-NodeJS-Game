@@ -31,12 +31,13 @@ export const PRESENTATION_CARTES: Readonly<Record<IdentifiantCarte, Presentation
  *
  * Le mode est un jeu de regles enfichable (decision du 29 juin 2026), et le salon
  * le transporte depuis l'etape 2.4. Le Tactique s'est ajoute au Classique a l'etape
- * 7.1, les Equipes a l'etape 7.2.
+ * 7.1, les Equipes a l'etape 7.2, la Chasse a l'etape 7.3.
  */
 export const NOMS_DES_MODES: Readonly<Record<Mode, string>> = {
   classique: 'Classique',
   tactique: 'Tactique',
   equipes: 'Équipes',
+  chasse: 'Chasse',
 };
 
 /** Le nom de chaque equipe du mode Equipes, tel que le joueur le lit (etape 7.2). */
@@ -56,6 +57,8 @@ export const CAPTURES_DES_MODES: Readonly<Record<Mode, string>> = {
     'On capture à distance : Espace, ou le bouton Capturer, prend tout ce qui est dans le cône devant vous. Cinq charges, et une qui revient toutes les cinq secondes.',
   equipes:
     'On capture en touchant, en équipe : un faux ninja passe à la couleur de votre équipe, un adversaire vous cède sa part des ninjas de son équipe.',
+  chasse:
+    'Seuls les traqueurs capturent, en touchant : la proie attrapée devient traqueur à son tour. Les proies gagnent s’il en reste une à la fin.',
 };
 
 /** Le nom d'une carte tel qu'on l'affiche, mode miroir compris. */

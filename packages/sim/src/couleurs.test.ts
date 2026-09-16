@@ -10,6 +10,7 @@ import {
   COULEURS_JOUEURS,
   COULEUR_BOT_NEUTRE,
   COULEUR_BOT_NOIR,
+  COULEUR_DES_TRAQUEURS,
   creerAlea,
 } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
@@ -31,6 +32,37 @@ describe('couleurAleatoire', () => {
     const seconde = couleurAleatoire(premiere.alea);
 
     expect(seconde.valeur).not.toBe(premiere.valeur);
+  });
+});
+
+/**
+ * Une graine dont le premier tirage de couleur quelconque tombe exactement sur la
+ * couleur des traqueurs du mode Chasse. Trouvee une fois par une recherche exhaustive:
+ * le hasard ne la donnerait pas de lui-meme, une chance sur seize millions.
+ */
+const GRAINE_DE_LA_COULEUR_DES_TRAQUEURS = 575696;
+
+describe('la couleur des traqueurs (etape 7.3)', () => {
+  it('sort bien du premier tirage de la graine choisie', () => {
+    expect(couleurAleatoire(creerAlea(GRAINE_DE_LA_COULEUR_DES_TRAQUEURS)).valeur).toBe(
+      COULEUR_DES_TRAQUEURS,
+    );
+  });
+
+  it('n est jamais donnee a un joueur hors de la palette', () => {
+    const couleur = couleurUnique(
+      creerAlea(GRAINE_DE_LA_COULEUR_DES_TRAQUEURS),
+      COULEURS_JOUEURS,
+    ).valeur;
+
+    expect(couleur).not.toBe(COULEUR_DES_TRAQUEURS);
+    expect(couleur).toMatch(/^#[0-9A-F]{6}$/);
+  });
+
+  it('n est jamais donnee a un bot qui nait', () => {
+    expect(couleurDeBot(creerAlea(GRAINE_DE_LA_COULEUR_DES_TRAQUEURS), []).valeur).not.toBe(
+      COULEUR_DES_TRAQUEURS,
+    );
   });
 });
 

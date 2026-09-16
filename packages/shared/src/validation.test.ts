@@ -473,7 +473,7 @@ describe('validerDemandeCreation', () => {
       champsRefuses(
         validerDemandeCreation({
           pseudo: 'Alice',
-          configuration: { mode: 'chasse', visibilite: 'publique' },
+          configuration: { mode: 'royale', visibilite: 'publique' },
         }),
       ),
     ).toEqual(['configuration.mode']);

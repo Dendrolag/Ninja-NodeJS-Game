@@ -14,7 +14,6 @@
  */
 
 import type { Mode, Visibilite } from '@neon-ninja/shared';
-import { MODES } from '@neon-ninja/shared';
 
 import type { EtatClient } from '../../etat.js';
 import { monterChampPseudo } from '../composants/champPseudo.js';
@@ -23,7 +22,7 @@ import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import type { Glyphe } from '../icones.js';
 import { icone } from '../icones.js';
 import { NOMS_DES_MODES } from '../modeles/cartes.js';
-import { MODE_PAR_DEFAUT, modeleCreation } from '../modeles/creation.js';
+import { MODES_PROPOSES, MODE_PAR_DEFAUT, modeleCreation } from '../modeles/creation.js';
 import type { LigneRecapitulatif } from '../modeles/salon.js';
 import type { ContexteEcran, EcranAffiche } from './types.js';
 
@@ -44,6 +43,11 @@ const TUILES_DES_MODES: Readonly<
     texte:
       'Deux équipes, une couleur chacune : repeignez le plus de faux ninjas aux couleurs de votre camp.',
     glyphe: 'shield',
+  },
+  chasse: {
+    texte:
+      'Des traqueurs, des proies : chaque proie attrapée devient traqueur. Fondez-vous parmi les faux ninjas et tenez jusqu’au bout.',
+    glyphe: 'viseur',
   },
 };
 
@@ -88,7 +92,7 @@ export function monterCreation(contexte: ContexteEcran): EcranAffiche {
     },
   });
 
-  const choixDeMode = MODES.map((valeur) => {
+  const choixDeMode = MODES_PROPOSES.map((valeur) => {
     const saisie = creer(doc, 'input', {
       attributs: { type: 'radio', name: 'mode', value: valeur },
     });
@@ -286,7 +290,7 @@ export function monterCreation(contexte: ContexteEcran): EcranAffiche {
       visibilite = cible.value === 'privee' ? 'privee' : 'publique';
       rendre();
     } else if (cible.name === 'mode') {
-      mode = MODES.find((candidat) => candidat === cible.value) ?? MODE_PAR_DEFAUT;
+      mode = MODES_PROPOSES.find((candidat) => candidat === cible.value) ?? MODE_PAR_DEFAUT;
       rendre();
     }
   };

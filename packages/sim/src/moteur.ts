@@ -30,7 +30,8 @@
  *   4. les zones speciales vieillissent, apparaissent, et agissent sur les bots;
  *   5. les bonus et malus poses vieillissent, et de nouveaux apparaissent;
  *   6. le mode de jeu agit sur les entrees: rien en Classique; en Tactique, les
- *      joueurs s'orientent, rechargent et tirent;
+ *      joueurs s'orientent, rechargent et tirent; en Chasse, une proie remplace les
+ *      traqueurs s'ils sont tous partis;
  *   7. on releve les contacts entre entites et on en tire les consequences,
  *      captures comprises, selon le mode;
  *   8. les joueurs ramassent les objets sur lesquels ils se trouvent.
@@ -53,9 +54,11 @@ import { VITESSES } from '@neon-ninja/shared';
 
 import type { PerteFaceAuBotNoir } from './bots.js';
 import { avancerLesBots, perteClassique } from './bots.js';
+import { agirEnChasse, chasseDecidee, lancerLaChasse, malusEnChasse } from './chasse.js';
 import type { RegleDeResolution } from './contacts.js';
 import {
   detecterContacts,
+  regleChasse,
   regleClassique,
   regleEquipes,
   regleTactique,
@@ -119,7 +122,7 @@ export type Entrees = Readonly<Record<IdentifiantEntite, EntreeJoueur>>;
  * Ce qui distingue un mode de jeu, vu du moteur.
  *
  * Le moteur fait avancer le monde de la meme facon dans tous les modes: joueurs,
- * bots, zones, objets. Un mode decide de quatre choses seulement.
+ * bots, zones, objets. Un mode decide de six choses seulement.
  */
 export interface JeuDeRegles {
   /**
@@ -135,8 +138,21 @@ export interface JeuDeRegles {
    * Classique et en Tactique; une part de sa part en Equipes.
    */
   readonly perteFaceAuBotNoir: PerteFaceAuBotNoir;
-  /** Qui subit un malus ramasse: tous les autres, ou l'equipe adverse en Equipes. */
+  /**
+   * Qui subit un malus ramasse: tous les autres, l'equipe adverse en Equipes, l'autre camp
+   * en Chasse.
+   */
   readonly victimeDuMalus: VictimeDuMalus;
+  /**
+   * Ce que le mode fait de l'etat au lancement de la partie, une fois les bots poses. Rien
+   * dans les autres modes, sans aucun tirage; la Chasse y tire ses premiers traqueurs.
+   */
+  readonly lancer: (etat: EtatPartie) => EtatPartie;
+  /**
+   * La partie est-elle decidee avant le terme de son temps ? Jamais dans les autres modes;
+   * en Chasse, des qu'il ne reste plus aucune proie.
+   */
+  readonly estDecidee: (etat: EtatPartie) => boolean;
 }
 
 /**
@@ -156,6 +172,11 @@ export interface JeuDeRegles {
  * joueur attrape par un bot noir et qui subit un malus, deux decisions qui vivaient
  * dans le comportement des bots et dans le ramassage des objets sans consulter le
  * mode. Le Classique et le Tactique y gardent exactement le code d'avant.
+ *
+ * L'etape 7.3 l'a elargi une troisieme fois. La Chasse tire ses premiers traqueurs au
+ * lancement, et s'arrete des que la derniere proie tombe: deux questions que le
+ * lancement de la partie et la lecture de sa fin posaient sans consulter le mode. Les
+ * trois autres modes n'y font rien.
  */
 export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>> = {
   classique: {
@@ -163,18 +184,33 @@ export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>>
     resoudreContacts: regleClassique,
     perteFaceAuBotNoir: perteClassique,
     victimeDuMalus: malusClassique,
+    lancer: sansPreparation,
+    estDecidee: jamaisAvantLeTerme,
   },
   tactique: {
     agir: agirEnTactique,
     resoudreContacts: regleTactique,
     perteFaceAuBotNoir: perteClassique,
     victimeDuMalus: malusClassique,
+    lancer: sansPreparation,
+    estDecidee: jamaisAvantLeTerme,
   },
   equipes: {
     agir: sansAction,
     resoudreContacts: regleEquipes,
     perteFaceAuBotNoir: perteEnEquipe,
     victimeDuMalus: malusEnEquipe,
+    lancer: sansPreparation,
+    estDecidee: jamaisAvantLeTerme,
+  },
+  chasse: {
+    agir: agirEnChasse,
+    resoudreContacts: regleChasse,
+    // Sans bots noirs, la question ne se pose pas: celle du Classique, qui ne sert pas.
+    perteFaceAuBotNoir: perteClassique,
+    victimeDuMalus: malusEnChasse,
+    lancer: lancerLaChasse,
+    estDecidee: chasseDecidee,
   },
 };
 
@@ -240,6 +276,26 @@ function sansAction(etat: EtatPartie): EtatPartie {
   return etat;
 }
 
+/** Un mode qui ne prepare rien au lancement: l'etat est rendu tel quel. */
+function sansPreparation(etat: EtatPartie): EtatPartie {
+  return etat;
+}
+
+/** Un mode que seul le temps decide. */
+function jamaisAvantLeTerme(): boolean {
+  return false;
+}
+
+/**
+ * Prepare une partie qui se lance, selon son mode: rien en Classique, en Tactique et en
+ * Equipes; les premiers traqueurs en Chasse.
+ *
+ * Le serveur l'appelle au lancement, une fois les bots poses (etape 7.3).
+ */
+export function lancerLaPartie(etat: EtatPartie): EtatPartie {
+  return REGLES_DES_MODES[etat.mode].lancer(etat);
+}
+
 /**
  * Le battement d'une partie suspendue: il a lieu, et il ne fait rien.
  *
@@ -273,11 +329,18 @@ function battementSuspendu(etat: EtatPartie): EtatPartie {
  * Portage de calculateTimeLeft (legacy/server.js:1537). C'est une lecture, pas
  * une action: le moteur ne termine rien de lui-meme. Declarer la fin, prevenir
  * les joueurs et arreter la boucle appartiennent au serveur (etape 2.1).
+ *
+ * Le temps decide de la fin dans tous les modes. Un mode peut aussi etre decide avant
+ * le terme: la Chasse, quand il ne reste plus aucune proie (etape 7.3). Le temps
+ * restant, lui, reste celui du reglage.
  */
 export function evaluerFinDePartie(etat: EtatPartie): EvaluationFinDePartie {
   const restant = etat.dureeMs - etat.tempsEcouleMs;
 
-  return { terminee: restant <= 0, tempsRestantMs: Math.max(restant, 0) };
+  return {
+    terminee: restant <= 0 || REGLES_DES_MODES[etat.mode].estDecidee(etat),
+    tempsRestantMs: Math.max(restant, 0),
+  };
 }
 
 /**

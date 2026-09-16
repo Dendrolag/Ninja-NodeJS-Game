@@ -64,6 +64,7 @@ import {
   RAYON_ENTITE,
   completerReglages,
   creerAlea,
+  imposerLesReglagesDuMode,
   reel,
 } from '@neon-ninja/shared';
 
@@ -232,9 +233,13 @@ export interface CaptureDeJoueur {
   readonly type: 'captureJoueur';
   readonly attaquant: IdentifiantEntite;
   readonly victime: IdentifiantEntite;
-  /** Nombre de bots passes de la victime a l'attaquant. */
+  /** Nombre de bots passes de la victime a l'attaquant. Zero pour une infection. */
   readonly botsTransferes: number;
-  /** Couleur tiree pour la victime a sa reapparition. */
+  /**
+   * La couleur de la victime apres la capture: tiree a sa reapparition en Classique et
+   * en Tactique, celle de son equipe en Equipes, celle des traqueurs en Chasse, ou la
+   * victime infectee change de camp sur place.
+   */
   readonly nouvelleCouleurVictime: Couleur;
   /** Ou la victime se trouvait au moment du contact. */
   readonly position: Position;
@@ -445,7 +450,21 @@ export interface EtatPartie {
    * de depart (voir etatTactiqueDe dans tactique.ts).
    */
   readonly tactique?: Readonly<Record<IdentifiantEntite, EtatTactiqueDuJoueur>>;
-  /** Reglages choisis par l'hote. Le moteur ne connait que ceux-la. */
+  /**
+   * Les traqueurs d'une partie Chasse, et le temps de jeu ecoule quand chacun l'est
+   * devenu (etape 7.3).
+   *
+   * ABSENT D'UNE PARTIE D'UN AUTRE MODE, comme l'etat tactique, et absent aussi d'une
+   * Chasse qui n'est pas encore lancee: c'est le tirage des premiers traqueurs qui le
+   * pose (voir chasse.ts). Un joueur qui n'y figure pas est une proie. La couleur des
+   * traqueurs dit la meme chose a l'ecran, et une seule fonction ecrit les deux
+   * ensemble, devenirTraqueur, pour qu'elles ne puissent pas diverger.
+   */
+  readonly chasse?: Readonly<Record<IdentifiantEntite, number>>;
+  /**
+   * Reglages choisis par l'hote, une fois appliques ceux que le mode impose. Le moteur
+   * ne connait que ceux-la.
+   */
   readonly reglages: ReglagesPartie;
   /** Dimensions de la carte jouee. */
   readonly carte: DimensionsCarte;
@@ -540,7 +559,11 @@ export interface OptionsAjoutJoueur {
 
 /** Cree l'etat de depart d'une partie: pas de joueur, pas de temps ecoule. */
 export function creerEtatInitial(options: OptionsEtatInitial): EtatPartie {
-  const reglages: ReglagesPartie = completerReglages(options.reglages);
+  const mode = options.mode ?? 'classique';
+  const reglages: ReglagesPartie = imposerLesReglagesDuMode(
+    mode,
+    completerReglages(options.reglages),
+  );
   const carte = CARTES[reglages.carte];
   const terrain = options.terrain ?? carteSansMur(carte);
 
@@ -560,7 +583,7 @@ export function creerEtatInitial(options: OptionsEtatInitial): EtatPartie {
     tempsEcouleMs: 0,
     dureeMs: reglages.dureePartieS * 1000,
     enPause: false,
-    mode: options.mode ?? 'classique',
+    mode,
     reglages,
     carte,
     terrain,
@@ -773,7 +796,16 @@ export function retirerJoueur(etat: EtatPartie, id: IdentifiantEntite): EtatPart
   const joueurs = { ...etat.joueurs };
   delete joueurs[id];
 
-  return { ...etat, joueurs };
+  // Un traqueur de la Chasse qui s'en va quitte aussi la table des traqueurs (etape 7.3):
+  // elle ne connait que des joueurs presents. Les autres modes n'ont pas cette table.
+  if (etat.chasse?.[id] === undefined) {
+    return { ...etat, joueurs };
+  }
+
+  const chasse = { ...etat.chasse };
+  delete chasse[id];
+
+  return { ...etat, joueurs, chasse };
 }
 
 /**

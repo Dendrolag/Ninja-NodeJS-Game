@@ -24,6 +24,7 @@
 
 import { SCORE } from '@neon-ninja/shared';
 
+import { estTraqueur, tempsDeSurvieMs } from './chasse.js';
 import type { Couleur } from './couleurs.js';
 import type { EtatPartie, HistoriqueCapture, IdentifiantEntite, Joueur } from './etat.js';
 
@@ -33,7 +34,8 @@ export interface LigneScore {
   readonly pseudo: string;
   readonly couleur: Couleur;
   /**
-   * Le score affiche: les bots portes plus les points de bots noirs.
+   * Le score affiche: les bots portes plus les points de bots noirs. En Chasse, le temps
+   * de survie, en secondes entieres (etape 7.3).
    *
    * Le legacy nommait ce total currentBots, ce qui laissait croire a un nombre de
    * bots alors qu'il comprenait aussi les points de bots noirs. Les deux parts
@@ -62,6 +64,11 @@ export interface LigneScore {
  * Seuls les bots ordinaires comptent. Les bots noirs portent la couleur noire et
  * n'appartiennent a personne; ils rapportent quand on les detruit, pas quand on
  * les cotoie.
+ *
+ * EN CHASSE, LA SURVIE SEULE COMPTE (etape 7.3, decision 3 du porteur du projet): le
+ * score est le temps de survie, en secondes entieres, arrondi en dessous. Les ninjas y
+ * sont un camouflage, et aucun joueur ne les repeint; les champs qui les decrivent
+ * restent lus comme ailleurs, et valent zero.
  */
 export function scoreDe(etat: EtatPartie, joueur: Joueur): LigneScore {
   const botsPortes = Object.values(etat.bots).filter(
@@ -73,7 +80,10 @@ export function scoreDe(etat: EtatPartie, joueur: Joueur): LigneScore {
     id: joueur.id,
     pseudo: joueur.pseudo,
     couleur: joueur.couleur,
-    points: botsPortes + pointsBotsNoirs,
+    points:
+      etat.mode === 'chasse'
+        ? Math.floor(tempsDeSurvieMs(etat, joueur.id) / 1000)
+        : botsPortes + pointsBotsNoirs,
     botsPortes,
     pointsBotsNoirs,
     captures: joueur.captures,
@@ -92,12 +102,21 @@ export function scoreDe(etat: EtatPartie, joueur: Joueur): LigneScore {
  * de troisieme critere. C'est deja ce que faisait le legacy, qui n'avait pas non
  * plus de troisieme critere.
  *
+ * En Chasse, les proies passent avant les traqueurs: un traqueur infecte dans la seconde
+ * a le meme temps de survie, en secondes entieres, que les proies encore debout.
+ *
  * Cette fonction ne modifie rien: elle lit l'etat et en tire un tableau.
  */
 export function calculerScores(etat: EtatPartie): readonly LigneScore[] {
+  const camp = (ligne: LigneScore): number =>
+    etat.mode === 'chasse' && estTraqueur(etat, ligne.id) ? 1 : 0;
+
   return Object.values(etat.joueurs)
     .map((joueur) => scoreDe(etat, joueur))
     .sort(
-      (premier, second) => second.points - premier.points || second.captures - premier.captures,
+      (premier, second) =>
+        camp(premier) - camp(second) ||
+        second.points - premier.points ||
+        second.captures - premier.captures,
     );
 }
