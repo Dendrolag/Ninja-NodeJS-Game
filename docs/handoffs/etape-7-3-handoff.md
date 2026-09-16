@@ -79,10 +79,10 @@ Repris du handoff 7.2, inchangé: on ne distingue ses coéquipiers qu'à la coul
 
 ## Prochaine action exacte
 
-Dans une conversation neuve, sur `master`: demander au porteur du projet quelle fonctionnalité reportée vient ensuite (Battle Royale, Chaos, pass de saison, skins, clans), trancher ses règles avec lui, puis rédiger sa fiche selon le cas de repli du PROTOCOLE et la commiter avant de l'exécuter.
+Dans une conversation neuve, sur `master`: le porteur du projet a choisi le mode suivant le 16 septembre 2026, le mode **Massacre** (ou Bain de sang). Lire `docs/design/idee-mode-massacre.md`, qui consigne son intention et ce qui a été étudié (coup de katana en arc, sang et traces de pas tout en code, combos), trancher avec lui les questions de sa dernière section, puis rédiger la fiche de l'étape 7.4 selon le cas de repli du PROTOCOLE et la commiter avant de l'exécuter.
 
-Au porteur du projet: choisir la fonctionnalité suivante; jouer une Chasse à plusieurs pour valider le barème, les trois vies et le nombre de traqueurs; jouer une partie Équipes (handoff 7.2); écouter les sons et la musique d'une partie (cas C21); trancher la base du serveur de développement local (handoff 3.4).
+Au porteur du projet: jouer une Chasse à plusieurs pour valider le barème, les trois vies et le nombre de traqueurs; jouer une partie Équipes (handoff 7.2); écouter les sons et la musique d'une partie (cas C21); trancher la base du serveur de développement local (handoff 3.4). Pour plus tard: l'étude des cartes beaucoup plus grandes, avant toute Battle Royale (`docs/mesures/etude-grandes-cartes.md`).
 
 ## Étape suivante
 
-Fiche à lire: aucune encore; celle de la fonctionnalité que le porteur du projet choisira, à rédiger au début de la session.
+Fiche à lire: aucune encore; celle de l'étape 7.4, mode Massacre, à rédiger au début de la session à partir de `docs/design/idee-mode-massacre.md`.
