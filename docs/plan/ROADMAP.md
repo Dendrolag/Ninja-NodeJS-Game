@@ -104,6 +104,8 @@ Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision 
 
 **Révision du 16 septembre 2026, pendant l'étape 7.3: la Chasse devient un jeu de repérage.** Après les lots A et B, le porteur du projet a fait évoluer le mode. Le traqueur capture par un tir en cône, comme en Tactique, et ne prend que l'entité la plus proche. Viser un faux ninja lui coûte une vie, et il est éliminé à la troisième. Les proies marquent un point par tranche de cent pixels parcourus. Un traqueur marque cinquante points par capture et vingt-cinq par vie restante. Le classement est individuel, aux points. La fiche est réécrite en conséquence (lots A2 et B2).
 
+**Décision du 16 septembre 2026: les règles du Massacre.** Le porteur du projet les a tranchées en dix points: le katana balaie un arc de 160 degrés sur 60 pixels, toutes les 400 millisecondes, et tue les bots comme les joueurs; la carte se vide, et la partie s'arrête quand tout est tué, avec 5 points par seconde restante; un bot vaut 10 points fois un multiplicateur de combo, qui monte toutes les cinq morts enchaînées à moins de deux secondes, jusqu'à x5; un joueur tué perd son combo et la moitié de ses points, au profit de son tueur; les Black Ninjas restent, tranchables; huit joueurs, solo lançable, record personnel en solo; le sang est une préférence du joueur. Étape `7.4`, fiche rédigée le même jour selon le cas de repli du PROTOCOLE.
+
 ---
 
 ## 4. Carte thématique des étapes
@@ -224,6 +226,9 @@ Tests requis: TU sur la part d'un joueur, la capture, le bot noir et le malus en
 
 **7.3. Mode Chasse.** Des traqueurs repèrent les vrais joueurs cachés parmi les faux ninjas et les infectent d'un tir en cône; viser un faux ninja coûte une vie, sur trois. Les proies marquent en restant mobiles. Deuxième fonctionnalité reportée, choisie par le porteur du projet le 16 septembre 2026, règles révisées le même jour: infection, traqueurs tirés au sort, dix joueurs, ninjas en camouflage sans Black Ninjas, couleur commune des traqueurs, classement individuel aux points.
 Tests requis: TU sur les rôles, le tirage, le tir en cône, les vies et l'élimination, le remplacement d'un traqueur parti, les points et la fin anticipée; TI sur le salon (lancement, entrée refusée) et sur une partie Chasse à travers le vrai serveur et la base; bout en bout d'une partie lancée; Classique, Tactique et Équipes inchangés, empreinte des parties comprise.
+
+**7.4. Mode Massacre.** Plus de capture: un coup de katana en arc tue les bots et les joueurs, chaque mort laisse du sang, et les morts enchaînées font monter un multiplicateur de points. La carte se vide; la partie s'arrête quand tout est tué, avec un bonus au temps restant. Troisième fonctionnalité reportée, choisie par le porteur du projet le 16 septembre 2026: huit joueurs, solo lançable avec record personnel, vol de la moitié des points d'un joueur tué, Black Ninjas tranchables, sang réglable par chaque joueur.
+Tests requis: TU sur l'arc, le coup, les combos, le joueur tué, le Black Ninja et la carte vidée; TU du dessin reproductible du sang et des traces de pas; TI sur une partie Massacre à travers le vrai serveur et la base, record solo compris; bout en bout d'une partie lancée seul; Classique, Tactique, Équipes et Chasse inchangés, empreinte des parties comprise.
 
 ---
 
