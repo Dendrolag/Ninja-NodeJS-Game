@@ -242,15 +242,26 @@ export const malusClassique: VictimeDuMalus = () => true;
 export function ramasserLesObjets(
   etat: EtatPartie,
   victime: VictimeDuMalus = malusClassique,
+  horsJeu: ReadonlySet<IdentifiantEntite> = new Set(),
 ): EtatPartie {
   let courant = etat;
 
   // Les positions sont celles de ce battement et aucun ramassage ne les change:
   // on peut parcourir les joueurs tels qu'ils sont a l'entree.
   for (const joueur of Object.values(etat.joueurs)) {
+    // Un joueur hors jeu (un traqueur elimine, en Chasse, etape 7.3) ne ramasse rien.
+    if (horsJeu.has(joueur.id)) {
+      continue;
+    }
+
     for (const objet of Object.values(courant.objets)) {
       if (aPortee(joueur.position, objet.position)) {
-        courant = ramasser(courant, joueur.id, objet.id, victime);
+        courant = ramasser(
+          courant,
+          joueur.id,
+          objet.id,
+          (ramasseur, autre) => !horsJeu.has(autre.id) && victime(ramasseur, autre),
+        );
       }
     }
   }

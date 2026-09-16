@@ -106,7 +106,12 @@ export interface JoueurVu extends EntiteVueCommune {
 }
 
 /**
- * Ce que le mode Tactique montre d'un joueur (etape 7.1).
+ * Ce que le mode Tactique montre d'un joueur (etape 7.1), et l'arme d'un traqueur de la
+ * Chasse (etape 7.3).
+ *
+ * EN CHASSE, LES CHARGES SONT LES VIES DU TRAQUEUR, et rien ne revient avec le temps:
+ * l'attente vaut zero. Une proie n'en a pas. Le flux d'etat garde ainsi une seule forme
+ * pour les deux modes; le client lit le mode de la partie pour savoir ce qu'il affiche.
  *
  * PUBLIC, POUR LA RAISON QUI REND PUBLICS LES DEUX INDICATEURS: les charges d'un
  * joueur changent l'issue d'une rencontre, et l'on doit pouvoir voir qu'un adversaire
@@ -355,8 +360,18 @@ export interface MalusSubi {
 }
 
 /**
- * Un joueur vient de tirer, dans le mode Tactique (etape 7.1). Adresse a chaque joueur
- * de la partie: tout le monde voit partir un tir, qu'il capture ou non.
+ * Un traqueur de la Chasse vient de viser un faux ninja, et y a laisse une vie (etape
+ * 7.3). Adresse a ce traqueur.
+ */
+export interface VieDeTraqueurPerdueVue {
+  /** Les vies qui lui restent. Zero: il est elimine, et regarde la suite. */
+  readonly viesRestantes: number;
+}
+
+/**
+ * Un joueur vient de tirer, dans le mode Tactique (etape 7.1) ou en traqueur de la Chasse
+ * (etape 7.3). Adresse a chaque joueur de la partie: tout le monde voit partir un tir,
+ * qu'il capture ou non.
  *
  * Ses effets arrivent par ailleurs: les bots repeints et les charges par le flux
  * d'etat, la capture d'un joueur par captureSubie et captureReussie.
@@ -718,6 +733,9 @@ export interface EvenementsServeurVersClient {
    * le tireur, ou tout le serveur.
    */
   tirDeCapture: (tir: TirDeCaptureVu) => void;
+
+  /** Ce traqueur de la Chasse a vise un faux ninja, et perdu une vie (etape 7.3). */
+  vieDeTraqueurPerdue: (vie: VieDeTraqueurPerdueVue) => void;
 
   /** Une demande de ce joueur a ete refusee. Remplace error. */
   refus: (refus: Refus) => void;

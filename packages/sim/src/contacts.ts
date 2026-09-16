@@ -11,7 +11,7 @@
  *     mode: le mode Classique capture par simple proximite, le mode Tactique ne
  *     capture pas au contact, puisqu'il capture par un cone (tactique.ts), le
  *     mode Equipes capture au contact un adversaire qui ne cede que sa part, et la
- *     Chasse infecte au contact la proie qu'un traqueur touche.
+ *     Chasse ne capture pas au contact, puisque ses traqueurs tirent (chasse.ts).
  *   - Le ramassage des bonus et des malus n'est pas un contact entre entites:
  *     il vit dans objets.ts.
  *
@@ -41,7 +41,6 @@ import {
   capturerJoueur,
   detruireBotNoir,
 } from './capture.js';
-import { infecter } from './chasse.js';
 import type { Bot, EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
 import { entiteDe, toutesLesEntites } from './etat.js';
 
@@ -193,22 +192,15 @@ export const regleEquipes: RegleDeResolution = regleDeContacts({
 });
 
 /**
- * La regle du mode Chasse: un traqueur infecte la proie qu'il touche (etape 7.3).
+ * La regle du mode Chasse: toucher ne produit rien (etape 7.3).
  *
- * Seul un traqueur capture, et seulement une proie: il n'y a donc jamais deux attaquants
- * possibles, ni de tirage au sort. On tente l'infection dans un sens, puis dans l'autre;
- * infecter refuse elle-meme tout ce qui n'est pas un traqueur pret face a une proie. La
- * proie infectee reste a sa place: aucun autre contact du battement n'est ecarte.
- *
- * Toucher un ninja ne fait rien. Les ninjas servent de camouflage et ne comptent pour
- * personne (decision 9 du porteur du projet), et il n'y a pas de bots noirs a detruire.
+ * Un traqueur capture en tirant (chasse.ts), pas en touchant. Toucher un ninja ne fait rien
+ * non plus: les ninjas servent de camouflage et ne comptent pour personne, et il n'y a pas
+ * de bots noirs a detruire. Seule la contagion entre bots reste, commune a tous les modes;
+ * aucun bot ne portant la couleur d'un joueur, elle n'a rien a transmettre.
  */
 export const regleChasse: RegleDeResolution = regleDeContacts({
-  entreJoueurs: (etat, premier, second) => {
-    const dansUnSens = infecter(etat, premier.id, second.id);
-
-    return sansEffet(dansUnSens !== etat ? dansUnSens : infecter(etat, second.id, premier.id));
-  },
+  entreJoueurs: (etat) => sansEffet(etat),
   joueurEtBot: (etat) => etat,
 });
 

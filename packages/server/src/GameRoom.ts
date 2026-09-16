@@ -77,7 +77,6 @@ import {
   classementDesEquipes,
   equipeDArrivee,
   equipeDeCouleur,
-  placeDansLaChasse,
   placeDansLesEquipes,
   pointsEnEquipe,
   reperePseudo,
@@ -177,8 +176,7 @@ export interface JoueurDuBilan {
   readonly abandon: boolean;
   /**
    * Ce que ce joueur devance, quand son placement ne le dit pas: un present d'une partie
-   * Equipes (etape 7.2) ou Chasse (etape 7.3). Absent en Classique et en Tactique, et pour
-   * un abandon.
+   * Equipes (etape 7.2). Absent dans les autres modes, et pour un abandon.
    */
   readonly devancement?: Devancement;
 }
@@ -891,11 +889,10 @@ export class GameRoom {
    * propres points de bots noirs (pointsEnEquipe): le score de toute l'equipe gonflerait
    * le meilleur score de son profil.
    *
-   * DANS UNE PARTIE CHASSE (etape 7.3), on se place par camp aussi: les proies survivantes
-   * d'abord s'il en reste, sinon tous les traqueurs (placeDansLaChasse). Le classement du
-   * moteur range deja les proies devant. Les points sont le temps de survie. Et une chasse
-   * gagnee avant le terme vaut une partie entiere: le temps joue court jusqu'a la duree
-   * reglee, pour que les traqueurs ne soient pas payes moins pour avoir gagne vite.
+   * DANS UNE PARTIE CHASSE (etape 7.3), on se place comme en Classique, aux points. Une
+   * chasse terminee avant le terme vaut une partie entiere: le temps joue court jusqu'a la
+   * duree reglee, pour que personne ne soit paye moins d'XP parce que la derniere proie
+   * est tombee, ou le dernier traqueur elimine, avant l'heure.
    */
   bilan(): BilanDePartie {
     const classement = this.classement();
@@ -937,9 +934,8 @@ export class GameRoom {
   }
 
   /**
-   * La place d'un joueur present dans le bilan, selon le mode: son rang au classement en
-   * Classique et en Tactique; la place de son camp, et ce qu'il devance, en Equipes et en
-   * Chasse.
+   * La place d'un joueur present dans le bilan, selon le mode: la place de son equipe, et
+   * ce qu'il devance, en Equipes; son rang au classement ailleurs.
    */
   private placeEnFin(
     ligne: LigneScore,
@@ -953,10 +949,6 @@ export class GameRoom {
         equipeDeCouleur(ligne.couleur),
         nombreJoueurs,
       );
-    }
-
-    if (this.mode === 'chasse') {
-      return placeDansLaChasse(classement, ligne.couleur, nombreJoueurs);
     }
 
     return { placement: index + 1 };

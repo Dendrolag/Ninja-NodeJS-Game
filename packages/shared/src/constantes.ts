@@ -469,7 +469,7 @@ export const COULEUR_DES_TRAQUEURS = '#FF2E7E';
 
 /**
  * Les regles chiffrees du mode Chasse (etape 7.3), tranchees par le porteur du projet le
- * 16 septembre 2026.
+ * 16 septembre 2026. Le cone du tir est celui du Tactique (TACTIQUE plus haut).
  */
 export const CHASSE = {
   /** Un traqueur par tranche de cinq joueurs au lancement, arrondi au-dessus. */
@@ -481,6 +481,16 @@ export const CHASSE = {
   DELAI_NOUVEAU_TRAQUEUR_MS: 3000,
   /** Combien de joueurs il faut au moins pour lancer: un traqueur et une proie. */
   JOUEURS_MINIMUM: 2,
+  /** Les vies d'un traqueur: viser un faux ninja en coute une, et a zero il est elimine. */
+  VIES_DES_TRAQUEURS: 3,
+  /** L'attente entre deux tirs d'un traqueur, en millisecondes. */
+  DELAI_ENTRE_TIRS_MS: 1000,
+  /** Une proie marque un point par tranche de cette distance parcourue, en pixels. */
+  PIXELS_PAR_POINT: 100,
+  /** Ce que rapporte a un traqueur chaque proie attrapee. */
+  POINTS_PAR_CAPTURE: 50,
+  /** Ce que rapporte a un traqueur en jeu chaque vie qui lui reste. */
+  POINTS_PAR_VIE: 25,
 } as const;
 
 /** Couleur d'un bot non capture. */

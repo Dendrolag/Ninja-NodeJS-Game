@@ -40,6 +40,7 @@ import type {
   PartiePublique,
   TactiqueVue,
   TirDeCaptureVu,
+  VieDeTraqueurPerdueVue,
   ZoneVue,
 } from '@neon-ninja/shared';
 import type {
@@ -54,6 +55,7 @@ import type {
   ZoneSpeciale,
 } from '@neon-ninja/sim';
 import {
+  REGLES_DES_MODES,
   bonusActif,
   calculerScores,
   etatTactiqueDe,
@@ -78,11 +80,40 @@ export function instantaneDe(etat: EtatPartie): InstantanePartie {
     tick: etat.tick,
     tempsRestantMs: evaluerFinDePartie(etat).tempsRestantMs,
     enPause: etat.enPause,
-    entites: toutesLesEntites(etat).map((entite) => entiteVue(etat, entite)),
+    entites: entitesVisibles(etat).map((entite) => entiteVue(etat, entite)),
     objets: Object.values(etat.objets).map(objetVu),
     zones: Object.values(etat.zones).map(zoneVue),
     classement: calculerScores(etat).map(ligneClassement),
   };
+}
+
+/**
+ * Les entites que la partie montre: toutes, sauf les joueurs hors jeu.
+ *
+ * Un traqueur elimine de la Chasse (etape 7.3) reste membre et classe, mais il ne joue
+ * plus: il disparait de la carte, et regarde la suite sans etre vu.
+ */
+function entitesVisibles(etat: EtatPartie): readonly (Joueur | Bot)[] {
+  const horsJeu = REGLES_DES_MODES[etat.mode].horsJeu(etat);
+  const entites = toutesLesEntites(etat);
+
+  return horsJeu.size === 0 ? entites : entites.filter((entite) => !horsJeu.has(entite.id));
+}
+
+/**
+ * L'arme d'un traqueur de la Chasse, telle qu'elle part sur le reseau (etape 7.3).
+ *
+ * ELLE VOYAGE DANS L'ETAT TACTIQUE D'UN JOUEUR, pour que le flux d'etat ne change pas de
+ * forme: l'orientation est celle ou il vise, et SES CHARGES SONT SES VIES. Rien ne revient
+ * avec le temps: l'attente d'une charge vaut zero. Le client lit le mode de la partie pour
+ * savoir ce qu'il affiche. Une proie n'a pas d'arme.
+ */
+function armeDuTraqueur(etat: EtatPartie, id: IdentifiantEntite): TactiqueVue | undefined {
+  const traqueur = etat.chasse?.traqueurs[id];
+
+  return traqueur === undefined
+    ? undefined
+    : { orientation: traqueur.orientation, charges: traqueur.vies, avantProchaineChargeMs: 0 };
 }
 
 /** L'etat tactique d'un joueur, tel qu'il part sur le reseau. */
@@ -98,7 +129,8 @@ function tactiqueVue(tactique: EtatTactiqueDuJoueur): TactiqueVue {
  * Convertit une entite du moteur en ce que tout le monde a le droit d'en voir.
  *
  * Dans une partie Tactique, un joueur montre en plus ou il vise et ce qu'il lui reste
- * de charges (etape 7.1). Ailleurs, rien de ce mode ne part.
+ * de charges (etape 7.1); dans une Chasse, un traqueur montre ou il vise et ses vies
+ * (etape 7.3). Ailleurs, rien de ces modes ne part.
  */
 function entiteVue(etat: EtatPartie, entite: Joueur | Bot): EntiteVue {
   const commun = {
@@ -116,13 +148,22 @@ function entiteVue(etat: EtatPartie, entite: Joueur | Bot): EntiteVue {
       pseudo: entite.pseudo,
       invincible: bonusActif(entite, 'invincibilite'),
       protege: entite.protectionSpawnRestanteMs > 0,
-      ...(etat.mode === 'tactique'
-        ? { tactique: tactiqueVue(etatTactiqueDe(etat, entite.id)) }
-        : {}),
+      ...armeVue(etat, entite.id),
     };
   }
 
   return { ...commun, type: entite.type };
+}
+
+/** L'arme d'un joueur, si son mode lui en donne une: champ omis sinon. */
+function armeVue(etat: EtatPartie, id: IdentifiantEntite): { readonly tactique?: TactiqueVue } {
+  if (etat.mode === 'tactique') {
+    return { tactique: tactiqueVue(etatTactiqueDe(etat, id)) };
+  }
+
+  const arme = etat.mode === 'chasse' ? armeDuTraqueur(etat, id) : undefined;
+
+  return arme === undefined ? {} : { tactique: arme };
 }
 
 /** Convertit un objet pose en ce que le client doit dessiner. */
@@ -276,6 +317,11 @@ export type Notification =
       readonly nom: 'tirDeCapture';
       readonly pour: IdentifiantEntite;
       readonly charge: TirDeCaptureVu;
+    }
+  | {
+      readonly nom: 'vieDeTraqueurPerdue';
+      readonly pour: IdentifiantEntite;
+      readonly charge: VieDeTraqueurPerdueVue;
     };
 
 /**
@@ -347,6 +393,15 @@ function notificationsDUnFait(
           captures: evenement.captures,
         },
       }));
+
+    case 'vieDeTraqueurPerdue':
+      return [
+        {
+          nom: 'vieDeTraqueurPerdue',
+          pour: evenement.joueur,
+          charge: { viesRestantes: evenement.viesRestantes },
+        },
+      ];
   }
 }
 

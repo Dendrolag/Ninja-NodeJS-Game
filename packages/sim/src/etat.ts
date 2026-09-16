@@ -372,7 +372,8 @@ export type EvenementPartie =
   | DestructionDeBotNoir
   | BonusRamasse
   | MalusRamasse
-  | TirDeCapture;
+  | TirDeCapture
+  | VieDeTraqueurPerdue;
 
 /**
  * Un joueur a tire, dans le mode Tactique (etape 7.1).
@@ -391,6 +392,48 @@ export interface TirDeCapture {
   readonly orientation: Orientation;
   /** Nombre d'entites capturees, joueurs et bots confondus. Zero pour un tir sans effet. */
   readonly captures: number;
+}
+
+/**
+ * Un traqueur de la Chasse a vise un faux ninja, et y a laisse une vie (etape 7.3).
+ */
+export interface VieDeTraqueurPerdue {
+  readonly type: 'vieDeTraqueurPerdue';
+  readonly joueur: IdentifiantEntite;
+  /** Les vies qui lui restent. Zero: il est elimine. */
+  readonly viesRestantes: number;
+  /** Ou se trouvait le faux ninja vise. */
+  readonly position: Position;
+}
+
+/** Ce que la Chasse retient d'un traqueur (etape 7.3). */
+export interface TraqueurEnChasse {
+  /** Le temps de jeu ecoule quand il est devenu traqueur. */
+  readonly devenuAMs: number;
+  /** Ses vies, de zero a CHASSE.VIES_DES_TRAQUEURS. A zero, il est elimine. */
+  readonly vies: number;
+  /** La direction de son dernier deplacement: celle dans laquelle il vise. */
+  readonly orientation: Orientation;
+  /** Le temps avant qu'il puisse tirer de nouveau, en millisecondes. Zero: il peut. */
+  readonly avantProchainTirMs: number;
+}
+
+/** Le chemin parcouru par un joueur tant qu'il etait proie, dans la Chasse (etape 7.3). */
+export interface ParcoursEnChasse {
+  /** La distance parcourue en tant que proie, en pixels. */
+  readonly distancePx: number;
+  /** Sa position a la fin du battement precedent. */
+  readonly derniere: Position;
+}
+
+/** Ce que la Chasse retient de la partie (etape 7.3). Voir EtatPartie.chasse. */
+export interface EtatDeChasse {
+  /** Les traqueurs, elimines compris. Un joueur qui n'y figure pas est une proie. */
+  readonly traqueurs: Readonly<Record<IdentifiantEntite, TraqueurEnChasse>>;
+  /** Le parcours de chaque joueur en tant que proie, fige quand il devient traqueur. */
+  readonly parcours: Readonly<Record<IdentifiantEntite, ParcoursEnChasse>>;
+  /** Tous les traqueurs en jeu ont ete elimines: la partie est decidee. */
+  readonly traqueursEpuises: boolean;
 }
 
 /**
@@ -451,16 +494,15 @@ export interface EtatPartie {
    */
   readonly tactique?: Readonly<Record<IdentifiantEntite, EtatTactiqueDuJoueur>>;
   /**
-   * Les traqueurs d'une partie Chasse, et le temps de jeu ecoule quand chacun l'est
-   * devenu (etape 7.3).
+   * Les roles d'une partie Chasse: ses traqueurs, leurs vies et leur arme, et le parcours
+   * de ses proies (etape 7.3).
    *
    * ABSENT D'UNE PARTIE D'UN AUTRE MODE, comme l'etat tactique, et absent aussi d'une
-   * Chasse qui n'est pas encore lancee: c'est le tirage des premiers traqueurs qui le
-   * pose (voir chasse.ts). Un joueur qui n'y figure pas est une proie. La couleur des
-   * traqueurs dit la meme chose a l'ecran, et une seule fonction ecrit les deux
-   * ensemble, devenirTraqueur, pour qu'elles ne puissent pas diverger.
+   * Chasse qui n'est pas encore lancee: c'est le lancement qui le pose (voir chasse.ts).
+   * La couleur des traqueurs dit a l'ecran qui est traqueur, et une seule fonction ecrit
+   * les deux ensemble, devenirTraqueur, pour qu'ils ne puissent pas diverger.
    */
-  readonly chasse?: Readonly<Record<IdentifiantEntite, number>>;
+  readonly chasse?: EtatDeChasse;
   /**
    * Reglages choisis par l'hote, une fois appliques ceux que le mode impose. Le moteur
    * ne connait que ceux-la.
@@ -796,16 +838,18 @@ export function retirerJoueur(etat: EtatPartie, id: IdentifiantEntite): EtatPart
   const joueurs = { ...etat.joueurs };
   delete joueurs[id];
 
-  // Un traqueur de la Chasse qui s'en va quitte aussi la table des traqueurs (etape 7.3):
-  // elle ne connait que des joueurs presents. Les autres modes n'ont pas cette table.
-  if (etat.chasse?.[id] === undefined) {
+  // Un joueur de la Chasse qui s'en va quitte aussi ses tables (etape 7.3): elles ne
+  // connaissent que des joueurs presents. Les autres modes n'ont pas ces tables.
+  if (etat.chasse === undefined) {
     return { ...etat, joueurs };
   }
 
-  const chasse = { ...etat.chasse };
-  delete chasse[id];
+  const traqueurs = { ...etat.chasse.traqueurs };
+  const parcours = { ...etat.chasse.parcours };
+  delete traqueurs[id];
+  delete parcours[id];
 
-  return { ...etat, joueurs, chasse };
+  return { ...etat, joueurs, chasse: { ...etat.chasse, traqueurs, parcours } };
 }
 
 /**

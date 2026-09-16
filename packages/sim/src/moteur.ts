@@ -30,8 +30,8 @@
  *   4. les zones speciales vieillissent, apparaissent, et agissent sur les bots;
  *   5. les bonus et malus poses vieillissent, et de nouveaux apparaissent;
  *   6. le mode de jeu agit sur les entrees: rien en Classique; en Tactique, les
- *      joueurs s'orientent, rechargent et tirent; en Chasse, une proie remplace les
- *      traqueurs s'ils sont tous partis;
+ *      joueurs s'orientent, rechargent et tirent; en Chasse, les proies comptent leur
+ *      parcours, une proie remplace les traqueurs partis, et les traqueurs tirent;
  *   7. on releve les contacts entre entites et on en tire les consequences,
  *      captures comprises, selon le mode;
  *   8. les joueurs ramassent les objets sur lesquels ils se trouvent.
@@ -54,7 +54,14 @@ import { VITESSES } from '@neon-ninja/shared';
 
 import type { PerteFaceAuBotNoir } from './bots.js';
 import { avancerLesBots, perteClassique } from './bots.js';
-import { agirEnChasse, chasseDecidee, lancerLaChasse, malusEnChasse } from './chasse.js';
+import {
+  PERSONNE_HORS_JEU,
+  agirEnChasse,
+  chasseDecidee,
+  horsJeuEnChasse,
+  lancerLaChasse,
+  malusEnChasse,
+} from './chasse.js';
 import type { RegleDeResolution } from './contacts.js';
 import {
   detecterContacts,
@@ -150,9 +157,14 @@ export interface JeuDeRegles {
   readonly lancer: (etat: EtatPartie) => EtatPartie;
   /**
    * La partie est-elle decidee avant le terme de son temps ? Jamais dans les autres modes;
-   * en Chasse, des qu'il ne reste plus aucune proie.
+   * en Chasse, des qu'il ne reste plus aucune proie, ou plus aucun traqueur en jeu.
    */
   readonly estDecidee: (etat: EtatPartie) => boolean;
+  /**
+   * Les joueurs hors jeu: ils ne bougent plus, ne ramassent rien et ne subissent aucun
+   * malus. Personne dans les autres modes; les traqueurs elimines en Chasse.
+   */
+  readonly horsJeu: (etat: EtatPartie) => ReadonlySet<IdentifiantEntite>;
 }
 
 /**
@@ -174,8 +186,9 @@ export interface JeuDeRegles {
  * mode. Le Classique et le Tactique y gardent exactement le code d'avant.
  *
  * L'etape 7.3 l'a elargi une troisieme fois. La Chasse tire ses premiers traqueurs au
- * lancement, et s'arrete des que la derniere proie tombe: deux questions que le
- * lancement de la partie et la lecture de sa fin posaient sans consulter le mode. Les
+ * lancement, s'arrete des que la derniere proie tombe ou que ses traqueurs sont epuises, et
+ * met hors jeu un traqueur elimine: trois questions que le lancement de la partie, la
+ * lecture de sa fin, le deplacement et le ramassage posaient sans consulter le mode. Les
  * trois autres modes n'y font rien.
  */
 export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>> = {
@@ -186,6 +199,7 @@ export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>>
     victimeDuMalus: malusClassique,
     lancer: sansPreparation,
     estDecidee: jamaisAvantLeTerme,
+    horsJeu: personneHorsJeu,
   },
   tactique: {
     agir: agirEnTactique,
@@ -194,6 +208,7 @@ export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>>
     victimeDuMalus: malusClassique,
     lancer: sansPreparation,
     estDecidee: jamaisAvantLeTerme,
+    horsJeu: personneHorsJeu,
   },
   equipes: {
     agir: sansAction,
@@ -202,6 +217,7 @@ export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>>
     victimeDuMalus: malusEnEquipe,
     lancer: sansPreparation,
     estDecidee: jamaisAvantLeTerme,
+    horsJeu: personneHorsJeu,
   },
   chasse: {
     agir: agirEnChasse,
@@ -211,6 +227,7 @@ export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>>
     victimeDuMalus: malusEnChasse,
     lancer: lancerLaChasse,
     estDecidee: chasseDecidee,
+    horsJeu: horsJeuEnChasse,
   },
 };
 
@@ -246,9 +263,12 @@ export function tick(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPart
     return battementSuspendu(etat);
   }
 
+  const regles = REGLES_DES_MODES[etat.mode];
+  const horsJeu = regles.horsJeu(etat);
   const joueurs: Record<IdentifiantEntite, Joueur> = {};
   for (const [id, joueur] of Object.entries(etat.joueurs)) {
-    joueurs[id] = avancerJoueur(etat, joueur, entrees[id], dtMs);
+    // Un joueur hors jeu (un traqueur elimine, en Chasse) ne bouge plus.
+    joueurs[id] = horsJeu.has(id) ? joueur : avancerJoueur(etat, joueur, entrees[id], dtMs);
   }
 
   // Le journal repart vide: il decrit ce battement-ci, pas l'histoire de la
@@ -261,14 +281,13 @@ export function tick(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPart
     evenements: [],
   };
 
-  const regles = REGLES_DES_MODES[etat.mode];
   const bots = avancerLesBots(deplace, dtMs, regles.perteFaceAuBotNoir);
   const zones = appliquerLesEffetsDeZone(avancerLesZones(bots, dtMs), dtMs);
   const objets = faireApparaitreLesObjets(fairePasserLeTempsSurLesObjets(zones, dtMs), dtMs);
   const actions = regles.agir(objets, entrees, dtMs);
   const contacts = resoudreContacts(actions, detecterContacts(actions), regles.resoudreContacts);
 
-  return ramasserLesObjets(contacts, regles.victimeDuMalus);
+  return ramasserLesObjets(contacts, regles.victimeDuMalus, regles.horsJeu(contacts));
 }
 
 /** Un mode qui n'agit pas sur les entrees: l'etat est rendu tel quel. */
@@ -284,6 +303,11 @@ function sansPreparation(etat: EtatPartie): EtatPartie {
 /** Un mode que seul le temps decide. */
 function jamaisAvantLeTerme(): boolean {
   return false;
+}
+
+/** Un mode ou personne n'est jamais hors jeu. */
+function personneHorsJeu(): ReadonlySet<IdentifiantEntite> {
+  return PERSONNE_HORS_JEU;
 }
 
 /**
@@ -331,7 +355,8 @@ function battementSuspendu(etat: EtatPartie): EtatPartie {
  * les joueurs et arreter la boucle appartiennent au serveur (etape 2.1).
  *
  * Le temps decide de la fin dans tous les modes. Un mode peut aussi etre decide avant
- * le terme: la Chasse, quand il ne reste plus aucune proie (etape 7.3). Le temps
+ * le terme: la Chasse, quand il ne reste plus aucune proie ou plus aucun traqueur en jeu
+ * (etape 7.3). Le temps
  * restant, lui, reste celui du reglage.
  */
 export function evaluerFinDePartie(etat: EtatPartie): EvaluationFinDePartie {

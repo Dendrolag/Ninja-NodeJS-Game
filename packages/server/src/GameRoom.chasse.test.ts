@@ -1,15 +1,14 @@
 /**
  * Tests de la GameRoom d'une partie Chasse (etape 7.3): la capacite, la condition de
- * lancement, le tirage des traqueurs, l'entree refusee en cours de partie, la fin des
- * que la derniere proie tombe, et le bilan par camp.
+ * lancement, le tirage des traqueurs, l'entree refusee en cours de partie, le tir, la fin
+ * anticipee, et le bilan aux points.
  *
- * Les regles de l'infection et du score sont testees dans packages/sim (chasse.test.ts),
- * celles des camps dans packages/shared (chasse.test.ts). Ce qui est verifie ici, c'est
- * que la room les applique a une vraie partie.
+ * Les regles du tir, des vies et des points sont testees dans packages/sim (chasse.test.ts).
+ * Ce qui est verifie ici, c'est que la room les applique a une vraie partie.
  */
 
 import type { SessionJoueur } from '@neon-ninja/shared';
-import { COULEUR_DES_TRAQUEURS, placeDansLaChasse, recompensesDePartie } from '@neon-ninja/shared';
+import { CHASSE, COULEUR_DES_TRAQUEURS, recompensesDePartie } from '@neon-ninja/shared';
 import { estTraqueur } from '@neon-ninja/sim';
 import { describe, expect, it } from 'vitest';
 
@@ -160,29 +159,23 @@ describe('le lancement d une partie Chasse', () => {
   });
 });
 
-describe('la fin d une partie Chasse', () => {
-  it('s arrete des que la derniere proie tombe, avant le terme', () => {
-    // Le traqueur marche droit vers la proie, qui ne bouge pas: il la rattrape bien avant
-    // le terme, une fois passes son delai et la protection d'apparition.
+describe('le jeu d une partie Chasse', () => {
+  it('fait tirer un traqueur qui le demande, une fois passe son delai', () => {
     const room = avecLesJoueurs(roomDeChasse(), invite('A'), invite('B'));
     room.lancer();
-    const { traqueurs, proies } = camps(room);
-    const traqueur = room.etat.joueurs[traqueurs[0] as string];
-    const proie = room.etat.joueurs[proies[0] as string];
-    if (traqueur === undefined || proie === undefined) {
-      throw new Error('Un traqueur et une proie devraient etre tires.');
+    const [traqueur] = camps(room).traqueurs;
+    if (traqueur === undefined) {
+      throw new Error('Un traqueur devrait etre tire.');
     }
 
-    const versLaProie = {
-      x: proie.position.x - traqueur.position.x,
-      y: proie.position.y - traqueur.position.y,
-    };
-    room.enregistrerIntention(traqueur.id, { deplacement: versLaProie, enMouvement: true });
-    jouer(room, 30_000);
+    jouer(room, CHASSE.DELAI_NOUVEAU_TRAQUEUR_MS + 100);
+    room.demanderUnTir(traqueur);
+    room.avancer(50);
 
-    expect(room.statut).toBe('terminee');
-    expect(room.etat.tempsEcouleMs).toBeLessThan(room.etat.dureeMs);
-    expect(camps(room).proies).toEqual([]);
+    expect(room.etat.chasse?.traqueurs[traqueur]?.avantProchainTirMs).toBe(
+      CHASSE.DELAI_ENTRE_TIRS_MS,
+    );
+    expect(room.etat.evenements.some((evenement) => evenement.type === 'tirDeCapture')).toBe(true);
   });
 
   it('s arrete quand la derniere proie s en va', () => {
@@ -207,7 +200,7 @@ describe('la fin d une partie Chasse', () => {
 });
 
 describe('le bilan d une partie Chasse', () => {
-  /** Une chasse jouee jusqu'au terme, ou personne ne bouge: les proies survivent. */
+  /** Une chasse jouee jusqu'au terme, ou personne ne bouge et personne ne tire. */
   function chasseJouee(): GameRoom {
     const room = avecLesJoueurs(roomDeChasse(), compte('Alice'), invite('Bob'), compte('Carole'));
     room.lancer();
@@ -215,29 +208,33 @@ describe('le bilan d une partie Chasse', () => {
     return room;
   }
 
-  it('place les proies survivantes premieres et les traqueurs ensuite, avec leur devancement', () => {
+  it('classe chacun aux points, comme en Classique, sans devancement', () => {
     const room = chasseJouee();
     const classement = room.classement();
     const bilan = room.bilan();
 
     expect(room.statut).toBe('terminee');
+    expect(bilan.joueurs.map((joueur) => joueur.id)).toEqual(classement.map((ligne) => ligne.id));
+    expect(bilan.joueurs.map((joueur) => joueur.placement)).toEqual([1, 2, 3]);
     for (const joueur of bilan.joueurs) {
-      const ligne = classement.find((candidate) => candidate.id === joueur.id);
-      const place = placeDansLaChasse(classement, ligne?.couleur ?? '', 3);
-
-      expect(joueur.placement).toBe(place.placement);
-      expect(joueur.devancement).toEqual(place.devancement);
+      expect(joueur).not.toHaveProperty('devancement');
     }
-    expect(bilan.joueurs.map((joueur) => joueur.placement)).toEqual([1, 1, 3]);
   });
 
-  it('compte en points le temps de survie, en secondes', () => {
-    const bilan = chasseJouee().bilan();
+  it('compte en points les vies du traqueur et le parcours des proies', () => {
+    const room = chasseJouee();
+    const [traqueur] = camps(room).traqueurs;
+    const points = Object.fromEntries(
+      room.bilan().joueurs.map((joueur) => [joueur.id, joueur.points]),
+    );
 
-    expect(bilan.joueurs.map((joueur) => joueur.points)).toEqual([30, 30, 0]);
+    // Personne n'a bouge: les proies n'ont rien parcouru, le traqueur a ses trois vies.
+    for (const [id, valeur] of Object.entries(points)) {
+      expect(valeur).toBe(id === traqueur ? CHASSE.VIES_DES_TRAQUEURS * CHASSE.POINTS_PAR_VIE : 0);
+    }
   });
 
-  it('paye une chasse gagnee avant le terme comme une partie entiere', () => {
+  it('paye une chasse terminee avant le terme comme une partie entiere', () => {
     const room = avecLesJoueurs(roomDeChasse(), invite('A'), invite('B'));
     room.lancer();
     room.faireSortir(camps(room).proies[0] as string);
@@ -249,14 +246,14 @@ describe('le bilan d une partie Chasse', () => {
     expect(traqueur?.placement).toBe(1);
   });
 
-  it('donne a chaque compte les gains de son camp', () => {
+  it('donne a chaque compte les gains de son placement', () => {
     const room = chasseJouee();
     const bilan = room.bilan();
 
     for (const resultat of finPourLesComptes(room).resultats) {
       const joueur = bilan.joueurs.find((candidat) => candidat.compte?.id === resultat.compteId);
-      if (joueur?.devancement === undefined) {
-        throw new Error(`Le compte ${resultat.compteId} devrait avoir un devancement.`);
+      if (joueur === undefined) {
+        throw new Error(`Le compte ${resultat.compteId} devrait etre au bilan.`);
       }
 
       const gains = recompensesDePartie({
@@ -265,7 +262,6 @@ describe('le bilan d une partie Chasse', () => {
         tempsJoueMs: joueur.tempsJoueMs,
         dureePartieMs: bilan.dureePartieMs,
         abandon: false,
-        devancement: joueur.devancement,
       });
 
       expect(resultat).toMatchObject({

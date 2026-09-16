@@ -1677,6 +1677,10 @@ function envoyer(socket: SocketTypee, notification: Notification): void {
     case 'tirDeCapture':
       socket.emit('tirDeCapture', notification.charge);
       return;
+
+    case 'vieDeTraqueurPerdue':
+      socket.emit('vieDeTraqueurPerdue', notification.charge);
+      return;
   }
 }
 

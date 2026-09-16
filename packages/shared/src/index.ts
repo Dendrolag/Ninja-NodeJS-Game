@@ -120,6 +120,7 @@ export type {
   StatutPartie,
   TactiqueVue,
   TirDeCaptureVu,
+  VieDeTraqueurPerdueVue,
   ZoneVue,
 } from './evenements.js';
 
@@ -171,7 +172,7 @@ export type { IssueParCamp, PlaceDansUnCamp } from './camps.js';
 export { placeDansUnCamp } from './camps.js';
 
 export type { CampDeChasse, LigneDeJoueurEnChasse } from './chasse.js';
-export { campDeCouleur, campVainqueur, placeDansLaChasse, proiesRestantes } from './chasse.js';
+export { campDeCouleur, proiesRestantes } from './chasse.js';
 
 export type {
   ClassementDesEquipes,

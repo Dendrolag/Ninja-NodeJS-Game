@@ -74,15 +74,19 @@ export {
 } from './effets.js';
 
 export {
+  PERSONNE_HORS_JEU,
   agirEnChasse,
   chasseDecidee,
   devenirTraqueur,
   estTraqueur,
+  horsJeuEnChasse,
   infecter,
   lancerLaChasse,
   malusEnChasse,
-  tempsDeSurvieMs,
-  traqueurPret,
+  peutTirer,
+  pointsEnChasse,
+  tirerEnChasse,
+  traqueurEnJeu,
 } from './chasse.js';
 
 export { malusEnEquipe, partDuJoueur, perteEnEquipe } from './equipes.js';
@@ -97,6 +101,7 @@ export type {
   CaptureParBotNoir,
   DestructionDeBotNoir,
   Entite,
+  EtatDeChasse,
   EtatPartie,
   EtatTactiqueDuJoueur,
   EvenementPartie,
@@ -109,9 +114,12 @@ export type {
   OptionsAjoutBot,
   OptionsAjoutJoueur,
   OptionsEtatInitial,
+  ParcoursEnChasse,
   ProchainesApparitions,
   TirDeCapture,
+  TraqueurEnChasse,
   TypeEntite,
+  VieDeTraqueurPerdue,
   ZoneSpeciale,
 } from './etat.js';
 export {

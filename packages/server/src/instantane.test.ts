@@ -12,9 +12,18 @@
  *      test pour survivre.
  */
 
-import { CARTES, TACTIQUE } from '@neon-ninja/shared';
+import { CARTES, CHASSE, TACTIQUE } from '@neon-ninja/shared';
 import type { EtatPartie } from '@neon-ninja/sim';
-import { ajouterJoueur, creerEtatInitial, mettreEnPause, poserObjet, tick } from '@neon-ninja/sim';
+import {
+  ajouterBot,
+  ajouterJoueur,
+  creerEtatInitial,
+  devenirTraqueur,
+  mettreEnPause,
+  poserObjet,
+  tick,
+  tirerEnChasse,
+} from '@neon-ninja/sim';
 import { describe, expect, it } from 'vitest';
 
 import { GameRoom } from './GameRoom.js';
@@ -96,6 +105,61 @@ describe('le mode Tactique dans la projection', () => {
       orientation: 'est',
       captures: 0,
     });
+  });
+});
+
+describe('le mode Chasse dans la projection', () => {
+  /**
+   * Une Chasse a deux joueurs: le traqueur tire, pret, en (500, 500), vise a l'est, un faux
+   * ninja juste devant lui.
+   */
+  function chasseADeux(vies: number = CHASSE.VIES_DES_TRAQUEURS): EtatPartie {
+    let etat = creerEtatInitial({ graine: 7, mode: 'chasse' });
+    etat = ajouterJoueur(etat, { id: 'alice', pseudo: 'Alice', position: { x: 500, y: 500 } });
+    etat = ajouterJoueur(etat, { id: 'bob', pseudo: 'Bob', position: { x: 1500, y: 1000 } });
+    etat = devenirTraqueur(
+      { ...etat, chasse: { traqueurs: {}, parcours: {}, traqueursEpuises: false } },
+      'alice',
+    );
+    etat = ajouterBot(etat, { id: 'ninja', couleur: '#123456', position: { x: 540, y: 500 } });
+    const alice = etat.chasse?.traqueurs['alice'];
+    if (etat.chasse === undefined || alice === undefined) {
+      throw new Error('Alice devrait etre le traqueur.');
+    }
+
+    return {
+      ...etat,
+      tempsEcouleMs: CHASSE.DELAI_NOUVEAU_TRAQUEUR_MS + 1,
+      chasse: { ...etat.chasse, traqueurs: { alice: { ...alice, vies } } },
+    };
+  }
+
+  it('montre l arme d un traqueur: ou il vise, et ses vies en guise de charges', () => {
+    const entites = instantaneDe(chasseADeux()).entites;
+
+    expect(entites.find((entite) => entite.id === 'alice')).toMatchObject({
+      tactique: {
+        orientation: 'est',
+        charges: CHASSE.VIES_DES_TRAQUEURS,
+        avantProchaineChargeMs: 0,
+      },
+    });
+    expect(entites.find((entite) => entite.id === 'bob')).not.toHaveProperty('tactique');
+  });
+
+  it('retire de la carte un traqueur elimine, qui reste au classement', () => {
+    const instantane = instantaneDe(chasseADeux(0));
+
+    expect(instantane.entites.some((entite) => entite.id === 'alice')).toBe(false);
+    expect(instantane.classement.some((ligne) => ligne.id === 'alice')).toBe(true);
+  });
+
+  it('previent le seul traqueur d une vie perdue', () => {
+    const etat = tirerEnChasse({ ...chasseADeux(), evenements: [] }, 'alice');
+
+    expect(
+      notificationsDe(etat).filter((notification) => notification.nom === 'vieDeTraqueurPerdue'),
+    ).toEqual([{ nom: 'vieDeTraqueurPerdue', pour: 'alice', charge: { viesRestantes: 2 } }]);
   });
 });
 

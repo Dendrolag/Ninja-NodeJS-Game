@@ -282,9 +282,10 @@ export function agirEnTactique(etat: EtatPartie, entrees: Entrees, dtMs: number)
  * tir croise. Il est tire au sort par le generateur a graine, pour la raison qui fait
  * tirer au sort les duels de contacts.ts: « le premier arrive dans la partie tire le
  * premier » donnerait au meme joueur un avantage pendant toute la partie. Un seul
- * tireur ne consomme aucun tirage.
+ * tireur ne consomme aucun tirage. Exportee pour les tirs des traqueurs de la Chasse
+ * (etape 7.3), qui suivent la meme regle.
  */
-function ordreDesTirs(
+export function ordreDesTirs(
   etat: EtatPartie,
   entrees: Entrees,
 ): { readonly ordre: readonly IdentifiantEntite[]; readonly alea: Alea } {

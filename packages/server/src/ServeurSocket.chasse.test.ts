@@ -1,7 +1,8 @@
 /**
  * Tests d'integration du mode Chasse a travers la couche reseau (etape 7.3), avec de vrais
  * clients Socket.IO: la condition de lancement, l'entree refusee dans une chasse lancee,
- * et une chasse jouee jusqu'a l'infection de la derniere proie, qui la termine.
+ * une chasse jouee jusqu'a l'infection de la derniere proie par un tir, qui la termine, et
+ * la vie perdue annoncee au traqueur.
  *
  * Meme cadre que ServeurSocket.equipes.test.ts: un vrai serveur sur un vrai port, une
  * horloge manuelle pour le temps du JEU, et des attentes explicites pour celui du RESEAU.
@@ -317,7 +318,7 @@ describe('une partie Chasse, a travers le reseau', () => {
     });
   });
 
-  it('se joue jusqu a l infection de la derniere proie, qui termine la partie', async () => {
+  it('se joue jusqu a l infection de la derniere proie par un tir, qui termine la partie', async () => {
     const { hote, invite, salon } = await salonAAlice();
     const room = roomDe(salon.idRoom);
     await lancer(hote);
@@ -329,26 +330,45 @@ describe('une partie Chasse, a travers le reseau', () => {
     }
     const [traqueur, proie] = salon.joueurs[0]?.id === traqueurId ? [hote, invite] : [invite, hote];
 
-    // Le delai du traqueur et la protection de la proie passent, puis il marche droit sur elle.
+    // Le delai du traqueur et la protection de la proie passent.
     horloge.avancerDe(Math.max(CHASSE.DELAI_NOUVEAU_TRAQUEUR_MS, DUREES.PROTECTION_SPAWN_MS) + 50);
-    const cible = room.etat.joueurs[proieId]?.position;
-    const depart = room.etat.joueurs[traqueurId]?.position;
-    if (cible === undefined || depart === undefined) {
-      throw new Error('Le traqueur et la proie devraient etre sur la carte.');
-    }
 
-    const distance = Math.hypot(cible.x - depart.x, cible.y - depart.y);
+    const position = (id: string): { x: number; y: number } => {
+      const joueur = room.etat.joueurs[id];
+      if (joueur === undefined) {
+        throw new Error(`Le joueur ${id} devrait etre sur la carte.`);
+      }
+      return joueur.position;
+    };
+    const ecart = (): number => {
+      const cible = position(proieId);
+      const depart = position(traqueurId);
+      return Math.hypot(cible.x - depart.x, cible.y - depart.y);
+    };
+
+    // Il marche droit sur la proie, qui ne bouge pas, jusqu'a la toucher presque: aucun
+    // faux ninja ne peut alors etre plus proche d'elle dans son cone.
+    const cible = position(proieId);
+    const depart = position(traqueurId);
+    const distance = ecart();
     const deplacement = { x: (cible.x - depart.x) / distance, y: (cible.y - depart.y) / distance };
     const intentions = vi.spyOn(room, 'enregistrerIntention');
+    const tirs = vi.spyOn(room, 'demanderUnTir');
     const infections = collecter(proie, 'captureSubie');
     const fin = prochain(proie, 'partieTerminee');
 
     traqueur.emit('deplacer', { deplacement, enMouvement: true });
     await jusquA(() => intentions.mock.calls.length > 0);
 
-    for (let ecoule = 0; ecoule < 40_000 && room.statut === 'enCours'; ecoule += 50) {
+    for (let ecoule = 0; ecoule < 40_000 && ecart() > 12; ecoule += 50) {
       horloge.avancerDe(50);
     }
+
+    traqueur.emit('deplacer', { deplacement, enMouvement: false });
+    await jusquA(() => intentions.mock.calls.length > 1);
+    traqueur.emit('capturer');
+    await jusquA(() => tirs.mock.calls.length > 0);
+    horloge.avancerDe(50);
 
     expect(room.statut).toBe('terminee');
     expect(room.etat.tempsEcouleMs).toBeLessThan(room.etat.dureeMs);
@@ -358,5 +378,62 @@ describe('une partie Chasse, a travers le reseau', () => {
     expect(infections[0]?.nouvelleCouleur).toBe(COULEUR_DES_TRAQUEURS);
     const { classement } = await fin;
     expect(classement.every((ligne) => ligne.couleur === COULEUR_DES_TRAQUEURS)).toBe(true);
+  });
+
+  it('previent le seul traqueur d une vie perdue', async () => {
+    const { hote, invite, salon } = await salonAAlice();
+    const room = roomDe(salon.idRoom);
+    await lancer(hote);
+
+    const traqueurId = Object.keys(room.etat.joueurs).find((id) => estTraqueur(room.etat, id));
+    if (traqueurId === undefined) {
+      throw new Error('Un traqueur devrait etre tire.');
+    }
+    const [traqueur, proie] = salon.joueurs[0]?.id === traqueurId ? [hote, invite] : [invite, hote];
+    const chezLeTraqueur = collecter(traqueur, 'vieDeTraqueurPerdue');
+    const chezLaProie = collecter(proie, 'vieDeTraqueurPerdue');
+    horloge.avancerDe(CHASSE.DELAI_NOUVEAU_TRAQUEUR_MS + 50);
+
+    // La cible est l'affaire du moteur, teste a part: ici, la room fait marcher le traqueur
+    // droit sur le faux ninja le plus proche, et tirer une fois colle a lui.
+    for (
+      let ecoule = 0;
+      ecoule < 40_000 &&
+      room.etat.evenements.every((evenement) => evenement.type !== 'vieDeTraqueurPerdue');
+      ecoule += 50
+    ) {
+      const lui = room.etat.joueurs[traqueurId];
+      if (lui === undefined) {
+        throw new Error('Le traqueur devrait etre sur la carte.');
+      }
+      const ecartA = (x: number, y: number): number =>
+        Math.hypot(x - lui.position.x, y - lui.position.y);
+      const ninja = Object.values(room.etat.bots)
+        .filter((bot) => bot.type === 'bot')
+        .sort(
+          (un, autre) =>
+            ecartA(un.position.x, un.position.y) - ecartA(autre.position.x, autre.position.y),
+        )[0];
+      if (ninja === undefined) {
+        throw new Error('Des faux ninjas devraient etre sur la carte.');
+      }
+      const ecart = ecartA(ninja.position.x, ninja.position.y);
+
+      room.enregistrerIntention(traqueurId, {
+        deplacement: {
+          x: (ninja.position.x - lui.position.x) / Math.max(ecart, 1),
+          y: (ninja.position.y - lui.position.y) / Math.max(ecart, 1),
+        },
+        enMouvement: ecart > 12,
+      });
+      if (ecart <= 12) {
+        room.demanderUnTir(traqueurId);
+      }
+      horloge.avancerDe(50);
+    }
+
+    await jusquA(() => chezLeTraqueur.length === 1);
+    expect(chezLeTraqueur[0]).toEqual({ viesRestantes: 2 });
+    expect(chezLaProie).toEqual([]);
   });
 });
