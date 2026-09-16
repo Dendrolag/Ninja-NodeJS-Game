@@ -1,16 +1,16 @@
 # Fiche étape 7.3 - Mode Chasse
 
-Brief de session. Objectif unique: ajouter au jeu son quatrième mode, la Chasse, où des traqueurs infectent les proies qu'ils attrapent, et où les proies doivent tenir jusqu'au bout. Deuxième des fonctionnalités reportées, choisie par le porteur du projet après le mode Équipes.
+Brief de session. Objectif unique: ajouter au jeu son quatrième mode, la Chasse. Des traqueurs doivent repérer les vrais joueurs cachés parmi les faux ninjas et les attraper d'un tir en cône, au risque de perdre une vie s'ils visent un faux ninja. Les proies attrapées deviennent traqueurs, et les proies marquent des points en restant mobiles. C'est la deuxième des fonctionnalités reportées, choisie par le porteur du projet après le mode Équipes.
 
 ## Origine de cette fiche
 
 Aucune fiche n'existait: le handoff 7.2 renvoie aux fonctionnalités reportées (Chasse, Battle Royale, Chaos, pass de saison, skins, clans), dans l'ordre que fixe le porteur du projet. Elle est rédigée le 16 septembre 2026 selon le cas de repli du PROTOCOLE (boucle d'une étape, point 2), à partir de:
 
 - la section 3 du ROADMAP, et la fiche 7.2 prise comme modèle;
-- la section 6 du cadrage (`docs/design/cadrage.md`);
+- la section 6 du cadrage (`docs/design/cadrage.md`), et la fiche 7.1 pour la capture en cône;
 - la maquette (`docs/design/HANDOFF-CLAUDE-DESIGN.md`): « Chasse, 5-10 J, un traqueur, des proies. Survivez jusqu'au bout. » Une proposition non validée (cadrage, tension 2), sans règles;
 - l'état du dépôt au commit `8264f69`, et le handoff 7.2;
-- douze décisions posées au porteur du projet le 16 septembre 2026.
+- les décisions posées au porteur du projet le 16 septembre 2026, en deux temps (voir « Révision des règles »).
 
 **Aucune référence de comportement.** Ni la v0.8.6, ni la v0.9.0 n'ont de mode Chasse: il n'y a rien à caractériser. Les règles ci-dessous font foi, et les comportements à préserver de CLAUDE.md s'appliquent partout où elles ne disent pas le contraire.
 
@@ -18,125 +18,121 @@ Aucune fiche n'existait: le handoff 7.2 renvoie aux fonctionnalités reportées 
 
 ## Rituel de début de session
 
-Lire CLAUDE.md, le dernier handoff (7.2, ou le handoff partiel de cette étape), cette fiche, `.claude/rules/sim-purity.md`, la section 6 du cadrage et la fiche 7.2.
+Lire CLAUDE.md, le dernier handoff (7.2, ou le handoff partiel de cette étape), cette fiche, `.claude/rules/sim-purity.md`, la section 6 du cadrage et les fiches 7.1 et 7.2.
+
+## Révision des règles, 16 septembre 2026
+
+La fiche a d'abord porté une première version des règles: infection au contact, survie seule au score, victoire par camp. Les lots A (`d70c719`) et B (`a23af12`) l'ont construite. Pendant le lot C, en voyant la page, le porteur du projet a fait évoluer le mode. Le traqueur doit distinguer les vrais joueurs des faux ninjas, avec trois vies et une visée. Les proies se cachent, mais doivent bouger pour marquer. Les décisions ci-dessous remplacent les premières là où elles diffèrent, et le périmètre reprend les lots A et B en conséquence.
 
 ## Décisions du porteur du projet, 16 septembre 2026
 
-1. **La Chasse vient après les Équipes** parmi les fonctionnalités reportées.
-2. **Infection.** Une proie attrapée par un traqueur devient traqueur à son tour. Les traqueurs se multiplient jusqu'à la fin.
-3. **La survie seule compte.** Les ninjas de la carte ne font pas le score.
-4. **Les premiers traqueurs sont tirés au sort** au lancement.
-5. **Dix joueurs au plus.**
-6. **Un traqueur par cinq joueurs au lancement**, arrondi au-dessus: un de 2 à 5 joueurs, deux de 6 à 10.
-7. **Deux équilibrages**: un nouveau traqueur ne capture qu'au bout de trois secondes; les proies ont trois secondes d'avance au lancement. Les traqueurs vont à la même vitesse que les proies.
-8. **Deux camps à la fin.** S'il reste une proie au terme du temps, les proies survivantes gagnent et tous les traqueurs perdent; sinon, tous les traqueurs gagnent. Les récompenses se calculent par camp, comme en Équipes. La partie s'arrête dès que la dernière proie tombe.
-9. **Les ninjas servent de camouflage.** Ils errent toujours, sans compter pour personne, et les proies peuvent s'y fondre. Pas de Black Ninjas. Bonus et malus restent en jeu: l'invincibilité protège une proie, un malus frappe l'autre camp.
-10. **Les traqueurs portent une couleur commune**, le rose-rouge `#FF2E7E` de la tuile Chasse; les proies gardent la leur. Une proie infectée change de couleur.
-11. **Si tous les traqueurs quittent la partie**, une proie tirée au sort devient traqueur, avec son délai de trois secondes, et la partie continue.
-12. **On n'entre pas dans une Chasse lancée.** Le retour d'un joueur dont le lien est tombé (étape 2.5) reste permis. **On lance à deux joueurs au moins.**
+Première série, toujours valable:
 
-Écartés par ces décisions: le chat perché à un seul traqueur, l'élimination, la perte des ninjas au profit du traqueur; le score en ninjas, mixte ou au temps de survie individuel; le traqueur désigné par l'hôte ou volontaire; huit ou douze joueurs; toujours un seul traqueur; des traqueurs plus rapides; les Black Ninjas qui infectent, la carte vide; un marqueur au lieu d'une couleur; la victoire des proies quand les traqueurs partent; l'entrée en cours de partie comme traqueur; trois joueurs pour lancer.
+1. **La Chasse vient après les Équipes** parmi les fonctionnalités reportées.
+2. **Infection.** Une proie attrapée par un traqueur devient traqueur à son tour.
+3. **Les premiers traqueurs sont tirés au sort** au lancement, **un par tranche de cinq joueurs**, arrondi au-dessus.
+4. **Dix joueurs au plus**, **deux pour lancer**.
+5. **Un nouveau traqueur ne capture qu'au bout de trois secondes**; les proies ont trois secondes d'avance au lancement.
+6. **Les ninjas servent de camouflage** et ne comptent pour personne; **pas de Black Ninjas**; bonus et malus en jeu, **un malus frappe l'autre camp**.
+7. **Les traqueurs portent une couleur commune**, le rose-rouge `#FF2E7E`; les proies gardent la leur.
+8. **Si les traqueurs quittent tous la partie**, une proie tirée au sort devient traqueur, et la partie continue.
+9. **On n'entre pas dans une Chasse lancée**; le retour après une coupure reste permis.
+10. **La minimap ne montre que son camp.**
+
+Seconde série, qui remplace la survie seule au score et la victoire par camp:
+
+11. **Le traqueur capture par un cône, comme en Tactique.** Le tir ne prend que l'entité la plus proche dans le cône, hors traqueurs. Un vrai joueur, c'est une infection. Un faux ninja coûte une vie.
+12. **Trois vies par traqueur.** Un traqueur qui les a toutes perdues est **éliminé**. Si tous les traqueurs sont éliminés, la partie s'arrête.
+13. **Un tir dans le vide ne coûte rien; une seconde entre deux tirs.** Pas de charges.
+14. **Une proie marque à la distance parcourue**: un point par tranche de cent pixels, tant qu'elle est proie. Immobile, elle est cachée et ne marque rien.
+15. **Un traqueur marque par ses captures et ses vies**: cinquante points par proie attrapée, et vingt-cinq par vie qui lui reste.
+16. **Classement individuel aux points**, comme en Classique, quel que soit le camp. La partie s'arrête au terme du temps, quand il ne reste plus de proie, ou quand tous les traqueurs sont éliminés.
+
+Écartés: la survie seule au score, la victoire par camp; la désignation d'une cible au clic, le contact suivi d'une confirmation; la proie éliminée, la proie qui perd ses points; le traqueur redevenu proie ou paralysé; les points au temps en mouvement, le bonus de survie; les charges du Tactique en plus des vies, le tir dans le vide payant; la fin de partie quand les traqueurs partent.
 
 ## Décisions prises par cette fiche
 
 Micro-décisions au sens du PROTOCOLE. Chacune se consigne au journal de `docs/design/README.md` quand elle est construite, et se révise en exécutant si le dépôt le demande.
 
-1. **Nom « Chasse », identifiant `chasse`.** Le nom de la maquette et du cadrage.
-2. **Un traqueur, pour le moteur, c'est la couleur des traqueurs.** Comme une équipe en Équipes. `captureAutorisee` refuse déjà une capture entre joueurs de même couleur: deux traqueurs ne se capturent pas. `COULEUR_DES_TRAQUEURS` rejoint les couleurs réservées: aucun joueur, aucun bot à sa naissance ni aucune zone de chaos ne la reçoit hors du rôle.
-3. **Le moment où chacun est devenu traqueur vit dans l'état**, dans un champ facultatif propre au mode (`chasse`), comme l'état tactique de l'étape 7.1: une table de l'identifiant d'un traqueur vers le temps de jeu écoulé quand il l'est devenu. C'est ce qui porte le délai de trois secondes et le temps de survie. Une seule fonction fait d'un joueur un traqueur, et pose sa couleur et son moment ensemble. Une partie Classique n'a pas ce champ: son état et son empreinte ne changent pas.
-4. **Seul un traqueur capture, et seulement une proie.** Deux proies qui se touchent, ou un traqueur et une proie dans l'autre sens, ne produisent rien. Il n'y a donc jamais de tirage au sort entre deux attaquants. Le traqueur capture si `captureAutorisee` l'accepte (protection, invincibilité, délai d'une seconde) et s'il est traqueur depuis plus de trois secondes.
-5. **L'infection a lieu sur place.** La proie ne réapparaît pas ailleurs: elle prend la couleur des traqueurs là où elle est, et son délai de trois secondes la laisse s'éloigner ou se faire fuir. L'événement de capture existant la décrit: zéro ninja transféré, nouvelle couleur celle des traqueurs.
-6. **Un joueur ne repeint aucun ninja**, et un joueur invincible ne rencontre aucun Black Ninja: ils n'existent pas. Les ninjas gardent la couleur quelconque de leur naissance, que seule une zone de chaos change; aucune couleur de joueur ne se transmet donc entre eux.
-7. **Les Black Ninjas sont absents par le mode, pas par un réglage de l'hôte.** Les réglages imposés par un mode vivent dans une fonction pure de `packages/shared`, que le moteur applique en créant l'état et que le salon affiche; les réglages des Black Ninjas n'apparaissent pas dans un salon Chasse.
-8. **Les premiers traqueurs sont tirés au lancement, après les ninjas**, par le générateur à graine, parmi les joueurs dans leur ordre d'entrée dans l'état. Ils deviennent traqueurs au temps zéro: leur délai de trois secondes coïncide avec la protection d'apparition que chaque proie porte déjà depuis le salon (décision 7). Le jeu de règles d'un mode gagne ce qu'il fait au lancement; les autres modes n'y font rien, sans tirage.
-9. **Le remplacement d'un traqueur parti (décision 11)** se fait dans le battement, dans ce que le mode fait des entrées: s'il n'y a plus aucun traqueur et au moins deux joueurs, une proie est tirée au sort. Seul dans la partie, un joueur reste proie jusqu'au terme. Un traqueur absent (étape 2.5) est encore dans l'état: il compte, immobile, jusqu'à son retour ou sa sortie.
-10. **La fin anticipée (décision 8)**: une partie Chasse est terminée quand il ne reste plus aucune proie, qu'elle soit tombée ou partie. Le jeu de règles d'un mode gagne ce verdict; les autres modes n'ont que le temps.
-11. **Le score d'un joueur en Chasse est son temps de survie, en secondes entières**: le temps de jeu écoulé pour une proie, le moment où il est devenu traqueur pour un traqueur. Le classement range les proies d'abord, puis les traqueurs par survie, à égalité par captures. Ce sont aussi les points enregistrés: aucun ninja n'est porté, et le temps de survie est ce que le mode fait valoir.
-12. **Le placement enregistré et les récompenses** reprennent la règle des camps des Équipes, sans égalité possible: les vainqueurs présents sont premiers et devancent tous les autres, abandons compris, avec les points de ligue du premier; les perdants sont placés juste après et ne devancent que les abandons, avec les points de ligue du dernier. Un abandon reste dernier. Ce qui est commun aux deux modes se partage dans `packages/shared`.
-13. **Une chasse gagnée avant le terme vaut une partie entière.** Le temps de jeu d'un présent court jusqu'à la durée réglée, et non jusqu'au battement de la dernière capture: les traqueurs ne sont pas payés moins d'XP pour avoir gagné vite. La règle des trois minutes pour la ligue lit la durée réglée, comme ailleurs.
-14. **Le camp se déduit de la couleur partout où le client en a besoin** (HUD, fin de partie, notifications), par une fonction pure de `packages/shared`: le flux d'état ne change pas de forme.
-15. **La partie rapide ne change pas**, et une Chasse lancée disparaît déjà de la liste des parties publiques, qui ne montre que les salons.
-16. **Refus d'entrée**: « Cette chasse a déjà commencé. », par code comme par la liste.
+1. **Nom « Chasse », identifiant `chasse`.**
+2. **Le rôle d'un joueur vit dans l'état, dans un champ facultatif propre au mode** (`EtatPartie.chasse`), comme l'état tactique. Il porte, pour chaque traqueur, le moment où il l'est devenu, ses vies, son orientation et l'attente avant son prochain tir. Il porte aussi, pour chaque joueur, la distance parcourue en tant que proie et sa dernière position. S'y ajoute un indicateur « traqueurs épuisés ». Un traqueur à zéro vie est éliminé. Une seule fonction fait d'un joueur un traqueur, et pose sa couleur avec son rôle. Une partie Classique n'a pas ce champ.
+3. **`COULEUR_DES_TRAQUEURS` est réservée**: aucun joueur, aucun faux ninja, aucune zone de chaos ne la reçoit hors du rôle.
+4. **Le tir d'un traqueur** se joue dans ce que le mode fait des entrées, après les déplacements. Les tireurs du battement passent dans un ordre tiré au sort, comme en Tactique. Pour tirer, il faut être un traqueur non éliminé, prêt (trois secondes) et sans tir depuis une seconde. Parmi les proies et les faux ninjas dans le cône, la plus proche est prise; à distance égale, l'ordre de l'état (joueurs d'abord) départage. Une proie protégée ou invincible ne produit rien et ne coûte aucune vie, mais le tir compte pour l'attente. Le cône et la portée sont ceux du Tactique (90 degrés, 100 pixels). L'orientation d'un traqueur est celle de son dernier déplacement.
+5. **L'infection a lieu sur place**, la proie reçoit trois vies et le délai de trois secondes. L'événement de capture existant la décrit, avec zéro ninja transféré.
+6. **Une vie perdue est un événement du moteur**, qui dit au traqueur combien il lui en reste, et s'il est éliminé.
+7. **Un traqueur éliminé est hors jeu**: il ne bouge plus, ne ramasse rien, ne subit aucun malus, ne tire plus et n'est pas une cible. Il reste membre de la partie et figure au classement. Le serveur le retire des entités du flux: il regarde la suite sans être vu.
+8. **« Tous les traqueurs sont partis » ou « tous éliminés »**: s'il ne reste aucun traqueur en jeu à la suite d'une élimination, les traqueurs sont épuisés et la partie s'arrête. Si c'est à la suite d'un départ, une proie tirée au sort devient traqueur, à condition qu'il reste deux proies; seule, une proie joue jusqu'au terme.
+9. **La distance d'une proie** s'ajoute à chaque battement, d'après sa position de fin de déplacement comparée à la précédente. Elle cesse de croître quand la proie devient traqueur, et la proie garde ce qu'elle a gagné.
+10. **Le score d'un joueur en Chasse**: un point par tranche de cent pixels parcourus en tant que proie, arrondi en dessous, plus cinquante points par capture, plus vingt-cinq points par vie d'un traqueur en jeu. Le score se lit ainsi pendant toute la partie: le HUD ne contredit jamais le classement final.
+11. **Les joueurs sont classés comme en Classique**: aux points, puis aux captures. Le bilan, les récompenses et le placement sont ceux du Classique. Une chasse terminée avant le terme vaut une partie entière pour l'XP: le temps joué court jusqu'à la durée réglée.
+12. **Le flux d'état ne change pas de forme.** L'état de l'arme d'un traqueur passe par l'état tactique d'un joueur (orientation, charges): en Chasse, ses charges sont ses vies. Le client lit le mode pour savoir ce qu'il affiche. Le rôle se lit à la couleur.
+13. **Les contacts ne produisent rien en Chasse**: toucher ne capture pas, et un joueur ne repeint aucun ninja.
+14. **Refus d'entrée**: « Cette chasse a déjà commencé. »
 
-## État de départ, constaté dans le dépôt
+## État après les lots A et B de la première version
 
-Ce qui existe et se réutilise:
+Construit et conservé: le mode dans le contrat, sa capacité, la couleur réservée, les réglages imposés par le mode (pas de Black Ninjas), la migration, le jeu de règles élargi (`lancer`, `estDecidee`), le tirage des premiers traqueurs, le remplacement d'un traqueur parti, le malus sur l'autre camp, la fin quand il ne reste plus de proie, `GameRoom` (capacité, entrée refusée, deux joueurs pour lancer, tirage au lancement), la place par camp partagée (`camps.ts`), toujours utile aux Équipes.
 
-- **Le branchement du mode**: `MODES` et `CAPACITES` (`packages/shared/src/constantes.ts`); `EtatPartie.mode`; `REGLES_DES_MODES` et `JeuDeRegles { agir; resoudreContacts; perteFaceAuBotNoir; victimeDuMalus }` (`packages/sim/src/moteur.ts`).
-- **Les règles de contacts par mode** (`regleDeContacts`, `contacts.ts`) et les captures autonomes (`capture.ts`), dont `capturerAvec` et son issue par mode.
-- **Un état propre à un mode**, `EtatPartie.tactique`, facultatif, et sa transmission par le flux.
-- **Les camps et leurs récompenses**: `placeDansLesEquipes` et `Devancement` (`packages/shared/src/equipes.ts`, `progression.ts`), le bilan par camp de `GameRoom`.
-- **La condition de lancement** de `GameRoom`, vérifiée au démarrage et au terme du décompte par `ServeurSocket`.
-- **Côté client**, `NOMS_DES_MODES` et `CAPTURES_DES_MODES`, la tuile « À venir », le HUD, le salon et l'écran de fin qui distinguent déjà les Équipes.
-
-Ce qui manque:
-
-- **Rien dans le jeu de règles ne dit ce qu'un mode fait au lancement, ni quand il est décidé avant le terme.** `GameRoom.lancer` ne fait que poser les ninjas; `evaluerFinDePartie` ne lit que le temps.
-- **Le score ne connaît que les ninjas** (`scoreDe`), et le bilan fait courir le temps joué jusqu'au dernier battement.
-- **Rien n'impose de réglage selon le mode**: les Black Ninjas viennent des réglages de l'hôte.
-- **`accueillir` accepte toujours une partie en cours**, et la condition de lancement ne compte pas les joueurs.
+À reprendre: l'infection au contact (remplacée par le tir), le score de survie (remplacé par les points), le classement « proies d'abord » et le bilan par camp (remplacés par le classement du Classique), `placeDansLaChasse`, devenue sans objet.
 
 ## Périmètre
 
-Découpé en lots, dans l'ordre d'exécution. Chaque lot se termine vert et se commite; si l'étape déborde d'une session, le handoff partiel s'arrête à la fin d'un lot.
+### Lot A (fait, `d70c719`) et lot B (fait, `a23af12`): première version
 
-### Lot A. Le jeu de règles Chasse dans le moteur
+Voir « État après les lots A et B ».
 
-1. **L'empreinte du jeu** des quatre parties Classique de référence est relevée avant toute modification.
-2. **Le mode `chasse`** rejoint `MODES`, avec sa capacité (10), la couleur des traqueurs et les réglages imposés par le mode (micro-décision 7) dans `packages/shared`; et, dans le même lot, ce que la compilation et la CI exigent dès qu'un mode existe: son nom et sa phrase de capture dans les tables du client, et la migration de l'énumération `mode_de_jeu`, écrite par `pnpm base:generer`. Jusqu'au lot C, l'écran de création ne propose pas le mode.
-3. **Le jeu de règles s'élargit à deux questions** (micro-décisions 8 et 10): ce que le mode fait au lancement, et s'il est décidé avant le terme. Le Classique, le Tactique et les Équipes n'y font rien.
-4. **L'état de la Chasse** (micro-décision 3): devenir traqueur, être traqueur, depuis quand, et pouvoir capturer.
-5. **Le tirage des premiers traqueurs** (décisions 4 et 6) et **le remplacement d'un traqueur parti** (micro-décision 9).
-6. **Les contacts du mode Chasse** (micro-décisions 4 à 6): l'infection, sans duel ni ninja repeint, sans dupliquer ce que `regleDeContacts` partage.
-7. **Le malus** frappe l'autre camp; **la perte face à un Black Ninja** reste celle du Classique, sans objet.
-8. **Le score en Chasse** (micro-décision 11), et **la fin anticipée** (micro-décision 10).
-9. **Les couleurs réservées** (micro-décision 2): la couleur des traqueurs n'est tirée ni pour un joueur, ni pour un ninja, ni par une zone de chaos.
+### Lot A2. Le moteur révisé
 
-### Lot B. Salon, serveur, contrat, fin de partie et base
+1. **L'état de la Chasse** (micro-décision 2), et devenir traqueur avec trois vies.
+2. **Le tir** (micro-décisions 4 à 6): cible la plus proche dans le cône, infection, vie perdue, élimination, attente d'une seconde, tir dans le vide gratuit; `dansLeCone` et l'ordre des tirs du Tactique réutilisés.
+3. **Le hors-jeu d'un traqueur éliminé** (micro-décision 7): un ajout au jeu de règles d'un mode, lu par le déplacement, le ramassage et le malus; rien pour les autres modes.
+4. **Les contacts sans effet** (micro-décision 13).
+5. **La distance des proies et le score** (micro-décisions 9 et 10), le classement du Classique (micro-décision 11).
+6. **La fin et le remplacement** (micro-décision 8).
+7. **Empreinte** du Classique identique à celle relevée avant le lot A.
 
-1. **Le camp d'une couleur et l'issue d'une Chasse** (micro-décision 14): fonctions pures de `packages/shared`, depuis le classement.
-2. **La place par camp** (micro-décision 12), partagée avec les Équipes sans rien changer à leurs résultats.
-3. **`GameRoom`**: capacité, refus d'entrée dans une Chasse lancée (micro-décision 16), condition de lancement à deux joueurs, tirage au lancement par le jeu de règles, bilan par camp avec le temps joué jusqu'à la durée réglée (micro-décision 13).
-4. **`ServeurSocket`**: le refus de démarrage à un joueur, et le décompte annulé si le salon retombe à un joueur, par la condition de lancement existante.
-5. **La création** accepte le mode Chasse, et **la base** enregistre une partie Chasse, avec ses placements et ses gains.
+### Lot B2. Le serveur révisé
 
-### Lot C. Le client
+1. **Le bilan** redevient celui du Classique, temps joué jusqu'à la durée réglée compris; `placeDansLaChasse` et `campVainqueur` disparaissent s'ils ne servent plus.
+2. **Le tir en Chasse** passe par la demande de capture existante.
+3. **Le flux**: l'état tactique d'un traqueur (orientation, vies), le traqueur éliminé retiré des entités.
+4. **Les notifications**: une vie perdue et une élimination, adressées au traqueur.
+5. **Tests à travers le vrai serveur**: une chasse jouée jusqu'à une infection par un tir, une vie perdue sur un faux ninja, et la fin quand les traqueurs sont épuisés.
 
-1. **Création**: la tuile Chasse, sélectionnable, avec sa phrase; la tuile « À venir » reste pour Battle Royale et Chaos.
-2. **Salon**: la phrase de capture du mode; « Lancer » suspendu à un joueur, avec la raison; les réglages des Black Ninjas masqués.
-3. **HUD**: son rôle (proie ou traqueur), le nombre de proies restantes, et le classement en temps de survie.
-4. **Fin de partie**: l'issue (« Les proies ont survécu », « Les traqueurs l'emportent »), les survivants, les traqueurs, les temps de survie; le récapitulatif des gains inchangé.
-5. **Aide**: une ligne sur le mode Chasse. **Notifications**: l'infection dite comme telle, à l'infecté comme au traqueur.
+### Lot C. La page
+
+1. **Création**: la tuile Chasse et sa phrase; les Black Ninjas non proposés.
+2. **Salon**: « Lancer » suspendu à un joueur, avec la raison; pas de Black Ninjas au récapitulatif.
+3. **Jeu**: le bouton et la touche de capture pour un traqueur en jeu, son cône, ses vies; le rôle et les proies restantes; la minimap limitée à son camp; les points au classement.
+4. **Fin de partie**: le classement et le podium du Classique, et l'issue au titre.
+5. **Annonces**: l'infection, la vie perdue et l'élimination. **Aide**: une ligne sur le mode.
 
 ### Lot D. Bout en bout, mesure et documentation
 
-1. **Scénario** (`tests/e2e/chasse.spec.ts`): un hôte crée une partie Chasse; « Lancer » est suspendu tant qu'il est seul; un second joueur arrive, la partie se lance, chacun voit son rôle; le scénario lit le salon et le HUD sur un ordinateur et un téléphone.
-2. **Charge**: une partie Chasse pleine passe au banc (`pnpm charge --banc --mode chasse`), comparée au Classique; chiffres dans `docs/mesures/charge-serveur.md`.
-3. **Empreinte**: celle des quatre parties Classique de référence est identique à celle relevée avant le lot A.
-4. **Documentation**: cadrage (sections 1, 4, 5 et 6), journal de conception, ROADMAP, et CLAUDE.md: les comportements à préserver 1 et 4 doivent dire ce qu'ils deviennent en Chasse.
+1. **Scénario** (`tests/e2e/chasse.spec.ts`): « Lancer » suspendu seul; un second joueur arrive, la partie se lance, chacun voit son rôle; le traqueur a un bouton de capture et ses vies. Sur un ordinateur et sur un téléphone.
+2. **Charge**: `pnpm charge --banc --mode chasse`, comparé au Classique; chiffres dans `docs/mesures/charge-serveur.md`.
+3. **Empreinte** du Classique identique.
+4. **Documentation**: cadrage, journal de conception, ROADMAP, et CLAUDE.md (comportements à préserver 1, 2 et 4 en Chasse).
 
 ## Hors périmètre
 
-- Des traqueurs plus rapides, un radar ou une flèche vers les proies, un temps de survie par capture.
-- Les autres modes (Battle Royale, Chaos), et la Chasse en équipes ou en Tactique.
-- Le mode spectateur, l'entrée en cours de partie.
-- Des statistiques ou des récompenses propres au mode au-delà de la micro-décision 12.
+- Des traqueurs plus rapides, un radar, un temps de survie récompensé.
+- Les autres modes (Battle Royale, Chaos), la Chasse en équipes.
+- Le mode spectateur au-delà de la micro-décision 7, l'entrée en cours de partie.
 - Toute modification du comportement du Classique, du Tactique ou des Équipes, de `legacy/` ou de `tests/caracterisation/`.
 
 ## Tests requis
 
-- **Rôles (TU)**: devenir traqueur pose la couleur et le moment ensemble; une proie n'est pas traqueur; le délai de trois secondes, refusé à trois secondes pile et accordé juste après.
-- **Lancement (TU)**: un traqueur de 2 à 5 joueurs, deux de 6 à 10; tirage reproductible à graine égale; les autres modes ne tirent rien et leur état ne change pas.
-- **Infection (TU)**: un traqueur prêt infecte la proie qu'il touche, sur place; la proie protégée, invincible, ou le traqueur dans son délai ou dans sa seconde entre deux captures ne produisent rien; deux proies, deux traqueurs, une proie qui touche un traqueur ne produisent rien; aucun ninja repeint; l'événement de capture et les compteurs.
-- **Remplacement (TU)**: plus de traqueur à deux joueurs ou plus, une proie tirée au sort devient traqueur avec son délai; seul, rien; un traqueur absent compte.
-- **Malus et monde (TU)**: un malus frappe l'autre camp; aucun Black Ninja n'apparaît, quels que soient les réglages reçus; la couleur des traqueurs n'est jamais tirée pour un ninja, une zone de chaos ou une proie.
-- **Score et fin (TU)**: temps de survie d'une proie et d'un traqueur; ordre du classement; la partie est décidée quand la dernière proie tombe ou part, pas avant; le temps décide toujours.
-- **Moteur (TU)**: deux parties Chasse de même graine et mêmes entrées sont identiques; le jeu de règles élargi ne change rien au Classique, au Tactique et aux Équipes, et tous les tests existants restent verts sans modification de leurs attentes.
-- **Camps et récompenses (TU)**: issue, place des vainqueurs et des perdants, abandons; les Équipes inchangées.
-- **Salon et serveur (TI)**: capacité de dix; entrée refusée dans une Chasse lancée, retour après coupure accepté; lancement refusé seul; décompte annulé si le salon retombe à un joueur; réglages des Black Ninjas sans effet; une partie Chasse à travers le vrai serveur, jusqu'à une infection et la fin anticipée; bilan, temps joué jusqu'à la durée réglée.
-- **Base (TI)**: migration rejouable; une partie Chasse enregistrée, placements et gains compris.
-- **Client (TU)**: création d'une partie Chasse; salon (« Lancer » suspendu, Black Ninjas masqués); HUD (rôle, proies restantes); fin (les deux issues); notifications d'infection.
-- **Bout en bout**: le scénario du lot D, sans erreur de console.
+- **Rôles (TU)**: devenir traqueur pose la couleur, le moment et trois vies; le délai de trois secondes.
+- **Lancement et remplacement (TU)**: nombre de traqueurs tirés; remplacement après un départ, à deux proies au moins; aucun remplacement après une élimination.
+- **Tir (TU)**: la plus proche dans le cône est prise; infection d'une proie; vie perdue sur un faux ninja; élimination à la troisième; rien sur une proie protégée; tir dans le vide gratuit; une seconde d'attente; un traqueur non prêt ou éliminé ne tire pas; les traqueurs ne sont pas des cibles; ordre des tirs reproductible.
+- **Hors-jeu (TU)**: un traqueur éliminé ne bouge plus, ne ramasse rien, ne subit pas de malus; rien de tel dans les autres modes.
+- **Score et fin (TU)**: distance d'une proie, figée quand elle devient traqueur; points de capture et de vies; classement; fin sans proie, fin par traqueurs épuisés, temps.
+- **Moteur (TU)**: déterminisme; les trois autres modes inchangés.
+- **Serveur (TI)**: entrée refusée, lancement à deux, tir à travers le réseau, vie perdue annoncée, fin par épuisement, bilan.
+- **Base (TI)**: une partie Chasse enregistrée.
+- **Client (TU)**: création, salon, HUD (rôle, vies, bouton), fin, annonces.
+- **Bout en bout**: le scénario du lot D.
 
 ## Définition de terminé
 
@@ -144,18 +140,16 @@ Conditions de ROADMAP réunies, plus:
 
 1. Une partie Chasse se crée, se prépare au salon, se joue et s'enregistre depuis la page, au bureau et sur téléphone.
 2. **Le Classique, le Tactique et les Équipes n'ont pas changé**: tests existants inchangés, empreinte du jeu des quatre parties de référence identique.
-3. Ajouter le mode n'a demandé que des ajouts aux points d'extension, plus l'élargissement du jeu de règles (lot A, point 3), décrit dans la section 6 du cadrage.
-4. La couverture de `packages/sim` ne baisse pas (99,79 pour cent au handoff 7.2).
-5. Le cadrage, le journal de conception et CLAUDE.md décrivent ce qui a été construit.
+3. La couverture de `packages/sim` ne baisse pas (99,79 pour cent au handoff 7.2).
+4. Le cadrage, le journal de conception et CLAUDE.md décrivent ce qui a été construit.
 
 ## Points de vigilance
 
-1. **Le tirage au lancement et le remplacement consomment l'aléa.** Ils ne doivent le faire qu'en Chasse: un tirage de plus en Classique décalerait toute la partie. L'empreinte est le garde-fou, vérifiée à la fin du lot A.
-2. **La couleur et la table des traqueurs ne doivent jamais diverger.** Une seule fonction les écrit; aucun autre chemin (réglages changés au salon, retour de l'étape 2.5) ne donne la couleur des traqueurs.
-3. **La fin anticipée et le premier battement.** Une Chasse sans traqueur tiré n'est pas décidée pour autant; une Chasse au salon n'est jamais évaluée comme terminée.
-4. **Les points d'une proie montent chaque seconde**: le classement change à chaque seconde, et le flux d'état l'envoie. Le banc dit ce que cela coûte.
-5. **L'exclusion d'une couleur de plus dans les tirages** ne change un tirage que s'il tombait exactement sur elle: l'empreinte doit le confirmer.
+1. **Les tirages ne se font qu'en Chasse**: ordre des tirs, tirage des traqueurs, remplacement. L'empreinte est le garde-fou.
+2. **Le hors-jeu touche le déplacement et le ramassage de tous les modes**: pour les autres modes, la question doit rendre « personne », sans aucun coût ni tirage.
+3. **Épuisement et départ** mènent à deux issues différentes: le test doit couvrir les deux ordres (un éliminé puis un départ, un départ puis une élimination).
+4. **Les charges d'un traqueur sont ses vies**: aucun écran ne doit les présenter comme des charges du Tactique.
 
 ## Rituel de fin de session
 
-Écrire `docs/handoffs/etape-7-3-handoff.md`: les décisions construites, les écarts à cette fiche, les chiffres du banc, l'état de la CI. Prochaine action exacte: demander au porteur du projet la fonctionnalité reportée suivante (Battle Royale, Chaos, pass de saison, skins, clans), trancher ses règles, puis rédiger sa fiche. Commiter.
+Écrire `docs/handoffs/etape-7-3-handoff.md`: les décisions construites, la révision des règles en cours d'étape, les écarts à cette fiche, les chiffres du banc, l'état de la CI. Prochaine action exacte: demander au porteur du projet la fonctionnalité reportée suivante (Battle Royale, Chaos, pass de saison, skins, clans), trancher ses règles, puis rédiger sa fiche. Commiter.
