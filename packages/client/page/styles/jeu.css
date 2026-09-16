@@ -494,6 +494,49 @@
   gap: 5px;
 }
 
+/*
+ * Le role dans une partie Chasse (etape 7.3), a droite sous les boutons: le haut du centre
+ * appartient au temps restant et aux annonces.
+ */
+.hud-chasse {
+  --couleur-camp: var(--cyan);
+
+  position: absolute;
+  top: 70px;
+  right: 14px;
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  padding: 8px 16px;
+  border: 1px solid var(--couleur-camp);
+  border-radius: 14px;
+  background: var(--fond-verre);
+  backdrop-filter: blur(8px);
+  text-align: right;
+}
+
+.hud-chasse[hidden] {
+  display: none;
+}
+
+.hud-chasse[data-camp='traqueurs'] {
+  --couleur-camp: var(--rose);
+}
+
+.hud-chasse-role {
+  color: var(--couleur-camp);
+  font-family: var(--police-titre);
+  font-size: 18px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hud-chasse-consigne,
+.hud-chasse-proies {
+  color: var(--texte-secondaire);
+  font-size: 12px;
+}
+
 .hud-charge {
   position: relative;
   width: 10px;
@@ -506,6 +549,16 @@
 .hud-charge.pleine {
   background: #cc99ff;
   box-shadow: 0 0 6px rgba(204, 153, 255, 0.8);
+}
+
+/* Les vies d'un traqueur de la Chasse (etape 7.3). */
+.hud-charges.vies .hud-charge {
+  box-shadow: inset 0 0 0 1px rgba(255, 46, 126, 0.6);
+}
+
+.hud-charges.vies .hud-charge.pleine {
+  background: var(--rose);
+  box-shadow: 0 0 6px rgba(255, 46, 126, 0.8);
 }
 
 .hud-charge.en-recharge::after {
@@ -551,6 +604,16 @@
   .hud-minimap {
     transform: scale(0.72);
     transform-origin: bottom right;
+  }
+
+  /* A droite, a la hauteur du classement, qui occupe la gauche. */
+  .hud-chasse {
+    top: 128px;
+    padding: 6px 12px;
+  }
+
+  .hud-chasse-role {
+    font-size: 15px;
   }
 
   .ecran-jeu {

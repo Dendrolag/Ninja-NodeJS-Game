@@ -20,7 +20,7 @@
  * le joueur a sous les yeux, et le lui dire ailleurs le ferait chercher.
  */
 
-import type { Refus, TypeMalus } from '@neon-ninja/shared';
+import type { Mode, Refus, TypeMalus } from '@neon-ninja/shared';
 
 import type { EtatClient } from './etat.js';
 import type { FaitDeJeu } from './faits.js';
@@ -76,26 +76,43 @@ function ninjas(nombre: number): string {
  * Tous les faits en ont une, sauf le tir du mode Tactique: il se voit sur le terrain,
  * et, s'il prend un joueur, la capture s'annonce elle-meme. Une phrase de plus a
  * chaque tir noierait les autres.
+ *
+ * EN CHASSE (etape 7.3), une capture est une infection: la proie attrapee devient
+ * traqueur, et aucun ninja ne change de main. Les phrases le disent.
+ *
+ * @param mode Le mode de la partie, quand on le connait.
  */
-export function annonceDuFait(fait: FaitDeJeu): Annonce | undefined {
+export function annonceDuFait(fait: FaitDeJeu, mode?: Mode): Annonce | undefined {
   switch (fait.nature) {
     case 'tirDeCapture':
       return undefined;
 
     case 'captureSubie':
-      return { texte: `Capturé par ${fait.charge.parPseudo} !`, ton: 'alerte' };
+      return mode === 'chasse'
+        ? { texte: `${fait.charge.parPseudo} vous a attrapé : vous êtes traqueur !`, ton: 'alerte' }
+        : { texte: `Capturé par ${fait.charge.parPseudo} !`, ton: 'alerte' };
 
     case 'captureReussie':
-      return {
-        texte: `Vous avez capturé ${fait.charge.victimePseudo} : +${ninjas(fait.charge.botsGagnes)}`,
-        ton: 'succes',
-      };
+      return mode === 'chasse'
+        ? { texte: `${fait.charge.victimePseudo} rejoint les traqueurs`, ton: 'succes' }
+        : {
+            texte: `Vous avez capturé ${fait.charge.victimePseudo} : +${ninjas(fait.charge.botsGagnes)}`,
+            ton: 'succes',
+          };
 
     case 'captureParBotNoir':
       return {
         texte: `Un Black Ninja vous a capturé : ${ninjas(fait.charge.botsPerdus)} perdus`,
         ton: 'alerte',
       };
+
+    case 'vieDeTraqueurPerdue':
+      return fait.charge.viesRestantes === 0
+        ? { texte: 'C’était un faux ninja : éliminé, vous regardez la suite', ton: 'alerte' }
+        : {
+            texte: `C’était un faux ninja : ${String(fait.charge.viesRestantes)} ${fait.charge.viesRestantes > 1 ? 'vies' : 'vie'} restante${fait.charge.viesRestantes > 1 ? 's' : ''}`,
+            ton: 'alerte',
+          };
 
     case 'botNoirDetruit':
       return {
@@ -163,7 +180,7 @@ export function annoncesDuChangement(avant: EtatClient, apres: EtatClient): read
     const connus = new Set(avant.journal);
 
     for (const fait of apres.journal) {
-      const annonce = connus.has(fait) ? undefined : annonceDuFait(fait);
+      const annonce = connus.has(fait) ? undefined : annonceDuFait(fait, apres.salon?.mode);
 
       if (annonce !== undefined) {
         annonces.push(annonce);

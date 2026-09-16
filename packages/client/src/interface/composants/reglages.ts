@@ -18,7 +18,12 @@
  * le serveur donnerait.
  */
 
-import type { IdentifiantCarte, ReglagesPartie, ResultatValidation } from '@neon-ninja/shared';
+import type {
+  IdentifiantCarte,
+  Mode,
+  ReglagesPartie,
+  ResultatValidation,
+} from '@neon-ninja/shared';
 import {
   CARTES,
   RACINE_RESSOURCES,
@@ -32,6 +37,7 @@ import type { ChampReglage, GroupeReglages, ValeursFormulaire } from '../modeles
 import {
   GROUPES_REGLAGES,
   erreursParChamp,
+  groupePropose,
   tousLesChamps,
   valeursDepuisReglages,
   verifierLesValeurs,
@@ -66,6 +72,8 @@ export interface FormulaireReglages {
   ecrire(valeurs: ValeursFormulaire): void;
   /** Verifie la saisie, montre les motifs, et rend le verdict. */
   verifier(): ResultatValidation<ReglagesPartie>;
+  /** Ne propose que les groupes que ce mode laisse en jeu (etape 7.3). */
+  adapterAuMode(mode: Mode): void;
   demonter(): void;
 }
 
@@ -84,6 +92,8 @@ export function monterFormulaireReglages(options: OptionsFormulaireReglages): Fo
   const valeursAffichees = new Map<string, { sortie: HTMLOutputElement; unite: string }>();
 
   const formulaire = creer(doc, 'form', { classe: 'reglages', attributs: { novalidate: '' } });
+  /** L'element de chaque groupe, pour le cacher dans un mode qui le retire. */
+  const groupesMontes: { readonly groupe: GroupeReglages; readonly element: HTMLElement }[] = [];
 
   const groupeEnElement = (groupe: GroupeReglages): HTMLElement => {
     const ensemble = creer(
@@ -107,8 +117,13 @@ export function monterFormulaireReglages(options: OptionsFormulaireReglages): Fo
       );
     }
 
+    groupesMontes.push({ groupe, element: ensemble });
+
     return ensemble;
   };
+
+  /** La liste des reglages avances, sous leur titre replie. */
+  const listeDesAvances = creer(doc, 'span');
 
   const [essentiel, ...avances] = GROUPES_REGLAGES;
 
@@ -124,9 +139,7 @@ export function monterFormulaireReglages(options: OptionsFormulaireReglages): Fo
           'summary',
           {},
           creer(doc, 'strong', { texte: 'Réglages avancés' }),
-          creer(doc, 'span', {
-            texte: avances.map((groupe) => groupe.titre.toLocaleLowerCase('fr')).join(' · '),
-          }),
+          listeDesAvances,
         ),
         creer(doc, 'div', { classe: 'reglages-groupes' }, ...avances.map(groupeEnElement)),
       ),
@@ -204,6 +217,20 @@ export function monterFormulaireReglages(options: OptionsFormulaireReglages): Fo
     return verdict;
   };
 
+  const adapterAuMode = (mode: Mode): void => {
+    for (const { groupe, element } of groupesMontes) {
+      montrer(element, groupePropose(groupe, mode));
+    }
+
+    ecrireTexte(
+      listeDesAvances,
+      avances
+        .filter((groupe) => groupePropose(groupe, mode))
+        .map((groupe) => groupe.titre.toLocaleLowerCase('fr'))
+        .join(' · '),
+    );
+  };
+
   const surSaisie = (): void => {
     const verdict = verifier();
     options.surChangement?.(verdict);
@@ -220,12 +247,14 @@ export function monterFormulaireReglages(options: OptionsFormulaireReglages): Fo
 
   ecrire(valeursDepuisReglages(REGLAGES_PAR_DEFAUT));
   verifier();
+  adapterAuMode('classique');
 
   return {
     racine: formulaire,
     lire,
     ecrire,
     verifier,
+    adapterAuMode,
 
     demonter() {
       formulaire.removeEventListener('input', surSaisie);
@@ -251,8 +280,11 @@ export interface OptionsPanneauReglages {
 export interface PanneauReglages {
   readonly racine: HTMLElement;
   readonly ouvert: boolean;
-  /** Ouvre le panneau, rempli avec ces reglages. */
-  ouvrirAvec(reglages: ReglagesPartie): void;
+  /**
+   * Ouvre le panneau, rempli avec ces reglages, et sans les groupes que le mode de la
+   * partie retire du jeu.
+   */
+  ouvrirAvec(reglages: ReglagesPartie, mode?: Mode): void;
   fermer(): void;
   demonter(): void;
 }
@@ -316,7 +348,8 @@ export function monterPanneauReglages(options: OptionsPanneauReglages): PanneauR
       return fenetre.ouverte;
     },
 
-    ouvrirAvec(reglages) {
+    ouvrirAvec(reglages, mode = 'classique') {
+      formulaire.adapterAuMode(mode);
       formulaire.ecrire(valeursDepuisReglages(reglages));
       enregistrer.disabled = !formulaire.verifier().valide;
       fenetre.ouvrir();

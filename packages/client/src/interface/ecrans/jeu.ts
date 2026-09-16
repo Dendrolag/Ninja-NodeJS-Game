@@ -52,7 +52,10 @@ export function monterJeu(contexte: ContexteEcran): EcranAffiche {
   // Les reglages sont figes au lancement: ceux du salon sont ceux de la partie.
   const reglages = client.etat.salon?.reglages ?? REGLAGES_PAR_DEFAUT;
   const carte = CARTES[reglages.carte];
-  const tactique = client.etat.salon?.mode === 'tactique';
+  // On tire en Tactique, et en traqueur dans la Chasse (etape 7.3): le bouton ne se montre
+  // qu'a qui porte une arme, une proie n'en a pas.
+  const mode = client.etat.salon?.mode;
+  const tactique = mode === 'tactique' || mode === 'chasse';
 
   const controles = new Controles();
   controles.reinitialiser();
@@ -109,9 +112,12 @@ export function monterJeu(contexte: ContexteEcran): EcranAffiche {
     { classe: 'jeu-actions' },
     creer(doc, 'span', {
       classe: 'jeu-rappel',
-      texte: tactique
-        ? 'ZQSD ou flèches · Espace pour capturer · F pour vous localiser'
-        : 'ZQSD ou flèches · F pour vous localiser',
+      texte:
+        mode === 'chasse'
+          ? 'ZQSD ou flèches · Espace pour tirer, en traqueur · F pour vous localiser'
+          : tactique
+            ? 'ZQSD ou flèches · Espace pour capturer · F pour vous localiser'
+            : 'ZQSD ou flèches · F pour vous localiser',
     }),
     bouton(
       doc,

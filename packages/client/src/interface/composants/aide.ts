@@ -15,7 +15,7 @@
  */
 
 import type { TypeBonus, TypeMalus, TypeZone } from '@neon-ninja/shared';
-import { RACINE_RESSOURCES, SCORE, TACTIQUE, cheminObjet } from '@neon-ninja/shared';
+import { CHASSE, RACINE_RESSOURCES, SCORE, TACTIQUE, cheminObjet } from '@neon-ninja/shared';
 
 import { APPARENCE_OBJET, APPARENCE_ZONE } from '../../rendu/apparence.js';
 import { creer } from '../dom.js';
@@ -83,6 +83,9 @@ export function monterAide(doc: Document): Fenetre {
       creer(doc, 'p', {
         texte:
           'Dans le mode Équipes, deux équipes s’affrontent, une couleur chacune : les faux ninjas que vous touchez rejoignent votre équipe, dont le score est la somme de ses ninjas et des points de Black Ninjas de ses membres. Capturer un adversaire vous donne sa part des ninjas de son équipe, et un malus frappe l’équipe adverse.',
+      }),
+      creer(doc, 'p', {
+        texte: `Dans le mode Chasse, des traqueurs sont tirés au sort. Ils tirent devant eux, comme en Tactique, et le tir prend ce qui est le plus proche : une proie devient traqueur à son tour, un faux ninja coûte une vie. À la troisième, le traqueur est éliminé. Une proie marque un point tous les ${String(CHASSE.PIXELS_PAR_POINT)} pixels parcourus : cachée et immobile, elle ne marque rien. Un traqueur marque ${String(CHASSE.POINTS_PAR_CAPTURE)} points par capture et ${String(CHASSE.POINTS_PAR_VIE)} par vie qui lui reste. Il n’y a pas de Black Ninjas, et un malus frappe l’autre camp.`,
       }),
     ),
     liste(doc, 'Bonus', Object.entries(EFFETS_BONUS) as [TypeBonus, string][], true),

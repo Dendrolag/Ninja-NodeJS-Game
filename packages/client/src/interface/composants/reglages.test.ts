@@ -50,6 +50,18 @@ afterEach(() => {
   panneau.demonter();
 });
 
+describe('le panneau de reglages d une partie Chasse (etape 7.3)', () => {
+  it('ne propose pas les Black Ninjas, que le mode retire du jeu', () => {
+    const groupe = (): Element => champ('botsNoirs.actifs').closest('fieldset') as Element;
+
+    panneau.ouvrirAvec(REGLAGES_PAR_DEFAUT, 'chasse');
+    expect(estCache(groupe())).toBe(true);
+
+    panneau.ouvrirAvec(REGLAGES_PAR_DEFAUT, 'classique');
+    expect(estCache(groupe())).toBe(false);
+  });
+});
+
 describe('le panneau de reglages', () => {
   it('s ouvre rempli avec les reglages de la partie', () => {
     expect(panneau.ouvert).toBe(true);

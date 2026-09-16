@@ -72,7 +72,7 @@ describe('l ecran de creation', () => {
 
     const modes = [...hote.querySelectorAll<HTMLInputElement>('input[name="mode"]')];
 
-    expect(modes.map((mode) => mode.value)).toEqual(['classique', 'tactique', 'equipes']);
+    expect(modes.map((mode) => mode.value)).toEqual(['classique', 'tactique', 'equipes', 'chasse']);
     expect(champ('input[name="mode"][value="classique"]').checked).toBe(true);
 
     const aVenir = obligatoire(hote, '.tuile-a-venir');
@@ -109,6 +109,31 @@ describe('l ecran de creation', () => {
     expect(reseau.dernier('creerPartie')?.[0]).toMatchObject({
       configuration: { mode: 'equipes', visibilite: 'publique' },
     });
+  });
+
+  it('cree une partie Chasse pour dix joueurs, sans proposer les Black Ninjas', () => {
+    const blackNinjas = (): Element =>
+      champ('[data-chemin="botsNoirs.actifs"]').closest('fieldset') as Element;
+
+    expect(estCache(blackNinjas())).toBe(false);
+
+    cocher(champ('input[name="mode"][value="chasse"]'), true);
+
+    expect(obligatoire(hote, '.creation-recapitulatif h2').textContent).toBe(
+      'Chasse · Rainy Tokyo',
+    );
+    expect(obligatoire(hote, '.creation-recapitulatif').textContent).toContain('10 joueurs');
+    expect(estCache(blackNinjas())).toBe(true);
+
+    creerLeSalon().click();
+
+    expect(reseau.dernier('creerPartie')?.[0]).toMatchObject({
+      configuration: { mode: 'chasse', visibilite: 'publique' },
+    });
+
+    cocher(champ('input[name="mode"][value="classique"]'), true);
+
+    expect(estCache(blackNinjas())).toBe(false);
   });
 
   it('signale une configuration invalide sur son champ, et ne la laisse pas partir', () => {

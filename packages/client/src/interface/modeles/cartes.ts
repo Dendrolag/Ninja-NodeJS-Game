@@ -58,7 +58,7 @@ export const CAPTURES_DES_MODES: Readonly<Record<Mode, string>> = {
   equipes:
     'On capture en touchant, en équipe : un faux ninja passe à la couleur de votre équipe, un adversaire vous cède sa part des ninjas de son équipe.',
   chasse:
-    'Seuls les traqueurs capturent, en touchant : la proie attrapée devient traqueur à son tour. Les proies gagnent s’il en reste une à la fin.',
+    'Les traqueurs tirent devant eux, avec Espace ou le bouton Capturer : une proie touchée devient traqueur, un faux ninja leur coûte une vie sur trois. Les proies marquent en bougeant.',
 };
 
 /** Le nom d'une carte tel qu'on l'affiche, mode miroir compris. */

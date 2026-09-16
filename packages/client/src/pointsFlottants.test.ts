@@ -9,6 +9,7 @@
  */
 
 import type { EntiteVue } from '@neon-ninja/shared';
+import { REGLAGES_PAR_DEFAUT } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
 import type { EtatClient } from './etat.js';
@@ -143,5 +144,28 @@ describe('texteDesPoints', () => {
 
   it('ecrit zero sans signe', () => {
     expect(texteDesPoints(0)).toBe('0');
+  });
+
+  it('ne fait rien s envoler d une capture en Chasse, qui ne rapporte aucun ninja', () => {
+    const salonChasse = {
+      idRoom: 'room-1',
+      statut: 'enCours' as const,
+      mode: 'chasse' as const,
+      visibilite: 'publique' as const,
+      capacite: 10,
+      joueurs: [],
+      reglages: REGLAGES_PAR_DEFAUT,
+    };
+    const partie = vue([joueur('moi', '#FF2E7E'), joueur('bob', '#00FF00', 40, 60)]);
+    const avant = etat({ partie, salon: salonChasse });
+    const apres = etat({
+      partie,
+      salon: salonChasse,
+      journal: [
+        fait('captureReussie', { victimePseudo: 'bob', botsGagnes: 0, capturesTotal: 1 }, 0),
+      ],
+    });
+
+    expect(pointsDuChangement(avant, apres)).toEqual([]);
   });
 });

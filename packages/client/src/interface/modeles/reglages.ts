@@ -23,6 +23,7 @@
 import type {
   ErreurValidation,
   Intervalle,
+  Mode,
   ReglagesPartie,
   ReglagesPartiels,
   ResultatValidation,
@@ -65,6 +66,17 @@ export interface SectionReglages {
 export interface GroupeReglages {
   readonly titre: string;
   readonly sections: readonly SectionReglages[];
+  /**
+   * Les modes qui retirent ce groupe du jeu, quoi que l'hote regle: le formulaire ne le
+   * propose pas dans ces modes. Les Black Ninjas n'existent pas en Chasse (etape 7.3,
+   * imposerLesReglagesDuMode dans packages/shared).
+   */
+  readonly absentEn?: readonly Mode[];
+}
+
+/** Ce groupe se regle-t-il dans ce mode ? */
+export function groupePropose(groupe: GroupeReglages, mode: Mode): boolean {
+  return groupe.absentEn?.includes(mode) !== true;
 }
 
 /** Un entier en secondes. */
@@ -130,6 +142,7 @@ export const GROUPES_REGLAGES: readonly GroupeReglages[] = [
   },
   {
     titre: 'Black Ninjas',
+    absentEn: ['chasse'],
     sections: [
       {
         titre: undefined,

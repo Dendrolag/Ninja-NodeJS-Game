@@ -4,8 +4,8 @@
  * FONCTION PURE, COMME LA SCENE. On lui donne l'etat et l'instant, elle rend la
  * description de ce qu'il faut afficher: le temps restant deja mis en forme, les
  * lignes du classement, les effets en cours avec leur reste, les points de la
- * minimap, et, dans le mode Tactique, nos charges. Ecrire cela dans le document est
- * le travail d'un autre fichier.
+ * minimap, dans le mode Tactique, nos charges, et, dans le mode Chasse, notre role.
+ * Ecrire cela dans le document est le travail d'un autre fichier.
  *
  * POURQUOI CE DECOUPAGE ICI AUSSI. Le client d'origine avait quinze fonctions qui
  * ecrivaient dans le document, chacune allant chercher ses donnees dans une
@@ -20,12 +20,22 @@
  * document dessine l'interface par-dessus. C'est la pile annoncee par CLAUDE.md.
  */
 
-import type { Couleur, LigneClassement, TypeBonus, TypeMalus } from '@neon-ninja/shared';
+import type {
+  CampDeChasse,
+  Couleur,
+  LigneClassement,
+  Mode,
+  TypeBonus,
+  TypeMalus,
+} from '@neon-ninja/shared';
 import {
+  CHASSE,
   COULEURS_DES_EQUIPES,
   TACTIQUE,
+  campDeCouleur,
   classementDesEquipes,
   equipeDeCouleur,
+  proiesRestantes,
 } from '@neon-ninja/shared';
 
 import type { EtatClient } from '../etat.js';
@@ -81,6 +91,17 @@ export interface ChargesHud {
   readonly recharge: number;
 }
 
+/** Notre role dans une partie Chasse, et ce qu'il reste de proies (etape 7.3). */
+export interface ChasseHud {
+  readonly camp: CampDeChasse;
+  /** « Traqueur », « Éliminé » ou « Proie ». */
+  readonly role: string;
+  /** Ce que le role demande, en quelques mots. */
+  readonly consigne: string;
+  /** « 3 proies restantes », « 1 proie restante » ou « Plus aucune proie ». */
+  readonly proies: string;
+}
+
 /** Tout ce que la surcouche affiche a un instant donne. */
 export interface Hud {
   /** Le temps restant, mis en forme minutes deux-points secondes. */
@@ -103,6 +124,8 @@ export interface Hud {
   readonly minimap: readonly PointMinimap[];
   /** Nos charges. Absentes hors du mode Tactique, ou tant qu'on n'est pas sur la carte. */
   readonly charges: ChargesHud | undefined;
+  /** Notre role. Absent hors du mode Chasse, ou tant qu'on n'est pas au classement. */
+  readonly chasse: ChasseHud | undefined;
 }
 
 /** Un HUD vide, celui d'un ecran hors partie. */
@@ -117,6 +140,7 @@ export const HUD_VIDE: Hud = {
   effets: [],
   minimap: [],
   charges: undefined,
+  chasse: undefined,
 };
 
 /**
@@ -146,6 +170,8 @@ export function construireHud(etat: EtatClient, maintenant: number): Hud {
     return HUD_VIDE;
   }
 
+  const mode = etat.salon?.mode;
+
   return {
     temps: formaterDuree(partie.tempsRestantMs),
     tempsRestantMs: partie.tempsRestantMs,
@@ -153,10 +179,11 @@ export function construireHud(etat: EtatClient, maintenant: number): Hud {
     enPause: partie.enPause,
     pausePar: etat.pausePar,
     retourEnCours: etat.connexion === 'retour',
-    classement: classementHud(partie.classement, etat.moi, etat.salon?.mode === 'equipes'),
+    classement: classementHud(partie.classement, etat.moi, mode),
     effets: effetsHud(etat, maintenant),
-    minimap: minimapHud(etat),
-    charges: chargesHud(etat),
+    minimap: minimapHud(etat, mode),
+    charges: chargesHud(etat, mode),
+    chasse: chasseHud(etat, mode),
   };
 }
 
@@ -171,9 +198,9 @@ export function construireHud(etat: EtatClient, maintenant: number): Hud {
 function classementHud(
   classement: readonly LigneClassement[],
   moi: string | undefined,
-  enEquipes: boolean,
+  mode: Mode | undefined,
 ): readonly LigneHud[] {
-  if (enEquipes) {
+  if (mode === 'equipes') {
     return classementDesEquipesHud(classement, moi);
   }
 
@@ -234,17 +261,61 @@ function effetsHud(etat: EtatClient, maintenant: number): readonly EffetHud[] {
  * ON N'Y MET QUE LES JOUEURS, pas les bots. Une carte couverte de cent points
  * blancs ne dit rien; les joueurs, eux, sont ce que l'on cherche du regard. Le
  * jeu d'origine n'avait pas de minimap du tout: elle vient des maquettes.
+ *
+ * EN CHASSE, ON N'Y MET QUE SON CAMP (etape 7.3, decision du porteur du projet du 16
+ * septembre 2026). Les proies se cachent parmi les faux ninjas: une minimap qui les
+ * montrerait aux traqueurs defairait le camouflage. Chacun voit donc les siens, et une
+ * proie infectee decouvre ses nouveaux allies. Notre camp se lit a notre couleur dans le
+ * classement, ou figure aussi un traqueur elimine, qui n'est plus sur la carte.
  */
-function minimapHud(etat: EtatClient): readonly PointMinimap[] {
-  return (etat.partie?.entites ?? [])
-    .filter((entite) => entite.type === 'joueur')
-    .map((entite) => ({
-      id: entite.id,
-      x: entite.x,
-      y: entite.y,
-      couleur: entite.couleur,
-      moi: entite.id === etat.moi,
-    }));
+function minimapHud(etat: EtatClient, mode: Mode | undefined): readonly PointMinimap[] {
+  const joueurs = (etat.partie?.entites ?? []).filter((entite) => entite.type === 'joueur');
+  const notre = etat.partie?.classement.find((ligne) => ligne.id === etat.moi);
+  const visibles =
+    mode === 'chasse' && notre !== undefined
+      ? joueurs.filter((entite) => campDeCouleur(entite.couleur) === campDeCouleur(notre.couleur))
+      : joueurs;
+
+  return visibles.map((entite) => ({
+    id: entite.id,
+    x: entite.x,
+    y: entite.y,
+    couleur: entite.couleur,
+    moi: entite.id === etat.moi,
+  }));
+}
+
+/**
+ * Notre role dans une partie Chasse, lu a notre couleur dans le classement (etape 7.3).
+ *
+ * Un traqueur au classement qui n'est plus sur la carte a ete elimine: il regarde la suite.
+ */
+function chasseHud(etat: EtatClient, mode: Mode | undefined): ChasseHud | undefined {
+  const classement = etat.partie?.classement ?? [];
+  const notre = classement.find((ligne) => ligne.id === etat.moi);
+
+  if (mode !== 'chasse' || notre === undefined) {
+    return undefined;
+  }
+
+  const camp = campDeCouleur(notre.couleur);
+  const restantes = proiesRestantes(classement);
+  const elimine = camp === 'traqueurs' && moiDansLaPartie(etat) === undefined;
+
+  return {
+    camp,
+    role: camp === 'proies' ? 'Proie' : elimine ? 'Éliminé' : 'Traqueur',
+    consigne:
+      camp === 'proies'
+        ? 'Cachez-vous, et bougez pour marquer'
+        : elimine
+          ? 'Vous regardez la suite'
+          : 'Visez les vrais joueurs',
+    proies:
+      restantes === 0
+        ? 'Plus aucune proie'
+        : `${String(restantes)} ${restantes > 1 ? 'proies restantes' : 'proie restante'}`,
+  };
 }
 
 /**
@@ -252,8 +323,11 @@ function minimapHud(etat: EtatClient): readonly PointMinimap[] {
  *
  * L'attente de la prochaine vient du dernier battement recu: elle avance par
  * vingtiemes de seconde, ce qui ne se voit pas sur une jauge de cinq secondes.
+ *
+ * EN CHASSE (etape 7.3), l'arme d'un traqueur voyage de la meme facon, et ses charges sont
+ * ses vies: trois au plus, et aucune ne revient. Une proie n'en a pas.
  */
-function chargesHud(etat: EtatClient): ChargesHud | undefined {
+function chargesHud(etat: EtatClient, mode: Mode | undefined): ChargesHud | undefined {
   const moi = moiDansLaPartie(etat);
 
   if (moi?.type !== 'joueur' || moi.tactique === undefined) {
@@ -261,6 +335,11 @@ function chargesHud(etat: EtatClient): ChargesHud | undefined {
   }
 
   const { charges, avantProchaineChargeMs } = moi.tactique;
+
+  if (mode === 'chasse') {
+    return { disponibles: charges, maximum: CHASSE.VIES_DES_TRAQUEURS, recharge: 0 };
+  }
+
   const enCours = 1 - avantProchaineChargeMs / TACTIQUE.RECHARGE_MS;
 
   return {

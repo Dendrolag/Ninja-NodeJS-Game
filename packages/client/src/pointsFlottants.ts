@@ -77,7 +77,8 @@ function pointsDesFaits(avant: EtatClient, apres: EtatClient): readonly PointsGa
       points.push({ valeur, genre: 'botNoir', x, y });
     }
 
-    if (fait.nature === 'captureReussie') {
+    // En Chasse, attraper une proie ne rapporte aucun ninja: aucun point ne s'envole.
+    if (fait.nature === 'captureReussie' && apres.salon?.mode !== 'chasse') {
       const victime = (avant.partie ?? apres.partie)?.entites.find(
         (entite) => entite.type === 'joueur' && entite.pseudo === fait.charge.victimePseudo,
       );

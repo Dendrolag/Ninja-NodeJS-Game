@@ -27,7 +27,7 @@
 import type { DimensionsCarte } from '@neon-ninja/shared';
 
 import type { EtatManette } from '../controles/tactile.js';
-import type { ChargesHud, Hud, LigneHud, PointMinimap } from './modele.js';
+import type { ChargesHud, ChasseHud, Hud, LigneHud, PointMinimap } from './modele.js';
 
 /** Cote de la minimap, en pixels d'ecran. */
 export const COTE_MINIMAP = 160;
@@ -72,6 +72,7 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
   retour.setAttribute('role', 'status');
   retour.textContent = 'Connexion perdue. Retour dans la partie…';
   retour.hidden = true;
+  const chasse = monterChasse(doc, racine);
   const classement = element(doc, 'ol', 'hud-classement', racine);
   const effets = element(doc, 'ul', 'hud-effets', racine);
   const minimap = element(doc, 'div', 'hud-minimap', racine);
@@ -106,10 +107,12 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
       pause.hidden = !hud.enPause || hud.retourEnCours;
       retour.hidden = !hud.retourEnCours;
 
+      chasse.afficher(hud.chasse);
       majClassement(doc, classement, lignes, hud.classement);
       majEffets(doc, effets, hud);
       majMinimap(doc, minimap, points, hud.minimap, options.carte);
-      capture?.afficher(hud.charges);
+      // En Chasse, les charges d'un traqueur sont ses vies (etape 7.3).
+      capture?.afficher(hud.charges, hud.chasse !== undefined);
     },
 
     afficherLaManette(etat: EtatManette) {
@@ -145,12 +148,14 @@ function element(doc: Document, balise: string, classe: string, parent: Element)
 
 /** Le bouton de capture, qui montre aussi nos charges. */
 interface BoutonDeCapture {
-  afficher(charges: ChargesHud | undefined): void;
+  /** Montre nos charges, ou, en Chasse, nos vies. */
+  afficher(charges: ChargesHud | undefined, enVies: boolean): void;
   demonter(): void;
 }
 
 /**
- * Pose le bouton de capture du mode Tactique (etape 7.1).
+ * Pose le bouton de capture du mode Tactique (etape 7.1), et du traqueur de la Chasse
+ * (etape 7.3), dont les points sont les vies.
  *
  * IL REAGIT A L'APPUI, PAS AU CLIC. Un clic attend que le doigt se leve, et il
  * n'arrive pas toujours quand un autre doigt tient la manette: sur telephone, le
@@ -186,8 +191,9 @@ function monterCapture(doc: Document, parent: HTMLElement, capturer: () => void)
   let etiquette = '';
 
   return {
-    afficher(charges) {
+    afficher(charges, enVies) {
       bouton.hidden = charges === undefined;
+      jauge.classList.toggle('vies', enVies);
 
       if (charges === undefined) {
         return;
@@ -207,7 +213,7 @@ function monterCapture(doc: Document, parent: HTMLElement, capturer: () => void)
 
       bouton.classList.toggle('vide', charges.disponibles === 0);
 
-      const nouvelle = `Capturer, ${String(charges.disponibles)} charges sur ${String(charges.maximum)}`;
+      const nouvelle = `Capturer, ${String(charges.disponibles)} ${enVies ? 'vies' : 'charges'} sur ${String(charges.maximum)}`;
 
       if (nouvelle !== etiquette) {
         etiquette = nouvelle;
@@ -217,6 +223,39 @@ function monterCapture(doc: Document, parent: HTMLElement, capturer: () => void)
 
     demonter() {
       bouton.removeEventListener('pointerdown', surAppui);
+    },
+  };
+}
+
+/** Le bandeau de notre role, dans une partie Chasse. */
+interface BandeauDeChasse {
+  afficher(chasse: ChasseHud | undefined): void;
+}
+
+/**
+ * Le bandeau qui dit notre role dans une partie Chasse, et les proies restantes (etape
+ * 7.3). Cache hors de ce mode.
+ */
+function monterChasse(doc: Document, parent: HTMLElement): BandeauDeChasse {
+  const bandeau = element(doc, 'div', 'hud-chasse', parent);
+  bandeau.setAttribute('role', 'status');
+  bandeau.hidden = true;
+  const role = element(doc, 'strong', 'hud-chasse-role', bandeau);
+  const consigne = element(doc, 'span', 'hud-chasse-consigne', bandeau);
+  const proies = element(doc, 'span', 'hud-chasse-proies', bandeau);
+
+  return {
+    afficher(chasse) {
+      bandeau.hidden = chasse === undefined;
+
+      if (chasse === undefined) {
+        return;
+      }
+
+      bandeau.dataset['camp'] = chasse.camp;
+      role.textContent = chasse.role;
+      consigne.textContent = chasse.consigne;
+      proies.textContent = chasse.proies;
     },
   };
 }

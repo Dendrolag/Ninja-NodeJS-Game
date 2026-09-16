@@ -15,10 +15,14 @@
  * deux equipes, chacun peut rejoindre l'autre tant qu'elle n'est pas complete, et la
  * partie ne se lance pas tant qu'une equipe est vide. Le serveur verifie tout cela a
  * chaque demande: le modele ne fait que le dire a l'avance.
+ *
+ * LA CHASSE (etape 7.3). Elle ne se lance pas a un seul joueur, et ses reglages n'ont pas
+ * de Black Ninjas: le recapitulatif n'en parle pas.
  */
 
-import type { Couleur, Equipe, ReglagesPartie } from '@neon-ninja/shared';
+import type { Couleur, Equipe, Mode, ReglagesPartie } from '@neon-ninja/shared';
 import {
+  CHASSE,
   COULEURS_DES_EQUIPES,
   EQUIPES,
   MEMBRES_PAR_EQUIPE_MAXIMUM,
@@ -171,8 +175,12 @@ export function modeleSalon(etat: EtatClient): ModeleSalon | undefined {
     salon.mode === 'equipes'
       ? equipesAffichees(joueurs, lienEtabli && salon.statut === 'salon')
       : undefined;
-  // Une partie Equipes ne se lance pas avec une equipe vide (etape 7.2).
-  const equipeVide = equipes?.some((equipe) => equipe.joueurs.length === 0) === true;
+  const empechement = empechementDeLancer(
+    // Une partie Equipes ne se lance pas avec une equipe vide (etape 7.2).
+    equipes?.some((equipe) => equipe.joueurs.length === 0) === true,
+    // Une Chasse ne se lance pas a un seul joueur (etape 7.3).
+    salon.mode === 'chasse' && nombre < CHASSE.JOUEURS_MINIMUM,
+  );
 
   return {
     titre: hote === undefined ? 'Salon' : `Salon de ${hote.pseudo}`,
@@ -188,9 +196,13 @@ export function modeleSalon(etat: EtatClient): ModeleSalon | undefined {
     jeSuisHote: commande,
     lienEtabli,
     peutLancer:
-      commande && lienEtabli && salon.statut === 'salon' && compte === undefined && !equipeVide,
-    consigne: consigne(commande, compte !== undefined, hote?.pseudo, equipeVide),
-    recapitulatif: recapitulatif(salon.reglages),
+      commande &&
+      lienEtabli &&
+      salon.statut === 'salon' &&
+      compte === undefined &&
+      empechement === undefined,
+    consigne: consigne(commande, compte !== undefined, hote?.pseudo, empechement),
+    recapitulatif: recapitulatif(salon.reglages, salon.mode),
     compteARebours:
       compte === undefined
         ? undefined
@@ -240,19 +252,28 @@ function equipesAffichees(
   });
 }
 
+/** Ce qui empeche de lancer la partie, dit au joueur, ou rien. */
+function empechementDeLancer(equipeVide: boolean, chasseSolitaire: boolean): string | undefined {
+  if (equipeVide) {
+    return 'Il faut au moins un joueur dans chaque équipe pour lancer la partie.';
+  }
+
+  return chasseSolitaire ? 'Il faut au moins deux joueurs pour lancer une chasse.' : undefined;
+}
+
 /** La phrase qui dit ce qu'on attend, selon qui l'on est. */
 function consigne(
   hote: boolean,
   decompte: boolean,
   pseudoHote: string | undefined,
-  equipeVide: boolean,
+  empechement: string | undefined,
 ): string {
   if (decompte) {
     return 'La partie va commencer.';
   }
 
-  if (equipeVide) {
-    return 'Il faut au moins un joueur dans chaque équipe pour lancer la partie.';
+  if (empechement !== undefined) {
+    return empechement;
   }
 
   if (hote) {
@@ -270,8 +291,10 @@ function consigne(
  * Tout le monde le voit, hote ou non: dans le jeu d'origine, seuls le nom de la
  * carte et le mode etaient visibles des invites, qui decouvraient le reste en
  * jouant.
+ *
+ * Une Chasse n'a pas de Black Ninjas (etape 7.3): la ligne n'y figure pas.
  */
-function recapitulatif(reglages: ReglagesPartie): readonly LigneRecapitulatif[] {
+function recapitulatif(reglages: ReglagesPartie, mode: Mode): readonly LigneRecapitulatif[] {
   const bonusActifs = TYPES_BONUS.filter((nature) => reglages.bonus.types[nature].actif).length;
   const malusActifs = TYPES_MALUS.filter((nature) => reglages.malus.types[nature].actif).length;
   const zonesActives = TYPES_ZONE.filter((nature) => reglages.zones.types[nature]).length;
@@ -281,12 +304,16 @@ function recapitulatif(reglages: ReglagesPartie): readonly LigneRecapitulatif[] 
     { libelle: 'Carte', valeur: nomDeCarte(reglages.carte, reglages.modeMiroir) },
     { libelle: 'Durée', valeur: formaterDuree(reglages.dureePartieS * 1000) },
     { libelle: 'Faux ninjas', valeur: String(reglages.nombreBotsInitial) },
-    {
-      libelle: 'Black Ninjas',
-      valeur: noirs.actifs
-        ? `${String(noirs.nombre)}, à ${String(noirs.momentApparitionPourCent)} % de la partie`
-        : 'Désactivés',
-    },
+    ...(mode === 'chasse'
+      ? []
+      : [
+          {
+            libelle: 'Black Ninjas',
+            valeur: noirs.actifs
+              ? `${String(noirs.nombre)}, à ${String(noirs.momentApparitionPourCent)} % de la partie`
+              : 'Désactivés',
+          },
+        ]),
     {
       libelle: 'Bonus',
       valeur:

@@ -107,10 +107,10 @@ export function monterSalon(contexte: ContexteEcran): EcranAffiche {
     doc,
     { classe: 'bouton bouton-secondaire', texte: 'Réglages', icone: 'gear' },
     () => {
-      const reglages = etatCourant?.salon?.reglages;
+      const salon = etatCourant?.salon;
 
-      if (reglages !== undefined) {
-        panneau.ouvrirAvec(reglages);
+      if (salon !== undefined) {
+        panneau.ouvrirAvec(salon.reglages, salon.mode);
       }
     },
   );

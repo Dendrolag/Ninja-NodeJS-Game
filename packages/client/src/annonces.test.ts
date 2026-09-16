@@ -45,6 +45,30 @@ describe('annonceDuFait', () => {
     expect(annonce).toEqual({ texte: 'Capturé par Bob !', ton: 'alerte' });
   });
 
+  it('dit a un traqueur la vie perdue sur un faux ninja, et son elimination', () => {
+    const deux = annonceDuFait(fait('vieDeTraqueurPerdue', { viesRestantes: 2 }, 0));
+    const une = annonceDuFait(fait('vieDeTraqueurPerdue', { viesRestantes: 1 }, 0));
+    const aucune = annonceDuFait(fait('vieDeTraqueurPerdue', { viesRestantes: 0 }, 0));
+
+    expect(deux).toEqual({ texte: 'C’était un faux ninja : 2 vies restantes', ton: 'alerte' });
+    expect(une?.texte).toBe('C’était un faux ninja : 1 vie restante');
+    expect(aucune?.texte).toBe('C’était un faux ninja : éliminé, vous regardez la suite');
+  });
+
+  it('dit une infection comme telle dans une partie Chasse', () => {
+    const subie = annonceDuFait(
+      fait('captureSubie', { parPseudo: 'Bob', nouvelleCouleur: '#FF2E7E', botsPerdus: 0 }, 0),
+      'chasse',
+    );
+    const reussie = annonceDuFait(
+      fait('captureReussie', { victimePseudo: 'Eve', botsGagnes: 0, capturesTotal: 1 }, 0),
+      'chasse',
+    );
+
+    expect(subie).toEqual({ texte: 'Bob vous a attrapé : vous êtes traqueur !', ton: 'alerte' });
+    expect(reussie).toEqual({ texte: 'Eve rejoint les traqueurs', ton: 'succes' });
+  });
+
   it('accorde le nombre de ninjas gagnes', () => {
     const un = annonceDuFait(
       fait('captureReussie', { victimePseudo: 'Bob', botsGagnes: 1, capturesTotal: 1 }, 0),

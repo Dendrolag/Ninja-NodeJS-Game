@@ -417,6 +417,12 @@ export function creerClient(options: OptionsClient): Client {
     }),
   );
 
+  ecouter(
+    reseau.sur('vieDeTraqueurPerdue', (charge) => {
+      magasin.appliquer({ type: 'fait', fait: fait('vieDeTraqueurPerdue', charge, maintenant()) });
+    }),
+  );
+
   // -- Les refus ------------------------------------------------------------
 
   ecouter(

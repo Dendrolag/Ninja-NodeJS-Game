@@ -29,6 +29,7 @@ import type {
   MalusRamasseParMoi,
   MalusSubi,
   TirDeCaptureVu,
+  VieDeTraqueurPerdueVue,
 } from '@neon-ninja/shared';
 
 /**
@@ -57,8 +58,10 @@ export interface ChargesDeFait {
   malusRamasse: MalusRamasseParMoi;
   /** Ce joueur subit le malus qu'un autre a ramasse. */
   malusSubi: MalusSubi;
-  /** Un joueur de la partie vient de tirer, dans le mode Tactique. */
+  /** Un joueur de la partie vient de tirer, dans le mode Tactique ou en traqueur. */
   tirDeCapture: TirDeCaptureVu;
+  /** Ce traqueur de la Chasse vient de viser un faux ninja, et y a laisse une vie. */
+  vieDeTraqueurPerdue: VieDeTraqueurPerdueVue;
   /** Quelqu'un vient d'entrer dans la partie. */
   joueurArrive: JoueurDuSalon;
   /** Quelqu'un vient de quitter la partie. */
