@@ -70,12 +70,14 @@ import type {
 } from '@neon-ninja/shared';
 import {
   CAPACITES,
+  CHASSE,
   COULEURS_DES_EQUIPES,
   EQUIPES,
   MEMBRES_PAR_EQUIPE_MAXIMUM,
   classementDesEquipes,
   equipeDArrivee,
   equipeDeCouleur,
+  placeDansLaChasse,
   placeDansLesEquipes,
   pointsEnEquipe,
   reperePseudo,
@@ -95,6 +97,7 @@ import {
   changerDeCouleur,
   creerEtatInitial,
   evaluerFinDePartie,
+  lancerLaPartie,
   mettreEnPause,
   peuplerDeBots,
   reprendre,
@@ -174,7 +177,8 @@ export interface JoueurDuBilan {
   readonly abandon: boolean;
   /**
    * Ce que ce joueur devance, quand son placement ne le dit pas: un present d'une partie
-   * Equipes (etape 7.2). Absent en Classique et en Tactique, et pour un abandon.
+   * Equipes (etape 7.2) ou Chasse (etape 7.3). Absent en Classique et en Tactique, et pour
+   * un abandon.
    */
   readonly devancement?: Devancement;
 }
@@ -444,10 +448,18 @@ export class GameRoom {
    * DANS UNE PARTIE EQUIPES (etape 7.2), le joueur entre dans une equipe et en porte la
    * couleur: la moins nombreuse, ou, a nombre egal, celle qui a le moins de points. Au
    * salon, il pourra en changer; dans une partie deja lancee, il y reste.
+   *
+   * ON N'ENTRE PAS DANS UNE CHASSE LANCEE (etape 7.3, decision 12 du porteur du projet):
+   * rejoindre en proie a la fin d'une chasse serait un raccourci vers la victoire. Le
+   * retour d'un membre dont le lien est tombe ne passe pas par ici, et reste permis.
    */
   accueillir(session: SessionJoueur): ResultatValidation<JoueurDeRoom> {
     if (this.statutCourant === 'terminee') {
       return refus('partie', 'Cette partie est terminée.');
+    }
+
+    if (this.mode === 'chasse' && this.statutCourant === 'enCours') {
+      return refus('partie', 'Cette chasse a déjà commencé.');
     }
 
     if (this.partie.joueurs[session.id] !== undefined) {
@@ -620,11 +632,16 @@ export class GameRoom {
    *
    * Toujours en Classique et en Tactique, ou un joueur seul peut lancer, comme dans le
    * legacy. En Equipes, il faut au moins un joueur dans chaque equipe (decision 9 du
-   * porteur du projet); des equipes inegales sont permises.
+   * porteur du projet); des equipes inegales sont permises. En Chasse, il faut deux
+   * joueurs, un traqueur et une proie (decision 12 du porteur du projet, etape 7.3).
    */
   conditionDeLancement(): ResultatValidation<true> {
     if (this.mode === 'equipes' && EQUIPES.some((equipe) => this.membresDe(equipe) === 0)) {
       return refus('equipes', 'Il faut au moins un joueur dans chaque équipe.');
+    }
+
+    if (this.mode === 'chasse' && this.ordreDArrivee.length < CHASSE.JOUEURS_MINIMUM) {
+      return refus('joueurs', 'Il faut au moins deux joueurs pour lancer une chasse.');
     }
 
     return { valide: true, valeur: true };
@@ -686,6 +703,9 @@ export class GameRoom {
    * serveur choisit le moment. Les bots sont poses APRES les joueurs, donc a
    * l'ecart de leurs positions.
    *
+   * Le mode prepare ensuite la partie (lancerLaPartie): rien en Classique, en Tactique
+   * et en Equipes; les premiers traqueurs en Chasse (etape 7.3).
+   *
    * Le compte a rebours de cinq secondes du salon n'est pas gere ici: il se
    * decide et s'annule par messages, donc a l'etape 2.2. Cette methode lance la
    * partie pour de bon.
@@ -707,7 +727,7 @@ export class GameRoom {
       );
     }
 
-    this.partie = peuplerDeBots(this.partie);
+    this.partie = lancerLaPartie(peuplerDeBots(this.partie));
     this.statutCourant = 'enCours';
     this.demarrerLaBoucle();
   }
@@ -870,21 +890,27 @@ export class GameRoom {
    * (placeDansLesEquipes). Ses points sont sa part des bots de son equipe, plus ses
    * propres points de bots noirs (pointsEnEquipe): le score de toute l'equipe gonflerait
    * le meilleur score de son profil.
+   *
+   * DANS UNE PARTIE CHASSE (etape 7.3), on se place par camp aussi: les proies survivantes
+   * d'abord s'il en reste, sinon tous les traqueurs (placeDansLaChasse). Le classement du
+   * moteur range deja les proies devant. Les points sont le temps de survie. Et une chasse
+   * gagnee avant le terme vaut une partie entiere: le temps joue court jusqu'a la duree
+   * reglee, pour que les traqueurs ne soient pas payes moins pour avoir gagne vite.
    */
   bilan(): BilanDePartie {
     const classement = this.classement();
     const nombreJoueurs = classement.length + this.abandons.length;
-    const finDuJeuMs = Math.min(this.partie.tempsEcouleMs, this.partie.dureeMs);
+    const finDuJeuMs =
+      this.mode === 'chasse'
+        ? this.partie.dureeMs
+        : Math.min(this.partie.tempsEcouleMs, this.partie.dureeMs);
     const equipes = this.mode === 'equipes' ? classementDesEquipes(classement) : undefined;
     const ordre = equipes === undefined ? classement : dansLOrdreDesEquipes(classement, equipes);
 
     const presents = ordre.map((ligne, index): JoueurDuBilan => {
       const compte = this.comptesDesMembres.get(ligne.id);
       const entreeMs = this.entreesEnJeuMs.get(ligne.id) ?? 0;
-      const place =
-        equipes === undefined
-          ? { placement: index + 1 }
-          : placeDansLesEquipes(equipes, equipeDeCouleur(ligne.couleur), nombreJoueurs);
+      const place = this.placeEnFin(ligne, index, classement, nombreJoueurs);
 
       return {
         id: ligne.id,
@@ -908,6 +934,32 @@ export class GameRoom {
     }));
 
     return { nombreJoueurs, dureePartieMs: this.partie.dureeMs, joueurs: [...presents, ...partis] };
+  }
+
+  /**
+   * La place d'un joueur present dans le bilan, selon le mode: son rang au classement en
+   * Classique et en Tactique; la place de son camp, et ce qu'il devance, en Equipes et en
+   * Chasse.
+   */
+  private placeEnFin(
+    ligne: LigneScore,
+    index: number,
+    classement: readonly LigneScore[],
+    nombreJoueurs: number,
+  ): { readonly placement: number; readonly devancement?: Devancement } {
+    if (this.mode === 'equipes') {
+      return placeDansLesEquipes(
+        classementDesEquipes(classement),
+        equipeDeCouleur(ligne.couleur),
+        nombreJoueurs,
+      );
+    }
+
+    if (this.mode === 'chasse') {
+      return placeDansLaChasse(classement, ligne.couleur, nombreJoueurs);
+    }
+
+    return { placement: index + 1 };
   }
 
   /**

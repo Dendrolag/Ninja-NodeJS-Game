@@ -11,9 +11,10 @@
  * client pour le HUD et l'ecran de fin, et les deux calculent la meme chose.
  */
 
+import type { PlaceDansUnCamp } from './camps.js';
+import { placeDansUnCamp } from './camps.js';
 import type { Couleur, Equipe } from './constantes.js';
 import { COULEURS_DES_EQUIPES, EQUIPES } from './constantes.js';
-import type { Devancement } from './progression.js';
 
 /**
  * L'equipe qui porte cette couleur, ou undefined si aucune ne la porte.
@@ -122,22 +123,19 @@ export function classementDesEquipes(
   };
 }
 
-/** La place d'un joueur present a la fin d'une partie Equipes. */
-export interface PlaceDansLesEquipes {
-  /** Ce que retiennent l'historique, l'ecran de fin et les victoires du profil. */
-  readonly placement: number;
-  /** Ce que valent ses recompenses: le placement ne le dit pas en equipes. */
-  readonly devancement: Devancement;
-}
+/**
+ * La place d'un joueur present a la fin d'une partie Equipes: celle de tout mode qui se
+ * gagne par camp (camps.ts).
+ */
+export type PlaceDansLesEquipes = PlaceDansUnCamp;
 
 /**
  * La place d'un joueur present a la fin d'une partie Equipes (decision 8 du porteur du
  * projet, micro-decisions 10 et 11 de la fiche 7.2).
  *
- *   - Un vainqueur est place premier. Il devance tous les joueurs qui ne sont pas de son
- *     equipe, abandons compris, et prend les points de ligue du premier.
- *   - Un perdant est place juste apres les vainqueurs presents. Il ne devance que les
- *     abandons, et prend les points de ligue du dernier.
+ *   - Un vainqueur est place premier, un perdant juste apres les vainqueurs presents: la
+ *     regle commune aux modes par camp (placeDansUnCamp, dans camps.ts), que la Chasse
+ *     reprend.
  *   - A egalite, tous les presents sont au meme rang, au milieu: places un plus la
  *     moitie des presents, arrondie en dessous, ce qui n'est jamais une victoire. Chacun
  *     devance les abandons et la moitie des adversaires presents, et prend les points de
@@ -171,15 +169,13 @@ export function placeDansLesEquipes(
     };
   }
 
-  const vainqueurs =
-    classement.equipes.find((ligne) => ligne.equipe === issue.gagnante)?.membres.length ?? 0;
-
-  return equipe === issue.gagnante
-    ? {
-        placement: 1,
-        devancement: { joueursDevances: nombreJoueurs - vainqueurs, partDevancee: 1 },
-      }
-    : { placement: vainqueurs + 1, devancement: { joueursDevances: abandons, partDevancee: 0 } };
+  return placeDansUnCamp({
+    vainqueur: equipe === issue.gagnante,
+    vainqueursPresents:
+      classement.equipes.find((ligne) => ligne.equipe === issue.gagnante)?.membres.length ?? 0,
+    nombreJoueurs,
+    presents,
+  });
 }
 
 /**

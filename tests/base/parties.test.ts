@@ -126,6 +126,27 @@ describe.runIf(baseDisponible())('parties et resultats', () => {
     }
   });
 
+  it('enregistre une partie Chasse, ses survivantes premieres et le traqueur apres', async () => {
+    // Etape 7.3: la valeur chasse de l'enumeration des modes (migration 0005). Deux proies
+    // survivent a egalite au premier rang, avec trente secondes de survie en points; le
+    // traqueur est place troisieme.
+    const proie = await nouveauCompte();
+    const traqueur = await nouveauCompte();
+    const jouee = partie({ mode: 'chasse', nombreJoueurs: 3 });
+
+    const { partieId } = await enregistrerPartie(db(), jouee, [
+      resultat(proie, 1, { points: 30, variationPointsLigue: 20 }),
+      resultat(traqueur, 3, { points: 0 }),
+    ]);
+
+    expect(await lireHistorique(db(), proie)).toMatchObject([
+      { partieId, mode: 'chasse', placement: 1, points: 30, variationPointsLigue: 20 },
+    ]);
+    expect(await lireHistorique(db(), traqueur)).toMatchObject([
+      { partieId, mode: 'chasse', placement: 3, points: 0 },
+    ]);
+  });
+
   it('rend l historique de la partie la plus recente a la plus ancienne', async () => {
     const compte = await nouveauCompte();
     const ancienne = partie({ termineeLe: new Date('2026-03-01T10:00:00Z') });
