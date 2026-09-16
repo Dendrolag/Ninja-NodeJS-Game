@@ -160,6 +160,7 @@ describe('les commandes du joueur', () => {
 
     client.deplacer({ deplacement: { x: 1, y: 0 }, enMouvement: true });
     client.capturer();
+    client.changerDEquipe('magenta');
     client.parler('salut');
     client.changerReglages({ dureePartieS: 120 });
     client.demarrer();
@@ -172,6 +173,7 @@ describe('les commandes du joueur', () => {
       'rejoindre',
       'deplacer',
       'capturer',
+      'changerDEquipe',
       'chat',
       'reglages',
       'demarrer',

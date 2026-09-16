@@ -26,7 +26,7 @@ import type { EtatClient } from '../../etat.js';
 import { moiDansLeSalon } from '../../selecteurs.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import { icone } from '../icones.js';
-import type { LigneFin, ModeleFin, ProgressionAffichee } from '../modeles/fin.js';
+import type { EquipeFin, LigneFin, ModeleFin, ProgressionAffichee } from '../modeles/fin.js';
 import { modeleFin } from '../modeles/fin.js';
 import { initiales } from '../modeles/salon.js';
 import type { ContexteEcran, EcranAffiche } from './types.js';
@@ -39,6 +39,8 @@ export function monterFin(contexte: ContexteEcran): EcranAffiche {
   const ligneContexte = creer(doc, 'p', { classe: 'fin-contexte' });
   const titre = creer(doc, 'h1', { classe: 'fin-titre' });
   const podium = creer(doc, 'div', { classe: 'podium' });
+  // Dans une partie Equipes, les equipes prennent la place du podium (etape 7.2).
+  const blocEquipes = creer(doc, 'div', { classe: 'fin-equipes' });
   const corpsTableau = creer(doc, 'tbody');
   const progression = monterPanneauDeProgression(doc);
 
@@ -77,7 +79,7 @@ export function monterFin(contexte: ContexteEcran): EcranAffiche {
       doc,
       'div',
       { classe: 'fin-corps' },
-      creer(doc, 'div', { classe: 'panneau fin-podium' }, podium),
+      creer(doc, 'div', { classe: 'panneau fin-podium' }, blocEquipes, podium),
       creer(
         doc,
         'div',
@@ -151,6 +153,11 @@ export function monterFin(contexte: ContexteEcran): EcranAffiche {
     titre.append(creer(doc, 'span', { classe: 'accent', texte: modele.message }));
 
     podium.replaceChildren(...modele.podium.map((ligne) => marche(doc, ligne)));
+    montrer(podium, modele.podium.length > 0);
+    blocEquipes.replaceChildren(
+      ...(modele.equipes ?? []).map((equipe) => carteDEquipe(doc, equipe)),
+    );
+    montrer(blocEquipes, modele.equipes !== undefined);
     corpsTableau.replaceChildren(...modele.lignes.map((ligne) => rangee(doc, ligne)));
   };
 
@@ -177,6 +184,30 @@ export function monterFin(contexte: ContexteEcran): EcranAffiche {
       racine.remove();
     },
   };
+}
+
+/** Le score d'une equipe, dans l'ecran de fin d'une partie Equipes (etape 7.2). */
+function carteDEquipe(doc: Document, equipe: EquipeFin): HTMLElement {
+  const carte = creer(
+    doc,
+    'div',
+    {
+      classe: equipe.mienne ? 'fin-equipe mienne' : 'fin-equipe',
+      attributs: { 'data-equipe': equipe.equipe },
+    },
+    creer(doc, 'span', { classe: 'fin-equipe-nom', texte: equipe.nom }),
+    creer(doc, 'strong', {
+      classe: 'fin-equipe-points',
+      texte: `${String(equipe.points)} ${equipe.points > 1 ? 'points' : 'point'}`,
+    }),
+    creer(doc, 'span', {
+      classe: 'fin-equipe-captures',
+      texte: `${String(equipe.captures)} ${equipe.captures > 1 ? 'captures' : 'capture'}`,
+    }),
+  );
+  carte.style.setProperty('--couleur-equipe', equipe.couleur);
+
+  return carte;
 }
 
 /** Le panneau de progression, monte. */

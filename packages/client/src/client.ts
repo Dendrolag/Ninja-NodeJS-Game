@@ -29,6 +29,7 @@ import type {
   AuthentificationReseau,
   ConfigurationPartie,
   DemandeRejoindre,
+  Equipe,
   InfosSalon,
   IntentionDeplacement,
   ReglagesPartiels,
@@ -120,6 +121,8 @@ export interface Client extends CommandesDeSession {
   deplacer(intention: IntentionDeplacement): void;
   /** Tire, dans une partie Tactique. Ailleurs, le serveur ignore la demande. */
   capturer(): void;
+  /** Passe dans une equipe, dans le salon d'une partie Equipes (etape 7.2). */
+  changerDEquipe(equipe: Equipe): void;
   /** Parle dans le chat. */
   parler(texte: string): void;
   /** Change les reglages de la partie. Reserve a l'hote. */
@@ -505,6 +508,10 @@ export function creerClient(options: OptionsClient): Client {
 
     capturer: () => {
       reseau.emettre('capturer');
+    },
+
+    changerDEquipe: (equipe) => {
+      reseau.emettre('changerDEquipe', equipe);
     },
 
     parler: (texte) => {

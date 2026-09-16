@@ -21,9 +21,15 @@
  */
 
 import type { Couleur, LigneClassement, TypeBonus, TypeMalus } from '@neon-ninja/shared';
-import { TACTIQUE } from '@neon-ninja/shared';
+import {
+  COULEURS_DES_EQUIPES,
+  TACTIQUE,
+  classementDesEquipes,
+  equipeDeCouleur,
+} from '@neon-ninja/shared';
 
 import type { EtatClient } from '../etat.js';
+import { NOMS_DES_EQUIPES } from '../interface/modeles/cartes.js';
 import { APPARENCE_OBJET } from '../rendu/apparence.js';
 import { effetsEnCours, moiDansLaPartie, resteDeLEffet } from '../selecteurs.js';
 
@@ -147,24 +153,54 @@ export function construireHud(etat: EtatClient, maintenant: number): Hud {
     enPause: partie.enPause,
     pausePar: etat.pausePar,
     retourEnCours: etat.connexion === 'retour',
-    classement: classementHud(partie.classement, etat.moi),
+    classement: classementHud(partie.classement, etat.moi, etat.salon?.mode === 'equipes'),
     effets: effetsHud(etat, maintenant),
     minimap: minimapHud(etat),
     charges: chargesHud(etat),
   };
 }
 
-/** Le classement, numerote et marque a notre nom. */
+/**
+ * Le classement, numerote et marque a notre nom.
+ *
+ * DANS UNE PARTIE EQUIPES (etape 7.2), ce sont les equipes qui sont classees, et la
+ * notre qui est marquee. Les points d'un joueur y comptent tous les ninjas de son
+ * equipe: affiches ligne par ligne, ils se liraient comme un score personnel, et les
+ * memes points seraient comptes autant de fois que l'equipe a de membres.
+ */
 function classementHud(
   classement: readonly LigneClassement[],
   moi: string | undefined,
+  enEquipes: boolean,
 ): readonly LigneHud[] {
+  if (enEquipes) {
+    return classementDesEquipesHud(classement, moi);
+  }
+
   return classement.map((ligne, index) => ({
     id: ligne.id,
     pseudo: ligne.pseudo,
     couleur: ligne.couleur,
     points: ligne.points,
     moi: ligne.id === moi,
+    rang: index + 1,
+  }));
+}
+
+/** Le classement des equipes, la gagnante d'abord, la notre marquee (etape 7.2). */
+function classementDesEquipesHud(
+  classement: readonly LigneClassement[],
+  moi: string | undefined,
+): readonly LigneHud[] {
+  const notreLigne = classement.find((ligne) => ligne.id === moi);
+  const notre = notreLigne === undefined ? undefined : equipeDeCouleur(notreLigne.couleur);
+
+  return classementDesEquipes(classement).equipes.map((ligne, index) => ({
+    id: `equipe-${ligne.equipe}`,
+    pseudo: `Équipe ${NOMS_DES_EQUIPES[ligne.equipe]}`,
+    couleur: COULEURS_DES_EQUIPES[ligne.equipe],
+    points: ligne.points,
+    moi: ligne.equipe === notre,
     rang: index + 1,
   }));
 }

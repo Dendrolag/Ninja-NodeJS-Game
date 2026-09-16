@@ -11,7 +11,7 @@
  * compilation: rien ne peut apparaitre a l'ecran sous son identifiant technique.
  */
 
-import type { IdentifiantCarte, Mode } from '@neon-ninja/shared';
+import type { Equipe, IdentifiantCarte, Mode } from '@neon-ninja/shared';
 
 /** Ce que le joueur lit d'une carte. */
 export interface PresentationCarte {
@@ -37,6 +37,12 @@ export const NOMS_DES_MODES: Readonly<Record<Mode, string>> = {
   classique: 'Classique',
   tactique: 'Tactique',
   equipes: 'Équipes',
+};
+
+/** Le nom de chaque equipe du mode Equipes, tel que le joueur le lit (etape 7.2). */
+export const NOMS_DES_EQUIPES: Readonly<Record<Equipe, string>> = {
+  cyan: 'Cyan',
+  magenta: 'Magenta',
 };
 
 /**

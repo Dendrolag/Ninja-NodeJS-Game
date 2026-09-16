@@ -20,10 +20,22 @@
  * maquette sont reportes apres la v1 (cadrage, question 7).
  */
 
-import type { LigneClassement, ProgressionDeFin } from '@neon-ninja/shared';
+import type {
+  ClassementDesEquipes,
+  Equipe,
+  LigneClassement,
+  ProgressionDeFin,
+} from '@neon-ninja/shared';
+import {
+  COULEURS_DES_EQUIPES,
+  classementDesEquipes,
+  equipeDeCouleur,
+  placeDansLesEquipes,
+  pointsEnEquipe,
+} from '@neon-ninja/shared';
 
 import type { EtatClient } from '../../etat.js';
-import { NOMS_DES_MODES, nomDeCarte } from './cartes.js';
+import { NOMS_DES_EQUIPES, NOMS_DES_MODES, nomDeCarte } from './cartes.js';
 import type { BarreDeNiveau } from './progression.js';
 import {
   NOMS_DES_PALIERS,
@@ -45,6 +57,18 @@ export interface LigneFin {
   readonly botsNoirsDetruits: number;
   /** Cette ligne est la notre. */
   readonly moi: boolean;
+}
+
+/** Une equipe au classement final d'une partie Equipes, telle qu'on l'affiche (etape 7.2). */
+export interface EquipeFin {
+  readonly equipe: Equipe;
+  /** « Équipe Cyan ». */
+  readonly nom: string;
+  readonly couleur: string;
+  readonly points: number;
+  readonly captures: number;
+  /** Nous en sommes. */
+  readonly mienne: boolean;
 }
 
 /** Notre place, decoupee pour que l'ecran puisse ecrire le suffixe en exposant. */
@@ -90,8 +114,13 @@ export interface ModeleFin {
   readonly place: Place | undefined;
   /** Le mot qui suit la place. */
   readonly message: string;
-  /** Les trois premiers, dans l'ordre du podium: deuxieme, premier, troisieme. */
+  /**
+   * Les trois premiers, dans l'ordre du podium: deuxieme, premier, troisieme. Vide dans
+   * une partie Equipes, ou ce sont les equipes qui se classent.
+   */
   readonly podium: readonly LigneFin[];
+  /** Les equipes, la gagnante d'abord, dans une partie Equipes seulement (etape 7.2). */
+  readonly equipes: readonly EquipeFin[] | undefined;
   /** Tout le classement, du premier au dernier. */
   readonly lignes: readonly LigneFin[];
   /** Ce que la partie a rapporte a notre compte. Absent pour un invite. */
@@ -111,16 +140,17 @@ export function modeleFin(etat: EtatClient): ModeleFin | undefined {
     return undefined;
   }
 
-  const lignes = fin.classement.map((ligne, index) => ligneFin(ligne, index + 1, etat.moi));
-  const mienne = lignes.find((ligne) => ligne.moi);
   const salon = etat.salon;
 
+  if (salon?.mode === 'equipes') {
+    return { ...modeleFinEnEquipes(fin.classement, etat), contexte: contexteDeFin(etat) };
+  }
+
+  const lignes = fin.classement.map((ligne, index) => ligneFin(ligne, index + 1, etat.moi));
+  const mienne = lignes.find((ligne) => ligne.moi);
+
   return {
-    // Sans salon, ni le mode ni la carte ne sont connus: on ne les invente pas.
-    contexte:
-      salon === undefined
-        ? 'Partie terminée'
-        : `Partie terminée · ${NOMS_DES_MODES[salon.mode]} · ${nomDeCarte(salon.reglages.carte, salon.reglages.modeMiroir)}`,
+    contexte: contexteDeFin(etat),
     place:
       mienne === undefined
         ? undefined
@@ -130,6 +160,7 @@ export function modeleFin(etat: EtatClient): ModeleFin | undefined {
     podium: [lignes[1], lignes[0], lignes[2]].filter(
       (ligne): ligne is LigneFin => ligne !== undefined,
     ),
+    equipes: undefined,
     lignes,
     // Une session en verification a presente un jeton que le serveur a accepte:
     // c'est un compte, dont la progression arrivera.
@@ -137,6 +168,88 @@ export function modeleFin(etat: EtatClient): ModeleFin | undefined {
       etat.session.nature === 'invite' ? undefined : progressionAffichee(etat.progressionDeFin),
     peutRejouer: etat.connexion === 'connecte',
   };
+}
+
+/** La ligne de contexte. Sans salon, ni le mode ni la carte ne sont connus: on ne les invente pas. */
+function contexteDeFin(etat: EtatClient): string {
+  const salon = etat.salon;
+
+  return salon === undefined
+    ? 'Partie terminée'
+    : `Partie terminée · ${NOMS_DES_MODES[salon.mode]} · ${nomDeCarte(salon.reglages.carte, salon.reglages.modeMiroir)}`;
+}
+
+/**
+ * L'ecran de fin d'une partie Equipes (etape 7.2), contexte mis a part.
+ *
+ * Ce sont les equipes qui se classent: le titre dit l'issue, les equipes remplacent le
+ * podium, et le tableau range les joueurs par equipe. Le rang d'un joueur est celui que
+ * l'historique retient (placeDansLesEquipes): premier pour un vainqueur, juste apres
+ * les vainqueurs pour un perdant, au milieu a egalite. Ses points et ses ninjas sont sa
+ * part des ninjas de son equipe, plus ses points de Black Ninjas: les points de toute
+ * l'equipe se liraient comme un score personnel.
+ */
+function modeleFinEnEquipes(
+  classement: readonly LigneClassement[],
+  etat: EtatClient,
+): Omit<ModeleFin, 'contexte'> {
+  const equipes = classementDesEquipes(classement);
+  const notreLigne = classement.find((ligne) => ligne.id === etat.moi);
+  const notre = notreLigne === undefined ? undefined : equipeDeCouleur(notreLigne.couleur);
+  const rangDEquipe = (ligne: LigneClassement): number => {
+    const trouve = equipes.equipes.findIndex((equipe) => equipe.membres.includes(ligne.id));
+    return trouve === -1 ? equipes.equipes.length : trouve;
+  };
+
+  const lignes = [...classement]
+    .sort((une, autre) => rangDEquipe(une) - rangDEquipe(autre))
+    .map((ligne) => ({
+      ...ligneFin(
+        ligne,
+        placeDansLesEquipes(equipes, equipeDeCouleur(ligne.couleur), classement.length).placement,
+        etat.moi,
+      ),
+      points: pointsEnEquipe(equipes, ligne),
+      botsPortes: partDesNinjas(equipes, ligne.id),
+    }));
+
+  return {
+    place: undefined,
+    message: messageDesEquipes(equipes, notre),
+    podium: [],
+    equipes: equipes.equipes.map((ligne) => ({
+      equipe: ligne.equipe,
+      nom: `Équipe ${NOMS_DES_EQUIPES[ligne.equipe]}`,
+      couleur: COULEURS_DES_EQUIPES[ligne.equipe],
+      points: ligne.points,
+      captures: ligne.captures,
+      mienne: ligne.equipe === notre,
+    })),
+    lignes,
+    progression:
+      etat.session.nature === 'invite' ? undefined : progressionAffichee(etat.progressionDeFin),
+    peutRejouer: etat.connexion === 'connecte',
+  };
+}
+
+/** La part d'un joueur dans les ninjas de son equipe: ses ninjas divises par ses membres. */
+function partDesNinjas(equipes: ClassementDesEquipes, id: string): number {
+  const equipe = equipes.equipes.find((ligne) => ligne.membres.includes(id));
+
+  return equipe === undefined ? 0 : Math.floor(equipe.botsPortes / equipe.membres.length);
+}
+
+/** Ce que le titre dit de l'issue d'une partie Equipes, vue de notre equipe. */
+function messageDesEquipes(equipes: ClassementDesEquipes, notre: Equipe | undefined): string {
+  const issue = equipes.issue;
+
+  if (issue.type === 'egalite') {
+    return 'Égalité !';
+  }
+
+  return issue.gagnante === notre
+    ? 'Victoire de votre équipe !'
+    : `Victoire de l’équipe ${NOMS_DES_EQUIPES[issue.gagnante]}`;
 }
 
 /** Le recapitulatif de progression, mis en forme. */

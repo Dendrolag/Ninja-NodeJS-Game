@@ -604,6 +604,52 @@
   font-size: 12px;
 }
 
+/* Les deux equipes du mode Equipes, cote a cote, chacune a sa couleur (etape 7.2). */
+.salon-equipes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.salon-equipes[hidden] {
+  display: none;
+}
+
+.salon-equipe {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 3px solid var(--couleur-equipe);
+  border-radius: var(--rayon-carte);
+  background: rgba(13, 17, 27, 0.45);
+}
+
+.salon-equipe-entete {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.salon-equipe-entete h3 {
+  color: var(--couleur-equipe);
+  font-family: var(--police-titre);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.salon-equipe .salon-joueurs {
+  grid-template-columns: 1fr;
+}
+
+.salon-equipe-note {
+  color: var(--couleur-equipe);
+  font-size: 13px;
+  text-align: center;
+}
+
 .salon-reglages {
   display: grid;
   gap: 12px;
@@ -1288,6 +1334,52 @@
 
 .fin-non-enregistree {
   color: var(--rose-clair);
+}
+
+/* Le score des deux equipes, a la place du podium, dans une partie Equipes (etape 7.2). */
+.fin-equipes {
+  display: grid;
+  gap: 14px;
+  padding-bottom: 30px;
+}
+
+.fin-equipes[hidden],
+.podium[hidden] {
+  display: none;
+}
+
+.fin-equipe {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 18px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-left: 4px solid var(--couleur-equipe);
+  border-radius: var(--rayon-carte);
+  background: rgba(13, 17, 27, 0.6);
+}
+
+.fin-equipe.mienne {
+  background: rgba(45, 230, 224, 0.08);
+}
+
+.fin-equipe-nom {
+  color: var(--couleur-equipe);
+  font-family: var(--police-titre);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.fin-equipe-points {
+  grid-row: span 2;
+  font-family: var(--police-donnees);
+  font-size: 26px;
+}
+
+.fin-equipe-captures {
+  color: var(--texte-secondaire);
+  font-size: 13px;
 }
 
 .fin-classement {

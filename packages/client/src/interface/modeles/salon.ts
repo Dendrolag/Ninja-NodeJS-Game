@@ -10,15 +10,27 @@
  * arrivent dans le salon depuis l'etape 2.4; le code d'une partie privee n'est
  * transmis qu'a ses membres, qui le partagent. L'etat « pret » n'existe pas: le
  * cadrage de l'etape 0.3 ne le retient pas.
+ *
+ * LES EQUIPES (etape 7.2). Dans une partie Equipes, les joueurs sont ranges dans leurs
+ * deux equipes, chacun peut rejoindre l'autre tant qu'elle n'est pas complete, et la
+ * partie ne se lance pas tant qu'une equipe est vide. Le serveur verifie tout cela a
+ * chaque demande: le modele ne fait que le dire a l'avance.
  */
 
-import type { ReglagesPartie } from '@neon-ninja/shared';
-import { TYPES_BONUS, TYPES_MALUS, TYPES_ZONE } from '@neon-ninja/shared';
+import type { Couleur, Equipe, ReglagesPartie } from '@neon-ninja/shared';
+import {
+  COULEURS_DES_EQUIPES,
+  EQUIPES,
+  MEMBRES_PAR_EQUIPE_MAXIMUM,
+  TYPES_BONUS,
+  TYPES_MALUS,
+  TYPES_ZONE,
+} from '@neon-ninja/shared';
 
 import type { EtatClient } from '../../etat.js';
 import { formaterDuree } from '../../hud/modele.js';
 import { jeSuisHote } from '../../selecteurs.js';
-import { CAPTURES_DES_MODES, NOMS_DES_MODES, nomDeCarte } from './cartes.js';
+import { CAPTURES_DES_MODES, NOMS_DES_EQUIPES, NOMS_DES_MODES, nomDeCarte } from './cartes.js';
 
 /** Un joueur du salon, tel qu'on l'affiche. */
 export interface JoueurAffiche {
@@ -34,6 +46,26 @@ export interface JoueurAffiche {
    * c'est ce qui distingue les deux dans le salon.
    */
   readonly niveau: number | undefined;
+  /** Son equipe, dans une partie Equipes seulement. */
+  readonly equipe: Equipe | undefined;
+}
+
+/** Une equipe du salon d'une partie Equipes, telle qu'on l'affiche (etape 7.2). */
+export interface EquipeAffichee {
+  readonly equipe: Equipe;
+  /** « Équipe Cyan ». */
+  readonly nom: string;
+  readonly couleur: Couleur;
+  /** Ses membres, dans leur ordre d'arrivee. */
+  readonly joueurs: readonly JoueurAffiche[];
+  /** « 2 / 6 ». */
+  readonly effectif: string;
+  /** Nous en sommes. */
+  readonly mienne: boolean;
+  /** Elle a atteint son nombre de membres maximum. */
+  readonly complete: boolean;
+  /** Le bouton pour la rejoindre est-il actif: ni la notre, ni complete, un lien, au salon. */
+  readonly peutRejoindre: boolean;
 }
 
 /** Une ligne du recapitulatif des reglages. */
@@ -66,6 +98,8 @@ export interface ModeleSalon {
   /** Comment on capture dans le mode de la partie. */
   readonly regle: string;
   readonly joueurs: readonly JoueurAffiche[];
+  /** Les deux equipes et leurs membres, dans une partie Equipes seulement (etape 7.2). */
+  readonly equipes: readonly EquipeAffichee[] | undefined;
   /** Le nombre de joueurs, en toutes lettres: « 3 joueurs ». */
   readonly effectif: string;
   /** « 9 places libres », « 1 place libre » ou « Partie complète ». */
@@ -124,19 +158,28 @@ export function modeleSalon(etat: EtatClient): ModeleSalon | undefined {
   // Pendant que le lien se retablit, le salon affiche n'est plus tenu a jour, et rien
   // de ce qu'on y demanderait ne partirait (etape 2.6).
   const lienEtabli = etat.connexion === 'connecte';
+  const joueurs = salon.joueurs.map((joueur): JoueurAffiche => ({
+    id: joueur.id,
+    pseudo: joueur.pseudo,
+    initiales: initiales(joueur.pseudo),
+    hote: joueur.hote,
+    moi: joueur.id === etat.moi,
+    niveau: joueur.compte?.niveau,
+    equipe: joueur.equipe,
+  }));
+  const equipes =
+    salon.mode === 'equipes'
+      ? equipesAffichees(joueurs, lienEtabli && salon.statut === 'salon')
+      : undefined;
+  // Une partie Equipes ne se lance pas avec une equipe vide (etape 7.2).
+  const equipeVide = equipes?.some((equipe) => equipe.joueurs.length === 0) === true;
 
   return {
     titre: hote === undefined ? 'Salon' : `Salon de ${hote.pseudo}`,
     sousTitre: `${NOMS_DES_MODES[salon.mode]} · ${nomDeCarte(salon.reglages.carte, salon.reglages.modeMiroir)}`,
     regle: CAPTURES_DES_MODES[salon.mode],
-    joueurs: salon.joueurs.map((joueur) => ({
-      id: joueur.id,
-      pseudo: joueur.pseudo,
-      initiales: initiales(joueur.pseudo),
-      hote: joueur.hote,
-      moi: joueur.id === etat.moi,
-      niveau: joueur.compte?.niveau,
-    })),
+    joueurs,
+    equipes,
     effectif: `${String(nombre)} ${nombre > 1 ? 'joueurs' : 'joueur'}`,
     placesLibres: placesLibres(salon.capacite - nombre),
     visibilite: salon.visibilite === 'privee' ? 'Partie privée' : 'Partie publique',
@@ -144,8 +187,9 @@ export function modeleSalon(etat: EtatClient): ModeleSalon | undefined {
     code: salon.visibilite === 'privee' ? salon.code : undefined,
     jeSuisHote: commande,
     lienEtabli,
-    peutLancer: commande && lienEtabli && salon.statut === 'salon' && compte === undefined,
-    consigne: consigne(commande, compte !== undefined, hote?.pseudo),
+    peutLancer:
+      commande && lienEtabli && salon.statut === 'salon' && compte === undefined && !equipeVide,
+    consigne: consigne(commande, compte !== undefined, hote?.pseudo, equipeVide),
     recapitulatif: recapitulatif(salon.reglages),
     compteARebours:
       compte === undefined
@@ -169,10 +213,46 @@ function placesLibres(restantes: number): string {
   return `${String(restantes)} ${restantes > 1 ? 'places libres' : 'place libre'}`;
 }
 
+/**
+ * Les deux equipes d'une partie Equipes, avec leurs membres (etape 7.2).
+ *
+ * @param changementPossible Le lien est etabli et la partie attend dans son salon.
+ */
+function equipesAffichees(
+  joueurs: readonly JoueurAffiche[],
+  changementPossible: boolean,
+): readonly EquipeAffichee[] {
+  return EQUIPES.map((equipe) => {
+    const membres = joueurs.filter((joueur) => joueur.equipe === equipe);
+    const complete = membres.length >= MEMBRES_PAR_EQUIPE_MAXIMUM;
+    const mienne = membres.some((joueur) => joueur.moi);
+
+    return {
+      equipe,
+      nom: `Équipe ${NOMS_DES_EQUIPES[equipe]}`,
+      couleur: COULEURS_DES_EQUIPES[equipe],
+      joueurs: membres,
+      effectif: `${String(membres.length)} / ${String(MEMBRES_PAR_EQUIPE_MAXIMUM)}`,
+      mienne,
+      complete,
+      peutRejoindre: changementPossible && !mienne && !complete,
+    };
+  });
+}
+
 /** La phrase qui dit ce qu'on attend, selon qui l'on est. */
-function consigne(hote: boolean, decompte: boolean, pseudoHote: string | undefined): string {
+function consigne(
+  hote: boolean,
+  decompte: boolean,
+  pseudoHote: string | undefined,
+  equipeVide: boolean,
+): string {
   if (decompte) {
     return 'La partie va commencer.';
+  }
+
+  if (equipeVide) {
+    return 'Il faut au moins un joueur dans chaque équipe pour lancer la partie.';
   }
 
   if (hote) {

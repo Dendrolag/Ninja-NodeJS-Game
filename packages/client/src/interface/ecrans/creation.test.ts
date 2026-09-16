@@ -72,7 +72,7 @@ describe('l ecran de creation', () => {
 
     const modes = [...hote.querySelectorAll<HTMLInputElement>('input[name="mode"]')];
 
-    expect(modes.map((mode) => mode.value)).toEqual(['classique', 'tactique']);
+    expect(modes.map((mode) => mode.value)).toEqual(['classique', 'tactique', 'equipes']);
     expect(champ('input[name="mode"][value="classique"]').checked).toBe(true);
 
     const aVenir = obligatoire(hote, '.tuile-a-venir');
@@ -93,6 +93,21 @@ describe('l ecran de creation', () => {
     expect(reseau.dernier('creerPartie')?.[0]).toMatchObject({
       pseudo: 'Alice',
       configuration: { mode: 'tactique', visibilite: 'publique' },
+    });
+  });
+
+  it('cree une partie Equipes quand on choisit son mode, pour douze joueurs', () => {
+    cocher(champ('input[name="mode"][value="equipes"]'), true);
+
+    expect(obligatoire(hote, '.creation-recapitulatif h2').textContent).toBe(
+      'Équipes · Rainy Tokyo',
+    );
+    expect(obligatoire(hote, '.creation-recapitulatif').textContent).toContain('12 joueurs');
+
+    creerLeSalon().click();
+
+    expect(reseau.dernier('creerPartie')?.[0]).toMatchObject({
+      configuration: { mode: 'equipes', visibilite: 'publique' },
     });
   });
 

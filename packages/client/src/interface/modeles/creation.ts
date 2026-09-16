@@ -18,7 +18,7 @@
  */
 
 import type { ConfigurationPartie, IdentifiantCarte, Mode, Visibilite } from '@neon-ninja/shared';
-import { CAPACITES, CARTES, MODES, validerDemandeCreation } from '@neon-ninja/shared';
+import { CAPACITES, CARTES, validerDemandeCreation } from '@neon-ninja/shared';
 
 import type { EtatClient } from '../../etat.js';
 import { formaterDuree } from '../../hud/modele.js';
@@ -31,18 +31,9 @@ import type { LigneRecapitulatif } from './salon.js';
 /** Le mode propose d'abord a la creation: le Classique, le jeu d'origine. */
 export const MODE_PAR_DEFAUT: Mode = 'classique';
 
-/**
- * Les modes que l'ecran de creation propose, dans l'ordre de leurs tuiles.
- *
- * Le mode Equipes existe dans le contrat depuis le lot A de l'etape 7.2, mais son salon
- * n'arrive qu'avec les lots B et C: une partie Equipes creee avant n'aurait pas
- * d'equipes. Il rejoint la creation au lot C.
- */
-export const MODES_PROPOSES: readonly Mode[] = MODES.filter((mode) => mode !== 'equipes');
-
 /** Ce que le joueur a choisi. */
 export interface SaisieDeCreation {
-  /** Le mode de la partie. Le Tactique se choisit depuis l'etape 7.1. */
+  /** Le mode de la partie. Le Tactique se choisit depuis l'etape 7.1, les Equipes depuis la 7.2. */
   readonly mode: Mode;
   readonly visibilite: Visibilite;
   /** Les valeurs du formulaire des reglages, telles que saisies. */

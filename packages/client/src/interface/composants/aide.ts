@@ -80,6 +80,10 @@ export function monterAide(doc: Document): Fenetre {
       creer(doc, 'p', {
         texte: `Dans le mode Tactique, toucher ne capture plus : Espace, ou le bouton Capturer, prend tout ce qui se trouve dans le cône, à courte distance devant vous. Vous avez ${String(TACTIQUE.CHARGES_MAXIMUM)} charges ; un tir qui prend quelque chose en coûte une, qui revient en ${String(TACTIQUE.RECHARGE_MS / 1000)} secondes, et un tir dans le vide ne coûte rien.`,
       }),
+      creer(doc, 'p', {
+        texte:
+          'Dans le mode Équipes, deux équipes s’affrontent, une couleur chacune : les faux ninjas que vous touchez rejoignent votre équipe, dont le score est la somme de ses ninjas et des points de Black Ninjas de ses membres. Capturer un adversaire vous donne sa part des ninjas de son équipe, et un malus frappe l’équipe adverse.',
+      }),
     ),
     liste(doc, 'Bonus', Object.entries(EFFETS_BONUS) as [TypeBonus, string][], true),
     liste(

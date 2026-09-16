@@ -20,7 +20,7 @@ import { monterChat } from '../composants/chat.js';
 import { monterPanneauReglages } from '../composants/reglages.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import { icone } from '../icones.js';
-import type { JoueurAffiche, LigneRecapitulatif } from '../modeles/salon.js';
+import type { EquipeAffichee, JoueurAffiche, LigneRecapitulatif } from '../modeles/salon.js';
 import { modeleSalon } from '../modeles/salon.js';
 import type { ContexteEcran, EcranAffiche } from './types.js';
 
@@ -91,6 +91,8 @@ export function monterSalon(contexte: ContexteEcran): EcranAffiche {
     }
   };
   const listeJoueurs = creer(doc, 'ul', { classe: 'salon-joueurs' });
+  // Dans une partie Equipes, les joueurs sont ranges dans leurs equipes (etape 7.2).
+  const blocEquipes = creer(doc, 'div', { classe: 'salon-equipes' });
   const recapitulatif = creer(doc, 'dl', { classe: 'recapitulatif' });
   const consigne = creer(doc, 'p', { classe: 'salon-consigne' });
 
@@ -204,6 +206,7 @@ export function monterSalon(contexte: ContexteEcran): EcranAffiche {
           placesLibres,
         ),
         listeJoueurs,
+        blocEquipes,
         creer(
           doc,
           'section',
@@ -233,15 +236,11 @@ export function monterSalon(contexte: ContexteEcran): EcranAffiche {
 
   /** La signature de la liste affichee, pour ne la refaire que si elle a change. */
   let signatureJoueurs = '';
+  let signatureEquipes = '';
   let signatureRecapitulatif = '';
 
   const majJoueurs = (joueurs: readonly JoueurAffiche[]): void => {
-    const signature = joueurs
-      .map(
-        (joueur) =>
-          `${joueur.id}|${joueur.pseudo}|${String(joueur.hote)}|${String(joueur.moi)}|${String(joueur.niveau)}`,
-      )
-      .join('\n');
+    const signature = joueurs.map(signatureDuJoueur).join('\n');
 
     if (signature === signatureJoueurs) {
       return;
@@ -249,6 +248,37 @@ export function monterSalon(contexte: ContexteEcran): EcranAffiche {
 
     signatureJoueurs = signature;
     listeJoueurs.replaceChildren(...joueurs.map((joueur) => carteJoueur(doc, joueur)));
+  };
+
+  /** Les colonnes des equipes, a la place de la liste, dans une partie Equipes (etape 7.2). */
+  const majEquipes = (equipes: readonly EquipeAffichee[] | undefined): void => {
+    montrer(listeJoueurs, equipes === undefined);
+    montrer(blocEquipes, equipes !== undefined);
+
+    const signature = (equipes ?? [])
+      .map((equipe) =>
+        [
+          equipe.equipe,
+          equipe.effectif,
+          String(equipe.mienne),
+          String(equipe.peutRejoindre),
+          ...equipe.joueurs.map(signatureDuJoueur),
+        ].join('\n'),
+      )
+      .join('\n\n');
+
+    if (signature === signatureEquipes) {
+      return;
+    }
+
+    signatureEquipes = signature;
+    blocEquipes.replaceChildren(
+      ...(equipes ?? []).map((equipe) =>
+        colonneDEquipe(doc, equipe, () => {
+          client.changerDEquipe(equipe.equipe);
+        }),
+      ),
+    );
   };
 
   const majRecapitulatif = (lignes: readonly LigneRecapitulatif[]): void => {
@@ -302,6 +332,7 @@ export function monterSalon(contexte: ContexteEcran): EcranAffiche {
       }
 
       majJoueurs(modele.joueurs);
+      majEquipes(modele.equipes);
       majRecapitulatif(modele.recapitulatif);
       chat.afficher(modele.messages, etat.refus?.action === 'chat' ? etat.refus : undefined);
       chat.activer(modele.lienEtabli);
@@ -321,6 +352,57 @@ export function monterSalon(contexte: ContexteEcran): EcranAffiche {
       racine.remove();
     },
   };
+}
+
+/** Ce qui, d'un joueur, change sa carte: pour ne la refaire que si elle a change. */
+function signatureDuJoueur(joueur: JoueurAffiche): string {
+  return `${joueur.id}|${joueur.pseudo}|${String(joueur.hote)}|${String(joueur.moi)}|${String(joueur.niveau)}`;
+}
+
+/**
+ * La colonne d'une equipe, dans le salon d'une partie Equipes (etape 7.2): son nom a sa
+ * couleur, ses membres, et le bouton pour la rejoindre, ou la mention de la notre.
+ */
+function colonneDEquipe(doc: Document, equipe: EquipeAffichee, rejoindre: () => void): HTMLElement {
+  const boutonRejoindre = bouton(
+    doc,
+    {
+      classe: 'bouton bouton-secondaire',
+      texte: equipe.complete
+        ? 'Équipe complète'
+        : `Rejoindre l’${equipe.nom.toLocaleLowerCase('fr')}`,
+    },
+    rejoindre,
+  );
+  boutonRejoindre.disabled = !equipe.peutRejoindre;
+
+  const colonne = creer(
+    doc,
+    'section',
+    {
+      classe: equipe.mienne ? 'salon-equipe mienne' : 'salon-equipe',
+      attributs: { 'data-equipe': equipe.equipe },
+    },
+    creer(
+      doc,
+      'header',
+      { classe: 'salon-equipe-entete' },
+      creer(doc, 'h3', { texte: equipe.nom }),
+      creer(doc, 'span', { classe: 'salon-effectif', texte: equipe.effectif }),
+    ),
+    creer(
+      doc,
+      'ul',
+      { classe: 'salon-joueurs' },
+      ...equipe.joueurs.map((joueur) => carteJoueur(doc, joueur)),
+    ),
+    equipe.mienne
+      ? creer(doc, 'p', { classe: 'salon-equipe-note', texte: 'Votre équipe' })
+      : boutonRejoindre,
+  );
+  colonne.style.setProperty('--couleur-equipe', equipe.couleur);
+
+  return colonne;
 }
 
 /** La carte d'un joueur du salon. */
