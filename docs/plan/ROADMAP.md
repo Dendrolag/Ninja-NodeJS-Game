@@ -96,6 +96,8 @@ Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision 
 
 **Décision du 15 septembre 2026: le mode Équipes ouvre les fonctionnalités reportées.** Le porteur du projet l'a choisi parmi les quatre modes proposés, le pass de saison, les skins et les clans, puis a tranché ses règles: deux équipes d'une couleur chacune, douze joueurs, choix de l'équipe au salon, capture d'un adversaire qui rapporte sa part des bots de son équipe, malus sur l'équipe adverse, récompenses par équipe. Étape `7.2`, fiche rédigée le même jour selon le cas de repli du PROTOCOLE. Les autres fonctionnalités reportées suivent, dans l'ordre que fixera le porteur du projet.
 
+**Décision du 16 septembre 2026: la Chasse suit les Équipes.** Le porteur du projet l'a choisie parmi les fonctionnalités reportées restantes, puis a tranché douze règles: une proie attrapée devient traqueur (infection), la survie seule compte, un traqueur par cinq joueurs tiré au sort au lancement, dix joueurs, trois secondes avant qu'un nouveau traqueur capture, deux camps à la fin, les ninjas en camouflage sans Black Ninjas, une couleur commune aux traqueurs, pas d'entrée dans une Chasse lancée. Étape `7.3`, fiche rédigée le même jour selon le cas de repli du PROTOCOLE.
+
 ---
 
 ## 4. Carte thématique des étapes
@@ -213,6 +215,9 @@ Tests requis: TU sur la géométrie du cône, le tir, les charges et la visée; 
 
 **7.2. Mode Équipes.** Deux équipes d'une couleur chacune, douze joueurs au plus, qui se disputent les bots de la carte. Première fonctionnalité reportée, choisie par le porteur du projet le 15 septembre 2026 avec neuf décisions de jeu: choix de l'équipe au salon, capture d'un adversaire qui rapporte sa part au plus près, bot noir qui en retire la moitié, malus sur l'équipe adverse, récompenses par équipe, lancement avec un joueur par équipe.
 Tests requis: TU sur la part d'un joueur, la capture, le bot noir et le malus en équipes, le classement des équipes et les récompenses; TI sur le salon (arrivée, changement d'équipe, condition de lancement) et sur une partie Équipes à travers le vrai serveur et la base; bout en bout d'une partie préparée au salon et lancée; Classique et Tactique inchangés, empreinte des parties comprise.
+
+**7.3. Mode Chasse.** Des traqueurs infectent les proies qu'ils attrapent, et les proies doivent tenir jusqu'au bout. Deuxième fonctionnalité reportée, choisie par le porteur du projet le 16 septembre 2026 avec douze décisions de jeu: infection, survie seule au score, traqueurs tirés au sort, dix joueurs, délai de trois secondes d'un nouveau traqueur, victoire par camp et fin dès la dernière proie tombée, ninjas en camouflage, couleur commune des traqueurs.
+Tests requis: TU sur les rôles, le tirage, l'infection, le remplacement d'un traqueur parti, le score de survie, la fin anticipée et les places par camp; TI sur le salon (lancement, entrée refusée) et sur une partie Chasse à travers le vrai serveur et la base; bout en bout d'une partie lancée; Classique, Tactique et Équipes inchangés, empreinte des parties comprise.
 
 ---
 
