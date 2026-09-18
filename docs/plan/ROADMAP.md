@@ -110,6 +110,8 @@ Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision 
 
 **Décision du 18 septembre 2026: du peaufinage et du débogage avant toute nouvelle évolution.** En jouant après l'étape 7.4, le porteur du projet a relevé un défaut d'affichage (un personnage arrêté se retournait face à l'écran), corrigé le jour même pour les joueurs (`b7f9cd3`) puis, sur sa décision, pour les bots (`24e2fc2`). Il demande une étape consacrée à ce genre de défauts avant d'attaquer les fonctionnalités reportées: étape `5.5`, peaufinage et débogage de tout le jeu, les cinq modes compris. Sa fiche se rédige au début de la session selon le cas de repli du PROTOCOLE, à partir de la liste que donne le porteur du projet et des limites connues des handoffs. Ordre: `5.5`, puis les fonctionnalités reportées.
 
+**Décision du 18 septembre 2026, au début de l'étape 5.5: deux nouvelles étapes.** La liste du porteur du projet mêlait des défauts et des évolutions. Les défauts, et deux limites connues (la flèche d'une proie infectée, la teinte fixe des cadavres), restent dans `5.5` (fiche `docs/plan/etape-5-5.md`). Deviennent des étapes: `7.5`, réglages du Classique (combo, points flottants qui suivent le combo, renommage en « Horde » à confirmer, vitesse commune de 150 pixels par seconde aux joueurs et aux bots hors bonus), qui change le score et les vitesses protégés par CLAUDE.md et se fait donc en une fois; et `7.6`, options de partie (Tokyo unique avec une option pluie, plus de 150 bots selon le mode ou la carte). Ordre: `5.5`, `7.5`, `7.6`, puis les fonctionnalités reportées.
+
 ---
 
 ## 4. Carte thématique des étapes
@@ -236,6 +238,12 @@ Tests requis: TU sur les rôles, le tirage, le tir en cône, les vies et l'élim
 
 **7.4. Mode Massacre.** Plus de capture: un coup de katana en arc tue les bots et les joueurs, chaque mort laisse du sang, et les morts enchaînées font monter un multiplicateur de points. La carte se vide; la partie s'arrête quand tout est tué, avec un bonus au temps restant. Troisième fonctionnalité reportée, choisie par le porteur du projet le 16 septembre 2026: huit joueurs, solo lançable avec record personnel, vol de la moitié des points d'un joueur tué, Black Ninjas tranchables, sang réglable par chaque joueur.
 Tests requis: TU sur l'arc, le coup, les combos, le joueur tué, le Black Ninja et la carte vidée; TU du dessin reproductible du sang et des traces de pas; TI sur une partie Massacre à travers le vrai serveur et la base, record solo compris; bout en bout d'une partie lancée seul; Classique, Tactique, Équipes et Chasse inchangés, empreinte des parties comprise.
+
+**7.5. Réglages du Classique.** Étape ajoutée le 18 septembre 2026, au tri de l'étape 5.5. Un multiplicateur de combo pour les captures de faux ninjas enchaînées, sur le modèle du Massacre; des points flottants blancs dont la couleur et la taille montent avec le combo, sur une échelle fixée avec le porteur du projet; le renommage du Classique en « Horde », à confirmer; une vitesse commune de 150 pixels par seconde aux joueurs et aux bots, Black Ninjas compris, hors bonus. Les comportements à préserver 1 et 5 de CLAUDE.md sont mis à jour, datés, et les règles du combo tranchées au début de l'étape.
+Tests requis: TU sur le combo et la vitesse; TU des points flottants; nouvelles empreintes des parties de référence, changement voulu et consigné; les autres modes inchangés là où la vitesse ne les touche pas; bout en bout vert.
+
+**7.6. Options de partie.** Étape ajoutée le 18 septembre 2026, au tri de l'étape 5.5. Tokyo et Rainy Tokyo ont le même décor: une seule carte « Tokyo », et une option pluie dans les réglages de partie, les parties et records déjà enregistrés restant lisibles. Plus de 150 faux ninjas au départ, selon le mode ou la carte, dans la limite qu'une mesure du débit et du rendu justifie.
+Tests requis: TU de la validation des réglages; TI d'une partie avec pluie et d'une partie à plus de 150 bots; mesure au banc de charge et au banc du rendu; empreinte des parties de référence identique; bout en bout vert.
 
 ---
 
