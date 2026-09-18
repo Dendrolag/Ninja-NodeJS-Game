@@ -131,7 +131,7 @@ test('l en-tete des menus tient dans un petit telephone, compte compris', async 
   await page.setViewportSize({ width: 360, height: 640 });
   await page.goto(jeu.url);
   await page.evaluate(() => {
-    for (const element of document.querySelectorAll('.entete-compte > *')) {
+    for (const element of Array.from(document.querySelectorAll('.entete-compte > *'))) {
       element.toggleAttribute('hidden', element.classList.contains('entete-connexion'));
     }
     const pieces = document.querySelector('.pastille-pieces');
@@ -144,7 +144,7 @@ test('l en-tete des menus tient dans un petit telephone, compte compris', async 
 
   const mesure = await page.evaluate(() => {
     const entete = document.querySelector('.entete') as HTMLElement;
-    const enfants = [...entete.querySelectorAll('*')]
+    const enfants = Array.from(entete.querySelectorAll('*'))
       .filter((element) => (element as HTMLElement).offsetParent !== null)
       .map((element) => element.getBoundingClientRect());
     return {
