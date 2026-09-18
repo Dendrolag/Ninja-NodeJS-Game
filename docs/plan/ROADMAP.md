@@ -108,6 +108,8 @@ Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision 
 
 **Étape 7.4 terminée le 18 septembre 2026: le jeu a son mode Massacre.** On ne capture plus: un coup de katana en arc tue les faux ninjas, les Black Ninjas et les autres joueurs, et les morts enchaînées multiplient les points. La carte se vide, avec un bonus au temps restant; le mode se joue seul, avec un record personnel au profil, ou à huit. Le sang, les cadavres et les traces de pas sont dessinés tout en code, les mêmes pour tous, et chacun choisit d'en voir plus ou moins. Le Classique est inchangé, empreinte des parties comprise; une partie Massacre coûte moins qu'une Classique, la carte se vidant sous les coups (section 16 de `docs/mesures/charge-serveur.md`). Fiche: `docs/plan/etape-7-4.md`. Suite: les autres fonctionnalités reportées (Battle Royale, Chaos, pass de saison, skins, clans), dans l'ordre que fixe le porteur du projet, chacune avec sa fiche.
 
+**Décision du 18 septembre 2026: du peaufinage et du débogage avant toute nouvelle évolution.** En jouant après l'étape 7.4, le porteur du projet a relevé un défaut d'affichage (un personnage arrêté se retournait face à l'écran), corrigé le jour même pour les joueurs (`b7f9cd3`) puis, sur sa décision, pour les bots (`24e2fc2`). Il demande une étape consacrée à ce genre de défauts avant d'attaquer les fonctionnalités reportées: étape `5.5`, peaufinage et débogage de tout le jeu, les cinq modes compris. Sa fiche se rédige au début de la session selon le cas de repli du PROTOCOLE, à partir de la liste que donne le porteur du projet et des limites connues des handoffs. Ordre: `5.5`, puis les fonctionnalités reportées.
+
 ---
 
 ## 4. Carte thématique des étapes
@@ -211,6 +213,9 @@ Tests requis: TU et TI du contrôle de version entre la page et le serveur, de l
 
 **5.4. Recette fonctionnelle.** Étape ajoutée le 14 septembre 2026, à la demande du porteur du projet. Dérouler une grille de recette de tout le jeu (écrans, règles, comptes, mode Tactique, cartes, multijoueur, mobile, production), en local et en production, en comparant au jeu d'origine là où il fait foi; corriger chaque défaut trouvé, dont l'attribution aléatoire des couleurs signalée.
 Tests requis: un test qui échouait avant chaque correction; la grille complète, chaque cas avec son verdict.
+
+**5.5. Peaufinage et débogage.** Étape ajoutée le 18 septembre 2026, à la demande du porteur du projet, après l'étape 7.4 et avant les fonctionnalités reportées. Recueillir auprès de lui les défauts et les manques qu'il relève en jouant, les compléter des limites connues des handoffs (5.4 à 7.4), les trier avec lui, puis corriger chacun, dans les cinq modes, sur ordinateur et sur téléphone. Aucune nouvelle fonctionnalité: ce qui en serait une devient une étape à part.
+Tests requis: un test qui échouait avant chaque correction; empreinte des parties de référence identique, sauf changement voulu et consigné; bout en bout vert.
 
 ### Phase 6. Retrait du legacy
 

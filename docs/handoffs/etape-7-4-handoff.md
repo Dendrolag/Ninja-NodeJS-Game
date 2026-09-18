@@ -81,10 +81,10 @@ Les empreintes des parties Classique de référence changent pour cette seule ra
 
 ## Prochaine action exacte
 
-Dans une conversation neuve, sur `master`: demander au porteur du projet la fonctionnalité reportée suivante (Battle Royale, Chaos, pass de saison, skins, clans), trancher ses règles avec lui, puis rédiger sa fiche selon le cas de repli du PROTOCOLE et la commiter avant de l'exécuter.
+Décision du porteur du projet du 18 septembre 2026, prise après ce handoff: du peaufinage et du débogage avant toute nouvelle évolution (ROADMAP, section 3). Dans une conversation neuve, sur `master`: ouvrir l'étape `5.5`, peaufinage et débogage. Demander au porteur du projet la liste des défauts et des manques qu'il a relevés en jouant, la compléter des limites connues ci-dessous, la trier avec lui, puis rédiger la fiche `docs/plan/etape-5-5.md` selon le cas de repli du PROTOCOLE, la commiter, et corriger chaque point, un test qui échouait avant chaque correction. Les fonctionnalités reportées (Battle Royale, Chaos, pass de saison, skins, clans) viennent ensuite.
 
 Au porteur du projet: jouer un Massacre seul puis à plusieurs, pour régler le barème, la fenêtre du combo et le niveau de sang par défaut; écouter les deux sons du katana, et dire s'il veut les remplacer. Toujours en attente des handoffs précédents: une Chasse et une partie Équipes à plusieurs, les sons et la musique (cas C21), la base du serveur de développement local (handoff 3.4).
 
 ## Étape suivante
 
-Fiche à lire: aucune encore; celle de la fonctionnalité reportée suivante, à rédiger au début de la session, une fois ses règles tranchées par le porteur du projet.
+Fiche à lire: aucune encore; celle de l'étape 5.5, peaufinage et débogage, à rédiger au début de la session à partir de la liste du porteur du projet (entrée 5.5 de la section 4 du ROADMAP).
