@@ -82,6 +82,11 @@ export function sonDuFait(fait: FaitDeJeu, moi?: string, mode?: Mode): NomDeSon 
     case 'carteVidee':
       return undefined;
 
+    // Nos ralliements de la Horde (etape 7.5): le son d'un faux ninja rallie, une fois pour
+    // tous ceux d'un meme battement, qui arrivent ensemble.
+    case 'ralliement':
+      return 'botCapture';
+
     case 'bonusActive':
       return 'bonusRamasse';
 
@@ -151,8 +156,12 @@ export function sonsDuChangement(precedent: EtatClient, courant: EtatClient): re
 
   // Un faux ninja rallie: le son du jeu d'origine (botConvert), qui accompagne le point
   // « +1 » et ne se jouait plus (etape 5.5). Un seul son par battement, meme si
-  // plusieurs ninjas passent ensemble.
-  if (pointsDesRalliements(precedent.partie, courant.partie, courant.moi).length > 0) {
+  // plusieurs ninjas passent ensemble. La Horde (etape 7.5) le tire de ses ralliements,
+  // annonces par le serveur: voir sonDuFait.
+  if (
+    courant.salon?.mode !== 'classique' &&
+    pointsDesRalliements(precedent.partie, courant.partie, courant.moi).length > 0
+  ) {
     sons.push('botCapture');
   }
 

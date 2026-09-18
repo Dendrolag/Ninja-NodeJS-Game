@@ -82,6 +82,8 @@ function ninjas(nombre: number): string {
  * EN CHASSE (etape 7.3), une capture est une infection: la proie attrapee devient
  * traqueur, et aucun ninja ne change de main. Les phrases le disent.
  *
+ * EN HORDE (etape 7.5), nos ralliements ne s'annoncent qu'a un nouveau palier de combo.
+ *
  * EN MASSACRE (etape 7.4), un coup de katana ne s'annonce que lorsqu'il fait passer notre
  * multiplicateur a un nouveau palier; un joueur tue ne s'annonce qu'au tueur et a sa
  * victime; la carte videe s'annonce a tous, avec son bonus.
@@ -96,6 +98,9 @@ export function annonceDuFait(fait: FaitDeJeu, mode?: Mode, moi?: string): Annon
 
     case 'coupDeKatana':
       return annonceDuCoup(fait.charge, moi);
+
+    case 'ralliement':
+      return annonceDuRalliement(fait.charge);
 
     case 'joueurTranche':
       return annonceDeLaMiseAMort(fait.charge, moi);
@@ -176,6 +181,21 @@ function annonceDuCoup(
 
   return coup.frappeur === moi && coup.morts.length > 0 && coup.multiplicateur > avant
     ? { texte: `Combo x${String(coup.multiplicateur)} !`, ton: 'succes' }
+    : undefined;
+}
+
+/**
+ * Nos ralliements de la Horde (etape 7.5) ne s'annoncent que lorsqu'ils font passer notre
+ * multiplicateur a un nouveau palier, comme les coups du Massacre. Ils ne sont envoyes qu'a
+ * nous.
+ */
+function annonceDuRalliement(
+  ralliement: Extract<FaitDeJeu, { nature: 'ralliement' }>['charge'],
+): Annonce | undefined {
+  const avant = multiplicateurDuCombo(ralliement.combo - ralliement.ninjas.length);
+
+  return ralliement.multiplicateur > avant
+    ? { texte: `Combo x${String(ralliement.multiplicateur)} !`, ton: 'succes' }
     : undefined;
 }
 

@@ -38,7 +38,7 @@ export type SensDUneVariation = 'hausse' | 'baisse' | 'stable';
 /** Une partie de l'historique, telle qu'on l'affiche. */
 export interface LigneDHistorique {
   readonly date: string;
-  /** « Classique · Spirit & Time · Miroir ». */
+  /** « Horde · Spirit & Time · Miroir ». */
   readonly partie: string;
   /** « 1re sur 3 ». */
   readonly place: string;

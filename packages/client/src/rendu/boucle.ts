@@ -232,6 +232,7 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
         afficheur.montrer({
           texte: texteDesPoints(gain.valeur),
           genre: gain.genre,
+          niveau: gain.niveau,
           ...versEcran(gain, camera, taille),
         });
       }

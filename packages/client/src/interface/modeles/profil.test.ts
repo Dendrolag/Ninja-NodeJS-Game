@@ -94,7 +94,7 @@ describe('modeleProfil', () => {
     expect(modele.nature === 'charge' ? modele.parties : []).toEqual([
       {
         date: formaterFinDePartie('2026-09-12T18:30:00.000Z'),
-        partie: 'Classique · Spirit & Time · Miroir',
+        partie: 'Horde · Spirit & Time · Miroir',
         place: '1re sur 3',
         points: '42',
         xp: '+150',
@@ -104,7 +104,7 @@ describe('modeleProfil', () => {
       },
       {
         date: formaterFinDePartie('2026-09-12T17:00:00.000Z'),
-        partie: 'Classique · Rainy Tokyo',
+        partie: 'Horde · Rainy Tokyo',
         place: '4e sur 4',
         points: '3',
         xp: '+30',

@@ -27,6 +27,7 @@ import { SCORE } from '@neon-ninja/shared';
 import { pointsEnChasse } from './chasse.js';
 import type { Couleur } from './couleurs.js';
 import type { EtatPartie, HistoriqueCapture, IdentifiantEntite, Joueur } from './etat.js';
+import { primeEnHorde } from './horde.js';
 import { pointsEnMassacre } from './massacre.js';
 
 /** Ce que vaut un joueur a un instant donne, et de quoi c'est fait. */
@@ -35,7 +36,8 @@ export interface LigneScore {
   readonly pseudo: string;
   readonly couleur: Couleur;
   /**
-   * Le score affiche: les bots portes plus les points de bots noirs. En Chasse, les points
+   * Le score affiche: les bots portes plus les points de bots noirs, et en Horde la reserve
+   * de primes de combo, qui se perd a la capture comme les bots (etape 7.5). En Chasse, les points
    * de parcours, de captures et de vies (etape 7.3). En Massacre, les points que l'etat range
    * pour le joueur (etape 7.4).
    *
@@ -96,9 +98,14 @@ export function scoreDe(etat: EtatPartie, joueur: Joueur): LigneScore {
   };
 }
 
-/** Le score affiche d'un joueur selon le mode: les bots portes et les bots noirs, hors Chasse et Massacre. */
+/**
+ * Le score affiche d'un joueur selon le mode: les bots portes et les bots noirs, plus la
+ * reserve de primes de combo en Horde (etape 7.5); autre chose en Chasse et en Massacre.
+ */
 function pointsDe(etat: EtatPartie, joueur: Joueur, pointsDeBots: number): number {
   switch (etat.mode) {
+    case 'classique':
+      return pointsDeBots + primeEnHorde(etat, joueur);
     case 'chasse':
       return pointsEnChasse(etat, joueur);
     case 'massacre':

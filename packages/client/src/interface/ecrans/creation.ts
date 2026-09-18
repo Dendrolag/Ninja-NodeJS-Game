@@ -31,7 +31,8 @@ const TUILES_DES_MODES: Readonly<
   Record<Mode, { readonly texte: string; readonly glyphe: Glyphe }>
 > = {
   classique: {
-    texte: 'Ralliez les faux ninjas et capturez les autres joueurs pour leur voler leur troupeau.',
+    texte:
+      'Ralliez les faux ninjas à la suite pour monter votre combo, et capturez les autres joueurs pour leur voler leur troupeau.',
     glyphe: 'ninja',
   },
   tactique: {

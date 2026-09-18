@@ -113,6 +113,7 @@ export type {
   MalusRamasseParMoi,
   MalusSubi,
   MortVue,
+  NinjaRallieVu,
   ObjetVu,
   PartieEnPause,
   PartiePublique,
@@ -120,6 +121,7 @@ export type {
   ProgressionDeFin,
   ProgressionEnregistree,
   ProgressionNonEnregistree,
+  RalliementVu,
   Refus,
   StatutPartie,
   TactiqueVue,
@@ -149,6 +151,7 @@ export {
   CAPACITES,
   CARTES,
   CHASSE,
+  COMBO,
   MASSACRE,
   COULEUR_BOT_NEUTRE,
   COULEUR_BOT_NOIR,
@@ -179,7 +182,7 @@ export { placeDansUnCamp } from './camps.js';
 export type { CampDeChasse, LigneDeJoueurEnChasse } from './chasse.js';
 export { campDeCouleur, proiesRestantes } from './chasse.js';
 
-export { multiplicateurDuCombo } from './massacre.js';
+export { multiplicateurDuCombo } from './combo.js';
 
 export type {
   ClassementDesEquipes,

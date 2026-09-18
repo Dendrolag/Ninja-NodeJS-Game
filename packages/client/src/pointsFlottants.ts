@@ -13,12 +13,17 @@
  *   - un Black Ninja detruit: ses points, en or, la ou il a ete detruit;
  *   - un joueur capture: les ninjas gagnes, en violet, la ou il se trouvait.
  *
+ * LA HORDE (etape 7.5) remplace la premiere occasion par ses ralliements, que le serveur
+ * annonce avec le multiplicateur du combo: le point y vaut ce multiplicateur, et monte en
+ * couleur et en taille avec lui, comme les morts du Massacre.
+ *
  * FONCTIONS PURES, COMME LES ANNONCES. On leur donne deux etats successifs, elles
  * rendent les points a montrer, en coordonnees de carte. Les placer a l'ecran et
  * les animer est le travail de la boucle et de hud/pointsFlottants.ts.
  */
 
 import type { EntiteVue } from '@neon-ninja/shared';
+import { MASSACRE } from '@neon-ninja/shared';
 
 import type { EtatClient } from './etat.js';
 import { faitsArrives } from './faits.js';
@@ -37,6 +42,11 @@ export type GenreDePoints =
 export interface PointsGagnes {
   readonly valeur: number;
   readonly genre: GenreDePoints;
+  /**
+   * Le multiplicateur du combo qui les a rapportes, de un a cinq: la couleur et la taille
+   * du point montent avec lui (etape 7.5). Un hors de tout combo.
+   */
+  readonly niveau: number;
   readonly x: number;
   readonly y: number;
 }
@@ -48,10 +58,14 @@ export function texteDesPoints(valeur: number): string {
 
 /** Tous les points a montrer en passant d'un etat au suivant. */
 export function pointsDuChangement(avant: EtatClient, apres: EtatClient): readonly PointsGagnes[] {
-  return [
-    ...pointsDesFaits(avant, apres),
-    ...pointsDesRalliements(avant.partie, apres.partie, apres.moi),
-  ];
+  // La Horde (etape 7.5) annonce ses ralliements, avec leur multiplicateur: ses points
+  // viennent des faits, pas des couleurs.
+  return apres.salon?.mode === 'classique'
+    ? pointsDesFaits(avant, apres)
+    : [
+        ...pointsDesFaits(avant, apres),
+        ...pointsDesRalliements(avant.partie, apres.partie, apres.moi),
+      ];
 }
 
 /**
@@ -71,20 +85,37 @@ function pointsDesFaits(avant: EtatClient, apres: EtatClient): readonly PointsGa
         points.push({
           valeur: mort.points,
           genre: mort.noir ? 'botNoir' : 'bot',
+          // Le multiplicateur de cette mort-la: un meme coup peut franchir un palier.
+          niveau:
+            mort.points / (mort.noir ? MASSACRE.POINTS_PAR_BOT_NOIR : MASSACRE.POINTS_PAR_BOT),
           x: mort.x,
           y: mort.y,
         });
       }
     }
 
+    // La Horde (etape 7.5): chaque ninja que nous avons rallie vaut son multiplicateur, le
+    // ninja lui-meme plus sa prime.
+    if (fait.nature === 'ralliement') {
+      for (const ninja of fait.charge.ninjas) {
+        points.push({
+          valeur: ninja.multiplicateur,
+          genre: 'bot',
+          niveau: ninja.multiplicateur,
+          x: ninja.x,
+          y: ninja.y,
+        });
+      }
+    }
+
     if (fait.nature === 'joueurTranche' && fait.charge.attaquant === apres.moi) {
       const { pointsVoles: valeur, x, y } = fait.charge;
-      points.push({ valeur, genre: 'joueur', x, y });
+      points.push({ valeur, genre: 'joueur', niveau: 1, x, y });
     }
 
     if (fait.nature === 'botNoirDetruit') {
       const { points: valeur, x, y } = fait.charge;
-      points.push({ valeur, genre: 'botNoir', x, y });
+      points.push({ valeur, genre: 'botNoir', niveau: 1, x, y });
     }
 
     // En Chasse, attraper une proie ne rapporte aucun ninja: aucun point ne s'envole.
@@ -97,6 +128,7 @@ function pointsDesFaits(avant: EtatClient, apres: EtatClient): readonly PointsGa
         points.push({
           valeur: fait.charge.botsGagnes,
           genre: 'joueur',
+          niveau: 1,
           x: victime.x,
           y: victime.y,
         });
@@ -144,7 +176,7 @@ export function pointsDesRalliements(
       entite.couleur === maCouleur &&
       !couleursDesJoueurs.has(ancien.couleur)
     ) {
-      points.push({ valeur: 1, genre: 'bot', x: entite.x, y: entite.y });
+      points.push({ valeur: 1, genre: 'bot', niveau: 1, x: entite.x, y: entite.y });
     }
   }
 

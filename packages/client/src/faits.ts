@@ -31,6 +31,7 @@ import type {
   JoueurTrancheVu,
   MalusRamasseParMoi,
   MalusSubi,
+  RalliementVu,
   TirDeCaptureVu,
   VieDeTraqueurPerdueVue,
 } from '@neon-ninja/shared';
@@ -71,6 +72,8 @@ export interface ChargesDeFait {
   joueurTranche: JoueurTrancheVu;
   /** Le dernier bot vient de tomber, dans le Massacre. */
   carteVidee: CarteVideeVue;
+  /** Ce joueur vient de rallier des faux ninjas en les touchant, dans la Horde. */
+  ralliement: RalliementVu;
   /** Quelqu'un vient d'entrer dans la partie. */
   joueurArrive: JoueurDuSalon;
   /** Quelqu'un vient de quitter la partie. */

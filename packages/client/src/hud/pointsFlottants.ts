@@ -18,6 +18,8 @@ import type { GenreDePoints } from '../pointsFlottants.js';
 export interface PointAAfficher {
   readonly texte: string;
   readonly genre: GenreDePoints;
+  /** Le multiplicateur du combo, de un a cinq, qui decide de la couleur et de la taille. */
+  readonly niveau: number;
   /** Position en pixels, dans le repere de l'element hote. */
   readonly x: number;
   readonly y: number;
@@ -52,6 +54,8 @@ export function monterPointsFlottants(options: OptionsPointsFlottants): Afficheu
     montrer(point) {
       const element = doc.createElement('div');
       element.className = `point-flottant point-flottant-${point.genre} monte`;
+      // Le niveau du combo (etape 7.5): du blanc au magenta, de plus en plus grand.
+      element.dataset['niveau'] = String(point.niveau);
       // textContent, et pas innerHTML: le texte ne doit jamais devenir du balisage.
       element.textContent = point.texte;
       element.style.left = `${String(point.x)}px`;

@@ -56,7 +56,7 @@ export interface EnvoiDeCreation {
 
 /** Ce que l'ecran de creation affiche. */
 export interface ModeleCreation {
-  /** « Classique · Rainy Tokyo ». */
+  /** « Horde · Rainy Tokyo ». */
   readonly titre: string;
   readonly recapitulatif: readonly LigneRecapitulatif[];
   readonly pseudoRequis: boolean;

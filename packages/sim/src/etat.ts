@@ -376,7 +376,8 @@ export type EvenementPartie =
   | VieDeTraqueurPerdue
   | CoupDeKatana
   | JoueurTranche
-  | CarteVidee;
+  | CarteVidee
+  | Ralliement;
 
 /**
  * Un joueur a tire, dans le mode Tactique (etape 7.1).
@@ -492,6 +493,44 @@ export interface EtatDeMassacre {
   readonly carteVidee: boolean;
 }
 
+/**
+ * Un joueur a rallie un faux ninja en le touchant, dans la Horde (etape 7.5): le ninja est
+ * passe a sa couleur, et son combo a avance.
+ *
+ * Seul le contact d'un joueur en laisse un. La contagion entre ninjas, qui repeint aussi,
+ * ne compte pas pour le combo et ne laisse rien au journal.
+ */
+export interface Ralliement {
+  readonly type: 'ralliement';
+  readonly joueur: IdentifiantEntite;
+  readonly bot: IdentifiantEntite;
+  /** Ou se trouvait le ninja rallie. */
+  readonly position: Position;
+  /** Les ninjas du combo du joueur apres ce ralliement. */
+  readonly combo: number;
+  /** Le multiplicateur atteint: le ninja vaut un point de stock, plus ce multiplicateur moins un de prime. */
+  readonly multiplicateur: number;
+}
+
+/** Ce que la Horde retient d'un joueur (etape 7.5). */
+export interface RallieurEnHorde {
+  /** Les ninjas rallies de son combo en cours. Zero: pas de combo. */
+  readonly combo: number;
+  /** Le temps qu'il reste a son combo pour etre prolonge, en millisecondes. */
+  readonly avantFinDuComboMs: number;
+  /**
+   * Sa reserve de primes de combo. Elle s'ajoute a son score, et se perd avec ses ninjas
+   * quand il se fait capturer: le score reste un stock.
+   */
+  readonly prime: number;
+}
+
+/** Ce que la Horde retient de la partie (etape 7.5). Voir EtatPartie.horde. */
+export interface EtatDeHorde {
+  /** Ce que retient chaque joueur. Un joueur qui n'y figure pas a l'etat de depart. */
+  readonly rallieurs: Readonly<Record<IdentifiantEntite, RallieurEnHorde>>;
+}
+
 /** Ce que la Chasse retient d'un traqueur (etape 7.3). */
 export interface TraqueurEnChasse {
   /** Le temps de jeu ecoule quand il est devenu traqueur. */
@@ -596,6 +635,15 @@ export interface EtatPartie {
    * le pose (voir massacre.ts), comme pour la Chasse.
    */
   readonly massacre?: EtatDeMassacre;
+  /**
+   * Les combos et les reserves de primes d'une partie Horde, le mode d'identifiant
+   * `classique` (etape 7.5).
+   *
+   * ABSENT D'UNE PARTIE D'UN AUTRE MODE, et d'une Horde au salon: c'est le lancement qui le
+   * pose (voir horde.ts), comme pour le Massacre. Sans lui, le Classique joue exactement
+   * comme avant l'etape: aucun combo, aucune prime.
+   */
+  readonly horde?: EtatDeHorde;
   /**
    * Reglages choisis par l'hote, une fois appliques ceux que le mode impose. Le moteur
    * ne connait que ceux-la.

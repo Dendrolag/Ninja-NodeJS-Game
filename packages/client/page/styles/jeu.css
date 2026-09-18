@@ -361,6 +361,34 @@
   color: #cc99ff;
 }
 
+/*
+ * Les faux ninjas d'un combo, en Horde et en Massacre (etape 7.5): du froid vers le chaud,
+ * de plus en plus grands, par pas de vingt pour cent. Les Black Ninjas et les joueurs
+ * gardent leurs couleurs.
+ */
+.point-flottant-bot[data-niveau='2'] {
+  color: #3fe8ff;
+  font-size: 30px;
+}
+
+.point-flottant-bot[data-niveau='3'] {
+  color: #4dff7a;
+  font-size: 35px;
+}
+
+.point-flottant-bot[data-niveau='4'] {
+  color: #ffd23f;
+  font-size: 40px;
+}
+
+.point-flottant-bot[data-niveau='5'] {
+  color: #ff3df0;
+  font-size: 45px;
+  text-shadow:
+    0 0 2px rgba(0, 0, 0, 0.8),
+    0 0 12px rgba(255, 61, 240, 0.9);
+}
+
 .point-flottant.monte {
   animation: point-monte 0.5s ease-out forwards;
 }

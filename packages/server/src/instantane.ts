@@ -41,6 +41,7 @@ import type {
   MalusSubi,
   ObjetVu,
   PartiePublique,
+  RalliementVu,
   TactiqueVue,
   TirDeCaptureVu,
   VieDeTraqueurPerdueVue,
@@ -364,6 +365,11 @@ export type Notification =
       readonly nom: 'carteVidee';
       readonly pour: IdentifiantEntite;
       readonly charge: CarteVideeVue;
+    }
+  | {
+      readonly nom: 'ralliement';
+      readonly pour: IdentifiantEntite;
+      readonly charge: RalliementVu;
     };
 
 /**
@@ -376,7 +382,49 @@ export type Notification =
  * pseudo vide.
  */
 export function notificationsDe(etat: EtatPartie): readonly Notification[] {
-  return etat.evenements.flatMap((evenement) => notificationsDUnFait(etat, evenement));
+  return [
+    ...etat.evenements.flatMap((evenement) => notificationsDUnFait(etat, evenement)),
+    ...ralliementsDe(etat),
+  ];
+}
+
+/**
+ * Les ralliements du battement, dans la Horde (etape 7.5): une notification par joueur au
+ * plus, qui les regroupe tous, adressee a lui seul. Un joueur qui traverse un troupeau en
+ * fait plusieurs d'un coup; les envoyer un par un chargerait le reseau et le fil des faits
+ * de la page pour rien. Le combo et le multiplicateur sont ceux du dernier.
+ *
+ * Omis pour un joueur qui a quitte la partie dans le meme battement.
+ */
+function ralliementsDe(etat: EtatPartie): readonly Notification[] {
+  const parJoueur = new Map<
+    IdentifiantEntite,
+    Extract<EvenementPartie, { type: 'ralliement' }>[]
+  >();
+
+  for (const evenement of etat.evenements) {
+    if (evenement.type === 'ralliement' && etat.joueurs[evenement.joueur] !== undefined) {
+      parJoueur.set(evenement.joueur, [...(parJoueur.get(evenement.joueur) ?? []), evenement]);
+    }
+  }
+
+  return [...parJoueur].map(([pour, ralliements]): Notification => {
+    const dernier = ralliements[ralliements.length - 1] as (typeof ralliements)[number];
+
+    return {
+      nom: 'ralliement',
+      pour,
+      charge: {
+        ninjas: ralliements.map((ralliement) => ({
+          x: ralliement.position.x,
+          y: ralliement.position.y,
+          multiplicateur: ralliement.multiplicateur,
+        })),
+        combo: dernier.combo,
+        multiplicateur: dernier.multiplicateur,
+      },
+    };
+  });
 }
 
 /** Traduit un fait en zero, une ou plusieurs notifications. */
@@ -475,6 +523,10 @@ function notificationsDUnFait(
         bonus: evenement.bonus,
         tempsRestantMs: evenement.tempsRestantMs,
       });
+
+    case 'ralliement':
+      // Regroupes par joueur a part: voir ralliementsDe.
+      return [];
   }
 }
 

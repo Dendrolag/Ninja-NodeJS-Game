@@ -43,6 +43,7 @@ import {
 } from './capture.js';
 import type { Bot, EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
 import { entiteDe, toutesLesEntites } from './etat.js';
+import { rallierUnBot, viderLaReserve } from './horde.js';
 
 /**
  * En dessous de cette distance, en pixels, deux entites se touchent. Valeur du
@@ -175,6 +176,24 @@ function regleDeContacts(regles: ReglesDeContact): RegleDeResolution {
 export const regleClassique: RegleDeResolution = regleDeContacts({
   entreJoueurs: duelDeJoueurs(capturerJoueur),
   joueurEtBot: contactJoueurBot,
+});
+
+/**
+ * La regle de la Horde, le mode d'identifiant `classique` (etape 7.5): celle du Classique,
+ * plus le combo. Un joueur qui fait passer un faux ninja a sa couleur en le touchant le
+ * rallie; un joueur capture perd sa reserve de primes et son combo. Voir horde.ts.
+ *
+ * La contagion entre ninjas passe par le meme code qu'ailleurs, et ne rallie rien.
+ */
+export const regleHorde: RegleDeResolution = regleDeContacts({
+  entreJoueurs: duelDeJoueurs((etat, attaquantId, victimeId) => {
+    const apres = capturerJoueur(etat, attaquantId, victimeId);
+    return apres === etat ? etat : viderLaReserve(apres, victimeId);
+  }),
+  joueurEtBot: (etat, joueur, bot) => {
+    const apres = contactJoueurBot(etat, joueur, bot);
+    return bot.type === 'bot' && apres !== etat ? rallierUnBot(apres, joueur.id, bot) : apres;
+  },
 });
 
 /**

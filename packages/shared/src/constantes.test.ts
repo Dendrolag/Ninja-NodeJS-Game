@@ -11,28 +11,19 @@ import { describe, expect, it } from 'vitest';
 
 import { CADENCES_LEGACY_MS, CARTES, DEPLACEMENTS_LEGACY_PAR_PAS, VITESSES } from './constantes.js';
 
-describe('conversion des vitesses du legacy', () => {
+describe('vitesses', () => {
   it('donne 150 pixels par seconde au joueur', () => {
     // 3 pixels envoyes toutes les 20 millisecondes par le client de bureau.
     expect(VITESSES.JOUEUR_PX_PAR_SECONDE).toBe(150);
   });
 
-  it('donne 100 pixels par seconde au bot', () => {
-    // 5 pixels a chaque battement de la boucle serveur, toutes les 50 ms.
-    expect(VITESSES.BOT_PX_PAR_SECONDE).toBe(100);
-  });
-
-  it('donne au bot noir exactement la vitesse d un bot ordinaire', () => {
-    // Decision du 13 aout 2026: on conserve la vitesse reellement jouee. Le
-    // reglage blackBotSpeed a 6 du legacy n'etait lu nulle part (defaut X13).
-    expect(VITESSES.BOT_NOIR_PX_PAR_SECONDE).toBe(VITESSES.BOT_PX_PAR_SECONDE);
-  });
-
-  it('rend le joueur plus rapide qu un bot une fois ramene a la seconde', () => {
-    // Contre-intuitif a la lecture du legacy, ou le joueur avance de 3 et le bot
-    // de 5. Les deux nombres ne sont pas rapportes a la meme horloge: le joueur
-    // avance deux fois et demie plus souvent.
-    expect(VITESSES.JOUEUR_PX_PAR_SECONDE).toBeGreaterThan(VITESSES.BOT_PX_PAR_SECONDE);
+  it('donne a tous la vitesse commune, 150 pixels par seconde (etape 7.5)', () => {
+    // Le jeu d'origine faisait aller le bot a 100 (5 pixels toutes les 50 ms), et le bot
+    // noir comme lui. Decision du porteur du projet du 18 septembre 2026: tout le monde va
+    // a la vitesse du joueur, Black Ninjas compris, hors bonus.
+    expect(VITESSES.BOT_PX_PAR_SECONDE).toBe(150);
+    expect(VITESSES.BOT_NOIR_PX_PAR_SECONDE).toBe(150);
+    expect(VITESSES.JOUEUR_PX_PAR_SECONDE).toBe(VITESSES.BOT_PX_PAR_SECONDE);
   });
 
   it('conserve les valeurs par pas du legacy telles quelles', () => {

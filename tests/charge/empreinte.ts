@@ -36,6 +36,7 @@ import type { Entrees, EtatPartie } from '../../packages/sim/dist/index.js';
 import {
   ajouterJoueur,
   creerEtatInitial,
+  lancerLaPartie,
   peuplerDeBots,
   tick,
 } from '../../packages/sim/dist/index.js';
@@ -126,7 +127,9 @@ function empreinteDe(partie: PartieDEmpreinte, murs: EtatPartie['terrain']): str
   for (let rang = 1; rang <= partie.joueurs; rang += 1) {
     etat = ajouterJoueur(etat, { id: `j${String(rang)}`, pseudo: `Joueur${String(rang)}` });
   }
-  etat = peuplerDeBots(etat);
+  // Lancee comme le serveur la lance (GameRoom): depuis l'etape 7.5, c'est ce qui donne ses
+  // combos a la Horde.
+  etat = lancerLaPartie(peuplerDeBots(etat));
 
   let alea = creerAlea(partie.graine ^ 0x1234);
   const entrees: Record<string, Entrees[string]> = {};

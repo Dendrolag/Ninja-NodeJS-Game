@@ -392,20 +392,21 @@ describe('les points flottants', () => {
   });
 
   it('montre un point par faux ninja rallie, une seule fois, a sa place sur l ecran', () => {
-    reseau.recevoir(
-      'etat',
-      trame(2, [
-        joueur('moi', 1_000, 750),
-        bot('b1', 1_040, '#FF0000'),
-        bot('b2', 1_100, '#FF0000'),
-      ]),
-    );
+    // En Horde (etape 7.5), le serveur annonce nos ralliements, avec leur multiplicateur.
+    reseau.recevoir('ralliement', {
+      ninjas: [
+        { x: 1_040, y: 750, multiplicateur: 1 },
+        { x: 1_100, y: 750, multiplicateur: 2 },
+      ],
+      combo: 5,
+      multiplicateur: 2,
+    });
     uneImage();
     uneImage();
 
-    expect(montres.map((point) => [point.texte, point.genre])).toEqual([
-      ['+1', 'bot'],
-      ['+1', 'bot'],
+    expect(montres.map((point) => [point.texte, point.genre, point.niveau])).toEqual([
+      ['+1', 'bot', 1],
+      ['+2', 'bot', 2],
     ]);
     // Soixante pixels de carte separent les deux ninjas: la camera les convertit.
     expect((montres[1]?.x ?? 0) - (montres[0]?.x ?? 0)).toBeCloseTo(
@@ -413,7 +414,9 @@ describe('les points flottants', () => {
     );
   });
 
-  it('voit aussi les ralliements portes par un delta, comme les envoie le serveur', () => {
+  it('voit aussi les ralliements portes par un delta, hors de la Horde', () => {
+    // Hors de la Horde, les ralliements se deduisent des couleurs du flux d'etat.
+    reseau.recevoir('salon', { ...SALON, statut: 'enCours', mode: 'equipes' });
     const partie = (tick: number, couleur: string) => ({
       tick,
       tempsRestantMs: 120_000,

@@ -29,7 +29,7 @@
  */
 
 import type { Orientation } from '@neon-ninja/shared';
-import { DUREES, MASSACRE, TACTIQUE, multiplicateurDuCombo } from '@neon-ninja/shared';
+import { COMBO, DUREES, MASSACRE, TACTIQUE, multiplicateurDuCombo } from '@neon-ninja/shared';
 
 import type { PerteFaceAuBotNoir } from './bots.js';
 import { inscrireAuJournal } from './capture.js';
@@ -305,7 +305,7 @@ function tuerUnBot(
     ...guerrier,
     points: guerrier.points + points,
     combo,
-    avantFinDuComboMs: MASSACRE.FENETRE_DU_COMBO_MS,
+    avantFinDuComboMs: COMBO.FENETRE_MS,
     botsTues: guerrier.botsTues + 1,
   });
 

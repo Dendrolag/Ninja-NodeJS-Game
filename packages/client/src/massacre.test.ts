@@ -8,7 +8,7 @@
  * les autres modes.
  */
 
-import { MASSACRE } from '@neon-ninja/shared';
+import { COMBO, MASSACRE } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
 import { annonceDuFait } from './annonces.js';
@@ -29,9 +29,9 @@ describe('le HUD d une partie Massacre', () => {
 
     expect(hud.arme).toBe('katana');
     expect(hud.charges).toEqual({ disponibles: 1, maximum: 1, recharge: 1 });
-    expect(hud.massacre).toEqual({
+    expect(hud.combo).toEqual({
       multiplicateur: 1,
-      combo: '',
+      compte: '',
       fenetre: 0,
       restants: '37 ninjas restants',
     });
@@ -51,20 +51,20 @@ describe('le HUD d une partie Massacre', () => {
     const journal = [coup(1000, { combo: 7, multiplicateur: 2 }), coup(1200, { morts: [] })];
     const hud = construireHud(etatDeMassacre({ journal }), 1500);
 
-    expect(hud.massacre).toMatchObject({ multiplicateur: 2, combo: '7 morts', fenetre: 0.75 });
+    expect(hud.combo).toMatchObject({ multiplicateur: 2, compte: '7 morts', fenetre: 0.75 });
   });
 
   it('laisse tomber le combo apres sa fenetre, ou quand on se fait tuer', () => {
     const journal = [coup(1000, { combo: 7, multiplicateur: 2 })];
 
-    expect(
-      construireHud(etatDeMassacre({ journal }), 1000 + MASSACRE.FENETRE_DU_COMBO_MS).massacre,
-    ).toMatchObject({ multiplicateur: 1, combo: '' });
+    expect(construireHud(etatDeMassacre({ journal }), 1000 + COMBO.FENETRE_MS).combo).toMatchObject(
+      { multiplicateur: 1, compte: '' },
+    );
     expect(
       construireHud(
         etatDeMassacre({ journal: [...journal, miseAMort(1100, { victime: 'alice' })] }),
         1200,
-      ).massacre,
+      ).combo,
     ).toMatchObject({ multiplicateur: 1 });
     expect(
       construireHud(
@@ -72,26 +72,24 @@ describe('le HUD d une partie Massacre', () => {
           journal: [...journal, fait('captureParBotNoir', { botsPerdus: 0 }, 1100)],
         }),
         1200,
-      ).massacre,
+      ).combo,
     ).toMatchObject({ multiplicateur: 1 });
   });
 
   it('ignore les coups des autres, et accorde les ninjas restants', () => {
     const journal = [coup(1000, { frappeur: 'bob', combo: 9, multiplicateur: 2 })];
 
-    expect(construireHud(etatDeMassacre({ journal, ninjas: 1 }), 1100).massacre).toMatchObject({
+    expect(construireHud(etatDeMassacre({ journal, ninjas: 1 }), 1100).combo).toMatchObject({
       multiplicateur: 1,
       restants: '1 ninja restant',
     });
-    expect(construireHud(etatDeMassacre({ ninjas: 0 }), 0).massacre?.restants).toBe(
-      'Carte nettoyée',
-    );
+    expect(construireHud(etatDeMassacre({ ninjas: 0 }), 0).combo?.restants).toBe('Carte nettoyée');
   });
 
   it('ne montre rien du Massacre dans un autre mode', () => {
-    const hud = construireHud(etatDeMassacre({ mode: 'classique' }), 0);
+    const hud = construireHud(etatDeMassacre({ mode: 'tactique' }), 0);
 
-    expect(hud.massacre).toBeUndefined();
+    expect(hud.combo).toBeUndefined();
     expect(hud.arme).toBe('charges');
   });
 });
@@ -142,7 +140,7 @@ describe('les annonces, les sons et les points du Massacre', () => {
     expect(sonDuFait(fait('carteVidee', { bonus: 0, tempsRestantMs: 0 }, 0))).toBeUndefined();
   });
 
-  it('fait s envoler les points de nos morts et des points voles', () => {
+  it('fait s envoler les points de nos morts, a leur niveau de combo, et des points voles', () => {
     const avant = etatDeMassacre();
     const apres = etatDeMassacre({
       journal: [
@@ -158,9 +156,9 @@ describe('les annonces, les sons et les points du Massacre', () => {
     });
 
     expect(pointsDuChangement(avant, apres)).toEqual([
-      { valeur: 20, genre: 'bot', x: 10, y: 20 },
-      { valeur: 30, genre: 'botNoir', x: 30, y: 40 },
-      { valeur: 10, genre: 'joueur', x: 400, y: 400 },
+      { valeur: 20, genre: 'bot', niveau: 2, x: 10, y: 20 },
+      { valeur: 30, genre: 'botNoir', niveau: 2, x: 30, y: 40 },
+      { valeur: 10, genre: 'joueur', niveau: 1, x: 400, y: 400 },
     ]);
   });
 });

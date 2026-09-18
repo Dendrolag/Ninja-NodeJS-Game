@@ -114,7 +114,7 @@ describe('modeleFin', () => {
   });
 
   it('dit le mode et la carte de la partie', () => {
-    expect(modeleFin(etat(CLASSEMENT))?.contexte).toBe('Partie terminée · Classique · Rainy Tokyo');
+    expect(modeleFin(etat(CLASSEMENT))?.contexte).toBe('Partie terminée · Horde · Rainy Tokyo');
   });
 
   it('ne donne aucune place a qui ne figure pas au classement', () => {

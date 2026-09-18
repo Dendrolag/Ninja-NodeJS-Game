@@ -18,11 +18,15 @@ import {
   ajouterBot,
   ajouterJoueur,
   creerEtatInitial,
+  detecterContacts,
   devenirTraqueur,
   frapper,
+  lancerLaPartie,
   lancerLeMassacre,
   mettreEnPause,
   poserObjet,
+  regleHorde,
+  resoudreContacts,
   tick,
   tirerEnChasse,
 } from '@neon-ninja/sim';
@@ -272,6 +276,69 @@ describe('le mode Massacre dans la projection', () => {
       ['alice', 10],
       ['bob', 0],
     ]);
+  });
+});
+
+describe('la Horde dans la projection', () => {
+  /**
+   * Une Horde lancee a deux joueurs: Alice en (500, 500) sur trois faux ninjas neutres, Bob
+   * loin d'elle.
+   */
+  function hordeADeux(): EtatPartie {
+    let etat = creerEtatInitial({ graine: 7, mode: 'classique' });
+    etat = ajouterJoueur(etat, { id: 'alice', pseudo: 'Alice', position: { x: 500, y: 500 } });
+    etat = ajouterJoueur(etat, { id: 'bob', pseudo: 'Bob', position: { x: 1500, y: 1000 } });
+    for (const rang of [0, 1, 2]) {
+      etat = ajouterBot(etat, { id: `b${String(rang)}`, position: { x: 500 + rang, y: 500 } });
+    }
+
+    return lancerLaPartie(etat);
+  }
+
+  it('regroupe les ralliements d un battement en une notification, pour le seul rallieur', () => {
+    const etat = resoudreContacts(
+      { ...hordeADeux(), evenements: [] },
+      detecterContacts(hordeADeux()),
+      regleHorde,
+    );
+
+    expect(
+      notificationsDe(etat).filter((notification) => notification.nom === 'ralliement'),
+    ).toEqual([
+      {
+        nom: 'ralliement',
+        pour: 'alice',
+        charge: {
+          ninjas: [
+            { x: 500, y: 500, multiplicateur: 1 },
+            { x: 501, y: 500, multiplicateur: 1 },
+            { x: 502, y: 500, multiplicateur: 1 },
+          ],
+          combo: 3,
+          multiplicateur: 1,
+        },
+      },
+    ]);
+  });
+
+  it('omet les ralliements d un joueur qui a quitte la partie', () => {
+    const etat = resoudreContacts(hordeADeux(), detecterContacts(hordeADeux()), regleHorde);
+    const { alice: _partie, ...restants } = etat.joueurs;
+
+    expect(
+      notificationsDe({ ...etat, joueurs: restants }).some(
+        (notification) => notification.nom === 'ralliement',
+      ),
+    ).toBe(false);
+  });
+
+  it('met la reserve de primes au classement', () => {
+    const etat = {
+      ...hordeADeux(),
+      horde: { rallieurs: { alice: { combo: 0, avantFinDuComboMs: 0, prime: 12 } } },
+    };
+
+    expect(classementDe(etat).find((ligne) => ligne.id === 'alice')?.points).toBe(12);
   });
 });
 

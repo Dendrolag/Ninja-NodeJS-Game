@@ -31,10 +31,12 @@ export const PRESENTATION_CARTES: Readonly<Record<IdentifiantCarte, Presentation
  *
  * Le mode est un jeu de regles enfichable (decision du 29 juin 2026), et le salon
  * le transporte depuis l'etape 2.4. Le Tactique s'est ajoute au Classique a l'etape
- * 7.1, les Equipes a l'etape 7.2, la Chasse a l'etape 7.3, le Massacre a l'etape 7.4.
+ * 7.1, les Equipes a l'etape 7.2, la Chasse a l'etape 7.3, le Massacre a l'etape 7.4. Le
+ * Classique s'appelle la Horde depuis l'etape 7.5, sur decision du porteur du projet; son
+ * identifiant reste `classique`, pour que les parties et records enregistres restent lisibles.
  */
 export const NOMS_DES_MODES: Readonly<Record<Mode, string>> = {
-  classique: 'Classique',
+  classique: 'Horde',
   tactique: 'Tactique',
   equipes: 'Équipes',
   chasse: 'Chasse',
@@ -53,7 +55,7 @@ export const NOMS_DES_EQUIPES: Readonly<Record<Equipe, string>> = {
  */
 export const CAPTURES_DES_MODES: Readonly<Record<Mode, string>> = {
   classique:
-    'On capture en touchant : un faux ninja rejoint votre couleur, un joueur vous cède tous les siens.',
+    'On capture en touchant : un faux ninja rejoint votre couleur, un joueur vous cède tous les siens. Enchaînez les faux ninjas pour monter votre combo.',
   tactique:
     'On capture à distance : Espace, ou le bouton Capturer, prend tout ce qui est dans le cône devant vous. Cinq charges, et une qui revient toutes les cinq secondes.',
   equipes:

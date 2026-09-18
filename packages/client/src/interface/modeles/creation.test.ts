@@ -55,7 +55,7 @@ describe('modeleCreation', () => {
         reglages: completerReglages({ carte: 'map3', modeMiroir: true }),
       },
     });
-    expect(modele.titre).toBe('Classique · Spirit & Time · Miroir');
+    expect(modele.titre).toBe('Horde · Spirit & Time · Miroir');
     expect(modele.recapitulatif).toEqual([
       { libelle: 'Visibilité', valeur: 'Privée, sur code d’invitation' },
       { libelle: 'Durée', valeur: '3:00' },

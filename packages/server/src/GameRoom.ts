@@ -701,8 +701,9 @@ export class GameRoom {
    * serveur choisit le moment. Les bots sont poses APRES les joueurs, donc a
    * l'ecart de leurs positions.
    *
-   * Le mode prepare ensuite la partie (lancerLaPartie): rien en Classique, en Tactique
-   * et en Equipes; les premiers traqueurs en Chasse (etape 7.3).
+   * Le mode prepare ensuite la partie (lancerLaPartie): les combos en Horde (etape 7.5);
+   * rien en Tactique et en Equipes; les premiers traqueurs en Chasse (etape 7.3); les armes
+   * en Massacre (etape 7.4).
    *
    * Le compte a rebours de cinq secondes du salon n'est pas gere ici: il se
    * decide et s'annule par messages, donc a l'etape 2.2. Cette methode lance la

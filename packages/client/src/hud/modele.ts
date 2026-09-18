@@ -32,6 +32,7 @@ import type {
 import {
   CHASSE,
   COULEURS_DES_EQUIPES,
+  COMBO,
   MASSACRE,
   TACTIQUE,
   campDeCouleur,
@@ -104,15 +105,18 @@ export interface ChasseHud {
   readonly proies: string;
 }
 
-/** Notre combo dans une partie Massacre, et ce qu'il reste de ninjas a tuer (etape 7.4). */
-export interface MassacreHud {
+/**
+ * Notre combo, dans une partie Massacre (etape 7.4) ou Horde (etape 7.5), et, en Massacre,
+ * ce qu'il reste de ninjas a tuer.
+ */
+export interface ComboHud {
   /** Le multiplicateur en cours: un sans combo. */
   readonly multiplicateur: number;
-  /** « 7 morts », ou rien sans combo. */
-  readonly combo: string;
+  /** « 7 morts » en Massacre, « 7 ninjas » en Horde, ou rien sans combo. */
+  readonly compte: string;
   /** Ce qu'il reste a la fenetre du combo, de zero a un. Zero: pas de combo. */
   readonly fenetre: number;
-  /** « 37 ninjas restants », « 1 ninja restant » ou « Carte nettoyée ». */
+  /** « 37 ninjas restants », « 1 ninja restant » ou « Carte nettoyée »; rien en Horde. */
   readonly restants: string;
 }
 
@@ -143,8 +147,8 @@ export interface Hud {
   readonly charges: ChargesHud | undefined;
   /** Notre role. Absent hors du mode Chasse, ou tant qu'on n'est pas au classement. */
   readonly chasse: ChasseHud | undefined;
-  /** Notre combo. Absent hors du mode Massacre, ou tant qu'on n'est pas au classement. */
-  readonly massacre: MassacreHud | undefined;
+  /** Notre combo. Absent hors du Massacre et de la Horde, ou tant qu'on n'est pas au classement. */
+  readonly combo: ComboHud | undefined;
   /** Ce que le bouton d'action porte, selon le mode. */
   readonly arme: ArmeHud;
 }
@@ -162,7 +166,7 @@ export const HUD_VIDE: Hud = {
   minimap: [],
   charges: undefined,
   chasse: undefined,
-  massacre: undefined,
+  combo: undefined,
   arme: 'charges',
 };
 
@@ -207,42 +211,50 @@ export function construireHud(etat: EtatClient, maintenant: number): Hud {
     minimap: minimapHud(etat, mode),
     charges: chargesHud(etat, mode),
     chasse: chasseHud(etat, mode),
-    massacre: massacreHud(etat, mode, maintenant),
+    combo: comboHud(etat, mode, maintenant),
     arme: mode === 'chasse' ? 'vies' : mode === 'massacre' ? 'katana' : 'charges',
   };
 }
 
 /**
- * Notre combo dans une partie Massacre, lu dans nos coups de katana (etape 7.4).
+ * Notre combo, lu dans nos coups de katana en Massacre (etape 7.4), dans nos ralliements en
+ * Horde (etape 7.5).
  *
  * Le flux d'etat ne porte pas le combo: il ne concerne que nous. Notre dernier coup qui a
- * tue dit ou il en est, et la fenetre de deux secondes court depuis son arrivee. Il tombe
- * plus tot si l'on s'est fait tuer ou attraper par un Black Ninja depuis. Le moteur le
- * tient au battement pres; l'ecart d'un battement ne se voit pas sur une jauge.
+ * tue, ou notre dernier ralliement, dit ou il en est, et la fenetre de deux secondes court
+ * depuis son arrivee. Il tombe plus tot si l'on s'est fait tuer, capturer ou attraper par un
+ * Black Ninja depuis. Le moteur le tient au battement pres; l'ecart d'un battement ne se
+ * voit pas sur une jauge.
  */
-function massacreHud(
+function comboHud(
   etat: EtatClient,
   mode: Mode | undefined,
   maintenant: number,
-): MassacreHud | undefined {
+): ComboHud | undefined {
   const partie = etat.partie;
 
-  if (mode !== 'massacre' || partie?.classement.some((ligne) => ligne.id === etat.moi) !== true) {
+  if (
+    (mode !== 'massacre' && mode !== 'classique') ||
+    partie?.classement.some((ligne) => ligne.id === etat.moi) !== true
+  ) {
     return undefined;
   }
 
-  const restants = partie.entites.filter((entite) => entite.type === 'bot').length;
   const combo = comboEnCours(etat, maintenant);
+  const unite = mode === 'massacre' ? 'mort' : 'ninja';
+  const restants = partie.entites.filter((entite) => entite.type === 'bot').length;
 
   return {
     multiplicateur: combo?.multiplicateur ?? 1,
-    combo:
-      combo === undefined ? '' : `${String(combo.morts)} ${combo.morts > 1 ? 'morts' : 'mort'}`,
+    compte:
+      combo === undefined ? '' : `${String(combo.coups)} ${unite}${combo.coups > 1 ? 's' : ''}`,
     fenetre: combo?.fenetre ?? 0,
     restants:
-      restants === 0
-        ? 'Carte nettoyée'
-        : `${String(restants)} ${restants > 1 ? 'ninjas restants' : 'ninja restant'}`,
+      mode === 'classique'
+        ? ''
+        : restants === 0
+          ? 'Carte nettoyée'
+          : `${String(restants)} ${restants > 1 ? 'ninjas restants' : 'ninja restant'}`,
   };
 }
 
@@ -251,7 +263,7 @@ function comboEnCours(
   etat: EtatClient,
   maintenant: number,
 ):
-  | { readonly morts: number; readonly multiplicateur: number; readonly fenetre: number }
+  | { readonly coups: number; readonly multiplicateur: number; readonly fenetre: number }
   | undefined {
   for (let rang = etat.journal.length - 1; rang >= 0; rang -= 1) {
     const fait = etat.journal[rang];
@@ -260,25 +272,31 @@ function comboEnCours(
       continue;
     }
 
-    // Tue, ou attrape par un Black Ninja: le combo est tombe.
+    // Tue, capture, ou attrape par un Black Ninja: le combo est tombe.
     if (
       fait.nature === 'captureParBotNoir' ||
+      fait.nature === 'captureSubie' ||
       (fait.nature === 'joueurTranche' && fait.charge.victime === etat.moi)
     ) {
       return undefined;
     }
 
-    if (
+    const dernier =
       fait.nature === 'coupDeKatana' &&
       fait.charge.frappeur === etat.moi &&
       fait.charge.morts.length > 0
-    ) {
-      const fenetre = 1 - (maintenant - fait.instant) / MASSACRE.FENETRE_DU_COMBO_MS;
+        ? fait.charge
+        : fait.nature === 'ralliement'
+          ? fait.charge
+          : undefined;
+
+    if (dernier !== undefined) {
+      const fenetre = 1 - (maintenant - fait.instant) / COMBO.FENETRE_MS;
 
       return fenetre > 0
         ? {
-            morts: fait.charge.combo,
-            multiplicateur: fait.charge.multiplicateur,
+            coups: dernier.combo,
+            multiplicateur: dernier.multiplicateur,
             fenetre: Math.min(fenetre, 1),
           }
         : undefined;

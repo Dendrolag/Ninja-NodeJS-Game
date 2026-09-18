@@ -108,7 +108,7 @@ export type ProgressionAffichee =
 
 /** Tout ce que l'ecran de fin affiche. */
 export interface ModeleFin {
-  /** La ligne de contexte: « Partie terminée · Classique · Rainy Tokyo ». */
+  /** La ligne de contexte: « Partie terminée · Horde · Rainy Tokyo ». */
   readonly contexte: string;
   /** Notre place, ou rien si nous ne figurons pas au classement. */
   readonly place: Place | undefined;

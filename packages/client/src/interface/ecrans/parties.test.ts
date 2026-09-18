@@ -128,8 +128,8 @@ describe('l ecran des parties', () => {
     ]);
 
     expect(lignes).toEqual([
-      ['Salon de KageOni', 'Classique · Tokyo', '3/12'],
-      ['Salon de Akumu', 'Classique · Spirit & Time · Miroir', '11/12'],
+      ['Salon de KageOni', 'Horde · Tokyo', '3/12'],
+      ['Salon de Akumu', 'Horde · Spirit & Time · Miroir', '11/12'],
     ]);
     expect(obligatoire(hote, '.sous-titre-ecran').textContent).toBe('2 parties ouvertes');
     expect(estCache(obligatoire(hote, '.parties-chargement'))).toBe(true);

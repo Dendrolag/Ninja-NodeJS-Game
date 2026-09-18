@@ -27,7 +27,7 @@ import { peuplerDeBots } from './bots.js';
 import type { EtatPartie, EvenementPartie } from './etat.js';
 import { ajouterJoueur, creerEtatInitial } from './etat.js';
 import type { Entrees } from './moteur.js';
-import { evaluerFinDePartie, tick } from './moteur.js';
+import { evaluerFinDePartie, lancerLaPartie, tick } from './moteur.js';
 import { calculerScores } from './score.js';
 
 /** Cadence de reference du serveur, en millisecondes. */
@@ -76,7 +76,9 @@ function jouerLaPartie(graine = 42): {
   readonly etat: EtatPartie;
   readonly evenements: readonly EvenementPartie[];
 } {
-  let etat = partiePrete(graine);
+  // Lancee comme le serveur la lance: depuis l'etape 7.5, c'est ce qui donne ses combos a
+  // la Horde.
+  let etat = lancerLaPartie(partiePrete(graine));
   const evenements: EvenementPartie[] = [];
 
   for (let battement = 0; battement < BATTEMENTS; battement += 1) {

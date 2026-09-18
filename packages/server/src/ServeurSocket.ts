@@ -1717,6 +1717,10 @@ function envoyer(socket: SocketTypee, notification: Notification): void {
     case 'carteVidee':
       socket.emit('carteVidee', notification.charge);
       return;
+
+    case 'ralliement':
+      socket.emit('ralliement', notification.charge);
+      return;
   }
 }
 

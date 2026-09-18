@@ -402,6 +402,29 @@ export interface MortVue {
   readonly couleur: Couleur;
 }
 
+/** Un faux ninja rallie, dans une notification de ralliement (etape 7.5). */
+export interface NinjaRallieVu {
+  /** Ou il se trouvait. */
+  readonly x: number;
+  readonly y: number;
+  /** Le multiplicateur atteint par ce ralliement: ce que le ninja a rapporte, prime comprise. */
+  readonly multiplicateur: number;
+}
+
+/**
+ * Ce joueur vient de rallier des faux ninjas en les touchant, dans la Horde (etape 7.5).
+ * Adresse a lui seul, une fois par battement au plus: un joueur qui traverse un troupeau en
+ * rallie plusieurs d'un coup, et personne d'autre n'a besoin de le savoir.
+ */
+export interface RalliementVu {
+  /** Les ninjas rallies pendant ce battement, dans l'ordre. */
+  readonly ninjas: readonly NinjaRallieVu[];
+  /** Les ninjas du combo du joueur apres ces ralliements. */
+  readonly combo: number;
+  /** Le multiplicateur atteint apres ces ralliements. */
+  readonly multiplicateur: number;
+}
+
 /**
  * Un joueur vient de donner un coup de katana, dans le Massacre (etape 7.4). Adresse a
  * chaque joueur de la partie: tout le monde voit le coup et le sang qu'il fait couler.
@@ -801,6 +824,9 @@ export interface EvenementsServeurVersClient {
 
   /** Un joueur de la partie vient de donner un coup de katana, dans le Massacre (etape 7.4). */
   coupDeKatana: (coup: CoupDeKatanaVu) => void;
+
+  /** Ce joueur vient de rallier des faux ninjas, dans la Horde (etape 7.5). */
+  ralliement: (ralliement: RalliementVu) => void;
 
   /** Un joueur de la partie vient d'en tuer un autre, dans le Massacre (etape 7.4). */
   joueurTranche: (mise: JoueurTrancheVu) => void;

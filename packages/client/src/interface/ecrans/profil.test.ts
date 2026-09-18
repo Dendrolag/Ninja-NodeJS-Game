@@ -120,14 +120,7 @@ describe('l ecran du profil', () => {
       (cellule) => cellule.textContent,
     );
 
-    expect(cellules.slice(1)).toEqual([
-      'Classique · Tokyo',
-      '1re sur 3',
-      '42',
-      '+120',
-      '+12',
-      '+20',
-    ]);
+    expect(cellules.slice(1)).toEqual(['Horde · Tokyo', '1re sur 3', '42', '+120', '+12', '+20']);
     expect(estCache(obligatoire(hote, '.profil-vide'))).toBe(true);
   });
 

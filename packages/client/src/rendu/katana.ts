@@ -14,7 +14,7 @@
  */
 
 import type { Couleur, Orientation } from '@neon-ninja/shared';
-import { MASSACRE, RACINE_RESSOURCES, cheminNinja } from '@neon-ninja/shared';
+import { COMBO, MASSACRE, RACINE_RESSOURCES, cheminNinja } from '@neon-ninja/shared';
 
 import type { EtatClient } from '../etat.js';
 import type { FaitDeJeu } from '../faits.js';
@@ -168,7 +168,7 @@ function trainee(
 
   const opacite = 1 - avancee;
   const couleur =
-    coup.multiplicateur >= MASSACRE.MULTIPLICATEUR_MAXIMUM
+    coup.multiplicateur >= COMBO.MULTIPLICATEUR_MAXIMUM
       ? reglage.couleurDuCombo
       : coup.multiplicateur > 1
         ? 0xff9a9a

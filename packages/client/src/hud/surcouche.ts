@@ -33,7 +33,7 @@ import type {
   ChasseHud,
   Hud,
   LigneHud,
-  MassacreHud,
+  ComboHud,
   PointMinimap,
 } from './modele.js';
 
@@ -81,7 +81,7 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
   retour.textContent = 'Connexion perdue. Retour dans la partie…';
   retour.hidden = true;
   const chasse = monterChasse(doc, racine);
-  const massacre = monterMassacre(doc, racine);
+  const combo = monterCombo(doc, racine);
   const classement = element(doc, 'ol', 'hud-classement', racine);
   const effets = element(doc, 'ul', 'hud-effets', racine);
   const minimap = element(doc, 'div', 'hud-minimap', racine);
@@ -117,7 +117,7 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
       retour.hidden = !hud.retourEnCours;
 
       chasse.afficher(hud.chasse);
-      massacre.afficher(hud.massacre);
+      combo.afficher(hud.combo);
       majClassement(doc, classement, lignes, hud.classement);
       majEffets(doc, effets, hud);
       majMinimap(doc, minimap, points, hud.minimap, options.carte);
@@ -249,42 +249,44 @@ function monterCapture(doc: Document, parent: HTMLElement, capturer: () => void)
   };
 }
 
-/** Le compteur de combo, dans une partie Massacre. */
+/** Le compteur de combo, dans une partie Massacre ou Horde. */
 interface CompteurDeCombo {
-  afficher(massacre: MassacreHud | undefined): void;
+  afficher(combo: ComboHud | undefined): void;
 }
 
 /**
- * Le compteur de combo d'une partie Massacre (etape 7.4): le multiplicateur en grand, les
- * morts du combo, la fenetre qui s'epuise, et les ninjas qui restent. Cache hors de ce mode.
- * Il prend la place du bandeau de role de la Chasse, a droite sous les boutons.
+ * Le compteur de combo d'une partie Massacre (etape 7.4) ou Horde (etape 7.5): le
+ * multiplicateur en grand, les coups du combo, la fenetre qui s'epuise, et, en Massacre, les
+ * ninjas qui restent. Cache hors de ces modes. Il prend la place du bandeau de role de la
+ * Chasse, a droite sous les boutons.
  */
-function monterMassacre(doc: Document, parent: HTMLElement): CompteurDeCombo {
+function monterCombo(doc: Document, parent: HTMLElement): CompteurDeCombo {
   const compteur = element(doc, 'div', 'hud-massacre', parent);
   compteur.hidden = true;
   const multiplicateur = element(doc, 'strong', 'hud-massacre-multiplicateur', compteur);
-  const morts = element(doc, 'span', 'hud-massacre-combo', compteur);
+  const coups = element(doc, 'span', 'hud-massacre-combo', compteur);
   const fenetre = element(doc, 'span', 'hud-massacre-fenetre', compteur);
   const restants = element(doc, 'span', 'hud-massacre-restants', compteur);
   restants.setAttribute('role', 'status');
 
   return {
-    afficher(massacre) {
-      compteur.hidden = massacre === undefined;
+    afficher(combo) {
+      compteur.hidden = combo === undefined;
 
-      if (massacre === undefined) {
+      if (combo === undefined) {
         return;
       }
 
-      const texte = `x${String(massacre.multiplicateur)}`;
+      const texte = `x${String(combo.multiplicateur)}`;
       if (multiplicateur.textContent !== texte) {
         multiplicateur.textContent = texte;
       }
-      compteur.dataset['multiplicateur'] = String(massacre.multiplicateur);
-      compteur.classList.toggle('en-combo', massacre.fenetre > 0);
-      morts.textContent = massacre.combo;
-      fenetre.style.setProperty('--fenetre', String(massacre.fenetre));
-      restants.textContent = massacre.restants;
+      compteur.dataset['multiplicateur'] = String(combo.multiplicateur);
+      compteur.classList.toggle('en-combo', combo.fenetre > 0);
+      coups.textContent = combo.compte;
+      fenetre.style.setProperty('--fenetre', String(combo.fenetre));
+      restants.textContent = combo.restants;
+      restants.hidden = combo.restants === '';
     },
   };
 }

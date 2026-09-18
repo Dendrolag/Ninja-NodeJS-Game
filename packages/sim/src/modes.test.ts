@@ -1,7 +1,7 @@
 /**
  * Tests du branchement du mode de jeu sur le moteur (etapes 2.4, 7.1 et 7.2).
  *
- * Cinq modes existent, le Classique, le Tactique, les Equipes, la Chasse et le Massacre. Ces tests verifient
+ * Cinq modes existent, le Classique (la Horde depuis l'etape 7.5), le Tactique, les Equipes, la Chasse et le Massacre. Ces tests verifient
  * que le mode voyage dans l'etat, qu'il ne change pas d'un battement a l'autre, et que
  * le moteur trouve le jeu de regles a partir de lui. Ce que font les jeux de regles
  * Tactique, Equipes et Chasse se teste dans tactique.test.ts, equipes.test.ts et
@@ -11,8 +11,9 @@
 import { describe, expect, it } from 'vitest';
 
 import { perteClassique } from './bots.js';
-import { regleClassique, regleTactique } from './contacts.js';
+import { regleHorde, regleTactique } from './contacts.js';
 import { ajouterJoueur, creerEtatInitial } from './etat.js';
+import { agirEnHorde } from './horde.js';
 import { REGLES_DES_MODES, evaluerFinDePartie, lancerLaPartie, tick } from './moteur.js';
 import { malusClassique } from './objets.js';
 import { agirEnTactique } from './tactique.js';
@@ -41,10 +42,13 @@ describe('le mode de la partie', () => {
 });
 
 describe('REGLES_DES_MODES', () => {
-  it('donne au Classique sa regle de capture par simple proximite, et aucune action', () => {
+  it('donne au Classique, devenu la Horde, la capture par simple proximite et le combo', () => {
+    // Etape 7.5: la regle de la Horde est celle du Classique, plus le combo, qui ne vit
+    // que dans une partie lancee. Au salon, agir ne fait rien.
     const etat = ajouterJoueur(creerEtatInitial({ graine: 1 }), { id: 'alice', pseudo: 'Alice' });
 
-    expect(REGLES_DES_MODES.classique.resoudreContacts).toBe(regleClassique);
+    expect(REGLES_DES_MODES.classique.resoudreContacts).toBe(regleHorde);
+    expect(REGLES_DES_MODES.classique.agir).toBe(agirEnHorde);
     expect(REGLES_DES_MODES.classique.agir(etat, {}, 50)).toBe(etat);
   });
 
@@ -73,11 +77,11 @@ describe('REGLES_DES_MODES', () => {
     expect('tactique' in tick(depart, entrees, 50)).toBe(false);
   });
 
-  it('ne prepare rien au lancement et ne decide rien avant le terme, hors Chasse et Massacre', () => {
+  it('ne prepare rien au lancement et ne decide rien avant le terme, en Tactique et en Equipes', () => {
     // Le jeu de regles s'est elargi a l'etape 7.3 pour la Chasse, puis a servi au Massacre
-    // (etape 7.4): les trois autres modes rendent l'etat tel quel, sans aucun tirage, et
-    // seul le temps les decide.
-    for (const mode of ['classique', 'tactique', 'equipes'] as const) {
+    // (etape 7.4) et a la Horde (etape 7.5, voir horde.test.ts): les deux autres modes
+    // rendent l'etat tel quel, sans aucun tirage, et seul le temps les decide.
+    for (const mode of ['tactique', 'equipes'] as const) {
       const etat = ajouterJoueur(creerEtatInitial({ graine: 1, mode }), {
         id: 'alice',
         pseudo: 'Alice',

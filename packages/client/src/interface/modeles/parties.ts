@@ -34,7 +34,7 @@ export interface PartieAffichee {
   /** « Salon de Bob ». */
   readonly titre: string;
   readonly initiales: string;
-  /** « Classique · Tokyo · Miroir ». */
+  /** « Horde · Tokyo · Miroir ». */
   readonly details: string;
   /** « 3/12 ». */
   readonly joueurs: string;

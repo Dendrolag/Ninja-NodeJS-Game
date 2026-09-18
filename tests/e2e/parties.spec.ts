@@ -121,7 +121,7 @@ test('une partie publique trouvee dans la liste, et rejointe', async ({ browser 
     await bob.page.getByRole('button', { name: 'Parcourir' }).click();
 
     const salon = bob.page.locator('.partie', { hasText: 'Salon de Alice' });
-    await expect(salon).toContainText('Classique · Tokyo');
+    await expect(salon).toContainText('Horde · Tokyo');
     await expect(salon.locator('.partie-joueurs')).toHaveText('1/12');
 
     await bob.page.getByRole('button', { name: 'Rejoindre le salon de Alice' }).click();

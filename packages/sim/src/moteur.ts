@@ -29,7 +29,7 @@
  *      entrent en jeu quand leur heure est venue;
  *   4. les zones speciales vieillissent, apparaissent, et agissent sur les bots;
  *   5. les bonus et malus poses vieillissent, et de nouveaux apparaissent;
- *   6. le mode de jeu agit sur les entrees: rien en Classique; en Tactique, les
+ *   6. le mode de jeu agit sur les entrees: en Horde, les combos s'epuisent; en Tactique, les
  *      joueurs s'orientent, rechargent et tirent; en Chasse, les proies comptent leur
  *      parcours, une proie remplace les traqueurs partis, et les traqueurs tirent; en
  *      Massacre, les joueurs s'orientent, paient leurs prises par un bot noir et frappent;
@@ -67,8 +67,8 @@ import type { RegleDeResolution } from './contacts.js';
 import {
   detecterContacts,
   regleChasse,
-  regleClassique,
   regleEquipes,
+  regleHorde,
   regleMassacre,
   regleTactique,
   resoudreContacts,
@@ -77,6 +77,7 @@ import { resoudreDeplacement } from './deplacement.js';
 import { aLaLongueur, directionDuVecteur, norme } from './direction.js';
 import { fairePasserLeTemps } from './effets.js';
 import { malusEnEquipe, perteEnEquipe } from './equipes.js';
+import { agirEnHorde, lancerLaHorde } from './horde.js';
 import type { EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
 import { agirEnMassacre, lancerLeMassacre, massacreDecide, perteEnMassacre } from './massacre.js';
 import { COMPTEUR_CAPTURE_PRET, bonusActif, malusActif } from './etat.js';
@@ -196,14 +197,17 @@ export interface JeuDeRegles {
  *
  * L'etape 7.4 y a branche le Massacre sans l'elargir: il frappe dans agir, pose ses armes au
  * lancement, et se decide quand la carte est videe.
+ *
+ * L'etape 7.5 a donne au Classique, devenu la Horde, un combo: il pose ses combos au
+ * lancement, les laisse s'epuiser dans agir, et rallie dans sa regle de contacts.
  */
 export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>> = {
   classique: {
-    agir: sansAction,
-    resoudreContacts: regleClassique,
+    agir: agirEnHorde,
+    resoudreContacts: regleHorde,
     perteFaceAuBotNoir: perteClassique,
     victimeDuMalus: malusClassique,
-    lancer: sansPreparation,
+    lancer: lancerLaHorde,
     estDecidee: jamaisAvantLeTerme,
     horsJeu: personneHorsJeu,
   },
@@ -326,8 +330,8 @@ function personneHorsJeu(): ReadonlySet<IdentifiantEntite> {
 }
 
 /**
- * Prepare une partie qui se lance, selon son mode: rien en Classique, en Tactique et en
- * Equipes; les premiers traqueurs en Chasse; les armes et les points en Massacre.
+ * Prepare une partie qui se lance, selon son mode: les combos en Horde; rien en Tactique et
+ * en Equipes; les premiers traqueurs en Chasse; les armes et les points en Massacre.
  *
  * Le serveur l'appelle au lancement, une fois les bots poses (etape 7.3).
  */

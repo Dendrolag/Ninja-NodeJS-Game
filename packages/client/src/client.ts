@@ -435,6 +435,12 @@ export function creerClient(options: OptionsClient): Client {
   );
 
   ecouter(
+    reseau.sur('ralliement', (charge) => {
+      magasin.appliquer({ type: 'fait', fait: fait('ralliement', charge, maintenant()) });
+    }),
+  );
+
+  ecouter(
     reseau.sur('joueurTranche', (charge) => {
       magasin.appliquer({ type: 'fait', fait: fait('joueurTranche', charge, maintenant()) });
     }),

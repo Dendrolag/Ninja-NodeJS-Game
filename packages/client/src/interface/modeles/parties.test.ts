@@ -60,7 +60,7 @@ describe('modeleParties', () => {
         hote: 'KageOni',
         titre: 'Salon de KageOni',
         initiales: 'KO',
-        details: 'Classique · Tokyo',
+        details: 'Horde · Tokyo',
         joueurs: '3/12',
       },
       {
@@ -68,7 +68,7 @@ describe('modeleParties', () => {
         hote: 'Akumu',
         titre: 'Salon de Akumu',
         initiales: 'AK',
-        details: 'Classique · Spirit & Time · Miroir',
+        details: 'Horde · Spirit & Time · Miroir',
         joueurs: '11/12',
       },
     ]);

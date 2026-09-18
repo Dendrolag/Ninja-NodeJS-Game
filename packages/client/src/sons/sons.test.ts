@@ -198,7 +198,7 @@ describe('sonsDuChangement', () => {
     it('sonnent quand un faux ninja neutre passe a notre couleur', () => {
       // Le son du jeu d'origine (botConvert), qui ne se jouait plus: il accompagne le
       // point « +1 ».
-      const contexte = enMode('classique');
+      const contexte = enMode('equipes');
 
       expect(
         changement(
@@ -206,6 +206,17 @@ describe('sonsDuChangement', () => {
           { ...contexte, partie: avecUnBot('#FF0000') },
         ),
       ).toEqual(['botCapture']);
+    });
+
+    it('se taisent en Horde, ou ils suivent les ralliements annonces (etape 7.5)', () => {
+      const contexte = enMode('classique');
+
+      expect(
+        changement(
+          { ...contexte, partie: avecUnBot('#ABCDEF') },
+          { ...contexte, partie: avecUnBot('#FF0000') },
+        ),
+      ).toEqual([]);
     });
 
     it('sonnent aussi en Tactique, apres le coup de fusil', () => {

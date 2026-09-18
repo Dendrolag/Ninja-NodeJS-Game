@@ -187,7 +187,7 @@ describe('l ecran de creation', () => {
     cocher(champ('input[value="map3"]'), true);
 
     expect(obligatoire(hote, '.creation-recapitulatif h2').textContent).toBe(
-      'Classique · Spirit & Time',
+      'Horde · Spirit & Time',
     );
 
     creerLeSalon().click();

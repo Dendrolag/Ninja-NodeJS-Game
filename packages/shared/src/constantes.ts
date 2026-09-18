@@ -42,32 +42,39 @@ export const DEPLACEMENTS_LEGACY_PAR_PAS = {
   BOT_NOIR: 5,
 } as const;
 
+/** La vitesse du joueur d'origine, devenue celle de tous: 150 pixels par seconde. */
+const VITESSE_COMMUNE_PX_PAR_SECONDE =
+  (DEPLACEMENTS_LEGACY_PAR_PAS.JOUEUR * 1000) / CADENCES_LEGACY_MS.ENVOI_DEPLACEMENT_JOUEUR;
+
 /**
  * Vitesses de deplacement, en pixels par seconde.
  *
- * POURQUOI CETTE CONVERSION. Le legacy ne raisonne pas en temps: il deplace une
- * entite d'une distance fixe a chaque evenement. Un joueur avance de 3 pixels a
- * chaque message recu, et son client en envoie un toutes les 20 millisecondes;
- * un bot avance de 5 pixels a chaque battement de la boucle serveur, qui tourne
- * toutes les 50 millisecondes. Les deux nombres, 3 et 5, ne sont donc pas
- * comparables entre eux: ils ne sont pas rapportes a la meme horloge.
+ * UNE VITESSE COMMUNE DEPUIS L'ETAPE 7.5. Joueurs, faux ninjas et Black Ninjas vont tous a
+ * 150 pixels par seconde hors bonus, dans tous les modes: decision du porteur du projet du
+ * 18 septembre 2026, confirmee le meme jour pour les Black Ninjas, qu'on ne distance donc
+ * plus sans bonus de vitesse.
  *
- * Ramenes a la seconde, un joueur avance a 150 pixels par seconde et un bot a
- * 100. C'est ce que l'on ressent en jouant, et c'est ce que le moteur reproduit.
- * Le moteur recevant le temps ecoule (dt), il n'a plus besoin de supposer une
- * cadence: la vitesse ne depend plus du debit de messages, ce qui supprime au
- * passage la cause de la faille S2 de l'audit.
+ * AVANT, CES VITESSES VENAIENT DU JEU D'ORIGINE, converties en temps. Le legacy ne
+ * raisonnait pas en temps: il deplacait une entite d'une distance fixe a chaque evenement.
+ * Un joueur avancait de 3 pixels a chaque message recu, et son client en envoyait un toutes
+ * les 20 millisecondes; un bot avancait de 5 pixels a chaque battement de la boucle serveur,
+ * qui tournait toutes les 50 millisecondes. Ramenes a la seconde, le joueur allait a 150
+ * pixels par seconde et le bot a 100: c'est la vitesse du joueur, deja celle d'origine, qui
+ * est devenue la vitesse commune.
  *
- * Attention en lisant les tests de caracterisation: ils figent 3 et 5, parce
- * qu'ils observent le legacy tel qu'il est. La conversion ci-dessous preserve la
- * vitesse reellement jouee, pas l'ecriture du legacy.
+ * Le moteur recevant le temps ecoule (dt), il n'a pas besoin de supposer une cadence: la
+ * vitesse ne depend pas du debit de messages, ce qui supprime au passage la cause de la
+ * faille S2 de l'audit.
+ *
+ * Attention en lisant les tests de caracterisation: ils figent 3 et 5, parce qu'ils
+ * observent le legacy tel qu'il est (DEPLACEMENTS_LEGACY_PAR_PAS).
  */
 export const VITESSES = {
-  JOUEUR_PX_PAR_SECONDE:
-    (DEPLACEMENTS_LEGACY_PAR_PAS.JOUEUR * 1000) / CADENCES_LEGACY_MS.ENVOI_DEPLACEMENT_JOUEUR,
-  BOT_PX_PAR_SECONDE: (DEPLACEMENTS_LEGACY_PAR_PAS.BOT * 1000) / CADENCES_LEGACY_MS.BOUCLE_SERVEUR,
-  BOT_NOIR_PX_PAR_SECONDE:
-    (DEPLACEMENTS_LEGACY_PAR_PAS.BOT_NOIR * 1000) / CADENCES_LEGACY_MS.BOUCLE_SERVEUR,
+  JOUEUR_PX_PAR_SECONDE: VITESSE_COMMUNE_PX_PAR_SECONDE,
+  /** Elle valait 100 avant l'etape 7.5. */
+  BOT_PX_PAR_SECONDE: VITESSE_COMMUNE_PX_PAR_SECONDE,
+  /** Elle valait 100 avant l'etape 7.5. */
+  BOT_NOIR_PX_PAR_SECONDE: VITESSE_COMMUNE_PX_PAR_SECONDE,
   /** Multiplicateur du bonus de vitesse. Applique a l'etape 1.4. */
   MULTIPLICATEUR_BONUS: 1.7,
   /** Plafond du multiplicateur de vitesse, tous effets confondus. */
@@ -514,19 +521,29 @@ export const MASSACRE = {
   POINTS_PAR_BOT: 10,
   /** Ce que vaut un Black Ninja tue, avant multiplicateur. */
   POINTS_PAR_BOT_NOIR: 15,
-  /**
-   * Le temps pendant lequel une mort prolonge le combo, en millisecondes: au-dela, sans
-   * nouvelle mort, le combo retombe.
-   */
-  FENETRE_DU_COMBO_MS: 2000,
-  /** Le multiplicateur monte d'un cran chaque fois que le combo compte ce nombre de morts de plus. */
-  MORTS_PAR_CRAN: 5,
-  /** Le multiplicateur au plus. */
-  MULTIPLICATEUR_MAXIMUM: 5,
   /** La part des points d'un joueur tue qui passe a son tueur, en pour cent. */
   PART_VOLEE_POUR_CENT: 50,
   /** Ce que recoit chaque joueur par seconde entiere restante quand la carte est vide. */
   POINTS_PAR_SECONDE_RESTANTE: 5,
+} as const;
+
+/**
+ * La regle du combo, commune au Massacre (etape 7.4) et a la Horde (etape 7.5).
+ *
+ * Un combo compte des coups reussis a la suite: des morts au Massacre, des faux ninjas
+ * rallies a la Horde. Il fait monter un multiplicateur, et retombe quand sa fenetre passe
+ * sans nouveau coup.
+ */
+export const COMBO = {
+  /**
+   * Le temps pendant lequel un coup prolonge le combo, en millisecondes: au-dela, sans
+   * nouveau coup, le combo retombe.
+   */
+  FENETRE_MS: 2000,
+  /** Le multiplicateur monte d'un cran chaque fois que le combo compte ce nombre de coups de plus. */
+  COUPS_PAR_CRAN: 5,
+  /** Le multiplicateur au plus. */
+  MULTIPLICATEUR_MAXIMUM: 5,
 } as const;
 
 /** Couleur d'un bot non capture. */

@@ -7,7 +7,7 @@
  */
 
 import type { Position, ReglagesPartiels } from '@neon-ninja/shared';
-import { DUREES, MASSACRE, TACTIQUE } from '@neon-ninja/shared';
+import { COMBO, DUREES, MASSACRE, TACTIQUE } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
 import { detecterContacts, regleMassacre, resoudreContacts } from './contacts.js';
@@ -235,7 +235,7 @@ describe('un coup de katana', () => {
     expect(coup.orientation).toBe('est');
     expect(coup.position).toEqual(ICI);
     expect(pointsEnMassacre(apres, joueurDe(apres, 'alice'))).toBe(80);
-    expect(guerrierDe(apres, 'alice').avantFinDuComboMs).toBe(MASSACRE.FENETRE_DU_COMBO_MS);
+    expect(guerrierDe(apres, 'alice').avantFinDuComboMs).toBe(COMBO.FENETRE_MS);
   });
 
   it('plafonne le multiplicateur a cinq', () => {
@@ -336,17 +336,17 @@ describe('le combo', () => {
     const premiere = tuerApres(massacreAvec([{ x: 1500, y: 1500 }]), 50);
     expect(guerrierDe(premiere, 'alice').combo).toBe(1);
 
-    const seconde = tuerApres(premiere, MASSACRE.FENETRE_DU_COMBO_MS);
+    const seconde = tuerApres(premiere, COMBO.FENETRE_MS);
     expect(guerrierDe(seconde, 'alice').combo).toBe(2);
   });
 
   it('retombe au-dela de deux secondes sans mort', () => {
     const premiere = tuerApres(massacreAvec([{ x: 1500, y: 1500 }]), 50);
-    const tardive = tuerApres(premiere, MASSACRE.FENETRE_DU_COMBO_MS + 1);
+    const tardive = tuerApres(premiere, COMBO.FENETRE_MS + 1);
 
     expect(guerrierDe(tardive, 'alice').combo).toBe(1);
 
-    const oublie = agirEnMassacre(premiere, {}, MASSACRE.FENETRE_DU_COMBO_MS + 1);
+    const oublie = agirEnMassacre(premiere, {}, COMBO.FENETRE_MS + 1);
     expect(guerrierDe(oublie, 'alice')).toMatchObject({ combo: 0, avantFinDuComboMs: 0 });
   });
 });

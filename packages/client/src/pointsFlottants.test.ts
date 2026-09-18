@@ -63,7 +63,9 @@ describe('pointsDuChangement', () => {
       partie: vue([joueur('moi', '#FF0000'), bot('b1', '#FF0000', 42, 61)], 2),
     });
 
-    expect(pointsDuChangement(avant, apres)).toEqual([{ valeur: 1, genre: 'bot', x: 42, y: 61 }]);
+    expect(pointsDuChangement(avant, apres)).toEqual([
+      { valeur: 1, genre: 'bot', niveau: 1, x: 42, y: 61 },
+    ]);
   });
 
   it('ne montre rien pour un faux ninja passe a la couleur d un autre', () => {
@@ -107,7 +109,7 @@ describe('pointsDuChangement', () => {
     const apres = etat({ partie, journal: [detruit] });
 
     expect(pointsDuChangement(avant, apres)).toEqual([
-      { valeur: 15, genre: 'botNoir', x: 300, y: 200 },
+      { valeur: 15, genre: 'botNoir', niveau: 1, x: 300, y: 200 },
     ]);
   });
 
@@ -123,7 +125,7 @@ describe('pointsDuChangement', () => {
     const apres = etat({ partie: avant.partie, journal: [capture] });
 
     expect(pointsDuChangement(avant, apres)).toEqual([
-      { valeur: 7, genre: 'joueur', x: 500, y: 400 },
+      { valeur: 7, genre: 'joueur', niveau: 1, x: 500, y: 400 },
     ]);
   });
 

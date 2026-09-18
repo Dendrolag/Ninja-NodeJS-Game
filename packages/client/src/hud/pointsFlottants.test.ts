@@ -61,7 +61,7 @@ afterEach(() => {
 
 describe('monterPointsFlottants', () => {
   it('pose le gain a l endroit indique, avec son texte, et le fait monter', () => {
-    afficheur.montrer({ texte: '+1', genre: 'bot', x: 120, y: 80 });
+    afficheur.montrer({ texte: '+1', genre: 'bot', niveau: 1, x: 120, y: 80 });
 
     const [point] = points();
 
@@ -72,8 +72,14 @@ describe('monterPointsFlottants', () => {
     expect(point?.style.top).toBe('80px');
   });
 
+  it('porte le niveau du combo, qui en decide la couleur et la taille (etape 7.5)', () => {
+    afficheur.montrer({ texte: '+4', genre: 'bot', niveau: 4, x: 0, y: 0 });
+
+    expect(points()[0]?.dataset['niveau']).toBe('4');
+  });
+
   it('file vers le milieu de notre score une fois monte, puis disparait', () => {
-    afficheur.montrer({ texte: '+15', genre: 'botNoir', x: 100, y: 200 });
+    afficheur.montrer({ texte: '+15', genre: 'botNoir', niveau: 1, x: 100, y: 200 });
     const [point] = points();
 
     finirLAnimation(point);
@@ -90,7 +96,7 @@ describe('monterPointsFlottants', () => {
 
   it('disparait des qu il est monte quand notre score n est pas affiche', () => {
     score = null;
-    afficheur.montrer({ texte: '+7', genre: 'joueur', x: 100, y: 200 });
+    afficheur.montrer({ texte: '+7', genre: 'joueur', niveau: 1, x: 100, y: 200 });
 
     finirLAnimation(points()[0]);
 
@@ -98,14 +104,14 @@ describe('monterPointsFlottants', () => {
   });
 
   it('pose le texte comme du texte, jamais comme du balisage', () => {
-    afficheur.montrer({ texte: '<b>+1</b>', genre: 'bot', x: 0, y: 0 });
+    afficheur.montrer({ texte: '<b>+1</b>', genre: 'bot', niveau: 1, x: 0, y: 0 });
 
     expect(points()[0]?.querySelector('b')).toBeNull();
   });
 
   it('retire tous les points au demontage', () => {
-    afficheur.montrer({ texte: '+1', genre: 'bot', x: 0, y: 0 });
-    afficheur.montrer({ texte: '+1', genre: 'bot', x: 5, y: 5 });
+    afficheur.montrer({ texte: '+1', genre: 'bot', niveau: 1, x: 0, y: 0 });
+    afficheur.montrer({ texte: '+1', genre: 'bot', niveau: 1, x: 5, y: 5 });
 
     afficheur.demonter();
 

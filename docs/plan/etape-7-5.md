@@ -109,6 +109,19 @@ Conditions de ROADMAP réunies, plus:
 3. **Le volume des ralliements**: un joueur qui traverse un troupeau en fait plusieurs par battement; la notification ne va qu'à lui.
 4. **Les tests qui figent une vitesse de faux ninja ou de Black Ninja** changent volontairement; ceux de caractérisation, non.
 
+## Réconciliation pendant l'étape (18 septembre 2026)
+
+Écarts entre la fiche et ce qui a été construit, consignés au journal de `docs/design/README.md` quand ils touchent une décision.
+
+1. **Les ralliements d'un battement voyagent en une seule notification** (`ralliement`, charge `RalliementVu`), regroupés par le serveur: la micro-décision 8 prévoyait une notification par ralliement. Le fil des faits de la page est plafonné à cinquante, et un troupeau traversé en ferait plusieurs d'un coup.
+2. **Le compteur de combo du HUD est devenu commun**: `Hud.massacre` s'appelle `Hud.combo` (type `ComboHud`), et son compte se dit en morts au Massacre, en ninjas en Horde; la ligne des ninjas restants se cache en Horde. Il tombe aussi à la capture d'un joueur.
+3. **Les constantes du combo ont quitté `MASSACRE`** pour `COMBO` (`FENETRE_MS`, `COUPS_PAR_CRAN`, `MULTIPLICATEUR_MAXIMUM`), et `multiplicateurDuCombo` vit dans `packages/shared/src/combo.ts`, qui remplace `massacre.ts`.
+4. **La partie de référence du moteur et l'outil d'empreinte lancent désormais leurs parties** (`lancerLaPartie`), comme le serveur: sans cela, la Horde y aurait joué sans combo. L'instantané de `partie.test.ts` a changé en conséquence, et par la vitesse.
+5. **Le test d'intégration du serveur ne force pas de prime**: la graine d'une partie est tirée au hasard par le serveur, et une prime nulle y reste possible. Il vérifie l'accord entre les notifications, l'état et le classement; les paliers se testent dans le moteur.
+6. **`.claude/launch.json` passe en port automatique**: le port 3000 était pris par le serveur d'une autre conversation. Le serveur lit déjà `PORT`.
+7. **À regarder par le porteur du projet**: l'or du x4 est très proche de l'or des points d'un Black Ninja détruit, que seule sa taille distingue.
+8. **Le niveau d'un point flottant se pose en attribut** (`data-niveau`), pas en classe: la feuille de style le lit tel quel.
+
 ## Rituel de fin de session
 
 Écrire `docs/handoffs/etape-7-5-handoff.md`: les décisions construites, les écarts à cette fiche, les nouvelles empreintes, l'état de la CI. Prochaine action exacte: ouvrir l'étape 7.6, options de partie (Tokyo unique avec une option pluie, plus de 150 bots). Commiter.

@@ -49,6 +49,7 @@ export {
   regleClassique,
   regleChasse,
   regleEquipes,
+  regleHorde,
   regleTactique,
   resoudreContacts,
 } from './contacts.js';
@@ -92,6 +93,16 @@ export {
 export { malusEnEquipe, partDuJoueur, perteEnEquipe } from './equipes.js';
 
 export {
+  RALLIEUR_DE_DEPART,
+  agirEnHorde,
+  lancerLaHorde,
+  primeEnHorde,
+  rallierUnBot,
+  rallieurDe,
+  viderLaReserve,
+} from './horde.js';
+
+export {
   CONE_DU_KATANA,
   GUERRIER_DE_DEPART,
   agirEnMassacre,
@@ -118,6 +129,7 @@ export type {
   DestructionDeBotNoir,
   Entite,
   EtatDeChasse,
+  EtatDeHorde,
   EtatDeMassacre,
   EtatPartie,
   EtatTactiqueDuJoueur,
@@ -136,6 +148,8 @@ export type {
   OptionsEtatInitial,
   ParcoursEnChasse,
   ProchainesApparitions,
+  Ralliement,
+  RallieurEnHorde,
   TirDeCapture,
   TraqueurEnChasse,
   TypeEntite,

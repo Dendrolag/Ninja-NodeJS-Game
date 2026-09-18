@@ -131,7 +131,7 @@ describe('l ecran de fin', () => {
 
   it('dit la carte et le mode de la partie', () => {
     expect(obligatoire(document, '.fin-contexte').textContent).toBe(
-      'Partie terminée · Classique · Rainy Tokyo',
+      'Partie terminée · Horde · Rainy Tokyo',
     );
   });
 
