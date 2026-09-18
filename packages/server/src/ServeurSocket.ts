@@ -1570,6 +1570,19 @@ export class ServeurSocket {
         : refus('idRoom', "Cette partie n'existe plus.");
     }
 
+    // La partie rapide d'un mode (etape 5.5), que demande « Rejouer »: une partie de
+    // ce mode qui attend, ou une nouvelle, publique, a ses reglages par defaut.
+    const mode = demande.mode;
+
+    if (mode !== undefined) {
+      return {
+        valide: true,
+        valeur:
+          this.rooms.partiesPubliquesOuvertes().find((room) => room.mode === mode) ??
+          this.ouvrirUneRoom({ mode, visibilite: 'publique' }),
+      };
+    }
+
     return {
       valide: true,
       valeur: this.rooms.partiesPubliquesOuvertes()[0] ?? this.ouvrirUneRoom(),

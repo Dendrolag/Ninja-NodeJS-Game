@@ -121,7 +121,7 @@ export function coup(
       x: 100,
       y: 100,
       orientation: 'est',
-      morts: [{ id: 'b9', x: 130, y: 100, noir: false, points: 10 }],
+      morts: [{ id: 'b9', x: 130, y: 100, noir: false, points: 10, couleur: '#FF8000' }],
       combo: 1,
       multiplicateur: 1,
       ...charge,

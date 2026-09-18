@@ -101,7 +101,7 @@ describe('les annonces, les sons et les points du Massacre', () => {
     const palier = coup(0, {
       combo: 5,
       multiplicateur: 2,
-      morts: [{ id: 'b1', x: 0, y: 0, noir: false, points: 20 }],
+      morts: [{ id: 'b1', x: 0, y: 0, noir: false, points: 20, couleur: '#FFFFFF' }],
     });
 
     expect(annonceDuFait(palier, 'massacre', 'alice')).toEqual({
@@ -148,8 +148,8 @@ describe('les annonces, les sons et les points du Massacre', () => {
       journal: [
         coup(0, {
           morts: [
-            { id: 'b1', x: 10, y: 20, noir: false, points: 20 },
-            { id: 'n1', x: 30, y: 40, noir: true, points: 30 },
+            { id: 'b1', x: 10, y: 20, noir: false, points: 20, couleur: '#FFFFFF' },
+            { id: 'n1', x: 30, y: 40, noir: true, points: 30, couleur: '#000000' },
           ],
         }),
         coup(0, { frappeur: 'bob' }),
@@ -253,6 +253,14 @@ describe('ce que la scene montre d un coup de katana', () => {
     expect(image.sang).toMatchObject([{ id: 'b9', x: 130, y: 100, instant: 1000 }]);
     expect(image.sang[0]?.formes).toEqual(eclaboussure('b9', 130, 100, 0));
     expect(Math.hypot(image.secousse.x, image.secousse.y)).toBeGreaterThan(0);
+  });
+
+  it('couche le cadavre dans la couleur du mort, assombrie (etape 5.5)', () => {
+    // La couleur du mort n'etait pas transmise: tous les cadavres avaient la meme teinte.
+    const image = imageDuMassacre(etatDeMassacre({ journal: [coup(1000)] }), 1050, 'normal');
+
+    // #FF8000, assombri de 40 pour cent.
+    expect(image.cadavres[0]?.teinte).toBe(0x994d00);
   });
 
   it('laisse la trainee et l eclat s effacer, et ne propose plus le sang, une fois imprime', () => {

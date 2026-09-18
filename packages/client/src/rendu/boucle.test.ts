@@ -17,6 +17,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { Client } from '../client.js';
 import { creerClient } from '../client.js';
 import { Controles } from '../controles/controles.js';
+import { fait } from '../faits.js';
 import type { PointAAfficher } from '../hud/pointsFlottants.js';
 import type { HorlogeClientManuelle } from '../horloge.js';
 import { creerHorlogeClientManuelle } from '../horloge.js';
@@ -24,7 +25,7 @@ import type { ReseauFactice } from '../reseau.js';
 import { creerReseauFactice } from '../reseau.js';
 import type { LecteurDeSons } from '../sons/lecteur.js';
 import type { Boucle } from './boucle.js';
-import { lancerLaBoucle } from './boucle.js';
+import { faitQuiNousDeplace, lancerLaBoucle } from './boucle.js';
 import { echellePour } from './camera.js';
 import type { Rendu, SangAImprimer } from './pixi.js';
 import type { Scene } from './scene.js';
@@ -318,6 +319,26 @@ describe('les fleches qui designent notre personnage', () => {
     expect(rendu.scenes.at(-1)?.reperes).toHaveLength(4);
   });
 
+  it('reviennent quand un coup de katana nous tue, et nous fait reapparaitre ailleurs', () => {
+    // Defaut releve a l'etape 5.5: le Massacre fait reapparaitre le joueur tue, sans
+    // que les fleches ne l'aident a se retrouver.
+    laisserPasserLesFleches();
+
+    reseau.recevoir('joueurTranche', {
+      attaquant: 'bob',
+      attaquantPseudo: 'Bob',
+      victime: 'moi',
+      victimePseudo: 'Alice',
+      x: 100,
+      y: 100,
+      orientation: 'est',
+      pointsVoles: 20,
+    });
+    uneImage();
+
+    expect(rendu.scenes.at(-1)?.reperes).toHaveLength(4);
+  });
+
   it('ne servent pas une demande faite avant l apparition de notre personnage', () => {
     // La demande est consommee a chaque image, qu'on puisse la servir ou non: un
     // appui sur F dans le vide ne doit pas ressurgir plus tard.
@@ -460,5 +481,42 @@ describe('l annonce d un affichage stable', () => {
     }
 
     expect(annonces).toBe(1);
+  });
+});
+
+describe('faitQuiNousDeplace (etape 5.5)', () => {
+  const capture = fait(
+    'captureSubie',
+    { parPseudo: 'Bob', nouvelleCouleur: '#00FF00', botsPerdus: 2 },
+    0,
+  );
+
+  it('retient une capture subie, qui nous fait reapparaitre ailleurs', () => {
+    expect(faitQuiNousDeplace(capture, 'classique', 'moi')).toBe(true);
+  });
+
+  it('ignore une proie infectee en Chasse: elle devient traqueur sur place', () => {
+    expect(faitQuiNousDeplace(capture, 'chasse', 'moi')).toBe(false);
+  });
+
+  it('retient un joueur tranche seulement quand c est nous', () => {
+    const tranche = (victime: string) =>
+      fait(
+        'joueurTranche',
+        {
+          attaquant: 'bob',
+          attaquantPseudo: 'Bob',
+          victime,
+          victimePseudo: victime,
+          x: 0,
+          y: 0,
+          orientation: 'est',
+          pointsVoles: 0,
+        },
+        0,
+      );
+
+    expect(faitQuiNousDeplace(tranche('moi'), 'massacre', 'moi')).toBe(true);
+    expect(faitQuiNousDeplace(tranche('eve'), 'massacre', 'moi')).toBe(false);
   });
 });

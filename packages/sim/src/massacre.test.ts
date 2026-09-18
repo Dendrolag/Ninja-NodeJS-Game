@@ -214,6 +214,16 @@ describe('un coup de katana', () => {
     expect(guerrierDe(apres, 'alice').botsTues).toBe(2);
   });
 
+  it('garde la couleur du bot tue, pour son cadavre (etape 5.5)', () => {
+    const etat = ajouterBot(massacreAvec(), {
+      id: 'vert',
+      position: aDistance(30, 0),
+      couleur: '#00FF00',
+    });
+
+    expect(leCoup(frapper(etat, 'alice').etat).morts[0]?.couleur).toBe('#00FF00');
+  });
+
   it('fait valoir dix points par bot, et monte le multiplicateur a la cinquieme mort', () => {
     const etat = massacreAvec([0, 10, 20, 30, 40, 50].map((degres) => aDistance(40, degres)));
     const apres = frapper(etat, 'alice').etat;
@@ -277,7 +287,7 @@ describe('un coup de katana', () => {
 
     expect(apres.bots['noir']).toBeUndefined();
     expect(leCoup(apres).morts).toEqual([
-      { bot: 'noir', noir: true, position: aDistance(30, 0), points: 30 },
+      { bot: 'noir', noir: true, position: aDistance(30, 0), points: 30, couleur: '#000000' },
     ]);
     expect(joueurDe(apres, 'alice').botsNoirsDetruits).toBe(1);
   });

@@ -32,6 +32,7 @@ import type {
   Equipe,
   InfosSalon,
   IntentionDeplacement,
+  Mode,
   ReglagesPartiels,
   ResultatValidation,
 } from '@neon-ninja/shared';
@@ -84,9 +85,11 @@ export interface OptionsClient {
  * Comment viser une partie precise en y entrant.
  *
  * Par son identifiant, choisi dans la liste des parties publiques, ou par le code
- * d'invitation d'une partie privee. Sans l'un ni l'autre, c'est la partie rapide.
+ * d'invitation d'une partie privee. Sans l'un ni l'autre, c'est la partie rapide,
+ * d'un mode donne si on le precise (« Rejouer », etape 5.5).
  */
-export type AccesPartie = { readonly idRoom: string } | { readonly code: string };
+export type AccesPartie =
+  { readonly idRoom: string } | { readonly code: string } | { readonly mode: Mode };
 
 /**
  * Un client monte: son etat, et ce que le joueur peut demander.

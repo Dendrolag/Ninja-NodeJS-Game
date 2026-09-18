@@ -534,6 +534,30 @@ describe('validerDemandeRejoindre, par code d invitation', () => {
   });
 });
 
+describe('validerDemandeRejoindre, partie rapide d un mode (etape 5.5)', () => {
+  it('accepte un mode connu', () => {
+    expect(valeurAcceptee(validerDemandeRejoindre({ pseudo: 'Alice', mode: 'massacre' }))).toEqual({
+      pseudo: 'Alice',
+      mode: 'massacre',
+    });
+  });
+
+  it('refuse un mode inconnu en nommant le mode', () => {
+    expect(champsRefuses(validerDemandeRejoindre({ pseudo: 'Alice', mode: 'royale' }))).toEqual([
+      'mode',
+    ]);
+  });
+
+  it('refuse un mode avec une partie visee: le mode ne sert qu a la partie rapide', () => {
+    expect(
+      champsRefuses(validerDemandeRejoindre({ pseudo: 'Alice', idRoom: 'room-1', mode: 'chasse' })),
+    ).toEqual(['rejoindre']);
+    expect(
+      champsRefuses(validerDemandeRejoindre({ pseudo: 'Alice', code: 'NX7K2P', mode: 'chasse' })),
+    ).toEqual(['rejoindre']);
+  });
+});
+
 describe('validerDemandeRetour (etape 2.5)', () => {
   const JETON = 'Ab0_-'.repeat(8).concat('xyz');
 

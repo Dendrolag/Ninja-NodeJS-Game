@@ -29,7 +29,7 @@
  * existe avant et apres la boucle, qui les fait entendre.
  */
 
-import type { DimensionsCarte } from '@neon-ninja/shared';
+import type { DimensionsCarte, Mode } from '@neon-ninja/shared';
 
 import type { Client } from '../client.js';
 import type { Controles } from '../controles/controles.js';
@@ -102,11 +102,29 @@ export interface Boucle {
   arreter(): void;
 }
 
-/** Les faits apres lesquels on reapparait ailleurs, et qu'il faut donc se retrouver. */
-const FAITS_QUI_DEPLACENT: ReadonlySet<FaitDeJeu['nature']> = new Set([
-  'captureSubie',
-  'captureParBotNoir',
-]);
+/**
+ * Ce fait nous fait-il reapparaitre ailleurs, de sorte qu'il faut nous y retrouver.
+ *
+ * Deux corrections de l'etape 5.5. En Chasse, une proie attrapee devient traqueur SUR
+ * PLACE: les fleches la designaient alors qu'elle n'avait pas bouge. En Massacre, un
+ * joueur tue reapparait ailleurs, et les fleches ne l'aidaient pas a se retrouver.
+ */
+export function faitQuiNousDeplace(
+  fait: FaitDeJeu,
+  mode: Mode | undefined,
+  moi: string | undefined,
+): boolean {
+  switch (fait.nature) {
+    case 'captureSubie':
+      return mode !== 'chasse';
+    case 'captureParBotNoir':
+      return true;
+    case 'joueurTranche':
+      return fait.charge.victime === moi;
+    default:
+      return false;
+  }
+}
 
 /** Lance la boucle de rendu. */
 export function lancerLaBoucle(options: OptionsBoucle): Boucle {
@@ -283,7 +301,10 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
       return;
     }
 
-    const deplace = faitsNouveaux.some((fait) => FAITS_QUI_DEPLACENT.has(fait.nature));
+    const etat = options.client.etat;
+    const deplace = faitsNouveaux.some((fait) =>
+      faitQuiNousDeplace(fait, etat.salon?.mode, etat.moi),
+    );
 
     if (!apparitionMontree || deplace) {
       apparitionMontree = true;

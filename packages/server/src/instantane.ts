@@ -458,6 +458,7 @@ function notificationsDUnFait(
           y: mort.position.y,
           noir: mort.noir,
           points: mort.points,
+          couleur: mort.couleur,
         })),
         combo: evenement.combo,
         multiplicateur: evenement.multiplicateur,

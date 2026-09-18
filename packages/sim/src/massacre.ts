@@ -319,7 +319,7 @@ function tuerUnBot(
           },
         }
       : equipe,
-    mort: { bot: botId, noir, position: bot.position, points },
+    mort: { bot: botId, noir, position: bot.position, points, couleur: bot.couleur },
   };
 }
 

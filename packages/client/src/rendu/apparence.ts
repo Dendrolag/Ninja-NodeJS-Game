@@ -340,8 +340,11 @@ export const APPARENCE_KATANA = {
   },
   /** L'eclat d'une mort: un disque clair qui grandit en s'effacant. */
   eclat: { dureeMs: 220, couleur: 0xfff0f0, rayonDeDepart: 6, rayonDArrivee: 26 },
-  /** Le cadavre: le ninja couche et assombri, qui s'efface sur sa derniere seconde. */
-  cadavre: { dureeMs: 3500, effacementMs: 1000, teinte: 0x4a1418, alpha: 0.85 },
+  /**
+   * Le cadavre: le ninja couche, dans la couleur du mort assombrie (etape 5.5; une teinte
+   * fixe avant), qui s'efface sur sa derniere seconde.
+   */
+  cadavre: { dureeMs: 3500, effacementMs: 1000, assombrissement: 0.6, alpha: 0.85 },
   /** Le sang discret: une petite tache qui s'efface d'elle-meme. */
   sangDiscret: { dureeMs: 4000, echelle: 0.45 },
   /** Le micro-arret de l'impact: le mouvement affiche se fige, en millisecondes. */

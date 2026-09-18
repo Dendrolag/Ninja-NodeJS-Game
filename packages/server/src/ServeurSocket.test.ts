@@ -1557,6 +1557,41 @@ describe('parties publiques', () => {
   });
 });
 
+describe('partie rapide d un mode (etape 5.5)', () => {
+  // « Rejouer » en fin de partie demande une partie rapide du mode qui vient de se
+  // terminer: sans mode, il menait a n'importe quelle partie, souvent du Classique.
+  it('mene a une partie publique en attente de ce mode, pas a une autre', async () => {
+    const hoteClassique = await connecterUnClient();
+    salonAccepte(await creer(hoteClassique, { pseudo: 'Hote', configuration: PARTIE_PUBLIQUE }));
+    const hoteMassacre = await connecterUnClient();
+    const massacre = salonAccepte(
+      await creer(hoteMassacre, {
+        pseudo: 'Lame',
+        configuration: { mode: 'massacre', visibilite: 'publique' },
+      }),
+    );
+
+    const joueur = await connecterUnClient();
+    const rapide = salonAccepte(await rejoindreAvec(joueur, { pseudo: 'Bob', mode: 'massacre' }));
+
+    expect(rapide.idRoom).toBe(massacre.idRoom);
+  });
+
+  it('ouvre une partie de ce mode quand aucune n attend', async () => {
+    const hote = await connecterUnClient();
+    const classique = salonAccepte(
+      await creer(hote, { pseudo: 'Hote', configuration: PARTIE_PUBLIQUE }),
+    );
+
+    const joueur = await connecterUnClient();
+    const rapide = salonAccepte(await rejoindreAvec(joueur, { pseudo: 'Bob', mode: 'chasse' }));
+
+    expect(rapide.idRoom).not.toBe(classique.idRoom);
+    expect(rapide.mode).toBe('chasse');
+    expect(rapide.visibilite).toBe('publique');
+  });
+});
+
 describe('creation de partie refusee', () => {
   it('refuse une configuration aberrante sans rien creer', async () => {
     const client = await connecterUnClient();

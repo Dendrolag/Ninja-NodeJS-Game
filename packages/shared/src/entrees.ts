@@ -135,6 +135,12 @@ export interface DemandeRejoindre {
   readonly idRoom?: string;
   /** Code d'invitation d'une partie privee. */
   readonly code?: string;
+  /**
+   * Le mode voulu, pour une partie rapide seulement (etape 5.5): la premiere partie
+   * publique en attente de ce mode, ou une nouvelle. C'est ce que demande « Rejouer »
+   * en fin de partie. Sans mode, la partie rapide prend la premiere venue.
+   */
+  readonly mode?: Mode;
 }
 
 /**

@@ -11,7 +11,8 @@
  *   2. « REJOUER » OUVRE UN NOUVEAU SALON. Le retour au salon d'une partie finie
  *      n'existe pas (handoff 2.1): la partie terminee refuse les nouveaux venus.
  *      Rejouer quitte donc la partie et redemande a entrer, c'est-a-dire la partie
- *      rapide: la premiere partie publique en attente, ou une nouvelle (etape 2.4).
+ *      rapide du meme mode: la premiere partie publique de ce mode en attente, ou
+ *      une nouvelle (etapes 2.4 et 5.5).
  *      Des joueurs qui rejouent ensemble se retrouvent ainsi dans le meme salon. La
  *      minuterie de trente secondes du jeu d'origine, qui renvoyait d'office au
  *      salon, n'est pas reprise: elle n'aurait nulle part ou renvoyer.
@@ -46,12 +47,15 @@ export function monterFin(contexte: ContexteEcran): EcranAffiche {
 
   const rejouer = (): void => {
     const etat = client.etat;
+    // Le mode de la partie qui vient de finir (etape 5.5): sans lui, la partie rapide
+    // menait a n'importe quel mode, souvent du Classique.
+    const acces = etat.salon === undefined ? undefined : { mode: etat.salon.mode };
 
     client.quitter();
 
     // Un compte entre sous son propre pseudo, et n'en envoie pas.
     if (etat.session.nature !== 'invite') {
-      client.rejoindre(undefined);
+      client.rejoindre(undefined, acces);
       return;
     }
 
@@ -60,7 +64,7 @@ export function monterFin(contexte: ContexteEcran): EcranAffiche {
     const pseudo = moiDansLeSalon(etat)?.pseudo ?? etat.pseudoDemande;
 
     if (pseudo !== undefined) {
-      client.rejoindre(pseudo);
+      client.rejoindre(pseudo, acces);
     }
   };
 

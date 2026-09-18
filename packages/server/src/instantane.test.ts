@@ -215,7 +215,7 @@ describe('le mode Massacre dans la projection', () => {
           x: 500,
           y: 500,
           orientation: 'est',
-          morts: [{ id: 'b', x: 520, y: 510, noir: false, points: 10 }],
+          morts: [{ id: 'b', x: 520, y: 510, noir: false, points: 10, couleur: '#FFFFFF' }],
           combo: 1,
           multiplicateur: 1,
         },

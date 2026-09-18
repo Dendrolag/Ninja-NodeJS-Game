@@ -144,6 +144,8 @@ describe('l ecran de fin', () => {
       'quitter',
       'rejoindre',
     ]);
-    expect(reseau.dernier('rejoindre')?.[0]).toEqual({ pseudo: 'Alice' });
+    // Le mode de la partie terminee suit (etape 5.5): Rejouer menait a la partie
+    // rapide de n'importe quel mode, souvent du Classique.
+    expect(reseau.dernier('rejoindre')?.[0]).toEqual({ pseudo: 'Alice', mode: 'classique' });
   });
 });

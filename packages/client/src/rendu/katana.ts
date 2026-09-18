@@ -13,7 +13,7 @@
  * Desactive, seul l'eclat reste.
  */
 
-import type { Orientation } from '@neon-ninja/shared';
+import type { Couleur, Orientation } from '@neon-ninja/shared';
 import { MASSACRE, RACINE_RESSOURCES, cheminNinja } from '@neon-ninja/shared';
 
 import type { EtatClient } from '../etat.js';
@@ -23,6 +23,7 @@ import { APPARENCE_KATANA, TAILLE_SPRITE } from './apparence.js';
 import type { FormeDeSang } from './sang.js';
 import { eclaboussure } from './sang.js';
 import type { ConeScene, DisqueScene, SpriteScene } from './scene.js';
+import { couleurEnNombre } from './scene.js';
 
 /** Une tache de sang a imprimer une fois sur le calque du sol. */
 export interface TacheScene {
@@ -133,7 +134,7 @@ export function imageDuMassacre(
       eclater(mort.id, mort.x, mort.y, age, disques);
 
       if (niveau !== 'desactive') {
-        const cadavre = cadavreDe(mort.id, mort.x, mort.y, direction, age);
+        const cadavre = cadavreDe(mort.id, mort.x, mort.y, direction, age, mort.couleur);
         if (cadavre !== undefined) {
           cadavres.push(cadavre);
         }
@@ -267,6 +268,7 @@ function cadavreDe(
   y: number,
   direction: number,
   age: number,
+  couleur: Couleur,
 ): SpriteScene | undefined {
   const { cadavre } = APPARENCE_KATANA;
 
@@ -282,7 +284,7 @@ function cadavreDe(
     x,
     y,
     taille: TAILLE_SPRITE,
-    teinte: cadavre.teinte,
+    teinte: assombrir(couleurEnNombre(couleur), cadavre.assombrissement),
     alpha: cadavre.alpha * Math.min(restant / cadavre.effacementMs, 1),
     rotation: direction + Math.PI / 2,
   };
@@ -355,4 +357,12 @@ export function instantAffiche(microArret: MicroArret | undefined, maintenant: n
   return microArret !== undefined && maintenant < microArret.jusqua
     ? microArret.depuis
     : maintenant;
+}
+
+/** Une couleur assombrie: chaque composante multipliee par ce facteur, de zero a un. */
+function assombrir(couleur: number, facteur: number): number {
+  const composante = (decalage: number): number =>
+    Math.round(((couleur >> decalage) & 0xff) * facteur) << decalage;
+
+  return composante(16) | composante(8) | composante(0);
 }

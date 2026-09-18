@@ -1553,8 +1553,10 @@
   border-color: rgba(45, 230, 224, 0.6);
 }
 
+/* Assez large pour « CODE PRIVÉ » en entier, en majuscules espacées (étape 5.5):
+   à 10ch, on ne lisait que « CODE PRI ». */
 .code-prive input {
-  width: 10ch;
+  width: 17ch;
   min-height: 38px;
   border: 0;
   background: transparent;

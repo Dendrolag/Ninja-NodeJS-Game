@@ -398,6 +398,8 @@ export interface MortVue {
   readonly noir: boolean;
   /** Ce que cette mort a rapporte, multiplicateur compris. */
   readonly points: number;
+  /** Sa couleur au moment de mourir: son cadavre la garde (etape 5.5). */
+  readonly couleur: Couleur;
 }
 
 /**

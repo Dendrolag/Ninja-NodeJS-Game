@@ -186,12 +186,25 @@ export function validerDemandeRejoindre(brut: unknown): ResultatValidation<Deman
   const pseudo = verdictPseudo.valeur;
   const brutRoom = champ(source, 'idRoom');
   const brutCode = champ(source, 'code');
+  const brutMode = champ(source, 'mode');
 
   if (brutRoom !== undefined && brutCode !== undefined) {
     return refuse(
       'rejoindre',
       "Une demande d'entrée vise une partie par son identifiant ou par son code, pas les deux.",
     );
+  }
+
+  // Le mode ne sert qu'a la partie rapide (etape 5.5): avec une partie visee, il
+  // serait au mieux inutile, au pire contredit par celle-ci.
+  if (brutMode !== undefined) {
+    if (brutRoom !== undefined || brutCode !== undefined) {
+      return refuse('rejoindre', 'Le mode ne se choisit que pour une partie rapide.');
+    }
+
+    return estUnDe(MODES, brutMode)
+      ? accepte({ ...pseudo, mode: brutMode })
+      : refuse('mode', "Ce mode de jeu n'existe pas.");
   }
 
   if (brutCode !== undefined) {
