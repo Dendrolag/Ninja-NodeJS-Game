@@ -18,6 +18,8 @@ Les six `collision.png` ont été comparées octet par octet à celles de `legac
 
 Exception, les deux sons du katana du mode Massacre (étape 7.4), `sons/katana-swing.mp3` et `sons/katana-hit.mp3`: ils ne viennent pas de `master`. Synthétisés par un script à l'étape 7.4, ils ont été remplacés à l'étape 5.5 par deux sons fournis par le porteur du projet, le 18 septembre 2026.
 
+De même, les deux sons du fusil du mode Tactique, `sons/shotgun-wave.mp3` (chacun de nos tirs) et `sons/shotgun-reload.mp3` (une charge qui revient), fournis par le porteur du projet à l'étape 5.5, le même jour.
+
 ## Arborescence
 
 | Dossier                            | Contenu                                                                              | Qui le lit                                               |

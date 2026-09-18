@@ -33,7 +33,7 @@
  *      son indicateur « pret » restait faux pour toujours.
  */
 
-import type { NomDeSon } from '@neon-ninja/shared';
+import type { Mode, NomDeSon } from '@neon-ninja/shared';
 
 import type { EtatClient } from '../etat.js';
 import type { FaitDeJeu } from '../faits.js';
@@ -49,10 +49,19 @@ import { pointsDesRalliements } from '../pointsFlottants.js';
  *            seulement s'il a pris quelque chose: douze joueurs qui tirent feraient
  *            sinon un vacarme ou le sien se perdrait.
  */
-export function sonDuFait(fait: FaitDeJeu, moi?: string): NomDeSon | undefined {
+export function sonDuFait(fait: FaitDeJeu, moi?: string, mode?: Mode): NomDeSon | undefined {
   switch (fait.nature) {
+    // En Tactique, chacun de nos tirs sonne comme un coup de fusil, qu'il prenne ou non
+    // (etape 5.5); ce qu'il prend se fait entendre par le son des ralliements. Ailleurs
+    // (le traqueur de la Chasse), seul un tir qui prend s'entend.
     case 'tirDeCapture':
-      return fait.charge.tireur === moi && fait.charge.captures > 0 ? 'capture' : undefined;
+      if (fait.charge.tireur !== moi) {
+        return undefined;
+      }
+      if (mode === 'tactique') {
+        return 'tirFusil';
+      }
+      return fait.charge.captures > 0 ? 'capture' : undefined;
 
     // Le coup de katana du Massacre (etape 7.4): comme un tir, il ne s'entend que chez celui
     // qui l'a donne, fendant l'air ou tranchant ce qu'il touche.
@@ -139,15 +148,16 @@ export function sonsDuChangement(precedent: EtatClient, courant: EtatClient): re
     sons.push('tempsPresqueEcoule');
   }
 
-  // Un faux ninja rallie au contact: le son du jeu d'origine (botConvert), qui
-  // accompagne le point « +1 » et ne se jouait plus (etape 5.5). Un seul son par
-  // battement, meme si plusieurs ninjas passent ensemble. Pas en Tactique, ou le tir
-  // qui rallie a deja le sien.
-  if (
-    courant.salon?.mode !== 'tactique' &&
-    pointsDesRalliements(precedent.partie, courant.partie, courant.moi).length > 0
-  ) {
+  // Un faux ninja rallie: le son du jeu d'origine (botConvert), qui accompagne le point
+  // « +1 » et ne se jouait plus (etape 5.5). Un seul son par battement, meme si
+  // plusieurs ninjas passent ensemble.
+  if (pointsDesRalliements(precedent.partie, courant.partie, courant.moi).length > 0) {
     sons.push('botCapture');
+  }
+
+  // Le fusil du Tactique se recharge a chaque charge qui revient (etape 5.5).
+  if (courant.salon?.mode === 'tactique' && chargeRevenue(precedent, courant)) {
+    sons.push('rechargeFusil');
   }
 
   return sons;
@@ -172,4 +182,16 @@ export function battementDeFin(
   }
 
   return Math.ceil(courantMs / 1000) !== Math.ceil(precedentMs / 1000);
+}
+
+/** Une de nos charges vient-elle de revenir, d'un etat au suivant. */
+function chargeRevenue(precedent: EtatClient, courant: EtatClient): boolean {
+  const charges = (etat: EtatClient): number | undefined => {
+    const moi = etat.partie?.entites.find((entite) => entite.id === etat.moi);
+    return moi?.type === 'joueur' ? moi.tactique?.charges : undefined;
+  };
+  const avant = charges(precedent);
+  const apres = charges(courant);
+
+  return avant !== undefined && apres !== undefined && apres > avant;
 }

@@ -335,7 +335,7 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
     }
 
     for (const fait of faitsNouveaux) {
-      const nom = sonDuFait(fait, etat.moi);
+      const nom = sonDuFait(fait, etat.moi, etat.salon?.mode);
 
       if (nom !== undefined) {
         sons.jouer(nom);

@@ -229,6 +229,13 @@ export const SONS = {
   katana: 'katana-swing.mp3',
   /** Un coup de katana vient de trancher quelque chose, dans le Massacre (etape 7.4). */
   katanaImpact: 'katana-hit.mp3',
+  /**
+   * Un coup de fusil: notre tir en Tactique, qu'il prenne quelque chose ou non. Fourni par
+   * le porteur du projet a l'etape 5.5, pour l'idee d'un fusil a portee reduite.
+   */
+  tirFusil: 'shotgun-wave.mp3',
+  /** Une de nos charges vient de revenir, en Tactique (etape 5.5). */
+  rechargeFusil: 'shotgun-reload.mp3',
 } as const;
 
 /** Nom d'un son ponctuel. */

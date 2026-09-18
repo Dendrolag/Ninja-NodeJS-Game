@@ -66,6 +66,15 @@ describe('sonDuFait', () => {
     expect(sonDuFait(tir('autre', 3), 'moi')).toBeUndefined();
   });
 
+  it('fait entendre le fusil a chacun de nos tirs en Tactique, reussi ou non (etape 5.5)', () => {
+    const tir = (tireur: string, captures: number): ReturnType<typeof fait> =>
+      fait('tirDeCapture', { tireur, x: 0, y: 0, orientation: 'est', captures }, 0);
+
+    expect(sonDuFait(tir('moi', 2), 'moi', 'tactique')).toBe('tirFusil');
+    expect(sonDuFait(tir('moi', 0), 'moi', 'tactique')).toBe('tirFusil');
+    expect(sonDuFait(tir('autre', 3), 'moi', 'tactique')).toBeUndefined();
+  });
+
   it('ne nomme que des sons qui existent', () => {
     // Le defaut exact du jeu d'origine. Ici le compilateur le rend impossible,
     // et ce test le verifie une seconde fois a l'execution, au cas ou la table
@@ -190,13 +199,40 @@ describe('sonsDuChangement', () => {
       ).toEqual(['botCapture']);
     });
 
-    it('ne sonnent pas en Tactique, ou le tir a deja son son', () => {
+    it('sonnent aussi en Tactique, apres le coup de fusil', () => {
       const contexte = enMode('tactique');
 
       expect(
         changement(
           { ...contexte, partie: avecUnBot('#ABCDEF') },
           { ...contexte, partie: avecUnBot('#FF0000') },
+        ),
+      ).toEqual(['botCapture']);
+    });
+
+    it('rechargent le fusil quand une de nos charges revient, en Tactique', () => {
+      const contexte = enMode('tactique');
+      const avecCharges = (charges: number): VuePartie => ({
+        ...partie(60_000),
+        entites: [
+          {
+            ...MOI,
+            tactique: { orientation: 'est', charges, avantProchaineChargeMs: 1_000 },
+          },
+        ],
+      });
+
+      expect(
+        changement(
+          { ...contexte, partie: avecCharges(2) },
+          { ...contexte, partie: avecCharges(3) },
+        ),
+      ).toEqual(['rechargeFusil']);
+      // Un tir fait baisser les charges: rien a recharger.
+      expect(
+        changement(
+          { ...contexte, partie: avecCharges(3) },
+          { ...contexte, partie: avecCharges(2) },
         ),
       ).toEqual([]);
     });
