@@ -17,6 +17,7 @@
 import type { TypeBonus, TypeMalus, TypeZone } from '@neon-ninja/shared';
 import {
   CHASSE,
+  IMAGES_PAR_OBJET,
   MASSACRE,
   RACINE_RESSOURCES,
   SCORE,
@@ -24,7 +25,7 @@ import {
   cheminObjet,
 } from '@neon-ninja/shared';
 
-import { APPARENCE_OBJET, APPARENCE_ZONE } from '../../rendu/apparence.js';
+import { APPARENCE_OBJET, APPARENCE_ZONE, CADENCE_OBJET_MS } from '../../rendu/apparence.js';
 import { creer } from '../dom.js';
 import type { Fenetre } from './fenetre.js';
 import { monterFenetre } from './fenetre.js';
@@ -166,16 +167,28 @@ function liste(
           doc,
           'li',
           {},
-          avecIcone
-            ? creer(doc, 'img', {
-                classe: 'aide-icone',
-                attributs: { src: `${RACINE_RESSOURCES}/${cheminObjet(nature)}`, alt: '' },
-              })
-            : undefined,
+          avecIcone ? iconeAnimee(doc, nature) : undefined,
           creer(doc, 'strong', { texte: APPARENCE_OBJET[nature].libelle }),
           creer(doc, 'span', { texte: effet }),
         ),
       ),
     ),
   );
+}
+
+/**
+ * L'icone d'un objet, animee comme en partie, sur un halo clair (etape 5.5).
+ *
+ * Le fichier est une planche de deux images cote a cote: l'aide la posait entiere
+ * dans un carre, si bien que chaque icone se montrait en double, et sombre sur le
+ * fond sombre. Le carre ne montre plus qu'une image a la fois, qui alterne a la
+ * cadence des objets du terrain (feuille de style, .aide-icone).
+ */
+function iconeAnimee(doc: Document, nature: TypeBonus | TypeMalus): HTMLElement {
+  const icone = creer(doc, 'span', { classe: 'aide-icone', attributs: { 'aria-hidden': 'true' } });
+  icone.style.backgroundImage = `url("${RACINE_RESSOURCES}/${cheminObjet(nature)}")`;
+  icone.style.setProperty('--images', String(IMAGES_PAR_OBJET));
+  icone.style.setProperty('--duree', `${String(CADENCE_OBJET_MS * IMAGES_PAR_OBJET)}ms`);
+
+  return creer(doc, 'span', { classe: 'aide-halo' }, icone);
 }

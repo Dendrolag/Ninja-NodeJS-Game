@@ -1103,15 +1103,46 @@
 
 .aide-liste li {
   display: grid;
-  grid-template-columns: 28px 1fr;
+  grid-template-columns: 40px 1fr;
   column-gap: 12px;
 }
 
-.aide-icone {
+/*
+ * Les icones des bonus et malus (etape 5.5): un halo clair les detache du fond
+ * sombre, et le carre ne montre qu'une image de la planche a la fois, qui alterne
+ * comme sur le terrain.
+ */
+.aide-liste .aide-halo {
+  display: grid;
   grid-row: span 2;
+  grid-column: 1;
+  place-items: center;
   align-self: center;
-  width: 28px;
-  height: 28px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.85) 0%,
+    rgba(255, 255, 255, 0.45) 45%,
+    transparent 72%
+  );
+}
+
+.aide-icone {
+  width: 30px;
+  height: 30px;
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-size: calc(var(--images, 2) * 100%) 100%;
+  animation: aide-planche var(--duree, 1s) steps(var(--images, 2)) infinite;
+}
+
+@keyframes aide-planche {
+  to {
+    /* Avec steps(N), passer de 0 a N x 100 % / (N - 1) s'arrete sur chaque image. */
+    background-position: calc(var(--images, 2) * 100% / (var(--images, 2) - 1)) 0;
+  }
 }
 
 .aide-liste strong,
