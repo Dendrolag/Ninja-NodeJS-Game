@@ -280,9 +280,14 @@ function errer(etat: EtatPartie, bot: Bot, dtMs: number): Avancement {
  * comportement ne depend donc pas du decoupage du temps. La boucle se termine
  * toujours, une duree valant au moins une seconde.
  *
- * En entrant en pause, le bot s'arrete de regarder devant lui et son suivi de
- * blocage repart de zero: c'est ce que fait le legacy (:973), et c'est sense, un
- * bot en pause n'est pas un bot bloque.
+ * En entrant en pause, le suivi de blocage du bot repart de zero: c'est ce que fait
+ * le legacy (:973), et c'est sense, un bot en pause n'est pas un bot bloque.
+ *
+ * LE BOT EN PAUSE GARDE SA DIRECTION. Le legacy le remettait immobile (:974), face a
+ * l'ecran. Decision du porteur du projet du 18 septembre 2026: un bot a l'arret reste
+ * tourne vers ou il allait, comme un joueur arrete depuis le correctif du meme jour.
+ * Sans cela, en Chasse, un personnage arrete tourne de profil ne pouvait etre qu'un
+ * vrai joueur, et le camouflage parmi les faux ninjas ne tenait plus.
  */
 function basculerEntreMarcheEtPause(etat: EtatPartie, bot: Bot, dtMs: number): Avancement {
   let courant: Avancement = { etat, bot };
@@ -300,7 +305,6 @@ function basculerEntreMarcheEtPause(etat: EtatPartie, bot: Bot, dtMs: number): A
         : {
             ...courant.bot,
             enMouvement,
-            direction: 'immobile',
             positionAuDernierControle: courant.bot.position,
             controlesSansAvancer: 0,
           },

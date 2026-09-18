@@ -165,23 +165,30 @@ describe('errance d un bot ordinaire', () => {
     expect(botDe(avancerLesBots(depart, 0.1), 'b1').direction).toBe('est');
   });
 
-  it('ne bouge pas et se fige quand il est en pause', () => {
-    const depart = avecBot(partie(), 'b1', { x: 500, y: 500 }, { enMouvement: false });
+  it('ne bouge pas en pause, et garde la direction qu il avait', () => {
+    const depart = avecBot(
+      partie(),
+      'b1',
+      { x: 500, y: 500 },
+      { enMouvement: false, direction: 'ouest' },
+    );
 
     const apres = botDe(avancerLesBots(depart, 1000), 'b1');
 
     expect(apres.position).toEqual({ x: 500, y: 500 });
-    expect(apres.direction).toBe('immobile');
+    expect(apres.direction).toBe('ouest');
   });
 
-  it('bascule de la marche a la pause quand la duree de l etat est ecoulee', () => {
-    const depart = avecBot(partie(), 'b1', { x: 500, y: 500 }, { avantChangementDEtatMs: 100 });
+  it('bascule de la marche a la pause, tourne vers ou il allait', () => {
+    // Decision du porteur du projet du 18 septembre 2026: le legacy le remettait face a
+    // l'ecran (server.js:974), le bot garde desormais sa direction, comme un joueur.
+    const enMarche = avecBot(partie(), 'b1', { x: 500, y: 500 }, { avantChangementDEtatMs: 100 });
+    const tourne = botDe(avancerLesBots(enMarche, 50), 'b1').direction;
+    const apres = botDe(avancerLesBots(avancerLesBots(enMarche, 50), 50), 'b1');
 
-    const apres = botDe(avancerLesBots(depart, 100), 'b1');
-
+    expect(tourne).not.toBe('immobile');
     expect(apres.enMouvement).toBe(false);
-    expect(apres.position).toEqual({ x: 500, y: 500 });
-    expect(apres.direction).toBe('immobile');
+    expect(apres.direction).toBe(tourne);
     expect(apres.avantChangementDEtatMs).toBeGreaterThanOrEqual(BOTS.DUREE_ETAT_MINIMUM_MS);
   });
 
