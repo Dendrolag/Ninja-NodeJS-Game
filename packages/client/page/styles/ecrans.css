@@ -2140,8 +2140,52 @@
 }
 
 @media (max-width: 560px) {
+  /*
+   * L'en-tete compact des telephones (etape 5.5): le logo, le niveau, la monnaie et
+   * les pictogrammes debordaient de l'ecran, et la page se laissait dezoomer.
+   * Tout se resserre, et rien ne passe plus a la ligne ni hors de l'ecran.
+   */
   .entete {
+    gap: 8px;
     padding-top: 14px;
+  }
+
+  .marque {
+    flex: none;
+    gap: 10px;
+  }
+
+  .logo {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    font-size: 18px;
+  }
+
+  .marque-nom {
+    font-size: 15px;
+    letter-spacing: 0.1em;
+  }
+
+  .entete-actions {
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .entete-actions .bouton-icone {
+    width: 36px;
+    height: 36px;
+  }
+
+  .entete-compte {
+    gap: 6px;
+    margin-right: 0;
+  }
+
+  .anneau-niveau {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
   }
 
   .partie {
@@ -2166,7 +2210,9 @@
 
   /* L'anneau du niveau suffit a designer le compte. */
   .carte-compte {
-    padding: 3px;
+    min-height: 36px;
+    padding: 1px;
+    border-radius: var(--rayon-bouton);
   }
 
   .carte-compte-identite,
@@ -2175,11 +2221,15 @@
   }
 
   .entete-connexion {
-    padding: 0 12px;
+    min-height: 36px;
+    padding: 0 10px;
   }
 
   .pastille-pieces {
-    padding: 0 10px;
+    gap: 5px;
+    min-height: 36px;
+    padding: 0 8px;
+    font-size: 12px;
   }
 
   .scene-ecran {
@@ -2223,5 +2273,12 @@
 
   .compte-nombre {
     font-size: 72px;
+  }
+}
+
+/* Sur les plus petits telephones, le logo seul porte la marque (etape 5.5). */
+@media (max-width: 420px) {
+  .marque-nom {
+    display: none;
   }
 }

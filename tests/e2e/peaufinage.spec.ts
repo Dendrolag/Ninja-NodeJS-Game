@@ -123,3 +123,40 @@ test('le HUD tient dans une seule barre en haut, au fond peu opaque', async ({ p
   expect(opacite).toBeLessThanOrEqual(0.5);
   expect(erreurs).toEqual([]);
 });
+
+test('l en-tete des menus tient dans un petit telephone, compte compris', async ({ page }) => {
+  // Sur telephone, le logo, le niveau, la monnaie et les pictogrammes debordaient,
+  // et la page se laissait zoomer ou dezoomer. Le niveau et la monnaie d'un compte
+  // sont montres de force, avec de grands nombres: le pire cas, sans base de donnees.
+  await page.setViewportSize({ width: 360, height: 640 });
+  await page.goto(jeu.url);
+  await page.evaluate(() => {
+    for (const element of document.querySelectorAll('.entete-compte > *')) {
+      element.toggleAttribute('hidden', element.classList.contains('entete-connexion'));
+    }
+    const pieces = document.querySelector('.pastille-pieces');
+    pieces?.append(document.createTextNode('128 450'));
+    const niveau = document.querySelector('.anneau-niveau span');
+    if (niveau !== null) {
+      niveau.textContent = '42';
+    }
+  });
+
+  const mesure = await page.evaluate(() => {
+    const entete = document.querySelector('.entete') as HTMLElement;
+    const enfants = [...entete.querySelectorAll('*')]
+      .filter((element) => (element as HTMLElement).offsetParent !== null)
+      .map((element) => element.getBoundingClientRect());
+    return {
+      largeurPage: document.documentElement.scrollWidth,
+      hauteur: entete.getBoundingClientRect().height,
+      droite: Math.max(...enfants.map((boite) => boite.right)),
+      zoom: document.querySelector('meta[name="viewport"]')?.getAttribute('content') ?? '',
+    };
+  });
+
+  expect(mesure.largeurPage).toBeLessThanOrEqual(360);
+  expect(mesure.droite).toBeLessThanOrEqual(360);
+  expect(mesure.hauteur).toBeLessThanOrEqual(60);
+  expect(mesure.zoom).toContain('user-scalable=no');
+});
