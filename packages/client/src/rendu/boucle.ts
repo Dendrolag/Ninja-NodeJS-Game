@@ -35,6 +35,7 @@ import type { Client } from '../client.js';
 import type { Controles } from '../controles/controles.js';
 import type { EtatClient } from '../etat.js';
 import type { FaitDeJeu } from '../faits.js';
+import { faitsArrives } from '../faits.js';
 import type { HorlogeClient } from '../horloge.js';
 import type { NiveauDeSang } from '../interface/preferences.js';
 import type { AfficheurDePoints } from '../hud/pointsFlottants.js';
@@ -121,8 +122,6 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
   let camera: Camera | undefined;
   let instantPrecedent: number | undefined;
   let etatPrecedent: EtatClient = options.client.etat;
-  /** Les faits deja traites: le journal s'allonge, on ne rejoue pas le passe. */
-  let faitsTraites = etatPrecedent.journal.length;
   let bouclesEnCours = new Set<string>();
   /** Les fleches qui designent notre personnage, tant qu'elles sont visibles. */
   let localisation: Localisation | undefined;
@@ -158,12 +157,8 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
       options.client.capturer();
     }
 
-    // 2. Les faits recus depuis l'image precedente. Le journal est borne: quand
-    //    il deborde, sa longueur cesse de croitre et les faits nouveaux poussent
-    //    les anciens dehors. On repart donc du plus petit des deux comptes, ce
-    //    qui peut faire manquer un fait en cas de rafale, jamais en rejouer un.
-    const faitsNouveaux = etat.journal.slice(Math.min(faitsTraites, etat.journal.length));
-    faitsTraites = etat.journal.length;
+    // 2. Les faits recus depuis l'image precedente.
+    const faitsNouveaux = faitsArrives(etatPrecedent.journal, etat.journal);
 
     // 3. Les sons naissent de ce qui vient d'arriver.
     const precedent = etatPrecedent;

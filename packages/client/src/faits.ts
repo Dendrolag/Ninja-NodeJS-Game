@@ -111,3 +111,26 @@ export function fait<Nature extends NatureDeFait>(
 ): FaitDeJeu {
   return { nature, charge, instant } as FaitDeJeu;
 }
+
+/**
+ * Les faits du journal courant qui n'etaient pas dans le journal precedent.
+ *
+ * ON LES RECONNAIT A LEUR IDENTITE, PAS A LA LONGUEUR DU JOURNAL. Il est borne: une
+ * fois plein, sa longueur ne bouge plus, les faits nouveaux poussant les anciens
+ * dehors. Compter a partir de l'ancienne longueur ne voyait alors plus rien
+ * arriver, et tous les sons se taisaient au cinquantieme fait (etape 5.5). Chaque
+ * fait est un objet a part, et le journal n'est jamais recopie fait par fait: un
+ * fait deja vu est donc le meme objet d'une image a l'autre.
+ */
+export function faitsArrives(
+  precedent: readonly FaitDeJeu[],
+  courant: readonly FaitDeJeu[],
+): readonly FaitDeJeu[] {
+  if (precedent === courant) {
+    return [];
+  }
+
+  const connus = new Set(precedent);
+
+  return courant.filter((fait) => !connus.has(fait));
+}

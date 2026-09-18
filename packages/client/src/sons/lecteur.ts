@@ -22,6 +22,13 @@
  *    reseau dedies au son, y compris pour transmettre le volume choisi par un
  *    joueur. Le volume est un reglage local; il n'a rien a faire sur le reseau.
  *
+ * LE VOLUME PASSE PAR WEB AUDIO (etape 5.5). Sous iOS, tous les navigateurs sont
+ * WebKit, qui ignore le volume d'un element audio: les curseurs ne faisaient rien
+ * sur un iPhone. Chaque element est donc branche sur un noeud de gain, un pour les
+ * effets, un pour les boucles de bonus, un pour la musique, et c'est le gain qui
+ * regle le volume. Sans Web Audio (les tests, un tres vieux navigateur), le
+ * lecteur regle le volume des elements, comme avant.
+ *
  * L'AUTORISATION DU NAVIGATEUR. Aucun navigateur ne laisse une page emettre du
  * son avant que l'utilisateur n'ait interagi avec elle. Le lecteur ne se bat pas
  * contre cette regle: il tente, et il ignore le refus. Un son perdu au tout debut
@@ -65,6 +72,13 @@ export interface LecteurDeSons {
   reglerLeVolumeDeLaMusique(volume: number): void;
   /** Coupe ou retablit tout le son. */
   couperLeSon(coupe: boolean): void;
+  /**
+   * Debloque le son, a appeler sur un geste du joueur.
+   *
+   * Un contexte Web Audio nait suspendu, et le navigateur ne le laisse repartir que
+   * pendant un geste (un toucher, une touche). Sans effet s'il tourne deja.
+   */
+  deverrouiller(): void;
 }
 
 /** Ce qu'il faut pour construire un lecteur de sons. */
@@ -80,17 +94,73 @@ export interface OptionsLecteur {
    * le constructeur Audio du navigateur.
    */
   readonly creerAudio?: (adresse: string) => HTMLAudioElement;
+  /**
+   * Comment obtenir un contexte Web Audio, ou rien s'il n'y en a pas.
+   *
+   * Injectable pour les tests. En production, un AudioContext du navigateur, s'il
+   * existe.
+   */
+  readonly creerContexte?: () => AudioContext | undefined;
 }
 
 /** Intervalle entre deux bruits de pas, en millisecondes. Valeurs du jeu d'origine. */
 const INTERVALLE_PAS_MS = { normal: 250, presse: 200 } as const;
 
-/** Volume des boucles de bonus: elles accompagnent, elles ne couvrent pas. */
+/**
+ * Volume des boucles de bonus, en part du volume des effets: elles accompagnent,
+ * elles ne couvrent pas. Elles suivent le reglage des effets depuis l'etape 5.5:
+ * avant, les effets coupes a zero laissaient les boucles tourner.
+ */
 const VOLUME_BOUCLE = 0.2;
+
+/** Le contexte Web Audio du navigateur, s'il en a un. */
+function contexteDuNavigateur(): AudioContext | undefined {
+  return typeof AudioContext === 'undefined' ? undefined : new AudioContext();
+}
+
+/** Un canal de volume: un noeud de gain, ou a defaut le volume des elements. */
+interface Canal {
+  brancher(audio: HTMLAudioElement): void;
+  regler(volume: number): void;
+}
+
+/** Cree un canal de volume, sur le contexte s'il y en a un. */
+function creerCanal(contexte: AudioContext | undefined, volume: number): Canal {
+  if (contexte === undefined) {
+    const elements: HTMLAudioElement[] = [];
+    let courant = volume;
+    return {
+      brancher(audio) {
+        audio.volume = courant;
+        elements.push(audio);
+      },
+      regler(nouveau) {
+        courant = nouveau;
+        for (const audio of elements) {
+          audio.volume = nouveau;
+        }
+      },
+    };
+  }
+
+  const gain = contexte.createGain();
+  gain.gain.value = volume;
+  gain.connect(contexte.destination);
+
+  return {
+    brancher(audio) {
+      contexte.createMediaElementSource(audio).connect(gain);
+    },
+    regler(nouveau) {
+      gain.gain.value = nouveau;
+    },
+  };
+}
 
 /** Cree un lecteur de sons. */
 export function creerLecteurDeSons(options: OptionsLecteur = {}): LecteurDeSons {
   const fabriquer = options.creerAudio ?? ((adresse: string) => new Audio(adresse));
+  const contexte = (options.creerContexte ?? contexteDuNavigateur)();
 
   let volumeSons = options.volumeSons ?? 0.9;
   let volumeMusique = options.volumeMusique ?? 0.7;
@@ -111,24 +181,36 @@ export function creerLecteurDeSons(options: OptionsLecteur = {}): LecteurDeSons 
   const audioDe = (fichier: string): HTMLAudioElement =>
     fabriquer(`${RACINE_RESSOURCES}/${cheminSon(fichier)}`);
 
+  const canalSons = creerCanal(contexte, volumeSons);
+  const canalBoucles = creerCanal(contexte, volumeSons * VOLUME_BOUCLE);
+  const canalMusique = creerCanal(contexte, volumeMusique);
+
   for (const [nom, fichier] of Object.entries(SONS) as [NomDeSon, string][]) {
     const audio = audioDe(fichier);
-    audio.volume = volumeSons;
+    canalSons.brancher(audio);
     ponctuels.set(nom, audio);
   }
 
   for (const fichier of SONS_DE_PAS) {
     const audio = audioDe(fichier);
-    audio.volume = volumeSons;
+    canalSons.brancher(audio);
     pas.push(audio);
   }
 
   for (const [bonus, fichier] of Object.entries(SONS_EN_BOUCLE) as [TypeBonus, string][]) {
     const audio = audioDe(fichier);
     audio.loop = true;
-    audio.volume = VOLUME_BOUCLE;
+    canalBoucles.brancher(audio);
     boucles.set(bonus, audio);
   }
+
+  /** Fabrique l'element d'une musique, branche sur son canal, une fois pour toutes. */
+  const nouvelleMusique = (piste: PisteMusicale): HTMLAudioElement => {
+    const audio = audioDe(MUSIQUES[piste]);
+    canalMusique.brancher(audio);
+    musiques.set(piste, audio);
+    return audio;
+  };
 
   /**
    * Lance la lecture en ignorant un refus du navigateur.
@@ -193,8 +275,7 @@ export function creerLecteurDeSons(options: OptionsLecteur = {}): LecteurDeSons 
       // continuer, sans la reprendre du debut.
       if (pisteEnCours !== piste) {
         arreter(musique);
-        musique = musiques.get(piste) ?? audioDe(MUSIQUES[piste]);
-        musiques.set(piste, musique);
+        musique = musiques.get(piste) ?? nouvelleMusique(piste);
         pisteEnCours = piste;
       }
 
@@ -203,7 +284,6 @@ export function creerLecteurDeSons(options: OptionsLecteur = {}): LecteurDeSons 
       }
 
       musique.loop = true;
-      musique.volume = volumeMusique;
 
       if (!coupe && musique.paused) {
         void musique.play().catch(() => undefined);
@@ -224,17 +304,18 @@ export function creerLecteurDeSons(options: OptionsLecteur = {}): LecteurDeSons 
 
     reglerLeVolumeDesSons(volume) {
       volumeSons = borner(volume);
-
-      for (const audio of [...ponctuels.values(), ...pas]) {
-        audio.volume = volumeSons;
-      }
+      canalSons.regler(volumeSons);
+      canalBoucles.regler(volumeSons * VOLUME_BOUCLE);
     },
 
     reglerLeVolumeDeLaMusique(volume) {
       volumeMusique = borner(volume);
+      canalMusique.regler(volumeMusique);
+    },
 
-      if (musique !== undefined) {
-        musique.volume = volumeMusique;
+    deverrouiller() {
+      if (contexte?.state === 'suspended') {
+        void contexte.resume().catch(() => undefined);
       }
     },
 

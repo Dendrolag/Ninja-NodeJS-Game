@@ -21,6 +21,7 @@
 import type { EntiteVue } from '@neon-ninja/shared';
 
 import type { EtatClient } from './etat.js';
+import { faitsArrives } from './faits.js';
 import type { VuePartie } from './reconstruction.js';
 
 /** D'ou viennent des points, ce qui decide de leur apparence. */
@@ -60,18 +61,9 @@ export function pointsDuChangement(avant: EtatClient, apres: EtatClient): readon
  * peut-etre deja reapparu a l'autre bout de la carte.
  */
 function pointsDesFaits(avant: EtatClient, apres: EtatClient): readonly PointsGagnes[] {
-  if (avant.journal === apres.journal) {
-    return [];
-  }
-
-  const connus = new Set(avant.journal);
   const points: PointsGagnes[] = [];
 
-  for (const fait of apres.journal) {
-    if (connus.has(fait)) {
-      continue;
-    }
-
+  for (const fait of faitsArrives(avant.journal, apres.journal)) {
     // Le Massacre (etape 7.4): chaque mort de notre coup de katana, la ou elle est tombee,
     // et les points voles a un joueur tue, la ou il se trouvait.
     if (fait.nature === 'coupDeKatana' && fait.charge.frappeur === apres.moi) {
@@ -115,8 +107,13 @@ function pointsDesFaits(avant: EtatClient, apres: EtatClient): readonly PointsGa
   return points;
 }
 
-/** Un point par faux ninja neutre passe a notre couleur entre deux battements. */
-function pointsDesRalliements(
+/**
+ * Un point par faux ninja neutre passe a notre couleur entre deux battements.
+ *
+ * Exportee pour le son des captures (etape 5.5), qui suit la meme regle que le point
+ * « +1 », celle du jeu d'origine.
+ */
+export function pointsDesRalliements(
   avant: VuePartie | undefined,
   apres: VuePartie | undefined,
   moi: string | undefined,

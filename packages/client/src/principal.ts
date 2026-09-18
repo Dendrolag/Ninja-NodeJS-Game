@@ -33,6 +33,7 @@ import { monterApplication } from './interface/application.js';
 import { monterJeu } from './interface/ecrans/jeu.js';
 import { prechargerLaPartie } from './rendu/pixi.js';
 import { creerReseauSocketIo } from './reseauSocketIo.js';
+import type { LecteurDeSons } from './sons/lecteur.js';
 import { creerLecteurDeSons } from './sons/lecteur.js';
 
 /** L'origine du serveur de jeu, ecrite par l'empaqueteur. Vide: celle de la page. */
@@ -108,10 +109,13 @@ const client = creerClient({
   surReseauRetrouve,
 });
 
+const sons = creerLecteurDeSons();
+debloquerLeSon(sons);
+
 monterApplication({
   hote,
   client,
-  sons: creerLecteurDeSons(),
+  sons,
   horloge: horlogeNavigateur,
   monterLeJeu: monterJeu,
   // Un prechargement qui echoue n'a rien de grave: l'ecran de jeu recharge lui-meme
@@ -124,3 +128,30 @@ monterApplication({
 
 // Le lien s'ouvre une fois l'application montee: elle montre deja qu'il s'etablit.
 client.ouvrir();
+
+/**
+ * Debloque le son au premier geste du joueur, et a chaque geste suivant.
+ *
+ * Le son passe par Web Audio (etape 5.5), dont le contexte nait suspendu: le
+ * navigateur ne le laisse repartir que pendant un geste. On ecoute donc les gestes
+ * pour toute la vie de la page; hors du premier, l'appel est sans effet.
+ *
+ * Sous iOS, Web Audio se tait quand le telephone est en mode silencieux, a la
+ * difference d'un element audio. Une session audio de type « lecture » le fait
+ * sonner comme avant, la ou le navigateur la connait (Safari 16.4 et ses cousins).
+ */
+function debloquerLeSon(lecteur: LecteurDeSons): void {
+  const session = (navigator as Navigator & { audioSession?: { type: string } }).audioSession;
+
+  if (session !== undefined) {
+    session.type = 'playback';
+  }
+
+  const deverrouiller = (): void => {
+    lecteur.deverrouiller();
+  };
+
+  for (const geste of ['pointerdown', 'touchend', 'keydown'] as const) {
+    document.addEventListener(geste, deverrouiller, { capture: true, passive: true });
+  }
+}

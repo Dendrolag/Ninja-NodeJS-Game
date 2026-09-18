@@ -37,6 +37,7 @@ import type { NomDeSon } from '@neon-ninja/shared';
 
 import type { EtatClient } from '../etat.js';
 import type { FaitDeJeu } from '../faits.js';
+import { pointsDesRalliements } from '../pointsFlottants.js';
 
 /**
  * Le son que declenche une notification, s'il y en a un.
@@ -136,6 +137,17 @@ export function sonsDuChangement(precedent: EtatClient, courant: EtatClient): re
 
   if (battementDeFin(precedent.partie?.tempsRestantMs, courant.partie?.tempsRestantMs)) {
     sons.push('tempsPresqueEcoule');
+  }
+
+  // Un faux ninja rallie au contact: le son du jeu d'origine (botConvert), qui
+  // accompagne le point « +1 » et ne se jouait plus (etape 5.5). Un seul son par
+  // battement, meme si plusieurs ninjas passent ensemble. Pas en Tactique, ou le tir
+  // qui rallie a deja le sien.
+  if (
+    courant.salon?.mode !== 'tactique' &&
+    pointsDesRalliements(precedent.partie, courant.partie, courant.moi).length > 0
+  ) {
+    sons.push('botCapture');
   }
 
   return sons;

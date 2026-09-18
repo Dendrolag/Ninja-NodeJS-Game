@@ -25,6 +25,7 @@ import { multiplicateurDuCombo } from '@neon-ninja/shared';
 
 import type { EtatClient } from './etat.js';
 import type { FaitDeJeu } from './faits.js';
+import { faitsArrives } from './faits.js';
 import { APPARENCE_OBJET } from './rendu/apparence.js';
 import { jeSuisHote } from './selecteurs.js';
 
@@ -223,25 +224,19 @@ export function annonceDuRefus(refus: Refus): Annonce | undefined {
  * Tout ce qu'il faut annoncer en passant d'un etat au suivant.
  *
  * COMPARER DEUX ETATS, COMME POUR LE SON. Les faits nouveaux sont ceux du
- * journal courant qui n'etaient pas dans le precedent; le journal ne fait que
- * s'allonger, sauf au lancement d'une partie ou il repart vide, et ce cas ne
- * produit donc aucune annonce. Un refus est nouveau quand ce n'est plus le meme
+ * journal courant qui n'etaient pas dans le precedent (faitsArrives); au
+ * lancement d'une partie, le journal repart vide, et ce cas ne produit donc
+ * aucune annonce. Un refus est nouveau quand ce n'est plus le meme
  * objet. Rien n'est retenu entre deux appels.
  */
 export function annoncesDuChangement(avant: EtatClient, apres: EtatClient): readonly Annonce[] {
   const annonces: Annonce[] = [];
 
-  if (avant.journal !== apres.journal) {
-    const connus = new Set(avant.journal);
+  for (const fait of faitsArrives(avant.journal, apres.journal)) {
+    const annonce = annonceDuFait(fait, apres.salon?.mode, apres.moi);
 
-    for (const fait of apres.journal) {
-      const annonce = connus.has(fait)
-        ? undefined
-        : annonceDuFait(fait, apres.salon?.mode, apres.moi);
-
-      if (annonce !== undefined) {
-        annonces.push(annonce);
-      }
+    if (annonce !== undefined) {
+      annonces.push(annonce);
     }
   }
 

@@ -119,6 +119,7 @@ function sonsDEssai(): LecteurDeSons & {
     reglerLeVolumeDesSons: () => undefined,
     reglerLeVolumeDeLaMusique: () => undefined,
     couperLeSon: () => undefined,
+    deverrouiller: () => undefined,
   };
 
   return lecteur;
@@ -218,6 +219,32 @@ describe('lancerLaBoucle', () => {
     uneImage();
 
     expect(sons.joues.filter((nom) => nom === 'joueurCapture')).toHaveLength(1);
+  });
+
+  it('entend encore les faits recus quand le journal est plein', () => {
+    // Defaut de l'etape 5.5: le journal garde cinquante faits. Une fois plein, sa
+    // longueur ne bouge plus, et la boucle, qui lisait ce qui depassait l'ancienne
+    // longueur, ne voyait plus rien arriver. En Massacre, ou chaque coup de katana
+    // est un fait, tous les sons se taisaient au bout de cinquante coups.
+    reseau.recevoir('partieLancee');
+    uneImage();
+
+    for (let fait = 0; fait < 60; fait += 1) {
+      reseau.recevoir('joueurArrive', {
+        id: `j${String(fait)}`,
+        pseudo: `J${String(fait)}`,
+        hote: false,
+      });
+    }
+    uneImage();
+
+    reseau.recevoir('captureReussie', { victimePseudo: 'Bob', botsGagnes: 4, capturesTotal: 1 });
+    uneImage();
+    reseau.recevoir('captureReussie', { victimePseudo: 'Eve', botsGagnes: 2, capturesTotal: 2 });
+    uneImage();
+    uneImage();
+
+    expect(sons.joues.filter((nom) => nom === 'joueurCapture')).toHaveLength(2);
   });
 
   it('demarre la boucle sonore d un bonus et l arrete quand il expire', () => {

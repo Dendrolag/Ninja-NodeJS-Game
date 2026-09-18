@@ -7,8 +7,8 @@
  * de sa table; aucun test ne pouvait le dire, et personne ne l'a remarque.
  */
 
-import type { NomDeSon } from '@neon-ninja/shared';
-import { SONS } from '@neon-ninja/shared';
+import type { Mode, NomDeSon } from '@neon-ninja/shared';
+import { REGLAGES_PAR_DEFAUT, SONS } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
 import type { EtatClient } from '../etat.js';
@@ -143,6 +143,64 @@ describe('sonsDuChangement', () => {
   it('reste muet tant qu il reste du temps', () => {
     expect(changement({ partie: partie(60_000) }, { partie: partie(59_800) })).toEqual([]);
   });
+
+  describe('les faux ninjas ralliés (etape 5.5)', () => {
+    const MOI = {
+      type: 'joueur',
+      id: 'moi',
+      x: 100,
+      y: 100,
+      couleur: '#FF0000',
+      direction: 'sud',
+      pseudo: 'Alice',
+      invincible: false,
+      protege: false,
+    } as const;
+
+    /** Une partie ou un faux ninja porte cette couleur. */
+    const avecUnBot = (couleur: string): VuePartie => ({
+      ...partie(60_000),
+      entites: [MOI, { type: 'bot', id: 'b1', x: 120, y: 100, couleur, direction: 'nord' }],
+    });
+
+    const enMode = (mode: Mode) =>
+      ({
+        moi: 'moi',
+        salon: {
+          idRoom: 'r',
+          statut: 'enCours',
+          mode,
+          visibilite: 'publique',
+          capacite: 12,
+          joueurs: [],
+          reglages: REGLAGES_PAR_DEFAUT,
+        },
+      }) as const;
+
+    it('sonnent quand un faux ninja neutre passe a notre couleur', () => {
+      // Le son du jeu d'origine (botConvert), qui ne se jouait plus: il accompagne le
+      // point « +1 ».
+      const contexte = enMode('classique');
+
+      expect(
+        changement(
+          { ...contexte, partie: avecUnBot('#ABCDEF') },
+          { ...contexte, partie: avecUnBot('#FF0000') },
+        ),
+      ).toEqual(['botCapture']);
+    });
+
+    it('ne sonnent pas en Tactique, ou le tir a deja son son', () => {
+      const contexte = enMode('tactique');
+
+      expect(
+        changement(
+          { ...contexte, partie: avecUnBot('#ABCDEF') },
+          { ...contexte, partie: avecUnBot('#FF0000') },
+        ),
+      ).toEqual([]);
+    });
+  });
 });
 
 describe('battementDeFin', () => {
@@ -244,6 +302,101 @@ describe('creerLecteurDeSons', () => {
     lecteur.jouer('bonusRamasse');
 
     expect([...audios.values()].every((audio) => audio.lectures === 0)).toBe(true);
+  });
+
+  describe('avec Web Audio (etape 5.5)', () => {
+    // Sous iOS, tous les navigateurs sont WebKit, qui ignore le volume d'un element
+    // audio: les curseurs ne faisaient rien. Le son passe donc par des noeuds de gain.
+
+    /** Un contexte audio d'essai, qui note ses noeuds de gain et ce qui s'y branche. */
+    function contexteDEssai() {
+      const gains: { gain: { value: number }; branches: unknown[] }[] = [];
+      const contexte = {
+        state: 'suspended' as AudioContextState,
+        destination: {},
+        reprises: 0,
+        gains,
+        createGain() {
+          const noeud = {
+            gain: { value: 1 },
+            branches: [] as unknown[],
+            connect(cible: unknown) {
+              return cible;
+            },
+          };
+          gains.push(noeud);
+          return noeud;
+        },
+        createMediaElementSource(element: HTMLMediaElement) {
+          return {
+            connect(cible: { branches: unknown[] }) {
+              cible.branches.push(element);
+              return cible;
+            },
+          };
+        },
+        resume() {
+          contexte.reprises += 1;
+          contexte.state = 'running';
+          return Promise.resolve();
+        },
+      };
+      return contexte;
+    }
+
+    function lecteurWebAudio() {
+      const contexte = contexteDEssai();
+      const audios = new Map<string, HTMLAudioElement & { lectures: number }>();
+      const lecteur = creerLecteurDeSons({
+        creerAudio: (adresse) => {
+          const audio = audioDEssai();
+          audios.set(adresse, audio);
+          return audio;
+        },
+        creerContexte: () => contexte as unknown as AudioContext,
+      });
+      /** Le noeud de gain par lequel passe l'element de cette adresse. */
+      const gainDe = (adresse: string) =>
+        contexte.gains.find((noeud) => noeud.branches.includes(audios.get(adresse)));
+      return { lecteur, contexte, audios, gainDe };
+    }
+
+    it('regle le volume des effets par un noeud de gain', () => {
+      const { lecteur, audios, gainDe } = lecteurWebAudio();
+
+      lecteur.reglerLeVolumeDesSons(0.25);
+
+      expect(gainDe('/assets/sons/collect-bonus.wav')?.gain.value).toBe(0.25);
+      // L'element reste a plein volume: c'est le gain qui decide.
+      expect(audios.get('/assets/sons/collect-bonus.wav')?.volume).toBe(1);
+    });
+
+    it('regle le volume de la musique par son propre noeud de gain', () => {
+      const { lecteur, gainDe } = lecteurWebAudio();
+
+      lecteur.demarrerLaMusique('menu');
+      lecteur.reglerLeVolumeDeLaMusique(0.1);
+
+      expect(gainDe('/assets/sons/menu-music.mp3')?.gain.value).toBe(0.1);
+    });
+
+    it('fait suivre aux boucles de bonus le volume des effets', () => {
+      const { lecteur, gainDe } = lecteurWebAudio();
+
+      lecteur.reglerLeVolumeDesSons(0.5);
+
+      expect(gainDe('/assets/sons/speed-active.mp3')?.gain.value).toBeCloseTo(0.1);
+    });
+
+    it('se debloque au geste du joueur', () => {
+      const { lecteur, contexte } = lecteurWebAudio();
+
+      lecteur.deverrouiller();
+      lecteur.deverrouiller();
+
+      expect(contexte.state).toBe('running');
+      expect(contexte.reprises).toBe(1);
+    });
   });
 
   it('borne le volume entre zero et un', () => {
