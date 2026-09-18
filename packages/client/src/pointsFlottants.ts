@@ -72,6 +72,24 @@ function pointsDesFaits(avant: EtatClient, apres: EtatClient): readonly PointsGa
       continue;
     }
 
+    // Le Massacre (etape 7.4): chaque mort de notre coup de katana, la ou elle est tombee,
+    // et les points voles a un joueur tue, la ou il se trouvait.
+    if (fait.nature === 'coupDeKatana' && fait.charge.frappeur === apres.moi) {
+      for (const mort of fait.charge.morts) {
+        points.push({
+          valeur: mort.points,
+          genre: mort.noir ? 'botNoir' : 'bot',
+          x: mort.x,
+          y: mort.y,
+        });
+      }
+    }
+
+    if (fait.nature === 'joueurTranche' && fait.charge.attaquant === apres.moi) {
+      const { pointsVoles: valeur, x, y } = fait.charge;
+      points.push({ valeur, genre: 'joueur', x, y });
+    }
+
     if (fait.nature === 'botNoirDetruit') {
       const { points: valeur, x, y } = fait.charge;
       points.push({ valeur, genre: 'botNoir', x, y });

@@ -111,6 +111,7 @@ describe('l ecran du profil', () => {
       '2Parties jouées',
       '1Victoires',
       '42Meilleur score',
+      '—Record Massacre solo',
       '0Pièces',
       '120Points de ligue',
     ]);

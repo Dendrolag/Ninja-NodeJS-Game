@@ -4,7 +4,8 @@
  * FONCTION PURE, COMME LA SCENE. On lui donne l'etat et l'instant, elle rend la
  * description de ce qu'il faut afficher: le temps restant deja mis en forme, les
  * lignes du classement, les effets en cours avec leur reste, les points de la
- * minimap, dans le mode Tactique, nos charges, et, dans le mode Chasse, notre role.
+ * minimap, dans le mode Tactique, nos charges, dans le mode Chasse, notre role, et, dans le
+ * mode Massacre, notre combo.
  * Ecrire cela dans le document est le travail d'un autre fichier.
  *
  * POURQUOI CE DECOUPAGE ICI AUSSI. Le client d'origine avait quinze fonctions qui
@@ -31,6 +32,7 @@ import type {
 import {
   CHASSE,
   COULEURS_DES_EQUIPES,
+  MASSACRE,
   TACTIQUE,
   campDeCouleur,
   classementDesEquipes,
@@ -102,6 +104,21 @@ export interface ChasseHud {
   readonly proies: string;
 }
 
+/** Notre combo dans une partie Massacre, et ce qu'il reste de ninjas a tuer (etape 7.4). */
+export interface MassacreHud {
+  /** Le multiplicateur en cours: un sans combo. */
+  readonly multiplicateur: number;
+  /** « 7 morts », ou rien sans combo. */
+  readonly combo: string;
+  /** Ce qu'il reste a la fenetre du combo, de zero a un. Zero: pas de combo. */
+  readonly fenetre: number;
+  /** « 37 ninjas restants », « 1 ninja restant » ou « Carte nettoyée ». */
+  readonly restants: string;
+}
+
+/** Ce que porte le bouton d'action: des charges en Tactique, des vies en Chasse, un katana en Massacre. */
+export type ArmeHud = 'charges' | 'vies' | 'katana';
+
 /** Tout ce que la surcouche affiche a un instant donne. */
 export interface Hud {
   /** Le temps restant, mis en forme minutes deux-points secondes. */
@@ -126,6 +143,10 @@ export interface Hud {
   readonly charges: ChargesHud | undefined;
   /** Notre role. Absent hors du mode Chasse, ou tant qu'on n'est pas au classement. */
   readonly chasse: ChasseHud | undefined;
+  /** Notre combo. Absent hors du mode Massacre, ou tant qu'on n'est pas au classement. */
+  readonly massacre: MassacreHud | undefined;
+  /** Ce que le bouton d'action porte, selon le mode. */
+  readonly arme: ArmeHud;
 }
 
 /** Un HUD vide, celui d'un ecran hors partie. */
@@ -141,6 +162,8 @@ export const HUD_VIDE: Hud = {
   minimap: [],
   charges: undefined,
   chasse: undefined,
+  massacre: undefined,
+  arme: 'charges',
 };
 
 /**
@@ -184,7 +207,85 @@ export function construireHud(etat: EtatClient, maintenant: number): Hud {
     minimap: minimapHud(etat, mode),
     charges: chargesHud(etat, mode),
     chasse: chasseHud(etat, mode),
+    massacre: massacreHud(etat, mode, maintenant),
+    arme: mode === 'chasse' ? 'vies' : mode === 'massacre' ? 'katana' : 'charges',
   };
+}
+
+/**
+ * Notre combo dans une partie Massacre, lu dans nos coups de katana (etape 7.4).
+ *
+ * Le flux d'etat ne porte pas le combo: il ne concerne que nous. Notre dernier coup qui a
+ * tue dit ou il en est, et la fenetre de deux secondes court depuis son arrivee. Il tombe
+ * plus tot si l'on s'est fait tuer ou attraper par un Black Ninja depuis. Le moteur le
+ * tient au battement pres; l'ecart d'un battement ne se voit pas sur une jauge.
+ */
+function massacreHud(
+  etat: EtatClient,
+  mode: Mode | undefined,
+  maintenant: number,
+): MassacreHud | undefined {
+  const partie = etat.partie;
+
+  if (mode !== 'massacre' || partie?.classement.some((ligne) => ligne.id === etat.moi) !== true) {
+    return undefined;
+  }
+
+  const restants = partie.entites.filter((entite) => entite.type === 'bot').length;
+  const combo = comboEnCours(etat, maintenant);
+
+  return {
+    multiplicateur: combo?.multiplicateur ?? 1,
+    combo:
+      combo === undefined ? '' : `${String(combo.morts)} ${combo.morts > 1 ? 'morts' : 'mort'}`,
+    fenetre: combo?.fenetre ?? 0,
+    restants:
+      restants === 0
+        ? 'Carte nettoyée'
+        : `${String(restants)} ${restants > 1 ? 'ninjas restants' : 'ninja restant'}`,
+  };
+}
+
+/** Le combo en cours, d'apres le journal, ou rien s'il est tombe. */
+function comboEnCours(
+  etat: EtatClient,
+  maintenant: number,
+):
+  | { readonly morts: number; readonly multiplicateur: number; readonly fenetre: number }
+  | undefined {
+  for (let rang = etat.journal.length - 1; rang >= 0; rang -= 1) {
+    const fait = etat.journal[rang];
+
+    if (fait === undefined) {
+      continue;
+    }
+
+    // Tue, ou attrape par un Black Ninja: le combo est tombe.
+    if (
+      fait.nature === 'captureParBotNoir' ||
+      (fait.nature === 'joueurTranche' && fait.charge.victime === etat.moi)
+    ) {
+      return undefined;
+    }
+
+    if (
+      fait.nature === 'coupDeKatana' &&
+      fait.charge.frappeur === etat.moi &&
+      fait.charge.morts.length > 0
+    ) {
+      const fenetre = 1 - (maintenant - fait.instant) / MASSACRE.FENETRE_DU_COMBO_MS;
+
+      return fenetre > 0
+        ? {
+            morts: fait.charge.combo,
+            multiplicateur: fait.charge.multiplicateur,
+            fenetre: Math.min(fenetre, 1),
+          }
+        : undefined;
+    }
+  }
+
+  return undefined;
 }
 
 /**
@@ -338,6 +439,18 @@ function chargesHud(etat: EtatClient, mode: Mode | undefined): ChargesHud | unde
 
   if (mode === 'chasse') {
     return { disponibles: charges, maximum: CHASSE.VIES_DES_TRAQUEURS, recharge: 0 };
+  }
+
+  // En Massacre (etape 7.4), une seule charge: le coup est pret, ou revient en 400 ms.
+  if (mode === 'massacre') {
+    return {
+      disponibles: charges,
+      maximum: 1,
+      recharge:
+        charges > 0
+          ? 1
+          : Math.min(Math.max(1 - avantProchaineChargeMs / MASSACRE.DELAI_ENTRE_COUPS_MS, 0), 1),
+    };
   }
 
   const enCours = 1 - avantProchaineChargeMs / TACTIQUE.RECHARGE_MS;

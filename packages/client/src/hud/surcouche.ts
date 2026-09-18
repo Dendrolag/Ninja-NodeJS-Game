@@ -27,7 +27,15 @@
 import type { DimensionsCarte } from '@neon-ninja/shared';
 
 import type { EtatManette } from '../controles/tactile.js';
-import type { ChargesHud, ChasseHud, Hud, LigneHud, PointMinimap } from './modele.js';
+import type {
+  ArmeHud,
+  ChargesHud,
+  ChasseHud,
+  Hud,
+  LigneHud,
+  MassacreHud,
+  PointMinimap,
+} from './modele.js';
 
 /** Cote de la minimap, en pixels d'ecran. */
 export const COTE_MINIMAP = 160;
@@ -73,6 +81,7 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
   retour.textContent = 'Connexion perdue. Retour dans la partie…';
   retour.hidden = true;
   const chasse = monterChasse(doc, racine);
+  const massacre = monterMassacre(doc, racine);
   const classement = element(doc, 'ol', 'hud-classement', racine);
   const effets = element(doc, 'ul', 'hud-effets', racine);
   const minimap = element(doc, 'div', 'hud-minimap', racine);
@@ -108,11 +117,13 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
       retour.hidden = !hud.retourEnCours;
 
       chasse.afficher(hud.chasse);
+      massacre.afficher(hud.massacre);
       majClassement(doc, classement, lignes, hud.classement);
       majEffets(doc, effets, hud);
       majMinimap(doc, minimap, points, hud.minimap, options.carte);
-      // En Chasse, les charges d'un traqueur sont ses vies (etape 7.3).
-      capture?.afficher(hud.charges, hud.chasse !== undefined);
+      // En Chasse, les charges d'un traqueur sont ses vies (etape 7.3); en Massacre, le
+      // bouton porte le katana (etape 7.4).
+      capture?.afficher(hud.charges, hud.arme);
     },
 
     afficherLaManette(etat: EtatManette) {
@@ -148,8 +159,8 @@ function element(doc: Document, balise: string, classe: string, parent: Element)
 
 /** Le bouton de capture, qui montre aussi nos charges. */
 interface BoutonDeCapture {
-  /** Montre nos charges, ou, en Chasse, nos vies. */
-  afficher(charges: ChargesHud | undefined, enVies: boolean): void;
+  /** Montre nos charges, ou, en Chasse, nos vies, ou, en Massacre, notre katana. */
+  afficher(charges: ChargesHud | undefined, arme: ArmeHud): void;
   demonter(): void;
 }
 
@@ -175,7 +186,8 @@ function monterCapture(doc: Document, parent: HTMLElement, capturer: () => void)
   // bouton empecherait alors de tirer au clavier.
   bouton.tabIndex = -1;
   bouton.hidden = true;
-  element(doc, 'span', 'hud-capture-libelle', bouton).textContent = 'Capturer';
+  const libelle = element(doc, 'span', 'hud-capture-libelle', bouton);
+  libelle.textContent = 'Capturer';
   const jauge = element(doc, 'span', 'hud-charges', bouton);
   parent.append(bouton);
 
@@ -191,9 +203,16 @@ function monterCapture(doc: Document, parent: HTMLElement, capturer: () => void)
   let etiquette = '';
 
   return {
-    afficher(charges, enVies) {
+    afficher(charges, arme) {
+      const enVies = arme === 'vies';
+      const nom = arme === 'katana' ? 'Katana' : 'Capturer';
       bouton.hidden = charges === undefined;
       jauge.classList.toggle('vies', enVies);
+      jauge.classList.toggle('katana', arme === 'katana');
+
+      if (libelle.textContent !== nom) {
+        libelle.textContent = nom;
+      }
 
       if (charges === undefined) {
         return;
@@ -213,7 +232,10 @@ function monterCapture(doc: Document, parent: HTMLElement, capturer: () => void)
 
       bouton.classList.toggle('vide', charges.disponibles === 0);
 
-      const nouvelle = `Capturer, ${String(charges.disponibles)} ${enVies ? 'vies' : 'charges'} sur ${String(charges.maximum)}`;
+      const nouvelle =
+        arme === 'katana'
+          ? `Katana, ${charges.disponibles > 0 ? 'prêt' : 'en garde'}`
+          : `Capturer, ${String(charges.disponibles)} ${enVies ? 'vies' : 'charges'} sur ${String(charges.maximum)}`;
 
       if (nouvelle !== etiquette) {
         etiquette = nouvelle;
@@ -223,6 +245,46 @@ function monterCapture(doc: Document, parent: HTMLElement, capturer: () => void)
 
     demonter() {
       bouton.removeEventListener('pointerdown', surAppui);
+    },
+  };
+}
+
+/** Le compteur de combo, dans une partie Massacre. */
+interface CompteurDeCombo {
+  afficher(massacre: MassacreHud | undefined): void;
+}
+
+/**
+ * Le compteur de combo d'une partie Massacre (etape 7.4): le multiplicateur en grand, les
+ * morts du combo, la fenetre qui s'epuise, et les ninjas qui restent. Cache hors de ce mode.
+ * Il prend la place du bandeau de role de la Chasse, a droite sous les boutons.
+ */
+function monterMassacre(doc: Document, parent: HTMLElement): CompteurDeCombo {
+  const compteur = element(doc, 'div', 'hud-massacre', parent);
+  compteur.hidden = true;
+  const multiplicateur = element(doc, 'strong', 'hud-massacre-multiplicateur', compteur);
+  const morts = element(doc, 'span', 'hud-massacre-combo', compteur);
+  const fenetre = element(doc, 'span', 'hud-massacre-fenetre', compteur);
+  const restants = element(doc, 'span', 'hud-massacre-restants', compteur);
+  restants.setAttribute('role', 'status');
+
+  return {
+    afficher(massacre) {
+      compteur.hidden = massacre === undefined;
+
+      if (massacre === undefined) {
+        return;
+      }
+
+      const texte = `x${String(massacre.multiplicateur)}`;
+      if (multiplicateur.textContent !== texte) {
+        multiplicateur.textContent = texte;
+      }
+      compteur.dataset['multiplicateur'] = String(massacre.multiplicateur);
+      compteur.classList.toggle('en-combo', massacre.fenetre > 0);
+      morts.textContent = massacre.combo;
+      fenetre.style.setProperty('--fenetre', String(massacre.fenetre));
+      restants.textContent = massacre.restants;
     },
   };
 }

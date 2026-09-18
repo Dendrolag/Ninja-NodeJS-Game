@@ -25,7 +25,10 @@ import type {
   CaptureParBotNoirSubie,
   CaptureReussie,
   CaptureSubie,
+  CarteVideeVue,
+  CoupDeKatanaVu,
   JoueurDuSalon,
+  JoueurTrancheVu,
   MalusRamasseParMoi,
   MalusSubi,
   TirDeCaptureVu,
@@ -62,6 +65,12 @@ export interface ChargesDeFait {
   tirDeCapture: TirDeCaptureVu;
   /** Ce traqueur de la Chasse vient de viser un faux ninja, et y a laisse une vie. */
   vieDeTraqueurPerdue: VieDeTraqueurPerdueVue;
+  /** Un joueur de la partie vient de donner un coup de katana, dans le Massacre. */
+  coupDeKatana: CoupDeKatanaVu;
+  /** Un joueur de la partie vient d'en tuer un autre, dans le Massacre. */
+  joueurTranche: JoueurTrancheVu;
+  /** Le dernier bot vient de tomber, dans le Massacre. */
+  carteVidee: CarteVideeVue;
   /** Quelqu'un vient d'entrer dans la partie. */
   joueurArrive: JoueurDuSalon;
   /** Quelqu'un vient de quitter la partie. */

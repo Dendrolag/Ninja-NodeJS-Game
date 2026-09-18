@@ -36,6 +36,7 @@ import type { Controles } from '../controles/controles.js';
 import type { EtatClient } from '../etat.js';
 import type { FaitDeJeu } from '../faits.js';
 import type { HorlogeClient } from '../horloge.js';
+import type { NiveauDeSang } from '../interface/preferences.js';
 import type { AfficheurDePoints } from '../hud/pointsFlottants.js';
 import type { Surcouche } from '../hud/surcouche.js';
 import { construireHud } from '../hud/modele.js';
@@ -50,7 +51,10 @@ import { TamponDeLissage } from './interpolation.js';
 import type { Localisation } from './localisation.js';
 import { localiser, opaciteDeLocalisation } from './localisation.js';
 import type { Rendu } from './pixi.js';
+import { empreinte } from './sang.js';
 import { construireScene } from './scene.js';
+import type { SangAuSol, SuiviDesPas } from './traces.js';
+import { AUCUN_PAS, TRACES, avancerLesPas } from './traces.js';
 import { creerJugeDeStabilite } from './stabilite.js';
 
 /** Ce qu'il faut pour faire tourner une partie a l'ecran. */
@@ -62,6 +66,8 @@ export interface OptionsBoucle {
   readonly carte: DimensionsCarte;
   /** La surcouche du HUD. Absente, le jeu s'affiche sans interface. */
   readonly surcouche?: Surcouche;
+  /** Le sang que le joueur veut voir, en Massacre. Normal par defaut. */
+  readonly niveauDeSang?: () => NiveauDeSang;
   /** Le lecteur de sons. Absent, le jeu est muet. */
   readonly sons?: LecteurDeSons;
   /** L'affichage des points gagnes. Absent, les gains ne se voient qu'au classement. */
@@ -124,6 +130,10 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
   let prochaineImage: number | undefined;
   const juge = creerJugeDeStabilite();
   let stabiliteAnnoncee = false;
+  /** Les pieds de chaque joueur, pour les traces de pas du Massacre (etape 7.4). */
+  let suiviDesPas: SuiviDesPas = AUCUN_PAS;
+  /** Le sang frais au sol, que les pieds emportent, retrouve par identifiant. */
+  const sangAuSol = new Map<string, SangAuSol>();
 
   const uneImage = (instant: number): void => {
     const etat = options.client.etat;
@@ -172,7 +182,15 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
         ? cameraSur(cible, taille, options.carte, options.mobile ?? false)
         : suivre(camera, cible, taille, options.carte, dtMs);
 
-    options.rendu.dessiner(construireScene(etat, lissee, maintenant, localisation), camera);
+    const niveauDeSang = options.niveauDeSang?.() ?? 'normal';
+    const scene = construireScene(etat, lissee, maintenant, localisation, niveauDeSang);
+    options.rendu.dessiner(scene, camera);
+
+    // 5 bis. Le sang imprime au sol colle aux pieds de qui marche dedans (Massacre,
+    //    etape 7.4). Seulement au niveau normal: discret, le sang s'efface, sans traces.
+    if (niveauDeSang === 'normal' && lissee !== undefined && etat.salon?.mode === 'massacre') {
+      marcherDansLeSang(scene.sang, lissee, maintenant);
+    }
     options.surcouche?.afficher(construireHud(etat, maintenant));
 
     // Les premieres images dessinees preparent le decor et la lueur, et rament: on
@@ -203,6 +221,43 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
 
     if (monEntite?.enMouvement === true) {
       options.sons?.jouerUnPas(maintenant, false);
+    }
+  };
+
+  /** Suit les pieds des joueurs affiches, et imprime leurs pas dans le sang. */
+  const marcherDansLeSang = (
+    taches: readonly {
+      readonly id: string;
+      readonly x: number;
+      readonly y: number;
+      readonly instant: number;
+    }[],
+    lissee: NonNullable<ReturnType<TamponDeLissage['vueLissee']>>,
+    maintenant: number,
+  ): void => {
+    for (const tache of taches) {
+      sangAuSol.set(tache.id, tache);
+    }
+
+    for (const [id, tache] of sangAuSol) {
+      if (maintenant - tache.instant > TRACES.fraicheurMs) {
+        sangAuSol.delete(id);
+      }
+    }
+
+    const marcheurs = lissee.entites
+      .filter(({ entite }) => entite.type === 'joueur')
+      .map(({ entite, x, y }) => ({ id: entite.id, x, y }));
+    const avance = avancerLesPas(suiviDesPas, marcheurs, [...sangAuSol.values()], maintenant);
+    suiviDesPas = avance.suivi;
+
+    if (avance.pas.length > 0) {
+      options.rendu.imprimer(
+        avance.pas.map((pas) => ({
+          id: pas.id,
+          formes: empreinte(pas.x, pas.y, pas.angle, pas.opacite),
+        })),
+      );
     }
   };
 

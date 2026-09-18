@@ -79,6 +79,20 @@ export function groupePropose(groupe: GroupeReglages, mode: Mode): boolean {
   return groupe.absentEn?.includes(mode) !== true;
 }
 
+/**
+ * Les champs isoles qu'un mode retire du jeu, quoi que l'hote regle, par chemin. Le
+ * Massacre n'a pas de zone de chaos (etape 7.4, imposerLesReglagesDuMode dans
+ * packages/shared): les autres natures de zone restent.
+ */
+const CHAMPS_ABSENTS: Readonly<Partial<Record<Mode, readonly string[]>>> = {
+  massacre: ['zones.types.chaos'],
+};
+
+/** Ce champ se regle-t-il dans ce mode ? */
+export function champPropose(chemin: string, mode: Mode): boolean {
+  return CHAMPS_ABSENTS[mode]?.includes(chemin) !== true;
+}
+
 /** Un entier en secondes. */
 const secondes = (chemin: string, libelle: string, bornes: Intervalle): ChampReglage => ({
   nature: 'entier',

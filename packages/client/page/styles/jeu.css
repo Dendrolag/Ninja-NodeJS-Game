@@ -531,6 +531,99 @@
   text-transform: uppercase;
 }
 
+/*
+ * Le combo d'une partie Massacre (etape 7.4), a la place du role de la Chasse: le
+ * multiplicateur en grand, qui rougit et grossit a mesure qu'il monte, et la fenetre du
+ * combo qui s'epuise dessous.
+ */
+.hud-massacre {
+  --couleur-combo: var(--texte-secondaire);
+
+  position: absolute;
+  top: 70px;
+  right: 14px;
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  min-width: 132px;
+  padding: 8px 16px;
+  border: 1px solid var(--bordure);
+  border-radius: 14px;
+  background: var(--fond-verre);
+  backdrop-filter: blur(8px);
+  text-align: right;
+}
+
+.hud-massacre[hidden] {
+  display: none;
+}
+
+.hud-massacre.en-combo {
+  --couleur-combo: #ff5a5a;
+
+  border-color: var(--couleur-combo);
+}
+
+.hud-massacre[data-multiplicateur='3'],
+.hud-massacre[data-multiplicateur='4'] {
+  --couleur-combo: #ff2e4a;
+}
+
+.hud-massacre[data-multiplicateur='5'] {
+  --couleur-combo: #ff1030;
+}
+
+.hud-massacre-multiplicateur {
+  color: var(--couleur-combo);
+  font-family: var(--police-titre);
+  font-size: calc(18px + 3px * var(--taille-combo, 0));
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 10px var(--couleur-combo);
+}
+
+.hud-massacre[data-multiplicateur='2'] {
+  --taille-combo: 1;
+}
+
+.hud-massacre[data-multiplicateur='3'] {
+  --taille-combo: 2;
+}
+
+.hud-massacre[data-multiplicateur='4'] {
+  --taille-combo: 3;
+}
+
+.hud-massacre[data-multiplicateur='5'] {
+  --taille-combo: 4;
+}
+
+.hud-massacre-combo,
+.hud-massacre-restants {
+  color: var(--texte-secondaire);
+  font-size: 12px;
+}
+
+.hud-massacre-fenetre {
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--couleur-combo) calc(var(--fenetre, 0) * 100%),
+    transparent calc(var(--fenetre, 0) * 100%)
+  );
+}
+
+/* Le katana du Massacre (etape 7.4): une seule charge, le coup pret ou en garde. */
+.hud-charges.katana .hud-charge {
+  box-shadow: inset 0 0 0 1px rgba(255, 90, 90, 0.6);
+}
+
+.hud-charges.katana .hud-charge.pleine {
+  background: #ff5a5a;
+  box-shadow: 0 0 6px rgba(255, 90, 90, 0.8);
+}
+
 .hud-chasse-consigne,
 .hud-chasse-proies {
   color: var(--texte-secondaire);
@@ -614,6 +707,11 @@
 
   .hud-chasse-role {
     font-size: 15px;
+  }
+
+  .hud-massacre {
+    top: 128px;
+    padding: 6px 12px;
   }
 
   .ecran-jeu {

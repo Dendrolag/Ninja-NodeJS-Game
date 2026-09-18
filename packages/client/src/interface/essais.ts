@@ -96,6 +96,7 @@ export function contexteDEssai(client: Client): ContexteEcran & { recharges: num
     recharges: 0,
     ouvrirAide: () => undefined,
     ouvrirSon: () => undefined,
+    niveauDeSang: () => 'normal' as const,
     recharger: () => {
       contexte.recharges += 1;
     },

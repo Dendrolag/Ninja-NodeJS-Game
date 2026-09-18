@@ -20,7 +20,7 @@ const PROFIL: ProfilDuCompte = {
   pieces: 1280,
   pointsLigue: 320,
   inscritLe: '2026-09-11T12:00:00.000Z',
-  statistiques: { partiesJouees: 12, victoires: 4, meilleurScore: 99 },
+  statistiques: { partiesJouees: 12, victoires: 4, meilleurScore: 99, recordMassacreSolo: 1450 },
   dernieresParties: [
     {
       mode: 'classique',
@@ -81,6 +81,7 @@ describe('modeleProfil', () => {
         { libelle: 'Parties jouées', valeur: '12' },
         { libelle: 'Victoires', valeur: '4' },
         { libelle: 'Meilleur score', valeur: '99' },
+        { libelle: 'Record Massacre solo', valeur: formaterNombre(1450) },
         { libelle: 'Pièces', valeur: formaterNombre(1280) },
         { libelle: 'Points de ligue', valeur: '320' },
       ],
@@ -127,9 +128,9 @@ describe('modeleProfil', () => {
       },
     });
 
-    expect(modele.nature === 'charge' ? modele.statistiques[2] : undefined).toEqual({
-      libelle: 'Meilleur score',
-      valeur: '—',
-    });
+    expect(modele.nature === 'charge' ? modele.statistiques.slice(2, 4) : undefined).toEqual([
+      { libelle: 'Meilleur score', valeur: '—' },
+      { libelle: 'Record Massacre solo', valeur: '—' },
+    ]);
   });
 });

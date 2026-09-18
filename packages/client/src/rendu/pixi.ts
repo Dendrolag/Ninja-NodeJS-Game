@@ -54,6 +54,7 @@ import {
   Container,
   Graphics,
   Rectangle,
+  RenderTexture,
   Sprite,
   Text,
   Texture,
@@ -63,6 +64,7 @@ import { BORDURE_TERRAIN, COULEUR_FOND, DENSITE_MAXIMALE, LUEUR, PLUIE } from '.
 import type { Camera } from './camera.js';
 import { versEcran } from './camera.js';
 import { separerLesCalques } from './recoloration.js';
+import type { FormeDeSang } from './sang.js';
 import { adresseDImage, adresseDesDetails, adresseDuCorps } from './textures.js';
 import type {
   ConeScene,
@@ -272,6 +274,26 @@ export interface OptionsRendu {
   readonly hauteur?: number;
 }
 
+/** Du sang a imprimer au sol: une eclaboussure du Massacre, ou une empreinte de pas. */
+export interface SangAImprimer {
+  /** Identifiant stable: une tache deja imprimee ne l'est pas une seconde fois. */
+  readonly id: string;
+  readonly formes: readonly FormeDeSang[];
+}
+
+/**
+ * La resolution du calque du sol, par rapport a la carte: la moitie.
+ *
+ * Le sang s'imprime une fois sur une texture qui couvre toute la carte, et ne coute plus
+ * rien ensuite. A pleine resolution, celle de map3 pese 24 Mo de memoire graphique; a
+ * demi-resolution, 6 Mo, et une tache de quelques pixels n'y perd rien de visible
+ * (docs/design/idee-mode-massacre.md).
+ */
+const RESOLUTION_DU_SOL = 0.5;
+
+/** Combien de cotes pour dessiner une ellipse tournee: assez pour qu'elle paraisse ronde. */
+const COTES_D_UNE_ELLIPSE = 14;
+
 /** Un rendu monte, pret a recevoir des scenes. */
 export interface Rendu {
   /** Le moteur de rendu, pour la mesure et le redimensionnement. */
@@ -280,6 +302,8 @@ export interface Rendu {
   chargerLeDecor(): Promise<void>;
   /** Pose cette scene, vue par cette camera. */
   dessiner(scene: Scene, camera: Camera): void;
+  /** Imprime du sang au sol, une fois pour toutes (mode Massacre, etape 7.4). */
+  imprimer(taches: readonly SangAImprimer[]): void;
   /** Adapte le canevas a une nouvelle taille de fenetre. */
   redimensionner(largeur: number, hauteur: number): void;
   /** Detruit tout et libere le GPU. */
@@ -354,8 +378,43 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   pluie.visible = false;
   /** Les images de pluie de la carte, une fois le decor charge. */
   let imagesPluie: readonly Texture[] = [];
-  decor.addChild(fond, pluie);
+  // Le sol du Massacre: le sang s'y imprime une fois, a demi-resolution, sur le fond et
+  // sous la pluie. Cree a la premiere tache seulement: les autres modes n'en paient rien.
+  const sol = new Sprite();
+  sol.scale.set(1 / RESOLUTION_DU_SOL);
+  let texteDuSol: RenderTexture | undefined;
+  const imprimees = new Set<string>();
+  decor.addChild(fond, sol, pluie);
   premierPlan.addChild(dessus);
+
+  const imprimer = (taches: readonly SangAImprimer[]): void => {
+    const nouvelles = taches.filter((tache) => !imprimees.has(tache.id));
+
+    if (nouvelles.length === 0) {
+      return;
+    }
+
+    if (texteDuSol === undefined) {
+      texteDuSol = RenderTexture.create({
+        width: Math.ceil(options.carte.largeur * RESOLUTION_DU_SOL),
+        height: Math.ceil(options.carte.hauteur * RESOLUTION_DU_SOL),
+      });
+      sol.texture = texteDuSol;
+    }
+
+    const pinceau = new Graphics();
+    pinceau.scale.set(RESOLUTION_DU_SOL);
+
+    for (const tache of nouvelles) {
+      imprimees.add(tache.id);
+      for (const forme of tache.formes) {
+        dessinerUneForme(pinceau, forme);
+      }
+    }
+
+    application.renderer.render({ container: pinceau, target: texteDuSol, clear: false });
+    pinceau.destroy();
+  };
 
   /** Le trait qui marque les limites du terrain, dessine une seule fois. */
   const limites = new Graphics();
@@ -403,8 +462,14 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       }
     },
 
+    imprimer,
+
     dessiner(scene: Scene, camera: Camera) {
       placerLaCamera(monde, camera, application);
+      // La secousse d'un coup de katana decale le monde de quelques pixels (etape 7.4).
+      monde.position.x += scene.secousse.x * camera.echelle;
+      monde.position.y += scene.secousse.y * camera.echelle;
+      imprimer(scene.sang);
 
       // Toutes les images de la planche ont la meme taille: changer de texture garde
       // l'etirement pose au chargement.
@@ -430,6 +495,8 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
     },
 
     detruire() {
+      texteDuSol?.destroy(true);
+      imprimees.clear();
       application.destroy(true, { children: true });
       spritesEntites.clear();
       spritesObjets.clear();
@@ -666,6 +733,7 @@ function majPersonnages(
     poserLaTexture(personnage.corps, adresseDuCorps(decrit.texture), decrit.taille);
     personnage.corps.tint = decrit.teinte;
     personnage.racine.position.set(decrit.x, decrit.y);
+    personnage.racine.rotation = decrit.rotation ?? 0;
     personnage.racine.alpha = decrit.alpha;
   }
 
@@ -675,6 +743,25 @@ function majPersonnages(
       connus.delete(id);
     }
   }
+}
+
+/**
+ * Dessine une forme de sang: une ellipse pleine, tournee. PixiJS ne sait pas tourner une
+ * ellipse seule dans un objet graphique commun: elle est tracee en polygone.
+ */
+function dessinerUneForme(pinceau: Graphics, forme: FormeDeSang): void {
+  const points: number[] = [];
+  const cos = Math.cos(forme.rotation);
+  const sin = Math.sin(forme.rotation);
+
+  for (let cote = 0; cote < COTES_D_UNE_ELLIPSE; cote += 1) {
+    const t = (2 * Math.PI * cote) / COTES_D_UNE_ELLIPSE;
+    const ex = Math.cos(t) * forme.rayonX;
+    const ey = Math.sin(t) * forme.rayonY;
+    points.push(forme.x + ex * cos - ey * sin, forme.y + ex * sin + ey * cos);
+  }
+
+  pinceau.poly(points).fill({ color: forme.couleur, alpha: forme.alpha });
 }
 
 /** Donne a un sprite la texture rangee sous ce nom, s'il ne l'a pas deja, et sa taille. */

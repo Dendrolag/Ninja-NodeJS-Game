@@ -52,10 +52,11 @@ export function monterJeu(contexte: ContexteEcran): EcranAffiche {
   // Les reglages sont figes au lancement: ceux du salon sont ceux de la partie.
   const reglages = client.etat.salon?.reglages ?? REGLAGES_PAR_DEFAUT;
   const carte = CARTES[reglages.carte];
-  // On tire en Tactique, et en traqueur dans la Chasse (etape 7.3): le bouton ne se montre
-  // qu'a qui porte une arme, une proie n'en a pas.
+  // On tire en Tactique, en traqueur dans la Chasse (etape 7.3), et on frappe au katana
+  // dans le Massacre (etape 7.4): le bouton ne se montre qu'a qui porte une arme, une proie
+  // n'en a pas.
   const mode = client.etat.salon?.mode;
-  const tactique = mode === 'tactique' || mode === 'chasse';
+  const tactique = mode === 'tactique' || mode === 'chasse' || mode === 'massacre';
 
   const controles = new Controles();
   controles.reinitialiser();
@@ -115,9 +116,11 @@ export function monterJeu(contexte: ContexteEcran): EcranAffiche {
       texte:
         mode === 'chasse'
           ? 'ZQSD ou flèches · Espace pour tirer, en traqueur · F pour vous localiser'
-          : tactique
-            ? 'ZQSD ou flèches · Espace pour capturer · F pour vous localiser'
-            : 'ZQSD ou flèches · F pour vous localiser',
+          : mode === 'massacre'
+            ? 'ZQSD ou flèches · Espace pour trancher · F pour vous localiser'
+            : tactique
+              ? 'ZQSD ou flèches · Espace pour capturer · F pour vous localiser'
+              : 'ZQSD ou flèches · F pour vous localiser',
     }),
     bouton(
       doc,
@@ -240,6 +243,7 @@ export function monterJeu(contexte: ContexteEcran): EcranAffiche {
         montrer(chargement, false);
       },
       ...(contexte.sons === undefined ? {} : { sons: contexte.sons }),
+      niveauDeSang: contexte.niveauDeSang,
       mobile: navigateur?.matchMedia('(pointer: coarse)').matches ?? false,
       taille: () => ({ largeur: terrain.clientWidth, hauteur: terrain.clientHeight }),
     });

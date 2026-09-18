@@ -1,5 +1,6 @@
 /**
- * Le panneau du son: le volume de la musique, celui des effets, et la coupure.
+ * Le panneau du son: le volume de la musique, celui des effets, et la coupure. Depuis
+ * l'etape 7.4, il regle aussi le sang du mode Massacre, l'autre reglage local du joueur.
  *
  * Portage du panneau audioControls du jeu d'origine (index.html:24), qui
  * enregistrait deja ses reglages dans le navigateur. Le volume est un reglage
@@ -14,11 +15,14 @@
 
 import type { LecteurDeSons } from '../../sons/lecteur.js';
 import { creer, ecrireTexte } from '../dom.js';
-import type { PreferencesSon } from '../preferences.js';
+import type { NiveauDeSang, PreferencesSon } from '../preferences.js';
 import {
+  CLE_PREFERENCE_SANG,
   CLE_PREFERENCES_SON,
+  NIVEAU_DE_SANG_PAR_DEFAUT,
   PREFERENCES_SON_PAR_DEFAUT,
   ecrirePreferencesSon,
+  lireNiveauDeSang,
   lirePreferencesSon,
 } from '../preferences.js';
 import type { Fenetre } from './fenetre.js';
@@ -39,7 +43,16 @@ export interface OptionsPanneauSon {
 export interface PanneauSon extends Fenetre {
   /** Les preferences en vigueur. */
   readonly preferences: PreferencesSon;
+  /** Le sang que le joueur veut voir, dans le mode Massacre. */
+  readonly sang: NiveauDeSang;
 }
+
+/** Ce que le panneau dit de chaque niveau de sang. */
+const LIBELLES_DU_SANG: Readonly<Record<NiveauDeSang, string>> = {
+  normal: 'Normal',
+  discret: 'Discret',
+  desactive: 'Désactivé',
+};
 
 /** Monte le panneau du son, et applique tout de suite les preferences enregistrees. */
 export function monterPanneauSon(options: OptionsPanneauSon): PanneauSon {
@@ -54,6 +67,22 @@ export function monterPanneauSon(options: OptionsPanneauSon): PanneauSon {
   const coupure = creer(doc, 'input', { attributs: { type: 'checkbox' } });
   coupure.checked = preferences.coupe;
 
+  let sang = lireSang(options.stockage);
+  const choixDuSang = (Object.keys(LIBELLES_DU_SANG) as NiveauDeSang[]).map((niveau) => {
+    const saisie = creer(doc, 'input', {
+      attributs: { type: 'radio', name: 'sang', value: niveau },
+    });
+    saisie.checked = niveau === sang;
+
+    return creer(
+      doc,
+      'label',
+      { classe: 'choix-sang' },
+      saisie,
+      creer(doc, 'span', { texte: LIBELLES_DU_SANG[niveau] }),
+    );
+  });
+
   fenetre.corps.append(
     musique.racine,
     effets.racine,
@@ -65,9 +94,24 @@ export function monterPanneauSon(options: OptionsPanneauSon): PanneauSon {
       creer(doc, 'span', { classe: 'interrupteur-piste' }),
       creer(doc, 'span', { texte: 'Couper tout le son' }),
     ),
+    creer(
+      doc,
+      'fieldset',
+      { classe: 'champ-sang' },
+      creer(doc, 'legend', { classe: 'champ-libelle', texte: 'Sang, en mode Massacre' }),
+      ...choixDuSang,
+    ),
   );
 
-  const surSaisie = (): void => {
+  const surSaisie = (evenement: Event): void => {
+    const cible = evenement.target;
+
+    if (cible instanceof HTMLInputElement && cible.name === 'sang') {
+      sang = lireNiveauDeSang(cible.value);
+      enregistrerSang(options.stockage, sang);
+      return;
+    }
+
     preferences = {
       volumeMusique: Number(musique.saisie.value) / 100,
       volumeSons: Number(effets.saisie.value) / 100,
@@ -93,6 +137,10 @@ export function monterPanneauSon(options: OptionsPanneauSon): PanneauSon {
 
     get preferences() {
       return preferences;
+    },
+
+    get sang() {
+      return sang;
     },
 
     demonter() {
@@ -151,6 +199,24 @@ function lire(stockage: Storage | undefined): PreferencesSon {
     return lirePreferencesSon(stockage?.getItem(CLE_PREFERENCES_SON));
   } catch {
     return PREFERENCES_SON_PAR_DEFAUT;
+  }
+}
+
+/** Lit le niveau de sang enregistre, sans jamais lever d'erreur. */
+function lireSang(stockage: Storage | undefined): NiveauDeSang {
+  try {
+    return lireNiveauDeSang(stockage?.getItem(CLE_PREFERENCE_SANG));
+  } catch {
+    return NIVEAU_DE_SANG_PAR_DEFAUT;
+  }
+}
+
+/** Enregistre le niveau de sang, sans jamais lever d'erreur. */
+function enregistrerSang(stockage: Storage | undefined, sang: NiveauDeSang): void {
+  try {
+    stockage?.setItem(CLE_PREFERENCE_SANG, sang);
+  } catch {
+    // Stockage plein ou refuse: le reglage vivra le temps de l'onglet.
   }
 }
 

@@ -32,12 +32,11 @@ import type { LigneRecapitulatif } from './salon.js';
 export const MODE_PAR_DEFAUT: Mode = 'classique';
 
 /**
- * Les modes que l'ecran de creation propose, dans l'ordre de leurs tuiles.
- *
- * Le Massacre existe dans le contrat depuis le lot A de l'etape 7.4, mais la page ne sait
- * donner un coup de katana qu'avec le lot C: il rejoint la creation a ce lot.
+ * Les modes que l'ecran de creation propose, dans l'ordre de leurs tuiles: tous ceux du
+ * contrat. Le Massacre les a rejoints au lot C de l'etape 7.4, quand la page a su donner un
+ * coup de katana.
  */
-export const MODES_PROPOSES: readonly Mode[] = MODES.filter((mode) => mode !== 'massacre');
+export const MODES_PROPOSES: readonly Mode[] = MODES;
 
 /** Ce que le joueur a choisi. */
 export interface SaisieDeCreation {

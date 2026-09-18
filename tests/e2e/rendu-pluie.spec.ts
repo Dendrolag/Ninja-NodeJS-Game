@@ -41,7 +41,16 @@ function pageDeLaPluie(carte: string): string {
   });
   await rendu.chargerLeDecor();
 
-  const vide = { disques: [], cones: [], zones: [], objets: [], entites: [], reperes: [] };
+  const vide = {
+    disques: [],
+    cones: [],
+    zones: [],
+    objets: [],
+    entites: [],
+    reperes: [],
+    sang: [],
+    secousse: { x: 0, y: 0 },
+  };
   const pixelsAvec = async (imageDePluie) => {
     rendu.dessiner({ ...vide, imageDePluie }, { x: 1000, y: 750, echelle: 1 });
     rendu.application.render();

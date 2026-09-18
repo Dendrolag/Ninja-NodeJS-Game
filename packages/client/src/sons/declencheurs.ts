@@ -53,6 +53,24 @@ export function sonDuFait(fait: FaitDeJeu, moi?: string): NomDeSon | undefined {
     case 'tirDeCapture':
       return fait.charge.tireur === moi && fait.charge.captures > 0 ? 'capture' : undefined;
 
+    // Le coup de katana du Massacre (etape 7.4): comme un tir, il ne s'entend que chez celui
+    // qui l'a donne, fendant l'air ou tranchant ce qu'il touche.
+    case 'coupDeKatana':
+      if (fait.charge.frappeur !== moi) {
+        return undefined;
+      }
+      return fait.charge.morts.length > 0 ? 'katanaImpact' : 'katana';
+
+    case 'joueurTranche':
+      return fait.charge.attaquant === moi
+        ? 'joueurCapture'
+        : fait.charge.victime === moi
+          ? 'joueurCaptureSubi'
+          : undefined;
+
+    case 'carteVidee':
+      return undefined;
+
     case 'bonusActive':
       return 'bonusRamasse';
 

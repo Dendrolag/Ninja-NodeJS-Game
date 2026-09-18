@@ -77,3 +77,27 @@ function volume(valeur: unknown, parDefaut: number): number {
     ? valeur
     : parDefaut;
 }
+
+/**
+ * Ce que le joueur voit du sang, dans le mode Massacre (etape 7.4).
+ *
+ * Decision du porteur du projet du 16 septembre 2026: chacun choisit pour lui, sans rien
+ * changer au jeu. Normal: les eclaboussures restent au sol, et les joueurs y impriment
+ * leurs pas. Discret: de petites taches qui s'effacent, et aucun pas. Desactive: un eclat
+ * lumineux seul a chaque mort.
+ */
+export const NIVEAUX_DE_SANG = ['normal', 'discret', 'desactive'] as const;
+
+/** Un niveau de sang. */
+export type NiveauDeSang = (typeof NIVEAUX_DE_SANG)[number];
+
+/** Le sang d'un joueur qui n'a rien regle. */
+export const NIVEAU_DE_SANG_PAR_DEFAUT: NiveauDeSang = 'normal';
+
+/** La cle sous laquelle le niveau de sang est range dans le navigateur. */
+export const CLE_PREFERENCE_SANG = 'neon-ninja.sang';
+
+/** Lit un niveau de sang enregistre: tout ce qui n'en est pas un vaut le niveau par defaut. */
+export function lireNiveauDeSang(brut: string | null | undefined): NiveauDeSang {
+  return NIVEAUX_DE_SANG.find((niveau) => niveau === brut) ?? NIVEAU_DE_SANG_PAR_DEFAUT;
+}

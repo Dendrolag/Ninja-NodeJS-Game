@@ -36,6 +36,7 @@ import { PRESENTATION_CARTES } from '../modeles/cartes.js';
 import type { ChampReglage, GroupeReglages, ValeursFormulaire } from '../modeles/reglages.js';
 import {
   GROUPES_REGLAGES,
+  champPropose,
   erreursParChamp,
   groupePropose,
   tousLesChamps,
@@ -94,6 +95,8 @@ export function monterFormulaireReglages(options: OptionsFormulaireReglages): Fo
   const formulaire = creer(doc, 'form', { classe: 'reglages', attributs: { novalidate: '' } });
   /** L'element de chaque groupe, pour le cacher dans un mode qui le retire. */
   const groupesMontes: { readonly groupe: GroupeReglages; readonly element: HTMLElement }[] = [];
+  /** L'element de chaque champ, pour cacher un champ isole qu'un mode retire. */
+  const champsMontes: { readonly chemin: string; readonly element: HTMLElement }[] = [];
 
   const groupeEnElement = (groupe: GroupeReglages): HTMLElement => {
     const ensemble = creer(
@@ -110,9 +113,11 @@ export function monterFormulaireReglages(options: OptionsFormulaireReglages): Fo
           'div',
           { classe: 'reglages-section' },
           section.titre === undefined ? undefined : creer(doc, 'h3', { texte: section.titre }),
-          ...section.champs.map((champ) =>
-            champEnElement(doc, champ, saisies, motifs, valeursAffichees),
-          ),
+          ...section.champs.map((champ) => {
+            const element = champEnElement(doc, champ, saisies, motifs, valeursAffichees);
+            champsMontes.push({ chemin: champ.chemin, element });
+            return element;
+          }),
         ),
       );
     }
@@ -220,6 +225,10 @@ export function monterFormulaireReglages(options: OptionsFormulaireReglages): Fo
   const adapterAuMode = (mode: Mode): void => {
     for (const { groupe, element } of groupesMontes) {
       montrer(element, groupePropose(groupe, mode));
+    }
+
+    for (const { chemin, element } of champsMontes) {
+      montrer(element, champPropose(chemin, mode));
     }
 
     ecrireTexte(

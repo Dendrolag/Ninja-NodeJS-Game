@@ -311,6 +311,44 @@ export const APPARENCE_TIR = {
 } as const;
 
 /**
+ * Le katana du mode Massacre (etape 7.4): la visee, la trainee du coup, l'eclat des morts,
+ * les cadavres, le sang discret et la secousse de la camera.
+ *
+ * Tout en code, sans image (docs/design/idee-mode-massacre.md): une trainee claire en
+ * croissant qui balaie l'arc en un peu plus d'un dixieme de seconde puis s'efface, plus vive
+ * quand le combo monte; un eclat sur chaque mort; le sprite du ninja couche, assombri, qui
+ * s'efface; une legere secousse quand notre coup tranche.
+ */
+export const APPARENCE_KATANA = {
+  visee: {
+    remplissage: { couleur: 0xff8a8a, alpha: 0.06 },
+    contour: { couleur: 0xff8a8a, alpha: 0.22, epaisseur: 1 },
+  },
+  viseeEnGarde: {
+    remplissage: { couleur: 0x808080, alpha: 0.03 },
+    contour: { couleur: 0x808080, alpha: 0.12, epaisseur: 1 },
+  },
+  /** La trainee du coup: sa duree, sa couleur, et la largeur de la lame qui balaie. */
+  trainee: {
+    dureeMs: 140,
+    couleur: 0xffe8e8,
+    /** La couleur quand le multiplicateur a atteint son plafond. */
+    couleurDuCombo: 0xff3040,
+    demiLargeur: 0.35,
+    /** Ce qui reste de l'arc entier, a peine visible, pendant qu'il s'efface. */
+    alphaDeLArc: 0.22,
+  },
+  /** L'eclat d'une mort: un disque clair qui grandit en s'effacant. */
+  eclat: { dureeMs: 220, couleur: 0xfff0f0, rayonDeDepart: 6, rayonDArrivee: 26 },
+  /** Le cadavre: le ninja couche et assombri, qui s'efface sur sa derniere seconde. */
+  cadavre: { dureeMs: 3500, effacementMs: 1000, teinte: 0x4a1418, alpha: 0.85 },
+  /** Le sang discret: une petite tache qui s'efface d'elle-meme. */
+  sangDiscret: { dureeMs: 4000, echelle: 0.45 },
+  /** La secousse de la camera quand notre coup tranche, en pixels de carte. */
+  secousse: { dureeMs: 120, amplitudePx: 2.5, parCran: 0.6 },
+} as const;
+
+/**
  * Reglage de la lueur neon, appliquee en filtre GPU sur le calque des reperes.
  *
  * Elle fait rayonner les fleches de localisation, comme le shadowBlur rouge du jeu

@@ -203,6 +203,7 @@ export function monterApplication(options: OptionsApplication): Application {
     ouvrirSon: () => {
       panneauSon.ouvrir();
     },
+    niveauDeSang: () => panneauSon.sang,
     recharger,
   };
 

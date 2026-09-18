@@ -12,6 +12,7 @@ import type { Client } from '../../client.js';
 import type { EtatClient } from '../../etat.js';
 import type { HorlogeClient } from '../../horloge.js';
 import type { LecteurDeSons } from '../../sons/lecteur.js';
+import type { NiveauDeSang } from '../preferences.js';
 
 /** Ce que l'application donne a chaque ecran. */
 export interface ContexteEcran {
@@ -23,6 +24,8 @@ export interface ContexteEcran {
   readonly ouvrirAide: () => void;
   /** Ouvre le panneau du son, commun a toute l'application. */
   readonly ouvrirSon: () => void;
+  /** Le sang que le joueur veut voir en Massacre, lu au moment ou l'on dessine. */
+  readonly niveauDeSang: () => NiveauDeSang;
   /** Recharge la page. Injectable, pour que les tests ne rechargent rien. */
   readonly recharger: () => void;
 }

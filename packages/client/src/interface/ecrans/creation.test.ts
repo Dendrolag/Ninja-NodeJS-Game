@@ -72,7 +72,13 @@ describe('l ecran de creation', () => {
 
     const modes = [...hote.querySelectorAll<HTMLInputElement>('input[name="mode"]')];
 
-    expect(modes.map((mode) => mode.value)).toEqual(['classique', 'tactique', 'equipes', 'chasse']);
+    expect(modes.map((mode) => mode.value)).toEqual([
+      'classique',
+      'tactique',
+      'equipes',
+      'chasse',
+      'massacre',
+    ]);
     expect(champ('input[name="mode"][value="classique"]').checked).toBe(true);
 
     const aVenir = obligatoire(hote, '.tuile-a-venir');
@@ -134,6 +140,30 @@ describe('l ecran de creation', () => {
     cocher(champ('input[name="mode"][value="classique"]'), true);
 
     expect(estCache(blackNinjas())).toBe(false);
+  });
+
+  it('cree une partie Massacre pour huit joueurs, sans proposer la zone de chaos', () => {
+    const chaos = (): Element =>
+      champ('[data-chemin="zones.types.chaos"]').closest('label') as Element;
+
+    expect(estCache(chaos())).toBe(false);
+
+    cocher(champ('input[name="mode"][value="massacre"]'), true);
+
+    expect(obligatoire(hote, '.creation-recapitulatif h2').textContent).toBe(
+      'Massacre · Rainy Tokyo',
+    );
+    expect(obligatoire(hote, '.creation-recapitulatif').textContent).toContain('8 joueurs');
+    expect(estCache(chaos())).toBe(true);
+    expect(
+      estCache(champ('[data-chemin="zones.types.repulsion"]').closest('label') as Element),
+    ).toBe(false);
+
+    creerLeSalon().click();
+
+    expect(reseau.dernier('creerPartie')?.[0]).toMatchObject({
+      configuration: { mode: 'massacre', visibilite: 'publique' },
+    });
   });
 
   it('signale une configuration invalide sur son champ, et ne la laisse pas partir', () => {

@@ -27,9 +27,17 @@
  * charges recues, sans jamais calculer ce qu'il contient.
  */
 
-import type { Couleur, EntiteVue, Orientation, TypeBonus, TypeZone } from '@neon-ninja/shared';
+import type {
+  Couleur,
+  EntiteVue,
+  Mode,
+  Orientation,
+  TypeBonus,
+  TypeZone,
+} from '@neon-ninja/shared';
 import {
   COULEUR_BOT_NEUTRE,
+  MASSACRE,
   RACINE_RESSOURCES,
   REGLAGES_PAR_DEFAUT,
   TACTIQUE,
@@ -38,6 +46,7 @@ import {
 } from '@neon-ninja/shared';
 
 import type { EtatClient } from '../etat.js';
+import type { NiveauDeSang } from '../interface/preferences.js';
 import { effetsEnCours } from '../selecteurs.js';
 import {
   imageDObjet,
@@ -49,6 +58,7 @@ import {
 import type { Teinte } from './apparence.js';
 import {
   ALPHA_INVISIBLE,
+  APPARENCE_KATANA,
   APPARENCE_OBJET,
   APPARENCE_TIR,
   APPARENCE_ZONE,
@@ -62,6 +72,8 @@ import {
   TEINTE_DETECTION_BOT_NOIR,
 } from './apparence.js';
 import type { VueLissee } from './interpolation.js';
+import type { TacheScene } from './katana.js';
+import { DEMI_ARC_DU_KATANA, imageDuMassacre } from './katana.js';
 import type { Localisation } from './localisation.js';
 import { flechesDeLocalisation, opaciteDeLocalisation } from './localisation.js';
 import { adresseDImage } from './textures.js';
@@ -86,6 +98,8 @@ export interface SpriteScene {
    */
   readonly teinte: number;
   readonly alpha: number;
+  /** Rotation, en radians: celle d'un cadavre couche du Massacre. Aucune par defaut. */
+  readonly rotation?: number;
 }
 
 /** Un disque a dessiner sous ou autour de quelque chose. */
@@ -141,8 +155,15 @@ export interface Scene {
   readonly zones: readonly ZoneScene[];
   /** Les objets ramassables poses sur la carte. */
   readonly objets: readonly SpriteScene[];
-  /** Les personnages: joueurs, faux ninjas et bots noirs. */
+  /** Les personnages: joueurs, faux ninjas et bots noirs, et les cadavres du Massacre dessous. */
   readonly entites: readonly SpriteScene[];
+  /**
+   * Le sang du Massacre a imprimer au sol (etape 7.4). Le rendu n'imprime chaque tache
+   * qu'une fois: une tache deja au sol peut revenir dans la scene sans rien couter.
+   */
+  readonly sang: readonly TacheScene[];
+  /** Le decalage de la camera d'une secousse, en pixels de carte. Nul hors du Massacre. */
+  readonly secousse: { readonly x: number; readonly y: number };
   /**
    * Les reperes poses par-dessus tout, premier plan compris: les fleches qui
    * designent notre personnage. Un toit ne doit pas les cacher, puisque c'est
@@ -164,6 +185,8 @@ export const SCENE_VIDE: Scene = {
   objets: [],
   entites: [],
   reperes: [],
+  sang: [],
+  secousse: { x: 0, y: 0 },
 };
 
 /** La direction de chaque orientation, en radians. L'axe des y descend. */
@@ -206,12 +229,14 @@ function adresse(relatif: string): string {
  * @param lissee     Les positions lissees du battement en cours d'affichage.
  * @param maintenant Instant local, lu sur l'horloge du client.
  * @param localisation Le reperage de notre personnage en cours, s'il y en a un.
+ * @param niveauDeSang Le sang que le joueur veut voir, dans le mode Massacre.
  */
 export function construireScene(
   etat: EtatClient,
   lissee: VueLissee | undefined,
   maintenant: number,
   localisation?: Localisation,
+  niveauDeSang: NiveauDeSang = 'normal',
 ): Scene {
   if (lissee === undefined) {
     return SCENE_VIDE;
@@ -365,15 +390,23 @@ export function construireScene(
           maintenant,
         );
 
-  const cones = [...maVisee(monEntite), ...tirsRecents(etat, lissee, maintenant)];
+  const massacre = imageDuMassacre(etat, maintenant, niveauDeSang);
+  const cones = [
+    ...maVisee(monEntite, etat.salon?.mode),
+    ...tirsRecents(etat, lissee, maintenant),
+    ...massacre.cones,
+  ];
 
   return {
-    disques,
+    disques: [...disques, ...massacre.disques],
     cones,
     zones,
     objets,
-    entites,
+    // Les cadavres d'abord: les vivants passent par-dessus.
+    entites: massacre.cadavres.length === 0 ? entites : [...massacre.cadavres, ...entites],
     reperes,
+    sang: massacre.sang,
+    secousse: massacre.secousse,
     imageDePluie: imageDePluie(maintenant),
   };
 }
@@ -383,15 +416,26 @@ export function construireScene(
  *
  * Seulement le notre, comme dans la version 0.9.0: douze cones sur le terrain
  * cacheraient les ninjas que l'on cherche. Il palit quand il ne reste aucune charge.
- * Il n'existe que dans une partie Tactique, la seule ou le flux porte une orientation.
+ * Il n'existe que dans une partie ou le flux porte une orientation: le Tactique, la Chasse,
+ * et le Massacre, ou c'est l'arc du katana, plus large et plus court (etape 7.4).
  */
-function maVisee(mien: VueLissee['entites'][number] | undefined): readonly ConeScene[] {
+function maVisee(
+  mien: VueLissee['entites'][number] | undefined,
+  mode: Mode | undefined,
+): readonly ConeScene[] {
   if (mien === undefined || mien.entite.type !== 'joueur' || mien.entite.tactique === undefined) {
     return [];
   }
 
   const { orientation, charges } = mien.entite.tactique;
-  const apparence = charges > 0 ? APPARENCE_TIR.visee : APPARENCE_TIR.viseeDesarmee;
+  const katana = mode === 'massacre';
+  const apparence = katana
+    ? charges > 0
+      ? APPARENCE_KATANA.visee
+      : APPARENCE_KATANA.viseeEnGarde
+    : charges > 0
+      ? APPARENCE_TIR.visee
+      : APPARENCE_TIR.viseeDesarmee;
 
   return [
     {
@@ -399,8 +443,8 @@ function maVisee(mien: VueLissee['entites'][number] | undefined): readonly ConeS
       x: mien.x,
       y: mien.y,
       angle: ANGLES[orientation],
-      demiOuverture: DEMI_OUVERTURE,
-      rayon: TACTIQUE.PORTEE_PX,
+      demiOuverture: katana ? DEMI_ARC_DU_KATANA : DEMI_OUVERTURE,
+      rayon: katana ? MASSACRE.PORTEE_DU_KATANA_PX : TACTIQUE.PORTEE_PX,
       remplissage: apparence.remplissage,
       contour: apparence.contour,
     },

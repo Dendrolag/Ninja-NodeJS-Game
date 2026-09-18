@@ -26,7 +26,7 @@ import type { LecteurDeSons } from '../sons/lecteur.js';
 import type { Boucle } from './boucle.js';
 import { lancerLaBoucle } from './boucle.js';
 import { echellePour } from './camera.js';
-import type { Rendu } from './pixi.js';
+import type { Rendu, SangAImprimer } from './pixi.js';
 import type { Scene } from './scene.js';
 
 /** Un joueur pose a un endroit. */
@@ -68,12 +68,17 @@ const SALON: InfosSalon = {
   reglages: REGLAGES_PAR_DEFAUT,
 };
 
-/** Un rendu qui ne dessine rien et retient les scenes recues. */
-function renduDEssai(): Rendu & { scenes: Scene[] } {
+/** Un rendu qui ne dessine rien et retient les scenes et le sang recus. */
+function renduDEssai(): Rendu & { scenes: Scene[]; imprimes: SangAImprimer[] } {
   const scenes: Scene[] = [];
+  const imprimes: SangAImprimer[] = [];
 
   return {
     scenes,
+    imprimes,
+    imprimer: (taches) => {
+      imprimes.push(...taches);
+    },
     application: undefined as never,
     chargerLeDecor: async () => undefined,
     dessiner: (scene) => {

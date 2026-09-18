@@ -15,7 +15,14 @@
  */
 
 import type { TypeBonus, TypeMalus, TypeZone } from '@neon-ninja/shared';
-import { CHASSE, RACINE_RESSOURCES, SCORE, TACTIQUE, cheminObjet } from '@neon-ninja/shared';
+import {
+  CHASSE,
+  MASSACRE,
+  RACINE_RESSOURCES,
+  SCORE,
+  TACTIQUE,
+  cheminObjet,
+} from '@neon-ninja/shared';
 
 import { APPARENCE_OBJET, APPARENCE_ZONE } from '../../rendu/apparence.js';
 import { creer } from '../dom.js';
@@ -86,6 +93,9 @@ export function monterAide(doc: Document): Fenetre {
       }),
       creer(doc, 'p', {
         texte: `Dans le mode Chasse, des traqueurs sont tirés au sort. Ils tirent devant eux, comme en Tactique, et le tir prend ce qui est le plus proche : une proie devient traqueur à son tour, un faux ninja coûte une vie. À la troisième, le traqueur est éliminé. Une proie marque un point tous les ${String(CHASSE.PIXELS_PAR_POINT)} pixels parcourus : cachée et immobile, elle ne marque rien. Un traqueur marque ${String(CHASSE.POINTS_PAR_CAPTURE)} points par capture et ${String(CHASSE.POINTS_PAR_VIE)} par vie qui lui reste. Il n’y a pas de Black Ninjas, et un malus frappe l’autre camp.`,
+      }),
+      creer(doc, 'p', {
+        texte: `Dans le mode Massacre, on ne capture plus : Espace, ou le bouton Katana, tranche tout ce qui se trouve devant vous, et la carte se vide. Un faux ninja vaut ${String(MASSACRE.POINTS_PAR_BOT)} points, un Black Ninja ${String(MASSACRE.POINTS_PAR_BOT_NOIR)}, fois votre multiplicateur : enchaînez les morts à moins de ${String(MASSACRE.FENETRE_DU_COMBO_MS / 1000)} secondes d’intervalle, et il monte d’un cran toutes les ${String(MASSACRE.MORTS_PAR_CRAN)} morts, jusqu’à x${String(MASSACRE.MULTIPLICATEUR_MAXIMUM)}. Un joueur tranché perd son combo et la moitié de ses points, qui vont à son tueur. Carte nettoyée avant la fin : ${String(MASSACRE.POINTS_PAR_SECONDE_RESTANTE)} points par seconde restante. Le sang se règle dans le panneau du son.`,
       }),
     ),
     liste(doc, 'Bonus', Object.entries(EFFETS_BONUS) as [TypeBonus, string][], true),

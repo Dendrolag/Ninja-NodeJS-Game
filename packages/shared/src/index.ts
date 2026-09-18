@@ -179,6 +179,8 @@ export { placeDansUnCamp } from './camps.js';
 export type { CampDeChasse, LigneDeJoueurEnChasse } from './chasse.js';
 export { campDeCouleur, proiesRestantes } from './chasse.js';
 
+export { multiplicateurDuCombo } from './massacre.js';
+
 export type {
   ClassementDesEquipes,
   IssueDesEquipes,

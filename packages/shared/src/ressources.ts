@@ -222,6 +222,13 @@ export const SONS = {
   chat: 'chat-message.mp3',
   /** Un bouton des menus vient d'etre actionne. Ajoute a l'etape 4.3. */
   clic: 'button-click.wav',
+  /**
+   * Un coup de katana fend l'air, dans le Massacre (etape 7.4). Synthetise par
+   * tests/outils/sons-katana.ts, comme le suivant.
+   */
+  katana: 'katana-swing.wav',
+  /** Un coup de katana vient de trancher quelque chose, dans le Massacre (etape 7.4). */
+  katanaImpact: 'katana-hit.wav',
 } as const;
 
 /** Nom d'un son ponctuel. */

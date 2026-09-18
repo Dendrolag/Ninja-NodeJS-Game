@@ -61,7 +61,7 @@ function pageDesCouleurs(): string {
 
   rendu.dessiner(
     {
-      disques: [], cones: [], zones: [], objets: [], reperes: [],
+      disques: [], cones: [], zones: [], objets: [], reperes: [], sang: [], secousse: { x: 0, y: 0 },
       entites: [ninja('joueur-vert', 980, 0x00ff00), ninja('bot-blanc', 1020, 0xffffff)],
     },
     { x: 1000, y: 750, echelle: 4 },
@@ -125,7 +125,7 @@ function pageDuHalo(): string {
     id, texture: '/assets/ninja/idle.png', x, y: 750, taille: 32, teinte, alpha: 1,
   });
   const scene = {
-    disques: [], cones: [], zones: [], objets: [], reperes: [],
+    disques: [], cones: [], zones: [], objets: [], reperes: [], sang: [], secousse: { x: 0, y: 0 },
     entites: [
       ninja('jaune', 970, 0xffff00),
       ninja('blanc', 1000, 0xffffff),

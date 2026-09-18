@@ -423,6 +423,24 @@ export function creerClient(options: OptionsClient): Client {
     }),
   );
 
+  ecouter(
+    reseau.sur('coupDeKatana', (charge) => {
+      magasin.appliquer({ type: 'fait', fait: fait('coupDeKatana', charge, maintenant()) });
+    }),
+  );
+
+  ecouter(
+    reseau.sur('joueurTranche', (charge) => {
+      magasin.appliquer({ type: 'fait', fait: fait('joueurTranche', charge, maintenant()) });
+    }),
+  );
+
+  ecouter(
+    reseau.sur('carteVidee', (charge) => {
+      magasin.appliquer({ type: 'fait', fait: fait('carteVidee', charge, maintenant()) });
+    }),
+  );
+
   // -- Les refus ------------------------------------------------------------
 
   ecouter(

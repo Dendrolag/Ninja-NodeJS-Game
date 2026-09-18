@@ -21,6 +21,7 @@
  */
 
 import type { Mode, Refus, TypeMalus } from '@neon-ninja/shared';
+import { multiplicateurDuCombo } from '@neon-ninja/shared';
 
 import type { EtatClient } from './etat.js';
 import type { FaitDeJeu } from './faits.js';
@@ -80,12 +81,29 @@ function ninjas(nombre: number): string {
  * EN CHASSE (etape 7.3), une capture est une infection: la proie attrapee devient
  * traqueur, et aucun ninja ne change de main. Les phrases le disent.
  *
+ * EN MASSACRE (etape 7.4), un coup de katana ne s'annonce que lorsqu'il fait passer notre
+ * multiplicateur a un nouveau palier; un joueur tue ne s'annonce qu'au tueur et a sa
+ * victime; la carte videe s'annonce a tous, avec son bonus.
+ *
  * @param mode Le mode de la partie, quand on le connait.
+ * @param moi  Notre identifiant, quand on le connait.
  */
-export function annonceDuFait(fait: FaitDeJeu, mode?: Mode): Annonce | undefined {
+export function annonceDuFait(fait: FaitDeJeu, mode?: Mode, moi?: string): Annonce | undefined {
   switch (fait.nature) {
     case 'tirDeCapture':
       return undefined;
+
+    case 'coupDeKatana':
+      return annonceDuCoup(fait.charge, moi);
+
+    case 'joueurTranche':
+      return annonceDeLaMiseAMort(fait.charge, moi);
+
+    case 'carteVidee':
+      return {
+        texte: `Carte nettoyée : +${String(fait.charge.bonus)} points de temps`,
+        ton: 'succes',
+      };
 
     case 'captureSubie':
       return mode === 'chasse'
@@ -101,10 +119,12 @@ export function annonceDuFait(fait: FaitDeJeu, mode?: Mode): Annonce | undefined
           };
 
     case 'captureParBotNoir':
-      return {
-        texte: `Un Black Ninja vous a capturé : ${ninjas(fait.charge.botsPerdus)} perdus`,
-        ton: 'alerte',
-      };
+      return mode === 'massacre'
+        ? { texte: 'Un Black Ninja vous a eu : points perdus, combo brisé', ton: 'alerte' }
+        : {
+            texte: `Un Black Ninja vous a capturé : ${ninjas(fait.charge.botsPerdus)} perdus`,
+            ton: 'alerte',
+          };
 
     case 'vieDeTraqueurPerdue':
       return fait.charge.viesRestantes === 0
@@ -144,6 +164,41 @@ export function annonceDuFait(fait: FaitDeJeu, mode?: Mode): Annonce | undefined
 }
 
 /**
+ * Un coup de katana ne s'annonce que chez celui qui l'a donne, et seulement quand ses morts
+ * font passer le multiplicateur a un nouveau palier: « Combo x3 ».
+ */
+function annonceDuCoup(
+  coup: Extract<FaitDeJeu, { nature: 'coupDeKatana' }>['charge'],
+  moi: string | undefined,
+): Annonce | undefined {
+  const avant = multiplicateurDuCombo(coup.combo - coup.morts.length);
+
+  return coup.frappeur === moi && coup.morts.length > 0 && coup.multiplicateur > avant
+    ? { texte: `Combo x${String(coup.multiplicateur)} !`, ton: 'succes' }
+    : undefined;
+}
+
+/** Un joueur tue ne s'annonce qu'a son tueur et a sa victime. */
+function annonceDeLaMiseAMort(
+  mise: Extract<FaitDeJeu, { nature: 'joueurTranche' }>['charge'],
+  moi: string | undefined,
+): Annonce | undefined {
+  if (mise.victime === moi) {
+    return {
+      texte: `Tranché par ${mise.attaquantPseudo} : -${String(mise.pointsVoles)} points`,
+      ton: 'alerte',
+    };
+  }
+
+  return mise.attaquant === moi
+    ? {
+        texte: `Vous avez tranché ${mise.victimePseudo} : +${String(mise.pointsVoles)} points`,
+        ton: 'succes',
+      }
+    : undefined;
+}
+
+/**
  * Les refus qui s'affichent a cote de leur champ, et pas en annonce.
  *
  * L'entree en partie montre son refus sous le pseudo, le chat sous le message, et
@@ -180,7 +235,9 @@ export function annoncesDuChangement(avant: EtatClient, apres: EtatClient): read
     const connus = new Set(avant.journal);
 
     for (const fait of apres.journal) {
-      const annonce = connus.has(fait) ? undefined : annonceDuFait(fait, apres.salon?.mode);
+      const annonce = connus.has(fait)
+        ? undefined
+        : annonceDuFait(fait, apres.salon?.mode, apres.moi);
 
       if (annonce !== undefined) {
         annonces.push(annonce);

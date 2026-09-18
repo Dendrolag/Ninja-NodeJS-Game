@@ -130,6 +130,14 @@ function profilCharge(profil: ProfilDuCompte): ModeleProfil {
             ? '—'
             : formaterNombre(statistiques.meilleurScore),
       },
+      {
+        // Le record personnel du Massacre joue seul (etape 7.4), un tiret tant qu'il n'y en a pas.
+        libelle: 'Record Massacre solo',
+        valeur:
+          statistiques.recordMassacreSolo === undefined
+            ? '—'
+            : formaterNombre(statistiques.recordMassacreSolo),
+      },
       { libelle: 'Pièces', valeur: formaterNombre(profil.pieces) },
       { libelle: 'Points de ligue', valeur: formaterNombre(profil.pointsLigue) },
     ],

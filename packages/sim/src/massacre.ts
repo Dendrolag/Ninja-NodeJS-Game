@@ -29,7 +29,7 @@
  */
 
 import type { Orientation } from '@neon-ninja/shared';
-import { DUREES, MASSACRE, TACTIQUE } from '@neon-ninja/shared';
+import { DUREES, MASSACRE, TACTIQUE, multiplicateurDuCombo } from '@neon-ninja/shared';
 
 import type { PerteFaceAuBotNoir } from './bots.js';
 import { inscrireAuJournal } from './capture.js';
@@ -84,12 +84,10 @@ export function pointsEnMassacre(etat: EtatPartie, joueur: Joueur): number {
 }
 
 /**
- * Le multiplicateur d'un combo de tant de morts: un cran de plus toutes les cinq morts,
- * jusqu'a cinq. Zero ou une mort valent un.
+ * Le multiplicateur d'un combo de tant de morts. La regle vit dans packages/shared, pour
+ * que la page la lise comme le moteur; elle est republiee ici sous le meme nom.
  */
-export function multiplicateurDuCombo(morts: number): number {
-  return Math.min(1 + Math.floor(morts / MASSACRE.MORTS_PAR_CRAN), MASSACRE.MULTIPLICATEUR_MAXIMUM);
-}
+export { multiplicateurDuCombo };
 
 /**
  * Lance un Massacre: chaque joueur present recoit l'etat de depart.
