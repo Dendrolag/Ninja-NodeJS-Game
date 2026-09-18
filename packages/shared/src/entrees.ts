@@ -141,6 +141,12 @@ export interface DemandeRejoindre {
    * en fin de partie. Sans mode, la partie rapide prend la premiere venue.
    */
   readonly mode?: Mode;
+  /**
+   * Les reglages voulus, avec un mode seulement: « Rejouer » garde ceux de la partie
+   * terminee. Une partie en attente ne convient que si elle a les memes; sinon, la
+   * nouvelle partie les prend.
+   */
+  readonly reglages?: ReglagesPartiels;
 }
 
 /**

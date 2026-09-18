@@ -43,7 +43,7 @@ import type { Surcouche } from '../hud/surcouche.js';
 import { construireHud } from '../hud/modele.js';
 import { pointsDuChangement, texteDesPoints } from '../pointsFlottants.js';
 import { effetsEnCours, moiDansLaPartie } from '../selecteurs.js';
-import { sonDuFait, sonsDuChangement } from '../sons/declencheurs.js';
+import { rechargeApresLeTir, sonDuFait, sonsDuChangement } from '../sons/declencheurs.js';
 import type { LecteurDeSons } from '../sons/lecteur.js';
 import { DUREES_LOCALISATION } from './apparence.js';
 import type { Camera } from './camera.js';
@@ -141,6 +141,8 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
   let instantPrecedent: number | undefined;
   let etatPrecedent: EtatClient = options.client.etat;
   let bouclesEnCours = new Set<string>();
+  /** L'instant ou recharger le fusil du traqueur, apres son dernier tir (Chasse). */
+  let rechargePrevue: number | undefined;
   /** Les fleches qui designent notre personnage, tant qu'elles sont visibles. */
   let localisation: Localisation | undefined;
   /** Notre personnage a-t-il deja ete montre a son apparition. */
@@ -340,6 +342,14 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
       if (nom !== undefined) {
         sons.jouer(nom);
       }
+
+      rechargePrevue = rechargeApresLeTir(fait, etat.moi, etat.salon?.mode) ?? rechargePrevue;
+    }
+
+    // Le fusil du traqueur se recharge quand il peut tirer de nouveau (Chasse, etape 5.5).
+    if (rechargePrevue !== undefined && maintenant >= rechargePrevue) {
+      rechargePrevue = undefined;
+      sons.jouer('rechargeFusil');
     }
 
     // Les boucles de bonus se demarrent et s'arretent sur le passage: comparer

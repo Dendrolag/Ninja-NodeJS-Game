@@ -8,14 +8,14 @@
  */
 
 import type { Mode, NomDeSon } from '@neon-ninja/shared';
-import { REGLAGES_PAR_DEFAUT, SONS } from '@neon-ninja/shared';
+import { CHASSE, REGLAGES_PAR_DEFAUT, SONS } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
 import type { EtatClient } from '../etat.js';
 import { ETAT_INITIAL } from '../etat.js';
 import { fait } from '../faits.js';
 import type { VuePartie } from '../reconstruction.js';
-import { battementDeFin, sonDuFait, sonsDuChangement } from './declencheurs.js';
+import { battementDeFin, rechargeApresLeTir, sonDuFait, sonsDuChangement } from './declencheurs.js';
 import { creerLecteurDeSons } from './lecteur.js';
 
 /** Une vue de partie avec le temps restant voulu. */
@@ -73,6 +73,15 @@ describe('sonDuFait', () => {
     expect(sonDuFait(tir('moi', 2), 'moi', 'tactique')).toBe('tirFusil');
     expect(sonDuFait(tir('moi', 0), 'moi', 'tactique')).toBe('tirFusil');
     expect(sonDuFait(tir('autre', 3), 'moi', 'tactique')).toBeUndefined();
+  });
+
+  it('fait entendre le fusil aux tirs du traqueur en Chasse, reussis ou non', () => {
+    const tir = (tireur: string, captures: number): ReturnType<typeof fait> =>
+      fait('tirDeCapture', { tireur, x: 0, y: 0, orientation: 'est', captures }, 0);
+
+    expect(sonDuFait(tir('moi', 1), 'moi', 'chasse')).toBe('tirFusil');
+    expect(sonDuFait(tir('moi', 0), 'moi', 'chasse')).toBe('tirFusil');
+    expect(sonDuFait(tir('autre', 1), 'moi', 'chasse')).toBeUndefined();
   });
 
   it('ne nomme que des sons qui existent', () => {
@@ -444,5 +453,21 @@ describe('creerLecteurDeSons', () => {
     lecteur.reglerLeVolumeDesSons(-3);
 
     expect([...audios.values()].every((audio) => audio.volume >= 0)).toBe(true);
+  });
+});
+
+describe('rechargeApresLeTir (Chasse)', () => {
+  const tir = (tireur: string): ReturnType<typeof fait> =>
+    fait('tirDeCapture', { tireur, x: 0, y: 0, orientation: 'est', captures: 0 }, 1_000);
+
+  it('recharge le fusil du traqueur quand il peut tirer de nouveau', () => {
+    expect(rechargeApresLeTir(tir('moi'), 'moi', 'chasse')).toBe(
+      1_000 + CHASSE.DELAI_ENTRE_TIRS_MS,
+    );
+  });
+
+  it('ne recharge ni le tir d un autre, ni en Tactique, ou les charges le disent', () => {
+    expect(rechargeApresLeTir(tir('autre'), 'moi', 'chasse')).toBeUndefined();
+    expect(rechargeApresLeTir(tir('moi'), 'moi', 'tactique')).toBeUndefined();
   });
 });

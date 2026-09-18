@@ -34,6 +34,7 @@
  */
 
 import type { Mode, NomDeSon } from '@neon-ninja/shared';
+import { CHASSE } from '@neon-ninja/shared';
 
 import type { EtatClient } from '../etat.js';
 import type { FaitDeJeu } from '../faits.js';
@@ -51,14 +52,14 @@ import { pointsDesRalliements } from '../pointsFlottants.js';
  */
 export function sonDuFait(fait: FaitDeJeu, moi?: string, mode?: Mode): NomDeSon | undefined {
   switch (fait.nature) {
-    // En Tactique, chacun de nos tirs sonne comme un coup de fusil, qu'il prenne ou non
-    // (etape 5.5); ce qu'il prend se fait entendre par le son des ralliements. Ailleurs
-    // (le traqueur de la Chasse), seul un tir qui prend s'entend.
+    // En Tactique et pour le traqueur de la Chasse, chacun de nos tirs sonne comme un coup
+    // de fusil, qu'il prenne ou non (etape 5.5); ce qu'il prend se fait entendre par le
+    // son des ralliements ou de la capture. Sans mode connu, seul un tir qui prend s'entend.
     case 'tirDeCapture':
       if (fait.charge.tireur !== moi) {
         return undefined;
       }
-      if (mode === 'tactique') {
+      if (mode === 'tactique' || mode === 'chasse') {
         return 'tirFusil';
       }
       return fait.charge.captures > 0 ? 'capture' : undefined;
@@ -194,4 +195,26 @@ function chargeRevenue(precedent: EtatClient, courant: EtatClient): boolean {
   const apres = charges(courant);
 
   return avant !== undefined && apres !== undefined && apres > avant;
+}
+
+/**
+ * Quand recharger le fusil du traqueur apres ce tir, en Chasse (etape 5.5).
+ *
+ * Un traqueur n'a pas de charges qui reviennent, ses points sont ses vies: il attend
+ * une seconde entre deux tirs, attente que le serveur ne transmet pas. Le fusil se
+ * recharge donc a l'instant ou il peut tirer de nouveau. En Tactique, ce sont les
+ * charges qui le disent (sonsDuChangement).
+ *
+ * @returns L'instant local de la recharge, ou rien si ce tir n'en appelle pas.
+ */
+export function rechargeApresLeTir(
+  fait: FaitDeJeu,
+  moi: string | undefined,
+  mode: Mode | undefined,
+): number | undefined {
+  if (mode !== 'chasse' || fait.nature !== 'tirDeCapture' || fait.charge.tireur !== moi) {
+    return undefined;
+  }
+
+  return fait.instant + CHASSE.DELAI_ENTRE_TIRS_MS;
 }

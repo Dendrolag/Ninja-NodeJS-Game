@@ -520,3 +520,53 @@ describe('faitQuiNousDeplace (etape 5.5)', () => {
     expect(faitQuiNousDeplace(tranche('eve'), 'massacre', 'moi')).toBe(false);
   });
 });
+
+describe('le fusil du traqueur (Chasse, etape 5.5)', () => {
+  it('se recharge quand le traqueur peut tirer de nouveau, et une seule fois', () => {
+    const reseauChasse = creerReseauFactice();
+    const horlogeChasse = creerHorlogeClientManuelle();
+    const clientChasse = creerClient({ reseau: reseauChasse, horloge: horlogeChasse });
+    const sonsChasse = sonsDEssai();
+    reseauChasse.simulerConnexion();
+    reseauChasse.recevoir('placeAttribuee', { joueur: 'moi', jetonDeRetour: 'M'.repeat(43) });
+    clientChasse.rejoindre('Alice');
+    reseauChasse.dernier('rejoindre')?.[1]({ valide: true, valeur: { ...SALON, mode: 'chasse' } });
+    const boucleChasse = lancerLaBoucle({
+      client: clientChasse,
+      rendu: renduDEssai(),
+      controles: new Controles(),
+      horloge: horlogeChasse,
+      sons: sonsChasse,
+      carte: { largeur: 2_000, hauteur: 1_500 },
+      taille: () => ({ largeur: 1_280, hauteur: 720 }),
+      demanderUneImage: () => 1,
+      annulerUneImage: () => undefined,
+    });
+    let instantChasse = 0;
+    const image = (ms: number): void => {
+      instantChasse += ms;
+      horlogeChasse.avancerDe(ms);
+      boucleChasse.uneImage(instantChasse);
+    };
+
+    reseauChasse.recevoir('partieLancee');
+    image(50);
+    reseauChasse.recevoir('tirDeCapture', {
+      tireur: 'moi',
+      x: 0,
+      y: 0,
+      orientation: 'est',
+      captures: 0,
+    });
+    image(50);
+
+    expect(sonsChasse.joues).toContain('tirFusil');
+    expect(sonsChasse.joues).not.toContain('rechargeFusil');
+
+    image(1_000);
+    image(50);
+
+    expect(sonsChasse.joues.filter((nom) => nom === 'rechargeFusil')).toHaveLength(1);
+    boucleChasse.arreter();
+  });
+});

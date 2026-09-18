@@ -57,7 +57,7 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
 Huit entrées au journal de `docs/design/README.md` (18 septembre 2026), et une section « Réconciliation » dans la fiche. À retenir:
 
 1. **Le son perdu du Massacre venait de la boucle, pas des bonus.** Elle lisait le journal des faits à partir de son ancienne longueur, qui ne bouge plus une fois le journal plein (cinquante faits): au cinquantième fait, plus aucun son, plus de flèche de localisation, plus de micro-arrêt, dans tous les modes. Les faits nouveaux se reconnaissent maintenant à leur identité (`faitsArrives`), comme le faisaient déjà les annonces et les points flottants, qui l'utilisent aussi.
-2. **« Rejouer » ne reprend que le mode**, pas les réglages de la partie terminée: le contrat gagne un mode facultatif pour la partie rapide.
+2. **« Rejouer » reprend le mode et les réglages** de la partie terminée: le contrat gagne, pour la partie rapide seulement, un mode et des réglages facultatifs. Une partie en attente ne convient que si elle a les mêmes. Une partie privée rejouée mène à une partie publique.
 3. **La couleur du cadavre passe par le contrat**, un champ de plus dans les morts d'un coup de katana.
 4. **La page ne se zoome plus**, à la demande du porteur du projet: un joueur malvoyant ne peut plus agrandir au pincement.
 5. **Deux défauts voisins corrigés en route (règle 7)**: les flèches après une mise à mort en Massacre, le surtitre de l'accueil.
@@ -71,6 +71,14 @@ Huit entrées au journal de `docs/design/README.md` (18 septembre 2026), et une 
 - **Le panneau du navigateur de Claude Code ne dessine pas la partie**: les captures de vérification ont été prises avec Playwright sur le serveur local.
 
 Repris du handoff 7.4, inchangé, sauf ce que cette étape a résolu (le joueur sous le HUD en haut de la carte, la flèche d'une proie infectée, la teinte fixe du cadavre, les sons synthétiques du katana): l'équilibrage du Massacre et de la Chasse reste à jouer; le coût du sang et d'un tir en Chasse n'est pas mesuré; un traqueur éliminé ne voit que les traqueurs et sa caméra reste figée; en Équipes, on ne distingue ses coéquipiers qu'à la couleur, une partie coûte un peu plus cher, une équipe vidée n'est plus classée, un joueur entré en cours de partie ne choisit pas son camp, le chat n'est pas par équipe; un hôte seul dans son salon le perd avec son lien; un joueur revenu dans le salon n'en est plus l'hôte; l'écoute des sessions fermées et les limites de tentatives vivent dans le processus; fermer la fenêtre du code de secours vaut « noté »; l'échec isolé, non reproduit, du test des routes des comptes; le serveur de développement local parle à la base de production (question au porteur du projet); jusqu'à 45 secondes pour constater une coupure silencieuse; la pluie coûte au chargement du décor; la fluidité et le lancement sur iPhone restent à confirmer sur un vrai téléphone; les erreurs d'un travailleur échappent aux scénarios de bout en bout; le relevé des contacts et le lissage du client restent en carré du nombre d'entités; l'outil de Vercel est téléchargé par npx à chaque mise en ligne; des déploiements Vercel non promus restent de la première mise en ligne; le jeton Vercel expire le 14 septembre 2027. La musique reste à écouter par le porteur du projet (cas C21 de la grille de recette).
+
+## Retours du porteur du projet après l'étape
+
+Trois demandes, le même jour, chacune avec ses tests:
+
+- la bordure basse de la barre du HUD barrait le classement qui descend dessous: retirée (`packages/client/page/styles/jeu.css`);
+- le traqueur de la Chasse a lui aussi les sons du fusil: le coup à chacun de ses tirs, la recharge une seconde après, quand il peut tirer de nouveau, cette attente n'étant pas transmise par le serveur (`packages/client/src/sons/declencheurs.ts`, `rechargeApresLeTir`, et `rendu/boucle.ts`);
+- « Rejouer » garde aussi les réglages (`packages/shared/src/entrees.ts`, `validation.ts`, `packages/server/src/ServeurSocket.ts`, `packages/client/src/client.ts`, `interface/ecrans/fin.ts`, et leurs tests).
 
 ## Prochaine action exacte
 

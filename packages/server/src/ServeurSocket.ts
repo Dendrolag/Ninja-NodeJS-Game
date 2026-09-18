@@ -1571,15 +1571,26 @@ export class ServeurSocket {
     }
 
     // La partie rapide d'un mode (etape 5.5), que demande « Rejouer »: une partie de
-    // ce mode qui attend, ou une nouvelle, publique, a ses reglages par defaut.
-    const mode = demande.mode;
+    // ce mode qui attend, avec les memes reglages s'ils sont donnes, ou une nouvelle,
+    // publique, a ces reglages.
+    const { mode, reglages } = demande;
 
     if (mode !== undefined) {
       return {
         valide: true,
         valeur:
-          this.rooms.partiesPubliquesOuvertes().find((room) => room.mode === mode) ??
-          this.ouvrirUneRoom({ mode, visibilite: 'publique' }),
+          this.rooms
+            .partiesPubliquesOuvertes()
+            .find(
+              (room) =>
+                room.mode === mode &&
+                (reglages === undefined || memesValeurs(room.reglages, reglages)),
+            ) ??
+          this.ouvrirUneRoom({
+            mode,
+            visibilite: 'publique',
+            ...(reglages === undefined ? {} : { reglages }),
+          }),
       };
     }
 
@@ -1724,4 +1735,28 @@ function refus<T>(champ: string, motif: string): ResultatValidation<T> {
   const erreurs: readonly ErreurValidation[] = [{ champ, motif }];
 
   return { valide: false, erreurs };
+}
+
+/**
+ * Deux valeurs sont-elles les memes, en profondeur: des reglages compares champ par
+ * champ, sans dependre de l'ordre de leurs cles.
+ */
+function memesValeurs(a: unknown, b: unknown): boolean {
+  if (a === b) {
+    return true;
+  }
+
+  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) {
+    return false;
+  }
+
+  const clesA = Object.keys(a);
+  const clesB = Object.keys(b);
+
+  return (
+    clesA.length === clesB.length &&
+    clesA.every((cle) =>
+      memesValeurs((a as Record<string, unknown>)[cle], (b as Record<string, unknown>)[cle]),
+    )
+  );
 }

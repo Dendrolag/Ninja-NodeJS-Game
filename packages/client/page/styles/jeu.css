@@ -67,7 +67,7 @@
   right: 0;
   left: 0;
   height: calc(var(--debut-barre) + var(--hauteur-barre));
-  border-bottom: 1px solid var(--bordure);
+  /* Sans bordure: elle barrait le classement qui descend sous la barre. */
   background: var(--fond-barre);
   backdrop-filter: blur(6px);
   pointer-events: none;

@@ -1577,6 +1577,40 @@ describe('partie rapide d un mode (etape 5.5)', () => {
     expect(rapide.idRoom).toBe(massacre.idRoom);
   });
 
+  it('garde les reglages: une partie qui attend avec d autres reglages ne convient pas', async () => {
+    const hote = await connecterUnClient();
+    const autreCarte = salonAccepte(
+      await creer(hote, {
+        pseudo: 'Hote',
+        configuration: { ...PARTIE_PUBLIQUE, reglages: { carte: 'map2' } },
+      }),
+    );
+
+    const joueur = await connecterUnClient();
+    const rapide = salonAccepte(
+      await rejoindreAvec(joueur, {
+        pseudo: 'Bob',
+        mode: 'classique',
+        reglages: { carte: 'map3', dureePartieS: 240 },
+      }),
+    );
+
+    expect(rapide.idRoom).not.toBe(autreCarte.idRoom);
+    expect(rapide.reglages).toMatchObject({ carte: 'map3', dureePartieS: 240 });
+
+    // Un troisieme joueur qui rejoue la meme partie retrouve ce salon.
+    const troisieme = await connecterUnClient();
+    const meme = salonAccepte(
+      await rejoindreAvec(troisieme, {
+        pseudo: 'Eve',
+        mode: 'classique',
+        reglages: rapide.reglages,
+      }),
+    );
+
+    expect(meme.idRoom).toBe(rapide.idRoom);
+  });
+
   it('ouvre une partie de ce mode quand aucune n attend', async () => {
     const hote = await connecterUnClient();
     const classique = salonAccepte(

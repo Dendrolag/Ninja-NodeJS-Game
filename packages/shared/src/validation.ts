@@ -187,6 +187,11 @@ export function validerDemandeRejoindre(brut: unknown): ResultatValidation<Deman
   const brutRoom = champ(source, 'idRoom');
   const brutCode = champ(source, 'code');
   const brutMode = champ(source, 'mode');
+  const brutReglages = champ(source, 'reglages');
+
+  if (brutReglages !== undefined && brutMode === undefined) {
+    return refuse('rejoindre', 'Les réglages ne se choisissent qu’avec un mode.');
+  }
 
   if (brutRoom !== undefined && brutCode !== undefined) {
     return refuse(
@@ -202,9 +207,19 @@ export function validerDemandeRejoindre(brut: unknown): ResultatValidation<Deman
       return refuse('rejoindre', 'Le mode ne se choisit que pour une partie rapide.');
     }
 
-    return estUnDe(MODES, brutMode)
-      ? accepte({ ...pseudo, mode: brutMode })
-      : refuse('mode', "Ce mode de jeu n'existe pas.");
+    if (!estUnDe(MODES, brutMode)) {
+      return refuse('mode', "Ce mode de jeu n'existe pas.");
+    }
+
+    if (brutReglages === undefined) {
+      return accepte({ ...pseudo, mode: brutMode });
+    }
+
+    // Completes par defaut, comme a la creation d'une partie.
+    const verdictReglages = validerReglages(brutReglages);
+    return verdictReglages.valide
+      ? accepte({ ...pseudo, mode: brutMode, reglages: verdictReglages.valeur })
+      : { valide: false, erreurs: verdictReglages.erreurs };
   }
 
   if (brutCode !== undefined) {

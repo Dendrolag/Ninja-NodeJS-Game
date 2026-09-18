@@ -246,7 +246,11 @@ describe('la navigation entre les ecrans', () => {
       'quitter',
       'rejoindre',
     ]);
-    expect(reseau.dernier('rejoindre')?.[0]).toEqual({ pseudo: 'Alice', mode: 'classique' });
+    expect(reseau.dernier('rejoindre')?.[0]).toEqual({
+      pseudo: 'Alice',
+      mode: 'classique',
+      reglages: SALON.reglages,
+    });
 
     reseau.dernier('rejoindre')?.[1]({ valide: true, valeur: SALON });
 

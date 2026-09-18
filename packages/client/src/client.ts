@@ -89,7 +89,9 @@ export interface OptionsClient {
  * d'un mode donne si on le precise (« Rejouer », etape 5.5).
  */
 export type AccesPartie =
-  { readonly idRoom: string } | { readonly code: string } | { readonly mode: Mode };
+  | { readonly idRoom: string }
+  | { readonly code: string }
+  | { readonly mode: Mode; readonly reglages?: ReglagesPartiels };
 
 /**
  * Un client monte: son etat, et ce que le joueur peut demander.

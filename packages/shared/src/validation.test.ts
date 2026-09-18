@@ -548,6 +548,30 @@ describe('validerDemandeRejoindre, partie rapide d un mode (etape 5.5)', () => {
     ]);
   });
 
+  it('accepte les reglages de la partie terminee avec le mode, completes par defaut', () => {
+    const demande = valeurAcceptee(
+      validerDemandeRejoindre({ pseudo: 'Alice', mode: 'massacre', reglages: { carte: 'map3' } }),
+    );
+
+    expect(demande.mode).toBe('massacre');
+    expect(demande.reglages).toEqual({ ...REGLAGES_PAR_DEFAUT, carte: 'map3' });
+  });
+
+  it('refuse des reglages sans mode, ou aberrants', () => {
+    expect(
+      champsRefuses(validerDemandeRejoindre({ pseudo: 'Alice', reglages: { carte: 'map3' } })),
+    ).toEqual(['rejoindre']);
+    expect(
+      champsRefuses(
+        validerDemandeRejoindre({
+          pseudo: 'Alice',
+          mode: 'classique',
+          reglages: { dureePartieS: 5000 },
+        }),
+      ),
+    ).toEqual(['dureePartieS']);
+  });
+
   it('refuse un mode avec une partie visee: le mode ne sert qu a la partie rapide', () => {
     expect(
       champsRefuses(validerDemandeRejoindre({ pseudo: 'Alice', idRoom: 'room-1', mode: 'chasse' })),
