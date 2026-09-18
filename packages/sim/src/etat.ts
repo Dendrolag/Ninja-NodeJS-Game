@@ -373,7 +373,10 @@ export type EvenementPartie =
   | BonusRamasse
   | MalusRamasse
   | TirDeCapture
-  | VieDeTraqueurPerdue;
+  | VieDeTraqueurPerdue
+  | CoupDeKatana
+  | JoueurTranche
+  | CarteVidee;
 
 /**
  * Un joueur a tire, dans le mode Tactique (etape 7.1).
@@ -404,6 +407,87 @@ export interface VieDeTraqueurPerdue {
   readonly viesRestantes: number;
   /** Ou se trouvait le faux ninja vise. */
   readonly position: Position;
+}
+
+/** Un bot ou un Black Ninja tue par un coup de katana, dans le Massacre (etape 7.4). */
+export interface MortParLeKatana {
+  readonly bot: IdentifiantEntite;
+  /** Un Black Ninja, ou un bot ordinaire. */
+  readonly noir: boolean;
+  /** Ou il se trouvait quand il est mort. */
+  readonly position: Position;
+  /** Ce que cette mort a rapporte, multiplicateur compris. */
+  readonly points: number;
+}
+
+/**
+ * Un joueur a donne un coup de katana, dans le Massacre (etape 7.4).
+ *
+ * Le coup a eu lieu, qu'il ait tue ou non. Un joueur tue par ce coup laisse en plus son
+ * propre fait (JoueurTranche).
+ */
+export interface CoupDeKatana {
+  readonly type: 'coupDeKatana';
+  readonly joueur: IdentifiantEntite;
+  /** D'ou le coup est parti. */
+  readonly position: Position;
+  /** Dans quelle direction il a balaye. */
+  readonly orientation: Orientation;
+  /** Les bots et Black Ninjas tues, dans l'ordre ou ils sont tombes. */
+  readonly morts: readonly MortParLeKatana[];
+  /** Les morts du combo du joueur apres ce coup. */
+  readonly combo: number;
+  /** Le multiplicateur atteint apres ce coup. */
+  readonly multiplicateur: number;
+}
+
+/** Un joueur en a tue un autre d'un coup de katana, dans le Massacre (etape 7.4). */
+export interface JoueurTranche {
+  readonly type: 'joueurTranche';
+  readonly attaquant: IdentifiantEntite;
+  readonly victime: IdentifiantEntite;
+  /** Ou la victime se trouvait, avant de reapparaitre ailleurs. */
+  readonly position: Position;
+  /** La direction du coup. */
+  readonly orientation: Orientation;
+  /** Les points passes de la victime a son tueur. */
+  readonly pointsVoles: number;
+}
+
+/** Le dernier bot de la carte est tombe, dans le Massacre (etape 7.4): la partie est decidee. */
+export interface CarteVidee {
+  readonly type: 'carteVidee';
+  /** Le temps de jeu qui restait, en millisecondes. */
+  readonly tempsRestantMs: number;
+  /** Les points ajoutes a chaque joueur present. */
+  readonly bonus: number;
+}
+
+/** Ce que le Massacre retient d'un joueur (etape 7.4). */
+export interface GuerrierEnMassacre {
+  /** La direction de son dernier deplacement: celle dans laquelle il frappe. */
+  readonly orientation: Orientation;
+  /** Le temps avant qu'il puisse frapper de nouveau, en millisecondes. Zero: il peut. */
+  readonly avantProchainCoupMs: number;
+  /**
+   * Ses points. Ils se rangent dans l'etat: les bots tues ont disparu, et les points voles
+   * ou perdus ne se deduisent de rien.
+   */
+  readonly points: number;
+  /** Les morts de son combo en cours. Zero: pas de combo. */
+  readonly combo: number;
+  /** Le temps qu'il reste a son combo pour etre prolonge, en millisecondes. */
+  readonly avantFinDuComboMs: number;
+  /** Les bots et Black Ninjas qu'il a tues depuis le debut de la partie. */
+  readonly botsTues: number;
+}
+
+/** Ce que le Massacre retient de la partie (etape 7.4). Voir EtatPartie.massacre. */
+export interface EtatDeMassacre {
+  /** Ce que retient chaque joueur. Un joueur qui n'y figure pas a l'etat de depart. */
+  readonly guerriers: Readonly<Record<IdentifiantEntite, GuerrierEnMassacre>>;
+  /** Le dernier bot est tombe avant le terme: la partie est decidee. */
+  readonly carteVidee: boolean;
 }
 
 /** Ce que la Chasse retient d'un traqueur (etape 7.3). */
@@ -503,6 +587,13 @@ export interface EtatPartie {
    * les deux ensemble, devenirTraqueur, pour qu'ils ne puissent pas diverger.
    */
   readonly chasse?: EtatDeChasse;
+  /**
+   * Les armes, les points et les combos d'une partie Massacre (etape 7.4).
+   *
+   * ABSENT D'UNE PARTIE D'UN AUTRE MODE, et d'un Massacre au salon: c'est le lancement qui
+   * le pose (voir massacre.ts), comme pour la Chasse.
+   */
+  readonly massacre?: EtatDeMassacre;
   /**
    * Reglages choisis par l'hote, une fois appliques ceux que le mode impose. Le moteur
    * ne connait que ceux-la.

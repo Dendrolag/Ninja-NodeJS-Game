@@ -106,11 +106,14 @@ export interface DimensionsCarte {
  *     contact (etape 7.2). Voir EQUIPES plus bas.
  *   - La Chasse oppose des traqueurs, qui infectent les proies qu'ils attrapent, a des
  *     proies qui doivent tenir jusqu'au bout (etape 7.3). Voir CHASSE plus bas.
+ *   - Le Massacre ne capture plus: un coup de katana tue les bots et les joueurs qu'il
+ *     balaie, et les morts enchainees font monter les points (etape 7.4). Voir MASSACRE
+ *     plus bas.
  *
  * Ajouter un mode demande aussi une migration de la base, dont l'enumeration des
  * modes est tiree de cette liste.
  */
-export const MODES = ['classique', 'tactique', 'equipes', 'chasse'] as const;
+export const MODES = ['classique', 'tactique', 'equipes', 'chasse', 'massacre'] as const;
 
 /** Un mode de jeu. */
 export type Mode = (typeof MODES)[number];
@@ -135,13 +138,16 @@ export type Mode = (typeof MODES)[number];
  * Le Tactique en accueille autant: rien dans ses regles ne change ce que coute un
  * joueur (etape 7.1). Les Equipes aussi, deux equipes de six: decision du porteur du
  * projet du 15 septembre 2026 (etape 7.2). La Chasse en accueille dix, la borne haute de
- * la maquette: decision du porteur du projet du 16 septembre 2026 (etape 7.3).
+ * la maquette: decision du porteur du projet du 16 septembre 2026 (etape 7.3). Le Massacre
+ * en accueille huit: la carte se vide, et a douze chacun tuerait trop peu de bots pour que
+ * les combos existent (decision du porteur du projet du 16 septembre 2026, etape 7.4).
  */
 export const CAPACITES: Readonly<Record<Mode, number>> = {
   classique: 12,
   tactique: 12,
   equipes: 12,
   chasse: 10,
+  massacre: 8,
 };
 
 /**
@@ -491,6 +497,36 @@ export const CHASSE = {
   POINTS_PAR_CAPTURE: 50,
   /** Ce que rapporte a un traqueur en jeu chaque vie qui lui reste. */
   POINTS_PAR_VIE: 25,
+} as const;
+
+/**
+ * Les regles chiffrees du mode Massacre (etape 7.4), tranchees par le porteur du projet le
+ * 16 septembre 2026 (docs/plan/etape-7-4.md).
+ */
+export const MASSACRE = {
+  /** Ouverture totale de l'arc du katana, en degres: la moitie de chaque cote de l'orientation. */
+  ANGLE_DU_KATANA_DEGRES: 160,
+  /** Distance maximale entre le centre du joueur et celui de ce qu'il tranche, en pixels. */
+  PORTEE_DU_KATANA_PX: 60,
+  /** L'attente entre deux coups de katana, en millisecondes. */
+  DELAI_ENTRE_COUPS_MS: 400,
+  /** Ce que vaut un bot tue, avant multiplicateur. */
+  POINTS_PAR_BOT: 10,
+  /** Ce que vaut un Black Ninja tue, avant multiplicateur. */
+  POINTS_PAR_BOT_NOIR: 15,
+  /**
+   * Le temps pendant lequel une mort prolonge le combo, en millisecondes: au-dela, sans
+   * nouvelle mort, le combo retombe.
+   */
+  FENETRE_DU_COMBO_MS: 2000,
+  /** Le multiplicateur monte d'un cran chaque fois que le combo compte ce nombre de morts de plus. */
+  MORTS_PAR_CRAN: 5,
+  /** Le multiplicateur au plus. */
+  MULTIPLICATEUR_MAXIMUM: 5,
+  /** La part des points d'un joueur tue qui passe a son tueur, en pour cent. */
+  PART_VOLEE_POUR_CENT: 50,
+  /** Ce que recoit chaque joueur par seconde entiere restante quand la carte est vide. */
+  POINTS_PAR_SECONDE_RESTANTE: 5,
 } as const;
 
 /** Couleur d'un bot non capture. */

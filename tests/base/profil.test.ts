@@ -14,7 +14,7 @@ import {
   enregistrerPartie,
   trouverCompteParPseudo,
 } from '@neon-ninja/server';
-import type { ProfilDuCompte } from '@neon-ninja/shared';
+import type { Mode, ProfilDuCompte } from '@neon-ninja/shared';
 import { PARTIES_DU_PROFIL, ROUTES_COMPTES } from '@neon-ninja/shared';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -77,11 +77,12 @@ describe.runIf(baseDisponible())('profil', () => {
     termineeLe: string,
     nombreJoueurs: number,
     resultat: Partial<NouveauResultat>,
+    mode: Mode = 'classique',
   ): Promise<void> {
     await enregistrerPartie(
       db(),
       {
-        mode: 'classique',
+        mode,
         carte: 'map3',
         modeMiroir: true,
         dureeS: 180,
@@ -171,6 +172,23 @@ describe.runIf(baseDisponible())('profil', () => {
       partiesJouees: 2,
       victoires: 1,
       meilleurScore: 40,
+    });
+  });
+
+  it('deduit le record en Massacre des seules parties Massacre jouees seul', async () => {
+    const auth = authentification();
+    const { jeton, compteId } = await inscrire(auth);
+
+    await jouer(compteId, '2026-03-01T12:00:00.000Z', 1, { placement: 1, points: 700 }, 'massacre');
+    await jouer(compteId, '2026-03-02T12:00:00.000Z', 1, { placement: 1, points: 450 }, 'massacre');
+    await jouer(compteId, '2026-03-03T12:00:00.000Z', 2, { placement: 1, points: 900 }, 'massacre');
+    await jouer(compteId, '2026-03-04T12:00:00.000Z', 1, { placement: 1, points: 800 });
+
+    expect((await profilDe(auth, jeton)).statistiques).toEqual({
+      partiesJouees: 4,
+      victoires: 1,
+      meilleurScore: 900,
+      recordMassacreSolo: 700,
     });
   });
 

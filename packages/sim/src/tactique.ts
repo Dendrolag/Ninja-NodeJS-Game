@@ -45,8 +45,30 @@ import { capturerBot, capturerJoueur } from './capture.js';
 import type { EtatPartie, EtatTactiqueDuJoueur, IdentifiantEntite } from './etat.js';
 import type { Entrees } from './moteur.js';
 
-/** Le cosinus de la demi-ouverture du cone: 45 degres de chaque cote de l'orientation. */
-const COSINUS_DU_DEMI_ANGLE = Math.cos((TACTIQUE.ANGLE_DU_CONE_DEGRES / 2) * (Math.PI / 180));
+/**
+ * La geometrie d'un cone: jusqu'ou il porte, et de combien il s'ouvre.
+ *
+ * Le cone du Tactique a servi seul jusqu'a l'etape 7.4, ou le katana du Massacre en a
+ * demande un autre, plus large et plus court. L'ouverture est gardee sous la forme du
+ * cosinus de sa moitie, calcule une fois: c'est ce que compare le test.
+ */
+export interface GeometrieDuCone {
+  /** Le cosinus de la demi-ouverture. */
+  readonly cosinusDuDemiAngle: number;
+  /** La distance maximale entre le centre du tireur et celui de sa cible, en pixels. */
+  readonly porteePx: number;
+}
+
+/** La geometrie d'un cone d'ouverture totale donnee, en degres, et de portee donnee. */
+export function geometrieDuCone(angleDegres: number, porteePx: number): GeometrieDuCone {
+  return { cosinusDuDemiAngle: Math.cos((angleDegres / 2) * (Math.PI / 180)), porteePx };
+}
+
+/** Le cone du Tactique, et du tir d'un traqueur de la Chasse: 90 degres sur 100 pixels. */
+export const CONE_TACTIQUE: GeometrieDuCone = geometrieDuCone(
+  TACTIQUE.ANGLE_DU_CONE_DEGRES,
+  TACTIQUE.PORTEE_PX,
+);
 
 /**
  * Tolerance sur la comparaison des cosinus.
@@ -97,14 +119,21 @@ export function etatTactiqueDe(etat: EtatPartie, id: IdentifiantEntite): EtatTac
  * centre de la cible est a la portee au plus, et l'ecart d'angle entre l'orientation
  * du tireur et la direction de la cible est de la demi-ouverture au plus. Une cible
  * confondue avec le tireur est dans le cone: la v0.9.0 lui comptait un angle nul.
+ *
+ * Le cone est celui du Tactique quand l'appelant n'en donne pas d'autre.
  */
-export function dansLeCone(origine: Position, orientation: Orientation, cible: Position): boolean {
+export function dansLeCone(
+  origine: Position,
+  orientation: Orientation,
+  cible: Position,
+  cone: GeometrieDuCone = CONE_TACTIQUE,
+): boolean {
   const ecartX = cible.x - origine.x;
   const ecartY = cible.y - origine.y;
   const distance = Math.hypot(ecartX, ecartY);
 
   // Ecrit ainsi pour qu'une distance non numerique soit hors de portee.
-  if (!(distance <= TACTIQUE.PORTEE_PX)) {
+  if (!(distance <= cone.porteePx)) {
     return false;
   }
 
@@ -115,7 +144,7 @@ export function dansLeCone(origine: Position, orientation: Orientation, cible: P
   const vecteur = VECTEURS[orientation];
   const cosinus = (vecteur.x * ecartX + vecteur.y * ecartY) / distance;
 
-  return cosinus >= COSINUS_DU_DEMI_ANGLE - TOLERANCE;
+  return cosinus >= cone.cosinusDuDemiAngle - TOLERANCE;
 }
 
 /**

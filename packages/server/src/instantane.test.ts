@@ -12,13 +12,15 @@
  *      test pour survivre.
  */
 
-import { CARTES, CHASSE, TACTIQUE } from '@neon-ninja/shared';
+import { CARTES, CHASSE, MASSACRE, TACTIQUE } from '@neon-ninja/shared';
 import type { EtatPartie } from '@neon-ninja/sim';
 import {
   ajouterBot,
   ajouterJoueur,
   creerEtatInitial,
   devenirTraqueur,
+  frapper,
+  lancerLeMassacre,
   mettreEnPause,
   poserObjet,
   tick,
@@ -160,6 +162,116 @@ describe('le mode Chasse dans la projection', () => {
     expect(
       notificationsDe(etat).filter((notification) => notification.nom === 'vieDeTraqueurPerdue'),
     ).toEqual([{ nom: 'vieDeTraqueurPerdue', pour: 'alice', charge: { viesRestantes: 2 } }]);
+  });
+});
+
+describe('le mode Massacre dans la projection', () => {
+  /** Un Massacre lance: Alice au milieu, Bob a trente pixels a l'est, un bot entre eux. */
+  function massacreADeux(): EtatPartie {
+    let etat = creerEtatInitial({
+      graine: 7,
+      mode: 'massacre',
+      reglages: { nombreBotsInitial: 10 },
+    });
+    etat = ajouterJoueur(etat, { id: 'alice', pseudo: 'Alice', position: { x: 500, y: 500 } });
+    etat = ajouterJoueur(etat, { id: 'bob', pseudo: 'Bob', position: { x: 530, y: 500 } });
+    etat = ajouterBot(etat, { id: 'b', position: { x: 520, y: 510 } });
+    etat = ajouterBot(etat, { id: 'loin', position: { x: 1500, y: 1000 } });
+    const bob = etat.joueurs['bob'];
+    if (bob === undefined) {
+      throw new Error('Bob devrait etre dans la partie.');
+    }
+
+    return lancerLeMassacre({
+      ...etat,
+      joueurs: { ...etat.joueurs, bob: { ...bob, protectionSpawnRestanteMs: 0 } },
+    });
+  }
+
+  it('montre l arme de chaque joueur: ou il frappe, et si son coup est pret', () => {
+    const pret = instantaneDe(massacreADeux()).entites.find((entite) => entite.id === 'alice');
+    const apres = instantaneDe(frapper(massacreADeux(), 'alice').etat).entites.find(
+      (entite) => entite.id === 'alice',
+    );
+
+    expect(pret).toMatchObject({
+      tactique: { orientation: 'est', charges: 1, avantProchaineChargeMs: 0 },
+    });
+    expect(apres).toMatchObject({
+      tactique: { charges: 0, avantProchaineChargeMs: MASSACRE.DELAI_ENTRE_COUPS_MS },
+    });
+  });
+
+  it('annonce le coup, ses morts et le joueur tue a chaque joueur de la partie', () => {
+    const etat = frapper({ ...massacreADeux(), evenements: [] }, 'alice').etat;
+    const notifications = notificationsDe(etat);
+
+    expect(notifications.filter((notification) => notification.nom === 'coupDeKatana')).toEqual(
+      ['alice', 'bob'].map((pour) => ({
+        nom: 'coupDeKatana',
+        pour,
+        charge: {
+          frappeur: 'alice',
+          x: 500,
+          y: 500,
+          orientation: 'est',
+          morts: [{ id: 'b', x: 520, y: 510, noir: false, points: 10 }],
+          combo: 1,
+          multiplicateur: 1,
+        },
+      })),
+    );
+    expect(notifications.filter((notification) => notification.nom === 'joueurTranche')).toEqual(
+      ['alice', 'bob'].map((pour) => ({
+        nom: 'joueurTranche',
+        pour,
+        charge: {
+          attaquant: 'alice',
+          attaquantPseudo: 'Alice',
+          victime: 'bob',
+          victimePseudo: 'Bob',
+          x: 530,
+          y: 500,
+          orientation: 'est',
+          pointsVoles: 0,
+        },
+      })),
+    );
+  });
+
+  it('omet un joueur tue dont l un des deux a quitte la partie', () => {
+    const etat = frapper({ ...massacreADeux(), evenements: [] }, 'alice').etat;
+    const { bob: _parti, ...restants } = etat.joueurs;
+
+    expect(
+      notificationsDe({ ...etat, joueurs: restants }).some(
+        (notification) => notification.nom === 'joueurTranche',
+      ),
+    ).toBe(false);
+  });
+
+  it('annonce la carte videe et son bonus a chaque joueur', () => {
+    const etat = {
+      ...massacreADeux(),
+      evenements: [{ type: 'carteVidee', tempsRestantMs: 12_300, bonus: 60 }] as const,
+    };
+
+    expect(notificationsDe(etat)).toEqual(
+      ['alice', 'bob'].map((pour) => ({
+        nom: 'carteVidee',
+        pour,
+        charge: { bonus: 60, tempsRestantMs: 12_300 },
+      })),
+    );
+  });
+
+  it('classe aux points du Massacre', () => {
+    const etat = frapper(massacreADeux(), 'alice').etat;
+
+    expect(classementDe(etat).map((ligne) => [ligne.id, ligne.points])).toEqual([
+      ['alice', 10],
+      ['bob', 0],
+    ]);
   });
 });
 

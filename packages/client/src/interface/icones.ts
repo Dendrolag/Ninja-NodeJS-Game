@@ -95,6 +95,14 @@ const GLYPHES = {
       { trace: 'M17 12h5' },
     ],
   },
+  katana: {
+    formes: [
+      { trace: 'M20 4L8.5 15.5' },
+      { trace: 'M20 4l-1 4-9 9' },
+      { trace: 'M6 13l5 5' },
+      { trace: 'M8 16l-4 4' },
+    ],
+  },
   trophy: {
     formes: [
       { trace: 'M7 4h10v5a5 5 0 0 1-10 0z' },

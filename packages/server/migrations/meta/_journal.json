@@ -43,6 +43,13 @@
       "when": 1789550428612,
       "tag": "0005_mode_chasse",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789591479330,
+      "tag": "0006_mode_massacre",
+      "breakpoints": true
     }
   ]
 }

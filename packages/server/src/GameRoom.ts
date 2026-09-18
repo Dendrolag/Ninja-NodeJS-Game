@@ -893,6 +893,10 @@ export class GameRoom {
    * chasse terminee avant le terme vaut une partie entiere: le temps joue court jusqu'a la
    * duree reglee, pour que personne ne soit paye moins d'XP parce que la derniere proie
    * est tombee, ou le dernier traqueur elimine, avant l'heure.
+   *
+   * DANS UNE PARTIE MASSACRE (etape 7.4), on se place aussi aux points, mais le temps joue
+   * reste celui reellement joue: une carte videe avant le terme rapporte deja son bonus de
+   * points, et payer le reste en XP recompenserait deux fois la meme vitesse.
    */
   bilan(): BilanDePartie {
     const classement = this.classement();

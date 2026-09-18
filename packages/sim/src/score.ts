@@ -27,6 +27,7 @@ import { SCORE } from '@neon-ninja/shared';
 import { pointsEnChasse } from './chasse.js';
 import type { Couleur } from './couleurs.js';
 import type { EtatPartie, HistoriqueCapture, IdentifiantEntite, Joueur } from './etat.js';
+import { pointsEnMassacre } from './massacre.js';
 
 /** Ce que vaut un joueur a un instant donne, et de quoi c'est fait. */
 export interface LigneScore {
@@ -35,7 +36,8 @@ export interface LigneScore {
   readonly couleur: Couleur;
   /**
    * Le score affiche: les bots portes plus les points de bots noirs. En Chasse, les points
-   * de parcours, de captures et de vies (etape 7.3).
+   * de parcours, de captures et de vies (etape 7.3). En Massacre, les points que l'etat range
+   * pour le joueur (etape 7.4).
    *
    * Le legacy nommait ce total currentBots, ce qui laissait croire a un nombre de
    * bots alors qu'il comprenait aussi les points de bots noirs. Les deux parts
@@ -69,6 +71,9 @@ export interface LigneScore {
  * la carte, un traqueur en capturant et en gardant ses vies (pointsEnChasse). Les ninjas y
  * sont un camouflage, et aucun joueur ne les repeint; les champs qui les decrivent restent
  * lus comme ailleurs, et valent zero.
+ *
+ * EN MASSACRE NON PLUS (etape 7.4): les bots tues disparaissent, et les points se rangent
+ * dans l'etat, avec les vols et les pertes (pointsEnMassacre).
  */
 export function scoreDe(etat: EtatPartie, joueur: Joueur): LigneScore {
   const botsPortes = Object.values(etat.bots).filter(
@@ -80,7 +85,7 @@ export function scoreDe(etat: EtatPartie, joueur: Joueur): LigneScore {
     id: joueur.id,
     pseudo: joueur.pseudo,
     couleur: joueur.couleur,
-    points: etat.mode === 'chasse' ? pointsEnChasse(etat, joueur) : botsPortes + pointsBotsNoirs,
+    points: pointsDe(etat, joueur, botsPortes + pointsBotsNoirs),
     botsPortes,
     pointsBotsNoirs,
     captures: joueur.captures,
@@ -89,6 +94,18 @@ export function scoreDe(etat: EtatPartie, joueur: Joueur): LigneScore {
     joueursCaptures: joueur.joueursCaptures,
     capturesSubies: joueur.capturesSubies,
   };
+}
+
+/** Le score affiche d'un joueur selon le mode: les bots portes et les bots noirs, hors Chasse et Massacre. */
+function pointsDe(etat: EtatPartie, joueur: Joueur, pointsDeBots: number): number {
+  switch (etat.mode) {
+    case 'chasse':
+      return pointsEnChasse(etat, joueur);
+    case 'massacre':
+      return pointsEnMassacre(etat, joueur);
+    default:
+      return pointsDeBots;
+  }
 }
 
 /**

@@ -388,6 +388,66 @@ export interface TirDeCaptureVu {
   readonly captures: number;
 }
 
+/** Un bot ou un Black Ninja tue par un coup de katana, dans le Massacre (etape 7.4). */
+export interface MortVue {
+  /** Identifiant du bot tue: le dessin de son sang s'en deduit, le meme pour tous. */
+  readonly id: string;
+  readonly x: number;
+  readonly y: number;
+  /** Un Black Ninja, ou un bot ordinaire. */
+  readonly noir: boolean;
+  /** Ce que cette mort a rapporte, multiplicateur compris. */
+  readonly points: number;
+}
+
+/**
+ * Un joueur vient de donner un coup de katana, dans le Massacre (etape 7.4). Adresse a
+ * chaque joueur de la partie: tout le monde voit le coup et le sang qu'il fait couler.
+ *
+ * Le joueur qui frappe y lit son combo; les autres, seulement le coup et les morts.
+ */
+export interface CoupDeKatanaVu {
+  /** Identifiant du joueur qui a frappe. */
+  readonly frappeur: string;
+  /** D'ou le coup est parti. */
+  readonly x: number;
+  readonly y: number;
+  /** Dans quelle direction il a balaye. */
+  readonly orientation: Orientation;
+  /** Les bots et Black Ninjas tues, dans l'ordre ou ils sont tombes. */
+  readonly morts: readonly MortVue[];
+  /** Les morts du combo du joueur apres ce coup. */
+  readonly combo: number;
+  /** Le multiplicateur atteint apres ce coup. */
+  readonly multiplicateur: number;
+}
+
+/**
+ * Un joueur vient d'en tuer un autre, dans le Massacre (etape 7.4). Adresse a chaque joueur
+ * de la partie, pour le sang; le tueur et la victime y lisent ce qui les concerne.
+ */
+export interface JoueurTrancheVu {
+  readonly attaquant: string;
+  readonly attaquantPseudo: string;
+  readonly victime: string;
+  readonly victimePseudo: string;
+  /** Ou la victime se trouvait, avant de reapparaitre ailleurs. */
+  readonly x: number;
+  readonly y: number;
+  /** La direction du coup. */
+  readonly orientation: Orientation;
+  /** Les points passes de la victime a son tueur. */
+  readonly pointsVoles: number;
+}
+
+/** Le dernier bot de la carte vient de tomber, dans le Massacre (etape 7.4). Adresse a tous. */
+export interface CarteVideeVue {
+  /** Les points ajoutes a chaque joueur present. */
+  readonly bonus: number;
+  /** Le temps de jeu qui restait, en millisecondes. */
+  readonly tempsRestantMs: number;
+}
+
 /**
  * La partie vient d'etre suspendue.
  *
@@ -736,6 +796,15 @@ export interface EvenementsServeurVersClient {
 
   /** Ce traqueur de la Chasse a vise un faux ninja, et perdu une vie (etape 7.3). */
   vieDeTraqueurPerdue: (vie: VieDeTraqueurPerdueVue) => void;
+
+  /** Un joueur de la partie vient de donner un coup de katana, dans le Massacre (etape 7.4). */
+  coupDeKatana: (coup: CoupDeKatanaVu) => void;
+
+  /** Un joueur de la partie vient d'en tuer un autre, dans le Massacre (etape 7.4). */
+  joueurTranche: (mise: JoueurTrancheVu) => void;
+
+  /** Le dernier bot vient de tomber: la partie Massacre s'arrete (etape 7.4). */
+  carteVidee: (carte: CarteVideeVue) => void;
 
   /** Une demande de ce joueur a ete refusee. Remplace error. */
   refus: (refus: Refus) => void;

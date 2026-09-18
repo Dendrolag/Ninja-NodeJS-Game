@@ -193,15 +193,24 @@ export function completerReglages(partiels?: ReglagesPartiels): ReglagesPartie {
  *
  *   - La Chasse n'a pas de bots noirs (etape 7.3, decision 9 du porteur du projet): ses
  *     ninjas ne font aucun score, et un bot noir n'aurait rien a prendre.
+ *   - Le Massacre n'a pas de zone de chaos (etape 7.4, decision 6 du porteur du projet):
+ *     elle repeint des bots dont la couleur ne compte pour personne.
  *   - Les autres modes n'imposent rien: leurs reglages sont rendus tels quels, le meme
  *     objet, ce qui laisse leurs parties identiques a ce qu'elles etaient.
  */
 export function imposerLesReglagesDuMode(mode: Mode, reglages: ReglagesPartie): ReglagesPartie {
-  if (mode !== 'chasse' || !reglages.botsNoirs.actifs) {
-    return reglages;
+  if (mode === 'chasse' && reglages.botsNoirs.actifs) {
+    return { ...reglages, botsNoirs: { ...reglages.botsNoirs, actifs: false } };
   }
 
-  return { ...reglages, botsNoirs: { ...reglages.botsNoirs, actifs: false } };
+  if (mode === 'massacre' && reglages.zones.types.chaos) {
+    return {
+      ...reglages,
+      zones: { ...reglages.zones, types: { ...reglages.zones.types, chaos: false } },
+    };
+  }
+
+  return reglages;
 }
 
 /**

@@ -205,6 +205,20 @@ export const regleChasse: RegleDeResolution = regleDeContacts({
 });
 
 /**
+ * La regle du mode Massacre: toucher ne produit rien (etape 7.4).
+ *
+ * On y tue d'un coup de katana (massacre.ts), pas en touchant. Toucher un bot ne le repeint
+ * pas, et un joueur invincible ne detruit pas le Black Ninja qu'il touche: le katana est la
+ * seule arme, et l'invincibilite ne fait que proteger (decision 7 de la fiche). Seule la
+ * contagion entre bots reste, commune a tous les modes; aucun bot ne portant la couleur
+ * d'un joueur, elle n'a rien a transmettre.
+ */
+export const regleMassacre: RegleDeResolution = regleDeContacts({
+  entreJoueurs: (etat) => sansEffet(etat),
+  joueurEtBot: (etat) => etat,
+});
+
+/**
  * La regle du mode Tactique: toucher ne capture rien.
  *
  * On y capture par un cone (tactique.ts). Ce que le contact produit encore n'est

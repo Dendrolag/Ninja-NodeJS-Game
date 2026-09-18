@@ -195,6 +195,11 @@ export interface StatistiquesDuCompte {
   readonly victoires: number;
   /** Le meilleur score d'une partie. Absent tant qu'aucune partie n'est enregistree. */
   readonly meilleurScore?: number;
+  /**
+   * Le record personnel en Massacre: le meilleur score d'une partie Massacre jouee seul
+   * (etape 7.4, decision 7 du porteur du projet). Absent tant qu'il n'y en a aucune.
+   */
+  readonly recordMassacreSolo?: number;
 }
 
 /** Une partie de l'historique d'un compte, telle que son profil la montre. */

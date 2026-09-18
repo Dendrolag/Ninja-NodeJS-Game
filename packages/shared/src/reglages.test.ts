@@ -100,6 +100,21 @@ describe('imposerLesReglagesDuMode', () => {
     }
   });
 
+  it('retire la zone de chaos d une partie Massacre, et rien d autre', () => {
+    const reglages = imposerLesReglagesDuMode('massacre', completerReglages({ dureePartieS: 60 }));
+
+    expect(reglages.zones.types).toEqual({ ...REGLAGES_PAR_DEFAUT.zones.types, chaos: false });
+    expect(reglages.zones.actives).toBe(true);
+    expect(reglages.botsNoirs).toEqual(REGLAGES_PAR_DEFAUT.botsNoirs);
+    expect(reglages.dureePartieS).toBe(60);
+  });
+
+  it('rend tels quels les reglages d un Massacre deja sans chaos', () => {
+    const reglages = completerReglages({ zones: { types: { chaos: false } } });
+
+    expect(imposerLesReglagesDuMode('massacre', reglages)).toBe(reglages);
+  });
+
   it('rend tels quels les reglages d une Chasse deja sans bots noirs', () => {
     const reglages = completerReglages({ botsNoirs: { actifs: false } });
 

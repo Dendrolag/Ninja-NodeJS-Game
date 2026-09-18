@@ -344,6 +344,8 @@ export interface StatistiquesEnregistrees {
   readonly victoires: number;
   /** Absent tant qu'aucune partie n'est enregistree. */
   readonly meilleurScore: number | undefined;
+  /** Le meilleur score en Massacre joue seul. Absent tant qu'il n'y en a aucun. */
+  readonly recordMassacreSolo: number | undefined;
 }
 
 /**
@@ -356,6 +358,10 @@ export interface StatistiquesEnregistrees {
  * parties que le profil affiche.
  *
  * Une partie jouee seul n'est pas une victoire: voir JOUEURS_POUR_UNE_VICTOIRE.
+ *
+ * Le record en Massacre (etape 7.4) se deduit de meme: le meilleur score des parties
+ * Massacre d'un seul joueur. Une partie a plusieurs n'y compte pas, ses points dependant des
+ * autres.
  */
 export async function statistiquesDuCompte(
   db: BaseDeDonnees,
@@ -366,6 +372,9 @@ export async function statistiquesDuCompte(
       partiesJouees: sql<number>`count(*)::int`,
       victoires: sql<number>`(count(*) filter (where ${resultats.placement} = 1 and ${parties.nombreJoueurs} >= ${JOUEURS_POUR_UNE_VICTOIRE}))::int`,
       meilleurScore: sql<number | null>`max(${resultats.points})`,
+      recordMassacreSolo: sql<
+        number | null
+      >`max(${resultats.points}) filter (where ${parties.mode} = 'massacre' and ${parties.nombreJoueurs} = 1)`,
     })
     .from(resultats)
     .innerJoin(parties, eq(resultats.partieId, parties.id))
@@ -375,5 +384,6 @@ export async function statistiquesDuCompte(
     partiesJouees: ligne?.partiesJouees ?? 0,
     victoires: ligne?.victoires ?? 0,
     meilleurScore: ligne?.meilleurScore ?? undefined,
+    recordMassacreSolo: ligne?.recordMassacreSolo ?? undefined,
   };
 }

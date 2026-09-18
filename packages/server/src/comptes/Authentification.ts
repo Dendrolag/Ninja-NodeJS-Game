@@ -566,17 +566,20 @@ function sessionAbsente<T>(): ReponseDeCompte<T> {
 /**
  * Les statistiques d'un compte, a la forme du contrat.
  *
- * Un meilleur score absent n'est pas ecrit: le contrat le declare facultatif, et un
- * champ absent n'est pas un champ qui vaut undefined.
+ * Un meilleur score ou un record absent n'est pas ecrit: le contrat les declare facultatifs,
+ * et un champ absent n'est pas un champ qui vaut undefined.
  */
 function statistiquesDuProfil(
   statistiques: StatistiquesEnregistrees,
 ): ProfilDuCompte['statistiques'] {
-  const { partiesJouees, victoires, meilleurScore } = statistiques;
+  const { partiesJouees, victoires, meilleurScore, recordMassacreSolo } = statistiques;
 
-  return meilleurScore === undefined
-    ? { partiesJouees, victoires }
-    : { partiesJouees, victoires, meilleurScore };
+  return {
+    partiesJouees,
+    victoires,
+    ...(meilleurScore === undefined ? {} : { meilleurScore }),
+    ...(recordMassacreSolo === undefined ? {} : { recordMassacreSolo }),
+  };
 }
 
 /** Une ligne de l'historique, a la forme du contrat. */

@@ -1681,6 +1681,18 @@ function envoyer(socket: SocketTypee, notification: Notification): void {
     case 'vieDeTraqueurPerdue':
       socket.emit('vieDeTraqueurPerdue', notification.charge);
       return;
+
+    case 'coupDeKatana':
+      socket.emit('coupDeKatana', notification.charge);
+      return;
+
+    case 'joueurTranche':
+      socket.emit('joueurTranche', notification.charge);
+      return;
+
+    case 'carteVidee':
+      socket.emit('carteVidee', notification.charge);
+      return;
   }
 }
 

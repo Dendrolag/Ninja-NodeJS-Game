@@ -91,6 +91,20 @@ export {
 
 export { malusEnEquipe, partDuJoueur, perteEnEquipe } from './equipes.js';
 
+export {
+  CONE_DU_KATANA,
+  GUERRIER_DE_DEPART,
+  agirEnMassacre,
+  frapper,
+  guerrierDe,
+  lancerLeMassacre,
+  massacreDecide,
+  multiplicateurDuCombo,
+  perteEnMassacre,
+  pointsEnMassacre,
+  tuerUnJoueur,
+} from './massacre.js';
+
 export type {
   BonusPose,
   BonusRamasse,
@@ -99,17 +113,23 @@ export type {
   BotOrdinaire,
   CaptureDeJoueur,
   CaptureParBotNoir,
+  CarteVidee,
+  CoupDeKatana,
   DestructionDeBotNoir,
   Entite,
   EtatDeChasse,
+  EtatDeMassacre,
   EtatPartie,
   EtatTactiqueDuJoueur,
   EvenementPartie,
+  GuerrierEnMassacre,
   HistoriqueCapture,
   IdentifiantEntite,
   Joueur,
+  JoueurTranche,
   MalusPose,
   MalusRamasse,
+  MortParLeKatana,
   ObjetRamassable,
   OptionsAjoutBot,
   OptionsAjoutJoueur,
@@ -159,10 +179,13 @@ export { mettreEnPause, reprendre } from './pause.js';
 
 export { avancerUneEcheance, intervalleFixe, intervalleVariable } from './planification.js';
 
+export type { GeometrieDuCone } from './tactique.js';
 export {
+  CONE_TACTIQUE,
   ETAT_TACTIQUE_DE_DEPART,
   agirEnTactique,
   dansLeCone,
+  geometrieDuCone,
   etatTactiqueDe,
   recharger,
   tirer,

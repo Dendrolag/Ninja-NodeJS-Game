@@ -14,7 +14,6 @@
  */
 
 import type { Mode, Visibilite } from '@neon-ninja/shared';
-import { MODES } from '@neon-ninja/shared';
 
 import type { EtatClient } from '../../etat.js';
 import { monterChampPseudo } from '../composants/champPseudo.js';
@@ -23,7 +22,7 @@ import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import type { Glyphe } from '../icones.js';
 import { icone } from '../icones.js';
 import { NOMS_DES_MODES } from '../modeles/cartes.js';
-import { MODE_PAR_DEFAUT, modeleCreation } from '../modeles/creation.js';
+import { MODES_PROPOSES, MODE_PAR_DEFAUT, modeleCreation } from '../modeles/creation.js';
 import type { LigneRecapitulatif } from '../modeles/salon.js';
 import type { ContexteEcran, EcranAffiche } from './types.js';
 
@@ -49,6 +48,11 @@ const TUILES_DES_MODES: Readonly<
     texte:
       'Des traqueurs cherchent les vrais joueurs parmi les faux ninjas : visez juste, trois vies. Proie, cachez-vous, mais bougez pour marquer.',
     glyphe: 'viseur',
+  },
+  massacre: {
+    texte:
+      'Seul ou à plusieurs, tranchez tous les ninjas au katana avant la fin du temps. Enchaînez les morts pour multiplier vos points.',
+    glyphe: 'katana',
   },
 };
 
@@ -96,7 +100,7 @@ export function monterCreation(contexte: ContexteEcran): EcranAffiche {
   // Les reglages que le mode retire du jeu ne se proposent pas (etape 7.3).
   formulaire.adapterAuMode(mode);
 
-  const choixDeMode = MODES.map((valeur) => {
+  const choixDeMode = MODES_PROPOSES.map((valeur) => {
     const saisie = creer(doc, 'input', {
       attributs: { type: 'radio', name: 'mode', value: valeur },
     });
@@ -294,7 +298,7 @@ export function monterCreation(contexte: ContexteEcran): EcranAffiche {
       visibilite = cible.value === 'privee' ? 'privee' : 'publique';
       rendre();
     } else if (cible.name === 'mode') {
-      mode = MODES.find((candidat) => candidat === cible.value) ?? MODE_PAR_DEFAUT;
+      mode = MODES_PROPOSES.find((candidat) => candidat === cible.value) ?? MODE_PAR_DEFAUT;
       formulaire.adapterAuMode(mode);
       rendre();
     }

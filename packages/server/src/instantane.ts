@@ -28,11 +28,14 @@ import type {
   CaptureParBotNoirSubie,
   CaptureReussie,
   CaptureSubie,
+  CarteVideeVue,
   CompteDeSession,
+  CoupDeKatanaVu,
   EntiteVue,
   InfosSalon,
   InstantanePartie,
   JoueurDuSalon,
+  JoueurTrancheVu,
   LigneClassement,
   MalusRamasseParMoi,
   MalusSubi,
@@ -60,6 +63,7 @@ import {
   calculerScores,
   etatTactiqueDe,
   evaluerFinDePartie,
+  guerrierDe,
   toutesLesEntites,
 } from '@neon-ninja/sim';
 
@@ -116,6 +120,24 @@ function armeDuTraqueur(etat: EtatPartie, id: IdentifiantEntite): TactiqueVue | 
     : { orientation: traqueur.orientation, charges: traqueur.vies, avantProchaineChargeMs: 0 };
 }
 
+/**
+ * L'arme d'un joueur du Massacre, telle qu'elle part sur le reseau (etape 7.4).
+ *
+ * ELLE VOYAGE DANS L'ETAT TACTIQUE D'UN JOUEUR, comme celle d'un traqueur de la Chasse: le
+ * flux d'etat ne change pas de forme. L'orientation est celle ou il frappe; une charge si
+ * son coup est pret, zero sinon, et l'attente avant le prochain. Le combo n'y figure pas: il
+ * se lit dans les coups de katana, qui disent au joueur ou il en est.
+ */
+function armeDuGuerrier(etat: EtatPartie, id: IdentifiantEntite): TactiqueVue {
+  const guerrier = guerrierDe(etat, id);
+
+  return {
+    orientation: guerrier.orientation,
+    charges: guerrier.avantProchainCoupMs > 0 ? 0 : 1,
+    avantProchaineChargeMs: guerrier.avantProchainCoupMs,
+  };
+}
+
 /** L'etat tactique d'un joueur, tel qu'il part sur le reseau. */
 function tactiqueVue(tactique: EtatTactiqueDuJoueur): TactiqueVue {
   return {
@@ -130,7 +152,8 @@ function tactiqueVue(tactique: EtatTactiqueDuJoueur): TactiqueVue {
  *
  * Dans une partie Tactique, un joueur montre en plus ou il vise et ce qu'il lui reste
  * de charges (etape 7.1); dans une Chasse, un traqueur montre ou il vise et ses vies
- * (etape 7.3). Ailleurs, rien de ces modes ne part.
+ * (etape 7.3); dans un Massacre, chaque joueur montre ou il frappe et si son coup est pret
+ * (etape 7.4). Ailleurs, rien de ces modes ne part.
  */
 function entiteVue(etat: EtatPartie, entite: Joueur | Bot): EntiteVue {
   const commun = {
@@ -159,6 +182,10 @@ function entiteVue(etat: EtatPartie, entite: Joueur | Bot): EntiteVue {
 function armeVue(etat: EtatPartie, id: IdentifiantEntite): { readonly tactique?: TactiqueVue } {
   if (etat.mode === 'tactique') {
     return { tactique: tactiqueVue(etatTactiqueDe(etat, id)) };
+  }
+
+  if (etat.mode === 'massacre') {
+    return { tactique: armeDuGuerrier(etat, id) };
   }
 
   const arme = etat.mode === 'chasse' ? armeDuTraqueur(etat, id) : undefined;
@@ -322,6 +349,21 @@ export type Notification =
       readonly nom: 'vieDeTraqueurPerdue';
       readonly pour: IdentifiantEntite;
       readonly charge: VieDeTraqueurPerdueVue;
+    }
+  | {
+      readonly nom: 'coupDeKatana';
+      readonly pour: IdentifiantEntite;
+      readonly charge: CoupDeKatanaVu;
+    }
+  | {
+      readonly nom: 'joueurTranche';
+      readonly pour: IdentifiantEntite;
+      readonly charge: JoueurTrancheVu;
+    }
+  | {
+      readonly nom: 'carteVidee';
+      readonly pour: IdentifiantEntite;
+      readonly charge: CarteVideeVue;
     };
 
 /**
@@ -402,7 +444,80 @@ function notificationsDUnFait(
           charge: { viesRestantes: evenement.viesRestantes },
         },
       ];
+
+    case 'coupDeKatana': {
+      // Un coup se voit de toute la partie, et le sang qu'il fait couler aussi.
+      const charge: CoupDeKatanaVu = {
+        frappeur: evenement.joueur,
+        x: evenement.position.x,
+        y: evenement.position.y,
+        orientation: evenement.orientation,
+        morts: evenement.morts.map((mort) => ({
+          id: mort.bot,
+          x: mort.position.x,
+          y: mort.position.y,
+          noir: mort.noir,
+          points: mort.points,
+        })),
+        combo: evenement.combo,
+        multiplicateur: evenement.multiplicateur,
+      };
+
+      return aTous(etat, 'coupDeKatana', charge);
+    }
+
+    case 'joueurTranche':
+      return joueurTranche(etat, evenement);
+
+    case 'carteVidee':
+      return aTous(etat, 'carteVidee', {
+        bonus: evenement.bonus,
+        tempsRestantMs: evenement.tempsRestantMs,
+      });
   }
+}
+
+/** La meme notification, pour chaque joueur present. */
+function aTous<N extends 'coupDeKatana' | 'carteVidee'>(
+  etat: EtatPartie,
+  nom: N,
+  charge: Extract<Notification, { nom: N }>['charge'],
+): readonly Notification[] {
+  return Object.keys(etat.joueurs).map((pour) => ({ nom, pour, charge }) as Notification);
+}
+
+/**
+ * Un joueur tue par un autre, dans le Massacre: une notification pour chaque joueur
+ * present, parce que tout le monde voit le sang. Omise si l'un des deux a quitte la partie
+ * dans le meme battement, plutot que d'inventer un pseudo vide.
+ */
+function joueurTranche(
+  etat: EtatPartie,
+  evenement: Extract<EvenementPartie, { type: 'joueurTranche' }>,
+): readonly Notification[] {
+  const attaquant = etat.joueurs[evenement.attaquant];
+  const victime = etat.joueurs[evenement.victime];
+
+  if (attaquant === undefined || victime === undefined) {
+    return [];
+  }
+
+  const charge: JoueurTrancheVu = {
+    attaquant: attaquant.id,
+    attaquantPseudo: attaquant.pseudo,
+    victime: victime.id,
+    victimePseudo: victime.pseudo,
+    x: evenement.position.x,
+    y: evenement.position.y,
+    orientation: evenement.orientation,
+    pointsVoles: evenement.pointsVoles,
+  };
+
+  return Object.keys(etat.joueurs).map((pour): Notification => ({
+    nom: 'joueurTranche',
+    pour,
+    charge,
+  }));
 }
 
 /**
