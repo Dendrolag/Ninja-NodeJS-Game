@@ -35,6 +35,7 @@ import { prechargerLaPartie } from './rendu/pixi.js';
 import { creerReseauSocketIo } from './reseauSocketIo.js';
 import type { LecteurDeSons } from './sons/lecteur.js';
 import { creerLecteurDeSons } from './sons/lecteur.js';
+import { garderEveilleDansLeNavigateur } from './eveil.js';
 
 /** L'origine du serveur de jeu, ecrite par l'empaqueteur. Vide: celle de la page. */
 declare const __SERVEUR_DE_JEU__: string;
@@ -128,6 +129,9 @@ monterApplication({
 
 // Le lien s'ouvre une fois l'application montee: elle montre deja qu'il s'etablit.
 client.ouvrir();
+
+// Le serveur de jeu reste eveille tant que la page est ouverte et visible (etape 5.5).
+garderEveilleDansLeNavigateur(configuration.url);
 
 /**
  * Debloque le son au premier geste du joueur, et a chaque geste suivant.
