@@ -54,7 +54,8 @@ test('un lien perdu sur l accueil se retablit sans recharger la page', async ({ 
   await jeu.rallumer();
 
   // Un essai toutes les trois secondes: le lien revient dans ce delai.
-  await expect(lien).toBeHidden({ timeout: 10_000 });
+  // Le lien revenu se dit, au vert, depuis l'etape 5.5.
+  await expect(lien).toHaveText('Connecté au serveur', { timeout: 10_000 });
   await expect(page.getByPlaceholder('Votre pseudo')).toHaveValue('Alice');
   await expect(partieRapide).toBeEnabled();
   expect(await page.evaluate(() => Reflect.get(globalThis, 'temoinDeLaPage'))).toBe(

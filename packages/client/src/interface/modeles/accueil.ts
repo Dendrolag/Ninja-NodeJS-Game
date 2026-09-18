@@ -38,7 +38,10 @@ import { modeleDuLien } from './lien.js';
 /** Ce que l'accueil affiche. */
 export interface ModeleAccueil {
   readonly lien: EtatDuLien;
-  /** Ce que l'accueil dit du lien. Vide quand il est etabli. */
+  /**
+   * Ce que l'accueil dit du lien, y compris quand il est etabli (etape 5.5): le joueur
+   * doit voir d'un coup d'oeil que le serveur repond.
+   */
   readonly texteDuLien: string;
   /** Pourquoi le lien est refuse, tant qu'il l'est. */
   readonly motifDuLien: string | undefined;
@@ -63,6 +66,9 @@ export interface ModeleAccueil {
   /** Le lien refuse presentait une session: on peut y renoncer et jouer en invite. */
   readonly peutContinuerEnInvite: boolean;
 }
+
+/** Ce que l'accueil dit d'un lien etabli. */
+export const TEXTE_LIEN_ETABLI = 'Connecté au serveur';
 
 /** Ce que l'accueil dit a un joueur dont la session gardee a expire. */
 export const AVIS_SESSION_EXPIREE =
@@ -89,7 +95,7 @@ export function modeleAccueil(etat: EtatClient, saisie: string): ModeleAccueil {
 
   return {
     lien: lien.lien,
-    texteDuLien: lien.texte,
+    texteDuLien: lien.lien === 'etabli' ? TEXTE_LIEN_ETABLI : lien.texte,
     motifDuLien: lien.motif,
     pseudoRequis,
     pseudoDuCompte: session.nature === 'compte' ? session.progression.pseudo : undefined,

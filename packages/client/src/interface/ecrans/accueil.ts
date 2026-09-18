@@ -15,12 +15,15 @@
  * information qu'il garderait pour lui serait perdue.
  */
 
+import { CARTES, MODES } from '@neon-ninja/shared';
+
 import type { EtatClient } from '../../etat.js';
 import { monterChampPseudo } from '../composants/champPseudo.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import type { Glyphe } from '../icones.js';
 import { icone } from '../icones.js';
 import { modeleAccueil } from '../modeles/accueil.js';
+import type { EtatDuLien } from '../modeles/lien.js';
 import type { ContexteEcran, EcranAffiche } from './types.js';
 
 /** Les trois regles du jeu, telles que l'accueil les resume. */
@@ -48,6 +51,11 @@ const REGLES: readonly {
       'Ils chassent les joueurs en cours de partie. Avec le bonus d’invincibilité, c’est vous qui les détruisez.',
   },
 ];
+
+/** Le lien est-il en train de s'etablir, de sorte que le joueur n'a qu'a attendre. */
+function lienEnAttente(lien: EtatDuLien): boolean {
+  return lien === 'enCours' || lien === 'reveil' || lien === 'retablissement' || lien === 'retour';
+}
 
 /** Monte l'ecran d'accueil. */
 export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
@@ -122,7 +130,11 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
           'p',
           { classe: 'surtitre' },
           creer(doc, 'span', { classe: 'point-vivant' }),
-          creer(doc, 'span', { texte: 'Mode classique · 3 cartes' }),
+          // Compte depuis le contrat: il disait encore « Mode classique » apres l'ajout
+          // de quatre modes (etape 5.5).
+          creer(doc, 'span', {
+            texte: `${String(MODES.length)} modes · ${String(Object.keys(CARTES).length)} cartes`,
+          }),
         ),
         creer(
           doc,
@@ -136,6 +148,16 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
           texte:
             'Ralliez les faux ninjas, volez les troupeaux des autres joueurs, et gardez le plus grand jusqu’au bout.',
         }),
+        // L'etat du lien, en haut, visible sans defiler sur telephone (etape 5.5).
+        creer(
+          doc,
+          'div',
+          { classe: 'accueil-etat' },
+          lien,
+          recharger,
+          reessayer,
+          continuerEnInvite,
+        ),
         avis,
         ligneDuCompte,
         formulaire,
@@ -158,15 +180,6 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
               client.naviguer('parties');
             },
           ),
-        ),
-        creer(
-          doc,
-          'div',
-          { classe: 'accueil-etat' },
-          lien,
-          recharger,
-          reessayer,
-          continuerEnInvite,
         ),
       ),
       creer(doc, 'span', {
@@ -232,8 +245,12 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
 
       const texteDuLien = modele.enAttente ? 'Entrée dans une partie…' : modele.texteDuLien;
 
+      // L'etat du lien se voit franchement (etape 5.5): une pastille coloree selon
+      // l'etat, qui tourne tant qu'on attend, et le bouton de jeu qui attend avec elle.
       ecrireTexte(lien, texteDuLien);
       montrer(lien, texteDuLien !== '');
+      lien.dataset['lien'] = modele.enAttente ? 'entree' : modele.lien;
+      partieRapide.toggleAttribute('data-attente', lienEnAttente(modele.lien));
       montrer(recharger, modele.peutRecharger);
       montrer(reessayer, modele.peutReessayer);
       montrer(continuerEnInvite, modele.peutContinuerEnInvite);

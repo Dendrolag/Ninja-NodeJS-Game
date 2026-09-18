@@ -136,6 +136,25 @@ describe('l accueil', () => {
     expect(obligatoire(hote, '.accueil-lien').textContent).toBe('Connexion au serveur…');
   });
 
+  it('montre franchement ou en est la connexion, et quand elle est etablie (etape 5.5)', () => {
+    // La connexion etait trop discrete: un petit texte gris, rien une fois etablie.
+    const etat = obligatoire(hote, '.accueil-lien');
+
+    expect(etat.dataset['lien']).toBe('enCours');
+    expect(boutonObligatoire(hote, 'Partie rapide').hasAttribute('data-attente')).toBe(true);
+
+    reseau.simulerConnexion();
+
+    expect(etat.dataset['lien']).toBe('etabli');
+    expect(etat.textContent).toBe('Connecté au serveur');
+    expect(etat.hidden).toBe(false);
+    expect(boutonObligatoire(hote, 'Partie rapide').hasAttribute('data-attente')).toBe(false);
+  });
+
+  it('annonce les cinq modes, et plus seulement le Classique (etape 5.5)', () => {
+    expect(obligatoire(hote, '.surtitre').textContent).toBe('5 modes · 3 cartes');
+  });
+
   it('refuse d envoyer un pseudo invalide, et dit pourquoi', () => {
     reseau.simulerConnexion();
     saisir(champPseudo(), 'Al<ice>');

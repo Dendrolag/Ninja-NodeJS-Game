@@ -332,10 +332,89 @@
   display: none;
 }
 
+/*
+ * L'etat du lien, en pastille (etape 5.5): il etait trop discret, un petit texte gris
+ * qui ne disait rien une fois le lien etabli. La couleur dit l'etat, et un anneau
+ * tourne tant qu'on attend le serveur.
+ */
 .accueil-lien {
-  color: var(--texte-tertiaire);
+  --couleur-lien: var(--or);
+
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 8px 14px;
+  border: 1px solid color-mix(in srgb, var(--couleur-lien) 40%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--couleur-lien) 10%, transparent);
+  color: var(--couleur-lien);
   font-family: var(--police-donnees);
-  font-size: 12px;
+  font-size: 13px;
+}
+
+.accueil-lien::before {
+  content: '';
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--couleur-lien);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: rotation 0.9s linear infinite;
+}
+
+.accueil-lien[data-lien='etabli'] {
+  --couleur-lien: var(--vert);
+}
+
+.accueil-lien[data-lien='etabli']::before {
+  width: 8px;
+  height: 8px;
+  border: 0;
+  background: var(--couleur-lien);
+  box-shadow: 0 0 8px var(--couleur-lien);
+  animation: none;
+}
+
+.accueil-lien[data-lien='entree'] {
+  --couleur-lien: var(--cyan);
+}
+
+.accueil-lien[data-lien='perdu'],
+.accueil-lien[data-lien='refuse'] {
+  --couleur-lien: var(--rose);
+}
+
+.accueil-lien[data-lien='perdu']::before,
+.accueil-lien[data-lien='refuse']::before {
+  width: 8px;
+  height: 8px;
+  border: 0;
+  background: var(--couleur-lien);
+  animation: none;
+}
+
+/* Le bouton de jeu attend le serveur avec la pastille. */
+.bouton[data-attente] {
+  position: relative;
+}
+
+.bouton[data-attente]::after {
+  content: '';
+  width: 14px;
+  height: 14px;
+  margin-left: 4px;
+  border: 2px solid currentcolor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: rotation 0.9s linear infinite;
+}
+
+@keyframes rotation {
+  to {
+    transform: rotate(1turn);
+  }
 }
 
 .accueil-compte {

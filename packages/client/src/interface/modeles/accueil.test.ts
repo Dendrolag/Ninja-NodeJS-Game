@@ -69,7 +69,8 @@ describe('modeleAccueil', () => {
   it('laisse jouer avec un pseudo valide', () => {
     expect(modeleAccueil(CONNECTE, 'Alice')).toEqual({
       lien: 'etabli',
-      texteDuLien: '',
+      // Dit aussi quand tout va bien (etape 5.5).
+      texteDuLien: 'Connecté au serveur',
       motifDuLien: undefined,
       pseudoRequis: true,
       pseudoDuCompte: undefined,
