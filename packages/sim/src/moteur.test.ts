@@ -235,18 +235,31 @@ describe('deplacement des joueurs', () => {
     expect(joueurDe(etat, 'j1').direction).toBe('sud');
   });
 
-  it('immobilise le joueur qui ne declare pas de mouvement', () => {
+  it('arrete le joueur qui ne declare pas de mouvement, tourne vers ou il allait', () => {
+    // Le legacy ignorait un message sans mouvement (test de caracterisation « ignore un
+    // message de deplacement qui ne declare pas de mouvement »): la direction ne change pas.
+    const enMarche = tick(partieAvecUnJoueur(), vers({ x: 0, y: 1 }), BATTEMENT_MS);
+    const position = joueurDe(enMarche, 'j1').position;
     const etat = tick(
-      partieAvecUnJoueur(),
+      enMarche,
       { j1: { deplacement: { x: 1, y: 0 }, enMouvement: false } },
       BATTEMENT_MS,
     );
 
-    expect(joueurDe(etat, 'j1').position).toEqual({ x: 500, y: 500 });
-    expect(joueurDe(etat, 'j1').direction).toBe('immobile');
+    expect(joueurDe(etat, 'j1').position).toEqual(position);
+    expect(joueurDe(etat, 'j1').direction).toBe('sud');
   });
 
-  it('immobilise le joueur sans entree du tout', () => {
+  it('arrete le joueur sans entree du tout, tourne vers ou il allait', () => {
+    const enMarche = tick(partieAvecUnJoueur(), vers({ x: -1, y: 0 }), BATTEMENT_MS);
+    const position = joueurDe(enMarche, 'j1').position;
+    const etat = tick(enMarche, {}, BATTEMENT_MS);
+
+    expect(joueurDe(etat, 'j1').position).toEqual(position);
+    expect(joueurDe(etat, 'j1').direction).toBe('ouest');
+  });
+
+  it('laisse immobile un joueur qui n a encore jamais bouge', () => {
     const etat = tick(partieAvecUnJoueur(), {}, BATTEMENT_MS);
 
     expect(joueurDe(etat, 'j1').position).toEqual({ x: 500, y: 500 });

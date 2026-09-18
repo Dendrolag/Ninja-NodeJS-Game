@@ -71,6 +71,10 @@ Repris du handoff 7.3, inchangé: un traqueur éliminé ne voit que les traqueur
 - Vérifié ensuite depuis la machine de développement: `https://neon-ninja.onrender.com/sante` rend la version `b1a9e640a476886eb4e439fe84586f04d84469bf`.
 - Le commit de ce handoff ne touche que la documentation: sa mise en ligne doit s'arrêter d'elle-même, la production restant sur `b1a9e64`.
 
+## Après l'étape: correctif du 18 septembre 2026
+
+Signalé par le porteur du projet: le personnage contrôlé se retournait face à l'écran dès qu'on s'arrêtait. Corrigé: le moteur garde la dernière direction à l'arrêt, comme le jeu d'origine, et la page montre alors la première image du personnage tourné (`packages/sim/src/moteur.ts`, `packages/client/src/rendu/scene.ts`, tests du moteur, du Tactique et de la scène; entrée au journal de conception). L'empreinte des parties Classique de référence change pour cette seule raison: la direction fait partie de l'état; captures, prises par Black Ninja, bonus et malus identiques. Nouvelles empreintes du jeu: `49aac682…9121` (150 bots, 12 joueurs), `cc2954ee…7b7a` (50 bots), `f3f388d2…360b` (300 bots sans mur), `a5329da1…7226` (150 bots, 2 joueurs).
+
 ## Prochaine action exacte
 
 Dans une conversation neuve, sur `master`: demander au porteur du projet la fonctionnalité reportée suivante (Battle Royale, Chaos, pass de saison, skins, clans), trancher ses règles avec lui, puis rédiger sa fiche selon le cas de repli du PROTOCOLE et la commiter avant de l'exécuter.

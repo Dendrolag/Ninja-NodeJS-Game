@@ -18,6 +18,7 @@ import {
   RACINE_RESSOURCES,
   REGLAGES_PAR_DEFAUT,
   TACTIQUE,
+  cheminNinja,
   cheminObjet,
 } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
@@ -135,6 +136,22 @@ describe('construireScene', () => {
 
     expect(scene.entites[0]?.x).toBe(42);
     expect(scene.entites[0]?.y).toBe(84);
+  });
+
+  it('montre un personnage arrete tourne vers sa direction, sur sa premiere image', () => {
+    // A l'arret, le flux garde la derniere direction: le sprite y reste tourne, sans
+    // marcher sur place, comme getFrameKey du jeu d'origine.
+    const partie = vue([joueur('moi', 100, 100)]);
+    const enMarche: VueLissee = {
+      vue: partie,
+      entites: [{ entite: partie.entites[0] as EntiteVue, x: 100, y: 100, enMouvement: true }],
+    };
+    const texture = (etatDeLaVue: VueLissee, instant: number): string | undefined =>
+      construireScene(etatEnJeu('moi'), etatDeLaVue, instant).entites[0]?.texture;
+
+    expect(texture(lissee(partie), 0)).toBe(`${RACINE_RESSOURCES}/${cheminNinja('sud', 1)}`);
+    expect(texture(lissee(partie), 1_000)).toBe(`${RACINE_RESSOURCES}/${cheminNinja('sud', 1)}`);
+    expect(new Set([0, 125, 250, 375].map((instant) => texture(enMarche, instant))).size).toBe(2);
   });
 
   it('teinte chaque sprite de la couleur de son proprietaire', () => {

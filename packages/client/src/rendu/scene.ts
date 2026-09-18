@@ -345,7 +345,9 @@ export function construireScene(
 
     entites.push({
       id: entite.id,
-      texture: adresse(cheminNinja(entite.direction, image)),
+      // A l'arret, un personnage garde sa direction et sa premiere image, sans marcher
+      // sur place: c'est getFrameKey du jeu d'origine (client.js:589).
+      texture: adresse(cheminNinja(entite.direction, enMouvement ? image : 1)),
       x,
       y,
       taille: TAILLE_SPRITE,

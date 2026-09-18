@@ -423,8 +423,16 @@ function avancerJoueur(
  * centre colle au bord. C'est deja ce que le legacy faisait reellement, son
  * bornage n'ayant jamais rien eu a corriger.
  *
- * La direction suit le deplacement effectivement realise: un joueur bloque
- * regarde devant lui, comme dans le legacy.
+ * La direction suit le deplacement effectivement realise. Un joueur qui essaie
+ * d'avancer sans pouvoir bouger, coince contre un mur, devient immobile, comme dans
+ * le legacy (server.js:2670). UN JOUEUR ARRETE, LUI, GARDE SA DERNIERE DIRECTION:
+ * le client d'origine n'envoyait un deplacement que touche enfoncee, et le serveur
+ * ignorait un message sans mouvement, si bien que le personnage restait tourne vers
+ * ou il allait. Le portage le remettait immobile a chaque battement sans
+ * deplacement, et il se retournait face a l'ecran des qu'on lachait la touche:
+ * corrige le 18 septembre 2026, a la demande du porteur du projet, et fige par le
+ * test de caracterisation « ignore un message de deplacement qui ne declare pas de
+ * mouvement ».
  *
  * LA DISTANCE NE DEPEND QUE DE dt. Elle vaut la vitesse du joueur multipliee par
  * le temps ecoule, et rien d'autre. Ni la longueur du vecteur recu, ni le nombre
@@ -438,7 +446,7 @@ function deplacerJoueur(
   dtMs: number,
 ): Joueur {
   if (entree === undefined || !entree.enMouvement || !intentionExploitable(entree.deplacement)) {
-    return { ...joueur, direction: 'immobile' };
+    return joueur;
   }
 
   const distance = (VITESSES.JOUEUR_PX_PAR_SECONDE * multiplicateurDeVitesse(joueur) * dtMs) / 1000;

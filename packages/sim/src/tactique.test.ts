@@ -360,7 +360,8 @@ describe('le mode Tactique dans le battement', () => {
     const arrete = tick(enMarche, { alice: IMMOBILE }, 50);
 
     expect(etatTactiqueDe(enMarche, 'alice').orientation).toBe('nord');
-    expect(arrete.joueurs['alice']?.direction).toBe('immobile');
+    // A l'arret, le joueur reste tourne vers ou il allait, comme dans le legacy.
+    expect(arrete.joueurs['alice']?.direction).toBe('nord');
     expect(etatTactiqueDe(arrete, 'alice').orientation).toBe('nord');
   });
 
