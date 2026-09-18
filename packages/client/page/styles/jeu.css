@@ -46,37 +46,65 @@
   text-transform: uppercase;
 }
 
+/* -- La barre du haut ------------------------------------------------------ */
+
+/*
+ * Un seul bandeau translucide porte le HUD permanent (etape 5.5, a la demande du
+ * porteur du projet): le classement a gauche, le temps au centre, les boutons a
+ * droite. Avant, trois panneaux separes, plus opaques; sur telephone, le temps et
+ * le classement tombaient sous les boutons. Le fond est leger, pour laisser le jeu
+ * lisible dessous, et la camera descend sous la barre au bord de la carte.
+ */
+.ecran-jeu {
+  --hauteur-barre: 56px;
+  --debut-barre: env(safe-area-inset-top, 0px);
+  --fond-barre: rgba(7, 12, 20, 0.42);
+}
+
+.jeu-barre {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: calc(var(--debut-barre) + var(--hauteur-barre));
+  border-bottom: 1px solid var(--bordure);
+  background: var(--fond-barre);
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+
 /* -- Actions ------------------------------------------------------------- */
 
 .jeu-actions {
   position: absolute;
-  top: max(14px, env(safe-area-inset-top));
-  right: max(14px, env(safe-area-inset-right));
+  top: var(--debut-barre);
+  right: max(12px, env(safe-area-inset-right));
   z-index: 5;
   display: flex;
   align-items: center;
   gap: 8px;
+  height: var(--hauteur-barre);
 }
 
 .jeu-actions .bouton {
-  min-height: 42px;
+  min-height: 38px;
   padding: 0 14px;
   font-size: 12.5px;
-  backdrop-filter: blur(8px);
 }
 
 .jeu-actions .bouton-secondaire,
 .jeu-actions .bouton-icone {
-  background: var(--fond-verre);
-  backdrop-filter: blur(8px);
+  min-height: 38px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* A la hauteur des autres boutons de la barre. */
+.jeu-actions .bouton-icone:not(.jeu-localiser) {
+  width: 38px;
+  height: 38px;
 }
 
 .jeu-rappel {
-  padding: 10px 12px;
-  border: 1px solid var(--bordure);
-  border-radius: 10px;
-  background: var(--fond-verre);
-  backdrop-filter: blur(8px);
   color: var(--texte-tertiaire);
   font-family: var(--police-donnees);
   font-size: 11px;
@@ -151,16 +179,16 @@
 
 .hud-temps {
   position: absolute;
-  top: 14px;
+  top: var(--debut-barre);
   left: 50%;
-  padding: 8px 22px 10px;
-  border: 1px solid rgba(45, 230, 224, 0.3);
-  border-radius: 14px;
-  background: var(--fond-verre);
-  backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: var(--hauteur-barre);
+  padding: 0 12px;
   color: var(--cyan);
   font-family: var(--police-titre);
-  font-size: 30px;
+  font-size: 26px;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   line-height: 1;
@@ -171,10 +199,10 @@
 .hud-temps::before {
   content: 'Temps restant';
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
   color: var(--texte-tertiaire);
   font-family: var(--police-donnees);
-  font-size: 9.5px;
+  font-size: 8.5px;
   font-weight: 400;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -185,7 +213,6 @@
 }
 
 .hud-temps.urgence {
-  border-color: rgba(255, 46, 126, 0.5);
   color: var(--rose);
   animation: pulsation 1s ease-in-out infinite;
 }
@@ -225,21 +252,31 @@
   transform: translate(-50%, -50%);
 }
 
+/*
+ * Le classement commence dans la barre: seul, notre ligne y tient, centree. A
+ * plusieurs, la liste descend sous la barre, sur le meme fond, que le degrade ne pose
+ * que sous elle pour ne pas le doubler dedans.
+ */
 .hud-classement {
+  --hauteur-ligne: 28px;
+
   position: absolute;
-  top: 14px;
-  left: 14px;
+  top: var(--debut-barre);
+  left: max(8px, env(safe-area-inset-left));
   display: flex;
   flex-direction: column;
   gap: 2px;
   width: 220px;
   margin: 0;
-  padding: 8px;
-  border: 1px solid var(--bordure);
-  border-radius: 14px;
-  background: var(--fond-verre);
-  backdrop-filter: blur(8px);
+  padding: calc((var(--hauteur-barre) - var(--hauteur-ligne)) / 2) 6px;
+  border-radius: 0 0 14px 14px;
+  background: linear-gradient(
+    to bottom,
+    transparent var(--hauteur-barre),
+    var(--fond-barre) var(--hauteur-barre)
+  );
   list-style: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 .hud-classement:empty {
@@ -248,9 +285,11 @@
 
 .hud-ligne {
   display: flex;
+  flex: none;
   align-items: center;
   gap: 8px;
-  padding: 5px 8px;
+  height: var(--hauteur-ligne);
+  padding: 0 8px;
   border-radius: 8px;
   font-size: 13px;
 }
@@ -502,7 +541,7 @@
   --couleur-camp: var(--cyan);
 
   position: absolute;
-  top: 70px;
+  top: calc(var(--debut-barre) + var(--hauteur-barre) + 8px);
   right: 14px;
   display: grid;
   justify-items: end;
@@ -540,7 +579,7 @@
   --couleur-combo: var(--texte-secondaire);
 
   position: absolute;
-  top: 70px;
+  top: calc(var(--debut-barre) + var(--hauteur-barre) + 8px);
   right: 14px;
   display: grid;
   justify-items: end;
@@ -677,20 +716,32 @@
 /* -- Petits ecrans ------------------------------------------------------- */
 
 @media (max-width: 640px) {
-  .hud-temps {
-    top: 66px;
-    padding: 6px 16px 8px;
-    font-size: 22px;
+  .ecran-jeu {
+    --hauteur-barre: 48px;
   }
 
-  /*
-   * Sous le temps restant, que la rangee des boutons pousse a 66 pixels du haut et
-   * qui en mesure une cinquantaine. Laisse en haut a gauche, le classement
-   * descendait sur lui des le deuxieme joueur (recette de l'etape 5.4).
-   */
+  .hud-temps {
+    padding: 0 6px;
+    font-size: 19px;
+  }
+
+  .hud-temps::before {
+    margin-bottom: 2px;
+    font-size: 7px;
+    letter-spacing: 0.12em;
+  }
+
+  /* Dans la barre, a gauche du temps, qui garde le centre. */
   .hud-classement {
-    top: 128px;
-    width: 150px;
+    --hauteur-ligne: 26px;
+
+    width: min(130px, calc(50% - 50px));
+    font-size: 12px;
+  }
+
+  .hud-ligne {
+    gap: 6px;
+    padding: 0 6px;
     font-size: 12px;
   }
 
@@ -699,9 +750,7 @@
     transform-origin: bottom right;
   }
 
-  /* A droite, a la hauteur du classement, qui occupe la gauche. */
   .hud-chasse {
-    top: 128px;
     padding: 6px 12px;
   }
 
@@ -710,7 +759,6 @@
   }
 
   .hud-massacre {
-    top: 128px;
     padding: 6px 12px;
   }
 
@@ -728,12 +776,21 @@
     white-space: nowrap;
   }
 
-  .jeu-actions .bouton {
-    width: 42px;
+  .jeu-actions {
+    gap: 6px;
+  }
+
+  /* Pas le bouton de localisation, rond et pose sous le pouce. */
+  .jeu-actions .bouton,
+  .jeu-actions .bouton-icone:not(.jeu-localiser) {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    min-height: 36px;
     padding: 0;
   }
 
   .application[data-ecran='jeu'] .annonces {
-    top: 130px;
+    top: calc(env(safe-area-inset-top, 0px) + 60px);
   }
 }

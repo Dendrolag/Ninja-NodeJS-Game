@@ -33,6 +33,12 @@ export interface Camera {
 export interface TailleEcran {
   readonly largeur: number;
   readonly hauteur: number;
+  /**
+   * Hauteur couverte en haut de l'ecran par la barre du HUD, en pixels d'ecran
+   * (etape 5.5). Collee au bord, la camera laisserait le haut de la carte dessous:
+   * elle descend d'autant pour le montrer. Aucune par defaut.
+   */
+  readonly margeHaute?: number;
 }
 
 /**
@@ -72,6 +78,7 @@ export function borner(
 ): Position {
   const demiLargeur = ecran.largeur / camera.echelle / 2;
   const demiHauteur = ecran.hauteur / camera.echelle / 2;
+  const sousLaBarre = (ecran.margeHaute ?? 0) / camera.echelle;
 
   const x =
     demiLargeur * 2 >= carte.largeur
@@ -81,7 +88,7 @@ export function borner(
   const y =
     demiHauteur * 2 >= carte.hauteur
       ? carte.hauteur / 2
-      : Math.min(Math.max(centre.y, demiHauteur), carte.hauteur - demiHauteur);
+      : Math.min(Math.max(centre.y, demiHauteur - sousLaBarre), carte.hauteur - demiHauteur);
 
   return { x, y };
 }

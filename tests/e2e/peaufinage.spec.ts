@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
-import { releverLesErreurs } from './harnais/parcours.js';
+import { attendreLaPartie, entrer, lancer, releverLesErreurs } from './harnais/parcours.js';
 import type { ServeurDeJeu } from './harnais/serveur-de-jeu.js';
 import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
 
@@ -68,5 +68,58 @@ test('le champ du code prive montre son texte indicatif en entier', async ({ pag
   const { texte, place } = await placeDuTexteIndicatif(page, 'input[name="code"]');
 
   expect(texte).toBeLessThanOrEqual(place);
+  expect(erreurs).toEqual([]);
+});
+
+/** La boite d'un element, lue dans la page. */
+async function boite(page: Page, selecteur: string) {
+  const cadre = await page.locator(selecteur).first().boundingBox();
+  if (cadre === null) {
+    throw new Error(`${selecteur} n'est pas affiche.`);
+  }
+  return cadre;
+}
+
+test('le HUD tient dans une seule barre en haut, au fond peu opaque', async ({ page }) => {
+  // Demande du porteur du projet: le temps au centre, le classement a gauche, les
+  // boutons a droite, sur une seule barre qui laisse le jeu lisible. Avant, trois
+  // panneaux separes, et sur telephone le temps et le classement sous les boutons.
+  const erreurs = releverLesErreurs(page);
+
+  await entrer(page, jeu.url, 'Alice');
+  await lancer(page);
+  await attendreLaPartie(page);
+
+  const fenetre = page.viewportSize();
+  const barre = await boite(page, '.jeu-barre');
+
+  expect(barre.y).toBe(0);
+  expect(barre.width).toBe(fenetre?.width);
+
+  // Le centre de chaque element tombe dans la barre.
+  for (const selecteur of ['.hud-temps', '.hud-ligne.moi', '.jeu-quitter']) {
+    const element = await boite(page, selecteur);
+    const milieu = element.y + element.height / 2;
+
+    expect(milieu, selecteur).toBeGreaterThan(barre.y);
+    expect(milieu, selecteur).toBeLessThan(barre.y + barre.height);
+  }
+
+  // Le temps au milieu, le classement a gauche, les boutons a droite.
+  const temps = await boite(page, '.hud-temps');
+  const ligne = await boite(page, '.hud-ligne.moi');
+  const quitter = await boite(page, '.jeu-quitter');
+
+  expect(Math.abs(temps.x + temps.width / 2 - barre.width / 2)).toBeLessThan(2);
+  expect(ligne.x + ligne.width).toBeLessThan(temps.x);
+  expect(quitter.x).toBeGreaterThan(temps.x + temps.width);
+
+  const opacite = await page
+    .locator('.jeu-barre')
+    .evaluate((element) =>
+      Number(/[\d.]+(?=\)$)/u.exec(getComputedStyle(element).backgroundColor)?.[0]),
+    );
+
+  expect(opacite).toBeLessThanOrEqual(0.5);
   expect(erreurs).toEqual([]);
 });

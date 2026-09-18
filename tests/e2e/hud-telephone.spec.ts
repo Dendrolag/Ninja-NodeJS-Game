@@ -3,8 +3,9 @@
  *
  * LE DEFAUT QUE CE SCENARIO FERME, releve a la recette de l'etape 5.4 sur
  * telephone: le classement, pose en haut a gauche, descendait sur le temps restant
- * des qu'il comptait plusieurs joueurs. Le temps, centre, est pousse sous la rangee
- * des boutons sur les petits ecrans; le classement doit passer sous lui.
+ * des qu'il comptait plusieurs joueurs. Depuis l'etape 5.5, le temps et le classement
+ * tiennent dans une meme barre en haut de l'ecran, le temps au centre: le classement
+ * doit rester a sa gauche, sans le chevaucher, meme quand sa liste descend.
  *
  * La page monte la vraie surcouche du HUD avec la vraie feuille de style de la page
  * empaquetee, un classement de huit joueurs, puis mesure ou le navigateur pose les
@@ -84,7 +85,7 @@ const TELEPHONES = [
   { largeur: 412, hauteur: 915 },
 ] as const;
 
-test('sur telephone, le classement passe sous le temps restant', async ({ page }) => {
+test('sur telephone, le classement reste a gauche du temps restant', async ({ page }) => {
   await page.goto(`${serveur.url}/hud.html`);
   await page.waitForFunction(() => (window as unknown as { pret?: boolean }).pret, null, {
     timeout: 30_000,
@@ -106,9 +107,9 @@ test('sur telephone, le classement passe sous le temps restant', async ({ page }
       disposition.classement.haut + 150,
     );
     expect(
-      disposition.classement.haut,
-      `le classement doit commencer sous le temps restant ${detail}`,
-    ).toBeGreaterThanOrEqual(disposition.temps.bas);
+      disposition.classement.droite,
+      `le classement doit rester a gauche du temps restant ${detail}`,
+    ).toBeLessThanOrEqual(disposition.temps.gauche);
     expect(
       disposition.classement.bas,
       `le classement doit tenir dans l'ecran ${detail}`,

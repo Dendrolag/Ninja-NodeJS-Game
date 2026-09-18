@@ -390,8 +390,9 @@
   pointer-events: none;
 }
 
+/* Sous la barre du haut de l'ecran de jeu (etape 5.5). */
 .application[data-ecran='jeu'] .annonces {
-  top: 104px;
+  top: calc(env(safe-area-inset-top, 0px) + 72px);
 }
 
 /* L'annonce s'efface par son animation, a la fin de laquelle elle est retiree. */

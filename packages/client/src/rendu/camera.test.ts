@@ -155,3 +155,23 @@ describe('zoneVisible', () => {
     expect(visible.droite).toBe(1_850);
   });
 });
+
+describe('la barre du haut (etape 5.5)', () => {
+  // Le HUD tient dans une barre en haut de l'ecran. Collee au bord de la carte, la
+  // camera laissait le haut du terrain, et le joueur qui s'y trouvait, sous la barre.
+  const SOUS_LA_BARRE = { ...ECRAN, margeHaute: 60 };
+
+  it('descend assez pour montrer le haut de la carte sous la barre', () => {
+    const camera = cameraSur({ x: 1_000, y: 0 }, SOUS_LA_BARRE, CARTE, false);
+    const hautDeLaCarte = versEcran({ x: 1_000, y: 0 }, camera, SOUS_LA_BARRE);
+
+    expect(hautDeLaCarte.y).toBeCloseTo(60);
+  });
+
+  it('ne change rien sans barre, ni loin du haut', () => {
+    expect(cameraSur({ x: 1_000, y: 0 }, ECRAN, CARTE, false).y).toBe(
+      ECRAN.hauteur / echellePour(ECRAN, CARTE, false) / 2,
+    );
+    expect(cameraSur({ x: 1_000, y: 750 }, SOUS_LA_BARRE, CARTE, false).y).toBe(750);
+  });
+});

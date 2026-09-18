@@ -62,6 +62,9 @@ export function monterJeu(contexte: ContexteEcran): EcranAffiche {
   controles.reinitialiser();
 
   const terrain = creer(doc, 'div', { classe: 'terrain' });
+  // La barre du haut (etape 5.5): un seul bandeau translucide pour le classement, le
+  // temps et les boutons, poses dessus par la feuille de style.
+  const barre = creer(doc, 'div', { classe: 'jeu-barre', attributs: { 'aria-hidden': 'true' } });
   const zoneHud = creer(doc, 'div', { classe: 'zone-hud' });
   const chargement = creer(doc, 'p', {
     classe: 'jeu-chargement',
@@ -132,9 +135,13 @@ export function monterJeu(contexte: ContexteEcran): EcranAffiche {
     bouton(doc, { classe: 'bouton-icone', icone: 'son', etiquette: 'Son' }, contexte.ouvrirSon),
     pause,
     reprendre,
-    bouton(doc, { classe: 'bouton bouton-danger', texte: 'Quitter', icone: 'stop' }, () => {
-      confirmation.ouvrir();
-    }),
+    bouton(
+      doc,
+      { classe: 'bouton bouton-danger jeu-quitter', texte: 'Quitter', icone: 'stop' },
+      () => {
+        confirmation.ouvrir();
+      },
+    ),
   );
 
   const racine = creer(
@@ -142,6 +149,7 @@ export function monterJeu(contexte: ContexteEcran): EcranAffiche {
     'section',
     { classe: 'ecran ecran-jeu' },
     terrain,
+    barre,
     zoneHud,
     chargement,
     actions,
@@ -245,7 +253,12 @@ export function monterJeu(contexte: ContexteEcran): EcranAffiche {
       ...(contexte.sons === undefined ? {} : { sons: contexte.sons }),
       niveauDeSang: contexte.niveauDeSang,
       mobile: navigateur?.matchMedia('(pointer: coarse)').matches ?? false,
-      taille: () => ({ largeur: terrain.clientWidth, hauteur: terrain.clientHeight }),
+      // La camera descend sous la barre du haut au bord de la carte (etape 5.5).
+      taille: () => ({
+        largeur: terrain.clientWidth,
+        hauteur: terrain.clientHeight,
+        margeHaute: barre.offsetHeight,
+      }),
     });
     aRetirer.push(() => {
       boucle.arreter();
