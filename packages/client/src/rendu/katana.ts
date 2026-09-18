@@ -17,6 +17,7 @@ import type { Orientation } from '@neon-ninja/shared';
 import { MASSACRE, RACINE_RESSOURCES, cheminNinja } from '@neon-ninja/shared';
 
 import type { EtatClient } from '../etat.js';
+import type { FaitDeJeu } from '../faits.js';
 import type { NiveauDeSang } from '../interface/preferences.js';
 import { APPARENCE_KATANA, TAILLE_SPRITE } from './apparence.js';
 import type { FormeDeSang } from './sang.js';
@@ -311,4 +312,47 @@ function secousseDe(
   return Math.hypot(nouvelle.x, nouvelle.y) > Math.hypot(actuelle.x, actuelle.y)
     ? nouvelle
     : actuelle;
+}
+
+/** Un micro-arret en cours: l'instant ou le mouvement affiche s'est fige, et sa fin. */
+export interface MicroArret {
+  readonly depuis: number;
+  readonly jusqua: number;
+}
+
+/**
+ * Le micro-arret de l'impact: quand notre coup de katana tranche, le mouvement affiche se
+ * fige quelques dizaines de millisecondes. Un nouveau coup qui tranche en relance un;
+ * fini, il disparait.
+ *
+ * @param enCours   Le micro-arret de l'image precedente, s'il y en avait un.
+ * @param faits     Les faits arrives depuis l'image precedente.
+ * @param moi       Notre identifiant.
+ * @param maintenant Instant local.
+ */
+export function suivreLeMicroArret(
+  enCours: MicroArret | undefined,
+  faits: readonly FaitDeJeu[],
+  moi: string | undefined,
+  maintenant: number,
+): MicroArret | undefined {
+  const tranche = faits.some(
+    (fait) =>
+      fait.nature === 'coupDeKatana' &&
+      fait.charge.frappeur === moi &&
+      fait.charge.morts.length > 0,
+  );
+
+  if (tranche) {
+    return { depuis: maintenant, jusqua: maintenant + APPARENCE_KATANA.microArretMs };
+  }
+
+  return enCours !== undefined && maintenant < enCours.jusqua ? enCours : undefined;
+}
+
+/** L'instant que le lissage doit montrer: fige pendant un micro-arret, sinon maintenant. */
+export function instantAffiche(microArret: MicroArret | undefined, maintenant: number): number {
+  return microArret !== undefined && maintenant < microArret.jusqua
+    ? microArret.depuis
+    : maintenant;
 }

@@ -344,6 +344,8 @@ export const APPARENCE_KATANA = {
   cadavre: { dureeMs: 3500, effacementMs: 1000, teinte: 0x4a1418, alpha: 0.85 },
   /** Le sang discret: une petite tache qui s'efface d'elle-meme. */
   sangDiscret: { dureeMs: 4000, echelle: 0.45 },
+  /** Le micro-arret de l'impact: le mouvement affiche se fige, en millisecondes. */
+  microArretMs: 40,
   /** La secousse de la camera quand notre coup tranche, en pixels de carte. */
   secousse: { dureeMs: 120, amplitudePx: 2.5, parCran: 0.6 },
 } as const;

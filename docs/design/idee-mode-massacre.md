@@ -1,6 +1,8 @@
 # Idée - Le mode Massacre (ou Bain de sang)
 
-Note de préparation du 16 septembre 2026, écrite après l'étape 7.3 à partir des échanges avec le porteur du projet. **Ce n'est pas une fiche**: aucune règle n'est tranchée. La prochaine conversation tranche les règles avec le porteur du projet, puis rédige la fiche selon le cas de repli du PROTOCOLE.
+**Construit à l'étape 7.4, le 18 septembre 2026.** Les questions de la dernière section ont été tranchées par le porteur du projet le 16 septembre 2026; les règles qui font foi sont celles de la fiche `docs/plan/etape-7-4.md`, et ce qui a été construit est au journal de `docs/design/README.md`. Cette note reste pour l'intention et l'étude d'origine.
+
+Note de préparation du 16 septembre 2026, écrite après l'étape 7.3 à partir des échanges avec le porteur du projet. **Ce n'est pas une fiche**: aucune règle n'y était tranchée.
 
 ## L'intention du porteur du projet
 

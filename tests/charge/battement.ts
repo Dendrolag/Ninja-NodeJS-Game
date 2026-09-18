@@ -45,6 +45,10 @@
  * des traqueurs, est mesure; un tir, rare et borne a une seconde d'attente, ne l'est pas.
  * Le mode accueille dix joueurs: le banc se lance avec --joueurs 10.
  *
+ * En Massacre (etape 7.4), chaque joueur frappe en changeant de cap, comme en Tactique:
+ * des coups au hasard tuent des bots, sans vider la carte pendant la mesure. Le mode
+ * accueille huit joueurs: le banc se lance avec --joueurs 8.
+ *
  * AUCUN CODE DU JEU N'EST MODIFIE NI IMITE. La room est celle du serveur, lue dans
  * sa compilation, c'est-a-dire le code qui tourne en production. Seul le rappel
  * de battement, que la room offre a qui veut etre prevenu, est fourni ici.
@@ -352,7 +356,7 @@ function orienterLesJoueurs(
     });
     avantChangement.set(joueur.id, CAP_TENU_BATTEMENTS.minimum + tenue.valeur);
 
-    if (room.mode === 'tactique') {
+    if (room.mode === 'tactique' || room.mode === 'massacre') {
       room.demanderUnTir(joueur.id);
     }
   }

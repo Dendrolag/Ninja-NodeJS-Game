@@ -50,6 +50,8 @@ import { cameraSur, suivre, versEcran } from './camera.js';
 import { TamponDeLissage } from './interpolation.js';
 import type { Localisation } from './localisation.js';
 import { localiser, opaciteDeLocalisation } from './localisation.js';
+import type { MicroArret } from './katana.js';
+import { instantAffiche, suivreLeMicroArret } from './katana.js';
 import type { Rendu } from './pixi.js';
 import { empreinte } from './sang.js';
 import { construireScene } from './scene.js';
@@ -134,6 +136,8 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
   let suiviDesPas: SuiviDesPas = AUCUN_PAS;
   /** Le sang frais au sol, que les pieds emportent, retrouve par identifiant. */
   const sangAuSol = new Map<string, SangAuSol>();
+  /** Le micro-arret d'un coup de katana qui tranche, s'il y en a un en cours. */
+  let microArret: MicroArret | undefined;
 
   const uneImage = (instant: number): void => {
     const etat = options.client.etat;
@@ -170,9 +174,13 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
     const moi = moiDansLaPartie(etat);
     reperer(moi !== undefined, faitsNouveaux, maintenant);
 
-    // 5. L'affichage lit l'etat courant, sans s'y abonner.
+    // 5. L'affichage lit l'etat courant, sans s'y abonner. Quand notre coup de katana
+    //    tranche, le mouvement se fige un instant: le micro-arret de l'impact (Massacre,
+    //    etape 7.4). Seul le lissage s'arrete; le reste du jeu continue.
+    microArret = suivreLeMicroArret(microArret, faitsNouveaux, etat.moi, maintenant);
+
     tampon.observer(etat.partie, maintenant);
-    const lissee = tampon.vueLissee(maintenant);
+    const lissee = tampon.vueLissee(instantAffiche(microArret, maintenant));
     const taille = options.taille();
 
     const cible = moi ?? { x: options.carte.largeur / 2, y: options.carte.hauteur / 2 };

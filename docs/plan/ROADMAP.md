@@ -106,6 +106,8 @@ Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision 
 
 **Décision du 16 septembre 2026: les règles du Massacre.** Le porteur du projet les a tranchées en dix points: le katana balaie un arc de 160 degrés sur 60 pixels, toutes les 400 millisecondes, et tue les bots comme les joueurs; la carte se vide, et la partie s'arrête quand tout est tué, avec 5 points par seconde restante; un bot vaut 10 points fois un multiplicateur de combo, qui monte toutes les cinq morts enchaînées à moins de deux secondes, jusqu'à x5; un joueur tué perd son combo et la moitié de ses points, au profit de son tueur; les Black Ninjas restent, tranchables; huit joueurs, solo lançable, record personnel en solo; le sang est une préférence du joueur. Étape `7.4`, fiche rédigée le même jour selon le cas de repli du PROTOCOLE.
 
+**Étape 7.4 terminée le 18 septembre 2026: le jeu a son mode Massacre.** On ne capture plus: un coup de katana en arc tue les faux ninjas, les Black Ninjas et les autres joueurs, et les morts enchaînées multiplient les points. La carte se vide, avec un bonus au temps restant; le mode se joue seul, avec un record personnel au profil, ou à huit. Le sang, les cadavres et les traces de pas sont dessinés tout en code, les mêmes pour tous, et chacun choisit d'en voir plus ou moins. Le Classique est inchangé, empreinte des parties comprise; une partie Massacre coûte moins qu'une Classique, la carte se vidant sous les coups (section 16 de `docs/mesures/charge-serveur.md`). Fiche: `docs/plan/etape-7-4.md`. Suite: les autres fonctionnalités reportées (Battle Royale, Chaos, pass de saison, skins, clans), dans l'ordre que fixe le porteur du projet, chacune avec sa fiche.
+
 ---
 
 ## 4. Carte thématique des étapes

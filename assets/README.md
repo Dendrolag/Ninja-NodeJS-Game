@@ -16,6 +16,8 @@ git show master:public/assets/images/ninja/north_1.png > assets/ninja/north_1.pn
 
 Les six `collision.png` ont été comparées octet par octet à celles de `legacy/assets/maps/`: elles sont identiques. Les tests de caractérisation de l'étape 0.2 continuent donc de décrire exactement les images que le jeu utilise.
 
+Exception, les deux sons du katana du mode Massacre (étape 7.4), `sons/katana-swing.wav` et `sons/katana-hit.wav`: ils ne viennent pas de `master`, ils sont synthétisés par `tests/outils/sons-katana.ts`, qui rend toujours les mêmes octets. Décision du porteur du projet du 16 septembre 2026: un vrai son pourra les remplacer sous le même nom, sans toucher au code.
+
 ## Arborescence
 
 | Dossier                            | Contenu                                                                              | Qui le lit                                               |

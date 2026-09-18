@@ -708,3 +708,35 @@ Dix joueurs, carte map1, un processus neuf par ligne. Durées en millisecondes p
 
 - **Le coût d'un tir.** Un traqueur tire au plus une fois par seconde, et un tir parcourt les entités une fois: un coût borné, que le banc ne sait pas jouer sans terminer la partie.
 - **La charge du serveur complet en Chasse**, ni le coût du client: le mode dessine le cône du Tactique pour le seul traqueur qui regarde, et rien d'autre de nouveau.
+
+## 16. Mesure de l'étape 7.4: le mode Massacre (18 septembre 2026)
+
+Chiffres bruts: `docs/mesures/charge-serveur-7-4-massacre.json` et `docs/mesures/charge-serveur-7-4-classique.json`, écrits par le harnais l'un après l'autre, sur le même code (commit `360dc0c`, plus les frappes du banc) et la même machine qu'aux sections 2 et 11 à 15.
+
+### 16.1 L'essentiel
+
+- **Une partie Massacre coûte moins qu'une partie Classique**: 0,281 ms par battement à 150 faux ninjas au départ et 8 joueurs, contre 0,379, et 124 parties pleines par cœur au banc contre 92. La raison est le mode lui-même: la carte se vide sous les coups, 108 entités en moyenne sur la mesure au lieu de 159, et personne ne repeint de ninja. Un coup de katana parcourt les entités une fois, comme un tir du Tactique.
+- **Un message pèse moins**: 334 octets à 150 faux ninjas contre 435, pour la même raison. L'arme de chaque joueur passe par l'état tactique déjà codé; les coups, les morts et le sang partent en notifications, hors du flux.
+- **Le Classique n'a pas bougé**: l'empreinte du jeu des quatre parties de `tests/charge/empreinte.ts` est identique à celle d'avant l'étape.
+
+### 16.2 Méthode
+
+`pnpm charge --banc --mode massacre --joueurs 8`, puis la même commande sans `--mode`. Huit joueurs, la capacité du mode, pour les deux. En Massacre, chaque joueur frappe en changeant de cap, soit toutes les demi-secondes à une seconde et demie, coups dans le vide compris (voir `tests/charge/battement.ts`): des faux ninjas meurent, sans que la carte se vide pendant la mesure.
+
+### 16.3 Le banc
+
+Huit joueurs, carte map1, un processus neuf par ligne. Durées en millisecondes par battement, tailles en octets par message sur le fil, images comprises. La colonne des bots est leur nombre au départ.
+
+| Bots | Mode      | Moteur | Projection | Codage | Total | Total p99 | Octets par message | Parties par cœur |
+| ---: | --------- | -----: | ---------: | -----: | ----: | --------: | -----------------: | ---------------: |
+|   50 | Classique |  0,097 |      0,016 |  0,026 | 0,140 |     0,384 |                217 |              250 |
+|   50 | Massacre  |  0,067 |      0,012 |  0,020 | 0,099 |     0,280 |                170 |              353 |
+|  150 | Classique |  0,291 |      0,036 |  0,052 | 0,379 |     0,765 |                435 |               92 |
+|  150 | Massacre  |  0,213 |      0,030 |  0,039 | 0,281 |     0,704 |                334 |              124 |
+|  300 | Classique |  0,828 |      0,066 |  0,082 | 0,976 |     1,578 |                782 |               35 |
+|  300 | Massacre  |  0,506 |      0,063 |  0,063 | 0,631 |     1,421 |                566 |               55 |
+
+### 16.4 Ce qui n'est pas mesuré
+
+- **Une partie Massacre à carte pleine du début à la fin.** Par nature, elle se vide: le banc mesure une partie où des faux ninjas meurent peu à peu, comme en jeu.
+- **Le coût du sang dans la page.** Il se dessine dans le navigateur: une tache s'imprime une fois sur un calque de sol à demi-résolution (6 Mo de mémoire graphique pour la plus grande carte), puis ne coûte plus rien. Le banc du rendu n'en joue pas.

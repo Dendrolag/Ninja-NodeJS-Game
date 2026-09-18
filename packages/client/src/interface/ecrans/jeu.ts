@@ -259,6 +259,18 @@ export function monterJeu(contexte: ContexteEcran): EcranAffiche {
     aRetirer.push(() => {
       navigateur?.removeEventListener('resize', redimensionner);
     });
+
+    // Le terrain peut changer de taille sans que la fenetre en change: une page montee
+    // pendant qu'elle etait cachee mesurait zero, et son canevas restait a zero sur zero,
+    // noir, jusqu'au prochain redimensionnement de la fenetre (releve a l'etape 7.4). On
+    // suit donc le terrain lui-meme, la ou le navigateur sait le faire.
+    if (navigateur !== null && 'ResizeObserver' in navigateur) {
+      const observateur = new navigateur.ResizeObserver(redimensionner);
+      observateur.observe(terrain);
+      aRetirer.push(() => {
+        observateur.disconnect();
+      });
+    }
   };
 
   assembler().catch((erreur: unknown) => {

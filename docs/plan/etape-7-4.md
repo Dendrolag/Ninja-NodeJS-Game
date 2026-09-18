@@ -131,6 +131,18 @@ Conditions de ROADMAP réunies, plus:
 4. **Le calque de sang coûte de la mémoire graphique**: il s'imprime à demi-résolution et se libère en quittant la partie.
 5. **Le sang ne dépend que de ce que le serveur envoie**: jamais de tirage non reproductible dans son dessin.
 
+## Réconciliation pendant l'étape (16 au 18 septembre 2026)
+
+Écarts entre la fiche et ce qui a été construit, consignés au journal de `docs/design/README.md` quand ils touchent une décision.
+
+1. **Les lots A et B ont été construits et commités ensemble** (`20ddac3`), le serveur étant indispensable à la compilation du moteur élargi. Le Massacre est resté hors de l'écran de création jusqu'au lot C (`360dc0c`), pour qu'aucune partie ne se crée sans le katana dans la page.
+2. **La règle du multiplicateur vit dans `packages/shared`** (`multiplicateurDuCombo`), et le moteur la republie: la page en a besoin pour annoncer un palier de combo.
+3. **Le cadavre a une teinte fixe, rouge sombre**: la couleur du mort ne voyage pas avec sa mort, et son sprite a déjà quitté le flux.
+4. **Le sang normal n'est proposé à l'impression que pendant une seconde**: le rendu l'imprime à la première image qui le voit, et le recalculer à chaque image pour tout le journal coûtait pour rien.
+5. **Le record solo n'apparaît qu'au profil**, pas sur l'écran de fin, comme le prévoyait le périmètre.
+6. **Le banc fait frapper les joueurs du Massacre** en changeant de cap, comme ceux du Tactique; la carte ne se vide pas pendant la mesure.
+7. **Défauts corrigés en route (règle 7)**: un canevas de jeu monté pendant que la page était cachée restait à zéro sur zéro, noir, jusqu'à un redimensionnement de la fenêtre (vu à l'écran pendant la vérification); l'écran de jeu suit désormais la taille du terrain lui-même. Les bancs de rendu de bout en bout construisaient leurs scènes à la main, hors du contrôle des types: ils portent les deux nouveaux champs.
+
 ## Rituel de fin de session
 
 Écrire `docs/handoffs/etape-7-4-handoff.md`: les décisions construites, les écarts à cette fiche, les chiffres du banc, l'état de la CI. Prochaine action exacte: demander au porteur du projet la fonctionnalité reportée suivante (Battle Royale, Chaos, pass de saison, skins, clans), trancher ses règles, puis rédiger sa fiche. Commiter.

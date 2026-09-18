@@ -18,7 +18,7 @@ import { NIVEAU_DE_SANG_PAR_DEFAUT, lireNiveauDeSang } from './interface/prefere
 import { coup, etatDeMassacre, miseAMort } from './massacre.essais.js';
 import { pointsDuChangement } from './pointsFlottants.js';
 import { APPARENCE_KATANA } from './rendu/apparence.js';
-import { imageDuMassacre } from './rendu/katana.js';
+import { imageDuMassacre, instantAffiche, suivreLeMicroArret } from './rendu/katana.js';
 import { eclaboussure, empreinte, graineDe } from './rendu/sang.js';
 import { AUCUN_PAS, TRACES, avancerLesPas } from './rendu/traces.js';
 import { sonDuFait } from './sons/declencheurs.js';
@@ -305,6 +305,27 @@ describe('ce que la scene montre d un coup de katana', () => {
     );
 
     expect(image).toMatchObject({ cones: [], disques: [], cadavres: [], sang: [] });
+  });
+});
+
+describe('le micro-arret de l impact', () => {
+  it('fige le mouvement affiche quand notre coup tranche, puis le relache', () => {
+    const arret = suivreLeMicroArret(undefined, [coup(1000)], 'alice', 1000);
+
+    expect(arret).toEqual({ depuis: 1000, jusqua: 1000 + APPARENCE_KATANA.microArretMs });
+    expect(instantAffiche(arret, 1020)).toBe(1000);
+    expect(suivreLeMicroArret(arret, [], 'alice', 1020)).toBe(arret);
+    expect(suivreLeMicroArret(arret, [], 'alice', 1000 + APPARENCE_KATANA.microArretMs)).toBe(
+      undefined,
+    );
+    expect(instantAffiche(undefined, 1100)).toBe(1100);
+  });
+
+  it('ne fige rien pour un coup dans le vide, ni pour le coup d un autre', () => {
+    expect(suivreLeMicroArret(undefined, [coup(0, { morts: [] })], 'alice', 0)).toBeUndefined();
+    expect(suivreLeMicroArret(undefined, [coup(0, { frappeur: 'bob' })], 'alice', 0)).toBe(
+      undefined,
+    );
   });
 });
 
