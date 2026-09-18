@@ -12,6 +12,17 @@ Aucune fiche n'existait: le handoff 7.4 et l'entrée 5.5 du ROADMAP (section 4) 
 
 **Numéro**: 5.5, dans la phase 5, « Charge, performance et durcissement ».
 
+## Réconciliation du 18 septembre 2026
+
+- **Le son perdu du Massacre n'avait rien à voir avec les bonus.** La boucle de rendu lisait le journal des faits à partir de son ancienne longueur, qui ne bouge plus une fois le journal plein (cinquante faits). Au cinquantième fait, tous les sons se taisaient, dans tous les modes, avec les flèches de localisation et le micro-arrêt. Le bonus ramassé tombait simplement vers ce moment-là.
+- **Un point ajouté en cours d'étape (14)**: les sons du fusil du mode Tactique, fournis par le porteur du projet.
+- **Deux défauts voisins corrigés en route (règle 7)**: un joueur tué en Massacre ne voyait pas les flèches de localisation, alors qu'il réapparaît ailleurs; le surtitre de l'accueil disait encore « Mode classique » avec cinq modes.
+- **« Rejouer »** ne reprend que le mode, pas les réglages de la partie terminée: une partie ouverte par la partie rapide a les réglages par défaut de son mode.
+- **La barre du haut** ne règle que le haut de la carte: en bas, aucun élément du HUD ne couvre le centre de l'écran.
+- **La couleur du cadavre passe par le contrat**: la page ne connaît plus sûrement le mort quand sa mort arrive, et un champ de plus dans une notification ne coûte rien. Seuls les faits du Massacre changent: l'empreinte des parties Classique est identique.
+- **Les sons fournis gardent les noms de fichier du jeu** (`katana-swing.mp3`, `katana-hit.mp3`, `shotgun-wave.mp3`, `shotgun-reload.mp3`), plus parlants que ceux d'origine.
+- **Le volume sous iOS** est corrigé par conception et vérifié dans Chromium; seul un vrai iPhone le confirme.
+
 ## Rituel de début de session
 
 Lire CLAUDE.md (dont « Comportements à préserver »), le dernier handoff (7.4, ou le handoff partiel de cette étape), cette fiche, et `.claude/rules/sim-purity.md` si un point touche `packages/sim`.
@@ -56,6 +67,10 @@ Chaque point commence par un test qui échoue et reproduit le défaut, dans la c
 
 13. **Le serveur tenu éveillé tant qu'une page est ouverte.** En offre gratuite, Render endort le serveur après quinze minutes sans trafic entrant, même si quelqu'un est sur les menus. La page envoie un signal de vie périodique (la route `/sante` par exemple), moins de quinze minutes d'écart, tant qu'elle est ouverte et visible. Vérifier que les heures gratuites suffisent (750 heures par mois, un mois en compte au plus 744) et le consigner dans `docs/deploiement.md`.
 
+### Ajouté en cours d'étape
+
+14. **Tactique: le son d'un fusil.** Demande du porteur du projet du 18 septembre 2026, avec deux sons fournis: `shotgun-wave.mp3` à chacun de nos tirs, qu'il prenne ou non, et `shotgun-reload.mp3` dès qu'une charge revient.
+
 ## Hors périmètre
 
 - Les étapes 7.5 et 7.6 ci-dessus, et les fonctionnalités reportées (Battle Royale, Chaos, pass de saison, skins, clans).
@@ -73,7 +88,7 @@ Chaque point commence par un test qui échoue et reproduit le défaut, dans la c
 
 Conditions de ROADMAP réunies, plus:
 
-1. Les treize points sont corrigés et testés, ou devenus une étape avec l'accord du porteur du projet.
+1. Les quatorze points sont corrigés et testés, ou devenus une étape avec l'accord du porteur du projet.
 2. Empreinte identique, couverture de `packages/sim` qui ne baisse pas.
 3. La production est à jour, CI verte.
 

@@ -112,6 +112,8 @@ Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision 
 
 **Décision du 18 septembre 2026, au début de l'étape 5.5: deux nouvelles étapes.** La liste du porteur du projet mêlait des défauts et des évolutions. Les défauts, et deux limites connues (la flèche d'une proie infectée, la teinte fixe des cadavres), restent dans `5.5` (fiche `docs/plan/etape-5-5.md`). Deviennent des étapes: `7.5`, réglages du Classique (combo, points flottants qui suivent le combo, renommage en « Horde » à confirmer, vitesse commune de 150 pixels par seconde aux joueurs et aux bots hors bonus), qui change le score et les vitesses protégés par CLAUDE.md et se fait donc en une fois; et `7.6`, options de partie (Tokyo unique avec une option pluie, plus de 150 bots selon le mode ou la carte). Ordre: `5.5`, `7.5`, `7.6`, puis les fonctionnalités reportées.
 
+**Étape 5.5 terminée le 18 septembre 2026: le jeu est peaufiné avant ses nouvelles règles.** Quatorze points corrigés, chacun avec son test: les sons (tous se taisaient au cinquantième fait reçu; les captures du Classique; les sons du katana et du fusil du Tactique, fournis par le porteur du projet; le volume sous iOS, par Web Audio), « Rejouer » qui garde le mode, le HUD en une seule barre supérieure, l'en-tête des menus sur téléphone, la connexion au serveur rendue visible, l'aide lisible, la couleur des cadavres, les flèches de localisation, et le serveur Render tenu éveillé tant qu'une page est ouverte. Empreinte des parties de référence identique. Fiche: `docs/plan/etape-5-5.md`. Suite: `7.5`, puis `7.6`.
+
 ---
 
 ## 4. Carte thématique des étapes
