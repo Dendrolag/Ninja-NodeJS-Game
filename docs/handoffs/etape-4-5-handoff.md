@@ -44,7 +44,7 @@ Aucune modification de `legacy/`, de `tests/caracterisation/` ni de `packages/si
 - Ajoutés: titre et accroche de l'accueil; une carte par mode avec son nom et son texte; le même texte sur chaque tuile de création; une section par mode dans l'aide, ouverte par le texte du mode; Espace et le bouton Katana cités pour les trois modes; aucun écran de présentation ne dit plus « troupeau » ni « faux ninja ».
 - Résultat: **2 401 tests Vitest** (unitaires et base) au vert; types des paquets, des tests et du bout en bout compilés en appelant tsc directement; linter et formatage verts. Bout en bout en local: **41 scénarios sur 41**, banc du rendu compris.
 - Couverture de `packages/sim`: inchangée, le paquet n'est pas touché.
-- État de la CI: ETAT_CI.
+- État de la CI: `25b47e3` rouge (banc ralenti instable, voir plus haut); **`12ab3e8` verte** (exécution 35441155010), avec « Types, linter et tests », « Bout en bout » (41 sur 41, aucun instable) et « Mise en ligne »: les nouveaux textes sont en production. Ce dernier commit ne touche que la documentation: sa mise en ligne doit s'arrêter d'elle-même.
 
 ## Décisions et écarts au plan
 
