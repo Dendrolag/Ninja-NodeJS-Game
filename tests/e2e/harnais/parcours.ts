@@ -15,7 +15,8 @@ import type { Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 
 import type { GameRoom } from '../../../packages/server/dist/index.js';
-import type { Joueur } from '../../../packages/sim/dist/index.js';
+import type { GeometrieDuCone, Joueur } from '../../../packages/sim/dist/index.js';
+import { dansLeCone } from '../../../packages/sim/dist/index.js';
 import type { Commande, Mission } from './pilote.js';
 
 /** Des reglages a saisir dans le panneau, par chemin: un nombre en texte, ou un interrupteur. */
@@ -389,12 +390,20 @@ export function capturerUnFauxNinja(partie: GameRoom, pseudo: string, commande: 
  * la distance donnee. Le pilote relache alors les commandes: le joueur s'arrete, et
  * regarde dans la direction de son dernier pas, c'est-a-dire vers sa cible. Le
  * toucher en route ne l'aurait pas capturee.
+ *
+ * AVEC UNE ARME QUI FRAPPE DEVANT (Tactique, Massacre), la mission ne s'acheve que si le
+ * faux ninja est aussi dans l'arc, du cote ou le joueur regarde. Sans cela, un faux ninja
+ * a portee mais sur le cote ou derriere suffisait: le coup partait dans le vide, et le
+ * scenario Massacre au pouce echouait une fois sur deux en integration continue, ou les
+ * faux ninjas, aussi rapides que les joueurs depuis l'etape 7.5, sortent de l'arc pendant
+ * la latence d'une machine lente (corrige a l'etape 4.5).
  */
 export function approcherUnFauxNinja(
   partie: GameRoom,
   pseudo: string,
   commande: Commande,
   distancePx: number,
+  arme?: GeometrieDuCone,
 ): Mission {
   return {
     nom: `${pseudo} s'approche d'un faux ninja`,
@@ -411,13 +420,28 @@ export function approcherUnFauxNinja(
     },
     accomplie: () => {
       const joueur = joueurNomme(partie, pseudo);
+      const orientation = orientationDe(partie, joueur);
 
       return fauxNinjasAPrendre(partie, joueur).some(
         (position) =>
-          Math.hypot(position.x - joueur.position.x, position.y - joueur.position.y) < distancePx,
+          Math.hypot(position.x - joueur.position.x, position.y - joueur.position.y) < distancePx &&
+          (arme === undefined ||
+            (orientation !== undefined &&
+              dansLeCone(joueur.position, orientation, position, arme))),
       );
     },
   };
+}
+
+/** Ou ce joueur regarde, dans un mode ou il frappe devant lui; indefini ailleurs. */
+function orientationDe(
+  partie: GameRoom,
+  joueur: Joueur,
+): Parameters<typeof dansLeCone>[1] | undefined {
+  return (
+    partie.etat.massacre?.guerriers[joueur.id]?.orientation ??
+    partie.etat.tactique?.[joueur.id]?.orientation
+  );
 }
 
 /** Ou sont les faux ninjas que ce joueur peut encore prendre: ceux qui ne portent pas sa couleur. */

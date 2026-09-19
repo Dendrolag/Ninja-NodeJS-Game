@@ -18,6 +18,8 @@ Réécrire avec le porteur du projet les textes qui présentent le jeu. Ils data
 - **« PNJ » remplace « faux ninjas »** partout où le joueur le lit: curseur « PNJ au départ », récapitulatifs, rappel du salon, annonces de la Chasse (« C'était un PNJ, 2 vies restantes »), refus du plafond (« Cette carte accepte au plus 300 PNJ au départ. »).
 - **Défauts corrigés** (règle 7): l'aide ne citait Espace que pour la Tactique, ni le bouton Katana; elle disait que l'invincibilité détruit les Black Ninjas, faux en Massacre.
 - Description de la page et première ligne du README réécrites.
+- **CI rouge, deux tests instables corrigés** (règle 7). Le commit de l'étape (`25b47e3`, run 35438462543) a échoué sur le banc du rendu au processeur ralenti, qui échouait déjà sur le handoff 7.6 (`ca27863`, run 35424800622): 9,32 ms à 300 sprites pour un plafond de 8, sur une machine de CI lente, pour un code inchangé. Sur décision du porteur du projet, ce plafond ne s'exige plus qu'en local sur carte graphique (`tests/e2e/banc-rendu.spec.ts`). Le scénario Massacre au pouce était lui aussi instable (échec puis succès à la relance, runs 35424800622 et 35438439204): la mission d'approche exige désormais la cible dans l'arc de l'arme (`tests/e2e/harnais/parcours.ts`, `massacre.spec.ts`, `tactique.spec.ts`), 20 passages sur 20 sans relance en local.
+- **Compte connecté**: l'accueil dit « Bienvenue, Alice. » au lieu de « Vous jouez avec votre compte, Alice. », à la demande du porteur du projet (`ecrans/accueil.ts`, test `application.comptes.test.ts`), dans un commit à part.
 - **Vérifié dans le navigateur de Claude Code** (serveur local): accueil en bureau et en téléphone, cinq cartes de modes, aide complète (principe, cinq modes, bonus, malus, zones, commandes), création avec les nouvelles tuiles et « PNJ 50 » au récapitulatif, « PNJ au départ » sur le curseur, aucune erreur dans la console.
 
 ## Fichiers créés ou modifiés
@@ -31,7 +33,9 @@ Commit de l'étape:
 - Tests: `packages/client/src/interface/presentation.test.ts` (créé); mis à jour `annonces.test.ts`, `modeles/creation.test.ts`, `modeles/reglages.test.ts`, `modeles/salon.test.ts`, `shared/src/validation.test.ts`, `server/src/ServeurSocket.options.test.ts`, `tests/e2e/navigation.spec.ts` (titre de l'accueil).
 - Documentation: `README.md`, `docs/design/README.md` (quatre entrées au journal), `docs/plan/ROADMAP.md` (4.5 faite).
 
-Commit de ce handoff: `docs/handoffs/etape-4-5-handoff.md` (créé).
+Commit de correction de la CI et de l'accueil d'un compte: `packages/client/src/interface/ecrans/accueil.ts` et `application.comptes.test.ts` (« Bienvenue »), `tests/e2e/banc-rendu.spec.ts`, `tests/e2e/harnais/parcours.ts`, `tests/e2e/massacre.spec.ts`, `tests/e2e/tactique.spec.ts`, `docs/design/README.md` (deux entrées), `docs/mesures/charge-serveur.md` (section 17), `docs/plan/etape-4-5.md` (décision 8), ce handoff.
+
+Commit de ce handoff: `docs/handoffs/etape-4-5-handoff.md` (créé), mis à jour par le commit de correction.
 
 Aucune modification de `legacy/`, de `tests/caracterisation/` ni de `packages/sim`.
 
@@ -44,12 +48,14 @@ Aucune modification de `legacy/`, de `tests/caracterisation/` ni de `packages/si
 
 ## Décisions et écarts au plan
 
-Quatre entrées au journal de `docs/design/README.md`. À retenir:
+Six entrées au journal de `docs/design/README.md`. À retenir:
 
 1. **Ton court et décalé, ponctuation du porteur du projet** dans les textes réécrits. Les textes non réécrits (zones, messages techniques) gardent leurs deux-points.
 2. **« PNJ » dans ce que le joueur lit, `bot` et « faux ninja » dans le code**: les commentaires et les noms de tests qui décrivent le moteur ne changent pas.
 3. **Une carte par mode sur l'accueil**, texte partagé avec la création et l'aide.
 4. **Le paragraphe commun sur les Black Ninjas parle de « score »** et non de ninjas, pour valoir aussi en Massacre, et précise qu'en Massacre seul le katana en vient à bout.
+5. **Le banc au processeur ralenti n'exige ses 8 ms qu'en local**, sur carte graphique (décision du porteur du projet). Consigné aussi à la section 17 de `docs/mesures/charge-serveur.md`.
+6. **La mission d'approche du bout en bout exige la cible dans l'arc de l'arme.**
 
 Aucun écart à la fiche.
 

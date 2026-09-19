@@ -53,7 +53,7 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
     doc,
     'p',
     { classe: 'accueil-compte' },
-    doc.createTextNode('Vous jouez avec votre compte, '),
+    doc.createTextNode('Bienvenue, '),
     nomDuCompte,
     doc.createTextNode('.'),
   );

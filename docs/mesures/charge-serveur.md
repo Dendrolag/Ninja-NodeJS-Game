@@ -785,6 +785,8 @@ Notre code par image, en millisecondes: lissage, scène et transmission à PixiJ
 
 À 500 entités au processeur ralenti, après correction du lissage: lissage 0,46 ms, scène 0,6 ms, transmission à PixiJS 2,8 ms, par image.
 
+**En intégration continue, ce plafond ne s'exige plus** (décision du porteur du projet, 19 septembre 2026, étape 4.5). Le ralentissement y multiplie la vitesse d'une machine partagée et sans carte graphique, qui varie du simple au double d'une exécution à l'autre. Pour le même code, le banc y a mesuré à 300 sprites 5,5, 6,1 puis deux fois 9,3 ms par image, et 1,2 à 2,3 ms à 500 sprites sans ralentissement. Il échouait donc selon la machine attribuée. Il y mesure et affiche toujours ses chiffres. Sur carte graphique, en local, les 8 ms restent exigées. L'étape 5.7 reprend ce seuil.
+
 ### 17.5 Ce qui n'est pas mesuré
 
 - **La charge du serveur complet à 500 faux ninjas**: le banc suffit à situer le coût, quinze fois sous le budget d'un battement.

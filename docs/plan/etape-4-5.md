@@ -50,6 +50,7 @@ Lire CLAUDE.md, le dernier handoff (7.6, ou le handoff partiel de cette étape),
    - Négatif. Ça ne pénalisera pas les daltoniens.
 6. **« PNJ » remplace « faux ninjas »** partout où le joueur le lit. Les Black Ninjas gardent leur nom.
 7. **Les cartes de l'accueil deviennent une carte par mode**, avec le texte de sa tuile: la grille s'allonge d'elle-même avec les modes. Les autres textes (aide, rappel du salon, description, README) sont rédigés dans ce cadre, puis relus par le porteur du projet sur la page.
+8. **La ligne d'un compte connecté sur l'accueil** dit « Bienvenue, Alice. » au lieu de « Vous jouez avec votre compte, Alice. » (demande du porteur du projet, en fin d'étape).
 
 Écartés: « Prêt à frapper dans l'ombre ? » et quatre autres titres; « Cinq façons de semer la zizanie », trop daté et lié au nombre de modes; « Plus on est de ninjas, plus on rit »; « Toucher, c'est pour les amateurs », au double sens malvenu; « bots » et « faux ninjas ».
 

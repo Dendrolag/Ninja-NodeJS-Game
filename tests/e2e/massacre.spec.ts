@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
+import { CONE_DU_KATANA } from '../../packages/sim/dist/index.js';
 import { commandeAuClavier, commandeAuPouce } from './harnais/commandes.js';
 import {
   approcherUnFauxNinja,
@@ -106,7 +107,9 @@ test('creer une partie Massacre, la lancer seul et trancher un faux ninja', asyn
 
   await expliquerLEchec({ Alice: signes }, async () => {
     await expect(async () => {
-      await accomplir(approcherUnFauxNinja(partie, 'Alice', commande, DISTANCE_DE_COUP_PX));
+      await accomplir(
+        approcherUnFauxNinja(partie, 'Alice', commande, DISTANCE_DE_COUP_PX, CONE_DU_KATANA),
+      );
       await frapper();
       await expect.poll(pointsDAlice, { timeout: 2_000 }).toBeGreaterThan(0);
     }).toPass({ timeout: 120_000 });

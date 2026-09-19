@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
+import { CONE_TACTIQUE } from '../../packages/sim/dist/index.js';
 import { commandeAuClavier, commandeAuPouce } from './harnais/commandes.js';
 import {
   approcherUnFauxNinja,
@@ -105,7 +106,9 @@ test('creer une partie Tactique, s approcher d un faux ninja et le prendre par u
 
   await expliquerLEchec({ Alice: signes }, async () => {
     await expect(async () => {
-      await accomplir(approcherUnFauxNinja(partie, 'Alice', commande, DISTANCE_DE_TIR_PX));
+      await accomplir(
+        approcherUnFauxNinja(partie, 'Alice', commande, DISTANCE_DE_TIR_PX, CONE_TACTIQUE),
+      );
 
       // Toucher ne capture pas: avant son premier tir reussi, Alice ne porte rien.
       expect(fauxNinjasDAlice()).toBe(0);

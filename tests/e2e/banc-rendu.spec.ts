@@ -494,8 +494,28 @@ test.describe('banc de mesure du rendu PixiJS', () => {
   // Etape 7.6: plus de 150 faux ninjas. Le cout de notre code croit plus vite que le
   // nombre d'entites (le lissage retrouve chaque entite par un parcours complet): il se
   // mesure la ou il pese le plus, sur un processeur de telephone d'entree de gamme.
+  //
+  // LE PLAFOND NE S'EXIGE QUE SUR CARTE GRAPHIQUE (decision du porteur du projet, 19
+  // septembre 2026). En integration continue, le ralentissement multiplie la vitesse
+  // d'une machine partagee, qui varie du simple au double d'une execution a l'autre:
+  // pour le meme code, 300 sprites y ont coute de 5,5 a 9,3 ms par image, et le banc
+  // echouait selon la machine attribuee. La-bas, il mesure et affiche ses chiffres sans
+  // echouer, comme pour la cadence. L'etape 5.7 reprend ce seuil avec l'allegement du
+  // rendu.
   test('tient les plafonds de faux ninjas au processeur ralenti six fois', async ({ page }) => {
     await ouvrirLeBanc(page);
+
+    const dessinePar = (await page.evaluate(() =>
+      (window as unknown as { quiDessine: () => string }).quiDessine(),
+    )) as string;
+    const logiciel = RENDU_LOGICIEL.test(dessinePar);
+
+    test.info().annotations.push({
+      type: 'rendu',
+      description: logiciel
+        ? `logiciel (${dessinePar}): plafond de cout au processeur ralenti non exige`
+        : `carte graphique (${dessinePar})`,
+    });
 
     const session = await page.context().newCDPSession(page);
     await session.send('Emulation.setCPUThrottlingRate', { rate: RALENTISSEMENT_TELEPHONE });
@@ -527,6 +547,11 @@ test.describe('banc de mesure du rendu PixiJS', () => {
 
     for (const mesure of mesures) {
       expect(mesure.entitesDessinees).toBe(mesure.sprites);
+
+      if (logiciel) {
+        continue;
+      }
+
       expect(
         mesure.coutMoyenMs,
         `${String(mesure.sprites)} sprites au processeur ralenti: notre code coute trop cher`,

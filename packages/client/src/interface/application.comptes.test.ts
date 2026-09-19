@@ -119,9 +119,7 @@ describe('l en-tete et la connexion', () => {
     reseau.simulerConnexion();
 
     expect(estCache(obligatoire(hote, '.champ-pseudo'))).toBe(true);
-    expect(obligatoire(hote, '.accueil-compte').textContent).toBe(
-      'Vous jouez avec votre compte, Alice.',
-    );
+    expect(obligatoire(hote, '.accueil-compte').textContent).toBe('Bienvenue, Alice.');
 
     boutonObligatoire(hote, 'Partie rapide').click();
 
