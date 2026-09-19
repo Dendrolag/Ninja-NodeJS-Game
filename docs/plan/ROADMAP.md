@@ -126,6 +126,8 @@ Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision 
 
 **Étape 5.7 terminée le 19 septembre 2026: 500 entités tiennent sur un téléphone d'entrée de gamme.** Le rendu ne transmet plus à PixiJS que ce qui change, et que ce que la caméra montre: au processeur ralenti six fois et au cadrage d'un téléphone, une image à 500 entités coûte environ 5 ms de processeur au lieu de 16, notre code 1,6 à 1,9 ms au lieu de 5,8 à 6,2. Tout à l'écran, notre code tient sous le quart d'une image (2,7 ms). Rien ne change de ce qui se voit, sinon un défaut corrigé: un personnage créé en cours de partie, comme un cadavre du Massacre, ne passe plus devant les autres (section 18 de `docs/mesures/charge-serveur.md`). Fiche: `docs/plan/etape-5-7.md`. Suite: les fonctionnalités reportées (Battle Royale, Chaos, pass de saison, skins, clans), dans l'ordre que fixe le porteur du projet.
 
+**Décision du 19 septembre 2026: les objets du Tactique ouvrent la suite.** Hors de la liste des fonctionnalités reportées, le porteur du projet demande six objets qui jouent sur l'arme du Tactique: trois bonus (Rafale, Recharge rapide, Visée large) et trois malus (Tir unique, Visée étroite, Recharge lente), avec les charges affichées sous le joueur, une vue plus proche sur ordinateur et une minimap limitée aux alentours. Les règles et les rendus ont été tranchés avec lui sur maquettes. Étape `7.7`, fiche `docs/plan/etape-7-7.md`, rédigée le même jour selon le cas de repli du PROTOCOLE. Ensuite, les autres fonctionnalités reportées (Battle Royale, Chaos, pass de saison, skins, clans), dans l'ordre que fixe le porteur du projet.
+
 ---
 
 ## 4. Carte thématique des étapes
@@ -267,6 +269,9 @@ Tests requis: TU sur le combo et la vitesse; TU des points flottants; nouvelles 
 
 **7.6. Options de partie.** Faite le 19 septembre 2026 (fiche `docs/plan/etape-7-6.md`). Étape ajoutée le 18 septembre 2026, au tri de l'étape 5.5. Tokyo et Rainy Tokyo ont le même décor: une seule carte « Tokyo », et une option pluie dans les réglages de partie, les parties et records déjà enregistrés restant lisibles. Plus de 150 faux ninjas au départ, selon le mode ou la carte, dans la limite qu'une mesure du débit et du rendu justifie.
 Tests requis: TU de la validation des réglages; TI d'une partie avec pluie et d'une partie à plus de 150 bots; mesure au banc de charge et au banc du rendu; empreinte des parties de référence identique; bout en bout vert.
+
+**7.7. Objets du Tactique.** Étape ajoutée le 19 septembre 2026, à la demande du porteur du projet. Six objets réservés au Tactique, qui s'ajoutent aux six existants: Rafale (un tir ne coûte plus de charge), Recharge rapide, Visée large, et leurs contraires Tir unique, Recharge lente, Visée étroite, qui frappent les autres joueurs. Un bonus et le malus contraire s'annulent; les taux d'apparition baissent pour garder la même densité d'objets. Les charges s'affichent en arc sous le ninja, pour soi seul; la vue sur ordinateur passe à 500 pixels de haut; la minimap ne montre que les joueurs proches.
+Tests requis: TU de chaque objet, des annulations, des recharges variables et de l'apparition; TI d'une partie Tactique à travers le vrai serveur; TU de l'arc, des icônes, de la vue et de la minimap; empreinte des parties de référence identique; bout en bout vert.
 
 ---
 
