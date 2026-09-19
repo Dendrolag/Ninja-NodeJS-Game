@@ -48,8 +48,16 @@ export interface TailleEcran {
  * de vue constante, de sorte que la portion de terrain visible ne depende pas de
  * la taille de la fenetre; sur mobile on serre davantage, parce qu'un ecran de
  * telephone tenu a la main ne se lit pas comme un moniteur.
+ *
+ * La hauteur de vue sur ordinateur depend du mode: le Tactique regarde de plus pres
+ * (HAUTEUR_DE_VUE_TACTIQUE_PX, etape 7.7).
  */
-export function echellePour(ecran: TailleEcran, carte: DimensionsCarte, mobile: boolean): number {
+export function echellePour(
+  ecran: TailleEcran,
+  carte: DimensionsCarte,
+  mobile: boolean,
+  hauteurDeVue: number = HAUTEUR_DE_VUE_PX,
+): number {
   if (mobile) {
     return Math.min(ecran.largeur / CADRAGE_MOBILE.largeur, ecran.hauteur / CADRAGE_MOBILE.hauteur);
   }
@@ -58,8 +66,8 @@ export function echellePour(ecran: TailleEcran, carte: DimensionsCarte, mobile: 
   const proportionsEcran = ecran.largeur / ecran.hauteur;
 
   return proportionsEcran > proportionsCarte
-    ? ecran.hauteur / HAUTEUR_DE_VUE_PX
-    : ecran.largeur / (HAUTEUR_DE_VUE_PX * proportionsCarte);
+    ? ecran.hauteur / hauteurDeVue
+    : ecran.largeur / (hauteurDeVue * proportionsCarte);
 }
 
 /**
@@ -99,8 +107,9 @@ export function cameraSur(
   ecran: TailleEcran,
   carte: DimensionsCarte,
   mobile: boolean,
+  hauteurDeVue: number = HAUTEUR_DE_VUE_PX,
 ): Camera {
-  const echelle = echellePour(ecran, carte, mobile);
+  const echelle = echellePour(ecran, carte, mobile, hauteurDeVue);
   const borne = borner(centre, ecran, { x: centre.x, y: centre.y, echelle }, carte);
 
   return { x: borne.x, y: borne.y, echelle };

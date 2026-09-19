@@ -45,7 +45,7 @@ import { pointsDuChangement, texteDesPoints } from '../pointsFlottants.js';
 import { bonusDOrigineEnCours, filtreDesMalus, moiDansLaPartie } from '../selecteurs.js';
 import { rechargeApresLeTir, sonDuFait, sonsDuChangement } from '../sons/declencheurs.js';
 import type { LecteurDeSons } from '../sons/lecteur.js';
-import { DUREES_LOCALISATION } from './apparence.js';
+import { DUREES_LOCALISATION, HAUTEUR_DE_VUE_PX } from './apparence.js';
 import type { Camera } from './camera.js';
 import { cameraSur, suivre, versEcran } from './camera.js';
 import { TamponDeLissage } from './interpolation.js';
@@ -82,6 +82,11 @@ export interface OptionsBoucle {
   readonly surStabilite?: () => void;
   /** Le cadrage est-il celui d'un appareil tactile. */
   readonly mobile?: boolean;
+  /**
+   * La hauteur de carte montree sur ordinateur, en pixels. Celle de tous les modes par
+   * defaut; plus courte en Tactique (etape 7.7).
+   */
+  readonly hauteurDeVue?: number;
   /** Taille de la zone d'affichage, relue a chaque image. */
   readonly taille: () => { readonly largeur: number; readonly hauteur: number };
   /**
@@ -202,7 +207,13 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
 
     camera =
       camera === undefined
-        ? cameraSur(cible, taille, options.carte, options.mobile ?? false)
+        ? cameraSur(
+            cible,
+            taille,
+            options.carte,
+            options.mobile ?? false,
+            options.hauteurDeVue ?? HAUTEUR_DE_VUE_PX,
+          )
         : suivre(camera, cible, taille, options.carte, dtMs);
 
     const niveauDeSang = options.niveauDeSang?.() ?? 'normal';

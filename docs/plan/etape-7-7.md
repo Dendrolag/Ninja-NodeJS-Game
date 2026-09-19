@@ -130,6 +130,18 @@ Conditions de ROADMAP réunies, plus:
 3. **Le flux binaire** (étape 2.3): toute donnée nouvelle d'une entité ou d'un événement demande son codage et un test de l'aller-retour.
 4. **La vue de 500 pixels sur une petite carte**: la caméra se borne déjà aux limites de la carte; vérifier Spirit & Time et Tokyo en miroir.
 
+## Réconciliation pendant l'étape (19 septembre 2026)
+
+Écarts entre la fiche et ce qui a été construit, consignés au journal de `docs/design/README.md`.
+
+1. **Micro-décision 6 révisée: le Tir unique gèle vraiment les charges.** La fiche disait « la réserve continue de se remplir ». Les tests ont montré que le plafond ne limitait alors rien: la charge dépensée était aussitôt remplacée par une de la réserve, et le malus n'empêchait pas d'enchaîner les tirs. Les charges au-delà d'une sont mises de côté (`chargesGelees`), la recharge ne remplit que la charge en main, et tout revient à la fin de l'effet.
+2. **La règle d'annulation et la visée vivent dans `packages/shared`**, et non dans le seul moteur: la page doit dessiner le cône que le moteur appliquera. C'est le choix déjà fait pour le multiplicateur de combo (`combo.ts`).
+3. **Deux défauts anciens corrigés en chemin** (règle 7 de CLAUDE.md): Vision floue et Vision négative ne troublaient plus l'écran de leur victime depuis la réécriture, et un malus subi de nouveau voyait sa jauge s'allonger alors que le moteur repart de la durée pleine. Les deux touchaient ce que l'étape construit: la page distingue désormais un effet qui agit sur nous d'un effet qu'on inflige aux autres.
+4. **Le récapitulatif du salon compte les objets du Tactique** (« Objets du Tactique 6/6 »), ligne absente des autres modes: sans elle, le salon annonçait « Bonus 3/3, Malus 3/3 » dans une partie qui en compte douze.
+5. **La partie rapide compare les réglages après ceux que le mode impose** (`ServeurSocket`): sans cela, une partie Tactique qui attendait n'était plus reconnue comme ayant les mêmes réglages.
+6. **L'arc des charges passe au-dessus des personnages et sous le premier plan**, décision du porteur du projet à la recette: il disparaît sous un toit ou un câble, comme le ninja lui-même.
+7. **Le format du flux ne change pas de version** (`VERSION_DU_FLUX` reste 2): les natures d'objet du Tactique prennent des codes ajoutés en fin de liste, si bien qu'une partie sans elles s'écrit à l'octet comme avant. La page et le serveur sont toujours de la même version (`VERSION_DU_JEU`).
+
 ## Rituel de fin de session
 
 Écrire `docs/handoffs/etape-7-7-handoff.md`: les décisions construites, les écarts à cette fiche, l'empreinte, les mesures, l'état de la CI. Prochaine action exacte: demander au porteur du projet la fonctionnalité reportée suivante. Commiter.

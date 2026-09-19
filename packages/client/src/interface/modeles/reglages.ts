@@ -35,6 +35,7 @@ import {
   BORNES_REGLAGES,
   CARTES,
   PLAFONDS_DE_FAUX_NINJAS,
+  REGLAGES_PAR_DEFAUT,
   TYPES_BONUS,
   TYPES_BONUS_TACTIQUES,
   TYPES_MALUS,
@@ -369,7 +370,12 @@ export function valeursDepuisReglages(reglages: ReglagesPartie): ValeursFormulai
   const valeurs: Record<string, ValeurDeChamp> = {};
 
   for (const champ of tousLesChamps()) {
-    const valeur = lireChemin(reglages, champ.chemin);
+    // Un groupe qu'un mode retire est absent des reglages de sa partie: les objets du
+    // Tactique dans une Horde (etape 7.7). Le formulaire montre alors la valeur par
+    // defaut, prete a servir si l'hote passe au Tactique, plutot qu'un champ vide, que
+    // la validation refuserait et qui bloquerait l'enregistrement.
+    const valeur =
+      lireChemin(reglages, champ.chemin) ?? lireChemin(REGLAGES_PAR_DEFAUT, champ.chemin);
     valeurs[champ.chemin] = champ.nature === 'interrupteur' ? valeur === true : String(valeur);
   }
 

@@ -27,28 +27,20 @@ import type {
   ReglagesPartie,
   TypeBonusTactique,
   TypeMalusTactique,
-  Visee,
 } from '@neon-ninja/shared';
 import {
-  CONTRAIRES_TACTIQUES,
   OBJETS_TACTIQUES,
   TACTIQUE,
   TYPES_BONUS_TACTIQUES,
   TYPES_MALUS_TACTIQUES,
+  effetQuiAgit,
 } from '@neon-ninja/shared';
 
 import type { DureesRestantes } from './effets.js';
 import type { EtatTactiqueDuJoueur } from './etat.js';
 
-/** Aucun effet du Tactique en cours. */
-export const AUCUN_EFFET_TACTIQUE: DureesRestantes<EffetTactique> = {
-  rafale: 0,
-  rechargeRapide: 0,
-  viseeLarge: 0,
-  tirUnique: 0,
-  rechargeLente: 0,
-  viseeEtroite: 0,
-};
+/** Aucun effet du Tactique en cours. Voir packages/shared/src/objetsTactiques.ts. */
+export { AUCUN_EFFET_TACTIQUE, effetQuiAgit, viseeDe } from '@neon-ninja/shared';
 
 /** Cette nature de bonus est-elle un bonus du Tactique ? */
 export function estUnBonusTactique(nature: NatureObjet): nature is TypeBonusTactique {
@@ -106,37 +98,6 @@ export function dureeDeLEffet(reglages: ReglagesPartie, nature: EffetTactique): 
 /** Le taux d'apparition d'un bonus du Tactique, avant la part que le mode lui laisse. */
 export function tauxDuBonus(reglages: ReglagesPartie, nature: TypeBonusTactique): number {
   return reglagesDesObjets(reglages).bonus[nature].tauxApparitionPourCent;
-}
-
-/** Le malus contraire d'un bonus. */
-const CONTRAIRE_DU_MALUS: Readonly<Record<TypeMalusTactique, TypeBonusTactique>> = {
-  tirUnique: 'rafale',
-  rechargeLente: 'rechargeRapide',
-  viseeEtroite: 'viseeLarge',
-};
-
-/**
- * Un effet agit-il ? Il faut qu'il dure encore, et que son contraire ne dure pas: un
- * bonus et le malus contraire s'annulent tant que les deux sont en cours.
- */
-export function effetQuiAgit(
-  effets: DureesRestantes<EffetTactique>,
-  nature: EffetTactique,
-): boolean {
-  const contraire = estUnBonusTactique(nature)
-    ? CONTRAIRES_TACTIQUES[nature]
-    : CONTRAIRE_DU_MALUS[nature];
-
-  return effets[nature] > 0 && effets[contraire] <= 0;
-}
-
-/** La visee d'un joueur, selon ses effets. */
-export function viseeDe(effets: DureesRestantes<EffetTactique>): Visee {
-  if (effetQuiAgit(effets, 'viseeLarge')) {
-    return 'large';
-  }
-
-  return effetQuiAgit(effets, 'viseeEtroite') ? 'etroite' : 'normale';
 }
 
 /**

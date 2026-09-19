@@ -16,13 +16,22 @@
  * terrain. Les zones gardent les textes du jeu d'origine, et aucun emoji.
  */
 
-import type { Mode, TypeBonus, TypeMalus, TypeZone } from '@neon-ninja/shared';
+import type {
+  Mode,
+  NatureObjet,
+  TypeBonus,
+  TypeBonusTactique,
+  TypeMalus,
+  TypeMalusTactique,
+  TypeZone,
+} from '@neon-ninja/shared';
 import {
   CHASSE,
   IMAGES_PAR_OBJET,
   COMBO,
   MASSACRE,
   MODES,
+  OBJETS_TACTIQUES,
   RACINE_RESSOURCES,
   SCORE,
   TACTIQUE,
@@ -48,6 +57,25 @@ const EFFETS_MALUS: Readonly<Record<TypeMalus, string>> = {
   flou: 'Les autres joueurs auraient dû prendre leurs lunettes.',
   negatif: 'Ça ne pénalisera pas les daltoniens.',
 };
+
+/** Ce que fait chaque bonus du Tactique (etape 7.7). */
+const EFFETS_BONUS_TACTIQUES: Readonly<Record<TypeBonusTactique, string>> = {
+  rafale: 'Tirez sans compter, aucun tir ne coûte de charge.',
+  rechargeRapide: `Une charge revient en ${nombreFr(OBJETS_TACTIQUES.RECHARGE_RAPIDE_MS / 1000)} seconde.`,
+  viseeLarge: 'Votre cône s’ouvre et porte plus loin.',
+};
+
+/** Ce que fait chaque malus du Tactique (etape 7.7). */
+const EFFETS_MALUS_TACTIQUES: Readonly<Record<TypeMalusTactique, string>> = {
+  tirUnique: 'Les autres n’ont plus qu’une charge en main, le reste attend la fin.',
+  rechargeLente: `Leurs charges reviennent en ${String(OBJETS_TACTIQUES.RECHARGE_LENTE_MS / 1000)} secondes.`,
+  viseeEtroite: 'Leur cône se resserre et porte moins loin.',
+};
+
+/** Un nombre a virgule, a la francaise. */
+function nombreFr(valeur: number): string {
+  return String(valeur).replace('.', ',');
+}
 
 /** Ce que fait chaque zone. Textes du jeu d'origine. */
 const EFFETS_ZONES: Readonly<Record<TypeZone, string>> = {
@@ -81,7 +109,8 @@ const REGLES_DES_MODES: Readonly<Record<Mode, readonly string[]>> = {
   ],
   tactique: [
     'Toucher ne capture plus. Espace ou le bouton Capturer prend tout ce qui se trouve dans le cône, à courte distance devant vous.',
-    `Vous avez ${String(TACTIQUE.CHARGES_MAXIMUM)} charges. Un tir qui prend quelque chose en coûte une, qui revient en ${String(TACTIQUE.RECHARGE_MS / 1000)} secondes. Un tir dans le vide ne coûte rien.`,
+    `Vous avez ${String(TACTIQUE.CHARGES_MAXIMUM)} charges, que l’arc sous votre ninja montre. Un tir qui prend quelque chose en coûte une, qui revient en ${String(TACTIQUE.RECHARGE_MS / 1000)} secondes. Un tir dans le vide ne coûte rien.`,
+    'La vue est plus proche que dans les autres modes, et la minimap ne montre que les joueurs autour de vous. Six objets propres au mode changent votre arme ou celle des autres.',
   ],
   equipes: [
     'Les PNJ que vous touchez rejoignent votre équipe. Son score est la somme de ses ninjas et des points de Black Ninjas de ses membres.',
@@ -135,6 +164,16 @@ export function monterAide(doc: Document): Fenetre {
       true,
       'En Équipes et en Chasse, ils ne frappent que l’autre camp.',
     ),
+    liste(
+      doc,
+      'Objets du Tactique',
+      [
+        ...(Object.entries(EFFETS_BONUS_TACTIQUES) as [TypeBonusTactique, string][]),
+        ...(Object.entries(EFFETS_MALUS_TACTIQUES) as [TypeMalusTactique, string][]),
+      ],
+      true,
+      'Les trois premiers sont des bonus, les trois suivants des malus qui frappent les autres. Un bonus et le malus contraire s’annulent tant que les deux durent.',
+    ),
     creer(
       doc,
       'section',
@@ -179,7 +218,7 @@ export function monterAide(doc: Document): Fenetre {
 function liste(
   doc: Document,
   titre: string,
-  effets: readonly [TypeBonus | TypeMalus, string][],
+  effets: readonly [NatureObjet, string][],
   avecIcone: boolean,
   precision?: string,
 ): HTMLElement {
@@ -215,7 +254,7 @@ function liste(
  * fond sombre. Le carre ne montre plus qu'une image a la fois, qui alterne a la
  * cadence des objets du terrain (feuille de style, .aide-icone).
  */
-function iconeAnimee(doc: Document, nature: TypeBonus | TypeMalus): HTMLElement {
+function iconeAnimee(doc: Document, nature: NatureObjet): HTMLElement {
   const icone = creer(doc, 'span', { classe: 'aide-icone', attributs: { 'aria-hidden': 'true' } });
   icone.style.backgroundImage = `url("${RACINE_RESSOURCES}/${cheminObjet(nature)}")`;
   icone.style.setProperty('--images', String(IMAGES_PAR_OBJET));

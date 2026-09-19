@@ -11,7 +11,7 @@
  */
 
 import type { EffetTactique, JoueurDuSalon, LigneClassement, TypeBonus } from '@neon-ninja/shared';
-import { EFFETS_TACTIQUES, TYPES_BONUS } from '@neon-ninja/shared';
+import { AUCUN_EFFET_TACTIQUE, EFFETS_TACTIQUES, TYPES_BONUS } from '@neon-ninja/shared';
 
 import type { EffetActif, EtatClient } from './etat.js';
 import type { VuePartie } from './reconstruction.js';
@@ -73,14 +73,7 @@ export function effetsTactiquesSurMoi(
   etat: EtatClient,
   maintenant: number,
 ): Readonly<Record<EffetTactique, number>> {
-  const restes: Record<EffetTactique, number> = {
-    rafale: 0,
-    rechargeRapide: 0,
-    viseeLarge: 0,
-    tirUnique: 0,
-    rechargeLente: 0,
-    viseeEtroite: 0,
-  };
+  const restes: Record<EffetTactique, number> = { ...AUCUN_EFFET_TACTIQUE };
 
   for (const effet of effetsEnCours(etat, maintenant)) {
     if (effet.surMoi && (EFFETS_TACTIQUES as readonly string[]).includes(effet.nature)) {

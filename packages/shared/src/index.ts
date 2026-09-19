@@ -200,6 +200,14 @@ export { campDeCouleur, proiesRestantes } from './chasse.js';
 
 export { multiplicateurDuCombo } from './combo.js';
 
+export type { RestesDesEffetsTactiques } from './objetsTactiques.js';
+export {
+  AUCUN_EFFET_TACTIQUE,
+  CONES_DES_VISEES,
+  effetQuiAgit,
+  viseeDe,
+} from './objetsTactiques.js';
+
 export type {
   ClassementDesEquipes,
   IssueDesEquipes,

@@ -415,6 +415,16 @@ export const VITESSE_CAMERA_PAR_SECONDE = 5;
 export const HAUTEUR_DE_VUE_PX = 900;
 
 /**
+ * Hauteur de vue du Tactique sur ordinateur, en pixels de la carte (etape 7.7).
+ *
+ * Plus proche, pour qu'on voie moins loin et qu'il faille chercher ses cibles: 31 pour
+ * cent de la surface visible d'ordinaire. Decision du porteur du projet du 19 septembre
+ * 2026, sur la planche docs/design/etape-7-7/4-zoom.png. Le telephone garde son cadrage,
+ * deja serre.
+ */
+export const HAUTEUR_DE_VUE_TACTIQUE_PX = 500;
+
+/**
  * Largeur et hauteur de reference du cadrage mobile, plus serre.
  *
  * ECART VOULU AVEC LE JEU D'ORIGINE, qui montrait 600 par 451 pixels de carte

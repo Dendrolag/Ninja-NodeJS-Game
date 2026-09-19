@@ -35,6 +35,7 @@ import type {
   LigneHud,
   ComboHud,
   PointMinimap,
+  PorteeMinimap,
 } from './modele.js';
 
 /** Cote de la minimap, en pixels d'ecran. */
@@ -87,6 +88,9 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
   const minimap = element(doc, 'div', 'hud-minimap', racine);
   minimap.style.width = `${String(COTE_MINIMAP)}px`;
   minimap.style.height = `${String(COTE_MINIMAP)}px`;
+  // Le disque que la minimap montre en Tactique (etape 7.7), cache ailleurs.
+  const portee = element(doc, 'div', 'hud-portee', minimap);
+  portee.hidden = true;
 
   const manette = element(doc, 'div', 'hud-manette', racine);
   const pouce = element(doc, 'div', 'hud-manette-pouce', manette);
@@ -121,6 +125,7 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
       majClassement(doc, classement, lignes, hud.classement);
       majEffets(doc, effets, hud);
       majMinimap(doc, minimap, points, hud.minimap, options.carte);
+      majPortee(portee, hud.portee, options.carte);
       // En Chasse, les charges d'un traqueur sont ses vies (etape 7.3); en Massacre, le
       // bouton porte le katana (etape 7.4).
       capture?.afficher(hud.charges, hud.arme);
@@ -386,6 +391,27 @@ function majEffets(doc: Document, liste: HTMLElement, hud: Hud): void {
     element(doc, 'span', 'hud-effet-libelle', ligne).textContent = effet.libelle;
     element(doc, 'span', 'hud-effet-reste', ligne).textContent = `${String(effet.resteS)} s`;
   }
+}
+
+/**
+ * Pose sur la minimap le disque qu'elle montre, en Tactique (etape 7.7). La minimap est
+ * carree et la carte ne l'est pas: le disque y devient une ellipse.
+ */
+function majPortee(
+  portee: HTMLElement,
+  modele: PorteeMinimap | undefined,
+  carte: DimensionsCarte,
+): void {
+  portee.hidden = modele === undefined;
+
+  if (modele === undefined) {
+    return;
+  }
+
+  portee.style.left = `${String(((modele.x - modele.rayon) / carte.largeur) * 100)}%`;
+  portee.style.top = `${String(((modele.y - modele.rayon) / carte.hauteur) * 100)}%`;
+  portee.style.width = `${String(((2 * modele.rayon) / carte.largeur) * 100)}%`;
+  portee.style.height = `${String(((2 * modele.rayon) / carte.hauteur) * 100)}%`;
 }
 
 /** Met les points de la minimap en accord avec le modele. */

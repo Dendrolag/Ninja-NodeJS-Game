@@ -52,6 +52,16 @@ describe('la description du formulaire', () => {
     expect(verifierLesValeurs(valeurs)).toEqual({ valide: true, valeur: REGLAGES_PAR_DEFAUT });
   });
 
+  it('reste valide devant des reglages sans les objets du Tactique (etape 7.7)', () => {
+    // Les reglages d'une partie d'un autre mode n'ont pas ce groupe: le formulaire montre
+    // les valeurs par defaut, et l'enregistrement reste possible.
+    const { objetsTactiques: _absents, ...sansObjets } = REGLAGES_PAR_DEFAUT;
+    const valeurs = valeursDepuisReglages(sansObjets as typeof REGLAGES_PAR_DEFAUT);
+
+    expect(valeurs['objetsTactiques.bonus.rafale.dureeS']).toBe('5');
+    expect(verifierLesValeurs(valeurs).valide).toBe(true);
+  });
+
   it('annonce pour chaque nombre les bornes que le serveur applique', () => {
     for (const champ of tousLesChamps()) {
       if (champ.nature !== 'entier') {

@@ -54,6 +54,13 @@ export interface LigneHud {
   readonly rang: number;
 }
 
+/** Un disque de la carte, en pixels de carte: ce que la minimap du Tactique montre. */
+export interface PorteeMinimap {
+  readonly x: number;
+  readonly y: number;
+  readonly rayon: number;
+}
+
 /** Un effet en cours sur nous, avec ce qu'il en reste. */
 export interface EffetHud {
   readonly nature: NatureObjet;
@@ -136,6 +143,8 @@ export interface Hud {
   readonly classement: readonly LigneHud[];
   readonly effets: readonly EffetHud[];
   readonly minimap: readonly PointMinimap[];
+  /** Le disque que la minimap montre, en Tactique (etape 7.7). Absent: toute la carte. */
+  readonly portee: PorteeMinimap | undefined;
   /** Nos charges. Absentes hors du mode Tactique, ou tant qu'on n'est pas sur la carte. */
   readonly charges: ChargesHud | undefined;
   /** Notre role. Absent hors du mode Chasse, ou tant qu'on n'est pas au classement. */
@@ -157,6 +166,7 @@ export const HUD_VIDE: Hud = {
   classement: [],
   effets: [],
   minimap: [],
+  portee: undefined,
   charges: undefined,
   chasse: undefined,
   combo: undefined,
@@ -202,6 +212,7 @@ export function construireHud(etat: EtatClient, maintenant: number): Hud {
     classement: classementHud(partie.classement, etat.moi, mode),
     effets: effetsHud(etat, maintenant),
     minimap: minimapHud(etat, mode),
+    portee: porteeDeLaMinimap(etat, mode),
     charges: chargesHud(etat, mode),
     chasse: chasseHud(etat, mode),
     combo: comboHud(etat, mode, maintenant),
@@ -387,14 +398,23 @@ function effetsHud(etat: EtatClient, maintenant: number): readonly EffetHud[] {
  * montrerait aux traqueurs defairait le camouflage. Chacun voit donc les siens, et une
  * proie infectee decouvre ses nouveaux allies. Notre camp se lit a notre couleur dans le
  * classement, ou figure aussi un traqueur elimine, qui n'est plus sur la carte.
+ *
+ * EN TACTIQUE, ON N'Y MET QUE LES JOUEURS PROCHES (etape 7.7, decision du porteur du projet
+ * du 19 septembre 2026): la vue plus proche ne cacherait rien si la minimap montrait tout
+ * le monde. Comme en Chasse, c'est un filtre d'affichage, le flux reste complet.
  */
 function minimapHud(etat: EtatClient, mode: Mode | undefined): readonly PointMinimap[] {
   const joueurs = (etat.partie?.entites ?? []).filter((entite) => entite.type === 'joueur');
   const notre = etat.partie?.classement.find((ligne) => ligne.id === etat.moi);
+  const portee = porteeDeLaMinimap(etat, mode);
   const visibles =
     mode === 'chasse' && notre !== undefined
       ? joueurs.filter((entite) => campDeCouleur(entite.couleur) === campDeCouleur(notre.couleur))
-      : joueurs;
+      : portee !== undefined
+        ? joueurs.filter(
+            (entite) => Math.hypot(entite.x - portee.x, entite.y - portee.y) <= portee.rayon,
+          )
+        : joueurs;
 
   return visibles.map((entite) => ({
     id: entite.id,
@@ -403,6 +423,19 @@ function minimapHud(etat: EtatClient, mode: Mode | undefined): readonly PointMin
     couleur: entite.couleur,
     moi: entite.id === etat.moi,
   }));
+}
+
+/** Jusqu'ou la minimap du Tactique montre les joueurs autour de nous, en pixels de carte. */
+export const RAYON_MINIMAP_TACTIQUE_PX = 900;
+
+/**
+ * Le disque de la carte que la minimap montre, en Tactique: centre sur nous. Absent dans
+ * les autres modes, ou tant que nous ne sommes pas sur la carte.
+ */
+function porteeDeLaMinimap(etat: EtatClient, mode: Mode | undefined): PorteeMinimap | undefined {
+  const moi = mode === 'tactique' ? moiDansLaPartie(etat) : undefined;
+
+  return moi === undefined ? undefined : { x: moi.x, y: moi.y, rayon: RAYON_MINIMAP_TACTIQUE_PX };
 }
 
 /**

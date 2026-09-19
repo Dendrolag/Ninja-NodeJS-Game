@@ -1,0 +1,237 @@
+{
+  "date": "2026-09-19T21:43:29.833Z",
+  "commit": "0c9058d",
+  "machine": {
+    "processeur": "AMD Ryzen 7 3800X 8-Core Processor",
+    "coeursLogiques": 16,
+    "memoireGo": 32,
+    "systeme": "Windows_NT 10.0.26200",
+    "node": "v24.16.0"
+  },
+  "mode": "classique",
+  "carte": "map1",
+  "banc": [
+    {
+      "bots": 50,
+      "joueurs": 12,
+      "battements": 1200,
+      "mode": "classique",
+      "moteurMs": {
+        "nombre": 1200,
+        "moyenne": 0.10937475000000593,
+        "p50": 0.09529999999995198,
+        "p95": 0.20210000000020045,
+        "p99": 0.3267000000000735,
+        "minimum": 0.0648999999998523,
+        "maximum": 0.6559999999999491
+      },
+      "projectionMs": {
+        "nombre": 1200,
+        "moyenne": 0.017441083333331258,
+        "p50": 0.01639999999997599,
+        "p95": 0.02729999999996835,
+        "p99": 0.04619999999999891,
+        "minimum": 0.011199999999917054,
+        "maximum": 0.1591000000000804
+      },
+      "serialisationMs": {
+        "nombre": 1200,
+        "moyenne": 0.02842183333333215,
+        "p50": 0.024699999999938882,
+        "p95": 0.04020000000014079,
+        "p99": 0.08230000000003201,
+        "minimum": 0.01939999999990505,
+        "maximum": 0.6470999999999094
+      },
+      "totalMs": {
+        "nombre": 1200,
+        "moyenne": 0.15523766666666935,
+        "p50": 0.13619999999991705,
+        "p95": 0.26119999999991705,
+        "p99": 0.42190000000005057,
+        "minimum": 0.1068000000000211,
+        "maximum": 0.7809999999999491
+      },
+      "octetsParMessage": {
+        "nombre": 1200,
+        "moyenne": 225.5875,
+        "p50": 213,
+        "p95": 245,
+        "p99": 320,
+        "minimum": 165,
+        "maximum": 1555
+      },
+      "octetsCompressesParMessage": {
+        "nombre": 60,
+        "moyenne": 190.71666666666667,
+        "p50": 189,
+        "p95": 219,
+        "p99": 246,
+        "minimum": 160,
+        "maximum": 246
+      },
+      "octetsJsonParMessage": {
+        "nombre": 60,
+        "moyenne": 9880.583333333334,
+        "p50": 9921,
+        "p95": 10113,
+        "p99": 10186,
+        "minimum": 9563,
+        "maximum": 10186
+      },
+      "entitesParMessage": 63.151666666666664,
+      "octetsTotal": 270705,
+      "partiesParCoeur": 225,
+      "botsParCoeur": 11250,
+      "debitParClientKoS": 4.51175
+    },
+    {
+      "bots": 150,
+      "joueurs": 12,
+      "battements": 1200,
+      "mode": "classique",
+      "moteurMs": {
+        "nombre": 1200,
+        "moyenne": 0.31127083333333244,
+        "p50": 0.2930999999998676,
+        "p95": 0.48420000000010077,
+        "p99": 0.6010000000001128,
+        "minimum": 0.24319999999988795,
+        "maximum": 1.756399999999985
+      },
+      "projectionMs": {
+        "nombre": 1200,
+        "moyenne": 0.04283641666666938,
+        "p50": 0.04169999999999163,
+        "p95": 0.05999999999994543,
+        "p99": 0.08550000000013824,
+        "minimum": 0.030499999999847205,
+        "maximum": 0.6432999999999538
+      },
+      "serialisationMs": {
+        "nombre": 1200,
+        "moyenne": 0.05151508333332989,
+        "p50": 0.0464999999999236,
+        "p95": 0.06970000000001164,
+        "p99": 0.14670000000000982,
+        "minimum": 0.040299999999888314,
+        "maximum": 0.7539999999999054
+      },
+      "totalMs": {
+        "nombre": 1200,
+        "moyenne": 0.40562233333333175,
+        "p50": 0.38019999999983156,
+        "p95": 0.5872999999999138,
+        "p99": 0.8240000000000691,
+        "minimum": 0.3305000000000291,
+        "maximum": 1.9998000000000502
+      },
+      "octetsParMessage": {
+        "nombre": 1200,
+        "moyenne": 439.6116666666667,
+        "p50": 412,
+        "p95": 462,
+        "p99": 675,
+        "minimum": 296,
+        "maximum": 3443
+      },
+      "octetsCompressesParMessage": {
+        "nombre": 60,
+        "moyenne": 327.78333333333336,
+        "p50": 330,
+        "p95": 362,
+        "p99": 377,
+        "minimum": 269,
+        "maximum": 377
+      },
+      "octetsJsonParMessage": {
+        "nombre": 60,
+        "moyenne": 21458.533333333333,
+        "p50": 21540,
+        "p95": 21905,
+        "p99": 21952,
+        "minimum": 20943,
+        "maximum": 21952
+      },
+      "entitesParMessage": 163.15166666666667,
+      "octetsTotal": 527534,
+      "partiesParCoeur": 86,
+      "botsParCoeur": 12900,
+      "debitParClientKoS": 8.792233333333334
+    },
+    {
+      "bots": 300,
+      "joueurs": 12,
+      "battements": 1200,
+      "mode": "classique",
+      "moteurMs": {
+        "nombre": 1200,
+        "moyenne": 0.8791043333333298,
+        "p50": 0.8515999999997348,
+        "p95": 1.1801000000000386,
+        "p99": 1.430000000000291,
+        "minimum": 0.7265999999999622,
+        "maximum": 4.213600000000042
+      },
+      "projectionMs": {
+        "nombre": 1200,
+        "moyenne": 0.07972158333333444,
+        "p50": 0.07960000000002765,
+        "p95": 0.10450000000037107,
+        "p99": 0.14480000000003201,
+        "minimum": 0.05960000000004584,
+        "maximum": 0.5929000000000997
+      },
+      "serialisationMs": {
+        "nombre": 1200,
+        "moyenne": 0.08594249999999894,
+        "p50": 0.07940000000007785,
+        "p95": 0.11580000000003565,
+        "p99": 0.22060000000010405,
+        "minimum": 0.06950000000006185,
+        "maximum": 0.7290000000002692
+      },
+      "totalMs": {
+        "nombre": 1200,
+        "moyenne": 1.0447684166666633,
+        "p50": 1.0016000000000531,
+        "p95": 1.3623999999999796,
+        "p99": 1.6684999999999945,
+        "minimum": 0.882499999999709,
+        "maximum": 4.538500000000113
+      },
+      "octetsParMessage": {
+        "nombre": 1200,
+        "moyenne": 778.94,
+        "p50": 727,
+        "p95": 791,
+        "p99": 1213,
+        "minimum": 599,
+        "maximum": 6247
+      },
+      "octetsCompressesParMessage": {
+        "nombre": 60,
+        "moyenne": 538.3833333333333,
+        "p50": 541,
+        "p95": 578,
+        "p99": 587,
+        "minimum": 481,
+        "maximum": 587
+      },
+      "octetsJsonParMessage": {
+        "nombre": 60,
+        "moyenne": 38886.916666666664,
+        "p50": 38950,
+        "p95": 39161,
+        "p99": 39286,
+        "minimum": 38406,
+        "maximum": 39286
+      },
+      "entitesParMessage": 313.15166666666664,
+      "octetsTotal": 934728,
+      "partiesParCoeur": 33,
+      "botsParCoeur": 9900,
+      "debitParClientKoS": 15.578800000000001
+    }
+  ]
+}

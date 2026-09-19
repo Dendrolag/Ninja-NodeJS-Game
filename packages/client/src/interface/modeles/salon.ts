@@ -27,7 +27,9 @@ import {
   EQUIPES,
   MEMBRES_PAR_EQUIPE_MAXIMUM,
   TYPES_BONUS,
+  TYPES_BONUS_TACTIQUES,
   TYPES_MALUS,
+  TYPES_MALUS_TACTIQUES,
   TYPES_ZONE,
 } from '@neon-ninja/shared';
 
@@ -298,13 +300,22 @@ function consigne(
  * carte et le mode etaient visibles des invites, qui decouvraient le reste en
  * jouant.
  *
- * Une Chasse n'a pas de Black Ninjas (etape 7.3): la ligne n'y figure pas.
+ * Une Chasse n'a pas de Black Ninjas (etape 7.3): la ligne n'y figure pas. Seul le
+ * Tactique a ses objets (etape 7.7): la ligne n'apparait que la.
  */
 function recapitulatif(reglages: ReglagesPartie, mode: Mode): readonly LigneRecapitulatif[] {
   const bonusActifs = TYPES_BONUS.filter((nature) => reglages.bonus.types[nature].actif).length;
   const malusActifs = TYPES_MALUS.filter((nature) => reglages.malus.types[nature].actif).length;
   const zonesActives = TYPES_ZONE.filter((nature) => reglages.zones.types[nature]).length;
   const noirs = reglages.botsNoirs;
+  // Le moteur ne pose ce groupe que dans une partie Tactique; le mode le confirme.
+  const objets = mode === 'tactique' ? reglages.objetsTactiques : undefined;
+  const objetsActifs =
+    objets === undefined
+      ? 0
+      : TYPES_BONUS_TACTIQUES.filter((nature) => objets.bonus[nature].actif).length +
+        TYPES_MALUS_TACTIQUES.filter((nature) => objets.malus[nature].actif).length;
+  const objetsDuTactique = TYPES_BONUS_TACTIQUES.length + TYPES_MALUS_TACTIQUES.length;
 
   return [
     { libelle: 'Carte', valeur: carteDeLaPartie(reglages) },
@@ -332,6 +343,18 @@ function recapitulatif(reglages: ReglagesPartie, mode: Mode): readonly LigneReca
           ? 'Désactivés'
           : `${String(malusActifs)}/${String(TYPES_MALUS.length)}`,
     },
+    // Les six objets du Tactique, dans ce mode seulement (etape 7.7).
+    ...(objets === undefined
+      ? []
+      : [
+          {
+            libelle: 'Objets du Tactique',
+            valeur:
+              objetsActifs === 0
+                ? 'Désactivés'
+                : `${String(objetsActifs)}/${String(objetsDuTactique)}`,
+          },
+        ]),
     {
       libelle: 'Zones spéciales',
       valeur:

@@ -22,13 +22,13 @@ De même, les deux sons du fusil du mode Tactique, `sons/shotgun-wave.mp3` (chac
 
 ## Arborescence
 
-| Dossier                            | Contenu                                                                              | Qui le lit                                               |
-| ---------------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------- |
-| `cartes/<carte>/<normal\|mirror>/` | `background.png`, `collision.png`, `foreground.png`, et `rain.png` pour map1 (Tokyo) | `collision.png` par le serveur, les autres par le client |
-| `cartes/<carte>/preview.png`       | La vignette de la carte, montrée dans les réglages du salon                          | Le client                                                |
-| `ninja/`                           | Les dix-sept sprites du personnage: huit directions à deux images, plus l'immobilité | Le client                                                |
-| `objets/`                          | Les six icônes de bonus et de malus, reprises aussi dans l'aide                      | Le client                                                |
-| `sons/`                            | Les sons de jeu, le clic des menus, la musique des menus et celle de la partie       | Le client                                                |
+| Dossier                            | Contenu                                                                                                                   | Qui le lit                                               |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `cartes/<carte>/<normal\|mirror>/` | `background.png`, `collision.png`, `foreground.png`, et `rain.png` pour map1 (Tokyo)                                      | `collision.png` par le serveur, les autres par le client |
+| `cartes/<carte>/preview.png`       | La vignette de la carte, montrée dans les réglages du salon                                                               | Le client                                                |
+| `ninja/`                           | Les dix-sept sprites du personnage: huit directions à deux images, plus l'immobilité                                      | Le client                                                |
+| `objets/`                          | Les icônes des objets: six images du jeu d'origine, et les six du Tactique en SVG (étape 7.7), reprises aussi dans l'aide | Le client                                                |
+| `sons/`                            | Les sons de jeu, le clic des menus, la musique des menus et celle de la partie                                            | Le client                                                |
 
 Les chemins ne se recopient nulle part: ils se fabriquent dans `packages/shared/src/ressources.ts`, qui est le seul endroit à connaître cette arborescence. Un test y vérifie que chaque fichier annoncé existe.
 

@@ -10,7 +10,12 @@
 import { COMBO } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
-import { APPARENCE_KATANA, MARGE_HORS_CHAMP_PX, TAILLE_SPRITE } from './apparence.js';
+import {
+  APPARENCE_KATANA,
+  HAUTEUR_DE_VUE_TACTIQUE_PX,
+  MARGE_HORS_CHAMP_PX,
+  TAILLE_SPRITE,
+} from './apparence.js';
 import {
   borner,
   cameraSur,
@@ -33,6 +38,21 @@ describe('echellePour', () => {
     // hauteur de vue, exprimee en pixels de carte, reste la meme.
     expect(450 / petite).toBeCloseTo(900 / grande);
     expect(900 / grande).toBeCloseTo(900);
+  });
+
+  it('montre 500 pixels de carte en hauteur au Tactique sur ordinateur (etape 7.7)', () => {
+    const tactique = echellePour(ECRAN, CARTE, false, HAUTEUR_DE_VUE_TACTIQUE_PX);
+
+    expect(ECRAN.hauteur / tactique).toBeCloseTo(500);
+    expect(tactique).toBeGreaterThan(echellePour(ECRAN, CARTE, false));
+  });
+
+  it('garde le cadrage du telephone quelle que soit la hauteur de vue', () => {
+    const telephone = { largeur: 800, hauteur: 400 };
+
+    expect(echellePour(telephone, CARTE, true, HAUTEUR_DE_VUE_TACTIQUE_PX)).toBe(
+      echellePour(telephone, CARTE, true),
+    );
   });
 
   it('serre le cadrage sur mobile', () => {

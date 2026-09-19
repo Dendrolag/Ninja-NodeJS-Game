@@ -23,7 +23,8 @@ describe('les objets de l aide', () => {
     expect(aide.racine.querySelector('img.aide-icone')).toBeNull();
 
     for (const icone of icones) {
-      expect(icone.style.backgroundImage).toMatch(/objets\/.+\.png/u);
+      // Les icones du jeu d'origine en PNG, celles du Tactique en SVG (etape 7.7).
+      expect(icone.style.backgroundImage).toMatch(/objets\/.+\.(?:png|svg)/u);
       expect(icone.style.getPropertyValue('--images')).toBe(String(IMAGES_PAR_OBJET));
       expect(icone.style.getPropertyValue('--duree')).toBe(
         `${String(CADENCE_OBJET_MS * IMAGES_PAR_OBJET)}ms`,

@@ -849,3 +849,36 @@ Avant l'étape, la cadence au processeur ralenti descendait à 53 à 57 images p
 
 - **Un vrai téléphone**, comme à la section 17.5: à confirmer en jouant.
 - **PixiJS tout à l'écran**: ses 10 ms à 500 entités au processeur ralenti ne se réduisent qu'en dessinant moins de sprites, ce qu'aucun écran de téléphone ne demande.
+
+---
+
+## 19. Mesure de l'étape 7.7: les objets du Tactique (19 septembre 2026)
+
+Chiffres bruts: `docs/mesures/charge-serveur-7-7-tactique.json` et `docs/mesures/charge-serveur-7-7-horde.json`, écrits par le harnais sur la même machine qu'aux sections 2, 11, 12 et 13, avant puis après l'étape (commits `f2165ac` et `0c9058d`).
+
+### 19.1 L'essentiel
+
+- **Les six objets ne changent pas le coût d'une partie Tactique.** 0,450 ms par battement à 150 faux ninjas et 12 joueurs, contre 0,438 avant l'étape: l'écart est dans le bruit d'une exécution à l'autre (section 8). Les effets ne sont que six durées par joueur, que le battement fait décroître.
+- **Un message d'une partie Tactique pèse 9 octets de plus**, 490 contre 481 à 150 faux ninjas, soit 0,08 Mbit/s par joueur: les objets du mode sont des objets comme les autres sur le fil, et leur densité totale ne change pas.
+- **La Horde n'a pas bougé, à l'octet.** Mêmes tailles de message qu'avant l'étape (226, 440 et 779 octets), et même empreinte du jeu et du flux pour les quatre parties de référence de `tests/charge/empreinte.ts`.
+
+### 19.2 Méthode
+
+`pnpm charge --banc --bots-banc 50,150,300`, puis la même commande avec `--mode tactique`, avant puis après. Comme à la section 13, chaque joueur du banc d'une partie Tactique tire à chaque changement de cap. Les réglages sont ceux par défaut: les six objets du mode sont actifs, chaque bonus tentant sa chance à la moitié de son taux.
+
+### 19.3 Le banc
+
+Douze joueurs, carte Tokyo, un processus neuf par ligne. Durées en millisecondes par battement, tailles en octets par message.
+
+| Faux ninjas | Mode     | Avant, total | Après, total | Avant, octets | Après, octets |
+| ----------: | -------- | -----------: | -----------: | ------------: | ------------: |
+|          50 | Tactique |        0,158 |        0,166 |           244 |           240 |
+|         150 | Tactique |        0,438 |        0,450 |           481 |           490 |
+|         300 | Tactique |        1,050 |        1,045 |           810 |           814 |
+|          50 | Horde    |        0,150 |        0,155 |           226 |           226 |
+|         150 | Horde    |        0,405 |        0,406 |           440 |           440 |
+|         300 | Horde    |        1,015 |        1,045 |           779 |           779 |
+
+### 19.4 Ce qui n'est pas mesuré
+
+- **Le rendu de l'arc des charges**: quelques dizaines de traits pour un seul joueur, sans commune mesure avec les cinq cents personnages de la section 18. La vue plus proche du Tactique réduit d'ailleurs le nombre de personnages affichés.

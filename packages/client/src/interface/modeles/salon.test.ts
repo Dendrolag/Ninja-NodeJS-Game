@@ -140,6 +140,16 @@ describe('modeleSalon', () => {
     });
   });
 
+  it('compte les objets du Tactique dans ce mode seulement (etape 7.7)', () => {
+    const valeur = (mode: InfosSalon['mode']): string | undefined =>
+      modeleSalon(etat(salon('bob', { mode })))?.recapitulatif.find(
+        (ligne) => ligne.libelle === 'Objets du Tactique',
+      )?.valeur;
+
+    expect(valeur('tactique')).toBe('6/6');
+    expect(valeur('classique')).toBeUndefined();
+  });
+
   it('dit ce qui est desactive, et la carte en miroir', () => {
     const reglages = completerReglages({
       carte: 'map3',

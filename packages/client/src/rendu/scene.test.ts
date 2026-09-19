@@ -497,6 +497,85 @@ describe('le cone du mode Tactique', () => {
   });
 });
 
+describe('les objets du Tactique a l ecran (etape 7.7)', () => {
+  /** Un joueur qui porte l'etat du mode Tactique. */
+  function tacticien(id: string): EntiteVue {
+    return {
+      ...joueur(id, 100, 200),
+      tactique: { orientation: 'est', charges: 3, avantProchaineChargeMs: 2500 },
+    } as EntiteVue;
+  }
+
+  /** Le salon d'une partie Tactique en cours. */
+  const SALON_TACTIQUE: InfosSalon = {
+    idRoom: 'room-1',
+    statut: 'enCours',
+    mode: 'tactique',
+    visibilite: 'publique',
+    capacite: 12,
+    joueurs: [],
+    reglages: REGLAGES_PAR_DEFAUT,
+  };
+
+  /** Un client en jeu dans une partie Tactique, avec ces effets. */
+  function enTactique(effets: readonly EffetActif[] = []): EtatClient {
+    return { ...etatEnJeu('moi', effets), salon: SALON_TACTIQUE };
+  }
+
+  /** Un effet en cours sur nous, ou inflige aux autres. */
+  function effet(
+    categorie: EffetActif['categorie'],
+    nature: EffetActif['nature'],
+    surMoi = true,
+  ): EffetActif {
+    return { categorie, nature, surMoi, finPrevueA: 9000 };
+  }
+
+  it('pose l arc de nos charges sous notre ninja, en Tactique seulement', () => {
+    const partie = lissee(vue([tacticien('moi'), tacticien('autre')]));
+    const tactique = construireScene(enTactique(), partie, 0);
+    const ailleurs = construireScene(etatEnJeu('moi'), partie, 0);
+
+    expect(tactique.indicateur.disques.length).toBeGreaterThan(0);
+    expect(tactique.indicateur.disques.every((disque) => disque.id.startsWith('moi:'))).toBe(true);
+    expect(ailleurs.indicateur).toEqual(SCENE_VIDE.indicateur);
+  });
+
+  it('ouvre notre visee sous Visee large, et la resserre sous Visee etroite subie', () => {
+    const partie = lissee(vue([tacticien('moi')]));
+    const large = construireScene(enTactique([effet('bonus', 'viseeLarge')]), partie, 0);
+    const etroite = construireScene(enTactique([effet('malus', 'viseeEtroite')]), partie, 0);
+    const infligee = construireScene(
+      enTactique([effet('malus', 'viseeEtroite', false)]),
+      partie,
+      0,
+    );
+
+    expect(large.cones[0]).toMatchObject({ rayon: 150 });
+    expect(large.cones[0]?.demiOuverture).toBeCloseTo(Math.PI / 3);
+    expect(etroite.cones[0]).toMatchObject({ rayon: 70 });
+    expect(etroite.cones[0]?.demiOuverture).toBeCloseTo(Math.PI / 6);
+    // Le malus qu'on a ramasse frappe les autres: notre cone ne change pas.
+    expect(infligee.cones[0]).toMatchObject({ rayon: TACTIQUE.PORTEE_PX });
+  });
+
+  it('dessine l eclair d un tir au cone du tireur', () => {
+    const tir = fait(
+      'tirDeCapture',
+      { tireur: 'autre', x: 10, y: 20, orientation: 'est', captures: 0, visee: 'large' },
+      0,
+    );
+    const scene = construireScene(
+      { ...etatEnJeu('moi'), journal: [tir] },
+      lissee(vue([joueur('moi', 0, 0)])),
+      0,
+    );
+
+    expect(scene.cones[0]).toMatchObject({ rayon: 150 });
+    expect(scene.cones[0]?.demiOuverture).toBeCloseTo(Math.PI / 3);
+  });
+});
+
 describe('couleurEnNombre', () => {
   it('convertit une couleur du contrat en nombre', () => {
     expect(couleurEnNombre('#FF0000')).toBe(0xff0000);

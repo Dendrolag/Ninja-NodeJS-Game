@@ -36,6 +36,7 @@ import { Controles } from '../../controles/controles.js';
 import { brancherTactile } from '../../controles/tactile.js';
 import { monterPointsFlottants } from '../../hud/pointsFlottants.js';
 import { monterSurcouche } from '../../hud/surcouche.js';
+import { HAUTEUR_DE_VUE_TACTIQUE_PX } from '../../rendu/apparence.js';
 import { lancerLaBoucle } from '../../rendu/boucle.js';
 import { monterRendu, prechargerLesSprites } from '../../rendu/pixi.js';
 import { jeSuisHote } from '../../selecteurs.js';
@@ -254,6 +255,8 @@ export function monterJeu(contexte: ContexteEcran): EcranAffiche {
       ...(contexte.sons === undefined ? {} : { sons: contexte.sons }),
       niveauDeSang: contexte.niveauDeSang,
       mobile: navigateur?.matchMedia('(pointer: coarse)').matches ?? false,
+      // Le Tactique regarde de plus pres, pour qu'il faille chercher ses cibles (etape 7.7).
+      ...(mode === 'tactique' ? { hauteurDeVue: HAUTEUR_DE_VUE_TACTIQUE_PX } : {}),
       // La camera descend sous la barre du haut au bord de la carte (etape 5.5).
       taille: () => ({
         largeur: terrain.clientWidth,

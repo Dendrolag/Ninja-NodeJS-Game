@@ -8,6 +8,7 @@ import {
   attendreLaPartie,
   expliquerLEchec,
   lancer,
+  ramasserUnBonusTactique,
   regler,
   releverLesErreurs,
   releverLesSignesVitaux,
@@ -120,6 +121,54 @@ test('creer une partie Tactique, s approcher d un faux ninja et le prendre par u
 
   // Un tir qui a capture coute une charge, qui revient en cinq secondes.
   await expect(bouton.locator('.hud-charge.pleine')).not.toHaveCount(5, { timeout: 4_000 });
+
+  expect(erreurs).toEqual([]);
+});
+
+/**
+ * Les objets du Tactique de l'etape 7.7: Alice ramasse un bonus du mode, et la page le dit.
+ *
+ * Les trois bonus du Tactique apparaissent a coup sur toutes les deux secondes, et les
+ * autres objets sont coupes, pour qu'Alice trouve vite le sien. Elle le ramasse; le HUD
+ * nomme son effet, et l'arc de ses charges est sous son ninja (capture d'ecran jointe au
+ * rapport, a relire a l'oeil).
+ */
+test('ramasser un bonus du Tactique et le voir agir', async ({ page, hasTouch }, infos) => {
+  test.setTimeout(120_000);
+
+  const erreurs = releverLesErreurs(page);
+  const signes = await releverLesSignesVitaux(page);
+
+  await creerUnePartieTactique(page);
+  await regler(page, {
+    dureePartieS: '90',
+    'zones.actives': false,
+    'botsNoirs.actifs': false,
+    'malus.actifs': false,
+    'bonus.intervalleApparitionS': '2',
+    'bonus.types.vitesse.actif': false,
+    'bonus.types.invincibilite.actif': false,
+    'bonus.types.revelation.actif': false,
+    'objetsTactiques.bonus.rafale.tauxApparitionPourCent': '100',
+    'objetsTactiques.bonus.rechargeRapide.tauxApparitionPourCent': '100',
+    'objetsTactiques.bonus.viseeLarge.tauxApparitionPourCent': '100',
+  });
+  await lancer(page);
+  await attendreLaPartie(page);
+  const partie = jeu.partie();
+
+  const commande = hasTouch ? await commandeAuPouce(page) : commandeAuClavier(page);
+
+  await expliquerLEchec({ Alice: signes }, async () => {
+    await expect(async () => {
+      await accomplir(ramasserUnBonusTactique(partie, 'Alice', commande));
+    }).toPass({ timeout: 60_000 });
+  });
+
+  await expect(page.locator('.hud-effet-libelle')).toContainText(
+    /Rafale|Recharge rapide|Visée large/u,
+  );
+  await page.screenshot({ path: infos.outputPath('bonus-du-tactique.png') });
 
   expect(erreurs).toEqual([]);
 });

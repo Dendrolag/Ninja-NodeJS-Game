@@ -17,6 +17,7 @@ import { expect } from '@playwright/test';
 import type { GameRoom } from '../../../packages/server/dist/index.js';
 import type { GeometrieDuCone, Joueur } from '../../../packages/sim/dist/index.js';
 import { dansLeCone } from '../../../packages/sim/dist/index.js';
+import { TYPES_BONUS_TACTIQUES } from '../../../packages/shared/dist/index.js';
 import type { Commande, Mission } from './pilote.js';
 
 /** Des reglages a saisir dans le panneau, par chemin: un nombre en texte, ou un interrupteur. */
@@ -429,6 +430,40 @@ export function approcherUnFauxNinja(
             (orientation !== undefined &&
               dansLeCone(joueur.position, orientation, position, arme))),
       );
+    },
+  };
+}
+
+/**
+ * Mission, dans le mode Tactique: ce joueur ramasse un des trois bonus du mode (etape 7.7).
+ *
+ * Il vise les bonus du Tactique poses sur la carte, et la mission est accomplie quand le
+ * serveur lui compte un de leurs effets. Un objet vit huit secondes: s'il disparait en
+ * route, le pilote passe au suivant.
+ */
+export function ramasserUnBonusTactique(
+  partie: GameRoom,
+  pseudo: string,
+  commande: Commande,
+): Mission {
+  const bonusDuTactique = (nature: string): boolean =>
+    (TYPES_BONUS_TACTIQUES as readonly string[]).includes(nature);
+
+  return {
+    nom: `${pseudo} ramasse un bonus du Tactique`,
+    commande,
+    delaiMs: DELAI_CAPTURE_DE_BOT_MS,
+    situation: () => ({
+      terrain: partie.etat.terrain,
+      position: joueurNomme(partie, pseudo).position,
+      cibles: Object.values(partie.etat.objets)
+        .filter((objet) => bonusDuTactique(objet.nature))
+        .map((objet) => objet.position),
+    }),
+    accomplie: () => {
+      const effets = partie.etat.tactique?.[joueurNomme(partie, pseudo).id]?.effets;
+
+      return TYPES_BONUS_TACTIQUES.some((nature) => (effets?.[nature] ?? 0) > 0);
     },
   };
 }

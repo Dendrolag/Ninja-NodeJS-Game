@@ -46,7 +46,7 @@ import type {
   Vecteur,
   Visee,
 } from '@neon-ninja/shared';
-import { OBJETS_TACTIQUES, TACTIQUE, entier } from '@neon-ninja/shared';
+import { CONES_DES_VISEES as CONES_VISES, TACTIQUE, entier } from '@neon-ninja/shared';
 
 import { capturerBot, capturerJoueur } from './capture.js';
 import type { DureesRestantes } from './effets.js';
@@ -94,14 +94,8 @@ export const CONE_TACTIQUE: GeometrieDuCone = geometrieDuCone(
  */
 export const CONES_DES_VISEES: Readonly<Record<Visee, GeometrieDuCone>> = {
   normale: CONE_TACTIQUE,
-  large: geometrieDuCone(
-    OBJETS_TACTIQUES.VISEE_LARGE.ANGLE_DEGRES,
-    OBJETS_TACTIQUES.VISEE_LARGE.PORTEE_PX,
-  ),
-  etroite: geometrieDuCone(
-    OBJETS_TACTIQUES.VISEE_ETROITE.ANGLE_DEGRES,
-    OBJETS_TACTIQUES.VISEE_ETROITE.PORTEE_PX,
-  ),
+  large: geometrieDuCone(CONES_VISES.large.angleDegres, CONES_VISES.large.porteePx),
+  etroite: geometrieDuCone(CONES_VISES.etroite.angleDegres, CONES_VISES.etroite.porteePx),
 };
 
 /**

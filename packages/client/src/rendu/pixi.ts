@@ -79,6 +79,7 @@ import {
 } from './apparence.js';
 import type { Camera, ZoneVisible } from './camera.js';
 import { dansLaZone, versEcran, zoneVisible } from './camera.js';
+import type { IndicateurScene } from './charges.js';
 import { separerLesCalques } from './recoloration.js';
 import type { FormeDeSang } from './sang.js';
 import { adresseDImage, adresseDesDetails, adresseDuCorps } from './textures.js';
@@ -375,12 +376,24 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   // Les personnages se dessinent dans l'ordre de la scene, que leur rang fixe (etape 5.7).
   // Le nom permet au banc de mesure de compter ceux qui sont affiches.
   const entites = new Container({ label: 'personnages', sortableChildren: true });
+  // L'arc de nos charges du Tactique, sur les personnages et sous les toits (etape 7.7).
+  const indicateur = new Graphics();
   const premierPlan = new Container();
   const reperes = new Graphics();
   /** Le numero de l'image en cours: il marque les personnages que la scene nomme encore. */
   let numeroDImage = 0;
 
-  monde.addChild(decor, zones, libelles, disques, objets, entites, premierPlan, reperes);
+  monde.addChild(
+    decor,
+    zones,
+    libelles,
+    disques,
+    objets,
+    entites,
+    indicateur,
+    premierPlan,
+    reperes,
+  );
   application.stage.addChild(monde);
 
   if (options.lueur !== false) {
@@ -537,6 +550,7 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       dessinerLesCones(disques, scene.cones);
       majSprites(spritesObjets, objets, scene.objets);
       majPersonnages(spritesEntites, entites, scene.entites, champ, numeroDImage, calquesParImage);
+      dessinerLIndicateur(indicateur, scene.indicateur, champ);
       dessinerLesReperes(reperes, scene.reperes);
     },
 
@@ -641,6 +655,30 @@ function dessinerLesCones(graphique: Graphics, cones: readonly ConeScene[]): voi
         width: cone.contour.epaisseur,
       });
     }
+  }
+}
+
+/**
+ * Redessine l'arc de nos charges du Tactique (etape 7.7): ses points, la part de la charge
+ * qui revient, et ses traits. Meme principe que les disques.
+ */
+function dessinerLIndicateur(
+  graphique: Graphics,
+  indicateur: IndicateurScene,
+  champ: ZoneVisible,
+): void {
+  dessinerLesDisques(graphique, indicateur.disques, champ);
+  dessinerLesCones(graphique, indicateur.parts);
+
+  for (const trait of indicateur.traits) {
+    graphique.poly([...trait.points], false);
+    graphique.stroke({
+      color: trait.couleur,
+      alpha: trait.alpha,
+      width: trait.epaisseur,
+      cap: 'round',
+      join: 'round',
+    });
   }
 }
 

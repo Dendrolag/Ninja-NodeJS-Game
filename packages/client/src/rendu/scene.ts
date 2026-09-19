@@ -35,22 +35,27 @@ import type {
   Orientation,
   TypeBonus,
   TypeZone,
+  Visee,
 } from '@neon-ninja/shared';
 import {
+  AUCUN_EFFET_TACTIQUE,
+  CONES_DES_VISEES,
   COULEUR_BOT_NEUTRE,
   DIRECTIONS,
   IMAGES_DE_MARCHE,
   MASSACRE,
   RACINE_RESSOURCES,
   REGLAGES_PAR_DEFAUT,
-  TACTIQUE,
   cheminNinja,
   cheminObjet,
+  viseeDe,
 } from '@neon-ninja/shared';
 
 import type { EtatClient } from '../etat.js';
 import type { NiveauDeSang } from '../interface/preferences.js';
-import { bonusDOrigineEnCours } from '../selecteurs.js';
+import { bonusDOrigineEnCours, effetsTactiquesSurMoi } from '../selecteurs.js';
+import type { IndicateurScene } from './charges.js';
+import { AUCUN_INDICATEUR, arcDesCharges } from './charges.js';
 import {
   imageDObjet,
   imageDeMarche,
@@ -145,6 +150,16 @@ export interface ConeScene {
   readonly contour: (Teinte & { readonly epaisseur: number }) | undefined;
 }
 
+/** Une ligne brisee, ouverte: un trait de l'arc des charges du Tactique (etape 7.7). */
+export interface TraitScene {
+  readonly id: string;
+  /** Les sommets a plat, en coordonnees de carte: x1, y1, x2, y2, et ainsi de suite. */
+  readonly points: readonly number[];
+  readonly couleur: number;
+  readonly alpha: number;
+  readonly epaisseur: number;
+}
+
 /** Tout ce qu'une image contient, hors decor et interface. */
 export interface Scene {
   /** Les disques poses SOUS les entites: zones, halos, ombres, rayons de detection. */
@@ -174,6 +189,11 @@ export interface Scene {
    */
   readonly reperes: readonly FlecheScene[];
   /**
+   * L'arc de nos charges, sous notre ninja et par-dessus les personnages (Tactique, etape
+   * 7.7). Vide dans les autres modes.
+   */
+  readonly indicateur: IndicateurScene;
+  /**
    * L'image de la planche de pluie a montrer, sur une carte qui en a une. Absente
    * d'une scene vide; le rendu l'ignore sur une carte sans pluie.
    */
@@ -188,6 +208,7 @@ export const SCENE_VIDE: Scene = {
   objets: [],
   entites: [],
   reperes: [],
+  indicateur: AUCUN_INDICATEUR,
   sang: [],
   secousse: { x: 0, y: 0 },
 };
@@ -204,8 +225,12 @@ const ANGLES: Readonly<Record<Orientation, number>> = {
   nord_est: -Math.PI / 4,
 };
 
-/** La demi-ouverture du cone, en radians. */
-const DEMI_OUVERTURE = (TACTIQUE.ANGLE_DU_CONE_DEGRES / 2) * (Math.PI / 180);
+/** La demi-ouverture du cone de chaque visee, en radians (etape 7.7 pour les deux autres). */
+const DEMI_OUVERTURES: Readonly<Record<Visee, number>> = {
+  normale: (CONES_DES_VISEES.normale.angleDegres / 2) * (Math.PI / 180),
+  large: (CONES_DES_VISEES.large.angleDegres / 2) * (Math.PI / 180),
+  etroite: (CONES_DES_VISEES.etroite.angleDegres / 2) * (Math.PI / 180),
+};
 
 /**
  * Convertit une couleur du contrat, ecrite en hexadecimal, en nombre.
@@ -411,11 +436,27 @@ export function construireScene(
         );
 
   const massacre = imageDuMassacre(etat, maintenant, niveauDeSang);
+  const mode = etat.salon?.mode;
+  // Nos effets du Tactique changent notre cone et se lisent sur l'arc (etape 7.7).
+  const effets =
+    mode === 'tactique' ? effetsTactiquesSurMoi(etat, maintenant) : AUCUN_EFFET_TACTIQUE;
   const cones = [
-    ...maVisee(monEntite, etat.salon?.mode),
+    ...maVisee(monEntite, mode, viseeDe(effets)),
     ...tirsRecents(etat, lissee, maintenant),
     ...massacre.cones,
   ];
+  const indicateur =
+    mode === 'tactique' &&
+    monEntite?.entite.type === 'joueur' &&
+    monEntite.entite.tactique !== undefined
+      ? arcDesCharges(
+          monEntite.entite.id,
+          monEntite.x,
+          monEntite.y,
+          monEntite.entite.tactique,
+          effets,
+        )
+      : AUCUN_INDICATEUR;
 
   return {
     disques: [...disques, ...massacre.disques],
@@ -425,6 +466,7 @@ export function construireScene(
     // Les cadavres d'abord: les vivants passent par-dessus.
     entites: massacre.cadavres.length === 0 ? entites : [...massacre.cadavres, ...entites],
     reperes,
+    indicateur,
     sang: massacre.sang,
     secousse: massacre.secousse,
     imageDePluie: imageDePluie(maintenant),
@@ -437,11 +479,13 @@ export function construireScene(
  * Seulement le notre, comme dans la version 0.9.0: douze cones sur le terrain
  * cacheraient les ninjas que l'on cherche. Il palit quand il ne reste aucune charge.
  * Il n'existe que dans une partie ou le flux porte une orientation: le Tactique, la Chasse,
- * et le Massacre, ou c'est l'arc du katana, plus large et plus court (etape 7.4).
+ * et le Massacre, ou c'est l'arc du katana, plus large et plus court (etape 7.4). En
+ * Tactique, il prend la visee que nos objets nous donnent (etape 7.7).
  */
 function maVisee(
   mien: VueLissee['entites'][number] | undefined,
   mode: Mode | undefined,
+  visee: Visee,
 ): readonly ConeScene[] {
   if (mien === undefined || mien.entite.type !== 'joueur' || mien.entite.tactique === undefined) {
     return [];
@@ -463,8 +507,8 @@ function maVisee(
       x: mien.x,
       y: mien.y,
       angle: ANGLES[orientation],
-      demiOuverture: katana ? DEMI_ARC_DU_KATANA : DEMI_OUVERTURE,
-      rayon: katana ? MASSACRE.PORTEE_DU_KATANA_PX : TACTIQUE.PORTEE_PX,
+      demiOuverture: katana ? DEMI_ARC_DU_KATANA : DEMI_OUVERTURES[visee],
+      rayon: katana ? MASSACRE.PORTEE_DU_KATANA_PX : CONES_DES_VISEES[visee].porteePx,
       remplissage: apparence.remplissage,
       contour: apparence.contour,
     },
@@ -510,14 +554,16 @@ function tirsRecents(
     const tir = fait.charge;
     const couleur = tir.captures > 0 ? APPARENCE_TIR.reussi : APPARENCE_TIR.manque;
     const opacite = 1 - progression;
+    // Le cone du tireur au moment du tir, qu'un objet du Tactique a pu changer (etape 7.7).
+    const visee = tir.visee ?? 'normale';
 
     cones.push({
       id: `tir:${tir.tireur}:${String(rang)}`,
       x: tir.x,
       y: tir.y,
       angle: ANGLES[tir.orientation],
-      demiOuverture: DEMI_OUVERTURE,
-      rayon: TACTIQUE.PORTEE_PX * (1 + progression * APPARENCE_TIR.agrandissement),
+      demiOuverture: DEMI_OUVERTURES[visee],
+      rayon: CONES_DES_VISEES[visee].porteePx * (1 + progression * APPARENCE_TIR.agrandissement),
       remplissage: { couleur, alpha: opacite * 0.3 },
       contour: { couleur, alpha: opacite * 0.8, epaisseur: 2 },
     });

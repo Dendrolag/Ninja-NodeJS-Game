@@ -479,6 +479,19 @@
   backdrop-filter: blur(8px);
 }
 
+/* Le disque que la minimap montre en Tactique (etape 7.7). */
+.hud-portee {
+  position: absolute;
+  border: 1px dashed rgba(204, 153, 255, 0.55);
+  border-radius: 50%;
+  background: rgba(204, 153, 255, 0.06);
+  pointer-events: none;
+}
+
+.hud-portee[hidden] {
+  display: none;
+}
+
 .hud-point {
   position: absolute;
   width: 6px;
