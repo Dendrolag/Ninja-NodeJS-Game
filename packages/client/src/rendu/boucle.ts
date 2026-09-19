@@ -42,7 +42,7 @@ import type { AfficheurDePoints } from '../hud/pointsFlottants.js';
 import type { Surcouche } from '../hud/surcouche.js';
 import { construireHud } from '../hud/modele.js';
 import { pointsDuChangement, texteDesPoints } from '../pointsFlottants.js';
-import { effetsEnCours, moiDansLaPartie } from '../selecteurs.js';
+import { bonusDOrigineEnCours, filtreDesMalus, moiDansLaPartie } from '../selecteurs.js';
 import { rechargeApresLeTir, sonDuFait, sonsDuChangement } from '../sons/declencheurs.js';
 import type { LecteurDeSons } from '../sons/lecteur.js';
 import { DUREES_LOCALISATION } from './apparence.js';
@@ -208,6 +208,8 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
     const niveauDeSang = options.niveauDeSang?.() ?? 'normal';
     const scene = construireScene(etat, lissee, maintenant, localisation, niveauDeSang);
     options.rendu.dessiner(scene, camera);
+    // Vision floue et Vision negative troublent le terrain, pas le HUD (etape 7.7).
+    options.rendu.filtrer(filtreDesMalus(etat, maintenant));
 
     // 5 bis. Le sang imprime au sol colle aux pieds de qui marche dedans (Massacre,
     //    etape 7.4). Seulement au niveau normal: discret, le sang s'efface, sans traces.
@@ -358,11 +360,8 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
     // qui a demarre quoi. On lit les effets EN COURS a cet instant, et non la
     // liste du magasin: celui-ci ne retire un effet expire qu'a l'arrivee du
     // suivant, et la boucle sonore d'un bonus fini tournerait sinon jusque-la.
-    const actives = new Set(
-      effetsEnCours(etat, maintenant)
-        .filter((effet) => effet.categorie === 'bonus')
-        .map((effet) => effet.nature as string),
-    );
+    // Seuls les bonus du jeu d'origine ont un son en boucle (etape 7.7).
+    const actives = new Set<string>(bonusDOrigineEnCours(etat, maintenant));
 
     for (const nature of actives) {
       if (!bouclesEnCours.has(nature)) {

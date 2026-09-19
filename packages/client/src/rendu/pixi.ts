@@ -328,6 +328,11 @@ export interface Rendu {
   dessiner(scene: Scene, camera: Camera): void;
   /** Imprime du sang au sol, une fois pour toutes (mode Massacre, etape 7.4). */
   imprimer(taches: readonly SangAImprimer[]): void;
+  /**
+   * Pose un filtre CSS sur le terrain seul, le HUD restant net: le flou et le gris des
+   * malus (etape 7.7). « none » le retire.
+   */
+  filtrer(filtre: string): void;
   /** Adapte le canevas a une nouvelle taille de fenetre. */
   redimensionner(largeur: number, hauteur: number): void;
   /** Detruit tout et libere le GPU. */
@@ -493,6 +498,16 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
     },
 
     imprimer,
+
+    filtrer(filtre: string) {
+      // Ecrire le style a chaque image obligerait le navigateur a le relire: on ne
+      // l'ecrit que s'il change.
+      const canevas = application.canvas as unknown as HTMLCanvasElement;
+
+      if (canevas.style.filter !== filtre) {
+        canevas.style.filter = filtre;
+      }
+    },
 
     dessiner(scene: Scene, camera: Camera) {
       placerLaCamera(monde, camera, application);

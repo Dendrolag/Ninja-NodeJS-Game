@@ -130,9 +130,9 @@ describe('construireHud', () => {
 
   describe('effets en cours', () => {
     const effets: readonly EffetActif[] = [
-      { categorie: 'bonus', nature: 'vitesse', finPrevueA: 10_000 },
-      { categorie: 'malus', nature: 'flou', finPrevueA: 4_000 },
-      { categorie: 'bonus', nature: 'invincibilite', finPrevueA: 1_000 },
+      { categorie: 'bonus', nature: 'vitesse', surMoi: true, finPrevueA: 10_000 },
+      { categorie: 'malus', nature: 'flou', surMoi: true, finPrevueA: 4_000 },
+      { categorie: 'bonus', nature: 'invincibilite', surMoi: true, finPrevueA: 1_000 },
     ];
 
     it('montre chaque effet avec son libelle et son reste', () => {

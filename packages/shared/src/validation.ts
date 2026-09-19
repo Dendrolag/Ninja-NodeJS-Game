@@ -56,7 +56,9 @@ import {
   MODES,
   PLAFONDS_DE_FAUX_NINJAS,
   TYPES_BONUS,
+  TYPES_BONUS_TACTIQUES,
   TYPES_MALUS,
+  TYPES_MALUS_TACTIQUES,
   TYPES_ZONE,
   VISIBILITES,
 } from './constantes.js';
@@ -775,6 +777,7 @@ export function validerReglages(brut: unknown): ResultatValidation<ReglagesParti
   poser(retenus, 'malus', groupeMalus(source, erreurs));
   poser(retenus, 'zones', groupeZones(source, erreurs));
   poser(retenus, 'botsNoirs', groupeBotsNoirs(source, erreurs));
+  poser(retenus, 'objetsTactiques', groupeObjetsTactiques(source, erreurs));
 
   if (erreurs.length > 0) {
     return { valide: false, erreurs };
@@ -841,31 +844,7 @@ function groupeBonus(
   const brutTypes = groupe(brut, 'types', 'bonus.types', erreurs);
 
   for (const nature of TYPES_BONUS) {
-    const chemin = `bonus.types.${nature}`;
-    const brutNature = groupe(brutTypes ?? {}, nature, chemin, erreurs);
-    if (brutNature === undefined) {
-      continue;
-    }
-
-    const reglage: Enregistrement = {};
-    poser(reglage, 'actif', booleen(brutNature, 'actif', erreurs, chemin));
-    poser(
-      reglage,
-      'dureeS',
-      entier(brutNature, 'dureeS', BORNES_REGLAGES.bonus.dureeS, erreurs, chemin),
-    );
-    poser(
-      reglage,
-      'tauxApparitionPourCent',
-      entier(
-        brutNature,
-        'tauxApparitionPourCent',
-        BORNES_REGLAGES.bonus.tauxApparitionPourCent,
-        erreurs,
-        chemin,
-      ),
-    );
-    poser(types, nature, siRempli(reglage));
+    poser(types, nature, reglageDeBonus(brutTypes, nature, `bonus.types.${nature}`, erreurs));
   }
 
   poser(retenu, 'types', siRempli(types));
@@ -912,23 +891,93 @@ function groupeMalus(
   const brutTypes = groupe(brut, 'types', 'malus.types', erreurs);
 
   for (const nature of TYPES_MALUS) {
-    const chemin = `malus.types.${nature}`;
-    const brutNature = groupe(brutTypes ?? {}, nature, chemin, erreurs);
-    if (brutNature === undefined) {
-      continue;
-    }
-
-    const reglage: Enregistrement = {};
-    poser(reglage, 'actif', booleen(brutNature, 'actif', erreurs, chemin));
-    poser(
-      reglage,
-      'dureeS',
-      entier(brutNature, 'dureeS', BORNES_REGLAGES.malus.dureeS, erreurs, chemin),
-    );
-    poser(types, nature, siRempli(reglage));
+    poser(types, nature, reglageDeMalus(brutTypes, nature, `malus.types.${nature}`, erreurs));
   }
 
   poser(retenu, 'types', siRempli(types));
+
+  return siRempli(retenu);
+}
+
+/**
+ * Le reglage d'une nature de bonus: en jeu ou non, sa duree, son taux d'apparition. Les
+ * bonus du Tactique ont les memes bornes que ceux du jeu d'origine.
+ */
+function reglageDeBonus(
+  types: Enregistrement | undefined,
+  nature: string,
+  chemin: string,
+  erreurs: ErreurValidation[],
+): Enregistrement | undefined {
+  const brut = groupe(types ?? {}, nature, chemin, erreurs);
+  if (brut === undefined) {
+    return undefined;
+  }
+
+  const reglage: Enregistrement = {};
+  poser(reglage, 'actif', booleen(brut, 'actif', erreurs, chemin));
+  poser(reglage, 'dureeS', entier(brut, 'dureeS', BORNES_REGLAGES.bonus.dureeS, erreurs, chemin));
+  poser(
+    reglage,
+    'tauxApparitionPourCent',
+    entier(
+      brut,
+      'tauxApparitionPourCent',
+      BORNES_REGLAGES.bonus.tauxApparitionPourCent,
+      erreurs,
+      chemin,
+    ),
+  );
+
+  return siRempli(reglage);
+}
+
+/** Le reglage d'une nature de malus: en jeu ou non, et sa duree. */
+function reglageDeMalus(
+  types: Enregistrement | undefined,
+  nature: string,
+  chemin: string,
+  erreurs: ErreurValidation[],
+): Enregistrement | undefined {
+  const brut = groupe(types ?? {}, nature, chemin, erreurs);
+  if (brut === undefined) {
+    return undefined;
+  }
+
+  const reglage: Enregistrement = {};
+  poser(reglage, 'actif', booleen(brut, 'actif', erreurs, chemin));
+  poser(reglage, 'dureeS', entier(brut, 'dureeS', BORNES_REGLAGES.malus.dureeS, erreurs, chemin));
+
+  return siRempli(reglage);
+}
+
+/** Reglages des objets du Tactique (etape 7.7): chaque bonus, puis chaque malus. */
+function groupeObjetsTactiques(
+  source: Enregistrement,
+  erreurs: ErreurValidation[],
+): Enregistrement | undefined {
+  const brut = groupe(source, 'objetsTactiques', 'objetsTactiques', erreurs);
+  if (brut === undefined) {
+    return undefined;
+  }
+
+  const bonus: Enregistrement = {};
+  const brutBonus = groupe(brut, 'bonus', 'objetsTactiques.bonus', erreurs);
+  for (const nature of TYPES_BONUS_TACTIQUES) {
+    const chemin = `objetsTactiques.bonus.${nature}`;
+    poser(bonus, nature, reglageDeBonus(brutBonus, nature, chemin, erreurs));
+  }
+
+  const malus: Enregistrement = {};
+  const brutMalus = groupe(brut, 'malus', 'objetsTactiques.malus', erreurs);
+  for (const nature of TYPES_MALUS_TACTIQUES) {
+    const chemin = `objetsTactiques.malus.${nature}`;
+    poser(malus, nature, reglageDeMalus(brutMalus, nature, chemin, erreurs));
+  }
+
+  const retenu: Enregistrement = {};
+  poser(retenu, 'bonus', siRempli(bonus));
+  poser(retenu, 'malus', siRempli(malus));
 
   return siRempli(retenu);
 }

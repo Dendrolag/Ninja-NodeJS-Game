@@ -36,7 +36,9 @@ import {
   CARTES,
   PLAFONDS_DE_FAUX_NINJAS,
   TYPES_BONUS,
+  TYPES_BONUS_TACTIQUES,
   TYPES_MALUS,
+  TYPES_MALUS_TACTIQUES,
   TYPES_ZONE,
   cheminPluie,
   validerReglages,
@@ -78,11 +80,18 @@ export interface GroupeReglages {
    * imposerLesReglagesDuMode dans packages/shared).
    */
   readonly absentEn?: readonly Mode[];
+  /**
+   * Les seuls modes ou ce groupe est en jeu. Absent, il l'est dans tous. Les objets du
+   * Tactique n'existent que dans le Tactique (etape 7.7).
+   */
+  readonly presentEn?: readonly Mode[];
+  /** Une phrase sous le titre du groupe, pour ce que les champs ne disent pas seuls. */
+  readonly note?: string;
 }
 
 /** Ce groupe se regle-t-il dans ce mode ? */
 export function groupePropose(groupe: GroupeReglages, mode: Mode): boolean {
-  return groupe.absentEn?.includes(mode) !== true;
+  return groupe.absentEn?.includes(mode) !== true && groupe.presentEn?.includes(mode) !== false;
 }
 
 /**
@@ -167,7 +176,7 @@ const interrupteur = (chemin: string, libelle: string): ChampReglage => ({
 /**
  * Tous les reglages de la partie, dans l'ordre ou l'hote les lit.
  *
- * Les cinq groupes suivent ReglagesPartie. Les libelles des bonus, des malus et
+ * Les six groupes suivent ReglagesPartie. Les libelles des bonus, des malus et
  * des zones sont ceux du HUD et du terrain, pour que le joueur retrouve en jeu
  * les noms qu'il a regles dans le salon.
  */
@@ -288,6 +297,32 @@ export const GROUPES_REGLAGES: readonly GroupeReglages[] = [
         champs: [
           interrupteur(`malus.types.${nature}.actif`, 'Actif'),
           secondes(`malus.types.${nature}.dureeS`, 'Durée', BORNES_REGLAGES.malus.dureeS),
+        ],
+      })),
+    ],
+  },
+  {
+    titre: 'Objets du Tactique',
+    presentEn: ['tactique'],
+    note: 'En Tactique, six bonus se partagent la carte : chacun apparaît deux fois moins souvent que son taux.',
+    sections: [
+      ...TYPES_BONUS_TACTIQUES.map((nature) => ({
+        titre: APPARENCE_OBJET[nature].libelle,
+        champs: [
+          interrupteur(`objetsTactiques.bonus.${nature}.actif`, 'Actif'),
+          secondes(`objetsTactiques.bonus.${nature}.dureeS`, 'Durée', BORNES_REGLAGES.bonus.dureeS),
+          pourCent(
+            `objetsTactiques.bonus.${nature}.tauxApparitionPourCent`,
+            'Taux d’apparition',
+            BORNES_REGLAGES.bonus.tauxApparitionPourCent,
+          ),
+        ],
+      })),
+      ...TYPES_MALUS_TACTIQUES.map((nature) => ({
+        titre: APPARENCE_OBJET[nature].libelle,
+        champs: [
+          interrupteur(`objetsTactiques.malus.${nature}.actif`, 'Actif'),
+          secondes(`objetsTactiques.malus.${nature}.dureeS`, 'Durée', BORNES_REGLAGES.malus.dureeS),
         ],
       })),
     ],

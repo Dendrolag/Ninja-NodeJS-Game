@@ -29,8 +29,7 @@ import type {
   ProfilDuCompte,
   ProgressionDeFin,
   Refus,
-  TypeBonus,
-  TypeMalus,
+  NatureObjet,
 } from '@neon-ninja/shared';
 
 import type { Ecran } from './ecrans.js';
@@ -195,7 +194,14 @@ export interface MessageAffiche extends MessageChat {
  */
 export interface EffetActif {
   readonly categorie: 'bonus' | 'malus';
-  readonly nature: TypeBonus | TypeMalus;
+  readonly nature: NatureObjet;
+  /**
+   * L'effet agit-il sur nous: un bonus ramasse, ou un malus qu'un autre nous inflige. Un
+   * malus que nous avons ramasse s'affiche aussi, mais il frappe les autres
+   * (comportement a preserver 4): il ne floute pas notre ecran, et ne change pas notre
+   * arme du Tactique (etape 7.7).
+   */
+  readonly surMoi: boolean;
   /** Instant local auquel l'effet doit cesser d'etre affiche. */
   readonly finPrevueA: number;
 }

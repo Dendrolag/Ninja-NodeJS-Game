@@ -481,6 +481,7 @@ function notificationsDUnFait(
           y: evenement.position.y,
           orientation: evenement.orientation,
           captures: evenement.captures,
+          ...(evenement.visee === undefined ? {} : { visee: evenement.visee }),
         },
       }));
 

@@ -44,15 +44,15 @@
  * l'appelant decide de traiter.
  */
 
-import type {
-  Couleur,
-  Direction,
-  Orientation,
-  TypeBonus,
-  TypeMalus,
-  TypeZone,
+import type { Couleur, Direction, NatureObjet, Orientation, TypeZone } from './constantes.js';
+import {
+  DIRECTIONS,
+  TYPES_BONUS,
+  TYPES_BONUS_TACTIQUES,
+  TYPES_MALUS,
+  TYPES_MALUS_TACTIQUES,
+  TYPES_ZONE,
 } from './constantes.js';
-import { DIRECTIONS, TYPES_BONUS, TYPES_MALUS, TYPES_ZONE } from './constantes.js';
 import type {
   BotVu,
   EntiteVue,
@@ -346,8 +346,19 @@ const TYPES_ENTITE = ['joueur', 'bot', 'botNoir'] as const;
 /** Les categories d'objet, dans l'ordre de leur code. */
 const CATEGORIES_OBJET = ['bonus', 'malus'] as const;
 
-/** Les natures d'objet, bonus puis malus, dans l'ordre de leur code. */
-const NATURES_OBJET: readonly (TypeBonus | TypeMalus)[] = [...TYPES_BONUS, ...TYPES_MALUS];
+/**
+ * Les natures d'objet, dans l'ordre de leur code: les bonus puis les malus du jeu d'origine,
+ * puis ceux du Tactique (etape 7.7). Ajoutes a la fin, ceux-la laissent leur code aux six
+ * premiers: une partie sans objet du Tactique s'ecrit a l'octet comme avant. La page et le
+ * serveur sont toujours de la meme version (VERSION_DU_JEU): aucune page ancienne ne recoit
+ * un code qu'elle ne connait pas.
+ */
+const NATURES_OBJET: readonly NatureObjet[] = [
+  ...TYPES_BONUS,
+  ...TYPES_MALUS,
+  ...TYPES_BONUS_TACTIQUES,
+  ...TYPES_MALUS_TACTIQUES,
+];
 
 /** Le code d'une valeur dans sa liste fermee. */
 function codeDans<T>(liste: readonly T[], valeur: T, nom: string): number {

@@ -51,8 +51,10 @@ import type {
   IdentifiantCarte,
   Mode,
   Orientation,
-  TypeBonus,
-  TypeMalus,
+  NatureBonus,
+  NatureMalus,
+  NatureObjet,
+  Visee,
   TypeZone,
   Visibilite,
 } from './constantes.js';
@@ -147,7 +149,8 @@ export type EntiteVue = JoueurVu | BotVu;
 export interface ObjetVu {
   readonly id: string;
   readonly categorie: 'bonus' | 'malus';
-  readonly nature: TypeBonus | TypeMalus;
+  /** Un objet du jeu d'origine, ou, dans une partie Tactique, un des siens (etape 7.7). */
+  readonly nature: NatureObjet;
   readonly x: number;
   readonly y: number;
   readonly dureeDeVieRestanteMs: number;
@@ -334,14 +337,15 @@ export interface BotNoirDetruit {
 
 /** Un joueur vient de ramasser un bonus. Adresse a lui seul. */
 export interface BonusActive {
-  readonly nature: TypeBonus;
+  /** Un bonus du jeu d'origine, ou un des trois du Tactique (etape 7.7). */
+  readonly nature: NatureBonus;
   /** Duree ajoutee par ce ramassage, en millisecondes. Les durees se cumulent. */
   readonly dureeMs: number;
 }
 
 /** Un joueur vient de ramasser un malus. Adresse a lui seul: il en est epargne. */
 export interface MalusRamasseParMoi {
-  readonly nature: TypeMalus;
+  readonly nature: NatureMalus;
   readonly dureeMs: number;
 }
 
@@ -353,7 +357,8 @@ export interface MalusRamasseParMoi {
  * distinctes, et le serveur ne les envoie jamais a la meme personne.
  */
 export interface MalusSubi {
-  readonly nature: TypeMalus;
+  /** Un malus du jeu d'origine, ou un des trois du Tactique (etape 7.7). */
+  readonly nature: NatureMalus;
   readonly dureeMs: number;
   /** Pseudo de celui qui l'a ramasse. */
   readonly parPseudo: string;
@@ -386,6 +391,11 @@ export interface TirDeCaptureVu {
   readonly orientation: Orientation;
   /** Nombre d'entites capturees, joueurs et bots confondus. Zero pour un tir sans effet. */
   readonly captures: number;
+  /**
+   * Le cone du tir quand un objet du Tactique l'a elargi ou retreci (etape 7.7), pour que
+   * chacun voie l'eclair a sa vraie taille. Absent pour le cone ordinaire.
+   */
+  readonly visee?: Exclude<Visee, 'normale'>;
 }
 
 /** Un bot ou un Black Ninja tue par un coup de katana, dans le Massacre (etape 7.4). */

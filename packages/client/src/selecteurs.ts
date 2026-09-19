@@ -10,7 +10,8 @@
  * Elles sont pures et sans etat: on leur donne l'etat, elles repondent.
  */
 
-import type { JoueurDuSalon, LigneClassement } from '@neon-ninja/shared';
+import type { EffetTactique, JoueurDuSalon, LigneClassement, TypeBonus } from '@neon-ninja/shared';
+import { EFFETS_TACTIQUES, TYPES_BONUS } from '@neon-ninja/shared';
 
 import type { EffetActif, EtatClient } from './etat.js';
 import type { VuePartie } from './reconstruction.js';
@@ -56,6 +57,65 @@ export function maLigneDeClassement(etat: EtatClient): LigneClassement | undefin
 export function effetsEnCours(etat: EtatClient, maintenant: number): readonly EffetActif[] {
   return etat.effets.filter((effet) => effet.finPrevueA > maintenant);
 }
+
+/**
+ * Les bonus du jeu d'origine en cours sur nous: ceux qui ont un halo et un son en boucle.
+ * Les bonus du Tactique (etape 7.7) n'en ont pas: ils se lisent sur les charges.
+ */
+export function bonusDOrigineEnCours(etat: EtatClient, maintenant: number): readonly TypeBonus[] {
+  return effetsEnCours(etat, maintenant)
+    .map((effet) => effet.nature)
+    .filter((nature): nature is TypeBonus => (TYPES_BONUS as readonly string[]).includes(nature));
+}
+
+/** Les effets du Tactique en cours sur nous, et ce qu'il reste de chacun (etape 7.7). */
+export function effetsTactiquesSurMoi(
+  etat: EtatClient,
+  maintenant: number,
+): Readonly<Record<EffetTactique, number>> {
+  const restes: Record<EffetTactique, number> = {
+    rafale: 0,
+    rechargeRapide: 0,
+    viseeLarge: 0,
+    tirUnique: 0,
+    rechargeLente: 0,
+    viseeEtroite: 0,
+  };
+
+  for (const effet of effetsEnCours(etat, maintenant)) {
+    if (effet.surMoi && (EFFETS_TACTIQUES as readonly string[]).includes(effet.nature)) {
+      restes[effet.nature as EffetTactique] = resteDeLEffet(effet, maintenant);
+    }
+  }
+
+  return restes;
+}
+
+/**
+ * Le filtre que nos malus posent sur le terrain: flou sous Vision floue, gris sous Vision
+ * negative, comme le jeu d'origine (applyBlurEffect et applyNegativeEffect,
+ * legacy/client.js:3430). Seul le terrain est touche, le HUD reste net. Un malus que nous
+ * avons ramasse frappe les autres: il ne touche pas notre ecran.
+ */
+export function filtreDesMalus(etat: EtatClient, maintenant: number): string {
+  const subis = new Set(
+    effetsEnCours(etat, maintenant)
+      .filter((effet) => effet.categorie === 'malus' && effet.surMoi)
+      .map((effet) => effet.nature),
+  );
+  const filtres = [
+    ...(subis.has('flou') ? [FILTRES_DES_MALUS.flou] : []),
+    ...(subis.has('negatif') ? [FILTRES_DES_MALUS.negatif] : []),
+  ];
+
+  return filtres.length === 0 ? 'none' : filtres.join(' ');
+}
+
+/** Les filtres CSS de Vision floue et de Vision negative, valeurs du jeu d'origine. */
+export const FILTRES_DES_MALUS = {
+  flou: 'blur(8px)',
+  negatif: 'grayscale(100%)',
+} as const;
 
 /** Ce qu'il reste d'un effet, en millisecondes. Zero s'il est fini. */
 export function resteDeLEffet(effet: EffetActif, maintenant: number): number {

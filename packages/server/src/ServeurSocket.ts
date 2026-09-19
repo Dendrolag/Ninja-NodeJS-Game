@@ -75,6 +75,7 @@ import {
   LIMITES_DEBIT,
   MOTIF_VERSION_DIFFERENTE,
   completerReglages,
+  imposerLesReglagesDuMode,
   consommer,
   seauNeuf,
   validerDemandeCreation,
@@ -1576,6 +1577,14 @@ export class ServeurSocket {
     const { mode, reglages } = demande;
 
     if (mode !== undefined) {
+      // Les reglages d'une partie sont ceux que son mode impose: ceux de la demande se
+      // comparent donc apres la meme operation (les objets du Tactique, etape 7.7, ne
+      // sont que dans une partie Tactique).
+      const voulus =
+        reglages === undefined
+          ? undefined
+          : imposerLesReglagesDuMode(mode, completerReglages(reglages));
+
       return {
         valide: true,
         valeur:
@@ -1583,8 +1592,7 @@ export class ServeurSocket {
             .partiesPubliquesOuvertes()
             .find(
               (room) =>
-                room.mode === mode &&
-                (reglages === undefined || memesValeurs(room.reglages, reglages)),
+                room.mode === mode && (voulus === undefined || memesValeurs(room.reglages, voulus)),
             ) ??
           this.ouvrirUneRoom({
             mode,

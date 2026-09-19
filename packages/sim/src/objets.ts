@@ -27,9 +27,19 @@
  * joueur present dans l'etat est un joueur qui joue.
  */
 
-import type { Alea, Position, TypeBonus, TypeMalus } from '@neon-ninja/shared';
-import { OBJETS, TYPES_BONUS, TYPES_MALUS, element, nombre } from '@neon-ninja/shared';
+import type { Alea, EffetTactique, NatureBonus, NatureMalus, Position } from '@neon-ninja/shared';
+import {
+  OBJETS,
+  OBJETS_TACTIQUES,
+  TYPES_BONUS,
+  TYPES_BONUS_TACTIQUES,
+  TYPES_MALUS,
+  TYPES_MALUS_TACTIQUES,
+  element,
+  nombre,
+} from '@neon-ninja/shared';
 
+import type { DureesRestantes } from './effets.js';
 import { cumuler, remplacer } from './effets.js';
 import type {
   BonusPose,
@@ -40,19 +50,27 @@ import type {
   ObjetRamassable,
 } from './etat.js';
 import { identifiantSuivant, positionDApparition } from './etat.js';
+import {
+  dureeDeLEffet,
+  estUnBonusTactique,
+  estUnMalusTactique,
+  objetTactiqueActif,
+  tauxDuBonus,
+} from './objetsTactiques.js';
+import { etatTactiqueDe } from './tactique.js';
 import { avancerUneEcheance, intervalleVariable } from './planification.js';
 
 /** Ce qu'il faut pour poser un objet sur la carte. */
 export type OptionsPoseObjet =
   | {
       readonly categorie: 'bonus';
-      readonly nature: TypeBonus;
+      readonly nature: NatureBonus;
       /** Position imposee. Sinon elle est tiree de la graine. */
       readonly position?: Position;
     }
   | {
       readonly categorie: 'malus';
-      readonly nature: TypeMalus;
+      readonly nature: NatureMalus;
       readonly position?: Position;
     };
 
@@ -151,21 +169,22 @@ export function faireApparaitreLesObjets(etat: EtatPartie, dtMs: number): EtatPa
 /**
  * Une tentative d'apparition de bonus: chaque nature active tente sa chance.
  *
- * Un seul passage peut donc poser jusqu'a trois bonus, comme dans le legacy. Les
- * natures desactivees ne consomment aucun tirage, ce qui compte: c'est ce qui
- * garantit qu'une meme graine donne la meme partie quel que soit le nombre de
- * bonus actives.
+ * Un seul passage peut donc poser plusieurs bonus, comme dans le legacy. Les natures
+ * desactivees ne consomment aucun tirage, ce qui compte: c'est ce qui garantit qu'une
+ * meme graine donne la meme partie quel que soit le nombre de bonus actives.
+ *
+ * En Tactique (etape 7.7), ses trois bonus tentent leur chance a la suite des trois du jeu
+ * d'origine, et les six a la moitie de leur taux: deux fois plus de natures, autant de
+ * bonus sur la carte (decision du porteur du projet du 19 septembre 2026). Hors du
+ * Tactique, rien ne change, pas meme le nombre de tirages.
  */
 function tenterUneApparitionDeBonus(etat: EtatPartie): EtatPartie {
   let courant = etat;
+  const tactique = etat.mode === 'tactique';
+  const part = tactique ? OBJETS_TACTIQUES.PART_DU_TAUX_DES_BONUS : 1;
 
-  for (const nature of TYPES_BONUS) {
-    const reglage = etat.reglages.bonus.types[nature];
-    if (!reglage.actif) {
-      continue;
-    }
-
-    const tirage = tirerUneChance(courant.alea, reglage.tauxApparitionPourCent);
+  for (const [nature, taux] of chancesDesBonus(etat, tactique)) {
+    const tirage = tirerUneChance(courant.alea, taux * part);
     courant = { ...courant, alea: tirage.alea };
 
     if (tirage.reussi) {
@@ -176,15 +195,49 @@ function tenterUneApparitionDeBonus(etat: EtatPartie): EtatPartie {
   return courant;
 }
 
+/** Les bonus actifs de la partie et leur taux, dans l'ordre ou ils tentent leur chance. */
+function chancesDesBonus(
+  etat: EtatPartie,
+  tactique: boolean,
+): readonly (readonly [NatureBonus, number])[] {
+  const chances: (readonly [NatureBonus, number])[] = [];
+
+  for (const nature of TYPES_BONUS) {
+    const reglage = etat.reglages.bonus.types[nature];
+    if (reglage.actif) {
+      chances.push([nature, reglage.tauxApparitionPourCent]);
+    }
+  }
+
+  if (tactique) {
+    for (const nature of TYPES_BONUS_TACTIQUES) {
+      if (objetTactiqueActif(etat.reglages, nature)) {
+        chances.push([nature, tauxDuBonus(etat.reglages, nature)]);
+      }
+    }
+  }
+
+  return chances;
+}
+
 /**
  * Une tentative d'apparition de malus: une seule chance, puis un tirage de nature.
  *
  * Le plafond de cinq malus simultanes est celui du legacy. Il n'existe pas de
- * plafond equivalent pour les bonus.
+ * plafond equivalent pour les bonus. En Tactique, ses trois malus s'ajoutent aux natures
+ * tirees: il ne tombe pas plus de malus, chacun tombe moins souvent (etape 7.7).
  */
 function tenterUneApparitionDeMalus(etat: EtatPartie): EtatPartie {
   const reglages = etat.reglages.malus;
-  const naturesActives = TYPES_MALUS.filter((nature) => reglages.types[nature].actif);
+  const naturesActives: NatureMalus[] = TYPES_MALUS.filter(
+    (nature) => reglages.types[nature].actif,
+  );
+
+  if (etat.mode === 'tactique') {
+    naturesActives.push(
+      ...TYPES_MALUS_TACTIQUES.filter((nature) => objetTactiqueActif(etat.reglages, nature)),
+    );
+  }
 
   if (!reglages.actifs || naturesActives.length === 0) {
     return etat;
@@ -308,27 +361,52 @@ export function ramasser(
  * donne vingt secondes. Comportement a preserver numero 10 de CLAUDE.md.
  */
 function accorderLeBonus(etat: EtatPartie, joueur: Joueur, bonus: BonusPose): EtatPartie {
-  const dureeMs = etat.reglages.bonus.types[bonus.nature].dureeS * 1000;
+  const nature = bonus.nature;
+  const dureeMs = estUnBonusTactique(nature)
+    ? dureeDeLEffet(etat.reglages, nature)
+    : etat.reglages.bonus.types[nature].dureeS * 1000;
+  const apresEffet = estUnBonusTactique(nature)
+    ? modifierLesEffetsTactiques(etat, joueur.id, (effets) => cumuler(effets, nature, dureeMs))
+    : {
+        ...etat,
+        joueurs: {
+          ...etat.joueurs,
+          [joueur.id]: {
+            ...joueur,
+            bonusRestantsMs: cumuler(joueur.bonusRestantsMs, nature, dureeMs),
+          },
+        },
+      };
 
   return {
-    ...etat,
-    joueurs: {
-      ...etat.joueurs,
-      [joueur.id]: {
-        ...joueur,
-        bonusRestantsMs: cumuler(joueur.bonusRestantsMs, bonus.nature, dureeMs),
-      },
-    },
+    ...apresEffet,
     evenements: [
-      ...etat.evenements,
+      ...apresEffet.evenements,
       {
         type: 'bonusRamasse',
         joueur: joueur.id,
-        nature: bonus.nature,
+        nature,
         dureeMs,
         position: bonus.position,
       },
     ],
+  };
+}
+
+/**
+ * Change les effets du Tactique d'un joueur (etape 7.7). Ils vivent dans son etat
+ * tactique, et non dans Joueur: une partie d'un autre mode n'en porte aucune trace.
+ */
+function modifierLesEffetsTactiques(
+  etat: EtatPartie,
+  id: IdentifiantEntite,
+  modifier: (effets: DureesRestantes<EffetTactique>) => DureesRestantes<EffetTactique>,
+): EtatPartie {
+  const arme = etatTactiqueDe(etat, id);
+
+  return {
+    ...etat,
+    tactique: { ...etat.tactique, [id]: { ...arme, effets: modifier(arme.effets) } },
   };
 }
 
@@ -349,7 +427,12 @@ function infligerLeMalus(
   malus: MalusPose,
   victime: VictimeDuMalus,
 ): EtatPartie {
-  const dureeMs = etat.reglages.malus.types[malus.nature].dureeS * 1000;
+  const nature = malus.nature;
+  const tactique = estUnMalusTactique(nature);
+  const dureeMs = tactique
+    ? dureeDeLEffet(etat.reglages, nature)
+    : etat.reglages.malus.types[nature].dureeS * 1000;
+  let courant = etat;
   const joueurs: Record<IdentifiantEntite, Joueur> = { ...etat.joueurs };
   const victimes: IdentifiantEntite[] = [];
 
@@ -358,22 +441,28 @@ function infligerLeMalus(
       continue;
     }
 
-    joueurs[id] = {
-      ...joueur,
-      malusRestantsMs: remplacer(joueur.malusRestantsMs, malus.nature, dureeMs),
-    };
+    if (tactique) {
+      courant = modifierLesEffetsTactiques(courant, id, (effets) =>
+        remplacer(effets, nature, dureeMs),
+      );
+    } else {
+      joueurs[id] = {
+        ...joueur,
+        malusRestantsMs: remplacer(joueur.malusRestantsMs, nature, dureeMs),
+      };
+    }
     victimes.push(id);
   }
 
   return {
-    ...etat,
+    ...courant,
     joueurs,
     evenements: [
-      ...etat.evenements,
+      ...courant.evenements,
       {
         type: 'malusRamasse',
         joueur: ramasseur.id,
-        nature: malus.nature,
+        nature,
         dureeMs,
         victimes,
         position: malus.position,

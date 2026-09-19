@@ -13,7 +13,11 @@ import { describe, expect, it } from 'vitest';
 import type { EtatClient } from './etat.js';
 import { ETAT_INITIAL } from './etat.js';
 import {
+  FILTRES_DES_MALUS,
+  bonusDOrigineEnCours,
   effetsEnCours,
+  effetsTactiquesSurMoi,
+  filtreDesMalus,
   jeSuisHote,
   maLigneDeClassement,
   moiDansLaPartie,
@@ -159,8 +163,8 @@ describe('qui suis-je', () => {
 describe('les effets en cours', () => {
   const etat = enPartie({
     effets: [
-      { categorie: 'bonus', nature: 'vitesse', finPrevueA: 5000 },
-      { categorie: 'malus', nature: 'flou', finPrevueA: 12_000 },
+      { categorie: 'bonus', nature: 'vitesse', surMoi: true, finPrevueA: 5000 },
+      { categorie: 'malus', nature: 'flou', surMoi: true, finPrevueA: 12_000 },
     ],
   });
 
@@ -171,7 +175,12 @@ describe('les effets en cours', () => {
   });
 
   it('dit ce qu il reste d un effet, et jamais moins que rien', () => {
-    const effet = { categorie: 'bonus' as const, nature: 'vitesse' as const, finPrevueA: 5000 };
+    const effet = {
+      categorie: 'bonus' as const,
+      nature: 'vitesse' as const,
+      surMoi: true,
+      finPrevueA: 5000,
+    };
 
     expect(resteDeLEffet(effet, 1000)).toBe(4000);
     expect(resteDeLEffet(effet, 9000)).toBe(0);
@@ -199,5 +208,47 @@ describe('la partie bouge-t-elle', () => {
   it('dit non hors de l ecran de jeu', () => {
     expect(partieEnMouvement(enPartie({ ecran: 'fin' }))).toBe(false);
     expect(partieEnMouvement(ETAT_INITIAL)).toBe(false);
+  });
+});
+
+describe('les effets qui agissent sur nous (etape 7.7)', () => {
+  const etat = enPartie({
+    effets: [
+      { categorie: 'bonus', nature: 'vitesse', surMoi: true, finPrevueA: 5000 },
+      { categorie: 'bonus', nature: 'rafale', surMoi: true, finPrevueA: 4000 },
+      { categorie: 'malus', nature: 'viseeEtroite', surMoi: true, finPrevueA: 9000 },
+      { categorie: 'malus', nature: 'tirUnique', surMoi: false, finPrevueA: 9000 },
+      { categorie: 'malus', nature: 'flou', surMoi: false, finPrevueA: 9000 },
+    ],
+  });
+
+  it('ne donne un halo et un son qu aux bonus du jeu d origine', () => {
+    expect(bonusDOrigineEnCours(etat, 1000)).toEqual(['vitesse']);
+  });
+
+  it('rend ce qu il reste des effets du Tactique subis ou recus, pas de ceux qu on inflige', () => {
+    const restes = effetsTactiquesSurMoi(etat, 1000);
+
+    expect(restes.rafale).toBe(3000);
+    expect(restes.viseeEtroite).toBe(8000);
+    expect(restes.tirUnique).toBe(0);
+    expect(effetsTactiquesSurMoi(etat, 6000).rafale).toBe(0);
+  });
+
+  it('floute et grise le terrain sous les malus subis, pas sous ceux qu on a ramasses', () => {
+    expect(filtreDesMalus(etat, 1000)).toBe('none');
+
+    const subis = enPartie({
+      effets: [
+        { categorie: 'malus', nature: 'flou', surMoi: true, finPrevueA: 9000 },
+        { categorie: 'malus', nature: 'negatif', surMoi: true, finPrevueA: 5000 },
+      ],
+    });
+
+    expect(filtreDesMalus(subis, 1000)).toBe(
+      `${FILTRES_DES_MALUS.flou} ${FILTRES_DES_MALUS.negatif}`,
+    );
+    expect(filtreDesMalus(subis, 6000)).toBe(FILTRES_DES_MALUS.flou);
+    expect(filtreDesMalus(subis, 10_000)).toBe('none');
   });
 });

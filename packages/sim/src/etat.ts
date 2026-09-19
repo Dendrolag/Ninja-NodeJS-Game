@@ -49,8 +49,12 @@ import type {
   Position,
   ReglagesPartie,
   ReglagesPartiels,
+  EffetTactique,
+  NatureBonus,
+  NatureMalus,
   TypeBonus,
   TypeMalus,
+  Visee,
   TypeZone,
   Vecteur,
 } from '@neon-ninja/shared';
@@ -268,13 +272,15 @@ interface ObjetPose {
 /** Un bonus pose sur la carte. Il profite a celui qui le ramasse. */
 export interface BonusPose extends ObjetPose {
   readonly categorie: 'bonus';
-  readonly nature: TypeBonus;
+  /** Un bonus du jeu d'origine, ou, dans une partie Tactique, un des siens (etape 7.7). */
+  readonly nature: NatureBonus;
 }
 
 /** Un malus pose sur la carte. Il frappe les autres joueurs que le ramasseur. */
 export interface MalusPose extends ObjetPose {
   readonly categorie: 'malus';
-  readonly nature: TypeMalus;
+  /** Un malus du jeu d'origine, ou, dans une partie Tactique, un des siens (etape 7.7). */
+  readonly nature: NatureMalus;
 }
 
 /** Un objet a ramasser: un bonus ou un malus. */
@@ -303,7 +309,7 @@ export interface ZoneSpeciale {
 export interface BonusRamasse {
   readonly type: 'bonusRamasse';
   readonly joueur: IdentifiantEntite;
-  readonly nature: TypeBonus;
+  readonly nature: NatureBonus;
   /** Duree ajoutee par ce ramassage, en millisecondes. */
   readonly dureeMs: number;
   readonly position: Position;
@@ -319,7 +325,7 @@ export interface BonusRamasse {
 export interface MalusRamasse {
   readonly type: 'malusRamasse';
   readonly joueur: IdentifiantEntite;
-  readonly nature: TypeMalus;
+  readonly nature: NatureMalus;
   /** Duree imposee aux autres joueurs, en millisecondes. */
   readonly dureeMs: number;
   readonly victimes: readonly IdentifiantEntite[];
@@ -396,6 +402,11 @@ export interface TirDeCapture {
   readonly orientation: Orientation;
   /** Nombre d'entites capturees, joueurs et bots confondus. Zero pour un tir sans effet. */
   readonly captures: number;
+  /**
+   * Le cone du tir, quand un objet du Tactique l'a elargi ou retreci (etape 7.7). Absent
+   * pour le cone ordinaire, et donc toujours en Chasse.
+   */
+  readonly visee?: Exclude<Visee, 'normale'>;
 }
 
 /**
@@ -570,13 +581,24 @@ export interface EtatDeChasse {
 export interface EtatTactiqueDuJoueur {
   /** La direction de son dernier deplacement: celle dans laquelle il vise. */
   readonly orientation: Orientation;
-  /** Charges disponibles, de zero a TACTIQUE.CHARGES_MAXIMUM. */
+  /** Charges en main, de zero a TACTIQUE.CHARGES_MAXIMUM, ou a une sous Tir unique. */
   readonly charges: number;
   /**
    * Temps avant qu'une charge revienne, en millisecondes. Il ne s'ecoule que si des
    * charges manquent: aux charges pleines, il vaut une attente entiere.
    */
   readonly avantProchaineChargeMs: number;
+  /**
+   * Les charges mises de cote par un Tir unique (etape 7.7), rendues a la fin de l'effet.
+   * Zero le reste du temps.
+   */
+  readonly chargesGelees: number;
+  /**
+   * Le temps restant sur chacun des six effets du Tactique (etape 7.7), bonus recus et
+   * malus subis. Ils changent l'arme, et rien d'autre: c'est pourquoi ils vivent ici, et
+   * non avec les bonus et malus du jeu d'origine dans Joueur.
+   */
+  readonly effets: DureesRestantes<EffetTactique>;
 }
 
 /** L'etat complet d'une partie a un instant donne. */

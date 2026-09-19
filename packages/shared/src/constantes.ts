@@ -223,6 +223,32 @@ export const TACTIQUE = {
 export type Orientation = Exclude<Direction, 'immobile'>;
 
 /**
+ * Ce que changent les objets du Tactique (etape 7.7), decisions du porteur du projet du
+ * 19 septembre 2026.
+ *
+ * Les recharges se donnent en duree d'une charge, pour se comparer d'un coup d'oeil aux
+ * cinq secondes ordinaires (TACTIQUE.RECHARGE_MS). Le moteur n'en tire qu'une vitesse:
+ * sous Recharge rapide, l'attente s'ecoule 5 / 1,5 fois plus vite.
+ */
+export const OBJETS_TACTIQUES = {
+  /** Visee large: l'ouverture totale du cone, en degres, et sa portee, en pixels. */
+  VISEE_LARGE: { ANGLE_DEGRES: 120, PORTEE_PX: 150 },
+  /** Visee etroite. */
+  VISEE_ETROITE: { ANGLE_DEGRES: 60, PORTEE_PX: 70 },
+  /** Recharge rapide: le temps d'une charge, en millisecondes. */
+  RECHARGE_RAPIDE_MS: 1500,
+  /** Recharge lente. */
+  RECHARGE_LENTE_MS: 10000,
+  /** Tir unique: les charges utilisables au plus. Les autres sont gelees, pas perdues. */
+  CHARGES_SOUS_TIR_UNIQUE: 1,
+  /**
+   * En Tactique, six bonus tentent leur chance au lieu de trois: chacun a la moitie de son
+   * taux, pour que la carte ne se charge pas davantage (decision du 19 septembre 2026).
+   */
+  PART_DU_TAUX_DES_BONUS: 0.5,
+} as const;
+
+/**
  * Qui peut trouver une partie.
  *
  * Une partie publique apparait dans la liste et accueille la partie rapide; une
@@ -279,6 +305,63 @@ export const TYPES_MALUS = ['controlesInverses', 'flou', 'negatif'] as const;
 
 /** Nature d'un malus. */
 export type TypeMalus = (typeof TYPES_MALUS)[number];
+
+/**
+ * Les trois bonus propres au mode Tactique (etape 7.7), qui jouent sur son arme.
+ *
+ * Ils s'ajoutent aux trois bonus du jeu d'origine, dans le Tactique seulement: les autres
+ * modes ne parcourent que TYPES_BONUS. Decision du porteur du projet du 19 septembre 2026.
+ */
+export const TYPES_BONUS_TACTIQUES = ['rafale', 'rechargeRapide', 'viseeLarge'] as const;
+
+/** Nature d'un bonus du Tactique. */
+export type TypeBonusTactique = (typeof TYPES_BONUS_TACTIQUES)[number];
+
+/**
+ * Les trois malus propres au mode Tactique (etape 7.7), contraires des trois bonus. Comme
+ * tout malus, ils frappent les autres joueurs, pas celui qui les ramasse.
+ */
+export const TYPES_MALUS_TACTIQUES = ['tirUnique', 'rechargeLente', 'viseeEtroite'] as const;
+
+/** Nature d'un malus du Tactique. */
+export type TypeMalusTactique = (typeof TYPES_MALUS_TACTIQUES)[number];
+
+/** Nature d'un effet du Tactique: un de ses bonus ou un de ses malus. */
+export type EffetTactique = TypeBonusTactique | TypeMalusTactique;
+
+/** Les six effets du Tactique, bonus puis malus. */
+export const EFFETS_TACTIQUES: readonly EffetTactique[] = [
+  ...TYPES_BONUS_TACTIQUES,
+  ...TYPES_MALUS_TACTIQUES,
+];
+
+/**
+ * Le malus contraire de chaque bonus du Tactique. Tant que les deux durent, ils
+ * s'annulent: ni l'un ni l'autre n'agit (decision du porteur du projet, etape 7.7).
+ */
+export const CONTRAIRES_TACTIQUES: Readonly<Record<TypeBonusTactique, TypeMalusTactique>> = {
+  rafale: 'tirUnique',
+  rechargeRapide: 'rechargeLente',
+  viseeLarge: 'viseeEtroite',
+};
+
+/**
+ * Le cone d'un joueur du Tactique, tel que les objets le changent: ordinaire, large sous
+ * Visee large, etroit sous Visee etroite (etape 7.7).
+ */
+export const VISEES = ['normale', 'large', 'etroite'] as const;
+
+/** La visee d'un joueur du Tactique. */
+export type Visee = (typeof VISEES)[number];
+
+/** Nature d'un bonus pose sur la carte, tous modes confondus. */
+export type NatureBonus = TypeBonus | TypeBonusTactique;
+
+/** Nature d'un malus pose sur la carte, tous modes confondus. */
+export type NatureMalus = TypeMalus | TypeMalusTactique;
+
+/** Nature d'un objet pose sur la carte. */
+export type NatureObjet = NatureBonus | NatureMalus;
 
 /**
  * Les quatre zones speciales. Portage de ZONE_TYPES (legacy/server.js:187).

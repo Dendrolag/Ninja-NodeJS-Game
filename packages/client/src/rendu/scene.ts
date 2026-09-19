@@ -50,7 +50,7 @@ import {
 
 import type { EtatClient } from '../etat.js';
 import type { NiveauDeSang } from '../interface/preferences.js';
-import { effetsEnCours } from '../selecteurs.js';
+import { bonusDOrigineEnCours } from '../selecteurs.js';
 import {
   imageDObjet,
   imageDeMarche,
@@ -265,11 +265,7 @@ export function construireScene(
   }
 
   const moi = etat.moi;
-  const bonusActifs = new Set<TypeBonus>(
-    effetsEnCours(etat, maintenant)
-      .filter((effet) => effet.categorie === 'bonus')
-      .map((effet) => effet.nature as TypeBonus),
-  );
+  const bonusActifs = new Set<TypeBonus>(bonusDOrigineEnCours(etat, maintenant));
 
   // Le rayon de detection des bots noirs est un reglage de la partie: on le lit
   // dans le salon, qui porte les reglages retenus. Faute de salon, la valeur par

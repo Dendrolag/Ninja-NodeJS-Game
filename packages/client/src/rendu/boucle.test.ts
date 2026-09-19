@@ -70,15 +70,20 @@ const SALON: InfosSalon = {
 };
 
 /** Un rendu qui ne dessine rien et retient les scenes et le sang recus. */
-function renduDEssai(): Rendu & { scenes: Scene[]; imprimes: SangAImprimer[] } {
+function renduDEssai(): Rendu & { scenes: Scene[]; imprimes: SangAImprimer[]; filtres: string[] } {
   const scenes: Scene[] = [];
   const imprimes: SangAImprimer[] = [];
+  const filtres: string[] = [];
 
   return {
     scenes,
     imprimes,
+    filtres,
     imprimer: (taches) => {
       imprimes.push(...taches);
+    },
+    filtrer: (filtre) => {
+      filtres.push(filtre);
     },
     application: undefined as never,
     chargerLeDecor: async () => undefined,

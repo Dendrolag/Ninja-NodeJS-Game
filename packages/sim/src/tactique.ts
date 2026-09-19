@@ -38,12 +38,30 @@
  * prouve.
  */
 
-import type { Alea, Orientation, Position, Vecteur } from '@neon-ninja/shared';
-import { TACTIQUE, entier } from '@neon-ninja/shared';
+import type {
+  Alea,
+  EffetTactique,
+  Orientation,
+  Position,
+  Vecteur,
+  Visee,
+} from '@neon-ninja/shared';
+import { OBJETS_TACTIQUES, TACTIQUE, entier } from '@neon-ninja/shared';
 
 import { capturerBot, capturerJoueur } from './capture.js';
+import type { DureesRestantes } from './effets.js';
+import { fairePasserLeTemps } from './effets.js';
 import type { EtatPartie, EtatTactiqueDuJoueur, IdentifiantEntite } from './etat.js';
 import type { Entrees } from './moteur.js';
+import {
+  AUCUN_EFFET_TACTIQUE,
+  chargesMaximum,
+  gelerOuRendre,
+  peutTirer,
+  tirPayant,
+  viseeDe,
+  vitesseDeRecharge,
+} from './objetsTactiques.js';
 
 /**
  * La geometrie d'un cone: jusqu'ou il porte, et de combien il s'ouvre.
@@ -71,6 +89,22 @@ export const CONE_TACTIQUE: GeometrieDuCone = geometrieDuCone(
 );
 
 /**
+ * Le cone de chaque visee: celui du Tactique, puis ceux que donnent Visee large et Visee
+ * etroite (etape 7.7).
+ */
+export const CONES_DES_VISEES: Readonly<Record<Visee, GeometrieDuCone>> = {
+  normale: CONE_TACTIQUE,
+  large: geometrieDuCone(
+    OBJETS_TACTIQUES.VISEE_LARGE.ANGLE_DEGRES,
+    OBJETS_TACTIQUES.VISEE_LARGE.PORTEE_PX,
+  ),
+  etroite: geometrieDuCone(
+    OBJETS_TACTIQUES.VISEE_ETROITE.ANGLE_DEGRES,
+    OBJETS_TACTIQUES.VISEE_ETROITE.PORTEE_PX,
+  ),
+};
+
+/**
  * Tolerance sur la comparaison des cosinus.
  *
  * La v0.9.0 comparait des angles en inegalite large: une cible exactement sur le bord
@@ -95,11 +129,16 @@ const VECTEURS: Readonly<Record<Orientation, Vecteur>> = {
   nord_ouest: { x: -DIAGONALE, y: -DIAGONALE },
 };
 
-/** L'etat tactique d'un joueur qui n'a encore rien fait: tourne vers l'est, charges pleines. */
+/**
+ * L'etat tactique d'un joueur qui n'a encore rien fait: tourne vers l'est, charges pleines,
+ * aucun effet en cours.
+ */
 export const ETAT_TACTIQUE_DE_DEPART: EtatTactiqueDuJoueur = {
   orientation: TACTIQUE.ORIENTATION_DE_DEPART,
   charges: TACTIQUE.CHARGES_MAXIMUM,
   avantProchaineChargeMs: TACTIQUE.RECHARGE_MS,
+  chargesGelees: 0,
+  effets: AUCUN_EFFET_TACTIQUE,
 };
 
 /**
@@ -155,27 +194,73 @@ export function dansLeCone(
  * battements de cinquante millisecondes rendent autant qu'un seul battement d'une
  * seconde. Un joueur aux charges pleines n'attend rien: son attente reste entiere, et
  * ne commence qu'a son prochain tir payant.
+ *
+ * L'attente se compte en temps de recharge ordinaire. Sous Recharge rapide ou lente
+ * (etape 7.7), elle s'ecoule plus ou moins vite que le temps (avanceeDeLAttente): c'est ce
+ * qui garde la propriete precedente quand un effet commence ou finit en cours de route.
+ *
+ * Sous Tir unique, la main ne tient qu'une charge: la recharge s'arrete a une, et les
+ * charges gelees attendent la fin de l'effet (gelerOuRendre). Le plafond est celui du debut
+ * du battement.
+ *
+ * Les effets ne s'ecoulent pas ici: c'est vieillirLesEffets, apres.
  */
 export function recharger(courant: EtatTactiqueDuJoueur, dtMs: number): EtatTactiqueDuJoueur {
+  const maximum = chargesMaximum(courant.effets);
   let charges = courant.charges;
   let avant = courant.avantProchaineChargeMs;
 
-  if (charges < TACTIQUE.CHARGES_MAXIMUM) {
-    avant -= dtMs;
+  if (charges < maximum) {
+    avant -= avanceeDeLAttente(courant.effets, dtMs);
 
-    while (avant <= 0 && charges < TACTIQUE.CHARGES_MAXIMUM) {
+    while (avant <= 0 && charges < maximum) {
       charges += 1;
       avant += TACTIQUE.RECHARGE_MS;
     }
   }
 
-  if (charges >= TACTIQUE.CHARGES_MAXIMUM) {
+  if (charges >= maximum) {
     avant = TACTIQUE.RECHARGE_MS;
   }
 
   return charges === courant.charges && avant === courant.avantProchaineChargeMs
     ? courant
     : { ...courant, charges, avantProchaineChargeMs: avant };
+}
+
+/**
+ * De combien l'attente d'une charge avance pendant dtMs, en temps de recharge ordinaire.
+ *
+ * Autant que dtMs sans effet de recharge. Sinon, le battement se coupe aux instants ou un
+ * effet de recharge prend fin, et chaque morceau avance a la vitesse des effets qui
+ * durent encore: le resultat ne depend pas du decoupage du temps en battements.
+ */
+export function avanceeDeLAttente(effets: DureesRestantes<EffetTactique>, dtMs: number): number {
+  const coupures = [effets.rechargeRapide, effets.rechargeLente]
+    .filter((fin) => fin > 0 && fin < dtMs)
+    .sort((a, b) => a - b);
+  let avancee = 0;
+  let debut = 0;
+
+  for (const fin of [...coupures, dtMs]) {
+    avancee += (fin - debut) * vitesseDeRecharge(fairePasserLeTemps(effets, debut));
+    debut = fin;
+  }
+
+  return avancee;
+}
+
+/**
+ * Fait s'ecouler les effets du Tactique d'un joueur. Sans effet en cours, l'etat est rendu
+ * tel quel: une partie sans objet ramasse ne fabrique rien a chaque battement.
+ */
+export function vieillirLesEffets(
+  courant: EtatTactiqueDuJoueur,
+  dtMs: number,
+): EtatTactiqueDuJoueur {
+  const enCours = Object.values(courant.effets).some((reste) => reste > 0);
+
+  return enCours ? { ...courant, effets: fairePasserLeTemps(courant.effets, dtMs) } : courant;
 }
 
 /**
@@ -192,6 +277,10 @@ export function recharger(courant: EtatTactiqueDuJoueur, dtMs: number): EtatTact
  * Sans charge, le tir n'a pas lieu. Avec une charge, il a lieu et laisse un evenement
  * au journal, meme s'il ne capture rien; il ne coute la charge que s'il capture
  * quelque chose, et relance alors l'attente de la prochaine.
+ *
+ * Les objets du Tactique (etape 7.7) changent trois choses: le cone est celui de la visee
+ * du tireur; pendant une Rafale un tir ne coute rien, et part meme sans charge; sous Tir
+ * unique, la main ne tient qu'une charge (voir gelerOuRendre).
  */
 export function tirer(etat: EtatPartie, tireurId: IdentifiantEntite): EtatPartie {
   return unTir(etat, tireurId).etat;
@@ -209,18 +298,20 @@ function unTir(etat: EtatPartie, tireurId: IdentifiantEntite): Tir {
   const tireur = etat.joueurs[tireurId];
   const arme = etatTactiqueDe(etat, tireurId);
 
-  if (tireur === undefined || arme.charges <= 0) {
+  if (tireur === undefined || !peutTirer(arme)) {
     return { etat, victimes: [] };
   }
 
   const { position } = tireur;
   const { orientation } = arme;
+  const visee = viseeDe(arme.effets);
+  const cone = CONES_DES_VISEES[visee];
   const victimes: IdentifiantEntite[] = [];
   let courant = etat;
   let captures = 0;
 
   for (const cible of Object.values(etat.joueurs)) {
-    if (cible.id !== tireurId && dansLeCone(position, orientation, cible.position)) {
+    if (cible.id !== tireurId && dansLeCone(position, orientation, cible.position, cone)) {
       const apres = capturerJoueur(courant, tireurId, cible.id);
 
       if (apres !== courant) {
@@ -232,7 +323,7 @@ function unTir(etat: EtatPartie, tireurId: IdentifiantEntite): Tir {
   }
 
   for (const bot of Object.values(etat.bots)) {
-    if (bot.type === 'bot' && dansLeCone(position, orientation, bot.position)) {
+    if (bot.type === 'bot' && dansLeCone(position, orientation, bot.position, cone)) {
       const apres = capturerBot(courant, tireurId, bot.id);
 
       if (apres !== courant) {
@@ -243,7 +334,7 @@ function unTir(etat: EtatPartie, tireurId: IdentifiantEntite): Tir {
   }
 
   const armeApres =
-    captures > 0
+    captures > 0 && tirPayant(arme)
       ? { ...arme, charges: arme.charges - 1, avantProchaineChargeMs: TACTIQUE.RECHARGE_MS }
       : arme;
 
@@ -253,7 +344,14 @@ function unTir(etat: EtatPartie, tireurId: IdentifiantEntite): Tir {
       tactique: { ...courant.tactique, [tireurId]: armeApres },
       evenements: [
         ...courant.evenements,
-        { type: 'tirDeCapture', joueur: tireurId, position, orientation, captures },
+        {
+          type: 'tirDeCapture',
+          joueur: tireurId,
+          position,
+          orientation,
+          captures,
+          ...(visee === 'normale' ? {} : { visee }),
+        },
       ],
     },
     victimes,
@@ -264,8 +362,9 @@ function unTir(etat: EtatPartie, tireurId: IdentifiantEntite): Tir {
  * Ce que le mode Tactique fait a chaque battement, avant le releve des contacts.
  *
  * Dans cet ordre: chaque joueur prend l'orientation de son deplacement s'il s'est
- * deplace, ses charges reviennent avec le temps ecoule, puis les tirs demandes
- * partent. La table est reconstruite a partir des joueurs presents: celui qui a
+ * deplace, ses charges reviennent avec le temps ecoule, ses effets s'ecoulent et le Tir
+ * unique gele ou rend ses charges (etape 7.7), puis les tirs demandes partent: un tir voit
+ * donc les effets tels qu'ils sont a la fin du battement. La table est reconstruite a partir des joueurs presents: celui qui a
  * quitte la partie en sort de lui-meme.
  *
  * La direction d'un joueur est celle de son deplacement effectif pendant ce
@@ -278,9 +377,11 @@ export function agirEnTactique(etat: EtatPartie, entrees: Entrees, dtMs: number)
     const avant = etatTactiqueDe(etat, joueur.id);
     const orientation = joueur.direction === 'immobile' ? avant.orientation : joueur.direction;
 
-    table[joueur.id] = recharger(
-      orientation === avant.orientation ? avant : { ...avant, orientation },
-      dtMs,
+    table[joueur.id] = gelerOuRendre(
+      vieillirLesEffets(
+        recharger(orientation === avant.orientation ? avant : { ...avant, orientation }, dtMs),
+        dtMs,
+      ),
     );
   }
 

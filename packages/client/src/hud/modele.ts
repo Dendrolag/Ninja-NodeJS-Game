@@ -21,14 +21,7 @@
  * document dessine l'interface par-dessus. C'est la pile annoncee par CLAUDE.md.
  */
 
-import type {
-  CampDeChasse,
-  Couleur,
-  LigneClassement,
-  Mode,
-  TypeBonus,
-  TypeMalus,
-} from '@neon-ninja/shared';
+import type { CampDeChasse, Couleur, LigneClassement, Mode, NatureObjet } from '@neon-ninja/shared';
 import {
   CHASSE,
   COULEURS_DES_EQUIPES,
@@ -63,7 +56,7 @@ export interface LigneHud {
 
 /** Un effet en cours sur nous, avec ce qu'il en reste. */
 export interface EffetHud {
-  readonly nature: TypeBonus | TypeMalus;
+  readonly nature: NatureObjet;
   readonly categorie: 'bonus' | 'malus';
   readonly libelle: string;
   readonly couleur: number;

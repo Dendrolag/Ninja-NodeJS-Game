@@ -17,7 +17,7 @@
  * se discutera avec les maquettes, pas dans un fichier de constantes.
  */
 
-import type { TypeBonus, TypeMalus, TypeZone } from '@neon-ninja/shared';
+import type { NatureObjet, TypeBonus, TypeZone } from '@neon-ninja/shared';
 
 /** Une couleur d'affichage et son opacite, separees pour PixiJS qui les veut ainsi. */
 export interface Teinte {
@@ -218,13 +218,23 @@ export const APPARENCE_ZONE: Readonly<
 };
 
 /**
+ * Les couleurs des trois familles d'objets du Tactique (etape 7.7): le tir (Rafale et Tir
+ * unique), la recharge, et la visee, qui reprend le violet pale du cone.
+ */
+export const COULEURS_TACTIQUES = {
+  tir: 0xffae2e,
+  recharge: 0x3ee6ff,
+  visee: 0xcc99ff,
+} as const;
+
+/**
  * Couleur et libelle de chaque bonus et de chaque malus, portage des tables du client d'origine.
  *
  * Les libelles sont lus par le joueur: ils portent leurs accents. L'etape 4.2 les
  * avait ecrits sans, ce qui ne se voyait pas tant qu'aucune page ne les affichait.
  */
 export const APPARENCE_OBJET: Readonly<
-  Record<TypeBonus | TypeMalus, { readonly libelle: string; readonly couleur: number }>
+  Record<NatureObjet, { readonly libelle: string; readonly couleur: number }>
 > = {
   vitesse: { libelle: 'Boost', couleur: 0x00ff00 },
   invincibilite: { libelle: 'Invincibilité', couleur: 0xffd700 },
@@ -232,6 +242,15 @@ export const APPARENCE_OBJET: Readonly<
   controlesInverses: { libelle: 'Contrôles inversés', couleur: 0xff4444 },
   flou: { libelle: 'Vision floue', couleur: 0x44aaff },
   negatif: { libelle: 'Vision négative', couleur: 0xaa44ff },
+  // Les objets du Tactique (etape 7.7): une couleur par paire, un bonus et son contraire,
+  // decision du porteur du projet du 19 septembre 2026. La couleur dit ce qui change,
+  // le pictogramme dans quel sens.
+  rafale: { libelle: 'Rafale', couleur: COULEURS_TACTIQUES.tir },
+  tirUnique: { libelle: 'Tir unique', couleur: COULEURS_TACTIQUES.tir },
+  rechargeRapide: { libelle: 'Recharge rapide', couleur: COULEURS_TACTIQUES.recharge },
+  rechargeLente: { libelle: 'Recharge lente', couleur: COULEURS_TACTIQUES.recharge },
+  viseeLarge: { libelle: 'Visée large', couleur: COULEURS_TACTIQUES.visee },
+  viseeEtroite: { libelle: 'Visée étroite', couleur: COULEURS_TACTIQUES.visee },
 };
 
 /**

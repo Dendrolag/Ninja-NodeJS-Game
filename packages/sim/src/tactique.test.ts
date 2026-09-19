@@ -312,7 +312,7 @@ describe('tirer', () => {
 
 describe('recharger', () => {
   it('rend une charge au bout de cinq secondes, pas avant', () => {
-    const depart = { orientation: 'est' as const, charges: 3, avantProchaineChargeMs: 5000 };
+    const depart = { ...ETAT_TACTIQUE_DE_DEPART, charges: 3, avantProchaineChargeMs: 5000 };
 
     const presque = recharger(depart, 4999);
     const arrivee = recharger(presque, 1);
@@ -323,6 +323,7 @@ describe('recharger', () => {
 
   it('reporte le reste de l attente: le decoupage du temps ne change rien', () => {
     const depart: EtatTactiqueDuJoueur = {
+      ...ETAT_TACTIQUE_DE_DEPART,
       orientation: 'sud',
       charges: 0,
       avantProchaineChargeMs: 5000,
@@ -340,7 +341,7 @@ describe('recharger', () => {
   });
 
   it('ne depasse jamais le maximum, et garde une attente entiere aux charges pleines', () => {
-    const presquePlein = { orientation: 'est' as const, charges: 4, avantProchaineChargeMs: 100 };
+    const presquePlein = { ...ETAT_TACTIQUE_DE_DEPART, charges: 4, avantProchaineChargeMs: 100 };
     const plein = recharger(presquePlein, 1_000_000);
 
     expect(plein).toEqual({ ...ETAT_TACTIQUE_DE_DEPART, orientation: 'est' });

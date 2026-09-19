@@ -10,7 +10,12 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ReglagesPartiels } from './reglages.js';
-import { REGLAGES_PAR_DEFAUT, completerReglages, imposerLesReglagesDuMode } from './reglages.js';
+import {
+  OBJETS_TACTIQUES_PAR_DEFAUT,
+  REGLAGES_PAR_DEFAUT,
+  completerReglages,
+  imposerLesReglagesDuMode,
+} from './reglages.js';
 
 describe('completerReglages', () => {
   it('rend les valeurs par defaut quand on ne fournit rien', () => {
@@ -92,12 +97,46 @@ describe('imposerLesReglagesDuMode', () => {
     expect(reglages.dureePartieS).toBe(60);
   });
 
-  it('rend tels quels, le meme objet, les reglages des autres modes', () => {
+  it('rend tels quels, le meme objet, les reglages du Tactique', () => {
     const reglages = completerReglages();
 
-    for (const mode of ['classique', 'tactique', 'equipes'] as const) {
+    expect(imposerLesReglagesDuMode('tactique', reglages)).toBe(reglages);
+  });
+
+  it('rend au Tactique ses objets s ils manquaient', () => {
+    const sansObjets = imposerLesReglagesDuMode('classique', completerReglages());
+
+    expect(imposerLesReglagesDuMode('tactique', sansObjets).objetsTactiques).toEqual(
+      OBJETS_TACTIQUES_PAR_DEFAUT,
+    );
+  });
+
+  it('retire les objets du Tactique des autres modes, et rien d autre', () => {
+    const { objetsTactiques: _retires, ...attendus } = completerReglages();
+
+    for (const mode of ['classique', 'equipes'] as const) {
+      const reglages = imposerLesReglagesDuMode(mode, completerReglages());
+
+      expect(reglages).toEqual(attendus);
+      expect('objetsTactiques' in reglages).toBe(false);
       expect(imposerLesReglagesDuMode(mode, reglages)).toBe(reglages);
     }
+  });
+
+  it('garde les objets du Tactique choisis par l hote', () => {
+    const reglages = completerReglages({
+      objetsTactiques: { bonus: { rafale: { dureeS: 8 } }, malus: { tirUnique: { actif: false } } },
+    });
+
+    expect(reglages.objetsTactiques?.bonus.rafale).toEqual({
+      actif: true,
+      dureeS: 8,
+      tauxApparitionPourCent: 15,
+    });
+    expect(reglages.objetsTactiques?.malus.tirUnique.actif).toBe(false);
+    expect(reglages.objetsTactiques?.bonus.viseeLarge).toEqual(
+      OBJETS_TACTIQUES_PAR_DEFAUT.bonus.viseeLarge,
+    );
   });
 
   it('retire la zone de chaos d une partie Massacre, et rien d autre', () => {
@@ -110,13 +149,19 @@ describe('imposerLesReglagesDuMode', () => {
   });
 
   it('rend tels quels les reglages d un Massacre deja sans chaos', () => {
-    const reglages = completerReglages({ zones: { types: { chaos: false } } });
+    const reglages = imposerLesReglagesDuMode(
+      'massacre',
+      completerReglages({ zones: { types: { chaos: false } } }),
+    );
 
     expect(imposerLesReglagesDuMode('massacre', reglages)).toBe(reglages);
   });
 
   it('rend tels quels les reglages d une Chasse deja sans bots noirs', () => {
-    const reglages = completerReglages({ botsNoirs: { actifs: false } });
+    const reglages = imposerLesReglagesDuMode(
+      'chasse',
+      completerReglages({ botsNoirs: { actifs: false } }),
+    );
 
     expect(imposerLesReglagesDuMode('chasse', reglages)).toBe(reglages);
   });

@@ -463,18 +463,43 @@ function ecranPourLaSession(ecran: Ecran, session: SessionDuClient): Ecran {
  * Trois faits seulement en ajoutent un: le bonus ramasse, le malus ramasse, et
  * le malus subi du fait d'un autre. Tous les autres passent sans rien changer.
  *
- * LES DUREES SE CUMULENT quand un effet deja en cours revient, comportement a
- * preserver numero 10 de CLAUDE.md. On ajoute donc la duree a la fin prevue, on
- * ne la remplace pas.
+ * LES DUREES DES BONUS SE CUMULENT quand un effet deja en cours revient,
+ * comportement a preserver numero 10 de CLAUDE.md: on ajoute la duree a la fin
+ * prevue. UN MALUS QUI REVIENT REPART DE SA DUREE PLEINE, sans s'ajouter, comme le
+ * fait le moteur (remplacer, dans packages/sim): la jauge l'annoncait plus long
+ * qu'il n'etait jusqu'a l'etape 7.7.
  */
 function effetsApres(effets: readonly EffetActif[], fait: FaitDeJeu): readonly EffetActif[] {
   switch (fait.nature) {
     case 'bonusActive':
-      return cumuler(effets, 'bonus', fait.charge.nature, fait.charge.dureeMs, fait.instant);
+      return ajouterLEffet(
+        effets,
+        'bonus',
+        fait.charge.nature,
+        true,
+        fait.charge.dureeMs,
+        fait.instant,
+      );
 
     case 'malusRamasse':
+      return ajouterLEffet(
+        effets,
+        'malus',
+        fait.charge.nature,
+        false,
+        fait.charge.dureeMs,
+        fait.instant,
+      );
+
     case 'malusSubi':
-      return cumuler(effets, 'malus', fait.charge.nature, fait.charge.dureeMs, fait.instant);
+      return ajouterLEffet(
+        effets,
+        'malus',
+        fait.charge.nature,
+        true,
+        fait.charge.dureeMs,
+        fait.instant,
+      );
 
     default:
       return effets;
@@ -482,31 +507,38 @@ function effetsApres(effets: readonly EffetActif[], fait: FaitDeJeu): readonly E
 }
 
 /**
- * Ajoute un effet, ou repousse la fin de celui qui court deja.
+ * Ajoute un effet, ou change la fin de celui qui court deja: elle recule de la duree
+ * pour un bonus, elle repart de la duree pleine pour un malus.
  *
  * Un effet dont la fin est deja passee ne compte pas comme courant: il vaut
  * mieux repartir de l'instant present que d'ajouter une duree a un passe que
  * personne n'a vu s'ecouler.
  */
-function cumuler(
+function ajouterLEffet(
   effets: readonly EffetActif[],
   categorie: EffetActif['categorie'],
   nature: EffetActif['nature'],
+  surMoi: boolean,
   dureeMs: number,
   instant: number,
 ): readonly EffetActif[] {
   // Les effets deja expires sont oublies au passage: personne ne les affiche
   // plus, et les garder ferait grandir la liste sans fin.
   const enCours = effets.filter((effet) => effet.finPrevueA > instant);
-  const courant = enCours.find((effet) => effet.nature === nature && effet.categorie === categorie);
+  const courant = enCours.find(
+    (effet) => effet.nature === nature && effet.categorie === categorie && effet.surMoi === surMoi,
+  );
 
   if (courant === undefined) {
-    return [...enCours, { categorie, nature, finPrevueA: instant + dureeMs }];
+    return [...enCours, { categorie, nature, surMoi, finPrevueA: instant + dureeMs }];
   }
 
-  return enCours.map((effet) =>
-    effet === courant ? { ...effet, finPrevueA: effet.finPrevueA + dureeMs } : effet,
-  );
+  const finPrevueA =
+    categorie === 'bonus'
+      ? courant.finPrevueA + dureeMs
+      : Math.max(courant.finPrevueA, instant + dureeMs);
+
+  return enCours.map((effet) => (effet === courant ? { ...effet, finPrevueA } : effet));
 }
 
 /** Le message de chat, date de son arrivee. */

@@ -347,7 +347,9 @@ describe('les effets affiches', () => {
       { type: 'fait', fait: fait('bonusActive', { nature: 'vitesse', dureeMs: 10_000 }, 1000) },
     ]);
 
-    expect(etat.effets).toEqual([{ categorie: 'bonus', nature: 'vitesse', finPrevueA: 11_000 }]);
+    expect(etat.effets).toEqual([
+      { categorie: 'bonus', nature: 'vitesse', surMoi: true, finPrevueA: 11_000 },
+    ]);
   });
 
   it('cumule les durees d un meme bonus au lieu de les remplacer', () => {
@@ -392,13 +394,40 @@ describe('les effets affiches', () => {
     expect(etat.effets.map((effet) => effet.categorie)).toEqual(['bonus', 'malus']);
   });
 
-  it('retient aussi le malus que l on ramasse soi-meme', () => {
+  it('retient aussi le malus que l on ramasse soi-meme, sans qu il agisse sur nous', () => {
     const etat = apres([
       ...JUSQU_AU_JEU,
       { type: 'fait', fait: fait('malusRamasse', { nature: 'flou', dureeMs: 4000 }, 1000) },
     ]);
 
-    expect(etat.effets).toEqual([{ categorie: 'malus', nature: 'flou', finPrevueA: 5000 }]);
+    expect(etat.effets).toEqual([
+      { categorie: 'malus', nature: 'flou', surMoi: false, finPrevueA: 5000 },
+    ]);
+  });
+
+  it('relance un malus subi de nouveau sans allonger sa duree, comme le moteur', () => {
+    const subi = (instant: number): Action => ({
+      type: 'fait',
+      fait: fait('malusSubi', { nature: 'flou', dureeMs: 12_000, parPseudo: 'Bob' }, instant),
+    });
+    const etat = apres([...JUSQU_AU_JEU, subi(1000), subi(8000)]);
+
+    expect(etat.effets).toEqual([
+      { categorie: 'malus', nature: 'flou', surMoi: true, finPrevueA: 20_000 },
+    ]);
+  });
+
+  it('distingue le malus qu on subit de celui qu on a ramasse', () => {
+    const etat = apres([
+      ...JUSQU_AU_JEU,
+      { type: 'fait', fait: fait('malusRamasse', { nature: 'tirUnique', dureeMs: 10_000 }, 1000) },
+      {
+        type: 'fait',
+        fait: fait('malusSubi', { nature: 'tirUnique', dureeMs: 10_000, parPseudo: 'Bob' }, 2000),
+      },
+    ]);
+
+    expect(etat.effets.map((effet) => effet.surMoi)).toEqual([false, true]);
   });
 
   it('n ajoute aucun effet pour un fait qui n en porte pas', () => {

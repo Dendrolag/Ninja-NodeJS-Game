@@ -20,7 +20,7 @@
  * le joueur a sous les yeux, et le lui dire ailleurs le ferait chercher.
  */
 
-import type { Mode, Refus, TypeMalus } from '@neon-ninja/shared';
+import type { Mode, NatureMalus, Refus } from '@neon-ninja/shared';
 import { multiplicateurDuCombo } from '@neon-ninja/shared';
 
 import type { EtatClient } from './etat.js';
@@ -51,7 +51,7 @@ export interface Annonce {
  * le nom du coupable remplace {joueur}.
  */
 const TEXTES_MALUS: Readonly<
-  Record<TypeMalus, { readonly declenche: string; readonly subi: string }>
+  Record<NatureMalus, { readonly declenche: string; readonly subi: string }>
 > = {
   flou: {
     declenche: 'Vous volez les lunettes de vos adversaires',
@@ -64,6 +64,19 @@ const TEXTES_MALUS: Readonly<
   negatif: {
     declenche: 'Vous avez privé vos adversaires de couleurs',
     subi: '{joueur} vous prive de couleurs',
+  },
+  // Les malus du Tactique (etape 7.7), sur le meme ton.
+  tirUnique: {
+    declenche: 'Vos adversaires n’ont plus qu’une charge',
+    subi: '{joueur} vous laisse une seule charge',
+  },
+  rechargeLente: {
+    declenche: 'Vous ralentissez la recharge de vos adversaires',
+    subi: '{joueur} a ralenti votre recharge',
+  },
+  viseeEtroite: {
+    declenche: 'Vous resserrez la visée de vos adversaires',
+    subi: '{joueur} a resserré votre visée',
   },
 };
 

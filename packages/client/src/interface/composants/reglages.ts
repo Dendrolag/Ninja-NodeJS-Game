@@ -106,6 +106,9 @@ export function monterFormulaireReglages(options: OptionsFormulaireReglages): Fo
       'fieldset',
       { classe: 'reglages-groupe' },
       creer(doc, 'legend', { texte: groupe.titre }),
+      groupe.note === undefined
+        ? undefined
+        : creer(doc, 'p', { classe: 'reglages-note', texte: groupe.note }),
     );
 
     for (const section of groupe.sections) {

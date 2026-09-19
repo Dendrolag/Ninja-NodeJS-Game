@@ -30,7 +30,15 @@
  * le groupe: c'est le role de completerReglages.
  */
 
-import type { IdentifiantCarte, Mode, TypeBonus, TypeMalus, TypeZone } from './constantes.js';
+import type {
+  IdentifiantCarte,
+  Mode,
+  TypeBonus,
+  TypeBonusTactique,
+  TypeMalus,
+  TypeMalusTactique,
+  TypeZone,
+} from './constantes.js';
 
 /** Reglages d'un bonus: est-il en jeu, combien de temps dure-t-il, apparait-il souvent. */
 export interface ReglageBonus {
@@ -69,6 +77,20 @@ export interface ReglagesMalus {
   /** Chance sur cent qu'une tentative fasse apparaitre un malus. */
   readonly tauxApparitionPourCent: number;
   readonly types: Readonly<Record<TypeMalus, ReglageMalus>>;
+}
+
+/**
+ * Reglages des six objets du Tactique (etape 7.7): pour chacun, est-il en jeu et combien
+ * de temps dure-t-il, plus un taux d'apparition pour chaque bonus.
+ *
+ * Ils suivent les regles d'apparition des objets du jeu d'origine: l'intervalle entre deux
+ * tentatives est celui des bonus, et le taux commun des malus. Un groupe a part, et non
+ * trois natures de plus dans les groupes bonus et malus, parce qu'il n'existe que dans une
+ * partie Tactique: les autres modes gardent des reglages identiques a ce qu'ils etaient.
+ */
+export interface ReglagesObjetsTactiques {
+  readonly bonus: Readonly<Record<TypeBonusTactique, ReglageBonus>>;
+  readonly malus: Readonly<Record<TypeMalusTactique, ReglageMalus>>;
 }
 
 /** Reglages des zones speciales. */
@@ -129,9 +151,33 @@ export interface ReglagesPartie {
   readonly malus: ReglagesMalus;
   readonly zones: ReglagesZones;
   readonly botsNoirs: ReglagesBotsNoirs;
+  /**
+   * Les objets du Tactique (etape 7.7). Presents dans les reglages que l'hote regle au
+   * salon, quel que soit le mode, pour qu'il retrouve ses choix en changeant de mode; le
+   * moteur les retire d'une partie d'un autre mode (imposerLesReglagesDuMode).
+   */
+  readonly objetsTactiques?: ReglagesObjetsTactiques;
 }
 
-/** Reglages appliques quand l'hote ne change rien. Valeurs du legacy. */
+/**
+ * Les objets du Tactique quand l'hote ne change rien (etape 7.7): les durees tranchees
+ * par le porteur du projet le 19 septembre 2026, et des taux qui reprennent ceux des bonus
+ * du jeu d'origine, le plus fort des trois, la Rafale, etant le plus rare.
+ */
+export const OBJETS_TACTIQUES_PAR_DEFAUT: ReglagesObjetsTactiques = {
+  bonus: {
+    rafale: { actif: true, dureeS: 5, tauxApparitionPourCent: 15 },
+    rechargeRapide: { actif: true, dureeS: 10, tauxApparitionPourCent: 25 },
+    viseeLarge: { actif: true, dureeS: 10, tauxApparitionPourCent: 20 },
+  },
+  malus: {
+    tirUnique: { actif: true, dureeS: 10 },
+    rechargeLente: { actif: true, dureeS: 12 },
+    viseeEtroite: { actif: true, dureeS: 10 },
+  },
+};
+
+/** Reglages appliques quand l'hote ne change rien. Valeurs du legacy, et les objets du Tactique. */
 export const REGLAGES_PAR_DEFAUT: ReglagesPartie = {
   dureePartieS: 180,
   carte: 'map1',
@@ -170,6 +216,7 @@ export const REGLAGES_PAR_DEFAUT: ReglagesPartie = {
     rayonDetectionPx: 150,
     partDeBotsPerduePourCent: 50,
   },
+  objetsTactiques: OBJETS_TACTIQUES_PAR_DEFAUT,
 };
 
 /**
@@ -179,7 +226,9 @@ export const REGLAGES_PAR_DEFAUT: ReglagesPartie = {
  * valeurs par defaut.
  */
 export type PartielProfond<T> = {
-  readonly [Champ in keyof T]?: T[Champ] extends object ? PartielProfond<T[Champ]> : T[Champ];
+  readonly [Champ in keyof T]?: NonNullable<T[Champ]> extends object
+    ? PartielProfond<NonNullable<T[Champ]>>
+    : T[Champ];
 };
 
 /** Des reglages incomplets, tels qu'un appelant peut les fournir. */
@@ -206,10 +255,24 @@ export function completerReglages(partiels?: ReglagesPartiels): ReglagesPartie {
  *     ninjas ne font aucun score, et un bot noir n'aurait rien a prendre.
  *   - Le Massacre n'a pas de zone de chaos (etape 7.4, decision 6 du porteur du projet):
  *     elle repeint des bots dont la couleur ne compte pour personne.
- *   - Les autres modes n'imposent rien: leurs reglages sont rendus tels quels, le meme
- *     objet, ce qui laisse leurs parties identiques a ce qu'elles etaient.
+ *   - Seul le Tactique a ses objets (etape 7.7): les autres modes en perdent le groupe, et
+ *     leur etat reste identique a l'octet a ce qu'il etait avant eux. Le Tactique le
+ *     retrouve s'il manquait.
+ *   - Pour le reste, les autres modes n'imposent rien: leurs reglages sont rendus tels
+ *     quels, ce qui laisse leurs parties identiques a ce qu'elles etaient.
  */
 export function imposerLesReglagesDuMode(mode: Mode, reglages: ReglagesPartie): ReglagesPartie {
+  if (mode === 'tactique') {
+    return reglages.objetsTactiques === undefined
+      ? { ...reglages, objetsTactiques: OBJETS_TACTIQUES_PAR_DEFAUT }
+      : reglages;
+  }
+
+  if (reglages.objetsTactiques !== undefined) {
+    const { objetsTactiques: _retires, ...sansObjetsTactiques } = reglages;
+    return imposerLesReglagesDuMode(mode, sansObjetsTactiques);
+  }
+
   if (mode === 'chasse' && reglages.botsNoirs.actifs) {
     return { ...reglages, botsNoirs: { ...reglages.botsNoirs, actifs: false } };
   }

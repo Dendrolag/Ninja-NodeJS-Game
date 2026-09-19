@@ -28,7 +28,7 @@
  * assets/README.md.
  */
 
-import type { TypeBonus, TypeMalus } from './constantes.js';
+import type { NatureObjet, TypeBonus } from './constantes.js';
 import type { Direction } from './constantes.js';
 
 /**
@@ -149,19 +149,31 @@ export function tousLesNinjas(): readonly string[] {
   return [...chemins];
 }
 
-/** Nom du fichier d'icone de chaque bonus et de chaque malus. */
-const ICONE_OBJET: Readonly<Record<TypeBonus | TypeMalus, string>> = {
-  vitesse: 'speed',
-  invincibilite: 'shield',
-  revelation: 'eye',
-  controlesInverses: 'reverse',
-  flou: 'blur',
-  negatif: 'negative',
+/**
+ * Fichier d'icone de chaque bonus et de chaque malus.
+ *
+ * Les six du jeu d'origine sont des images dessinees a la main. Les six du Tactique
+ * (etape 7.7) sont dessinees en SVG, sur le meme modele: un pictogramme noir, en planche
+ * de deux images, pose par le rendu sur un disque de la couleur de l'objet.
+ */
+const ICONE_OBJET: Readonly<Record<NatureObjet, string>> = {
+  vitesse: 'speed.png',
+  invincibilite: 'shield.png',
+  revelation: 'eye.png',
+  controlesInverses: 'reverse.png',
+  flou: 'blur.png',
+  negatif: 'negative.png',
+  rafale: 'rafale.svg',
+  rechargeRapide: 'recharge-rapide.svg',
+  viseeLarge: 'visee-large.svg',
+  tirUnique: 'tir-unique.svg',
+  rechargeLente: 'recharge-lente.svg',
+  viseeEtroite: 'visee-etroite.svg',
 };
 
 /** Chemin relatif de l'icone d'un bonus ou d'un malus. */
-export function cheminObjet(nature: TypeBonus | TypeMalus): string {
-  return `objets/${ICONE_OBJET[nature]}.png`;
+export function cheminObjet(nature: NatureObjet): string {
+  return `objets/${ICONE_OBJET[nature]}`;
 }
 
 /**
@@ -178,7 +190,7 @@ export const COTE_IMAGE_OBJET_PX = 50;
 
 /** Toutes les icones d'objet a charger. */
 export function tousLesObjets(): readonly string[] {
-  return Object.values(ICONE_OBJET).map((icone) => `objets/${icone}.png`);
+  return Object.values(ICONE_OBJET).map((icone) => `objets/${icone}`);
 }
 
 /**

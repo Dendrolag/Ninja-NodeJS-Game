@@ -952,6 +952,13 @@
   font-weight: 600;
 }
 
+/* Une phrase sous le titre d'un groupe: ce que ses champs ne disent pas seuls (etape 7.7). */
+.reglages-note {
+  margin: 0;
+  color: var(--texte-secondaire);
+  font-size: 13px;
+}
+
 .reglages-section {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));

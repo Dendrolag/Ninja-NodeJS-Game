@@ -16,7 +16,13 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { CARTES, TYPES_BONUS, TYPES_MALUS } from './constantes.js';
+import {
+  CARTES,
+  TYPES_BONUS,
+  TYPES_BONUS_TACTIQUES,
+  TYPES_MALUS,
+  TYPES_MALUS_TACTIQUES,
+} from './constantes.js';
 import {
   IMAGES_DE_PLUIE,
   MUSIQUES,
@@ -107,8 +113,19 @@ describe('cheminObjet', () => {
     expect(cheminObjet('flou')).toBe('objets/blur.png');
   });
 
-  it('couvre les six natures sans en oublier', () => {
-    const natures = [...TYPES_BONUS, ...TYPES_MALUS];
+  it('dessine en SVG les six objets du Tactique', () => {
+    expect(cheminObjet('rafale')).toBe('objets/rafale.svg');
+    expect(cheminObjet('rechargeLente')).toBe('objets/recharge-lente.svg');
+    expect(cheminObjet('viseeEtroite')).toBe('objets/visee-etroite.svg');
+  });
+
+  it('couvre les douze natures sans en oublier', () => {
+    const natures = [
+      ...TYPES_BONUS,
+      ...TYPES_MALUS,
+      ...TYPES_BONUS_TACTIQUES,
+      ...TYPES_MALUS_TACTIQUES,
+    ];
 
     expect(tousLesObjets()).toHaveLength(natures.length);
     expect(new Set(natures.map((nature) => cheminObjet(nature))).size).toBe(natures.length);
