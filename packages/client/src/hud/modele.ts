@@ -241,6 +241,14 @@ function comboHud(
   }
 
   const combo = comboEnCours(etat, maintenant);
+
+  // En Horde, le compteur ne se montre que pendant un combo: hors de l'action, un « x1 »
+  // fixe n'apprend rien (demande du porteur du projet, 19 septembre 2026). Le Massacre le
+  // garde, pour les ninjas qui restent.
+  if (mode === 'classique' && combo === undefined) {
+    return undefined;
+  }
+
   const unite = mode === 'massacre' ? 'mort' : 'ninja';
   const restants = partie.entites.filter((entite) => entite.type === 'bot').length;
 

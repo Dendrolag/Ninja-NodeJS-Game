@@ -38,11 +38,15 @@ function horde(journal: readonly FaitDeJeu[] = []): ReturnType<typeof etatDeMass
 }
 
 describe('le HUD d une partie Horde', () => {
-  it('montre le compteur de combo, sans ninjas restants', () => {
-    expect(construireHud(horde(), 0).combo).toEqual({
+  it('ne montre rien hors d un combo, pas meme x1', () => {
+    expect(construireHud(horde(), 0).combo).toBeUndefined();
+  });
+
+  it('montre le compteur pendant un combo, sans ninjas restants', () => {
+    expect(construireHud(horde([ralliement(1000)]), 1000).combo).toEqual({
       multiplicateur: 1,
-      compte: '',
-      fenetre: 0,
+      compte: '1 ninja',
+      fenetre: 1,
       restants: '',
     });
   });
@@ -67,9 +71,9 @@ describe('le HUD d une partie Horde', () => {
     );
     const noir = fait('captureParBotNoir', { botsPerdus: 3 }, 1100);
 
-    expect(construireHud(horde(journal), 1000 + COMBO.FENETRE_MS).combo?.multiplicateur).toBe(1);
-    expect(construireHud(horde([...journal, capture]), 1200).combo?.multiplicateur).toBe(1);
-    expect(construireHud(horde([...journal, noir]), 1200).combo?.multiplicateur).toBe(1);
+    expect(construireHud(horde(journal), 1000 + COMBO.FENETRE_MS).combo).toBeUndefined();
+    expect(construireHud(horde([...journal, capture]), 1200).combo).toBeUndefined();
+    expect(construireHud(horde([...journal, noir]), 1200).combo).toBeUndefined();
   });
 
   it('ne montre pas de combo en Tactique ni en Equipes', () => {
