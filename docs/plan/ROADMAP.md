@@ -122,6 +122,8 @@ Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision 
 
 **Étape 4.5 terminée le 19 septembre 2026: le jeu se présente tel qu'il est.** Les textes de l'accueil, de la création et de l'aide ont été réécrits avec le porteur du projet, dans un ton court et un peu décalé: « Le ninja, c'est vous. Enfin, un des trois cents. », « Plusieurs modes, beaucoup de ninjas. », une carte par mode sur l'accueil, une section par mode dans l'aide. Le joueur lit « PNJ » là où il lisait « faux ninjas ». L'aide cite enfin Espace et le bouton Katana pour les trois modes qui s'en servent. Aucune règle ne change. Fiche: `docs/plan/etape-4-5.md`.
 
+**Étape 5.6 terminée le 19 septembre 2026: le jeu peut être trouvé.** La page dit ce qu'est le jeu dans son titre, déclare une seule adresse, `ninja.dendrolag.fr`, vers laquelle l'alias `vercel.app` redirige, sert un fichier des robots et un plan du site, décrit le jeu en données structurées, et montre une vraie scène de partie quand on partage son lien. Un moteur de recherche qui n'exécute pas le jeu lit le titre de l'accueil et les cinq modes, qui servent aussi d'écran de chargement. Reste au porteur du projet à déclarer le domaine à Google et à Bing. Fiche: `docs/plan/etape-5-6.md`.
+
 ---
 
 ## 4. Carte thématique des étapes
@@ -232,7 +234,7 @@ Tests requis: un test qui échouait avant chaque correction; la grille complète
 **5.5. Peaufinage et débogage.** Étape ajoutée le 18 septembre 2026, à la demande du porteur du projet, après l'étape 7.4 et avant les fonctionnalités reportées. Recueillir auprès de lui les défauts et les manques qu'il relève en jouant, les compléter des limites connues des handoffs (5.4 à 7.4), les trier avec lui, puis corriger chacun, dans les cinq modes, sur ordinateur et sur téléphone. Aucune nouvelle fonctionnalité: ce qui en serait une devient une étape à part.
 Tests requis: un test qui échouait avant chaque correction; empreinte des parties de référence identique, sauf changement voulu et consigné; bout en bout vert.
 
-**5.6. Référencement.** Étape ajoutée le 19 septembre 2026, à la demande du porteur du projet: que le jeu remonte dans les moteurs de recherche. Titre, description et aperçu de la page servie par Vercel, données structurées, plan du site et fichier des robots, contenu lisible sans exécuter le jeu, adresse canonique; mesurer avant et après avec les outils des moteurs de recherche.
+**5.6. Référencement.** Faite le 19 septembre 2026 (fiche `docs/plan/etape-5-6.md`). Étape ajoutée le 19 septembre 2026, à la demande du porteur du projet: que le jeu remonte dans les moteurs de recherche. Titre, description et aperçu de la page servie par Vercel, données structurées, plan du site et fichier des robots, contenu lisible sans exécuter le jeu, adresse canonique; mesurer avant et après avec les outils des moteurs de recherche.
 Tests requis: TU ou TI des balises servies par la page; vérification en production de ce que voit un robot; bout en bout vert.
 
 **5.7. Allègement du rendu.** Étape ajoutée le 19 septembre 2026, issue de la mesure de l'étape 7.6, sur décision du porteur du projet de garder le plafond de 500 faux ninjas. Au processeur ralenti six fois, 500 entités coûtent 4,3 à 5,3 ms de notre code par image, dont 2,8 ms de transmission des sprites à PixiJS (section 17 de `docs/mesures/charge-serveur.md`). Réduire ce coût, par exemple en ne mettant à jour que ce que la caméra montre, sans changer ce qui se voit.

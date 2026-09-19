@@ -190,7 +190,10 @@ export function monterApplication(options: OptionsApplication): Application {
     fenetreDuCode.racine,
   );
 
-  options.hote.append(racine);
+  // L'hote contient la presentation statique de la page (etape 5.6), ecrite pour
+  // les moteurs de recherche et pour patienter pendant que le code arrive:
+  // l'application prend sa place.
+  options.hote.replaceChildren(racine);
 
   const contexte: ContexteEcran = {
     document: doc,

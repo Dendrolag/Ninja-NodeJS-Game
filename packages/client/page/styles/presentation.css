@@ -1,0 +1,73 @@
+/*
+ * La presentation statique de la page (etape 5.6).
+ *
+ * Elle est ecrite dans index.html, avant tout code: c'est ce que lit un moteur de
+ * recherche qui n'execute pas le jeu, et ce que voit le joueur pendant que le code
+ * arrive, a la place d'une page vide. L'application la remplace en se montant.
+ * Elle reprend l'allure de l'accueil sans ses controles: rien n'y est cliquable
+ * tant que le jeu n'est pas la.
+ */
+
+.presentation {
+  display: grid;
+  gap: 18px;
+  width: min(100%, var(--largeur-page));
+  margin: 0 auto;
+  padding: clamp(28px, 6vw, 64px) var(--marge-page);
+}
+
+.presentation-marque {
+  font-family: var(--police-titre);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.presentation-titre {
+  display: grid;
+  font-size: clamp(36px, 6vw, 56px);
+  letter-spacing: -0.01em;
+  line-height: 1.04;
+}
+
+.presentation-accroche {
+  max-width: 560px;
+  color: var(--texte-secondaire);
+  font-size: 15.5px;
+}
+
+.presentation-chargement {
+  color: var(--cyan);
+  font-family: var(--police-donnees);
+  font-size: 13px;
+}
+
+.presentation-modes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.presentation-modes li {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--bordure);
+  border-radius: 18px;
+}
+
+.presentation-modes h2 {
+  font-size: 15.5px;
+  font-weight: 600;
+}
+
+.presentation-modes p {
+  color: var(--texte-tertiaire);
+  font-size: 13px;
+}

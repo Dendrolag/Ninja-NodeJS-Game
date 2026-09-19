@@ -28,7 +28,14 @@ export interface CompteDeLEntete {
 export function monterCompteDeLEntete(doc: Document, client: Client): CompteDeLEntete {
   const seConnecter = bouton(
     doc,
-    { classe: 'bouton bouton-secondaire entete-connexion', texte: 'Se connecter', icone: 'user' },
+    // Sur telephone, la feuille de style cache le texte et ne garde que le
+    // pictogramme: l'etiquette garde au bouton son nom (etape 5.6).
+    {
+      classe: 'bouton bouton-secondaire entete-connexion',
+      texte: 'Se connecter',
+      icone: 'user',
+      etiquette: 'Se connecter',
+    },
     () => {
       client.naviguer('connexion');
     },

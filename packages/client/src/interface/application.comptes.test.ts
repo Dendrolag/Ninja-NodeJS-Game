@@ -92,6 +92,8 @@ describe('l en-tete et la connexion', () => {
 
     const seConnecter = obligatoire(hote, '.entete-connexion');
     expect(estCache(seConnecter)).toBe(false);
+    // Sur telephone, son texte est cache: il garde son nom (etape 5.6).
+    expect(seConnecter.getAttribute('aria-label')).toBe('Se connecter');
 
     seConnecter.click();
 

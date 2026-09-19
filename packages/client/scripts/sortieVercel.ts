@@ -32,6 +32,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { RACINE_RESSOURCES, politiqueDeContenu } from '@neon-ninja/shared';
 
+import { ADRESSE_CANONIQUE, ALIAS_VERCEL } from './adresses.ts';
 import { DOSSIER_WEB, empaqueterLeClient } from './empaqueter.ts';
 
 /** La racine du depot. */
@@ -45,6 +46,12 @@ export const DOSSIER_SORTIE_VERCEL = join(RACINE_DEPOT, '.vercel', 'output');
 
 /** Une regle de routage de Vercel: des en-tetes sur les adresses qui correspondent. */
 export type RouteVercel =
+  | {
+      readonly src: string;
+      readonly has: readonly [{ readonly type: 'host'; readonly value: string }];
+      readonly status: 308;
+      readonly headers: { readonly Location: string };
+    }
   | {
       readonly src: string;
       readonly headers: Readonly<Record<string, string>>;
@@ -75,12 +82,22 @@ export interface OptionsSortieVercel {
  * pas survivre a la mise en ligne d'aujourd'hui. Les regles d'en-tetes passent
  * avant les fichiers, qu'elles laissent servir.
  *
+ * La redirection de l'alias passe la premiere: une visite par l'alias repart vers
+ * l'adresse canonique, chemin compris, sans rien servir. Elle est permanente (308),
+ * pour que les moteurs de recherche reportent l'alias sur l'adresse canonique.
+ *
  * @throws Si le serveur de jeu n'est pas une origine.
  */
 export function configurationVercel(serveurDeJeu: string): ConfigurationVercel {
   return {
     version: 3,
     routes: [
+      {
+        src: '^/(.*)$',
+        has: [{ type: 'host', value: ALIAS_VERCEL }],
+        status: 308,
+        headers: { Location: `${ADRESSE_CANONIQUE}/$1` },
+      },
       {
         src: '/polices/(.*)',
         headers: { 'Cache-Control': 'public, max-age=31536000, immutable' },

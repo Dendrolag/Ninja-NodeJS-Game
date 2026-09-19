@@ -16,7 +16,9 @@
  *   app.js              tout le code du client, minifie, avec sa carte de sources
  *   styles.css          toutes les feuilles de style, polices comprises
  *   polices/            les fichiers de police, references par styles.css
- *   icones/, favicon.ico les icones de la page
+ *   icones/, favicon.ico les icones de la page, et l'image d'apercu d'un lien partage
+ *   robots.txt          ce que les moteurs de recherche peuvent lire (etape 5.6)
+ *   sitemap.xml         le plan du site, qui ne compte que la page d'accueil
  *
  * Les ressources du jeu (cartes, sprites, sons) n'y sont pas: elles restent dans
  * assets/, a la racine du depot. En developpement, le serveur les sert sous
@@ -52,6 +54,14 @@ const DOSSIER_PAGE = join(RACINE_PAQUET, 'page');
 
 /** Le dossier produit, que le serveur sert a la racine. */
 export const DOSSIER_WEB = join(RACINE_PAQUET, 'web');
+
+/** Les fichiers de la page recopies tels quels, a cote de index.html et des icones. */
+export const FICHIERS_RECOPIES: readonly string[] = [
+  'index.html',
+  'favicon.ico',
+  'robots.txt',
+  'sitemap.xml',
+];
 
 /** Ce que la page doit savoir de sa mise en ligne. Voir src/configuration.ts. */
 export interface OptionsEmpaquetage {
@@ -91,8 +101,9 @@ export async function empaqueterLeClient(options: OptionsEmpaquetage = {}): Prom
     logLevel: 'warning',
   });
 
-  await cp(join(DOSSIER_PAGE, 'index.html'), join(DOSSIER_WEB, 'index.html'));
-  await cp(join(DOSSIER_PAGE, 'favicon.ico'), join(DOSSIER_WEB, 'favicon.ico'));
+  for (const fichier of FICHIERS_RECOPIES) {
+    await cp(join(DOSSIER_PAGE, fichier), join(DOSSIER_WEB, fichier));
+  }
   await cp(join(DOSSIER_PAGE, 'icones'), join(DOSSIER_WEB, 'icones'), { recursive: true });
 }
 

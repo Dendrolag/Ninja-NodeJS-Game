@@ -378,3 +378,26 @@ describe('ce qui accompagne les ecrans', () => {
     application = { demonter: () => undefined };
   });
 });
+
+describe('la presentation statique de la page (etape 5.6)', () => {
+  it('cede sa place a l application qui se monte', () => {
+    const page = document.createElement('div');
+    page.innerHTML =
+      '<main class="presentation"><h1>Le ninja, c’est vous.</h1><p>Chargement du jeu…</p></main>';
+    document.body.append(page);
+
+    const autre = monterApplication({
+      hote: page,
+      client: creerClient({ reseau: creerReseauFactice(), horloge: creerHorlogeClientManuelle() }),
+      horloge: creerHorlogeClientManuelle(),
+      monterLeJeu: jeuDEssai().monteur,
+      recharger: () => undefined,
+    });
+
+    expect(page.querySelector('.presentation')).toBeNull();
+    expect(page.children).toHaveLength(1);
+    expect(obligatoire(page, '.application').dataset['ecran']).toBe('accueil');
+
+    autre.demonter();
+  });
+});

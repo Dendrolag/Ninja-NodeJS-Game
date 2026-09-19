@@ -7,19 +7,126 @@
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
     <meta name="theme-color" content="#06080e" />
+    <title>Neon Ninja, jeu multijoueur gratuit dans le navigateur</title>
     <meta
       name="description"
       content="Jeu multijoueur en temps réel dans le navigateur. Plusieurs modes, beaucoup de ninjas. Ralliez, capturez, traquez ou tranchez au milieu de centaines de PNJ."
     />
-    <title>Neon Ninja</title>
+    <link rel="canonical" href="https://ninja.dendrolag.fr/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Neon Ninja" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta property="og:url" content="https://ninja.dendrolag.fr/" />
+    <meta property="og:title" content="Neon Ninja, jeu multijoueur gratuit dans le navigateur" />
+    <meta
+      property="og:description"
+      content="Le ninja, c’est vous. Enfin, un des trois cents. Plusieurs modes, beaucoup de ninjas."
+    />
+    <meta property="og:image" content="https://ninja.dendrolag.fr/icones/apercu.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Une rue de Tokyo la nuit, sous la pluie, remplie de ninjas de toutes les couleurs."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" href="/icones/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icones/apple-touch-icon.png" />
     <link rel="stylesheet" href="/styles.css" />
     <script type="module" src="/app.js"></script>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://ninja.dendrolag.fr/#site",
+            "name": "Neon Ninja",
+            "url": "https://ninja.dendrolag.fr/",
+            "inLanguage": "fr"
+          },
+          {
+            "@type": "VideoGame",
+            "@id": "https://ninja.dendrolag.fr/#jeu",
+            "name": "Neon Ninja",
+            "url": "https://ninja.dendrolag.fr/",
+            "description": "Jeu multijoueur en temps réel dans le navigateur. Plusieurs modes, beaucoup de ninjas. Ralliez, capturez, traquez ou tranchez au milieu de centaines de PNJ.",
+            "image": "https://ninja.dendrolag.fr/icones/apercu.jpg",
+            "inLanguage": "fr",
+            "genre": ["Action", "Multijoueur"],
+            "playMode": "MultiPlayer",
+            "gamePlatform": "Navigateur web",
+            "applicationCategory": "Game",
+            "operatingSystem": "Tous les systèmes avec un navigateur récent",
+            "isAccessibleForFree": true,
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+            "isPartOf": { "@id": "https://ninja.dendrolag.fr/#site" }
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
-    <div id="application"></div>
-    <noscript>Neon Ninja a besoin de JavaScript pour fonctionner.</noscript>
+    <div id="application">
+      <!--
+        La presentation statique (etape 5.6): ce que lit un moteur de recherche qui
+        n'execute pas le jeu, et ce que voit le joueur pendant que le code arrive.
+        L'application la remplace en se montant. Les textes des modes sont ceux de
+        TEXTES_DES_MODES, mot pour mot: un test y veille.
+      -->
+      <main class="presentation">
+        <p class="presentation-marque"><span>Neon</span> <span class="accent">Ninja</span></p>
+        <h1 class="presentation-titre">
+          <span>Le ninja, c’est vous.</span>
+          <span class="accent">Enfin, un des trois cents.</span>
+        </h1>
+        <p class="presentation-accroche">
+          Jeu multijoueur gratuit en temps réel, dans le navigateur, sans inscription. Plusieurs
+          modes, beaucoup de ninjas.
+        </p>
+        <p class="presentation-chargement" aria-live="polite">Chargement du jeu…</p>
+        <noscript>
+          <p class="presentation-chargement">Neon Ninja a besoin de JavaScript pour fonctionner.</p>
+        </noscript>
+        <ul class="presentation-modes">
+          <li>
+            <h2>Horde</h2>
+            <p>Faites grossir vos rangs et attrapez les autres joueurs pour tout leur piquer.</p>
+          </li>
+          <li>
+            <h2>Tactique</h2>
+            <p>
+              Réfléchir avant d’agir, pour une fois. Visez devant vous et capturez tout ce qui
+              passe.
+            </p>
+          </li>
+          <li>
+            <h2>Équipes</h2>
+            <p>
+              Deux couleurs, une seule qui gagne. Ralliez pour votre camp, ne trahissez personne.
+            </p>
+          </li>
+          <li>
+            <h2>Chasse</h2>
+            <p>
+              Cache-cache, version ninja. Les traqueurs cherchent les vrais joueurs dans la foule.
+              Les proies prises changent de camp.
+            </p>
+          </li>
+          <li>
+            <h2>Massacre</h2>
+            <p>
+              Fini les couleurs, place au bain de sang. Tranchez tout au katana et enchaînez pour
+              faire exploser le score.
+            </p>
+          </li>
+        </ul>
+      </main>
+    </div>
   </body>
 </html>

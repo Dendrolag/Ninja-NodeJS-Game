@@ -112,3 +112,48 @@ test('de l accueil a la partie, puis retour a l accueil', async ({ page, hasTouc
 
   expect(erreurs).toEqual([]);
 });
+
+/**
+ * Le referencement de l'etape 5.6: ce que lit un moteur de recherche qui n'execute
+ * pas le jeu, et les fichiers qu'il demande. Avec le jeu, la presentation statique
+ * cede sa place a l'accueil, sans erreur: le bloc de donnees structurees passe la
+ * politique de securite du contenu.
+ */
+test('la page se presente sans le jeu, et sert ce que lisent les moteurs de recherche', async ({
+  browser,
+  page,
+  request,
+}) => {
+  const sansJavaScript = await browser.newContext({ javaScriptEnabled: false });
+  const lecteur = await sansJavaScript.newPage();
+
+  await lecteur.goto(jeu.url);
+  await expect(lecteur).toHaveTitle('Neon Ninja, jeu multijoueur gratuit dans le navigateur');
+  await expect(lecteur.getByRole('heading', { level: 1 })).toContainText('Le ninja, c’est vous.');
+  await expect(lecteur.getByRole('heading', { level: 2 })).toHaveText([
+    'Horde',
+    'Tactique',
+    'Équipes',
+    'Chasse',
+    'Massacre',
+  ]);
+  await sansJavaScript.close();
+
+  for (const [chemin, type] of [
+    ['/robots.txt', 'text/plain'],
+    ['/sitemap.xml', 'xml'],
+    ['/icones/apercu.jpg', 'image/jpeg'],
+  ] as const) {
+    const reponse = await request.get(`${jeu.url}${chemin}`);
+
+    expect(reponse.status(), chemin).toBe(200);
+    expect(reponse.headers()['content-type'], chemin).toContain(type);
+  }
+
+  const erreurs = releverLesErreurs(page);
+
+  await page.goto(jeu.url);
+  await expect(page.locator('.application')).toHaveAttribute('data-ecran', 'accueil');
+  await expect(page.locator('.presentation')).toHaveCount(0);
+  expect(erreurs).toEqual([]);
+});
