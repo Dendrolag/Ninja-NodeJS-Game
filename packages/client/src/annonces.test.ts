@@ -50,9 +50,9 @@ describe('annonceDuFait', () => {
     const une = annonceDuFait(fait('vieDeTraqueurPerdue', { viesRestantes: 1 }, 0));
     const aucune = annonceDuFait(fait('vieDeTraqueurPerdue', { viesRestantes: 0 }, 0));
 
-    expect(deux).toEqual({ texte: 'C’était un faux ninja : 2 vies restantes', ton: 'alerte' });
-    expect(une?.texte).toBe('C’était un faux ninja : 1 vie restante');
-    expect(aucune?.texte).toBe('C’était un faux ninja : éliminé, vous regardez la suite');
+    expect(deux).toEqual({ texte: 'C’était un PNJ, 2 vies restantes', ton: 'alerte' });
+    expect(une?.texte).toBe('C’était un PNJ, 1 vie restante');
+    expect(aucune?.texte).toBe('C’était un PNJ. Éliminé, vous regardez la suite');
   });
 
   it('dit une infection comme telle dans une partie Chasse', () => {

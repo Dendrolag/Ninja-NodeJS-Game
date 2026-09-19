@@ -531,40 +531,50 @@
   user-select: none;
 }
 
-.accueil-regles {
+.accueil-modes {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.regle {
+.carte-mode {
   display: grid;
+  align-content: start;
   gap: 8px;
   padding: 20px;
   border-radius: 18px;
 }
 
-.regle .icone {
+/* Une teinte par mode, dans l'ordre du contrat: la sixieme reprend la premiere. */
+.carte-mode .icone {
   color: var(--cyan);
 }
 
-.regle:nth-child(2) .icone {
+.carte-mode:nth-child(5n + 2) .icone {
   color: var(--rose);
 }
 
-.regle:nth-child(3) .icone {
+.carte-mode:nth-child(5n + 3) .icone {
   color: var(--or);
 }
 
-.regle h2 {
+.carte-mode:nth-child(5n + 4) .icone {
+  color: var(--violet);
+}
+
+.carte-mode:nth-child(5n) .icone {
+  color: var(--vert);
+}
+
+.carte-mode h2 {
   font-size: 15.5px;
   font-weight: 600;
 }
 
-.regle p {
+.carte-mode p {
   color: var(--texte-tertiaire);
   font-size: 13px;
 }
@@ -1091,6 +1101,12 @@
 
 .aide-section p {
   color: var(--texte-secondaire);
+}
+
+/* Le texte de presentation d'un mode, au-dessus de ses regles (etape 4.5). */
+.aide-section .aide-accroche {
+  color: var(--texte);
+  font-style: italic;
 }
 
 .aide-liste {

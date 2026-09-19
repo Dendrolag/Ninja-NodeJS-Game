@@ -246,7 +246,7 @@ describe('plus de 150 faux ninjas, jusqu au plafond de la carte (etape 7.6)', ()
     expect(reponse.valide ? [] : reponse.erreurs).toEqual([
       {
         champ: 'nombreBotsInitial',
-        motif: 'Cette carte accepte au plus 300 faux ninjas au départ.',
+        motif: 'Cette carte accepte au plus 300 PNJ au départ.',
       },
     ]);
   });

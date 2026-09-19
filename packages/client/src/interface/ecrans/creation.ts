@@ -20,42 +20,11 @@ import { monterChampPseudo } from '../composants/champPseudo.js';
 import { monterFormulaireReglages } from '../composants/reglages.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import type { Glyphe } from '../icones.js';
-import { icone } from '../icones.js';
-import { NOMS_DES_MODES } from '../modeles/cartes.js';
+import { GLYPHES_DES_MODES, icone } from '../icones.js';
+import { NOMS_DES_MODES, TEXTES_DES_MODES } from '../modeles/cartes.js';
 import { MODES_PROPOSES, MODE_PAR_DEFAUT, modeleCreation } from '../modeles/creation.js';
 import type { LigneRecapitulatif } from '../modeles/salon.js';
 import type { ContexteEcran, EcranAffiche } from './types.js';
-
-/** Ce que la tuile de chaque mode dit de lui, et son pictogramme. */
-const TUILES_DES_MODES: Readonly<
-  Record<Mode, { readonly texte: string; readonly glyphe: Glyphe }>
-> = {
-  classique: {
-    texte:
-      'Ralliez les faux ninjas à la suite pour monter votre combo, et capturez les autres joueurs pour leur voler leur troupeau.',
-    glyphe: 'ninja',
-  },
-  tactique: {
-    texte:
-      'Capturez à distance tout ce qui se trouve dans le cône devant vous, avec cinq charges qui reviennent peu à peu.',
-    glyphe: 'target',
-  },
-  equipes: {
-    texte:
-      'Deux équipes, une couleur chacune : repeignez le plus de faux ninjas aux couleurs de votre camp.',
-    glyphe: 'shield',
-  },
-  chasse: {
-    texte:
-      'Des traqueurs cherchent les vrais joueurs parmi les faux ninjas : visez juste, trois vies. Proie, cachez-vous, mais bougez pour marquer.',
-    glyphe: 'viseur',
-  },
-  massacre: {
-    texte:
-      'Seul ou à plusieurs, tranchez tous les ninjas au katana avant la fin du temps. Enchaînez les morts pour multiplier vos points.',
-    glyphe: 'katana',
-  },
-};
 
 /** Les deux visibilites, telles que leurs tuiles les presentent. */
 const VISIBILITES: readonly {
@@ -112,9 +81,9 @@ export function monterCreation(contexte: ContexteEcran): EcranAffiche {
       'label',
       { classe: 'tuile tuile-choix', attributs: { 'data-mode': valeur } },
       saisie,
-      icone(doc, TUILES_DES_MODES[valeur].glyphe, 22),
+      icone(doc, GLYPHES_DES_MODES[valeur], 22),
       creer(doc, 'strong', { texte: NOMS_DES_MODES[valeur] }),
-      creer(doc, 'span', { texte: TUILES_DES_MODES[valeur].texte }),
+      creer(doc, 'span', { texte: TEXTES_DES_MODES[valeur] }),
     );
   });
 

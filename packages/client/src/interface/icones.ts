@@ -16,6 +16,8 @@
  * balisage n'est jamais interpretee.
  */
 
+import type { Mode } from '@neon-ninja/shared';
+
 /** Une forme d'un pictogramme. */
 type Forme =
   /** Un trace, dans la syntaxe de l'attribut d d'un chemin SVG. */
@@ -159,6 +161,18 @@ const GLYPHES = {
 
 /** Le nom d'un pictogramme. */
 export type Glyphe = keyof typeof GLYPHES;
+
+/**
+ * Le pictogramme de chaque mode de jeu, le meme sur l'accueil et a la creation
+ * (etape 4.5).
+ */
+export const GLYPHES_DES_MODES: Readonly<Record<Mode, Glyphe>> = {
+  classique: 'ninja',
+  tactique: 'target',
+  equipes: 'shield',
+  chasse: 'viseur',
+  massacre: 'katana',
+};
 
 /** L'espace de noms des elements SVG, sans lequel le document fabrique des elements HTML inertes. */
 const ESPACE_SVG = 'http://www.w3.org/2000/svg';

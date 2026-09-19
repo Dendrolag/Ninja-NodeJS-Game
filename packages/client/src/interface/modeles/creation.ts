@@ -109,7 +109,7 @@ export function modeleCreation(etat: EtatClient, saisie: SaisieDeCreation): Mode
           : formaterDuree(Number(saisie.valeurs['dureePartieS']) * 1000),
       },
       {
-        libelle: 'Faux ninjas',
+        libelle: 'PNJ',
         valeur: fautes.has('nombreBotsInitial') ? '—' : String(saisie.valeurs['nombreBotsInitial']),
       },
       { libelle: 'Capacité', valeur: `${String(CAPACITES[saisie.mode])} joueurs` },

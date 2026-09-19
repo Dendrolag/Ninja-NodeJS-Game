@@ -120,6 +120,8 @@ Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision 
 
 **Décision du 19 septembre 2026: trois étapes suivent `7.6`.** Deux demandées par le porteur du projet: `4.5`, les textes de présentation du menu principal, qui parlent encore de troupeaux et de capture seule, alors que le jeu compte cinq modes, la Horde, l'élimination et la traque; `5.6`, le référencement du jeu dans les moteurs de recherche. Une issue de la mesure de `7.6`, sur décision du porteur du projet: `5.7`, l'allègement du rendu, pour que 500 entités tiennent sur un téléphone d'entrée de gamme. Ordre: `4.5`, `5.6`, `5.7`, puis les fonctionnalités reportées; le porteur du projet peut le changer. Leurs fiches se rédigent au début de chacune, selon le cas de repli du PROTOCOLE.
 
+**Étape 4.5 terminée le 19 septembre 2026: le jeu se présente tel qu'il est.** Les textes de l'accueil, de la création et de l'aide ont été réécrits avec le porteur du projet, dans un ton court et un peu décalé: « Le ninja, c'est vous. Enfin, un des trois cents. », « Plusieurs modes, beaucoup de ninjas. », une carte par mode sur l'accueil, une section par mode dans l'aide. Le joueur lit « PNJ » là où il lisait « faux ninjas ». L'aide cite enfin Espace et le bouton Katana pour les trois modes qui s'en servent. Aucune règle ne change. Fiche: `docs/plan/etape-4-5.md`.
+
 ---
 
 ## 4. Carte thématique des étapes
@@ -210,7 +212,7 @@ Tests requis: scénarios de navigation, validation du formulaire de création.
 **4.4. Bout en bout multi-clients.** Playwright, plusieurs clients simultanés, fenêtre mobile.
 Tests requis: deux clients dans une même partie vérifiant la cohérence de l'état.
 
-**4.5. Textes de présentation.** Étape ajoutée le 19 septembre 2026, à la demande du porteur du projet. Revoir les textes de présentation du menu principal et des écrans qui décrivent le jeu: ils datent du jeu d'origine et parlent de troupeaux et de capture, alors que le jeu compte cinq modes, la Horde, l'élimination au katana et la traque. Les textes se rédigent avec le porteur du projet.
+**4.5. Textes de présentation.** Faite le 19 septembre 2026 (fiche `docs/plan/etape-4-5.md`). Étape ajoutée le 19 septembre 2026, à la demande du porteur du projet. Revoir les textes de présentation du menu principal et des écrans qui décrivent le jeu: ils datent du jeu d'origine et parlent de troupeaux et de capture, alors que le jeu compte cinq modes, la Horde, l'élimination au katana et la traque. Les textes se rédigent avec le porteur du projet.
 Tests requis: TU des écrans dont le texte change; aucun nom de mode ou de carte qui ne soit celui du contrat; bout en bout vert.
 
 ### Phase 5. Charge, performance et durcissement

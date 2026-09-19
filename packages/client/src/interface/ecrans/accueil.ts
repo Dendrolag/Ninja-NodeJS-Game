@@ -4,9 +4,13 @@
  * Portage du mainMenu du jeu d'origine, dans l'identite de la maquette. Trois
  * chemins, ceux du cadrage (section 3, accueil): la partie rapide, la creation
  * d'une partie, et la liste des parties publiques. La maquette y met aussi les
- * modes, les defis et le pass de saison: les defis et le pass sont reportes apres
- * la v1, et un seul mode existe. Conformement a la decision du 29 juin 2026, ce qui
- * est reporte est absent, pas grise.
+ * defis et le pass de saison, reportes apres la v1: conformement a la decision du
+ * 29 juin 2026, ce qui est reporte est absent, pas grise.
+ *
+ * LES TEXTES SONT CEUX DE L'ETAPE 4.5, arretes avec le porteur du projet. Sous la
+ * banniere, une carte par mode, avec le texte de sa tuile de creation: la grille
+ * s'allonge d'elle-meme quand un mode s'ajoute. Elle remplace les trois regles de la
+ * Horde, qui ne valaient plus pour les autres modes.
  *
  * CET ECRAN NE DECIDE RIEN, ET NE RETIENT RIEN. Peut-on jouer, pourquoi le pseudo
  * est refuse, ou en est le lien, faut-il un pseudo: tout vient de modeleAccueil,
@@ -20,37 +24,11 @@ import { CARTES, MODES } from '@neon-ninja/shared';
 import type { EtatClient } from '../../etat.js';
 import { monterChampPseudo } from '../composants/champPseudo.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
-import type { Glyphe } from '../icones.js';
-import { icone } from '../icones.js';
+import { GLYPHES_DES_MODES, icone } from '../icones.js';
 import { modeleAccueil } from '../modeles/accueil.js';
+import { NOMS_DES_MODES, TEXTES_DES_MODES } from '../modeles/cartes.js';
 import type { EtatDuLien } from '../modeles/lien.js';
 import type { ContexteEcran, EcranAffiche } from './types.js';
-
-/** Les trois regles du jeu, telles que l'accueil les resume. */
-const REGLES: readonly {
-  readonly glyphe: Glyphe;
-  readonly titre: string;
-  readonly texte: string;
-}[] = [
-  {
-    glyphe: 'ninja',
-    titre: 'Ralliez les faux ninjas',
-    texte:
-      'Touchez un faux ninja pour le peindre à votre couleur. Chaque ninja à votre couleur compte un point.',
-  },
-  {
-    glyphe: 'target',
-    titre: 'Capturez les joueurs',
-    texte:
-      'Touchez un autre joueur pour lui prendre tous ses ninjas d’un coup. Il peut vous rendre la pareille.',
-  },
-  {
-    glyphe: 'shield',
-    titre: 'Méfiez-vous des Black Ninjas',
-    texte:
-      'Ils chassent les joueurs en cours de partie. Avec le bonus d’invincibilité, c’est vous qui les détruisez.',
-  },
-];
 
 /** Le lien est-il en train de s'etablir, de sorte que le joueur n'a qu'a attendre. */
 function lienEnAttente(lien: EtatDuLien): boolean {
@@ -140,13 +118,12 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
           doc,
           'h1',
           { classe: 'accueil-titre' },
-          creer(doc, 'span', { texte: 'Prêt à frapper' }),
-          creer(doc, 'span', { classe: 'accent', texte: 'dans l’ombre ?' }),
+          creer(doc, 'span', { texte: 'Le ninja, c’est vous.' }),
+          creer(doc, 'span', { classe: 'accent', texte: 'Enfin, un des trois cents.' }),
         ),
         creer(doc, 'p', {
           classe: 'accueil-accroche',
-          texte:
-            'Ralliez les faux ninjas, volez les troupeaux des autres joueurs, et gardez le plus grand jusqu’au bout.',
+          texte: 'Plusieurs modes, beaucoup de ninjas.',
         }),
         // L'etat du lien, en haut, visible sans defiler sur telephone (etape 5.5).
         creer(
@@ -191,15 +168,15 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
     creer(
       doc,
       'ul',
-      { classe: 'accueil-regles' },
-      ...REGLES.map((regle) =>
+      { classe: 'accueil-modes' },
+      ...MODES.map((mode) =>
         creer(
           doc,
           'li',
-          { classe: 'panneau regle' },
-          icone(doc, regle.glyphe, 22),
-          creer(doc, 'h2', { texte: regle.titre }),
-          creer(doc, 'p', { texte: regle.texte }),
+          { classe: 'panneau carte-mode' },
+          icone(doc, GLYPHES_DES_MODES[mode], 22),
+          creer(doc, 'h2', { texte: NOMS_DES_MODES[mode] }),
+          creer(doc, 'p', { texte: TEXTES_DES_MODES[mode] }),
         ),
       ),
     ),

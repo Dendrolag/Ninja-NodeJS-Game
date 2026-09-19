@@ -354,7 +354,7 @@ describe('validerReglages', () => {
 
     expect(resultat.valide).toBe(false);
     expect(resultat.valide ? [] : resultat.erreurs.map((erreur) => erreur.motif)).toEqual([
-      'Cette carte accepte au plus 300 faux ninjas au départ.',
+      'Cette carte accepte au plus 300 PNJ au départ.',
     ]);
   });
 

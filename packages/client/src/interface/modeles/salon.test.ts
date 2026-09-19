@@ -132,7 +132,7 @@ describe('modeleSalon', () => {
     ).toEqual({
       Carte: 'Tokyo · Pluie',
       Durée: '3:00',
-      'Faux ninjas': '50',
+      PNJ: '50',
       'Black Ninjas': '2, à 50 % de la partie',
       Bonus: '3/3',
       Malus: '3/3',

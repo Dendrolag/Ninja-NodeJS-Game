@@ -1,6 +1,6 @@
 # Neon Ninja
 
-Jeu multijoueur en temps réel, dans le navigateur : capturer les faux ninjas en les touchant, et capturer les autres joueurs pour leur prendre tous les leurs d'un coup.
+Jeu multijoueur en temps réel dans le navigateur. Plusieurs modes, beaucoup de ninjas. Ralliez, capturez, traquez ou tranchez au milieu de centaines de PNJ.
 
 Jouer : https://ninja.dendrolag.fr
 

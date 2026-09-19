@@ -158,7 +158,7 @@ describe('le formulaire sur la carte choisie (etape 7.6)', () => {
 
     expect(
       verdict.valide ? undefined : erreursParChamp(verdict.erreurs).get('nombreBotsInitial'),
-    ).toBe('Cette carte accepte au plus 300 faux ninjas au départ.');
+    ).toBe('Cette carte accepte au plus 300 PNJ au départ.');
   });
 });
 

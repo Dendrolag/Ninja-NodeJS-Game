@@ -800,7 +800,7 @@ export function validerReglages(brut: unknown): ResultatValidation<ReglagesParti
   if (reglages.nombreBotsInitial > plafond) {
     return refuse(
       'nombreBotsInitial',
-      `Cette carte accepte au plus ${String(plafond)} faux ninjas au départ.`,
+      `Cette carte accepte au plus ${String(plafond)} PNJ au départ.`,
     );
   }
 

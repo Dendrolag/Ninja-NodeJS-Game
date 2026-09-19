@@ -59,7 +59,7 @@ describe('modeleCreation', () => {
     expect(modele.recapitulatif).toEqual([
       { libelle: 'Visibilité', valeur: 'Privée, sur code d’invitation' },
       { libelle: 'Durée', valeur: '3:00' },
-      { libelle: 'Faux ninjas', valeur: '50' },
+      { libelle: 'PNJ', valeur: '50' },
       { libelle: 'Capacité', valeur: '12 joueurs' },
     ]);
   });

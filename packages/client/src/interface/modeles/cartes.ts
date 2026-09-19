@@ -59,20 +59,41 @@ export const NOMS_DES_EQUIPES: Readonly<Record<Equipe, string>> = {
 };
 
 /**
- * Comment on capture dans chaque mode, en une phrase: ce que le salon rappelle avant
- * le lancement, pour qu'un joueur arrive par la partie rapide sache a quoi il joue.
+ * Ce que chaque mode dit de lui, en une ou deux phrases (etape 4.5).
+ *
+ * Textes arretes avec le porteur du projet le 19 septembre 2026: courts, un peu
+ * decales, juste assez pour comprendre le principe et laisser de la decouverte. Une
+ * seule source, que lisent l'accueil, la creation et l'aide: deux ecrans ne peuvent
+ * plus presenter un mode de deux facons. Les regles exactes sont dans l'aide.
+ */
+export const TEXTES_DES_MODES: Readonly<Record<Mode, string>> = {
+  classique: 'Faites grossir vos rangs et attrapez les autres joueurs pour tout leur piquer.',
+  tactique:
+    'Réfléchir avant d’agir, pour une fois. Visez devant vous et capturez tout ce qui passe.',
+  equipes: 'Deux couleurs, une seule qui gagne. Ralliez pour votre camp, ne trahissez personne.',
+  chasse:
+    'Cache-cache, version ninja. Les traqueurs cherchent les vrais joueurs dans la foule. Les proies prises changent de camp.',
+  massacre:
+    'Fini les couleurs, place au bain de sang. Tranchez tout au katana et enchaînez pour faire exploser le score.',
+};
+
+/**
+ * Comment on capture dans chaque mode: ce que le salon rappelle avant le lancement,
+ * pour qu'un joueur arrive par la partie rapide sache a quoi il joue. Ce rappel reste
+ * pratique, touches, charges et vies comprises. Depuis l'etape 4.5, le joueur lit
+ * « PNJ » la ou il lisait « faux ninjas ».
  */
 export const CAPTURES_DES_MODES: Readonly<Record<Mode, string>> = {
   classique:
-    'On capture en touchant : un faux ninja rejoint votre couleur, un joueur vous cède tous les siens. Enchaînez les faux ninjas pour monter votre combo.',
+    'On capture en touchant. Un PNJ rejoint votre couleur, un joueur vous cède tous les siens. Enchaînez les PNJ pour monter votre combo.',
   tactique:
-    'On capture à distance : Espace, ou le bouton Capturer, prend tout ce qui est dans le cône devant vous. Cinq charges, et une qui revient toutes les cinq secondes.',
+    'On capture à distance. Espace ou le bouton Capturer prend tout ce qui est dans le cône devant vous. Cinq charges, dont une revient toutes les cinq secondes.',
   equipes:
-    'On capture en touchant, en équipe : un faux ninja passe à la couleur de votre équipe, un adversaire vous cède sa part des ninjas de son équipe.',
+    'On capture en touchant, en équipe. Un PNJ passe à la couleur de votre équipe, un adversaire vous cède sa part des ninjas de son équipe.',
   chasse:
-    'Les traqueurs tirent devant eux, avec Espace ou le bouton Capturer : une proie touchée devient traqueur, un faux ninja leur coûte une vie sur trois. Les proies marquent en bougeant.',
+    'Les traqueurs tirent devant eux avec Espace ou le bouton Capturer. Une proie touchée devient traqueur, un PNJ leur coûte une vie sur trois. Les proies marquent en bougeant.',
   massacre:
-    'On ne capture plus : Espace, ou le bouton Katana, tranche tout ce qui est devant vous, faux ninjas comme joueurs. Enchaînez les morts pour multiplier les points.',
+    'On ne capture plus. Espace ou le bouton Katana tranche tout ce qui est devant vous, PNJ comme joueurs. Enchaînez les morts pour multiplier les points.',
 };
 
 /** Le nom d'une carte tel qu'on l'affiche, mode miroir compris. */

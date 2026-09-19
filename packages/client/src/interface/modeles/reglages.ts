@@ -192,7 +192,7 @@ export const GROUPES_REGLAGES: readonly GroupeReglages[] = [
           {
             nature: 'entier',
             chemin: CHEMIN_FAUX_NINJAS,
-            libelle: 'Faux ninjas au départ',
+            libelle: 'PNJ au départ',
             bornes: BORNES_REGLAGES.nombreBotsInitial,
             unite: '',
             pas: 5,

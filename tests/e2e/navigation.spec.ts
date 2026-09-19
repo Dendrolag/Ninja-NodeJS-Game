@@ -43,7 +43,7 @@ test('de l accueil a la partie, puis retour a l accueil', async ({ page, hasTouc
 
   // -- L'accueil --------------------------------------------------------------
   await page.goto(jeu.url);
-  await expect(page.getByRole('heading', { name: /Prêt à frapper/u })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Le ninja, c’est vous/u })).toBeVisible();
 
   const pseudo = page.getByPlaceholder('Votre pseudo');
   const jouer = page.getByRole('button', { name: 'Partie rapide' });

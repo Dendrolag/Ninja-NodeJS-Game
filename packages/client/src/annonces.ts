@@ -134,9 +134,9 @@ export function annonceDuFait(fait: FaitDeJeu, mode?: Mode, moi?: string): Annon
 
     case 'vieDeTraqueurPerdue':
       return fait.charge.viesRestantes === 0
-        ? { texte: 'C’était un faux ninja : éliminé, vous regardez la suite', ton: 'alerte' }
+        ? { texte: 'C’était un PNJ. Éliminé, vous regardez la suite', ton: 'alerte' }
         : {
-            texte: `C’était un faux ninja : ${String(fait.charge.viesRestantes)} ${fait.charge.viesRestantes > 1 ? 'vies' : 'vie'} restante${fait.charge.viesRestantes > 1 ? 's' : ''}`,
+            texte: `C’était un PNJ, ${String(fait.charge.viesRestantes)} ${fait.charge.viesRestantes > 1 ? 'vies' : 'vie'} restante${fait.charge.viesRestantes > 1 ? 's' : ''}`,
             ton: 'alerte',
           };
 

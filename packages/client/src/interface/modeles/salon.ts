@@ -309,7 +309,7 @@ function recapitulatif(reglages: ReglagesPartie, mode: Mode): readonly LigneReca
   return [
     { libelle: 'Carte', valeur: carteDeLaPartie(reglages) },
     { libelle: 'Durée', valeur: formaterDuree(reglages.dureePartieS * 1000) },
-    { libelle: 'Faux ninjas', valeur: String(reglages.nombreBotsInitial) },
+    { libelle: 'PNJ', valeur: String(reglages.nombreBotsInitial) },
     ...(mode === 'chasse'
       ? []
       : [

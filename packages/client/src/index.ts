@@ -326,6 +326,7 @@ export {
   CAPTURES_DES_MODES,
   NOMS_DES_MODES,
   PRESENTATION_CARTES,
+  TEXTES_DES_MODES,
   nomDeCarte,
 } from './interface/modeles/cartes.js';
 

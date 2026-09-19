@@ -1,25 +1,28 @@
 /**
  * L'aide: comment jouer, et avec quelles touches.
  *
- * LE CONTENU EST CELUI DU JEU D'ORIGINE (helpMenu, index.html:211), avec trois
- * changements. Les emoji des zones speciales sont remplaces par les icones du jeu
- * ou retires, conformement aux conventions du projet. Les regles du score et des
- * Black Ninjas, que le jeu d'origine ne disait nulle part, sont ajoutees: ce sont
- * les comportements a preserver numeros 1 a 3 de CLAUDE.md, et un joueur qui ne
- * les connait pas ne comprend pas pourquoi son score retombe a zero. Enfin la
- * touche F et WASD sont listees, puisqu'elles existent.
+ * LES TEXTES SONT CEUX DE L'ETAPE 4.5, arretes avec le porteur du projet le 19
+ * septembre 2026: un ton court et un peu decale pour les bonus et les malus, et le
+ * texte de chaque mode que lisent aussi l'accueil et la creation. Sous ce texte, les
+ * regles exactes, chiffrees depuis les constantes du contrat: c'est ici qu'un joueur
+ * comprend pourquoi son score est retombe. Le joueur lit « PNJ » la ou le jeu
+ * d'origine disait « faux ninjas ».
+ *
+ * L'AIDE S'ORGANISE PAR MODE. Un principe commun, puis une section par mode, dans
+ * l'ordre du contrat: un mode ajoute sans ses regles est une erreur de compilation.
  *
  * LES NOMS DES BONUS, DES MALUS ET DES ZONES VIENNENT DE L'APPARENCE DU JEU: le
  * joueur lit dans l'aide exactement les mots qu'il verra dans le HUD et sur le
- * terrain.
+ * terrain. Les zones gardent les textes du jeu d'origine, et aucun emoji.
  */
 
-import type { TypeBonus, TypeMalus, TypeZone } from '@neon-ninja/shared';
+import type { Mode, TypeBonus, TypeMalus, TypeZone } from '@neon-ninja/shared';
 import {
   CHASSE,
   IMAGES_PAR_OBJET,
   COMBO,
   MASSACRE,
+  MODES,
   RACINE_RESSOURCES,
   SCORE,
   TACTIQUE,
@@ -28,21 +31,22 @@ import {
 
 import { APPARENCE_OBJET, APPARENCE_ZONE, CADENCE_OBJET_MS } from '../../rendu/apparence.js';
 import { creer } from '../dom.js';
+import { NOMS_DES_MODES, TEXTES_DES_MODES } from '../modeles/cartes.js';
 import type { Fenetre } from './fenetre.js';
 import { monterFenetre } from './fenetre.js';
 
-/** Ce que fait chaque bonus. Textes du jeu d'origine. */
+/** Ce que fait chaque bonus (etape 4.5). */
 const EFFETS_BONUS: Readonly<Record<TypeBonus, string>> = {
-  vitesse: 'Déplacez-vous plus rapidement.',
-  invincibilite: 'Personne ne peut vous capturer, et vous détruisez les Black Ninjas.',
-  revelation: 'Les vrais ninjas, ceux des joueurs, se révèlent au milieu des faux.',
+  vitesse: 'Pour ceux qui trouvaient le jeu trop lent.',
+  invincibilite: 'Le nom parle de lui-même, non ?',
+  revelation: 'Les vrais ninjas ne peuvent plus faire semblant.',
 };
 
-/** Ce que fait chaque malus. Textes du jeu d'origine. */
+/** Ce que fait chaque malus (etape 4.5). */
 const EFFETS_MALUS: Readonly<Record<TypeMalus, string>> = {
-  controlesInverses: 'Inverse les commandes de vos adversaires.',
-  flou: 'Trouble la vision des autres joueurs.',
-  negatif: 'Inverse les couleurs de vos adversaires.',
+  controlesInverses: 'Gauche, c’est droite. Bon courage aux autres.',
+  flou: 'Les autres joueurs auraient dû prendre leurs lunettes.',
+  negatif: 'Ça ne pénalisera pas les daltoniens.',
 };
 
 /** Ce que fait chaque zone. Textes du jeu d'origine. */
@@ -53,17 +57,47 @@ const EFFETS_ZONES: Readonly<Record<TypeZone, string>> = {
   invisibilite: 'Les joueurs qui s’y cachent deviennent invisibles pour les autres.',
 };
 
-/** Les commandes, pour le clavier et pour le tactile. */
+/**
+ * Les commandes, pour le clavier et pour le tactile. Espace et le bouton d'action
+ * servent dans trois modes, pas seulement en Tactique (defaut corrige a l'etape 4.5).
+ */
 const COMMANDES: readonly (readonly [string, string])[] = [
   ['Z, W ou flèche haut', 'Monter'],
   ['S ou flèche bas', 'Descendre'],
   ['Q, A ou flèche gauche', 'Aller à gauche'],
   ['D ou flèche droite', 'Aller à droite'],
   ['F', 'Localiser votre ninja'],
-  ['Espace', 'Capturer, dans le mode Tactique'],
+  ['Espace', 'Capturer en Tactique et en Chasse, trancher en Massacre'],
   ['Pouce sur l’écran', 'Se déplacer, sur téléphone et tablette'],
-  ['Bouton Capturer', 'Capturer sur téléphone et tablette, dans le mode Tactique'],
+  ['Bouton Capturer ou Katana', 'La même chose qu’Espace, sur téléphone et tablette'],
 ];
+
+/** Les regles exactes de chaque mode, sous son texte de presentation. */
+const REGLES_DES_MODES: Readonly<Record<Mode, readonly string[]>> = {
+  classique: [
+    'Touchez un PNJ pour le rallier à votre couleur. Touchez un autre joueur pour le capturer et il vous cède d’un coup tous les ninjas de sa couleur.',
+    'Votre score, ce sont les ninjas que vous gardez. Se faire capturer le fait retomber, seul compte ce que vous tenez à la fin.',
+    `Ralliez les PNJ à moins de ${String(COMBO.FENETRE_MS / 1000)} secondes d’intervalle et votre combo monte d’un cran tous les ${String(COMBO.COUPS_PAR_CRAN)} ninjas, jusqu’à x${String(COMBO.MULTIPLICATEUR_MAXIMUM)}. Chaque ninja rapporte alors une prime, le multiplicateur moins un. La prime compte dans votre score et se perd avec vos ninjas si l’on vous capture.`,
+  ],
+  tactique: [
+    'Toucher ne capture plus. Espace ou le bouton Capturer prend tout ce qui se trouve dans le cône, à courte distance devant vous.',
+    `Vous avez ${String(TACTIQUE.CHARGES_MAXIMUM)} charges. Un tir qui prend quelque chose en coûte une, qui revient en ${String(TACTIQUE.RECHARGE_MS / 1000)} secondes. Un tir dans le vide ne coûte rien.`,
+  ],
+  equipes: [
+    'Les PNJ que vous touchez rejoignent votre équipe. Son score est la somme de ses ninjas et des points de Black Ninjas de ses membres.',
+    'Capturer un adversaire vous donne sa part des ninjas de son équipe.',
+  ],
+  chasse: [
+    `Des traqueurs sont tirés au sort. Ils tirent devant eux avec Espace ou le bouton Capturer, et le tir prend ce qui est le plus proche. Une proie devient traqueur à son tour, un PNJ coûte une vie. À la ${String(CHASSE.VIES_DES_TRAQUEURS)}e, le traqueur est éliminé.`,
+    `Une proie marque un point tous les ${String(CHASSE.PIXELS_PAR_POINT)} pixels parcourus. Cachée et immobile, elle ne marque rien. Un traqueur marque ${String(CHASSE.POINTS_PAR_CAPTURE)} points par capture et ${String(CHASSE.POINTS_PAR_VIE)} par vie qui lui reste.`,
+    'Pas de Black Ninjas dans ce mode.',
+  ],
+  massacre: [
+    `On ne capture plus. Espace ou le bouton Katana tranche tout ce qui se trouve devant vous. Un PNJ vaut ${String(MASSACRE.POINTS_PAR_BOT)} points, un Black Ninja ${String(MASSACRE.POINTS_PAR_BOT_NOIR)}, fois votre multiplicateur.`,
+    `Enchaînez les morts à moins de ${String(COMBO.FENETRE_MS / 1000)} secondes d’intervalle et le multiplicateur monte d’un cran toutes les ${String(COMBO.COUPS_PAR_CRAN)} morts, jusqu’à x${String(COMBO.MULTIPLICATEUR_MAXIMUM)}. Un joueur tranché perd son combo et la moitié de ses points, qui vont à son tueur.`,
+    `Carte nettoyée avant la fin ? ${String(MASSACRE.POINTS_PAR_SECONDE_RESTANTE)} points par seconde restante. Le sang se règle dans le panneau du son.`,
+  ],
+};
 
 /** Monte la fenetre d'aide, fermee. */
 export function monterAide(doc: Document): Fenetre {
@@ -77,31 +111,21 @@ export function monterAide(doc: Document): Fenetre {
       creer(doc, 'h3', { texte: 'Le principe' }),
       creer(doc, 'p', {
         texte:
-          'Touchez un faux ninja pour le rallier à votre couleur. Touchez un autre joueur pour le capturer : il vous cède d’un coup tous les ninjas de sa couleur.',
+          'Des joueurs et des centaines de PNJ, ces ninjas sans joueur, se partagent la carte. Chaque mode en fait autre chose. Le meilleur score à la fin de la partie l’emporte.',
       }),
       creer(doc, 'p', {
-        texte:
-          'Votre score, ce sont les ninjas que vous gardez. Se faire capturer le fait retomber : seul compte ce que vous tenez à la fin.',
+        texte: `Les Black Ninjas débarquent en cours de partie et chassent les joueurs. S’ils vous attrapent, vous perdez une partie de votre score. Invincible, vous les détruisez en les touchant et chacun rapporte ${String(SCORE.POINTS_PAR_BOT_NOIR)} points. En Massacre, seul le katana en vient à bout.`,
       }),
-      creer(doc, 'p', {
-        texte: `Dans la Horde, ralliez les faux ninjas à la suite : à moins de ${String(COMBO.FENETRE_MS / 1000)} secondes d’intervalle, votre combo monte d’un cran tous les ${String(COMBO.COUPS_PAR_CRAN)} ninjas, jusqu’à x${String(COMBO.MULTIPLICATEUR_MAXIMUM)}, et chaque ninja rapporte en plus une prime, le multiplicateur moins un. La prime compte dans votre score et se perd avec vos ninjas si l’on vous capture. Un Black Ninja vous en prend la même part que de vos ninjas.`,
-      }),
-      creer(doc, 'p', {
-        texte: `Les Black Ninjas entrent en jeu en cours de partie et chassent les joueurs. S’ils vous prennent, vous perdez une partie de vos ninjas. Invincible, vous pouvez les détruire : chacun rapporte ${String(SCORE.POINTS_PAR_BOT_NOIR)} points.`,
-      }),
-      creer(doc, 'p', {
-        texte: `Dans le mode Tactique, toucher ne capture plus : Espace, ou le bouton Capturer, prend tout ce qui se trouve dans le cône, à courte distance devant vous. Vous avez ${String(TACTIQUE.CHARGES_MAXIMUM)} charges ; un tir qui prend quelque chose en coûte une, qui revient en ${String(TACTIQUE.RECHARGE_MS / 1000)} secondes, et un tir dans le vide ne coûte rien.`,
-      }),
-      creer(doc, 'p', {
-        texte:
-          'Dans le mode Équipes, deux équipes s’affrontent, une couleur chacune : les faux ninjas que vous touchez rejoignent votre équipe, dont le score est la somme de ses ninjas et des points de Black Ninjas de ses membres. Capturer un adversaire vous donne sa part des ninjas de son équipe, et un malus frappe l’équipe adverse.',
-      }),
-      creer(doc, 'p', {
-        texte: `Dans le mode Chasse, des traqueurs sont tirés au sort. Ils tirent devant eux, comme en Tactique, et le tir prend ce qui est le plus proche : une proie devient traqueur à son tour, un faux ninja coûte une vie. À la troisième, le traqueur est éliminé. Une proie marque un point tous les ${String(CHASSE.PIXELS_PAR_POINT)} pixels parcourus : cachée et immobile, elle ne marque rien. Un traqueur marque ${String(CHASSE.POINTS_PAR_CAPTURE)} points par capture et ${String(CHASSE.POINTS_PAR_VIE)} par vie qui lui reste. Il n’y a pas de Black Ninjas, et un malus frappe l’autre camp.`,
-      }),
-      creer(doc, 'p', {
-        texte: `Dans le mode Massacre, on ne capture plus : Espace, ou le bouton Katana, tranche tout ce qui se trouve devant vous, et la carte se vide. Un faux ninja vaut ${String(MASSACRE.POINTS_PAR_BOT)} points, un Black Ninja ${String(MASSACRE.POINTS_PAR_BOT_NOIR)}, fois votre multiplicateur : enchaînez les morts à moins de ${String(COMBO.FENETRE_MS / 1000)} secondes d’intervalle, et il monte d’un cran toutes les ${String(COMBO.COUPS_PAR_CRAN)} morts, jusqu’à x${String(COMBO.MULTIPLICATEUR_MAXIMUM)}. Un joueur tranché perd son combo et la moitié de ses points, qui vont à son tueur. Carte nettoyée avant la fin : ${String(MASSACRE.POINTS_PAR_SECONDE_RESTANTE)} points par seconde restante. Le sang se règle dans le panneau du son.`,
-      }),
+    ),
+    ...MODES.map((mode) =>
+      creer(
+        doc,
+        'section',
+        { classe: 'aide-section aide-mode', attributs: { 'data-mode': mode } },
+        creer(doc, 'h3', { texte: NOMS_DES_MODES[mode] }),
+        creer(doc, 'p', { classe: 'aide-accroche', texte: TEXTES_DES_MODES[mode] }),
+        ...REGLES_DES_MODES[mode].map((regle) => creer(doc, 'p', { texte: regle })),
+      ),
     ),
     liste(doc, 'Bonus', Object.entries(EFFETS_BONUS) as [TypeBonus, string][], true),
     liste(
@@ -109,6 +133,7 @@ export function monterAide(doc: Document): Fenetre {
       'Malus, qui frappent les autres',
       Object.entries(EFFETS_MALUS) as [TypeMalus, string][],
       true,
+      'En Équipes et en Chasse, ils ne frappent que l’autre camp.',
     ),
     creer(
       doc,
@@ -156,12 +181,14 @@ function liste(
   titre: string,
   effets: readonly [TypeBonus | TypeMalus, string][],
   avecIcone: boolean,
+  precision?: string,
 ): HTMLElement {
   return creer(
     doc,
     'section',
     { classe: 'aide-section' },
     creer(doc, 'h3', { texte: titre }),
+    precision === undefined ? undefined : creer(doc, 'p', { texte: precision }),
     creer(
       doc,
       'ul',
