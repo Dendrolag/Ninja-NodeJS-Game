@@ -127,6 +127,53 @@ describe('le panneau de reglages', () => {
     expect(panneau.ouvert).toBe(false);
   });
 
+  it('ne propose la pluie que sur Tokyo, cochee par defaut (etape 7.6)', () => {
+    const pluie = (): Element => champ('pluie').closest('label') as Element;
+
+    expect(champ('pluie').checked).toBe(true);
+    expect(estCache(pluie())).toBe(false);
+
+    cocher(obligatoire<HTMLInputElement>(panneau.racine, 'input[value="map3"]'), true);
+    expect(estCache(pluie())).toBe(true);
+
+    cocher(obligatoire<HTMLInputElement>(panneau.racine, 'input[value="map1"]'), true);
+    expect(estCache(pluie())).toBe(false);
+  });
+
+  it('enregistre une partie sans pluie', () => {
+    cocher(champ('pluie'), false);
+
+    boutonObligatoire(panneau.racine, 'Enregistrer').click();
+
+    expect(enregistres).toEqual([completerReglages({ pluie: false })]);
+  });
+
+  it('arrete le curseur des faux ninjas au plafond de la carte (etape 7.6)', () => {
+    expect(champ('nombreBotsInitial').max).toBe('300');
+
+    cocher(obligatoire<HTMLInputElement>(panneau.racine, 'input[value="map3"]'), true);
+    expect(champ('nombreBotsInitial').max).toBe('500');
+  });
+
+  it('ouvre une partie de Spirit & Time a 500 faux ninjas telle quelle', () => {
+    panneau.ouvrirAvec(completerReglages({ carte: 'map3', nombreBotsInitial: 500 }));
+
+    expect(champ('nombreBotsInitial').value).toBe('500');
+    expect(champ('nombreBotsInitial').max).toBe('500');
+  });
+
+  it('ramene le curseur au plafond de Tokyo, sous les yeux de l hote, en changeant de carte', () => {
+    panneau.ouvrirAvec(completerReglages({ carte: 'map3', nombreBotsInitial: 450 }));
+
+    cocher(obligatoire<HTMLInputElement>(panneau.racine, 'input[value="map1"]'), true);
+
+    expect(champ('nombreBotsInitial').value).toBe('300');
+    expect(
+      champ('nombreBotsInitial').closest('label')?.querySelector('.champ-valeur')?.textContent,
+    ).toBe('300');
+    expect(boutonObligatoire(panneau.racine, 'Enregistrer').disabled).toBe(false);
+  });
+
   it('remet les valeurs par defaut sur demande', () => {
     saisir(champ('dureePartieS'), '60');
 

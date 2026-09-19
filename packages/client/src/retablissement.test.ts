@@ -57,7 +57,7 @@ const PARTIE: PartiePublique = {
   idRoom: 'room-1',
   hote: 'Bob',
   mode: 'classique',
-  carte: 'map2',
+  carte: 'map1',
   modeMiroir: false,
   joueurs: 3,
   capacite: 12,

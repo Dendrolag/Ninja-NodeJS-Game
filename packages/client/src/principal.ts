@@ -122,7 +122,7 @@ monterApplication({
   // Un prechargement qui echoue n'a rien de grave: l'ecran de jeu recharge lui-meme
   // ce qui lui manque, et dit s'il n'y parvient pas.
   prechargerLeJeu: (reglages) => {
-    prechargerLaPartie(reglages.carte, reglages.modeMiroir).catch(() => undefined);
+    prechargerLaPartie(reglages.carte, reglages.modeMiroir, reglages.pluie).catch(() => undefined);
   },
   ...(stockage === undefined ? {} : { stockage }),
 });

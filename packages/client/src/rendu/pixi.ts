@@ -125,7 +125,11 @@ export async function prechargerLesSprites(): Promise<void> {
  * pendant que la partie tournait deja. Le montage de l'ecran de jeu retrouve ensuite
  * ces textures deja chargees.
  */
-export async function prechargerLaPartie(carte: string, modeMiroir: boolean): Promise<void> {
+export async function prechargerLaPartie(
+  carte: string,
+  modeMiroir: boolean,
+  pluie: boolean,
+): Promise<void> {
   const adresse = (couche: 'background' | 'foreground'): string =>
     `${RACINE_RESSOURCES}/${cheminCarte(carte, modeMiroir, couche)}`;
   const dimensions = CARTES[carte as IdentifiantCarte] as DimensionsCarte | undefined;
@@ -134,12 +138,13 @@ export async function prechargerLaPartie(carte: string, modeMiroir: boolean): Pr
     prechargerLesSprites(),
     Assets.load<Texture>(adresse('background')),
     Assets.load<Texture>(adresse('foreground')),
-    dimensions === undefined ? [] : imagesDePluie(carte, modeMiroir, dimensions),
+    dimensions === undefined ? [] : imagesDePluie(carte, modeMiroir, pluie, dimensions),
   ]);
 }
 
 /**
- * Les images de pluie d'une carte, a sa taille; aucune pour une carte sans pluie.
+ * Les images de pluie d'une carte, a sa taille; aucune pour une carte sans pluie, ni
+ * quand la partie a coupe la pluie (ReglagesPartie.pluie, etape 7.6).
  *
  * LA PLANCHE N'EST JAMAIS ENVOYEE A LA CARTE GRAPHIQUE. Elle mesure 9000 pixels de
  * large, au-dela de la plus grande texture qu'acceptent bien des telephones (4096 ou
@@ -153,9 +158,10 @@ export async function prechargerLaPartie(carte: string, modeMiroir: boolean): Pr
 async function imagesDePluie(
   carte: string,
   modeMiroir: boolean,
+  pluie: boolean,
   dimensions: DimensionsCarte,
 ): Promise<readonly Texture[]> {
-  const chemin = cheminPluie(carte, modeMiroir);
+  const chemin = pluie ? cheminPluie(carte, modeMiroir) : undefined;
 
   if (chemin === undefined) {
     return [];
@@ -267,6 +273,8 @@ export interface OptionsRendu {
   readonly identifiantCarte: string;
   /** Mode miroir de la carte. */
   readonly modeMiroir: boolean;
+  /** La pluie tombe-t-elle, sur une carte qui en a une (reglage de la partie, etape 7.6). */
+  readonly pluie: boolean;
   /** Poser ou non la lueur neon. Utile au banc de mesure, qui compare. */
   readonly lueur?: boolean;
   /** Largeur et hauteur du canevas. Celles de l'hote par defaut. */
@@ -435,7 +443,7 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       const [texteFond, texteDessus, images] = await Promise.all([
         Assets.load<Texture>(adresse('background')),
         Assets.load<Texture>(adresse('foreground')),
-        imagesDePluie(options.identifiantCarte, options.modeMiroir, options.carte),
+        imagesDePluie(options.identifiantCarte, options.modeMiroir, options.pluie, options.carte),
       ]);
 
       fond.texture = texteFond;

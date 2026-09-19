@@ -24,7 +24,7 @@ De même, les deux sons du fusil du mode Tactique, `sons/shotgun-wave.mp3` (chac
 
 | Dossier                            | Contenu                                                                              | Qui le lit                                               |
 | ---------------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------- |
-| `cartes/<carte>/<normal\|mirror>/` | `background.png`, `collision.png`, `foreground.png`, et `rain.png` pour map1         | `collision.png` par le serveur, les autres par le client |
+| `cartes/<carte>/<normal\|mirror>/` | `background.png`, `collision.png`, `foreground.png`, et `rain.png` pour map1 (Tokyo) | `collision.png` par le serveur, les autres par le client |
 | `cartes/<carte>/preview.png`       | La vignette de la carte, montrée dans les réglages du salon                          | Le client                                                |
 | `ninja/`                           | Les dix-sept sprites du personnage: huit directions à deux images, plus l'immobilité | Le client                                                |
 | `objets/`                          | Les six icônes de bonus et de malus, reprises aussi dans l'aide                      | Le client                                                |
@@ -38,11 +38,11 @@ Contrairement au code et à la documentation. Ce sont des noms de contenu, pas d
 
 ## Les images de carte font toutes 3000x2000
 
-Y compris celles de map1 et map2, dont la carte mesure 2000x1500. Ce n'est pas une erreur: le jeu d'origine **redimensionne** ces images aux dimensions de la carte au chargement, sans conserver les proportions. Le décodage du terrain (`packages/server/src/terrain.ts`) et l'affichage (`packages/client/src/rendu/`) reproduisent tous les deux ce redimensionnement, sans quoi les murs ne seraient pas là où le décor les montre.
+Y compris celles de map1, Tokyo, dont la carte mesure 2000x1500. Ce n'est pas une erreur: le jeu d'origine **redimensionne** ces images aux dimensions de la carte au chargement, sans conserver les proportions. Le décodage du terrain (`packages/server/src/terrain.ts`) et l'affichage (`packages/client/src/rendu/`) reproduisent tous les deux ce redimensionnement, sans quoi les murs ne seraient pas là où le décor les montre.
 
-## map1 et map2 partagent décor et vignette
+## map2 a disparu: Tokyo est une seule carte
 
-Leurs `background.png` et leurs `preview.png` sont identiques octet pour octet. Ce n'est pas un oubli du rapatriement: Rainy Tokyo est Tokyo sous la pluie, et c'est `rain.png` qui fait la différence.
+Le jeu d'origine avait deux cartes Tokyo, map1 (Rainy Tokyo) et map2 (Tokyo), dont le décor, l'avant-plan, les murs et la vignette étaient identiques octet pour octet: seule la pluie de `rain.png` les distinguait. Depuis l'étape 7.6, c'est une seule carte, map1, et la pluie est un réglage de partie. Les images de map2 ont été retirées de ce dossier; elles restent dans l'histoire du dépôt et sous l'étiquette `v0.8.6`. Les parties enregistrées sur map2 se lisent toujours, sous le nom « Tokyo ».
 
 ## Ce qui n'est pas ici
 

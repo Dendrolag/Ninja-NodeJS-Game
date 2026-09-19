@@ -81,15 +81,48 @@ export const VITESSES = {
   MULTIPLICATEUR_MAXIMUM: 2,
 } as const;
 
-/** Dimensions des cartes du jeu, en pixels. */
+/**
+ * Les cartes jouables, et leurs dimensions en pixels.
+ *
+ * map1 est Tokyo, map3 Spirit & Time. Le jeu d'origine avait une troisieme carte,
+ * map2, « Tokyo » sans pluie, dont le decor et les murs etaient ceux de map1 a
+ * l'octet pres: depuis l'etape 7.6, c'est une seule carte, et la pluie est un
+ * reglage de partie (ReglagesPartie.pluie). map2 ne se joue plus, mais des parties
+ * enregistrees la portent encore: voir CARTES_ENREGISTREES.
+ */
 export const CARTES = {
   map1: { largeur: 2000, hauteur: 1500 },
-  map2: { largeur: 2000, hauteur: 1500 },
   map3: { largeur: 3000, hauteur: 2000 },
 } as const;
 
 /** Identifiant d'une carte jouable. */
 export type IdentifiantCarte = keyof typeof CARTES;
+
+/**
+ * Les cartes qu'une partie enregistree peut porter: les cartes jouables, et celles
+ * qui ne se jouent plus.
+ *
+ * L'enumeration des cartes de la base en est tiree. Une valeur retiree d'une
+ * enumeration PostgreSQL rendrait illisibles les parties deja jouees: une carte
+ * retiree du jeu reste donc ici (etape 7.6, map2 fondue dans map1).
+ */
+export const CARTES_ENREGISTREES = ['map1', 'map2', 'map3'] as const;
+
+/** La carte d'une partie enregistree: jouable, ou retiree du jeu depuis. */
+export type CarteEnregistree = (typeof CARTES_ENREGISTREES)[number];
+
+/**
+ * Le nombre de faux ninjas au depart qu'une carte accepte au plus.
+ *
+ * Decision du porteur du projet du 18 septembre 2026 (etape 7.6): un plafond par
+ * carte, a peu pres la meme densite sur les deux, et le meme dans tous les modes.
+ * Spirit & Time a deux fois la surface de Tokyo. Mesure qui les justifie: la section
+ * 17 de docs/mesures/charge-serveur.md, et le banc du rendu.
+ */
+export const PLAFONDS_DE_FAUX_NINJAS: Readonly<Record<IdentifiantCarte, number>> = {
+  map1: 300,
+  map3: 500,
+};
 
 /** Dimensions d'une carte, en pixels. */
 export interface DimensionsCarte {

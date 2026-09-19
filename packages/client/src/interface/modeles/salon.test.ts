@@ -6,7 +6,7 @@
  * et dans ecrans/salon.test.ts sur la page reellement construite.
  */
 
-import type { InfosSalon, JoueurDuSalon } from '@neon-ninja/shared';
+import type { InfosSalon, JoueurDuSalon, ReglagesPartiels } from '@neon-ninja/shared';
 import { REGLAGES_PAR_DEFAUT, completerReglages } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
@@ -130,7 +130,7 @@ describe('modeleSalon', () => {
     expect(
       Object.fromEntries((lignes ?? []).map((ligne) => [ligne.libelle, ligne.valeur])),
     ).toEqual({
-      Carte: 'Rainy Tokyo',
+      Carte: 'Tokyo · Pluie',
       Durée: '3:00',
       'Faux ninjas': '50',
       'Black Ninjas': '2, à 50 % de la partie',
@@ -154,6 +154,17 @@ describe('modeleSalon', () => {
     expect(valeur('Carte')).toBe('Spirit & Time · Miroir');
     expect(valeur('Malus')).toBe('Désactivés');
     expect(valeur('Black Ninjas')).toBe('Désactivés');
+  });
+
+  it('ne dit la pluie que si elle tombe, sur une carte qui en a une (etape 7.6)', () => {
+    const carte = (reglages: ReglagesPartiels): string | undefined =>
+      modeleSalon(
+        etat(salon('bob', { reglages: completerReglages(reglages) })),
+      )?.recapitulatif.find((ligne) => ligne.libelle === 'Carte')?.valeur;
+
+    expect(carte({ pluie: false })).toBe('Tokyo');
+    expect(carte({ modeMiroir: true })).toBe('Tokyo · Miroir · Pluie');
+    expect(carte({ carte: 'map3', pluie: true })).toBe('Spirit & Time');
   });
 
   it('dit la visibilite et les places libres d une partie publique, sans code', () => {

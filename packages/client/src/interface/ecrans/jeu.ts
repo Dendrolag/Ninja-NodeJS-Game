@@ -180,6 +180,7 @@ export function monterJeu(contexte: ContexteEcran): EcranAffiche {
       carte,
       identifiantCarte: reglages.carte,
       modeMiroir: reglages.modeMiroir,
+      pluie: reglages.pluie,
     });
 
     if (!vivant) {

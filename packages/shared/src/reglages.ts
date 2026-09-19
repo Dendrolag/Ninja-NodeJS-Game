@@ -113,7 +113,17 @@ export interface ReglagesPartie {
   readonly carte: IdentifiantCarte;
   /** Mode miroir: la carte est retournee horizontalement. */
   readonly modeMiroir: boolean;
-  /** Nombre de bots presents au demarrage. */
+  /**
+   * La pluie tombe-t-elle sur la carte. Un reglage d'affichage, que le moteur ignore:
+   * seule Tokyo a une pluie, et le reglage est sans effet ailleurs. Il remplace, a
+   * l'etape 7.6, la carte Rainy Tokyo du jeu d'origine (decision du porteur du projet
+   * du 18 septembre 2026: la pluie par defaut, comme l'ancienne carte par defaut).
+   */
+  readonly pluie: boolean;
+  /**
+   * Nombre de bots presents au demarrage. Il ne depasse pas le plafond de la carte
+   * (PLAFONDS_DE_FAUX_NINJAS, etape 7.6).
+   */
   readonly nombreBotsInitial: number;
   readonly bonus: ReglagesBonus;
   readonly malus: ReglagesMalus;
@@ -126,6 +136,7 @@ export const REGLAGES_PAR_DEFAUT: ReglagesPartie = {
   dureePartieS: 180,
   carte: 'map1',
   modeMiroir: false,
+  pluie: true,
   nombreBotsInitial: 50,
   bonus: {
     intervalleApparitionS: 4,

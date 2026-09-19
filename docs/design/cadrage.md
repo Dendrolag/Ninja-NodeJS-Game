@@ -49,7 +49,7 @@ Les neuf tensions et les huit questions ouvertes du README sont l'entrée de cet
 | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Tension 1, le miroir                 | **Un réglage de carte, pas un mode.** Le legacy le charge comme une variante de ressources de chaque carte (`legacy/js/MapManager.js`, dossiers `normal` et `mirror`), et le contrat actuel le porte en `modeMiroir`. Le mode « Miroir » de la maquette disparaît; ses « contrôles inversés » existent déjà, comme malus. |
 | Tension 2, six modes                 | Un seul mode jouable en v1. Les propositions Chasse, Battle Royale, Équipes et Chaos n'étaient pas validées: tuile unique « à venir ». Le Tactique est arrivé à l'étape 7.1, les Équipes à l'étape 7.2, la Chasse à l'étape 7.3 et le Massacre, mode que la maquette ne proposait pas, à l'étape 7.4, avec les règles que le porteur du projet a tranchées; Battle Royale et Chaos restent des propositions. |
-| Tension 3, quatre cartes             | Trois cartes: map1 Rainy Tokyo et map2 Tokyo (2000 × 1500), map3 Spirit & Time (3000 × 2000), réconciliées avec `MAP_DIMENSIONS` du legacy. Shibuya Cross reportée.                                                                                          |
+| Tension 3, quatre cartes             | Trois cartes: map1 Rainy Tokyo et map2 Tokyo (2000 × 1500), map3 Spirit & Time (3000 × 2000), réconciliées avec `MAP_DIMENSIONS` du legacy. Shibuya Cross reportée. **Depuis l'étape 7.6 (18 septembre 2026), deux cartes jouables**: Rainy Tokyo et Tokyo, au même décor, deviennent une seule carte « Tokyo » (map1), dont la pluie est un réglage; map2 ne se joue plus, et les parties enregistrées dessus se lisent sous le nom « Tokyo ». |
 | Tension 4 et question 8, faux ninjas | **10 à 150, 50 par défaut**, les bornes du serveur actuel, qui sont celles du salon du legacy. La fourchette de la maquette (10 à 80, défaut 40) est écartée: elle contredit l'objectif de plus de 100. Le nombre est choisi par l'hôte, il ne s'adapte ni aux joueurs ni à la carte. La borne haute pourra monter si la mesure de l'étape 5.1 le permet. |
 | Tension 5, profil                    | Profil réduit: identité, niveau, palier, pièces, statistiques simples, historique. Voir l'inventaire.                                                                                                                                                         |
 | Tension 6, latence par salon         | **Retirée en v1.** Toutes les parties tournent sur le même serveur: la latence serait la même pour chaque salon, donc une colonne sans information. À concevoir si le jeu passe à plusieurs régions.                                                          |
@@ -138,10 +138,11 @@ C'est `ReglagesPartie`, sans changement. Les défauts sont ceux du legacy.
 
 | Champ                                        | Type    | Défaut   | Bornes   |
 | -------------------------------------------- | ------- | -------- | -------- |
-| `carte`                                      | `map1`, `map2` ou `map3` | `map1` | trois cartes |
+| `carte`                                      | `map1` (Tokyo) ou `map3` (Spirit & Time) | `map1` | deux cartes depuis l'étape 7.6 |
+| `pluie`                                      | booléen | vrai     | sans effet hors de Tokyo, étape 7.6 |
 | `modeMiroir`                                 | booléen | faux     |          |
 | `dureePartieS`                               | entier  | 180      | 30 à 600 |
-| `nombreBotsInitial` (faux ninjas)            | entier  | 50       | 10 à 150 |
+| `nombreBotsInitial` (faux ninjas)            | entier  | 50       | 10 au plafond de la carte: 300 sur Tokyo, 500 sur Spirit & Time (150 avant l'étape 7.6) |
 | `botsNoirs.actifs`                           | booléen | vrai     |          |
 | `botsNoirs.nombre`                           | entier  | 2        | 1 à 5    |
 | `botsNoirs.momentApparitionPourCent`         | entier  | 50       | 0 à 100  |

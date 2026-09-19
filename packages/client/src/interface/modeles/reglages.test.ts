@@ -10,7 +10,10 @@
 import { REGLAGES_PAR_DEFAUT, completerReglages, validerReglages } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
+import type { ChampReglage } from './reglages.js';
 import {
+  bornesSurLaCarte,
+  champUtileSurLaCarte,
   erreursParChamp,
   reglagesDepuisValeurs,
   tousLesChamps,
@@ -111,6 +114,51 @@ describe('verifierLesValeurs', () => {
     expect(verdict.valide ? [] : verdict.erreurs.map((erreur) => erreur.champ)).toEqual([
       'zones.dureeMinimumS',
     ]);
+  });
+});
+
+describe('le formulaire sur la carte choisie (etape 7.6)', () => {
+  /** Le champ entier de ce chemin. */
+  const entier = (chemin: string): Extract<ChampReglage, { nature: 'entier' }> => {
+    const trouve = tousLesChamps().find((champ) => champ.chemin === chemin);
+
+    if (trouve?.nature !== 'entier') {
+      throw new Error(`Pas de champ entier a ${chemin}.`);
+    }
+
+    return trouve;
+  };
+
+  it('arrete les faux ninjas au plafond de la carte', () => {
+    expect(bornesSurLaCarte(entier('nombreBotsInitial'), 'map1')).toEqual({
+      minimum: 10,
+      maximum: 300,
+    });
+    expect(bornesSurLaCarte(entier('nombreBotsInitial'), 'map3')).toEqual({
+      minimum: 10,
+      maximum: 500,
+    });
+  });
+
+  it('laisse leurs bornes aux autres champs, et a une carte inconnue', () => {
+    expect(bornesSurLaCarte(entier('dureePartieS'), 'map1')).toEqual(entier('dureePartieS').bornes);
+    expect(bornesSurLaCarte(entier('nombreBotsInitial'), 'map2')).toEqual(
+      entier('nombreBotsInitial').bornes,
+    );
+  });
+
+  it('ne propose la pluie que sur Tokyo', () => {
+    expect(champUtileSurLaCarte('pluie', 'map1')).toBe(true);
+    expect(champUtileSurLaCarte('pluie', 'map3')).toBe(false);
+    expect(champUtileSurLaCarte('modeMiroir', 'map3')).toBe(true);
+  });
+
+  it('signale sur son champ un nombre de faux ninjas au-dela du plafond de Tokyo', () => {
+    const verdict = verifierLesValeurs(valeursAvec('nombreBotsInitial', '400'));
+
+    expect(
+      verdict.valide ? undefined : erreursParChamp(verdict.erreurs).get('nombreBotsInitial'),
+    ).toBe('Cette carte accepte au plus 300 faux ninjas au départ.');
   });
 });
 

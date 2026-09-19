@@ -24,8 +24,7 @@
  * deux resultats d'une meme partie de ne pas dire la meme carte.
  */
 
-import type { IdentifiantCarte } from '@neon-ninja/shared';
-import { CARTES, MODES } from '@neon-ninja/shared';
+import { CARTES_ENREGISTREES, MODES } from '@neon-ninja/shared';
 import { sql } from 'drizzle-orm';
 import {
   boolean,
@@ -50,16 +49,13 @@ import {
 export const modeDeJeu = pgEnum('mode_de_jeu', MODES);
 
 /**
- * Les cartes jouables. Meme raisonnement que pour les modes.
- *
- * Les cles de CARTES sont exactement les identifiants de carte: le type le
- * garantit (IdentifiantCarte est keyof typeof CARTES). Object.keys ne sait pas le
- * dire au compilateur, d'ou la conversion.
+ * Les cartes qu'une partie enregistree peut porter. Meme raisonnement que pour les
+ * modes, a une difference pres: la liste n'est pas celle des cartes jouables. Une
+ * carte retiree du jeu reste dans l'enumeration, sans quoi les parties deja jouees
+ * dessus deviendraient illisibles (etape 7.6: map2, Tokyo sans pluie, fondue dans
+ * map1, garde sa valeur).
  */
-export const carte = pgEnum(
-  'carte',
-  Object.keys(CARTES) as [IdentifiantCarte, ...IdentifiantCarte[]],
-);
+export const carte = pgEnum('carte', CARTES_ENREGISTREES);
 
 /** Horodatage avec fuseau: une heure de fin ne depend pas du fuseau du serveur. */
 const horodatage = (nom: string) => timestamp(nom, { withTimezone: true });

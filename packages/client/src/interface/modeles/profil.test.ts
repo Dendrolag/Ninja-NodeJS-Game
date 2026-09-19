@@ -104,7 +104,7 @@ describe('modeleProfil', () => {
       },
       {
         date: formaterFinDePartie('2026-09-12T17:00:00.000Z'),
-        partie: 'Horde · Rainy Tokyo',
+        partie: 'Horde · Tokyo',
         place: '4e sur 4',
         points: '3',
         xp: '+30',
@@ -113,6 +113,18 @@ describe('modeleProfil', () => {
         sensDeLaLigue: 'baisse',
       },
     ]);
+  });
+
+  it('nomme Tokyo une partie jouee sur l ancienne Tokyo sans pluie, map2 (etape 7.6)', () => {
+    const ancienne = { ...PROFIL.dernieresParties[1]!, carte: 'map2' as const };
+    const modele = modeleProfil({
+      ...ETAT_INITIAL,
+      profil: { statut: 'charge', profil: { ...PROFIL, dernieresParties: [ancienne] } },
+    });
+
+    expect(modele.nature === 'charge' ? modele.parties.map((partie) => partie.partie) : []).toEqual(
+      ['Horde · Tokyo'],
+    );
   });
 
   it('ecrit un tiret, et non un zero, quand aucune partie n a donne de score', () => {

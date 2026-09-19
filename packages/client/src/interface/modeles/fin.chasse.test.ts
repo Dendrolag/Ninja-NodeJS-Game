@@ -55,7 +55,7 @@ describe('la fin d une partie Chasse', () => {
   it('classe chacun aux points, avec un podium, comme en Classique', () => {
     const modele = modeleFin(etat());
 
-    expect(modele?.contexte).toBe('Partie terminée · Chasse · Rainy Tokyo');
+    expect(modele?.contexte).toBe('Partie terminée · Chasse · Tokyo');
     expect(modele?.place).toEqual({ nombre: 2, suffixe: 'e' });
     expect(modele?.equipes).toBeUndefined();
     expect(modele?.podium.map((marche) => marche.pseudo)).toEqual(['moi', 'bob', 'eve']);

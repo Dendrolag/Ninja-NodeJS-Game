@@ -34,7 +34,13 @@ import {
 import type { EtatClient } from '../../etat.js';
 import { formaterDuree } from '../../hud/modele.js';
 import { jeSuisHote } from '../../selecteurs.js';
-import { CAPTURES_DES_MODES, NOMS_DES_EQUIPES, NOMS_DES_MODES, nomDeCarte } from './cartes.js';
+import {
+  CAPTURES_DES_MODES,
+  NOMS_DES_EQUIPES,
+  NOMS_DES_MODES,
+  carteDeLaPartie,
+  nomDeCarte,
+} from './cartes.js';
 
 /** Un joueur du salon, tel qu'on l'affiche. */
 export interface JoueurAffiche {
@@ -301,7 +307,7 @@ function recapitulatif(reglages: ReglagesPartie, mode: Mode): readonly LigneReca
   const noirs = reglages.botsNoirs;
 
   return [
-    { libelle: 'Carte', valeur: nomDeCarte(reglages.carte, reglages.modeMiroir) },
+    { libelle: 'Carte', valeur: carteDeLaPartie(reglages) },
     { libelle: 'Durée', valeur: formaterDuree(reglages.dureePartieS * 1000) },
     { libelle: 'Faux ninjas', valeur: String(reglages.nombreBotsInitial) },
     ...(mode === 'chasse'

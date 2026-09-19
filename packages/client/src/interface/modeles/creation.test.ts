@@ -68,7 +68,7 @@ describe('modeleCreation', () => {
     const modele = modeleCreation(INVITE, { ...PUBLIQUE, mode: 'tactique' });
 
     expect(modele.envoi?.configuration.mode).toBe('tactique');
-    expect(modele.titre).toBe('Tactique · Rainy Tokyo');
+    expect(modele.titre).toBe('Tactique · Tokyo');
     expect(modele.recapitulatif[3]).toEqual({ libelle: 'Capacité', valeur: '12 joueurs' });
   });
 

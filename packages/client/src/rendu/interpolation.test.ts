@@ -141,6 +141,30 @@ describe('TamponDeLissage', () => {
     expect(nouveau?.y).toBe(600);
   });
 
+  it('retrouve chaque entite par son identifiant, quel que soit son rang (etape 7.6)', () => {
+    // Les positions precedentes sont rangees par identifiant une fois par battement: une
+    // entite qui change de rang dans la liste part toujours de sa propre position.
+    const tampon = new TamponDeLissage();
+    tampon.observer(vue(1, [joueur('a', 0, 0), joueur('b', 100, 100)]), 1_000);
+    tampon.observer(vue(2, [joueur('b', 110, 100), joueur('a', 10, 0)]), 1_050);
+
+    const rendue = tampon.vueLissee(1_075);
+
+    expect(rendue?.entites.map(({ entite, x }) => [entite.id, x])).toEqual([
+      ['b', 105],
+      ['a', 5],
+    ]);
+  });
+
+  it('ne lisse pas une nouvelle partie depuis les positions de la precedente', () => {
+    const tampon = new TamponDeLissage();
+    tampon.observer(vue(1, [joueur('moi', 0, 0)]), 1_000);
+    tampon.observer(vue(2, [joueur('moi', 10, 0)]), 1_050);
+    tampon.observer(vue(1, [joueur('moi', 20, 0)]), 1_100);
+
+    expect(tampon.vueLissee(1_110)?.entites[0]?.x).toBe(20);
+  });
+
   it('laisse tomber une entite absente du dernier battement', () => {
     const tampon = new TamponDeLissage();
     tampon.observer(vue(1, [joueur('moi', 0, 0), joueur('parti', 50, 50)]), 1_000);

@@ -187,7 +187,7 @@ describe('SANS_TERRAIN', () => {
 describe('les vraies cartes du jeu', () => {
   const chargeur = new ChargeurDeTerrain(racineRessources());
 
-  for (const carte of ['map1', 'map2', 'map3'] as const) {
+  for (const carte of ['map1', 'map3'] as const) {
     for (const modeMiroir of [false, true]) {
       it(`decode ${carte} ${modeMiroir ? 'miroir' : 'normale'} avec de vrais murs`, () => {
         const terrain = chargeur.charger({ carte, modeMiroir });

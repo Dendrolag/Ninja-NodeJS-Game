@@ -135,7 +135,7 @@ describe('le lien qui ne revient pas', () => {
             idRoom: 'room-1',
             hote: 'Bob',
             mode: 'classique',
-            carte: 'map2',
+            carte: 'map1',
             modeMiroir: false,
             joueurs: 3,
             capacite: 12,

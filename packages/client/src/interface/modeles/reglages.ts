@@ -17,11 +17,14 @@
  *
  * LES BORNES AFFICHEES viennent de BORNES_REGLAGES pour la meme raison: les
  * attributs min et max d'un champ ne peuvent pas diverger de ce que le serveur
- * accepte.
+ * accepte. Depuis l'etape 7.6, le nombre de faux ninjas a en plus le plafond de la
+ * carte choisie (PLAFONDS_DE_FAUX_NINJAS), et la pluie n'a de sens que sur une carte
+ * qui en a une: voir bornesSurLaCarte et champUtileSurLaCarte.
  */
 
 import type {
   ErreurValidation,
+  IdentifiantCarte,
   Intervalle,
   Mode,
   ReglagesPartie,
@@ -30,9 +33,12 @@ import type {
 } from '@neon-ninja/shared';
 import {
   BORNES_REGLAGES,
+  CARTES,
+  PLAFONDS_DE_FAUX_NINJAS,
   TYPES_BONUS,
   TYPES_MALUS,
   TYPES_ZONE,
+  cheminPluie,
   validerReglages,
 } from '@neon-ninja/shared';
 
@@ -93,6 +99,46 @@ export function champPropose(chemin: string, mode: Mode): boolean {
   return CHAMPS_ABSENTS[mode]?.includes(chemin) !== true;
 }
 
+/** Le chemin du nombre de faux ninjas au depart, borne par la carte (etape 7.6). */
+const CHEMIN_FAUX_NINJAS = 'nombreBotsInitial';
+
+/** Le chemin de la pluie, qui n'a de sens que sur une carte qui en a une (etape 7.6). */
+const CHEMIN_PLUIE = 'pluie';
+
+/** Cette valeur de formulaire designe-t-elle une carte jouable ? */
+function estUneCarte(carte: string): carte is IdentifiantCarte {
+  return Object.hasOwn(CARTES, carte);
+}
+
+/**
+ * Les bornes d'un champ entier sur la carte choisie.
+ *
+ * Seul le nombre de faux ninjas en depend: sa borne haute est le plafond de la carte
+ * (decision du porteur du projet du 18 septembre 2026). Les autres champs gardent
+ * leurs bornes, et une carte inconnue aussi: c'est la validation qui la refuse.
+ */
+export function bornesSurLaCarte(
+  champ: Extract<ChampReglage, { nature: 'entier' }>,
+  carte: string,
+): Intervalle {
+  if (champ.chemin !== CHEMIN_FAUX_NINJAS || !estUneCarte(carte)) {
+    return champ.bornes;
+  }
+
+  return { minimum: champ.bornes.minimum, maximum: PLAFONDS_DE_FAUX_NINJAS[carte] };
+}
+
+/**
+ * Ce champ a-t-il un sens sur la carte choisie ?
+ *
+ * La pluie ne tombe que sur une carte qui a une planche de pluie, Tokyo: ailleurs,
+ * l'interrupteur se cache (decision du porteur du projet du 18 septembre 2026). Sa
+ * valeur est gardee, sans effet, pour revenir telle quelle si l'hote revient a Tokyo.
+ */
+export function champUtileSurLaCarte(chemin: string, carte: string): boolean {
+  return chemin !== CHEMIN_PLUIE || cheminPluie(carte, false) !== undefined;
+}
+
 /** Un entier en secondes. */
 const secondes = (chemin: string, libelle: string, bornes: Intervalle): ChampReglage => ({
   nature: 'entier',
@@ -133,6 +179,7 @@ export const GROUPES_REGLAGES: readonly GroupeReglages[] = [
         titre: undefined,
         champs: [
           { nature: 'carte', chemin: 'carte', libelle: 'Carte' },
+          interrupteur(CHEMIN_PLUIE, 'Pluie'),
           interrupteur('modeMiroir', 'Mode miroir'),
           {
             nature: 'entier',
@@ -144,7 +191,7 @@ export const GROUPES_REGLAGES: readonly GroupeReglages[] = [
           },
           {
             nature: 'entier',
-            chemin: 'nombreBotsInitial',
+            chemin: CHEMIN_FAUX_NINJAS,
             libelle: 'Faux ninjas au départ',
             bornes: BORNES_REGLAGES.nombreBotsInitial,
             unite: '',

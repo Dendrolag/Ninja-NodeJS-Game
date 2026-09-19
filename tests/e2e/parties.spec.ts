@@ -62,7 +62,7 @@ async function creer(page: Page, visibilite: 'publique' | 'privee', carte: strin
   await page.getByRole('button', { name: 'Créer une partie' }).click();
   await expect(page.locator('.application')).toHaveAttribute('data-ecran', 'creation');
   await page.locator(`label.tuile-choix[data-visibilite="${visibilite}"]`).click();
-  // Le nom exact: « Tokyo » est aussi dans « Rainy Tokyo ».
+  // Le nom exact, pour qu'un nom de carte n'en designe jamais une autre qui le contiendrait.
   await page
     .locator('label.carte-choix', {
       has: page.locator('.carte-nom').getByText(carte, { exact: true }),

@@ -131,6 +131,7 @@ export type {
 } from './evenements.js';
 
 export type {
+  CarteEnregistree,
   Couleur,
   DimensionsCarte,
   Direction,
@@ -150,6 +151,7 @@ export {
   CADENCES_LEGACY_MS,
   CAPACITES,
   CARTES,
+  CARTES_ENREGISTREES,
   CHASSE,
   COMBO,
   MASSACRE,
@@ -165,6 +167,7 @@ export {
   MEMBRES_PAR_EQUIPE_MAXIMUM,
   MODES,
   OBJETS,
+  PLAFONDS_DE_FAUX_NINJAS,
   RAYON_ENTITE,
   SCORE,
   TACTIQUE,

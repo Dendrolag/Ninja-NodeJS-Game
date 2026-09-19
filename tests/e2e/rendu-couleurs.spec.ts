@@ -50,6 +50,7 @@ function pageDesCouleurs(): string {
     carte: { largeur: 2000, hauteur: 1500 },
     identifiantCarte: 'map1',
     modeMiroir: false,
+    pluie: true,
     lueur: false,
     largeur: 640,
     hauteur: 480,
@@ -136,7 +137,7 @@ function pageDuHalo(): string {
   const pixelsDe = async (hote, lueur) => {
     const rendu = await monterRendu({
       hote, carte: { largeur: 2000, hauteur: 1500 }, identifiantCarte: 'map1',
-      modeMiroir: false, lueur, largeur: 320, hauteur: 240,
+      modeMiroir: false, pluie: true, lueur, largeur: 320, hauteur: 240,
     });
     rendu.dessiner(scene, { x: 1000, y: 750, echelle: 3 });
     rendu.application.render();

@@ -64,7 +64,7 @@ describe('la fin d une partie Equipes', () => {
   it('dit la victoire de notre equipe, et classe les equipes a la place du podium', () => {
     const modele = modeleFin(etat(CLASSEMENT));
 
-    expect(modele?.contexte).toBe('Partie terminée · Équipes · Rainy Tokyo');
+    expect(modele?.contexte).toBe('Partie terminée · Équipes · Tokyo');
     expect(modele?.message).toBe('Victoire de votre équipe !');
     expect(modele?.place).toBeUndefined();
     expect(modele?.podium).toEqual([]);

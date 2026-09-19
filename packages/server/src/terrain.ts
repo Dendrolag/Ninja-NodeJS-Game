@@ -16,7 +16,7 @@
  * ce sont elles qui placent les murs la ou deux ans de jeu les ont mis.
  *
  * 1. LES IMAGES SONT REDIMENSIONNEES. Les six collision.png mesurent toutes
- *    3000x2000, alors que map1 et map2 mesurent 2000x1500. Le jeu d'origine les
+ *    3000x2000, alors que map1 (Tokyo) mesure 2000x1500. Le jeu d'origine les
  *    dessinait dans un canevas aux dimensions de la carte (server.js:352), ce
  *    qui les ecrase sans conserver les proportions. Ignorer ce redimensionnement
  *    donnerait des murs decales de plusieurs centaines de pixels par rapport au

@@ -22,7 +22,7 @@
  * demande recue est revalidee par validation.ts avant d'aller plus loin.
  */
 
-import type { IdentifiantCarte, Mode } from './constantes.js';
+import type { CarteEnregistree, Mode } from './constantes.js';
 import type { ErreurValidation } from './validation.js';
 
 /** La racine des routes HTTP des comptes. */
@@ -205,7 +205,8 @@ export interface StatistiquesDuCompte {
 /** Une partie de l'historique d'un compte, telle que son profil la montre. */
 export interface PartieDuProfil {
   readonly mode: Mode;
-  readonly carte: IdentifiantCarte;
+  /** Une partie ancienne peut porter une carte retiree du jeu depuis (etape 7.6). */
+  readonly carte: CarteEnregistree;
   readonly modeMiroir: boolean;
   /** 1 pour le premier. */
   readonly placement: number;

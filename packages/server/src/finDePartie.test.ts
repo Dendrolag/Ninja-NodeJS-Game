@@ -29,7 +29,7 @@ function roomLancee(...sessions: readonly SessionJoueur[]): GameRoom {
     id: 'room-1',
     graine: 5,
     horloge: creerHorlogeManuelle(),
-    reglages: { carte: 'map2', modeMiroir: true, dureePartieS: 30, nombreBotsInitial: 10 },
+    reglages: { carte: 'map3', modeMiroir: true, dureePartieS: 30, nombreBotsInitial: 10 },
   });
 
   for (const session of sessions) {
@@ -57,7 +57,7 @@ describe('finPourLesComptes', () => {
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u,
       ) as string,
       mode: 'classique',
-      carte: 'map2',
+      carte: 'map3',
       modeMiroir: true,
       dureeS: 30,
       nombreJoueurs: 2,

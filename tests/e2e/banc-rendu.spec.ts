@@ -41,6 +41,7 @@
  * de l'etape, avec la machine.
  */
 
+import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
 import { CARTE_IMPORTATION, demarrerServeurStatique } from './harnais/serveur-statique.js';
@@ -91,6 +92,29 @@ const PART_CONSERVEE_A_CINQ_CENTS = 0.5;
 /** Plafond du cout de notre propre code, par image, en millisecondes. */
 const PLAFOND_COUT_PROPRE_MS = 8;
 
+/**
+ * Le ralentissement du processeur qui approche un telephone d'entree de gamme, comme a
+ * la mesure du client de l'etape 5.2 (section 11.9 de docs/mesures/charge-serveur.md):
+ * Chromium ralentit lui-meme son processeur, comme dans ses outils de developpement.
+ */
+const RALENTISSEMENT_TELEPHONE = 6;
+
+/**
+ * Les charges mesurees au processeur ralenti: les plafonds de faux ninjas de Tokyo et
+ * de Spirit & Time (etape 7.6), joueurs et Black Ninjas en plus comptes large.
+ */
+const CHARGES_TELEPHONE = [300, 500] as const;
+
+/**
+ * L'echauffement de chaque charge de la serie telephone, non compte. Au processeur
+ * ralenti, la premiere seconde d'une charge nouvelle paie la compilation du code et la
+ * creation des sprites: mesuree avec le reste, elle doublait la pointe (etape 7.6).
+ */
+const ECHAUFFEMENT_TELEPHONE_MS = 1_000;
+
+/** Les joueurs d'une vraie partie pleine, pour la composition de la serie telephone. */
+const JOUEURS_D_UNE_PARTIE_PLEINE = 12;
+
 /** Le resultat d'une mesure. */
 interface Mesure {
   readonly sprites: number;
@@ -125,8 +149,21 @@ function pageDuBanc(): string {
    * Les entites tournent sur des cercles de rayons differents: elles bougent
    * toutes, en permanence, et pas deux a la meme vitesse. Une scene ou rien ne
    * bouge ne mesurerait rien, PixiJS n'ayant alors aucune position a transmettre.
+   *
+   * Sans nombre de joueurs, la composition est celle de l'etape 4.2, gardee pour
+   * comparer: un sprite sur quatre est un joueur, avec son pseudo. Avec un nombre de
+   * joueurs, elle est celle d'une vraie partie (etape 7.6): ces joueurs-la, un Black
+   * Ninja par centaine d'entites, et des faux ninjas pour le reste.
    */
-  function instantane(tick, nombre, tour) {
+  function natureDe(index, joueurs) {
+    if (joueurs === undefined) {
+      return index === 0 ? 'joueur' : index % 25 === 0 ? 'botNoir' : index % 4 === 0 ? 'joueur' : 'bot';
+    }
+
+    return index < joueurs ? 'joueur' : index % 100 === 99 ? 'botNoir' : 'bot';
+  }
+
+  function instantane(tick, nombre, tour, joueurs) {
     const entites = [];
 
     for (let index = 0; index < nombre; index += 1) {
@@ -134,7 +171,7 @@ function pageDuBanc(): string {
       const angle = tour * (0.4 + (index % 11) * 0.05) + index;
 
       entites.push({
-        type: index === 0 ? 'joueur' : index % 25 === 0 ? 'botNoir' : index % 4 === 0 ? 'joueur' : 'bot',
+        type: natureDe(index, joueurs),
         id: 'e' + index,
         x: CARTE.largeur / 2 + Math.cos(angle) * rayon,
         y: CARTE.hauteur / 2 + Math.sin(angle) * rayon * 0.7,
@@ -181,6 +218,7 @@ function pageDuBanc(): string {
       carte: CARTE,
       identifiantCarte: 'map1',
       modeMiroir: false,
+      pluie: true,
       lueur,
     });
 
@@ -195,7 +233,7 @@ function pageDuBanc(): string {
    * On compte les images reellement produites par le navigateur et on chronometre
    * separement ce que NOTRE code consomme dans chacune.
    */
-  window.mesurer = async (sprites, dureeMs) => {
+  window.mesurer = async (sprites, dureeMs, joueurs) => {
     const etat = { ...ETAT_INITIAL, ecran: 'jeu', moi: 'e0' };
     const tampon = new TamponDeLissage();
     const taille = { largeur: window.innerWidth, hauteur: window.innerHeight };
@@ -218,7 +256,7 @@ function pageDuBanc(): string {
 
         if (battement > tick) {
           tick = battement;
-          tampon.observer(instantane(tick, sprites, tick * 0.05), instant);
+          tampon.observer(instantane(tick, sprites, tick * 0.05, joueurs), instant);
         }
 
         const avant = performance.now();
@@ -289,63 +327,82 @@ test.afterAll(async () => {
   await serveur.arreter();
 });
 
+/**
+ * Ouvre la page du banc et attend qu'elle soit prete.
+ *
+ * Les erreurs de la page sont recueillies et rejouees dans le message d'echec: sans
+ * cela, un module qui ne se charge pas se manifeste par une attente qui expire, ce qui
+ * ne dit rien de la cause.
+ */
+async function ouvrirLeBanc(page: Page): Promise<void> {
+  const erreurs: string[] = [];
+  page.on('pageerror', (erreur) => erreurs.push(erreur.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error') {
+      erreurs.push(message.text());
+    }
+  });
+
+  await page.goto(`${serveur.url}/banc.html`);
+
+  try {
+    await page.waitForFunction(
+      () => (window as unknown as { bancPret?: boolean }).bancPret === true,
+      { timeout: 30_000 },
+    );
+  } catch (echec) {
+    const detail = erreurs.length === 0 ? '(aucune)' : erreurs.join(' | ');
+    throw new Error(`Le banc ne s'est pas initialise. Erreurs de la page: ${detail}`, {
+      cause: echec,
+    });
+  }
+
+  expect(erreurs, 'la page du banc ne doit lever aucune erreur').toEqual([]);
+}
+
+/** Joue une serie de mesures, lueur allumee ou eteinte, a ces charges. */
+async function mesurerUneSerie(
+  page: Page,
+  lueur: boolean,
+  charges: readonly number[],
+  joueurs?: number,
+  dureeMs: number = DUREE_MESURE_MS,
+): Promise<Mesure[]> {
+  await page.evaluate(
+    async (avecLueur) =>
+      (window as unknown as { preparer: (l: boolean) => Promise<void> }).preparer(avecLueur),
+    lueur,
+  );
+
+  const relevees: Mesure[] = [];
+
+  for (const sprites of charges) {
+    relevees.push(
+      (await page.evaluate(
+        async ([nombre, duree, presents]) =>
+          (
+            window as unknown as {
+              mesurer: (n: number, d: number, j: number | undefined) => Promise<Mesure>;
+            }
+          ).mesurer(nombre as number, duree as number, presents),
+        [sprites, dureeMs, joueurs] as const,
+      )) as Mesure,
+    );
+  }
+
+  return relevees;
+}
+
 test.describe('banc de mesure du rendu PixiJS', () => {
   // Trois charges, trois secondes chacune, plus le chargement des images.
   test.setTimeout(60_000);
 
   test('tient la charge a 100, 200 et 500 sprites animes', async ({ page }) => {
-    // Les erreurs de la page sont recueillies et rejouees dans le message
-    // d'echec: sans cela, un module qui ne se charge pas se manifeste par une
-    // attente qui expire, ce qui ne dit rien de la cause.
-    const erreurs: string[] = [];
-    page.on('pageerror', (erreur) => erreurs.push(erreur.message));
-    page.on('console', (message) => {
-      if (message.type() === 'error') {
-        erreurs.push(message.text());
-      }
-    });
-
-    await page.goto(`${serveur.url}/banc.html`);
-
-    try {
-      await page.waitForFunction(
-        () => (window as unknown as { bancPret?: boolean }).bancPret === true,
-        { timeout: 30_000 },
-      );
-    } catch (echec) {
-      const detail = erreurs.length === 0 ? '(aucune)' : erreurs.join(' | ');
-      throw new Error(`Le banc ne s'est pas initialise. Erreurs de la page: ${detail}`, {
-        cause: echec,
-      });
-    }
-
-    expect(erreurs, 'la page du banc ne doit lever aucune erreur').toEqual([]);
+    await ouvrirLeBanc(page);
 
     /** Joue une serie de mesures, lueur allumee ou eteinte. */
-    const serie = async (lueur: boolean): Promise<Mesure[]> => {
-      await page.evaluate(
-        async (avecLueur) =>
-          (window as unknown as { preparer: (l: boolean) => Promise<void> }).preparer(avecLueur),
-        lueur,
-      );
-
-      const relevees: Mesure[] = [];
-
-      for (const sprites of CHARGES) {
-        relevees.push(
-          (await page.evaluate(
-            async ([nombre, duree]) =>
-              (window as unknown as { mesurer: (n: number, d: number) => Promise<Mesure> }).mesurer(
-                nombre as number,
-                duree as number,
-              ),
-            [sprites, DUREE_MESURE_MS],
-          )) as Mesure,
-        );
-      }
-
-      return relevees;
-    };
+    const serie = async (lueur: boolean): Promise<Mesure[]> =>
+      mesurerUneSerie(page, lueur, CHARGES);
 
     const dessinePar = (await page.evaluate(() =>
       (window as unknown as { quiDessine: () => string }).quiDessine(),
@@ -432,5 +489,48 @@ test.describe('banc de mesure du rendu PixiJS', () => {
       (cinqCents as Mesure).imagesParSeconde / (cent as Mesure).imagesParSeconde,
       'passer de 100 a 500 sprites ne doit pas effondrer la cadence',
     ).toBeGreaterThan(PART_CONSERVEE_A_CINQ_CENTS);
+  });
+
+  // Etape 7.6: plus de 150 faux ninjas. Le cout de notre code croit plus vite que le
+  // nombre d'entites (le lissage retrouve chaque entite par un parcours complet): il se
+  // mesure la ou il pese le plus, sur un processeur de telephone d'entree de gamme.
+  test('tient les plafonds de faux ninjas au processeur ralenti six fois', async ({ page }) => {
+    await ouvrirLeBanc(page);
+
+    const session = await page.context().newCDPSession(page);
+    await session.send('Emulation.setCPUThrottlingRate', { rate: RALENTISSEMENT_TELEPHONE });
+
+    const mesures: Mesure[] = [];
+
+    for (const charge of CHARGES_TELEPHONE) {
+      const joueurs = JOUEURS_D_UNE_PARTIE_PLEINE;
+      await mesurerUneSerie(page, true, [charge], joueurs, ECHAUFFEMENT_TELEPHONE_MS);
+      mesures.push(...(await mesurerUneSerie(page, true, [charge], joueurs)));
+    }
+
+    await session.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+
+    console.log(
+      [
+        '',
+        `Banc de rendu PixiJS, processeur ralenti ${String(RALENTISSEMENT_TELEPHONE)} fois`,
+        ...mesures.map(
+          (mesure) =>
+            `  ${String(mesure.sprites).padStart(3)} sprites: ` +
+            `${mesure.imagesParSeconde.toFixed(1)} images/s, ` +
+            `cout propre ${mesure.coutMoyenMs.toFixed(2)} ms/image ` +
+            `(pointe ${mesure.coutMaximumMs.toFixed(2)} ms)`,
+        ),
+        '',
+      ].join('\n'),
+    );
+
+    for (const mesure of mesures) {
+      expect(mesure.entitesDessinees).toBe(mesure.sprites);
+      expect(
+        mesure.coutMoyenMs,
+        `${String(mesure.sprites)} sprites au processeur ralenti: notre code coute trop cher`,
+      ).toBeLessThan(PLAFOND_COUT_PROPRE_MS);
+    }
   });
 });

@@ -1,5 +1,5 @@
 /**
- * La pluie de Rainy Tokyo, telle que le vrai rendu la dessine.
+ * La pluie de Tokyo, telle que le vrai rendu la dessine.
  *
  * LE DEFAUT QUE CE SCENARIO FERME, releve a la recette de l'etape 5.4: la pluie de
  * la carte Rainy Tokyo n'avait jamais ete portee. Le jeu d'origine la dessinait
@@ -7,10 +7,11 @@
  * (RainEffect, legacy/js/MapManager.js). Le rendu de la reecriture chargeait le fond
  * et le premier plan, jamais la pluie.
  *
- * La page monte le vrai rendu sur la carte demandee, charge son decor, dessine deux
- * scenes vides qui ne different que par l'image de pluie, et compte les pixels qui
- * changent. Sur Rainy Tokyo la pluie anime le decor; sur Tokyo, carte au meme decor
- * mais sans pluie, rien ne bouge.
+ * Depuis l'etape 7.6, Rainy Tokyo et Tokyo sont une seule carte, et la pluie un
+ * reglage de partie. La page monte le vrai rendu sur la carte demandee, avec ou sans
+ * pluie, charge son decor, dessine deux scenes vides qui ne different que par l'image
+ * de pluie, et compte les pixels qui changent. Avec la pluie, elle anime le decor;
+ * sans elle, ou sur une carte qui n'en a pas, rien ne bouge.
  */
 
 import type { Page } from '@playwright/test';
@@ -20,7 +21,7 @@ import { CARTE_IMPORTATION, demarrerServeurStatique } from './harnais/serveur-st
 import type { ServeurStatique } from './harnais/serveur-statique.js';
 
 /** La page: le decor d'une carte, dessine avec deux images de pluie differentes. */
-function pageDeLaPluie(carte: string): string {
+function pageDeLaPluie(carte: string, pluie: boolean): string {
   return `<!doctype html>
 <meta charset="utf-8">
 <title>Pluie</title>
@@ -35,6 +36,7 @@ function pageDeLaPluie(carte: string): string {
     carte: { largeur: 2000, hauteur: 1500 },
     identifiantCarte: '${carte}',
     modeMiroir: false,
+    pluie: ${String(pluie)},
     lueur: false,
     largeur: 400,
     hauteur: 300,
@@ -84,8 +86,9 @@ let serveur: ServeurStatique;
 
 test.beforeAll(async () => {
   serveur = await demarrerServeurStatique({
-    '/rainy-tokyo.html': pageDeLaPluie('map1'),
-    '/tokyo.html': pageDeLaPluie('map2'),
+    '/tokyo-pluie.html': pageDeLaPluie('map1', true),
+    '/tokyo-sec.html': pageDeLaPluie('map1', false),
+    '/spirit-pluie.html': pageDeLaPluie('map3', true),
   });
 });
 
@@ -110,20 +113,26 @@ async function compter(page: Page, chemin: string): Promise<{ differents: number
   )) as { differents: number; total: number };
 }
 
-test('sur Rainy Tokyo, la pluie anime le decor', async ({ page }) => {
-  const pluie = await compter(page, '/rainy-tokyo.html');
+test('sur Tokyo avec la pluie, elle anime le decor', async ({ page }) => {
+  const pluie = await compter(page, '/tokyo-pluie.html');
 
   // Une pluie clairsemee, a trente pour cent d'opacite, ne change qu'une petite part
   // des pixels: 933 sur 120 000 au bureau, 3 719 sur 480 000 en emulation mobile,
-  // mesures a l'etape 5.4. Sans pluie, le compte vaut zero, comme sur Tokyo.
+  // mesures a l'etape 5.4. Sans pluie, le compte vaut zero.
   expect(
     pluie.differents,
     `la pluie doit changer l'image ${JSON.stringify(pluie)}`,
   ).toBeGreaterThan(pluie.total / 1000);
 });
 
-test('sur Tokyo, sans pluie, le decor ne bouge pas', async ({ page }) => {
-  const pluie = await compter(page, '/tokyo.html');
+test('sur Tokyo sans la pluie, le decor ne bouge pas (etape 7.6)', async ({ page }) => {
+  const pluie = await compter(page, '/tokyo-sec.html');
+
+  expect(pluie.differents, `rien ne doit changer ${JSON.stringify(pluie)}`).toBe(0);
+});
+
+test('sur Spirit & Time, la pluie demandee ne tombe pas: la carte n en a pas', async ({ page }) => {
+  const pluie = await compter(page, '/spirit-pluie.html');
 
   expect(pluie.differents, `rien ne doit changer ${JSON.stringify(pluie)}`).toBe(0);
 });

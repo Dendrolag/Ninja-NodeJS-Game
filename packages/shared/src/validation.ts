@@ -54,6 +54,7 @@ import {
   CARTES,
   EQUIPES,
   MODES,
+  PLAFONDS_DE_FAUX_NINJAS,
   TYPES_BONUS,
   TYPES_MALUS,
   TYPES_ZONE,
@@ -764,6 +765,7 @@ export function validerReglages(brut: unknown): ResultatValidation<ReglagesParti
   );
   poser(retenus, 'carte', identifiantDeCarte(source, erreurs));
   poser(retenus, 'modeMiroir', booleen(source, 'modeMiroir', erreurs));
+  poser(retenus, 'pluie', booleen(source, 'pluie', erreurs));
   poser(
     retenus,
     'nombreBotsInitial',
@@ -783,13 +785,22 @@ export function validerReglages(brut: unknown): ResultatValidation<ReglagesParti
   // pour la fusion des reglages partiels dans reglages.ts.
   const reglages = completerReglages(retenus as ReglagesPartiels);
 
-  // Seule regle qui met deux reglages en rapport, donc la seule qui ne puisse
-  // pas se verifier champ par champ. Elle se juge apres completion, parce que
-  // l'hote peut n'avoir change qu'une des deux durees.
+  // Les deux regles qui mettent deux reglages en rapport, donc les seules qui ne
+  // puissent pas se verifier champ par champ. Elles se jugent apres completion,
+  // parce que l'hote peut n'avoir change qu'un des deux reglages.
   if (reglages.zones.dureeMinimumS > reglages.zones.dureeMaximumS) {
     return refuse(
       'zones.dureeMinimumS',
       "La durée minimale d'une zone ne peut pas dépasser sa durée maximale.",
+    );
+  }
+
+  // Chaque carte a son plafond de faux ninjas (etape 7.6).
+  const plafond = PLAFONDS_DE_FAUX_NINJAS[reglages.carte];
+  if (reglages.nombreBotsInitial > plafond) {
+    return refuse(
+      'nombreBotsInitial',
+      `Cette carte accepte au plus ${String(plafond)} faux ninjas au départ.`,
     );
   }
 

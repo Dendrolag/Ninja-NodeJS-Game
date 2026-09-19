@@ -6,6 +6,8 @@ Document de référence de l'étape 5.1. Il consigne ce que coûte le serveur so
 
 **Mise à jour du 12 septembre 2026, étape 2.3.** La section 12 consigne la mesure d'après le passage du flux d'état en trames binaires, sur la même machine et avec la même commande. Ses valeurs de comparaison (section 12.7) remplacent celles de la section 11.11 pour la taille des messages et la bande passante.
 
+**Mise à jour du 18 septembre 2026, étape 7.6.** La section 17 mesure les nouveaux plafonds de faux ninjas, 300 sur Tokyo et 500 sur Spirit & Time, au serveur et dans la page.
+
 Chiffres bruts de cette mesure: `docs/mesures/charge-serveur-5-1.json`, écrit par le harnais lui-même.
 
 ## 1. L'essentiel
@@ -740,3 +742,50 @@ Huit joueurs, carte map1, un processus neuf par ligne. Durées en millisecondes 
 
 - **Une partie Massacre à carte pleine du début à la fin.** Par nature, elle se vide: le banc mesure une partie où des faux ninjas meurent peu à peu, comme en jeu.
 - **Le coût du sang dans la page.** Il se dessine dans le navigateur: une tache s'imprime une fois sur un calque de sol à demi-résolution (6 Mo de mémoire graphique pour la plus grande carte), puis ne coûte plus rien. Le banc du rendu n'en joue pas.
+
+## 17. Mesure de l'étape 7.6: plus de 150 faux ninjas (18 septembre 2026)
+
+Chiffres bruts: `docs/mesures/charge-serveur-7-6-tokyo.json` et `docs/mesures/charge-serveur-7-6-spirit.json`, écrits par le harnais sur le code de l'étape (commit de base `9c003cd`, plus les changements de l'étape, dont le moteur ne diffère que par le réglage `pluie`, qu'il ignore) et la même machine qu'aux sections 2 et 11 à 16. Le banc du rendu est `tests/e2e/banc-rendu.spec.ts`, sur la carte graphique de la machine de mesure (NVIDIA RTX 2080 Ti).
+
+### 17.1 L'essentiel
+
+- **Le serveur tient les deux plafonds sans effort.** Une Horde de douze joueurs coûte 1,02 ms par battement à 300 faux ninjas sur Tokyo, 2,31 ms (p99 3,20) à 500 sur Spirit & Time, pour un budget de 50 ms: 34 et 15 parties par cœur au banc. Un message pèse 779 et 1 241 octets, soit 0,12 et 0,20 Mbit/s par joueur.
+- **Les murs de Spirit & Time ne coûtent pas plus que ceux de Tokyo**: à nombre égal, les deux cartes se mesurent à quelques centièmes de milliseconde près.
+- **Le lissage de la page était en carré du nombre d'entités**, et coûtait 3,3 ms par image à 500 entités au processeur ralenti six fois. Il retrouve désormais les entités par leur identifiant (journal de conception, 18 septembre 2026): 0,46 ms. Sur carte graphique, notre code passe de 1,26 à 0,59 ms par image à 500 sprites.
+- **Sur un téléphone d'entrée de gamme simulé**, notre code coûte 3,1 à 3,4 ms par image à 300 entités (environ 20 pour cent d'une image) et 4,3 à 5,3 ms à 500 (26 à 32 pour cent), pour environ 54 images par seconde. Ce qui reste est la transmission des sprites à PixiJS: son allègement est l'étape `5.7`.
+
+### 17.2 Méthode
+
+Serveur: `pnpm charge --banc --bots-banc 150,300`, puis `pnpm charge --banc --carte map3 --bots-banc 150,300,500`. L'option `--carte` est ajoutée au harnais à cette étape; le banc joue la carte avec ses murs, douze joueurs, en Horde.
+
+Rendu: le banc de l'étape 4.2 gagne une série au processeur ralenti six fois par Chromium, comme à la section 11.9, à 300 et 500 entités. Sa composition est celle d'une vraie partie pleine, douze joueurs, un Black Ninja par centaine d'entités et des faux ninjas pour le reste; la série d'origine garde la sienne (un joueur sur quatre) pour rester comparable. Chaque charge est précédée d'une seconde d'échauffement non comptée: au processeur ralenti, la première seconde paie la compilation du code et la création des sprites, et doublait la pointe. Trois exécutions pour la fourchette.
+
+### 17.3 Le banc du battement
+
+Douze joueurs, Horde, un processus neuf par ligne. Durées en millisecondes par battement, tailles en octets par message sur le fil, images comprises.
+
+| Carte         | Bots | Moteur | Projection | Codage | Total | Total p99 | Octets par message | Parties par cœur |
+| ------------- | ---: | -----: | ---------: | -----: | ----: | --------: | -----------------: | ---------------: |
+| Tokyo         |  150 |  0,319 |      0,045 |  0,055 | 0,418 |     0,895 |                440 |               83 |
+| Tokyo         |  300 |  0,864 |      0,077 |  0,083 | 1,024 |     1,557 |                779 |               34 |
+| Spirit & Time |  150 |  0,311 |      0,041 |  0,053 | 0,405 |     0,865 |                451 |               86 |
+| Spirit & Time |  300 |  0,869 |      0,075 |  0,089 | 1,033 |     1,591 |                785 |               33 |
+| Spirit & Time |  500 |  2,045 |      0,127 |  0,134 | 2,306 |     3,199 |              1 241 |               15 |
+
+### 17.4 Le coût de la page
+
+Notre code par image, en millisecondes: lissage, scène et transmission à PixiJS, hors dessin.
+
+| Situation                                   | Entités | Avant l'étape | Après l'étape | Images par seconde |
+| ------------------------------------------- | ------: | ------------: | ------------: | -----------------: |
+| Carte graphique, composition de l'étape 4.2 |     500 |          1,26 |          0,59 |                 60 |
+| Processeur ralenti × 6, partie réelle       |     300 |               |     3,1 à 3,4 |                 54 |
+| Processeur ralenti × 6, partie réelle       |     500 |               |     4,3 à 5,3 |                 54 |
+| Processeur ralenti × 6, composition 4.2     |     500 |          8,27 |               |                 49 |
+
+À 500 entités au processeur ralenti, après correction du lissage: lissage 0,46 ms, scène 0,6 ms, transmission à PixiJS 2,8 ms, par image.
+
+### 17.5 Ce qui n'est pas mesuré
+
+- **La charge du serveur complet à 500 faux ninjas**: le banc suffit à situer le coût, quinze fois sous le budget d'un battement.
+- **Un vrai téléphone.** Le ralentissement de Chromium ne reproduit ni sa carte graphique ni son échauffement; à confirmer en jouant.

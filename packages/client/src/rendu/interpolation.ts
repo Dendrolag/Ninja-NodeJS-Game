@@ -60,6 +60,15 @@ export interface VueLissee {
  */
 export class TamponDeLissage {
   private precedente: VuePartie | undefined;
+  /**
+   * Les positions du battement precedent, par identifiant d'entite.
+   *
+   * Construites une fois par battement, quand il devient le precedent, et non une fois
+   * par image et par entite: chercher chaque entite par un parcours de la liste coutait
+   * le carre de leur nombre a chaque image, 3 ms par image a 500 entites sur un
+   * telephone d'entree de gamme (mesure de l'etape 7.6).
+   */
+  private positionsPrecedentes: ReadonlyMap<string, EntiteVue> = new Map();
   private courante: VuePartie | undefined;
   /** Instant local d'arrivee du battement courant. */
   private arriveeCourante = 0;
@@ -94,6 +103,9 @@ export class TamponDeLissage {
 
     if (this.courante !== undefined) {
       this.precedente = this.courante;
+      this.positionsPrecedentes = new Map(
+        this.courante.entites.map((entite) => [entite.id, entite]),
+      );
       this.intervalleMs = Math.max(maintenant - this.arriveeCourante, 1);
     }
 
@@ -104,6 +116,7 @@ export class TamponDeLissage {
   /** Efface tout: plus rien a lisser, la prochaine vue repart de zero. */
   oublier(): void {
     this.precedente = undefined;
+    this.positionsPrecedentes = new Map();
     this.courante = undefined;
     this.arriveeCourante = 0;
     this.intervalleMs = DUREE_BATTEMENT_PAR_DEFAUT_MS;
@@ -122,9 +135,7 @@ export class TamponDeLissage {
       return undefined;
     }
 
-    const precedente = this.precedente;
-
-    if (precedente === undefined) {
+    if (this.precedente === undefined) {
       return {
         vue: courante,
         entites: courante.entites.map((entite) => ({
@@ -140,10 +151,12 @@ export class TamponDeLissage {
     // que de prolonger le mouvement. C'est la difference entre lisser et deviner.
     const avancement = Math.min((maintenant - this.arriveeCourante) / this.intervalleMs, 1);
 
+    const positions = this.positionsPrecedentes;
+
     return {
       vue: courante,
       entites: courante.entites.map((entite) =>
-        lisserUneEntite(entite, positionPrecedente(precedente, entite.id), avancement),
+        lisserUneEntite(entite, positions.get(entite.id), avancement),
       ),
     };
   }
@@ -151,16 +164,6 @@ export class TamponDeLissage {
 
 /** Duree supposee entre deux battements tant qu'aucune n'a ete observee. */
 const DUREE_BATTEMENT_PAR_DEFAUT_MS = 50;
-
-/** Retrouve ou etait une entite au battement precedent, si elle y etait. */
-function positionPrecedente(
-  precedente: VuePartie,
-  id: string,
-): { readonly x: number; readonly y: number } | undefined {
-  const trouvee = precedente.entites.find((entite) => entite.id === id);
-
-  return trouvee === undefined ? undefined : { x: trouvee.x, y: trouvee.y };
-}
 
 /**
  * Place une entite entre ses deux dernieres positions connues.

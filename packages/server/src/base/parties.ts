@@ -24,7 +24,7 @@
  * Aucun joueur n'enregistre une partie lui-meme.
  */
 
-import type { IdentifiantCarte, Mode } from '@neon-ninja/shared';
+import type { CarteEnregistree, Mode } from '@neon-ninja/shared';
 import { JOUEURS_POUR_UNE_VICTOIRE } from '@neon-ninja/shared';
 import { desc, eq, inArray, sql } from 'drizzle-orm';
 
@@ -46,7 +46,7 @@ export interface NouvellePartie {
    */
   readonly id?: string;
   readonly mode: Mode;
-  readonly carte: IdentifiantCarte;
+  readonly carte: CarteEnregistree;
   readonly modeMiroir: boolean;
   readonly dureeS: number;
   /** Tous les joueurs, avec ou sans compte, abandons compris. */

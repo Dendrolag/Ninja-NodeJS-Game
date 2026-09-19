@@ -90,9 +90,7 @@ describe('l ecran de creation', () => {
   it('cree une partie Tactique quand on choisit son mode', () => {
     cocher(champ('input[name="mode"][value="tactique"]'), true);
 
-    expect(obligatoire(hote, '.creation-recapitulatif h2').textContent).toBe(
-      'Tactique · Rainy Tokyo',
-    );
+    expect(obligatoire(hote, '.creation-recapitulatif h2').textContent).toBe('Tactique · Tokyo');
 
     creerLeSalon().click();
 
@@ -105,9 +103,7 @@ describe('l ecran de creation', () => {
   it('cree une partie Equipes quand on choisit son mode, pour douze joueurs', () => {
     cocher(champ('input[name="mode"][value="equipes"]'), true);
 
-    expect(obligatoire(hote, '.creation-recapitulatif h2').textContent).toBe(
-      'Équipes · Rainy Tokyo',
-    );
+    expect(obligatoire(hote, '.creation-recapitulatif h2').textContent).toBe('Équipes · Tokyo');
     expect(obligatoire(hote, '.creation-recapitulatif').textContent).toContain('12 joueurs');
 
     creerLeSalon().click();
@@ -125,9 +121,7 @@ describe('l ecran de creation', () => {
 
     cocher(champ('input[name="mode"][value="chasse"]'), true);
 
-    expect(obligatoire(hote, '.creation-recapitulatif h2').textContent).toBe(
-      'Chasse · Rainy Tokyo',
-    );
+    expect(obligatoire(hote, '.creation-recapitulatif h2').textContent).toBe('Chasse · Tokyo');
     expect(obligatoire(hote, '.creation-recapitulatif').textContent).toContain('10 joueurs');
     expect(estCache(blackNinjas())).toBe(true);
 
@@ -150,9 +144,7 @@ describe('l ecran de creation', () => {
 
     cocher(champ('input[name="mode"][value="massacre"]'), true);
 
-    expect(obligatoire(hote, '.creation-recapitulatif h2').textContent).toBe(
-      'Massacre · Rainy Tokyo',
-    );
+    expect(obligatoire(hote, '.creation-recapitulatif h2').textContent).toBe('Massacre · Tokyo');
     expect(obligatoire(hote, '.creation-recapitulatif').textContent).toContain('8 joueurs');
     expect(estCache(chaos())).toBe(true);
     expect(

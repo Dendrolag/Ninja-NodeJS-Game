@@ -37,6 +37,8 @@ import type { ChampReglage, GroupeReglages, ValeursFormulaire } from '../modeles
 import {
   GROUPES_REGLAGES,
   champPropose,
+  bornesSurLaCarte,
+  champUtileSurLaCarte,
   erreursParChamp,
   groupePropose,
   tousLesChamps,
@@ -190,10 +192,61 @@ export function monterFormulaireReglages(options: OptionsFormulaireReglages): Fo
         } else if (champ.nature === 'interrupteur') {
           element.checked = valeur === true;
         } else {
+          // La borne large d'abord: un curseur ne prend pas une valeur au-dela de son
+          // maximum, et celui de la carte precedente pourrait etre plus bas.
+          element.max = String(champ.bornes.maximum);
           element.value = String(valeur ?? '');
         }
       }
     }
+
+    adapterALaCarte();
+  };
+
+  /** Le mode de la partie, qui retire des champs du jeu (etape 7.3). */
+  let modeCourant: Mode = 'classique';
+
+  /** Montre les champs que le mode et la carte laissent en jeu. */
+  const montrerLesChamps = (): void => {
+    const carte = String(lire()['carte'] ?? '');
+
+    for (const { chemin, element } of champsMontes) {
+      montrer(element, champPropose(chemin, modeCourant) && champUtileSurLaCarte(chemin, carte));
+    }
+  };
+
+  /**
+   * Adapte le formulaire a la carte choisie (etape 7.6): la pluie ne se propose que
+   * sur Tokyo, et le curseur des faux ninjas s'arrete au plafond de la carte.
+   *
+   * Passer a une carte au plafond plus bas ramene le curseur au bout de sa course: un
+   * curseur ne montre pas de valeur au-dela de son maximum. La valeur ecrite a cote
+   * change sous les yeux de l'hote; ce n'est pas un rognage silencieux, et la
+   * conversion des valeurs, elle, ne corrige toujours rien.
+   */
+  const adapterALaCarte = (): void => {
+    const carte = String(lire()['carte'] ?? '');
+
+    for (const champ of tousLesChamps()) {
+      if (champ.nature !== 'entier') {
+        continue;
+      }
+
+      const bornes = bornesSurLaCarte(champ, carte);
+
+      for (const element of saisies.get(champ.chemin) ?? []) {
+        element.max = String(bornes.maximum);
+
+        // Un navigateur ramene deja un curseur dans ses bornes; on ne s'en remet pas a
+        // lui, pour que le comportement soit le meme partout. Une saisie de nombre,
+        // elle, garde ce qui est ecrit: la validation dit ce qui ne va pas.
+        if (element.type === 'range' && Number(element.value) > bornes.maximum) {
+          element.value = String(bornes.maximum);
+        }
+      }
+    }
+
+    montrerLesChamps();
   };
 
   const verifier = (): ResultatValidation<ReglagesPartie> => {
@@ -223,13 +276,13 @@ export function monterFormulaireReglages(options: OptionsFormulaireReglages): Fo
   };
 
   const adapterAuMode = (mode: Mode): void => {
+    modeCourant = mode;
+
     for (const { groupe, element } of groupesMontes) {
       montrer(element, groupePropose(groupe, mode));
     }
 
-    for (const { chemin, element } of champsMontes) {
-      montrer(element, champPropose(chemin, mode));
-    }
+    montrerLesChamps();
 
     ecrireTexte(
       listeDesAvances,
@@ -241,6 +294,7 @@ export function monterFormulaireReglages(options: OptionsFormulaireReglages): Fo
   };
 
   const surSaisie = (): void => {
+    adapterALaCarte();
     const verdict = verifier();
     options.surChangement?.(verdict);
   };

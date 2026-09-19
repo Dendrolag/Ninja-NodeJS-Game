@@ -1476,13 +1476,13 @@ describe('parties privees', () => {
 
     expect((await refusAuLancement).erreurs[0]?.champ).toBe('hote');
 
-    const salonMisAJour = salonQui(invite, (infos) => infos.reglages.carte === 'map2');
-    hote.emit('reglages', { carte: 'map2' });
+    const salonMisAJour = salonQui(invite, (infos) => infos.reglages.carte === 'map3');
+    hote.emit('reglages', { carte: 'map3' });
 
     expect(await salonMisAJour).toMatchObject({
       code: salon.code,
       visibilite: 'privee',
-      reglages: { carte: 'map2' },
+      reglages: { carte: 'map3' },
     });
   });
 });
@@ -1495,7 +1495,7 @@ describe('parties publiques', () => {
     const salon = salonAccepte(
       await creer(hote, {
         pseudo: 'Alice',
-        configuration: { ...PARTIE_PUBLIQUE, reglages: { carte: 'map2' } },
+        configuration: { ...PARTIE_PUBLIQUE, reglages: { carte: 'map3' } },
       }),
     );
 
@@ -1508,7 +1508,7 @@ describe('parties publiques', () => {
         idRoom: salon.idRoom,
         hote: 'Alice',
         mode: 'classique',
-        carte: 'map2',
+        carte: 'map3',
         modeMiroir: false,
         joueurs: 1,
         capacite: CAPACITES.classique,
@@ -1582,7 +1582,7 @@ describe('partie rapide d un mode (etape 5.5)', () => {
     const autreCarte = salonAccepte(
       await creer(hote, {
         pseudo: 'Hote',
-        configuration: { ...PARTIE_PUBLIQUE, reglages: { carte: 'map2' } },
+        configuration: { ...PARTIE_PUBLIQUE, reglages: { carte: 'map1' } },
       }),
     );
 

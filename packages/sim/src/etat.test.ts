@@ -74,7 +74,7 @@ describe('creerEtatInitial', () => {
   it('porte les dimensions de la carte choisie, quelle que soit sa taille', () => {
     // Le legacy renvoyait toujours 2000x1500, meme sur map3 (defaut X5).
     const grande = creerEtatInitial({ graine: 1, reglages: { carte: 'map3' } });
-    const petite = creerEtatInitial({ graine: 1, reglages: { carte: 'map2' } });
+    const petite = creerEtatInitial({ graine: 1, reglages: { carte: 'map1' } });
 
     expect(grande.carte.largeur).toBe(3000);
     expect(petite.carte.largeur).toBe(2000);

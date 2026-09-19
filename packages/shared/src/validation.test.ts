@@ -321,7 +321,41 @@ describe('validerReglages', () => {
 
   it('refuse une carte inconnue et accepte celles qui existent', () => {
     expect(champsRefuses(validerReglages({ carte: 'tokyo' }))).toEqual(['carte']);
-    expect(valeurAcceptee(validerReglages({ carte: 'map2' })).carte).toBe('map2');
+    expect(valeurAcceptee(validerReglages({ carte: 'map3' })).carte).toBe('map3');
+  });
+
+  it('refuse map2, fondue dans Tokyo a l etape 7.6', () => {
+    // Elle reste lisible dans les parties enregistrees, mais ne se joue plus.
+    expect(champsRefuses(validerReglages({ carte: 'map2' }))).toEqual(['carte']);
+  });
+
+  it('fait tomber la pluie par defaut, et accepte de la couper (etape 7.6)', () => {
+    expect(valeurAcceptee(validerReglages({})).pluie).toBe(true);
+    expect(valeurAcceptee(validerReglages({ pluie: false })).pluie).toBe(false);
+    expect(champsRefuses(validerReglages({ pluie: 'non' }))).toEqual(['pluie']);
+  });
+
+  it('borne les faux ninjas au plafond de la carte choisie (etape 7.6)', () => {
+    // Tokyo: 300 au plus. Spirit & Time: 500.
+    expect(valeurAcceptee(validerReglages({ nombreBotsInitial: 300 })).nombreBotsInitial).toBe(300);
+    expect(champsRefuses(validerReglages({ nombreBotsInitial: 301 }))).toEqual([
+      'nombreBotsInitial',
+    ]);
+    expect(
+      valeurAcceptee(validerReglages({ carte: 'map3', nombreBotsInitial: 500 })).nombreBotsInitial,
+    ).toBe(500);
+    expect(champsRefuses(validerReglages({ carte: 'map3', nombreBotsInitial: 501 }))).toEqual([
+      'nombreBotsInitial',
+    ]);
+  });
+
+  it('dit le plafond de la carte quand il est depasse', () => {
+    const resultat = validerReglages({ carte: 'map1', nombreBotsInitial: 400 });
+
+    expect(resultat.valide).toBe(false);
+    expect(resultat.valide ? [] : resultat.erreurs.map((erreur) => erreur.motif)).toEqual([
+      'Cette carte accepte au plus 300 faux ninjas au départ.',
+    ]);
   });
 
   it('refuse un interrupteur qui n est pas un booleen', () => {

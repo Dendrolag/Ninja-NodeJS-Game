@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { TYPES_BONUS, TYPES_MALUS } from './constantes.js';
+import { CARTES, TYPES_BONUS, TYPES_MALUS } from './constantes.js';
 import {
   IMAGES_DE_PLUIE,
   MUSIQUES,
@@ -48,7 +48,7 @@ function dimensionsPng(relatif: string): { largeur: number; hauteur: number } {
 describe('cheminCarte', () => {
   it('range les trois couches par carte et par mode', () => {
     expect(cheminCarte('map1', false, 'background')).toBe('cartes/map1/normal/background.png');
-    expect(cheminCarte('map2', true, 'collision')).toBe('cartes/map2/mirror/collision.png');
+    expect(cheminCarte('map1', true, 'collision')).toBe('cartes/map1/mirror/collision.png');
     expect(cheminCarte('map3', false, 'foreground')).toBe('cartes/map3/normal/foreground.png');
   });
 });
@@ -63,7 +63,7 @@ describe('cheminPluie', () => {
     // Le jeu d'origine demandait rain.png pour toutes les cartes et recevait
     // trois erreurs de chargement sur quatre. Rendre l'absence explicite evite
     // la demande.
-    expect(cheminPluie('map2', false)).toBeUndefined();
+    expect(cheminPluie('map3', false)).toBeUndefined();
     expect(cheminPluie('map3', true)).toBeUndefined();
   });
 
@@ -137,7 +137,7 @@ describe('les ressources annoncees existent sur le disque', () => {
   it('pour les cartes, leurs trois couches et la pluie', () => {
     const manquants: string[] = [];
 
-    for (const carte of ['map1', 'map2', 'map3'] as const) {
+    for (const carte of Object.keys(CARTES)) {
       for (const modeMiroir of [false, true]) {
         for (const couche of ['background', 'collision', 'foreground'] as const) {
           const chemin = cheminCarte(carte, modeMiroir, couche);
@@ -164,7 +164,7 @@ describe('les ressources annoncees existent sur le disque', () => {
       ...Object.values(SONS_EN_BOUCLE).map((fichier) => cheminSon(fichier)),
       ...SONS_DE_PAS.map((fichier) => cheminSon(fichier)),
       ...Object.values(MUSIQUES).map((fichier) => cheminSon(fichier)),
-      ...(['map1', 'map2', 'map3'] as const).map((carte) => cheminApercuCarte(carte)),
+      ...Object.keys(CARTES).map((carte) => cheminApercuCarte(carte)),
     ];
 
     expect(attendus.filter((chemin) => !present(chemin))).toEqual([]);

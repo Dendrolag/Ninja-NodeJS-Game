@@ -18,7 +18,7 @@ const PARTIES: readonly PartiePublique[] = [
     idRoom: 'room-1',
     hote: 'KageOni',
     mode: 'classique',
-    carte: 'map2',
+    carte: 'map1',
     modeMiroir: false,
     joueurs: 3,
     capacite: 12,

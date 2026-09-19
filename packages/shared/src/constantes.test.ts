@@ -9,7 +9,16 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { CADENCES_LEGACY_MS, CARTES, DEPLACEMENTS_LEGACY_PAR_PAS, VITESSES } from './constantes.js';
+import { BORNES_REGLAGES } from './bornes.js';
+import {
+  CADENCES_LEGACY_MS,
+  CARTES,
+  CARTES_ENREGISTREES,
+  DEPLACEMENTS_LEGACY_PAR_PAS,
+  PLAFONDS_DE_FAUX_NINJAS,
+  VITESSES,
+} from './constantes.js';
+import type { CarteEnregistree, IdentifiantCarte } from './constantes.js';
 
 describe('vitesses', () => {
   it('donne 150 pixels par seconde au joueur', () => {
@@ -33,11 +42,35 @@ describe('vitesses', () => {
 });
 
 describe('cartes', () => {
-  it('porte les trois cartes du legacy, avec leurs dimensions reelles', () => {
+  it('porte les deux cartes jouables, avec leurs dimensions reelles', () => {
     // Le defaut X5 du legacy renvoyait 2000x1500 meme sur map3. Ici chaque carte
     // porte ses vraies dimensions, et le moteur ne travaille que sur celles-la.
-    expect(CARTES.map1).toEqual({ largeur: 2000, hauteur: 1500 });
-    expect(CARTES.map2).toEqual({ largeur: 2000, hauteur: 1500 });
-    expect(CARTES.map3).toEqual({ largeur: 3000, hauteur: 2000 });
+    expect(CARTES).toEqual({
+      map1: { largeur: 2000, hauteur: 1500 },
+      map3: { largeur: 3000, hauteur: 2000 },
+    });
+  });
+
+  it('garde map2 parmi les cartes enregistrees, sans la rendre jouable (etape 7.6)', () => {
+    // L'enumeration de la base en est tiree: perdre map2 rendrait illisibles les
+    // parties jouees sur l'ancienne Tokyo sans pluie.
+    expect(CARTES_ENREGISTREES).toEqual(['map1', 'map2', 'map3']);
+    expect(Object.hasOwn(CARTES, 'map2')).toBe(false);
+  });
+
+  it('enregistre toute carte jouable', () => {
+    const jouables = Object.keys(CARTES) as IdentifiantCarte[];
+    const enregistrables: readonly CarteEnregistree[] = jouables;
+
+    expect(enregistrables.every((carte) => CARTES_ENREGISTREES.includes(carte))).toBe(true);
+  });
+
+  it('donne un plafond de faux ninjas a chaque carte, dans la borne des reglages', () => {
+    // Decision du porteur du projet du 18 septembre 2026: 300 sur Tokyo, 500 sur Spirit
+    // & Time, la meme densite a peu pres.
+    expect(PLAFONDS_DE_FAUX_NINJAS).toEqual({ map1: 300, map3: 500 });
+    expect(Math.max(...Object.values(PLAFONDS_DE_FAUX_NINJAS))).toBe(
+      BORNES_REGLAGES.nombreBotsInitial.maximum,
+    );
   });
 });

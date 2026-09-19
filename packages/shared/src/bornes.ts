@@ -206,8 +206,12 @@ export const DELAI_DE_RETOUR_MS = 30_000;
 export const BORNES_REGLAGES = {
   /** Duree de la partie, en secondes. Bornes du salon du legacy. */
   dureePartieS: { minimum: 30, maximum: 600 } satisfies Intervalle,
-  /** Nombre de bots au demarrage. Bornes du salon du legacy. */
-  nombreBotsInitial: { minimum: 10, maximum: 150 } satisfies Intervalle,
+  /**
+   * Nombre de bots au demarrage. Le minimum est celui du salon du legacy, qui
+   * plafonnait a 150. Depuis l'etape 7.6, le maximum est le plus haut des plafonds
+   * de carte (PLAFONDS_DE_FAUX_NINJAS): chaque carte a le sien, verifie a part.
+   */
+  nombreBotsInitial: { minimum: 10, maximum: 500 } satisfies Intervalle,
   bonus: {
     /** Delai entre deux tentatives d'apparition, en secondes. */
     intervalleApparitionS: { minimum: 2, maximum: 20 } satisfies Intervalle,

@@ -10,7 +10,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { DOSSIER_MIGRATIONS, appliquerMigrations } from '@neon-ninja/server';
-import { CARTES, MODES } from '@neon-ninja/shared';
+import { CARTES_ENREGISTREES, MODES } from '@neon-ninja/shared';
 import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
@@ -64,7 +64,9 @@ describe.runIf(baseDisponible())('migrations', () => {
       rows.filter((ligne) => ligne.type === type).map((ligne) => ligne.valeur);
 
     expect(valeursDe('mode_de_jeu')).toEqual([...MODES]);
-    expect(valeursDe('carte')).toEqual(Object.keys(CARTES));
+    // Les cartes enregistrees, et non les seules jouables: map2 ne se joue plus depuis
+    // l'etape 7.6, mais des parties jouees dessus restent en base.
+    expect(valeursDe('carte')).toEqual([...CARTES_ENREGISTREES]);
   });
 
   it('ont toutes ete appliquees, et se rejouent sans rien changer', async () => {

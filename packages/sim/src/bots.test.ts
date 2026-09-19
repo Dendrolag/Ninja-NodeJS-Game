@@ -22,6 +22,7 @@ import {
   COULEUR_BOT_NEUTRE,
   COULEUR_BOT_NOIR,
   DUREES,
+  PLAFONDS_DE_FAUX_NINJAS,
   RAYON_ENTITE,
   VITESSES,
 } from '@neon-ninja/shared';
@@ -749,6 +750,26 @@ describe('peuplement de la carte', () => {
     const bots = Object.values(peuplerDeBots(partie(), 8).bots);
 
     expect(new Set(bots.map((bot) => `${bot.position.x},${bot.position.y}`)).size).toBe(8);
+  });
+
+  it('peuple Spirit & Time jusqu a son plafond, 500 bots, a graine egale identiques (etape 7.6)', () => {
+    const grande = creerEtatInitial({
+      graine: 7,
+      reglages: { carte: 'map3', nombreBotsInitial: PLAFONDS_DE_FAUX_NINJAS.map3 },
+    });
+    const bots = Object.values(peuplerDeBots(grande).bots);
+
+    expect(bots).toHaveLength(500);
+    expect(
+      bots.every(
+        (bot) =>
+          bot.position.x >= 0 &&
+          bot.position.x <= CARTES.map3.largeur &&
+          bot.position.y >= 0 &&
+          bot.position.y <= CARTES.map3.hauteur,
+      ),
+    ).toBe(true);
+    expect(peuplerDeBots(grande).bots).toEqual(peuplerDeBots(grande).bots);
   });
 
   // Legacy: le constructeur d'Entity tire une couleur quelconque (server.js:838).

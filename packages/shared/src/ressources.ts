@@ -66,9 +66,10 @@ export function cheminCarte(carte: string, modeMiroir: boolean, couche: CoucheCa
 /**
  * Chemin relatif de l'effet de pluie d'une carte, s'il en existe un.
  *
- * Seule map1 en a un dans le jeu d'origine. Rendre l'absence explicite evite au
- * client de demander une image qui n'existe pas, ce que le legacy faisait pour
- * les deux autres cartes.
+ * Seule map1, Tokyo, en a un, comme dans le jeu d'origine. Rendre l'absence
+ * explicite evite au client de demander une image qui n'existe pas, ce que le
+ * legacy faisait pour les autres cartes. Que la pluie tombe depend en plus du
+ * reglage de la partie (ReglagesPartie.pluie, etape 7.6).
  */
 export function cheminPluie(carte: string, modeMiroir: boolean): string | undefined {
   return carte === 'map1'
@@ -89,8 +90,6 @@ export const IMAGES_DE_PLUIE = 3;
  * Chemin relatif de la vignette d'une carte, montree dans les reglages du salon.
  *
  * Une seule vignette par carte, mode miroir compris, comme dans le jeu d'origine.
- * Celles de map1 et map2 sont le meme fichier, et ce n'est pas une erreur: les
- * deux cartes partagent leur decor, la premiere y ajoute la pluie.
  */
 export function cheminApercuCarte(carte: string): string {
   return `cartes/${carte}/preview.png`;

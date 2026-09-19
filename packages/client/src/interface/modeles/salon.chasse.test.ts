@@ -52,7 +52,7 @@ describe('le salon d une partie Chasse', () => {
 
   it('rappelle comment on capture en Chasse', () => {
     expect(modeleSalon(etat(salon([MOI])))?.regle).toBe(CAPTURES_DES_MODES.chasse);
-    expect(modeleSalon(etat(salon([MOI])))?.sousTitre).toBe('Chasse · Rainy Tokyo');
+    expect(modeleSalon(etat(salon([MOI])))?.sousTitre).toBe('Chasse · Tokyo');
   });
 
   it('ne parle pas de Black Ninjas dans son recapitulatif, a l inverse du Classique', () => {

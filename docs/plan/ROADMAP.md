@@ -116,6 +116,10 @@ Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision 
 
 **Étape 7.5 terminée le 18 septembre 2026: le Classique devient la Horde.** Les faux ninjas ralliés à la suite font un combo aux règles du Massacre, dont la prime s'ajoute au score et se perd avec les ninjas à la capture; les points flottants montent du blanc au magenta avec le combo, en Horde et en Massacre; joueurs, faux ninjas et Black Ninjas vont tous à 150 pixels par seconde hors bonus. Les nouvelles empreintes des quatre parties de référence sont au handoff. Fiche: `docs/plan/etape-7-5.md`. Suite: `7.6`.
 
+**Étape 7.6 terminée le 19 septembre 2026: Tokyo unique, et plus de faux ninjas.** Rainy Tokyo et Tokyo sont une seule carte « Tokyo », dont la pluie est un réglage de partie, activé par défaut; les parties jouées sur l'ancienne Tokyo restent lisibles. Chaque carte a son plafond de faux ninjas au départ, 300 sur Tokyo et 500 sur Spirit & Time, dans tous les modes. Le serveur les tient sans effort (2,3 ms par battement à 500); dans la page, le lissage en carré du nombre d'entités est corrigé, et la transmission des sprites reste à alléger pour les téléphones d'entrée de gamme (section 17 de `docs/mesures/charge-serveur.md`). Le jeu est inchangé, empreinte des parties comprise hors du nouveau réglage. Fiche: `docs/plan/etape-7-6.md`.
+
+**Décision du 19 septembre 2026: trois étapes suivent `7.6`.** Deux demandées par le porteur du projet: `4.5`, les textes de présentation du menu principal, qui parlent encore de troupeaux et de capture seule, alors que le jeu compte cinq modes, la Horde, l'élimination et la traque; `5.6`, le référencement du jeu dans les moteurs de recherche. Une issue de la mesure de `7.6`, sur décision du porteur du projet: `5.7`, l'allègement du rendu, pour que 500 entités tiennent sur un téléphone d'entrée de gamme. Ordre: `4.5`, `5.6`, `5.7`, puis les fonctionnalités reportées; le porteur du projet peut le changer. Leurs fiches se rédigent au début de chacune, selon le cas de repli du PROTOCOLE.
+
 ---
 
 ## 4. Carte thématique des étapes
@@ -206,6 +210,9 @@ Tests requis: scénarios de navigation, validation du formulaire de création.
 **4.4. Bout en bout multi-clients.** Playwright, plusieurs clients simultanés, fenêtre mobile.
 Tests requis: deux clients dans une même partie vérifiant la cohérence de l'état.
 
+**4.5. Textes de présentation.** Étape ajoutée le 19 septembre 2026, à la demande du porteur du projet. Revoir les textes de présentation du menu principal et des écrans qui décrivent le jeu: ils datent du jeu d'origine et parlent de troupeaux et de capture, alors que le jeu compte cinq modes, la Horde, l'élimination au katana et la traque. Les textes se rédigent avec le porteur du projet.
+Tests requis: TU des écrans dont le texte change; aucun nom de mode ou de carte qui ne soit celui du contrat; bout en bout vert.
+
 ### Phase 5. Charge, performance et durcissement
 
 **5.1. Tests de charge serveur.** N rooms peuplées de plus de 100 bots, mesure du temps par tick et de la bande passante.
@@ -222,6 +229,12 @@ Tests requis: un test qui échouait avant chaque correction; la grille complète
 
 **5.5. Peaufinage et débogage.** Étape ajoutée le 18 septembre 2026, à la demande du porteur du projet, après l'étape 7.4 et avant les fonctionnalités reportées. Recueillir auprès de lui les défauts et les manques qu'il relève en jouant, les compléter des limites connues des handoffs (5.4 à 7.4), les trier avec lui, puis corriger chacun, dans les cinq modes, sur ordinateur et sur téléphone. Aucune nouvelle fonctionnalité: ce qui en serait une devient une étape à part.
 Tests requis: un test qui échouait avant chaque correction; empreinte des parties de référence identique, sauf changement voulu et consigné; bout en bout vert.
+
+**5.6. Référencement.** Étape ajoutée le 19 septembre 2026, à la demande du porteur du projet: que le jeu remonte dans les moteurs de recherche. Titre, description et aperçu de la page servie par Vercel, données structurées, plan du site et fichier des robots, contenu lisible sans exécuter le jeu, adresse canonique; mesurer avant et après avec les outils des moteurs de recherche.
+Tests requis: TU ou TI des balises servies par la page; vérification en production de ce que voit un robot; bout en bout vert.
+
+**5.7. Allègement du rendu.** Étape ajoutée le 19 septembre 2026, issue de la mesure de l'étape 7.6, sur décision du porteur du projet de garder le plafond de 500 faux ninjas. Au processeur ralenti six fois, 500 entités coûtent 4,3 à 5,3 ms de notre code par image, dont 2,8 ms de transmission des sprites à PixiJS (section 17 de `docs/mesures/charge-serveur.md`). Réduire ce coût, par exemple en ne mettant à jour que ce que la caméra montre, sans changer ce qui se voit.
+Tests requis: banc du rendu, série au processeur ralenti, avant et après, notre code sous le quart d'une image à 500 entités; TU de ce qui se dessine ou non; bout en bout vert.
 
 ### Phase 6. Retrait du legacy
 
@@ -246,7 +259,7 @@ Tests requis: TU sur l'arc, le coup, les combos, le joueur tué, le Black Ninja 
 **7.5. Réglages du Classique.** Faite le 18 septembre 2026 (fiche `docs/plan/etape-7-5.md`). Étape ajoutée le 18 septembre 2026, au tri de l'étape 5.5. Un multiplicateur de combo pour les captures de faux ninjas enchaînées, sur le modèle du Massacre; des points flottants blancs dont la couleur et la taille montent avec le combo, sur une échelle fixée avec le porteur du projet; le renommage du Classique en « Horde », à confirmer; une vitesse commune de 150 pixels par seconde aux joueurs et aux bots, Black Ninjas compris, hors bonus. Les comportements à préserver 1 et 5 de CLAUDE.md sont mis à jour, datés, et les règles du combo tranchées au début de l'étape.
 Tests requis: TU sur le combo et la vitesse; TU des points flottants; nouvelles empreintes des parties de référence, changement voulu et consigné; les autres modes inchangés là où la vitesse ne les touche pas; bout en bout vert.
 
-**7.6. Options de partie.** Étape ajoutée le 18 septembre 2026, au tri de l'étape 5.5. Tokyo et Rainy Tokyo ont le même décor: une seule carte « Tokyo », et une option pluie dans les réglages de partie, les parties et records déjà enregistrés restant lisibles. Plus de 150 faux ninjas au départ, selon le mode ou la carte, dans la limite qu'une mesure du débit et du rendu justifie.
+**7.6. Options de partie.** Faite le 19 septembre 2026 (fiche `docs/plan/etape-7-6.md`). Étape ajoutée le 18 septembre 2026, au tri de l'étape 5.5. Tokyo et Rainy Tokyo ont le même décor: une seule carte « Tokyo », et une option pluie dans les réglages de partie, les parties et records déjà enregistrés restant lisibles. Plus de 150 faux ninjas au départ, selon le mode ou la carte, dans la limite qu'une mesure du débit et du rendu justifie.
 Tests requis: TU de la validation des réglages; TI d'une partie avec pluie et d'une partie à plus de 150 bots; mesure au banc de charge et au banc du rendu; empreinte des parties de référence identique; bout en bout vert.
 
 ---

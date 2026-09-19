@@ -21,6 +21,7 @@
  *
  *   pnpm charge
  *   pnpm charge --banc --bots-banc 150,300
+ *   pnpm charge --banc --carte map3 --bots-banc 150,300,500
  *   pnpm charge --reseau --bots 150 --bots 50,150 --rooms 8,16,32
  *   pnpm charge --sortie docs/mesures/charge-serveur-5-1.json
  *
@@ -34,8 +35,8 @@ import { availableParallelism, cpus, release, totalmem, type as systeme } from '
 import { dirname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
-import type { Mode } from '../../packages/shared/dist/index.js';
-import { MODES } from '../../packages/shared/dist/index.js';
+import type { IdentifiantCarte, Mode } from '../../packages/shared/dist/index.js';
+import { CARTES, MODES } from '../../packages/shared/dist/index.js';
 
 import type { ConfigurationDeBanc } from './battement-isole.ts';
 import { mesurerEnProcessusNeuf } from './battement-isole.ts';
@@ -101,6 +102,12 @@ interface Plan {
   readonly sortie: string | undefined;
   /** Le mode des parties du banc et des populations melees. Le Classique par defaut. */
   readonly mode: Mode;
+  /**
+   * La carte des parties du banc et des populations melees, murs compris. Tokyo (map1)
+   * par defaut; --carte map3 mesure Spirit & Time, dont le plafond de faux ninjas est
+   * plus haut (etape 7.6).
+   */
+  readonly carte: IdentifiantCarte;
 }
 
 /** Une ligne du banc, avec le budget qui en decoule. */
@@ -129,6 +136,9 @@ interface RapportDeCharge {
     readonly systeme: string;
     readonly node: string;
   };
+  /** Le mode et la carte des parties du banc et des populations melees. */
+  readonly mode: Mode;
+  readonly carte: IdentifiantCarte;
   banc?: readonly LigneDeBanc[];
   melange?: readonly {
     readonly sequence: readonly number[];
@@ -194,6 +204,7 @@ function lirePlan(argumentsRecus: readonly string[]): Plan {
       'sans-arret': { type: 'boolean', default: false },
       sortie: { type: 'string' },
       mode: { type: 'string' },
+      carte: { type: 'string' },
     },
   });
 
@@ -221,7 +232,27 @@ function lirePlan(argumentsRecus: readonly string[]): Plan {
     sansArret: options['sans-arret'],
     sortie: options.sortie,
     mode: modeDe(options.mode),
+    carte: carteDe(options.carte),
   };
+}
+
+/** Lit la carte demandee, Tokyo (map1) s'il n'y en a pas. */
+function carteDe(texte: string | undefined): IdentifiantCarte {
+  if (texte === undefined) {
+    return 'map1';
+  }
+
+  const carte = (Object.keys(CARTES) as IdentifiantCarte[]).find(
+    (candidate) => candidate === texte,
+  );
+
+  if (carte === undefined) {
+    throw new Error(
+      `--carte attend l'une de ${Object.keys(CARTES).join(', ')}, recu « ${texte} ».`,
+    );
+  }
+
+  return carte;
 }
 
 /** Lit le mode demande, le Classique s'il n'y en a pas. */
@@ -264,6 +295,7 @@ function configuration(plan: Plan, bots: number): ConfigurationDeBanc {
     echauffement: plan.echauffement,
     graine: GRAINE,
     mode: plan.mode,
+    carte: plan.carte,
   };
 }
 
@@ -290,7 +322,7 @@ async function jouerLeBanc(plan: Plan): Promise<LigneDeBanc[]> {
   console.log(
     [
       '',
-      `Banc du battement: mode ${plan.mode}, ${String(plan.joueurs)} joueurs, ${String(plan.battements)} battements mesures, carte map1 avec ses murs, un processus neuf par ligne`,
+      `Banc du battement: mode ${plan.mode}, ${String(plan.joueurs)} joueurs, ${String(plan.battements)} battements mesures, carte ${plan.carte} avec ses murs, un processus neuf par ligne`,
       tableau(
         [
           'bots',
@@ -451,6 +483,8 @@ async function principal(): Promise<void> {
       systeme: `${systeme()} ${release()}`,
       node: process.version,
     },
+    mode: plan.mode,
+    carte: plan.carte,
   };
 
   console.log(

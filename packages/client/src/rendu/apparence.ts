@@ -275,7 +275,7 @@ export const CADENCE_CLIGNOTEMENT = 0.01;
 export const CADENCE_OBJET_MS = 125;
 
 /**
- * La pluie de la carte Rainy Tokyo.
+ * La pluie de Tokyo, quand la partie la fait tomber (reglage pluie, etape 7.6).
  *
  * Valeurs du jeu d'origine (RainEffect, legacy/js/MapManager.js): une image toutes
  * les cent millisecondes, posee par-dessus le fond a trente pour cent d'opacite.

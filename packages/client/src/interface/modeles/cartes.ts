@@ -4,14 +4,18 @@
  * Les noms des cartes sont ceux retenus le 29 juin 2026 pour la version 1
  * (journal de conception): Rainy Tokyo, Tokyo et Spirit & Time. Le jeu d'origine
  * appelait la troisieme « Room Of Spirit and Time ». Les ambiances viennent de la
- * maquette.
+ * maquette. Depuis l'etape 7.6, Rainy Tokyo et Tokyo, qui avaient le meme decor, sont
+ * une seule carte « Tokyo », dont la pluie est un reglage; une partie enregistree sur
+ * l'une ou l'autre s'appelle donc « Tokyo » (decision du porteur du projet du 18
+ * septembre 2026).
  *
  * LES TABLES SONT INDEXEES PAR LES IDENTIFIANTS DU CONTRAT. Ajouter une carte ou
  * un mode au contrat sans lui donner de nom ici est donc une erreur de
  * compilation: rien ne peut apparaitre a l'ecran sous son identifiant technique.
  */
 
-import type { Equipe, IdentifiantCarte, Mode } from '@neon-ninja/shared';
+import type { CarteEnregistree, Equipe, Mode, ReglagesPartie } from '@neon-ninja/shared';
+import { cheminPluie } from '@neon-ninja/shared';
 
 /** Ce que le joueur lit d'une carte. */
 export interface PresentationCarte {
@@ -19,10 +23,15 @@ export interface PresentationCarte {
   readonly ambiance: string;
 }
 
-/** La presentation de chaque carte jouable. */
-export const PRESENTATION_CARTES: Readonly<Record<IdentifiantCarte, PresentationCarte>> = {
-  map1: { nom: 'Rainy Tokyo', ambiance: 'Néon · Pluie' },
-  map2: { nom: 'Tokyo', ambiance: 'Urbain · Nuit' },
+/**
+ * La presentation de chaque carte, jouable ou seulement enregistree.
+ *
+ * map2, l'ancienne Tokyo sans pluie, ne se joue plus: elle n'apparait que dans
+ * l'historique d'un profil, sous le meme nom que map1.
+ */
+export const PRESENTATION_CARTES: Readonly<Record<CarteEnregistree, PresentationCarte>> = {
+  map1: { nom: 'Tokyo', ambiance: 'Néon · Nuit' },
+  map2: { nom: 'Tokyo', ambiance: 'Néon · Nuit' },
   map3: { nom: 'Spirit & Time', ambiance: 'Vide · Infini' },
 };
 
@@ -67,8 +76,20 @@ export const CAPTURES_DES_MODES: Readonly<Record<Mode, string>> = {
 };
 
 /** Le nom d'une carte tel qu'on l'affiche, mode miroir compris. */
-export function nomDeCarte(carte: IdentifiantCarte, modeMiroir: boolean): string {
+export function nomDeCarte(carte: CarteEnregistree, modeMiroir: boolean): string {
   const nom = PRESENTATION_CARTES[carte].nom;
 
   return modeMiroir ? `${nom} · Miroir` : nom;
+}
+
+/**
+ * La carte d'une partie a venir, telle que le salon la recapitule: son nom, miroir
+ * compris, et « Pluie » quand la pluie tombera (etape 7.6). Sur une carte sans pluie,
+ * le reglage est sans effet et ne se dit pas.
+ */
+export function carteDeLaPartie(reglages: ReglagesPartie): string {
+  const nom = nomDeCarte(reglages.carte, reglages.modeMiroir);
+  const pleut = reglages.pluie && cheminPluie(reglages.carte, reglages.modeMiroir) !== undefined;
+
+  return pleut ? `${nom} · Pluie` : nom;
 }

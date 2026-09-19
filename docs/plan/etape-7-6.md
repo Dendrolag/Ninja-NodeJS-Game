@@ -103,6 +103,18 @@ Conditions de ROADMAP réunies, plus:
 2. **Le lissage de la page est en carré du nombre d'entités**: c'est lui que la mesure au processeur ralenti doit regarder en premier.
 3. **La densité au départ**: 300 faux ninjas sur Tokyo; vérifier que le peuplement les place tous hors des murs.
 
+## Réconciliation pendant l'étape (18 et 19 septembre 2026)
+
+Écarts entre la fiche et ce qui a été construit, consignés au journal de `docs/design/README.md` quand ils touchent une décision.
+
+1. **Micro-décision 6 révisée**: le curseur des faux ninjas n'est pas « ramené au plafond » par une règle du formulaire, ce que la décision du 14 août 2026 interdit (aucun rognage dans la conversion des valeurs). Son maximum suit la carte, et un curseur ne montre pas de valeur au-delà de son maximum: passer à Tokyo le ramène au bout de sa course, sous les yeux de l'hôte. Le composant le fait lui-même, pour ne pas dépendre du navigateur.
+2. **Le récapitulatif du salon dit la pluie** (« Tokyo · Pluie »), pour que les joueurs sachent ce qui les attend; l'historique ne la retient pas, comme décidé.
+3. **Le lissage de la page est corrigé dans l'étape** (règle 7): la mesure au processeur ralenti a montré qu'il coûtait 3,3 ms par image à 500 entités, par un parcours en carré. Il retrouve désormais les entités par identifiant.
+4. **Le seuil du quart d'une image n'est pas atteint à 500 entités** au processeur ralenti (4,3 à 5,3 ms); il l'est à 300. Le porteur du projet a choisi de garder 500 et d'optimiser dans une étape à part, `5.7`. Le banc exige en continu le plafond existant du coût propre (8 ms), et consigne les valeurs.
+5. **La série téléphone du banc du rendu a sa propre composition** (douze joueurs, le reste en faux ninjas) et un échauffement d'une seconde par charge; la série d'origine garde la sienne pour rester comparable.
+6. **Le harnais de charge gagne `--carte`**, et son rapport retient le mode et la carte mesurés.
+7. **Deux étapes nouvelles demandées par le porteur du projet en cours de session**, `4.5` (textes de présentation du menu principal) et `5.6` (référencement), inscrites au ROADMAP sans être commencées.
+
 ## Rituel de fin de session
 
 Écrire `docs/handoffs/etape-7-6-handoff.md`: les décisions construites, les écarts à cette fiche, les mesures, l'empreinte, l'état de la CI. Prochaine action exacte: l'étape suivante de la section 3 du ROADMAP. Commiter.

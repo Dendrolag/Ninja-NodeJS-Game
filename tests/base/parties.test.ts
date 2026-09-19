@@ -16,7 +16,7 @@ import {
   lireProgression,
   schema,
 } from '@neon-ninja/server';
-import type { IdentifiantCarte } from '@neon-ninja/shared';
+import type { CarteEnregistree } from '@neon-ninja/shared';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
@@ -105,6 +105,17 @@ describe.runIf(baseDisponible())('parties et resultats', () => {
     expect(await lireHistorique(db(), bob)).toMatchObject([
       { partieId, placement: 3, variationPointsLigue: 0 },
     ]);
+  });
+
+  it('relit une partie jouee sur map2, l ancienne Tokyo sans pluie retiree du jeu (etape 7.6)', async () => {
+    // map2 ne se joue plus, mais l'enumeration des cartes de la base la garde: les
+    // parties jouees dessus restent dans l'historique de leurs comptes.
+    const alice = await nouveauCompte();
+    const { partieId } = await enregistrerPartie(db(), partie({ carte: 'map2' }), [
+      resultat(alice, 1),
+    ]);
+
+    expect(await lireHistorique(db(), alice)).toMatchObject([{ partieId, carte: 'map2' }]);
   });
 
   it('enregistre une partie Equipes, ou deux comptes a egalite partagent leur rang', async () => {
@@ -282,7 +293,7 @@ describe.runIf(baseDisponible())('parties et resultats', () => {
     const erreur = await erreurDe(
       db()
         .insert(schema.parties)
-        .values({ ...partie({ carte: 'map9' as IdentifiantCarte }), termineeLe: new Date() }),
+        .values({ ...partie({ carte: 'map9' as CarteEnregistree }), termineeLe: new Date() }),
     );
 
     // 22P02: valeur hors du type enumere.
