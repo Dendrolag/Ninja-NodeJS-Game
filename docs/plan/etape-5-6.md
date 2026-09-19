@@ -10,7 +10,7 @@ Aucune fiche n'existait: l'étape a été ajoutée le 19 septembre 2026, à la d
 - l'état du dépôt au commit `1defeab`, et le handoff 4.5, qui a déjà réécrit la description de la page (décision 5 de sa fiche);
 - la mesure de la page en ligne ci-dessous.
 
-**Numéro**: 5.6, dans la phase 5, « Performance et mise en ligne ».
+**Numéro**: 5.6, dans la phase 5, « Charge, performance et durcissement ».
 
 ## Rituel de début de session
 
