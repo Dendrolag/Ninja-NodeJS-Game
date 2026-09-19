@@ -41,6 +41,19 @@ export const BORDURE_TERRAIN = {
 export const TAILLE_SPRITE = 32;
 
 /**
+ * La marge autour de ce que la camera montre, en pixels de la carte, en deca de laquelle
+ * un personnage est encore mis a jour (etape 5.7). Au-dela, il est cache et ne coute plus
+ * rien.
+ *
+ * Un personnage est repere par son centre. Il faut donc que la marge couvre ce qui en
+ * depasse: la demi-diagonale d'un sprite couche en biais (un cadavre du Massacre, 23
+ * pixels), plus la plus forte secousse du katana, qui decale le monde sans deplacer la
+ * camera (8,5 pixels). Deux sprites entiers laissent de quoi voir venir: rien n'apparait
+ * d'un coup au bord de l'ecran.
+ */
+export const MARGE_HORS_CHAMP_PX = 2 * TAILLE_SPRITE;
+
+/**
  * Densite de pixels maximale du rendu.
  *
  * Au-dela, l'oeil ne gagne rien et le telephone paie tout: a densite 3, chaque image

@@ -159,8 +159,8 @@ export interface ZoneVisible {
 /**
  * Ce que la camera montre en ce moment.
  *
- * La minimap s'en sert pour dessiner le rectangle de vue, et le rendu pourra
- * s'en servir plus tard pour ne pas dessiner ce qui est hors champ. La marge
+ * La minimap s'en sert pour dessiner le rectangle de vue, et le rendu, depuis
+ * l'etape 5.7, pour ne pas mettre a jour les personnages hors champ. La marge
  * evite qu'une entite a cheval sur le bord apparaisse d'un coup.
  */
 export function zoneVisible(camera: Camera, ecran: TailleEcran, marge = 0): ZoneVisible {
@@ -173,4 +173,22 @@ export function zoneVisible(camera: Camera, ecran: TailleEcran, marge = 0): Zone
     droite: camera.x + demiLargeur,
     bas: camera.y + demiHauteur,
   };
+}
+
+/**
+ * Un point de la carte est-il dans cette zone, bords compris; ou, avec un rayon, un
+ * disque centre sur ce point la touche-t-il.
+ *
+ * Le rendu s'en sert a chaque image pour chacun des cinq cents personnages, et pour les
+ * halos poses sous eux (etape 5.7): quatre comparaisons, sans rien fabriquer. Pour un
+ * disque, c'est le carre qui l'entoure qui est compare: un disque qui ne fait qu'en
+ * froler le coin est garde, ce qui ne coute qu'un dessin de plus.
+ */
+export function dansLaZone(zone: ZoneVisible, x: number, y: number, rayon = 0): boolean {
+  return (
+    x >= zone.gauche - rayon &&
+    x <= zone.droite + rayon &&
+    y >= zone.haut - rayon &&
+    y <= zone.bas + rayon
+  );
 }

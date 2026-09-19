@@ -8,6 +8,8 @@ Document de référence de l'étape 5.1. Il consigne ce que coûte le serveur so
 
 **Mise à jour du 18 septembre 2026, étape 7.6.** La section 17 mesure les nouveaux plafonds de faux ninjas, 300 sur Tokyo et 500 sur Spirit & Time, au serveur et dans la page.
 
+**Mise à jour du 19 septembre 2026, étape 5.7.** La section 18 mesure l'allègement du rendu dans la page, au processeur ralenti six fois, tout à l'écran et au cadrage d'un téléphone. Le serveur n'est pas touché.
+
 Chiffres bruts de cette mesure: `docs/mesures/charge-serveur-5-1.json`, écrit par le harnais lui-même.
 
 ## 1. L'essentiel
@@ -791,3 +793,59 @@ Notre code par image, en millisecondes: lissage, scène et transmission à PixiJ
 
 - **La charge du serveur complet à 500 faux ninjas**: le banc suffit à situer le coût, quinze fois sous le budget d'un battement.
 - **Un vrai téléphone.** Le ralentissement de Chromium ne reproduit ni sa carte graphique ni son échauffement; à confirmer en jouant.
+
+## 18. Mesure de l'étape 5.7: l'allègement du rendu (19 septembre 2026)
+
+Banc du rendu `tests/e2e/banc-rendu.spec.ts`, sur la carte graphique de la machine de mesure (NVIDIA RTX 2080 Ti), trois exécutions pour chaque fourchette. Avant: le code du commit `431f068`, mesuré avec le banc de cette étape. Après: le code de l'étape.
+
+### 18.1 L'essentiel
+
+- **Au cadrage d'un téléphone, une image à 500 entités coûte trois fois moins de processeur**: notre code passe de 5,8 à 6,2 ms à 1,6 à 1,9 ms, et PixiJS de 10,0 à 10,6 ms à 3,2 à 3,6 ms. De 16 ms, presque tout le budget d'une image, à 5 ms environ.
+- **Dans le pire cas, toutes les entités à l'écran**, notre code passe de 5,7 à 6,1 ms à 2,7 ms à 500 entités, sous le quart d'une image (4,2 ms), que le banc exige désormais sur carte graphique. PixiJS y garde ses 10 ms: mille sprites visibles restent mille sprites à dessiner. Ce cas n'arrive pas sur un téléphone, dont la caméra montre 25 à 30 personnages.
+- **Ce qui se voit ne change pas**: le banc vérifie à chaque mesure que le rendu affiche exactement les personnages que la caméra montre, marge comprise, et les scénarios de bout en bout jouent de vraies parties.
+
+### 18.2 Où allait le temps
+
+Un profil du processeur pendant la mesure à 500 entités, avant l'étape, tout à l'écran, par image:
+
+| Poste                                           |  Temps |
+| ----------------------------------------------- | -----: |
+| Transmission des personnages à PixiJS           | 3,2 ms |
+| Lissage et scène                                | 1,1 ms |
+| Travail de PixiJS avant le dessin, tout compris |  11 ms |
+
+La transmission reposait à chaque image, pour chaque personnage, deux noms de texture recomposés, deux recherches de texture, la teinte (que PixiJS convertit avant de la comparer) et la taille, et refaisait un ensemble des identifiants vus. La scène recomposait l'adresse de l'image de chaque entité. PixiJS parcourait tous les sprites, visibles ou non, et refaisait la géométrie des halos de tous les Black Ninjas de la carte.
+
+### 18.3 Ce qui a été fait
+
+1. Chaque personnage retient sa texture, sa taille et sa teinte; seules celles qui changent sont reposées. Les deux calques d'une image se cherchent une fois pour tout le rendu.
+2. Un personnage hors du champ, à deux sprites de marge, est caché sans être mis à jour. Les halos hors du champ ne sont pas tracés.
+3. La scène tire l'adresse des images de ninja d'une table figée.
+4. L'ordre de dessin des personnages suit la scène (défaut corrigé, journal de conception).
+
+### 18.4 Les chiffres
+
+Notre code par image, en millisecondes, puis le temps de PixiJS avant le dessin, puis la cadence.
+
+| Situation                                   | Entités | Notre code avant | Notre code après | PixiJS avant | PixiJS après | Images par seconde après |
+| ------------------------------------------- | ------: | ---------------: | ---------------: | -----------: | -----------: | -----------------------: |
+| Processeur ralenti × 6, tout à l'écran      |     300 |        3,4 à 3,7 |              1,9 |    6,3 à 7,2 |    6,3 à 6,7 |                       60 |
+| Processeur ralenti × 6, tout à l'écran      |     500 |        5,7 à 6,1 |              2,7 |   9,5 à 10,4 |   9,7 à 10,4 |                       60 |
+| Processeur ralenti × 6, cadrage téléphone   |     300 |        3,4 à 3,6 |              1,5 |    6,4 à 6,9 |    3,3 à 3,7 |                       60 |
+| Processeur ralenti × 6, cadrage téléphone   |     500 |        5,8 à 6,2 |        1,6 à 1,9 |  10,0 à 10,6 |    3,2 à 3,6 |                       60 |
+| Carte graphique, composition de l'étape 4.2 |     500 |      0,68 à 0,73 |      0,37 à 0,41 |    1,6 à 1,8 |    1,8 à 2,1 |                       60 |
+
+Avant l'étape, la cadence au processeur ralenti descendait à 53 à 57 images par seconde à 500 entités; elle tient 60 après. Au cadrage d'un téléphone, la caméra montre 28 personnages sur 300 à Tokyo, 25 sur 500 à Spirit & Time.
+
+### 18.5 Ce que le banc gagne
+
+- **Une série au cadrage d'un téléphone**: fenêtre de 915 par 412 pixels, la caméra serrée du jeu sur téléphone, les entités réparties sur toute la carte, 300 sur Tokyo et 500 sur Spirit & Time. La série « tout à l'écran » reste la même, comparable à la section 17.
+- **Le temps de PixiJS avant le dessin**, relevé à côté du nôtre: c'est aussi lui que paie un téléphone.
+- **Le compte des personnages affichés**, comparé à celui des entités dans le champ.
+- **Un échauffement qui réchauffe vraiment.** Chaque série remontait le rendu, si bien que la seconde d'échauffement de la section 17 ne réchauffait que le code, pas les textures, que la mesure renvoyait à la carte graphique.
+- **Le plafond de notre code à 500 entités au processeur ralenti descend à 4,2 ms**, le quart d'une image, dans les deux séries. Comme à la section 17.4, il s'exige sur carte graphique et se mesure sans s'exiger en intégration continue.
+
+### 18.6 Ce qui n'est pas mesuré
+
+- **Un vrai téléphone**, comme à la section 17.5: à confirmer en jouant.
+- **PixiJS tout à l'écran**: ses 10 ms à 500 entités au processeur ralenti ne se réduisent qu'en dessinant moins de sprites, ce qu'aucun écran de téléphone ne demande.

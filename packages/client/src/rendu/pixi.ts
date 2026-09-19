@@ -20,6 +20,15 @@
  * travailler le ramasse-miettes en continu, ce qui se voit sous forme de
  * micro-saccades regulieres.
  *
+ * SEUL CE QUI CHANGE EST TRANSMIS, ET SEUL CE QUE LA CAMERA MONTRE (etape 5.7). A
+ * cinq cents entites, reposer a chaque image la texture, la taille et la teinte de
+ * chaque personnage coutait plus de trois millisecondes par image a un telephone
+ * d'entree de gamme; et PixiJS parcourait ensuite tous les sprites, y compris ceux
+ * que la camera ne montrait pas, alors qu'au cadrage d'un telephone elle en montre
+ * quelques-uns. Un personnage retient donc ce qu'on lui a donne, et un personnage
+ * hors du champ est cache sans etre mis a jour. Ce n'est pas une regle d'apparence:
+ * ce qui se voit est le meme.
+ *
  * LES TEXTURES SONT PARTAGEES. Dix-sept images de ninja suffisent a cinq cents
  * personnages: chaque image est coupee une fois en deux calques, et la couleur est
  * appliquee par TEINTE sur le GPU, au seul calque du corps (recoloration.ts). Le
@@ -60,9 +69,16 @@ import {
   Texture,
 } from 'pixi.js';
 
-import { BORDURE_TERRAIN, COULEUR_FOND, DENSITE_MAXIMALE, LUEUR, PLUIE } from './apparence.js';
-import type { Camera } from './camera.js';
-import { versEcran } from './camera.js';
+import {
+  BORDURE_TERRAIN,
+  COULEUR_FOND,
+  DENSITE_MAXIMALE,
+  LUEUR,
+  MARGE_HORS_CHAMP_PX,
+  PLUIE,
+} from './apparence.js';
+import type { Camera, ZoneVisible } from './camera.js';
+import { dansLaZone, versEcran, zoneVisible } from './camera.js';
 import { separerLesCalques } from './recoloration.js';
 import type { FormeDeSang } from './sang.js';
 import { adresseDImage, adresseDesDetails, adresseDuCorps } from './textures.js';
@@ -351,9 +367,13 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   const libelles = new Container();
   const disques = new Graphics();
   const objets = new Container();
-  const entites = new Container();
+  // Les personnages se dessinent dans l'ordre de la scene, que leur rang fixe (etape 5.7).
+  // Le nom permet au banc de mesure de compter ceux qui sont affiches.
+  const entites = new Container({ label: 'personnages', sortableChildren: true });
   const premierPlan = new Container();
   const reperes = new Graphics();
+  /** Le numero de l'image en cours: il marque les personnages que la scene nomme encore. */
+  let numeroDImage = 0;
 
   monde.addChild(decor, zones, libelles, disques, objets, entites, premierPlan, reperes);
   application.stage.addChild(monde);
@@ -374,6 +394,8 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
 
   /** Les objets d'affichage deja crees, retrouves par identifiant de scene. */
   const spritesEntites = new Map<string, Personnage>();
+  /** Les deux calques de chaque image de ninja deja demandee, retrouves par son adresse. */
+  const calquesParImage = new Map<string, Calques>();
   const spritesObjets = new Map<string, Sprite>();
   const textesZones = new Map<string, Text>();
 
@@ -490,11 +512,16 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
         pluie.texture = imagePluie;
       }
 
+      // Le champ se mesure sur l'ecran de PixiJS, celui qui vient de placer la camera.
+      numeroDImage += 1;
+      const ecran = { largeur: application.screen.width, hauteur: application.screen.height };
+      const champ = zoneVisible(camera, ecran, MARGE_HORS_CHAMP_PX);
+
       dessinerLesZones(zones, libelles, textesZones, scene.zones);
-      dessinerLesDisques(disques, scene.disques);
+      dessinerLesDisques(disques, scene.disques, champ);
       dessinerLesCones(disques, scene.cones);
       majSprites(spritesObjets, objets, scene.objets);
-      majPersonnages(spritesEntites, entites, scene.entites);
+      majPersonnages(spritesEntites, entites, scene.entites, champ, numeroDImage, calquesParImage);
       dessinerLesReperes(reperes, scene.reperes);
     },
 
@@ -507,6 +534,7 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       imprimees.clear();
       application.destroy(true, { children: true });
       spritesEntites.clear();
+      calquesParImage.clear();
       spritesObjets.clear();
       textesZones.clear();
     },
@@ -540,11 +568,23 @@ function placerLaCamera(monde: Container, camera: Camera, application: Applicati
  * volontaire: leurs rayons pulsent, donc leur geometrie change de toute facon, et
  * un seul objet donne un seul appel de dessin la ou cent objets en donneraient
  * cent.
+ *
+ * SEULS LES DISQUES QUE LA CAMERA MONTRE SONT TRACES (etape 5.7). Refaire la geometrie
+ * des halos de tous les Black Ninjas de la carte etait, au cadrage d'un telephone, le
+ * plus gros travail de PixiJS a chaque image.
  */
-function dessinerLesDisques(graphique: Graphics, disques: readonly DisqueScene[]): void {
+function dessinerLesDisques(
+  graphique: Graphics,
+  disques: readonly DisqueScene[],
+  champ: ZoneVisible,
+): void {
   graphique.clear();
 
   for (const disque of disques) {
+    if (!dansLaZone(champ, disque.x, disque.y, Math.max(disque.rayon, 0))) {
+      continue;
+    }
+
     graphique.circle(disque.x, disque.y, Math.max(disque.rayon, 0));
 
     if (disque.remplissage !== undefined) {
@@ -702,11 +742,24 @@ function majSprites(
   }
 }
 
-/** Un personnage affiche: ses details intacts, et son corps teinte par-dessus. */
+/**
+ * Un personnage affiche: ses details intacts, et son corps teinte par-dessus.
+ *
+ * Il retient ce qu'on lui a donne, pour que la transmission ne repose que ce qui
+ * change (etape 5.7): c'est l'etat de l'adaptateur, jamais une regle d'apparence.
+ */
 interface Personnage {
   readonly racine: Container;
   readonly details: Sprite;
   readonly corps: Sprite;
+  /** Le numero de la derniere image dont la scene le nommait: un autre, et il est parti. */
+  image: number;
+  /** L'adresse de l'image dont ses deux calques sont tires; aucune avant sa premiere texture. */
+  texture: string | undefined;
+  /** La taille posee; aucune quand elle est a reposer, apres un changement de texture. */
+  taille: number | undefined;
+  /** La teinte posee sur le corps. */
+  teinte: number | undefined;
 }
 
 /**
@@ -716,40 +769,152 @@ interface Personnage {
  * EST TEINTE: teinter l'image entiere multiplierait aussi le contour et les yeux,
  * et, sur un sprite rouge, ferait du vert un noir (recoloration.ts). L'opacite se
  * pose sur le conteneur, pour que les deux calques s'effacent ensemble.
+ *
+ * DEUX ALLEGEMENTS DE L'ETAPE 5.7, sans rien changer a ce qui se voit.
+ *
+ *   - Un personnage hors du champ est cache, et n'est pas mis a jour: PixiJS ne le
+ *     parcourt plus. Il ne nait qu'en entrant dans le champ, et, a son retour, recoit
+ *     ce qui a change pendant son absence. La marge du champ fait qu'il est deja la
+ *     quand son sprite atteint le bord de l'ecran.
+ *   - La texture, la taille et la teinte ne sont reposees que si elles changent. La
+ *     position, la rotation et l'opacite le sont a chaque image: PixiJS les compare
+ *     lui-meme, sans rien convertir.
+ *
+ * L'ORDRE DE DESSIN EST CELUI DE LA SCENE, par le rang de chaque personnage. Sans lui,
+ * tout personnage cree en cours de partie passait devant les autres: un cadavre du
+ * Massacre, que la scene met dessous, et desormais tout personnage qui entre dans le
+ * champ.
  */
 function majPersonnages(
   connus: Map<string, Personnage>,
   parent: ConteneurPixi,
   modele: readonly SpriteScene[],
+  champ: ZoneVisible,
+  image: number,
+  calquesParImage: Map<string, Calques>,
 ): void {
-  const vus = new Set<string>();
-
-  for (const decrit of modele) {
-    vus.add(decrit.id);
+  modele.forEach((decrit, rang) => {
     let personnage = connus.get(decrit.id);
 
+    if (!dansLaZone(champ, decrit.x, decrit.y)) {
+      if (personnage !== undefined) {
+        personnage.image = image;
+        personnage.racine.visible = false;
+      }
+
+      return;
+    }
+
     if (personnage === undefined) {
-      personnage = { racine: new Container(), details: new Sprite(), corps: new Sprite() };
-      personnage.details.anchor.set(0.5);
-      personnage.corps.anchor.set(0.5);
-      personnage.racine.addChild(personnage.details, personnage.corps);
-      parent.addChild(personnage.racine);
+      personnage = nouveauPersonnage(parent);
       connus.set(decrit.id, personnage);
     }
 
-    poserLaTexture(personnage.details, adresseDesDetails(decrit.texture), decrit.taille);
-    poserLaTexture(personnage.corps, adresseDuCorps(decrit.texture), decrit.taille);
-    personnage.corps.tint = decrit.teinte;
+    personnage.image = image;
+    poserLApparence(personnage, decrit, calquesParImage);
+    personnage.racine.visible = true;
+    personnage.racine.zIndex = rang;
     personnage.racine.position.set(decrit.x, decrit.y);
     personnage.racine.rotation = decrit.rotation ?? 0;
     personnage.racine.alpha = decrit.alpha;
-  }
+  });
 
   for (const [id, personnage] of connus) {
-    if (!vus.has(id)) {
+    if (personnage.image !== image) {
       personnage.racine.destroy({ children: true });
       connus.delete(id);
     }
+  }
+}
+
+/** Un personnage neuf, sans texture, pose dans son calque. */
+function nouveauPersonnage(parent: ConteneurPixi): Personnage {
+  const personnage: Personnage = {
+    racine: new Container(),
+    details: new Sprite(),
+    corps: new Sprite(),
+    image: 0,
+    texture: undefined,
+    taille: undefined,
+    teinte: undefined,
+  };
+
+  personnage.details.anchor.set(0.5);
+  personnage.corps.anchor.set(0.5);
+  personnage.racine.addChild(personnage.details, personnage.corps);
+  parent.addChild(personnage.racine);
+
+  return personnage;
+}
+
+/** Les deux calques d'une image de ninja: le corps a teinter, et les details intacts. */
+interface Calques {
+  readonly corps: Texture;
+  readonly details: Texture;
+}
+
+/**
+ * Les deux calques de cette image de ninja, ou rien s'ils ne sont pas encore fabriques.
+ *
+ * Toutes les entites qui marchent changent d'image au meme instant (animation.ts): sans
+ * ce rangement, chacune recomposait les deux noms et les cherchait parmi les textures, des
+ * centaines de fois dans la meme image.
+ */
+function calquesDe(calquesParImage: Map<string, Calques>, adresse: string): Calques | undefined {
+  const connus = calquesParImage.get(adresse);
+
+  if (connus !== undefined) {
+    return connus;
+  }
+
+  const corps = Assets.get<Texture>(adresseDuCorps(adresse));
+  const details = Assets.get<Texture>(adresseDesDetails(adresse));
+
+  if (corps === undefined || details === undefined) {
+    return undefined;
+  }
+
+  const calques = { corps, details };
+  calquesParImage.set(adresse, calques);
+
+  return calques;
+}
+
+/**
+ * Pose la texture, la taille et la teinte que la scene demande, seulement si elles ont
+ * change.
+ *
+ * Les deux calques ne se cherchent qu'au changement d'image, et une seule fois par image
+ * pour tout le rendu. La taille se repose apres un changement de texture, parce que
+ * PixiJS l'exprime en proportion de la texture. La teinte se compare avant d'etre posee:
+ * PixiJS la convertit avant de la comparer.
+ */
+function poserLApparence(
+  personnage: Personnage,
+  decrit: SpriteScene,
+  calquesParImage: Map<string, Calques>,
+): void {
+  if (personnage.texture !== decrit.texture) {
+    const calques = calquesDe(calquesParImage, decrit.texture);
+
+    // Une texture absente est redemandee a l'image suivante.
+    if (calques !== undefined) {
+      personnage.details.texture = calques.details;
+      personnage.corps.texture = calques.corps;
+      personnage.texture = decrit.texture;
+      personnage.taille = undefined;
+    }
+  }
+
+  if (personnage.taille !== decrit.taille) {
+    poserLaTaille(personnage.details, decrit.taille);
+    poserLaTaille(personnage.corps, decrit.taille);
+    personnage.taille = decrit.taille;
+  }
+
+  if (personnage.teinte !== decrit.teinte) {
+    personnage.corps.tint = decrit.teinte;
+    personnage.teinte = decrit.teinte;
   }
 }
 
@@ -772,14 +937,12 @@ function dessinerUneForme(pinceau: Graphics, forme: FormeDeSang): void {
   pinceau.poly(points).fill({ color: forme.couleur, alpha: forme.alpha });
 }
 
-/** Donne a un sprite la texture rangee sous ce nom, s'il ne l'a pas deja, et sa taille. */
-function poserLaTexture(sprite: Sprite, nom: string, taille: number): void {
-  const texture = Assets.get<Texture>(nom);
+/**
+ * Etire un sprite a ce cote, d'apres les dimensions de sa texture. C'est ce que font
+ * les proprietes width et height de PixiJS, sans leurs calculs de signe.
+ */
+function poserLaTaille(sprite: Sprite, cote: number): void {
+  const { width, height } = sprite.texture.orig;
 
-  if (texture !== undefined && sprite.texture !== texture) {
-    sprite.texture = texture;
-  }
-
-  sprite.width = taille;
-  sprite.height = taille;
+  sprite.scale.set(cote / width, cote / height);
 }

@@ -29,6 +29,7 @@
 
 import type {
   Couleur,
+  Direction,
   EntiteVue,
   Mode,
   Orientation,
@@ -37,6 +38,8 @@ import type {
 } from '@neon-ninja/shared';
 import {
   COULEUR_BOT_NEUTRE,
+  DIRECTIONS,
+  IMAGES_DE_MARCHE,
   MASSACRE,
   RACINE_RESSOURCES,
   REGLAGES_PAR_DEFAUT,
@@ -223,6 +226,25 @@ function adresse(relatif: string): string {
 }
 
 /**
+ * L'adresse de chaque image de ninja, par direction puis par image de marche, composee
+ * une fois pour toutes (etape 5.7). A cinq cents entites, la recomposer pour chacune a
+ * chaque image fabriquait trente mille chaines par seconde, toujours les memes.
+ */
+const ADRESSES_DE_NINJA: ReadonlyMap<Direction, readonly string[]> = new Map(
+  DIRECTIONS.map((direction) => [
+    direction,
+    Array.from({ length: IMAGES_DE_MARCHE }, (_, rang) =>
+      adresse(cheminNinja(direction, rang + 1)),
+    ),
+  ]),
+);
+
+/** L'adresse de l'image de ninja de cette direction, a cette image de marche. */
+function adresseDeNinja(direction: Direction, image: number): string {
+  return ADRESSES_DE_NINJA.get(direction)?.[image - 1] ?? adresse(cheminNinja(direction, image));
+}
+
+/**
  * Construit la scene a dessiner.
  *
  * @param etat       L'etat du client, lu tel quel a chaque image.
@@ -347,7 +369,7 @@ export function construireScene(
       id: entite.id,
       // A l'arret, un personnage garde sa direction et sa premiere image, sans marcher
       // sur place: c'est getFrameKey du jeu d'origine (client.js:589).
-      texture: adresse(cheminNinja(entite.direction, enMouvement ? image : 1)),
+      texture: adresseDeNinja(entite.direction, enMouvement ? image : 1),
       x,
       y,
       taille: TAILLE_SPRITE,

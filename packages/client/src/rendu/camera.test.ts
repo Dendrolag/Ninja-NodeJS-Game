@@ -7,9 +7,19 @@
  * d'affichage.
  */
 
+import { COMBO } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
-import { borner, cameraSur, echellePour, suivre, versEcran, zoneVisible } from './camera.js';
+import { APPARENCE_KATANA, MARGE_HORS_CHAMP_PX, TAILLE_SPRITE } from './apparence.js';
+import {
+  borner,
+  cameraSur,
+  dansLaZone,
+  echellePour,
+  suivre,
+  versEcran,
+  zoneVisible,
+} from './camera.js';
 
 const CARTE = { largeur: 2_000, hauteur: 1_500 };
 const ECRAN = { largeur: 1_600, hauteur: 900 };
@@ -153,6 +163,59 @@ describe('zoneVisible', () => {
 
     expect(visible.gauche).toBe(150);
     expect(visible.droite).toBe(1_850);
+  });
+});
+
+describe('dansLaZone (etape 5.7)', () => {
+  const zone = { gauche: 200, haut: 300, droite: 1_800, bas: 1_200 };
+
+  it('dit dedans un point de la zone', () => {
+    expect(dansLaZone(zone, 1_000, 750)).toBe(true);
+  });
+
+  it('dit dehors un point au-dela de chaque bord', () => {
+    expect(dansLaZone(zone, 199, 750)).toBe(false);
+    expect(dansLaZone(zone, 1_801, 750)).toBe(false);
+    expect(dansLaZone(zone, 1_000, 299)).toBe(false);
+    expect(dansLaZone(zone, 1_000, 1_201)).toBe(false);
+  });
+
+  it('compte les bords dedans', () => {
+    expect(dansLaZone(zone, 200, 300)).toBe(true);
+    expect(dansLaZone(zone, 1_800, 1_200)).toBe(true);
+  });
+
+  it('garde un disque hors de la zone qui la touche par son rayon', () => {
+    expect(dansLaZone(zone, 150, 750, 60)).toBe(true);
+    expect(dansLaZone(zone, 1_000, 1_250, 60)).toBe(true);
+  });
+
+  it('ecarte un disque que son rayon n amene pas jusqu a la zone', () => {
+    expect(dansLaZone(zone, 150, 750, 40)).toBe(false);
+    expect(dansLaZone(zone, 1_000, 1_300, 60)).toBe(false);
+  });
+});
+
+describe('la marge hors champ (etape 5.7)', () => {
+  // Un personnage repere par son centre, juste hors de la zone marge comprise, ne doit
+  // rien montrer a l'ecran: ni un coin de sprite couche en biais, ni pendant la plus forte
+  // secousse du katana, qui decale le monde sans deplacer la camera.
+  it('couvre un sprite couche en biais et la plus forte secousse', () => {
+    const demiDiagonale = (TAILLE_SPRITE * Math.SQRT2) / 2;
+    const { amplitudePx, parCran } = APPARENCE_KATANA.secousse;
+    // La secousse decale le monde d'au plus sa force, sur chaque axe.
+    const plusForteSecousse = amplitudePx * (1 + parCran * (COMBO.MULTIPLICATEUR_MAXIMUM - 1));
+
+    expect(MARGE_HORS_CHAMP_PX).toBeGreaterThanOrEqual(demiDiagonale + plusForteSecousse);
+  });
+
+  it('montre un personnage dont le sprite mord sur le bord de l ecran', () => {
+    const camera = { x: 1_000, y: 750, echelle: 1 };
+    const champ = zoneVisible(camera, ECRAN, MARGE_HORS_CHAMP_PX);
+    const auBord = zoneVisible(camera, ECRAN);
+
+    expect(dansLaZone(champ, auBord.droite + TAILLE_SPRITE / 2, 750)).toBe(true);
+    expect(dansLaZone(champ, 1_000, auBord.haut - TAILLE_SPRITE / 2)).toBe(true);
   });
 });
 

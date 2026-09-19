@@ -35,7 +35,7 @@ Sur téléphone, la caméra ne montre que 360 par 271 pixels de carte (`CADRAGE_
 ## Décisions prises par cette fiche
 
 1. **Ne transmettre à PixiJS que ce qui a changé.** Chaque personnage affiché garde la texture, la taille et la teinte qu'on lui a données; elles ne sont reposées que si la scène en demande d'autres. Les noms des deux calques ne se recomposent qu'au changement de texture. L'ensemble des identifiants vus est remplacé par un numéro d'image posé sur chaque personnage.
-2. **Ne mettre à jour que ce que la caméra montre.** Un personnage hors du champ de la caméra, marge comprise, est caché et n'est pas mis à jour; il ne naît qu'en entrant dans le champ. Caché, il ne coûte plus rien à PixiJS non plus. La marge couvre un sprite entier, ce qui dépasse d'un cadavre couché et la plus forte secousse du katana: rien n'apparaît d'un coup au bord de l'écran. Le champ se calcule par `zoneVisible` (camera.ts), déjà prévue pour cet usage. Seuls les personnages sont triés: les objets, zones, disques et repères sont quelques dizaines au plus.
+2. **Ne mettre à jour que ce que la caméra montre.** Un personnage hors du champ de la caméra, marge comprise, est caché et n'est pas mis à jour; il ne naît qu'en entrant dans le champ. Caché, il ne coûte plus rien à PixiJS non plus. La marge couvre un sprite entier, ce qui dépasse d'un cadavre couché et la plus forte secousse du katana: rien n'apparaît d'un coup au bord de l'écran. Le champ se calcule par `zoneVisible` (camera.ts), déjà prévue pour cet usage. Les personnages sont triés, et les halos (les disques) depuis la réconciliation ci-dessous; les objets, zones, cônes et repères sont quelques-uns au plus.
 3. **La scène reste complète et ignore la caméra.** Le tri se fait dans l'adaptateur PixiJS, qui connaît la caméra et l'écran; la scène continue de dire tout ce qui existe, et ses tests ne changent pas.
 4. **L'ordre de dessin des personnages devient celui de la scène.** Jusqu'ici, un sprite créé en cours de partie passait devant tous les autres: un cadavre du Massacre, que la scène déclare dessous, se dessinait par-dessus les vivants. Avec le tri par la caméra, tout personnage qui entre dans le champ serait créé, donc dessiné devant. Le rang dans la scène fixe désormais l'ordre de dessin.
 5. **Le banc gagne une série « cadrage téléphone »**: composition d'une vraie partie pleine, entités réparties sur toute la carte, caméra au cadrage mobile. La série téléphone existante reste le pire cas (tout à l'écran) et reste comparable à la mesure 7.6. Le banc vérifie en plus que le nombre de personnages affichés est celui des entités dans le champ, et relève le temps de PixiJS avant le dessin.
@@ -77,6 +77,13 @@ Conditions de ROADMAP réunies, plus:
 1. **PixiJS ne met à jour la teinte, la position ou l'opacité que si la valeur change**, mais la teinte passe d'abord par une conversion de couleur: c'est pourquoi elle se compare avant d'être posée.
 2. **Un personnage caché garde son état**: à son retour dans le champ, ce qui a changé pendant son absence est posé, et seulement cela.
 3. **Le champ se calcule sur l'écran de PixiJS**, celui qui place la caméra, et non sur la taille de la fenêtre: les deux doivent rester les mêmes.
+
+## Réconciliation pendant l'étape (19 septembre 2026)
+
+1. **Les halos sont triés aussi** (décision 2 élargie). Au cadrage d'un téléphone, une fois les personnages triés, le plus gros travail de PixiJS restait la géométrie des halos de tous les Black Ninjas de la carte, refaite à chaque image. Les disques hors du champ, rayon compris, ne sont plus tracés: PixiJS passe de 4,5 à 3,3 ms par image à 500 entités.
+2. **La scène est allégée** (périmètre, point 4). Elle recomposait l'adresse de l'image de chaque entité à chaque image; une table figée la donne. Notre code tout à l'écran passe de 3,2 à 3,5 ms à 2,7 ms à 500 entités.
+3. **Les deux calques d'une image se cherchent une fois pour tout le rendu**, et la taille se pose par l'échelle: toutes les entités qui marchent changent d'image au même instant, et recomposaient toutes les mêmes noms.
+4. **Le compte des personnages affichés se lit dans PixiJS par le nom du calque** (`personnages`), sans ajouter de méthode au rendu.
 
 ## Rituel de fin de session
 

@@ -124,6 +124,8 @@ Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision 
 
 **Étape 5.6 terminée le 19 septembre 2026: le jeu peut être trouvé.** La page dit ce qu'est le jeu dans son titre, déclare une seule adresse, `ninja.dendrolag.fr`, vers laquelle l'alias `vercel.app` redirige, sert un fichier des robots et un plan du site, décrit le jeu en données structurées, et montre une vraie scène de partie quand on partage son lien. Un moteur de recherche qui n'exécute pas le jeu lit le titre de l'accueil et les cinq modes, qui servent aussi d'écran de chargement. Reste au porteur du projet à déclarer le domaine à Google et à Bing. Fiche: `docs/plan/etape-5-6.md`.
 
+**Étape 5.7 terminée le 19 septembre 2026: 500 entités tiennent sur un téléphone d'entrée de gamme.** Le rendu ne transmet plus à PixiJS que ce qui change, et que ce que la caméra montre: au processeur ralenti six fois et au cadrage d'un téléphone, une image à 500 entités coûte environ 5 ms de processeur au lieu de 16, notre code 1,6 à 1,9 ms au lieu de 5,8 à 6,2. Tout à l'écran, notre code tient sous le quart d'une image (2,7 ms). Rien ne change de ce qui se voit, sinon un défaut corrigé: un personnage créé en cours de partie, comme un cadavre du Massacre, ne passe plus devant les autres (section 18 de `docs/mesures/charge-serveur.md`). Fiche: `docs/plan/etape-5-7.md`. Suite: les fonctionnalités reportées (Battle Royale, Chaos, pass de saison, skins, clans), dans l'ordre que fixe le porteur du projet.
+
 ---
 
 ## 4. Carte thématique des étapes
@@ -237,7 +239,7 @@ Tests requis: un test qui échouait avant chaque correction; empreinte des parti
 **5.6. Référencement.** Faite le 19 septembre 2026 (fiche `docs/plan/etape-5-6.md`). Étape ajoutée le 19 septembre 2026, à la demande du porteur du projet: que le jeu remonte dans les moteurs de recherche. Titre, description et aperçu de la page servie par Vercel, données structurées, plan du site et fichier des robots, contenu lisible sans exécuter le jeu, adresse canonique; mesurer avant et après avec les outils des moteurs de recherche.
 Tests requis: TU ou TI des balises servies par la page; vérification en production de ce que voit un robot; bout en bout vert.
 
-**5.7. Allègement du rendu.** Étape ajoutée le 19 septembre 2026, issue de la mesure de l'étape 7.6, sur décision du porteur du projet de garder le plafond de 500 faux ninjas. Au processeur ralenti six fois, 500 entités coûtent 4,3 à 5,3 ms de notre code par image, dont 2,8 ms de transmission des sprites à PixiJS (section 17 de `docs/mesures/charge-serveur.md`). Réduire ce coût, par exemple en ne mettant à jour que ce que la caméra montre, sans changer ce qui se voit.
+**5.7. Allègement du rendu.** Faite le 19 septembre 2026 (fiche `docs/plan/etape-5-7.md`). Étape ajoutée le 19 septembre 2026, issue de la mesure de l'étape 7.6, sur décision du porteur du projet de garder le plafond de 500 faux ninjas. Au processeur ralenti six fois, 500 entités coûtent 4,3 à 5,3 ms de notre code par image, dont 2,8 ms de transmission des sprites à PixiJS (section 17 de `docs/mesures/charge-serveur.md`). Réduire ce coût, par exemple en ne mettant à jour que ce que la caméra montre, sans changer ce qui se voit.
 Tests requis: banc du rendu, série au processeur ralenti, avant et après, notre code sous le quart d'une image à 500 entités; TU de ce qui se dessine ou non; bout en bout vert.
 
 ### Phase 6. Retrait du legacy
