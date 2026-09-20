@@ -2,7 +2,7 @@
 
 Étape 8.1, ouverture de la phase 8. Demande du porteur du projet: **une étude avant tout prototype**, pour savoir ce qu'on commanderait à un graphiste avant de lui commander quoi que ce soit.
 
-**Aucune décision n'est prise ici.** L'étude dit ce qu'est techniquement une carte, ce que valent les deux cartes existantes, ce qu'une carte doit à une partie à plusieurs, comment juger une proposition, et ce que coûtent quelques structures possibles. La dernière section liste ce qui revient au porteur du projet.
+**L'étude elle-même ne décide de rien.** L'étude dit ce qu'est techniquement une carte, ce que valent les deux cartes existantes, ce qu'une carte doit à une partie à plusieurs, comment juger une proposition, et ce que coûtent quelques structures possibles. Elle liste ce qui revient au porteur du projet, **et ses réponses, données le jour même, sont consignées à la section 7.1**: un quartier de 2400 sur 1800, à 1,20 de détour, éprouvé d'abord en carte de travail, sans graphiste, avec un miroir calculé par le jeu.
 
 Ce document ne remplace pas `etude-grandes-cartes.md` (16 septembre 2026), qui traite du très grand, 2 000 à 10 000 faux ninjas, et qui reste la référence sur ce sujet. Celui-ci traite des cartes qu'on pourrait commander demain, à des tailles que le socle tient déjà.
 
@@ -263,13 +263,34 @@ Ce qui revient au porteur du projet. L'étude ne le fait pas à sa place.
 4. **Combien de cartes, et à quel prix.** Le décor de Tokyo pèse 2,3 Mo par orientation: c'est du travail de graphiste, pas de programmeur. Une carte bien structurée mais laide se teste; une carte belle et sans structure se jette.
 5. **Si le miroir reste obligatoire.** Il double la commande. Le jeu sait déjà se passer d'un fichier absent pour la pluie: la même souplesse pour le miroir est possible, et éviterait de payer deux fois chaque carte.
 
+### 7.1 Les réponses du porteur du projet, 20 septembre 2026
+
+Données le jour de l'étude. Elles sont la décision, et l'étude ci-dessus reste telle quelle: c'est le raisonnement qui y a mené.
+
+| #   | Question                         | Réponse                                                                                  |
+| --- | -------------------------------- | ---------------------------------------------------------------------------------------- |
+| 1   | Cartes, ou structure ?           | **Les deux, structure d'abord.** Une carte structurée éprouvée en jeu avant tout contenu |
+| 2   | Quel détour médian ?             | **1,20 à 1,35**, l'archétype du quartier                                                 |
+| 3   | Quelle taille ?                  | **2400 x 1800**                                                                          |
+| 4   | Combien de cartes, à quel prix ? | **Pas de graphiste pour l'instant.** On avance en noir et blanc                          |
+| 5   | Le miroir reste-t-il ?           | **Le jeu le calcule.** Une carte ne se commande plus qu'une fois                         |
+
+Deux questions posées en plus, et leurs réponses: **une carte de travail d'abord**, une collision au trait sans décor, jugée par les douze critères de la section 4 puis jouée; et **le repérage se juge à la recette**, la minimap ne se repense que si l'on se perd vraiment.
+
+Trois conséquences à tirer, qu'aucune section ci-dessus n'a traitées parce qu'elles n'existaient pas avant ces réponses.
+
+1. **C'est un quartier plus grand que celui de la section 5.1**, qui le décrivait à 2000 sur 1500. À 2400 sur 1800, un écran d'ordinateur montre **33 pour cent** de la carte au lieu des 48 de Tokyo, et la traversée passe d'environ 18 à environ 25 secondes. C'est le point à surveiller à la recette, et c'est exactement ce que la septième réponse dit d'observer plutôt que d'anticiper.
+2. **Le plafond de PNJ est à recalculer**: 4,32 Mpx de surface, 60 à 70 pour cent de jouable, soit 2,6 à 3,0 Mpx. À la densité de Tokyo, cela fait **340 à 400 PNJ**, à confirmer par la mesure et non à fixer au jugé, comme le veut le critère 5.
+3. **Le miroir calculé est une étape de code à part entière**, et elle touche les deux côtés: le serveur retourne la collision, la page retourne le décor. Elle ne dépend pas de la carte de travail et peut se faire avant, après, ou jamais si la carte de travail est abandonnée.
+
 ## 8. Ce que deviendraient les étapes suivantes
 
-Selon la réponse, trois suites possibles, à planifier comme des étapes à part entière.
+Les réponses de la section 7.1 tranchent: c'est la première des trois suites qui est retenue, et elle devient l'étape `8.2`.
 
-- **Si le détour est la réponse**: une étape « carte de travail », qui dessine une collision au trait, sans décor, pour éprouver un quartier en jeu avant de commander quoi que ce soit. Un `collision.png` en noir et blanc se produit sans graphiste, et les critères de la section 4 le jugent avant qu'on y joue.
-- **Si la taille est la réponse**: l'étape de mesure numéro 1 de `etude-grandes-cartes.md`, le banc à 1 000 et 2 000 faux ninjas sur une grande carte, pour remplacer les extrapolations de la section 6 par des chiffres.
-- **Dans les deux cas, avant de commander**: une fiche de commande d'une page pour le graphiste, tirée des sections 1 et 4, avec le piège de l'étirement en tête.
+- **Retenu, étape `8.2`, la carte de travail**: une collision au trait, sans décor, qui dessine un quartier de 2400 sur 1800 à 1,20 de détour, jugée par les douze critères de la section 4 avant qu'on y joue, puis jouée à plusieurs. Un `collision.png` en noir et blanc se produit sans graphiste.
+- **Retenu, étape `8.3`, le miroir calculé**: le serveur retourne la collision, la page retourne le décor, et une carte ne se livre plus qu'une fois. Indépendante de `8.2`.
+- **Écarté pour l'instant**: l'étape de mesure numéro 1 de `etude-grandes-cartes.md`, le banc à 1 000 et 2 000 PNJ. La taille retenue, 4,3 Mpx, tient largement dans ce que la section 6 donne pour acquis.
+- **Reporté à plus tard, et seulement si la carte de travail convainc**: la fiche de commande d'une page pour le graphiste, tirée des sections 1 et 4, avec le piège de l'étirement en tête.
 
 ## Ce qui n'est pas mesuré ici
 

@@ -39,7 +39,7 @@ Aucune modification de `packages/`, de `tests/`, de `assets/`, de `legacy/` ni d
 - Ajoutés: aucun, c'est une étude (entrée ROADMAP).
 - Résultat: **2 481 tests Vitest au vert** (2 413 du projet `unitaires`, 68 du projet `base`), exactement le compte du handoff 7.8, puisque aucun paquet n'est touché. Types compilés (`tsc --build`), linter et formatage verts.
 - Couverture de `packages/sim`: inchangée, le paquet n'est pas touché.
-- État de la CI: à vérifier sur `6a3082d` après la poussée. Le commit ne touche que de la documentation et un outil hors `packages/`.
+- État de la CI: **`7c7993b` verte** (exécution 35497595093), « Types, linter et tests », « Bout en bout » et « Mise en ligne ». L'étape ne touche que de la documentation et un outil hors `packages/`.
 
 ## Décisions et écarts au plan
 
@@ -64,15 +64,24 @@ Repris du handoff 7.8, inchangé: une couleur de joueur sombre n'a pas encore é
 
 ## Prochaine action exacte
 
-**Poser les cinq questions de la section 7 de `docs/mesures/etude-structures-de-carte.md` au porteur du projet**, et attendre ses réponses: elles décident de la suite, et rien d'utile ne peut être construit avant. La plus structurante est la deuxième, le détour médian visé, qui fait la différence entre commander un décor et commander un terrain de jeu.
+Ouvrir l'étape **8.2, la carte de travail**, dans une conversation neuve, sur `master`: rédiger sa fiche selon le cas de repli du PROTOCOLE, puis produire un `collision.png` au trait, noir et blanc, qui dessine **un quartier de 2400 sur 1800 visant un détour médian de 1,20 à 1,35**, le juger par les douze critères de la section 4 de l'étude **avant** d'y jouer, puis le jouer à plusieurs. Point de départ: `docs/mesures/etude-structures-de-carte.md`, sections 4, 5.1 et 7.1, et l'outil `mesurer-les-cartes.mjs`, qui mesure la carte produite comme il mesure les autres.
 
-Les deux suites possibles sont décrites à la section 8 de l'étude, et deviendront des étapes à part entière:
+L'étape `8.3`, le miroir calculé, est indépendante et peut passer avant ou après.
 
-- si le détour est la réponse, une étape « carte de travail », qui dessine une collision au trait, sans décor, pour éprouver un quartier en jeu avant toute commande;
-- si la taille est la réponse, le chantier de mesure numéro 1 de `etude-grandes-cartes.md`, le banc à 1 000 et 2 000 faux ninjas.
+## Les décisions du porteur du projet, prises le 20 septembre 2026
 
-Dans les deux cas, une fiche de commande d'une page pour le graphiste, tirée des sections 1 et 4 de l'étude, précède toute commande.
+Données le jour même, en réponse aux cinq questions de la section 7 de l'étude, et à deux autres posées dans la foulée. Consignées à la section 7.1 de l'étude et au journal de `docs/design/README.md`.
+
+1. **Les deux manques existent, mais la structure d'abord**: une carte structurée éprouvée en jeu avant tout contenu.
+2. **Détour médian visé: 1,20 à 1,35**, l'archétype du quartier.
+3. **Taille: 2400 sur 1800**, et non les 2000 sur 1500 auxquels l'étude décrivait le quartier. C'est donc un quartier plus grand, dont un écran montrera 33 pour cent au lieu des 48 de Tokyo.
+4. **Pas de graphiste pour l'instant**: on avance en noir et blanc, et un décor ne se commande que si la structure convainc.
+5. **Le miroir sera calculé par le jeu**, et non livré en images. Une carte ne se commande plus qu'une fois.
+6. **Une carte de travail d'abord**, jugée par les douze critères puis jouée.
+7. **Le repérage se juge à la recette**, pas à l'avance: la minimap ne se repense que si l'on se perd vraiment.
+
+Conséquence à établir dans l'étape 8.2: le plafond de PNJ de cette carte, que l'étude situe entre 340 et 400 à la densité de Tokyo, et qui se confirme par la mesure et non au jugé.
 
 ## Étape suivante
 
-Aucune fiche à lire: la phase 8 n'a pas d'étape 8.2 planifiée, et elle ne peut pas l'être avant les réponses ci-dessus. La prochaine étape se décide avec le porteur du projet, puis sa fiche se rédige selon le cas de repli du PROTOCOLE, comme celle-ci.
+Fiche à lire: `docs/plan/etape-8-2.md`, à rédiger au début de l'étape. Les deux étapes ouvertes par ces décisions, `8.2` et `8.3`, sont décrites à la section 3 de `docs/plan/ROADMAP.md`.
