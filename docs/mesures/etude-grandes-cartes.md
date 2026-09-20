@@ -2,6 +2,8 @@
 
 Question du porteur du projet, après l'étape 7.3: que coûterait une carte beaucoup plus grande, avec beaucoup plus de bots, par exemple pour un mode Battle Royale ? **Aucune décision n'est prise.** Le porteur du projet n'a pas les ressources pour produire une grande carte pour l'instant; cette étude est gardée pour le jour où la question reviendra.
 
+**Suite, 20 septembre 2026**: l'étape 8.1 a produit `etude-structures-de-carte.md`, qui traite des cartes qu'on pourrait commander demain, aux tailles que le socle tient déjà, et qui mesure les deux cartes existantes. Les deux documents se complètent: celui-ci reste la référence sur le très grand, l'autre sur la structure et la commande d'une carte.
+
 ## Verdict
 
 Le socle n'est pas remis en cause: le moteur pur, les jeux de règles par mode (une zone qui rétrécit tient dans `estDecidee` et `horsJeu`, ajoutés à l'étape 7.3), les rooms, le flux binaire en différentiel, le banc de charge et l'empreinte des parties. Mais quatre plafonds, sans effet aux tailles actuelles, cèdent en grand, et doivent être levés avant un tel mode.

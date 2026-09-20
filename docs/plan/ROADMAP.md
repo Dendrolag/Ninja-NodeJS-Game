@@ -134,6 +134,8 @@ Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision 
 
 **Étape 7.8 terminée le 20 septembre 2026: le repère de localisation est une onde.** Les quatre triangles rouges cèdent la place à deux anneaux à la couleur du joueur, cernés de blanc, qui se resserrent sur son ninja en boucle pendant le repérage, plus un anneau d'ancrage discret. Les occasions, les durées et le fondu ne changent pas. Fiche: `docs/plan/etape-7-8.md`. Suite: `8.1`, l'étude des structures de carte.
 
+**Étape 8.1 terminée le 20 septembre 2026: l'étude des structures de carte.** Première étape de la phase 8, et un document, pas du code: `docs/mesures/etude-structures-de-carte.md`. Ce qu'est techniquement une carte (neuf fichiers, un seuil de luminosité, un étirement à ne pas rater), ce que valent les deux cartes existantes une fois mesurées (des terrains ouverts: détour médian 1,08 et 1,06), ce qu'une partie à plusieurs demande à une carte, douze critères de jugement chiffrés, quatre archétypes, et les limites du socle (environ 12 Mpx et 1 000 PNJ sans rien changer). Un outil de mesure relançable l'accompagne. Fiche: `docs/plan/etape-8-1.md`. Suite: **aucune étape n'est planifiée**, parce que l'étude s'arrête sur cinq questions qui reviennent au porteur du projet (section 7). Les deux suites possibles, selon sa réponse, sont décrites à la section 8 de l'étude.
+
 ---
 
 ## 4. Carte thématique des étapes
@@ -284,8 +286,9 @@ Tests requis: TU de la géométrie et de l'opacité du repère; bout en bout ver
 
 ### Phase 8. Cartes
 
-**8.1. Étude des structures de carte.** Étape ajoutée le 20 septembre 2026, à la demande du porteur du projet. Une note, sans code: ce qu'est techniquement une carte (image de collision et seuil de luminosité, fond et avant-plan, vignette, dimensions, miroir), ce qu'une carte doit à une partie à plusieurs (points d'apparition, distances, visibilité, goulets, densité de PNJ), trois ou quatre archétypes de structure de tailles différentes, et de quoi les juger avant de commander un décor. Le rendu visuel final serait confié au graphiste de Tokyo. Point de départ: `docs/mesures/etude-grandes-cartes.md` et les mesures de charge par carte.
+**8.1. Étude des structures de carte.** Faite le 20 septembre 2026 (fiche `docs/plan/etape-8-1.md`, étude `docs/mesures/etude-structures-de-carte.md`). Étape ajoutée le 20 septembre 2026, à la demande du porteur du projet. Une note, sans code: ce qu'est techniquement une carte (image de collision et seuil de luminosité, fond et avant-plan, vignette, dimensions, miroir), ce qu'une carte doit à une partie à plusieurs (points d'apparition, distances, visibilité, goulets, densité de PNJ), trois ou quatre archétypes de structure de tailles différentes, et de quoi les juger avant de commander un décor. Le rendu visuel final serait confié au graphiste de Tokyo. Point de départ: `docs/mesures/etude-grandes-cartes.md` et les mesures de charge par carte.
 Tests requis: aucun, c'est une étude. Les prototypes qu'elle proposera feront leurs propres étapes.
+Résultat: les deux cartes existantes sont mesurées et se révèlent des terrains ouverts (détour médian 1,08 et 1,06, contre 1,2 à 1,7 pour une carte structurée), d'un seul tenant et sans poche isolée; un écran d'ordinateur montre 48 pour cent de Tokyo. Douze critères de jugement chiffrés, quatre archétypes, et un outil de mesure relançable (`docs/mesures/mesurer-les-cartes.mjs`, chiffres dans `cartes.json`). Le socle tient environ 12 Mpx et 1 000 PNJ sans rien changer. Cinq questions restent au porteur du projet, dont la taille visée, le détour visé et le sort du miroir: section 7 de l'étude. La suite en dépend, et n'est donc pas planifiée ici.
 
 ---
 

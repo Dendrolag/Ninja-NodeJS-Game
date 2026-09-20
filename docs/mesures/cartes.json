@@ -1,0 +1,134 @@
+{
+  "genereLe": "2026-09-20",
+  "outil": "docs/mesures/mesurer-les-cartes.mjs",
+  "reglages": {
+    "rayonEntitePx": 16,
+    "margeDeBordPx": 100,
+    "vitessePxParSeconde": 150,
+    "pasDeGrillePx": 4,
+    "departsTires": 24,
+    "graine": 20260920
+  },
+  "cartes": [
+    {
+      "carte": "map1",
+      "nom": "Tokyo",
+      "miroir": false,
+      "dimensions": {
+        "largeur": 2000,
+        "hauteur": 1500
+      },
+      "surfaceMpx": 3,
+      "partDeSolPct": 88.9,
+      "partTenablePct": 75.3,
+      "morceaux": 1,
+      "partDuPrincipalPct": 100,
+      "airesIsoleesPx": 0,
+      "plusGrosMorceauIsolePx": 0,
+      "partDeLaBandeDApparitionPct": 82.7,
+      "degagementPx": {
+        "p10": 24,
+        "median": 64,
+        "p90": 135,
+        "maximum": 244
+      },
+      "traverseePx": 2699,
+      "traverseeS": 18,
+      "parcoursTypiquePx": 956,
+      "parcoursTypiqueS": 6.4,
+      "parcoursCourtS": 2.5,
+      "parcoursLongS": 11.1,
+      "detourMedian": 1.08
+    },
+    {
+      "carte": "map1",
+      "nom": "Tokyo",
+      "miroir": true,
+      "dimensions": {
+        "largeur": 2000,
+        "hauteur": 1500
+      },
+      "surfaceMpx": 3,
+      "partDeSolPct": 88.9,
+      "partTenablePct": 75.3,
+      "morceaux": 1,
+      "partDuPrincipalPct": 100,
+      "airesIsoleesPx": 0,
+      "plusGrosMorceauIsolePx": 0,
+      "partDeLaBandeDApparitionPct": 82.7,
+      "degagementPx": {
+        "p10": 24,
+        "median": 64,
+        "p90": 135,
+        "maximum": 244
+      },
+      "traverseePx": 2655,
+      "traverseeS": 17.7,
+      "parcoursTypiquePx": 953,
+      "parcoursTypiqueS": 6.4,
+      "parcoursCourtS": 2.4,
+      "parcoursLongS": 11,
+      "detourMedian": 1.08
+    },
+    {
+      "carte": "map3",
+      "nom": "Spirit & Time",
+      "miroir": false,
+      "dimensions": {
+        "largeur": 3000,
+        "hauteur": 2000
+      },
+      "surfaceMpx": 6,
+      "partDeSolPct": 97.5,
+      "partTenablePct": 94.4,
+      "morceaux": 1,
+      "partDuPrincipalPct": 100,
+      "airesIsoleesPx": 0,
+      "plusGrosMorceauIsolePx": 0,
+      "partDeLaBandeDApparitionPct": 85.7,
+      "degagementPx": {
+        "p10": 63,
+        "median": 258,
+        "p90": 471,
+        "maximum": 611
+      },
+      "traverseePx": 3778,
+      "traverseeS": 25.2,
+      "parcoursTypiquePx": 1506,
+      "parcoursTypiqueS": 10,
+      "parcoursCourtS": 3.9,
+      "parcoursLongS": 16.2,
+      "detourMedian": 1.06
+    },
+    {
+      "carte": "map3",
+      "nom": "Spirit & Time",
+      "miroir": true,
+      "dimensions": {
+        "largeur": 3000,
+        "hauteur": 2000
+      },
+      "surfaceMpx": 6,
+      "partDeSolPct": 97.5,
+      "partTenablePct": 94.4,
+      "morceaux": 1,
+      "partDuPrincipalPct": 100,
+      "airesIsoleesPx": 0,
+      "plusGrosMorceauIsolePx": 0,
+      "partDeLaBandeDApparitionPct": 85.7,
+      "degagementPx": {
+        "p10": 63,
+        "median": 258,
+        "p90": 471,
+        "maximum": 611
+      },
+      "traverseePx": 3778,
+      "traverseeS": 25.2,
+      "parcoursTypiquePx": 1506,
+      "parcoursTypiqueS": 10,
+      "parcoursCourtS": 3.9,
+      "parcoursLongS": 16.2,
+      "detourMedian": 1.06
+    }
+  ]
+}

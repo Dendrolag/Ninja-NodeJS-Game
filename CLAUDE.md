@@ -144,4 +144,5 @@ Les règles d'enchaînement autonome et les conditions d'arrêt sont dans docs/p
 - Journal de conception et décisions: `docs/design/README.md`
 - Invariant de pureté: `.claude/rules/sim-purity.md`
 - Mesures de charge et seuils de performance: `docs/mesures/charge-serveur.md`
+- Ce qu'est une carte, et de quoi juger une carte nouvelle: `docs/mesures/etude-structures-de-carte.md`
 - Mise en ligne et exploitation de la production: `docs/deploiement.md`
