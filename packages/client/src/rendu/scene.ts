@@ -83,7 +83,7 @@ import type { VueLissee } from './interpolation.js';
 import type { TacheScene } from './katana.js';
 import { DEMI_ARC_DU_KATANA, imageDuMassacre } from './katana.js';
 import type { Localisation } from './localisation.js';
-import { flechesDeLocalisation, opaciteDeLocalisation } from './localisation.js';
+import { opaciteDeLocalisation, reperesDeLocalisation } from './localisation.js';
 import { adresseDImage } from './textures.js';
 
 /** Un sprite a poser sur la carte. */
@@ -124,15 +124,6 @@ export interface DisqueScene {
 export interface ZoneScene extends DisqueScene {
   readonly type: TypeZone;
   readonly libelle: string;
-}
-
-/** Un triangle plein, cerne d'un trait. */
-export interface FlecheScene {
-  readonly id: string;
-  /** Les trois sommets a plat, en coordonnees de carte: x1, y1, x2, y2, x3, y3. */
-  readonly points: readonly number[];
-  readonly remplissage: Teinte;
-  readonly contour: Teinte & { readonly epaisseur: number };
 }
 
 /** Un cone: la portee d'un tir du mode Tactique, devant un joueur (etape 7.1). */
@@ -183,11 +174,11 @@ export interface Scene {
   /** Le decalage de la camera d'une secousse, en pixels de carte. Nul hors du Massacre. */
   readonly secousse: { readonly x: number; readonly y: number };
   /**
-   * Les reperes poses par-dessus tout, premier plan compris: les fleches qui
-   * designent notre personnage. Un toit ne doit pas les cacher, puisque c'est
+   * Les reperes poses par-dessus tout, premier plan compris: les anneaux qui
+   * designent notre personnage (etape 7.8). Un toit ne doit pas les cacher, puisque c'est
    * justement quand on ne se voit plus qu'on les demande.
    */
-  readonly reperes: readonly FlecheScene[];
+  readonly reperes: readonly DisqueScene[];
   /**
    * L'arc de nos charges, sous notre ninja et par-dessus les personnages (Tactique, etape
    * 7.7). Vide dans les autres modes.
@@ -423,16 +414,17 @@ export function construireScene(
     });
   }
 
-  // Les fleches suivent la position AFFICHEE de notre personnage, pas celle du
-  // dernier battement: sinon elles le devanceraient d'un battement.
+  // Le repere suit la position AFFICHEE de notre personnage, pas celle du dernier
+  // battement: sinon il le devancerait d'un battement. Il prend notre couleur (etape 7.8).
   const monEntite = lissee.entites.find(({ entite }) => entite.id === moi);
   const reperes =
     monEntite === undefined
       ? []
-      : flechesDeLocalisation(
+      : reperesDeLocalisation(
           monEntite,
           opaciteDeLocalisation(localisation, maintenant),
           maintenant,
+          couleurEnNombre(monEntite.entite.couleur),
         );
 
   const massacre = imageDuMassacre(etat, maintenant, niveauDeSang);

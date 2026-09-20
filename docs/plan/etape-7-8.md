@@ -80,6 +80,13 @@ Conditions de ROADMAP réunies, plus:
 2. **Le repère passe au-dessus du premier plan**, toits compris: c'est voulu, c'est justement quand on ne se voit plus qu'on le demande.
 3. **L'anneau ne doit pas se confondre avec les halos de bonus**, qui sont des disques pleins et pâles autour du joueur: l'onde est un trait net qui bouge.
 
+## Réconciliation pendant l'étape (20 septembre 2026)
+
+Écarts entre la fiche et ce qui a été construit.
+
+1. **Aucun écart de fond.** Les six micro-décisions ont été construites telles quelles.
+2. **`FlecheScene` a disparu du contrat de la scène**, comme prévu: plus rien ne dessinait de triangle. Le calque des repères dessine des anneaux, et les tests de la boucle qui comptaient quatre flèches vérifient désormais qu'un repère est posé, sans compter ses traits.
+
 ## Rituel de fin de session
 
 Écrire `docs/handoffs/etape-7-8-handoff.md`, puis commiter. Prochaine action exacte: l'étape `8.1`, l'étude des structures de carte.

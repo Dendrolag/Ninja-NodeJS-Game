@@ -83,14 +83,7 @@ import type { IndicateurScene } from './charges.js';
 import { separerLesCalques } from './recoloration.js';
 import type { FormeDeSang } from './sang.js';
 import { adresseDImage, adresseDesDetails, adresseDuCorps } from './textures.js';
-import type {
-  ConeScene,
-  DisqueScene,
-  FlecheScene,
-  Scene,
-  SpriteScene,
-  ZoneScene,
-} from './scene.js';
+import type { ConeScene, DisqueScene, Scene, SpriteScene, ZoneScene } from './scene.js';
 
 /**
  * La police des libelles de zone.
@@ -682,18 +675,24 @@ function dessinerLIndicateur(
   }
 }
 
-/** Redessine les reperes, par-dessus tout le reste. Meme principe que les disques. */
-function dessinerLesReperes(graphique: Graphics, fleches: readonly FlecheScene[]): void {
+/**
+ * Redessine les reperes, par-dessus tout le reste: les anneaux qui designent notre
+ * personnage (etape 7.8). Meme principe que les disques, dans leur propre calque, le seul
+ * qui rayonne.
+ */
+function dessinerLesReperes(graphique: Graphics, reperes: readonly DisqueScene[]): void {
   graphique.clear();
 
-  for (const fleche of fleches) {
-    graphique.poly([...fleche.points]);
-    graphique.fill({ color: fleche.remplissage.couleur, alpha: fleche.remplissage.alpha });
-    graphique.stroke({
-      color: fleche.contour.couleur,
-      alpha: fleche.contour.alpha,
-      width: fleche.contour.epaisseur,
-    });
+  for (const repere of reperes) {
+    graphique.circle(repere.x, repere.y, Math.max(repere.rayon, 0));
+
+    if (repere.contour !== undefined) {
+      graphique.stroke({
+        color: repere.contour.couleur,
+        alpha: repere.contour.alpha,
+        width: repere.contour.epaisseur,
+      });
+    }
   }
 }
 

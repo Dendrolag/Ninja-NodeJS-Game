@@ -132,6 +132,8 @@ Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision 
 
 **Décision du 20 septembre 2026: deux étapes suivent 7.7.** Le porteur du projet a demandé, en recettant les objets du Tactique, de revoir le style des repères de localisation, et d'amorcer les nouvelles cartes. Sur maquettes (`docs/design/etape-7-8/`), il a choisi de remplacer les quatre triangles rouges par une onde qui se referme, à la couleur du joueur: étape `7.8`. Pour les cartes, il a choisi une étude avant tout prototype: étape `8.1`. Leurs fiches se rédigent au début de chacune, selon le cas de repli du PROTOCOLE.
 
+**Étape 7.8 terminée le 20 septembre 2026: le repère de localisation est une onde.** Les quatre triangles rouges cèdent la place à deux anneaux à la couleur du joueur, cernés de blanc, qui se resserrent sur son ninja en boucle pendant le repérage, plus un anneau d'ancrage discret. Les occasions, les durées et le fondu ne changent pas. Fiche: `docs/plan/etape-7-8.md`. Suite: `8.1`, l'étude des structures de carte.
+
 ---
 
 ## 4. Carte thématique des étapes
@@ -277,7 +279,7 @@ Tests requis: TU de la validation des réglages; TI d'une partie avec pluie et d
 **7.7. Objets du Tactique.** Faite le 20 septembre 2026 (fiche `docs/plan/etape-7-7.md`). Étape ajoutée le 19 septembre 2026, à la demande du porteur du projet. Six objets réservés au Tactique, qui s'ajoutent aux six existants: Rafale (un tir ne coûte plus de charge), Recharge rapide, Visée large, et leurs contraires Tir unique, Recharge lente, Visée étroite, qui frappent les autres joueurs. Un bonus et le malus contraire s'annulent; les taux d'apparition baissent pour garder la même densité d'objets. Les charges s'affichent en arc sous le ninja, pour soi seul; la vue sur ordinateur passe à 500 pixels de haut; la minimap ne montre que les joueurs proches.
 Tests requis: TU de chaque objet, des annulations, des recharges variables et de l'apparition; TI d'une partie Tactique à travers le vrai serveur; TU de l'arc, des icônes, de la vue et de la minimap; empreinte des parties de référence identique; bout en bout vert.
 
-**7.8. Style des repères de localisation.** Étape ajoutée le 20 septembre 2026, à la demande du porteur du projet. Les quatre triangles rouges cernés de blanc du jeu d'origine ne tiennent pas dans le style du jeu, et leur rouge se confond avec les Black Ninjas. Ils cèdent la place à une onde qui se referme: deux anneaux à la couleur du joueur, qui se resserrent sur son ninja (rendu A des maquettes). À trancher en ouvrant l'étape: la couleur en Chasse, où les traqueurs partagent une couleur, et le rayonnement, puisque les repères passent dans le calque qui rayonne.
+**7.8. Style des repères de localisation.** Faite le 20 septembre 2026 (fiche `docs/plan/etape-7-8.md`). Étape ajoutée le 20 septembre 2026, à la demande du porteur du projet. Les quatre triangles rouges cernés de blanc du jeu d'origine ne tiennent pas dans le style du jeu, et leur rouge se confond avec les Black Ninjas. Ils cèdent la place à une onde qui se referme: deux anneaux à la couleur du joueur, qui se resserrent sur son ninja (rendu A des maquettes). À trancher en ouvrant l'étape: la couleur en Chasse, où les traqueurs partagent une couleur, et le rayonnement, puisque les repères passent dans le calque qui rayonne.
 Tests requis: TU de la géométrie et de l'opacité du repère; bout en bout vert; le reste du rendu inchangé.
 
 ### Phase 8. Cartes

@@ -28,7 +28,7 @@
  *
  *   - rendu/, l'affichage du terrain. Un coeur pur (camera, lissage, scene) que
  *     l'on teste sans navigateur, et un adaptateur PixiJS qui pose la scene sur
- *     le GPU. La lueur neon y est un filtre de calque, sur les seules fleches de localisation.
+ *     le GPU. La lueur neon y est un filtre de calque, sur le seul repere de localisation.
  *   - controles/, la saisie. Une table de touches et un calcul d'intention,
  *     purs; deux branchements minces sur le clavier et le tactile.
  *   - hud/, la surcouche. Un modele pur de ce qu'il faut afficher, et un
@@ -41,7 +41,7 @@
  *     enchaine. Meme decoupage que partout ailleurs: des modeles purs dans
  *     interface/modeles, des ecrivains de document qui ne decident rien.
  *   - annonces, les phrases qui disent ce qui vient d'arriver.
- *   - rendu/localisation, les fleches qui designent notre personnage.
+ *   - rendu/localisation, l'onde qui designe notre personnage.
  *   - principal.ts, le point de depart dans le navigateur. Il n'est pas exporte
  *     ici: l'importer lancerait l'application. L'empaqueteur
  *     (scripts/empaqueter.ts) part de lui.
@@ -166,7 +166,7 @@ export { borner, cameraSur, echellePour, suivre, versEcran, zoneVisible } from '
 export type { EntiteLissee, VueLissee } from './rendu/interpolation.js';
 export { TamponDeLissage, lisserUneEntite } from './rendu/interpolation.js';
 
-export type { DisqueScene, FlecheScene, Scene, SpriteScene, ZoneScene } from './rendu/scene.js';
+export type { DisqueScene, Scene, SpriteScene, ZoneScene } from './rendu/scene.js';
 export { SCENE_VIDE, construireScene, couleurEnNombre } from './rendu/scene.js';
 
 export { imageDeMarche, opaciteObjet, rayonPulsant } from './rendu/animation.js';
@@ -182,7 +182,7 @@ export {
 } from './rendu/apparence.js';
 
 export type { Localisation } from './rendu/localisation.js';
-export { flechesDeLocalisation, localiser, opaciteDeLocalisation } from './rendu/localisation.js';
+export { localiser, opaciteDeLocalisation, reperesDeLocalisation } from './rendu/localisation.js';
 
 export type { Boucle, OptionsBoucle } from './rendu/boucle.js';
 export { lancerLaBoucle } from './rendu/boucle.js';

@@ -254,26 +254,42 @@ export const APPARENCE_OBJET: Readonly<
 };
 
 /**
- * Les quatre fleches qui designent notre personnage quand on le cherche.
+ * Le repere qui designe notre personnage quand on le cherche: une onde qui se referme.
  *
- * Valeurs du jeu d'origine (drawPlayerLocator, client.js:3498): des triangles
- * rouges cernes de blanc, poses a quatre-vingts pixels du personnage et pointes
- * vers lui, qui respirent de huit pixels.
+ * Etape 7.8, rendu A des maquettes (docs/design/etape-7-8/), choisi par le porteur du
+ * projet le 20 septembre 2026. Deux anneaux a notre couleur, cernes de blanc, se
+ * resserrent sur le ninja, decales d'un demi-cycle, et un anneau d'ancrage discret reste
+ * autour de lui.
+ *
+ * AVANT, C'ETAIENT QUATRE TRIANGLES ROUGES cernes de blanc, poses a quatre-vingts pixels et
+ * pointes vers le personnage (drawPlayerLocator du jeu d'origine, client.js:3498). Le rouge
+ * ne tenait pas dans la palette du jeu, et se confondait avec le halo des Black Ninjas.
  */
 export const REPERE_LOCALISATION = {
-  /** Distance entre le personnage et la base de chaque fleche, en pixels de la carte. */
-  distance: 80,
-  /** Longueur d'une fleche, de sa base a sa pointe. */
-  longueur: 40,
-  /** Moitie de la largeur de la base. */
-  demiLargeur: 30,
-  /** Amplitude de la respiration, en pixels. */
-  amplitude: 8,
-  /** Vitesse de la respiration, en radians par milliseconde. */
-  cadence: 0.004,
-  remplissage: 0xff1e1e,
-  contour: 0xffffff,
-  epaisseur: 3,
+  /** Rayon d'un anneau au depart de sa course, en pixels de la carte. */
+  rayonDeDepart: 78,
+  /** Rayon a la fin de sa course, juste autour du personnage. */
+  rayonDArrivee: 30,
+  /** Duree d'une onde, en millisecondes. */
+  cycleMs: 900,
+  /** Avance du second anneau sur le premier, en part de cycle. */
+  decalage: 0.5,
+  /** Rayon de l'anneau d'ancrage, qui ne bouge pas. */
+  rayonDAncrage: 26,
+  /** Opacite de l'anneau d'ancrage. */
+  alphaDAncrage: 0.35,
+  /** Epaisseur de l'anneau d'ancrage. */
+  epaisseurDAncrage: 1.5,
+  /** Epaisseur du trait de notre couleur. */
+  epaisseur: 2.5,
+  /** Epaisseur du trait blanc pose dessous, qui cerne le premier. */
+  epaisseurDuCerne: 4.5,
+  /** Opacite du trait blanc, rapportee a celle de l'anneau. */
+  alphaDuCerne: 0.5,
+  /** Opacite d'un anneau au depart de sa course. Elle tombe a zero a l'arrivee. */
+  alphaAuDepart: 0.85,
+  /** Couleur du cerne. */
+  cerne: 0xffffff,
 } as const;
 
 /**
