@@ -130,6 +130,8 @@ Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision 
 
 **Étape 7.7 terminée le 20 septembre 2026: le Tactique a ses six objets.** Rafale, Recharge rapide et Visée large, et leurs contraires Tir unique, Recharge lente et Visée étroite, qui frappent les autres joueurs; un bonus et son contraire s'annulent. Les six n'existent que dans ce mode, réglables comme les autres objets, à la moitié de leur taux pour que la carte ne se charge pas davantage. Les charges se lisent sur un arc sous son propre ninja, la vue est plus proche sur ordinateur (500 pixels de carte au lieu de 900) et la minimap ne montre que les joueurs à moins de 900 pixels. Deux défauts anciens corrigés en chemin: Vision floue et Vision négative ne troublaient plus l'écran de leur victime, et un malus subi de nouveau voyait sa jauge s'allonger. La Horde est inchangée, empreinte des parties comprise; une partie Tactique coûte autant qu'avant au serveur (section 19 de `docs/mesures/charge-serveur.md`). Fiche: `docs/plan/etape-7-7.md`. Suite: les autres fonctionnalités reportées (Battle Royale, Chaos, pass de saison, skins, clans), dans l'ordre que fixe le porteur du projet.
 
+**Décision du 20 septembre 2026: deux étapes suivent 7.7.** Le porteur du projet a demandé, en recettant les objets du Tactique, de revoir le style des repères de localisation, et d'amorcer les nouvelles cartes. Sur maquettes (`docs/design/etape-7-8/`), il a choisi de remplacer les quatre triangles rouges par une onde qui se referme, à la couleur du joueur: étape `7.8`. Pour les cartes, il a choisi une étude avant tout prototype: étape `8.1`. Leurs fiches se rédigent au début de chacune, selon le cas de repli du PROTOCOLE.
+
 ---
 
 ## 4. Carte thématique des étapes
@@ -274,6 +276,14 @@ Tests requis: TU de la validation des réglages; TI d'une partie avec pluie et d
 
 **7.7. Objets du Tactique.** Faite le 20 septembre 2026 (fiche `docs/plan/etape-7-7.md`). Étape ajoutée le 19 septembre 2026, à la demande du porteur du projet. Six objets réservés au Tactique, qui s'ajoutent aux six existants: Rafale (un tir ne coûte plus de charge), Recharge rapide, Visée large, et leurs contraires Tir unique, Recharge lente, Visée étroite, qui frappent les autres joueurs. Un bonus et le malus contraire s'annulent; les taux d'apparition baissent pour garder la même densité d'objets. Les charges s'affichent en arc sous le ninja, pour soi seul; la vue sur ordinateur passe à 500 pixels de haut; la minimap ne montre que les joueurs proches.
 Tests requis: TU de chaque objet, des annulations, des recharges variables et de l'apparition; TI d'une partie Tactique à travers le vrai serveur; TU de l'arc, des icônes, de la vue et de la minimap; empreinte des parties de référence identique; bout en bout vert.
+
+**7.8. Style des repères de localisation.** Étape ajoutée le 20 septembre 2026, à la demande du porteur du projet. Les quatre triangles rouges cernés de blanc du jeu d'origine ne tiennent pas dans le style du jeu, et leur rouge se confond avec les Black Ninjas. Ils cèdent la place à une onde qui se referme: deux anneaux à la couleur du joueur, qui se resserrent sur son ninja (rendu A des maquettes). À trancher en ouvrant l'étape: la couleur en Chasse, où les traqueurs partagent une couleur, et le rayonnement, puisque les repères passent dans le calque qui rayonne.
+Tests requis: TU de la géométrie et de l'opacité du repère; bout en bout vert; le reste du rendu inchangé.
+
+### Phase 8. Cartes
+
+**8.1. Étude des structures de carte.** Étape ajoutée le 20 septembre 2026, à la demande du porteur du projet. Une note, sans code: ce qu'est techniquement une carte (image de collision et seuil de luminosité, fond et avant-plan, vignette, dimensions, miroir), ce qu'une carte doit à une partie à plusieurs (points d'apparition, distances, visibilité, goulets, densité de PNJ), trois ou quatre archétypes de structure de tailles différentes, et de quoi les juger avant de commander un décor. Le rendu visuel final serait confié au graphiste de Tokyo. Point de départ: `docs/mesures/etude-grandes-cartes.md` et les mesures de charge par carte.
+Tests requis: aucun, c'est une étude. Les prototypes qu'elle proposera feront leurs propres étapes.
 
 ---
 

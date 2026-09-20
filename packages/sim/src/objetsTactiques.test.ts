@@ -28,6 +28,7 @@ import { faireApparaitreLesObjets, poserObjet, ramasser } from './objets.js';
 import {
   AUCUN_EFFET_TACTIQUE,
   chargesMaximum,
+  dureeDeLEffet,
   effetQuiAgit,
   estUnEffetTactique,
   gelerOuRendre,
@@ -164,6 +165,11 @@ describe('le catalogue des objets du Tactique', () => {
     for (const nature of ['vitesse', 'invincibilite', 'revelation', 'flou'] as const) {
       expect(estUnEffetTactique(nature)).toBe(false);
     }
+  });
+
+  it('refuse de donner la duree d un objet hors d une partie Tactique', () => {
+    // Une faute d'appelant: aucun objet du Tactique n'apparait ailleurs.
+    expect(() => dureeDeLEffet(partie('classique').reglages, 'rafale')).toThrow(/Tactique/u);
   });
 
   it('n en met aucun en jeu hors du Tactique', () => {
