@@ -20,6 +20,14 @@ Exception, les deux sons du katana du mode Massacre (étape 7.4), `sons/katana-s
 
 De même, les deux sons du fusil du mode Tactique, `sons/shotgun-wave.mp3` (chacun de nos tirs) et `sons/shotgun-reload.mp3` (une charge qui revient), fournis par le porteur du projet à l'étape 5.5, le même jour.
 
+Exception plus large, **la carte `cartes/quartier/`**: elle ne vient de nulle part. Ses sept images sont produites par un programme du dépôt, `docs/mesures/dessiner-le-quartier.mjs`, à l'étape 8.2. C'est la première carte dessinée pour ce jeu-ci, et la seule qui se refait d'une commande:
+
+```bash
+node docs/mesures/dessiner-le-quartier.mjs
+```
+
+Ne pas retoucher ses images à la main: le programme les réécrirait. La géométrie du quartier se change dans le programme, et se juge ensuite par `docs/mesures/mesurer-les-cartes.mjs`.
+
 ## Arborescence
 
 | Dossier                            | Contenu                                                                                                                   | Qui le lit                                               |
@@ -36,9 +44,11 @@ Les chemins ne se recopient nulle part: ils se fabriquent dans `packages/shared/
 
 Contrairement au code et à la documentation. Ce sont des noms de contenu, pas de code: les renommer obligerait à retoucher des images inchangées depuis deux ans, pour un gain nul, et couperait le lien avec la branche `master` d'où ils viennent. Les noms des dossiers, eux, suivent la convention du projet.
 
-## Les images de carte font toutes 3000x2000
+## Les images des cartes héritées font toutes 3000x2000
 
 Y compris celles de map1, Tokyo, dont la carte mesure 2000x1500. Ce n'est pas une erreur: le jeu d'origine **redimensionne** ces images aux dimensions de la carte au chargement, sans conserver les proportions. Le décodage du terrain (`packages/server/src/terrain.ts`) et l'affichage (`packages/client/src/rendu/`) reproduisent tous les deux ce redimensionnement, sans quoi les murs ne seraient pas là où le décor les montre.
+
+Le Quartier, lui, est dessiné à ses dimensions exactes, 2400x1800. Le redimensionnement du serveur et l'étirement du client s'y appliquent aussi, et n'y changent rien. C'est ce qu'il faudra demander à un graphiste: dessiner à la taille de la carte évite le seul piège vraiment coûteux de la commande.
 
 ## map2 a disparu: Tokyo est une seule carte
 

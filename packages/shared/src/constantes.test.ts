@@ -42,19 +42,22 @@ describe('vitesses', () => {
 });
 
 describe('cartes', () => {
-  it('porte les deux cartes jouables, avec leurs dimensions reelles', () => {
+  it('porte les trois cartes jouables, avec leurs dimensions reelles', () => {
     // Le defaut X5 du legacy renvoyait 2000x1500 meme sur map3. Ici chaque carte
     // porte ses vraies dimensions, et le moteur ne travaille que sur celles-la.
+    // Le Quartier s'est ajoute a l'etape 8.2: c'est la carte de travail, la seule
+    // dessinee pour ce jeu-ci et non heritee du jeu d'origine.
     expect(CARTES).toEqual({
       map1: { largeur: 2000, hauteur: 1500 },
       map3: { largeur: 3000, hauteur: 2000 },
+      quartier: { largeur: 2400, hauteur: 1800 },
     });
   });
 
   it('garde map2 parmi les cartes enregistrees, sans la rendre jouable (etape 7.6)', () => {
     // L'enumeration de la base en est tiree: perdre map2 rendrait illisibles les
     // parties jouees sur l'ancienne Tokyo sans pluie.
-    expect(CARTES_ENREGISTREES).toEqual(['map1', 'map2', 'map3']);
+    expect(CARTES_ENREGISTREES).toEqual(['map1', 'map2', 'map3', 'quartier']);
     expect(Object.hasOwn(CARTES, 'map2')).toBe(false);
   });
 
@@ -67,8 +70,10 @@ describe('cartes', () => {
 
   it('donne un plafond de faux ninjas a chaque carte, dans la borne des reglages', () => {
     // Decision du porteur du projet du 18 septembre 2026: 300 sur Tokyo, 500 sur Spirit
-    // & Time, la meme densite a peu pres.
-    expect(PLAFONDS_DE_FAUX_NINJAS).toEqual({ map1: 300, map3: 500 });
+    // & Time, la meme densite a peu pres. Le Quartier suit la meme densite, appliquee a
+    // sa surface reellement tenable, mesuree a l'etape 8.2: 2,60 Mpx a 133 faux ninjas
+    // par Mpx donnent 345, arrondis a 340.
+    expect(PLAFONDS_DE_FAUX_NINJAS).toEqual({ map1: 300, map3: 500, quartier: 340 });
     expect(Math.max(...Object.values(PLAFONDS_DE_FAUX_NINJAS))).toBe(
       BORNES_REGLAGES.nombreBotsInitial.maximum,
     );

@@ -1,0 +1,1 @@
+ALTER TYPE "public"."carte" ADD VALUE 'quartier';

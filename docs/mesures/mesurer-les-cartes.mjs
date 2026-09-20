@@ -46,8 +46,20 @@ const RESSOURCES = join(RACINE, 'assets');
  */
 const PAS_DE_GRILLE = 4;
 
-/** Nombre de points de depart tires pour estimer les distances typiques. */
-const DEPARTS_TIRES = 24;
+/**
+ * Nombre de points de depart tires pour estimer les distances typiques.
+ *
+ * Porte de vingt-quatre a quatre-vingts a l'etape 8.2. VINGT-QUATRE NE SUFFISAIENT
+ * PAS: deplacer une place de trente pixels faisait bouger le detour median de cinq
+ * centiemes dans un sens ou dans l'autre, parce que les vingt-quatre points tires
+ * n'etaient plus les memes. Sur les deux cartes ouvertes de l'etape 8.1, ou tous
+ * les trajets se ressemblent, cela ne se voyait pas. Sur une carte structuree, ou
+ * un point tire dans une cour ne vaut pas un point tire sur une artere, le bruit
+ * devenait plus grand que ce qu'on cherchait a mesurer. Quatre-vingts points font
+ * six mille trajets, et deux fois plus de calcul: c'est le prix d'un chiffre qu'on
+ * peut comparer a lui-meme.
+ */
+const DEPARTS_TIRES = 80;
 
 /** Graine du tirage des points de depart: deux executions donnent les memes chiffres. */
 const GRAINE = 20260920;
@@ -58,6 +70,8 @@ const TERRAINS = [
   { carte: 'map1', nom: 'Tokyo', miroir: true },
   { carte: 'map3', nom: 'Spirit & Time', miroir: false },
   { carte: 'map3', nom: 'Spirit & Time', miroir: true },
+  { carte: 'quartier', nom: 'Quartier', miroir: false },
+  { carte: 'quartier', nom: 'Quartier', miroir: true },
 ];
 
 /** Un pixel de la carte est-il un mur ? Meme lecture de bits que packages/sim. */
@@ -562,7 +576,19 @@ function mesurer({ carte: identifiant, nom, miroir }) {
   };
 }
 
-const mesures = TERRAINS.map((terrain) => {
+/**
+ * Les terrains a mesurer: tous, ou seulement ceux que la ligne de commande nomme.
+ *
+ * Mesurer coute quelques secondes par terrain, et mettre au point une carte
+ * nouvelle en demande des dizaines d'essais (etape 8.2). Nommer la carte qu'on
+ * travaille evite de remesurer celles qui n'ont pas bouge. Dans ce cas cartes.json
+ * n'est pas reecrit: il perdrait les cartes qu'on vient de sauter.
+ */
+const FILTRE = process.argv.slice(2);
+const A_MESURER =
+  FILTRE.length === 0 ? TERRAINS : TERRAINS.filter((terrain) => FILTRE.includes(terrain.carte));
+
+const mesures = A_MESURER.map((terrain) => {
   const debut = Date.now();
   const mesure = mesurer(terrain);
   console.log(
@@ -571,6 +597,8 @@ const mesures = TERRAINS.map((terrain) => {
       `${String(mesure.partTenablePct)} pour cent tenable, ` +
       `${String(mesure.morceaux)} morceaux, ` +
       `passage median ${String(mesure.degagementPx.median)} px, ` +
+      `detour median ${String(mesure.detourMedian)}, ` +
+      `bande d apparition ${String(mesure.partDeLaBandeDApparitionPct)} pour cent, ` +
       `traversee ${String(mesure.traverseeS)} s ` +
       `[${String(Math.round((Date.now() - debut) / 1000))} s de calcul]`,
   );
@@ -591,8 +619,12 @@ const sortie = {
   cartes: mesures,
 };
 
-writeFileSync(
-  join(RACINE, 'docs', 'mesures', 'cartes.json'),
-  `${JSON.stringify(sortie, null, 2)}\n`,
-);
-console.log('Ecrit: docs/mesures/cartes.json');
+if (FILTRE.length === 0) {
+  writeFileSync(
+    join(RACINE, 'docs', 'mesures', 'cartes.json'),
+    `${JSON.stringify(sortie, null, 2)}\n`,
+  );
+  console.log('Ecrit: docs/mesures/cartes.json');
+} else {
+  console.log('Mesure partielle: cartes.json n a pas ete reecrit.');
+}

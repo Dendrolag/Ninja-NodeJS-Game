@@ -152,7 +152,7 @@ describe('l accueil', () => {
   });
 
   it('annonce les cinq modes, et plus seulement le Classique (etape 5.5)', () => {
-    expect(obligatoire(hote, '.surtitre').textContent).toBe('5 modes · 2 cartes');
+    expect(obligatoire(hote, '.surtitre').textContent).toBe('5 modes · 3 cartes');
   });
 
   it('refuse d envoyer un pseudo invalide, et dit pourquoi', () => {

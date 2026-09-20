@@ -4,6 +4,8 @@
 
 **L'étude elle-même ne décide de rien.** L'étude dit ce qu'est techniquement une carte, ce que valent les deux cartes existantes, ce qu'une carte doit à une partie à plusieurs, comment juger une proposition, et ce que coûtent quelques structures possibles. Elle liste ce qui revient au porteur du projet, **et ses réponses, données le jour même, sont consignées à la section 7.1**: un quartier de 2400 sur 1800, à 1,20 de détour, éprouvé d'abord en carte de travail, sans graphiste, avec un miroir calculé par le jeu.
 
+**Complétée le 20 septembre 2026 par la section 9**, qui mesure la carte de travail produite à l'étape 8.2 et la juge par les douze critères de la section 4. Les sections 1 à 8 sont restées telles qu'elles étaient: c'est le raisonnement qui a mené à cette carte.
+
 Ce document ne remplace pas `etude-grandes-cartes.md` (16 septembre 2026), qui traite du très grand, 2 000 à 10 000 faux ninjas, et qui reste la référence sur ce sujet. Celui-ci traite des cartes qu'on pourrait commander demain, à des tailles que le socle tient déjà.
 
 ## Ce que l'étude a trouvé, en cinq lignes
@@ -97,13 +99,15 @@ L'outil décode les quatre terrains jouables **par le chemin réel du serveur**,
 | Parcours typique entre deux apparitions        |    956 px, 6,4 s | 1 506 px, 10,0 s |
 | Parcours court (un sur dix)                    |            2,5 s |            3,9 s |
 | Parcours long (un sur dix)                     |           11,1 s |           16,2 s |
-| **Détour médian** (chemin réel / vol d'oiseau) |         **1,08** |         **1,06** |
+| **Détour médian** (chemin réel / vol d'oiseau) |         **1,08** |         **1,07** |
 
 Les durées sont à la vitesse du jeu, 150 pixels par seconde; avec le bonus de vitesse, elles se divisent par 1,7. Les chiffres du miroir sont identiques à la virgule près, comme attendu d'un retournement: seule la traversée de Tokyo diffère de 1,6 pour cent, effet du pas de grille et non du terrain.
 
+Mise à jour du 20 septembre 2026, étape 8.2: **le détour de Spirit & Time est passé de 1,06 à 1,07**, et lui seul. L'outil tirait vingt-quatre points de départ, ce qui suffisait sur ces deux cartes ouvertes, où tous les trajets se ressemblent. Sur une carte structurée, le chiffre bougeait de cinq centièmes selon le tirage, ce qui est plus que ce qu'on cherchait à mesurer. Il en tire maintenant quatre-vingts, soit six mille trajets. Tokyo n'a pas bougé d'un centième.
+
 ### 2.2 Ce que ces chiffres disent
 
-**Nos deux cartes sont des terrains ouverts, pas des structures.** Le détour médian est la mesure qui le dit le plus clairement: 1,08 et 1,06. Aller d'un point à un autre coûte 6 à 8 pour cent de plus qu'en ligne droite. Dans une carte à couloirs, ce nombre monte à 1,3 ou 1,5; dans un labyrinthe, à 2 et au-delà. Il n'y a chez nous ni détour à subir, ni raccourci à connaître, ni chemin à choisir.
+**Nos deux cartes sont des terrains ouverts, pas des structures.** Le détour médian est la mesure qui le dit le plus clairement: 1,08 et 1,07. Aller d'un point à un autre coûte 6 à 8 pour cent de plus qu'en ligne droite. Dans une carte à couloirs, ce nombre monte à 1,3 ou 1,5; dans un labyrinthe, à 2 et au-delà. Il n'y a chez nous ni détour à subir, ni raccourci à connaître, ni chemin à choisir.
 
 **Les murs de Tokyo sont du mobilier.** Ils occupent 11 pour cent de la surface, et ce qu'ils retirent au jouable (13,6 points de plus, par leur seul encombrement) tient au fait qu'un ninja ne peut pas se coller à eux. Le passage médian fait 128 pixels de large, quatre fois un ninja. Ce sont des obstacles qu'on contourne, pas des murs qui organisent.
 
@@ -258,7 +262,7 @@ Repris des mesures de `charge-serveur.md`, section 17, et de l'étape 5.7.
 Ce qui revient au porteur du projet. L'étude ne le fait pas à sa place.
 
 1. **Quelle question on cherche à résoudre**: manque-t-il des cartes, ou manque-t-il de la structure aux cartes qu'on a ? Les deux se commandent différemment. La mesure de la section 2 dit que le second manque est réel et chiffré; le premier est un choix de contenu.
-2. **Quel détour médian on vise.** C'est la décision de conception principale, celle qui fait la différence entre un décor et un terrain de jeu. Repères: 1,06 et 1,08 aujourd'hui, 1,2 à 1,35 pour un quartier, 1,5 et plus pour un dédale.
+2. **Quel détour médian on vise.** C'est la décision de conception principale, celle qui fait la différence entre un décor et un terrain de jeu. Repères: 1,07 et 1,08 aujourd'hui, 1,2 à 1,35 pour un quartier, 1,5 et plus pour un dédale.
 3. **Quelle taille.** Tout ce qui tient dans 2000 x 1500 ne coûte rien au socle et ne change rien à l'interface. Au-delà de 3000 x 2000, la part visible d'un écran devient la vraie question, avant la performance.
 4. **Combien de cartes, et à quel prix.** Le décor de Tokyo pèse 2,3 Mo par orientation: c'est du travail de graphiste, pas de programmeur. Une carte bien structurée mais laide se teste; une carte belle et sans structure se jette.
 5. **Si le miroir reste obligatoire.** Il double la commande. Le jeu sait déjà se passer d'un fichier absent pour la pluie: la même souplesse pour le miroir est possible, et éviterait de payer deux fois chaque carte.
@@ -291,6 +295,89 @@ Les réponses de la section 7.1 tranchent: c'est la première des trois suites q
 - **Retenu, étape `8.3`, le miroir calculé**: le serveur retourne la collision, la page retourne le décor, et une carte ne se livre plus qu'une fois. Indépendante de `8.2`.
 - **Écarté pour l'instant**: l'étape de mesure numéro 1 de `etude-grandes-cartes.md`, le banc à 1 000 et 2 000 PNJ. La taille retenue, 4,3 Mpx, tient largement dans ce que la section 6 donne pour acquis.
 - **Reporté à plus tard, et seulement si la carte de travail convainc**: la fiche de commande d'une page pour le graphiste, tirée des sections 1 et 4, avec le piège de l'étirement en tête.
+
+## 9. La carte de travail, mesurée (étape 8.2, 20 septembre 2026)
+
+Le Quartier est la première carte dessinée pour ce jeu-ci, et la première à avoir une structure. Elle est en noir et blanc, sans graphiste, et elle se refait d'une commande:
+
+```bash
+node docs/mesures/dessiner-le-quartier.mjs
+node docs/mesures/mesurer-les-cartes.mjs quartier
+```
+
+Sa géométrie vit dans le programme et non dans l'image: quatre colonnes et trois lignes d'îlots, séparées par des rues de 120 pixels et par deux artères qui traversent la carte de part en part. Sept îlots sur huit sont des **îlots à cour**, c'est-à-dire une ceinture de bâtiments de 65 pixels d'épaisseur autour d'une cour ouverte par une seule porte. Aucune rue ne longe le bord de la carte: les îlots y touchent.
+
+### 9.1 Les chiffres, à côté des deux autres
+
+| Mesure                                         |            Tokyo |    Spirit & Time |         **Quartier** |
+| ---------------------------------------------- | ---------------: | ---------------: | -------------------: |
+| Dimensions                                     |      2000 x 1500 |      3000 x 2000 |      **2400 x 1800** |
+| Surface                                        |          3,0 Mpx |          6,0 Mpx |          **4,3 Mpx** |
+| Part de sol (hors murs)                        |           88,9 % |           97,5 % |           **69,8 %** |
+| Part où un ninja tient réellement              |           75,3 % |           94,4 % |           **59,6 %** |
+| Morceaux séparés, et part du plus grand        |    1, soit 100 % |    1, soit 100 % |    **1, soit 100 %** |
+| Part du jouable hors bande de bord             |           82,7 % |           85,7 % |           **93,1 %** |
+| Dégagement médian (demi-largeur d'un passage)  |            64 px |           258 px |            **60 px** |
+| Dégagement, dixième le plus serré              |            24 px |            63 px |            **24 px** |
+| Traversée, du point le plus loin à l'opposé    | 2 699 px, 18,0 s | 3 778 px, 25,2 s | **3 195 px, 21,3 s** |
+| Parcours typique entre deux apparitions        |    956 px, 6,4 s | 1 506 px, 10,0 s |  **1 462 px, 9,7 s** |
+| **Détour médian** (chemin réel / vol d'oiseau) |             1,08 |             1,07 |             **1,24** |
+
+**Le chiffre qui compte est le dernier.** Aller d'un point à un autre coûte 24 pour cent de plus qu'en ligne droite, contre 7 et 8 sur les deux cartes héritées. C'est le premier terrain du jeu où le chemin se choisit.
+
+### 9.2 Les douze critères, un par un
+
+| #   | Critère                                   | Seuil                    | Quartier             | Tenu       |
+| --- | ----------------------------------------- | ------------------------ | -------------------- | ---------- |
+| 1   | Un seul morceau d'un seul tenant          | 100 %                    | 100 %                | oui        |
+| 2   | Part jouable                              | 45 % au moins            | 59,6 %               | oui        |
+| 3   | Jouable hors bande de bord                | 70 % au moins            | 93,1 %               | oui        |
+| 4   | Dixième le plus serré des passages        | 20 px au moins           | 24 px                | oui        |
+| 5   | Surface jouable par entité, partie pleine | 5 000 px² au moins       | 7 315 px²            | oui        |
+| 6   | Traversée complète                        | 12 à 30 s                | 21,3 s               | oui        |
+| 7   | Détour médian                             | 1,20 à 1,35 (décidé)     | 1,24                 | oui        |
+| 8   | Superposition du décor et de la collision | exacte                   | même programme       | oui        |
+| 9   | Proportions de l'image et de la carte     | identiques               | dessinée à 2400x1800 | oui        |
+| 10  | Lisibilité du mur dans le décor           | visible                  | liseré cyan de 3 px  | oui        |
+| 11  | Avant-plan justifié                       | il cache sans gêner      | transparent          | sans objet |
+| 12  | Vignette parlante à 120 px                | structure reconnaissable | les îlots se lisent  | oui        |
+
+Les critères 8 et 9 sont tenus **par construction** et non par vérification: le même programme écrit les murs et le décor, dans la même passe et aux mêmes dimensions. C'est le principal avantage d'une carte calculée sur une carte dessinée, et c'est ce qu'il faudra obtenir d'un graphiste par la consigne, faute de pouvoir l'obtenir par construction.
+
+Le critère 5 se calcule pour une partie pleine: 340 faux ninjas au plafond, plus douze joueurs, sur 2,575 millions de pixels réellement tenables.
+
+### 9.3 Le plafond de faux ninjas: 340
+
+Établi par la mesure, comme le veut la section 1.5, et non au jugé. Tokyo porte 300 faux ninjas sur 2,259 millions de pixels tenables, soit **133 par million de pixels tenables**. Le Quartier en offre 2,575 millions, ce qui donne 342, arrondis à 340.
+
+Le banc de charge confirme le chiffre, murs de la carte compris:
+
+```bash
+pnpm charge --banc --carte quartier --bots-banc 150,340
+```
+
+À 340 faux ninjas et douze joueurs, un battement coûte **1,24 milliseconde** pour un budget de 50, et un cœur tient 28 parties. C'est très exactement le coût de Tokyo à 300 (1,02 ms, 34 parties). La structure ne coûte rien: les murs se lisent en un bit, et seul le nombre d'entités compte.
+
+### 9.4 Ce que la mise au point a appris
+
+Cinq essais mesurés, et trois enseignements qui serviront à la carte suivante.
+
+1. **Un boulevard périphérique dessert une carte deux fois.** Il offre un contournement gratuit de toute la structure, et il remplit de sol la bande de cent pixels où se tirent les apparitions: 68 pour cent du jouable hors bande au premier essai, contre 70 exigés par le critère 3. Îlots au ras du bord, et le même plan passe à 93 pour cent.
+2. **Une cour traversante n'est pas une cour, c'est une rue.** Percer une deuxième porte en face de la première fait tomber le détour de 1,24 à 1,10. Une cour à une seule porte est une cachette, et c'est ce qu'on voulait; à deux portes, c'est un raccourci, et le jeu retrouve son terrain ouvert.
+3. **Un grand vide au centre coûte autant qu'une rue de plus.** Une cellule entière laissée vide au croisement des artères fait tomber le détour de 1,24 à 1,15, parce qu'un vide central est un raccourci pour presque tous les trajets. Le croisement des deux artères se contente donc d'une teinte de sol: le repère est là, la structure est intacte.
+
+Deux pièges découverts en chemin, tous deux invisibles à l'œil sur l'image.
+
+- **Une porte de cour qui donne sur le bord de la carte ne s'ouvre sur rien.** Le dehors est un mur pour le moteur: la cour devient un morceau isolé, et un joueur qui y apparaîtrait y passerait la partie entière. Le programme refuse maintenant de dessiner une telle porte.
+- **Une place taillée dans l'angle d'un îlot entame sa ceinture**, et peut laisser un point où un ninja tient sans pouvoir en sortir. Un seul point sur 161 000 était concerné, et il aurait suffi à y coincer un faux ninja pour toute une partie. Un test de `packages/server` parcourt maintenant la carte entière et vérifie qu'on atteint tout depuis n'importe quel point.
+
+### 9.5 Ce que cette carte ne dit pas encore
+
+Elle est mesurée, elle n'est pas jugée. **Aucune mesure ne dit qu'une carte est bonne**, et trois questions attendent d'être jouées à plusieurs.
+
+- **Les faux ninjas dans les passages étroits.** Leur dégagement automatique n'a connu que des terrains ouverts. Sept cours à une seule porte sont exactement ce qui peut le mettre en défaut.
+- **Le Massacre et les culs-de-sac.** Sept cours à une porte font sept refuges. Le mode veut une carte qui se vide: c'est celui qui risque le plus de traîner ici.
+- **Le repérage.** Un écran d'ordinateur montre 33 pour cent de cette carte contre 48 de Tokyo, et les îlots se ressemblent. Le porteur du projet a tranché le 20 septembre 2026: la minimap ne se repense que si l'on se perd vraiment.
 
 ## Ce qui n'est pas mesuré ici
 

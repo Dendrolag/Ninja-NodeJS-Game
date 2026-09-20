@@ -21,7 +21,7 @@ import type {
   ResultatValidation,
 } from '@neon-ninja/shared';
 import { appliquerTrame } from '@neon-ninja/shared';
-import { estMur } from '@neon-ninja/sim';
+import { estMur, positionTenable } from '@neon-ninja/sim';
 import type { Socket as SocketClient } from 'socket.io-client';
 import { io as connecter } from 'socket.io-client';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -59,7 +59,7 @@ let port: number;
 const clients: ClientTypee[] = [];
 
 beforeAll(() => {
-  for (const carte of ['map1', 'map3'] as const) {
+  for (const carte of ['map1', 'map3', 'quartier'] as const) {
     terrains.charger({ carte, modeMiroir: false });
   }
 });
@@ -216,6 +216,7 @@ describe('plus de 150 faux ninjas, jusqu au plafond de la carte (etape 7.6)', ()
   it.each([
     ['map1', 300],
     ['map3', 500],
+    ['quartier', 340],
   ] as const)('peuple %s de %i faux ninjas, tous hors des murs', async (carte, faux) => {
     const room = await partieAuPlafond(carte, faux);
     const bots = Object.values(room.etat.bots).filter((bot) => bot.type === 'bot');
@@ -223,6 +224,12 @@ describe('plus de 150 faux ninjas, jusqu au plafond de la carte (etape 7.6)', ()
 
     expect(bots).toHaveLength(faux);
     expect(bots.filter((bot) => estMur(murs, bot.position.x, bot.position.y))).toEqual([]);
+
+    // Hors des murs ne suffit pas sur une carte a rues etroites: il faut que le
+    // corps entier du faux ninja tienne, sans quoi il apparaitrait a cheval sur un
+    // batiment. La carte de travail de l'etape 8.2 est la premiere ou la
+    // difference existe.
+    expect(bots.filter((bot) => !positionTenable(murs, bot.position))).toEqual([]);
   });
 
   it('diffuse une partie de 300 faux ninjas a ses joueurs', async () => {

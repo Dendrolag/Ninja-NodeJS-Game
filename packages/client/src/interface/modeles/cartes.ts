@@ -28,11 +28,17 @@ export interface PresentationCarte {
  *
  * map2, l'ancienne Tokyo sans pluie, ne se joue plus: elle n'apparait que dans
  * l'historique d'un profil, sous le meme nom que map1.
+ *
+ * Le Quartier est la carte de travail de l'etape 8.2: un plan au trait, sans
+ * decor, pose en jeu pour savoir si une carte structuree vaut mieux qu'un terrain
+ * ouvert. Son ambiance le dit au joueur, pour que personne ne la prenne pour un
+ * decor reste en chemin.
  */
 export const PRESENTATION_CARTES: Readonly<Record<CarteEnregistree, PresentationCarte>> = {
   map1: { nom: 'Tokyo', ambiance: 'Néon · Nuit' },
   map2: { nom: 'Tokyo', ambiance: 'Néon · Nuit' },
   map3: { nom: 'Spirit & Time', ambiance: 'Vide · Infini' },
+  quartier: { nom: 'Quartier', ambiance: 'Essai · Plan au trait' },
 };
 
 /**

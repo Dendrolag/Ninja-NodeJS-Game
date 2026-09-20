@@ -89,10 +89,18 @@ export const VITESSES = {
  * l'octet pres: depuis l'etape 7.6, c'est une seule carte, et la pluie est un
  * reglage de partie (ReglagesPartie.pluie). map2 ne se joue plus, mais des parties
  * enregistrees la portent encore: voir CARTES_ENREGISTREES.
+ *
+ * `quartier` est la carte de travail de l'etape 8.2: un quartier de 2400 sur 1800,
+ * dessine en noir et blanc par docs/mesures/dessiner-le-quartier.mjs, sans graphiste.
+ * Elle est la seule des trois a avoir une structure: son detour median, la mesure
+ * qui compare le chemin reel au vol d'oiseau, vaut 1,24 la ou les deux autres valent
+ * 1,08 et 1,07. Son identifiant n'est pas un numero, parce que map1 et map3 sont des
+ * noms de fichiers herites du jeu d'origine et non une numerotation a poursuivre.
  */
 export const CARTES = {
   map1: { largeur: 2000, hauteur: 1500 },
   map3: { largeur: 3000, hauteur: 2000 },
+  quartier: { largeur: 2400, hauteur: 1800 },
 } as const;
 
 /** Identifiant d'une carte jouable. */
@@ -106,7 +114,7 @@ export type IdentifiantCarte = keyof typeof CARTES;
  * enumeration PostgreSQL rendrait illisibles les parties deja jouees: une carte
  * retiree du jeu reste donc ici (etape 7.6, map2 fondue dans map1).
  */
-export const CARTES_ENREGISTREES = ['map1', 'map2', 'map3'] as const;
+export const CARTES_ENREGISTREES = ['map1', 'map2', 'map3', 'quartier'] as const;
 
 /** La carte d'une partie enregistree: jouable, ou retiree du jeu depuis. */
 export type CarteEnregistree = (typeof CARTES_ENREGISTREES)[number];
@@ -122,6 +130,7 @@ export type CarteEnregistree = (typeof CARTES_ENREGISTREES)[number];
 export const PLAFONDS_DE_FAUX_NINJAS: Readonly<Record<IdentifiantCarte, number>> = {
   map1: 300,
   map3: 500,
+  quartier: 340,
 };
 
 /** Dimensions d'une carte, en pixels. */

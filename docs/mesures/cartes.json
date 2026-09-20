@@ -6,7 +6,7 @@
     "margeDeBordPx": 100,
     "vitessePxParSeconde": 150,
     "pasDeGrillePx": 4,
-    "departsTires": 24,
+    "departsTires": 80,
     "graine": 20260920
   },
   "cartes": [
@@ -34,10 +34,10 @@
       },
       "traverseePx": 2699,
       "traverseeS": 18,
-      "parcoursTypiquePx": 956,
+      "parcoursTypiquePx": 959,
       "parcoursTypiqueS": 6.4,
       "parcoursCourtS": 2.5,
-      "parcoursLongS": 11.1,
+      "parcoursLongS": 11.2,
       "detourMedian": 1.08
     },
     {
@@ -64,10 +64,10 @@
       },
       "traverseePx": 2655,
       "traverseeS": 17.7,
-      "parcoursTypiquePx": 953,
-      "parcoursTypiqueS": 6.4,
-      "parcoursCourtS": 2.4,
-      "parcoursLongS": 11,
+      "parcoursTypiquePx": 919,
+      "parcoursTypiqueS": 6.1,
+      "parcoursCourtS": 2.3,
+      "parcoursLongS": 10.8,
       "detourMedian": 1.08
     },
     {
@@ -94,11 +94,11 @@
       },
       "traverseePx": 3778,
       "traverseeS": 25.2,
-      "parcoursTypiquePx": 1506,
-      "parcoursTypiqueS": 10,
-      "parcoursCourtS": 3.9,
-      "parcoursLongS": 16.2,
-      "detourMedian": 1.06
+      "parcoursTypiquePx": 1350,
+      "parcoursTypiqueS": 9,
+      "parcoursCourtS": 3.3,
+      "parcoursLongS": 15.6,
+      "detourMedian": 1.07
     },
     {
       "carte": "map3",
@@ -124,11 +124,71 @@
       },
       "traverseePx": 3778,
       "traverseeS": 25.2,
-      "parcoursTypiquePx": 1506,
-      "parcoursTypiqueS": 10,
-      "parcoursCourtS": 3.9,
-      "parcoursLongS": 16.2,
-      "detourMedian": 1.06
+      "parcoursTypiquePx": 1350,
+      "parcoursTypiqueS": 9,
+      "parcoursCourtS": 3.3,
+      "parcoursLongS": 15.6,
+      "detourMedian": 1.07
+    },
+    {
+      "carte": "quartier",
+      "nom": "Quartier",
+      "miroir": false,
+      "dimensions": {
+        "largeur": 2400,
+        "hauteur": 1800
+      },
+      "surfaceMpx": 4.32,
+      "partDeSolPct": 69.8,
+      "partTenablePct": 59.6,
+      "morceaux": 1,
+      "partDuPrincipalPct": 100,
+      "airesIsoleesPx": 0,
+      "plusGrosMorceauIsolePx": 0,
+      "partDeLaBandeDApparitionPct": 93.1,
+      "degagementPx": {
+        "p10": 24,
+        "median": 60,
+        "p90": 150,
+        "maximum": 212
+      },
+      "traverseePx": 3195,
+      "traverseeS": 21.3,
+      "parcoursTypiquePx": 1462,
+      "parcoursTypiqueS": 9.7,
+      "parcoursCourtS": 3.6,
+      "parcoursLongS": 14.7,
+      "detourMedian": 1.24
+    },
+    {
+      "carte": "quartier",
+      "nom": "Quartier",
+      "miroir": true,
+      "dimensions": {
+        "largeur": 2400,
+        "hauteur": 1800
+      },
+      "surfaceMpx": 4.32,
+      "partDeSolPct": 69.8,
+      "partTenablePct": 59.6,
+      "morceaux": 1,
+      "partDuPrincipalPct": 100,
+      "airesIsoleesPx": 0,
+      "plusGrosMorceauIsolePx": 0,
+      "partDeLaBandeDApparitionPct": 93.1,
+      "degagementPx": {
+        "p10": 24,
+        "median": 60,
+        "p90": 150,
+        "maximum": 212
+      },
+      "traverseePx": 3214,
+      "traverseeS": 21.4,
+      "parcoursTypiquePx": 1474,
+      "parcoursTypiqueS": 9.8,
+      "parcoursCourtS": 3.7,
+      "parcoursLongS": 14.9,
+      "detourMedian": 1.24
     }
   ]
 }

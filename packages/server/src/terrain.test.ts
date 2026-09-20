@@ -17,8 +17,9 @@ import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import type { IdentifiantCarte } from '@neon-ninja/shared';
 import { CARTES, REGLAGES_PAR_DEFAUT, cheminCarte } from '@neon-ninja/shared';
-import { carteSansMur, estMur } from '@neon-ninja/sim';
+import { carteSansMur, estMur, positionTenable } from '@neon-ninja/sim';
 import { PNG } from 'pngjs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -187,7 +188,9 @@ describe('SANS_TERRAIN', () => {
 describe('les vraies cartes du jeu', () => {
   const chargeur = new ChargeurDeTerrain(racineRessources());
 
-  for (const carte of ['map1', 'map3'] as const) {
+  // Toutes les cartes jouables, et non une liste ecrite a la main: une carte
+  // ajoutee sans image se signalerait ici plutot qu'a l'ecran (etape 8.2).
+  for (const carte of Object.keys(CARTES) as IdentifiantCarte[]) {
     for (const modeMiroir of [false, true]) {
       it(`decode ${carte} ${modeMiroir ? 'miroir' : 'normale'} avec de vrais murs`, () => {
         const terrain = chargeur.charger({ carte, modeMiroir });
@@ -210,6 +213,98 @@ describe('les vraies cartes du jeu', () => {
         expect(murs).toBeGreaterThan(0);
       });
     }
+  }
+});
+
+/**
+ * Le Quartier est la carte de travail de l'etape 8.2, et la seule dessinee pour ce
+ * jeu-ci: un programme du depot la produit (docs/mesures/dessiner-le-quartier.mjs).
+ * Ce test garde l'invariant qui la rendrait injouable si elle etait redessinee de
+ * travers, et que l'oeil ne voit pas sur l'image.
+ */
+describe('la carte de travail Quartier', () => {
+  const chargeur = new ChargeurDeTerrain(racineRessources());
+
+  /** Les huit voisines d'une case, diagonales comprises. */
+  const VOISINES = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+    [1, 1],
+    [1, -1],
+    [-1, 1],
+    [-1, -1],
+  ] as const;
+
+  for (const modeMiroir of [false, true]) {
+    it(`n enferme personne ${modeMiroir ? 'en miroir' : 'en normal'}`, () => {
+      const terrain = chargeur.charger({ carte: 'quartier', modeMiroir });
+
+      // UNE COUR DONT L'UNIQUE OUVERTURE DONNE SUR LE BORD DE LA CARTE EST UN
+      // PIEGE: le dehors est un mur, la cour devient un morceau a part, et un
+      // joueur qui y apparait y passe la partie entiere. C'est arrive au premier
+      // dessin, et cela ne se voyait pas sur l'image. Ici on parcourt la carte
+      // depuis un seul point et on verifie qu'on atteint tout le reste.
+      // Quatre pixels, et les diagonales admises: c'est le modele de
+      // docs/mesures/mesurer-les-cartes.mjs, qui a servi a juger la carte. Un pas
+      // plus large isolerait des cases que le jeu relie, et dirait la carte cassee
+      // alors qu'elle ne l'est pas.
+      const pas = 4;
+      const largeur = Math.floor(terrain.largeur / pas);
+      const hauteur = Math.floor(terrain.hauteur / pas);
+      const tenable = new Uint8Array(largeur * hauteur);
+      let total = 0;
+
+      for (let ligne = 0; ligne < hauteur; ligne += 1) {
+        for (let colonne = 0; colonne < largeur; colonne += 1) {
+          const position = { x: colonne * pas + pas / 2, y: ligne * pas + pas / 2 };
+
+          if (positionTenable(terrain, position)) {
+            tenable[ligne * largeur + colonne] = 1;
+            total += 1;
+          }
+        }
+      }
+
+      expect(total).toBeGreaterThan(0);
+
+      const depart = tenable.indexOf(1);
+      const vues = new Uint8Array(largeur * hauteur);
+      const pile = [depart];
+      vues[depart] = 1;
+      let atteintes = 1;
+
+      while (pile.length > 0) {
+        const case_ = pile.pop() as number;
+        const colonne = case_ % largeur;
+        const ligne = (case_ - colonne) / largeur;
+
+        for (const [dx, dy] of VOISINES) {
+          const voisineColonne = colonne + dx;
+          const voisineLigne = ligne + dy;
+
+          if (
+            voisineColonne < 0 ||
+            voisineColonne >= largeur ||
+            voisineLigne < 0 ||
+            voisineLigne >= hauteur
+          ) {
+            continue;
+          }
+
+          const voisine = voisineLigne * largeur + voisineColonne;
+
+          if (tenable[voisine] === 1 && vues[voisine] === 0) {
+            vues[voisine] = 1;
+            atteintes += 1;
+            pile.push(voisine);
+          }
+        }
+      }
+
+      expect(atteintes).toBe(total);
+    });
   }
 });
 
