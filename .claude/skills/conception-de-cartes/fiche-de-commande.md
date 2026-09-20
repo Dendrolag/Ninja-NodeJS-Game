@@ -22,7 +22,7 @@ Trois images, toutes aux **mêmes dimensions**, parfaitement superposables.
 
 Plus une vignette `preview.png` de **120 sur 120 pixels**, qui montre la carte en petit dans les menus.
 
-Le miroir (une version retournée de la carte) n'est plus à livrer: le jeu le calcule.
+**Le miroir.** Le jeu propose chaque carte aussi en version retournée horizontalement. Aujourd'hui elle se livre en images, dans un second dossier: cela double la commande. Le porteur du projet a décidé le 20 septembre 2026 que le jeu la calculerait lui-même (étape 8.3). **Tant que cette étape n'est pas faite, le miroir reste à livrer**: quatre images de plus, simple retournement horizontal, en retouchant à la main ce qui se lirait à l'envers. Vérifier où en est l'étape 8.3 avant d'envoyer cette fiche.
 
 ## L'image de collision: la règle à ne pas rater
 

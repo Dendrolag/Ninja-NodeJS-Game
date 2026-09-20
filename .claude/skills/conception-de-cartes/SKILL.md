@@ -87,7 +87,13 @@ Depuis la racine du dépôt, après `pnpm build`:
 node docs/mesures/mesurer-les-cartes.mjs
 ```
 
-L'outil décode les terrains **par le chemin réel du serveur** (étirement et seuil compris), et écrit `docs/mesures/cartes.json`. Pour mesurer une carte nouvelle, l'ajouter à la table `TERRAINS` en tête du fichier. Trois secondes par carte.
+Pour ne mesurer qu'une carte, la nommer. Indispensable quand on met une carte au point, où la boucle dessiner-mesurer se répète des dizaines de fois:
+
+```bash
+node docs/mesures/mesurer-les-cartes.mjs quartier
+```
+
+L'outil décode les terrains **par le chemin réel du serveur** (étirement et seuil compris), et écrit `docs/mesures/cartes.json`. Une mesure partielle ne réécrit pas ce fichier, pour ne pas y perdre les cartes sautées. Pour ajouter une carte, l'inscrire dans la table `TERRAINS` en tête du fichier. Deux à quatre secondes par carte.
 
 Ce que chaque nombre veut dire:
 
@@ -97,20 +103,40 @@ Ce que chaque nombre veut dire:
 - `traverseeS` et `parcoursTypiqueS`: à la vitesse du jeu, du point le plus loin à son opposé, et entre deux apparitions tirées au sort.
 - `detourMedian`: chemin réel divisé par le vol d'oiseau. **C'est la mesure de la structure.**
 
-### Les deux cartes de référence
+### Les trois cartes de référence
 
-| Mesure              | Tokyo (2000x1500) | Spirit & Time (3000x2000) |
-| ------------------- | ----------------: | ------------------------: |
-| Part de sol         |            88,9 % |                    97,5 % |
-| Part tenable        |            75,3 % |                    94,4 % |
-| Dégagement médian   |             64 px |                    258 px |
-| Traversée           |            18,0 s |                    25,2 s |
-| Parcours typique    |             6,4 s |                    10,0 s |
-| **Détour médian**   |          **1,08** |                  **1,06** |
-| Plafond de PNJ      |               300 |                       500 |
-| Part vue d'un écran |              48 % |                      24 % |
+| Mesure              | Tokyo (2000x1500) | Spirit & Time (3000x2000) | Quartier (2400x1800) |
+| ------------------- | ----------------: | ------------------------: | -------------------: |
+| Part tenable        |            75,3 % |                    94,4 % |               59,6 % |
+| Dégagement médian   |             64 px |                    258 px |                60 px |
+| Traversée           |            18,0 s |                    25,2 s |               21,3 s |
+| **Détour médian**   |          **1,08** |                  **1,07** |             **1,24** |
+| Plafond de PNJ      |               300 |                       500 |                  340 |
+| Part vue d'un écran |              48 % |                      24 % |                 33 % |
 
-Les deux sont des **terrains ouverts**: un détour de 1,06 à 1,08 veut dire qu'il n'y a ni couloir, ni détour à subir, ni raccourci à connaître. Les murs de Tokyo sont du mobilier qu'on contourne, pas une structure qui organise.
+**Les deux cartes héritées sont des terrains ouverts**: un détour de 1,07 à 1,08 veut dire qu'il n'y a ni couloir, ni détour à subir, ni raccourci à connaître. Les murs de Tokyo sont du mobilier qu'on contourne, pas une structure qui organise.
+
+**Le Quartier est le premier terrain du jeu où le chemin se choisit** (étape 8.2, 20 septembre 2026): quatre colonnes et trois lignes d'îlots, des rues de 120 pixels, deux artères traversantes, et sept îlots sur huit bâtis en ceinture de 65 pixels autour d'une cour ouverte par une seule porte.
+
+Note: le détour de Spirit & Time se lisait 1,06 à l'étape 8.1, avec vingt-quatre points de départ tirés. L'outil en tire quatre-vingts depuis l'étape 8.2, parce que vingt-quatre laissaient le détour bouger de cinq centièmes selon le tirage.
+
+## 5 bis. Une carte se calcule, elle ne se dessine pas
+
+Leçon de l'étape 8.2, qui a produit le Quartier. La carte est écrite par un programme, `docs/mesures/dessiner-le-quartier.mjs`, à copier comme modèle. Trois raisons, dont deux n'étaient pas prévues.
+
+1. **La mise au point demande des dizaines d'essais mesurés.** Chacun serait un nouveau dessin dans un éditeur d'images. Le Quartier en a demandé une quinzaine.
+2. **Les critères 8 et 9 deviennent vrais par construction**, puisque le même programme écrit la collision et le décor à la même dimension dans la même passe. On ne peut plus les rater.
+3. **La géométrie devient lisible et modifiable**: elle est écrite en clair, pas enfouie dans des pixels.
+
+### Trois règles de structure, établies contre la mesure
+
+Elles ont coûté des essais, elles se réutilisent telles quelles.
+
+- **Pas de boulevard périphérique.** Il offre un contournement gratuit de toute la structure, et il remplit de sol la bande de cent pixels où se tirent les apparitions. Au premier essai du Quartier: 68 pour cent de jouable hors bande, contre 70 exigés. Une fois les îlots posés au ras du bord: 93 pour cent.
+- **Des cours à une seule porte.** Une deuxième porte en face fait tomber le détour de 1,24 à 1,10: une cour traversante n'est plus une cour, c'est une rue.
+- **Pas de place centrale.** Une cellule vide au croisement des artères coûte 0,09 de détour, une place taillée dans les angles seulement 0,03. Le croisement tient lieu de repère par la couleur du sol, sans retirer un seul mur.
+
+Quatrième leçon, sur la part jouable: **une ceinture bâtie autour d'une cour encombre autant qu'un pâté plein et coûte trois fois moins de mur.** C'est ce qui a permis au Quartier de tenir 59,6 pour cent de jouable tout en atteignant 1,24 de détour.
 
 ## 6. Ce que chaque mode demande au terrain
 
@@ -139,21 +165,23 @@ Trois modes sur cinq profitent d'une carte plus structurée que les nôtres, deu
 Porteur du projet, 20 septembre 2026, en réponse à l'étude 8.1 (section 7.1).
 
 - **La structure d'abord**, avant tout contenu nouveau.
-- **Détour médian visé: 1,20 à 1,35**, l'archétype du quartier.
-- **Taille visée: 2400 sur 1800.** Un écran y montrera 33 pour cent de la carte, contre 48 sur Tokyo.
-- **Pas de graphiste pour l'instant**: on avance en noir et blanc, et un décor ne se commande que si la structure convainc.
-- **Le miroir sera calculé par le jeu** et non livré en images (étape 8.3). L'étude a vérifié que c'est un simple retournement horizontal, à l'octet près pour la collision de Tokyo. Réserve: l'avant-plan de Tokyo a été retouché à la main, identique à 91 pour cent seulement, sans doute pour les enseignes.
+- **Détour médian visé: 1,20 à 1,35**, l'archétype du quartier. **Réalisé: 1,24**, le Quartier, étape 8.2.
+- **Taille visée: 2400 sur 1800.** Réalisée. Un écran en montre 33 pour cent, contre 48 sur Tokyo.
+- **Pas de graphiste pour l'instant**: on avance en noir et blanc, et un décor ne se commande que si la structure convainc. Le Quartier est donc une carte de travail, au trait, et elle se joue telle quelle.
+- **Une carte porte un nom, pas un numéro** (étape 8.2): `quartier`, et non `map4`. `map1` et `map3` sont des noms de fichiers hérités, pas une numérotation à poursuivre. Conséquence assumée: la valeur entre dans l'énumération PostgreSQL et n'en sortira jamais, une valeur retirée rendant illisibles les parties déjà jouées.
+- **Le miroir sera calculé par le jeu** et non livré en images: **étape 8.3, pas encore faite**. Tant qu'elle ne l'est pas, une carte nouvelle livre bien ses quatre images de miroir, comme le Quartier l'a fait. L'étude a vérifié que c'est un simple retournement horizontal, à l'octet près pour la collision de Tokyo. Réserve: l'avant-plan de Tokyo a été retouché à la main, identique à 91 pour cent seulement, sans doute pour les enseignes.
 - **Le repérage se juge à la recette**, pas à l'avance: la minimap ne se repense que si l'on se perd vraiment.
 
 Décision plus ancienne, toujours valable: **le miroir est un réglage de carte, pas un mode** (journal de conception, 10 septembre 2026). Il se combine avec n'importe quel mode.
 
 ## 9. Points de vigilance
 
-1. **Le dégagement automatique des PNJ n'a jamais été éprouvé sur une carte à passages étroits.** Nos deux cartes sont ouvertes. C'est le premier point à surveiller sur un prototype structuré.
-2. **Le moteur ne connaît pas de ligne de vue**: tout ce qui est à l'écran se voit, même derrière un mur. Une carte pensée pour cacher ne cachera que ce que la caméra ne montre pas.
-3. **Les murs ne coûtent rien au serveur.** À nombre égal de PNJ, Tokyo et Spirit & Time se mesurent à quelques centièmes de milliseconde près. Ce qui coûte est le nombre d'entités, pas la surface ni les murs.
-4. **Le socle tient environ 12 Mpx et 1 000 PNJ** sans rien changer. Au-delà, ce sont les quatre plafonds de `docs/mesures/etude-grandes-cartes.md` qui reprennent la main.
-5. **Générer une image de collision avec un modèle d'image est le mauvais instrument.** L'anticrénelage y épaissit chaque mur de façon incontrôlée, et on rate par construction les critères 4 et 8. Une collision se trace, elle ne se génère pas.
+1. **Le dégagement automatique des PNJ n'a jamais été éprouvé sur une carte à passages étroits.** Il n'a connu que des terrains ouverts, et les sept cours à une seule porte du Quartier sont exactement ce qui peut le mettre en défaut. Un test vérifie que 340 PNJ tiennent tous à leur apparition, ce qui ne dit rien de leur errance ensuite. **À jouer à plusieurs.**
+2. **Le Massacre et les culs-de-sac.** Sept cours à une porte font sept refuges, et le mode veut une carte qui se vide. C'est celui qui risque le plus de traîner sur le Quartier.
+3. **Le moteur ne connaît pas de ligne de vue**: tout ce qui est à l'écran se voit, même derrière un mur. Une carte pensée pour cacher ne cachera que ce que la caméra ne montre pas.
+4. **Les murs ne coûtent rien au serveur.** À nombre égal de PNJ, Tokyo et Spirit & Time se mesurent à quelques centièmes de milliseconde près. Ce qui coûte est le nombre d'entités, pas la surface ni les murs.
+5. **Le socle tient environ 12 Mpx et 1 000 PNJ** sans rien changer. Au-delà, ce sont les quatre plafonds de `docs/mesures/etude-grandes-cartes.md` qui reprennent la main.
+6. **Générer une image de collision avec un modèle d'image est le mauvais instrument.** L'anticrénelage y épaissit chaque mur de façon incontrôlée, et on rate par construction les critères 4 et 8. Une collision se trace, elle ne se génère pas.
 
 ## Pour commander un décor à un graphiste
 
