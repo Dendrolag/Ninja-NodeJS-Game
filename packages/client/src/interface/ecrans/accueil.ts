@@ -180,6 +180,21 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
         ),
       ),
     ),
+    // De quand date le jeu qu'on a sous les yeux (etape 8.4). Le 20 septembre 2026,
+    // la production est restee trois commits en arriere sans que rien ne le signale:
+    // il fallait interroger la route de sante du serveur pour s'en apercevoir.
+    // L'empreinte complete est dans l'infobulle, pour qui a le depot sous la main.
+    creer(
+      doc,
+      'footer',
+      { classe: 'accueil-pied' },
+      creer(doc, 'span', {
+        texte: contexte.libelleDeVersion,
+        ...(contexte.version === undefined
+          ? {}
+          : { attributs: { title: `Commit ${contexte.version}` } }),
+      }),
+    ),
   );
 
   let etatCourant: EtatClient | undefined;

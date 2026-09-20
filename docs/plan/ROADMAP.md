@@ -138,6 +138,8 @@ Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision 
 
 **Étape 8.2 terminée le 20 septembre 2026: le jeu a une troisième carte, et elle a une structure.** `quartier`, un quartier de 2400 sur 1800 en noir et blanc, sans graphiste, produit par un programme du dépôt (`docs/mesures/dessiner-le-quartier.mjs`) et non dessiné à la main. **Détour médian 1,24**, dans la cible de 1,20 à 1,35, contre 1,08 et 1,07 aux deux cartes héritées: c'est le premier terrain du jeu où le chemin se choisit. Les douze critères de l'étude 8.1 sont tenus, et le plafond de 340 PNJ est confirmé au banc de charge. Mesures et jugement: section 9 de `docs/mesures/etude-structures-de-carte.md`. Fiche: `docs/plan/etape-8-2.md`. Reste au porteur du projet d'y jouer à plusieurs et de dire si la structure vaut un décor. Suite: `8.3`, le miroir calculé.
 
+**Étape 8.4 terminée le 20 septembre 2026 : on sait, en regardant la page, sur quelle version on est.** Le pied de l'écran d'accueil porte la date du commit servi et son empreinte courte. Demandée par le porteur du projet après un incident de mise en ligne le jour même : trois poussées en vingt minutes ont fait sauter deux déploiements de suite, chaque exécution de la CI restant verte, et rien sur la page ne le disait. Fiche : `docs/plan/etape-8-4.md`. Suite : `8.3`, le miroir calculé, seule étape planifiée non faite.
+
 ---
 
 ## 4. Carte thématique des étapes
@@ -302,6 +304,10 @@ Résultat: la carte existe, s'appelle `quartier`, et se joue. **Détour médian 
 
 **8.3. Le miroir calculé.** Étape ouverte le 20 septembre 2026 par la même décision. Le miroir cesse d'être quatre images livrées à part: le serveur retourne la collision, la page retourne le décor. L'étude 8.1 a vérifié que c'est bien un simple retournement horizontal (à l'octet près pour la collision de Tokyo). Une carte ne se commande donc plus qu'une fois. **Indépendante de 8.2**, à faire avant, après, ou jamais. Réserve connue: l'avant-plan de Tokyo a été retouché à la main dans son dossier `mirror`, identique à 91 pour cent seulement, sans doute pour que les enseignes ne se lisent pas à l'envers; l'étape doit décider si l'on conserve une image livrée quand elle existe.
 Tests requis: TU du retournement, côté serveur et côté page; les murs d'une carte retournée par le calcul identiques à ceux de l'image livrée aujourd'hui; l'empreinte des parties de référence en miroir inchangée; bout en bout vert.
+
+**8.4. La version du jeu, lisible en pied d'accueil.** Faite le 20 septembre 2026 (fiche `docs/plan/etape-8-4.md`). Étape demandée par le porteur du projet le jour même, après un incident : la carte de l'étape 8.2 était dans le code et pas en production, et rien sur la page ne permettait de s'en apercevoir. Le jeu a une version depuis l'étape 5.3, le commit lui-même, mais elle n'est écrite nulle part où un humain la lise. Le pied de l'écran d'accueil dit désormais « Version du 20 septembre 2026, 20h17 · 0e0cdc6 » : la date du commit servi, en toutes lettres, et sept caractères d'empreinte, l'empreinte complète étant dans l'infobulle. En développement, il dit « Version de développement ».
+Tests requis : TU du libellé, dans les trois cas et sans dépendance à la langue du navigateur ni au fuseau de la machine ; TU du pied de l'accueil, avec et sans commit ; suite complète verte.
+Résultat : onze tests ajoutés, 2 429 au total. La date vient du commit et non de la mise en ligne, les deux pouvant différer de plusieurs heures. Elle se compose par lecture directe des champs de la chaîne ISO, sans objet `Date` : deux joueurs lisent la même heure pour la même version.
 
 ---
 

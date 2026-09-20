@@ -71,7 +71,13 @@ export {
 
 export { origineValide, politiqueDeContenu } from './page.js';
 
-export { MOTIF_VERSION_DIFFERENTE, versionAcceptee } from './version.js';
+export {
+  LIBELLE_DE_DEVELOPPEMENT,
+  MOTIF_VERSION_DIFFERENTE,
+  dateDeVersion,
+  libelleDeVersion,
+  versionAcceptee,
+} from './version.js';
 
 export type { Consommation, SeauAJetons } from './debit.js';
 export { consommer, seauNeuf } from './debit.js';

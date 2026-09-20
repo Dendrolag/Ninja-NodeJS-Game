@@ -71,6 +71,9 @@ export interface OptionsSortieVercel {
   readonly serveurDeJeu: string;
   /** Le commit dont la page est construite. */
   readonly version: string;
+  /** La date de ce commit, en ISO 8601. Absente, le pied de l'accueil n'affiche
+   * que l'empreinte du commit (etape 8.4). */
+  readonly horodatage?: string;
 }
 
 /**
@@ -181,9 +184,14 @@ const lanceDirectement =
   process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (lanceDirectement) {
+  // L'horodatage n'est pas obligatoire: sans lui, le pied de l'accueil se replie sur
+  // la seule empreinte du commit, ce qui vaut mieux que de refuser d'empaqueter.
+  const horodatage = process.env['HORODATAGE_DU_JEU']?.trim() ?? '';
+
   await preparerLaSortieVercel({
     serveurDeJeu: variableObligatoire('SERVEUR_DE_JEU'),
     version: variableObligatoire('VERSION_DU_JEU'),
+    ...(horodatage === '' ? {} : { horodatage }),
   });
   process.stdout.write(`Sortie Vercel prete dans ${DOSSIER_SORTIE_VERCEL}.\n`);
 }

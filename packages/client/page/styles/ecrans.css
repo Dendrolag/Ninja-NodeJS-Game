@@ -540,6 +540,22 @@
   list-style: none;
 }
 
+/*
+ * Le pied de l'accueil: la version du jeu (etape 8.4).
+ *
+ * DISCRET VEUT DIRE DISCRET. Pas de panneau, pas de bordure, pas de fond: une ligne
+ * de texte faible, en police de donnees parce que c'est une donnee, centree sous la
+ * liste des modes. Elle se lit quand on la cherche et ne prend l'oeil de personne.
+ */
+.accueil-pied {
+  margin-top: 8px;
+  color: var(--texte-faible);
+  font-family: var(--police-donnees);
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
 .carte-mode {
   display: grid;
   align-content: start;

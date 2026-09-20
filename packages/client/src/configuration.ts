@@ -16,6 +16,8 @@ export interface ConfigurationDeLaPage {
   readonly url?: string;
   /** Le commit dont la page est construite. Absent en developpement. */
   readonly version?: string;
+  /** La date de ce commit, en ISO 8601, telle que le pied de l'accueil la presente. */
+  readonly horodatage?: string;
 }
 
 /**
@@ -23,13 +25,16 @@ export interface ConfigurationDeLaPage {
  *
  * @param serveurDeJeu L'origine du serveur de jeu, ou une chaine vide.
  * @param version      Le commit de la page, ou une chaine vide.
+ * @param horodatage   La date de ce commit, ou une chaine vide.
  */
 export function configurationDeLaPage(
   serveurDeJeu: string,
   version: string,
+  horodatage: string = '',
 ): ConfigurationDeLaPage {
   return {
     ...(serveurDeJeu === '' ? {} : { url: serveurDeJeu }),
     ...(version === '' ? {} : { version }),
+    ...(horodatage === '' ? {} : { horodatage }),
   };
 }

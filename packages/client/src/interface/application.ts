@@ -24,6 +24,7 @@
  */
 
 import type { PisteMusicale, ReglagesPartie } from '@neon-ninja/shared';
+import { libelleDeVersion } from '@neon-ninja/shared';
 
 import { annoncesDuChangement } from '../annonces.js';
 import type { Client } from '../client.js';
@@ -69,6 +70,13 @@ export interface OptionsApplication {
   readonly stockage?: Storage;
   /** Recharger la page. Celui du navigateur par defaut. */
   readonly recharger?: () => void;
+  /**
+   * Le commit dont la page est construite, et sa date en ISO 8601 (etape 8.4). Le
+   * pied de l'accueil en tire la ligne que le joueur lit. Absents, il dit que la
+   * page est une page de developpement.
+   */
+  readonly version?: string;
+  readonly horodatage?: string;
 }
 
 /** L'application montee. */
@@ -208,6 +216,8 @@ export function monterApplication(options: OptionsApplication): Application {
     },
     niveauDeSang: () => panneauSon.sang,
     recharger,
+    libelleDeVersion: libelleDeVersion(options.version, options.horodatage),
+    ...(options.version === undefined ? {} : { version: options.version }),
   };
 
   /** Monte un ecran, l'installe dans la page, et lance sa musique. */

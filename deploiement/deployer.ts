@@ -283,6 +283,23 @@ async function lireLaVersionEnLigne(serveurDeJeu: string): Promise<string | unde
 }
 
 /**
+ * La date d'un commit, en ISO 8601, ou rien si git ne sait pas la dire.
+ *
+ * C'est elle que le pied de l'accueil presente au joueur (etape 8.4). On prend la
+ * date du commit et non celle de la mise en ligne: les deux peuvent differer de
+ * plusieurs heures, et c'est le code servi que la ligne doit decrire, pas le moment
+ * ou il est parti.
+ */
+async function dateDuCommit(commit: string): Promise<string | undefined> {
+  return new Promise((resoudre) => {
+    execFile('git', ['show', '-s', '--format=%cI', commit], (erreur, sortie) => {
+      const date = sortie.trim();
+      resoudre(erreur === null && date !== '' ? date : undefined);
+    });
+  });
+}
+
+/**
  * Les fichiers changes d'un commit a l'autre, ou rien si git ne sait pas les comparer:
  * un commit absent de l'historique recupere, par exemple.
  */
@@ -350,7 +367,12 @@ export async function deployer(configuration: ConfigurationDuDeploiement): Promi
   }
 
   annoncer(`Preparation de la page du commit ${version}`);
-  await preparerLaSortieVercel({ serveurDeJeu, version });
+  const horodatage = await dateDuCommit(version);
+  await preparerLaSortieVercel({
+    serveurDeJeu,
+    version,
+    ...(horodatage === undefined ? {} : { horodatage }),
+  });
 
   annoncer('Envoi de la page a Vercel, sans la promouvoir');
   const deploiementDeLaPage = adresseObligatoire(

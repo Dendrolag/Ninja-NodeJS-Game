@@ -13,6 +13,7 @@
  */
 
 import type { NomDeSon, PisteMusicale } from '@neon-ninja/shared';
+import { LIBELLE_DE_DEVELOPPEMENT } from '@neon-ninja/shared';
 
 import type { Client } from '../client.js';
 import { creerHorlogeClientManuelle } from '../horloge.js';
@@ -101,6 +102,9 @@ export function contexteDEssai(client: Client): ContexteEcran & { recharges: num
     recharger: () => {
       contexte.recharges += 1;
     },
+    // Un ecran monte seul est un ecran de developpement: c'est ce que le pied de
+    // l'accueil dit quand la page n'est construite d'aucun commit (etape 8.4).
+    libelleDeVersion: LIBELLE_DE_DEVELOPPEMENT,
   };
 
   return contexte;

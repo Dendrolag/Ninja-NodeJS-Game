@@ -28,6 +28,16 @@ export interface ContexteEcran {
   readonly niveauDeSang: () => NiveauDeSang;
   /** Recharge la page. Injectable, pour que les tests ne rechargent rien. */
   readonly recharger: () => void;
+  /**
+   * Ce que le joueur lit en pied d'accueil pour savoir sur quelle version il est
+   * (etape 8.4). Une chaine toute faite: l'ecran l'affiche, il ne la compose pas.
+   */
+  readonly libelleDeVersion: string;
+  /**
+   * L'empreinte complete du commit, pour l'infobulle du pied. Absente en
+   * developpement, ou la page n'est construite d'aucun commit.
+   */
+  readonly version?: string;
 }
 
 /** Un ecran monte. */

@@ -69,6 +69,12 @@ export interface OptionsEmpaquetage {
   readonly serveurDeJeu?: string;
   /** Le commit dont la page est construite. */
   readonly version?: string;
+  /**
+   * La date de ce commit, en ISO 8601, pour que le pied de l'accueil dise de quand
+   * date le jeu qu'on a sous les yeux (etape 8.4). Absente, le pied n'affiche que
+   * l'empreinte du commit.
+   */
+  readonly horodatage?: string;
 }
 
 /** Empaquete le client dans packages/client/web, en repartant d'un dossier vide. */
@@ -95,6 +101,7 @@ export async function empaqueterLeClient(options: OptionsEmpaquetage = {}): Prom
     define: {
       __SERVEUR_DE_JEU__: JSON.stringify(options.serveurDeJeu ?? ''),
       __VERSION_DU_JEU__: JSON.stringify(options.version ?? ''),
+      __HORODATAGE_DU_JEU__: JSON.stringify(options.horodatage ?? ''),
     },
     loader: { '.woff2': 'file', '.woff': 'file' },
     assetNames: 'polices/[name]-[hash]',

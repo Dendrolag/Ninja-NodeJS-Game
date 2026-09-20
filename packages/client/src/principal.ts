@@ -43,6 +43,9 @@ declare const __SERVEUR_DE_JEU__: string;
 /** Le commit dont la page est construite, ecrit par l'empaqueteur. Vide en developpement. */
 declare const __VERSION_DU_JEU__: string;
 
+/** La date de ce commit, en ISO 8601, ecrite par l'empaqueteur. Vide en developpement. */
+declare const __HORODATAGE_DU_JEU__: string;
+
 /**
  * Le stockage du navigateur, s'il est permis d'y toucher.
  *
@@ -99,7 +102,11 @@ if (hote === null) {
 }
 
 const stockage = stockageDuNavigateur();
-const configuration = configurationDeLaPage(__SERVEUR_DE_JEU__, __VERSION_DU_JEU__);
+const configuration = configurationDeLaPage(
+  __SERVEUR_DE_JEU__,
+  __VERSION_DU_JEU__,
+  __HORODATAGE_DU_JEU__,
+);
 
 const client = creerClient({
   reseau: creerReseauSocketIo(configuration),
@@ -125,6 +132,9 @@ monterApplication({
     prechargerLaPartie(reglages.carte, reglages.modeMiroir, reglages.pluie).catch(() => undefined);
   },
   ...(stockage === undefined ? {} : { stockage }),
+  // Le pied de l'accueil dit de quand date la page qu'on a sous les yeux (etape 8.4).
+  ...(configuration.version === undefined ? {} : { version: configuration.version }),
+  ...(configuration.horodatage === undefined ? {} : { horodatage: configuration.horodatage }),
 });
 
 // Le lien s'ouvre une fois l'application montee: elle montre deja qu'il s'etablit.

@@ -13,7 +13,7 @@
  */
 
 import type { InfosSalon, LigneClassement, ReglagesPartie } from '@neon-ninja/shared';
-import { REGLAGES_PAR_DEFAUT } from '@neon-ninja/shared';
+import { LIBELLE_DE_DEVELOPPEMENT, REGLAGES_PAR_DEFAUT } from '@neon-ninja/shared';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Client } from '../client.js';
@@ -153,6 +153,37 @@ describe('l accueil', () => {
 
   it('annonce les cinq modes, et plus seulement le Classique (etape 5.5)', () => {
     expect(obligatoire(hote, '.surtitre').textContent).toBe('5 modes · 3 cartes');
+  });
+
+  it('dit en pied de page de quand date la version servie (etape 8.4)', () => {
+    // La page de ce test n'est construite d'aucun commit: elle le dit, plutot que de
+    // laisser une ligne vide qui ferait croire a une page cassee.
+    expect(obligatoire(hote, '.accueil-pied').textContent).toBe(LIBELLE_DE_DEVELOPPEMENT);
+  });
+
+  it('porte la date du commit, et son empreinte entiere en infobulle (etape 8.4)', () => {
+    const page = document.createElement('div');
+    document.body.append(page);
+
+    const autre = monterApplication({
+      hote: page,
+      client: creerClient({ reseau: creerReseauFactice(), horloge: creerHorlogeClientManuelle() }),
+      horloge: creerHorlogeClientManuelle(),
+      monterLeJeu: jeuDEssai().monteur,
+      recharger: () => undefined,
+      version: 'ee181518d887796fb7dd012e7e91e6a88740e2ed',
+      horodatage: '2026-09-20T19:44:10+02:00',
+    });
+
+    const pied = obligatoire(page, '.accueil-pied span');
+
+    expect(pied.textContent).toBe('Version du 20 septembre 2026, 19h44 · ee18151');
+    // L'empreinte entiere ne se lit pas en pied de page, mais elle reste a portee de
+    // souris: c'est elle qu'on colle dans un « git show ».
+    expect(pied.getAttribute('title')).toBe('Commit ee181518d887796fb7dd012e7e91e6a88740e2ed');
+
+    autre.demonter();
+    page.remove();
   });
 
   it('refuse d envoyer un pseudo invalide, et dit pourquoi', () => {
