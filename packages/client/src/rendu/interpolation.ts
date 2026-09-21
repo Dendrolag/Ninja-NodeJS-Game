@@ -123,6 +123,16 @@ export class TamponDeLissage {
   }
 
   /**
+   * Le lissage est-il au bout de son trajet, a attendre le battement suivant.
+   *
+   * C'est le signe d'un reseau en retard: les personnages tiennent leur derniere position
+   * au lieu d'avancer. Le releve de performance le compte (etape 8.5).
+   */
+  enAttente(maintenant: number): boolean {
+    return this.precedente !== undefined && maintenant - this.arriveeCourante >= this.intervalleMs;
+  }
+
+  /**
    * Ce qu'il faut dessiner a cet instant.
    *
    * @param maintenant Instant local, lu sur l'horloge du client.

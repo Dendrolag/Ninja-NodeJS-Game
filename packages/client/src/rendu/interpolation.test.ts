@@ -172,6 +172,19 @@ describe('TamponDeLissage', () => {
 
     expect(tampon.vueLissee(1_060)?.entites.map(({ entite }) => entite.id)).toEqual(['moi']);
   });
+
+  it('dit quand le lissage, au bout de son trajet, attend le battement suivant', () => {
+    const tampon = new TamponDeLissage();
+    tampon.observer(vue(1, [joueur('moi', 0, 0)]), 1_000);
+
+    // Un seul battement: rien a lisser, donc rien a attendre.
+    expect(tampon.enAttente(2_000)).toBe(false);
+
+    tampon.observer(vue(2, [joueur('moi', 100, 0)]), 1_050);
+
+    expect(tampon.enAttente(1_080)).toBe(false);
+    expect(tampon.enAttente(1_100)).toBe(true);
+  });
 });
 
 describe('lisserUneEntite', () => {

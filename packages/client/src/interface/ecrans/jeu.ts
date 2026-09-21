@@ -34,6 +34,8 @@ import { CARTES, REGLAGES_PAR_DEFAUT } from '@neon-ninja/shared';
 import { brancherClavier } from '../../controles/clavier.js';
 import { Controles } from '../../controles/controles.js';
 import { brancherTactile } from '../../controles/tactile.js';
+import type { Diagnostic } from '../../diagnostic/diagnostic.js';
+import { pilotageParPixi } from '../../diagnostic/diagnostic.js';
 import { monterPointsFlottants } from '../../hud/pointsFlottants.js';
 import { monterSurcouche } from '../../hud/surcouche.js';
 import { HAUTEUR_DE_VUE_TACTIQUE_PX } from '../../rendu/apparence.js';
@@ -44,8 +46,13 @@ import { monterFenetre } from '../composants/fenetre.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import type { ContexteEcran, EcranAffiche } from './types.js';
 
-/** Monte l'ecran de jeu. Le terrain apparait des que la carte est chargee. */
-export function monterJeu(contexte: ContexteEcran): EcranAffiche {
+/**
+ * Monte l'ecran de jeu. Le terrain apparait des que la carte est chargee.
+ *
+ * @param diagnostic Le releve de performance, quand l'adresse le demande (etape 8.5): il
+ *                   suit la partie, et ses variantes changent le montage du rendu.
+ */
+export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): EcranAffiche {
   const doc = contexte.document;
   const navigateur = doc.defaultView;
   const client = contexte.client;
@@ -176,12 +183,20 @@ export function monterJeu(contexte: ContexteEcran): EcranAffiche {
       return;
     }
 
+    const variantes = diagnostic?.variantes;
     const rendu = await monterRendu({
       hote: terrain,
       carte,
       identifiantCarte: reglages.carte,
       modeMiroir: reglages.modeMiroir,
       pluie: reglages.pluie,
+      ...(variantes === undefined
+        ? {}
+        : {
+            lueur: variantes.lueur,
+            ...(variantes.rendu === undefined ? {} : { preference: variantes.rendu }),
+            ...(variantes.densite === undefined ? {} : { densite: variantes.densite }),
+          }),
     });
 
     if (!vivant) {
@@ -241,14 +256,38 @@ export function monterJeu(contexte: ContexteEcran): EcranAffiche {
       }),
     );
 
+    const suivi = diagnostic?.suivreUnePartie({
+      application: rendu.application,
+      client,
+      description: () =>
+        [
+          `carte ${reglages.carte}${reglages.modeMiroir ? ' miroir' : ''}`,
+          `mode ${mode ?? '?'}`,
+          `${String(reglages.nombreBotsInitial)} PNJ au départ`,
+          reglages.pluie ? 'pluie' : 'sans pluie',
+          `${String(client.etat.partie?.entites.length ?? 0)} entités à cet instant`,
+        ].join(', '),
+    });
+
+    if (suivi !== undefined) {
+      aRetirer.push(() => {
+        suivi.arreter();
+      });
+    }
+
+    // Sans HUD, la variante du releve qui le retire (etape 8.5).
+    const hud = variantes?.hud ?? true;
     const boucle = lancerLaBoucle({
       client,
       rendu,
       controles,
       horloge: contexte.horloge,
       carte,
-      surcouche,
-      pointsFlottants,
+      ...(hud ? { surcouche, pointsFlottants } : {}),
+      ...(suivi === undefined ? {} : { sonde: suivi.sonde }),
+      ...(variantes?.cadence === undefined
+        ? {}
+        : pilotageParPixi(rendu.application, variantes.cadence)),
       surStabilite: () => {
         montrer(chargement, false);
       },

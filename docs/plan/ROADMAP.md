@@ -142,6 +142,8 @@ Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision 
 
 **Étape 8.5 ouverte le 20 septembre 2026, et prioritaire: le jeu saccade sur téléphone.** Rapporté par le porteur du projet sur iPhone 14 Pro, au point que le jeu n'y est pas jouable. Audit d'abord, plan d'action ensuite, aucune optimisation au jugé. Fiche: `docs/plan/etape-8-5.md`. **C'est la prochaine étape à exécuter**, avant `8.3`.
 
+**Étape 8.5 en cours au 21 septembre 2026: l'instrument est en ligne, les mesures attendent le téléphone.** `https://ninja.dendrolag.fr/?diagnostic=1` ouvre un relevé de performance dans la page (cadence, saccades, part de notre code, de PixiJS et du réseau), copiable d'un bouton, et des variantes de l'adresse essaient un remède chacune. Le protocole de recette est à la section 4 de `docs/mesures/audit-saccades-telephone.md`. L'étape reprend quand les relevés de l'iPhone 14 Pro sont dans la conversation. Elle passe toujours avant `8.3`.
+
 ---
 
 ## 4. Carte thématique des étapes

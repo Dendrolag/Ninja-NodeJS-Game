@@ -33,6 +33,7 @@ import type { DimensionsCarte, Mode } from '@neon-ninja/shared';
 
 import type { Client } from '../client.js';
 import type { Controles } from '../controles/controles.js';
+import type { MesureDImage } from '../diagnostic/releve.js';
 import type { EtatClient } from '../etat.js';
 import type { FaitDeJeu } from '../faits.js';
 import { faitsArrives } from '../faits.js';
@@ -97,6 +98,16 @@ export interface OptionsBoucle {
    */
   readonly demanderUneImage?: (suite: (instant: number) => void) => number;
   readonly annulerUneImage?: (identifiant: number) => void;
+  /**
+   * Le releve de performance, quand l'adresse le demande (etape 8.5). Absent, la boucle ne
+   * lit aucune horloge de plus: le releve ne coute rien a qui ne l'a pas demande.
+   */
+  readonly sonde?: SondeDImage;
+}
+
+/** Ce qui recoit la mesure de chaque image, pour le releve de performance (etape 8.5). */
+export interface SondeDImage {
+  image(mesure: MesureDImage): void;
 }
 
 /** Une boucle en marche. */
@@ -227,7 +238,11 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
     if (niveauDeSang === 'normal' && lissee !== undefined && etat.salon?.mode === 'massacre') {
       marcherDansLeSang(scene.sang, lissee, maintenant);
     }
+
+    const sonde = options.sonde;
+    const apresLeRendu = sonde === undefined ? 0 : options.horloge.maintenant();
     options.surcouche?.afficher(construireHud(etat, maintenant));
+    const apresLeHud = sonde === undefined ? 0 : options.horloge.maintenant();
 
     // Les premieres images dessinees preparent le decor et la lueur, et rament: on
     // annonce le moment ou l'affichage devient fluide (recette de l'etape 5.4).
@@ -259,6 +274,14 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
     if (monEntite?.enMouvement === true) {
       options.sons?.jouerUnPas(maintenant, false);
     }
+
+    sonde?.image({
+      instant,
+      renduMs: apresLeRendu - maintenant,
+      hudMs: apresLeHud - apresLeRendu,
+      notreCodeMs: options.horloge.maintenant() - maintenant,
+      tenue: lissee !== undefined && tampon.enAttente(instantAffiche(microArret, maintenant)),
+    });
   };
 
   /** Suit les pieds des joueurs affiches, et imprime leurs pas dans le sang. */

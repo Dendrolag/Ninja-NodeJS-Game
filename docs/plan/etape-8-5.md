@@ -61,7 +61,7 @@ Micro-décisions au sens du PROTOCOLE.
 
 Écrites pour être **réfutées par la mesure**, pas pour être crues. Aucune n'est privilégiée. L'ordre est celui de la vraisemblance estimée, qui ne vaut rien tant qu'on n'a pas mesuré.
 
-1. **Le dos de rendu choisi par Safari.** PixiJS 8 prend WebGPU quand le navigateur le propose, et retombe sur WebGL sinon (`monterRendu` ne demande rien de particulier). Safari a les deux, et ils n'ont pas les mêmes performances ni les mêmes défauts. À relever: lequel tourne réellement sur l'appareil. À essayer: forcer l'autre.
+1. **Le dos de rendu choisi par Safari.** Safari a WebGL et WebGPU, qui n'ont pas les mêmes performances ni les mêmes défauts. À relever: lequel tourne réellement sur l'appareil. À essayer: forcer l'autre. Correction du 21 septembre 2026, à l'exécution: cette ligne disait que PixiJS 8 prend WebGPU quand le navigateur le propose. C'est faux: PixiJS 8.19 essaie **WebGL d'abord** (`autoDetectRenderer`), et `monterRendu` ne demande rien d'autre. C'est donc WebGPU qu'il faut essayer.
 2. **La cadence d'écran de l'iPhone 14 Pro.** Son écran monte à 120 hertz. Si le navigateur cadence le jeu à 120 images par seconde, le budget d'une image tombe de 16,7 à 8,3 millisecondes, et un rendu qui tenait confortablement devient limite. À relever: la cadence réellement demandée. À essayer: la plafonner.
 3. **Le coût du dessin, en vrai.** Les 3,2 à 3,6 millisecondes de PixiJS au cadrage d'un téléphone (section 18) sont mesurées sur une carte graphique de bureau. Celle d'un téléphone n'a ni la même bande passante mémoire ni le même pilote.
 4. **Les téléversements de texture.** Le décor est deux images de 3000 par 2000, et la pluie de Tokyo une planche de 9000 par 2000, découpée en trois. Ce sont des pics ponctuels: ils expliqueraient des saccades au démarrage et à l'apparition d'un effet, pas une gêne continue. Le juge de stabilité de l'étape 5.4 en couvre déjà une partie.
@@ -71,6 +71,11 @@ Micro-décisions au sens du PROTOCOLE.
 8. **L'échauffement et le mode économie d'énergie.** Un iPhone bride son processeur en chauffant, et le mode économie d'énergie plafonne l'affichage. Une dégradation progressive au fil d'une partie signe cette famille-là.
 9. **Le son.** Plusieurs sons ponctuels déclenchés en même temps, joués par des éléments audio du navigateur, sont une cause classique de saccade sur iOS. À essayer: jouer une partie son coupé.
 10. **Le filtre de lueur.** Une passe de calque qui coûte la surface de l'écran, sur un écran dense. Il ne couvre plus que les repères depuis le 15 septembre 2026, mais il reste une passe.
+
+Deux hypothèses ajoutées le 21 septembre 2026, à la lecture du code au début de l'étape (section 5.1 de l'audit):
+
+11. **Le HUD réécrit à chaque image, sur des fonds floutés.** La surcouche réécrit ses textes et reconstruit la liste des effets à chaque image, et cinq de ses éléments posent un flou d'arrière-plan sur un canevas qui change à chaque image. Le coût est hors de nos chronomètres, dans la mise en page et la composition du navigateur. À essayer: sans HUD, sans flou.
+12. **La saisie tactile.** La manette écoute les contacts en mode non passif: le navigateur attend la page avant de traiter chacun. À essayer: une moitié de partie sans toucher l'écran.
 
 ## Périmètre
 
@@ -137,6 +142,13 @@ Dans le même document, une dernière section:
 4. **Se méfier de la première hypothèse qui colle.** Deux causes peuvent se cumuler, et l'étape 5.4 a déjà montré qu'une cause trouvée sur iPhone pouvait en cacher une autre.
 5. **Le porteur du projet est dans la boucle, et l'étape s'arrête sans lui.** C'est prévu, ce n'est pas un échec: on écrit un handoff partiel au statut bloquée, disant exactement quels relevés manquent.
 6. **Écrire pour une personne non technique**, comme tout le reste de la documentation du projet.
+
+## Réconciliation à l'exécution (21 septembre 2026)
+
+- **Le dos de rendu par défaut est WebGL**, pas WebGPU: hypothèse 1 corrigée ci-dessus.
+- **Deux hypothèses de plus**, 11 et 12, ci-dessus. La définition de terminé porte donc sur douze hypothèses, pas dix.
+- **L'instrument essaie les remèdes par l'adresse.** Au-delà du relevé, `?diagnostic=1` accepte des variantes (`son=0`, `hud=0`, `flou=0`, `densite=1`, `cadence=60`, `rendu=webgpu`, `lueur=0`), qui ne valent qu'avec lui. Chaque hypothèse se tranche ainsi par une partie de plus, sans remettre le jeu en ligne. C'est aussi ce qui permettra de remesurer un réglage avant de le faire.
+- **Le scénario de bout en bout est `tests/e2e/diagnostic.spec.ts`**, joué par le seul projet bureau.
 
 ## Rituel de fin de session
 

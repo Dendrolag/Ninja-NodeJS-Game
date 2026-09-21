@@ -69,6 +69,12 @@ const EQUIPES = '**/equipes.spec.ts';
  */
 const CHASSE = '**/chasse.spec.ts';
 
+/**
+ * Le relevé de performance (étape 8.5), joué par le seul projet bureau: il ne dépend pas du
+ * cadrage, et le presse-papiers s'y lit plus simplement.
+ */
+const DIAGNOSTIC = '**/diagnostic.spec.ts';
+
 export default defineConfig({
   testDir: './tests/e2e',
   // Les paquets sont compiles une fois avant les scenarios: le banc de mesure du
@@ -118,7 +124,18 @@ export default defineConfig({
     {
       name: 'mobile',
       use: { ...devices['Pixel 7'] },
-      testIgnore: [BANC, MULTIJOUEUR, PARTIES, COMPTE, RETOUR, MOT_DE_PASSE, LIEN, EQUIPES, CHASSE],
+      testIgnore: [
+        BANC,
+        MULTIJOUEUR,
+        PARTIES,
+        COMPTE,
+        RETOUR,
+        MOT_DE_PASSE,
+        LIEN,
+        EQUIPES,
+        CHASSE,
+        DIAGNOSTIC,
+      ],
     },
     // Le banc de mesure du rendu a son propre projet, et une seule execution:
     // il mesure le moteur de rendu, pas la taille de la fenetre. Le jouer dans

@@ -28,6 +28,8 @@ import { creerClient } from './client.js';
 import { creerApiComptesHttp } from './comptes/api.js';
 import { CLE_RETOUR, creerCoffreDeJeton } from './comptes/coffre.js';
 import { configurationDeLaPage } from './configuration.js';
+import { creerDiagnostic } from './diagnostic/diagnostic.js';
+import { lireLaDemande } from './diagnostic/demande.js';
 import { horlogeNavigateur } from './horloge.js';
 import { monterApplication } from './interface/application.js';
 import { monterJeu } from './interface/ecrans/jeu.js';
@@ -117,15 +119,31 @@ const client = creerClient({
   surReseauRetrouve,
 });
 
-const sons = creerLecteurDeSons();
-debloquerLeSon(sons);
+// Le releve de performance, seulement si l'adresse le demande (etape 8.5): sans
+// `?diagnostic=1`, il n'existe pas.
+const variantes = lireLaDemande(globalThis.location.search);
+const diagnostic =
+  variantes === undefined
+    ? undefined
+    : creerDiagnostic({
+        document,
+        variantes,
+        ...(configuration.version === undefined ? {} : { version: configuration.version }),
+      });
+
+// Sans son, la variante du releve qui le retire: aucun lecteur n'est cree.
+const sons = variantes?.son === false ? undefined : creerLecteurDeSons();
+
+if (sons !== undefined) {
+  debloquerLeSon(sons);
+}
 
 monterApplication({
   hote,
   client,
-  sons,
+  ...(sons === undefined ? {} : { sons }),
   horloge: horlogeNavigateur,
-  monterLeJeu: monterJeu,
+  monterLeJeu: diagnostic === undefined ? monterJeu : (contexte) => monterJeu(contexte, diagnostic),
   // Un prechargement qui echoue n'a rien de grave: l'ecran de jeu recharge lui-meme
   // ce qui lui manque, et dit s'il n'y parvient pas.
   prechargerLeJeu: (reglages) => {

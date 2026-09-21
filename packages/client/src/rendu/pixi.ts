@@ -287,6 +287,16 @@ export interface OptionsRendu {
   readonly pluie: boolean;
   /** Poser ou non la lueur neon. Utile au banc de mesure, qui compare. */
   readonly lueur?: boolean;
+  /**
+   * Le dos de rendu a demander a PixiJS, qui prend WebGL de lui-meme. Seul le releve de
+   * performance en demande un autre, pour les comparer (etape 8.5).
+   */
+  readonly preference?: 'webgl' | 'webgpu';
+  /**
+   * La densite de rendu imposee, au lieu de celle de l'ecran plafonnee a DENSITE_MAXIMALE.
+   * Seul le releve de performance l'impose (etape 8.5).
+   */
+  readonly densite?: number;
   /** Largeur et hauteur du canevas. Celles de l'hote par defaut. */
   readonly largeur?: number;
   readonly hauteur?: number;
@@ -353,8 +363,9 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
     // Le rendu suit la densite de l'ecran, pour ne pas etre flou, mais jamais
     // au-dela de DENSITE_MAXIMALE (apparence.ts): un telephone de densite 3 faisait
     // dessiner neuf fois plus de pixels qu'un ecran ordinaire, lueur comprise.
-    resolution: Math.min(globalThis.devicePixelRatio, DENSITE_MAXIMALE),
+    resolution: options.densite ?? Math.min(globalThis.devicePixelRatio, DENSITE_MAXIMALE),
     autoDensity: true,
+    ...(options.preference === undefined ? {} : { preference: options.preference }),
   });
 
   options.hote.append(application.canvas as unknown as Node);
