@@ -118,6 +118,7 @@ Sept écrans dans la maquette. Pour chacun: son statut en v1, les données qu'il
 - **Statut**: v1 réduit, construit au jalon 3. Route `GET /api/comptes/profil` (`ProfilDuCompte`); les dix dernières parties; une victoire est une première place dans une partie d'au moins deux joueurs (décision du 11 septembre 2026). Un invité est mené à la connexion.
 - **Données v1**: pseudo, date d'inscription, niveau et XP, palier et points de ligue, pièces; statistiques déduites de l'historique (parties jouées, victoires, meilleur score); dernières parties (mode, carte, placement, score, gains, date).
 - **Masqué**: pass de saison, skins, succès, clan, gemmes, rang mondial, ratio, meilleure série, temps de jeu, ninjas capturés au total.
+- **Évolution décidée le 25 septembre 2026** (étape `3.5`): le meilleur score toutes modes confondus devient un meilleur score par mode, et le mode préféré s'ajoute. Le ratio et le temps de jeu restent masqués. La fiche d'un autre joueur, les amis et leurs statistiques: `docs/design/etude-amis-et-fiche-joueur.md`.
 
 ## 4. Contrat de configuration de partie
 

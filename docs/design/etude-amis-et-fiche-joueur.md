@@ -1,7 +1,7 @@
 # Étude - Les amis et la fiche joueur
 
 Date: 25 septembre 2026
-Statut: étude, rien n'est construit. Sept décisions attendent le porteur du projet (section 7).
+Statut: étude close, rien n'est construit. Décisions prises par le porteur du projet le 25 septembre 2026 (section 7): les recommandations sont retenues, sauf le temps de jeu, écarté. Les quatre étapes sont inscrites au ROADMAP.
 
 ## 1. La demande
 
@@ -53,13 +53,13 @@ Si un partage sans saisie est voulu, un **lien d'ami** (`…/?ami=Pseudo`) fait 
 | Ratio victoires sur défaites | Non, et à écarter | **Remplacer** | Voir ci-dessous. |
 | Mode préféré | Non, mais se déduit | Garder | Le mode le plus joué, départagé par la partie la plus récente. Un regroupement sur `resultats`, sans stockage. |
 | Plus haut score | Oui, mais toutes modes confondus | **Garder, par mode** | Voir ci-dessous. |
-| Temps de jeu total | Non, non enregistré | À décider | Demande une colonne, et l'historique passé est perdu. Voir ci-dessous. |
+| Temps de jeu total | Non, non enregistré | **Écarté** | Décision du 25 septembre 2026. Voir ci-dessous. |
 
 **Le ratio victoires sur défaites se lit mal dans ce jeu.** Les parties se jouent jusqu'à douze, chacun pour soi dans la plupart des modes. Gagner une partie sur quatre à huit joueurs est une performance, et donne un ratio de 0,33 qui se lit comme un échec. Le ratio dépend davantage de la taille des salons que du niveau du joueur. À la place: « 12 victoires en 40 parties à plusieurs », et le palier de ligue, qui mesure déjà la performance en tenant compte de la place et du nombre de joueurs.
 
 **Un plus haut score toutes modes confondus compare des choses différentes.** Une proie de Chasse marque en parcourant la carte, un joueur de Massacre au combo, et le x2 de l'Évadé double le score de son porteur. Le maximum global finit par être toujours le même mode. C'est déjà le cas du profil actuel, qui affiche ce maximum global. Proposition: un meilleur score par mode, qui remplace aussi celui du profil, et le record en Massacre solo y devient un cas du même tableau au lieu d'une exception.
 
-**Le temps de jeu total** coûte une colonne `temps_joue_s` dans `resultats`, remplie à la fin de chaque partie à partir du `tempsJoueMs` déjà calculé. Les parties déjà enregistrées ne le connaissent pas, et rien ne permet de le retrouver de façon fiable: l'XP d'un abandon vaut zéro, et `duree_s` est la durée réglée. Le total afficherait donc le temps « depuis le » jour de la mise en ligne. C'est un choix du porteur du projet, qui revient aussi sur un masquage du cadrage.
+**Le temps de jeu total** aurait coûté une colonne `temps_joue_s` dans `resultats`, et n'aurait compté qu'à partir de sa mise en ligne: les parties déjà enregistrées ne le connaissent pas, et rien ne permet de le retrouver de façon fiable (l'XP d'un abandon vaut zéro, et `duree_s` est la durée réglée). **Écarté par le porteur du projet le 25 septembre 2026**: le masquage du cadrage tient toujours.
 
 ### 3.4 Ce que la demande ne dit pas et qu'il faut trancher
 
@@ -81,21 +81,21 @@ Si un partage sans saisie est voulu, un **lien d'ami** (`…/?ami=Pseudo`) fait 
 
 ### 4.2 Les données
 
-Trois tables nouvelles qui référencent le compte, conformément au schéma de l'étape 3.1, et une colonne si le temps de jeu est retenu.
+Trois tables nouvelles qui référencent le compte, conformément au schéma de l'étape 3.1. Aucune colonne n'est ajoutée aux tables existantes.
 
 - `amities (compte_a, compte_b, creee_le)`: une ligne par amitié, avec `compte_a < compte_b` imposé par une contrainte. Une amitié est symétrique: la stocker une fois, dans un ordre fixe, rend un doublon impossible par construction. Clé primaire sur le couple, index sur `compte_b` pour lire les amis d'un compte dans les deux sens.
 - `demandes_d_ami (de, pour, creee_le)`: dirigée. Clé primaire sur le couple, contrainte `de <> pour`, index sur `pour` pour lire les demandes reçues. Accepter supprime la demande et crée l'amitié dans une même transaction.
 - `blocages (bloqueur, bloque, cree_le)`: dirigée, clé primaire sur le couple.
 - Toutes en `on delete cascade` sur `comptes`.
-- `resultats.temps_joue_s`, entier positif, **nul pour les parties d'avant**, si la décision 3 le retient. C'est un écart à la règle « pas de colonne ajoutée aux tables v1 », qui visait les fonctionnalités reportées (pass, skins, clans) et non un fait d'un résultat. Il se note au journal de conception.
 
 Aucune de ces données ne touche `packages/sim`: les amis et la présence sont l'affaire du serveur et de la page.
 
 ### 4.3 La fiche joueur
 
 - **Route** `GET /api/joueurs/:pseudo`, retrouvée par `reperePseudo`, avec un format de réponse et une lecture vérifiée dans `packages/shared`, comme `ProfilDuCompte`.
-- **Contenu**: pseudo, date d'inscription, niveau, palier de ligue, parties jouées, victoires sur parties à plusieurs, mode préféré, meilleur score par mode, et, si retenu, le temps de jeu. Pour un ami: la présence, les parties jouées ensemble et le face-à-face.
-- **Jamais**: les pièces, le code de secours, l'identifiant du compte. Ni les dernières parties, sauf décision contraire.
+- **Contenu**: pseudo, date d'inscription, niveau, palier de ligue, parties jouées, victoires sur parties à plusieurs, mode préféré, meilleur score par mode. Pour un ami: la présence, les parties jouées ensemble et le face-à-face.
+- **Jamais**: les pièces, le code de secours, l'identifiant du compte, ni les dernières parties (décision 7).
+- **Les succès, plus tard.** Le porteur du projet veut que la fiche montre les trophées et succès débloqués, quand ils existeront. Ils ne sont pas construits: c'est un point d'extension du cadrage (section 5, « succès et défis du jour »), sans étape au ROADMAP. La fiche s'y prépare sans rien construire d'avance: sa réponse est un objet à champs nommés, où un champ `succes` s'ajoutera, et son écran une suite de sections, où une section « Succès » s'insérera. L'étape qui construira les succès les affichera sur la fiche, avec la même visibilité que les statistiques.
 - **Requêtes**: une agrégation par mode sur `resultats` joint à `parties`, et, pour le face-à-face, une jointure de `resultats` sur lui-même par `partie_id`, que la clé primaire `(partie_id, compte_id)` et l'index `resultats_par_compte` servent déjà. Aux volumes du jeu, rien à mettre en cache.
 - **Le profil réutilise la même agrégation**: il gagne le meilleur score par mode et le mode préféré, au lieu d'avoir sa propre requête.
 
@@ -138,27 +138,29 @@ Chaque étape livre quelque chose d'utile seule. On peut s'arrêter après n'imp
 | Étape | Contenu | Taille | Dépend de |
 | --- | --- | --- | --- |
 | `2.7` Le lien d'invitation | `?partie=CODE` ouvre l'entrée dans la partie, pseudo demandé à un invité. Bouton « Partager » au salon (`navigator.share`, copie du lien à défaut). | Petite | Rien |
-| `3.5` La fiche joueur | Route par pseudo, agrégats par mode, mode préféré, temps de jeu si retenu, profil aligné sur la même agrégation. Ouverture depuis le salon et la fin de partie. | Moyenne | Rien |
+| `3.5` La fiche joueur | Route par pseudo, agrégats par mode, mode préféré, profil aligné sur la même agrégation. Ouverture depuis le salon et la fin de partie. | Moyenne | Rien |
 | `3.6` Les amis | Tables, demandes, acceptation, retrait, blocage, écran Amis, ajout par pseudo et depuis la fin de partie, face-à-face sur la fiche. | Moyenne à grande | `3.5` |
 | `2.8` Présence et invitations | Registre de présence, invitation poussée, droit d'entrée sans code, « Rejoindre » une partie publique d'un ami. | Moyenne à grande | `3.6` |
 
-Les numéros suivent la carte thématique: le réseau en phase 2, les comptes en phase 3. L'ordre d'exécution recommandé est celui du tableau. Aucune de ces étapes n'est encore inscrite à la section 3 du ROADMAP: elles le seront une fois les décisions prises.
+Les numéros suivent la carte thématique: le réseau en phase 2, les comptes en phase 3. L'ordre d'exécution est celui du tableau. Les quatre étapes sont inscrites à la section 3 du ROADMAP le 25 septembre 2026, après `8.7`, déjà planifiée au titre de la règle 7. Leurs fiches se rédigent au début de chacune, selon le cas de repli du PROTOCOLE, à partir de cette étude.
 
 ## 6. Ce qui est écarté, et pourquoi
 
 - **Le code de partage d'ami**: doublon du pseudo (3.2).
 - **Le ratio victoires sur défaites**: trompeur dans des parties à plusieurs (3.3).
 - **Le plus haut score global**: remplacé par un meilleur score par mode (3.3).
+- **Le temps de jeu total**: décision du porteur du projet (3.3).
 - **Le suivi à sens unique**, façon abonnement: il permettrait d'inviter quelqu'un qui n'a rien accepté.
 - **Une messagerie entre amis**: modération, stockage et abus pour un besoin que les joueurs couvrent déjà ailleurs. Le chat du salon reste le seul.
 - **Les invitations persistantes hors ligne**: le lien d'invitation fait mieux, sans stockage.
 
-## 7. Décisions à prendre par le porteur du projet
+## 7. Décisions du porteur du projet, le 25 septembre 2026
 
-1. **L'ordre**: commencer par le lien d'invitation (`2.7`), indépendant de la liste d'amis. Recommandé.
-2. **La visibilité de la fiche**: (a) amis seulement, (b) tout compte connecté, (c) tout le monde, invités compris. Recommandé: (b) pour les statistiques, la présence et le face-à-face réservés aux amis.
-3. **Le temps de jeu**: l'enregistrer à partir de la mise en ligne, affiché « depuis le » jour de départ, ou y renoncer comme le cadrage l'avait fait. Recommandé: l'enregistrer, le coût est une colonne.
-4. **Le ratio remplacé** par les victoires sur parties à plusieurs et le palier de ligue. Recommandé.
-5. **Le meilleur score par mode**, qui remplace aussi le meilleur score global du profil actuel. Recommandé.
-6. **L'emplacement de l'écran Amis**: cinquième destination de la navigation, ou onglet du Profil. Recommandé: cinquième destination.
-7. **Les dernières parties d'un ami** sur sa fiche: oui ou non. Recommandé: non, les parties ensemble suffisent.
+1. **L'ordre**: le lien d'invitation (`2.7`) en premier, indépendant de la liste d'amis. Retenu.
+2. **La visibilité de la fiche**: tout compte connecté voit les statistiques, la présence et le face-à-face sont réservés aux amis. Un invité ne voit pas de fiche. Retenu.
+3. **Le temps de jeu**: écarté. Rien ne s'ajoute à `resultats`.
+4. **Le ratio remplacé** par les victoires sur parties à plusieurs et le palier de ligue. Retenu.
+5. **Le meilleur score par mode**, qui remplace aussi le meilleur score global du profil actuel. Retenu.
+6. **L'écran Amis** est une cinquième destination de la navigation. Retenu.
+7. **Les dernières parties d'un ami** ne figurent pas sur sa fiche: les parties ensemble suffisent. Retenu.
+8. **Les succès**, ajout du porteur du projet: la fiche montrera les trophées et succès débloqués quand la fonctionnalité existera (section 4.3). Rien ne se construit d'avance.
