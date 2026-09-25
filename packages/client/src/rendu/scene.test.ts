@@ -180,8 +180,14 @@ describe('construireScene', () => {
 
   it('ajoute un halo par bonus actif sur nous', () => {
     const effets: readonly EffetActif[] = [
-      { categorie: 'bonus', nature: 'vitesse', surMoi: true, finPrevueA: 10_000 },
-      { categorie: 'bonus', nature: 'invincibilite', surMoi: true, finPrevueA: 10_000 },
+      { categorie: 'bonus', nature: 'vitesse', surMoi: true, finPrevueA: 10_000, dureeMs: 10_000 },
+      {
+        categorie: 'bonus',
+        nature: 'invincibilite',
+        surMoi: true,
+        finPrevueA: 10_000,
+        dureeMs: 10_000,
+      },
     ];
 
     const scene = construireScene(etatEnJeu('moi', effets), lissee(vue([joueur('moi', 0, 0)])), 0);
@@ -192,7 +198,7 @@ describe('construireScene', () => {
 
   it('ignore un bonus dont la duree est deja passee', () => {
     const effets: readonly EffetActif[] = [
-      { categorie: 'bonus', nature: 'vitesse', surMoi: true, finPrevueA: 1_000 },
+      { categorie: 'bonus', nature: 'vitesse', surMoi: true, finPrevueA: 1_000, dureeMs: 10_000 },
     ];
 
     const scene = construireScene(
@@ -206,7 +212,13 @@ describe('construireScene', () => {
 
   it('revele les autres joueurs, et seulement eux, quand la revelation est active', () => {
     const effets: readonly EffetActif[] = [
-      { categorie: 'bonus', nature: 'revelation', surMoi: true, finPrevueA: 10_000 },
+      {
+        categorie: 'bonus',
+        nature: 'revelation',
+        surMoi: true,
+        finPrevueA: 10_000,
+        dureeMs: 10_000,
+      },
     ];
 
     const scene = construireScene(
@@ -528,7 +540,7 @@ describe('les objets du Tactique a l ecran (etape 7.7)', () => {
     nature: EffetActif['nature'],
     surMoi = true,
   ): EffetActif {
-    return { categorie, nature, surMoi, finPrevueA: 9000 };
+    return { categorie, nature, surMoi, finPrevueA: 9000, dureeMs: 10_000 };
   }
 
   it('pose l arc de nos charges sous notre ninja, en Tactique seulement', () => {

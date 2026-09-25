@@ -348,7 +348,7 @@ describe('les effets affiches', () => {
     ]);
 
     expect(etat.effets).toEqual([
-      { categorie: 'bonus', nature: 'vitesse', surMoi: true, finPrevueA: 11_000 },
+      { categorie: 'bonus', nature: 'vitesse', surMoi: true, finPrevueA: 11_000, dureeMs: 10_000 },
     ]);
   });
 
@@ -363,6 +363,8 @@ describe('les effets affiches', () => {
 
     expect(etat.effets).toHaveLength(1);
     expect(etat.effets[0]?.finPrevueA).toBe(21_000);
+    // La jauge du HUD repart pleine, sur les dix-huit secondes qui restent (etape 4.6).
+    expect(etat.effets[0]?.dureeMs).toBe(18_000);
   });
 
   it('ne cumule pas avec un effet deja expire', () => {
@@ -401,7 +403,7 @@ describe('les effets affiches', () => {
     ]);
 
     expect(etat.effets).toEqual([
-      { categorie: 'malus', nature: 'flou', surMoi: false, finPrevueA: 5000 },
+      { categorie: 'malus', nature: 'flou', surMoi: false, finPrevueA: 5000, dureeMs: 4000 },
     ]);
   });
 
@@ -413,7 +415,8 @@ describe('les effets affiches', () => {
     const etat = apres([...JUSQU_AU_JEU, subi(1000), subi(8000)]);
 
     expect(etat.effets).toEqual([
-      { categorie: 'malus', nature: 'flou', surMoi: true, finPrevueA: 20_000 },
+      // La jauge repart pleine, sur la duree du malus relance (etape 4.6).
+      { categorie: 'malus', nature: 'flou', surMoi: true, finPrevueA: 20_000, dureeMs: 12_000 },
     ]);
   });
 

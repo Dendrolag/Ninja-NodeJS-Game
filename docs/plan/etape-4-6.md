@@ -102,6 +102,17 @@ Conditions de ROADMAP réunies, plus:
 2. **Deux effets identiques ne font qu'une carte**: le cumul allonge la jauge, il n'en ajoute pas une deuxième.
 3. **Le flou et le négatif**: Vision floue et Vision négative troublent notre écran. Vérifier que le grand titre et les cartes, qui sont en DOM, restent lisibles sous ces deux malus, comme aujourd'hui.
 
+## Réconciliation pendant l'étape (25 septembre 2026)
+
+Écarts entre la fiche et ce qui a été construit, consignés au journal de `docs/design/README.md`.
+
+1. **Un malus que nous ramassons ne se brouille pas.** La décision 1 disait « un malus se distingue par un titre penché et un effet de brouillage ». Le brouillage dit « quelque chose vous trouble »: il est réservé au malus subi. Un malus ramassé frappe les autres (comportement à préserver 4), c'est une bonne nouvelle; son grand titre porte le surtitre « Malus envoyé », droit, à la couleur de l'objet.
+2. **Sur écran tactile, le grand titre est plus serré et plus haut** (25 pour cent de la hauteur, titre de 28 pixels): à 34 pour cent, comme sur la planche, sa dernière ligne passait sur notre ninja, au centre de l'écran. Vérifié sur un téléphone tenu à l'horizontale.
+3. **Un téléphone à l'horizontale se reconnaît au pointeur**, pas à la largeur: il dépasse 640 pixels. Les tailles compactes s'appliquent donc sous `(pointer: coarse), (max-width: 640px)`, qui couvre aussi une fenêtre étroite d'ordinateur.
+4. **La jauge se rapporte à ce qui restait au dernier ramassage** (`EffetActif.dureeMs`): un bonus identique ramassé en cours de route la remplit de nouveau, un malus relancé aussi.
+5. **L'adresse de l'icône d'un objet a un seul endroit**, `adresseDeLIcone` dans `rendu/apparence.ts`, que l'aide emploie désormais aussi.
+6. **Les descriptions des bonus sous le grand titre** sont rédigées dans l'étape (« Vitesse x1,7 », « Personne ne peut vous capturer », « Les vrais joueurs se dévoilent », « Vos tirs ne coûtent plus de charge », « Une charge revient en 1,5 s », « Votre cône s’ouvre et porte plus loin »). Les malus reprennent les textes de l'étape 4.3. Elles restent à valider par le porteur du projet (définition de terminé, point 2).
+
 ## Rituel de fin de session
 
 Écrire `docs/handoffs/etape-4-6-handoff.md`: les décisions construites, les écarts à cette fiche, les captures, l'état de la CI. Prochaine action exacte: l'étape suivante de la section 3 du ROADMAP. Commiter, pousser, vérifier la CI et la mise en ligne.

@@ -163,8 +163,8 @@ describe('qui suis-je', () => {
 describe('les effets en cours', () => {
   const etat = enPartie({
     effets: [
-      { categorie: 'bonus', nature: 'vitesse', surMoi: true, finPrevueA: 5000 },
-      { categorie: 'malus', nature: 'flou', surMoi: true, finPrevueA: 12_000 },
+      { categorie: 'bonus', nature: 'vitesse', surMoi: true, finPrevueA: 5000, dureeMs: 10_000 },
+      { categorie: 'malus', nature: 'flou', surMoi: true, finPrevueA: 12_000, dureeMs: 10_000 },
     ],
   });
 
@@ -180,6 +180,7 @@ describe('les effets en cours', () => {
       nature: 'vitesse' as const,
       surMoi: true,
       finPrevueA: 5000,
+      dureeMs: 10_000,
     };
 
     expect(resteDeLEffet(effet, 1000)).toBe(4000);
@@ -214,11 +215,17 @@ describe('la partie bouge-t-elle', () => {
 describe('les effets qui agissent sur nous (etape 7.7)', () => {
   const etat = enPartie({
     effets: [
-      { categorie: 'bonus', nature: 'vitesse', surMoi: true, finPrevueA: 5000 },
-      { categorie: 'bonus', nature: 'rafale', surMoi: true, finPrevueA: 4000 },
-      { categorie: 'malus', nature: 'viseeEtroite', surMoi: true, finPrevueA: 9000 },
-      { categorie: 'malus', nature: 'tirUnique', surMoi: false, finPrevueA: 9000 },
-      { categorie: 'malus', nature: 'flou', surMoi: false, finPrevueA: 9000 },
+      { categorie: 'bonus', nature: 'vitesse', surMoi: true, finPrevueA: 5000, dureeMs: 10_000 },
+      { categorie: 'bonus', nature: 'rafale', surMoi: true, finPrevueA: 4000, dureeMs: 10_000 },
+      {
+        categorie: 'malus',
+        nature: 'viseeEtroite',
+        surMoi: true,
+        finPrevueA: 9000,
+        dureeMs: 10_000,
+      },
+      { categorie: 'malus', nature: 'tirUnique', surMoi: false, finPrevueA: 9000, dureeMs: 10_000 },
+      { categorie: 'malus', nature: 'flou', surMoi: false, finPrevueA: 9000, dureeMs: 10_000 },
     ],
   });
 
@@ -240,8 +247,8 @@ describe('les effets qui agissent sur nous (etape 7.7)', () => {
 
     const subis = enPartie({
       effets: [
-        { categorie: 'malus', nature: 'flou', surMoi: true, finPrevueA: 9000 },
-        { categorie: 'malus', nature: 'negatif', surMoi: true, finPrevueA: 5000 },
+        { categorie: 'malus', nature: 'flou', surMoi: true, finPrevueA: 9000, dureeMs: 10_000 },
+        { categorie: 'malus', nature: 'negatif', surMoi: true, finPrevueA: 5000, dureeMs: 10_000 },
       ],
     });
 

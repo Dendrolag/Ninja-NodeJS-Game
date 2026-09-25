@@ -36,11 +36,14 @@ import {
 
 import type { EtatClient } from '../etat.js';
 import { NOMS_DES_EQUIPES } from '../interface/modeles/cartes.js';
-import { APPARENCE_OBJET } from '../rendu/apparence.js';
+import { APPARENCE_OBJET, adresseDeLIcone } from '../rendu/apparence.js';
 import { effetsEnCours, moiDansLaPartie, resteDeLEffet } from '../selecteurs.js';
 
 /** Sous cette duree restante, le temps s'affiche en alerte. */
 export const SEUIL_URGENCE_MS = 30_000;
+
+/** Sous cette duree restante, la carte d'un effet clignote (etape 4.6). */
+export const SEUIL_FIN_PROCHE_MS = 3_000;
 
 /** Une ligne du classement, prete a etre affichee. */
 export interface LigneHud {
@@ -71,6 +74,17 @@ export interface EffetHud {
   readonly resteMs: number;
   /** Ce qu'il reste, en secondes arrondies vers le haut: ce que le joueur lit. */
   readonly resteS: number;
+  /** Ce qu'il reste de l'effet, de zero a un: la jauge de sa carte (etape 4.6). */
+  readonly part: number;
+  /** L'effet touche a sa fin: sa carte clignote (etape 4.6). */
+  readonly finProche: boolean;
+  /**
+   * Un malus que nous avons ramasse: il frappe les autres et nous epargne (comportement a
+   * preserver 4). Sa carte le dit, pour qu'il ne se lise pas comme subi.
+   */
+  readonly auxAutres: boolean;
+  /** L'adresse de l'icone de l'objet, la meme que sur la carte. */
+  readonly icone: string;
 }
 
 /** Un point a poser sur la minimap, en coordonnees de carte. */
@@ -381,6 +395,10 @@ function effetsHud(etat: EtatClient, maintenant: number): readonly EffetHud[] {
         couleur: apparence.couleur,
         resteMs,
         resteS: Math.ceil(resteMs / 1000),
+        part: effet.dureeMs > 0 ? Math.min(Math.max(resteMs / effet.dureeMs, 0), 1) : 0,
+        finProche: resteMs <= SEUIL_FIN_PROCHE_MS,
+        auxAutres: effet.categorie === 'malus' && !effet.surMoi,
+        icone: adresseDeLIcone(effet.nature),
       };
     })
     .sort((gauche, droite) => gauche.resteMs - droite.resteMs);

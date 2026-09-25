@@ -14,6 +14,7 @@ import { annonceDuFait, annonceDuRefus, annoncesDuChangement } from './annonces.
 import type { EtatClient } from './etat.js';
 import { ETAT_INITIAL } from './etat.js';
 import { fait } from './faits.js';
+import { APPARENCE_OBJET, adresseDeLIcone } from './rendu/apparence.js';
 
 /** Un salon ou l'hote est celui qu'on designe. */
 function salon(hote: string): InfosSalon {
@@ -86,7 +87,19 @@ describe('annonceDuFait', () => {
       fait('malusSubi', { nature: 'flou', dureeMs: 12_000, parPseudo: 'Bob' }, 0),
     );
 
-    expect(annonce).toEqual({ texte: 'Bob vous a volé vos lunettes', ton: 'alerte' });
+    expect(annonce).toEqual({
+      texte: 'Bob vous a volé vos lunettes',
+      ton: 'alerte',
+      // Un malus qui nous frappe prend le grand titre, penche et brouille (etape 4.6).
+      grandTitre: {
+        surtitre: 'Malus',
+        titre: 'Vision floue',
+        ligne: 'Bob vous a volé vos lunettes',
+        couleur: 0x44aaff,
+        icone: '/assets/objets/blur.png',
+        brouille: true,
+      },
+    });
   });
 
   it('dit a celui qui ramasse un malus qu il frappe les autres', () => {
@@ -97,7 +110,82 @@ describe('annonceDuFait', () => {
     expect(annonce).toEqual({
       texte: 'Vous avez privé vos adversaires de couleurs',
       ton: 'succes',
+      // Une bonne nouvelle pour nous: le grand titre ne se brouille pas (etape 4.6).
+      grandTitre: {
+        surtitre: 'Malus envoyé',
+        titre: 'Vision négative',
+        ligne: 'Vous avez privé vos adversaires de couleurs',
+        couleur: 0xaa44ff,
+        icone: '/assets/objets/negative.png',
+        brouille: false,
+      },
     });
+  });
+
+  it('donne le grand titre a chacun des douze objets, a sa couleur et avec son icone', () => {
+    const bonus = [
+      'vitesse',
+      'invincibilite',
+      'revelation',
+      'rafale',
+      'rechargeRapide',
+      'viseeLarge',
+    ] as const;
+    const malus = [
+      'controlesInverses',
+      'flou',
+      'negatif',
+      'tirUnique',
+      'rechargeLente',
+      'viseeEtroite',
+    ] as const;
+
+    for (const nature of bonus) {
+      const titre = annonceDuFait(fait('bonusActive', { nature, dureeMs: 7_000 }, 0))?.grandTitre;
+
+      expect(titre?.surtitre, nature).toBe('Bonus');
+      expect(titre?.couleur, nature).toBe(APPARENCE_OBJET[nature].couleur);
+      expect(titre?.titre, nature).toBe(APPARENCE_OBJET[nature].libelle);
+      expect(titre?.icone, nature).toBe(adresseDeLIcone(nature));
+      // La duree vient de l'effet recu: l'hote regle les durees.
+      expect(titre?.ligne, nature).toMatch(/ pendant 7 s$/u);
+      expect(titre?.brouille, nature).toBe(false);
+    }
+
+    for (const nature of malus) {
+      const subi = annonceDuFait(
+        fait('malusSubi', { nature, dureeMs: 7_000, parPseudo: 'Bob' }, 0),
+      );
+      const envoye = annonceDuFait(fait('malusRamasse', { nature, dureeMs: 7_000 }, 0));
+
+      expect(subi?.grandTitre?.couleur, nature).toBe(APPARENCE_OBJET[nature].couleur);
+      expect(subi?.grandTitre?.ligne, nature).toContain('Bob');
+      expect(subi?.grandTitre?.brouille, nature).toBe(true);
+      expect(envoye?.grandTitre?.surtitre, nature).toBe('Malus envoyé');
+      expect(envoye?.grandTitre?.brouille, nature).toBe(false);
+    }
+  });
+
+  it('dit ce que fait un bonus sous son grand titre', () => {
+    const vitesse = annonceDuFait(fait('bonusActive', { nature: 'vitesse', dureeMs: 10_000 }, 0));
+    const recharge = annonceDuFait(
+      fait('bonusActive', { nature: 'rechargeRapide', dureeMs: 10_000 }, 0),
+    );
+
+    expect(vitesse?.grandTitre?.ligne).toBe('Vitesse x1,7 pendant 10 s');
+    expect(recharge?.grandTitre?.ligne).toBe('Une charge revient en 1,5 s pendant 10 s');
+  });
+
+  it('laisse les autres faits dans le fil, sans grand titre', () => {
+    const capture = annonceDuFait(
+      fait('captureSubie', { parPseudo: 'Bob', nouvelleCouleur: '#00FF00', botsPerdus: 3 }, 0),
+    );
+    const arrivee = annonceDuFait(
+      fait('joueurArrive', { id: 'eve', pseudo: 'Eve', hote: false }, 0),
+    );
+
+    expect(capture?.grandTitre).toBeUndefined();
+    expect(arrivee?.grandTitre).toBeUndefined();
   });
 
   it('nomme le bonus ramasse avec son libelle affiche', () => {

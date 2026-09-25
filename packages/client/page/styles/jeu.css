@@ -258,7 +258,7 @@
  * que sous elle pour ne pas le doubler dedans.
  */
 .hud-classement {
-  --hauteur-ligne: 28px;
+  --hauteur-ligne: 34px;
 
   position: absolute;
   top: var(--debut-barre);
@@ -266,7 +266,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  width: 220px;
+  width: 250px;
   margin: 0;
   padding: calc((var(--hauteur-barre) - var(--hauteur-ligne)) / 2) 6px;
   border-radius: 0 0 14px 14px;
@@ -291,7 +291,7 @@
   height: var(--hauteur-ligne);
   padding: 0 8px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 16px;
 }
 
 .hud-ligne::before {
@@ -304,8 +304,15 @@
   box-shadow: 0 0 6px var(--couleur-joueur);
 }
 
+/*
+ * Notre ligne se detache (etape 4.6): plus haute, cadree, les points en gros. Sur les
+ * ecrans tactiles et etroits, elle reprend la forme d'avant, plus bas.
+ */
 .hud-ligne.moi {
-  background: rgba(45, 230, 224, 0.1);
+  height: calc(var(--hauteur-ligne) + 10px);
+  border: 1px solid rgba(45, 230, 224, 0.5);
+  background: linear-gradient(90deg, rgba(45, 230, 224, 0.22), rgba(45, 230, 224, 0.06));
+  box-shadow: 0 0 14px rgba(45, 230, 224, 0.25);
 }
 
 .hud-pseudo {
@@ -318,12 +325,20 @@
 
 .hud-ligne.moi .hud-pseudo {
   color: var(--cyan);
+  font-size: 18px;
   font-weight: 600;
 }
 
 .hud-points {
   font-family: var(--police-donnees);
-  font-size: 12.5px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.hud-ligne.moi .hud-points {
+  color: #fff;
+  font-size: 24px;
+  text-shadow: 0 0 10px var(--cyan);
 }
 
 /*
@@ -422,46 +437,121 @@
   }
 }
 
+/*
+ * Les effets en cours, en cartes a jauge (etape 4.6, direction A des planches de
+ * docs/design/etape-4-6/): l'icone de l'objet dans son disque, son nom, les secondes en
+ * gros et a sa couleur, et une jauge qui se vide. Un malus a une bordure en pointille, et
+ * une carte clignote pendant ses trois dernieres secondes. Les tailles sont celles de
+ * l'ordinateur; les ecrans tactiles et etroits gardent a peu pres celles d'avant, plus bas.
+ */
 .hud-effets {
   position: absolute;
-  bottom: max(14px, env(safe-area-inset-bottom));
-  left: 14px;
-  display: grid;
-  gap: 8px;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .hud-effet {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 14px;
-  border: 1px solid color-mix(in srgb, var(--couleur-effet) 45%, transparent);
-  border-radius: 12px;
-  background: var(--fond-verre);
+  gap: 12px;
+  width: 280px;
+  padding: 9px 14px 13px 9px;
+  overflow: hidden;
+  border: 2px solid color-mix(in srgb, var(--couleur-effet) 60%, transparent);
+  border-radius: 14px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--couleur-effet) 18%, rgba(7, 12, 20, 0.9)),
+    rgba(7, 12, 20, 0.86)
+  );
+  box-shadow: 0 0 16px color-mix(in srgb, var(--couleur-effet) 25%, transparent);
   backdrop-filter: blur(8px);
 }
 
-.hud-effet::before {
-  content: '';
-  width: 8px;
-  height: 8px;
+.hud-effet-malus {
+  border-style: dashed;
+}
+
+.hud-effet.fin-proche {
+  animation: effet-finissant 0.5s ease-in-out infinite alternate;
+}
+
+.hud-effet-icone,
+.grand-titre-icone {
+  display: grid;
+  flex: none;
+  place-items: center;
   border-radius: 50%;
+  background: var(--couleur-effet, var(--couleur-objet));
+  box-shadow: 0 0 12px var(--couleur-effet, var(--couleur-objet));
+}
+
+.hud-effet-icone {
+  width: 36px;
+  height: 36px;
+}
+
+/* L'icone est une planche de deux images: on n'en montre que la premiere. */
+.hud-effet-pictogramme,
+.grand-titre-pictogramme {
+  width: 72%;
+  height: 72%;
+  background-position: 0 0;
+  background-repeat: no-repeat;
+  background-size: 200% 100%;
+}
+
+.hud-effet-nom {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.hud-effet-libelle {
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hud-effet-cible {
+  color: var(--texte-secondaire);
+  font-size: 12px;
+}
+
+.hud-effet-reste {
+  color: color-mix(in srgb, var(--couleur-effet) 60%, #fff);
+  font-family: var(--police-donnees);
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: 0 0 8px var(--couleur-effet);
+}
+
+.hud-effet-jauge {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: calc(var(--part, 1) * 100%);
+  height: 4px;
   background: var(--couleur-effet);
   box-shadow: 0 0 8px var(--couleur-effet);
 }
 
-.hud-effet-libelle {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.hud-effet-reste {
-  color: var(--texte-secondaire);
-  font-family: var(--police-donnees);
-  font-size: 12px;
+@keyframes effet-finissant {
+  to {
+    opacity: 0.45;
+  }
 }
 
 .hud-minimap {
@@ -751,6 +841,82 @@
     min-width: 120px;
     padding: 16px 18px;
     font-size: 15px;
+  }
+}
+
+/*
+ * Sur un ecran tactile, le HUD garde a peu pres les tailles d'avant l'etape 4.6:
+ * l'ecran est petit, et agrandir couvrirait le terrain (planches 6 a 8 de
+ * docs/design/etape-4-6/). Un telephone tenu a l'horizontale depasse 640 pixels: c'est
+ * le pointeur qui le reconnait; une fenetre etroite d'ordinateur prend les memes tailles.
+ */
+@media (pointer: coarse), (max-width: 640px) {
+  .hud-classement {
+    --hauteur-ligne: 28px;
+
+    width: 220px;
+  }
+
+  .hud-ligne {
+    font-size: 13px;
+  }
+
+  .hud-ligne.moi {
+    height: var(--hauteur-ligne);
+    box-shadow: none;
+  }
+
+  .hud-ligne.moi .hud-pseudo {
+    font-size: 13px;
+  }
+
+  .hud-points {
+    font-size: 12.5px;
+  }
+
+  .hud-ligne.moi .hud-points {
+    font-size: 15px;
+  }
+
+  .hud-effets {
+    bottom: max(14px, env(safe-area-inset-bottom));
+    left: 14px;
+    gap: 6px;
+  }
+
+  .hud-effet {
+    gap: 8px;
+    width: 200px;
+    padding: 5px 10px 8px 5px;
+    border-width: 1.5px;
+    border-radius: 12px;
+  }
+
+  .hud-effet-icone {
+    width: 26px;
+    height: 26px;
+  }
+
+  .hud-effet-libelle {
+    font-size: 13px;
+  }
+
+  .hud-effet-cible {
+    font-size: 10px;
+  }
+
+  .hud-effet-reste {
+    font-size: 16px;
+  }
+
+  .hud-effet-jauge {
+    height: 3px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-effet.fin-proche {
+    animation: none;
   }
 }
 

@@ -31,6 +31,7 @@ import type {
   ArmeHud,
   ChargesHud,
   ChasseHud,
+  EffetHud,
   Hud,
   LigneHud,
   ComboHud,
@@ -108,6 +109,8 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
   const lignes = new Map<string, HTMLElement>();
   /** Les points de la minimap deja crees. */
   const points = new Map<string, HTMLElement>();
+  /** Les cartes des effets deja creees (etape 4.6). */
+  const cartesDEffets = new Map<string, HTMLElement>();
 
   return {
     afficher(hud: Hud) {
@@ -123,7 +126,7 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
       chasse.afficher(hud.chasse);
       combo.afficher(hud.combo);
       majClassement(doc, classement, lignes, hud.classement);
-      majEffets(doc, effets, hud);
+      majEffets(doc, effets, cartesDEffets, hud.effets);
       majMinimap(doc, minimap, points, hud.minimap, options.carte);
       majPortee(portee, hud.portee, options.carte);
       // En Chasse, les charges d'un traqueur sont ses vies (etape 7.3); en Massacre, le
@@ -149,6 +152,7 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
       racine.remove();
       lignes.clear();
       points.clear();
+      cartesDEffets.clear();
     },
   };
 }
@@ -376,21 +380,70 @@ function creerLigne(
 }
 
 /**
- * Met les effets affiches en accord avec le modele.
+ * Met les cartes des effets en accord avec le modele (etape 4.6, cartes a jauge).
  *
- * Ils sont peu nombreux, changent d'ordre a chaque seconde et disparaissent
- * souvent: les reconstruire est ici plus simple que de les suivre, et le cout est
- * negligeable devant celui du classement.
+ * LES CARTES SONT REUTILISEES, comme les lignes du classement: une carte reconstruite a
+ * chaque image ferait repartir son clignotement de fin a zero, et il ne clignoterait
+ * jamais. Une carte par effet, reconnue a sa nature, sa categorie et sa cible. L'ordre,
+ * du plus proche de sa fin au plus lointain, passe par l'ordre de mise en page.
  */
-function majEffets(doc: Document, liste: HTMLElement, hud: Hud): void {
-  liste.replaceChildren();
+function majEffets(
+  doc: Document,
+  liste: HTMLElement,
+  cartes: Map<string, HTMLElement>,
+  modele: readonly EffetHud[],
+): void {
+  const vues = new Set<string>();
 
-  for (const effet of hud.effets) {
-    const ligne = element(doc, 'li', `hud-effet hud-effet-${effet.categorie}`, liste);
-    ligne.style.setProperty('--couleur-effet', `#${effet.couleur.toString(16).padStart(6, '0')}`);
-    element(doc, 'span', 'hud-effet-libelle', ligne).textContent = effet.libelle;
-    element(doc, 'span', 'hud-effet-reste', ligne).textContent = `${String(effet.resteS)} s`;
+  modele.forEach((effet, rang) => {
+    const cle = `${effet.categorie}-${effet.nature}-${effet.auxAutres ? 'autres' : 'moi'}`;
+    vues.add(cle);
+    const carte = cartes.get(cle) ?? creerCarte(doc, liste, cartes, cle, effet);
+
+    (carte.querySelector('.hud-effet-reste') as HTMLElement).textContent =
+      `${String(effet.resteS)}s`;
+    carte.style.setProperty('--part', String(effet.part));
+    carte.style.order = String(rang);
+    carte.classList.toggle('fin-proche', effet.finProche);
+  });
+
+  for (const [cle, carte] of cartes) {
+    if (!vues.has(cle)) {
+      carte.remove();
+      cartes.delete(cle);
+    }
   }
+}
+
+/** Cree la carte d'un effet, avec ce qui ne change pas pendant sa vie, et la retient. */
+function creerCarte(
+  doc: Document,
+  liste: HTMLElement,
+  cartes: Map<string, HTMLElement>,
+  cle: string,
+  effet: EffetHud,
+): HTMLElement {
+  const carte = element(doc, 'li', `hud-effet hud-effet-${effet.categorie}`, liste);
+  carte.style.setProperty('--couleur-effet', `#${effet.couleur.toString(16).padStart(6, '0')}`);
+  carte.classList.toggle('aux-autres', effet.auxAutres);
+
+  const icone = element(doc, 'span', 'hud-effet-icone', carte);
+  icone.setAttribute('aria-hidden', 'true');
+  element(doc, 'span', 'hud-effet-pictogramme', icone).style.backgroundImage =
+    `url("${effet.icone}")`;
+
+  const nom = element(doc, 'span', 'hud-effet-nom', carte);
+  element(doc, 'span', 'hud-effet-libelle', nom).textContent = effet.libelle;
+
+  if (effet.auxAutres) {
+    element(doc, 'span', 'hud-effet-cible', nom).textContent = 'aux autres';
+  }
+
+  element(doc, 'span', 'hud-effet-reste', carte);
+  element(doc, 'span', 'hud-effet-jauge', carte).setAttribute('aria-hidden', 'true');
+  cartes.set(cle, carte);
+
+  return carte;
 }
 
 /**

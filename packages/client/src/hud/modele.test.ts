@@ -130,9 +130,15 @@ describe('construireHud', () => {
 
   describe('effets en cours', () => {
     const effets: readonly EffetActif[] = [
-      { categorie: 'bonus', nature: 'vitesse', surMoi: true, finPrevueA: 10_000 },
-      { categorie: 'malus', nature: 'flou', surMoi: true, finPrevueA: 4_000 },
-      { categorie: 'bonus', nature: 'invincibilite', surMoi: true, finPrevueA: 1_000 },
+      { categorie: 'bonus', nature: 'vitesse', surMoi: true, finPrevueA: 10_000, dureeMs: 10_000 },
+      { categorie: 'malus', nature: 'flou', surMoi: true, finPrevueA: 4_000, dureeMs: 10_000 },
+      {
+        categorie: 'bonus',
+        nature: 'invincibilite',
+        surMoi: true,
+        finPrevueA: 1_000,
+        dureeMs: 10_000,
+      },
     ];
 
     it('montre chaque effet avec son libelle et son reste', () => {
@@ -147,6 +153,47 @@ describe('construireHud', () => {
       const hud = construireHud(etatEnJeu(vue(), { effets }), 0);
 
       expect(hud.effets.map((effet) => effet.nature)).toEqual(['invincibilite', 'flou', 'vitesse']);
+    });
+
+    it('dit la part qui reste de chaque effet, pour sa jauge (etape 4.6)', () => {
+      const hud = construireHud(etatEnJeu(vue(), { effets }), 2_500);
+      const part = (nature: string): number | undefined =>
+        hud.effets.find((effet) => effet.nature === nature)?.part;
+
+      expect(part('vitesse')).toBeCloseTo(0.75);
+      expect(part('flou')).toBeCloseTo(0.15);
+    });
+
+    it('signale les trois dernieres secondes d un effet (etape 4.6)', () => {
+      const hud = construireHud(etatEnJeu(vue(), { effets }), 1_000);
+      const finProche = (nature: string): boolean | undefined =>
+        hud.effets.find((effet) => effet.nature === nature)?.finProche;
+
+      expect(finProche('flou')).toBe(true);
+      expect(finProche('vitesse')).toBe(false);
+    });
+
+    it('distingue le malus que nous infligeons aux autres (etape 4.6)', () => {
+      const envoye: EffetActif = {
+        categorie: 'malus',
+        nature: 'negatif',
+        surMoi: false,
+        finPrevueA: 9_000,
+        dureeMs: 14_000,
+      };
+      const hud = construireHud(etatEnJeu(vue(), { effets: [...effets, envoye] }), 0);
+
+      expect(hud.effets.find((effet) => effet.nature === 'negatif')?.auxAutres).toBe(true);
+      expect(hud.effets.find((effet) => effet.nature === 'flou')?.auxAutres).toBe(false);
+      expect(hud.effets.find((effet) => effet.nature === 'vitesse')?.auxAutres).toBe(false);
+    });
+
+    it('donne a chaque effet l icone de son objet (etape 4.6)', () => {
+      const hud = construireHud(etatEnJeu(vue(), { effets }), 0);
+
+      expect(hud.effets.find((effet) => effet.nature === 'vitesse')?.icone).toBe(
+        '/assets/objets/speed.png',
+      );
     });
 
     it('arrondit le reste vers le haut, en secondes', () => {

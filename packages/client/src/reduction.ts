@@ -530,7 +530,7 @@ function ajouterLEffet(
   );
 
   if (courant === undefined) {
-    return [...enCours, { categorie, nature, surMoi, finPrevueA: instant + dureeMs }];
+    return [...enCours, { categorie, nature, surMoi, finPrevueA: instant + dureeMs, dureeMs }];
   }
 
   const finPrevueA =
@@ -538,7 +538,10 @@ function ajouterLEffet(
       ? courant.finPrevueA + dureeMs
       : Math.max(courant.finPrevueA, instant + dureeMs);
 
-  return enCours.map((effet) => (effet === courant ? { ...effet, finPrevueA } : effet));
+  // La jauge repart pleine: elle se rapporte a ce qui reste au moment du ramassage.
+  return enCours.map((effet) =>
+    effet === courant ? { ...effet, finPrevueA, dureeMs: finPrevueA - instant } : effet,
+  );
 }
 
 /** Le message de chat, date de son arrivee. */

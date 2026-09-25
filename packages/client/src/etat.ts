@@ -204,6 +204,12 @@ export interface EffetActif {
   readonly surMoi: boolean;
   /** Instant local auquel l'effet doit cesser d'etre affiche. */
   readonly finPrevueA: number;
+  /**
+   * Ce que durait l'effet a son dernier ramassage, en millisecondes: la jauge du HUD s'y
+   * rapporte (etape 4.6). Un bonus identique ramasse en cours de route l'allonge de sa
+   * duree (comportement a preserver 10), et la jauge se remplit de nouveau.
+   */
+  readonly dureeMs: number;
 }
 
 /** Tout ce que le client sait, a un instant donne. */

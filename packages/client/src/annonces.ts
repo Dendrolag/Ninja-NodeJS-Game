@@ -20,13 +20,13 @@
  * le joueur a sous les yeux, et le lui dire ailleurs le ferait chercher.
  */
 
-import type { Mode, NatureMalus, Refus } from '@neon-ninja/shared';
-import { multiplicateurDuCombo } from '@neon-ninja/shared';
+import type { Mode, NatureBonus, NatureMalus, NatureObjet, Refus } from '@neon-ninja/shared';
+import { OBJETS_TACTIQUES, VITESSES, multiplicateurDuCombo } from '@neon-ninja/shared';
 
 import type { EtatClient } from './etat.js';
 import type { FaitDeJeu } from './faits.js';
 import { faitsArrives } from './faits.js';
-import { APPARENCE_OBJET } from './rendu/apparence.js';
+import { APPARENCE_OBJET, adresseDeLIcone } from './rendu/apparence.js';
 import { jeSuisHote } from './selecteurs.js';
 
 /** Le ton d'une annonce, qui decide de sa couleur. */
@@ -38,10 +38,71 @@ export type TonAnnonce =
   /** Une information neutre. */
   | 'info';
 
+/**
+ * Le grand titre d'une annonce d'objet, au centre de l'ecran (etape 4.6, direction B des
+ * planches de `docs/design/etape-4-6/`, choisie par le porteur du projet).
+ */
+export interface GrandTitre {
+  /** Au-dessus du titre: « Bonus », « Malus » ou « Malus envoyé ». */
+  readonly surtitre: string;
+  /** Le nom de l'objet, en tres grand. */
+  readonly titre: string;
+  /** Sous le titre: ce que fait l'objet, ou qui nous l'inflige. */
+  readonly ligne: string;
+  /** La couleur de l'objet, celle qu'il a sur la carte. */
+  readonly couleur: number;
+  /** L'adresse de son icone. */
+  readonly icone: string;
+  /** Un malus qui nous frappe: le titre se penche et se brouille. */
+  readonly brouille: boolean;
+}
+
 /** Une phrase a montrer au joueur. */
 export interface Annonce {
   readonly texte: string;
   readonly ton: TonAnnonce;
+  /**
+   * Present, l'annonce prend la forme d'un grand titre au lieu d'une bulle du fil (etape
+   * 4.6). Seuls les objets le prennent; le texte reste la phrase entiere.
+   */
+  readonly grandTitre?: GrandTitre;
+}
+
+/**
+ * Ce que fait chaque bonus, en quelques mots, sous le grand titre de son annonce (etape 4.6).
+ * La duree s'y ajoute: elle vient de l'effet recu, l'hote reglant les durees.
+ */
+const EFFETS_DES_BONUS: Readonly<Record<NatureBonus, string>> = {
+  vitesse: `Vitesse x${String(VITESSES.MULTIPLICATEUR_BONUS).replace('.', ',')}`,
+  invincibilite: 'Personne ne peut vous capturer',
+  revelation: 'Les vrais joueurs se dévoilent',
+  rafale: 'Vos tirs ne coûtent plus de charge',
+  rechargeRapide: `Une charge revient en ${String(OBJETS_TACTIQUES.RECHARGE_RAPIDE_MS / 1000).replace('.', ',')} s`,
+  viseeLarge: 'Votre cône s’ouvre et porte plus loin',
+};
+
+/** Une duree d'effet, en secondes entieres: « pendant 10 s ». */
+function pendant(dureeMs: number): string {
+  return `pendant ${String(Math.round(dureeMs / 1000))} s`;
+}
+
+/** Le grand titre de l'annonce d'un objet. */
+function grandTitre(
+  nature: NatureObjet,
+  surtitre: string,
+  ligne: string,
+  brouille: boolean,
+): GrandTitre {
+  const apparence = APPARENCE_OBJET[nature];
+
+  return {
+    surtitre,
+    titre: apparence.libelle,
+    ligne,
+    couleur: apparence.couleur,
+    icone: adresseDeLIcone(nature),
+    brouille,
+  };
 }
 
 /**
@@ -160,16 +221,41 @@ export function annonceDuFait(fait: FaitDeJeu, mode?: Mode, moi?: string): Annon
       };
 
     case 'bonusActive':
-      return { texte: `Bonus : ${APPARENCE_OBJET[fait.charge.nature].libelle}`, ton: 'succes' };
-
-    case 'malusRamasse':
-      return { texte: TEXTES_MALUS[fait.charge.nature].declenche, ton: 'succes' };
-
-    case 'malusSubi':
       return {
-        texte: TEXTES_MALUS[fait.charge.nature].subi.replace('{joueur}', fait.charge.parPseudo),
-        ton: 'alerte',
+        texte: `Bonus : ${APPARENCE_OBJET[fait.charge.nature].libelle}`,
+        ton: 'succes',
+        grandTitre: grandTitre(
+          fait.charge.nature,
+          'Bonus',
+          `${EFFETS_DES_BONUS[fait.charge.nature]} ${pendant(fait.charge.dureeMs)}`,
+          false,
+        ),
       };
+
+    case 'malusRamasse': {
+      const texte = TEXTES_MALUS[fait.charge.nature].declenche;
+
+      // Un malus ramasse frappe les autres (comportement a preserver 4): c'est une bonne
+      // nouvelle pour nous, et le titre ne se brouille pas.
+      return {
+        texte,
+        ton: 'succes',
+        grandTitre: grandTitre(fait.charge.nature, 'Malus envoyé', texte, false),
+      };
+    }
+
+    case 'malusSubi': {
+      const texte = TEXTES_MALUS[fait.charge.nature].subi.replace(
+        '{joueur}',
+        fait.charge.parPseudo,
+      );
+
+      return {
+        texte,
+        ton: 'alerte',
+        grandTitre: grandTitre(fait.charge.nature, 'Malus', texte, true),
+      };
+    }
 
     case 'joueurArrive':
       return { texte: `${fait.charge.pseudo} a rejoint la partie`, ton: 'info' };

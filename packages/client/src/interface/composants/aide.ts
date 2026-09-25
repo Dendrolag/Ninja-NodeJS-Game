@@ -32,13 +32,16 @@ import {
   MASSACRE,
   MODES,
   OBJETS_TACTIQUES,
-  RACINE_RESSOURCES,
   SCORE,
   TACTIQUE,
-  cheminObjet,
 } from '@neon-ninja/shared';
 
-import { APPARENCE_OBJET, APPARENCE_ZONE, CADENCE_OBJET_MS } from '../../rendu/apparence.js';
+import {
+  APPARENCE_OBJET,
+  APPARENCE_ZONE,
+  CADENCE_OBJET_MS,
+  adresseDeLIcone,
+} from '../../rendu/apparence.js';
 import { creer } from '../dom.js';
 import { NOMS_DES_MODES, TEXTES_DES_MODES } from '../modeles/cartes.js';
 import type { Fenetre } from './fenetre.js';
@@ -256,7 +259,7 @@ function liste(
  */
 function iconeAnimee(doc: Document, nature: NatureObjet): HTMLElement {
   const icone = creer(doc, 'span', { classe: 'aide-icone', attributs: { 'aria-hidden': 'true' } });
-  icone.style.backgroundImage = `url("${RACINE_RESSOURCES}/${cheminObjet(nature)}")`;
+  icone.style.backgroundImage = `url("${adresseDeLIcone(nature)}")`;
   icone.style.setProperty('--images', String(IMAGES_PAR_OBJET));
   icone.style.setProperty('--duree', `${String(CADENCE_OBJET_MS * IMAGES_PAR_OBJET)}ms`);
 

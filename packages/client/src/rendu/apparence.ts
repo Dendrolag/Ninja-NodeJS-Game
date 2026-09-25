@@ -18,6 +18,7 @@
  */
 
 import type { NatureObjet, TypeBonus, TypeZone } from '@neon-ninja/shared';
+import { RACINE_RESSOURCES, cheminObjet } from '@neon-ninja/shared';
 
 /** Une couleur d'affichage et son opacite, separees pour PixiJS qui les veut ainsi. */
 export interface Teinte {
@@ -259,6 +260,17 @@ export const APPARENCE_OBJET: Readonly<
   viseeLarge: { libelle: 'Visée large', couleur: COULEURS_TACTIQUES.visee },
   viseeEtroite: { libelle: 'Visée étroite', couleur: COULEURS_TACTIQUES.visee },
 };
+
+/**
+ * L'adresse de l'icone d'un objet, telle que la page la demande.
+ *
+ * UN SEUL ENDROIT pour l'aide, le HUD et les annonces (etape 4.6): l'objet se montre partout
+ * avec la meme icone que sur la carte. Le fichier est une planche de deux images; qui
+ * l'affiche n'en montre qu'une a la fois.
+ */
+export function adresseDeLIcone(nature: NatureObjet): string {
+  return `${RACINE_RESSOURCES}/${cheminObjet(nature)}`;
+}
 
 /**
  * Le repere qui designe notre personnage quand on le cherche: une onde qui se referme.
