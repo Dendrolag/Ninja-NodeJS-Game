@@ -2,7 +2,7 @@
 
 Date: 25 septembre 2026
 Auteur: session Claude Code
-Statut: terminée (sous réserve de la CI et de la mise en ligne, vérifiées après la poussée: voir « Tests »)
+Statut: terminée
 
 ## Objectif de l'étape
 
@@ -48,7 +48,7 @@ Aucune modification de `packages/sim`, de `legacy/` ni de `tests/caracterisation
 - **Vu dans le navigateur**: une partie Horde sur Tokyo, miroir et pluie, par le vrai serveur. Le décor est retourné, la pluie tombe dans les rues et s'arrête aux intérieurs retournés.
 - **Empreintes des parties de référence inchangées** (`tests/charge/empreinte.ts`), les quatre du handoff 8.5: `21c9a22d…`, `c64c0e08…`, `ffbc1f1f…`, `cf86bff3…`. Elles se jouent sans miroir.
 - Couverture de packages/sim: non touchée.
-- État de la CI: à vérifier sur le commit poussé.
+- État de la CI: **verte** sur `f883faf` (types, linter, tests, bout en bout), mise en ligne faite. La production répond `f883faf` sur `/sante`, sert les images à leurs nouveaux chemins et plus les anciens.
 
 ## Décisions et écarts au plan
 
