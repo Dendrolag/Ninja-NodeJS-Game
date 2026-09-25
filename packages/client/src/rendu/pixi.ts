@@ -80,6 +80,7 @@ import {
 import type { Camera, ZoneVisible } from './camera.js';
 import { dansLaZone, versEcran, zoneVisible } from './camera.js';
 import type { IndicateurScene } from './charges.js';
+import { orienterLeDecor } from './miroir.js';
 import { separerLesCalques } from './recoloration.js';
 import type { FormeDeSang } from './sang.js';
 import { adresseDImage, adresseDesDetails, adresseDuCorps } from './textures.js';
@@ -135,20 +136,16 @@ export async function prechargerLesSprites(): Promise<void> {
  * pendant que la partie tournait deja. Le montage de l'ecran de jeu retrouve ensuite
  * ces textures deja chargees.
  */
-export async function prechargerLaPartie(
-  carte: string,
-  modeMiroir: boolean,
-  pluie: boolean,
-): Promise<void> {
+export async function prechargerLaPartie(carte: string, pluie: boolean): Promise<void> {
   const adresse = (couche: 'background' | 'foreground'): string =>
-    `${RACINE_RESSOURCES}/${cheminCarte(carte, modeMiroir, couche)}`;
+    `${RACINE_RESSOURCES}/${cheminCarte(carte, couche)}`;
   const dimensions = CARTES[carte as IdentifiantCarte] as DimensionsCarte | undefined;
 
   await Promise.all([
     prechargerLesSprites(),
     Assets.load<Texture>(adresse('background')),
     Assets.load<Texture>(adresse('foreground')),
-    dimensions === undefined ? [] : imagesDePluie(carte, modeMiroir, pluie, dimensions),
+    dimensions === undefined ? [] : imagesDePluie(carte, pluie, dimensions),
   ]);
 }
 
@@ -167,11 +164,10 @@ export async function prechargerLaPartie(
  */
 async function imagesDePluie(
   carte: string,
-  modeMiroir: boolean,
   pluie: boolean,
   dimensions: DimensionsCarte,
 ): Promise<readonly Texture[]> {
-  const chemin = pluie ? cheminPluie(carte, modeMiroir) : undefined;
+  const chemin = pluie ? cheminPluie(carte) : undefined;
 
   if (chemin === undefined) {
     return [];
@@ -281,7 +277,7 @@ export interface OptionsRendu {
   readonly carte: DimensionsCarte;
   /** Identifiant de la carte, pour trouver ses images. */
   readonly identifiantCarte: string;
-  /** Mode miroir de la carte. */
+  /** Mode miroir de la carte: le decor se dessine retourne (etape 8.3). */
   readonly modeMiroir: boolean;
   /** La pluie tombe-t-elle, sur une carte qui en a une (reglage de la partie, etape 7.6). */
   readonly pluie: boolean;
@@ -482,12 +478,12 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
 
     async chargerLeDecor() {
       const adresse = (couche: 'background' | 'foreground'): string =>
-        `${RACINE_RESSOURCES}/${cheminCarte(options.identifiantCarte, options.modeMiroir, couche)}`;
+        `${RACINE_RESSOURCES}/${cheminCarte(options.identifiantCarte, couche)}`;
 
       const [texteFond, texteDessus, images] = await Promise.all([
         Assets.load<Texture>(adresse('background')),
         Assets.load<Texture>(adresse('foreground')),
-        imagesDePluie(options.identifiantCarte, options.modeMiroir, options.pluie, options.carte),
+        imagesDePluie(options.identifiantCarte, options.pluie, options.carte),
       ]);
 
       fond.texture = texteFond;
@@ -500,6 +496,7 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
         pluie.texture = premiere;
         pluie.width = options.carte.largeur;
         pluie.height = options.carte.hauteur;
+        orienterLeDecor(pluie, options.carte.largeur, options.modeMiroir);
         pluie.visible = true;
       }
 
@@ -508,9 +505,11 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       // carte sans conserver les proportions, et le decodage du terrain fait de
       // meme cote serveur. Reproduire l'etirement est ce qui garantit que les
       // murs sont la ou le decor les montre.
+      // En miroir, le decor se retourne ici, et lui seul (etape 8.3, rendu/miroir.ts).
       for (const image of [fond, dessus]) {
         image.width = options.carte.largeur;
         image.height = options.carte.hauteur;
+        orienterLeDecor(image, options.carte.largeur, options.modeMiroir);
       }
     },
 

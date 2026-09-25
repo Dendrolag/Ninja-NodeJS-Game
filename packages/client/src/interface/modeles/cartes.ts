@@ -116,7 +116,7 @@ export function nomDeCarte(carte: CarteEnregistree, modeMiroir: boolean): string
  */
 export function carteDeLaPartie(reglages: ReglagesPartie): string {
   const nom = nomDeCarte(reglages.carte, reglages.modeMiroir);
-  const pleut = reglages.pluie && cheminPluie(reglages.carte, reglages.modeMiroir) !== undefined;
+  const pleut = reglages.pluie && cheminPluie(reglages.carte) !== undefined;
 
   return pleut ? `${nom} · Pluie` : nom;
 }

@@ -26,6 +26,10 @@
  *    ignoree. C'est la regle qui a dessine les murs des cartes existantes; elle
  *    vit dans packages/sim, avec la constante qui la porte.
  *
+ * LE MIROIR SE CALCULE ICI (etape 8.3). Une carte n'a qu'une image de collision;
+ * son miroir est cette image retournee de gauche a droite, AVANT d'etre etiree aux
+ * dimensions de la carte. Voir retournerHorizontalement.
+ *
  * UNE CARTE DECODEE EST GARDEE EN MEMOIRE. Elle ne depend que de la carte et du
  * mode miroir, elle ne change jamais, et elle est partagee sans risque: la
  * CarteCollisions est en lecture seule et tous les etats successifs d'une partie
@@ -136,17 +140,64 @@ export function redimensionner(
 }
 
 /**
+ * Retourne une image de gauche a droite: le pixel de la colonne x passe a la
+ * colonne largeur - 1 - x, sur chaque ligne.
+ *
+ * C'EST TOUT LE MODE MIROIR COTE SERVEUR (etape 8.3). Jusque-la, chaque carte
+ * livrait une seconde image de collision, deja retournee. Mesure faite, c'etait
+ * exactement ce retournement, a l'octet pres, pour Tokyo et le Quartier.
+ *
+ * POURQUOI AVANT L'ETIREMENT ET NON APRES. L'etirement moyenne des zones de l'image
+ * source dont les bords tombent sur des pixels entiers (voir redimensionner): il
+ * n'est pas symetrique quand l'echelle n'est pas entiere, comme pour Tokyo, de 3000
+ * pixels vers 2000. Retourner la carte des murs apres coup deplacerait donc des
+ * murs d'un pixel ici et la. Retourner l'image source, c'est refaire exactement ce
+ * que le serveur faisait avec l'image livree, et obtenir les memes murs.
+ *
+ * @param pixels     Image source, quatre octets par pixel.
+ * @param dimensions Dimensions de cette image.
+ */
+export function retournerHorizontalement(
+  pixels: Uint8Array,
+  dimensions: DimensionsCarte,
+): Uint8Array {
+  const { largeur, hauteur } = dimensions;
+  // Un pixel se copie en un seul entier de 32 bits, ses quatre octets ensemble.
+  const source = new Uint32Array(Uint8Array.from(pixels).buffer);
+  const sortie = new Uint32Array(largeur * hauteur);
+
+  for (let ligne = 0; ligne < hauteur; ligne += 1) {
+    const debutDeLigne = ligne * largeur;
+    const finDeLigne = debutDeLigne + largeur - 1;
+
+    for (let colonne = 0; colonne < largeur; colonne += 1) {
+      sortie[finDeLigne - colonne] = source[debutDeLigne + colonne] ?? 0;
+    }
+  }
+
+  return new Uint8Array(sortie.buffer);
+}
+
+/**
  * Decode une image de collision deja lue en memoire, et en tire une carte.
  *
  * Separee de la lecture du fichier pour une raison precise: elle se teste avec
  * une image fabriquee sur mesure, sans toucher au disque ni dependre du contenu
  * des cartes du jeu.
+ *
+ * @param modeMiroir Vrai pour le terrain retourne de gauche a droite.
  */
-export function terrainDepuisImage(image: Buffer, dimensions: DimensionsCarte): CarteCollisions {
+export function terrainDepuisImage(
+  image: Buffer,
+  dimensions: DimensionsCarte,
+  modeMiroir: boolean = false,
+): CarteCollisions {
   const decodee = PNG.sync.read(image);
+  const source = { largeur: decodee.width, hauteur: decodee.height };
+  const lus = Uint8Array.from(decodee.data);
   const pixels = redimensionner(
-    Uint8Array.from(decodee.data),
-    { largeur: decodee.width, hauteur: decodee.height },
+    modeMiroir ? retournerHorizontalement(lus, source) : lus,
+    source,
     dimensions,
   );
 
@@ -224,9 +275,10 @@ export class ChargeurDeTerrain implements SourceDeTerrain {
       return deja;
     }
 
-    const chemin = join(this.racine, cheminCarte(carte, modeMiroir, 'collision'));
+    // Une seule image pour les deux sens: le miroir se calcule au decodage.
+    const chemin = join(this.racine, cheminCarte(carte, 'collision'));
     const dimensions = CARTES[carte];
-    const terrain = terrainDepuisImage(readFileSync(chemin), dimensions);
+    const terrain = terrainDepuisImage(readFileSync(chemin), dimensions, modeMiroir);
 
     this.cache.set(cle, terrain);
 

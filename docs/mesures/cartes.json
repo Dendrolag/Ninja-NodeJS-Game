@@ -1,5 +1,5 @@
 {
-  "genereLe": "2026-09-20",
+  "genereLe": "2026-09-25",
   "outil": "docs/mesures/mesurer-les-cartes.mjs",
   "reglages": {
     "rayonEntitePx": 16,
@@ -124,10 +124,10 @@
       },
       "traverseePx": 3778,
       "traverseeS": 25.2,
-      "parcoursTypiquePx": 1350,
-      "parcoursTypiqueS": 9,
-      "parcoursCourtS": 3.3,
-      "parcoursLongS": 15.6,
+      "parcoursTypiquePx": 1365,
+      "parcoursTypiqueS": 9.1,
+      "parcoursCourtS": 3.4,
+      "parcoursLongS": 15.7,
       "detourMedian": 1.07
     },
     {

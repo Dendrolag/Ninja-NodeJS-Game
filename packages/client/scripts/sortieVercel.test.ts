@@ -84,10 +84,10 @@ describe('ce qui part en ligne', () => {
   });
 
   it('garde les ressources que la page demande, sans les murs ni la documentation', () => {
-    expect(ressourcePubliee('/assets/cartes/map1/normal/background.png')).toBe(true);
+    expect(ressourcePubliee('/assets/cartes/map1/background.png')).toBe(true);
     expect(ressourcePubliee('/assets/sons/game-start.wav')).toBe(true);
     expect(ressourcePubliee('/assets/cartes')).toBe(true);
-    expect(ressourcePubliee('/assets/cartes/map1/normal/collision.png')).toBe(false);
+    expect(ressourcePubliee('/assets/cartes/map1/collision.png')).toBe(false);
     expect(ressourcePubliee('/assets/README.md')).toBe(false);
   });
 });

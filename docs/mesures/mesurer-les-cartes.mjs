@@ -9,7 +9,8 @@
  * IL DECODE LES CARTES PAR LE CHEMIN REEL DU SERVEUR, terrainDepuisImage, qui
  * ecrase l'image 3000x2000 aux dimensions de la carte puis seuille a 128. Donner
  * ici une version approchee du decodage produirait des chiffres qui ne seraient
- * pas ceux du jeu.
+ * pas ceux du jeu. Le miroir aussi se decode comme le serveur le fait depuis
+ * l'etape 8.3: l'unique image de la carte, retournee avant d'etre etiree.
  *
  * Lancement, depuis la racine du depot, apres pnpm build:
  *
@@ -64,7 +65,7 @@ const DEPARTS_TIRES = 80;
 /** Graine du tirage des points de depart: deux executions donnent les memes chiffres. */
 const GRAINE = 20260920;
 
-/** Les quatre terrains reellement jouables: deux cartes, chacune en normal et en miroir. */
+/** Les six terrains reellement jouables: trois cartes, chacune en normal et en miroir. */
 const TERRAINS = [
   { carte: 'map1', nom: 'Tokyo', miroir: false },
   { carte: 'map1', nom: 'Tokyo', miroir: true },
@@ -457,8 +458,8 @@ function arrondi(valeur, decimales = 1) {
 /** Mesure un terrain, et rend tout ce que l'etude en dit. */
 function mesurer({ carte: identifiant, nom, miroir }) {
   const dimensions = CARTES[identifiant];
-  const chemin = join(RESSOURCES, cheminCarte(identifiant, miroir, 'collision'));
-  const carte = terrainDepuisImage(readFileSync(chemin), dimensions);
+  const chemin = join(RESSOURCES, cheminCarte(identifiant, 'collision'));
+  const carte = terrainDepuisImage(readFileSync(chemin), dimensions, miroir);
   const { largeur, hauteur } = carte;
   const total = largeur * hauteur;
 

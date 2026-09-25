@@ -148,7 +148,7 @@ monterApplication({
   // Un prechargement qui echoue n'a rien de grave: l'ecran de jeu recharge lui-meme
   // ce qui lui manque, et dit s'il n'y parvient pas.
   prechargerLeJeu: (reglages) => {
-    prechargerLaPartie(reglages.carte, reglages.modeMiroir, reglages.pluie).catch(() => undefined);
+    prechargerLaPartie(reglages.carte, reglages.pluie).catch(() => undefined);
   },
   ...(stockage === undefined ? {} : { stockage }),
   // Le pied de l'accueil dit de quand date la page qu'on a sous les yeux (etape 8.4).

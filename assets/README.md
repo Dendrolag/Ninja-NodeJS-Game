@@ -20,7 +20,7 @@ Exception, les deux sons du katana du mode Massacre (étape 7.4), `sons/katana-s
 
 De même, les deux sons du fusil du mode Tactique, `sons/shotgun-wave.mp3` (chacun de nos tirs) et `sons/shotgun-reload.mp3` (une charge qui revient), fournis par le porteur du projet à l'étape 5.5, le même jour.
 
-Exception plus large, **la carte `cartes/quartier/`**: elle ne vient de nulle part. Ses sept images sont produites par un programme du dépôt, `docs/mesures/dessiner-le-quartier.mjs`, à l'étape 8.2. C'est la première carte dessinée pour ce jeu-ci, et la seule qui se refait d'une commande:
+Exception plus large, **la carte `cartes/quartier/`**: elle ne vient de nulle part. Ses quatre images sont produites par un programme du dépôt, `docs/mesures/dessiner-le-quartier.mjs`, à l'étape 8.2. C'est la première carte dessinée pour ce jeu-ci, et la seule qui se refait d'une commande:
 
 ```bash
 node docs/mesures/dessiner-le-quartier.mjs
@@ -30,13 +30,13 @@ Ne pas retoucher ses images à la main: le programme les réécrirait. La géom�
 
 ## Arborescence
 
-| Dossier                            | Contenu                                                                                                                   | Qui le lit                                               |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| `cartes/<carte>/<normal\|mirror>/` | `background.png`, `collision.png`, `foreground.png`, et `rain.png` pour map1 (Tokyo)                                      | `collision.png` par le serveur, les autres par le client |
-| `cartes/<carte>/preview.png`       | La vignette de la carte, montrée dans les réglages du salon                                                               | Le client                                                |
-| `ninja/`                           | Les dix-sept sprites du personnage: huit directions à deux images, plus l'immobilité                                      | Le client                                                |
-| `objets/`                          | Les icônes des objets: six images du jeu d'origine, et les six du Tactique en SVG (étape 7.7), reprises aussi dans l'aide | Le client                                                |
-| `sons/`                            | Les sons de jeu, le clic des menus, la musique des menus et celle de la partie                                            | Le client                                                |
+| Dossier                      | Contenu                                                                                                                                       | Qui le lit                                               |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `cartes/<carte>/`            | `background.png`, `collision.png`, `foreground.png`, et `rain.png` pour map1 (Tokyo). Une seule orientation: le miroir se calcule (étape 8.3) | `collision.png` par le serveur, les autres par le client |
+| `cartes/<carte>/preview.png` | La vignette de la carte, montrée dans les réglages du salon                                                                                   | Le client                                                |
+| `ninja/`                     | Les dix-sept sprites du personnage: huit directions à deux images, plus l'immobilité                                                          | Le client                                                |
+| `objets/`                    | Les icônes des objets: six images du jeu d'origine, et les six du Tactique en SVG (étape 7.7), reprises aussi dans l'aide                     | Le client                                                |
+| `sons/`                      | Les sons de jeu, le clic des menus, la musique des menus et celle de la partie                                                                | Le client                                                |
 
 Les chemins ne se recopient nulle part: ils se fabriquent dans `packages/shared/src/ressources.ts`, qui est le seul endroit à connaître cette arborescence. Un test y vérifie que chaque fichier annoncé existe.
 

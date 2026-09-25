@@ -17,7 +17,7 @@
  *
  * L'ARBORESCENCE, ecrite une fois pour toutes:
  *
- *   assets/cartes/<carte>/<normal|mirror>/<background|collision|foreground>.png
+ *   assets/cartes/<carte>/<background|collision|foreground>.png, et rain.png
  *   assets/ninja/<direction>_<1|2>.png, et idle.png
  *   assets/objets/<icone>.png
  *   assets/sons/<son>.<mp3|wav>
@@ -52,15 +52,17 @@ export type CoucheCarte =
 /**
  * Chemin relatif d'une couche de carte, depuis la racine des ressources.
  *
- * LE MODE MIROIR EST UN JEU D'IMAGES, PAS UNE TRANSFORMATION. Le jeu d'origine
- * ne retourne rien a l'affichage: il dessine des images deja retournees, rangees
- * dans un dossier voisin. On garde ce fonctionnement, parce qu'il permet a une
- * carte miroir de differer de son originale autrement que par une symetrie, et
- * parce que retourner le masque de collision a l'execution couterait un balayage
- * complet pour un resultat identique.
+ * LE MODE MIROIR EST UN CALCUL, PAS UN JEU D'IMAGES (etape 8.3). Le jeu d'origine
+ * dessinait des images deja retournees, rangees dans un dossier voisin, ce qui
+ * doublait la commande de chaque carte. Mesure faite, ces images n'etaient rien
+ * d'autre que le retournement des normales (et celles de Spirit & Time n'etaient
+ * meme pas retournees, defaut X37 de l'audit). Une carte n'a donc plus qu'un jeu
+ * d'images: le serveur retourne la collision (packages/server/src/terrain.ts), la
+ * page retourne le decor (packages/client/src/rendu/miroir.ts). Le chemin ne
+ * depend plus du miroir.
  */
-export function cheminCarte(carte: string, modeMiroir: boolean, couche: CoucheCarte): string {
-  return `cartes/${carte}/${modeMiroir ? 'mirror' : 'normal'}/${couche}.png`;
+export function cheminCarte(carte: string, couche: CoucheCarte): string {
+  return `cartes/${carte}/${couche}.png`;
 }
 
 /**
@@ -70,11 +72,13 @@ export function cheminCarte(carte: string, modeMiroir: boolean, couche: CoucheCa
  * explicite evite au client de demander une image qui n'existe pas, ce que le
  * legacy faisait pour les autres cartes. Que la pluie tombe depend en plus du
  * reglage de la partie (ReglagesPartie.pluie, etape 7.6).
+ *
+ * En miroir, la pluie se retourne comme le fond, image par image de sa planche: elle
+ * ne tombe pas dans les interieurs vus en coupe, et ses zones seches doivent rester
+ * sous les toits retournes.
  */
-export function cheminPluie(carte: string, modeMiroir: boolean): string | undefined {
-  return carte === 'map1'
-    ? `cartes/${carte}/${modeMiroir ? 'mirror' : 'normal'}/rain.png`
-    : undefined;
+export function cheminPluie(carte: string): string | undefined {
+  return carte === 'map1' ? `cartes/${carte}/rain.png` : undefined;
 }
 
 /**
@@ -89,7 +93,8 @@ export const IMAGES_DE_PLUIE = 3;
 /**
  * Chemin relatif de la vignette d'une carte, montree dans les reglages du salon.
  *
- * Une seule vignette par carte, mode miroir compris, comme dans le jeu d'origine.
+ * Une seule vignette par carte, mode miroir compris, comme dans le jeu d'origine: la
+ * vignette montre la carte dans son sens normal.
  */
 export function cheminApercuCarte(carte: string): string {
   return `cartes/${carte}/preview.png`;

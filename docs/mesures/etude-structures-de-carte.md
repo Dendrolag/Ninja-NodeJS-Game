@@ -20,7 +20,7 @@ Ce document ne remplace pas `etude-grandes-cartes.md` (16 septembre 2026), qui t
 
 ### 1.1 Les fichiers à livrer
 
-Une carte est un dossier `assets/cartes/<carte>/`, avec une vignette et deux orientations, `normal/` et `mirror/`. Les chemins se fabriquent à un seul endroit, `packages/shared/src/ressources.ts`, et un test y vérifie que chaque fichier annoncé existe.
+Une carte est un dossier `assets/cartes/<carte>/`, avec une vignette et deux orientations, `normal/` et `mirror/` (depuis l'étape 8.3, une seule orientation, à la racine du dossier: section 1.4). Les chemins se fabriquent à un seul endroit, `packages/shared/src/ressources.ts`, et un test y vérifie que chaque fichier annoncé existe.
 
 | Fichier                        | Rôle                                                                    | Qui le lit                                | Obligatoire |
 | ------------------------------ | ----------------------------------------------------------------------- | ----------------------------------------- | ----------- |
@@ -57,6 +57,13 @@ Le miroir n'est pas un mode de jeu, c'est un réglage de carte (journal de conce
 Vérifié dans les images actuelles: le miroir est bien le retournement horizontal du normal, à l'octet près pour la collision de Tokyo, à 99,9 pour cent pour Spirit & Time. **Une seule exception, l'avant-plan de Tokyo, identique à 91 pour cent seulement**: quelqu'un l'a retouché, sans doute pour que les enseignes et les textes ne se lisent pas à l'envers.
 
 Deux façons de commander, donc: livrer huit images, ou en livrer quatre et retourner les autres, en retouchant à la main ce qui se lit. Le jeu, lui, ne sait pas qu'un miroir est un retournement: il charge un autre dossier.
+
+**Correction du 25 septembre 2026 (étape 8.3).** Les deux mesures de ce paragraphe étaient mal lues, faute d'avoir tenu compte de l'opacité et d'avoir comparé le miroir à la carte normale elle-même.
+
+1. **L'avant-plan de Tokyo n'est pas retouché.** Les 9 pour cent de pixels qui diffèrent du retournement sont tous entièrement transparents: seule leur couleur, invisible, change. Aucun pixel visible ne diffère.
+2. **Le miroir de Spirit & Time n'est pas un retournement du tout**: c'est la carte normale, octet pour octet, déjà dans le jeu d'origine. Les 99,9 pour cent mesuraient la symétrie de la carte elle-même. Cocher « Miroir » sur Spirit & Time ne changeait rien (défaut X37 de l'audit).
+
+La pluie de Tokyo en miroir, elle, était une pluie tirée à nouveau, dont les zones sèches suivaient le fond retourné. Depuis l'étape 8.3, le jeu calcule le miroir: le serveur retourne la collision avant de l'étirer, et retrouve à l'octet près les murs des images livrées; la page retourne le fond, la pluie image par image et l'avant-plan. Les dossiers `mirror/` sont supprimés.
 
 ### 1.5 Les cinq endroits du code à toucher
 
@@ -277,7 +284,7 @@ Données le jour de l'étude. Elles sont la décision, et l'étude ci-dessus res
 | 2   | Quel détour médian ?             | **1,20 à 1,35**, l'archétype du quartier                                                 |
 | 3   | Quelle taille ?                  | **2400 x 1800**                                                                          |
 | 4   | Combien de cartes, à quel prix ? | **Pas de graphiste pour l'instant.** On avance en noir et blanc                          |
-| 5   | Le miroir reste-t-il ?           | **Le jeu le calcule.** Une carte ne se commande plus qu'une fois                         |
+| 5   | Le miroir reste-t-il ?           | **Le jeu le calcule.** Une carte ne se commande plus qu'une fois (fait, étape 8.3)       |
 
 Deux questions posées en plus, et leurs réponses: **une carte de travail d'abord**, une collision au trait sans décor, jugée par les douze critères de la section 4 puis jouée; et **le repérage se juge à la recette**, la minimap ne se repense que si l'on se perd vraiment.
 
@@ -292,7 +299,7 @@ Trois conséquences à tirer, qu'aucune section ci-dessus n'a traitées parce qu
 Les réponses de la section 7.1 tranchent: c'est la première des trois suites qui est retenue, et elle devient l'étape `8.2`.
 
 - **Retenu, étape `8.2`, la carte de travail**: une collision au trait, sans décor, qui dessine un quartier de 2400 sur 1800 à 1,20 de détour, jugée par les douze critères de la section 4 avant qu'on y joue, puis jouée à plusieurs. Un `collision.png` en noir et blanc se produit sans graphiste.
-- **Retenu, étape `8.3`, le miroir calculé**: le serveur retourne la collision, la page retourne le décor, et une carte ne se livre plus qu'une fois. Indépendante de `8.2`.
+- **Retenu, étape `8.3`, le miroir calculé**: le serveur retourne la collision, la page retourne le décor, et une carte ne se livre plus qu'une fois. Indépendante de `8.2`. Faite le 25 septembre 2026.
 - **Écarté pour l'instant**: l'étape de mesure numéro 1 de `etude-grandes-cartes.md`, le banc à 1 000 et 2 000 PNJ. La taille retenue, 4,3 Mpx, tient largement dans ce que la section 6 donne pour acquis.
 - **Reporté à plus tard, et seulement si la carte de travail convainc**: la fiche de commande d'une page pour le graphiste, tirée des sections 1 et 4, avec le piège de l'étirement en tête.
 

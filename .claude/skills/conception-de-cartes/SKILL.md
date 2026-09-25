@@ -11,17 +11,19 @@ Tout ce qui suit est vérifié dans le dépôt, pas supposé. Le raisonnement co
 
 ## 1. Ce qu'est une carte
 
-Un dossier `assets/cartes/<carte>/`, avec une vignette et deux orientations, `normal/` et `mirror/`.
+Un dossier `assets/cartes/<carte>/`, avec ses images **dans un seul sens**. Le miroir se calcule depuis l'étape 8.3: le serveur retourne la collision, la page retourne le décor. Une carte se livre donc une fois, et un dossier `mirror/` n'a plus de sens (un test l'interdit).
 
-| Fichier                        | Rôle                                                 | Obligatoire |
-| ------------------------------ | ---------------------------------------------------- | ----------- |
-| `<orientation>/collision.png`  | Les murs. La seule image qui décide de quelque chose | Oui         |
-| `<orientation>/background.png` | Le décor, sous les personnages                       | Oui         |
-| `<orientation>/foreground.png` | L'avant-plan, au-dessus des personnages              | Oui         |
-| `<orientation>/rain.png`       | La pluie, une bande qui défile. Seule Tokyo en a une | Non         |
-| `preview.png`                  | La vignette, 120 sur 120, montrée dans les réglages  | Oui         |
+| Fichier          | Rôle                                                 | Obligatoire |
+| ---------------- | ---------------------------------------------------- | ----------- |
+| `collision.png`  | Les murs. La seule image qui décide de quelque chose | Oui         |
+| `background.png` | Le décor, sous les personnages                       | Oui         |
+| `foreground.png` | L'avant-plan, au-dessus des personnages              | Oui         |
+| `rain.png`       | La pluie, une bande qui défile. Seule Tokyo en a une | Non         |
+| `preview.png`    | La vignette, 120 sur 120, montrée dans les réglages  | Oui         |
 
 Les chemins se fabriquent à un seul endroit, `packages/shared/src/ressources.ts`, où un test vérifie que chaque fichier annoncé existe.
+
+**La pluie suit le décor.** Elle ne tombe pas dans les intérieurs vus en coupe: ses zones sèches se dessinent sous les toits du fond. En miroir, la page la retourne image par image avec le fond, et ces zones restent à leur place. Une pluie se dessine donc pour le sens normal seulement, comme tout le reste.
 
 ## 2. Comment les murs se déduisent de l'image
 
@@ -169,7 +171,7 @@ Porteur du projet, 20 septembre 2026, en réponse à l'étude 8.1 (section 7.1).
 - **Taille visée: 2400 sur 1800.** Réalisée. Un écran en montre 33 pour cent, contre 48 sur Tokyo.
 - **Pas de graphiste pour l'instant**: on avance en noir et blanc, et un décor ne se commande que si la structure convainc. Le Quartier est donc une carte de travail, au trait, et elle se joue telle quelle.
 - **Une carte porte un nom, pas un numéro** (étape 8.2): `quartier`, et non `map4`. `map1` et `map3` sont des noms de fichiers hérités, pas une numérotation à poursuivre. Conséquence assumée: la valeur entre dans l'énumération PostgreSQL et n'en sortira jamais, une valeur retirée rendant illisibles les parties déjà jouées.
-- **Le miroir sera calculé par le jeu** et non livré en images: **étape 8.3, pas encore faite**. Tant qu'elle ne l'est pas, une carte nouvelle livre bien ses quatre images de miroir, comme le Quartier l'a fait. L'étude a vérifié que c'est un simple retournement horizontal, à l'octet près pour la collision de Tokyo. Réserve: l'avant-plan de Tokyo a été retouché à la main, identique à 91 pour cent seulement, sans doute pour les enseignes.
+- **Le miroir est calculé par le jeu**, et non livré en images: **étape 8.3, faite le 25 septembre 2026**. Le serveur retourne l'image de collision avant de l'étirer, ce qui redonne à l'octet près les murs des anciennes images de miroir; la page retourne le fond, la pluie et l'avant-plan. La réserve de l'étude sur l'avant-plan de Tokyo était fausse: seuls des pixels entièrement transparents différaient, aucune retouche visible. Conséquence pour une commande: **rien ne se lit à l'envers qui ne se lise aussi à l'endroit**, puisque plus rien ne permet de retoucher un miroir. Spirit & Time, dont le miroir n'était qu'une copie de la carte normale depuis le jeu d'origine, est devenu un vrai miroir (défaut X37 de l'audit).
 - **Le repérage se juge à la recette**, pas à l'avance: la minimap ne se repense que si l'on se perd vraiment.
 
 Décision plus ancienne, toujours valable: **le miroir est un réglage de carte, pas un mode** (journal de conception, 10 septembre 2026). Il se combine avec n'importe quel mode.

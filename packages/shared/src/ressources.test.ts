@@ -10,7 +10,7 @@
  * rapatriement ne se decouvrirait qu'a l'etape 4.3, quand une page les demande.
  */
 
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -52,38 +52,36 @@ function dimensionsPng(relatif: string): { largeur: number; hauteur: number } {
 }
 
 describe('cheminCarte', () => {
-  it('range les trois couches par carte et par mode', () => {
-    expect(cheminCarte('map1', false, 'background')).toBe('cartes/map1/normal/background.png');
-    expect(cheminCarte('map1', true, 'collision')).toBe('cartes/map1/mirror/collision.png');
-    expect(cheminCarte('map3', false, 'foreground')).toBe('cartes/map3/normal/foreground.png');
+  it('range les trois couches par carte, une seule fois pour les deux sens', () => {
+    // Le miroir se calcule depuis l'etape 8.3: plus de dossier normal ni mirror.
+    expect(cheminCarte('map1', 'background')).toBe('cartes/map1/background.png');
+    expect(cheminCarte('map1', 'collision')).toBe('cartes/map1/collision.png');
+    expect(cheminCarte('map3', 'foreground')).toBe('cartes/map3/foreground.png');
   });
 });
 
 describe('cheminPluie', () => {
   it('donne un chemin pour la seule carte qui a de la pluie', () => {
-    expect(cheminPluie('map1', false)).toBe('cartes/map1/normal/rain.png');
-    expect(cheminPluie('map1', true)).toBe('cartes/map1/mirror/rain.png');
+    expect(cheminPluie('map1')).toBe('cartes/map1/rain.png');
   });
 
   it('ne donne rien pour les cartes sans pluie', () => {
     // Le jeu d'origine demandait rain.png pour toutes les cartes et recevait
     // trois erreurs de chargement sur quatre. Rendre l'absence explicite evite
     // la demande.
-    expect(cheminPluie('map3', false)).toBeUndefined();
-    expect(cheminPluie('map3', true)).toBeUndefined();
+    expect(cheminPluie('map3')).toBeUndefined();
+    expect(cheminPluie('quartier')).toBeUndefined();
   });
 
   it('se decoupe en IMAGES_DE_PLUIE images, chacune de la taille des couches de sa carte', () => {
     // RainEffect (legacy/js/MapManager.js:13): une planche de 9000 pixels de large,
     // trois images de 3000 par 2000. Le rendu la decoupe avant de l'envoyer a la
     // carte graphique, les telephones refusant souvent une texture aussi large.
-    for (const modeMiroir of [false, true]) {
-      const planche = dimensionsPng(cheminPluie('map1', modeMiroir) as string);
-      const fond = dimensionsPng(cheminCarte('map1', modeMiroir, 'background'));
+    const planche = dimensionsPng(cheminPluie('map1') as string);
+    const fond = dimensionsPng(cheminCarte('map1', 'background'));
 
-      expect(planche.largeur).toBe(fond.largeur * IMAGES_DE_PLUIE);
-      expect(planche.hauteur).toBe(fond.hauteur);
-    }
+    expect(planche.largeur).toBe(fond.largeur * IMAGES_DE_PLUIE);
+    expect(planche.hauteur).toBe(fond.hauteur);
   });
 });
 
@@ -155,22 +153,34 @@ describe('les ressources annoncees existent sur le disque', () => {
     const manquants: string[] = [];
 
     for (const carte of Object.keys(CARTES)) {
-      for (const modeMiroir of [false, true]) {
-        for (const couche of ['background', 'collision', 'foreground'] as const) {
-          const chemin = cheminCarte(carte, modeMiroir, couche);
-          if (!present(chemin)) {
-            manquants.push(chemin);
-          }
+      for (const couche of ['background', 'collision', 'foreground'] as const) {
+        const chemin = cheminCarte(carte, couche);
+        if (!present(chemin)) {
+          manquants.push(chemin);
         }
+      }
 
-        const pluie = cheminPluie(carte, modeMiroir);
-        if (pluie !== undefined && !present(pluie)) {
-          manquants.push(pluie);
-        }
+      const pluie = cheminPluie(carte);
+      if (pluie !== undefined && !present(pluie)) {
+        manquants.push(pluie);
       }
     }
 
     expect(manquants).toEqual([]);
+  });
+
+  it('sans aucun dossier d orientation: une carte se livre une fois', () => {
+    // Etape 8.3. Un dossier mirror oublie la ou une carte nouvelle est livree ne
+    // casserait rien, et ferait croire qu'il sert: le jeu ne le lirait jamais.
+    const dossiers = readdirSync(join(RACINE_DISQUE, 'cartes'), { withFileTypes: true })
+      .filter((entree) => entree.isDirectory())
+      .flatMap((carte) =>
+        readdirSync(join(RACINE_DISQUE, 'cartes', carte.name), { withFileTypes: true })
+          .filter((entree) => entree.isDirectory())
+          .map((entree) => `${carte.name}/${entree.name}`),
+      );
+
+    expect(dossiers).toEqual([]);
   });
 
   it('pour les sprites, les icones, les sons et la musique', () => {

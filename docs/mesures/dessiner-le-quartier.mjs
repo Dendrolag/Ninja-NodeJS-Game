@@ -1,5 +1,8 @@
 /**
- * Dessine la carte de travail « Quartier », et ecrit ses huit images.
+ * Dessine la carte de travail « Quartier », et ecrit ses quatre images.
+ *
+ * Huit jusqu'a l'etape 8.3, qui a rendu le miroir calcule par le jeu: une carte ne
+ * livre plus qu'un sens.
  *
  * CE N'EST PAS DU CODE DE JEU. Rien dans packages/ ne connait ce fichier, et le
  * jeu tourne sans lui. C'est l'outil de l'etape 8.2 (docs/plan/etape-8-2.md):
@@ -412,21 +415,6 @@ function imageDeVignette(decor) {
   return pixels;
 }
 
-/** La meme image, retournee de gauche a droite. C'est ce que le dossier mirror attend. */
-function retourner(pixels, largeur, hauteur) {
-  const retournes = Buffer.alloc(pixels.length);
-
-  for (let y = 0; y < hauteur; y += 1) {
-    for (let x = 0; x < largeur; x += 1) {
-      const source = (y * largeur + x) * 4;
-      const cible = (y * largeur + (largeur - 1 - x)) * 4;
-      pixels.copy(retournes, cible, source, source + 4);
-    }
-  }
-
-  return retournes;
-}
-
 /**
  * Encodage PNG, en vingt lignes.
  *
@@ -515,30 +503,10 @@ const vignette = imageDeVignette(decor);
 
 let poids = 0;
 
-for (const orientation of ['normal', 'mirror']) {
-  const miroir = orientation === 'mirror';
-  const transformer = (pixels) => (miroir ? retourner(pixels, LARGEUR, HAUTEUR) : pixels);
-
-  poids += ecrire(
-    join(DOSSIER, orientation, 'collision.png'),
-    LARGEUR,
-    HAUTEUR,
-    transformer(collision),
-  );
-  poids += ecrire(
-    join(DOSSIER, orientation, 'background.png'),
-    LARGEUR,
-    HAUTEUR,
-    transformer(decor),
-  );
-  poids += ecrire(
-    join(DOSSIER, orientation, 'foreground.png'),
-    LARGEUR,
-    HAUTEUR,
-    transformer(avantPlan),
-  );
-}
-
+// Une seule orientation: le jeu calcule le miroir depuis l'etape 8.3.
+poids += ecrire(join(DOSSIER, 'collision.png'), LARGEUR, HAUTEUR, collision);
+poids += ecrire(join(DOSSIER, 'background.png'), LARGEUR, HAUTEUR, decor);
+poids += ecrire(join(DOSSIER, 'foreground.png'), LARGEUR, HAUTEUR, avantPlan);
 poids += ecrire(join(DOSSIER, 'preview.png'), COTE_VIGNETTE, COTE_VIGNETTE, vignette);
 
 let murPixels = 0;

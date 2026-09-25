@@ -22,7 +22,7 @@ Trois images, toutes aux **mêmes dimensions**, parfaitement superposables.
 
 Plus une vignette `preview.png` de **120 sur 120 pixels**, qui montre la carte en petit dans les menus.
 
-**Le miroir.** Le jeu propose chaque carte aussi en version retournée horizontalement. Aujourd'hui elle se livre en images, dans un second dossier: cela double la commande. Le porteur du projet a décidé le 20 septembre 2026 que le jeu la calculerait lui-même (étape 8.3). **Tant que cette étape n'est pas faite, le miroir reste à livrer**: quatre images de plus, simple retournement horizontal, en retouchant à la main ce qui se lirait à l'envers. Vérifier où en est l'étape 8.3 avant d'envoyer cette fiche.
+**Le miroir.** Le jeu propose chaque carte aussi en version retournée horizontalement. **Il la calcule lui-même** (depuis le 25 septembre 2026): rien à livrer de plus, les images se livrent une seule fois, dans leur sens normal. En contrepartie, rien de ce qui se lit ne peut être retouché pour le sens retourné: voir « Ce qu'on n'attend pas ».
 
 ## L'image de collision: la règle à ne pas rater
 
@@ -77,7 +77,7 @@ Une carte qui tombe dans l'un de ces cas est inutilisable, et devra être redess
 ## Ce qu'on n'attend pas
 
 - Aucune perspective, aucune hauteur, aucun étage: le jeu est plat.
-- Aucun texte lisible ni enseigne écrite si possible. Le jeu retourne la carte en miroir, et un texte se lirait à l'envers.
+- Aucun texte lisible ni enseigne écrite si possible. Le jeu retourne la carte en miroir, et un texte se lirait à l'envers, sans moyen de le corriger.
 - Aucun point de départ ni zone de départ à marquer: les apparitions sont tirées au sort partout.
 - Aucun objet, bonus ou personnage dessiné: le jeu les pose lui-même.
 

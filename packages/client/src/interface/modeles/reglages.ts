@@ -146,7 +146,7 @@ export function bornesSurLaCarte(
  * valeur est gardee, sans effet, pour revenir telle quelle si l'hote revient a Tokyo.
  */
 export function champUtileSurLaCarte(chemin: string, carte: string): boolean {
-  return chemin !== CHEMIN_PLUIE || cheminPluie(carte, false) !== undefined;
+  return chemin !== CHEMIN_PLUIE || cheminPluie(carte) !== undefined;
 }
 
 /** Un entier en secondes. */
