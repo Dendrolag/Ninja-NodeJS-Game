@@ -54,7 +54,7 @@ const PARTIE_TACTIQUE = {
 } as const;
 
 /**
- * Le temps laisse a Alice pour prendre un faux ninja, en millisecondes.
+ * Le temps laisse a Alice pour prendre un faux ninja, ou un bonus, en millisecondes.
  *
  * Moins que la partie, dont le lancement a deja pris quelques secondes: un echec doit se
  * dire pendant la partie. Plus long, il se disait apres la fin, quand plus personne ne
@@ -161,7 +161,7 @@ test('creer une partie Tactique, s approcher d un faux ninja et le prendre par u
  * rapport, a relire a l'oeil).
  */
 test('ramasser un bonus du Tactique et le voir agir', async ({ page, hasTouch }, infos) => {
-  test.setTimeout(120_000);
+  test.setTimeout(150_000);
 
   const erreurs = releverLesErreurs(page);
   const signes = await releverLesSignesVitaux(page);
@@ -189,7 +189,7 @@ test('ramasser un bonus du Tactique et le voir agir', async ({ page, hasTouch },
   await expliquerLEchec({ Alice: signes }, async () => {
     await expect(async () => {
       await accomplir(ramasserUnBonusTactique(partie, 'Alice', commande));
-    }).toPass({ timeout: 60_000 });
+    }).toPass({ timeout: DELAI_DE_PRISE_MS });
   });
 
   await expect(page.locator('.hud-effet-libelle')).toContainText(

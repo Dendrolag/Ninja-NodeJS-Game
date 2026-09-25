@@ -17,6 +17,7 @@ import { expect } from '@playwright/test';
 import type { GameRoom } from '../../../packages/server/dist/index.js';
 import type { GeometrieDuCone, Joueur } from '../../../packages/sim/dist/index.js';
 import { dansLeCone, geometrieDuCone, trajetTenable } from '../../../packages/sim/dist/index.js';
+import type { Position } from '../../../packages/shared/dist/index.js';
 import {
   RAYON_ENTITE,
   TYPES_BONUS_TACTIQUES,
@@ -40,6 +41,12 @@ const MARGE_DE_VISEE = 0.75;
 
 /** La duree supposee d'un coup, appui et lever, avant que le premier la mesure. */
 const DUREE_D_UN_COUP_SUPPOSEE_MS = 2_000;
+
+/** De combien les detours autour des murs allongent un trajet a vol d'oiseau, au plus. */
+const ALLONGEMENT_DES_DETOURS = 1.5;
+
+/** Le retard qu'une page lente ajoute a un trajet, en millisecondes. */
+const RETARD_DE_LA_PAGE_MS = 2_000;
 
 /** Ce qu'une prevision doit tenir au-dela de l'arrivee du coup, en millisecondes. */
 const MARGE_DE_PREVISION_MS = 500;
@@ -463,8 +470,15 @@ export function prendreUnFauxNinjaDUnCoup(
  * Mission, dans le mode Tactique: ce joueur ramasse un des trois bonus du mode (etape 7.7).
  *
  * Il vise les bonus du Tactique poses sur la carte, et la mission est accomplie quand le
- * serveur lui compte un de leurs effets. Un objet vit huit secondes: s'il disparait en
- * route, le pilote passe au suivant.
+ * serveur lui compte un de leurs effets.
+ *
+ * SEULEMENT CEUX QU'IL PEUT ATTEINDRE AVANT QU'ILS DISPARAISSENT. Un objet vit huit
+ * secondes, et apparait n'importe ou. Sur la page du telephone en integration continue,
+ * ou le pilote ne corrige sa direction qu'une fois par seconde environ, le joueur
+ * poursuivait la plupart du temps des bonus a trois cents pixels et plus, qui
+ * disparaissaient avant qu'il arrive, et la mission echouait une fois sur deux a deux
+ * processeurs (etape 8.7). Le serveur, l'arbitre, dit a chaque objet sa vie restante:
+ * sans bonus atteignable, le joueur attend sur place que le suivant apparaisse.
  */
 export function ramasserUnBonusTactique(
   partie: GameRoom,
@@ -478,19 +492,42 @@ export function ramasserUnBonusTactique(
     nom: `${pseudo} ramasse un bonus du Tactique`,
     commande,
     delaiMs: DELAI_CAPTURE_DE_BOT_MS,
-    situation: () => ({
-      terrain: partie.etat.terrain,
-      position: joueurNomme(partie, pseudo).position,
-      cibles: Object.values(partie.etat.objets)
-        .filter((objet) => bonusDuTactique(objet.nature))
-        .map((objet) => objet.position),
-    }),
+    situation: () => {
+      const position = joueurNomme(partie, pseudo).position;
+
+      return {
+        terrain: partie.etat.terrain,
+        position,
+        cibles: Object.values(partie.etat.objets)
+          .filter(
+            (objet) =>
+              bonusDuTactique(objet.nature) &&
+              objet.dureeDeVieRestanteMs >= tempsPourAtteindreMs(position, objet.position),
+          )
+          .map((objet) => objet.position),
+      };
+    },
     accomplie: () => {
       const effets = partie.etat.tactique?.[joueurNomme(partie, pseudo).id]?.effets;
 
       return TYPES_BONUS_TACTIQUES.some((nature) => (effets?.[nature] ?? 0) > 0);
     },
   };
+}
+
+/**
+ * Le temps qu'il faut a un joueur pour atteindre un point, au plus, en millisecondes.
+ *
+ * La distance a vol d'oiseau, allongee pour les detours autour des murs, a vitesse de
+ * joueur, plus le retard d'une page lente a prendre chaque direction.
+ */
+function tempsPourAtteindreMs(depart: Position, arrivee: Position): number {
+  const distance = Math.hypot(arrivee.x - depart.x, arrivee.y - depart.y);
+
+  return (
+    ((distance * ALLONGEMENT_DES_DETOURS) / VITESSES.JOUEUR_PX_PAR_SECONDE) * 1000 +
+    RETARD_DE_LA_PAGE_MS
+  );
 }
 
 /** Ou ce joueur regarde, dans un mode ou il frappe devant lui; indefini ailleurs. */
