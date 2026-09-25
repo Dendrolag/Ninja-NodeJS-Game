@@ -156,6 +156,25 @@ describe('RoomManager, cycle de vie', () => {
     expect(room.etat.tick).toBe(2);
   });
 
+  it('chronometre les battements de toutes ses parties (etape 8.6)', () => {
+    const { gestionnaire, horloge } = gestionnaireDeTest();
+    const premiere = gestionnaire.creer({ reglages: REGLAGES });
+    const seconde = gestionnaire.creer({ reglages: REGLAGES });
+
+    gestionnaire.rejoindre(premiere.id, session('alice', 'Alice'));
+    gestionnaire.rejoindre(seconde.id, session('bob', 'Bob'));
+    premiere.lancer();
+    seconde.lancer();
+    horloge.avancerDe(500);
+
+    // Dix battements par partie, chacun cinquante millisecondes apres le precedent.
+    const resume = gestionnaire.chronometre.resume(horloge.maintenant());
+
+    expect(resume?.battements).toBe(20);
+    expect(resume?.ecart).toEqual({ mediane: 50, p90: 50, p99: 50, max: 50 });
+    expect(resume?.enRetard).toBe(0);
+  });
+
   it('ferme toutes les rooms d un coup', () => {
     const { gestionnaire } = gestionnaireDeTest();
 

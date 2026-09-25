@@ -159,6 +159,7 @@ export function creerServeur(options: OptionsServeur = {}): ServeurMonte {
     options.fichiers,
     routesDesComptes(options.comptes, origines),
     () => activiteDe(jeu, options.version),
+    origines,
   );
 
   if (mandataires > 0) {
@@ -254,12 +255,14 @@ function activiteDe(
   version: string | undefined,
 ): ActiviteDuServeur {
   const parties = jeu?.rooms.toutesLesRooms ?? [];
+  const battement = jeu?.resumeDuBattement();
 
   return {
     version,
     parties: parties.length,
     joueurs: parties.reduce((total, partie) => total + partie.joueurs.length, 0),
     connexions: jeu?.nombreDeConnexions ?? 0,
+    ...(battement === undefined ? {} : { battement }),
   };
 }
 

@@ -179,6 +179,46 @@ describe('la route de sante', () => {
     });
   });
 
+  it('ne dit rien des battements tant qu aucune partie n a battu (etape 8.6)', async () => {
+    const url = await monter(false);
+
+    expect((await sante(url)).battement).toBeNull();
+  });
+
+  it('resume les battements recents du serveur (etape 8.6)', async () => {
+    const url = await monterAvec({});
+    const chronometre = serveur?.jeu.rooms.chronometre;
+
+    if (chronometre === undefined) {
+      throw new Error("Le serveur de test n'est pas monte.");
+    }
+
+    chronometre.enregistrer(performance.now(), 50, 1);
+    chronometre.enregistrer(performance.now(), 180, 3);
+
+    expect((await sante(url)).battement).toEqual({
+      fenetreS: 300,
+      battements: 2,
+      ecart: { mediane: 50, p90: 180, p99: 180, max: 180 },
+      enRetard: 1,
+      duree: { mediane: 1, p90: 3, p99: 3, max: 3 },
+    });
+  });
+
+  it('se laisse lire par la page depuis une origine autorisee, et elle seule', async () => {
+    const url = await monterAvec({ originesAutorisees: ['https://ninja.example'] });
+
+    const autorisee = await fetch(`${url}/sante`, {
+      headers: { Origin: 'https://ninja.example' },
+    });
+    const inconnue = await fetch(`${url}/sante`, {
+      headers: { Origin: 'https://ailleurs.example' },
+    });
+
+    expect(autorisee.headers.get('access-control-allow-origin')).toBe('https://ninja.example');
+    expect(inconnue.headers.get('access-control-allow-origin')).toBeNull();
+  });
+
   it('rend l adresse du demandeur, sans croire un en-tete que personne n a pose', async () => {
     const url = await monter(false);
     const corps = await sante(url, '/sante', { 'X-Forwarded-For': '203.0.113.7' });

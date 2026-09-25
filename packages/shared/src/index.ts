@@ -306,3 +306,6 @@ export {
   validerPseudo,
   validerReglages,
 } from './validation.js';
+
+export type { Repartition, ResumeDuBattement } from './sante.js';
+export { lireLeResumeDuBattement } from './sante.js';

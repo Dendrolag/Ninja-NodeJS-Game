@@ -33,6 +33,8 @@
  */
 
 import { RACINE_API_COMPTES, RACINE_RESSOURCES, politiqueDeContenu } from '@neon-ninja/shared';
+
+import type { ResumeDuBattement } from '@neon-ninja/shared';
 import type { Express, RequestHandler } from 'express';
 import express from 'express';
 
@@ -60,6 +62,8 @@ export interface ActiviteDuServeur {
   readonly joueurs: number;
   /** Les connexions ouvertes, entrees dans une partie ou non. */
   readonly connexions: number;
+  /** Les battements des cinq dernieres minutes (etape 8.6), s'il y en a eu. */
+  readonly battement?: ResumeDuBattement;
 }
 
 /** La reponse de la route de sante, en JSON. */
@@ -72,6 +76,11 @@ export interface ReponseDeSante {
   readonly connexions: number;
   /** L'adresse sous laquelle le serveur voit le demandeur, mandataires de confiance compris. */
   readonly adresse: string | null;
+  /**
+   * Les battements des cinq dernieres minutes, toutes parties confondues: leur ecart reel
+   * et leur duree (etape 8.6). Null quand aucune partie n'a battu pendant ce temps.
+   */
+  readonly battement: ResumeDuBattement | null;
 }
 
 /** L'activite d'une application montee sans couche jeu. */
@@ -93,9 +102,10 @@ export function applicationWeb(
   dossiers?: DossiersServis,
   comptes?: RequestHandler,
   activite: () => ActiviteDuServeur = sansActivite,
+  originesAutorisees: readonly string[] = [],
 ): Express {
   const application = express();
-  const repondreSante = routeDeSante(activite);
+  const repondreSante = routeDeSante(activite, originesAutorisees);
 
   // Annoncer la bibliotheque et sa version n'aide que celui qui cherche une faille.
   application.disable('x-powered-by');
@@ -120,10 +130,20 @@ export function applicationWeb(
   return application;
 }
 
-/** La route qui repond a la question de sante. */
-function routeDeSante(activite: () => ActiviteDuServeur): RequestHandler {
+/**
+ * La route qui repond a la question de sante.
+ *
+ * LA PAGE PEUT LA LIRE, DEPUIS SON ORIGINE (etape 8.6). Le releve de performance de la
+ * page, servie par Vercel, y lit les battements du serveur: une origine autorisee recoit
+ * donc l'en-tete du controle d'acces, comme pour les comptes. Les autres gardent une
+ * reponse opaque, qui suffit au signal de vie de la page (eveil.ts).
+ */
+function routeDeSante(
+  activite: () => ActiviteDuServeur,
+  originesAutorisees: readonly string[],
+): RequestHandler {
   return (requete, reponse) => {
-    const { version, parties, joueurs, connexions } = activite();
+    const { version, parties, joueurs, connexions, battement } = activite();
     const corps: ReponseDeSante = {
       message: MESSAGE_DE_SANTE,
       version: version ?? null,
@@ -131,10 +151,19 @@ function routeDeSante(activite: () => ActiviteDuServeur): RequestHandler {
       joueurs,
       connexions,
       adresse: requete.ip ?? null,
+      battement: battement ?? null,
     };
 
     // Une reponse d'hier ne dit rien du serveur d'aujourd'hui.
     reponse.setHeader('Cache-Control', 'no-store');
+    reponse.setHeader('Vary', 'Origin');
+
+    const origine = requete.headers.origin;
+
+    if (origine !== undefined && originesAutorisees.includes(origine)) {
+      reponse.setHeader('Access-Control-Allow-Origin', origine);
+    }
+
     reponse.json(corps);
   };
 }

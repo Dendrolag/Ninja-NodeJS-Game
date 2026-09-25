@@ -34,6 +34,7 @@ import { BORNES_CODE_INVITATION } from '@neon-ninja/shared';
 import type { CarteCollisions } from '@neon-ninja/sim';
 
 import type { JoueurDeRoom, OptionsGameRoom } from './GameRoom.js';
+import { ChronometreDuBattement } from './chronometreDuBattement.js';
 import { GameRoom } from './GameRoom.js';
 import type { Horloge } from './horloge.js';
 
@@ -119,6 +120,12 @@ export class RoomManager {
    */
   private prochainNumero = 1;
 
+  /**
+   * L'ecart et la duree des battements de toutes les parties (etape 8.6), que la route
+   * de sante resume.
+   */
+  readonly chronometre = new ChronometreDuBattement();
+
   constructor(options: OptionsRoomManager = {}) {
     this.horloge = options.horloge;
     this.cadenceMs = options.cadenceMs;
@@ -166,6 +173,7 @@ export class RoomManager {
       ...(options.surFinDePartie === undefined ? {} : { surFinDePartie: options.surFinDePartie }),
       ...(this.horloge === undefined ? {} : { horloge: this.horloge }),
       ...(this.cadenceMs === undefined ? {} : { cadenceMs: this.cadenceMs }),
+      chronometre: this.chronometre,
     };
 
     const room = new GameRoom(parametres);

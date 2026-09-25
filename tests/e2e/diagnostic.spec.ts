@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
-import { attendreLaPartie, entrer, lancer, regler } from './harnais/parcours.js';
+import { attendreLaFin, attendreLaPartie, entrer, lancer, regler } from './harnais/parcours.js';
 import type { ServeurDeJeu } from './harnais/serveur-de-jeu.js';
 import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
 
@@ -94,6 +94,15 @@ test('avec le paramètre, le relevé suit la partie et se copie', async ({ page,
   expect(releve).toMatch(/Instantanés reçus: [1-9]/u);
   expect(releve).toMatch(/Notre code: moyenne \d/u);
   expect(releve).toMatch(/PixiJS: moyenne \d/u);
+  expect(releve).toContain('== Serveur, battements de toutes ses parties');
+
+  // A la fin de la partie, la page lit les battements du serveur (etape 8.6): le releve
+  // copie sur l'ecran des resultats dit ce que le serveur a envoye.
+  await attendreLaFin(page);
+  await expect(async () => {
+    const final = await copierLeReleve(page);
+    expect(final).toMatch(/Écart entre deux battements d'une partie, 50 ms visés: médiane \d/u);
+  }).toPass({ timeout: 15_000 });
 });
 
 test('une variante de l adresse change le rendu, et le relevé la nomme', async ({

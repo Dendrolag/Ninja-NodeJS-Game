@@ -105,6 +105,7 @@ import {
 } from '@neon-ninja/sim';
 
 import type { Horloge } from './horloge.js';
+import type { ChronometreDuBattement } from './chronometreDuBattement.js';
 import { horlogeSysteme } from './horloge.js';
 
 /**
@@ -226,6 +227,11 @@ export interface OptionsGameRoom {
   /** Cadence de la boucle, en millisecondes. */
   readonly cadenceMs?: number;
   /**
+   * Ou retenir l'ecart et la duree de chaque battement (etape 8.6). Le RoomManager en
+   * donne un seul a toutes ses parties; sans lui, rien n'est retenu.
+   */
+  readonly chronometre?: ChronometreDuBattement;
+  /**
    * Appele apres chaque battement, une fois l'etat avance.
    *
    * C'est le seul lien de la room vers le monde exterieur, et il va dans le bon
@@ -259,6 +265,7 @@ export class GameRoom {
 
   private readonly horloge: Horloge;
   private readonly cadenceMs: number;
+  private readonly chronometre: ChronometreDuBattement | undefined;
   private readonly surBattement: ((room: GameRoom) => void) | undefined;
   private readonly surFinDePartie: ((room: GameRoom) => void) | undefined;
 
@@ -360,6 +367,7 @@ export class GameRoom {
     this.code = options.code;
     this.horloge = options.horloge ?? horlogeSysteme;
     this.cadenceMs = options.cadenceMs ?? CADENCE_BATTEMENT_MS;
+    this.chronometre = options.chronometre;
     this.surBattement = options.surBattement;
     this.surFinDePartie = options.surFinDePartie;
     this.terrain = options.terrain;
@@ -1117,10 +1125,14 @@ export class GameRoom {
 
     this.arreterLaBoucle = this.horloge.repeter(() => {
       const maintenant = this.horloge.maintenant();
-      const ecoule = Math.min(Math.max(maintenant - precedent, 0), DT_MAXIMUM_MS);
+      const ecart = maintenant - precedent;
+      const ecoule = Math.min(Math.max(ecart, 0), DT_MAXIMUM_MS);
       precedent = maintenant;
 
       this.avancer(ecoule);
+
+      // L'ecart reel, non borne, et tout le battement, envoi compris (etape 8.6).
+      this.chronometre?.enregistrer(maintenant, ecart, this.horloge.maintenant() - maintenant);
     }, this.cadenceMs);
   }
 }

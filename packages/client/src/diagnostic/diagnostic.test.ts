@@ -3,6 +3,42 @@ import { describe, expect, it } from 'vitest';
 import { decrireLesVariantes, lireLaDemande } from './demande.js';
 import { Histogramme } from './histogramme.js';
 import { Releve } from './releve.js';
+import { texteDuServeur } from './serveur.js';
+
+describe('les battements du serveur dans le relevé (étape 8.6)', () => {
+  it('écrit le résumé que le serveur a rendu', () => {
+    const texte = texteDuServeur({
+      ageS: 4,
+      battement: {
+        fenetreS: 300,
+        battements: 3600,
+        ecart: { mediane: 50, p90: 50.4, p99: 61.2, max: 140 },
+        enRetard: 2,
+        duree: { mediane: 0.4, p90: 0.9, p99: 1.6, max: 3.1 },
+      },
+    });
+
+    expect(texte).toContain('== Serveur, battements de toutes ses parties');
+    expect(texte).toContain('Fenêtre: les 300 dernières secondes, 3600 battements (lu il y a 4 s)');
+    expect(texte).toContain(
+      "Écart entre deux battements d'une partie, 50 ms visés: médiane 50,0, p90 50,4, p99 61,2, max 140,0 ms",
+    );
+    expect(texte).toContain("Battements d'au moins 100 ms: 2");
+    expect(texte).toContain(
+      "Durée d'un battement (moteur, codage, envoi): médiane 0,4, p90 0,9, p99 1,6, max 3,1 ms",
+    );
+  });
+
+  it('dit quand le serveur n a pas encore été lu, n a rien battu, ou n a pas répondu', () => {
+    expect(texteDuServeur(undefined)).toContain('Pas encore lu');
+    expect(texteDuServeur({ ageS: 1, battement: null })).toContain(
+      'Aucun battement dans la fenêtre du serveur (lu il y a 1 s).',
+    );
+    expect(texteDuServeur({ ageS: 2, echec: 'réponse illisible' })).toContain(
+      'Lecture impossible (lu il y a 2 s): réponse illisible',
+    );
+  });
+});
 
 describe('la demande du relevé', () => {
   it('ne rend rien sans le paramètre, ni avec une autre valeur', () => {

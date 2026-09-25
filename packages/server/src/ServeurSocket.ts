@@ -102,6 +102,7 @@ import {
 } from './finDePartie.js';
 import { FluxDEtat } from './fluxDEtat.js';
 import type { GameRoom } from './GameRoom.js';
+import type { ResumeDuBattement } from '@neon-ninja/shared';
 import type { Horloge } from './horloge.js';
 import { horlogeSysteme } from './horloge.js';
 import type { Notification } from './instantane.js';
@@ -1606,6 +1607,14 @@ export class ServeurSocket {
       valide: true,
       valeur: this.rooms.partiesPubliquesOuvertes()[0] ?? this.ouvrirUneRoom(),
     };
+  }
+
+  /**
+   * Les battements des cinq dernieres minutes, toutes parties confondues, ou rien si
+   * aucune n'a battu (etape 8.6). Lus sur l'horloge du serveur, celle des parties.
+   */
+  resumeDuBattement(): ResumeDuBattement | undefined {
+    return this.rooms.chronometre.resume(this.horloge.maintenant());
   }
 
   /**

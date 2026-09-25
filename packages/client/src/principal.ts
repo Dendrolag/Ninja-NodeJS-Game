@@ -129,6 +129,7 @@ const diagnostic =
         document,
         variantes,
         ...(configuration.version === undefined ? {} : { version: configuration.version }),
+        ...(configuration.url === undefined ? {} : { serveur: configuration.url }),
       });
 
 // Sans son, la variante du releve qui le retire: aucun lecteur n'est cree.

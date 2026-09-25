@@ -23,6 +23,8 @@
  * tests/e2e/diagnostic.spec.ts ouvre le jeu avec et sans le paramètre.
  */
 
+import { lireLeResumeDuBattement } from '@neon-ninja/shared';
+import type { ResumeDuBattement } from '@neon-ninja/shared';
 import type { Application, Container } from 'pixi.js';
 import { UPDATE_PRIORITY } from 'pixi.js';
 
@@ -31,6 +33,7 @@ import type { SondeDImage } from '../rendu/boucle.js';
 import type { Variantes } from './demande.js';
 import { decrireLesVariantes } from './demande.js';
 import { Releve, nombre } from './releve.js';
+import { texteDuServeur } from './serveur.js';
 
 /** Le relevé ouvert dans la page. */
 export interface Diagnostic {
@@ -64,14 +67,30 @@ export interface SuiviDePartie {
 /** Tous les combien le panneau se met à jour, en millisecondes. */
 const RAFRAICHISSEMENT_MS = 500;
 
+/**
+ * Tous les combien la page lit les battements du serveur pendant une partie, en
+ * millisecondes (étape 8.6). Elle les lit aussi à la fin de la partie. Le serveur résume
+ * ses cinq dernières minutes: une lecture à la fin couvre une partie de trois minutes, et
+ * celles d'avant servent si la fin n'arrive pas.
+ */
+const LECTURE_DU_SERVEUR_MS = 30_000;
+
 /** Ouvre le relevé: pose son panneau dans la page. */
 export function creerDiagnostic(options: {
   readonly document: Document;
   readonly variantes: Variantes;
   readonly version?: string;
+  /** L'origine du serveur de jeu. Absente: celle de la page (étape 8.6). */
+  readonly serveur?: string;
 }): Diagnostic {
   const doc = options.document;
   const releve = new Releve();
+  /** La dernière lecture des battements du serveur (étape 8.6), et son instant. */
+  let lecture:
+    | { readonly instant: number; readonly battement: ResumeDuBattement | null }
+    | { readonly instant: number; readonly echec: string }
+    | undefined;
+  let rafraichissements = 0;
   const panneau = monterLePanneau(doc);
   /** Ce que la partie suivie ajoute à l'en-tête, et de quoi compter ses personnages. */
   let partie:
@@ -96,7 +115,37 @@ export function creerDiagnostic(options: {
     ...(partie?.entete() ?? [['Partie', 'aucune suivie']]),
   ];
 
-  panneau.surCopie(() => releve.texte(entete()));
+  /**
+   * Lit les battements du serveur sur sa route de santé. La copie ne peut pas attendre le
+   * réseau (Safari n'écrit dans le presse-papiers que pendant le geste): elle écrit la
+   * dernière lecture, avec son âge.
+   */
+  const lireLeServeur = (): void => {
+    fetch(`${options.serveur ?? ''}/sante`, { cache: 'no-store' })
+      .then(async (reponse) => reponse.json() as Promise<unknown>)
+      .then((corps) => {
+        const battement = lireLeResumeDuBattement(corps);
+        lecture =
+          battement === undefined
+            ? { instant: performance.now(), echec: 'réponse sans battements' }
+            : { instant: performance.now(), battement };
+      })
+      .catch((erreur: unknown) => {
+        lecture = { instant: performance.now(), echec: String(erreur) };
+      });
+  };
+
+  panneau.surCopie(() => {
+    const age = lecture === undefined ? 0 : (performance.now() - lecture.instant) / 1000;
+    const lue =
+      lecture === undefined
+        ? undefined
+        : 'echec' in lecture
+          ? { ageS: age, echec: lecture.echec }
+          : { ageS: age, battement: lecture.battement };
+
+    return releve.texte(entete()) + texteDuServeur(lue);
+  });
 
   const vue = doc.defaultView;
   vue?.setInterval(() => {
@@ -107,6 +156,11 @@ export function creerDiagnostic(options: {
 
     if (suivie && partie !== undefined) {
       releve.echantillonner(performance.now(), partie.compter());
+      rafraichissements += 1;
+
+      if (rafraichissements % (LECTURE_DU_SERVEUR_MS / RAFRAICHISSEMENT_MS) === 0) {
+        lireLeServeur();
+      }
     }
 
     const resume = releve.resume();
@@ -165,6 +219,7 @@ export function creerDiagnostic(options: {
         arreter() {
           suivie = false;
           desabonner();
+          lireLeServeur();
           // Le rendu va être détruit et la partie oubliée: l'en-tête et le compte se figent.
           const entete = partie?.entete() ?? [];
           const compte = partie?.compter() ?? 0;
