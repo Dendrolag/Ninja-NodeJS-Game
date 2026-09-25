@@ -59,6 +59,19 @@ const PARTIE_MASSACRE = {
  */
 const DELAI_DE_PRISE_MS = 130_000;
 
+/**
+ * Densite de pixels un, dans les deux cadrages (etape 8.7).
+ *
+ * Le Pixel 7 emule dessine a densite deux, quatre fois plus de pixels, et la machine
+ * d'integration continue n'a pas de carte graphique: la page y dessinait trois images par
+ * seconde, chaque contact tactile attendait pres d'une seconde, et un coup partait plus
+ * d'une seconde apres la decision. Mesure a deux processeurs: deux images par seconde a
+ * densite deux, huit et demie a densite un, un contact en 0,25 seconde au lieu de 1,15.
+ * Ce scenario verifie le pouce, le bouton et les regles, pas le rendu: le rendu a densite
+ * deux reste exerce par les autres scenarios du cadrage telephone et par le banc.
+ */
+test.use({ deviceScaleFactor: 1 });
+
 let jeu: ServeurDeJeu;
 
 test.beforeEach(async () => {
