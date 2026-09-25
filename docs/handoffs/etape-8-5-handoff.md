@@ -22,7 +22,9 @@ Savoir pourquoi le jeu saccade sur un iPhone 14 Pro, chiffres à l'appui, et éc
 - **Trois relevés de l'iPhone 14 Pro**, trois parties entières de trois minutes, seul: Horde à 50 PNJ, Massacre à 200, Tactique à 300. Rangés dans `docs/mesures/releves-8-5/`. Pris dans Firefox pour iOS, qui dessine avec le moteur de Safari.
 - **Lot C, l'audit, verdict provisoire** (section 6 de l'audit). **Le dessin est fluide**: 59,8 à 59,9 images par seconde, centile 99 de 21 à 23 ms, notre code 0,3 à 0,4 ms et PixiJS 0,4 à 0,5 ms par image, aucune dégradation en trois minutes. **Ce qui reste est la forme 3**: les instantanés arrivent vingt fois par seconde mais irrégulièrement (centile 99 de l'écart de 119 à 151 ms), et le lissage, qui suit cette irrégularité, tient les personnages immobiles pendant 15 à 17 pour cent des images (1,5 au bureau). Et **un gel de 131 à 257 ms au tout début** de chaque partie, l'écran de préparation se levant trop tôt. Dix hypothèses sur douze écartées dans ces conditions, deux confirmées (6 et 7), la 4 confirmée au départ seulement.
 - **Les très grosses saccades du 20 septembre ne sont pas reproduites.** Le porteur du projet ressent « pas de latence forte » à « quelques faibles latences ». Section 6.4 de l'audit: le navigateur, le réseau, la partie ou la version diffèrent peut-être.
-- **Lot D, le plan d'action** (section 8 de l'audit): (1) le réglage de l'écran de préparation, fait; (2) le lissage à retard fixe, proposé comme étape `8.6`; (3) mesurer la régularité du battement du serveur en production, dans `8.6`; (4) relever les conditions du 20 septembre, par le porteur du projet.
+- **Lot D, le plan d'action** (section 8 de l'audit): (1) le réglage de l'écran de préparation, fait; (2) mesurer la régularité du battement du serveur en production, proposé comme étape `8.6`; (3) adoucir le lissage sans ajouter de retard, à décider après `8.6`.
+- **Décision du porteur du projet: pas de retard ajouté à l'affichage.** L'audit proposait d'abord un lissage à retard fixe (50 ms de plus); refusé, le jeu demandant d'être réactif pour capturer. Consignée au journal de conception.
+- **Le porteur du projet confirme que le 20 septembre, les conditions étaient les mêmes** que le 25. La cause la plus probable des grosses saccades varie donc dans le temps: le réseau, ou le serveur hébergé gratuitement (section 6.4 de l'audit).
 - **Réglage fait: l'écran de préparation attend une demi-seconde réellement fluide**, trente images d'affilée de moins de 34 ms au lieu de trois de moins de 100 ms (`STABILITE`, `rendu/apparence.ts`). Au plus trois secondes, comme avant.
 - **Le relevé dit désormais quand l'écran de préparation s'est levé**, et combien d'images d'au moins 50 ms l'ont suivi: c'est ce qui remesurera le réglage.
 - **Défaut trouvé en route et corrigé (règle 7): les PNJ naissaient empilés.** Relevé par le porteur du projet en Tactique à 300 PNJ: la plupart des PNJ apparaissaient en un disque près du joueur. Passé environ 150 PNJ sur Tokyo, les cent tirages à 100 pixels de toutes les entités échouaient, et la spirale de secours, dont le second passage ignore l'écart, rendait le même point à chaque PNJ: **138 sur 300 au même endroit sur Tokyo**, 161 sur 500 sur Spirit & Time, 98 sur 300 sur le Quartier. Présent depuis l'étape 7.6. Désormais l'écart se resserre à 50, 25 puis 0 pixel avant la spirale; plus aucune pile, sur les quatre cartes, jusqu'à 500 PNJ. Section 8.1 de l'audit.
@@ -66,7 +68,7 @@ Aucune modification de `packages/server`, de `legacy/` ni de `tests/caracterisat
 2. **Deux hypothèses ajoutées**, 11 (le HUD) et 12 (la saisie tactile), écartées toutes deux par les relevés.
 3. **Des variantes dans l'adresse**, non prévues par la fiche. Elles n'ont pas servi: le dessin n'est pas en cause.
 4. **Le protocole n'a pas été joué tel quel**, et c'était le bon choix: trois parties de référence ont suffi à écarter le dessin, ce que les variantes devaient départager.
-5. **Le gel du départ se corrige par un réglage**, dans l'étape, comme la fiche le demande. **Le lissage à retard fixe est une étape**, pas un réglage: c'est un changement de conception du lissage, avec un prix, 50 ms d'affichage en plus, à régler en jouant.
+5. **Le gel du départ se corrige par un réglage**, dans l'étape, comme la fiche le demande. Le lissage à retard fixe, qui aurait été une étape, est **refusé par le porteur du projet**: pas de retard ajouté à l'affichage.
 6. **La correction des PNJ empilés est faite dans cette étape**, hors de son périmètre, au titre de la règle 7: un défaut de jeu vu pendant la recette, petit et bien délimité. Elle change trois empreintes de référence, parce que ces parties portaient déjà le défaut.
 7. **Pas de prédiction de notre propre ninja**: ce serait rejouer les règles dans la page. Section 8 de l'audit.
 
@@ -74,7 +76,7 @@ Aucune modification de `packages/server`, de `legacy/` ni de `tests/caracterisat
 
 - **L'étape n'est pas terminée**, pour deux raisons que seul le porteur du projet peut lever:
   - **le réglage de l'écran de préparation n'est pas remesuré sur le téléphone**: il faut une partie avec `?diagnostic=1`, et la ligne « Écran de préparation levé à … s; images d'au moins 50 ms ensuite: 0 »;
-  - **les conditions du 20 septembre sont inconnues**: navigateur (Safari?), réseau (Wi-Fi ou mobile?), partie (seul ou à plusieurs, mode, carte, PNJ).
+  - **aucun relevé n'a encore été pris un jour où le jeu saccade**: les conditions du 20 septembre étaient les mêmes, et c'est un tel relevé qui établira la cause (section 6.4 de l'audit).
 - **Le Massacre annoncé à 300 PNJ s'est joué à 200.** Le relevé lit le nombre dans les réglages de la partie, et aucun mode ne le réécrit (seule la validation le plafonne, par carte, à 300 sur Tokyo): le réglage était donc à 200. Pas un défaut.
 - **Le bandeau du relevé peut couvrir un bouton** en bas d'un écran étroit.
 
@@ -85,11 +87,11 @@ Repris des handoffs précédents, inchangé: la carte du Quartier reste à juger
 **Au porteur du projet**, sur l'iPhone 14 Pro, avec la page du commit qui porte ces corrections:
 
 1. Une partie avec `https://ninja.dendrolag.fr/?diagnostic=1`, par défaut, et coller le relevé: il doit dire « images d'au moins 50 ms ensuite: 0 ». Vérifier au passage que les PNJ naissent partout sur la carte, en Tactique à 300.
-2. Dire dans quelles conditions les très grosses saccades du 20 septembre sont apparues (navigateur, réseau, partie), et si possible en rejouer une dans ces conditions avec `?diagnostic=1`.
-3. Trancher l'étape `8.6` et son ordre face à `8.3`.
+2. Le jour où le jeu saccade de nouveau, jouer avec `?diagnostic=1` et coller le relevé.
+3. Trancher l'étape `8.6`, la régularité du battement en production, et son ordre face à `8.3`.
 
 **À la session suivante**, réponses en main: ranger les relevés, conclure la section 6.4 de l'audit, marquer l'étape terminée, et ouvrir `8.6` ou `8.3` selon la décision.
 
 ## Étape suivante
 
-Fiche à lire: `docs/plan/etape-8-5.md`, la même, pour clore l'étape. Ensuite, selon la décision du porteur du projet, `8.6` (le lissage à retard fixe, fiche à rédiger) ou `8.3` (le miroir calculé, fiche à rédiger).
+Fiche à lire: `docs/plan/etape-8-5.md`, la même, pour clore l'étape. Ensuite, selon la décision du porteur du projet, `8.6` (la régularité du battement en production, fiche à rédiger) ou `8.3` (le miroir calculé, fiche à rédiger).

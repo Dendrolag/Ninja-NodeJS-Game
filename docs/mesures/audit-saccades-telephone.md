@@ -2,7 +2,7 @@
 
 Rapport de l'étape 8.5. Fiche: `docs/plan/etape-8-5.md`.
 
-**Statut au 25 septembre 2026: trois parties mesurées sur l'iPhone 14 Pro, le verdict est provisoire.** Sur ce téléphone et dans ces conditions, **le dessin est fluide**: 60 images par seconde tenues trois minutes, en Horde, en Massacre et en Tactique, jusqu'à 300 PNJ. Ce qui reste est un défaut de **réseau** que le lissage amplifie (forme 3), et un gel d'une fraction de seconde au tout début de chaque partie. Les très grosses saccades du 20 septembre ne sont pas reproduites: la section 6.4 dit ce qu'il faut savoir d'elles pour conclure.
+**Statut au 25 septembre 2026: trois parties mesurées sur l'iPhone 14 Pro, le verdict est provisoire.** Sur ce téléphone et dans ces conditions, **le dessin est fluide**: 60 images par seconde tenues trois minutes, en Horde, en Massacre et en Tactique, jusqu'à 300 PNJ. Ce qui reste est un défaut de **réseau** que le lissage amplifie (forme 3), et un gel d'une fraction de seconde au tout début de chaque partie. Les très grosses saccades du 20 septembre, dans les mêmes conditions, ne sont pas reproduites: la cause la plus probable est une variation dans le temps du réseau ou du serveur (section 6.4). Pas de retard ajouté à l'affichage, sur décision du porteur du projet (section 8).
 
 ## 1. Le problème, et pourquoi on mesure d'abord
 
@@ -168,27 +168,25 @@ Une précaution de lecture: **ce navigateur arrondit ses chronomètres à la mil
 
 ### 6.3 Les causes, et le chiffre qui les désigne
 
-1. **Le lissage adaptatif (hypothèse 6), sur des arrivées irrégulières (hypothèse 7).** Le lissage règle sa vitesse sur l'écart entre les deux derniers instantanés: il suit l'irrégularité au lieu de l'absorber. Chiffre: 16,8, 15,0 et 16,0 pour cent d'images tenues, contre 1,5 au bureau sur le même code. Le relevé ne dit pas d'où vient l'irrégularité: du réseau de l'appareil, d'Internet, ou du serveur, dont le battement tourne sur une offre gratuite de Render. Les trois se corrigent de la même façon côté page (section 8, action 1), et se départagent côté serveur (action 3).
+1. **Le lissage adaptatif (hypothèse 6), sur des arrivées irrégulières (hypothèse 7).** Le lissage règle sa vitesse sur l'écart entre les deux derniers instantanés: il suit l'irrégularité au lieu de l'absorber. Chiffre: 16,8, 15,0 et 16,0 pour cent d'images tenues, contre 1,5 au bureau sur le même code. Le relevé ne dit pas d'où vient l'irrégularité: du réseau de l'appareil, d'Internet, ou du serveur, dont le battement tourne sur une offre gratuite de Render. L'action 2 de la section 8 les départage.
 2. **L'écran de préparation qui se lève trop tôt (hypothèse 4).** Chiffre: une image de 131 à 257 ms, à 0,13 à 0,26 s, dans chacune des trois parties.
 
-### 6.4 Ce qui n'est pas tranché: les très grosses saccades du 20 septembre
+### 6.4 Les très grosses saccades du 20 septembre: une variation dans le temps
 
-Le 20 septembre, le jeu était « injouable » sur le même téléphone. Le 25, il est fluide. Trois différences possibles, à confirmer avec le porteur du projet:
+Le 20 septembre, le jeu était « injouable » sur le même téléphone. Le 25, il est fluide. **Le porteur du projet confirme que les conditions étaient les mêmes**: même appareil, même navigateur, même réseau, même façon de jouer. Rien dans le dessin n'a changé entre les deux dates.
 
-- **Le navigateur.** Le rapport du 20 septembre était-il dans Safari? Les relevés sont dans Firefox pour iOS: même moteur, pas forcément les mêmes réglages.
-- **Le réseau.** Wi-Fi ou réseau mobile, le 20 et le 25? Sur un réseau plus irrégulier, la forme 3 grossit exactement comme une « très grosse saccade »: écarts de 300 ms au lieu de 100, personnages qui se figent un tiers de seconde puis bondissent.
-- **La partie et la version.** Seul, ou à plusieurs? Quel mode, quelle carte, combien de PNJ? Le 20 septembre, deux mises en ligne ont sauté (handoff 8.4): la page était peut-être plus ancienne.
+Ce qui a varié n'est donc ni le téléphone ni le code du dessin, mais **ce qui se trouve entre le serveur et le téléphone**: le réseau, ou le serveur lui-même, hébergé sur une offre gratuite de Render dont la puissance n'est pas garantie. Le relevé du 25 septembre montre déjà la même forme en petit (un écart d'au moins 100 ms toutes les deux à trois secondes). Un jour où ces écarts montent à 300 ms et plus, les personnages se figent un tiers de seconde puis bondissent: c'est exactement une « très grosse saccade » ressentie, sur un dessin pourtant fluide.
 
-**Ce qu'il faudrait pour conclure**: rejouer dans les conditions du 20 septembre, avec `?diagnostic=1`. Un seul relevé suffirait à dire si c'est la forme 3, en plus grand, ou autre chose.
+**Ce qui reste à faire pour le confirmer**: un relevé `?diagnostic=1` pris un jour où le jeu saccade de nouveau. S'il montre des images fluides et des écarts entre instantanés de plusieurs centaines de millisecondes, la cause est établie. Le porteur du projet refera un essai.
 
 ### 6.5 Jouable ou pas, et à quelles conditions
 
-**Oui, sur un iPhone 14 Pro, dans les conditions mesurées**: un joueur, jusqu'à 300 PNJ, trois modes. Le dessin garde plus de 90 pour cent de marge. Ce qui gêne encore est un à-coup des personnages toutes les deux à trois secondes, dû aux arrivées irrégulières, que l'action 1 de la section 8 supprime.
+**Oui, sur un iPhone 14 Pro, dans les conditions mesurées**: un joueur, jusqu'à 300 PNJ, trois modes. Le dessin garde plus de 90 pour cent de marge. Ce qui gêne encore est un à-coup des personnages toutes les deux à trois secondes, dû aux arrivées irrégulières, et qui peut grossir certains jours au point de rendre le jeu pénible (section 6.4). La section 8 dit comment en trouver l'origine.
 
 ## 7. Ce que le banc de l'étape 5.7 ne voyait pas
 
 - **Ni Safari, ni une carte graphique de téléphone.** Le banc mesure Chromium sur une carte de bureau. Pour ce téléphone, c'était sans conséquence: le banc annonçait 5 ms par image au processeur ralenti six fois, le téléphone en dépense moins d'une. Le ralentissement de Chromium est pessimiste pour un appareil haut de gamme.
-- **Ni le réseau.** Le banc fabrique ses instantanés à la cadence parfaite: il ne pouvait pas voir la forme 3, qui est justement le défaut restant. **À lui ajouter**: un test du lissage nourri d'arrivées irrégulières, tirées de la répartition mesurée ici (médiane 50 ms, neuvième décile 75 ms, centile 99 130 ms), qui borne le taux d'images tenues. C'est le test qui prouvera l'action 1.
+- **Ni le réseau.** Le banc fabrique ses instantanés à la cadence parfaite: il ne pouvait pas voir la forme 3, qui est justement le défaut restant. **À lui ajouter**: un test du lissage nourri d'arrivées irrégulières, tirées de la répartition mesurée ici (médiane 50 ms, neuvième décile 75 ms, centile 99 130 ms), qui borne le taux d'images tenues. C'est le test qui prouverait l'action 3.
 - **Ni le début de partie.** Le banc s'échauffe une seconde avant de mesurer, exprès: le gel du départ lui était invisible. Le relevé, lui, le voit désormais: il écrit quand l'écran de préparation s'est levé, et combien d'images d'au moins 50 ms ont suivi.
 - **Ni le HUD, ni la mise en page, ni la durée.** Invisibles au banc, et sans conséquence sur ce téléphone (hypothèses 8 et 11).
 
@@ -196,26 +194,26 @@ Le 20 septembre, le jeu était « injouable » sur le même téléphone. Le 25, 
 
 Ordonné par gain rapporté au coût.
 
+**Décision du porteur du projet, le 25 septembre 2026: pas de retard ajouté à l'affichage.** L'audit proposait d'abord un lissage à retard fixe: afficher la partie avec un peu plus de deux battements de retard, pour qu'un instantané en retard ne se voie plus. Refusé: le jeu demande d'être réactif pour capturer, et 50 ms de plus entre la réalité du serveur et l'écran nuiraient au ressenti. Tout remède doit donc se passer de retard supplémentaire.
+
 1. **L'écran de préparation attend une demi-seconde réellement fluide** (`STABILITE`, `packages/client/src/rendu/apparence.ts`): trente images d'affilée de moins de 34 ms, au lieu de trois de moins de 100 ms.
    - Gain espéré: le gel de 131 à 257 ms du départ passe sous l'écran de préparation, dans les trois relevés.
    - Risque: l'écran se lève une demi-seconde plus tard. Il se lève toujours au bout de trois secondes au plus.
    - **Réglage, fait à l'étape 8.5**, à remesurer: le relevé dit désormais combien d'images d'au moins 50 ms suivent le lever de l'écran. Il en faut zéro.
-2. **Le lissage à retard fixe.** Afficher la partie telle qu'elle était un peu plus de deux battements plus tôt, sur la chronologie des battements, au lieu de régler la vitesse sur le dernier écart observé. Un instantané en retard de moins que ce délai ne se voit plus.
-   - Gain espéré: les images tenues passent de 15 à 17 pour cent à moins de 1 pour cent avec un délai de 100 ms, qui couvre le centile 99 mesuré (119 à 151 ms d'écart, soit 70 à 100 ms de retard sur l'attendu).
-   - Risque: le jeu s'affiche 50 ms plus tard qu'aujourd'hui, notre ninja compris: la saisie paraîtra un peu moins vive. Le délai se règle en jouant, avec le porteur du projet, entre 75 et 125 ms.
-   - **Étape, proposée au ROADMAP: `8.6`.** C'est un changement de conception du lissage, pas un réglage.
-3. **Mesurer la régularité du battement du serveur en production**, pour savoir si l'irrégularité vient du réseau ou du serveur hébergé gratuitement.
-   - Gain: aucun en soi. Il dit si un serveur payant, ou un autre hébergeur, gagnerait quelque chose.
-   - **À faire dans l'étape `8.6`**, qui en a besoin pour choisir son délai.
-4. **Relever les conditions du 20 septembre** avec `?diagnostic=1` (section 6.4).
-   - Gain: dit si l'étape 8.6 suffit, ou s'il y a autre chose.
-   - **Recette, par le porteur du projet.**
+2. **Mesurer la régularité du battement du serveur en production.** Le serveur relèverait l'écart réel entre deux de ses battements et l'exposerait par sa route `/sante`, et le relevé de la page l'écrirait à côté du sien. C'est ce qui dira si l'irrégularité naît au serveur, hébergé gratuitement, ou sur le chemin jusqu'au téléphone.
+   - Gain: aucun en soi, mais il décide de la suite. Si le serveur est en cause, un hébergement qui garantit sa puissance corrige tout sans rien changer au jeu. S'il ne l'est pas, seul le lissage peut agir.
+   - Risque: aucun pour le jeu.
+   - **Étape, proposée au ROADMAP: `8.6`.**
+3. **Adoucir le lissage sans ajouter de retard**, à décider après l'action 2 et seulement si le réseau est en cause. Deux voies, à éprouver en jouant:
+   - **régler la vitesse du lissage sur le battement nominal de 50 ms**, et non sur le dernier écart observé. Après un instantané en retard, le lissage ne ralentit plus les personnages pour la suite: il supprime la course qui suit chaque arrêt. Il ne supprime pas l'arrêt lui-même.
+   - **prolonger brièvement le mouvement** quand l'instantané suivant tarde, d'au plus un battement, dans la direction connue de chaque personnage. Plus d'arrêt tant que le retard reste court, mais une petite correction visible quand un personnage a tourné entre-temps. C'est contraire au principe écrit du lissage, « on interpole, on n'extrapole jamais »: à trancher par le porteur du projet.
+   - Forme: **étape**, à planifier après `8.6` selon son résultat.
 
 **Ce qu'on accepte de ne pas faire, et pourquoi.**
 
+- **Aucun retard ajouté à l'affichage**, sur décision du porteur du projet.
 - **Aucune optimisation du dessin.** Il prend moins d'une milliseconde sur ce téléphone: ni WebGPU, ni densité réduite, ni HUD allégé ne se verraient.
-- **Pas de prédiction de notre propre ninja.** Faire avancer notre personnage avant la réponse du serveur supprimerait le retard de la saisie, mais ce serait rejouer les règles du jeu dans la page, avec les corrections visibles qu'elle impose. Le lissage à retard fixe suffit à la forme 3; la prédiction ne se discuterait que si la saisie paraissait molle après lui.
-- **Pas de nouvel hébergement du serveur** tant que l'action 3 n'a pas dit que le serveur est en cause.
+- **Pas de prédiction de notre propre ninja.** Faire avancer notre personnage avant la réponse du serveur rendrait la saisie plus vive, mais ce serait rejouer les règles du jeu dans la page, avec les corrections visibles qu'elle impose. Hors de propos tant que la saisie n'est pas jugée molle.
 
 ### 8.1 Défaut trouvé en route: les PNJ nés au même point
 
