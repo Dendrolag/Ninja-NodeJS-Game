@@ -39,9 +39,6 @@ const DELAI_CAPTURE_DE_BOT_MS = 12_000;
 /** La part de l'arme ou le joueur a l'affut vise un faux ninja en marche, en portee et en ouverture. */
 const MARGE_DE_VISEE = 0.75;
 
-/** La duree supposee d'un coup, appui et lever, avant que le premier la mesure. */
-const DUREE_D_UN_COUP_SUPPOSEE_MS = 2_000;
-
 /** De combien les detours autour des murs allongent un trajet a vol d'oiseau, au plus. */
 const ALLONGEMENT_DES_DETOURS = 1.5;
 
@@ -422,7 +419,9 @@ export function capturerUnFauxNinja(partie: GameRoom, pseudo: string, commande: 
  * pixels entre-temps. A l'arret, le joueur ne bouge plus; le faux ninja, lui, se prevoit
  * dans l'etat du serveur, l'arbitre: en pause, il reste ou il est tant que sa pause dure;
  * en marche, il suit son cap tant qu'il n'en change pas. Le delai du coup se mesure sur le
- * coup precedent.
+ * coup precedent; le premier part des qu'un faux ninja est dans l'arme. Supposer ce delai
+ * avant de l'avoir mesure, deux secondes, retenait presque tous les coups sur une page
+ * plus rapide que prevu.
  *
  * Le pilote va aussi jusqu'au contact des faux ninjas: le toucher ne doit pas suffire a
  * prendre, et c'est au scenario de le verifier.
@@ -435,7 +434,9 @@ export function prendreUnFauxNinjaDUnCoup(
   frapper: () => Promise<void>,
   prise: () => boolean,
 ): Mission {
-  let dureeDuCoupMs = DUREE_D_UN_COUP_SUPPOSEE_MS;
+  // Inconnue avant le premier coup: celui-ci part des qu'un faux ninja est dans l'arme,
+  // sans prevision, et la mesure. Un coup dans le vide ne coute rien.
+  let dureeDuCoupMs = 0;
 
   return {
     nom: `${pseudo} prend un faux ninja d'un coup`,
