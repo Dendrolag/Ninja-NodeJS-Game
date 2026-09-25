@@ -39,7 +39,7 @@ import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
 
 /** Une partie longue et peuplee: beaucoup de faux ninjas a portee, et le temps d'approcher. */
 const PARTIE_MASSACRE = {
-  dureePartieS: '120',
+  dureePartieS: '150',
   nombreBotsInitial: '120',
   'zones.actives': false,
 } as const;
@@ -49,8 +49,15 @@ const PARTIE_MASSACRE = {
  *
  * Moins que la partie, dont le lancement a deja pris quelques secondes: un echec doit se
  * dire pendant la partie, et non apres sa fin, quand plus personne ne bouge (etape 8.7).
+ *
+ * Large, et la partie avec lui: le katana ne porte qu'a soixante pixels, et sur une page
+ * qui dessine deux images par seconde, le joueur glisse de cent a deux cents pixels apres
+ * le lever du pouce. S'arreter a portee d'un faux ninja choisi y tient de la chance; les
+ * prises viennent surtout des faux ninjas qui passent pendant l'affut. A deux processeurs,
+ * une prise sur cinq a demande pres de cent secondes. Le scenario s'arrete a la prise: la
+ * marge ne coute rien quand il reussit.
  */
-const DELAI_DE_PRISE_MS = 100_000;
+const DELAI_DE_PRISE_MS = 130_000;
 
 let jeu: ServeurDeJeu;
 
@@ -80,7 +87,7 @@ test('creer une partie Massacre, la lancer seul et trancher un faux ninja', asyn
   hasTouch,
 }, informations) => {
   // La partie, son compte a rebours, le chargement de la carte et plusieurs approches.
-  test.setTimeout(180_000);
+  test.setTimeout(210_000);
 
   const erreurs = releverLesErreurs(page);
   const signes = await releverLesSignesVitaux(page);
