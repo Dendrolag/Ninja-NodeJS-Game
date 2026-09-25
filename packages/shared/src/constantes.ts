@@ -660,6 +660,36 @@ export const MASSACRE = {
 } as const;
 
 /**
+ * L'Evade (etape 7.9): un ninja raye rouge et blanc qui apparait une fois par partie, fuit
+ * les joueurs, et donne a qui l'attrape un x2 sur tout son score. Regles tranchees par le
+ * porteur du projet le 25 septembre 2026 (docs/plan/etape-7-9.md).
+ */
+export const EVADE = {
+  /** Sa vitesse: dix pour cent de plus que tout le monde, moins que le bonus de vitesse. */
+  VITESSE_PX_PAR_SECONDE: 165,
+  /** Il apparait a un moment tire au sort entre ces deux parts de la duree de la partie. */
+  DEBUT_DE_LA_FENETRE: 0.25,
+  FIN_DE_LA_FENETRE: 0.75,
+  /** Pas attrape dans ce delai, il s'en va, perdu pour tous. */
+  PRESENCE_MS: 45_000,
+  /** Il fuit les joueurs a moins de cette distance, en pixels. */
+  RAYON_DE_FUITE_PX: 300,
+  /** Il reconsidere sa fuite a cette cadence, en millisecondes. */
+  DECISION_MS: 250,
+  /** Combien de caps il essaie, regulierement repartis, pour fuir. */
+  CAPS_ESSAYES: 16,
+  /** Jusqu'ou il regarde devant lui, dans chaque cap essaye, en pixels. */
+  PORTEE_D_ESSAI_PX: 60,
+  /** Ce que vaut le multiplicateur porte. */
+  MULTIPLICATEUR: 2,
+  /** Sa couleur dans le flux d'etat. Le rendu le dessine raye, pas de cette couleur. */
+  COULEUR: '#E3262E',
+} as const;
+
+/** Les modes ou l'Evade apparait (decision 2 du porteur du projet): tous, sauf la Chasse. */
+export const MODES_AVEC_EVADE: readonly Mode[] = ['classique', 'tactique', 'equipes', 'massacre'];
+
+/**
  * La regle du combo, commune au Massacre (etape 7.4) et a la Horde (etape 7.5).
  *
  * Un combo compte des coups reussis a la suite: des morts au Massacre, des faux ninjas

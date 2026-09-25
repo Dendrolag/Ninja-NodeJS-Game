@@ -20,6 +20,7 @@ import type {
   Joueur,
 } from './etat.js';
 import { AUCUN_BONUS } from './effets.js';
+import { preparerLEvade } from './evade.js';
 import { ajouterBot, ajouterJoueur, creerEtatInitial, retirerJoueur } from './etat.js';
 import {
   CONE_DU_KATANA,
@@ -186,7 +187,9 @@ describe('le lancement', () => {
       carteVidee: false,
     });
     expect(lance.alea).toBe(avant.alea);
-    expect(lancerLaPartie(avant)).toEqual(lance);
+    // Le lancement d'une partie ajoute le tirage du moment ou l'Evade apparaitra (etape
+    // 7.9): le Massacre, lui, n'en fait aucun.
+    expect(lancerLaPartie(avant)).toEqual(preparerLEvade(lance));
   });
 
   it('donne l etat de depart a un joueur qui n a pas encore d entree', () => {

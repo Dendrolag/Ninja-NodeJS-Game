@@ -45,6 +45,7 @@ export {
 export type { Contact, RegleDeResolution } from './contacts.js';
 export {
   SEUIL_CONTACT_PX,
+  attraperLEvadeAuContact,
   detecterContacts,
   regleClassique,
   regleChasse,
@@ -93,6 +94,17 @@ export {
 export { malusEnEquipe, partDuJoueur, perteEnEquipe } from './equipes.js';
 
 export {
+  attraperLEvade,
+  avancerLEvade,
+  cederLeDoubleur,
+  evadeSurLaCarte,
+  multiplicateurDuScore,
+  perdreLeDoubleur,
+  porteLeDoubleur,
+  preparerLEvade,
+} from './evade.js';
+
+export {
   RALLIEUR_DE_DEPART,
   agirEnHorde,
   lancerLaHorde,
@@ -127,7 +139,14 @@ export type {
   CarteVidee,
   CoupDeKatana,
   DestructionDeBotNoir,
+  DoubleurPerdu,
+  DoubleurVole,
   Entite,
+  EtatDeLEvade,
+  EvadeApparu,
+  EvadeAttrape,
+  EvadeEnfui,
+  EvadeSurLaCarte,
   EtatDeChasse,
   EtatDeHorde,
   EtatDeMassacre,

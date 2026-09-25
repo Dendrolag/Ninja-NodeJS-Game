@@ -53,6 +53,7 @@ import { BOTS, BOTS_NOIRS, COULEUR_BOT_NEUTRE, DUREES, VITESSES, reel } from '@n
 import { trajetTenable } from './collisions.js';
 import { couleurDeBot } from './couleurs.js';
 import { resoudreDeplacement } from './deplacement.js';
+import { perdreLeDoubleur } from './evade.js';
 import { aLaLongueur, directionDuVecteur } from './direction.js';
 import type { Bot, BotNoir, BotOrdinaire, EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
 import {
@@ -788,31 +789,35 @@ function depouiller(
 
   const place = positionDApparition(etat.alea, etat.terrain, positionsOccupees(etat));
 
-  return {
-    ...etat,
-    bots,
-    joueurs: {
-      ...etat.joueurs,
-      [victime.id]: {
-        ...victime,
-        position: place.valeur,
-        direction: 'immobile',
-        protectionSpawnRestanteMs: DUREES.PROTECTION_SPAWN_MS,
-        capturesParBotNoirSubies: victime.capturesParBotNoirSubies + 1,
+  // Le porteur du x2 attrape par un Black Ninja le perd, pour tous (etape 7.9, decision 7).
+  return perdreLeDoubleur(
+    {
+      ...etat,
+      bots,
+      joueurs: {
+        ...etat.joueurs,
+        [victime.id]: {
+          ...victime,
+          position: place.valeur,
+          direction: 'immobile',
+          protectionSpawnRestanteMs: DUREES.PROTECTION_SPAWN_MS,
+          capturesParBotNoirSubies: victime.capturesParBotNoirSubies + 1,
+        },
       },
+      evenements: [
+        ...etat.evenements,
+        {
+          type: 'captureParBotNoir',
+          botNoir: botNoir.id,
+          victime: victime.id,
+          botsPerdus: perdus.length,
+          position: victime.position,
+        },
+      ],
+      alea: place.alea,
     },
-    evenements: [
-      ...etat.evenements,
-      {
-        type: 'captureParBotNoir',
-        botNoir: botNoir.id,
-        victime: victime.id,
-        botsPerdus: perdus.length,
-        position: victime.position,
-      },
-    ],
-    alea: place.alea,
-  };
+    victime.id,
+  );
 }
 
 /** Distance entre deux positions, en pixels. */

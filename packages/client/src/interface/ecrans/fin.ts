@@ -199,7 +199,9 @@ function carteDEquipe(doc: Document, equipe: EquipeFin): HTMLElement {
     doc,
     'div',
     {
-      classe: equipe.mienne ? 'fin-equipe mienne' : 'fin-equipe',
+      classe: ['fin-equipe', equipe.mienne ? 'mienne' : '', equipe.doubleur ? 'doubleur' : '']
+        .filter((classe) => classe !== '')
+        .join(' '),
       attributs: { 'data-equipe': equipe.equipe },
     },
     creer(doc, 'span', { classe: 'fin-equipe-nom', texte: equipe.nom }),
@@ -352,9 +354,15 @@ function marche(doc: Document, ligne: LigneFin): HTMLElement {
     doc,
     'div',
     {
-      classe: ligne.moi
-        ? `marche marche-${String(ligne.rang)} moi`
-        : `marche marche-${String(ligne.rang)}`,
+      classe: [
+        'marche',
+        `marche-${String(ligne.rang)}`,
+        ligne.moi ? 'moi' : '',
+        // Le badge du x2 de l'Evade se pose par la feuille de style (etape 7.9).
+        ligne.doubleur ? 'doubleur' : '',
+      ]
+        .filter((classe) => classe !== '')
+        .join(' '),
       attributs: { 'data-rang': String(ligne.rang) },
     },
     avatar,
@@ -377,7 +385,17 @@ function rangee(doc: Document, ligne: LigneFin): HTMLElement {
   return creer(
     doc,
     'tr',
-    { classe: ligne.moi ? 'moi' : '', attributs: { 'data-joueur': ligne.id } },
+    {
+      // Le badge du x2 de l'Evade se pose par la feuille de style, hors du texte de la
+      // cellule (etape 7.9); le titre le dit a qui ne le voit pas.
+      classe: [ligne.moi ? 'moi' : '', ligne.doubleur ? 'doubleur' : '']
+        .filter((classe) => classe !== '')
+        .join(' '),
+      attributs: {
+        'data-joueur': ligne.id,
+        ...(ligne.doubleur ? { title: 'A fini avec le x2 de l’Évadé' } : {}),
+      },
+    },
     creer(doc, 'td', { classe: 'rang', texte: String(ligne.rang) }),
     creer(doc, 'td', { classe: 'joueur' }, pastille, creer(doc, 'span', { texte: ligne.pseudo })),
     creer(doc, 'td', { classe: 'nombre points', texte: String(ligne.points) }),

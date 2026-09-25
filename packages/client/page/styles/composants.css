@@ -511,6 +511,40 @@
 }
 
 /*
+ * L'Evade (etape 7.9): son titre est blanc cerne de rouge, et son disque raye rouge et blanc
+ * porte « x2 », faute d'icone.
+ */
+.grand-titre.raye .grand-titre-icone {
+  border-color: #fff;
+  background: repeating-linear-gradient(-45deg, #e3262e 0 7px, #f6f6f6 7px 14px);
+  box-shadow: 0 0 16px rgba(227, 38, 46, 0.8);
+}
+
+.grand-titre-x2 {
+  color: #fff;
+  font-family: var(--police-donnees);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow:
+    0 0 3px #b3121b,
+    0 0 3px #b3121b,
+    0 1px 2px #000;
+}
+
+.grand-titre.raye .grand-titre-surtitre {
+  color: #ffc2c5;
+}
+
+.grand-titre.raye .grand-titre-titre {
+  color: #fff;
+  text-shadow:
+    3px 3px 0 #e3262e,
+    0 0 10px #e3262e,
+    0 0 30px rgba(227, 38, 46, 0.7);
+}
+
+/*
  * Sur un ecran tactile ou etroit, le titre reste grand, mais plus serre et plus haut: a
  * 34 pour cent, sa derniere ligne passait sur notre ninja, au centre de l'ecran.
  */
@@ -539,6 +573,10 @@
   }
 
   .grand-titre-ligne {
+    font-size: 12px;
+  }
+
+  .grand-titre-x2 {
     font-size: 12px;
   }
 }

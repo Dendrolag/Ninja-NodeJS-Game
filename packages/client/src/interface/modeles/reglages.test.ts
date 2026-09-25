@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { ChampReglage } from './reglages.js';
 import {
+  champPropose,
   bornesSurLaCarte,
   champUtileSurLaCarte,
   erreursParChamp,
@@ -182,5 +183,15 @@ describe('erreursParChamp', () => {
 
     expect(parChamp.get('carte')).toBe('Un. Deux.');
     expect(parChamp.get('dureePartieS')).toBe('Trois.');
+  });
+});
+
+describe("l'interrupteur de l'Evade (etape 7.9)", () => {
+  it('se propose dans tous les modes, sauf la Chasse', () => {
+    for (const mode of ['classique', 'tactique', 'equipes', 'massacre'] as const) {
+      expect(champPropose('evade', mode), mode).toBe(true);
+    }
+
+    expect(champPropose('evade', 'chasse')).toBe(false);
   });
 });

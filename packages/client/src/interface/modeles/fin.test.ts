@@ -232,3 +232,18 @@ describe('la progression de fin', () => {
     });
   });
 });
+
+describe("le x2 de l'Evade au classement final (etape 7.9)", () => {
+  it('marque la ligne de qui a fini avec le x2', () => {
+    const classement = [
+      { ...ligne('alice', 'Alice', 60), doubleur: true as const },
+      ligne('moi', 'Moi', 20),
+    ];
+    const lignes = modeleFin(etat(classement))?.lignes ?? [];
+
+    expect(lignes.map((une) => [une.id, une.doubleur])).toEqual([
+      ['alice', true],
+      ['moi', false],
+    ]);
+  });
+});

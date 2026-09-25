@@ -329,6 +329,12 @@ describe('validerReglages', () => {
     expect(champsRefuses(validerReglages({ carte: 'map2' }))).toEqual(['carte']);
   });
 
+  it('met l Evade en jeu par defaut, et accepte de le couper (etape 7.9)', () => {
+    expect(valeurAcceptee(validerReglages({})).evade).toBe(true);
+    expect(valeurAcceptee(validerReglages({ evade: false })).evade).toBe(false);
+    expect(champsRefuses(validerReglages({ evade: 'oui' }))).toEqual(['evade']);
+  });
+
   it('fait tomber la pluie par defaut, et accepte de la couper (etape 7.6)', () => {
     expect(valeurAcceptee(validerReglages({})).pluie).toBe(true);
     expect(valeurAcceptee(validerReglages({ pluie: false })).pluie).toBe(false);

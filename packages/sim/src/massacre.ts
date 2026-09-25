@@ -33,6 +33,7 @@ import { COMBO, DUREES, MASSACRE, TACTIQUE, multiplicateurDuCombo } from '@neon-
 
 import type { PerteFaceAuBotNoir } from './bots.js';
 import { inscrireAuJournal } from './capture.js';
+import { attraperLEvade, cederLeDoubleur, evadeSurLaCarte } from './evade.js';
 import type {
   Bot,
   EtatDeMassacre,
@@ -214,7 +215,8 @@ interface Coup {
  *
  * Les cibles sont jugees sur les positions d'avant le coup. Les joueurs d'abord, comme les
  * tirs du Tactique: un seul au plus, le delai d'une seconde entre deux joueurs tues
- * refusant le suivant. Puis les bots et les Black Ninjas, dans l'ordre de l'etat. Le coup a
+ * refusant le suivant. Puis les bots et les Black Ninjas, dans l'ordre de l'etat, et
+ * l'Evade (etape 7.9). Le coup a
  * lieu meme dans le vide: il relance l'attente, et le journal le dit.
  */
 export function frapper(etat: EtatPartie, id: IdentifiantEntite): Coup {
@@ -255,6 +257,14 @@ export function frapper(etat: EtatPartie, id: IdentifiantEntite): Coup {
       courant = mort.etat;
       morts.push(mort.mort);
     }
+  }
+
+  // L'Evade dans l'arc est elimine: il ne rapporte que le x2, ni points ni combo (etape 7.9,
+  // micro-decision 7 de la fiche).
+  const evade = evadeSurLaCarte(etat);
+
+  if (evade !== undefined && dansLeCone(position, orientation, evade.position, CONE_DU_KATANA)) {
+    courant = attraperLEvade(courant, id);
   }
 
   const apres = guerrierDe(courant, id);
@@ -377,35 +387,41 @@ export function tuerUnJoueur(
   };
   const massacre = massacreDe(etat);
 
-  return {
-    ...etat,
-    joueurs,
-    massacre: {
-      ...massacre,
-      guerriers: {
-        ...massacre.guerriers,
-        [tueurId]: { ...armee, points: armee.points + pointsVoles },
-        [victimeId]: {
-          ...volee,
-          points: volee.points - pointsVoles,
-          combo: 0,
-          avantFinDuComboMs: 0,
+  // Le porteur du x2 le cede a son tueur (etape 7.9). La moitie volee porte sur les points
+  // ranges, pas sur leur double.
+  return cederLeDoubleur(
+    {
+      ...etat,
+      joueurs,
+      massacre: {
+        ...massacre,
+        guerriers: {
+          ...massacre.guerriers,
+          [tueurId]: { ...armee, points: armee.points + pointsVoles },
+          [victimeId]: {
+            ...volee,
+            points: volee.points - pointsVoles,
+            combo: 0,
+            avantFinDuComboMs: 0,
+          },
         },
       },
+      evenements: [
+        ...etat.evenements,
+        {
+          type: 'joueurTranche',
+          attaquant: tueurId,
+          victime: victimeId,
+          position: victime.position,
+          orientation,
+          pointsVoles,
+        },
+      ],
+      alea: place.alea,
     },
-    evenements: [
-      ...etat.evenements,
-      {
-        type: 'joueurTranche',
-        attaquant: tueurId,
-        victime: victimeId,
-        position: victime.position,
-        orientation,
-        pointsVoles,
-      },
-    ],
-    alea: place.alea,
-  };
+    victimeId,
+    tueurId,
+  );
 }
 
 /**

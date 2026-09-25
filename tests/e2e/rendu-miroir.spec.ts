@@ -38,6 +38,7 @@ const PAGE_DU_MIROIR = `<!doctype html>
     entites: [],
     reperes: [],
     indicateur: { disques: [], parts: [], traits: [] },
+    marques: [],
     sang: [],
     secousse: { x: 0, y: 0 },
     imageDePluie: 1,

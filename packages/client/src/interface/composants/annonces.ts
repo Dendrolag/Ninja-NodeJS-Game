@@ -93,13 +93,24 @@ export function monterFilDAnnonces(doc: Document): FilDAnnonces {
  * la ligne qui le dit. La couleur passe par une propriete de la feuille de style.
  */
 function elementDuGrandTitre(doc: Document, titre: GrandTitre): HTMLElement {
-  const pictogramme = creer(doc, 'span', { classe: 'grand-titre-pictogramme' });
-  pictogramme.style.backgroundImage = `url("${titre.icone}")`;
+  // L'Evade n'a pas d'icone: son disque est raye, et porte « x2 » (etape 7.9).
+  const pictogramme =
+    titre.icone === undefined
+      ? creer(doc, 'span', { classe: 'grand-titre-x2', texte: 'x2' })
+      : creer(doc, 'span', { classe: 'grand-titre-pictogramme' });
+
+  if (titre.icone !== undefined) {
+    pictogramme.style.backgroundImage = `url("${titre.icone}")`;
+  }
+
+  const classes = ['grand-titre', titre.brouille ? 'brouille' : '', titre.raye ? 'raye' : '']
+    .filter((classe) => classe !== '')
+    .join(' ');
 
   const element = creer(
     doc,
     'div',
-    { classe: titre.brouille ? 'grand-titre brouille' : 'grand-titre' },
+    { classe: classes },
     creer(
       doc,
       'span',

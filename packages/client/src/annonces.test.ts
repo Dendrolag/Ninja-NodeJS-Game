@@ -290,3 +290,57 @@ describe('annoncesDuChangement', () => {
     expect(annoncesDuChangement(avant, etat({ salon: salon('moi') }))).toEqual([]);
   });
 });
+
+describe("les annonces de l'Evade (etape 7.9)", () => {
+  const annonce = (charge: Parameters<typeof fait<'evade'>>[1], mode?: 'equipes' | 'massacre') =>
+    annonceDuFait(fait('evade', charge, 0), mode, 'moi');
+
+  it('annonce son apparition a tous, en grand titre raye, sans icone', () => {
+    const apparu = annonce({ quoi: 'apparu' });
+
+    expect(apparu?.grandTitre).toMatchObject({
+      titre: 'L’Évadé rôde !',
+      ligne: 'Son x2 double votre score',
+      raye: true,
+      icone: undefined,
+      brouille: false,
+    });
+    expect(annonce({ quoi: 'apparu' }, 'equipes')?.grandTitre?.ligne).toBe(
+      'Son x2 double le score de votre équipe',
+    );
+  });
+
+  it('dit a celui qui l attrape que son score compte double, et aux autres qui le porte', () => {
+    const moi = annonce({ quoi: 'attrape', par: 'moi', parPseudo: 'Moi' });
+    const autre = annonce({ quoi: 'attrape', par: 'bob', parPseudo: 'Bob' });
+
+    expect(moi?.ton).toBe('succes');
+    expect(moi?.grandTitre?.titre).toBe('x2');
+    expect(autre?.grandTitre?.ligne).toBe('Bob porte le x2 : prenez-le lui');
+    expect(
+      annonce({ quoi: 'attrape', par: 'moi', parPseudo: 'Moi' }, 'massacre')?.grandTitre?.surtitre,
+    ).toBe('L’Évadé éliminé');
+  });
+
+  it('dit le vol du x2 a chacun, et le brouille chez qui le perd', () => {
+    const vol = { quoi: 'vole' as const, par: 'bob', parPseudo: 'Bob', de: 'moi', dePseudo: 'Moi' };
+    const subi = annonce(vol);
+    const fait_ = annonce({ ...vol, par: 'moi', parPseudo: 'Moi', de: 'bob', dePseudo: 'Bob' });
+    const vu = annonce({ ...vol, de: 'eve', dePseudo: 'Eve' });
+
+    expect(subi?.ton).toBe('alerte');
+    expect(subi?.grandTitre?.brouille).toBe(true);
+    expect(fait_?.grandTitre?.ligne).toBe('Vous prenez le x2 de Bob');
+    expect(vu?.grandTitre?.ligne).toBe('Bob prend le x2 de Eve');
+  });
+
+  it('dit la perte du x2 face a un Black Ninja, et la fuite de l Evade', () => {
+    expect(annonce({ quoi: 'perdu', de: 'moi', dePseudo: 'Moi' })?.grandTitre?.ligne).toBe(
+      'Un Black Ninja a détruit votre x2',
+    );
+    expect(annonce({ quoi: 'perdu', de: 'bob', dePseudo: 'Bob' })?.grandTitre?.ligne).toBe(
+      'Un Black Ninja a détruit le x2 de Bob',
+    );
+    expect(annonce({ quoi: 'enfui' })?.grandTitre?.titre).toBe('Envolé');
+  });
+});

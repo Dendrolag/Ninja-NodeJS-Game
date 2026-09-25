@@ -44,6 +44,7 @@ import { DUREES, SCORE } from '@neon-ninja/shared';
 import type { Couleur } from './couleurs.js';
 import { couleurUnique } from './couleurs.js';
 import { partDuJoueur } from './equipes.js';
+import { cederLeDoubleur } from './evade.js';
 import type { Bot, BotOrdinaire, EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
 import {
   couleursUtilisees,
@@ -194,23 +195,28 @@ function capturerAvec(
     },
   };
 
-  return {
-    ...etat,
-    joueurs,
-    bots: repeindre(etat.bots, cedes, attaquant.couleur),
-    evenements: [
-      ...etat.evenements,
-      {
-        type: 'captureJoueur',
-        attaquant: attaquantId,
-        victime: victimeId,
-        botsTransferes: cedes.length,
-        nouvelleCouleurVictime: teinte.valeur,
-        position: positionDuContact,
-      },
-    ],
-    alea: teinte.alea,
-  };
+  // Le porteur du x2 le cede a qui le capture, avec ses ninjas (etape 7.9).
+  return cederLeDoubleur(
+    {
+      ...etat,
+      joueurs,
+      bots: repeindre(etat.bots, cedes, attaquant.couleur),
+      evenements: [
+        ...etat.evenements,
+        {
+          type: 'captureJoueur',
+          attaquant: attaquantId,
+          victime: victimeId,
+          botsTransferes: cedes.length,
+          nouvelleCouleurVictime: teinte.valeur,
+          position: positionDuContact,
+        },
+      ],
+      alea: teinte.alea,
+    },
+    victimeId,
+    attaquantId,
+  );
 }
 
 /**

@@ -134,6 +134,8 @@ describe('modeleSalon', () => {
       Durée: '3:00',
       PNJ: '50',
       'Black Ninjas': '2, à 50 % de la partie',
+      // L'Evade, en jeu par defaut hors de la Chasse (etape 7.9).
+      'L’Évadé': 'Une fois, au hasard',
       Bonus: '3/3',
       Malus: '3/3',
       'Zones spéciales': '4/4',

@@ -102,6 +102,8 @@ export function groupePropose(groupe: GroupeReglages, mode: Mode): boolean {
  */
 const CHAMPS_ABSENTS: Readonly<Partial<Record<Mode, readonly string[]>>> = {
   massacre: ['zones.types.chaos'],
+  // La Chasse n'a pas d'Evade (etape 7.9).
+  chasse: ['evade'],
 };
 
 /** Ce champ se regle-t-il dans ce mode ? */
@@ -191,6 +193,8 @@ export const GROUPES_REGLAGES: readonly GroupeReglages[] = [
           { nature: 'carte', chemin: 'carte', libelle: 'Carte' },
           interrupteur(CHEMIN_PLUIE, 'Pluie'),
           interrupteur('modeMiroir', 'Mode miroir'),
+          // L'Evade apparait une fois, au hasard, et donne un x2 a qui l'attrape (etape 7.9).
+          interrupteur('evade', 'L’Évadé'),
           {
             nature: 'entier',
             chemin: 'dureePartieS',

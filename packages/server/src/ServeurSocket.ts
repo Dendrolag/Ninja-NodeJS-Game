@@ -1738,6 +1738,10 @@ function envoyer(socket: SocketTypee, notification: Notification): void {
     case 'ralliement':
       socket.emit('ralliement', notification.charge);
       return;
+
+    case 'evade':
+      socket.emit('evade', notification.charge);
+      return;
   }
 }
 

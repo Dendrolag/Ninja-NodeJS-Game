@@ -96,4 +96,28 @@ describe('le fil des annonces', () => {
 
     expect(fil.racine.querySelector('.grand-titre')).toBeNull();
   });
+
+  it('montre l Evade en grand titre raye, un disque « x2 » a la place de l icone (etape 7.9)', () => {
+    const fil = monterFilDAnnonces(document);
+
+    fil.ajouter({
+      texte: 'Attrapez-le : L’Évadé rôde ! Son x2 double votre score',
+      ton: 'info',
+      grandTitre: {
+        surtitre: 'Attrapez-le',
+        titre: 'L’Évadé rôde !',
+        ligne: 'Son x2 double votre score',
+        couleur: 0xe3262e,
+        icone: undefined,
+        brouille: false,
+        raye: true,
+      },
+    });
+
+    const titre = fil.racine.querySelector('.grand-titre');
+
+    expect(titre?.classList.contains('raye')).toBe(true);
+    expect(titre?.querySelector('.grand-titre-pictogramme')).toBeNull();
+    expect(titre?.querySelector('.grand-titre-x2')?.textContent).toBe('x2');
+  });
 });

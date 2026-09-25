@@ -26,7 +26,8 @@
  *   2. chaque joueur applique son entree et se deplace contre le terrain, puis
  *      voit ses protections et ses effets se rapprocher de leur fin;
  *   3. les bots errent, les bots noirs chassent, et de nouveaux bots noirs
- *      entrent en jeu quand leur heure est venue;
+ *      entrent en jeu quand leur heure est venue; l'Evade apparait, fuit ou s'en va
+ *      (etape 7.9);
  *   4. les zones speciales vieillissent, apparaissent, et agissent sur les bots;
  *   5. les bonus et malus poses vieillissent, et de nouveaux apparaissent;
  *   6. le mode de jeu agit sur les entrees: en Horde, les combos s'epuisent; en Tactique, les
@@ -34,7 +35,8 @@
  *      parcours, une proie remplace les traqueurs partis, et les traqueurs tirent; en
  *      Massacre, les joueurs s'orientent, paient leurs prises par un bot noir et frappent;
  *   7. on releve les contacts entre entites et on en tire les consequences,
- *      captures comprises, selon le mode;
+ *      captures comprises, selon le mode, puis l'Evade touche est attrape, en Horde et en
+ *      Equipes (etape 7.9);
  *   8. les joueurs ramassent les objets sur lesquels ils se trouvent.
  *
  * Une partie SUSPENDUE ne fait rien de tout cela. Le battement a bien lieu, mais
@@ -65,6 +67,7 @@ import {
 } from './chasse.js';
 import type { RegleDeResolution } from './contacts.js';
 import {
+  attraperLEvadeAuContact,
   detecterContacts,
   regleChasse,
   regleEquipes,
@@ -76,6 +79,7 @@ import {
 import { resoudreDeplacement } from './deplacement.js';
 import { aLaLongueur, directionDuVecteur, norme } from './direction.js';
 import { fairePasserLeTemps } from './effets.js';
+import { avancerLEvade, preparerLEvade } from './evade.js';
 import { malusEnEquipe, perteEnEquipe } from './equipes.js';
 import { agirEnHorde, lancerLaHorde } from './horde.js';
 import type { EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
@@ -169,6 +173,15 @@ export interface JeuDeRegles {
    * malus. Personne dans les autres modes; les traqueurs elimines en Chasse.
    */
   readonly horsJeu: (etat: EtatPartie) => ReadonlySet<IdentifiantEntite>;
+  /**
+   * Ce que le contact fait de l'Evade (etape 7.9): en Horde et en Equipes, le joueur qui le
+   * touche l'attrape, comme un PNJ. Rien dans les autres modes: le Tactique l'attrape d'un
+   * tir et le Massacre d'un coup de katana, dans agir; la Chasse ne l'a pas.
+   */
+  readonly attraperLEvade: (
+    etat: EtatPartie,
+    horsJeu: ReadonlySet<IdentifiantEntite>,
+  ) => EtatPartie;
 }
 
 /**
@@ -200,6 +213,10 @@ export interface JeuDeRegles {
  *
  * L'etape 7.5 a donne au Classique, devenu la Horde, un combo: il pose ses combos au
  * lancement, les laisse s'epuiser dans agir, et rallie dans sa regle de contacts.
+ *
+ * L'etape 7.9 l'a elargi une quatrieme fois: l'Evade s'attrape au contact en Horde et en
+ * Equipes, et le releve des contacts ne voit que des entites. Les trois autres modes n'y
+ * font rien.
  */
 export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>> = {
   classique: {
@@ -210,6 +227,7 @@ export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>>
     lancer: lancerLaHorde,
     estDecidee: jamaisAvantLeTerme,
     horsJeu: personneHorsJeu,
+    attraperLEvade: attraperLEvadeAuContact,
   },
   tactique: {
     agir: agirEnTactique,
@@ -219,6 +237,7 @@ export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>>
     lancer: sansPreparation,
     estDecidee: jamaisAvantLeTerme,
     horsJeu: personneHorsJeu,
+    attraperLEvade: sansEvadeAuContact,
   },
   equipes: {
     agir: sansAction,
@@ -228,6 +247,7 @@ export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>>
     lancer: sansPreparation,
     estDecidee: jamaisAvantLeTerme,
     horsJeu: personneHorsJeu,
+    attraperLEvade: attraperLEvadeAuContact,
   },
   chasse: {
     agir: agirEnChasse,
@@ -238,6 +258,7 @@ export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>>
     lancer: lancerLaChasse,
     estDecidee: chasseDecidee,
     horsJeu: horsJeuEnChasse,
+    attraperLEvade: sansEvadeAuContact,
   },
   massacre: {
     agir: agirEnMassacre,
@@ -247,6 +268,7 @@ export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>>
     lancer: lancerLeMassacre,
     estDecidee: massacreDecide,
     horsJeu: personneHorsJeu,
+    attraperLEvade: sansEvadeAuContact,
   },
 };
 
@@ -300,13 +322,14 @@ export function tick(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPart
     evenements: [],
   };
 
-  const bots = avancerLesBots(deplace, dtMs, regles.perteFaceAuBotNoir);
+  const bots = avancerLEvade(avancerLesBots(deplace, dtMs, regles.perteFaceAuBotNoir), dtMs);
   const zones = appliquerLesEffetsDeZone(avancerLesZones(bots, dtMs), dtMs);
   const objets = faireApparaitreLesObjets(fairePasserLeTempsSurLesObjets(zones, dtMs), dtMs);
   const actions = regles.agir(objets, entrees, dtMs);
   const contacts = resoudreContacts(actions, detecterContacts(actions), regles.resoudreContacts);
+  const evade = regles.attraperLEvade(contacts, regles.horsJeu(contacts));
 
-  return ramasserLesObjets(contacts, regles.victimeDuMalus, regles.horsJeu(contacts));
+  return ramasserLesObjets(evade, regles.victimeDuMalus, regles.horsJeu(evade));
 }
 
 /** Un mode qui n'agit pas sur les entrees: l'etat est rendu tel quel. */
@@ -316,6 +339,11 @@ function sansAction(etat: EtatPartie): EtatPartie {
 
 /** Un mode qui ne prepare rien au lancement: l'etat est rendu tel quel. */
 function sansPreparation(etat: EtatPartie): EtatPartie {
+  return etat;
+}
+
+/** Un mode ou le contact n'attrape pas l'Evade: l'etat est rendu tel quel. */
+function sansEvadeAuContact(etat: EtatPartie): EtatPartie {
   return etat;
 }
 
@@ -331,12 +359,13 @@ function personneHorsJeu(): ReadonlySet<IdentifiantEntite> {
 
 /**
  * Prepare une partie qui se lance, selon son mode: les combos en Horde; rien en Tactique et
- * en Equipes; les premiers traqueurs en Chasse; les armes et les points en Massacre.
+ * en Equipes; les premiers traqueurs en Chasse; les armes et les points en Massacre. Puis,
+ * dans les modes qui l'admettent, le moment ou l'Evade apparaitra (etape 7.9).
  *
  * Le serveur l'appelle au lancement, une fois les bots poses (etape 7.3).
  */
 export function lancerLaPartie(etat: EtatPartie): EtatPartie {
-  return REGLES_DES_MODES[etat.mode].lancer(etat);
+  return preparerLEvade(REGLES_DES_MODES[etat.mode].lancer(etat));
 }
 
 /**

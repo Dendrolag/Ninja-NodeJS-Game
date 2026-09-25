@@ -33,3 +33,12 @@ export function adresseDesDetails(adresse: string): string {
 export function adresseDImage(adresse: string, rang: number): string {
   return `${adresse}#image-${String(rang)}`;
 }
+
+/**
+ * L'adresse d'une image de ninja dont le corps est raye rouge et blanc: celle de l'Evade
+ * (etape 7.9). Ce n'est pas une image chargee: le rendu en fabrique les deux calques a
+ * partir de ceux de l'image d'origine, et les range sous les noms que cette adresse donne.
+ */
+export function adresseRayee(adresse: string): string {
+  return `${adresse}#raye`;
+}

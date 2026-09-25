@@ -43,6 +43,7 @@ import {
 } from './capture.js';
 import type { Bot, EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
 import { entiteDe, toutesLesEntites } from './etat.js';
+import { attraperLEvade, evadeSurLaCarte } from './evade.js';
 import { rallierUnBot, viderLaReserve } from './horde.js';
 
 /**
@@ -376,4 +377,37 @@ function duelDeJoueurs(capturer: CaptureDUnJoueur): ReglesDeContact['entreJoueur
 
     return { etat: capturer(courant, attaquant.id, victime.id), replacee: victime.id };
   };
+}
+
+/**
+ * L'Evade (etape 7.9). En Horde et en Equipes, on l'attrape au contact, comme on prend un PNJ: le joueur le plus
+ * proche a moins de vingt pixels, le premier arrive dans la partie a distance egale. Un
+ * joueur hors jeu ne l'attrape pas.
+ */
+export function attraperLEvadeAuContact(
+  etat: EtatPartie,
+  horsJeu: ReadonlySet<IdentifiantEntite>,
+): EtatPartie {
+  const present = evadeSurLaCarte(etat);
+
+  if (present === undefined) {
+    return etat;
+  }
+
+  let plusProche: Joueur | undefined;
+  let distanceLaPlusCourte = SEUIL_CONTACT_PX;
+
+  for (const joueur of Object.values(etat.joueurs)) {
+    const distance = Math.hypot(
+      joueur.position.x - present.position.x,
+      joueur.position.y - present.position.y,
+    );
+
+    if (!horsJeu.has(joueur.id) && distance < distanceLaPlusCourte) {
+      distanceLaPlusCourte = distance;
+      plusProche = joueur;
+    }
+  }
+
+  return plusProche === undefined ? etat : attraperLEvade(etat, plusProche.id);
 }

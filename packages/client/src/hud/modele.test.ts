@@ -279,3 +279,18 @@ describe('construireHud', () => {
     });
   });
 });
+
+describe("le x2 de l'Evade au classement du HUD (etape 7.9)", () => {
+  it('marque la ligne de qui le porte, lu sur le joueur, et elle seule', () => {
+    const partie = vue({
+      entites: [{ ...joueur('autre', 0, 0), doubleur: true } as EntiteVue, joueur('moi', 10, 10)],
+      classement: [ligne('autre', 24), ligne('moi', 7)],
+    });
+    const hud = construireHud(etatEnJeu(partie), 0);
+
+    expect(hud.classement.map((entree) => [entree.id, entree.doubleur])).toEqual([
+      ['autre', true],
+      ['moi', false],
+    ]);
+  });
+});

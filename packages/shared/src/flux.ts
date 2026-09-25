@@ -340,8 +340,11 @@ function depuisUtf8(octets: Uint8Array, debut: number, fin: number): string {
 // Les valeurs du jeu: listes fermees, couleurs, coordonnees
 // --------------------------------------------------------------------------
 
-/** Les natures d'entite, dans l'ordre de leur code. */
-const TYPES_ENTITE = ['joueur', 'bot', 'botNoir'] as const;
+/**
+ * Les natures d'entite, dans l'ordre de leur code. L'Evade (etape 7.9) est ajoute a la fin:
+ * les trois premieres gardent leur code, et une partie sans lui s'ecrit a l'octet comme avant.
+ */
+const TYPES_ENTITE = ['joueur', 'bot', 'botNoir', 'evade'] as const;
 
 /** Les categories d'objet, dans l'ordre de leur code. */
 const CATEGORIES_OBJET = ['bonus', 'malus'] as const;
@@ -479,6 +482,7 @@ function entiteArrondie(entite: EntiteVue): EntiteVue {
       invincible: entite.invincible,
       protege: entite.protege,
       ...(entite.tactique === undefined ? {} : { tactique: tactiqueArrondie(entite.tactique) }),
+      ...(entite.doubleur === true ? { doubleur: true as const } : {}),
     };
   }
 
@@ -605,26 +609,31 @@ function lireCode<T>(lecteur: Lecteur, liste: readonly T[]): T {
 }
 
 /**
- * Les indicateurs d'un joueur, sur un octet: 1 invincible, 2 protege, et 4 quand il
- * porte l'etat du mode Tactique.
+ * Les indicateurs d'un joueur, sur un octet: 1 invincible, 2 protege, 4 quand il porte
+ * l'etat du mode Tactique, et 8 quand il porte le x2 de l'Evade (etape 7.9). Un joueur
+ * sans x2 garde l'octet d'avant.
  */
 function drapeauxDuJoueur(joueur: JoueurVu): number {
   return (
-    (joueur.invincible ? 1 : 0) | (joueur.protege ? 2 : 0) | (joueur.tactique === undefined ? 0 : 4)
+    (joueur.invincible ? 1 : 0) |
+    (joueur.protege ? 2 : 0) |
+    (joueur.tactique === undefined ? 0 : 4) |
+    (joueur.doubleur === true ? 8 : 0)
   );
 }
 
-/** Les indicateurs d'un joueur, relus. */
+/** Les indicateurs d'un joueur, relus. Le x2 n'y figure que s'il est porte. */
 interface DrapeauxDuJoueur {
   readonly invincible: boolean;
   readonly protege: boolean;
   readonly avecTactique: boolean;
+  readonly doubleur?: true;
 }
 
 function lireDrapeauxDuJoueur(lecteur: Lecteur): DrapeauxDuJoueur {
   const drapeaux = lecteur.octet();
 
-  if (drapeaux > 7) {
+  if (drapeaux > 15) {
     throw new ErreurDeTrame("les indicateurs d'un joueur y sont inconnus");
   }
 
@@ -632,6 +641,7 @@ function lireDrapeauxDuJoueur(lecteur: Lecteur): DrapeauxDuJoueur {
     invincible: (drapeaux & 1) !== 0,
     protege: (drapeaux & 2) !== 0,
     avecTactique: (drapeaux & 4) !== 0,
+    ...((drapeaux & 8) !== 0 ? { doubleur: true as const } : {}),
   };
 }
 
@@ -799,6 +809,7 @@ const ENTITES: Genre<EntiteVue> = {
             invincible: ancienne.invincible,
             protege: ancienne.protege,
             avecTactique: ancienne.tactique !== undefined,
+            ...(ancienne.doubleur === true ? { doubleur: true as const } : {}),
           };
 
     if (!avecTactique) {

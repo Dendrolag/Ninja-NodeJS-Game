@@ -349,6 +349,8 @@ function majClassement(
     // textContent, et pas innerHTML: un pseudo vient d'un joueur.
     (element_.querySelector('.hud-pseudo') as HTMLElement).textContent = ligne.pseudo;
     (element_.querySelector('.hud-points') as HTMLElement).textContent = String(ligne.points);
+    // Le badge du x2 de l'Evade, a cote du nom (etape 7.9).
+    (element_.querySelector('.hud-x2') as HTMLElement).hidden = !ligne.doubleur;
     element_.style.setProperty('--couleur-joueur', ligne.couleur);
     element_.classList.toggle('moi', ligne.moi);
     // L'ordre du classement change en cours de partie: on l'exprime par l'ordre
@@ -373,6 +375,10 @@ function creerLigne(
 ): HTMLElement {
   const ligne = element(doc, 'li', 'hud-ligne', liste);
   element(doc, 'span', 'hud-pseudo', ligne);
+  const x2 = element(doc, 'span', 'hud-x2', ligne);
+  x2.textContent = 'x2';
+  x2.title = 'Porte le x2 de l’Évadé';
+  x2.hidden = true;
   element(doc, 'span', 'hud-points', ligne);
   lignes.set(id, ligne);
 

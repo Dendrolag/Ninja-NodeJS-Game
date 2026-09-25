@@ -300,8 +300,8 @@ function consigne(
  * carte et le mode etaient visibles des invites, qui decouvraient le reste en
  * jouant.
  *
- * Une Chasse n'a pas de Black Ninjas (etape 7.3): la ligne n'y figure pas. Seul le
- * Tactique a ses objets (etape 7.7): la ligne n'apparait que la.
+ * Une Chasse n'a pas de Black Ninjas (etape 7.3), ni d'Evade (etape 7.9): les lignes n'y
+ * figurent pas. Seul le Tactique a ses objets (etape 7.7): la ligne n'apparait que la.
  */
 function recapitulatif(reglages: ReglagesPartie, mode: Mode): readonly LigneRecapitulatif[] {
   const bonusActifs = TYPES_BONUS.filter((nature) => reglages.bonus.types[nature].actif).length;
@@ -330,6 +330,7 @@ function recapitulatif(reglages: ReglagesPartie, mode: Mode): readonly LigneReca
               ? `${String(noirs.nombre)}, à ${String(noirs.momentApparitionPourCent)} % de la partie`
               : 'Désactivés',
           },
+          { libelle: 'L’Évadé', valeur: reglages.evade ? 'Une fois, au hasard' : 'Désactivé' },
         ]),
     {
       libelle: 'Bonus',

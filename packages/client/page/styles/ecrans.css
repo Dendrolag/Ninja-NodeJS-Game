@@ -1555,6 +1555,28 @@
   gap: 10px;
 }
 
+/*
+ * Le badge du x2 de l'Evade (etape 7.9), pose par la feuille de style apres le nom de qui a
+ * fini la partie avec lui: le texte de la cellule reste le seul pseudo.
+ */
+.tableau tr.doubleur .joueur::after,
+.marche.doubleur .marche-pseudo::after,
+.fin-equipe.doubleur .fin-equipe-nom::after {
+  content: 'x2';
+  margin-left: 8px;
+  padding: 2px 5px;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background:
+    linear-gradient(#d91f2a, #d91f2a) padding-box,
+    repeating-linear-gradient(-45deg, #fff 0 3px, #d91f2a 3px 6px) border-box;
+  color: #fff;
+  font-family: var(--police-donnees);
+  font-size: 12px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
 .tableau tr.moi td {
   background: rgba(45, 230, 224, 0.07);
 }

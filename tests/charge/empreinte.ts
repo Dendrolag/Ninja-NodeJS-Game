@@ -27,6 +27,13 @@
  *
  * Une empreinte qui change n'est pas forcement une faute: un changement de regle
  * voulu la change aussi. Elle dit seulement que les parties ne sont plus les memes.
+ *
+ * SANS L'EVADE (etape 7.9). L'Evade est en jeu par defaut: il tire un moment au lancement,
+ * et change donc toute la suite des parties. L'option --sans-evade le coupe, et retire de
+ * l'empreinte le reglage qui le coupe, seul ajout a l'etat: les parties rejouent alors a
+ * l'octet celles d'avant l'etape, ce qui prouve que rien d'autre n'a change.
+ *
+ *   node --disable-warning=ExperimentalWarning tests/charge/empreinte.ts --sans-evade
  */
 
 import { createHash } from 'node:crypto';
@@ -104,9 +111,17 @@ const PARTIES: readonly PartieDEmpreinte[] = [
   },
 ];
 
-/** Le terrain ne change jamais pendant une partie: il n'entre pas dans l'empreinte. */
+/** L'Evade est-il coupe pour cette execution (etape 7.9). */
+const SANS_EVADE = process.argv.includes('--sans-evade');
+
+/**
+ * Le terrain ne change jamais pendant une partie: il n'entre pas dans l'empreinte. Le reglage
+ * qui coupe l'Evade non plus, quand on le coupe: voir l'en-tete.
+ */
 function sansTerrain(cle: string, valeur: unknown): unknown {
-  return cle === 'terrain' ? undefined : valeur;
+  return cle === 'terrain' || (SANS_EVADE && cle === 'evade' && valeur === false)
+    ? undefined
+    : valeur;
 }
 
 /** Joue une partie et rend sa ligne de sortie: ses deux empreintes, et ce qui s'y est passe. */
@@ -120,6 +135,7 @@ function empreinteDe(partie: PartieDEmpreinte, murs: EtatPartie['terrain']): str
       malus: { intervalleApparitionS: 4 },
       zones: { intervalleApparitionS: 5 },
       botsNoirs: { momentApparitionPourCent: 5 },
+      ...(SANS_EVADE ? { evade: false } : {}),
     },
     ...(partie.murs ? { terrain: murs } : {}),
   });

@@ -335,6 +335,31 @@
   font-weight: 700;
 }
 
+/*
+ * Le badge du x2 de l'Evade (etape 7.9): rouge, cerne de rayures rouges et blanches, a cote
+ * du nom de qui le porte.
+ */
+.hud-x2 {
+  flex: none;
+  padding: 2px 5px;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background:
+    linear-gradient(#d91f2a, #d91f2a) padding-box,
+    repeating-linear-gradient(-45deg, #fff 0 3px, #d91f2a 3px 6px) border-box;
+  box-shadow: 0 0 10px rgba(227, 38, 46, 0.55);
+  color: #fff;
+  font-family: var(--police-donnees);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: none;
+}
+
+.hud-x2[hidden] {
+  display: none;
+}
+
 .hud-ligne.moi .hud-points {
   color: #fff;
   font-size: 24px;

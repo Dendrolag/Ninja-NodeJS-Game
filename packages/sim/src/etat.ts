@@ -383,7 +383,12 @@ export type EvenementPartie =
   | CoupDeKatana
   | JoueurTranche
   | CarteVidee
-  | Ralliement;
+  | Ralliement
+  | EvadeApparu
+  | EvadeAttrape
+  | DoubleurVole
+  | DoubleurPerdu
+  | EvadeEnfui;
 
 /**
  * Un joueur a tire, dans le mode Tactique (etape 7.1).
@@ -521,6 +526,76 @@ export interface Ralliement {
   readonly combo: number;
   /** Le multiplicateur atteint: le ninja vaut un point de stock, plus ce multiplicateur moins un de prime. */
   readonly multiplicateur: number;
+}
+
+/** L'Evade vient d'entrer sur la carte (etape 7.9). */
+export interface EvadeApparu {
+  readonly type: 'evadeApparu';
+  readonly position: Position;
+}
+
+/**
+ * Un joueur a attrape l'Evade (etape 7.9): au contact, d'un tir en cone ou d'un coup de
+ * katana, selon le mode. Il porte desormais le x2.
+ */
+export interface EvadeAttrape {
+  readonly type: 'evadeAttrape';
+  readonly joueur: IdentifiantEntite;
+  readonly position: Position;
+}
+
+/** Un joueur a capture ou tue le porteur du x2, et le lui a pris (etape 7.9). */
+export interface DoubleurVole {
+  readonly type: 'doubleurVole';
+  /** Le nouveau porteur. */
+  readonly par: IdentifiantEntite;
+  /** L'ancien. */
+  readonly de: IdentifiantEntite;
+}
+
+/** Un Black Ninja a attrape le porteur du x2, qui est detruit (etape 7.9, decision 7). */
+export interface DoubleurPerdu {
+  readonly type: 'doubleurPerdu';
+  readonly de: IdentifiantEntite;
+}
+
+/** Personne n'a attrape l'Evade a temps: il est parti, perdu pour tous (etape 7.9). */
+export interface EvadeEnfui {
+  readonly type: 'evadeEnfui';
+  readonly position: Position;
+}
+
+/** L'Evade quand il est sur la carte (etape 7.9). */
+export interface EvadeSurLaCarte {
+  readonly id: IdentifiantEntite;
+  readonly position: Position;
+  /** Vers ou il regarde, pour le dessiner. */
+  readonly direction: Direction;
+  /** Le cap qu'il suit, de longueur un. */
+  readonly cap: Vecteur;
+  /** Le temps avant qu'il reconsidere sa fuite, en millisecondes. */
+  readonly avantDecisionMs: number;
+  /** Le temps avant qu'il change de cap en errant, quand personne ne le poursuit. */
+  readonly avantChangementDeCapMs: number;
+  /** Le temps avant qu'il s'en aille, en millisecondes. */
+  readonly avantDepartMs: number;
+}
+
+/**
+ * L'Evade d'une partie, et le x2 qu'il donne (etape 7.9).
+ *
+ * Le score reste un stock deduit de l'etat (comportement a preserver 1): le x2 n'est pas un
+ * nombre range, seul son porteur l'est. Le score se deduit comme avant, puis double pour lui.
+ */
+export interface EtatDeLEvade {
+  /** Le temps de jeu ecoule auquel il apparait, tire au lancement. */
+  readonly apparitionMs: number;
+  /** Il est sur la carte. Absent avant son apparition, et apres son depart ou sa capture. */
+  readonly surLaCarte: EvadeSurLaCarte | undefined;
+  /** Il a deja paru: il ne reviendra plus. */
+  readonly passe: boolean;
+  /** Le joueur qui porte le x2, s'il y en a un. */
+  readonly porteur: IdentifiantEntite | undefined;
 }
 
 /** Ce que la Horde retient d'un joueur (etape 7.5). */
@@ -666,6 +741,14 @@ export interface EtatPartie {
    * comme avant l'etape: aucun combo, aucune prime.
    */
   readonly horde?: EtatDeHorde;
+  /**
+   * L'Evade et son x2 (etape 7.9).
+   *
+   * ABSENT QUAND IL N'A PAS DE RAISON D'ETRE: reglage coupe, Chasse, ou partie au salon.
+   * C'est le lancement qui le pose (voir evade.ts), comme pour la Horde. Sans lui, une partie
+   * joue exactement comme avant l'etape.
+   */
+  readonly evade?: EtatDeLEvade;
   /**
    * Reglages choisis par l'hote, une fois appliques ceux que le mode impose. Le moteur
    * ne connait que ceux-la.
@@ -1017,6 +1100,13 @@ export function retirerJoueur(etat: EtatPartie, id: IdentifiantEntite): EtatPart
 
   const joueurs = { ...etat.joueurs };
   delete joueurs[id];
+
+  // Le porteur du x2 qui quitte la partie l'emporte avec lui: il est perdu pour tous
+  // (etape 7.9, decision 9 de la fiche). Un lien tombe n'est pas un depart: le joueur reste
+  // dans la partie le temps du retour, et garde son x2.
+  if (etat.evade?.porteur === id) {
+    return retirerJoueur({ ...etat, evade: { ...etat.evade, porteur: undefined } }, id);
+  }
 
   // Un joueur de la Chasse qui s'en va quitte aussi ses tables (etape 7.3): elles ne
   // connaissent que des joueurs presents. Les autres modes n'ont pas ces tables.

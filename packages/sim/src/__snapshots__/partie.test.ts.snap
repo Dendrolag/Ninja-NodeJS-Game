@@ -66,3 +66,78 @@ exports[`partie complete > produit l instantane de reference apres une minute de
   ],
 }
 `;
+
+exports[`partie complete > produit l instantane de reference d une partie avec l Evade (etape 7.9) 1`] = `
+{
+  "alea": 3610684247,
+  "bots": {
+    "noirs": 2,
+    "ordinaires": 30,
+    "total": 32,
+  },
+  "capturesParBotNoirSubies": {
+    "alice": 2,
+    "bob": 1,
+    "chloe": 0,
+  },
+  "classement": [
+    {
+      "botsNoirsDetruits": 0,
+      "botsPortes": 6,
+      "captures": 1,
+      "id": "chloe",
+      "points": 6,
+    },
+    {
+      "botsNoirsDetruits": 0,
+      "botsPortes": 4,
+      "captures": 0,
+      "id": "bob",
+      "points": 4,
+    },
+    {
+      "botsNoirsDetruits": 0,
+      "botsPortes": 0,
+      "captures": 0,
+      "id": "alice",
+      "points": 0,
+    },
+  ],
+  "compteurIdentifiants": 55,
+  "doubleurs": [],
+  "evade": {
+    "apparitionMs": 33476,
+    "passe": false,
+    "porteur": undefined,
+    "present": true,
+  },
+  "evenements": {
+    "captureJoueur": 1,
+    "captureParBotNoir": 3,
+    "evadeApparu": 1,
+    "ralliement": 11,
+  },
+  "objetsPoses": 1,
+  "partieTerminee": true,
+  "positions": {
+    "alice": {
+      "x": 263.51,
+      "y": 90.26,
+    },
+    "bob": {
+      "x": 1552.84,
+      "y": 132.27,
+    },
+    "chloe": {
+      "x": 701.38,
+      "y": 942.17,
+    },
+  },
+  "tempsEcouleMs": 60000,
+  "tick": 1200,
+  "zonesActives": [
+    "attraction",
+    "chaos",
+  ],
+}
+`;

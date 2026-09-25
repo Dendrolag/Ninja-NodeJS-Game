@@ -81,11 +81,15 @@ describe('REGLES_DES_MODES', () => {
     // Le jeu de regles s'est elargi a l'etape 7.3 pour la Chasse, puis a servi au Massacre
     // (etape 7.4) et a la Horde (etape 7.5, voir horde.test.ts): les deux autres modes
     // rendent l'etat tel quel, sans aucun tirage, et seul le temps les decide.
+    // L'Evade coupe (etape 7.9): son tirage est le seul que fait le lancement de ces modes.
     for (const mode of ['tactique', 'equipes'] as const) {
-      const etat = ajouterJoueur(creerEtatInitial({ graine: 1, mode }), {
-        id: 'alice',
-        pseudo: 'Alice',
-      });
+      const etat = ajouterJoueur(
+        creerEtatInitial({ graine: 1, mode, reglages: { evade: false } }),
+        {
+          id: 'alice',
+          pseudo: 'Alice',
+        },
+      );
 
       expect(lancerLaPartie(etat)).toBe(etat);
       expect(REGLES_DES_MODES[mode].estDecidee(etat)).toBe(false);

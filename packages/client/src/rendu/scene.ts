@@ -66,6 +66,7 @@ import {
 import type { Teinte } from './apparence.js';
 import {
   ALPHA_INVISIBLE,
+  APPARENCE_EVADE,
   APPARENCE_KATANA,
   APPARENCE_OBJET,
   APPARENCE_TIR,
@@ -84,7 +85,7 @@ import type { TacheScene } from './katana.js';
 import { DEMI_ARC_DU_KATANA, imageDuMassacre } from './katana.js';
 import type { Localisation } from './localisation.js';
 import { opaciteDeLocalisation, reperesDeLocalisation } from './localisation.js';
-import { adresseDImage } from './textures.js';
+import { adresseDImage, adresseRayee } from './textures.js';
 
 /** Un sprite a poser sur la carte. */
 export interface SpriteScene {
@@ -151,6 +152,19 @@ export interface TraitScene {
   readonly epaisseur: number;
 }
 
+/**
+ * La marque du joueur qui porte le x2 de l'Evade (etape 7.9): un anneau raye rouge et blanc
+ * autour de lui, qui tourne, et un badge « x2 » au-dessus de sa tete. Tout le monde la voit.
+ */
+export interface MarqueScene {
+  readonly id: string;
+  /** Le centre du porteur, a sa position affichee. */
+  readonly x: number;
+  readonly y: number;
+  /** Ou en est la rotation de l'anneau, en radians. */
+  readonly rotation: number;
+}
+
 /** Tout ce qu'une image contient, hors decor et interface. */
 export interface Scene {
   /** Les disques poses SOUS les entites: zones, halos, ombres, rayons de detection. */
@@ -184,6 +198,8 @@ export interface Scene {
    * 7.7). Vide dans les autres modes.
    */
   readonly indicateur: IndicateurScene;
+  /** La marque du porteur du x2, par-dessus les personnages et sous les toits (etape 7.9). */
+  readonly marques: readonly MarqueScene[];
   /**
    * L'image de la planche de pluie a montrer, sur une carte qui en a une. Absente
    * d'une scene vide; le rendu l'ignore sur une carte sans pluie.
@@ -200,6 +216,7 @@ export const SCENE_VIDE: Scene = {
   entites: [],
   reperes: [],
   indicateur: AUCUN_INDICATEUR,
+  marques: [],
   sang: [],
   secousse: { x: 0, y: 0 },
 };
@@ -294,6 +311,7 @@ export function construireScene(
   const zones: ZoneScene[] = [];
   const objets: SpriteScene[] = [];
   const entites: SpriteScene[] = [];
+  const marques: MarqueScene[] = [];
 
   for (const zone of lissee.vue.zones) {
     const apparence = APPARENCE_ZONE[zone.type];
@@ -324,6 +342,36 @@ export function construireScene(
     }
 
     const alpha = cachee && estMoi ? ALPHA_INVISIBLE : 1;
+
+    // L'Evade (etape 7.9): raye rouge et blanc, dans un halo qui pulse. Son corps n'est pas
+    // teinte: ses rayures sont un calque a part, calcule sur le meme sprite.
+    if (entite.type === 'evade') {
+      disques.push(haloDeLEvade(entite.id, x, y, maintenant));
+      entites.push({
+        id: entite.id,
+        texture: adresseRayee(adresseDeNinja(entite.direction, enMouvement ? image : 1)),
+        x,
+        y,
+        taille: TAILLE_SPRITE,
+        teinte: 0xffffff,
+        alpha: 1,
+      });
+      continue;
+    }
+
+    // Le porteur du x2 se voit de tous: c'est la cible. Une zone d'invisibilite le cache
+    // comme un autre, plus haut.
+    if (entite.type === 'joueur' && entite.doubleur === true) {
+      marques.push({
+        id: `${entite.id}:x2`,
+        x,
+        y,
+        rotation:
+          ((maintenant % APPARENCE_EVADE.marque.tourMs) / APPARENCE_EVADE.marque.tourMs) *
+          2 *
+          Math.PI,
+      });
+    }
 
     if (estMoi) {
       disques.push({
@@ -459,6 +507,7 @@ export function construireScene(
     entites: massacre.cadavres.length === 0 ? entites : [...massacre.cadavres, ...entites],
     reperes,
     indicateur,
+    marques,
     sang: massacre.sang,
     secousse: massacre.secousse,
     imageDePluie: imageDePluie(maintenant),
@@ -575,6 +624,20 @@ function tirsRecents(
  * l'appelant l'a et que la signature restera juste si une apparence de marche
  * differait un jour.
  */
+/** Le halo de l'Evade: un disque blanc qui pulse, cerne de rouge (etape 7.9). */
+function haloDeLEvade(id: string, x: number, y: number, maintenant: number): DisqueScene {
+  const { halo, cerne } = APPARENCE_EVADE;
+
+  return {
+    id: `${id}:halo`,
+    x,
+    y,
+    rayon: rayonPulsant(halo, maintenant),
+    remplissage: halo.teinte,
+    contour: cerne,
+  };
+}
+
 function teinteDe(entite: EntiteVue, _enMouvement: boolean): Couleur {
   return entite.couleur === '' ? COULEUR_BOT_NEUTRE : entite.couleur;
 }

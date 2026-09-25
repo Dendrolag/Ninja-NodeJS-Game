@@ -33,15 +33,24 @@ import { calculerScores } from './score.js';
 /** Cadence de reference du serveur, en millisecondes. */
 const BATTEMENT_MS = 50;
 
-/** Une partie d'une minute: assez pour que les bots noirs entrent en jeu a mi-parcours. */
-const REGLAGES: ReglagesPartiels = { dureePartieS: 60, nombreBotsInitial: 30 };
+/**
+ * Une partie d'une minute: assez pour que les bots noirs entrent en jeu a mi-parcours.
+ *
+ * SANS L'EVADE (etape 7.9): cette partie de reference est celle d'avant l'etape, et son
+ * instantane n'a pas bouge, ce qui prouve que rien d'autre n'a change. La partie avec
+ * l'Evade a sa propre reference, plus bas.
+ */
+const REGLAGES: ReglagesPartiels = { dureePartieS: 60, nombreBotsInitial: 30, evade: false };
+
+/** La meme partie, l'Evade en jeu (etape 7.9). */
+const AVEC_L_EVADE: ReglagesPartiels = { ...REGLAGES, evade: true };
 
 /** Nombre de battements pour couvrir la partie entiere. */
 const BATTEMENTS = (60 * 1000) / BATTEMENT_MS;
 
 /** Une partie prete a jouer: trois joueurs places, trente bots semes. */
-function partiePrete(graine = 42): EtatPartie {
-  let etat = creerEtatInitial({ graine, reglages: REGLAGES });
+function partiePrete(graine = 42, reglages: ReglagesPartiels = REGLAGES): EtatPartie {
+  let etat = creerEtatInitial({ graine, reglages });
 
   etat = ajouterJoueur(etat, { id: 'alice', pseudo: 'Alice', position: { x: 400, y: 400 } });
   etat = ajouterJoueur(etat, { id: 'bob', pseudo: 'Bob', position: { x: 1200, y: 900 } });
@@ -72,13 +81,16 @@ function entreesDu(battement: number): Entrees {
 }
 
 /** Joue la partie du debut a la fin, en accumulant tout ce qui s'y est passe. */
-function jouerLaPartie(graine = 42): {
+function jouerLaPartie(
+  graine = 42,
+  reglages: ReglagesPartiels = REGLAGES,
+): {
   readonly etat: EtatPartie;
   readonly evenements: readonly EvenementPartie[];
 } {
   // Lancee comme le serveur la lance: depuis l'etape 7.5, c'est ce qui donne ses combos a
   // la Horde.
-  let etat = lancerLaPartie(partiePrete(graine));
+  let etat = lancerLaPartie(partiePrete(graine, reglages));
   const evenements: EvenementPartie[] = [];
 
   for (let battement = 0; battement < BATTEMENTS; battement += 1) {
@@ -144,6 +156,24 @@ describe('partie complete', () => {
     const partie = jouerLaPartie();
 
     expect(resume(partie.etat, partie.evenements)).toMatchSnapshot();
+  });
+
+  it('produit l instantane de reference d une partie avec l Evade (etape 7.9)', () => {
+    const partie = jouerLaPartie(42, AVEC_L_EVADE);
+    const evade = partie.etat.evade;
+
+    expect({
+      ...(resume(partie.etat, partie.evenements) as object),
+      evade: {
+        apparitionMs: evade?.apparitionMs,
+        passe: evade?.passe,
+        porteur: evade?.porteur,
+        present: evade?.surLaCarte !== undefined,
+      },
+      doubleurs: calculerScores(partie.etat)
+        .filter((ligne) => ligne.doubleur)
+        .map((ligne) => ligne.id),
+    }).toMatchSnapshot();
   });
 
   it('rejoue exactement la meme partie a graine et entrees egales', () => {

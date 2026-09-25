@@ -143,6 +143,12 @@ export interface ReglagesPartie {
    */
   readonly pluie: boolean;
   /**
+   * L'Evade apparait-il dans la partie (etape 7.9). Actif par defaut; la Chasse le retire
+   * (imposerLesReglagesDuMode), et le moteur ne le fait apparaitre que dans les modes de
+   * MODES_AVEC_EVADE.
+   */
+  readonly evade: boolean;
+  /**
    * Nombre de bots presents au demarrage. Il ne depasse pas le plafond de la carte
    * (PLAFONDS_DE_FAUX_NINJAS, etape 7.6).
    */
@@ -183,6 +189,7 @@ export const REGLAGES_PAR_DEFAUT: ReglagesPartie = {
   carte: 'map1',
   modeMiroir: false,
   pluie: true,
+  evade: true,
   nombreBotsInitial: 50,
   bonus: {
     intervalleApparitionS: 4,
@@ -252,7 +259,8 @@ export function completerReglages(partiels?: ReglagesPartiels): ReglagesPartie {
  * fait foi; le salon lit les reglages de l'etat, et montre ce qui se jouera.
  *
  *   - La Chasse n'a pas de bots noirs (etape 7.3, decision 9 du porteur du projet): ses
- *     ninjas ne font aucun score, et un bot noir n'aurait rien a prendre.
+ *     ninjas ne font aucun score, et un bot noir n'aurait rien a prendre. Elle n'a pas
+ *     d'Evade non plus (etape 7.9, decision 2).
  *   - Le Massacre n'a pas de zone de chaos (etape 7.4, decision 6 du porteur du projet):
  *     elle repeint des bots dont la couleur ne compte pour personne.
  *   - Seul le Tactique a ses objets (etape 7.7): les autres modes en perdent le groupe, et
@@ -273,8 +281,8 @@ export function imposerLesReglagesDuMode(mode: Mode, reglages: ReglagesPartie): 
     return imposerLesReglagesDuMode(mode, sansObjetsTactiques);
   }
 
-  if (mode === 'chasse' && reglages.botsNoirs.actifs) {
-    return { ...reglages, botsNoirs: { ...reglages.botsNoirs, actifs: false } };
+  if (mode === 'chasse' && (reglages.botsNoirs.actifs || reglages.evade)) {
+    return { ...reglages, evade: false, botsNoirs: { ...reglages.botsNoirs, actifs: false } };
   }
 
   if (mode === 'massacre' && reglages.zones.types.chaos) {

@@ -69,7 +69,15 @@ describe('la fin d une partie Equipes', () => {
     expect(modele?.place).toBeUndefined();
     expect(modele?.podium).toEqual([]);
     expect(modele?.equipes).toEqual([
-      { equipe: 'cyan', nom: 'Équipe Cyan', couleur: CYAN, points: 45, captures: 3, mienne: true },
+      {
+        equipe: 'cyan',
+        nom: 'Équipe Cyan',
+        couleur: CYAN,
+        points: 45,
+        captures: 3,
+        mienne: true,
+        doubleur: false,
+      },
       {
         equipe: 'magenta',
         nom: 'Équipe Magenta',
@@ -77,6 +85,7 @@ describe('la fin d une partie Equipes', () => {
         points: 20,
         captures: 0,
         mienne: false,
+        doubleur: false,
       },
     ]);
   });

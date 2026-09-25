@@ -109,6 +109,19 @@ describe('classementDesEquipes', () => {
     expect(classement.issue).toEqual({ type: 'victoire', gagnante: 'magenta' });
   });
 
+  it('double le score d une equipe dont un membre porte le x2 de l Evade (etape 7.9)', () => {
+    const classement = classementDesEquipes([
+      { ...ligne('c1', CYAN, 10, 5), doubleur: true },
+      ligne('m1', MAGENTA, 25),
+      ligne('c2', CYAN, 10),
+    ]);
+
+    expect(classement.equipes[0]).toMatchObject({ equipe: 'cyan', points: 30, doubleur: true });
+    expect(classement.equipes[1]).toMatchObject({ equipe: 'magenta', points: 25 });
+    expect(classement.equipes[1]).not.toHaveProperty('doubleur');
+    expect(classement.issue).toEqual({ type: 'victoire', gagnante: 'cyan' });
+  });
+
   it('declare une egalite a scores egaux, sans autre critere, les equipes dans leur ordre', () => {
     const classement = classementDesEquipes([
       ligne('m1', MAGENTA, 20, 0, 5),

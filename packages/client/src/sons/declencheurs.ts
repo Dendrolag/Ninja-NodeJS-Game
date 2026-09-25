@@ -82,6 +82,16 @@ export function sonDuFait(fait: FaitDeJeu, moi?: string, mode?: Mode): NomDeSon 
     case 'carteVidee':
       return undefined;
 
+    // L'Evade (etape 7.9): son apparition s'entend de tous, et sa capture chez qui l'a
+    // attrape. Un vol ou une perte du x2 accompagne une capture, qui a deja son son.
+    case 'evade':
+      if (fait.charge.quoi === 'apparu') {
+        return 'compteAReboursFinal';
+      }
+      return fait.charge.quoi === 'attrape' && fait.charge.par === moi
+        ? 'joueurCapture'
+        : undefined;
+
     // Nos ralliements de la Horde (etape 7.5): le son d'un faux ninja rallie, une fois pour
     // tous ceux d'un meme battement, qui arrivent ensemble.
     case 'ralliement':

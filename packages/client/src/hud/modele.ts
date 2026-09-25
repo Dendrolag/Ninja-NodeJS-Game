@@ -55,6 +55,11 @@ export interface LigneHud {
   readonly moi: boolean;
   /** Rang, a partir de un. */
   readonly rang: number;
+  /**
+   * Il porte le x2 de l'Evade, ou, en Equipes, un membre de son equipe le porte: ses points
+   * sont deja doubles, et un badge le dit (etape 7.9).
+   */
+  readonly doubleur: boolean;
 }
 
 /** Un disque de la carte, en pixels de carte: ce que la minimap du Tactique montre. */
@@ -223,7 +228,7 @@ export function construireHud(etat: EtatClient, maintenant: number): Hud {
     enPause: partie.enPause,
     pausePar: etat.pausePar,
     retourEnCours: etat.connexion === 'retour',
-    classement: classementHud(partie.classement, etat.moi, mode),
+    classement: classementHud(partie.classement, etat.moi, mode, doubleursDe(etat)),
     effets: effetsHud(etat, maintenant),
     minimap: minimapHud(etat, mode),
     portee: porteeDeLaMinimap(etat, mode),
@@ -333,6 +338,22 @@ function comboEnCours(
 }
 
 /**
+ * Les joueurs qui portent le x2 de l'Evade (etape 7.9). Le flux d'etat le porte sur le
+ * joueur, pas sur sa ligne du classement: c'est la que la page le lit.
+ */
+function doubleursDe(etat: EtatClient): ReadonlySet<string> {
+  const doubleurs = new Set<string>();
+
+  for (const entite of etat.partie?.entites ?? []) {
+    if (entite.type === 'joueur' && entite.doubleur === true) {
+      doubleurs.add(entite.id);
+    }
+  }
+
+  return doubleurs;
+}
+
+/**
  * Le classement, numerote et marque a notre nom.
  *
  * DANS UNE PARTIE EQUIPES (etape 7.2), ce sont les equipes qui sont classees, et la
@@ -344,9 +365,10 @@ function classementHud(
   classement: readonly LigneClassement[],
   moi: string | undefined,
   mode: Mode | undefined,
+  doubleurs: ReadonlySet<string>,
 ): readonly LigneHud[] {
   if (mode === 'equipes') {
-    return classementDesEquipesHud(classement, moi);
+    return classementDesEquipesHud(classement, moi, doubleurs);
   }
 
   return classement.map((ligne, index) => ({
@@ -356,6 +378,7 @@ function classementHud(
     points: ligne.points,
     moi: ligne.id === moi,
     rang: index + 1,
+    doubleur: doubleurs.has(ligne.id),
   }));
 }
 
@@ -363,17 +386,22 @@ function classementHud(
 function classementDesEquipesHud(
   classement: readonly LigneClassement[],
   moi: string | undefined,
+  doubleurs: ReadonlySet<string>,
 ): readonly LigneHud[] {
   const notreLigne = classement.find((ligne) => ligne.id === moi);
   const notre = notreLigne === undefined ? undefined : equipeDeCouleur(notreLigne.couleur);
+  // Le porteur du x2 double le score de son equipe (etape 7.9): le classement des equipes
+  // le lit sur ses lignes.
+  const lignes = classement.map((ligne) => ({ ...ligne, doubleur: doubleurs.has(ligne.id) }));
 
-  return classementDesEquipes(classement).equipes.map((ligne, index) => ({
+  return classementDesEquipes(lignes).equipes.map((ligne, index) => ({
     id: `equipe-${ligne.equipe}`,
     pseudo: `Équipe ${NOMS_DES_EQUIPES[ligne.equipe]}`,
     couleur: COULEURS_DES_EQUIPES[ligne.equipe],
     points: ligne.points,
     moi: ligne.equipe === notre,
     rang: index + 1,
+    doubleur: ligne.doubleur === true,
   }));
 }
 

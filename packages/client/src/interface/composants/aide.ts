@@ -149,6 +149,21 @@ export function monterAide(doc: Document): Fenetre {
         texte: `Les Black Ninjas débarquent en cours de partie et chassent les joueurs. S’ils vous attrapent, vous perdez une partie de votre score. Invincible, vous les détruisez en les touchant et chacun rapporte ${String(SCORE.POINTS_PAR_BOT_NOIR)} points. En Massacre, seul le katana en vient à bout.`,
       }),
     ),
+    // L'Evade (etape 7.9), dans tous les modes sauf la Chasse.
+    creer(
+      doc,
+      'section',
+      { classe: 'aide-section aide-evade' },
+      creer(doc, 'h3', { texte: 'L’Évadé' }),
+      creer(doc, 'p', {
+        texte:
+          'Une fois par partie, un ninja rayé rouge et blanc se glisse parmi les PNJ. Il file plus vite que vous et s’enfuit au bout de 45 secondes : coincez-le, à plusieurs ou avec un Boost. Qui l’attrape, ou l’élimine en Massacre, voit tout son score compter double jusqu’à la fin, et toute son équipe en Équipes.',
+      }),
+      creer(doc, 'p', {
+        texte:
+          'Tout le monde voit qui porte le x2. Capturez-le pour le lui prendre. Un Black Ninja qui l’attrape le détruit. Pas d’Évadé en Chasse.',
+      }),
+    ),
     ...MODES.map((mode) =>
       creer(
         doc,

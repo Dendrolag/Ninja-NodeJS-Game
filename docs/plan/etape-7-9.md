@@ -54,17 +54,17 @@ Micro-décisions au sens du PROTOCOLE. Chacune se consigne au journal de `docs/d
 7. **On l'attrape comme on prend un PNJ dans chaque mode**: au contact en Horde et en Équipes, par le tir en cône en Tactique, d'un coup de katana en Massacre. Un tir qui l'attrape coûte une charge, comme pour un PNJ. Il ne rapporte rien d'autre que le x2: aucun point, aucun ninja, et il ne compte pas dans le combo.
 8. **Le x2 s'applique au score affiché**, et à lui seul. Les ninjas portés, les Black Ninjas détruits, la réserve de primes, les points du Massacre restent ce qu'ils sont: le score se déduit toujours de l'état, puis double pour le porteur (`pointsDe`). Un vol de la moitié des points en Massacre porte sur les points rangés, pas sur le double.
 9. **Le x2 suit les captures**: capturé par un joueur, le porteur le cède à son capteur, en même temps que ses ninjas. Attrapé par un Black Ninja, il le perd. Un porteur dont le lien tombe le garde pendant les 30 secondes du retour (étape 2.5). Un porteur qui quitte la partie le perd.
-10. **Le x2 compte au classement final**, dans l'historique et dans la progression, comme tout le score. Pour le record personnel du Massacre en solo, voir « À trancher en ouvrant l'étape ».
+10. **Le x2 compte au classement final**, dans l'historique, dans la progression et dans le record du Massacre en solo, comme tout le score (décisions 11 et 12).
 11. **Le flux d'état porte l'Évadé** comme un nouveau type d'entité, ajouté en fin de liste (`TYPES_ENTITE`), et le porteur du x2 dans la vue de la partie. Comme à l'étape 7.7, une partie sans Évadé doit s'écrire à l'octet comme avant, sans changer `VERSION_DU_FLUX`.
 12. **Quatre annonces**, au grand titre de l'étape 4.6, en rouge et blanc, à tous les joueurs: son apparition (« L'Évadé rôde ! »), sa capture (« Remi a attrapé l'Évadé : x2 »), le vol du x2 (« Kenji vole le x2 de Remi »), sa fuite (« L'Évadé s'est échappé »). La perte face à un Black Ninja s'annonce aussi. Les textes se valident à la recette.
 13. **Le skin se calcule au chargement**, comme la recoloration (`recoloration.ts`): un troisième calque, le corps rayé, tiré des mêmes images. Aucun fichier d'image n'est ajouté.
 14. **Aucun son nouveau**: l'apparition et la capture reprennent des sons existants, choisis dans l'étape.
 15. **La minimap ne le montre pas**: on le cherche des yeux, c'est le principe du personnage. Elle ne change pas non plus pour le porteur.
 
-## À trancher en ouvrant l'étape
+## Tranché par le porteur du projet avant l'étape, 25 septembre 2026
 
-1. **Le record solo du Massacre**: l'Évadé y apparaît-il? S'il y apparaît, les records battus avec un x2 ne se comparent plus à ceux d'avant.
-2. **La progression**: vérifier si les récompenses de fin de partie lisent le score. Si oui, le x2 les double. Le dire au porteur du projet avant de construire.
+11. **L'Évadé apparaît aussi dans le Massacre en solo**, et un record battu avec le x2 compte comme un autre.
+12. **Le x2 double le score, et donc indirectement les récompenses de progression** qui en dépendent. C'est voulu.
 
 ## Périmètre
 
@@ -132,6 +132,21 @@ Conditions de ROADMAP réunies, plus:
 3. **Le dégagement automatique** n'a jamais été éprouvé sur une entité qui fuit: un cap choisi pour fuir ne doit pas le coller indéfiniment à un mur.
 4. **Le flux binaire** (étape 2.3): une entité nouvelle demande son codage et un test d'aller-retour. Le miroir aussi (étape 8.3): ses positions sont celles du terrain retourné, comme toutes les autres.
 5. **Les équipes**: une équipe est une couleur pour le moteur (étape 7.2). Le x2 d'équipe se lit à la couleur du porteur, sans nouveau champ d'équipe.
+
+## Réconciliation pendant l'étape (25 septembre 2026)
+
+Écarts entre la fiche et ce qui a été construit, consignés au journal de `docs/design/README.md`.
+
+1. **La fuite a été mesurée, et le porteur du projet l'a gardée sans répit.** Des poursuivants sans bonus qui foncent droit sur l'Évadé, vingt parties par cas, 45 secondes: seul, 6 sur 20 sur Tokyo, 4 sur le Quartier, 0 sur Spirit & Time; à trois, 16, 10 et 0 sur 20. Un fuyard plus rapide que son poursuivant ne se rattrape qu'en le coinçant, et Spirit & Time est un terrain ouvert. Ralentir l'Évadé à 150 n'y changeait presque rien. Un essoufflement (trois secondes de course, une de pause) le rendait prenable partout (seul, 11, 16 et 8 sur 20); le porteur du projet a préféré un trophée rare, et l'essai a été retiré du code.
+2. **Seize caps essayés, et non huit**: huit laissaient des trajectoires en zigzag le long des murs. Les valeurs vivent dans `EVADE` (`packages/shared`).
+3. **La capture au contact vit dans `contacts.ts`** (`attraperLEvadeAuContact`), et non dans `evade.ts`: `evade.ts` est lu par `capture.ts`, qui est lu par `contacts.ts`, et la placer dans `evade.ts` aurait fait une boucle d'import. Le jeu de règles d'un mode gagne un champ, `attraperLEvade`: au contact en Horde et en Équipes, rien ailleurs.
+4. **Le x2 voyage sur le joueur, pas sur sa ligne du classement.** Un indicateur de plus dans l'octet des indicateurs d'un joueur (8): une partie sans x2 s'écrit à l'octet comme avant, alors qu'un champ de plus au classement aurait changé toutes les trames. La page lit le x2 sur le joueur pour le HUD; le classement final, qui part en entier, le porte (`LigneClassement.doubleur`).
+5. **Au classement final, le badge x2 est posé par la feuille de style** (`::after`), hors du texte des cellules: le texte d'une ligne reste le pseudo, et les scénarios qui lisent le classement ne changent pas.
+6. **Les annonces de l'Évadé prennent le grand titre de l'étape 4.6**, rayé, un disque « x2 » à la place de l'icône: son apparition, sa capture, le vol et la perte du x2, et sa fuite, chacun dit à la personne qu'il concerne. Les textes restent à valider à la recette.
+7. **Deux sons existants**: l'apparition sonne comme le dernier battement du compte à rebours, pour tous; la capture sonne comme une capture de joueur, chez qui l'attrape. Un vol ou une perte du x2 accompagne une capture, qui a déjà son son.
+8. **Le test d'intégration joue dans une arène fermée** (`ServeurSocket.evade.test.ts`): sur une vraie carte, un poursuivant ne rattrape pas l'Évadé (point 1). Dans l'arène aussi, foncer droit sur lui ne suffit pas au contact: il fait le tour le long des murs. Le poursuivant du test lui coupe la route. La Horde, le Tactique et le Massacre y sont joués; les Équipes, qui demandent deux joueurs, le sont dans le moteur.
+9. **Le scénario de bout en bout ne joue pas la capture**: un scénario n'écrit jamais dans le serveur, et sans cela l'Évadé ne se rattrape pas à coup sûr. Il vérifie le récapitulatif du salon et le grand titre de l'apparition, dans une vraie partie.
+10. **L'enregistrement en base n'a pas de test propre**: le x2 n'y ajoute rien, les points enregistrés sont les points du classement, déjà doublés.
 
 ## Rituel de fin de session
 

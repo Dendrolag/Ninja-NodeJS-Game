@@ -14,7 +14,7 @@
 import type { PlaceDansUnCamp } from './camps.js';
 import { placeDansUnCamp } from './camps.js';
 import type { Couleur, Equipe } from './constantes.js';
-import { COULEURS_DES_EQUIPES, EQUIPES } from './constantes.js';
+import { COULEURS_DES_EQUIPES, EQUIPES, EVADE } from './constantes.js';
 
 /**
  * L'equipe qui porte cette couleur, ou undefined si aucune ne la porte.
@@ -41,6 +41,8 @@ export interface LigneDeJoueurEnEquipe {
   readonly botsPortes: number;
   readonly pointsBotsNoirs: number;
   readonly captures: number;
+  /** Il porte le x2 de l'Evade (etape 7.9), qui double le score de toute son equipe. */
+  readonly doubleur?: boolean;
 }
 
 /** Une equipe au classement. */
@@ -54,6 +56,8 @@ export interface LigneDEquipe {
   readonly captures: number;
   /** Ses membres, dans l'ordre du classement des joueurs recu. */
   readonly membres: readonly string[];
+  /** Un de ses membres porte le x2 de l'Evade: son score est deja double (etape 7.9). */
+  readonly doubleur?: true;
 }
 
 /** L'issue d'une partie Equipes: une equipe gagne, ou les deux sont a egalite. */
@@ -75,7 +79,8 @@ export interface ClassementDesEquipes {
  *
  * Le score d'une equipe vaut les bots de sa couleur, plus les points de bots noirs de
  * ses membres (decision 2 du porteur du projet). La plus haute gagne; deux scores egaux
- * font une egalite, sans autre critere (decision 8).
+ * font une egalite, sans autre critere (decision 8). Quand un de ses membres porte le x2
+ * de l'Evade, ce score double (etape 7.9, decision 6 du porteur du projet).
  *
  * UNE EQUIPE SANS MEMBRE N'EST PAS CLASSEE: l'autre gagne, et les bots de sa couleur ne
  * comptent pour personne. Sans aucun membre dans aucune equipe, personne ne gagne.
@@ -94,14 +99,16 @@ export function classementDesEquipes(
 
     const botsPortes = Math.max(...membres.map((membre) => membre.botsPortes));
     const pointsBotsNoirs = somme(membres.map((membre) => membre.pointsBotsNoirs));
+    const doublee = membres.some((membre) => membre.doubleur === true);
 
     equipes.push({
       equipe,
-      points: botsPortes + pointsBotsNoirs,
+      points: (botsPortes + pointsBotsNoirs) * (doublee ? EVADE.MULTIPLICATEUR : 1),
       botsPortes,
       pointsBotsNoirs,
       captures: somme(membres.map((membre) => membre.captures)),
       membres: membres.map((membre) => membre.id),
+      ...(doublee ? { doubleur: true as const } : {}),
     });
   }
 

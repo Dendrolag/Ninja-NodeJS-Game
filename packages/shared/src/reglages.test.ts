@@ -89,6 +89,15 @@ describe('completerReglages', () => {
 });
 
 describe('imposerLesReglagesDuMode', () => {
+  it('met l Evade en jeu par defaut, et le retire de la Chasse (etape 7.9)', () => {
+    expect(REGLAGES_PAR_DEFAUT.evade).toBe(true);
+    expect(imposerLesReglagesDuMode('chasse', completerReglages()).evade).toBe(false);
+
+    for (const mode of ['classique', 'tactique', 'equipes', 'massacre'] as const) {
+      expect(imposerLesReglagesDuMode(mode, completerReglages()).evade, mode).toBe(true);
+    }
+  });
+
   it('retire les bots noirs d une partie Chasse, quoi que l hote ait choisi', () => {
     const reglages = imposerLesReglagesDuMode('chasse', completerReglages({ dureePartieS: 60 }));
 

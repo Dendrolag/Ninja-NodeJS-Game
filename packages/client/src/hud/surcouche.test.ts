@@ -124,3 +124,25 @@ describe('les cartes des effets', () => {
     ]);
   });
 });
+
+describe("le badge du x2 de l'Evade (etape 7.9)", () => {
+  it('montre le badge sur la ligne de qui le porte, et le cache ailleurs', () => {
+    const { hote, monte } = surcouche();
+    const ligneHud = (id: string, doubleur: boolean) => ({
+      id,
+      pseudo: id,
+      couleur: '#FF0000',
+      points: 10,
+      moi: id === 'moi',
+      rang: id === 'moi' ? 1 : 2,
+      doubleur,
+    });
+
+    monte.afficher({ ...hud([]), classement: [ligneHud('moi', true), ligneHud('bob', false)] });
+
+    const badges = [...hote.querySelectorAll<HTMLElement>('.hud-ligne .hud-x2')];
+
+    expect(badges.map((badge) => badge.hidden)).toEqual([false, true]);
+    expect(badges[0]?.textContent).toBe('x2');
+  });
+});

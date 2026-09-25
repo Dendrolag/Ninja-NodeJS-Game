@@ -765,3 +765,68 @@ describe('chaque garde du decodage refuse sa trame fausse', () => {
     expect(appliquerTrame(reference, encoderDelta(reference, apres).octets)).toEqual(apres);
   });
 });
+
+describe("l'Evade et son x2 (etape 7.9)", () => {
+  /** L'Evade tel que le serveur l'envoie: une entite de plus, qui voyage comme un bot. */
+  const evade = (x: number, y: number): EntiteVue => ({
+    id: 'evade-9',
+    type: 'evade',
+    x,
+    y,
+    couleur: '#E3262E',
+    direction: 'est',
+  });
+
+  it('fait voyager l Evade qui apparait, fuit et s en va, image puis deltas', () => {
+    const parties = [
+      instantane({ tick: 1, entites: [joueur('a', 100, 100), bot('b', 50, 50)] }),
+      instantane({
+        tick: 2,
+        entites: [joueur('a', 101, 100), bot('b', 50, 50), evade(900.3, 700)],
+      }),
+      instantane({
+        tick: 3,
+        entites: [joueur('a', 102, 100), bot('b', 50, 50), evade(908.55, 701)],
+      }),
+      instantane({
+        tick: 4,
+        entites: [joueur('a', 103, 100, { doubleur: true }), bot('b', 50, 50)],
+      }),
+      instantane({ tick: 5, entites: [joueur('a', 104, 100), bot('b', 50, 50)] }),
+    ];
+    let reference = encoderImage(parties[0] as InstantanePartie).reference;
+
+    for (const suivante of parties.slice(1)) {
+      const trame = encoderDelta(reference, suivante);
+
+      expect(appliquerTrame(reference, trame.octets)).toEqual(quantifierInstantane(suivante));
+      reference = trame.reference;
+    }
+  });
+
+  it('garde le x2 d un joueur dans une image, et ne l invente pas a un autre', () => {
+    const partie = instantane({
+      entites: [joueur('a', 10, 10, { doubleur: true, invincible: true }), joueur('b', 20, 20)],
+    });
+    const relue = appliquerTrame(undefined, encoderImage(partie).octets);
+
+    expect(relue).toEqual(quantifierInstantane(partie));
+    expect(relue?.entites[1]).not.toHaveProperty('doubleur');
+  });
+
+  it('tient le x2 dans l octet des indicateurs: une image avec x2 pese autant qu une sans', () => {
+    const sans = encoderImage(instantane({ entites: [joueur('a', 10, 10)] })).octets;
+    const avec = encoderImage(
+      instantane({ entites: [joueur('a', 10, 10, { doubleur: true })] }),
+    ).octets;
+
+    expect(avec.length).toBe(sans.length);
+    expect(avec).not.toEqual(sans);
+  });
+
+  it('ne fait pas voyager le x2 d une ligne du classement: la page le lit sur le joueur', () => {
+    const partie = instantane({ classement: [{ ...ligne('a', 12), doubleur: true }] });
+
+    expect(quantifierInstantane(partie).classement[0]).not.toHaveProperty('doubleur');
+  });
+});

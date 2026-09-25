@@ -882,3 +882,27 @@ Douze joueurs, carte Tokyo, un processus neuf par ligne. Durées en milliseconde
 ### 19.4 Ce qui n'est pas mesuré
 
 - **Le rendu de l'arc des charges**: quelques dizaines de traits pour un seul joueur, sans commune mesure avec les cinq cents personnages de la section 18. La vue plus proche du Tactique réduit d'ailleurs le nombre de personnages affichés.
+
+## 20. Mesure de l'étape 7.9: l'Évadé (25 septembre 2026)
+
+Chiffres bruts: `docs/mesures/charge-serveur-7-9-horde.json`, écrits par le harnais sur la même machine qu'à la section 19, au commit `8986c2e` plus les changements de l'étape, avant leur commit.
+
+### 20.1 L'essentiel
+
+- **L'Évadé ne change pas le coût d'une partie.** 0,433 ms par battement à 150 faux ninjas et 12 joueurs, contre 0,406 à la section 19: l'écart est dans le bruit d'une exécution à l'autre (section 8), comme les 0,160 contre 0,155 à 50 et les 1,048 contre 1,045 à 300. C'est une entité de plus, qui regarde les joueurs proches tous les quarts de seconde et essaie seize caps.
+- **Un message pèse ce qu'il pesait**, 226 et 781 octets à 50 et 300 faux ninjas. Le 467 à 150, contre 440, ne vient pas de l'Évadé lui-même, qui coûte une entité de plus dans la liste: le tirage de son moment d'apparition change la suite de la partie jouée par le banc, et donc ce qui s'y passe.
+- **Sans l'Évadé, rien n'a bougé, à l'octet.** L'outil d'empreinte relancé avec `--sans-evade` redonne les empreintes du jeu et du flux d'avant l'étape pour les quatre parties de référence.
+
+### 20.2 Méthode
+
+`pnpm charge --banc --bots-banc 50,150,300`, comparé à la ligne « Horde, après » de la section 19.3. Le banc joue une partie d'une minute et une seconde: l'Évadé y apparaît entre 15 et 45 secondes, et reste sur la carte jusqu'à la fin de la mesure. Aucun joueur du banc ne le poursuit exprès.
+
+### 20.3 Le banc
+
+Douze joueurs, carte Tokyo, un processus neuf par ligne. Durées en millisecondes par battement, tailles en octets par message.
+
+| Faux ninjas | Section 19, total | Étape 7.9, total | Section 19, octets | Étape 7.9, octets |
+| ----------: | ----------------: | ---------------: | -----------------: | ----------------: |
+|          50 |             0,155 |            0,160 |                226 |               226 |
+|         150 |             0,406 |            0,433 |                440 |               467 |
+|         300 |             1,045 |            1,048 |                779 |               781 |

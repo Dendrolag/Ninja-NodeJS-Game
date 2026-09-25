@@ -452,6 +452,12 @@ export function creerClient(options: OptionsClient): Client {
     }),
   );
 
+  ecouter(
+    reseau.sur('evade', (charge) => {
+      magasin.appliquer({ type: 'fait', fait: fait('evade', charge, maintenant()) });
+    }),
+  );
+
   // -- Les refus ------------------------------------------------------------
 
   ecouter(

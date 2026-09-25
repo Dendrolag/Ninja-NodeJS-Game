@@ -66,3 +66,42 @@ function estARepeindre(rouge: number, vert: number, bleu: number): boolean {
     Math.abs(bleu - cible.b) <= tolerance
   );
 }
+
+/**
+ * Raye le calque du corps d'une image de ninja, par bandes horizontales de deux couleurs:
+ * le corps de l'Evade (etape 7.9, skin C de la planche docs/design/etape-7-9/). Aucune
+ * image n'est livree pour lui: ses rayures se calculent sur les sprites du jeu.
+ *
+ * Seuls les pixels du corps changent de couleur, en gardant leur opacite; le reste du
+ * calque reste transparent. La premiere bande, en haut, est de la premiere couleur.
+ *
+ * FONCTION PURE, sur un tableau de pixels, comme separerLesCalques.
+ *
+ * @param corps   Le calque du corps, tel que separerLesCalques le rend.
+ * @param largeur La largeur de l'image, en pixels.
+ * @param bande   L'epaisseur d'une bande, en lignes de pixels.
+ * @param couleurs Les deux couleurs des bandes, en 24 bits.
+ */
+export function rayerLeCorps(
+  corps: Uint8ClampedArray,
+  largeur: number,
+  bande: number,
+  couleurs: readonly [number, number],
+): Uint8ClampedArray {
+  const raye = new Uint8ClampedArray(corps.length);
+
+  for (let index = 0; index < corps.length; index += 4) {
+    const opacite = corps[index + 3] ?? 0;
+
+    if (opacite === 0) {
+      continue;
+    }
+
+    const ligne = Math.floor(index / 4 / largeur);
+    const couleur = Math.floor(ligne / bande) % 2 === 0 ? couleurs[0] : couleurs[1];
+
+    raye.set([(couleur >> 16) & 0xff, (couleur >> 8) & 0xff, couleur & 0xff, opacite], index);
+  }
+
+  return raye;
+}

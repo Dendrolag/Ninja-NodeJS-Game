@@ -20,13 +20,20 @@
  * le joueur a sous les yeux, et le lui dire ailleurs le ferait chercher.
  */
 
-import type { Mode, NatureBonus, NatureMalus, NatureObjet, Refus } from '@neon-ninja/shared';
+import type {
+  EvadeVu,
+  Mode,
+  NatureBonus,
+  NatureMalus,
+  NatureObjet,
+  Refus,
+} from '@neon-ninja/shared';
 import { OBJETS_TACTIQUES, VITESSES, multiplicateurDuCombo } from '@neon-ninja/shared';
 
 import type { EtatClient } from './etat.js';
 import type { FaitDeJeu } from './faits.js';
 import { faitsArrives } from './faits.js';
-import { APPARENCE_OBJET, adresseDeLIcone } from './rendu/apparence.js';
+import { APPARENCE_EVADE, APPARENCE_OBJET, adresseDeLIcone } from './rendu/apparence.js';
 import { jeSuisHote } from './selecteurs.js';
 
 /** Le ton d'une annonce, qui decide de sa couleur. */
@@ -51,10 +58,15 @@ export interface GrandTitre {
   readonly ligne: string;
   /** La couleur de l'objet, celle qu'il a sur la carte. */
   readonly couleur: number;
-  /** L'adresse de son icone. */
-  readonly icone: string;
+  /**
+   * L'adresse de son icone. Absente pour l'Evade (etape 7.9), qui n'a pas d'image: son
+   * disque est raye, et porte « x2 ».
+   */
+  readonly icone: string | undefined;
   /** Un malus qui nous frappe: le titre se penche et se brouille. */
   readonly brouille: boolean;
+  /** Le titre de l'Evade est raye rouge et blanc, comme lui (etape 7.9). */
+  readonly raye?: true;
 }
 
 /** Une phrase a montrer au joueur. */
@@ -257,6 +269,9 @@ export function annonceDuFait(fait: FaitDeJeu, mode?: Mode, moi?: string): Annon
       };
     }
 
+    case 'evade':
+      return annonceDeLEvade(fait.charge, mode, moi);
+
     case 'joueurArrive':
       return { texte: `${fait.charge.pseudo} a rejoint la partie`, ton: 'info' };
 
@@ -266,6 +281,97 @@ export function annonceDuFait(fait: FaitDeJeu, mode?: Mode, moi?: string): Annon
         ton: 'info',
       };
   }
+}
+
+/**
+ * Ce qui arrive a l'Evade et a son x2 (etape 7.9), en grand titre raye, a tous les joueurs:
+ * le porteur devient la cible, et chacun doit savoir qui il est. Chacun lit la phrase qui le
+ * concerne: celui qui attrape, qui vole ou qui perd le x2 lit « vous ».
+ *
+ * EN EQUIPES, le x2 double le score de toute l'equipe du porteur (decision 6 du porteur du
+ * projet); EN MASSACRE, on n'attrape pas, on elimine.
+ */
+function annonceDeLEvade(evade: EvadeVu, mode?: Mode, moi?: string): Annonce {
+  const votreScore = mode === 'equipes' ? 'le score de votre équipe' : 'votre score';
+  const attrape = mode === 'massacre' ? 'éliminé' : 'attrapé';
+
+  switch (evade.quoi) {
+    case 'apparu':
+      return titreDeLEvade('info', 'Attrapez-le', 'L’Évadé rôde !', `Son x2 double ${votreScore}`);
+
+    case 'attrape':
+      return evade.par === moi
+        ? titreDeLEvade(
+            'succes',
+            `L’Évadé ${attrape}`,
+            'x2',
+            `Tout ${votreScore} compte double. Tout le monde vous voit`,
+          )
+        : titreDeLEvade(
+            'info',
+            `L’Évadé ${attrape}`,
+            'x2 pris',
+            `${evade.parPseudo} porte le x2 : prenez-le lui`,
+          );
+
+    case 'vole':
+      if (evade.par === moi) {
+        return titreDeLEvade('succes', 'x2 volé', 'x2', `Vous prenez le x2 de ${evade.dePseudo}`);
+      }
+      return evade.de === moi
+        ? titreDeLEvade(
+            'alerte',
+            'x2 perdu',
+            'Volé !',
+            `${evade.parPseudo} vous a pris le x2`,
+            true,
+          )
+        : titreDeLEvade(
+            'info',
+            'x2 volé',
+            'x2 pris',
+            `${evade.parPseudo} prend le x2 de ${evade.dePseudo}`,
+          );
+
+    case 'perdu':
+      return evade.de === moi
+        ? titreDeLEvade('alerte', 'x2 perdu', 'Détruit', 'Un Black Ninja a détruit votre x2', true)
+        : titreDeLEvade(
+            'info',
+            'x2 perdu',
+            'Détruit',
+            `Un Black Ninja a détruit le x2 de ${evade.dePseudo}`,
+          );
+
+    case 'enfui':
+      return titreDeLEvade('info', 'L’Évadé', 'Envolé', 'Personne ne l’a attrapé à temps');
+  }
+}
+
+/** Le grand titre raye d'une annonce de l'Evade, et sa phrase entiere pour le fil. */
+function titreDeLEvade(
+  ton: TonAnnonce,
+  surtitre: string,
+  titre: string,
+  ligne: string,
+  brouille = false,
+): Annonce {
+  // « L'Évadé rôde ! » porte deja sa ponctuation.
+  const point = /[!?.]$/u.test(titre) ? '' : '.';
+
+  return {
+    texte: `${surtitre} : ${titre}${point} ${ligne}`,
+    ton,
+    grandTitre: {
+      surtitre,
+      titre,
+      ligne,
+      couleur: APPARENCE_EVADE.rouge,
+      icone: undefined,
+      brouille,
+      raye: true,
+    },
+  };
 }
 
 /**

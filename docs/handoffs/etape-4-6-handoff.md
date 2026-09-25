@@ -2,7 +2,7 @@
 
 Date: 25 septembre 2026
 Auteur: session Claude Code
-Statut: terminée (sous réserve de la CI et de la mise en ligne, vérifiées après la poussée, et de la validation des textes par le porteur du projet)
+Statut: terminée (sous réserve de la validation des textes par le porteur du projet)
 
 ## Objectif de l'étape
 
@@ -38,7 +38,7 @@ Aucune modification de `packages/sim`, `packages/server`, `packages/shared`, `le
 - Résultat: **2 565 tests unitaires au vert**. Types, linter et formatage verts. Bout en bout en local: `hud-lisible`, `hud-telephone`, `peaufinage` et `tactique`, 14 sur 14.
 - Couverture de packages/sim: inchangée, le paquet n'est pas touché.
 - Empreinte des parties de référence: inchangée par construction, rien du moteur ni du serveur n'ayant changé.
-- État de la CI: voir le commit de clôture.
+- État de la CI: **verte sur `8986c2e`**, types, tests, bout en bout et mise en ligne; le serveur de production répond sur ce commit (`/sante`).
 
 ## Décisions et écarts au plan
 

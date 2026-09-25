@@ -30,7 +30,8 @@ import { fait } from '../faits.js';
 import type { VuePartie } from '../reconstruction.js';
 import type { VueLissee } from './interpolation.js';
 import { SCENE_VIDE, construireScene, couleurEnNombre } from './scene.js';
-import { adresseDImage } from './textures.js';
+import { APPARENCE_EVADE } from './apparence.js';
+import { adresseDImage, adresseRayee } from './textures.js';
 
 /** Un joueur pose a un endroit, avec le minimum de champs. */
 function joueur(id: string, x: number, y: number, couleur = '#FF0000'): EntiteVue {
@@ -598,5 +599,44 @@ describe('couleurEnNombre', () => {
     // Une couleur absente ou mal formee ne doit pas faire disparaitre une entite
     // de l'ecran: mieux vaut un ninja blanc qu'un ninja invisible.
     expect(couleurEnNombre('pas-une-couleur')).toBe(0xffffff);
+  });
+});
+
+describe("l'Evade dans la scene (etape 7.9)", () => {
+  const evade: EntiteVue = {
+    type: 'evade',
+    id: 'evade-3',
+    x: 400,
+    y: 300,
+    couleur: '#E3262E',
+    direction: 'est',
+  };
+
+  it('dessine l Evade raye, non teinte, dans un halo rouge et blanc', () => {
+    const scene = construireScene(etatEnJeu('moi'), lissee(vue([joueur('moi', 0, 0), evade])), 0);
+    const sprite = scene.entites.find((entite) => entite.id === 'evade-3');
+    const halo = scene.disques.find((disque) => disque.id === 'evade-3:halo');
+
+    expect(sprite?.texture).toBe(adresseRayee(`${RACINE_RESSOURCES}/${cheminNinja('est', 1)}`));
+    expect(sprite?.teinte).toBe(0xffffff);
+    expect(halo?.remplissage).toEqual(APPARENCE_EVADE.halo.teinte);
+    expect(halo?.contour).toEqual(APPARENCE_EVADE.cerne);
+  });
+
+  it('marque le porteur du x2, et lui seul, a sa position affichee', () => {
+    const porteur = { ...joueur('bob', 250, 260), doubleur: true } as EntiteVue;
+    const scene = construireScene(
+      etatEnJeu('moi'),
+      lissee(vue([joueur('moi', 0, 0), porteur])),
+      APPARENCE_EVADE.marque.tourMs / 4,
+    );
+
+    expect(scene.marques).toEqual([{ id: 'bob:x2', x: 250, y: 260, rotation: Math.PI / 2 }]);
+  });
+
+  it('ne marque personne sans x2', () => {
+    const scene = construireScene(etatEnJeu('moi'), lissee(vue([joueur('moi', 0, 0)])), 0);
+
+    expect(scene.marques).toEqual([]);
   });
 });

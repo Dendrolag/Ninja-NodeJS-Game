@@ -32,6 +32,7 @@ import type {
   CompteDeSession,
   CoupDeKatanaVu,
   EntiteVue,
+  EvadeVu,
   InfosSalon,
   InstantanePartie,
   JoueurDuSalon,
@@ -58,13 +59,16 @@ import type {
   ObjetRamassable,
   ZoneSpeciale,
 } from '@neon-ninja/sim';
+import { EVADE } from '@neon-ninja/shared';
 import {
   REGLES_DES_MODES,
   bonusActif,
   calculerScores,
   etatTactiqueDe,
+  evadeSurLaCarte,
   evaluerFinDePartie,
   guerrierDe,
+  porteLeDoubleur,
   toutesLesEntites,
 } from '@neon-ninja/sim';
 
@@ -85,7 +89,7 @@ export function instantaneDe(etat: EtatPartie): InstantanePartie {
     tick: etat.tick,
     tempsRestantMs: evaluerFinDePartie(etat).tempsRestantMs,
     enPause: etat.enPause,
-    entites: entitesVisibles(etat).map((entite) => entiteVue(etat, entite)),
+    entites: [...entitesVisibles(etat).map((entite) => entiteVue(etat, entite)), ...evadeVu(etat)],
     objets: Object.values(etat.objets).map(objetVu),
     zones: Object.values(etat.zones).map(zoneVue),
     classement: calculerScores(etat).map(ligneClassement),
@@ -103,6 +107,27 @@ function entitesVisibles(etat: EtatPartie): readonly (Joueur | Bot)[] {
   const entites = toutesLesEntites(etat);
 
   return horsJeu.size === 0 ? entites : entites.filter((entite) => !horsJeu.has(entite.id));
+}
+
+/**
+ * L'Evade, quand il est sur la carte (etape 7.9). Il voyage comme un bot, a la fin de la
+ * liste des entites, avec une couleur fixe que la page ne dessine pas: elle le raye.
+ */
+function evadeVu(etat: EtatPartie): readonly EntiteVue[] {
+  const evade = evadeSurLaCarte(etat);
+
+  return evade === undefined
+    ? []
+    : [
+        {
+          type: 'evade',
+          id: evade.id,
+          x: evade.position.x,
+          y: evade.position.y,
+          couleur: EVADE.COULEUR,
+          direction: evade.direction,
+        },
+      ];
 }
 
 /**
@@ -173,6 +198,8 @@ function entiteVue(etat: EtatPartie, entite: Joueur | Bot): EntiteVue {
       invincible: bonusActif(entite, 'invincibilite'),
       protege: entite.protectionSpawnRestanteMs > 0,
       ...armeVue(etat, entite.id),
+      // Le porteur du x2 se voit de tous (etape 7.9, decision 8).
+      ...(porteLeDoubleur(etat, entite.id) ? { doubleur: true as const } : {}),
     };
   }
 
@@ -236,6 +263,8 @@ function ligneClassement(ligne: LigneScore): LigneClassement {
     pointsBotsNoirs: ligne.pointsBotsNoirs,
     captures: ligne.captures,
     botsNoirsDetruits: ligne.botsNoirsDetruits,
+    // Ses points sont deja doubles; le classement final le dit (etape 7.9).
+    ...(ligne.doubleur ? { doubleur: true as const } : {}),
   };
 }
 
@@ -370,7 +399,8 @@ export type Notification =
       readonly nom: 'ralliement';
       readonly pour: IdentifiantEntite;
       readonly charge: RalliementVu;
-    };
+    }
+  | { readonly nom: 'evade'; readonly pour: IdentifiantEntite; readonly charge: EvadeVu };
 
 /**
  * Traduit les faits d'un battement en notifications adressees.
@@ -528,11 +558,62 @@ function notificationsDUnFait(
     case 'ralliement':
       // Regroupes par joueur a part: voir ralliementsDe.
       return [];
+
+    case 'evadeApparu':
+      return aTous(etat, 'evade', { quoi: 'apparu' });
+
+    case 'evadeEnfui':
+      return aTous(etat, 'evade', { quoi: 'enfui' });
+
+    case 'evadeAttrape':
+    case 'doubleurVole':
+    case 'doubleurPerdu':
+      return ceQuArriveAuDoubleur(etat, evenement);
   }
 }
 
+/**
+ * Ce qui arrive au x2 de l'Evade, dit a tous (etape 7.9): qui l'a attrape, qui l'a vole a
+ * qui, qui l'a perdu. Omis si l'un des joueurs a quitte la partie dans le meme battement,
+ * plutot que d'inventer un pseudo vide.
+ */
+function ceQuArriveAuDoubleur(
+  etat: EtatPartie,
+  evenement: Extract<EvenementPartie, { type: 'evadeAttrape' | 'doubleurVole' | 'doubleurPerdu' }>,
+): readonly Notification[] {
+  const pseudo = (id: IdentifiantEntite): string | undefined => etat.joueurs[id]?.pseudo;
+
+  if (evenement.type === 'evadeAttrape') {
+    const parPseudo = pseudo(evenement.joueur);
+
+    return parPseudo === undefined
+      ? []
+      : aTous(etat, 'evade', { quoi: 'attrape', par: evenement.joueur, parPseudo });
+  }
+
+  const dePseudo = pseudo(evenement.de);
+
+  if (evenement.type === 'doubleurPerdu') {
+    return dePseudo === undefined
+      ? []
+      : aTous(etat, 'evade', { quoi: 'perdu', de: evenement.de, dePseudo });
+  }
+
+  const parPseudo = pseudo(evenement.par);
+
+  return dePseudo === undefined || parPseudo === undefined
+    ? []
+    : aTous(etat, 'evade', {
+        quoi: 'vole',
+        par: evenement.par,
+        parPseudo,
+        de: evenement.de,
+        dePseudo,
+      });
+}
+
 /** La meme notification, pour chaque joueur present. */
-function aTous<N extends 'coupDeKatana' | 'carteVidee'>(
+function aTous<N extends 'coupDeKatana' | 'carteVidee' | 'evade'>(
   etat: EtatPartie,
   nom: N,
   charge: Extract<Notification, { nom: N }>['charge'],

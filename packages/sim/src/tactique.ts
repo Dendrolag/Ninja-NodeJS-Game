@@ -49,6 +49,7 @@ import type {
 import { CONES_DES_VISEES as CONES_VISES, TACTIQUE, entier } from '@neon-ninja/shared';
 
 import { capturerBot, capturerJoueur } from './capture.js';
+import { attraperLEvade, evadeSurLaCarte } from './evade.js';
 import type { DureesRestantes } from './effets.js';
 import { fairePasserLeTemps } from './effets.js';
 import type { EtatPartie, EtatTactiqueDuJoueur, IdentifiantEntite } from './etat.js';
@@ -266,7 +267,7 @@ export function vieillirLesEffets(
  * protection d'apparition, invincibilite, delai entre deux captures de joueur,
  * couleur deja portee. Les joueurs d'abord, puis les bots, comme dans la v0.9.0: les
  * bots d'une victime passent au tireur avant que le cone ne repeigne les autres. Les
- * bots noirs ne sont pas des cibles.
+ * bots noirs ne sont pas des cibles. L'Evade en est une, la derniere (etape 7.9).
  *
  * Sans charge, le tir n'a pas lieu. Avec une charge, il a lieu et laisse un evenement
  * au journal, meme s'il ne capture rien; il ne coute la charge que s'il capture
@@ -325,6 +326,15 @@ function unTir(etat: EtatPartie, tireurId: IdentifiantEntite): Tir {
         courant = apres;
       }
     }
+  }
+
+  // L'Evade pris dans le cone est attrape, et compte comme une capture: le tir coute une
+  // charge, comme pour un PNJ (etape 7.9, micro-decision 7 de la fiche).
+  const evade = evadeSurLaCarte(etat);
+
+  if (evade !== undefined && dansLeCone(position, orientation, evade.position, cone)) {
+    courant = attraperLEvade(courant, tireurId);
+    captures += 1;
   }
 
   const armeApres =

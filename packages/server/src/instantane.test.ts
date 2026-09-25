@@ -617,3 +617,96 @@ describe('notificationsDe', () => {
     expect(notificationsDe(orpheline)).toEqual([]);
   });
 });
+
+describe("l'Evade dans la projection (etape 7.9)", () => {
+  /** Une partie a deux joueurs, l'Evade sur la carte, et Alice qui porte deja le x2. */
+  function partieAvecLEvade(porteur?: string): EtatPartie {
+    const etat = partieADeux();
+
+    return {
+      ...etat,
+      evade: {
+        apparitionMs: 0,
+        surLaCarte: {
+          id: 'evade-5',
+          position: { x: 900, y: 700 },
+          direction: 'est',
+          cap: { x: 1, y: 0 },
+          avantDecisionMs: 0,
+          avantChangementDeCapMs: 1000,
+          avantDepartMs: 45_000,
+        },
+        passe: false,
+        porteur,
+      },
+    };
+  }
+
+  it('montre l Evade sur la carte, a la fin des entites, comme un bot', () => {
+    const entites = instantaneDe(partieAvecLEvade()).entites;
+
+    expect(entites[entites.length - 1]).toEqual({
+      type: 'evade',
+      id: 'evade-5',
+      x: 900,
+      y: 700,
+      couleur: '#E3262E',
+      direction: 'est',
+    });
+  });
+
+  it('ne montre rien de l Evade dans une partie qui ne l a pas', () => {
+    expect(instantaneDe(partieADeux()).entites.some((entite) => entite.type === 'evade')).toBe(
+      false,
+    );
+  });
+
+  it('montre a tous qui porte le x2, sur la carte et au classement final', () => {
+    const etat = partieAvecLEvade('alice');
+    const alice = instantaneDe(etat).entites.find((entite) => entite.id === 'alice');
+    const bob = instantaneDe(etat).entites.find((entite) => entite.id === 'bob');
+
+    expect(alice).toMatchObject({ doubleur: true });
+    expect(bob).not.toHaveProperty('doubleur');
+    expect(classementDe(etat).find((ligne) => ligne.id === 'alice')).toMatchObject({
+      doubleur: true,
+    });
+    expect(classementDe(etat).find((ligne) => ligne.id === 'bob')).not.toHaveProperty('doubleur');
+  });
+
+  it('annonce a tous l apparition, la capture, le vol, la perte et la fuite', () => {
+    const etat = partieAvecLEvade();
+    const avec = (evenements: EtatPartie['evenements']): EtatPartie => ({ ...etat, evenements });
+    const charges = (evenements: EtatPartie['evenements']): readonly unknown[] =>
+      notificationsDe(avec(evenements)).map((notification) => [
+        notification.pour,
+        notification.charge,
+      ]);
+
+    expect(charges([{ type: 'evadeApparu', position: { x: 1, y: 1 } }])).toEqual([
+      ['alice', { quoi: 'apparu' }],
+      ['bob', { quoi: 'apparu' }],
+    ]);
+    expect(
+      charges([{ type: 'evadeAttrape', joueur: 'bob', position: { x: 1, y: 1 } }]),
+    ).toContainEqual(['alice', { quoi: 'attrape', par: 'bob', parPseudo: 'Bob' }]);
+    expect(charges([{ type: 'doubleurVole', par: 'alice', de: 'bob' }])).toContainEqual([
+      'bob',
+      { quoi: 'vole', par: 'alice', parPseudo: 'Alice', de: 'bob', dePseudo: 'Bob' },
+    ]);
+    expect(charges([{ type: 'doubleurPerdu', de: 'alice' }])).toContainEqual([
+      'bob',
+      { quoi: 'perdu', de: 'alice', dePseudo: 'Alice' },
+    ]);
+    expect(charges([{ type: 'evadeEnfui', position: { x: 1, y: 1 } }])).toHaveLength(2);
+  });
+
+  it('tait un fait du x2 dont un joueur a quitte la partie', () => {
+    const etat = {
+      ...partieAvecLEvade(),
+      evenements: [{ type: 'doubleurPerdu' as const, de: 'eve' }],
+    };
+
+    expect(notificationsDe(etat)).toEqual([]);
+  });
+});

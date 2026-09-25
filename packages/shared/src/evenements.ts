@@ -105,6 +105,11 @@ export interface JoueurVu extends EntiteVueCommune {
   readonly protege: boolean;
   /** Ou il vise, et ce qu'il lui reste pour tirer. Absent hors du mode Tactique. */
   readonly tactique?: TactiqueVue;
+  /**
+   * Le joueur porte le x2 de l'Evade (etape 7.9): tout le monde le voit, c'est ce qui en fait
+   * la cible (decision 8 du porteur du projet). Absent sinon.
+   */
+  readonly doubleur?: true;
 }
 
 /**
@@ -131,7 +136,8 @@ export interface TactiqueVue {
 
 /** Un bot ordinaire ou un bot noir, tel que tout le monde le voit. */
 export interface BotVu extends EntiteVueCommune {
-  readonly type: 'bot' | 'botNoir';
+  /** Un faux ninja, un Black Ninja, ou l'Evade (etape 7.9), qui voyage comme eux. */
+  readonly type: 'bot' | 'botNoir' | 'evade';
 }
 
 /** Tout ce qui se deplace sur la carte. */
@@ -188,6 +194,14 @@ export interface LigneClassement {
   readonly captures: number;
   /** Nombre de bots noirs detruits. */
   readonly botsNoirsDetruits: number;
+  /**
+   * Le joueur porte le x2 de l'Evade (etape 7.9): ses points sont deja doubles. Absent sinon.
+   *
+   * LE FLUX D'ETAT NE LE TRANSPORTE PAS: pendant la partie, la page le lit sur le joueur
+   * (JoueurVu.doubleur), et le format binaire du classement reste celui d'avant. Il sert au
+   * classement final, qui part en entier (partieTerminee).
+   */
+  readonly doubleur?: true;
 }
 
 /**
@@ -482,6 +496,29 @@ export interface CarteVideeVue {
   /** Le temps de jeu qui restait, en millisecondes. */
   readonly tempsRestantMs: number;
 }
+
+/**
+ * Ce qui arrive a l'Evade et au x2 qu'il donne (etape 7.9). Adresse a tous les joueurs de la
+ * partie: le porteur devient la cible, et chacun doit savoir qui il est.
+ *
+ *   - apparu: l'Evade vient d'entrer sur la carte.
+ *   - attrape: un joueur l'a attrape (ou tue, en Massacre), et porte desormais le x2.
+ *   - vole: un joueur a capture (ou tue) le porteur, et lui a pris le x2.
+ *   - perdu: un Black Ninja a attrape le porteur, et le x2 est detruit.
+ *   - enfui: personne ne l'a attrape a temps; il est parti, perdu pour tous.
+ */
+export type EvadeVu =
+  | { readonly quoi: 'apparu' }
+  | { readonly quoi: 'attrape'; readonly par: string; readonly parPseudo: string }
+  | {
+      readonly quoi: 'vole';
+      readonly par: string;
+      readonly parPseudo: string;
+      readonly de: string;
+      readonly dePseudo: string;
+    }
+  | { readonly quoi: 'perdu'; readonly de: string; readonly dePseudo: string }
+  | { readonly quoi: 'enfui' };
 
 /**
  * La partie vient d'etre suspendue.
@@ -843,6 +880,9 @@ export interface EvenementsServeurVersClient {
 
   /** Le dernier bot vient de tomber: la partie Massacre s'arrete (etape 7.4). */
   carteVidee: (carte: CarteVideeVue) => void;
+
+  /** Ce qui arrive a l'Evade et a son x2 (etape 7.9). Adresse a tous. */
+  evade: (evade: EvadeVu) => void;
 
   /** Une demande de ce joueur a ete refusee. Remplace error. */
   refus: (refus: Refus) => void;

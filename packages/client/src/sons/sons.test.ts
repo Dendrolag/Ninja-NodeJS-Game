@@ -482,3 +482,16 @@ describe('rechargeApresLeTir (Chasse)', () => {
     expect(rechargeApresLeTir(tir('moi'), 'moi', 'tactique')).toBeUndefined();
   });
 });
+
+describe("les sons de l'Evade (etape 7.9)", () => {
+  it('fait entendre son apparition a tous, et sa capture a qui l attrape seulement', () => {
+    expect(sonDuFait(fait('evade', { quoi: 'apparu' }, 0), 'moi')).toBe('compteAReboursFinal');
+    expect(
+      sonDuFait(fait('evade', { quoi: 'attrape', par: 'moi', parPseudo: 'Moi' }, 0), 'moi'),
+    ).toBe('joueurCapture');
+    expect(
+      sonDuFait(fait('evade', { quoi: 'attrape', par: 'bob', parPseudo: 'Bob' }, 0), 'moi'),
+    ).toBeUndefined();
+    expect(sonDuFait(fait('evade', { quoi: 'enfui' }, 0), 'moi')).toBeUndefined();
+  });
+});

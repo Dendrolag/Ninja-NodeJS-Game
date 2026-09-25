@@ -24,7 +24,7 @@ import { describe, expect, it } from 'vitest';
 
 import { REPEINTE_DU_NINJA } from './apparence.js';
 import type { CalquesDuNinja } from './recoloration.js';
-import { separerLesCalques } from './recoloration.js';
+import { rayerLeCorps, separerLesCalques } from './recoloration.js';
 
 /** Le dossier des sprites de ninja, a la racine du depot. */
 const DOSSIER_NINJA = fileURLToPath(new URL('../../../../assets/ninja/', import.meta.url));
@@ -180,5 +180,25 @@ describe('les vrais sprites du jeu', () => {
         visible(recolorationDOrigine(pixels, couleur)),
       );
     }
+  });
+});
+
+describe("les rayures de l'Evade (etape 7.9)", () => {
+  it('raye le corps par bandes de deux lignes, sans toucher au reste ni a l opacite', () => {
+    // Une image de deux pixels de large sur quatre de haut: le corps partout, sauf un trou.
+    const corps = new Uint8ClampedArray(2 * 4 * 4);
+    for (let pixel = 0; pixel < 8; pixel += 1) {
+      corps.set([255, 255, 255, pixel === 5 ? 0 : 200], pixel * 4);
+    }
+
+    const raye = rayerLeCorps(corps, 2, 2, [0xe3262e, 0xf6f6f6]);
+    const pixel = (rang: number): number[] => [...raye.slice(rang * 4, rang * 4 + 4)];
+
+    // Les deux premieres lignes rouges, les deux suivantes blanches.
+    expect(pixel(0)).toEqual([0xe3, 0x26, 0x2e, 200]);
+    expect(pixel(3)).toEqual([0xe3, 0x26, 0x2e, 200]);
+    expect(pixel(4)).toEqual([0xf6, 0xf6, 0xf6, 200]);
+    expect(pixel(5)).toEqual([0, 0, 0, 0]);
+    expect(pixel(7)).toEqual([0xf6, 0xf6, 0xf6, 200]);
   });
 });

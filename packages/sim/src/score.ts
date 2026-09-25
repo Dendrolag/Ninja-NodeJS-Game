@@ -27,6 +27,7 @@ import { SCORE } from '@neon-ninja/shared';
 import { pointsEnChasse } from './chasse.js';
 import type { Couleur } from './couleurs.js';
 import type { EtatPartie, HistoriqueCapture, IdentifiantEntite, Joueur } from './etat.js';
+import { multiplicateurDuScore } from './evade.js';
 import { primeEnHorde } from './horde.js';
 import { pointsEnMassacre } from './massacre.js';
 
@@ -60,6 +61,11 @@ export interface LigneScore {
   readonly joueursCaptures: Readonly<Record<IdentifiantEntite, HistoriqueCapture>>;
   /** Qui a capture ce joueur, et combien de fois. */
   readonly capturesSubies: Readonly<Record<IdentifiantEntite, HistoriqueCapture>>;
+  /**
+   * Il porte le x2 de l'Evade, ou, en Equipes, un membre de son equipe le porte: ses points
+   * sont doubles (etape 7.9).
+   */
+  readonly doubleur: boolean;
 }
 
 /**
@@ -76,18 +82,23 @@ export interface LigneScore {
  *
  * EN MASSACRE NON PLUS (etape 7.4): les bots tues disparaissent, et les points se rangent
  * dans l'etat, avec les vols et les pertes (pointsEnMassacre).
+ *
+ * LE X2 DE L'EVADE (etape 7.9) double le tout pour son porteur, et en Equipes pour toute son
+ * equipe. Le stock ne change pas: il se deduit comme avant, puis se multiplie.
  */
 export function scoreDe(etat: EtatPartie, joueur: Joueur): LigneScore {
   const botsPortes = Object.values(etat.bots).filter(
     (bot) => bot.type === 'bot' && bot.couleur === joueur.couleur,
   ).length;
   const pointsBotsNoirs = joueur.botsNoirsDetruits * SCORE.POINTS_PAR_BOT_NOIR;
+  const multiplicateur = multiplicateurDuScore(etat, joueur);
 
   return {
     id: joueur.id,
     pseudo: joueur.pseudo,
     couleur: joueur.couleur,
-    points: pointsDe(etat, joueur, botsPortes + pointsBotsNoirs),
+    // Le x2 de l'Evade double le score deduit, sans rien ranger (etape 7.9).
+    points: pointsDe(etat, joueur, botsPortes + pointsBotsNoirs) * multiplicateur,
     botsPortes,
     pointsBotsNoirs,
     captures: joueur.captures,
@@ -95,6 +106,7 @@ export function scoreDe(etat: EtatPartie, joueur: Joueur): LigneScore {
     botsNoirsDetruits: joueur.botsNoirsDetruits,
     joueursCaptures: joueur.joueursCaptures,
     capturesSubies: joueur.capturesSubies,
+    doubleur: multiplicateur > 1,
   };
 }
 

@@ -57,6 +57,8 @@ export interface LigneFin {
   readonly botsNoirsDetruits: number;
   /** Cette ligne est la notre. */
   readonly moi: boolean;
+  /** Il a fini la partie avec le x2 de l'Evade: ses points sont deja doubles (etape 7.9). */
+  readonly doubleur: boolean;
 }
 
 /** Une equipe au classement final d'une partie Equipes, telle qu'on l'affiche (etape 7.2). */
@@ -69,6 +71,8 @@ export interface EquipeFin {
   readonly captures: number;
   /** Nous en sommes. */
   readonly mienne: boolean;
+  /** Un de ses membres a fini avec le x2 de l'Evade: son score est deja double (etape 7.9). */
+  readonly doubleur: boolean;
 }
 
 /** Notre place, decoupee pour que l'ecran puisse ecrire le suffixe en exposant. */
@@ -224,6 +228,7 @@ function modeleFinEnEquipes(
       points: ligne.points,
       captures: ligne.captures,
       mienne: ligne.equipe === notre,
+      doubleur: ligne.doubleur === true,
     })),
     lignes,
     progression:
@@ -304,6 +309,7 @@ function ligneFin(ligne: LigneClassement, rang: number, moi: string | undefined)
     captures: ligne.captures,
     botsNoirsDetruits: ligne.botsNoirsDetruits,
     moi: ligne.id === moi,
+    doubleur: ligne.doubleur === true,
   };
 }
 

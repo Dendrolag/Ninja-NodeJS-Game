@@ -70,6 +70,7 @@ import {
 } from 'pixi.js';
 
 import {
+  APPARENCE_EVADE,
   BORDURE_TERRAIN,
   COULEUR_FOND,
   DENSITE_MAXIMALE,
@@ -81,10 +82,17 @@ import type { Camera, ZoneVisible } from './camera.js';
 import { dansLaZone, versEcran, zoneVisible } from './camera.js';
 import type { IndicateurScene } from './charges.js';
 import { orienterLeDecor } from './miroir.js';
-import { separerLesCalques } from './recoloration.js';
+import { rayerLeCorps, separerLesCalques } from './recoloration.js';
 import type { FormeDeSang } from './sang.js';
-import { adresseDImage, adresseDesDetails, adresseDuCorps } from './textures.js';
-import type { ConeScene, DisqueScene, Scene, SpriteScene, ZoneScene } from './scene.js';
+import { adresseDImage, adresseDesDetails, adresseDuCorps, adresseRayee } from './textures.js';
+import type {
+  ConeScene,
+  DisqueScene,
+  MarqueScene,
+  Scene,
+  SpriteScene,
+  ZoneScene,
+} from './scene.js';
 
 /**
  * La police des libelles de zone.
@@ -223,8 +231,21 @@ function rangerLesCalques(adresse: string, texture: Texture): void {
 
   const calques = separerLesCalques(contexte.getImageData(0, 0, largeur, hauteur).data);
 
+  const details = textureDePixels(calques.details, largeur, hauteur);
+
   Assets.cache.set(adresseDuCorps(adresse), textureDePixels(calques.corps, largeur, hauteur));
-  Assets.cache.set(adresseDesDetails(adresse), textureDePixels(calques.details, largeur, hauteur));
+  Assets.cache.set(adresseDesDetails(adresse), details);
+
+  // Le meme ninja, le corps raye rouge et blanc: l'Evade (etape 7.9). Ses details sont ceux
+  // de l'image d'origine, la meme texture.
+  const raye = adresseRayee(adresse);
+  const rayures = rayerLeCorps(calques.corps, largeur, APPARENCE_EVADE.bande, [
+    APPARENCE_EVADE.rouge,
+    APPARENCE_EVADE.blanc,
+  ]);
+
+  Assets.cache.set(adresseDuCorps(raye), textureDePixels(rayures, largeur, hauteur));
+  Assets.cache.set(adresseDesDetails(raye), details);
 }
 
 /** Range chaque image d'une planche d'objet comme une texture, qui partage l'image chargee. */
@@ -378,6 +399,10 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   const entites = new Container({ label: 'personnages', sortableChildren: true });
   // L'arc de nos charges du Tactique, sur les personnages et sous les toits (etape 7.7).
   const indicateur = new Graphics();
+  // La marque du porteur du x2 de l'Evade, au meme niveau (etape 7.9): son anneau, et le
+  // texte de son badge.
+  const marques = new Graphics();
+  const textesDesMarques = new Container();
   const premierPlan = new Container();
   const reperes = new Graphics();
   /** Le numero de l'image en cours: il marque les personnages que la scene nomme encore. */
@@ -391,6 +416,8 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
     objets,
     entites,
     indicateur,
+    marques,
+    textesDesMarques,
     premierPlan,
     reperes,
   );
@@ -416,6 +443,7 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   const calquesParImage = new Map<string, Calques>();
   const spritesObjets = new Map<string, Sprite>();
   const textesZones = new Map<string, Text>();
+  const badges = new Map<string, Text>();
 
   const fond = new Sprite();
   const dessus = new Sprite();
@@ -554,6 +582,7 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       majSprites(spritesObjets, objets, scene.objets);
       majPersonnages(spritesEntites, entites, scene.entites, champ, numeroDImage, calquesParImage);
       dessinerLIndicateur(indicateur, scene.indicateur, champ);
+      dessinerLesMarques(marques, textesDesMarques, badges, scene.marques);
       dessinerLesReperes(reperes, scene.reperes);
     },
 
@@ -569,6 +598,7 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       calquesParImage.clear();
       spritesObjets.clear();
       textesZones.clear();
+      badges.clear();
     },
   };
 }
@@ -682,6 +712,72 @@ function dessinerLIndicateur(
       cap: 'round',
       join: 'round',
     });
+  }
+}
+
+/**
+ * Redessine la marque du porteur du x2 de l'Evade (etape 7.9, marque C de la planche
+ * docs/design/etape-7-9/): un anneau de segments alternativement rouges et blancs, qui
+ * tourne, et un badge « x2 » rouge cerne de blanc au-dessus de sa tete. Il n'y a qu'un
+ * porteur a la fois: la marque se redessine en entier a chaque image.
+ */
+function dessinerLesMarques(
+  graphique: Graphics,
+  conteneur: Container,
+  textes: Map<string, Text>,
+  marques: readonly MarqueScene[],
+): void {
+  const { rouge, blanc, marque: forme } = APPARENCE_EVADE;
+  const pas = (2 * Math.PI) / forme.segments;
+  const vues = new Set<string>();
+
+  graphique.clear();
+
+  for (const marque of marques) {
+    vues.add(marque.id);
+
+    for (let segment = 0; segment < forme.segments; segment += 1) {
+      const debut = marque.rotation + segment * pas;
+
+      graphique
+        .moveTo(marque.x + Math.cos(debut) * forme.rayon, marque.y + Math.sin(debut) * forme.rayon)
+        .arc(marque.x, marque.y, forme.rayon, debut, debut + pas)
+        .stroke({ color: segment % 2 === 0 ? rouge : blanc, width: forme.epaisseur });
+    }
+
+    const { largeur, hauteur, hauteurAuDessus } = forme.badge;
+    const gauche = marque.x - largeur / 2;
+    const haut = marque.y - hauteurAuDessus - hauteur / 2;
+
+    graphique.roundRect(gauche - 1.5, haut - 1.5, largeur + 3, hauteur + 3, 4).fill(blanc);
+    graphique.roundRect(gauche, haut, largeur, hauteur, 3).fill(rouge);
+
+    let texte = textes.get(marque.id);
+
+    if (texte === undefined) {
+      texte = new Text({
+        text: 'x2',
+        style: {
+          fill: 0xffffff,
+          fontSize: hauteur - 1,
+          fontFamily: POLICE_DES_LIBELLES,
+          fontWeight: '700',
+        },
+        resolution: 4,
+      });
+      texte.anchor.set(0.5);
+      conteneur.addChild(texte);
+      textes.set(marque.id, texte);
+    }
+
+    texte.position.set(marque.x, haut + hauteur / 2);
+  }
+
+  for (const [id, texte] of textes) {
+    if (!vues.has(id)) {
+      texte.destroy();
+      textes.delete(id);
+    }
   }
 }
 

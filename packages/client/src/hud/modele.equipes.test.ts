@@ -82,6 +82,7 @@ describe('le classement du HUD en Equipes', () => {
         points: 40,
         moi: false,
         rang: 1,
+        doubleur: false,
       },
       {
         id: 'equipe-cyan',
@@ -90,6 +91,7 @@ describe('le classement du HUD en Equipes', () => {
         points: 35,
         moi: true,
         rang: 2,
+        doubleur: false,
       },
     ]);
   });
@@ -99,5 +101,35 @@ describe('le classement du HUD en Equipes', () => {
 
     expect(classement.map((ligneHud) => ligneHud.id)).toEqual(['bob', 'moi', 'eve']);
     expect(classement[1]).toMatchObject({ points: 35, moi: true, rang: 2 });
+  });
+});
+
+describe("le x2 de l'Evade au classement des equipes (etape 7.9)", () => {
+  it('double le score de l equipe du porteur, et la marque', () => {
+    const base = etat(CLASSEMENT, 'equipes');
+    const avecX2 = {
+      ...base,
+      partie: {
+        ...base.partie!,
+        entites: [
+          {
+            type: 'joueur' as const,
+            id: 'eve',
+            x: 0,
+            y: 0,
+            couleur: CYAN,
+            direction: 'sud' as const,
+            pseudo: 'eve',
+            invincible: false,
+            protege: false,
+            doubleur: true as const,
+          },
+        ],
+      },
+    };
+    const classement = construireHud(avecX2, 0).classement;
+
+    expect(classement[0]).toMatchObject({ id: 'equipe-cyan', points: 70, doubleur: true });
+    expect(classement[1]).toMatchObject({ id: 'equipe-magenta', doubleur: false });
   });
 });

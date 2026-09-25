@@ -262,6 +262,44 @@ export const APPARENCE_OBJET: Readonly<
 };
 
 /**
+ * L'Evade (etape 7.9): ses rayures, son halo, et la marque du joueur qui porte son x2.
+ *
+ * Rendus choisis par le porteur du projet sur la planche docs/design/etape-7-9/: le skin C,
+ * rayures larges et halo pulse rouge et blanc, qui le fait reperer dans la foule; la marque
+ * C, un anneau raye autour du porteur et un badge « x2 » au-dessus de sa tete, visibles de
+ * tous.
+ */
+export const APPARENCE_EVADE = {
+  /** Les deux couleurs de ses rayures, et de tout ce qui le rappelle. */
+  rouge: 0xe3262e,
+  blanc: 0xf6f6f6,
+  /** L'epaisseur d'une bande de son corps, en lignes de pixels du sprite. */
+  bande: 2,
+  /** Son halo: un disque blanc qui pulse... */
+  halo: {
+    rayon: 20,
+    amplitude: 4,
+    cadence: 0.008,
+    teinte: { couleur: 0xf6f6f6, alpha: 0.28 },
+  } satisfies Halo,
+  /** ...cerne de rouge. */
+  cerne: { couleur: 0xe3262e, alpha: 0.75, epaisseur: 2 },
+  /** La marque du porteur du x2. */
+  marque: {
+    /** Rayon de l'anneau, en pixels de la carte. */
+    rayon: 19,
+    /** Epaisseur de l'anneau. */
+    epaisseur: 2.4,
+    /** Nombre de segments de l'anneau, alternativement rouges et blancs. */
+    segments: 16,
+    /** Duree d'un tour complet de l'anneau, en millisecondes. */
+    tourMs: 4000,
+    /** Le badge au-dessus de la tete: sa taille, et son ecart au centre du ninja. */
+    badge: { largeur: 20, hauteur: 11, hauteurAuDessus: 26 },
+  },
+} as const;
+
+/**
  * L'adresse de l'icone d'un objet, telle que la page la demande.
  *
  * UN SEUL ENDROIT pour l'aide, le HUD et les annonces (etape 4.6): l'objet se montre partout
