@@ -44,6 +44,11 @@
  * chaque instant. A l'arret seulement: sur une page qui dessine trois images par seconde,
  * un coup part plus d'une seconde apres la decision, et un joueur qui court a parcouru
  * deux cents pixels entre-temps (etape 8.7).
+ *
+ * Un joueur qui guette ne fonce pas A TRAVERS sa cible, ce qui le laisserait dos a elle:
+ * il fonce jusqu'a la distance d'affut, face a elle. Le pouce leve, il glisse encore le
+ * temps que la page et le serveur l'apprennent; le pilote mesure cette glissade a chaque
+ * arret, et leve le pouce d'autant plus tot.
  */
 
 import type { Position, Vecteur } from '../../../packages/shared/dist/index.js';
@@ -127,11 +132,16 @@ export interface Mission {
   readonly accomplie: () => boolean;
   /** Au-dela de ce delai, la mission echoue. */
   readonly delaiMs: number;
-  /**
-   * Ce que le joueur fait a chaque instant de l'affut, arrete, par la page. Sans elle, le
-   * joueur ne guette pas: il fonce des qu'il est arrete.
-   */
-  readonly aLAffut?: () => Promise<void>;
+  /** L'affut, s'il faut guetter. Sans lui, le joueur fonce des qu'il est arrete. */
+  readonly affut?: Affut;
+}
+
+/** Ce que le joueur fait quand il guette a l'arret. */
+export interface Affut {
+  /** A quelle distance de sa cible le joueur cherche a s'arreter pour guetter, en pixels. */
+  readonly distancePx: number;
+  /** Ce que le joueur fait a chaque instant de l'affut, par la page. */
+  guetter(): Promise<void>;
 }
 
 /** La carte ramenee a des mailles, praticables ou non. */
@@ -161,7 +171,13 @@ interface Visee {
  */
 type Phase =
   | { readonly nom: 'route' }
-  | { readonly nom: 'arret'; readonly depuis: number; readonly immobileDepuis?: number }
+  | {
+      readonly nom: 'arret';
+      readonly depuis: number;
+      /** Ou le joueur etait quand le pouce s'est leve. */
+      readonly lacheEn: Position;
+      readonly immobileDepuis?: number;
+    }
   | { readonly nom: 'ruee'; readonly jusqua: number };
 
 /** Ce que le pilote a lu et decide a un instant, pour expliquer un echec. */
@@ -189,6 +205,8 @@ export async function accomplir(mission: Mission): Promise<void> {
   let phase: Phase = { nom: 'route' };
   let precedente: Situation | undefined;
   let viseePrecedente: Visee | undefined;
+  /** Combien le joueur glisse apres le lever du pouce, mesure au dernier arret, en pixels. */
+  let glissadePx = 0;
 
   try {
     while (!mission.accomplie()) {
@@ -215,18 +233,29 @@ export async function accomplir(mission: Mission): Promise<void> {
           const arrete =
             precedente !== undefined && memePosition(precedente.position, situation.position);
 
-          if (arrete && mission.aLAffut !== undefined) {
-            const immobileDepuis: number = phase.immobileDepuis ?? maintenant;
-            phase = { nom: 'arret', depuis: phase.depuis, immobileDepuis };
+          if (arrete && phase.immobileDepuis === undefined) {
+            glissadePx = distanceEntre(phase.lacheEn, situation.position);
+            phase = {
+              nom: 'arret',
+              depuis: phase.depuis,
+              lacheEn: phase.lacheEn,
+              immobileDepuis: maintenant,
+            };
+          }
 
-            if (maintenant - immobileDepuis < AFFUT_MS) {
-              await mission.aLAffut();
-              break;
-            }
+          if (
+            arrete &&
+            mission.affut !== undefined &&
+            maintenant - (phase.immobileDepuis ?? maintenant) < AFFUT_MS
+          ) {
+            await mission.affut.guetter();
+            break;
           }
 
           if (arrete || maintenant - phase.depuis > ARRET_MAXIMUM_MS) {
-            phase = await ruer(mission.commande, situation, visee);
+            const retenuePx =
+              mission.affut === undefined ? undefined : mission.affut.distancePx + glissadePx;
+            phase = await ruer(mission.commande, situation, visee, retenuePx);
           }
           break;
         }
@@ -234,7 +263,7 @@ export async function accomplir(mission: Mission): Promise<void> {
         case 'route':
           if (doitSArreter(mission, viseePrecedente, visee)) {
             await mission.commande.relacher();
-            phase = { nom: 'arret', depuis: maintenant };
+            phase = { nom: 'arret', depuis: maintenant, lacheEn: situation.position };
           } else {
             await suivre(mission.commande, situation, visee);
           }
@@ -278,11 +307,16 @@ async function suivre(
  * l'instant d'avant l'envoi, elle etait deja finie quand elle commencait sur une page
  * qui dessine trois images par seconde: poser le pouce puis le glisser y prend deux
  * secondes (etape 8.7).
+ *
+ * @param retenuePx Pour un joueur qui guette: de combien s'arreter avant la cible,
+ *                  glissade comprise. S'il est deja plus pres, il fonce a travers elle,
+ *                  pour se retourner a l'arret suivant.
  */
 async function ruer(
   commande: Commande,
   situation: Situation,
   visee: Visee | undefined,
+  retenuePx: number | undefined,
 ): Promise<Phase> {
   const direction =
     visee?.surLaCible === true ? directionVers(situation.position, visee.point) : undefined;
@@ -293,11 +327,12 @@ async function ruer(
 
   await commande.orienter(direction);
 
-  const distance = Math.hypot(
-    visee.point.x - situation.position.x,
-    visee.point.y - situation.position.y,
-  );
-  const dureeMs = (distance / VITESSES.JOUEUR_PX_PAR_SECONDE) * 1000 + MARGE_DE_RUEE_MS;
+  const distance = distanceEntre(situation.position, visee.point);
+  const courte = retenuePx === undefined ? 0 : distance - retenuePx;
+  const dureeMs =
+    courte > 0
+      ? (courte / VITESSES.JOUEUR_PX_PAR_SECONDE) * 1000
+      : (distance / VITESSES.JOUEUR_PX_PAR_SECONDE) * 1000 + MARGE_DE_RUEE_MS;
 
   return { nom: 'ruee', jusqua: Date.now() + dureeMs };
 }
@@ -312,7 +347,7 @@ function doitSArreter(
   precedente: Visee | undefined,
   courante: Visee | undefined,
 ): boolean {
-  return mission.aLAffut === undefined
+  return mission.affut === undefined
     ? cibleImmobileEnVue(precedente, courante)
     : courante?.surLaCible === true;
 }
@@ -324,6 +359,11 @@ function cibleImmobileEnVue(precedente: Visee | undefined, courante: Visee | und
     courante?.surLaCible === true &&
     memePosition(precedente.point, courante.point)
   );
+}
+
+/** La distance entre deux positions, en pixels. */
+function distanceEntre(une: Position, autre: Position): number {
+  return Math.hypot(autre.x - une.x, autre.y - une.y);
 }
 
 /** Deux positions identiques: ce qui ne bouge pas garde exactement ses coordonnees. */

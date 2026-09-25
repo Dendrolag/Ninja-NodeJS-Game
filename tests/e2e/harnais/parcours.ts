@@ -401,10 +401,10 @@ export function capturerUnFauxNinja(partie: GameRoom, pseudo: string, commande: 
  * Mission, dans un mode ou l'on frappe devant soi (Tactique, Massacre): ce joueur prend
  * un faux ninja d'un coup de son arme.
  *
- * Le pilote le mene vers les faux ninjas qui ne sont pas a sa couleur. Quand il s'arrete
- * pres de l'un d'eux, immobile, il guette (l'affut du pilote): il frappe si un faux ninja
- * SERA dans son arme au moment ou le coup arrivera au serveur. Puis il repart. Un coup
- * dans le vide ne coute rien. La mission est accomplie quand le serveur lui compte sa
+ * Le pilote le mene vers les faux ninjas qui ne sont pas a sa couleur, et l'arrete a
+ * mi-portee de l'un d'eux, face a lui. La, immobile, il guette (l'affut du pilote): il
+ * frappe si un faux ninja SERA dans son arme au moment ou le coup arrivera au serveur.
+ * Puis il repart. Un coup dans le vide ne coute rien. La mission est accomplie quand le serveur lui compte sa
  * prise, que le scenario definit: un faux ninja porte en Tactique, des points en Massacre.
  *
  * POURQUOI PREVOIR, ET POURQUOI A L'ARRET (etape 8.7). Sur la page du telephone en
@@ -444,14 +444,17 @@ export function prendreUnFauxNinjaDUnCoup(
       };
     },
     accomplie: prise,
-    aLAffut: async () => {
-      if (!unFauxNinjaDansLArmeAuCoup(partie, pseudo, arme, dureeDuCoupMs)) {
-        return;
-      }
+    affut: {
+      distancePx: arme.porteePx / 2,
+      guetter: async () => {
+        if (!unFauxNinjaDansLArmeAuCoup(partie, pseudo, arme, dureeDuCoupMs)) {
+          return;
+        }
 
-      const debut = Date.now();
-      await frapper();
-      dureeDuCoupMs = Date.now() - debut;
+        const debut = Date.now();
+        await frapper();
+        dureeDuCoupMs = Date.now() - debut;
+      },
     },
   };
 }
