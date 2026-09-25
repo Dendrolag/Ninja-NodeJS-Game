@@ -9,7 +9,7 @@
  * clavier et la manette virtuelle marchent.
  */
 
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 import type { Vecteur } from '../../../packages/shared/dist/index.js';
 import type { Commande } from './pilote.js';
@@ -77,6 +77,31 @@ export function commandeAuClavier(page: Page): Commande {
   };
 }
 
+/** Un point de contact sur l'ecran, en pixels, avec l'identifiant de son doigt. */
+interface Contact {
+  readonly x: number;
+  readonly y: number;
+  readonly id: number;
+}
+
+/** L'identifiant du pouce qui tient la manette. */
+const POUCE = 0;
+
+/** L'identifiant du second doigt, celui qui appuie sur un bouton. */
+const DOIGT = 1;
+
+/** Le pouce, et le second doigt d'une main qui joue a deux doigts. */
+export interface CommandeAuPouce extends Commande {
+  /**
+   * Prepare un appui du second doigt au centre de cet element, mesure une fois.
+   *
+   * La fonction rendue pose le doigt puis le leve, sans lacher le pouce: un joueur court
+   * du pouce gauche et tire du pouce droit. Le contact tombe sur ce qui est affiche a cet
+   * endroit: un bouton couvert par autre chose ne le recevrait pas.
+   */
+  appuiSur(element: Locator): Promise<() => Promise<void>>;
+}
+
 /**
  * Le pouce: la manette virtuelle, tenue au milieu du terrain.
  *
@@ -85,8 +110,17 @@ export function commandeAuClavier(page: Page): Commande {
  *
  * Il faut une page emulee avec le tactile, comme celle du projet mobile: sans
  * cela, Chromium ignore les contacts.
+ *
+ * CHAQUE CONTACT ATTEND QUE LA PAGE L'AIT TRAITE, donc une image ou deux: en integration
+ * continue, ou la page du telephone dessine trois images par seconde, pres d'une seconde
+ * (etape 8.7). D'ou l'appui du second doigt, qui part pouce tenu: lever le pouce, puis
+ * passer par locator.tap(), qui attend que le bouton soit stable sur deux images, faisait
+ * partir un tir six secondes apres la decision de tirer.
+ *
+ * Les doigts portent chacun un identifiant. Le protocole compare chaque envoi au
+ * precedent: un doigt nouveau est pose, un doigt deplace glisse, un doigt absent est leve.
  */
-export async function commandeAuPouce(page: Page): Promise<Commande> {
+export async function commandeAuPouce(page: Page): Promise<CommandeAuPouce> {
   const terrain = await page.locator('.terrain').boundingBox();
 
   if (terrain === null) {
@@ -95,27 +129,24 @@ export async function commandeAuPouce(page: Page): Promise<Commande> {
 
   const centre = { x: terrain.x + terrain.width / 2, y: terrain.y + terrain.height / 2 };
   const protocole = await page.context().newCDPSession(page);
-  /** Le doigt est-il pose. */
-  let pose = false;
+  /** Ou est le pouce sur l'ecran, s'il est pose. */
+  let pouce: Contact | undefined;
   /** La derniere direction reellement envoyee a la page, doigt pose. */
   let envoyee: Vecteur | undefined;
 
   const toucher = async (
     type: 'touchStart' | 'touchMove' | 'touchEnd',
-    point?: { x: number; y: number },
+    contacts: readonly Contact[],
   ): Promise<void> => {
-    await protocole.send('Input.dispatchTouchEvent', {
-      type,
-      touchPoints: point === undefined ? [] : [{ x: point.x, y: point.y }],
-    });
+    await protocole.send('Input.dispatchTouchEvent', { type, touchPoints: [...contacts] });
   };
 
   return {
     async orienter(direction) {
-      if (!pose) {
-        pose = true;
+      if (pouce === undefined) {
+        pouce = { ...centre, id: POUCE };
         envoyee = undefined;
-        await toucher('touchStart', centre);
+        await toucher('touchStart', [pouce]);
       }
 
       if (envoyee !== undefined && produitScalaire(direction, envoyee) > COSINUS_ECART_MINIMUM) {
@@ -123,18 +154,48 @@ export async function commandeAuPouce(page: Page): Promise<Commande> {
       }
 
       envoyee = direction;
-      await toucher('touchMove', {
+      pouce = {
         x: Math.round(centre.x + direction.x * COURSE_DU_POUCE_PX),
         y: Math.round(centre.y + direction.y * COURSE_DU_POUCE_PX),
-      });
+        id: POUCE,
+      };
+      await toucher('touchMove', [pouce]);
     },
 
     async relacher() {
-      if (pose) {
-        pose = false;
+      if (pouce !== undefined) {
+        pouce = undefined;
         envoyee = undefined;
-        await toucher('touchEnd');
+        await toucher('touchEnd', []);
       }
+    },
+
+    async appuiSur(element) {
+      const boite = await element.boundingBox();
+
+      if (boite === null) {
+        throw new Error("L'element n'est pas affiche: aucun endroit ou poser le doigt.");
+      }
+
+      const doigt: Contact = {
+        x: Math.round(boite.x + boite.width / 2),
+        y: Math.round(boite.y + boite.height / 2),
+        id: DOIGT,
+      };
+
+      return async () => {
+        const tenu = pouce;
+
+        if (tenu === undefined) {
+          await toucher('touchStart', [doigt]);
+          await toucher('touchEnd', []);
+          return;
+        }
+
+        // Le pouce reste ou il est: seul le second doigt se pose, puis se leve.
+        await toucher('touchStart', [tenu, doigt]);
+        await toucher('touchMove', [tenu]);
+      };
     },
   };
 }

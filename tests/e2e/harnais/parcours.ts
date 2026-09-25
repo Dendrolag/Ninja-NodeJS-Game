@@ -385,29 +385,37 @@ export function capturerUnFauxNinja(partie: GameRoom, pseudo: string, commande: 
 }
 
 /**
- * Mission, dans le mode Tactique: ce joueur s'approche d'un faux ninja, a portee de tir.
+ * Mission, dans un mode ou l'on frappe devant soi (Tactique, Massacre): ce joueur prend
+ * un faux ninja d'un coup de son arme.
  *
- * Elle est accomplie des qu'un faux ninja qui n'est pas a sa couleur est plus pres que
- * la distance donnee. Le pilote relache alors les commandes: le joueur s'arrete, et
- * regarde dans la direction de son dernier pas, c'est-a-dire vers sa cible. Le
- * toucher en route ne l'aurait pas capturee.
+ * Le pilote le mene vers les faux ninjas qui ne sont pas a sa couleur, et, a chaque
+ * instant de sa route, le joueur frappe si l'un d'eux est dans son arme: a portee, et du
+ * cote ou il regarde. Un coup dans le vide ne coute rien. La mission est accomplie quand
+ * le serveur lui compte sa prise, que le scenario definit: un faux ninja porte en
+ * Tactique, des points en Massacre.
  *
- * AVEC UNE ARME QUI FRAPPE DEVANT (Tactique, Massacre), la mission ne s'acheve que si le
- * faux ninja est aussi dans l'arc, du cote ou le joueur regarde. Sans cela, un faux ninja
- * a portee mais sur le cote ou derriere suffisait: le coup partait dans le vide, et le
- * scenario Massacre au pouce echouait une fois sur deux en integration continue, ou les
- * faux ninjas, aussi rapides que les joueurs depuis l'etape 7.5, sortent de l'arc pendant
- * la latence d'une machine lente (corrige a l'etape 4.5).
+ * FRAPPER EN ROUTE, ET NON A L'ARRET. Jusqu'a l'etape 8.7, le joueur s'approchait a
+ * portee, s'arretait, levait le pouce, puis frappait. Sur la page du telephone en
+ * integration continue, qui dessine trois images par seconde, le coup partait alors six
+ * secondes apres la decision: les faux ninjas, qui vont a 150 pixels par seconde depuis
+ * l'etape 7.5, etaient sortis de l'arme, et le scenario Tactique manquait tous ses tirs
+ * jusqu'a la fin de la partie. En route, le coup part d'un second doigt, pouce tenu, au
+ * plus pres de l'instant ou la cible est dans l'arme; et le joueur retente a chaque
+ * instant ou une cible y passe.
+ *
+ * Le pilote va jusqu'au contact des faux ninjas: le toucher ne doit pas suffire a prendre,
+ * et c'est au scenario de le verifier.
  */
-export function approcherUnFauxNinja(
+export function prendreUnFauxNinjaDUnCoup(
   partie: GameRoom,
   pseudo: string,
   commande: Commande,
-  distancePx: number,
-  arme?: GeometrieDuCone,
+  arme: GeometrieDuCone,
+  frapper: () => Promise<void>,
+  prise: () => boolean,
 ): Mission {
   return {
-    nom: `${pseudo} s'approche d'un faux ninja`,
+    nom: `${pseudo} prend un faux ninja d'un coup`,
     commande,
     delaiMs: DELAI_CAPTURE_DE_BOT_MS,
     situation: () => {
@@ -419,17 +427,11 @@ export function approcherUnFauxNinja(
         cibles: fauxNinjasAPrendre(partie, joueur),
       };
     },
-    accomplie: () => {
-      const joueur = joueurNomme(partie, pseudo);
-      const orientation = orientationDe(partie, joueur);
-
-      return fauxNinjasAPrendre(partie, joueur).some(
-        (position) =>
-          Math.hypot(position.x - joueur.position.x, position.y - joueur.position.y) < distancePx &&
-          (arme === undefined ||
-            (orientation !== undefined &&
-              dansLeCone(joueur.position, orientation, position, arme))),
-      );
+    accomplie: prise,
+    enRoute: async () => {
+      if (unFauxNinjaDansLArme(partie, pseudo, arme)) {
+        await frapper();
+      }
     },
   };
 }
@@ -476,6 +478,19 @@ function orientationDe(
   return (
     partie.etat.massacre?.guerriers[joueur.id]?.orientation ??
     partie.etat.tactique?.[joueur.id]?.orientation
+  );
+}
+
+/** Un faux ninja que ce joueur peut prendre est-il dans son arme, a cet instant. */
+function unFauxNinjaDansLArme(partie: GameRoom, pseudo: string, arme: GeometrieDuCone): boolean {
+  const joueur = joueurNomme(partie, pseudo);
+  const orientation = orientationDe(partie, joueur);
+
+  return (
+    orientation !== undefined &&
+    fauxNinjasAPrendre(partie, joueur).some((position) =>
+      dansLeCone(joueur.position, orientation, position, arme),
+    )
   );
 }
 

@@ -37,6 +37,11 @@
  * voie arrete, puis fonce en ligne droite vers elle sans plus corriger: depuis
  * l'arret, cette ligne passe par la cible, et le retard ne fait que retarder le
  * contact.
+ *
+ * L'ACTION EN ROUTE. Une mission peut demander au joueur d'agir a chaque instant, pendant
+ * qu'il se deplace: tirer des qu'une cible est dans son cone, en Tactique ou en Massacre.
+ * C'est ce que fait un joueur, et c'est ce qui laisse le moins de temps a la cible pour
+ * sortir du cone (etape 8.7).
  */
 
 import type { Position, Vecteur } from '../../../packages/shared/dist/index.js';
@@ -117,6 +122,8 @@ export interface Mission {
   readonly accomplie: () => boolean;
   /** Au-dela de ce delai, la mission echoue. */
   readonly delaiMs: number;
+  /** Ce que le joueur fait a chaque instant de sa route, par la page. Rien par defaut. */
+  readonly enRoute?: () => Promise<void>;
 }
 
 /** La carte ramenee a des mailles, praticables ou non. */
@@ -200,7 +207,7 @@ export async function accomplir(mission: Mission): Promise<void> {
             (precedente !== undefined && memePosition(precedente.position, situation.position)) ||
             maintenant - phase.depuis > ARRET_MAXIMUM_MS
           ) {
-            phase = await ruer(mission.commande, situation, visee, maintenant);
+            phase = await ruer(mission.commande, situation, visee);
           }
           break;
 
@@ -213,6 +220,8 @@ export async function accomplir(mission: Mission): Promise<void> {
           }
           break;
       }
+
+      await mission.enRoute?.();
 
       releves.push({ instant: maintenant, situation, visee, phase: phase.nom });
       while ((releves[0]?.instant ?? maintenant) < maintenant - FENETRE_DE_PROGRES_MS) {
@@ -246,12 +255,16 @@ async function suivre(
  * La ruee dure le temps de parcourir la distance a vitesse de joueur, plus une
  * marge pour le retard de la page. Si la cible n'est plus en vue, le pilote reprend
  * la route.
+ *
+ * Elle se compte depuis l'instant ou la page a recu la direction. Comptee depuis
+ * l'instant d'avant l'envoi, elle etait deja finie quand elle commencait sur une page
+ * qui dessine trois images par seconde: poser le pouce puis le glisser y prend deux
+ * secondes (etape 8.7).
  */
 async function ruer(
   commande: Commande,
   situation: Situation,
   visee: Visee | undefined,
-  maintenant: number,
 ): Promise<Phase> {
   const direction =
     visee?.surLaCible === true ? directionVers(situation.position, visee.point) : undefined;
@@ -268,7 +281,7 @@ async function ruer(
   );
   const dureeMs = (distance / VITESSES.JOUEUR_PX_PAR_SECONDE) * 1000 + MARGE_DE_RUEE_MS;
 
-  return { nom: 'ruee', jusqua: maintenant + dureeMs };
+  return { nom: 'ruee', jusqua: Date.now() + dureeMs };
 }
 
 /** La cible visee est en vue, et elle n'a pas bouge depuis la lecture precedente. */

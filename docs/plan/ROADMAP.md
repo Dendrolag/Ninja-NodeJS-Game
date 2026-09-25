@@ -345,7 +345,9 @@ Point de rendez-vous: **la mesure se prend sur le téléphone du porteur du proj
 Tests requis: TU du chronomètre sur des séries connues, de la boucle qui l'alimente, de `/sante` (résumé, absence, contrôle d'accès), de la lecture du résumé dans le paquet partagé, et de la section « Serveur » du relevé; bout en bout du relevé qui lit les battements en fin de partie.
 Résultat: le serveur de production bat à l'heure (centile 99 de l'écart à 52,6 ms, aucun retard de 100 ms). L'irrégularité vue sur l'iPhone naît probablement entre le téléphone et le réseau.
 
-**8.7. Les scénarios Tactique au pouce, qui échouent par intermittence.** Planifiée le 25 septembre 2026, au titre de la règle 7. Deux scénarios de `tests/e2e/tactique.spec.ts`, dans le cadrage téléphone, échouent de temps en temps en CI: le ninja piloté au pouce ne bouge plus. Trouver la cause, la corriger, et prouver la correction par des passages répétés en CI.
+**8.7. Les scénarios Tactique au pouce, qui échouent par intermittence.** Planifiée le 25 septembre 2026, au titre de la règle 7 (fiche `docs/plan/etape-8-7.md`). Deux scénarios de `tests/e2e/tactique.spec.ts`, dans le cadrage téléphone, échouent de temps en temps en CI. Le « ninja qui ne bouge plus » de l'entrée d'origine était une mauvaise lecture: le message citait la dernière tentative, jouée après la fin de la partie. Trouver la cause, la corriger, et prouver la correction par des passages répétés en CI.
+Tests requis: les scénarios Tactique et Massacre au pouce, sans relance, en local limité à deux processeurs et en CI.
+Résultat: en cours de vérification.
 ---
 
 ## 5. Écarts assumés par rapport au plan d'origine
