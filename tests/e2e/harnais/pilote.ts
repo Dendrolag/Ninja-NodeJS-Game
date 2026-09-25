@@ -86,6 +86,9 @@ const MARGE_DE_RUEE_MS = 800;
 /** Au-dela de ce temps d'arret, le pilote fonce meme si le serveur voit encore le joueur bouger. */
 const ARRET_MAXIMUM_MS = 2_000;
 
+/** Une cible est devant un joueur qui marche a moins de quarante-cinq degres de sa marche. */
+const COSINUS_DEVANT = Math.SQRT1_2;
+
 /** Combien de temps le joueur guette a l'arret, quand la mission le demande, avant de foncer. */
 const AFFUT_MS = 4_000;
 
@@ -261,7 +264,7 @@ export async function accomplir(mission: Mission): Promise<void> {
         }
 
         case 'route':
-          if (doitSArreter(mission, viseePrecedente, visee)) {
+          if (doitSArreter(mission, situation, precedente, viseePrecedente, visee, glissadePx)) {
             await mission.commande.relacher();
             phase = { nom: 'arret', depuis: maintenant, lacheEn: situation.position };
           } else {
@@ -341,15 +344,45 @@ async function ruer(
  * Le joueur doit-il s'arreter: devant une cible immobile en vue, ou, s'il guette, devant
  * toute cible en vue. L'affut prevoit ou seront les cibles qui bougent: il n'a pas besoin
  * qu'elles restent en place.
+ *
+ * Un joueur qui guette leve le pouce des qu'une cible en ligne droite, devant lui, est a
+ * la distance d'affut plus la glissade: sur une page qui dessine deux ou trois images par
+ * seconde, il glisse cent a cent cinquante pixels apres le lever, plus que la portee de
+ * visee. S'il attendait d'avoir la cible en vue, il la depassait a chaque fois. Devant lui
+ * seulement: apres avoir traverse une cible, il s'arreterait dos a elle.
  */
 function doitSArreter(
   mission: Mission,
+  situation: Situation,
+  situationPrecedente: Situation | undefined,
   precedente: Visee | undefined,
   courante: Visee | undefined,
+  glissadePx: number,
 ): boolean {
-  return mission.affut === undefined
-    ? cibleImmobileEnVue(precedente, courante)
-    : courante?.surLaCible === true;
+  if (mission.affut === undefined) {
+    return cibleImmobileEnVue(precedente, courante);
+  }
+
+  const retenuePx = mission.affut.distancePx + glissadePx;
+  const marche =
+    situationPrecedente === undefined
+      ? undefined
+      : directionVers(situationPrecedente.position, situation.position);
+
+  return (
+    courante?.surLaCible === true ||
+    situation.cibles.some((cible) => {
+      const versLaCible = directionVers(situation.position, cible);
+
+      return (
+        distanceEntre(situation.position, cible) <= retenuePx &&
+        (marche === undefined ||
+          versLaCible === undefined ||
+          marche.x * versLaCible.x + marche.y * versLaCible.y >= COSINUS_DEVANT) &&
+        trajetTenable(situation.terrain, situation.position, cible, RAYON_ENTITE)
+      );
+    })
+  );
 }
 
 /** La cible visee est en vue, et elle n'a pas bouge depuis la lecture precedente. */
