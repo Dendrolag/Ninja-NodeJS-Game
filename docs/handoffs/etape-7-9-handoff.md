@@ -2,7 +2,7 @@
 
 Date: 25 septembre 2026
 Auteur: session Claude Code
-Statut: terminée (sous réserve de la CI et de la mise en ligne, vérifiées après la poussée, et de la validation des textes par le porteur du projet)
+Statut: terminée (sous réserve de la validation des textes par le porteur du projet)
 
 ## Objectif de l'étape
 
@@ -47,7 +47,7 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
   - 300 bots, 12 joueurs, sans mur: jeu `f2fd81f6d10cc63b6375326b2de4a67fb58a2d04ff1422a32f6c88fba857cf00`, flux `c3541fe6575212f131cbef0e5009aee3931f40156d9a74c21945565f761dbd44`
   - 150 bots, 2 joueurs, murs: jeu `6eb2d84ef3411a54b5bf0dffc984ced511faba22f31d0a6edcc77296797f763d`, flux `db1254e2b0433b30dd7bb9e62c4a4f1f3a0d437fcebfd72bb477e1f30ef1b2cb`
 - Banc de charge: coût inchangé, section 20 de `docs/mesures/charge-serveur.md`.
-- État de la CI: voir le commit de clôture.
+- État de la CI: **verte sur `344b929`**, types, tests, bout en bout et mise en ligne; le serveur de production répond sur ce commit (`/sante`).
 
 ## Décisions et écarts au plan
 
