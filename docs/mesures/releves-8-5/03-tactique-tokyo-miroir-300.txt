@@ -1,0 +1,98 @@
+Relevé de performance Neon Ninja (étape 8.5)
+
+Relevé copié le: 2026-09-25T09:17:30.892Z
+Page: 2b5cb4fd782a4ecdb44becef7242d73cfefbb048
+Variantes: aucune
+Navigateur: Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/156.1 Mobile/15E148 Safari/604.1
+Écran: 393 × 852, densité 3
+Fenêtre: 393 × 779
+Processeurs logiques: 4
+Partie: carte map1 miroir, mode tactique, 300 PNJ au départ, pluie, 303 entités à cet instant
+Rendu: webgl 2, densité 2, canevas 786 × 1558
+Carte graphique: Apple GPU
+
+== Images
+Durée mesurée: 179,8 s, 10772 images, 59,9 par seconde
+Cadence du navigateur estimée: 58 Hz (écart médian 17,1 ms)
+Écart entre deux images: moyenne 16,70, médiane 17,1, p90 17,1, p99 22,1, max 131,0 ms
+Images d'au moins 25 ms: 41, 50 ms: 2, 100 ms: 1, 250 ms: 0
+Interruptions (page cachée): 0
+
+== Où va le temps, par image
+Notre code: moyenne 0,43, médiane 0,1, p90 1,1, p99 1,1, max 4,0 ms
+  dont saisie, sons, lissage, scène et transmission à PixiJS: moyenne 0,31, médiane 0,1, p90 1,1, p99 1,1, max 4,0 ms
+  dont HUD: moyenne 0,10, médiane 0,1, p90 0,1, p99 1,0, max 1,0 ms
+PixiJS: moyenne 0,52, médiane 1,1, p90 1,1, p99 1,1, max 15,0 ms
+Hors de nos chronomètres, en moyenne: 15,75 ms (l'attente de l'écran, puis le navigateur, la carte graphique, le ramasse-miettes)
+
+== Réseau
+Instantanés reçus: 3534, 19,7 par seconde, battements sautés: 0
+Écart entre deux instantanés: moyenne 50,87, médiane 50,1, p90 73,1, p99 151,1, max 359,0 ms
+Instantanés d'au moins 100 ms: 100
+Images tenues, le lissage attendant le réseau: 1727 (16,0 %)
+
+== Déroulé, par fenêtre de 5 s
+début s | images/s | plus longue ms | ≥ 50 ms | notre code ms | PixiJS ms | instantanés/s | écart max ms | personnages
+0 | 58,0 | 131,0 | 2 | 0,38 | 0,69 | 19,4 | 135 | 162
+5 | 60,0 | 20,0 | 0 | 0,39 | 0,42 | 20,0 | 175 | 62
+10 | 60,0 | 24,0 | 0 | 0,43 | 0,43 | 19,6 | 140 | 54
+15 | 60,0 | 22,0 | 0 | 0,41 | 0,55 | 20,0 | 111 | 48
+20 | 59,8 | 22,0 | 0 | 0,41 | 0,47 | 19,8 | 108 | 48
+25 | 60,0 | 20,0 | 0 | 0,46 | 0,44 | 20,2 | 85 | 45
+30 | 60,0 | 22,0 | 0 | 0,46 | 0,51 | 20,0 | 157 | 42
+35 | 60,0 | 20,0 | 0 | 0,45 | 0,46 | 19,4 | 165 | 45
+40 | 59,8 | 22,0 | 0 | 0,42 | 0,47 | 20,2 | 196 | 44
+45 | 60,0 | 22,0 | 0 | 0,43 | 0,49 | 20,0 | 183 | 47
+50 | 60,0 | 22,0 | 0 | 0,45 | 0,51 | 20,0 | 67 | 43
+55 | 60,0 | 18,0 | 0 | 0,37 | 0,53 | 20,0 | 72 | 41
+60 | 60,0 | 21,0 | 0 | 0,42 | 0,54 | 19,2 | 210 | 60
+65 | 59,8 | 21,0 | 0 | 0,36 | 0,55 | 19,0 | 302 | 63
+70 | 60,0 | 22,0 | 0 | 0,40 | 0,52 | 19,6 | 136 | 69
+75 | 60,0 | 21,0 | 0 | 0,46 | 0,49 | 18,8 | 293 | 55
+80 | 60,0 | 21,0 | 0 | 0,39 | 0,45 | 19,6 | 133 | 55
+85 | 59,8 | 22,0 | 0 | 0,42 | 0,52 | 18,8 | 195 | 57
+90 | 60,0 | 22,0 | 0 | 0,39 | 0,52 | 18,8 | 142 | 59
+95 | 60,0 | 22,0 | 0 | 0,41 | 0,59 | 19,0 | 299 | 51
+100 | 60,0 | 21,0 | 0 | 0,38 | 0,46 | 19,2 | 212 | 51
+105 | 59,8 | 22,0 | 0 | 0,38 | 0,60 | 20,2 | 138 | 41
+110 | 60,0 | 23,0 | 0 | 0,46 | 0,49 | 19,6 | 154 | 42
+115 | 60,0 | 22,0 | 0 | 0,38 | 0,50 | 20,0 | 99 | 32
+120 | 60,0 | 22,0 | 0 | 0,43 | 0,47 | 20,0 | 108 | 28
+125 | 59,8 | 27,0 | 0 | 0,35 | 0,51 | 19,8 | 189 | 36
+130 | 60,0 | 24,0 | 0 | 0,46 | 0,50 | 20,0 | 180 | 42
+135 | 60,0 | 25,0 | 0 | 0,38 | 0,53 | 20,0 | 119 | 38
+140 | 60,0 | 27,0 | 0 | 0,44 | 0,48 | 19,8 | 90 | 40
+145 | 60,0 | 26,0 | 0 | 0,41 | 0,52 | 19,8 | 129 | 33
+150 | 59,8 | 27,0 | 0 | 0,50 | 0,52 | 19,8 | 97 | 34
+155 | 60,0 | 26,0 | 0 | 0,52 | 0,54 | 19,2 | 199 | 44
+160 | 60,0 | 27,0 | 0 | 0,43 | 0,66 | 19,8 | 359 | 37
+165 | 60,0 | 24,0 | 0 | 0,48 | 0,56 | 19,4 | 149 | 34
+170 | 59,8 | 28,0 | 0 | 0,48 | 0,50 | 19,0 | 180 | 39
+175 | 60,1 | 27,0 | 0 | 0,51 | 0,57 | 20,3 | 258 | 36
+
+== Les 20 pires images, d'au moins 25 ms
+à s | écart ms | notre code ms, image précédente | PixiJS ms | instantanés reçus pendant
+0,13 | 131,0 | 1,00 | 1,00 | 1
+0,22 | 57,0 | 1,00 | 7,00 | 0
+0,16 | 30,0 | 4,00 | 15,00 | 0
+0,25 | 28,0 | 1,00 | 2,00 | 2
+171,83 | 28,0 | 0,00 | 1,00 | 0
+153,28 | 27,0 | 1,00 | 1,00 | 0
+127,97 | 27,0 | 0,00 | 1,00 | 0
+162,74 | 27,0 | 1,00 | 1,00 | 0
+163,42 | 27,0 | 1,00 | 1,00 | 1
+150,48 | 27,0 | 1,00 | 1,00 | 0
+141,34 | 27,0 | 0,00 | 1,00 | 0
+175,26 | 27,0 | 1,00 | 0,00 | 0
+152,63 | 27,0 | 1,00 | 1,00 | 1
+1,14 | 26,0 | 0,00 | 0,00 | 1
+147,17 | 26,0 | 0,00 | 0,00 | 0
+155,03 | 26,0 | 1,00 | 1,00 | 1
+174,36 | 26,0 | 1,00 | 1,00 | 0
+152,04 | 26,0 | 0,00 | 0,00 | 1
+153,06 | 26,0 | 1,00 | 0,00 | 0
+139,88 | 25,0 | 1,00 | 0,00 | 0
+
+Ressenti du porteur du projet: quelques latences ressenties, mais faibles.
+Partie Tactique, un seul joueur, 300 PNJ.
+Remarque du porteur du projet: une très grosse majorité des PNJ est apparue dans une zone arrondie proche du joueur, au lieu d'être répartie de façon relativement uniforme sur toute la carte. Défaut confirmé et corrigé à l'étape 8.5 (handoff, et positionDApparition dans packages/sim/src/etat.ts): passé environ 150 PNJ sur Tokyo, 138 des 300 PNJ naissaient exactement au même point.

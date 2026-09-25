@@ -98,6 +98,10 @@ export class Releve {
   readonly ecartsInstantanes = new Histogramme();
 
   private debut: number | undefined;
+  /** L'instant où l'écran de préparation s'est levé, s'il l'a fait. */
+  private rideau: number | undefined;
+  /** Les images lentes vues par le joueur: après le lever de l'écran de préparation. */
+  private lentesApresRideau = 0;
   private imagePrecedente: number | undefined;
   private notreCodePrecedent = 0;
   private pixiEnCours = 0;
@@ -142,6 +146,8 @@ export class Releve {
     }
 
     this.debut = undefined;
+    this.rideau = undefined;
+    this.lentesApresRideau = 0;
     this.imagePrecedente = undefined;
     this.notreCodePrecedent = 0;
     this.pixiEnCours = 0;
@@ -201,6 +207,14 @@ export class Releve {
     this.pixiEnCours = 0;
   }
 
+  /**
+   * L'écran de préparation vient de se lever: le joueur voit la partie. Une image lente
+   * d'avant ne se voyait pas; celles d'après se comptent à part.
+   */
+  leverLeRideau(instant: number): void {
+    this.rideau ??= instant;
+  }
+
   /** Le nombre de personnages dessinés, relevé de temps en temps. */
   echantillonner(instant: number, entites: number): void {
     const fenetre = this.fenetreDe(instant);
@@ -239,6 +253,10 @@ export class Releve {
         fenetre.pixi += this.pixiEnCours;
         fenetre.plusLongue = Math.max(fenetre.plusLongue, duree);
         fenetre.lentes += duree >= SEUIL_SACCADE_MS ? 1 : 0;
+      }
+
+      if (this.rideau !== undefined && this.imagePrecedente >= this.rideau) {
+        this.lentesApresRideau += duree >= SEUIL_SACCADE_MS ? 1 : 0;
       }
 
       this.retenirSiPire(mesure.instant - (this.debut ?? 0), duree);
@@ -291,6 +309,9 @@ export class Releve {
       `Écart entre deux images: ${repartition(this.durees)}`,
       `Images d'au moins 25 ms: ${String(this.durees.auDela(25))}, 50 ms: ${String(this.durees.auDela(SEUIL_SACCADE_MS))}, 100 ms: ${String(this.durees.auDela(100))}, 250 ms: ${String(this.durees.auDela(250))}`,
       `Interruptions (page cachée): ${String(this.interruptions)}`,
+      this.rideau === undefined
+        ? 'Écran de préparation: pas encore levé'
+        : `Écran de préparation levé à ${nombre((this.rideau - debut) / 1000, 2)} s; images d'au moins 50 ms ensuite: ${String(this.lentesApresRideau)}`,
       '',
       '== Où va le temps, par image',
       `Notre code: ${repartition(this.notreCode)}`,

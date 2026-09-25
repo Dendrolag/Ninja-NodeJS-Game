@@ -172,6 +172,33 @@ describe('le relevé d une partie', () => {
     expect(texte).toContain("Instantanés d'au moins 100 ms: 1");
   });
 
+  it('compte à part les images lentes vues après le lever de l écran de préparation', () => {
+    const releve = new Releve();
+    let instant = jouer(releve, 0, 16, 5);
+
+    // Une image lente sous l'écran de préparation: le joueur ne la voit pas.
+    instant += 200;
+    releve.image({ instant, renduMs: 1, hudMs: 0.5, notreCodeMs: 2, tenue: false });
+    releve.leverLeRideau(instant);
+
+    instant = jouer(releve, instant + 16, 16, 5);
+    instant += 80;
+    releve.image({ instant, renduMs: 1, hudMs: 0.5, notreCodeMs: 2, tenue: false });
+
+    const texte = releve.texte([]);
+    expect(texte).toContain("Images d'au moins 25 ms: 2, 50 ms: 2");
+    expect(texte).toContain(
+      "Écran de préparation levé à 0,26 s; images d'au moins 50 ms ensuite: 1",
+    );
+  });
+
+  it('dit quand l écran de préparation n est pas encore levé', () => {
+    const releve = new Releve();
+    jouer(releve, 0, 16, 5);
+
+    expect(releve.texte([])).toContain('Écran de préparation: pas encore levé');
+  });
+
   it('ne compte pas l écart d une page cachée', () => {
     const releve = new Releve();
     const fin = jouer(releve, 0, 16, 10);

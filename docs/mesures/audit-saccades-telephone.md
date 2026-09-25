@@ -2,7 +2,7 @@
 
 Rapport de l'étape 8.5. Fiche: `docs/plan/etape-8-5.md`.
 
-**Statut au 21 septembre 2026: l'instrument est prêt et en ligne, les mesures sur le vrai téléphone sont à faire.** Les sections 1 à 5 sont écrites: le problème, l'instrument, le protocole de recette et les douze hypothèses, toutes ouvertes. Le verdict (section 6) et le plan d'action (section 8) attendent les relevés de l'iPhone 14 Pro, et la section 7 n'en dit que ce qui est déjà su.
+**Statut au 25 septembre 2026: trois parties mesurées sur l'iPhone 14 Pro, le verdict est provisoire.** Sur ce téléphone et dans ces conditions, **le dessin est fluide**: 60 images par seconde tenues trois minutes, en Horde, en Massacre et en Tactique, jusqu'à 300 PNJ. Ce qui reste est un défaut de **réseau** que le lissage amplifie (forme 3), et un gel d'une fraction de seconde au tout début de chaque partie. Les très grosses saccades du 20 septembre ne sont pas reproduites: la section 6.4 dit ce qu'il faut savoir d'elles pour conclure.
 
 ## 1. Le problème, et pourquoi on mesure d'abord
 
@@ -65,7 +65,7 @@ Exemple: `https://ninja.dendrolag.fr/?diagnostic=1&son=0&densite=1`.
 ### 3.3 Ce que le relevé contient
 
 - **En-tête**: la date, la version de la page, les variantes, le navigateur, l'écran et sa densité, la fenêtre, le dos de rendu réellement utilisé (WebGL 1 ou 2, WebGPU), la densité de rendu, la taille du canevas, la carte graphique annoncée, la carte, le mode, le nombre de PNJ et la pluie.
-- **Images**: la durée mesurée, la cadence, la cadence de l'écran estimée (60 ou 120 Hz), la répartition des durées d'image (moyenne, médiane, p90, p99, maximum), les images d'au moins 25, 50, 100 et 250 ms, et les interruptions (page cachée, dont l'écart n'est pas compté).
+- **Images**: la durée mesurée, la cadence, la cadence de l'écran estimée (60 ou 120 Hz), la répartition des durées d'image (moyenne, médiane, p90, p99, maximum), les images d'au moins 25, 50, 100 et 250 ms, les interruptions (page cachée, dont l'écart n'est pas compté), et, depuis le 25 septembre 2026, l'instant où l'écran de préparation s'est levé et le nombre d'images d'au moins 50 ms qui l'ont suivi: celles que le joueur a vues.
 - **Où va le temps**: la répartition de notre code, de sa partie rendu, de son HUD, et de PixiJS, et ce qui reste hors de nos chronomètres.
 - **Réseau**: les instantanés reçus, leur rythme, les battements sautés, la répartition de l'écart entre deux, ceux d'au moins 100 ms, et les images tenues.
 - **Déroulé**: une ligne par fenêtre de 5 secondes, pour voir l'échauffement.
@@ -113,26 +113,34 @@ Si la partie 1 est **parfaitement fluide** (aucune image d'au moins 50 ms, et un
 
 ### 4.3 Ce qu'on fera des relevés
 
-Chaque relevé brut est rangé dans `docs/mesures/releves-8-5/`, un fichier par partie, sous son numéro. L'état des hypothèses (section 5), le verdict (section 6) et le plan d'action (section 8) s'écrivent à partir d'eux, chiffres cités.
+Chaque relevé brut est rangé dans `docs/mesures/releves-8-5/`, un fichier par partie, sous son numéro.
+
+**Ce qui a été joué, le 25 septembre 2026**: pas le protocole ci-dessus, mais trois parties entières de trois minutes, seul, sans variante, ce qui a suffi à trancher la plupart des hypothèses. Les variantes servaient à trouver le coupable d'un dessin lent: le dessin ne l'est pas.
+
+| Relevé                             | Mode     | Carte         | PNJ | Ressenti                   |
+| ---------------------------------- | -------- | ------------- | --: | -------------------------- |
+| `01-horde-tokyo-50.txt`            | Horde    | Tokyo         |  50 | pas de latence forte       |
+| `02-massacre-tokyo-200.txt`        | Massacre | Tokyo         | 200 | quelques faibles latences  |
+| `03-tactique-tokyo-miroir-300.txt` | Tactique | Tokyo, miroir | 300 | quelques latences, faibles | L'état des hypothèses (section 5), le verdict (section 6) et le plan d'action (section 8) s'écrivent à partir d'eux, chiffres cités. |
 
 ## 5. Les hypothèses
 
-Écrites pour être réfutées. Les dix premières sont celles de la fiche; les deux dernières sont apparues à la lecture du code au début de l'étape. **Toutes sont ouvertes** tant que les relevés du téléphone ne sont pas là.
+Écrites pour être réfutées. Les dix premières sont celles de la fiche; les deux dernières sont apparues à la lecture du code au début de l'étape. État au 25 septembre 2026, sur les trois relevés de l'iPhone 14 Pro (section 6). « Écartée » veut dire écartée **dans ces conditions**: la section 6.4 dit ce qui reste à éprouver.
 
-| N°  | Hypothèse                                              | Ce qui la confirmerait                                                                                 | Ce qui l'écarterait                                            | Partie | État    |
-| --- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- | ------ | ------- |
-| 1   | Le dos de rendu choisi par Safari                      | WebGPU nettement meilleur ou pire que WebGL, à tout le reste égal                                      | Aucun écart entre les parties 1 et 6                           | 1, 6   | ouverte |
-| 2   | L'écran à 120 Hz                                       | Cadence estimée à 120 Hz, et images lentes qui disparaissent plafonnées à 60                           | Cadence estimée à 60 Hz dès la partie 1                        | 1, 5   | ouverte |
-| 3   | Le coût du dessin, sur la carte graphique du téléphone | PixiJS ou le temps hors chronomètres qui baisse nettement à la densité 1                               | Aucun écart entre les parties 1 et 4                           | 1, 4   | ouverte |
-| 4   | Les téléversements de texture                          | Pires images groupées au début, ou à l'apparition d'un effet; partie 7 plus fluide                     | Pires images réparties sur toute la partie, partie 7 identique | 1, 7   | ouverte |
-| 5   | Le ramasse-miettes                                     | Images longues à intervalles réguliers, hors de nos chronomètres, sans cause visible                   | Aucune image longue inexpliquée                                | 1, 8   | ouverte |
-| 6   | Le lissage entre deux instantanés                      | Images fluides mais beaucoup d'images tenues, ou lissage lent dans notre code                          | Peu d'images tenues, lissage bon marché                        | 1      | ouverte |
-| 7   | Le réseau                                              | Écarts entre instantanés irréguliers (p99 au-delà de 100 ms), battements sautés, écart Wi-Fi et mobile | Instantanés réguliers à 50 ms                                  | 1, 8   | ouverte |
-| 8   | L'échauffement et l'économie d'énergie                 | Le déroulé de la partie 8 se dégrade au fil des fenêtres                                               | Déroulé stable sur trois minutes                               | 8      | ouverte |
-| 9   | Le son                                                 | Partie 2 nettement plus fluide que la partie 1                                                         | Aucun écart                                                    | 2      | ouverte |
-| 10  | Le filtre de lueur                                     | Images lentes pendant les repères seulement (apparition, capture)                                      | Aucune corrélation                                             | 1      | ouverte |
-| 11  | Le HUD réécrit à chaque image, sur des fonds floutés   | Partie 3 nettement plus fluide que la partie 1, temps hors chronomètres qui baisse                     | Aucun écart                                                    | 3      | ouverte |
-| 12  | La saisie tactile                                      | Fluide sans toucher, haché en jouant                                                                   | Aucun écart entre les deux moitiés de la partie 9              | 9      | ouverte |
+| N°  | Hypothèse                                              | Ce que les relevés en disent                                                                                                                    | État                |
+| --- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| 1   | Le dos de rendu choisi par Safari                      | WebGL 2 tourne, et le dessin tient 60 images par seconde: rien à gagner à essayer WebGPU                                                        | écartée             |
+| 2   | L'écran à 120 Hz                                       | Le navigateur cadence à 60 Hz (59,8 à 59,9 images par seconde), pas à 120                                                                       | écartée             |
+| 3   | Le coût du dessin, sur la carte graphique du téléphone | Notre code 0,28 à 0,43 ms par image, PixiJS 0,37 à 0,52 ms, jusqu'à 300 PNJ: moins de 6 pour cent d'une image                                   | écartée             |
+| 4   | Les téléversements de texture                          | **Au début seulement**: les seules images de plus de 100 ms tombent entre 0,13 et 0,40 s, PixiJS y prend jusqu'à 52 ms. Rien ensuite            | confirmée, corrigée |
+| 5   | Le ramasse-miettes                                     | Après la première demi-seconde, aucune image au-delà de 30 ms en neuf minutes de jeu                                                            | écartée             |
+| 6   | Le lissage entre deux instantanés                      | **Amplificateur**: 15 à 17 pour cent des images tenues sur le dernier instantané, contre 1,5 pour cent au bureau                                | confirmée           |
+| 7   | Le réseau                                              | 20 instantanés par seconde, aucun perdu, mais irréguliers: p99 de l'écart de 119 à 151 ms, un écart d'au moins 100 ms toutes les 2 à 3 secondes | confirmée           |
+| 8   | L'échauffement et l'économie d'énergie                 | Neuf minutes de jeu presque d'affilée: aucune fenêtre de 5 secondes ne se dégrade                                                               | écartée             |
+| 9   | Le son                                                 | Joué avec le son, et le dessin tient                                                                                                            | écartée             |
+| 10  | Le filtre de lueur                                     | Aucune image lente pendant la partie, repères compris                                                                                           | écartée             |
+| 11  | Le HUD réécrit à chaque image, sur des fonds floutés   | HUD à 0,10 à 0,12 ms par image, et les images tombent à l'heure: la mise en page et la composition tiennent dans le budget                      | écartée             |
+| 12  | La saisie tactile                                      | Joué au pouce tout du long, et les images tombent à l'heure                                                                                     | écartée             |
 
 ### 5.1 Ce que la lecture du code a déjà appris
 
@@ -146,19 +154,75 @@ Pas un verdict, des faits qui orientent la lecture des relevés.
 
 ## 6. Verdict
 
-À écrire à partir des relevés. Il dira laquelle des quatre formes, à quel moment, et la ou les causes, avec le chiffre qui les désigne.
+### 6.1 Les conditions
+
+Trois parties de trois minutes, le 25 septembre 2026 entre 9h04 et 9h17, seul, sur la page du commit `2b5cb4f`. iPhone 14 Pro sous iOS 18.7, **Firefox pour iOS** (FxiOS 156.1, qui dessine avec le moteur de Safari, comme tout navigateur sur iPhone), tenu **en portrait** (fenêtre de 393 sur 779 points). Rendu WebGL 2, densité 2, canevas de 786 sur 1558. Réseau non précisé.
+
+Une précaution de lecture: **ce navigateur arrondit ses chronomètres à la milliseconde**. Une image y mesure 16 ou 17 ms, jamais 16,7, d'où la « cadence estimée à 58 Hz » pour 59,9 images réellement comptées par seconde, et les temps de notre code, image par image, à 0 ou 1 ms. Les moyennes, elles, restent justes sur dix mille images.
+
+### 6.2 Ce qui se voit: la forme 3, et un gel au départ
+
+- **Le dessin est fluide: ni forme 1, ni forme 2, ni forme 4.** 59,8 à 59,9 images par seconde de bout en bout, centile 99 de 21 à 23 ms, **une à deux images d'au moins 50 ms par partie de trois minutes**, toutes dans la première demi-seconde. Aucune des 108 fenêtres de 5 secondes ne se dégrade.
+- **Le réseau est irrégulier, et le lissage le rend visible: la forme 3.** Les instantanés arrivent bien vingt fois par seconde, sans aucun battement sauté, mais pas à intervalles réguliers: neuvième décile de l'écart de 71 à 77 ms, centile 99 de 119 à 151 ms, jusqu'à 359 ms. De 60 à 100 écarts d'au moins 100 ms par partie, soit un toutes les deux à trois secondes. Pendant 15 à 17 pour cent des images, le lissage, arrivé au bout de son trajet, tient les personnages immobiles en attendant le suivant; puis le suivant, arrivé en rafale, les fait courir. **C'est ce que le porteur du projet appelle « quelques faibles latences ».**
+- **Un gel d'une fraction de seconde au tout début de chaque partie.** Dans les trois relevés, une image de 131 à 257 ms tombe entre 0,13 et 0,26 s, suivie d'une deuxième de 57 à 138 ms. PixiJS y prend jusqu'à 52 ms: c'est le décor et les personnages envoyés à la carte graphique. L'écran de préparation, qui devait couvrir ce moment, se levait après trois images de moins de 100 ms, donc **avant**.
+
+### 6.3 Les causes, et le chiffre qui les désigne
+
+1. **Le lissage adaptatif (hypothèse 6), sur des arrivées irrégulières (hypothèse 7).** Le lissage règle sa vitesse sur l'écart entre les deux derniers instantanés: il suit l'irrégularité au lieu de l'absorber. Chiffre: 16,8, 15,0 et 16,0 pour cent d'images tenues, contre 1,5 au bureau sur le même code. Le relevé ne dit pas d'où vient l'irrégularité: du réseau de l'appareil, d'Internet, ou du serveur, dont le battement tourne sur une offre gratuite de Render. Les trois se corrigent de la même façon côté page (section 8, action 1), et se départagent côté serveur (action 3).
+2. **L'écran de préparation qui se lève trop tôt (hypothèse 4).** Chiffre: une image de 131 à 257 ms, à 0,13 à 0,26 s, dans chacune des trois parties.
+
+### 6.4 Ce qui n'est pas tranché: les très grosses saccades du 20 septembre
+
+Le 20 septembre, le jeu était « injouable » sur le même téléphone. Le 25, il est fluide. Trois différences possibles, à confirmer avec le porteur du projet:
+
+- **Le navigateur.** Le rapport du 20 septembre était-il dans Safari? Les relevés sont dans Firefox pour iOS: même moteur, pas forcément les mêmes réglages.
+- **Le réseau.** Wi-Fi ou réseau mobile, le 20 et le 25? Sur un réseau plus irrégulier, la forme 3 grossit exactement comme une « très grosse saccade »: écarts de 300 ms au lieu de 100, personnages qui se figent un tiers de seconde puis bondissent.
+- **La partie et la version.** Seul, ou à plusieurs? Quel mode, quelle carte, combien de PNJ? Le 20 septembre, deux mises en ligne ont sauté (handoff 8.4): la page était peut-être plus ancienne.
+
+**Ce qu'il faudrait pour conclure**: rejouer dans les conditions du 20 septembre, avec `?diagnostic=1`. Un seul relevé suffirait à dire si c'est la forme 3, en plus grand, ou autre chose.
+
+### 6.5 Jouable ou pas, et à quelles conditions
+
+**Oui, sur un iPhone 14 Pro, dans les conditions mesurées**: un joueur, jusqu'à 300 PNJ, trois modes. Le dessin garde plus de 90 pour cent de marge. Ce qui gêne encore est un à-coup des personnages toutes les deux à trois secondes, dû aux arrivées irrégulières, que l'action 1 de la section 8 supprime.
 
 ## 7. Ce que le banc de l'étape 5.7 ne voyait pas
 
-Ce qui est déjà su, avant même les relevés:
-
-- **Ni Safari, ni une carte graphique de téléphone.** Le banc mesure Chromium sur une carte de bureau. Il ralentit le processeur, pas la carte graphique ni sa mémoire.
-- **Ni le HUD, ni la mise en page.** Le banc fait tourner sa propre boucle, sans surcouche ni document autour du canevas: les coûts de l'hypothèse 11 lui sont invisibles par construction.
-- **Ni le réseau.** Le banc fabrique ses instantanés à la cadence parfaite. Il ne peut pas voir la forme 3.
-- **Ni la durée.** Le banc mesure quelques secondes après échauffement: il ne voit ni la chaleur ni une fuite.
-
-Ce qu'il faudra lui ajouter se décidera avec le verdict.
+- **Ni Safari, ni une carte graphique de téléphone.** Le banc mesure Chromium sur une carte de bureau. Pour ce téléphone, c'était sans conséquence: le banc annonçait 5 ms par image au processeur ralenti six fois, le téléphone en dépense moins d'une. Le ralentissement de Chromium est pessimiste pour un appareil haut de gamme.
+- **Ni le réseau.** Le banc fabrique ses instantanés à la cadence parfaite: il ne pouvait pas voir la forme 3, qui est justement le défaut restant. **À lui ajouter**: un test du lissage nourri d'arrivées irrégulières, tirées de la répartition mesurée ici (médiane 50 ms, neuvième décile 75 ms, centile 99 130 ms), qui borne le taux d'images tenues. C'est le test qui prouvera l'action 1.
+- **Ni le début de partie.** Le banc s'échauffe une seconde avant de mesurer, exprès: le gel du départ lui était invisible. Le relevé, lui, le voit désormais: il écrit quand l'écran de préparation s'est levé, et combien d'images d'au moins 50 ms ont suivi.
+- **Ni le HUD, ni la mise en page, ni la durée.** Invisibles au banc, et sans conséquence sur ce téléphone (hypothèses 8 et 11).
 
 ## 8. Plan d'action
 
-À écrire à partir du verdict: les actions ordonnées par gain rapporté au coût, chacune avec son gain espéré et d'où vient l'estimation, son risque pour le jeu, et si elle tient dans un réglage (faite dans l'étape et remesurée) ou demande une étape (proposée au ROADMAP).
+Ordonné par gain rapporté au coût.
+
+1. **L'écran de préparation attend une demi-seconde réellement fluide** (`STABILITE`, `packages/client/src/rendu/apparence.ts`): trente images d'affilée de moins de 34 ms, au lieu de trois de moins de 100 ms.
+   - Gain espéré: le gel de 131 à 257 ms du départ passe sous l'écran de préparation, dans les trois relevés.
+   - Risque: l'écran se lève une demi-seconde plus tard. Il se lève toujours au bout de trois secondes au plus.
+   - **Réglage, fait à l'étape 8.5**, à remesurer: le relevé dit désormais combien d'images d'au moins 50 ms suivent le lever de l'écran. Il en faut zéro.
+2. **Le lissage à retard fixe.** Afficher la partie telle qu'elle était un peu plus de deux battements plus tôt, sur la chronologie des battements, au lieu de régler la vitesse sur le dernier écart observé. Un instantané en retard de moins que ce délai ne se voit plus.
+   - Gain espéré: les images tenues passent de 15 à 17 pour cent à moins de 1 pour cent avec un délai de 100 ms, qui couvre le centile 99 mesuré (119 à 151 ms d'écart, soit 70 à 100 ms de retard sur l'attendu).
+   - Risque: le jeu s'affiche 50 ms plus tard qu'aujourd'hui, notre ninja compris: la saisie paraîtra un peu moins vive. Le délai se règle en jouant, avec le porteur du projet, entre 75 et 125 ms.
+   - **Étape, proposée au ROADMAP: `8.6`.** C'est un changement de conception du lissage, pas un réglage.
+3. **Mesurer la régularité du battement du serveur en production**, pour savoir si l'irrégularité vient du réseau ou du serveur hébergé gratuitement.
+   - Gain: aucun en soi. Il dit si un serveur payant, ou un autre hébergeur, gagnerait quelque chose.
+   - **À faire dans l'étape `8.6`**, qui en a besoin pour choisir son délai.
+4. **Relever les conditions du 20 septembre** avec `?diagnostic=1` (section 6.4).
+   - Gain: dit si l'étape 8.6 suffit, ou s'il y a autre chose.
+   - **Recette, par le porteur du projet.**
+
+**Ce qu'on accepte de ne pas faire, et pourquoi.**
+
+- **Aucune optimisation du dessin.** Il prend moins d'une milliseconde sur ce téléphone: ni WebGPU, ni densité réduite, ni HUD allégé ne se verraient.
+- **Pas de prédiction de notre propre ninja.** Faire avancer notre personnage avant la réponse du serveur supprimerait le retard de la saisie, mais ce serait rejouer les règles du jeu dans la page, avec les corrections visibles qu'elle impose. Le lissage à retard fixe suffit à la forme 3; la prédiction ne se discuterait que si la saisie paraissait molle après lui.
+- **Pas de nouvel hébergement du serveur** tant que l'action 3 n'a pas dit que le serveur est en cause.
+
+### 8.1 Défaut trouvé en route: les PNJ nés au même point
+
+Relevé par le porteur du projet pendant la partie Tactique: une très grosse majorité des PNJ apparaissait dans une zone arrondie près du joueur, au lieu d'être répartie sur toute la carte. Ce n'était pas l'affichage: c'est le moteur.
+
+**La cause.** Chaque PNJ doit naître à 100 pixels de toutes les autres entités, en cent tirages au plus. Passé environ 150 PNJ sur Tokyo, la carte n'a plus assez de place: les cent tirages échouent, et la recherche de secours part du **centre de la carte** en spirale. Son second passage, qui renonce à l'écart, rend alors **le même point à chaque PNJ**. Mesure sur les vraies cartes, avec leurs murs: **138 PNJ sur 300 exactement au même endroit sur Tokyo**, 335 sur 500; 161 sur 500 sur Spirit & Time; 98 sur 300 sur le Quartier. Le défaut date de l'étape 7.6, qui a porté les plafonds au-delà de ce que l'écart permet. Le jeu d'origine, limité à 150 PNJ et dont l'écart ne s'appliquait jamais (défaut X4), ne le connaissait pas.
+
+**La correction** (`positionDApparition`, `packages/sim/src/etat.ts`). Quand aucun tirage ne tient les 100 pixels, on retire au sort avec un écart de 50, puis 25, puis 0 pixel (`APPARITION.ECARTS_DE_REPLI`), avant de recourir à la spirale. Tant que la carte a la place, les tirages sont exactement ceux d'avant. Après correction, plus aucune pile, sur les quatre cartes, jusqu'à 500 PNJ.
+
+**Ce que cela change aux parties de référence.** La partie à 50 PNJ est identique. Les trois autres, à 150 et 300 PNJ, changent: elles étaient elles-mêmes touchées. À 150 PNJ sur Tokyo avec ses murs, des PNJ naissaient déjà empilés, et les ralliements y passent de 432 à 322. Nouvelles empreintes au handoff de l'étape.

@@ -144,6 +144,10 @@ Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision 
 
 **Étape 8.5 en cours au 21 septembre 2026: l'instrument est en ligne, les mesures attendent le téléphone.** `https://ninja.dendrolag.fr/?diagnostic=1` ouvre un relevé de performance dans la page (cadence, saccades, part de notre code, de PixiJS et du réseau), copiable d'un bouton, et des variantes de l'adresse essaient un remède chacune. Le protocole de recette est à la section 4 de `docs/mesures/audit-saccades-telephone.md`. L'étape reprend quand les relevés de l'iPhone 14 Pro sont dans la conversation. Elle passe toujours avant `8.3`.
 
+**Étape 8.5, verdict provisoire du 25 septembre 2026: le dessin est fluide, le réseau ne l'est pas.** Trois parties de trois minutes sur l'iPhone 14 Pro, jusqu'à 300 PNJ: 60 images par seconde, moins d'une milliseconde de dessin par image. Ce qui reste est un à-coup des personnages toutes les deux à trois secondes, les instantanés arrivant irrégulièrement (centile 99 de l'écart de 119 à 151 ms) et le lissage suivant cette irrégularité au lieu de l'absorber, plus un gel d'un quart de seconde au départ, corrigé dans l'étape par un réglage. Les très grosses saccades du 20 septembre ne sont pas reproduites: il faut savoir dans quelles conditions elles sont apparues. Défaut trouvé en route et corrigé: passé environ 150 PNJ, les PNJ naissaient empilés au même point (138 sur 300 sur Tokyo), depuis l'étape 7.6. Audit: `docs/mesures/audit-saccades-telephone.md`.
+
+**Proposition du 25 septembre 2026, issue de l'audit 8.5: étape `8.6`, le lissage à retard fixe.** Afficher la partie telle qu'elle était un peu plus de deux battements plus tôt, sur la chronologie des battements, pour qu'un instantané en retard ne se voie plus; et mesurer la régularité du battement du serveur en production. Gain attendu: moins de 1 pour cent d'images tenues au lieu de 15 à 17. Prix: 50 ms d'affichage en plus. Sa fiche se rédige au début de l'étape. Ordre proposé: `8.5` terminée, puis `8.6`, puis `8.3`; le porteur du projet tranche.
+
 ---
 
 ## 4. Carte thématique des étapes

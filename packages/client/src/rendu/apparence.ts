@@ -69,13 +69,20 @@ export const DENSITE_MAXIMALE = 2;
  * Mesure de la recette de l'etape 5.4, sur un telephone simule: les premieres images
  * dessinees portaient des taches longues de 100 a 150 millisecondes (le decor envoye a
  * la carte graphique, la lueur preparee), puis l'affichage tenait soixante images par
- * seconde. L'ecran de preparation reste pose tant que trois images d'affilee ne sont
- * pas passees sous 100 millisecondes, et jamais plus de trois secondes: au-dela, le
- * joueur voit la partie meme si elle rame, plutot qu'un ecran qui ne se leve pas.
+ * seconde. L'ecran de preparation reste pose tant que l'affichage n'est pas fluide, et
+ * jamais plus de trois secondes: au-dela, le joueur voit la partie meme si elle rame,
+ * plutot qu'un ecran qui ne se leve pas.
+ *
+ * RESSERRE A L'ETAPE 8.5, SUR MESURE DU VRAI TELEPHONE. La regle d'origine, trois images
+ * d'affilee sous 100 millisecondes, se levait trop tot: sur un iPhone 14 Pro, les trois
+ * releves de la recette portent une image de 131 a 257 millisecondes vers 0,15 a 0,26 s,
+ * PixiJS envoyant encore une texture (jusqu'a 52 ms de son temps), apres trois images
+ * rapides. Le joueur voyait donc la partie se figer a son tout debut. On exige desormais
+ * une demi-seconde d'images fluides: trente d'affilee, chacune sous deux images a 60 Hz.
  */
 export const STABILITE = {
-  imagesRapidesRequises: 3,
-  dureeImageRapideMs: 100,
+  imagesRapidesRequises: 30,
+  dureeImageRapideMs: 34,
   attenteMaximaleMs: 3000,
 } as const;
 

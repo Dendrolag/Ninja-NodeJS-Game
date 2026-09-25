@@ -24,6 +24,7 @@ import { creerHorlogeClientManuelle } from '../horloge.js';
 import type { ReseauFactice } from '../reseau.js';
 import { creerReseauFactice } from '../reseau.js';
 import type { LecteurDeSons } from '../sons/lecteur.js';
+import { STABILITE } from './apparence.js';
 import type { Boucle } from './boucle.js';
 import { faitQuiNousDeplace, lancerLaBoucle } from './boucle.js';
 import { echellePour } from './camera.js';
@@ -484,8 +485,12 @@ describe('l annonce d un affichage stable', () => {
     reseau.recevoir('partieLancee');
     reseau.recevoir('etat', trame(1, [joueur('moi', 1_000, 750)]));
 
-    for (let image = 0; image < 20; image += 1) {
-      uneImage();
+    // Assez d'images fluides, a 60 Hz, pour que le juge se prononce, et d'autres encore
+    // apres: une seule annonce.
+    for (let image = 0; image < STABILITE.imagesRapidesRequises + 20; image += 1) {
+      instant += 16;
+      horloge.avancerDe(16);
+      boucle.uneImage(instant);
     }
 
     expect(annonces).toBe(1);

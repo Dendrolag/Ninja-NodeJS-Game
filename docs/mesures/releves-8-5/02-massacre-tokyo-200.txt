@@ -1,0 +1,97 @@
+Relevé de performance Neon Ninja (étape 8.5)
+
+Relevé copié le: 2026-09-25T09:13:34.204Z
+Page: 2b5cb4fd782a4ecdb44becef7242d73cfefbb048
+Variantes: aucune
+Navigateur: Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/156.1 Mobile/15E148 Safari/604.1
+Écran: 393 × 852, densité 3
+Fenêtre: 393 × 651
+Processeurs logiques: 4
+Partie: carte map1, mode massacre, 200 PNJ au départ, pluie, 92 entités à cet instant
+Rendu: webgl 2, densité 2, canevas 786 × 1558
+Carte graphique: Apple GPU
+
+== Images
+Durée mesurée: 179,8 s, 10760 images, 59,8 par seconde
+Cadence du navigateur estimée: 58 Hz (écart médian 17,1 ms)
+Écart entre deux images: moyenne 16,71, médiane 17,1, p90 17,1, p99 23,1, max 257,0 ms
+Images d'au moins 25 ms: 41, 50 ms: 2, 100 ms: 2, 250 ms: 1
+Interruptions (page cachée): 0
+
+== Où va le temps, par image
+Notre code: moyenne 0,36, médiane 0,1, p90 1,1, p99 1,1, max 9,0 ms
+  dont saisie, sons, lissage, scène et transmission à PixiJS: moyenne 0,25, médiane 0,1, p90 1,1, p99 1,1, max 8,0 ms
+  dont HUD: moyenne 0,10, médiane 0,1, p90 1,0, p99 1,0, max 1,0 ms
+PixiJS: moyenne 0,37, médiane 0,1, p90 1,1, p99 1,1, max 52,0 ms
+Hors de nos chronomètres, en moyenne: 15,99 ms (l'attente de l'écran, puis le navigateur, la carte graphique, le ramasse-miettes)
+
+== Réseau
+Instantanés reçus: 3593, 20,0 par seconde, battements sautés: 0
+Écart entre deux instantanés: moyenne 50,06, médiane 50,1, p90 71,1, p99 119,1, max 249,0 ms
+Instantanés d'au moins 100 ms: 60
+Images tenues, le lissage attendant le réseau: 1619 (15,0 %)
+
+== Déroulé, par fenêtre de 5 s
+début s | images/s | plus longue ms | ≥ 50 ms | notre code ms | PixiJS ms | instantanés/s | écart max ms | personnages
+0 | 55,8 | 257,0 | 2 | 0,39 | 0,75 | 20,4 | 206 | 23
+5 | 60,0 | 24,0 | 0 | 0,38 | 0,30 | 20,0 | 110 | 19
+10 | 59,8 | 26,0 | 0 | 0,37 | 0,25 | 20,0 | 91 | 18
+15 | 60,0 | 24,0 | 0 | 0,44 | 0,34 | 19,6 | 144 | 19
+20 | 60,0 | 24,0 | 0 | 0,36 | 0,34 | 20,0 | 103 | 22
+25 | 60,0 | 24,0 | 0 | 0,41 | 0,33 | 20,0 | 85 | 22
+30 | 59,8 | 25,0 | 0 | 0,39 | 0,36 | 19,4 | 179 | 17
+35 | 60,0 | 25,0 | 0 | 0,35 | 0,35 | 20,0 | 142 | 23
+40 | 60,0 | 24,0 | 0 | 0,36 | 0,36 | 20,2 | 146 | 23
+45 | 60,0 | 24,0 | 0 | 0,39 | 0,32 | 20,0 | 89 | 24
+50 | 59,8 | 24,0 | 0 | 0,34 | 0,35 | 19,6 | 145 | 28
+55 | 60,0 | 24,0 | 0 | 0,32 | 0,38 | 20,0 | 98 | 20
+60 | 60,0 | 24,0 | 0 | 0,34 | 0,35 | 20,0 | 136 | 17
+65 | 60,0 | 25,0 | 0 | 0,36 | 0,43 | 20,0 | 86 | 22
+70 | 60,0 | 25,0 | 0 | 0,33 | 0,36 | 20,0 | 78 | 22
+75 | 59,8 | 30,0 | 0 | 0,43 | 0,37 | 20,0 | 80 | 24
+80 | 60,0 | 23,0 | 0 | 0,37 | 0,37 | 20,0 | 113 | 25
+85 | 60,0 | 25,0 | 0 | 0,32 | 0,32 | 20,0 | 86 | 18
+90 | 60,0 | 23,0 | 0 | 0,35 | 0,35 | 20,0 | 84 | 18
+95 | 59,8 | 24,0 | 0 | 0,34 | 0,31 | 19,8 | 212 | 15
+100 | 60,0 | 26,0 | 0 | 0,31 | 0,35 | 20,2 | 249 | 14
+105 | 60,0 | 24,0 | 0 | 0,36 | 0,41 | 20,0 | 91 | 15
+110 | 60,0 | 25,0 | 0 | 0,32 | 0,43 | 20,0 | 101 | 10
+115 | 59,8 | 25,0 | 0 | 0,35 | 0,33 | 20,0 | 122 | 12
+120 | 60,0 | 30,0 | 0 | 0,31 | 0,38 | 19,6 | 148 | 15
+125 | 60,0 | 25,0 | 0 | 0,35 | 0,38 | 20,0 | 79 | 17
+130 | 60,0 | 26,0 | 0 | 0,35 | 0,32 | 20,0 | 102 | 20
+135 | 59,8 | 23,0 | 0 | 0,40 | 0,36 | 20,0 | 124 | 15
+140 | 60,0 | 22,0 | 0 | 0,36 | 0,38 | 20,0 | 157 | 16
+145 | 60,0 | 24,0 | 0 | 0,32 | 0,28 | 20,0 | 97 | 16
+150 | 60,0 | 28,0 | 0 | 0,41 | 0,42 | 20,0 | 93 | 18
+155 | 60,0 | 25,0 | 0 | 0,38 | 0,37 | 19,8 | 209 | 18
+160 | 59,8 | 28,0 | 0 | 0,35 | 0,36 | 20,2 | 109 | 8
+165 | 60,0 | 28,0 | 0 | 0,35 | 0,37 | 20,0 | 98 | 9
+170 | 60,0 | 30,0 | 0 | 0,33 | 0,38 | 20,0 | 88 | 5
+175 | 60,0 | 25,0 | 0 | 0,39 | 0,36 | 20,1 | 159 | 6
+
+== Les 20 pires images, d'au moins 25 ms
+à s | écart ms | notre code ms, image précédente | PixiJS ms | instantanés reçus pendant
+0,26 | 257,0 | 9,00 | 52,00 | 7
+0,40 | 138,0 | 2,00 | 2,00 | 3
+79,17 | 30,0 | 0,00 | 1,00 | 0
+172,29 | 30,0 | 0,00 | 0,00 | 1
+120,11 | 30,0 | 0,00 | 1,00 | 0
+0,45 | 28,0 | 1,00 | 1,00 | 0
+150,80 | 28,0 | 0,00 | 0,00 | 0
+163,31 | 28,0 | 1,00 | 1,00 | 1
+166,05 | 28,0 | 0,00 | 1,00 | 1
+162,56 | 27,0 | 1,00 | 1,00 | 1
+170,40 | 27,0 | 0,00 | 1,00 | 0
+1,55 | 26,0 | 0,00 | 0,00 | 0
+130,18 | 26,0 | 0,00 | 0,00 | 1
+130,83 | 26,0 | 0,00 | 1,00 | 1
+162,76 | 26,0 | 0,00 | 0,00 | 0
+163,51 | 26,0 | 1,00 | 0,00 | 1
+12,51 | 26,0 | 0,00 | 0,00 | 0
+100,48 | 26,0 | 0,00 | 0,00 | 1
+118,87 | 25,0 | 0,00 | 0,00 | 1
+30,75 | 25,0 | 0,00 | 1,00 | 0
+
+Ressenti du porteur du projet: quelques faibles latences ressenties.
+Partie Massacre, un seul joueur, annoncée à 300 PNJ par le porteur du projet; le relevé en lit 200 dans les réglages de la partie.

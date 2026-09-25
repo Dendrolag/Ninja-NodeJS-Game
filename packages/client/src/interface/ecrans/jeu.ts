@@ -290,6 +290,7 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
         : pilotageParPixi(rendu.application, variantes.cadence)),
       surStabilite: () => {
         montrer(chargement, false);
+        suivi?.leverLeRideau();
       },
       ...(contexte.sons === undefined ? {} : { sons: contexte.sons }),
       niveauDeSang: contexte.niveauDeSang,

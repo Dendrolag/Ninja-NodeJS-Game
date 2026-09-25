@@ -55,6 +55,8 @@ export interface PartieSuivie {
 export interface SuiviDePartie {
   /** À donner à la boucle de rendu. */
   readonly sonde: SondeDImage;
+  /** L'écran de préparation vient de se lever: le joueur voit la partie. */
+  leverLeRideau(): void;
   /** La partie est finie: le relevé garde ses chiffres, pour être copié. */
   arreter(): void;
 }
@@ -155,6 +157,10 @@ export function creerDiagnostic(options: {
 
       return {
         sonde: releve,
+
+        leverLeRideau() {
+          releve.leverLeRideau(performance.now());
+        },
 
         arreter() {
           suivie = false;

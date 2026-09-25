@@ -1,8 +1,8 @@
 # Handoff - Étape 8.5 Audit des saccades sur téléphone, et plan d'action
 
-Date: 21 septembre 2026
+Date: 21 septembre 2026, repris le 25 septembre 2026
 Auteur: session Claude Code
-Statut: partielle (bloquée sur les relevés du vrai téléphone, comme la fiche le prévoit)
+Statut: partielle (verdict provisoire; deux réponses et un relevé du porteur du projet manquent)
 
 ## Objectif de l'étape
 
@@ -10,61 +10,86 @@ Savoir pourquoi le jeu saccade sur un iPhone 14 Pro, chiffres à l'appui, et éc
 
 ## Ce qui a été fait
 
-- **Lot A, l'instrument, fait.** `https://ninja.dendrolag.fr/?diagnostic=1` ouvre un relevé de performance dans la page. Un bandeau en bas de l'écran montre la cadence, le neuvième décile et le centile 99 de la durée d'image, et le compte des images d'au moins 50 ms depuis le début de la partie. Un bouton copie le relevé complet en texte: appareil, dos de rendu réellement utilisé, répartition des durées d'image, part de notre code (rendu et HUD séparés), de PixiJS et de ce qui échappe à nos chronomètres, réseau (instantanés, écarts, battements sautés, images où le lissage attendait), déroulé par fenêtres de 5 secondes, et les vingt pires images. Sans le paramètre, rien n'existe.
-- **Des variantes de l'adresse**, au-delà de la fiche, pour trancher chaque hypothèse par une partie de plus sans remettre le jeu en ligne: `son=0`, `hud=0`, `flou=0`, `densite=1`, `cadence=60`, `rendu=webgpu`, `lueur=0`.
-- **Lot B, le protocole de recette, écrit**: section 4 de `docs/mesures/audit-saccades-telephone.md`. Neuf parties, dans l'ordre, chacune avec son adresse, ses réglages, sa durée et l'hypothèse qu'elle tranche. Les conditions à noter (iOS, Wi-Fi ou mobile, batterie, économie d'énergie).
-- **Lot C, l'audit, commencé**: les quatre formes de saccade et leur signature dans le relevé, l'instrument expliqué pour une personne non technique, douze hypothèses (les dix de la fiche et deux trouvées à la lecture du code), et ce que le banc de l'étape 5.7 ne voit pas par construction. **Le verdict attend les relevés.**
-- **Lot D, le plan d'action: pas commencé**, il découle du verdict.
-- **Vérifié dans un navigateur de bureau**: une partie de 20 secondes à Tokyo, 59,7 images par seconde, notre code à 0,31 ms, PixiJS à 0,65 ms, 20 instantanés par seconde à 50 ms d'écart médian, 1,5 pour cent d'images tenues. C'est la référence d'un appareil qui ne saccade pas.
+### Le 21 septembre: l'instrument et le protocole
+
+- **Lot A, l'instrument.** `https://ninja.dendrolag.fr/?diagnostic=1` ouvre un relevé de performance dans la page. Un bandeau en bas de l'écran montre la cadence, le neuvième décile et le centile 99 de la durée d'image, et le compte des images d'au moins 50 ms depuis le début de la partie. Un bouton copie le relevé complet en texte: appareil, dos de rendu réellement utilisé, répartition des durées d'image, part de notre code (rendu et HUD séparés), de PixiJS et de ce qui échappe à nos chronomètres, réseau (instantanés, écarts, battements sautés, images où le lissage attendait), déroulé par fenêtres de 5 secondes, et les vingt pires images. Sans le paramètre, rien n'existe.
+- **Des variantes de l'adresse**, au-delà de la fiche: `son=0`, `hud=0`, `flou=0`, `densite=1`, `cadence=60`, `rendu=webgpu`, `lueur=0`.
+- **Lot B, le protocole de recette**: section 4 de `docs/mesures/audit-saccades-telephone.md`.
+- Commit `2b5cb4f`, en ligne le 21 septembre.
+
+### Le 25 septembre: les relevés, le verdict provisoire et deux corrections
+
+- **Trois relevés de l'iPhone 14 Pro**, trois parties entières de trois minutes, seul: Horde à 50 PNJ, Massacre à 200, Tactique à 300. Rangés dans `docs/mesures/releves-8-5/`. Pris dans Firefox pour iOS, qui dessine avec le moteur de Safari.
+- **Lot C, l'audit, verdict provisoire** (section 6 de l'audit). **Le dessin est fluide**: 59,8 à 59,9 images par seconde, centile 99 de 21 à 23 ms, notre code 0,3 à 0,4 ms et PixiJS 0,4 à 0,5 ms par image, aucune dégradation en trois minutes. **Ce qui reste est la forme 3**: les instantanés arrivent vingt fois par seconde mais irrégulièrement (centile 99 de l'écart de 119 à 151 ms), et le lissage, qui suit cette irrégularité, tient les personnages immobiles pendant 15 à 17 pour cent des images (1,5 au bureau). Et **un gel de 131 à 257 ms au tout début** de chaque partie, l'écran de préparation se levant trop tôt. Dix hypothèses sur douze écartées dans ces conditions, deux confirmées (6 et 7), la 4 confirmée au départ seulement.
+- **Les très grosses saccades du 20 septembre ne sont pas reproduites.** Le porteur du projet ressent « pas de latence forte » à « quelques faibles latences ». Section 6.4 de l'audit: le navigateur, le réseau, la partie ou la version diffèrent peut-être.
+- **Lot D, le plan d'action** (section 8 de l'audit): (1) le réglage de l'écran de préparation, fait; (2) le lissage à retard fixe, proposé comme étape `8.6`; (3) mesurer la régularité du battement du serveur en production, dans `8.6`; (4) relever les conditions du 20 septembre, par le porteur du projet.
+- **Réglage fait: l'écran de préparation attend une demi-seconde réellement fluide**, trente images d'affilée de moins de 34 ms au lieu de trois de moins de 100 ms (`STABILITE`, `rendu/apparence.ts`). Au plus trois secondes, comme avant.
+- **Le relevé dit désormais quand l'écran de préparation s'est levé**, et combien d'images d'au moins 50 ms l'ont suivi: c'est ce qui remesurera le réglage.
+- **Défaut trouvé en route et corrigé (règle 7): les PNJ naissaient empilés.** Relevé par le porteur du projet en Tactique à 300 PNJ: la plupart des PNJ apparaissaient en un disque près du joueur. Passé environ 150 PNJ sur Tokyo, les cent tirages à 100 pixels de toutes les entités échouaient, et la spirale de secours, dont le second passage ignore l'écart, rendait le même point à chaque PNJ: **138 sur 300 au même endroit sur Tokyo**, 161 sur 500 sur Spirit & Time, 98 sur 300 sur le Quartier. Présent depuis l'étape 7.6. Désormais l'écart se resserre à 50, 25 puis 0 pixel avant la spirale; plus aucune pile, sur les quatre cartes, jusqu'à 500 PNJ. Section 8.1 de l'audit.
 
 ## Fichiers créés ou modifiés
 
-- `packages/client/src/diagnostic/demande.ts` (créé): lit l'adresse; ne rend rien sans `diagnostic=1`.
-- `packages/client/src/diagnostic/histogramme.ts` (créé): répartition de durées à taille fixe, sans allocation.
-- `packages/client/src/diagnostic/releve.ts` (créé): le relevé, pur, qui rend le texte.
-- `packages/client/src/diagnostic/diagnostic.ts` (créé): le bandeau, le chronomètre du dessin de PixiJS, le suivi des instantanés, et la variante de cadence.
-- `packages/client/src/diagnostic/diagnostic.test.ts` (créé): 15 tests.
-- `packages/client/src/rendu/boucle.ts`: une sonde facultative, qui reçoit la mesure de chaque image. Sans elle, la boucle ne lit aucune horloge de plus.
-- `packages/client/src/rendu/interpolation.ts`: `enAttente`, le lissage au bout de son trajet. `interpolation.test.ts`: un test.
-- `packages/client/src/rendu/pixi.ts`: les options `preference` et `densite` de `monterRendu`, que seul le relevé passe.
-- `packages/client/src/interface/ecrans/jeu.ts`: reçoit le relevé, applique ses variantes et lui fait suivre la partie.
-- `packages/client/src/principal.ts`: crée le relevé si l'adresse le demande, et aucun lecteur de sons avec `son=0`.
-- `tests/e2e/diagnostic.spec.ts` (créé), `playwright.config.ts`: trois scénarios, projet bureau seul.
-- `docs/mesures/audit-saccades-telephone.md` (créé): l'audit.
-- `docs/plan/etape-8-5.md`: réconciliée (voir plus bas). `docs/plan/ROADMAP.md`: état de l'étape.
+Commit `2b5cb4f` (21 septembre):
 
-Aucune modification de `packages/sim`, de `packages/server`, de `legacy/` ni de `tests/caracterisation/`.
+- `packages/client/src/diagnostic/demande.ts`, `histogramme.ts`, `releve.ts`, `diagnostic.ts`, `diagnostic.test.ts` (créés): l'instrument et ses tests.
+- `packages/client/src/rendu/boucle.ts`: une sonde facultative. `rendu/interpolation.ts` (et son test): `enAttente`. `rendu/pixi.ts`: les options `preference` et `densite`.
+- `packages/client/src/interface/ecrans/jeu.ts`, `principal.ts`: le relevé et ses variantes, seulement sur demande.
+- `tests/e2e/diagnostic.spec.ts` (créé), `playwright.config.ts`.
+- `docs/mesures/audit-saccades-telephone.md` (créé), `docs/plan/etape-8-5.md`, `docs/plan/ROADMAP.md`, ce handoff.
+
+Commits du 25 septembre:
+
+- `packages/sim/src/etat.ts`: `positionDApparition` resserre l'écart avant la spirale. `packages/sim/src/etat.test.ts`: deux tests.
+- `packages/shared/src/constantes.ts`: `APPARITION.ECARTS_DE_REPLI`.
+- `packages/client/src/rendu/apparence.ts`: `STABILITE` resserré. `rendu/boucle.test.ts`: le test de l'annonce joue ses images à 60 Hz.
+- `packages/client/src/diagnostic/releve.ts`, `diagnostic.ts`, `diagnostic.test.ts`, `interface/ecrans/jeu.ts`: le lever de l'écran de préparation dans le relevé.
+- `docs/mesures/releves-8-5/` (créé): les trois relevés bruts.
+- `docs/mesures/audit-saccades-telephone.md`: hypothèses tranchées, verdict, banc, plan d'action. `docs/plan/ROADMAP.md`: verdict et proposition de l'étape `8.6`.
+
+Aucune modification de `packages/server`, de `legacy/` ni de `tests/caracterisation/`.
 
 ## Tests
 
-- Ajoutés: 16 unitaires. Les répartitions sur des séries connues (médiane, neuvième décile, centile 99, compte au-delà d'un seuil, une saccade parmi cent images que la moyenne cache), la lecture de l'adresse (rien sans le paramètre, variantes ignorées sans lui, valeurs hors bornes écartées), le relevé (attribution d'une image lente, instantanés et battements sautés, page cachée non comptée, fenêtres de 5 s, remise à zéro), le lissage qui attend le réseau. Trois de bout en bout: sans le paramètre aucun bandeau, ni à l'accueil ni en partie; avec, le relevé suit la partie et se copie; avec des variantes, la densité, la cadence plafonnée à 20, sans son et sans HUD sont appliquées et nommées.
-- Résultat: **2 445 tests unitaires au vert** (2 429 au handoff 8.4). Bout en bout: voir l'état de la CI. Types, linter et formatage verts.
-- Couverture de packages/sim: inchangée, le paquet n'est pas touché.
+- Ajoutés le 25 septembre: quatre unitaires. Deux dans le moteur: cent pixels tenus entre soixante apparitions, et cinq cents apparitions toutes distinctes et réparties sur les quatre quarts de la carte (167 positions distinctes sur 500 avant la correction). Deux dans le relevé: les images lentes après le lever de l'écran de préparation, comptées à part, et le relevé d'un écran pas encore levé.
+- Résultat: **2 449 tests unitaires au vert** (2 429 au handoff 8.4). Bout en bout: voir l'état de la CI. Types, linter et formatage verts.
+- Couverture de packages/sim: **99,88 pour cent** des instructions (99,85 au handoff 7.7).
+- **Empreintes des parties de référence** (`tests/charge/empreinte.ts`): la partie à 50 PNJ est identique; les trois autres changent, parce que le défaut des PNJ empilés les touchait déjà. Nouvelles empreintes du jeu:
+  - 150 bots, 12 joueurs, murs: `21c9a22dfb14b707748207aa4447f17b85d335e2f24e06cf6c8749157e1dfb83` (ralliements 432 avant, 322 après)
+  - 50 bots, 12 joueurs, murs: `c64c0e081766ce7df062dfba8580be86eedb2c97c5718cdccc1de426a4e59b12`, inchangée
+  - 300 bots, 12 joueurs, sans mur: `ffbc1f1f5e7b75af85ee366eb8751cf1da3d9cce61f3b36543b684b1be63863d`
+  - 150 bots, 2 joueurs, murs: `cf86bff3e179b41916157567cf2ff3bbac4609f55c01a0ea0a78b7262a5adca3`
 - État de la CI: à vérifier sur le commit poussé.
 
 ## Décisions et écarts au plan
 
-1. **La fiche se trompait sur le dos de rendu par défaut.** PixiJS 8.19 essaie WebGL d'abord, pas WebGPU. Hypothèse 1 corrigée dans la fiche: c'est WebGPU qu'il faut essayer.
-2. **Deux hypothèses ajoutées**, 11 (le HUD réécrit à chaque image, sous cinq fonds floutés) et 12 (la saisie tactile non passive). Détail et faits de code à la section 5.1 de l'audit.
-3. **Des variantes dans l'adresse**, non prévues par la fiche. Sans elles, trancher le son, le HUD, la densité ou la cadence aurait demandé une mise en ligne par essai. Elles ne valent qu'avec `diagnostic=1`, et le relevé les nomme.
-4. **La variante de cadence fait passer la boucle du jeu dans le minuteur de PixiJS**, juste avant son dessin. Plafonner les deux minuteurs séparément les aurait fait tourner décalés. En production, rien ne change: deux minuteurs, et une image de retard entre la scène et son dessin (section 5.1 de l'audit), qui n'est pas une saccade.
-5. **Le style du bandeau est posé par le code.** La politique de sécurité de la page refuse une balise de style ajoutée; la variante `flou=0` ajoute sa règle par le modèle objet des styles, qu'elle accepte.
-6. **Le relevé se copie, il ne s'envoie pas.** La fiche l'avait décidé; le serveur est hors périmètre.
+1. **La fiche se trompait sur le dos de rendu par défaut.** PixiJS 8.19 essaie WebGL d'abord, pas WebGPU.
+2. **Deux hypothèses ajoutées**, 11 (le HUD) et 12 (la saisie tactile), écartées toutes deux par les relevés.
+3. **Des variantes dans l'adresse**, non prévues par la fiche. Elles n'ont pas servi: le dessin n'est pas en cause.
+4. **Le protocole n'a pas été joué tel quel**, et c'était le bon choix: trois parties de référence ont suffi à écarter le dessin, ce que les variantes devaient départager.
+5. **Le gel du départ se corrige par un réglage**, dans l'étape, comme la fiche le demande. **Le lissage à retard fixe est une étape**, pas un réglage: c'est un changement de conception du lissage, avec un prix, 50 ms d'affichage en plus, à régler en jouant.
+6. **La correction des PNJ empilés est faite dans cette étape**, hors de son périmètre, au titre de la règle 7: un défaut de jeu vu pendant la recette, petit et bien délimité. Elle change trois empreintes de référence, parce que ces parties portaient déjà le défaut.
+7. **Pas de prédiction de notre propre ninja**: ce serait rejouer les règles dans la page. Section 8 de l'audit.
 
 ## Problèmes connus et dette
 
-- **L'étape n'est pas finie**: verdict, plan d'action, réglages faits et remesurés, et le « jouable ou pas, à quelles conditions », tout attend les relevés.
-- **Le bandeau peut couvrir un bouton** en bas d'un écran étroit. Il est petit et centré; c'est un instrument, pas un écran du jeu.
-- **Le relevé ne voit pas la carte graphique.** Safari n'offre pas de chronomètre de la carte graphique à la page: son temps tombe dans « hors de nos chronomètres », avec la mise en page et le ramasse-miettes. Les variantes sont là pour les départager.
+- **L'étape n'est pas terminée**, pour deux raisons que seul le porteur du projet peut lever:
+  - **le réglage de l'écran de préparation n'est pas remesuré sur le téléphone**: il faut une partie avec `?diagnostic=1`, et la ligne « Écran de préparation levé à … s; images d'au moins 50 ms ensuite: 0 »;
+  - **les conditions du 20 septembre sont inconnues**: navigateur (Safari?), réseau (Wi-Fi ou mobile?), partie (seul ou à plusieurs, mode, carte, PNJ).
+- **Le Massacre annoncé à 300 PNJ s'est joué à 200.** Le relevé lit le nombre dans les réglages de la partie, et aucun mode ne le réécrit (seule la validation le plafonne, par carte, à 300 sur Tokyo): le réglage était donc à 200. Pas un défaut.
+- **Le bandeau du relevé peut couvrir un bouton** en bas d'un écran étroit.
 
 Repris des handoffs précédents, inchangé: la carte du Quartier reste à juger en jouant à plusieurs; rien ne surveille que la production suit `master`.
 
 ## Prochaine action exacte
 
-**Au porteur du projet**: jouer les neuf parties de la section 4 de `docs/mesures/audit-saccades-telephone.md` sur l'iPhone 14 Pro, dans Safari, et coller chaque relevé dans la conversation avec une phrase sur le ressenti. Au minimum les parties 1, 2, 3, 4 et 8 pour que l'audit puisse conclure.
+**Au porteur du projet**, sur l'iPhone 14 Pro, avec la page du commit qui porte ces corrections:
 
-**À la session suivante**, relevés en main: les ranger dans `docs/mesures/releves-8-5/`, un fichier par partie; trancher les douze hypothèses (section 5); écrire le verdict (section 6), ce qu'il faut ajouter au banc (section 7) et le plan d'action (section 8); faire les remèdes qui tiennent dans un réglage et les faire remesurer par la même adresse; proposer les autres comme étapes au ROADMAP.
+1. Une partie avec `https://ninja.dendrolag.fr/?diagnostic=1`, par défaut, et coller le relevé: il doit dire « images d'au moins 50 ms ensuite: 0 ». Vérifier au passage que les PNJ naissent partout sur la carte, en Tactique à 300.
+2. Dire dans quelles conditions les très grosses saccades du 20 septembre sont apparues (navigateur, réseau, partie), et si possible en rejouer une dans ces conditions avec `?diagnostic=1`.
+3. Trancher l'étape `8.6` et son ordre face à `8.3`.
+
+**À la session suivante**, réponses en main: ranger les relevés, conclure la section 6.4 de l'audit, marquer l'étape terminée, et ouvrir `8.6` ou `8.3` selon la décision.
 
 ## Étape suivante
 
-Fiche à lire: `docs/plan/etape-8-5.md`, la même: l'étape reprend avec les relevés. Ensuite `8.3`, le miroir calculé, dont la fiche est à rédiger.
+Fiche à lire: `docs/plan/etape-8-5.md`, la même, pour clore l'étape. Ensuite, selon la décision du porteur du projet, `8.6` (le lissage à retard fixe, fiche à rédiger) ou `8.3` (le miroir calculé, fiche à rédiger).
