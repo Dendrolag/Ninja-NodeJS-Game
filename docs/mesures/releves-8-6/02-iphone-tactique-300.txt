@@ -1,0 +1,97 @@
+Relevé de performance Neon Ninja (étape 8.5)
+
+Relevé copié le: 2026-09-25T20:05:12.981Z
+Page: 344b929b445742c2da4186ada10f615be8ad5fa0
+Variantes: aucune
+Navigateur: Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/156.1 Mobile/15E148 Safari/604.1
+Écran: 393 × 852, densité 3
+Fenêtre: 393 × 779
+Processeurs logiques: 4
+Partie: carte map1 miroir, mode tactique, 300 PNJ au départ, pluie, 303 entités à cet instant
+Rendu: webgl 2, densité 2, canevas 786 × 1558
+Carte graphique: Apple GPU
+
+== Images
+Durée mesurée: 180,0 s, 10783 images, 59,9 par seconde
+Cadence du navigateur estimée: 58 Hz (écart médian 17,1 ms)
+Écart entre deux images: moyenne 16,69, médiane 17,1, p90 17,1, p99 18,1, max 145,0 ms
+Images d'au moins 25 ms: 13, 50 ms: 1, 100 ms: 1, 250 ms: 0
+Interruptions (page cachée): 0
+Écran de préparation levé à 0,66 s; images d'au moins 50 ms ensuite: 0
+
+== Où va le temps, par image
+Notre code: moyenne 0,40, médiane 0,1, p90 1,1, p99 1,1, max 3,0 ms
+  dont saisie, sons, lissage, scène et transmission à PixiJS: moyenne 0,29, médiane 0,1, p90 1,1, p99 1,1, max 3,0 ms
+  dont HUD: moyenne 0,09, médiane 0,1, p90 0,1, p99 1,0, max 1,0 ms
+PixiJS: moyenne 0,51, médiane 1,1, p90 1,1, p99 1,1, max 13,0 ms
+Hors de nos chronomètres, en moyenne: 15,78 ms (l'attente de l'écran, puis le navigateur, la carte graphique, le ramasse-miettes)
+
+== Réseau
+Instantanés reçus: 3590, 19,9 par seconde, battements sautés: 0
+Écart entre deux instantanés: moyenne 50,12, médiane 50,1, p90 60,1, p99 103,1, max 316,0 ms
+Instantanés d'au moins 100 ms: 41
+Images tenues, le lissage attendant le réseau: 976 (9,1 %)
+
+== Déroulé, par fenêtre de 5 s
+début s | images/s | plus longue ms | ≥ 50 ms | notre code ms | PixiJS ms | instantanés/s | écart max ms | personnages
+0 | 58,4 | 145,0 | 1 | 0,46 | 0,70 | 19,8 | 143 | 53
+5 | 59,8 | 24,0 | 0 | 0,34 | 0,39 | 20,2 | 78 | 38
+10 | 60,0 | 23,0 | 0 | 0,39 | 0,38 | 19,8 | 71 | 46
+15 | 60,0 | 24,0 | 0 | 0,50 | 0,47 | 19,4 | 273 | 46
+20 | 60,0 | 25,0 | 0 | 0,44 | 0,45 | 20,0 | 312 | 45
+25 | 59,8 | 25,0 | 0 | 0,47 | 0,41 | 20,0 | 93 | 36
+30 | 60,0 | 19,0 | 0 | 0,48 | 0,45 | 20,0 | 60 | 37
+35 | 60,0 | 23,0 | 0 | 0,43 | 0,51 | 20,0 | 179 | 37
+40 | 60,0 | 18,0 | 0 | 0,44 | 0,46 | 20,0 | 62 | 35
+45 | 60,0 | 18,0 | 0 | 0,41 | 0,49 | 19,8 | 316 | 41
+50 | 59,8 | 20,0 | 0 | 0,37 | 0,44 | 19,8 | 67 | 47
+55 | 60,0 | 22,0 | 0 | 0,36 | 0,39 | 20,0 | 114 | 42
+60 | 60,0 | 24,0 | 0 | 0,42 | 0,53 | 20,0 | 183 | 39
+65 | 60,0 | 25,0 | 0 | 0,41 | 0,56 | 20,0 | 85 | 41
+70 | 59,8 | 23,0 | 0 | 0,40 | 0,51 | 20,2 | 176 | 37
+75 | 60,0 | 24,0 | 0 | 0,41 | 0,50 | 20,0 | 181 | 46
+80 | 60,0 | 19,0 | 0 | 0,46 | 0,48 | 19,8 | 75 | 54
+85 | 60,0 | 20,0 | 0 | 0,38 | 0,46 | 20,0 | 176 | 45
+90 | 59,8 | 23,0 | 0 | 0,37 | 0,49 | 20,0 | 94 | 38
+95 | 60,0 | 18,0 | 0 | 0,36 | 0,53 | 20,2 | 186 | 47
+100 | 60,0 | 19,0 | 0 | 0,36 | 0,51 | 19,6 | 180 | 41
+105 | 60,0 | 21,0 | 0 | 0,29 | 0,49 | 20,0 | 140 | 34
+110 | 60,0 | 18,0 | 0 | 0,33 | 0,56 | 20,0 | 180 | 38
+115 | 59,8 | 22,0 | 0 | 0,37 | 0,52 | 19,6 | 150 | 39
+120 | 60,0 | 18,0 | 0 | 0,37 | 0,57 | 20,2 | 128 | 34
+125 | 60,0 | 25,0 | 0 | 0,34 | 0,56 | 19,8 | 146 | 37
+130 | 60,0 | 25,0 | 0 | 0,37 | 0,58 | 19,8 | 86 | 45
+135 | 59,8 | 18,0 | 0 | 0,40 | 0,66 | 20,2 | 83 | 43
+140 | 60,0 | 25,0 | 0 | 0,38 | 0,61 | 19,6 | 65 | 43
+145 | 60,0 | 24,0 | 0 | 0,34 | 0,47 | 20,4 | 150 | 38
+150 | 60,0 | 24,0 | 0 | 0,43 | 0,54 | 19,8 | 74 | 35
+155 | 59,8 | 22,0 | 0 | 0,46 | 0,50 | 20,0 | 195 | 46
+160 | 60,0 | 23,0 | 0 | 0,31 | 0,51 | 20,2 | 114 | 55
+165 | 60,0 | 25,0 | 0 | 0,40 | 0,61 | 20,0 | 84 | 50
+170 | 60,0 | 27,0 | 0 | 0,43 | 0,56 | 19,8 | 71 | 43
+175 | 60,0 | 26,0 | 0 | 0,53 | 0,61 | 19,9 | 189 | 44
+
+== Les 20 pires images, d'au moins 25 ms
+à s | écart ms | notre code ms, image précédente | PixiJS ms | instantanés reçus pendant
+0,14 | 145,0 | 2,00 | 0,00 | 2
+0,21 | 31,0 | 1,00 | 2,00 | 2
+171,70 | 27,0 | 0,00 | 1,00 | 1
+176,56 | 26,0 | 0,00 | 1,00 | 1
+29,84 | 25,0 | 1,00 | 0,00 | 0
+1,40 | 25,0 | 0,00 | 0,00 | 0
+130,12 | 25,0 | 0,00 | 1,00 | 1
+143,90 | 25,0 | 1,00 | 1,00 | 0
+168,82 | 25,0 | 1,00 | 1,00 | 1
+68,59 | 25,0 | 1,00 | 1,00 | 0
+127,42 | 25,0 | 0,00 | 0,00 | 2
+20,38 | 25,0 | 0,00 | 0,00 | 0
+128,82 | 25,0 | 0,00 | 0,00 | 1
+
+== Serveur, battements de toutes ses parties
+Fenêtre: les 300 dernières secondes, 3590 battements (lu il y a 5 s)
+Écart entre deux battements d'une partie, 50 ms visés: médiane 50,0, p90 51,2, p99 52,2, max 205,4 ms
+Battements d'au moins 100 ms: 3
+Durée d'un battement (moteur, codage, envoi): médiane 2,0, p90 2,7, p99 6,4, max 97,6 ms
+
+Ressenti du porteur du projet: partie fluide.
+Partie Tactique, un seul joueur, 300 PNJ, iPhone 14 Pro, le 25 septembre 2026 au soir.

@@ -53,11 +53,11 @@ Aucune modification de `packages/sim`, de `legacy/` ni de `tests/caracterisation
 
 - **Les scénarios Tactique au pouce échouent par intermittence en CI**, antérieurs à 8.5 et 8.6: premier essai en échec les 20 et 21 septembre, trois essais en échec le 25 septembre sur `66b49ca`, vert à la relance, jamais reproduit en local (six sur six). Planifié comme étape `8.7` au ROADMAP (règle 7).
 - **Le banc de rendu échoue en local ce 25 septembre**, notre code à 4,9 ou 5,0 ms au lieu de moins de 4,2 à 500 sprites au processeur ralenti. Le même banc, sur le code d'avant la 8.6, échoue de la même façon, et PixiJS y est lui-même 70 pour cent plus lent que dans ses mesures de référence: c'est la machine, chargée par l'autre conversation, pas le code. En CI, ce plafond ne s'exige pas (étape 4.5).
-- **La conclusion reste à confirmer sur l'iPhone**, par un relevé qui porte les deux côtés.
+- **Confirmé sur l'iPhone le 25 septembre au soir** (`docs/mesures/releves-8-6/02-iphone-tactique-300.txt`, section 6.4 ter de l'audit): partie Tactique à 300 PNJ ressentie fluide; sur 41 instantanés arrivés avec au moins 100 ms d'écart, le serveur n'en explique que 3; l'écran de préparation couvre le gel du départ. Le serveur a eu un seul battement lent en trois minutes, 97,6 ms à 300 PNJ.
 
 ## Prochaine action exacte
 
-**Au porteur du projet**, quand il le voudra: une partie avec `https://ninja.dendrolag.fr/?diagnostic=1` sur l'iPhone, idéalement un jour où ça saccade, et coller le relevé. Il dira à la fois si le serveur est resté à l'heure (section « Serveur ») et si l'écran de préparation couvre bien le gel du départ (« images d'au moins 50 ms ensuite: 0 »).
+Rien n'attend le porteur du projet: le relevé de l'iPhone est pris et l'étape close. Le relevé `?diagnostic=1` reste en ligne pour un prochain doute.
 
 **À la session suivante**: l'étape `8.3` est déjà faite par une autre conversation (commit `f883faf`, handoff `docs/handoffs/etape-8-3-handoff.md`). Lire le dernier handoff et la section 3 du ROADMAP; la prochaine étape planifiée non faite est `8.7`, les scénarios Tactique au pouce.
 

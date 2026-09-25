@@ -2,7 +2,7 @@
 
 Date: 21 septembre 2026, repris le 25 septembre 2026
 Auteur: session Claude Code
-Statut: terminée le 25 septembre 2026, à la demande du porteur du projet; la remesure du réglage sur le téléphone se fait avec le relevé de la recette de 8.6
+Statut: terminée le 25 septembre 2026; le réglage de l'écran de préparation est remesuré sur le téléphone le soir même (aucune image lente après son lever, `docs/mesures/releves-8-6/02-iphone-tactique-300.txt`)
 
 ## Objectif de l'étape
 

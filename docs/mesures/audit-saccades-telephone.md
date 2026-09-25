@@ -2,7 +2,7 @@
 
 Rapport de l'étape 8.5. Fiche: `docs/plan/etape-8-5.md`.
 
-**Statut au 25 septembre 2026: trois parties mesurées sur l'iPhone 14 Pro, le verdict est provisoire.** Sur ce téléphone et dans ces conditions, **le dessin est fluide**: 60 images par seconde tenues trois minutes, en Horde, en Massacre et en Tactique, jusqu'à 300 PNJ. Ce qui reste est un défaut de **réseau** que le lissage amplifie (forme 3), et un gel d'une fraction de seconde au tout début de chaque partie. Les très grosses saccades du 20 septembre, dans les mêmes conditions, ne sont pas reproduites: la cause la plus probable est une variation dans le temps du réseau ou du serveur (section 6.4). Pas de retard ajouté à l'affichage, sur décision du porteur du projet (section 8).
+**Statut au 25 septembre 2026, au soir: audit clos.** Quatre parties mesurées sur l'iPhone 14 Pro, et le serveur mesuré en production (étape 8.6); conclusion à la section 6.4 ter. Ce qui suit était le statut du matin: Sur ce téléphone et dans ces conditions, **le dessin est fluide**: 60 images par seconde tenues trois minutes, en Horde, en Massacre et en Tactique, jusqu'à 300 PNJ. Ce qui reste est un défaut de **réseau** que le lissage amplifie (forme 3), et un gel d'une fraction de seconde au tout début de chaque partie. Les très grosses saccades du 20 septembre, dans les mêmes conditions, ne sont pas reproduites: la cause la plus probable est une variation dans le temps du réseau ou du serveur (section 6.4). Pas de retard ajouté à l'affichage, sur décision du porteur du projet (section 8).
 
 ## 1. Le problème, et pourquoi on mesure d'abord
 
@@ -194,6 +194,22 @@ Première mesure du battement en production, une fois le chronomètre de l'étap
 **Ce qui reste à faire pour le confirmer**: un relevé de l'iPhone, qui porte désormais les deux côtés dans un même texte. Si la section « Serveur » y reste à 50 ms pendant que la page reçoit ses instantanés en retard, c'est établi. Un seul relevé ne suffit pas pour un phénomène qui varie d'un jour à l'autre: le serveur peut peiner un autre jour, et le relevé le dira.
 
 **Remarque**: dans ce relevé-ci, le navigateur intégré, en arrière-plan, dessinait à 30 images par seconde, et le lissage tenait donc 24 pour cent des images. C'est un effet de la cadence réduite, pas du réseau: à 30 Hz, une image sur trois tombe après la fin du trajet du lissage.
+
+### 6.4 ter Le relevé de l'iPhone confirme: le retard naît sur le chemin (25 septembre 2026, au soir)
+
+Une partie Tactique de trois minutes à 300 PNJ sur l'iPhone 14 Pro, ressentie **fluide**, avec le relevé qui porte désormais les deux côtés. Relevé brut: `docs/mesures/releves-8-6/02-iphone-tactique-300.txt`.
+
+| Mesure, même partie                             | Médiane |  p90 |   p99 | Maximum | D'au moins 100 ms |
+| ----------------------------------------------- | ------: | ---: | ----: | ------: | ----------------: |
+| Écart entre deux battements, au serveur (ms)    |    50,0 | 51,2 |  52,2 |   205,4 |          3 / 3590 |
+| Écart entre deux instantanés, sur l'iPhone (ms) |    50,1 | 60,1 | 103,1 |   316,0 |         41 / 3590 |
+
+- **Le retard naît sur le chemin, pas au serveur.** Sur 41 instantanés arrivés avec au moins 100 ms d'écart, le serveur n'en explique que 3. Les 38 autres naissent entre le serveur et le téléphone, et le relevé de l'ordinateur, sur le même serveur, en voyait deux fois moins en une minute et demie (section 6.4 bis): c'est le dernier tronçon, celui du téléphone.
+- **Le serveur a eu un seul hoquet**: un battement de 97,6 ms, à 300 PNJ, d'où ses trois écarts de plus de 100 ms. Une fois en trois minutes: pas de quoi changer d'hébergement.
+- **Moins d'images tenues que le matin**: 9,1 pour cent contre 15 à 17. Même téléphone, même réseau: l'irrégularité du dernier tronçon varie d'un moment à l'autre, ce qui explique aussi les grosses saccades du 20 septembre (section 6.4).
+- **Le réglage de l'écran de préparation est remesuré sur le téléphone**: levé à 0,66 s, et **aucune image d'au moins 50 ms ensuite**. Le gel du départ, 145 ms à 0,14 s, s'est passé sous l'écran. Action 1 de la section 8 confirmée.
+
+**Conclusion de l'audit.** Sur un iPhone 14 Pro, le jeu est jouable et fluide à 300 PNJ. Le dessin a une marge de plus de 90 pour cent, le serveur bat à l'heure, et le gel du départ est caché. Ce qui reste, des à-coups des personnages quand le lien du téléphone hoquette, se voit plus ou moins selon les moments et ne se corrige que dans le lissage, sans retard ajouté (section 8, action 3), si le porteur du projet le juge un jour utile.
 
 ### 6.5 Jouable ou pas, et à quelles conditions
 
