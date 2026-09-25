@@ -855,7 +855,18 @@ export function identifiantSuivant(
  *
  * La distance de securite reste un souhait, pas une obligation: si la carte est
  * trop encombree pour la respecter, on prefere une position dans un espace libre
- * a un echec. C'est le role du second passage de la spirale.
+ * a un echec.
+ *
+ * L'ECART SE RESSERRE AVANT QU'ON RENONCE AU HASARD (etape 8.5). Passe environ
+ * cent cinquante entites sur Tokyo, la carte n'a plus de place a cent pixels de
+ * toutes les autres. Les tirages echouaient alors tous, et la spirale de secours,
+ * dont le second passage ignore l'ecart, rendait le meme point a chaque entite:
+ * 138 PNJ sur 300 naissaient exactement au meme endroit, pres du centre. Ce
+ * n'etait pas visible avant l'etape 7.6, qui a porte les plafonds au-dela de 150.
+ * On retire donc au sort avec des ecarts de plus en plus serres
+ * (APPARITION.ECARTS_DE_REPLI), jusqu'a zero. La spirale ne sert plus que quand
+ * le terrain lui-meme n'a presque aucune place libre dans la bande ou l'on tire.
+ * Tant que la carte a la place, les tirages sont exactement ceux d'avant.
  *
  * @param alea Generateur a graine. Le tirage le fait avancer.
  * @param terrain Le terrain, qui porte aussi les dimensions de la carte.
@@ -873,34 +884,40 @@ export function positionDApparition(
 } {
   let generateur = alea;
 
-  for (let tentative = 0; tentative < APPARITION.TENTATIVES_MAXIMUM; tentative += 1) {
-    const tirageX = reel(
-      generateur,
-      APPARITION.MARGE_BORD,
-      terrain.largeur - APPARITION.MARGE_BORD,
-    );
-    const tirageY = reel(
-      tirageX.alea,
-      APPARITION.MARGE_BORD,
-      terrain.hauteur - APPARITION.MARGE_BORD,
-    );
-    generateur = tirageY.alea;
+  for (const ecart of [APPARITION.DISTANCE_DE_SECURITE, ...APPARITION.ECARTS_DE_REPLI]) {
+    for (let tentative = 0; tentative < APPARITION.TENTATIVES_MAXIMUM; tentative += 1) {
+      const tirageX = reel(
+        generateur,
+        APPARITION.MARGE_BORD,
+        terrain.largeur - APPARITION.MARGE_BORD,
+      );
+      const tirageY = reel(
+        tirageX.alea,
+        APPARITION.MARGE_BORD,
+        terrain.hauteur - APPARITION.MARGE_BORD,
+      );
+      generateur = tirageY.alea;
 
-    const candidate = { x: tirageX.valeur, y: tirageY.valeur };
-    if (positionTenable(terrain, candidate, rayon) && aLEcartDe(candidate, occupees)) {
-      return { valeur: candidate, alea: generateur };
+      const candidate = { x: tirageX.valeur, y: tirageY.valeur };
+      if (positionTenable(terrain, candidate, rayon) && aLEcartDe(candidate, occupees, ecart)) {
+        return { valeur: candidate, alea: generateur };
+      }
     }
   }
 
   return { valeur: positionDeSecours(terrain, occupees, rayon), alea: generateur };
 }
 
-/** Une position respecte-t-elle la distance de securite avec toutes les autres ? */
-function aLEcartDe(position: Position, occupees: readonly Position[]): boolean {
-  return occupees.every(
-    (autre) =>
-      Math.hypot(position.x - autre.x, position.y - autre.y) >= APPARITION.DISTANCE_DE_SECURITE,
-  );
+/**
+ * Une position est-elle a cet ecart de toutes les autres ? La distance de securite par
+ * defaut; un ecart plus serre quand la carte n'a plus la place.
+ */
+function aLEcartDe(
+  position: Position,
+  occupees: readonly Position[],
+  ecart: number = APPARITION.DISTANCE_DE_SECURITE,
+): boolean {
+  return occupees.every((autre) => Math.hypot(position.x - autre.x, position.y - autre.y) >= ecart);
 }
 
 /**

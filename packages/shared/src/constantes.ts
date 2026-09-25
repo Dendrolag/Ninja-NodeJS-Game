@@ -512,8 +512,15 @@ export const APPARITION = {
   MARGE_BORD: 100,
   /** Distance minimale souhaitee entre deux entites qui apparaissent, en pixels. */
   DISTANCE_DE_SECURITE: 100,
-  /** Nombre maximal de tirages avant d'abandonner la recherche d'une position. */
+  /** Nombre maximal de tirages avant d'abandonner la recherche d'une position, par ecart essaye. */
   TENTATIVES_MAXIMUM: 100,
+  /**
+   * Les ecarts, en pixels, essayes tour a tour quand aucun tirage ne tient la distance
+   * de securite: la carte n'a plus la place a cent pixels de toutes les entites, ce qui
+   * arrive passe environ 150 PNJ sur Tokyo (etape 8.5). Le dernier, zero, ne demande
+   * qu'une place libre.
+   */
+  ECARTS_DE_REPLI: [50, 25, 0],
   /**
    * Ecart entre deux anneaux de la recherche en spirale, en pixels. C'est le
    * chemin de secours emprunte quand tous les tirages au sort ont echoue.

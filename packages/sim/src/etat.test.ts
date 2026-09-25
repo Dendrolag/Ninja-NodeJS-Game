@@ -165,6 +165,59 @@ describe('positionDApparition', () => {
     }
   });
 
+  /** Fait apparaitre autant d'entites une a une, chacune a l'ecart des precedentes. */
+  const peupler = (nombre: number): readonly { x: number; y: number }[] => {
+    const terrain = carteSansMur(CARTES.map1);
+    const places: { x: number; y: number }[] = [];
+    let alea = creerAlea(7);
+
+    for (let index = 0; index < nombre; index += 1) {
+      const tirage = positionDApparition(alea, terrain, places);
+      places.push(tirage.valeur);
+      alea = tirage.alea;
+    }
+
+    return places;
+  };
+
+  it('garde cent pixels entre les apparitions tant que la carte a la place', () => {
+    const places = peupler(60);
+
+    for (const [rang, place] of places.entries()) {
+      for (const autre of places.slice(rang + 1)) {
+        expect(Math.hypot(place.x - autre.x, place.y - autre.y)).toBeGreaterThanOrEqual(
+          APPARITION.DISTANCE_DE_SECURITE,
+        );
+      }
+    }
+  });
+
+  it('repartit cinq cents entites sur toute la carte, sans les empiler', () => {
+    // Releve de l'etape 8.5, en Tactique a 300 PNJ sur Tokyo: une grosse majorite des PNJ
+    // naissait en un disque pres du centre. Passe environ 150 entites, la carte n'a plus
+    // de place a cent pixels de toutes les autres; les tirages echouaient, et la spirale
+    // de secours, dont le second passage ignore l'ecart, rendait le meme point a tous:
+    // 138 PNJ sur 300 exactement au meme endroit. L'ecart se resserre desormais avant
+    // de renoncer au tirage au sort.
+    const places = peupler(500);
+    const distinctes = new Set(places.map(({ x, y }) => `${x.toFixed(3)},${y.toFixed(3)}`));
+
+    expect(distinctes.size).toBe(500);
+
+    // Chaque quart de la carte en recoit sa part, a peu pres.
+    for (const [gauche, haut] of [
+      [true, true],
+      [true, false],
+      [false, true],
+      [false, false],
+    ]) {
+      const dansLeQuart = places.filter(
+        ({ x, y }) => x < 1000 === gauche && y < 750 === haut,
+      ).length;
+      expect(dansLeQuart).toBeGreaterThan(90);
+    }
+  });
+
   it('trouve une place en spirale quand tous les tirages echouent', () => {
     // CORRECTION DU DEFAUT X3. Le chemin de secours du legacy levait une erreur
     // au lieu de replier quoi que ce soit. Ici la seule place libre est hors de
