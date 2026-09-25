@@ -35,12 +35,7 @@ export type SaisieDeReglages = Readonly<Record<string, string | boolean>>;
  */
 const DELAI_CAPTURE_DE_BOT_MS = 12_000;
 
-/**
- * La part de l'arme ou le joueur a l'affut vise, en portee et en ouverture.
- *
- * Un faux ninja prevu au bord de l'arme en sortirait pour peu que le coup arrive un peu
- * plus tot ou plus tard que prevu.
- */
+/** La part de l'arme ou le joueur a l'affut vise un faux ninja en marche, en portee et en ouverture. */
 const MARGE_DE_VISEE = 0.75;
 
 /** La duree supposee d'un coup, appui et lever, avant que le premier la mesure. */
@@ -433,10 +428,6 @@ export function prendreUnFauxNinjaDUnCoup(
   frapper: () => Promise<void>,
   prise: () => boolean,
 ): Mission {
-  const armeReduite = geometrieDuCone(
-    angleDuCone(arme) * MARGE_DE_VISEE,
-    arme.porteePx * MARGE_DE_VISEE,
-  );
   let dureeDuCoupMs = DUREE_D_UN_COUP_SUPPOSEE_MS;
 
   return {
@@ -454,7 +445,7 @@ export function prendreUnFauxNinjaDUnCoup(
     },
     accomplie: prise,
     aLAffut: async () => {
-      if (!unFauxNinjaDansLArmeAuCoup(partie, pseudo, armeReduite, dureeDuCoupMs)) {
+      if (!unFauxNinjaDansLArmeAuCoup(partie, pseudo, arme, dureeDuCoupMs)) {
         return;
       }
 
@@ -517,7 +508,9 @@ function orientationDe(
  * Le coup arrive a peu pres a la moitie de la duree du geste, appui puis lever: l'appui
  * compte, le lever ne fait rien. Un faux ninja en pause y reste si sa pause dure jusque-la;
  * un faux ninja en marche avance tout droit s'il ne change ni de cap ni d'allure d'ici la,
- * et si aucun mur ne l'arrete.
+ * et si aucun mur ne l'arrete. Un faux ninja en pause se vise dans toute l'arme: ni lui ni
+ * le joueur ne bougent. Un faux ninja en marche, dans une arme reduite: il en sortirait
+ * pour peu que le coup arrive un peu plus tot ou plus tard que prevu.
  * Les autres ne se prevoient pas, et ne comptent pas.
  */
 function unFauxNinjaDansLArmeAuCoup(
@@ -533,6 +526,10 @@ function unFauxNinjaDansLArmeAuCoup(
     return false;
   }
 
+  const armeReduite = geometrieDuCone(
+    angleDuCone(arme) * MARGE_DE_VISEE,
+    arme.porteePx * MARGE_DE_VISEE,
+  );
   const arriveeDuCoupMs = dureeDuCoupMs / 2;
   const certitudeMs = arriveeDuCoupMs + MARGE_DE_PREVISION_MS;
 
@@ -545,22 +542,21 @@ function unFauxNinjaDansLArmeAuCoup(
       return false;
     }
 
-    let prevue = bot.position;
-
-    if (bot.enMouvement) {
-      if (bot.avantChangementDeCapMs < certitudeMs) {
-        return false;
-      }
-
-      const pas = (VITESSES.BOT_PX_PAR_SECONDE * arriveeDuCoupMs) / 1000;
-      prevue = { x: bot.position.x + bot.cap.x * pas, y: bot.position.y + bot.cap.y * pas };
-
-      if (!trajetTenable(partie.etat.terrain, bot.position, prevue, RAYON_ENTITE)) {
-        return false;
-      }
+    if (!bot.enMouvement) {
+      return dansLeCone(joueur.position, orientation, bot.position, arme);
     }
 
-    return dansLeCone(joueur.position, orientation, prevue, arme);
+    if (bot.avantChangementDeCapMs < certitudeMs) {
+      return false;
+    }
+
+    const pas = (VITESSES.BOT_PX_PAR_SECONDE * arriveeDuCoupMs) / 1000;
+    const prevue = { x: bot.position.x + bot.cap.x * pas, y: bot.position.y + bot.cap.y * pas };
+
+    return (
+      trajetTenable(partie.etat.terrain, bot.position, prevue, RAYON_ENTITE) &&
+      dansLeCone(joueur.position, orientation, prevue, armeReduite)
+    );
   });
 }
 
