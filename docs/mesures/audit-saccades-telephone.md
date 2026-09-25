@@ -179,6 +179,22 @@ Ce qui a varié n'est donc ni le téléphone ni le code du dessin, mais **ce qui
 
 **Ce qui reste à faire pour le confirmer**: un relevé `?diagnostic=1` pris un jour où le jeu saccade de nouveau. S'il montre des images fluides et des écarts entre instantanés de plusieurs centaines de millisecondes, la cause est établie. Le porteur du projet refera un essai.
 
+### 6.4 bis Le serveur bat à l'heure (étape 8.6, 25 septembre 2026)
+
+Première mesure du battement en production, une fois le chronomètre de l'étape 8.6 en ligne (commit `f883faf`): une partie privée d'une minute et demie, un joueur, Tokyo, 50 PNJ, jouée depuis l'ordinateur de développement. Relevé brut: `docs/mesures/releves-8-6/01-production-ordinateur.txt`.
+
+| Mesure                                       | Médiane |  p90 |  p99 | Maximum | D'au moins 100 ms |
+| -------------------------------------------- | ------: | ---: | ---: | ------: | ----------------: |
+| Écart entre deux battements, au serveur (ms) |    49,9 | 50,7 | 52,6 |    70,9 |          0 / 1197 |
+| Écart entre deux instantanés, à la page (ms) |    50,0 | 51,6 | 56,6 |   115,6 |          2 / 1717 |
+| Durée d'un battement, au serveur (ms)        |     0,6 |  0,9 |  3,9 |    17,9 |                   |
+
+**Le serveur de production part à l'heure**, malgré son offre gratuite: aucun battement en retard en une minute et demie, et un battement lui coûte moins d'une milliseconde. Vue d'un ordinateur relié au même serveur, l'arrivée est presque aussi régulière que le départ. Les écarts de 119 à 151 ms au centile 99 relevés sur l'iPhone le 25 au matin, et les grosses saccades du 20, ne naissent donc probablement **ni au serveur, ni sur Internet**, mais sur le **dernier tronçon, entre le téléphone et le réseau**: le Wi-Fi ou la radio du téléphone, qui peut regrouper ses réceptions pour économiser sa batterie.
+
+**Ce qui reste à faire pour le confirmer**: un relevé de l'iPhone, qui porte désormais les deux côtés dans un même texte. Si la section « Serveur » y reste à 50 ms pendant que la page reçoit ses instantanés en retard, c'est établi. Un seul relevé ne suffit pas pour un phénomène qui varie d'un jour à l'autre: le serveur peut peiner un autre jour, et le relevé le dira.
+
+**Remarque**: dans ce relevé-ci, le navigateur intégré, en arrière-plan, dessinait à 30 images par seconde, et le lissage tenait donc 24 pour cent des images. C'est un effet de la cadence réduite, pas du réseau: à 30 Hz, une image sur trois tombe après la fin du trajet du lissage.
+
 ### 6.5 Jouable ou pas, et à quelles conditions
 
 **Oui, sur un iPhone 14 Pro, dans les conditions mesurées**: un joueur, jusqu'à 300 PNJ, trois modes. Le dessin garde plus de 90 pour cent de marge. Ce qui gêne encore est un à-coup des personnages toutes les deux à trois secondes, dû aux arrivées irrégulières, et qui peut grossir certains jours au point de rendre le jeu pénible (section 6.4). La section 8 dit comment en trouver l'origine.
@@ -200,10 +216,10 @@ Ordonné par gain rapporté au coût.
    - Gain espéré: le gel de 131 à 257 ms du départ passe sous l'écran de préparation, dans les trois relevés.
    - Risque: l'écran se lève une demi-seconde plus tard. Il se lève toujours au bout de trois secondes au plus.
    - **Réglage, fait à l'étape 8.5**, à remesurer: le relevé dit désormais combien d'images d'au moins 50 ms suivent le lever de l'écran. Il en faut zéro.
-2. **Mesurer la régularité du battement du serveur en production.** Le serveur relèverait l'écart réel entre deux de ses battements et l'exposerait par sa route `/sante`, et le relevé de la page l'écrirait à côté du sien. C'est ce qui dira si l'irrégularité naît au serveur, hébergé gratuitement, ou sur le chemin jusqu'au téléphone.
+2. **Mesurer la régularité du battement du serveur en production.** Le serveur relève l'écart réel entre deux de ses battements et l'expose par sa route `/sante`, et le relevé de la page l'écrit à côté du sien. C'est ce qui dit si l'irrégularité naît au serveur, hébergé gratuitement, ou sur le chemin jusqu'au téléphone. **Fait à l'étape 8.6**: le serveur bat à l'heure (section 6.4 bis).
    - Gain: aucun en soi, mais il décide de la suite. Si le serveur est en cause, un hébergement qui garantit sa puissance corrige tout sans rien changer au jeu. S'il ne l'est pas, seul le lissage peut agir.
    - Risque: aucun pour le jeu.
-   - **Étape, proposée au ROADMAP: `8.6`.**
+   - **Étape `8.6`, faite le 25 septembre 2026.**
 3. **Adoucir le lissage sans ajouter de retard**, à décider après l'action 2 et seulement si le réseau est en cause. Deux voies, à éprouver en jouant:
    - **régler la vitesse du lissage sur le battement nominal de 50 ms**, et non sur le dernier écart observé. Après un instantané en retard, le lissage ne ralentit plus les personnages pour la suite: il supprime la course qui suit chaque arrêt. Il ne supprime pas l'arrêt lui-même.
    - **prolonger brièvement le mouvement** quand l'instantané suivant tarde, d'au plus un battement, dans la direction connue de chaque personnage. Plus d'arrêt tant que le retard reste court, mais une petite correction visible quand un personnage a tourné entre-temps. C'est contraire au principe écrit du lissage, « on interpole, on n'extrapole jamais »: à trancher par le porteur du projet.

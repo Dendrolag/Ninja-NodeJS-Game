@@ -1,0 +1,86 @@
+Relevé de performance Neon Ninja (étape 8.5)
+
+Relevé copié le: 2026-09-25T13:49:54.635Z
+Page: f883faf584ff33ebcdc97249aff63a6bd5e20ff3
+Variantes: aucune
+Navigateur: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Claude/2.9939.2 Chrome/152.0.7977.130 Safari/537.36 MSIX
+Écran: 2560 × 1440, densité 1
+Fenêtre: 1024 × 768
+Processeurs logiques: 16
+Mémoire JavaScript: 9,8 Mo
+Partie: carte map1, mode classique, 50 PNJ au départ, pluie, 51 entités à cet instant
+Rendu: webgl 2, densité 1, canevas 1024 × 768
+Carte graphique: ANGLE (NVIDIA, NVIDIA GeForce RTX 2080 Ti (0x00001E04) Direct3D11 vs_5_0 ps_5_0, D3D11)
+
+== Images
+Durée mesurée: 85,7 s, 2539 images, 29,6 par seconde
+Cadence du navigateur estimée: 30 Hz (écart médian 33,4 ms)
+Écart entre deux images: moyenne 33,75, médiane 33,4, p90 33,5, p99 33,6, max 1000,8 ms
+Images d'au moins 25 ms: 2538, 50 ms: 2, 100 ms: 1, 250 ms: 1
+Interruptions (page cachée): 0
+Écran de préparation levé à 2,09 s; images d'au moins 50 ms ensuite: 0
+
+== Où va le temps, par image
+Notre code: moyenne 0,27, médiane 0,3, p90 0,4, p99 0,7, max 4,2 ms
+  dont saisie, sons, lissage, scène et transmission à PixiJS: moyenne 0,16, médiane 0,2, p90 0,3, p99 0,5, max 3,5 ms
+  dont HUD: moyenne 0,10, médiane 0,2, p90 0,3, p99 0,3, max 0,5 ms
+PixiJS: moyenne 0,54, médiane 0,6, p90 0,7, p99 1,1, max 44,7 ms
+Hors de nos chronomètres, en moyenne: 32,94 ms (l'attente de l'écran, puis le navigateur, la carte graphique, le ramasse-miettes)
+
+== Réseau
+Instantanés reçus: 1717, 20,0 par seconde, battements sautés: 0
+Écart entre deux instantanés: moyenne 49,99, médiane 50,0, p90 51,6, p99 56,6, max 115,6 ms
+Instantanés d'au moins 100 ms: 2
+Images tenues, le lissage attendant le réseau: 601 (23,7 %)
+
+== Déroulé, par fenêtre de 5 s
+début s | images/s | plus longue ms | ≥ 50 ms | notre code ms | PixiJS ms | instantanés/s | écart max ms | personnages
+0 | 24,2 | 1000,8 | 2 | 0,39 | 1,26 | 20,0 | 116 | 25
+5 | 30,0 | 33,5 | 0 | 0,28 | 0,47 | 20,0 | 61 | 28
+10 | 30,0 | 33,5 | 0 | 0,36 | 0,54 | 20,0 | 56 | 33
+15 | 30,0 | 33,5 | 0 | 0,31 | 0,57 | 20,0 | 54 | 29
+20 | 29,8 | 33,5 | 0 | 0,27 | 0,51 | 20,0 | 56 | 30
+25 | 30,0 | 33,6 | 0 | 0,25 | 0,50 | 20,0 | 65 | 32
+30 | 30,0 | 33,5 | 0 | 0,31 | 0,61 | 20,0 | 60 | 34
+35 | 30,0 | 33,5 | 0 | 0,25 | 0,58 | 20,0 | 67 | 29
+40 | 30,0 | 33,5 | 0 | 0,28 | 0,56 | 20,0 | 57 | 27
+45 | 30,0 | 33,5 | 0 | 0,25 | 0,49 | 20,0 | 57 | 28
+50 | 30,0 | 33,5 | 0 | 0,24 | 0,49 | 20,0 | 61 | 26
+55 | 30,0 | 33,5 | 0 | 0,24 | 0,51 | 20,0 | 70 | 26
+60 | 29,8 | 33,5 | 0 | 0,24 | 0,54 | 20,0 | 55 | 27
+65 | 30,0 | 33,5 | 0 | 0,23 | 0,48 | 20,0 | 58 | 28
+70 | 30,0 | 33,6 | 0 | 0,24 | 0,38 | 20,0 | 56 | 22
+75 | 30,0 | 33,5 | 0 | 0,22 | 0,43 | 20,0 | 53 | 22
+80 | 30,0 | 33,5 | 0 | 0,22 | 0,47 | 20,0 | 53 | 23
+85 | 30,6 | 33,5 | 0 | 0,20 | 0,41 | 21,4 | 53 | 23
+
+== Les 20 pires images, d'au moins 25 ms
+à s | écart ms | notre code ms, image précédente | PixiJS ms | instantanés reçus pendant
+1,00 | 1000,8 | 4,20 | 44,70 | 20
+1,08 | 50,0 | 1,10 | 1,50 | 2
+70,41 | 33,6 | 0,30 | 0,40 | 1
+29,94 | 33,6 | 0,70 | 1,10 | 1
+1,15 | 33,5 | 0,80 | 6,60 | 0
+5,02 | 33,5 | 0,40 | 0,50 | 1
+5,29 | 33,5 | 0,40 | 0,60 | 1
+8,99 | 33,5 | 0,40 | 0,40 | 1
+9,46 | 33,5 | 0,30 | 0,40 | 1
+10,46 | 33,5 | 0,30 | 0,40 | 1
+10,59 | 33,5 | 0,40 | 0,50 | 0
+10,76 | 33,5 | 0,30 | 0,50 | 1
+11,03 | 33,5 | 0,40 | 0,50 | 1
+11,43 | 33,5 | 0,30 | 0,60 | 1
+11,99 | 33,5 | 0,30 | 0,50 | 1
+12,29 | 33,5 | 0,20 | 0,40 | 0
+1,92 | 33,5 | 0,30 | 0,90 | 1
+1,58 | 33,5 | 0,40 | 1,00 | 1
+12,59 | 33,5 | 0,40 | 0,60 | 0
+12,69 | 33,5 | 0,40 | 0,60 | 0
+
+== Serveur, battements de toutes ses parties
+Fenêtre: les 300 dernières secondes, 1197 battements (lu il y a 26 s)
+Écart entre deux battements d'une partie, 50 ms visés: médiane 49,9, p90 50,7, p99 52,6, max 70,9 ms
+Battements d'au moins 100 ms: 0
+Durée d'un battement (moteur, codage, envoi): médiane 0,6, p90 0,9, p99 3,9, max 17,9 ms
+
+Conditions: partie privée d'un joueur en production, jouée depuis l'ordinateur de développement dans le navigateur intégré de Claude, laissé en arrière-plan (d'où ses 30 images par seconde et ses 24 pour cent d'images tenues). Lecture directe de /sante au même moment, sur 1519 battements: écart médian 49,9, p90 50,7, p99 52,3, max 70,9 ms, aucun d'au moins 100 ms, durée médiane 0,6 ms.

@@ -2,7 +2,7 @@
 
 Date: 21 septembre 2026, repris le 25 septembre 2026
 Auteur: session Claude Code
-Statut: partielle (verdict provisoire; deux réponses et un relevé du porteur du projet manquent)
+Statut: terminée le 25 septembre 2026, à la demande du porteur du projet; la remesure du réglage sur le téléphone se fait avec le relevé de la recette de 8.6
 
 ## Objectif de l'étape
 
