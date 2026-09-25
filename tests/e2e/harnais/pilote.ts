@@ -38,10 +38,12 @@
  * l'arret, cette ligne passe par la cible, et le retard ne fait que retarder le
  * contact.
  *
- * L'ACTION EN ROUTE. Une mission peut demander au joueur d'agir a chaque instant, pendant
- * qu'il se deplace: tirer des qu'une cible est dans son cone, en Tactique ou en Massacre.
- * C'est ce que fait un joueur, et c'est ce qui laisse le moins de temps a la cible pour
- * sortir du cone (etape 8.7).
+ * L'AFFUT. Une mission peut demander au joueur de guetter a l'arret avant de foncer:
+ * frapper, en Tactique ou en Massacre, quand une cible sera dans son arme au moment ou le
+ * coup partira. Le pilote reste alors immobile un moment, et laisse la mission agir a
+ * chaque instant. A l'arret seulement: sur une page qui dessine trois images par seconde,
+ * un coup part plus d'une seconde apres la decision, et un joueur qui court a parcouru
+ * deux cents pixels entre-temps (etape 8.7).
  */
 
 import type { Position, Vecteur } from '../../../packages/shared/dist/index.js';
@@ -78,6 +80,9 @@ const MARGE_DE_RUEE_MS = 800;
 
 /** Au-dela de ce temps d'arret, le pilote fonce meme si le serveur voit encore le joueur bouger. */
 const ARRET_MAXIMUM_MS = 2_000;
+
+/** Combien de temps le joueur guette a l'arret, quand la mission le demande, avant de foncer. */
+const AFFUT_MS = 4_000;
 
 /** Sur quelle duree le message d'echec retrace les positions, en millisecondes. */
 const FENETRE_DE_PROGRES_MS = 2_000;
@@ -122,8 +127,11 @@ export interface Mission {
   readonly accomplie: () => boolean;
   /** Au-dela de ce delai, la mission echoue. */
   readonly delaiMs: number;
-  /** Ce que le joueur fait a chaque instant de sa route, par la page. Rien par defaut. */
-  readonly enRoute?: () => Promise<void>;
+  /**
+   * Ce que le joueur fait a chaque instant de l'affut, arrete, par la page. Sans elle, le
+   * joueur ne guette pas: il fonce des qu'il est arrete.
+   */
+  readonly aLAffut?: () => Promise<void>;
 }
 
 /** La carte ramenee a des mailles, praticables ou non. */
@@ -147,12 +155,13 @@ interface Visee {
  * Ou en est le pilote.
  *
  *   - route: il suit le chemin et corrige a chaque instant;
- *   - arret: une cible immobile est en vue, il attend que le serveur le voie arrete;
+ *   - arret: une cible immobile est en vue, il attend que le serveur le voie arrete, puis,
+ *     si la mission le demande, guette un moment;
  *   - ruee: il fonce en ligne droite vers la cible, sans corriger, jusqu'a une echeance.
  */
 type Phase =
   | { readonly nom: 'route' }
-  | { readonly nom: 'arret'; readonly depuis: number }
+  | { readonly nom: 'arret'; readonly depuis: number; readonly immobileDepuis?: number }
   | { readonly nom: 'ruee'; readonly jusqua: number };
 
 /** Ce que le pilote a lu et decide a un instant, pour expliquer un echec. */
@@ -202,17 +211,28 @@ export async function accomplir(mission: Mission): Promise<void> {
           }
           break;
 
-        case 'arret':
-          if (
-            (precedente !== undefined && memePosition(precedente.position, situation.position)) ||
-            maintenant - phase.depuis > ARRET_MAXIMUM_MS
-          ) {
+        case 'arret': {
+          const arrete =
+            precedente !== undefined && memePosition(precedente.position, situation.position);
+
+          if (arrete && mission.aLAffut !== undefined) {
+            const immobileDepuis: number = phase.immobileDepuis ?? maintenant;
+            phase = { nom: 'arret', depuis: phase.depuis, immobileDepuis };
+
+            if (maintenant - immobileDepuis < AFFUT_MS) {
+              await mission.aLAffut();
+              break;
+            }
+          }
+
+          if (arrete || maintenant - phase.depuis > ARRET_MAXIMUM_MS) {
             phase = await ruer(mission.commande, situation, visee);
           }
           break;
+        }
 
         case 'route':
-          if (cibleImmobileEnVue(viseePrecedente, visee)) {
+          if (doitSArreter(mission, viseePrecedente, visee)) {
             await mission.commande.relacher();
             phase = { nom: 'arret', depuis: maintenant };
           } else {
@@ -220,8 +240,6 @@ export async function accomplir(mission: Mission): Promise<void> {
           }
           break;
       }
-
-      await mission.enRoute?.();
 
       releves.push({ instant: maintenant, situation, visee, phase: phase.nom });
       while ((releves[0]?.instant ?? maintenant) < maintenant - FENETRE_DE_PROGRES_MS) {
@@ -282,6 +300,21 @@ async function ruer(
   const dureeMs = (distance / VITESSES.JOUEUR_PX_PAR_SECONDE) * 1000 + MARGE_DE_RUEE_MS;
 
   return { nom: 'ruee', jusqua: Date.now() + dureeMs };
+}
+
+/**
+ * Le joueur doit-il s'arreter: devant une cible immobile en vue, ou, s'il guette, devant
+ * toute cible en vue. L'affut prevoit ou seront les cibles qui bougent: il n'a pas besoin
+ * qu'elles restent en place.
+ */
+function doitSArreter(
+  mission: Mission,
+  precedente: Visee | undefined,
+  courante: Visee | undefined,
+): boolean {
+  return mission.aLAffut === undefined
+    ? cibleImmobileEnVue(precedente, courante)
+    : courante?.surLaCible === true;
 }
 
 /** La cible visee est en vue, et elle n'a pas bouge depuis la lecture precedente. */

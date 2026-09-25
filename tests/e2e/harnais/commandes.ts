@@ -118,7 +118,11 @@ export interface CommandeAuPouce extends Commande {
  * partir un tir six secondes apres la decision de tirer.
  *
  * Les doigts portent chacun un identifiant. Le protocole compare chaque envoi au
- * precedent: un doigt nouveau est pose, un doigt deplace glisse, un doigt absent est leve.
+ * precedent: dans un debut ou un glissement, un doigt nouveau est pose et un doigt deplace
+ * glisse; une fin leve les doigts qu'elle cite, et tous si elle n'en cite aucun. Un doigt
+ * absent d'un glissement n'est PAS leve: il reste pose, et tout nouvel appui du meme doigt
+ * est ignore (verifie a l'etape 8.7, ou un second doigt leve ainsi rendait sans effet
+ * chaque tir suivant, jusqu'au prochain lever du pouce).
  */
 export async function commandeAuPouce(page: Page): Promise<CommandeAuPouce> {
   const terrain = await page.locator('.terrain').boundingBox();
@@ -184,17 +188,9 @@ export async function commandeAuPouce(page: Page): Promise<CommandeAuPouce> {
       };
 
       return async () => {
-        const tenu = pouce;
-
-        if (tenu === undefined) {
-          await toucher('touchStart', [doigt]);
-          await toucher('touchEnd', []);
-          return;
-        }
-
         // Le pouce reste ou il est: seul le second doigt se pose, puis se leve.
-        await toucher('touchStart', [tenu, doigt]);
-        await toucher('touchMove', [tenu]);
+        await toucher('touchStart', pouce === undefined ? [doigt] : [pouce, doigt]);
+        await toucher('touchEnd', [doigt]);
       };
     },
   };
