@@ -28,13 +28,15 @@ L'entrée du ROADMAP dit: « le ninja piloté au pouce reste immobile, position 
 5. **La ruée se compte depuis l'instant où la page a reçu la direction**, pas depuis l'instant d'avant l'envoi.
 6. **Le scénario Massacre au pouce porte le même défaut** (approche, lever du pouce, puis `tap()`), en latence: il passe parce que ses 120 secondes laissent plus d'essais. Il reçoit la même correction (règle 7).
 7. **Le second scénario ne vise que les bonus atteignables avant leur disparition.** Un objet vit huit secondes et apparaît n'importe où. Le serveur donne à chaque objet sa vie restante: la mission ne garde que ceux dont elle couvre le trajet (distance allongée de moitié pour les détours, plus deux secondes de retard de la page). Sans bonus atteignable, le joueur attend le suivant sur place.
+8. **Les scénarios Tactique et Massacre dessinent à densité de pixels un.** Le Pixel 7 émulé dessine à densité deux, quatre fois plus de pixels, sans carte graphique en CI. Mesuré à deux processeurs: 2 images par seconde à densité deux, 8,5 à densité un; un contact tactile en 1,15 s contre 0,25 s. Ces scénarios vérifient le pouce, le bouton et les règles. Le rendu à densité deux reste exercé par les autres scénarios du cadrage téléphone et par le banc. Décision prise en fin d'étape, voir réconciliation point 9.
+9. **Le premier coup mesure le délai au lieu de le supposer**: il part dès qu'un faux ninja est dans l'arme, sans prévision.
 
 ## Périmètre
 
 - `tests/e2e/harnais/commandes.ts`: le second doigt du pouce, et le tir au clavier.
 - `tests/e2e/harnais/pilote.ts`: l'affût, et la durée de la ruée.
 - `tests/e2e/harnais/parcours.ts`: la mission « prendre un faux ninja d'un coup d'arme », et les bonus atteignables de la mission de ramassage.
-- `tests/e2e/tactique.spec.ts`, `tests/e2e/massacre.spec.ts` (partie de 150 secondes, réconciliation point 8).
+- `tests/e2e/tactique.spec.ts`, `tests/e2e/massacre.spec.ts` (densité un, décision 8; partie Massacre de 150 secondes, réconciliation point 8).
 - La documentation: le ROADMAP (l'entrée 8.7 corrigée), le handoff.
 
 ## Hors périmètre
@@ -66,7 +68,9 @@ L'entrée du ROADMAP dit: « le ninja piloté au pouce reste immobile, position 
 5. **La ruée traversait la cible**, et laissait le joueur dos à elle à l'arrêt suivant: un échec sur quatre restait. D'où l'arrêt à mi-portée, glissade comprise (décision 3).
 6. **Le second scénario échouait pour une autre raison que le premier**: la poursuite de bonus lointains qui disparaissaient avant l'arrivée (trace du pilote: la cible visée passait de 170 à 800 pixels à chaque disparition). Deux échecs sur quatre à deux processeurs. D'où la décision 7, ajoutée en cours d'étape.
 7. **Attendre d'avoir la cible en vue pour lever le pouce la faisait dépasser.** À deux images par seconde, le joueur glisse de 100 à 150 pixels après le lever, plus que les 80 pixels de la visée du pilote: un scénario Massacre a tourné cent secondes autour d'un faux ninja à 15 pixels. D'où le lever anticipé, pour une cible devant le joueur seulement (décision 3).
-8. **Le Massacre garde une part de chance, et reçoit de la marge.** Le katana ne porte qu'à 60 pixels, moins que l'incertitude de la glissade: les prises viennent surtout des faux ninjas qui passent pendant l'affût, et une sur cinq a demandé près de cent secondes à deux processeurs. La partie du scénario passe de 120 à 150 secondes, la prise à 130 au plus. Ce n'est pas un délai qui masque une cause: le scénario s'arrête à la prise.
+8. **Le Massacre reçoit de la marge.** Le katana ne porte qu'à 60 pixels, moins que l'incertitude de la glissade à deux images par seconde: une prise sur cinq a demandé près de cent secondes à deux processeurs. La partie du scénario passe de 120 à 150 secondes, la prise à 130 au plus. Le scénario s'arrête à la prise, la marge ne coûte rien.
+9. **L'affût seul ne suffisait pas en CI.** Sur le code jugé final (`59c5290`), une CI a été propre (run `36196876234`), la suivante sur le même code a consommé deux relances, tir Tactique et Massacre (run `36198863704`). La page de la CI, à 3 images par seconde, laissait encore trop de place au hasard. D'où la densité un (décision 8), qui rend la page quatre fois plus rapide.
+10. **La durée d'un coup était supposée à deux secondes avant le premier.** À densité un, où le geste dure une demi-seconde, cette supposition retenait presque tous les coups: dans un Massacre relevé, trente lectures d'affût avec un faux ninja dans l'arc, aucun coup. D'où la décision 9. Avec les décisions 8 et 9, à deux processeurs: 15 sur 15, prise du Massacre en 16 à 28 secondes le plus souvent (66 au pire), tir Tactique en 14 à 32.
 
 ## Rituel de fin de session
 
