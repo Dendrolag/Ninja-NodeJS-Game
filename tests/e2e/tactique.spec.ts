@@ -1,13 +1,15 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
+import { TACTIQUE } from '../../packages/shared/dist/index.js';
 import { CONE_TACTIQUE } from '../../packages/sim/dist/index.js';
 import { commandeAuClavier, commandeAuPouce } from './harnais/commandes.js';
 import {
-  approcherUnFauxNinja,
   attendreLaPartie,
   expliquerLEchec,
+  joueurNomme,
   lancer,
+  prendreUnFauxNinjaDUnCoup,
   ramasserUnBonusTactique,
   regler,
   releverLesErreurs,
@@ -22,16 +24,21 @@ import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
  *
  * Alice cree une partie Tactique depuis l'ecran de creation, et le salon lui dit
  * comment on y capture. Elle la lance, voit le bouton Capturer et ses cinq charges,
- * s'approche d'un faux ninja, puis tire: le serveur lui compte un faux ninja, et le
- * bouton montre une charge de moins. Avant son premier tir reussi, elle n'en porte
- * aucun: la frolant en chemin, elle ne l'aurait pas capture.
+ * court vers les faux ninjas et tire des que l'un d'eux passe dans son cone: le serveur
+ * lui compte un faux ninja, et le bouton montre une charge de moins. Elle va jusqu'au
+ * contact des faux ninjas, qui ne suffit pas: au moment ou le serveur lui compte le
+ * premier, une charge a ete depensee.
  *
  * JOUE DANS LES DEUX CADRAGES. Sur bureau, Alice se deplace au clavier et tire a la
- * barre d'espace. En fenetre mobile, elle se deplace au pouce et tire du bouton.
+ * barre d'espace. En fenetre mobile, elle se deplace au pouce et tire du bouton, d'un
+ * second doigt, sans lever le pouce (etape 8.7).
  *
- * UN TIR PEUT MANQUER, ET LE SCENARIO REPREND L'APPROCHE. Entre l'arret du pilote a
- * portee et le depart du tir, le faux ninja a pu sortir du cone; un tir sans effet ne
- * coute rien.
+ * UN TIR PEUT MANQUER: le faux ninja a pu sortir du cone avant que le tir parte. Un tir
+ * sans effet ne coute rien, et Alice retire des qu'un faux ninja repasse dans son cone.
+ *
+ * LA RAFALE ET LA RECHARGE RAPIDE SONT COUPEES: la premiere rend les tirs gratuits, la
+ * seconde fait revenir une charge en une seconde et demie. L'une ou l'autre, ramassee en
+ * chemin, effacerait la charge depensee que le scenario verifie.
  *
  * LES ZONES SPECIALES SONT COUPEES: une zone de chaos repeint des faux ninjas au
  * hasard, et pourrait en donner un a Alice sans qu'elle ait tire.
@@ -42,10 +49,31 @@ const PARTIE_TACTIQUE = {
   dureePartieS: '90',
   nombreBotsInitial: '100',
   'zones.actives': false,
+  'objetsTactiques.bonus.rafale.actif': false,
+  'objetsTactiques.bonus.rechargeRapide.actif': false,
 } as const;
 
-/** A cette distance d'un faux ninja, en pixels, Alice s'arrete pour tirer: bien dans la portee. */
-const DISTANCE_DE_TIR_PX = 60;
+/**
+ * Le temps laisse a Alice pour prendre un faux ninja, ou un bonus, en millisecondes.
+ *
+ * Moins que la partie, dont le lancement a deja pris quelques secondes: un echec doit se
+ * dire pendant la partie. Plus long, il se disait apres la fin, quand plus personne ne
+ * bouge, et le message montrait un ninja immobile qui n'expliquait rien (etape 8.7).
+ */
+const DELAI_DE_PRISE_MS = 75_000;
+
+/**
+ * Densite de pixels un, dans les deux cadrages (etape 8.7).
+ *
+ * Le Pixel 7 emule dessine a densite deux, quatre fois plus de pixels, et la machine
+ * d'integration continue n'a pas de carte graphique: la page y dessinait trois images par
+ * seconde, chaque contact tactile attendait pres d'une seconde, et un coup partait plus
+ * d'une seconde apres la decision. Mesure a deux processeurs: deux images par seconde a
+ * densite deux, huit et demie a densite un, un contact en 0,25 seconde au lieu de 1,15.
+ * Ce scenario verifie le pouce, le bouton et les regles, pas le rendu: le rendu a densite
+ * deux reste exerce par les autres scenarios du cadrage telephone et par le banc.
+ */
+test.use({ deviceScaleFactor: 1 });
 
 let jeu: ServeurDeJeu;
 
@@ -98,26 +126,38 @@ test('creer une partie Tactique, s approcher d un faux ninja et le prendre par u
     await expect(page.locator('.jeu-rappel')).toContainText('Espace pour capturer');
   }
 
-  const commande = hasTouch ? await commandeAuPouce(page) : commandeAuClavier(page);
-  const tirer = async (): Promise<void> => {
-    await (hasTouch ? bouton.tap() : page.keyboard.press('Space'));
-  };
+  const pouce = hasTouch ? await commandeAuPouce(page) : undefined;
+  const commande = pouce ?? commandeAuClavier(page);
+  const tirer =
+    pouce === undefined
+      ? async (): Promise<void> => {
+          await page.keyboard.press('Space');
+        }
+      : await pouce.appuiSur(bouton);
   const fauxNinjasDAlice = (): number =>
     partie.classement().find((ligne) => ligne.pseudo === 'Alice')?.botsPortes ?? 0;
+
+  /** Les charges d'Alice au moment ou le serveur lui compte son premier faux ninja. */
+  let chargesALaPrise: number | undefined;
+  const prise = (): boolean => {
+    if (fauxNinjasDAlice() === 0) {
+      return false;
+    }
+
+    chargesALaPrise ??= partie.etat.tactique?.[joueurNomme(partie, 'Alice').id]?.charges;
+    return true;
+  };
 
   await expliquerLEchec({ Alice: signes }, async () => {
     await expect(async () => {
       await accomplir(
-        approcherUnFauxNinja(partie, 'Alice', commande, DISTANCE_DE_TIR_PX, CONE_TACTIQUE),
+        prendreUnFauxNinjaDUnCoup(partie, 'Alice', commande, CONE_TACTIQUE, tirer, prise),
       );
-
-      // Toucher ne capture pas: avant son premier tir reussi, Alice ne porte rien.
-      expect(fauxNinjasDAlice()).toBe(0);
-
-      await tirer();
-      await expect.poll(fauxNinjasDAlice, { timeout: 2_000 }).toBeGreaterThan(0);
-    }).toPass({ timeout: 120_000 });
+    }).toPass({ timeout: DELAI_DE_PRISE_MS });
   });
+
+  // Toucher ne capture pas: le premier faux ninja d'Alice lui a coute une charge.
+  expect(chargesALaPrise).toBeLessThan(TACTIQUE.CHARGES_MAXIMUM);
 
   // Un tir qui a capture coute une charge, qui revient en cinq secondes.
   await expect(bouton.locator('.hud-charge.pleine')).not.toHaveCount(5, { timeout: 4_000 });
@@ -134,7 +174,7 @@ test('creer une partie Tactique, s approcher d un faux ninja et le prendre par u
  * rapport, a relire a l'oeil).
  */
 test('ramasser un bonus du Tactique et le voir agir', async ({ page, hasTouch }, infos) => {
-  test.setTimeout(120_000);
+  test.setTimeout(150_000);
 
   const erreurs = releverLesErreurs(page);
   const signes = await releverLesSignesVitaux(page);
@@ -162,7 +202,7 @@ test('ramasser un bonus du Tactique et le voir agir', async ({ page, hasTouch },
   await expliquerLEchec({ Alice: signes }, async () => {
     await expect(async () => {
       await accomplir(ramasserUnBonusTactique(partie, 'Alice', commande));
-    }).toPass({ timeout: 60_000 });
+    }).toPass({ timeout: DELAI_DE_PRISE_MS });
   });
 
   await expect(page.locator('.hud-effet-libelle')).toContainText(

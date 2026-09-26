@@ -16,8 +16,13 @@ import { expect } from '@playwright/test';
 
 import type { GameRoom } from '../../../packages/server/dist/index.js';
 import type { GeometrieDuCone, Joueur } from '../../../packages/sim/dist/index.js';
-import { dansLeCone } from '../../../packages/sim/dist/index.js';
-import { TYPES_BONUS_TACTIQUES } from '../../../packages/shared/dist/index.js';
+import { dansLeCone, geometrieDuCone, trajetTenable } from '../../../packages/sim/dist/index.js';
+import type { Position } from '../../../packages/shared/dist/index.js';
+import {
+  RAYON_ENTITE,
+  TYPES_BONUS_TACTIQUES,
+  VITESSES,
+} from '../../../packages/shared/dist/index.js';
 import type { Commande, Mission } from './pilote.js';
 
 /** Des reglages a saisir dans le panneau, par chemin: un nombre en texte, ou un interrupteur. */
@@ -30,6 +35,18 @@ export type SaisieDeReglages = Readonly<Record<string, string | boolean>>;
  * La marge couvre une machine d'integration continue lente.
  */
 const DELAI_CAPTURE_DE_BOT_MS = 12_000;
+
+/** La part de l'arme ou le joueur a l'affut vise un faux ninja en marche, en portee et en ouverture. */
+const MARGE_DE_VISEE = 0.75;
+
+/** De combien les detours autour des murs allongent un trajet a vol d'oiseau, au plus. */
+const ALLONGEMENT_DES_DETOURS = 1.5;
+
+/** Le retard qu'une page lente ajoute a un trajet, en millisecondes. */
+const RETARD_DE_LA_PAGE_MS = 2_000;
+
+/** Ce qu'une prevision doit tenir au-dela de l'arrivee du coup, en millisecondes. */
+const MARGE_DE_PREVISION_MS = 500;
 
 /**
  * Temps laisse a un joueur pour en rejoindre un autre, d'un bout a l'autre de la carte.
@@ -385,29 +402,44 @@ export function capturerUnFauxNinja(partie: GameRoom, pseudo: string, commande: 
 }
 
 /**
- * Mission, dans le mode Tactique: ce joueur s'approche d'un faux ninja, a portee de tir.
+ * Mission, dans un mode ou l'on frappe devant soi (Tactique, Massacre): ce joueur prend
+ * un faux ninja d'un coup de son arme.
  *
- * Elle est accomplie des qu'un faux ninja qui n'est pas a sa couleur est plus pres que
- * la distance donnee. Le pilote relache alors les commandes: le joueur s'arrete, et
- * regarde dans la direction de son dernier pas, c'est-a-dire vers sa cible. Le
- * toucher en route ne l'aurait pas capturee.
+ * Le pilote le mene vers les faux ninjas qui ne sont pas a sa couleur, et l'arrete a
+ * mi-portee de l'un d'eux, face a lui. La, immobile, il guette (l'affut du pilote): il
+ * frappe si un faux ninja SERA dans son arme au moment ou le coup arrivera au serveur.
+ * Puis il repart. Un coup dans le vide ne coute rien. La mission est accomplie quand le serveur lui compte sa
+ * prise, que le scenario definit: un faux ninja porte en Tactique, des points en Massacre.
  *
- * AVEC UNE ARME QUI FRAPPE DEVANT (Tactique, Massacre), la mission ne s'acheve que si le
- * faux ninja est aussi dans l'arc, du cote ou le joueur regarde. Sans cela, un faux ninja
- * a portee mais sur le cote ou derriere suffisait: le coup partait dans le vide, et le
- * scenario Massacre au pouce echouait une fois sur deux en integration continue, ou les
- * faux ninjas, aussi rapides que les joueurs depuis l'etape 7.5, sortent de l'arc pendant
- * la latence d'une machine lente (corrige a l'etape 4.5).
+ * POURQUOI PREVOIR, ET POURQUOI A L'ARRET (etape 8.7). Sur la page du telephone en
+ * integration continue, qui dessine trois images par seconde, un coup arrive au serveur
+ * plus d'une seconde apres la decision. Le scenario d'origine s'approchait, levait le
+ * pouce, puis frappait: le coup partait six secondes apres, et manquait. Frapper en
+ * courant ne valait guere mieux: un coup sur quatre, le joueur ayant parcouru deux cents
+ * pixels entre-temps. A l'arret, le joueur ne bouge plus; le faux ninja, lui, se prevoit
+ * dans l'etat du serveur, l'arbitre: en pause, il reste ou il est tant que sa pause dure;
+ * en marche, il suit son cap tant qu'il n'en change pas. Le delai du coup se mesure sur le
+ * coup precedent; le premier part des qu'un faux ninja est dans l'arme. Supposer ce delai
+ * avant de l'avoir mesure, deux secondes, retenait presque tous les coups sur une page
+ * plus rapide que prevu.
+ *
+ * Le pilote va aussi jusqu'au contact des faux ninjas: le toucher ne doit pas suffire a
+ * prendre, et c'est au scenario de le verifier.
  */
-export function approcherUnFauxNinja(
+export function prendreUnFauxNinjaDUnCoup(
   partie: GameRoom,
   pseudo: string,
   commande: Commande,
-  distancePx: number,
-  arme?: GeometrieDuCone,
+  arme: GeometrieDuCone,
+  frapper: () => Promise<void>,
+  prise: () => boolean,
 ): Mission {
+  // Inconnue avant le premier coup: celui-ci part des qu'un faux ninja est dans l'arme,
+  // sans prevision, et la mesure. Un coup dans le vide ne coute rien.
+  let dureeDuCoupMs = 0;
+
   return {
-    nom: `${pseudo} s'approche d'un faux ninja`,
+    nom: `${pseudo} prend un faux ninja d'un coup`,
     commande,
     delaiMs: DELAI_CAPTURE_DE_BOT_MS,
     situation: () => {
@@ -419,17 +451,18 @@ export function approcherUnFauxNinja(
         cibles: fauxNinjasAPrendre(partie, joueur),
       };
     },
-    accomplie: () => {
-      const joueur = joueurNomme(partie, pseudo);
-      const orientation = orientationDe(partie, joueur);
+    accomplie: prise,
+    affut: {
+      distancePx: arme.porteePx / 2,
+      guetter: async () => {
+        if (!unFauxNinjaDansLArmeAuCoup(partie, pseudo, arme, dureeDuCoupMs)) {
+          return;
+        }
 
-      return fauxNinjasAPrendre(partie, joueur).some(
-        (position) =>
-          Math.hypot(position.x - joueur.position.x, position.y - joueur.position.y) < distancePx &&
-          (arme === undefined ||
-            (orientation !== undefined &&
-              dansLeCone(joueur.position, orientation, position, arme))),
-      );
+        const debut = Date.now();
+        await frapper();
+        dureeDuCoupMs = Date.now() - debut;
+      },
     },
   };
 }
@@ -438,8 +471,15 @@ export function approcherUnFauxNinja(
  * Mission, dans le mode Tactique: ce joueur ramasse un des trois bonus du mode (etape 7.7).
  *
  * Il vise les bonus du Tactique poses sur la carte, et la mission est accomplie quand le
- * serveur lui compte un de leurs effets. Un objet vit huit secondes: s'il disparait en
- * route, le pilote passe au suivant.
+ * serveur lui compte un de leurs effets.
+ *
+ * SEULEMENT CEUX QU'IL PEUT ATTEINDRE AVANT QU'ILS DISPARAISSENT. Un objet vit huit
+ * secondes, et apparait n'importe ou. Sur la page du telephone en integration continue,
+ * ou le pilote ne corrige sa direction qu'une fois par seconde environ, le joueur
+ * poursuivait la plupart du temps des bonus a trois cents pixels et plus, qui
+ * disparaissaient avant qu'il arrive, et la mission echouait une fois sur deux a deux
+ * processeurs (etape 8.7). Le serveur, l'arbitre, dit a chaque objet sa vie restante:
+ * sans bonus atteignable, le joueur attend sur place que le suivant apparaisse.
  */
 export function ramasserUnBonusTactique(
   partie: GameRoom,
@@ -453,19 +493,42 @@ export function ramasserUnBonusTactique(
     nom: `${pseudo} ramasse un bonus du Tactique`,
     commande,
     delaiMs: DELAI_CAPTURE_DE_BOT_MS,
-    situation: () => ({
-      terrain: partie.etat.terrain,
-      position: joueurNomme(partie, pseudo).position,
-      cibles: Object.values(partie.etat.objets)
-        .filter((objet) => bonusDuTactique(objet.nature))
-        .map((objet) => objet.position),
-    }),
+    situation: () => {
+      const position = joueurNomme(partie, pseudo).position;
+
+      return {
+        terrain: partie.etat.terrain,
+        position,
+        cibles: Object.values(partie.etat.objets)
+          .filter(
+            (objet) =>
+              bonusDuTactique(objet.nature) &&
+              objet.dureeDeVieRestanteMs >= tempsPourAtteindreMs(position, objet.position),
+          )
+          .map((objet) => objet.position),
+      };
+    },
     accomplie: () => {
       const effets = partie.etat.tactique?.[joueurNomme(partie, pseudo).id]?.effets;
 
       return TYPES_BONUS_TACTIQUES.some((nature) => (effets?.[nature] ?? 0) > 0);
     },
   };
+}
+
+/**
+ * Le temps qu'il faut a un joueur pour atteindre un point, au plus, en millisecondes.
+ *
+ * La distance a vol d'oiseau, allongee pour les detours autour des murs, a vitesse de
+ * joueur, plus le retard d'une page lente a prendre chaque direction.
+ */
+function tempsPourAtteindreMs(depart: Position, arrivee: Position): number {
+  const distance = Math.hypot(arrivee.x - depart.x, arrivee.y - depart.y);
+
+  return (
+    ((distance * ALLONGEMENT_DES_DETOURS) / VITESSES.JOUEUR_PX_PAR_SECONDE) * 1000 +
+    RETARD_DE_LA_PAGE_MS
+  );
 }
 
 /** Ou ce joueur regarde, dans un mode ou il frappe devant lui; indefini ailleurs. */
@@ -477,6 +540,70 @@ function orientationDe(
     partie.etat.massacre?.guerriers[joueur.id]?.orientation ??
     partie.etat.tactique?.[joueur.id]?.orientation
   );
+}
+
+/**
+ * Un faux ninja que ce joueur, immobile, peut prendre sera-t-il dans son arme au moment ou
+ * un coup donne maintenant arrivera.
+ *
+ * Le coup arrive a peu pres a la moitie de la duree du geste, appui puis lever: l'appui
+ * compte, le lever ne fait rien. Un faux ninja en pause y reste si sa pause dure jusque-la;
+ * un faux ninja en marche avance tout droit s'il ne change ni de cap ni d'allure d'ici la,
+ * et si aucun mur ne l'arrete. Un faux ninja en pause se vise dans toute l'arme: ni lui ni
+ * le joueur ne bougent. Un faux ninja en marche, dans une arme reduite: il en sortirait
+ * pour peu que le coup arrive un peu plus tot ou plus tard que prevu.
+ * Les autres ne se prevoient pas, et ne comptent pas.
+ */
+function unFauxNinjaDansLArmeAuCoup(
+  partie: GameRoom,
+  pseudo: string,
+  arme: GeometrieDuCone,
+  dureeDuCoupMs: number,
+): boolean {
+  const joueur = joueurNomme(partie, pseudo);
+  const orientation = orientationDe(partie, joueur);
+
+  if (orientation === undefined) {
+    return false;
+  }
+
+  const armeReduite = geometrieDuCone(
+    angleDuCone(arme) * MARGE_DE_VISEE,
+    arme.porteePx * MARGE_DE_VISEE,
+  );
+  const arriveeDuCoupMs = dureeDuCoupMs / 2;
+  const certitudeMs = arriveeDuCoupMs + MARGE_DE_PREVISION_MS;
+
+  return Object.values(partie.etat.bots).some((bot) => {
+    if (bot.type !== 'bot' || bot.couleur === joueur.couleur) {
+      return false;
+    }
+
+    if (bot.avantChangementDEtatMs < certitudeMs) {
+      return false;
+    }
+
+    if (!bot.enMouvement) {
+      return dansLeCone(joueur.position, orientation, bot.position, arme);
+    }
+
+    if (bot.avantChangementDeCapMs < certitudeMs) {
+      return false;
+    }
+
+    const pas = (VITESSES.BOT_PX_PAR_SECONDE * arriveeDuCoupMs) / 1000;
+    const prevue = { x: bot.position.x + bot.cap.x * pas, y: bot.position.y + bot.cap.y * pas };
+
+    return (
+      trajetTenable(partie.etat.terrain, bot.position, prevue, RAYON_ENTITE) &&
+      dansLeCone(joueur.position, orientation, prevue, armeReduite)
+    );
+  });
+}
+
+/** L'ouverture totale d'un cone, en degres. */
+function angleDuCone(cone: GeometrieDuCone): number {
+  return (2 * Math.acos(cone.cosinusDuDemiAngle) * 180) / Math.PI;
 }
 
 /** Ou sont les faux ninjas que ce joueur peut encore prendre: ceux qui ne portent pas sa couleur. */

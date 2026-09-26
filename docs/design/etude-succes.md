@@ -1,7 +1,7 @@
 # Étude - Les succès
 
 Date: 25 septembre 2026
-Statut: étude, rien n'est construit. Sept décisions attendent le porteur du projet (section 8).
+Statut: étude, rien n'est construit. L'ordre est tranché le 26 septembre 2026: les succès suivent les amis. Les six autres décisions de la section 8 se prennent au début de l'étape `3.7`.
 
 ## 1. La demande
 
@@ -166,7 +166,7 @@ La maquette proposait « 1000 Ninjas capturés ». Le moteur publie un ralliemen
 | `3.7` Les succès, socle | Définitions, table des succès débloqués, attribution en fin de partie, rattrapage, écran de fin, section du profil, mesure de rétention. Les succès de source « base » seulement. | Moyenne à grande | `3.5`, pour afficher sur la fiche |
 | `3.8` Les exploits de partie | Relevé d'exploits, table des faits de partie, succès de source « partie », secrets. | Moyenne | `3.7` |
 
-Les succès avec les amis s'ajoutent dans les étapes `3.6` et `2.8`, ou juste après, sans étape à part. Ordre proposé: `2.7`, `3.5`, `3.7`, `3.8`, `3.6`, `2.8`. Les succès passent avant les amis parce qu'ils servent tous les joueurs qui ont un compte, sans attendre qu'ils aient des amis inscrits. L'ordre inverse se défend si le porteur du projet juge l'invitation entre amis plus urgente.
+Ordre retenu par le porteur du projet le 26 septembre 2026: les amis d'abord, puis les succès, soit `2.7`, `3.5`, `3.6`, `2.8`, `3.7`, `3.8`. Les succès avec les amis entrent donc directement dans `3.7` et `3.8`, les amis existant déjà.
 
 ## 7. Ce qui est écarté, et pourquoi
 
@@ -182,6 +182,6 @@ Les succès avec les amis s'ajoutent dans les étapes `3.6` et `2.8`, ou juste a
 2. **La liste**: la valider, en retirer ou en ajouter. Les seuils seront calibrés sur la production au début de l'étape.
 3. **Le rattrapage** des succès de source « base » pour les comptes existants. Recommandé: oui.
 4. **Les secrets**: les garder. Recommandé: oui, trois.
-5. **L'ordre**: succès avant les amis (`3.7`, `3.8`, puis `3.6`, `2.8`), ou après. Recommandé: avant.
+5. **L'ordre**: tranché le 26 septembre 2026, les amis d'abord, puis les succès.
 6. **« 1000 ninjas capturés » tous modes**, qui demande un fait de plus au moteur: le faire, ou s'en tenir à la Horde. Recommandé: s'en tenir à la Horde.
 7. **La mesure de rétention**, relevée avant et un mois après: l'ajouter à l'étape `3.7`. Recommandé: oui.
