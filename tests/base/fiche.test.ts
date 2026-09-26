@@ -195,7 +195,10 @@ describe.runIf(baseDisponible())('fiche joueur', () => {
 
     await jouer(bob.compteId, 'tactique', '2026-05-01T12:00:00.000Z', 3, {});
     await jouer(bob.compteId, 'tactique', '2026-05-02T12:00:00.000Z', 3, {});
-    await jouer(bob.compteId, 'massacre', '2026-05-20T12:00:00.000Z', 1, { points: 700 });
+    await jouer(bob.compteId, 'massacre', '2026-05-20T12:00:00.000Z', 1, {
+      placement: 1,
+      points: 700,
+    });
 
     const { statistiques } = await ficheDe(auth, lecteur.jeton, bob.pseudo);
 

@@ -170,8 +170,15 @@ describe('mesurerLaCharge', () => {
         graine: 3,
         terrain: new ChargeurDeTerrain().charger({ carte: 'map1', modeMiroir: false }),
       });
+      // LA BORNE BASSE SUIT LA CHARGE DE LA MACHINE. Le fil compte ce que font de vrais
+      // clients, qui partagent le processeur avec les autres tests: plus la machine est
+      // chargee, moins ils jouent pendant la fenetre, et plus les deltas sont petits.
+      // Releve le 26 septembre 2026: 0,97 seul, 0,91 avec six executions en parallele,
+      // 0,844 en integration continue (run 36235321379), sous l'ancienne borne de 0,85.
+      // Une erreur grossiere de l'enveloppe du banc, comme une image comptee avec les
+      // deltas, sort encore de ces bornes.
       const rapport = resultat.octetsParMessage / banc.octetsParMessage.moyenne;
-      expect(rapport).toBeGreaterThan(0.85);
+      expect(rapport).toBeGreaterThan(0.75);
       expect(rapport).toBeLessThan(1.15);
     },
   );

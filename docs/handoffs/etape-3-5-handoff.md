@@ -45,7 +45,9 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
   - bout en bout (`tests/e2e/fiche.spec.ts`, bureau): Alice et Bob s'inscrivent, jouent une partie courte ensemble; au classement, Alice ouvre la fiche de Bob et y lit une partie en Horde, sans pièces ni dernières parties, puis la ferme.
 - Résultat: `pnpm verify` en local, 2 655 tests unitaires et d'intégration au vert (53 de plus qu'au handoff 2.7), 75 sautés (base Neon absente en local: les sept tests de `fiche.test.ts` et ceux de `profil.test.ts` mis à jour n'ont donc pas tourné ici). Types, linter et formatage verts. Bout en bout en local, Chromium sans interface: la fiche, le compte, les parties et le multijoueur au vert.
 - Couverture de packages/sim: inchangée, aucun code du paquet touché.
-- État de la CI: à lire sur le commit poussé. C'est elle qui exécute pour la première fois les tests de la base écrits ici; un échec y serait à corriger en priorité.
+- État de la CI: rouge sur `03c1af5` (run `36235321379`), pour deux raisons, corrigées dans le commit suivant.
+  1. **Une faute de ce handoff**: dans `tests/base/fiche.test.ts`, une partie Massacre jouée seul gardait le placement par défaut, 2, que `enregistrerPartie` refuse dans une partie d'un joueur. Le test lui donne la première place. Les six autres tests de la base de la fiche, et ceux du profil, passaient.
+  2. **Règle 7, hors de l'étape**: `tests/charge/charge-reseau.test.ts` exigeait que la taille des messages relevée sur le fil vaille au moins 0,85 fois celle du banc; la CI a mesuré 0,844. Le rapport suit la charge de la machine, parce que de vrais clients partagent le processeur avec les autres tests: 0,97 seul, 0,91 avec six exécutions en parallèle ici. La borne basse passe à 0,75, relevés à l'appui dans le test. `master` était vert sur ce test: le défaut était latent, pas causé par l'étape.
 
 ## Décisions et écarts au plan
 
