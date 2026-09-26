@@ -48,9 +48,9 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
   - partage: partager sur un appareil tactile, copier sur ordinateur, sans `matchMedia`, partage annulé, partage en échec rabattu sur la copie, `canShare` négatif, copie impossible;
   - salon: lien copié sur ordinateur, lien montré quand la copie est impossible, lien partagé sur un appareil tactile;
   - bout en bout (bureau): Alice crée une partie privée et copie le lien; Bob, invité, l'ouvre, voit l'invitation, choisit son pseudo et entre dans le salon d'Alice; son adresse ne porte plus le code.
-- Résultat: RESULTATS_A_COMPLETER
+- Résultat: `pnpm verify` en local, 2 602 tests unitaires et d'intégration au vert (46 de plus qu'au handoff 8.7), 68 sautés (base Neon absente en local); types, linter et formatage verts. Bout en bout en local, avec le Chromium sans interface qu'utilise la CI: les trois scénarios des parties, dont le nouveau, au vert. Une première passe complète avec le Chromium complet de la machine a compté deux échecs en pleine partie (la poursuite de `multijoueur.spec.ts`, le HUD de `peaufinage.spec.ts`), loin de l'accueil et du salon: le premier passe rejoué seul, le second passait en 29,8 s pour un délai de 30 s avec ce navigateur et passe en 25 s avec celui de la CI. Artefact de l'outil local, comme au handoff 8.7.
 - Couverture de packages/sim: inchangée, aucun code du paquet touché.
-- État de la CI: CI_A_COMPLETER
+- État de la CI: verte au premier essai sur `3817595` (run `36223581024`), tests de la base Neon compris, 56 scénarios de bout en bout sur 56 sans relance. Pas de mise en ligne: la branche n'est pas `master`.
 
 ## Décisions et écarts au plan
 
@@ -60,9 +60,9 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
 
 ## Problèmes connus et dette
 
-- **Le partage du système n'a pas été essayé sur un vrai téléphone**: il est couvert par des tests avec une fenêtre d'essai, et le scénario de bout en bout joue la copie sur ordinateur (le Chromium sans interface ne sait pas partager). À vérifier à la recette par le porteur du projet: sur téléphone, « Partager le lien » ouvre la liste des messageries, et le lien reçu ouvre l'accueil sur l'invitation.
+- **Le partage du système n'a pas été essayé sur un vrai téléphone**: il est couvert par des tests avec une fenêtre d'essai, et le scénario de bout en bout joue la copie sur ordinateur (vérifié: `navigator.share` n'existe pas dans le Chromium sans interface, même en cadrage téléphone). À vérifier à la recette par le porteur du projet: sur téléphone, « Partager le lien » ouvre la liste des messageries, et le lien reçu ouvre l'accueil sur l'invitation.
 - **Un lien vers une partie qui a été lancée ou qui a disparu** ne s'annonce pas comme tel avant le clic: l'accueil propose de rejoindre, et c'est le refus du serveur qui le dit. Un aperçu demanderait un message réseau nouveau, hors du périmètre.
-- Pour rejouer les scénarios de bout en bout dans un conteneur de Claude Code sur le web, même remarque qu'au handoff 8.7: passer `executablePath` vers le Chromium préinstallé par un fichier de configuration temporaire.
+- Pour rejouer les scénarios de bout en bout dans un conteneur de Claude Code sur le web, même remarque qu'au handoff 8.7: passer `executablePath` vers le Chromium sans interface préinstallé (`/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell`) par un fichier de configuration temporaire, hors du dépôt: `pnpm verify` le compile sinon, et échoue.
 
 ## Prochaine action exacte
 
