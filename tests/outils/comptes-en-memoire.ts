@@ -467,6 +467,7 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
       return {
         acceptee: true,
         valeur: {
+          pseudo: vise.pseudo,
           relation: relationVue(faitsApres(faits, decision.ecritures)),
           amis: listeDe(compteId),
         },

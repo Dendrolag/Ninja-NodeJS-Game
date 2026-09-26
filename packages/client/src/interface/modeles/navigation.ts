@@ -4,7 +4,8 @@
  * SES QUATRE DESTINATIONS EXISTENT DESORMAIS: Jouer, Parties, Creer, Profil. Le
  * cadrage la reprend a ce moment-la (section 3, en-tete commun); elle etait masquee
  * tant que trois de ses entrees auraient mene a des ecrans absents (decision du 10
- * septembre 2026).
+ * septembre 2026). L'etape 3.6 y ajoute une cinquieme, Amis (decision 6 de l'etude
+ * des amis), avec une pastille qui compte les demandes recues.
  *
  * ELLE N'EST PROPOSEE QUE HORS PARTIE. Dans le salon, en jeu ou a la fin, un clic sur
  * « Parties » ferait quitter la partie sans le dire au serveur: on en sort par ses
@@ -16,6 +17,7 @@
 import type { EcranDeMenu } from '../../ecrans.js';
 import { estUnEcranDeMenu } from '../../ecrans.js';
 import type { EtatClient } from '../../etat.js';
+import { demandesEnAttente } from './amis.js';
 
 /** Les ecrans que la navigation propose. La connexion n'y est pas: le profil y mene. */
 export type DestinationDeNavigation = Exclude<EcranDeMenu, 'connexion'>;
@@ -26,6 +28,8 @@ export interface EntreeDeNavigation {
   readonly libelle: string;
   /** L'entree de l'ecran affiche. */
   readonly actif: boolean;
+  /** Le nombre a montrer en pastille: les demandes d'ami recues. Zero, pas de pastille. */
+  readonly pastille: number;
 }
 
 /** Ce que la navigation affiche. */
@@ -42,6 +46,7 @@ export const DESTINATIONS: readonly {
   { vers: 'accueil', libelle: 'Jouer' },
   { vers: 'parties', libelle: 'Parties' },
   { vers: 'creation', libelle: 'Créer' },
+  { vers: 'amis', libelle: 'Amis' },
   { vers: 'profil', libelle: 'Profil' },
 ];
 
@@ -54,6 +59,7 @@ export function modeleNavigation(etat: EtatClient): ModeleNavigation {
       libelle,
       // L'ecran de connexion est celui du compte: un invite y arrive par le profil.
       actif: etat.ecran === vers || (vers === 'profil' && etat.ecran === 'connexion'),
+      pastille: vers === 'amis' ? demandesEnAttente(etat) : 0,
     })),
   };
 }

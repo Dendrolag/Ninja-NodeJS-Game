@@ -262,6 +262,8 @@ describe.runIf(baseDisponible())('amis', () => {
     const demande = await geste(auth, alice, 'demander', bob.pseudo.toLowerCase());
 
     expect(demande.relation).toBe('demandeEnvoyee');
+    // Le compte vise, dans son ecriture, et non dans celle de la demande.
+    expect(demande.pseudo).toBe(bob.pseudo);
     expect(pseudos(demande.amis.envoyees)).toEqual([bob.pseudo]);
     expect(pseudos((await listeDe(auth, bob)).recues)).toEqual([alice.pseudo]);
     expect((await ficheDe(auth, bob, alice.pseudo)).relation).toBe('demandeRecue');

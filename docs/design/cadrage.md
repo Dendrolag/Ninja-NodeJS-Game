@@ -71,7 +71,7 @@ Sept écrans dans la maquette. Pour chacun: son statut en v1, les données qu'il
 ### En-tête commun
 
 - **v1**: marque, libellé d'écran, et, une fois connecté (3.2), niveau avec sa progression, pseudo, palier et pièces. Construit au jalon 3; un invité y trouve « Se connecter ».
-- **Navigation latérale**: reprise au jalon 3, ses quatre destinations existant (Jouer, Parties, Créer, Profil). Proposée hors partie seulement, repliée en barre en fenêtre étroite (décision du 11 septembre 2026).
+- **Navigation latérale**: reprise au jalon 3, ses quatre destinations existant (Jouer, Parties, Créer, Profil). Proposée hors partie seulement, repliée en barre en fenêtre étroite (décision du 11 septembre 2026). Une cinquième, **Amis**, depuis l'étape `3.6`, entre Créer et Profil, avec une pastille qui compte les demandes d'ami reçues; un invité y est mené à la connexion.
 - **Écarté**: pastille de gemmes.
 
 ### 1. Accueil
@@ -120,6 +120,14 @@ Sept écrans dans la maquette. Pour chacun: son statut en v1, les données qu'il
 - **Masqué**: pass de saison, skins, succès, clan, gemmes, rang mondial, ratio, meilleure série, temps de jeu, ninjas capturés au total.
 - **Évolution décidée le 25 septembre 2026, construite le 26** (étape `3.5`): le meilleur score toutes modes confondus devient un meilleur score par mode, le record en Massacre solo devient la colonne « Seul » de ce tableau, et le mode préféré s'ajoute. Le ratio et le temps de jeu restent masqués. « Inscrit le » devient « Membre depuis le ».
 - **La fiche d'un autre joueur** (étape `3.5`): `GET /api/comptes/joueur?pseudo=…` (`FicheJoueur`), réservée aux comptes connectés, ouverte d'un clic sur un pseudo au salon et au classement de fin. Pseudo, date d'inscription, niveau, palier et les mêmes statistiques que le profil; ni pièces, ni XP ou points de ligue exacts, ni dernières parties. Les amis et leurs statistiques partagées: `docs/design/etude-amis-et-fiche-joueur.md`.
+
+### 8. Amis
+
+- **Statut**: construit à l'étape `3.6` (`docs/plan/etape-3-6.md`). Réservé aux comptes.
+- **L'amitié**: mutuelle, par demande acceptée; deux demandes croisées valent acceptation. Refuser, annuler et retirer sont silencieux. Bloquer défait l'amitié et les demandes, et le bloqué n'en sait rien: ses demandes sont enregistrées, jamais montrées, et effacées au déblocage. 200 amis, 50 demandes en attente et 10 demandes par minute au plus.
+- **L'écran**: « Ajouter par pseudo », puis les demandes reçues (Accepter, Refuser, Bloquer), les amis, les demandes envoyées (Annuler), les comptes bloqués (Débloquer). Chaque pseudo ouvre la fiche.
+- **La fiche** dit la relation et propose les gestes qu'elle permet: c'est par elle qu'on ajoute un joueur rencontré au salon ou à la fin. Pour un ami, elle montre les parties jouées ensemble, « Vous devant » et « Bob devant », sans les égalités.
+- **La liste se relit** à l'ouverture de la session, à chaque navigation et au retour d'une partie: une demande reçue page ouverte apparaît à la navigation suivante. La présence et les invitations viennent à l'étape `2.8`.
 
 ## 4. Contrat de configuration de partie
 

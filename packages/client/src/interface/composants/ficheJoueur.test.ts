@@ -5,7 +5,8 @@
  * L'application entiere est montee, avec un client de compte relie au banc d'essai du
  * transport et a des comptes d'essai: la fiche s'ouvre depuis le salon et le
  * classement de fin comme en jeu, d'un clic sur un pseudo, et se lit par la requete
- * des comptes.
+ * des comptes. Depuis l'etape 3.6, elle propose les gestes d'amitie que la relation
+ * permet, et montre a un ami les parties jouees ensemble.
  */
 
 import type { FicheJoueur, InfosSalon, LigneClassement } from '@neon-ninja/shared';
@@ -273,5 +274,102 @@ describe('la fiche d un joueur, a la fin', () => {
     });
 
     expect(hote.querySelectorAll('.lien-fiche')).toHaveLength(0);
+  });
+});
+
+describe('l amitie, sur la fiche (etape 3.6)', () => {
+  /** Les libelles des gestes proposes par la fiche, dans l'ordre. */
+  function gestes(): string[] {
+    return [...fenetre().querySelectorAll('.fiche-gestes button')].map(
+      (element) => element.textContent,
+    );
+  }
+
+  it('propose d ajouter un compte sans relation, et suit la demande envoyee', async () => {
+    await entrerAuSalon(true);
+    boutonObligatoire(hote, 'Bob, voir sa fiche').click();
+    await laisserRepondre();
+
+    expect(gestes()).toEqual(['Ajouter en ami', 'Bloquer']);
+    expect(estCache(obligatoire(fenetre(), '.fiche-relation'))).toBe(true);
+    expect(estCache(obligatoire(fenetre(), '.fiche-ensemble'))).toBe(true);
+
+    api.reponses.gesteDAmitie = async () => ({
+      acceptee: true,
+      valeur: {
+        pseudo: 'Bob',
+        relation: 'demandeEnvoyee',
+        amis: { amis: [], recues: [], envoyees: [{ pseudo: 'Bob', niveau: 4 }], bloques: [] },
+      },
+    });
+    boutonObligatoire(fenetre(), 'Ajouter en ami').click();
+
+    expect(api.appels.at(-1)).toEqual({
+      nom: 'gesteDAmitie',
+      argument: { jeton: JETON_DESSAI, demande: { geste: 'demander', pseudo: 'Bob' } },
+    });
+    // Le geste attend sa reponse: les boutons ne repartent pas.
+    expect(boutonObligatoire(fenetre(), 'Bloquer').disabled).toBe(true);
+
+    await laisserRepondre();
+
+    expect(obligatoire(fenetre(), '.fiche-relation').textContent).toBe(
+      'Demande envoyée, en attente de réponse.',
+    );
+    expect(gestes()).toEqual(['Annuler la demande', 'Bloquer']);
+    expect(boutonObligatoire(fenetre(), 'Bloquer').disabled).toBe(false);
+  });
+
+  it('dit pourquoi un geste est refuse', async () => {
+    await entrerAuSalon(true);
+    boutonObligatoire(hote, 'Bob, voir sa fiche').click();
+    await laisserRepondre();
+    api.reponses.gesteDAmitie = async () => ({
+      acceptee: false,
+      statut: 409,
+      erreurs: [{ champ: 'geste', motif: 'Ce compte a déjà 200 amis.' }],
+    });
+
+    boutonObligatoire(fenetre(), 'Ajouter en ami').click();
+    await laisserRepondre();
+
+    expect(obligatoire(fenetre(), '.fiche-erreur-geste').textContent).toBe(
+      'Ce compte a déjà 200 amis.',
+    );
+  });
+
+  it('montre a un ami les parties jouees ensemble', async () => {
+    api.reponses.joueur = async () => ({
+      acceptee: true,
+      valeur: {
+        ...FICHE_DE_BOB,
+        relation: 'ami',
+        ensemble: { partiesEnsemble: 14, devant: 9, derriere: 4 },
+      },
+    });
+    await entrerAuSalon(true);
+    boutonObligatoire(hote, 'Bob, voir sa fiche').click();
+    await laisserRepondre();
+
+    expect(obligatoire(fenetre(), '.fiche-relation').textContent).toBe('Vous êtes amis.');
+    expect(gestes()).toEqual(['Retirer des amis', 'Bloquer']);
+    expect(
+      [...obligatoire(fenetre(), '.fiche-ensemble').querySelectorAll('.statistique')].map(
+        (tuile) => tuile.textContent,
+      ),
+    ).toEqual(['14Parties ensemble', '9Vous devant', '4Bob devant']);
+  });
+
+  it('ne propose rien sur sa propre fiche', async () => {
+    api.reponses.joueur = async (_jeton, pseudo) => ({
+      acceptee: true,
+      valeur: { ...ficheDEssai(pseudo), relation: 'soi' },
+    });
+    await entrerAuSalon(true);
+    boutonObligatoire(hote, 'Alice, voir sa fiche').click();
+    await laisserRepondre();
+
+    expect(estCache(obligatoire(fenetre(), '.fiche-amitie'))).toBe(true);
+    expect(gestes()).toEqual([]);
   });
 });

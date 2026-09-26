@@ -46,6 +46,7 @@ import { monterNavigation } from './composants/navigation.js';
 import { monterPanneauSon } from './composants/son.js';
 import { bouton, creer, ecrireTexte } from './dom.js';
 import { monterAccueil } from './ecrans/accueil.js';
+import { monterAmis } from './ecrans/amis.js';
 import { monterConnexion } from './ecrans/connexion.js';
 import { monterCreation } from './ecrans/creation.js';
 import { monterFin } from './ecrans/fin.js';
@@ -93,6 +94,7 @@ const MONTEURS_DE_MENU: Readonly<Record<Exclude<Ecran, 'jeu'>, MonteurEcran>> = 
   parties: monterParties,
   creation: monterCreation,
   connexion: monterConnexion,
+  amis: monterAmis,
   profil: monterProfil,
   salon: monterSalon,
   fin: monterFin,
@@ -104,6 +106,7 @@ const LIBELLES_ECRAN: Readonly<Record<Ecran, string>> = {
   parties: 'Parties',
   creation: 'Créer',
   connexion: 'Compte',
+  amis: 'Amis',
   profil: 'Profil',
   salon: 'Salon',
   jeu: 'En jeu',

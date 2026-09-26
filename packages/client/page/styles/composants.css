@@ -90,6 +90,17 @@
   color: var(--texte);
 }
 
+/* Un bouton de ligne ou de fenetre, plus bas, pour les gestes d'amitie (etape 3.6). */
+.bouton-compact {
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 12.5px;
+}
+
+.bouton-discret.bouton-compact {
+  padding: 0 10px;
+}
+
 .bouton-large {
   min-height: 52px;
   padding: 0 30px;
@@ -421,6 +432,56 @@
 
 .fiche-statistiques h3,
 .fiche-par-mode h3 {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* L'amitie sur la fiche (etape 3.6): la relation en une phrase, puis les gestes, ceux
+   qui defont tenus a droite, loin du geste principal. */
+.fiche-amitie {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-controle);
+  background: var(--surface);
+}
+
+.fiche-relation {
+  color: var(--texte-secondaire);
+  font-size: 13.5px;
+}
+
+.fiche-gestes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.gestes-d-amitie {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gestes-qui-defont {
+  margin-left: auto;
+}
+
+.fiche-erreur-geste {
+  color: var(--rose-clair);
+  font-size: 13px;
+}
+
+.fiche-ensemble {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+
+.fiche-ensemble h3 {
   font-size: 15px;
   font-weight: 600;
 }

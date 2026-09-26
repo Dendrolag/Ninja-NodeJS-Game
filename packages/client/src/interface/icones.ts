@@ -6,8 +6,8 @@
  * les entoure. La tension 9 du journal de conception les jugeait directement
  * reutilisables, et c'est le cas: aucune police d'icones, aucun fichier a charger,
  * aucun emoji. Les glyphes absents de la maquette sont dessines dans le meme style:
- * pause, son, sonCoupe, fermer, user, sortir, viseur, katana, et partager (etape
- * 2.7).
+ * pause, son, sonCoupe, fermer, user, sortir, viseur, katana, partager (etape
+ * 2.7), et amis (etape 3.6).
  *
  * SEULS LES GLYPHES UTILISES SONT REPRIS. La maquette en compte trente-cinq, dont
  * beaucoup servent des ecrans reportes (pass de saison, boutique, clans).
@@ -166,6 +166,15 @@ const GLYPHES = {
       { trace: 'M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4' },
       { trace: 'M9 16l-4-4 4-4' },
       { trace: 'M5 12h11' },
+    ],
+  },
+  // Etape 3.6: deux silhouettes, celle de devant reprise de user.
+  amis: {
+    formes: [
+      { cercle: [9, 8, 3.5] },
+      { trace: 'M2.5 20a6.5 6.5 0 0 1 13 0' },
+      { trace: 'M15 4.8a3.5 3.5 0 0 1 0 6.4' },
+      { trace: 'M17.5 14.2a6.5 6.5 0 0 1 4 5.8' },
     ],
   },
 } satisfies Readonly<Record<string, DefinitionGlyphe>>;

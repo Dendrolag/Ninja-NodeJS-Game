@@ -80,7 +80,11 @@ describe('au demarrage', () => {
 
     expect(client.etat.session.nature).toBe('compte');
     expect(reseau.ouvertures).toEqual([{ jeton: JETON_DESSAI }]);
-    expect(api.appels).toEqual([{ nom: 'moi', argument: JETON_DESSAI }]);
+    // Le compte reconnu lit aussi ses amis (etape 3.6).
+    expect(api.appels).toEqual([
+      { nom: 'moi', argument: JETON_DESSAI },
+      { nom: 'amis', argument: JETON_DESSAI },
+    ]);
   });
 
   it('oublie une session expiree, ouvre en invite, et retient qu il faudra le dire', async () => {
@@ -177,7 +181,7 @@ describe('se connecter et s inscrire', () => {
 
     await laisserRepondre();
 
-    expect(requetes()).toEqual(['connecter', 'moi']);
+    expect(requetes()).toEqual(['connecter', 'moi', 'amis']);
     expect(coffre.lire()).toBe(JETON_DESSAI);
     expect(client.etat.session.nature).toBe('compte');
     expect(client.etat.demandeDeCompte.enCours).toBe(false);
@@ -190,7 +194,7 @@ describe('se connecter et s inscrire', () => {
     client.sInscrire({ pseudo: 'Bob', motDePasse: 'correct cheval' });
     await laisserRepondre();
 
-    expect(requetes()).toEqual(['inscrire', 'moi']);
+    expect(requetes()).toEqual(['inscrire', 'moi', 'amis']);
     expect(
       client.etat.session.nature === 'compte' ? client.etat.session.progression.pseudo : '',
     ).toBe('Bob');
@@ -316,6 +320,6 @@ describe('pendant une partie', () => {
     expect(reseau.ouvertures).toHaveLength(ouvertures);
     expect(coffre.lire()).toBe(JETON_DESSAI);
     expect(client.etat.session.nature).toBe('compte');
-    expect(requetes()).toEqual(['moi']);
+    expect(requetes()).toEqual(['moi', 'amis']);
   });
 });

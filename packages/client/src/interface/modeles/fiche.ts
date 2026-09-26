@@ -6,18 +6,21 @@
  * profil (statistiques.ts). Ni ses pieces, ni ses dernieres parties: le serveur ne les
  * envoie pas.
  *
- * UNE SUITE DE SECTIONS, POUR LA SUITE. L'identite, les statistiques, puis le tableau
- * par mode; la section des succes (etapes 3.7 et 3.8) viendra s'y ajouter, et celle
- * des parties jouees ensemble pour un ami (etape 3.6).
+ * UNE SUITE DE SECTIONS, POUR LA SUITE. L'identite, l'amitie et, pour un ami, les
+ * parties jouees ensemble (etape 3.6), les statistiques, puis le tableau par mode; la
+ * section des succes (etapes 3.7 et 3.8) viendra s'y ajouter.
  *
  * FONCTION PURE. Le client met en forme ce que le serveur a lu.
  */
 
-import type { FicheJoueur } from '@neon-ninja/shared';
+import type { FaceAFace, FicheJoueur } from '@neon-ninja/shared';
 
-import type { EtatClient } from '../../etat.js';
+import type { EtatClient, EtatDuGeste } from '../../etat.js';
+import type { GestePropose } from './amis.js';
+import { gesteSur, gestesDeLaRelation, modeleDuGeste, phraseDeLaRelation } from './amis.js';
 import { formaterInscription } from './profil.js';
 import { NOMS_DES_PALIERS } from './progression.js';
+import { formaterNombre } from './progression.js';
 import { initiales } from './salon.js';
 import type { LigneDUnMode, StatistiqueAffichee } from './statistiques.js';
 import { lignesParMode, tuilesDesStatistiques } from './statistiques.js';
@@ -44,7 +47,22 @@ export type ModeleFiche =
       readonly statistiques: readonly StatistiqueAffichee[];
       /** Les modes joues, dans l'ordre des modes du jeu. Vide sans partie. */
       readonly parMode: readonly LigneDUnMode[];
+      /** L'amitie avec ce compte (etape 3.6). Absente sur sa propre fiche. */
+      readonly amitie?: ModeleAmitie;
+      /** Les parties jouees ensemble, pour un ami, et pour lui seul (etape 3.6). */
+      readonly ensemble?: readonly StatistiqueAffichee[];
     };
+
+/** La section Amitie de la fiche (etape 3.6). */
+export interface ModeleAmitie {
+  /** « Vous êtes amis. » Absente quand il n'y a aucune relation. */
+  readonly phrase: string | undefined;
+  readonly gestes: readonly GestePropose[];
+  /** Un geste sur ce compte attend sa reponse: les boutons ne repartent pas. */
+  readonly enCours: boolean;
+  /** Pourquoi le dernier geste sur ce compte a ete refuse. */
+  readonly erreur: string | undefined;
+}
 
 /** Calcule la fenetre de la fiche. */
 export function modeleFiche(etat: EtatClient): ModeleFiche {
@@ -61,12 +79,14 @@ export function modeleFiche(etat: EtatClient): ModeleFiche {
       return { nature: 'echec', pseudo: fiche.pseudo, motif: fiche.motif };
 
     case 'chargee':
-      return ficheChargee(fiche.fiche);
+      return ficheChargee(fiche.fiche, etat.amis.geste);
   }
 }
 
-/** La fiche lue, mise en forme. */
-function ficheChargee(fiche: FicheJoueur): ModeleFiche {
+/** La fiche lue, mise en forme, avec le dernier geste d'amitie s'il la concerne. */
+function ficheChargee(fiche: FicheJoueur, geste: EtatDuGeste): ModeleFiche {
+  const dernier = modeleDuGeste(gesteSur(geste, fiche.pseudo));
+
   return {
     nature: 'chargee',
     pseudo: fiche.pseudo,
@@ -76,5 +96,30 @@ function ficheChargee(fiche: FicheJoueur): ModeleFiche {
     inscription: formaterInscription(fiche.inscritLe),
     statistiques: tuilesDesStatistiques(fiche.statistiques),
     parMode: lignesParMode(fiche.statistiques),
+    ...(fiche.relation === 'soi'
+      ? {}
+      : {
+          amitie: {
+            phrase: phraseDeLaRelation(fiche.relation),
+            gestes: gestesDeLaRelation(fiche.relation),
+            enCours: dernier.enCours,
+            erreur: dernier.erreur,
+          },
+        }),
+    ...(fiche.relation === 'ami' && fiche.ensemble !== undefined
+      ? { ensemble: tuilesDEnsemble(fiche.pseudo, fiche.ensemble) }
+      : {}),
   };
+}
+
+/**
+ * Les parties jouees ensemble: combien, et qui a fini devant l'autre. Le pseudo, et non
+ * « lui »: la fiche ne genre personne.
+ */
+function tuilesDEnsemble(pseudo: string, ensemble: FaceAFace): readonly StatistiqueAffichee[] {
+  return [
+    { libelle: 'Parties ensemble', valeur: formaterNombre(ensemble.partiesEnsemble) },
+    { libelle: 'Vous devant', valeur: formaterNombre(ensemble.devant) },
+    { libelle: `${pseudo} devant`, valeur: formaterNombre(ensemble.derriere) },
+  ];
 }

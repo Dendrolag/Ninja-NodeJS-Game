@@ -29,7 +29,14 @@ import type { StatutPartie } from '@neon-ninja/shared';
 import type { Action } from './actions.js';
 
 /** Les ecrans ou l'on va de soi-meme, hors de toute partie. */
-export const ECRANS_DE_MENU = ['accueil', 'parties', 'creation', 'profil', 'connexion'] as const;
+export const ECRANS_DE_MENU = [
+  'accueil',
+  'parties',
+  'creation',
+  'amis',
+  'profil',
+  'connexion',
+] as const;
 
 /** Un ecran de menu. */
 export type EcranDeMenu = (typeof ECRANS_DE_MENU)[number];
@@ -46,6 +53,8 @@ export type Ecran =
   | 'connexion'
   /** Profil: la progression, les statistiques et les dernieres parties d'un compte. */
   | 'profil'
+  /** Amis: les amis d'un compte, ses demandes et ses blocages (etape 3.6). */
+  | 'amis'
   /** Salon: on attend, on discute, l'hote regle et lance. Le waitingRoom du legacy. */
   | 'salon'
   /** Jeu: la partie se joue. Le gameScreen du legacy. */

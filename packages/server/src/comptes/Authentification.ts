@@ -388,6 +388,7 @@ export class Authentification implements ServiceDeComptes {
     }
 
     return acceptee({
+      pseudo: vise.pseudo,
       relation: relationVue(applique.faits),
       amis: listeDAmis(await amitiesDuCompte(this.db, compteId)),
     });

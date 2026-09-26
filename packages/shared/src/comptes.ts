@@ -382,8 +382,13 @@ export interface ListeDAmis {
   readonly bloques: readonly PersonneListee[];
 }
 
-/** La reponse a un geste d'amitie accepte: la relation qui en resulte, et la liste a jour. */
+/**
+ * La reponse a un geste d'amitie accepte: le compte vise, la relation qui en resulte,
+ * et la liste a jour.
+ */
 export interface ReponseDeGeste {
+  /** Le pseudo du compte vise, dans son ecriture: la demande a pu l'ecrire autrement. */
+  readonly pseudo: string;
   readonly relation: RelationDAmitie;
   readonly amis: ListeDAmis;
 }

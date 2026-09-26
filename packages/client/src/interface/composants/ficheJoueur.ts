@@ -7,9 +7,9 @@
  * code de secours, et elle suit l'etat: ouverte tant que l'etat porte une fiche,
  * fermee sinon.
  *
- * UNE SUITE DE SECTIONS. L'identite, les statistiques, le tableau par mode. Les
- * succes (etapes 3.7 et 3.8) et, pour un ami, les parties jouees ensemble (etape
- * 3.6) s'y ajouteront chacun en section.
+ * UNE SUITE DE SECTIONS. L'identite, l'amitie et ses gestes, les parties jouees
+ * ensemble pour un ami (etape 3.6), les statistiques, le tableau par mode. Les succes
+ * (etapes 3.7 et 3.8) s'y ajouteront en section.
  *
  * CE COMPOSANT NE DECIDE RIEN. Il montre le modele de la fiche, et previent le client
  * a la fermeture, quelle qu'en soit la facon: bouton, croix, Echap ou clic a cote.
@@ -22,6 +22,7 @@ import { icone } from '../icones.js';
 import type { ModeleFiche } from '../modeles/fiche.js';
 import { modeleFiche } from '../modeles/fiche.js';
 import { monterFenetre } from './fenetre.js';
+import { boutonsDeGestes } from './gestesDAmitie.js';
 import { tableauParMode, tuilesDeStatistiques } from './statistiques.js';
 
 /** La fenetre de la fiche, montee. */
@@ -76,6 +77,29 @@ export function monterFenetreDeLaFiche(doc: Document, client: Client): FenetreDe
     texte: 'Aucune partie enregistrée pour l’instant.',
   });
 
+  const phraseDAmitie = creer(doc, 'p', { classe: 'fiche-relation' });
+  const gestes = creer(doc, 'div', { classe: 'fiche-gestes' });
+  const erreurDuGeste = creer(doc, 'p', {
+    classe: 'fiche-erreur-geste',
+    attributs: { role: 'alert' },
+  });
+  const amitie = creer(
+    doc,
+    'section',
+    { classe: 'fiche-amitie', attributs: { 'aria-label': 'Amitié' } },
+    phraseDAmitie,
+    gestes,
+    erreurDuGeste,
+  );
+  const tuilesEnsemble = creer(doc, 'ul', { classe: 'statistiques' });
+  const ensemble = creer(
+    doc,
+    'section',
+    { classe: 'fiche-ensemble' },
+    creer(doc, 'h3', { texte: 'Ensemble' }),
+    tuilesEnsemble,
+  );
+
   const contenu = creer(
     doc,
     'div',
@@ -100,6 +124,8 @@ export function monterFenetreDeLaFiche(doc: Document, client: Client): FenetreDe
         inscription,
       ),
     ),
+    amitie,
+    ensemble,
     creer(
       doc,
       'section',
@@ -126,6 +152,8 @@ export function monterFenetreDeLaFiche(doc: Document, client: Client): FenetreDe
 
   /** La fiche deja dessinee: elle ne se redessine que si elle a change. */
   let dessinee: unknown;
+  /** Les gestes deja dessines, decrits: ils ne se refont que s'ils ont change. */
+  let gestesDessines = '';
 
   const dessiner = (modele: Extract<ModeleFiche, { nature: 'chargee' }>): void => {
     ecrireTexte(avatar, modele.initiales);
@@ -137,6 +165,36 @@ export function monterFenetreDeLaFiche(doc: Document, client: Client): FenetreDe
     parMode.replaceChildren(tableauParMode(doc, modele.parMode));
     montrer(parMode, modele.parMode.length > 0);
     montrer(sansPartie, modele.parMode.length === 0);
+    tuilesEnsemble.replaceChildren(...tuilesDeStatistiques(doc, modele.ensemble ?? []));
+    montrer(ensemble, modele.ensemble !== undefined);
+  };
+
+  /**
+   * L'amitie suit aussi le dernier geste, qui change sans que la fiche change: elle se
+   * met a jour a chaque affichage, et ses boutons seulement quand ils changent.
+   */
+  const dessinerLAmitie = (modele: Extract<ModeleFiche, { nature: 'chargee' }>): void => {
+    const { amitie: modeleAmitie } = modele;
+
+    montrer(amitie, modeleAmitie !== undefined);
+
+    if (modeleAmitie === undefined) {
+      return;
+    }
+
+    ecrireTexte(phraseDAmitie, modeleAmitie.phrase ?? '');
+    montrer(phraseDAmitie, modeleAmitie.phrase !== undefined);
+    ecrireTexte(erreurDuGeste, modeleAmitie.erreur ?? '');
+    montrer(erreurDuGeste, modeleAmitie.erreur !== undefined);
+
+    const description = JSON.stringify([modele.pseudo, modeleAmitie.gestes, modeleAmitie.enCours]);
+
+    if (description !== gestesDessines) {
+      gestesDessines = description;
+      gestes.replaceChildren(
+        ...boutonsDeGestes(doc, client, modele.pseudo, modeleAmitie.gestes, modeleAmitie.enCours),
+      );
+    }
   };
 
   return {
@@ -165,6 +223,10 @@ export function monterFenetreDeLaFiche(doc: Document, client: Client): FenetreDe
       if (modele.nature === 'chargee' && etat.fiche !== dessinee) {
         dessinee = etat.fiche;
         dessiner(modele);
+      }
+
+      if (modele.nature === 'chargee') {
+        dessinerLAmitie(modele);
       }
 
       fenetre.ouvrir();

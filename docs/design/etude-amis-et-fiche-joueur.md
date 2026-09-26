@@ -1,7 +1,7 @@
 # Étude - Les amis et la fiche joueur
 
 Date: 25 septembre 2026
-Statut: étude close. Décisions prises par le porteur du projet le 25 septembre 2026 (section 7): les recommandations sont retenues, sauf le temps de jeu, écarté. Les quatre étapes sont inscrites au ROADMAP. La première, `2.7` le lien d'invitation, est construite depuis le 26 septembre 2026 (`docs/plan/etape-2-7.md`), la deuxième, `3.5` la fiche joueur, le même jour (`docs/plan/etape-3-5.md`; la route est `GET /api/comptes/joueur?pseudo=…` et non `/api/joueurs/:pseudo`, un pseudo pouvant valoir « .. »); les deux autres ne le sont pas.
+Statut: étude close. Décisions prises par le porteur du projet le 25 septembre 2026 (section 7): les recommandations sont retenues, sauf le temps de jeu, écarté. Les quatre étapes sont inscrites au ROADMAP. La première, `2.7` le lien d'invitation, est construite depuis le 26 septembre 2026 (`docs/plan/etape-2-7.md`), la deuxième, `3.5` la fiche joueur, le même jour (`docs/plan/etape-3-5.md`; la route est `GET /api/comptes/joueur?pseudo=…` et non `/api/joueurs/:pseudo`, un pseudo pouvant valoir « .. »), la troisième, `3.6` les amis, le même jour aussi (`docs/plan/etape-3-6.md`; on ajoute un joueur rencontré depuis sa fiche, et non par un bouton sur chaque ligne); reste `2.8`, la présence et les invitations.
 
 ## 1. La demande
 

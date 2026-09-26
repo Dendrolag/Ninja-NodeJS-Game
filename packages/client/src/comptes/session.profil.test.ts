@@ -66,7 +66,8 @@ describe('le profil d un compte', () => {
     await laisserRepondre();
 
     expect(client.etat.profil).toEqual({ statut: 'charge', profil });
-    expect(requetes()).toEqual(['moi', 'profil']);
+    // Les amis se lisent a l'ouverture de la session, puis a chaque navigation (etape 3.6).
+    expect(requetes()).toEqual(['moi', 'amis', 'profil', 'amis']);
     expect(client.etat.session).toEqual({
       nature: 'compte',
       progression: {
@@ -124,7 +125,8 @@ describe('le profil d un compte', () => {
     client.naviguer('profil');
     client.chargerLeProfil();
 
-    expect(requetes()).toEqual(['moi', 'profil']);
+    // Les amis se lisent a l'ouverture de la session, puis a chaque navigation (etape 3.6).
+    expect(requetes()).toEqual(['moi', 'amis', 'profil', 'amis']);
   });
 
   it('se quitte en se deconnectant, vers l accueil', async () => {

@@ -23,7 +23,9 @@ import type {
   EtatCompteARebours,
   FicheJoueur,
   FinDePartie,
+  GesteDAmitie,
   InfosSalon,
+  ListeDAmis,
   MaProgression,
   MessageChat,
   PartiePublique,
@@ -31,6 +33,7 @@ import type {
   ProgressionDeFin,
   Refus,
   NatureObjet,
+  RelationDAmitie,
 } from '@neon-ninja/shared';
 
 import type { Ecran } from './ecrans.js';
@@ -183,6 +186,59 @@ export type EtatDeLaFiche =
 export const FICHE_FERMEE: EtatDeLaFiche = { statut: 'fermee' };
 
 /**
+ * Le dernier geste d'amitie du joueur, et ce qu'il a donne (etape 3.6).
+ *
+ * Il retient le geste et le pseudo vise: l'ecran Amis et la fiche de ce joueur disent
+ * son resultat, et une fiche ouverte sur un autre joueur ne le montre pas.
+ */
+export type EtatDuGeste =
+  | { readonly statut: 'aucun' }
+  | { readonly statut: 'enCours'; readonly geste: GesteDAmitie; readonly pseudo: string }
+  | {
+      readonly statut: 'fait';
+      readonly geste: GesteDAmitie;
+      readonly pseudo: string;
+      /** Ce que ce compte est devenu pour le joueur. */
+      readonly relation: RelationDAmitie;
+    }
+  | {
+      readonly statut: 'refuse';
+      readonly geste: GesteDAmitie;
+      readonly pseudo: string;
+      readonly motif: string;
+    };
+
+/**
+ * Les amis du compte, tels que le client les a lus (etape 3.6).
+ *
+ * LA LISTE SE RELIT, ELLE NE SE POUSSE PAS: a l'ouverture d'une session de compte, a
+ * chaque navigation entre les ecrans de menu et au retour d'une partie. La derniere
+ * lue reste affichee pendant qu'une autre se lit: la pastille des demandes recues ne
+ * clignote pas a chaque changement d'ecran.
+ */
+export interface EtatDesAmis {
+  /** La derniere liste lue. Absente tant qu'aucune ne l'a ete. */
+  readonly liste: ListeDAmis | undefined;
+  /**
+   * Le numero de la lecture qui attend sa reponse, ou undefined. Une reponse ne vaut que
+   * pour la lecture qu'on attend encore: un geste fait entre-temps rend la liste a jour,
+   * et la lecture partie avant lui ne doit pas la remplacer par une plus ancienne.
+   */
+  readonly lecture: number | undefined;
+  /** Pourquoi la derniere lecture a echoue. Absent si elle a abouti. */
+  readonly motifDEchec: string | undefined;
+  readonly geste: EtatDuGeste;
+}
+
+/** Des amis que le client n'a pas lus. */
+export const AMIS_INCONNUS: EtatDesAmis = {
+  liste: undefined,
+  lecture: undefined,
+  motifDEchec: undefined,
+  geste: { statut: 'aucun' },
+};
+
+/**
  * Un message de chat, date a son arrivee chez nous.
  *
  * Le serveur n'envoie aucune heure, et c'est delibere: la sienne est monotone et
@@ -259,6 +315,11 @@ export interface EtatClient {
    * d'un invite, qui n'a pas de fiche a lire.
    */
   readonly fiche: EtatDeLaFiche;
+  /**
+   * Les amis du compte, et le dernier geste d'amitie (etape 3.6). Oublies quand la
+   * session change.
+   */
+  readonly amis: EtatDesAmis;
   /**
    * Notre identifiant de joueur, donne par le serveur a l'entree en partie.
    *
@@ -378,6 +439,7 @@ export const ETAT_INITIAL: EtatClient = {
   codeDeSecours: undefined,
   profil: PROFIL_INCONNU,
   fiche: FICHE_FERMEE,
+  amis: AMIS_INCONNUS,
   moi: undefined,
   pseudoDemande: undefined,
   pseudoSaisi: '',

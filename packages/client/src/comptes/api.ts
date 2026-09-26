@@ -1,6 +1,7 @@
 /**
  * Les requetes des comptes: s'inscrire, se connecter, se deconnecter, lire sa
- * progression et, depuis l'etape 3.5, la fiche d'un autre compte.
+ * progression, depuis l'etape 3.5 la fiche d'un autre compte et, depuis l'etape 3.6,
+ * ses amis.
  *
  * DERRIERE UNE INTERFACE, COMME LE TRANSPORT DU JEU (etape 4.1). Le reste du client
  * ne sait pas que ces questions passent par HTTP: la session (session.ts) appelle
@@ -25,12 +26,15 @@ import type {
   DemandeChangementMotDePasse,
   DemandeCodeDeSecours,
   DemandeConnexion,
+  DemandeDeGeste,
   DemandeInscription,
   DemandeReinitialisation,
   ErreurValidation,
   FicheJoueur,
+  ListeDAmis,
   MaProgression,
   ProfilDuCompte,
+  ReponseDeGeste,
   SessionInscrite,
   SessionOuverte,
 } from '@neon-ninja/shared';
@@ -69,6 +73,13 @@ export interface ApiComptes {
    * 3.5). Un pseudo sans compte est refuse en 404.
    */
   joueur(jeton: string, pseudo: string): Promise<ReponseDesComptes<FicheJoueur>>;
+  /** Les amis du compte de cette session (etape 3.6). */
+  amis(jeton: string): Promise<ReponseDesComptes<ListeDAmis>>;
+  /**
+   * Fait un geste d'amitie du compte de cette session (etape 3.6). Un geste que les
+   * regles refusent l'est en 409, un pseudo sans compte en 404.
+   */
+  gesteDAmitie(jeton: string, demande: DemandeDeGeste): Promise<ReponseDesComptes<ReponseDeGeste>>;
   /**
    * Change le mot de passe du compte de cette session, et rend son nouveau code de
    * secours (etape 3.4). Un mot de passe actuel faux est refuse en 403.
@@ -189,6 +200,10 @@ export function creerApiComptesHttp(options: OptionsApiComptesHttp = {}): ApiCom
       demander(ROUTES_COMPTES.profil, { method: 'GET', headers: entetesDuJeton(jeton) }, true),
     joueur: (jeton, pseudo) =>
       demander(adresseDeLaFiche(pseudo), { method: 'GET', headers: entetesDuJeton(jeton) }, true),
+    amis: (jeton) =>
+      demander(ROUTES_COMPTES.amis, { method: 'GET', headers: entetesDuJeton(jeton) }, true),
+    gesteDAmitie: (jeton, demande) =>
+      demander(ROUTES_COMPTES.amis, envoiJson(demande, jeton), true),
     changerMotDePasse: (jeton, demande) =>
       demander(ROUTES_COMPTES.motDePasse, envoiJson(demande, jeton), true),
     nouveauCodeDeSecours: (jeton, demande) =>
@@ -336,6 +351,9 @@ export function ficheDEssai(pseudo: string): FicheJoueur {
   };
 }
 
+/** La liste d'un compte qui n'a ni ami ni demande, pour les tests (etape 3.6). */
+export const LISTE_D_AMIS_VIDE: ListeDAmis = { amis: [], recues: [], envoyees: [], bloques: [] };
+
 /** Cree des comptes pilotes a la main. */
 export function creerApiComptesFactice(): ApiComptesFactice {
   const appels: AppelDesComptes[] = [];
@@ -377,6 +395,15 @@ export function creerApiComptesFactice(): ApiComptesFactice {
     moi: async () => ({ acceptee: true, valeur: progressionDEssai(dernierPseudo) }),
     profil: async () => ({ acceptee: true, valeur: profilDEssai(dernierPseudo) }),
     joueur: async (_jeton, pseudo) => ({ acceptee: true, valeur: ficheDEssai(pseudo) }),
+    amis: async () => ({ acceptee: true, valeur: LISTE_D_AMIS_VIDE }),
+    gesteDAmitie: async (_jeton, demande) => ({
+      acceptee: true,
+      valeur: {
+        pseudo: demande.pseudo,
+        relation: demande.geste === 'demander' ? 'demandeEnvoyee' : 'aucune',
+        amis: LISTE_D_AMIS_VIDE,
+      },
+    }),
   };
 
   return {
@@ -405,6 +432,14 @@ export function creerApiComptesFactice(): ApiComptesFactice {
     joueur: (jeton, pseudo) => {
       appels.push({ nom: 'joueur', argument: { jeton, pseudo } });
       return reponses.joueur(jeton, pseudo);
+    },
+    amis: (jeton) => {
+      appels.push({ nom: 'amis', argument: jeton });
+      return reponses.amis(jeton);
+    },
+    gesteDAmitie: (jeton, demande) => {
+      appels.push({ nom: 'gesteDAmitie', argument: { jeton, demande } });
+      return reponses.gesteDAmitie(jeton, demande);
     },
     changerMotDePasse: (jeton, demande) => {
       appels.push({ nom: 'changerMotDePasse', argument: { jeton, demande } });

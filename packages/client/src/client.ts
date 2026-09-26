@@ -512,6 +512,10 @@ export function creerClient(options: OptionsClient): Client {
       } else if (magasin.etat.ecran === 'parties') {
         listerParties();
       }
+
+      // Les amis se relisent a chaque navigation (etape 3.6): aucune demande recue n'est
+      // poussee, et la pastille de la navigation doit la montrer au passage suivant.
+      session.chargerLesAmis();
     },
 
     saisirPseudo: (pseudo) => {
@@ -545,11 +549,14 @@ export function creerClient(options: OptionsClient): Client {
 
     // Quitter un salon dont le lien se retablit y renonce: rien n'y sera redemande
     // (etape 2.6). Le message de depart, lui, ne part que si le lien est la.
+    // De retour aux menus, les amis se relisent: des demandes ont pu arriver pendant la
+    // partie (etape 3.6).
     quitter: () => {
       reseau.emettre('quitter');
       magasin.appliquer({ type: 'sortie' });
       retour.renoncer();
       retablissement.renoncerAuSalon();
+      session.chargerLesAmis();
     },
 
     /**

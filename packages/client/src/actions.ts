@@ -24,7 +24,9 @@ import type {
   EtatCompteARebours,
   FicheJoueur,
   FinDePartie,
+  GesteDAmitie,
   InfosSalon,
+  ListeDAmis,
   MaProgression,
   MessageChat,
   PartieEnPause,
@@ -32,6 +34,7 @@ import type {
   ProfilDuCompte,
   ProgressionDeFin,
   Refus,
+  ReponseDeGeste,
   TrameDEtat,
 } from '@neon-ninja/shared';
 
@@ -132,6 +135,28 @@ export type Action =
   | { readonly type: 'ficheRefusee'; readonly pseudo: string; readonly motif: string }
   /** Le joueur ferme la fiche. */
   | { readonly type: 'ficheFermee' }
+  /** La lecture de la liste des amis est partie, sous ce numero (etape 3.6). */
+  | { readonly type: 'amisDemandes'; readonly lecture: number }
+  /** La liste des amis de cette lecture est arrivee. */
+  | { readonly type: 'amisRecus'; readonly lecture: number; readonly liste: ListeDAmis }
+  /** Cette lecture de la liste des amis a echoue, pour ce motif. */
+  | { readonly type: 'amisRefuses'; readonly lecture: number; readonly motif: string }
+  /** Un geste d'amitie est parti, vers ce pseudo (etape 3.6). */
+  | { readonly type: 'gesteEnvoye'; readonly geste: GesteDAmitie; readonly pseudo: string }
+  /** Le geste a ete fait: voici la relation qui en resulte, et la liste a jour. */
+  | {
+      readonly type: 'gesteFait';
+      readonly geste: GesteDAmitie;
+      readonly pseudo: string;
+      readonly reponse: ReponseDeGeste;
+    }
+  /** Le geste a ete refuse, pour ce motif. */
+  | {
+      readonly type: 'gesteRefuse';
+      readonly geste: GesteDAmitie;
+      readonly pseudo: string;
+      readonly motif: string;
+    }
   /**
    * Le joueur demande a entrer, ou a creer une partie.
    *

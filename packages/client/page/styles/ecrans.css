@@ -1713,6 +1713,26 @@
   transform: translateY(-50%);
 }
 
+/* La pastille des demandes d'ami recues, sur l'entree Amis (etape 3.6). */
+.navigation-pastille {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--rose);
+  box-shadow: 0 0 10px rgba(255, 46, 126, 0.55);
+  color: #fff;
+  font-family: var(--police-donnees);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
 /* -- En-tete des ecrans de menu ------------------------------------------ */
 
 .titre-et-sous-titre {
@@ -2139,6 +2159,117 @@
   color: var(--texte-faible);
   font-family: var(--police-donnees);
   font-size: 12px;
+}
+
+/* -- Amis (etape 3.6) ---------------------------------------------------- */
+
+.ecran-amis,
+.amis-listes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+
+.amis-ajout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  padding: clamp(16px, 3vw, 22px);
+}
+
+.amis-champ {
+  display: grid;
+  flex: 1 1 240px;
+  gap: 8px;
+}
+
+.amis-annonce {
+  color: var(--vert);
+}
+
+.amis-erreur,
+.amis-echec {
+  color: var(--rose-clair);
+}
+
+.amis-echec {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.amis-chargement,
+.amis-vide {
+  color: var(--texte-tertiaire);
+  font-size: 13.5px;
+}
+
+.amis-section {
+  display: grid;
+  gap: 12px;
+  padding: clamp(16px, 3vw, 22px);
+}
+
+.amis-section-titre {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.amis-section-titre h2 {
+  font-size: 17px;
+}
+
+.amis-nombre {
+  border: 1px solid var(--bordure-survol);
+  color: var(--texte-secondaire);
+}
+
+.amis-recues {
+  border-color: rgba(255, 46, 126, 0.35);
+}
+
+.amis-liste {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ligne-ami {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-controle);
+  background: var(--surface);
+}
+
+.ligne-ami-identite {
+  display: grid;
+  flex: 1 1 140px;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ligne-ami-pseudo {
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
+.ligne-ami-niveau {
+  color: var(--texte-tertiaire);
+  font-family: var(--police-donnees);
+  font-size: 11.5px;
+}
+
+.ligne-ami .gestes-qui-defont {
+  margin-left: 0;
 }
 
 /* -- Profil -------------------------------------------------------------- */

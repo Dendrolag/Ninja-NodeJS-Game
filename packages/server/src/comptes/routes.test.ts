@@ -123,7 +123,9 @@ function serviceFactice(remplacements: Partial<ServiceDeComptes> = {}): ServiceD
     profil: vi.fn(async () => acceptee(PROFIL)),
     ficheJoueur: vi.fn(async () => acceptee(FICHE)),
     amis: vi.fn(async () => acceptee(AMIS)),
-    gesteDAmitie: vi.fn(async () => acceptee({ relation: 'ami' as const, amis: AMIS })),
+    gesteDAmitie: vi.fn(async () =>
+      acceptee({ pseudo: 'Léa B.', relation: 'ami' as const, amis: AMIS }),
+    ),
     changerMotDePasse: vi.fn(async () => acceptee(CODE)),
     nouveauCodeDeSecours: vi.fn(async () => acceptee(CODE)),
     reinitialiser: vi.fn(async () => acceptee(SESSION_INSCRITE)),
@@ -489,7 +491,10 @@ describe('amis (etape 3.6)', () => {
       entetes,
     });
 
-    expect([reponse.statut, reponse.corps]).toEqual([200, { relation: 'ami', amis: AMIS }]);
+    expect([reponse.statut, reponse.corps]).toEqual([
+      200,
+      { pseudo: 'Léa B.', relation: 'ami', amis: AMIS },
+    ]);
     expect(service.gesteDAmitie).toHaveBeenCalledWith(JETON, {
       geste: 'accepter',
       pseudo: 'Léa B.',

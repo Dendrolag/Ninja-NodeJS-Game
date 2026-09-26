@@ -16,6 +16,7 @@ import type { EnvoiHttp } from './api.js';
 import {
   CODE_DESSAI,
   JETON_DESSAI,
+  LISTE_D_AMIS_VIDE,
   MOTIF_INJOIGNABLE,
   STATUT_INJOIGNABLE,
   creerApiComptesHttp,
@@ -136,6 +137,43 @@ describe('les requetes qui partent', () => {
     expect(await api.joueur(JETON_DESSAI, 'Personne')).toEqual({
       acceptee: false,
       statut: 404,
+      erreurs: [motif],
+    });
+  });
+
+  it('lisent les amis a leur route, avec le jeton en en-tete (etape 3.6)', async () => {
+    const { vues, envoyer } = envoiDEssai(() => json(200, LISTE_D_AMIS_VIDE));
+    const api = creerApiComptesHttp({ url: ORIGINE, envoyer });
+
+    expect(await api.amis(JETON_DESSAI)).toEqual({ acceptee: true, valeur: LISTE_D_AMIS_VIDE });
+    expect(vues[0]?.adresse).toBe(`${ORIGINE}${ROUTES_COMPTES.amis}`);
+    expect(vues[0]?.init.method).toBe('GET');
+    expect(entetes(vues[0]).get('Authorization')).toBe(`Bearer ${JETON_DESSAI}`);
+  });
+
+  it('envoient un geste d amitie en JSON a la meme route, et rendent son refus', async () => {
+    const reponse = { relation: 'demandeEnvoyee', amis: LISTE_D_AMIS_VIDE };
+    const { vues, envoyer } = envoiDEssai(() => json(200, reponse));
+    const api = creerApiComptesHttp({ url: ORIGINE, envoyer });
+
+    expect(await api.gesteDAmitie(JETON_DESSAI, { geste: 'demander', pseudo: 'Léa B.' })).toEqual({
+      acceptee: true,
+      valeur: reponse,
+    });
+    expect(vues[0]?.adresse).toBe(`${ORIGINE}${ROUTES_COMPTES.amis}`);
+    expect(vues[0]?.init.method).toBe('POST');
+    expect(entetes(vues[0]).get('Authorization')).toBe(`Bearer ${JETON_DESSAI}`);
+    expect(JSON.parse(String(vues[0]?.init.body))).toEqual({ geste: 'demander', pseudo: 'Léa B.' });
+
+    const motif = { champ: 'geste', motif: 'Ce compte ne vous a pas demandé d’être amis.' };
+    const refus = creerApiComptesHttp({
+      url: ORIGINE,
+      envoyer: envoiDEssai(() => json(409, { erreurs: [motif] })).envoyer,
+    });
+
+    expect(await refus.gesteDAmitie(JETON_DESSAI, { geste: 'accepter', pseudo: 'Bob' })).toEqual({
+      acceptee: false,
+      statut: 409,
       erreurs: [motif],
     });
   });

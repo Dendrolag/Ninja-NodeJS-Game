@@ -18,7 +18,8 @@
  * defaut du client d'origine.
  */
 
-import type { ProfilDuCompte, ProgressionDeFin } from '@neon-ninja/shared';
+import type { ProfilDuCompte, ProgressionDeFin, RelationDAmitie } from '@neon-ninja/shared';
+import { reperePseudo } from '@neon-ninja/shared';
 
 import type { Action } from './actions.js';
 import { ecranSuivant, estUnEcranDeMenu } from './ecrans.js';
@@ -26,11 +27,13 @@ import type { Ecran } from './ecrans.js';
 import type {
   EffetActif,
   EtatClient,
+  EtatDeLaFiche,
   EtatConnexion,
   MessageAffiche,
   SessionDuClient,
 } from './etat.js';
 import {
+  AMIS_INCONNUS,
   AUCUNE_DEMANDE_DE_COMPTE,
   ETAT_INITIAL,
   FICHE_FERMEE,
@@ -175,20 +178,22 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
     case 'sessionEnVerification':
       return { ...etat, ecran, session: { nature: 'verification' } };
 
-    // Un joueur qui quitte son compte depuis le profil revient a l'accueil, pas a
-    // l'ecran de connexion.
+    // Un joueur qui quitte son compte depuis le profil, ou depuis ses amis, revient a
+    // l'accueil, pas a l'ecran de connexion.
     case 'sessionDInvite':
       return {
         ...etat,
         ecran:
-          ecran === 'profil'
+          ecran === 'profil' || ecran === 'amis'
             ? 'accueil'
             : ecranPourLaSession(ecran, { nature: 'invite', sessionExpiree: action.expiree }),
         session: { nature: 'invite', sessionExpiree: action.expiree },
         demandeDeCompte: AUCUNE_DEMANDE_DE_COMPTE,
         profil: PROFIL_INCONNU,
+        amis: AMIS_INCONNUS,
       };
 
+    // Les amis d'un autre compte ne sont pas les siens: ils se relisent.
     case 'sessionDeCompte':
       return {
         ...etat,
@@ -196,6 +201,11 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
         session: { nature: 'compte', progression: action.progression },
         demandeDeCompte: AUCUNE_DEMANDE_DE_COMPTE,
         profil: PROFIL_INCONNU,
+        amis:
+          etat.session.nature === 'compte' &&
+          reperePseudo(etat.session.progression.pseudo) === reperePseudo(action.progression.pseudo)
+            ? etat.amis
+            : AMIS_INCONNUS,
       };
 
     case 'demandeDeCompteEnvoyee':
@@ -268,7 +278,7 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
     // Une reponse ne vaut que pour la fiche qui l'attend encore: le joueur a pu la fermer,
     // ou en ouvrir une autre, entre-temps.
     case 'ficheRecue':
-      return ficheAttendue(etat, action.pseudo)
+      return ficheALire(etat, action.pseudo)
         ? {
             ...etat,
             ecran,
@@ -284,9 +294,80 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
     case 'ficheFermee':
       return etat.fiche.statut === 'fermee' ? etat : { ...etat, ecran, fiche: FICHE_FERMEE };
 
+    // La derniere liste lue reste affichee pendant qu'une autre se lit.
+    case 'amisDemandes':
+      return { ...etat, ecran, amis: { ...etat.amis, lecture: action.lecture } };
+
+    // Une reponse ne vaut que pour la lecture qu'on attend encore.
+    case 'amisRecus':
+      return etat.amis.lecture === action.lecture
+        ? {
+            ...etat,
+            ecran,
+            amis: { ...etat.amis, liste: action.liste, lecture: undefined, motifDEchec: undefined },
+          }
+        : etat;
+
+    case 'amisRefuses':
+      return etat.amis.lecture === action.lecture
+        ? {
+            ...etat,
+            ecran,
+            amis: { ...etat.amis, lecture: undefined, motifDEchec: action.motif },
+          }
+        : etat;
+
+    case 'gesteEnvoye':
+      return {
+        ...etat,
+        ecran,
+        amis: {
+          ...etat.amis,
+          geste: { statut: 'enCours', geste: action.geste, pseudo: action.pseudo },
+        },
+      };
+
+    // La reponse porte la liste a jour, et le pseudo dans l'ecriture du compte, que
+    // l'annonce reprend; la fiche ouverte sur ce joueur suit la relation. Une lecture
+    // partie avant le geste rendrait une liste plus ancienne: elle ne vaut plus.
+    case 'gesteFait':
+      return {
+        ...etat,
+        ecran,
+        amis: {
+          ...etat.amis,
+          liste: action.reponse.amis,
+          lecture: undefined,
+          motifDEchec: undefined,
+          geste: {
+            statut: 'fait',
+            geste: action.geste,
+            pseudo: action.reponse.pseudo,
+            relation: action.reponse.relation,
+          },
+        },
+        fiche: ficheApresLeGeste(etat.fiche, action.pseudo, action.reponse.relation),
+      };
+
+    case 'gesteRefuse':
+      return {
+        ...etat,
+        ecran,
+        amis: {
+          ...etat.amis,
+          geste: {
+            statut: 'refuse',
+            geste: action.geste,
+            pseudo: action.pseudo,
+            motif: action.motif,
+          },
+        },
+      };
+
     // Un refus de compte ne suit pas le joueur sur un autre ecran. Une demande
     // en cours, elle, continue: sa reponse arrivera.
     // Un refus d'entree non plus: il concernait l'ecran que l'on quitte.
+    // Le resultat d'un geste d'amitie non plus.
     case 'navigation':
       return {
         ...etat,
@@ -294,6 +375,10 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
         demandeDeCompte: etat.demandeDeCompte.enCours
           ? etat.demandeDeCompte
           : AUCUNE_DEMANDE_DE_COMPTE,
+        amis:
+          etat.amis.geste.statut === 'enCours' || etat.amis.geste.statut === 'aucun'
+            ? etat.amis
+            : { ...etat.amis, geste: { statut: 'aucun' } },
         refus: undefined,
       };
 
@@ -449,12 +534,48 @@ function ficheAttendue(etat: EtatClient, pseudo: string): boolean {
 }
 
 /**
+ * La fiche de ce pseudo peut-elle recevoir une lecture: la premiere, qu'elle attend, ou
+ * une relecture de la fiche deja lue, apres un geste d'amitie (etape 3.6). Un refus
+ * tardif, lui, ne remplace jamais une fiche lue: seule ficheAttendue le laisse passer.
+ */
+function ficheALire(etat: EtatClient, pseudo: string): boolean {
+  return (
+    ficheAttendue(etat, pseudo) || (etat.fiche.statut === 'chargee' && etat.fiche.pseudo === pseudo)
+  );
+}
+
+/**
+ * La fiche apres un geste d'amitie sur ce pseudo (etape 3.6): celle de ce joueur prend
+ * sa nouvelle relation, et perd les parties jouees ensemble s'il n'est plus un ami.
+ * Devenu ami, ses parties ensemble arrivent par la relecture que la session demande.
+ */
+function ficheApresLeGeste(
+  fiche: EtatDeLaFiche,
+  pseudo: string,
+  relation: RelationDAmitie,
+): EtatDeLaFiche {
+  if (fiche.statut !== 'chargee' || reperePseudo(fiche.fiche.pseudo) !== reperePseudo(pseudo)) {
+    return fiche;
+  }
+
+  const { ensemble, ...sansEnsemble } = fiche.fiche;
+
+  return {
+    ...fiche,
+    fiche:
+      relation === 'ami' && ensemble !== undefined
+        ? { ...sansEnsemble, relation, ensemble }
+        : { ...sansEnsemble, relation },
+  };
+}
+
+/**
  * L'etat d'un joueur qui n'est plus dans aucune partie, de lui-meme ou non.
  *
  * Tout ce qui tenait a la partie s'efface, notre identifiant de joueur compris.
  * Survivent le pseudo saisi, pour reproposer la saisie, la session, qui ne depend pas
- * du lien, un code de secours pas encore note, que le serveur ne rendra plus, et une
- * invitation qui n'a pas servi (etape 2.7).
+ * du lien, un code de secours pas encore note, que le serveur ne rendra plus, une
+ * invitation qui n'a pas servi (etape 2.7), et les amis du compte (etape 3.6).
  */
 function horsDeLaPartie(etat: EtatClient, ecran: Ecran, connexion: EtatConnexion): EtatClient {
   return {
@@ -466,6 +587,7 @@ function horsDeLaPartie(etat: EtatClient, ecran: Ecran, connexion: EtatConnexion
     session: etat.session,
     codeDeSecours: etat.codeDeSecours,
     invitation: etat.invitation,
+    amis: etat.amis,
   };
 }
 
@@ -514,14 +636,15 @@ function sessionDuProfil(session: SessionDuClient, profil: ProfilDuCompte): Sess
  * L'ecran de menu qui convient a la session.
  *
  * Un compte n'a rien a faire sur l'ecran de connexion, et le profil d'un invite
- * n'existe pas: il y est mene a la connexion, qui lui en ouvre un.
+ * n'existe pas, ni ses amis (etape 3.6): il y est mene a la connexion, qui lui ouvre
+ * un compte.
  */
 function ecranPourLaSession(ecran: Ecran, session: SessionDuClient): Ecran {
   if (ecran === 'connexion' && session.nature === 'compte') {
     return 'accueil';
   }
 
-  if (ecran === 'profil' && session.nature === 'invite') {
+  if ((ecran === 'profil' || ecran === 'amis') && session.nature === 'invite') {
     return 'connexion';
   }
 

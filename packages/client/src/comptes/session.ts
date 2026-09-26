@@ -35,6 +35,11 @@
  * font depuis le profil, avec la session du compte, qui ne change pas. Chacune de
  * ces demandes, et l'inscription, remet un code de secours: il entre dans l'etat
  * pour s'afficher, a l'inverse du jeton, et en sort des que le joueur l'a note.
+ *
+ * LES AMIS AUSSI (etape 3.6). Leur liste se lit des qu'une session de compte s'ouvre,
+ * puis a la demande du client (navigation, retour d'une partie). Un geste d'amitie
+ * part avec la session du compte, depuis l'ecran Amis ou depuis une fiche, pendant une
+ * partie comme ailleurs: comme la fiche, il ne perd pas la session en pleine partie.
  */
 
 import type {
@@ -44,9 +49,12 @@ import type {
   DemandeConnexion,
   DemandeInscription,
   DemandeReinitialisation,
+  GesteDAmitie,
+  MaProgression,
   SessionInscrite,
   SessionOuverte,
 } from '@neon-ninja/shared';
+import { reperePseudo } from '@neon-ninja/shared';
 
 import type { NatureDemandeDeCompte } from '../etat.js';
 import type { Magasin } from '../magasin.js';
@@ -100,6 +108,16 @@ export interface CommandesDeSession {
   ouvrirLaFiche(pseudo: string): void;
   /** Ferme la fiche ouverte. Une lecture en cours sera ignoree a son arrivee. */
   fermerLaFiche(): void;
+  /**
+   * Relit la liste des amis du compte (etape 3.6). Sans effet pour un invite, ou pendant
+   * qu'une lecture attend.
+   */
+  chargerLesAmis(): void;
+  /**
+   * Fait un geste d'amitie sur le compte qui porte ce pseudo (etape 3.6). Sans effet
+   * pour un invite, ou pendant qu'un autre geste attend sa reponse.
+   */
+  faireUnGeste(geste: GesteDAmitie, pseudo: string): void;
 }
 
 /** Le motif d'une demande de compte sans comptes a joindre. */
@@ -127,6 +145,58 @@ export function brancherLaSession(options: OptionsSession): CommandesDeSession {
     ouvrirLeLien(undefined);
   };
 
+  /** Le nombre de lectures de la liste des amis demandees: chacune a son numero. */
+  let lectures = 0;
+
+  /** Le motif lisible d'un refus des comptes. */
+  const motifDe = (erreurs: readonly { readonly motif: string }[]): string =>
+    erreurs.map((erreur) => erreur.motif).join(' ');
+
+  /**
+   * Relit la liste des amis (etape 3.6). Une session que le serveur ne reconnait plus se
+   * traite comme a la lecture du profil, hors partie; en partie, la liste dit son echec.
+   */
+  const chargerLesAmis = (): void => {
+    const jeton = coffre.lire();
+
+    if (
+      api === undefined ||
+      jeton === undefined ||
+      magasin.etat.session.nature !== 'compte' ||
+      magasin.etat.amis.lecture !== undefined
+    ) {
+      return;
+    }
+
+    lectures += 1;
+    const lecture = lectures;
+    magasin.appliquer({ type: 'amisDemandes', lecture });
+
+    void api.amis(jeton).then((reponse) => {
+      if (coffre.lire() !== jeton) {
+        return;
+      }
+
+      if (reponse.acceptee) {
+        magasin.appliquer({ type: 'amisRecus', lecture, liste: reponse.valeur });
+        return;
+      }
+
+      if (reponse.statut === STATUT_SESSION_ABSENTE && horsPartie()) {
+        perdreLaSession();
+        return;
+      }
+
+      magasin.appliquer({ type: 'amisRefuses', lecture, motif: motifDe(reponse.erreurs) });
+    });
+  };
+
+  /** On joue desormais avec ce compte: l'etat le sait, et ses amis se lisent. */
+  const devenirCompte = (progression: MaProgression): void => {
+    magasin.appliquer({ type: 'sessionDeCompte', progression });
+    chargerLesAmis();
+  };
+
   /** Le demarrage: verifier la session gardee, puis ouvrir. */
   const demarrer = async (): Promise<void> => {
     const jeton = coffre.lire();
@@ -151,7 +221,7 @@ export function brancherLaSession(options: OptionsSession): CommandesDeSession {
     }
 
     if (reponse.acceptee) {
-      magasin.appliquer({ type: 'sessionDeCompte', progression: reponse.valeur });
+      devenirCompte(reponse.valeur);
       ouvrirLeLien(jeton);
       return;
     }
@@ -184,7 +254,7 @@ export function brancherLaSession(options: OptionsSession): CommandesDeSession {
           coffre.lire() === jeton &&
           magasin.etat.session.nature === 'verification'
         ) {
-          magasin.appliquer({ type: 'sessionDeCompte', progression: reponse.valeur });
+          devenirCompte(reponse.valeur);
         }
       });
     }),
@@ -238,7 +308,7 @@ export function brancherLaSession(options: OptionsSession): CommandesDeSession {
       }
 
       coffre.garder(jeton);
-      magasin.appliquer({ type: 'sessionDeCompte', progression: progression.valeur });
+      devenirCompte(progression.valeur);
       ouvrirLeLien(jeton);
     })();
   };
@@ -443,16 +513,68 @@ export function brancherLaSession(options: OptionsSession): CommandesDeSession {
           return;
         }
 
-        magasin.appliquer({
-          type: 'ficheRefusee',
-          pseudo,
-          motif: reponse.erreurs.map((erreur) => erreur.motif).join(' '),
-        });
+        magasin.appliquer({ type: 'ficheRefusee', pseudo, motif: motifDe(reponse.erreurs) });
       });
     },
 
     fermerLaFiche: () => {
       magasin.appliquer({ type: 'ficheFermee' });
+    },
+
+    chargerLesAmis,
+
+    // Devenu ami, le joueur de la fiche ouverte montre ses parties ensemble: la fiche se
+    // relit, sans repasser par la lecture, et sans rien dire si la relecture echoue.
+    faireUnGeste: (geste, pseudo) => {
+      const jeton = coffre.lire();
+
+      if (
+        api === undefined ||
+        jeton === undefined ||
+        magasin.etat.session.nature !== 'compte' ||
+        magasin.etat.amis.geste.statut === 'enCours'
+      ) {
+        return;
+      }
+
+      magasin.appliquer({ type: 'gesteEnvoye', geste, pseudo });
+
+      void api.gesteDAmitie(jeton, { geste, pseudo }).then((reponse) => {
+        if (coffre.lire() !== jeton) {
+          return;
+        }
+
+        if (!reponse.acceptee) {
+          if (reponse.statut === STATUT_SESSION_ABSENTE && horsPartie()) {
+            perdreLaSession();
+            return;
+          }
+
+          magasin.appliquer({
+            type: 'gesteRefuse',
+            geste,
+            pseudo,
+            motif: motifDe(reponse.erreurs),
+          });
+          return;
+        }
+
+        magasin.appliquer({ type: 'gesteFait', geste, pseudo, reponse: reponse.valeur });
+
+        const fiche = magasin.etat.fiche;
+
+        if (
+          reponse.valeur.relation === 'ami' &&
+          fiche.statut === 'chargee' &&
+          reperePseudo(fiche.fiche.pseudo) === reperePseudo(pseudo)
+        ) {
+          void api.joueur(jeton, fiche.pseudo).then((relue) => {
+            if (relue.acceptee && coffre.lire() === jeton) {
+              magasin.appliquer({ type: 'ficheRecue', pseudo: fiche.pseudo, fiche: relue.valeur });
+            }
+          });
+        }
+      });
     },
   };
 }

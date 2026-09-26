@@ -81,6 +81,12 @@ const DIAGNOSTIC = '**/diagnostic.spec.ts';
  */
 const FICHE = '**/fiche.spec.ts';
 
+/**
+ * Les amis (etape 3.6), joues par le seul projet bureau: deux comptes, et une partie
+ * entiere, que le cadrage de l'ecran ne change pas.
+ */
+const AMIS = '**/amis.spec.ts';
+
 export default defineConfig({
   testDir: './tests/e2e',
   // Les paquets sont compiles une fois avant les scenarios: le banc de mesure du
@@ -142,6 +148,7 @@ export default defineConfig({
         CHASSE,
         DIAGNOSTIC,
         FICHE,
+        AMIS,
       ],
     },
     // Le banc de mesure du rendu a son propre projet, et une seule execution:
