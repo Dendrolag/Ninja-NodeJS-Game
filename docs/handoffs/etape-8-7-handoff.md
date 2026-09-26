@@ -49,7 +49,7 @@ Aucune modification de `legacy/`, de `tests/caracterisation/` ni de `packages/`.
 
 ## Décisions et écarts au plan
 
-1. **Écart de branche**: la session travaillait sur la branche imposée `claude/etape-8-7-lfnf5y`, et non directement sur `master` comme le veut le PROTOCOLE. Le travail n'est pas encore sur `master`. Il ne touche que des scénarios et de la documentation, et ne déclenche donc aucune mise en ligne.
+1. **Écart de branche**: la session travaillait sur la branche imposée `claude/etape-8-7-lfnf5y`, et non directement sur `master` comme le veut le PROTOCOLE. Le porteur du projet a demandé de le pousser sur `master` le 26 septembre 2026, en avance rapide. Il ne touche que des scénarios et de la documentation: la mise en ligne constate que rien de ce qui compose le jeu n'a changé.
 2. Plusieurs essais avant la version finale, consignés dans la section « Réconciliation » de la fiche: tirer en courant (un tir sur quatre), un affût qui n'attendait que des cibles immobiles, une marge de visée appliquée aux faux ninjas en pause, une ruée qui traversait la cible, un arrêt décidé trop tard.
 3. **La partie du Massacre allongée** (réconciliation, point 8): de la marge, qui ne coûte rien puisque le scénario s'arrête à la prise.
 4. **La densité un** (décision 8 de la fiche): les deux scénarios ne vérifient pas le rendu. Le rendu à densité deux reste exercé par les autres scénarios du cadrage téléphone et par le banc.
@@ -58,14 +58,13 @@ Aucune modification de `legacy/`, de `tests/caracterisation/` ni de `packages/`.
 
 ## Problèmes connus et dette
 
-- **Fusion dans `master`** à faire (point 1 ci-dessus).
 - Le pilote lit l'état du serveur pour prévoir un faux ninja (pause, cap). C'est le rôle d'arbitre qu'il avait déjà. Si le moteur change la façon dont un faux ninja erre, l'affût devra suivre.
 - Le Massacre au pouce reste le plus lent des trois. S'il redevenait instable, regarder d'abord la cadence de la page dans le message d'échec (« images en 2 s »), puis l'affût (`prendreUnFauxNinjaDUnCoup`), plutôt que d'allonger encore la partie.
 - Pour rejouer ces scénarios dans un conteneur de Claude Code sur le web: le Chromium préinstallé n'est pas celui qu'attend Playwright 1.62. Il faut passer `executablePath` (`/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell`, le même type de Chromium que la CI). Le Chromium complet demande `favicon.ico` et fait échouer le banc. Pour imiter la machine de CI, limiter le jeu à deux processeurs: `taskset -c 0,1`.
 
 ## Prochaine action exacte
 
-**Au porteur du projet**: fusionner la branche `claude/etape-8-7-lfnf5y` dans `master`. Aucune étape planifiée ne reste ouverte à la section 3 du ROADMAP. La suite se décide avec le porteur du projet, par exemple après la recette de l'Évadé et du HUD (handoff 7.9).
+Aucune étape planifiée ne reste ouverte à la section 3 du ROADMAP. La suite se décide avec le porteur du projet, par exemple après la recette de l'Évadé et du HUD (handoff 7.9).
 
 ## Étape suivante
 
