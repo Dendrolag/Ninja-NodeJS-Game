@@ -46,9 +46,11 @@ import type {
   DemandeChangementMotDePasse,
   DemandeCodeDeSecours,
   DemandeConnexion,
+  DemandeDeGeste,
   DemandeInscription,
   DemandeReinitialisation,
 } from './comptes.js';
+import { GESTES_D_AMITIE } from './comptes.js';
 import type { Equipe, IdentifiantCarte } from './constantes.js';
 import {
   CARTES,
@@ -628,6 +630,31 @@ export function validerDemandeRetour(brut: unknown): ResultatValidation<DemandeR
   }
 
   return accepte({ jeton });
+}
+
+/**
+ * Valide un geste d'amitie (etape 3.6): un geste connu, et un pseudo bien forme.
+ *
+ * Le pseudo est normalise comme a l'entree dans un salon; c'est le serveur qui dit si
+ * un compte le porte, et qui decide si le geste est permis.
+ */
+export function validerDemandeDeGeste(brut: unknown): ResultatValidation<DemandeDeGeste> {
+  const source = objetOuRien(brut);
+  if (source === undefined) {
+    return refuse('geste', 'Un geste d’amitié doit être un objet.');
+  }
+
+  const geste = champ(source, 'geste');
+  if (!estUnDe(GESTES_D_AMITIE, geste)) {
+    return refuse('geste', 'Ce geste d’amitié n’existe pas.');
+  }
+
+  const pseudo = validerPseudo(champ(source, 'pseudo'));
+  if (!pseudo.valide) {
+    return pseudo;
+  }
+
+  return accepte({ geste, pseudo: pseudo.valeur });
 }
 
 /** Une valeur est-elle l'un des textes d'une liste fermee. */

@@ -45,6 +45,7 @@ const FICHE_DE_BOB: FicheJoueur = {
   inscritLe: '2026-09-11T10:00:00.000Z',
   niveau: 4,
   palier: 'argent',
+  relation: 'aucune',
   statistiques: {
     partiesJouees: 7,
     partiesAPlusieurs: 6,

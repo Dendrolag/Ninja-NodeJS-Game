@@ -57,6 +57,13 @@
       "when": 1789894569565,
       "tag": "0007_carte_quartier",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790429206156,
+      "tag": "0008_amities",
+      "breakpoints": true
     }
   ]
 }

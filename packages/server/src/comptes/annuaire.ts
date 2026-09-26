@@ -8,7 +8,9 @@
  * partie pour ses comptes. Depuis l'etape 3.4, elle ecoute aussi les sessions
  * fermees, pour couper les connexions ouvertes avec elles. C'est l'annuaire. Les
  * routes HTTP ont besoin, en plus, d'inscrire, de connecter, de deconnecter, de lire
- * la progression et, depuis l'etape 3.4, de gerer le mot de passe. C'est le service.
+ * la progression et, depuis l'etape 3.4, de gerer le mot de passe, depuis l'etape 3.5
+ * de lire la fiche d'un autre compte et, depuis l'etape 3.6, de gerer ses amities.
+ * C'est le service.
  *
  * Ni l'un ni l'autre ne nomme la base: Authentification les implemente avec elle,
  * et les tests de la couche reseau peuvent leur substituer une version en memoire.
@@ -19,8 +21,10 @@ import type {
   CodeDeSecoursEmis,
   ErreurValidation,
   FicheJoueur,
+  ListeDAmis,
   MaProgression,
   ProfilDuCompte,
+  ReponseDeGeste,
   SessionInscrite,
   SessionOuverte,
 } from '@neon-ninja/shared';
@@ -93,8 +97,16 @@ export type MotifDeRefus =
    * 403 (etape 3.4). Pas 401, que le client lit comme une session expiree.
    */
   | 'motDePasseIncorrect'
-  /** Aucun compte ne porte le pseudo de la fiche demandee: 404 (etape 3.5). */
+  /**
+   * Aucun compte ne porte le pseudo de la fiche demandee (etape 3.5), ou du compte vise
+   * par un geste d'amitie (etape 3.6): 404.
+   */
   | 'joueurInconnu'
+  /**
+   * Les regles des amities refusent ce geste (etape 3.6): demander un compte qu'on
+   * bloque, accepter une demande qui n'existe pas, depasser une borne. 409.
+   */
+  | 'gesteImpossible'
   /** Trop de tentatives recentes: 429. */
   | 'tropDeTentatives';
 
@@ -136,11 +148,24 @@ export interface ServiceDeComptes extends AnnuaireDesComptes {
 
   /**
    * La fiche du compte qui porte ce pseudo, pour le compte dont ce jeton ouvre la
-   * session (etape 3.5). Reservee aux comptes: sans session valable, refusee.
+   * session (etape 3.5). Reservee aux comptes: sans session valable, refusee. Depuis
+   * l'etape 3.6, elle dit ce que ce compte est pour le lecteur et, pour un ami, les
+   * parties jouees ensemble.
    *
    * @param pseudo Le pseudo lu dans la requete, a valider.
    */
   ficheJoueur(jeton: string, pseudo: unknown): Promise<ReponseDeCompte<FicheJoueur>>;
+
+  /** Les amities du compte dont ce jeton ouvre la session (etape 3.6). */
+  amis(jeton: string): Promise<ReponseDeCompte<ListeDAmis>>;
+
+  /**
+   * Fait un geste d'amitie du compte dont ce jeton ouvre la session sur un autre
+   * compte, designe par son pseudo (etape 3.6).
+   *
+   * @param demande Le corps de la requete, a valider: le geste et le pseudo.
+   */
+  gesteDAmitie(jeton: string, demande: unknown): Promise<ReponseDeCompte<ReponseDeGeste>>;
 
   /**
    * Change le mot de passe du compte dont ce jeton ouvre la session, contre le mot de

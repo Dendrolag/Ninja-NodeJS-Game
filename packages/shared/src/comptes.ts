@@ -67,6 +67,13 @@ export const ROUTES_COMPTES = {
    * compte ne le porte, 429.
    */
   joueur: `${RACINE_API_COMPTES}/joueur`,
+  /**
+   * Les amis (etape 3.6), jeton en en-tete. GET: 200 et ListeDAmis, 401 sans session
+   * valide. POST, DemandeDeGeste: 200 et ReponseDeGeste; 400 si le geste ou le pseudo
+   * sont mal formes, 401, 404 si aucun compte ne porte le pseudo, 409 si les regles
+   * refusent le geste, 429.
+   */
+  amis: `${RACINE_API_COMPTES}/amis`,
 } as const;
 
 /**
@@ -257,6 +264,41 @@ export interface StatistiquesDeJoueur {
 }
 
 /**
+ * Ce qu'un compte est pour un autre, vu de celui qui regarde (etape 3.6).
+ *
+ * UN BLOQUE NE LIT JAMAIS QU'IL L'EST. Le blocage n'apparait que du cote de celui qui
+ * bloque; de l'autre cote, la relation est « aucune », ou « demandeEnvoyee » si le
+ * bloque a fait une demande depuis, que le serveur a enregistree sans la montrer.
+ */
+export type RelationDAmitie =
+  /** C'est son propre compte. */
+  | 'soi'
+  | 'aucune'
+  | 'ami'
+  /** On lui a demande d'etre amis, et il n'a pas encore repondu. */
+  | 'demandeEnvoyee'
+  /** Il nous l'a demande, et on n'a pas encore repondu. */
+  | 'demandeRecue'
+  /** On l'a bloque. */
+  | 'bloque';
+
+/**
+ * Les parties jouees ensemble par deux amis, et qui a fini devant l'autre (etape 3.6),
+ * vues de celui qui lit la fiche.
+ *
+ * LES EGALITES NE COMPTENT NI D'UN COTE NI DE L'AUTRE: ce sont des coequipiers d'une
+ * partie Equipes, ou deux abandons. Les parties ensemble les comptent, si bien que
+ * devant et derriere n'en font pas toujours la somme.
+ */
+export interface FaceAFace {
+  readonly partiesEnsemble: number;
+  /** Les parties ou celui qui lit la fiche a fini devant. */
+  readonly devant: number;
+  /** Les parties ou le compte de la fiche a fini devant. */
+  readonly derriere: number;
+}
+
+/**
  * La fiche d'un compte, telle que tout compte connecte la lit (etape 3.5).
  *
  * CE QUI EST PUBLIC, ET RIEN D'AUTRE. Le pseudo et le niveau s'affichent deja dans
@@ -265,7 +307,8 @@ export interface StatistiquesDeJoueur {
  * de ligue exacts, ni les dernieres parties, qui diraient quand le joueur joue.
  *
  * UN OBJET A CHAMPS NOMMES, POUR LA SUITE. Les succes (etapes 3.7 et 3.8) y
- * ajouteront leur champ, sans rien changer aux autres.
+ * ajouteront leur champ, sans rien changer aux autres. L'etape 3.6 y a ajoute la
+ * relation, et le face-a-face, reserve aux amis.
  */
 export interface FicheJoueur {
   /** Le pseudo, dans l'ecriture choisie a l'inscription. */
@@ -275,6 +318,74 @@ export interface FicheJoueur {
   readonly niveau: number;
   readonly palier: IdentifiantPalier;
   readonly statistiques: StatistiquesDeJoueur;
+  /** Ce que ce compte est pour celui qui lit la fiche (etape 3.6). */
+  readonly relation: RelationDAmitie;
+  /** Les parties jouees ensemble. Present pour un ami, et pour lui seul (etape 3.6). */
+  readonly ensemble?: FaceAFace;
+}
+
+/**
+ * Ce qu'un compte peut faire d'un autre, dans ses amities (etape 3.6).
+ *
+ * TOUS LES GESTES SONT IDEMPOTENTS: redemander un ami deja ami, refuser une demande
+ * deja partie ou debloquer un compte qu'on ne bloque pas ne change rien, et ne
+ * refuse rien.
+ */
+export const GESTES_D_AMITIE = [
+  /** Demander d'etre amis. Une demande croisee vaut acceptation. */
+  'demander',
+  /** Accepter une demande recue. */
+  'accepter',
+  /** Refuser une demande recue, sans que l'autre le sache. */
+  'refuser',
+  /** Retirer sa propre demande. */
+  'annuler',
+  /** Ne plus etre amis, sans que l'autre en soit prevenu. */
+  'retirer',
+  /** Defaire l'amitie et les demandes, et ignorer celles qui viendront. */
+  'bloquer',
+  /** Ne plus ignorer ce compte. Ses demandes ignorees ne resurgissent pas. */
+  'debloquer',
+] as const;
+
+/** Un geste d'amitie. */
+export type GesteDAmitie = (typeof GESTES_D_AMITIE)[number];
+
+/** Ce qu'un compte connecte envoie pour faire un geste d'amitie (etape 3.6). */
+export interface DemandeDeGeste {
+  readonly geste: GesteDAmitie;
+  /** Le pseudo de l'autre compte, quelle que soit son ecriture. */
+  readonly pseudo: string;
+}
+
+/**
+ * Un compte dans la liste des amis: ce qui s'en affiche deja dans un salon.
+ *
+ * Ni l'identifiant du compte, ni la date de l'amitie ou de la demande: les pseudos
+ * suffisent a designer, et les dates diraient quand l'autre a repondu.
+ */
+export interface PersonneListee {
+  readonly pseudo: string;
+  readonly niveau: number;
+}
+
+/**
+ * Les amities d'un compte, telles que son proprietaire les lit (etape 3.6).
+ *
+ * Chaque liste est triee par pseudo. Les demandes recues d'un compte qu'on bloque n'y
+ * sont pas: elles sont ignorees.
+ */
+export interface ListeDAmis {
+  readonly amis: readonly PersonneListee[];
+  readonly recues: readonly PersonneListee[];
+  readonly envoyees: readonly PersonneListee[];
+  readonly bloques: readonly PersonneListee[];
+}
+
+/** La reponse a un geste d'amitie accepte: la relation qui en resulte, et la liste a jour. */
+export interface ReponseDeGeste {
+  readonly relation: RelationDAmitie;
+  readonly amis: ListeDAmis;
 }
 
 /** Une partie de l'historique d'un compte, telle que son profil la montre. */

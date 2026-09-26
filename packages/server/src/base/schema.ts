@@ -1,5 +1,6 @@
 /**
- * Le schema de la base: les comptes, leur progression, et les parties jouees.
+ * Le schema de la base: les comptes, leur progression, les parties jouees et, depuis
+ * l'etape 3.6, les amities.
  *
  * C'EST LA SOURCE DES MIGRATIONS. Les fichiers SQL de packages/server/migrations
  * sont ecrits par drizzle-kit a partir de ce fichier (`pnpm base:generer`), jamais
@@ -214,5 +215,80 @@ export const resultats = pgTable(
     check('resultats_bots_noirs_positifs', sql`${table.botsNoirsDetruits} >= 0`),
     check('resultats_xp_positive', sql`${table.xpGagnee} >= 0`),
     check('resultats_pieces_positives', sql`${table.piecesGagnees} >= 0`),
+  ],
+);
+
+/**
+ * Les amities (etape 3.6): une ligne par paire d'amis.
+ *
+ * UNE AMITIE EST SYMETRIQUE: elle se stocke une fois, dans un ordre fixe, le plus
+ * petit identifiant d'abord. Une contrainte l'impose, si bien que la meme amitie ne
+ * peut pas exister deux fois, dans un sens puis dans l'autre. Les amis d'un compte se
+ * lisent dans les deux colonnes: la cle primaire sert la premiere, un index la seconde.
+ */
+export const amities = pgTable(
+  'amities',
+  {
+    compteA: uuid('compte_a')
+      .notNull()
+      .references(() => comptes.id, { onDelete: 'cascade' }),
+    compteB: uuid('compte_b')
+      .notNull()
+      .references(() => comptes.id, { onDelete: 'cascade' }),
+    creeeLe: horodatage('creee_le').notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ name: 'amities_paire', columns: [table.compteA, table.compteB] }),
+    index('amities_par_compte_b').on(table.compteB),
+    check('amities_dans_l_ordre', sql`${table.compteA} < ${table.compteB}`),
+  ],
+);
+
+/**
+ * Les demandes d'ami en attente (etape 3.6): dirigees, de celui qui demande a celui
+ * qui repondra.
+ *
+ * Une demande acceptee, refusee ou annulee est effacee: il n'y a pas de statut, et
+ * aucune trace d'un refus, qui est silencieux. Les demandes recues se lisent par
+ * l'index sur le destinataire.
+ */
+export const demandesDAmi = pgTable(
+  'demandes_d_ami',
+  {
+    de: uuid('de')
+      .notNull()
+      .references(() => comptes.id, { onDelete: 'cascade' }),
+    pour: uuid('pour')
+      .notNull()
+      .references(() => comptes.id, { onDelete: 'cascade' }),
+    creeeLe: horodatage('creee_le').notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ name: 'demandes_d_ami_paire', columns: [table.de, table.pour] }),
+    index('demandes_d_ami_par_destinataire').on(table.pour),
+    check('demandes_d_ami_pas_a_soi', sql`${table.de} <> ${table.pour}`),
+  ],
+);
+
+/**
+ * Les blocages (etape 3.6): diriges, de celui qui bloque a celui qui est bloque.
+ *
+ * Le bloque n'en sait rien: ses demandes au bloqueur s'enregistrent encore dans
+ * demandes_d_ami, et c'est la lecture qui les ignore. Voir comptes/amities.ts.
+ */
+export const blocages = pgTable(
+  'blocages',
+  {
+    bloqueur: uuid('bloqueur')
+      .notNull()
+      .references(() => comptes.id, { onDelete: 'cascade' }),
+    bloque: uuid('bloque')
+      .notNull()
+      .references(() => comptes.id, { onDelete: 'cascade' }),
+    creeLe: horodatage('cree_le').notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ name: 'blocages_paire', columns: [table.bloqueur, table.bloque] }),
+    check('blocages_pas_de_soi', sql`${table.bloqueur} <> ${table.bloque}`),
   ],
 );

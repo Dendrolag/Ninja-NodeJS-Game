@@ -83,6 +83,8 @@ function comptesQuiFontAttendre(): {
     maProgression: vi.fn(),
     profil: vi.fn(),
     ficheJoueur: vi.fn(),
+    amis: vi.fn(),
+    gesteDAmitie: vi.fn(),
     changerMotDePasse: vi.fn(),
     nouveauCodeDeSecours: vi.fn(),
     reinitialiser: vi.fn(),

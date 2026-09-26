@@ -61,6 +61,13 @@
  *   - le code de secours, remis a chaque nouveau mot de passe, qui reinitialise un
  *     mot de passe oublie;
  *   - la coupure des connexions de jeu dont la session vient d'etre fermee.
+ *
+ * Ce que l'etape 3.6 a ajoute:
+ *
+ *   - les amities, les demandes d'ami et les blocages, en trois tables;
+ *   - leurs regles, en fonctions pures (comptes/amities.ts), appliquees en base sous
+ *     le verrou des deux comptes;
+ *   - la relation et les parties jouees ensemble sur la fiche d'un joueur.
  */
 
 export type {
@@ -129,6 +136,9 @@ export {
 
 export { compteDeLaSession, fermerSession, ouvrirSession } from './base/sessions.js';
 
+export type { AmitiesEnregistrees, GesteApplique, PersonneEnregistree } from './base/amities.js';
+export { amitiesDuCompte, appliquerGeste, faceAFace, faitsEntre } from './base/amities.js';
+
 export type {
   ChangementDeMotDePasse,
   CodeDuCompte,
@@ -159,6 +169,19 @@ export {
   JOUEUR_INCONNU,
   MOT_DE_PASSE_INCORRECT,
 } from './comptes/Authentification.js';
+export type { DecisionDAmitie, EcritureDAmitie, FaitsDAmitie } from './comptes/amities.js';
+export {
+  AMI_DE_SOI,
+  AUCUNE_DEMANDE,
+  DEBLOQUER_D_ABORD,
+  GESTE_SUR_SOI,
+  MES_AMIS_AU_COMPLET,
+  SES_AMIS_AU_COMPLET,
+  TROP_DE_DEMANDES,
+  deciderDuGeste,
+  faitsApres,
+  relationVue,
+} from './comptes/amities.js';
 export { empreinteDuCode, fabriquerCodeDeSecours } from './comptes/codeDeSecours.js';
 export { empreinteDuJeton, fabriquerJeton } from './comptes/jetons.js';
 export type { VerdictTentative } from './comptes/limiteur.js';

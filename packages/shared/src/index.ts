@@ -13,6 +13,7 @@ export { creerAlea, element, entier, nombre, reel } from './alea.js';
 
 export type { Intervalle, LimiteDebit } from './bornes.js';
 export {
+  BORNES_AMITIES,
   BORNES_CHAT,
   BORNES_CODE_DE_SECOURS,
   BORNES_CODE_INVITATION,
@@ -33,12 +34,19 @@ export type {
   DemandeChangementMotDePasse,
   DemandeCodeDeSecours,
   DemandeConnexion,
+  DemandeDeGeste,
   DemandeInscription,
   DemandeReinitialisation,
+  FaceAFace,
   FicheJoueur,
+  GesteDAmitie,
+  ListeDAmis,
   MaProgression,
   PartieDuProfil,
+  PersonneListee,
   ProfilDuCompte,
+  RelationDAmitie,
+  ReponseDeGeste,
   ReponseRefusee,
   SessionInscrite,
   SessionOuverte,
@@ -46,6 +54,7 @@ export type {
   StatistiquesDeJoueur,
 } from './comptes.js';
 export {
+  GESTES_D_AMITIE,
   JOUEURS_POUR_UNE_VICTOIRE,
   PARAMETRE_PSEUDO,
   PARTIES_DU_PROFIL,
@@ -301,6 +310,7 @@ export {
   validerDemandeCodeDeSecours,
   validerDemandeConnexion,
   validerDemandeCreation,
+  validerDemandeDeGeste,
   validerDemandeInscription,
   validerDemandeReinitialisation,
   validerDemandeRejoindre,

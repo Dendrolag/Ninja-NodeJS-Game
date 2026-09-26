@@ -9,8 +9,9 @@
  * celui-ci en est un, tenu en memoire.
  *
  * CE N'EST PAS UNE SECONDE IMPLEMENTATION DES REGLES. Les validations sont celles du
- * paquet partage, les motifs sont ceux d'Authentification, et les gains arrivent
- * deja calcules par le serveur de jeu. Ce que seul la base garantit (hachage,
+ * paquet partage, les motifs sont ceux d'Authentification, les gains arrivent
+ * deja calcules par le serveur de jeu, et les gestes d'amitie sont decides par les
+ * fonctions pures du serveur (comptes/amities.ts), ici appliquees a des ensembles. Ce que seul la base garantit (hachage,
  * limites de tentatives, transactions) est verifie contre Neon, dans tests/base.
  * Le mot de passe et le code de secours sont gardes en clair: ce fichier ne sert
  * qu'aux tests, et aucun vrai secret n'y passe.
@@ -34,17 +35,24 @@ import type {
   ServiceDeComptes,
   StatistiquesEnregistreesDUnMode,
 } from '../../packages/server/dist/index.js';
+import type { EcritureDAmitie, FaitsDAmitie } from '../../packages/server/dist/index.js';
 import {
   CODE_DE_SECOURS_INCORRECT,
   JOUEUR_INCONNU,
   MOT_DE_PASSE_INCORRECT,
+  deciderDuGeste,
   fabriquerCodeDeSecours,
+  faitsApres,
+  relationVue,
   statistiquesDeJoueur,
 } from '../../packages/server/dist/index.js';
 import type {
   ErreurValidation,
+  FaceAFace,
+  ListeDAmis,
   MaProgression,
   PartieDuProfil,
+  PersonneListee,
   SessionInscrite,
   SessionOuverte,
   StatistiquesDeJoueur,
@@ -59,6 +67,7 @@ import {
   validerDemandeChangementMotDePasse,
   validerDemandeCodeDeSecours,
   validerDemandeConnexion,
+  validerDemandeDeGeste,
   validerDemandeInscription,
   validerDemandeReinitialisation,
   validerPseudo,
@@ -77,6 +86,8 @@ interface CompteEnMemoire {
   pointsLigue: number;
   /** Les parties jouees, de la plus recente a la plus ancienne. */
   readonly historique: PartieDuProfil[];
+  /** Le placement du compte dans chaque partie jouee, par numero de partie (etape 3.6). */
+  readonly placements: Map<number, number>;
 }
 
 /** Une fin de partie enregistree. */
@@ -124,6 +135,16 @@ export interface ComptesEnMemoire extends ServiceDeComptes {
   sessionsDe(pseudo: string): number;
 }
 
+/** La cle d'une paire dirigee de comptes. */
+function paire(de: string, pour: string): string {
+  return `${de}|${pour}`;
+}
+
+/** La cle d'une amitie: la paire, dans l'ordre des identifiants, comme en base. */
+function paireOrdonnee(a: string, b: string): string {
+  return a < b ? paire(a, b) : paire(b, a);
+}
+
 /** Les motifs d'Authentification, pour que la page lise les memes phrases qu'en production. */
 const MOTIFS = {
   identifiantsIncorrects: 'Pseudo ou mot de passe incorrect.',
@@ -137,6 +158,9 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
   const sessions = new Map<string, string>();
   const ecouteurs = new Set<(compteId: string) => void>();
   const fins: FinEnregistree[] = [];
+  const amities = new Set<string>();
+  const demandes = new Set<string>();
+  const blocages = new Set<string>();
   let compteur = 0;
 
   const refusee = <T>(
@@ -192,6 +216,89 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
       : refusee('motDePasseIncorrect', [{ champ: 'motDePasse', motif: MOT_DE_PASSE_INCORRECT }]);
   };
 
+  /** Le nombre d'amis de ce compte. */
+  const nombreDAmis = (compteId: string): number =>
+    [...amities].filter((cle) => cle.split('|').includes(compteId)).length;
+
+  /** Ce qui lie ces deux comptes, vu du premier, comme le lit la base. */
+  const faitsEntre = (moi: string, lui: string): FaitsDAmitie => ({
+    soi: moi === lui,
+    amis: amities.has(paireOrdonnee(moi, lui)),
+    demandeEnvoyee: demandes.has(paire(moi, lui)),
+    demandeRecue: demandes.has(paire(lui, moi)),
+    jeBloque: blocages.has(paire(moi, lui)),
+    ilMeBloque: blocages.has(paire(lui, moi)),
+    mesAmis: nombreDAmis(moi),
+    sesAmis: nombreDAmis(lui),
+    mesDemandesEnAttente: [...demandes].filter((cle) => cle.startsWith(`${moi}|`)).length,
+  });
+
+  /** Fait une ecriture decidee par les regles, comme la base. */
+  const ecrire = (ecriture: EcritureDAmitie, moi: string, lui: string): void => {
+    const operations: Record<EcritureDAmitie, () => void> = {
+      creerAmitie: () => amities.add(paireOrdonnee(moi, lui)),
+      supprimerAmitie: () => amities.delete(paireOrdonnee(moi, lui)),
+      creerDemandeEnvoyee: () => demandes.add(paire(moi, lui)),
+      supprimerDemandeEnvoyee: () => demandes.delete(paire(moi, lui)),
+      supprimerDemandeRecue: () => demandes.delete(paire(lui, moi)),
+      creerBlocage: () => blocages.add(paire(moi, lui)),
+      supprimerBlocage: () => blocages.delete(paire(moi, lui)),
+    };
+
+    operations[ecriture]();
+  };
+
+  /** Les amities de ce compte, triees par pseudo comme en base. */
+  const listeDe = (compteId: string): ListeDAmis => {
+    const listees = (ids: readonly string[]): PersonneListee[] =>
+      ids
+        .map((id) => comptes.get(id))
+        .filter((compte): compte is CompteEnMemoire => compte !== undefined)
+        .sort((a, b) => (reperePseudo(a.pseudo) < reperePseudo(b.pseudo) ? -1 : 1))
+        .map((compte) => ({ pseudo: compte.pseudo, niveau: niveauDeXp(compte.xpTotale) }));
+    const autres = (
+      ensemble: Set<string>,
+      garder: (de: string, pour: string) => string | undefined,
+    ) =>
+      [...ensemble].flatMap((cle) => {
+        const [de = '', pour = ''] = cle.split('|');
+        const autre = garder(de, pour);
+        return autre === undefined ? [] : [autre];
+      });
+
+    return {
+      amis: listees(
+        autres(amities, (a, b) => (a === compteId ? b : b === compteId ? a : undefined)),
+      ),
+      recues: listees(
+        autres(demandes, (de, pour) =>
+          pour === compteId && !blocages.has(paire(compteId, de)) ? de : undefined,
+        ),
+      ),
+      envoyees: listees(autres(demandes, (de, pour) => (de === compteId ? pour : undefined))),
+      bloques: listees(autres(blocages, (de, pour) => (de === compteId ? pour : undefined))),
+    };
+  };
+
+  /** Les parties que ces deux comptes ont jouees ensemble, vues du premier. */
+  const faceAFace = (moi: CompteEnMemoire, lui: CompteEnMemoire): FaceAFace => {
+    let partiesEnsemble = 0;
+    let devant = 0;
+    let derriere = 0;
+
+    for (const [partie, placement] of moi.placements) {
+      const sienne = lui.placements.get(partie);
+
+      if (sienne !== undefined) {
+        partiesEnsemble += 1;
+        devant += placement < sienne ? 1 : 0;
+        derriere += placement > sienne ? 1 : 0;
+      }
+    }
+
+    return { partiesEnsemble, devant, derriere };
+  };
+
   const progressionDe = (compte: CompteEnMemoire): MaProgression => ({
     pseudo: compte.pseudo,
     niveau: niveauDeXp(compte.xpTotale),
@@ -232,6 +339,7 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
         pieces: 0,
         pointsLigue: 0,
         historique: [],
+        placements: new Map(),
       };
       comptes.set(compte.id, compte);
       const codeDeSecours = renouvelerLeCode(compte);
@@ -289,7 +397,8 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
 
     // Comme Authentification, la limite de lecture en moins: aucun scenario ne l'atteint.
     ficheJoueur: async (jeton, brut) => {
-      if (!sessions.has(jeton)) {
+      const lecteur = comptes.get(sessions.get(jeton) ?? '');
+      if (lecteur === undefined) {
         return sessionAbsente();
       }
 
@@ -311,6 +420,55 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
           niveau: niveauDeXp(compte.xpTotale),
           palier: palierDePoints(compte.pointsLigue),
           statistiques: statistiquesDe(compte),
+          relation: relationVue(faitsEntre(lecteur.id, compte.id)),
+          ...(relationVue(faitsEntre(lecteur.id, compte.id)) === 'ami'
+            ? { ensemble: faceAFace(lecteur, compte) }
+            : {}),
+        },
+      };
+    },
+
+    amis: async (jeton) => {
+      const compteId = sessions.get(jeton);
+
+      return compteId === undefined
+        ? sessionAbsente()
+        : { acceptee: true, valeur: listeDe(compteId) };
+    },
+
+    // Comme Authentification, les limites en moins: aucun scenario ne les atteint.
+    gesteDAmitie: async (jeton, brut) => {
+      const compteId = sessions.get(jeton);
+      if (compteId === undefined) {
+        return sessionAbsente();
+      }
+
+      const demande = validerDemandeDeGeste(brut);
+      if (!demande.valide) {
+        return refusee('demandeInvalide', demande.erreurs);
+      }
+
+      const vise = parPseudo(demande.valeur.pseudo);
+      if (vise === undefined) {
+        return refusee('joueurInconnu', [{ champ: 'pseudo', motif: JOUEUR_INCONNU }]);
+      }
+
+      const faits = faitsEntre(compteId, vise.id);
+      const decision = deciderDuGeste(demande.valeur.geste, faits);
+
+      if (!decision.permis) {
+        return refusee('gesteImpossible', [{ champ: 'geste', motif: decision.motif }]);
+      }
+
+      for (const ecriture of decision.ecritures) {
+        ecrire(ecriture, compteId, vise.id);
+      }
+
+      return {
+        acceptee: true,
+        valeur: {
+          relation: relationVue(faitsApres(faits, decision.ecritures)),
+          amis: listeDe(compteId),
         },
       };
     },
@@ -394,6 +552,7 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
     // plus grande que le solde est ramenee au solde.
     enregistrerFinDePartie: async (partie, resultats): Promise<readonly ProgressionAppliquee[]> => {
       fins.push({ partie, resultats });
+      const numero = fins.length;
 
       return resultats.map((resultat) => {
         const compte = comptes.get(resultat.compteId);
@@ -413,6 +572,7 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
         compte.xpTotale += resultat.xpGagnee;
         compte.pieces += resultat.piecesGagnees;
         compte.pointsLigue += variationPointsLigue;
+        compte.placements.set(numero, resultat.placement);
         compte.historique.unshift({
           mode: partie.mode,
           carte: partie.carte,

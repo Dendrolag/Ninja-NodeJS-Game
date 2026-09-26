@@ -332,6 +332,7 @@ export function ficheDEssai(pseudo: string): FicheJoueur {
     niveau: 1,
     palier: 'bronze',
     statistiques: STATISTIQUES_VIDES,
+    relation: 'aucune',
   };
 }
 

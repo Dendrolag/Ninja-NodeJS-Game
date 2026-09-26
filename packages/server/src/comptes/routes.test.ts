@@ -10,6 +10,7 @@
 import type {
   CodeDeSecoursEmis,
   FicheJoueur,
+  ListeDAmis,
   MaProgression,
   ProfilDuCompte,
   ReponseRefusee,
@@ -56,6 +57,15 @@ const FICHE: FicheJoueur = {
   niveau: 3,
   palier: 'bronze',
   statistiques: STATISTIQUES,
+  relation: 'ami',
+  ensemble: { partiesEnsemble: 3, devant: 2, derriere: 1 },
+};
+
+const AMIS: ListeDAmis = {
+  amis: [{ pseudo: 'Bob', niveau: 2 }],
+  recues: [{ pseudo: 'Léa B.', niveau: 4 }],
+  envoyees: [],
+  bloques: [],
 };
 
 const PROFIL: ProfilDuCompte = {
@@ -112,6 +122,8 @@ function serviceFactice(remplacements: Partial<ServiceDeComptes> = {}): ServiceD
     maProgression: vi.fn(async () => acceptee(PROGRESSION)),
     profil: vi.fn(async () => acceptee(PROFIL)),
     ficheJoueur: vi.fn(async () => acceptee(FICHE)),
+    amis: vi.fn(async () => acceptee(AMIS)),
+    gesteDAmitie: vi.fn(async () => acceptee({ relation: 'ami' as const, amis: AMIS })),
     changerMotDePasse: vi.fn(async () => acceptee(CODE)),
     nouveauCodeDeSecours: vi.fn(async () => acceptee(CODE)),
     reinitialiser: vi.fn(async () => acceptee(SESSION_INSCRITE)),
@@ -451,6 +463,78 @@ describe('fiche d un joueur (etape 3.5)', () => {
     expect(
       (await requete(url, adresseDeLaFiche('Alice'), { methode: 'GET', entetes })).statut,
     ).toBe(503);
+  });
+});
+
+describe('amis (etape 3.6)', () => {
+  const entetes = { Authorization: `Bearer ${JETON}` };
+
+  it('rend la liste a qui presente son jeton', async () => {
+    const service = serviceFactice();
+    const url = await monter({ comptes: service });
+
+    const reponse = await requete(url, ROUTES_COMPTES.amis, { methode: 'GET', entetes });
+
+    expect([reponse.statut, reponse.corps]).toEqual([200, AMIS]);
+    expect(reponse.entetes.get('cache-control')).toBe('no-store');
+    expect(service.amis).toHaveBeenCalledWith(JETON);
+  });
+
+  it('passe le geste au service, et rend la relation et la liste', async () => {
+    const service = serviceFactice();
+    const url = await monter({ comptes: service });
+
+    const reponse = await requete(url, ROUTES_COMPTES.amis, {
+      corps: JSON.stringify({ geste: 'accepter', pseudo: 'Léa B.' }),
+      entetes,
+    });
+
+    expect([reponse.statut, reponse.corps]).toEqual([200, { relation: 'ami', amis: AMIS }]);
+    expect(service.gesteDAmitie).toHaveBeenCalledWith(JETON, {
+      geste: 'accepter',
+      pseudo: 'Léa B.',
+    });
+  });
+
+  it('refusent sans jeton, sans deranger le service', async () => {
+    const service = serviceFactice();
+    const url = await monter({ comptes: service });
+
+    const liste = await requete(url, ROUTES_COMPTES.amis, { methode: 'GET' });
+    const geste = await requete(url, ROUTES_COMPTES.amis, { corps: '{}' });
+
+    expect([liste.statut, geste.statut]).toEqual([401, 401]);
+    expect(geste.entetes.get('www-authenticate')).toBe('Bearer');
+    expect(service.amis).not.toHaveBeenCalled();
+    expect(service.gesteDAmitie).not.toHaveBeenCalled();
+  });
+
+  it('traduisent chaque refus du geste en son code', async () => {
+    const attendus = [
+      ['demandeInvalide', 400],
+      ['sessionAbsente', 401],
+      ['joueurInconnu', 404],
+      ['gesteImpossible', 409],
+      ['tropDeTentatives', 429],
+    ] as const;
+
+    for (const [motif, statut] of attendus) {
+      await serveur?.fermer();
+      const url = await monter({
+        comptes: serviceFactice({ gesteDAmitie: refusDuService(motif) }),
+      });
+
+      const reponse = await requete(url, ROUTES_COMPTES.amis, { corps: '{}', entetes });
+
+      expect([motif, reponse.statut]).toEqual([motif, statut]);
+    }
+  });
+
+  it('repondent que les comptes sont indisponibles sur un serveur sans base', async () => {
+    const url = await monter({});
+
+    expect((await requete(url, ROUTES_COMPTES.amis, { methode: 'GET', entetes })).statut).toBe(503);
+    expect((await requete(url, ROUTES_COMPTES.amis, { corps: '{}', entetes })).statut).toBe(503);
   });
 });
 

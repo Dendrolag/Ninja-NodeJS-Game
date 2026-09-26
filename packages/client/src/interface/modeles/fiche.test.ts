@@ -18,6 +18,7 @@ const FICHE: FicheJoueur = {
   inscritLe: '2026-09-11T12:00:00.000Z',
   niveau: 12,
   palier: 'platine',
+  relation: 'aucune',
   statistiques: {
     partiesJouees: 40,
     partiesAPlusieurs: 38,

@@ -182,6 +182,21 @@ export const BORNES_CODE_DE_SECOURS = {
 } as const;
 
 /**
+ * Les bornes des amities d'un compte (etape 3.6, etude des amis, section 4.1).
+ *
+ * Une liste d'amis sert a retrouver les joueurs avec qui l'on joue: deux cents, c'est
+ * bien plus qu'on ne retrouve jamais. Les demandes en attente sont bornees pour qu'un
+ * compte ne puisse pas en semer partout; au-dela, il faut en annuler une, ou attendre
+ * une reponse. La vitesse des demandes est une limite de debit, LIMITES_COMPTES.
+ */
+export const BORNES_AMITIES = {
+  /** Le nombre d'amis d'un compte. */
+  amisMaximum: 200,
+  /** Les demandes qu'un compte a envoyees et qui n'ont pas eu de reponse. */
+  demandesEnAttenteMaximum: 50,
+} as const;
+
+/**
  * Combien de temps une partie en cours garde la place d'un joueur dont le lien est
  * tombe (etape 2.5), en millisecondes.
  *
@@ -310,7 +325,8 @@ export const LIMITES_DEBIT = {
  *
  * Depuis l'etape 3.5, la lecture des fiches a aussi son seau, par compte: ce n'est
  * plus un secret qu'on protege, mais la base, contre un compte qui la ferait agreger
- * en boucle.
+ * en boucle. Depuis l'etape 3.6, les gestes d'amitie aussi, et les demandes d'ami ont
+ * le leur, contre un compte qui en enverrait a tout le monde.
  */
 export const LIMITES_COMPTES = {
   /** Connexions a un meme compte, quelle que soit l'adresse: cinq, puis une par minute. */
@@ -325,4 +341,15 @@ export const LIMITES_COMPTES = {
    * d'un classement n'en demande qu'une douzaine.
    */
   ficheParCompte: { parSeconde: 1, rafale: 30 } satisfies LimiteDebit,
+  /**
+   * Gestes d'amitie d'un meme compte, tous confondus (etape 3.6): trente, puis un par
+   * seconde. Chacun ecrit en base dans une transaction qui verrouille deux comptes.
+   */
+  gesteDAmitieParCompte: { parSeconde: 1, rafale: 30 } satisfies LimiteDebit,
+  /**
+   * Demandes d'ami d'un meme compte (etape 3.6): dix, puis dix par minute. Une soiree
+   * passee a ajouter les joueurs d'une partie n'en demande pas davantage; semer des
+   * demandes a tous les pseudos connus, si.
+   */
+  demandeDAmiParCompte: { parSeconde: 1 / 6, rafale: 10 } satisfies LimiteDebit,
 } as const;

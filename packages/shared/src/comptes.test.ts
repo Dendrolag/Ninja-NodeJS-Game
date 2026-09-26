@@ -10,7 +10,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { BORNES_CODE_DE_SECOURS, BORNES_JETON, BORNES_MOT_DE_PASSE } from './bornes.js';
-import { PARAMETRE_PSEUDO, ROUTES_COMPTES, adresseDeLaFiche } from './comptes.js';
+import { GESTES_D_AMITIE, PARAMETRE_PSEUDO, ROUTES_COMPTES, adresseDeLaFiche } from './comptes.js';
 import type { ResultatValidation } from './validation.js';
 import {
   formaterCodeDeSecours,
@@ -19,6 +19,7 @@ import {
   validerDemandeCodeDeSecours,
   validerDemandeConnexion,
   validerDemandeCreation,
+  validerDemandeDeGeste,
   validerDemandeInscription,
   validerDemandeReinitialisation,
   validerJeton,
@@ -304,5 +305,51 @@ describe('adresseDeLaFiche', () => {
     for (const pseudo of ['.', '..', '../profil']) {
       expect(pseudoRelu(adresseDeLaFiche(pseudo))).toBe(pseudo);
     }
+  });
+});
+
+describe('validerDemandeDeGeste (etape 3.6)', () => {
+  it('accepte chacun des sept gestes, et normalise le pseudo', () => {
+    expect(GESTES_D_AMITIE).toHaveLength(7);
+
+    for (const geste of GESTES_D_AMITIE) {
+      expect(valeurAcceptee(validerDemandeDeGeste({ geste, pseudo: '  Léa B.  ' }))).toEqual({
+        geste,
+        pseudo: 'Léa B.',
+      });
+    }
+  });
+
+  it('refuse un geste inconnu, absent ou qui n est pas du texte', () => {
+    for (const geste of ['supprimer', 'Demander', '', undefined, 3, ['demander']]) {
+      const verdict = validerDemandeDeGeste({ geste, pseudo: 'Bob' });
+
+      expect(verdict.valide).toBe(false);
+      expect(verdict.valide ? [] : verdict.erreurs.map((erreur) => erreur.champ)).toEqual([
+        'geste',
+      ]);
+    }
+  });
+
+  it('refuse un pseudo mal forme avec le motif du pseudo', () => {
+    for (const pseudo of ['', '   ', 'x'.repeat(40), 12, undefined]) {
+      const verdict = validerDemandeDeGeste({ geste: 'demander', pseudo });
+
+      expect(verdict.valide ? [] : verdict.erreurs.map((erreur) => erreur.champ)).toEqual([
+        'pseudo',
+      ]);
+    }
+  });
+
+  it('refuse ce qui n est pas un objet', () => {
+    for (const brut of [null, 'demander', 3, undefined]) {
+      expect(validerDemandeDeGeste(brut).valide).toBe(false);
+    }
+  });
+
+  it('ne lit rien d autre que le geste et le pseudo', () => {
+    expect(
+      valeurAcceptee(validerDemandeDeGeste({ geste: 'bloquer', pseudo: 'Bob', compte: 'x' })),
+    ).toEqual({ geste: 'bloquer', pseudo: 'Bob' });
   });
 });

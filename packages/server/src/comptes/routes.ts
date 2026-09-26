@@ -1,7 +1,8 @@
 /**
  * Les routes HTTP des comptes: inscription, connexion, deconnexion, progression,
  * profil, depuis l'etape 3.4 changement de mot de passe, code de secours et
- * reinitialisation et, depuis l'etape 3.5, la fiche d'un autre compte.
+ * reinitialisation, depuis l'etape 3.5, la fiche d'un autre compte et, depuis l'etape
+ * 3.6, les amis.
  *
  * CE FICHIER TRADUIT, IL NE DECIDE RIEN. Il lit la requete (corps JSON, jeton en
  * en-tete, adresse), appelle le service, et traduit sa reponse en code HTTP. Toute
@@ -39,6 +40,7 @@ const CODES_DES_REFUS: Record<MotifDeRefus, number> = {
   sessionAbsente: 401,
   motDePasseIncorrect: 403,
   joueurInconnu: 404,
+  gesteImpossible: 409,
   tropDeTentatives: 429,
 };
 
@@ -113,6 +115,26 @@ export function routesDesComptes(
     }
 
     repondre(reponse, await service.ficheJoueur(jeton, requete.query[PARAMETRE_PSEUDO]), 200);
+  });
+
+  routes.get('/amis', async (requete, reponse) => {
+    const jeton = jetonDe(requete);
+    if (jeton === undefined) {
+      refuserSansSession(reponse);
+      return;
+    }
+
+    repondre(reponse, await service.amis(jeton), 200);
+  });
+
+  routes.post('/amis', async (requete, reponse) => {
+    const jeton = jetonDe(requete);
+    if (jeton === undefined) {
+      refuserSansSession(reponse);
+      return;
+    }
+
+    repondre(reponse, await service.gesteDAmitie(jeton, requete.body), 200);
   });
 
   routes.post('/mot-de-passe', async (requete, reponse) => {

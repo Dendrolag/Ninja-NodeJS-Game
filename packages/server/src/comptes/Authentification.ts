@@ -3,7 +3,8 @@
  * l'etape 3.3, enregistrer la fin d'une partie pour les comptes qui l'ont jouee.
  * Depuis l'etape 3.4, gerer le mot de passe: le changer, obtenir un code de secours,
  * et reinitialiser avec ce code un mot de passe oublie. Depuis l'etape 3.5, lire la
- * fiche d'un autre compte.
+ * fiche d'un autre compte. Depuis l'etape 3.6, gerer ses amities: les regles sont
+ * dans amities.ts, et les ecritures dans base/amities.ts.
  *
  * C'est l'implementation, avec la base, de l'annuaire et du service de
  * annuaire.ts. Elle assemble des briques qui ont chacune leur fichier: la
@@ -34,9 +35,12 @@ import type {
   ErreurValidation,
   FicheJoueur,
   LimiteDebit,
+  ListeDAmis,
   MaProgression,
   PartieDuProfil,
+  PersonneListee,
   ProfilDuCompte,
+  ReponseDeGeste,
   SessionInscrite,
   SessionOuverte,
 } from '@neon-ninja/shared';
@@ -50,11 +54,14 @@ import {
   validerDemandeChangementMotDePasse,
   validerDemandeCodeDeSecours,
   validerDemandeConnexion,
+  validerDemandeDeGeste,
   validerDemandeInscription,
   validerDemandeReinitialisation,
   validerPseudo,
 } from '@neon-ninja/shared';
 
+import type { AmitiesEnregistrees, PersonneEnregistree } from '../base/amities.js';
+import { amitiesDuCompte, appliquerGeste, faceAFace, faitsEntre } from '../base/amities.js';
 import {
   creerCompte,
   identifiantsParPseudo,
@@ -81,6 +88,7 @@ import {
 import { compteDeLaSession, fermerSession, ouvrirSession } from '../base/sessions.js';
 import type { Horloge } from '../horloge.js';
 import { horlogeSysteme } from '../horloge.js';
+import { deciderDuGeste, relationVue } from './amities.js';
 import type {
   IdentiteDeCompte,
   MotifDeRefus,
@@ -110,6 +118,10 @@ export interface LimitesDesComptes {
   readonly inscriptionParAdresse: LimiteDebit;
   /** Les fiches lues par un meme compte (etape 3.5). Absente: celle du paquet partage. */
   readonly ficheParCompte?: LimiteDebit;
+  /** Les gestes d'amitie d'un meme compte (etape 3.6). Absente: celle du paquet partage. */
+  readonly gesteDAmitieParCompte?: LimiteDebit;
+  /** Les demandes d'ami d'un meme compte (etape 3.6). Absente: celle du paquet partage. */
+  readonly demandeDAmiParCompte?: LimiteDebit;
 }
 
 /** Ce qu'il faut pour authentifier. */
@@ -137,7 +149,10 @@ export const CODE_DE_SECOURS_INCORRECT = 'Pseudo ou code de secours incorrect.';
 /** Le motif d'un mot de passe actuel faux, exige par une demande faite depuis le profil. */
 export const MOT_DE_PASSE_INCORRECT = 'Mot de passe incorrect.';
 
-/** Le motif d'une fiche demandee pour un pseudo qu'aucun compte ne porte (etape 3.5). */
+/**
+ * Le motif d'une fiche demandee (etape 3.5), ou d'un geste d'amitie (etape 3.6), pour un
+ * pseudo qu'aucun compte ne porte.
+ */
 export const JOUEUR_INCONNU = 'Aucun compte ne porte ce pseudo.';
 
 /** L'authentification des comptes, avec la base. */
@@ -149,6 +164,8 @@ export class Authentification implements ServiceDeComptes {
   private readonly connexionsParAdresse: LimiteurDeTentatives;
   private readonly inscriptionsParAdresse: LimiteurDeTentatives;
   private readonly fichesParCompte: LimiteurDeTentatives;
+  private readonly gestesParCompte: LimiteurDeTentatives;
+  private readonly demandesDAmiParCompte: LimiteurDeTentatives;
 
   /** L'empreinte leurre, calculee une fois, a la premiere connexion qui en a besoin. */
   private empreinteLeurre: Promise<string> | undefined;
@@ -168,6 +185,14 @@ export class Authentification implements ServiceDeComptes {
     this.inscriptionsParAdresse = new LimiteurDeTentatives(limites.inscriptionParAdresse, horloge);
     this.fichesParCompte = new LimiteurDeTentatives(
       limites.ficheParCompte ?? LIMITES_COMPTES.ficheParCompte,
+      horloge,
+    );
+    this.gestesParCompte = new LimiteurDeTentatives(
+      limites.gesteDAmitieParCompte ?? LIMITES_COMPTES.gesteDAmitieParCompte,
+      horloge,
+    );
+    this.demandesDAmiParCompte = new LimiteurDeTentatives(
+      limites.demandeDAmiParCompte ?? LIMITES_COMPTES.demandeDAmiParCompte,
       horloge,
     );
   }
@@ -290,15 +315,81 @@ export class Authentification implements ServiceDeComptes {
 
     const profil = await profilParPseudo(this.db, pseudo.valeur);
     if (profil === undefined) {
-      return refusee('joueurInconnu', [{ champ: 'pseudo', motif: JOUEUR_INCONNU }]);
+      return joueurInconnu();
     }
+
+    const [statistiques, faits] = await Promise.all([
+      statistiquesParMode(this.db, profil.id),
+      faitsEntre(this.db, lecteur, profil.id),
+    ]);
+    const relation = relationVue(faits);
 
     return acceptee({
       pseudo: profil.pseudo,
       inscritLe: profil.creeLe.toISOString(),
       niveau: niveauDeXp(profil.xpTotale),
       palier: palierDePoints(profil.pointsLigue),
-      statistiques: statistiquesDeJoueur(await statistiquesParMode(this.db, profil.id)),
+      statistiques: statistiquesDeJoueur(statistiques),
+      relation,
+      // Le face-a-face est reserve aux amis (decision 2 de l'etude des amis).
+      ...(relation === 'ami' ? { ensemble: await faceAFace(this.db, lecteur, profil.id) } : {}),
+    });
+  }
+
+  async amis(jeton: string): Promise<ReponseDeCompte<ListeDAmis>> {
+    const compteId = await this.compteDeSession(jeton);
+
+    return compteId === undefined
+      ? sessionAbsente()
+      : acceptee(listeDAmis(await amitiesDuCompte(this.db, compteId)));
+  }
+
+  /**
+   * Dans l'ordre: la session, la limite des gestes, la demande, la limite des demandes
+   * d'ami pour un geste qui en est une, le compte vise, puis les regles, sous le verrou
+   * des deux comptes.
+   */
+  async gesteDAmitie(jeton: string, brut: unknown): Promise<ReponseDeCompte<ReponseDeGeste>> {
+    const compteId = await this.compteDeSession(jeton);
+    if (compteId === undefined) {
+      return sessionAbsente();
+    }
+
+    const tentative = this.gestesParCompte.tenter(compteId);
+    if (!tentative.accepte) {
+      return tropDeTentatives(tentative.reessayerDansMs);
+    }
+
+    const demande = validerDemandeDeGeste(brut);
+    if (!demande.valide) {
+      return refusee('demandeInvalide', demande.erreurs);
+    }
+
+    const { geste, pseudo } = demande.valeur;
+
+    if (geste === 'demander') {
+      const demandeDAmi = this.demandesDAmiParCompte.tenter(compteId);
+      if (!demandeDAmi.accepte) {
+        return tropDeTentatives(demandeDAmi.reessayerDansMs);
+      }
+    }
+
+    const vise = await trouverCompteParPseudo(this.db, pseudo);
+    if (vise === undefined) {
+      return joueurInconnu();
+    }
+
+    const applique = await appliquerGeste(this.db, compteId, vise.id, (faits) =>
+      deciderDuGeste(geste, faits),
+    );
+
+    if (!applique.decision.permis) {
+      return refusee('gesteImpossible', [{ champ: 'geste', motif: applique.decision.motif }]);
+    }
+
+    return acceptee({
+      relation: relationVue(applique.faits),
+      amis: listeDAmis(await amitiesDuCompte(this.db, compteId)),
     });
   }
 
@@ -603,6 +694,26 @@ function memesEmpreintes(gauche: string, droite: string): boolean {
   const b = Buffer.from(droite, 'hex');
 
   return a.length === b.length && timingSafeEqual(a, b);
+}
+
+/** Une reponse refusee parce qu'aucun compte ne porte le pseudo vise (etapes 3.5 et 3.6). */
+function joueurInconnu<T>(): ReponseDeCompte<T> {
+  return refusee('joueurInconnu', [{ champ: 'pseudo', motif: JOUEUR_INCONNU }]);
+}
+
+/** Les amities lues en base, a la forme du contrat: le niveau se deduit de l'XP. */
+function listeDAmis(amities: AmitiesEnregistrees): ListeDAmis {
+  const listee = ({ pseudo, xpTotale }: PersonneEnregistree): PersonneListee => ({
+    pseudo,
+    niveau: niveauDeXp(xpTotale),
+  });
+
+  return {
+    amis: amities.amis.map(listee),
+    recues: amities.recues.map(listee),
+    envoyees: amities.envoyees.map(listee),
+    bloques: amities.bloques.map(listee),
+  };
 }
 
 /** Une reponse refusee faute de session valable. */
