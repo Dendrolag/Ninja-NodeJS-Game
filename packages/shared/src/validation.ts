@@ -66,6 +66,7 @@ import {
 } from './constantes.js';
 import type {
   DemandeCreation,
+  DemandeInvitation,
   DemandeRejoindre,
   DemandeRetour,
   IntentionDeplacement,
@@ -193,6 +194,23 @@ export function validerDemandeRejoindre(brut: unknown): ResultatValidation<Deman
   const brutCode = champ(source, 'code');
   const brutMode = champ(source, 'mode');
   const brutReglages = champ(source, 'reglages');
+  const brutInvitation = champ(source, 'invitation');
+
+  // L'invitation d'un ami (etape 2.8) designe a elle seule la partie: avec une autre
+  // facon de viser, la demande serait ambigue.
+  if (brutInvitation !== undefined) {
+    if (brutRoom !== undefined || brutCode !== undefined || brutMode !== undefined) {
+      return refuse('rejoindre', "Une demande d'entrée par invitation ne vise pas d'autre partie.");
+    }
+
+    if (typeof brutInvitation !== 'string' || !BORNES_JETON.forme.test(brutInvitation)) {
+      return refuse('invitation', 'Cette invitation est mal formée.');
+    }
+
+    return brutReglages === undefined
+      ? accepte({ ...pseudo, invitation: brutInvitation })
+      : refuse('rejoindre', 'Les réglages ne se choisissent qu’avec un mode.');
+  }
 
   if (brutReglages !== undefined && brutMode === undefined) {
     return refuse('rejoindre', 'Les réglages ne se choisissent qu’avec un mode.');
@@ -655,6 +673,21 @@ export function validerDemandeDeGeste(brut: unknown): ResultatValidation<Demande
   }
 
   return accepte({ geste, pseudo: pseudo.valeur });
+}
+
+/**
+ * Valide une invitation d'un ami (etape 2.8): un pseudo bien forme, normalise comme a
+ * l'entree dans un salon. C'est le serveur qui dit si c'est celui d'un ami en ligne.
+ */
+export function validerDemandeInvitation(brut: unknown): ResultatValidation<DemandeInvitation> {
+  const source = objetOuRien(brut);
+  if (source === undefined) {
+    return refuse('invitation', 'Une invitation doit être un objet.');
+  }
+
+  const pseudo = validerPseudo(champ(source, 'pseudo'));
+
+  return pseudo.valide ? accepte({ pseudo: pseudo.valeur }) : pseudo;
 }
 
 /** Une valeur est-elle l'un des textes d'une liste fermee. */

@@ -157,6 +157,7 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
   const comptes = new Map<string, CompteEnMemoire>();
   const sessions = new Map<string, string>();
   const ecouteurs = new Set<(compteId: string) => void>();
+  const ecouteursDesAmities = new Set<(auteur: string, vise: string) => void>();
   const fins: FinEnregistree[] = [];
   const amities = new Set<string>();
   const demandes = new Set<string>();
@@ -464,6 +465,13 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
         ecrire(ecriture, compteId, vise.id);
       }
 
+      // Comme Authentification: un geste qui a ecrit previent la couche reseau (etape 2.8).
+      if (decision.ecritures.length > 0) {
+        for (const ecouteur of ecouteursDesAmities) {
+          ecouteur(compteId, vise.id);
+        }
+      }
+
       return {
         acceptee: true,
         valeur: {
@@ -546,6 +554,21 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
 
       return () => {
         ecouteurs.delete(ecouteur);
+      };
+    },
+
+    // Les amis d'un compte, dans l'ordre de sa liste, comme en base (etape 2.8).
+    amisDe: async (compteId) =>
+      listeDe(compteId).amis.flatMap((ami) => {
+        const compte = parPseudo(ami.pseudo);
+        return compte === undefined ? [] : [{ compteId: compte.id, pseudo: compte.pseudo }];
+      }),
+
+    surAmitiesChangees: (ecouteur) => {
+      ecouteursDesAmities.add(ecouteur);
+
+      return () => {
+        ecouteursDesAmities.delete(ecouteur);
       };
     },
 

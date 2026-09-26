@@ -6,7 +6,9 @@
  * quel pseudo et a quel niveau ce compte entre-t-il en partie, ce pseudo
  * appartient-il a un compte, et, depuis l'etape 3.3, enregistrer la fin d'une
  * partie pour ses comptes. Depuis l'etape 3.4, elle ecoute aussi les sessions
- * fermees, pour couper les connexions ouvertes avec elles. C'est l'annuaire. Les
+ * fermees, pour couper les connexions ouvertes avec elles, et depuis l'etape 2.8, lit
+ * les amis d'un compte et ecoute les amities changees, pour la presence et les
+ * invitations. C'est l'annuaire. Les
  * routes HTTP ont besoin, en plus, d'inscrire, de connecter, de deconnecter, de lire
  * la progression et, depuis l'etape 3.4, de gerer le mot de passe, depuis l'etape 3.5
  * de lire la fiche d'un autre compte et, depuis l'etape 3.6, de gerer ses amities.
@@ -30,6 +32,12 @@ import type {
 } from '@neon-ninja/shared';
 
 import type { NouveauResultat, NouvellePartie, ProgressionAppliquee } from '../base/parties.js';
+
+/** Un ami d'un compte: son identifiant, qui ne quitte pas le serveur, et son pseudo. */
+export interface AmiConnu {
+  readonly compteId: string;
+  readonly pseudo: string;
+}
 
 /** Ce sous quoi un compte entre en partie. */
 export interface IdentiteDeCompte {
@@ -80,6 +88,26 @@ export interface AnnuaireDesComptes {
    * @returns La fonction qui retire l'ecouteur.
    */
   surSessionsFermees(ecouteur: (compteId: string) => void): () => void;
+
+  /**
+   * Les amis de ce compte (etape 2.8), sans les demandes ni les blocages.
+   *
+   * La couche reseau les lit a la premiere page ouverte d'un compte, et les relit quand
+   * ses amities changent: c'est d'eux que depend a qui montrer sa presence, et qui il
+   * peut inviter.
+   */
+  amisDe(compteId: string): Promise<readonly AmiConnu[]>;
+
+  /**
+   * Ecoute les gestes d'amitie qui ont change quelque chose entre deux comptes (etape
+   * 2.8). Un geste deja fait, ou refuse, ne previent pas.
+   *
+   * L'ecouteur recoit les deux comptes, dans l'ordre du geste: celui qui l'a fait, puis
+   * celui qu'il visait. C'est a lui de relire leurs amis (amisDe).
+   *
+   * @returns La fonction qui retire l'ecouteur.
+   */
+  surAmitiesChangees(ecouteur: (auteur: string, vise: string) => void): () => void;
 }
 
 /** Pourquoi une demande de compte est refusee. */

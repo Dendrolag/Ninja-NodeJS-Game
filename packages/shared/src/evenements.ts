@@ -61,6 +61,7 @@ import type {
 import type {
   DemandeChat,
   DemandeCreation,
+  DemandeInvitation,
   DemandeRejoindre,
   DemandeRetour,
   IntentionDeplacement,
@@ -309,6 +310,84 @@ export interface PartiePublique {
   readonly joueurs: number;
   /** Nombre de joueurs accueillis au plus. */
   readonly capacite: number;
+}
+
+// --------------------------------------------------------------------------
+// Les amis en direct: presence et invitations (etape 2.8)
+// --------------------------------------------------------------------------
+
+/**
+ * La partie ou se trouve un ami, telle que ses amis la voient.
+ *
+ * UNE PARTIE PUBLIQUE SE MONTRE, UNE PRIVEE SE TAIT. D'une partie publique, ce que la
+ * liste des parties en montre deja: son identifiant, par lequel on la rejoint, son
+ * mode, ses joueurs et sa capacite. D'une partie privee, seulement qu'elle l'est: ni
+ * identifiant, ni mode, et jamais de code. La rejoindre demande une invitation.
+ */
+export type PartieDUnAmi =
+  | { readonly visibilite: 'privee' }
+  | {
+      readonly visibilite: 'publique';
+      readonly idRoom: string;
+      readonly mode: Mode;
+      /** Nombre de joueurs presents. */
+      readonly joueurs: number;
+      /** Nombre de joueurs accueillis au plus. */
+      readonly capacite: number;
+    };
+
+/**
+ * Ou se trouve un ami en ligne.
+ *
+ * Hors ligne ne se transmet pas: un ami absent de la liste de presence l'est. Une
+ * partie terminee compte comme en ligne, son ecran de fin n'empechant pas de repondre.
+ */
+export type LieuDUnAmi =
+  /** Une page ouverte sur les menus. */
+  | { readonly etat: 'enLigne' }
+  /** Dans le salon d'une partie, qui attend son lancement. */
+  | { readonly etat: 'salon'; readonly partie: PartieDUnAmi }
+  /** Dans une partie qui se joue. */
+  | { readonly etat: 'enPartie'; readonly partie: PartieDUnAmi };
+
+/** Un ami en ligne, et ou il se trouve. */
+export interface PresenceDUnAmi {
+  /** Le pseudo de l'ami, dans l'ecriture de son compte. */
+  readonly pseudo: string;
+  readonly lieu: LieuDUnAmi;
+}
+
+/**
+ * Une invitation qu'un ami vient d'envoyer a ce compte (etape 2.8).
+ *
+ * Elle designe un droit d'entree tenu par le serveur, et non la partie: ni son code,
+ * ni son identifiant ne partent. Ce qu'elle decrit de la partie est pris a l'instant
+ * de l'invitation, pour que l'invite sache ou il entrerait.
+ */
+export interface InvitationRecue {
+  /** L'identifiant du droit d'entree, a presenter pour rejoindre. */
+  readonly id: string;
+  /** Le pseudo de l'ami qui invite. */
+  readonly de: string;
+  readonly mode: Mode;
+  readonly visibilite: Visibilite;
+  /** Nombre de joueurs presents a l'invitation. */
+  readonly joueurs: number;
+  readonly capacite: number;
+}
+
+/**
+ * Une invitation qui ne vaut plus: expiree, servie, partie finie, inviteur parti, ou
+ * amitie rompue. La page cesse de la montrer.
+ */
+export interface InvitationRetiree {
+  readonly id: string;
+}
+
+/** Ce que l'inviteur apprend d'une invitation partie. */
+export interface InvitationEnvoyee {
+  /** Le pseudo de l'ami invite, dans l'ecriture de son compte. */
+  readonly pseudo: string;
 }
 
 // --------------------------------------------------------------------------
@@ -757,6 +836,20 @@ export interface EvenementsClientVersServeur {
 
   /** Reprendre la partie. Reserve a l'hote. Remplace l'autre moitie de togglePause. */
   reprendre: () => void;
+
+  /**
+   * Inviter un ami dans sa partie (etape 2.8). Sans equivalent dans le jeu d'origine.
+   *
+   * Reserve a un compte qui se trouve dans une partie qui n'est pas finie. Refuse si le
+   * pseudo n'est pas celui d'un ami, si cet ami n'a aucune page ouverte, s'il est deja
+   * dans la partie, ou s'il a deja ete invite il y a moins d'une minute. Accepte, l'ami
+   * recoit invitationRecue sur chacune de ses pages. L'accuse est la seule facon de
+   * savoir que l'invitation est partie: rien ne se voit a l'ecran de l'inviteur.
+   */
+  inviter: (
+    demande: DemandeInvitation,
+    accuse: (reponse: ResultatValidation<InvitationEnvoyee>) => void,
+  ) => void;
 }
 
 /**
@@ -886,6 +979,28 @@ export interface EvenementsServeurVersClient {
 
   /** Une demande de ce joueur a ete refusee. Remplace error. */
   refus: (refus: Refus) => void;
+
+  /**
+   * Les amis de ce compte qui ont une page ouverte, et ou ils sont (etape 2.8).
+   *
+   * LA LISTE EST ENTIERE, pas un changement: elle part a l'ouverture de chaque page
+   * d'un compte, puis a chaque changement. Un ami absent de la liste est hors ligne.
+   * Elle ne part qu'aux comptes, et ne parle que de leurs amis.
+   */
+  presenceDesAmis: (presences: readonly PresenceDUnAmi[]) => void;
+
+  /**
+   * Les amities de ce compte viennent de changer, par un geste de lui ou d'un autre
+   * (etape 2.8). Le message ne dit rien de plus: la page relit sa liste, par la route
+   * des amis, qui sait ce qu'elle doit montrer ou taire.
+   */
+  amitiesChangees: () => void;
+
+  /** Un ami invite ce compte dans sa partie (etape 2.8). Part a chacune de ses pages. */
+  invitationRecue: (invitation: InvitationRecue) => void;
+
+  /** Une invitation recue ne vaut plus (etape 2.8). */
+  invitationRetiree: (retrait: InvitationRetiree) => void;
 }
 
 /**

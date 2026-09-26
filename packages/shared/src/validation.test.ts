@@ -29,6 +29,7 @@ import {
   reperePseudo,
   validerCodeInvitation,
   validerDemandeCreation,
+  validerDemandeInvitation,
   validerDemandeRejoindre,
   validerDemandeRetour,
   validerIntentionDeplacement,
@@ -727,5 +728,66 @@ describe('validerDemandeRejoindre', () => {
     );
 
     expect(demande).toEqual({ pseudo: 'Alice' });
+  });
+});
+
+describe('validerDemandeRejoindre, par invitation d un ami (etape 2.8)', () => {
+  const INVITATION = 'a'.repeat(43);
+
+  it('accepte un identifiant d invitation de la forme d un jeton', () => {
+    expect(valeurAcceptee(validerDemandeRejoindre({ invitation: INVITATION }))).toEqual({
+      invitation: INVITATION,
+    });
+  });
+
+  it('garde un pseudo joint, qui ne sera lu que pour un invite', () => {
+    expect(
+      valeurAcceptee(validerDemandeRejoindre({ pseudo: 'Alice', invitation: INVITATION })),
+    ).toEqual({ pseudo: 'Alice', invitation: INVITATION });
+  });
+
+  it('refuse un identifiant mal forme, trop court ou qui n est pas du texte', () => {
+    expect(champsRefuses(validerDemandeRejoindre({ invitation: 'a'.repeat(42) }))).toEqual([
+      'invitation',
+    ]);
+    expect(champsRefuses(validerDemandeRejoindre({ invitation: `${'a'.repeat(42)}!` }))).toEqual([
+      'invitation',
+    ]);
+    expect(champsRefuses(validerDemandeRejoindre({ invitation: 42 }))).toEqual(['invitation']);
+  });
+
+  it('refuse une invitation jointe a une autre facon de viser une partie', () => {
+    for (const autre of [{ idRoom: 'room-1' }, { code: 'NX7K2P' }, { mode: 'classique' }]) {
+      expect(champsRefuses(validerDemandeRejoindre({ invitation: INVITATION, ...autre }))).toEqual([
+        'rejoindre',
+      ]);
+    }
+  });
+
+  it('refuse des reglages avec une invitation', () => {
+    expect(
+      champsRefuses(validerDemandeRejoindre({ invitation: INVITATION, reglages: {} })),
+    ).toEqual(['rejoindre']);
+  });
+});
+
+describe('validerDemandeInvitation (etape 2.8)', () => {
+  it('accepte un pseudo et le normalise', () => {
+    expect(valeurAcceptee(validerDemandeInvitation({ pseudo: '  Bob  ' }))).toEqual({
+      pseudo: 'Bob',
+    });
+  });
+
+  it('ignore les champs en trop', () => {
+    expect(valeurAcceptee(validerDemandeInvitation({ pseudo: 'Bob', idRoom: 'room-1' }))).toEqual({
+      pseudo: 'Bob',
+    });
+  });
+
+  it('refuse ce qui n est pas un objet, et un pseudo mal forme ou absent', () => {
+    expect(champsRefuses(validerDemandeInvitation('Bob'))).toEqual(['invitation']);
+    expect(champsRefuses(validerDemandeInvitation(null))).toEqual(['invitation']);
+    expect(champsRefuses(validerDemandeInvitation({}))).toEqual(['pseudo']);
+    expect(champsRefuses(validerDemandeInvitation({ pseudo: '<b>' }))).toEqual(['pseudo']);
   });
 });

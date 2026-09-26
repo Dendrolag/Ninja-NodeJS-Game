@@ -4,7 +4,8 @@
  * Depuis l'etape 3.4, gerer le mot de passe: le changer, obtenir un code de secours,
  * et reinitialiser avec ce code un mot de passe oublie. Depuis l'etape 3.5, lire la
  * fiche d'un autre compte. Depuis l'etape 3.6, gerer ses amities: les regles sont
- * dans amities.ts, et les ecritures dans base/amities.ts.
+ * dans amities.ts, et les ecritures dans base/amities.ts. Depuis l'etape 2.8, dire a la
+ * couche reseau les amis d'un compte, et la prevenir des amities qui changent.
  *
  * C'est l'implementation, avec la base, de l'annuaire et du service de
  * annuaire.ts. Elle assemble des briques qui ont chacune leur fichier: la
@@ -61,7 +62,13 @@ import {
 } from '@neon-ninja/shared';
 
 import type { AmitiesEnregistrees, PersonneEnregistree } from '../base/amities.js';
-import { amitiesDuCompte, appliquerGeste, faceAFace, faitsEntre } from '../base/amities.js';
+import {
+  amisParIdentifiant,
+  amitiesDuCompte,
+  appliquerGeste,
+  faceAFace,
+  faitsEntre,
+} from '../base/amities.js';
 import {
   creerCompte,
   identifiantsParPseudo,
@@ -90,6 +97,7 @@ import type { Horloge } from '../horloge.js';
 import { horlogeSysteme } from '../horloge.js';
 import { deciderDuGeste, relationVue } from './amities.js';
 import type {
+  AmiConnu,
   IdentiteDeCompte,
   MotifDeRefus,
   ReponseDeCompte,
@@ -172,6 +180,9 @@ export class Authentification implements ServiceDeComptes {
 
   /** Ceux qui ecoutent les sessions fermees d'un compte: la couche reseau (etape 3.4). */
   private readonly ecouteursDesFermetures = new Set<(compteId: string) => void>();
+
+  /** Ceux qui ecoutent les amities changees: la couche reseau (etape 2.8). */
+  private readonly ecouteursDesAmities = new Set<(auteur: string, vise: string) => void>();
 
   constructor(options: OptionsAuthentification) {
     const horloge = options.horloge ?? horlogeSysteme;
@@ -387,6 +398,13 @@ export class Authentification implements ServiceDeComptes {
       return refusee('gesteImpossible', [{ champ: 'geste', motif: applique.decision.motif }]);
     }
 
+    // Un geste deja fait n'a rien change: personne n'a de liste a relire.
+    if (applique.decision.ecritures.length > 0) {
+      for (const ecouteur of this.ecouteursDesAmities) {
+        ecouteur(compteId, vise.id);
+      }
+    }
+
     return acceptee({
       pseudo: vise.pseudo,
       relation: relationVue(applique.faits),
@@ -532,6 +550,18 @@ export class Authentification implements ServiceDeComptes {
 
     return () => {
       this.ecouteursDesFermetures.delete(ecouteur);
+    };
+  }
+
+  async amisDe(compteId: string): Promise<readonly AmiConnu[]> {
+    return amisParIdentifiant(this.db, compteId);
+  }
+
+  surAmitiesChangees(ecouteur: (auteur: string, vise: string) => void): () => void {
+    this.ecouteursDesAmities.add(ecouteur);
+
+    return () => {
+      this.ecouteursDesAmities.delete(ecouteur);
     };
   }
 

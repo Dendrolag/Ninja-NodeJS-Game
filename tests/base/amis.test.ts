@@ -1,5 +1,5 @@
 /**
- * Tests d'integration des amis (etape 3.6), contre une vraie base.
+ * Tests d'integration des amis (etapes 3.6 et 2.8), contre une vraie base.
  *
  * Ce que la fiche de l'etape demande: les contraintes des trois tables, la demande et
  * l'acceptation, les demandes croisees, le refus, le retrait, le blocage et le
@@ -7,6 +7,9 @@
  * concurrents, la cascade a la suppression d'un compte, la relation et le face-a-face
  * sur la fiche, et la liste triee. Les regles elles-memes, geste par geste, sont
  * verifiees sans base dans packages/server/src/comptes/amities.test.ts.
+ *
+ * Depuis l'etape 2.8: les amis d'un compte tels que la couche reseau les lit (amisDe),
+ * et l'ecoute des gestes qui ont change quelque chose (surAmitiesChangees).
  */
 
 import type {
@@ -678,5 +681,57 @@ describe.runIf(baseDisponible())('amis', () => {
     expect(pseudos(((await liste.json()) as ListeDAmis).envoyees)).toEqual([bob.pseudo]);
     expect(sansSession.status).toBe(401);
     expect(impossible.status).toBe(409);
+  });
+
+  it('lit les amis d un compte dans les deux sens, sans les demandes ni les blocages (etape 2.8)', async () => {
+    const auth = authentification();
+    const alice = await inscrire(auth, 'Zed');
+    const bob = await inscrire(auth, 'bea');
+    const carole = await inscrire(auth, 'Cle');
+    const david = await inscrire(auth);
+    const eve = await inscrire(auth);
+
+    await geste(auth, alice, 'demander', bob.pseudo);
+    await geste(auth, bob, 'accepter', alice.pseudo);
+    await geste(auth, carole, 'demander', alice.pseudo);
+    await geste(auth, alice, 'accepter', carole.pseudo);
+    await geste(auth, david, 'demander', alice.pseudo);
+    await geste(auth, alice, 'bloquer', eve.pseudo);
+
+    const amis = await auth.amisDe(alice.compteId);
+
+    expect(amis).toEqual(
+      [bob, carole]
+        .sort((a, b) => (reperePseudo(a.pseudo) < reperePseudo(b.pseudo) ? -1 : 1))
+        .map((compte) => ({ compteId: compte.compteId, pseudo: compte.pseudo })),
+    );
+    expect(await auth.amisDe(bob.compteId)).toEqual([
+      { compteId: alice.compteId, pseudo: alice.pseudo },
+    ]);
+    expect(await auth.amisDe(david.compteId)).toEqual([]);
+  });
+
+  it('previent des gestes qui ont ecrit, pas des gestes sans effet ni refuses (etape 2.8)', async () => {
+    const auth = authentification();
+    const alice = await inscrire(auth);
+    const bob = await inscrire(auth);
+    const recus: [string, string][] = [];
+    const arreter = auth.surAmitiesChangees((auteur, vise) => {
+      recus.push([auteur, vise]);
+    });
+
+    await geste(auth, alice, 'demander', bob.pseudo);
+    await geste(auth, alice, 'demander', bob.pseudo);
+    await auth.gesteDAmitie(alice.jeton, { geste: 'accepter', pseudo: bob.pseudo });
+    await geste(auth, bob, 'accepter', alice.pseudo);
+
+    expect(recus).toEqual([
+      [alice.compteId, bob.compteId],
+      [bob.compteId, alice.compteId],
+    ]);
+
+    arreter();
+    await geste(auth, bob, 'retirer', alice.pseudo);
+    expect(recus).toHaveLength(2);
   });
 });

@@ -137,7 +137,14 @@ export {
 export { compteDeLaSession, fermerSession, ouvrirSession } from './base/sessions.js';
 
 export type { AmitiesEnregistrees, GesteApplique, PersonneEnregistree } from './base/amities.js';
-export { amitiesDuCompte, appliquerGeste, faceAFace, faitsEntre } from './base/amities.js';
+export type { AmiEnregistre } from './base/amities.js';
+export {
+  amisParIdentifiant,
+  amitiesDuCompte,
+  appliquerGeste,
+  faceAFace,
+  faitsEntre,
+} from './base/amities.js';
 
 export type {
   ChangementDeMotDePasse,
@@ -155,6 +162,7 @@ export {
 } from './base/secrets.js';
 
 export type {
+  AmiConnu,
   AnnuaireDesComptes,
   IdentiteDeCompte,
   MotifDeRefus,

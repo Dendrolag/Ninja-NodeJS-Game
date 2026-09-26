@@ -93,6 +93,8 @@ function comptesQuiFontAttendre(): {
     pseudoDeCompte: vi.fn(async () => false),
     enregistrerFinDePartie: vi.fn(async () => []),
     surSessionsFermees: vi.fn(() => () => undefined),
+    amisDe: vi.fn(async () => []),
+    surAmitiesChangees: vi.fn(() => () => undefined),
   };
 
   return { service, repondre: () => repondre() };

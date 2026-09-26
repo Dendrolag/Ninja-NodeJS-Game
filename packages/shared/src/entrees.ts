@@ -116,7 +116,7 @@ export interface CompteDeSession {
  * n'est pas lu. Un invite, lui, doit en fournir un, et il ne peut pas prendre
  * celui d'un compte.
  *
- * TROIS FACONS D'ENTRER, ET UNE SEULE A LA FOIS:
+ * QUATRE FACONS D'ENTRER, ET UNE SEULE A LA FOIS:
  *
  *   - par un CODE D'INVITATION, pour une partie privee;
  *   - par l'IDENTIFIANT d'une partie choisie dans la liste publique. Une partie
@@ -125,6 +125,9 @@ export interface CompteDeSession {
  *   - SANS RIEN, et c'est la partie rapide du cadrage de l'etape 0.3: la premiere
  *     partie publique encore dans son salon et non pleine, ou une nouvelle partie
  *     publique aux reglages par defaut s'il n'y en a aucune.
+ *   - par une INVITATION d'un ami (etape 2.8): le droit d'entree que le serveur lui
+ *     a remis, qui ne vaut que pour ce compte, et qui ouvre une partie privee sans
+ *     en montrer le code.
  *
  * Un identifiant et un code ensemble sont refuses: la demande serait ambigue.
  */
@@ -135,6 +138,12 @@ export interface DemandeRejoindre {
   readonly idRoom?: string;
   /** Code d'invitation d'une partie privee. */
   readonly code?: string;
+  /**
+   * L'identifiant d'une invitation recue d'un ami (etape 2.8): un jeton tire par le
+   * serveur, qui designe le droit d'entree qu'il tient. Il ne vaut que pour le compte
+   * invite, deux minutes au plus.
+   */
+  readonly invitation?: string;
   /**
    * Le mode voulu, pour une partie rapide seulement (etape 5.5): la premiere partie
    * publique en attente de ce mode, ou une nouvelle. C'est ce que demande « Rejouer »
@@ -147,6 +156,16 @@ export interface DemandeRejoindre {
    * nouvelle partie les prend.
    */
   readonly reglages?: ReglagesPartiels;
+}
+
+/**
+ * Ce qu'un compte envoie pour inviter un ami dans sa partie (etape 2.8).
+ *
+ * Seulement le pseudo de l'ami: la partie est celle ou se trouve la connexion, et le
+ * serveur verifie que ce pseudo est celui d'un ami, en ligne, qui n'y est pas deja.
+ */
+export interface DemandeInvitation {
+  readonly pseudo: string;
 }
 
 /**

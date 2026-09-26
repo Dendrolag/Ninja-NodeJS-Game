@@ -46,6 +46,12 @@
  * recoit ce qui a ete reellement applique a sa progression. Les gains ne se
  * calculent pas ici: les regles sont dans @neon-ninja/shared.
  *
+ * ELLE MONTRE LES AMIS EN DIRECT, DEPUIS L'ETAPE 2.8. Pour les comptes, elle tient
+ * ReseauDesAmis (amis/): la presence de chacun, montree a ses seuls amis, les
+ * invitations, qui ouvrent une partie privee par un droit d'entree plutot que par son
+ * code, et le signal qui fait relire une liste d'amis changee. Elle lui dit chaque page
+ * ouverte ou fermee, chaque entree, chaque sortie, chaque partie qui change.
+ *
  * AUCUN ETAT GLOBAL, une fois de plus. Tout tient dans l'instance: ses
  * connexions, ses decomptes, son RoomManager. Deux serveurs peuvent tourner dans
  * le meme processus sans se voir, ce dont les tests profitent largement.
@@ -55,6 +61,7 @@ import type {
   CompteDeSession,
   DemandeChat,
   DemandeCreation,
+  DemandeInvitation,
   DemandeRejoindre,
   DemandeRetour,
   Equipe,
@@ -63,6 +70,7 @@ import type {
   EvenementsServeurVersClient,
   InfosSalon,
   IntentionDeplacement,
+  InvitationEnvoyee,
   LimiteDebit,
   PartiePublique,
   ProgressionDeFin,
@@ -79,6 +87,7 @@ import {
   consommer,
   seauNeuf,
   validerDemandeCreation,
+  validerDemandeInvitation,
   validerDemandeRejoindre,
   validerDemandeRetour,
   validerEquipe,
@@ -91,6 +100,8 @@ import {
 import type { CarteCollisions } from '@neon-ninja/sim';
 import type { DefaultEventsMap, Server, Socket } from 'socket.io';
 
+import type { MessageDesAmis } from './amis/ReseauDesAmis.js';
+import { MOTIFS_D_INVITATION, ReseauDesAmis } from './amis/ReseauDesAmis.js';
 import { CompteARebours } from './compteARebours.js';
 import type { AnnuaireDesComptes } from './comptes/annuaire.js';
 import type { FinPourLesComptes } from './finDePartie.js';
@@ -262,6 +273,9 @@ export class ServeurSocket {
   /** L'annuaire des comptes, s'il y en a. */
   private readonly comptes: AnnuaireDesComptes | undefined;
 
+  /** Les amis en direct: presence et invitations (etape 2.8). Absents sans comptes. */
+  private readonly amis: ReseauDesAmis | undefined;
+
   /** Les enregistrements de fin de partie qui n'ont pas encore abouti. */
   private readonly enregistrements = new Set<Promise<void>>();
 
@@ -293,6 +307,22 @@ export class ServeurSocket {
       void this.couperLesSessionsFermees(compteId);
     });
 
+    this.amis =
+      this.comptes === undefined
+        ? undefined
+        : new ReseauDesAmis({
+            annuaire: this.comptes,
+            horloge: this.horloge,
+            partie: (idRoom) => this.rooms.room(idRoom),
+            envoyer: (idConnexion, message) => {
+              const connexion = this.connexions.get(idConnexion);
+
+              if (connexion !== undefined) {
+                envoyerAuxAmis(connexion.socket, message);
+              }
+            },
+          });
+
     // L'identification passe AVANT l'acceptation de la connexion: une connexion
     // dont la session est refusee n'existe jamais pour la couche jeu.
     this.io.use((socket, suite) => {
@@ -314,6 +344,7 @@ export class ServeurSocket {
    */
   fermer(): void {
     this.arreterLEcouteDesSessions?.();
+    this.amis?.fermer();
 
     for (const decompte of this.decomptes.values()) {
       decompte.arreter();
@@ -519,9 +550,18 @@ export class ServeurSocket {
     socket.on('reprendre', () => {
       this.surPause(socket, false);
     });
+    socket.on('inviter', (demande, accuse) => {
+      this.surInviter(socket, demande, accuse);
+    });
     socket.on('disconnect', () => {
       this.surDeconnexion(socket);
     });
+
+    // La presence de ses amis, et les invitations qui l'attendent, partent a chaque
+    // page de compte qui s'ouvre (etape 2.8). Ses ecoutes sont deja posees.
+    if (socket.data.compteId !== undefined) {
+      this.amis?.connexionOuverte(socket.id, socket.data.compteId);
+    }
   }
 
   // ------------------------------------------------------------------------
@@ -559,13 +599,19 @@ export class ServeurSocket {
     }
 
     this.apresIdentification(socket, connexion, verdict.valeur.pseudo, repondre, (identite) => {
-      const trouvee = this.trouverLaRoom(verdict.valeur);
+      const trouvee = this.trouverLaRoom(verdict.valeur, connexion);
       if (!trouvee.valide) {
         repondre({ valide: false, erreurs: trouvee.erreurs });
         return;
       }
 
-      this.faireEntrer(socket, connexion, trouvee.valeur, identite, repondre);
+      const entre = this.faireEntrer(socket, connexion, trouvee.valeur, identite, repondre);
+
+      // Une invitation qui a fait entrer ne vaut plus (etape 2.8). Refusee par la
+      // partie, pleine ou lancee, elle reste valable le temps qu'il lui reste.
+      if (entre && verdict.valeur.invitation !== undefined) {
+        this.amis?.invitationServie(verdict.valeur.invitation);
+      }
     });
   }
 
@@ -696,6 +742,7 @@ export class ServeurSocket {
     connexion.session = place.session;
     connexion.idRoom = room.id;
     void socket.join(room.id);
+    this.amis?.entree(socket.id, room.id);
 
     this.annoncerLaPlace(socket, place);
     repondre({ valide: true, valeur: salonDe(room) });
@@ -705,6 +752,61 @@ export class ServeurSocket {
     if (room.hote !== hoteAvant) {
       this.diffuserLeSalon(room);
     }
+  }
+
+  /**
+   * Invitation d'un ami dans sa partie (etape 2.8).
+   *
+   * La couche reseau limite le debit, valide la demande, et verifie que la connexion
+   * est celle d'un compte dans une partie: le reste (un ami, en ligne, pas deja la, pas
+   * invite trop tot) est l'affaire de ReseauDesAmis, qui peut attendre la lecture des
+   * amis. L'accuse dit a l'inviteur ce qu'il en est.
+   */
+  private surInviter(
+    socket: SocketTypee,
+    demande: DemandeInvitation,
+    accuse: (reponse: ResultatValidation<InvitationEnvoyee>) => void,
+  ): void {
+    const repondre =
+      typeof accuse === 'function'
+        ? accuse
+        : (): void => {
+            // Un client modifie peut omettre l'accuse: rien a repondre.
+          };
+    const connexion = this.connexions.get(socket.id);
+
+    if (connexion === undefined) {
+      return;
+    }
+
+    if (!this.autorise(connexion, 'autresActions')) {
+      repondre(refus('inviter', 'Trop de demandes. Ralentissez.'));
+      return;
+    }
+
+    const verdict = validerDemandeInvitation(demande as unknown);
+    if (!verdict.valide) {
+      repondre(verdict);
+      return;
+    }
+
+    if (this.amis === undefined || connexion.compteId === undefined) {
+      repondre(refus('session', MOTIFS_D_INVITATION.invite));
+      return;
+    }
+
+    if (connexion.session === undefined) {
+      repondre(refus('partie', MOTIFS_D_INVITATION.horsPartie));
+      return;
+    }
+
+    this.amis
+      .inviter(socket.id, connexion.session.pseudo, verdict.valeur.pseudo)
+      .then(repondre)
+      .catch((erreur: unknown) => {
+        console.error("Une invitation n'a pas pu etre envoyee:", erreur);
+        repondre(refus('serveur', "L'invitation n'a pas pu partir. Réessayez."));
+      });
   }
 
   /** Sortie volontaire de la partie: la place est rendue aussitot. */
@@ -720,6 +822,7 @@ export class ServeurSocket {
     connexion.session = undefined;
     connexion.idRoom = undefined;
     void socket.leave(idRoom);
+    this.amis?.sortie(socket.id);
 
     this.places.liberer(session.id);
     this.faireSortir(idRoom, session);
@@ -741,6 +844,7 @@ export class ServeurSocket {
   private surDeconnexion(socket: SocketTypee): void {
     const connexion = this.connexions.get(socket.id);
     this.connexions.delete(socket.id);
+    this.amis?.connexionFermee(socket.id);
 
     if (connexion?.idRoom === undefined || connexion.session === undefined) {
       return;
@@ -779,12 +883,18 @@ export class ServeurSocket {
 
     this.rooms.quitter(idRoom, session.id);
 
+    // Ses invitations dans cette partie ne valent plus (etape 2.8).
+    if (session.compte !== undefined) {
+      this.amis?.joueurSorti(session.compte.id, idRoom);
+    }
+
     const restante = this.rooms.room(idRoom);
     if (restante === undefined) {
       // Le RoomManager vient de detruire une partie vide: son decompte n'a plus
       // d'objet, et le laisser tourner ferait partir une partie sans personne.
       this.decomptes.get(idRoom)?.arreter();
       this.decomptes.delete(idRoom);
+      this.amis?.partieChangee(idRoom);
       return;
     }
 
@@ -809,6 +919,7 @@ export class ServeurSocket {
     void ancienne.socket.leave(ancienne.idRoom);
     ancienne.session = undefined;
     ancienne.idRoom = undefined;
+    this.amis?.sortie(idConnexion);
     ancienne.socket.emit('placeReprise');
   }
 
@@ -1108,6 +1219,7 @@ export class ServeurSocket {
 
     room.lancer();
     this.io.to(room.id).emit('partieLancee');
+    this.amis?.partieChangee(room.id);
   }
 
   /**
@@ -1161,6 +1273,7 @@ export class ServeurSocket {
   /** Annonce la fin d'une partie et son classement definitif. */
   private diffuserLaFin(room: GameRoom): void {
     this.io.to(room.id).emit('partieTerminee', { classement: classementDe(room.etat) });
+    this.amis?.partieChangee(room.id);
   }
 
   /**
@@ -1299,6 +1412,9 @@ export class ServeurSocket {
   /** Reemet l'etat du salon a tous ses membres. */
   private diffuserLeSalon(room: GameRoom): void {
     this.io.to(room.id).emit('salon', salonDe(room));
+
+    // Ses joueurs, son hote ou son statut ont pu changer: la presence suit (etape 2.8).
+    this.amis?.partieChangee(room.id);
   }
 
   // ------------------------------------------------------------------------
@@ -1458,6 +1574,7 @@ export class ServeurSocket {
     connexion.session = session;
     connexion.idRoom = room.id;
     void socket.join(room.id);
+    this.amis?.entree(socket.id, room.id);
 
     this.annoncerLaPlace(socket, this.places.attribuer(room.id, session, socket.id));
     repondre({ valide: true, valeur: salonDe(room) });
@@ -1542,7 +1659,8 @@ export class ServeurSocket {
   /**
    * Trouve la partie qu'une demande d'entree vise, ou dit pourquoi il n'y en a pas.
    *
-   * TROIS CAS, ET UNE REGLE DE SECURITE.
+   * TROIS CAS, ET UNE REGLE DE SECURITE. Et depuis l'etape 2.8, un quatrieme: par
+   * l'invitation d'un ami, qui ne vaut que pour le compte invite.
    *
    *   - Par CODE: la partie privee qui le porte.
    *   - Par IDENTIFIANT: une partie publique seulement. Les identifiants se
@@ -1555,7 +1673,22 @@ export class ServeurSocket {
    *     partie publique aux reglages par defaut. Elle remplace la regle
    *     provisoire du jalon 1, qui prenait n'importe quel salon en attente.
    */
-  private trouverLaRoom(demande: DemandeRejoindre): ResultatValidation<GameRoom> {
+  private trouverLaRoom(
+    demande: DemandeRejoindre,
+    connexion: Connexion,
+  ): ResultatValidation<GameRoom> {
+    // Par INVITATION d'un ami (etape 2.8): le droit d'entree que tient le serveur, pour
+    // ce seul compte. Inconnu, expire, adresse a un autre, ou partie disparue: un seul
+    // refus, qui ne dit pas lequel.
+    if (demande.invitation !== undefined) {
+      const droit = this.amis?.droitDEntree(demande.invitation, connexion.compteId);
+      const room = droit?.valide === true ? this.rooms.room(droit.valeur) : undefined;
+
+      return room === undefined
+        ? refus('invitation', MOTIFS_D_INVITATION.plusValable)
+        : { valide: true, valeur: room };
+    }
+
     if (demande.code !== undefined) {
       const room = this.rooms.parCode(demande.code);
 
@@ -1741,6 +1874,31 @@ function envoyer(socket: SocketTypee, notification: Notification): void {
 
     case 'evade':
       socket.emit('evade', notification.charge);
+      return;
+  }
+}
+
+/**
+ * Envoie un message des amis en direct a une connexion (etape 2.8), par un aiguillage
+ * explicite, pour la meme raison que les notifications: le compilateur verifie que
+ * chaque nom recoit sa charge.
+ */
+function envoyerAuxAmis(socket: SocketTypee, message: MessageDesAmis): void {
+  switch (message.nom) {
+    case 'presenceDesAmis':
+      socket.emit('presenceDesAmis', message.charge);
+      return;
+
+    case 'amitiesChangees':
+      socket.emit('amitiesChangees');
+      return;
+
+    case 'invitationRecue':
+      socket.emit('invitationRecue', message.charge);
+      return;
+
+    case 'invitationRetiree':
+      socket.emit('invitationRetiree', message.charge);
       return;
   }
 }

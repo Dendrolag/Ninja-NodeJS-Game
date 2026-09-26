@@ -153,6 +153,37 @@ export async function amitiesDuCompte(
   return { amis, recues, envoyees, bloques };
 }
 
+/** Un ami d'un compte, tel que la couche reseau le retient (etape 2.8). */
+export interface AmiEnregistre {
+  readonly compteId: string;
+  readonly pseudo: string;
+}
+
+/**
+ * Les amis de ce compte, avec leur identifiant, dans les deux colonnes (etape 2.8).
+ *
+ * C'est ce que la couche reseau garde en memoire pour dire a chacun lesquels de ses
+ * amis sont en ligne, et pour verifier une invitation. Ni les demandes ni les blocages:
+ * seule une amitie voit la presence.
+ */
+export async function amisParIdentifiant(
+  db: BaseDeDonnees,
+  compteId: string,
+): Promise<AmiEnregistre[]> {
+  return db
+    .select({ compteId: comptes.id, pseudo: comptes.pseudo })
+    .from(amities)
+    .innerJoin(
+      comptes,
+      eq(
+        comptes.id,
+        sql`case when ${amities.compteA} = ${compteId}::uuid then ${amities.compteB} else ${amities.compteA} end`,
+      ),
+    )
+    .where(or(eq(amities.compteA, compteId), eq(amities.compteB, compteId)))
+    .orderBy(asc(comptes.reperePseudo));
+}
+
 /**
  * Les parties que ces deux comptes ont jouees ensemble, et qui a fini devant l'autre,
  * vues du premier. Les egalites ne comptent ni d'un cote ni de l'autre.
