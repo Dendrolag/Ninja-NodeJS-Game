@@ -123,11 +123,13 @@ Sept écrans dans la maquette. Pour chacun: son statut en v1, les données qu'il
 
 ### 8. Amis
 
-- **Statut**: construit à l'étape `3.6` (`docs/plan/etape-3-6.md`). Réservé aux comptes.
+- **Statut**: construit à l'étape `3.6` (`docs/plan/etape-3-6.md`), présence et invitations à l'étape `2.8` (`docs/plan/etape-2-8.md`). Réservé aux comptes.
 - **L'amitié**: mutuelle, par demande acceptée; deux demandes croisées valent acceptation. Refuser, annuler et retirer sont silencieux. Bloquer défait l'amitié et les demandes, et le bloqué n'en sait rien: ses demandes sont enregistrées, jamais montrées, et effacées au déblocage. 200 amis, 50 demandes en attente et 10 demandes par minute au plus.
 - **L'écran**: « Ajouter par pseudo », puis les demandes reçues (Accepter, Refuser, Bloquer), les amis, les demandes envoyées (Annuler), les comptes bloqués (Débloquer). Chaque pseudo ouvre la fiche.
 - **La fiche** dit la relation et propose les gestes qu'elle permet: c'est par elle qu'on ajoute un joueur rencontré au salon ou à la fin. Pour un ami, elle montre les parties jouées ensemble, « Vous devant » et « Bob devant », sans les égalités.
-- **La liste se relit** à l'ouverture de la session, à chaque navigation et au retour d'une partie: une demande reçue page ouverte apparaît à la navigation suivante. La présence et les invitations viennent à l'étape `2.8`.
+- **La liste se relit** à l'ouverture de la session, à chaque navigation et au retour d'une partie, et, depuis l'étape `2.8`, dès qu'un geste la change, de soi ou de l'autre: le serveur le signale, et la pastille suit sans naviguer.
+- **La présence** (étape `2.8`): chaque ami dit où il est, en ligne, dans un salon ou en partie, ou hors ligne s'il n'a aucune page ouverte. D'une partie publique, le mode et les places, d'une partie privée, seulement qu'elle l'est. Les amis se rangent par présence (salon, en ligne, en partie, hors ligne), puis par pseudo. Le salon d'une partie publique qui a de la place se rejoint d'un clic. La fiche d'un ami dit aussi où il est.
+- **Les invitations** (étape `2.8`): le salon d'un compte a une section « Inviter des amis », qui liste ses amis en ligne. L'invitation porte un droit d'entrée tenu par le serveur, deux minutes, sans montrer de code, et une par minute au plus vers un même ami. Elle s'affiche en carte au-dessus des écrans de menu (« Alice vous invite », Rejoindre, Ignorer), jamais pendant une partie: elle attend le retour aux menus.
 
 ## 4. Contrat de configuration de partie
 

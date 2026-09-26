@@ -3,8 +3,8 @@
  * invitations, et le signal qui fait relire une liste d'amis changee.
  *
  * C'EST L'ASSEMBLAGE DE TROIS PIECES, possedees par la couche reseau: le registre de
- * presence (presence.ts), qui sait ou se trouve chaque page de compte; le registre des
- * invitations (invitations.ts), qui tient les droits d'entree; et les amis des comptes
+ * presence (presence.ts), qui sait ou se trouve chaque page de compte. Le registre des
+ * invitations (invitations.ts), qui tient les droits d'entree. Et les amis des comptes
  * connectes, lus par l'annuaire et gardes ici tant que le compte a une page ouverte.
  * La couche reseau appelle cette classe a chaque fait qui compte (page ouverte ou
  * fermee, entree, sortie, partie qui change), et lui donne de quoi envoyer un message a
@@ -240,8 +240,8 @@ export class ReseauDesAmis {
   /**
    * Invite l'ami qui porte ce pseudo dans la partie de cette connexion.
    *
-   * Dans l'ordre: un compte, dans une partie qui n'est pas finie; un ami, lu apres la
-   * lecture de ses amis si elle est en cours; en ligne; pas deja dans la partie; pas
+   * Dans l'ordre: un compte, dans une partie qui n'est pas finie. Un ami, lu apres la
+   * lecture de ses amis si elle est en cours. En ligne. Pas deja dans la partie. Pas
    * invite trop recemment. Acceptee, chaque page de l'ami recoit l'invitation, et
    * celle qu'elle remplace est retiree.
    *

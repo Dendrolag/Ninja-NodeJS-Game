@@ -3,7 +3,7 @@
  * parties d'essai, et les messages que chaque connexion recevrait.
  *
  * Ce qui est verifie ici, c'est la logique: a qui part la presence, quand, et jamais a
- * qui; ce qu'une invitation exige, ce qu'elle ouvre, et quand elle tombe. Le chemin
+ * qui. Ce qu'une invitation exige, ce qu'elle ouvre, et quand elle tombe. Le chemin
  * par de vraies sockets est verifie dans ServeurSocket.amis.test.ts.
  */
 

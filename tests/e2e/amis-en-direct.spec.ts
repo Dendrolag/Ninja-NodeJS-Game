@@ -11,9 +11,9 @@ import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
  * Les amis en direct (etape 2.8), de bout en bout.
  *
  * Deux scenarios. D'abord tout ce qui arrive sans naviguer: Alice demande Bob, et la
- * pastille de Bob s'allume sur l'accueil; Bob accepte, et Alice le voit apparaitre
- * parmi ses amis, en ligne; Alice cree une partie privee, et Bob la voit « dans le
- * salon d'une partie privee »; Alice l'invite depuis son salon, Bob rejoint par la carte
+ * pastille de Bob s'allume sur l'accueil. Bob accepte, et Alice le voit apparaitre
+ * parmi ses amis, en ligne. Alice cree une partie privee, et Bob la voit « dans le
+ * salon d'une partie privee ». Alice l'invite depuis son salon, Bob rejoint par la carte
  * d'invitation, sans avoir vu de code, et Alice le voit entrer. Ensuite, Bob rejoint
  * d'un clic, depuis l'ecran Amis, le salon public d'Alice.
  *

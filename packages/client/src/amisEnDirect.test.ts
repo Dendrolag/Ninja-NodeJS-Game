@@ -3,11 +3,11 @@
  * invitations recues et envoyees, et la relecture des amis sur signal du serveur.
  *
  * Ce qu'ils protegent: la presence remplace la precedente, et s'oublie avec la session
- * et a chaque lien neuf, le serveur la redisant; une invitation recue ne se double pas,
+ * et a chaque lien neuf, le serveur la redisant. Une invitation recue ne se double pas,
  * se retire et s'ignore, survit a une sortie de partie, et part de l'etat une fois
- * servie; son refus reste attache a sa carte jusqu'a la navigation; une invitation
+ * servie. Son refus reste attache a sa carte jusqu'a la navigation. Une invitation
  * envoyee passe par en cours, puis partie ou refusee, ami par ami, et s'oublie en
- * quittant le salon; le signal relit la liste meme pendant une lecture, et la fiche
+ * quittant le salon. Le signal relit la liste meme pendant une lecture, et la fiche
  * ouverte avec elle.
  */
 

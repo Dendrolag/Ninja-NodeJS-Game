@@ -2,7 +2,7 @@
  * Les cartes d'invitation d'un ami, au-dessus des ecrans de menu (etape 2.8).
  *
  * « Alice vous invite », la partie en une ligne, Rejoindre et Ignorer. Rejoindre entre
- * par le droit d'entree que le serveur tient, sans jamais montrer de code; un refus
+ * par le droit d'entree que le serveur tient, sans jamais montrer de code. Un refus
  * (partie complete, Chasse lancee, invitation expiree) s'affiche sur la carte. Ignorer
  * la retire de la page, sans rien dire a personne.
  *

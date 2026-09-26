@@ -4,8 +4,8 @@
  *
  * L'application entiere est montee, avec un client de compte, des comptes d'essai et
  * le banc d'essai du reseau: l'ecran Amis montre la presence et rejoint la partie
- * publique d'un ami; les cartes d'invitation se montrent sur les menus, pas au salon,
- * rejoignent et s'ignorent; le salon invite un ami en ligne; la fiche d'un ami dit ou
+ * publique d'un ami. Les cartes d'invitation se montrent sur les menus, pas au salon,
+ * rejoignent et s'ignorent. Le salon invite un ami en ligne. La fiche d'un ami dit ou
  * il est.
  */
 

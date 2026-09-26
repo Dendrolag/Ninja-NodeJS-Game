@@ -3,7 +3,7 @@
  *
  * Elle liste les amis en ligne qui ne sont pas deja dans la partie, avec leur presence
  * et un bouton Inviter. L'invitation part au serveur, qui la verifie et la transmet a
- * chaque page de l'ami; la ligne dit ensuite qu'elle est partie, ou pourquoi elle a
+ * chaque page de l'ami. La ligne dit ensuite qu'elle est partie, ou pourquoi elle a
  * ete refusee. L'ami qui accepte arrive dans la liste des joueurs, comme tout arrivant.
  *
  * CE COMPOSANT NE DECIDE RIEN: la liste et ses mots viennent de modeles/presence.ts.
