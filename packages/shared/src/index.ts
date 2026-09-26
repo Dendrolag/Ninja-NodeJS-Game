@@ -35,20 +35,24 @@ export type {
   DemandeConnexion,
   DemandeInscription,
   DemandeReinitialisation,
+  FicheJoueur,
   MaProgression,
   PartieDuProfil,
   ProfilDuCompte,
   ReponseRefusee,
   SessionInscrite,
   SessionOuverte,
-  StatistiquesDuCompte,
+  StatistiquesDUnMode,
+  StatistiquesDeJoueur,
 } from './comptes.js';
 export {
   JOUEURS_POUR_UNE_VICTOIRE,
+  PARAMETRE_PSEUDO,
   PARTIES_DU_PROFIL,
   PREFIXE_JETON_HTTP,
   RACINE_API_COMPTES,
   ROUTES_COMPTES,
+  adresseDeLaFiche,
 } from './comptes.js';
 
 export type {

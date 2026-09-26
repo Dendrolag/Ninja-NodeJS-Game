@@ -23,8 +23,10 @@
 
 import type { FinDePartie } from '@neon-ninja/shared';
 
+import type { Client } from '../../client.js';
 import type { EtatClient } from '../../etat.js';
 import { moiDansLeSalon } from '../../selecteurs.js';
+import { boutonDeFiche } from '../composants/ficheJoueur.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import { icone } from '../icones.js';
 import type { EquipeFin, LigneFin, ModeleFin, ProgressionAffichee } from '../modeles/fin.js';
@@ -137,6 +139,9 @@ export function monterFin(contexte: ContexteEcran): EcranAffiche {
 
   /** Le classement deja affiche: il est definitif, on ne le redessine pas. */
   let finAffichee: FinDePartie | undefined;
+  // Les boutons de fiche dependent de notre session (etape 3.5): un compte dont la
+  // session se confirme apres la fin les voit apparaitre.
+  let sessionAffichee: EtatClient['session']['nature'] | undefined;
 
   const dessinerLeClassement = (modele: ModeleFin): void => {
     ecrireTexte(ligneContexte, modele.contexte);
@@ -165,7 +170,7 @@ export function monterFin(contexte: ContexteEcran): EcranAffiche {
       ...(modele.equipes ?? []).map((equipe) => carteDEquipe(doc, equipe)),
     );
     montrer(blocEquipes, modele.equipes !== undefined);
-    corpsTableau.replaceChildren(...modele.lignes.map((ligne) => rangee(doc, ligne)));
+    corpsTableau.replaceChildren(...modele.lignes.map((ligne) => rangee(doc, ligne, client)));
   };
 
   return {
@@ -178,8 +183,9 @@ export function monterFin(contexte: ContexteEcran): EcranAffiche {
         return;
       }
 
-      if (etat.fin !== finAffichee) {
+      if (etat.fin !== finAffichee || etat.session.nature !== sessionAffichee) {
         finAffichee = etat.fin;
+        sessionAffichee = etat.session.nature;
         dessinerLeClassement(modele);
       }
 
@@ -377,8 +383,11 @@ function marche(doc: Document, ligne: LigneFin): HTMLElement {
   );
 }
 
-/** Une rangee du classement complet. */
-function rangee(doc: Document, ligne: LigneFin): HTMLElement {
+/**
+ * Une rangee du classement complet. Le pseudo d'un joueur qui a une fiche est un bouton
+ * qui l'ouvre (etape 3.5).
+ */
+function rangee(doc: Document, ligne: LigneFin, client: Client): HTMLElement {
   const pastille = creer(doc, 'span', { classe: 'pastille', attributs: { 'aria-hidden': 'true' } });
   pastille.style.setProperty('--couleur-joueur', ligne.couleur);
 
@@ -397,7 +406,15 @@ function rangee(doc: Document, ligne: LigneFin): HTMLElement {
       },
     },
     creer(doc, 'td', { classe: 'rang', texte: String(ligne.rang) }),
-    creer(doc, 'td', { classe: 'joueur' }, pastille, creer(doc, 'span', { texte: ligne.pseudo })),
+    creer(
+      doc,
+      'td',
+      { classe: 'joueur' },
+      pastille,
+      ligne.aUneFiche
+        ? boutonDeFiche(doc, ligne.pseudo, 'fin-pseudo', client)
+        : creer(doc, 'span', { texte: ligne.pseudo }),
+    ),
     creer(doc, 'td', { classe: 'nombre points', texte: String(ligne.points) }),
     creer(doc, 'td', { classe: 'nombre', texte: String(ligne.botsPortes) }),
     creer(doc, 'td', { classe: 'nombre', texte: String(ligne.captures) }),

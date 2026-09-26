@@ -75,6 +75,12 @@ const CHASSE = '**/chasse.spec.ts';
  */
 const DIAGNOSTIC = '**/diagnostic.spec.ts';
 
+/**
+ * La fiche d'un joueur (etape 3.5), jouee par le seul projet bureau: une partie entiere a
+ * deux comptes, que le cadrage de l'ecran ne change pas.
+ */
+const FICHE = '**/fiche.spec.ts';
+
 export default defineConfig({
   testDir: './tests/e2e',
   // Les paquets sont compiles une fois avant les scenarios: le banc de mesure du
@@ -135,6 +141,7 @@ export default defineConfig({
         EQUIPES,
         CHASSE,
         DIAGNOSTIC,
+        FICHE,
       ],
     },
     // Le banc de mesure du rendu a son propre projet, et une seule execution:

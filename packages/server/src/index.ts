@@ -123,6 +123,7 @@ export {
   creerCompte,
   identifiantsParPseudo,
   profilDuCompte,
+  profilParPseudo,
   trouverCompteParPseudo,
 } from './base/comptes.js';
 
@@ -155,6 +156,7 @@ export {
   Authentification,
   CODE_DE_SECOURS_INCORRECT,
   DUREE_SESSION_MS,
+  JOUEUR_INCONNU,
   MOT_DE_PASSE_INCORRECT,
 } from './comptes/Authentification.js';
 export { empreinteDuCode, fabriquerCodeDeSecours } from './comptes/codeDeSecours.js';
@@ -164,6 +166,7 @@ export { LimiteurDeTentatives } from './comptes/limiteur.js';
 export type { ParametresScrypt } from './comptes/motDePasse.js';
 export { PARAMETRES_SCRYPT, hacherMotDePasse, verifierMotDePasse } from './comptes/motDePasse.js';
 export { routesDesComptes } from './comptes/routes.js';
+export { statistiquesDeJoueur } from './comptes/statistiques.js';
 
 export type { Progression, ValeursProgression } from './base/progression.js';
 export { ecrireProgression, lireProgression } from './base/progression.js';
@@ -175,8 +178,8 @@ export type {
   ProgressionAppliquee,
   ResultatDePartie,
 } from './base/parties.js';
-export { enregistrerPartie, lireHistorique, statistiquesDuCompte } from './base/parties.js';
-export type { StatistiquesEnregistrees } from './base/parties.js';
+export { enregistrerPartie, lireHistorique, statistiquesParMode } from './base/parties.js';
+export type { StatistiquesEnregistreesDUnMode } from './base/parties.js';
 
 export type { FinPourLesComptes } from './finDePartie.js';
 export { finPourLesComptes, progressionEnregistree } from './finDePartie.js';

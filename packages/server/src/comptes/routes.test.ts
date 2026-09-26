@@ -9,13 +9,14 @@
 
 import type {
   CodeDeSecoursEmis,
+  FicheJoueur,
   MaProgression,
   ProfilDuCompte,
   ReponseRefusee,
   SessionInscrite,
   SessionOuverte,
 } from '@neon-ninja/shared';
-import { ROUTES_COMPTES } from '@neon-ninja/shared';
+import { ROUTES_COMPTES, adresseDeLaFiche } from '@neon-ninja/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { OptionsServeur, ServeurMonte } from '../serveur.js';
@@ -39,9 +40,27 @@ const PROGRESSION: MaProgression = {
   inscritLe: '2026-09-11T10:00:00.000Z',
 };
 
+const STATISTIQUES: ProfilDuCompte['statistiques'] = {
+  partiesJouees: 1,
+  partiesAPlusieurs: 1,
+  victoires: 1,
+  modePrefere: 'classique',
+  parMode: [
+    { mode: 'classique', partiesJouees: 1, partiesAPlusieurs: 1, victoires: 1, meilleurScore: 30 },
+  ],
+};
+
+const FICHE: FicheJoueur = {
+  pseudo: 'Léa B.',
+  inscritLe: '2026-09-11T10:00:00.000Z',
+  niveau: 3,
+  palier: 'bronze',
+  statistiques: STATISTIQUES,
+};
+
 const PROFIL: ProfilDuCompte = {
   ...PROGRESSION,
-  statistiques: { partiesJouees: 1, victoires: 1, meilleurScore: 30 },
+  statistiques: STATISTIQUES,
   dernieresParties: [
     {
       mode: 'classique',
@@ -92,6 +111,7 @@ function serviceFactice(remplacements: Partial<ServiceDeComptes> = {}): ServiceD
     deconnecter: vi.fn(async () => undefined),
     maProgression: vi.fn(async () => acceptee(PROGRESSION)),
     profil: vi.fn(async () => acceptee(PROFIL)),
+    ficheJoueur: vi.fn(async () => acceptee(FICHE)),
     changerMotDePasse: vi.fn(async () => acceptee(CODE)),
     nouveauCodeDeSecours: vi.fn(async () => acceptee(CODE)),
     reinitialiser: vi.fn(async () => acceptee(SESSION_INSCRITE)),
@@ -354,6 +374,83 @@ describe('routes reservees a une session', () => {
 
     expect(reponse.statut).toBe(401);
     expect(reponse.entetes.get('www-authenticate')).toBe('Bearer');
+  });
+});
+
+describe('fiche d un joueur (etape 3.5)', () => {
+  const entetes = { Authorization: `Bearer ${JETON}` };
+
+  it('rend la fiche a qui presente son jeton, en passant le pseudo relu au service', async () => {
+    const service = serviceFactice();
+    const url = await monter({ comptes: service });
+
+    const reponse = await requete(url, adresseDeLaFiche('Léa B.'), { methode: 'GET', entetes });
+
+    expect([reponse.statut, reponse.corps]).toEqual([200, FICHE]);
+    expect(reponse.entetes.get('cache-control')).toBe('no-store');
+    expect(service.ficheJoueur).toHaveBeenCalledWith(JETON, 'Léa B.');
+  });
+
+  it('ne sort pas de sa route pour un pseudo fait de points', async () => {
+    const service = serviceFactice();
+    const url = await monter({ comptes: service });
+
+    const reponse = await requete(url, adresseDeLaFiche('..'), { methode: 'GET', entetes });
+
+    expect(reponse.statut).toBe(200);
+    expect(service.ficheJoueur).toHaveBeenCalledWith(JETON, '..');
+  });
+
+  it('laisse au service un pseudo absent ou repete, qu il refusera', async () => {
+    const service = serviceFactice({ ficheJoueur: refusDuService('demandeInvalide') });
+    const url = await monter({ comptes: service });
+
+    const absent = await requete(url, ROUTES_COMPTES.joueur, { methode: 'GET', entetes });
+    const repete = await requete(url, `${ROUTES_COMPTES.joueur}?pseudo=a&pseudo=b`, {
+      methode: 'GET',
+      entetes,
+    });
+
+    expect([absent.statut, repete.statut]).toEqual([400, 400]);
+    expect(service.ficheJoueur).toHaveBeenNthCalledWith(1, JETON, undefined);
+    expect(service.ficheJoueur).toHaveBeenNthCalledWith(2, JETON, ['a', 'b']);
+  });
+
+  it('refuse sans jeton, sans deranger le service', async () => {
+    const service = serviceFactice();
+    const url = await monter({ comptes: service });
+
+    const reponse = await requete(url, adresseDeLaFiche('Alice'), { methode: 'GET' });
+
+    expect(reponse.statut).toBe(401);
+    expect(reponse.entetes.get('www-authenticate')).toBe('Bearer');
+    expect(service.ficheJoueur).not.toHaveBeenCalled();
+  });
+
+  it('traduit un pseudo sans compte en 404, et trop de lectures en 429', async () => {
+    const url = await monter({
+      comptes: serviceFactice({ ficheJoueur: refusDuService('joueurInconnu') }),
+    });
+
+    const inconnu = await requete(url, adresseDeLaFiche('Personne'), { methode: 'GET', entetes });
+
+    expect([inconnu.statut, premierChamp(inconnu.corps)]).toEqual([404, 'joueurInconnu']);
+
+    await serveur?.fermer();
+    const autre = await monter({
+      comptes: serviceFactice({ ficheJoueur: refusDuService('tropDeTentatives') }),
+    });
+    expect(
+      (await requete(autre, adresseDeLaFiche('Alice'), { methode: 'GET', entetes })).statut,
+    ).toBe(429);
+  });
+
+  it('repond que les comptes sont indisponibles sur un serveur sans base', async () => {
+    const url = await monter({});
+
+    expect(
+      (await requete(url, adresseDeLaFiche('Alice'), { methode: 'GET', entetes })).statut,
+    ).toBe(503);
   });
 });
 

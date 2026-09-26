@@ -20,9 +20,11 @@
  * l'application.
  */
 
+import type { Client } from '../../client.js';
 import type { EtatClient } from '../../etat.js';
 import { adresseDInvitation } from '../../invitation.js';
 import { monterChat } from '../composants/chat.js';
+import { boutonDeFiche } from '../composants/ficheJoueur.js';
 import type { IssueDuPartage } from '../composants/partage.js';
 import { partageDuSysteme, partagerLeLien } from '../composants/partage.js';
 import { monterPanneauReglages } from '../composants/reglages.js';
@@ -290,7 +292,7 @@ export function monterSalon(contexte: ContexteEcran): EcranAffiche {
     }
 
     signatureJoueurs = signature;
-    listeJoueurs.replaceChildren(...joueurs.map((joueur) => carteJoueur(doc, joueur)));
+    listeJoueurs.replaceChildren(...joueurs.map((joueur) => carteJoueur(doc, joueur, client)));
   };
 
   /** Les colonnes des equipes, a la place de la liste, dans une partie Equipes (etape 7.2). */
@@ -317,7 +319,7 @@ export function monterSalon(contexte: ContexteEcran): EcranAffiche {
     signatureEquipes = signature;
     blocEquipes.replaceChildren(
       ...(equipes ?? []).map((equipe) =>
-        colonneDEquipe(doc, equipe, () => {
+        colonneDEquipe(doc, equipe, client, () => {
           client.changerDEquipe(equipe.equipe);
         }),
       ),
@@ -399,14 +401,19 @@ export function monterSalon(contexte: ContexteEcran): EcranAffiche {
 
 /** Ce qui, d'un joueur, change sa carte: pour ne la refaire que si elle a change. */
 function signatureDuJoueur(joueur: JoueurAffiche): string {
-  return `${joueur.id}|${joueur.pseudo}|${String(joueur.hote)}|${String(joueur.moi)}|${String(joueur.niveau)}`;
+  return `${joueur.id}|${joueur.pseudo}|${String(joueur.hote)}|${String(joueur.moi)}|${String(joueur.niveau)}|${String(joueur.aUneFiche)}`;
 }
 
 /**
  * La colonne d'une equipe, dans le salon d'une partie Equipes (etape 7.2): son nom a sa
  * couleur, ses membres, et le bouton pour la rejoindre, ou la mention de la notre.
  */
-function colonneDEquipe(doc: Document, equipe: EquipeAffichee, rejoindre: () => void): HTMLElement {
+function colonneDEquipe(
+  doc: Document,
+  equipe: EquipeAffichee,
+  client: Client,
+  rejoindre: () => void,
+): HTMLElement {
   const boutonRejoindre = bouton(
     doc,
     {
@@ -437,7 +444,7 @@ function colonneDEquipe(doc: Document, equipe: EquipeAffichee, rejoindre: () => 
       doc,
       'ul',
       { classe: 'salon-joueurs' },
-      ...equipe.joueurs.map((joueur) => carteJoueur(doc, joueur)),
+      ...equipe.joueurs.map((joueur) => carteJoueur(doc, joueur, client)),
     ),
     equipe.mienne
       ? creer(doc, 'p', { classe: 'salon-equipe-note', texte: 'Votre équipe' })
@@ -448,8 +455,11 @@ function colonneDEquipe(doc: Document, equipe: EquipeAffichee, rejoindre: () => 
   return colonne;
 }
 
-/** La carte d'un joueur du salon. */
-function carteJoueur(doc: Document, joueur: JoueurAffiche): HTMLElement {
+/**
+ * La carte d'un joueur du salon. Le pseudo d'un joueur qui a une fiche est un bouton
+ * qui l'ouvre (etape 3.5).
+ */
+function carteJoueur(doc: Document, joueur: JoueurAffiche, client: Client): HTMLElement {
   return creer(
     doc,
     'li',
@@ -466,7 +476,9 @@ function carteJoueur(doc: Document, joueur: JoueurAffiche): HTMLElement {
       doc,
       'span',
       { classe: 'carte-joueur-identite' },
-      creer(doc, 'span', { classe: 'carte-joueur-pseudo', texte: joueur.pseudo }),
+      joueur.aUneFiche
+        ? boutonDeFiche(doc, joueur.pseudo, 'carte-joueur-pseudo', client)
+        : creer(doc, 'span', { classe: 'carte-joueur-pseudo', texte: joueur.pseudo }),
       joueur.niveau === undefined
         ? undefined
         : creer(doc, 'span', {

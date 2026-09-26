@@ -2,7 +2,8 @@
  * L'authentification: inscrire, connecter, reconnaitre une session. Et, depuis
  * l'etape 3.3, enregistrer la fin d'une partie pour les comptes qui l'ont jouee.
  * Depuis l'etape 3.4, gerer le mot de passe: le changer, obtenir un code de secours,
- * et reinitialiser avec ce code un mot de passe oublie.
+ * et reinitialiser avec ce code un mot de passe oublie. Depuis l'etape 3.5, lire la
+ * fiche d'un autre compte.
  *
  * C'est l'implementation, avec la base, de l'annuaire et du service de
  * annuaire.ts. Elle assemble des briques qui ont chacune leur fichier: la
@@ -31,6 +32,7 @@ import { timingSafeEqual } from 'node:crypto';
 import type {
   CodeDeSecoursEmis,
   ErreurValidation,
+  FicheJoueur,
   LimiteDebit,
   MaProgression,
   PartieDuProfil,
@@ -43,18 +45,21 @@ import {
   PARTIES_DU_PROFIL,
   formaterCodeDeSecours,
   niveauDeXp,
+  palierDePoints,
   reperePseudo,
   validerDemandeChangementMotDePasse,
   validerDemandeCodeDeSecours,
   validerDemandeConnexion,
   validerDemandeInscription,
   validerDemandeReinitialisation,
+  validerPseudo,
 } from '@neon-ninja/shared';
 
 import {
   creerCompte,
   identifiantsParPseudo,
   profilDuCompte,
+  profilParPseudo,
   trouverCompteParPseudo,
 } from '../base/comptes.js';
 import type { BaseDeDonnees } from '../base/connexion.js';
@@ -63,9 +68,8 @@ import type {
   NouvellePartie,
   ProgressionAppliquee,
   ResultatDePartie,
-  StatistiquesEnregistrees,
 } from '../base/parties.js';
-import { enregistrerPartie, lireHistorique, statistiquesDuCompte } from '../base/parties.js';
+import { enregistrerPartie, lireHistorique, statistiquesParMode } from '../base/parties.js';
 import {
   aUnCodeDeSecours,
   codeParPseudo,
@@ -88,6 +92,7 @@ import { empreinteDuJeton, fabriquerJeton } from './jetons.js';
 import { LimiteurDeTentatives } from './limiteur.js';
 import type { ParametresScrypt } from './motDePasse.js';
 import { PARAMETRES_SCRYPT, hacherMotDePasse, verifierMotDePasse } from './motDePasse.js';
+import { statistiquesDeJoueur } from './statistiques.js';
 
 /**
  * Duree de validite d'une session: trente jours.
@@ -98,11 +103,13 @@ import { PARAMETRES_SCRYPT, hacherMotDePasse, verifierMotDePasse } from './motDe
  */
 export const DUREE_SESSION_MS = 30 * 24 * 60 * 60 * 1000;
 
-/** Les trois limites de tentatives. Celles du paquet partage par defaut. */
+/** Les limites de tentatives. Celles du paquet partage par defaut. */
 export interface LimitesDesComptes {
   readonly connexionParPseudo: LimiteDebit;
   readonly connexionParAdresse: LimiteDebit;
   readonly inscriptionParAdresse: LimiteDebit;
+  /** Les fiches lues par un meme compte (etape 3.5). Absente: celle du paquet partage. */
+  readonly ficheParCompte?: LimiteDebit;
 }
 
 /** Ce qu'il faut pour authentifier. */
@@ -130,6 +137,9 @@ export const CODE_DE_SECOURS_INCORRECT = 'Pseudo ou code de secours incorrect.';
 /** Le motif d'un mot de passe actuel faux, exige par une demande faite depuis le profil. */
 export const MOT_DE_PASSE_INCORRECT = 'Mot de passe incorrect.';
 
+/** Le motif d'une fiche demandee pour un pseudo qu'aucun compte ne porte (etape 3.5). */
+export const JOUEUR_INCONNU = 'Aucun compte ne porte ce pseudo.';
+
 /** L'authentification des comptes, avec la base. */
 export class Authentification implements ServiceDeComptes {
   private readonly db: BaseDeDonnees;
@@ -138,6 +148,7 @@ export class Authentification implements ServiceDeComptes {
   private readonly connexionsParPseudo: LimiteurDeTentatives;
   private readonly connexionsParAdresse: LimiteurDeTentatives;
   private readonly inscriptionsParAdresse: LimiteurDeTentatives;
+  private readonly fichesParCompte: LimiteurDeTentatives;
 
   /** L'empreinte leurre, calculee une fois, a la premiere connexion qui en a besoin. */
   private empreinteLeurre: Promise<string> | undefined;
@@ -155,6 +166,10 @@ export class Authentification implements ServiceDeComptes {
     this.connexionsParPseudo = new LimiteurDeTentatives(limites.connexionParPseudo, horloge);
     this.connexionsParAdresse = new LimiteurDeTentatives(limites.connexionParAdresse, horloge);
     this.inscriptionsParAdresse = new LimiteurDeTentatives(limites.inscriptionParAdresse, horloge);
+    this.fichesParCompte = new LimiteurDeTentatives(
+      limites.ficheParCompte ?? LIMITES_COMPTES.ficheParCompte,
+      horloge,
+    );
   }
 
   // ------------------------------------------------------------------------
@@ -240,16 +255,50 @@ export class Authentification implements ServiceDeComptes {
     }
 
     const [statistiques, historique, codeDeSecours] = await Promise.all([
-      statistiquesDuCompte(this.db, compte.id),
+      statistiquesParMode(this.db, compte.id),
       lireHistorique(this.db, compte.id, PARTIES_DU_PROFIL),
       aUnCodeDeSecours(this.db, compte.id),
     ]);
 
     return acceptee({
       ...compte.progression,
-      statistiques: statistiquesDuProfil(statistiques),
+      statistiques: statistiquesDeJoueur(statistiques),
       dernieresParties: historique.map(partieDuProfil),
       codeDeSecours,
+    });
+  }
+
+  /**
+   * Dans l'ordre: la session, la limite de lecture du compte qui demande, le pseudo,
+   * puis la base. Un invite n'apprend donc rien, pas meme qu'un pseudo est mal forme.
+   */
+  async ficheJoueur(jeton: string, brut: unknown): Promise<ReponseDeCompte<FicheJoueur>> {
+    const lecteur = await this.compteDeSession(jeton);
+    if (lecteur === undefined) {
+      return sessionAbsente();
+    }
+
+    const tentative = this.fichesParCompte.tenter(lecteur);
+    if (!tentative.accepte) {
+      return tropDeTentatives(tentative.reessayerDansMs);
+    }
+
+    const pseudo = validerPseudo(brut);
+    if (!pseudo.valide) {
+      return refusee('demandeInvalide', pseudo.erreurs);
+    }
+
+    const profil = await profilParPseudo(this.db, pseudo.valeur);
+    if (profil === undefined) {
+      return refusee('joueurInconnu', [{ champ: 'pseudo', motif: JOUEUR_INCONNU }]);
+    }
+
+    return acceptee({
+      pseudo: profil.pseudo,
+      inscritLe: profil.creeLe.toISOString(),
+      niveau: niveauDeXp(profil.xpTotale),
+      palier: palierDePoints(profil.pointsLigue),
+      statistiques: statistiquesDeJoueur(await statistiquesParMode(this.db, profil.id)),
     });
   }
 
@@ -561,25 +610,6 @@ function sessionAbsente<T>(): ReponseDeCompte<T> {
   return refusee('sessionAbsente', [
     { champ: 'session', motif: 'Session absente ou expirée. Connectez-vous.' },
   ]);
-}
-
-/**
- * Les statistiques d'un compte, a la forme du contrat.
- *
- * Un meilleur score ou un record absent n'est pas ecrit: le contrat les declare facultatifs,
- * et un champ absent n'est pas un champ qui vaut undefined.
- */
-function statistiquesDuProfil(
-  statistiques: StatistiquesEnregistrees,
-): ProfilDuCompte['statistiques'] {
-  const { partiesJouees, victoires, meilleurScore, recordMassacreSolo } = statistiques;
-
-  return {
-    partiesJouees,
-    victoires,
-    ...(meilleurScore === undefined ? {} : { meilleurScore }),
-    ...(recordMassacreSolo === undefined ? {} : { recordMassacreSolo }),
-  };
 }
 
 /** Une ligne de l'historique, a la forme du contrat. */

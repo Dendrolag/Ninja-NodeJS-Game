@@ -307,6 +307,10 @@ export const LIMITES_DEBIT = {
  *
  * L'inscription n'a qu'un seau, par adresse, contre la fabrication de comptes en
  * serie. Dix d'un coup laissent une soiree entre amis s'inscrire ensemble.
+ *
+ * Depuis l'etape 3.5, la lecture des fiches a aussi son seau, par compte: ce n'est
+ * plus un secret qu'on protege, mais la base, contre un compte qui la ferait agreger
+ * en boucle.
  */
 export const LIMITES_COMPTES = {
   /** Connexions a un meme compte, quelle que soit l'adresse: cinq, puis une par minute. */
@@ -315,4 +319,10 @@ export const LIMITES_COMPTES = {
   connexionParAdresse: { parSeconde: 1 / 6, rafale: 20 } satisfies LimiteDebit,
   /** Inscriptions depuis une meme adresse: dix, puis une toutes les deux minutes. */
   inscriptionParAdresse: { parSeconde: 1 / 120, rafale: 10 } satisfies LimiteDebit,
+  /**
+   * Fiches lues par un meme compte (etape 3.5): trente, puis une par seconde. Chaque
+   * lecture agrege tout l'historique d'un joueur; parcourir les fiches d'un salon ou
+   * d'un classement n'en demande qu'une douzaine.
+   */
+  ficheParCompte: { parSeconde: 1, rafale: 30 } satisfies LimiteDebit,
 } as const;

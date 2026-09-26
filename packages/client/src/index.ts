@@ -291,9 +291,23 @@ export type {
   LigneDHistorique,
   ModeleProfil,
   SensDUneVariation,
-  StatistiqueAffichee,
 } from './interface/modeles/profil.js';
-export { formaterFinDePartie, formaterJour, modeleProfil } from './interface/modeles/profil.js';
+export {
+  formaterFinDePartie,
+  formaterInscription,
+  formaterJour,
+  modeleProfil,
+} from './interface/modeles/profil.js';
+
+export type { LigneDUnMode, StatistiqueAffichee } from './interface/modeles/statistiques.js';
+export {
+  SANS_VALEUR,
+  lignesParMode,
+  tuilesDesStatistiques,
+} from './interface/modeles/statistiques.js';
+
+export type { ModeleFiche } from './interface/modeles/fiche.js';
+export { modeleFiche } from './interface/modeles/fiche.js';
 
 export type { BarreDeNiveau } from './interface/modeles/progression.js';
 export {

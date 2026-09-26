@@ -59,6 +59,12 @@ export interface LigneFin {
   readonly moi: boolean;
   /** Il a fini la partie avec le x2 de l'Evade: ses points sont deja doubles (etape 7.9). */
   readonly doubleur: boolean;
+  /**
+   * Sa fiche peut s'ouvrir d'un clic sur son pseudo (etape 3.5): il est au salon avec
+   * un compte, et nous avons un compte. Un joueur parti avant la fin n'est plus au
+   * salon: le classement seul ne dit pas s'il avait un compte.
+   */
+  readonly aUneFiche: boolean;
 }
 
 /** Une equipe au classement final d'une partie Equipes, telle qu'on l'affiche (etape 7.2). */
@@ -150,7 +156,7 @@ export function modeleFin(etat: EtatClient): ModeleFin | undefined {
     return { ...modeleFinEnEquipes(fin.classement, etat), contexte: contexteDeFin(etat) };
   }
 
-  const lignes = fin.classement.map((ligne, index) => ligneFin(ligne, index + 1, etat.moi));
+  const lignes = fin.classement.map((ligne, index) => ligneFin(ligne, index + 1, etat));
   const mienne = lignes.find((ligne) => ligne.moi);
 
   return {
@@ -211,7 +217,7 @@ function modeleFinEnEquipes(
       ...ligneFin(
         ligne,
         placeDansLesEquipes(equipes, equipeDeCouleur(ligne.couleur), classement.length).placement,
-        etat.moi,
+        etat,
       ),
       points: pointsEnEquipe(equipes, ligne),
       botsPortes: partDesNinjas(equipes, ligne.id),
@@ -298,7 +304,9 @@ function sensDe(variation: number): SensDeLaLigue {
 }
 
 /** Une ligne du classement recu, mise a la forme de l'affichage. */
-function ligneFin(ligne: LigneClassement, rang: number, moi: string | undefined): LigneFin {
+function ligneFin(ligne: LigneClassement, rang: number, etat: EtatClient): LigneFin {
+  const auSalon = etat.salon?.joueurs.find((joueur) => joueur.id === ligne.id);
+
   return {
     id: ligne.id,
     rang,
@@ -308,8 +316,9 @@ function ligneFin(ligne: LigneClassement, rang: number, moi: string | undefined)
     botsPortes: ligne.botsPortes,
     captures: ligne.captures,
     botsNoirsDetruits: ligne.botsNoirsDetruits,
-    moi: ligne.id === moi,
+    moi: ligne.id === etat.moi,
     doubleur: ligne.doubleur === true,
+    aUneFiche: auSalon?.compte !== undefined && etat.session.nature === 'compte',
   };
 }
 

@@ -23,6 +23,7 @@
  */
 
 import type { CarteEnregistree, Mode } from './constantes.js';
+import type { IdentifiantPalier } from './progression.js';
 import type { ErreurValidation } from './validation.js';
 
 /** La racine des routes HTTP des comptes. */
@@ -60,7 +61,27 @@ export const ROUTES_COMPTES = {
    * 400, 401 si le pseudo ou le code ne correspondent pas, 429.
    */
   reinitialisation: `${RACINE_API_COMPTES}/reinitialisation`,
+  /**
+   * GET, jeton en en-tete, pseudo en parametre (etape 3.5): adresseDeLaFiche. 200 et
+   * FicheJoueur; 400 si le pseudo est mal forme, 401 sans session valide, 404 si aucun
+   * compte ne le porte, 429.
+   */
+  joueur: `${RACINE_API_COMPTES}/joueur`,
 } as const;
+
+/**
+ * Le parametre qui porte le pseudo de la fiche demandee (etape 3.5).
+ *
+ * UN PARAMETRE, PAS UN MORCEAU DU CHEMIN. Un pseudo peut valoir « .. », que le
+ * navigateur lit dans un chemin comme un retour au dossier parent, meme encode: la
+ * demande partirait vers une autre adresse. Dans un parametre, ce n'est que du texte.
+ */
+export const PARAMETRE_PSEUDO = 'pseudo';
+
+/** L'adresse de la fiche du compte qui porte ce pseudo, relative au serveur (etape 3.5). */
+export function adresseDeLaFiche(pseudo: string): string {
+  return `${ROUTES_COMPTES.joueur}?${PARAMETRE_PSEUDO}=${encodeURIComponent(pseudo)}`;
+}
 
 /**
  * Le nom de l'en-tete HTTP qui porte le jeton, et son prefixe.
@@ -184,22 +205,76 @@ export const PARTIES_DU_PROFIL = 10;
 export const JOUEURS_POUR_UNE_VICTOIRE = 2;
 
 /**
- * Ce que l'historique d'un compte dit de lui (cadrage, section 3, profil).
+ * Ce que l'historique d'un compte dit de lui dans un mode (etape 3.5).
  *
  * Ces nombres se deduisent des resultats enregistres, a chaque lecture: aucune
  * colonne ne les tient a jour (cadrage, section 5).
  */
-export interface StatistiquesDuCompte {
+export interface StatistiquesDUnMode {
+  readonly mode: Mode;
+  /** Au moins une: un mode jamais joue n'a pas de ligne. */
   readonly partiesJouees: number;
-  /** Premieres places dans une partie d'au moins JOUEURS_POUR_UNE_VICTOIRE joueurs. */
+  /** Les parties d'au moins JOUEURS_POUR_UNE_VICTOIRE joueurs. */
+  readonly partiesAPlusieurs: number;
+  /** Premieres places dans une partie a plusieurs. */
   readonly victoires: number;
-  /** Le meilleur score d'une partie. Absent tant qu'aucune partie n'est enregistree. */
-  readonly meilleurScore?: number;
+  /** Le meilleur score d'une partie de ce mode, seul ou a plusieurs. */
+  readonly meilleurScore: number;
   /**
-   * Le record personnel en Massacre: le meilleur score d'une partie Massacre jouee seul
-   * (etape 7.4, decision 7 du porteur du projet). Absent tant qu'il n'y en a aucune.
+   * Le meilleur score d'une partie de ce mode jouee seul. Absent tant qu'il n'y en a
+   * aucune. C'est ce qu'etait le record en Massacre solo de l'etape 7.4, etendu a tous
+   * les modes: un cas du tableau, et non plus une exception.
    */
-  readonly recordMassacreSolo?: number;
+  readonly meilleurScoreSeul?: number;
+}
+
+/**
+ * Ce que l'historique d'un compte dit de lui (etape 3.5), tel que le montrent son
+ * profil et sa fiche.
+ *
+ * PAS DE MEILLEUR SCORE TOUTES MODES CONFONDUS (etude des amis, section 3.3): une
+ * proie de Chasse, un joueur de Massacre et le porteur du x2 de l'Evade ne marquent
+ * pas de la meme facon. Le meilleur score se lit par mode.
+ *
+ * PAS DE RATIO VICTOIRES SUR DEFAITES: dans des parties jusqu'a douze, gagner une
+ * partie sur quatre est une performance qu'un ratio ferait lire comme un echec. Les
+ * victoires se lisent sur les parties a plusieurs.
+ */
+export interface StatistiquesDeJoueur {
+  readonly partiesJouees: number;
+  /** Les parties d'au moins JOUEURS_POUR_UNE_VICTOIRE joueurs. */
+  readonly partiesAPlusieurs: number;
+  /** Premieres places dans une partie a plusieurs. */
+  readonly victoires: number;
+  /**
+   * Le mode le plus joue, departage par la partie la plus recente. Absent tant
+   * qu'aucune partie n'est enregistree. La date qui departage ne sort pas du serveur:
+   * elle dirait quand le joueur a joue.
+   */
+  readonly modePrefere?: Mode;
+  /** Les modes joues au moins une fois, dans l'ordre de MODES. */
+  readonly parMode: readonly StatistiquesDUnMode[];
+}
+
+/**
+ * La fiche d'un compte, telle que tout compte connecte la lit (etape 3.5).
+ *
+ * CE QUI EST PUBLIC, ET RIEN D'AUTRE. Le pseudo et le niveau s'affichent deja dans
+ * chaque salon; le palier et les statistiques sont ce que l'etude des amis a retenu.
+ * Jamais les pieces, l'identifiant du compte, le code de secours, l'XP ou les points
+ * de ligue exacts, ni les dernieres parties, qui diraient quand le joueur joue.
+ *
+ * UN OBJET A CHAMPS NOMMES, POUR LA SUITE. Les succes (etapes 3.7 et 3.8) y
+ * ajouteront leur champ, sans rien changer aux autres.
+ */
+export interface FicheJoueur {
+  /** Le pseudo, dans l'ecriture choisie a l'inscription. */
+  readonly pseudo: string;
+  /** Date d'inscription, au format ISO 8601. */
+  readonly inscritLe: string;
+  readonly niveau: number;
+  readonly palier: IdentifiantPalier;
+  readonly statistiques: StatistiquesDeJoueur;
 }
 
 /** Une partie de l'historique d'un compte, telle que son profil la montre. */
@@ -225,11 +300,13 @@ export interface PartieDuProfil {
  * Le profil d'un compte, tel que son proprietaire le lit (cadrage, section 3).
  *
  * Reserve, comme la progression, a une demande qui presente une session valide: le
- * profil d'un compte n'est montre qu'a lui. Pas de rang mondial, de pass de saison,
- * de skins, de succes ni de clan: reportes apres la v1.
+ * profil d'un compte n'est montre qu'a lui. Les autres comptes en lisent la fiche
+ * (FicheJoueur, etape 3.5). Pas de rang mondial, de pass de saison, de skins, de
+ * succes ni de clan: reportes apres la v1.
  */
 export interface ProfilDuCompte extends MaProgression {
-  readonly statistiques: StatistiquesDuCompte;
+  /** La meme agregation que la fiche (etape 3.5). */
+  readonly statistiques: StatistiquesDeJoueur;
   /** Les PARTIES_DU_PROFIL dernieres parties, de la plus recente a la plus ancienne. */
   readonly dernieresParties: readonly PartieDuProfil[];
   /**

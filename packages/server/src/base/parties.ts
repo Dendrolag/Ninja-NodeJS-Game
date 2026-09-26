@@ -337,53 +337,64 @@ export async function lireHistorique(
     .limit(limite);
 }
 
-/** Ce que les resultats d'un compte disent de lui, sur tout son historique. */
-export interface StatistiquesEnregistrees {
+/** Ce que les resultats d'un compte disent de lui dans un mode, sur tout son historique. */
+export interface StatistiquesEnregistreesDUnMode {
+  readonly mode: Mode;
   readonly partiesJouees: number;
-  /** Premieres places dans une partie d'au moins JOUEURS_POUR_UNE_VICTOIRE joueurs. */
+  /** Les parties d'au moins JOUEURS_POUR_UNE_VICTOIRE joueurs. */
+  readonly partiesAPlusieurs: number;
+  /** Premieres places dans une partie a plusieurs. */
   readonly victoires: number;
-  /** Absent tant qu'aucune partie n'est enregistree. */
-  readonly meilleurScore: number | undefined;
-  /** Le meilleur score en Massacre joue seul. Absent tant qu'il n'y en a aucun. */
-  readonly recordMassacreSolo: number | undefined;
+  readonly meilleurScore: number;
+  /** Le meilleur score d'une partie jouee seul. Absent tant qu'il n'y en a aucune. */
+  readonly meilleurScoreSeul: number | undefined;
+  /**
+   * La fin de la derniere partie de ce mode. Elle departage le mode prefere, et ne
+   * sort pas du serveur: voir comptes/statistiques.ts.
+   */
+  readonly derniereLe: Date;
 }
 
 /**
- * Les statistiques d'un compte, deduites de ses resultats (reprise des ecrans du
- * jalon 3, profil).
+ * Les statistiques d'un compte, mode par mode, deduites de ses resultats (etape 3.5).
  *
  * CE QUI SE DEDUIT NE SE STOCKE PAS (cadrage, section 5): aucune colonne ne tient
  * ces compteurs, qu'une partie oubliee ou enregistree deux fois ferait diverger.
- * Une seule requete d'agregat, sur tout l'historique, et non sur les dernieres
- * parties que le profil affiche.
+ * Une seule requete d'agregat, regroupee par mode, sur tout l'historique, et non sur
+ * les dernieres parties que le profil affiche. L'index resultats_par_compte la sert.
  *
- * Une partie jouee seul n'est pas une victoire: voir JOUEURS_POUR_UNE_VICTOIRE.
+ * Une partie jouee seul n'est pas une victoire: voir JOUEURS_POUR_UNE_VICTOIRE. Son
+ * meilleur score, lui, se garde a part: c'est le record en Massacre solo de l'etape
+ * 7.4, etendu a tous les modes.
  *
- * Le record en Massacre (etape 7.4) se deduit de meme: le meilleur score des parties
- * Massacre d'un seul joueur. Une partie a plusieurs n'y compte pas, ses points dependant des
- * autres.
+ * @returns Une ligne par mode joue au moins une fois, dans un ordre quelconque.
  */
-export async function statistiquesDuCompte(
+export async function statistiquesParMode(
   db: BaseDeDonnees,
   compteId: string,
-): Promise<StatistiquesEnregistrees> {
-  const [ligne] = await db
+): Promise<StatistiquesEnregistreesDUnMode[]> {
+  const aPlusieurs = sql`${parties.nombreJoueurs} >= ${JOUEURS_POUR_UNE_VICTOIRE}`;
+  const lignes = await db
     .select({
+      mode: parties.mode,
       partiesJouees: sql<number>`count(*)::int`,
-      victoires: sql<number>`(count(*) filter (where ${resultats.placement} = 1 and ${parties.nombreJoueurs} >= ${JOUEURS_POUR_UNE_VICTOIRE}))::int`,
-      meilleurScore: sql<number | null>`max(${resultats.points})`,
-      recordMassacreSolo: sql<
+      partiesAPlusieurs: sql<number>`(count(*) filter (where ${aPlusieurs}))::int`,
+      victoires: sql<number>`(count(*) filter (where ${resultats.placement} = 1 and ${aPlusieurs}))::int`,
+      meilleurScore: sql<number>`max(${resultats.points})`,
+      meilleurScoreSeul: sql<
         number | null
-      >`max(${resultats.points}) filter (where ${parties.mode} = 'massacre' and ${parties.nombreJoueurs} = 1)`,
+      >`max(${resultats.points}) filter (where ${parties.nombreJoueurs} = 1)`,
+      // Un agregat ne passe pas de lui-meme par la conversion de la colonne: mapWith la
+      // lui applique, et la date arrive comme celle de lireHistorique.
+      derniereLe: sql<Date>`max(${parties.termineeLe})`.mapWith(parties.termineeLe),
     })
     .from(resultats)
     .innerJoin(parties, eq(resultats.partieId, parties.id))
-    .where(eq(resultats.compteId, compteId));
+    .where(eq(resultats.compteId, compteId))
+    .groupBy(parties.mode);
 
-  return {
-    partiesJouees: ligne?.partiesJouees ?? 0,
-    victoires: ligne?.victoires ?? 0,
-    meilleurScore: ligne?.meilleurScore ?? undefined,
-    recordMassacreSolo: ligne?.recordMassacreSolo ?? undefined,
-  };
+  return lignes.map((ligne) => ({
+    ...ligne,
+    meilleurScoreSeul: ligne.meilleurScoreSeul ?? undefined,
+  }));
 }

@@ -211,6 +211,50 @@ describe('les comptes, du client au serveur', () => {
     expect(await comptes.compteDeSession(jeton)).toBeUndefined();
   });
 
+  it('lit au salon la fiche d un autre compte, par son pseudo (etape 3.5)', async () => {
+    const alice = await ouvrirUnClient();
+    await inscrire(alice, 'Alice');
+    const lea = await ouvrirUnClient();
+    await inscrire(lea, 'Léa B.');
+
+    alice.rejoindre(undefined);
+    await attendreQue(() => alice.etat.salon !== undefined, 'le salon d Alice');
+    lea.rejoindre(undefined, { idRoom: alice.etat.salon?.idRoom ?? '' });
+    await attendreQue(() => alice.etat.salon?.joueurs.length === 2, 'Lea au salon');
+
+    // Le pseudo tel que le salon le montre: c'est celui que la page envoie.
+    const pseudo = alice.etat.salon?.joueurs[1]?.pseudo ?? '';
+    alice.ouvrirLaFiche(pseudo);
+    await attendreQue(() => alice.etat.fiche.statut === 'chargee', 'la fiche de Lea');
+
+    expect(alice.etat.fiche).toMatchObject({
+      statut: 'chargee',
+      pseudo: 'Léa B.',
+      fiche: {
+        pseudo: 'Léa B.',
+        niveau: 1,
+        palier: 'bronze',
+        statistiques: { partiesJouees: 0, partiesAPlusieurs: 0, victoires: 0, parMode: [] },
+      },
+    });
+  });
+
+  it('dit qu aucun compte ne porte un pseudo inconnu', async () => {
+    const alice = await ouvrirUnClient();
+    await inscrire(alice, 'Alice');
+    alice.rejoindre(undefined);
+    await attendreQue(() => alice.etat.salon !== undefined, 'le salon');
+
+    alice.ouvrirLaFiche('Personne');
+    await attendreQue(() => alice.etat.fiche.statut === 'echec', 'le refus');
+
+    expect(alice.etat.fiche).toEqual({
+      statut: 'echec',
+      pseudo: 'Personne',
+      motif: 'Aucun compte ne porte ce pseudo.',
+    });
+  });
+
   it('attend le reveil d un serveur de jeu qui ne repond pas, puis dit qu il ne repond pas', async () => {
     // Un serveur HTTP qui coupe toute demande de lien, sans faire attendre.
     const muet = createServer();

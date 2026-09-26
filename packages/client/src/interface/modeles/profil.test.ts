@@ -3,7 +3,7 @@
  *
  * Ce qu'ils protegent: le profil affiche est celui que la route a rendu, mis en
  * forme sans rien recalculer, et un compte qui n'a jamais joue ne voit pas de zero
- * trompeur.
+ * trompeur. Depuis l'etape 3.5, ses statistiques sont celles de la fiche, par mode.
  */
 
 import type { ProfilDuCompte } from '@neon-ninja/shared';
@@ -20,7 +20,29 @@ const PROFIL: ProfilDuCompte = {
   pieces: 1280,
   pointsLigue: 320,
   inscritLe: '2026-09-11T12:00:00.000Z',
-  statistiques: { partiesJouees: 12, victoires: 4, meilleurScore: 99, recordMassacreSolo: 1450 },
+  statistiques: {
+    partiesJouees: 12,
+    partiesAPlusieurs: 9,
+    victoires: 4,
+    modePrefere: 'classique',
+    parMode: [
+      {
+        mode: 'classique',
+        partiesJouees: 9,
+        partiesAPlusieurs: 8,
+        victoires: 4,
+        meilleurScore: 99,
+      },
+      {
+        mode: 'massacre',
+        partiesJouees: 3,
+        partiesAPlusieurs: 1,
+        victoires: 0,
+        meilleurScore: 1600,
+        meilleurScoreSeul: 1450,
+      },
+    ],
+  },
   dernieresParties: [
     {
       mode: 'classique',
@@ -75,17 +97,40 @@ describe('modeleProfil', () => {
       pseudo: 'ShadowFox',
       initiales: 'SF',
       palier: 'Or',
-      inscription: `Inscrit le ${formaterJour(PROFIL.inscritLe)}`,
+      inscription: `Membre depuis le ${formaterJour(PROFIL.inscritLe)}`,
       barre: { niveau: 2, pourCent: 25, xp: '50 / 200 XP' },
       statistiques: [
         { libelle: 'Parties jouées', valeur: '12' },
-        { libelle: 'Victoires', valeur: '4' },
-        { libelle: 'Meilleur score', valeur: '99' },
-        { libelle: 'Record Massacre solo', valeur: formaterNombre(1450) },
+        { libelle: 'Victoires', valeur: '4', detail: 'sur 9 parties à plusieurs' },
+        { libelle: 'Mode préféré', valeur: 'Horde' },
         { libelle: 'Pièces', valeur: formaterNombre(1280) },
         { libelle: 'Points de ligue', valeur: '320' },
       ],
     });
+  });
+
+  it('range le record en Massacre solo dans le tableau par mode, sans meilleur score global', () => {
+    const modele = modeleProfil({ ...ETAT_INITIAL, profil: { statut: 'charge', profil: PROFIL } });
+
+    expect(modele.nature === 'charge' ? modele.parMode : []).toEqual([
+      {
+        mode: 'Horde',
+        parties: '9',
+        victoires: '4 sur 8',
+        meilleurScore: '99',
+        meilleurScoreSeul: '—',
+      },
+      {
+        mode: 'Massacre',
+        parties: '3',
+        victoires: '0 sur 1',
+        meilleurScore: formaterNombre(1600),
+        meilleurScoreSeul: formaterNombre(1450),
+      },
+    ]);
+    expect(
+      modele.nature === 'charge' ? modele.statistiques.map((tuile) => tuile.libelle) : [],
+    ).not.toContain('Meilleur score');
   });
 
   it('met en forme chaque partie de l historique, dans l ordre recu', () => {
@@ -127,22 +172,23 @@ describe('modeleProfil', () => {
     );
   });
 
-  it('ecrit un tiret, et non un zero, quand aucune partie n a donne de score', () => {
+  it('ecrit un tiret, et non un mode au hasard, quand aucune partie n a ete jouee', () => {
     const modele = modeleProfil({
       ...ETAT_INITIAL,
       profil: {
         statut: 'charge',
         profil: {
           ...PROFIL,
-          statistiques: { partiesJouees: 0, victoires: 0 },
+          statistiques: { partiesJouees: 0, partiesAPlusieurs: 0, victoires: 0, parMode: [] },
           dernieresParties: [],
         },
       },
     });
 
-    expect(modele.nature === 'charge' ? modele.statistiques.slice(2, 4) : undefined).toEqual([
-      { libelle: 'Meilleur score', valeur: '—' },
-      { libelle: 'Record Massacre solo', valeur: '—' },
+    expect(modele.nature === 'charge' ? modele.statistiques.slice(1, 3) : undefined).toEqual([
+      { libelle: 'Victoires', valeur: '0', detail: 'sur 0 partie à plusieurs' },
+      { libelle: 'Mode préféré', valeur: '—' },
     ]);
+    expect(modele.nature === 'charge' ? modele.parMode : undefined).toEqual([]);
   });
 });

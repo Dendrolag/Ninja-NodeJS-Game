@@ -152,6 +152,7 @@ function annuaireDEssai(): AnnuaireDEssai {
     deconnecter: nonUtilise,
     maProgression: nonUtilise,
     profil: nonUtilise,
+    ficheJoueur: nonUtilise,
     changerMotDePasse: nonUtilise,
     nouveauCodeDeSecours: nonUtilise,
     reinitialiser: nonUtilise,

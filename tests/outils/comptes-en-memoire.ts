@@ -32,11 +32,14 @@ import type {
   ProgressionAppliquee,
   ReponseDeCompte,
   ServiceDeComptes,
+  StatistiquesEnregistreesDUnMode,
 } from '../../packages/server/dist/index.js';
 import {
   CODE_DE_SECOURS_INCORRECT,
+  JOUEUR_INCONNU,
   MOT_DE_PASSE_INCORRECT,
   fabriquerCodeDeSecours,
+  statistiquesDeJoueur,
 } from '../../packages/server/dist/index.js';
 import type {
   ErreurValidation,
@@ -44,18 +47,21 @@ import type {
   PartieDuProfil,
   SessionInscrite,
   SessionOuverte,
+  StatistiquesDeJoueur,
 } from '../../packages/shared/dist/index.js';
 import {
   JOUEURS_POUR_UNE_VICTOIRE,
   PARTIES_DU_PROFIL,
   formaterCodeDeSecours,
   niveauDeXp,
+  palierDePoints,
   reperePseudo,
   validerDemandeChangementMotDePasse,
   validerDemandeCodeDeSecours,
   validerDemandeConnexion,
   validerDemandeInscription,
   validerDemandeReinitialisation,
+  validerPseudo,
 } from '../../packages/shared/dist/index.js';
 
 /** Un compte tenu en memoire. */
@@ -77,6 +83,35 @@ interface CompteEnMemoire {
 export interface FinEnregistree {
   readonly partie: NouvellePartie;
   readonly resultats: readonly NouveauResultat[];
+}
+
+/**
+ * Les statistiques d'un compte, regroupees par mode comme le fait la base, puis
+ * deduites par la fonction du serveur: seul le regroupement est ecrit ici.
+ */
+function statistiquesDe(compte: CompteEnMemoire): StatistiquesDeJoueur {
+  const parMode = new Map<string, StatistiquesEnregistreesDUnMode>();
+
+  for (const partie of compte.historique) {
+    const aPlusieurs = partie.nombreJoueurs >= JOUEURS_POUR_UNE_VICTOIRE;
+    const seul = partie.nombreJoueurs === 1;
+    const fin = new Date(partie.termineeLe);
+    const avant = parMode.get(partie.mode);
+    const meilleurSeul = avant?.meilleurScoreSeul;
+
+    parMode.set(partie.mode, {
+      mode: partie.mode,
+      partiesJouees: (avant?.partiesJouees ?? 0) + 1,
+      partiesAPlusieurs: (avant?.partiesAPlusieurs ?? 0) + (aPlusieurs ? 1 : 0),
+      victoires: (avant?.victoires ?? 0) + (aPlusieurs && partie.placement === 1 ? 1 : 0),
+      meilleurScore: Math.max(avant?.meilleurScore ?? 0, partie.points),
+      meilleurScoreSeul: seul ? Math.max(meilleurSeul ?? 0, partie.points) : meilleurSeul,
+      derniereLe:
+        avant === undefined || fin.getTime() > avant.derniereLe.getTime() ? fin : avant.derniereLe,
+    });
+  }
+
+  return statistiquesDeJoueur([...parMode.values()]);
 }
 
 /** Des comptes en memoire, et de quoi les examiner. */
@@ -241,21 +276,41 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
         return sessionAbsente();
       }
 
-      const victoires = compte.historique.filter(
-        (partie) => partie.placement === 1 && partie.nombreJoueurs >= JOUEURS_POUR_UNE_VICTOIRE,
-      ).length;
-      const scores = compte.historique.map((partie) => partie.points);
-
       return {
         acceptee: true,
         valeur: {
           ...progressionDe(compte),
-          statistiques:
-            scores.length === 0
-              ? { partiesJouees: 0, victoires }
-              : { partiesJouees: scores.length, victoires, meilleurScore: Math.max(...scores) },
+          statistiques: statistiquesDe(compte),
           dernieresParties: compte.historique.slice(0, PARTIES_DU_PROFIL),
           codeDeSecours: compte.codeDeSecours !== '',
+        },
+      };
+    },
+
+    // Comme Authentification, la limite de lecture en moins: aucun scenario ne l'atteint.
+    ficheJoueur: async (jeton, brut) => {
+      if (!sessions.has(jeton)) {
+        return sessionAbsente();
+      }
+
+      const pseudo = validerPseudo(brut);
+      if (!pseudo.valide) {
+        return refusee('demandeInvalide', pseudo.erreurs);
+      }
+
+      const compte = parPseudo(pseudo.valeur);
+      if (compte === undefined) {
+        return refusee('joueurInconnu', [{ champ: 'pseudo', motif: JOUEUR_INCONNU }]);
+      }
+
+      return {
+        acceptee: true,
+        valeur: {
+          pseudo: compte.pseudo,
+          inscritLe: compte.inscritLe.toISOString(),
+          niveau: niveauDeXp(compte.xpTotale),
+          palier: palierDePoints(compte.pointsLigue),
+          statistiques: statistiquesDe(compte),
         },
       };
     },

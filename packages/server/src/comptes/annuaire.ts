@@ -18,6 +18,7 @@
 import type {
   CodeDeSecoursEmis,
   ErreurValidation,
+  FicheJoueur,
   MaProgression,
   ProfilDuCompte,
   SessionInscrite,
@@ -92,6 +93,8 @@ export type MotifDeRefus =
    * 403 (etape 3.4). Pas 401, que le client lit comme une session expiree.
    */
   | 'motDePasseIncorrect'
+  /** Aucun compte ne porte le pseudo de la fiche demandee: 404 (etape 3.5). */
+  | 'joueurInconnu'
   /** Trop de tentatives recentes: 429. */
   | 'tropDeTentatives';
 
@@ -130,6 +133,14 @@ export interface ServiceDeComptes extends AnnuaireDesComptes {
    * statistiques et ses dernieres parties (reprise des ecrans du jalon 3).
    */
   profil(jeton: string): Promise<ReponseDeCompte<ProfilDuCompte>>;
+
+  /**
+   * La fiche du compte qui porte ce pseudo, pour le compte dont ce jeton ouvre la
+   * session (etape 3.5). Reservee aux comptes: sans session valable, refusee.
+   *
+   * @param pseudo Le pseudo lu dans la requete, a valider.
+   */
+  ficheJoueur(jeton: string, pseudo: unknown): Promise<ReponseDeCompte<FicheJoueur>>;
 
   /**
    * Change le mot de passe du compte dont ce jeton ouvre la session, contre le mot de

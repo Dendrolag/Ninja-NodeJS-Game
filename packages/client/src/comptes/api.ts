@@ -1,6 +1,6 @@
 /**
  * Les requetes des comptes: s'inscrire, se connecter, se deconnecter, lire sa
- * progression.
+ * progression et, depuis l'etape 3.5, la fiche d'un autre compte.
  *
  * DERRIERE UNE INTERFACE, COMME LE TRANSPORT DU JEU (etape 4.1). Le reste du client
  * ne sait pas que ces questions passent par HTTP: la session (session.ts) appelle
@@ -28,12 +28,13 @@ import type {
   DemandeInscription,
   DemandeReinitialisation,
   ErreurValidation,
+  FicheJoueur,
   MaProgression,
   ProfilDuCompte,
   SessionInscrite,
   SessionOuverte,
 } from '@neon-ninja/shared';
-import { PREFIXE_JETON_HTTP, ROUTES_COMPTES } from '@neon-ninja/shared';
+import { PREFIXE_JETON_HTTP, ROUTES_COMPTES, adresseDeLaFiche } from '@neon-ninja/shared';
 
 /** La reponse a une requete des comptes. */
 export type ReponseDesComptes<T> =
@@ -63,6 +64,11 @@ export interface ApiComptes {
   moi(jeton: string): Promise<ReponseDesComptes<MaProgression>>;
   /** Le profil du compte dont ce jeton ouvre la session. */
   profil(jeton: string): Promise<ReponseDesComptes<ProfilDuCompte>>;
+  /**
+   * La fiche du compte qui porte ce pseudo, lue avec la session de ce jeton (etape
+   * 3.5). Un pseudo sans compte est refuse en 404.
+   */
+  joueur(jeton: string, pseudo: string): Promise<ReponseDesComptes<FicheJoueur>>;
   /**
    * Change le mot de passe du compte de cette session, et rend son nouveau code de
    * secours (etape 3.4). Un mot de passe actuel faux est refuse en 403.
@@ -181,6 +187,8 @@ export function creerApiComptesHttp(options: OptionsApiComptesHttp = {}): ApiCom
       demander(ROUTES_COMPTES.moi, { method: 'GET', headers: entetesDuJeton(jeton) }, true),
     profil: (jeton) =>
       demander(ROUTES_COMPTES.profil, { method: 'GET', headers: entetesDuJeton(jeton) }, true),
+    joueur: (jeton, pseudo) =>
+      demander(adresseDeLaFiche(pseudo), { method: 'GET', headers: entetesDuJeton(jeton) }, true),
     changerMotDePasse: (jeton, demande) =>
       demander(ROUTES_COMPTES.motDePasse, envoiJson(demande, jeton), true),
     nouveauCodeDeSecours: (jeton, demande) =>
@@ -298,13 +306,32 @@ export function progressionDEssai(pseudo: string): MaProgression {
   };
 }
 
+/** Les statistiques d'un compte qui n'a jamais joue, pour les tests. */
+export const STATISTIQUES_VIDES: ProfilDuCompte['statistiques'] = {
+  partiesJouees: 0,
+  partiesAPlusieurs: 0,
+  victoires: 0,
+  parMode: [],
+};
+
 /** Le profil d'un compte neuf, qui n'a jamais joue, pour les tests. */
 export function profilDEssai(pseudo: string): ProfilDuCompte {
   return {
     ...progressionDEssai(pseudo),
-    statistiques: { partiesJouees: 0, victoires: 0 },
+    statistiques: STATISTIQUES_VIDES,
     dernieresParties: [],
     codeDeSecours: true,
+  };
+}
+
+/** La fiche d'un compte neuf, qui n'a jamais joue, pour les tests (etape 3.5). */
+export function ficheDEssai(pseudo: string): FicheJoueur {
+  return {
+    pseudo,
+    inscritLe: '2026-09-11T10:00:00.000Z',
+    niveau: 1,
+    palier: 'bronze',
+    statistiques: STATISTIQUES_VIDES,
   };
 }
 
@@ -348,6 +375,7 @@ export function creerApiComptesFactice(): ApiComptesFactice {
     deconnecter: async () => ({ acceptee: true, valeur: undefined }),
     moi: async () => ({ acceptee: true, valeur: progressionDEssai(dernierPseudo) }),
     profil: async () => ({ acceptee: true, valeur: profilDEssai(dernierPseudo) }),
+    joueur: async (_jeton, pseudo) => ({ acceptee: true, valeur: ficheDEssai(pseudo) }),
   };
 
   return {
@@ -372,6 +400,10 @@ export function creerApiComptesFactice(): ApiComptesFactice {
     profil: (jeton) => {
       appels.push({ nom: 'profil', argument: jeton });
       return reponses.profil(jeton);
+    },
+    joueur: (jeton, pseudo) => {
+      appels.push({ nom: 'joueur', argument: { jeton, pseudo } });
+      return reponses.joueur(jeton, pseudo);
     },
     changerMotDePasse: (jeton, demande) => {
       appels.push({ nom: 'changerMotDePasse', argument: { jeton, demande } });

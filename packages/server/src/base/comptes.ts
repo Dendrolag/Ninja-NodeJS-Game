@@ -1,5 +1,5 @@
 /**
- * Les comptes: les creer, les retrouver.
+ * Les comptes: les creer, les retrouver, par leur identifiant ou par leur pseudo.
  *
  * UN COMPTE NAIT AVEC SA PROGRESSION, dans la meme transaction. Il n'existe donc
  * jamais de compte sans progression a gerer ailleurs.
@@ -161,21 +161,41 @@ export async function identifiantsParPseudo(
 /** Un compte et sa progression, lus ensemble. */
 export interface Profil extends Compte, ValeursProgression {}
 
+/** Les colonnes lues pour decrire un compte et sa progression. */
+const COLONNES_PROFIL = {
+  ...COLONNES_COMPTE,
+  xpTotale: progressions.xpTotale,
+  pieces: progressions.pieces,
+  pointsLigue: progressions.pointsLigue,
+};
+
 /** Le compte et la progression de cet identifiant, ou undefined s'il n'existe pas. */
 export async function profilDuCompte(
   db: BaseDeDonnees,
   compteId: string,
 ): Promise<Profil | undefined> {
   const [profil] = await db
-    .select({
-      ...COLONNES_COMPTE,
-      xpTotale: progressions.xpTotale,
-      pieces: progressions.pieces,
-      pointsLigue: progressions.pointsLigue,
-    })
+    .select(COLONNES_PROFIL)
     .from(comptes)
     .innerJoin(progressions, eq(progressions.compteId, comptes.id))
     .where(eq(comptes.id, compteId));
+
+  return profil;
+}
+
+/**
+ * Le compte qui porte ce pseudo, quelle que soit la facon de l'ecrire, et sa
+ * progression, en une seule requete (etape 3.5); undefined s'il n'existe pas.
+ */
+export async function profilParPseudo(
+  db: BaseDeDonnees,
+  pseudo: string,
+): Promise<Profil | undefined> {
+  const [profil] = await db
+    .select(COLONNES_PROFIL)
+    .from(comptes)
+    .innerJoin(progressions, eq(progressions.compteId, comptes.id))
+    .where(eq(comptes.reperePseudo, reperePseudo(pseudo)));
 
   return profil;
 }

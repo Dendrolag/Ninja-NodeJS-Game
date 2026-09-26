@@ -349,6 +349,90 @@
   width: min(480px, 100%);
 }
 
+/* La fiche d'un joueur (etape 3.5): assez large pour le tableau par mode, qui defile
+   sur un telephone plutot que de deborder. */
+.fenetre-fiche {
+  width: min(640px, 100%);
+}
+
+/* Une colonne qui peut se reduire sous la largeur du tableau: sans elle, la grille
+   prendrait la largeur du tableau, et la fenetre deborderait de l'ecran au lieu de
+   laisser le tableau defiler. */
+.fenetre-fiche .fenetre-corps,
+.fiche-contenu,
+.fiche-statistiques,
+.fiche-par-mode {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.fiche-contenu {
+  display: grid;
+  gap: 20px;
+}
+
+.fiche-identite {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.fiche-identite > div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.avatar-fiche {
+  width: 60px;
+  height: 60px;
+  font-size: 20px;
+}
+
+.fiche-pseudo {
+  overflow-wrap: anywhere;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.fiche-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fiche-niveau {
+  border: 1px solid rgba(45, 230, 224, 0.35);
+  background: rgba(45, 230, 224, 0.1);
+  color: var(--cyan);
+}
+
+.fiche-inscription,
+.fiche-chargement,
+.fiche-vide {
+  color: var(--texte-tertiaire);
+  font-size: 13px;
+}
+
+.fiche-statistiques,
+.fiche-par-mode {
+  display: grid;
+  gap: 10px;
+}
+
+.fiche-statistiques h3,
+.fiche-par-mode h3 {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.fiche-echec {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  color: var(--rose-clair);
+}
+
 .code-de-secours {
   justify-self: center;
   padding: 12px 18px;
@@ -656,6 +740,49 @@
 .tableau .nombre {
   font-family: var(--police-donnees);
   text-align: right;
+}
+
+/* Le tableau par mode du profil et de la fiche (etape 3.5): le mode en tete de ligne,
+   les nombres a droite des la deuxieme colonne. */
+.tableau-par-mode th:nth-child(n + 2) {
+  text-align: right;
+}
+
+.tableau-par-mode tbody th {
+  padding: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--texte);
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.tableau-par-mode td {
+  white-space: nowrap;
+}
+
+/* Le pseudo d'un joueur qui a une fiche, au salon et a la fin (etape 3.5): un bouton qui
+   se lit comme le texte qu'il remplace, souligne au survol et au clavier. */
+.lien-fiche {
+  display: inline;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: underline dotted rgba(255, 255, 255, 0.35);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.lien-fiche:hover,
+.lien-fiche:focus-visible {
+  color: var(--cyan);
+  text-decoration: underline solid;
 }
 
 .pastille {

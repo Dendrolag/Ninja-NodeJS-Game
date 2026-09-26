@@ -19,6 +19,7 @@ import {
   MOTIF_INJOIGNABLE,
   STATUT_INJOIGNABLE,
   creerApiComptesHttp,
+  ficheDEssai,
   profilDEssai,
   progressionDEssai,
 } from './api.js';
@@ -112,6 +113,31 @@ describe('les requetes qui partent', () => {
     });
     expect(vues[0]?.adresse).toBe(`${ORIGINE}${ROUTES_COMPTES.profil}`);
     expect(entetes(vues[0]).get('Authorization')).toBe(`Bearer ${JETON_DESSAI}`);
+  });
+
+  it('lisent la fiche d un joueur a sa route, pseudo encode en parametre (etape 3.5)', async () => {
+    const { vues, envoyer } = envoiDEssai(() => json(200, ficheDEssai('Léa B.')));
+    const api = creerApiComptesHttp({ url: ORIGINE, envoyer });
+
+    expect(await api.joueur(JETON_DESSAI, 'Léa B.')).toEqual({
+      acceptee: true,
+      valeur: ficheDEssai('Léa B.'),
+    });
+    expect(vues[0]?.adresse).toBe(`${ORIGINE}${ROUTES_COMPTES.joueur}?pseudo=L%C3%A9a%20B.`);
+    expect(vues[0]?.init.method).toBe('GET');
+    expect(entetes(vues[0]).get('Authorization')).toBe(`Bearer ${JETON_DESSAI}`);
+  });
+
+  it('rendent le motif du serveur pour une fiche sans compte', async () => {
+    const motif = { champ: 'pseudo', motif: 'Aucun compte ne porte ce pseudo.' };
+    const { envoyer } = envoiDEssai(() => json(404, { erreurs: [motif] }));
+    const api = creerApiComptesHttp({ url: ORIGINE, envoyer });
+
+    expect(await api.joueur(JETON_DESSAI, 'Personne')).toEqual({
+      acceptee: false,
+      statut: 404,
+      erreurs: [motif],
+    });
   });
 
   it('envoient le changement de mot de passe et la demande de code, jeton en en-tete', async () => {

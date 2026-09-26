@@ -247,3 +247,54 @@ describe("le x2 de l'Evade au classement final (etape 7.9)", () => {
     ]);
   });
 });
+
+describe('la fiche des joueurs au classement final (etape 3.5)', () => {
+  /** La partie finie, vue d'un compte, avec ces membres encore au salon. */
+  function etatAvecLeSalon(session: EtatClient['session']): EtatClient {
+    const base = etat(CLASSEMENT);
+
+    return {
+      ...base,
+      session,
+      salon: base.salon && {
+        ...base.salon,
+        joueurs: [
+          { id: 'moi', pseudo: 'Moi', hote: true, compte: { niveau: 3 } },
+          { id: 'alice', pseudo: 'Alice', hote: false, compte: { niveau: 9 } },
+          { id: 'carol', pseudo: 'Carol', hote: false },
+        ],
+      },
+    };
+  }
+
+  const COMPTE: EtatClient['session'] = {
+    nature: 'compte',
+    progression: {
+      pseudo: 'Moi',
+      niveau: 3,
+      xpTotale: 400,
+      pieces: 0,
+      pointsLigue: 0,
+      inscritLe: '2026-09-11T10:00:00.000Z',
+    },
+  };
+
+  it('ouvre la fiche des comptes encore au salon, pas celle d un invite ni d un joueur parti', () => {
+    const lignes = modeleFin(etatAvecLeSalon(COMPTE))?.lignes ?? [];
+
+    expect(lignes.map((une) => [une.id, une.aUneFiche])).toEqual([
+      ['alice', true],
+      ['moi', true],
+      ['carol', false],
+      // Dan est parti avant la fin: le classement seul ne dit pas s'il avait un compte.
+      ['dan', false],
+    ]);
+  });
+
+  it('n ouvre aucune fiche a un invite', () => {
+    const lignes =
+      modeleFin(etatAvecLeSalon({ nature: 'invite', sessionExpiree: false }))?.lignes ?? [];
+
+    expect(lignes.some((une) => une.aUneFiche)).toBe(false);
+  });
+});

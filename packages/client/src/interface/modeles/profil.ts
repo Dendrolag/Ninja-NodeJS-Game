@@ -2,10 +2,14 @@
  * Le profil d'un compte, sous forme de donnees.
  *
  * LA VERSION REDUITE DU CADRAGE (section 3, profil): identite, niveau et XP, palier
- * et points de ligue, pieces, statistiques (parties jouees, victoires, meilleur
- * score) et dernieres parties. Ni pass de saison, ni skins, ni succes, ni clan, ni
- * gemmes, ni rang mondial: reportes apres la v1, et absents plutot que grises
- * (decision du 29 juin 2026).
+ * et points de ligue, pieces, statistiques et dernieres parties. Ni pass de saison,
+ * ni skins, ni succes, ni clan, ni gemmes, ni rang mondial: reportes apres la v1, et
+ * absents plutot que grises (decision du 29 juin 2026).
+ *
+ * LES STATISTIQUES SONT CELLES DE LA FICHE (etape 3.5): parties, victoires sur les
+ * parties a plusieurs, mode prefere, et un tableau par mode, mis en forme par
+ * statistiques.ts. Le meilleur score toutes modes confondus et la tuile du record en
+ * Massacre solo ont disparu: ce record est la colonne « Seul » du Massacre.
  *
  * FONCTION PURE. Tout vient du profil lu par la route de l'etape (statistiques
  * comprises, deduites des resultats par le serveur): le client met en forme, il ne
@@ -25,12 +29,8 @@ import {
   formaterVariation,
 } from './progression.js';
 import { initiales } from './salon.js';
-
-/** Une statistique, telle qu'on l'affiche. */
-export interface StatistiqueAffichee {
-  readonly libelle: string;
-  readonly valeur: string;
-}
+import type { LigneDUnMode, StatistiqueAffichee } from './statistiques.js';
+import { lignesParMode, tuilesDesStatistiques } from './statistiques.js';
 
 /** Le sens d'une variation de points de ligue, qui decide de sa couleur. */
 export type SensDUneVariation = 'hausse' | 'baisse' | 'stable';
@@ -62,10 +62,12 @@ export type ModeleProfil =
       readonly pseudo: string;
       readonly initiales: string;
       readonly palier: string;
-      /** « Inscrit le 11 septembre 2026 ». */
+      /** « Membre depuis le 11 septembre 2026 ». */
       readonly inscription: string;
       readonly barre: BarreDeNiveau;
       readonly statistiques: readonly StatistiqueAffichee[];
+      /** Les modes joues, dans l'ordre des modes du jeu (etape 3.5). */
+      readonly parMode: readonly LigneDUnMode[];
       /** Les dernieres parties, de la plus recente a la plus ancienne. */
       readonly parties: readonly LigneDHistorique[];
     };
@@ -82,6 +84,14 @@ const FORMAT_DE_PARTIE = new Intl.DateTimeFormat('fr-FR', {
 /** Une date d'inscription, ecrite a la francaise, dans le fuseau du joueur. */
 export function formaterJour(iso: string): string {
   return FORMAT_DE_JOUR.format(new Date(iso));
+}
+
+/**
+ * La ligne d'inscription du profil et de la fiche: « Membre depuis le 11 septembre
+ * 2026 ». Pas « Inscrit le », qui genrait le joueur (etape 3.5).
+ */
+export function formaterInscription(iso: string): string {
+  return `Membre depuis le ${formaterJour(iso)}`;
 }
 
 /** La fin d'une partie, ecrite a la francaise, dans le fuseau du joueur. */
@@ -117,30 +127,14 @@ function profilCharge(profil: ProfilDuCompte): ModeleProfil {
     pseudo: profil.pseudo,
     initiales: initiales(profil.pseudo),
     palier: NOMS_DES_PALIERS[palierDePoints(profil.pointsLigue)],
-    inscription: `Inscrit le ${formaterJour(profil.inscritLe)}`,
+    inscription: formaterInscription(profil.inscritLe),
     barre: barreDeNiveau(profil.xpTotale),
     statistiques: [
-      { libelle: 'Parties jouées', valeur: formaterNombre(statistiques.partiesJouees) },
-      { libelle: 'Victoires', valeur: formaterNombre(statistiques.victoires) },
-      {
-        libelle: 'Meilleur score',
-        // Un tiret plutot qu'un zero: aucune partie n'a encore ete jouee.
-        valeur:
-          statistiques.meilleurScore === undefined
-            ? '—'
-            : formaterNombre(statistiques.meilleurScore),
-      },
-      {
-        // Le record personnel du Massacre joue seul (etape 7.4), un tiret tant qu'il n'y en a pas.
-        libelle: 'Record Massacre solo',
-        valeur:
-          statistiques.recordMassacreSolo === undefined
-            ? '—'
-            : formaterNombre(statistiques.recordMassacreSolo),
-      },
+      ...tuilesDesStatistiques(statistiques),
       { libelle: 'Pièces', valeur: formaterNombre(profil.pieces) },
       { libelle: 'Points de ligue', valeur: formaterNombre(profil.pointsLigue) },
     ],
+    parMode: lignesParMode(statistiques),
     parties: profil.dernieresParties.map(ligneDHistorique),
   };
 }

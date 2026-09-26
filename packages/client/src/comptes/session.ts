@@ -93,6 +93,13 @@ export interface CommandesDeSession {
   demanderUnCodeDeSecours(demande: DemandeCodeDeSecours): void;
   /** Le joueur a note son code de secours: il est oublie (etape 3.4). */
   noterLeCodeDeSecours(): void;
+  /**
+   * Ouvre la fiche du joueur qui porte ce pseudo, et la lit (etape 3.5). Sans effet
+   * pour un invite, qui n'a pas de fiche a lire, ou si cette fiche se lit deja.
+   */
+  ouvrirLaFiche(pseudo: string): void;
+  /** Ferme la fiche ouverte. Une lecture en cours sera ignoree a son arrivee. */
+  fermerLaFiche(): void;
 }
 
 /** Le motif d'une demande de compte sans comptes a joindre. */
@@ -401,6 +408,51 @@ export function brancherLaSession(options: OptionsSession): CommandesDeSession {
       if (magasin.etat.codeDeSecours !== undefined) {
         magasin.appliquer({ type: 'codeDeSecoursNote' });
       }
+    },
+
+    // La fiche s'ouvre aussi pendant une partie, au salon comme a la fin: une session
+    // que le serveur ne reconnait plus ne s'y perd donc pas, la fiche dit seulement
+    // son refus. Hors partie, elle se traite comme a la lecture du profil.
+    ouvrirLaFiche: (pseudo) => {
+      const jeton = coffre.lire();
+      const fiche = magasin.etat.fiche;
+
+      if (
+        api === undefined ||
+        jeton === undefined ||
+        magasin.etat.session.nature !== 'compte' ||
+        (fiche.statut === 'chargement' && fiche.pseudo === pseudo)
+      ) {
+        return;
+      }
+
+      magasin.appliquer({ type: 'ficheDemandee', pseudo });
+
+      void api.joueur(jeton, pseudo).then((reponse) => {
+        if (coffre.lire() !== jeton) {
+          return;
+        }
+
+        if (reponse.acceptee) {
+          magasin.appliquer({ type: 'ficheRecue', pseudo, fiche: reponse.valeur });
+          return;
+        }
+
+        if (reponse.statut === STATUT_SESSION_ABSENTE && horsPartie()) {
+          perdreLaSession();
+          return;
+        }
+
+        magasin.appliquer({
+          type: 'ficheRefusee',
+          pseudo,
+          motif: reponse.erreurs.map((erreur) => erreur.motif).join(' '),
+        });
+      });
+    },
+
+    fermerLaFiche: () => {
+      magasin.appliquer({ type: 'ficheFermee' });
     },
   };
 }

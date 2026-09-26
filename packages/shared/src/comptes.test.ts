@@ -10,6 +10,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { BORNES_CODE_DE_SECOURS, BORNES_JETON, BORNES_MOT_DE_PASSE } from './bornes.js';
+import { PARAMETRE_PSEUDO, ROUTES_COMPTES, adresseDeLaFiche } from './comptes.js';
 import type { ResultatValidation } from './validation.js';
 import {
   formaterCodeDeSecours,
@@ -276,5 +277,32 @@ describe('validerDemandeCreation sans pseudo', () => {
 
     expect(demande.pseudo).toBeUndefined();
     expect('pseudo' in demande).toBe(false);
+  });
+});
+
+describe('adresseDeLaFiche', () => {
+  /** Le pseudo tel que le serveur le relira dans l'adresse. */
+  function pseudoRelu(adresse: string): string | null {
+    const url = new URL(adresse, 'https://jeu.example');
+
+    expect(url.pathname).toBe(ROUTES_COMPTES.joueur);
+
+    return url.searchParams.get(PARAMETRE_PSEUDO);
+  }
+
+  it('porte le pseudo en parametre, sur la route de la fiche', () => {
+    expect(adresseDeLaFiche('Alice')).toBe(`${ROUTES_COMPTES.joueur}?pseudo=Alice`);
+  });
+
+  it('rend relisible un pseudo avec espace, accent, point ou signe de requete', () => {
+    for (const pseudo of ['Léa B.', 'a&b=c', 'x+y', '#1', '?']) {
+      expect(pseudoRelu(adresseDeLaFiche(pseudo))).toBe(pseudo);
+    }
+  });
+
+  it('ne laisse pas un pseudo en points sortir de la route', () => {
+    for (const pseudo of ['.', '..', '../profil']) {
+      expect(pseudoRelu(adresseDeLaFiche(pseudo))).toBe(pseudo);
+    }
   });
 });

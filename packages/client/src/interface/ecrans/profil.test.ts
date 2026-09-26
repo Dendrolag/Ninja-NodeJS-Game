@@ -26,7 +26,21 @@ const PROFIL: ProfilDuCompte = {
   xpTotale: 150,
   niveau: 2,
   pointsLigue: 120,
-  statistiques: { partiesJouees: 2, victoires: 1, meilleurScore: 42 },
+  statistiques: {
+    partiesJouees: 2,
+    partiesAPlusieurs: 2,
+    victoires: 1,
+    modePrefere: 'classique',
+    parMode: [
+      {
+        mode: 'classique',
+        partiesJouees: 2,
+        partiesAPlusieurs: 2,
+        victoires: 1,
+        meilleurScore: 42,
+      },
+    ],
+  },
   dernieresParties: [
     {
       mode: 'classique',
@@ -109,12 +123,17 @@ describe('l ecran du profil', () => {
       [...hote.querySelectorAll('.statistique')].map((statistique) => statistique.textContent),
     ).toEqual([
       '2Parties jouées',
-      '1Victoires',
-      '42Meilleur score',
-      '—Record Massacre solo',
+      '1Victoiressur 2 parties à plusieurs',
+      'HordeMode préféré',
       '0Pièces',
       '120Points de ligue',
     ]);
+    expect(
+      [...hote.querySelectorAll('.tableau-par-mode tbody tr')].map((ligne) =>
+        [...ligne.children].map((cellule) => cellule.textContent),
+      ),
+    ).toEqual([['Horde', '2', '1 sur 2', '42', '—']]);
+    expect(estCache(obligatoire(hote, '.profil-par-mode'))).toBe(false);
 
     const cellules = [...hote.querySelectorAll('.tableau-historique tbody td')].map(
       (cellule) => cellule.textContent,
@@ -130,6 +149,8 @@ describe('l ecran du profil', () => {
 
     expect(estCache(obligatoire(hote, '.profil-vide'))).toBe(false);
     expect(estCache(obligatoire(hote, '.tableau-historique'))).toBe(true);
+    // Sans partie, le tableau par mode n'aurait que ses titres.
+    expect(estCache(obligatoire(hote, '.profil-par-mode'))).toBe(true);
   });
 
   it('dit pourquoi le profil n a pas pu etre lu, et le relit sur demande', async () => {

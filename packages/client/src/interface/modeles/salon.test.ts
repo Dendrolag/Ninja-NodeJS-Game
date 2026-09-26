@@ -10,6 +10,7 @@ import type { InfosSalon, JoueurDuSalon, ReglagesPartiels } from '@neon-ninja/sh
 import { REGLAGES_PAR_DEFAUT, completerReglages } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
+import { progressionDEssai } from '../../comptes/api.js';
 import type { EtatClient } from '../../etat.js';
 import { ETAT_INITIAL } from '../../etat.js';
 import { initiales, modeleSalon } from './salon.js';
@@ -67,9 +68,36 @@ describe('modeleSalon', () => {
     expect(modele?.titre).toBe('Salon de Bob');
     expect(modele?.effectif).toBe('2 joueurs');
     expect(modele?.joueurs).toEqual([
-      { id: 'moi', pseudo: 'Alice', initiales: 'AL', hote: false, moi: true },
-      { id: 'bob', pseudo: 'Bob', initiales: 'BO', hote: true, moi: false },
+      { id: 'moi', pseudo: 'Alice', initiales: 'AL', hote: false, moi: true, aUneFiche: false },
+      { id: 'bob', pseudo: 'Bob', initiales: 'BO', hote: true, moi: false, aUneFiche: false },
     ]);
+  });
+
+  it('ouvre la fiche des joueurs qui ont un compte, a qui a un compte (etape 3.5)', () => {
+    const infos = salon('bob', {
+      joueurs: [
+        { id: 'moi', pseudo: 'Alice', hote: false, compte: { niveau: 7 } },
+        { id: 'bob', pseudo: 'Bob', hote: true, compte: { niveau: 2 } },
+        { id: 'eve', pseudo: 'Eve', hote: false },
+      ],
+    });
+    const fiches = (session: EtatClient['session']): readonly (readonly [string, boolean])[] =>
+      modeleSalon(etat(infos, { session }))?.joueurs.map(
+        (joueur) => [joueur.pseudo, joueur.aUneFiche] as const,
+      ) ?? [];
+
+    expect(fiches({ nature: 'compte', progression: progressionDEssai('Alice') })).toEqual([
+      ['Alice', true],
+      ['Bob', true],
+      ['Eve', false],
+    ]);
+    // Un invite ne lit aucune fiche, et une session en verification n'est pas encore un compte.
+    expect(fiches({ nature: 'invite', sessionExpiree: false })).toEqual([
+      ['Alice', false],
+      ['Bob', false],
+      ['Eve', false],
+    ]);
+    expect(fiches({ nature: 'verification' }).every(([, fiche]) => !fiche)).toBe(true);
   });
 
   it('montre le niveau d un compte, et aucun pour un invite', () => {

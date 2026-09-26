@@ -22,6 +22,7 @@
 import type {
   ErreurValidation,
   EtatCompteARebours,
+  FicheJoueur,
   FinDePartie,
   InfosSalon,
   MaProgression,
@@ -123,6 +124,14 @@ export type Action =
   | { readonly type: 'profilRecu'; readonly profil: ProfilDuCompte }
   /** Le profil n'a pas pu etre lu, pour ce motif. */
   | { readonly type: 'profilRefuse'; readonly motif: string }
+  /** La lecture de la fiche de ce joueur est partie: elle s'ouvre (etape 3.5). */
+  | { readonly type: 'ficheDemandee'; readonly pseudo: string }
+  /** La fiche demandee pour ce pseudo est arrivee. */
+  | { readonly type: 'ficheRecue'; readonly pseudo: string; readonly fiche: FicheJoueur }
+  /** La fiche demandee pour ce pseudo n'a pas pu etre lue, pour ce motif. */
+  | { readonly type: 'ficheRefusee'; readonly pseudo: string; readonly motif: string }
+  /** Le joueur ferme la fiche. */
+  | { readonly type: 'ficheFermee' }
   /**
    * Le joueur demande a entrer, ou a creer une partie.
    *

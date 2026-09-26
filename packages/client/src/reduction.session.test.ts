@@ -250,7 +250,21 @@ describe('le profil', () => {
       ...PROGRESSION,
       xpTotale: 400,
       niveau: 3,
-      statistiques: { partiesJouees: 3, victoires: 1, meilleurScore: 12 },
+      statistiques: {
+        partiesJouees: 3,
+        partiesAPlusieurs: 3,
+        victoires: 1,
+        modePrefere: 'classique' as const,
+        parMode: [
+          {
+            mode: 'classique' as const,
+            partiesJouees: 3,
+            partiesAPlusieurs: 3,
+            victoires: 1,
+            meilleurScore: 12,
+          },
+        ],
+      },
       dernieresParties: [],
       codeDeSecours: false,
     };
@@ -271,7 +285,7 @@ describe('le profil', () => {
   it('sait que le compte a un code des qu un code est emis (etape 3.4)', () => {
     const profil = {
       ...PROGRESSION,
-      statistiques: { partiesJouees: 0, victoires: 0 },
+      statistiques: { partiesJouees: 0, partiesAPlusieurs: 0, victoires: 0, parMode: [] },
       dernieresParties: [],
       codeDeSecours: false,
     };

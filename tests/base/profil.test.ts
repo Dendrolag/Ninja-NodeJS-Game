@@ -4,7 +4,8 @@
  * Ce sont les tests de la route du profil que demande la fiche de la reprise des
  * ecrans du jalon 3: les statistiques se deduisent de tout l'historique enregistre,
  * seules les dernieres parties sont rendues, une partie jouee seul n'est pas une
- * victoire, et le profil n'est rendu qu'a qui presente sa session.
+ * victoire, et le profil n'est rendu qu'a qui presente sa session. Depuis l'etape
+ * 3.5, les statistiques se lisent par mode, comme sur la fiche (fiche.test.ts).
  */
 
 import type { LimitesDesComptes, NouveauResultat, ServeurMonte } from '@neon-ninja/server';
@@ -122,7 +123,12 @@ describe.runIf(baseDisponible())('profil', () => {
 
     const profil = await profilDe(auth, jeton);
 
-    expect(profil.statistiques).toEqual({ partiesJouees: 0, victoires: 0 });
+    expect(profil.statistiques).toEqual({
+      partiesJouees: 0,
+      partiesAPlusieurs: 0,
+      victoires: 0,
+      parMode: [],
+    });
     expect(profil.dernieresParties).toEqual([]);
     expect(profil).toMatchObject({ niveau: 1, xpTotale: 0, pieces: 0, pointsLigue: 0 });
   });
@@ -145,7 +151,21 @@ describe.runIf(baseDisponible())('profil', () => {
 
     const profil = await profilDe(auth, jeton);
 
-    expect(profil.statistiques).toEqual({ partiesJouees: total, victoires: 4, meilleurScore: 99 });
+    expect(profil.statistiques).toEqual({
+      partiesJouees: total,
+      partiesAPlusieurs: total,
+      victoires: 4,
+      modePrefere: 'classique',
+      parMode: [
+        {
+          mode: 'classique',
+          partiesJouees: total,
+          partiesAPlusieurs: total,
+          victoires: 4,
+          meilleurScore: 99,
+        },
+      ],
+    });
     expect(profil.dernieresParties).toHaveLength(PARTIES_DU_PROFIL);
     expect(profil.dernieresParties[0]).toEqual({
       mode: 'classique',
@@ -170,12 +190,23 @@ describe.runIf(baseDisponible())('profil', () => {
 
     expect((await profilDe(auth, jeton)).statistiques).toEqual({
       partiesJouees: 2,
+      partiesAPlusieurs: 1,
       victoires: 1,
-      meilleurScore: 40,
+      modePrefere: 'classique',
+      parMode: [
+        {
+          mode: 'classique',
+          partiesJouees: 2,
+          partiesAPlusieurs: 1,
+          victoires: 1,
+          meilleurScore: 40,
+          meilleurScoreSeul: 40,
+        },
+      ],
     });
   });
 
-  it('deduit le record en Massacre des seules parties Massacre jouees seul', async () => {
+  it('range le record en Massacre solo dans la ligne du Massacre, sans meilleur score global', async () => {
     const auth = authentification();
     const { jeton, compteId } = await inscrire(auth);
 
@@ -186,9 +217,27 @@ describe.runIf(baseDisponible())('profil', () => {
 
     expect((await profilDe(auth, jeton)).statistiques).toEqual({
       partiesJouees: 4,
+      partiesAPlusieurs: 1,
       victoires: 1,
-      meilleurScore: 900,
-      recordMassacreSolo: 700,
+      modePrefere: 'massacre',
+      parMode: [
+        {
+          mode: 'classique',
+          partiesJouees: 1,
+          partiesAPlusieurs: 0,
+          victoires: 0,
+          meilleurScore: 800,
+          meilleurScoreSeul: 800,
+        },
+        {
+          mode: 'massacre',
+          partiesJouees: 3,
+          partiesAPlusieurs: 1,
+          victoires: 1,
+          meilleurScore: 900,
+          meilleurScoreSeul: 700,
+        },
+      ],
     });
   });
 
@@ -213,7 +262,9 @@ describe.runIf(baseDisponible())('profil', () => {
     expect(avecSession.status).toBe(200);
     expect(((await avecSession.json()) as ProfilDuCompte).statistiques).toEqual({
       partiesJouees: 0,
+      partiesAPlusieurs: 0,
       victoires: 0,
+      parMode: [],
     });
     expect(sansSession.status).toBe(401);
     expect(jetonInconnu.status).toBe(401);

@@ -12,6 +12,7 @@
  */
 
 import { monterSecuriteDuCompte } from '../composants/securiteDuCompte.js';
+import { tableauParMode, tuilesDeStatistiques } from '../composants/statistiques.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import { icone } from '../icones.js';
 import type { LigneDHistorique, ModeleProfil } from '../modeles/profil.js';
@@ -55,6 +56,14 @@ export function monterProfil(contexte: ContexteEcran): EcranAffiche {
   const remplissage = creer(doc, 'span', { classe: 'barre-remplie' });
   const xp = creer(doc, 'p', { classe: 'barre-niveau-xp' });
   const statistiques = creer(doc, 'ul', { classe: 'statistiques' });
+  const parMode = creer(doc, 'div', { classe: 'profil-par-mode-tableau' });
+  const sectionParMode = creer(
+    doc,
+    'section',
+    { classe: 'panneau profil-par-mode' },
+    creer(doc, 'h2', { texte: 'Par mode' }),
+    parMode,
+  );
   const corpsHistorique = creer(doc, 'tbody');
   const historique = creer(
     doc,
@@ -134,6 +143,7 @@ export function monterProfil(contexte: ContexteEcran): EcranAffiche {
       creer(doc, 'h2', { texte: 'Statistiques' }),
       statistiques,
     ),
+    sectionParMode,
     creer(
       doc,
       'section',
@@ -167,17 +177,10 @@ export function monterProfil(contexte: ContexteEcran): EcranAffiche {
     remplissage.style.setProperty('--remplissage', `${String(modele.barre.pourCent)}%`);
     ecrireTexte(xp, modele.barre.xp);
 
-    statistiques.replaceChildren(
-      ...modele.statistiques.map((statistique) =>
-        creer(
-          doc,
-          'li',
-          { classe: 'panneau statistique' },
-          creer(doc, 'strong', { texte: statistique.valeur }),
-          creer(doc, 'span', { texte: statistique.libelle }),
-        ),
-      ),
-    );
+    statistiques.replaceChildren(...tuilesDeStatistiques(doc, modele.statistiques));
+    parMode.replaceChildren(tableauParMode(doc, modele.parMode));
+    // Sans partie, le tableau n'aurait que ses titres: l'historique vide dit deja pourquoi.
+    montrer(sectionParMode, modele.parMode.length > 0);
 
     corpsHistorique.replaceChildren(...modele.parties.map((partie) => rangee(doc, partie)));
     montrer(historique, modele.parties.length > 0);

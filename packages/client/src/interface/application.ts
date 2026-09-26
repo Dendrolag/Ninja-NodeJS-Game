@@ -1,5 +1,7 @@
 /**
- * L'application: l'en-tete, l'ecran affiche, les annonces, l'aide et le son.
+ * L'application: l'en-tete, l'ecran affiche, les annonces, l'aide et le son, et les
+ * fenetres qui se posent par-dessus n'importe quel ecran: le code de secours et la
+ * fiche d'un joueur.
  *
  * C'EST LE SEUL ABONNE DU CLIENT. A chaque changement d'etat, elle regarde quel
  * ecran doit etre affiche (la reponse est deja dans etat.ecran, calculee par
@@ -38,6 +40,7 @@ import { monterAide } from './composants/aide.js';
 import { monterFilDAnnonces } from './composants/annonces.js';
 import { monterFenetreDuCode } from './composants/codeDeSecours.js';
 import { monterCompteDeLEntete } from './composants/compte.js';
+import { monterFenetreDeLaFiche } from './composants/ficheJoueur.js';
 import { monterLigneDuLien } from './composants/lien.js';
 import { monterNavigation } from './composants/navigation.js';
 import { monterPanneauSon } from './composants/son.js';
@@ -134,6 +137,8 @@ export function monterApplication(options: OptionsApplication): Application {
   const annonces = monterFilDAnnonces(doc);
   // Le code de secours s'affiche par-dessus n'importe quel ecran (etape 3.4).
   const fenetreDuCode = monterFenetreDuCode(doc, client);
+  // La fiche d'un joueur aussi, ouverte depuis le salon ou la fin (etape 3.5).
+  const fenetreDeLaFiche = monterFenetreDeLaFiche(doc, client);
   const compte = monterCompteDeLEntete(doc, client);
   const navigation = monterNavigation(doc, client);
 
@@ -195,6 +200,7 @@ export function monterApplication(options: OptionsApplication): Application {
     annonces.racine,
     aide.racine,
     panneauSon.racine,
+    fenetreDeLaFiche.racine,
     fenetreDuCode.racine,
   );
 
@@ -240,6 +246,7 @@ export function monterApplication(options: OptionsApplication): Application {
   ecran.afficher(precedent);
   compte.afficher(precedent);
   navigation.afficher(precedent);
+  fenetreDeLaFiche.afficher(precedent);
   fenetreDuCode.afficher(precedent);
   ligneDuLien.afficher(precedent);
 
@@ -257,6 +264,7 @@ export function monterApplication(options: OptionsApplication): Application {
     ecran.afficher(etat);
     compte.afficher(etat);
     navigation.afficher(etat);
+    fenetreDeLaFiche.afficher(etat);
     fenetreDuCode.afficher(etat);
     ligneDuLien.afficher(etat);
 
@@ -316,6 +324,7 @@ export function monterApplication(options: OptionsApplication): Application {
       navigation.demonter();
       aide.demonter();
       panneauSon.demonter();
+      fenetreDeLaFiche.demonter();
       fenetreDuCode.demonter();
       ligneDuLien.demonter();
       annonces.demonter();

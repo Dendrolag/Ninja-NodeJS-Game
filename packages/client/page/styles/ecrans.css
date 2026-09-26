@@ -2149,6 +2149,17 @@
   gap: 24px;
 }
 
+/* Une colonne qui peut se reduire sous la largeur d'un tableau: sans elle, le tableau
+   par mode, dont les nombres ne passent pas a la ligne, elargirait la page entiere sur
+   un telephone au lieu de defiler (etape 3.5). */
+.ecran-profil,
+.profil-contenu,
+.profil-statistiques,
+.profil-par-mode,
+.profil-parties {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .profil-chargement {
   color: var(--texte-secondaire);
   font-family: var(--police-donnees);
@@ -2216,16 +2227,19 @@
 }
 
 .profil-statistiques,
+.profil-par-mode,
 .profil-parties {
   display: grid;
   gap: 12px;
 }
 
+.profil-par-mode,
 .profil-parties {
   padding: 18px 20px;
 }
 
 .profil-statistiques h2,
+.profil-par-mode h2,
 .profil-parties h2 {
   font-size: 16px;
   font-weight: 600;
@@ -2255,6 +2269,12 @@
 .statistique span {
   color: var(--texte-tertiaire);
   font-size: 12.5px;
+}
+
+/* La precision d'une tuile: « sur 40 parties à plusieurs » (etape 3.5). */
+.statistique .statistique-detail {
+  color: var(--texte-faible);
+  font-size: 11.5px;
 }
 
 .profil-vide {

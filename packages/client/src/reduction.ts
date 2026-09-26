@@ -33,6 +33,7 @@ import type {
 import {
   AUCUNE_DEMANDE_DE_COMPTE,
   ETAT_INITIAL,
+  FICHE_FERMEE,
   MAX_JOURNAL,
   MAX_MESSAGES,
   PROFIL_INCONNU,
@@ -48,6 +49,26 @@ import { reconstruire } from './reconstruction.js';
  * @param action Ce qui vient d'arriver.
  */
 export function reduire(etat: EtatClient, action: Action): EtatClient {
+  return ficheQuiSuit(etat, etatSuivant(etat, action));
+}
+
+/**
+ * La fiche d'un joueur ne survit ni a un changement d'ecran, ni au retour en invite
+ * (etape 3.5). Ouverte au salon, elle ne doit pas rester par-dessus la partie qui se
+ * lance; et un invite n'a pas de fiche a lire.
+ */
+function ficheQuiSuit(avant: EtatClient, apres: EtatClient): EtatClient {
+  if (apres.fiche.statut === 'fermee') {
+    return apres;
+  }
+
+  return apres.ecran !== avant.ecran || apres.session.nature === 'invite'
+    ? { ...apres, fiche: FICHE_FERMEE }
+    : apres;
+}
+
+/** L'etat apres l'action, la fiche mise a part. */
+function etatSuivant(etat: EtatClient, action: Action): EtatClient {
   const ecran = ecranSuivant(etat.ecran, action);
 
   switch (action.type) {
@@ -241,6 +262,28 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
     case 'profilRefuse':
       return { ...etat, ecran, profil: { statut: 'echec', motif: action.motif } };
 
+    case 'ficheDemandee':
+      return { ...etat, ecran, fiche: { statut: 'chargement', pseudo: action.pseudo } };
+
+    // Une reponse ne vaut que pour la fiche qui l'attend encore: le joueur a pu la fermer,
+    // ou en ouvrir une autre, entre-temps.
+    case 'ficheRecue':
+      return ficheAttendue(etat, action.pseudo)
+        ? {
+            ...etat,
+            ecran,
+            fiche: { statut: 'chargee', pseudo: action.pseudo, fiche: action.fiche },
+          }
+        : etat;
+
+    case 'ficheRefusee':
+      return ficheAttendue(etat, action.pseudo)
+        ? { ...etat, ecran, fiche: { statut: 'echec', pseudo: action.pseudo, motif: action.motif } }
+        : etat;
+
+    case 'ficheFermee':
+      return etat.fiche.statut === 'fermee' ? etat : { ...etat, ecran, fiche: FICHE_FERMEE };
+
     // Un refus de compte ne suit pas le joueur sur un autre ecran. Une demande
     // en cours, elle, continue: sa reponse arrivera.
     // Un refus d'entree non plus: il concernait l'ecran que l'on quitte.
@@ -398,6 +441,11 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
     case 'refus':
       return { ...etat, ecran, refus: action.refus };
   }
+}
+
+/** La fiche de ce pseudo est-elle ouverte, et attend-elle sa lecture. */
+function ficheAttendue(etat: EtatClient, pseudo: string): boolean {
+  return etat.fiche.statut === 'chargement' && etat.fiche.pseudo === pseudo;
 }
 
 /**

@@ -60,6 +60,11 @@ export interface JoueurAffiche {
   readonly niveau: number | undefined;
   /** Son equipe, dans une partie Equipes seulement. */
   readonly equipe: Equipe | undefined;
+  /**
+   * Sa fiche peut s'ouvrir d'un clic sur son pseudo (etape 3.5): il a un compte, et
+   * nous aussi. Un invite n'a pas de fiche, et n'en lit aucune.
+   */
+  readonly aUneFiche: boolean;
 }
 
 /** Une equipe du salon d'une partie Equipes, telle qu'on l'affiche (etape 7.2). */
@@ -178,6 +183,7 @@ export function modeleSalon(etat: EtatClient): ModeleSalon | undefined {
     moi: joueur.id === etat.moi,
     niveau: joueur.compte?.niveau,
     equipe: joueur.equipe,
+    aUneFiche: joueur.compte !== undefined && etat.session.nature === 'compte',
   }));
   const equipes =
     salon.mode === 'equipes'

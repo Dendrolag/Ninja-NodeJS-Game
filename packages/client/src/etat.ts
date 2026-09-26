@@ -21,6 +21,7 @@
 import type {
   ErreurValidation,
   EtatCompteARebours,
+  FicheJoueur,
   FinDePartie,
   InfosSalon,
   MaProgression,
@@ -166,6 +167,22 @@ export type EtatDuProfil =
 export const PROFIL_INCONNU: EtatDuProfil = { statut: 'inconnu' };
 
 /**
+ * La fiche d'un joueur ouverte par-dessus l'ecran, et ce qu'on en a lu (etape 3.5).
+ *
+ * Elle retient le pseudo demande: une reponse qui arrive pour un autre pseudo, apres
+ * que le joueur en a ouvert une autre, ne la remplace pas. Elle se relit a chaque
+ * ouverture, comme le profil.
+ */
+export type EtatDeLaFiche =
+  | { readonly statut: 'fermee' }
+  | { readonly statut: 'chargement'; readonly pseudo: string }
+  | { readonly statut: 'chargee'; readonly pseudo: string; readonly fiche: FicheJoueur }
+  | { readonly statut: 'echec'; readonly pseudo: string; readonly motif: string };
+
+/** Aucune fiche ouverte. */
+export const FICHE_FERMEE: EtatDeLaFiche = { statut: 'fermee' };
+
+/**
  * Un message de chat, date a son arrivee chez nous.
  *
  * Le serveur n'envoie aucune heure, et c'est delibere: la sienne est monotone et
@@ -236,6 +253,12 @@ export interface EtatClient {
   readonly codeDeSecours: string | undefined;
   /** Le profil du compte, lu a l'ouverture de son ecran. */
   readonly profil: EtatDuProfil;
+  /**
+   * La fiche d'un joueur, ouverte depuis le salon ou le classement de fin (etape 3.5).
+   * Elle se ferme d'elle-meme quand l'ecran change, et quand la session redevient celle
+   * d'un invite, qui n'a pas de fiche a lire.
+   */
+  readonly fiche: EtatDeLaFiche;
   /**
    * Notre identifiant de joueur, donne par le serveur a l'entree en partie.
    *
@@ -354,6 +377,7 @@ export const ETAT_INITIAL: EtatClient = {
   demandeDeCompte: AUCUNE_DEMANDE_DE_COMPTE,
   codeDeSecours: undefined,
   profil: PROFIL_INCONNU,
+  fiche: FICHE_FERMEE,
   moi: undefined,
   pseudoDemande: undefined,
   pseudoSaisi: '',
