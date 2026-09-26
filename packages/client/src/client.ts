@@ -90,14 +90,17 @@ export interface OptionsClient {
 /**
  * Comment viser une partie precise en y entrant.
  *
- * Par son identifiant, choisi dans la liste des parties publiques, ou par le code
- * d'invitation d'une partie privee. Sans l'un ni l'autre, c'est la partie rapide,
- * d'un mode donne si on le precise (« Rejouer », etape 5.5).
+ * Par son identifiant, choisi dans la liste des parties publiques ou sur la ligne d'un
+ * ami, par le code d'invitation d'une partie privee, ou par l'invitation d'un ami
+ * (etape 2.8). Sans rien de cela, c'est la partie rapide, d'un mode donne si on le
+ * precise (« Rejouer », etape 5.5).
  */
 export type AccesPartie =
   | { readonly idRoom: string }
   | { readonly code: string }
-  | { readonly mode: Mode; readonly reglages?: ReglagesPartiels };
+  | { readonly mode: Mode; readonly reglages?: ReglagesPartiels }
+  /** L'invitation d'un ami, par son identifiant (etape 2.8). */
+  | { readonly invitation: string };
 
 /**
  * Un client monte: son etat, et ce que le joueur peut demander.
@@ -130,6 +133,13 @@ export interface Client extends CommandesDeSession {
   listerParties(): void;
   /** Quitte la partie sans couper le lien. */
   quitter(): void;
+  /**
+   * Invite cet ami dans la partie ou l'on est (etape 2.8). Le salon dit ce qu'il en est,
+   * ami par ami. Sans lien, rien ne part.
+   */
+  inviter(pseudo: string): void;
+  /** Ignore une invitation recue d'un ami: elle quitte la page, l'inviteur n'en sait rien. */
+  ignorerLInvitationDAmi(id: string): void;
   /** Annonce ou l'on veut aller. */
   deplacer(intention: IntentionDeplacement): void;
   /** Tire, dans une partie Tactique. Ailleurs, le serveur ignore la demande. */
@@ -470,6 +480,34 @@ export function creerClient(options: OptionsClient): Client {
     }),
   );
 
+  // -- Les amis en direct (etape 2.8) ---------------------------------------
+
+  ecouter(
+    reseau.sur('presenceDesAmis', (presences) => {
+      magasin.appliquer({ type: 'presenceDesAmis', presences });
+    }),
+  );
+
+  // Le serveur signale un geste qui a change nos amities: la liste se relit aussitot, et
+  // la pastille des demandes recues suit sans attendre la prochaine navigation.
+  ecouter(
+    reseau.sur('amitiesChangees', () => {
+      session.relireLesAmis();
+    }),
+  );
+
+  ecouter(
+    reseau.sur('invitationRecue', (invitation) => {
+      magasin.appliquer({ type: 'invitationRecue', invitation });
+    }),
+  );
+
+  ecouter(
+    reseau.sur('invitationRetiree', ({ id }) => {
+      magasin.appliquer({ type: 'invitationRetiree', id });
+    }),
+  );
+
   // -- Les refus ------------------------------------------------------------
 
   ecouter(
@@ -527,7 +565,11 @@ export function creerClient(options: OptionsClient): Client {
     },
 
     rejoindre: (pseudo, acces) => {
-      magasin.appliquer({ type: 'entreeDemandee', pseudo });
+      magasin.appliquer({
+        type: 'entreeDemandee',
+        pseudo,
+        ...(acces !== undefined && 'invitation' in acces ? { invitation: acces.invitation } : {}),
+      });
 
       // Le contrat declare le pseudo, l'identifiant et le code optionnels, et les
       // poser a undefined n'est pas la meme chose que ne pas les poser du tout.
@@ -557,6 +599,29 @@ export function creerClient(options: OptionsClient): Client {
       retour.renoncer();
       retablissement.renoncerAuSalon();
       session.chargerLesAmis();
+    },
+
+    inviter: (pseudo) => {
+      if (!reseau.connecte) {
+        return;
+      }
+
+      magasin.appliquer({ type: 'invitationEnvoyee', pseudo });
+      reseau.emettre('inviter', { pseudo }, (reponse) => {
+        magasin.appliquer(
+          reponse.valide
+            ? { type: 'invitationPartie', pseudo }
+            : {
+                type: 'invitationRefusee',
+                pseudo,
+                motif: reponse.erreurs.map((erreur) => erreur.motif).join(' '),
+              },
+        );
+      });
+    },
+
+    ignorerLInvitationDAmi: (id) => {
+      magasin.appliquer({ type: 'invitationDAmiIgnoree', id });
     },
 
     /**

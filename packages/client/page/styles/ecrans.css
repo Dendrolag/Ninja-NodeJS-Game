@@ -2272,6 +2272,154 @@
   margin-left: 0;
 }
 
+/* -- Presence et invitations des amis (etape 2.8) ----------------------- */
+
+/* La presence d'un ami: une pastille de couleur, puis ou il est. */
+.ligne-ami-presence,
+.fiche-presence {
+  --couleur-presence: var(--texte-faible);
+
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--texte-secondaire);
+  font-size: 12.5px;
+}
+
+.ligne-ami-presence::before,
+.fiche-presence::before {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--couleur-presence);
+  content: '';
+}
+
+[data-presence='enLigne'] {
+  --couleur-presence: var(--vert);
+}
+
+[data-presence='salon'] {
+  --couleur-presence: var(--cyan);
+}
+
+[data-presence='enPartie'] {
+  --couleur-presence: var(--or);
+}
+
+[data-presence='enLigne']::before,
+[data-presence='salon']::before,
+[data-presence='enPartie']::before {
+  box-shadow: 0 0 6px var(--couleur-presence);
+}
+
+/* Les invitations recues, entre l'en-tete et l'ecran de menu. */
+.invitations-d-amis {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  max-width: var(--largeur-page);
+  margin: 16px auto 0;
+  padding: 0 var(--marge-page);
+}
+
+.invitation-d-ami {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  padding: 12px 16px;
+  border-color: rgba(45, 230, 224, 0.35);
+  background: rgba(45, 230, 224, 0.07);
+}
+
+.invitation-texte {
+  display: grid;
+  flex: 1 1 200px;
+  gap: 2px;
+  min-width: 0;
+}
+
+.invitation-titre {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
+.invitation-detail {
+  margin: 0;
+  color: var(--texte-secondaire);
+  font-family: var(--police-donnees);
+  font-size: 12px;
+}
+
+.invitation-erreur {
+  margin: 0;
+  color: var(--rose-clair);
+  font-size: 13px;
+}
+
+.invitation-gestes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* La section du salon qui invite les amis en ligne. */
+.salon-amis {
+  display: grid;
+  gap: 12px;
+  padding: clamp(14px, 3vw, 20px);
+}
+
+.salon-amis h2 {
+  font-size: 16px;
+}
+
+.salon-amis-liste {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.salon-ami {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.salon-ami-identite {
+  display: grid;
+  flex: 1 1 140px;
+  gap: 2px;
+  min-width: 0;
+}
+
+.salon-ami-pseudo {
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
+.salon-ami-note {
+  color: var(--vert);
+  font-size: 12.5px;
+}
+
+.salon-ami-refus {
+  color: var(--rose-clair);
+}
+
+.salon-amis-vide {
+  margin: 0;
+  color: var(--texte-tertiaire);
+  font-size: 13.5px;
+}
+
 /* -- Profil -------------------------------------------------------------- */
 
 .ecran-profil,

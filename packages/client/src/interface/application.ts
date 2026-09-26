@@ -1,7 +1,7 @@
 /**
  * L'application: l'en-tete, l'ecran affiche, les annonces, l'aide et le son, et les
  * fenetres qui se posent par-dessus n'importe quel ecran: le code de secours et la
- * fiche d'un joueur.
+ * fiche d'un joueur. Depuis l'etape 2.8, les invitations des amis, au-dessus des menus.
  *
  * C'EST LE SEUL ABONNE DU CLIENT. A chaque changement d'etat, elle regarde quel
  * ecran doit etre affiche (la reponse est deja dans etat.ecran, calculee par
@@ -41,6 +41,7 @@ import { monterFilDAnnonces } from './composants/annonces.js';
 import { monterFenetreDuCode } from './composants/codeDeSecours.js';
 import { monterCompteDeLEntete } from './composants/compte.js';
 import { monterFenetreDeLaFiche } from './composants/ficheJoueur.js';
+import { monterInvitationsDAmis } from './composants/invitationsDAmis.js';
 import { monterLigneDuLien } from './composants/lien.js';
 import { monterNavigation } from './composants/navigation.js';
 import { monterPanneauSon } from './composants/son.js';
@@ -155,6 +156,9 @@ export function monterApplication(options: OptionsApplication): Application {
   // eux-memes (etape 2.6).
   const ligneDuLien = monterLigneDuLien(doc, client, recharger);
 
+  // Les invitations des amis, au-dessus des ecrans de menu seulement (etape 2.8).
+  const invitationsDAmis = monterInvitationsDAmis(doc, client);
+
   const libelle = creer(doc, 'span', { classe: 'marque-ecran' });
   const scene = creer(doc, 'main', { classe: 'scene-ecran' });
 
@@ -199,6 +203,7 @@ export function monterApplication(options: OptionsApplication): Application {
       ),
     ),
     ligneDuLien.racine,
+    invitationsDAmis.racine,
     scene,
     annonces.racine,
     aide.racine,
@@ -252,6 +257,7 @@ export function monterApplication(options: OptionsApplication): Application {
   fenetreDeLaFiche.afficher(precedent);
   fenetreDuCode.afficher(precedent);
   ligneDuLien.afficher(precedent);
+  invitationsDAmis.afficher(precedent);
 
   const surChangement = (): void => {
     const etat = client.etat;
@@ -270,6 +276,7 @@ export function monterApplication(options: OptionsApplication): Application {
     fenetreDeLaFiche.afficher(etat);
     fenetreDuCode.afficher(etat);
     ligneDuLien.afficher(etat);
+    invitationsDAmis.afficher(etat);
 
     if (sons !== undefined && !(precedent.ecran === 'jeu' && etat.ecran === 'jeu')) {
       for (const nom of sonsDuChangement(precedent, etat)) {
@@ -330,6 +337,7 @@ export function monterApplication(options: OptionsApplication): Application {
       fenetreDeLaFiche.demonter();
       fenetreDuCode.demonter();
       ligneDuLien.demonter();
+      invitationsDAmis.demonter();
       annonces.demonter();
       racine.remove();
     },

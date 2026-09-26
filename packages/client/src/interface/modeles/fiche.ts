@@ -13,11 +13,13 @@
  * FONCTION PURE. Le client met en forme ce que le serveur a lu.
  */
 
-import type { FaceAFace, FicheJoueur } from '@neon-ninja/shared';
+import type { FaceAFace, FicheJoueur, LieuDUnAmi } from '@neon-ninja/shared';
 
 import type { EtatClient, EtatDuGeste } from '../../etat.js';
 import type { GestePropose } from './amis.js';
 import { gesteSur, gestesDeLaRelation, modeleDuGeste, phraseDeLaRelation } from './amis.js';
+import type { PresenceAffichee } from './presence.js';
+import { lieuDe, presenceAffichee } from './presence.js';
 import { formaterInscription } from './profil.js';
 import { NOMS_DES_PALIERS } from './progression.js';
 import { formaterNombre } from './progression.js';
@@ -57,6 +59,8 @@ export type ModeleFiche =
 export interface ModeleAmitie {
   /** « Vous êtes amis. » Absente quand il n'y a aucune relation. */
   readonly phrase: string | undefined;
+  /** Ou est cet ami (etape 2.8). Absente pour qui n'est pas ami. */
+  readonly presence?: PresenceAffichee;
   readonly gestes: readonly GestePropose[];
   /** Un geste sur ce compte attend sa reponse: les boutons ne repartent pas. */
   readonly enCours: boolean;
@@ -79,12 +83,16 @@ export function modeleFiche(etat: EtatClient): ModeleFiche {
       return { nature: 'echec', pseudo: fiche.pseudo, motif: fiche.motif };
 
     case 'chargee':
-      return ficheChargee(fiche.fiche, etat.amis.geste);
+      return ficheChargee(fiche.fiche, etat.amis.geste, lieuDe(etat, fiche.fiche.pseudo));
   }
 }
 
 /** La fiche lue, mise en forme, avec le dernier geste d'amitie s'il la concerne. */
-function ficheChargee(fiche: FicheJoueur, geste: EtatDuGeste): ModeleFiche {
+function ficheChargee(
+  fiche: FicheJoueur,
+  geste: EtatDuGeste,
+  lieu: LieuDUnAmi | undefined,
+): ModeleFiche {
   const dernier = modeleDuGeste(gesteSur(geste, fiche.pseudo));
 
   return {
@@ -101,6 +109,7 @@ function ficheChargee(fiche: FicheJoueur, geste: EtatDuGeste): ModeleFiche {
       : {
           amitie: {
             phrase: phraseDeLaRelation(fiche.relation),
+            ...(fiche.relation === 'ami' ? { presence: presenceAffichee(lieu) } : {}),
             gestes: gestesDeLaRelation(fiche.relation),
             enCours: dernier.enCours,
             erreur: dernier.erreur,

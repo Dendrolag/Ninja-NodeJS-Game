@@ -169,7 +169,8 @@ function refusDuServeur(
 ): string | undefined {
   const refus = etat.refus;
 
-  if (refus?.action !== 'rejoindre') {
+  // Le refus d'une entree par l'invitation d'un ami s'affiche sur sa carte (etape 2.8).
+  if (refus?.action !== 'rejoindre' || etat.invitationsDAmis.tentee !== undefined) {
     return undefined;
   }
 

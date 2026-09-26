@@ -40,6 +40,8 @@
  * puis a la demande du client (navigation, retour d'une partie). Un geste d'amitie
  * part avec la session du compte, depuis l'ecran Amis ou depuis une fiche, pendant une
  * partie comme ailleurs: comme la fiche, il ne perd pas la session en pleine partie.
+ * Depuis l'etape 2.8, le serveur signale aussi les amities changees: la liste se relit
+ * alors aussitot, et la fiche ouverte avec elle.
  */
 
 import type {
@@ -114,6 +116,12 @@ export interface CommandesDeSession {
    */
   chargerLesAmis(): void;
   /**
+   * Relit la liste des amis meme si une lecture attend, et la fiche ouverte, qui dit la
+   * relation (etape 2.8). C'est ce que demande le signal du serveur apres un geste: une
+   * lecture partie avant lui rendrait une liste perimee, et la nouvelle la remplace.
+   */
+  relireLesAmis(): void;
+  /**
    * Fait un geste d'amitie sur le compte qui porte ce pseudo (etape 3.6). Sans effet
    * pour un invite, ou pendant qu'un autre geste attend sa reponse.
    */
@@ -156,14 +164,14 @@ export function brancherLaSession(options: OptionsSession): CommandesDeSession {
    * Relit la liste des amis (etape 3.6). Une session que le serveur ne reconnait plus se
    * traite comme a la lecture du profil, hors partie; en partie, la liste dit son echec.
    */
-  const chargerLesAmis = (): void => {
+  const lireLesAmis = (memeSiUneLectureAttend: boolean): void => {
     const jeton = coffre.lire();
 
     if (
       api === undefined ||
       jeton === undefined ||
       magasin.etat.session.nature !== 'compte' ||
-      magasin.etat.amis.lecture !== undefined
+      (magasin.etat.amis.lecture !== undefined && !memeSiUneLectureAttend)
     ) {
       return;
     }
@@ -189,6 +197,29 @@ export function brancherLaSession(options: OptionsSession): CommandesDeSession {
 
       magasin.appliquer({ type: 'amisRefuses', lecture, motif: motifDe(reponse.erreurs) });
     });
+  };
+
+  const chargerLesAmis = (): void => {
+    lireLesAmis(false);
+  };
+
+  /**
+   * Sur signal du serveur (etape 2.8): la liste se relit, et la fiche ouverte aussi, sans
+   * rien dire si sa relecture echoue.
+   */
+  const relireLesAmis = (): void => {
+    lireLesAmis(true);
+
+    const jeton = coffre.lire();
+    const fiche = magasin.etat.fiche;
+
+    if (api !== undefined && jeton !== undefined && fiche.statut === 'chargee') {
+      void api.joueur(jeton, fiche.pseudo).then((relue) => {
+        if (relue.acceptee && coffre.lire() === jeton) {
+          magasin.appliquer({ type: 'ficheRecue', pseudo: fiche.pseudo, fiche: relue.valeur });
+        }
+      });
+    }
   };
 
   /** On joue desormais avec ce compte: l'etat le sait, et ses amis se lisent. */
@@ -522,6 +553,8 @@ export function brancherLaSession(options: OptionsSession): CommandesDeSession {
     },
 
     chargerLesAmis,
+
+    relireLesAmis,
 
     // Devenu ami, le joueur de la fiche ouverte montre ses parties ensemble: la fiche se
     // relit, sans repasser par la lecture, et sans rien dire si la relecture echoue.

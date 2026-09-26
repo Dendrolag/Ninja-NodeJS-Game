@@ -6,6 +6,10 @@
  * pas d'ajouter un ami, ni d'accepter une demande qui n'existe pas. Le serveur decide
  * de toute facon; le client ne propose que ce qui a un sens.
  *
+ * LA PRESENCE DES AMIS (etape 2.8). Chaque ami dit ou il est, et les amis se rangent par
+ * presence, puis par pseudo: d'abord ceux dont on peut rejoindre le salon, les absents
+ * a la fin. Le salon d'une partie publique qui a de la place se rejoint d'un clic.
+ *
  * AUCUNE FORMULE NE GENRE LE JOUEUR: « ce compte », le pseudo, jamais « il » ni « lui ».
  *
  * FONCTIONS PURES.
@@ -15,6 +19,8 @@ import type { GesteDAmitie, ListeDAmis, PersonneListee, RelationDAmitie } from '
 import { BORNES_AMITIES, reperePseudo } from '@neon-ninja/shared';
 
 import type { EtatClient, EtatDuGeste } from '../../etat.js';
+import type { PresenceAffichee } from './presence.js';
+import { RANG_DE_PRESENCE, lieuDe, partieARejoindre, presenceAffichee } from './presence.js';
 import { formaterNombre } from './progression.js';
 import { initiales } from './salon.js';
 
@@ -137,6 +143,10 @@ export interface LigneDAmi {
   /** « Niv. 4 ». */
   readonly niveau: string;
   readonly gestes: readonly GestePropose[];
+  /** Ou est cet ami (etape 2.8). Seulement dans la section des amis. */
+  readonly presence?: PresenceAffichee;
+  /** La partie publique de cet ami, a rejoindre d'un clic (etape 2.8). */
+  readonly rejoindre?: string;
 }
 
 /** Une section de l'ecran Amis. */
@@ -192,6 +202,33 @@ export function modeleDuGeste(geste: EtatDuGeste): ModeleDuGeste {
   }
 }
 
+/**
+ * Les lignes des amis, avec leur presence, rangees par presence puis dans l'ordre de la
+ * liste, qui est celui des pseudos.
+ */
+function lignesDAmis(lignes: readonly LigneDAmi[], etat: EtatClient): readonly LigneDAmi[] {
+  return lignes
+    .map((ligne, rang) => {
+      const lieu = lieuDe(etat, ligne.pseudo);
+      const rejoindre = partieARejoindre(lieu);
+
+      return {
+        rang,
+        ligne: {
+          ...ligne,
+          presence: presenceAffichee(lieu),
+          ...(rejoindre === undefined ? {} : { rejoindre }),
+        },
+      };
+    })
+    .sort(
+      (a, b) =>
+        RANG_DE_PRESENCE[a.ligne.presence.etat] - RANG_DE_PRESENCE[b.ligne.presence.etat] ||
+        a.rang - b.rang,
+    )
+    .map(({ ligne }) => ligne);
+}
+
 /** Calcule l'ecran Amis. */
 export function modeleAmis(etat: EtatClient): ModeleAmis {
   const { liste, motifDEchec } = etat.amis;
@@ -202,11 +239,11 @@ export function modeleAmis(etat: EtatClient): ModeleAmis {
       : { nature: 'echec', motif: motifDEchec };
   }
 
-  return listeChargee(liste);
+  return listeChargee(liste, etat);
 }
 
-/** La liste lue, mise en forme. */
-function listeChargee(liste: ListeDAmis): ModeleAmis {
+/** La liste lue, mise en forme, avec la presence des amis. */
+function listeChargee(liste: ListeDAmis, etat: EtatClient): ModeleAmis {
   const lignes = (
     personnes: readonly PersonneListee[],
     gestes: readonly GestePropose[],
@@ -230,7 +267,7 @@ function listeChargee(liste: ListeDAmis): ModeleAmis {
     },
     amis: {
       titre: 'Amis',
-      lignes: lignes(liste.amis, []),
+      lignes: lignesDAmis(lignes(liste.amis, []), etat),
       vide: 'Aucun ami pour l’instant. Ajoutez un joueur par son pseudo, ou depuis sa fiche, au salon ou à la fin d’une partie.',
     },
     envoyees: {

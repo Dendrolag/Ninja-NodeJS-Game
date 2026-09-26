@@ -25,6 +25,7 @@ import type {
   FinDePartie,
   GesteDAmitie,
   InfosSalon,
+  InvitationRecue,
   ListeDAmis,
   MaProgression,
   MessageChat,
@@ -33,6 +34,7 @@ import type {
   ProgressionDeFin,
   Refus,
   NatureObjet,
+  PresenceDUnAmi,
   RelationDAmitie,
 } from '@neon-ninja/shared';
 
@@ -239,6 +241,44 @@ export const AMIS_INCONNUS: EtatDesAmis = {
 };
 
 /**
+ * Une invitation envoyee depuis le salon a un ami, et ce qu'elle a donne (etape 2.8).
+ *
+ * Elle retient le pseudo tel que le salon l'a propose: la section « Inviter des amis »
+ * dit, ami par ami, qu'une invitation part, est partie, ou a ete refusee.
+ */
+export type InvitationDuSalon =
+  | { readonly pseudo: string; readonly statut: 'enCours' | 'envoyee' }
+  | { readonly pseudo: string; readonly statut: 'refusee'; readonly motif: string };
+
+/**
+ * Les invitations entre amis (etape 2.8): celles qu'on a recues et qui valent encore,
+ * celle par laquelle on demande a entrer, et celles qu'on a envoyees depuis le salon.
+ *
+ * LES INVITATIONS RECUES SONT CELLES QUE LE SERVEUR TIENT. Il les envoie a chaque page
+ * ouverte, et dit quand l'une ne vaut plus: expiree, servie, partie finie. Le client
+ * n'en calcule jamais l'expiration. Ignorer en retire une de cette page, sans rien dire
+ * au serveur ni a l'inviteur.
+ */
+export interface EtatDesInvitations {
+  /** Les invitations recues, de la plus ancienne a la plus recente. */
+  readonly recues: readonly InvitationRecue[];
+  /**
+   * L'invitation par laquelle le joueur vient de demander a entrer: son refus s'affiche
+   * sur sa carte. Oubliee a l'entree, et a la navigation.
+   */
+  readonly tentee: string | undefined;
+  /** Les invitations envoyees depuis le salon ou l'on est. */
+  readonly envoyees: readonly InvitationDuSalon[];
+}
+
+/** Aucune invitation. */
+export const AUCUNE_INVITATION: EtatDesInvitations = {
+  recues: [],
+  tentee: undefined,
+  envoyees: [],
+};
+
+/**
  * Un message de chat, date a son arrivee chez nous.
  *
  * Le serveur n'envoie aucune heure, et c'est delibere: la sienne est monotone et
@@ -320,6 +360,13 @@ export interface EtatClient {
    * session change.
    */
   readonly amis: EtatDesAmis;
+  /**
+   * Les amis en ligne, et ou ils sont, tels que le serveur les a pousses en dernier
+   * (etape 2.8). Un ami absent de la liste est hors ligne. Vide pour un invite.
+   */
+  readonly presences: readonly PresenceDUnAmi[];
+  /** Les invitations entre amis, recues et envoyees (etape 2.8). */
+  readonly invitationsDAmis: EtatDesInvitations;
   /**
    * Notre identifiant de joueur, donne par le serveur a l'entree en partie.
    *
@@ -440,6 +487,8 @@ export const ETAT_INITIAL: EtatClient = {
   profil: PROFIL_INCONNU,
   fiche: FICHE_FERMEE,
   amis: AMIS_INCONNUS,
+  presences: [],
+  invitationsDAmis: AUCUNE_INVITATION,
   moi: undefined,
   pseudoDemande: undefined,
   pseudoSaisi: '',
