@@ -190,6 +190,7 @@ export type { ParametresScrypt } from './comptes/motDePasse.js';
 export { PARAMETRES_SCRYPT, hacherMotDePasse, verifierMotDePasse } from './comptes/motDePasse.js';
 export { routesDesComptes } from './comptes/routes.js';
 export { statistiquesDeJoueur } from './comptes/statistiques.js';
+export { succesDeFiche, succesDeFin, succesDuProfil } from './comptes/succes.js';
 
 export type { Progression, ValeursProgression } from './base/progression.js';
 export { ecrireProgression, lireProgression } from './base/progression.js';
@@ -203,6 +204,23 @@ export type {
 } from './base/parties.js';
 export { enregistrerPartie, lireHistorique, statistiquesParMode } from './base/parties.js';
 export type { StatistiquesEnregistreesDUnMode } from './base/parties.js';
+export type {
+  BilanDuRattrapage,
+  PartieDatee,
+  SuccesDUnCompte,
+  SuccesEnregistre,
+} from './base/succes.js';
+export type { Cohorte, ReleveDeRetention, Repartition, SemaineActive } from './base/mesures.js';
+export { rapportDeRetention, releverLaRetention } from './base/mesures.js';
+export {
+  attribuerLesSucces,
+  historiquesDesComptes,
+  mesuresDuCompte,
+  raretes,
+  rattraperLesSucces,
+  succesDuCompte,
+  succesEnregistres,
+} from './base/succes.js';
 
 export type { FinPourLesComptes } from './finDePartie.js';
 export { finPourLesComptes, progressionEnregistree } from './finDePartie.js';

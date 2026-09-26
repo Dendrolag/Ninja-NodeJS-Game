@@ -187,6 +187,10 @@ describe.runIf(baseDisponible())('fiche joueur', () => {
       },
       // Etape 3.6: ce que Bob est pour le lecteur. Pas un ami: pas de face-a-face.
       relation: 'aucune',
+      // Etape 3.7: ses succes obtenus, sans date. Leur detail est verifie par succes.test.ts.
+      succes: expect.arrayContaining([
+        { id: 'premier-pas', rarete: expect.any(Number) as number },
+      ]) as unknown,
     });
   });
 

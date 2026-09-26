@@ -38,7 +38,7 @@ import type {
   SessionInscrite,
   SessionOuverte,
 } from '@neon-ninja/shared';
-import { PREFIXE_JETON_HTTP, ROUTES_COMPTES, adresseDeLaFiche } from '@neon-ninja/shared';
+import { PREFIXE_JETON_HTTP, ROUTES_COMPTES, SUCCES, adresseDeLaFiche } from '@neon-ninja/shared';
 
 /** La reponse a une requete des comptes. */
 export type ReponseDesComptes<T> =
@@ -336,6 +336,8 @@ export function profilDEssai(pseudo: string): ProfilDuCompte {
     statistiques: STATISTIQUES_VIDES,
     dernieresParties: [],
     codeDeSecours: true,
+    // Aucun succes obtenu, et aucune progression montree (etape 3.7).
+    succes: SUCCES.map((succes) => ({ id: succes.id, rarete: 0 })),
   };
 }
 
@@ -348,6 +350,7 @@ export function ficheDEssai(pseudo: string): FicheJoueur {
     palier: 'bronze',
     statistiques: STATISTIQUES_VIDES,
     relation: 'aucune',
+    succes: [],
   };
 }
 

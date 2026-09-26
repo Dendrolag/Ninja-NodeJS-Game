@@ -69,6 +69,7 @@ import type {
 import type { TrameDEtat } from './flux.js';
 import type { IdentifiantPalier } from './progression.js';
 import type { ReglagesPartie, ReglagesPartiels } from './reglages.js';
+import type { IdentifiantSucces, ProgressionDUnSucces } from './succes.js';
 import type { ErreurValidation, ResultatValidation } from './validation.js';
 
 // --------------------------------------------------------------------------
@@ -578,6 +579,22 @@ export interface ProgressionEnregistree {
   readonly variationPointsLigue: number;
   readonly avant: EtatDeProgression;
   readonly apres: EtatDeProgression;
+  /** Les succes que cette partie a donnes, et le plus proche d'etre obtenu (etape 3.7). */
+  readonly succes: SuccesDeFin;
+}
+
+/**
+ * Les succes d'un compte a la fin d'une partie (etape 3.7).
+ *
+ * UNE PARTIE N'ANNONCE QUE LES SUCCES QU'ELLE A DONNES: ceux dont elle est la partie
+ * d'origine. Un succes plus ancien, inscrit a cette occasion parce qu'il avait ete
+ * oublie, garde sa vraie date et ne s'annonce pas.
+ */
+export interface SuccesDeFin {
+  /** Dans l'ordre de SUCCES. */
+  readonly debloques: readonly IdentifiantSucces[];
+  /** Le cumul le plus proche de son seuil (succesLePlusProche). Absent: aucun n'est commence. */
+  readonly plusProche?: ProgressionDUnSucces;
 }
 
 /**

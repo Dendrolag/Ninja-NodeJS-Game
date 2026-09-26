@@ -134,6 +134,7 @@ export function progressionEnregistree(
     variationPointsLigue: apres.pointsLigue - avant.pointsLigue,
     avant: etatDeProgression(avant),
     apres: etatDeProgression(apres),
+    succes: appliquee.succes,
   };
 }
 

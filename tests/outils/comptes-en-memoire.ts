@@ -34,6 +34,7 @@ import type {
   ReponseDeCompte,
   ServiceDeComptes,
   StatistiquesEnregistreesDUnMode,
+  SuccesEnregistre,
 } from '../../packages/server/dist/index.js';
 import type { EcritureDAmitie, FaitsDAmitie } from '../../packages/server/dist/index.js';
 import {
@@ -45,12 +46,18 @@ import {
   faitsApres,
   relationVue,
   statistiquesDeJoueur,
+  succesDeFiche,
+  succesDeFin,
+  succesDuProfil,
 } from '../../packages/server/dist/index.js';
 import type {
   ErreurValidation,
   FaceAFace,
+  IdentifiantSucces,
   ListeDAmis,
   MaProgression,
+  ParcoursDeSucces,
+  PartieDuParcours,
   PartieDuProfil,
   PersonneListee,
   SessionInscrite,
@@ -63,6 +70,7 @@ import {
   formaterCodeDeSecours,
   niveauDeXp,
   palierDePoints,
+  parcoursDe,
   reperePseudo,
   validerDemandeChangementMotDePasse,
   validerDemandeCodeDeSecours,
@@ -88,7 +96,30 @@ interface CompteEnMemoire {
   readonly historique: PartieDuProfil[];
   /** Le placement du compte dans chaque partie jouee, par numero de partie (etape 3.6). */
   readonly placements: Map<number, number>;
+  /**
+   * Ses parties, de la plus ancienne a la plus recente, telles que le pli des succes les
+   * lit, sans les amis, qui se relisent a chaque attribution (etape 3.7).
+   */
+  readonly parcours: PartieJouee[];
+  /** Ses succes inscrits (etape 3.7). */
+  readonly succes: Map<IdentifiantSucces, SuccesEnregistre>;
 }
+
+/** Une partie jouee par un compte, pour le pli des succes. */
+interface PartieJouee {
+  readonly numero: number;
+  readonly partieId: string;
+  readonly termineeLe: Date;
+  readonly partie: Omit<PartieDuParcours, 'amis'>;
+}
+
+/** Le jour d'une date a l'heure de Paris, comme la base l'ecrit: « 2026-09-26 ». */
+const JOUR_A_PARIS = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Europe/Paris',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
 
 /** Une fin de partie enregistree. */
 export interface FinEnregistree {
@@ -299,6 +330,52 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
     return { partiesEnsemble, devant, derriere };
   };
 
+  /** Le parcours de ce compte, avec ses amis d'aujourd'hui dans chaque partie, comme en base. */
+  const parcoursDuCompte = (compte: CompteEnMemoire): ParcoursDeSucces =>
+    parcoursDe(
+      compte.parcours.map((jouee) => ({
+        ...jouee.partie,
+        amis: [...comptes.values()].flatMap((autre) => {
+          const placement = autre.placements.get(jouee.numero);
+
+          return autre.id !== compte.id &&
+            placement !== undefined &&
+            amities.has(paireOrdonnee(compte.id, autre.id))
+            ? [{ compte: autre.id, placement }]
+            : [];
+        }),
+      })),
+    );
+
+  /** Inscrit les succes atteints de ce compte, dates de leur partie d'origine, comme en base. */
+  const attribuer = (compte: CompteEnMemoire): ParcoursDeSucces => {
+    const parcours = parcoursDuCompte(compte);
+
+    for (const [id, index] of parcours.premieres) {
+      const origine = compte.parcours[index];
+
+      if (origine !== undefined && !compte.succes.has(id)) {
+        compte.succes.set(id, { debloqueLe: origine.termineeLe, partieId: origine.partieId });
+      }
+    }
+
+    return parcours;
+  };
+
+  /** La rarete de chaque succes, parmi les comptes qui ont joue, comme en base. */
+  const raretes = (): Map<IdentifiantSucces, number> => {
+    const joueurs = [...comptes.values()].filter((compte) => compte.parcours.length > 0);
+    const parSucces = new Map<IdentifiantSucces, number>();
+
+    for (const compte of joueurs) {
+      for (const id of compte.succes.keys()) {
+        parSucces.set(id, (parSucces.get(id) ?? 0) + 1);
+      }
+    }
+
+    return new Map([...parSucces].map(([id, nombre]) => [id, (nombre * 100) / joueurs.length]));
+  };
+
   const progressionDe = (compte: CompteEnMemoire): MaProgression => ({
     pseudo: compte.pseudo,
     niveau: niveauDeXp(compte.xpTotale),
@@ -340,6 +417,8 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
         pointsLigue: 0,
         historique: [],
         placements: new Map(),
+        parcours: [],
+        succes: new Map(),
       };
       comptes.set(compte.id, compte);
       const codeDeSecours = renouvelerLeCode(compte);
@@ -391,6 +470,7 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
           statistiques: statistiquesDe(compte),
           dernieresParties: compte.historique.slice(0, PARTIES_DU_PROFIL),
           codeDeSecours: compte.codeDeSecours !== '',
+          succes: succesDuProfil(parcoursDuCompte(compte).mesures, compte.succes, raretes()),
         },
       };
     },
@@ -424,6 +504,7 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
           ...(relationVue(faitsEntre(lecteur.id, compte.id)) === 'ami'
             ? { ensemble: faceAFace(lecteur, compte) }
             : {}),
+          succes: succesDeFiche(compte.succes, raretes()),
         },
       };
     },
@@ -549,13 +630,16 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
       };
     },
 
-    // Les gains arrivent calcules; comme en base, une perte de points de ligue
-    // plus grande que le solde est ramenee au solde.
+    // Les gains arrivent calcules. Comme en base, une perte de points de ligue plus
+    // grande que le solde est ramenee au solde, et les succes s'attribuent une fois tous
+    // les resultats de la partie ecrits.
     enregistrerFinDePartie: async (partie, resultats): Promise<readonly ProgressionAppliquee[]> => {
       fins.push({ partie, resultats });
       const numero = fins.length;
+      const partieId = partie.id ?? `partie-${String(numero)}`;
+      const termineeLe = partie.termineeLe ?? new Date();
 
-      return resultats.map((resultat) => {
+      const gains = resultats.map((resultat) => {
         const compte = comptes.get(resultat.compteId);
 
         if (compte === undefined) {
@@ -584,10 +668,28 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
           xpGagnee: resultat.xpGagnee,
           piecesGagnees: resultat.piecesGagnees,
           variationPointsLigue,
-          termineeLe: (partie.termineeLe ?? new Date()).toISOString(),
+          termineeLe: termineeLe.toISOString(),
+        });
+        compte.parcours.push({
+          numero,
+          partieId,
+          termineeLe,
+          partie: {
+            mode: partie.mode,
+            carte: partie.carte,
+            modeMiroir: partie.modeMiroir,
+            nombreJoueurs: partie.nombreJoueurs,
+            placement: resultat.placement,
+            captures: resultat.captures,
+            botsNoirsDetruits: resultat.botsNoirsDetruits,
+            xpGagnee: resultat.xpGagnee,
+            variationPointsLigue,
+            jour: JOUR_A_PARIS.format(termineeLe),
+          },
         });
 
         return {
+          compte,
           compteId: compte.id,
           avant,
           apres: {
@@ -597,6 +699,11 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
           },
         };
       });
+
+      return gains.map(({ compte, ...appliquee }) => ({
+        ...appliquee,
+        succes: succesDeFin(partieId, attribuer(compte).mesures, compte.succes),
+      }));
     },
   };
 }

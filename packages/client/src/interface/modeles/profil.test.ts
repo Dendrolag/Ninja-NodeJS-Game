@@ -70,6 +70,7 @@ const PROFIL: ProfilDuCompte = {
     },
   ],
   codeDeSecours: true,
+  succes: [],
 };
 
 describe('modeleProfil', () => {

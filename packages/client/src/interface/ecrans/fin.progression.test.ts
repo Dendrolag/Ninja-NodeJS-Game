@@ -57,6 +57,7 @@ const RECAPITULATIF: ProgressionEnregistree = {
   variationPointsLigue: 20,
   avant: { xpTotale: 0, niveau: 1, pieces: 0, pointsLigue: 90, palier: 'bronze' },
   apres: { xpTotale: 210, niveau: 2, pieces: 1021, pointsLigue: 110, palier: 'argent' },
+  succes: { debloques: [] },
 };
 
 let reseau: ReseauFactice;

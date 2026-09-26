@@ -155,6 +155,7 @@ describe('la progression de fin', () => {
     variationPointsLigue: 10,
     avant: { xpTotale: 90, niveau: 1, pieces: 1200, pointsLigue: 90, palier: 'bronze' },
     apres: { xpTotale: 240, niveau: 2, pieces: 2700, pointsLigue: 100, palier: 'argent' },
+    succes: { debloques: [] },
   };
 
   /** Un compte dont la partie vient de finir, avec ou sans recapitulatif. */

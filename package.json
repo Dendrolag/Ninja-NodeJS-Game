@@ -27,6 +27,8 @@
     "dev:server": "pnpm --filter @neon-ninja/server dev",
     "base:generer": "pnpm --filter @neon-ninja/server base:generer",
     "base:migrer": "pnpm --filter @neon-ninja/server base:migrer",
+    "base:rattraper": "pnpm --filter @neon-ninja/server base:rattraper",
+    "base:mesurer": "pnpm --filter @neon-ninja/server base:mesurer",
     "verify": "pnpm typecheck && pnpm lint && pnpm test"
   },
   "devDependencies": {

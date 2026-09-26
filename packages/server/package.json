@@ -17,7 +17,9 @@
     "dev": "tsc --build && node dist/principal.js",
     "start": "node dist/principal.js",
     "base:generer": "drizzle-kit generate",
-    "base:migrer": "tsc --build && node dist/base/migrer.js"
+    "base:migrer": "tsc --build && node dist/base/migrer.js",
+    "base:rattraper": "tsc --build && node dist/base/rattraper.js",
+    "base:mesurer": "tsc --build && node dist/base/mesurer.js"
   },
   "dependencies": {
     "@neon-ninja/shared": "workspace:*",

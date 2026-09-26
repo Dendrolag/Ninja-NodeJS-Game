@@ -131,6 +131,8 @@ function annuaireDEssai(): AnnuaireDEssai {
           pieces: resultat.piecesGagnees,
           pointsLigue: Math.max(resultat.variationPointsLigue, 0),
         },
+        // La premiere partie de chaque compte lui donne « Premier pas » (etape 3.7).
+        succes: { debloques: ['premier-pas'] },
       }));
     },
     compteDeSession: async (jeton) => {
@@ -827,6 +829,8 @@ describe('fin de partie (etape 3.3)', () => {
         pointsLigue: 0,
         palier: 'bronze',
       },
+      // Les succes passent tels que l'enregistrement les rend (etape 3.7).
+      succes: { debloques: ['premier-pas'] },
     });
     expect(resultat?.xpGagnee).toBeGreaterThan(0);
     expect(pourBob).toEqual([]);

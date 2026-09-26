@@ -21,6 +21,7 @@ const FICHE: FicheJoueur = {
   niveau: 12,
   palier: 'platine',
   relation: 'aucune',
+  succes: [],
   statistiques: {
     partiesJouees: 40,
     partiesAPlusieurs: 38,

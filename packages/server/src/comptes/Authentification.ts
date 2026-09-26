@@ -77,6 +77,7 @@ import type {
   ResultatDePartie,
 } from '../base/parties.js';
 import { enregistrerPartie, lireHistorique, statistiquesParMode } from '../base/parties.js';
+import { mesuresDuCompte, raretes, succesDuCompte } from '../base/succes.js';
 import {
   aUnCodeDeSecours,
   codeParPseudo,
@@ -101,6 +102,7 @@ import { LimiteurDeTentatives } from './limiteur.js';
 import type { ParametresScrypt } from './motDePasse.js';
 import { PARAMETRES_SCRYPT, hacherMotDePasse, verifierMotDePasse } from './motDePasse.js';
 import { statistiquesDeJoueur } from './statistiques.js';
+import { succesDeFiche, succesDuProfil } from './succes.js';
 
 /**
  * Duree de validite d'une session: trente jours.
@@ -279,10 +281,13 @@ export class Authentification implements ServiceDeComptes {
       return sessionAbsente();
     }
 
-    const [statistiques, historique, codeDeSecours] = await Promise.all([
+    const [statistiques, historique, codeDeSecours, mesures, inscrits, rarete] = await Promise.all([
       statistiquesParMode(this.db, compte.id),
       lireHistorique(this.db, compte.id, PARTIES_DU_PROFIL),
       aUnCodeDeSecours(this.db, compte.id),
+      mesuresDuCompte(this.db, compte.id),
+      succesDuCompte(this.db, compte.id),
+      raretes(this.db),
     ]);
 
     return acceptee({
@@ -290,6 +295,7 @@ export class Authentification implements ServiceDeComptes {
       statistiques: statistiquesDeJoueur(statistiques),
       dernieresParties: historique.map(partieDuProfil),
       codeDeSecours,
+      succes: succesDuProfil(mesures, inscrits, rarete),
     });
   }
 
@@ -318,9 +324,11 @@ export class Authentification implements ServiceDeComptes {
       return joueurInconnu();
     }
 
-    const [statistiques, faits] = await Promise.all([
+    const [statistiques, faits, inscrits, rarete] = await Promise.all([
       statistiquesParMode(this.db, profil.id),
       faitsEntre(this.db, lecteur, profil.id),
+      succesDuCompte(this.db, profil.id),
+      raretes(this.db),
     ]);
     const relation = relationVue(faits);
 
@@ -333,6 +341,7 @@ export class Authentification implements ServiceDeComptes {
       relation,
       // Le face-a-face est reserve aux amis (decision 2 de l'etude des amis).
       ...(relation === 'ami' ? { ensemble: await faceAFace(this.db, lecteur, profil.id) } : {}),
+      succes: succesDeFiche(inscrits, rarete),
     });
   }
 

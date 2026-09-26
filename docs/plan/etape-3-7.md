@@ -64,12 +64,12 @@ Aucune n'a été soumise au porteur du projet: elles découlent de l'étude et d
 
 29 succès, tous de source « base ». Les descriptions exactes vivent dans `succes.ts`.
 
-| Palier | Succès |
-| --- | --- |
-| Découverte | Premier pas (1 partie), Première prise (1 prise), Nettoyeur (1 Black Ninja), Reflet (1 partie en miroir), Sur le podium, Première couronne (1 victoire) |
-| Habitué | Habitué (25 parties), Dix couronnes (10 victoires), Pickpocket (50 prises), Démineur (25 Black Ninjas), Touriste (3 cartes), Touche-à-tout (5 modes), Fidèle (7 jours), Recrue (niveau 5), Argent, En bande (10 parties avec un même ami) |
-| Expert | Vétéran (100 parties), Cinquante couronnes (50 victoires), Série (3 victoires d'affilée), Solidaires (10 victoires en Équipes), Confirmé (niveau 20), Or, Meute (3 infections dans une Chasse), Rivalité (devant un même ami 10 fois) |
-| Légende | Pilier (500 parties), Centurion (100 victoires), Grand chelem (une victoire dans 5 modes), Diamant, Légende (niveau 50) |
+| Palier     | Succès                                                                                                                                                                                                                                    |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Découverte | Premier pas (1 partie), Première prise (1 prise), Nettoyeur (1 Black Ninja), Reflet (1 partie en miroir), Sur le podium, Première couronne (1 victoire)                                                                                   |
+| Habitué    | Habitué (25 parties), Dix couronnes (10 victoires), Pickpocket (50 prises), Démineur (25 Black Ninjas), Touriste (3 cartes), Touche-à-tout (5 modes), Fidèle (7 jours), Recrue (niveau 5), Argent, En bande (10 parties avec un même ami) |
+| Expert     | Vétéran (100 parties), Cinquante couronnes (50 victoires), Série (3 victoires d'affilée), Solidaires (10 victoires en Équipes), Confirmé (niveau 20), Or, Meute (3 infections dans une Chasse), Rivalité (devant un même ami 10 fois)     |
+| Légende    | Pilier (500 parties), Centurion (100 victoires), Grand chelem (une victoire dans 5 modes), Diamant, Légende (niveau 50)                                                                                                                   |
 
 ## Périmètre
 

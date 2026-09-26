@@ -24,6 +24,7 @@
 
 import type { CarteEnregistree, Mode } from './constantes.js';
 import type { IdentifiantPalier } from './progression.js';
+import type { IdentifiantSucces, ProgressionDUnSucces } from './succes.js';
 import type { ErreurValidation } from './validation.js';
 
 /** La racine des routes HTTP des comptes. */
@@ -299,6 +300,36 @@ export interface FaceAFace {
 }
 
 /**
+ * Un succes obtenu, tel que la fiche d'un compte le montre aux autres (etape 3.7).
+ *
+ * SANS SA DATE: elle dirait quand le joueur a joue, ce que l'etude des amis reserve a
+ * son profil (sa decision 7).
+ */
+export interface SuccesDeFiche {
+  readonly id: IdentifiantSucces;
+  /**
+   * La part des comptes qui ont joue au moins une partie et qui l'ont obtenu, en pour
+   * cent, de 0 a 100, non arrondie: l'affichage dit « moins de 1 % » d'un succes rare.
+   */
+  readonly rarete: number;
+}
+
+/**
+ * Un succes, tel que son proprietaire le lit au profil (etape 3.7): obtenu ou non.
+ *
+ * Un succes secret non obtenu part sans progression: sa mesure le decrirait.
+ */
+export interface SuccesDuProfil {
+  readonly id: IdentifiantSucces;
+  /** Le deblocage, au format ISO 8601: la fin de la partie qui l'a donne. Absent: pas obtenu. */
+  readonly debloqueLe?: string;
+  /** Pour un cumul pas encore obtenu: « 412 sur 500 ». */
+  readonly progression?: Omit<ProgressionDUnSucces, 'id'>;
+  /** Comme sur la fiche. */
+  readonly rarete: number;
+}
+
+/**
  * La fiche d'un compte, telle que tout compte connecte la lit (etape 3.5).
  *
  * CE QUI EST PUBLIC, ET RIEN D'AUTRE. Le pseudo et le niveau s'affichent deja dans
@@ -306,9 +337,8 @@ export interface FaceAFace {
  * Jamais les pieces, l'identifiant du compte, le code de secours, l'XP ou les points
  * de ligue exacts, ni les dernieres parties, qui diraient quand le joueur joue.
  *
- * UN OBJET A CHAMPS NOMMES, POUR LA SUITE. Les succes (etapes 3.7 et 3.8) y
- * ajouteront leur champ, sans rien changer aux autres. L'etape 3.6 y a ajoute la
- * relation, et le face-a-face, reserve aux amis.
+ * UN OBJET A CHAMPS NOMMES, POUR LA SUITE. L'etape 3.6 y a ajoute la relation, et le
+ * face-a-face, reserve aux amis. L'etape 3.7 y a ajoute les succes obtenus.
  */
 export interface FicheJoueur {
   /** Le pseudo, dans l'ecriture choisie a l'inscription. */
@@ -322,6 +352,8 @@ export interface FicheJoueur {
   readonly relation: RelationDAmitie;
   /** Les parties jouees ensemble. Present pour un ami, et pour lui seul (etape 3.6). */
   readonly ensemble?: FaceAFace;
+  /** Les succes obtenus, dans l'ordre de SUCCES (etape 3.7). */
+  readonly succes: readonly SuccesDeFiche[];
 }
 
 /**
@@ -417,8 +449,8 @@ export interface PartieDuProfil {
  *
  * Reserve, comme la progression, a une demande qui presente une session valide: le
  * profil d'un compte n'est montre qu'a lui. Les autres comptes en lisent la fiche
- * (FicheJoueur, etape 3.5). Pas de rang mondial, de pass de saison, de skins, de
- * succes ni de clan: reportes apres la v1.
+ * (FicheJoueur, etape 3.5). Pas de rang mondial, de pass de saison, de skins ni de
+ * clan: reportes apres la v1. Les succes y sont depuis l'etape 3.7.
  */
 export interface ProfilDuCompte extends MaProgression {
   /** La meme agregation que la fiche (etape 3.5). */
@@ -431,6 +463,8 @@ export interface ProfilDuCompte extends MaProgression {
    * qui n'en a pas, le sache et en cree un.
    */
   readonly codeDeSecours: boolean;
+  /** Tous les succes connus, obtenus ou non, dans l'ordre de SUCCES (etape 3.7). */
+  readonly succes: readonly SuccesDuProfil[];
 }
 
 /** Le corps d'une reponse HTTP refusee. */

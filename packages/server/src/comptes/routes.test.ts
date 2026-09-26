@@ -58,6 +58,7 @@ const FICHE: FicheJoueur = {
   palier: 'bronze',
   statistiques: STATISTIQUES,
   relation: 'ami',
+  succes: [],
   ensemble: { partiesEnsemble: 3, devant: 2, derriere: 1 },
 };
 
@@ -86,6 +87,7 @@ const PROFIL: ProfilDuCompte = {
     },
   ],
   codeDeSecours: true,
+  succes: [],
 };
 
 let serveur: ServeurMonte | undefined;

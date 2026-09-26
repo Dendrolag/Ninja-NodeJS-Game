@@ -47,6 +47,7 @@ const FICHE_DE_BOB: FicheJoueur = {
   niveau: 4,
   palier: 'argent',
   relation: 'aucune',
+  succes: [],
   statistiques: {
     partiesJouees: 7,
     partiesAPlusieurs: 6,

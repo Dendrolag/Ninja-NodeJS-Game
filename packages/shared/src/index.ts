@@ -52,6 +52,8 @@ export type {
   SessionOuverte,
   StatistiquesDUnMode,
   StatistiquesDeJoueur,
+  SuccesDeFiche,
+  SuccesDuProfil,
 } from './comptes.js';
 export {
   GESTES_D_AMITIE,
@@ -141,6 +143,7 @@ export type {
   ProgressionDeFin,
   ProgressionEnregistree,
   ProgressionNonEnregistree,
+  SuccesDeFin,
   RalliementVu,
   Refus,
   StatutPartie,
@@ -326,3 +329,29 @@ export {
 
 export type { Repartition, ResumeDuBattement } from './sante.js';
 export { lireLeResumeDuBattement } from './sante.js';
+
+export type {
+  AmiDansLaPartie,
+  DefinitionDeSucces,
+  IdentifiantSucces,
+  Mesure,
+  Mesures,
+  PalierDeSucces,
+  ParcoursDeSucces,
+  PartieDuParcours,
+  ProgressionDUnSucces,
+  SuccesConnu,
+  UniteDeMesure,
+} from './succes.js';
+export {
+  JOUEURS_POUR_UN_PODIUM,
+  MESURES,
+  PALIERS_DE_SUCCES,
+  SUCCES,
+  definitionDuSucces,
+  estAtteint,
+  estUnSucces,
+  parcoursDe,
+  progressionDuSucces,
+  succesLePlusProche,
+} from './succes.js';

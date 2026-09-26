@@ -393,6 +393,10 @@ describe.runIf(baseDisponible())('progression branchee sur la fin de partie', ()
             niveau: niveauDeXp(apres.xpTotale),
             palier: palierDePoints(apres.pointsLigue),
           },
+          // Etape 3.7: la premiere partie de chaque compte lui donne au moins Premier pas.
+          succes: expect.objectContaining({
+            debloques: expect.arrayContaining(['premier-pas']) as unknown,
+          }) as unknown,
         });
         expect(apres.xpTotale - DEPART.xpTotale).toBe(resultat?.xpGagnee);
       }
