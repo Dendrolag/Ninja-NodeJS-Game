@@ -47,7 +47,7 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
   - bout en bout (`tests/e2e/amis.spec.ts`, bureau): par pseudo (demande, pastille, acceptation, retrait depuis la fiche), et au salon (ajout et acceptation depuis les fiches, partie courte, une partie ensemble sur la fiche).
 - Résultat: `pnpm verify` en local, 2 754 tests unitaires et d'intégration au vert (99 de plus qu'au handoff 3.5), 92 sautés (base Neon absente). **Les tests de la base ont tourné en local cette fois**, contre un PostgreSQL 16 du conteneur (voir plus bas): 91 sur 92, le seul échec étant un écart connu de version. Bout en bout en local: 55 scénarios au vert, plus un (le HUD en partie sur mobile) tombé au délai de 30 s pendant que les tests unitaires tournaient en même temps sur la machine, vert rejoué seul (23,6 s); banc de rendu vert.
 - Couverture de packages/sim: inchangée, aucun code du paquet touché.
-- État de la CI: voir la section suivante, complétée après la poussée.
+- État de la CI: **verte sur `2dbc803`** (run `36247579982`) du premier coup, tests de la base Neon compris, 59 scénarios de bout en bout sur 59 sans relance. Mise en ligne sautée: la branche n'est pas `master`.
 
 ## Décisions et écarts au plan
 
