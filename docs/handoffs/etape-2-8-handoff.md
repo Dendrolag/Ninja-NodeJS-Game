@@ -43,9 +43,9 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
   - base (`tests/base/amis.test.ts`, 2 cas): `amisDe` dans les deux sens sans demandes ni blocages, le signal après les seuls gestes qui écrivent,
   - client: réduction et câblage (15 cas), modèles (10 cas), application dans un document (13 cas: écran Amis, Rejoindre et son refus, cartes, salon, fiche),
   - bout en bout (bureau, 2 scénarios): la pastille, la présence et l'invitation sans naviguer, jusqu'à l'entrée sans code, puis « Rejoindre » le salon public d'un ami.
-- Résultat: `pnpm verify` en local, 2 863 tests unitaires et d'intégration au vert (109 de plus qu'au handoff 3.6), 94 sautés (base Neon absente). Tests de la base contre un PostgreSQL 16 du conteneur: 93 sur 94, le seul échec étant l'écart de version connu (`23503` contre `23001`, handoff 3.6). Bout en bout en local: voir ci-dessous.
+- Résultat: `pnpm verify` en local, 2 863 tests unitaires et d'intégration au vert (109 de plus qu'au handoff 3.6), 94 sautés (base Neon absente). Tests de la base contre un PostgreSQL 16 du conteneur: 93 sur 94, le seul échec étant l'écart de version connu (`23503` contre `23001`, handoff 3.6). Bout en bout en local: 58 scénarios sur 58, bureau et mobile, en 6,7 minutes, sans relance.
 - Couverture de packages/sim: inchangée, aucun code du paquet touché.
-- État de la CI: voir ci-dessous.
+- État de la CI: **verte sur `83648dd`** (run `36263573183`), tests de la base Neon compris, du premier coup. Le run du premier commit de l'étape a été annulé par la poussée suivante, pas en échec. Mise en ligne sautée: la branche n'est pas `master`.
 
 ## Décisions et écarts au plan
 
@@ -56,7 +56,7 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
 5. **Ignorer une invitation est local**: l'inviteur n'apprend rien, le droit expire de lui-même, et les autres pages de l'invité la gardent jusque-là.
 6. **« Rejoindre » ne vaut que pour le salon d'une partie publique qui a de la place**, comme la liste des parties: une partie en cours n'est pas proposée, même si le mode l'accepterait.
 7. **Une invitation remplacée ou retirée est dite à l'invité** (`invitationRetiree`), mais le refus d'une entrée par invitation (partie complète, Chasse lancée) la laisse valable le temps qu'il lui reste.
-8. **Écart de branche**, comme aux étapes 2.7, 3.5 et 3.6: la session travaille sur la branche imposée `claude/etape-2-8-dbw8hu`, repartie de `master`, et non directement sur `master`. Elle rejoindra `master` à la demande du porteur du projet.
+8. **Écart de branche**, comme aux étapes 2.7, 3.5 et 3.6: la session travaille sur la branche imposée `claude/etape-2-8-dbw8hu`, repartie de `master`, et non directement sur `master`. Le porteur du projet a demandé la fusion le 26 septembre 2026: la branche a rejoint `master` en avance rapide, et part en ligne avec la CI de `master`. Aucune migration.
 
 ## Problèmes connus et dette
 
