@@ -58,7 +58,7 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
 5. **Sur l'écran Amis, les lignes d'amis n'ont pas de bouton**: retirer et bloquer un ami passent par sa fiche, un clic plus loin. Les demandes reçues, elles, se bloquent depuis la liste, contre un importun.
 6. **Les demandes ignorées d'un bloqué comptent dans ses 50 en attente**: les en retirer lui dirait qu'il est bloqué.
 7. **Aucune borne sur le nombre de comptes bloqués**: la clé primaire le limite au nombre de comptes, et la limite des gestes à un par seconde.
-8. **Écart de branche**, comme aux étapes 2.7 et 3.5: la session travaille sur la branche imposée `claude/etape-3-6-ua1mla`, repartie de `master`, et non directement sur `master`. La fusion dans `master` attend la demande du porteur du projet.
+8. **Écart de branche**, comme aux étapes 2.7 et 3.5: la session travaille sur la branche imposée `claude/etape-3-6-ua1mla`, repartie de `master`, et non directement sur `master`. Le porteur du projet a demandé la fusion le 26 septembre 2026: la branche a rejoint `master` en avance rapide, et part en ligne avec la CI de `master`, migration `0008` comprise.
 
 ## Problèmes connus et dette
 
