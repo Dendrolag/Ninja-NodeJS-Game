@@ -37,6 +37,7 @@ import type {
 import type { EcranDeMenu } from './ecrans.js';
 import type { NatureDemandeDeCompte } from './etat.js';
 import type { FaitDeJeu } from './faits.js';
+import type { Invitation } from './invitation.js';
 
 /** Tout ce qui peut arriver au client. */
 export type Action =
@@ -110,6 +111,10 @@ export type Action =
   | { readonly type: 'codeDeSecoursEmis'; readonly code: string }
   /** Le joueur dit avoir note son code de secours: il est oublie (etape 3.4). */
   | { readonly type: 'codeDeSecoursNote' }
+  /** La page a ete ouverte par un lien d'invitation (etape 2.7). */
+  | { readonly type: 'invitationOuverte'; readonly invitation: Invitation }
+  /** Le joueur ignore l'invitation: l'accueil redevient celui de tous les jours. */
+  | { readonly type: 'invitationIgnoree' }
   /** Le joueur va vers un ecran de menu. */
   | { readonly type: 'navigation'; readonly vers: EcranDeMenu }
   /** La lecture du profil du compte est partie. */

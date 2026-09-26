@@ -27,13 +27,27 @@
  *     reessayer si elle n'y parvient pas, sans avoir a recharger;
  *   - UNE PAGE D'UNE AUTRE VERSION SE RECHARGE (etape 5.3): seul un rechargement lui
  *     donne la page qui va avec le serveur.
+ *
+ * UNE PAGE OUVERTE PAR UN LIEN D'INVITATION (etape 2.7) propose d'entrer dans cette
+ * partie: le bouton principal la rejoint par son code, au lieu de la partie rapide. Un
+ * compte y entre d'un clic, un invite choisit d'abord son pseudo. Un lien dont le code
+ * est mal forme se dit, et rien ne part au serveur.
  */
 
 import { normaliserTexte, validerPseudo } from '@neon-ninja/shared';
 
 import type { EtatClient } from '../../etat.js';
+import type { Invitation } from '../../invitation.js';
 import type { EtatDuLien } from './lien.js';
 import { modeleDuLien } from './lien.js';
+
+/** L'invitation, telle que l'accueil l'annonce. */
+export interface InvitationAffichee {
+  readonly titre: string;
+  readonly texte: string;
+  /** Le code de la partie; absent quand le lien est mal forme. */
+  readonly code: string | undefined;
+}
 
 /** Ce que l'accueil affiche. */
 export interface ModeleAccueil {
@@ -65,6 +79,12 @@ export interface ModeleAccueil {
   readonly peutReessayer: boolean;
   /** Le lien refuse presentait une session: on peut y renoncer et jouer en invite. */
   readonly peutContinuerEnInvite: boolean;
+  /** L'invitation lue dans l'adresse de la page, tant qu'elle n'a pas servi (etape 2.7). */
+  readonly invitation: InvitationAffichee | undefined;
+  /** Le texte du bouton principal: la partie rapide, ou la partie de l'invitation. */
+  readonly libelleDuBouton: string;
+  /** Le code par lequel entrer; absent pour la partie rapide. */
+  readonly codeDEntree: string | undefined;
 }
 
 /** Ce que l'accueil dit d'un lien etabli. */
@@ -73,6 +93,12 @@ export const TEXTE_LIEN_ETABLI = 'Connecté au serveur';
 /** Ce que l'accueil dit a un joueur dont la session gardee a expire. */
 export const AVIS_SESSION_EXPIREE =
   'Votre session a expiré : vous jouez en invité. Connectez-vous pour retrouver votre progression.';
+
+/** Ce que l'accueil dit d'une invitation dont le code est bien forme. */
+export const TEXTE_INVITATION = 'Une partie privée vous attend.';
+
+/** Ce que l'accueil dit d'un lien d'invitation dont le code est mal forme. */
+export const TITRE_INVITATION_MAL_FORMEE = "Ce lien d'invitation n'est pas valable.";
 
 /**
  * Calcule l'accueil.
@@ -85,6 +111,7 @@ export function modeleAccueil(etat: EtatClient, saisie: string): ModeleAccueil {
   const session = etat.session;
   const pseudoRequis = session.nature === 'invite';
   const verdict = validerPseudo(saisie);
+  const codeDEntree = etat.invitation?.nature === 'code' ? etat.invitation.code : undefined;
 
   // Un champ vide n'est pas une faute a signaler: c'est un champ pas encore
   // rempli. Le bouton reste simplement inactif.
@@ -110,7 +137,21 @@ export function modeleAccueil(etat: EtatClient, saisie: string): ModeleAccueil {
     peutRecharger: lien.peutRecharger,
     peutReessayer: lien.peutReessayer,
     peutContinuerEnInvite: lien.peutContinuerEnInvite,
+    invitation: invitationAffichee(etat.invitation),
+    libelleDuBouton: codeDEntree === undefined ? 'Partie rapide' : 'Rejoindre la partie',
+    codeDEntree,
   };
+}
+
+/** L'invitation mise en forme, ou rien. */
+function invitationAffichee(invitation: Invitation | undefined): InvitationAffichee | undefined {
+  if (invitation === undefined) {
+    return undefined;
+  }
+
+  return invitation.nature === 'code'
+    ? { titre: 'Invitation', texte: TEXTE_INVITATION, code: invitation.code }
+    : { titre: TITRE_INVITATION_MAL_FORMEE, texte: invitation.motif, code: undefined };
 }
 
 /**

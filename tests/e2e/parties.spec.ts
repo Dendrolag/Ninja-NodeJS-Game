@@ -17,6 +17,9 @@ import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
  *      Bob ne la voit pas dans la liste, et la rejoint en tapant ce code, en
  *      minuscules. Les deux salons sont identiques, code compris.
  *   2. Alice cree une partie publique; Bob la trouve dans la liste, et la rejoint.
+ *   3. Alice cree une partie privee et copie son lien d'invitation (etape 2.7); Bob,
+ *      invite, ouvre ce lien, choisit son pseudo et entre dans le salon d'Alice, sans
+ *      jamais taper le code.
  *
  * UN SEUL CADRAGE: le scenario fabrique lui-meme ses deux appareils. Voir
  * playwright.config.ts.
@@ -133,6 +136,52 @@ test('une partie publique trouvee dans la liste, et rejointe', async ({ browser 
       await expect(page.locator('.salon-code')).toBeHidden();
     }
 
+    expect([...alice.erreurs, ...bob.erreurs]).toEqual([]);
+  } finally {
+    await alice.fermer();
+    await bob.fermer();
+  }
+});
+
+test('une partie privee rejointe par son lien d invitation (etape 2.7)', async ({ browser }) => {
+  const alice = await ouvrir(browser);
+  const bob = await ouvrir(browser);
+
+  try {
+    await alice.page
+      .context()
+      .grantPermissions(['clipboard-read', 'clipboard-write'], { origin: jeu.url });
+
+    await arriver(alice.page, 'Alice');
+    await creer(alice.page, 'privee', 'Tokyo');
+    const code = (await alice.page.locator('.salon-code-valeur').textContent()) ?? '';
+
+    // Sur ordinateur, le lien se copie.
+    await alice.page.getByRole('button', { name: 'Copier le lien' }).click();
+    await expect(alice.page.locator('.salon-copie')).toHaveText('Lien copié');
+    const lien = await alice.page.evaluate(async () => navigator.clipboard.readText());
+    expect(lien).toBe(`${jeu.url}/?partie=${code}`);
+
+    // Bob ouvre le lien: l'accueil annonce la partie, et attend son pseudo.
+    await bob.page.goto(lien);
+    const invitation = bob.page.locator('.accueil-invitation');
+    await expect(invitation).toContainText('Une partie privée vous attend.');
+    await expect(invitation.locator('.accueil-invitation-valeur')).toHaveText(code);
+    const rejoindre = bob.page.getByRole('button', { name: 'Rejoindre la partie' });
+    await expect(rejoindre).toBeDisabled();
+
+    await bob.page.getByPlaceholder('Votre pseudo').fill('Bob');
+    await rejoindre.click();
+
+    for (const { page } of [alice, bob]) {
+      await expect(page.getByRole('heading', { name: 'Salon de Alice' })).toBeVisible();
+      await expect(page.locator('.carte-joueur')).toHaveCount(2);
+      await expect(page.locator('.salon-code-valeur')).toHaveText(code);
+    }
+
+    // L'invitation a servi: elle a quitte l'adresse de Bob.
+    expect(new URL(bob.page.url()).search).toBe('');
+    expect(jeu.partie().joueurs).toHaveLength(2);
     expect([...alice.erreurs, ...bob.erreurs]).toEqual([]);
   } finally {
     await alice.fermer();

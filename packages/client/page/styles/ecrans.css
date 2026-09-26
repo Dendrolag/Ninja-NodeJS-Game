@@ -436,6 +436,55 @@
   font-size: 13px;
 }
 
+/* Une page ouverte par un lien d'invitation (etape 2.7): la partie qui attend le
+   joueur, avant le formulaire qui la rejoint. */
+.accueil-invitation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 12px 16px;
+  border: 1px solid rgba(45, 230, 224, 0.35);
+  border-radius: var(--rayon-controle);
+  background: rgba(45, 230, 224, 0.08);
+}
+
+.accueil-invitation[data-invitation='malFormee'] {
+  border-color: rgba(255, 46, 126, 0.35);
+  background: rgba(255, 46, 126, 0.08);
+}
+
+.accueil-invitation-contenu {
+  display: grid;
+  gap: 2px;
+}
+
+.accueil-invitation-titre {
+  color: var(--cyan);
+  font-family: var(--police-titre);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.accueil-invitation[data-invitation='malFormee'] .accueil-invitation-titre {
+  color: var(--rose-clair);
+}
+
+.accueil-invitation-texte,
+.accueil-invitation-code {
+  color: var(--texte-secondaire);
+  font-size: 14px;
+}
+
+.accueil-invitation-valeur {
+  color: var(--cyan);
+  font-family: var(--police-donnees);
+  letter-spacing: 0.2em;
+}
+
 /* -- Connexion ----------------------------------------------------------- */
 
 .ecran-connexion {
@@ -2072,9 +2121,18 @@
   height: 34px;
 }
 
+/* Le lien d'invitation (etape 2.7), a la taille du bouton qui copie le code. */
+.salon-code .salon-partage {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+
 .salon-copie {
   color: var(--texte-tertiaire);
   font-size: 12px;
+  /* Une copie impossible montre le lien, qui doit pouvoir passer a la ligne. */
+  overflow-wrap: anywhere;
 }
 
 .salon-places {

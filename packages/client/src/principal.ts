@@ -38,6 +38,7 @@ import { creerReseauSocketIo } from './reseauSocketIo.js';
 import type { LecteurDeSons } from './sons/lecteur.js';
 import { creerLecteurDeSons } from './sons/lecteur.js';
 import { garderEveilleDansLeNavigateur } from './eveil.js';
+import { brancherLAdresseDInvitation, lireLInvitation } from './invitation.js';
 
 /** L'origine du serveur de jeu, ecrite par l'empaqueteur. Vide: celle de la page. */
 declare const __SERVEUR_DE_JEU__: string;
@@ -110,6 +111,9 @@ const configuration = configurationDeLaPage(
   __HORODATAGE_DU_JEU__,
 );
 
+// Une page ouverte par un lien d'invitation propose d'entrer dans cette partie (etape 2.7).
+const invitation = lireLInvitation(globalThis.location.search);
+
 const client = creerClient({
   reseau: creerReseauSocketIo(configuration),
   horloge: horlogeNavigateur,
@@ -117,7 +121,11 @@ const client = creerClient({
   coffre: creerCoffreDeJeton(stockage),
   coffreDeRetour: creerCoffreDeJeton(stockageDeSession(), CLE_RETOUR),
   surReseauRetrouve,
+  ...(invitation === undefined ? {} : { invitation }),
 });
+
+// L'invitation quitte l'adresse des qu'elle a servi: recharger ne la repropose pas.
+brancherLAdresseDInvitation(client, globalThis);
 
 // Le releve de performance, seulement si l'adresse le demande (etape 8.5): sans
 // `?diagnostic=1`, il n'existe pas.

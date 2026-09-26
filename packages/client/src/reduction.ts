@@ -261,6 +261,18 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
         ? etat
         : { ...etat, ecran, pseudoSaisi: action.pseudo };
 
+    case 'invitationOuverte':
+      return { ...etat, ecran, invitation: action.invitation };
+
+    // Le refus d'une entree par l'invitation ne concerne plus rien a l'ecran.
+    case 'invitationIgnoree':
+      return {
+        ...etat,
+        ecran,
+        invitation: undefined,
+        refus: etat.refus?.action === 'rejoindre' ? undefined : etat.refus,
+      };
+
     case 'listeDemandee':
       return { ...etat, ecran, listeEnCours: true };
 
@@ -275,8 +287,17 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
         avisDeRetour: undefined,
       };
 
+    // Une entree acceptee consomme l'invitation, qu'elle ait servi a entrer ou que le
+    // joueur soit alle ailleurs (etape 2.7).
     case 'entreeAcceptee':
-      return { ...etat, ecran, salon: action.salon, entreeEnCours: false, refus: undefined };
+      return {
+        ...etat,
+        ecran,
+        salon: action.salon,
+        entreeEnCours: false,
+        refus: undefined,
+        invitation: undefined,
+      };
 
     case 'entreeRefusee':
       return {
@@ -384,7 +405,8 @@ export function reduire(etat: EtatClient, action: Action): EtatClient {
  *
  * Tout ce qui tenait a la partie s'efface, notre identifiant de joueur compris.
  * Survivent le pseudo saisi, pour reproposer la saisie, la session, qui ne depend pas
- * du lien, et un code de secours pas encore note, que le serveur ne rendra plus.
+ * du lien, un code de secours pas encore note, que le serveur ne rendra plus, et une
+ * invitation qui n'a pas servi (etape 2.7).
  */
 function horsDeLaPartie(etat: EtatClient, ecran: Ecran, connexion: EtatConnexion): EtatClient {
   return {
@@ -395,6 +417,7 @@ function horsDeLaPartie(etat: EtatClient, ecran: Ecran, connexion: EtatConnexion
     pseudoSaisi: etat.pseudoSaisi,
     session: etat.session,
     codeDeSecours: etat.codeDeSecours,
+    invitation: etat.invitation,
   };
 }
 

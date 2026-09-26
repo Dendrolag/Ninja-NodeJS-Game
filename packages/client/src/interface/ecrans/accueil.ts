@@ -12,6 +12,10 @@
  * s'allonge d'elle-meme quand un mode s'ajoute. Elle remplace les trois regles de la
  * Horde, qui ne valaient plus pour les autres modes.
  *
+ * OUVERT PAR UN LIEN D'INVITATION (etape 2.7), il annonce la partie privee qui attend
+ * le joueur, et son bouton principal la rejoint au lieu de la partie rapide. « Ignorer »
+ * le rend a l'accueil de tous les jours.
+ *
  * CET ECRAN NE DECIDE RIEN, ET NE RETIENT RIEN. Peut-on jouer, pourquoi le pseudo
  * est refuse, ou en est le lien, faut-il un pseudo: tout vient de modeleAccueil,
  * qui ne lit que l'etat du client. Le pseudo saisi lui-meme vit dans l'etat
@@ -41,12 +45,41 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
   const client = contexte.client;
 
   const champPseudo = monterChampPseudo(doc, client);
+  // Son texte suit l'invitation: « Partie rapide », ou « Rejoindre la partie ».
+  const libelleDuBouton = creer(doc, 'span');
   const partieRapide = bouton(doc, {
     classe: 'bouton bouton-primaire bouton-large',
-    texte: 'Partie rapide',
     icone: 'play',
     type: 'submit',
   });
+  partieRapide.append(libelleDuBouton);
+
+  const titreDInvitation = creer(doc, 'p', { classe: 'accueil-invitation-titre' });
+  const texteDInvitation = creer(doc, 'p', { classe: 'accueil-invitation-texte' });
+  const codeDInvitation = creer(doc, 'strong', { classe: 'accueil-invitation-valeur' });
+  const ligneDuCode = creer(
+    doc,
+    'p',
+    { classe: 'accueil-invitation-code' },
+    doc.createTextNode('Code '),
+    codeDInvitation,
+  );
+  const invitation = creer(
+    doc,
+    'div',
+    { classe: 'accueil-invitation', attributs: { role: 'status' } },
+    creer(
+      doc,
+      'div',
+      { classe: 'accueil-invitation-contenu' },
+      titreDInvitation,
+      texteDInvitation,
+      ligneDuCode,
+    ),
+    bouton(doc, { classe: 'bouton bouton-discret', texte: 'Ignorer' }, () => {
+      client.ignorerLInvitation();
+    }),
+  );
 
   const nomDuCompte = creer(doc, 'strong');
   const ligneDuCompte = creer(
@@ -136,6 +169,7 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
           continuerEnInvite,
         ),
         avis,
+        invitation,
         ligneDuCompte,
         formulaire,
         erreur,
@@ -211,7 +245,10 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
     const modele = modeleAccueil(etatCourant, etatCourant.pseudoSaisi);
 
     if (modele.peutJouer) {
-      client.rejoindre(modele.pseudo);
+      client.rejoindre(
+        modele.pseudo,
+        modele.codeDEntree === undefined ? undefined : { code: modele.codeDEntree },
+      );
     }
   };
 
@@ -230,8 +267,17 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
       ecrireTexte(avis, modele.avis ?? '');
       montrer(avis, modele.avis !== undefined);
 
+      montrer(invitation, modele.invitation !== undefined);
+      invitation.dataset['invitation'] =
+        modele.invitation?.code === undefined ? 'malFormee' : 'code';
+      ecrireTexte(titreDInvitation, modele.invitation?.titre ?? '');
+      ecrireTexte(texteDInvitation, modele.invitation?.texte ?? '');
+      ecrireTexte(codeDInvitation, modele.invitation?.code ?? '');
+      montrer(ligneDuCode, modele.invitation?.code !== undefined);
+
       ecrireTexte(erreur, modele.erreur ?? '');
       montrer(erreur, modele.erreur !== undefined);
+      ecrireTexte(libelleDuBouton, modele.libelleDuBouton);
       partieRapide.disabled = !modele.peutJouer;
       partieRapide.toggleAttribute('aria-busy', modele.enAttente);
 

@@ -1,7 +1,7 @@
 # Étude - Les amis et la fiche joueur
 
 Date: 25 septembre 2026
-Statut: étude close, rien n'est construit. Décisions prises par le porteur du projet le 25 septembre 2026 (section 7): les recommandations sont retenues, sauf le temps de jeu, écarté. Les quatre étapes sont inscrites au ROADMAP.
+Statut: étude close. Décisions prises par le porteur du projet le 25 septembre 2026 (section 7): les recommandations sont retenues, sauf le temps de jeu, écarté. Les quatre étapes sont inscrites au ROADMAP. La première, `2.7` le lien d'invitation, est construite depuis le 26 septembre 2026 (`docs/plan/etape-2-7.md`); les trois autres ne le sont pas.
 
 ## 1. La demande
 

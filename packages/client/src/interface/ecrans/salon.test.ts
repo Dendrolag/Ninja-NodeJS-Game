@@ -281,6 +281,61 @@ describe('la visibilite et le code d invitation', () => {
     );
   });
 
+  it('copie le lien d invitation sur un ordinateur (etape 2.7)', async () => {
+    const ecrits = pressePapiersDEssai();
+    monter({ ...salon('bob'), visibilite: 'privee', code: 'NX7K2P' });
+
+    boutonObligatoire(document, 'Copier le lien').click();
+    await new Promise((resoudre) => setTimeout(resoudre, 0));
+
+    // L'adresse de la page, et non celle du serveur de jeu, avec le seul code.
+    const lien = new URL(window.location.href);
+    lien.search = '?partie=NX7K2P';
+    lien.hash = '';
+    expect(ecrits).toEqual([lien.href]);
+    expect(obligatoire(document, '.salon-copie').textContent).toBe('Lien copié');
+  });
+
+  it('montre le lien a selectionner quand la copie est impossible (etape 2.7)', async () => {
+    monter({ ...salon('moi'), visibilite: 'privee', code: 'NX7K2P' });
+
+    boutonObligatoire(document, 'Copier le lien').click();
+    await new Promise((resoudre) => setTimeout(resoudre, 0));
+
+    expect(obligatoire(document, '.salon-copie').textContent).toMatch(
+      /^Copie impossible\. Lien : http.*\?partie=NX7K2P$/u,
+    );
+  });
+
+  it('partage le lien par le systeme sur un appareil tactile (etape 2.7)', async () => {
+    const partages: ShareData[] = [];
+    Object.defineProperty(window.navigator, 'share', {
+      configurable: true,
+      value: async (donnees: ShareData) => {
+        partages.push(donnees);
+      },
+    });
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: (requete: string) => ({ matches: requete === '(pointer: coarse)' }),
+    });
+
+    try {
+      monter({ ...salon('moi'), visibilite: 'privee', code: 'NX7K2P' });
+
+      expect(boutonNomme(document, 'Copier le lien')).toBeUndefined();
+      boutonObligatoire(document, 'Partager le lien').click();
+      await new Promise((resoudre) => setTimeout(resoudre, 0));
+
+      expect(partages).toHaveLength(1);
+      expect(partages[0]?.url).toMatch(/\?partie=NX7K2P$/u);
+      expect(obligatoire(document, '.salon-copie').textContent).toBe('Lien partagé');
+    } finally {
+      Reflect.deleteProperty(window.navigator, 'share');
+      Reflect.deleteProperty(window, 'matchMedia');
+    }
+  });
+
   it('ne montre aucun code pour une partie publique, mais les places libres', () => {
     monter(salon('moi'));
 

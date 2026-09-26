@@ -5,8 +5,9 @@
  * arrondies sur une grille de vingt-quatre, qui prennent la couleur du texte qui
  * les entoure. La tension 9 du journal de conception les jugeait directement
  * reutilisables, et c'est le cas: aucune police d'icones, aucun fichier a charger,
- * aucun emoji. Quatre glyphes manquaient a la maquette et sont dessines dans le
- * meme style: pause, son, sonCoupe et fermer.
+ * aucun emoji. Les glyphes absents de la maquette sont dessines dans le meme style:
+ * pause, son, sonCoupe, fermer, user, sortir, viseur, katana, et partager (etape
+ * 2.7).
  *
  * SEULS LES GLYPHES UTILISES SONT REPRIS. La maquette en compte trente-cinq, dont
  * beaucoup servent des ecrans reportes (pass de saison, boutique, clans).
@@ -147,6 +148,16 @@ const GLYPHES = {
     formes: [
       { rectangle: [9, 9, 11, 11, 2] },
       { trace: 'M5.5 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v.5' },
+    ],
+  },
+  // Absent de la maquette, dessine dans le meme style (etape 2.7): trois points relies.
+  partager: {
+    formes: [
+      { cercle: [18, 5, 2.5] },
+      { cercle: [6, 12, 2.5] },
+      { cercle: [18, 19, 2.5] },
+      { trace: 'M8.2 10.8l7.6-4.5' },
+      { trace: 'M8.2 13.2l7.6 4.5' },
     ],
   },
   cle: { formes: [{ cercle: [8, 15, 4] }, { trace: 'M11 12l9-9' }, { trace: 'M17 6l3 3' }] },

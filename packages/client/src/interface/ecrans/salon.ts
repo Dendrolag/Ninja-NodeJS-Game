@@ -9,6 +9,11 @@
  * qu'une politesse. Le serveur verifie la qualite d'hote a chaque demande, et un
  * invite qui les forcerait recevrait un refus, annonce par le fil des annonces.
  *
+ * LE LIEN D'INVITATION D'UNE PARTIE PRIVEE SE PARTAGE D'ICI (etape 2.7), a cote du
+ * code: par le partage du systeme sur un appareil tactile, par le presse-papiers
+ * ailleurs (composants/partage.ts). Le choix se fait au montage: l'appareil ne change
+ * pas en cours de route.
+ *
  * LE JEU D'ORIGINE AVAIT TROIS FENETRES POUR CE SALON (parametres, carte, aide),
  * dont deux se chevauchaient: la carte se reglait a deux endroits. Il n'y a ici
  * qu'un panneau de reglages, carte comprise, et l'aide est commune a
@@ -16,7 +21,10 @@
  */
 
 import type { EtatClient } from '../../etat.js';
+import { adresseDInvitation } from '../../invitation.js';
 import { monterChat } from '../composants/chat.js';
+import type { IssueDuPartage } from '../composants/partage.js';
+import { partageDuSysteme, partagerLeLien } from '../composants/partage.js';
 import { monterPanneauReglages } from '../composants/reglages.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import { icone } from '../icones.js';
@@ -62,8 +70,43 @@ export function monterSalon(contexte: ContexteEcran): EcranAffiche {
     bouton(doc, { classe: 'bouton-icone', icone: 'copier', etiquette: 'Copier le code' }, () => {
       void copierLeCode();
     }),
+    bouton(
+      doc,
+      {
+        classe: 'bouton bouton-secondaire salon-partage',
+        icone: 'partager',
+        texte: partageDuSysteme(doc.defaultView) ? 'Partager le lien' : 'Copier le lien',
+      },
+      () => {
+        void partagerLeLienDInvitation();
+      },
+    ),
     retourDeCopie,
   );
+
+  /**
+   * Partage le lien d'invitation de la partie, ou le copie (etape 2.7).
+   *
+   * Le lien est fabrique au clic, depuis l'adresse de la page: c'est elle, et non le
+   * serveur de jeu, que l'invite doit ouvrir.
+   */
+  const partagerLeLienDInvitation = async (): Promise<void> => {
+    const valeur = etatCourant?.salon?.code;
+    const fenetre = doc.defaultView;
+
+    if (valeur === undefined || fenetre === null) {
+      return;
+    }
+
+    const url = adresseDInvitation(fenetre.location.href, valeur);
+    const issue = await partagerLeLien(fenetre, {
+      titre: 'Neon Ninja',
+      texte: 'Rejoins ma partie privée de Neon Ninja.',
+      url,
+    });
+
+    ecrireTexte(retourDeCopie, texteDuPartage(issue, url));
+  };
 
   /**
    * Copie le code dans le presse-papiers.
@@ -442,4 +485,18 @@ function carteJoueur(doc: Document, joueur: JoueurAffiche): HTMLElement {
         )
       : undefined,
   );
+}
+
+/** Ce que le salon dit apres un partage du lien d'invitation. */
+function texteDuPartage(issue: IssueDuPartage, url: string): string {
+  switch (issue) {
+    case 'partage':
+      return 'Lien partagé';
+    case 'copie':
+      return 'Lien copié';
+    case 'annule':
+      return '';
+    case 'impossible':
+      return `Copie impossible. Lien : ${url}`;
+  }
 }

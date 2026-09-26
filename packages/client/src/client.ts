@@ -47,6 +47,7 @@ import type { EtatClient } from './etat.js';
 import { fait } from './faits.js';
 import type { HorlogeClient } from './horloge.js';
 import { horlogeNavigateur } from './horloge.js';
+import type { Invitation } from './invitation.js';
 import type { Magasin, Observateur } from './magasin.js';
 import { creerMagasin } from './magasin.js';
 import type { Minuterie } from './minuterie.js';
@@ -79,6 +80,11 @@ export interface OptionsClient {
    * arreter d'ecouter. Absent, un lien perdu ne se rouvre qu'a ses essais planifies.
    */
   readonly surReseauRetrouve?: (gestionnaire: () => void) => () => void;
+  /**
+   * L'invitation lue dans l'adresse de la page (etape 2.7). Absente, l'accueil est
+   * celui de tous les jours.
+   */
+  readonly invitation?: Invitation;
 }
 
 /**
@@ -109,6 +115,8 @@ export interface Client extends CommandesDeSession {
   naviguer(vers: EcranDeMenu): void;
   /** Retient le pseudo qu'un invite saisit, pour tous les ecrans qui le demandent. */
   saisirPseudo(pseudo: string): void;
+  /** Renonce a l'invitation lue dans l'adresse de la page (etape 2.7). */
+  ignorerLInvitation(): void;
   /**
    * Demande a entrer dans une partie.
    *
@@ -156,6 +164,10 @@ export function creerClient(options: OptionsClient): Client {
   const magasin = options.magasin ?? creerMagasin();
 
   const desabonnements: (() => void)[] = [];
+
+  if (options.invitation !== undefined) {
+    magasin.appliquer({ type: 'invitationOuverte', invitation: options.invitation });
+  }
 
   /** Pose une ecoute et retient de quoi la retirer. */
   const ecouter = (retirer: () => void): void => {
@@ -504,6 +516,10 @@ export function creerClient(options: OptionsClient): Client {
 
     saisirPseudo: (pseudo) => {
       magasin.appliquer({ type: 'pseudoSaisi', pseudo });
+    },
+
+    ignorerLInvitation: () => {
+      magasin.appliquer({ type: 'invitationIgnoree' });
     },
 
     rejoindre: (pseudo, acces) => {

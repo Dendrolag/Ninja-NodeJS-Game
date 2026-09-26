@@ -34,6 +34,7 @@ import type {
 
 import type { Ecran } from './ecrans.js';
 import type { FaitDeJeu } from './faits.js';
+import type { Invitation } from './invitation.js';
 import type { VuePartie } from './reconstruction.js';
 
 /** Ou en est le transport. */
@@ -321,6 +322,15 @@ export interface EtatClient {
    * entree.
    */
   readonly avisDeRetour: string | undefined;
+  /**
+   * L'invitation lue dans l'adresse de la page, tant qu'elle n'a pas servi (etape 2.7).
+   *
+   * L'accueil propose d'entrer dans cette partie, ou dit que le lien ne vaut rien.
+   * Elle cesse a la premiere entree acceptee, et quand le joueur l'ignore. Une sortie
+   * de partie ne l'efface pas: une page rechargee reprend d'abord sa place (etape
+   * 2.5), et l'invitation l'attend a l'accueil.
+   */
+  readonly invitation: Invitation | undefined;
 }
 
 /**
@@ -361,6 +371,7 @@ export const ETAT_INITIAL: EtatClient = {
   progressionDeFin: undefined,
   refus: undefined,
   avisDeRetour: undefined,
+  invitation: undefined,
 };
 
 /** Un refus fabrique a partir d'erreurs de validation, pour un evenement donne. */

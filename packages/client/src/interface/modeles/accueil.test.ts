@@ -6,7 +6,8 @@
  * affiche sous un pseudo qu'il n'a pas concerne. Depuis la reprise des ecrans du
  * jalon 3: un compte n'a pas de pseudo a choisir, et un lien refuse se dit. Depuis
  * l'etape 5.3: une page d'une autre version que le serveur ne propose que de se
- * recharger.
+ * recharger. Depuis l'etape 2.7: une page ouverte par un lien d'invitation propose
+ * d'entrer dans cette partie, et dit qu'un lien mal forme ne vaut rien.
  */
 
 import type { MaProgression } from '@neon-ninja/shared';
@@ -15,7 +16,12 @@ import { describe, expect, it } from 'vitest';
 
 import type { EtatClient } from '../../etat.js';
 import { ETAT_INITIAL } from '../../etat.js';
-import { AVIS_SESSION_EXPIREE, modeleAccueil } from './accueil.js';
+import {
+  AVIS_SESSION_EXPIREE,
+  TEXTE_INVITATION,
+  TITRE_INVITATION_MAL_FORMEE,
+  modeleAccueil,
+} from './accueil.js';
 import { TEXTE_LIEN_PERDU, TEXTE_RETABLISSEMENT } from './lien.js';
 
 /** Un client dont le lien est etabli. */
@@ -82,6 +88,9 @@ describe('modeleAccueil', () => {
       peutRecharger: false,
       peutReessayer: false,
       peutContinuerEnInvite: false,
+      invitation: undefined,
+      libelleDuBouton: 'Partie rapide',
+      codeDEntree: undefined,
     });
   });
 
@@ -273,5 +282,77 @@ describe('modeleAccueil, quand la page n est pas de la version du serveur', () =
     );
 
     expect(modele.peutContinuerEnInvite).toBe(false);
+  });
+});
+
+describe('modeleAccueil, ouvert par un lien d invitation (etape 2.7)', () => {
+  /** Un invite dont la page a ete ouverte par un lien bien forme. */
+  const INVITE: EtatClient = { ...CONNECTE, invitation: { nature: 'code', code: 'K7XM3Q' } };
+
+  it('annonce la partie et la rejoint par son code, au lieu de la partie rapide', () => {
+    expect(modeleAccueil(INVITE, 'Bob')).toMatchObject({
+      invitation: { titre: 'Invitation', texte: TEXTE_INVITATION, code: 'K7XM3Q' },
+      libelleDuBouton: 'Rejoindre la partie',
+      codeDEntree: 'K7XM3Q',
+      pseudoRequis: true,
+      pseudo: 'Bob',
+      peutJouer: true,
+    });
+  });
+
+  it('demande un pseudo valide a un invite avant de le laisser entrer', () => {
+    expect(modeleAccueil(INVITE, '   ')).toMatchObject({ peutJouer: false, erreur: undefined });
+    expect(modeleAccueil(INVITE, 'Bob<b>').peutJouer).toBe(false);
+    expect(modeleAccueil(INVITE, 'Bob<b>').erreur).toBeDefined();
+  });
+
+  it('laisse un compte entrer d un clic, sans pseudo', () => {
+    expect(
+      modeleAccueil({ ...COMPTE, invitation: { nature: 'code', code: 'K7XM3Q' } }, ''),
+    ).toMatchObject({
+      pseudoRequis: false,
+      pseudo: undefined,
+      codeDEntree: 'K7XM3Q',
+      peutJouer: true,
+    });
+  });
+
+  it('attend le lien pour laisser entrer, comme la partie rapide', () => {
+    expect(modeleAccueil({ ...INVITE, connexion: 'horsLigne' }, 'Bob').peutJouer).toBe(false);
+  });
+
+  it('montre le refus du serveur sous le formulaire', () => {
+    const refuse: EtatClient = {
+      ...INVITE,
+      pseudoDemande: 'Bob',
+      refus: {
+        action: 'rejoindre',
+        erreurs: [{ champ: 'code', motif: 'Aucune partie ne porte ce code.' }],
+      },
+    };
+
+    expect(modeleAccueil(refuse, 'Bob')).toMatchObject({
+      erreur: 'Aucune partie ne porte ce code.',
+      codeDEntree: 'K7XM3Q',
+      peutJouer: true,
+    });
+  });
+
+  it('dit qu un lien mal forme ne vaut rien, et garde la partie rapide', () => {
+    const modele = modeleAccueil(
+      { ...CONNECTE, invitation: { nature: 'malFormee', motif: 'Un code compte 6 caractères.' } },
+      'Bob',
+    );
+
+    expect(modele).toMatchObject({
+      invitation: {
+        titre: TITRE_INVITATION_MAL_FORMEE,
+        texte: 'Un code compte 6 caractères.',
+        code: undefined,
+      },
+      libelleDuBouton: 'Partie rapide',
+      codeDEntree: undefined,
+      peutJouer: true,
+    });
   });
 });
