@@ -1,7 +1,7 @@
 # Étude - Les succès
 
 Date: 25 septembre 2026
-Statut: étude, décisions prises. L'ordre est tranché le 26 septembre 2026: les succès suivent les amis. Les six autres décisions de la section 8 ont été prises avec le porteur du projet le 26 septembre 2026, au début de l'étape `3.7`, qui construit le socle (`docs/plan/etape-3-7.md`).
+Statut: étude, décisions prises. L'ordre est tranché le 26 septembre 2026: les succès suivent les amis. Les six autres décisions de la section 8 ont été prises avec le porteur du projet le 26 septembre 2026, au début de l'étape `3.7`, qui construit le socle (`docs/plan/etape-3-7.md`). L'étape `3.8`, terminée le 27 septembre 2026, construit les exploits de partie, les secrets et « Rassembleur » (`docs/plan/etape-3-8.md`): la liste de la section 4 est entière.
 
 ## 1. La demande
 
