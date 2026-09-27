@@ -27,6 +27,7 @@ import type {
   DemandeCodeDeSecours,
   DemandeConnexion,
   DemandeDeGeste,
+  DemandeDeTitre,
   DemandeInscription,
   DemandeReinitialisation,
   ErreurValidation,
@@ -37,6 +38,7 @@ import type {
   ReponseDeGeste,
   SessionInscrite,
   SessionOuverte,
+  TitreDuCompte,
 } from '@neon-ninja/shared';
 import { PREFIXE_JETON_HTTP, ROUTES_COMPTES, SUCCES, adresseDeLaFiche } from '@neon-ninja/shared';
 
@@ -80,6 +82,11 @@ export interface ApiComptes {
    * regles refusent l'est en 409, un pseudo sans compte en 404.
    */
   gesteDAmitie(jeton: string, demande: DemandeDeGeste): Promise<ReponseDesComptes<ReponseDeGeste>>;
+  /**
+   * Choisit le titre du compte de cette session parmi ses succes obtenus, ou le retire
+   * (etape 3.9). Un succes non obtenu est refuse en 409.
+   */
+  titre(jeton: string, demande: DemandeDeTitre): Promise<ReponseDesComptes<TitreDuCompte>>;
   /**
    * Change le mot de passe du compte de cette session, et rend son nouveau code de
    * secours (etape 3.4). Un mot de passe actuel faux est refuse en 403.
@@ -204,6 +211,7 @@ export function creerApiComptesHttp(options: OptionsApiComptesHttp = {}): ApiCom
       demander(ROUTES_COMPTES.amis, { method: 'GET', headers: entetesDuJeton(jeton) }, true),
     gesteDAmitie: (jeton, demande) =>
       demander(ROUTES_COMPTES.amis, envoiJson(demande, jeton), true),
+    titre: (jeton, demande) => demander(ROUTES_COMPTES.titre, envoiJson(demande, jeton), true),
     changerMotDePasse: (jeton, demande) =>
       demander(ROUTES_COMPTES.motDePasse, envoiJson(demande, jeton), true),
     nouveauCodeDeSecours: (jeton, demande) =>
@@ -407,6 +415,10 @@ export function creerApiComptesFactice(): ApiComptesFactice {
         amis: LISTE_D_AMIS_VIDE,
       },
     }),
+    titre: async (_jeton, demande) => ({
+      acceptee: true,
+      valeur: demande.titre === null ? {} : { titre: demande.titre },
+    }),
   };
 
   return {
@@ -443,6 +455,10 @@ export function creerApiComptesFactice(): ApiComptesFactice {
     gesteDAmitie: (jeton, demande) => {
       appels.push({ nom: 'gesteDAmitie', argument: { jeton, demande } });
       return reponses.gesteDAmitie(jeton, demande);
+    },
+    titre: (jeton, demande) => {
+      appels.push({ nom: 'titre', argument: { jeton, demande } });
+      return reponses.titre(jeton, demande);
     },
     changerMotDePasse: (jeton, demande) => {
       appels.push({ nom: 'changerMotDePasse', argument: { jeton, demande } });

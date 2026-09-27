@@ -43,6 +43,8 @@ import {
   carteDeLaPartie,
   nomDeCarte,
 } from './cartes.js';
+import type { TitreAffiche } from './titre.js';
+import { titreAffiche } from './titre.js';
 
 /** Un joueur du salon, tel qu'on l'affiche. */
 export interface JoueurAffiche {
@@ -58,6 +60,8 @@ export interface JoueurAffiche {
    * c'est ce qui distingue les deux dans le salon.
    */
   readonly niveau: number | undefined;
+  /** Le titre de son compte, sous son pseudo (etape 3.9). Absent: aucun, ou un invite. */
+  readonly titre: TitreAffiche | undefined;
   /** Son equipe, dans une partie Equipes seulement. */
   readonly equipe: Equipe | undefined;
   /**
@@ -182,6 +186,7 @@ export function modeleSalon(etat: EtatClient): ModeleSalon | undefined {
     hote: joueur.hote,
     moi: joueur.id === etat.moi,
     niveau: joueur.compte?.niveau,
+    titre: titreAffiche(joueur.compte?.titre),
     equipe: joueur.equipe,
     aUneFiche: joueur.compte !== undefined && etat.session.nature === 'compte',
   }));

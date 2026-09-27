@@ -4,7 +4,8 @@
  * LA VERSION REDUITE DU CADRAGE (section 3, profil): identite, niveau et XP, palier
  * et points de ligue, pieces, statistiques et dernieres parties. Ni pass de saison,
  * ni skins, ni clan, ni gemmes, ni rang mondial: reportes apres la v1, et absents
- * plutot que grises (decision du 29 juin 2026). Les succes y sont depuis l'etape 3.7.
+ * plutot que grises (decision du 29 juin 2026). Les succes y sont depuis l'etape 3.7, et
+ * le titre, choisi parmi eux, depuis l'etape 3.9.
  *
  * LES STATISTIQUES SONT CELLES DE LA FICHE (etape 3.5): parties, victoires sur les
  * parties a plusieurs, mode prefere, et un tableau par mode, mis en forme par
@@ -19,7 +20,7 @@
 import type { PartieDuProfil, ProfilDuCompte } from '@neon-ninja/shared';
 import { palierDePoints } from '@neon-ninja/shared';
 
-import type { EtatClient } from '../../etat.js';
+import type { EtatClient, EtatDuChoixDuTitre } from '../../etat.js';
 import { NOMS_DES_MODES, nomDeCarte } from './cartes.js';
 import type { BarreDeNiveau } from './progression.js';
 import {
@@ -38,6 +39,8 @@ import type { LigneDUnMode, StatistiqueAffichee } from './statistiques.js';
 import { lignesParMode, tuilesDesStatistiques } from './statistiques.js';
 import type { SuccesDuProfilAffiches } from './succes.js';
 import { succesDuProfilAffiches } from './succes.js';
+import type { ChoixDuTitreAffiche, TitreAffiche } from './titre.js';
+import { choixDuTitreAffiche, titreAffiche } from './titre.js';
 
 /** Le sens d'une variation de points de ligue, qui decide de sa couleur. */
 export type SensDUneVariation = 'hausse' | 'baisse' | 'stable';
@@ -79,6 +82,10 @@ export type ModeleProfil =
       readonly parties: readonly LigneDHistorique[];
       /** Les succes, obtenus ou non, palier par palier (etape 3.7). */
       readonly succes: SuccesDuProfilAffiches;
+      /** Le titre porte, sous le pseudo (etape 3.9). Absent: aucun. */
+      readonly titre: TitreAffiche | undefined;
+      /** La liste ou il se choisit. */
+      readonly choixDuTitre: ChoixDuTitreAffiche;
     };
 
 /** La fin d'une partie: le jour et l'heure. */
@@ -115,12 +122,12 @@ export function modeleProfil(etat: EtatClient): ModeleProfil {
       return { nature: 'echec', motif: profil.motif };
 
     case 'charge':
-      return profilCharge(profil.profil);
+      return profilCharge(profil.profil, etat.choixDuTitre);
   }
 }
 
 /** Le profil lu, mis en forme. */
-function profilCharge(profil: ProfilDuCompte): ModeleProfil {
+function profilCharge(profil: ProfilDuCompte, choix: EtatDuChoixDuTitre): ModeleProfil {
   const { statistiques } = profil;
 
   return {
@@ -138,6 +145,8 @@ function profilCharge(profil: ProfilDuCompte): ModeleProfil {
     parMode: lignesParMode(statistiques),
     parties: profil.dernieresParties.map(ligneDHistorique),
     succes: succesDuProfilAffiches(profil.succes),
+    titre: titreAffiche(profil.titre),
+    choixDuTitre: choixDuTitreAffiche(profil, choix),
   };
 }
 

@@ -184,6 +184,130 @@ describe('l ecran du profil', () => {
     expect(habitue?.querySelector('.succes-date')).toBeNull();
   });
 
+  describe('le titre (etape 3.9)', () => {
+    /** Le profil, avec « Premier pas » et « Centurion » obtenus. */
+    const AVEC_SUCCES: ProfilDuCompte = {
+      ...PROFIL,
+      succes: PROFIL.succes.map((succes) =>
+        succes.id === 'premier-pas' || succes.id === 'centurion'
+          ? { ...succes, debloqueLe: '2026-09-11T12:00:00.000Z' }
+          : succes,
+      ),
+    };
+
+    /** La liste du titre. */
+    function liste(): HTMLSelectElement {
+      return obligatoire<HTMLSelectElement>(hote, '.titre-choix');
+    }
+
+    /** Choisit cette valeur dans la liste, comme le joueur. */
+    function choisir(valeur: string): void {
+      liste().value = valeur;
+      liste().dispatchEvent(new Event('change'));
+    }
+
+    it('propose Aucun, puis les succes obtenus par palier, et montre le titre porte', async () => {
+      api.reponses.profil = async () => ({
+        acceptee: true,
+        valeur: { ...AVEC_SUCCES, titre: 'centurion' },
+      });
+
+      client.naviguer('profil');
+      await laisserRepondre();
+
+      expect([...liste().options].map((option) => option.textContent)).toEqual([
+        'Aucun',
+        'Premier pas',
+        'Centurion',
+      ]);
+      expect([...liste().querySelectorAll('optgroup')].map((groupe) => groupe.label)).toEqual([
+        'Découverte',
+        'Légende',
+      ]);
+      expect(liste().value).toBe('centurion');
+      expect(obligatoire(hote, '.profil-titre').textContent).toBe('Centurion');
+      expect(obligatoire(hote, '.profil-titre').dataset['palier']).toBe('legende');
+    });
+
+    it('envoie le choix aussitot, desactive la liste pendant l attente, et montre le nouveau titre', async () => {
+      api.reponses.profil = async () => ({ acceptee: true, valeur: AVEC_SUCCES });
+      let repondre: (() => void) | undefined;
+      api.reponses.titre = (_jeton, demande) =>
+        new Promise((resoudre) => {
+          repondre = () => {
+            resoudre({
+              acceptee: true,
+              valeur: demande.titre === null ? {} : { titre: demande.titre },
+            });
+          };
+        });
+
+      client.naviguer('profil');
+      await laisserRepondre();
+
+      expect(estCache(obligatoire(hote, '.profil-titre'))).toBe(true);
+
+      choisir('premier-pas');
+
+      expect(liste().disabled).toBe(true);
+      expect(liste().value).toBe('premier-pas');
+      expect(api.appels.at(-1)).toEqual({
+        nom: 'titre',
+        argument: { jeton: JETON_DESSAI, demande: { titre: 'premier-pas' } },
+      });
+
+      repondre?.();
+      await laisserRepondre();
+
+      expect(liste().disabled).toBe(false);
+      expect(obligatoire(hote, '.profil-titre').textContent).toBe('Premier pas');
+      expect(estCache(obligatoire(hote, '.profil-titre'))).toBe(false);
+
+      choisir('');
+      repondre?.();
+      await laisserRepondre();
+
+      expect(api.appels.at(-1)?.argument).toEqual({
+        jeton: JETON_DESSAI,
+        demande: { titre: null },
+      });
+      expect(estCache(obligatoire(hote, '.profil-titre'))).toBe(true);
+    });
+
+    it('dit un refus, et revient au titre porte', async () => {
+      api.reponses.profil = async () => ({
+        acceptee: true,
+        valeur: { ...AVEC_SUCCES, titre: 'premier-pas' },
+      });
+      api.reponses.titre = async () => ({
+        acceptee: false,
+        statut: 409,
+        erreurs: [{ champ: 'titre', motif: 'Ce succès n’est pas encore obtenu.' }],
+      });
+
+      client.naviguer('profil');
+      await laisserRepondre();
+      choisir('centurion');
+      await laisserRepondre();
+
+      expect(obligatoire(hote, '.titre-erreur').textContent).toBe(
+        'Ce succès n’est pas encore obtenu.',
+      );
+      expect(estCache(obligatoire(hote, '.titre-erreur'))).toBe(false);
+      expect(liste().value).toBe('premier-pas');
+    });
+
+    it('dit comment obtenir un titre, sans succes obtenu', async () => {
+      client.naviguer('profil');
+      await laisserRepondre();
+
+      expect(estCache(obligatoire(hote, '.titre-champ'))).toBe(true);
+      expect(obligatoire(hote, '.titre-du-profil').textContent).toContain(
+        'Obtenez un succès pour choisir un titre',
+      );
+    });
+  });
+
   it('dit qu aucune partie n est encore enregistree', async () => {
     client.naviguer('profil');
     await laisserRepondre();

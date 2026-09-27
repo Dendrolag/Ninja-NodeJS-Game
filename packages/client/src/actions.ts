@@ -37,6 +37,7 @@ import type {
   ProgressionDeFin,
   Refus,
   ReponseDeGeste,
+  TitreDuCompte,
   TrameDEtat,
 } from '@neon-ninja/shared';
 
@@ -129,6 +130,12 @@ export type Action =
   | { readonly type: 'profilRecu'; readonly profil: ProfilDuCompte }
   /** Le profil n'a pas pu etre lu, pour ce motif. */
   | { readonly type: 'profilRefuse'; readonly motif: string }
+  /** Le choix d'un titre est parti (etape 3.9). */
+  | { readonly type: 'titreDemande' }
+  /** Le serveur a accepte le choix: voici le titre porte desormais. */
+  | { readonly type: 'titreChoisi'; readonly titre: TitreDuCompte }
+  /** Le choix du titre a ete refuse, pour ce motif. */
+  | { readonly type: 'titreRefuse'; readonly motif: string }
   /** La lecture de la fiche de ce joueur est partie: elle s'ouvre (etape 3.5). */
   | { readonly type: 'ficheDemandee'; readonly pseudo: string }
   /** La fiche demandee pour ce pseudo est arrivee. */

@@ -3,18 +3,21 @@
  *
  * Sans equivalent dans le legacy. La maquette y met aussi le pass de saison, les
  * skins et le rang mondial: tous reportes apres la v1, et absents. Les succes y sont
- * depuis l'etape 3.7, palier par palier.
+ * depuis l'etape 3.7, palier par palier, et le titre, choisi parmi eux, depuis l'etape
+ * 3.9.
  *
  * CET ECRAN NE DECIDE RIEN. Ce qu'il montre vient de modeleProfil; la lecture du
  * profil part de la navigation vers cet ecran (client.ts), pas de son montage. Il
  * propose deux actions qui lui soient propres: se deconnecter, qui ramene a
- * l'accueil en invite, et, depuis l'etape 3.4, gerer son mot de passe et son code
- * de secours (composants/securiteDuCompte.ts).
+ * l'accueil en invite, depuis l'etape 3.4, gerer son mot de passe et son code de
+ * secours (composants/securiteDuCompte.ts), et, depuis l'etape 3.9, choisir son titre
+ * (composants/titre.ts).
  */
 
 import { monterSecuriteDuCompte } from '../composants/securiteDuCompte.js';
 import { tableauParMode, tuilesDeStatistiques } from '../composants/statistiques.js';
 import { paliersDeSucces } from '../composants/succes.js';
+import { ecrireLeTitre, monterChoixDuTitre } from '../composants/titre.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import { icone } from '../icones.js';
 import type { LigneDHistorique, ModeleProfil } from '../modeles/profil.js';
@@ -51,6 +54,7 @@ export function monterProfil(contexte: ContexteEcran): EcranAffiche {
     attributs: { 'aria-hidden': 'true' },
   });
   const pseudo = creer(doc, 'h1');
+  const titre = creer(doc, 'p', { classe: 'titre-de-compte profil-titre' });
   const palier = creer(doc, 'span');
   const inscription = creer(doc, 'p', { classe: 'profil-inscription' });
   const niveau = creer(doc, 'span');
@@ -68,6 +72,7 @@ export function monterProfil(contexte: ContexteEcran): EcranAffiche {
   );
   const compteDesSucces = creer(doc, 'span', { classe: 'succes-compte' });
   const paliers = creer(doc, 'div', { classe: 'profil-succes-paliers' });
+  const choixDuTitre = monterChoixDuTitre(doc, client);
   const corpsHistorique = creer(doc, 'tbody');
   const historique = creer(
     doc,
@@ -121,6 +126,7 @@ export function monterProfil(contexte: ContexteEcran): EcranAffiche {
           pseudo,
           creer(doc, 'span', { classe: 'badge badge-palier' }, icone(doc, 'diamond', 12), palier),
         ),
+        titre,
         inscription,
         creer(
           doc,
@@ -153,6 +159,7 @@ export function monterProfil(contexte: ContexteEcran): EcranAffiche {
       'section',
       { classe: 'panneau profil-succes' },
       creer(doc, 'h2', {}, creer(doc, 'span', { texte: 'Succès' }), compteDesSucces),
+      choixDuTitre.racine,
       paliers,
     ),
     creer(
@@ -181,6 +188,7 @@ export function monterProfil(contexte: ContexteEcran): EcranAffiche {
   const dessiner = (modele: Extract<ModeleProfil, { nature: 'charge' }>): void => {
     ecrireTexte(avatar, modele.initiales);
     ecrireTexte(pseudo, modele.pseudo);
+    ecrireLeTitre(titre, modele.titre);
     ecrireTexte(palier, modele.palier);
     ecrireTexte(inscription, modele.inscription);
     ecrireTexte(niveau, `Niv. ${String(modele.barre.niveau)}`);
@@ -218,6 +226,11 @@ export function monterProfil(contexte: ContexteEcran): EcranAffiche {
       if (modele.nature === 'charge' && etat.profil !== dessine) {
         dessine = etat.profil;
         dessiner(modele);
+      }
+
+      // Le choix du titre attend ou se refuse sans que le profil change.
+      if (modele.nature === 'charge') {
+        choixDuTitre.afficher(modele.choixDuTitre);
       }
 
       securite.afficher(etat);

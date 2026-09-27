@@ -116,6 +116,24 @@ describe('modeleSalon', () => {
     ]);
   });
 
+  it('montre le titre d un compte sous le nom de son succes, et rien sans titre (etape 3.9)', () => {
+    const infos = salon('bob', {
+      joueurs: [
+        { id: 'moi', pseudo: 'Alice', hote: false, compte: { niveau: 7, titre: 'centurion' } },
+        { id: 'bob', pseudo: 'Bob', hote: true, compte: { niveau: 2 } },
+        { id: 'eve', pseudo: 'Eve', hote: false },
+      ],
+    });
+
+    expect(
+      modeleSalon(etat(infos))?.joueurs.map((joueur) => [joueur.pseudo, joueur.titre]),
+    ).toEqual([
+      ['Alice', { nom: 'Centurion', palier: 'legende' }],
+      ['Bob', undefined],
+      ['Eve', undefined],
+    ]);
+  });
+
   it('reserve le lancement a l hote', () => {
     expect(modeleSalon(etat(salon('moi')))?.peutLancer).toBe(true);
     expect(modeleSalon(etat(salon('bob')))?.peutLancer).toBe(false);

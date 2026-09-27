@@ -123,6 +123,22 @@ describe('les joueurs du salon', () => {
     expect(document.querySelector('[data-joueur="moi"] .carte-joueur-niveau')).toBeNull();
   });
 
+  it('montre sous le pseudo le titre d un compte, a la couleur de son palier (etape 3.9)', () => {
+    monter({
+      ...salon('bob'),
+      joueurs: [
+        { id: 'moi', pseudo: 'Alice', hote: false, compte: { niveau: 2 } },
+        { id: 'bob', pseudo: 'Bob', hote: true, compte: { niveau: 4, titre: 'centurion' } },
+      ],
+    });
+
+    const titre = obligatoire(document, '[data-joueur="bob"] .carte-joueur-titre');
+
+    expect(titre.textContent).toBe('Centurion');
+    expect(titre.dataset['palier']).toBe('legende');
+    expect(document.querySelector('[data-joueur="moi"] .carte-joueur-titre')).toBeNull();
+  });
+
   it('suit le transfert de l hote', () => {
     monter(salon('bob'));
     expect(boutonNomme(document, 'Lancer la partie')).toBeUndefined();

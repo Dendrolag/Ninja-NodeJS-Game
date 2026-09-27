@@ -999,6 +999,74 @@
   gap: 10px;
 }
 
+/* Le titre d'un compte (etape 3.9): le nom d'un succes obtenu, sous le pseudo, a la
+   couleur de son palier. Au salon, sur la fiche et au profil. */
+.titre-de-compte {
+  overflow: hidden;
+  color: var(--couleur-palier, var(--texte-secondaire));
+  font-family: var(--police-titre);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.titre-de-compte[hidden] {
+  display: none;
+}
+
+.fiche-titre {
+  margin-top: -2px;
+  margin-bottom: 6px;
+}
+
+/* La liste du titre, au profil. */
+.titre-du-profil {
+  display: grid;
+  gap: 6px;
+}
+
+.titre-champ {
+  display: grid;
+  gap: 6px;
+  max-width: 360px;
+}
+
+.titre-champ[hidden],
+.titre-aide[hidden],
+.titre-erreur[hidden] {
+  display: none;
+}
+
+.titre-choix {
+  color: var(--texte);
+  font: inherit;
+  cursor: pointer;
+}
+
+.titre-choix:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.titre-choix option,
+.titre-choix optgroup {
+  background: var(--fond-panneau);
+  color: var(--texte);
+}
+
+.titre-aide {
+  color: var(--texte-tertiaire);
+  font-size: 13px;
+}
+
+.titre-erreur {
+  color: var(--rose-clair);
+  font-size: 13px;
+}
+
 .fiche-succes h3 {
   font-size: 15px;
   font-weight: 600;

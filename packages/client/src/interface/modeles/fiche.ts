@@ -29,6 +29,8 @@ import type { LigneDUnMode, StatistiqueAffichee } from './statistiques.js';
 import { lignesParMode, tuilesDesStatistiques } from './statistiques.js';
 import type { SuccesDeFicheAffiche } from './succes.js';
 import { succesDeFicheAffiches } from './succes.js';
+import type { TitreAffiche } from './titre.js';
+import { titreAffiche } from './titre.js';
 
 /** Ce que la fenetre de la fiche affiche. */
 export type ModeleFiche =
@@ -43,6 +45,8 @@ export type ModeleFiche =
       /** Le pseudo, dans l'ecriture du compte. */
       readonly pseudo: string;
       readonly initiales: string;
+      /** Le titre qu'il porte, sous son pseudo (etape 3.9). Absent: aucun. */
+      readonly titre: TitreAffiche | undefined;
       /** « Niveau 12 ». */
       readonly niveau: string;
       /** « Argent ». */
@@ -107,6 +111,7 @@ function ficheChargee(
     nature: 'chargee',
     pseudo: fiche.pseudo,
     initiales: initiales(fiche.pseudo),
+    titre: titreAffiche(fiche.titre),
     niveau: `Niveau ${String(fiche.niveau)}`,
     palier: NOMS_DES_PALIERS[fiche.palier],
     inscription: formaterInscription(fiche.inscritLe),

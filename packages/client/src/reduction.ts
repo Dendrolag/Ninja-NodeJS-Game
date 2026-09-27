@@ -35,6 +35,7 @@ import type {
 } from './etat.js';
 import {
   AMIS_INCONNUS,
+  AUCUN_CHOIX_DE_TITRE,
   AUCUNE_DEMANDE_DE_COMPTE,
   AUCUNE_INVITATION,
   ETAT_INITIAL,
@@ -42,6 +43,7 @@ import {
   MAX_JOURNAL,
   MAX_MESSAGES,
   PROFIL_INCONNU,
+  profilAvecLeTitre,
   refusDe,
 } from './etat.js';
 import type { FaitDeJeu } from './faits.js';
@@ -201,6 +203,7 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
         session: { nature: 'invite', sessionExpiree: action.expiree },
         demandeDeCompte: AUCUNE_DEMANDE_DE_COMPTE,
         profil: PROFIL_INCONNU,
+        choixDuTitre: AUCUN_CHOIX_DE_TITRE,
         amis: AMIS_INCONNUS,
         presences: [],
         invitationsDAmis: AUCUNE_INVITATION,
@@ -219,6 +222,7 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
         session: { nature: 'compte', progression: action.progression },
         demandeDeCompte: AUCUNE_DEMANDE_DE_COMPTE,
         profil: PROFIL_INCONNU,
+        choixDuTitre: AUCUN_CHOIX_DE_TITRE,
         amis: memeCompte ? etat.amis : AMIS_INCONNUS,
         presences: memeCompte ? etat.presences : [],
         invitationsDAmis: memeCompte ? etat.invitationsDAmis : AUCUNE_INVITATION,
@@ -274,8 +278,14 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
     case 'codeDeSecoursNote':
       return { ...etat, ecran, codeDeSecours: undefined };
 
+    // Un refus de titre ne se montre plus au profil relu.
     case 'profilDemande':
-      return { ...etat, ecran, profil: { statut: 'chargement' } };
+      return {
+        ...etat,
+        ecran,
+        profil: { statut: 'chargement' },
+        choixDuTitre: AUCUN_CHOIX_DE_TITRE,
+      };
 
     // Le profil porte la progression du moment: l'en-tete la suit.
     case 'profilRecu':
@@ -288,6 +298,24 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
 
     case 'profilRefuse':
       return { ...etat, ecran, profil: { statut: 'echec', motif: action.motif } };
+
+    case 'titreDemande':
+      return { ...etat, ecran, choixDuTitre: { statut: 'enCours' } };
+
+    // Le profil lu dit desormais le titre porte.
+    case 'titreChoisi':
+      return {
+        ...etat,
+        ecran,
+        choixDuTitre: AUCUN_CHOIX_DE_TITRE,
+        profil:
+          etat.profil.statut === 'charge'
+            ? { statut: 'charge', profil: profilAvecLeTitre(etat.profil.profil, action.titre) }
+            : etat.profil,
+      };
+
+    case 'titreRefuse':
+      return { ...etat, ecran, choixDuTitre: { statut: 'refuse', motif: action.motif } };
 
     case 'ficheDemandee':
       return { ...etat, ecran, fiche: { statut: 'chargement', pseudo: action.pseudo } };

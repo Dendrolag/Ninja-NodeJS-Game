@@ -178,6 +178,32 @@ describe('les requetes qui partent', () => {
     });
   });
 
+  it('envoie le choix du titre, jeton en en-tete, et rend le refus d un succes non obtenu', async () => {
+    const { vues, envoyer } = envoiDEssai(() => json(200, { titre: 'premier-pas' }));
+    const api = creerApiComptesHttp({ url: ORIGINE, envoyer });
+
+    expect(await api.titre(JETON_DESSAI, { titre: 'premier-pas' })).toEqual({
+      acceptee: true,
+      valeur: { titre: 'premier-pas' },
+    });
+    expect(vues[0]?.adresse).toBe(`${ORIGINE}${ROUTES_COMPTES.titre}`);
+    expect(vues[0]?.init.method).toBe('POST');
+    expect(entetes(vues[0]).get('Authorization')).toBe(`Bearer ${JETON_DESSAI}`);
+    expect(JSON.parse(String(vues[0]?.init.body))).toEqual({ titre: 'premier-pas' });
+
+    const motif = { champ: 'titre', motif: 'Ce succès n’est pas encore obtenu.' };
+    const refus = creerApiComptesHttp({
+      url: ORIGINE,
+      envoyer: envoiDEssai(() => json(409, { erreurs: [motif] })).envoyer,
+    });
+
+    expect(await refus.titre(JETON_DESSAI, { titre: 'centurion' })).toEqual({
+      acceptee: false,
+      statut: 409,
+      erreurs: [motif],
+    });
+  });
+
   it('envoient le changement de mot de passe et la demande de code, jeton en en-tete', async () => {
     const { vues, envoyer } = envoiDEssai(() => json(200, { codeDeSecours: CODE_DESSAI }));
     const api = creerApiComptesHttp({ url: ORIGINE, envoyer });

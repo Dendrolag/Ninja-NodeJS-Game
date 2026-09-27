@@ -42,6 +42,9 @@
  * partie comme ailleurs: comme la fiche, il ne perd pas la session en pleine partie.
  * Depuis l'etape 2.8, le serveur signale aussi les amities changees: la liste se relit
  * alors aussitot, et la fiche ouverte avec elle.
+ *
+ * LE TITRE AUSSI (etape 3.9). Il se choisit depuis le profil, avec la session du compte,
+ * qui ne change pas. Le profil lu prend le titre accepte, sans se relire.
  */
 
 import type {
@@ -52,6 +55,7 @@ import type {
   DemandeInscription,
   DemandeReinitialisation,
   GesteDAmitie,
+  IdentifiantSucces,
   MaProgression,
   SessionInscrite,
   SessionOuverte,
@@ -126,6 +130,11 @@ export interface CommandesDeSession {
    * pour un invite, ou pendant qu'un autre geste attend sa reponse.
    */
   faireUnGeste(geste: GesteDAmitie, pseudo: string): void;
+  /**
+   * Choisit le titre du compte parmi ses succes obtenus, ou le retire avec null (etape
+   * 3.9). Sans effet pour un invite, ou pendant qu'un autre choix attend sa reponse.
+   */
+  choisirUnTitre(titre: IdentifiantSucces | null): void;
 }
 
 /** Le motif d'une demande de compte sans comptes a joindre. */
@@ -607,6 +616,40 @@ export function brancherLaSession(options: OptionsSession): CommandesDeSession {
             }
           });
         }
+      });
+    },
+
+    // Une session que le serveur ne reconnait plus se traite comme a la lecture du profil.
+    choisirUnTitre: (titre) => {
+      const jeton = coffre.lire();
+
+      if (
+        api === undefined ||
+        jeton === undefined ||
+        magasin.etat.session.nature !== 'compte' ||
+        magasin.etat.choixDuTitre.statut === 'enCours'
+      ) {
+        return;
+      }
+
+      magasin.appliquer({ type: 'titreDemande' });
+
+      void api.titre(jeton, { titre }).then((reponse) => {
+        if (coffre.lire() !== jeton) {
+          return;
+        }
+
+        if (reponse.acceptee) {
+          magasin.appliquer({ type: 'titreChoisi', titre: reponse.valeur });
+          return;
+        }
+
+        if (reponse.statut === STATUT_SESSION_ABSENTE && horsPartie()) {
+          perdreLaSession();
+          return;
+        }
+
+        magasin.appliquer({ type: 'titreRefuse', motif: motifDe(reponse.erreurs) });
       });
     },
   };

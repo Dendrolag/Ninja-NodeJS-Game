@@ -168,6 +168,11 @@ export interface ComptesEnMemoire extends ServiceDeComptes {
   compteNomme(pseudo: string): Readonly<CompteEnMemoire> | undefined;
   /** Le nombre de sessions ouvertes de ce compte (etape 3.4). */
   sessionsDe(pseudo: string): number;
+  /**
+   * Inscrit ce succes pour le compte qui porte ce pseudo, sans partie d'origine, comme un
+   * rattrapage (etape 3.9): un scenario du titre n'a pas a jouer les parties d'un succes.
+   */
+  accorderUnSucces(pseudo: string, succes: IdentifiantSucces): void;
 }
 
 /** La cle d'une paire dirigee de comptes. */
@@ -394,6 +399,16 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
     fins,
 
     compteNomme: parPseudo,
+
+    accorderUnSucces: (pseudo, succes) => {
+      const compte = parPseudo(pseudo);
+
+      if (compte === undefined) {
+        throw new Error(`Aucun compte ne porte le pseudo ${pseudo}.`);
+      }
+
+      compte.succes.set(succes, { debloqueLe: new Date(), partieId: undefined });
+    },
 
     sessionsDe: (pseudo) => {
       const compte = parPseudo(pseudo);

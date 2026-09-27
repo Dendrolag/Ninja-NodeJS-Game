@@ -7,9 +7,9 @@
  * code de secours, et elle suit l'etat: ouverte tant que l'etat porte une fiche,
  * fermee sinon.
  *
- * UNE SUITE DE SECTIONS. L'identite, l'amitie et ses gestes, les parties jouees
- * ensemble pour un ami (etape 3.6), les statistiques, le tableau par mode, puis les
- * succes obtenus (etape 3.7).
+ * UNE SUITE DE SECTIONS. L'identite, avec le titre depuis l'etape 3.9, l'amitie et ses
+ * gestes, les parties jouees ensemble pour un ami (etape 3.6), les statistiques, le
+ * tableau par mode, puis les succes obtenus (etape 3.7).
  *
  * CE COMPOSANT NE DECIDE RIEN. Il montre le modele de la fiche, et previent le client
  * a la fermeture, quelle qu'en soit la facon: bouton, croix, Echap ou clic a cote.
@@ -25,6 +25,7 @@ import { monterFenetre } from './fenetre.js';
 import { boutonsDeGestes } from './gestesDAmitie.js';
 import { tableauParMode, tuilesDeStatistiques } from './statistiques.js';
 import { listeDeSuccesObtenus } from './succes.js';
+import { ecrireLeTitre } from './titre.js';
 
 /** La fenetre de la fiche, montee. */
 export interface FenetreDeLaFiche {
@@ -68,6 +69,8 @@ export function monterFenetreDeLaFiche(doc: Document, client: Client): FenetreDe
     attributs: { 'aria-hidden': 'true' },
   });
   const pseudo = creer(doc, 'h3', { classe: 'fiche-pseudo' });
+  // Le titre qu'il porte, sous son pseudo (etape 3.9).
+  const titre = creer(doc, 'p', { classe: 'titre-de-compte fiche-titre' });
   const niveau = creer(doc, 'span', { classe: 'badge fiche-niveau' });
   const palier = creer(doc, 'span');
   const inscription = creer(doc, 'p', { classe: 'fiche-inscription' });
@@ -125,6 +128,7 @@ export function monterFenetreDeLaFiche(doc: Document, client: Client): FenetreDe
         'div',
         {},
         pseudo,
+        titre,
         creer(
           doc,
           'div',
@@ -177,6 +181,7 @@ export function monterFenetreDeLaFiche(doc: Document, client: Client): FenetreDe
   const dessiner = (modele: Extract<ModeleFiche, { nature: 'chargee' }>): void => {
     ecrireTexte(avatar, modele.initiales);
     ecrireTexte(pseudo, modele.pseudo);
+    ecrireLeTitre(titre, modele.titre);
     ecrireTexte(niveau, modele.niveau);
     ecrireTexte(palier, modele.palier);
     ecrireTexte(inscription, modele.inscription);

@@ -32,6 +32,7 @@ import { monterInviterDesAmis } from '../composants/inviterDesAmis.js';
 import type { IssueDuPartage } from '../composants/partage.js';
 import { partageDuSysteme, partagerLeLien } from '../composants/partage.js';
 import { monterPanneauReglages } from '../composants/reglages.js';
+import { ligneDeTitre } from '../composants/titre.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import { icone } from '../icones.js';
 import type { EquipeAffichee, JoueurAffiche, LigneRecapitulatif } from '../modeles/salon.js';
@@ -408,7 +409,7 @@ export function monterSalon(contexte: ContexteEcran): EcranAffiche {
 
 /** Ce qui, d'un joueur, change sa carte: pour ne la refaire que si elle a change. */
 function signatureDuJoueur(joueur: JoueurAffiche): string {
-  return `${joueur.id}|${joueur.pseudo}|${String(joueur.hote)}|${String(joueur.moi)}|${String(joueur.niveau)}|${String(joueur.aUneFiche)}`;
+  return `${joueur.id}|${joueur.pseudo}|${String(joueur.hote)}|${String(joueur.moi)}|${String(joueur.niveau)}|${joueur.titre?.nom ?? ''}|${String(joueur.aUneFiche)}`;
 }
 
 /**
@@ -486,6 +487,9 @@ function carteJoueur(doc: Document, joueur: JoueurAffiche, client: Client): HTML
       joueur.aUneFiche
         ? boutonDeFiche(doc, joueur.pseudo, 'carte-joueur-pseudo', client)
         : creer(doc, 'span', { classe: 'carte-joueur-pseudo', texte: joueur.pseudo }),
+      joueur.titre === undefined
+        ? undefined
+        : ligneDeTitre(doc, joueur.titre, 'carte-joueur-titre'),
       joueur.niveau === undefined
         ? undefined
         : creer(doc, 'span', {

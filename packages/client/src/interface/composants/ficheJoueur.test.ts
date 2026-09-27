@@ -200,6 +200,26 @@ describe('la fiche d un joueur, au salon', () => {
     expect(fenetre().textContent).not.toMatch(/Pièces|Points de ligue|Dernières parties/);
   });
 
+  it('montre sous le pseudo le titre porte, et rien sans titre (etape 3.9)', async () => {
+    api.reponses.joueur = async (_jeton, pseudo) => ({
+      acceptee: true,
+      valeur: pseudo === 'Bob' ? { ...FICHE_DE_BOB, titre: 'meute' } : ficheDEssai(pseudo),
+    });
+    await entrerAuSalon(true);
+
+    boutonObligatoire(hote, 'Bob, voir sa fiche').click();
+    await laisserRepondre();
+
+    expect(obligatoire(fenetre(), '.fiche-titre').textContent).toBe('Meute');
+    expect(obligatoire(fenetre(), '.fiche-titre').dataset['palier']).toBe('expert');
+    expect(estCache(obligatoire(fenetre(), '.fiche-titre'))).toBe(false);
+
+    boutonObligatoire(hote, 'Alice, voir sa fiche').click();
+    await laisserRepondre();
+
+    expect(estCache(obligatoire(fenetre(), '.fiche-titre'))).toBe(true);
+  });
+
   it("dit qu'un joueur n'a encore aucun succes", async () => {
     await entrerAuSalon(true);
     boutonObligatoire(hote, 'Alice, voir sa fiche').click();

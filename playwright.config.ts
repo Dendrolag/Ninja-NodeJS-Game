@@ -93,6 +93,12 @@ const AMIS = '**/amis.spec.ts';
  */
 const AMIS_EN_DIRECT = '**/amis-en-direct.spec.ts';
 
+/**
+ * Le titre (etape 3.9): deux pages, dans des contextes a elles, qui choisissent et lisent
+ * un titre. Le cadrage de l'ecran n'y change rien.
+ */
+const TITRE = '**/titre.spec.ts';
+
 export default defineConfig({
   testDir: './tests/e2e',
   // Les paquets sont compiles une fois avant les scenarios: le banc de mesure du
@@ -156,6 +162,7 @@ export default defineConfig({
         FICHE,
         AMIS,
         AMIS_EN_DIRECT,
+        TITRE,
       ],
     },
     // Le banc de mesure du rendu a son propre projet, et une seule execution:

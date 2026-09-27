@@ -33,6 +33,7 @@ import type {
   ProfilDuCompte,
   ProgressionDeFin,
   Refus,
+  TitreDuCompte,
   NatureObjet,
   PresenceDUnAmi,
   RelationDAmitie,
@@ -170,6 +171,28 @@ export type EtatDuProfil =
 
 /** Un profil que le client n'a pas lu. */
 export const PROFIL_INCONNU: EtatDuProfil = { statut: 'inconnu' };
+
+/**
+ * Le dernier choix de titre fait depuis le profil, et ce qu'il a donne (etape 3.9).
+ *
+ * Un choix accepte change le profil lu, qui dit le titre porte: il n'a pas a etre
+ * retenu ici. Seuls comptent l'attente, qui desactive la liste, et le refus, qui
+ * s'affiche sous elle.
+ */
+export type EtatDuChoixDuTitre =
+  | { readonly statut: 'aucun' }
+  | { readonly statut: 'enCours' }
+  | { readonly statut: 'refuse'; readonly motif: string };
+
+/** Aucun choix de titre en attente ni refuse. */
+export const AUCUN_CHOIX_DE_TITRE: EtatDuChoixDuTitre = { statut: 'aucun' };
+
+/** Le profil lu, avec le titre que le serveur vient d'accepter. */
+export function profilAvecLeTitre(profil: ProfilDuCompte, choisi: TitreDuCompte): ProfilDuCompte {
+  const { titre: _ancien, ...sansTitre } = profil;
+
+  return choisi.titre === undefined ? sansTitre : { ...sansTitre, titre: choisi.titre };
+}
 
 /**
  * La fiche d'un joueur ouverte par-dessus l'ecran, et ce qu'on en a lu (etape 3.5).
@@ -349,6 +372,8 @@ export interface EtatClient {
   readonly codeDeSecours: string | undefined;
   /** Le profil du compte, lu a l'ouverture de son ecran. */
   readonly profil: EtatDuProfil;
+  /** Le dernier choix de titre, fait depuis le profil (etape 3.9). */
+  readonly choixDuTitre: EtatDuChoixDuTitre;
   /**
    * La fiche d'un joueur, ouverte depuis le salon ou le classement de fin (etape 3.5).
    * Elle se ferme d'elle-meme quand l'ecran change, et quand la session redevient celle
@@ -485,6 +510,7 @@ export const ETAT_INITIAL: EtatClient = {
   demandeDeCompte: AUCUNE_DEMANDE_DE_COMPTE,
   codeDeSecours: undefined,
   profil: PROFIL_INCONNU,
+  choixDuTitre: AUCUN_CHOIX_DE_TITRE,
   fiche: FICHE_FERMEE,
   amis: AMIS_INCONNUS,
   presences: [],

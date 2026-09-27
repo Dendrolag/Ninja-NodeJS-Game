@@ -58,6 +58,21 @@ describe('modeleFiche', () => {
     ).toEqual({ nature: 'echec', pseudo: 'Bob', motif: 'Aucun compte ne porte ce pseudo.' });
   });
 
+  it('montre le titre porte sous le nom de son succes, et rien sans titre (etape 3.9)', () => {
+    const lue = (fiche: FicheJoueur): EtatClient => ({
+      ...ETAT_INITIAL,
+      fiche: { statut: 'chargee', pseudo: fiche.pseudo, fiche },
+    });
+    const avecTitre = modeleFiche(lue({ ...FICHE, titre: 'premier-pas' }));
+    const sansTitre = modeleFiche(lue(FICHE));
+
+    expect(avecTitre.nature === 'chargee' ? avecTitre.titre : 'absente').toEqual({
+      nom: 'Premier pas',
+      palier: 'decouverte',
+    });
+    expect(sansTitre.nature === 'chargee' ? sansTitre.titre : 'absente').toBeUndefined();
+  });
+
   it('met en forme la fiche lue: identite, tuiles et tableau par mode', () => {
     expect(
       modeleFiche({
