@@ -197,6 +197,23 @@ export const BORNES_AMITIES = {
 } as const;
 
 /**
+ * Les bornes des invitations entre amis (etape 2.8, etude des amis, section 4.4).
+ *
+ * Une invitation porte un droit d'entree tenu par le serveur, valable deux minutes:
+ * de quoi finir une manche de menu et repondre, pas assez pour qu'une invitation
+ * oubliee fasse entrer quelqu'un dans une partie qui a change de visage. On n'invite
+ * pas le meme ami plus d'une fois par minute (etude, 4.6): relancer un ami qui ne
+ * repond pas ne doit pas devenir une nuisance. L'identifiant d'une invitation a la
+ * forme d'un jeton de session (BORNES_JETON).
+ */
+export const BORNES_INVITATIONS = {
+  /** Combien de temps un droit d'entree vaut, en millisecondes. */
+  validiteMs: 120_000,
+  /** Le temps minimal entre deux invitations d'un compte au meme ami, en millisecondes. */
+  intervalleParAmiMs: 60_000,
+} as const;
+
+/**
  * Combien de temps une partie en cours garde la place d'un joueur dont le lien est
  * tombe (etape 2.5), en millisecondes.
  *

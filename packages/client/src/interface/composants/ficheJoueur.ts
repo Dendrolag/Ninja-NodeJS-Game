@@ -86,6 +86,8 @@ export function monterFenetreDeLaFiche(doc: Document, client: Client): FenetreDe
   });
 
   const phraseDAmitie = creer(doc, 'p', { classe: 'fiche-relation' });
+  // Ou est cet ami, pour un ami seulement (etape 2.8).
+  const presenceDAmi = creer(doc, 'p', { classe: 'fiche-presence' });
   const gestes = creer(doc, 'div', { classe: 'fiche-gestes' });
   const erreurDuGeste = creer(doc, 'p', {
     classe: 'fiche-erreur-geste',
@@ -96,6 +98,7 @@ export function monterFenetreDeLaFiche(doc: Document, client: Client): FenetreDe
     'section',
     { classe: 'fiche-amitie', attributs: { 'aria-label': 'Amitié' } },
     phraseDAmitie,
+    presenceDAmi,
     gestes,
     erreurDuGeste,
   );
@@ -204,6 +207,9 @@ export function monterFenetreDeLaFiche(doc: Document, client: Client): FenetreDe
 
     ecrireTexte(phraseDAmitie, modeleAmitie.phrase ?? '');
     montrer(phraseDAmitie, modeleAmitie.phrase !== undefined);
+    ecrireTexte(presenceDAmi, modeleAmitie.presence?.texte ?? '');
+    presenceDAmi.dataset['presence'] = modeleAmitie.presence?.etat ?? '';
+    montrer(presenceDAmi, modeleAmitie.presence !== undefined);
     ecrireTexte(erreurDuGeste, modeleAmitie.erreur ?? '');
     montrer(erreurDuGeste, modeleAmitie.erreur !== undefined);
 

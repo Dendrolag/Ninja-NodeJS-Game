@@ -87,6 +87,12 @@ const FICHE = '**/fiche.spec.ts';
  */
 const AMIS = '**/amis.spec.ts';
 
+/**
+ * Les amis en direct (etape 2.8), joues par le seul projet bureau: deux comptes et leurs
+ * pages, que le cadrage de l'ecran ne change pas.
+ */
+const AMIS_EN_DIRECT = '**/amis-en-direct.spec.ts';
+
 export default defineConfig({
   testDir: './tests/e2e',
   // Les paquets sont compiles une fois avant les scenarios: le banc de mesure du
@@ -149,6 +155,7 @@ export default defineConfig({
         DIAGNOSTIC,
         FICHE,
         AMIS,
+        AMIS_EN_DIRECT,
       ],
     },
     // Le banc de mesure du rendu a son propre projet, et une seule execution:

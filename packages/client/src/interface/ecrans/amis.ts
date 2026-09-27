@@ -4,7 +4,8 @@
  *
  * Sans equivalent dans le legacy. L'etude des amis (section 4.5) le place en cinquieme
  * destination de la navigation. La presence des amis et les invitations viendront a
- * l'etape 2.8.
+ * l'etape 2.8, qui les a ajoutees: chaque ami dit ou il est, et le salon d'une partie
+ * publique d'un ami se rejoint d'ici.
  *
  * CET ECRAN NE DECIDE RIEN. Ce qu'il montre vient de modeleAmis; la liste se relit a
  * chaque navigation (client.ts), et chaque pseudo ouvre la fiche du joueur, montee par
@@ -136,8 +137,12 @@ export function monterAmis(contexte: ContexteEcran): EcranAffiche {
   /** Les listes deja dessinees, decrites: elles ne se refont que si elles ont change. */
   let dessinees = '';
 
-  const dessiner = (modele: Extract<ModeleAmis, { nature: 'chargee' }>, enCours: boolean): void => {
-    const description = JSON.stringify([modele, enCours]);
+  const dessiner = (
+    modele: Extract<ModeleAmis, { nature: 'chargee' }>,
+    enCours: boolean,
+    peutEntrer: boolean,
+  ): void => {
+    const description = JSON.stringify([modele, enCours, peutEntrer]);
 
     if (description === dessinees) {
       return;
@@ -148,7 +153,7 @@ export function monterAmis(contexte: ContexteEcran): EcranAffiche {
 
     for (const nom of ['recues', 'amis', 'envoyees', 'bloques'] as const) {
       remplirSection(sections[nom], modele[nom], (ligne) =>
-        ligneDAmi(doc, contexte, ligne, enCours),
+        ligneDAmi(doc, contexte, ligne, enCours, peutEntrer),
       );
     }
   };
@@ -170,14 +175,23 @@ export function monterAmis(contexte: ContexteEcran): EcranAffiche {
       }
 
       if (modele.nature === 'chargee') {
-        dessiner(modele, geste.enCours);
+        dessiner(modele, geste.enCours, etat.connexion === 'connecte' && !etat.entreeEnCours);
       }
+
+      // Rejoindre la partie d'un ami peut etre refuse (complete, lancee entre-temps): le
+      // refus se dit ici, a la place de celui d'un geste. Celui d'une invitation se dit
+      // sur sa carte.
+      const refusDEntree =
+        etat.refus?.action === 'rejoindre' && etat.invitationsDAmis.tentee === undefined
+          ? etat.refus.erreurs.map((raison) => raison.motif).join(' ')
+          : undefined;
+      const motifDErreur = geste.erreur ?? refusDEntree;
 
       envoyer.disabled = geste.enCours;
       ecrireTexte(annonce, geste.annonce ?? '');
       montrer(annonce, geste.annonce !== undefined);
-      ecrireTexte(erreur, geste.erreur ?? '');
-      montrer(erreur, geste.erreur !== undefined);
+      ecrireTexte(erreur, motifDErreur ?? '');
+      montrer(erreur, motifDErreur !== undefined);
       saisie.toggleAttribute('aria-invalid', geste.erreur !== undefined && envoye !== undefined);
 
       // La demande envoyee depuis le champ est faite: le champ se vide pour la suivante.
@@ -241,13 +255,33 @@ function remplirSection(
   montrer(montee.racine, section.lignes.length > 0 || section.vide !== undefined);
 }
 
-/** Une ligne de liste: l'avatar, le pseudo qui ouvre la fiche, le niveau, les gestes. */
+/**
+ * Une ligne de liste: l'avatar, le pseudo qui ouvre la fiche, le niveau, la presence
+ * d'un ami (etape 2.8), les gestes, et « Rejoindre » la partie publique d'un ami.
+ */
 function ligneDAmi(
   doc: Document,
   contexte: ContexteEcran,
   ligne: LigneDAmi,
   enCours: boolean,
+  peutEntrer: boolean,
 ): HTMLElement {
+  const { presence, rejoindre: idRoom } = ligne;
+  const rejoindre =
+    idRoom === undefined
+      ? undefined
+      : bouton(
+          doc,
+          { classe: 'bouton bouton-primaire bouton-compact', texte: 'Rejoindre', icone: 'play' },
+          () => {
+            contexte.client.rejoindre(undefined, { idRoom });
+          },
+        );
+
+  if (rejoindre !== undefined) {
+    rejoindre.disabled = !peutEntrer;
+  }
+
   return creer(
     doc,
     'li',
@@ -263,7 +297,15 @@ function ligneDAmi(
       { classe: 'ligne-ami-identite' },
       boutonDeFiche(doc, ligne.pseudo, 'ligne-ami-pseudo', contexte.client),
       creer(doc, 'span', { classe: 'ligne-ami-niveau', texte: ligne.niveau }),
+      presence === undefined
+        ? undefined
+        : creer(doc, 'span', {
+            classe: 'ligne-ami-presence',
+            texte: presence.texte,
+            attributs: { 'data-presence': presence.etat },
+          }),
     ),
+    rejoindre,
     ...boutonsDeGestes(doc, contexte.client, ligne.pseudo, ligne.gestes, enCours),
   );
 }

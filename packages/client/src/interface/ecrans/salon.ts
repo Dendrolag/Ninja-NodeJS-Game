@@ -14,6 +14,9 @@
  * ailleurs (composants/partage.ts). Le choix se fait au montage: l'appareil ne change
  * pas en cours de route.
  *
+ * UN COMPTE Y INVITE SES AMIS EN LIGNE (etape 2.8), par une section qui les liste sous
+ * les joueurs. L'ami invite recoit une invitation qui ne montre pas le code.
+ *
  * LE JEU D'ORIGINE AVAIT TROIS FENETRES POUR CE SALON (parametres, carte, aide),
  * dont deux se chevauchaient: la carte se reglait a deux endroits. Il n'y a ici
  * qu'un panneau de reglages, carte comprise, et l'aide est commune a
@@ -25,6 +28,7 @@ import type { EtatClient } from '../../etat.js';
 import { adresseDInvitation } from '../../invitation.js';
 import { monterChat } from '../composants/chat.js';
 import { boutonDeFiche } from '../composants/ficheJoueur.js';
+import { monterInviterDesAmis } from '../composants/inviterDesAmis.js';
 import type { IssueDuPartage } from '../composants/partage.js';
 import { partageDuSysteme, partagerLeLien } from '../composants/partage.js';
 import { monterPanneauReglages } from '../composants/reglages.js';
@@ -173,6 +177,7 @@ export function monterSalon(contexte: ContexteEcran): EcranAffiche {
   };
 
   const chat = monterChat(doc, client);
+  const inviterDesAmis = monterInviterDesAmis(doc, client);
 
   const secondes = creer(doc, 'span', { classe: 'compte-nombre' });
   const annuler = bouton(
@@ -252,6 +257,7 @@ export function monterSalon(contexte: ContexteEcran): EcranAffiche {
         ),
         listeJoueurs,
         blocEquipes,
+        inviterDesAmis.racine,
         creer(
           doc,
           'section',
@@ -379,6 +385,7 @@ export function monterSalon(contexte: ContexteEcran): EcranAffiche {
       majJoueurs(modele.joueurs);
       majEquipes(modele.equipes);
       majRecapitulatif(modele.recapitulatif);
+      inviterDesAmis.afficher(etat);
       chat.afficher(modele.messages, etat.refus?.action === 'chat' ? etat.refus : undefined);
       chat.activer(modele.lienEtabli);
 

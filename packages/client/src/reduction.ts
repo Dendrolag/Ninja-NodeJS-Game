@@ -29,12 +29,14 @@ import type {
   EtatClient,
   EtatDeLaFiche,
   EtatConnexion,
+  InvitationDuSalon,
   MessageAffiche,
   SessionDuClient,
 } from './etat.js';
 import {
   AMIS_INCONNUS,
   AUCUNE_DEMANDE_DE_COMPTE,
+  AUCUNE_INVITATION,
   ETAT_INITIAL,
   FICHE_FERMEE,
   MAX_JOURNAL,
@@ -87,8 +89,17 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
         refusDeConnexion: undefined,
       };
 
+    // Un lien neuf: le serveur va redire la presence des amis et les invitations qui
+    // attendent (etape 2.8). Celles d'avant ne valent que ce qu'il en redira.
     case 'connexionEtablie':
-      return { ...etat, ecran, connexion: 'connecte', refusDeConnexion: undefined };
+      return {
+        ...etat,
+        ecran,
+        connexion: 'connecte',
+        refusDeConnexion: undefined,
+        presences: [],
+        invitationsDAmis: { ...etat.invitationsDAmis, recues: [] },
+      };
 
     // Le lien n'a pas pu etre retabli (etape 2.6). Ce qu'on attendait du serveur ne
     // viendra pas. Un salon n'est plus le notre: on repart de l'accueil, avec l'avis.
@@ -191,22 +202,28 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
         demandeDeCompte: AUCUNE_DEMANDE_DE_COMPTE,
         profil: PROFIL_INCONNU,
         amis: AMIS_INCONNUS,
+        presences: [],
+        invitationsDAmis: AUCUNE_INVITATION,
       };
 
-    // Les amis d'un autre compte ne sont pas les siens: ils se relisent.
-    case 'sessionDeCompte':
+    // Les amis d'un autre compte ne sont pas les siens: ils se relisent, et sa presence
+    // et ses invitations arriveront par le lien rouvert (etape 2.8).
+    case 'sessionDeCompte': {
+      const memeCompte =
+        etat.session.nature === 'compte' &&
+        reperePseudo(etat.session.progression.pseudo) === reperePseudo(action.progression.pseudo);
+
       return {
         ...etat,
         ecran,
         session: { nature: 'compte', progression: action.progression },
         demandeDeCompte: AUCUNE_DEMANDE_DE_COMPTE,
         profil: PROFIL_INCONNU,
-        amis:
-          etat.session.nature === 'compte' &&
-          reperePseudo(etat.session.progression.pseudo) === reperePseudo(action.progression.pseudo)
-            ? etat.amis
-            : AMIS_INCONNUS,
+        amis: memeCompte ? etat.amis : AMIS_INCONNUS,
+        presences: memeCompte ? etat.presences : [],
+        invitationsDAmis: memeCompte ? etat.invitationsDAmis : AUCUNE_INVITATION,
       };
+    }
 
     case 'demandeDeCompteEnvoyee':
       return {
@@ -367,11 +384,12 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
     // Un refus de compte ne suit pas le joueur sur un autre ecran. Une demande
     // en cours, elle, continue: sa reponse arrivera.
     // Un refus d'entree non plus: il concernait l'ecran que l'on quitte.
-    // Le resultat d'un geste d'amitie non plus.
+    // Le resultat d'un geste d'amitie non plus, ni celui d'une invitation tentee.
     case 'navigation':
       return {
         ...etat,
         ecran: ecranPourLaSession(ecran, etat.session),
+        invitationsDAmis: { ...etat.invitationsDAmis, tentee: undefined },
         demandeDeCompte: etat.demandeDeCompte.enCours
           ? etat.demandeDeCompte
           : AUCUNE_DEMANDE_DE_COMPTE,
@@ -391,6 +409,62 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
 
     case 'invitationOuverte':
       return { ...etat, ecran, invitation: action.invitation };
+
+    // La liste entiere des amis en ligne remplace la precedente (etape 2.8).
+    case 'presenceDesAmis':
+      return { ...etat, ecran, presences: action.presences };
+
+    // Une invitation redite par le serveur, sur un lien neuf, ne se double pas.
+    case 'invitationRecue':
+      return {
+        ...etat,
+        ecran,
+        invitationsDAmis: {
+          ...etat.invitationsDAmis,
+          recues: [
+            ...etat.invitationsDAmis.recues.filter((recue) => recue.id !== action.invitation.id),
+            action.invitation,
+          ],
+        },
+      };
+
+    case 'invitationRetiree':
+    case 'invitationDAmiIgnoree':
+      return etat.invitationsDAmis.recues.some((recue) => recue.id === action.id)
+        ? {
+            ...etat,
+            ecran,
+            invitationsDAmis: {
+              ...etat.invitationsDAmis,
+              recues: etat.invitationsDAmis.recues.filter((recue) => recue.id !== action.id),
+            },
+          }
+        : etat;
+
+    case 'invitationEnvoyee':
+      return {
+        ...etat,
+        ecran,
+        invitationsDAmis: invitationDuSalon(etat, { pseudo: action.pseudo, statut: 'enCours' }),
+      };
+
+    case 'invitationPartie':
+      return {
+        ...etat,
+        ecran,
+        invitationsDAmis: invitationDuSalon(etat, { pseudo: action.pseudo, statut: 'envoyee' }),
+      };
+
+    case 'invitationRefusee':
+      return {
+        ...etat,
+        ecran,
+        invitationsDAmis: invitationDuSalon(etat, {
+          pseudo: action.pseudo,
+          statut: 'refusee',
+          motif: action.motif,
+        }),
+      };
 
     // Le refus d'une entree par l'invitation ne concerne plus rien a l'ecran.
     case 'invitationIgnoree':
@@ -413,11 +487,16 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
         entreeEnCours: true,
         refus: undefined,
         avisDeRetour: undefined,
+        invitationsDAmis: { ...etat.invitationsDAmis, tentee: action.invitation },
       };
 
     // Une entree acceptee consomme l'invitation, qu'elle ait servi a entrer ou que le
-    // joueur soit alle ailleurs (etape 2.7).
-    case 'entreeAcceptee':
+    // joueur soit alle ailleurs (etape 2.7). L'invitation d'un ami qui a fait entrer
+    // aussi, sans attendre que le serveur la retire (etape 2.8), et les invitations
+    // envoyees depuis un salon precedent ne concernent plus rien.
+    case 'entreeAcceptee': {
+      const { recues, tentee } = etat.invitationsDAmis;
+
       return {
         ...etat,
         ecran,
@@ -425,7 +504,13 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
         entreeEnCours: false,
         refus: undefined,
         invitation: undefined,
+        invitationsDAmis: {
+          recues: recues.filter((recue) => recue.id !== tentee),
+          tentee: undefined,
+          envoyees: [],
+        },
       };
+    }
 
     case 'entreeRefusee':
       return {
@@ -570,12 +655,35 @@ function ficheApresLeGeste(
 }
 
 /**
+ * Les invitations apres le dernier etat connu d'une invitation envoyee a cet ami: elle
+ * remplace la precedente du meme ami (etape 2.8).
+ */
+function invitationDuSalon(
+  etat: EtatClient,
+  invitation: InvitationDuSalon,
+): EtatClient['invitationsDAmis'] {
+  const repere = reperePseudo(invitation.pseudo);
+
+  return {
+    ...etat.invitationsDAmis,
+    envoyees: [
+      ...etat.invitationsDAmis.envoyees.filter(
+        (envoyee) => reperePseudo(envoyee.pseudo) !== repere,
+      ),
+      invitation,
+    ],
+  };
+}
+
+/**
  * L'etat d'un joueur qui n'est plus dans aucune partie, de lui-meme ou non.
  *
  * Tout ce qui tenait a la partie s'efface, notre identifiant de joueur compris.
  * Survivent le pseudo saisi, pour reproposer la saisie, la session, qui ne depend pas
  * du lien, un code de secours pas encore note, que le serveur ne rendra plus, une
- * invitation qui n'a pas servi (etape 2.7), et les amis du compte (etape 3.6).
+ * invitation qui n'a pas servi (etape 2.7), les amis du compte (etape 3.6), leur
+ * presence et les invitations recues d'eux (etape 2.8). Celles envoyees depuis le salon
+ * quitte ne concernent plus rien.
  */
 function horsDeLaPartie(etat: EtatClient, ecran: Ecran, connexion: EtatConnexion): EtatClient {
   return {
@@ -588,6 +696,8 @@ function horsDeLaPartie(etat: EtatClient, ecran: Ecran, connexion: EtatConnexion
     codeDeSecours: etat.codeDeSecours,
     invitation: etat.invitation,
     amis: etat.amis,
+    presences: etat.presences,
+    invitationsDAmis: { recues: etat.invitationsDAmis.recues, tentee: undefined, envoyees: [] },
   };
 }
 

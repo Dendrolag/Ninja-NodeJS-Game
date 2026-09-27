@@ -26,11 +26,13 @@ import type {
   FinDePartie,
   GesteDAmitie,
   InfosSalon,
+  InvitationRecue,
   ListeDAmis,
   MaProgression,
   MessageChat,
   PartieEnPause,
   PartiePublique,
+  PresenceDUnAmi,
   ProfilDuCompte,
   ProgressionDeFin,
   Refus,
@@ -157,12 +159,31 @@ export type Action =
       readonly pseudo: string;
       readonly motif: string;
     }
+  /** Le serveur dit quels amis sont en ligne, et ou (etape 2.8). */
+  | { readonly type: 'presenceDesAmis'; readonly presences: readonly PresenceDUnAmi[] }
+  /** Un ami invite ce compte dans sa partie (etape 2.8). */
+  | { readonly type: 'invitationRecue'; readonly invitation: InvitationRecue }
+  /** Cette invitation ne vaut plus, dit le serveur (etape 2.8). */
+  | { readonly type: 'invitationRetiree'; readonly id: string }
+  /** Le joueur ignore cette invitation d'un ami: elle quitte sa page, en silence. */
+  | { readonly type: 'invitationDAmiIgnoree'; readonly id: string }
+  /** Une invitation part du salon vers cet ami (etape 2.8). */
+  | { readonly type: 'invitationEnvoyee'; readonly pseudo: string }
+  /** Le serveur l'a fait partir. */
+  | { readonly type: 'invitationPartie'; readonly pseudo: string }
+  /** Le serveur l'a refusee, pour ce motif. */
+  | { readonly type: 'invitationRefusee'; readonly pseudo: string; readonly motif: string }
   /**
    * Le joueur demande a entrer, ou a creer une partie.
    *
-   * Le pseudo souhaite est absent pour un compte, qui entre sous le sien.
+   * Le pseudo souhaite est absent pour un compte, qui entre sous le sien. L'invitation
+   * est celle d'un ami par laquelle il demande a entrer, s'il y en a une (etape 2.8).
    */
-  | { readonly type: 'entreeDemandee'; readonly pseudo: string | undefined }
+  | {
+      readonly type: 'entreeDemandee';
+      readonly pseudo: string | undefined;
+      readonly invitation?: string;
+    }
   /** Le serveur a accepte l'entree et decrit le salon. */
   | { readonly type: 'entreeAcceptee'; readonly salon: InfosSalon }
   /**

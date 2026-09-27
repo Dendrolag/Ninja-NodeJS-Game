@@ -53,14 +53,14 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
 
 ## Décisions et écarts au plan
 
-1. **`3.7` avant `2.8`**, sur demande du porteur du projet. Le ROADMAP fait foi: `3.7`, `2.8`, `3.8`, `3.9`.
+1. **`3.7` avant `2.8`**, sur demande du porteur du projet. Dans les faits, `2.8` a été faite en parallèle et a rejoint `master` la première (écart 8). Suite: `3.8`, puis `3.9`.
 2. **Les seuils ne sont pas calibrés sur la production**, contrairement à ce que prévoyait l'entrée du ROADMAP: cette session n'a pas accès à la base de production, et quelques semaines de résultats ne calibrent pas des délais d'une semaine ou d'un mois. Décision du porteur du projet. La requête de calibration est dans `pnpm base:mesurer`.
 3. **Le relevé de rétention n'est pas fait**, pour la même raison. Il n'a pas à précéder la fusion, contrairement à ce que prévoyait l'étude: la commande relit l'historique, et les semaines d'avant la mise en ligne s'y lisent à tout moment. Un relevé un mois après suffit, avec la date de la mise en ligne.
 4. **Attribuer rattrape** (fiche, décision 3): la fin de partie inscrit aussi les succès anciens d'un compte, à leur vraie date. Le script de rattrapage ne sert qu'aux comptes qui ne rejouent pas.
 5. **Les succès de niveau se mesurent en XP** (voir plus haut), et la rareté ne compte que les détenteurs qui ont joué: un compte peut, en théorie, porter un succès sans partie (un test l'écrit à la main), et la part dépasserait cent.
 6. **Le « plus proche » d'une première partie est souvent « Touriste »** (une carte sur trois fait déjà un tiers). C'est exact, et c'est une invitation à changer de carte. À revoir si le porteur du projet la trouve répétitive.
 7. **Un abandon débloque les succès de base** (étude, 5.4): rien ne le distingue en base. Les descriptions disent « Jouer » et non « Terminer ».
-8. **Écart de branche**, comme aux étapes précédentes: la session travaille sur la branche imposée `claude/etape-3-7-socle-succes-ikwb7u`, repartie de `master`. La fusion dans `master` met en ligne la migration `0009` et les succès.
+8. **Écart de branche**, comme aux étapes précédentes: la session travaille sur la branche imposée `claude/etape-3-7-socle-succes-ikwb7u`, repartie de `master`. Pendant ce temps, l'étape `2.8` a été faite sur une autre branche et a rejoint `master`: la fusion n'était plus une avance rapide. `master` a donc été fusionné dans la branche (trois conflits, dans le ROADMAP, le modèle de la fiche et les comptes en mémoire, résolus en gardant les deux apports), vérifiée à nouveau, puis la branche a rejoint `master` en avance rapide, sur demande du porteur du projet. Aucune migration n'était en concurrence: `2.8` n'en a pas.
 
 ## Problèmes connus et dette
 
@@ -71,8 +71,8 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
 ## Prochaine action exacte
 
 1. **Le porteur du projet**, après la mise en ligne: noter sa date dans `docs/mesures/retention.md`, puis lancer `pnpm base:rattraper` une fois avec l'adresse de production. Un mois après: lancer `pnpm base:mesurer` et recopier le relevé au même endroit.
-2. **La session suivante**: exécuter l'étape `2.8`, la présence et les invitations entre amis. Rédiger sa fiche selon le cas de repli du PROTOCOLE, à partir de l'entrée 2.8 du ROADMAP et de la section 4.4 de `docs/design/etude-amis-et-fiche-joueur.md`. Elle y ajoutera la pastille des demandes d'ami poussée en direct (handoff 3.6, décision 3).
+2. **La session suivante**: exécuter l'étape `3.8`, les exploits de partie. Rédiger sa fiche selon le cas de repli du PROTOCOLE, à partir de l'entrée 3.8 du ROADMAP et des sections 4 et 5 de `docs/design/etude-succes.md`. L'étape `2.8`, faite en parallèle, a déjà rejoint `master`: « Rassembleur » peut s'y construire.
 
 ## Étape suivante
 
-Fiche à lire: `docs/plan/etape-2-8.md`, à rédiger au début de l'étape (cas de repli du PROTOCOLE).
+Fiche à lire: `docs/plan/etape-3-8.md`, à rédiger au début de l'étape (cas de repli du PROTOCOLE).

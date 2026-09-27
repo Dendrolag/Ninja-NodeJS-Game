@@ -102,6 +102,9 @@ function annuaireDEssai(): AnnuaireDEssai {
         ecouteurs.delete(ecouteur);
       };
     },
+    // Les amis en direct ont leurs propres essais (ServeurSocket.amis.test.ts).
+    amisDe: async () => [],
+    surAmitiesChangees: () => () => undefined,
     comptes: new Map([['compte-alice', { pseudo: 'Alice', niveau: 7 }]]),
     finsEnregistrees: [],
     panne: false,
