@@ -2662,3 +2662,51 @@
     display: none;
   }
 }
+
+/* Les succes du profil (etape 3.7): un bloc par palier de difficulte. */
+.profil-succes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  padding: 18px 20px;
+}
+
+.profil-succes h2 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.profil-succes-paliers {
+  display: grid;
+  gap: 18px;
+}
+
+.succes-palier-bloc {
+  display: grid;
+  gap: 10px;
+}
+
+.succes-palier-bloc h3 {
+  color: var(--couleur-palier);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Les succes d'une fin de partie, sous les gains (etape 3.7). */
+.fin-succes {
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.fin-succes h3 {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.fin-plus-proche {
+  color: var(--texte-secondaire);
+  font-size: 13px;
+}

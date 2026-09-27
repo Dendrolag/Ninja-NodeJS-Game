@@ -17,7 +17,8 @@
  * client: la seule regle appliquee ici est la mise en forme. Le recapitulatif
  * arrive apres le classement, le temps de l'ecriture; en attendant, l'ecran le
  * dit. Un invite n'a que le classement (cadrage, section 3). Les defis de la
- * maquette sont reportes apres la v1 (cadrage, question 7).
+ * maquette sont reportes apres la v1 (cadrage, question 7). Depuis l'etape 3.7, le
+ * recapitulatif dit aussi les succes que la partie a donnes, et le plus proche.
  */
 
 import type {
@@ -43,6 +44,8 @@ import {
   formaterNombre,
   formaterVariation,
 } from './progression.js';
+import type { SuccesObtenuAffiche } from './succes.js';
+import { phraseDuPlusProche, succesDebloquesAffiches } from './succes.js';
 
 /** Une ligne du classement final, telle qu'on l'affiche. */
 export interface LigneFin {
@@ -114,6 +117,10 @@ export type ProgressionAffichee =
       readonly palier: string;
       /** « Bronze → Argent », seulement si le palier a change. */
       readonly changementDePalier: string | undefined;
+      /** Les succes que la partie a donnes (etape 3.7). */
+      readonly succes: readonly SuccesObtenuAffiche[];
+      /** « Plus que 3 victoires pour Dix couronnes ». Absente si rien n'est commence. */
+      readonly plusProche: string | undefined;
     };
 
 /** Tout ce que l'ecran de fin affiche. */
@@ -291,6 +298,11 @@ export function progressionAffichee(
       apres.palier === avant.palier
         ? undefined
         : `${NOMS_DES_PALIERS[avant.palier]} → ${NOMS_DES_PALIERS[apres.palier]}`,
+    succes: succesDebloquesAffiches(progression.succes.debloques),
+    plusProche:
+      progression.succes.plusProche === undefined
+        ? undefined
+        : phraseDuPlusProche(progression.succes.plusProche),
   };
 }
 

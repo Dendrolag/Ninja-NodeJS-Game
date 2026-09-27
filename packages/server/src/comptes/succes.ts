@@ -2,7 +2,7 @@
  * Les succes d'un compte, tels que la fin de partie, le profil et la fiche les montrent
  * (etape 3.7), tires de ce que la base a inscrit.
  *
- * FONCTIONS PURES. La base lit et inscrit (base/succes.ts); ce fichier met en forme les
+ * FONCTIONS PURES. La base lit et inscrit (base/succes.ts), ce fichier met en forme les
  * contrats du paquet partage. Separer les deux permet de verifier ces regles sans base,
  * et aux comptes en memoire des tests de les appliquer telles quelles.
  */

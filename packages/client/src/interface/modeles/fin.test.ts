@@ -155,7 +155,10 @@ describe('la progression de fin', () => {
     variationPointsLigue: 10,
     avant: { xpTotale: 90, niveau: 1, pieces: 1200, pointsLigue: 90, palier: 'bronze' },
     apres: { xpTotale: 240, niveau: 2, pieces: 2700, pointsLigue: 100, palier: 'argent' },
-    succes: { debloques: [] },
+    succes: {
+      debloques: ['premier-pas', 'sur-le-podium'],
+      plusProche: { id: 'habitue', actuel: 1, seuil: 25 },
+    },
   };
 
   /** Un compte dont la partie vient de finir, avec ou sans recapitulatif. */
@@ -189,7 +192,39 @@ describe('la progression de fin', () => {
       sensDeLaLigue: 'hausse',
       palier: 'Argent · 100 points',
       changementDePalier: 'Bronze → Argent',
+      // Etape 3.7: les succes que la partie a donnes, dans l'ordre recu, et le plus proche.
+      succes: [
+        {
+          id: 'premier-pas',
+          nom: 'Premier pas',
+          description: 'Jouer une partie.',
+          palier: 'decouverte',
+          nomDuPalier: 'Découverte',
+        },
+        {
+          id: 'sur-le-podium',
+          nom: 'Sur le podium',
+          description:
+            'Finir dans les trois premiers d’une partie d’au moins quatre joueurs, ou la gagner en Équipes.',
+          palier: 'decouverte',
+          nomDuPalier: 'Découverte',
+        },
+      ],
+      plusProche: 'Plus que 24 parties pour Habitué',
     });
+  });
+
+  it('ignore un succes que cette page ne connait pas, et se passe du plus proche', () => {
+    const progression = modeleFin(
+      etatDuCompte({
+        progressionDeFin: {
+          ...ENREGISTREE,
+          succes: { debloques: ['succes-a-venir' as 'habitue'] },
+        },
+      }),
+    )?.progression;
+
+    expect(progression).toMatchObject({ succes: [], plusProche: undefined });
   });
 
   it('ne parle ni de niveau ni de palier quand ils n ont pas change, et signe une perte', () => {

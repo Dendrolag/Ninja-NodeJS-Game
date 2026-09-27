@@ -854,3 +854,152 @@
   background: var(--couleur-joueur);
   box-shadow: 0 0 8px var(--couleur-joueur);
 }
+
+/* Les succes (etape 3.7). Chaque palier de difficulte a sa couleur: vert pour la
+   Decouverte, cyan pour l'Habitue, violet pour l'Expert, or pour la Legende. Un succes
+   obtenu la porte, un succes verrouille reste gris. */
+[data-palier='decouverte'] {
+  --couleur-palier: var(--vert);
+}
+
+[data-palier='habitue'] {
+  --couleur-palier: var(--cyan);
+}
+
+[data-palier='expert'] {
+  --couleur-palier: var(--violet);
+}
+
+[data-palier='legende'] {
+  --couleur-palier: var(--or);
+}
+
+.succes-liste,
+.succes-grille {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.succes-grille {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+}
+
+.succes {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-controle);
+  background: var(--surface);
+}
+
+.succes-icone {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--bordure);
+  color: var(--texte-faible);
+}
+
+.succes-obtenu {
+  border-color: color-mix(in srgb, var(--couleur-palier) 35%, transparent);
+}
+
+.succes-obtenu .succes-icone {
+  border-color: color-mix(in srgb, var(--couleur-palier) 50%, transparent);
+  background: color-mix(in srgb, var(--couleur-palier) 14%, transparent);
+  color: var(--couleur-palier);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--couleur-palier) 35%, transparent);
+}
+
+.succes-texte {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.succes-nom {
+  overflow-wrap: anywhere;
+  font-family: var(--police-titre);
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.succes-verrouille .succes-nom {
+  color: var(--texte-secondaire);
+}
+
+.succes-palier {
+  color: var(--couleur-palier);
+  font-family: var(--police-titre);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.succes-description {
+  color: var(--texte-secondaire);
+  font-size: 13px;
+}
+
+.succes-verrouille .succes-description {
+  color: var(--texte-tertiaire);
+}
+
+.succes-date,
+.succes-rarete {
+  color: var(--texte-faible);
+  font-size: 12px;
+}
+
+.succes-progression {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+  color: var(--texte-tertiaire);
+  font-family: var(--police-donnees);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.succes-progression .barre {
+  height: 6px;
+}
+
+.succes-compte {
+  color: var(--texte-tertiaire);
+  font-family: var(--police-donnees);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+/* Le titre d'une section de succes: son nom, puis son compte, a droite. */
+.fiche-succes h3,
+.profil-succes h2,
+.succes-palier-bloc h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fiche-succes {
+  display: grid;
+  gap: 10px;
+}
+
+.fiche-succes h3 {
+  font-size: 15px;
+  font-weight: 600;
+}

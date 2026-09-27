@@ -2,7 +2,8 @@
  * L'ecran du profil: ce que le compte a accumule, et ses dernieres parties.
  *
  * Sans equivalent dans le legacy. La maquette y met aussi le pass de saison, les
- * skins, les succes et le rang mondial: tous reportes apres la v1, et absents.
+ * skins et le rang mondial: tous reportes apres la v1, et absents. Les succes y sont
+ * depuis l'etape 3.7, palier par palier.
  *
  * CET ECRAN NE DECIDE RIEN. Ce qu'il montre vient de modeleProfil; la lecture du
  * profil part de la navigation vers cet ecran (client.ts), pas de son montage. Il
@@ -13,6 +14,7 @@
 
 import { monterSecuriteDuCompte } from '../composants/securiteDuCompte.js';
 import { tableauParMode, tuilesDeStatistiques } from '../composants/statistiques.js';
+import { paliersDeSucces } from '../composants/succes.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import { icone } from '../icones.js';
 import type { LigneDHistorique, ModeleProfil } from '../modeles/profil.js';
@@ -64,6 +66,8 @@ export function monterProfil(contexte: ContexteEcran): EcranAffiche {
     creer(doc, 'h2', { texte: 'Par mode' }),
     parMode,
   );
+  const compteDesSucces = creer(doc, 'span', { classe: 'succes-compte' });
+  const paliers = creer(doc, 'div', { classe: 'profil-succes-paliers' });
   const corpsHistorique = creer(doc, 'tbody');
   const historique = creer(
     doc,
@@ -147,6 +151,13 @@ export function monterProfil(contexte: ContexteEcran): EcranAffiche {
     creer(
       doc,
       'section',
+      { classe: 'panneau profil-succes' },
+      creer(doc, 'h2', {}, creer(doc, 'span', { texte: 'Succès' }), compteDesSucces),
+      paliers,
+    ),
+    creer(
+      doc,
+      'section',
       { classe: 'panneau profil-parties' },
       creer(doc, 'h2', { texte: 'Dernières parties' }),
       historiqueVide,
@@ -181,6 +192,9 @@ export function monterProfil(contexte: ContexteEcran): EcranAffiche {
     parMode.replaceChildren(tableauParMode(doc, modele.parMode));
     // Sans partie, le tableau n'aurait que ses titres: l'historique vide dit deja pourquoi.
     montrer(sectionParMode, modele.parMode.length > 0);
+
+    ecrireTexte(compteDesSucces, modele.succes.compte);
+    paliers.replaceChildren(...paliersDeSucces(doc, modele.succes.paliers));
 
     corpsHistorique.replaceChildren(...modele.parties.map((partie) => rangee(doc, partie)));
     montrer(historique, modele.parties.length > 0);

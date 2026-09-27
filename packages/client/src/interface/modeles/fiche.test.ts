@@ -21,7 +21,7 @@ const FICHE: FicheJoueur = {
   niveau: 12,
   palier: 'platine',
   relation: 'aucune',
-  succes: [],
+  succes: [{ id: 'premier-pas', rarete: 0.4 }],
   statistiques: {
     partiesJouees: 40,
     partiesAPlusieurs: 38,
@@ -103,6 +103,18 @@ describe('modeleFiche', () => {
         enCours: false,
         erreur: undefined,
       },
+      // Etape 3.7: ses succes obtenus, sans date, et un succes rare dit « moins de 1 % ».
+      succes: [
+        {
+          id: 'premier-pas',
+          nom: 'Premier pas',
+          description: 'Jouer une partie.',
+          palier: 'decouverte',
+          nomDuPalier: 'Découverte',
+          rarete: 'moins de 1 % des joueurs',
+        },
+      ],
+      compteDesSucces: '1 succès sur 29',
     });
   });
 

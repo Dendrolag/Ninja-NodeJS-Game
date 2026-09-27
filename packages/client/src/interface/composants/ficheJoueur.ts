@@ -8,8 +8,8 @@
  * fermee sinon.
  *
  * UNE SUITE DE SECTIONS. L'identite, l'amitie et ses gestes, les parties jouees
- * ensemble pour un ami (etape 3.6), les statistiques, le tableau par mode. Les succes
- * (etapes 3.7 et 3.8) s'y ajouteront en section.
+ * ensemble pour un ami (etape 3.6), les statistiques, le tableau par mode, puis les
+ * succes obtenus (etape 3.7).
  *
  * CE COMPOSANT NE DECIDE RIEN. Il montre le modele de la fiche, et previent le client
  * a la fermeture, quelle qu'en soit la facon: bouton, croix, Echap ou clic a cote.
@@ -24,6 +24,7 @@ import { modeleFiche } from '../modeles/fiche.js';
 import { monterFenetre } from './fenetre.js';
 import { boutonsDeGestes } from './gestesDAmitie.js';
 import { tableauParMode, tuilesDeStatistiques } from './statistiques.js';
+import { listeDeSuccesObtenus } from './succes.js';
 
 /** La fenetre de la fiche, montee. */
 export interface FenetreDeLaFiche {
@@ -75,6 +76,13 @@ export function monterFenetreDeLaFiche(doc: Document, client: Client): FenetreDe
   const sansPartie = creer(doc, 'p', {
     classe: 'fiche-vide',
     texte: 'Aucune partie enregistrée pour l’instant.',
+  });
+
+  const compteDesSucces = creer(doc, 'span', { classe: 'succes-compte' });
+  const succes = creer(doc, 'div', { classe: 'fiche-succes-liste' });
+  const sansSucces = creer(doc, 'p', {
+    classe: 'fiche-vide',
+    texte: 'Aucun succès pour l’instant.',
   });
 
   const phraseDAmitie = creer(doc, 'p', { classe: 'fiche-relation' });
@@ -141,6 +149,14 @@ export function monterFenetreDeLaFiche(doc: Document, client: Client): FenetreDe
       sansPartie,
       parMode,
     ),
+    creer(
+      doc,
+      'section',
+      { classe: 'fiche-succes' },
+      creer(doc, 'h3', {}, creer(doc, 'span', { texte: 'Succès' }), compteDesSucces),
+      sansSucces,
+      succes,
+    ),
   );
 
   fenetre.corps.append(chargement, echec, contenu);
@@ -167,6 +183,10 @@ export function monterFenetreDeLaFiche(doc: Document, client: Client): FenetreDe
     montrer(sansPartie, modele.parMode.length === 0);
     tuilesEnsemble.replaceChildren(...tuilesDeStatistiques(doc, modele.ensemble ?? []));
     montrer(ensemble, modele.ensemble !== undefined);
+    ecrireTexte(compteDesSucces, modele.compteDesSucces);
+    succes.replaceChildren(listeDeSuccesObtenus(doc, modele.succes));
+    montrer(succes, modele.succes.length > 0);
+    montrer(sansSucces, modele.succes.length === 0);
   };
 
   /**

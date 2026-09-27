@@ -27,6 +27,7 @@ import type { Client } from '../../client.js';
 import type { EtatClient } from '../../etat.js';
 import { moiDansLeSalon } from '../../selecteurs.js';
 import { boutonDeFiche } from '../composants/ficheJoueur.js';
+import { listeDeSuccesObtenus } from '../composants/succes.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import { icone } from '../icones.js';
 import type { EquipeFin, LigneFin, ModeleFin, ProgressionAffichee } from '../modeles/fin.js';
@@ -254,6 +255,17 @@ function monterPanneauDeProgression(doc: Document): PanneauDeProgression {
   const pieces = creer(doc, 'strong');
   const variationLigue = creer(doc, 'strong');
   const palier = creer(doc, 'span', { classe: 'gain-palier' });
+  const succesDebloques = creer(doc, 'div', { classe: 'fin-succes-liste' });
+  const blocDesSucces = creer(
+    doc,
+    'div',
+    { classe: 'fin-succes' },
+    creer(doc, 'h3', { texte: 'Succès débloqués' }),
+    succesDebloques,
+  );
+  const plusProche = creer(doc, 'p', { classe: 'fin-plus-proche' });
+  /** Les succes deja dessines, par leurs identifiants. */
+  let succesDessines: string | undefined;
   const changementDePalier = creer(doc, 'span', { classe: 'gain-changement' });
   const gainLigue = creer(
     doc,
@@ -294,6 +306,8 @@ function monterPanneauDeProgression(doc: Document): PanneauDeProgression {
       ),
       gainLigue,
     ),
+    blocDesSucces,
+    plusProche,
   );
 
   const racine = creer(
@@ -343,6 +357,17 @@ function monterPanneauDeProgression(doc: Document): PanneauDeProgression {
       ecrireTexte(palier, progression.palier);
       ecrireTexte(changementDePalier, progression.changementDePalier ?? '');
       montrer(changementDePalier, progression.changementDePalier !== undefined);
+      // La liste ne se refait que si elle a change: le panneau est lu a voix haute.
+      const succesDecrits = progression.succes.map((succes) => succes.id).join(' ');
+
+      if (succesDecrits !== succesDessines) {
+        succesDessines = succesDecrits;
+        succesDebloques.replaceChildren(listeDeSuccesObtenus(doc, progression.succes));
+      }
+
+      montrer(blocDesSucces, progression.succes.length > 0);
+      ecrireTexte(plusProche, progression.plusProche ?? '');
+      montrer(plusProche, progression.plusProche !== undefined);
     },
   };
 }
