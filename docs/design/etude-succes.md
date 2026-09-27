@@ -196,4 +196,4 @@ Prises avec le porteur du projet au début de l'étape `3.7`, toutes sur la reco
 4. **Les secrets**: oui, les trois, en `3.8`.
 5. **L'ordre**: précisé le même jour. `3.7` passe avant `2.8`, dont le socle ne dépend pas. `3.8` reste après `2.8`, qui fait exister « Rassembleur ».
 6. **« 1000 ninjas capturés » tous modes**: non, on s'en tient à la Horde.
-7. **La mesure de rétention**: oui, par un script en lecture seule, lancé par le porteur du projet avant la fusion dans `master` et un mois après (`docs/mesures/retention.md`).
+7. **La mesure de rétention**: oui, par un script en lecture seule, lancé par le porteur du projet un mois après la mise en ligne (`docs/mesures/retention.md`). Il relit l'historique: les semaines d'avant la mise en ligne s'y lisent aussi, sans relevé préalable.

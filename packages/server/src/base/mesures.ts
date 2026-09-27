@@ -6,8 +6,10 @@
  * semaine s'il y a joue une partie, et il est revenu s'il a rejoue sept jours ou plus
  * apres sa premiere partie. Rien ne s'ecrit, rien ne suit les invites.
  *
- * Le releve se fait a la main (`pnpm base:mesurer`), avant la mise en ligne des succes
- * puis un mois apres: docs/mesures/retention.md en garde la procedure et les chiffres.
+ * Le releve se fait a la main (`pnpm base:mesurer`), un mois apres la mise en ligne des
+ * succes: docs/mesures/retention.md en garde la procedure et les chiffres. Il relit
+ * l'historique, si bien que les semaines d'avant la mise en ligne s'y lisent aussi,
+ * quel que soit le jour ou il est lance.
  * Il dit aussi ce qu'une partie et un compte font d'ordinaire, pour recalibrer un jour
  * les seuils des succes sur des donnees assez nombreuses.
  */

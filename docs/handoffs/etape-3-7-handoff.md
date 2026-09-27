@@ -55,7 +55,7 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
 
 1. **`3.7` avant `2.8`**, sur demande du porteur du projet. Le ROADMAP fait foi: `3.7`, `2.8`, `3.8`, `3.9`.
 2. **Les seuils ne sont pas calibrés sur la production**, contrairement à ce que prévoyait l'entrée du ROADMAP: cette session n'a pas accès à la base de production, et quelques semaines de résultats ne calibrent pas des délais d'une semaine ou d'un mois. Décision du porteur du projet. La requête de calibration est dans `pnpm base:mesurer`.
-3. **Le relevé de rétention « avant » n'est pas fait**, pour la même raison. Il revient au porteur du projet, avant la fusion dans `master` (voir la prochaine action).
+3. **Le relevé de rétention n'est pas fait**, pour la même raison. Il n'a pas à précéder la fusion, contrairement à ce que prévoyait l'étude: la commande relit l'historique, et les semaines d'avant la mise en ligne s'y lisent à tout moment. Un relevé un mois après suffit, avec la date de la mise en ligne.
 4. **Attribuer rattrape** (fiche, décision 3): la fin de partie inscrit aussi les succès anciens d'un compte, à leur vraie date. Le script de rattrapage ne sert qu'aux comptes qui ne rejouent pas.
 5. **Les succès de niveau se mesurent en XP** (voir plus haut), et la rareté ne compte que les détenteurs qui ont joué: un compte peut, en théorie, porter un succès sans partie (un test l'écrit à la main), et la part dépasserait cent.
 6. **Le « plus proche » d'une première partie est souvent « Touriste »** (une carte sur trois fait déjà un tiers). C'est exact, et c'est une invitation à changer de carte. À revoir si le porteur du projet la trouve répétitive.
@@ -70,7 +70,7 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
 
 ## Prochaine action exacte
 
-1. **Le porteur du projet**, avant de fusionner cette branche dans `master`: lancer `pnpm base:mesurer` avec l'adresse de production, et recopier le relevé dans `docs/mesures/retention.md`. Après la mise en ligne: lancer `pnpm base:rattraper` une fois.
+1. **Le porteur du projet**, après la mise en ligne: noter sa date dans `docs/mesures/retention.md`, puis lancer `pnpm base:rattraper` une fois avec l'adresse de production. Un mois après: lancer `pnpm base:mesurer` et recopier le relevé au même endroit.
 2. **La session suivante**: exécuter l'étape `2.8`, la présence et les invitations entre amis. Rédiger sa fiche selon le cas de repli du PROTOCOLE, à partir de l'entrée 2.8 du ROADMAP et de la section 4.4 de `docs/design/etude-amis-et-fiche-joueur.md`. Elle y ajoutera la pastille des demandes d'ami poussée en direct (handoff 3.6, décision 3).
 
 ## Étape suivante

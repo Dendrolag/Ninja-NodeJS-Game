@@ -22,7 +22,7 @@ Prises au début de l'étape, sur les recommandations de l'étude (section 8).
 4. **Le rattrapage**: oui, par un script idempotent lancé une fois à la mise en ligne.
 5. **Les secrets**: trois, tous de source « partie », donc construits en `3.8`.
 6. **« 1000 ninjas capturés » tous modes**: non, on s'en tient à la Horde (« Seigneur de la Horde », en `3.8`). `packages/sim` n'est pas touché.
-7. **La mesure de rétention**: oui, par un script en lecture seule que le porteur du projet lance avant la fusion dans `master`, puis un mois après. Cette session n'a pas accès à la base de production.
+7. **La mesure de rétention**: oui, par un script en lecture seule que le porteur du projet lance un mois après la mise en ligne. Cette session n'a pas accès à la base de production. Précision du 27 septembre 2026: le relevé n'a pas à précéder la fusion, il relit l'historique et lit les semaines d'avant aussi bien que celles d'après.
 
 ## État du dépôt au départ (26 septembre 2026)
 
