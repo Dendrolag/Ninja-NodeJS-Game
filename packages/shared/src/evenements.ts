@@ -262,6 +262,11 @@ export interface JoueurDuSalon {
 export interface CompteDuSalon {
   /** Le niveau du compte a son entree dans la partie. */
   readonly niveau: number;
+  /**
+   * Le titre du compte a son entree dans la partie (etape 3.9): un succes obtenu, qui
+   * s'affiche sous son pseudo. Absent: il n'en a pas choisi.
+   */
+  readonly titre?: IdentifiantSucces;
 }
 
 /**

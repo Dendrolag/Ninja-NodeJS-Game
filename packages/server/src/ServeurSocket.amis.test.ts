@@ -95,6 +95,7 @@ function annuaireDEssai(...amis: [Compte, Compte][]): AnnuaireDEssai {
     ficheJoueur: nonUtilise,
     amis: nonUtilise,
     gesteDAmitie: nonUtilise,
+    choisirUnTitre: nonUtilise,
     changerMotDePasse: nonUtilise,
     nouveauCodeDeSecours: nonUtilise,
     reinitialiser: nonUtilise,

@@ -36,6 +36,7 @@ export type {
   DemandeCodeDeSecours,
   DemandeConnexion,
   DemandeDeGeste,
+  DemandeDeTitre,
   DemandeInscription,
   DemandeReinitialisation,
   FaceAFace,
@@ -55,6 +56,7 @@ export type {
   StatistiquesDeJoueur,
   SuccesDeFiche,
   SuccesDuProfil,
+  TitreDuCompte,
 } from './comptes.js';
 export {
   GESTES_D_AMITIE,
@@ -322,6 +324,7 @@ export {
   validerDemandeConnexion,
   validerDemandeCreation,
   validerDemandeDeGeste,
+  validerDemandeDeTitre,
   validerDemandeInvitation,
   validerDemandeInscription,
   validerDemandeReinitialisation,

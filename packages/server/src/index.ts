@@ -136,6 +136,8 @@ export {
 
 export { compteDeLaSession, fermerSession, ouvrirSession } from './base/sessions.js';
 
+export { choisirLeTitre, retirerLeTitre } from './base/titres.js';
+
 export type { AmitiesEnregistrees, GesteApplique, PersonneEnregistree } from './base/amities.js';
 export type { AmiEnregistre } from './base/amities.js';
 export {
@@ -176,6 +178,7 @@ export {
   DUREE_SESSION_MS,
   JOUEUR_INCONNU,
   MOT_DE_PASSE_INCORRECT,
+  SUCCES_NON_OBTENU,
 } from './comptes/Authentification.js';
 export type { DecisionDAmitie, EcritureDAmitie, FaitsDAmitie } from './comptes/amities.js';
 export {

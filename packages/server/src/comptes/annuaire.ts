@@ -11,8 +11,8 @@
  * invitations. C'est l'annuaire. Les
  * routes HTTP ont besoin, en plus, d'inscrire, de connecter, de deconnecter, de lire
  * la progression et, depuis l'etape 3.4, de gerer le mot de passe, depuis l'etape 3.5
- * de lire la fiche d'un autre compte et, depuis l'etape 3.6, de gerer ses amities.
- * C'est le service.
+ * de lire la fiche d'un autre compte, depuis l'etape 3.6, de gerer ses amities et,
+ * depuis l'etape 3.9, de choisir son titre. C'est le service.
  *
  * Ni l'un ni l'autre ne nomme la base: Authentification les implemente avec elle,
  * et les tests de la couche reseau peuvent leur substituer une version en memoire.
@@ -23,12 +23,14 @@ import type {
   CodeDeSecoursEmis,
   ErreurValidation,
   FicheJoueur,
+  IdentifiantSucces,
   ListeDAmis,
   MaProgression,
   ProfilDuCompte,
   ReponseDeGeste,
   SessionInscrite,
   SessionOuverte,
+  TitreDuCompte,
 } from '@neon-ninja/shared';
 
 import type { NouveauResultat, NouvellePartie, ProgressionAppliquee } from '../base/parties.js';
@@ -43,6 +45,8 @@ export interface AmiConnu {
 export interface IdentiteDeCompte {
   readonly pseudo: string;
   readonly niveau: number;
+  /** Son titre, montre au salon sous son pseudo (etape 3.9). Absent: aucun. */
+  readonly titre?: IdentifiantSucces;
 }
 
 /** Ce que la couche reseau demande aux comptes. */
@@ -67,10 +71,12 @@ export interface AnnuaireDesComptes {
   compteDeSession(jeton: string): Promise<string | undefined>;
 
   /**
-   * Le pseudo et le niveau actuels de ce compte, ou undefined s'il n'existe plus.
+   * Le pseudo, le niveau et le titre actuels de ce compte, ou undefined s'il n'existe
+   * plus.
    *
    * Lus a chaque entree en partie, et non a l'ouverture de la connexion: le niveau
-   * affiche au salon est celui du moment, meme apres une partie qui l'a fait monter.
+   * affiche au salon est celui du moment, meme apres une partie qui l'a fait monter, et
+   * le titre celui du dernier choix (etape 3.9).
    */
   identiteDe(compteId: string): Promise<IdentiteDeCompte | undefined>;
 
@@ -135,6 +141,8 @@ export type MotifDeRefus =
    * bloque, accepter une demande qui n'existe pas, depasser une borne. 409.
    */
   | 'gesteImpossible'
+  /** Le titre demande est un succes que le compte n'a pas obtenu (etape 3.9): 409. */
+  | 'succesNonObtenu'
   /** Trop de tentatives recentes: 429. */
   | 'tropDeTentatives';
 
@@ -194,6 +202,14 @@ export interface ServiceDeComptes extends AnnuaireDesComptes {
    * @param demande Le corps de la requete, a valider: le geste et le pseudo.
    */
   gesteDAmitie(jeton: string, demande: unknown): Promise<ReponseDeCompte<ReponseDeGeste>>;
+
+  /**
+   * Choisit le titre du compte dont ce jeton ouvre la session parmi ses succes obtenus,
+   * ou le retire (etape 3.9).
+   *
+   * @param demande Le corps de la requete, a valider: le succes, ou null.
+   */
+  choisirUnTitre(jeton: string, demande: unknown): Promise<ReponseDeCompte<TitreDuCompte>>;
 
   /**
    * Change le mot de passe du compte dont ce jeton ouvre la session, contre le mot de

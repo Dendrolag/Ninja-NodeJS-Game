@@ -128,6 +128,7 @@ function serviceFactice(remplacements: Partial<ServiceDeComptes> = {}): ServiceD
     gesteDAmitie: vi.fn(async () =>
       acceptee({ pseudo: 'Léa B.', relation: 'ami' as const, amis: AMIS }),
     ),
+    choisirUnTitre: vi.fn(async () => acceptee({ titre: 'premier-pas' as const })),
     changerMotDePasse: vi.fn(async () => acceptee(CODE)),
     nouveauCodeDeSecours: vi.fn(async () => acceptee(CODE)),
     reinitialiser: vi.fn(async () => acceptee(SESSION_INSCRITE)),
@@ -544,6 +545,60 @@ describe('amis (etape 3.6)', () => {
 
     expect((await requete(url, ROUTES_COMPTES.amis, { methode: 'GET', entetes })).statut).toBe(503);
     expect((await requete(url, ROUTES_COMPTES.amis, { corps: '{}', entetes })).statut).toBe(503);
+  });
+});
+
+describe('titre (etape 3.9)', () => {
+  const entetes = { Authorization: `Bearer ${JETON}` };
+
+  it('passe le choix au service, et rend le titre porte', async () => {
+    const service = serviceFactice();
+    const url = await monter({ comptes: service });
+
+    const reponse = await requete(url, ROUTES_COMPTES.titre, {
+      corps: JSON.stringify({ titre: 'premier-pas' }),
+      entetes,
+    });
+
+    expect([reponse.statut, reponse.corps]).toEqual([200, { titre: 'premier-pas' }]);
+    expect(reponse.entetes.get('cache-control')).toBe('no-store');
+    expect(service.choisirUnTitre).toHaveBeenCalledWith(JETON, { titre: 'premier-pas' });
+  });
+
+  it('refuse sans jeton, sans deranger le service', async () => {
+    const service = serviceFactice();
+    const url = await monter({ comptes: service });
+
+    const reponse = await requete(url, ROUTES_COMPTES.titre, { corps: '{"titre":null}' });
+
+    expect(reponse.statut).toBe(401);
+    expect(reponse.entetes.get('www-authenticate')).toBe('Bearer');
+    expect(service.choisirUnTitre).not.toHaveBeenCalled();
+  });
+
+  it('traduit chaque refus du choix en son code', async () => {
+    const attendus = [
+      ['demandeInvalide', 400],
+      ['sessionAbsente', 401],
+      ['succesNonObtenu', 409],
+    ] as const;
+
+    for (const [motif, statut] of attendus) {
+      await serveur?.fermer();
+      const url = await monter({
+        comptes: serviceFactice({ choisirUnTitre: refusDuService(motif) }),
+      });
+
+      const reponse = await requete(url, ROUTES_COMPTES.titre, { corps: '{}', entetes });
+
+      expect([motif, reponse.statut]).toEqual([motif, statut]);
+    }
+  });
+
+  it('repond que les comptes sont indisponibles sur un serveur sans base', async () => {
+    const url = await monter({});
+
+    expect((await requete(url, ROUTES_COMPTES.titre, { corps: '{}', entetes })).statut).toBe(503);
   });
 });
 

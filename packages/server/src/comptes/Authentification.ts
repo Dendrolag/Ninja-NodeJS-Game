@@ -5,7 +5,8 @@
  * et reinitialiser avec ce code un mot de passe oublie. Depuis l'etape 3.5, lire la
  * fiche d'un autre compte. Depuis l'etape 3.6, gerer ses amities: les regles sont
  * dans amities.ts, et les ecritures dans base/amities.ts. Depuis l'etape 2.8, dire a la
- * couche reseau les amis d'un compte, et la prevenir des amities qui changent.
+ * couche reseau les amis d'un compte, et la prevenir des amities qui changent. Depuis
+ * l'etape 3.9, choisir son titre parmi ses succes obtenus.
  *
  * C'est l'implementation, avec la base, de l'annuaire et du service de
  * annuaire.ts. Elle assemble des briques qui ont chacune leur fichier: la
@@ -35,6 +36,7 @@ import type {
   CodeDeSecoursEmis,
   ErreurValidation,
   FicheJoueur,
+  IdentifiantSucces,
   LimiteDebit,
   ListeDAmis,
   MaProgression,
@@ -44,6 +46,7 @@ import type {
   ReponseDeGeste,
   SessionInscrite,
   SessionOuverte,
+  TitreDuCompte,
 } from '@neon-ninja/shared';
 import {
   LIMITES_COMPTES,
@@ -56,6 +59,7 @@ import {
   validerDemandeCodeDeSecours,
   validerDemandeConnexion,
   validerDemandeDeGeste,
+  validerDemandeDeTitre,
   validerDemandeInscription,
   validerDemandeReinitialisation,
   validerPseudo,
@@ -94,6 +98,7 @@ import {
   secretsDuCompte,
 } from '../base/secrets.js';
 import { compteDeLaSession, fermerSession, ouvrirSession } from '../base/sessions.js';
+import { choisirLeTitre, retirerLeTitre } from '../base/titres.js';
 import type { Horloge } from '../horloge.js';
 import { horlogeSysteme } from '../horloge.js';
 import { deciderDuGeste, relationVue } from './amities.js';
@@ -164,6 +169,9 @@ export const MOT_DE_PASSE_INCORRECT = 'Mot de passe incorrect.';
  * pseudo qu'aucun compte ne porte.
  */
 export const JOUEUR_INCONNU = 'Aucun compte ne porte ce pseudo.';
+
+/** Le motif d'un titre demande parmi les succes que le compte n'a pas obtenus (etape 3.9). */
+export const SUCCES_NON_OBTENU = 'Ce succès n’est pas encore obtenu.';
 
 /** L'authentification des comptes, avec la base. */
 export class Authentification implements ServiceDeComptes {
@@ -307,6 +315,7 @@ export class Authentification implements ServiceDeComptes {
       dernieresParties: historique.map(partieDuProfil),
       codeDeSecours,
       succes: succesDuProfil(mesures, inscrits, rarete),
+      ...(compte.titre === undefined ? {} : { titre: compte.titre }),
     });
   }
 
@@ -353,6 +362,7 @@ export class Authentification implements ServiceDeComptes {
       // Le face-a-face est reserve aux amis (decision 2 de l'etude des amis).
       ...(relation === 'ami' ? { ensemble: await faceAFace(this.db, lecteur, profil.id) } : {}),
       succes: succesDeFiche(inscrits, rarete),
+      ...(profil.titre === undefined ? {} : { titre: profil.titre }),
     });
   }
 
@@ -419,6 +429,34 @@ export class Authentification implements ServiceDeComptes {
       relation: relationVue(applique.faits),
       amis: listeDAmis(await amitiesDuCompte(this.db, compteId)),
     });
+  }
+
+  /**
+   * Dans l'ordre: la session, puis la demande, puis une seule ecriture, qui ne prend que
+   * pour un succes obtenu. Pas de limite de tentatives: une demande ne touche que la
+   * ligne de son propre compte (fiche 3.9, decision 6).
+   */
+  async choisirUnTitre(jeton: string, brut: unknown): Promise<ReponseDeCompte<TitreDuCompte>> {
+    const compteId = await this.compteDeSession(jeton);
+    if (compteId === undefined) {
+      return sessionAbsente();
+    }
+
+    const demande = validerDemandeDeTitre(brut);
+    if (!demande.valide) {
+      return refusee('demandeInvalide', demande.erreurs);
+    }
+
+    const { titre } = demande.valeur;
+
+    if (titre === null) {
+      await retirerLeTitre(this.db, compteId);
+      return acceptee({});
+    }
+
+    return (await choisirLeTitre(this.db, compteId, titre))
+      ? acceptee({ titre })
+      : refusee('succesNonObtenu', [{ champ: 'titre', motif: SUCCES_NON_OBTENU }]);
   }
 
   async changerMotDePasse(
@@ -538,9 +576,15 @@ export class Authentification implements ServiceDeComptes {
   async identiteDe(compteId: string): Promise<IdentiteDeCompte | undefined> {
     const profil = await profilDuCompte(this.db, compteId);
 
-    return profil === undefined
-      ? undefined
-      : { pseudo: profil.pseudo, niveau: niveauDeXp(profil.xpTotale) };
+    if (profil === undefined) {
+      return undefined;
+    }
+
+    return {
+      pseudo: profil.pseudo,
+      niveau: niveauDeXp(profil.xpTotale),
+      ...(profil.titre === undefined ? {} : { titre: profil.titre }),
+    };
   }
 
   async pseudoDeCompte(pseudo: string): Promise<boolean> {
@@ -579,14 +623,19 @@ export class Authentification implements ServiceDeComptes {
   // ------------------------------------------------------------------------
 
   /**
-   * Le compte dont ce jeton ouvre une session valable, et sa progression, ou
+   * Le compte dont ce jeton ouvre une session valable, sa progression et son titre, ou
    * undefined.
    *
    * Le niveau se deduit de l'XP a cette lecture, et n'est garde nulle part.
    */
-  private async compteDeLaSession(
-    jeton: string,
-  ): Promise<{ readonly id: string; readonly progression: MaProgression } | undefined> {
+  private async compteDeLaSession(jeton: string): Promise<
+    | {
+        readonly id: string;
+        readonly progression: MaProgression;
+        readonly titre: IdentifiantSucces | undefined;
+      }
+    | undefined
+  > {
     const compteId = await this.compteDeSession(jeton);
     const profil = compteId === undefined ? undefined : await profilDuCompte(this.db, compteId);
 
@@ -604,6 +653,7 @@ export class Authentification implements ServiceDeComptes {
         pointsLigue: profil.pointsLigue,
         inscritLe: profil.creeLe.toISOString(),
       },
+      titre: profil.titre,
     };
   }
 

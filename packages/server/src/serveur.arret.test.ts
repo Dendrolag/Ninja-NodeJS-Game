@@ -85,6 +85,7 @@ function comptesQuiFontAttendre(): {
     ficheJoueur: vi.fn(),
     amis: vi.fn(),
     gesteDAmitie: vi.fn(),
+    choisirUnTitre: vi.fn(),
     changerMotDePasse: vi.fn(),
     nouveauCodeDeSecours: vi.fn(),
     reinitialiser: vi.fn(),

@@ -11,14 +11,14 @@
  * est traduit en message.
  */
 
-import type { ResultatValidation } from '@neon-ninja/shared';
-import { reperePseudo, validerPseudo } from '@neon-ninja/shared';
+import type { IdentifiantSucces, ResultatValidation } from '@neon-ninja/shared';
+import { estUnSucces, reperePseudo, validerPseudo } from '@neon-ninja/shared';
 import { eq } from 'drizzle-orm';
 
 import type { BaseDeDonnees } from './connexion.js';
 import { CODES_POSTGRES, erreurPostgres } from './erreurs.js';
 import type { ValeursProgression } from './progression.js';
-import { codesDeSecours, comptes, motsDePasse, progressions } from './schema.js';
+import { codesDeSecours, comptes, motsDePasse, progressions, titres } from './schema.js';
 
 /** Un compte, tel que le serveur le manipule. */
 export interface Compte {
@@ -158,29 +158,45 @@ export async function identifiantsParPseudo(
   return ligne === undefined ? undefined : { ...ligne, empreinte: ligne.empreinte ?? undefined };
 }
 
-/** Un compte et sa progression, lus ensemble. */
-export interface Profil extends Compte, ValeursProgression {}
+/** Un compte, sa progression et son titre, lus ensemble. */
+export interface Profil extends Compte, ValeursProgression {
+  /**
+   * Le titre choisi parmi ses succes obtenus (etape 3.9). Absent s'il n'en a pas, ou si
+   * le succes qu'il porte a ete retire du code depuis.
+   */
+  readonly titre: IdentifiantSucces | undefined;
+}
 
-/** Les colonnes lues pour decrire un compte et sa progression. */
+/** Les colonnes lues pour decrire un compte, sa progression et son titre. */
 const COLONNES_PROFIL = {
   ...COLONNES_COMPTE,
   xpTotale: progressions.xpTotale,
   pieces: progressions.pieces,
   pointsLigue: progressions.pointsLigue,
+  titre: titres.succes,
 };
+
+/** Une ligne lue avec COLONNES_PROFIL, a la forme d'un Profil. */
+function profilDeLaLigne({
+  titre,
+  ...ligne
+}: Omit<Profil, 'titre'> & { readonly titre: string | null }): Profil {
+  return { ...ligne, titre: titre !== null && estUnSucces(titre) ? titre : undefined };
+}
 
 /** Le compte et la progression de cet identifiant, ou undefined s'il n'existe pas. */
 export async function profilDuCompte(
   db: BaseDeDonnees,
   compteId: string,
 ): Promise<Profil | undefined> {
-  const [profil] = await db
+  const [ligne] = await db
     .select(COLONNES_PROFIL)
     .from(comptes)
     .innerJoin(progressions, eq(progressions.compteId, comptes.id))
+    .leftJoin(titres, eq(titres.compteId, comptes.id))
     .where(eq(comptes.id, compteId));
 
-  return profil;
+  return ligne === undefined ? undefined : profilDeLaLigne(ligne);
 }
 
 /**
@@ -191,11 +207,12 @@ export async function profilParPseudo(
   db: BaseDeDonnees,
   pseudo: string,
 ): Promise<Profil | undefined> {
-  const [profil] = await db
+  const [ligne] = await db
     .select(COLONNES_PROFIL)
     .from(comptes)
     .innerJoin(progressions, eq(progressions.compteId, comptes.id))
+    .leftJoin(titres, eq(titres.compteId, comptes.id))
     .where(eq(comptes.reperePseudo, reperePseudo(pseudo)));
 
-  return profil;
+  return ligne === undefined ? undefined : profilDeLaLigne(ligne);
 }

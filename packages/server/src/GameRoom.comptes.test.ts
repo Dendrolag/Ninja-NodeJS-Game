@@ -88,4 +88,18 @@ describe('le salon, comptes et invites', () => {
   it('ne donne aucun champ compte a un invite', () => {
     expect('compte' in joueurDuSalon({ id: 's-bob', pseudo: 'Bob', hote: false })).toBe(false);
   });
+
+  it('montre le titre d un compte qui en porte un, et aucun champ titre sinon (etape 3.9)', () => {
+    const titre = joueurDuSalon({
+      id: 's-alice',
+      pseudo: 'Alice',
+      hote: true,
+      compte: { id: 'c-alice', niveau: 4, titre: 'centurion' },
+    });
+    const sansTitre = joueurDuSalon({ ...ALICE, hote: true });
+
+    expect(titre.compte).toEqual({ niveau: 4, titre: 'centurion' });
+    expect(sansTitre.compte).toEqual({ niveau: 4 });
+    expect(sansTitre.compte !== undefined && 'titre' in sansTitre.compte).toBe(false);
+  });
 });

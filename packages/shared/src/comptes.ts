@@ -75,6 +75,12 @@ export const ROUTES_COMPTES = {
    * refusent le geste, 429.
    */
   amis: `${RACINE_API_COMPTES}/amis`,
+  /**
+   * POST, jeton en en-tete, DemandeDeTitre (etape 3.9). 200 et TitreDuCompte; 400 si la
+   * demande est mal formee ou le succes inconnu, 401 sans session valide, 409 si le
+   * succes n'est pas obtenu.
+   */
+  titre: `${RACINE_API_COMPTES}/titre`,
 } as const;
 
 /**
@@ -354,6 +360,24 @@ export interface FicheJoueur {
   readonly ensemble?: FaceAFace;
   /** Les succes obtenus, dans l'ordre de SUCCES (etape 3.7). */
   readonly succes: readonly SuccesDeFiche[];
+  /** Le titre que ce compte porte (etape 3.9). Absent: il n'en a pas choisi. */
+  readonly titre?: IdentifiantSucces;
+}
+
+/**
+ * Ce qu'un compte connecte envoie pour choisir son titre, ou le retirer (etape 3.9).
+ *
+ * UN TITRE EST UN SUCCES OBTENU, designe par son identifiant: il s'affiche sous son nom,
+ * sous le pseudo du compte, au salon et sur sa fiche. `null` retire le titre porte.
+ */
+export interface DemandeDeTitre {
+  readonly titre: IdentifiantSucces | null;
+}
+
+/** Le titre porte par un compte, apres une demande acceptee (etape 3.9). */
+export interface TitreDuCompte {
+  /** Absent: le compte ne porte pas de titre. */
+  readonly titre?: IdentifiantSucces;
 }
 
 /**
@@ -465,6 +489,8 @@ export interface ProfilDuCompte extends MaProgression {
   readonly codeDeSecours: boolean;
   /** Tous les succes connus, obtenus ou non, dans l'ordre de SUCCES (etape 3.7). */
   readonly succes: readonly SuccesDuProfil[];
+  /** Le titre choisi parmi les succes obtenus (etape 3.9). Absent: aucun. */
+  readonly titre?: IdentifiantSucces;
 }
 
 /** Le corps d'une reponse HTTP refusee. */

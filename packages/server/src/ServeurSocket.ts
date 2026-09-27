@@ -1500,8 +1500,8 @@ export class ServeurSocket {
   /**
    * L'identite sous laquelle cette connexion demande a entrer.
    *
-   * UN COMPTE entre sous le pseudo et avec le niveau que la base lui connait a cet
-   * instant; le pseudo de la demande n'est pas lu.
+   * UN COMPTE entre sous le pseudo, avec le niveau et le titre que la base lui connait
+   * a cet instant; le pseudo de la demande n'est pas lu.
    *
    * UN INVITE entre sous le pseudo qu'il demande, a une condition: ce pseudo ne
    * doit etre celui d'aucun compte, quelle que soit la facon de l'ecrire. C'est la
@@ -1524,7 +1524,11 @@ export class ServeurSocket {
         valide: true,
         valeur: {
           pseudo: identite.pseudo,
-          compte: { id: connexion.compteId, niveau: identite.niveau },
+          compte: {
+            id: connexion.compteId,
+            niveau: identite.niveau,
+            ...(identite.titre === undefined ? {} : { titre: identite.titre }),
+          },
         },
       };
     }

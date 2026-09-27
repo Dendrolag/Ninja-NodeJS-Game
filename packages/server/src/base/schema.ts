@@ -30,6 +30,7 @@ import { sql } from 'drizzle-orm';
 import {
   boolean,
   check,
+  foreignKey,
   index,
   integer,
   pgEnum,
@@ -320,5 +321,32 @@ export const succesDebloques = pgTable(
     primaryKey({ name: 'succes_debloques_compte_succes', columns: [table.compteId, table.succes] }),
     check('succes_debloques_identifiant', sql`${table.succes} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`),
     check('succes_debloques_longueur', sql`char_length(${table.succes}) <= 40`),
+  ],
+);
+
+/**
+ * Le titre d'un compte (etape 3.9): un succes obtenu, qu'il a choisi d'afficher sous son
+ * pseudo, au salon et sur sa fiche. Une ligne par compte qui en porte un.
+ *
+ * UNE TABLE A PART, ET NON UNE COLONNE DE `comptes`, comme le mot de passe: un compte
+ * reste une identite, sans colonne vide selon ce qu'il a choisi.
+ *
+ * C'EST LA BASE QUI GARANTIT QU'UN TITRE EST UN SUCCES OBTENU. La cle etrangere porte sur
+ * le couple (compte, succes) de `succes_debloques`: un titre non obtenu ne peut pas
+ * s'ecrire, quoi que fasse le service. Elle est en cascade: un succes efface emporte le
+ * titre qu'il donnait, et un compte supprime, ses succes, donc son titre.
+ */
+export const titres = pgTable(
+  'titres',
+  {
+    compteId: uuid('compte_id').primaryKey(),
+    succes: text('succes').notNull(),
+  },
+  (table) => [
+    foreignKey({
+      name: 'titres_succes_obtenu',
+      columns: [table.compteId, table.succes],
+      foreignColumns: [succesDebloques.compteId, succesDebloques.succes],
+    }).onDelete('cascade'),
   ],
 );

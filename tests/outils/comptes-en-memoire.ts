@@ -41,6 +41,7 @@ import {
   CODE_DE_SECOURS_INCORRECT,
   JOUEUR_INCONNU,
   MOT_DE_PASSE_INCORRECT,
+  SUCCES_NON_OBTENU,
   deciderDuGeste,
   fabriquerCodeDeSecours,
   faitsApres,
@@ -76,6 +77,7 @@ import {
   validerDemandeCodeDeSecours,
   validerDemandeConnexion,
   validerDemandeDeGeste,
+  validerDemandeDeTitre,
   validerDemandeInscription,
   validerDemandeReinitialisation,
   validerPseudo,
@@ -103,6 +105,8 @@ interface CompteEnMemoire {
   readonly parcours: PartieJouee[];
   /** Ses succes inscrits (etape 3.7). */
   readonly succes: Map<IdentifiantSucces, SuccesEnregistre>;
+  /** Le titre choisi parmi ses succes (etape 3.9). */
+  titre: IdentifiantSucces | undefined;
 }
 
 /** Une partie jouee par un compte, pour le pli des succes. */
@@ -420,6 +424,7 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
         placements: new Map(),
         parcours: [],
         succes: new Map(),
+        titre: undefined,
       };
       comptes.set(compte.id, compte);
       const codeDeSecours = renouvelerLeCode(compte);
@@ -472,6 +477,7 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
           dernieresParties: compte.historique.slice(0, PARTIES_DU_PROFIL),
           codeDeSecours: compte.codeDeSecours !== '',
           succes: succesDuProfil(parcoursDuCompte(compte).mesures, compte.succes, raretes()),
+          ...(compte.titre === undefined ? {} : { titre: compte.titre }),
         },
       };
     },
@@ -506,6 +512,7 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
             ? { ensemble: faceAFace(lecteur, compte) }
             : {}),
           succes: succesDeFiche(compte.succes, raretes()),
+          ...(compte.titre === undefined ? {} : { titre: compte.titre }),
         },
       };
     },
@@ -561,6 +568,29 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
           amis: listeDe(compteId),
         },
       };
+    },
+
+    // Comme Authentification: un titre n'est qu'un succes obtenu, et null le retire.
+    choisirUnTitre: async (jeton, brut) => {
+      const compte = comptes.get(sessions.get(jeton) ?? '');
+      if (compte === undefined) {
+        return sessionAbsente();
+      }
+
+      const demande = validerDemandeDeTitre(brut);
+      if (!demande.valide) {
+        return refusee('demandeInvalide', demande.erreurs);
+      }
+
+      const { titre } = demande.valeur;
+
+      if (titre !== null && !compte.succes.has(titre)) {
+        return refusee('succesNonObtenu', [{ champ: 'titre', motif: SUCCES_NON_OBTENU }]);
+      }
+
+      compte.titre = titre ?? undefined;
+
+      return { acceptee: true, valeur: titre === null ? {} : { titre } };
     },
 
     // Comme Authentification: les autres sessions se ferment, le code est renouvele.
@@ -623,9 +653,15 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
     identiteDe: async (compteId): Promise<IdentiteDeCompte | undefined> => {
       const compte = comptes.get(compteId);
 
-      return compte === undefined
-        ? undefined
-        : { pseudo: compte.pseudo, niveau: niveauDeXp(compte.xpTotale) };
+      if (compte === undefined) {
+        return undefined;
+      }
+
+      return {
+        pseudo: compte.pseudo,
+        niveau: niveauDeXp(compte.xpTotale),
+        ...(compte.titre === undefined ? {} : { titre: compte.titre }),
+      };
     },
 
     pseudoDeCompte: async (pseudo) => parPseudo(pseudo) !== undefined,

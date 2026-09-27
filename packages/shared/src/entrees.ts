@@ -33,6 +33,7 @@
 import type { Mode, Visibilite } from './constantes.js';
 import type { Vecteur } from './geometrie.js';
 import type { ReglagesPartiels } from './reglages.js';
+import type { IdentifiantSucces } from './succes.js';
 
 /**
  * Ce qu'un joueur demande pendant un battement: une direction, et rien d'autre.
@@ -100,6 +101,8 @@ export interface CompteDeSession {
   readonly id: string;
   /** Niveau du compte a l'entree en partie, deduit de son XP. */
   readonly niveau: number;
+  /** Titre du compte a l'entree en partie (etape 3.9). Absent: aucun. */
+  readonly titre?: IdentifiantSucces;
 }
 
 /**

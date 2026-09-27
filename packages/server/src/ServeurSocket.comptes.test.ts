@@ -160,6 +160,7 @@ function annuaireDEssai(): AnnuaireDEssai {
     ficheJoueur: nonUtilise,
     amis: nonUtilise,
     gesteDAmitie: nonUtilise,
+    choisirUnTitre: nonUtilise,
     changerMotDePasse: nonUtilise,
     nouveauCodeDeSecours: nonUtilise,
     reinitialiser: nonUtilise,
@@ -423,6 +424,29 @@ describe('une connexion authentifiee', () => {
     const invite = salon.joueurs.find((joueur) => joueur.pseudo === 'Bob');
     expect(invite).toEqual({ id: bob.id, pseudo: 'Bob', hote: true });
     expect(invite !== undefined && 'compte' in invite).toBe(false);
+  });
+
+  it('se montre avec le titre de son compte a l entree (etape 3.9)', async () => {
+    const annuaire = annuaireDEssai();
+    annuaire.comptes.set('compte-alice', { pseudo: 'Alice', niveau: 7, titre: 'premier-pas' });
+    await monter(annuaire);
+    const bob = await connecterUnClient();
+    const idRoom = salonAccepte(await rejoindre(bob, { pseudo: 'Bob' })).idRoom;
+
+    const arrivee = prochain(bob, 'joueurArrive');
+    const alice = await connecterUnClient({ jeton: JETON_ALICE });
+    const salon = salonAccepte(await rejoindre(alice, { idRoom }));
+
+    expect(await arrivee).toEqual({
+      id: alice.id,
+      pseudo: 'Alice',
+      hote: false,
+      compte: { niveau: 7, titre: 'premier-pas' },
+    });
+    expect(salon.joueurs.find((joueur) => joueur.id === alice.id)?.compte).toEqual({
+      niveau: 7,
+      titre: 'premier-pas',
+    });
   });
 
   it('part en disant qu elle etait un compte', async () => {

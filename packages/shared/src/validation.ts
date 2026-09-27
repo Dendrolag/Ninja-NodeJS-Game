@@ -47,6 +47,7 @@ import type {
   DemandeCodeDeSecours,
   DemandeConnexion,
   DemandeDeGeste,
+  DemandeDeTitre,
   DemandeInscription,
   DemandeReinitialisation,
 } from './comptes.js';
@@ -75,6 +76,7 @@ import type {
 } from './entrees.js';
 import type { ReglagesPartie, ReglagesPartiels } from './reglages.js';
 import { completerReglages } from './reglages.js';
+import { estUnSucces } from './succes.js';
 
 /** Ce qui cloche dans une entree refusee: ou, et pourquoi. */
 export interface ErreurValidation {
@@ -673,6 +675,31 @@ export function validerDemandeDeGeste(brut: unknown): ResultatValidation<Demande
   }
 
   return accepte({ geste, pseudo: pseudo.valeur });
+}
+
+/**
+ * Valide un choix de titre (etape 3.9): l'identifiant d'un succes que le code connait,
+ * ou `null` pour retirer le titre porte.
+ *
+ * Le champ est exige, meme pour retirer: un corps vide est plus probablement une erreur
+ * qu'une intention. C'est le serveur qui dit si le succes est obtenu.
+ */
+export function validerDemandeDeTitre(brut: unknown): ResultatValidation<DemandeDeTitre> {
+  const source = objetOuRien(brut);
+  if (source === undefined) {
+    return refuse('titre', 'Un choix de titre doit être un objet.');
+  }
+
+  const titre = champ(source, 'titre');
+  if (titre === null) {
+    return accepte({ titre: null });
+  }
+
+  if (typeof titre !== 'string' || !estUnSucces(titre)) {
+    return refuse('titre', 'Ce succès n’existe pas.');
+  }
+
+  return accepte({ titre });
 }
 
 /**

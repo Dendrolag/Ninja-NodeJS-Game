@@ -30,6 +30,7 @@ import type {
   CaptureSubie,
   CarteVideeVue,
   CompteDeSession,
+  CompteDuSalon,
   CoupDeKatanaVu,
   EntiteVue,
   EvadeVu,
@@ -313,8 +314,9 @@ export function partiePubliqueDe(room: GameRoom): PartiePublique {
 /**
  * Un membre du salon, tel que les autres le voient.
  *
- * Un compte montre son niveau, et rien d'autre: l'identifiant du compte en base
- * reste au serveur. Un invite n'a pas de champ compte.
+ * Un compte montre son niveau et, depuis l'etape 3.9, son titre s'il en porte un, et
+ * rien d'autre: l'identifiant du compte en base reste au serveur. Un invite n'a pas de
+ * champ compte.
  */
 export function joueurDuSalon(joueur: {
   readonly id: IdentifiantEntite;
@@ -327,9 +329,17 @@ export function joueurDuSalon(joueur: {
     id: joueur.id,
     pseudo: joueur.pseudo,
     hote: joueur.hote,
-    ...(joueur.compte === undefined ? {} : { compte: { niveau: joueur.compte.niveau } }),
+    ...(joueur.compte === undefined ? {} : { compte: compteDuSalon(joueur.compte) }),
     // L'equipe d'un membre, dans une partie Equipes seulement (etape 7.2).
     ...(joueur.equipe === undefined ? {} : { equipe: joueur.equipe }),
+  };
+}
+
+/** Ce que le salon montre d'un compte: son niveau, et son titre s'il en porte un. */
+function compteDuSalon(compte: CompteDeSession): CompteDuSalon {
+  return {
+    niveau: compte.niveau,
+    ...(compte.titre === undefined ? {} : { titre: compte.titre }),
   };
 }
 

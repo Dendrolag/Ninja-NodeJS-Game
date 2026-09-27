@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest';
 
 import { BORNES_CODE_DE_SECOURS, BORNES_JETON, BORNES_MOT_DE_PASSE } from './bornes.js';
 import { GESTES_D_AMITIE, PARAMETRE_PSEUDO, ROUTES_COMPTES, adresseDeLaFiche } from './comptes.js';
+import { SUCCES } from './succes.js';
 import type { ResultatValidation } from './validation.js';
 import {
   formaterCodeDeSecours,
@@ -20,6 +21,7 @@ import {
   validerDemandeConnexion,
   validerDemandeCreation,
   validerDemandeDeGeste,
+  validerDemandeDeTitre,
   validerDemandeInscription,
   validerDemandeReinitialisation,
   validerJeton,
@@ -351,5 +353,45 @@ describe('validerDemandeDeGeste (etape 3.6)', () => {
     expect(
       valeurAcceptee(validerDemandeDeGeste({ geste: 'bloquer', pseudo: 'Bob', compte: 'x' })),
     ).toEqual({ geste: 'bloquer', pseudo: 'Bob' });
+  });
+});
+
+describe('validerDemandeDeTitre (etape 3.9)', () => {
+  it('accepte chaque succes connu', () => {
+    for (const succes of SUCCES) {
+      expect(valeurAcceptee(validerDemandeDeTitre({ titre: succes.id }))).toEqual({
+        titre: succes.id,
+      });
+    }
+  });
+
+  it('accepte null, qui retire le titre', () => {
+    expect(valeurAcceptee(validerDemandeDeTitre({ titre: null }))).toEqual({ titre: null });
+  });
+
+  it('refuse un succes inconnu, absent ou qui n est pas du texte', () => {
+    for (const titre of ['centurion-dor', 'Premier-pas', '', 'constructor', undefined, 3, ['a']]) {
+      expect(champsRefuses(validerDemandeDeTitre({ titre }))).toEqual(['titre']);
+    }
+
+    expect(champsRefuses(validerDemandeDeTitre({}))).toEqual(['titre']);
+  });
+
+  it('refuse ce qui n est pas un objet', () => {
+    for (const brut of [null, 'premier-pas', 3, undefined, ['premier-pas']]) {
+      expect(champsRefuses(validerDemandeDeTitre(brut))).toEqual(['titre']);
+    }
+  });
+
+  it('ne lit rien d autre que le titre', () => {
+    const [premier] = SUCCES;
+
+    expect(valeurAcceptee(validerDemandeDeTitre({ titre: premier?.id, compte: 'x' }))).toEqual({
+      titre: premier?.id,
+    });
+  });
+
+  it('a sa route', () => {
+    expect(ROUTES_COMPTES.titre).toBe('/api/comptes/titre');
   });
 });
