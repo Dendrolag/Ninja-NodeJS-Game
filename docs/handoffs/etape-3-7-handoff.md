@@ -49,7 +49,7 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
   - bout en bout: « Premier pas » annoncé à la fin, daté au profil.
 - Résultat: `pnpm verify` en local, 2 839 tests unitaires et d'intégration au vert (85 de plus qu'au handoff 3.6). Tests de la base en local contre un PostgreSQL 16 du conteneur: 107 sur 108, le seul échec étant l'écart connu de version (voir plus bas). Bout en bout en local: 54 scénarios sur 56 en parallèle, les deux échecs étant le scénario du HUD de `peaufinage.spec.ts` au délai de 30 s, vert rejoué seul (21 et 22 s), sans lien avec l'étape. Vérification visuelle par captures: bloc de fin, profil sur ordinateur et sur téléphone. Elle a fait retirer « Obtenu par aucun joueur », répété sur chaque carte d'un profil neuf: la rareté ne s'écrit plus pour un succès que personne n'a.
 - Couverture de packages/sim: inchangée, aucun code du paquet touché.
-- État de la CI: ETAT_CI
+- État de la CI: **verte sur `e8c6a12`** (run `36297798381`) du premier coup, tests de la base Neon compris (l'écart de version local n'existe pas sur Neon), tous les scénarios de bout en bout sans relance. Le commit serveur `de7b9f9` l'était aussi (run `36269071378`). Mise en ligne sautée: la branche n'est pas `master`.
 
 ## Décisions et écarts au plan
 
