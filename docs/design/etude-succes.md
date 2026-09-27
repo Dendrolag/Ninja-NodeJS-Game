@@ -190,7 +190,7 @@ Ordre retenu par le porteur du projet le 26 septembre 2026: les amis d'abord, pu
 
 Prises avec le porteur du projet au début de l'étape `3.7`, toutes sur la recommandation.
 
-1. **La récompense**: (b), un titre choisi parmi ses succès. Il touche au contrat du salon et fait une étape à part, `3.9`, après `3.8`.
+1. **La récompense**: (b), un titre choisi parmi ses succès. Il touche au contrat du salon et fait une étape à part, `3.9`, après `3.8`. Précision du 27 septembre 2026: `3.9` est passée avant `3.8`, à la demande du porteur du projet, et construite le même jour (fiche `docs/plan/etape-3-9.md`).
 2. **La liste**: celle de la section 4, avec les ajustements de la relecture contre le schéma (fiche 3.7, décisions de conception 5 à 12). Deux changent la liste: « Meute » se déduit de la base, puisque `resultats.captures` compte les proies infectées d'une partie Chasse, et passe en `3.7`. « Première prise » et « Pickpocket » comptent les prises de tous les modes, captures, infections et éliminations. **Les seuils restent ceux de la section 4**: quelques semaines de résultats sur peu de joueurs ne calibrent pas des délais d'une semaine ou d'un mois. La requête de calibration est livrée avec la mesure de rétention, pour un recalibrage plus tard.
 3. **Le rattrapage**: oui, par un script idempotent lancé une fois à la mise en ligne.
 4. **Les secrets**: oui, les trois, en `3.8`.
