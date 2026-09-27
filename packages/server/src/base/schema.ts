@@ -1,6 +1,7 @@
 /**
  * Le schema de la base: les comptes, leur progression, les parties jouees et, depuis
- * l'etape 3.6, les amities.
+ * l'etape 3.6, les amities; depuis l'etape 3.7, les succes, et depuis l'etape 3.8, les
+ * faits de partie.
  *
  * C'EST LA SOURCE DES MIGRATIONS. Les fichiers SQL de packages/server/migrations
  * sont ecrits par drizzle-kit a partir de ce fichier (`pnpm base:generer`), jamais
@@ -30,6 +31,7 @@ import { sql } from 'drizzle-orm';
 import {
   boolean,
   check,
+  foreignKey,
   index,
   integer,
   pgEnum,
@@ -320,5 +322,42 @@ export const succesDebloques = pgTable(
     primaryKey({ name: 'succes_debloques_compte_succes', columns: [table.compteId, table.succes] }),
     check('succes_debloques_identifiant', sql`${table.succes} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`),
     check('succes_debloques_longueur', sql`char_length(${table.succes}) <= 40`),
+  ],
+);
+
+/**
+ * Les faits de partie (etape 3.8): ce que le serveur a releve pour un compte pendant une
+ * partie, et que son resultat ne dit pas. Une ligne par fait non nul.
+ *
+ * UN FAIT N'EXISTE PAS SANS SON RESULTAT. La cle etrangere vise le resultat du compte
+ * dans cette partie, en cascade: supprimer un compte supprime ses resultats, et avec eux
+ * ses faits. Aucune colonne ne s'ajoute a `resultats`.
+ *
+ * LE NOM DU FAIT EST UN TEXTE, PAS UNE ENUMERATION, comme l'identifiant d'un succes: les
+ * faits sont nommes dans le code (packages/shared/src/succes.ts), en ajouter un ne
+ * demande pas de migration, et la lecture ignore un fait que le code ne connait plus.
+ */
+export const faitsDePartie = pgTable(
+  'faits_de_partie',
+  {
+    partieId: uuid('partie_id').notNull(),
+    compteId: uuid('compte_id').notNull(),
+    fait: text('fait').notNull(),
+    valeur: integer('valeur').notNull(),
+  },
+  (table) => [
+    primaryKey({
+      name: 'faits_de_partie_partie_compte_fait',
+      columns: [table.partieId, table.compteId, table.fait],
+    }),
+    foreignKey({
+      name: 'faits_de_partie_resultat',
+      columns: [table.partieId, table.compteId],
+      foreignColumns: [resultats.partieId, resultats.compteId],
+    }).onDelete('cascade'),
+    index('faits_de_partie_par_compte').on(table.compteId),
+    check('faits_de_partie_nom', sql`${table.fait} ~ '^[a-z][a-zA-Z0-9]*$'`),
+    check('faits_de_partie_longueur', sql`char_length(${table.fait}) <= 40`),
+    check('faits_de_partie_valeur_positive', sql`${table.valeur} > 0`),
   ],
 );

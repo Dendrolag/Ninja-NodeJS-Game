@@ -608,9 +608,14 @@ export class ServeurSocket {
       const entre = this.faireEntrer(socket, connexion, trouvee.valeur, identite, repondre);
 
       // Une invitation qui a fait entrer ne vaut plus (etape 2.8). Refusee par la
-      // partie, pleine ou lancee, elle reste valable le temps qu'il lui reste.
+      // partie, pleine ou lancee, elle reste valable le temps qu'il lui reste. La partie
+      // retient l'ami rassemble par son inviteur (etape 3.8, « Rassembleur »).
       if (entre && verdict.valeur.invitation !== undefined) {
-        this.amis?.invitationServie(verdict.valeur.invitation);
+        const servie = this.amis?.invitationServie(verdict.valeur.invitation);
+
+        if (servie !== undefined) {
+          trouvee.valeur.noterUnAmiRassemble(servie.de, servie.pour);
+        }
       }
     });
   }

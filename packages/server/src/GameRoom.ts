@@ -53,6 +53,12 @@
  * pleine partie reste membre de la room et reste dans l'etat, le temps que la
  * couche reseau lui laisse pour revenir. La room l'immobilise et donne la main a un
  * joueur present s'il etait l'hote; elle ne sait rien du delai, ni du reseau.
+ *
+ * CE QUE L'ETAPE 3.8 A AJOUTE: le releve d'exploits. A chaque battement, la room donne le
+ * journal du moteur au releve (exploits.ts), qui en garde ce que les succes demandent, et
+ * a la fin elle en tire les faits de chaque joueur present. Elle apprend aussi de la couche
+ * reseau qu'un ami est entre par l'invitation d'un membre; des invitations elles-memes,
+ * elle ne sait rien.
  */
 
 import type {
@@ -60,6 +66,7 @@ import type {
   CompteDeSession,
   Devancement,
   Equipe,
+  FaitsDePartie,
   Mode,
   ReglagesPartie,
   ReglagesPartiels,
@@ -106,6 +113,8 @@ import {
 
 import type { Horloge } from './horloge.js';
 import type { ChronometreDuBattement } from './chronometreDuBattement.js';
+import type { ReleveDExploits } from './exploits.js';
+import { RELEVE_VIDE, faitsDeFin, noterUnAmiRassemble, releverLeBattement } from './exploits.js';
 import { horlogeSysteme } from './horloge.js';
 
 /**
@@ -355,6 +364,9 @@ export class GameRoom {
    * type ne le signalerait. Plusieurs demandes du meme battement n'en font qu'une.
    */
   private readonly tirsDemandes = new Set<IdentifiantEntite>();
+
+  /** Ce que chaque joueur a fait de notable depuis l'ouverture de la room (etape 3.8). */
+  private releve: ReleveDExploits = RELEVE_VIDE;
 
   /** De quoi arreter la boucle, quand elle tourne. */
   private arreterLaBoucle: (() => void) | undefined;
@@ -850,6 +862,7 @@ export class GameRoom {
 
     this.partie = tick(this.partie, this.entreesDuBattement(), dtMs);
     this.tirsDemandes.clear();
+    this.releve = releverLeBattement(this.releve, this.partie);
 
     // Prevenir AVANT de constater la fin: le dernier battement d'une partie est
     // un battement comme les autres, et ce qui s'y est passe doit partir comme le
@@ -874,6 +887,34 @@ export class GameRoom {
   arreter(): void {
     this.arreterLaBoucle?.();
     this.arreterLaBoucle = undefined;
+  }
+
+  /**
+   * Retient qu'un ami vient d'entrer par l'invitation d'un membre (etape 3.8,
+   * « Rassembleur »). La couche reseau l'appelle a l'entree reussie.
+   *
+   * @param inviteur Le compte du membre qui a invite.
+   * @param ami Le compte de l'ami entre.
+   * @returns Faux si aucun membre n'a ce compte: l'inviteur est deja parti.
+   */
+  noterUnAmiRassemble(inviteur: string, ami: string): boolean {
+    const membre = [...this.comptesDesMembres].find(([, compte]) => compte.id === inviteur);
+
+    if (membre === undefined) {
+      return false;
+    }
+
+    this.releve = noterUnAmiRassemble(this.releve, membre[0], ami);
+
+    return true;
+  }
+
+  /**
+   * Les faits de chaque joueur present, lus dans le releve et l'etat courant (etape 3.8):
+   * seulement les faits non nuls. A lire une fois la partie terminee, comme le bilan.
+   */
+  faitsDesJoueurs(): ReadonlyMap<IdentifiantEntite, FaitsDePartie> {
+    return faitsDeFin(this.releve, this.partie);
   }
 
   /** Le classement de la partie, du meilleur au moins bon. */

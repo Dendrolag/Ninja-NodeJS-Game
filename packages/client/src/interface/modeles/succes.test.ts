@@ -1,6 +1,6 @@
 /**
- * Tests de la mise en forme des succes (etape 3.7): rarete, succes le plus proche,
- * section du profil, succes de la fiche et de la fin de partie.
+ * Tests de la mise en forme des succes (etapes 3.7 et 3.8): rarete, succes le plus
+ * proche, section du profil, secrets, succes de la fiche et de la fin de partie.
  */
 
 import type { IdentifiantSucces, SuccesConnu, SuccesDuProfil } from '@neon-ninja/shared';
@@ -46,6 +46,12 @@ describe('phraseDuPlusProche', () => {
     expect(phraseDuPlusProche({ id: 'demineur', actuel: 24, seuil: 25 })).toBe(
       'Plus que 1 Black Ninja pour Démineur',
     );
+    expect(phraseDuPlusProche({ id: 'collectionneur-de-fantomes', actuel: 7, seuil: 10 })).toBe(
+      'Plus que 3 Évadés pour Collectionneur de fantômes',
+    );
+    expect(phraseDuPlusProche({ id: 'seigneur-de-la-horde', actuel: 9_999, seuil: 10_000 })).toBe(
+      'Plus que 1 ninja pour Seigneur de la Horde',
+    );
   });
 
   it('se tait pour un succes inconnu, sans unite, ou deja atteint', () => {
@@ -66,12 +72,12 @@ describe('succesDuProfilAffiches', () => {
     );
     const section = succesDuProfilAffiches(lus);
 
-    expect(section.compte).toBe('2 succès sur 29');
+    expect(section.compte).toBe('2 succès sur 47');
     expect(section.paliers.map((palier) => [palier.nom, palier.compte])).toEqual([
-      ['Découverte', '1 sur 6'],
-      ['Habitué', '0 sur 10'],
-      ['Expert', '1 sur 8'],
-      ['Légende', '0 sur 5'],
+      ['Découverte', '1 sur 8'],
+      ['Habitué', '0 sur 15'],
+      ['Expert', '1 sur 17'],
+      ['Légende', '0 sur 7'],
     ]);
   });
 
@@ -112,7 +118,7 @@ describe('succesDuProfilAffiches', () => {
       { id: 'succes-retire' as 'habitue', rarete: 10 },
     ]);
 
-    expect(section.compte).toBe('0 succès sur 29');
+    expect(section.compte).toBe('0 succès sur 47');
   });
 });
 
@@ -141,8 +147,21 @@ describe('les secrets', () => {
     secret: id === 'habitue',
   });
 
-  it("n'existent pas encore: ils viennent a l'etape 3.8", () => {
-    expect(SUCCES.some((succes) => succes.secret)).toBe(false);
+  it("cachent les trois secrets de l'etape 3.8 tant qu'ils ne sont pas obtenus", () => {
+    const lus = profilVide().map((succes) =>
+      succes.id === 'sur-le-fil' ? { ...succes, debloqueLe: '2026-09-27T18:30:00.000Z' } : succes,
+    );
+    const tous = succesDuProfilAffiches(lus).paliers.flatMap((palier) => palier.succes);
+
+    expect(tous.find((succes) => succes.id === 'pas-de-chance')).toMatchObject({
+      nom: SECRET,
+      description: undefined,
+    });
+    expect(tous.find((succes) => succes.id === 'arroseur-arrose')?.nom).toBe(SECRET);
+    expect(tous.find((succes) => succes.id === 'sur-le-fil')).toMatchObject({
+      nom: 'Sur le fil',
+      obtenu: true,
+    });
   });
 
   it("se lisent « ??? » avant d'etre obtenus, sans description ni progression", () => {

@@ -9,7 +9,8 @@
  *   1. Du bilan de la room vers ce qui s'enregistre: la partie, et le resultat de
  *      chaque joueur qui a un compte, present a la fin ou parti avant. Un invite ne
  *      laisse aucun resultat, mais il compte dans le nombre de joueurs et dans le
- *      placement des autres (decision du 11 septembre 2026).
+ *      placement des autres (decision du 11 septembre 2026). Depuis l'etape 3.8, le
+ *      resultat d'un present porte ses faits de partie; un abandon n'en a pas.
  *   2. De la progression appliquee par la base vers le recapitulatif envoye au
  *      compte. Les gains y sont la DIFFERENCE entre la progression d'apres et celle
  *      d'avant: le recapitulatif dit ce qui a ete ecrit, jamais ce qui avait ete
@@ -61,6 +62,7 @@ export interface FinPourLesComptes {
 /** Ce que la fin de cette partie laisse a enregistrer pour ses comptes. */
 export function finPourLesComptes(room: GameRoom): FinPourLesComptes {
   const bilan = room.bilan();
+  const faits = room.faitsDesJoueurs();
   const resultats: NouveauResultat[] = [];
   const joueurs = new Map<string, IdentifiantEntite>();
 
@@ -88,6 +90,9 @@ export function finPourLesComptes(room: GameRoom): FinPourLesComptes {
       xpGagnee: gains.xp,
       piecesGagnees: gains.pieces,
       variationPointsLigue: gains.variationPointsLigue,
+      // Un abandon n'a pas de faits (etude des succes, 5.4): quitter ne doit pas etre une
+      // facon d'obtenir un exploit.
+      ...(joueur.id === undefined ? {} : { faits: faits.get(joueur.id) ?? {} }),
     });
 
     if (joueur.id !== undefined) {

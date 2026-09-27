@@ -14,13 +14,19 @@
  * fait rien: la cle primaire l'interdit, et l'insertion l'ignore.
  */
 
-import type { IdentifiantSucces, Mesures, PartieDuParcours } from '@neon-ninja/shared';
-import { estUnSucces, parcoursDe } from '@neon-ninja/shared';
+import type {
+  FaitDePartie,
+  FaitsDePartie,
+  IdentifiantSucces,
+  Mesures,
+  PartieDuParcours,
+} from '@neon-ninja/shared';
+import { estUnFait, estUnSucces, parcoursDe } from '@neon-ninja/shared';
 import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
 import type { BaseDeDonnees } from './connexion.js';
-import { amities, parties, resultats, succesDebloques } from './schema.js';
+import { amities, faitsDePartie, parties, resultats, succesDebloques } from './schema.js';
 
 /** Ce qui execute une lecture: la base, ou une transaction ouverte sur elle. */
 type Lecteur = Pick<BaseDeDonnees, 'select'>;
@@ -63,10 +69,11 @@ export interface SuccesDUnCompte {
 
 /**
  * L'historique de ces comptes, tel que le pli le lit: pour chacun, ses parties dans
- * l'ordre ou elles se sont terminees, avec ses amis d'aujourd'hui qui les ont jouees.
+ * l'ordre ou elles se sont terminees, avec ses amis d'aujourd'hui qui les ont jouees et
+ * ses faits de partie (etape 3.8).
  *
- * Deux requetes pour tous les comptes, et non deux par compte: la fin d'une partie de
- * douze joueurs n'en fait pas vingt-quatre.
+ * Trois requetes pour tous les comptes, et non trois par compte: la fin d'une partie de
+ * douze joueurs n'en fait pas trente-six.
  */
 export async function historiquesDesComptes(
   lecteur: Lecteur,
@@ -79,7 +86,7 @@ export async function historiquesDesComptes(
     return historiques;
   }
 
-  const [lignes, amisPresents] = await Promise.all([
+  const [lignes, amisPresents, faits] = await Promise.all([
     lecteur
       .select({
         compteId: resultats.compteId,
@@ -101,13 +108,18 @@ export async function historiquesDesComptes(
       .where(inArray(resultats.compteId, ids))
       .orderBy(asc(resultats.compteId), asc(parties.termineeLe), asc(parties.id)),
     amisDansLeursParties(lecteur, ids),
+    faitsDansLeursParties(lecteur, ids),
   ]);
 
   for (const { compteId, partieId, termineeLe, ...partie } of lignes) {
     historiques.get(compteId)?.push({
       partieId,
       termineeLe,
-      partie: { ...partie, amis: amisPresents.get(`${compteId}/${partieId}`) ?? [] },
+      partie: {
+        ...partie,
+        amis: amisPresents.get(`${compteId}/${partieId}`) ?? [],
+        faits: faits.get(`${compteId}/${partieId}`) ?? {},
+      },
     });
   }
 
@@ -149,6 +161,31 @@ async function amisDansLeursParties(
 
     presents.push({ compte: ligne.ami, placement: ligne.placement });
     parPartie.set(cle, presents);
+  }
+
+  return parPartie;
+}
+
+/**
+ * Les faits de partie de ces comptes, par « compte/partie » (etape 3.8). Un fait que le
+ * code ne connait plus est ignore: il a ete retire.
+ */
+async function faitsDansLeursParties(
+  lecteur: Lecteur,
+  ids: readonly string[],
+): Promise<ReadonlyMap<string, FaitsDePartie>> {
+  const lignes = await lecteur
+    .select()
+    .from(faitsDePartie)
+    .where(inArray(faitsDePartie.compteId, [...ids]));
+  const parPartie = new Map<string, Partial<Record<FaitDePartie, number>>>();
+
+  for (const ligne of lignes) {
+    if (estUnFait(ligne.fait)) {
+      const cle = `${ligne.compteId}/${ligne.partieId}`;
+
+      parPartie.set(cle, { ...parPartie.get(cle), [ligne.fait]: ligne.valeur });
+    }
   }
 
   return parPartie;

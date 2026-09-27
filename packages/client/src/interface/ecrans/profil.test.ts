@@ -164,11 +164,11 @@ describe('l ecran du profil', () => {
     await laisserRepondre();
 
     expect(obligatoire(hote, '.profil-succes h2 .succes-compte').textContent).toBe(
-      '1 succès sur 29',
+      '1 succès sur 47',
     );
     expect(
       [...hote.querySelectorAll('.succes-palier-bloc h3')].map((titre) => titre.textContent),
-    ).toEqual(['Découverte1 sur 6', 'Habitué0 sur 10', 'Expert0 sur 8', 'Légende0 sur 5']);
+    ).toEqual(['Découverte1 sur 8', 'Habitué0 sur 15', 'Expert0 sur 17', 'Légende0 sur 7']);
 
     const premierPas = obligatoire(hote, '.succes-obtenu');
     expect(obligatoire(premierPas, '.succes-nom').textContent).toBe('Premier pas');

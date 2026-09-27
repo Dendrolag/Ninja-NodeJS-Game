@@ -184,7 +184,7 @@ describe('la fiche d un joueur, au salon', () => {
     ]);
     // Etape 3.7: ses succes obtenus, avec leur rarete, et sans leur date.
     expect(obligatoire(fenetre(), '.fiche-succes .succes-compte').textContent).toBe(
-      '2 succès sur 29',
+      '2 succès sur 47',
     );
     expect(
       [...fenetre().querySelectorAll('.fiche-succes .succes')].map((succes) => [

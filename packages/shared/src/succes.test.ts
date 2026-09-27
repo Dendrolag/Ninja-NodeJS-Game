@@ -1,6 +1,6 @@
 /**
- * Tests des succes (etape 3.7): les definitions, le pli sur l'historique, la premiere
- * partie de chaque succes, et le succes le plus proche.
+ * Tests des succes (etapes 3.7 et 3.8): les definitions, le pli sur l'historique et les
+ * faits de partie, la premiere partie de chaque succes, et le succes le plus proche.
  *
  * Chaque succes est verifie juste sous et juste sur son seuil, sur un historique
  * construit a la main. Les seuils sont ecrits en toutes lettres: ce sont ceux que le
@@ -10,13 +10,16 @@
 
 import { describe, expect, it } from 'vitest';
 
+import type { Mode } from './constantes.js';
 import type { IdentifiantSucces, Mesures, PartieDuParcours } from './succes.js';
 import {
+  FAITS_DE_PARTIE,
   MESURES,
   PALIERS_DE_SUCCES,
   SUCCES,
   definitionDuSucces,
   estAtteint,
+  estUnFait,
   estUnSucces,
   parcoursDe,
   progressionDuSucces,
@@ -37,6 +40,7 @@ function partie(surcharge: Partial<PartieDuParcours> = {}): PartieDuParcours {
     variationPointsLigue: 0,
     jour: '2026-09-01',
     amis: [],
+    faits: {},
     ...surcharge,
   };
 }
@@ -49,6 +53,19 @@ function victoire(surcharge: Partial<PartieDuParcours> = {}): PartieDuParcours {
 /** Une defaite dans une partie a deux. */
 function defaite(surcharge: Partial<PartieDuParcours> = {}): PartieDuParcours {
   return partie({ nombreJoueurs: 2, placement: 2, ...surcharge });
+}
+
+/** Une partie de ce mode, a plusieurs, avec ces faits. */
+function avec(
+  faits: PartieDuParcours['faits'],
+  surcharge: Partial<PartieDuParcours> = {},
+): PartieDuParcours {
+  return partie({ nombreJoueurs: 2, placement: 2, faits, ...surcharge });
+}
+
+/** Une victoire dans une partie de quatre joueurs, dans ce mode, avec ces faits. */
+function victoireA4(mode: Mode, faits: PartieDuParcours['faits']): PartieDuParcours {
+  return partie({ mode, nombreJoueurs: 4, placement: 1, faits });
 }
 
 /** Cette partie, n fois. */
@@ -94,12 +111,32 @@ describe('les definitions', () => {
     expect(rangs).toEqual([...rangs].sort((un, autre) => un - autre));
   });
 
-  it('comptent 29 succes: 6 Decouverte, 10 Habitue, 8 Expert, 5 Legende', () => {
+  it('comptent 47 succes: 8 Decouverte, 15 Habitue, 17 Expert, 7 Legende', () => {
     const parPalier = PALIERS_DE_SUCCES.map(
       (palier) => SUCCES.filter((succes) => succes.palier === palier).length,
     );
 
-    expect(parPalier).toEqual([6, 10, 8, 5]);
+    expect(parPalier).toEqual([8, 15, 17, 7]);
+  });
+
+  it("gardent les trois secrets de l'etude", () => {
+    expect(SUCCES.filter((succes) => succes.secret).map((succes) => succes.id)).toEqual([
+      'pas-de-chance',
+      'arroseur-arrose',
+      'sur-le-fil',
+    ]);
+  });
+
+  it('nomment des faits uniques, et reconnaissent un fait connu', () => {
+    expect(new Set(FAITS_DE_PARTIE).size).toBe(FAITS_DE_PARTIE.length);
+
+    for (const fait of FAITS_DE_PARTIE) {
+      expect(fait).toMatch(/^[a-z][a-zA-Z0-9]*$/);
+      expect(fait.length).toBeLessThanOrEqual(40);
+    }
+
+    expect(estUnFait('ninjasRallies')).toBe(true);
+    expect(estUnFait('faitRetire')).toBe(false);
   });
 
   it('donnent une unite aux cumuls, et a eux seuls', () => {
@@ -220,6 +257,56 @@ describe('chaque succes, juste sous et juste sur son seuil', () => {
     diamant: [[partie({ variationPointsLigue: 999 })], [partie({ variationPointsLigue: 1000 })]],
     // Le niveau 50 s'atteint a 122 500 XP.
     legende: [[partie({ xpGagnee: 122_499 })], [partie({ xpGagnee: 122_500 })]],
+
+    // Les exploits de partie (etape 3.8).
+    'cadeau-empoisonne': [[avec({})], [avec({ malusRamasses: 1 })]],
+    rassembleur: [[avec({})], [avec({ amisRassembles: 1 })]],
+    razzia: [
+      [avec({ plusGrosseRazzia: 19 }), avec({ plusGrosseRazzia: 19 })],
+      [avec({ plusGrosseRazzia: 20 })],
+    ],
+    revanche: [[avec({})], [avec({ revanches: 1 })]],
+    'en-chaine': [[avec({ meilleurMultiplicateur: 2 })], [avec({ meilleurMultiplicateur: 3 })]],
+    'pas-de-chance': [
+      [avec({ prisParUnBlackNinja: 2 }), avec({ prisParUnBlackNinja: 2 })],
+      [avec({ prisParUnBlackNinja: 3 })],
+    ],
+    'arroseur-arrose': [[avec({})], [avec({ prisJusteApresUnePrise: 1 })]],
+    'combo-parfait': [
+      [avec({ meilleurMultiplicateur: 4 }, { mode: 'massacre' })],
+      [avec({ meilleurMultiplicateur: 5 }, { mode: 'massacre' })],
+    ],
+    intouchable: [
+      [partie({ nombreJoueurs: 4, placement: 2, faits: { jamaisPris: 1 } })],
+      [victoireA4('classique', { jamaisPris: 1 })],
+    ],
+    'coup-de-filet': [
+      [avec({ meilleurTir: 7 }, { mode: 'tactique' })],
+      [avec({ meilleurTir: 8 }, { mode: 'tactique' })],
+    ],
+    'derniere-proie': [
+      [partie({ mode: 'chasse', nombreJoueurs: 3, faits: { derniereProie: 1 } })],
+      [partie({ mode: 'chasse', nombreJoueurs: 4, faits: { derniereProie: 1 } })],
+    ],
+    'table-rase': [
+      [avec({}, { mode: 'massacre' })],
+      [avec({ carteVidee: 1 }, { mode: 'massacre' })],
+    ],
+    'chasseur-d-evade': [[avec({})], [avec({ evadesAttrapes: 1 })]],
+    'main-leste': [[avec({})], [avec({ x2Voles: 1 })]],
+    'double-ou-rien': [
+      [defaite({ faits: { porteurDuX2: 1 } })],
+      [victoire({ faits: { porteurDuX2: 1 } })],
+    ],
+    'sur-le-fil': [[avec({})], [avec({ prisesSurLeFil: 1 })]],
+    'collectionneur-de-fantomes': [
+      [avec({ evadesAttrapes: 9 })],
+      [avec({ evadesAttrapes: 9 }), avec({ evadesAttrapes: 1 })],
+    ],
+    'seigneur-de-la-horde': [
+      [avec({ ninjasRallies: 9_999 })],
+      [avec({ ninjasRallies: 9_999 }), avec({ ninjasRallies: 1 })],
+    ],
   };
 
   for (const succes of SUCCES) {
@@ -356,6 +443,86 @@ describe('les regles du pli', () => {
     expect(parcoursDe([partie({ xpGagnee: 60 }), partie({ xpGagnee: 40 })]).mesures.xpTotale).toBe(
       100,
     );
+  });
+});
+
+describe('les regles des exploits de partie', () => {
+  it("ne donne aucun exploit a une partie sans faits, d'avant l'etape 3.8 ou abandonnee", () => {
+    const { mesures: sansFaits } = parcoursDe([victoireA4('classique', {})]);
+
+    expect(sansFaits.victoiresIntouchables).toBe(0);
+    expect(sansFaits.malusRamasses).toBe(0);
+  });
+
+  it('ne lit le multiplicateur de En chaine que dans la Horde', () => {
+    expect(obtient('en-chaine', [avec({ meilleurMultiplicateur: 5 }, { mode: 'massacre' })])).toBe(
+      false,
+    );
+    expect(obtient('combo-parfait', [avec({ meilleurMultiplicateur: 5 })])).toBe(true);
+  });
+
+  it('ne lit le multiplicateur de Combo parfait ni en Tactique, ni en Equipes, ni en Chasse', () => {
+    for (const mode of ['tactique', 'equipes', 'chasse'] as const) {
+      expect(obtient('combo-parfait', [avec({ meilleurMultiplicateur: 5 }, { mode })])).toBe(false);
+    }
+  });
+
+  it('veut pour Intouchable une victoire en Horde, a quatre joueurs au moins, sans avoir ete pris', () => {
+    expect(obtient('intouchable', [victoireA4('classique', {})])).toBe(false);
+    expect(obtient('intouchable', [victoireA4('tactique', { jamaisPris: 1 })])).toBe(false);
+    expect(
+      obtient('intouchable', [
+        partie({ nombreJoueurs: 3, placement: 1, faits: { jamaisPris: 1 } }),
+      ]),
+    ).toBe(false);
+  });
+
+  it('ne lit le meilleur tir que dans une partie Tactique', () => {
+    expect(obtient('coup-de-filet', [avec({ meilleurTir: 9 }, { mode: 'chasse' })])).toBe(false);
+  });
+
+  it('ne lit la derniere proie que dans une Chasse', () => {
+    expect(
+      obtient('derniere-proie', [partie({ nombreJoueurs: 4, faits: { derniereProie: 1 } })]),
+    ).toBe(false);
+  });
+
+  it('ne lit la carte videe que dans un Massacre', () => {
+    expect(obtient('table-rase', [avec({ carteVidee: 1 })])).toBe(false);
+  });
+
+  it('veut pour Double ou rien une victoire a plusieurs: seul, porter le x2 ne suffit pas', () => {
+    expect(obtient('double-ou-rien', [partie({ faits: { porteurDuX2: 1 } })])).toBe(false);
+    expect(obtient('double-ou-rien', [victoireA4('equipes', { porteurDuX2: 1 })])).toBe(true);
+  });
+
+  it('ne compte les ninjas rallies que dans la Horde', () => {
+    expect(
+      parcoursDe([avec({ ninjasRallies: 50 }), avec({ ninjasRallies: 30 }, { mode: 'equipes' })])
+        .mesures.ninjasRalliesEnHorde,
+    ).toBe(50);
+  });
+
+  it('lit les records dans une seule partie, et cumule les autres faits', () => {
+    const { mesures: cumul } = parcoursDe([
+      avec({ prisParUnBlackNinja: 2, evadesAttrapes: 1, revanches: 1 }),
+      avec({ prisParUnBlackNinja: 2, evadesAttrapes: 1, revanches: 2 }),
+    ]);
+
+    expect(cumul.plusDePrisesParUnBlackNinja).toBe(2);
+    expect(cumul.evadesAttrapes).toBe(2);
+    expect(cumul.revanches).toBe(3);
+  });
+
+  it("date un exploit de la partie ou il est fait, apres les succes de base qu'elle donne", () => {
+    const { premieres } = parcoursDe([partie(), victoire({ faits: { malusRamasses: 1 } })]);
+
+    expect(premieres.get('cadeau-empoisonne')).toBe(1);
+    expect(atteints([victoire({ faits: { malusRamasses: 1 } })])).toEqual([
+      'premier-pas',
+      'premiere-couronne',
+      'cadeau-empoisonne',
+    ]);
   });
 });
 

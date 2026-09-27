@@ -19,10 +19,13 @@
  * premiere partie apres laquelle il etait atteint: c'est elle qui le date.
  *
  * FONCTIONS PURES. Rien ici ne lit l'horloge ni la base: le jour de chaque partie, a
- * l'heure de Paris, et les amis qui l'ont jouee arrivent avec elle.
+ * l'heure de Paris, les amis qui l'ont jouee et ses faits arrivent avec elle.
  *
- * Seuls les succes qui se deduisent des resultats enregistres sont ici. Ceux qui
- * demandent un releve pendant la partie, et les secrets, viennent a l'etape 3.8.
+ * DEUX SOURCES. La plupart des succes se deduisent des resultats enregistres (etape
+ * 3.7), et s'attribuent donc aussi aux parties d'avant eux. Les exploits de partie
+ * (etape 3.8) se lisent dans les faits que le serveur a releves pendant la partie:
+ * une combinaison, une grosse capture, l'Evade attrape. Une partie d'avant l'etape 3.8
+ * n'a pas de faits, et ne donne aucun exploit.
  */
 
 import { JOUEURS_POUR_UNE_VICTOIRE } from './comptes.js';
@@ -49,6 +52,70 @@ export type PalierDeSucces = (typeof PALIERS_DE_SUCCES)[number];
 // --------------------------------------------------------------------------
 // Le parcours d'un compte
 // --------------------------------------------------------------------------
+
+/**
+ * Les faits qu'un serveur releve pour un joueur pendant une partie (etape 3.8).
+ *
+ * Un fait est une observation chiffree, jamais une conclusion: combien de ninjas le
+ * joueur a rallies, le plus haut multiplicateur qu'il a atteint, combien de fois un
+ * Black Ninja l'a pris. Les conditions qui le combinent au mode, au placement et au
+ * nombre de joueurs sont dans ce fichier, avec les autres. Seuls les faits non nuls
+ * s'enregistrent.
+ *
+ * UN NOM DE FAIT NE SE REUTILISE JAMAIS, comme un identifiant de succes: il est ecrit
+ * dans la base, et un fait que le code ne connait plus s'ignore a la lecture.
+ */
+export const FAITS_DE_PARTIE = [
+  /** Les malus ramasses, qui frappent les autres. */
+  'malusRamasses',
+  /** Le plus de ninjas recuperes en prenant un joueur, en une fois. */
+  'plusGrosseRazzia',
+  /** Les prises du dernier joueur qui l'avait pris, moins de trente secondes apres. */
+  'revanches',
+  /** Le plus haut multiplicateur de combo atteint, en Horde ou en Massacre. */
+  'meilleurMultiplicateur',
+  /** Un: il n'a jamais ete pris, ni par un joueur ni par un Black Ninja. Lu a la fin. */
+  'jamaisPris',
+  /** Le plus de captures d'un seul tir, joueurs et ninjas confondus. */
+  'meilleurTir',
+  /** Un: il finit une Chasse comme la seule proie non infectee. Lu a la fin. */
+  'derniereProie',
+  /** Un: son coup de katana a porte au battement ou la carte s'est videe. */
+  'carteVidee',
+  /** Les Evades attrapes. */
+  'evadesAttrapes',
+  /** Les x2 pris a leur porteur. */
+  'x2Voles',
+  /** Un: il porte le x2 a la fin. Lu a la fin. */
+  'porteurDuX2',
+  /** Les ninjas rallies d'un contact, en Horde. */
+  'ninjasRallies',
+  /** Les fois ou un Black Ninja l'a pris. */
+  'prisParUnBlackNinja',
+  /** Les prises dans la derniere seconde du temps de jeu. */
+  'prisesSurLeFil',
+  /** Les fois ou il a ete pris moins de trois secondes apres avoir pris. */
+  'prisJusteApresUnePrise',
+  /** Les amis entres dans sa partie par son invitation, chacun une fois. */
+  'amisRassembles',
+] as const;
+
+/** Un fait releve pendant une partie. */
+export type FaitDePartie = (typeof FAITS_DE_PARTIE)[number];
+
+/** Les faits d'un joueur dans une partie. Un fait absent vaut zero. */
+export type FaitsDePartie = Readonly<Partial<Record<FaitDePartie, number>>>;
+
+/** Les noms de faits connus. */
+const FAITS_CONNUS: ReadonlySet<string> = new Set(FAITS_DE_PARTIE);
+
+/**
+ * Ce nom est-il celui d'un fait connu. Ce que la base rend peut nommer un fait retire
+ * depuis: il s'ignore.
+ */
+export function estUnFait(nom: string): nom is FaitDePartie {
+  return FAITS_CONNUS.has(nom);
+}
 
 /** Un ami du compte qui a joue la meme partie, et sa place. */
 export interface AmiDansLaPartie {
@@ -82,6 +149,11 @@ export interface PartieDuParcours {
   readonly jour: string;
   /** Les amis actuels du compte qui ont joue cette partie. */
   readonly amis: readonly AmiDansLaPartie[];
+  /**
+   * Ce que le serveur a releve pour le compte pendant la partie (etape 3.8). Vide pour
+   * une partie d'avant l'etape 3.8, et pour un abandon.
+   */
+  readonly faits: FaitsDePartie;
 }
 
 /** Ce que les succes mesurent dans un parcours. */
@@ -103,6 +175,24 @@ export const MESURES = [
   'sommetDesPointsDeLigue',
   'partiesAvecUnAmi',
   'devantUnAmi',
+  // Les exploits de partie (etape 3.8), tires des faits.
+  'malusRamasses',
+  'plusGrosseRazzia',
+  'revanches',
+  'multiplicateurEnHorde',
+  'meilleurMultiplicateur',
+  'victoiresIntouchables',
+  'meilleurTir',
+  'dernieresProies',
+  'cartesVidees',
+  'evadesAttrapes',
+  'x2Voles',
+  'victoiresAvecLeX2',
+  'ninjasRalliesEnHorde',
+  'plusDePrisesParUnBlackNinja',
+  'prisesSurLeFil',
+  'prisJusteApresUnePrise',
+  'amisRassembles',
 ] as const;
 
 /** Une mesure du parcours. */
@@ -121,6 +211,12 @@ export const JOUEURS_POUR_UN_PODIUM = 4;
 
 /** Les places du podium. */
 const PLACES_DU_PODIUM = 3;
+
+/**
+ * Le nombre de joueurs a partir duquel une partie compte pour un exploit dispute:
+ * « Intouchable » et « Derniere proie ». Le meme plafond que le podium (etude, section 7).
+ */
+export const JOUEURS_POUR_UN_EXPLOIT = 4;
 
 // --------------------------------------------------------------------------
 // Les definitions
@@ -169,6 +265,8 @@ const JOURS: UniteDeMesure = { singulier: 'jour', pluriel: 'jours' };
  */
 const XP: UniteDeMesure = { singulier: 'XP', pluriel: 'XP' };
 const POINTS_DE_LIGUE: UniteDeMesure = { singulier: 'point de ligue', pluriel: 'points de ligue' };
+const EVADES: UniteDeMesure = { singulier: 'Évadé', pluriel: 'Évadés' };
+const NINJAS: UniteDeMesure = { singulier: 'ninja', pluriel: 'ninjas' };
 
 /** Les points de ligue d'un palier de rang. */
 function seuilDuPalier(id: IdentifiantPalier): number {
@@ -186,7 +284,8 @@ function seuilDuPalier(id: IdentifiantPalier): number {
  * identifiants.
  *
  * Les seuils sont ceux de l'etude (section 4), gardes tels quels le 26 septembre 2026:
- * quelques semaines de resultats ne suffisaient pas a les calibrer.
+ * quelques semaines de resultats ne suffisaient pas a les calibrer. Dans chaque palier,
+ * les succes de l'etape 3.8 suivent ceux de l'etape 3.7, et les secrets ferment la marche.
  */
 const DEFINITIONS = [
   // Decouverte: dans la premiere heure.
@@ -243,6 +342,24 @@ const DEFINITIONS = [
     palier: 'decouverte',
     secret: false,
     mesure: 'victoires',
+    seuil: 1,
+  },
+  {
+    id: 'cadeau-empoisonne',
+    nom: 'Cadeau empoisonné',
+    description: 'Ramasser un malus, qui frappe les autres.',
+    palier: 'decouverte',
+    secret: false,
+    mesure: 'malusRamasses',
+    seuil: 1,
+  },
+  {
+    id: 'rassembleur',
+    nom: 'Rassembleur',
+    description: 'Faire entrer un ami dans sa partie par une invitation.',
+    palier: 'decouverte',
+    secret: false,
+    mesure: 'amisRassembles',
     seuil: 1,
   },
 
@@ -347,6 +464,51 @@ const DEFINITIONS = [
     seuil: 10,
     unite: PARTIES,
   },
+  {
+    id: 'razzia',
+    nom: 'Razzia',
+    description: 'Récupérer au moins 20 ninjas en prenant un joueur.',
+    palier: 'habitue',
+    secret: false,
+    mesure: 'plusGrosseRazzia',
+    seuil: 20,
+  },
+  {
+    id: 'revanche',
+    nom: 'Revanche',
+    description: 'Prendre, moins de 30 secondes après, le joueur qui vient de vous prendre.',
+    palier: 'habitue',
+    secret: false,
+    mesure: 'revanches',
+    seuil: 1,
+  },
+  {
+    id: 'en-chaine',
+    nom: 'En chaîne',
+    description: 'Atteindre le multiplicateur x3 en Horde.',
+    palier: 'habitue',
+    secret: false,
+    mesure: 'multiplicateurEnHorde',
+    seuil: 3,
+  },
+  {
+    id: 'pas-de-chance',
+    nom: 'Pas de chance',
+    description: 'Être pris trois fois par un Black Ninja dans la même partie.',
+    palier: 'habitue',
+    secret: true,
+    mesure: 'plusDePrisesParUnBlackNinja',
+    seuil: 3,
+  },
+  {
+    id: 'arroseur-arrose',
+    nom: 'Arroseur arrosé',
+    description: 'Être pris par un joueur moins de trois secondes après en avoir pris un.',
+    palier: 'habitue',
+    secret: true,
+    mesure: 'prisJusteApresUnePrise',
+    seuil: 1,
+  },
 
   // Expert: en un mois de jeu regulier, ou par un exploit.
   {
@@ -427,6 +589,88 @@ const DEFINITIONS = [
     seuil: 10,
     unite: PARTIES,
   },
+  {
+    id: 'combo-parfait',
+    nom: 'Combo parfait',
+    description: 'Atteindre le multiplicateur x5, en Horde ou en Massacre.',
+    palier: 'expert',
+    secret: false,
+    mesure: 'meilleurMultiplicateur',
+    seuil: 5,
+  },
+  {
+    id: 'intouchable',
+    nom: 'Intouchable',
+    description:
+      'Gagner une Horde d’au moins quatre joueurs sans jamais être pris, ni par un joueur ni par un Black Ninja.',
+    palier: 'expert',
+    secret: false,
+    mesure: 'victoiresIntouchables',
+    seuil: 1,
+  },
+  {
+    id: 'coup-de-filet',
+    nom: 'Coup de filet',
+    description: 'Capturer au moins huit ninjas ou joueurs d’un seul tir, en Tactique.',
+    palier: 'expert',
+    secret: false,
+    mesure: 'meilleurTir',
+    seuil: 8,
+  },
+  {
+    id: 'derniere-proie',
+    nom: 'Dernière proie',
+    description: 'Finir une Chasse d’au moins quatre joueurs comme la dernière proie.',
+    palier: 'expert',
+    secret: false,
+    mesure: 'dernieresProies',
+    seuil: 1,
+  },
+  {
+    id: 'table-rase',
+    nom: 'Table rase',
+    description: 'Porter le coup qui vide la carte, en Massacre.',
+    palier: 'expert',
+    secret: false,
+    mesure: 'cartesVidees',
+    seuil: 1,
+  },
+  {
+    id: 'chasseur-d-evade',
+    nom: 'Chasseur d’Évadé',
+    description: 'Attraper l’Évadé.',
+    palier: 'expert',
+    secret: false,
+    mesure: 'evadesAttrapes',
+    seuil: 1,
+  },
+  {
+    id: 'main-leste',
+    nom: 'Main leste',
+    description: 'Prendre le x2 à son porteur.',
+    palier: 'expert',
+    secret: false,
+    mesure: 'x2Voles',
+    seuil: 1,
+  },
+  {
+    id: 'double-ou-rien',
+    nom: 'Double ou rien',
+    description: 'Gagner une partie à plusieurs en portant le x2.',
+    palier: 'expert',
+    secret: false,
+    mesure: 'victoiresAvecLeX2',
+    seuil: 1,
+  },
+  {
+    id: 'sur-le-fil',
+    nom: 'Sur le fil',
+    description: 'Prendre un joueur dans la dernière seconde d’une partie.',
+    palier: 'expert',
+    secret: true,
+    mesure: 'prisesSurLeFil',
+    seuil: 1,
+  },
 
   // Legende: rares, vises par peu de joueurs.
   {
@@ -478,6 +722,26 @@ const DEFINITIONS = [
     mesure: 'xpTotale',
     seuil: xpDuNiveau(50),
     unite: XP,
+  },
+  {
+    id: 'collectionneur-de-fantomes',
+    nom: 'Collectionneur de fantômes',
+    description: 'Attraper l’Évadé dix fois.',
+    palier: 'legende',
+    secret: false,
+    mesure: 'evadesAttrapes',
+    seuil: 10,
+    unite: EVADES,
+  },
+  {
+    id: 'seigneur-de-la-horde',
+    nom: 'Seigneur de la Horde',
+    description: 'Rallier 10 000 ninjas en Horde, au total.',
+    palier: 'legende',
+    secret: false,
+    mesure: 'ninjasRalliesEnHorde',
+    seuil: 10_000,
+    unite: NINJAS,
   },
 ] as const satisfies readonly DefinitionDeSucces[];
 
@@ -565,6 +829,23 @@ interface Compteurs {
   readonly modesGagnes: Set<Mode>;
   readonly jours: Set<string>;
   readonly amis: Map<string, AvecUnAmi>;
+  malusRamasses: number;
+  plusGrosseRazzia: number;
+  revanches: number;
+  multiplicateurEnHorde: number;
+  meilleurMultiplicateur: number;
+  victoiresIntouchables: number;
+  meilleurTir: number;
+  dernieresProies: number;
+  cartesVidees: number;
+  evadesAttrapes: number;
+  x2Voles: number;
+  victoiresAvecLeX2: number;
+  ninjasRalliesEnHorde: number;
+  plusDePrisesParUnBlackNinja: number;
+  prisesSurLeFil: number;
+  prisJusteApresUnePrise: number;
+  amisRassembles: number;
 }
 
 /**
@@ -612,6 +893,23 @@ function compteursVides(): Compteurs {
     modesGagnes: new Set(),
     jours: new Set(),
     amis: new Map(),
+    malusRamasses: 0,
+    plusGrosseRazzia: 0,
+    revanches: 0,
+    multiplicateurEnHorde: 0,
+    meilleurMultiplicateur: 0,
+    victoiresIntouchables: 0,
+    meilleurTir: 0,
+    dernieresProies: 0,
+    cartesVidees: 0,
+    evadesAttrapes: 0,
+    x2Voles: 0,
+    victoiresAvecLeX2: 0,
+    ninjasRalliesEnHorde: 0,
+    plusDePrisesParUnBlackNinja: 0,
+    prisesSurLeFil: 0,
+    prisJusteApresUnePrise: 0,
+    amisRassembles: 0,
   };
 }
 
@@ -663,6 +961,63 @@ function ajouterLaPartie(compteurs: Compteurs, partie: PartieDuParcours): void {
     avecLui.devant += partie.placement < ami.placement ? 1 : 0;
     compteurs.amis.set(ami.compte, avecLui);
   }
+
+  ajouterLesFaits(compteurs, partie, victoire);
+}
+
+/**
+ * Ajoute les faits d'une partie aux compteurs (etape 3.8). Une partie sans faits,
+ * d'avant l'etape 3.8 ou abandonnee, n'y ajoute rien.
+ *
+ * Un fait ne se lit que dans le mode qui le fait exister, meme si le serveur n'en
+ * releve pas ailleurs: la condition dit elle-meme son mode.
+ */
+function ajouterLesFaits(compteurs: Compteurs, partie: PartieDuParcours, victoire: boolean): void {
+  const { faits, mode } = partie;
+  const fait = (nom: FaitDePartie): number => faits[nom] ?? 0;
+  const disputee = partie.nombreJoueurs >= JOUEURS_POUR_UN_EXPLOIT;
+
+  compteurs.malusRamasses += fait('malusRamasses');
+  compteurs.plusGrosseRazzia = Math.max(compteurs.plusGrosseRazzia, fait('plusGrosseRazzia'));
+  compteurs.revanches += fait('revanches');
+  compteurs.evadesAttrapes += fait('evadesAttrapes');
+  compteurs.x2Voles += fait('x2Voles');
+  compteurs.plusDePrisesParUnBlackNinja = Math.max(
+    compteurs.plusDePrisesParUnBlackNinja,
+    fait('prisParUnBlackNinja'),
+  );
+  compteurs.prisesSurLeFil += fait('prisesSurLeFil');
+  compteurs.prisJusteApresUnePrise += fait('prisJusteApresUnePrise');
+  compteurs.amisRassembles += fait('amisRassembles');
+  compteurs.victoiresAvecLeX2 += victoire && fait('porteurDuX2') > 0 ? 1 : 0;
+
+  if (mode === 'classique') {
+    compteurs.multiplicateurEnHorde = Math.max(
+      compteurs.multiplicateurEnHorde,
+      fait('meilleurMultiplicateur'),
+    );
+    compteurs.ninjasRalliesEnHorde += fait('ninjasRallies');
+    compteurs.victoiresIntouchables += victoire && disputee && fait('jamaisPris') > 0 ? 1 : 0;
+  }
+
+  if (mode === 'classique' || mode === 'massacre') {
+    compteurs.meilleurMultiplicateur = Math.max(
+      compteurs.meilleurMultiplicateur,
+      fait('meilleurMultiplicateur'),
+    );
+  }
+
+  if (mode === 'tactique') {
+    compteurs.meilleurTir = Math.max(compteurs.meilleurTir, fait('meilleurTir'));
+  }
+
+  if (mode === 'chasse') {
+    compteurs.dernieresProies += disputee && fait('derniereProie') > 0 ? 1 : 0;
+  }
+
+  if (mode === 'massacre') {
+    compteurs.cartesVidees += fait('carteVidee');
+  }
 }
 
 /**
@@ -707,6 +1062,23 @@ function mesuresDe(compteurs: Compteurs): Mesures {
     sommetDesPointsDeLigue: compteurs.sommetDesPointsDeLigue,
     partiesAvecUnAmi,
     devantUnAmi,
+    malusRamasses: compteurs.malusRamasses,
+    plusGrosseRazzia: compteurs.plusGrosseRazzia,
+    revanches: compteurs.revanches,
+    multiplicateurEnHorde: compteurs.multiplicateurEnHorde,
+    meilleurMultiplicateur: compteurs.meilleurMultiplicateur,
+    victoiresIntouchables: compteurs.victoiresIntouchables,
+    meilleurTir: compteurs.meilleurTir,
+    dernieresProies: compteurs.dernieresProies,
+    cartesVidees: compteurs.cartesVidees,
+    evadesAttrapes: compteurs.evadesAttrapes,
+    x2Voles: compteurs.x2Voles,
+    victoiresAvecLeX2: compteurs.victoiresAvecLeX2,
+    ninjasRalliesEnHorde: compteurs.ninjasRalliesEnHorde,
+    plusDePrisesParUnBlackNinja: compteurs.plusDePrisesParUnBlackNinja,
+    prisesSurLeFil: compteurs.prisesSurLeFil,
+    prisJusteApresUnePrise: compteurs.prisJusteApresUnePrise,
+    amisRassembles: compteurs.amisRassembles,
   };
 }
 

@@ -708,6 +708,13 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
             xpGagnee: resultat.xpGagnee,
             variationPointsLigue,
             jour: JOUR_A_PARIS.format(termineeLe),
+            // Comme en base (etape 3.8): seuls les faits non nuls s'ecrivent, un abandon
+            // n'en a pas.
+            faits: Object.fromEntries(
+              Object.entries(resultat.faits ?? {}).filter(
+                ([, valeur]) => valeur !== undefined && valeur > 0,
+              ),
+            ),
           },
         });
 

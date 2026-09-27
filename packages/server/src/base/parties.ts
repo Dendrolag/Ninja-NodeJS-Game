@@ -3,9 +3,9 @@
  * comptes; relire l'historique d'un compte.
  *
  * TOUT S'ECRIT ENSEMBLE, OU RIEN. Une seule transaction pour la partie, le resultat
- * de chaque compte, l'ajout de ses gains a sa progression et, depuis l'etape 3.7, les
- * succes qu'il a atteints (base/succes.ts): si l'un est refuse,
- * rien n'est ecrit. Une partie a moitie enregistree fausserait les statistiques du
+ * de chaque compte, l'ajout de ses gains a sa progression, ses faits de partie depuis
+ * l'etape 3.8 et, depuis l'etape 3.7, les succes qu'il a atteints (base/succes.ts): si
+ * l'un est refuse, rien n'est ecrit. Une partie a moitie enregistree fausserait les statistiques du
  * profil, et un gain applique sans son resultat ne s'expliquerait plus.
  *
  * LES GAINS S'AJOUTENT, ILS NE REMPLACENT PAS (etape 3.3). La progression de chaque
@@ -25,14 +25,14 @@
  * Aucun joueur n'enregistre une partie lui-meme.
  */
 
-import type { CarteEnregistree, Mode, SuccesDeFin } from '@neon-ninja/shared';
+import type { CarteEnregistree, FaitsDePartie, Mode, SuccesDeFin } from '@neon-ninja/shared';
 import { JOUEURS_POUR_UNE_VICTOIRE } from '@neon-ninja/shared';
 import { desc, eq, inArray, sql } from 'drizzle-orm';
 
 import { succesDeFin } from '../comptes/succes.js';
 import type { BaseDeDonnees } from './connexion.js';
 import type { ValeursProgression } from './progression.js';
-import { parties, progressions, resultats } from './schema.js';
+import { faitsDePartie, parties, progressions, resultats } from './schema.js';
 import { attribuerLesSucces } from './succes.js';
 
 /** Une transaction ouverte sur la base. */
@@ -79,6 +79,11 @@ export interface NouveauResultat {
    * est reduite a ce solde; c'est la variation reduite qui s'enregistre.
    */
   readonly variationPointsLigue: number;
+  /**
+   * Ce que le serveur a releve pour ce compte pendant la partie (etape 3.8). Absent pour
+   * un abandon. Seuls les faits non nuls s'ecrivent.
+   */
+  readonly faits?: FaitsDePartie;
 }
 
 /** L'evolution de la progression d'un compte, telle que l'enregistrement l'a appliquee. */
@@ -104,7 +109,7 @@ export interface PartieEnregistree {
 
 /** Une ligne de l'historique d'un compte: sa partie, et son resultat dans celle-ci. */
 export interface ResultatDePartie
-  extends Omit<NouvellePartie, 'id' | 'termineeLe'>, Omit<NouveauResultat, 'compteId'> {
+  extends Omit<NouvellePartie, 'id' | 'termineeLe'>, Omit<NouveauResultat, 'compteId' | 'faits'> {
   readonly partieId: string;
   readonly termineeLe: Date;
 }
@@ -168,12 +173,13 @@ export async function enregistrerPartie(
     // Les resultats d'abord: c'est la que la base refuse un gain negatif ou un
     // doublon, avec la contrainte qui le dit.
     await transaction.insert(resultats).values(
-      appliquees.map(({ ligne, avant }) => ({
+      appliquees.map(({ ligne: { faits: _faits, ...ligne }, avant }) => ({
         ...ligne,
         variationPointsLigue: variationAppliquee(ligne, avant),
         partieId: enregistree.id,
       })),
     );
+    await ecrireLesFaits(transaction, enregistree.id, lignes);
 
     const progressionsAppliquees: GainsAppliques[] = [];
 
@@ -190,6 +196,26 @@ export async function enregistrerPartie(
       progressions: await avecLesSucces(transaction, enregistree.id, progressionsAppliquees),
     };
   });
+}
+
+/**
+ * Ecrit les faits de partie de chaque compte, apres les resultats qu'ils referencent et
+ * avant l'attribution des succes, qui les lit (etape 3.8). Un fait nul ne s'ecrit pas.
+ */
+async function ecrireLesFaits(
+  transaction: Transaction,
+  partieId: string,
+  lignes: readonly NouveauResultat[],
+): Promise<void> {
+  const aEcrire = lignes.flatMap((ligne) =>
+    Object.entries(ligne.faits ?? {})
+      .filter(([, valeur]) => valeur !== undefined && valeur > 0)
+      .map(([fait, valeur]) => ({ partieId, compteId: ligne.compteId, fait, valeur: valeur ?? 0 })),
+  );
+
+  if (aEcrire.length > 0) {
+    await transaction.insert(faitsDePartie).values(aEcrire);
+  }
 }
 
 /**

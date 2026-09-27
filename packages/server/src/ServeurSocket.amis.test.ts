@@ -5,7 +5,8 @@
  * La logique (a qui part quoi, quand une invitation tombe) est verifiee sans reseau
  * dans amis/ReseauDesAmis.test.ts. Ici, c'est le chemin: la couche reseau dit bien a
  * ReseauDesAmis chaque page, chaque entree et chaque sortie, les messages arrivent aux
- * bonnes pages, et une invitation fait entrer dans une partie privee sans son code.
+ * bonnes pages, et une invitation fait entrer dans une partie privee sans son code. Depuis
+ * l'etape 3.8, l'inviteur en garde un fait de partie, « Rassembleur ».
  */
 
 import type {
@@ -22,6 +23,7 @@ import { io as connecter } from 'socket.io-client';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { MOTIFS_D_INVITATION } from './amis/ReseauDesAmis.js';
+import type { NouveauResultat } from './base/parties.js';
 import type { AmiConnu, ServiceDeComptes } from './comptes/annuaire.js';
 import type { HorlogeManuelle } from './horloge.js';
 import { creerHorlogeManuelle } from './horloge.js';
@@ -46,6 +48,8 @@ type Compte = keyof typeof COMPTES;
 /** Un annuaire en memoire, avec des amities qu'on change et un geste qu'on signale. */
 interface AnnuaireDEssai extends ServiceDeComptes {
   readonly amities: Set<string>;
+  /** Les resultats de chaque fin de partie enregistree, dans l'ordre. */
+  readonly fins: (readonly NouveauResultat[])[];
   signaler(auteur: Compte, vise: Compte): void;
 }
 
@@ -60,9 +64,11 @@ function annuaireDEssai(...amis: [Compte, Compte][]): AnnuaireDEssai {
   };
   const comptes = Object.keys(COMPTES) as Compte[];
   const amities = new Set(amis.map(([a, b]) => cle(a, b)));
+  const fins: (readonly NouveauResultat[])[] = [];
 
   return {
     amities,
+    fins,
     signaler: (auteur, vise) => {
       for (const ecouteur of ecouteurs) {
         ecouteur(auteur, vise);
@@ -86,7 +92,10 @@ function annuaireDEssai(...amis: [Compte, Compte][]): AnnuaireDEssai {
       };
     },
     surSessionsFermees: () => () => undefined,
-    enregistrerFinDePartie: async () => [],
+    enregistrerFinDePartie: async (_partie, resultats) => {
+      fins.push(resultats);
+      return [];
+    },
     inscrire: nonUtilise,
     connecter: nonUtilise,
     deconnecter: nonUtilise,
@@ -356,6 +365,39 @@ describe('une invitation par le reseau', () => {
     expect(motif(await demander(bob, 'rejoindre', { invitation: invitation?.id }))).toBe(
       MOTIFS_D_INVITATION.plusValable,
     );
+  });
+
+  it("donne a l'inviteur l'ami rassemble, a la fin de la partie (etape 3.8)", async () => {
+    const annuaire = annuaireDEssai(['alice', 'bob']);
+    await monter(annuaire);
+    const bob = await ouvrir('bob');
+    const alice = await ouvrir('alice');
+    await creer(alice, 'privee');
+    await demander<InvitationEnvoyee>(alice, 'inviter', { pseudo: 'bob' });
+    await laisserPasser();
+    await demander<InfosSalon>(bob, 'rejoindre', { invitation: bob.invitations[0]?.id });
+
+    // Une partie courte, lancee apres son decompte, puis jouee jusqu'au bout.
+    alice.client.emit('reglages', { dureePartieS: 30, nombreBotsInitial: 10 });
+    await laisserPasser();
+    const lancee = new Promise<void>((resoudre) => {
+      alice.client.once('partieLancee', () => {
+        resoudre();
+      });
+    });
+    alice.client.emit('demarrer');
+    await laisserPasser();
+    horloge.avancerDe(5000);
+    await lancee;
+    horloge.avancerDe(31_000);
+    await laisserPasser();
+
+    const [resultats] = annuaire.fins;
+    const faitsDe = (compteId: string): NouveauResultat['faits'] =>
+      resultats?.find((resultat) => resultat.compteId === compteId)?.faits;
+
+    expect(faitsDe('alice')).toMatchObject({ amisRassembles: 1 });
+    expect(faitsDe('bob')?.amisRassembles).toBeUndefined();
   });
 
   it('ne fait entrer ni un autre compte, ni un invite', async () => {

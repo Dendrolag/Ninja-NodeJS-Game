@@ -1,6 +1,6 @@
 /**
- * Tests de la fin de partie vue des comptes (etape 3.3): ce qui s'enregistre, et
- * le recapitulatif envoye a chaque compte.
+ * Tests de la fin de partie vue des comptes (etape 3.3): ce qui s'enregistre, faits de
+ * partie compris depuis l'etape 3.8, et le recapitulatif envoye a chaque compte.
  *
  * Les gains sont compares a recompensesDePartie, et non ecrits en dur: les valeurs
  * elles-memes sont figees par les tests de packages/shared. Ce qui est verifie ici,
@@ -100,6 +100,7 @@ describe('finPourLesComptes', () => {
         xpGagnee: gains.xp,
         piecesGagnees: gains.pieces,
         variationPointsLigue: gains.variationPointsLigue,
+        faits: room.faitsDesJoueurs().get(ALICE.id),
       },
     ]);
     expect(gains.xp).toBeGreaterThan(0);
@@ -123,7 +124,29 @@ describe('finPourLesComptes', () => {
         piecesGagnees: 0,
       }),
     ]);
+    // Un abandon n'a pas de faits (etape 3.8): quitter n'obtient aucun exploit.
+    expect(fin.resultats[0]).not.toHaveProperty('faits');
     expect(fin.joueurs.size).toBe(0);
+  });
+
+  it("joint a chaque compte present les faits de la room, l'ami rassemble compris", () => {
+    const CARLA: SessionJoueur = {
+      id: 's-carla',
+      pseudo: 'Carla',
+      compte: { id: 'c-carla', niveau: 1 },
+    };
+    const room = roomLancee(ALICE, CARLA);
+
+    expect(room.noterUnAmiRassemble('c-alice', 'c-carla')).toBe(true);
+    expect(room.noterUnAmiRassemble('c-inconnu', 'c-carla')).toBe(false);
+    jouer(room, 31_000);
+
+    const parCompte = new Map(
+      finPourLesComptes(room).resultats.map((resultat) => [resultat.compteId, resultat.faits]),
+    );
+
+    expect(parCompte.get('c-alice')).toMatchObject({ amisRassembles: 1 });
+    expect(parCompte.get('c-carla')?.amisRassembles).toBeUndefined();
   });
 
   it('ne rend aucun resultat pour une partie jouee par des invites', () => {
