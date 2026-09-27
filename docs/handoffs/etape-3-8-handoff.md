@@ -47,7 +47,7 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
   - base (`tests/base/exploits.test.ts`, 7 cas): contraintes et cascade, écriture des seuls faits non nuls et « Cadeau empoisonné » annoncé, réessai, abandon, Intouchable, cumuls d'une partie à l'autre, fait retiré ignoré.
 - Résultat: `pnpm verify` en local, 3 001 tests unitaires et d'intégration au vert (162 de plus qu'au handoff 3.7, ceux de la `2.8` compris), 117 sautés (base Neon absente). Tests de la base contre un PostgreSQL 16 du conteneur: 116 sur 117, le seul échec étant l'écart de version connu (`parties.test.ts`, `23503` contre `23001`). Bout en bout en local: 57 scénarios sur 58 en parallèle, bureau et mobile, en 5 minutes; le seul échec est le scénario du HUD de `peaufinage.spec.ts` sur mobile, au délai de 30 s, vert rejoué seul (18 et 21 s), comme au handoff 3.7.
 - Couverture de packages/sim: inchangée, aucun code du paquet touché.
-- État de la CI: le premier run (`36305404170`, sur `e3461f7`) a échoué avant tout test, l'API Neon refusant de créer la branche de test (`ROOT_BRANCHES_LIMIT_EXCEEDED`): deux runs de la session de la `3.7` en occupaient au même moment. Le résultat sur le dernier commit est donné au commit qui suit celui-ci.
+- État de la CI: le premier run (`36305404170`, sur `e3461f7`) a échoué avant tout test, l'API Neon refusant de créer la branche de test (`ROOT_BRANCHES_LIMIT_EXCEEDED`): deux runs de la session de la `3.7` en occupaient au même moment. **Verte sur `8999feb`** (run `36305724405`), qui porte le même code et la fusion de `master`: tests de la base Neon compris, tous les scénarios de bout en bout, sans relance. Mise en ligne sautée: la branche n'est pas `master`.
 
 ## Décisions et écarts au plan
 
