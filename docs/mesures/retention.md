@@ -22,7 +22,7 @@ La commande ne fait que lire. Recopier son texte ci-dessous, sous la date du rel
 
 **Un relevé suffit, un mois après la mise en ligne des succès.** La commande relit l'historique des parties: les semaines d'avant la mise en ligne s'y lisent aussi bien que celles d'après, quel que soit le jour où elle est lancée. Un relevé plus tôt ne donne rien de plus. Noter seulement la date de la mise en ligne, qui sépare les cohortes d'avant et d'après.
 
-Mise en ligne des succès (étape 3.7): à renseigner le jour de la fusion dans `master`.
+Mise en ligne des succès (étape 3.7): **27 septembre 2026, 10 h 05 à Paris** (commit `d68bc15`, run de CI `36304108846`). Les cohortes des semaines suivantes sont celles d'après.
 
 Comparer surtout le retour à sept jours des cohortes d'après la mise en ligne à celles d'avant. Avec peu de joueurs, un écart de quelques points ne dit rien: il faut plusieurs semaines de cohortes pour conclure.
 

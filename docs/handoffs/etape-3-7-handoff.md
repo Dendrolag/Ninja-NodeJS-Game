@@ -70,7 +70,7 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
 
 ## Prochaine action exacte
 
-1. **Le porteur du projet**, après la mise en ligne: noter sa date dans `docs/mesures/retention.md`, puis lancer `pnpm base:rattraper` une fois avec l'adresse de production. Un mois après: lancer `pnpm base:mesurer` et recopier le relevé au même endroit.
+1. **Le porteur du projet**: les succès sont en ligne depuis le 27 septembre 2026 à 10 h 05, heure de Paris (`d68bc15`, CI verte, mise en ligne comprise, run `36304108846`), date notée dans `docs/mesures/retention.md`. Reste à lancer `pnpm base:rattraper` une fois avec l'adresse de production. Un mois après: lancer `pnpm base:mesurer` et recopier le relevé au même endroit.
 2. **La session suivante**: exécuter l'étape `3.8`, les exploits de partie. Rédiger sa fiche selon le cas de repli du PROTOCOLE, à partir de l'entrée 3.8 du ROADMAP et des sections 4 et 5 de `docs/design/etude-succes.md`. L'étape `2.8`, faite en parallèle, a déjà rejoint `master`: « Rassembleur » peut s'y construire.
 
 ## Étape suivante
