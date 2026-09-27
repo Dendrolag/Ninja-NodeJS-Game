@@ -57,6 +57,10 @@ const RECAPITULATIF: ProgressionEnregistree = {
   variationPointsLigue: 20,
   avant: { xpTotale: 0, niveau: 1, pieces: 0, pointsLigue: 90, palier: 'bronze' },
   apres: { xpTotale: 210, niveau: 2, pieces: 1021, pointsLigue: 110, palier: 'argent' },
+  succes: {
+    debloques: ['premier-pas', 'premiere-couronne'],
+    plusProche: { id: 'touriste', actuel: 1, seuil: 3 },
+  },
 };
 
 let reseau: ReseauFactice;
@@ -124,6 +128,23 @@ describe('la progression sur l ecran de fin', () => {
     expect(obligatoire(document, '.barre-remplie').style.getPropertyValue('--remplissage')).toBe(
       '55%',
     );
+  });
+
+  it('annonce les succes que la partie a donnes, puis le plus proche (etape 3.7)', () => {
+    reseau.recevoir('progressionDeFin', RECAPITULATIF);
+
+    expect(estCache(obligatoire(document, '.fin-succes'))).toBe(false);
+    expect(
+      [...document.querySelectorAll('.fin-succes .succes-nom')].map((nom) => nom.textContent),
+    ).toEqual(['Premier pas', 'Première couronne']);
+    expect(texte('.fin-plus-proche')).toBe('Plus que 2 cartes pour Touriste');
+  });
+
+  it("ne montre ni liste ni plus proche quand la partie n'a rien donne", () => {
+    reseau.recevoir('progressionDeFin', { ...RECAPITULATIF, succes: { debloques: [] } });
+
+    expect(estCache(obligatoire(document, '.fin-succes'))).toBe(true);
+    expect(estCache(obligatoire(document, '.fin-plus-proche'))).toBe(true);
   });
 
   it('dit pourquoi une partie n a pas ete enregistree', () => {

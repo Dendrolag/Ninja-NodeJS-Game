@@ -76,6 +76,13 @@ Entre la mise en ligne du serveur et la promotion de la page, quelques secondes,
 
 Elles s'appliquent au démarrage du serveur, avant qu'il n'écoute (la commande préalable au déploiement de Render est réservée aux offres payantes). Pendant ce temps, l'ancien serveur tourne encore, sur la base déjà migrée : **une migration doit rester compatible avec la version précédente du serveur**. Ajouter une colonne ou une table se fait en un commit ; en retirer ou en renommer une se fait en deux, le code qui ne s'en sert plus d'abord, la migration ensuite. Une migration ne se défait pas par un retour arrière.
 
+## Commandes ponctuelles sur la base
+
+Elles se lancent à la main, depuis un poste qui a `DATABASE_URL` de la production (l'adresse par le pooler).
+
+- **`pnpm base:rattraper`** (étape 3.7) : attribue leurs succès aux comptes qui ont joué avant que les succès existent, datés de leur partie d'origine. À lancer une fois après la mise en ligne de l'étape 3.7, quand le serveur a migré la base (la table `succes_debloques` existe). La relancer n'inscrit rien. L'oublier ne retarde que les comptes qui ne rejouent pas : chaque fin de partie rattrape déjà ceux de ses joueurs. Un succès ajouté plus tard au code se rattrape de la même façon.
+- **`pnpm base:mesurer`** (étape 3.7) : en lecture seule, la rétention (comptes actifs par semaine, retour sept jours ou plus après la première partie) et la calibration des seuils des succès. La procédure et les relevés sont dans `docs/mesures/retention.md`.
+
 ## Retour arrière
 
 Le serveur et la page doivent toujours être du même commit, sans quoi le serveur refuse la page.

@@ -292,3 +292,33 @@ export const blocages = pgTable(
     check('blocages_pas_de_soi', sql`${table.bloqueur} <> ${table.bloque}`),
   ],
 );
+
+/**
+ * Les succes debloques (etape 3.7): une ligne par compte et par succes obtenu.
+ *
+ * L'IDENTIFIANT DU SUCCES EST UN TEXTE, PAS UNE ENUMERATION. Les succes sont definis
+ * dans le code (packages/shared/src/succes.ts): en ajouter un ne demande pas de
+ * migration, et un succes retire reste lisible. La lecture ignore un identifiant que le
+ * code ne connait plus. Seule sa forme est controlee ici.
+ *
+ * DATE ET PARTIE SONT CELLES DE L'ORIGINE: la fin de la partie apres laquelle le succes
+ * etait atteint pour la premiere fois, meme s'il s'inscrit plus tard (rattrapage).
+ * Supprimer un compte supprime ses succes. La partie, elle, ne se supprime pas tant
+ * qu'elle a des resultats: si elle disparaissait, le succes resterait, sans sa partie.
+ */
+export const succesDebloques = pgTable(
+  'succes_debloques',
+  {
+    compteId: uuid('compte_id')
+      .notNull()
+      .references(() => comptes.id, { onDelete: 'cascade' }),
+    succes: text('succes').notNull(),
+    debloqueLe: horodatage('debloque_le').notNull(),
+    partieId: uuid('partie_id').references(() => parties.id, { onDelete: 'set null' }),
+  },
+  (table) => [
+    primaryKey({ name: 'succes_debloques_compte_succes', columns: [table.compteId, table.succes] }),
+    check('succes_debloques_identifiant', sql`${table.succes} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`),
+    check('succes_debloques_longueur', sql`char_length(${table.succes}) <= 40`),
+  ],
+);

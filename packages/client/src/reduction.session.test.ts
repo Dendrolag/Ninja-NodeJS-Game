@@ -267,6 +267,7 @@ describe('le profil', () => {
       },
       dernieresParties: [],
       codeDeSecours: false,
+      succes: [],
     };
     const etat = apres([
       { type: 'sessionDeCompte', progression: PROGRESSION },
@@ -288,6 +289,7 @@ describe('le profil', () => {
       statistiques: { partiesJouees: 0, partiesAPlusieurs: 0, victoires: 0, parMode: [] },
       dernieresParties: [],
       codeDeSecours: false,
+      succes: [],
     };
     const lu = apres([
       { type: 'sessionDeCompte', progression: PROGRESSION },

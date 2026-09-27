@@ -194,6 +194,12 @@ describe.runIf(baseDisponible())('parties et resultats', () => {
         compteId: compte,
         avant: { xpTotale: 1000, pieces: 50, pointsLigue: 40 },
         apres: { xpTotale: 1210, pieces: 71, pointsLigue: 60 },
+        // Etape 3.7: la premiere partie du compte, en miroir, gagnee a trois, avec une prise
+        // et un Black Ninja. Une carte sur trois: Touriste est le plus proche.
+        succes: {
+          debloques: ['premier-pas', 'premiere-prise', 'nettoyeur', 'reflet', 'premiere-couronne'],
+          plusProche: { id: 'touriste', actuel: 1, seuil: 3 },
+        },
       },
     ]);
     expect(await lireProgression(db(), compte)).toMatchObject({

@@ -3,7 +3,8 @@
  * comptes; relire l'historique d'un compte.
  *
  * TOUT S'ECRIT ENSEMBLE, OU RIEN. Une seule transaction pour la partie, le resultat
- * de chaque compte et l'ajout de ses gains a sa progression: si l'un est refuse,
+ * de chaque compte, l'ajout de ses gains a sa progression et, depuis l'etape 3.7, les
+ * succes qu'il a atteints (base/succes.ts): si l'un est refuse,
  * rien n'est ecrit. Une partie a moitie enregistree fausserait les statistiques du
  * profil, et un gain applique sans son resultat ne s'expliquerait plus.
  *
@@ -24,13 +25,15 @@
  * Aucun joueur n'enregistre une partie lui-meme.
  */
 
-import type { CarteEnregistree, Mode } from '@neon-ninja/shared';
+import type { CarteEnregistree, Mode, SuccesDeFin } from '@neon-ninja/shared';
 import { JOUEURS_POUR_UNE_VICTOIRE } from '@neon-ninja/shared';
 import { desc, eq, inArray, sql } from 'drizzle-orm';
 
+import { succesDeFin } from '../comptes/succes.js';
 import type { BaseDeDonnees } from './connexion.js';
 import type { ValeursProgression } from './progression.js';
 import { parties, progressions, resultats } from './schema.js';
+import { attribuerLesSucces } from './succes.js';
 
 /** Une transaction ouverte sur la base. */
 type Transaction = Parameters<Parameters<BaseDeDonnees['transaction']>[0]>[0];
@@ -85,7 +88,12 @@ export interface ProgressionAppliquee {
   readonly avant: ValeursProgression;
   /** La progression rendue par la base apres l'ajout des gains. */
   readonly apres: ValeursProgression;
+  /** Les succes que la partie a donnes au compte, et le plus proche (etape 3.7). */
+  readonly succes: SuccesDeFin;
 }
+
+/** L'evolution de la progression d'un compte, avant l'attribution de ses succes. */
+type GainsAppliques = Omit<ProgressionAppliquee, 'succes'>;
 
 /** Une partie enregistree, et ce que ses comptes y ont gagne. */
 export interface PartieEnregistree {
@@ -139,7 +147,11 @@ export async function enregistrerPartie(
 
       return {
         partieId: partie.id,
-        progressions: await progressionsDejaAppliquees(transaction, partie.id, lignes),
+        progressions: await avecLesSucces(
+          transaction,
+          partie.id,
+          await progressionsDejaAppliquees(transaction, partie.id, lignes),
+        ),
       };
     }
 
@@ -163,7 +175,7 @@ export async function enregistrerPartie(
       })),
     );
 
-    const progressionsAppliquees: ProgressionAppliquee[] = [];
+    const progressionsAppliquees: GainsAppliques[] = [];
 
     for (const { ligne, avant } of appliquees) {
       progressionsAppliquees.push({
@@ -173,7 +185,38 @@ export async function enregistrerPartie(
       });
     }
 
-    return { partieId: enregistree.id, progressions: progressionsAppliquees };
+    return {
+      partieId: enregistree.id,
+      progressions: await avecLesSucces(transaction, enregistree.id, progressionsAppliquees),
+    };
+  });
+}
+
+/**
+ * Attribue leurs succes aux comptes de la partie, dans la transaction qui l'enregistre,
+ * et joint a chaque progression ce que la partie leur a donne (etape 3.7).
+ *
+ * Au reessai d'une partie deja enregistree, l'attribution n'inscrit rien de plus: les
+ * succes annonces sont relus par leur partie d'origine, et ce sont les memes.
+ */
+async function avecLesSucces(
+  transaction: Transaction,
+  partieId: string,
+  gains: readonly GainsAppliques[],
+): Promise<ProgressionAppliquee[]> {
+  const attribues = await attribuerLesSucces(
+    transaction,
+    gains.map((appliquee) => appliquee.compteId),
+  );
+
+  return gains.map((appliquee) => {
+    const compte = attribues.get(appliquee.compteId);
+
+    if (compte === undefined) {
+      throw new Error(`Aucun succes attribue au compte ${appliquee.compteId}.`);
+    }
+
+    return { ...appliquee, succes: succesDeFin(partieId, compte.mesures, compte.succes) };
   });
 }
 
@@ -227,7 +270,7 @@ async function progressionsDejaAppliquees(
   transaction: Transaction,
   partieId: string,
   lignes: readonly NouveauResultat[],
-): Promise<readonly ProgressionAppliquee[]> {
+): Promise<readonly GainsAppliques[]> {
   if (lignes.length === 0) {
     return [];
   }

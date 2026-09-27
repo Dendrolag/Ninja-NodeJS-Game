@@ -1,7 +1,7 @@
 # Étude - Les succès
 
 Date: 25 septembre 2026
-Statut: étude, rien n'est construit. L'ordre est tranché le 26 septembre 2026: les succès suivent les amis. Les six autres décisions de la section 8 se prennent au début de l'étape `3.7`.
+Statut: étude, décisions prises. L'ordre est tranché le 26 septembre 2026: les succès suivent les amis. Les six autres décisions de la section 8 ont été prises avec le porteur du projet le 26 septembre 2026, au début de l'étape `3.7`, qui construit le socle (`docs/plan/etape-3-7.md`).
 
 ## 1. La demande
 
@@ -185,3 +185,15 @@ Ordre retenu par le porteur du projet le 26 septembre 2026: les amis d'abord, pu
 5. **L'ordre**: tranché le 26 septembre 2026, les amis d'abord, puis les succès.
 6. **« 1000 ninjas capturés » tous modes**, qui demande un fait de plus au moteur: le faire, ou s'en tenir à la Horde. Recommandé: s'en tenir à la Horde.
 7. **La mesure de rétention**, relevée avant et un mois après: l'ajouter à l'étape `3.7`. Recommandé: oui.
+
+### Décisions du 26 septembre 2026
+
+Prises avec le porteur du projet au début de l'étape `3.7`, toutes sur la recommandation.
+
+1. **La récompense**: (b), un titre choisi parmi ses succès. Il touche au contrat du salon et fait une étape à part, `3.9`, après `3.8`.
+2. **La liste**: celle de la section 4, avec les ajustements de la relecture contre le schéma (fiche 3.7, décisions de conception 5 à 12). Deux changent la liste: « Meute » se déduit de la base, puisque `resultats.captures` compte les proies infectées d'une partie Chasse, et passe en `3.7`. « Première prise » et « Pickpocket » comptent les prises de tous les modes, captures, infections et éliminations. **Les seuils restent ceux de la section 4**: quelques semaines de résultats sur peu de joueurs ne calibrent pas des délais d'une semaine ou d'un mois. La requête de calibration est livrée avec la mesure de rétention, pour un recalibrage plus tard.
+3. **Le rattrapage**: oui, par un script idempotent lancé une fois à la mise en ligne.
+4. **Les secrets**: oui, les trois, en `3.8`.
+5. **L'ordre**: précisé le même jour. `3.7` passe avant `2.8`, dont le socle ne dépend pas. `3.8` reste après `2.8`, qui fait exister « Rassembleur ».
+6. **« 1000 ninjas capturés » tous modes**: non, on s'en tient à la Horde.
+7. **La mesure de rétention**: oui, par un script en lecture seule, lancé par le porteur du projet avant la fusion dans `master` et un mois après (`docs/mesures/retention.md`).

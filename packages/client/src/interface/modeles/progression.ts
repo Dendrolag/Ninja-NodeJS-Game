@@ -26,6 +26,14 @@ export const NOMS_DES_PALIERS: Readonly<Record<IdentifiantPalier, string>> = {
 /** Les nombres a la francaise: « 1 280 », avec l'espace fine des milliers. */
 const FORMAT_DES_NOMBRES = new Intl.NumberFormat('fr-FR');
 
+/** Un jour: « 11 septembre 2026 ». */
+const FORMAT_DE_JOUR = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' });
+
+/** Le jour d'une date, ecrit a la francaise, dans le fuseau du joueur. */
+export function formaterJour(iso: string): string {
+  return FORMAT_DE_JOUR.format(new Date(iso));
+}
+
 /** Un nombre entier, ecrit a la francaise. */
 export function formaterNombre(nombre: number): string {
   return FORMAT_DES_NOMBRES.format(nombre);

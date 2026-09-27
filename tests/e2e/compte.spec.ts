@@ -18,8 +18,8 @@ import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
  *
  * Le joueur s'inscrit depuis la page, retrouve son compte apres un rechargement,
  * entre en partie sous son pseudo, joue une partie courte jusqu'a la fin, voit ce
- * qu'elle lui a rapporte, le retrouve dans son profil, puis se deconnecte. Aucune
- * erreur ne doit apparaitre dans la console.
+ * qu'elle lui a rapporte et le succes « Premier pas » (etape 3.7), le retrouve dans son
+ * profil, puis se deconnecte. Aucune erreur ne doit apparaitre dans la console.
  *
  * LE SERVEUR A DES COMPTES EN MEMOIRE (tests/outils/comptes-en-memoire.ts): les
  * scenarios tournent sans base. Ce qui est eprouve ici, c'est tout le chemin de la
@@ -107,6 +107,9 @@ test('s inscrire, jouer, voir sa progression, puis se deconnecter', async ({ pag
   // Seul, et en trente secondes: la ligue ne bouge pas.
   await expect(progression.locator('.gain-ligue strong')).toHaveText('0');
 
+  // Etape 3.7: la premiere partie donne « Premier pas », annonce a la fin.
+  await expect(progression.locator('.fin-succes .succes-nom').first()).toHaveText('Premier pas');
+
   // -- Le profil compte la partie ---------------------------------------------
   await page.locator('.fin-actions').getByRole('button', { name: 'Accueil' }).click();
   await expect(ecran).toHaveAttribute('data-ecran', 'accueil');
@@ -118,6 +121,11 @@ test('s inscrire, jouer, voir sa progression, puis se deconnecter', async ({ pag
   ).toHaveText('1');
   await expect(page.locator('.tableau-historique tbody tr')).toHaveCount(1);
   await expect(page.locator('.tableau-historique tbody tr')).toContainText('1re sur 1');
+
+  // Etape 3.7: le profil date le succes, parmi ceux de la Decouverte.
+  const premierPas = page.locator('.profil-succes .succes-obtenu', { hasText: 'Premier pas' });
+  await expect(premierPas.locator('.succes-date')).toHaveText(/^Obtenu le /);
+  await expect(premierPas.locator('.succes-rarete')).toHaveText('Obtenu par 100 % des joueurs');
 
   // -- La deconnexion ---------------------------------------------------------
   await page.getByRole('button', { name: 'Se déconnecter' }).click();

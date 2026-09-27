@@ -47,6 +47,10 @@ const FICHE_DE_BOB: FicheJoueur = {
   niveau: 4,
   palier: 'argent',
   relation: 'aucune',
+  succes: [
+    { id: 'premier-pas', rarete: 100 },
+    { id: 'meute', rarete: 0.5 },
+  ],
   statistiques: {
     partiesJouees: 7,
     partiesAPlusieurs: 6,
@@ -178,8 +182,31 @@ describe('la fiche d un joueur, au salon', () => {
       ['Horde', '3', '1 sur 2', '80', '—'],
       ['Chasse', '4', '1 sur 4', '210', '—'],
     ]);
+    // Etape 3.7: ses succes obtenus, avec leur rarete, et sans leur date.
+    expect(obligatoire(fenetre(), '.fiche-succes .succes-compte').textContent).toBe(
+      '2 succès sur 29',
+    );
+    expect(
+      [...fenetre().querySelectorAll('.fiche-succes .succes')].map((succes) => [
+        obligatoire(succes as HTMLElement, '.succes-nom').textContent,
+        obligatoire(succes as HTMLElement, '.succes-rarete').textContent,
+      ]),
+    ).toEqual([
+      ['Premier pas', 'Obtenu par 100 % des joueurs'],
+      ['Meute', 'Obtenu par moins de 1 % des joueurs'],
+    ]);
+    expect(fenetre().querySelector('.fiche-succes .succes-date')).toBeNull();
     // Ce que la fiche ne montre jamais.
     expect(fenetre().textContent).not.toMatch(/Pièces|Points de ligue|Dernières parties/);
+  });
+
+  it("dit qu'un joueur n'a encore aucun succes", async () => {
+    await entrerAuSalon(true);
+    boutonObligatoire(hote, 'Alice, voir sa fiche').click();
+    await laisserRepondre();
+
+    expect(estCache(obligatoire(fenetre(), '.fiche-succes .fiche-vide'))).toBe(false);
+    expect(estCache(obligatoire(fenetre(), '.fiche-succes-liste'))).toBe(true);
   });
 
   it('n offre aucune fiche pour un invite, et ouvre la sienne a qui la demande', async () => {

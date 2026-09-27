@@ -143,6 +143,47 @@ describe('l ecran du profil', () => {
     expect(estCache(obligatoire(hote, '.profil-vide'))).toBe(true);
   });
 
+  it('montre les succes palier par palier: obtenus dates, les autres avec leur progression', async () => {
+    api.reponses.profil = async () => ({
+      acceptee: true,
+      valeur: {
+        ...PROFIL,
+        succes: PROFIL.succes.map((succes) => {
+          if (succes.id === 'premier-pas') {
+            return { ...succes, debloqueLe: '2026-09-11T12:00:00.000Z', rarete: 90 };
+          }
+
+          return succes.id === 'habitue'
+            ? { ...succes, progression: { actuel: 2, seuil: 25 }, rarete: 10 }
+            : succes;
+        }),
+      },
+    });
+
+    client.naviguer('profil');
+    await laisserRepondre();
+
+    expect(obligatoire(hote, '.profil-succes h2 .succes-compte').textContent).toBe(
+      '1 succès sur 29',
+    );
+    expect(
+      [...hote.querySelectorAll('.succes-palier-bloc h3')].map((titre) => titre.textContent),
+    ).toEqual(['Découverte1 sur 6', 'Habitué0 sur 10', 'Expert0 sur 8', 'Légende0 sur 5']);
+
+    const premierPas = obligatoire(hote, '.succes-obtenu');
+    expect(obligatoire(premierPas, '.succes-nom').textContent).toBe('Premier pas');
+    expect(obligatoire(premierPas, '.succes-date').textContent).toMatch(/^Obtenu le /);
+    expect(obligatoire(premierPas, '.succes-rarete').textContent).toBe(
+      'Obtenu par 90 % des joueurs',
+    );
+
+    const habitue = [...hote.querySelectorAll<HTMLElement>('.succes-verrouille')].find(
+      (succes) => succes.querySelector('.succes-nom')?.textContent === 'Habitué',
+    );
+    expect(habitue?.querySelector('.succes-progression')?.textContent).toBe('2 sur 25');
+    expect(habitue?.querySelector('.succes-date')).toBeNull();
+  });
+
   it('dit qu aucune partie n est encore enregistree', async () => {
     client.naviguer('profil');
     await laisserRepondre();

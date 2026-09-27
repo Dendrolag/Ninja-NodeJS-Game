@@ -156,6 +156,10 @@ describe('progressionEnregistree', () => {
         compteId: 'c-alice',
         avant: { xpTotale: 90, pieces: 5, pointsLigue: 95 },
         apres: { xpTotale: 240, pieces: 20, pointsLigue: 115 },
+        succes: {
+          debloques: ['premiere-couronne'],
+          plusProche: { id: 'dix-couronnes', actuel: 1, seuil: 10 },
+        },
       }),
     ).toEqual({
       enregistree: true,
@@ -166,6 +170,10 @@ describe('progressionEnregistree', () => {
       variationPointsLigue: 20,
       avant: { xpTotale: 90, niveau: 1, pieces: 5, pointsLigue: 95, palier: 'bronze' },
       apres: { xpTotale: 240, niveau: 2, pieces: 20, pointsLigue: 115, palier: 'argent' },
+      succes: {
+        debloques: ['premiere-couronne'],
+        plusProche: { id: 'dix-couronnes', actuel: 1, seuil: 10 },
+      },
     });
   });
 
@@ -177,6 +185,7 @@ describe('progressionEnregistree', () => {
         compteId: 'c-alice',
         avant: { xpTotale: 0, pieces: 0, pointsLigue: 3 },
         apres: { xpTotale: 30, pieces: 3, pointsLigue: 0 },
+        succes: { debloques: [] },
       },
     );
 

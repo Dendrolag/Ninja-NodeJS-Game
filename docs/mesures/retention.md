@@ -1,0 +1,30 @@
+# Rétention et calibration des succès
+
+Relevés de l'étape 3.7, décision 7 de l'étude des succès (`docs/design/etude-succes.md`). Ils disent si les succès changent quelque chose au retour des joueurs, et donnent les chiffres qui permettront un jour de recalibrer leurs seuils.
+
+## Ce qui est mesuré
+
+Tout se lit dans les résultats enregistrés, sans pisteur. Seuls les comptes sont mesurés: un invité ne laisse aucun résultat.
+
+- **Comptes actifs par semaine**: les comptes qui ont joué au moins une partie dans la semaine, du lundi au dimanche, à l'heure de Paris.
+- **Retour à sept jours**: pour chaque semaine de première partie, la part des comptes qui ont rejoué sept jours ou plus après leur première partie. Une semaine dont la première partie date de moins de sept jours n'est pas encore mesurable, et n'apparaît pas.
+- **Calibration**: prises et Black Ninjas détruits par partie, victoires par compte, parties par compte et par semaine active, chacun en moyenne, médiane, neuvième décile et maximum.
+
+## Procédure
+
+Depuis un poste qui a l'adresse de la base de production dans `DATABASE_URL`:
+
+```bash
+pnpm base:mesurer
+```
+
+La commande ne fait que lire. Recopier son texte ci-dessous, sous la date du relevé.
+
+1. **Avant la mise en ligne des succès**: juste avant de fusionner l'étape 3.7 dans `master`.
+2. **Un mois après**: même commande, même tableau.
+
+Comparer surtout le retour à sept jours des cohortes d'après la mise en ligne à celles d'avant. Avec peu de joueurs, un écart de quelques points ne dit rien: il faut plusieurs semaines de cohortes pour conclure.
+
+## Relevés
+
+Aucun relevé n'est encore fait: cette session n'avait pas accès à la base de production.

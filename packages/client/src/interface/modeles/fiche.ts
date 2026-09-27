@@ -6,14 +6,15 @@
  * profil (statistiques.ts). Ni ses pieces, ni ses dernieres parties: le serveur ne les
  * envoie pas.
  *
- * UNE SUITE DE SECTIONS, POUR LA SUITE. L'identite, l'amitie et, pour un ami, les
- * parties jouees ensemble (etape 3.6), les statistiques, puis le tableau par mode; la
- * section des succes (etapes 3.7 et 3.8) viendra s'y ajouter.
+ * UNE SUITE DE SECTIONS. L'identite, l'amitie et, pour un ami, les parties jouees
+ * ensemble (etape 3.6), les statistiques, le tableau par mode, puis les succes obtenus
+ * (etape 3.7), sans leur date.
  *
  * FONCTION PURE. Le client met en forme ce que le serveur a lu.
  */
 
 import type { FaceAFace, FicheJoueur, LieuDUnAmi } from '@neon-ninja/shared';
+import { SUCCES } from '@neon-ninja/shared';
 
 import type { EtatClient, EtatDuGeste } from '../../etat.js';
 import type { GestePropose } from './amis.js';
@@ -26,6 +27,8 @@ import { formaterNombre } from './progression.js';
 import { initiales } from './salon.js';
 import type { LigneDUnMode, StatistiqueAffichee } from './statistiques.js';
 import { lignesParMode, tuilesDesStatistiques } from './statistiques.js';
+import type { SuccesDeFicheAffiche } from './succes.js';
+import { succesDeFicheAffiches } from './succes.js';
 
 /** Ce que la fenetre de la fiche affiche. */
 export type ModeleFiche =
@@ -53,6 +56,10 @@ export type ModeleFiche =
       readonly amitie?: ModeleAmitie;
       /** Les parties jouees ensemble, pour un ami, et pour lui seul (etape 3.6). */
       readonly ensemble?: readonly StatistiqueAffichee[];
+      /** Les succes obtenus, dans l'ordre des succes (etape 3.7). */
+      readonly succes: readonly SuccesDeFicheAffiche[];
+      /** « 3 succès sur 29 ». */
+      readonly compteDesSucces: string;
     };
 
 /** La section Amitie de la fiche (etape 3.6). */
@@ -94,6 +101,7 @@ function ficheChargee(
   lieu: LieuDUnAmi | undefined,
 ): ModeleFiche {
   const dernier = modeleDuGeste(gesteSur(geste, fiche.pseudo));
+  const succes = succesDeFicheAffiches(fiche.succes);
 
   return {
     nature: 'chargee',
@@ -104,6 +112,8 @@ function ficheChargee(
     inscription: formaterInscription(fiche.inscritLe),
     statistiques: tuilesDesStatistiques(fiche.statistiques),
     parMode: lignesParMode(fiche.statistiques),
+    succes,
+    compteDesSucces: `${formaterNombre(succes.length)} succès sur ${formaterNombre(SUCCES.length)}`,
     ...(fiche.relation === 'soi'
       ? {}
       : {
