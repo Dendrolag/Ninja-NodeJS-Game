@@ -48,7 +48,7 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
 
 1. **`4.7` avant `3.8`**, sur demande du porteur du projet. Rien de `3.8` n'est tiré en avant.
 2. **Le pied passe sur deux lignes sur téléphone**, sans le point séparateur: le libellé de production (« Version du 20 septembre 2026, 19h44 · ee18151 ») ne tient pas sur une ligne avec « Crédits », et le point serait resté seul en bout de ligne. Constaté sur capture, non prévu par la fiche.
-3. **Branche de travail**: cette session a travaillé sur la branche `claude/etape-4-7-credits-rg5wk2`, imposée par son environnement, et non sur `master` comme le prévoit le PROTOCOLE. La CI y tourne, mais la mise en ligne ne part que de `master`: les crédits seront en production quand la branche y sera fusionnée.
+3. **Branche de travail**: cette session a travaillé sur la branche `claude/etape-4-7-credits-rg5wk2`, imposée par son environnement, et non sur `master` comme le prévoit le PROTOCOLE. La branche a été fusionnée dans `master` en avance rapide (`0981197`) à la demande du porteur du projet, CI verte (run `36397605149`). Sa mise en ligne a été sautée à bon droit: entre-temps, la session de l'étape `3.8` avait poussé sur `master` sa fusion de 4.7 (`7f75de6`). Les crédits sont en production depuis le 28 septembre 2026 avec ce commit, qui porte aussi l'étape 3.8 (run `36398067296`, `/sante` vérifiée, page publique vérifiée).
 4. **Playwright en local**: le Chromium préinstallé de ce conteneur n'avait pas la révision attendue par la version de Playwright du dépôt. Les scénarios ont tourné avec une configuration locale, non commitée, qui pointait vers le Chromium disponible. Rien ne change pour la CI.
 
 ## Problèmes connus et dette
