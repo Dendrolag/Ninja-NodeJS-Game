@@ -62,7 +62,7 @@ export type ModeleFiche =
       readonly ensemble?: readonly StatistiqueAffichee[];
       /** Les succes obtenus, dans l'ordre des succes (etape 3.7). */
       readonly succes: readonly SuccesDeFicheAffiche[];
-      /** « 3 succès sur 29 ». */
+      /** « 3 succès sur 47 ». */
       readonly compteDesSucces: string;
     };
 

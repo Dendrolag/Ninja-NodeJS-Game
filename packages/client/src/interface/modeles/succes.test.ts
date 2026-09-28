@@ -1,10 +1,10 @@
 /**
- * Tests de la mise en forme des succes (etape 3.7): rarete, succes le plus proche,
- * section du profil, succes de la fiche et de la fin de partie.
+ * Tests de la mise en forme des succes (etapes 3.7 et 3.8): rarete, succes le plus
+ * proche, section du profil et ses secrets, succes de la fiche et de la fin de partie.
  */
 
-import type { IdentifiantSucces, SuccesConnu, SuccesDuProfil } from '@neon-ninja/shared';
-import { SUCCES, definitionDuSucces } from '@neon-ninja/shared';
+import type { SuccesDuProfil } from '@neon-ninja/shared';
+import { SUCCES } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
 import { formaterJour } from './progression.js';
@@ -66,12 +66,12 @@ describe('succesDuProfilAffiches', () => {
     );
     const section = succesDuProfilAffiches(lus);
 
-    expect(section.compte).toBe('2 succès sur 29');
+    expect(section.compte).toBe('2 succès sur 47');
     expect(section.paliers.map((palier) => [palier.nom, palier.compte])).toEqual([
-      ['Découverte', '1 sur 6'],
-      ['Habitué', '0 sur 10'],
-      ['Expert', '1 sur 8'],
-      ['Légende', '0 sur 5'],
+      ['Découverte', '1 sur 8'],
+      ['Habitué', '0 sur 15'],
+      ['Expert', '1 sur 17'],
+      ['Légende', '0 sur 7'],
     ]);
   });
 
@@ -112,7 +112,7 @@ describe('succesDuProfilAffiches', () => {
       { id: 'succes-retire' as 'habitue', rarete: 10 },
     ]);
 
-    expect(section.compte).toBe('0 succès sur 29');
+    expect(section.compte).toBe('0 succès sur 47');
   });
 });
 
@@ -135,40 +135,50 @@ describe('succesDeFicheAffiches et succesDebloquesAffiches', () => {
 });
 
 describe('les secrets', () => {
-  /** Les definitions du paquet partage, ou Habitue serait secret. */
-  const habitueSecret = (id: IdentifiantSucces): SuccesConnu => ({
-    ...definitionDuSucces(id),
-    secret: id === 'habitue',
-  });
-
-  it("n'existent pas encore: ils viennent a l'etape 3.8", () => {
-    expect(SUCCES.some((succes) => succes.secret)).toBe(false);
-  });
+  /** « Pas de chance », tel que le profil le montre apres ces lectures. */
+  function pasDeChance(lus: readonly SuccesDuProfil[]): unknown {
+    return succesDuProfilAffiches(lus)
+      .paliers.flatMap((palier) => palier.succes)
+      .find((succes) => succes.id === 'pas-de-chance');
+  }
 
   it("se lisent « ??? » avant d'etre obtenus, sans description ni progression", () => {
+    // Un serveur qui enverrait une progression ne la ferait pas lire pour autant.
     const lus = profilVide().map((succes) =>
-      succes.id === 'habitue' ? { ...succes, progression: { actuel: 3, seuil: 25 } } : succes,
+      succes.id === 'pas-de-chance'
+        ? { ...succes, progression: { actuel: 2, seuil: 3 }, rarete: 4 }
+        : succes,
     );
-    const habitue = succesDuProfilAffiches(lus, habitueSecret)
-      .paliers.flatMap((palier) => palier.succes)
-      .find((succes) => succes.id === 'habitue');
 
-    expect(habitue).toMatchObject({
+    expect(pasDeChance(lus)).toEqual({
+      id: 'pas-de-chance',
       nom: SECRET,
       description: undefined,
-      progression: undefined,
+      palier: 'decouverte',
       obtenu: false,
+      date: undefined,
+      progression: undefined,
+      rarete: '4 % des joueurs',
     });
   });
 
   it('se decrivent une fois obtenus', () => {
     const lus = profilVide().map((succes) =>
-      succes.id === 'habitue' ? { ...succes, debloqueLe: '2026-09-20T18:30:00.000Z' } : succes,
+      succes.id === 'pas-de-chance'
+        ? { ...succes, debloqueLe: '2026-09-20T18:30:00.000Z' }
+        : succes,
     );
-    const habitue = succesDuProfilAffiches(lus, habitueSecret)
-      .paliers.flatMap((palier) => palier.succes)
-      .find((succes) => succes.id === 'habitue');
 
-    expect(habitue).toMatchObject({ nom: 'Habitué', description: 'Jouer 25 parties.' });
+    expect(pasDeChance(lus)).toMatchObject({
+      nom: 'Pas de chance',
+      description: 'Être pris trois fois par un Black Ninja dans une même partie.',
+      obtenu: true,
+    });
+  });
+
+  it('se nomment sur la fiche et en fin de partie, ou ils sont deja obtenus', () => {
+    expect(succesDebloquesAffiches(['sur-le-fil']).map((succes) => succes.nom)).toEqual([
+      'Sur le fil',
+    ]);
   });
 });

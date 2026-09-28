@@ -75,7 +75,7 @@ export interface PalierAffiche {
 
 /** La section des succes du profil. */
 export interface SuccesDuProfilAffiches {
-  /** « 12 succès sur 29 ». */
+  /** « 12 succès sur 47 ». */
   readonly compte: string;
   /** Les paliers qui ont au moins un succes, du plus facile au plus rare. */
   readonly paliers: readonly PalierAffiche[];
@@ -130,21 +130,13 @@ export function phraseDuPlusProche(progression: ProgressionDUnSucces): string | 
   return `Plus que ${formaterNombre(reste)} ${reste > 1 ? unite.pluriel : unite.singulier} pour ${succes.nom}`;
 }
 
-/** Ce qui donne la definition d'un succes connu. */
-type Definir = (id: IdentifiantSucces) => SuccesConnu;
-
 /**
- * La section des succes du profil, palier par palier.
- *
- * @param definir Les definitions a lire: celles du paquet partage. Un test y substitue
- *                un secret, tant qu'aucun n'existe (ils viennent a l'etape 3.8).
+ * La section des succes du profil, palier par palier. Les secrets s'y rangent dans leur
+ * palier, comme les autres (etape 3.8).
  */
-export function succesDuProfilAffiches(
-  succes: readonly SuccesDuProfil[],
-  definir: Definir = definitionDuSucces,
-): SuccesDuProfilAffiches {
+export function succesDuProfilAffiches(succes: readonly SuccesDuProfil[]): SuccesDuProfilAffiches {
   const affiches = succes.flatMap((lu) =>
-    estUnSucces(lu.id) ? [succesAffiche(lu, definir(lu.id))] : [],
+    estUnSucces(lu.id) ? [succesAffiche(lu, definitionDuSucces(lu.id))] : [],
   );
   const obtenus = affiches.filter((affiche) => affiche.obtenu).length;
 

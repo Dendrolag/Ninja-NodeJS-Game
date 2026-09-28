@@ -129,7 +129,7 @@ describe('modeleFiche', () => {
           rarete: 'moins de 1 % des joueurs',
         },
       ],
-      compteDesSucces: '1 succès sur 29',
+      compteDesSucces: '1 succès sur 47',
     });
   });
 
