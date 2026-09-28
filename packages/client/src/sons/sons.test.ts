@@ -495,3 +495,14 @@ describe("les sons de l'Evade (etape 7.9)", () => {
     expect(sonDuFait(fait('evade', { quoi: 'enfui' }, 0), 'moi')).toBeUndefined();
   });
 });
+
+describe('les sons de la fumee (etape 7.10)', () => {
+  it('fait entendre la fumee empochee comme un bonus, et le nuage a tous', () => {
+    expect(sonDuFait(fait('objetEmpoche', { nature: 'fumee' }, 0), 'moi')).toBe('bonusRamasse');
+
+    const nuage = { depart: { x: 1, y: 2 }, arrivee: { x: 900, y: 700 } };
+    expect(sonDuFait(fait('fumee', { joueur: 'moi', ...nuage }, 0), 'moi')).toBe('fumee');
+    expect(sonDuFait(fait('fumee', { joueur: 'bob', ...nuage }, 0), 'moi')).toBe('fumee');
+    expect(SONS.fumee).toBeDefined();
+  });
+});

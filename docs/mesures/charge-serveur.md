@@ -906,3 +906,27 @@ Douze joueurs, carte Tokyo, un processus neuf par ligne. Durées en milliseconde
 |          50 |             0,155 |            0,160 |                226 |               226 |
 |         150 |             0,406 |            0,433 |                440 |               467 |
 |         300 |             1,045 |            1,048 |                779 |               781 |
+
+## 21. Mesure de l'étape 7.10: la poche et la fumée (28 septembre 2026)
+
+Chiffres bruts: `docs/mesures/charge-serveur-7-10-horde.json`, écrits par le harnais sur la même machine qu'à la section 20, au commit `5843f2c` plus les changements de l'étape, avant leur commit.
+
+### 21.1 L'essentiel
+
+- **La fumée ne change pas le coût d'une partie.** Sur une même partie, la fumée coupée et la fumée active coûtent la même chose, au bruit près: 1,086 contre 1,052 ms par battement à 300 faux ninjas avec la graine 7, 1,092 contre 1,119 avec la graine 1234. Son travail par battement est une lecture des entrées de douze joueurs, et un objet de plus parmi les bonus.
+- **Avec la graine du banc, 42, la partie jouée n'est plus la même, et elle est plus chargée.** 1,40 ms à 300 faux ninjas sur trois passages, contre 1,07 à 1,22 pour le code d'avant l'étape et pour le code de l'étape fumée coupée, mesurés le même jour. Les tirages de la fumée décalent tout le hasard de la partie: ce qui s'y passe change, et les messages pèsent 810 octets au lieu de 781. À 50 et 150 faux ninjas, rien ne bouge. Ce n'est pas un coût de la fumée, que les deux autres graines montrent nul: c'est une autre partie.
+- **Sans la fumée, rien n'a bougé, à l'octet.** L'outil d'empreinte relancé avec `--sans-poche` redonne les empreintes du jeu et du flux d'avant l'étape pour les quatre parties de référence.
+
+### 21.2 Méthode
+
+`pnpm charge --banc --bots-banc 50,150,300`, trois fois; puis le même banc sur le commit `72a6325`, d'avant l'étape; puis le code de l'étape avec la fumée coupée dans les réglages du banc; puis, à 300 faux ninjas seulement, la fumée active et coupée avec les graines 7 et 1234. Ces trois dernières mesures modifient le banc le temps de la mesure (réglages, graine), sans que rien n'en soit gardé. Les joueurs du banc ne se servent jamais de leur poche.
+
+### 21.3 Le banc
+
+Douze joueurs, carte Tokyo, graine 42, un processus neuf par ligne, le meilleur de deux ou trois passages. Durées en millisecondes par battement, tailles en octets par message.
+
+| Faux ninjas | Avant l'étape, total | Fumée coupée, total | Fumée active, total | Avant, octets | Fumée active, octets |
+| ----------: | -------------------: | ------------------: | ------------------: | ------------: | -------------------: |
+|          50 |                0,163 |               0,161 |               0,169 |           226 |                  235 |
+|         150 |                0,447 |               0,453 |               0,431 |           467 |                  445 |
+|         300 |                1,068 |               1,066 |               1,400 |           781 |                  810 |

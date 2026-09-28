@@ -44,14 +44,7 @@
  * l'appelant decide de traiter.
  */
 
-import type {
-  Couleur,
-  Direction,
-  NatureObjet,
-  ObjetDePoche,
-  Orientation,
-  TypeZone,
-} from './constantes.js';
+import type { Couleur, Direction, NatureObjet, Orientation, TypeZone } from './constantes.js';
 import {
   DIRECTIONS,
   TYPES_BONUS,
@@ -493,7 +486,6 @@ function entiteArrondie(entite: EntiteVue): EntiteVue {
       protege: entite.protege,
       ...(entite.tactique === undefined ? {} : { tactique: tactiqueArrondie(entite.tactique) }),
       ...(entite.doubleur === true ? { doubleur: true as const } : {}),
-      ...(entite.poche === undefined ? {} : { poche: entite.poche }),
     };
   }
 
@@ -624,37 +616,30 @@ function lireCode<T>(lecteur: Lecteur, liste: readonly T[]): T {
  * l'etat du mode Tactique, et 8 quand il porte le x2 de l'Evade (etape 7.9). Un joueur
  * sans x2 garde l'octet d'avant.
  *
- * Les quatre bits du haut disent ce qu'il a en poche (etape 7.10): zero pour une poche
- * vide, sinon le rang de l'objet dans TYPES_OBJETS_DE_POCHE, plus un. Un joueur a la poche
- * vide garde, lui aussi, l'octet d'avant.
+ * La poche d'un joueur (etape 7.10) n'y est pas, et ne doit jamais y venir: ce flux part a
+ * toute la partie, et la poche ne regarde que son porteur.
  */
 function drapeauxDuJoueur(joueur: JoueurVu): number {
-  const poche =
-    joueur.poche === undefined ? 0 : codeDans(TYPES_OBJETS_DE_POCHE, joueur.poche, 'poche') + 1;
-
   return (
     (joueur.invincible ? 1 : 0) |
     (joueur.protege ? 2 : 0) |
     (joueur.tactique === undefined ? 0 : 4) |
-    (joueur.doubleur === true ? 8 : 0) |
-    (poche << 4)
+    (joueur.doubleur === true ? 8 : 0)
   );
 }
 
-/** Les indicateurs d'un joueur, relus. Le x2 et la poche n'y figurent que s'ils sont portes. */
+/** Les indicateurs d'un joueur, relus. Le x2 n'y figure que s'il est porte. */
 interface DrapeauxDuJoueur {
   readonly invincible: boolean;
   readonly protege: boolean;
   readonly avecTactique: boolean;
   readonly doubleur?: true;
-  readonly poche?: ObjetDePoche;
 }
 
 function lireDrapeauxDuJoueur(lecteur: Lecteur): DrapeauxDuJoueur {
   const drapeaux = lecteur.octet();
-  const poche = drapeaux >> 4;
 
-  if (poche > TYPES_OBJETS_DE_POCHE.length) {
+  if (drapeaux > 15) {
     throw new ErreurDeTrame("les indicateurs d'un joueur y sont inconnus");
   }
 
@@ -663,7 +648,6 @@ function lireDrapeauxDuJoueur(lecteur: Lecteur): DrapeauxDuJoueur {
     protege: (drapeaux & 2) !== 0,
     avecTactique: (drapeaux & 4) !== 0,
     ...((drapeaux & 8) !== 0 ? { doubleur: true as const } : {}),
-    ...(poche === 0 ? {} : { poche: valeurDe(TYPES_OBJETS_DE_POCHE, poche - 1) }),
   };
 }
 
@@ -832,7 +816,6 @@ const ENTITES: Genre<EntiteVue> = {
             protege: ancienne.protege,
             avecTactique: ancienne.tactique !== undefined,
             ...(ancienne.doubleur === true ? { doubleur: true as const } : {}),
-            ...(ancienne.poche === undefined ? {} : { poche: ancienne.poche }),
           };
 
     if (!avecTactique) {

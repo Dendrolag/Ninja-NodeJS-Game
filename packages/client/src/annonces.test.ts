@@ -344,3 +344,32 @@ describe("les annonces de l'Evade (etape 7.9)", () => {
     expect(annonce({ quoi: 'enfui' })?.grandTitre?.titre).toBe('Envolé');
   });
 });
+
+describe('les annonces de la poche (etape 7.10)', () => {
+  it('annonce la fumee empochee en grand titre, a sa couleur, sans duree', () => {
+    const annonce = annonceDuFait(fait('objetEmpoche', { nature: 'fumee' }, 0), 'classique', 'moi');
+
+    expect(annonce).toMatchObject({
+      texte: 'En poche : Fumée',
+      ton: 'succes',
+      grandTitre: {
+        surtitre: 'En poche',
+        titre: 'Fumée',
+        ligne: 'Disparaissez quand vous voulez',
+        couleur: APPARENCE_OBJET.fumee.couleur,
+        icone: adresseDeLIcone('fumee'),
+        brouille: false,
+      },
+    });
+  });
+
+  it('n annonce pas un nuage: il se voit sur la carte', () => {
+    expect(
+      annonceDuFait(
+        fait('fumee', { joueur: 'bob', depart: { x: 1, y: 2 }, arrivee: { x: 3, y: 4 } }, 0),
+        'classique',
+        'moi',
+      ),
+    ).toBeUndefined();
+  });
+});

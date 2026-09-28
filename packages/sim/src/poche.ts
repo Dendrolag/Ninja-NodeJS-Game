@@ -31,7 +31,7 @@
 import type { Alea, NatureObjet, ObjetDePoche, Position } from '@neon-ninja/shared';
 import { FUMEE, TYPES_OBJETS_DE_POCHE } from '@neon-ninja/shared';
 
-import type { BonusPose, EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
+import type { EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
 import { positionDApparition } from './etat.js';
 import type { Entrees } from './moteur.js';
 
@@ -61,19 +61,19 @@ export function sansPoche(joueur: Joueur): Joueur {
 /**
  * Le joueur met un objet de poche dans sa poche. L'appelant a verifie qu'elle etait vide
  * et retire l'objet de la carte.
+ *
+ * @param position Ou l'objet etait pose, pour le journal.
  */
-export function empocher(etat: EtatPartie, joueur: Joueur, objet: BonusPose): EtatPartie {
-  if (!estUnObjetDePoche(objet.nature)) {
-    return etat;
-  }
-
+export function empocher(
+  etat: EtatPartie,
+  joueur: Joueur,
+  nature: ObjetDePoche,
+  position: Position,
+): EtatPartie {
   return {
     ...etat,
-    joueurs: { ...etat.joueurs, [joueur.id]: { ...joueur, poche: objet.nature } },
-    evenements: [
-      ...etat.evenements,
-      { type: 'objetEmpoche', joueur: joueur.id, nature: objet.nature, position: objet.position },
-    ],
+    joueurs: { ...etat.joueurs, [joueur.id]: { ...joueur, poche: nature } },
+    evenements: [...etat.evenements, { type: 'objetEmpoche', joueur: joueur.id, nature, position }],
   };
 }
 

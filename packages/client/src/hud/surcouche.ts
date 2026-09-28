@@ -17,7 +17,8 @@
  *      defilement et la selection en cours.
  *   3. LA SURCOUCHE NE RECOIT PAS LES CLICS, sauf ce qui en a besoin. Sans cela,
  *      un panneau transparent poserait au joueur un mur invisible entre son doigt
- *      et le terrain. Seul le bouton de capture du mode Tactique les recoit.
+ *      et le terrain. Seuls le bouton de capture du mode Tactique et celui de la poche
+ *      (etape 7.10) les recoivent.
  *
  * LA MISE EN FORME N'EST PAS ICI. Les elements portent des classes; la feuille de
  * style arrive avec les ecrans de l'etape 4.3, qui decidera de l'apparence a
@@ -35,6 +36,7 @@ import type {
   Hud,
   LigneHud,
   ComboHud,
+  PocheHud,
   PointMinimap,
   PorteeMinimap,
 } from './modele.js';
@@ -55,6 +57,11 @@ export interface OptionsSurcouche {
    * Tactique seulement; sans lui, la surcouche ne pose ni bouton ni charges.
    */
   readonly capturer?: () => void;
+  /**
+   * Ce que fait le bouton de la poche: s'en servir (etape 7.10). Sans lui, la carte de la
+   * poche se montre, et aucun bouton n'est pose.
+   */
+  readonly utiliserLaPoche?: () => void;
 }
 
 /** Une surcouche montee, qui se met a jour et se demonte. */
@@ -102,6 +109,7 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
 
   const capture =
     options.capturer === undefined ? undefined : monterCapture(doc, racine, options.capturer);
+  const poche = monterPoche(doc, racine, effets, options.utiliserLaPoche);
 
   options.hote.append(racine);
 
@@ -127,6 +135,7 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
       combo.afficher(hud.combo);
       majClassement(doc, classement, lignes, hud.classement);
       majEffets(doc, effets, cartesDEffets, hud.effets);
+      poche.afficher(hud.poche);
       majMinimap(doc, minimap, points, hud.minimap, options.carte);
       majPortee(portee, hud.portee, options.carte);
       // En Chasse, les charges d'un traqueur sont ses vies (etape 7.3); en Massacre, le
@@ -149,6 +158,7 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
 
     demonter() {
       capture?.demonter();
+      poche.demonter();
       racine.remove();
       lignes.clear();
       points.clear();
@@ -254,6 +264,102 @@ function monterCapture(doc: Document, parent: HTMLElement, capturer: () => void)
 
     demonter() {
       bouton.removeEventListener('pointerdown', surAppui);
+    },
+  };
+}
+
+/** La poche, au HUD: sa carte parmi les effets, et son bouton sur un ecran tactile. */
+interface PocheAuHud {
+  afficher(poche: PocheHud | undefined): void;
+  demonter(): void;
+}
+
+/**
+ * Pose la poche au HUD (etape 7.10), rendus A des planches de docs/design/etape-7-10/.
+ *
+ * LA CARTE se range en tete des effets, sans jauge: la fumee dure tant qu'on la garde. Elle
+ * porte la touche E, que la feuille de style cache sur un ecran tactile. LE BOUTON, un
+ * disque de brume a gauche de la minimap, ne se montre que sur un ecran tactile, et
+ * seulement quand la poche est pleine. Comme celui de capture, il reagit a l'appui, et il
+ * est hors du terrain: un doigt pose dessus ne plante pas la manette.
+ */
+function monterPoche(
+  doc: Document,
+  racine: HTMLElement,
+  effets: HTMLElement,
+  utiliser: (() => void) | undefined,
+): PocheAuHud {
+  // La carte n'est dans la liste des effets que tant que la poche est pleine.
+  const carte = element(doc, 'li', 'hud-effet hud-effet-poche', effets);
+  carte.remove();
+  const icone = element(doc, 'span', 'hud-effet-icone', carte);
+  icone.setAttribute('aria-hidden', 'true');
+  const pictogramme = element(doc, 'span', 'hud-effet-pictogramme', icone);
+  const nom = element(doc, 'span', 'hud-effet-nom', carte);
+  const libelle = element(doc, 'span', 'hud-effet-libelle', nom);
+  element(doc, 'span', 'hud-effet-cible', nom).textContent = 'En poche';
+  const touche = element(doc, 'kbd', 'hud-poche-touche', carte);
+  touche.textContent = 'E';
+
+  let bouton: HTMLButtonElement | undefined;
+  let boutonIcone: HTMLElement | undefined;
+  const surAppui = (evenement: Event): void => {
+    evenement.preventDefault();
+    utiliser?.();
+  };
+
+  if (utiliser !== undefined) {
+    bouton = doc.createElement('button');
+    bouton.type = 'button';
+    bouton.className = 'hud-poche';
+    bouton.style.pointerEvents = 'auto';
+    // Jamais en focus, pour la meme raison que le bouton de capture.
+    bouton.tabIndex = -1;
+    bouton.hidden = true;
+    boutonIcone = element(doc, 'span', 'hud-poche-pictogramme', bouton);
+    boutonIcone.setAttribute('aria-hidden', 'true');
+    bouton.addEventListener('pointerdown', surAppui);
+    racine.append(bouton);
+  }
+
+  /** L'objet affiche, pour ne toucher au document que s'il change. */
+  let affiche: string | undefined;
+
+  return {
+    afficher(poche) {
+      const nature = poche?.nature;
+      if (nature === affiche) {
+        return;
+      }
+      affiche = nature;
+
+      if (poche === undefined) {
+        carte.remove();
+      } else if (carte.parentElement !== effets) {
+        effets.prepend(carte);
+      }
+      if (bouton !== undefined) {
+        bouton.hidden = poche === undefined;
+      }
+
+      if (poche === undefined) {
+        return;
+      }
+
+      const couleur = `#${poche.couleur.toString(16).padStart(6, '0')}`;
+      carte.style.setProperty('--couleur-effet', couleur);
+      pictogramme.style.backgroundImage = `url("${poche.icone}")`;
+      libelle.textContent = poche.libelle;
+
+      if (bouton !== undefined && boutonIcone !== undefined) {
+        bouton.style.setProperty('--couleur-effet', couleur);
+        boutonIcone.style.backgroundImage = `url("${poche.icone}")`;
+        bouton.setAttribute('aria-label', `${poche.libelle} : s’en servir`);
+      }
+    },
+
+    demonter() {
+      bouton?.removeEventListener('pointerdown', surAppui);
     },
   };
 }

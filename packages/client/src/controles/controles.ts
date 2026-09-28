@@ -174,6 +174,25 @@ export class Controles {
     return demande;
   }
 
+  /** Une demande de poche attend-elle d'etre envoyee (etape 7.10). */
+  private pocheDemandee = false;
+
+  /** Le joueur se sert de sa poche: touche E, ou bouton de la poche sur un ecran tactile. */
+  demanderLaPoche(): void {
+    this.pocheDemandee = true;
+  }
+
+  /**
+   * Y a-t-il une demande de poche a envoyer. La lire la consomme, comme un tir: elle part
+   * une fois, et deux demandes entre deux images n'en font qu'une.
+   */
+  prendreLaDemandeDePoche(): boolean {
+    const demande = this.pocheDemandee;
+    this.pocheDemandee = false;
+
+    return demande;
+  }
+
   /**
    * Repart de zero: plus rien d'enfonce, et la prochaine intention sera emise.
    *
@@ -187,5 +206,6 @@ export class Controles {
     this.derniereEmise = IMMOBILE;
     this.localisationDemandee = false;
     this.tirDemande = false;
+    this.pocheDemandee = false;
   }
 }

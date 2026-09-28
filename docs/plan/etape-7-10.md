@@ -123,6 +123,22 @@ Conditions de ROADMAP réunies, plus:
 4. **La Chasse et le Massacre** ont déjà une touche d'action: vérifier sur téléphone que les deux boutons ne se gênent pas.
 5. **La poche prépare l'étape 7.11**: la construire pour deux natures, sans rien coder de la mine.
 
+## Réconciliation pendant l'étape (28 septembre 2026)
+
+Écarts entre la fiche et ce qui a été construit, consignés au journal de `docs/design/README.md`.
+
+1. **Rendus choisis par le porteur du projet** sur la planche `docs/design/etape-7-10/1-fumee.png`: le nuage C, cerné comme les sprites, qui gonfle puis se dissipe en bouffées qui montent; au HUD, la carte A parmi les effets, sans jauge, qui porte la touche E; sur téléphone, le bouton A, un disque de brume à gauche de la minimap, caché quand la poche est vide.
+2. **La poche n'est visible de personne d'autre** (décision 3 révisée par le porteur du projet: « ça trahirait trop les joueurs qui en possèdent »). Aucune marque sur le ninja. La poche ne voyage pas dans le flux d'état, commun à toute la partie: un premier jet la codait dans l'octet des indicateurs d'un joueur (micro-décision 11), retiré. Elle part au seul joueur, par un message `poche`, à chaque changement (`annoncerLesPoches`, dans `ServeurSocket.ts`); la mémoire de ce qui a été annoncé repart de zéro à l'entrée dans une partie et au retour après une coupure, comme la page, qui vide sa poche au lancement.
+3. **Le pictogramme reprend la forme du nuage C**, à la demande du porteur du projet: lobes cernés et trois bouffées (`assets/objets/fumee.svg`). C'est un fichier SVG, comme les pictogrammes des objets du Tactique (étape 7.7): la fiche disait « aucun fichier d'image », un pictogramme d'objet en demande un, et il est dessiné en code.
+4. **Un son à l'activation, que le porteur du projet fournira.** Le nom `fumee` est posé dans la table des sons (`SONS`, `packages/shared/src/ressources.ts`), entendu de tous, comme le nuage se voit de tous; il joue provisoirement le souffle du katana (`katana-swing.mp3`). Une fumée empochée sonne comme un bonus ramassé.
+5. **L'annonce**: à l'empochement, un grand titre « En poche », « Fumée », « Disparaissez quand vous voulez », à la couleur de la fumée. Aucun titre au nuage.
+6. **La touche E** s'ignore dans un champ de saisie, le chat par exemple, et maintenue ne sert qu'une fois. Le rappel des touches en jeu ajoute « E pour la fumée » quand elle est en jeu; l'aide a une section « À garder en poche », et E et le bouton de la poche parmi les commandes.
+7. **Les réglages**: un groupe `objetsDePoche` à la racine des réglages (actif, taux), dans tous les modes. Au formulaire, la fumée est une section du groupe Bonus, sans durée; le récapitulatif du salon a une ligne « Fumée ». Taux par défaut: 15, celui de l'Invincibilité.
+8. **Le nuage** est une couche de la scène à part (`fumees`), au-dessus des personnages et sous les toits: il cache le ninja qui part, et celui qui reparaît en sort. Le nuage d'un autre joueur dans une zone d'invisibilité ne se montre pas, comme l'éclair d'un tir. Les trois scénarios de rendu qui composent leur scène à la main ont reçu le champ `fumees`, comme ils avaient reçu `marques` à l'étape 7.9.
+9. **Le scénario de bout en bout s'appelle `poche.spec.ts`**: `fumee.spec.ts` est le test de fumée (le « smoke test ») de l'étape 0.1. Un premier jet l'avait écrasé, restauré aussitôt depuis Git. Le scénario guide Alice au clavier ou au pouce jusqu'à une fumée, en lisant le serveur sans y écrire, puis la fait s'en servir par E ou par le bouton.
+10. **Une demande servie ne se teste pas dans la room seule**, qui ne laisse pas poser une fumée dans une poche: elle se joue à travers le vrai serveur (`ServeurSocket.poche.test.ts`), dans une arène fermée.
+11. **Le banc**: la fumée ne coûte rien de mesurable; avec la graine du banc, elle change la partie jouée, plus chargée à 300 faux ninjas. Section 21 de `docs/mesures/charge-serveur.md`.
+
 ## Rituel de fin de session
 
 Écrire `docs/handoffs/etape-7-10-handoff.md`: les décisions construites, les écarts à cette fiche, les deux jeux d'empreintes, l'état de la CI. Prochaine action exacte: l'étape 7.11, ou l'étape suivante de la section 3 du ROADMAP. Commiter, pousser, vérifier la CI et la mise en ligne.

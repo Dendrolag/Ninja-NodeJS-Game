@@ -21,7 +21,14 @@
  * document dessine l'interface par-dessus. C'est la pile annoncee par CLAUDE.md.
  */
 
-import type { CampDeChasse, Couleur, LigneClassement, Mode, NatureObjet } from '@neon-ninja/shared';
+import type {
+  CampDeChasse,
+  Couleur,
+  LigneClassement,
+  Mode,
+  NatureObjet,
+  ObjetDePoche,
+} from '@neon-ninja/shared';
 import {
   CHASSE,
   COULEURS_DES_EQUIPES,
@@ -88,6 +95,19 @@ export interface EffetHud {
    * preserver 4). Sa carte le dit, pour qu'il ne se lise pas comme subi.
    */
   readonly auxAutres: boolean;
+  /** L'adresse de l'icone de l'objet, la meme que sur la carte. */
+  readonly icone: string;
+}
+
+/**
+ * Ce que nous avons en poche (etape 7.10): une carte parmi les effets, sans jauge, tant
+ * que l'objet y est, et, sur un ecran tactile, un bouton pour s'en servir. Rendus A des
+ * planches de docs/design/etape-7-10/, choisis par le porteur du projet.
+ */
+export interface PocheHud {
+  readonly nature: ObjetDePoche;
+  readonly libelle: string;
+  readonly couleur: number;
   /** L'adresse de l'icone de l'objet, la meme que sur la carte. */
   readonly icone: string;
 }
@@ -161,6 +181,8 @@ export interface Hud {
   readonly retourEnCours: boolean;
   readonly classement: readonly LigneHud[];
   readonly effets: readonly EffetHud[];
+  /** Ce que nous avons en poche. Absent: la poche est vide (etape 7.10). */
+  readonly poche: PocheHud | undefined;
   readonly minimap: readonly PointMinimap[];
   /** Le disque que la minimap montre, en Tactique (etape 7.7). Absent: toute la carte. */
   readonly portee: PorteeMinimap | undefined;
@@ -184,6 +206,7 @@ export const HUD_VIDE: Hud = {
   retourEnCours: false,
   classement: [],
   effets: [],
+  poche: undefined,
   minimap: [],
   portee: undefined,
   charges: undefined,
@@ -230,6 +253,7 @@ export function construireHud(etat: EtatClient, maintenant: number): Hud {
     retourEnCours: etat.connexion === 'retour',
     classement: classementHud(partie.classement, etat.moi, mode, doubleursDe(etat)),
     effets: effetsHud(etat, maintenant),
+    poche: pocheHud(etat.poche),
     minimap: minimapHud(etat, mode),
     portee: porteeDeLaMinimap(etat, mode),
     charges: chargesHud(etat, mode),
@@ -403,6 +427,22 @@ function classementDesEquipesHud(
     rang: index + 1,
     doubleur: ligne.doubleur === true,
   }));
+}
+
+/** Ce que nous avons en poche, tel que le HUD le montre (etape 7.10). */
+function pocheHud(poche: ObjetDePoche | undefined): PocheHud | undefined {
+  if (poche === undefined) {
+    return undefined;
+  }
+
+  const apparence = APPARENCE_OBJET[poche];
+
+  return {
+    nature: poche,
+    libelle: apparence.libelle,
+    couleur: apparence.couleur,
+    icone: adresseDeLIcone(poche),
+  };
 }
 
 /**

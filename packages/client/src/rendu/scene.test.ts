@@ -29,8 +29,8 @@ import type { FaitDeJeu } from '../faits.js';
 import { fait } from '../faits.js';
 import type { VuePartie } from '../reconstruction.js';
 import type { VueLissee } from './interpolation.js';
-import { SCENE_VIDE, construireScene, couleurEnNombre } from './scene.js';
-import { APPARENCE_EVADE } from './apparence.js';
+import { SCENE_VIDE, construireScene, couleurEnNombre, nuage } from './scene.js';
+import { APPARENCE_EVADE, APPARENCE_FUMEE } from './apparence.js';
 import { adresseDImage, adresseRayee } from './textures.js';
 
 /** Un joueur pose a un endroit, avec le minimum de champs. */
@@ -638,5 +638,73 @@ describe("l'Evade dans la scene (etape 7.9)", () => {
     const scene = construireScene(etatEnJeu('moi'), lissee(vue([joueur('moi', 0, 0)])), 0);
 
     expect(scene.marques).toEqual([]);
+  });
+});
+
+describe('les nuages de fumee (etape 7.10)', () => {
+  /** Une fuite de ce joueur, arrivee a cet instant. */
+  function fuite(joueurId: string, instant: number): FaitDeJeu {
+    return fait(
+      'fumee',
+      { joueur: joueurId, depart: { x: 100, y: 100 }, arrivee: { x: 900, y: 700 } },
+      instant,
+    );
+  }
+
+  /** Les centres des nuages d'une scene: le lobe central de chacun. */
+  function centres(fumees: ReturnType<typeof construireScene>['fumees']): string[] {
+    return fumees
+      .filter((disque) => disque.id.endsWith(':brume6'))
+      .map((disque) => `${String(disque.x)},${String(disque.y)}`);
+  }
+
+  it('pose un nuage au depart et un plus petit a l arrivee, pendant sa vie seulement', () => {
+    const partie = lissee(vue([joueur('moi', 300, 300)]));
+    const etat = { ...etatEnJeu('moi'), journal: [fuite('bob', 1000)] };
+
+    const pendant = construireScene(etat, partie, 1200);
+    expect(centres(pendant.fumees)).toEqual(['100,100', '900,700']);
+
+    const depart = pendant.fumees.find((disque) => disque.id.endsWith(':depart:brume6'));
+    const arrivee = pendant.fumees.find((disque) => disque.id.endsWith(':arrivee:brume6'));
+    expect(arrivee?.rayon).toBeCloseTo((depart?.rayon ?? 0) * APPARENCE_FUMEE.echelleArrivee, 6);
+
+    expect(construireScene(etat, partie, 1000 + APPARENCE_FUMEE.dureeMs).fumees).toEqual([]);
+    expect(construireScene(etat, partie, 999).fumees).toEqual([]);
+  });
+
+  it('cache le nuage d un autre joueur dans une zone d invisibilite, pas le notre', () => {
+    const zone: ZoneVue = {
+      id: 'zone-1',
+      type: 'invisibilite',
+      x: 100,
+      y: 100,
+      rayon: 50,
+      dureeRestanteMs: 5_000,
+    };
+    const partie = lissee(vue([joueur('moi', 300, 300)], [], [zone]));
+
+    const autre = construireScene({ ...etatEnJeu('moi'), journal: [fuite('bob', 0)] }, partie, 100);
+    const mien = construireScene({ ...etatEnJeu('moi'), journal: [fuite('moi', 0)] }, partie, 100);
+
+    expect(centres(autre.fumees)).toEqual(['900,700']);
+    expect(centres(mien.fumees)).toEqual(['100,100', '900,700']);
+  });
+
+  it('gonfle, reste plein, puis palit, et ses bouffees montent a la fin', () => {
+    const debut = nuage('n', 0, 0, 0.1, 1);
+    const plein = nuage('n', 0, 0, 0.4, 1);
+    const fin = nuage('n', 0, 0, 0.9, 1);
+    const lobe = (disques: typeof debut) => disques.find((disque) => disque.id === 'n:brume6');
+
+    expect(lobe(debut)?.rayon).toBeLessThan(lobe(plein)?.rayon ?? 0);
+    expect(lobe(plein)?.remplissage?.alpha).toBe(1);
+    expect(lobe(fin)?.remplissage?.alpha).toBeLessThan(0.4);
+    expect(debut.some((disque) => disque.id.includes('bouffee'))).toBe(false);
+    expect(fin.filter((disque) => disque.id.includes('bouffee'))).toHaveLength(3);
+  });
+
+  it('n a aucun nuage dans une scene vide', () => {
+    expect(SCENE_VIDE.fumees).toEqual([]);
   });
 });

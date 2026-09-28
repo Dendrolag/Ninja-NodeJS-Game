@@ -27,7 +27,14 @@
  * joueur present dans l'etat est un joueur qui joue.
  */
 
-import type { Alea, EffetTactique, NatureBonus, NatureMalus, Position } from '@neon-ninja/shared';
+import type {
+  Alea,
+  EffetTactique,
+  NatureBonus,
+  NatureMalus,
+  ObjetDePoche,
+  Position,
+} from '@neon-ninja/shared';
 import {
   OBJETS,
   OBJETS_TACTIQUES,
@@ -362,15 +369,19 @@ export function ramasser(
     return etat;
   }
 
-  if (objet.categorie === 'bonus' && estUnObjetDePoche(objet.nature)) {
-    return aLaPocheVide(joueur) ? empocher(retirerObjet(etat, objetId), joueur, objet) : etat;
+  if (objet.categorie === 'malus') {
+    return infligerLeMalus(retirerObjet(etat, objetId), joueur, objet, victime);
   }
 
-  const sansObjet = retirerObjet(etat, objetId);
+  const nature = objet.nature;
 
-  return objet.categorie === 'bonus'
-    ? accorderLeBonus(sansObjet, joueur, objet)
-    : infligerLeMalus(sansObjet, joueur, objet, victime);
+  if (estUnObjetDePoche(nature)) {
+    return aLaPocheVide(joueur)
+      ? empocher(retirerObjet(etat, objetId), joueur, nature, objet.position)
+      : etat;
+  }
+
+  return accorderLeBonus(retirerObjet(etat, objetId), joueur, objet, nature);
 }
 
 /**
@@ -378,15 +389,16 @@ export function ramasser(
  *
  * La duree s'ajoute a ce qui reste: ramasser deux bonus de vitesse coup sur coup
  * donne vingt secondes. Comportement a preserver numero 10 de CLAUDE.md.
+ *
+ * @param nature La nature du bonus, qui n'est pas un objet de poche: ceux-la n'ont pas de
+ *               duree, et remplissent la poche (ramasser).
  */
-function accorderLeBonus(etat: EtatPartie, joueur: Joueur, bonus: BonusPose): EtatPartie {
-  const nature = bonus.nature;
-
-  // Les objets de poche n'arrivent jamais ici (ramasser): ils n'ont pas de duree.
-  if (estUnObjetDePoche(nature)) {
-    return etat;
-  }
-
+function accorderLeBonus(
+  etat: EtatPartie,
+  joueur: Joueur,
+  bonus: BonusPose,
+  nature: Exclude<NatureBonus, ObjetDePoche>,
+): EtatPartie {
   const dureeMs = estUnBonusTactique(nature)
     ? dureeDeLEffet(etat.reglages, nature)
     : etat.reglages.bonus.types[nature].dureeS * 1000;

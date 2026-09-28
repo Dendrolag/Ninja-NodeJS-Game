@@ -294,3 +294,21 @@ describe("le x2 de l'Evade au classement du HUD (etape 7.9)", () => {
     ]);
   });
 });
+
+describe('la poche au HUD (etape 7.10)', () => {
+  it('montre ce que nous avons en poche, avec son libelle, sa couleur et son icone', () => {
+    const hud = construireHud(etatEnJeu(vue(), { poche: 'fumee' }), 0);
+
+    expect(hud.poche).toEqual({
+      nature: 'fumee',
+      libelle: 'Fumée',
+      couleur: 0xb8c4d6,
+      icone: expect.stringMatching(/objets\/fumee\.svg$/) as unknown as string,
+    });
+  });
+
+  it('ne montre rien quand la poche est vide, ni hors de partie', () => {
+    expect(construireHud(etatEnJeu(vue()), 0).poche).toBeUndefined();
+    expect(construireHud({ ...ETAT_INITIAL, poche: 'fumee' }, 0).poche).toBeUndefined();
+  });
+});

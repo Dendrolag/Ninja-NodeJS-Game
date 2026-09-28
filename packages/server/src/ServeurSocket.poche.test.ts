@@ -1,8 +1,8 @@
 /**
  * Tests d'integration de la poche et de la fumee, a travers la couche reseau (etape 7.10),
  * avec de vrais clients Socket.IO: un joueur met une fumee en poche, s'en sert par le
- * message utiliserLaPoche, et chacun voit le nuage; le flux montre la poche a tous, puis
- * plus rien une fois la fumee utilisee.
+ * message utiliserLaPoche, et chacun voit le nuage. Sa poche ne regarde que lui: il la
+ * recoit par le message poche, et le flux d'etat, commun a toute la partie, n'en dit rien.
  *
  * Meme cadre que ServeurSocket.evade.test.ts: un vrai serveur sur un vrai port, une horloge
  * manuelle pour le temps du JEU, des attentes explicites pour celui du RESEAU, et une petite
@@ -156,6 +156,20 @@ async function prochain<Nom extends keyof EvenementsServeurVersClient>(
   });
 }
 
+/** Collecte tous les messages de ce nom recus a partir de maintenant. */
+function collecter<Nom extends keyof EvenementsServeurVersClient>(
+  client: ClientTypee,
+  nom: Nom,
+): Parameters<EvenementsServeurVersClient[Nom]>[0][] {
+  const recus: Parameters<EvenementsServeurVersClient[Nom]>[0][] = [];
+
+  client.on(nom, ((charge: Parameters<EvenementsServeurVersClient[Nom]>[0]) => {
+    recus.push(charge);
+  }) as never);
+
+  return recus;
+}
+
 /** Envoie une demande a accuse de reception, et attend la reponse. */
 async function attendreAccuse<T>(emettre: (accuse: (reponse: T) => void) => void): Promise<T> {
   return new Promise((resoudre, rejeter) => {
@@ -277,7 +291,7 @@ function allerChercherLaFumee(room: GameRoom, id: string): void {
 }
 
 describe('la poche et la fumee, a travers le reseau', () => {
-  it('met la fumee en poche, la montre a tous, puis fait fuir le joueur dans un nuage vu de tous', async () => {
+  it('met la fumee en poche, le dit a lui seul, puis le fait fuir dans un nuage vu de tous', async () => {
     const hote = await connecterUnClient();
     const invite = await connecterUnClient();
     const salon = await creer(hote, 'Alice', partie());
@@ -288,6 +302,8 @@ describe('la poche et la fumee, a travers le reseau', () => {
 
     const flux = suivreLeFlux(invite);
     const empoche = prochain(hote, 'objetEmpoche');
+    const pochesDeLHote = collecter(hote, 'poche');
+    const pochesDeLInvite = collecter(invite, 'poche');
     await lancer(hote);
 
     const alice = hote.id as string;
@@ -296,11 +312,11 @@ describe('la poche et la fumee, a travers le reseau', () => {
     expect(room.etat.joueurs[alice]?.poche).toBe('fumee');
     expect(await empoche).toEqual({ nature: 'fumee' });
 
-    // Bob voit la fumee dans la poche d'Alice.
+    // Alice sait ce qu'elle a en poche; Bob n'en voit rien, ni dans le flux, ni par message.
+    await jusquA(() => pochesDeLHote.length === 1);
+    expect(pochesDeLHote).toEqual([{ nature: 'fumee' }]);
     await jusquA(() => flux.partie?.tick === room.etat.tick);
-    expect(flux.partie?.entites.find((entite) => entite.id === alice)).toMatchObject({
-      poche: 'fumee',
-    });
+    expect(flux.partie?.entites.find((entite) => entite.id === alice)).not.toHaveProperty('poche');
 
     const depart = room.etat.joueurs[alice]?.position;
     const chezLHote = prochain(hote, 'fumee');
@@ -318,8 +334,10 @@ describe('la poche et la fumee, a travers le reseau', () => {
     expect(nuage.depart).toEqual({ x: depart?.x, y: depart?.y });
     expect(room.etat.joueurs[alice]?.position).toEqual(nuage.arrivee);
 
-    await jusquA(() => flux.partie?.tick === room.etat.tick);
-    expect(flux.partie?.entites.find((entite) => entite.id === alice)).not.toHaveProperty('poche');
+    // Alice apprend que sa poche est vide; Bob n'a jamais rien recu.
+    await jusquA(() => pochesDeLHote.length === 2);
+    expect(pochesDeLHote).toEqual([{ nature: 'fumee' }, {}]);
+    expect(pochesDeLInvite).toEqual([]);
   });
 
   it('ignore une demande sur une poche vide, sans rien envoyer', async () => {

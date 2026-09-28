@@ -113,12 +113,10 @@ export interface JoueurVu extends EntiteVueCommune {
    * la cible (decision 8 du porteur du projet). Absent sinon.
    */
   readonly doubleur?: true;
-  /**
-   * L'objet que le joueur garde en poche (etape 7.10). Public: une icone sur son ninja dit a
-   * tous qu'il peut s'enfuir, c'est la parade que la fumee laisse a ses poursuivants
-   * (decision 3 du porteur du projet). Absent quand la poche est vide.
-   */
-  readonly poche?: ObjetDePoche;
+  // Ce que le joueur a en poche (etape 7.10) n'est pas ici, et ne doit jamais y venir: le flux
+  // d'etat part a toute la partie, et la poche ne regarde que son porteur (decision du
+  // porteur du projet du 28 septembre 2026, « ca trahirait trop les joueurs qui en
+  // possedent »). Elle lui arrive par le message poche.
 }
 
 /**
@@ -450,11 +448,20 @@ export interface BonusActive {
 }
 
 /**
- * Un joueur vient de mettre un objet dans sa poche (etape 7.10). Adresse a lui seul: il
- * l'annonce en grand titre, et sait desormais qu'il peut s'en servir.
+ * Un joueur vient de mettre un objet dans sa poche (etape 7.10). Adresse a lui seul, qui
+ * l'annonce en grand titre.
  */
 export interface ObjetEmpoche {
   readonly nature: ObjetDePoche;
+}
+
+/**
+ * Ce que ce joueur a en poche (etape 7.10), adresse a lui seul, a chaque changement: rempli,
+ * utilise, vide par une prise, et a son retour apres une coupure. Personne d'autre ne le sait:
+ * la poche ne voyage pas dans le flux d'etat. Sans nature, la poche est vide.
+ */
+export interface PocheVue {
+  readonly nature?: ObjetDePoche;
 }
 
 /**
@@ -1040,6 +1047,9 @@ export interface EvenementsServeurVersClient {
 
   /** Ce joueur vient de mettre un objet dans sa poche (etape 7.10). */
   objetEmpoche: (objet: ObjetEmpoche) => void;
+
+  /** Ce que ce joueur a en poche, a lui seul, a chaque changement (etape 7.10). */
+  poche: (poche: PocheVue) => void;
 
   /** Un joueur de la partie vient de s'enfuir dans un nuage de fumee (etape 7.10). A tous. */
   fumee: (fumee: FumeeVue) => void;

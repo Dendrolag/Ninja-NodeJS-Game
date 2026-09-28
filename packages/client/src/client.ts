@@ -144,6 +144,8 @@ export interface Client extends CommandesDeSession {
   deplacer(intention: IntentionDeplacement): void;
   /** Tire, dans une partie Tactique. Ailleurs, le serveur ignore la demande. */
   capturer(): void;
+  /** Se sert de ce qu'on a en poche (etape 7.10). Sur une poche vide, le serveur l'ignore. */
+  utiliserLaPoche(): void;
   /** Passe dans une equipe, dans le salon d'une partie Equipes (etape 7.2). */
   changerDEquipe(equipe: Equipe): void;
   /** Parle dans le chat. */
@@ -480,6 +482,26 @@ export function creerClient(options: OptionsClient): Client {
     }),
   );
 
+  // La poche et la fumee (etape 7.10): l'objet empoche et le nuage sont des faits; ce que
+  // l'on a en poche est un etat, que le serveur ne dit qu'a nous.
+  ecouter(
+    reseau.sur('objetEmpoche', (charge) => {
+      magasin.appliquer({ type: 'fait', fait: fait('objetEmpoche', charge, maintenant()) });
+    }),
+  );
+
+  ecouter(
+    reseau.sur('fumee', (charge) => {
+      magasin.appliquer({ type: 'fait', fait: fait('fumee', charge, maintenant()) });
+    }),
+  );
+
+  ecouter(
+    reseau.sur('poche', (poche) => {
+      magasin.appliquer({ type: 'poche', poche: poche.nature });
+    }),
+  );
+
   // -- Les amis en direct (etape 2.8) ---------------------------------------
 
   ecouter(
@@ -637,6 +659,10 @@ export function creerClient(options: OptionsClient): Client {
 
     capturer: () => {
       reseau.emettre('capturer');
+    },
+
+    utiliserLaPoche: () => {
+      reseau.emettre('utiliserLaPoche');
     },
 
     changerDEquipe: (equipe) => {

@@ -274,6 +274,24 @@ export function annonceDuFait(fait: FaitDeJeu, mode?: Mode, moi?: string): Annon
     case 'evade':
       return annonceDeLEvade(fait.charge, mode, moi);
 
+    // Un objet de poche (etape 7.10) s'annonce comme un bonus, en grand titre, mais sans
+    // duree: sa ligne dit comment s'en servir.
+    case 'objetEmpoche':
+      return {
+        texte: `En poche : ${APPARENCE_OBJET[fait.charge.nature].libelle}`,
+        ton: 'succes',
+        grandTitre: grandTitre(
+          fait.charge.nature,
+          'En poche',
+          EFFETS_DES_BONUS[fait.charge.nature],
+          false,
+        ),
+      };
+
+    // Un nuage se voit sur la carte: aucun titre, pour ne pas couvrir l'ecran a chaque fuite.
+    case 'fumee':
+      return undefined;
+
     case 'joueurArrive':
       return { texte: `${fait.charge.pseudo} a rejoint la partie`, ton: 'info' };
 

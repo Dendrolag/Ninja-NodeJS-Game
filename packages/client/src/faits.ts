@@ -28,10 +28,12 @@ import type {
   CarteVideeVue,
   CoupDeKatanaVu,
   EvadeVu,
+  FumeeVue,
   JoueurDuSalon,
   JoueurTrancheVu,
   MalusRamasseParMoi,
   MalusSubi,
+  ObjetEmpoche,
   RalliementVu,
   TirDeCaptureVu,
   VieDeTraqueurPerdueVue,
@@ -75,6 +77,10 @@ export interface ChargesDeFait {
   carteVidee: CarteVideeVue;
   /** Ce qui arrive a l'Evade et a son x2 (etape 7.9). Adresse a tous. */
   evade: EvadeVu;
+  /** Ce joueur vient de mettre un objet dans sa poche (etape 7.10). */
+  objetEmpoche: ObjetEmpoche;
+  /** Un joueur de la partie vient de s'enfuir dans un nuage de fumee (etape 7.10). A tous. */
+  fumee: FumeeVue;
   /** Ce joueur vient de rallier des faux ninjas en les touchant, dans la Horde. */
   ralliement: RalliementVu;
   /** Quelqu'un vient d'entrer dans la partie. */

@@ -35,6 +35,7 @@ import type {
   PresenceDUnAmi,
   ProfilDuCompte,
   ProgressionDeFin,
+  ObjetDePoche,
   Refus,
   ReponseDeGeste,
   TitreDuCompte,
@@ -234,5 +235,7 @@ export type Action =
   | { readonly type: 'progressionDeFin'; readonly progression: ProgressionDeFin }
   /** Un fait vient d'arriver: capture, bonus, arrivee, depart. */
   | { readonly type: 'fait'; readonly fait: FaitDeJeu }
+  /** Ce que nous avons en poche vient de changer (etape 7.10). Absent: la poche est vide. */
+  | { readonly type: 'poche'; readonly poche: ObjetDePoche | undefined }
   /** Une demande du joueur a ete refusee. */
   | { readonly type: 'refus'; readonly refus: Refus };

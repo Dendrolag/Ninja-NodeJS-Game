@@ -35,6 +35,7 @@ import type {
   Refus,
   TitreDuCompte,
   NatureObjet,
+  ObjetDePoche,
   PresenceDUnAmi,
   RelationDAmitie,
 } from '@neon-ninja/shared';
@@ -447,6 +448,11 @@ export interface EtatClient {
   readonly partie: VuePartie | undefined;
   /** Les effets en cours sur nous, pour l'affichage seul. */
   readonly effets: readonly EffetActif[];
+  /**
+   * Ce que nous avons en poche (etape 7.10), tel que le serveur nous le dit a chaque
+   * changement. Personne d'autre ne le sait: il ne voyage pas dans le flux d'etat.
+   */
+  readonly poche: ObjetDePoche | undefined;
   /** Les messages de chat recus, du plus ancien au plus recent. */
   readonly messages: readonly MessageAffiche[];
   /** Les faits recents, du plus ancien au plus recent. */
@@ -525,6 +531,7 @@ export const ETAT_INITIAL: EtatClient = {
   compteARebours: undefined,
   partie: undefined,
   effets: [],
+  poche: undefined,
   messages: [],
   journal: [],
   pausePar: undefined,

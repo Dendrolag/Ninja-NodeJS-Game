@@ -160,6 +160,7 @@ describe('les commandes du joueur', () => {
 
     client.deplacer({ deplacement: { x: 1, y: 0 }, enMouvement: true });
     client.capturer();
+    client.utiliserLaPoche();
     client.changerDEquipe('magenta');
     client.parler('salut');
     client.changerReglages({ dureePartieS: 120 });
@@ -173,6 +174,7 @@ describe('les commandes du joueur', () => {
       'rejoindre',
       'deplacer',
       'capturer',
+      'utiliserLaPoche',
       'changerDEquipe',
       'chat',
       'reglages',
@@ -397,5 +399,30 @@ describe('abonnement', () => {
     reseau.recevoir('partieLancee');
 
     expect(appels).toBe(avant);
+  });
+});
+
+describe('la poche et la fumee (etape 7.10)', () => {
+  it('retient ce que le serveur nous dit de notre poche, et l oublie a la partie suivante', () => {
+    entrerEtLancer();
+
+    reseau.recevoir('poche', { nature: 'fumee' });
+    expect(client.etat.poche).toBe('fumee');
+
+    reseau.recevoir('poche', {});
+    expect(client.etat.poche).toBeUndefined();
+
+    reseau.recevoir('poche', { nature: 'fumee' });
+    reseau.recevoir('partieLancee');
+    expect(client.etat.poche).toBeUndefined();
+  });
+
+  it('range l objet empoche et le nuage de fumee dans le fil des faits', () => {
+    entrerEtLancer();
+
+    reseau.recevoir('objetEmpoche', { nature: 'fumee' });
+    reseau.recevoir('fumee', { joueur: 'bob', depart: { x: 1, y: 2 }, arrivee: { x: 3, y: 4 } });
+
+    expect(client.etat.journal.map((fait) => fait.nature)).toEqual(['objetEmpoche', 'fumee']);
   });
 });

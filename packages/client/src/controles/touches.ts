@@ -46,6 +46,13 @@ export const TOUCHE_LOCALISER = 'f';
  */
 export const TOUCHE_CAPTURER = ' ';
 
+/**
+ * La touche qui sert l'objet de la poche (etape 7.10): E, dans tous les modes. Elle tombe sous
+ * le doigt a cote de ZQSD, sur un clavier francais comme sur un clavier qwerty. Comme F, ce
+ * n'est pas une direction.
+ */
+export const TOUCHE_POCHE = 'e';
+
 /** Normalise le nom d'une touche tel que le navigateur le donne. */
 export function nomDeTouche(touche: string): string {
   return touche.toLowerCase();

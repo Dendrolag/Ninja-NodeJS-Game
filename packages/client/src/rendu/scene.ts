@@ -67,6 +67,7 @@ import type { Teinte } from './apparence.js';
 import {
   ALPHA_INVISIBLE,
   APPARENCE_EVADE,
+  APPARENCE_FUMEE,
   APPARENCE_KATANA,
   APPARENCE_OBJET,
   APPARENCE_TIR,
@@ -201,6 +202,11 @@ export interface Scene {
   /** La marque du porteur du x2, par-dessus les personnages et sous les toits (etape 7.9). */
   readonly marques: readonly MarqueScene[];
   /**
+   * Les nuages de fumee (etape 7.10), par-dessus les personnages et sous les toits: le nuage
+   * cache le ninja qui part, et celui qui reparait en sort.
+   */
+  readonly fumees: readonly DisqueScene[];
+  /**
    * L'image de la planche de pluie a montrer, sur une carte qui en a une. Absente
    * d'une scene vide; le rendu l'ignore sur une carte sans pluie.
    */
@@ -217,6 +223,7 @@ export const SCENE_VIDE: Scene = {
   reperes: [],
   indicateur: AUCUN_INDICATEUR,
   marques: [],
+  fumees: [],
   sang: [],
   secousse: { x: 0, y: 0 },
 };
@@ -508,6 +515,7 @@ export function construireScene(
     reperes,
     indicateur,
     marques,
+    fumees: nuagesDeFumee(etat, lissee, maintenant),
     sang: massacre.sang,
     secousse: massacre.secousse,
     imageDePluie: imageDePluie(maintenant),
@@ -611,6 +619,106 @@ function tirsRecents(
   });
 
   return cones;
+}
+
+/**
+ * Les nuages de fumee du moment (etape 7.10): un au depart de chaque fuite recente, un plus
+ * petit a l'arrivee.
+ *
+ * Un nuage d'un autre joueur dans une zone d'invisibilite ne se montre pas: il le trahirait,
+ * comme l'eclair d'un tir. Les notres se voient toujours.
+ */
+function nuagesDeFumee(
+  etat: EtatClient,
+  lissee: VueLissee,
+  maintenant: number,
+): readonly DisqueScene[] {
+  const disques: DisqueScene[] = [];
+
+  etat.journal.forEach((fait, rang) => {
+    if (fait.nature !== 'fumee') {
+      return;
+    }
+
+    const vie = (maintenant - fait.instant) / APPARENCE_FUMEE.dureeMs;
+
+    if (vie < 0 || vie >= 1) {
+      return;
+    }
+
+    const { joueur, depart, arrivee } = fait.charge;
+    const lieux = [
+      ['depart', depart, 1],
+      ['arrivee', arrivee, APPARENCE_FUMEE.echelleArrivee],
+    ] as const;
+
+    for (const [lieu, point, echelle] of lieux) {
+      if (joueur !== etat.moi && dansUneZoneInvisible(lissee, point.x, point.y)) {
+        continue;
+      }
+
+      disques.push(...nuage(`fumee:${String(rang)}:${lieu}`, point.x, point.y, vie, echelle));
+    }
+  });
+
+  return disques;
+}
+
+/**
+ * Les disques d'un nuage de fumee a cet instant de sa vie, de zero a un: ses lobes cernes, qui
+ * gonflent puis palissent, et les bouffees qui montent a la fin.
+ */
+export function nuage(
+  id: string,
+  x: number,
+  y: number,
+  vie: number,
+  echelle: number,
+): readonly DisqueScene[] {
+  const forme = APPARENCE_FUMEE;
+  const e = forme.echelle * echelle;
+  const gonfle = Math.min(vie / forme.partDuGonflement, 1);
+  const opacite =
+    vie < forme.partPleine ? 1 : 1 - (vie - forme.partPleine) / (1 - forme.partPleine);
+  const disques: DisqueScene[] = [];
+
+  const lobe = (suffixe: string, dx: number, dy: number, rayon: number, couleur: number): void => {
+    disques.push({
+      id: `${id}:${suffixe}`,
+      x: x + dx * e * gonfle,
+      y: y + dy * e * gonfle,
+      rayon: rayon * e * gonfle,
+      remplissage: { couleur, alpha: opacite },
+      contour: undefined,
+    });
+  };
+
+  forme.lobes.forEach(([dx, dy, rayon], rang) => {
+    lobe(`cerne${String(rang)}`, dx, dy, rayon + 2, forme.cerne);
+  });
+  forme.lobes.forEach(([dx, dy, rayon], rang) => {
+    lobe(`brume${String(rang)}`, dx, dy, rayon, forme.brume);
+  });
+  forme.lobes.slice(0, 3).forEach(([dx, dy, rayon], rang) => {
+    lobe(`clair${String(rang)}`, dx - 2, dy - 3, rayon * 0.45, forme.clair);
+  });
+
+  if (vie > forme.partDesBouffees) {
+    const montee = (vie - forme.partDesBouffees) / (1 - forme.partDesBouffees);
+
+    forme.bouffees.forEach(([dx, rayon], rang) => {
+      disques.push({
+        id: `${id}:bouffee${String(rang)}`,
+        x: x + dx * e,
+        y: y - (14 + 26 * montee) * e,
+        rayon: rayon * e * (1 - montee * 0.5),
+        remplissage: { couleur: forme.brume, alpha: 1 - montee },
+        contour: undefined,
+      });
+    });
+  }
+
+  return disques;
 }
 
 /**

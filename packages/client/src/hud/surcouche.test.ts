@@ -146,3 +146,74 @@ describe("le badge du x2 de l'Evade (etape 7.9)", () => {
     expect(badges[0]?.textContent).toBe('x2');
   });
 });
+
+describe('la poche au HUD (etape 7.10)', () => {
+  const fumee: NonNullable<Hud['poche']> = {
+    nature: 'fumee',
+    libelle: 'Fumée',
+    couleur: 0xb8c4d6,
+    icone: '/assets/objets/fumee.svg',
+  };
+
+  /** Une surcouche montee avec le bouton de la poche, qui compte ses appuis. */
+  function avecLeBouton() {
+    const hote = document.createElement('div');
+    const appuis = { nombre: 0 };
+    const monte = monterSurcouche({
+      hote,
+      carte: { largeur: 2000, hauteur: 1500 },
+      utiliserLaPoche: () => {
+        appuis.nombre += 1;
+      },
+    });
+
+    return { hote, monte, appuis };
+  }
+
+  it('pose une carte en tete des effets tant que la poche est pleine, et la retire vide', () => {
+    const { hote, monte } = avecLeBouton();
+
+    monte.afficher({ ...hud([effet()]), poche: fumee });
+
+    const cartes = hote.querySelectorAll<HTMLElement>('.hud-effet');
+    const carte = cartes[0];
+    expect(cartes).toHaveLength(2);
+    expect(carte?.classList.contains('hud-effet-poche')).toBe(true);
+    expect(carte?.style.getPropertyValue('--couleur-effet')).toBe('#b8c4d6');
+    expect(carte?.querySelector('.hud-effet-libelle')?.textContent).toBe('Fumée');
+    expect(carte?.querySelector('.hud-poche-touche')?.textContent).toBe('E');
+    expect(carte?.querySelector('.hud-effet-jauge')).toBeNull();
+
+    monte.afficher({ ...hud([effet()]), poche: undefined });
+
+    expect(hote.querySelector('.hud-effet-poche')).toBeNull();
+    expect(hote.querySelectorAll('.hud-effet')).toHaveLength(1);
+  });
+
+  it('montre le bouton quand la poche est pleine, et s en sert a l appui', () => {
+    const { hote, monte, appuis } = avecLeBouton();
+    const bouton = hote.querySelector<HTMLButtonElement>('.hud-poche');
+
+    monte.afficher(hud([]));
+    expect(bouton?.hidden).toBe(true);
+
+    monte.afficher({ ...hud([]), poche: fumee });
+    expect(bouton?.hidden).toBe(false);
+    expect(bouton?.getAttribute('aria-label')).toBe('Fumée : s’en servir');
+
+    bouton?.dispatchEvent(new Event('pointerdown'));
+    expect(appuis.nombre).toBe(1);
+
+    monte.afficher(hud([]));
+    expect(bouton?.hidden).toBe(true);
+  });
+
+  it('ne pose pas de bouton sans commande, mais montre la carte', () => {
+    const { hote, monte } = surcouche();
+
+    monte.afficher({ ...hud([]), poche: fumee });
+
+    expect(hote.querySelector('.hud-poche')).toBeNull();
+    expect(hote.querySelector('.hud-effet-poche')).not.toBeNull();
+  });
+});

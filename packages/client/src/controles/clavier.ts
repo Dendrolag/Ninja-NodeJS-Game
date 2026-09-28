@@ -13,7 +13,13 @@
  */
 
 import type { Controles } from './controles.js';
-import { TOUCHES_DU_JEU, TOUCHE_CAPTURER, TOUCHE_LOCALISER, nomDeTouche } from './touches.js';
+import {
+  TOUCHES_DU_JEU,
+  TOUCHE_CAPTURER,
+  TOUCHE_LOCALISER,
+  TOUCHE_POCHE,
+  nomDeTouche,
+} from './touches.js';
 
 /** Ce qu'il faut pour ecouter un clavier. */
 export interface OptionsClavier {
@@ -76,6 +82,15 @@ export function brancherClavier(controles: Controles, options: OptionsClavier = 
       return;
     }
 
+    // La poche (etape 7.10), dans tous les modes. Maintenue, la touche ne sert qu'une fois;
+    // dans un champ de saisie, c'est une lettre, pas un geste.
+    if (touche === TOUCHE_POCHE) {
+      if (!clavier.repeat && !dansUnChampDeSaisie(clavier.target)) {
+        controles.demanderLaPoche();
+      }
+      return;
+    }
+
     if (!TOUCHES_DU_JEU.has(touche)) {
       return;
     }
@@ -116,4 +131,14 @@ function surUnControleDePage(cible: EventTarget | null): boolean {
   const balise = (cible as { readonly tagName?: unknown } | null)?.tagName;
 
   return typeof balise === 'string' && CONTROLES_DE_PAGE.has(balise);
+}
+
+/** Les elements ou une touche de lettre s'ecrit. */
+const CHAMPS_DE_SAISIE: ReadonlySet<string> = new Set(['INPUT', 'SELECT', 'TEXTAREA']);
+
+/** La touche s'ecrit-elle dans un champ de saisie (le chat, par exemple). */
+function dansUnChampDeSaisie(cible: EventTarget | null): boolean {
+  const balise = (cible as { readonly tagName?: unknown } | null)?.tagName;
+
+  return typeof balise === 'string' && CHAMPS_DE_SAISIE.has(balise);
 }

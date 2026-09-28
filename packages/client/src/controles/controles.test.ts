@@ -308,51 +308,51 @@ describe('la demande de localisation', () => {
   });
 });
 
-describe('le tir du mode Tactique', () => {
-  /**
-   * Une cible d'essai qui transmet l'evenement tel qu'on le decrit: touche maintenue,
-   * element vise. Elle dit si l'evenement a ete intercepte.
-   */
-  function cibleDeClavier(): EventTarget & {
-    envoyer(type: string, evenement: Record<string, unknown>): boolean;
-  } {
-    const ecoutes = new Map<string, EventListenerOrEventListenerObject[]>();
+/**
+ * Une cible d'essai qui transmet l'evenement tel qu'on le decrit: touche maintenue,
+ * element vise. Elle dit si l'evenement a ete intercepte.
+ */
+function cibleDeClavier(): EventTarget & {
+  envoyer(type: string, evenement: Record<string, unknown>): boolean;
+} {
+  const ecoutes = new Map<string, EventListenerOrEventListenerObject[]>();
 
-    return {
-      addEventListener(type: string, ecoute: EventListenerOrEventListenerObject) {
-        ecoutes.set(type, [...(ecoutes.get(type) ?? []), ecoute]);
-      },
-      removeEventListener(type: string, ecoute: EventListenerOrEventListenerObject) {
-        ecoutes.set(
-          type,
-          (ecoutes.get(type) ?? []).filter((autre) => autre !== ecoute),
-        );
-      },
-      dispatchEvent() {
-        return true;
-      },
-      envoyer(type: string, evenement: Record<string, unknown>) {
-        let intercepte = false;
-        const complet = {
-          ...evenement,
-          preventDefault: () => {
-            intercepte = true;
-          },
-        } as unknown as Event;
+  return {
+    addEventListener(type: string, ecoute: EventListenerOrEventListenerObject) {
+      ecoutes.set(type, [...(ecoutes.get(type) ?? []), ecoute]);
+    },
+    removeEventListener(type: string, ecoute: EventListenerOrEventListenerObject) {
+      ecoutes.set(
+        type,
+        (ecoutes.get(type) ?? []).filter((autre) => autre !== ecoute),
+      );
+    },
+    dispatchEvent() {
+      return true;
+    },
+    envoyer(type: string, evenement: Record<string, unknown>) {
+      let intercepte = false;
+      const complet = {
+        ...evenement,
+        preventDefault: () => {
+          intercepte = true;
+        },
+      } as unknown as Event;
 
-        for (const ecoute of ecoutes.get(type) ?? []) {
-          if (typeof ecoute === 'function') {
-            ecoute(complet);
-          } else {
-            ecoute.handleEvent(complet);
-          }
+      for (const ecoute of ecoutes.get(type) ?? []) {
+        if (typeof ecoute === 'function') {
+          ecoute(complet);
+        } else {
+          ecoute.handleEvent(complet);
         }
+      }
 
-        return intercepte;
-      },
-    };
-  }
+      return intercepte;
+    },
+  };
+}
 
+describe('le tir du mode Tactique', () => {
   it('part de la barre d espace dans une partie Tactique, une seule fois', () => {
     const controles = new Controles();
     const cible = cibleDeClavier();
@@ -408,5 +408,59 @@ describe('le tir du mode Tactique', () => {
     controles.reinitialiser();
 
     expect(controles.prendreLaDemandeDeTir()).toBe(false);
+  });
+});
+
+describe('la poche (etape 7.10)', () => {
+  it('part de la touche E dans tous les modes, une seule fois', () => {
+    const controles = new Controles();
+    const cible = cibleDeClavier();
+    brancherClavier(controles, { cible, fenetre: cibleDEssai() });
+
+    cible.envoyer('keydown', { key: 'E' });
+    expect(controles.prendreLaDemandeDePoche()).toBe(true);
+    expect(controles.prendreLaDemandeDePoche()).toBe(false);
+    // Ni un tir, ni une intention de deplacement.
+    expect(controles.prendreLaDemandeDeTir()).toBe(false);
+    expect(controles.aEmettre()).toBeUndefined();
+  });
+
+  it('ne sert qu une fois quand la touche est maintenue', () => {
+    const controles = new Controles();
+    const cible = cibleDeClavier();
+    brancherClavier(controles, { cible, fenetre: cibleDEssai(), capture: true });
+
+    cible.envoyer('keydown', { key: 'e' });
+    controles.prendreLaDemandeDePoche();
+    cible.envoyer('keydown', { key: 'e', repeat: true });
+
+    expect(controles.prendreLaDemandeDePoche()).toBe(false);
+  });
+
+  it('laisse la lettre E a un champ de saisie, le chat par exemple', () => {
+    const controles = new Controles();
+    const cible = cibleDeClavier();
+    brancherClavier(controles, { cible, fenetre: cibleDEssai() });
+
+    for (const tagName of ['INPUT', 'TEXTAREA', 'SELECT']) {
+      cible.envoyer('keydown', { key: 'e', target: { tagName } });
+    }
+
+    expect(controles.prendreLaDemandeDePoche()).toBe(false);
+  });
+
+  it('fait d une rafale entre deux images une seule demande, oubliee a l entree en partie', () => {
+    const controles = new Controles();
+
+    controles.demanderLaPoche();
+    controles.demanderLaPoche();
+
+    expect(controles.prendreLaDemandeDePoche()).toBe(true);
+    expect(controles.prendreLaDemandeDePoche()).toBe(false);
+
+    controles.demanderLaPoche();
+    controles.reinitialiser();
+
+    expect(controles.prendreLaDemandeDePoche()).toBe(false);
   });
 });

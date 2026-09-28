@@ -193,6 +193,11 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
       options.client.capturer();
     }
 
+    // Et la poche, dans tous les modes (etape 7.10).
+    if (options.controles.prendreLaDemandeDePoche()) {
+      options.client.utiliserLaPoche();
+    }
+
     // 2. Les faits recus depuis l'image precedente.
     const faitsNouveaux = faitsArrives(etatPrecedent.journal, etat.journal);
 

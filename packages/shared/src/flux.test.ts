@@ -831,63 +831,9 @@ describe("l'Evade et son x2 (etape 7.9)", () => {
   });
 });
 
-describe('la poche (etape 7.10)', () => {
-  it('fait voyager la poche d un joueur, image puis deltas: elle se remplit, reste, se vide', () => {
-    const parties = [
-      instantane({ tick: 1, entites: [joueur('a', 100, 100), joueur('b', 200, 200)] }),
-      instantane({
-        tick: 2,
-        entites: [joueur('a', 101, 100, { poche: 'fumee' }), joueur('b', 200, 200)],
-      }),
-      instantane({
-        tick: 3,
-        entites: [joueur('a', 102, 100, { poche: 'fumee' }), joueur('b', 201, 200)],
-      }),
-      instantane({ tick: 4, entites: [joueur('a', 900, 700), joueur('b', 202, 200)] }),
-    ];
-    let reference = encoderImage(parties[0] as InstantanePartie).reference;
-
-    for (const suivante of parties.slice(1)) {
-      const trame = encoderDelta(reference, suivante);
-
-      expect(appliquerTrame(reference, trame.octets)).toEqual(quantifierInstantane(suivante));
-      reference = trame.reference;
-    }
-  });
-
-  it('garde la poche d un joueur dans une image, et ne l invente pas a un autre', () => {
-    const partie = instantane({
-      entites: [joueur('a', 10, 10, { poche: 'fumee', doubleur: true }), joueur('b', 20, 20)],
-    });
-    const relue = appliquerTrame(undefined, encoderImage(partie).octets);
-
-    expect(relue).toEqual(quantifierInstantane(partie));
-    expect(relue?.entites[0]).toMatchObject({ poche: 'fumee', doubleur: true });
-    expect(relue?.entites[1]).not.toHaveProperty('poche');
-  });
-
-  it('tient la poche dans l octet des indicateurs: une image avec poche pese autant qu une sans', () => {
-    const sans = encoderImage(instantane({ entites: [joueur('a', 10, 10)] })).octets;
-    const avec = encoderImage(
-      instantane({ entites: [joueur('a', 10, 10, { poche: 'fumee' })] }),
-    ).octets;
-
-    expect(avec.length).toBe(sans.length);
-    expect(avec).not.toEqual(sans);
-  });
-
-  it('refuse un code de poche inconnu', () => {
-    const sans = encoderImage(instantane({ entites: [joueur('a', 10, 10)] })).octets;
-    const avec = encoderImage(
-      instantane({ entites: [joueur('a', 10, 10, { poche: 'fumee' })] }),
-    ).octets;
-    const rang = avec.findIndex((octet, indice) => octet !== sans[indice]);
-    const faussee = Uint8Array.from(avec);
-    faussee[rang] = (faussee[rang] as number) | 0x70;
-
-    expect(() => appliquerTrame(undefined, faussee)).toThrow(ErreurDeTrame);
-  });
-
+describe('la fumee (etape 7.10)', () => {
+  // La poche d'un joueur ne voyage pas dans ce flux: il part a toute la partie, et elle ne
+  // regarde que son porteur. Seule la fumee posee au sol, visible de tous, y passe.
   it('fait voyager une fumee posee sur la carte', () => {
     const partie = instantane({
       objets: [

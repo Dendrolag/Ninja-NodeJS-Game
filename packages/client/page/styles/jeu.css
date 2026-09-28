@@ -684,6 +684,36 @@
   color: var(--texte-tertiaire);
 }
 
+/*
+ * La poche (etape 7.10), rendus A des planches de docs/design/etape-7-10/: une carte en tete
+ * des effets, sans jauge, qui porte la touche E; et, sur un ecran tactile seulement, un
+ * disque de brume a gauche de la minimap. La carte quitte la liste et le bouton se cache
+ * quand la poche est vide.
+ */
+.hud-effet-poche {
+  order: -1;
+  padding-bottom: 9px;
+}
+
+.hud-poche[hidden] {
+  display: none;
+}
+
+.hud-poche-touche {
+  padding: 2px 9px;
+  border-radius: 6px;
+  background: var(--couleur-effet);
+  box-shadow: 0 0 8px var(--couleur-effet);
+  color: #0b1020;
+  font-family: var(--police-donnees);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.hud-poche {
+  display: none;
+}
+
 .hud-charges {
   display: flex;
   gap: 5px;
@@ -866,6 +896,40 @@
     min-width: 120px;
     padding: 16px 18px;
     font-size: 15px;
+  }
+
+  /* Pas de clavier: la touche E ne dit rien. Le bouton de la poche la remplace. */
+  .hud-poche-touche {
+    display: none;
+  }
+
+  .hud-poche {
+    position: absolute;
+    right: calc(14px + var(--hauteur-minimap) + 12px);
+    bottom: var(--marge-du-bas);
+    display: grid;
+    place-items: center;
+    width: 72px;
+    height: 72px;
+    padding: 0;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-radius: 50%;
+    background: var(--couleur-effet);
+    box-shadow: 0 0 16px var(--couleur-effet);
+    cursor: pointer;
+    touch-action: none;
+  }
+
+  .hud-poche:active {
+    transform: scale(0.9);
+  }
+
+  .hud-poche-pictogramme {
+    width: 60%;
+    height: 60%;
+    background-position: 0 0;
+    background-repeat: no-repeat;
+    background-size: 200% 100%;
   }
 }
 

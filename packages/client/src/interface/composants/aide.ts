@@ -19,6 +19,7 @@
 import type {
   Mode,
   NatureObjet,
+  ObjetDePoche,
   TypeBonus,
   TypeBonusTactique,
   TypeMalus,
@@ -52,6 +53,12 @@ const EFFETS_BONUS: Readonly<Record<TypeBonus, string>> = {
   vitesse: 'Pour ceux qui trouvaient le jeu trop lent.',
   invincibilite: 'Le nom parle de lui-même, non ?',
   revelation: 'Les vrais ninjas ne peuvent plus faire semblant.',
+};
+
+/** Ce que fait chaque objet de poche (etape 7.10). */
+const EFFETS_POCHE: Readonly<Record<ObjetDePoche, string>> = {
+  fumee:
+    'Gardez-la pour le bon moment. Un nuage, et vous reparaissez loin de là, à l’abri des autres. Personne ne sait que vous l’avez.',
 };
 
 /** Ce que fait chaque malus (etape 4.5). */
@@ -98,9 +105,11 @@ const COMMANDES: readonly (readonly [string, string])[] = [
   ['Q, A ou flèche gauche', 'Aller à gauche'],
   ['D ou flèche droite', 'Aller à droite'],
   ['F', 'Localiser votre ninja'],
+  ['E', 'Vous servir de ce que vous avez en poche : la fumée'],
   ['Espace', 'Capturer en Tactique et en Chasse, trancher en Massacre'],
   ['Pouce sur l’écran', 'Se déplacer, sur téléphone et tablette'],
   ['Bouton Capturer ou Katana', 'La même chose qu’Espace, sur téléphone et tablette'],
+  ['Bouton de la poche', 'La même chose que E, sur téléphone et tablette'],
 ];
 
 /** Les regles exactes de chaque mode, sous son texte de presentation. */
@@ -175,6 +184,13 @@ export function monterAide(doc: Document): Fenetre {
       ),
     ),
     liste(doc, 'Bonus', Object.entries(EFFETS_BONUS) as [TypeBonus, string][], true),
+    liste(
+      doc,
+      'À garder en poche',
+      Object.entries(EFFETS_POCHE) as [ObjetDePoche, string][],
+      true,
+      'Votre poche ne tient qu’un objet, jusqu’à ce que vous vous en serviez. Pleine, vous passez sur le suivant sans le prendre. Se faire prendre la vide.',
+    ),
     liste(
       doc,
       'Malus, qui frappent les autres',

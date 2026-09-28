@@ -264,6 +264,47 @@ export const APPARENCE_OBJET: Readonly<
 };
 
 /**
+ * Le nuage de la fumee (etape 7.10), rendu C de la planche docs/design/etape-7-10/, choisi par
+ * le porteur du projet: un nuage cerne comme les sprites, qui gonfle, cache le ninja, puis se
+ * dissipe en bouffees qui montent. Un au depart, un plus petit a l'arrivee.
+ *
+ * Les lobes et les bouffees sont en pixels du sprite (32 de cote), a l'echelle du depart.
+ */
+export const APPARENCE_FUMEE = {
+  /** Duree de vie d'un nuage, en millisecondes. */
+  dureeMs: 600,
+  /** Le nuage d'arrivee, plus petit que celui du depart: le ninja y reparait. */
+  echelleArrivee: 0.8,
+  /** Le nuage gonfle pendant cette part de sa vie. */
+  partDuGonflement: 0.3,
+  /** Il reste plein jusqu'a cette part de sa vie, puis palit. */
+  partPleine: 0.55,
+  /** Les bouffees montent a partir de cette part de sa vie. */
+  partDesBouffees: 0.35,
+  /** Combien de pixels de la carte vaut un pixel du dessin, au depart. */
+  echelle: 0.77,
+  brume: 0xb8c4d6,
+  clair: 0xeef2fa,
+  cerne: 0x6f7c96,
+  /** Les lobes: decalage en x, en y, et rayon. */
+  lobes: [
+    [-12, 2, 10],
+    [-5, -7, 11],
+    [6, -8, 11],
+    [13, 1, 10],
+    [6, 9, 10],
+    [-6, 9, 10],
+    [0, 0, 12],
+  ],
+  /** Les bouffees qui montent a la fin: decalage en x, et rayon. */
+  bouffees: [
+    [-8, 4],
+    [3, 5],
+    [12, 3.5],
+  ],
+} as const;
+
+/**
  * L'Evade (etape 7.9): ses rayures, son halo, et la marque du joueur qui porte son x2.
  *
  * Rendus choisis par le porteur du projet sur la planche docs/design/etape-7-9/: le skin C,

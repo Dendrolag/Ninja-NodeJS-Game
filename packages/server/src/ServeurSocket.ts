@@ -72,6 +72,7 @@ import type {
   IntentionDeplacement,
   InvitationEnvoyee,
   LimiteDebit,
+  ObjetDePoche,
   PartiePublique,
   ProgressionDeFin,
   ReglagesPartiels,
@@ -206,6 +207,12 @@ interface Connexion {
   readonly seaux: Record<FamilleDebit, SeauAJetons>;
   /** Instant du dernier message accepte ou refuse, par famille. */
   readonly derniereFois: Record<FamilleDebit, number>;
+  /**
+   * Ce que cette connexion sait de la poche de son joueur (etape 7.10): le dernier contenu
+   * annonce, vide au depart. Une connexion revenue apres une coupure part vide, et recoit donc
+   * la poche au battement suivant.
+   */
+  pocheAnnoncee: ObjetDePoche | undefined;
 }
 
 /** La reponse a une demande d'entree, de creation ou de retour. */
@@ -508,6 +515,7 @@ export class ServeurSocket {
         capture: maintenant,
         poche: maintenant,
       },
+      pocheAnnoncee: undefined,
     });
 
     socket.on('rejoindre', (demande, accuse) => {
@@ -751,6 +759,8 @@ export class ServeurSocket {
 
     connexion.session = place.session;
     connexion.idRoom = room.id;
+    // La page repart d'une poche vide: le prochain battement lui redit la sienne (etape 7.10).
+    connexion.pocheAnnoncee = undefined;
     void socket.join(room.id);
     this.amis?.entree(socket.id, room.id);
 
@@ -1290,6 +1300,29 @@ export class ServeurSocket {
         envoyer(destinataire.socket, notification);
       }
     }
+
+    this.annoncerLesPoches(room);
+  }
+
+  /**
+   * Dit a chaque joueur ce qu'il a en poche, a lui seul, quand cela change (etape 7.10).
+   *
+   * La poche ne voyage pas dans le flux d'etat, commun a toute la partie: la montrer aux
+   * autres trahirait ceux qui en ont une (decision du porteur du projet du 28 septembre
+   * 2026), et un client modifie lirait ce que la page ne dessine pas. Elle se lit donc sur
+   * l'etat, apres le battement, et part a la seule connexion du joueur.
+   */
+  private annoncerLesPoches(room: GameRoom): void {
+    for (const [id, joueur] of Object.entries(room.etat.joueurs)) {
+      const connexion = this.connexionDuJoueur(id);
+
+      if (connexion?.idRoom !== room.id || connexion.pocheAnnoncee === joueur.poche) {
+        continue;
+      }
+
+      connexion.pocheAnnoncee = joueur.poche;
+      connexion.socket.emit('poche', joueur.poche === undefined ? {} : { nature: joueur.poche });
+    }
   }
 
   /** Le flux d'etat d'une partie, cree a son premier besoin. */
@@ -1613,6 +1646,8 @@ export class ServeurSocket {
 
     connexion.session = session;
     connexion.idRoom = room.id;
+    // Une nouvelle partie part d'une poche vide, ici comme dans la page (etape 7.10).
+    connexion.pocheAnnoncee = undefined;
     void socket.join(room.id);
     this.amis?.entree(socket.id, room.id);
 

@@ -52,6 +52,7 @@ function pageDeLaPluie(carte: string, pluie: boolean): string {
     reperes: [],
     indicateur: { disques: [], parts: [], traits: [] },
     marques: [],
+    fumees: [],
     sang: [],
     secousse: { x: 0, y: 0 },
   };

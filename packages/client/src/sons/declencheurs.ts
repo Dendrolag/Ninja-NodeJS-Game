@@ -100,6 +100,14 @@ export function sonDuFait(fait: FaitDeJeu, moi?: string, mode?: Mode): NomDeSon 
     case 'bonusActive':
       return 'bonusRamasse';
 
+    // La poche (etape 7.10): une fumee empochee sonne comme un bonus ramasse, chez nous; un
+    // nuage s'entend de tous, comme il se voit de tous.
+    case 'objetEmpoche':
+      return 'bonusRamasse';
+
+    case 'fumee':
+      return 'fumee';
+
     case 'malusRamasse':
     case 'malusSubi':
       return 'malusRamasse';

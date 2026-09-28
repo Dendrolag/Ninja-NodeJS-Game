@@ -403,6 +403,8 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   // texte de son badge.
   const marques = new Graphics();
   const textesDesMarques = new Container();
+  // Les nuages de fumee, au meme niveau: ils cachent le ninja qui part (etape 7.10).
+  const fumees = new Graphics();
   const premierPlan = new Container();
   const reperes = new Graphics();
   /** Le numero de l'image en cours: il marque les personnages que la scene nomme encore. */
@@ -418,6 +420,7 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
     indicateur,
     marques,
     textesDesMarques,
+    fumees,
     premierPlan,
     reperes,
   );
@@ -583,6 +586,7 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       majPersonnages(spritesEntites, entites, scene.entites, champ, numeroDImage, calquesParImage);
       dessinerLIndicateur(indicateur, scene.indicateur, champ);
       dessinerLesMarques(marques, textesDesMarques, badges, scene.marques);
+      dessinerLesDisques(fumees, scene.fumees, champ);
       dessinerLesReperes(reperes, scene.reperes);
     },
 

@@ -125,13 +125,15 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
     creer(doc, 'span', {
       classe: 'jeu-rappel',
       texte:
-        mode === 'chasse'
+        (mode === 'chasse'
           ? 'ZQSD ou flèches · Espace pour tirer, en traqueur · F pour vous localiser'
           : mode === 'massacre'
             ? 'ZQSD ou flèches · Espace pour trancher · F pour vous localiser'
             : tactique
               ? 'ZQSD ou flèches · Espace pour capturer · F pour vous localiser'
-              : 'ZQSD ou flèches · F pour vous localiser',
+              : 'ZQSD ou flèches · F pour vous localiser') +
+        // La touche de la poche, quand la fumee est en jeu (etape 7.10).
+        (reglages.objetsDePoche.fumee.actif ? ' · E pour la fumée' : ''),
     }),
     bouton(
       doc,
@@ -230,6 +232,10 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
             },
           }
         : {}),
+      // Le bouton de la poche, dans tous les modes (etape 7.10).
+      utiliserLaPoche: () => {
+        controles.demanderLaPoche();
+      },
     });
     aRetirer.push(() => {
       surcouche.demonter();

@@ -151,6 +151,7 @@ export type {
   PartieEnPause,
   PartiePublique,
   PlaceEnPartie,
+  PocheVue,
   PresenceDUnAmi,
   ProgressionDeFin,
   ProgressionEnregistree,

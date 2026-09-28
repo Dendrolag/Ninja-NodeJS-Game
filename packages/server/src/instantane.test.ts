@@ -723,11 +723,11 @@ describe('la poche dans la projection (etape 7.10)', () => {
     return { ...etat, joueurs: { ...etat.joueurs, alice: { ...alice, poche: 'fumee' } } };
   }
 
-  it('montre a tous ce qu un joueur a en poche, et rien pour une poche vide', () => {
-    const entites = instantaneDe(aliceEnPoche()).entites;
+  it('ne montre a personne ce qu un joueur a en poche: le flux part a toute la partie', () => {
+    const avec = instantaneDe(aliceEnPoche());
 
-    expect(entites.find((entite) => entite.id === 'alice')).toMatchObject({ poche: 'fumee' });
-    expect(entites.find((entite) => entite.id === 'bob')).not.toHaveProperty('poche');
+    expect(avec.entites.find((entite) => entite.id === 'alice')).not.toHaveProperty('poche');
+    expect(avec).toEqual(instantaneDe(partieADeux()));
   });
 
   it('annonce l objet empoche a son seul ramasseur, et la fumee a tous', () => {

@@ -586,6 +586,8 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
         compteARebours: undefined,
         partie: undefined,
         effets: [],
+        // Le serveur redit la poche au premier battement, a l'entree comme au retour.
+        poche: undefined,
         journal: [],
         fin: undefined,
         progressionDeFin: undefined,
@@ -635,6 +637,10 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
         journal: ajouter(etat.journal, action.fait, MAX_JOURNAL),
         effets: effetsApres(etat.effets, action.fait),
       };
+
+    // Ce que nous avons en poche, que le serveur ne dit qu'a nous (etape 7.10).
+    case 'poche':
+      return { ...etat, ecran, poche: action.poche };
 
     case 'refus':
       return { ...etat, ecran, refus: action.refus };

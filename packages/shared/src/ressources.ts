@@ -254,6 +254,11 @@ export const SONS = {
   tirFusil: 'shotgun-wave.mp3',
   /** Une de nos charges vient de revenir, en Tactique (etape 5.5). */
   rechargeFusil: 'shotgun-reload.mp3',
+  /**
+   * Un joueur s'enfuit dans un nuage de fumee (etape 7.10), entendu de tous. PROVISOIRE: le
+   * souffle du katana, en attendant le son que le porteur du projet fournira.
+   */
+  fumee: 'katana-swing.mp3',
 } as const;
 
 /** Nom d'un son ponctuel. */

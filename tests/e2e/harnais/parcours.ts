@@ -517,6 +517,37 @@ export function ramasserUnBonusTactique(
 }
 
 /**
+ * Mission: ce joueur met une fumee dans sa poche (etape 7.10).
+ *
+ * Il vise les fumees posees sur la carte qu'il peut atteindre avant qu'elles disparaissent,
+ * comme les bonus du Tactique, et la mission est accomplie quand le serveur la lui compte
+ * en poche.
+ */
+export function ramasserUneFumee(partie: GameRoom, pseudo: string, commande: Commande): Mission {
+  return {
+    nom: `${pseudo} met une fumee dans sa poche`,
+    commande,
+    delaiMs: DELAI_CAPTURE_DE_BOT_MS,
+    situation: () => {
+      const position = joueurNomme(partie, pseudo).position;
+
+      return {
+        terrain: partie.etat.terrain,
+        position,
+        cibles: Object.values(partie.etat.objets)
+          .filter(
+            (objet) =>
+              objet.nature === 'fumee' &&
+              objet.dureeDeVieRestanteMs >= tempsPourAtteindreMs(position, objet.position),
+          )
+          .map((objet) => objet.position),
+      };
+    },
+    accomplie: () => joueurNomme(partie, pseudo).poche === 'fumee',
+  };
+}
+
+/**
  * Le temps qu'il faut a un joueur pour atteindre un point, au plus, en millisecondes.
  *
  * La distance a vol d'oiseau, allongee pour les detours autour des murs, a vitesse de

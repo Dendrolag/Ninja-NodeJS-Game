@@ -203,8 +203,8 @@ function entiteVue(etat: EtatPartie, entite: Joueur | Bot): EntiteVue {
       ...armeVue(etat, entite.id),
       // Le porteur du x2 se voit de tous (etape 7.9, decision 8).
       ...(porteLeDoubleur(etat, entite.id) ? { doubleur: true as const } : {}),
-      // Ce qu'il a en poche aussi: c'est la parade laissee a ses poursuivants (etape 7.10).
-      ...(entite.poche === undefined ? {} : { poche: entite.poche }),
+      // Pas sa poche (etape 7.10): elle ne regarde que lui, et part a lui seul
+      // (ServeurSocket, diffuserLeBattement).
     };
   }
 
