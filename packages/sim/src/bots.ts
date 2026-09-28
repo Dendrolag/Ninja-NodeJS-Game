@@ -54,6 +54,7 @@ import { trajetTenable } from './collisions.js';
 import { couleurDeBot } from './couleurs.js';
 import { resoudreDeplacement } from './deplacement.js';
 import { perdreLeDoubleur } from './evade.js';
+import { sansPoche } from './poche.js';
 import { aLaLongueur, directionDuVecteur } from './direction.js';
 import type { Bot, BotNoir, BotOrdinaire, EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
 import {
@@ -796,8 +797,9 @@ function depouiller(
       bots,
       joueurs: {
         ...etat.joueurs,
+        // Une prise vide la poche (etape 7.10).
         [victime.id]: {
-          ...victime,
+          ...sansPoche(victime),
           position: place.valeur,
           direction: 'immobile',
           protectionSpawnRestanteMs: DUREES.PROTECTION_SPAWN_MS,

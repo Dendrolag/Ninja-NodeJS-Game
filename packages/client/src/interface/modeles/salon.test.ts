@@ -183,9 +183,18 @@ describe('modeleSalon', () => {
       // L'Evade, en jeu par defaut hors de la Chasse (etape 7.9).
       'L’Évadé': 'Une fois, au hasard',
       Bonus: '3/3',
+      // La fumee, en jeu par defaut dans tous les modes (etape 7.10).
+      Fumée: 'À garder en poche',
       Malus: '3/3',
       'Zones spéciales': '4/4',
     });
+  });
+
+  it('dit la fumee desactivee (etape 7.10)', () => {
+    const reglages = completerReglages({ objetsDePoche: { fumee: { actif: false } } });
+    const lignes = modeleSalon(etat(salon('bob', { reglages })))?.recapitulatif;
+
+    expect(lignes?.find((ligne) => ligne.libelle === 'Fumée')?.valeur).toBe('Désactivée');
   });
 
   it('compte les objets du Tactique dans ce mode seulement (etape 7.7)', () => {

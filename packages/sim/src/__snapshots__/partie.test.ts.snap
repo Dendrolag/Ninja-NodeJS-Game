@@ -141,3 +141,76 @@ exports[`partie complete > produit l instantane de reference d une partie avec l
   ],
 }
 `;
+
+exports[`partie complete > produit l instantane de reference d une partie avec la fumee (etape 7.10) 1`] = `
+{
+  "alea": 3053696871,
+  "bots": {
+    "noirs": 2,
+    "ordinaires": 30,
+    "total": 32,
+  },
+  "capturesParBotNoirSubies": {
+    "alice": 0,
+    "bob": 0,
+    "chloe": 0,
+  },
+  "classement": [
+    {
+      "botsNoirsDetruits": 0,
+      "botsPortes": 7,
+      "captures": 0,
+      "id": "chloe",
+      "points": 7,
+    },
+    {
+      "botsNoirsDetruits": 0,
+      "botsPortes": 4,
+      "captures": 0,
+      "id": "alice",
+      "points": 4,
+    },
+    {
+      "botsNoirsDetruits": 0,
+      "botsPortes": 1,
+      "captures": 1,
+      "id": "bob",
+      "points": 1,
+    },
+  ],
+  "compteurIdentifiants": 58,
+  "evenements": {
+    "captureJoueur": 1,
+    "fumee": 1,
+    "objetEmpoche": 1,
+    "ralliement": 12,
+  },
+  "objetsPoses": 1,
+  "partieTerminee": true,
+  "poches": {
+    "alice": null,
+    "bob": null,
+    "chloe": null,
+  },
+  "positions": {
+    "alice": {
+      "x": 400,
+      "y": 400,
+    },
+    "bob": {
+      "x": 1672.03,
+      "y": 257.29,
+    },
+    "chloe": {
+      "x": 969.19,
+      "y": 1326.11,
+    },
+  },
+  "tempsEcouleMs": 60000,
+  "tick": 1200,
+  "zonesActives": [
+    "chaos",
+    "attraction",
+  ],
+}
+`;

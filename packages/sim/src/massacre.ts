@@ -34,6 +34,7 @@ import { COMBO, DUREES, MASSACRE, TACTIQUE, multiplicateurDuCombo } from '@neon-
 import type { PerteFaceAuBotNoir } from './bots.js';
 import { inscrireAuJournal } from './capture.js';
 import { attraperLEvade, cederLeDoubleur, evadeSurLaCarte } from './evade.js';
+import { sansPoche } from './poche.js';
 import type {
   Bot,
   EtatDeMassacre,
@@ -377,8 +378,9 @@ export function tuerUnJoueur(
       joueursCaptures: inscrireAuJournal(tueur.joueursCaptures, victimeId, victime.pseudo),
       tempsDepuisDerniereCaptureMs: 0,
     },
+    // Une mort vide la poche (etape 7.10).
     [victimeId]: {
-      ...victime,
+      ...sansPoche(victime),
       position: place.valeur,
       direction: 'immobile',
       protectionSpawnRestanteMs: DUREES.PROTECTION_SPAWN_MS,

@@ -259,6 +259,8 @@ export const APPARENCE_OBJET: Readonly<
   rechargeLente: { libelle: 'Recharge lente', couleur: COULEURS_TACTIQUES.recharge },
   viseeLarge: { libelle: 'Visée large', couleur: COULEURS_TACTIQUES.visee },
   viseeEtroite: { libelle: 'Visée étroite', couleur: COULEURS_TACTIQUES.visee },
+  // La fumee (etape 7.10): un gris de brume, qui tranche sur les neons sans leur ressembler.
+  fumee: { libelle: 'Fumée', couleur: 0xb8c4d6 },
 };
 
 /**

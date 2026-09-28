@@ -365,6 +365,12 @@ export class GameRoom {
    */
   private readonly tirsDemandes = new Set<IdentifiantEntite>();
 
+  /**
+   * Les joueurs qui ont demande a se servir de leur poche depuis le battement precedent
+   * (etape 7.10). Des gestes ponctuels, effaces a chaque battement, comme les tirs.
+   */
+  private readonly pochesDemandees = new Set<IdentifiantEntite>();
+
   /** Ce que chaque joueur a fait de notable depuis le lancement (etape 3.8). */
   private releve: ReleveDesExploits = RELEVE_VIDE;
 
@@ -552,6 +558,7 @@ export class GameRoom {
     this.absents.delete(id);
     delete this.intentions[id];
     this.tirsDemandes.delete(id);
+    this.pochesDemandees.delete(id);
 
     if (this.hoteCourant === id) {
       this.hoteCourant = this.successeur();
@@ -584,6 +591,7 @@ export class GameRoom {
     this.absents.add(id);
     delete this.intentions[id];
     this.tirsDemandes.delete(id);
+    this.pochesDemandees.delete(id);
 
     if (this.hoteCourant === id) {
       this.hoteCourant = this.presentLePlusAncien() ?? id;
@@ -834,22 +842,39 @@ export class GameRoom {
   }
 
   /**
-   * Les entrees du battement: les intentions conservees, et les tirs demandes depuis le
-   * precedent. Sans tir demande, ce sont les intentions elles-memes.
+   * Retient qu'un joueur se sert de sa poche au prochain battement (etape 7.10).
+   *
+   * Memes regles qu'un tir: ignoree pour un joueur absent ou hors d'une partie en cours.
+   * La room ne sait pas ce que contient la poche: une poche vide, c'est le moteur qui
+   * l'ignore.
+   */
+  demanderLaPoche(id: IdentifiantEntite): void {
+    if (this.statutCourant !== 'enCours' || this.partie.joueurs[id] === undefined) {
+      return;
+    }
+
+    this.pochesDemandees.add(id);
+  }
+
+  /**
+   * Les entrees du battement: les intentions conservees, et les tirs et les poches demandes
+   * depuis le precedent. Sans rien de demande, ce sont les intentions elles-memes.
    */
   private entreesDuBattement(): Entrees {
-    if (this.tirsDemandes.size === 0) {
+    if (this.tirsDemandes.size === 0 && this.pochesDemandees.size === 0) {
       return this.intentions;
     }
 
     const entrees: Record<IdentifiantEntite, EntreeJoueur> = { ...this.intentions };
+    // Un joueur qui tire ou se sert de sa poche sans s'etre encore deplace reste immobile.
+    const immobile: EntreeJoueur = { deplacement: { x: 0, y: 0 }, enMouvement: false };
 
     for (const id of this.tirsDemandes) {
-      // Un joueur qui tire sans s'etre encore deplace reste immobile.
-      entrees[id] = {
-        ...(this.intentions[id] ?? { deplacement: { x: 0, y: 0 }, enMouvement: false }),
-        capturer: true,
-      };
+      entrees[id] = { ...(entrees[id] ?? immobile), capturer: true };
+    }
+
+    for (const id of this.pochesDemandees) {
+      entrees[id] = { ...(entrees[id] ?? immobile), utiliserLaPoche: true };
     }
 
     return entrees;
@@ -876,6 +901,7 @@ export class GameRoom {
 
     this.partie = tick(this.partie, this.entreesDuBattement(), dtMs);
     this.tirsDemandes.clear();
+    this.pochesDemandees.clear();
     this.releve = releverLeBattement(this.releve, this.partie, this.cleDuJoueur);
 
     // Prevenir AVANT de constater la fin: le dernier battement d'une partie est

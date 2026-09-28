@@ -128,6 +128,15 @@ export {
   tuerUnJoueur,
 } from './massacre.js';
 
+export {
+  aLaPocheVide,
+  destinationDeLaFumee,
+  empocher,
+  estUnObjetDePoche,
+  sansPoche,
+  utiliserLesPoches,
+} from './poche.js';
+
 export type {
   BonusPose,
   BonusRamasse,
@@ -153,6 +162,7 @@ export type {
   EtatPartie,
   EtatTactiqueDuJoueur,
   EvenementPartie,
+  FuiteDansLaFumee,
   GuerrierEnMassacre,
   HistoriqueCapture,
   IdentifiantEntite,
@@ -161,6 +171,7 @@ export type {
   MalusPose,
   MalusRamasse,
   MortParLeKatana,
+  ObjetEmpoche,
   ObjetRamassable,
   OptionsAjoutBot,
   OptionsAjoutJoueur,

@@ -52,6 +52,7 @@ import type {
   EffetTactique,
   NatureBonus,
   NatureMalus,
+  ObjetDePoche,
   TypeBonus,
   TypeMalus,
   Visee,
@@ -223,6 +224,12 @@ export interface Joueur extends Entite {
    * capturedByBlackBot. C'est un cumul, comme captures.
    */
   readonly capturesParBotNoirSubies: number;
+  /**
+   * L'objet que le joueur garde en poche (etape 7.10), absent quand elle est vide. Une seule
+   * place: une poche pleine ne ramasse pas d'autre objet de poche. Elle se vide quand il
+   * s'en sert, et a toute prise (poche.ts).
+   */
+  readonly poche?: ObjetDePoche;
 }
 
 /**
@@ -388,7 +395,32 @@ export type EvenementPartie =
   | EvadeAttrape
   | DoubleurVole
   | DoubleurPerdu
-  | EvadeEnfui;
+  | EvadeEnfui
+  | ObjetEmpoche
+  | FuiteDansLaFumee;
+
+/**
+ * Un joueur a mis un objet dans sa poche (etape 7.10). Il ne l'a pas encore utilise: le
+ * ramassage ne fait que remplir la poche.
+ */
+export interface ObjetEmpoche {
+  readonly type: 'objetEmpoche';
+  readonly joueur: IdentifiantEntite;
+  readonly nature: ObjetDePoche;
+  /** Ou l'objet etait pose. */
+  readonly position: Position;
+}
+
+/**
+ * Un joueur s'est enfui dans un nuage de fumee (etape 7.10): il a quitte le point de depart
+ * et reparait au point d'arrivee, dans le meme battement.
+ */
+export interface FuiteDansLaFumee {
+  readonly type: 'fumee';
+  readonly joueur: IdentifiantEntite;
+  readonly depart: Position;
+  readonly arrivee: Position;
+}
 
 /**
  * Un joueur a tire, dans le mode Tactique (etape 7.1).

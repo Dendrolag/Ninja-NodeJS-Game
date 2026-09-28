@@ -36,14 +36,23 @@ const AUCUNE_APPARITION: ReglagesPartiels = {
   },
   malus: { tauxApparitionPourCent: 0 },
   zones: { actives: false },
+  // La fumee tente sa chance avec les bonus depuis l'etape 7.10.
+  objetsDePoche: { fumee: { tauxApparitionPourCent: 0 } },
 };
 
-/** Une partie calme, avec les joueurs demandes places ou on veut. */
+/**
+ * Une partie calme, avec les joueurs demandes places ou on veut. La fumee y est coupee, sauf
+ * si les reglages la reglent: ces tests parlent des bonus et des malus d'avant l'etape 7.10,
+ * et poche.test.ts de la fumee.
+ */
 function partieAvec(
   joueurs: readonly (readonly [IdentifiantEntite, { x: number; y: number }])[] = [],
   reglages: ReglagesPartiels = AUCUNE_APPARITION,
 ): EtatPartie {
-  let etat = creerEtatInitial({ graine: 4, reglages });
+  let etat = creerEtatInitial({
+    graine: 4,
+    reglages: { objetsDePoche: { fumee: { actif: false } }, ...reglages },
+  });
 
   for (const [id, position] of joueurs) {
     etat = ajouterJoueur(etat, { id, pseudo: id.toUpperCase(), position });

@@ -40,6 +40,7 @@ import {
   TYPES_BONUS_TACTIQUES,
   TYPES_MALUS,
   TYPES_MALUS_TACTIQUES,
+  TYPES_OBJETS_DE_POCHE,
   TYPES_ZONE,
   cheminPluie,
   validerReglages,
@@ -271,6 +272,19 @@ export const GROUPES_REGLAGES: readonly GroupeReglages[] = [
           secondes(`bonus.types.${nature}.dureeS`, 'Durée', BORNES_REGLAGES.bonus.dureeS),
           pourCent(
             `bonus.types.${nature}.tauxApparitionPourCent`,
+            'Taux d’apparition',
+            BORNES_REGLAGES.bonus.tauxApparitionPourCent,
+          ),
+        ],
+      })),
+      // Les objets de poche (etape 7.10) apparaissent avec les bonus. Ils n'ont pas de duree:
+      // on les garde en poche jusqu'a s'en servir.
+      ...TYPES_OBJETS_DE_POCHE.map((nature) => ({
+        titre: APPARENCE_OBJET[nature].libelle,
+        champs: [
+          interrupteur(`objetsDePoche.${nature}.actif`, 'Actif'),
+          pourCent(
+            `objetsDePoche.${nature}.tauxApparitionPourCent`,
             'Taux d’apparition',
             BORNES_REGLAGES.bonus.tauxApparitionPourCent,
           ),

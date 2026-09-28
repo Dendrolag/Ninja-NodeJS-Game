@@ -39,11 +39,28 @@ const BATTEMENT_MS = 50;
  * SANS L'EVADE (etape 7.9): cette partie de reference est celle d'avant l'etape, et son
  * instantane n'a pas bouge, ce qui prouve que rien d'autre n'a change. La partie avec
  * l'Evade a sa propre reference, plus bas.
+ *
+ * SANS LA FUMEE (etape 7.10), pour la meme raison: les deux references d'avant restent
+ * identiques, et la partie avec la fumee a la sienne.
  */
-const REGLAGES: ReglagesPartiels = { dureePartieS: 60, nombreBotsInitial: 30, evade: false };
+const REGLAGES: ReglagesPartiels = {
+  dureePartieS: 60,
+  nombreBotsInitial: 30,
+  evade: false,
+  objetsDePoche: { fumee: { actif: false } },
+};
 
 /** La meme partie, l'Evade en jeu (etape 7.9). */
 const AVEC_L_EVADE: ReglagesPartiels = { ...REGLAGES, evade: true };
+
+/** La meme partie, la fumee en jeu et frequente (etape 7.10). */
+const AVEC_LA_FUMEE: ReglagesPartiels = {
+  ...REGLAGES,
+  objetsDePoche: { fumee: { actif: true, tauxApparitionPourCent: 60 } },
+};
+
+/** Tous les combien de battements chaque joueur se sert de sa poche, dans cette partie. */
+const CADENCE_DE_LA_POCHE = 40;
 
 /** Nombre de battements pour couvrir la partie entiere. */
 const BATTEMENTS = (60 * 1000) / BATTEMENT_MS;
@@ -66,17 +83,20 @@ function partiePrete(graine = 42, reglages: ReglagesPartiels = REGLAGES): EtatPa
  * facon simple de leur faire parcourir la carte, se croiser et rencontrer des
  * bots, sans avoir a ecrire un scenario a la main.
  */
-function entreesDu(battement: number): Entrees {
+function entreesDu(battement: number, avecLaPoche = false): Entrees {
   const surUnCercle = (periode: number, dephasage: number): Vecteur => {
     const angle = (2 * Math.PI * battement) / periode + dephasage;
 
     return { x: Math.cos(angle), y: Math.sin(angle) };
   };
+  // Chacun se sert de sa poche a son tour, a des battements fixes (etape 7.10).
+  const poche = (rang: number): { readonly utiliserLaPoche?: true } =>
+    avecLaPoche && battement % CADENCE_DE_LA_POCHE === rang ? { utiliserLaPoche: true } : {};
 
   return {
-    alice: { deplacement: surUnCercle(120, 0), enMouvement: true },
-    bob: { deplacement: surUnCercle(200, Math.PI / 3), enMouvement: true },
-    chloe: { deplacement: surUnCercle(90, Math.PI), enMouvement: true },
+    alice: { deplacement: surUnCercle(120, 0), enMouvement: true, ...poche(1) },
+    bob: { deplacement: surUnCercle(200, Math.PI / 3), enMouvement: true, ...poche(2) },
+    chloe: { deplacement: surUnCercle(90, Math.PI), enMouvement: true, ...poche(3) },
   };
 }
 
@@ -84,6 +104,7 @@ function entreesDu(battement: number): Entrees {
 function jouerLaPartie(
   graine = 42,
   reglages: ReglagesPartiels = REGLAGES,
+  avecLaPoche = false,
 ): {
   readonly etat: EtatPartie;
   readonly evenements: readonly EvenementPartie[];
@@ -94,7 +115,7 @@ function jouerLaPartie(
   const evenements: EvenementPartie[] = [];
 
   for (let battement = 0; battement < BATTEMENTS; battement += 1) {
-    etat = tick(etat, entreesDu(battement), BATTEMENT_MS);
+    etat = tick(etat, entreesDu(battement, avecLaPoche), BATTEMENT_MS);
     evenements.push(...etat.evenements);
   }
 
@@ -173,6 +194,20 @@ describe('partie complete', () => {
       doubleurs: calculerScores(partie.etat)
         .filter((ligne) => ligne.doubleur)
         .map((ligne) => ligne.id),
+    }).toMatchSnapshot();
+  });
+
+  it('produit l instantane de reference d une partie avec la fumee (etape 7.10)', () => {
+    const partie = jouerLaPartie(42, AVEC_LA_FUMEE, true);
+
+    // La fumee a vraiment ete ramassee et utilisee: sinon la reference ne prouverait rien.
+    expect(partie.evenements.some((fait) => fait.type === 'objetEmpoche')).toBe(true);
+    expect(partie.evenements.some((fait) => fait.type === 'fumee')).toBe(true);
+    expect({
+      ...(resume(partie.etat, partie.evenements) as object),
+      poches: Object.fromEntries(
+        Object.values(partie.etat.joueurs).map((joueur) => [joueur.id, joueur.poche ?? null]),
+      ),
     }).toMatchSnapshot();
   });
 

@@ -32,6 +32,7 @@ import type { Position } from '@neon-ninja/shared';
 import { CHASSE, COULEUR_DES_TRAQUEURS, TACTIQUE, entier } from '@neon-ninja/shared';
 
 import { captureAutorisee, inscrireAuJournal } from './capture.js';
+import { sansPoche } from './poche.js';
 import type {
   EtatDeChasse,
   EtatPartie,
@@ -416,8 +417,9 @@ export function infecter(
         joueursCaptures: inscrireAuJournal(traqueur.joueursCaptures, proieId, proie.pseudo),
         tempsDepuisDerniereCaptureMs: 0,
       },
+      // L'infection est une prise: elle vide la poche (etape 7.10).
       [proieId]: {
-        ...devenue,
+        ...sansPoche(devenue),
         capturesSubies: inscrireAuJournal(proie.capturesSubies, traqueurId, traqueur.pseudo),
       },
     },

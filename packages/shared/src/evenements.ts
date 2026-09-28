@@ -54,6 +54,7 @@ import type {
   NatureBonus,
   NatureMalus,
   NatureObjet,
+  ObjetDePoche,
   Visee,
   TypeZone,
   Visibilite,
@@ -112,6 +113,12 @@ export interface JoueurVu extends EntiteVueCommune {
    * la cible (decision 8 du porteur du projet). Absent sinon.
    */
   readonly doubleur?: true;
+  /**
+   * L'objet que le joueur garde en poche (etape 7.10). Public: une icone sur son ninja dit a
+   * tous qu'il peut s'enfuir, c'est la parade que la fumee laisse a ses poursuivants
+   * (decision 3 du porteur du projet). Absent quand la poche est vide.
+   */
+  readonly poche?: ObjetDePoche;
 }
 
 /**
@@ -440,6 +447,28 @@ export interface BonusActive {
   readonly nature: NatureBonus;
   /** Duree ajoutee par ce ramassage, en millisecondes. Les durees se cumulent. */
   readonly dureeMs: number;
+}
+
+/**
+ * Un joueur vient de mettre un objet dans sa poche (etape 7.10). Adresse a lui seul: il
+ * l'annonce en grand titre, et sait desormais qu'il peut s'en servir.
+ */
+export interface ObjetEmpoche {
+  readonly nature: ObjetDePoche;
+}
+
+/**
+ * Un joueur vient de s'enfuir dans un nuage de fumee (etape 7.10). Adresse a tous: chacun
+ * voit un nuage la ou il etait, et un autre la ou il reparait (decision 5 du porteur du
+ * projet).
+ */
+export interface FumeeVue {
+  /** Identifiant du joueur qui s'est enfui. */
+  readonly joueur: string;
+  /** D'ou il est parti. */
+  readonly depart: { readonly x: number; readonly y: number };
+  /** Ou il reparait. */
+  readonly arrivee: { readonly x: number; readonly y: number };
 }
 
 /** Un joueur vient de ramasser un malus. Adresse a lui seul: il en est epargne. */
@@ -820,6 +849,16 @@ export interface EvenementsClientVersServeur {
   capturer: () => void;
 
   /**
+   * Se servir de l'objet de sa poche (etape 7.10): la fumee, pour l'instant.
+   *
+   * Le message ne porte rien, comme un tir: ce que contient la poche, le moteur le sait,
+   * et le client ne le declare jamais. L'objet sert au battement suivant, et plusieurs
+   * demandes du meme battement n'en font qu'une. Sans effet sur une poche vide ou hors
+   * d'une partie en cours.
+   */
+  utiliserLaPoche: () => void;
+
+  /**
    * Passer dans une equipe, dans le salon d'une partie Equipes (etape 7.2). Sans
    * equivalent dans le jeu d'origine.
    *
@@ -998,6 +1037,12 @@ export interface EvenementsServeurVersClient {
 
   /** Ce qui arrive a l'Evade et a son x2 (etape 7.9). Adresse a tous. */
   evade: (evade: EvadeVu) => void;
+
+  /** Ce joueur vient de mettre un objet dans sa poche (etape 7.10). */
+  objetEmpoche: (objet: ObjetEmpoche) => void;
+
+  /** Un joueur de la partie vient de s'enfuir dans un nuage de fumee (etape 7.10). A tous. */
+  fumee: (fumee: FumeeVue) => void;
 
   /** Une demande de ce joueur a ete refusee. Remplace error. */
   refus: (refus: Refus) => void;

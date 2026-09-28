@@ -22,6 +22,7 @@ import {
   TYPES_BONUS_TACTIQUES,
   TYPES_MALUS,
   TYPES_MALUS_TACTIQUES,
+  TYPES_OBJETS_DE_POCHE,
 } from './constantes.js';
 import {
   IMAGES_DE_PLUIE,
@@ -117,12 +118,13 @@ describe('cheminObjet', () => {
     expect(cheminObjet('viseeEtroite')).toBe('objets/visee-etroite.svg');
   });
 
-  it('couvre les douze natures sans en oublier', () => {
+  it('couvre les treize natures sans en oublier, fumee comprise (etape 7.10)', () => {
     const natures = [
       ...TYPES_BONUS,
       ...TYPES_MALUS,
       ...TYPES_BONUS_TACTIQUES,
       ...TYPES_MALUS_TACTIQUES,
+      ...TYPES_OBJETS_DE_POCHE,
     ];
 
     expect(tousLesObjets()).toHaveLength(natures.length);

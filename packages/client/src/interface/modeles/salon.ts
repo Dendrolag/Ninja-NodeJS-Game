@@ -348,6 +348,11 @@ function recapitulatif(reglages: ReglagesPartie, mode: Mode): readonly LigneReca
       valeur:
         bonusActifs === 0 ? 'Désactivés' : `${String(bonusActifs)}/${String(TYPES_BONUS.length)}`,
     },
+    // La fumee, dans tous les modes (etape 7.10).
+    {
+      libelle: 'Fumée',
+      valeur: reglages.objetsDePoche.fumee.actif ? 'À garder en poche' : 'Désactivée',
+    },
     {
       libelle: 'Malus',
       valeur:

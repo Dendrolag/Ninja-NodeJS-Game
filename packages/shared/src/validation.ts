@@ -62,6 +62,7 @@ import {
   TYPES_BONUS_TACTIQUES,
   TYPES_MALUS,
   TYPES_MALUS_TACTIQUES,
+  TYPES_OBJETS_DE_POCHE,
   TYPES_ZONE,
   VISIBILITES,
 } from './constantes.js';
@@ -865,6 +866,7 @@ export function validerReglages(brut: unknown): ResultatValidation<ReglagesParti
   poser(retenus, 'malus', groupeMalus(source, erreurs));
   poser(retenus, 'zones', groupeZones(source, erreurs));
   poser(retenus, 'botsNoirs', groupeBotsNoirs(source, erreurs));
+  poser(retenus, 'objetsDePoche', groupeObjetsDePoche(source, erreurs));
   poser(retenus, 'objetsTactiques', groupeObjetsTactiques(source, erreurs));
 
   if (erreurs.length > 0) {
@@ -1037,6 +1039,47 @@ function reglageDeMalus(
   poser(reglage, 'dureeS', entier(brut, 'dureeS', BORNES_REGLAGES.malus.dureeS, erreurs, chemin));
 
   return siRempli(reglage);
+}
+
+/**
+ * Reglages des objets de poche (etape 7.10): pour chacun, en jeu ou non, et son taux
+ * d'apparition, aux bornes de celui d'un bonus. Ils n'ont pas de duree.
+ */
+function groupeObjetsDePoche(
+  source: Enregistrement,
+  erreurs: ErreurValidation[],
+): Enregistrement | undefined {
+  const brut = groupe(source, 'objetsDePoche', 'objetsDePoche', erreurs);
+  if (brut === undefined) {
+    return undefined;
+  }
+
+  const retenu: Enregistrement = {};
+
+  for (const nature of TYPES_OBJETS_DE_POCHE) {
+    const chemin = `objetsDePoche.${nature}`;
+    const brutObjet = groupe(brut, nature, chemin, erreurs);
+    if (brutObjet === undefined) {
+      continue;
+    }
+
+    const reglage: Enregistrement = {};
+    poser(reglage, 'actif', booleen(brutObjet, 'actif', erreurs, chemin));
+    poser(
+      reglage,
+      'tauxApparitionPourCent',
+      entier(
+        brutObjet,
+        'tauxApparitionPourCent',
+        BORNES_REGLAGES.bonus.tauxApparitionPourCent,
+        erreurs,
+        chemin,
+      ),
+    );
+    poser(retenu, nature, siRempli(reglage));
+  }
+
+  return siRempli(retenu);
 }
 
 /** Reglages des objets du Tactique (etape 7.7): chaque bonus, puis chaque malus. */

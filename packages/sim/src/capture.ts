@@ -45,6 +45,7 @@ import type { Couleur } from './couleurs.js';
 import { couleurUnique } from './couleurs.js';
 import { partDuJoueur } from './equipes.js';
 import { cederLeDoubleur } from './evade.js';
+import { sansPoche } from './poche.js';
 import type { Bot, BotOrdinaire, EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
 import {
   couleursUtilisees,
@@ -185,8 +186,9 @@ function capturerAvec(
       joueursCaptures: inscrireAuJournal(attaquant.joueursCaptures, victimeId, victime.pseudo),
       tempsDepuisDerniereCaptureMs: 0,
     },
+    // Une prise vide la poche (etape 7.10).
     [victimeId]: {
-      ...victime,
+      ...sansPoche(victime),
       position: place.valeur,
       couleur: teinte.valeur,
       direction: 'immobile',

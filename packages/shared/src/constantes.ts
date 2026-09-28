@@ -363,8 +363,37 @@ export const VISEES = ['normale', 'large', 'etroite'] as const;
 /** La visee d'un joueur du Tactique. */
 export type Visee = (typeof VISEES)[number];
 
-/** Nature d'un bonus pose sur la carte, tous modes confondus. */
-export type NatureBonus = TypeBonus | TypeBonusTactique;
+/**
+ * Les objets de poche (etape 7.10): des bonus qu'on garde et qu'on declenche quand on veut,
+ * au lieu d'un effet qui part au ramassage. Un joueur n'en porte qu'un a la fois.
+ *
+ * La fumee est le premier: declenchee, elle fait reapparaitre le ninja ailleurs sur la
+ * carte, loin des menaces. Decisions du porteur du projet du 28 septembre 2026
+ * (docs/plan/etape-7-10.md). Ils tentent leur chance dans tous les modes, apres les autres
+ * bonus.
+ */
+export const TYPES_OBJETS_DE_POCHE = ['fumee'] as const;
+
+/** Nature d'un objet de poche. */
+export type ObjetDePoche = (typeof TYPES_OBJETS_DE_POCHE)[number];
+
+/**
+ * La fumee (etape 7.10): ou elle peut mener.
+ *
+ * Elle mene loin des menaces, par le tirage d'une apparition, et loin du point de depart,
+ * pour qu'elle serve vraiment a fuir: au moins un tiers de la plus grande dimension de la
+ * carte. Si les tirages n'y arrivent pas, la distance au depart se relache avant l'ecart
+ * aux menaces.
+ */
+export const FUMEE = {
+  /** La distance minimale au depart, en part de la plus grande dimension de la carte. */
+  PART_DE_CARTE_AU_DEPART: 1 / 3,
+  /** Combien de tirages essaient de tenir cette distance avant qu'on y renonce. */
+  TIRAGES_LOIN_DU_DEPART: 20,
+} as const;
+
+/** Nature d'un bonus pose sur la carte, tous modes confondus, objets de poche compris. */
+export type NatureBonus = TypeBonus | TypeBonusTactique | ObjetDePoche;
 
 /** Nature d'un malus pose sur la carte, tous modes confondus. */
 export type NatureMalus = TypeMalus | TypeMalusTactique;

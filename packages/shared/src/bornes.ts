@@ -320,6 +320,11 @@ export const LIMITES_DEBIT = {
    * laisse vider ses cinq charges d'affilee.
    */
   capture: { parSeconde: 5, rafale: 5 } satisfies LimiteDebit,
+  /**
+   * Demandes d'utiliser sa poche (etape 7.10). La poche ne tient qu'un objet: une demande
+   * de plus par seconde ne sert a rien. Une rafale de deux absorbe un double appui.
+   */
+  poche: { parSeconde: 2, rafale: 2 } satisfies LimiteDebit,
   /** Tout le reste: rejoindre, quitter, lancer, se declarer pret. */
   autresActions: { parSeconde: 5, rafale: 10 } satisfies LimiteDebit,
 } as const;

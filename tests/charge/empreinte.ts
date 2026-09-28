@@ -34,6 +34,15 @@
  * l'octet celles d'avant l'etape, ce qui prouve que rien d'autre n'a change.
  *
  *   node --disable-warning=ExperimentalWarning tests/charge/empreinte.ts --sans-evade
+ *
+ * SANS LA POCHE (etape 7.10). La fumee est en jeu par defaut: elle tente sa chance avec les
+ * bonus, et change donc la suite des parties. Les joueurs de l'outil se servent de leur
+ * poche de temps en temps, a des battements fixes, sans rien tirer du generateur de
+ * l'outil: une poche vide n'y fait rien. L'option --sans-poche coupe la fumee et retire de
+ * l'empreinte le reglage qui la coupe: les parties rejouent alors a l'octet celles d'avant
+ * l'etape.
+ *
+ *   node --disable-warning=ExperimentalWarning tests/charge/empreinte.ts --sans-poche
  */
 
 import { createHash } from 'node:crypto';
@@ -114,12 +123,20 @@ const PARTIES: readonly PartieDEmpreinte[] = [
 /** L'Evade est-il coupe pour cette execution (etape 7.9). */
 const SANS_EVADE = process.argv.includes('--sans-evade');
 
+/** La fumee est-elle coupee pour cette execution (etape 7.10). */
+const SANS_POCHE = process.argv.includes('--sans-poche');
+
+/** Tous les combien de battements un joueur de l'outil se sert de sa poche. */
+const CADENCE_DE_LA_POCHE = 97;
+
 /**
- * Le terrain ne change jamais pendant une partie: il n'entre pas dans l'empreinte. Le reglage
- * qui coupe l'Evade non plus, quand on le coupe: voir l'en-tete.
+ * Le terrain ne change jamais pendant une partie: il n'entre pas dans l'empreinte. Les
+ * reglages qui coupent l'Evade et la fumee non plus, quand on les coupe: voir l'en-tete.
  */
 function sansTerrain(cle: string, valeur: unknown): unknown {
-  return cle === 'terrain' || (SANS_EVADE && cle === 'evade' && valeur === false)
+  return cle === 'terrain' ||
+    (SANS_EVADE && cle === 'evade' && valeur === false) ||
+    (SANS_POCHE && cle === 'objetsDePoche')
     ? undefined
     : valeur;
 }
@@ -136,6 +153,7 @@ function empreinteDe(partie: PartieDEmpreinte, murs: EtatPartie['terrain']): str
       zones: { intervalleApparitionS: 5 },
       botsNoirs: { momentApparitionPourCent: 5 },
       ...(SANS_EVADE ? { evade: false } : {}),
+      ...(SANS_POCHE ? { objetsDePoche: { fumee: { actif: false } } } : {}),
     },
     ...(partie.murs ? { terrain: murs } : {}),
   });
@@ -173,10 +191,21 @@ function empreinteDe(partie: PartieDEmpreinte, murs: EtatPartie['terrain']): str
       }
     }
 
+    // Chaque joueur se sert de sa poche a son tour, a des battements fixes: rien n'est tire
+    // du generateur de l'outil, pour que les parties sans fumee restent celles d'avant.
+    const duBattement: Record<string, Entrees[string]> = { ...entrees };
+    for (let rang = 1; rang <= partie.joueurs; rang += 1) {
+      const id = `j${String(rang)}`;
+      const intention = entrees[id];
+      if (intention !== undefined && battement % CADENCE_DE_LA_POCHE === rang) {
+        duBattement[id] = { ...intention, utiliserLaPoche: true };
+      }
+    }
+
     // Un pas de temps irregulier, de 20 a 80 millisecondes, comme un vrai serveur.
     const pas = entier(alea, 61);
     alea = pas.alea;
-    etat = tick(etat, entrees, 20 + pas.valeur);
+    etat = tick(etat, duBattement, 20 + pas.valeur);
 
     const instantane = instantaneDe(etat);
     empreinteDuJeu.update(JSON.stringify(etat, sansTerrain));

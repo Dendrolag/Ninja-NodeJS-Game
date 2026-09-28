@@ -91,6 +91,8 @@ const EFFETS_DES_BONUS: Readonly<Record<NatureBonus, string>> = {
   rafale: 'Vos tirs ne coûtent plus de charge',
   rechargeRapide: `Une charge revient en ${String(OBJETS_TACTIQUES.RECHARGE_RAPIDE_MS / 1000).replace('.', ',')} s`,
   viseeLarge: 'Votre cône s’ouvre et porte plus loin',
+  // Un objet de poche n'a pas de duree: sa ligne dit comment s'en servir (etape 7.10).
+  fumee: 'Disparaissez quand vous voulez',
 };
 
 /** Une duree d'effet, en secondes entieres: « pendant 10 s ». */

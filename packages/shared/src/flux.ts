@@ -44,13 +44,21 @@
  * l'appelant decide de traiter.
  */
 
-import type { Couleur, Direction, NatureObjet, Orientation, TypeZone } from './constantes.js';
+import type {
+  Couleur,
+  Direction,
+  NatureObjet,
+  ObjetDePoche,
+  Orientation,
+  TypeZone,
+} from './constantes.js';
 import {
   DIRECTIONS,
   TYPES_BONUS,
   TYPES_BONUS_TACTIQUES,
   TYPES_MALUS,
   TYPES_MALUS_TACTIQUES,
+  TYPES_OBJETS_DE_POCHE,
   TYPES_ZONE,
 } from './constantes.js';
 import type {
@@ -352,15 +360,17 @@ const CATEGORIES_OBJET = ['bonus', 'malus'] as const;
 /**
  * Les natures d'objet, dans l'ordre de leur code: les bonus puis les malus du jeu d'origine,
  * puis ceux du Tactique (etape 7.7). Ajoutes a la fin, ceux-la laissent leur code aux six
- * premiers: une partie sans objet du Tactique s'ecrit a l'octet comme avant. La page et le
- * serveur sont toujours de la meme version (VERSION_DU_JEU): aucune page ancienne ne recoit
- * un code qu'elle ne connait pas.
+ * premiers: une partie sans objet du Tactique s'ecrit a l'octet comme avant. Les objets de
+ * poche (etape 7.10) suivent, pour la meme raison. La page et le serveur sont toujours de la
+ * meme version (VERSION_DU_JEU): aucune page ancienne ne recoit un code qu'elle ne connait
+ * pas.
  */
 const NATURES_OBJET: readonly NatureObjet[] = [
   ...TYPES_BONUS,
   ...TYPES_MALUS,
   ...TYPES_BONUS_TACTIQUES,
   ...TYPES_MALUS_TACTIQUES,
+  ...TYPES_OBJETS_DE_POCHE,
 ];
 
 /** Le code d'une valeur dans sa liste fermee. */
@@ -483,6 +493,7 @@ function entiteArrondie(entite: EntiteVue): EntiteVue {
       protege: entite.protege,
       ...(entite.tactique === undefined ? {} : { tactique: tactiqueArrondie(entite.tactique) }),
       ...(entite.doubleur === true ? { doubleur: true as const } : {}),
+      ...(entite.poche === undefined ? {} : { poche: entite.poche }),
     };
   }
 
@@ -612,28 +623,38 @@ function lireCode<T>(lecteur: Lecteur, liste: readonly T[]): T {
  * Les indicateurs d'un joueur, sur un octet: 1 invincible, 2 protege, 4 quand il porte
  * l'etat du mode Tactique, et 8 quand il porte le x2 de l'Evade (etape 7.9). Un joueur
  * sans x2 garde l'octet d'avant.
+ *
+ * Les quatre bits du haut disent ce qu'il a en poche (etape 7.10): zero pour une poche
+ * vide, sinon le rang de l'objet dans TYPES_OBJETS_DE_POCHE, plus un. Un joueur a la poche
+ * vide garde, lui aussi, l'octet d'avant.
  */
 function drapeauxDuJoueur(joueur: JoueurVu): number {
+  const poche =
+    joueur.poche === undefined ? 0 : codeDans(TYPES_OBJETS_DE_POCHE, joueur.poche, 'poche') + 1;
+
   return (
     (joueur.invincible ? 1 : 0) |
     (joueur.protege ? 2 : 0) |
     (joueur.tactique === undefined ? 0 : 4) |
-    (joueur.doubleur === true ? 8 : 0)
+    (joueur.doubleur === true ? 8 : 0) |
+    (poche << 4)
   );
 }
 
-/** Les indicateurs d'un joueur, relus. Le x2 n'y figure que s'il est porte. */
+/** Les indicateurs d'un joueur, relus. Le x2 et la poche n'y figurent que s'ils sont portes. */
 interface DrapeauxDuJoueur {
   readonly invincible: boolean;
   readonly protege: boolean;
   readonly avecTactique: boolean;
   readonly doubleur?: true;
+  readonly poche?: ObjetDePoche;
 }
 
 function lireDrapeauxDuJoueur(lecteur: Lecteur): DrapeauxDuJoueur {
   const drapeaux = lecteur.octet();
+  const poche = drapeaux >> 4;
 
-  if (drapeaux > 15) {
+  if (poche > TYPES_OBJETS_DE_POCHE.length) {
     throw new ErreurDeTrame("les indicateurs d'un joueur y sont inconnus");
   }
 
@@ -642,6 +663,7 @@ function lireDrapeauxDuJoueur(lecteur: Lecteur): DrapeauxDuJoueur {
     protege: (drapeaux & 2) !== 0,
     avecTactique: (drapeaux & 4) !== 0,
     ...((drapeaux & 8) !== 0 ? { doubleur: true as const } : {}),
+    ...(poche === 0 ? {} : { poche: valeurDe(TYPES_OBJETS_DE_POCHE, poche - 1) }),
   };
 }
 
@@ -810,6 +832,7 @@ const ENTITES: Genre<EntiteVue> = {
             protege: ancienne.protege,
             avecTactique: ancienne.tactique !== undefined,
             ...(ancienne.doubleur === true ? { doubleur: true as const } : {}),
+            ...(ancienne.poche === undefined ? {} : { poche: ancienne.poche }),
           };
 
     if (!avecTactique) {

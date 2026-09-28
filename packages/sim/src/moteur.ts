@@ -92,6 +92,7 @@ import {
   malusClassique,
   ramasserLesObjets,
 } from './objets.js';
+import { utiliserLesPoches } from './poche.js';
 import { agirEnTactique } from './tactique.js';
 import { appliquerLesEffetsDeZone, avancerLesZones } from './zones.js';
 
@@ -117,6 +118,11 @@ import { appliquerLesEffetsDeZone, avancerLesZones } from './zones.js';
 export interface EntreeJoueur extends IntentionDeplacement {
   /** Le joueur tire pendant ce battement. */
   readonly capturer?: true;
+  /**
+   * Le joueur se sert de ce qu'il a en poche pendant ce battement (etape 7.10). Une
+   * intention, jamais un etat: ce que contient la poche, seul le moteur le sait.
+   */
+  readonly utiliserLaPoche?: true;
 }
 
 /**
@@ -322,7 +328,10 @@ export function tick(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPart
     evenements: [],
   };
 
-  const bots = avancerLEvade(avancerLesBots(deplace, dtMs, regles.perteFaceAuBotNoir), dtMs);
+  // Les poches servent avant tout le reste: une fumee declenchee dans le battement ou l'on
+  // se fait toucher l'emporte (etape 7.10, poche.ts).
+  const poches = utiliserLesPoches(deplace, entrees, horsJeu);
+  const bots = avancerLEvade(avancerLesBots(poches, dtMs, regles.perteFaceAuBotNoir), dtMs);
   const zones = appliquerLesEffetsDeZone(avancerLesZones(bots, dtMs), dtMs);
   const objets = faireApparaitreLesObjets(fairePasserLeTempsSurLesObjets(zones, dtMs), dtMs);
   const actions = regles.agir(objets, entrees, dtMs);

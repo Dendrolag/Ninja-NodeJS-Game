@@ -159,7 +159,8 @@ export function tousLesNinjas(): readonly string[] {
  *
  * Les six du jeu d'origine sont des images dessinees a la main. Les six du Tactique
  * (etape 7.7) sont dessinees en SVG, sur le meme modele: un pictogramme noir, en planche
- * de deux images, pose par le rendu sur un disque de la couleur de l'objet.
+ * de deux images, pose par le rendu sur un disque de la couleur de l'objet. La fumee
+ * (etape 7.10) aussi: un nuage, deux bouffees qui montent.
  */
 const ICONE_OBJET: Readonly<Record<NatureObjet, string>> = {
   vitesse: 'speed.png',
@@ -174,6 +175,7 @@ const ICONE_OBJET: Readonly<Record<NatureObjet, string>> = {
   tirUnique: 'tir-unique.svg',
   rechargeLente: 'recharge-lente.svg',
   viseeEtroite: 'visee-etroite.svg',
+  fumee: 'fumee.svg',
 };
 
 /** Chemin relatif de l'icone d'un bonus ou d'un malus. */

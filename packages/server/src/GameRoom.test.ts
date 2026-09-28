@@ -441,6 +441,30 @@ describe('GameRoom, un battement', () => {
     room.arreter();
   });
 
+  /** Les joueurs partis en fumee pendant le dernier battement. */
+  function fumeesDuBattement(room: GameRoom): readonly string[] {
+    return room.etat.evenements.flatMap((evenement) =>
+      evenement.type === 'fumee' ? [evenement.joueur] : [],
+    );
+  }
+
+  // Une demande servie (la fumee part, une seule fois) se joue a travers le reseau, dans
+  // ServeurSocket.poche.test.ts: une room ne laisse pas poser une fumee dans une poche.
+  it('ignore une demande de poche dans le salon, et celle d un joueur absent', () => {
+    const { room } = roomDeTest();
+    room.accueillir(session('alice', 'Alice'));
+    room.demanderLaPoche('alice');
+    room.lancer();
+
+    room.demanderLaPoche('fantome');
+    expect(() => {
+      room.avancer(50);
+    }).not.toThrow();
+    expect(fumeesDuBattement(room)).toEqual([]);
+
+    room.arreter();
+  });
+
   it('refuse d avancer une partie qui n a pas commence', () => {
     const { room } = roomDeTest();
 

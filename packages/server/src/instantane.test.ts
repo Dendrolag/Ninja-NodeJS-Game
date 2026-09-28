@@ -710,3 +710,46 @@ describe("l'Evade dans la projection (etape 7.9)", () => {
     expect(notificationsDe(etat)).toEqual([]);
   });
 });
+
+describe('la poche dans la projection (etape 7.10)', () => {
+  /** La partie a deux, Alice une fumee en poche. */
+  function aliceEnPoche(): EtatPartie {
+    const etat = partieADeux();
+    const alice = etat.joueurs['alice'];
+    if (alice === undefined) {
+      throw new Error('Alice devrait etre dans la partie.');
+    }
+
+    return { ...etat, joueurs: { ...etat.joueurs, alice: { ...alice, poche: 'fumee' } } };
+  }
+
+  it('montre a tous ce qu un joueur a en poche, et rien pour une poche vide', () => {
+    const entites = instantaneDe(aliceEnPoche()).entites;
+
+    expect(entites.find((entite) => entite.id === 'alice')).toMatchObject({ poche: 'fumee' });
+    expect(entites.find((entite) => entite.id === 'bob')).not.toHaveProperty('poche');
+  });
+
+  it('annonce l objet empoche a son seul ramasseur, et la fumee a tous', () => {
+    const etat = partieADeux();
+    const avec = (evenements: EtatPartie['evenements']): EtatPartie => ({ ...etat, evenements });
+
+    expect(
+      notificationsDe(
+        avec([
+          { type: 'objetEmpoche', joueur: 'alice', nature: 'fumee', position: { x: 1, y: 2 } },
+        ]),
+      ),
+    ).toEqual([{ nom: 'objetEmpoche', pour: 'alice', charge: { nature: 'fumee' } }]);
+
+    const fumee = {
+      joueur: 'alice',
+      depart: { x: 10, y: 20 },
+      arrivee: { x: 900, y: 700 },
+    };
+    expect(notificationsDe(avec([{ type: 'fumee', ...fumee }]))).toEqual([
+      { nom: 'fumee', pour: 'alice', charge: fumee },
+      { nom: 'fumee', pour: 'bob', charge: fumee },
+    ]);
+  });
+});

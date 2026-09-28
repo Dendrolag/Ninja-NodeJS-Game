@@ -336,6 +336,25 @@ describe('validerReglages', () => {
     expect(champsRefuses(validerReglages({ evade: 'oui' }))).toEqual(['evade']);
   });
 
+  it('met la fumee en jeu par defaut, et en accepte le reglage aux bornes d un bonus (etape 7.10)', () => {
+    expect(valeurAcceptee(validerReglages({})).objetsDePoche.fumee).toEqual({
+      actif: true,
+      tauxApparitionPourCent: 15,
+    });
+    expect(
+      valeurAcceptee(
+        validerReglages({ objetsDePoche: { fumee: { actif: false, tauxApparitionPourCent: 40 } } }),
+      ).objetsDePoche.fumee,
+    ).toEqual({ actif: false, tauxApparitionPourCent: 40 });
+    expect(
+      champsRefuses(validerReglages({ objetsDePoche: { fumee: { tauxApparitionPourCent: 101 } } })),
+    ).toEqual(['objetsDePoche.fumee.tauxApparitionPourCent']);
+    expect(champsRefuses(validerReglages({ objetsDePoche: { fumee: { actif: 'oui' } } }))).toEqual([
+      'objetsDePoche.fumee.actif',
+    ]);
+    expect(champsRefuses(validerReglages({ objetsDePoche: 'toutes' }))).toEqual(['objetsDePoche']);
+  });
+
   it('fait tomber la pluie par defaut, et accepte de la couper (etape 7.6)', () => {
     expect(valeurAcceptee(validerReglages({})).pluie).toBe(true);
     expect(valeurAcceptee(validerReglages({ pluie: false })).pluie).toBe(false);

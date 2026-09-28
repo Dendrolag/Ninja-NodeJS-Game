@@ -498,6 +498,7 @@ export class ServeurSocket {
         reglages: seauNeuf(LIMITES_DEBIT.reglages),
         autresActions: seauNeuf(LIMITES_DEBIT.autresActions),
         capture: seauNeuf(LIMITES_DEBIT.capture),
+        poche: seauNeuf(LIMITES_DEBIT.poche),
       },
       derniereFois: {
         deplacement: maintenant,
@@ -505,6 +506,7 @@ export class ServeurSocket {
         reglages: maintenant,
         autresActions: maintenant,
         capture: maintenant,
+        poche: maintenant,
       },
     });
 
@@ -528,6 +530,9 @@ export class ServeurSocket {
     });
     socket.on('capturer', () => {
       this.surCapturer(socket);
+    });
+    socket.on('utiliserLaPoche', () => {
+      this.surUtiliserLaPoche(socket);
     });
     socket.on('changerDEquipe', (equipe) => {
       this.surChangerDEquipe(socket, equipe);
@@ -1001,6 +1006,32 @@ export class ServeurSocket {
     }
 
     room.demanderUnTir(connexion.session.id);
+  }
+
+  /**
+   * Demande d'utiliser sa poche (etape 7.10).
+   *
+   * Traitee comme un tir: une demande en trop ou hors de propos est ignoree en silence, et
+   * le message ne porte rien. Ce que contient la poche, le moteur le sait; une poche vide
+   * ne fait rien.
+   */
+  private surUtiliserLaPoche(socket: SocketTypee): void {
+    const connexion = this.connexions.get(socket.id);
+
+    if (connexion?.session === undefined || connexion.idRoom === undefined) {
+      return;
+    }
+
+    if (!this.autorise(connexion, 'poche')) {
+      return;
+    }
+
+    const room = this.rooms.room(connexion.idRoom);
+    if (room?.statut !== 'enCours') {
+      return;
+    }
+
+    room.demanderLaPoche(connexion.session.id);
   }
 
   /** Message de chat, signe par la session et diffuse a la seule partie. */
@@ -1883,6 +1914,14 @@ function envoyer(socket: SocketTypee, notification: Notification): void {
 
     case 'evade':
       socket.emit('evade', notification.charge);
+      return;
+
+    case 'objetEmpoche':
+      socket.emit('objetEmpoche', notification.charge);
+      return;
+
+    case 'fumee':
+      socket.emit('fumee', notification.charge);
       return;
   }
 }

@@ -34,6 +34,7 @@ import type {
   CoupDeKatanaVu,
   EntiteVue,
   EvadeVu,
+  FumeeVue,
   InfosSalon,
   InstantanePartie,
   JoueurDuSalon,
@@ -41,6 +42,7 @@ import type {
   LigneClassement,
   MalusRamasseParMoi,
   MalusSubi,
+  ObjetEmpoche,
   ObjetVu,
   PartiePublique,
   RalliementVu,
@@ -201,6 +203,8 @@ function entiteVue(etat: EtatPartie, entite: Joueur | Bot): EntiteVue {
       ...armeVue(etat, entite.id),
       // Le porteur du x2 se voit de tous (etape 7.9, decision 8).
       ...(porteLeDoubleur(etat, entite.id) ? { doubleur: true as const } : {}),
+      // Ce qu'il a en poche aussi: c'est la parade laissee a ses poursuivants (etape 7.10).
+      ...(entite.poche === undefined ? {} : { poche: entite.poche }),
     };
   }
 
@@ -410,7 +414,13 @@ export type Notification =
       readonly pour: IdentifiantEntite;
       readonly charge: RalliementVu;
     }
-  | { readonly nom: 'evade'; readonly pour: IdentifiantEntite; readonly charge: EvadeVu };
+  | { readonly nom: 'evade'; readonly pour: IdentifiantEntite; readonly charge: EvadeVu }
+  | {
+      readonly nom: 'objetEmpoche';
+      readonly pour: IdentifiantEntite;
+      readonly charge: ObjetEmpoche;
+    }
+  | { readonly nom: 'fumee'; readonly pour: IdentifiantEntite; readonly charge: FumeeVue };
 
 /**
  * Traduit les faits d'un battement en notifications adressees.
@@ -579,6 +589,19 @@ function notificationsDUnFait(
     case 'doubleurVole':
     case 'doubleurPerdu':
       return ceQuArriveAuDoubleur(etat, evenement);
+
+    case 'objetEmpoche':
+      return [
+        { nom: 'objetEmpoche', pour: evenement.joueur, charge: { nature: evenement.nature } },
+      ];
+
+    case 'fumee':
+      // Un nuage se voit de toute la partie, au depart comme a l'arrivee (etape 7.10).
+      return aTous(etat, 'fumee', {
+        joueur: evenement.joueur,
+        depart: { x: evenement.depart.x, y: evenement.depart.y },
+        arrivee: { x: evenement.arrivee.x, y: evenement.arrivee.y },
+      });
   }
 }
 
@@ -623,7 +646,7 @@ function ceQuArriveAuDoubleur(
 }
 
 /** La meme notification, pour chaque joueur present. */
-function aTous<N extends 'coupDeKatana' | 'carteVidee' | 'evade'>(
+function aTous<N extends 'coupDeKatana' | 'carteVidee' | 'evade' | 'fumee'>(
   etat: EtatPartie,
   nom: N,
   charge: Extract<Notification, { nom: N }>['charge'],

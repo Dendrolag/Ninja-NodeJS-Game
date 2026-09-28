@@ -35,6 +35,7 @@ import {
   TYPES_BONUS_TACTIQUES,
   TYPES_MALUS,
   TYPES_MALUS_TACTIQUES,
+  TYPES_OBJETS_DE_POCHE,
   element,
   nombre,
 } from '@neon-ninja/shared';
@@ -50,6 +51,7 @@ import type {
   ObjetRamassable,
 } from './etat.js';
 import { identifiantSuivant, positionDApparition } from './etat.js';
+import { aLaPocheVide, empocher, estUnObjetDePoche } from './poche.js';
 import {
   dureeDeLEffet,
   estUnBonusTactique,
@@ -177,6 +179,9 @@ export function faireApparaitreLesObjets(etat: EtatPartie, dtMs: number): EtatPa
  * d'origine, et les six a la moitie de leur taux: deux fois plus de natures, autant de
  * bonus sur la carte (decision du porteur du projet du 19 septembre 2026). Hors du
  * Tactique, rien ne change, pas meme le nombre de tirages.
+ *
+ * Les objets de poche (etape 7.10) tentent leur chance en dernier, dans tous les modes, et a
+ * la moitie de leur taux en Tactique comme les autres bonus. Desactives, ils ne tirent rien.
  */
 function tenterUneApparitionDeBonus(etat: EtatPartie): EtatPartie {
   let courant = etat;
@@ -214,6 +219,13 @@ function chancesDesBonus(
       if (objetTactiqueActif(etat.reglages, nature)) {
         chances.push([nature, tauxDuBonus(etat.reglages, nature)]);
       }
+    }
+  }
+
+  for (const nature of TYPES_OBJETS_DE_POCHE) {
+    const reglage = etat.reglages.objetsDePoche[nature];
+    if (reglage.actif) {
+      chances.push([nature, reglage.tauxApparitionPourCent]);
     }
   }
 
@@ -333,6 +345,9 @@ function aPortee(joueur: Position, objet: Position): boolean {
  * Renvoie l'etat inchange si le joueur ou l'objet n'existe pas. La distance n'est
  * pas verifiee: c'est l'appelant qui constate le ramassage, comme pour les
  * captures ou la geometrie et la regle sont separees.
+ *
+ * Un objet de poche (etape 7.10) remplit la poche au lieu de lancer un effet. Si elle est
+ * deja pleine, le joueur passe dessus sans le prendre, et l'objet reste sur la carte.
  */
 export function ramasser(
   etat: EtatPartie,
@@ -345,6 +360,10 @@ export function ramasser(
 
   if (joueur === undefined || objet === undefined) {
     return etat;
+  }
+
+  if (objet.categorie === 'bonus' && estUnObjetDePoche(objet.nature)) {
+    return aLaPocheVide(joueur) ? empocher(retirerObjet(etat, objetId), joueur, objet) : etat;
   }
 
   const sansObjet = retirerObjet(etat, objetId);
@@ -362,6 +381,12 @@ export function ramasser(
  */
 function accorderLeBonus(etat: EtatPartie, joueur: Joueur, bonus: BonusPose): EtatPartie {
   const nature = bonus.nature;
+
+  // Les objets de poche n'arrivent jamais ici (ramasser): ils n'ont pas de duree.
+  if (estUnObjetDePoche(nature)) {
+    return etat;
+  }
+
   const dureeMs = estUnBonusTactique(nature)
     ? dureeDeLEffet(etat.reglages, nature)
     : etat.reglages.bonus.types[nature].dureeS * 1000;

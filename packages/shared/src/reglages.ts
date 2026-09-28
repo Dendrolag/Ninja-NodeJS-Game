@@ -33,6 +33,7 @@
 import type {
   IdentifiantCarte,
   Mode,
+  ObjetDePoche,
   TypeBonus,
   TypeBonusTactique,
   TypeMalus,
@@ -127,6 +128,21 @@ export interface ReglagesBotsNoirs {
   readonly partDeBotsPerduePourCent: number;
 }
 
+/**
+ * Reglage d'un objet de poche (etape 7.10): est-il en jeu, et apparait-il souvent.
+ *
+ * Celui d'un bonus, sans duree: ramasse, l'objet remplit la poche au lieu de lancer un
+ * effet, et il agit d'un coup quand le joueur le declenche.
+ */
+export interface ReglageObjetDePoche {
+  readonly actif: boolean;
+  /** Chance sur cent d'apparaitre a chaque tentative d'apparition des bonus. */
+  readonly tauxApparitionPourCent: number;
+}
+
+/** Reglages des objets de poche, un par nature (etape 7.10). */
+export type ReglagesObjetsDePoche = Readonly<Record<ObjetDePoche, ReglageObjetDePoche>>;
+
 /** Reglages d'une partie, figes au lancement. */
 export interface ReglagesPartie {
   /** Duree de la partie, en secondes. */
@@ -157,6 +173,11 @@ export interface ReglagesPartie {
   readonly malus: ReglagesMalus;
   readonly zones: ReglagesZones;
   readonly botsNoirs: ReglagesBotsNoirs;
+  /**
+   * Les objets de poche (etape 7.10), dans tous les modes. Ils tentent leur chance avec les
+   * bonus, a leur intervalle, apres toutes les autres natures de bonus.
+   */
+  readonly objetsDePoche: ReglagesObjetsDePoche;
   /**
    * Les objets du Tactique (etape 7.7). Presents dans les reglages que l'hote regle au
    * salon, quel que soit le mode, pour qu'il retrouve ses choix en changeant de mode; le
@@ -223,6 +244,9 @@ export const REGLAGES_PAR_DEFAUT: ReglagesPartie = {
     rayonDetectionPx: 150,
     partDeBotsPerduePourCent: 50,
   },
+  // Le taux du plus rare des bonus d'origine, l'Invincibilite: la fumee reste un objet
+  // qu'on remarque (etape 7.10).
+  objetsDePoche: { fumee: { actif: true, tauxApparitionPourCent: 15 } },
   objetsTactiques: OBJETS_TACTIQUES_PAR_DEFAUT,
 };
 
