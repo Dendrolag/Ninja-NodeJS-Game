@@ -65,7 +65,7 @@ Une seconde session (branche `claude/exploits-partie-etape-3-8-kn9v33`) avait co
 5. **Les faits `meilleurTir` et `carteVidee` sont retirés**, noms à ne jamais reprendre. Les lignes écrites sous ces noms en production s'ignorent à la lecture, les succès déjà inscrits restent.
 6. **Un scénario de bout en bout** (`tests/e2e/exploits.spec.ts`, bureau seulement): Alice invite Bob, ils jouent, et « Rassembleur » s'annonce à la fin pour Alice seulement. La décision 5 de ce handoff (pas de scénario propre) ne tient plus: « Rassembleur » s'obtient à coup sûr.
 
-Fichiers: `packages/shared/src/succes.ts` et son test, `packages/server/src/releveDesExploits.ts` et son test, `packages/client/src/interface/modeles/succes.test.ts`, `ecrans/profil.test.ts`, `tests/base/exploits.test.ts` (parties à deux, et un cas qui fige la règle des parties seules), `tests/e2e/exploits.spec.ts` (créé), `playwright.config.ts`, `docs/plan/etape-3-8.md`, `docs/plan/ROADMAP.md`, `docs/design/README.md`, `docs/design/etude-succes.md`, ce handoff. La branche parallèle est abandonnée.
+Fichiers: `packages/shared/src/succes.ts` et son test, `packages/server/src/releveDesExploits.ts` et son test, `packages/client/src/interface/modeles/succes.test.ts`, `ecrans/profil.test.ts`, `tests/base/exploits.test.ts` (parties à deux, et un cas qui fige la règle des parties seules), `tests/e2e/exploits.spec.ts` (créé), `playwright.config.ts`, `docs/plan/etape-3-8.md`, `docs/plan/ROADMAP.md`, `docs/design/README.md`, `docs/design/etude-succes.md`, ce handoff. La branche parallèle est abandonnée. CI **verte sur `26f2692`** (run `36401992159`), tests de la base Neon et scénarios de bout en bout compris, puis fusion dans `master` et mise en ligne par la CI de `master`.
 
 ## Problèmes connus et dette
 
