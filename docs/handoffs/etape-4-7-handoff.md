@@ -42,7 +42,7 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
   - bout en bout (`tests/e2e/credits.spec.ts`), sur ordinateur et sur téléphone: ouverture au clavier, lecture des deux lignes, fermeture par Échap puis au clic ou au doigt et par la croix, sans erreur de console; le badge sur les vignettes de la création.
 - Résultat: 2 998 tests unitaires et d'intégration au vert, 120 tests de la base sautés en local (pas de variables Neon dans ce conteneur: la CI les joue); types, linter et formatage verts; les 63 scénarios de bout en bout des projets bureau et mobile au vert en local. Vérification visuelle par captures Playwright, ordinateur et téléphone: le pied en développement et avec un libellé de production, la fenêtre, les vignettes.
 - Couverture de packages/sim: inchangée, aucun code du paquet touché.
-- État de la CI: voir « Décisions et écarts », point 3.
+- État de la CI: **verte sur `53c3b0d`** (run `36379815383`) du premier coup, tests de la base Neon et scénarios de bout en bout compris, sans relance. La mise en ligne est sautée hors de `master` (« Décisions et écarts », point 3).
 
 ## Décisions et écarts au plan
 
