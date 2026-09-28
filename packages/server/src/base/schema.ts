@@ -1,6 +1,7 @@
 /**
  * Le schema de la base: les comptes, leur progression, les parties jouees et, depuis
- * l'etape 3.6, les amities.
+ * l'etape 3.6, les amities, puis les succes (3.7), le titre (3.9) et les faits de partie
+ * (3.8).
  *
  * C'EST LA SOURCE DES MIGRATIONS. Les fichiers SQL de packages/server/migrations
  * sont ecrits par drizzle-kit a partir de ce fichier (`pnpm base:generer`), jamais
@@ -348,5 +349,46 @@ export const titres = pgTable(
       columns: [table.compteId, table.succes],
       foreignColumns: [succesDebloques.compteId, succesDebloques.succes],
     }).onDelete('cascade'),
+  ],
+);
+
+/**
+ * Les faits de partie (etape 3.8): ce que le serveur a releve d'un compte pendant une
+ * partie, et que son resultat ne dit pas. Une ligne par fait non nul: les Evades
+ * attrapes, le plus haut multiplicateur, « jamais pris » en Horde. Les exploits et les
+ * secrets s'en deduisent, comme les autres succes se deduisent des resultats.
+ *
+ * UNE TABLE A PART, ET NON DES COLONNES DE `resultats`: un fait de plus ne demande pas
+ * de migration (schema de l'etape 3.1). L'identifiant du fait est un texte, controle
+ * par sa forme seulement, comme celui d'un succes: la lecture ignore un fait que le
+ * code ne connait plus.
+ *
+ * UN FAIT APPARTIENT A UN RESULTAT. La cle etrangere porte sur le couple (partie,
+ * compte) de `resultats`, en cascade: un fait ne s'ecrit pas sans le resultat de son
+ * compte, et supprimer un compte supprime ses resultats, donc ses faits. Les faits d'un
+ * compte se lisent par l'index sur le compte, avec son historique.
+ */
+export const faitsDePartie = pgTable(
+  'faits_de_partie',
+  {
+    partieId: uuid('partie_id').notNull(),
+    compteId: uuid('compte_id').notNull(),
+    fait: text('fait').notNull(),
+    valeur: integer('valeur').notNull(),
+  },
+  (table) => [
+    primaryKey({
+      name: 'faits_de_partie_partie_compte_fait',
+      columns: [table.partieId, table.compteId, table.fait],
+    }),
+    foreignKey({
+      name: 'faits_de_partie_resultat',
+      columns: [table.partieId, table.compteId],
+      foreignColumns: [resultats.partieId, resultats.compteId],
+    }).onDelete('cascade'),
+    index('faits_de_partie_par_compte').on(table.compteId),
+    check('faits_de_partie_identifiant', sql`${table.fait} ~ '^[a-z][a-zA-Z0-9]*$'`),
+    check('faits_de_partie_longueur', sql`char_length(${table.fait}) <= 40`),
+    check('faits_de_partie_valeur_positive', sql`${table.valeur} > 0`),
   ],
 );

@@ -322,13 +322,19 @@ export class ReseauDesAmis {
       : { valide: true, valeur: invitation.idRoom };
   }
 
-  /** Cette invitation vient de faire entrer son invite: elle ne vaut plus. */
-  invitationServie(id: string): void {
+  /**
+   * Cette invitation vient de faire entrer son invite: elle ne vaut plus. Elle est rendue,
+   * pour que la partie retienne qui a fait venir qui (etape 3.8), ou rien si elle ne
+   * valait deja plus.
+   */
+  invitationServie(id: string): Invitation | undefined {
     const invitation = this.invitations.retirer(id);
 
     if (invitation !== undefined) {
       this.prevenirDuRetrait([invitation]);
     }
+
+    return invitation;
   }
 
   /** Arrete l'ecoute des amities et tous les delais. N'envoie plus rien. */

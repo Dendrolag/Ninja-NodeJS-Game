@@ -82,6 +82,7 @@ import {
 } from '../base/comptes.js';
 import type { BaseDeDonnees } from '../base/connexion.js';
 import type {
+  FaitsDesComptes,
   NouveauResultat,
   NouvellePartie,
   ProgressionAppliquee,
@@ -594,8 +595,9 @@ export class Authentification implements ServiceDeComptes {
   async enregistrerFinDePartie(
     partie: NouvellePartie,
     resultats: readonly NouveauResultat[],
+    faits?: FaitsDesComptes,
   ): Promise<readonly ProgressionAppliquee[]> {
-    return (await enregistrerPartie(this.db, partie, resultats)).progressions;
+    return (await enregistrerPartie(this.db, partie, resultats, faits)).progressions;
   }
 
   surSessionsFermees(ecouteur: (compteId: string) => void): () => void {

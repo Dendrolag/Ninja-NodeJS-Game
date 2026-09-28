@@ -345,6 +345,8 @@ export { lireLeResumeDuBattement } from './sante.js';
 export type {
   AmiDansLaPartie,
   DefinitionDeSucces,
+  FaitDePartie,
+  FaitsDePartie,
   IdentifiantSucces,
   Mesure,
   Mesures,
@@ -356,12 +358,15 @@ export type {
   UniteDeMesure,
 } from './succes.js';
 export {
+  FAITS_DE_PARTIE,
+  JOUEURS_POUR_UN_EXPLOIT,
   JOUEURS_POUR_UN_PODIUM,
   MESURES,
   PALIERS_DE_SUCCES,
   SUCCES,
   definitionDuSucces,
   estAtteint,
+  estUnFait,
   estUnSucces,
   parcoursDe,
   progressionDuSucces,

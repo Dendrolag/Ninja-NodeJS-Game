@@ -608,9 +608,14 @@ export class ServeurSocket {
       const entre = this.faireEntrer(socket, connexion, trouvee.valeur, identite, repondre);
 
       // Une invitation qui a fait entrer ne vaut plus (etape 2.8). Refusee par la
-      // partie, pleine ou lancee, elle reste valable le temps qu'il lui reste.
+      // partie, pleine ou lancee, elle reste valable le temps qu'il lui reste. Servie,
+      // la partie retient qui a fait venir qui, pour « Rassembleur » (etape 3.8).
       if (entre && verdict.valeur.invitation !== undefined) {
-        this.amis?.invitationServie(verdict.valeur.invitation);
+        const servie = this.amis?.invitationServie(verdict.valeur.invitation);
+
+        if (servie !== undefined) {
+          trouvee.valeur.retenirUneInvitationServie(servie.de, servie.pour);
+        }
       }
     });
   }
@@ -1353,7 +1358,7 @@ export class ServeurSocket {
   ): Promise<Awaited<ReturnType<AnnuaireDesComptes['enregistrerFinDePartie']>> | undefined> {
     for (let essai = 1; essai <= ESSAIS_D_ENREGISTREMENT; essai += 1) {
       try {
-        return await comptes.enregistrerFinDePartie(fin.partie, fin.resultats);
+        return await comptes.enregistrerFinDePartie(fin.partie, fin.resultats, fin.faits);
       } catch (erreur) {
         console.error(
           `La fin de la partie ${idRoom} n'a pas pu etre enregistree (essai ${String(essai)} sur ${String(ESSAIS_D_ENREGISTREMENT)}):`,

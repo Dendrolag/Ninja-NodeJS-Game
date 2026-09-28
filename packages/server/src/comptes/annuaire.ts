@@ -33,7 +33,12 @@ import type {
   TitreDuCompte,
 } from '@neon-ninja/shared';
 
-import type { NouveauResultat, NouvellePartie, ProgressionAppliquee } from '../base/parties.js';
+import type {
+  FaitsDesComptes,
+  NouveauResultat,
+  NouvellePartie,
+  ProgressionAppliquee,
+} from '../base/parties.js';
 
 /** Un ami d'un compte: son identifiant, qui ne quitte pas le serveur, et son pseudo. */
 export interface AmiConnu {
@@ -53,14 +58,18 @@ export interface IdentiteDeCompte {
 export interface AnnuaireDesComptes {
   /**
    * Enregistre une partie terminee: la partie, le resultat de chacun de ses comptes,
-   * et leurs gains ajoutes a leur progression, en une seule fois (etape 3.3).
+   * et leurs gains ajoutes a leur progression, en une seule fois (etape 3.3), avec les
+   * faits releves pendant la partie (etape 3.8).
    *
+   * @param faits Les faits de partie de chaque compte present a la fin, par identifiant
+   *              de compte. Un compte absent de la table n'en a aucun.
    * @returns L'evolution reellement appliquee a la progression de chaque compte.
    * @throws Si l'enregistrement n'a pas pu se faire: rien n'a alors ete ecrit.
    */
   enregistrerFinDePartie(
     partie: NouvellePartie,
     resultats: readonly NouveauResultat[],
+    faits?: FaitsDesComptes,
   ): Promise<readonly ProgressionAppliquee[]>;
 
   /**

@@ -19,7 +19,7 @@ import type { Socket as SocketClient } from 'socket.io-client';
 import { io as connecter } from 'socket.io-client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { NouveauResultat, NouvellePartie } from './base/parties.js';
+import type { FaitsDesComptes, NouveauResultat, NouvellePartie } from './base/parties.js';
 import type { IdentiteDeCompte, ServiceDeComptes } from './comptes/annuaire.js';
 import { ATTENTE_ENTRE_DEUX_ENREGISTREMENTS_MS, ESSAIS_D_ENREGISTREMENT } from './finDePartie.js';
 import type { HorlogeManuelle } from './horloge.js';
@@ -46,6 +46,7 @@ interface AnnuaireDEssai extends ServiceDeComptes {
   readonly finsEnregistrees: {
     readonly partie: NouvellePartie;
     readonly resultats: readonly NouveauResultat[];
+    readonly faits: FaitsDesComptes | undefined;
   }[];
   /** Toute question leve une erreur, comme une base injoignable. */
   panne: boolean;
@@ -114,7 +115,7 @@ function annuaireDEssai(): AnnuaireDEssai {
     essaisDEnregistrement: [],
     // Chaque compte part d'une progression vide, et une perte de points de ligue
     // est ramenee a zero, comme en base.
-    enregistrerFinDePartie: async (partie, resultats) => {
+    enregistrerFinDePartie: async (partie, resultats, faits) => {
       annuaire.essaisDEnregistrement.push(partie);
       await repondre();
 
@@ -124,7 +125,7 @@ function annuaireDEssai(): AnnuaireDEssai {
       }
 
       await annuaire.verrouDEnregistrement;
-      annuaire.finsEnregistrees.push({ partie, resultats });
+      annuaire.finsEnregistrees.push({ partie, resultats, faits });
 
       return resultats.map((resultat) => ({
         compteId: resultat.compteId,
@@ -841,6 +842,10 @@ describe('fin de partie (etape 3.3)', () => {
     });
     expect(fin?.resultats).toHaveLength(1);
     expect(resultat?.compteId).toBe('compte-alice');
+    // Les faits de partie du releve partent avec les resultats, pour les seuls comptes
+    // (etape 3.8).
+    expect(fin?.faits).toBeInstanceOf(Map);
+    expect([...(fin?.faits?.keys() ?? [])].every((compte) => compte === 'compte-alice')).toBe(true);
     expect(recue).toEqual({
       enregistree: true,
       placement: resultat?.placement,

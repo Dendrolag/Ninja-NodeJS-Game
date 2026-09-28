@@ -68,6 +68,14 @@
  *   - leurs regles, en fonctions pures (comptes/amities.ts), appliquees en base sous
  *     le verrou des deux comptes;
  *   - la relation et les parties jouees ensemble sur la fiche d'un joueur.
+ *
+ * Ce que les etapes 3.7 a 3.9 ont ajoute:
+ *
+ *   - les succes debloques, attribues dans la transaction de fin par le pli du paquet
+ *     partage, leur rarete, le rattrapage et la mesure de retention (3.7);
+ *   - le releve des exploits, fonction pure tenue par la room, et la table des faits de
+ *     partie qu'il remplit a la fin (3.8);
+ *   - le titre, un succes obtenu choisi au profil et montre au salon (3.9).
  */
 
 export type {
@@ -78,6 +86,16 @@ export type {
   StatutRoom,
 } from './GameRoom.js';
 export { CADENCE_BATTEMENT_MS, DT_MAXIMUM_MS, GameRoom } from './GameRoom.js';
+
+export type { CleDuJoueur, JoueurDuReleve, ReleveDesExploits } from './releveDesExploits.js';
+export {
+  DELAI_DE_L_ARROSEUR_MS,
+  DELAI_DE_REVANCHE_MS,
+  DERNIERE_SECONDE_MS,
+  RELEVE_VIDE,
+  faitsDeFin,
+  releverLeBattement,
+} from './releveDesExploits.js';
 
 export type { OptionsCreationRoom, OptionsRoomManager } from './RoomManager.js';
 export { RoomManager } from './RoomManager.js';
@@ -207,6 +225,7 @@ export type { Progression, ValeursProgression } from './base/progression.js';
 export { ecrireProgression, lireProgression } from './base/progression.js';
 
 export type {
+  FaitsDesComptes,
   NouveauResultat,
   NouvellePartie,
   PartieEnregistree,

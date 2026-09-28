@@ -78,6 +78,13 @@
       "when": 1790528293128,
       "tag": "0010_titres",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790579188195,
+      "tag": "0011_faits_de_partie",
+      "breakpoints": true
     }
   ]
 }

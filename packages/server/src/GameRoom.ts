@@ -49,6 +49,11 @@
  * pendant la partie. Elle ne calcule aucun gain: les regles sont dans
  * @neon-ninja/shared, et l'enregistrement dans la couche reseau.
  *
+ * CE QUE L'ETAPE 3.8 A AJOUTE: le releve des exploits. Apres chaque battement, la room
+ * fait lire les evenements du moteur par une fonction pure (releveDesExploits.ts), et
+ * retient les amis entres par invitation. A la fin, elle rend les faits de partie de
+ * chaque compte present. Elle ne sait rien des succes qui s'en deduisent.
+ *
  * CE QUE L'ETAPE 2.5 A AJOUTE: l'absence. Un joueur dont le lien est tombe en
  * pleine partie reste membre de la room et reste dans l'etat, le temps que la
  * couche reseau lui laisse pour revenir. La room l'immobilise et donne la main a un
@@ -60,6 +65,8 @@ import type {
   CompteDeSession,
   Devancement,
   Equipe,
+  FaitDePartie,
+  FaitsDePartie,
   Mode,
   ReglagesPartie,
   ReglagesPartiels,
@@ -107,6 +114,8 @@ import {
 import type { Horloge } from './horloge.js';
 import type { ChronometreDuBattement } from './chronometreDuBattement.js';
 import { horlogeSysteme } from './horloge.js';
+import type { ReleveDesExploits } from './releveDesExploits.js';
+import { RELEVE_VIDE, faitsDeFin, releverLeBattement } from './releveDesExploits.js';
 
 /**
  * Cadence de la boucle d'une partie, en millisecondes.
@@ -355,6 +364,23 @@ export class GameRoom {
    * type ne le signalerait. Plusieurs demandes du meme battement n'en font qu'une.
    */
   private readonly tirsDemandes = new Set<IdentifiantEntite>();
+
+  /** Ce que chaque joueur a fait de notable depuis le lancement (etape 3.8). */
+  private releve: ReleveDesExploits = RELEVE_VIDE;
+
+  /**
+   * Les amis entres par invitation, par compte qui les a invites (etape 3.8, succes
+   * « Rassembleur »). Retenus des le salon, ou l'on invite le plus: la couche reseau
+   * previent la room quand une invitation fait entrer son invite.
+   */
+  private readonly invitesParInviteur = new Map<string, Set<string>>();
+
+  /**
+   * La cle stable d'un joueur dans le releve: son compte, ou sa connexion pour un invite.
+   * Un identifiant de compte ne commence jamais par « invite: ».
+   */
+  private readonly cleDuJoueur = (id: IdentifiantEntite): string =>
+    this.comptesDesMembres.get(id)?.id ?? `invite:${id}`;
 
   /** De quoi arreter la boucle, quand elle tourne. */
   private arreterLaBoucle: (() => void) | undefined;
@@ -850,6 +876,7 @@ export class GameRoom {
 
     this.partie = tick(this.partie, this.entreesDuBattement(), dtMs);
     this.tirsDemandes.clear();
+    this.releve = releverLeBattement(this.releve, this.partie, this.cleDuJoueur);
 
     // Prevenir AVANT de constater la fin: le dernier battement d'une partie est
     // un battement comme les autres, et ce qui s'y est passe doit partir comme le
@@ -944,6 +971,45 @@ export class GameRoom {
     }));
 
     return { nombreJoueurs, dureePartieMs: this.partie.dureeMs, joueurs: [...presents, ...partis] };
+  }
+
+  /**
+   * Retient qu'une invitation de ce compte vient de faire entrer ce compte-la dans la
+   * partie (etape 3.8). Le meme ami entre deux fois ne compte qu'une.
+   */
+  retenirUneInvitationServie(inviteur: string, invite: string): void {
+    const invites = this.invitesParInviteur.get(inviteur) ?? new Set<string>();
+
+    invites.add(invite);
+    this.invitesParInviteur.set(inviteur, invites);
+  }
+
+  /**
+   * Les faits de partie de chaque compte present a la fin, par identifiant de compte
+   * (etape 3.8): ceux du releve, ceux qui se constatent a la fin, et les amis entres par
+   * son invitation. A lire une fois la partie terminee, comme le bilan.
+   *
+   * Un compte parti avant la fin n'y figure pas: un abandon n'a pas d'exploit (etude des
+   * succes, section 5.4). Un compte sans aucun fait non plus.
+   */
+  exploits(): ReadonlyMap<string, FaitsDePartie> {
+    const deFin = faitsDeFin(this.releve, this.partie, this.cleDuJoueur);
+    const parCompte = new Map<string, FaitsDePartie>();
+
+    for (const compte of this.comptesDesMembres.values()) {
+      const faits: Partial<Record<FaitDePartie, number>> = { ...deFin.get(compte.id) };
+      const rassembles = this.invitesParInviteur.get(compte.id)?.size ?? 0;
+
+      if (rassembles > 0) {
+        faits.amisRassembles = rassembles;
+      }
+
+      if (Object.keys(faits).length > 0) {
+        parCompte.set(compte.id, faits);
+      }
+    }
+
+    return parCompte;
   }
 
   /**

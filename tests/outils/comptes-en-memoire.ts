@@ -26,6 +26,7 @@
  */
 
 import type {
+  FaitsDesComptes,
   IdentiteDeCompte,
   MotifDeRefus,
   NouveauResultat,
@@ -129,6 +130,8 @@ const JOUR_A_PARIS = new Intl.DateTimeFormat('en-CA', {
 export interface FinEnregistree {
   readonly partie: NouvellePartie;
   readonly resultats: readonly NouveauResultat[];
+  /** Les faits de partie des comptes presents a la fin (etape 3.8). */
+  readonly faits: FaitsDesComptes;
 }
 
 /**
@@ -707,8 +710,12 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
     // Les gains arrivent calcules. Comme en base, une perte de points de ligue plus
     // grande que le solde est ramenee au solde, et les succes s'attribuent une fois tous
     // les resultats de la partie ecrits.
-    enregistrerFinDePartie: async (partie, resultats): Promise<readonly ProgressionAppliquee[]> => {
-      fins.push({ partie, resultats });
+    enregistrerFinDePartie: async (
+      partie,
+      resultats,
+      faits = new Map(),
+    ): Promise<readonly ProgressionAppliquee[]> => {
+      fins.push({ partie, resultats, faits });
       const numero = fins.length;
       const partieId = partie.id ?? `partie-${String(numero)}`;
       const termineeLe = partie.termineeLe ?? new Date();
@@ -727,6 +734,7 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
         };
 
         const variationPointsLigue = Math.max(resultat.variationPointsLigue, -compte.pointsLigue);
+        const faitsDuCompte = faits.get(resultat.compteId);
 
         compte.xpTotale += resultat.xpGagnee;
         compte.pieces += resultat.piecesGagnees;
@@ -759,6 +767,8 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
             xpGagnee: resultat.xpGagnee,
             variationPointsLigue,
             jour: JOUR_A_PARIS.format(termineeLe),
+            // Comme en base, les faits vont avec le resultat du compte (etape 3.8).
+            ...(faitsDuCompte === undefined ? {} : { faits: faitsDuCompte }),
           },
         });
 

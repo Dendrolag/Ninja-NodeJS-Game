@@ -3,10 +3,11 @@
  * comptes; relire l'historique d'un compte.
  *
  * TOUT S'ECRIT ENSEMBLE, OU RIEN. Une seule transaction pour la partie, le resultat
- * de chaque compte, l'ajout de ses gains a sa progression et, depuis l'etape 3.7, les
- * succes qu'il a atteints (base/succes.ts): si l'un est refuse,
- * rien n'est ecrit. Une partie a moitie enregistree fausserait les statistiques du
- * profil, et un gain applique sans son resultat ne s'expliquerait plus.
+ * de chaque compte, les faits releves pendant la partie (etape 3.8), l'ajout de ses
+ * gains a sa progression et, depuis l'etape 3.7, les succes qu'il a atteints
+ * (base/succes.ts): si l'un est refuse, rien n'est ecrit. Une partie a moitie
+ * enregistree fausserait les statistiques du profil, et un gain applique sans son
+ * resultat ne s'expliquerait plus.
  *
  * LES GAINS S'AJOUTENT, ILS NE REMPLACENT PAS (etape 3.3). La progression de chaque
  * compte est verrouillee, lue, puis augmentee dans la meme transaction. Deux parties
@@ -25,14 +26,14 @@
  * Aucun joueur n'enregistre une partie lui-meme.
  */
 
-import type { CarteEnregistree, Mode, SuccesDeFin } from '@neon-ninja/shared';
+import type { CarteEnregistree, FaitsDePartie, Mode, SuccesDeFin } from '@neon-ninja/shared';
 import { JOUEURS_POUR_UNE_VICTOIRE } from '@neon-ninja/shared';
 import { desc, eq, inArray, sql } from 'drizzle-orm';
 
 import { succesDeFin } from '../comptes/succes.js';
 import type { BaseDeDonnees } from './connexion.js';
 import type { ValeursProgression } from './progression.js';
-import { parties, progressions, resultats } from './schema.js';
+import { faitsDePartie, parties, progressions, resultats } from './schema.js';
 import { attribuerLesSucces } from './succes.js';
 
 /** Une transaction ouverte sur la base. */
@@ -81,6 +82,12 @@ export interface NouveauResultat {
   readonly variationPointsLigue: number;
 }
 
+/**
+ * Les faits de partie de chaque compte present a la fin, par identifiant de compte
+ * (etape 3.8). Un compte qui n'y figure pas n'a aucun fait.
+ */
+export type FaitsDesComptes = ReadonlyMap<string, FaitsDePartie>;
+
 /** L'evolution de la progression d'un compte, telle que l'enregistrement l'a appliquee. */
 export interface ProgressionAppliquee {
   readonly compteId: string;
@@ -110,9 +117,11 @@ export interface ResultatDePartie
 }
 
 /**
- * Enregistre une partie terminee, les resultats de ses joueurs qui ont un compte,
- * et ajoute leurs gains a leur progression.
+ * Enregistre une partie terminee, les resultats de ses joueurs qui ont un compte et
+ * leurs faits de partie, et ajoute leurs gains a leur progression.
  *
+ * @param faits Les faits de partie des comptes presents a la fin. Un fait n'existe
+ *              qu'avec le resultat de son compte: la base refuse l'un sans l'autre.
  * @returns L'identifiant de la partie, et l'evolution de la progression de chaque
  *          compte.
  */
@@ -120,6 +129,7 @@ export async function enregistrerPartie(
   db: BaseDeDonnees,
   partie: NouvellePartie,
   lignes: readonly NouveauResultat[],
+  faits: FaitsDesComptes = new Map(),
 ): Promise<PartieEnregistree> {
   // Seule regle que la base ne peut pas verifier seule: elle relie deux tables.
   for (const ligne of lignes) {
@@ -174,6 +184,13 @@ export async function enregistrerPartie(
         partieId: enregistree.id,
       })),
     );
+
+    // Les faits ensuite, avant l'attribution des succes, qui les lit avec l'historique.
+    const lignesDeFaits = lignesDesFaits(enregistree.id, faits);
+
+    if (lignesDeFaits.length > 0) {
+      await transaction.insert(faitsDePartie).values(lignesDeFaits);
+    }
 
     const progressionsAppliquees: GainsAppliques[] = [];
 
@@ -310,6 +327,18 @@ async function progressionsDejaAppliquees(
       apres,
     };
   });
+}
+
+/** Les lignes de la table des faits: une par fait non nul de chaque compte. */
+function lignesDesFaits(
+  partieId: string,
+  faits: FaitsDesComptes,
+): (typeof faitsDePartie.$inferInsert)[] {
+  return [...faits].flatMap(([compteId, sesFaits]) =>
+    Object.entries(sesFaits).flatMap(([fait, valeur]) =>
+      valeur === undefined || valeur === 0 ? [] : [{ partieId, compteId, fait, valeur }],
+    ),
+  );
 }
 
 /** La variation de points de ligue reellement applicable: jamais sous zero. */

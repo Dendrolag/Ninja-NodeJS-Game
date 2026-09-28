@@ -359,6 +359,19 @@ describe('une invitation par le reseau', () => {
     );
   });
 
+  it('dit a la partie qui a fait venir qui, pour « Rassembleur » (etape 3.8)', async () => {
+    const { alice, bob, salon } = await aliceInviteBob();
+
+    await demander<InvitationEnvoyee>(alice, 'inviter', { pseudo: 'bob' });
+    await laisserPasser();
+    await demander<InfosSalon>(bob, 'rejoindre', { invitation: bob.invitations[0]?.id });
+
+    const room = serveur?.jeu.rooms.room(salon.idRoom);
+
+    expect(room?.exploits().get('alice')?.amisRassembles).toBe(1);
+    expect(room?.exploits().get('bob')?.amisRassembles).toBeUndefined();
+  });
+
   it('ne fait entrer ni un autre compte, ni un invite', async () => {
     const { alice, bob } = await aliceInviteBob();
     const carole = await ouvrir('carole');

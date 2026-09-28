@@ -126,6 +126,28 @@ describe('finPourLesComptes', () => {
     expect(fin.joueurs.size).toBe(0);
   });
 
+  it('joint les faits de partie des comptes presents, tels que la room les a releves', () => {
+    const room = roomLancee(ALICE, BOB);
+    room.retenirUneInvitationServie('c-alice', 'c-carole');
+    jouer(room, 31_000);
+
+    const fin = finPourLesComptes(room);
+
+    expect(fin.faits).toEqual(room.exploits());
+    expect(fin.faits.get('c-alice')).toMatchObject({ amisRassembles: 1 });
+    expect([...fin.faits.keys()]).toEqual(['c-alice']);
+  });
+
+  it('ne joint aucun fait a l abandon d un compte', () => {
+    const room = roomLancee(ALICE, BOB);
+    room.retenirUneInvitationServie('c-alice', 'c-carole');
+    jouer(room, 10_000);
+    room.faireSortir(ALICE.id);
+    jouer(room, 21_000);
+
+    expect(finPourLesComptes(room).faits.size).toBe(0);
+  });
+
   it('ne rend aucun resultat pour une partie jouee par des invites', () => {
     const room = roomLancee(BOB);
     jouer(room, 31_000);

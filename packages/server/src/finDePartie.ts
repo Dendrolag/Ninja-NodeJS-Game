@@ -9,7 +9,9 @@
  *   1. Du bilan de la room vers ce qui s'enregistre: la partie, et le resultat de
  *      chaque joueur qui a un compte, present a la fin ou parti avant. Un invite ne
  *      laisse aucun resultat, mais il compte dans le nombre de joueurs et dans le
- *      placement des autres (decision du 11 septembre 2026).
+ *      placement des autres (decision du 11 septembre 2026). Depuis l'etape 3.8, les
+ *      faits de partie des comptes presents a la fin s'y joignent, tels que la room
+ *      les a releves.
  *   2. De la progression appliquee par la base vers le recapitulatif envoye au
  *      compte. Les gains y sont la DIFFERENCE entre la progression d'apres et celle
  *      d'avant: le recapitulatif dit ce qui a ete ecrit, jamais ce qui avait ete
@@ -25,7 +27,12 @@ import type { EtatDeProgression, ProgressionEnregistree } from '@neon-ninja/shar
 import { niveauDeXp, palierDePoints, recompensesDePartie } from '@neon-ninja/shared';
 import type { IdentifiantEntite } from '@neon-ninja/sim';
 
-import type { NouveauResultat, NouvellePartie, ProgressionAppliquee } from './base/parties.js';
+import type {
+  FaitsDesComptes,
+  NouveauResultat,
+  NouvellePartie,
+  ProgressionAppliquee,
+} from './base/parties.js';
 import type { ValeursProgression } from './base/progression.js';
 import type { GameRoom } from './GameRoom.js';
 
@@ -48,6 +55,11 @@ export interface FinPourLesComptes {
   readonly partie: NouvellePartie;
   /** Un par compte, present a la fin ou parti avant. Vide si personne n'avait de compte. */
   readonly resultats: readonly NouveauResultat[];
+  /**
+   * Les faits de partie des comptes presents a la fin (etape 3.8). Un compte parti avant
+   * n'y figure pas: un abandon n'a pas d'exploit.
+   */
+  readonly faits: FaitsDesComptes;
   /**
    * L'identifiant de joueur de chaque compte present a la fin, par identifiant de
    * compte: c'est par lui que la couche reseau retrouve la connexion a prevenir.
@@ -107,6 +119,7 @@ export function finPourLesComptes(room: GameRoom): FinPourLesComptes {
       nombreJoueurs: bilan.nombreJoueurs,
     },
     resultats,
+    faits: room.exploits(),
     joueurs,
   };
 }
