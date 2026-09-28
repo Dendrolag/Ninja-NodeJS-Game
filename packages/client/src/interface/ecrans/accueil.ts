@@ -27,6 +27,7 @@ import { CARTES, MODES } from '@neon-ninja/shared';
 
 import type { EtatClient } from '../../etat.js';
 import { monterChampPseudo } from '../composants/champPseudo.js';
+import { monterCredits } from '../composants/credits.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import { GLYPHES_DES_MODES, icone } from '../icones.js';
 import { modeleAccueil } from '../modeles/accueil.js';
@@ -115,6 +116,8 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
       client.continuerEnInvite();
     },
   );
+
+  const credits = monterCredits(doc);
 
   const formulaire = creer(
     doc,
@@ -218,17 +221,28 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
     // la production est restee trois commits en arriere sans que rien ne le signale:
     // il fallait interroger la route de sante du serveur pour s'en apercevoir.
     // L'empreinte complete est dans l'infobulle, pour qui a le depot sous la main.
+    // A cote, les credits (etape 4.7), a la place qu'un joueur connait pour eux.
     creer(
       doc,
       'footer',
       { classe: 'accueil-pied' },
       creer(doc, 'span', {
+        classe: 'accueil-version',
         texte: contexte.libelleDeVersion,
         ...(contexte.version === undefined
           ? {}
           : { attributs: { title: `Commit ${contexte.version}` } }),
       }),
+      creer(doc, 'span', {
+        classe: 'accueil-pied-separateur',
+        texte: '·',
+        attributs: { 'aria-hidden': 'true' },
+      }),
+      bouton(doc, { classe: 'accueil-credits', texte: 'Crédits' }, () => {
+        credits.ouvrir();
+      }),
     ),
+    credits.racine,
   );
 
   let etatCourant: EtatClient | undefined;
@@ -297,6 +311,7 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
     demonter() {
       formulaire.removeEventListener('submit', surEnvoi);
       champPseudo.demonter();
+      credits.demonter();
       racine.remove();
     },
   };

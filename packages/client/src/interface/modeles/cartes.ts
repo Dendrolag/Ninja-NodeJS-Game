@@ -21,6 +21,12 @@ import { cheminPluie } from '@neon-ninja/shared';
 export interface PresentationCarte {
   readonly nom: string;
   readonly ambiance: string;
+  /**
+   * Le decor est-il provisoire (etape 4.7). La vignette de la carte le dit alors d'un
+   * badge « Prototype ». La mention ne porte que sur le decor: les ninjas, eux, sont
+   * les memes sur toutes les cartes.
+   */
+  readonly prototype: boolean;
 }
 
 /**
@@ -29,16 +35,18 @@ export interface PresentationCarte {
  * map2, l'ancienne Tokyo sans pluie, ne se joue plus: elle n'apparait que dans
  * l'historique d'un profil, sous le meme nom que map1.
  *
- * Le Quartier est la carte de travail de l'etape 8.2: un plan au trait, sans
- * decor, pose en jeu pour savoir si une carte structuree vaut mieux qu'un terrain
- * ouvert. Son ambiance le dit au joueur, pour que personne ne la prenne pour un
- * decor reste en chemin.
+ * Seule Tokyo a un decor definitif, realise par Bribz (credits, etape 4.7). Spirit &
+ * Time garde le decor du jeu d'origine, et le Quartier est la carte de travail de
+ * l'etape 8.2: un plan au trait, sans decor, pose en jeu pour savoir si une carte
+ * structuree vaut mieux qu'un terrain ouvert. Toutes deux sont des prototypes, et le
+ * badge suffit a le dire: l'ambiance du Quartier a perdu son « Essai » (decision du
+ * porteur du projet du 28 septembre 2026).
  */
 export const PRESENTATION_CARTES: Readonly<Record<CarteEnregistree, PresentationCarte>> = {
-  map1: { nom: 'Tokyo', ambiance: 'Néon · Nuit' },
-  map2: { nom: 'Tokyo', ambiance: 'Néon · Nuit' },
-  map3: { nom: 'Spirit & Time', ambiance: 'Vide · Infini' },
-  quartier: { nom: 'Quartier', ambiance: 'Essai · Plan au trait' },
+  map1: { nom: 'Tokyo', ambiance: 'Néon · Nuit', prototype: false },
+  map2: { nom: 'Tokyo', ambiance: 'Néon · Nuit', prototype: false },
+  map3: { nom: 'Spirit & Time', ambiance: 'Vide · Infini', prototype: true },
+  quartier: { nom: 'Quartier', ambiance: 'Plan au trait', prototype: true },
 };
 
 /**

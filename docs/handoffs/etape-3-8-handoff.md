@@ -51,7 +51,7 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
 1. **Aucune décision soumise au porteur du projet.** Tranchées dans la fiche, à relire: une prise (Revanche, Sur le fil, Arroseur arrosé) est une prise de joueur, pas par un Black Ninja; « Sur le fil » se lit au chronomètre; « Table rase » va à tous les présents, faute d'auteur publié par le moteur; « Coup de filet » compte joueurs et ninjas, comme le moteur; « Rassembleur » demande de finir la partie et se range en Habitué; les secrets en Découverte, Habitué et Expert.
 2. **Les faits d'absence sont positifs** (`intouchable`), pour qu'une partie d'avant le relevé ne passe pas pour une partie sans prise. Sans cela, le rattrapage aurait donné « Intouchable » à toute victoire de Horde à quatre.
 3. **`exploits()` à part du bilan**, plutôt qu'un champ de `JoueurDuBilan`: le bilan dit la place et le temps, et ses tests figent sa forme.
-4. **Écart de branche**: le PROTOCOLE dit de pousser sur `master`. Cette session avait pour consigne de travailler et de pousser sur `claude/exploits-partie-etape-3-8-brf71c`. L'étape y est entière; rien n'est encore sur `master`, donc rien n'est en ligne. La fusion dans `master` met en ligne la migration `0011` et le relevé: elle revient au porteur du projet.
+4. **Écart de branche**: le PROTOCOLE dit de pousser sur `master`. Cette session avait pour consigne de travailler sur `claude/exploits-partie-etape-3-8-brf71c`. Pendant ce temps, l'étape `4.7` (les crédits) a été avancée et faite sur `master`. Sur demande du porteur du projet, `master` a été fusionnée dans la branche (un seul conflit, au ROADMAP, résolu dans l'ordre réel: `4.7`, puis `3.8`), puis la branche dans `master`. Le porteur du projet a demandé que ce soit désormais la règle: consignée dans le PROTOCOLE, cadre permanent.
 5. **Bout en bout sans scénario propre**: un exploit ne se provoque pas de façon fiable dans une partie pilotée par Playwright, et l'affichage n'a pas changé. La chaîne complète est couverte par la room rejouée par graine, la fin de partie, et la base.
 
 ## Problèmes connus et dette
@@ -61,8 +61,8 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
 
 ## Prochaine action exacte
 
-Si `master` n'a pas encore reçu cette branche: la fusionner dans `master` (CI verte, puis mise en ligne). Puis exécuter l'étape `4.7`, les crédits: rédiger sa fiche selon le cas de repli du PROTOCOLE, à partir de l'entrée 4.7 du ROADMAP, et trancher avec le porteur du projet les points qu'elle liste (texte, nom affiché, accord de Bribz, emplacement de « Prototype »).
+Aucune étape planifiée ne reste ouverte: `4.7` et `3.8` sont faites. Demander au porteur du projet la suivante. Un mois après la mise en ligne des succès, lui rappeler le relevé de rétention (`pnpm base:mesurer`, `docs/mesures/retention.md`).
 
 ## Étape suivante
 
-Fiche à lire: `docs/plan/etape-4-7.md`, à rédiger au début de l'étape (cas de repli du PROTOCOLE).
+Aucune: la prochaine étape se décide avec le porteur du projet, puis s'inscrit au ROADMAP.

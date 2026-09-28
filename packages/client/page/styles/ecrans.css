@@ -590,19 +590,50 @@
 }
 
 /*
- * Le pied de l'accueil: la version du jeu (etape 8.4).
+ * Le pied de l'accueil: la version du jeu (etape 8.4), et les credits (etape 4.7).
  *
  * DISCRET VEUT DIRE DISCRET. Pas de panneau, pas de bordure, pas de fond: une ligne
  * de texte faible, en police de donnees parce que c'est une donnee, centree sous la
  * liste des modes. Elle se lit quand on la cherche et ne prend l'oeil de personne.
+ * Le bouton des credits a la meme voix: souligne, sans rien d'un bouton d'action.
  */
 .accueil-pied {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  column-gap: 8px;
   margin-top: 8px;
   color: var(--texte-faible);
   font-family: var(--police-donnees);
   font-size: 11.5px;
   letter-spacing: 0.02em;
   text-align: center;
+}
+
+/* Une zone de toucher plus haute que la ligne, sans la grossir. */
+.accueil-credits {
+  margin: -8px 0;
+  padding: 8px 4px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  transition: color var(--transition);
+}
+
+.accueil-credits:hover {
+  color: var(--texte-secondaire);
+}
+
+.accueil-credits:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--cyan);
+  outline-offset: -2px;
 }
 
 .carte-mode {
@@ -1092,6 +1123,25 @@
   font-weight: 600;
 }
 
+/*
+ * Le badge d'une carte dont le decor est provisoire (etape 4.7). Pose sur l'image,
+ * en haut a gauche, sur un fond sombre qui le rend lisible sur n'importe quel decor.
+ */
+.carte-prototype {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  padding: 3px 7px;
+  border: 1px solid var(--bordure-survol);
+  border-radius: 6px;
+  background: rgba(6, 8, 14, 0.8);
+  color: var(--texte-secondaire);
+  font-family: var(--police-donnees);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .carte-ambiance {
   color: var(--texte-faible);
   font-family: var(--police-donnees);
@@ -1158,6 +1208,23 @@
 
 .fenetre-aide {
   width: min(660px, 100%);
+}
+
+/* Les credits (etape 4.7): deux lignes, une fenetre a leur mesure. */
+.fenetre-credits {
+  width: min(440px, 100%);
+}
+
+.credits-creation,
+.credits-participation {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.credits-lien {
+  color: var(--cyan);
+  font-weight: 600;
+  text-underline-offset: 3px;
 }
 
 .aide-section {
@@ -2781,6 +2848,28 @@
 
   .carte-ambiance {
     display: none;
+  }
+
+  /*
+   * La version de production ne tient pas sur une ligne avec les credits: chacun la
+   * sienne, sans le point qui resterait seul au bout de la premiere.
+   */
+  .accueil-pied {
+    flex-direction: column;
+    row-gap: 4px;
+  }
+
+  .accueil-pied-separateur {
+    display: none;
+  }
+
+  /* Trois vignettes par ligne: le badge se fait plus petit pour tenir sur l'image. */
+  .carte-prototype {
+    top: 14px;
+    left: 14px;
+    padding: 2px 5px;
+    font-size: 8px;
+    letter-spacing: 0.04em;
   }
 
   .podium {

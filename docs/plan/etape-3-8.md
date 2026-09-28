@@ -14,7 +14,7 @@ Le socle (`3.7`) ne récompense que ce que les résultats enregistrés disent: p
 
 ## Ordre
 
-`3.8` vient après `3.9`, faite le 27 septembre 2026 à la demande du porteur du projet. Les succès de cette étape deviennent des titres possibles sans rien changer au titre. Suite: `4.7`, les crédits.
+`3.8` vient après `3.9`, faite le 27 septembre 2026 à la demande du porteur du projet. Les succès de cette étape deviennent des titres possibles sans rien changer au titre. L'étape `4.7`, les crédits, a été avancée avant celle-ci le 28 septembre 2026 et faite le même jour, sur une autre branche: aucune étape planifiée ne suit.
 
 ## État du dépôt au départ (28 septembre 2026)
 
@@ -98,4 +98,4 @@ Conditions de ROADMAP réunies, plus:
 
 ## Rituel de fin de session
 
-Écrire `docs/handoffs/etape-3-8-handoff.md`. Consigner les décisions au journal de `docs/design/README.md`, mettre à jour le ROADMAP (étape terminée), le cadrage (profil) et l'étude des succès. Prochaine action exacte: l'étape `4.7`, les crédits. Commiter.
+Écrire `docs/handoffs/etape-3-8-handoff.md`. Consigner les décisions au journal de `docs/design/README.md`, mettre à jour le ROADMAP (étape terminée), le cadrage (profil) et l'étude des succès. Prochaine action exacte: aucune étape planifiée ne reste; la suivante se décide avec le porteur du projet. Commiter.
