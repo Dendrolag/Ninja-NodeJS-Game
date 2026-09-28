@@ -68,8 +68,8 @@ describe('succesDuProfilAffiches', () => {
 
     expect(section.compte).toBe('2 succès sur 47');
     expect(section.paliers.map((palier) => [palier.nom, palier.compte])).toEqual([
-      ['Découverte', '1 sur 8'],
-      ['Habitué', '0 sur 15'],
+      ['Découverte', '1 sur 7'],
+      ['Habitué', '0 sur 16'],
       ['Expert', '1 sur 17'],
       ['Légende', '0 sur 7'],
     ]);
@@ -154,7 +154,7 @@ describe('les secrets', () => {
       id: 'pas-de-chance',
       nom: SECRET,
       description: undefined,
-      palier: 'decouverte',
+      palier: 'habitue',
       obtenu: false,
       date: undefined,
       progression: undefined,

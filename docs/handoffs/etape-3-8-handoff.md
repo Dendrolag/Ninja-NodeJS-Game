@@ -54,6 +54,19 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
 4. **Écart de branche**: le PROTOCOLE dit de pousser sur `master`. Cette session avait pour consigne de travailler sur `claude/exploits-partie-etape-3-8-brf71c`. Pendant ce temps, l'étape `4.7` (les crédits) a été avancée et faite sur `master`. Sur demande du porteur du projet, `master` a été fusionnée dans la branche (un seul conflit, au ROADMAP, résolu dans l'ordre réel: `4.7`, puis `3.8`), puis la branche dans `master`. Le porteur du projet a demandé que ce soit désormais la règle: consignée dans le PROTOCOLE, cadre permanent.
 5. **Bout en bout sans scénario propre**: un exploit ne se provoque pas de façon fiable dans une partie pilotée par Playwright, et l'affichage n'a pas changé. La chaîne complète est couverte par la room rejouée par graine, la fin de partie, et la base.
 
+## Ajustements du 28 septembre 2026
+
+Une seconde session (branche `claude/exploits-partie-etape-3-8-kn9v33`) avait construit la même étape en parallèle, sans le savoir. Sa branche ne se fusionnait pas: même migration `0011`, même table, faits nommés autrement. Le porteur du projet a comparé les deux et retenu, sur `master`:
+
+1. **Les exploits ne comptent que dans une partie à plusieurs**, Massacre seul compris (pli, `packages/shared/src/succes.ts`). Les faits d'une partie seule s'enregistrent toujours.
+2. **« Pas de chance » en Habitué** au lieu de Découverte: 7 Découverte, 16 Habitué, 17 Expert, 7 Légende.
+3. **« Coup de filet » ne compte que les ninjas** d'un tir, comme sa description: nouveau fait `meilleurFilet`, déduit dans le relevé (`releveDesExploits.ts`) des prises qui précèdent le tir dans le battement, et gardé par un test contre le vrai moteur.
+4. **« Table rase » demande d'avoir tué** au moins un ninja: nouveau fait `tableRase`.
+5. **Les faits `meilleurTir` et `carteVidee` sont retirés**, noms à ne jamais reprendre. Les lignes écrites sous ces noms en production s'ignorent à la lecture, les succès déjà inscrits restent.
+6. **Un scénario de bout en bout** (`tests/e2e/exploits.spec.ts`, bureau seulement): Alice invite Bob, ils jouent, et « Rassembleur » s'annonce à la fin pour Alice seulement. La décision 5 de ce handoff (pas de scénario propre) ne tient plus: « Rassembleur » s'obtient à coup sûr.
+
+Fichiers: `packages/shared/src/succes.ts` et son test, `packages/server/src/releveDesExploits.ts` et son test, `packages/client/src/interface/modeles/succes.test.ts`, `ecrans/profil.test.ts`, `tests/base/exploits.test.ts` (parties à deux, et un cas qui fige la règle des parties seules), `tests/e2e/exploits.spec.ts` (créé), `playwright.config.ts`, `docs/plan/etape-3-8.md`, `docs/plan/ROADMAP.md`, `docs/design/README.md`, `docs/design/etude-succes.md`, ce handoff. La branche parallèle est abandonnée.
+
 ## Problèmes connus et dette
 
 - **Playwright et le Chromium de cette machine**: le dépôt épingle Playwright 1.62, dont le navigateur n'est pas celui préinstallé ici. Les scénarios ont été joués par une configuration temporaire, hors dépôt, qui pointe vers `/opt/pw-browsers/chromium`. Effet de l'environnement, pas du dépôt: la CI installe son navigateur.

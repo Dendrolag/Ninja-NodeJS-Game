@@ -205,7 +205,8 @@ Prises en construisant les succès de source « partie », sans changer la liste
 - **Les faits** vivent dans une table `faits_de_partie` (section 5.1), un nombre positif par fait non nul, relié au résultat de son compte. « Jamais pris » s'enregistre comme un fait positif constaté à la fin: une partie d'avant le relevé n'en a aucun, et ne donne aucun exploit.
 - **Une prise**, pour « Revanche », « Sur le fil » et « Arroseur arrosé », c'est capturer, infecter ou tuer un joueur, comme pour « Première prise ». Une prise par un Black Ninja n'en est pas une, sauf pour « Pas de chance » et « Intouchable », qui la nomment.
 - **« Sur le fil »** se lit à la dernière seconde du chronomètre: une Chasse finie avant l'heure par la dernière infection ne le donne pas.
-- **« Table rase »** va à chaque joueur présent quand la carte est vidée, comme le bonus du moteur.
-- **« Coup de filet »** compte les entités prises d'un tir, joueurs et ninjas confondus, comme le moteur.
+- **« Table rase »** va à chaque joueur présent quand la carte est vidée, s'il y a tué au moins un ninja (ajusté le même jour par le porteur du projet: d'abord à tout présent).
+- **« Coup de filet »** ne compte que les ninjas d'un tir, joueurs et Évadé non compris, comme la liste le dit (ajusté le même jour: d'abord toutes les captures du tir).
 - **« Rassembleur »** demande que l'inviteur finisse la partie, comme tout exploit, et se range en Habitué.
-- **Les secrets ont un palier**: « Pas de chance » en Découverte, « Arroseur arrosé » en Habitué, « Sur le fil » en Expert. Au profil, ils se rangent dans leur palier, en « ??? ».
+- **Les secrets ont un palier**: « Pas de chance » et « Arroseur arrosé » en Habitué, « Sur le fil » en Expert (« Pas de chance » d'abord en Découverte, ajusté le même jour). Au profil, ils se rangent dans leur palier, en « ??? ».
+- **Les exploits ne comptent que dans une partie à plusieurs** (décision du porteur du projet, le même jour), au sens des victoires: c'est le principe 3 appliqué aux exploits. Les descriptions le disent là où une partie seule est possible.

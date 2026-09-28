@@ -53,9 +53,12 @@ function defaite(surcharge: Partial<PartieDuParcours> = {}): PartieDuParcours {
   return partie({ nombreJoueurs: 2, placement: 2, ...surcharge });
 }
 
-/** Une partie de Horde jouee seul, avec ces faits releves. */
+/**
+ * Une partie de Horde a deux, perdue, avec ces faits releves: un exploit ne demande pas
+ * de gagner, mais seulement de jouer a plusieurs.
+ */
 function avec(faits: FaitsDePartie, surcharge: Partial<PartieDuParcours> = {}): PartieDuParcours {
-  return partie({ faits, ...surcharge });
+  return partie({ nombreJoueurs: 2, placement: 2, faits, ...surcharge });
 }
 
 /** Une victoire dans une partie de quatre, avec ces faits releves. */
@@ -109,19 +112,19 @@ describe('les definitions', () => {
     expect(rangs).toEqual([...rangs].sort((un, autre) => un - autre));
   });
 
-  it("comptent les 47 succes de l'etude: 8 Decouverte, 15 Habitue, 17 Expert, 7 Legende", () => {
+  it("comptent les 47 succes de l'etude: 7 Decouverte, 16 Habitue, 17 Expert, 7 Legende", () => {
     const parPalier = PALIERS_DE_SUCCES.map(
       (palier) => SUCCES.filter((succes) => succes.palier === palier).length,
     );
 
-    expect(parPalier).toEqual([8, 15, 17, 7]);
+    expect(parPalier).toEqual([7, 16, 17, 7]);
   });
 
-  it('gardent trois secrets, un par palier sous Legende', () => {
+  it('gardent trois secrets, deux en Habitue et un en Expert', () => {
     const secrets = SUCCES.filter((succes) => succes.secret);
 
     expect(secrets.map((succes) => [succes.id, succes.palier])).toEqual([
-      ['pas-de-chance', 'decouverte'],
+      ['pas-de-chance', 'habitue'],
       ['arroseur-arrose', 'habitue'],
       ['sur-le-fil', 'expert'],
     ]);
@@ -300,8 +303,8 @@ describe('chaque succes, juste sous et juste sur son seuil', () => {
       [victoireAQuatre({ intouchable: 1 })],
     ],
     'coup-de-filet': [
-      [avec({ meilleurTir: 7 }, { mode: 'tactique' })],
-      [avec({ meilleurTir: 8 }, { mode: 'tactique' })],
+      [avec({ meilleurFilet: 7 }, { mode: 'tactique' })],
+      [avec({ meilleurFilet: 8 }, { mode: 'tactique' })],
     ],
     'derniere-proie': [
       [avec({ derniereProie: 1 }, { mode: 'chasse', nombreJoueurs: 3 })],
@@ -309,7 +312,7 @@ describe('chaque succes, juste sous et juste sur son seuil', () => {
     ],
     'table-rase': [
       [avec({}, { mode: 'massacre' })],
-      [avec({ carteVidee: 1 }, { mode: 'massacre' })],
+      [avec({ tableRase: 1 }, { mode: 'massacre' })],
     ],
     'chasseur-d-evade': [[avec({})], [avec({ evadesAttrapes: 1 })]],
     'main-leste': [[avec({})], [avec({ doubleursVoles: 1 })]],
@@ -457,6 +460,17 @@ describe('les regles du pli', () => {
     expect(parcours.mesures.devantUnAmi).toBe(0);
   });
 
+  it("ne compte les exploits qu'a plusieurs: les faits d'une partie jouee seul ne donnent rien", () => {
+    const seul = partie({
+      faits: { malusRamasses: 3, meilleurMultiplicateur: 5, ninjasRallies: 400, tableRase: 1 },
+    });
+
+    expect(atteints([seul])).toEqual(['premier-pas']);
+    expect(parcoursDe([seul]).mesures.ninjasRallies).toBe(0);
+    // Le meme releve dans une partie a deux, meme perdue, compte.
+    expect(parcoursDe([avec(seul.faits ?? {})]).mesures.ninjasRallies).toBe(400);
+  });
+
   it("ne donne aucun exploit a une partie sans faits: celles d'avant le releve", () => {
     // Une victoire de Horde a quatre, sans releve: rien ne dit qu'elle etait sans prise.
     const avant = partie({ nombreJoueurs: 4, placement: 1 });
@@ -511,7 +525,7 @@ describe('les regles du pli', () => {
 
   it('ne lit le coup de filet que dans une partie Tactique', () => {
     // En Chasse, les traqueurs tirent aussi.
-    expect(obtient('coup-de-filet', [avec({ meilleurTir: 9 }, { mode: 'chasse' })])).toBe(false);
+    expect(obtient('coup-de-filet', [avec({ meilleurFilet: 9 }, { mode: 'chasse' })])).toBe(false);
   });
 
   it("ne lit la derniere proie que dans une Chasse d'au moins quatre joueurs", () => {
@@ -526,7 +540,8 @@ describe('les regles du pli', () => {
   it('ne compte le x2 porte a la fin que dans une victoire a plusieurs', () => {
     const doubleur = { finiAvecLeDoubleur: 1 };
 
-    // Seul, la premiere place n'est pas une victoire.
+    // Une partie perdue ne compte pas, ni une premiere place jouee seul.
+    expect(obtient('double-ou-rien', [partie({ faits: doubleur })])).toBe(false);
     expect(obtient('double-ou-rien', [avec(doubleur)])).toBe(false);
     expect(parcoursDe([victoire({ faits: doubleur })]).mesures.victoiresAvecLeDoubleur).toBe(1);
   });

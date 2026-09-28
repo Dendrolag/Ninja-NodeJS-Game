@@ -168,7 +168,7 @@ describe('l ecran du profil', () => {
     );
     expect(
       [...hote.querySelectorAll('.succes-palier-bloc h3')].map((titre) => titre.textContent),
-    ).toEqual(['Découverte1 sur 8', 'Habitué0 sur 15', 'Expert0 sur 17', 'Légende0 sur 7']);
+    ).toEqual(['Découverte1 sur 7', 'Habitué0 sur 16', 'Expert0 sur 17', 'Légende0 sur 7']);
 
     const premierPas = obligatoire(hote, '.succes-obtenu');
     expect(obligatoire(premierPas, '.succes-nom').textContent).toBe('Premier pas');

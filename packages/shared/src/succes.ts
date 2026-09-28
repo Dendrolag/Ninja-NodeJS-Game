@@ -65,6 +65,11 @@ export type PalierDeSucces = (typeof PALIERS_DE_SUCCES)[number];
  *
  * UN IDENTIFIANT NE SE REUTILISE JAMAIS, comme celui d'un succes: il est ecrit dans la
  * base, et la lecture ignore ce qu'elle ne connait plus.
+ *
+ * Retires le 28 septembre 2026, et a ne jamais reprendre: `meilleurTir`, qui comptait les
+ * joueurs pris d'un tir avec ses ninjas (remplace par `meilleurFilet`), et `carteVidee`,
+ * qui allait a tout present, meme sans avoir tue (remplace par `tableRase`). Les lignes
+ * deja ecrites sous ces noms s'ignorent a la lecture.
  */
 export const FAITS_DE_PARTIE = [
   /** Les malus ramasses. */
@@ -77,10 +82,10 @@ export const FAITS_DE_PARTIE = [
   'meilleurMultiplicateur',
   /** Les ninjas rallies en Horde. */
   'ninjasRallies',
-  /** Le plus d'entites prises d'un seul tir. */
-  'meilleurTir',
-  /** 1: le joueur etait sur la carte quand elle a ete videe, en Massacre. */
-  'carteVidee',
+  /** Le plus de ninjas pris d'un seul tir, joueurs et Evade non compris. */
+  'meilleurFilet',
+  /** 1: le joueur etait sur la carte quand elle a ete videe, en Massacre, et y avait tue. */
+  'tableRase',
   /** Les Evades attrapes. */
   'evadesAttrapes',
   /** Les x2 pris a leur porteur. */
@@ -187,9 +192,9 @@ export const MESURES = [
   'meilleurMultiplicateurEnHorde',
   'meilleurMultiplicateur',
   'victoiresIntouchables',
-  'meilleurTirEnTactique',
+  'meilleurFiletEnTactique',
   'dernieresProies',
-  'cartesVidees',
+  'tablesRases',
   'evadesAttrapes',
   'doubleursVoles',
   'victoiresAvecLeDoubleur',
@@ -355,20 +360,11 @@ const DEFINITIONS = [
   {
     id: 'cadeau-empoisonne',
     nom: 'Cadeau empoisonné',
-    description: 'Ramasser un malus, qui frappe les autres.',
+    description: 'Ramasser un malus, qui frappe les autres joueurs.',
     palier: 'decouverte',
     secret: false,
     mesure: 'malusRamasses',
     seuil: 1,
-  },
-  {
-    id: 'pas-de-chance',
-    nom: 'Pas de chance',
-    description: 'Être pris trois fois par un Black Ninja dans une même partie.',
-    palier: 'decouverte',
-    secret: true,
-    mesure: 'malchance',
-    seuil: 3,
   },
 
   // Habitue: dans la premiere semaine.
@@ -493,7 +489,7 @@ const DEFINITIONS = [
   {
     id: 'en-chaine',
     nom: 'En chaîne',
-    description: 'Atteindre le multiplicateur x3 en Horde.',
+    description: 'Atteindre le multiplicateur x3 en Horde, à plusieurs.',
     palier: 'habitue',
     secret: false,
     mesure: 'meilleurMultiplicateurEnHorde',
@@ -507,6 +503,15 @@ const DEFINITIONS = [
     secret: false,
     mesure: 'amisRassembles',
     seuil: 1,
+  },
+  {
+    id: 'pas-de-chance',
+    nom: 'Pas de chance',
+    description: 'Être pris trois fois par un Black Ninja dans une même partie.',
+    palier: 'habitue',
+    secret: true,
+    mesure: 'malchance',
+    seuil: 3,
   },
   {
     id: 'arroseur-arrose',
@@ -600,7 +605,7 @@ const DEFINITIONS = [
   {
     id: 'combo-parfait',
     nom: 'Combo parfait',
-    description: 'Atteindre le multiplicateur x5, en Horde ou en Massacre.',
+    description: 'Atteindre le multiplicateur x5, en Horde ou en Massacre, à plusieurs.',
     palier: 'expert',
     secret: false,
     mesure: 'meilleurMultiplicateur',
@@ -619,10 +624,10 @@ const DEFINITIONS = [
   {
     id: 'coup-de-filet',
     nom: 'Coup de filet',
-    description: 'Prendre au moins huit ninjas d’un seul tir, en Tactique.',
+    description: 'Prendre au moins huit ninjas d’un seul tir, en Tactique, à plusieurs.',
     palier: 'expert',
     secret: false,
-    mesure: 'meilleurTirEnTactique',
+    mesure: 'meilleurFiletEnTactique',
     seuil: 8,
   },
   {
@@ -637,16 +642,16 @@ const DEFINITIONS = [
   {
     id: 'table-rase',
     nom: 'Table rase',
-    description: 'Vider la carte en Massacre.',
+    description: 'Vider la carte en Massacre, à plusieurs, en y tuant au moins un ninja.',
     palier: 'expert',
     secret: false,
-    mesure: 'cartesVidees',
+    mesure: 'tablesRases',
     seuil: 1,
   },
   {
     id: 'chasseur-d-evade',
     nom: 'Chasseur d’Évadé',
-    description: 'Attraper l’Évadé.',
+    description: 'Attraper l’Évadé, à plusieurs.',
     palier: 'expert',
     secret: false,
     mesure: 'evadesAttrapes',
@@ -734,7 +739,7 @@ const DEFINITIONS = [
   {
     id: 'collectionneur-de-fantomes',
     nom: 'Collectionneur de fantômes',
-    description: 'Attraper l’Évadé 10 fois.',
+    description: 'Attraper l’Évadé 10 fois, à plusieurs.',
     palier: 'legende',
     secret: false,
     mesure: 'evadesAttrapes',
@@ -744,7 +749,7 @@ const DEFINITIONS = [
   {
     id: 'seigneur-de-la-horde',
     nom: 'Seigneur de la Horde',
-    description: 'Rallier 10\u00a0000 ninjas en Horde, au total.',
+    description: 'Rallier 10\u00a0000 ninjas en Horde, à plusieurs, au total.',
     palier: 'legende',
     secret: false,
     mesure: 'ninjasRallies',
@@ -853,9 +858,9 @@ type MesureDExploit = Extract<
   | 'meilleurMultiplicateurEnHorde'
   | 'meilleurMultiplicateur'
   | 'victoiresIntouchables'
-  | 'meilleurTirEnTactique'
+  | 'meilleurFiletEnTactique'
   | 'dernieresProies'
-  | 'cartesVidees'
+  | 'tablesRases'
   | 'evadesAttrapes'
   | 'doubleursVoles'
   | 'victoiresAvecLeDoubleur'
@@ -918,9 +923,9 @@ function compteursVides(): Compteurs {
       meilleurMultiplicateurEnHorde: 0,
       meilleurMultiplicateur: 0,
       victoiresIntouchables: 0,
-      meilleurTirEnTactique: 0,
+      meilleurFiletEnTactique: 0,
       dernieresProies: 0,
-      cartesVidees: 0,
+      tablesRases: 0,
       evadesAttrapes: 0,
       doubleursVoles: 0,
       victoiresAvecLeDoubleur: 0,
@@ -982,7 +987,10 @@ function ajouterLaPartie(compteurs: Compteurs, partie: PartieDuParcours): void {
     compteurs.amis.set(ami.compte, avecLui);
   }
 
-  if (partie.faits !== undefined) {
+  // Les exploits ne comptent qu'a plusieurs (decision du porteur du projet, 28 septembre
+  // 2026): seul, une Horde se rallie sans concurrence, et une partie privee deviendrait
+  // une ferme a exploits. Les faits d'une partie seule restent enregistres.
+  if (aPlusieurs && partie.faits !== undefined) {
     ajouterLesFaits(compteurs.exploits, partie, partie.faits, victoire);
   }
 }
@@ -1011,7 +1019,7 @@ function ajouterLesFaits(
     exploits.meilleurMultiplicateur,
     fait('meilleurMultiplicateur'),
   );
-  exploits.cartesVidees += fait('carteVidee');
+  exploits.tablesRases += fait('tableRase');
   exploits.evadesAttrapes += fait('evadesAttrapes');
   exploits.doubleursVoles += fait('doubleursVoles');
   exploits.ninjasRallies += fait('ninjasRallies');
@@ -1030,7 +1038,10 @@ function ajouterLesFaits(
   }
 
   if (partie.mode === 'tactique') {
-    exploits.meilleurTirEnTactique = Math.max(exploits.meilleurTirEnTactique, fait('meilleurTir'));
+    exploits.meilleurFiletEnTactique = Math.max(
+      exploits.meilleurFiletEnTactique,
+      fait('meilleurFilet'),
+    );
   }
 
   if (partie.mode === 'chasse') {

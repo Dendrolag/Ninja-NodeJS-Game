@@ -53,14 +53,25 @@ Aucune n'a été soumise au porteur du projet: elles découlent de l'étude, de 
 21. **Rien ne change à l'affichage**: l'écran de fin, le profil, la fiche et le titre lisent déjà la liste du paquet partagé. Le commentaire et le test du client qui injectaient un secret faute d'en avoir un en lisent désormais un vrai.
 22. **Pas de rattrapage**: aucun fait n'existe avant la mise en ligne, et les succès de cette étape ne comptent qu'à partir d'elle (étude, section 4). Le rattrapage de `3.7`, relancé, n'inscrirait rien de plus.
 
+## Ajustements du 28 septembre 2026, sur décision du porteur du projet
+
+Une seconde session avait construit l'étape en parallèle, sur une autre branche, sans que l'une sache l'autre. En comparant les deux, le porteur du projet a retenu les choix suivants, qui remplacent les décisions 13, 14 et 20 et complètent la décision 7.
+
+- **Les exploits ne comptent que dans une partie à plusieurs** (au moins deux joueurs, abandons compris, comme une victoire). Principe 3 de l'étude: seul, une Horde se rallie sans concurrence, et une partie privée deviendrait une ferme à exploits, Massacre seul compris. La règle vit dans le pli; les faits d'une partie seule restent enregistrés. Les descriptions le disent là où une partie seule est possible.
+- **« Coup de filet » ne compte que les ninjas d'un tir**, comme sa description l'a toujours dit: les captures du tir, moins les joueurs et l'Évadé dont les événements le précèdent dans le battement. Un test contre le vrai moteur garde cette déduction. Nouveau fait `meilleurFilet`.
+- **« Table rase » demande d'avoir tué au moins un ninja** au Massacre: la carte se vide ensemble, mais pas pour qui n'a rien fait. Nouveau fait `tableRase`.
+- **« Pas de chance » passe en Habitué**: être pris trois fois par un Black Ninja dans une partie demande d'en croiser plusieurs, ce qu'une première heure ne garantit pas.
+- **Les faits `meilleurTir` et `carteVidee` sont retirés**, et leurs noms ne se reprendront jamais: leur sens a changé. Les lignes déjà écrites en production sous ces noms, depuis la mise en ligne de la veille, s'ignorent à la lecture; les succès déjà inscrits le restent.
+- **Un scénario de bout en bout**: Alice invite Bob, ils jouent, et « Rassembleur » s'annonce sur l'écran de fin d'Alice seulement (`tests/e2e/exploits.spec.ts`).
+
 ## La liste construite ici
 
 18 succès de source « partie ». Les descriptions exactes vivent dans `succes.ts`.
 
 | Palier     | Succès                                                                                                                                                     |
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Découverte | Cadeau empoisonné (ramasser un malus), Pas de chance (secret)                                                                                              |
-| Habitué    | Razzia (20 ninjas d'une prise), Revanche, En chaîne (x3 en Horde), Rassembleur, Arroseur arrosé (secret)                                                   |
+| Découverte | Cadeau empoisonné (ramasser un malus)                                                                                                                      |
+| Habitué    | Razzia (20 ninjas d'une prise), Revanche, En chaîne (x3 en Horde), Rassembleur, Pas de chance (secret), Arroseur arrosé (secret)                           |
 | Expert     | Combo parfait (x5), Intouchable, Coup de filet (8 d'un tir), Dernière proie, Table rase, Chasseur d'Évadé, Main leste, Double ou rien, Sur le fil (secret) |
 | Légende    | Collectionneur de fantômes (10 Évadés), Seigneur de la Horde (10 000 ninjas ralliés)                                                                       |
 

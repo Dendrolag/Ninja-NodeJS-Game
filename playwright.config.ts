@@ -99,6 +99,12 @@ const AMIS_EN_DIRECT = '**/amis-en-direct.spec.ts';
  */
 const TITRE = '**/titre.spec.ts';
 
+/**
+ * Les exploits de partie (etape 3.8): deux comptes amis, une invitation et une partie
+ * entiere, que le cadrage de l'ecran ne change pas.
+ */
+const EXPLOITS = '**/exploits.spec.ts';
+
 export default defineConfig({
   testDir: './tests/e2e',
   // Les paquets sont compiles une fois avant les scenarios: le banc de mesure du
@@ -163,6 +169,7 @@ export default defineConfig({
         AMIS,
         AMIS_EN_DIRECT,
         TITRE,
+        EXPLOITS,
       ],
     },
     // Le banc de mesure du rendu a son propre projet, et une seule execution:
