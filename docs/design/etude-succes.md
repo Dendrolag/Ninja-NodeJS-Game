@@ -1,7 +1,7 @@
 # Étude - Les succès
 
 Date: 25 septembre 2026
-Statut: étude, décisions prises. L'ordre est tranché le 26 septembre 2026: les succès suivent les amis. Les six autres décisions de la section 8 ont été prises avec le porteur du projet le 26 septembre 2026, au début de l'étape `3.7`, qui construit le socle (`docs/plan/etape-3-7.md`).
+Statut: étude, décisions prises, construite. L'ordre est tranché le 26 septembre 2026: les succès suivent les amis. Les six autres décisions de la section 8 ont été prises avec le porteur du projet le 26 septembre 2026, au début de l'étape `3.7`, qui construit le socle (`docs/plan/etape-3-7.md`). Les exploits de partie, les secrets et « Rassembleur » sont construits à l'étape `3.8` (`docs/plan/etape-3-8.md`), le titre à l'étape `3.9`.
 
 ## 1. La demande
 
@@ -197,3 +197,15 @@ Prises avec le porteur du projet au début de l'étape `3.7`, toutes sur la reco
 5. **L'ordre**: précisé le même jour. `3.7` passe avant `2.8`, dont le socle ne dépend pas. `3.8` reste après `2.8`, qui fait exister « Rassembleur ».
 6. **« 1000 ninjas capturés » tous modes**: non, on s'en tient à la Horde.
 7. **La mesure de rétention**: oui, par un script en lecture seule, lancé par le porteur du projet un mois après la mise en ligne (`docs/mesures/retention.md`). Il relit l'historique: les semaines d'avant la mise en ligne s'y lisent aussi, sans relevé préalable.
+
+### Précisions de l'étape 3.8, le 28 septembre 2026
+
+Prises en construisant les succès de source « partie », sans changer la liste (fiche `docs/plan/etape-3-8.md`, décisions de conception).
+
+- **Les faits** vivent dans une table `faits_de_partie` (section 5.1), un nombre positif par fait non nul, relié au résultat de son compte. « Jamais pris » s'enregistre comme un fait positif constaté à la fin: une partie d'avant le relevé n'en a aucun, et ne donne aucun exploit.
+- **Une prise**, pour « Revanche », « Sur le fil » et « Arroseur arrosé », c'est capturer, infecter ou tuer un joueur, comme pour « Première prise ». Une prise par un Black Ninja n'en est pas une, sauf pour « Pas de chance » et « Intouchable », qui la nomment.
+- **« Sur le fil »** se lit à la dernière seconde du chronomètre: une Chasse finie avant l'heure par la dernière infection ne le donne pas.
+- **« Table rase »** va à chaque joueur présent quand la carte est vidée, comme le bonus du moteur.
+- **« Coup de filet »** compte les entités prises d'un tir, joueurs et ninjas confondus, comme le moteur.
+- **« Rassembleur »** demande que l'inviteur finisse la partie, comme tout exploit, et se range en Habitué.
+- **Les secrets ont un palier**: « Pas de chance » en Découverte, « Arroseur arrosé » en Habitué, « Sur le fil » en Expert. Au profil, ils se rangent dans leur palier, en « ??? ».
