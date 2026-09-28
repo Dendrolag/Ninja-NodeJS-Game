@@ -44,7 +44,7 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
   - client: le profil avec trois secrets en « ??? », « Pas de chance » avant et après obtention, 47 succès.
 - Résultat: 3 056 tests unitaires et d'intégration au vert en local (`--project unitaires`); les tests de la base sautés en local (pas de clés Neon dans cette session), joués par la CI; bout en bout des comptes, du titre, de la fiche, des amis en direct et du multijoueur au vert en local (6 sur 6, en cadrage bureau, avec le Chromium préinstallé de la machine).
 - Couverture de packages/sim: inchangée, aucun code du paquet touché.
-- État de la CI: en cours sur `61d5b61` (run `36391395582`) à l'écriture de ce handoff: formatage, types, migrations et linter au vert; les tests, base Neon comprise, et les scénarios de bout en bout tournaient. Son résultat est consigné par le commit qui suit, s'il diffère.
+- État de la CI: **verte sur `5e1ea2a`** (run `36391653211`) du premier coup, sans relance: 3 184 tests (3 056 unitaires, 128 de la base contre une branche Neon neuve, dont les 8 de `exploits.test.ts`), puis les scénarios de bout en bout. La mise en ligne est sautée hors de `master`: rien de l'étape n'est en production.
 
 ## Décisions et écarts au plan
 
