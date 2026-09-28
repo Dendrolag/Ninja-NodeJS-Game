@@ -62,6 +62,34 @@ describe('le panneau de reglages d une partie Chasse (etape 7.3)', () => {
   });
 });
 
+describe('les vignettes des cartes (etape 4.7)', () => {
+  /** Le badge de la vignette de cette carte, ou rien. */
+  function badge(carte: string): Element | null {
+    return (
+      obligatoire(panneau.racine, `input[value="${carte}"]`)
+        .closest('.carte-choix')
+        ?.querySelector('.carte-prototype') ?? null
+    );
+  }
+
+  it('marquent d un badge Prototype les decors provisoires, Spirit & Time et le Quartier', () => {
+    for (const carte of ['map3', 'quartier']) {
+      expect(badge(carte)?.textContent).toBe('Prototype');
+      expect(badge(carte)?.getAttribute('title')).toBe('Décor provisoire');
+    }
+  });
+
+  it('laissent Tokyo sans badge, son decor est definitif', () => {
+    expect(badge('map1')).toBeNull();
+  });
+
+  it('se lisent d abord par le nom de la carte, le badge ensuite', () => {
+    const vignette = obligatoire(panneau.racine, 'input[value="map3"]').closest('.carte-choix');
+
+    expect(vignette?.textContent).toBe('Spirit & TimePrototypeVide · Infini');
+  });
+});
+
 describe('le panneau de reglages', () => {
   it('s ouvre rempli avec les reglages de la partie', () => {
     expect(panneau.ouvert).toBe(true);

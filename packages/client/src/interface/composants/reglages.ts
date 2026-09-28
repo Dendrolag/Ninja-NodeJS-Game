@@ -468,6 +468,17 @@ function champEnElement(
               attributs: { src: `${RACINE_RESSOURCES}/${cheminApercuCarte(carte)}`, alt: '' },
             }),
             creer(doc, 'span', { classe: 'carte-nom', texte: PRESENTATION_CARTES[carte].nom }),
+            // Pose sur l'image par la mise en forme, mais apres le nom dans le document:
+            // la vignette se lit d'abord par le nom de sa carte (etape 4.7).
+            ...(PRESENTATION_CARTES[carte].prototype
+              ? [
+                  creer(doc, 'span', {
+                    classe: 'carte-prototype',
+                    texte: 'Prototype',
+                    attributs: { title: 'Décor provisoire' },
+                  }),
+                ]
+              : []),
             creer(doc, 'span', {
               classe: 'carte-ambiance',
               texte: PRESENTATION_CARTES[carte].ambiance,

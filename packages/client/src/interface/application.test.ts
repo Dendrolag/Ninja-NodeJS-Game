@@ -158,7 +158,7 @@ describe('l accueil', () => {
   it('dit en pied de page de quand date la version servie (etape 8.4)', () => {
     // La page de ce test n'est construite d'aucun commit: elle le dit, plutot que de
     // laisser une ligne vide qui ferait croire a une page cassee.
-    expect(obligatoire(hote, '.accueil-pied').textContent).toBe(LIBELLE_DE_DEVELOPPEMENT);
+    expect(obligatoire(hote, '.accueil-version').textContent).toBe(LIBELLE_DE_DEVELOPPEMENT);
   });
 
   it('porte la date du commit, et son empreinte entiere en infobulle (etape 8.4)', () => {
@@ -175,7 +175,7 @@ describe('l accueil', () => {
       horodatage: '2026-09-20T19:44:10+02:00',
     });
 
-    const pied = obligatoire(page, '.accueil-pied span');
+    const pied = obligatoire(page, '.accueil-version');
 
     expect(pied.textContent).toBe('Version du 20 septembre 2026, 19h44 · ee18151');
     // L'empreinte entiere ne se lit pas en pied de page, mais elle reste a portee de
@@ -184,6 +184,29 @@ describe('l accueil', () => {
 
     autre.demonter();
     page.remove();
+  });
+
+  it('ouvre les credits depuis son pied, puis rend le focus au bouton (etape 4.7)', () => {
+    const credits = (): HTMLElement => obligatoire(hote, '.fenetre-credits');
+    const bouton = boutonObligatoire(obligatoire(hote, '.accueil-pied'), 'Crédits');
+
+    expect(estCache(credits())).toBe(true);
+    // Un vrai bouton: la touche Entree ou Espace le declenche comme un clic.
+    expect(bouton.tagName).toBe('BUTTON');
+    expect(bouton.type).toBe('button');
+
+    bouton.focus();
+    bouton.click();
+
+    expect(estCache(credits())).toBe(false);
+    expect(document.activeElement).toBe(credits());
+    expect(credits().textContent).toContain('création originale de Dendrolag');
+    expect(credits().textContent).toContain('Bribz pour la carte Tokyo et les ninjas');
+
+    credits().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    expect(estCache(credits())).toBe(true);
+    expect(document.activeElement).toBe(bouton);
   });
 
   it('refuse d envoyer un pseudo invalide, et dit pourquoi', () => {
