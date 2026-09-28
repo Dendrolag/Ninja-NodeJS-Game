@@ -125,8 +125,12 @@ export {
   multiplicateurDuCombo,
   perteEnMassacre,
   pointsEnMassacre,
+  tuerParUneMine,
   tuerUnJoueur,
 } from './massacre.js';
+
+export { avancerLesMines, poserUneMine } from './mines.js';
+export type { ReglesDesMines } from './mines.js';
 
 export {
   aLaPocheVide,
@@ -170,6 +174,10 @@ export type {
   JoueurTranche,
   MalusPose,
   MalusRamasse,
+  MineArmee,
+  MineExplosee,
+  MinePosee,
+  MineSurLaCarte,
   MortParLeKatana,
   ObjetEmpoche,
   ObjetRamassable,

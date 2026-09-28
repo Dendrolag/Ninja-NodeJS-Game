@@ -479,7 +479,7 @@ describe('les Black Ninjas', () => {
   });
 
   it('ne perdent aucun bot au joueur attrape', () => {
-    expect(perteEnMassacre(massacreAvec(), joueurDe(massacreAvec(), 'alice'))).toEqual([]);
+    expect(perteEnMassacre(massacreAvec(), joueurDe(massacreAvec(), 'alice'), 50)).toEqual([]);
   });
 
   it('ignorent une prise dont la victime a quitte la partie', () => {

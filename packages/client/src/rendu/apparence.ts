@@ -261,6 +261,8 @@ export const APPARENCE_OBJET: Readonly<
   viseeEtroite: { libelle: 'Visée étroite', couleur: COULEURS_TACTIQUES.visee },
   // La fumee (etape 7.10): un gris de brume, qui tranche sur les neons sans leur ressembler.
   fumee: { libelle: 'Fumée', couleur: 0xb8c4d6 },
+  // La mine (etape 7.11): le rouge orange de sa diode et de son explosion.
+  mine: { libelle: 'Mine', couleur: 0xff5a3c },
 };
 
 /**

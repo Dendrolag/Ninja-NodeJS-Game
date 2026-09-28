@@ -59,6 +59,7 @@ const EFFETS_BONUS: Readonly<Record<TypeBonus, string>> = {
 const EFFETS_POCHE: Readonly<Record<ObjetDePoche, string>> = {
   fumee:
     'Gardez-la pour le bon moment. Un nuage, et vous reparaissez loin de là, à l’abri des autres. Personne ne sait que vous l’avez.',
+  mine: 'Posez-la sous vos pieds. Un adversaire ou un Black Ninja qui passe dessus l’arme, et elle saute une seconde et demie plus tard. Trois au plus sur la carte.',
 };
 
 /** Ce que fait chaque malus (etape 4.5). */

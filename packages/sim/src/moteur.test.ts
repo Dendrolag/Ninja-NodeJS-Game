@@ -42,6 +42,8 @@ const AUCUNE_APPARITION: ReglagesPartiels = {
   },
   malus: { tauxApparitionPourCent: 0 },
   zones: { actives: false },
+  // Les objets de poche tentent leur chance avec les bonus (etapes 7.10 et 7.11).
+  objetsDePoche: { fumee: { tauxApparitionPourCent: 0 }, mine: { tauxApparitionPourCent: 0 } },
 };
 
 /** Partie d'un joueur, place ou on veut, pour partir d'une situation nette. */

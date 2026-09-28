@@ -22,6 +22,7 @@
 
 import type {
   EvadeVu,
+  MineExploseeVue,
   Mode,
   NatureBonus,
   NatureMalus,
@@ -93,6 +94,7 @@ const EFFETS_DES_BONUS: Readonly<Record<NatureBonus, string>> = {
   viseeLarge: 'Votre cône s’ouvre et porte plus loin',
   // Un objet de poche n'a pas de duree: sa ligne dit comment s'en servir (etape 7.10).
   fumee: 'Disparaissez quand vous voulez',
+  mine: 'Posez-la, elle attendra les autres',
 };
 
 /** Une duree d'effet, en secondes entieres: « pendant 10 s ». */
@@ -292,6 +294,15 @@ export function annonceDuFait(fait: FaitDeJeu, mode?: Mode, moi?: string): Annon
     case 'fumee':
       return undefined;
 
+    // La mine (etape 7.11): sa pose et son armement se voient sur la carte. Son explosion
+    // s'annonce a qui elle touche, et a son poseur.
+    case 'minePosee':
+    case 'mineArmee':
+      return undefined;
+
+    case 'mineExplosee':
+      return annonceDeLExplosion(fait.charge, moi);
+
     case 'joueurArrive':
       return { texte: `${fait.charge.pseudo} a rejoint la partie`, ton: 'info' };
 
@@ -423,6 +434,52 @@ function annonceDuRalliement(
     ? { texte: `Combo x${String(ralliement.multiplicateur)} !`, ton: 'succes' }
     : undefined;
 }
+
+/**
+ * Une explosion de mine (etape 7.11). La victime lit en grand titre ce qu'elle vient de
+ * perdre, brouille comme un malus qui la frappe; en Massacre, la mort suffit a le dire, et une
+ * bulle nomme la mine. Le poseur lit dans une bulle ce que sa mine a fait. Les autres, rien:
+ * l'explosion se voit sur la carte.
+ */
+function annonceDeLExplosion(explosion: MineExploseeVue, moi?: string): Annonce | undefined {
+  const touche = explosion.touches.find((une) => une.joueur === moi);
+
+  if (touche !== undefined) {
+    if (touche.effet === 'tue') {
+      return { texte: 'Une mine vous a eu', ton: 'alerte' };
+    }
+
+    const ligne = LIGNES_DE_LA_MINE[touche.effet](touche.quantite);
+
+    return {
+      texte: `Mine : ${ligne}`,
+      ton: 'alerte',
+      grandTitre: grandTitre('mine', 'Piège', ligne, true),
+    };
+  }
+
+  if (explosion.poseur !== moi) {
+    return undefined;
+  }
+
+  const victimes = explosion.touches.length + explosion.botsNoirsTues;
+
+  return victimes === 0
+    ? { texte: 'Votre mine a sauté dans le vide', ton: 'info' }
+    : {
+        texte: `Votre mine a touché ${String(victimes)} ${victimes > 1 ? 'cibles' : 'cible'}${explosion.points > 0 ? ` : +${String(explosion.points)} points` : ''}`,
+        ton: 'succes',
+      };
+}
+
+/** Ce que la victime d'une mine a perdu, en quelques mots, hors du Massacre. */
+const LIGNES_DE_LA_MINE: Readonly<
+  Record<Exclude<MineExploseeVue['touches'][number]['effet'], 'tue'>, (quantite: number) => string>
+> = {
+  ninjasPerdus: (quantite) => `${ninjas(quantite)} ${quantite > 1 ? 'perdus' : 'perdu'}`,
+  pointsPerdus: (quantite) => `−${String(quantite)} ${quantite > 1 ? 'points' : 'point'}`,
+  armeEnrayee: (quantite) => `Arme enrayée ${pendant(quantite)}`,
+};
 
 /** Un joueur tue ne s'annonce qu'a son tueur et a sa victime. */
 function annonceDeLaMiseAMort(

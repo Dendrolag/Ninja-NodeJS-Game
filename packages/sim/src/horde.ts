@@ -143,6 +143,29 @@ export function viderLaReserve(etat: EtatPartie, victimeId: IdentifiantEntite): 
   return etat.horde === undefined ? etat : remplacer(etat, victimeId, RALLIEUR_DE_DEPART);
 }
 
+/**
+ * Une mine vient de toucher un joueur de la Horde (etape 7.11): sa reserve perd la meme part
+ * que ses ninjas, et son combo retombe, comme face a un Black Ninja. Rien dans une Horde au
+ * salon.
+ */
+export function amputerLaReserve(
+  etat: EtatPartie,
+  victimeId: IdentifiantEntite,
+  pourCent: number,
+): EtatPartie {
+  if (etat.horde === undefined) {
+    return etat;
+  }
+
+  const avant = rallieurDe(etat, victimeId);
+
+  return remplacer(etat, victimeId, {
+    combo: 0,
+    avantFinDuComboMs: 0,
+    prime: avant.prime - part(avant.prime, pourCent),
+  });
+}
+
 /** Remplace ce que retient un joueur, dans une Horde lancee. */
 function remplacer(etat: EtatPartie, id: IdentifiantEntite, rallieur: RallieurEnHorde): EtatPartie {
   const rallieurs = etat.horde?.rallieurs ?? {};

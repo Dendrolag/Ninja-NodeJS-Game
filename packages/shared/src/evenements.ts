@@ -147,8 +147,25 @@ export interface BotVu extends EntiteVueCommune {
   readonly type: 'bot' | 'botNoir' | 'evade';
 }
 
-/** Tout ce qui se deplace sur la carte. */
-export type EntiteVue = JoueurVu | BotVu;
+/**
+ * Une mine posee par un joueur (etape 7.11), telle que tout le monde la recoit.
+ *
+ * TOUTES LES MINES PARTENT A TOUS LES JOUEURS: celles des autres ne sont pas un secret,
+ * puisqu'elles scintillent (decision 5 du porteur du projet). C'est la page qui choisit le
+ * rendu, plein pour le poseur et son equipe, discret pour les autres, plein sous la
+ * Revelation. Sa couleur est celle de son poseur, et la suit quand elle change. Elle ne
+ * bouge pas: sa direction reste immobile.
+ */
+export interface MineVue extends EntiteVueCommune {
+  readonly type: 'mine';
+  /** Identifiant du joueur qui l'a posee. */
+  readonly poseur: string;
+  /** Armee, le temps avant qu'elle saute, en millisecondes. Absent tant qu'elle attend. */
+  readonly avantExplosionMs?: number;
+}
+
+/** Tout ce qui se trouve sur la carte et se dessine en personnage, plus les mines posees. */
+export type EntiteVue = JoueurVu | BotVu | MineVue;
 
 /**
  * Un objet pose sur la carte, en attente d'etre ramasse.
@@ -476,6 +493,62 @@ export interface FumeeVue {
   readonly depart: { readonly x: number; readonly y: number };
   /** Ou il reparait. */
   readonly arrivee: { readonly x: number; readonly y: number };
+}
+
+/** Ce joueur vient de poser une mine (etape 7.11). Adresse a lui seul: la pose ne s'entend pas. */
+export interface MinePoseeVue {
+  /** Identifiant de la mine. */
+  readonly mine: string;
+  readonly x: number;
+  readonly y: number;
+}
+
+/**
+ * Une mine vient d'etre armee (etape 7.11). Adresse a tous: armee, elle se voit de tous et
+ * clignote, pour laisser a chacun une chance de sortir de son rayon.
+ */
+export interface MineArmeeVue {
+  /** Identifiant de la mine. */
+  readonly mine: string;
+  /** Identifiant du joueur qui l'a posee. */
+  readonly poseur: string;
+  /** L'entite qui l'a armee: un joueur, ou un Black Ninja. */
+  readonly par: string;
+  readonly x: number;
+  readonly y: number;
+}
+
+/**
+ * Ce qu'une explosion a fait a un joueur (etape 7.11), selon le mode.
+ *
+ *   - ninjasPerdus: en Horde, en Tactique et en Equipes, la quantite est le nombre de ninjas
+ *     qui sont redevenus neutres.
+ *   - pointsPerdus: une proie de la Chasse, la quantite est ce que son score a perdu.
+ *   - armeEnrayee: un traqueur de la Chasse, la quantite est la duree, en millisecondes.
+ *   - tue: en Massacre, la quantite est ce qu'il a cede au poseur.
+ */
+export interface ToucheParUneMine {
+  readonly joueur: string;
+  readonly effet: 'ninjasPerdus' | 'pointsPerdus' | 'armeEnrayee' | 'tue';
+  readonly quantite: number;
+}
+
+/** Une mine vient de sauter (etape 7.11). Adresse a tous: chacun voit et entend l'explosion. */
+export interface MineExploseeVue {
+  /** Identifiant de la mine. */
+  readonly mine: string;
+  /** Identifiant du joueur qui l'a posee. */
+  readonly poseur: string;
+  readonly x: number;
+  readonly y: number;
+  /** Les joueurs qu'elle a touches, dans l'ordre de l'etat. Ni le poseur, ni son equipe. */
+  readonly touches: readonly ToucheParUneMine[];
+  /** Les Black Ninjas qu'elle a tues. */
+  readonly botsNoirsTues: number;
+  /** Les faux ninjas qu'elle a tues: en Massacre seulement. */
+  readonly botsTues: number;
+  /** Les points qu'elle rapporte a son poseur, points cedes par les joueurs tues compris. */
+  readonly points: number;
 }
 
 /** Un joueur vient de ramasser un malus. Adresse a lui seul: il en est epargne. */
@@ -1053,6 +1126,15 @@ export interface EvenementsServeurVersClient {
 
   /** Un joueur de la partie vient de s'enfuir dans un nuage de fumee (etape 7.10). A tous. */
   fumee: (fumee: FumeeVue) => void;
+
+  /** Ce joueur vient de poser une mine (etape 7.11). A lui seul. */
+  minePosee: (mine: MinePoseeVue) => void;
+
+  /** Une mine vient d'etre armee (etape 7.11). A tous. */
+  mineArmee: (mine: MineArmeeVue) => void;
+
+  /** Une mine vient de sauter (etape 7.11). A tous. */
+  mineExplosee: (mine: MineExploseeVue) => void;
 
   /** Une demande de ce joueur a ete refusee. Remplace error. */
   refus: (refus: Refus) => void;

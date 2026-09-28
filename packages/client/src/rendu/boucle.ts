@@ -142,6 +142,9 @@ export function faitQuiNousDeplace(
       return fait.charge.victime === moi;
     case 'fumee':
       return fait.charge.joueur === moi;
+    // Une mine qui nous tue en Massacre nous fait reapparaitre ailleurs (etape 7.11).
+    case 'mineExplosee':
+      return fait.charge.touches.some((touche) => touche.joueur === moi && touche.effet === 'tue');
     default:
       return false;
   }

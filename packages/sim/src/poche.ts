@@ -19,6 +19,8 @@
  *     l'Evade, ses effets en cours, son delai entre deux captures. Aucune protection a
  *     l'arrivee.
  *
+ *   - Le joueur qui s'en sert et porte une mine la pose sous ses pieds (etape 7.11, mines.ts).
+ *
  * L'ORDRE DU BATTEMENT. Les poches servent juste apres le deplacement des joueurs, avant les
  * bots, les tirs et les contacts (tick, dans moteur.ts). Un joueur qui declenche sa fumee
  * dans le battement ou un adversaire ou un Black Ninja le touche s'echappe: c'est le reflexe
@@ -33,6 +35,7 @@ import { FUMEE, TYPES_OBJETS_DE_POCHE } from '@neon-ninja/shared';
 
 import type { EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
 import { positionDApparition } from './etat.js';
+import { poserUneMine } from './mines.js';
 import type { Entrees } from './moteur.js';
 
 /** Cette nature d'objet va-t-elle dans la poche ? */
@@ -80,6 +83,7 @@ export function empocher(
 /** Ce que fait chaque objet de poche quand son porteur s'en sert. */
 const SERVIR: Readonly<Record<ObjetDePoche, (etat: EtatPartie, joueur: Joueur) => EtatPartie>> = {
   fumee: fuirDansLaFumee,
+  mine: poserUneMine,
 };
 
 /**

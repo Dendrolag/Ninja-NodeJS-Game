@@ -36,8 +36,8 @@ const AUCUNE_APPARITION: ReglagesPartiels = {
   },
   malus: { tauxApparitionPourCent: 0 },
   zones: { actives: false },
-  // La fumee tente sa chance avec les bonus depuis l'etape 7.10.
-  objetsDePoche: { fumee: { tauxApparitionPourCent: 0 } },
+  // La fumee tente sa chance avec les bonus depuis l'etape 7.10, et la mine depuis la 7.11.
+  objetsDePoche: { fumee: { tauxApparitionPourCent: 0 }, mine: { tauxApparitionPourCent: 0 } },
 };
 
 /**
@@ -51,7 +51,7 @@ function partieAvec(
 ): EtatPartie {
   let etat = creerEtatInitial({
     graine: 4,
-    reglages: { objetsDePoche: { fumee: { actif: false } }, ...reglages },
+    reglages: { objetsDePoche: { fumee: { actif: false }, mine: { actif: false } }, ...reglages },
   });
 
   for (const [id, position] of joueurs) {

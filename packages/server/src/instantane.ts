@@ -42,6 +42,9 @@ import type {
   LigneClassement,
   MalusRamasseParMoi,
   MalusSubi,
+  MineArmeeVue,
+  MineExploseeVue,
+  MinePoseeVue,
   ObjetEmpoche,
   ObjetVu,
   PartiePublique,
@@ -62,7 +65,7 @@ import type {
   ObjetRamassable,
   ZoneSpeciale,
 } from '@neon-ninja/sim';
-import { EVADE } from '@neon-ninja/shared';
+import { COULEUR_BOT_NEUTRE, EVADE } from '@neon-ninja/shared';
 import {
   REGLES_DES_MODES,
   bonusActif,
@@ -92,7 +95,11 @@ export function instantaneDe(etat: EtatPartie): InstantanePartie {
     tick: etat.tick,
     tempsRestantMs: evaluerFinDePartie(etat).tempsRestantMs,
     enPause: etat.enPause,
-    entites: [...entitesVisibles(etat).map((entite) => entiteVue(etat, entite)), ...evadeVu(etat)],
+    entites: [
+      ...entitesVisibles(etat).map((entite) => entiteVue(etat, entite)),
+      ...evadeVu(etat),
+      ...minesVues(etat),
+    ],
     objets: Object.values(etat.objets).map(objetVu),
     zones: Object.values(etat.zones).map(zoneVue),
     classement: calculerScores(etat).map(ligneClassement),
@@ -131,6 +138,24 @@ function evadeVu(etat: EtatPartie): readonly EntiteVue[] {
           direction: evade.direction,
         },
       ];
+}
+
+/**
+ * Les mines posees (etape 7.11), a la fin de la liste des entites, apres l'Evade: toutes, a
+ * tous les joueurs, puisque celles des autres scintillent; la page choisit leur rendu. Leur
+ * couleur est celle de leur poseur en ce moment, et elles ne bougent pas.
+ */
+function minesVues(etat: EtatPartie): readonly EntiteVue[] {
+  return Object.values(etat.minesPosees ?? {}).map((mine) => ({
+    type: 'mine',
+    id: mine.id,
+    x: mine.position.x,
+    y: mine.position.y,
+    couleur: etat.joueurs[mine.poseur]?.couleur ?? COULEUR_BOT_NEUTRE,
+    direction: 'immobile',
+    poseur: mine.poseur,
+    ...(mine.avantExplosionMs === undefined ? {} : { avantExplosionMs: mine.avantExplosionMs }),
+  }));
 }
 
 /**
@@ -420,7 +445,22 @@ export type Notification =
       readonly pour: IdentifiantEntite;
       readonly charge: ObjetEmpoche;
     }
-  | { readonly nom: 'fumee'; readonly pour: IdentifiantEntite; readonly charge: FumeeVue };
+  | { readonly nom: 'fumee'; readonly pour: IdentifiantEntite; readonly charge: FumeeVue }
+  | {
+      readonly nom: 'minePosee';
+      readonly pour: IdentifiantEntite;
+      readonly charge: MinePoseeVue;
+    }
+  | {
+      readonly nom: 'mineArmee';
+      readonly pour: IdentifiantEntite;
+      readonly charge: MineArmeeVue;
+    }
+  | {
+      readonly nom: 'mineExplosee';
+      readonly pour: IdentifiantEntite;
+      readonly charge: MineExploseeVue;
+    };
 
 /**
  * Traduit les faits d'un battement en notifications adressees.
@@ -602,6 +642,38 @@ function notificationsDUnFait(
         depart: { x: evenement.depart.x, y: evenement.depart.y },
         arrivee: { x: evenement.arrivee.x, y: evenement.arrivee.y },
       });
+
+    case 'minePosee':
+      // La pose ne regarde que le poseur: les autres ne voient qu'un scintillement (etape 7.11).
+      return [
+        {
+          nom: 'minePosee',
+          pour: evenement.joueur,
+          charge: { mine: evenement.mine, x: evenement.position.x, y: evenement.position.y },
+        },
+      ];
+
+    case 'mineArmee':
+      // Armee, une mine se voit et s'entend de tous: chacun doit pouvoir s'en eloigner.
+      return aTous(etat, 'mineArmee', {
+        mine: evenement.mine,
+        poseur: evenement.poseur,
+        par: evenement.par,
+        x: evenement.position.x,
+        y: evenement.position.y,
+      });
+
+    case 'mineExplosee':
+      return aTous(etat, 'mineExplosee', {
+        mine: evenement.mine,
+        poseur: evenement.poseur,
+        x: evenement.position.x,
+        y: evenement.position.y,
+        touches: evenement.touches.map((touche) => ({ ...touche })),
+        botsNoirsTues: evenement.botsNoirsTues,
+        botsTues: evenement.botsTues,
+        points: evenement.points,
+      });
   }
 }
 
@@ -646,7 +718,9 @@ function ceQuArriveAuDoubleur(
 }
 
 /** La meme notification, pour chaque joueur present. */
-function aTous<N extends 'coupDeKatana' | 'carteVidee' | 'evade' | 'fumee'>(
+function aTous<
+  N extends 'coupDeKatana' | 'carteVidee' | 'evade' | 'fumee' | 'mineArmee' | 'mineExplosee',
+>(
   etat: EtatPartie,
   nom: N,
   charge: Extract<Notification, { nom: N }>['charge'],

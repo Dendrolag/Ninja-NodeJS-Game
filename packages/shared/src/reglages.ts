@@ -246,7 +246,11 @@ export const REGLAGES_PAR_DEFAUT: ReglagesPartie = {
   },
   // Le taux du plus rare des bonus d'origine, l'Invincibilite: la fumee reste un objet
   // qu'on remarque (etape 7.10).
-  objetsDePoche: { fumee: { actif: true, tauxApparitionPourCent: 15 } },
+  // La mine a le taux de la fumee (etape 7.11, micro-decision 1 de la fiche).
+  objetsDePoche: {
+    fumee: { actif: true, tauxApparitionPourCent: 15 },
+    mine: { actif: true, tauxApparitionPourCent: 15 },
+  },
   objetsTactiques: OBJETS_TACTIQUES_PAR_DEFAUT,
 };
 

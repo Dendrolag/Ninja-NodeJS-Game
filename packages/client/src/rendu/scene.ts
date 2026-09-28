@@ -339,6 +339,11 @@ export function construireScene(
   const revelationActive = bonusActifs.has('revelation');
 
   for (const { entite, x, y, enMouvement } of lissee.entites) {
+    // Une mine posee (etape 7.11) n'est pas un personnage: elle a sa propre couche, plus bas.
+    if (entite.type === 'mine') {
+      continue;
+    }
+
     const cachee = dansUneZoneInvisible(lissee, x, y);
     const estMoi = entite.id === moi;
 

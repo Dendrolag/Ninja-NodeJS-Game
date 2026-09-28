@@ -33,6 +33,9 @@ import type {
   JoueurTrancheVu,
   MalusRamasseParMoi,
   MalusSubi,
+  MineArmeeVue,
+  MineExploseeVue,
+  MinePoseeVue,
   ObjetEmpoche,
   RalliementVu,
   TirDeCaptureVu,
@@ -81,6 +84,12 @@ export interface ChargesDeFait {
   objetEmpoche: ObjetEmpoche;
   /** Un joueur de la partie vient de s'enfuir dans un nuage de fumee (etape 7.10). A tous. */
   fumee: FumeeVue;
+  /** Ce joueur vient de poser une mine (etape 7.11). A lui seul. */
+  minePosee: MinePoseeVue;
+  /** Une mine de la partie vient d'etre armee (etape 7.11). A tous. */
+  mineArmee: MineArmeeVue;
+  /** Une mine de la partie vient de sauter (etape 7.11). A tous. */
+  mineExplosee: MineExploseeVue;
   /** Ce joueur vient de rallier des faux ninjas en les touchant, dans la Horde. */
   ralliement: RalliementVu;
   /** Quelqu'un vient d'entrer dans la partie. */

@@ -1958,6 +1958,18 @@ function envoyer(socket: SocketTypee, notification: Notification): void {
     case 'fumee':
       socket.emit('fumee', notification.charge);
       return;
+
+    case 'minePosee':
+      socket.emit('minePosee', notification.charge);
+      return;
+
+    case 'mineArmee':
+      socket.emit('mineArmee', notification.charge);
+      return;
+
+    case 'mineExplosee':
+      socket.emit('mineExplosee', notification.charge);
+      return;
   }
 }
 

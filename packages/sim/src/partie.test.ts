@@ -41,13 +41,13 @@ const BATTEMENT_MS = 50;
  * l'Evade a sa propre reference, plus bas.
  *
  * SANS LA FUMEE (etape 7.10), pour la meme raison: les deux references d'avant restent
- * identiques, et la partie avec la fumee a la sienne.
+ * identiques, et la partie avec la fumee a la sienne. SANS LA MINE (etape 7.11) non plus.
  */
 const REGLAGES: ReglagesPartiels = {
   dureePartieS: 60,
   nombreBotsInitial: 30,
   evade: false,
-  objetsDePoche: { fumee: { actif: false } },
+  objetsDePoche: { fumee: { actif: false }, mine: { actif: false } },
 };
 
 /** La meme partie, l'Evade en jeu (etape 7.9). */
@@ -56,7 +56,13 @@ const AVEC_L_EVADE: ReglagesPartiels = { ...REGLAGES, evade: true };
 /** La meme partie, la fumee en jeu et frequente (etape 7.10). */
 const AVEC_LA_FUMEE: ReglagesPartiels = {
   ...REGLAGES,
-  objetsDePoche: { fumee: { actif: true, tauxApparitionPourCent: 60 } },
+  objetsDePoche: { fumee: { actif: true, tauxApparitionPourCent: 60 }, mine: { actif: false } },
+};
+
+/** La meme partie, la mine en jeu et frequente (etape 7.11). */
+const AVEC_LA_MINE: ReglagesPartiels = {
+  ...REGLAGES,
+  objetsDePoche: { fumee: { actif: false }, mine: { actif: true, tauxApparitionPourCent: 60 } },
 };
 
 /** Tous les combien de battements chaque joueur se sert de sa poche, dans cette partie. */
@@ -207,6 +213,26 @@ describe('partie complete', () => {
       ...(resume(partie.etat, partie.evenements) as object),
       poches: Object.fromEntries(
         Object.values(partie.etat.joueurs).map((joueur) => [joueur.id, joueur.poche ?? null]),
+      ),
+    }).toMatchSnapshot();
+  });
+
+  it('produit l instantane de reference d une partie avec la mine (etape 7.11)', () => {
+    const partie = jouerLaPartie(42, AVEC_LA_MINE, true);
+
+    // Des mines ont vraiment ete posees, armees, et ont saute: sinon la reference ne prouverait
+    // rien.
+    expect(partie.evenements.some((fait) => fait.type === 'minePosee')).toBe(true);
+    expect(partie.evenements.some((fait) => fait.type === 'mineArmee')).toBe(true);
+    expect(partie.evenements.some((fait) => fait.type === 'mineExplosee')).toBe(true);
+    expect({
+      ...(resume(partie.etat, partie.evenements) as object),
+      minesPosees: Object.values(partie.etat.minesPosees ?? {}).map((mine) => ({
+        poseur: mine.poseur,
+        armee: mine.avantExplosionMs !== undefined,
+      })),
+      touches: partie.evenements.flatMap((fait) =>
+        fait.type === 'mineExplosee' ? fait.touches : [],
       ),
     }).toMatchSnapshot();
   });

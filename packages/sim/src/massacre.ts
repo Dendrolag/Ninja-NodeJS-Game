@@ -365,48 +365,16 @@ export function tuerUnJoueur(
     return etat;
   }
 
-  const volee = guerrierDe(etat, victimeId);
-  const armee = guerrierDe(etat, tueurId);
-  const pointsVoles = part(volee.points, MASSACRE.PART_VOLEE_POUR_CENT);
-  const place = positionDApparition(etat.alea, etat.terrain, positionsOccupees(etat));
-
-  const joueurs: Record<IdentifiantEntite, Joueur> = {
-    ...etat.joueurs,
-    [tueurId]: {
-      ...tueur,
-      captures: tueur.captures + 1,
-      joueursCaptures: inscrireAuJournal(tueur.joueursCaptures, victimeId, victime.pseudo),
-      tempsDepuisDerniereCaptureMs: 0,
-    },
-    // Une mort vide la poche (etape 7.10).
-    [victimeId]: {
-      ...sansPoche(victime),
-      position: place.valeur,
-      direction: 'immobile',
-      protectionSpawnRestanteMs: DUREES.PROTECTION_SPAWN_MS,
-      capturesSubies: inscrireAuJournal(victime.capturesSubies, tueurId, tueur.pseudo),
-    },
-  };
-  const massacre = massacreDe(etat);
+  const mort = mettreAMort(etat, tueur, victime);
 
   // Le porteur du x2 le cede a son tueur (etape 7.9). La moitie volee porte sur les points
   // ranges, pas sur leur double.
   return cederLeDoubleur(
     {
-      ...etat,
-      joueurs,
-      massacre: {
-        ...massacre,
-        guerriers: {
-          ...massacre.guerriers,
-          [tueurId]: { ...armee, points: armee.points + pointsVoles },
-          [victimeId]: {
-            ...volee,
-            points: volee.points - pointsVoles,
-            combo: 0,
-            avantFinDuComboMs: 0,
-          },
-        },
+      ...mort.etat,
+      joueurs: {
+        ...mort.etat.joueurs,
+        [tueurId]: { ...(mort.etat.joueurs[tueurId] as Joueur), tempsDepuisDerniereCaptureMs: 0 },
       },
       evenements: [
         ...etat.evenements,
@@ -416,14 +384,139 @@ export function tuerUnJoueur(
           victime: victimeId,
           position: victime.position,
           orientation,
-          pointsVoles,
+          pointsVoles: mort.pointsVoles,
         },
       ],
-      alea: place.alea,
     },
     victimeId,
     tueurId,
   );
+}
+
+/**
+ * Une mine tue un joueur en Massacre (etape 7.11, decision 10 du porteur du projet): comme un
+ * coup de katana, la victime cede la moitie de ses points au poseur, perd son combo et
+ * reapparait, et le porteur du x2 le cede au poseur.
+ *
+ * Mais le poseur n'a rien fait dans ce battement: son delai entre deux joueurs tues ne
+ * compte pas et ne repart pas, et une mine peut tuer plusieurs joueurs d'un coup. C'est a
+ * l'appelant de verifier que la victime est touchable. Le journal n'a pas de fait propre a
+ * cette mort: l'explosion porte ses victimes.
+ */
+export function tuerParUneMine(
+  etat: EtatPartie,
+  poseurId: IdentifiantEntite,
+  victimeId: IdentifiantEntite,
+): { readonly etat: EtatPartie; readonly pointsVoles: number } {
+  const poseur = etat.joueurs[poseurId] as Joueur;
+  const victime = etat.joueurs[victimeId] as Joueur;
+  const mort = mettreAMort(etat, poseur, victime);
+
+  return { etat: cederLeDoubleur(mort.etat, victimeId, poseurId), pointsVoles: mort.pointsVoles };
+}
+
+/**
+ * Ce qu'une mise a mort change, quelle que soit l'arme: les points et le combo des deux
+ * joueurs, le compteur et le journal des captures du tueur, et la victime qui reapparait,
+ * protegee, la poche videe. Ni le delai du tueur, ni le journal, ni le x2: ils dependent de
+ * l'arme.
+ */
+function mettreAMort(
+  etat: EtatPartie,
+  tueur: Joueur,
+  victime: Joueur,
+): { readonly etat: EtatPartie; readonly pointsVoles: number } {
+  const volee = guerrierDe(etat, victime.id);
+  const armee = guerrierDe(etat, tueur.id);
+  const pointsVoles = part(volee.points, MASSACRE.PART_VOLEE_POUR_CENT);
+  const place = positionDApparition(etat.alea, etat.terrain, positionsOccupees(etat));
+
+  const joueurs: Record<IdentifiantEntite, Joueur> = {
+    ...etat.joueurs,
+    [tueur.id]: {
+      ...tueur,
+      captures: tueur.captures + 1,
+      joueursCaptures: inscrireAuJournal(tueur.joueursCaptures, victime.id, victime.pseudo),
+    },
+    // Une mort vide la poche (etape 7.10).
+    [victime.id]: {
+      ...sansPoche(victime),
+      position: place.valeur,
+      direction: 'immobile',
+      protectionSpawnRestanteMs: DUREES.PROTECTION_SPAWN_MS,
+      capturesSubies: inscrireAuJournal(victime.capturesSubies, tueur.id, tueur.pseudo),
+    },
+  };
+  const massacre = massacreDe(etat);
+
+  return {
+    etat: {
+      ...etat,
+      joueurs,
+      massacre: {
+        ...massacre,
+        guerriers: {
+          ...massacre.guerriers,
+          [tueur.id]: { ...armee, points: armee.points + pointsVoles },
+          [victime.id]: {
+            ...volee,
+            points: volee.points - pointsVoles,
+            combo: 0,
+            avantFinDuComboMs: 0,
+          },
+        },
+      },
+      alea: place.alea,
+    },
+    pointsVoles,
+  };
+}
+
+/**
+ * Une mine tue un faux ninja ou un Black Ninja en Massacre (etape 7.11): il quitte la carte,
+ * et le poseur gagne sa valeur, dix ou quinze points, SANS multiplicateur de combo et sans
+ * faire avancer son combo (decision 10 du porteur du projet, micro-decision 10 de la fiche).
+ * Il compte parmi ses ninjas tues, et un Black Ninja parmi ses Black Ninjas detruits.
+ */
+export function tuerUnBotParUneMine(
+  etat: EtatPartie,
+  poseurId: IdentifiantEntite,
+  bot: Bot,
+): { readonly etat: EtatPartie; readonly points: number } {
+  const poseur = etat.joueurs[poseurId] as Joueur;
+  const noir = bot.type === 'botNoir';
+  const points = noir ? MASSACRE.POINTS_PAR_BOT_NOIR : MASSACRE.POINTS_PAR_BOT;
+  const guerrier = guerrierDe(etat, poseurId);
+  const equipe = equiper(retirerBot(etat, bot.id), poseurId, {
+    ...guerrier,
+    points: guerrier.points + points,
+    botsTues: guerrier.botsTues + 1,
+  });
+
+  return {
+    etat: noir
+      ? {
+          ...equipe,
+          joueurs: {
+            ...equipe.joueurs,
+            [poseurId]: { ...poseur, botsNoirsDetruits: poseur.botsNoirsDetruits + 1 },
+          },
+        }
+      : equipe,
+    points,
+  };
+}
+
+/**
+ * Si des bots vivaient avant et qu'il n'en reste plus, la carte est videe (etape 7.11): une
+ * mine peut tuer le dernier bot, apres les coups du battement. Rien dans un autre mode.
+ *
+ * @param botsAvant Le nombre de faux ninjas avant ce qui vient de tuer.
+ */
+export function viderLaCarteSiElleEstVide(etat: EtatPartie, botsAvant: number): EtatPartie {
+  return etat.massacre !== undefined && botsAvant > 0 && nombreDeBotsOrdinaires(etat) === 0
+    ? viderLaCarte(etat)
+    : etat;
 }
 
 /**
@@ -475,7 +568,7 @@ function equiper(
 }
 
 /** Combien de bots ordinaires restent sur la carte. Les Black Ninjas n'en sont pas. */
-function nombreDeBotsOrdinaires(etat: EtatPartie): number {
+export function nombreDeBotsOrdinaires(etat: EtatPartie): number {
   let nombre = 0;
 
   for (const bot of Object.values(etat.bots)) {

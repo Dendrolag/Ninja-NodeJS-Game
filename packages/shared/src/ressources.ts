@@ -160,7 +160,8 @@ export function tousLesNinjas(): readonly string[] {
  * Les six du jeu d'origine sont des images dessinees a la main. Les six du Tactique
  * (etape 7.7) sont dessinees en SVG, sur le meme modele: un pictogramme noir, en planche
  * de deux images, pose par le rendu sur un disque de la couleur de l'objet. La fumee
- * (etape 7.10) aussi: un nuage, deux bouffees qui montent.
+ * (etape 7.10) aussi: un nuage, deux bouffees qui montent. Et la mine (etape 7.11), au
+ * rendu choisi sur la planche docs/design/etape-7-11/.
  */
 const ICONE_OBJET: Readonly<Record<NatureObjet, string>> = {
   vitesse: 'speed.png',
@@ -176,6 +177,7 @@ const ICONE_OBJET: Readonly<Record<NatureObjet, string>> = {
   rechargeLente: 'recharge-lente.svg',
   viseeEtroite: 'visee-etroite.svg',
   fumee: 'fumee.svg',
+  mine: 'mine.svg',
 };
 
 /** Chemin relatif de l'icone d'un bonus ou d'un malus. */
@@ -259,6 +261,14 @@ export const SONS = {
    * souffle du katana, en attendant le son que le porteur du projet fournira.
    */
   fumee: 'katana-swing.mp3',
+  /**
+   * Une mine vient d'etre armee (etape 7.11), entendue de tous: le signal qui dit de s'eloigner.
+   * PROVISOIRE, comme le suivant: le tic du compte a rebours, en attendant les sons que le
+   * porteur du projet fournira.
+   */
+  mineArmee: 'countdown-tick.wav',
+  /** Une mine vient de sauter (etape 7.11), entendue de tous. PROVISOIRE: le Black Ninja detruit. */
+  mineExplosee: 'blackbot-destroy.mp3',
 } as const;
 
 /** Nom d'un son ponctuel. */

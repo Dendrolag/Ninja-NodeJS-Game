@@ -368,11 +368,12 @@ export type Visee = (typeof VISEES)[number];
  * au lieu d'un effet qui part au ramassage. Un joueur n'en porte qu'un a la fois.
  *
  * La fumee est le premier: declenchee, elle fait reapparaitre le ninja ailleurs sur la
- * carte, loin des menaces. Decisions du porteur du projet du 28 septembre 2026
- * (docs/plan/etape-7-10.md). Ils tentent leur chance dans tous les modes, apres les autres
- * bonus.
+ * carte, loin des menaces. La mine est le second (etape 7.11): le joueur la pose sous ses
+ * pieds, et elle attend qu'un adversaire ou un Black Ninja l'arme. Decisions du porteur du
+ * projet du 28 septembre 2026 (docs/plan/etape-7-10.md et etape-7-11.md). Ils tentent leur
+ * chance dans tous les modes, apres les autres bonus, dans cet ordre.
  */
-export const TYPES_OBJETS_DE_POCHE = ['fumee'] as const;
+export const TYPES_OBJETS_DE_POCHE = ['fumee', 'mine'] as const;
 
 /** Nature d'un objet de poche. */
 export type ObjetDePoche = (typeof TYPES_OBJETS_DE_POCHE)[number];
@@ -390,6 +391,34 @@ export const FUMEE = {
   PART_DE_CARTE_AU_DEPART: 1 / 3,
   /** Combien de tirages essaient de tenir cette distance avant qu'on y renonce. */
   TIRAGES_LOIN_DU_DEPART: 20,
+} as const;
+
+/**
+ * La mine posee par un joueur (etape 7.11), decisions du porteur du projet du 28 septembre
+ * 2026 (docs/plan/etape-7-11.md).
+ *
+ * Posee, elle reste jusqu'a ce qu'un adversaire ou un Black Ninja passe dessus, sans limite
+ * de temps. Ce contact l'arme, et elle saute 1,5 seconde plus tard: celui qui passe dessus
+ * sans s'arreter s'en sort de justesse, a 150 pixels par seconde, et un poursuivant colle a
+ * lui y reste. Ce que l'explosion fait depend du mode (packages/sim, mines.ts).
+ */
+export const MINES = {
+  /** Le temps entre l'armement et l'explosion, en millisecondes. */
+  DELAI_AVANT_EXPLOSION_MS: 1500,
+  /** Le rayon de l'explosion, en pixels, mesure du centre de la mine au centre de l'entite. */
+  RAYON_EXPLOSION_PX: 130,
+  /**
+   * En dessous de cette distance, en pixels, une entite qui passe arme la mine. C'est le
+   * seuil du contact entre deux entites (SEUIL_CONTACT_PX du moteur): on arme une mine en
+   * marchant dessus comme on touche un ninja, en inegalite stricte.
+   */
+  SEUIL_ARMEMENT_PX: 20,
+  /** La part des ninjas, ou en Chasse des points d'une proie, que fait perdre l'explosion. */
+  PART_PERDUE_POUR_CENT: 15,
+  /** Combien de mines un joueur peut avoir posees en meme temps: la suivante chasse la plus ancienne. */
+  PLAFOND_PAR_JOUEUR: 3,
+  /** Combien de temps l'arme d'un traqueur de la Chasse reste enrayee, en millisecondes. */
+  ENRAYEMENT_MS: 3000,
 } as const;
 
 /** Nature d'un bonus pose sur la carte, tous modes confondus, objets de poche compris. */

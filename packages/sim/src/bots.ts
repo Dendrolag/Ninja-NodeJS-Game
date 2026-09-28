@@ -90,20 +90,26 @@ interface AvancementDeBotNoir {
  * C'est une decision du mode de jeu (JeuDeRegles, dans moteur.ts): le Classique et le
  * Tactique retirent une part de tous les bots du joueur, les Equipes une part de sa
  * part (etape 7.2, equipes.ts). Le reste de la prise est commun a tous les modes.
+ *
+ * La part est donnee par l'appelant: celle que reglent les Black Ninjas pour leur prise, et
+ * celle d'une mine pour son explosion (etape 7.11, micro-decision 7 de la fiche), qui
+ * choisit ainsi ses ninjas comme un Black Ninja, sans regle nouvelle.
  */
-export type PerteFaceAuBotNoir = (etat: EtatPartie, victime: Joueur) => readonly BotOrdinaire[];
+export type PerteFaceAuBotNoir = (
+  etat: EtatPartie,
+  victime: Joueur,
+  pourCent: number,
+) => readonly BotOrdinaire[];
 
 /**
- * La perte du Classique et du Tactique: la part reglee de tous les bots qui portent la
+ * La perte du Classique et du Tactique: la part donnee de tous les bots qui portent la
  * couleur du joueur, arrondie en dessous, les premiers dans l'ordre de l'etat.
  */
-export const perteClassique: PerteFaceAuBotNoir = (etat, victime) => {
+export const perteClassique: PerteFaceAuBotNoir = (etat, victime, pourCent) => {
   const portes = Object.values(etat.bots).filter(
     (bot): bot is BotOrdinaire => bot.type === 'bot' && bot.couleur === victime.couleur,
   );
-  const perdus = Math.floor(
-    (portes.length * etat.reglages.botsNoirs.partDeBotsPerduePourCent) / 100,
-  );
+  const perdus = Math.floor((portes.length * pourCent) / 100);
 
   return portes.slice(0, perdus);
 };
@@ -781,7 +787,7 @@ function depouiller(
   victime: Joueur,
   perte: PerteFaceAuBotNoir,
 ): EtatPartie {
-  const perdus = perte(etat, victime);
+  const perdus = perte(etat, victime, etat.reglages.botsNoirs.partDeBotsPerduePourCent);
 
   const bots = { ...etat.bots };
   for (const bot of perdus) {

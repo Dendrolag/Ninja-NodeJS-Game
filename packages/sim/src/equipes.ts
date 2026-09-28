@@ -60,15 +60,16 @@ export function partDuJoueur(etat: EtatPartie, joueur: Joueur): readonly BotOrdi
 }
 
 /**
- * Ce que perd un joueur attrape par un bot noir, en Equipes: la part reglee de sa part,
+ * Ce que perd un joueur attrape par un bot noir, en Equipes: la part donnee de sa part,
  * les bots les plus proches de lui, arrondie en dessous.
  *
- * Le reglage est celui de l'hote, cinquante pour cent par defaut, comme en Classique;
- * seul change ce a quoi il s'applique (decision 7 du porteur du projet).
+ * Pour un Black Ninja, la part est le reglage de l'hote, cinquante pour cent par defaut,
+ * comme en Classique; seul change ce a quoi il s'applique (decision 7 du porteur du projet).
+ * Pour une mine (etape 7.11), celle de la mine.
  */
-export const perteEnEquipe: PerteFaceAuBotNoir = (etat, victime) => {
+export const perteEnEquipe: PerteFaceAuBotNoir = (etat, victime, pourCent) => {
   const part = partDuJoueur(etat, victime);
-  const perdus = Math.floor((part.length * etat.reglages.botsNoirs.partDeBotsPerduePourCent) / 100);
+  const perdus = Math.floor((part.length * pourCent) / 100);
 
   return part.slice(0, perdus);
 };

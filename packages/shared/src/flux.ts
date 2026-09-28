@@ -60,6 +60,7 @@ import type {
   InstantanePartie,
   JoueurVu,
   LigneClassement,
+  MineVue,
   ObjetVu,
   TactiqueVue,
   ZoneVue,
@@ -344,8 +345,9 @@ function depuisUtf8(octets: Uint8Array, debut: number, fin: number): string {
 /**
  * Les natures d'entite, dans l'ordre de leur code. L'Evade (etape 7.9) est ajoute a la fin:
  * les trois premieres gardent leur code, et une partie sans lui s'ecrit a l'octet comme avant.
+ * La mine posee (etape 7.11) le suit, pour la meme raison.
  */
-const TYPES_ENTITE = ['joueur', 'bot', 'botNoir', 'evade'] as const;
+const TYPES_ENTITE = ['joueur', 'bot', 'botNoir', 'evade', 'mine'] as const;
 
 /** Les categories d'objet, dans l'ordre de leur code. */
 const CATEGORIES_OBJET = ['bonus', 'malus'] as const;
@@ -486,6 +488,17 @@ function entiteArrondie(entite: EntiteVue): EntiteVue {
       protege: entite.protege,
       ...(entite.tactique === undefined ? {} : { tactique: tactiqueArrondie(entite.tactique) }),
       ...(entite.doubleur === true ? { doubleur: true as const } : {}),
+    };
+  }
+
+  if (entite.type === 'mine') {
+    return {
+      ...commun,
+      type: 'mine',
+      poseur: entite.poseur,
+      ...(entite.avantExplosionMs === undefined
+        ? {}
+        : { avantExplosionMs: positifArrondi(entite.avantExplosionMs, 'avantExplosionMs') }),
     };
   }
 
@@ -681,9 +694,34 @@ function lireTactique(lecteur: Lecteur): TactiqueVue {
 }
 
 /**
+ * L'armement d'une mine (etape 7.11): un octet, zero tant qu'elle attend, un une fois
+ * armee, et alors le temps avant qu'elle saute.
+ */
+function ecrireArmement(ecrivain: Ecrivain, mine: MineVue): void {
+  if (mine.avantExplosionMs === undefined) {
+    ecrivain.octet(0);
+    return;
+  }
+
+  ecrivain.octet(1);
+  ecrivain.entierPositif(mine.avantExplosionMs);
+}
+
+function lireArmement(lecteur: Lecteur): { readonly avantExplosionMs?: number } {
+  const armee = lecteur.octet();
+
+  if (armee > 1) {
+    throw new ErreurDeTrame("l'armement d'une mine y est inconnu");
+  }
+
+  return armee === 1 ? { avantExplosionMs: lecteur.entierPositif() } : {};
+}
+
+/**
  * Les entites. Bits du masque: 1 x, 2 y, 4 couleur, 8 direction, et pour un joueur,
  * 16 pseudo, 32 indicateurs, puis, dans le mode Tactique, 64 orientation et 128
- * charges et attente de la prochaine.
+ * charges et attente de la prochaine. Pour une mine (etape 7.11): 16 poseur, 32
+ * armement.
  */
 const ENTITES: Genre<EntiteVue> = {
   cle: (entite) => entite.id,
@@ -705,6 +743,11 @@ const ENTITES: Genre<EntiteVue> = {
       if (entite.tactique !== undefined) {
         ecrireTactique(ecrivain, entite.tactique);
       }
+    }
+
+    if (entite.type === 'mine') {
+      ecrivain.texte(entite.poseur);
+      ecrireArmement(ecrivain, entite);
     }
   },
 
@@ -730,6 +773,12 @@ const ENTITES: Genre<EntiteVue> = {
         ...drapeaux,
         ...(avecTactique ? { tactique: lireTactique(lecteur) } : {}),
       };
+    }
+
+    if (type === 'mine') {
+      const poseur = lecteur.texte();
+      const mine: MineVue = { ...commun, type, poseur, ...lireArmement(lecteur) };
+      return mine;
     }
 
     const bot: BotVu = { ...commun, type };
@@ -762,6 +811,11 @@ const ENTITES: Genre<EntiteVue> = {
       }
     }
 
+    if (ancienne.type === 'mine' && nouvelle.type === 'mine') {
+      if (ancienne.poseur !== nouvelle.poseur) masque |= 16;
+      if (ancienne.avantExplosionMs !== nouvelle.avantExplosionMs) masque |= 32;
+    }
+
     return masque;
   },
 
@@ -787,6 +841,11 @@ const ENTITES: Genre<EntiteVue> = {
         }
       }
     }
+
+    if (nouvelle.type === 'mine') {
+      if (masque & 16) ecrivain.texte(nouvelle.poseur);
+      if (masque & 32) ecrireArmement(ecrivain, nouvelle);
+    }
   },
 
   lireChangements: (lecteur, masque, ancienne) => {
@@ -797,6 +856,25 @@ const ENTITES: Genre<EntiteVue> = {
       couleur: masque & 4 ? lireCouleur(lecteur) : ancienne.couleur,
       direction: masque & 8 ? lireCode<Direction>(lecteur, DIRECTIONS) : ancienne.direction,
     };
+
+    if (ancienne.type === 'mine') {
+      if (masque & BITS_TACTIQUES) {
+        throw new ErreurDeTrame('une mine y porte un champ de joueur');
+      }
+
+      const { avantExplosionMs: _avant, ...sansArmement } = ancienne;
+      const mine: MineVue = {
+        ...sansArmement,
+        ...commun,
+        poseur: masque & 16 ? lecteur.texte() : ancienne.poseur,
+        ...(masque & 32
+          ? lireArmement(lecteur)
+          : ancienne.avantExplosionMs === undefined
+            ? {}
+            : { avantExplosionMs: ancienne.avantExplosionMs }),
+      };
+      return mine;
+    }
 
     if (ancienne.type !== 'joueur') {
       if (masque & (48 | BITS_TACTIQUES)) {

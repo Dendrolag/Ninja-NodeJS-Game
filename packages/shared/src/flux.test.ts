@@ -846,3 +846,79 @@ describe('la fumee (etape 7.10)', () => {
     );
   });
 });
+
+describe('la mine (etape 7.11)', () => {
+  /** Une mine telle que le serveur l'envoie: une entite de plus, qui ne bouge pas. */
+  const mine = (avantExplosionMs?: number, poseur = 'a', couleur = '#FF0000'): EntiteVue => ({
+    id: 'mine-4',
+    type: 'mine',
+    x: 300.4,
+    y: 200,
+    couleur,
+    direction: 'immobile',
+    poseur,
+    ...(avantExplosionMs === undefined ? {} : { avantExplosionMs }),
+  });
+
+  it('fait voyager la mine posee, armee, qui change de couleur puis saute, image puis deltas', () => {
+    const parties = [
+      instantane({ tick: 1, entites: [joueur('a', 100, 100), bot('b', 50, 50)] }),
+      instantane({ tick: 2, entites: [joueur('a', 101, 100), bot('b', 50, 50), mine()] }),
+      instantane({ tick: 3, entites: [joueur('a', 102, 100), bot('b', 50, 50), mine()] }),
+      instantane({ tick: 4, entites: [joueur('a', 103, 100), bot('b', 50, 50), mine(1500)] }),
+      instantane({
+        tick: 5,
+        entites: [joueur('a', 104, 100), bot('b', 50, 50), mine(1450, 'a', '#00FF00')],
+      }),
+      instantane({ tick: 6, entites: [joueur('a', 105, 100), bot('b', 50, 50)] }),
+    ];
+    let reference = encoderImage(parties[0] as InstantanePartie).reference;
+
+    for (const suivante of parties.slice(1)) {
+      const trame = encoderDelta(reference, suivante);
+
+      expect(appliquerTrame(reference, trame.octets)).toEqual(quantifierInstantane(suivante));
+      reference = trame.reference;
+    }
+  });
+
+  it('garde une mine armee et une mine qui attend dans une image', () => {
+    const partie = instantane({ entites: [mine(), { ...mine(700, 'b'), id: 'mine-5' }] });
+    const relue = appliquerTrame(undefined, encoderImage(partie).octets);
+
+    expect(relue).toEqual(quantifierInstantane(partie));
+    expect(relue?.entites[0]).not.toHaveProperty('avantExplosionMs');
+  });
+
+  it('ne coute rien quand elle ne change pas', () => {
+    const avant = instantane({ tick: 1, entites: [mine(900)] });
+    const apres = instantane({ tick: 2, entites: [mine(900)] });
+    const sans = instantane({ tick: 2, entites: [] });
+    const reference = encoderImage(avant).reference;
+    const referenceSans = encoderImage(instantane({ tick: 1, entites: [] })).reference;
+
+    expect(encoderDelta(reference, apres).octets.length).toBe(
+      encoderDelta(referenceSans, sans).octets.length,
+    );
+  });
+
+  it('refuse une trame ou une mine porte un champ de joueur', () => {
+    const avant = instantane({ tick: 1, entites: [mine()] });
+    const reference = encoderImage(avant).reference;
+    // Une trame de joueur change son etat tactique (bits 64 et 128): appliquee a une mine,
+    // elle doit etre refusee, pas lue de travers.
+    const avecJoueur = encoderDelta(
+      encoderImage(instantane({ tick: 1, entites: [joueur('mine-4', 300.4, 200)] })).reference,
+      instantane({
+        tick: 2,
+        entites: [
+          joueur('mine-4', 300.4, 200, {
+            tactique: { orientation: 'est', charges: 2, avantProchaineChargeMs: 100 },
+          }),
+        ],
+      }),
+    );
+
+    expect(() => appliquerTrame(reference, avecJoueur.octets)).toThrow(/une mine/);
+  });
+});

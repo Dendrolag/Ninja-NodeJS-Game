@@ -438,6 +438,53 @@ export function infecter(
 }
 
 /**
+ * Une mine enraye l'arme d'un traqueur (etape 7.11, micro-decision 11 de la fiche): son
+ * prochain tir attend au moins cette duree, par l'attente entre deux tirs. Une attente deja
+ * plus longue est gardee. Rien pour une proie.
+ */
+export function enrayerLArme(etat: EtatPartie, id: IdentifiantEntite, dureeMs: number): EtatPartie {
+  const arme = etat.chasse?.traqueurs[id];
+
+  return arme === undefined
+    ? etat
+    : armer(etat, id, {
+        ...arme,
+        avantProchainTirMs: Math.max(arme.avantProchainTirMs, dureeMs),
+      });
+}
+
+/**
+ * Une mine fait perdre a une proie une part de ses points (etape 7.11, decision 11 du porteur
+ * du projet). Ses points se deduisent de la distance parcourue: c'est elle qui perd la part,
+ * et le score reste deduit, rien de nouveau n'est range. Rend aussi ce que le score a perdu.
+ */
+export function amputerLeParcours(
+  etat: EtatPartie,
+  id: IdentifiantEntite,
+  pourCent: number,
+): { readonly etat: EtatPartie; readonly pointsPerdus: number } {
+  const chasse = etat.chasse;
+  const avant = chasse?.parcours[id];
+
+  if (chasse === undefined || avant === undefined) {
+    return { etat, pointsPerdus: 0 };
+  }
+
+  const distancePx = avant.distancePx - (avant.distancePx * pourCent) / 100;
+  const pointsPerdus =
+    Math.floor(avant.distancePx / CHASSE.PIXELS_PAR_POINT) -
+    Math.floor(distancePx / CHASSE.PIXELS_PAR_POINT);
+
+  return {
+    etat: {
+      ...etat,
+      chasse: { ...chasse, parcours: { ...chasse.parcours, [id]: { ...avant, distancePx } } },
+    },
+    pointsPerdus,
+  };
+}
+
+/**
  * Qui subit un malus, en Chasse: l'autre camp.
  *
  * Le camp se lit a la couleur, la seule chose que la question recoit: un traqueur porte

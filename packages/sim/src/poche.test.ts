@@ -40,7 +40,7 @@ const AUCUNE_APPARITION: ReglagesPartiels = {
   zones: { actives: false },
   botsNoirs: { actifs: false },
   evade: false,
-  objetsDePoche: { fumee: { tauxApparitionPourCent: 0 } },
+  objetsDePoche: { fumee: { tauxApparitionPourCent: 0 }, mine: { tauxApparitionPourCent: 0 } },
 };
 
 const ROUGE: Couleur = '#FF0000';
@@ -186,7 +186,7 @@ describe("l'apparition de la fumee", () => {
   function seuleLaFumee(fumee: { actif?: boolean; tauxApparitionPourCent?: number }) {
     return {
       bonus: { ...AUCUNE_APPARITION.bonus, intervalleApparitionS: 2 },
-      objetsDePoche: { fumee },
+      objetsDePoche: { fumee, mine: { actif: false } },
     } satisfies ReglagesPartiels;
   }
 

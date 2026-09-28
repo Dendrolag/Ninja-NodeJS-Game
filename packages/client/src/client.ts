@@ -496,6 +496,25 @@ export function creerClient(options: OptionsClient): Client {
     }),
   );
 
+  // La mine (etape 7.11): sa pose, son armement et son explosion sont des faits.
+  ecouter(
+    reseau.sur('minePosee', (charge) => {
+      magasin.appliquer({ type: 'fait', fait: fait('minePosee', charge, maintenant()) });
+    }),
+  );
+
+  ecouter(
+    reseau.sur('mineArmee', (charge) => {
+      magasin.appliquer({ type: 'fait', fait: fait('mineArmee', charge, maintenant()) });
+    }),
+  );
+
+  ecouter(
+    reseau.sur('mineExplosee', (charge) => {
+      magasin.appliquer({ type: 'fait', fait: fait('mineExplosee', charge, maintenant()) });
+    }),
+  );
+
   ecouter(
     reseau.sur('poche', (poche) => {
       magasin.appliquer({ type: 'poche', poche: poche.nature });

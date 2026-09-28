@@ -34,10 +34,12 @@
  *      joueurs s'orientent, rechargent et tirent; en Chasse, les proies comptent leur
  *      parcours, une proie remplace les traqueurs partis, et les traqueurs tirent; en
  *      Massacre, les joueurs s'orientent, paient leurs prises par un bot noir et frappent;
- *   7. on releve les contacts entre entites et on en tire les consequences,
+ *   7. les mines armees se rapprochent de leur explosion et sautent, puis celles qu'un
+ *      adversaire ou un Black Ninja touche s'arment (etape 7.11);
+ *   8. on releve les contacts entre entites et on en tire les consequences,
  *      captures comprises, selon le mode, puis l'Evade touche est attrape, en Horde et en
  *      Equipes (etape 7.9);
- *   8. les joueurs ramassent les objets sur lesquels ils se trouvent.
+ *   9. les joueurs ramassent les objets sur lesquels ils se trouvent.
  *
  * Une partie SUSPENDUE ne fait rien de tout cela. Le battement a bien lieu, mais
  * le temps de jeu ne s'ecoule pas: voir battementSuspendu, plus bas.
@@ -92,6 +94,7 @@ import {
   malusClassique,
   ramasserLesObjets,
 } from './objets.js';
+import { avancerLesMines } from './mines.js';
 import { utiliserLesPoches } from './poche.js';
 import { agirEnTactique } from './tactique.js';
 import { appliquerLesEffetsDeZone, avancerLesZones } from './zones.js';
@@ -335,7 +338,8 @@ export function tick(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPart
   const zones = appliquerLesEffetsDeZone(avancerLesZones(bots, dtMs), dtMs);
   const objets = faireApparaitreLesObjets(fairePasserLeTempsSurLesObjets(zones, dtMs), dtMs);
   const actions = regles.agir(objets, entrees, dtMs);
-  const contacts = resoudreContacts(actions, detecterContacts(actions), regles.resoudreContacts);
+  const mines = avancerLesMines(actions, dtMs, regles, regles.horsJeu(actions));
+  const contacts = resoudreContacts(mines, detecterContacts(mines), regles.resoudreContacts);
   const evade = regles.attraperLEvade(contacts, regles.horsJeu(contacts));
 
   return ramasserLesObjets(evade, regles.victimeDuMalus, regles.horsJeu(evade));

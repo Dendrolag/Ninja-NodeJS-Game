@@ -53,6 +53,7 @@ import type {
   NatureBonus,
   NatureMalus,
   ObjetDePoche,
+  ToucheParUneMine,
   TypeBonus,
   TypeMalus,
   Visee,
@@ -397,7 +398,10 @@ export type EvenementPartie =
   | DoubleurPerdu
   | EvadeEnfui
   | ObjetEmpoche
-  | FuiteDansLaFumee;
+  | FuiteDansLaFumee
+  | MinePosee
+  | MineArmee
+  | MineExplosee;
 
 /**
  * Un joueur a mis un objet dans sa poche (etape 7.10). Il ne l'a pas encore utilise: le
@@ -420,6 +424,56 @@ export interface FuiteDansLaFumee {
   readonly joueur: IdentifiantEntite;
   readonly depart: Position;
   readonly arrivee: Position;
+}
+
+/**
+ * Une mine posee par un joueur (etape 7.11), qui attend qu'un adversaire ou un Black Ninja
+ * l'arme, puis saute. Voir mines.ts.
+ */
+export interface MineSurLaCarte {
+  readonly id: IdentifiantEntite;
+  /** Le joueur qui l'a posee. Ses mines disparaissent avec lui quand il quitte la partie. */
+  readonly poseur: IdentifiantEntite;
+  readonly position: Position;
+  /**
+   * Armee, le temps avant qu'elle saute, en millisecondes. Absent tant qu'elle attend: une
+   * mine posee n'a pas de limite de temps.
+   */
+  readonly avantExplosionMs?: number;
+}
+
+/** Un joueur a pose une mine (etape 7.11). */
+export interface MinePosee {
+  readonly type: 'minePosee';
+  readonly joueur: IdentifiantEntite;
+  readonly mine: IdentifiantEntite;
+  readonly position: Position;
+}
+
+/** Une mine vient d'etre armee par un adversaire ou un Black Ninja (etape 7.11). */
+export interface MineArmee {
+  readonly type: 'mineArmee';
+  readonly mine: IdentifiantEntite;
+  readonly poseur: IdentifiantEntite;
+  /** L'entite qui l'a armee. */
+  readonly par: IdentifiantEntite;
+  readonly position: Position;
+}
+
+/**
+ * Une mine vient de sauter (etape 7.11). Ce qu'elle a fait a chaque joueur touche est dans
+ * touches, dans l'ordre de l'etat; les Black Ninjas et, en Massacre, les faux ninjas qu'elle a
+ * tues sont comptes, et les points qu'elle rapporte a son poseur additionnes.
+ */
+export interface MineExplosee {
+  readonly type: 'mineExplosee';
+  readonly mine: IdentifiantEntite;
+  readonly poseur: IdentifiantEntite;
+  readonly position: Position;
+  readonly touches: readonly ToucheParUneMine[];
+  readonly botsNoirsTues: number;
+  readonly botsTues: number;
+  readonly points: number;
 }
 
 /**
@@ -782,6 +836,13 @@ export interface EtatPartie {
    */
   readonly evade?: EtatDeLEvade;
   /**
+   * Les mines posees par les joueurs (etape 7.11), dans l'ordre de leur pose.
+   *
+   * ABSENT TANT QU'AUCUNE N'EST POSEE, et retire des que la derniere a saute ou disparu, comme
+   * l'Evade: une partie sans mine a exactement l'etat d'avant l'etape.
+   */
+  readonly minesPosees?: Readonly<Record<IdentifiantEntite, MineSurLaCarte>>;
+  /**
    * Reglages choisis par l'hote, une fois appliques ceux que le mode impose. Le moteur
    * ne connait que ceux-la.
    */
@@ -1140,6 +1201,12 @@ export function retirerJoueur(etat: EtatPartie, id: IdentifiantEntite): EtatPart
     return retirerJoueur({ ...etat, evade: { ...etat.evade, porteur: undefined } }, id);
   }
 
+  // Ses mines disparaissent avec lui (etape 7.11, decision 15 du porteur du projet). Un lien
+  // tombe n'est pas un depart: ses mines restent le temps du retour.
+  if (Object.values(etat.minesPosees ?? {}).some((mine) => mine.poseur === id)) {
+    return retirerJoueur(avecLesMines(etat, sansLesMinesDe(etat, id)), id);
+  }
+
   // Un joueur de la Chasse qui s'en va quitte aussi ses tables (etape 7.3): elles ne
   // connaissent que des joueurs presents. Les autres modes n'ont pas ces tables.
   if (etat.chasse === undefined) {
@@ -1152,6 +1219,36 @@ export function retirerJoueur(etat: EtatPartie, id: IdentifiantEntite): EtatPart
   delete parcours[id];
 
   return { ...etat, joueurs, chasse: { ...etat.chasse, traqueurs, parcours } };
+}
+
+/** Les mines posees, moins celles de ce joueur. */
+function sansLesMinesDe(
+  etat: EtatPartie,
+  id: IdentifiantEntite,
+): Readonly<Record<IdentifiantEntite, MineSurLaCarte>> {
+  return Object.fromEntries(
+    Object.entries(etat.minesPosees ?? {}).filter(([, mine]) => mine.poseur !== id),
+  );
+}
+
+/**
+ * L'etat avec ces mines posees. Sans aucune mine, le champ disparait au lieu de valoir une
+ * table vide: une partie ou toutes les mines ont saute redevient une partie sans mine.
+ */
+export function avecLesMines(
+  etat: EtatPartie,
+  mines: Readonly<Record<IdentifiantEntite, MineSurLaCarte>>,
+): EtatPartie {
+  if (Object.keys(mines).length > 0) {
+    return { ...etat, minesPosees: mines };
+  }
+
+  if (etat.minesPosees === undefined) {
+    return etat;
+  }
+
+  const { minesPosees: _videes, ...reste } = etat;
+  return reste;
 }
 
 /**

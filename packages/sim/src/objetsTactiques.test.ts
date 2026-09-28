@@ -523,7 +523,15 @@ describe('l apparition des objets du Tactique', () => {
     const bonus = (mode: 'tactique' | 'classique'): number => {
       const vus = new Set<string>();
       for (let graine = 1; graine <= 40; graine += 1) {
-        let etat = creerEtatInitial({ graine, mode, reglages: { botsNoirs: { actifs: false } } });
+        let etat = creerEtatInitial({
+          graine,
+          mode,
+          // Les objets de poche, communs aux deux modes, sont hors de la question.
+          reglages: {
+            botsNoirs: { actifs: false },
+            objetsDePoche: { fumee: { actif: false }, mine: { actif: false } },
+          },
+        });
         for (let battement = 0; battement < 1200; battement += 1) {
           etat = faireApparaitreLesObjets(etat, BATTEMENT_MS);
           for (const objet of Object.values(etat.objets)) {

@@ -355,6 +355,22 @@ describe('validerReglages', () => {
     expect(champsRefuses(validerReglages({ objetsDePoche: 'toutes' }))).toEqual(['objetsDePoche']);
   });
 
+  it('met la mine en jeu par defaut, au taux de la fumee, et en valide le reglage (etape 7.11)', () => {
+    expect(valeurAcceptee(validerReglages({})).objetsDePoche.mine).toEqual({
+      actif: true,
+      tauxApparitionPourCent: 15,
+    });
+    expect(
+      valeurAcceptee(validerReglages({ objetsDePoche: { mine: { actif: false } } })).objetsDePoche,
+    ).toEqual({
+      fumee: { actif: true, tauxApparitionPourCent: 15 },
+      mine: { actif: false, tauxApparitionPourCent: 15 },
+    });
+    expect(
+      champsRefuses(validerReglages({ objetsDePoche: { mine: { tauxApparitionPourCent: -1 } } })),
+    ).toEqual(['objetsDePoche.mine.tauxApparitionPourCent']);
+  });
+
   it('fait tomber la pluie par defaut, et accepte de la couper (etape 7.6)', () => {
     expect(valeurAcceptee(validerReglages({})).pluie).toBe(true);
     expect(valeurAcceptee(validerReglages({ pluie: false })).pluie).toBe(false);

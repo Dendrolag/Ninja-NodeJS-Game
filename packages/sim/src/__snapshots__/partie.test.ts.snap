@@ -214,3 +214,75 @@ exports[`partie complete > produit l instantane de reference d une partie avec l
   ],
 }
 `;
+
+exports[`partie complete > produit l instantane de reference d une partie avec la mine (etape 7.11) 1`] = `
+{
+  "alea": 651820494,
+  "bots": {
+    "noirs": 2,
+    "ordinaires": 30,
+    "total": 32,
+  },
+  "capturesParBotNoirSubies": {
+    "alice": 1,
+    "bob": 0,
+    "chloe": 0,
+  },
+  "classement": [
+    {
+      "botsNoirsDetruits": 0,
+      "botsPortes": 8,
+      "captures": 0,
+      "id": "chloe",
+      "points": 8,
+    },
+    {
+      "botsNoirsDetruits": 0,
+      "botsPortes": 4,
+      "captures": 0,
+      "id": "alice",
+      "points": 4,
+    },
+    {
+      "botsNoirsDetruits": 0,
+      "botsPortes": 1,
+      "captures": 1,
+      "id": "bob",
+      "points": 1,
+    },
+  ],
+  "compteurIdentifiants": 59,
+  "evenements": {
+    "captureJoueur": 1,
+    "captureParBotNoir": 1,
+    "mineArmee": 1,
+    "mineExplosee": 1,
+    "minePosee": 1,
+    "objetEmpoche": 1,
+    "ralliement": 11,
+  },
+  "minesPosees": [],
+  "objetsPoses": 2,
+  "partieTerminee": true,
+  "positions": {
+    "alice": {
+      "x": 1072.49,
+      "y": 38.17,
+    },
+    "bob": {
+      "x": 1200,
+      "y": 900,
+    },
+    "chloe": {
+      "x": 969.19,
+      "y": 1326.11,
+    },
+  },
+  "tempsEcouleMs": 60000,
+  "tick": 1200,
+  "touches": [],
+  "zonesActives": [
+    "chaos",
+  ],
+}
+`;
