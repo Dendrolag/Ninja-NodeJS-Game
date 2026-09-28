@@ -271,12 +271,20 @@ export const APPARENCE_OBJET: Readonly<
  * Les lobes et les bouffees sont en pixels du sprite (32 de cote), a l'echelle du depart.
  */
 export const APPARENCE_FUMEE = {
-  /** Duree de vie d'un nuage, en millisecondes. */
-  dureeMs: 600,
+  /**
+   * Duree de vie du nuage de depart, en millisecondes. Il traine sur place, la ou les
+   * poursuivants ont perdu le ninja (allongee de 600 a 1800 a la recette de l'etape 7.10).
+   */
+  dureeDepartMs: 1800,
+  /** Duree de vie du nuage d'arrivee, un peu plus courte: le ninja doit en sortir vite. */
+  dureeArriveeMs: 900,
   /** Le nuage d'arrivee, plus petit que celui du depart: le ninja y reparait. */
   echelleArrivee: 0.8,
-  /** Le nuage gonfle pendant cette part de sa vie. */
-  partDuGonflement: 0.3,
+  /**
+   * Le nuage gonfle pendant ce temps, en millisecondes, quelle que soit sa duree de vie: le
+   * pouf reste vif, c'est sa tenue qui s'allonge.
+   */
+  gonflementMs: 180,
   /** Il reste plein jusqu'a cette part de sa vie, puis palit. */
   partPleine: 0.55,
   /** Les bouffees montent a partir de cette part de sa vie. */

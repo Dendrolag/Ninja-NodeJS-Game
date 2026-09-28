@@ -345,6 +345,33 @@ describe('les fleches qui designent notre personnage', () => {
     expect(rendu.scenes.at(-1)?.reperes.length ?? 0).toBeGreaterThan(0);
   });
 
+  it('reviennent apres notre fuite dans la fumee, qui nous fait reparaitre ailleurs', () => {
+    // Demande a la recette de l'etape 7.10: le joueur ne savait plus ou il avait reparu.
+    laisserPasserLesFleches();
+
+    reseau.recevoir('fumee', {
+      joueur: 'moi',
+      depart: { x: 100, y: 100 },
+      arrivee: { x: 900, y: 700 },
+    });
+    uneImage();
+
+    expect(rendu.scenes.at(-1)?.reperes.length ?? 0).toBeGreaterThan(0);
+  });
+
+  it('ne reviennent pas pour la fuite d un autre joueur', () => {
+    laisserPasserLesFleches();
+
+    reseau.recevoir('fumee', {
+      joueur: 'bob',
+      depart: { x: 300, y: 300 },
+      arrivee: { x: 900, y: 700 },
+    });
+    uneImage();
+
+    expect(rendu.scenes.at(-1)?.reperes).toHaveLength(0);
+  });
+
   it('ne servent pas une demande faite avant l apparition de notre personnage', () => {
     // La demande est consommee a chaque image, qu'on puisse la servir ou non: un
     // appui sur F dans le vide ne doit pas ressurgir plus tard.
@@ -531,6 +558,16 @@ describe('faitQuiNousDeplace (etape 5.5)', () => {
 
     expect(faitQuiNousDeplace(tranche('moi'), 'massacre', 'moi')).toBe(true);
     expect(faitQuiNousDeplace(tranche('eve'), 'massacre', 'moi')).toBe(false);
+  });
+
+  it('retient une fuite dans la fumee seulement quand c est la notre (etape 7.10)', () => {
+    const fuite = (joueurId: string) =>
+      fait('fumee', { joueur: joueurId, depart: { x: 0, y: 0 }, arrivee: { x: 500, y: 500 } }, 0);
+
+    for (const mode of ['classique', 'tactique', 'equipes', 'chasse', 'massacre'] as const) {
+      expect(faitQuiNousDeplace(fuite('moi'), mode, 'moi')).toBe(true);
+      expect(faitQuiNousDeplace(fuite('eve'), mode, 'moi')).toBe(false);
+    }
   });
 });
 

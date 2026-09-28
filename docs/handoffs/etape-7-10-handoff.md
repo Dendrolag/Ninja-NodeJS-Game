@@ -80,7 +80,7 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
   - 300 bots, 12 joueurs, sans mur: jeu `174fb38bc90a0e7aa3159807c4b1548f79008a5f45ddcdbe28adc87eb0026698`, flux `35b39038c31b558ed8b6519317cb33bafcef8c9f781e416c3909f8c674e5a07c`
   - 150 bots, 2 joueurs, murs: jeu `49180c49e1480da7bfb4ea4c1d3da79488a723a3030ed53b6bbcc8fa529b87c0`, flux `3d05ac1b160384f3bf7a289c1bd72e6082968da70856b86f3560b51f12f6ed33`
 - Banc de charge: la fumée ne coûte rien de mesurable; avec la graine du banc, elle fait jouer une autre partie, plus chargée à 300 faux ninjas. Section 21 de `docs/mesures/charge-serveur.md`.
-- État de la CI: voir la ligne ajoutée en fin de handoff après la poussée.
+- État de la CI: verte sur `7eb5bab`, exécution 36429904070, mise en ligne comprise. Cette ligne manquait: le handoff l'annonçait en fin de document sans qu'elle y soit écrite, corrigé avec les ajustements de recette.
 
 ## Décisions et écarts au plan
 
@@ -88,6 +88,17 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
 2. **La poche n'est visible de personne d'autre**, décision 3 révisée par le porteur du projet sur la planche. Elle ne passe donc pas par le flux d'état, où un client modifié la lirait, mais par un message au seul joueur.
 3. **Le pictogramme reprend le nuage C**, et **un son à l'activation** viendra du porteur du projet; en attendant, le souffle du katana.
 4. Les autres écarts de construction sont à la section « Réconciliation » de la fiche: les rendus retenus, la touche E dans un champ, les réglages, la couche du nuage, le nom du scénario de bout en bout, la demande servie jouée à travers le serveur, le banc.
+
+## Ajustements de recette (28 septembre 2026)
+
+Demandés par le porteur du projet après la mise en ligne, avant l'étape 7.11:
+
+- **Le nuage de départ traîne plus longtemps, celui d'arrivée un peu plus**: 1,8 seconde et 0,9, contre 0,6 aux deux. Le gonflement reste à 180 millisecondes; un nuage qui dure plus reste plein plus longtemps et pâlit plus lentement. `packages/client/src/rendu/apparence.ts` (`dureeDepartMs`, `dureeArriveeMs`, `gonflementMs` au lieu de `dureeMs` et `partDuGonflement`), `scene.ts` (`nuage` prend le temps écoulé et la durée de vie).
+- **Le repère de localisation paraît après notre fuite**, comme après une capture qui nous fait reparaître ailleurs. La fuite d'un autre joueur ne le fait pas paraître. `packages/client/src/rendu/boucle.ts` (`faitQuiNousDeplace`).
+- Tests: `scene.test.ts` (les deux durées, le gonflement de même vitesse), `boucle.test.ts` (le repère après notre fuite, pas après celle d'un autre; `faitQuiNousDeplace` dans les cinq modes).
+- Documentation: la fiche (réconciliation, point 12), le ROADMAP, le journal de conception, ce handoff.
+
+Les durées exactes sont un choix de l'exécutant, la demande disant « plus longtemps » et « un peu plus longtemps ». Rien ne change au moteur, au serveur ni aux empreintes.
 
 ## Problèmes connus et dette
 
@@ -97,7 +108,7 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
 
 ## Prochaine action exacte
 
-Exécuter l'étape `7.11`, la mine posée, second objet de poche: lire `docs/plan/etape-7-11.md`, réconcilier avec la poche construite ici (famille `TYPES_OBJETS_DE_POCHE`, table `SERVIR` de `poche.ts`, message `poche` au seul porteur), et commencer par la planche de rendu.
+D'abord, **rappeler au porteur du projet de fournir le son de la fumée**: il l'a demandé le 28 septembre, n'ayant pas son fichier sous la main (voir « Problèmes connus et dette »). Puis exécuter l'étape `7.11`, la mine posée, second objet de poche: lire `docs/plan/etape-7-11.md`, réconcilier avec la poche construite ici (famille `TYPES_OBJETS_DE_POCHE`, table `SERVIR` de `poche.ts`, message `poche` au seul porteur), et commencer par la planche de rendu.
 
 ## Étape suivante
 

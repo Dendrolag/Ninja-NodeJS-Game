@@ -199,6 +199,8 @@ Le mode tactique en premier, ajouté comme jeu de règles enfichable (décision 
 
 **Étape 7.10 terminée le 28 septembre 2026: la fumée.** Faite dans la conversation qui l'a décidée, à la demande du porteur du projet. Une poche d'une place garde un objet ramassé; la fumée y va, et la touche E ou, sur téléphone, un disque de brume à gauche de la minimap la déclenche. Le joueur reparaît au hasard, loin des joueurs, des Black Ninjas et de l'Évadé, à un tiers de carte au moins de son départ, dans un nuage cerné qui gonfle puis se dissipe, au départ et à l'arrivée; la fumée l'emporte sur un contact du même battement. Personne d'autre ne sait qu'un joueur en a une (décision révisée par le porteur du projet): la poche part au seul joueur, par un message à part, jamais dans le flux d'état. Rendus choisis sur planche; le son est provisoire, en attendant celui que fournira le porteur du projet. Sans la fumée, les parties de référence rejouent à l'octet. Fiche: `docs/plan/etape-7-10.md`. **La prochaine étape à exécuter est `7.11`**, la mine posée.
 
+**Ajustements de l'étape 7.10, le 28 septembre 2026.** À la recette, le porteur du projet a demandé un nuage de départ qui traîne plus longtemps (1,8 seconde) et un nuage d'arrivée un peu plus (0,9), contre 0,6 aux deux, et le repère de localisation après sa propre fuite. Rien ne change au moteur. Il fournira le son de la fumée: à lui rappeler au début de `7.11`, qui reste la prochaine étape. Détail: fiche et handoff de l'étape.
+
 ## 4. Carte thématique des étapes
 
 ### Phase 0. Filet et fondations

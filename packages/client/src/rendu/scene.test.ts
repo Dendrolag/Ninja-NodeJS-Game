@@ -669,8 +669,27 @@ describe('les nuages de fumee (etape 7.10)', () => {
     const arrivee = pendant.fumees.find((disque) => disque.id.endsWith(':arrivee:brume6'));
     expect(arrivee?.rayon).toBeCloseTo((depart?.rayon ?? 0) * APPARENCE_FUMEE.echelleArrivee, 6);
 
-    expect(construireScene(etat, partie, 1000 + APPARENCE_FUMEE.dureeMs).fumees).toEqual([]);
+    expect(construireScene(etat, partie, 1000 + APPARENCE_FUMEE.dureeDepartMs).fumees).toEqual([]);
     expect(construireScene(etat, partie, 999).fumees).toEqual([]);
+  });
+
+  it('laisse trainer le nuage de depart plus longtemps que celui d arrivee', () => {
+    // Demande a la recette de l'etape 7.10: plus longtemps au depart, un peu plus a
+    // l'arrivee, contre 600 millisecondes aux deux avant.
+    expect(APPARENCE_FUMEE.dureeDepartMs).toBeGreaterThan(APPARENCE_FUMEE.dureeArriveeMs);
+    expect(APPARENCE_FUMEE.dureeArriveeMs).toBeGreaterThan(600);
+
+    const partie = lissee(vue([joueur('moi', 300, 300)]));
+    const etat = { ...etatEnJeu('moi'), journal: [fuite('bob', 0)] };
+
+    const entreLesDeux = construireScene(etat, partie, APPARENCE_FUMEE.dureeArriveeMs);
+    expect(centres(entreLesDeux.fumees)).toEqual(['100,100']);
+    expect(
+      centres(construireScene(etat, partie, APPARENCE_FUMEE.dureeArriveeMs - 1).fumees),
+    ).toEqual(['100,100', '900,700']);
+    expect(
+      centres(construireScene(etat, partie, APPARENCE_FUMEE.dureeDepartMs - 1).fumees),
+    ).toEqual(['100,100']);
   });
 
   it('cache le nuage d un autre joueur dans une zone d invisibilite, pas le notre', () => {
@@ -692,9 +711,9 @@ describe('les nuages de fumee (etape 7.10)', () => {
   });
 
   it('gonfle, reste plein, puis palit, et ses bouffees montent a la fin', () => {
-    const debut = nuage('n', 0, 0, 0.1, 1);
-    const plein = nuage('n', 0, 0, 0.4, 1);
-    const fin = nuage('n', 0, 0, 0.9, 1);
+    const debut = nuage('n', 0, 0, 100, 1000, 1);
+    const plein = nuage('n', 0, 0, 400, 1000, 1);
+    const fin = nuage('n', 0, 0, 900, 1000, 1);
     const lobe = (disques: typeof debut) => disques.find((disque) => disque.id === 'n:brume6');
 
     expect(lobe(debut)?.rayon).toBeLessThan(lobe(plein)?.rayon ?? 0);
@@ -702,6 +721,17 @@ describe('les nuages de fumee (etape 7.10)', () => {
     expect(lobe(fin)?.remplissage?.alpha).toBeLessThan(0.4);
     expect(debut.some((disque) => disque.id.includes('bouffee'))).toBe(false);
     expect(fin.filter((disque) => disque.id.includes('bouffee'))).toHaveLength(3);
+  });
+
+  it('gonfle aussi vite quelle que soit sa duree de vie, et tient plus longtemps s il dure', () => {
+    const lobe = (disques: ReturnType<typeof nuage>) =>
+      disques.find((disque) => disque.id === 'n:brume6');
+    const court = nuage('n', 0, 0, APPARENCE_FUMEE.gonflementMs, 600, 1);
+    const long = nuage('n', 0, 0, APPARENCE_FUMEE.gonflementMs, 1800, 1);
+
+    expect(lobe(court)?.rayon).toBe(lobe(long)?.rayon);
+    expect(lobe(nuage('n', 0, 0, 500, 600, 1))?.remplissage?.alpha).toBeLessThan(1);
+    expect(lobe(nuage('n', 0, 0, 500, 1800, 1))?.remplissage?.alpha).toBe(1);
   });
 
   it('n a aucun nuage dans une scene vide', () => {

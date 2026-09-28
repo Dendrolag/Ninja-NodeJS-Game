@@ -124,6 +124,9 @@ export interface Boucle {
  * Deux corrections de l'etape 5.5. En Chasse, une proie attrapee devient traqueur SUR
  * PLACE: les fleches la designaient alors qu'elle n'avait pas bouge. En Massacre, un
  * joueur tue reapparait ailleurs, et les fleches ne l'aidaient pas a se retrouver.
+ *
+ * Notre fumee aussi nous fait reparaitre ailleurs, au hasard (etape 7.10, ajoute a sa
+ * recette); celle d'un autre joueur ne nous deplace pas.
  */
 export function faitQuiNousDeplace(
   fait: FaitDeJeu,
@@ -137,6 +140,8 @@ export function faitQuiNousDeplace(
       return true;
     case 'joueurTranche':
       return fait.charge.victime === moi;
+    case 'fumee':
+      return fait.charge.joueur === moi;
     default:
       return false;
   }
@@ -159,7 +164,7 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
   let bouclesEnCours = new Set<string>();
   /** L'instant ou recharger le fusil du traqueur, apres son dernier tir (Chasse). */
   let rechargePrevue: number | undefined;
-  /** Les fleches qui designent notre personnage, tant qu'elles sont visibles. */
+  /** Le repere qui designe notre personnage, tant qu'il est visible. */
   let localisation: Localisation | undefined;
   /** Notre personnage a-t-il deja ete montre a son apparition. */
   let apparitionMontree = false;
@@ -327,12 +332,14 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
   };
 
   /**
-   * Decide s'il faut faire apparaitre les fleches autour de notre personnage.
+   * Decide s'il faut faire apparaitre le repere autour de notre personnage (l'onde
+   * de l'etape 7.8, qui a remplace les fleches du jeu d'origine).
    *
    * Trois occasions, celles du jeu d'origine: la premiere fois qu'il apparait, a
-   * chaque capture qui le fait reapparaitre ailleurs, et quand le joueur le
-   * demande. Une demande faite pendant que les fleches sont deja la est ignoree,
-   * comme dans le jeu d'origine: maintenir F ne les fait pas clignoter.
+   * chaque capture qui le fait reapparaitre ailleurs (et, depuis l'etape 7.10, a
+   * chacune de nos fuites dans la fumee), et quand le joueur le demande. Une
+   * demande faite pendant que le repere est deja la est ignoree, comme dans le jeu
+   * d'origine: maintenir F ne le fait pas clignoter.
    */
   const reperer = (
     present: boolean,

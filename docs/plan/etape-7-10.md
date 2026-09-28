@@ -138,6 +138,7 @@ Conditions de ROADMAP réunies, plus:
 9. **Le scénario de bout en bout s'appelle `poche.spec.ts`**: `fumee.spec.ts` est le test de fumée (le « smoke test ») de l'étape 0.1. Un premier jet l'avait écrasé, restauré aussitôt depuis Git. Le scénario guide Alice au clavier ou au pouce jusqu'à une fumée, en lisant le serveur sans y écrire, puis la fait s'en servir par E ou par le bouton.
 10. **Une demande servie ne se teste pas dans la room seule**, qui ne laisse pas poser une fumée dans une poche: elle se joue à travers le vrai serveur (`ServeurSocket.poche.test.ts`), dans une arène fermée.
 11. **Le banc**: la fumée ne coûte rien de mesurable; avec la graine du banc, elle change la partie jouée, plus chargée à 300 faux ninjas. Section 21 de `docs/mesures/charge-serveur.md`.
+12. **Ajustements de recette, le 28 septembre 2026**, demandés par le porteur du projet après la mise en ligne. Le nuage de départ traîne 1,8 seconde, celui d'arrivée 0,9, contre 0,6 aux deux avant (`APPARENCE_FUMEE.dureeDepartMs` et `dureeArriveeMs`); le gonflement garde ses 180 millisecondes, c'est la tenue du nuage qui s'allonge. Et notre propre fuite fait paraître le repère de localisation (l'onde de l'étape 7.8), comme une capture qui nous fait reparaître ailleurs: `faitQuiNousDeplace` retient la fumée quand elle est la nôtre, dans tous les modes. Les durées exactes sont un choix de l'exécutant, la demande disant « plus longtemps » et « un peu plus longtemps ». Rien ne change au moteur ni au serveur.
 
 ## Rituel de fin de session
 

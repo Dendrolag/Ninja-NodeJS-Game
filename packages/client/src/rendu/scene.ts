@@ -623,7 +623,7 @@ function tirsRecents(
 
 /**
  * Les nuages de fumee du moment (etape 7.10): un au depart de chaque fuite recente, un plus
- * petit a l'arrivee.
+ * petit a l'arrivee, chacun avec sa duree de vie.
  *
  * Un nuage d'un autre joueur dans une zone d'invisibilite ne se montre pas: il le trahirait,
  * comme l'eclair d'un tir. Les notres se voient toujours.
@@ -640,24 +640,25 @@ function nuagesDeFumee(
       return;
     }
 
-    const vie = (maintenant - fait.instant) / APPARENCE_FUMEE.dureeMs;
-
-    if (vie < 0 || vie >= 1) {
-      return;
-    }
-
+    const ecouleMs = maintenant - fait.instant;
     const { joueur, depart, arrivee } = fait.charge;
     const lieux = [
-      ['depart', depart, 1],
-      ['arrivee', arrivee, APPARENCE_FUMEE.echelleArrivee],
+      ['depart', depart, APPARENCE_FUMEE.dureeDepartMs, 1],
+      ['arrivee', arrivee, APPARENCE_FUMEE.dureeArriveeMs, APPARENCE_FUMEE.echelleArrivee],
     ] as const;
 
-    for (const [lieu, point, echelle] of lieux) {
+    for (const [lieu, point, dureeMs, echelle] of lieux) {
+      if (ecouleMs < 0 || ecouleMs >= dureeMs) {
+        continue;
+      }
+
       if (joueur !== etat.moi && dansUneZoneInvisible(lissee, point.x, point.y)) {
         continue;
       }
 
-      disques.push(...nuage(`fumee:${String(rang)}:${lieu}`, point.x, point.y, vie, echelle));
+      disques.push(
+        ...nuage(`fumee:${String(rang)}:${lieu}`, point.x, point.y, ecouleMs, dureeMs, echelle),
+      );
     }
   });
 
@@ -665,19 +666,24 @@ function nuagesDeFumee(
 }
 
 /**
- * Les disques d'un nuage de fumee a cet instant de sa vie, de zero a un: ses lobes cernes, qui
- * gonflent puis palissent, et les bouffees qui montent a la fin.
+ * Les disques d'un nuage de fumee, ecouleMs apres sa naissance, sur une vie de dureeMs: ses
+ * lobes cernes, qui gonflent puis palissent, et les bouffees qui montent a la fin.
+ *
+ * Le gonflement dure le meme temps pour tous les nuages. Le reste suit la duree de vie: un
+ * nuage qui dure plus longtemps reste plein plus longtemps et palit plus lentement.
  */
 export function nuage(
   id: string,
   x: number,
   y: number,
-  vie: number,
+  ecouleMs: number,
+  dureeMs: number,
   echelle: number,
 ): readonly DisqueScene[] {
   const forme = APPARENCE_FUMEE;
   const e = forme.echelle * echelle;
-  const gonfle = Math.min(vie / forme.partDuGonflement, 1);
+  const vie = ecouleMs / dureeMs;
+  const gonfle = Math.min(ecouleMs / forme.gonflementMs, 1);
   const opacite =
     vie < forme.partPleine ? 1 : 1 - (vie - forme.partPleine) / (1 - forme.partPleine);
   const disques: DisqueScene[] = [];
