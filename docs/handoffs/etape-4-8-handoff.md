@@ -33,7 +33,7 @@ Aucune modification de `legacy/`, de `tests/caracterisation/`, de `packages/sim`
 - Le formatage local signale 258 fichiers: ce sont les fins de ligne CRLF de l'extraction Windows (`core.autocrlf` à `true`), le dépôt est en LF. Les fichiers de l'étape passent.
 - Couverture de packages/sim: inchangée, le paquet n'est pas touché.
 - **Empreintes**: inchangées par construction, ni le moteur, ni le serveur, ni le contrat ne changent.
-- État de la CI: à renseigner après la poussée.
+- État de la CI: verte sur `3b670ac` (exécution 37048241045), types, linter et tests, bout en bout, mise en ligne: le serveur de production répond sur ce commit (`/sante`).
 
 ## Décisions et écarts au plan
 
