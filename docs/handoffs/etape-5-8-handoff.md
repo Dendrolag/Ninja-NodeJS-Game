@@ -53,8 +53,8 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
 
 ## Prochaine action exacte
 
-**Au porteur du projet**: jouer une partie avec des Black Ninjas pour juger leurs marques, et dire la suite: aucune étape planifiée ne reste ouverte à la section 3 du ROADMAP.
+**À la session suivante**: l'étape `4.8`, des ninjas nets de près, planifiée à la section 3 du ROADMAP le 2 octobre 2026. Rédiger sa fiche selon le cas de repli du PROTOCOLE, puis trouver d'où vient le crénelage des ninjas colorés avant de le corriger. **Au porteur du projet**: jouer une partie avec des Black Ninjas pour juger leurs marques.
 
 ## Étape suivante
 
-Fiche à lire: aucune. La prochaine étape est à décider avec le porteur du projet.
+Fiche à lire: `docs/plan/etape-4-8.md`, à rédiger au début de l'étape. L'entrée correspondante est à la section 3 de `docs/plan/ROADMAP.md`.
