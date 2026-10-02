@@ -642,16 +642,45 @@ export type Couleur = string;
 /**
  * Palette des couleurs attribuees aux joueurs.
  *
- * Portage de la liste availableColors du legacy (server.js:174).
+ * Portage de la liste availableColors du legacy (server.js:174), a un ecart pres: le bleu
+ * pur du jeu d'origine, `#0000FF`, le plus sombre des six, plus sombre que bien des marrons,
+ * se confondait avec un Black Ninja. Il devient un bleu neon eclairci, sur decision du
+ * porteur du projet du 2 octobre 2026 (etape 5.8, defaut X38 de l'audit).
  */
 export const COULEURS_JOUEURS = [
   '#FF0000',
   '#00FF00',
-  '#0000FF',
+  '#3D7DFF',
   '#FFFF00',
   '#FF00FF',
   '#00FFFF',
 ] as const;
+
+/**
+ * La luminance minimale d'une couleur tiree au hasard (etape 5.8, decision du porteur du
+ * projet du 2 octobre 2026): celle d'un faux ninja qui nait, d'un joueur au-dela du sixieme,
+ * d'un ninja repeint par une zone de chaos. Seul le Black Ninja est noir: aucune de ces
+ * couleurs ne doit s'en approcher. 0,18, c'est un contraste d'au moins 4,6 avec le noir: le
+ * noir, les marrons, les bleus et rouges fonces, les gris sombres sont exclus, le rouge pur
+ * passe de justesse. Un tirage sur trois environ est refait.
+ */
+export const LUMINANCE_MINIMUM_PNJ = 0.18;
+
+/**
+ * La luminance relative d'une couleur, de zero pour le noir a un pour le blanc: la moyenne
+ * des trois composantes, chacune ramenee a l'intensite lumineuse qu'elle produit, ponderees
+ * par la sensibilite de l'oeil (definition des normes d'accessibilite du web, WCAG 2).
+ *
+ * @param couleur Une couleur au format hexadecimal, par exemple '#3D7DFF'.
+ */
+export function luminance(couleur: Couleur): number {
+  const composante = (rang: number): number => {
+    const valeur = Number.parseInt(couleur.slice(rang, rang + 2), 16) / 255;
+    return valeur <= 0.040_45 ? valeur / 12.92 : ((valeur + 0.055) / 1.055) ** 2.4;
+  };
+
+  return 0.2126 * composante(1) + 0.7152 * composante(3) + 0.0722 * composante(5);
+}
 
 /**
  * Les deux equipes du mode Equipes (etape 7.2).

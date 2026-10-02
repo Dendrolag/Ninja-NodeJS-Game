@@ -22,9 +22,9 @@ import { COULEURS_JOUEURS, COULEUR_BOT_NEUTRE, COULEUR_BOT_NOIR } from '@neon-ni
 import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
 
-import { REPEINTE_DU_NINJA } from './apparence.js';
+import { REPEINTE_DU_NINJA, YEUX_DU_BLACK_NINJA } from './apparence.js';
 import type { CalquesDuNinja } from './recoloration.js';
-import { rayerLeCorps, separerLesCalques } from './recoloration.js';
+import { rayerLeCorps, rougirLesYeux, separerLesCalques } from './recoloration.js';
 
 /** Le dossier des sprites de ninja, a la racine du depot. */
 const DOSSIER_NINJA = fileURLToPath(new URL('../../../../assets/ninja/', import.meta.url));
@@ -200,5 +200,51 @@ describe("les rayures de l'Evade (etape 7.9)", () => {
     expect(pixel(4)).toEqual([0xf6, 0xf6, 0xf6, 200]);
     expect(pixel(5)).toEqual([0, 0, 0, 0]);
     expect(pixel(7)).toEqual([0xf6, 0xf6, 0xf6, 200]);
+  });
+});
+
+describe('les yeux rouges du Black Ninja (etape 5.8)', () => {
+  const ROUGE = YEUX_DU_BLACK_NINJA.couleur;
+
+  it('rougit un reflet clair et neutre, en gardant son opacite', () => {
+    const rougis = rougirLesYeux(new Uint8ClampedArray([230, 230, 225, 200]), ROUGE);
+
+    expect([...rougis]).toEqual([0xff, 0x32, 0x32, 200]);
+  });
+
+  it('laisse le cerne sombre, la peau coloree et le vide intacts', () => {
+    const details = new Uint8ClampedArray([
+      ...[20, 20, 20, 255],
+      ...[240, 200, 150, 255],
+      ...[255, 255, 255, 0],
+    ]);
+
+    expect([...rougirLesYeux(details, ROUGE)]).toEqual([...details]);
+  });
+
+  it('ne touche pas au calque recu', () => {
+    const details = new Uint8ClampedArray([230, 230, 230, 255]);
+    rougirLesYeux(details, ROUGE);
+
+    expect([...details]).toEqual([230, 230, 230, 255]);
+  });
+
+  it('trouve des yeux a rougir sur l image de face, et en laisse la plupart des details', () => {
+    const { details } = separerLesCalques(pixelsDe('idle.png'));
+    const rougis = rougirLesYeux(details, ROUGE);
+    let changes = 0;
+    let visibles = 0;
+
+    for (let index = 0; index < details.length; index += 4) {
+      if ((details[index + 3] ?? 0) > 0) {
+        visibles += 1;
+      }
+      if (rougis[index] !== details[index] || rougis[index + 1] !== details[index + 1]) {
+        changes += 1;
+      }
+    }
+
+    expect(changes).toBeGreaterThan(0);
+    expect(changes).toBeLessThan(visibles / 4);
   });
 });

@@ -189,6 +189,37 @@ export const HALO_BOT_NOIR: Halo = {
 /** Le disque rouge diffus qui montre le rayon de detection d'un bot noir. */
 export const TEINTE_DETECTION_BOT_NOIR: Teinte = { couleur: 0xff0000, alpha: 0.1 };
 
+/**
+ * Les yeux rouges du Black Ninja (etape 5.8, marque A de la planche
+ * docs/design/etape-5-8/1-couleurs-et-black-ninja.png): les reflets clairs et neutres de son
+ * masque, plus clairs que la clarte sur chaque composante et d'un ecart entre composantes
+ * plus petit que l'ecart, prennent la couleur; une lueur rouge pale, sous sa tete, les fait
+ * briller, sans filtre.
+ */
+export const YEUX_DU_BLACK_NINJA = {
+  couleur: 0xff3232,
+  clarte: 110,
+  ecart: 40,
+  lueur: { decalageY: -2, rayon: 15, alpha: 0.4, amplitude: 0.15, cadence: 0.006 },
+} as const;
+
+/**
+ * L'aura de fumee du Black Ninja (etape 5.8, marque C de la planche): des volutes sombres
+ * violacees qui tournent autour de lui, sous les personnages. Chaque volute a sa distance et
+ * sa taille, de trois sortes, et le tout fait un tour en tourMs.
+ */
+export const AURA_DU_BLACK_NINJA = {
+  volutes: 9,
+  couleur: 0x3a1056,
+  alpha: [0.6, 0.48, 0.36],
+  distance: [17, 20, 23],
+  rayon: [6, 7, 8],
+  /** Les volutes s'ecrasent en hauteur, et montent avec leur sorte. */
+  ecrasement: 0.6,
+  montee: 3,
+  tourMs: 5600,
+} as const;
+
 /** L'ombre portee sous notre personnage, qui aide a le retrouver. */
 export const OMBRE_JOUEUR = {
   rayon: 12,

@@ -45,8 +45,11 @@ const BATTEMENT_MS = 50;
  *
  * LES ZONES, ELLES, RESTENT EN JEU, comme par defaut: depuis l'etape 7.12, elles s'ouvrent sur
  * des mines de zone, et toutes les references ont change, ce changement de regle etant voulu.
- * La carte y pose ses mines au rythme par defaut; les joueurs n'en arment aucune a la graine
- * 42, d'ou une reference a part, a une graine ou une zone s'ouvre.
+ * La carte y pose ses mines au rythme par defaut; a la graine 42, l'ouverture d'une zone
+ * tient au hasard, d'ou une reference a part, a une graine ou deux zones s'ouvrent.
+ *
+ * LES FAUX NINJAS NAISSENT D'AUTRES COULEURS DEPUIS L'ETAPE 5.8, jamais trop sombres: toutes
+ * les references ont change de nouveau, comme voulu.
  */
 const REGLAGES: ReglagesPartiels = {
   dureePartieS: 60,
@@ -73,12 +76,14 @@ const AVEC_LA_MINE: ReglagesPartiels = {
 /**
  * La graine des parties avec la fumee et avec la mine. Depuis l'etape 7.12, les mines de zone
  * tirent autrement que les zones d'avant, et a la graine 42 plus aucun joueur ne passe sur un
- * objet de poche: ces references ne prouveraient plus rien.
+ * objet de poche: ces references ne prouveraient plus rien. Graine changee de nouveau a
+ * l'etape 5.8, les faux ninjas naissant d'autres couleurs: la graine 52 n'en faisait plus
+ * rien non plus.
  */
-const GRAINE_DE_LA_POCHE = 52;
+const GRAINE_DE_LA_POCHE = 47;
 
 /** Une graine ou un joueur arme une mine de zone et ouvre sa zone (etape 7.12). */
-const GRAINE_DES_ZONES = 62;
+const GRAINE_DES_ZONES = 46;
 
 /** Tous les combien de battements chaque joueur se sert de sa poche, dans cette partie. */
 const CADENCE_DE_LA_POCHE = 40;

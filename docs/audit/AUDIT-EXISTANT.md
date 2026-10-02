@@ -314,6 +314,12 @@ Ajoute le 25 septembre 2026, en mesurant les images du mode miroir.
 
 **X37. Le miroir de Spirit & Time n'etait pas retourne.** Les trois images de `assets/maps/map3/mirror/` sont les images de `normal/`, octet pour octet (`legacy/assets/maps/map3/mirror/collision.png` et `normal/collision.png` ont la meme empreinte). Cocher « Miroir » sur Spirit & Time chargeait donc la meme carte, sans que rien ne le signale. L'etude 8.1 ne l'avait pas vu: la carte etant symetrique a 99,9 pour cent, son image normale ressemble a son retournement a 99,9 pour cent, et c'est ce chiffre qui avait ete pris pour celui du miroir. Corrige par conception a l'etape 8.3: le miroir se calcule depuis l'image normale, pour toutes les cartes, si bien qu'il ne peut plus etre oublie. Le vrai miroir de Spirit & Time ne differe de la carte normale que de 0,05 pour cent de ses murs.
 
+### Defauts decouverts a l'etape 5.8
+
+Ajoute le 2 octobre 2026, a la demande du porteur du projet.
+
+**X38. Des faux ninjas aussi sombres qu'un Black Ninja.** `getRandomColor` (`server.js:1512`) tire une couleur parmi les seize millions, sans condition: un tiers des tirages environ est sombre, noir, marron, bleu ou rouge fonce, et un faux ninja ainsi colore se confond avec un Black Ninja, corps noir. Le meme tirage sert a un joueur au-dela du sixieme, dont les faux ninjas prennent la couleur, et a la zone de chaos. Le bleu de la palette, `#0000FF` (`availableColors`, `:174`), est lui-meme plus sombre que bien des marrons. Le portage de l'etape 5.4 avait repris le tirage tel quel. Corrige a l'etape 5.8, sur decision du porteur du projet: toute couleur tiree a une luminance relative de 0,18 au moins (`LUMINANCE_MINIMUM_PNJ`, `packages/shared`), le bleu de la palette devient `#3D7DFF`, et le Black Ninja recoit des yeux rouges et une aura de fumee.
+
 ### Statut des failles de securite apres l'etape 1.6
 
 Recapitulatif au 14 aout 2026. Les failles S1 a S4 sont traitees par conception dans `packages/shared` et `packages/sim`; leur fermeture effective demande en plus le branchement de l'etape 2.2 (couche reseau) et de l'etape 4.3 (ecrans).

@@ -11,7 +11,9 @@ import {
   COULEUR_BOT_NEUTRE,
   COULEUR_BOT_NOIR,
   COULEUR_DES_TRAQUEURS,
+  LUMINANCE_MINIMUM_PNJ,
   creerAlea,
+  luminance,
 } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
@@ -139,5 +141,60 @@ describe('couleurDeBot', () => {
 
   it('donne la meme couleur pour la meme graine', () => {
     expect(couleurDeBot(creerAlea(40), []).valeur).toBe(couleurDeBot(creerAlea(40), []).valeur);
+  });
+});
+
+describe('aucune couleur tiree trop sombre (etape 5.8, defaut X38)', () => {
+  /** Mille tirages a la suite d'une meme fonction. */
+  function milleTirages(
+    tirer: (alea: ReturnType<typeof creerAlea>) => {
+      readonly valeur: string;
+      readonly alea: ReturnType<typeof creerAlea>;
+    },
+  ): readonly string[] {
+    let alea = creerAlea(2026);
+    const couleurs: string[] = [];
+    for (let rang = 0; rang < 1_000; rang += 1) {
+      const tirage = tirer(alea);
+      couleurs.push(tirage.valeur);
+      alea = tirage.alea;
+    }
+    return couleurs;
+  }
+
+  it('fait naitre chaque faux ninja d une couleur au-dessus du seuil', () => {
+    const couleurs = milleTirages((alea) => couleurDeBot(alea, []));
+
+    expect(couleurs.every((couleur) => luminance(couleur) >= LUMINANCE_MINIMUM_PNJ)).toBe(true);
+    // Le tirage reste varie: le seuil n'en retire qu'un tiers.
+    expect(new Set(couleurs).size).toBeGreaterThan(990);
+  });
+
+  it('donne a un joueur hors de la palette, ou a une zone de chaos, une couleur claire', () => {
+    const couleurs = milleTirages((alea) => couleurUnique(alea, COULEURS_JOUEURS));
+
+    expect(couleurs.every((couleur) => luminance(couleur) >= LUMINANCE_MINIMUM_PNJ)).toBe(true);
+  });
+
+  it('refait un tirage tombe sous le seuil, sans se laisser tromper par sa luminance', () => {
+    // Une graine dont le premier tirage brut est sombre: le tirage retenu est le suivant
+    // qui passe le seuil.
+    let graine = 0;
+    while (luminance(couleurAleatoire(creerAlea(graine)).valeur) >= LUMINANCE_MINIMUM_PNJ) {
+      graine += 1;
+    }
+    const brut = couleurAleatoire(creerAlea(graine));
+    const retenue = couleurDeBot(creerAlea(graine), []);
+
+    expect(retenue.valeur).not.toBe(brut.valeur);
+    expect(luminance(retenue.valeur)).toBeGreaterThanOrEqual(LUMINANCE_MINIMUM_PNJ);
+  });
+
+  it('laisse au-dessus du seuil toutes les couleurs que le jeu donne de lui-meme', () => {
+    for (const couleur of [...COULEURS_JOUEURS, COULEUR_DES_TRAQUEURS, COULEUR_BOT_NEUTRE]) {
+      expect(luminance(couleur)).toBeGreaterThanOrEqual(LUMINANCE_MINIMUM_PNJ);
+    }
+    // Seul le Black Ninja est noir.
+    expect(luminance(COULEUR_BOT_NOIR)).toBe(0);
   });
 });

@@ -14,9 +14,12 @@ import {
   CADENCES_LEGACY_MS,
   CARTES,
   CARTES_ENREGISTREES,
+  COULEURS_JOUEURS,
   DEPLACEMENTS_LEGACY_PAR_PAS,
+  LUMINANCE_MINIMUM_PNJ,
   PLAFONDS_DE_FAUX_NINJAS,
   VITESSES,
+  luminance,
 } from './constantes.js';
 import type { CarteEnregistree, IdentifiantCarte } from './constantes.js';
 
@@ -77,5 +80,32 @@ describe('cartes', () => {
     expect(Math.max(...Object.values(PLAFONDS_DE_FAUX_NINJAS))).toBe(
       BORNES_REGLAGES.nombreBotsInitial.maximum,
     );
+  });
+});
+
+describe('la luminance des couleurs (etape 5.8)', () => {
+  it('va de zero pour le noir a un pour le blanc', () => {
+    expect(luminance('#000000')).toBe(0);
+    expect(luminance('#FFFFFF')).toBeCloseTo(1, 10);
+  });
+
+  it('pese le vert plus que le rouge, et le rouge plus que le bleu, comme l oeil', () => {
+    expect(luminance('#00FF00')).toBeCloseTo(0.7152, 4);
+    expect(luminance('#FF0000')).toBeCloseTo(0.2126, 4);
+    expect(luminance('#0000FF')).toBeCloseTo(0.0722, 4);
+  });
+
+  it('classe sous le seuil les couleurs proches du noir, au-dessus les couleurs vives', () => {
+    for (const sombre of ['#5A3A1A', '#8B4513', '#00008B', '#7F0000', '#2A3150', '#0000FF']) {
+      expect(luminance(sombre)).toBeLessThan(LUMINANCE_MINIMUM_PNJ);
+    }
+    for (const vive of ['#FF0000', '#808080', '#3D7DFF', '#FFA500']) {
+      expect(luminance(vive)).toBeGreaterThanOrEqual(LUMINANCE_MINIMUM_PNJ);
+    }
+  });
+
+  it('remplace le bleu pur de la palette par un bleu neon eclairci', () => {
+    expect(COULEURS_JOUEURS).toContain('#3D7DFF');
+    expect(COULEURS_JOUEURS).not.toContain('#0000FF');
   });
 });

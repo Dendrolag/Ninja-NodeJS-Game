@@ -14,8 +14,10 @@ import {
   COULEUR_BOT_NEUTRE,
   COULEUR_BOT_NOIR,
   COULEUR_DES_TRAQUEURS,
+  LUMINANCE_MINIMUM_PNJ,
   element,
   entier,
+  luminance,
 } from '@neon-ninja/shared';
 
 /**
@@ -33,7 +35,9 @@ const CHIFFRES_HEXADECIMAUX = '0123456789ABCDEF';
  * Nombre maximal de tirages avant d'abandonner la recherche d'une couleur
  * inedite. Le legacy bouclait sans limite; avec plus de seize millions de
  * couleurs possibles le cas ne se produit pas, mais une boucle sans sortie n'a
- * pas sa place dans un moteur qui tourne vingt fois par seconde.
+ * pas sa place dans un moteur qui tourne vingt fois par seconde. Depuis l'etape
+ * 5.8, un tirage sur trois environ est refait parce que trop sombre: trente-deux
+ * echecs de suite restent une chance sur dix millions de milliards.
  */
 const TENTATIVES_MAXIMUM = 32;
 
@@ -74,7 +78,13 @@ export function couleurUnique(alea: Alea, couleursExclues: readonly Couleur[]): 
 }
 
 /**
- * Tire des couleurs quelconques jusqu'a en trouver une qui n'est pas interdite.
+ * Tire des couleurs quelconques jusqu'a en trouver une qui n'est ni interdite, ni trop
+ * sombre.
+ *
+ * TROP SOMBRE, DEPUIS L'ETAPE 5.8: sous LUMINANCE_MINIMUM_PNJ. Seul le Black Ninja est noir;
+ * une couleur tiree au hasard, celle d'un faux ninja, d'un joueur hors palette ou d'une zone
+ * de chaos, ne doit pas s'en approcher (defaut X38 de l'audit). Le jeu d'origine tirait sans
+ * condition.
  *
  * Au bout de TENTATIVES_MAXIMUM tirages, cas theorique, on rend la derniere
  * couleur tiree plutot que de boucler ou de lever une erreur. Une couleur en
@@ -85,13 +95,18 @@ function couleurAleatoireHorsDe(alea: Alea, interdites: readonly Couleur[]): Tir
 
   for (
     let tentative = 1;
-    tentative < TENTATIVES_MAXIMUM && interdites.includes(tirage.valeur);
+    tentative < TENTATIVES_MAXIMUM && !estTirable(tirage.valeur, interdites);
     tentative += 1
   ) {
     tirage = couleurAleatoire(tirage.alea);
   }
 
   return tirage;
+}
+
+/** Cette couleur tiree au hasard peut-elle etre donnee: ni interdite, ni trop sombre. */
+function estTirable(couleur: Couleur, interdites: readonly Couleur[]): boolean {
+  return !interdites.includes(couleur) && luminance(couleur) >= LUMINANCE_MINIMUM_PNJ;
 }
 
 /**

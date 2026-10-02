@@ -21,7 +21,7 @@
  * chaque image chargee (pixi.ts).
  */
 
-import { REPEINTE_DU_NINJA } from './apparence.js';
+import { REPEINTE_DU_NINJA, YEUX_DU_BLACK_NINJA } from './apparence.js';
 
 /** Les deux calques d'une image de ninja, en pixels RVBA, de la taille de l'image. */
 export interface CalquesDuNinja {
@@ -104,4 +104,35 @@ export function rayerLeCorps(
   }
 
   return raye;
+}
+
+/**
+ * Rougit les yeux d'un calque de details: le regard du Black Ninja (etape 5.8, marque A de la
+ * planche docs/design/etape-5-8/). Les reflets clairs et neutres du masque, gris ou blancs,
+ * prennent la couleur donnee, en gardant leur opacite; les autres details, le cerne et la
+ * peau, ne changent pas.
+ *
+ * FONCTION PURE, sur un tableau de pixels, comme separerLesCalques.
+ *
+ * @param details Le calque des details, tel que separerLesCalques le rend.
+ * @param couleur La couleur des yeux, en 24 bits.
+ */
+export function rougirLesYeux(details: Uint8ClampedArray, couleur: number): Uint8ClampedArray {
+  const rougis = Uint8ClampedArray.from(details);
+  const { clarte, ecart } = YEUX_DU_BLACK_NINJA;
+
+  for (let index = 0; index < details.length; index += 4) {
+    const rouge = details[index] ?? 0;
+    const vert = details[index + 1] ?? 0;
+    const bleu = details[index + 2] ?? 0;
+    const opacite = details[index + 3] ?? 0;
+    const clair = rouge > clarte && vert > clarte && bleu > clarte;
+    const neutre = Math.max(rouge, vert, bleu) - Math.min(rouge, vert, bleu) < ecart;
+
+    if (opacite > 0 && clair && neutre) {
+      rougis.set([(couleur >> 16) & 0xff, (couleur >> 8) & 0xff, couleur & 0xff, opacite], index);
+    }
+  }
+
+  return rougis;
 }

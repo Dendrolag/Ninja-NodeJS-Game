@@ -30,7 +30,12 @@ import { fait } from '../faits.js';
 import type { VuePartie } from '../reconstruction.js';
 import type { VueLissee } from './interpolation.js';
 import { SCENE_VIDE, construireScene, couleurEnNombre, nuage } from './scene.js';
-import { APPARENCE_EVADE, APPARENCE_FUMEE, APPARENCE_ZONE } from './apparence.js';
+import {
+  APPARENCE_EVADE,
+  APPARENCE_FUMEE,
+  APPARENCE_ZONE,
+  AURA_DU_BLACK_NINJA,
+} from './apparence.js';
 import { adresseDImage, adresseRayee } from './textures.js';
 
 /** Un joueur pose a un endroit, avec le minimum de champs. */
@@ -257,6 +262,24 @@ describe('construireScene', () => {
     const detection = scene.disques.find((disque) => disque.id === 'noir-1:detection');
 
     expect(detection?.rayon).toBe(321);
+  });
+
+  it('marque le Black Ninja de ses yeux rouges et de son aura, et lui seul (etape 5.8)', () => {
+    const scene = construireScene(
+      etatEnJeu('moi'),
+      lissee(vue([bot('noir-1', 10, 10, 'botNoir'), bot('faux-1', 300, 300)])),
+      0,
+    );
+    const noir = scene.entites.find((sprite) => sprite.id === 'noir-1');
+    const faux = scene.entites.find((sprite) => sprite.id === 'faux-1');
+
+    expect(noir?.texture).toMatch(/#yeux-rouges$/);
+    expect(faux?.texture).not.toMatch(/#yeux-rouges$/);
+    expect(scene.disques.filter((disque) => disque.id.startsWith('noir-1:volute'))).toHaveLength(
+      AURA_DU_BLACK_NINJA.volutes,
+    );
+    expect(scene.disques.some((disque) => disque.id === 'noir-1:yeux')).toBe(true);
+    expect(scene.disques.some((disque) => disque.id.startsWith('faux-1:'))).toBe(false);
   });
 
   describe('zone d invisibilite', () => {

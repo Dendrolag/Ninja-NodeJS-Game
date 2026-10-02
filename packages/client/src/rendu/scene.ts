@@ -85,7 +85,8 @@ import { DEMI_ARC_DU_KATANA, imageDuMassacre } from './katana.js';
 import type { Localisation } from './localisation.js';
 import { opaciteDeLocalisation, reperesDeLocalisation } from './localisation.js';
 import { minesDeLaScene } from './mines.js';
-import { adresseDImage, adresseRayee } from './textures.js';
+import { marquesDuBlackNinja } from './blackNinja.js';
+import { adresseAuxYeuxRouges, adresseDImage, adresseRayee } from './textures.js';
 import type { ZoneScene } from './zones.js';
 import { ecouleDepuisLOuverture, mineDeZoneVivante, zoneQuiGonfle, zoneVivante } from './zones.js';
 
@@ -445,13 +446,19 @@ export function construireScene(
         remplissage: undefined,
         contour: { ...HALO_BOT_NOIR.teinte, epaisseur: 1 },
       });
+      // Son aura de fumee et la lueur de ses yeux rouges (etape 5.8).
+      disques.push(...marquesDuBlackNinja(entite.id, x, y, maintenant));
     }
 
     entites.push({
       id: entite.id,
       // A l'arret, un personnage garde sa direction et sa premiere image, sans marcher
       // sur place: c'est getFrameKey du jeu d'origine (client.js:589).
-      texture: adresseDeNinja(entite.direction, enMouvement ? image : 1),
+      // Le Black Ninja a les yeux rouges (etape 5.8).
+      texture:
+        entite.type === 'botNoir'
+          ? adresseAuxYeuxRouges(adresseDeNinja(entite.direction, enMouvement ? image : 1))
+          : adresseDeNinja(entite.direction, enMouvement ? image : 1),
       x,
       y,
       taille: TAILLE_SPRITE,

@@ -71,6 +71,7 @@ import {
 
 import {
   APPARENCE_EVADE,
+  YEUX_DU_BLACK_NINJA,
   BORDURE_TERRAIN,
   COULEUR_FOND,
   DENSITE_MAXIMALE,
@@ -82,9 +83,15 @@ import type { Camera, ZoneVisible } from './camera.js';
 import { dansLaZone, versEcran, zoneVisible } from './camera.js';
 import type { IndicateurScene } from './charges.js';
 import { orienterLeDecor } from './miroir.js';
-import { rayerLeCorps, separerLesCalques } from './recoloration.js';
+import { rayerLeCorps, rougirLesYeux, separerLesCalques } from './recoloration.js';
 import type { FormeDeSang } from './sang.js';
-import { adresseDImage, adresseDesDetails, adresseDuCorps, adresseRayee } from './textures.js';
+import {
+  adresseAuxYeuxRouges,
+  adresseDImage,
+  adresseDesDetails,
+  adresseDuCorps,
+  adresseRayee,
+} from './textures.js';
 import type {
   ConeScene,
   DisqueScene,
@@ -248,6 +255,16 @@ function rangerLesCalques(adresse: string, texture: Texture): void {
 
   Assets.cache.set(adresseDuCorps(raye), textureDePixels(rayures, largeur, hauteur));
   Assets.cache.set(adresseDesDetails(raye), details);
+
+  // Le meme ninja, les yeux rougis: le Black Ninja (etape 5.8). Son corps est celui de l'image
+  // d'origine, que le rendu teint en noir.
+  const yeuxRouges = adresseAuxYeuxRouges(adresse);
+
+  Assets.cache.set(adresseDuCorps(yeuxRouges), Assets.get<Texture>(adresseDuCorps(adresse)));
+  Assets.cache.set(
+    adresseDesDetails(yeuxRouges),
+    textureDePixels(rougirLesYeux(calques.details, YEUX_DU_BLACK_NINJA.couleur), largeur, hauteur),
+  );
 }
 
 /** Range chaque image d'une planche d'objet comme une texture, qui partage l'image chargee. */

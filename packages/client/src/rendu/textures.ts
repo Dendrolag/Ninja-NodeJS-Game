@@ -42,3 +42,11 @@ export function adresseDImage(adresse: string, rang: number): string {
 export function adresseRayee(adresse: string): string {
   return `${adresse}#raye`;
 }
+
+/**
+ * Le nom des textures du Black Ninja aux yeux rouges, tirees d'une image de ninja (etape 5.8):
+ * son corps est celui de l'image, ses details ont les yeux rougis.
+ */
+export function adresseAuxYeuxRouges(adresse: string): string {
+  return `${adresse}#yeux-rouges`;
+}
