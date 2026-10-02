@@ -15,8 +15,9 @@
  * DEUX PARTICULARITES DU JEU D'ORIGINE SONT REPRODUITES A L'IDENTIQUE, parce que
  * ce sont elles qui placent les murs la ou deux ans de jeu les ont mis.
  *
- * 1. LES IMAGES SONT REDIMENSIONNEES. Les six collision.png mesurent toutes
- *    3000x2000, alors que map1 (Tokyo) mesure 2000x1500. Le jeu d'origine les
+ * 1. LES IMAGES SONT REDIMENSIONNEES. Les collision.png du jeu d'origine
+ *    mesuraient toutes 3000x2000, et celle de map1 (Tokyo) le fait encore, alors
+ *    que la carte mesure 2000x1500. Le jeu d'origine les
  *    dessinait dans un canevas aux dimensions de la carte (server.js:352), ce
  *    qui les ecrase sans conserver les proportions. Ignorer ce redimensionnement
  *    donnerait des murs decales de plusieurs centaines de pixels par rapport au
@@ -24,7 +25,9 @@
  *
  * 2. LE SEUIL EST SUR LA MOYENNE DES TROIS COMPOSANTES, a 128, et l'opacite est
  *    ignoree. C'est la regle qui a dessine les murs des cartes existantes; elle
- *    vit dans packages/sim, avec la constante qui la porte.
+ *    vit dans packages/sim, avec la constante qui la porte. Une image des murs
+ *    doit donc etre opaque: livree en noir sur transparent, elle se lirait toute
+ *    en mur (etape 8.8, un test de terrain.test.ts le garde).
  *
  * LE MIROIR SE CALCULE ICI (etape 8.3). Une carte n'a qu'une image de collision;
  * son miroir est cette image retournee de gauche a droite, AVANT d'etre etiree aux

@@ -35,6 +35,7 @@ import {
   cheminCarte,
   cheminNinja,
   cheminObjet,
+  cheminLointain,
   cheminPluie,
   cheminSon,
   tousLesNinjas,
@@ -83,6 +84,23 @@ describe('cheminPluie', () => {
 
     expect(planche.largeur).toBe(fond.largeur * IMAGES_DE_PLUIE);
     expect(planche.hauteur).toBe(fond.hauteur);
+  });
+});
+
+describe('cheminLointain', () => {
+  it('donne un chemin pour la seule carte qui a un lointain (etape 8.8)', () => {
+    expect(cheminLointain('map3')).toBe('cartes/map3/background-parallax.png');
+  });
+
+  it('ne donne rien pour les cartes sans lointain', () => {
+    expect(cheminLointain('map1')).toBeUndefined();
+    expect(cheminLointain('quartier')).toBeUndefined();
+  });
+
+  it('a la taille des couches de sa carte', () => {
+    expect(dimensionsPng(cheminLointain('map3') as string)).toEqual(
+      dimensionsPng(cheminCarte('map3', 'background')),
+    );
   });
 });
 
@@ -140,6 +158,17 @@ describe('cheminSon', () => {
   });
 });
 
+describe('les sons de la fumee et des mines', () => {
+  it('sont ceux du porteur du projet, sans plus aucun son provisoire (etape 8.8)', () => {
+    expect(SONS.fumee).toBe('bonus-escape-nuage.mp3');
+    expect(SONS.minePosee).toBe('mine-pose.mp3');
+    expect(SONS.mineArmee).toBe('activation-mine.mp3');
+    expect(SONS.mineDeZoneArmee).toBe('activation-mine.mp3');
+    expect(SONS.mineExplosee).toBe('explosion-mine.mp3');
+    expect(SONS.zoneOuverte).toBe('explosion-mine-zone.mp3');
+  });
+});
+
 describe('cheminApercuCarte', () => {
   it('range la vignette de chaque carte avec ses couches', () => {
     expect(cheminApercuCarte('map1')).toBe('cartes/map1/preview.png');
@@ -151,7 +180,7 @@ describe('les ressources annoncees existent sur le disque', () => {
   /** Verifie qu'un chemin relatif designe un fichier reellement present. */
   const present = (relatif: string): boolean => existsSync(join(RACINE_DISQUE, relatif));
 
-  it('pour les cartes, leurs trois couches et la pluie', () => {
+  it('pour les cartes, leurs trois couches, la pluie et le lointain', () => {
     const manquants: string[] = [];
 
     for (const carte of Object.keys(CARTES)) {
@@ -162,9 +191,10 @@ describe('les ressources annoncees existent sur le disque', () => {
         }
       }
 
-      const pluie = cheminPluie(carte);
-      if (pluie !== undefined && !present(pluie)) {
-        manquants.push(pluie);
+      for (const optionnelle of [cheminPluie(carte), cheminLointain(carte)]) {
+        if (optionnelle !== undefined && !present(optionnelle)) {
+          manquants.push(optionnelle);
+        }
       }
     }
 

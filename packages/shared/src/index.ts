@@ -301,6 +301,7 @@ export {
   SONS_EN_BOUCLE,
   cheminApercuCarte,
   cheminCarte,
+  cheminLointain,
   cheminNinja,
   cheminObjet,
   cheminPluie,

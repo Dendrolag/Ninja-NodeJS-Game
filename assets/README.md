@@ -20,6 +20,14 @@ Exception, les deux sons du katana du mode Massacre (étape 7.4), `sons/katana-s
 
 De même, les deux sons du fusil du mode Tactique, `sons/shotgun-wave.mp3` (chacun de nos tirs) et `sons/shotgun-reload.mp3` (une charge qui revient), fournis par le porteur du projet à l'étape 5.5, le même jour.
 
+Les six sons de la fumée et des mines, fournis par le porteur du projet à l'étape 8.8, le 2 octobre 2026, à la place des sons du jeu qui en tenaient lieu depuis les étapes 7.10 à 7.12: `sons/bonus-escape-nuage.mp3` (la fumée), `sons/mine-pose.mp3` (une mine posée), `sons/activation-mine.mp3` (une mine ou une mine de zone armée), `sons/explosion-mine.mp3` (une mine qui saute) et `sons/explosion-mine-zone.mp3` (une zone qui s'ouvre).
+
+**Le décor de `cartes/map3/`, Spirit & Time, ne vient plus du jeu d'origine** depuis l'étape 8.8: un toit-terrasse au-dessus d'une ville, livré par le porteur du projet à 3000 sur 2200, avec sa collision, son lointain (`background-parallax.png`) et sa vignette. À sa demande, la carte a été réduite de 20 pour cent, pour que les ninjas n'y paraissent pas trop petits: les images sont à 2400 sur 1760. Trois transformations, faites une fois:
+
+- le fond et le lointain, réduits, sont ramenés pixel par pixel à la couleur la plus proche de leur palette d'origine (450 couleurs): même style, même poids que les fichiers livrés;
+- l'avant-plan, qui n'était pas réduit à une palette, est seulement réduit;
+- la collision, livrée en noir sur transparent, est posée sur du blanc, puis moyennée par zone: le jeu ignore l'opacité, et telle quelle toute la carte aurait été un mur. La vignette est ramenée à 120 sur 120.
+
 Exception plus large, **la carte `cartes/quartier/`**: elle ne vient de nulle part. Ses quatre images sont produites par un programme du dépôt, `docs/mesures/dessiner-le-quartier.mjs`, à l'étape 8.2. C'est la première carte dessinée pour ce jeu-ci, et la seule qui se refait d'une commande:
 
 ```bash
@@ -30,13 +38,13 @@ Ne pas retoucher ses images à la main: le programme les réécrirait. La géom�
 
 ## Arborescence
 
-| Dossier                      | Contenu                                                                                                                                       | Qui le lit                                               |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| `cartes/<carte>/`            | `background.png`, `collision.png`, `foreground.png`, et `rain.png` pour map1 (Tokyo). Une seule orientation: le miroir se calcule (étape 8.3) | `collision.png` par le serveur, les autres par le client |
-| `cartes/<carte>/preview.png` | La vignette de la carte, montrée dans les réglages du salon                                                                                   | Le client                                                |
-| `ninja/`                     | Les dix-sept sprites du personnage: huit directions à deux images, plus l'immobilité                                                          | Le client                                                |
-| `objets/`                    | Les icônes des objets: six images du jeu d'origine, et les six du Tactique en SVG (étape 7.7), reprises aussi dans l'aide                     | Le client                                                |
-| `sons/`                      | Les sons de jeu, le clic des menus, la musique des menus et celle de la partie                                                                | Le client                                                |
+| Dossier                      | Contenu                                                                                                                                                                                         | Qui le lit                                               |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `cartes/<carte>/`            | `background.png`, `collision.png`, `foreground.png`, `rain.png` pour map1 (Tokyo), `background-parallax.png` pour map3 (Spirit & Time). Une seule orientation: le miroir se calcule (étape 8.3) | `collision.png` par le serveur, les autres par le client |
+| `cartes/<carte>/preview.png` | La vignette de la carte, montrée dans les réglages du salon                                                                                                                                     | Le client                                                |
+| `ninja/`                     | Les dix-sept sprites du personnage: huit directions à deux images, plus l'immobilité                                                                                                            | Le client                                                |
+| `objets/`                    | Les icônes des objets: six images du jeu d'origine, et les six du Tactique en SVG (étape 7.7), reprises aussi dans l'aide                                                                       | Le client                                                |
+| `sons/`                      | Les sons de jeu, le clic des menus, la musique des menus et celle de la partie                                                                                                                  | Le client                                                |
 
 Les chemins ne se recopient nulle part: ils se fabriquent dans `packages/shared/src/ressources.ts`, qui est le seul endroit à connaître cette arborescence. Un test y vérifie que chaque fichier annoncé existe.
 
@@ -44,11 +52,11 @@ Les chemins ne se recopient nulle part: ils se fabriquent dans `packages/shared/
 
 Contrairement au code et à la documentation. Ce sont des noms de contenu, pas de code: les renommer obligerait à retoucher des images inchangées depuis deux ans, pour un gain nul, et couperait le lien avec la branche `master` d'où ils viennent. Les noms des dossiers, eux, suivent la convention du projet.
 
-## Les images des cartes héritées font toutes 3000x2000
+## Les images de Tokyo font 3000x2000
 
-Y compris celles de map1, Tokyo, dont la carte mesure 2000x1500. Ce n'est pas une erreur: le jeu d'origine **redimensionne** ces images aux dimensions de la carte au chargement, sans conserver les proportions. Le décodage du terrain (`packages/server/src/terrain.ts`) et l'affichage (`packages/client/src/rendu/`) reproduisent tous les deux ce redimensionnement, sans quoi les murs ne seraient pas là où le décor les montre.
+Alors que la carte mesure 2000x1500. Les images du jeu d'origine faisaient toutes cette taille. Ce n'est pas une erreur: le jeu d'origine **redimensionne** ces images aux dimensions de la carte au chargement, sans conserver les proportions. Le décodage du terrain (`packages/server/src/terrain.ts`) et l'affichage (`packages/client/src/rendu/`) reproduisent tous les deux ce redimensionnement, sans quoi les murs ne seraient pas là où le décor les montre.
 
-Le Quartier, lui, est dessiné à ses dimensions exactes, 2400x1800. Le redimensionnement du serveur et l'étirement du client s'y appliquent aussi, et n'y changent rien. C'est ce qu'il faudra demander à un graphiste: dessiner à la taille de la carte évite le seul piège vraiment coûteux de la commande.
+Le Quartier, lui, est dessiné à ses dimensions exactes, 2400x1800, et Spirit & Time l'est depuis l'étape 8.8, 2400x1760. Le redimensionnement du serveur et l'étirement du client s'y appliquent aussi, et n'y changent rien. C'est ce qu'il faudra demander à un graphiste: dessiner à la taille de la carte évite le seul piège vraiment coûteux de la commande.
 
 ## map2 a disparu: Tokyo est une seule carte
 

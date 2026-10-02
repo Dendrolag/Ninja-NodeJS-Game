@@ -147,7 +147,7 @@ describe('le formulaire sur la carte choisie (etape 7.6)', () => {
     });
     expect(bornesSurLaCarte(entier('nombreBotsInitial'), 'map3')).toEqual({
       minimum: 10,
-      maximum: 500,
+      maximum: 360,
     });
   });
 
@@ -165,7 +165,7 @@ describe('le formulaire sur la carte choisie (etape 7.6)', () => {
   });
 
   it('signale sur son champ un nombre de faux ninjas au-dela du plafond de Tokyo', () => {
-    const verdict = verifierLesValeurs(valeursAvec('nombreBotsInitial', '400'));
+    const verdict = verifierLesValeurs(valeursAvec('nombreBotsInitial', '350'));
 
     expect(
       verdict.valide ? undefined : erreursParChamp(verdict.erreurs).get('nombreBotsInitial'),

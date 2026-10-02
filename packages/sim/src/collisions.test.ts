@@ -211,15 +211,15 @@ describe('trajetTenable', () => {
 });
 
 describe('cartes de tailles differentes', () => {
-  it('reste correct sur la grande carte de 3000 sur 2000', () => {
-    const grande = creerCarteCollisions(CARTES.map3, (x) => x >= 2500);
+  it('reste correct sur la grande carte de 2400 sur 1760', () => {
+    const grande = creerCarteCollisions(CARTES.map3, (x) => x >= 2200);
 
-    expect(estMur(grande, 2499, 1000)).toBe(false);
-    expect(estMur(grande, 2500, 1000)).toBe(true);
+    expect(estMur(grande, 2199, 1000)).toBe(false);
+    expect(estMur(grande, 2200, 1000)).toBe(true);
     expect(positionTenable(grande, { x: 1500, y: 1000 })).toBe(true);
-    expect(positionTenable(grande, { x: 2490, y: 1000 })).toBe(false);
-    expect(estMur(grande, 2999, 1999)).toBe(true);
-    expect(estMur(grande, 3000, 1000)).toBe(true);
+    expect(positionTenable(grande, { x: 2190, y: 1000 })).toBe(false);
+    expect(estMur(grande, 2399, 1759)).toBe(true);
+    expect(estMur(grande, 2400, 1000)).toBe(true);
   });
 
   it('borne chaque carte a ses propres dimensions', () => {
@@ -229,8 +229,8 @@ describe('cartes de tailles differentes', () => {
     // Un point valable sur la grande carte est hors de la petite: deux parties
     // sur deux cartes differentes ne peuvent plus se melanger, ce que le legacy
     // ne garantissait pas (defaut X5).
-    expect(positionTenable(grande, { x: 2500, y: 1700 })).toBe(true);
-    expect(positionTenable(petite, { x: 2500, y: 1700 })).toBe(false);
+    expect(positionTenable(grande, { x: 2200, y: 1600 })).toBe(true);
+    expect(positionTenable(petite, { x: 2200, y: 1600 })).toBe(false);
   });
 
   it('couvre le dernier pixel des cartes dont la surface ne tombe pas juste', () => {

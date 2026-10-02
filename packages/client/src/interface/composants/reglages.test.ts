@@ -180,18 +180,18 @@ describe('le panneau de reglages', () => {
     expect(champ('nombreBotsInitial').max).toBe('300');
 
     cocher(obligatoire<HTMLInputElement>(panneau.racine, 'input[value="map3"]'), true);
-    expect(champ('nombreBotsInitial').max).toBe('500');
+    expect(champ('nombreBotsInitial').max).toBe('360');
   });
 
-  it('ouvre une partie de Spirit & Time a 500 faux ninjas telle quelle', () => {
-    panneau.ouvrirAvec(completerReglages({ carte: 'map3', nombreBotsInitial: 500 }));
+  it('ouvre une partie de Spirit & Time a 360 faux ninjas telle quelle', () => {
+    panneau.ouvrirAvec(completerReglages({ carte: 'map3', nombreBotsInitial: 360 }));
 
-    expect(champ('nombreBotsInitial').value).toBe('500');
-    expect(champ('nombreBotsInitial').max).toBe('500');
+    expect(champ('nombreBotsInitial').value).toBe('360');
+    expect(champ('nombreBotsInitial').max).toBe('360');
   });
 
   it('ramene le curseur au plafond de Tokyo, sous les yeux de l hote, en changeant de carte', () => {
-    panneau.ouvrirAvec(completerReglages({ carte: 'map3', nombreBotsInitial: 450 }));
+    panneau.ouvrirAvec(completerReglages({ carte: 'map3', nombreBotsInitial: 350 }));
 
     cocher(obligatoire<HTMLInputElement>(panneau.racine, 'input[value="map1"]'), true);
 

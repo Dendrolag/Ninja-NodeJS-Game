@@ -1,5 +1,5 @@
 {
-  "genereLe": "2026-09-25",
+  "genereLe": "2026-10-02",
   "outil": "docs/mesures/mesurer-les-cartes.mjs",
   "reglages": {
     "rayonEntitePx": 16,
@@ -75,60 +75,60 @@
       "nom": "Spirit & Time",
       "miroir": false,
       "dimensions": {
-        "largeur": 3000,
-        "hauteur": 2000
+        "largeur": 2400,
+        "hauteur": 1760
       },
-      "surfaceMpx": 6,
-      "partDeSolPct": 97.5,
-      "partTenablePct": 94.4,
+      "surfaceMpx": 4.22,
+      "partDeSolPct": 67.8,
+      "partTenablePct": 64.6,
       "morceaux": 1,
       "partDuPrincipalPct": 100,
       "airesIsoleesPx": 0,
       "plusGrosMorceauIsolePx": 0,
-      "partDeLaBandeDApparitionPct": 85.7,
+      "partDeLaBandeDApparitionPct": 100,
       "degagementPx": {
-        "p10": 63,
-        "median": 258,
-        "p90": 471,
-        "maximum": 611
+        "p10": 48.9,
+        "median": 225.6,
+        "p90": 490.3,
+        "maximum": 617.7
       },
-      "traverseePx": 3778,
-      "traverseeS": 25.2,
-      "parcoursTypiquePx": 1350,
-      "parcoursTypiqueS": 9,
-      "parcoursCourtS": 3.3,
-      "parcoursLongS": 15.6,
-      "detourMedian": 1.07
+      "traverseePx": 2435,
+      "traverseeS": 16.2,
+      "parcoursTypiquePx": 884,
+      "parcoursTypiqueS": 5.9,
+      "parcoursCourtS": 2.2,
+      "parcoursLongS": 10.4,
+      "detourMedian": 1.06
     },
     {
       "carte": "map3",
       "nom": "Spirit & Time",
       "miroir": true,
       "dimensions": {
-        "largeur": 3000,
-        "hauteur": 2000
+        "largeur": 2400,
+        "hauteur": 1760
       },
-      "surfaceMpx": 6,
-      "partDeSolPct": 97.5,
-      "partTenablePct": 94.4,
+      "surfaceMpx": 4.22,
+      "partDeSolPct": 67.8,
+      "partTenablePct": 64.6,
       "morceaux": 1,
       "partDuPrincipalPct": 100,
       "airesIsoleesPx": 0,
       "plusGrosMorceauIsolePx": 0,
-      "partDeLaBandeDApparitionPct": 85.7,
+      "partDeLaBandeDApparitionPct": 100,
       "degagementPx": {
-        "p10": 63,
-        "median": 258,
-        "p90": 471,
-        "maximum": 611
+        "p10": 48.9,
+        "median": 225.6,
+        "p90": 490.3,
+        "maximum": 617.7
       },
-      "traverseePx": 3778,
-      "traverseeS": 25.2,
-      "parcoursTypiquePx": 1365,
-      "parcoursTypiqueS": 9.1,
-      "parcoursCourtS": 3.4,
-      "parcoursLongS": 15.7,
-      "detourMedian": 1.07
+      "traverseePx": 2431,
+      "traverseeS": 16.2,
+      "parcoursTypiquePx": 877,
+      "parcoursTypiqueS": 5.8,
+      "parcoursCourtS": 2.3,
+      "parcoursLongS": 10.3,
+      "detourMedian": 1.06
     },
     {
       "carte": "quartier",

@@ -215,7 +215,7 @@ describe('plus de 150 faux ninjas, jusqu au plafond de la carte (etape 7.6)', ()
 
   it.each([
     ['map1', 300],
-    ['map3', 500],
+    ['map3', 360],
     ['quartier', 340],
   ] as const)('peuple %s de %i faux ninjas, tous hors des murs', async (carte, faux) => {
     const room = await partieAuPlafond(carte, faux);
@@ -258,9 +258,9 @@ describe('plus de 150 faux ninjas, jusqu au plafond de la carte (etape 7.6)', ()
     ]);
   });
 
-  it('refuse au salon de passer a Tokyo avec les 500 faux ninjas de Spirit & Time', async () => {
+  it('refuse au salon de passer a Tokyo avec les 360 faux ninjas de Spirit & Time', async () => {
     const hote = await connecterUnClient();
-    const salon = await creer(hote, partie('map3', { nombreBotsInitial: 500 }));
+    const salon = await creer(hote, partie('map3', { nombreBotsInitial: 360 }));
 
     const refus = prochain(hote, 'refus');
     hote.emit('reglages', { ...salon.reglages, carte: 'map1' });

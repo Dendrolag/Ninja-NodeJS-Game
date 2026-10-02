@@ -15,7 +15,7 @@
  */
 
 import type { Mode, ReglagesPartiels, SessionJoueur } from '@neon-ninja/shared';
-import { APPARITION, DUREES, VITESSES } from '@neon-ninja/shared';
+import { APPARITION, CARTES, DUREES, VITESSES } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
 import { DT_MAXIMUM_MS, GameRoom } from './GameRoom.js';
@@ -630,11 +630,11 @@ describe('GameRoom, changement des reglages dans le salon', () => {
 
     const position = room.etat.joueurs['un']?.position;
 
-    expect(room.etat.carte).toEqual({ largeur: 3000, hauteur: 2000 });
+    expect(room.etat.carte).toEqual(CARTES.map3);
     expect(position?.x).toBeGreaterThanOrEqual(0);
-    expect(position?.x).toBeLessThanOrEqual(3000);
+    expect(position?.x).toBeLessThanOrEqual(CARTES.map3.largeur);
     expect(position?.y).toBeGreaterThanOrEqual(0);
-    expect(position?.y).toBeLessThanOrEqual(2000);
+    expect(position?.y).toBeLessThanOrEqual(CARTES.map3.hauteur);
   });
 
   it('donne le meme resultat qu une room creee d emblee avec ces reglages', () => {

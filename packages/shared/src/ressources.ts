@@ -17,7 +17,8 @@
  *
  * L'ARBORESCENCE, ecrite une fois pour toutes:
  *
- *   assets/cartes/<carte>/<background|collision|foreground>.png, et rain.png
+ *   assets/cartes/<carte>/<background|collision|foreground>.png, rain.png
+ *     et background-parallax.png
  *   assets/ninja/<direction>_<1|2>.png, et idle.png
  *   assets/objets/<icone>.png
  *   assets/sons/<son>.<mp3|wav>
@@ -79,6 +80,19 @@ export function cheminCarte(carte: string, couche: CoucheCarte): string {
  */
 export function cheminPluie(carte: string): string | undefined {
   return carte === 'map1' ? `cartes/${carte}/rain.png` : undefined;
+}
+
+/**
+ * Chemin relatif du lointain d'une carte, s'il en existe un (etape 8.8).
+ *
+ * Le lointain est ce qu'on voit au-dela du terrain: la ville sous le toit de Spirit &
+ * Time, seule carte a en avoir un. Il se dessine sous le fond et glisse moins vite que
+ * lui quand la camera bouge, ce qui donne de la profondeur
+ * (packages/client/src/rendu/parallaxe.ts). Il a la taille des autres couches, et son
+ * centre, toujours cache par le terrain, peut rester vide.
+ */
+export function cheminLointain(carte: string): string | undefined {
+  return carte === 'map3' ? `cartes/${carte}/background-parallax.png` : undefined;
 }
 
 /**
@@ -257,29 +271,23 @@ export const SONS = {
   /** Une de nos charges vient de revenir, en Tactique (etape 5.5). */
   rechargeFusil: 'shotgun-reload.mp3',
   /**
-   * Un joueur s'enfuit dans un nuage de fumee (etape 7.10), entendu de tous. PROVISOIRE: le
-   * souffle du katana, en attendant le son que le porteur du projet fournira.
+   * Un joueur s'enfuit dans un nuage de fumee (etape 7.10), entendu de tous. Fourni par le
+   * porteur du projet a l'etape 8.8, comme les cinq sons des mines qui suivent.
    */
-  fumee: 'katana-swing.mp3',
+  fumee: 'bonus-escape-nuage.mp3',
+  /** Nous venons de poser une mine (etape 7.11), entendu de nous seuls. */
+  minePosee: 'mine-pose.mp3',
+  /** Une mine vient d'etre armee, entendue de tous: le signal de s'eloigner. */
+  mineArmee: 'activation-mine.mp3',
+  /** Une mine vient de sauter, entendue de tous. */
+  mineExplosee: 'explosion-mine.mp3',
   /**
-   * Les trois sons de la mine (etape 7.11). Le porteur du projet a les siens, qu'il deposera
-   * dans assets/sons/: il suffira alors de changer ici le nom du fichier. En attendant, chacun
-   * joue un son du jeu qui s'en approche, PROVISOIREMENT.
-   *
-   * Nous venons de poser une mine, entendu de nous seuls: le clic des boutons.
+   * Un joueur ou un Black Ninja vient d'armer une mine de zone (etape 7.12), entendu de tous:
+   * le meme armement que la mine posee.
    */
-  minePosee: 'button-click.wav',
-  /** Une mine vient d'etre armee, entendue de tous, le signal de s'eloigner: le tic du decompte. */
-  mineArmee: 'countdown-tick.wav',
-  /** Une mine vient de sauter, entendue de tous: le Black Ninja detruit. */
-  mineExplosee: 'blackbot-destroy.mp3',
-  /**
-   * Les deux sons de la mine de zone (etape 7.12), entendus de tous, PROVISOIRES comme ceux de
-   * la mine posee. Un joueur ou un Black Ninja vient de l'armer: le tic du decompte.
-   */
-  mineDeZoneArmee: 'countdown-tick.wav',
-  /** Sa zone vient de s'ouvrir: le dernier tic du decompte. */
-  zoneOuverte: 'final-tick.wav',
+  mineDeZoneArmee: 'activation-mine.mp3',
+  /** Sa zone vient de s'ouvrir, entendu de tous. */
+  zoneOuverte: 'explosion-mine-zone.mp3',
 } as const;
 
 /** Nom d'un son ponctuel. */

@@ -6,6 +6,8 @@
 
 **Complétée le 20 septembre 2026 par la section 9**, qui mesure la carte de travail produite à l'étape 8.2 et la juge par les douze critères de la section 4. Les sections 1 à 8 sont restées telles qu'elles étaient: c'est le raisonnement qui a mené à cette carte.
 
+**Spirit & Time a changé de terrain depuis, à l'étape 8.8 (2 octobre 2026)**: le décor livré par le porteur du projet, un toit-terrasse de 2400 sur 1760 ceint de murs, plafonné à 360 faux ninjas. Ce que l'étude en dit vaut pour l'ancienne carte, un champ de 3000 sur 2000. Les mesures de la nouvelle sont dans `cartes.json` et dans la compétence `conception-de-cartes`.
+
 Ce document ne remplace pas `etude-grandes-cartes.md` (16 septembre 2026), qui traite du très grand, 2 000 à 10 000 faux ninjas, et qui reste la référence sur ce sujet. Celui-ci traite des cartes qu'on pourrait commander demain, à des tailles que le socle tient déjà.
 
 ## Ce que l'étude a trouvé, en cinq lignes

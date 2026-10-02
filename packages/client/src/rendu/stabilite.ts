@@ -2,7 +2,7 @@
  * Le juge de stabilite: l'affichage d'une partie qui commence est-il devenu fluide.
  *
  * POURQUOI. Au lancement d'une partie, les premieres images dessinees coutent cher: le
- * decor, deux images de 3000 par 2000 pixels, part vers la carte graphique, et la
+ * decor, deux ou trois images de 3000 pixels de large, part vers la carte graphique, et la
  * lueur se prepare. Sur telephone, le jeu ramait ainsi quelques instants avant de se
  * stabiliser (recette de l'etape 5.4). L'ecran de jeu garde donc son ecran de
  * preparation jusqu'a ce que ce juge declare l'affichage fluide.

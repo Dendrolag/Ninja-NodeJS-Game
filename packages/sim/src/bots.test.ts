@@ -752,14 +752,14 @@ describe('peuplement de la carte', () => {
     expect(new Set(bots.map((bot) => `${bot.position.x},${bot.position.y}`)).size).toBe(8);
   });
 
-  it('peuple Spirit & Time jusqu a son plafond, 500 bots, a graine egale identiques (etape 7.6)', () => {
+  it('peuple Spirit & Time jusqu a son plafond, a graine egale identiques (etape 7.6)', () => {
     const grande = creerEtatInitial({
       graine: 7,
       reglages: { carte: 'map3', nombreBotsInitial: PLAFONDS_DE_FAUX_NINJAS.map3 },
     });
     const bots = Object.values(peuplerDeBots(grande).bots);
 
-    expect(bots).toHaveLength(500);
+    expect(bots).toHaveLength(PLAFONDS_DE_FAUX_NINJAS.map3);
     expect(
       bots.every(
         (bot) =>

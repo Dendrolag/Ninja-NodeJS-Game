@@ -14,7 +14,7 @@
  */
 
 import { createHash } from 'node:crypto';
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -269,19 +269,46 @@ describe('les vraies cartes du jeu', () => {
 
         // Le point du test: il y a des murs. Une carte vide passerait toutes
         // les verifications de dimensions ci-dessus, et c'est exactement ce sur
-        // quoi le jeu tournait jusqu'ici.
+        // quoi le jeu tournait jusqu'ici. Et il y a du sol: une carte toute en
+        // mur passerait aussi (etape 8.8, voir le test suivant).
         let murs = 0;
+        let sol = 0;
         for (let y = 0; y < terrain.hauteur; y += 20) {
           for (let x = 0; x < terrain.largeur; x += 20) {
             if (estMur(terrain, x, y)) {
               murs += 1;
+            } else {
+              sol += 1;
             }
           }
         }
 
         expect(murs).toBeGreaterThan(0);
+        expect(sol).toBeGreaterThan(0);
       });
     }
+
+    /**
+     * Le piege de l'etape 8.8. La collision de Spirit & Time a ete livree en noir sur
+     * transparent: des murs noirs opaques, un sol noir transparent. Le decodage ignore
+     * l'opacite, et ne lit que la luminosite: telle quelle, toute la carte aurait ete un
+     * mur. Elle est entree dans le depot posee sur du blanc. Une image de collision doit
+     * donc etre opaque partout, et ce test le dit avant qu'une carte ne se joue.
+     */
+    it(`${carte}: l image des murs est opaque partout`, () => {
+      const image = PNG.sync.read(
+        readFileSync(join(racineRessources(), cheminCarte(carte, 'collision'))),
+      );
+      let transparents = 0;
+
+      for (let octet = 3; octet < image.data.length; octet += 4) {
+        if ((image.data[octet] ?? 0) < 255) {
+          transparents += 1;
+        }
+      }
+
+      expect(transparents).toBe(0);
+    });
   }
 });
 
@@ -297,9 +324,11 @@ describe('les vraies cartes du jeu', () => {
  *
  * SPIRIT & TIME EST L'EXCEPTION, ET C'EST UN DEFAUT CORRIGE (X37 de l'audit). Son
  * dossier mirror contenait les images normales, a l'identique, deja dans le jeu
- * d'origine: son miroir n'a jamais ete retourne. La carte etant symetrique a 99,9
- * pour cent, le vrai miroir ne differe que de quelques murs. Son empreinte d'avant
- * etait celle de la carte normale; la nouvelle est celle du vrai retournement.
+ * d'origine: son miroir n'a jamais ete retourne. Son empreinte d'avant etait celle de
+ * la carte normale; celle de l'etape 8.3 etait celle du vrai retournement.
+ *
+ * Ses empreintes ont change a l'etape 8.8: la carte a pris le decor livre par le
+ * porteur du projet, reduit a 2400 sur 1760.
  */
 describe('les murs de chaque carte, figes', () => {
   const chargeur = new ChargeurDeTerrain(racineRessources());
@@ -310,8 +339,8 @@ describe('les murs de chaque carte, figes', () => {
       miroir: '64a4e7a9fca1a144532d0d8417b6c0f8475d6030fa0b2207a62f1aa50370cdc2',
     },
     map3: {
-      normal: '1a0b680fc25f8dc7bd634fe36e1041a85385cbcb5003dc244057081efdda87a3',
-      miroir: '0d86eec6cc2c2529e2dcc74093125d62d3104d98eb99371790b5ed37bfda6e5b',
+      normal: '0fd426e02c914194ca2374f3b6c9b827a7ae78cc494c8070299912587ca56c99',
+      miroir: '16e0ccbb4f8bafee4fdb4d8101da52f7d12af807d7606b007a11e30a1aec7206',
     },
     quartier: {
       normal: '026fa8f87fc252fa759680379f20dd26eab96cbc83f7b1e61a8992ec7f8c6543',
@@ -330,24 +359,25 @@ describe('les murs de chaque carte, figes', () => {
     });
   }
 
-  it('Spirit & Time en miroir est desormais retourne, et reste presque la meme carte', () => {
+  it('Spirit & Time en miroir est sa carte normale retournee, mur pour mur', () => {
+    // Le test de l'etape 8.3 verifiait que le miroir differait de moins d'un pour mille:
+    // l'ancienne carte etait symetrique. La nouvelle ne l'est plus (le dome est decale,
+    // les murs traces a la main): on verifie directement le retournement, pixel a pixel.
+    // L'image a la taille de la carte, l'etirement ne change rien.
     const normal = chargeur.charger({ carte: 'map3', modeMiroir: false });
     const miroir = chargeur.charger({ carte: 'map3', modeMiroir: true });
-    let differents = 0;
+    let ecarts = 0;
 
-    for (let octet = 0; octet < normal.murs.length; octet += 1) {
-      let ecart = (normal.murs[octet] ?? 0) ^ (miroir.murs[octet] ?? 0);
-
-      while (ecart !== 0) {
-        differents += ecart & 1;
-        ecart >>= 1;
+    for (let y = 0; y < normal.hauteur; y += 1) {
+      for (let x = 0; x < normal.largeur; x += 1) {
+        if (estMur(normal, x, y) !== estMur(miroir, normal.largeur - 1 - x, y)) {
+          ecarts += 1;
+        }
       }
     }
 
-    // Pas zero: le miroir n'est plus une copie. Moins d'un pour mille: la carte
-    // est symetrique, et son vrai miroir lui ressemble presque partout.
-    expect(differents).toBeGreaterThan(0);
-    expect(differents / (normal.largeur * normal.hauteur)).toBeLessThan(0.001);
+    expect(ecarts).toBe(0);
+    expect(empreinte('map3', true)).not.toBe(empreinte('map3', false));
   });
 });
 

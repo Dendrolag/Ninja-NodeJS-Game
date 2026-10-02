@@ -21,7 +21,7 @@
  *
  *   pnpm charge
  *   pnpm charge --banc --bots-banc 150,300
- *   pnpm charge --banc --carte map3 --bots-banc 150,300,500
+ *   pnpm charge --banc --carte map3 --bots-banc 150,300,360
  *   pnpm charge --banc --mines --bots-banc 50,150,300
  *   pnpm charge --reseau --bots 150 --bots 50,150 --rooms 8,16,32
  *   pnpm charge --sortie docs/mesures/charge-serveur-5-1.json
@@ -112,7 +112,7 @@ interface Plan {
   /**
    * La carte des parties du banc et des populations melees, murs compris. Tokyo (map1)
    * par defaut; --carte map3 mesure Spirit & Time, dont le plafond de faux ninjas est
-   * plus haut (etape 7.6).
+   * plus haut (etape 7.6): 360 depuis l'etape 8.8.
    */
   readonly carte: IdentifiantCarte;
   /** Les joueurs du banc posent des mines (etape 7.11, --mines). */

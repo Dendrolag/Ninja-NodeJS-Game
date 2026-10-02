@@ -68,7 +68,7 @@ describe('creerEtatInitial', () => {
   it('accepte des reglages partiels et complete le reste', () => {
     const etat = creerEtatInitial({ graine: 1, reglages: { carte: 'map3', dureePartieS: 60 } });
 
-    expect(etat.carte).toEqual({ largeur: 3000, hauteur: 2000 });
+    expect(etat.carte).toEqual({ largeur: 2400, hauteur: 1760 });
     expect(etat.dureeMs).toBe(60_000);
     expect(etat.reglages.nombreBotsInitial).toBe(REGLAGES_PAR_DEFAUT.nombreBotsInitial);
   });
@@ -78,7 +78,7 @@ describe('creerEtatInitial', () => {
     const grande = creerEtatInitial({ graine: 1, reglages: { carte: 'map3' } });
     const petite = creerEtatInitial({ graine: 1, reglages: { carte: 'map1' } });
 
-    expect(grande.carte.largeur).toBe(3000);
+    expect(grande.carte.largeur).toBe(2400);
     expect(petite.carte.largeur).toBe(2000);
   });
 
@@ -117,9 +117,9 @@ describe('positionDApparition', () => {
     for (let index = 0; index < 200; index += 1) {
       const tirage = positionDApparition(alea, terrain);
       expect(tirage.valeur.x).toBeGreaterThanOrEqual(100);
-      expect(tirage.valeur.x).toBeLessThanOrEqual(2900);
+      expect(tirage.valeur.x).toBeLessThanOrEqual(CARTES.map3.largeur - 100);
       expect(tirage.valeur.y).toBeGreaterThanOrEqual(100);
-      expect(tirage.valeur.y).toBeLessThanOrEqual(1900);
+      expect(tirage.valeur.y).toBeLessThanOrEqual(CARTES.map3.hauteur - 100);
       alea = tirage.alea;
     }
   });

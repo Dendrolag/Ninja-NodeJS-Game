@@ -241,9 +241,10 @@ export const BORNES_REGLAGES = {
   /**
    * Nombre de bots au demarrage. Le minimum est celui du salon du legacy, qui
    * plafonnait a 150. Depuis l'etape 7.6, le maximum est le plus haut des plafonds
-   * de carte (PLAFONDS_DE_FAUX_NINJAS): chaque carte a le sien, verifie a part.
+   * de carte (PLAFONDS_DE_FAUX_NINJAS): chaque carte a le sien, verifie a part. 500
+   * jusqu'a l'etape 8.8, ou Spirit & Time a retreci.
    */
-  nombreBotsInitial: { minimum: 10, maximum: 500 } satisfies Intervalle,
+  nombreBotsInitial: { minimum: 10, maximum: 360 } satisfies Intervalle,
   bonus: {
     /** Delai entre deux tentatives d'apparition, en secondes. */
     intervalleApparitionS: { minimum: 2, maximum: 20 } satisfies Intervalle,

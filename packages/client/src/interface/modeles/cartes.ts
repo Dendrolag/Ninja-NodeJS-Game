@@ -36,9 +36,11 @@ export interface PresentationCarte {
  * l'historique d'un profil, sous le meme nom que map1.
  *
  * Seule Tokyo a un decor definitif, realise par Bribz (credits, etape 4.7). Spirit &
- * Time garde le decor du jeu d'origine, et le Quartier est la carte de travail de
- * l'etape 8.2: un plan au trait, sans decor, pose en jeu pour savoir si une carte
- * structuree vaut mieux qu'un terrain ouvert. Toutes deux sont des prototypes, et le
+ * Time a pris a l'etape 8.8 le decor livre par le porteur du projet, un toit-terrasse
+ * au-dessus d'une ville, qu'il garde provisoire pour l'instant (decision du 2 octobre
+ * 2026). Le Quartier est la carte de travail de l'etape 8.2: un plan au trait, sans
+ * decor, pose en jeu pour savoir si une carte structuree vaut mieux qu'un terrain
+ * ouvert. Toutes deux sont des prototypes, et le
  * badge suffit a le dire: l'ambiance du Quartier a perdu son « Essai » (decision du
  * porteur du projet du 28 septembre 2026).
  */

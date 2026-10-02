@@ -726,7 +726,7 @@ describe('reglages et autorite de l hote', () => {
 
     expect(room?.joueurs.map((joueur) => joueur.pseudo)).toEqual(['Alice', 'Bob']);
     expect(room?.reglages.carte).toBe('map3');
-    expect(room?.etat.carte.largeur).toBe(3000);
+    expect(room?.etat.carte.largeur).toBe(2400);
   });
 
   it('refuse de changer les reglages une fois la partie commencee', async () => {

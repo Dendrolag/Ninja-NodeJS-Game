@@ -101,7 +101,9 @@ const RALENTISSEMENT_TELEPHONE = 6;
 
 /**
  * Les charges mesurees au processeur ralenti: les plafonds de faux ninjas de Tokyo et
- * de Spirit & Time (etape 7.6), joueurs et Black Ninjas en plus comptes large.
+ * de Spirit & Time (etape 7.6), joueurs et Black Ninjas en plus comptes large. Depuis que
+ * Spirit & Time est retombee a 360 (etape 8.8), 500 est une marge: le plus haut plafond
+ * de carte que le jeu ait eu, garde pour que le rendu ne perde pas la sienne.
  */
 const CHARGES_TELEPHONE = [300, 500] as const;
 
@@ -133,11 +135,12 @@ const FENETRE_TELEPHONE = { width: 915, height: 412 } as const;
 
 /**
  * Les charges de la serie au cadrage d'un telephone, chacune sur la carte dont elle est
- * le plafond de faux ninjas (etape 7.6): 300 sur Tokyo, 500 sur Spirit & Time.
+ * le plafond de faux ninjas (etape 7.6): 300 sur Tokyo, 360 sur Spirit & Time depuis
+ * l'etape 8.8 (500 avant).
  */
 const CHARGES_CADRAGE_TELEPHONE = [
   { entites: 300, carte: 'map1' },
-  { entites: 500, carte: 'map3' },
+  { entites: 360, carte: 'map3' },
 ] as const;
 
 /** Le resultat d'une mesure. */
@@ -195,7 +198,7 @@ function pageDuBanc(): string {
   import { MARGE_HORS_CHAMP_PX } from '/paquets/client/rendu/apparence.js';
   import { ETAT_INITIAL } from '/paquets/client/etat.js';
 
-  const CARTES = { map1: { largeur: 2000, hauteur: 1500 }, map3: { largeur: 3000, hauteur: 2000 } };
+  const CARTES = { map1: { largeur: 2000, hauteur: 1500 }, map3: { largeur: 2400, hauteur: 1760 } };
   let CARTE = CARTES.map1;
   const DIRECTIONS = ['nord', 'nord_est', 'est', 'sud_est', 'sud', 'sud_ouest', 'ouest', 'nord_ouest'];
   const COULEURS = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FFFFFF'];

@@ -597,6 +597,25 @@ export const PLUIE = {
 } as const;
 
 /**
+ * Le lointain d'une carte, qui glisse moins vite que le terrain (etape 8.8).
+ *
+ * L'AMPLITUDE EST UNE MESURE, PAS UN GOUT. Le lointain de Spirit & Time a un trou
+ * noir en son centre, cache par le toit-terrasse; le premier pixel par ou l'on voit
+ * le lointain en est a 139 pixels. Tant que le lointain ne s'ecarte pas de plus de
+ * 138 pixels de sa place, le trou reste cache: un test le verifie sur les images
+ * livrees (parallaxe.test.ts). 120 garde une marge.
+ */
+export const LOINTAIN = {
+  /** Le plus grand ecart du lointain a sa place, en pixels de carte, sur chaque axe. */
+  amplitudePx: 120,
+  /**
+   * La plus grande part du mouvement de la camera que le lointain suit. Au-dela de la
+   * moitie, sur une vue a peine plus petite que la carte, il paraitrait colle a l'ecran.
+   */
+  partMaximale: 0.5,
+} as const;
+
+/**
  * Le cone du mode Tactique (etape 7.1): notre visee, et l'eclair d'un tir.
  *
  * Valeurs de la version 0.9.0 du jeu d'origine (drawCaptureRange): un violet pale,

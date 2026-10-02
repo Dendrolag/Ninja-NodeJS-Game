@@ -84,7 +84,10 @@ export const VITESSES = {
 /**
  * Les cartes jouables, et leurs dimensions en pixels.
  *
- * map1 est Tokyo, map3 Spirit & Time. Le jeu d'origine avait une troisieme carte,
+ * map1 est Tokyo, map3 Spirit & Time, un toit-terrasse au-dessus d'une ville. Son
+ * decor a ete livre a 3000 sur 2200 par le porteur du projet a l'etape 8.8, puis reduit
+ * de 20 pour cent a sa demande, pour que les ninjas n'y paraissent pas trop petits: la
+ * carte mesure 2400 sur 1760. Le jeu d'origine avait une troisieme carte,
  * map2, « Tokyo » sans pluie, dont le decor et les murs etaient ceux de map1 a
  * l'octet pres: depuis l'etape 7.6, c'est une seule carte, et la pluie est un
  * reglage de partie (ReglagesPartie.pluie). map2 ne se joue plus, mais des parties
@@ -99,7 +102,7 @@ export const VITESSES = {
  */
 export const CARTES = {
   map1: { largeur: 2000, hauteur: 1500 },
-  map3: { largeur: 3000, hauteur: 2000 },
+  map3: { largeur: 2400, hauteur: 1760 },
   quartier: { largeur: 2400, hauteur: 1800 },
 } as const;
 
@@ -126,10 +129,16 @@ export type CarteEnregistree = (typeof CARTES_ENREGISTREES)[number];
  * carte, a peu pres la meme densite sur les deux, et le meme dans tous les modes.
  * Spirit & Time a deux fois la surface de Tokyo. Mesure qui les justifie: la section
  * 17 de docs/mesures/charge-serveur.md, et le banc du rendu.
+ *
+ * Le plafond de Spirit & Time passe de 500 a 360 avec son nouveau decor (etape 8.8,
+ * decision du porteur du projet du 2 octobre 2026): sa surface tenable tombe de 5,66 a
+ * 2,73 millions de pixels carres, et 360 faux ninjas lui redonnent la densite de Tokyo
+ * et du Quartier, 7 580 pixels carres chacun. Mesure au banc: section 24 de
+ * docs/mesures/charge-serveur.md.
  */
 export const PLAFONDS_DE_FAUX_NINJAS: Readonly<Record<IdentifiantCarte, number>> = {
   map1: 300,
-  map3: 500,
+  map3: 360,
   quartier: 340,
 };
 

@@ -991,3 +991,21 @@ Script de session, non gardé: une partie de 12 joueurs aux intentions tirées a
 |         300 | 1,321, 1,402, 1,426 | 1,344, 1,304, 1,287 | 0,30      | 0,29      |       754,3 |       755,9 |
 
 Le 0,205 est un passage isolé, que les deux autres ne confirment pas. Aucun banc gardé n'a été ajouté: le coût ne justifie pas d'option à `pnpm charge`.
+
+## 24. Mesure de l'étape 8.8: le nouveau décor de Spirit & Time (2 octobre 2026)
+
+Spirit & Time change de terrain: un toit-terrasse de 2400 sur 1760, ceint de murs, au lieu d'un champ ouvert de 3000 sur 2000. Sa surface tenable tombe de 5,66 à 2,73 millions de pixels carrés, et son plafond de faux ninjas de 500 à 360, pour garder la densité de Tokyo et du Quartier.
+
+`pnpm charge --banc --carte map3 --bots-banc 300,360`, puis `pnpm charge --banc --bots-banc 300` pour Tokyo, au même commit, sur la machine de mesure (AMD Ryzen 7 3800X, Node 24). Douze joueurs, Horde, un processus neuf par ligne; résultats bruts dans `charge-serveur-8-8-spirit.json`.
+
+| Carte         | Bots | Moteur | Projection | Codage | Total | Total p99 | Octets par message | Parties par cœur |
+| ------------- | ---: | -----: | ---------: | -----: | ----: | --------: | -----------------: | ---------------: |
+| Tokyo         |  300 |  0,932 |      0,088 |  0,096 | 1,117 |     2,042 |                782 |               31 |
+| Spirit & Time |  300 |  0,978 |      0,093 |  0,107 | 1,178 |     2,242 |                803 |               29 |
+| Spirit & Time |  360 |  1,347 |      0,128 |  0,139 | 1,614 |     2,849 |                941 |               21 |
+
+- **À nombre égal, la carte nouvelle coûte ce que coûte Tokyo**, à 5 pour cent près: les murs ne coûtent rien, c'est le nombre d'entités qui compte (section 17).
+- **À son plafond, 1,6 ms par battement**, le trentième du budget de 50 ms. L'ancien plafond de 500 coûtait 2,3 ms à l'étape 7.6.
+- Tokyo à 300 coûte aujourd'hui 1,12 ms, contre 1,02 à l'étape 7.6: c'est le jeu qui a grandi depuis (mines, Évadé, mines de zone), pas la carte.
+
+Le rendu ajoute une image de 2400 sur 1760, le lointain, sous le fond: une texture de 17 Mo de mémoire graphique, et deux multiplications par image pour la placer. Les trois couches de la carte réduite pèsent ensemble moins que les deux de 3000 sur 2200 livrées.

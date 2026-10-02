@@ -22,6 +22,8 @@ Trois images, toutes aux **mêmes dimensions**, parfaitement superposables.
 
 Plus une vignette `preview.png` de **120 sur 120 pixels**, qui montre la carte en petit dans les menus.
 
+En option, un lointain `background-parallax.png`, aux mêmes dimensions: ce qu'on voit au-delà du terrain, qui glisse moins vite que lui quand la caméra bouge. Son centre, caché par le terrain, peut rester vide, mais il ne doit pas paraître: le jeu le décale de quelques dizaines de pixels au plus, et un test vérifie que le terrain le couvre toujours (Spirit & Time, étape 8.8).
+
 **Le miroir.** Le jeu propose chaque carte aussi en version retournée horizontalement. **Il la calcule lui-même** (depuis le 25 septembre 2026): rien à livrer de plus, les images se livrent une seule fois, dans leur sens normal. En contrepartie, rien de ce qui se lit ne peut être retouché pour le sens retourné: voir « Ce qu'on n'attend pas ».
 
 ## L'image de collision: la règle à ne pas rater
@@ -35,6 +37,7 @@ Trois règles qui en découlent, et qui comptent plus que tout le reste.
 1. **Pas d'adoucissement des bords.** Un contour flouté crée une bande de gris, dont la moitié devient du mur: le mur réel serait plus épais que dessiné. Tracer net, sans anticrénelage.
 2. **Aucun détail parasite.** Un trait d'un seul pixel est un mur infranchissable. Pas de texture, pas de grain, pas d'ombre portée dans cette image: uniquement les formes pleines des obstacles.
 3. **Elle doit se superposer au décor au pixel près.** Un mur décalé donne un joueur qui bute sur du vide. Rien ne le détecte automatiquement.
+4. **Opaque partout, sans transparence.** Le jeu ne lit que la couleur: un sol « transparent » posé sur du noir reste noir, donc un mur. Livrer du noir et du blanc pleins (étape 8.8: une collision livrée en noir sur transparent faisait de toute la carte un mur).
 
 ## Les dimensions
 

@@ -7,7 +7,8 @@
  * de l'etude soient reverifiables plutot qu'affirmes.
  *
  * IL DECODE LES CARTES PAR LE CHEMIN REEL DU SERVEUR, terrainDepuisImage, qui
- * ecrase l'image 3000x2000 aux dimensions de la carte puis seuille a 128. Donner
+ * ramene l'image aux dimensions de la carte (Tokyo seule est ecrasee, de 3000x2000
+ * a 2000x1500) puis seuille a 128. Donner
  * ici une version approchee du decodage produirait des chiffres qui ne seraient
  * pas ceux du jeu. Le miroir aussi se decode comme le serveur le fait depuis
  * l'etape 8.3: l'unique image de la carte, retournee avant d'etre etiree.

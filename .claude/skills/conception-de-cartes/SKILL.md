@@ -13,13 +13,14 @@ Tout ce qui suit est vérifié dans le dépôt, pas supposé. Le raisonnement co
 
 Un dossier `assets/cartes/<carte>/`, avec ses images **dans un seul sens**. Le miroir se calcule depuis l'étape 8.3: le serveur retourne la collision, la page retourne le décor. Une carte se livre donc une fois, et un dossier `mirror/` n'a plus de sens (un test l'interdit).
 
-| Fichier          | Rôle                                                 | Obligatoire |
-| ---------------- | ---------------------------------------------------- | ----------- |
-| `collision.png`  | Les murs. La seule image qui décide de quelque chose | Oui         |
-| `background.png` | Le décor, sous les personnages                       | Oui         |
-| `foreground.png` | L'avant-plan, au-dessus des personnages              | Oui         |
-| `rain.png`       | La pluie, une bande qui défile. Seule Tokyo en a une | Non         |
-| `preview.png`    | La vignette, 120 sur 120, montrée dans les réglages  | Oui         |
+| Fichier                   | Rôle                                                                                              | Obligatoire |
+| ------------------------- | ------------------------------------------------------------------------------------------------- | ----------- |
+| `collision.png`           | Les murs. La seule image qui décide de quelque chose                                              | Oui         |
+| `background.png`          | Le décor, sous les personnages                                                                    | Oui         |
+| `foreground.png`          | L'avant-plan, au-dessus des personnages                                                           | Oui         |
+| `rain.png`                | La pluie, une bande qui défile. Seule Tokyo en a une                                              | Non         |
+| `background-parallax.png` | Le lointain, sous le fond, qui glisse moins vite que lui (étape 8.8). Seule Spirit & Time en a un | Non         |
+| `preview.png`             | La vignette, 120 sur 120, montrée dans les réglages                                               | Oui         |
 
 Les chemins se fabriquent à un seul endroit, `packages/shared/src/ressources.ts`, où un test vérifie que chaque fichier annoncé existe.
 
@@ -27,7 +28,7 @@ Les chemins se fabriquent à un seul endroit, `packages/shared/src/ressources.ts
 
 ## 2. Comment les murs se déduisent de l'image
 
-**Un pixel devient un mur quand la moyenne de ses trois composantes de couleur passe sous 128.** L'opacité est ignorée. Le noir est un mur, le blanc est du sol, le gris bascule à mi-chemin. (`SEUIL_MUR_LUMINOSITE`, `packages/sim/src/collisions.ts`; décodage dans `packages/server/src/terrain.ts`.)
+**Un pixel devient un mur quand la moyenne de ses trois composantes de couleur passe sous 128.** L'opacité est ignorée: une collision livrée en noir sur transparent se lit toute en mur. Elle doit être opaque partout, ce qu'un test vérifie pour chaque carte (étape 8.8, où celle de Spirit & Time est arrivée ainsi et a été posée sur du blanc). Le noir est un mur, le blanc est du sol, le gris bascule à mi-chemin. (`SEUIL_MUR_LUMINOSITE`, `packages/sim/src/collisions.ts`; décodage dans `packages/server/src/terrain.ts`.)
 
 Trois conséquences, à dire à quiconque dessine une carte.
 
@@ -37,7 +38,7 @@ Trois conséquences, à dire à quiconque dessine une carte.
 
 ### Le piège de l'étirement
 
-Les images sont **étirées aux dimensions de la carte, sans conserver les proportions**, des deux côtés: le serveur pour les murs (`redimensionner`), la page pour le décor (`pixi.ts`). Les images actuelles font toutes 3000 sur 2000, y compris celles de Tokyo qui mesure 2000 sur 1500: elles sont donc écrasées de 11 pour cent, et c'est voulu, parce que c'est ce qui met les murs là où deux ans de jeu les ont mis.
+Les images sont **étirées aux dimensions de la carte, sans conserver les proportions**, des deux côtés: le serveur pour les murs (`redimensionner`), la page pour le décor (`pixi.ts`). Les images de Tokyo font 3000 sur 2000 pour une carte de 2000 sur 1500: elles sont donc écrasées de 11 pour cent, et c'est voulu, parce que c'est ce qui met les murs là où deux ans de jeu les ont mis. Celles de Spirit & Time et du Quartier sont à la taille de leur carte.
 
 **Une carte nouvelle n'a aucune raison de répéter cela: la dessiner aux proportions de la carte, ou directement à sa taille.** C'est le piège principal d'une commande.
 
@@ -55,7 +56,7 @@ Les images sont **étirées aux dimensions de la carte, sans conserver les propo
 | Cadrage sur téléphone               | 360 x 271 px              | Quinze fois moins que l'ordinateur: ce n'est pas le même jeu |
 | Bande de bord interdite             | 100 px                    | Aucune apparition n'y tombe                                  |
 | Distance de sécurité à l'apparition | 100 px                    | Un souhait, pas une obligation, mais il faut la place        |
-| Rayon d'une zone spéciale           | racine de (surface / 5π)  | S'adapte tout seul: 437 px sur Tokyo, 618 sur Spirit & Time  |
+| Rayon d'une zone spéciale           | racine de (surface / 5π)  | S'adapte tout seul: 437 px sur Tokyo, 519 sur Spirit & Time  |
 | Protection au spawn                 | 3 s                       | Le temps de sortir d'un mauvais endroit                      |
 
 **Ce qui ne s'adapte pas tout seul à la taille**: le plafond de PNJ (par carte), la hauteur de vue (fixe, donc la part visible baisse quand la carte grandit), la cadence d'apparition des objets (donc leur densité baisse aussi), et la capacité en joueurs (propriété du mode).
@@ -107,20 +108,22 @@ Ce que chaque nombre veut dire:
 
 ### Les trois cartes de référence
 
-| Mesure              | Tokyo (2000x1500) | Spirit & Time (3000x2000) | Quartier (2400x1800) |
+| Mesure              | Tokyo (2000x1500) | Spirit & Time (2400x1760) | Quartier (2400x1800) |
 | ------------------- | ----------------: | ------------------------: | -------------------: |
-| Part tenable        |            75,3 % |                    94,4 % |               59,6 % |
-| Dégagement médian   |             64 px |                    258 px |                60 px |
-| Traversée           |            18,0 s |                    25,2 s |               21,3 s |
-| **Détour médian**   |          **1,08** |                  **1,07** |             **1,24** |
-| Plafond de PNJ      |               300 |                       500 |                  340 |
-| Part vue d'un écran |              48 % |                      24 % |                 33 % |
+| Part tenable        |            75,3 % |                    64,6 % |               59,6 % |
+| Dégagement médian   |             64 px |                    226 px |                60 px |
+| Traversée           |            18,0 s |                    16,2 s |               21,3 s |
+| **Détour médian**   |          **1,08** |                  **1,06** |             **1,24** |
+| Plafond de PNJ      |               300 |                       360 |                  340 |
+| Part vue d'un écran |              48 % |                      34 % |                 33 % |
 
 **Les deux cartes héritées sont des terrains ouverts**: un détour de 1,07 à 1,08 veut dire qu'il n'y a ni couloir, ni détour à subir, ni raccourci à connaître. Les murs de Tokyo sont du mobilier qu'on contourne, pas une structure qui organise.
 
 **Le Quartier est le premier terrain du jeu où le chemin se choisit** (étape 8.2, 20 septembre 2026): quatre colonnes et trois lignes d'îlots, des rues de 120 pixels, deux artères traversantes, et sept îlots sur huit bâtis en ceinture de 65 pixels autour d'une cour ouverte par une seule porte.
 
-Note: le détour de Spirit & Time se lisait 1,06 à l'étape 8.1, avec vingt-quatre points de départ tirés. L'outil en tire quatre-vingts depuis l'étape 8.2, parce que vingt-quatre laissaient le détour bouger de cinq centièmes selon le tirage.
+Note: le détour de l'ancienne Spirit & Time se lisait 1,06 à l'étape 8.1, avec vingt-quatre points de départ tirés, et 1,07 avec quatre-vingts. L'outil en tire quatre-vingts depuis l'étape 8.2, parce que vingt-quatre laissaient le détour bouger de cinq centièmes selon le tirage.
+
+**Spirit & Time a changé de terrain à l'étape 8.8**: le décor livré par le porteur du projet, un toit-terrasse ceint de murs au-dessus d'une ville, réduit de 20 pour cent pour que les ninjas n'y paraissent pas trop petits. L'ancienne était un champ de 3000 sur 2000, tenable à 94,4 pour cent, plafonnée à 500 PNJ. La nouvelle reste un terrain ouvert (1,06), mais bordé de murs: tout son tenable est hors de la bande d'apparition.
 
 ## 5 bis. Une carte se calcule, elle ne se dessine pas
 
@@ -154,13 +157,14 @@ Trois modes sur cinq profitent d'une carte plus structurée que les nôtres, deu
 
 **Repères de détour**: 1,06 à 1,08 aujourd'hui, 1,20 à 1,35 pour un quartier à pâtés de maisons, 1,45 à 1,70 pour un dédale, au-delà de 2 pour un labyrinthe.
 
-## 7. Ajouter une carte au jeu: les cinq endroits du code
+## 7. Ajouter une carte au jeu: les endroits du code
 
 1. `CARTES` (`packages/shared/src/constantes.ts`): identifiant et dimensions. La validation des réglages en découle.
 2. `CARTES_ENREGISTREES`: la même liste plus les cartes retirées. **L'énumération PostgreSQL en est tirée, donc une migration de la base est nécessaire.** Une carte retirée du jeu y reste, sinon les parties enregistrées deviennent illisibles.
 3. `PLAFONDS_DE_FAUX_NINJAS`: combien de PNJ au départ. **À justifier par une mesure au banc de charge, jamais au jugé.**
 4. `PRESENTATION_CARTES` (`packages/client/src/interface/modeles/cartes.ts`): nom et ambiance. L'oublier est une erreur de compilation, à dessein.
 5. `cheminPluie` (`packages/shared/src/ressources.ts`), si la carte a une pluie.
+6. `cheminLointain`, au même endroit, si la carte a un lointain. Son amplitude (`LOINTAIN`, `packages/client/src/rendu/apparence.ts`) se règle sur la marge que le terrain laisse autour de ce qu'il cache, mesurée par `parallaxe.test.ts`.
 
 ## 8. Décisions déjà prises, à ne pas rouvrir
 

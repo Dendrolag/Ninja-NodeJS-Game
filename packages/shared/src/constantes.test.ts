@@ -49,10 +49,11 @@ describe('cartes', () => {
     // Le defaut X5 du legacy renvoyait 2000x1500 meme sur map3. Ici chaque carte
     // porte ses vraies dimensions, et le moteur ne travaille que sur celles-la.
     // Le Quartier s'est ajoute a l'etape 8.2: c'est la carte de travail, la seule
-    // dessinee pour ce jeu-ci et non heritee du jeu d'origine.
+    // dessinee pour ce jeu-ci et non heritee du jeu d'origine. Spirit & Time est passee
+    // de 3000x2000 a 2400x1760 avec son nouveau decor, a l'etape 8.8.
     expect(CARTES).toEqual({
       map1: { largeur: 2000, hauteur: 1500 },
-      map3: { largeur: 3000, hauteur: 2000 },
+      map3: { largeur: 2400, hauteur: 1760 },
       quartier: { largeur: 2400, hauteur: 1800 },
     });
   });
@@ -75,8 +76,9 @@ describe('cartes', () => {
     // Decision du porteur du projet du 18 septembre 2026: 300 sur Tokyo, 500 sur Spirit
     // & Time, la meme densite a peu pres. Le Quartier suit la meme densite, appliquee a
     // sa surface reellement tenable, mesuree a l'etape 8.2: 2,60 Mpx a 133 faux ninjas
-    // par Mpx donnent 345, arrondis a 340.
-    expect(PLAFONDS_DE_FAUX_NINJAS).toEqual({ map1: 300, map3: 500, quartier: 340 });
+    // par Mpx donnent 345, arrondis a 340. Spirit & Time, reduite a l'etape 8.8, a 2,73
+    // Mpx tenables: 360 (decision du 2 octobre 2026).
+    expect(PLAFONDS_DE_FAUX_NINJAS).toEqual({ map1: 300, map3: 360, quartier: 340 });
     expect(Math.max(...Object.values(PLAFONDS_DE_FAUX_NINJAS))).toBe(
       BORNES_REGLAGES.nombreBotsInitial.maximum,
     );

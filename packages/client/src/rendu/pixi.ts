@@ -51,6 +51,7 @@ import {
   IMAGES_PAR_OBJET,
   RACINE_RESSOURCES,
   cheminCarte,
+  cheminLointain,
   cheminPluie,
   tousLesNinjas,
   tousLesObjets,
@@ -83,6 +84,7 @@ import type { Camera, ZoneVisible } from './camera.js';
 import { dansLaZone, versEcran, zoneVisible } from './camera.js';
 import type { IndicateurScene } from './charges.js';
 import { orienterLeDecor } from './miroir.js';
+import { decalageDuLointain, positionDuLointain } from './parallaxe.js';
 import { rayerLeCorps, rougirLesYeux, separerLesCalques } from './recoloration.js';
 import type { FormeDeSang } from './sang.js';
 import {
@@ -146,7 +148,7 @@ export async function prechargerLesSprites(): Promise<void> {
 
 /**
  * Precharge tout ce qu'une partie affichera: les images des personnages et des objets,
- * et le decor de sa carte.
+ * et le decor de sa carte, lointain compris.
  *
  * APPELE DES LE COMPTE A REBOURS DU SALON (recette de l'etape 5.4). Le decor d'une
  * carte pese pres de trois megaoctets: telecharge au lancement meme, il se chargeait
@@ -162,8 +164,16 @@ export async function prechargerLaPartie(carte: string, pluie: boolean): Promise
     prechargerLesSprites(),
     Assets.load<Texture>(adresse('background')),
     Assets.load<Texture>(adresse('foreground')),
+    imageDuLointain(carte),
     dimensions === undefined ? [] : imagesDePluie(carte, pluie, dimensions),
   ]);
+}
+
+/** L'image du lointain d'une carte (etape 8.8); aucune pour une carte qui n'en a pas. */
+async function imageDuLointain(carte: string): Promise<Texture | undefined> {
+  const chemin = cheminLointain(carte);
+
+  return chemin === undefined ? undefined : Assets.load<Texture>(`${RACINE_RESSOURCES}/${chemin}`);
 }
 
 /**
@@ -349,8 +359,8 @@ export interface SangAImprimer {
  * La resolution du calque du sol, par rapport a la carte: la moitie.
  *
  * Le sang s'imprime une fois sur une texture qui couvre toute la carte, et ne coute plus
- * rien ensuite. A pleine resolution, celle de map3 pese 24 Mo de memoire graphique; a
- * demi-resolution, 6 Mo, et une tache de quelques pixels n'y perd rien de visible
+ * rien ensuite. A pleine resolution, celle de map3 pese 26 Mo de memoire graphique; a
+ * demi-resolution, 6,6 Mo, et une tache de quelques pixels n'y perd rien de visible
  * (docs/design/idee-mode-massacre.md).
  */
 const RESOLUTION_DU_SOL = 0.5;
@@ -470,6 +480,10 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
 
   const fond = new Sprite();
   const dessus = new Sprite();
+  // Le lointain, sous le fond: il glisse moins vite que lui quand la camera bouge (etape
+  // 8.8, rendu/parallaxe.ts). Cache sur une carte qui n'en a pas.
+  const lointain = new Sprite();
+  lointain.visible = false;
   // La pluie tombe sur le fond et sous tout le reste, comme dans le jeu d'origine
   // (MapManager.draw, legacy/js/MapManager.js:388). Cachee sur une carte sans pluie.
   const pluie = new Sprite();
@@ -483,7 +497,7 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   sol.scale.set(1 / RESOLUTION_DU_SOL);
   let texteDuSol: RenderTexture | undefined;
   const imprimees = new Set<string>();
-  decor.addChild(fond, sol, pluie);
+  decor.addChild(lointain, fond, sol, pluie);
   premierPlan.addChild(dessus);
 
   const imprimer = (taches: readonly SangAImprimer[]): void => {
@@ -531,14 +545,23 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       const adresse = (couche: 'background' | 'foreground'): string =>
         `${RACINE_RESSOURCES}/${cheminCarte(options.identifiantCarte, couche)}`;
 
-      const [texteFond, texteDessus, images] = await Promise.all([
+      const [texteFond, texteDessus, texteLointain, images] = await Promise.all([
         Assets.load<Texture>(adresse('background')),
         Assets.load<Texture>(adresse('foreground')),
+        imageDuLointain(options.identifiantCarte),
         imagesDePluie(options.identifiantCarte, options.pluie, options.carte),
       ]);
 
       fond.texture = texteFond;
       dessus.texture = texteDessus;
+
+      if (texteLointain !== undefined) {
+        lointain.texture = texteLointain;
+        lointain.width = options.carte.largeur;
+        lointain.height = options.carte.hauteur;
+        orienterLeDecor(lointain, options.carte.largeur, options.modeMiroir);
+        lointain.visible = true;
+      }
 
       imagesPluie = images;
       const premiere = images[0];
@@ -551,11 +574,12 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
         pluie.visible = true;
       }
 
-      // Les images de carte mesurent toutes 3000x2000, y compris celles des
-      // cartes de 2000x1500: le jeu d'origine les etire aux dimensions de la
-      // carte sans conserver les proportions, et le decodage du terrain fait de
-      // meme cote serveur. Reproduire l'etirement est ce qui garantit que les
-      // murs sont la ou le decor les montre.
+      // Les images de Tokyo mesurent 3000x2000 pour une carte de 2000x1500: le jeu
+      // d'origine les etire aux dimensions de la carte sans conserver les
+      // proportions, et le decodage du terrain fait de meme cote serveur.
+      // Reproduire l'etirement est ce qui garantit que les murs sont la ou le
+      // decor les montre. Spirit & Time (etape 8.8) et le Quartier sont dessines
+      // a leur taille: l'etirement n'y change rien.
       // En miroir, le decor se retourne ici, et lui seul (etape 8.3, rendu/miroir.ts).
       for (const image of [fond, dessus]) {
         image.width = options.carte.largeur;
@@ -597,6 +621,16 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       // Le champ se mesure sur l'ecran de PixiJS, celui qui vient de placer la camera.
       numeroDImage += 1;
       const ecran = { largeur: application.screen.width, hauteur: application.screen.height };
+
+      if (lointain.visible) {
+        const place = positionDuLointain(
+          decalageDuLointain(camera, ecran, options.carte),
+          options.carte.largeur,
+          options.modeMiroir,
+        );
+
+        lointain.position.set(place.x, place.y);
+      }
       const champ = zoneVisible(camera, ecran, MARGE_HORS_CHAMP_PX);
 
       dessinerLesZones(zones, scene.zones, champ);
