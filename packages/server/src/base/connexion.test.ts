@@ -4,6 +4,10 @@
  * Les operations sur une vraie base sont testees dans tests/base/.
  */
 
+import { createServer } from 'node:net';
+import type { AddressInfo, Socket } from 'node:net';
+
+import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import { adresseChiffree, adresseDirecte, adressePooler, ouvrirBase } from './connexion.js';
@@ -61,5 +65,32 @@ describe('ouvrirBase', () => {
 
     expect(base.db).toBeDefined();
     await expect(base.fermer()).resolves.toBeUndefined();
+  });
+
+  it('abandonne une base qui ne repond pas, au lieu de l attendre sans fin (etape 8.8)', async () => {
+    // Un serveur qui accepte la connexion et ne dit jamais rien: la base muette qui a
+    // retenu une mise en ligne quinze minutes, le 2 octobre 2026.
+    const prises: Socket[] = [];
+    const muet = createServer((prise) => prises.push(prise));
+    await new Promise<void>((pret) => muet.listen(0, '127.0.0.1', pret));
+    const { port } = muet.address() as AddressInfo;
+    const base = ouvrirBase(`postgresql://personne:rien@127.0.0.1:${String(port)}/aucune`, {
+      delaiDeConnexionMs: 200,
+    });
+
+    try {
+      const erreur: unknown = await base.db.execute(sql`select 1`).then(
+        () => undefined,
+        (raison: unknown) => raison,
+      );
+
+      // Drizzle enveloppe l'erreur du pilote: c'est sa cause qui dit le delai depasse.
+      expect(erreur).toBeInstanceOf(Error);
+      expect(String((erreur as Error).cause)).toMatch(/timeout/iu);
+    } finally {
+      await base.fermer();
+      for (const prise of prises) prise.destroy();
+      await new Promise((ferme) => muet.close(ferme));
+    }
   });
 });

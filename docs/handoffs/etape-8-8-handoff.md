@@ -17,6 +17,7 @@ Spirit & Time prend le décor livré par le porteur du projet, avec une ville au
 - **Plafond de faux ninjas: 360**, au lieu de 500, sur décision du porteur du projet: la densité de Tokyo et du Quartier. La borne des réglages tombe de 500 à 360.
 - **Le lointain**: une couche sous le fond, chemin `cheminLointain`, décalage calculé par `decalageDuLointain` (fonction pure, `rendu/parallaxe.ts`), borné à 120 pixels. Son centre est un trou noir caché par la terrasse, qui paraîtrait à 139 pixels d'écart: un test le vérifie sur les images livrées.
 - **Badge « Prototype » gardé**, sur décision du porteur du projet.
+- **Défaut corrigé en route (règle 7)**: la première mise en ligne (CI 37062136259) a échoué. Sur Render, le nouveau serveur est resté quinze minutes dans `migrer.js`, sans rien dire, jusqu'à l'abandon; la production est restée sur `3b670ac`, intacte. La connexion à la base n'avait aucun délai. Désormais elle abandonne au bout de vingt secondes (`DELAI_DE_CONNEXION_MS`), et les migrations du démarrage se reprennent trois fois (`appliquerMigrationsAvecReprises`). Journaux lus par l'API de Render.
 - **Vu dans un vrai navigateur**: une partie jouée sur la carte, quatre endroits (`docs/design/etape-8-8/planche-partie.png`), et les murs superposés au décor (`docs/design/etape-8-8/murs-sur-le-decor.png`).
 
 ## Fichiers créés ou modifiés
@@ -26,6 +27,7 @@ Spirit & Time prend le décor livré par le porteur du projet, avec une ville au
 - `packages/shared/src/constantes.ts`: map3 à 2400 sur 1760, plafond 360. `bornes.ts`: borne des faux ninjas à 360. `ressources.ts`: `SONS`, `cheminLointain`. `index.ts`: export.
 - `packages/client/src/rendu/parallaxe.ts` (créé): `decalageDuLointain`, `positionDuLointain`. `apparence.ts`: `LOINTAIN`. `pixi.ts`: le sprite du lointain, préchargé, orienté, placé à chaque image. `stabilite.ts`: commentaire. `interface/modeles/cartes.ts`: commentaire de Spirit & Time.
 - `packages/server/src/terrain.ts`: commentaires (images de Tokyo, opacité).
+- `packages/server/src/base/connexion.ts`: délai de connexion. `migrations.ts`: `appliquerMigrationsAvecReprises`. `migrer.ts`: s'en sert. Tests: `connexion.test.ts` (base muette), `migrations.test.ts` (créé, reprises). `docs/deploiement.md`: l'incident et la conduite à tenir.
 - Tests: `parallaxe.test.ts` (créé), `ressources.test.ts`, `constantes.test.ts`, `validation.test.ts`, `terrain.test.ts` (empreintes, retournement pixel à pixel, collisions opaques, présence de sol), `GameRoom.test.ts`, `ServeurSocket.test.ts`, `ServeurSocket.options.test.ts`, `etat.test.ts`, `collisions.test.ts`, `bots.test.ts`, `reglages.test.ts` (modèle et composant). Bout en bout: `tests/e2e/rendu-parallaxe.spec.ts` (créé), `banc-rendu.spec.ts` (dimensions, plafond au cadrage du téléphone).
 - Mesures: `docs/mesures/cartes.json`, `docs/mesures/charge-serveur.md` (section 24), `docs/mesures/charge-serveur-8-8-spirit.json` (créé), `docs/mesures/mesurer-les-cartes.mjs` (commentaire), note dans `etude-structures-de-carte.md`, `tests/charge/charge.ts` (commentaires).
 - Documentation: fiche 8.8 (créée), ROADMAP, journal de conception, `assets/README.md`, compétence `conception-de-cartes` (SKILL.md et fiche de commande), ce handoff.
@@ -58,8 +60,8 @@ Aucune modification de `legacy/`, de `tests/caracterisation/` ni de la logique d
 
 ## Prochaine action exacte
 
-**Au porteur du projet**: jouer une partie sur Spirit & Time, juger les proportions, le lointain et les sons, et dire la suite. Aucune étape planifiée ne reste ouverte à la section 3 du ROADMAP.
+Exécuter l'étape `4.9`, le numéro de version et la note de version, décidée avec le porteur du projet à la fin de cette étape. Ses décisions et le texte de la note 1.5 sont dans la fiche. Au porteur du projet, en parallèle: jouer une partie sur Spirit & Time, juger les proportions, le lointain et les sons.
 
 ## Étape suivante
 
-Fiche à lire: aucune. La prochaine étape est à décider avec le porteur du projet.
+Fiche à lire: `docs/plan/etape-4-9.md`.

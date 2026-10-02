@@ -5,7 +5,7 @@
  * appliquent les migrations a leur propre branche Neon, creee pour eux.
  */
 
-import { appliquerMigrations } from './migrations.js';
+import { appliquerMigrationsAvecReprises } from './migrations.js';
 
 const adresse = process.env['DATABASE_URL'];
 
@@ -13,6 +13,6 @@ if (adresse === undefined || adresse === '') {
   console.error("DATABASE_URL n'est pas definie: aucune base a migrer.");
   process.exitCode = 1;
 } else {
-  await appliquerMigrations(adresse);
+  await appliquerMigrationsAvecReprises(adresse);
   process.stdout.write('Migrations appliquees.\n');
 }

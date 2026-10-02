@@ -100,6 +100,8 @@ Conditions de ROADMAP réunies, plus:
 7. **Une garde de plus**: chaque image de collision doit être opaque partout, et un test le vérifie pour toutes les cartes. C'est le piège trouvé au diagnostic (point 1), qui aurait fait de Spirit & Time un mur plein. Le test des vraies cartes vérifie aussi qu'il y a du sol, et non plus seulement des murs.
 8. **Le test de symétrie de l'étape 8.3** est remplacé par le retournement vérifié pixel à pixel: la carte nouvelle n'est plus symétrique.
 
+9. **La première mise en ligne a échoué, et c'était un défaut, corrigé dans l'étape** (règle 7). Sur Render, le nouveau serveur est resté quinze minutes dans ses migrations sans rien dire, jusqu'à l'abandon; l'ancien a redémarré et migré en six secondes. La connexion à la base n'avait aucun délai: une base muette retenait le démarrage indéfiniment. Désormais, une connexion qui ne s'ouvre pas en vingt secondes échoue (`DELAI_DE_CONNEXION_MS`, `base/connexion.ts`), et les migrations du démarrage se reprennent trois fois (`appliquerMigrationsAvecReprises`, `base/migrations.ts`). Tests sans base: un serveur qui accepte la connexion et ne répond jamais, et les reprises.
+
 ## Rituel de fin de session
 
 Écrire `docs/handoffs/etape-8-8-handoff.md`. Commiter, pousser, vérifier la CI et la mise en ligne.

@@ -16,6 +16,12 @@
  * pilote pg le signale par un evenement d'erreur sur le groupe de connexions: non
  * ecoute, cet evenement ferait tomber tout le serveur. Il est donc journalise, et
  * la prochaine requete ouvre une connexion neuve.
+ *
+ * UNE CONNEXION QUI NE REPOND PAS EST ABANDONNEE (etape 8.8). Sans delai, le pilote
+ * attend indefiniment une base muette: le 2 octobre 2026, une mise en ligne est restee
+ * quinze minutes dans ses migrations, jusqu'a ce que Render l'abandonne. Passe
+ * DELAI_DE_CONNEXION_MS, l'ouverture echoue, et l'appelant decide: reessayer, ou
+ * s'arreter en le disant.
  */
 
 import { drizzle } from 'drizzle-orm/node-postgres';
@@ -34,10 +40,18 @@ export interface BaseOuverte {
   fermer(): Promise<void>;
 }
 
+/**
+ * Combien de temps attendre qu'une connexion s'ouvre, en millisecondes. Une base Neon
+ * en veille se reveille en quelques secondes: vingt laissent une large marge.
+ */
+export const DELAI_DE_CONNEXION_MS = 20_000;
+
 /** Ce qui se regle a l'ouverture. */
 export interface OptionsBase {
   /** Nombre maximal de connexions ouvertes en meme temps. 10 par defaut. */
   readonly maximumConnexions?: number;
+  /** Delai d'ouverture d'une connexion. DELAI_DE_CONNEXION_MS par defaut. */
+  readonly delaiDeConnexionMs?: number;
 }
 
 /** Ouvre un groupe de connexions vers la base a cette adresse. */
@@ -45,6 +59,7 @@ export function ouvrirBase(adresse: string, options: OptionsBase = {}): BaseOuve
   const groupe = new pg.Pool({
     connectionString: adresseChiffree(adresse),
     max: options.maximumConnexions ?? 10,
+    connectionTimeoutMillis: options.delaiDeConnexionMs ?? DELAI_DE_CONNEXION_MS,
   });
 
   groupe.on('error', (erreur) => {
