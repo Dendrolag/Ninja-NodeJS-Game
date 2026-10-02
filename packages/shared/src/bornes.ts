@@ -257,11 +257,13 @@ export const BORNES_REGLAGES = {
     dureeS: { minimum: 5, maximum: 30 } satisfies Intervalle,
     tauxApparitionPourCent: { minimum: 5, maximum: 100 } satisfies Intervalle,
   },
-  /** Aucun de ces trois reglages n'existait dans le salon du legacy. */
+  /** Aucun de ces reglages n'existait dans le salon du legacy. */
   zones: {
     /** Duree de vie d'une zone, en secondes. La minimale ne peut pas depasser la maximale. */
     dureeS: { minimum: 5, maximum: 120 } satisfies Intervalle,
     intervalleApparitionS: { minimum: 5, maximum: 120 } satisfies Intervalle,
+    /** Plafond des mines de zone qui attendent sur la carte (etape 7.12). */
+    minesMaximum: { minimum: 1, maximum: 10 } satisfies Intervalle,
   },
   botsNoirs: {
     /** Nombre de bots noirs qui entrent en jeu ensemble. Bornes du salon du legacy. */

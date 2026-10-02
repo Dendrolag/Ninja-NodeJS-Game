@@ -377,12 +377,13 @@ function recapitulatif(reglages: ReglagesPartie, mode: Mode): readonly LigneReca
                 : `${String(objetsActifs)}/${String(objetsDuTactique)}`,
           },
         ]),
+    // Les zones s'ouvrent sur des mines de zone (etape 7.12): leur plafond, et les natures.
     {
-      libelle: 'Zones spéciales',
+      libelle: 'Mines de zone',
       valeur:
         !reglages.zones.actives || zonesActives === 0
           ? 'Désactivées'
-          : `${String(zonesActives)}/${String(TYPES_ZONE.length)}`,
+          : `${String(reglages.zones.minesMaximum)} au plus · ${String(zonesActives)}/${String(TYPES_ZONE.length)} zones`,
     },
   ];
 }

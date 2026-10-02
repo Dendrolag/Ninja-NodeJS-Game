@@ -188,8 +188,21 @@ describe('modeleSalon', () => {
       // La mine aussi (etape 7.11).
       Mine: 'À poser',
       Malus: '3/3',
-      'Zones spéciales': '4/4',
+      // Les zones s'ouvrent sur des mines de zone (etape 7.12).
+      'Mines de zone': '3 au plus · 4/4 zones',
     });
+  });
+
+  it('dit le plafond des mines de zone, et les zones coupees (etape 7.12)', () => {
+    const ligne = (reglages: ReturnType<typeof completerReglages>): string | undefined =>
+      modeleSalon(etat(salon('bob', { reglages })))?.recapitulatif.find(
+        (une) => une.libelle === 'Mines de zone',
+      )?.valeur;
+
+    expect(ligne(completerReglages({ zones: { minesMaximum: 7, types: { chaos: false } } }))).toBe(
+      '7 au plus · 3/4 zones',
+    );
+    expect(ligne(completerReglages({ zones: { actives: false } }))).toBe('Désactivées');
   });
 
   it('dit la fumee desactivee (etape 7.10)', () => {

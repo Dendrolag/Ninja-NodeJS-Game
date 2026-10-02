@@ -42,6 +42,11 @@ const BATTEMENT_MS = 50;
  *
  * SANS LA FUMEE (etape 7.10), pour la meme raison: les deux references d'avant restent
  * identiques, et la partie avec la fumee a la sienne. SANS LA MINE (etape 7.11) non plus.
+ *
+ * LES ZONES, ELLES, RESTENT EN JEU, comme par defaut: depuis l'etape 7.12, elles s'ouvrent sur
+ * des mines de zone, et toutes les references ont change, ce changement de regle etant voulu.
+ * La carte y pose ses mines au rythme par defaut; les joueurs n'en arment aucune a la graine
+ * 42, d'ou une reference a part, a une graine ou une zone s'ouvre.
  */
 const REGLAGES: ReglagesPartiels = {
   dureePartieS: 60,
@@ -64,6 +69,16 @@ const AVEC_LA_MINE: ReglagesPartiels = {
   ...REGLAGES,
   objetsDePoche: { fumee: { actif: false }, mine: { actif: true, tauxApparitionPourCent: 60 } },
 };
+
+/**
+ * La graine des parties avec la fumee et avec la mine. Depuis l'etape 7.12, les mines de zone
+ * tirent autrement que les zones d'avant, et a la graine 42 plus aucun joueur ne passe sur un
+ * objet de poche: ces references ne prouveraient plus rien.
+ */
+const GRAINE_DE_LA_POCHE = 52;
+
+/** Une graine ou un joueur arme une mine de zone et ouvre sa zone (etape 7.12). */
+const GRAINE_DES_ZONES = 62;
 
 /** Tous les combien de battements chaque joueur se sert de sa poche, dans cette partie. */
 const CADENCE_DE_LA_POCHE = 40;
@@ -204,7 +219,7 @@ describe('partie complete', () => {
   });
 
   it('produit l instantane de reference d une partie avec la fumee (etape 7.10)', () => {
-    const partie = jouerLaPartie(42, AVEC_LA_FUMEE, true);
+    const partie = jouerLaPartie(GRAINE_DE_LA_POCHE, AVEC_LA_FUMEE, true);
 
     // La fumee a vraiment ete ramassee et utilisee: sinon la reference ne prouverait rien.
     expect(partie.evenements.some((fait) => fait.type === 'objetEmpoche')).toBe(true);
@@ -218,7 +233,7 @@ describe('partie complete', () => {
   });
 
   it('produit l instantane de reference d une partie avec la mine (etape 7.11)', () => {
-    const partie = jouerLaPartie(42, AVEC_LA_MINE, true);
+    const partie = jouerLaPartie(GRAINE_DE_LA_POCHE, AVEC_LA_MINE, true);
 
     // Des mines ont vraiment ete posees, armees, et ont saute: sinon la reference ne prouverait
     // rien.
@@ -233,6 +248,25 @@ describe('partie complete', () => {
       })),
       touches: partie.evenements.flatMap((fait) =>
         fait.type === 'mineExplosee' ? fait.touches : [],
+      ),
+    }).toMatchSnapshot();
+  });
+
+  it('produit l instantane de reference d une partie ou une zone s ouvre (etape 7.12)', () => {
+    const partie = jouerLaPartie(GRAINE_DES_ZONES);
+
+    // Une mine de zone a vraiment ete posee, armee, et sa zone ouverte.
+    expect(partie.evenements.some((fait) => fait.type === 'mineDeZonePosee')).toBe(true);
+    expect(partie.evenements.some((fait) => fait.type === 'mineDeZoneArmee')).toBe(true);
+    expect(partie.evenements.some((fait) => fait.type === 'zoneOuverte')).toBe(true);
+    expect({
+      ...(resume(partie.etat, partie.evenements) as object),
+      minesDeZone: Object.values(partie.etat.minesDeZone ?? {}).map((mine) => ({
+        nature: mine.nature,
+        armee: mine.avantOuvertureMs !== undefined,
+      })),
+      zonesOuvertes: partie.evenements.flatMap((fait) =>
+        fait.type === 'zoneOuverte' ? [{ nature: fait.nature, position: fait.position }] : [],
       ),
     }).toMatchSnapshot();
   });
@@ -281,21 +315,25 @@ describe('partie complete', () => {
   });
 
   it('fait vivre les objets et les zones tout du long', () => {
-    let etat = partiePrete();
+    let etat = lancerLaPartie(partiePrete(GRAINE_DES_ZONES));
     let objetsVus = 0;
     let zonesVues = 0;
+    let minesDeZoneVues = 0;
 
     for (let battement = 0; battement < BATTEMENTS; battement += 1) {
       etat = tick(etat, entreesDu(battement), BATTEMENT_MS);
       objetsVus = Math.max(objetsVus, Object.keys(etat.objets).length);
       zonesVues = Math.max(zonesVues, Object.keys(etat.zones).length);
+      minesDeZoneVues = Math.max(minesDeZoneVues, Object.keys(etat.minesDeZone ?? {}).length);
     }
 
     // Les objets apparaissent toutes les quatre secondes environ et vivent huit
     // secondes: il y en a forcement plusieurs sur la carte en meme temps a un
     // moment ou a un autre. N'en voir aucun signalerait des apparitions muettes.
     expect(objetsVus).toBeGreaterThan(1);
-    expect(zonesVues).toBeGreaterThan(1);
+    // Les zones s'ouvrent sur les mines de zone que les joueurs arment en passant (etape 7.12).
+    expect(minesDeZoneVues).toBeGreaterThan(1);
+    expect(zonesVues).toBeGreaterThan(0);
   });
 
   it('n avance plus une fois la partie terminee', () => {

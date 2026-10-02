@@ -85,6 +85,7 @@ describe('completerReglages', () => {
     expect(reglages.malus.types.negatif.dureeS).toBe(14);
     expect(reglages.zones.intervalleApparitionS).toBe(15);
     expect(reglages.zones.dureeMaximumS).toBe(30);
+    expect(reglages.zones.minesMaximum).toBe(3);
   });
 });
 

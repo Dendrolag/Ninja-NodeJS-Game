@@ -421,6 +421,25 @@ export const MINES = {
   ENRAYEMENT_MS: 3000,
 } as const;
 
+/**
+ * La mine de zone, que pose la carte (etape 7.12), decisions du porteur du projet du 28
+ * septembre 2026 (docs/plan/etape-7-12.md).
+ *
+ * Elle remplace les zones qui apparaissaient seules: la carte pose des mines visibles de
+ * tous, a la couleur de la zone qu'elles cachent. Un joueur ou un Black Ninja qui passe
+ * dessus l'arme, et la zone s'ouvre a cet endroit 3 secondes plus tard. Le rythme des poses,
+ * la duree des zones, leurs natures et le plafond de mines sont des reglages du salon
+ * (ReglagesZones); le reste est ici.
+ */
+export const MINES_DE_ZONE = {
+  /** Le temps entre l'armement et l'ouverture de la zone, en millisecondes. A l'essai. */
+  DELAI_AVANT_OUVERTURE_MS: 3000,
+  /** On arme une mine de zone en marchant dessus, comme une mine posee. */
+  SEUIL_ARMEMENT_PX: MINES.SEUIL_ARMEMENT_PX,
+  /** Le plafond par defaut de mines de zone qui attendent sur la carte. */
+  MAXIMUM_PAR_DEFAUT: 3,
+} as const;
+
 /** Nature d'un bonus pose sur la carte, tous modes confondus, objets de poche compris. */
 export type NatureBonus = TypeBonus | TypeBonusTactique | ObjetDePoche;
 
@@ -471,19 +490,24 @@ export const OBJETS = {
 } as const;
 
 /**
- * Zones speciales: leur taille, leur nombre, et la force de leurs effets.
+ * Zones speciales: leur taille et la force de leurs effets.
  *
  * Les forces du legacy s'exprimaient par battement de la boucle serveur, comme
  * les vitesses. Elles sont converties en pixels par seconde pour la meme raison:
  * le moteur avance proportionnellement au temps ecoule, pas au nombre d'appels.
+ *
+ * Depuis l'etape 7.12, une zone ne nait plus seule: elle s'ouvre sur une mine de zone
+ * (MINES_DE_ZONE). Le plafond de trois zones du legacy (:817) disparait avec l'apparition
+ * spontanee, et le rayon, que le legacy tirait entre 150 pixels et le cinquieme de la carte
+ * (:513), est fixe.
  */
 export const ZONES = {
-  /** Nombre maximal de zones actives en meme temps (legacy :817). */
-  SIMULTANEES_MAXIMUM: 3,
-  /** Rayon minimal d'une zone, en pixels (legacy :523). */
-  RAYON_MINIMUM_PX: 150,
-  /** Une zone couvre au plus cette fraction de la carte (legacy :517). */
-  PART_DE_CARTE: 5,
+  /**
+   * Le rayon de toutes les zones, en pixels: choisi par le porteur du projet le 2 octobre
+   * 2026 sur la planche docs/design/etape-7-12/1-zones.png. Traversee en 2,9 secondes a 150
+   * pixels par seconde.
+   */
+  RAYON_PX: 220,
   /**
    * Probabilite qu'une zone de chaos repeigne un bot donne, par battement de
    * cinquante millisecondes (legacy :558). Le moteur la ramene au temps ecoule

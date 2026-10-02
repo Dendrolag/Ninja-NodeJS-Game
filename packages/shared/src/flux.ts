@@ -60,6 +60,7 @@ import type {
   InstantanePartie,
   JoueurVu,
   LigneClassement,
+  MineDeZoneVue,
   MineVue,
   ObjetVu,
   TactiqueVue,
@@ -345,9 +346,9 @@ function depuisUtf8(octets: Uint8Array, debut: number, fin: number): string {
 /**
  * Les natures d'entite, dans l'ordre de leur code. L'Evade (etape 7.9) est ajoute a la fin:
  * les trois premieres gardent leur code, et une partie sans lui s'ecrit a l'octet comme avant.
- * La mine posee (etape 7.11) le suit, pour la meme raison.
+ * La mine posee (etape 7.11) le suit, pour la meme raison, puis la mine de zone (etape 7.12).
  */
-const TYPES_ENTITE = ['joueur', 'bot', 'botNoir', 'evade', 'mine'] as const;
+const TYPES_ENTITE = ['joueur', 'bot', 'botNoir', 'evade', 'mine', 'mineDeZone'] as const;
 
 /** Les categories d'objet, dans l'ordre de leur code. */
 const CATEGORIES_OBJET = ['bonus', 'malus'] as const;
@@ -499,6 +500,19 @@ function entiteArrondie(entite: EntiteVue): EntiteVue {
       ...(entite.avantExplosionMs === undefined
         ? {}
         : { avantExplosionMs: positifArrondi(entite.avantExplosionMs, 'avantExplosionMs') }),
+    };
+  }
+
+  if (entite.type === 'mineDeZone') {
+    codeDans(TYPES_ZONE, entite.nature, 'type de zone');
+
+    return {
+      ...commun,
+      type: 'mineDeZone',
+      nature: entite.nature,
+      ...(entite.avantOuvertureMs === undefined
+        ? {}
+        : { avantOuvertureMs: positifArrondi(entite.avantOuvertureMs, 'avantOuvertureMs') }),
     };
   }
 
@@ -694,34 +708,45 @@ function lireTactique(lecteur: Lecteur): TactiqueVue {
 }
 
 /**
- * L'armement d'une mine (etape 7.11): un octet, zero tant qu'elle attend, un une fois
- * armee, et alors le temps avant qu'elle saute.
+ * L'armement d'une mine (etape 7.11), ou d'une mine de zone (etape 7.12): un octet, zero
+ * tant qu'elle attend, un une fois armee, et alors le temps avant qu'elle saute ou s'ouvre.
  */
-function ecrireArmement(ecrivain: Ecrivain, mine: MineVue): void {
-  if (mine.avantExplosionMs === undefined) {
+function ecrireArmement(ecrivain: Ecrivain, avantMs: number | undefined): void {
+  if (avantMs === undefined) {
     ecrivain.octet(0);
     return;
   }
 
   ecrivain.octet(1);
-  ecrivain.entierPositif(mine.avantExplosionMs);
+  ecrivain.entierPositif(avantMs);
 }
 
-function lireArmement(lecteur: Lecteur): { readonly avantExplosionMs?: number } {
+/** Le temps avant l'explosion ou l'ouverture, absent tant que la mine attend. */
+function lireArmement(lecteur: Lecteur): number | undefined {
   const armee = lecteur.octet();
 
   if (armee > 1) {
     throw new ErreurDeTrame("l'armement d'une mine y est inconnu");
   }
 
-  return armee === 1 ? { avantExplosionMs: lecteur.entierPositif() } : {};
+  return armee === 1 ? lecteur.entierPositif() : undefined;
+}
+
+/** Le temps avant l'explosion d'une mine posee, en champ facultatif. */
+function avantExplosion(avantMs: number | undefined): { readonly avantExplosionMs?: number } {
+  return avantMs === undefined ? {} : { avantExplosionMs: avantMs };
+}
+
+/** Le temps avant l'ouverture d'une mine de zone, en champ facultatif. */
+function avantOuverture(avantMs: number | undefined): { readonly avantOuvertureMs?: number } {
+  return avantMs === undefined ? {} : { avantOuvertureMs: avantMs };
 }
 
 /**
  * Les entites. Bits du masque: 1 x, 2 y, 4 couleur, 8 direction, et pour un joueur,
  * 16 pseudo, 32 indicateurs, puis, dans le mode Tactique, 64 orientation et 128
  * charges et attente de la prochaine. Pour une mine (etape 7.11): 16 poseur, 32
- * armement.
+ * armement. Pour une mine de zone (etape 7.12): 16 nature, 32 armement.
  */
 const ENTITES: Genre<EntiteVue> = {
   cle: (entite) => entite.id,
@@ -747,7 +772,12 @@ const ENTITES: Genre<EntiteVue> = {
 
     if (entite.type === 'mine') {
       ecrivain.texte(entite.poseur);
-      ecrireArmement(ecrivain, entite);
+      ecrireArmement(ecrivain, entite.avantExplosionMs);
+    }
+
+    if (entite.type === 'mineDeZone') {
+      ecrireCode<TypeZone>(ecrivain, TYPES_ZONE, entite.nature, 'type de zone');
+      ecrireArmement(ecrivain, entite.avantOuvertureMs);
     }
   },
 
@@ -777,7 +807,18 @@ const ENTITES: Genre<EntiteVue> = {
 
     if (type === 'mine') {
       const poseur = lecteur.texte();
-      const mine: MineVue = { ...commun, type, poseur, ...lireArmement(lecteur) };
+      const mine: MineVue = { ...commun, type, poseur, ...avantExplosion(lireArmement(lecteur)) };
+      return mine;
+    }
+
+    if (type === 'mineDeZone') {
+      const nature = lireCode<TypeZone>(lecteur, TYPES_ZONE);
+      const mine: MineDeZoneVue = {
+        ...commun,
+        type,
+        nature,
+        ...avantOuverture(lireArmement(lecteur)),
+      };
       return mine;
     }
 
@@ -816,6 +857,11 @@ const ENTITES: Genre<EntiteVue> = {
       if (ancienne.avantExplosionMs !== nouvelle.avantExplosionMs) masque |= 32;
     }
 
+    if (ancienne.type === 'mineDeZone' && nouvelle.type === 'mineDeZone') {
+      if (ancienne.nature !== nouvelle.nature) masque |= 16;
+      if (ancienne.avantOuvertureMs !== nouvelle.avantOuvertureMs) masque |= 32;
+    }
+
     return masque;
   },
 
@@ -844,7 +890,12 @@ const ENTITES: Genre<EntiteVue> = {
 
     if (nouvelle.type === 'mine') {
       if (masque & 16) ecrivain.texte(nouvelle.poseur);
-      if (masque & 32) ecrireArmement(ecrivain, nouvelle);
+      if (masque & 32) ecrireArmement(ecrivain, nouvelle.avantExplosionMs);
+    }
+
+    if (nouvelle.type === 'mineDeZone') {
+      if (masque & 16) ecrireCode<TypeZone>(ecrivain, TYPES_ZONE, nouvelle.nature, 'type de zone');
+      if (masque & 32) ecrireArmement(ecrivain, nouvelle.avantOuvertureMs);
     }
   },
 
@@ -867,11 +918,22 @@ const ENTITES: Genre<EntiteVue> = {
         ...sansArmement,
         ...commun,
         poseur: masque & 16 ? lecteur.texte() : ancienne.poseur,
-        ...(masque & 32
-          ? lireArmement(lecteur)
-          : ancienne.avantExplosionMs === undefined
-            ? {}
-            : { avantExplosionMs: ancienne.avantExplosionMs }),
+        ...avantExplosion(masque & 32 ? lireArmement(lecteur) : ancienne.avantExplosionMs),
+      };
+      return mine;
+    }
+
+    if (ancienne.type === 'mineDeZone') {
+      if (masque & BITS_TACTIQUES) {
+        throw new ErreurDeTrame('une mine de zone y porte un champ de joueur');
+      }
+
+      const { avantOuvertureMs: _avant, ...sansArmement } = ancienne;
+      const mine: MineDeZoneVue = {
+        ...sansArmement,
+        ...commun,
+        nature: masque & 16 ? lireCode<TypeZone>(lecteur, TYPES_ZONE) : ancienne.nature,
+        ...avantOuverture(masque & 32 ? lireArmement(lecteur) : ancienne.avantOuvertureMs),
       };
       return mine;
     }

@@ -164,8 +164,26 @@ export interface MineVue extends EntiteVueCommune {
   readonly avantExplosionMs?: number;
 }
 
-/** Tout ce qui se trouve sur la carte et se dessine en personnage, plus les mines posees. */
-export type EntiteVue = JoueurVu | BotVu | MineVue;
+/**
+ * Une mine de zone, que pose la carte (etape 7.12), telle que tout le monde la recoit.
+ *
+ * Elle se voit de tous, a la couleur de la zone qu'elle cache: c'est la page qui choisit
+ * cette couleur d'apres sa nature. Sa couleur d'entite, sans usage, est le blanc. Elle ne
+ * bouge pas: sa direction reste immobile.
+ */
+export interface MineDeZoneVue extends EntiteVueCommune {
+  readonly type: 'mineDeZone';
+  /** La nature de la zone qu'elle cache. */
+  readonly nature: TypeZone;
+  /** Armee, le temps avant que sa zone s'ouvre, en millisecondes. Absent tant qu'elle attend. */
+  readonly avantOuvertureMs?: number;
+}
+
+/**
+ * Tout ce qui se trouve sur la carte et se dessine en personnage, plus les mines posees et
+ * les mines de zone.
+ */
+export type EntiteVue = JoueurVu | BotVu | MineVue | MineDeZoneVue;
 
 /**
  * Un objet pose sur la carte, en attente d'etre ramasse.
@@ -549,6 +567,22 @@ export interface MineExploseeVue {
   readonly botsTues: number;
   /** Les points qu'elle rapporte a son poseur, points cedes par les joueurs tues compris. */
   readonly points: number;
+}
+
+/**
+ * Ce qui arrive a une mine de zone (etape 7.12), dit a tous: la carte vient de la poser, un
+ * joueur ou un Black Ninja vient de l'armer, ou sa zone vient de s'ouvrir.
+ */
+export interface MineDeZoneFaitVue {
+  readonly quoi: 'posee' | 'armee' | 'ouverte';
+  /** Identifiant de la mine. */
+  readonly mine: string;
+  /** La nature de la zone qu'elle cache. */
+  readonly nature: TypeZone;
+  readonly x: number;
+  readonly y: number;
+  /** L'entite qui l'a armee, un joueur ou un Black Ninja: pour un armement seulement. */
+  readonly par?: string;
 }
 
 /** Un joueur vient de ramasser un malus. Adresse a lui seul: il en est epargne. */
@@ -1135,6 +1169,9 @@ export interface EvenementsServeurVersClient {
 
   /** Une mine vient de sauter (etape 7.11). A tous. */
   mineExplosee: (mine: MineExploseeVue) => void;
+
+  /** Une mine de zone vient d'etre posee, armee, ou de s'ouvrir (etape 7.12). A tous. */
+  mineDeZone: (mine: MineDeZoneFaitVue) => void;
 
   /** Une demande de ce joueur a ete refusee. Remplace error. */
   refus: (refus: Refus) => void;

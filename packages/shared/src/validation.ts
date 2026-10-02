@@ -1113,7 +1113,10 @@ function groupeObjetsTactiques(
   return siRempli(retenu);
 }
 
-/** Reglages des zones: un interrupteur, deux durees, un intervalle, quatre natures. */
+/**
+ * Reglages des zones: un interrupteur, deux durees, un intervalle, quatre natures, et le
+ * plafond des mines de zone (etape 7.12).
+ */
 function groupeZones(
   source: Enregistrement,
   erreurs: ErreurValidation[],
@@ -1155,6 +1158,11 @@ function groupeZones(
   }
 
   poser(retenu, 'types', siRempli(types));
+  poser(
+    retenu,
+    'minesMaximum',
+    entier(brut, 'minesMaximum', BORNES_REGLAGES.zones.minesMaximum, erreurs, 'zones'),
+  );
 
   return siRempli(retenu);
 }

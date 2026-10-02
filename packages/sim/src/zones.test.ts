@@ -9,7 +9,7 @@
  * les seuils, les forces et la geometrie.
  */
 
-import type { Position, ReglagesPartiels } from '@neon-ninja/shared';
+import type { Position } from '@neon-ninja/shared';
 import { CARTES, COULEURS_JOUEURS, RAYON_ENTITE, ZONES } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
@@ -20,11 +20,6 @@ import { ajouterBot, ajouterJoueur, creerEtatInitial } from './etat.js';
 import { appliquerLesEffetsDeZone, avancerLesZones, estCache, zoneContient } from './zones.js';
 
 const ROUGE = '#FF0000';
-
-/** Des zones assez durables pour qu'un essai ne les voie pas mourir de vieillesse. */
-const ZONES_DURABLES: ReglagesPartiels = {
-  zones: { dureeMinimumS: 600, dureeMaximumS: 601 },
-};
 
 /** Une zone posee a la main, pour partir d'une situation nette. */
 function zone(type: ZoneSpeciale['type'], centre: Position, rayon = 300): ZoneSpeciale {
@@ -86,28 +81,8 @@ describe('geometrie d une zone', () => {
 });
 
 describe('vie et mort des zones', () => {
-  it('n en fait apparaitre aucune avant l intervalle regle', () => {
-    const etat = avancerLesZones(creerEtatInitial({ graine: 1 }), 14_000);
-
-    expect(Object.keys(etat.zones)).toEqual([]);
-  });
-
-  it('en fait apparaitre une quand l intervalle est ecoule', () => {
-    const etat = avancerLesZones(creerEtatInitial({ graine: 1 }), 15_000);
-
-    expect(Object.keys(etat.zones)).toEqual(['zone-0']);
-  });
-
-  it('ne depasse jamais trois zones actives', () => {
-    // Des zones qui ne meurent pas de vieillesse pendant l'essai: on ne mesure
-    // ici que le plafond, pas l'expiration.
-    let etat = creerEtatInitial({ graine: 1, reglages: ZONES_DURABLES });
-    for (let battement = 0; battement < 4_000; battement += 1) {
-      etat = avancerLesZones(etat, 50);
-    }
-
-    expect(Object.keys(etat.zones)).toHaveLength(ZONES.SIMULTANEES_MAXIMUM);
-  });
+  // Depuis l'etape 7.12, une zone ne nait plus seule: elle s'ouvre sur une mine de zone. La
+  // pose, l'armement et l'ouverture sont testes dans minesDeZone.test.ts.
 
   it('retire une zone quand sa duree est epuisee', () => {
     const etat = partieAvecZone({ ...zone('chaos', { x: 500, y: 500 }), dureeRestanteMs: 1_000 });
@@ -127,76 +102,6 @@ describe('vie et mort des zones', () => {
     // Sans zone a retirer, l'etat n'est meme pas recopie.
     const dejaVide = { ...eteintes, zones: {} };
     expect(avancerLesZones(dejaVide, 50)).toBe(dejaVide);
-  });
-
-  it('ne fait apparaitre aucune zone quand aucune nature n est activee', () => {
-    const aucuneNature: ReglagesPartiels = {
-      zones: {
-        types: { chaos: false, repulsion: false, attraction: false, invisibilite: false },
-      },
-    };
-    const etat = avancerLesZones(creerEtatInitial({ graine: 1, reglages: aucuneNature }), 60_000);
-
-    expect(Object.keys(etat.zones)).toEqual([]);
-  });
-
-  it('tire une nature parmi les seules activees', () => {
-    const seulementLeChaos: ReglagesPartiels = {
-      ...ZONES_DURABLES,
-      zones: {
-        ...ZONES_DURABLES.zones,
-        types: { chaos: true, repulsion: false, attraction: false, invisibilite: false },
-      },
-    };
-
-    let etat = creerEtatInitial({ graine: 11, reglages: seulementLeChaos });
-    for (let battement = 0; battement < 1_000; battement += 1) {
-      etat = avancerLesZones(etat, 50);
-    }
-
-    expect(Object.values(etat.zones).map((une) => une.type)).toEqual(['chaos', 'chaos', 'chaos']);
-  });
-
-  it('tire une duree comprise entre le minimum et le maximum regles', () => {
-    for (let graine = 0; graine < 30; graine += 1) {
-      const etat = avancerLesZones(creerEtatInitial({ graine }), 15_000);
-      const posee = Object.values(etat.zones)[0] as ZoneSpeciale;
-
-      expect(posee.dureeRestanteMs).toBeGreaterThanOrEqual(10_000);
-      expect(posee.dureeRestanteMs).toBeLessThan(30_000);
-      expect(Number.isInteger(posee.dureeRestanteMs)).toBe(true);
-    }
-  });
-
-  it('pose une zone entierement contenue dans la carte, jamais minuscule', () => {
-    const rayonMaximum = Math.sqrt(
-      (CARTES.map1.largeur * CARTES.map1.hauteur) / ZONES.PART_DE_CARTE / Math.PI,
-    );
-
-    for (let graine = 0; graine < 30; graine += 1) {
-      const etat = avancerLesZones(creerEtatInitial({ graine }), 15_000);
-      const posee = Object.values(etat.zones)[0] as ZoneSpeciale;
-
-      expect(posee.rayon).toBeGreaterThanOrEqual(ZONES.RAYON_MINIMUM_PX);
-      expect(posee.rayon).toBeLessThan(rayonMaximum);
-      expect(posee.centre.x - posee.rayon).toBeGreaterThanOrEqual(0);
-      expect(posee.centre.y - posee.rayon).toBeGreaterThanOrEqual(0);
-      expect(posee.centre.x + posee.rayon).toBeLessThanOrEqual(CARTES.map1.largeur);
-      expect(posee.centre.y + posee.rayon).toBeLessThanOrEqual(CARTES.map1.hauteur);
-    }
-  });
-
-  it('rejoue les memes zones a graine egale', () => {
-    const derouler = (graine: number): readonly ZoneSpeciale[] => {
-      let etat = creerEtatInitial({ graine });
-      for (let battement = 0; battement < 1_000; battement += 1) {
-        etat = avancerLesZones(etat, 50);
-      }
-      return Object.values(etat.zones);
-    };
-
-    expect(derouler(77)).toEqual(derouler(77));
-    expect(derouler(77)).not.toEqual(derouler(78));
   });
 });
 

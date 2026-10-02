@@ -346,24 +346,42 @@ export const GROUPES_REGLAGES: readonly GroupeReglages[] = [
       })),
     ],
   },
+  // Depuis l'etape 7.12, les zones s'ouvrent sur des mines que pose la carte: les reglages
+  // gardent leurs chemins et prennent le sens de la mine (micro-decision 1 de la fiche).
   {
     titre: 'Zones spéciales',
+    note: 'La carte pose des mines de zone, à la couleur de la zone qu’elles cachent : un joueur ou un Black Ninja qui passe dessus ouvre la zone 3 secondes plus tard.',
     sections: [
       {
         titre: undefined,
         champs: [
-          interrupteur('zones.actives', 'Zones actives'),
-          secondes('zones.dureeMinimumS', 'Durée minimale', BORNES_REGLAGES.zones.dureeS),
-          secondes('zones.dureeMaximumS', 'Durée maximale', BORNES_REGLAGES.zones.dureeS),
+          interrupteur('zones.actives', 'Mines de zone actives'),
           secondes(
             'zones.intervalleApparitionS',
-            'Intervalle d’apparition',
+            'Délai entre deux mines',
             BORNES_REGLAGES.zones.intervalleApparitionS,
+          ),
+          {
+            nature: 'entier',
+            chemin: 'zones.minesMaximum',
+            libelle: 'Mines en attente, au plus',
+            bornes: BORNES_REGLAGES.zones.minesMaximum,
+            unite: '',
+          },
+          secondes(
+            'zones.dureeMinimumS',
+            'Durée minimale d’une zone',
+            BORNES_REGLAGES.zones.dureeS,
+          ),
+          secondes(
+            'zones.dureeMaximumS',
+            'Durée maximale d’une zone',
+            BORNES_REGLAGES.zones.dureeS,
           ),
         ],
       },
       {
-        titre: 'Natures de zone',
+        titre: 'Zones qu’une mine peut cacher',
         champs: TYPES_ZONE.map((nature) =>
           interrupteur(`zones.types.${nature}`, APPARENCE_ZONE[nature].libelle),
         ),

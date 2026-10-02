@@ -25,7 +25,14 @@ import {
   TYPES_MALUS,
   TYPES_ZONE,
 } from './constantes.js';
-import type { EntiteVue, InstantanePartie, JoueurVu, LigneClassement } from './evenements.js';
+import type { TypeZone } from './constantes.js';
+import type {
+  EntiteVue,
+  InstantanePartie,
+  JoueurVu,
+  LigneClassement,
+  MineDeZoneVue,
+} from './evenements.js';
 import {
   ErreurDeTrame,
   SUBDIVISIONS_DU_PIXEL,
@@ -920,5 +927,108 @@ describe('la mine (etape 7.11)', () => {
     );
 
     expect(() => appliquerTrame(reference, avecJoueur.octets)).toThrow(/une mine/);
+  });
+});
+
+describe('la mine de zone (etape 7.12)', () => {
+  /** Une mine de zone telle que le serveur l'envoie: blanche, immobile, avec sa nature. */
+  const mineDeZone = (
+    avantOuvertureMs?: number,
+    nature: TypeZone = 'repulsion',
+    id = 'mineDeZone-3',
+  ): MineDeZoneVue => ({
+    id,
+    type: 'mineDeZone',
+    x: 640.2,
+    y: 480,
+    couleur: '#FFFFFF',
+    direction: 'immobile',
+    nature,
+    ...(avantOuvertureMs === undefined ? {} : { avantOuvertureMs }),
+  });
+
+  it('fait voyager la mine de zone posee, armee, puis ouverte en zone, image puis deltas', () => {
+    const parties = [
+      instantane({ tick: 1, entites: [joueur('a', 100, 100)] }),
+      instantane({ tick: 2, entites: [joueur('a', 101, 100), mineDeZone()] }),
+      // La nature ne change jamais en jeu; le flux sait pourtant la faire voyager.
+      instantane({ tick: 3, entites: [joueur('a', 102, 100), mineDeZone(undefined, 'chaos')] }),
+      instantane({ tick: 4, entites: [joueur('a', 103, 100), mineDeZone(3000)] }),
+      instantane({ tick: 5, entites: [joueur('a', 104, 100), mineDeZone(2950)] }),
+      instantane({
+        tick: 6,
+        entites: [joueur('a', 105, 100)],
+        zones: [
+          {
+            id: 'zone-9',
+            type: 'repulsion',
+            x: 640.2,
+            y: 480,
+            rayon: 220,
+            dureeRestanteMs: 12_000,
+          },
+        ],
+      }),
+    ];
+    let reference = encoderImage(parties[0] as InstantanePartie).reference;
+
+    for (const suivante of parties.slice(1)) {
+      const trame = encoderDelta(reference, suivante);
+
+      expect(appliquerTrame(reference, trame.octets)).toEqual(quantifierInstantane(suivante));
+      reference = trame.reference;
+    }
+  });
+
+  it('garde la nature de chaque mine, armee ou non, dans une image', () => {
+    const partie = instantane({
+      entites: [
+        mineDeZone(undefined, 'chaos', 'mz-1'),
+        mineDeZone(1200, 'attraction', 'mz-2'),
+        mineDeZone(undefined, 'invisibilite', 'mz-3'),
+        mineDeZone(undefined, 'repulsion', 'mz-4'),
+      ],
+    });
+    const relue = appliquerTrame(undefined, encoderImage(partie).octets);
+
+    expect(relue).toEqual(quantifierInstantane(partie));
+    expect(relue?.entites[0]).not.toHaveProperty('avantOuvertureMs');
+  });
+
+  it('ne coute rien quand elle ne change pas', () => {
+    const avant = instantane({ tick: 1, entites: [mineDeZone(900)] });
+    const apres = instantane({ tick: 2, entites: [mineDeZone(900)] });
+    const sans = instantane({ tick: 2, entites: [] });
+    const reference = encoderImage(avant).reference;
+    const referenceSans = encoderImage(instantane({ tick: 1, entites: [] })).reference;
+
+    expect(encoderDelta(reference, apres).octets.length).toBe(
+      encoderDelta(referenceSans, sans).octets.length,
+    );
+  });
+
+  it('refuse une mine de zone a la nature inconnue', () => {
+    expect(() =>
+      encoderImage(instantane({ entites: [{ ...mineDeZone(), nature: 'gravite' as TypeZone }] })),
+    ).toThrow();
+  });
+
+  it('refuse une trame ou une mine de zone porte un champ de joueur', () => {
+    const reference = encoderImage(
+      instantane({ tick: 1, entites: [mineDeZone(undefined, 'chaos', 'j')] }),
+    ).reference;
+    const avecJoueur = encoderDelta(
+      encoderImage(instantane({ tick: 1, entites: [joueur('j', 640.2, 480)] })).reference,
+      instantane({
+        tick: 2,
+        entites: [
+          joueur('j', 640.2, 480, {
+            tactique: { orientation: 'est', charges: 2, avantProchaineChargeMs: 100 },
+          }),
+        ],
+      }),
+    );
+
+    expect(() => appliquerTrame(reference, avecJoueur.octets)).toThrow(/une mine de zone/);
   });
 });

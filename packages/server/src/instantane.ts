@@ -43,6 +43,7 @@ import type {
   MalusRamasseParMoi,
   MalusSubi,
   MineArmeeVue,
+  MineDeZoneFaitVue,
   MineExploseeVue,
   MinePoseeVue,
   ObjetEmpoche,
@@ -99,6 +100,7 @@ export function instantaneDe(etat: EtatPartie): InstantanePartie {
       ...entitesVisibles(etat).map((entite) => entiteVue(etat, entite)),
       ...evadeVu(etat),
       ...minesVues(etat),
+      ...minesDeZoneVues(etat),
     ],
     objets: Object.values(etat.objets).map(objetVu),
     zones: Object.values(etat.zones).map(zoneVue),
@@ -139,6 +141,26 @@ function evadeVu(etat: EtatPartie): readonly EntiteVue[] {
         },
       ];
 }
+
+/**
+ * Les mines de zone (etape 7.12), a la fin de la liste des entites, apres les mines posees:
+ * toutes, a tous, a la couleur blanche, puisque la page les peint d'apres leur nature.
+ */
+function minesDeZoneVues(etat: EtatPartie): readonly EntiteVue[] {
+  return Object.values(etat.minesDeZone ?? {}).map((mine) => ({
+    type: 'mineDeZone',
+    id: mine.id,
+    x: mine.position.x,
+    y: mine.position.y,
+    couleur: COULEUR_MINE_DE_ZONE,
+    direction: 'immobile',
+    nature: mine.nature,
+    ...(mine.avantOuvertureMs === undefined ? {} : { avantOuvertureMs: mine.avantOuvertureMs }),
+  }));
+}
+
+/** La couleur d'entite d'une mine de zone, sans usage: la page la peint d'apres sa nature. */
+const COULEUR_MINE_DE_ZONE = '#FFFFFF';
 
 /**
  * Les mines posees (etape 7.11), a la fin de la liste des entites, apres l'Evade: toutes, a
@@ -460,6 +482,11 @@ export type Notification =
       readonly nom: 'mineExplosee';
       readonly pour: IdentifiantEntite;
       readonly charge: MineExploseeVue;
+    }
+  | {
+      readonly nom: 'mineDeZone';
+      readonly pour: IdentifiantEntite;
+      readonly charge: MineDeZoneFaitVue;
     };
 
 /**
@@ -674,6 +701,35 @@ function notificationsDUnFait(
         botsTues: evenement.botsTues,
         points: evenement.points,
       });
+
+    // Une mine de zone se voit de tous, de sa pose a l'ouverture de sa zone (etape 7.12).
+    case 'mineDeZonePosee':
+      return aTous(etat, 'mineDeZone', {
+        quoi: 'posee',
+        mine: evenement.mine,
+        nature: evenement.nature,
+        x: evenement.position.x,
+        y: evenement.position.y,
+      });
+
+    case 'mineDeZoneArmee':
+      return aTous(etat, 'mineDeZone', {
+        quoi: 'armee',
+        mine: evenement.mine,
+        nature: evenement.nature,
+        x: evenement.position.x,
+        y: evenement.position.y,
+        par: evenement.par,
+      });
+
+    case 'zoneOuverte':
+      return aTous(etat, 'mineDeZone', {
+        quoi: 'ouverte',
+        mine: evenement.mine,
+        nature: evenement.nature,
+        x: evenement.position.x,
+        y: evenement.position.y,
+      });
   }
 }
 
@@ -719,7 +775,8 @@ function ceQuArriveAuDoubleur(
 
 /** La meme notification, pour chaque joueur present. */
 function aTous<
-  N extends 'coupDeKatana' | 'carteVidee' | 'evade' | 'fumee' | 'mineArmee' | 'mineExplosee',
+  N extends
+    'coupDeKatana' | 'carteVidee' | 'evade' | 'fumee' | 'mineArmee' | 'mineExplosee' | 'mineDeZone',
 >(
   etat: EtatPartie,
   nom: N,

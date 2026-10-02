@@ -335,7 +335,7 @@ export function tick(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPart
   // se fait toucher l'emporte (etape 7.10, poche.ts).
   const poches = utiliserLesPoches(deplace, entrees, horsJeu);
   const bots = avancerLEvade(avancerLesBots(poches, dtMs, regles.perteFaceAuBotNoir), dtMs);
-  const zones = appliquerLesEffetsDeZone(avancerLesZones(bots, dtMs), dtMs);
+  const zones = appliquerLesEffetsDeZone(avancerLesZones(bots, dtMs, regles.horsJeu(bots)), dtMs);
   const objets = faireApparaitreLesObjets(fairePasserLeTempsSurLesObjets(zones, dtMs), dtMs);
   const actions = regles.agir(objets, entrees, dtMs);
   const mines = avancerLesMines(actions, dtMs, regles, regles.horsJeu(actions));

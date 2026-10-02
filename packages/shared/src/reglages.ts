@@ -40,6 +40,7 @@ import type {
   TypeMalusTactique,
   TypeZone,
 } from './constantes.js';
+import { MINES_DE_ZONE } from './constantes.js';
 
 /** Reglages d'un bonus: est-il en jeu, combien de temps dure-t-il, apparait-il souvent. */
 export interface ReglageBonus {
@@ -94,17 +95,27 @@ export interface ReglagesObjetsTactiques {
   readonly malus: Readonly<Record<TypeMalusTactique, ReglageMalus>>;
 }
 
-/** Reglages des zones speciales. */
+/**
+ * Reglages des zones speciales.
+ *
+ * DEPUIS L'ETAPE 7.12, UNE ZONE S'OUVRE SUR UNE MINE DE ZONE, que la carte pose. Les champs
+ * gardent leurs noms, pour que des reglages deja ecrits restent valides, et prennent le sens
+ * de la mine (micro-decision 1 de la fiche): l'intervalle est celui des poses, la duree est
+ * celle de la zone qui s'ouvre, les natures sont celles qu'une mine peut cacher.
+ */
 export interface ReglagesZones {
+  /** Les mines de zone, donc les zones, sont-elles en jeu. */
   readonly actives: boolean;
-  /** Duree de vie minimale d'une zone, en secondes. */
+  /** Duree de vie minimale d'une zone ouverte, en secondes. */
   readonly dureeMinimumS: number;
-  /** Duree de vie maximale d'une zone, en secondes. */
+  /** Duree de vie maximale d'une zone ouverte, en secondes. */
   readonly dureeMaximumS: number;
-  /** Delai entre deux apparitions de zone, en secondes. */
+  /** Delai entre deux poses de mine de zone, en secondes. */
   readonly intervalleApparitionS: number;
-  /** Quelles natures de zone peuvent apparaitre. */
+  /** Quelles natures de zone une mine peut cacher. */
   readonly types: Readonly<Record<TypeZone, boolean>>;
+  /** Combien de mines de zone peuvent attendre sur la carte en meme temps (etape 7.12). */
+  readonly minesMaximum: number;
 }
 
 /**
@@ -236,6 +247,7 @@ export const REGLAGES_PAR_DEFAUT: ReglagesPartie = {
     dureeMaximumS: 30,
     intervalleApparitionS: 15,
     types: { chaos: true, repulsion: true, attraction: true, invisibilite: true },
+    minesMaximum: MINES_DE_ZONE.MAXIMUM_PAR_DEFAUT,
   },
   botsNoirs: {
     actifs: true,

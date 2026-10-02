@@ -1970,6 +1970,10 @@ function envoyer(socket: SocketTypee, notification: Notification): void {
     case 'mineExplosee':
       socket.emit('mineExplosee', notification.charge);
       return;
+
+    case 'mineDeZone':
+      socket.emit('mineDeZone', notification.charge);
+      return;
   }
 }
 

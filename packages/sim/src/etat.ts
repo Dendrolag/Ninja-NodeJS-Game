@@ -401,7 +401,10 @@ export type EvenementPartie =
   | FuiteDansLaFumee
   | MinePosee
   | MineArmee
-  | MineExplosee;
+  | MineExplosee
+  | MineDeZonePosee
+  | MineDeZoneArmee
+  | ZoneOuverte;
 
 /**
  * Un joueur a mis un objet dans sa poche (etape 7.10). Il ne l'a pas encore utilise: le
@@ -474,6 +477,49 @@ export interface MineExplosee {
   readonly botsNoirsTues: number;
   readonly botsTues: number;
   readonly points: number;
+}
+
+/**
+ * Une mine de zone, que pose la carte (etape 7.12): elle cache une zone, dont elle porte la
+ * nature, et l'ouvre a sa place apres qu'un joueur ou un Black Ninja l'a armee. Voir zones.ts.
+ */
+export interface MineDeZone {
+  readonly id: IdentifiantEntite;
+  /** La nature de la zone qu'elle cache, tiree a la pose, et visible de tous. */
+  readonly nature: TypeZone;
+  readonly position: Position;
+  /**
+   * Armee, le temps avant que la zone s'ouvre, en millisecondes. Absent tant qu'elle attend:
+   * une mine de zone n'a pas de limite de temps.
+   */
+  readonly avantOuvertureMs?: number;
+}
+
+/** La carte vient de poser une mine de zone (etape 7.12). */
+export interface MineDeZonePosee {
+  readonly type: 'mineDeZonePosee';
+  readonly mine: IdentifiantEntite;
+  readonly nature: TypeZone;
+  readonly position: Position;
+}
+
+/** Un joueur ou un Black Ninja vient d'armer une mine de zone (etape 7.12). */
+export interface MineDeZoneArmee {
+  readonly type: 'mineDeZoneArmee';
+  readonly mine: IdentifiantEntite;
+  readonly nature: TypeZone;
+  /** L'entite qui l'a armee. */
+  readonly par: IdentifiantEntite;
+  readonly position: Position;
+}
+
+/** Une mine de zone vient de s'ouvrir: sa zone est sur la carte, a sa place (etape 7.12). */
+export interface ZoneOuverte {
+  readonly type: 'zoneOuverte';
+  readonly mine: IdentifiantEntite;
+  readonly zone: IdentifiantEntite;
+  readonly nature: TypeZone;
+  readonly position: Position;
 }
 
 /**
@@ -843,6 +889,13 @@ export interface EtatPartie {
    */
   readonly minesPosees?: Readonly<Record<IdentifiantEntite, MineSurLaCarte>>;
   /**
+   * Les mines de zone que la carte a posees (etape 7.12), dans l'ordre de leur pose.
+   *
+   * ABSENT TANT QU'AUCUNE N'EST POSEE, et retire des que la derniere s'est ouverte, comme les
+   * mines posees: une partie aux zones coupees a exactement l'etat d'avant l'etape.
+   */
+  readonly minesDeZone?: Readonly<Record<IdentifiantEntite, MineDeZone>>;
+  /**
    * Reglages choisis par l'hote, une fois appliques ceux que le mode impose. Le moteur
    * ne connait que ceux-la.
    */
@@ -907,7 +960,7 @@ export interface ProchainesApparitions {
   readonly bonusMs: number;
   /** Avant la prochaine tentative d'apparition de malus. */
   readonly malusMs: number;
-  /** Avant la prochaine apparition de zone speciale. */
+  /** Avant la prochaine pose de mine de zone (etape 7.12; avant, l'apparition d'une zone). */
   readonly zoneMs: number;
 }
 
@@ -974,8 +1027,8 @@ export function creerEtatInitial(options: OptionsEtatInitial): EtatPartie {
     zones: {},
     // Bonus et malus tentent leur chance des le premier battement, comme le
     // legacy qui appelait spawnBonus et spawnMalus au lancement de la partie. La
-    // premiere zone, elle, attend son intervalle: le legacy n'en planifiait une
-    // qu'au premier passage de manageSpecialZones.
+    // premiere mine de zone, elle, attend son intervalle, comme la premiere zone du
+    // legacy, qui n'en planifiait une qu'au premier passage de manageSpecialZones.
     prochainesApparitions: {
       bonusMs: 0,
       malusMs: 0,

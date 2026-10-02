@@ -788,14 +788,17 @@ describe('effets dans le battement', () => {
     expect(Object.keys(tick(etat, {}, BATTEMENT_MS).objets)).toHaveLength(0);
   });
 
-  it('fait apparaitre bonus, malus et zones au fil de la partie', () => {
+  it('fait apparaitre bonus, malus et mines de zone au fil de la partie', () => {
     let etat = creerEtatInitial({ graine: 2026 });
     for (let battement = 0; battement < 1_200; battement += 1) {
       etat = tick(etat, {}, BATTEMENT_MS);
     }
 
     expect(Object.keys(etat.objets).length).toBeGreaterThan(0);
-    expect(Object.keys(etat.zones).length).toBeGreaterThan(0);
+    // Depuis l'etape 7.12, une zone ne nait plus seule: sans personne pour armer les mines de
+    // zone, la carte n'en ouvre aucune.
+    expect(Object.keys(etat.minesDeZone ?? {}).length).toBeGreaterThan(0);
+    expect(Object.keys(etat.zones)).toEqual([]);
   });
 
   it('fait apparaitre exactement les memes choses a graine egale', () => {
@@ -804,7 +807,7 @@ describe('effets dans le battement', () => {
       for (let battement = 0; battement < 600; battement += 1) {
         etat = tick(etat, {}, BATTEMENT_MS);
       }
-      return { objets: etat.objets, zones: etat.zones };
+      return { objets: etat.objets, zones: etat.zones, minesDeZone: etat.minesDeZone };
     };
 
     expect(derouler(2026)).toEqual(derouler(2026));

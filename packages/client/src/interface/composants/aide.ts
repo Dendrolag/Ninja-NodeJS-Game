@@ -88,6 +88,21 @@ function nombreFr(valeur: number): string {
   return String(valeur).replace('.', ',');
 }
 
+/**
+ * La couleur de la mine de zone qui cache chaque zone (etape 7.12), qui est celle de la zone
+ * une fois ouverte (APPARENCE_ZONE).
+ */
+const COULEURS_ZONES: Readonly<Record<TypeZone, string>> = {
+  chaos: 'rouge',
+  repulsion: 'bleue',
+  attraction: 'verte',
+  invisibilite: 'violette',
+};
+
+/** Comment une zone s'ouvre, depuis l'etape 7.12. */
+const MINES_DE_ZONE_AIDE =
+  'Les zones ne naissent plus seules : la carte pose des mines de zone, visibles de tous, de la couleur de la zone qu’elles cachent. Un joueur ou un Black Ninja qui marche dessus l’arme, et la zone s’ouvre 3 secondes plus tard, là où était la mine. À vous de choisir où l’ouvrir.';
+
 /** Ce que fait chaque zone. Textes du jeu d'origine. */
 const EFFETS_ZONES: Readonly<Record<TypeZone, string>> = {
   chaos: 'Les ninjas qui la traversent changent de couleur au hasard.',
@@ -214,6 +229,7 @@ export function monterAide(doc: Document): Fenetre {
       'section',
       { classe: 'aide-section' },
       creer(doc, 'h3', { texte: 'Zones spéciales' }),
+      creer(doc, 'p', { texte: MINES_DE_ZONE_AIDE }),
       creer(
         doc,
         'ul',
@@ -224,7 +240,7 @@ export function monterAide(doc: Document): Fenetre {
             'li',
             {},
             creer(doc, 'strong', { texte: APPARENCE_ZONE[zone].libelle }),
-            creer(doc, 'span', { texte: effet }),
+            creer(doc, 'span', { texte: `Mine ${COULEURS_ZONES[zone]}. ${effet}` }),
           ),
         ),
       ),

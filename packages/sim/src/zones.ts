@@ -33,15 +33,47 @@
  * Les bots noirs sont indifferents aux zones: le legacy ne leur appliquait aucun
  * effet, parce qu'ils vivaient dans une table que sendUpdates ne passait pas aux
  * zones. Ce comportement est conserve.
+ *
+ * DEPUIS L'ETAPE 7.12, UNE ZONE NE NAIT PLUS SEULE. Le legacy en faisait apparaitre une
+ * toutes les quinze secondes, trois au plus, d'un rayon tire au hasard, ou que ce soit
+ * (manageSpecialZones et generateRandomShape, :803 et :513). A la place, et par decision du
+ * porteur du projet du 28 septembre 2026 (docs/plan/etape-7-12.md), la carte pose au meme
+ * rythme une MINE DE ZONE, visible de tous, qui porte la nature de la zone qu'elle cache:
+ *
+ *   - elle se pose loin des joueurs, des Black Ninjas et des autres mines de zone, tant que
+ *     celles qui attendent sont moins que le plafond regle (trois par defaut);
+ *   - un joueur en jeu, de tout camp, ou un Black Ninja qui passe dessus l'arme; ni un faux
+ *     ninja ni l'Evade;
+ *   - armee, elle s'ouvre trois secondes plus tard: sa zone se pose a sa place, d'un rayon
+ *     fixe de 220 pixels, pour une duree tiree comme avant entre les deux durees reglees.
+ *
+ * Les zones ouvertes n'ont pas de plafond propre: le plafond des mines borne leur nombre.
+ * Ce qu'une zone fait, une fois ouverte, ne change pas. C'est un ecart voulu au legacy, que
+ * les tests de caracterisation continuent d'observer tel qu'il etait.
  */
 
 import type { Position } from '@neon-ninja/shared';
-import { CADENCES_LEGACY_MS, TYPES_ZONE, ZONES, element, nombre, reel } from '@neon-ninja/shared';
+import {
+  CADENCES_LEGACY_MS,
+  MINES_DE_ZONE,
+  TYPES_ZONE,
+  ZONES,
+  element,
+  nombre,
+  reel,
+} from '@neon-ninja/shared';
 
 import { couleurUnique } from './couleurs.js';
 import { resoudreDeplacement } from './deplacement.js';
-import type { Bot, EtatPartie, IdentifiantEntite, Joueur, ZoneSpeciale } from './etat.js';
-import { couleursUtilisees, identifiantSuivant } from './etat.js';
+import type {
+  Bot,
+  EtatPartie,
+  IdentifiantEntite,
+  Joueur,
+  MineDeZone,
+  ZoneSpeciale,
+} from './etat.js';
+import { couleursUtilisees, identifiantSuivant, positionDApparition } from './etat.js';
 import { avancerUneEcheance, intervalleFixe } from './planification.js';
 
 /** Une position est-elle dans la zone ? Portage de isEntityInside (legacy :542). */
@@ -57,27 +89,67 @@ export function estCache(etat: EtatPartie, position: Position): boolean {
 }
 
 /**
- * Fait vivre les zones: les expire, puis en fait apparaitre de nouvelles.
+ * Fait vivre les zones et leurs mines (etape 7.12): les zones ouvertes s'expirent, les mines
+ * armees s'ouvrent a leur heure, celles qu'un joueur ou un Black Ninja touche s'arment, et la
+ * carte pose une mine nouvelle au rythme regle.
  *
- * Quand les zones sont desactivees dans les reglages, la carte se vide, comme le
- * faisait manageSpecialZones (legacy :804).
+ * Quand les zones sont desactivees dans les reglages, la carte se vide, zones et mines,
+ * comme le faisait manageSpecialZones (legacy :804) pour les zones.
+ *
+ * @param horsJeu Les joueurs hors jeu (les traqueurs elimines, en Chasse): ils n'arment rien.
  */
-export function avancerLesZones(etat: EtatPartie, dtMs: number): EtatPartie {
+export function avancerLesZones(
+  etat: EtatPartie,
+  dtMs: number,
+  horsJeu: ReadonlySet<IdentifiantEntite> = new Set(),
+): EtatPartie {
   if (!etat.reglages.zones.actives) {
-    return Object.keys(etat.zones).length === 0 ? etat : { ...etat, zones: {} };
+    return viderLesZones(etat);
   }
 
   return avancerUneEcheance(
-    fairePasserLeTempsSurLesZones(etat, dtMs),
+    armerLesMinesDeZone(
+      ouvrirLesMinesArmees(fairePasserLeTempsSurLesZones(etat, dtMs), dtMs),
+      horsJeu,
+    ),
     dtMs,
     'zoneMs',
     (alea) => intervalleFixe(alea, etat.reglages.zones.intervalleApparitionS),
-    faireApparaitreUneZone,
+    poserUneMineDeZone,
   );
+}
+
+/** Zones coupees: ni zone ni mine de zone. L'etat est rendu tel quel s'il n'y en a pas. */
+function viderLesZones(etat: EtatPartie): EtatPartie {
+  if (Object.keys(etat.zones).length === 0 && etat.minesDeZone === undefined) {
+    return etat;
+  }
+
+  return avecLesMinesDeZone({ ...etat, zones: {} }, {});
+}
+
+/**
+ * L'etat avec ces mines de zone. Sans aucune mine, le champ disparait au lieu de valoir une
+ * table vide: une partie dont toutes les mines se sont ouvertes redevient une partie sans.
+ */
+function avecLesMinesDeZone(
+  etat: EtatPartie,
+  mines: Readonly<Record<IdentifiantEntite, MineDeZone>>,
+): EtatPartie {
+  if (Object.keys(mines).length > 0) {
+    return { ...etat, minesDeZone: mines };
+  }
+
+  const { minesDeZone: _videes, ...reste } = etat;
+  return reste;
 }
 
 /** Retranche le temps ecoule a chaque zone et retire celles dont la duree est passee. */
 function fairePasserLeTempsSurLesZones(etat: EtatPartie, dtMs: number): EtatPartie {
+  if (Object.keys(etat.zones).length === 0) {
+    return etat;
+  }
+
   const zones: Record<IdentifiantEntite, ZoneSpeciale> = {};
 
   for (const [id, zone] of Object.entries(etat.zones)) {
@@ -91,35 +163,60 @@ function fairePasserLeTempsSurLesZones(etat: EtatPartie, dtMs: number): EtatPart
 }
 
 /**
- * Fait apparaitre une zone, si le plafond de trois n'est pas atteint.
- *
- * L'ordre des tirages est celui du legacy: la nature, la duree, puis la forme.
- * Le respecter n'est pas de la coquetterie: c'est ce qui fait qu'une partie
- * rejouee avec la meme graine produit exactement les memes zones.
+ * Les mines de zone armees se rapprochent de leur ouverture; celles dont l'heure est venue
+ * quittent la carte et ouvrent leur zone a leur place, dans l'ordre de leur pose.
  */
-function faireApparaitreUneZone(etat: EtatPartie): EtatPartie {
+function ouvrirLesMinesArmees(etat: EtatPartie, dtMs: number): EtatPartie {
+  const posees = etat.minesDeZone;
+
+  // Aucune mine armee: rien ne change, et la table n'est pas recopiee.
+  if (
+    posees === undefined ||
+    Object.values(posees).every((mine) => mine.avantOuvertureMs === undefined)
+  ) {
+    return etat;
+  }
+
+  const mines: Record<IdentifiantEntite, MineDeZone> = {};
+  const aOuvrir: MineDeZone[] = [];
+
+  for (const [id, mine] of Object.entries(posees)) {
+    if (mine.avantOuvertureMs === undefined) {
+      mines[id] = mine;
+      continue;
+    }
+
+    const avantOuvertureMs = mine.avantOuvertureMs - dtMs;
+
+    if (avantOuvertureMs > 0) {
+      mines[id] = { ...mine, avantOuvertureMs };
+    } else {
+      aOuvrir.push(mine);
+    }
+  }
+
+  let courant = avecLesMinesDeZone(etat, mines);
+
+  for (const mine of aOuvrir) {
+    courant = ouvrirUneZone(courant, mine);
+  }
+
+  return courant;
+}
+
+/**
+ * Une mine de zone s'ouvre: sa zone se pose a sa place, au rayon fixe, pour une duree tiree
+ * entre les deux durees reglees, arrondie a la milliseconde inferieure comme dans le legacy.
+ */
+function ouvrirUneZone(etat: EtatPartie, mine: MineDeZone): EtatPartie {
   const reglages = etat.reglages.zones;
-  const naturesActives = TYPES_ZONE.filter((nature) => reglages.types[nature]);
-
-  if (naturesActives.length === 0) {
-    return etat;
-  }
-
-  if (Object.keys(etat.zones).length >= ZONES.SIMULTANEES_MAXIMUM) {
-    return etat;
-  }
-
-  const nature = element(etat.alea, naturesActives);
-  const duree = reel(nature.alea, reglages.dureeMinimumS * 1000, reglages.dureeMaximumS * 1000);
-  const forme = tirerUneForme(etat, duree.alea);
-
+  const duree = reel(etat.alea, reglages.dureeMinimumS * 1000, reglages.dureeMaximumS * 1000);
   const identifiant = identifiantSuivant(etat, 'zone');
   const zone: ZoneSpeciale = {
     id: identifiant.valeur,
-    type: nature.valeur,
-    centre: forme.centre,
-    rayon: forme.rayon,
-    // Le legacy arrondissait la duree a la milliseconde inferieure.
+    type: mine.nature,
+    centre: mine.position,
+    rayon: ZONES.RAYON_PX,
     dureeRestanteMs: Math.floor(duree.valeur),
   };
 
@@ -127,38 +224,154 @@ function faireApparaitreUneZone(etat: EtatPartie): EtatPartie {
     ...etat,
     zones: { ...etat.zones, [identifiant.valeur]: zone },
     compteurIdentifiants: identifiant.compteur,
-    alea: forme.alea,
+    alea: duree.alea,
+    evenements: [
+      ...etat.evenements,
+      {
+        type: 'zoneOuverte',
+        mine: mine.id,
+        zone: identifiant.valeur,
+        nature: mine.nature,
+        position: mine.position,
+      },
+    ],
   };
 }
 
 /**
- * Tire la taille et la place d'une zone.
- *
- * Portage de generateRandomShape (legacy :513): une zone couvre au plus un
- * cinquieme de la carte, mesure cent cinquante pixels de rayon au minimum, et se
- * pose entierement a l'interieur de la carte.
- *
- * Une precaution que le legacy n'avait pas: sur une carte assez petite pour que
- * le cinquieme d'aire descende sous le rayon minimal, le tirage du legacy aurait
- * produit un rayon plus grand que la carte, donc une zone impossible a placer. Le
- * rayon est ici plafonne a la moitie du plus petit cote.
+ * Les mines de zone qui attendent et qu'un joueur en jeu ou un Black Ninja touche s'arment.
+ * Tout joueur, de tout camp, arme une mine de zone: elle n'a pas de poseur. Ni les faux
+ * ninjas ni l'Evade ne l'arment (decisions 2 et 3 du porteur du projet).
  */
-function tirerUneForme(
+function armerLesMinesDeZone(
   etat: EtatPartie,
-  alea: EtatPartie['alea'],
-): { readonly centre: Position; readonly rayon: number; readonly alea: EtatPartie['alea'] } {
-  const { largeur, hauteur } = etat.carte;
-  const rayonParLAire = Math.sqrt((largeur * hauteur) / ZONES.PART_DE_CARTE / Math.PI);
-  const rayonMaximum = Math.max(
-    ZONES.RAYON_MINIMUM_PX,
-    Math.min(rayonParLAire, Math.min(largeur, hauteur) / 2),
-  );
+  horsJeu: ReadonlySet<IdentifiantEntite>,
+): EtatPartie {
+  const posees = etat.minesDeZone;
 
-  const rayon = reel(alea, ZONES.RAYON_MINIMUM_PX, rayonMaximum);
-  const x = reel(rayon.alea, rayon.valeur, largeur - rayon.valeur);
-  const y = reel(x.alea, rayon.valeur, hauteur - rayon.valeur);
+  if (posees === undefined) {
+    return etat;
+  }
 
-  return { centre: { x: x.valeur, y: y.valeur }, rayon: rayon.valeur, alea: y.alea };
+  const mines: Record<IdentifiantEntite, MineDeZone> = {};
+  const evenements = [...etat.evenements];
+  // Les Black Ninjas, releves une fois pour toutes les mines, comme pour les mines posees.
+  const botsNoirs = Object.values(etat.bots).filter((bot) => bot.type === 'botNoir');
+  let arme = false;
+
+  for (const [id, mine] of Object.entries(posees)) {
+    const par =
+      mine.avantOuvertureMs === undefined ? quiLArme(etat, mine, horsJeu, botsNoirs) : undefined;
+
+    if (par === undefined) {
+      mines[id] = mine;
+      continue;
+    }
+
+    arme = true;
+    mines[id] = { ...mine, avantOuvertureMs: MINES_DE_ZONE.DELAI_AVANT_OUVERTURE_MS };
+    evenements.push({
+      type: 'mineDeZoneArmee',
+      mine: id,
+      nature: mine.nature,
+      par,
+      position: mine.position,
+    });
+  }
+
+  // Aucune mine armee dans ce battement: l'etat est rendu tel quel, sans copie.
+  return arme ? { ...etat, minesDeZone: mines, evenements } : etat;
+}
+
+/**
+ * L'entite qui arme cette mine dans ce battement, s'il y en a une: le premier joueur en jeu
+ * qui la touche, dans l'ordre des joueurs, sinon le premier Black Ninja.
+ */
+function quiLArme(
+  etat: EtatPartie,
+  mine: MineDeZone,
+  horsJeu: ReadonlySet<IdentifiantEntite>,
+  botsNoirs: readonly Bot[],
+): IdentifiantEntite | undefined {
+  for (const joueur of Object.values(etat.joueurs)) {
+    if (!horsJeu.has(joueur.id) && surLaMine(joueur.position, mine.position)) {
+      return joueur.id;
+    }
+  }
+
+  for (const bot of botsNoirs) {
+    if (surLaMine(bot.position, mine.position)) {
+      return bot.id;
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Cette entite touche-t-elle la mine ? Au seuil du contact, en inegalite stricte, avec le
+ * meme prefiltre par axe que les mines posees (mines.ts).
+ */
+function surLaMine(entite: Position, mine: Position): boolean {
+  const ecartX = entite.x - mine.x;
+  const ecartY = entite.y - mine.y;
+  const seuil = MINES_DE_ZONE.SEUIL_ARMEMENT_PX;
+
+  if (ecartX >= seuil || ecartX <= -seuil || ecartY >= seuil || ecartY <= -seuil) {
+    return false;
+  }
+
+  return Math.hypot(ecartX, ecartY) < seuil;
+}
+
+/**
+ * La carte pose une mine de zone, si celles qui attendent sont moins que le plafond regle.
+ * Les mines armees ne comptent plus: leur zone est deja promise.
+ *
+ * La nature se tire d'abord, parmi les natures cochees, puis la place, loin des joueurs, des
+ * Black Ninjas et des autres mines de zone (positionDApparition et sa distance de securite):
+ * personne ne l'arme en naissant, et deux mines ne se collent pas.
+ */
+function poserUneMineDeZone(etat: EtatPartie): EtatPartie {
+  const reglages = etat.reglages.zones;
+  const naturesActives = TYPES_ZONE.filter((nature) => reglages.types[nature]);
+
+  if (naturesActives.length === 0) {
+    return etat;
+  }
+
+  const posees = Object.values(etat.minesDeZone ?? {});
+  const enAttente = posees.filter((mine) => mine.avantOuvertureMs === undefined).length;
+
+  if (enAttente >= reglages.minesMaximum) {
+    return etat;
+  }
+
+  const nature = element(etat.alea, naturesActives);
+  const occupees = [
+    ...Object.values(etat.joueurs).map((joueur) => joueur.position),
+    ...Object.values(etat.bots)
+      .filter((bot) => bot.type === 'botNoir')
+      .map((bot) => bot.position),
+    ...posees.map((mine) => mine.position),
+  ];
+  const place = positionDApparition(nature.alea, etat.terrain, occupees);
+  const identifiant = identifiantSuivant(etat, 'mineDeZone');
+  const mine: MineDeZone = {
+    id: identifiant.valeur,
+    nature: nature.valeur,
+    position: place.valeur,
+  };
+
+  return {
+    ...avecLesMinesDeZone(etat, { ...etat.minesDeZone, [mine.id]: mine }),
+    compteurIdentifiants: identifiant.compteur,
+    alea: place.alea,
+    evenements: [
+      ...etat.evenements,
+      { type: 'mineDeZonePosee', mine: mine.id, nature: mine.nature, position: mine.position },
+    ],
+  };
 }
 
 /** Applique l'effet de chaque zone a ce qu'elle contient. */

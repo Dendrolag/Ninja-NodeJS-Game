@@ -22,6 +22,7 @@ import {
   BORNES_ROOM,
 } from './bornes.js';
 import type { SessionJoueur } from './entrees.js';
+import { MINES_DE_ZONE } from './constantes.js';
 import { REGLAGES_PAR_DEFAUT } from './reglages.js';
 import type { ResultatValidation } from './validation.js';
 import {
@@ -448,6 +449,33 @@ describe('validerReglages', () => {
       valeurAcceptee(validerReglages({ zones: { dureeMinimumS: 20, dureeMaximumS: 20 } })).zones
         .dureeMinimumS,
     ).toBe(20);
+  });
+
+  it('borne le plafond des mines de zone de 1 a 10 (etape 7.12)', () => {
+    const { minimum, maximum } = BORNES_REGLAGES.zones.minesMaximum;
+
+    expect([minimum, maximum]).toEqual([1, 10]);
+    expect(
+      valeurAcceptee(validerReglages({ zones: { minesMaximum: 10 } })).zones.minesMaximum,
+    ).toBe(10);
+    expect(champsRefuses(validerReglages({ zones: { minesMaximum: 0 } }))).toEqual([
+      'zones.minesMaximum',
+    ]);
+    expect(champsRefuses(validerReglages({ zones: { minesMaximum: 11 } }))).toEqual([
+      'zones.minesMaximum',
+    ]);
+    expect(champsRefuses(validerReglages({ zones: { minesMaximum: 2.5 } }))).toEqual([
+      'zones.minesMaximum',
+    ]);
+  });
+
+  it('accepte des reglages de zones ecrits avant les mines de zone, plafond par defaut', () => {
+    const anciens = valeurAcceptee(
+      validerReglages({ zones: { actives: true, intervalleApparitionS: 20, dureeMaximumS: 40 } }),
+    );
+
+    expect(anciens.zones.minesMaximum).toBe(MINES_DE_ZONE.MAXIMUM_PAR_DEFAUT);
+    expect(anciens.zones.intervalleApparitionS).toBe(20);
   });
 
   it('refuse un groupe de reglages qui n est pas un objet', () => {
