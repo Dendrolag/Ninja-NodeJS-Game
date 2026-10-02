@@ -16,7 +16,7 @@ Un second objet de poche, la mine: le joueur qui la ramasse la pose sous ses pie
 - **Le serveur**: les mines dans l'instantané, les trois notifications, une mine qui tue en Massacre comptée comme une prise par le relevé des exploits.
 - **La page**: le rendu choisi sur planche (`packages/client/src/rendu/mines.ts`, créé, et deux calques de PixiJS); les annonces (grand titre de la victime, bulle du poseur); les points flottants (gain du poseur, perte de la victime en Horde); les sons; l'aide; le récapitulatif du salon; le rappel de la touche E; le repère de localisation après une mort par mine.
 - **La planche** `docs/design/etape-7-11/1-mine.png`, rendus retenus A, A, B, B, A.
-- **Hors étape, demandé pendant l'étape**: une planche des zones, `docs/design/etape-7-12/1-zones.png` (trois rendus, trois tailles fixes), consignée dans la fiche 7.12, choix en attente.
+- **Hors étape, demandé pendant l'étape**: une planche des zones, `docs/design/etape-7-12/1-zones.png` (trois rendus, trois tailles fixes), consignée dans la fiche 7.12. Le porteur du projet a choisi le rendu B, motif vivant, et 220 pixels de rayon.
 - **Défaut corrigé en route**: le rappel des touches passait sous le temps restant à 1 280 pixels de large, déjà depuis la fumée.
 
 ## Fichiers créés ou modifiés
@@ -83,12 +83,11 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
 
 - **Trois sons sont provisoires**: la fumée (`SONS.fumee`, le souffle du katana), l'armement de la mine (`SONS.mineArmee`, le tic du compte à rebours) et son explosion (`SONS.mineExplosee`, le Black Ninja détruit). Le porteur du projet a annoncé le son de la fumée, et n'avait pas son fichier sous la main le 28 septembre. Pour chacun: déposer le fichier dans `assets/sons/`, et changer le nom dans `SONS` (`packages/shared/src/ressources.ts`); le test des ressources vérifie que le fichier existe.
 - **Le délai de 1,5 seconde est à juger en jouant**: à vitesse égale, un poursuivant collé au joueur qui arme la mine en sort aussi; c'est celui qui suit de loin qui y reste (fiche, réconciliation, point 16).
-- **Les zones**: rendu et taille en attente du porteur du projet (fiche 7.12).
 - Rien d'autre.
 
 ## Prochaine action exacte
 
-D'abord, **rappeler au porteur du projet les trois sons provisoires** (la fumée, l'armement et l'explosion de la mine), et **lui demander ses choix sur la planche des zones** (`docs/design/etape-7-12/1-zones.png`: le rendu A, B ou C, et la taille, 180, 220 ou 260 pixels). Puis exécuter l'étape `7.12`, les mines de zone: lire `docs/plan/etape-7-12.md`, sa section « Demande du porteur du projet, consignée le 2 octobre 2026 », réconcilier avec la mine posée (`packages/sim/src/mines.ts`, l'entité `mine` du flux, `rendu/mines.ts`), et commencer par la planche de la mine de zone.
+D'abord, **rappeler au porteur du projet les trois sons provisoires** (la fumée, l'armement et l'explosion de la mine). Puis exécuter l'étape `7.12`, les mines de zone: lire `docs/plan/etape-7-12.md`, sa section « Demande du porteur du projet, consignée le 2 octobre 2026 » (zones au rendu B, motif vivant, et à 220 pixels de rayon), réconcilier avec la mine posée (`packages/sim/src/mines.ts`, l'entité `mine` du flux, `rendu/mines.ts`), et commencer par la planche de la mine de zone.
 
 ## Étape suivante
 
