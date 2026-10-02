@@ -37,7 +37,7 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
   - 50 bots, 12 joueurs, murs: jeu `5b0ec6122ba23b71cb3ad524f15191dbf52818b5af76c01d24728018fa3e8beb`, flux `71ef3e4df00b32aa9fa588ff7956840de344a5662799c8fe3b38d91ac436e815`
   - 300 bots, 12 joueurs, sans mur: jeu `61c135dacfec026a153abbe287e75b49b6e8c9cb80f3f931fe30340db922ffeb`, flux `2298f9c0d5522f5fb667215713e539f8e245eddd26a9e815149e9ba7f69c9519`
   - 150 bots, 2 joueurs, murs: jeu `b301410e5fd6308a6cb8cfc32f0d59148b39321afc4582e9fb936fcaf9a21016`, flux `4ec3aadda8db5b7ac7f188891b418df2670d929d80943bd50e6d21bb4a858935`
-- État de la CI: à relever après la poussée sur `master`.
+- État de la CI: verte sur `855c016` (exécution 37035499454), types, linter et tests, bout en bout; sa mise en ligne a été sautée, un commit plus récent étant déjà sur la branche. Verte aussi sur `2b011cc` (exécution 37036798399, planification de l'étape 4.8), qui a mis le code de l'étape en ligne: le serveur de production répond sur ce commit (`/sante`).
 
 ## Décisions et écarts au plan
 
