@@ -970,3 +970,24 @@ Douze joueurs, Tokyo avec ses murs, graine 42, un processus neuf par ligne, sur 
 |         300 |     342 | 3,443, 3,562, 3,522       |                822 |
 
 La même partie au même échauffement, mines coupées le temps de la mesure (avant les optimisations, qui ne touchent pas une partie sans mine): 0,26 à 0,32 ms à 50, 1,25 à 1,36 à 150, 5,1 à 5,5 à 300. Les parties divergent, et la partie minée est moins chère à 150 et 300 faux ninjas: ses mines détruisent des Black Ninjas et changent ce qui s'y passe. Seule la mesure isolée dit le coût des mines.
+
+## 23. Mesure de l'étape 7.12: les mines de zone (2 octobre 2026)
+
+Mesures faites dans le conteneur de la session, comme à la section 22: les chiffres se comparent entre eux.
+
+### 23.1 L'essentiel
+
+- **Dix mines de zone qui attendent ne coûtent presque rien.** Sur une même partie, rejouée à l'octet (même état final du générateur), dix mines de zone posées hors de la carte, où personne ne peut les armer, le plafond le plus haut du salon, ajoutent environ 0,01 à 0,02 ms par battement au moteur à 50 faux ninjas, rien de lisible au-dessus du bruit à 300, et 1,6 octet par message: une mine de zone qui ne change pas ne part qu'avec les images complètes.
+- **Les zones ouvertes coûtent ce qu'elles coûtaient.** Leurs effets n'ont pas changé; elles naissent seulement d'une mine. Leur nombre n'a plus de plafond propre, mais le plafond des mines qui attendent le borne en pratique: dans les parties de l'outil d'empreinte, où une mine se pose toutes les cinq secondes, cinq à sept zones se sont ouvertes en tout dans les trois parties à douze joueurs, aucune dans la partie à deux.
+- **Sans les zones, rien n'a bougé, à l'octet.** L'outil d'empreinte relancé avec `--sans-zones` sur le code de l'étape et sur celui d'avant (commit `5dc1580`, l'option ajoutée à l'identique) donne les mêmes empreintes du jeu et du flux pour les quatre parties de référence.
+
+### 23.2 Méthode et chiffres
+
+Script de session, non gardé: une partie de 12 joueurs aux intentions tirées au sort, sur une carte sans mur, 2 400 battements de 50 ms dont 400 d'échauffement, la première pose de mine au-delà de la mesure; avec ou sans dix mines de zone posées hors de la carte. Trois passages par ligne, un processus neuf chacun. Moteur seul, puis projection et codage du flux, en millisecondes par battement.
+
+| Faux ninjas | Moteur sans mine    | Moteur, dix mines   | Flux sans | Flux avec | Octets sans | Octets avec |
+| ----------: | ------------------- | ------------------- | --------- | --------- | ----------: | ----------: |
+|          50 | 0,115, 0,127, 0,124 | 0,130, 0,205, 0,133 | 0,05      | 0,06      |       185,3 |       186,9 |
+|         300 | 1,321, 1,402, 1,426 | 1,344, 1,304, 1,287 | 0,30      | 0,29      |       754,3 |       755,9 |
+
+Le 0,205 est un passage isolé, que les deux autres ne confirment pas. Aucun banc gardé n'a été ajouté: le coût ne justifie pas d'option à `pnpm charge`.

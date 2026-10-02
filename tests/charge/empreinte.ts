@@ -50,6 +50,14 @@
  * de l'etape 7.10, fumee comprise.
  *
  *   node --disable-warning=ExperimentalWarning tests/charge/empreinte.ts --sans-mine
+ *
+ * SANS LES ZONES (etape 7.12). Depuis cette etape, les zones s'ouvrent sur des mines de zone
+ * au lieu d'apparaitre seules: avec les zones en jeu, comme par defaut, toute la suite des
+ * parties change. L'option --sans-zones les coupe, et retire de l'empreinte le plafond des
+ * mines de zone, seul reglage ajoute: les parties rejouent alors a l'octet celles d'avant
+ * l'etape, zones coupees de la meme facon.
+ *
+ *   node --disable-warning=ExperimentalWarning tests/charge/empreinte.ts --sans-zones
  */
 
 import { createHash } from 'node:crypto';
@@ -136,6 +144,9 @@ const SANS_POCHE = process.argv.includes('--sans-poche');
 /** La mine est-elle coupee pour cette execution, seule (etape 7.11). */
 const SANS_MINE = process.argv.includes('--sans-mine');
 
+/** Les zones sont-elles coupees pour cette execution (etape 7.12). */
+const SANS_ZONES = process.argv.includes('--sans-zones');
+
 /** Tous les combien de battements un joueur de l'outil se sert de sa poche. */
 const CADENCE_DE_LA_POCHE = 97;
 
@@ -147,7 +158,8 @@ function sansTerrain(cle: string, valeur: unknown): unknown {
   return cle === 'terrain' ||
     (SANS_EVADE && cle === 'evade' && valeur === false) ||
     (SANS_POCHE && cle === 'objetsDePoche') ||
-    (SANS_MINE && cle === 'mine' && estUnReglageCoupe(valeur))
+    (SANS_MINE && cle === 'mine' && estUnReglageCoupe(valeur)) ||
+    (SANS_ZONES && cle === 'minesMaximum')
     ? undefined
     : valeur;
 }
@@ -166,7 +178,7 @@ function empreinteDe(partie: PartieDEmpreinte, murs: EtatPartie['terrain']): str
       dureePartieS: 200,
       bonus: { intervalleApparitionS: 2 },
       malus: { intervalleApparitionS: 4 },
-      zones: { intervalleApparitionS: 5 },
+      zones: { intervalleApparitionS: 5, ...(SANS_ZONES ? { actives: false } : {}) },
       botsNoirs: { momentApparitionPourCent: 5 },
       ...(SANS_EVADE ? { evade: false } : {}),
       ...(SANS_POCHE ? { objetsDePoche: { fumee: { actif: false }, mine: { actif: false } } } : {}),

@@ -159,6 +159,32 @@ async function prochain<Nom extends keyof EvenementsServeurVersClient>(
   });
 }
 
+/**
+ * Attend le prochain fait de mine de zone de cette sorte. Les autres passent: la carte peut
+ * poser une mine nouvelle pendant qu'une autre s'arme ou s'ouvre, puisqu'une mine armee ne
+ * compte plus dans le plafond.
+ */
+async function prochainFait(
+  client: ClientTypee,
+  quoi: 'posee' | 'armee' | 'ouverte',
+): Promise<Parameters<EvenementsServeurVersClient['mineDeZone']>[0]> {
+  return new Promise((resoudre, rejeter) => {
+    const minuterie = setTimeout(() => {
+      client.off('mineDeZone', ecouter);
+      rejeter(new Error(`Aucune mine de zone « ${quoi} » n est arrivee.`));
+    }, DELAI_ATTENTE_MS);
+    const ecouter = (charge: Parameters<EvenementsServeurVersClient['mineDeZone']>[0]): void => {
+      if (charge.quoi === quoi) {
+        clearTimeout(minuterie);
+        client.off('mineDeZone', ecouter);
+        resoudre(charge);
+      }
+    };
+
+    client.on('mineDeZone', ecouter);
+  });
+}
+
 /** Collecte tous les messages de ce nom recus a partir de maintenant. */
 function collecter<Nom extends keyof EvenementsServeurVersClient>(
   client: ClientTypee,
@@ -299,8 +325,8 @@ describe('les mines de zone, a travers le reseau', () => {
     const bob = invite.id as string;
 
     // La carte pose sa mine au bout de l'intervalle, et le dit a tous.
-    const poseeChezLHote = prochain(hote, 'mineDeZone');
-    const poseeChezLInvite = prochain(invite, 'mineDeZone');
+    const poseeChezLHote = prochainFait(hote, 'posee');
+    const poseeChezLInvite = prochainFait(invite, 'posee');
     horloge.avancerDe(5000);
     const posee = await poseeChezLInvite;
     expect(await poseeChezLHote).toEqual(posee);
@@ -325,8 +351,8 @@ describe('les mines de zone, a travers le reseau', () => {
     expect(flux.partie?.zones).toEqual([]);
 
     // Bob marche dessus: elle s'arme, et tous le savent.
-    const armeeChezLHote = prochain(hote, 'mineDeZone');
-    const armeeChezLInvite = prochain(invite, 'mineDeZone');
+    const armeeChezLHote = prochainFait(hote, 'armee');
+    const armeeChezLInvite = prochainFait(invite, 'armee');
     allerA(room, bob, mine.position);
     const armee = await armeeChezLInvite;
     expect(await armeeChezLHote).toEqual(armee);
@@ -337,8 +363,8 @@ describe('les mines de zone, a travers le reseau', () => {
     );
 
     // Trois secondes plus tard, la zone s'ouvre a sa place.
-    const ouverteChezLHote = prochain(hote, 'mineDeZone');
-    const ouverteChezLInvite = prochain(invite, 'mineDeZone');
+    const ouverteChezLHote = prochainFait(hote, 'ouverte');
+    const ouverteChezLInvite = prochainFait(invite, 'ouverte');
     horloge.avancerDe(MINES_DE_ZONE.DELAI_AVANT_OUVERTURE_MS);
     const ouverte = await ouverteChezLInvite;
     expect(await ouverteChezLHote).toEqual(ouverte);
