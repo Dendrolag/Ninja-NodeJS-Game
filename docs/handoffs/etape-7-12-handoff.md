@@ -58,7 +58,7 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
   - 300 bots, 12 joueurs, sans mur: jeu `4d46c3eec478d4a1d324dff186f0724af80dddac6585dc219c07e5a5e70f236a`, flux `343cde1a968dd4b1b717a60662aa9f9c9a75ec9b08daa995583d25c1468a0cf4` (sept)
   - 150 bots, 2 joueurs, murs: jeu `5a4e4dac8ccd5f97cb3eccc8fe7dd681adfd6c829bb31deb1c8aabc075399eff`, flux `90965567e1c7f11a6a39201dccdb89611c633d15def1841309eb1381de54e06d` (aucune)
 - Banc: dix mines de zone qui attendent coûtent de 0,01 à 0,02 ms par battement à 50 faux ninjas, rien de lisible à 300, et 1,6 octet par message. Section 23 de `docs/mesures/charge-serveur.md`.
-- État de la CI: à relever après la poussée sur `master`.
+- État de la CI: verte sur `e165d3e` (exécution 37017903616): types, linter et tests, bout en bout, mise en ligne. Le serveur de production répond sur ce commit (`/sante`).
 
 ## Décisions et écarts au plan
 
