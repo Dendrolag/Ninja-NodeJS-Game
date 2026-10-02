@@ -37,12 +37,12 @@ Aucune modification de `legacy/`, de `tests/caracterisation/` ni de la logique d
 ## Tests
 
 - Ajoutés: chemin du lointain et sa taille; sons de la fumée et des mines; décalage du lointain (centre, bouts de course, proportion, téléphone, vue presque aussi grande que la carte, vue plus grande, sous le HUD, toutes positions); trou caché sur les images livrées jusqu'à 138 pixels et visible à 139; collisions opaques et présence de sol sur chaque carte; miroir de map3 retourné pixel à pixel. Bout en bout: aucun pixel noir aux quatre coins, à l'endroit et en miroir, bureau et mobile; le lointain recule de 70 pixels quand le terrain en recule 100. Vérifié qu'il échoue avec une amplitude de 180 (jusqu'à 14 440 pixels noirs).
-- Résultat: 3 489 tests unitaires et d'intégration au vert en local, types et linter compris; les tests de la base sautés en local, joués par la CI. Bout en bout en local: les scénarios de rendu, navigation, crédits, parties, mines, fumée et parcours solo au vert.
+- Résultat: 3 493 tests unitaires et d'intégration au vert en local, types et linter compris; les tests de la base sautés en local, joués par la CI. Bout en bout en local: les scénarios de rendu, navigation, crédits, parties, mines, fumée et parcours solo au vert.
 - Banc de charge: 1,61 ms par battement à 360 faux ninjas sur la carte nouvelle, 1,12 pour Tokyo à 300 au même commit (section 24).
 - Banc de rendu sur carte graphique: 60 images par seconde à 500 sprites, notre code à 0,79 ms par image; au cadrage du téléphone, Spirit & Time à 360 entités, 2,31 ms. La série « tout à l'écran » à 500 entités au processeur ralenti a dépassé son plafond local de 4,17 ms dans les deux campagnes complètes (4,20 puis 4,40), après quatre-vingts scénarios; jouée seule, trois fois: 3,57 à 3,76 ms. Elle joue sur Tokyo, où le lointain n'existe pas et où le seul code ajouté est un test sauté: c'est la charge de la machine en fin de campagne. Le plafond ne s'exige pas en CI (décision du 19 septembre 2026).
 - Couverture de packages/sim: inchangée, sa logique n'est pas touchée.
 - **Empreintes des parties de référence**: inchangées par construction, elles se jouent sur Tokyo.
-- État de la CI: à compléter après la poussée.
+- État de la CI: verte sur `32b33b7` (exécution 37066990341), types, linter et tests, bout en bout, mise en ligne: le serveur de production répond sur ce commit (`/sante`). L'exécution précédente, sur `8f2a8df` (37062136259), était verte jusqu'à la mise en ligne, qui a échoué (« Ce qui a été fait », défaut corrigé en route).
 
 ## Décisions et écarts au plan
 
