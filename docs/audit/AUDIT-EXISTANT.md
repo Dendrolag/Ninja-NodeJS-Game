@@ -320,6 +320,12 @@ Ajoute le 2 octobre 2026, a la demande du porteur du projet.
 
 **X38. Des faux ninjas aussi sombres qu'un Black Ninja.** `getRandomColor` (`server.js:1512`) tire une couleur parmi les seize millions, sans condition: un tiers des tirages environ est sombre, noir, marron, bleu ou rouge fonce, et un faux ninja ainsi colore se confond avec un Black Ninja, corps noir. Le meme tirage sert a un joueur au-dela du sixieme, dont les faux ninjas prennent la couleur, et a la zone de chaos. Le bleu de la palette, `#0000FF` (`availableColors`, `:174`), est lui-meme plus sombre que bien des marrons. Le portage de l'etape 5.4 avait repris le tirage tel quel. Corrige a l'etape 5.8, sur decision du porteur du projet: toute couleur tiree a une luminance relative de 0,18 au moins (`LUMINANCE_MINIMUM_PNJ`, `packages/shared`), le bleu de la palette devient `#3D7DFF`, et le Black Ninja recoit des yeux rouges et une aura de fumee.
 
+### Defauts decouverts a l'etape 4.8
+
+Ajoute le 2 octobre 2026, a la demande du porteur du projet.
+
+**X39. Un ninja colore a un bord en escalier, borde de rouge.** Le corps des sprites de ninja, dessine en rouge pur, est adouci vers son contour presque noir: 28 pour cent de ses pixels, et 714 pixels laisses aux details, sont des melanges exacts du rouge et du contour. `getColoredSprite` (`client.js:617`) repeint en entier tout pixel a moins de 140 du rouge pur (`TARGET_COLOR` et `COLOR_TOLERANCE`, `:493`), et laisse les autres intacts: au-dessus de 37,5 pour cent de rouge, un pixel de bord prend la couleur pleine, en dessous il reste rouge sombre. Le degrade du dessin devient une marche, entouree d'un liseré rouge brun, et les ombres du corps disparaissent; de pres, sur telephone ou grossi, le bord se voit en escalier. Une poignee de pixels bruns d'ombre de la peau, a moins de 140 du rouge, prenaient aussi la couleur du joueur. Le portage de l'etape 5.4 avait repris ce partage tel quel, en deux calques. Corrige a l'etape 4.8: chaque pixel donne au corps sa part de rouge, en opacite, et son fond neutre aux details (`separerLesCalques`, `packages/client/src/rendu/recoloration.ts`). Ecart voulu, au rendu seul: le moteur ne change pas.
+
 ### Statut des failles de securite apres l'etape 1.6
 
 Recapitulatif au 14 aout 2026. Les failles S1 a S4 sont traitees par conception dans `packages/shared` et `packages/sim`; leur fermeture effective demande en plus le branchement de l'etape 2.2 (couche reseau) et de l'etape 4.3 (ecrans).

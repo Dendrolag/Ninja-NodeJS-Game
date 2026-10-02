@@ -68,6 +68,13 @@ Conditions de ROADMAP réunies, plus:
 2. Empreintes des parties de référence inchangées.
 3. La couverture de `packages/sim` ne baisse pas (il n'est pas touché).
 
+## Réconciliation pendant l'étape (2 octobre 2026)
+
+1. **Faite dans la conversation qui l'a planifiée sur une autre machine**: la planification (`2b011cc`) n'était pas encore tirée en local au début de la session.
+2. **L'écart vert-bleu toléré est de 18, et non 12**, valeur du premier essai: à 18, quatre pixels de mélange du rouge et de la peau, comme `(159, 80, 62)`, se partagent aussi, et les ombres brunes de la peau, à 20 et au-delà, restent intactes.
+3. **Les tests comparent ce qui se voit**: chaque composante pondérée par l'opacité. Sur un pixel presque transparent, l'arrondi de l'opacité de chaque calque décale la couleur de deux ou trois sans que cela se voie. Écart mesuré: moins de 1,5 en repeignant en rouge, moins de 2 dans toutes les couleurs; à l'écran, 1,3 au plus.
+4. **Le scénario de rendu échoue sur l'ancien partage**, vérifié en le rétablissant le temps d'un essai: écart de 133 sur une composante, 125 pixels rouges sur le ninja grossi.
+
 ## Rituel de fin de session
 
 Écrire `docs/handoffs/etape-4-8-handoff.md`. Commiter, pousser, vérifier la CI et la mise en ligne.

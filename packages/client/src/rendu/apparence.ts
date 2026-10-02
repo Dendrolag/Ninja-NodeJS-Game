@@ -88,16 +88,29 @@ export const STABILITE = {
 } as const;
 
 /**
- * Quels pixels du sprite de ninja prennent la couleur de son proprietaire.
+ * Quelle part de chaque pixel du sprite de ninja prend la couleur de son proprietaire.
  *
- * LE SPRITE EST DESSINE EN ROUGE, pas en niveaux de gris. Le jeu d'origine
- * repeignait tout pixel dont chaque composante est a moins de la tolerance du
- * rouge pur, et laissait les autres intacts: le contour, les yeux, les ombres
- * gardent leurs couleurs (TARGET_COLOR et COLOR_TOLERANCE, legacy/client.js:493).
+ * LE SPRITE EST DESSINE EN ROUGE, pas en niveaux de gris, et son corps est adouci vers
+ * son contour presque noir: un pixel de bord est un melange du rouge pur et d'un detail
+ * neutre (contour, gris, blanc des yeux). Pour un fond neutre, la part de rouge vaut
+ * exactement (rouge - max(vert, bleu)) / 255 (recoloration.ts).
+ *
+ * Le jeu d'origine repeignait en entier tout pixel a moins de 140 du rouge pur, et
+ * laissait les autres intacts (TARGET_COLOR et COLOR_TOLERANCE, legacy/client.js:493):
+ * le bord adouci devenait un escalier borde de rouge. Ecart voulu, au rendu seul, de
+ * l'etape 4.8 (docs/plan/etape-4-8.md).
+ *
+ * Deux seuils, cales sur les dix-sept images du jeu:
+ *
+ *   - ecartNeutre: au-dela de cet ecart entre le vert et le bleu, le pixel n'est pas un
+ *     melange avec un neutre. La peau (249, 202, 157) et ses ombres brunes restent des
+ *     details intacts.
+ *   - excesMinimum: en deca de cet exces du rouge sur le vert et le bleu, le pixel est un
+ *     neutre. Le contour (31, 29, 25) n'est pas teint.
  */
 export const REPEINTE_DU_NINJA = {
-  cible: { r: 255, v: 0, b: 0 },
-  tolerance: 140,
+  ecartNeutre: 18,
+  excesMinimum: 8,
 } as const;
 
 /**

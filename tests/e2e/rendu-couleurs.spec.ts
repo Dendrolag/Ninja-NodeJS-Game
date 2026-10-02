@@ -179,12 +179,142 @@ function pageDuHalo(): string {
 </script>`;
 }
 
+/** Ce que la page du bord compare et compte. */
+interface Bord {
+  /** Le plus grand ecart, sur une composante, entre le ninja dessine et l'attendu. */
+  readonly plusGrandEcart: number;
+  /** Les pixels du ninja compares: ceux que le sprite ne laisse pas transparents. */
+  readonly compares: number;
+  /** Les pixels restes rouges sur le ninja vert grossi six fois. */
+  readonly rouges: number;
+  /** Les pixels verts du ninja grossi, pour s'assurer qu'il est dessine. */
+  readonly verts: number;
+}
+
+/**
+ * La page du bord des ninjas (etape 4.8).
+ *
+ * LE DEFAUT QU'ELLE FERME, releve par le porteur du projet le 2 octobre 2026: de pres,
+ * un ninja colore avait un bord en escalier, borde de rouge. Le corps du sprite est
+ * adouci vers son contour, et le partage tout ou rien du jeu d'origine coupait cet
+ * adoucissement (recoloration.ts).
+ *
+ * Deux mesures. A l'echelle un, chaque pixel du sprite tombe sur un pixel de l'ecran,
+ * sans lissage: le ninja vert dessine se compare au pixel pres a l'image attendue,
+ * chaque pixel du sprite repeint selon sa part de rouge et pose sur le fond. Grossi
+ * six fois, comme de tres pres, il ne doit garder aucun pixel rouge.
+ */
+function pageDuBord(): string {
+  return `<!doctype html>
+<meta charset="utf-8">
+<title>Bord des ninjas</title>
+<style>html,body{margin:0;height:100%;overflow:hidden}#terrain{width:640px;height:480px}</style>
+<div id="terrain"></div>
+<script type="importmap">${CARTE_IMPORTATION}</script>
+<script type="module">
+  import { monterRendu, prechargerLesSprites } from '/paquets/client/rendu/pixi.js';
+  import { partDeRouge } from '/paquets/client/rendu/recoloration.js';
+
+  const IMAGE = '/assets/ninja/south_1.png';
+  const VERT = [0, 255, 0];
+
+  await prechargerLesSprites();
+
+  const rendu = await monterRendu({
+    hote: document.querySelector('#terrain'),
+    carte: { largeur: 2000, hauteur: 1500 },
+    identifiantCarte: 'map1',
+    modeMiroir: false,
+    pluie: true,
+    lueur: false,
+    largeur: 640,
+    hauteur: 480,
+    densite: 1,
+  });
+
+  const scene = (entites) => ({
+    disques: [], cones: [], zones: [], objets: [], reperes: [], sang: [], secousse: { x: 0, y: 0 },
+    indicateur: { disques: [], parts: [], traits: [] },
+    marques: [],
+    fumees: [],
+    mines: { disques: [], parts: [], traits: [] },
+    explosions: [],
+    entites,
+  });
+  const ninja = { id: 'vert', texture: IMAGE, x: 1000, y: 750, taille: 32, teinte: 0x00ff00, alpha: 1 };
+  const lire = async (entites, echelle) => {
+    rendu.dessiner(scene(entites), { x: 1000, y: 750, echelle });
+    rendu.application.render();
+    const { pixels } = await Promise.resolve(
+      rendu.application.renderer.extract.pixels({
+        target: rendu.application.stage,
+        frame: rendu.application.screen,
+      }),
+    );
+    return pixels;
+  };
+
+  // Les pixels du sprite, lus comme le rendu les lit.
+  const image = new Image();
+  image.src = IMAGE;
+  await image.decode();
+  const canevas = document.createElement('canvas');
+  canevas.width = 32;
+  canevas.height = 32;
+  const contexte = canevas.getContext('2d');
+  contexte.drawImage(image, 0, 0);
+  const sprite = contexte.getImageData(0, 0, 32, 32).data;
+
+  // A l'echelle un: le coin du sprite tombe sur le pixel (304, 224) de l'ecran.
+  const fond = await lire([], 1);
+  const dessin = await lire([ninja], 1);
+  let plusGrandEcart = 0;
+  let compares = 0;
+
+  for (let y = 0; y < 32; y += 1) {
+    for (let x = 0; x < 32; x += 1) {
+      const source = (y * 32 + x) * 4;
+      const ecran = ((224 + y) * 640 + 304 + x) * 4;
+      const [r, v, b, opacite] = [sprite[source], sprite[source + 1], sprite[source + 2], sprite[source + 3]];
+
+      if (opacite === 0) continue;
+
+      const part = partDeRouge(r, v, b);
+      const fondDuPixel = part === 1 ? [0, 0, 0] : [(r - part * 255) / (1 - part), v / (1 - part), b / (1 - part)];
+      const a = opacite / 255;
+
+      compares += 1;
+      for (let composante = 0; composante < 3; composante += 1) {
+        const repeint = part * VERT[composante] + (1 - part) * Math.min(255, Math.max(0, fondDuPixel[composante]));
+        const attendu = repeint * a + fond[ecran + composante] * (1 - a);
+        plusGrandEcart = Math.max(plusGrandEcart, Math.abs(attendu - dessin[ecran + composante]));
+      }
+    }
+  }
+
+  // Grossi six fois.
+  const grossi = await lire([ninja], 6);
+  let rouges = 0;
+  let verts = 0;
+
+  for (let index = 0; index < grossi.length; index += 4) {
+    const [r, v, b] = [grossi[index], grossi[index + 1], grossi[index + 2]];
+
+    if (r > Math.max(v, b) + 40 && Math.abs(v - b) <= 18) rouges += 1;
+    if (v > 180 && r < 90 && b < 90) verts += 1;
+  }
+
+  window.bord = { plusGrandEcart, compares, rouges, verts };
+</script>`;
+}
+
 let serveur: ServeurStatique;
 
 test.beforeAll(async () => {
   serveur = await demarrerServeurStatique({
     '/couleurs.html': pageDesCouleurs(),
     '/halo.html': pageDuHalo(),
+    '/bord.html': pageDuBord(),
   });
 });
 
@@ -223,6 +353,29 @@ test('un ninja prend la couleur de son proprietaire, sans noircir ni rougir', as
     comptes.auCentre / (comptes.verts + comptes.blancs),
     `les ninjas vises doivent etre au milieu ${detail}`,
   ).toBeGreaterThan(0.9);
+});
+
+test('un ninja colore garde le bord adouci de son dessin, sans liseré rouge', async ({ page }) => {
+  const erreurs: string[] = [];
+  page.on('pageerror', (erreur) => erreurs.push(erreur.message));
+
+  await page.goto(`${serveur.url}/bord.html`);
+  await page.waitForFunction(() => (window as unknown as { bord?: unknown }).bord, null, {
+    timeout: 30_000,
+  });
+
+  expect(erreurs, 'la page ne doit lever aucune erreur').toEqual([]);
+
+  const bord = (await page.evaluate(() => (window as unknown as { bord: Bord }).bord)) as Bord;
+  const detail = JSON.stringify(bord);
+
+  // Le sprite de face couvre plus de cinq cents pixels. Avant la correction, ceux du bord
+  // s'ecartaient de l'attendu de 133 sur une composante, et le ninja grossi gardait 125
+  // pixels rouges.
+  expect(bord.compares, `le ninja doit etre compare ${detail}`).toBeGreaterThan(500);
+  expect(bord.plusGrandEcart, `le ninja doit etre dessine comme attendu ${detail}`).toBeLessThan(4);
+  expect(bord.verts, `le ninja grossi doit etre dessine ${detail}`).toBeGreaterThan(2_000);
+  expect(bord.rouges, `le ninja grossi ne doit garder aucun pixel rouge ${detail}`).toBe(0);
 });
 
 test('aucun ninja ne rayonne, meme de la couleur la plus claire', async ({ page }) => {

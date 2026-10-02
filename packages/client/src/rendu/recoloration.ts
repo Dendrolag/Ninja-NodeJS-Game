@@ -9,13 +9,19 @@
  *
  * ICI, CHAQUE IMAGE EST COUPEE UNE FOIS EN DEUX CALQUES, au chargement:
  *
- *   - le CORPS, les pixels a repeindre, passes en blanc: une teinte les rend
+ *   - le CORPS, la part rouge de chaque pixel, passee en blanc: une teinte la rend
  *     exactement de la couleur voulue, puisque blanc fois couleur donne la couleur;
- *   - les DETAILS, tous les autres pixels, laisses intacts et jamais teintes.
+ *   - les DETAILS, le reste, jamais teinte, dessine dessous.
  *
- * Poses l'un sur l'autre, ils donnent au pixel pres l'image du jeu d'origine, et
- * les textures restent partagees par toutes les entites: le GPU applique la
- * couleur, sans canevas par joueur.
+ * UN PIXEL PEUT ETRE EN PARTIE DANS CHAQUE CALQUE (etape 4.8). Le corps du sprite est
+ * adouci vers son contour: un pixel de bord est un melange du rouge et d'un detail
+ * neutre. Il donne sa part de rouge au corps, en opacite, et son fond aux details;
+ * superposes, les deux calques le redonnent dans la couleur voulue, son adoucissement
+ * garde. Le jeu d'origine repeignait chaque pixel en entier ou pas du tout, et son bord
+ * devenait un escalier borde de rouge.
+ *
+ * Les textures restent partagees par toutes les entites: le GPU applique la couleur,
+ * sans canevas par joueur.
  *
  * FONCTION PURE, sur un tableau de pixels. Le rendu PixiJS lui fournit ceux de
  * chaque image chargee (pixi.ts).
@@ -25,14 +31,20 @@ import { REPEINTE_DU_NINJA, YEUX_DU_BLACK_NINJA } from './apparence.js';
 
 /** Les deux calques d'une image de ninja, en pixels RVBA, de la taille de l'image. */
 export interface CalquesDuNinja {
-  /** Les pixels a repeindre, en blanc, avec leur opacite d'origine. Transparent ailleurs. */
+  /** La part rouge de chaque pixel, en blanc, a l'opacite de cette part. */
   readonly corps: Uint8ClampedArray;
-  /** Tous les autres pixels, intacts. Transparent la ou est le corps. */
+  /** Le reste de chaque pixel, a l'opacite qui, sous le corps, redonne celle du pixel. */
   readonly details: Uint8ClampedArray;
 }
 
 /**
  * Coupe une image de ninja en ses deux calques.
+ *
+ * Un pixel d'opacite a, dont la part de rouge est t et le fond f, se dessine en f
+ * teinte de t fois la couleur voulue. Le corps porte du blanc a l'opacite a fois t. Les
+ * details portent f, a l'opacite qui fait que les deux calques superposes couvrent
+ * exactement a: a (1 - t) / (1 - a t). Le rouge pur n'a pas de fond, et ne laisse rien
+ * aux details.
  *
  * @param pixels Les pixels de l'image, quatre octets par pixel: rouge, vert, bleu, opacite.
  */
@@ -46,25 +58,48 @@ export function separerLesCalques(pixels: ArrayLike<number>): CalquesDuNinja {
     const bleu = pixels[index + 2] ?? 0;
     const opacite = pixels[index + 3] ?? 0;
 
-    if (estARepeindre(rouge, vert, bleu)) {
-      corps.set([255, 255, 255, opacite], index);
-    } else {
-      details.set([rouge, vert, bleu, opacite], index);
+    if (opacite === 0) {
+      continue;
+    }
+
+    const part = partDeRouge(rouge, vert, bleu);
+
+    if (part > 0) {
+      corps.set([255, 255, 255, opacite * part], index);
+    }
+
+    if (part < 1) {
+      const a = opacite / 255;
+      // Le fond: ce qui reste du pixel une fois sa part de rouge retiree.
+      details.set(
+        [
+          (rouge - part * 255) / (1 - part),
+          vert / (1 - part),
+          bleu / (1 - part),
+          (255 * a * (1 - part)) / (1 - a * part),
+        ],
+        index,
+      );
     }
   }
 
   return { corps, details };
 }
 
-/** Ce pixel est-il assez proche du rouge pur pour prendre la couleur du proprietaire. */
-function estARepeindre(rouge: number, vert: number, bleu: number): boolean {
-  const { cible, tolerance } = REPEINTE_DU_NINJA;
+/**
+ * La part de rouge d'un pixel, de zero a un: celle d'un melange du rouge pur et d'un
+ * fond neutre. Zero pour un neutre et pour un pixel qui n'est pas un tel melange, comme
+ * la peau.
+ */
+export function partDeRouge(rouge: number, vert: number, bleu: number): number {
+  const { ecartNeutre, excesMinimum } = REPEINTE_DU_NINJA;
+  const exces = rouge - Math.max(vert, bleu);
 
-  return (
-    Math.abs(rouge - cible.r) <= tolerance &&
-    Math.abs(vert - cible.v) <= tolerance &&
-    Math.abs(bleu - cible.b) <= tolerance
-  );
+  if (Math.abs(vert - bleu) > ecartNeutre || exces < excesMinimum) {
+    return 0;
+  }
+
+  return Math.min(1, exces / 255);
 }
 
 /**
