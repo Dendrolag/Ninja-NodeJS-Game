@@ -40,6 +40,8 @@ const PAGE_DU_MIROIR = `<!doctype html>
     indicateur: { disques: [], parts: [], traits: [] },
     marques: [],
     fumees: [],
+    mines: { disques: [], parts: [], traits: [] },
+    explosions: [],
     sang: [],
     secousse: { x: 0, y: 0 },
     imageDePluie: 1,

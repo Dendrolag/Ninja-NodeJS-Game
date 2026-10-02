@@ -112,20 +112,30 @@ export function avancerLesMines(
     return etat;
   }
 
-  return armerLesMines(faireSauterLesMines(etat, dtMs, regles, horsJeu), regles, horsJeu);
+  return armerLesMines(
+    faireSauterLesMines(etat, etat.minesPosees, dtMs, regles, horsJeu),
+    regles,
+    horsJeu,
+  );
 }
 
 /** Les mines armees se rapprochent de leur explosion; celles dont l'heure est venue sautent. */
 function faireSauterLesMines(
   etat: EtatPartie,
+  posees: Readonly<Record<IdentifiantEntite, MineSurLaCarte>>,
   dtMs: number,
   regles: ReglesDesMines,
   horsJeu: ReadonlySet<IdentifiantEntite>,
 ): EtatPartie {
+  // Aucune mine armee: rien ne change, et la table n'est pas recopiee.
+  if (Object.values(posees).every((mine) => mine.avantExplosionMs === undefined)) {
+    return etat;
+  }
+
   const mines: Record<IdentifiantEntite, MineSurLaCarte> = {};
   const aFaireSauter: MineSurLaCarte[] = [];
 
-  for (const [id, mine] of Object.entries(etat.minesPosees ?? {})) {
+  for (const [id, mine] of Object.entries(posees)) {
     if (mine.avantExplosionMs === undefined) {
       mines[id] = mine;
       continue;
@@ -163,16 +173,23 @@ function armerLesMines(
 
   const mines: Record<IdentifiantEntite, MineSurLaCarte> = {};
   const evenements = [...etat.evenements];
+  // Les Black Ninjas, releves une fois pour toutes les mines: une mine n'a pas a parcourir
+  // tous les faux ninjas de la carte pour les trouver.
+  const botsNoirs = Object.values(etat.bots).filter((bot) => bot.type === 'botNoir');
+  let arme = false;
 
   for (const [id, mine] of Object.entries(etat.minesPosees)) {
     const par =
-      mine.avantExplosionMs === undefined ? quiLArme(etat, mine, regles, horsJeu) : undefined;
+      mine.avantExplosionMs === undefined
+        ? quiLArme(etat, mine, regles, horsJeu, botsNoirs)
+        : undefined;
 
     if (par === undefined) {
       mines[id] = mine;
       continue;
     }
 
+    arme = true;
     mines[id] = { ...mine, avantExplosionMs: MINES.DELAI_AVANT_EXPLOSION_MS };
     evenements.push({
       type: 'mineArmee',
@@ -183,7 +200,8 @@ function armerLesMines(
     });
   }
 
-  return { ...etat, minesPosees: mines, evenements };
+  // Aucune mine armee dans ce battement: l'etat est rendu tel quel, sans copie.
+  return arme ? { ...etat, minesPosees: mines, evenements } : etat;
 }
 
 /**
@@ -195,6 +213,7 @@ function quiLArme(
   mine: MineSurLaCarte,
   regles: ReglesDesMines,
   horsJeu: ReadonlySet<IdentifiantEntite>,
+  botsNoirs: readonly Bot[],
 ): IdentifiantEntite | undefined {
   const poseur = etat.joueurs[mine.poseur];
 
@@ -204,20 +223,37 @@ function quiLArme(
 
   for (const joueur of Object.values(etat.joueurs)) {
     if (
-      estAdversaire(poseur, joueur, regles, horsJeu) &&
-      distance(joueur.position, mine.position) < MINES.SEUIL_ARMEMENT_PX
+      surLaMine(joueur.position, mine.position) &&
+      estAdversaire(poseur, joueur, regles, horsJeu)
     ) {
       return joueur.id;
     }
   }
 
-  for (const bot of Object.values(etat.bots)) {
-    if (bot.type === 'botNoir' && distance(bot.position, mine.position) < MINES.SEUIL_ARMEMENT_PX) {
+  for (const bot of botsNoirs) {
+    if (surLaMine(bot.position, mine.position)) {
       return bot.id;
     }
   }
 
   return undefined;
+}
+
+/**
+ * Cette entite touche-t-elle la mine ? Une entite eloignee d'au moins le seuil sur un axe
+ * est ecartee sans calculer sa distance, comme dans le releve des contacts (contacts.ts): la
+ * distance n'est jamais plus petite que l'ecart sur un axe. Le resultat est le meme.
+ */
+function surLaMine(entite: Position, mine: Position): boolean {
+  const ecartX = entite.x - mine.x;
+  const ecartY = entite.y - mine.y;
+  const seuil = MINES.SEUIL_ARMEMENT_PX;
+
+  if (ecartX >= seuil || ecartX <= -seuil || ecartY >= seuil || ecartY <= -seuil) {
+    return false;
+  }
+
+  return Math.hypot(ecartX, ecartY) < seuil;
 }
 
 /** Ce joueur est-il, en ce moment, un adversaire du poseur, en jeu ? */

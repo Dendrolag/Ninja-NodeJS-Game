@@ -38,6 +38,8 @@ export interface ConfigurationDeBanc {
   readonly carte?: IdentifiantCarte;
   /** Le mode de la partie. Le Classique par defaut. */
   readonly mode?: Mode;
+  /** Les joueurs posent des mines (etape 7.11). Voir OptionsBancBattement. */
+  readonly mines?: boolean;
 }
 
 /** Ce que le processus de banc repond. */

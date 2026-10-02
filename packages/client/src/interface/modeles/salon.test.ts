@@ -185,6 +185,8 @@ describe('modeleSalon', () => {
       Bonus: '3/3',
       // La fumee, en jeu par defaut dans tous les modes (etape 7.10).
       Fumée: 'À garder en poche',
+      // La mine aussi (etape 7.11).
+      Mine: 'À poser',
       Malus: '3/3',
       'Zones spéciales': '4/4',
     });
@@ -195,6 +197,13 @@ describe('modeleSalon', () => {
     const lignes = modeleSalon(etat(salon('bob', { reglages })))?.recapitulatif;
 
     expect(lignes?.find((ligne) => ligne.libelle === 'Fumée')?.valeur).toBe('Désactivée');
+  });
+
+  it('dit la mine desactivee (etape 7.11)', () => {
+    const reglages = completerReglages({ objetsDePoche: { mine: { actif: false } } });
+    const lignes = modeleSalon(etat(salon('bob', { reglages })))?.recapitulatif;
+
+    expect(lignes?.find((ligne) => ligne.libelle === 'Mine')?.valeur).toBe('Désactivée');
   });
 
   it('compte les objets du Tactique dans ce mode seulement (etape 7.7)', () => {

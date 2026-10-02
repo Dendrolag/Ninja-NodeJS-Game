@@ -86,6 +86,7 @@ import type { TacheScene } from './katana.js';
 import { DEMI_ARC_DU_KATANA, imageDuMassacre } from './katana.js';
 import type { Localisation } from './localisation.js';
 import { opaciteDeLocalisation, reperesDeLocalisation } from './localisation.js';
+import { minesDeLaScene } from './mines.js';
 import { adresseDImage, adresseRayee } from './textures.js';
 
 /** Un sprite a poser sur la carte. */
@@ -207,6 +208,13 @@ export interface Scene {
    */
   readonly fumees: readonly DisqueScene[];
   /**
+   * Les mines posees (etape 7.11), au sol, sous les personnages: la mine, son reflet pour un
+   * adversaire, son rayon une fois armee.
+   */
+  readonly mines: IndicateurScene;
+  /** Les explosions des mines, par-dessus les personnages et sous les toits (etape 7.11). */
+  readonly explosions: readonly DisqueScene[];
+  /**
    * L'image de la planche de pluie a montrer, sur une carte qui en a une. Absente
    * d'une scene vide; le rendu l'ignore sur une carte sans pluie.
    */
@@ -224,6 +232,8 @@ export const SCENE_VIDE: Scene = {
   indicateur: AUCUN_INDICATEUR,
   marques: [],
   fumees: [],
+  mines: AUCUN_INDICATEUR,
+  explosions: [],
   sang: [],
   secousse: { x: 0, y: 0 },
 };
@@ -510,6 +520,20 @@ export function construireScene(
         )
       : AUCUN_INDICATEUR;
 
+  const mines = minesDeLaScene(
+    lissee.entites.flatMap(({ entite, x, y }) =>
+      entite.type === 'mine' ? [{ mine: entite, x, y }] : [],
+    ),
+    etat.journal,
+    {
+      moi,
+      couleur: monEntite?.entite.couleur,
+      mode,
+      revelation: revelationActive,
+    },
+    maintenant,
+  );
+
   return {
     disques: [...disques, ...massacre.disques],
     cones,
@@ -521,6 +545,8 @@ export function construireScene(
     indicateur,
     marques,
     fumees: nuagesDeFumee(etat, lissee, maintenant),
+    mines: mines.sol,
+    explosions: mines.explosions,
     sang: massacre.sang,
     secousse: massacre.secousse,
     imageDePluie: imageDePluie(maintenant),

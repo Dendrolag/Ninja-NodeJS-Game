@@ -1203,8 +1203,9 @@ export function retirerJoueur(etat: EtatPartie, id: IdentifiantEntite): EtatPart
 
   // Ses mines disparaissent avec lui (etape 7.11, decision 15 du porteur du projet). Un lien
   // tombe n'est pas un depart: ses mines restent le temps du retour.
-  if (Object.values(etat.minesPosees ?? {}).some((mine) => mine.poseur === id)) {
-    return retirerJoueur(avecLesMines(etat, sansLesMinesDe(etat, id)), id);
+  const mines = etat.minesPosees;
+  if (mines !== undefined && Object.values(mines).some((mine) => mine.poseur === id)) {
+    return retirerJoueur(avecLesMines(etat, sansLesMinesDe(mines, id)), id);
   }
 
   // Un joueur de la Chasse qui s'en va quitte aussi ses tables (etape 7.3): elles ne
@@ -1223,12 +1224,10 @@ export function retirerJoueur(etat: EtatPartie, id: IdentifiantEntite): EtatPart
 
 /** Les mines posees, moins celles de ce joueur. */
 function sansLesMinesDe(
-  etat: EtatPartie,
+  mines: Readonly<Record<IdentifiantEntite, MineSurLaCarte>>,
   id: IdentifiantEntite,
 ): Readonly<Record<IdentifiantEntite, MineSurLaCarte>> {
-  return Object.fromEntries(
-    Object.entries(etat.minesPosees ?? {}).filter(([, mine]) => mine.poseur !== id),
-  );
+  return Object.fromEntries(Object.entries(mines).filter(([, mine]) => mine.poseur !== id));
 }
 
 /**
@@ -1241,10 +1240,6 @@ export function avecLesMines(
 ): EtatPartie {
   if (Object.keys(mines).length > 0) {
     return { ...etat, minesPosees: mines };
-  }
-
-  if (etat.minesPosees === undefined) {
-    return etat;
   }
 
   const { minesPosees: _videes, ...reste } = etat;

@@ -43,6 +43,7 @@ import { lancerLaBoucle } from '../../rendu/boucle.js';
 import { monterRendu, prechargerLesSprites } from '../../rendu/pixi.js';
 import { jeSuisHote } from '../../selecteurs.js';
 import { monterFenetre } from '../composants/fenetre.js';
+import { toucheDeLaPoche } from '../modeles/touches.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import type { ContexteEcran, EcranAffiche } from './types.js';
 
@@ -132,8 +133,8 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
             : tactique
               ? 'ZQSD ou flèches · Espace pour capturer · F pour vous localiser'
               : 'ZQSD ou flèches · F pour vous localiser') +
-        // La touche de la poche, quand la fumee est en jeu (etape 7.10).
-        (reglages.objetsDePoche.fumee.actif ? ' · E pour la fumée' : ''),
+        // La touche de la poche, quand un objet de poche est en jeu (etapes 7.10 et 7.11).
+        toucheDeLaPoche(reglages.objetsDePoche),
     }),
     bouton(
       doc,

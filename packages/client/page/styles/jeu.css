@@ -105,16 +105,24 @@
 }
 
 .jeu-rappel {
+  /*
+   * Jamais sous le temps restant, centre en haut: le rappel tient dans la moitie droite de
+   * la barre, moins les boutons et la moitie du temps, et passe a la ligne au besoin. Avec
+   * la poche (etapes 7.10 et 7.11), il touchait le temps a 1280 pixels de large.
+   */
+  max-width: calc(50vw - 380px);
   color: var(--texte-tertiaire);
   font-family: var(--police-donnees);
   font-size: 11px;
+  line-height: 1.3;
+  text-align: right;
 }
 
 /*
- * Le rappel des touches prend de la place: sous cette largeur, il toucherait le
- * temps restant, centre en haut. Les touches restent decrites dans l'aide.
+ * Le rappel des touches prend de la place: sous cette largeur, il lui faudrait plus de trois
+ * lignes. Les touches restent decrites dans l'aide.
  */
-@media (max-width: 1100px) {
+@media (max-width: 1200px) {
   .jeu-rappel {
     display: none;
   }
@@ -399,6 +407,12 @@
 
 .point-flottant-joueur {
   color: #cc99ff;
+}
+
+/* Les ninjas qu'une mine vient de nous faire perdre, en Horde (etape 7.11): le rouge de la mine. */
+.point-flottant-perte {
+  color: #ff5a3c;
+  text-shadow: 0 0 6px rgba(255, 90, 60, 0.7);
 }
 
 /*

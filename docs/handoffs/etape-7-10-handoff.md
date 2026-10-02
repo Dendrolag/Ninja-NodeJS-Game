@@ -98,7 +98,7 @@ Demandés par le porteur du projet après la mise en ligne, avant l'étape 7.11:
 - Tests: `scene.test.ts` (les deux durées, le gonflement de même vitesse), `boucle.test.ts` (le repère après notre fuite, pas après celle d'un autre; `faitQuiNousDeplace` dans les cinq modes).
 - Documentation: la fiche (réconciliation, point 12), le ROADMAP, le journal de conception, ce handoff.
 
-Les durées exactes sont un choix de l'exécutant, la demande disant « plus longtemps » et « un peu plus longtemps ». Rien ne change au moteur, au serveur ni aux empreintes.
+Les durées exactes sont un choix de l'exécutant, la demande disant « plus longtemps » et « un peu plus longtemps ». Rien ne change au moteur, au serveur ni aux empreintes. CI verte sur `0fbae73`, poussé sur `master` en avance rapide: exécution 36481678298, mise en ligne comprise.
 
 ## Problèmes connus et dette
 

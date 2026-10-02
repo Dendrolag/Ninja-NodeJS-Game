@@ -12,7 +12,7 @@ import { CHASSE, COULEUR_BOT_NEUTRE, MASSACRE, MINES } from '@neon-ninja/shared'
 import { describe, expect, it } from 'vitest';
 
 import { capturerJoueur } from './capture.js';
-import { devenirTraqueur, infecter } from './chasse.js';
+import { amputerLeParcours, devenirTraqueur, enrayerLArme, infecter } from './chasse.js';
 import type {
   EtatPartie,
   EvenementPartie,
@@ -22,7 +22,7 @@ import type {
   MineSurLaCarte,
 } from './etat.js';
 import { ajouterBot, ajouterJoueur, creerEtatInitial, retirerJoueur } from './etat.js';
-import { lancerLaHorde, rallieurDe } from './horde.js';
+import { amputerLaReserve, lancerLaHorde, rallieurDe } from './horde.js';
 import { guerrierDe, lancerLeMassacre } from './massacre.js';
 import { avancerLesMines, poserUneMine } from './mines.js';
 import type { Entrees } from './moteur.js';
@@ -720,5 +720,52 @@ describe('en Chasse', () => {
     );
 
     expect(laDetonation(explosion(etat)).touches.map((touche) => touche.joueur)).toEqual(['bob']);
+  });
+});
+
+describe('les cas limites', () => {
+  it('n arme ni ne fait sauter la mine d un poseur absent: elle disparait sans bruit', () => {
+    const sansPoseur = avecMine(avecJoueur(partie(), 'bob', ICI), ICI, undefined, 'fantome');
+    expect(mines(sansPoseur).minesPosees?.['m1']?.avantExplosionMs).toBeUndefined();
+
+    const armee = avecMine(avecJoueur(partie(), 'bob', ICI), ICI, 50, 'fantome');
+    const apres = mines(armee);
+    expect(apres.minesPosees).toBeUndefined();
+    expect(faits(apres, 'mineExplosee')).toEqual([]);
+  });
+
+  it('n enraye que l arme d un traqueur, et n ampute que le parcours d une proie qui en a un', () => {
+    const etat = avecJoueur(partie('chasse'), 'bob', ICI);
+
+    expect(enrayerLArme(etat, 'bob', MINES.ENRAYEMENT_MS)).toBe(etat);
+    expect(amputerLeParcours(etat, 'bob', 15)).toEqual({ etat, pointsPerdus: 0 });
+
+    const lancee: EtatPartie = {
+      ...etat,
+      chasse: { traqueurs: {}, parcours: {}, traqueursEpuises: false },
+    };
+    expect(amputerLeParcours(lancee, 'bob', 15)).toEqual({ etat: lancee, pointsPerdus: 0 });
+  });
+
+  it('garde une attente de tir plus longue que l enrayement', () => {
+    let etat = devenirTraqueur(avecJoueur(partie('chasse'), 'tom', ICI), 'tom');
+    const arme = etat.chasse?.traqueurs['tom'];
+    etat = {
+      ...etat,
+      chasse: {
+        ...(etat.chasse as NonNullable<EtatPartie['chasse']>),
+        traqueurs: { tom: { ...(arme as NonNullable<typeof arme>), avantProchainTirMs: 5000 } },
+      },
+    };
+
+    expect(
+      enrayerLArme(etat, 'tom', MINES.ENRAYEMENT_MS).chasse?.traqueurs['tom']?.avantProchainTirMs,
+    ).toBe(5000);
+  });
+
+  it('n ampute la reserve que d une Horde lancee', () => {
+    const etat = avecJoueur(partie(), 'bob', ICI);
+
+    expect(amputerLaReserve(etat, 'bob', 15)).toBe(etat);
   });
 });

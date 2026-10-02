@@ -43,6 +43,13 @@
  * l'etape.
  *
  *   node --disable-warning=ExperimentalWarning tests/charge/empreinte.ts --sans-poche
+ *
+ * Elle coupe aussi la mine depuis l'etape 7.11. SANS LA MINE (etape 7.11), pour la meme
+ * raison: la mine tente sa chance apres la fumee. L'option --sans-mine la coupe seule, et
+ * retire de l'empreinte le reglage qui la coupe: les parties rejouent alors a l'octet celles
+ * de l'etape 7.10, fumee comprise.
+ *
+ *   node --disable-warning=ExperimentalWarning tests/charge/empreinte.ts --sans-mine
  */
 
 import { createHash } from 'node:crypto';
@@ -126,6 +133,9 @@ const SANS_EVADE = process.argv.includes('--sans-evade');
 /** La fumee est-elle coupee pour cette execution (etape 7.10). */
 const SANS_POCHE = process.argv.includes('--sans-poche');
 
+/** La mine est-elle coupee pour cette execution, seule (etape 7.11). */
+const SANS_MINE = process.argv.includes('--sans-mine');
+
 /** Tous les combien de battements un joueur de l'outil se sert de sa poche. */
 const CADENCE_DE_LA_POCHE = 97;
 
@@ -136,9 +146,15 @@ const CADENCE_DE_LA_POCHE = 97;
 function sansTerrain(cle: string, valeur: unknown): unknown {
   return cle === 'terrain' ||
     (SANS_EVADE && cle === 'evade' && valeur === false) ||
-    (SANS_POCHE && cle === 'objetsDePoche')
+    (SANS_POCHE && cle === 'objetsDePoche') ||
+    (SANS_MINE && cle === 'mine' && estUnReglageCoupe(valeur))
     ? undefined
     : valeur;
+}
+
+/** Cette valeur est-elle le reglage d'un objet de poche coupe ? */
+function estUnReglageCoupe(valeur: unknown): boolean {
+  return typeof valeur === 'object' && valeur !== null && 'actif' in valeur && !valeur.actif;
 }
 
 /** Joue une partie et rend sa ligne de sortie: ses deux empreintes, et ce qui s'y est passe. */
@@ -153,7 +169,8 @@ function empreinteDe(partie: PartieDEmpreinte, murs: EtatPartie['terrain']): str
       zones: { intervalleApparitionS: 5 },
       botsNoirs: { momentApparitionPourCent: 5 },
       ...(SANS_EVADE ? { evade: false } : {}),
-      ...(SANS_POCHE ? { objetsDePoche: { fumee: { actif: false } } } : {}),
+      ...(SANS_POCHE ? { objetsDePoche: { fumee: { actif: false }, mine: { actif: false } } } : {}),
+      ...(SANS_MINE && !SANS_POCHE ? { objetsDePoche: { mine: { actif: false } } } : {}),
     },
     ...(partie.murs ? { terrain: murs } : {}),
   });

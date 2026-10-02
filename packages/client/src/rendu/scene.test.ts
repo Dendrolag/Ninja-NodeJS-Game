@@ -738,3 +738,38 @@ describe('les nuages de fumee (etape 7.10)', () => {
     expect(SCENE_VIDE.fumees).toEqual([]);
   });
 });
+
+describe('les mines (etape 7.11)', () => {
+  const mine = (avantExplosionMs?: number): EntiteVue => ({
+    type: 'mine',
+    id: 'mine-7',
+    x: 300,
+    y: 300,
+    couleur: '#00FF00',
+    direction: 'immobile',
+    poseur: 'bob',
+    ...(avantExplosionMs === undefined ? {} : { avantExplosionMs }),
+  });
+
+  it('ne dessine pas une mine en personnage', () => {
+    const scene = construireScene(etatEnJeu('moi'), lissee(vue([joueur('moi', 0, 0), mine()])), 0);
+
+    expect(scene.entites.map((sprite) => sprite.id)).toEqual(['moi']);
+  });
+
+  it('pose une mine armee au sol, rayon compris, pour tous', () => {
+    const scene = construireScene(
+      etatEnJeu('moi'),
+      lissee(vue([joueur('moi', 0, 0), mine(800)])),
+      0,
+    );
+
+    expect(scene.mines.disques.map((disque) => disque.id)).toContain('mine-7:rayon');
+    expect(scene.explosions).toEqual([]);
+  });
+
+  it('n a aucune mine dans une scene vide', () => {
+    expect(SCENE_VIDE.mines.disques).toEqual([]);
+    expect(SCENE_VIDE.explosions).toEqual([]);
+  });
+});

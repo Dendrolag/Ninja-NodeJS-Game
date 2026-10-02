@@ -22,6 +22,7 @@
  *   pnpm charge
  *   pnpm charge --banc --bots-banc 150,300
  *   pnpm charge --banc --carte map3 --bots-banc 150,300,500
+ *   pnpm charge --banc --mines --bots-banc 50,150,300
  *   pnpm charge --reseau --bots 150 --bots 50,150 --rooms 8,16,32
  *   pnpm charge --sortie docs/mesures/charge-serveur-5-1.json
  *
@@ -49,6 +50,12 @@ import {
   megabitsParSeconde,
   partiesParCoeur,
 } from './seuils.ts';
+
+/**
+ * Battements joues avant de mesurer le banc des mines (--mines, etape 7.11): deux minutes,
+ * le temps que les joueurs en aient pose pres du plafond.
+ */
+const ECHAUFFEMENT_DES_MINES = 2400;
 
 /** Graine des parties du banc et des intentions des clients. */
 const GRAINE = 42;
@@ -108,6 +115,8 @@ interface Plan {
    * plus haut (etape 7.6).
    */
   readonly carte: IdentifiantCarte;
+  /** Les joueurs du banc posent des mines (etape 7.11, --mines). */
+  readonly mines: boolean;
 }
 
 /** Une ligne du banc, avec le budget qui en decoule. */
@@ -205,6 +214,7 @@ function lirePlan(argumentsRecus: readonly string[]): Plan {
       sortie: { type: 'string' },
       mode: { type: 'string' },
       carte: { type: 'string' },
+      mines: { type: 'boolean', default: false },
     },
   });
 
@@ -233,6 +243,7 @@ function lirePlan(argumentsRecus: readonly string[]): Plan {
     sortie: options.sortie,
     mode: modeDe(options.mode),
     carte: carteDe(options.carte),
+    mines: options.mines,
   };
 }
 
@@ -292,10 +303,14 @@ function configuration(plan: Plan, bots: number): ConfigurationDeBanc {
     bots,
     joueurs: plan.joueurs,
     battements: plan.battements,
-    echauffement: plan.echauffement,
+    // Les mines s'accumulent: deux minutes de jeu avant de mesurer (etape 7.11).
+    echauffement: plan.mines
+      ? Math.max(plan.echauffement, ECHAUFFEMENT_DES_MINES)
+      : plan.echauffement,
     graine: GRAINE,
     mode: plan.mode,
     carte: plan.carte,
+    mines: plan.mines,
   };
 }
 

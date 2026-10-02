@@ -133,6 +133,27 @@ Conditions de ROADMAP réunies, plus:
 4. **Les équipes sont des couleurs** pour le moteur (étape 7.2): épargner les coéquipiers se lit à la couleur, sans champ d'équipe nouveau.
 5. **Le miroir** (étape 8.3) et le flux binaire (étape 2.3): une entité nouvelle demande son codage et un test d'aller-retour.
 
+## Réconciliation pendant l'étape (28 septembre au 2 octobre 2026)
+
+Écarts entre la fiche et ce qui a été construit, consignés au journal de `docs/design/README.md`.
+
+1. **Faite dans la conversation de l'étape 7.10**, à la demande du porteur du projet, après les ajustements de recette de la fumée: écart de méthode à la règle 6, comme pour les étapes 4.6, 7.9 et 7.10.
+2. **Rendus choisis par le porteur du projet** sur la planche `docs/design/etape-7-11/1-mine.png`: A, A, B, B, A. La mine ronde (disque de métal cerné, anneau à la couleur du poseur, diode rouge au centre); pour les adversaires, un reflet blanc de deux dixièmes de seconde toutes les deux secondes, chaque mine à son rythme; armée, la diode s'affole et un cercle pointillé rouge marque les 130 pixels; l'explosion en boule de feu néon, orange puis rouge; le pictogramme de la mine ronde (`assets/objets/mine.svg`).
+3. **Qui arme une mine** (micro-décision 3): au seuil du contact entre deux entités, 20 pixels entre les centres en inégalité stricte (`MINES.SEUIL_ARMEMENT_PX`), et non la somme des rayons de l'entité et de la mine, qu'aucun contact du jeu n'utilise.
+4. **L'adversaire est celui qu'un malus du poseur frapperait**: le moteur réutilise `victimeDuMalus` du jeu de règles du mode. Les coéquipiers en Équipes et le camp en Chasse en découlent sans règle nouvelle, et la question se pose au moment de l'armement comme à celui de l'explosion (décision 16).
+5. **La perte face au Black Ninja prend sa part en paramètre** (`PerteFaceAuBotNoir`, micro-décision 7): 50 pour cent réglés pour un Black Ninja, 15 pour une mine.
+6. **Une mort par mine en Massacre** partage avec le katana sa mise à mort (`mettreAMort`, `massacre.ts`), mais ne tient pas compte du délai du poseur entre deux joueurs tués, ne le relance pas, et peut tuer plusieurs joueurs d'un coup. Elle compte comme une prise pour les exploits (revanche, prise sur le fil). Une mine qui tue le dernier faux ninja vide la carte.
+7. **Le flux d'état porte la mine** comme une entité de type `mine`, à la fin de `TYPES_ENTITE`, avec son poseur et, armée, son temps restant; sa couleur est celle de son poseur au moment présent. Une mine immobile et qui attend ne coûte rien dans un delta.
+8. **Faits**: la pose au seul poseur (son son: le clic des boutons, faute de mieux), l'armement et l'explosion à tous. Les sons de l'armement et de l'explosion sont **provisoires** (`SONS.mineArmee`, le tic du compte à rebours; `SONS.mineExplosee`, le Black Ninja détruit), comme celui de la fumée.
+9. **Les annonces**: la victime lit sa perte en grand titre brouillé, « Piège · Mine · 3 ninjas perdus », « −1 point » en proie de la Chasse, « Arme enrayée pendant 3 s » en traqueur; en Massacre, une bulle « Une mine vous a eu ». Le poseur lit une bulle, « Votre mine a touché 2 cibles : +15 points » ou « Votre mine a sauté dans le vide ». La pose et l'armement ne s'annoncent pas.
+10. **Les points flottants**: le gain du poseur, en or quand la mine détruit des Black Ninjas, en violet quand elle tue en Massacre; en Horde, la perte de la victime, en rouge et en négatif sous son ninja (nouveau genre `perte`).
+11. **L'aide** décrit la mine dans un paragraphe qui nomme chaque mode, au lieu d'une ligne par mode: l'aide range les objets de poche dans une liste à une entrée par objet.
+12. **Le rappel des touches** dit « E pour la poche », « E pour la fumée » ou « E pour poser la mine » selon les objets en jeu. **Défaut corrigé en route**: le rappel passait sous le temps restant à 1 280 pixels de large, déjà avec la fumée; il tient désormais dans la moitié droite de la barre, sur deux lignes au besoin, et disparaît sous 1 200 pixels.
+13. **Le banc**: une option `--mines` (`pnpm charge --banc --mines`), et une mesure isolée de trente-six mines qui ne s'arment jamais; section 22 de `docs/mesures/charge-serveur.md`. Trois coûts évitables retirés pendant la mesure (Black Ninjas relevés une fois, état non recopié sans armement, préfiltre par axe).
+14. **L'empreinte**: une option `--sans-mine` à l'outil, qui rejoue à l'octet l'étape 7.10; `--sans-poche` coupe désormais les deux objets de poche.
+15. **Le contrat du serveur** est joué à travers le vrai serveur (`ServeurSocket.mine.test.ts`): une mine posée, vue de tous, armée par Bob qui y perd des ninjas, en Horde; une mine qui tue Bob en Massacre et rapporte au poseur la moitié de ses points. L'enregistrement en base n'a pas de test propre: les points d'une partie Massacre y vont par le classement de fin, que rien de la mine ne change.
+16. **Mesure de gameplay à rejouer à la recette**: à la même vitesse, un poursuivant collé au joueur qui arme la mine, à moins de 78 pixels derrière lui, en sort aussi; c'est celui qui suit de plus loin, et arrive sur la mine quand elle saute, qui y reste. Le délai de 1,5 seconde est à juger en jouant (point de vigilance 3).
+
 ## Rituel de fin de session
 
 Écrire `docs/handoffs/etape-7-11-handoff.md`: les décisions construites, les écarts à cette fiche, les deux jeux d'empreintes, les mesures, l'état de la CI. Prochaine action exacte: l'étape 7.12, ou l'étape suivante de la section 3 du ROADMAP. Commiter, pousser, vérifier la CI et la mise en ligne.

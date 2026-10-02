@@ -17,7 +17,7 @@ import { expect } from '@playwright/test';
 import type { GameRoom } from '../../../packages/server/dist/index.js';
 import type { GeometrieDuCone, Joueur } from '../../../packages/sim/dist/index.js';
 import { dansLeCone, geometrieDuCone, trajetTenable } from '../../../packages/sim/dist/index.js';
-import type { Position } from '../../../packages/shared/dist/index.js';
+import type { ObjetDePoche, Position } from '../../../packages/shared/dist/index.js';
 import {
   RAYON_ENTITE,
   TYPES_BONUS_TACTIQUES,
@@ -517,15 +517,21 @@ export function ramasserUnBonusTactique(
 }
 
 /**
- * Mission: ce joueur met une fumee dans sa poche (etape 7.10).
+ * Mission: ce joueur met un objet de cette nature dans sa poche: une fumee (etape 7.10) ou une
+ * mine (etape 7.11).
  *
- * Il vise les fumees posees sur la carte qu'il peut atteindre avant qu'elles disparaissent,
- * comme les bonus du Tactique, et la mission est accomplie quand le serveur la lui compte
- * en poche.
+ * Il vise les objets de cette nature poses sur la carte qu'il peut atteindre avant qu'ils
+ * disparaissent, comme les bonus du Tactique, et la mission est accomplie quand le serveur le
+ * lui compte en poche.
  */
-export function ramasserUneFumee(partie: GameRoom, pseudo: string, commande: Commande): Mission {
+export function ramasserUnObjetDePoche(
+  partie: GameRoom,
+  pseudo: string,
+  commande: Commande,
+  nature: ObjetDePoche,
+): Mission {
   return {
-    nom: `${pseudo} met une fumee dans sa poche`,
+    nom: `${pseudo} met ${nature === 'fumee' ? 'une fumee' : 'une mine'} dans sa poche`,
     commande,
     delaiMs: DELAI_CAPTURE_DE_BOT_MS,
     situation: () => {
@@ -537,14 +543,19 @@ export function ramasserUneFumee(partie: GameRoom, pseudo: string, commande: Com
         cibles: Object.values(partie.etat.objets)
           .filter(
             (objet) =>
-              objet.nature === 'fumee' &&
+              objet.nature === nature &&
               objet.dureeDeVieRestanteMs >= tempsPourAtteindreMs(position, objet.position),
           )
           .map((objet) => objet.position),
       };
     },
-    accomplie: () => joueurNomme(partie, pseudo).poche === 'fumee',
+    accomplie: () => joueurNomme(partie, pseudo).poche === nature,
   };
+}
+
+/** Mission: ce joueur met une fumee dans sa poche (etape 7.10). */
+export function ramasserUneFumee(partie: GameRoom, pseudo: string, commande: Commande): Mission {
+  return ramasserUnObjetDePoche(partie, pseudo, commande, 'fumee');
 }
 
 /**

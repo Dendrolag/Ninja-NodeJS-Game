@@ -37,6 +37,15 @@ Lire CLAUDE.md, le dernier handoff (celui de l'étape 7.11), cette fiche, la fic
 
 Écartés: des mines de zone qui s'ajoutent aux zones spontanées; des mines de zone cachées ou d'une couleur neutre; les faux ninjas comme déclencheurs.
 
+## Demande du porteur du projet, consignée le 2 octobre 2026
+
+Pendant l'étape 7.11, le porteur du projet a demandé de revoir l'affichage des zones, « jusqu'ici des tests avec un rendu très brut », pour un rendu adapté et peaufiné, et de leur donner **une taille prédéfinie**. Cela révise la micro-décision 5 ci-dessous: le rayon ne se tire plus, il est fixe. La planche `docs/design/etape-7-12/1-zones.png` propose:
+
+- **trois rendus**, communs aux quatre natures: A, un anneau néon au bord lumineux, fond léger et pictogramme au centre, avec la durée restante en arc pointillé qui se vide; B, un motif vivant qui montre l'effet (éclairs du chaos, ondes et chevrons qui repoussent ou attirent, voile de l'invisibilité); C, un dôme de particules qui suivent l'effet. Dans les trois, la zone pâlit et son bord clignote les trois dernières secondes, et un pictogramme remplace le libellé écrit;
+- **trois tailles**: 180, 220 (proposée) ou 260 pixels de rayon, contre un tirage entre 150 et le cinquième de la carte aujourd'hui.
+
+**Choix en attente du porteur du projet**: le rendu et la taille. Ils se construisent dans cette étape, pas dans la 7.11 (règle 6). La durée, elle, reste tirée comme aujourd'hui, faute de décision contraire.
+
 ## Décisions prises par cette fiche
 
 Micro-décisions au sens du PROTOCOLE. Chacune se consigne au journal de `docs/design/README.md` quand elle est construite, et se révise en exécutant si le dépôt le demande.
@@ -56,12 +65,12 @@ Micro-décisions au sens du PROTOCOLE. Chacune se consigne au journal de `docs/d
 2. **La pose remplace l'apparition**: au rythme du délai réglé, avec la même variation au hasard qu'aujourd'hui, une mine est posée si la carte en compte moins que le plafond. La nature cachée se tire à la pose, parmi les natures cochées, et se voit tout de suite.
 3. **Une mine se pose loin des joueurs et des Black Ninjas**, par `positionDApparition`, pour que personne ne l'arme en naissant, et loin des autres mines.
 4. **Elle reste jusqu'à ce qu'on l'arme**, comme la mine posée.
-5. **À l'ouverture**, la zone se centre sur la mine, avec un rayon et une durée tirés comme aujourd'hui. Elle agit exactement comme une zone d'aujourd'hui: seules sa naissance et son annonce changent.
+5. **À l'ouverture**, la zone se centre sur la mine, avec un rayon et une durée tirés comme aujourd'hui. _Révisée le 2 octobre 2026: le rayon devient fixe, voir la demande ci-dessus._ Elle agit exactement comme une zone d'aujourd'hui: seules sa naissance et son annonce changent.
 6. **Les zones ouvertes n'ont pas de plafond propre**: chacune vient d'une mine, et le plafond de mines borne leur nombre en pratique. Le compter en jouant; un plafond se remettrait si l'écran se chargeait trop.
 7. **Ni la fumée ni l'explosion d'une mine posée** n'arment une mine de zone: seul un contact le fait.
 8. **Le flux d'état porte les mines de zone** comme un nouveau type d'entité, en fin de liste (`TYPES_ENTITE`), avec leur nature et, armées, leur temps restant. Une partie sans zones doit s'écrire à l'octet comme avant.
 9. **Faits**: la pose, l'armement, l'ouverture, pour les sons et le rendu. Aucun grand titre.
-10. **Le rendu se choisit sur planche** au début de l'étape (`docs/design/etape-7-12/`): la mine de zone à la couleur de chacune des quatre natures, armée, et la zone qui s'ouvre. Il se distingue de la mine posée (étape 7.11), dont il reprend le compte à rebours.
+10. **Le rendu se choisit sur planche** au début de l'étape (`docs/design/etape-7-12/`): la mine de zone à la couleur de chacune des quatre natures, armée, et la zone qui s'ouvre. Il se distingue de la mine posée (étape 7.11), dont il reprend le compte à rebours. La zone elle-même a déjà sa planche (`1-zones.png`, ci-dessus); celle de la mine de zone reste à faire.
 11. **Le changement se consigne comme voulu**, au journal et au handoff. Les tests de caractérisation ne changent pas. Les tests du moteur qui figeaient l'apparition spontanée sont réécrits pour la pose des mines; ceux des effets des zones ne changent pas.
 
 ## Périmètre

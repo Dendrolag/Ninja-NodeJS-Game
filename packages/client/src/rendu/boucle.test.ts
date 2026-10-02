@@ -560,6 +560,28 @@ describe('faitQuiNousDeplace (etape 5.5)', () => {
     expect(faitQuiNousDeplace(tranche('eve'), 'massacre', 'moi')).toBe(false);
   });
 
+  it('retient une mine seulement quand elle nous tue (etape 7.11)', () => {
+    const explosion = (joueur: string, effet: 'tue' | 'ninjasPerdus') =>
+      fait(
+        'mineExplosee',
+        {
+          mine: 'm',
+          poseur: 'bob',
+          x: 0,
+          y: 0,
+          touches: [{ joueur, effet, quantite: 1 }],
+          botsNoirsTues: 0,
+          botsTues: 0,
+          points: 0,
+        },
+        0,
+      );
+
+    expect(faitQuiNousDeplace(explosion('moi', 'tue'), 'massacre', 'moi')).toBe(true);
+    expect(faitQuiNousDeplace(explosion('eve', 'tue'), 'massacre', 'moi')).toBe(false);
+    expect(faitQuiNousDeplace(explosion('moi', 'ninjasPerdus'), 'classique', 'moi')).toBe(false);
+  });
+
   it('retient une fuite dans la fumee seulement quand c est la notre (etape 7.10)', () => {
     const fuite = (joueurId: string) =>
       fait('fumee', { joueur: joueurId, depart: { x: 0, y: 0 }, arrivee: { x: 500, y: 500 } }, 0);

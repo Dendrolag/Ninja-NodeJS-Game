@@ -58,7 +58,7 @@ import { deflateRawSync } from 'node:zlib';
 
 import type { CarteCollisions } from '../../packages/sim/dist/index.js';
 import type { Alea, IdentifiantCarte, Mode } from '../../packages/shared/dist/index.js';
-import { creerAlea, entier, nombre } from '../../packages/shared/dist/index.js';
+import { MINES, creerAlea, entier, nombre } from '../../packages/shared/dist/index.js';
 import {
   CADENCE_BATTEMENT_MS,
   FluxDEtat,
@@ -123,6 +123,13 @@ export interface OptionsBancBattement {
   readonly carte?: IdentifiantCarte;
   /** Le mode de la partie. Le Classique par defaut. */
   readonly mode?: Mode;
+  /**
+   * Les joueurs posent des mines (etape 7.11): seule la mine apparait parmi les objets de
+   * poche, a chaque tentative, toutes les deux secondes. Un joueur qui en a moins de trois
+   * posees va chercher la plus proche, et pose celle qu'il a en poche aussitot: la partie
+   * approche le pire cas, trois mines par joueur, moins celles que les autres font sauter.
+   */
+  readonly mines?: boolean;
 }
 
 /** Ce que le banc a mesure. Les durees sont en millisecondes, les tailles en octets. */
@@ -225,7 +232,7 @@ export function mesurerLeBattement(options: OptionsBancBattement): ResultatBancB
   let entites = 0;
 
   for (let battement = 0; battement < joues; battement += 1) {
-    alea = orienterLesJoueurs(room, alea, avantChangement);
+    alea = orienterLesJoueurs(room, alea, avantChangement, options.mines === true);
 
     mesure = undefined;
     const debut = performance.now();
@@ -299,6 +306,15 @@ function ouvrirLaPartie(
       carte: options.carte ?? 'map1',
       nombreBotsInitial: options.bots,
       dureePartieS,
+      ...(options.mines === true
+        ? {
+            bonus: { intervalleApparitionS: 2 },
+            objetsDePoche: {
+              fumee: { actif: false },
+              mine: { actif: true, tauxApparitionPourCent: 100 },
+            },
+          }
+        : {}),
     },
     ...(options.terrain === undefined ? {} : { terrain: options.terrain }),
     horloge: creerHorlogeManuelle(),
@@ -319,6 +335,48 @@ function ouvrirLaPartie(
 }
 
 /**
+ * Le banc des mines (etape 7.11): ce joueur pose la mine qu'il a en poche, ou va chercher la
+ * plus proche tant qu'il en a moins de trois posees. Aucun tirage. Rend faux s'il n'a rien a
+ * faire de ce cote, et suit alors son cap ordinaire.
+ */
+function chercherUneMine(room: GameRoom, id: string): boolean {
+  const joueur = room.etat.joueurs[id];
+
+  if (joueur === undefined) {
+    return false;
+  }
+
+  if (joueur.poche === 'mine') {
+    room.demanderLaPoche(id);
+    return true;
+  }
+
+  const posees = Object.values(room.etat.minesPosees ?? {}).filter((mine) => mine.poseur === id);
+  const auSol = Object.values(room.etat.objets).filter((objet) => objet.nature === 'mine');
+
+  if (posees.length >= MINES.PLAFOND_PAR_JOUEUR || auSol.length === 0) {
+    return false;
+  }
+
+  const ici = joueur.position;
+  const but = auSol
+    .map((objet) => objet.position)
+    .reduce((meilleur, autre) =>
+      Math.hypot(autre.x - ici.x, autre.y - ici.y) <
+      Math.hypot(meilleur.x - ici.x, meilleur.y - ici.y)
+        ? autre
+        : meilleur,
+    );
+  const ecart = Math.max(Math.hypot(but.x - ici.x, but.y - ici.y), 1);
+
+  room.enregistrerIntention(id, {
+    deplacement: { x: (but.x - ici.x) / ecart, y: (but.y - ici.y) / ecart },
+    enMouvement: true,
+  });
+  return true;
+}
+
+/**
  * Donne a chaque joueur un cap, qu'il tient entre une demi-seconde et une
  * seconde et demie avant d'en changer.
  *
@@ -334,10 +392,15 @@ function orienterLesJoueurs(
   room: GameRoom,
   alea: Alea,
   avantChangement: Map<string, number>,
+  poserDesMines: boolean,
 ): Alea {
   let suivant = alea;
 
   for (const joueur of room.joueurs) {
+    if (poserDesMines && chercherUneMine(room, joueur.id)) {
+      continue;
+    }
+
     const restant = avantChangement.get(joueur.id) ?? 0;
 
     if (restant > 0) {

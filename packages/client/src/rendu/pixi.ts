@@ -393,6 +393,8 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   const zones = new Graphics();
   const libelles = new Container();
   const disques = new Graphics();
+  // Les mines posees, au sol, sur les halos et sous les objets (etape 7.11).
+  const mines = new Graphics();
   const objets = new Container();
   // Les personnages se dessinent dans l'ordre de la scene, que leur rang fixe (etape 5.7).
   // Le nom permet au banc de mesure de compter ceux qui sont affiches.
@@ -415,6 +417,7 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
     zones,
     libelles,
     disques,
+    mines,
     objets,
     entites,
     indicateur,
@@ -582,11 +585,13 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       dessinerLesZones(zones, libelles, textesZones, scene.zones);
       dessinerLesDisques(disques, scene.disques, champ);
       dessinerLesCones(disques, scene.cones);
+      dessinerLIndicateur(mines, scene.mines, champ);
       majSprites(spritesObjets, objets, scene.objets);
       majPersonnages(spritesEntites, entites, scene.entites, champ, numeroDImage, calquesParImage);
       dessinerLIndicateur(indicateur, scene.indicateur, champ);
       dessinerLesMarques(marques, textesDesMarques, badges, scene.marques);
-      dessinerLesDisques(fumees, scene.fumees, champ);
+      // Les explosions des mines passent avec les nuages, par-dessus les personnages.
+      dessinerLesDisques(fumees, [...scene.fumees, ...scene.explosions], champ);
       dessinerLesReperes(reperes, scene.reperes);
     },
 

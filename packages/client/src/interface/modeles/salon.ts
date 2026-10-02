@@ -353,6 +353,11 @@ function recapitulatif(reglages: ReglagesPartie, mode: Mode): readonly LigneReca
       libelle: 'Fumée',
       valeur: reglages.objetsDePoche.fumee.actif ? 'À garder en poche' : 'Désactivée',
     },
+    // La mine, dans tous les modes (etape 7.11).
+    {
+      libelle: 'Mine',
+      valeur: reglages.objetsDePoche.mine.actif ? 'À poser' : 'Désactivée',
+    },
     {
       libelle: 'Malus',
       valeur:

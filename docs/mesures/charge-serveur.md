@@ -930,3 +930,43 @@ Douze joueurs, carte Tokyo, graine 42, un processus neuf par ligne, le meilleur 
 |          50 |                0,163 |               0,161 |               0,169 |           226 |                  235 |
 |         150 |                0,447 |               0,453 |               0,431 |           467 |                  445 |
 |         300 |                1,068 |               1,066 |               1,400 |           781 |                  810 |
+
+## 22. Mesure de l'étape 7.11: la mine posée (2 octobre 2026)
+
+Mesures faites dans le conteneur de la session, plus lent que la machine des sections 20 et 21: les chiffres se comparent entre eux, pas avec ceux des sections précédentes.
+
+### 22.1 L'essentiel
+
+- **Trente-six mines posées ne coûtent presque rien.** Sur une même partie, rejouée à l'octet (même état final du générateur), trente-six mines qui ne s'arment jamais, trois par joueur, le pire cas, ajoutent environ 0,03 ms par battement au moteur à 50 faux ninjas, et rien de lisible au-dessus du bruit à 300. La projection et le flux prennent 0,03 ms de plus. Un message pèse 8 octets de plus en moyenne: une mine qui ne change pas ne part qu'avec les images complètes, pas dans les deltas.
+- **Deux coûts évitables ont été retirés pendant la mesure.** Chaque mine qui attend parcourait tous les faux ninjas de la carte pour y trouver les Black Ninjas, et la table des mines était recopiée à chaque battement même quand rien ne changeait. Le premier coûtait 0,1 à 0,15 ms à 300 faux ninjas. Les Black Ninjas sont désormais relevés une fois par battement, l'état n'est recopié que si une mine s'arme ou saute, et le contact avec une mine écarte une entité éloignée sur un axe sans calculer de distance, comme le relevé des contacts.
+- **Sans la mine, rien n'a bougé, à l'octet.** L'outil d'empreinte relancé avec `--sans-mine` redonne les empreintes du jeu et du flux de l'étape 7.10, fumée comprise, pour les quatre parties de référence; avec `--sans-poche`, celles de l'étape 7.9.
+
+### 22.2 Méthode
+
+Deux mesures.
+
+1. **Le coût isolé** (script de session, non gardé): une partie de 12 joueurs aux intentions tirées au sort, sur une carte sans mur, 2 400 battements dont 400 d'échauffement, avec ou sans trente-six mines posées hors de la carte, où personne ne peut les armer. Le jeu est donc identique à l'octet, et l'écart est le coût des mines seules: le parcours du moteur, la projection et le codage du flux. Trois passages par ligne, un processus neuf chacun.
+2. **Le banc des mines**, gardé: `pnpm charge --banc --mines --bots-banc 50,150,300`. Seule la mine apparaît parmi les objets de poche, à chaque tentative, toutes les deux secondes; un joueur qui en a moins de trois posées va chercher la plus proche et pose celle qu'il a en poche aussitôt. Deux minutes d'échauffement, le temps que les mines s'accumulent. Les mines y changent la partie (elles s'arment, sautent, tuent des Black Ninjas): ce banc montre une partie minée, pas un écart pur.
+
+### 22.3 Le coût isolé
+
+Moyenne du moteur seul, en millisecondes par battement, trois passages.
+
+| Faux ninjas | Sans mine           | Trente-six mines    |
+| ----------: | ------------------- | ------------------- |
+|          50 | 0,173, 0,137, 0,138 | 0,174, 0,189, 0,173 |
+|         300 | 1,599, 1,500, 1,563 | 1,554, 1,600, 1,543 |
+
+Projection et codage du flux, ensemble: 0,06 contre 0,09 ms à 50 faux ninjas, 0,41 contre 0,43 ms à 300. Octets par message: 196,4 contre 204,2 à 50, 762,8 contre 770,7 à 300.
+
+### 22.4 Le banc des mines
+
+Douze joueurs, Tokyo avec ses murs, graine 42, un processus neuf par ligne, sur le code final de l'étape. Les entités comptent les mines posées: 18 à 27 en moyenne pendant la mesure, sous le plafond de 36, des mines sautant sous les pas des autres. Chiffres bruts du premier passage: `docs/mesures/charge-serveur-7-11-mines.json`.
+
+| Faux ninjas | Entités | Total ms (trois passages) | Octets par message |
+| ----------: | ------: | ------------------------- | -----------------: |
+|          50 |      88 | 0,306, 0,297, 0,332       |                250 |
+|         150 |     183 | 1,089, 0,948, 1,051       |                497 |
+|         300 |     342 | 3,443, 3,562, 3,522       |                822 |
+
+La même partie au même échauffement, mines coupées le temps de la mesure (avant les optimisations, qui ne touchent pas une partie sans mine): 0,26 à 0,32 ms à 50, 1,25 à 1,36 à 150, 5,1 à 5,5 à 300. Les parties divergent, et la partie minée est moins chère à 150 et 300 faux ninjas: ses mines détruisent des Black Ninjas et changent ce qui s'y passe. Seule la mesure isolée dit le coût des mines.

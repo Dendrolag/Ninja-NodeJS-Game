@@ -59,7 +59,7 @@ const EFFETS_BONUS: Readonly<Record<TypeBonus, string>> = {
 const EFFETS_POCHE: Readonly<Record<ObjetDePoche, string>> = {
   fumee:
     'Gardez-la pour le bon moment. Un nuage, et vous reparaissez loin de là, à l’abri des autres. Personne ne sait que vous l’avez.',
-  mine: 'Posez-la sous vos pieds. Un adversaire ou un Black Ninja qui passe dessus l’arme, et elle saute une seconde et demie plus tard. Trois au plus sur la carte.',
+  mine: 'Posez-la sous vos pieds : les autres n’en voient qu’un reflet. Un adversaire ou un Black Ninja qui passe dessus l’arme, et elle saute une seconde et demie plus tard, dans un grand rayon. En Horde, en Tactique et en Équipes, elle coûte 15 % de leurs ninjas aux adversaires touchés. En Massacre, elle tue. En Chasse, une proie y perd 15 % de ses points, un traqueur a son arme enrayée 3 secondes. Elle détruit les Black Ninjas, jamais vous ni vos coéquipiers. Trois au plus sur la carte.',
 };
 
 /** Ce que fait chaque malus (etape 4.5). */
@@ -106,7 +106,7 @@ const COMMANDES: readonly (readonly [string, string])[] = [
   ['Q, A ou flèche gauche', 'Aller à gauche'],
   ['D ou flèche droite', 'Aller à droite'],
   ['F', 'Localiser votre ninja'],
-  ['E', 'Vous servir de ce que vous avez en poche : la fumée'],
+  ['E', 'Vous servir de ce que vous avez en poche : la fumée, ou poser la mine'],
   ['Espace', 'Capturer en Tactique et en Chasse, trancher en Massacre'],
   ['Pouce sur l’écran', 'Se déplacer, sur téléphone et tablette'],
   ['Bouton Capturer ou Katana', 'La même chose qu’Espace, sur téléphone et tablette'],

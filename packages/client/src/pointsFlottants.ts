@@ -13,6 +13,10 @@
  *   - un Black Ninja detruit: ses points, en or, la ou il a ete detruit;
  *   - un joueur capture: les ninjas gagnes, en violet, la ou il se trouvait.
  *
+ * LA MINE (etape 7.11) en ajoute deux: ce qu'elle rapporte a son poseur, la ou elle a saute,
+ * en or quand elle detruit des Black Ninjas, en violet quand elle tue en Massacre; et, en
+ * Horde, les ninjas qu'elle nous fait perdre, en rouge et en negatif, sous notre ninja.
+ *
  * LA HORDE (etape 7.5) remplace la premiere occasion par ses ralliements, que le serveur
  * annonce avec le multiplicateur du combo: le point y vaut ce multiplicateur, et monte en
  * couleur et en taille avec lui, comme les morts du Massacre.
@@ -26,6 +30,7 @@ import type { EntiteVue } from '@neon-ninja/shared';
 import { MASSACRE } from '@neon-ninja/shared';
 
 import type { EtatClient } from './etat.js';
+import type { FaitDeJeu } from './faits.js';
 import { faitsArrives } from './faits.js';
 import type { VuePartie } from './reconstruction.js';
 
@@ -36,7 +41,9 @@ export type GenreDePoints =
   /** Un Black Ninja detruit. */
   | 'botNoir'
   /** Un joueur capture. */
-  | 'joueur';
+  | 'joueur'
+  /** Des ninjas qu'une mine vient de nous faire perdre, en Horde (etape 7.11). */
+  | 'perte';
 
 /** Des points a montrer, a un endroit de la carte. */
 export interface PointsGagnes {
@@ -113,6 +120,10 @@ function pointsDesFaits(avant: EtatClient, apres: EtatClient): readonly PointsGa
       points.push({ valeur, genre: 'joueur', niveau: 1, x, y });
     }
 
+    if (fait.nature === 'mineExplosee') {
+      points.push(...pointsDeLaMine(fait.charge, avant, apres));
+    }
+
     if (fait.nature === 'botNoirDetruit') {
       const { points: valeur, x, y } = fait.charge;
       points.push({ valeur, genre: 'botNoir', niveau: 1, x, y });
@@ -134,6 +145,46 @@ function pointsDesFaits(avant: EtatClient, apres: EtatClient): readonly PointsGa
         });
       }
     }
+  }
+
+  return points;
+}
+
+/**
+ * Ce qu'une explosion de mine montre en points flottants: le gain de son poseur, si c'est
+ * nous, et notre perte de ninjas en Horde, si elle nous a touches. Notre perte se pose a notre
+ * place d'avant l'explosion.
+ */
+function pointsDeLaMine(
+  explosion: Extract<FaitDeJeu, { nature: 'mineExplosee' }>['charge'],
+  avant: EtatClient,
+  apres: EtatClient,
+): readonly PointsGagnes[] {
+  const points: PointsGagnes[] = [];
+
+  if (explosion.poseur === apres.moi && explosion.points > 0) {
+    const tue = explosion.touches.some((touche) => touche.effet === 'tue');
+    points.push({
+      valeur: explosion.points,
+      genre: tue ? 'joueur' : 'botNoir',
+      niveau: 1,
+      x: explosion.x,
+      y: explosion.y,
+    });
+  }
+
+  const perte = explosion.touches.find(
+    (touche) => touche.joueur === apres.moi && touche.effet === 'ninjasPerdus',
+  );
+  const moi = (avant.partie ?? apres.partie)?.entites.find((entite) => entite.id === apres.moi);
+
+  if (
+    apres.salon?.mode === 'classique' &&
+    perte !== undefined &&
+    perte.quantite > 0 &&
+    moi !== undefined
+  ) {
+    points.push({ valeur: -perte.quantite, genre: 'perte', niveau: 1, x: moi.x, y: moi.y });
   }
 
   return points;

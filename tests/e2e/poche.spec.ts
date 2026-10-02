@@ -64,6 +64,8 @@ test('ramasser une fumee, la voir en poche, et s enfuir dans un nuage', async ({
     'bonus.types.invincibilite.actif': false,
     'bonus.types.revelation.actif': false,
     'objetsDePoche.fumee.tauxApparitionPourCent': '100',
+    // La mine (etape 7.11) coupee: Alice ne doit trouver en poche qu'une fumee.
+    'objetsDePoche.mine.actif': false,
   });
   await expect(page.locator('.recapitulatif')).toContainText('À garder en poche');
   await lancer(page);

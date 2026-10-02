@@ -315,6 +315,71 @@ export const APPARENCE_FUMEE = {
 } as const;
 
 /**
+ * La mine posee (etape 7.11), rendus choisis par le porteur du projet sur la planche
+ * docs/design/etape-7-11/1-mine.png: la mine ronde A, le reflet A pour les adversaires, le
+ * rayon B une fois armee, la boule de feu B a l'explosion.
+ *
+ * Les mesures sont en pixels de la carte.
+ */
+export const APPARENCE_MINE = {
+  /** Le disque de metal, cerne comme les sprites. */
+  rayon: 9,
+  metal: 0x2b3142,
+  metalClair: 0x4a5470,
+  cerne: 0x111111,
+  /** L'anneau a la couleur du poseur. */
+  rayonAnneau: 6.2,
+  epaisseurAnneau: 2.2,
+  /** La diode au centre: allumee, eteinte, et son halo. */
+  diode: 0xff2d3a,
+  diodeEteinte: 0x5a1a22,
+  rayonDiode: 2.2,
+  rayonHaloDiode: 6,
+  /** Posee et vue de son camp, la diode respire lentement: une periode, en millisecondes. */
+  respirationMs: 1600,
+  /** Le reflet que voient les adversaires: toutes les periodeMs, pendant dureeMs. */
+  reflet: { periodeMs: 2000, dureeMs: 200, taille: 7 },
+  /** La Revelation cerne la mine de son violet. */
+  revelation: { couleur: 0xb98cff, rayon: 13, epaisseur: 2, alpha: 0.9 },
+  /**
+   * Armee: la diode clignote de plus en plus vite, d'une periode de depart a une periode
+   * d'arrivee, et un cercle pointille rouge marque le rayon de l'explosion.
+   */
+  clignotement: { departMs: 400, arriveeMs: 70 },
+  rayonArme: {
+    remplissage: { couleur: 0xff2d3a, alpha: 0.08 },
+    trait: 0xff2d3a,
+    alpha: 0.75,
+    epaisseur: 2,
+    /** Les pointilles: un tiret, puis un vide, en pixels. */
+    tiret: 10,
+    vide: 8,
+  },
+  /** La boule de feu: elle remplit le rayon, puis se dissipe. */
+  explosion: {
+    dureeMs: 450,
+    gonflementMs: 220,
+    /** Orange au debut, puis rouge. */
+    orangeMs: 120,
+    orange: 0xffb347,
+    rouge: 0xff5a3c,
+    clair: 0xffe28a,
+    cerne: 0x111111,
+    /** Les lobes: decalage en x, en y, et rayon, pour un rayon d'explosion de 130 pixels. */
+    lobes: [
+      [0, 0, 55],
+      [-60, -20, 45],
+      [55, -30, 45],
+      [-40, 45, 42],
+      [45, 45, 42],
+      [0, -65, 40],
+      [-75, 25, 30],
+      [78, 18, 30],
+    ],
+  },
+} as const;
+
+/**
  * L'Evade (etape 7.9): ses rayures, son halo, et la marque du joueur qui porte son x2.
  *
  * Rendus choisis par le porteur du projet sur la planche docs/design/etape-7-9/: le skin C,

@@ -171,3 +171,44 @@ describe('texteDesPoints', () => {
     expect(pointsDuChangement(avant, apres)).toEqual([]);
   });
 });
+
+describe('les points de la mine (etape 7.11)', () => {
+  const explosion = (
+    poseur: string,
+    touches: readonly { joueur: string; effet: 'ninjasPerdus' | 'tue'; quantite: number }[],
+    points: number,
+  ) =>
+    fait(
+      'mineExplosee',
+      { mine: 'mine-1', poseur, x: 300, y: 200, touches, botsNoirsTues: 1, botsTues: 0, points },
+      10,
+    );
+  const horde = {
+    idRoom: 'room-1',
+    statut: 'enCours' as const,
+    mode: 'classique' as const,
+    visibilite: 'publique' as const,
+    capacite: 12,
+    joueurs: [],
+    reglages: REGLAGES_PAR_DEFAUT,
+  };
+
+  it('montre au poseur ce que sa mine rapporte, la ou elle a saute', () => {
+    const partie = vue([joueur('moi', '#FF0000')]);
+    const apres = etat({ partie, journal: [explosion('moi', [], 15)], salon: horde });
+
+    expect(pointsDuChangement(etat({ partie, salon: horde }), apres)).toEqual([
+      { valeur: 15, genre: 'botNoir', niveau: 1, x: 300, y: 200 },
+    ]);
+  });
+
+  it('montre en Horde, sous notre ninja, les ninjas qu une mine vient de nous faire perdre', () => {
+    const partie = vue([joueur('moi', '#FF0000', 50, 60)]);
+    const touche = explosion('bob', [{ joueur: 'moi', effet: 'ninjasPerdus', quantite: 3 }], 0);
+    const apres = etat({ partie, journal: [touche], salon: horde });
+
+    expect(pointsDuChangement(etat({ partie, salon: horde }), apres)).toEqual([
+      { valeur: -3, genre: 'perte', niveau: 1, x: 50, y: 60 },
+    ]);
+  });
+});

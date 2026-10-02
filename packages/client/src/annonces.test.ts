@@ -373,3 +373,108 @@ describe('les annonces de la poche (etape 7.10)', () => {
     ).toBeUndefined();
   });
 });
+
+describe('les annonces de la mine (etape 7.11)', () => {
+  /** Une explosion de la mine de ce poseur, qui a fait ces effets. */
+  const explosion = (
+    poseur: string,
+    touches: readonly {
+      joueur: string;
+      effet: 'ninjasPerdus' | 'pointsPerdus' | 'armeEnrayee' | 'tue';
+      quantite: number;
+    }[],
+    points = 0,
+    botsNoirsTues = 0,
+  ) =>
+    fait(
+      'mineExplosee',
+      { mine: 'mine-1', poseur, x: 0, y: 0, touches, botsNoirsTues, botsTues: 0, points },
+      0,
+    );
+
+  it('dit a la victime ce qu elle a perdu, en grand titre brouille', () => {
+    const annonce = annonceDuFait(
+      explosion('bob', [{ joueur: 'moi', effet: 'ninjasPerdus', quantite: 3 }]),
+      'classique',
+      'moi',
+    );
+
+    expect(annonce).toMatchObject({
+      texte: 'Mine : 3 ninjas perdus',
+      ton: 'alerte',
+      grandTitre: {
+        surtitre: 'Piège',
+        titre: 'Mine',
+        ligne: '3 ninjas perdus',
+        couleur: APPARENCE_OBJET.mine.couleur,
+        brouille: true,
+      },
+    });
+  });
+
+  it('dit une proie et un traqueur de la Chasse dans leurs mots', () => {
+    const proie = annonceDuFait(
+      explosion('tom', [{ joueur: 'moi', effet: 'pointsPerdus', quantite: 1 }]),
+      'chasse',
+      'moi',
+    );
+    const traqueur = annonceDuFait(
+      explosion('bob', [{ joueur: 'moi', effet: 'armeEnrayee', quantite: 3000 }]),
+      'chasse',
+      'moi',
+    );
+
+    expect(proie?.grandTitre?.ligne).toBe('−1 point');
+    expect(traqueur?.grandTitre?.ligne).toBe('Arme enrayée pendant 3 s');
+  });
+
+  it('dit la mort en Massacre dans une bulle, sans grand titre', () => {
+    const annonce = annonceDuFait(
+      explosion('bob', [{ joueur: 'moi', effet: 'tue', quantite: 20 }]),
+      'massacre',
+      'moi',
+    );
+
+    expect(annonce).toEqual({ texte: 'Une mine vous a eu', ton: 'alerte' });
+  });
+
+  it('dit au poseur ce que sa mine a fait, et rien aux autres', () => {
+    const touchee = explosion(
+      'moi',
+      [{ joueur: 'bob', effet: 'ninjasPerdus', quantite: 2 }],
+      15,
+      1,
+    );
+
+    expect(annonceDuFait(touchee, 'classique', 'moi')?.texte).toBe(
+      'Votre mine a touché 2 cibles : +15 points',
+    );
+    expect(annonceDuFait(explosion('moi', []), 'classique', 'moi')?.texte).toBe(
+      'Votre mine a sauté dans le vide',
+    );
+    expect(annonceDuFait(touchee, 'classique', 'carole')).toBeUndefined();
+  });
+
+  it('n annonce ni la pose ni l armement: ils se voient sur la carte', () => {
+    expect(
+      annonceDuFait(fait('minePosee', { mine: 'm', x: 0, y: 0 }, 0), 'classique', 'moi'),
+    ).toBeUndefined();
+    expect(
+      annonceDuFait(
+        fait('mineArmee', { mine: 'm', poseur: 'bob', par: 'moi', x: 0, y: 0 }, 0),
+        'classique',
+        'moi',
+      ),
+    ).toBeUndefined();
+  });
+
+  it('annonce la mine empochee, et comment s en servir', () => {
+    expect(
+      annonceDuFait(fait('objetEmpoche', { nature: 'mine' }, 0), 'classique', 'moi')?.grandTitre,
+    ).toMatchObject({
+      surtitre: 'En poche',
+      titre: 'Mine',
+      ligne: 'Posez-la, elle attendra les autres',
+    });
+  });
+});

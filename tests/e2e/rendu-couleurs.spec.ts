@@ -66,6 +66,8 @@ function pageDesCouleurs(): string {
       indicateur: { disques: [], parts: [], traits: [] },
       marques: [],
       fumees: [],
+      mines: { disques: [], parts: [], traits: [] },
+      explosions: [],
       entites: [ninja('joueur-vert', 980, 0x00ff00), ninja('bot-blanc', 1020, 0xffffff)],
     },
     { x: 1000, y: 750, echelle: 4 },
@@ -133,6 +135,8 @@ function pageDuHalo(): string {
     indicateur: { disques: [], parts: [], traits: [] },
     marques: [],
     fumees: [],
+    mines: { disques: [], parts: [], traits: [] },
+    explosions: [],
     entites: [
       ninja('jaune', 970, 0xffff00),
       ninja('blanc', 1000, 0xffffff),
