@@ -26,7 +26,7 @@ Un second objet de poche, la mine: le joueur qui la ramasse la pose sous ses pie
   - `reglages.ts`: le réglage par défaut de la mine;
   - `evenements.ts`: `MineVue` dans `EntiteVue`, `MinePoseeVue`, `MineArmeeVue`, `MineExploseeVue`, `ToucheParUneMine`, les trois messages;
   - `flux.ts`: la mine dans `TYPES_ENTITE`, son codage (poseur, armement);
-  - `ressources.ts`: l'icône de la mine, les sons `mineArmee` et `mineExplosee`;
+  - `ressources.ts`: l'icône de la mine, les sons `minePosee`, `mineArmee` et `mineExplosee`;
   - `index.ts`: les exports;
   - tests: `flux.test.ts` (aller-retour image et deltas, coût nul d'une mine immobile, trame refusée), `validation.test.ts` (réglage).
 - `packages/sim`:
@@ -50,7 +50,7 @@ Un second objet de poche, la mine: le joueur qui la ramasse la pose sous ses pie
   - `annonces.ts`, `pointsFlottants.ts`, `sons/declencheurs.ts`: annonces, points, sons;
   - `interface/composants/aide.ts`, `interface/modeles/salon.ts`, `interface/modeles/touches.ts` (créé), `interface/ecrans/jeu.ts`: aide, récapitulatif, rappel de la touche;
   - `page/styles/jeu.css`: le genre de point `perte`, le rappel des touches qui ne passe plus sous le temps;
-  - tests: `annonces.test.ts`, `pointsFlottants.test.ts`, `rendu/scene.test.ts`, `rendu/boucle.test.ts`, `interface/modeles/salon.test.ts`, `interface/modeles/touches.test.ts` (créé).
+  - tests: `annonces.test.ts`, `pointsFlottants.test.ts`, `sons/sons.test.ts`, `rendu/scene.test.ts`, `rendu/boucle.test.ts`, `interface/modeles/salon.test.ts`, `interface/modeles/touches.test.ts` (créé).
 - `assets/objets/mine.svg` (créé): le pictogramme.
 - `tests/e2e`: `mine.spec.ts` (créé); `harnais/parcours.ts` (`ramasserUnObjetDePoche`); `poche.spec.ts` (mine coupée); `rendu-couleurs.spec.ts`, `rendu-miroir.spec.ts`, `rendu-pluie.spec.ts` (les deux champs nouveaux de la scène).
 - `tests/charge`: `empreinte.ts` (`--sans-mine`, `--sans-poche` coupe les deux objets); `battement.ts`, `battement-isole.ts`, `charge.ts` (`--mines`).
@@ -81,13 +81,13 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
 
 ## Problèmes connus et dette
 
-- **Trois sons sont provisoires**: la fumée (`SONS.fumee`, le souffle du katana), l'armement de la mine (`SONS.mineArmee`, le tic du compte à rebours) et son explosion (`SONS.mineExplosee`, le Black Ninja détruit). Le porteur du projet a annoncé le son de la fumée, et n'avait pas son fichier sous la main le 28 septembre. Pour chacun: déposer le fichier dans `assets/sons/`, et changer le nom dans `SONS` (`packages/shared/src/ressources.ts`); le test des ressources vérifie que le fichier existe.
+- **Quatre sons sont provisoires**, et le porteur du projet a les siens, qu'il n'avait pas sous la main: la fumée (`SONS.fumee`, le souffle du katana), la pose de la mine (`SONS.minePosee`, le clic des boutons), son armement (`SONS.mineArmee`, le tic du compte à rebours) et son explosion (`SONS.mineExplosee`, le Black Ninja détruit). Pour chacun: déposer le fichier dans `assets/sons/`, et changer le nom dans `SONS` (`packages/shared/src/ressources.ts`); le test des ressources vérifie que le fichier existe.
 - **Le délai de 1,5 seconde est à juger en jouant**: à vitesse égale, un poursuivant collé au joueur qui arme la mine en sort aussi; c'est celui qui suit de loin qui y reste (fiche, réconciliation, point 16).
 - Rien d'autre.
 
 ## Prochaine action exacte
 
-D'abord, **rappeler au porteur du projet les trois sons provisoires** (la fumée, l'armement et l'explosion de la mine). Puis exécuter l'étape `7.12`, les mines de zone: lire `docs/plan/etape-7-12.md`, sa section « Demande du porteur du projet, consignée le 2 octobre 2026 » (zones au rendu B, motif vivant, et à 220 pixels de rayon), réconcilier avec la mine posée (`packages/sim/src/mines.ts`, l'entité `mine` du flux, `rendu/mines.ts`), et commencer par la planche de la mine de zone.
+D'abord, **rappeler au porteur du projet les quatre sons provisoires** (la fumée, la pose, l'armement et l'explosion de la mine). Puis exécuter l'étape `7.12`, les mines de zone: lire `docs/plan/etape-7-12.md`, sa section « Demande du porteur du projet, consignée le 2 octobre 2026 » (zones au rendu B, motif vivant, et à 220 pixels de rayon), réconcilier avec la mine posée (`packages/sim/src/mines.ts`, l'entité `mine` du flux, `rendu/mines.ts`), et commencer par la planche de la mine de zone.
 
 ## Étape suivante
 

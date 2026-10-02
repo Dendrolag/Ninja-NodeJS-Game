@@ -262,12 +262,16 @@ export const SONS = {
    */
   fumee: 'katana-swing.mp3',
   /**
-   * Une mine vient d'etre armee (etape 7.11), entendue de tous: le signal qui dit de s'eloigner.
-   * PROVISOIRE, comme le suivant: le tic du compte a rebours, en attendant les sons que le
-   * porteur du projet fournira.
+   * Les trois sons de la mine (etape 7.11). Le porteur du projet a les siens, qu'il deposera
+   * dans assets/sons/: il suffira alors de changer ici le nom du fichier. En attendant, chacun
+   * joue un son du jeu qui s'en approche, PROVISOIREMENT.
+   *
+   * Nous venons de poser une mine, entendu de nous seuls: le clic des boutons.
    */
+  minePosee: 'button-click.wav',
+  /** Une mine vient d'etre armee, entendue de tous, le signal de s'eloigner: le tic du decompte. */
   mineArmee: 'countdown-tick.wav',
-  /** Une mine vient de sauter (etape 7.11), entendue de tous. PROVISOIRE: le Black Ninja detruit. */
+  /** Une mine vient de sauter, entendue de tous: le Black Ninja detruit. */
   mineExplosee: 'blackbot-destroy.mp3',
 } as const;
 

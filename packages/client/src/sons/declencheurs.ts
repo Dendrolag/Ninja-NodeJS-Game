@@ -111,7 +111,7 @@ export function sonDuFait(fait: FaitDeJeu, moi?: string, mode?: Mode): NomDeSon 
     // La mine (etape 7.11): sa pose ne s'entend que chez nous, comme un objet qu'on pose;
     // son armement et son explosion, de tous, comme ils se voient de tous.
     case 'minePosee':
-      return 'clic';
+      return 'minePosee';
 
     case 'mineArmee':
       return 'mineArmee';

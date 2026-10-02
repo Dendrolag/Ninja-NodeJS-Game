@@ -506,3 +506,25 @@ describe('les sons de la fumee (etape 7.10)', () => {
     expect(SONS.fumee).toBeDefined();
   });
 });
+
+describe('les sons de la mine (etape 7.11)', () => {
+  it('a un son a elle pour sa pose, son armement et son explosion', () => {
+    const mine = { mine: 'm', x: 0, y: 0 };
+
+    expect(sonDuFait(fait('minePosee', mine, 0), 'moi')).toBe('minePosee');
+    expect(sonDuFait(fait('mineArmee', { ...mine, poseur: 'bob', par: 'moi' }, 0), 'moi')).toBe(
+      'mineArmee',
+    );
+    expect(
+      sonDuFait(
+        fait(
+          'mineExplosee',
+          { ...mine, poseur: 'bob', touches: [], botsNoirsTues: 0, botsTues: 0, points: 0 },
+          0,
+        ),
+        'moi',
+      ),
+    ).toBe('mineExplosee');
+    expect([SONS.minePosee, SONS.mineArmee, SONS.mineExplosee]).toHaveLength(3);
+  });
+});
