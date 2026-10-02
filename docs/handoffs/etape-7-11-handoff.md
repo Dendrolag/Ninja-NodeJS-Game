@@ -61,7 +61,7 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
 ## Tests
 
 - Ajoutés: voir la liste ci-dessus. Pour le moteur: la pose et le plafond, le départ et la capture du poseur, l'armement (adversaire, seuil strict, ni poseur, ni coéquipier, ni faux ninja, ni Évadé, Black Ninja, joueur protégé), le délai exact, le rayon bord compris, celui qui passe et celui qui suit, aucune réaction en chaîne, chaque mode, les protections, les Black Ninjas, le x2, l'Évadé, la carte vidée, la Chasse et son camp, les cas limites.
-- Résultat: 3 210 tests unitaires et d'intégration au vert en local (`pnpm verify`: types, linter, tests), formatage vérifié; les tests de la base sautés en local, joués par la CI. `ServeurSocket.mine.test.ts`: stable sur dix passages, et sous la charge de la couverture. Bout en bout: `mine.spec.ts` et `poche.spec.ts`, 4 sur 4 dans les deux cadrages; la suite entière: voir la ligne ajoutée après la poussée.
+- Résultat: 3 210 tests unitaires et d'intégration au vert en local (`pnpm verify`: types, linter, tests), formatage vérifié; les tests de la base sautés en local, joués par la CI. `ServeurSocket.mine.test.ts`: stable sur dix passages, et sous la charge de la couverture. Bout en bout: `mine.spec.ts` et `poche.spec.ts`, 4 sur 4 dans les deux cadrages; la suite entière: 71 sur 71 par la CI, à un exécutant. En local à trois exécutants, cinq scénarios échouent, `peaufinage` compris, qui échoue de la même façon sur `master`: la machine saturée perd l'écran, ce n'est pas la mine.
 - Couverture de packages/sim: 99,83 pour cent des instructions et 99,04 des branches, contre 99,81 et 98,93 au handoff 7.10 (`mines.ts` 100 et 100).
 - Empreinte des parties de référence, mine coupée (`--sans-mine`): identique à l'octet à celle du handoff 7.10, jeu et flux, pour les quatre parties. `--sans-poche`: identique à celle du handoff 7.9.
 - Nouvelles empreintes, mine active (réglages par défaut):
@@ -70,7 +70,7 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
   - 300 bots, 12 joueurs, sans mur: jeu `2cbfbf1245b9ccb784ab6099412839ba5ae3cc95f33b117aafe7a348f5cde146`, flux `95dca1224a84a5089f5d7f0145da9e1cbda401300326220a9caff59e46dfb398`
   - 150 bots, 2 joueurs, murs: jeu `c8262daf6e34aeb460506678db5ee656fe1960b336cfcd121fd7ebd25e3426f1`, flux `65d19806875b5bf075fed273f8bbc2c4913805f513cf27dcde697f13acd16350`
 - Banc: trente-six mines coûtent environ 0,03 ms par battement au moteur à 50 faux ninjas, rien de lisible à 300, et 8 octets par message. Section 22 de `docs/mesures/charge-serveur.md`.
-- État de la CI: voir la ligne ajoutée en fin de handoff après la poussée.
+- État de la CI: verte sur `352c5c3`, sur la branche (exécution 36975116537) puis sur `master`, poussé en avance rapide (exécution 36977485605), mise en ligne comprise.
 
 ## Décisions et écarts au plan
 
