@@ -273,6 +273,13 @@ export const SONS = {
   mineArmee: 'countdown-tick.wav',
   /** Une mine vient de sauter, entendue de tous: le Black Ninja detruit. */
   mineExplosee: 'blackbot-destroy.mp3',
+  /**
+   * Les deux sons de la mine de zone (etape 7.12), entendus de tous, PROVISOIRES comme ceux de
+   * la mine posee. Un joueur ou un Black Ninja vient de l'armer: le tic du decompte.
+   */
+  mineDeZoneArmee: 'countdown-tick.wav',
+  /** Sa zone vient de s'ouvrir: le dernier tic du decompte. */
+  zoneOuverte: 'final-tick.wav',
 } as const;
 
 /** Nom d'un son ponctuel. */

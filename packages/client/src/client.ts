@@ -515,6 +515,13 @@ export function creerClient(options: OptionsClient): Client {
     }),
   );
 
+  // La mine de zone (etape 7.12): sa pose, son armement et l'ouverture de sa zone.
+  ecouter(
+    reseau.sur('mineDeZone', (charge) => {
+      magasin.appliquer({ type: 'fait', fait: fait('mineDeZone', charge, maintenant()) });
+    }),
+  );
+
   ecouter(
     reseau.sur('poche', (poche) => {
       magasin.appliquer({ type: 'poche', poche: poche.nature });

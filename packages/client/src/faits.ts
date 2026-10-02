@@ -34,6 +34,7 @@ import type {
   MalusRamasseParMoi,
   MalusSubi,
   MineArmeeVue,
+  MineDeZoneFaitVue,
   MineExploseeVue,
   MinePoseeVue,
   ObjetEmpoche,
@@ -90,6 +91,8 @@ export interface ChargesDeFait {
   mineArmee: MineArmeeVue;
   /** Une mine de la partie vient de sauter (etape 7.11). A tous. */
   mineExplosee: MineExploseeVue;
+  /** Une mine de zone vient d'etre posee, armee, ou de s'ouvrir (etape 7.12). A tous. */
+  mineDeZone: MineDeZoneFaitVue;
   /** Ce joueur vient de rallier des faux ninjas en les touchant, dans la Horde. */
   ralliement: RalliementVu;
   /** Quelqu'un vient d'entrer dans la partie. */

@@ -30,7 +30,7 @@ import { fait } from '../faits.js';
 import type { VuePartie } from '../reconstruction.js';
 import type { VueLissee } from './interpolation.js';
 import { SCENE_VIDE, construireScene, couleurEnNombre, nuage } from './scene.js';
-import { APPARENCE_EVADE, APPARENCE_FUMEE } from './apparence.js';
+import { APPARENCE_EVADE, APPARENCE_FUMEE, APPARENCE_ZONE } from './apparence.js';
 import { adresseDImage, adresseRayee } from './textures.js';
 
 /** Un joueur pose a un endroit, avec le minimum de champs. */
@@ -374,7 +374,7 @@ describe('construireScene', () => {
     });
   });
 
-  it('decrit chaque zone avec sa couleur et son libelle', () => {
+  it('dessine chaque zone a sa place, a son rayon et a sa couleur (etape 7.12)', () => {
     const zone: ZoneVue = {
       id: 'zone-1',
       type: 'chaos',
@@ -385,10 +385,36 @@ describe('construireScene', () => {
     };
 
     const scene = construireScene(etatEnJeu('moi'), lissee(vue([], [], [zone])), 0);
+    const fond = scene.zones[0]?.couches[0]?.disques[0];
 
     expect(scene.zones).toHaveLength(1);
-    expect(scene.zones[0]?.libelle).toBe('Zone de chaos');
-    expect(scene.zones[0]?.rayon).toBe(60);
+    expect(fond).toMatchObject({ x: 100, y: 100, rayon: 60 });
+    expect(fond?.remplissage?.couleur).toBe(APPARENCE_ZONE.chaos.couleur);
+  });
+
+  it('fait gonfler une zone qui vient de s ouvrir, d apres le journal (etape 7.12)', () => {
+    const zone: ZoneVue = {
+      id: 'zone-1',
+      type: 'repulsion',
+      x: 400,
+      y: 300,
+      rayon: 220,
+      dureeRestanteMs: 12_000,
+    };
+    const ouverte = fait(
+      'mineDeZone',
+      { quoi: 'ouverte', mine: 'mz', nature: 'repulsion', x: 400, y: 300 },
+      1_000,
+    );
+    const etat = { ...etatEnJeu('moi'), journal: [ouverte] };
+    const rayonA = (instant: number): number | undefined =>
+      construireScene(etat, lissee(vue([], [], [zone])), instant).zones[0]?.couches[0]?.disques[0]
+        ?.rayon;
+
+    expect(rayonA(1_000)).toBe(0);
+    expect(rayonA(1_150)).toBeGreaterThan(150);
+    expect(rayonA(1_150)).toBeLessThan(220);
+    expect(rayonA(1_300)).toBe(220);
   });
 });
 
@@ -771,5 +797,47 @@ describe('les mines (etape 7.11)', () => {
   it('n a aucune mine dans une scene vide', () => {
     expect(SCENE_VIDE.mines.disques).toEqual([]);
     expect(SCENE_VIDE.explosions).toEqual([]);
+  });
+});
+
+describe('les mines de zone (etape 7.12)', () => {
+  const mineDeZone = (avantOuvertureMs?: number): EntiteVue => ({
+    type: 'mineDeZone',
+    id: 'mineDeZone-3',
+    x: 500,
+    y: 400,
+    couleur: '#FFFFFF',
+    direction: 'immobile',
+    nature: 'attraction',
+    ...(avantOuvertureMs === undefined ? {} : { avantOuvertureMs }),
+  });
+
+  it('ne dessine pas une mine de zone en personnage, mais au sol, pour tous', () => {
+    const scene = construireScene(
+      etatEnJeu('moi'),
+      lissee(vue([joueur('moi', 0, 0), mineDeZone()])),
+      0,
+    );
+
+    expect(scene.entites.map((sprite) => sprite.id)).toEqual(['moi']);
+    expect(scene.zones.map((zone) => zone.id)).toEqual(['mineDeZone-3']);
+  });
+
+  it('pose les mines de zone par-dessus les zones', () => {
+    const zone: ZoneVue = {
+      id: 'zone-1',
+      type: 'chaos',
+      x: 500,
+      y: 400,
+      rayon: 220,
+      dureeRestanteMs: 9_000,
+    };
+    const scene = construireScene(
+      etatEnJeu('moi'),
+      lissee(vue([joueur('moi', 0, 0), mineDeZone(1_000)], [], [zone])),
+      0,
+    );
+
+    expect(scene.zones.map((element) => element.id)).toEqual(['zone-1', 'mineDeZone-3']);
   });
 });

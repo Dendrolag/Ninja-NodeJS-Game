@@ -91,11 +91,13 @@ import type {
   MarqueScene,
   Scene,
   SpriteScene,
-  ZoneScene,
+  TraitScene,
 } from './scene.js';
+import type { ZoneScene } from './zones.js';
 
 /**
- * La police des libelles de zone.
+ * La police des textes poses sur le terrain: le badge du porteur du x2 (etape 7.9). Les
+ * zones ont eu un libelle ecrit jusqu'a l'etape 7.12, qui l'a remplace par un pictogramme.
  *
  * Celle des titres de l'interface depuis l'etape 4.3, pour que le terrain et les
  * menus parlent la meme langue visuelle. La page la charge; ecranDeJeu.ts attend
@@ -390,8 +392,8 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   /** Le monde: tout ce qui vit en coordonnees de carte. La camera le deplace. */
   const monde = new Container();
   const decor = new Container();
+  // Les zones et les mines de zone, au sol, sous tout le reste (etape 7.12).
   const zones = new Graphics();
-  const libelles = new Container();
   const disques = new Graphics();
   // Les mines posees, au sol, sur les halos et sous les objets (etape 7.11).
   const mines = new Graphics();
@@ -415,7 +417,6 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   monde.addChild(
     decor,
     zones,
-    libelles,
     disques,
     mines,
     objets,
@@ -448,7 +449,6 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   /** Les deux calques de chaque image de ninja deja demandee, retrouves par son adresse. */
   const calquesParImage = new Map<string, Calques>();
   const spritesObjets = new Map<string, Sprite>();
-  const textesZones = new Map<string, Text>();
   const badges = new Map<string, Text>();
 
   const fond = new Sprite();
@@ -582,7 +582,7 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       const ecran = { largeur: application.screen.width, hauteur: application.screen.height };
       const champ = zoneVisible(camera, ecran, MARGE_HORS_CHAMP_PX);
 
-      dessinerLesZones(zones, libelles, textesZones, scene.zones);
+      dessinerLesZones(zones, scene.zones, champ);
       dessinerLesDisques(disques, scene.disques, champ);
       dessinerLesCones(disques, scene.cones);
       dessinerLIndicateur(mines, scene.mines, champ);
@@ -606,7 +606,6 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       spritesEntites.clear();
       calquesParImage.clear();
       spritesObjets.clear();
-      textesZones.clear();
       badges.clear();
     },
   };
@@ -650,7 +649,15 @@ function dessinerLesDisques(
   champ: ZoneVisible,
 ): void {
   graphique.clear();
+  tracerLesDisques(graphique, disques, champ);
+}
 
+/** Trace ces disques, sans effacer ce que l'objet graphique porte deja. */
+function tracerLesDisques(
+  graphique: Graphics,
+  disques: readonly DisqueScene[],
+  champ: ZoneVisible,
+): void {
   for (const disque of disques) {
     if (!dansLaZone(champ, disque.x, disque.y, Math.max(disque.rayon, 0))) {
       continue;
@@ -711,8 +718,12 @@ function dessinerLIndicateur(
 ): void {
   dessinerLesDisques(graphique, indicateur.disques, champ);
   dessinerLesCones(graphique, indicateur.parts);
+  tracerLesTraits(graphique, indicateur.traits);
+}
 
-  for (const trait of indicateur.traits) {
+/** Trace ces lignes brisees, bouts et angles arrondis, sans rien effacer. */
+function tracerLesTraits(graphique: Graphics, traits: readonly TraitScene[]): void {
+  for (const trait of traits) {
     graphique.poly([...trait.points], false);
     graphique.stroke({
       color: trait.couleur,
@@ -811,51 +822,31 @@ function dessinerLesReperes(graphique: Graphics, reperes: readonly DisqueScene[]
   }
 }
 
-/** Redessine les zones speciales et place leur libelle. */
+/**
+ * Redessine les zones speciales et les mines de zone (etape 7.12): leurs couches dans l'ordre,
+ * chacune ses disques puis ses traits. Une zone que la camera ne montre pas n'est pas tracee:
+ * son premier disque, le fond, en donne la place et la taille.
+ */
 function dessinerLesZones(
   graphique: Graphics,
-  libelles: Container,
-  textes: Map<string, Text>,
   zones: readonly ZoneScene[],
+  champ: ZoneVisible,
 ): void {
   graphique.clear();
-  const vues = new Set<string>();
 
   for (const zone of zones) {
-    vues.add(zone.id);
-    graphique.circle(zone.x, zone.y, zone.rayon);
+    const etendue = zone.couches[0]?.disques[0];
 
-    if (zone.remplissage !== undefined) {
-      graphique.fill({ color: zone.remplissage.couleur, alpha: zone.remplissage.alpha });
+    if (
+      etendue !== undefined &&
+      !dansLaZone(champ, etendue.x, etendue.y, Math.max(etendue.rayon, 0) + 20)
+    ) {
+      continue;
     }
 
-    if (zone.contour !== undefined) {
-      graphique.stroke({
-        color: zone.contour.couleur,
-        alpha: zone.contour.alpha,
-        width: zone.contour.epaisseur,
-      });
-    }
-
-    let texte = textes.get(zone.id);
-
-    if (texte === undefined) {
-      texte = new Text({
-        text: zone.libelle,
-        style: { fill: 0xffffff, fontSize: 20, fontFamily: POLICE_DES_LIBELLES, fontWeight: '600' },
-      });
-      texte.anchor.set(0.5);
-      libelles.addChild(texte);
-      textes.set(zone.id, texte);
-    }
-
-    texte.position.set(zone.x, zone.y);
-  }
-
-  for (const [id, texte] of textes) {
-    if (!vues.has(id)) {
-      texte.destroy();
-      textes.delete(id);
+    for (const couche of zone.couches) {
+      tracerLesDisques(graphique, couche.disques, champ);
+      tracerLesTraits(graphique, couche.traits);
     }
   }
 }

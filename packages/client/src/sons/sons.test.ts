@@ -13,6 +13,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { EtatClient } from '../etat.js';
 import { ETAT_INITIAL } from '../etat.js';
+import type { FaitDeJeu } from '../faits.js';
 import { fait } from '../faits.js';
 import type { VuePartie } from '../reconstruction.js';
 import { battementDeFin, rechargeApresLeTir, sonDuFait, sonsDuChangement } from './declencheurs.js';
@@ -526,5 +527,17 @@ describe('les sons de la mine (etape 7.11)', () => {
       ),
     ).toBe('mineExplosee');
     expect([SONS.minePosee, SONS.mineArmee, SONS.mineExplosee]).toHaveLength(3);
+  });
+});
+
+describe('les sons de la mine de zone (etape 7.12)', () => {
+  const faitDe = (quoi: 'posee' | 'armee' | 'ouverte'): FaitDeJeu =>
+    fait('mineDeZone', { quoi, mine: 'mz', nature: 'chaos', x: 0, y: 0 }, 0);
+
+  it('se tait a la pose, et sonne a l armement et a l ouverture, chez tous', () => {
+    expect(sonDuFait(faitDe('posee'), 'moi')).toBeUndefined();
+    expect(sonDuFait(faitDe('armee'), 'moi')).toBe('mineDeZoneArmee');
+    expect(sonDuFait(faitDe('ouverte'), 'moi')).toBe('zoneOuverte');
+    expect([SONS.mineDeZoneArmee, SONS.zoneOuverte]).toHaveLength(2);
   });
 });

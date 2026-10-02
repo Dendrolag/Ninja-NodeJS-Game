@@ -119,6 +119,15 @@ export function sonDuFait(fait: FaitDeJeu, moi?: string, mode?: Mode): NomDeSon 
     case 'mineExplosee':
       return 'mineExplosee';
 
+    // La mine de zone (etape 7.12): la carte la pose sans bruit; son armement et l'ouverture
+    // de sa zone s'entendent de tous, comme ils se voient de tous.
+    case 'mineDeZone':
+      return fait.charge.quoi === 'armee'
+        ? 'mineDeZoneArmee'
+        : fait.charge.quoi === 'ouverte'
+          ? 'zoneOuverte'
+          : undefined;
+
     case 'malusRamasse':
     case 'malusSubi':
       return 'malusRamasse';

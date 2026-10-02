@@ -166,7 +166,8 @@ export { borner, cameraSur, echellePour, suivre, versEcran, zoneVisible } from '
 export type { EntiteLissee, VueLissee } from './rendu/interpolation.js';
 export { TamponDeLissage, lisserUneEntite } from './rendu/interpolation.js';
 
-export type { DisqueScene, Scene, SpriteScene, ZoneScene } from './rendu/scene.js';
+export type { DisqueScene, Scene, SpriteScene } from './rendu/scene.js';
+export type { ZoneScene } from './rendu/zones.js';
 export { SCENE_VIDE, construireScene, couleurEnNombre } from './rendu/scene.js';
 
 export { imageDeMarche, opaciteObjet, rayonPulsant } from './rendu/animation.js';

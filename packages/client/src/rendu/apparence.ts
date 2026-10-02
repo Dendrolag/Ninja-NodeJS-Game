@@ -199,31 +199,73 @@ export const OMBRE_JOUEUR = {
 /** Opacite de notre personnage quand il est cache dans une zone d'invisibilite. */
 export const ALPHA_INVISIBLE = 0.3;
 
-/** Couleurs et libelle de chaque zone speciale, portage de ZONE_TYPES. */
+/**
+ * Le libelle et la couleur de chaque zone speciale.
+ *
+ * Les libelles sont ceux du jeu d'origine (ZONE_TYPES); ils ne s'ecrivent plus sur la zone
+ * depuis l'etape 7.12, mais nomment les zones dans l'aide et les reglages. Les couleurs sont
+ * les teintes d'origine poussees en neon, choisies sur la planche
+ * docs/design/etape-7-12/1-zones.png: rouge du chaos, bleu de la repulsion, vert de
+ * l'attraction, violet de l'invisibilite. La mine de zone qui cache une zone en a la couleur.
+ */
 export const APPARENCE_ZONE: Readonly<
-  Record<TypeZone, { readonly libelle: string; readonly fond: Teinte; readonly bordure: Teinte }>
+  Record<TypeZone, { readonly libelle: string; readonly couleur: number }>
 > = {
-  chaos: {
-    libelle: 'Zone de chaos',
-    fond: { couleur: 0xff4040, alpha: 0.2 },
-    bordure: { couleur: 0xff4040, alpha: 0.6 },
-  },
-  repulsion: {
-    libelle: 'Zone répulsive',
-    fond: { couleur: 0x4040ff, alpha: 0.2 },
-    bordure: { couleur: 0x4040ff, alpha: 0.6 },
-  },
-  attraction: {
-    libelle: 'Zone attractive',
-    fond: { couleur: 0x40ff40, alpha: 0.2 },
-    bordure: { couleur: 0x40ff40, alpha: 0.6 },
-  },
-  invisibilite: {
-    libelle: "Zone d'invisibilité",
-    fond: { couleur: 0x800080, alpha: 0.2 },
-    bordure: { couleur: 0x800080, alpha: 0.6 },
-  },
+  chaos: { libelle: 'Zone de chaos', couleur: 0xff4d4d },
+  repulsion: { libelle: 'Zone répulsive', couleur: 0x4f7dff },
+  attraction: { libelle: 'Zone attractive', couleur: 0x3ddc6a },
+  invisibilite: { libelle: "Zone d'invisibilité", couleur: 0xb05cff },
 };
+
+/**
+ * Le rendu des zones ouvertes (etape 7.12): le rendu B de la planche
+ * docs/design/etape-7-12/1-zones.png, un motif vivant qui montre l'effet, choisi par le
+ * porteur du projet le 2 octobre 2026. Les durees sont en millisecondes, les tailles en
+ * pixels de la carte. Voir zones.ts, dans ce dossier.
+ */
+export const APPARENCE_ZONES = {
+  /** Le fond du disque, a peine teinte. */
+  fond: 0.14,
+  /** Le bord neon, et le halo plus large et plus pale qui le fait rayonner. */
+  bord: { alpha: 0.95, epaisseur: 5 },
+  halo: { alpha: 0.3, epaisseur: 14 },
+  /** Les traits du motif. */
+  motif: { alpha: 0.85, epaisseur: 3 },
+  /** Les trois dernieres secondes, la zone palit et son bord clignote. */
+  fin: { dureeMs: 3000, palit: 0.45, clignotementMs: 250 },
+  /** Le pictogramme, pose sur le bord, en haut: un disque blanc cerne, le dessin en noir. */
+  pictogramme: { rayon: 20, fond: 0xf4f6fb, cerne: 0x111111, dessin: 0x111111, trait: 3 },
+  /** Chaos: des eclairs qui crepitent, renouveles a chaque periode, a des places au hasard. */
+  chaos: { eclairs: 12, tailleMin: 22, tailleMax: 38, periodeMs: 180 },
+  /** Repulsion et attraction: des ondes qui partent du centre ou y reviennent, et des chevrons. */
+  ondes: { nombre: 3, periodeMs: 2400, chevrons: 8, place: 0.8, taille: 16, course: 0.06 },
+  /** Invisibilite: un voile plus dense, et des lignes de brume qui ondulent. */
+  voile: { fond: 0.22, ecart: 30, amplitude: 7, longueurDOnde: 60, periodeMs: 3000 },
+} as const;
+
+/**
+ * La mine de zone (etape 7.12), rendus choisis par le porteur du projet sur la planche
+ * docs/design/etape-7-12/2-mine-de-zone.png: A, B, B. Posee, la mine ronde de l'etape 7.11,
+ * plus grande, l'anneau a la couleur de la zone qu'elle cache et son pictogramme au centre;
+ * armee, le bord de la zone se trace en 3 secondes; ouverte, la zone gonfle depuis la mine.
+ */
+export const APPARENCE_MINE_DE_ZONE = {
+  rayon: 11,
+  rayonAnneau: 7.6,
+  epaisseurAnneau: 2.6,
+  /** Le disque blanc du pictogramme, au centre. */
+  rayonPictogramme: 4.6,
+  /** Le halo a la couleur de la zone, qui respire posee et clignote armee. */
+  rayonHalo: 16,
+  halo: 0.3,
+  /** Armee: le bord de la zone a venir, pale en entier, et trace a mesure du decompte. */
+  bordAVenir: { alpha: 0.25, epaisseur: 1.5 },
+  bordTrace: { alpha: 0.95, epaisseur: 3 },
+  /** Un sommet du trace tous les tant de radians. */
+  pasDuTrace: Math.PI / 48,
+  /** Ouverte: la zone gonfle jusqu'a son rayon en tant de millisecondes. */
+  gonflementMs: 300,
+} as const;
 
 /**
  * Les couleurs des trois familles d'objets du Tactique (etape 7.7): le tir (Rafale et Tir

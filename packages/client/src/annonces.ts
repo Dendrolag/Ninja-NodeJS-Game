@@ -300,6 +300,10 @@ export function annonceDuFait(fait: FaitDeJeu, mode?: Mode, moi?: string): Annon
     case 'mineArmee':
       return undefined;
 
+    // La mine de zone (etape 7.12) ne s'annonce pas: elle et sa zone se voient sur la carte.
+    case 'mineDeZone':
+      return undefined;
+
     case 'mineExplosee':
       return annonceDeLExplosion(fait.charge, moi);
 

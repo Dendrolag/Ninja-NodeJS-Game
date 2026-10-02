@@ -34,7 +34,6 @@ import type {
   Mode,
   Orientation,
   TypeBonus,
-  TypeZone,
   Visee,
 } from '@neon-ninja/shared';
 import {
@@ -71,7 +70,6 @@ import {
   APPARENCE_KATANA,
   APPARENCE_OBJET,
   APPARENCE_TIR,
-  APPARENCE_ZONE,
   HALO_BONUS,
   HALO_BOT_NOIR,
   HALO_REVELATION_AUTRUI,
@@ -88,6 +86,8 @@ import type { Localisation } from './localisation.js';
 import { opaciteDeLocalisation, reperesDeLocalisation } from './localisation.js';
 import { minesDeLaScene } from './mines.js';
 import { adresseDImage, adresseRayee } from './textures.js';
+import type { ZoneScene } from './zones.js';
+import { ecouleDepuisLOuverture, mineDeZoneVivante, zoneQuiGonfle, zoneVivante } from './zones.js';
 
 /** Un sprite a poser sur la carte. */
 export interface SpriteScene {
@@ -121,12 +121,6 @@ export interface DisqueScene {
   readonly rayon: number;
   readonly remplissage: Teinte | undefined;
   readonly contour: (Teinte & { readonly epaisseur: number }) | undefined;
-}
-
-/** Une zone speciale, avec son libelle. */
-export interface ZoneScene extends DisqueScene {
-  readonly type: TypeZone;
-  readonly libelle: string;
 }
 
 /** Un cone: la portee d'un tir du mode Tactique, devant un joueur (etape 7.1). */
@@ -176,7 +170,10 @@ export interface Scene {
    * visee, et les tirs qui viennent de partir.
    */
   readonly cones: readonly ConeScene[];
-  /** Les zones speciales, qui portent en plus un libelle a ecrire. */
+  /**
+   * Les zones speciales, au sol, sous les disques: leur motif vivant et leur pictogramme
+   * (etape 7.12, zones.ts).
+   */
   readonly zones: readonly ZoneScene[];
   /** Les objets ramassables poses sur la carte. */
   readonly objets: readonly SpriteScene[];
@@ -330,27 +327,30 @@ export function construireScene(
   const entites: SpriteScene[] = [];
   const marques: MarqueScene[] = [];
 
+  // Les zones, qui gonflent un instant quand elles s'ouvrent, puis les mines de zone par-dessus,
+  // que tout le monde voit (etape 7.12).
   for (const zone of lissee.vue.zones) {
-    const apparence = APPARENCE_ZONE[zone.type];
+    zones.push(
+      zoneVivante(
+        zoneQuiGonfle(zone, ecouleDepuisLOuverture(zone, etat.journal, maintenant)),
+        maintenant,
+      ),
+    );
+  }
 
-    zones.push({
-      id: zone.id,
-      type: zone.type,
-      libelle: apparence.libelle,
-      x: zone.x,
-      y: zone.y,
-      rayon: zone.rayon,
-      remplissage: apparence.fond,
-      contour: { ...apparence.bordure, epaisseur: 2 },
-    });
+  for (const { entite, x, y } of lissee.entites) {
+    if (entite.type === 'mineDeZone') {
+      zones.push(mineDeZoneVivante({ mine: entite, x, y }, maintenant));
+    }
   }
 
   const image = imageDeMarche(maintenant);
   const revelationActive = bonusActifs.has('revelation');
 
   for (const { entite, x, y, enMouvement } of lissee.entites) {
-    // Une mine posee (etape 7.11) n'est pas un personnage: elle a sa propre couche, plus bas.
-    if (entite.type === 'mine') {
+    // Une mine posee (etape 7.11) ou une mine de zone (etape 7.12) n'est pas un personnage:
+    // chacune a sa propre couche.
+    if (entite.type === 'mine' || entite.type === 'mineDeZone') {
       continue;
     }
 

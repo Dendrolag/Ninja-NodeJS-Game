@@ -559,6 +559,30 @@ export function ramasserUneFumee(partie: GameRoom, pseudo: string, commande: Com
 }
 
 /**
+ * Mission: ce joueur arme une mine de zone en marchant dessus (etape 7.12). La mission est
+ * accomplie des qu'une mine de zone est armee: c'est lui qui l'a fait, personne d'autre ne
+ * marchant dans la partie.
+ */
+export function armerUneMineDeZone(partie: GameRoom, pseudo: string, commande: Commande): Mission {
+  return {
+    nom: `${pseudo} arme une mine de zone`,
+    commande,
+    delaiMs: DELAI_CAPTURE_DE_BOT_MS,
+    situation: () => ({
+      terrain: partie.etat.terrain,
+      position: joueurNomme(partie, pseudo).position,
+      cibles: Object.values(partie.etat.minesDeZone ?? {})
+        .filter((mine) => mine.avantOuvertureMs === undefined)
+        .map((mine) => mine.position),
+    }),
+    accomplie: () =>
+      Object.values(partie.etat.minesDeZone ?? {}).some(
+        (mine) => mine.avantOuvertureMs !== undefined,
+      ) || Object.keys(partie.etat.zones).length > 0,
+  };
+}
+
+/**
  * Le temps qu'il faut a un joueur pour atteindre un point, au plus, en millisecondes.
  *
  * La distance a vol d'oiseau, allongee pour les detours autour des murs, a vitesse de
