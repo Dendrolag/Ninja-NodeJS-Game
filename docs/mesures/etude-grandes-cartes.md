@@ -4,6 +4,8 @@ Question du porteur du projet, après l'étape 7.3: que coûterait une carte bea
 
 **Suite, 20 septembre 2026**: l'étape 8.1 a produit `etude-structures-de-carte.md`, qui traite des cartes qu'on pourrait commander demain, aux tailles que le socle tient déjà, et qui mesure les deux cartes existantes. Les deux documents se complètent: celui-ci reste la référence sur le très grand, l'autre sur la structure et la commande d'une carte.
 
+**Suite, 3 octobre 2026**: l'étude `docs/design/etude-combat-survie-et-carte-geante.md` reprend la question pour une carte de 10 000 sur 10 000 sur plusieurs niveaux. Elle ajoute un cinquième plafond, la mémoire du calcul des places tenables et du morceau principal au démarrage (étape 8.10), et propose une carte faite d'un jeu de tuiles réutilisables, dont la collision se dérive.
+
 ## Verdict
 
 Le socle n'est pas remis en cause: le moteur pur, les jeux de règles par mode (une zone qui rétrécit tient dans `estDecidee` et `horsJeu`, ajoutés à l'étape 7.3), les rooms, le flux binaire en différentiel, le banc de charge et l'empreinte des parties. Mais quatre plafonds, sans effet aux tailles actuelles, cèdent en grand, et doivent être levés avant un tel mode.
