@@ -159,6 +159,7 @@ describe('la progression de fin', () => {
       debloques: ['premier-pas', 'sur-le-podium'],
       plusProche: { id: 'habitue', actuel: 1, seuil: 25 },
     },
+    defis: { releves: [], defis: [] },
   };
 
   /** Un compte dont la partie vient de finir, avec ou sans recapitulatif. */
@@ -211,6 +212,57 @@ describe('la progression de fin', () => {
         },
       ],
       plusProche: 'Plus que 24 parties pour Habitué',
+      defisReleves: [],
+      defis: [],
+      avisDesDefis: undefined,
+    });
+  });
+
+  it('dit qu une partie de moins de trois minutes ne fait pas avancer les defis (etape 3.10)', () => {
+    const base = etatDuCompte({ progressionDeFin: ENREGISTREE });
+    const courte = modeleFin({
+      ...base,
+      salon: base.salon && {
+        ...base.salon,
+        reglages: { ...base.salon.reglages, dureePartieS: 30 },
+      },
+    })?.progression;
+
+    expect(courte).toMatchObject({
+      nature: 'enregistree',
+      avisDesDefis: 'Une partie de moins de trois minutes ne fait pas avancer les défis.',
+    });
+  });
+
+  it('annonce les defis que la partie a releves, et ceux de la semaine (etape 3.10)', () => {
+    const progression = modeleFin(
+      etatDuCompte({
+        progressionDeFin: {
+          ...ENREGISTREE,
+          defis: {
+            releves: [{ id: 'trois-cartes', xp: 300 }],
+            defis: [
+              { id: 'trois-cartes', actuel: 3, seuil: 3, xp: 300, accompli: true },
+              { id: 'doubleurs', actuel: 1, seuil: 2, xp: 400, accompli: false },
+            ],
+          },
+        },
+      }),
+    )?.progression;
+
+    expect(progression).toMatchObject({
+      nature: 'enregistree',
+      defisReleves: [
+        {
+          id: 'trois-cartes',
+          texte: 'Défi relevé : Jouer sur 3 cartes différentes.',
+          xp: '+300 XP',
+        },
+      ],
+      defis: [
+        { id: 'trois-cartes', avancee: 'Relevé', pourCent: 100, accompli: true },
+        { id: 'doubleurs', avancee: '1 / 2', pourCent: 50, accompli: false },
+      ],
     });
   });
 

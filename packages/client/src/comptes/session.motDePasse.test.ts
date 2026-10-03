@@ -133,8 +133,8 @@ describe('la reinitialisation', () => {
 
     await laisserRepondre();
 
-    // La session ouverte lit aussi ses amis (etape 3.6).
-    expect(requetes()).toEqual(['reinitialiser', 'moi', 'amis']);
+    // La session ouverte lit aussi ses amis (etape 3.6) et ses defis (etape 3.10).
+    expect(requetes()).toEqual(['reinitialiser', 'moi', 'amis', 'defis']);
     expect(api.appels[0]?.argument).toEqual(DEMANDE);
     expect(coffre.lire()).toBe(JETON_DESSAI);
     expect(client.etat.session.nature).toBe('compte');
@@ -251,7 +251,7 @@ describe('les demandes du profil', () => {
     client.changerMotDePasse(CHANGEMENT);
     client.demanderUnCodeDeSecours({ motDePasse: 'correct cheval' });
 
-    expect(requetes().filter((nom) => nom !== 'moi' && nom !== 'amis')).toEqual([
+    expect(requetes().filter((nom) => !['moi', 'amis', 'defis'].includes(nom))).toEqual([
       'changerMotDePasse',
     ]);
   });

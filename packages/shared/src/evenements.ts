@@ -68,6 +68,7 @@ import type {
   IntentionDeplacement,
   MessageChat,
 } from './entrees.js';
+import type { DefisDeFin } from './defis.js';
 import type { TrameDEtat } from './flux.js';
 import type { IdentifiantPalier } from './progression.js';
 import type { ReglagesPartie, ReglagesPartiels } from './reglages.js';
@@ -816,6 +817,10 @@ export interface ProgressionEnregistree {
   readonly placement: number;
   /** Tous les joueurs de la partie, invites et abandons compris. */
   readonly nombreJoueurs: number;
+  /**
+   * L'XP de la partie seule. Celle des defis qu'elle a releves s'annonce avec eux
+   * (etape 3.10); l'avant et l'apres comprennent les deux.
+   */
   readonly xpGagnee: number;
   readonly piecesGagnees: number;
   /** Signee. */
@@ -824,6 +829,8 @@ export interface ProgressionEnregistree {
   readonly apres: EtatDeProgression;
   /** Les succes que cette partie a donnes, et le plus proche d'etre obtenu (etape 3.7). */
   readonly succes: SuccesDeFin;
+  /** Les defis que cette partie a releves, et ceux de sa semaine (etape 3.10). */
+  readonly defis: DefisDeFin;
 }
 
 /**

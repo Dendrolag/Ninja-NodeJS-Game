@@ -182,6 +182,7 @@ describe('progressionEnregistree', () => {
           debloques: ['premiere-couronne'],
           plusProche: { id: 'dix-couronnes', actuel: 1, seuil: 10 },
         },
+        defis: { releves: [], defis: [] },
       }),
     ).toEqual({
       enregistree: true,
@@ -196,7 +197,26 @@ describe('progressionEnregistree', () => {
         debloques: ['premiere-couronne'],
         plusProche: { id: 'dix-couronnes', actuel: 1, seuil: 10 },
       },
+      defis: { releves: [], defis: [] },
     });
+  });
+
+  it("annonce l'XP de la partie seule, celle des defis a part (etape 3.10)", () => {
+    const defis = {
+      releves: [{ id: 'trois-cartes' as const, xp: 300 }],
+      defis: [{ id: 'trois-cartes' as const, actuel: 3, seuil: 3, xp: 300, accompli: true }],
+    };
+    const recapitulatif = progressionEnregistree(RESULTAT, 3, {
+      compteId: 'c-alice',
+      avant: { xpTotale: 90, pieces: 5, pointsLigue: 95 },
+      apres: { xpTotale: 540, pieces: 20, pointsLigue: 115 },
+      succes: { debloques: [] },
+      defis,
+    });
+
+    expect(recapitulatif.xpGagnee).toBe(150);
+    expect(recapitulatif.apres.xpTotale).toBe(540);
+    expect(recapitulatif.defis).toEqual(defis);
   });
 
   it('rend la perte de points reellement appliquee, pas celle qui etait demandee', () => {
@@ -208,6 +228,7 @@ describe('progressionEnregistree', () => {
         avant: { xpTotale: 0, pieces: 0, pointsLigue: 3 },
         apres: { xpTotale: 30, pieces: 3, pointsLigue: 0 },
         succes: { debloques: [] },
+        defis: { releves: [], defis: [] },
       },
     );
 

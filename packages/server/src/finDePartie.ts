@@ -15,7 +15,8 @@
  *   2. De la progression appliquee par la base vers le recapitulatif envoye au
  *      compte. Les gains y sont la DIFFERENCE entre la progression d'apres et celle
  *      d'avant: le recapitulatif dit ce qui a ete ecrit, jamais ce qui avait ete
- *      demande.
+ *      demande. Depuis l'etape 3.10, l'XP des defis releves s'en retire, pour que
+ *      « XP gagnee » reste celle de la partie: les defis s'annoncent a part.
  *
  * TOUT CE FICHIER EST PUR, comme instantane.ts: il ne lit ni horloge ni base, et se
  * teste sans monter de serveur.
@@ -137,17 +138,19 @@ export function progressionEnregistree(
   appliquee: ProgressionAppliquee,
 ): ProgressionEnregistree {
   const { avant, apres } = appliquee;
+  const xpDesDefis = appliquee.defis.releves.reduce((total, releve) => total + releve.xp, 0);
 
   return {
     enregistree: true,
     placement: resultat.placement,
     nombreJoueurs,
-    xpGagnee: apres.xpTotale - avant.xpTotale,
+    xpGagnee: apres.xpTotale - avant.xpTotale - xpDesDefis,
     piecesGagnees: apres.pieces - avant.pieces,
     variationPointsLigue: apres.pointsLigue - avant.pointsLigue,
     avant: etatDeProgression(avant),
     apres: etatDeProgression(apres),
     succes: appliquee.succes,
+    defis: appliquee.defis,
   };
 }
 

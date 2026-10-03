@@ -9,6 +9,7 @@
 
 import type {
   CodeDeSecoursEmis,
+  DefisDeLaSemaine,
   FicheJoueur,
   ListeDAmis,
   MaProgression,
@@ -60,6 +61,12 @@ const FICHE: FicheJoueur = {
   relation: 'ami',
   succes: [],
   ensemble: { partiesEnsemble: 3, devant: 2, derriere: 1 },
+};
+
+const DEFIS: DefisDeLaSemaine = {
+  semaine: '2026-10-05',
+  finLe: '2026-10-11T22:00:00.000Z',
+  defis: [{ id: 'trois-cartes', actuel: 1, seuil: 3, xp: 300, accompli: false }],
 };
 
 const AMIS: ListeDAmis = {
@@ -129,6 +136,7 @@ function serviceFactice(remplacements: Partial<ServiceDeComptes> = {}): ServiceD
       acceptee({ pseudo: 'Léa B.', relation: 'ami' as const, amis: AMIS }),
     ),
     choisirUnTitre: vi.fn(async () => acceptee({ titre: 'premier-pas' as const })),
+    defis: vi.fn(async () => acceptee(DEFIS)),
     changerMotDePasse: vi.fn(async () => acceptee(CODE)),
     nouveauCodeDeSecours: vi.fn(async () => acceptee(CODE)),
     reinitialiser: vi.fn(async () => acceptee(SESSION_INSCRITE)),
@@ -373,6 +381,23 @@ describe('routes reservees a une session', () => {
     expect(sansJeton.statut).toBe(401);
     expect(service.profil).toHaveBeenCalledTimes(1);
     expect(service.profil).toHaveBeenCalledWith(JETON);
+  });
+
+  it('rendent les defis de la semaine a qui presente son jeton (etape 3.10)', async () => {
+    const service = serviceFactice();
+    const url = await monter({ comptes: service });
+
+    const defis = await requete(url, ROUTES_COMPTES.defis, {
+      methode: 'GET',
+      entetes: { Authorization: `Bearer ${JETON}` },
+    });
+    const sansJeton = await requete(url, ROUTES_COMPTES.defis, { methode: 'GET' });
+
+    expect([defis.statut, defis.corps]).toEqual([200, DEFIS]);
+    expect(defis.entetes.get('cache-control')).toBe('no-store');
+    expect(sansJeton.statut).toBe(401);
+    expect(service.defis).toHaveBeenCalledTimes(1);
+    expect(service.defis).toHaveBeenCalledWith(JETON);
   });
 
   it('traduisent une session absente en 401', async () => {

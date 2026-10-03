@@ -2,7 +2,7 @@
  * Les routes HTTP des comptes: inscription, connexion, deconnexion, progression,
  * profil, depuis l'etape 3.4 changement de mot de passe, code de secours et
  * reinitialisation, depuis l'etape 3.5, la fiche d'un autre compte, depuis l'etape 3.6,
- * les amis et, depuis l'etape 3.9, le titre.
+ * les amis, depuis l'etape 3.9, le titre et, depuis l'etape 3.10, les defis de la semaine.
  *
  * CE FICHIER TRADUIT, IL NE DECIDE RIEN. Il lit la requete (corps JSON, jeton en
  * en-tete, adresse), appelle le service, et traduit sa reponse en code HTTP. Toute
@@ -116,6 +116,16 @@ export function routesDesComptes(
     }
 
     repondre(reponse, await service.ficheJoueur(jeton, requete.query[PARAMETRE_PSEUDO]), 200);
+  });
+
+  routes.get('/defis', async (requete, reponse) => {
+    const jeton = jetonDe(requete);
+    if (jeton === undefined) {
+      refuserSansSession(reponse);
+      return;
+    }
+
+    repondre(reponse, await service.defis(jeton), 200);
   });
 
   routes.get('/amis', async (requete, reponse) => {

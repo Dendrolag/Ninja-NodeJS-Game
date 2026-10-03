@@ -137,6 +137,7 @@ function annuaireDEssai(): AnnuaireDEssai {
         },
         // La premiere partie de chaque compte lui donne « Premier pas » (etape 3.7).
         succes: { debloques: ['premier-pas'] },
+        defis: { releves: [], defis: [] },
       }));
     },
     compteDeSession: async (jeton) => {
@@ -162,6 +163,7 @@ function annuaireDEssai(): AnnuaireDEssai {
     amis: nonUtilise,
     gesteDAmitie: nonUtilise,
     choisirUnTitre: nonUtilise,
+    defis: nonUtilise,
     changerMotDePasse: nonUtilise,
     nouveauCodeDeSecours: nonUtilise,
     reinitialiser: nonUtilise,
@@ -861,8 +863,10 @@ describe('fin de partie (etape 3.3)', () => {
         pointsLigue: 0,
         palier: 'bronze',
       },
-      // Les succes passent tels que l'enregistrement les rend (etape 3.7).
+      // Les succes passent tels que l'enregistrement les rend (etape 3.7), et les defis
+      // aussi (etape 3.10).
       succes: { debloques: ['premier-pas'] },
+      defis: { releves: [], defis: [] },
     });
     expect(resultat?.xpGagnee).toBeGreaterThan(0);
     expect(pourBob).toEqual([]);

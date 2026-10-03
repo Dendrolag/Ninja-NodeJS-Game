@@ -34,6 +34,7 @@ import { timingSafeEqual } from 'node:crypto';
 
 import type {
   CodeDeSecoursEmis,
+  DefisDeLaSemaine,
   ErreurValidation,
   FicheJoueur,
   IdentifiantSucces,
@@ -81,6 +82,7 @@ import {
   trouverCompteParPseudo,
 } from '../base/comptes.js';
 import type { BaseDeDonnees } from '../base/connexion.js';
+import { defisDuCompte } from '../base/defis.js';
 import type {
   FaitsDesComptes,
   NouveauResultat,
@@ -458,6 +460,15 @@ export class Authentification implements ServiceDeComptes {
     return (await choisirLeTitre(this.db, compteId, titre))
       ? acceptee({ titre })
       : refusee('succesNonObtenu', [{ champ: 'titre', motif: SUCCES_NON_OBTENU }]);
+  }
+
+  async defis(jeton: string): Promise<ReponseDeCompte<DefisDeLaSemaine>> {
+    const compteId = await this.compteDeSession(jeton);
+    if (compteId === undefined) {
+      return sessionAbsente();
+    }
+
+    return acceptee(await defisDuCompte(this.db, compteId));
   }
 
   async changerMotDePasse(

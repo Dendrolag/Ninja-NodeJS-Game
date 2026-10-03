@@ -37,7 +37,7 @@ describe.runIf(baseDisponible())('migrations', () => {
     return rows[0]?.nombre ?? 0;
   }
 
-  it('creent les tables du schema v1, de l authentification, du code de secours, des amis, des succes, des titres et des faits de partie, et aucune autre', async () => {
+  it('creent les tables du schema v1, de l authentification, du code de secours, des amis, des succes, des titres, des faits de partie et des defis releves, et aucune autre', async () => {
     const { rows } = await db().execute<{ table_name: string }>(
       sql`select table_name from information_schema.tables where table_schema = 'public' order by table_name`,
     );
@@ -47,6 +47,7 @@ describe.runIf(baseDisponible())('migrations', () => {
       'blocages',
       'codes_de_secours',
       'comptes',
+      'defis_releves',
       'demandes_d_ami',
       'faits_de_partie',
       'mots_de_passe',

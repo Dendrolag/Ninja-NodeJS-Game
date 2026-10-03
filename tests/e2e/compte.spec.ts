@@ -18,8 +18,8 @@ import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
  *
  * Le joueur s'inscrit depuis la page, retrouve son compte apres un rechargement,
  * entre en partie sous son pseudo, joue une partie courte jusqu'a la fin, voit ce
- * qu'elle lui a rapporte et le succes « Premier pas » (etape 3.7), le retrouve dans son
- * profil, puis se deconnecte. Aucune erreur ne doit apparaitre dans la console.
+ * qu'elle lui a rapporte, le succes « Premier pas » (etape 3.7) et les defis de la
+ * semaine (etape 3.10), le retrouve dans son profil, puis se deconnecte. Aucune erreur ne doit apparaitre dans la console.
  *
  * LE SERVEUR A DES COMPTES EN MEMOIRE (tests/outils/comptes-en-memoire.ts): les
  * scenarios tournent sans base. Ce qui est eprouve ici, c'est tout le chemin de la
@@ -73,6 +73,8 @@ test('s inscrire, jouer, voir sa progression, puis se deconnecter', async ({ pag
   await expect(page.locator('.carte-compte-pseudo')).toHaveText('Alice');
   await expect(page.locator('.anneau-niveau')).toHaveText('1');
   await expect(page.locator('.accueil-compte')).toContainText('Alice');
+  // Etape 3.10: l'accueil d'un compte montre les trois defis de la semaine.
+  await expect(page.locator('.accueil-defis .defi')).toHaveCount(3);
 
   // La session survit a un rechargement: le jeton est garde par le navigateur.
   await page.reload();
@@ -109,6 +111,12 @@ test('s inscrire, jouer, voir sa progression, puis se deconnecter', async ({ pag
 
   // Etape 3.7: la premiere partie donne « Premier pas », annonce a la fin.
   await expect(progression.locator('.fin-succes .succes-nom').first()).toHaveText('Premier pas');
+
+  // Etape 3.10: la fin montre les defis de la semaine. Une partie de trente secondes
+  // n'en fait avancer aucun: il en faut trois minutes au moins.
+  await expect(progression.locator('.fin-defis .defi')).toHaveCount(3);
+  await expect(progression.locator('.defi-releve')).toHaveCount(0);
+  await expect(progression.locator('.fin-defis-avis')).toBeVisible();
 
   // -- Le profil compte la partie ---------------------------------------------
   await page.locator('.fin-actions').getByRole('button', { name: 'Accueil' }).click();

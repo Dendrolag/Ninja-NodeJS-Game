@@ -29,6 +29,7 @@ import type {
 } from '@neon-ninja/shared';
 import {
   COULEURS_DES_EQUIPES,
+  DUREE_MINIMUM_POUR_LES_DEFIS_S,
   classementDesEquipes,
   equipeDeCouleur,
   placeDansLesEquipes,
@@ -44,6 +45,8 @@ import {
   formaterNombre,
   formaterVariation,
 } from './progression.js';
+import type { DefiAffiche, DefiReleveAffiche } from './defis.js';
+import { defiAffiche, defisRelevesAffiches } from './defis.js';
 import type { SuccesObtenuAffiche } from './succes.js';
 import { phraseDuPlusProche, succesDebloquesAffiches } from './succes.js';
 
@@ -121,6 +124,15 @@ export type ProgressionAffichee =
       readonly succes: readonly SuccesObtenuAffiche[];
       /** « Plus que 3 victoires pour Dix couronnes ». Absente si rien n'est commence. */
       readonly plusProche: string | undefined;
+      /** Les defis que la partie a releves, avec leur XP (etape 3.10). */
+      readonly defisReleves: readonly DefiReleveAffiche[];
+      /** Les defis de la semaine de la partie, apres elle. */
+      readonly defis: readonly DefiAffiche[];
+      /**
+       * Pourquoi la partie n'a pas fait avancer les defis, quand on le sait d'avance: elle
+       * etait reglee sur moins de trois minutes. Absent sinon.
+       */
+      readonly avisDesDefis: string | undefined;
     };
 
 /** Tout ce que l'ecran de fin affiche. */
@@ -182,7 +194,9 @@ export function modeleFin(etat: EtatClient): ModeleFin | undefined {
     // Une session en verification a presente un jeton que le serveur a accepte:
     // c'est un compte, dont la progression arrivera.
     progression:
-      etat.session.nature === 'invite' ? undefined : progressionAffichee(etat.progressionDeFin),
+      etat.session.nature === 'invite'
+        ? undefined
+        : progressionAffichee(etat.progressionDeFin, etat.salon?.reglages.dureePartieS),
     peutRejouer: etat.connexion === 'connecte',
   };
 }
@@ -245,7 +259,9 @@ function modeleFinEnEquipes(
     })),
     lignes,
     progression:
-      etat.session.nature === 'invite' ? undefined : progressionAffichee(etat.progressionDeFin),
+      etat.session.nature === 'invite'
+        ? undefined
+        : progressionAffichee(etat.progressionDeFin, etat.salon?.reglages.dureePartieS),
     peutRejouer: etat.connexion === 'connecte',
   };
 }
@@ -270,9 +286,18 @@ function messageDesEquipes(equipes: ClassementDesEquipes, notre: Equipe | undefi
     : `Victoire de l’équipe ${NOMS_DES_EQUIPES[issue.gagnante]}`;
 }
 
-/** Le recapitulatif de progression, mis en forme. */
+/** Ce que la fin dit d'une partie trop courte pour les defis (etape 3.10). */
+export const AVIS_PARTIE_TROP_COURTE_POUR_LES_DEFIS =
+  'Une partie de moins de trois minutes ne fait pas avancer les défis.';
+
+/**
+ * Le recapitulatif de progression, mis en forme.
+ *
+ * @param dureePartieS La duree reglee de la partie, si le salon la dit encore.
+ */
 export function progressionAffichee(
   progression: ProgressionDeFin | undefined,
+  dureePartieS?: number,
 ): ProgressionAffichee {
   if (progression === undefined) {
     return { nature: 'attente' };
@@ -303,6 +328,12 @@ export function progressionAffichee(
       progression.succes.plusProche === undefined
         ? undefined
         : phraseDuPlusProche(progression.succes.plusProche),
+    defisReleves: defisRelevesAffiches(progression.defis.releves),
+    defis: progression.defis.defis.map(defiAffiche),
+    avisDesDefis:
+      dureePartieS !== undefined && dureePartieS < DUREE_MINIMUM_POUR_LES_DEFIS_S
+        ? AVIS_PARTIE_TROP_COURTE_POUR_LES_DEFIS
+        : undefined,
   };
 }
 

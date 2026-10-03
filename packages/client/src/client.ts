@@ -597,6 +597,9 @@ export function creerClient(options: OptionsClient): Client {
         session.chargerLeProfil();
       } else if (magasin.etat.ecran === 'parties') {
         listerParties();
+      } else if (magasin.etat.ecran === 'accueil') {
+        // Les defis de la semaine ont pu avancer depuis la derniere lecture (etape 3.10).
+        session.chargerLesDefis();
       }
 
       // Les amis se relisent a chaque navigation (etape 3.6): aucune demande recue n'est

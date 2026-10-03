@@ -104,6 +104,8 @@ export const FAITS_DE_PARTIE = [
   'finiAvecLeDoubleur',
   /** Les amis entres dans la partie par une invitation du joueur. */
   'amisRassembles',
+  /** Les bonus ramasses, objets de poche compris (etape 3.10, pour les defis). */
+  'bonusRamasses',
 ] as const;
 
 /** Un fait de partie. */
@@ -144,6 +146,8 @@ export interface PartieDuParcours {
   readonly modeMiroir: boolean;
   /** Tous les joueurs de la partie, invites et abandons compris. */
   readonly nombreJoueurs: number;
+  /** La duree reglee de la partie, en secondes (etape 3.10, pour les defis). */
+  readonly dureeS: number;
   /** 1 pour le premier. En Equipes, la place de son equipe. */
   readonly placement: number;
   /**
@@ -153,6 +157,11 @@ export interface PartieDuParcours {
   readonly captures: number;
   readonly botsNoirsDetruits: number;
   readonly xpGagnee: number;
+  /**
+   * L'XP des defis que cette partie a releves (etape 3.10). Absente: aucun. Elle compte
+   * dans l'XP totale, sans quoi un compte afficherait un niveau sans son succes.
+   */
+  readonly xpDesDefis?: number;
   /** Signee, telle qu'appliquee: jamais plus bas que zero point. */
   readonly variationPointsLigue: number;
   /** Le jour de la fin de la partie, a l'heure de Paris: « 2026-09-26 ». */
@@ -948,7 +957,7 @@ function ajouterLaPartie(compteurs: Compteurs, partie: PartieDuParcours): void {
   compteurs.podiums += surLePodium(partie) ? 1 : 0;
   compteurs.prises += partie.captures;
   compteurs.blackNinjasDetruits += partie.botsNoirsDetruits;
-  compteurs.xpTotale += partie.xpGagnee;
+  compteurs.xpTotale += partie.xpGagnee + (partie.xpDesDefis ?? 0);
   compteurs.cartes.add(partie.carte);
   compteurs.modes.add(partie.mode);
   compteurs.jours.add(partie.jour);

@@ -106,6 +106,36 @@ export const NOTES_DE_VERSION: readonly NoteDeVersion[] = [
       },
     ],
   },
+  {
+    version: '1.7',
+    titre: 'Nouveautés de la version 1.7',
+    sections: [
+      {
+        titre: 'Les défis de la semaine',
+        puces: [
+          {
+            intitule: 'Trois défis chaque semaine.',
+            texte:
+              'Les mêmes pour tous les joueurs, renouvelés chaque lundi. Un pour jouer, un pour agir et un exploit, à suivre depuis l’accueil.',
+          },
+          {
+            intitule: 'De l’XP en plus.',
+            texte:
+              'Chaque défi relevé rapporte de 300 à 500 XP, soit jusqu’à 1 200 XP par semaine en plus de vos parties.',
+          },
+          {
+            intitule: 'Jamais les mêmes.',
+            texte:
+              'Un défi ne revient pas la semaine suivante, et les modes et les cartes à l’honneur changent d’une semaine à l’autre.',
+          },
+          {
+            texte:
+              'Réservés aux joueurs connectés. Seules comptent les parties jouées jusqu’au bout et réglées sur trois minutes au moins.',
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 /** La note de la version mineure d'un numero, s'il y en a une. */

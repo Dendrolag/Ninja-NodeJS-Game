@@ -580,6 +580,43 @@
   user-select: none;
 }
 
+/* Les defis de la semaine d'un compte (etape 3.10), entre la banniere et les modes. */
+.accueil-defis {
+  display: grid;
+  gap: 14px;
+  padding: 22px 24px;
+}
+
+.accueil-defis-entete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.accueil-defis-entete h2 {
+  margin: 0;
+  font-family: var(--police-titre);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.accueil-defis-temps {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--texte-tertiaire);
+  font-family: var(--police-donnees);
+  font-size: 11px;
+}
+
+.accueil-defis-bilan {
+  margin: -6px 0 0;
+  color: var(--texte-secondaire);
+  font-size: 12.5px;
+}
+
 .accueil-modes {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -2967,6 +3004,23 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+/* Les defis de la semaine d'une fin de partie, sous les gains (etape 3.10). */
+.fin-defis {
+  display: grid;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.fin-defis h3 {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.fin-defis-avis {
+  color: var(--texte-tertiaire);
+  font-size: 12.5px;
 }
 
 /* Les succes d'une fin de partie, sous les gains (etape 3.7). */

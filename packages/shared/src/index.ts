@@ -400,3 +400,28 @@ export {
   progressionDuSucces,
   succesLePlusProche,
 } from './succes.js';
+
+export type {
+  AvancementDUnDefi,
+  ComptageDeDefi,
+  DefiReleve,
+  DefinitionDeDefi,
+  DefisDeFin,
+  DefisDeLaSemaine,
+  FamilleDeDefi,
+  IdentifiantDefi,
+} from './defis.js';
+export {
+  DEFIS,
+  DUREE_MINIMUM_POUR_LES_DEFIS_S,
+  FAMILLES_DE_DEFIS,
+  XP_DES_FAMILLES,
+  avanceeDuDefi,
+  avancementsDeLaSemaine,
+  compteePourLesDefis,
+  defisDeLaSemaine,
+  definitionDuDefi,
+  estUnDefi,
+  semaineDuJour,
+  semaineSuivante,
+} from './defis.js';

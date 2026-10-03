@@ -80,10 +80,11 @@ describe('au demarrage', () => {
 
     expect(client.etat.session.nature).toBe('compte');
     expect(reseau.ouvertures).toEqual([{ jeton: JETON_DESSAI }]);
-    // Le compte reconnu lit aussi ses amis (etape 3.6).
+    // Le compte reconnu lit aussi ses amis (etape 3.6) et ses defis (etape 3.10).
     expect(api.appels).toEqual([
       { nom: 'moi', argument: JETON_DESSAI },
       { nom: 'amis', argument: JETON_DESSAI },
+      { nom: 'defis', argument: JETON_DESSAI },
     ]);
   });
 
@@ -181,7 +182,7 @@ describe('se connecter et s inscrire', () => {
 
     await laisserRepondre();
 
-    expect(requetes()).toEqual(['connecter', 'moi', 'amis']);
+    expect(requetes()).toEqual(['connecter', 'moi', 'amis', 'defis']);
     expect(coffre.lire()).toBe(JETON_DESSAI);
     expect(client.etat.session.nature).toBe('compte');
     expect(client.etat.demandeDeCompte.enCours).toBe(false);
@@ -194,7 +195,7 @@ describe('se connecter et s inscrire', () => {
     client.sInscrire({ pseudo: 'Bob', motDePasse: 'correct cheval' });
     await laisserRepondre();
 
-    expect(requetes()).toEqual(['inscrire', 'moi', 'amis']);
+    expect(requetes()).toEqual(['inscrire', 'moi', 'amis', 'defis']);
     expect(
       client.etat.session.nature === 'compte' ? client.etat.session.progression.pseudo : '',
     ).toBe('Bob');
@@ -320,6 +321,6 @@ describe('pendant une partie', () => {
     expect(reseau.ouvertures).toHaveLength(ouvertures);
     expect(coffre.lire()).toBe(JETON_DESSAI);
     expect(client.etat.session.nature).toBe('compte');
-    expect(requetes()).toEqual(['moi', 'amis']);
+    expect(requetes()).toEqual(['moi', 'amis', 'defis']);
   });
 });

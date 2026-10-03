@@ -27,6 +27,7 @@ import type { Client } from '../../client.js';
 import type { EtatClient } from '../../etat.js';
 import { moiDansLeSalon } from '../../selecteurs.js';
 import { boutonDeFiche } from '../composants/ficheJoueur.js';
+import { listeDeDefis, listeDeDefisReleves } from '../composants/defis.js';
 import { listeDeSuccesObtenus } from '../composants/succes.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import { icone } from '../icones.js';
@@ -266,6 +267,21 @@ function monterPanneauDeProgression(doc: Document): PanneauDeProgression {
   const plusProche = creer(doc, 'p', { classe: 'fin-plus-proche' });
   /** Les succes deja dessines, par leurs identifiants. */
   let succesDessines: string | undefined;
+  // Les defis de la semaine (etape 3.10): ceux que la partie a releves, puis les trois.
+  const defisReleves = creer(doc, 'div');
+  const defisDeLaSemaine = creer(doc, 'div');
+  const avisDesDefis = creer(doc, 'p', { classe: 'fin-defis-avis' });
+  const blocDesDefis = creer(
+    doc,
+    'div',
+    { classe: 'fin-defis' },
+    creer(doc, 'h3', { texte: 'Défis de la semaine' }),
+    defisReleves,
+    defisDeLaSemaine,
+    avisDesDefis,
+  );
+  /** Les defis deja dessines. */
+  let defisDessines: string | undefined;
   const changementDePalier = creer(doc, 'span', { classe: 'gain-changement' });
   const gainLigue = creer(
     doc,
@@ -306,6 +322,7 @@ function monterPanneauDeProgression(doc: Document): PanneauDeProgression {
       ),
       gainLigue,
     ),
+    blocDesDefis,
     blocDesSucces,
     plusProche,
   );
@@ -366,6 +383,18 @@ function monterPanneauDeProgression(doc: Document): PanneauDeProgression {
       }
 
       montrer(blocDesSucces, progression.succes.length > 0);
+
+      const defisDecrits = JSON.stringify([progression.defisReleves, progression.defis]);
+
+      if (defisDecrits !== defisDessines) {
+        defisDessines = defisDecrits;
+        defisReleves.replaceChildren(listeDeDefisReleves(doc, progression.defisReleves));
+        defisDeLaSemaine.replaceChildren(listeDeDefis(doc, progression.defis));
+      }
+
+      montrer(blocDesDefis, progression.defis.length > 0);
+      ecrireTexte(avisDesDefis, progression.avisDesDefis ?? '');
+      montrer(avisDesDefis, progression.avisDesDefis !== undefined);
       ecrireTexte(plusProche, progression.plusProche ?? '');
       montrer(plusProche, progression.plusProche !== undefined);
     },

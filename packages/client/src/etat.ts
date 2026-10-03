@@ -31,6 +31,7 @@ import type {
   MessageChat,
   PartiePublique,
   ProfilDuCompte,
+  DefisDeLaSemaine,
   ProgressionDeFin,
   Refus,
   TitreDuCompte,
@@ -172,6 +173,21 @@ export type EtatDuProfil =
 
 /** Un profil que le client n'a pas lu. */
 export const PROFIL_INCONNU: EtatDuProfil = { statut: 'inconnu' };
+
+/**
+ * Les defis de la semaine du compte, tels que le client les a lus (etape 3.10).
+ *
+ * Ils se lisent a l'ouverture d'une session de compte et a chaque arrivee sur l'accueil,
+ * qui les montre. Une fin de partie les rend inconnus: elle les a fait avancer.
+ */
+export type EtatDesDefis =
+  | { readonly statut: 'inconnu' }
+  | { readonly statut: 'chargement' }
+  | { readonly statut: 'charge'; readonly defis: DefisDeLaSemaine }
+  | { readonly statut: 'echec'; readonly motif: string };
+
+/** Des defis que le client n'a pas lus. */
+export const DEFIS_INCONNUS: EtatDesDefis = { statut: 'inconnu' };
 
 /**
  * Le dernier choix de titre fait depuis le profil, et ce qu'il a donne (etape 3.9).
@@ -373,6 +389,8 @@ export interface EtatClient {
   readonly codeDeSecours: string | undefined;
   /** Le profil du compte, lu a l'ouverture de son ecran. */
   readonly profil: EtatDuProfil;
+  /** Les defis de la semaine du compte, lus pour l'accueil (etape 3.10). */
+  readonly defis: EtatDesDefis;
   /** Le dernier choix de titre, fait depuis le profil (etape 3.9). */
   readonly choixDuTitre: EtatDuChoixDuTitre;
   /**
@@ -522,6 +540,7 @@ export const ETAT_INITIAL: EtatClient = {
   demandeDeCompte: AUCUNE_DEMANDE_DE_COMPTE,
   codeDeSecours: undefined,
   profil: PROFIL_INCONNU,
+  defis: DEFIS_INCONNUS,
   choixDuTitre: AUCUN_CHOIX_DE_TITRE,
   fiche: FICHE_FERMEE,
   amis: AMIS_INCONNUS,

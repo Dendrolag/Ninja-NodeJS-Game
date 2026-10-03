@@ -32,7 +32,8 @@ Le périmètre validé le 29 juin 2026 est repris tel quel, et précisé pour ch
 |                                                    | Pass de saison, boutique de skins, clans                                  | Après la v1             |
 |                                                    | Échelle de ligue détaillée, appariement par niveau, rang mondial          | Après la v1             |
 |                                                    | Gemmes (monnaie premium)                                                  | Avec une boutique       |
-|                                                    | Défis du jour                                                             | Après la v1             |
+|                                                    | Défis de la semaine                                                       | Faits en 3.10           |
+|                                                    | Défis du jour                                                             | À décider après usage   |
 |                                                    | Succès                                                                    | Faits en 3.7 à 3.9      |
 |                                                    | État « prêt » des joueurs du salon                                        | À réévaluer à l'usage   |
 |                                                    | Latence affichée par salon                                                | Avec plusieurs régions  |
@@ -62,7 +63,7 @@ Les neuf tensions et les huit questions ouvertes du README sont l'entrée de cet
 | Question 4, modes et capacités       | Tuile unique « à venir ». Capacité du Classique: **12 joueurs**, la borne haute de la maquette; **1 joueur suffit pour lancer**, comme dans le legacy. Les fourchettes des autres modes ne sont pas retenues.                                                  |
 | Question 5, cartes                   | Tranchée le 29 juin 2026, voir la tension 3.                                                                                                                                                                                                                  |
 | Question 6, libellés du HUD          | Tranchée à l'étape 4.2: Boost (vitesse), Invincibilité, Révélation, Contrôles inversés, Vision floue, Vision négative, et les quatre zones (chaos, répulsive, attractive, invisibilité). Une seule table, `APPARENCE_OBJET` et `APPARENCE_ZONE` du client.     |
-| Question 7, défis du jour            | **Reportés.** Les blocs de défis de l'accueil et de la fin de partie sont masqués, et aucune table n'est créée.                                                                                                                                              |
+| Question 7, défis du jour            | **Reportés.** Les blocs de défis de l'accueil et de la fin de partie sont masqués, et aucune table n'est créée. **Repris le 3 octobre 2026 en défis de la semaine** (étape `3.10`, `docs/plan/etape-3-10.md`): trois par semaine, un par famille, les mêmes pour tous, de 300 à 500 XP. Les défis du jour restent à décider après usage.                                                                                                                                              |
 
 ## 3. Inventaire des écrans
 
@@ -78,7 +79,8 @@ Sept écrans dans la maquette. Pour chacun: son statut en v1, les données qu'il
 
 - **Statut**: v1 réduit. Construit (4.3), enrichi au jalon 3: « Partie rapide », « Créer une partie », « Parcourir », et pas de pseudo à choisir pour un compte.
 - **Données v1**: pseudo et niveau du compte; boutons « Partie rapide », « Créer une partie », « Parcourir »; présentation du mode Classique et tuile « à venir »; règles du jeu (existant).
-- **Masqué**: bandeau de saison, défis du jour, pass de saison, grille des six modes.
+- **Masqué**: bandeau de saison, pass de saison, grille des six modes.
+- **Les défis de la semaine** (étape `3.10`): pour un compte, entre la bannière et les modes, les trois défis, leur famille, leur récompense, leur jauge et le temps restant avant les suivants (route `GET /api/comptes/defis`, `DefisDeLaSemaine`). Rien pour un invité. Ils se relisent à l'ouverture de la session et à chaque arrivée sur l'accueil.
 - **« Partie rapide »**: rejoindre la première partie publique encore dans son salon et non pleine, ou en ouvrir une publique aux réglages par défaut s'il n'y en a aucune. C'est la règle provisoire du jalon 1, restreinte aux parties publiques.
 
 ### 2. Parties publiques
@@ -111,7 +113,7 @@ Sept écrans dans la maquette. Pour chacun: son statut en v1, les données qu'il
 - **Statut**: v1, enrichi au jalon 3. Le classement s'affiche aussitôt; la progression le rejoint quand le serveur l'a écrite, « Enregistrement de la partie… » en attendant, ou le motif d'un échec.
 - **Données existantes**: contexte (mode, carte), place, podium, classement complet (points, ninjas, captures, Black Ninjas), Rejouer, Accueil.
 - **Données ajoutées (3.3)**: XP gagnée, niveau avant et après avec sa barre, pièces gagnées, variation des points de ligue, palier avant et après. **Fournies depuis l'étape 3.3** par le message `progressionDeFin` (`ProgressionDeFin`, `packages/shared/src/evenements.ts`), adressé à chaque compte présent à la fin, après `partieTerminee`; la barre se calcule par `avancementDuNiveau`. Un invité n'a que le classement.
-- **Masqué**: défi accompli.
+- **Les défis de la semaine** (étape `3.10`): les défis que la partie a relevés, avec leur XP, puis les trois de la semaine et leur avancée (`ProgressionEnregistree.defis`). « XP gagnée » reste celle de la partie seule; la barre de niveau comprend celle des défis. Une partie réglée sur moins de trois minutes dit qu'elle ne fait pas avancer les défis.
 
 ### 7. Profil
 
@@ -255,7 +257,7 @@ Chaque fonctionnalité reportée s'ajoutera par **de nouvelles tables qui réfé
 - gemmes: un solde, avec la boutique qui les rend utiles;
 - succès et défis du jour: leur définition, et leur accomplissement par un compte.
 
-Aucune de ces tables n'est créée en v1.
+Aucune de ces tables n'est créée en v1. Depuis, les succès ont la leur (`succes_debloques`, étape 3.7), et les défis de la semaine aussi (`defis_releves`, étape 3.10): leur définition est dans le code, seul ce qu'un compte a relevé s'écrit.
 
 ## 6. Principe des modes
 

@@ -3,9 +3,12 @@
  *
  * Portage du mainMenu du jeu d'origine, dans l'identite de la maquette. Trois
  * chemins, ceux du cadrage (section 3, accueil): la partie rapide, la creation
- * d'une partie, et la liste des parties publiques. La maquette y met aussi les
- * defis et le pass de saison, reportes apres la v1: conformement a la decision du
- * 29 juin 2026, ce qui est reporte est absent, pas grise.
+ * d'une partie, et la liste des parties publiques. La maquette y met aussi le pass de
+ * saison, reporte apres la v1: conformement a la decision du 29 juin 2026, ce qui est
+ * reporte est absent, pas grise.
+ *
+ * LES DEFIS DE LA SEMAINE (etape 3.10), sous la banniere, pour un compte seulement: un
+ * invite n'en tirerait rien. Le bloc attend qu'ils soient lus, sans rien montrer avant.
  *
  * LES TEXTES SONT CEUX DE L'ETAPE 4.5, arretes avec le porteur du projet. Sous la
  * banniere, une carte par mode, avec le texte de sa tuile de creation: la grille
@@ -28,11 +31,13 @@ import { CARTES, MODES } from '@neon-ninja/shared';
 import type { EtatClient } from '../../etat.js';
 import { monterChampPseudo } from '../composants/champPseudo.js';
 import { monterCredits } from '../composants/credits.js';
+import { listeDeDefis } from '../composants/defis.js';
 import type { Fenetre } from '../composants/fenetre.js';
 import { monterNoteDeVersion } from '../composants/noteDeVersion.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import { GLYPHES_DES_MODES, icone } from '../icones.js';
 import { modeleAccueil } from '../modeles/accueil.js';
+import { modeleDesDefis } from '../modeles/defis.js';
 import { NOMS_DES_MODES, TEXTES_DES_MODES } from '../modeles/cartes.js';
 import type { EtatDuLien } from '../modeles/lien.js';
 import type { ContexteEcran, EcranAffiche } from './types.js';
@@ -153,6 +158,32 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
 
   const credits = monterCredits(doc);
 
+  // Les defis de la semaine (etape 3.10). La liste ne se refait que si elle a change.
+  const renouvellement = creer(doc, 'span', { classe: 'accueil-defis-renouvellement' });
+  const bilanDesDefis = creer(doc, 'p', { classe: 'accueil-defis-bilan' });
+  const listeDesDefis = creer(doc, 'div');
+  const blocDesDefis = creer(
+    doc,
+    'section',
+    { classe: 'panneau accueil-defis', attributs: { 'aria-labelledby': 'accueil-defis-titre' } },
+    creer(
+      doc,
+      'div',
+      { classe: 'accueil-defis-entete' },
+      creer(doc, 'h2', { texte: 'Défis de la semaine', attributs: { id: 'accueil-defis-titre' } }),
+      creer(
+        doc,
+        'span',
+        { classe: 'accueil-defis-temps' },
+        icone(doc, 'replay', 12),
+        renouvellement,
+      ),
+    ),
+    bilanDesDefis,
+    listeDesDefis,
+  );
+  let defisDessines: string | undefined;
+
   // La note de version (etape 4.9): retenue lue des qu'elle se ferme, quelle qu'en
   // soit la facon.
   const souvenir = contexte.souvenirDeVersion;
@@ -247,6 +278,7 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
         attributs: { 'aria-hidden': 'true' },
       }),
     ),
+    blocDesDefis,
     creer(
       doc,
       'ul',
@@ -361,6 +393,23 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
       montrer(recharger, modele.peutRecharger);
       montrer(reessayer, modele.peutReessayer);
       montrer(continuerEnInvite, modele.peutContinuerEnInvite);
+
+      // L'heure du calendrier, pour le temps qui reste: c'est un affichage, pas une regle.
+      const defis = modeleDesDefis(etat, Date.now());
+
+      montrer(blocDesDefis, defis !== undefined);
+
+      if (defis !== undefined) {
+        ecrireTexte(renouvellement, defis.renouvellement);
+        ecrireTexte(bilanDesDefis, defis.bilan);
+
+        const decrits = JSON.stringify(defis.defis);
+
+        if (decrits !== defisDessines) {
+          defisDessines = decrits;
+          listeDesDefis.replaceChildren(listeDeDefis(doc, defis.defis));
+        }
+      }
     },
 
     demonter() {

@@ -397,8 +397,16 @@ describe.runIf(baseDisponible())('progression branchee sur la fin de partie', ()
           succes: expect.objectContaining({
             debloques: expect.arrayContaining(['premier-pas']) as unknown,
           }) as unknown,
+          // Etape 3.10: les defis dependent de la semaine ou le test tourne.
+          defis: expect.objectContaining({ releves: expect.any(Array) as unknown }) as unknown,
         });
-        expect(apres.xpTotale - DEPART.xpTotale).toBe(resultat?.xpGagnee);
+        // L'XP de la partie, et celle des defis qu'elle a peut-etre releves (etape 3.10).
+        const recu = recus.get(compte.id);
+        const xpDesDefis =
+          recu?.enregistree === true
+            ? recu.defis.releves.reduce((total, releve) => total + releve.xp, 0)
+            : 0;
+        expect(apres.xpTotale - DEPART.xpTotale - xpDesDefis).toBe(resultat?.xpGagnee);
       }
 
       expect(recuParLInvite).toBeUndefined();

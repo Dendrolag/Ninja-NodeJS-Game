@@ -38,6 +38,7 @@ import {
   AUCUN_CHOIX_DE_TITRE,
   AUCUNE_DEMANDE_DE_COMPTE,
   AUCUNE_INVITATION,
+  DEFIS_INCONNUS,
   ETAT_INITIAL,
   FICHE_FERMEE,
   MAX_JOURNAL,
@@ -203,6 +204,7 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
         session: { nature: 'invite', sessionExpiree: action.expiree },
         demandeDeCompte: AUCUNE_DEMANDE_DE_COMPTE,
         profil: PROFIL_INCONNU,
+        defis: DEFIS_INCONNUS,
         choixDuTitre: AUCUN_CHOIX_DE_TITRE,
         amis: AMIS_INCONNUS,
         presences: [],
@@ -222,6 +224,7 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
         session: { nature: 'compte', progression: action.progression },
         demandeDeCompte: AUCUNE_DEMANDE_DE_COMPTE,
         profil: PROFIL_INCONNU,
+        defis: memeCompte ? etat.defis : DEFIS_INCONNUS,
         choixDuTitre: AUCUN_CHOIX_DE_TITRE,
         amis: memeCompte ? etat.amis : AMIS_INCONNUS,
         presences: memeCompte ? etat.presences : [],
@@ -298,6 +301,21 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
 
     case 'profilRefuse':
       return { ...etat, ecran, profil: { statut: 'echec', motif: action.motif } };
+
+    // Les defis de la semaine (etape 3.10). Ceux deja lus restent affiches pendant
+    // qu'ils se relisent: l'accueil ne clignote pas a chaque retour.
+    case 'defisDemandes':
+      return {
+        ...etat,
+        ecran,
+        defis: etat.defis.statut === 'charge' ? etat.defis : { statut: 'chargement' },
+      };
+
+    case 'defisRecus':
+      return { ...etat, ecran, defis: { statut: 'charge', defis: action.defis } };
+
+    case 'defisRefuses':
+      return { ...etat, ecran, defis: { statut: 'echec', motif: action.motif } };
 
     case 'titreDemande':
       return { ...etat, ecran, choixDuTitre: { statut: 'enCours' } };
@@ -629,6 +647,8 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
         ecran,
         progressionDeFin: action.progression,
         session: sessionApresLaPartie(etat.session, action.progression),
+        // La partie a fait avancer les defis: ils se reliront au retour a l'accueil.
+        defis: action.progression.enregistree ? DEFIS_INCONNUS : etat.defis,
       };
 
     case 'fait':

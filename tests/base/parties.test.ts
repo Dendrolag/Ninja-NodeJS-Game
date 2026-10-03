@@ -26,6 +26,15 @@ import { accepte, baseDeTest, baseDisponible, erreurDe, pseudoNeuf } from './con
  * Une partie terminee a une heure unique, pour la retrouver sans connaitre son
  * identifiant (quand son enregistrement a echoue, par exemple).
  */
+/**
+ * Une heure de fin au hasard dans la semaine du 5 octobre 2026, dont aucun defi ne se
+ * releve en une partie (etape 3.10): les gains comptes au plus pres n'y changent pas
+ * selon la semaine tiree.
+ */
+function dansUneSemaineSansDefiDUnePartie(): Date {
+  return new Date(Date.UTC(2026, 9, 5, 8) + randomInt(0, 4 * 86_400_000));
+}
+
 function partie(surcharge: Partial<NouvellePartie> = {}): NouvellePartie {
   return {
     mode: 'classique',
@@ -185,9 +194,11 @@ describe.runIf(baseDisponible())('parties et resultats', () => {
     const compte = await nouveauCompte();
     await ecrireProgression(db(), compte, { xpTotale: 1000, pieces: 50, pointsLigue: 40 });
 
-    const { progressions } = await enregistrerPartie(db(), partie(), [
-      resultat(compte, 1, { xpGagnee: 210, piecesGagnees: 21, variationPointsLigue: 20 }),
-    ]);
+    const { progressions } = await enregistrerPartie(
+      db(),
+      partie({ termineeLe: dansUneSemaineSansDefiDUnePartie() }),
+      [resultat(compte, 1, { xpGagnee: 210, piecesGagnees: 21, variationPointsLigue: 20 })],
+    );
 
     expect(progressions).toEqual([
       {
@@ -200,6 +211,8 @@ describe.runIf(baseDisponible())('parties et resultats', () => {
           debloques: ['premier-pas', 'premiere-prise', 'nettoyeur', 'reflet', 'premiere-couronne'],
           plusProche: { id: 'touriste', actuel: 1, seuil: 3 },
         },
+        // Etape 3.10: aucun defi de cette semaine ne se releve en une partie.
+        defis: { releves: [], defis: expect.any(Array) as unknown },
       },
     ]);
     expect(await lireProgression(db(), compte)).toMatchObject({
@@ -226,10 +239,10 @@ describe.runIf(baseDisponible())('parties et resultats', () => {
     const compte = await nouveauCompte();
 
     const enregistrees = await Promise.all([
-      enregistrerPartie(db(), partie(), [
+      enregistrerPartie(db(), partie({ termineeLe: dansUneSemaineSansDefiDUnePartie() }), [
         resultat(compte, 1, { xpGagnee: 150, piecesGagnees: 15, variationPointsLigue: 20 }),
       ]),
-      enregistrerPartie(db(), partie(), [
+      enregistrerPartie(db(), partie({ termineeLe: dansUneSemaineSansDefiDUnePartie() }), [
         resultat(compte, 2, { xpGagnee: 30, piecesGagnees: 3, variationPointsLigue: -10 }),
       ]),
     ]);
@@ -340,7 +353,7 @@ describe.runIf(baseDisponible())('parties et resultats', () => {
   it('ne compte qu une fois une partie enregistree deux fois sous le meme identifiant, et rend la meme evolution', async () => {
     const compte = await nouveauCompte();
     await ecrireProgression(db(), compte, { xpTotale: 1000, pieces: 50, pointsLigue: 40 });
-    const jouee = partie({ id: randomUUID() });
+    const jouee = partie({ id: randomUUID(), termineeLe: dansUneSemaineSansDefiDUnePartie() });
     const lignes = [
       resultat(compte, 1, { xpGagnee: 210, piecesGagnees: 21, variationPointsLigue: 20 }),
     ];

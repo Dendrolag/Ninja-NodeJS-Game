@@ -251,6 +251,8 @@ export {
   succesDuCompte,
   succesEnregistres,
 } from './base/succes.js';
+export type { DefisDUnCompte } from './base/defis.js';
+export { defisDuCompte, releverLesDefis } from './base/defis.js';
 
 export type { FinPourLesComptes } from './finDePartie.js';
 export { finPourLesComptes, progressionEnregistree } from './finDePartie.js';

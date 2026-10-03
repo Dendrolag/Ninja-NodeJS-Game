@@ -53,6 +53,9 @@ import {
   succesDuProfil,
 } from '../../packages/server/dist/index.js';
 import type {
+  DefiReleve,
+  DefisDeFin,
+  DefisDeLaSemaine,
   ErreurValidation,
   FaceAFace,
   IdentifiantSucces,
@@ -69,11 +72,15 @@ import type {
 import {
   JOUEURS_POUR_UNE_VICTOIRE,
   PARTIES_DU_PROFIL,
+  avancementsDeLaSemaine,
+  defisDeLaSemaine,
   formaterCodeDeSecours,
   niveauDeXp,
   palierDePoints,
   parcoursDe,
   reperePseudo,
+  semaineDuJour,
+  semaineSuivante,
   validerDemandeChangementMotDePasse,
   validerDemandeCodeDeSecours,
   validerDemandeConnexion,
@@ -108,6 +115,8 @@ interface CompteEnMemoire {
   readonly succes: Map<IdentifiantSucces, SuccesEnregistre>;
   /** Le titre choisi parmi ses succes (etape 3.9). */
   titre: IdentifiantSucces | undefined;
+  /** Ses defis releves, par semaine puis par defi: l'XP versee et la partie (etape 3.10). */
+  readonly defis: Map<string, Map<string, { readonly xp: number; readonly partieId: string }>>;
 }
 
 /** Une partie jouee par un compte, pour le pli des succes. */
@@ -125,6 +134,27 @@ const JOUR_A_PARIS = new Intl.DateTimeFormat('en-CA', {
   month: '2-digit',
   day: '2-digit',
 });
+
+/**
+ * L'instant ou commence ce jour a Paris, en temps universel: minuit a Paris est 22 h ou
+ * 23 h la veille, selon l'heure d'ete. Comme la base, qui le calcule elle-meme.
+ */
+function minuitAParis(jour: string): Date {
+  for (const decalageH of [1, 2]) {
+    const instant = new Date(Date.parse(`${jour}T00:00:00Z`) - decalageH * 3_600_000);
+    const heure = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/Paris',
+      hour: '2-digit',
+      hourCycle: 'h23',
+    }).format(instant);
+
+    if (JOUR_A_PARIS.format(instant) === jour && heure === '00') {
+      return instant;
+    }
+  }
+
+  throw new Error(`Minuit introuvable a Paris le ${jour}.`);
+}
 
 /** Une fin de partie enregistree. */
 export interface FinEnregistree {
@@ -343,22 +373,80 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
     return { partiesEnsemble, devant, derriere };
   };
 
-  /** Le parcours de ce compte, avec ses amis d'aujourd'hui dans chaque partie, comme en base. */
-  const parcoursDuCompte = (compte: CompteEnMemoire): ParcoursDeSucces =>
-    parcoursDe(
-      compte.parcours.map((jouee) => ({
-        ...jouee.partie,
-        amis: [...comptes.values()].flatMap((autre) => {
-          const placement = autre.placements.get(jouee.numero);
+  /** Les parties de ce compte, avec ses amis d'aujourd'hui dans chaque partie, comme en base. */
+  const parcoursAvecLesAmis = (compte: CompteEnMemoire): PartieDuParcours[] =>
+    compte.parcours.map((jouee) => ({
+      ...jouee.partie,
+      amis: [...comptes.values()].flatMap((autre) => {
+        const placement = autre.placements.get(jouee.numero);
 
-          return autre.id !== compte.id &&
-            placement !== undefined &&
-            amities.has(paireOrdonnee(compte.id, autre.id))
-            ? [{ compte: autre.id, placement }]
-            : [];
-        }),
-      })),
-    );
+        return autre.id !== compte.id &&
+          placement !== undefined &&
+          amities.has(paireOrdonnee(compte.id, autre.id))
+          ? [{ compte: autre.id, placement }]
+          : [];
+      }),
+    }));
+
+  /** Le parcours de ce compte, tel que le pli des succes le lit. */
+  const parcoursDuCompte = (compte: CompteEnMemoire): ParcoursDeSucces =>
+    parcoursDe(parcoursAvecLesAmis(compte));
+
+  /** Les parties de ce compte finies dans cette semaine, telles que les defis les lisent. */
+  const partiesDeLaSemaine = (compte: CompteEnMemoire, semaine: string): PartieDuParcours[] =>
+    parcoursAvecLesAmis(compte).filter((partie) => semaineDuJour(partie.jour) === semaine);
+
+  /** L'XP versee pour chaque defi releve cette semaine. */
+  const xpDesReleves = (compte: CompteEnMemoire, semaine: string): Map<string, number> =>
+    new Map([...(compte.defis.get(semaine) ?? [])].map(([id, releve]) => [id, releve.xp]));
+
+  /**
+   * Releve les defis que la partie fait atteindre a ce compte, comme en base: l'XP de ceux
+   * qui s'inscrivent s'ajoute au compte et a la partie, avant les succes.
+   */
+  const releverLesDefis = (compte: CompteEnMemoire, partieId: string): DefisDeFin => {
+    const index = compte.parcours.findIndex((jouee) => jouee.partieId === partieId);
+    const jouee = compte.parcours[index];
+
+    if (jouee === undefined) {
+      throw new Error(`La partie ${partieId} manque au parcours de ${compte.pseudo}.`);
+    }
+
+    const semaine = semaineDuJour(jouee.partie.jour);
+    const releves = compte.defis.get(semaine) ?? new Map();
+    const nouveaux: DefiReleve[] = [];
+
+    for (const avancement of avancementsDeLaSemaine(
+      semaine,
+      partiesDeLaSemaine(compte, semaine),
+      xpDesReleves(compte, semaine),
+    )) {
+      if (!avancement.accompli && avancement.actuel >= avancement.seuil) {
+        releves.set(avancement.id, { xp: avancement.xp, partieId });
+        nouveaux.push({ id: avancement.id, xp: avancement.xp });
+      }
+    }
+
+    compte.defis.set(semaine, releves);
+    const xp = nouveaux.reduce((total, releve) => total + releve.xp, 0);
+
+    if (xp > 0) {
+      compte.xpTotale += xp;
+      compte.parcours[index] = { ...jouee, partie: { ...jouee.partie, xpDesDefis: xp } };
+    }
+
+    // Dans l'ordre des familles, celui de la semaine.
+    const ordre: readonly string[] = defisDeLaSemaine(semaine);
+
+    return {
+      releves: nouveaux.sort((a, b) => ordre.indexOf(a.id) - ordre.indexOf(b.id)),
+      defis: avancementsDeLaSemaine(
+        semaine,
+        partiesDeLaSemaine(compte, semaine),
+        xpDesReleves(compte, semaine),
+      ),
+    };
+  };
 
   /** Inscrit les succes atteints de ce compte, dates de leur partie d'origine, comme en base. */
   const attribuer = (compte: CompteEnMemoire): ParcoursDeSucces => {
@@ -443,6 +531,7 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
         parcours: [],
         succes: new Map(),
         titre: undefined,
+        defis: new Map(),
       };
       comptes.set(compte.id, compte);
       const codeDeSecours = renouvelerLeCode(compte);
@@ -584,6 +673,29 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
           pseudo: vise.pseudo,
           relation: relationVue(faitsApres(faits, decision.ecritures)),
           amis: listeDe(compteId),
+        },
+      };
+    },
+
+    // Comme la base: la semaine en cours a Paris, ses parties et ses defis releves.
+    defis: async (jeton): Promise<ReponseDeCompte<DefisDeLaSemaine>> => {
+      const compte = comptes.get(sessions.get(jeton) ?? '');
+      if (compte === undefined) {
+        return sessionAbsente();
+      }
+
+      const semaine = semaineDuJour(JOUR_A_PARIS.format(new Date()));
+
+      return {
+        acceptee: true,
+        valeur: {
+          semaine,
+          finLe: minuitAParis(semaineSuivante(semaine)).toISOString(),
+          defis: avancementsDeLaSemaine(
+            semaine,
+            partiesDeLaSemaine(compte, semaine),
+            xpDesReleves(compte, semaine),
+          ),
         },
       };
     },
@@ -761,6 +873,7 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
             carte: partie.carte,
             modeMiroir: partie.modeMiroir,
             nombreJoueurs: partie.nombreJoueurs,
+            dureeS: partie.dureeS,
             placement: resultat.placement,
             captures: resultat.captures,
             botsNoirsDetruits: resultat.botsNoirsDetruits,
@@ -784,10 +897,17 @@ export function creerComptesEnMemoire(): ComptesEnMemoire {
         };
       });
 
-      return gains.map(({ compte, ...appliquee }) => ({
-        ...appliquee,
-        succes: succesDeFin(partieId, attribuer(compte).mesures, compte.succes),
-      }));
+      // Les defis d'abord, comme en base: leur XP compte dans les succes de niveau.
+      return gains.map(({ compte, ...appliquee }) => {
+        const defis = releverLesDefis(compte, partieId);
+
+        return {
+          ...appliquee,
+          apres: { ...appliquee.apres, xpTotale: compte.xpTotale },
+          defis,
+          succes: succesDeFin(partieId, attribuer(compte).mesures, compte.succes),
+        };
+      });
     },
   };
 }

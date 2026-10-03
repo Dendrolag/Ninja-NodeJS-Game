@@ -34,6 +34,7 @@ import type {
   PartiePublique,
   PresenceDUnAmi,
   ProfilDuCompte,
+  DefisDeLaSemaine,
   ProgressionDeFin,
   ObjetDePoche,
   Refus,
@@ -131,6 +132,12 @@ export type Action =
   | { readonly type: 'profilRecu'; readonly profil: ProfilDuCompte }
   /** Le profil n'a pas pu etre lu, pour ce motif. */
   | { readonly type: 'profilRefuse'; readonly motif: string }
+  /** La lecture des defis de la semaine est partie (etape 3.10). */
+  | { readonly type: 'defisDemandes' }
+  /** Les defis de la semaine sont arrives. */
+  | { readonly type: 'defisRecus'; readonly defis: DefisDeLaSemaine }
+  /** Les defis de la semaine n'ont pas pu etre lus, pour ce motif. */
+  | { readonly type: 'defisRefuses'; readonly motif: string }
   /** Le choix d'un titre est parti (etape 3.9). */
   | { readonly type: 'titreDemande' }
   /** Le serveur a accepte le choix: voici le titre porte desormais. */

@@ -23,23 +23,32 @@ import type {
   PartieDuParcours,
 } from '@neon-ninja/shared';
 import { estUnFait, estUnSucces, parcoursDe } from '@neon-ninja/shared';
+import type { SQL } from 'drizzle-orm';
 import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
 import type { BaseDeDonnees } from './connexion.js';
-import { amities, faitsDePartie, parties, resultats, succesDebloques } from './schema.js';
+import {
+  amities,
+  defisReleves,
+  faitsDePartie,
+  parties,
+  resultats,
+  succesDebloques,
+} from './schema.js';
 
 /** Ce qui execute une lecture: la base, ou une transaction ouverte sur elle. */
-type Lecteur = Pick<BaseDeDonnees, 'select'>;
+export type Lecteur = Pick<BaseDeDonnees, 'select'>;
 
 /** Ce qui lit et ecrit: la base, ou une transaction ouverte sur elle. */
-type Ecrivain = Pick<BaseDeDonnees, 'select' | 'insert'>;
+export type Ecrivain = Pick<BaseDeDonnees, 'select' | 'insert'>;
 
 /**
- * Le fuseau des jours de « Fidele » (etude des succes, section 4.2): celui des joueurs,
- * et non celui du serveur, qui tourne en temps universel.
+ * Le fuseau des jours de « Fidele » (etude des succes, section 4.2) et des semaines des
+ * defis (etape 3.10): celui des joueurs, et non celui du serveur, qui tourne en temps
+ * universel.
  */
-const FUSEAU_DES_JOURS = 'Europe/Paris';
+export const FUSEAU_DES_JOURS = 'Europe/Paris';
 
 /** Combien de comptes le rattrapage traite a la fois. */
 const COMPTES_PAR_LOT = 50;
@@ -70,15 +79,20 @@ export interface SuccesDUnCompte {
 
 /**
  * L'historique de ces comptes, tel que le pli le lit: pour chacun, ses parties dans
- * l'ordre ou elles se sont terminees, avec ses amis d'aujourd'hui qui les ont jouees et
- * les faits releves pendant la partie (etape 3.8).
+ * l'ordre ou elles se sont terminees, avec ses amis d'aujourd'hui qui les ont jouees, les
+ * faits releves pendant la partie (etape 3.8) et l'XP des defis qu'elle a releves (etape
+ * 3.10).
  *
- * Trois requetes pour tous les comptes, et non trois par compte: la fin d'une partie de
- * douze joueurs n'en fait pas trente-six.
+ * Quatre requetes pour tous les comptes, et non quatre par compte: la fin d'une partie de
+ * douze joueurs n'en fait pas quarante-huit.
+ *
+ * @param semaine Le lundi d'une semaine (etape 3.10). Present: les seules parties
+ *                terminees dans cette semaine, a l'heure de Paris.
  */
 export async function historiquesDesComptes(
   lecteur: Lecteur,
   compteIds: readonly string[],
+  semaine?: string,
 ): Promise<ReadonlyMap<string, readonly PartieDatee[]>> {
   const ids = [...new Set(compteIds)];
   const historiques = new Map<string, PartieDatee[]>(ids.map((id) => [id, []]));
@@ -87,7 +101,8 @@ export async function historiquesDesComptes(
     return historiques;
   }
 
-  const [lignes, amisPresents, faitsReleves] = await Promise.all([
+  const filtre = semaine === undefined ? undefined : dansLaSemaine(semaine);
+  const [lignes, amisPresents, faitsReleves, xpDesDefis] = await Promise.all([
     lecteur
       .select({
         compteId: resultats.compteId,
@@ -98,6 +113,7 @@ export async function historiquesDesComptes(
         carte: parties.carte,
         modeMiroir: parties.modeMiroir,
         nombreJoueurs: parties.nombreJoueurs,
+        dureeS: parties.dureeS,
         placement: resultats.placement,
         captures: resultats.captures,
         botsNoirsDetruits: resultats.botsNoirsDetruits,
@@ -106,15 +122,17 @@ export async function historiquesDesComptes(
       })
       .from(resultats)
       .innerJoin(parties, eq(resultats.partieId, parties.id))
-      .where(inArray(resultats.compteId, ids))
+      .where(and(inArray(resultats.compteId, ids), filtre))
       .orderBy(asc(resultats.compteId), asc(parties.termineeLe), asc(parties.id)),
-    amisDansLeursParties(lecteur, ids),
-    faitsDeLeursParties(lecteur, ids),
+    amisDansLeursParties(lecteur, ids, filtre),
+    faitsDeLeursParties(lecteur, ids, filtre),
+    xpDesDefisDeLeursParties(lecteur, ids, filtre),
   ]);
 
   for (const { compteId, partieId, termineeLe, ...partie } of lignes) {
     const cle = `${compteId}/${partieId}`;
     const faits = faitsReleves.get(cle);
+    const xp = xpDesDefis.get(cle);
 
     historiques.get(compteId)?.push({
       partieId,
@@ -123,11 +141,20 @@ export async function historiquesDesComptes(
         ...partie,
         amis: amisPresents.get(cle) ?? [],
         ...(faits === undefined ? {} : { faits }),
+        ...(xp === undefined ? {} : { xpDesDefis: xp }),
       },
     });
   }
 
   return historiques;
+}
+
+/**
+ * Les parties terminees dans cette semaine, du lundi 0 h au lundi suivant 0 h, a l'heure
+ * de Paris (etape 3.10).
+ */
+export function dansLaSemaine(semaine: string): SQL {
+  return sql`date_trunc('week', ${parties.termineeLe} at time zone ${FUSEAU_DES_JOURS})::date = ${semaine}::date`;
 }
 
 /**
@@ -137,6 +164,7 @@ export async function historiquesDesComptes(
 async function amisDansLeursParties(
   lecteur: Lecteur,
   ids: readonly string[],
+  filtre: SQL | undefined,
 ): Promise<ReadonlyMap<string, PartieDuParcours['amis']>> {
   const moi = alias(resultats, 'moi');
   const ami = alias(resultats, 'ami');
@@ -148,6 +176,7 @@ async function amisDansLeursParties(
       placement: ami.placement,
     })
     .from(moi)
+    .innerJoin(parties, eq(parties.id, moi.partieId))
     .innerJoin(ami, and(eq(ami.partieId, moi.partieId), ne(ami.compteId, moi.compteId)))
     .innerJoin(
       amities,
@@ -156,7 +185,7 @@ async function amisDansLeursParties(
         eq(amities.compteB, sql`greatest(${moi.compteId}, ${ami.compteId})`),
       ),
     )
-    .where(inArray(moi.compteId, [...ids]));
+    .where(and(inArray(moi.compteId, [...ids]), filtre));
   const parPartie = new Map<string, { compte: string; placement: number }[]>();
 
   for (const ligne of lignes) {
@@ -177,11 +206,18 @@ async function amisDansLeursParties(
 async function faitsDeLeursParties(
   lecteur: Lecteur,
   ids: readonly string[],
+  filtre: SQL | undefined,
 ): Promise<ReadonlyMap<string, FaitsDePartie>> {
   const lignes = await lecteur
-    .select()
+    .select({
+      compteId: faitsDePartie.compteId,
+      partieId: faitsDePartie.partieId,
+      fait: faitsDePartie.fait,
+      valeur: faitsDePartie.valeur,
+    })
     .from(faitsDePartie)
-    .where(inArray(faitsDePartie.compteId, [...ids]));
+    .innerJoin(parties, eq(parties.id, faitsDePartie.partieId))
+    .where(and(inArray(faitsDePartie.compteId, [...ids]), filtre));
   const parPartie = new Map<string, Partial<Record<FaitDePartie, number>>>();
 
   for (const ligne of lignes) {
@@ -195,6 +231,29 @@ async function faitsDeLeursParties(
   }
 
   return parPartie;
+}
+
+/**
+ * L'XP des defis que chaque partie a releves pour ces comptes, par « compte/partie »
+ * (etape 3.10). Une partie qui n'en a releve aucun n'y est pas.
+ */
+async function xpDesDefisDeLeursParties(
+  lecteur: Lecteur,
+  ids: readonly string[],
+  filtre: SQL | undefined,
+): Promise<ReadonlyMap<string, number>> {
+  const lignes = await lecteur
+    .select({
+      compteId: defisReleves.compteId,
+      partieId: parties.id,
+      xp: sql<number>`sum(${defisReleves.xp})::int`,
+    })
+    .from(defisReleves)
+    .innerJoin(parties, eq(parties.id, defisReleves.partieId))
+    .where(and(inArray(defisReleves.compteId, [...ids]), filtre))
+    .groupBy(defisReleves.compteId, parties.id);
+
+  return new Map(lignes.map((ligne) => [`${ligne.compteId}/${ligne.partieId}`, ligne.xp]));
 }
 
 /**
@@ -237,13 +296,17 @@ export async function succesEnregistres(
  *
  * Dans la transaction de fin de partie, l'historique lu comprend la partie qui vient de
  * s'ecrire. Une meme attribution relancee n'inscrit rien.
+ *
+ * @param dejaLus L'historique de ces comptes, s'il vient d'etre lu: la fin de partie le
+ *                lit une fois, pour les defis puis pour les succes (etape 3.10).
  */
 export async function attribuerLesSucces(
   ecrivain: Ecrivain,
   compteIds: readonly string[],
+  dejaLus?: ReadonlyMap<string, readonly PartieDatee[]>,
 ): Promise<ReadonlyMap<string, SuccesDUnCompte>> {
   const [historiques, enregistres] = await Promise.all([
-    historiquesDesComptes(ecrivain, compteIds),
+    dejaLus ?? historiquesDesComptes(ecrivain, compteIds),
     succesEnregistres(ecrivain, compteIds),
   ]);
   const aInscrire: (typeof succesDebloques.$inferInsert)[] = [];

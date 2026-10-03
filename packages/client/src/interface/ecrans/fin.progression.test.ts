@@ -61,6 +61,7 @@ const RECAPITULATIF: ProgressionEnregistree = {
     debloques: ['premier-pas', 'premiere-couronne'],
     plusProche: { id: 'touriste', actuel: 1, seuil: 3 },
   },
+  defis: { releves: [], defis: [] },
 };
 
 let reseau: ReseauFactice;
@@ -145,6 +146,31 @@ describe('la progression sur l ecran de fin', () => {
 
     expect(estCache(obligatoire(document, '.fin-succes'))).toBe(true);
     expect(estCache(obligatoire(document, '.fin-plus-proche'))).toBe(true);
+  });
+
+  it('annonce les defis que la partie a releves, puis ceux de la semaine (etape 3.10)', () => {
+    reseau.recevoir('progressionDeFin', RECAPITULATIF);
+
+    expect(estCache(obligatoire(document, '.fin-defis'))).toBe(true);
+
+    reseau.recevoir('progressionDeFin', {
+      ...RECAPITULATIF,
+      defis: {
+        releves: [{ id: 'trois-cartes', xp: 300 }],
+        defis: [
+          { id: 'trois-cartes', actuel: 3, seuil: 3, xp: 300, accompli: true },
+          { id: 'doubleurs', actuel: 0, seuil: 2, xp: 400, accompli: false },
+          { id: 'multiplicateur', actuel: 3, seuil: 5, xp: 500, accompli: false },
+        ],
+      },
+    });
+
+    expect(estCache(obligatoire(document, '.fin-defis'))).toBe(false);
+    expect(texte('.defi-releve-texte')).toBe('Défi relevé : Jouer sur 3 cartes différentes.');
+    expect(texte('.defi-releve-xp')).toBe('+300 XP');
+    expect(
+      [...document.querySelectorAll('.fin-defis .defi-avancee')].map((un) => un.textContent),
+    ).toEqual(['Relevé', '0 / 2', '3 / 5']);
   });
 
   it('dit pourquoi une partie n a pas ete enregistree', () => {

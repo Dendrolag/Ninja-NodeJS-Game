@@ -21,6 +21,7 @@
 
 import type {
   CodeDeSecoursEmis,
+  DefisDeLaSemaine,
   ErreurValidation,
   FicheJoueur,
   IdentifiantSucces,
@@ -219,6 +220,12 @@ export interface ServiceDeComptes extends AnnuaireDesComptes {
    * @param demande Le corps de la requete, a valider: le succes, ou null.
    */
   choisirUnTitre(jeton: string, demande: unknown): Promise<ReponseDeCompte<TitreDuCompte>>;
+
+  /**
+   * Les defis de la semaine en cours, et ou en est le compte dont ce jeton ouvre la
+   * session (etape 3.10).
+   */
+  defis(jeton: string): Promise<ReponseDeCompte<DefisDeLaSemaine>>;
 
   /**
    * Change le mot de passe du compte dont ce jeton ouvre la session, contre le mot de

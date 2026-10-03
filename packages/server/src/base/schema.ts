@@ -1,7 +1,7 @@
 /**
  * Le schema de la base: les comptes, leur progression, les parties jouees et, depuis
- * l'etape 3.6, les amities, puis les succes (3.7), le titre (3.9) et les faits de partie
- * (3.8).
+ * l'etape 3.6, les amities, puis les succes (3.7), le titre (3.9), les faits de partie
+ * (3.8) et les defis releves (3.10).
  *
  * C'EST LA SOURCE DES MIGRATIONS. Les fichiers SQL de packages/server/migrations
  * sont ecrits par drizzle-kit a partir de ce fichier (`pnpm base:generer`), jamais
@@ -14,10 +14,10 @@
  * packages/shared/src/progression.ts (etape 3.3). Meme principe que le score
  * depuis le 14 aout 2026.
  *
- * CE QUI N'EST PAS ICI, VOLONTAIREMENT. Ni gemmes, ni defis du jour, ni pass de
- * saison, ni skins, ni clans. Chacun s'ajoutera par de nouvelles tables qui
- * referencent le compte, sans colonne ajoutee a celles-ci. C'est deja le cas de
- * l'etape 3.2: le mot de passe et les sessions ont chacun leur table.
+ * CE QUI N'EST PAS ICI, VOLONTAIREMENT. Ni gemmes, ni pass de saison, ni skins, ni
+ * clans. Chacun s'ajoutera par de nouvelles tables qui referencent le compte, sans
+ * colonne ajoutee a celles-ci, comme l'ont fait le mot de passe et les sessions (3.2),
+ * puis les defis de la semaine (3.10).
  *
  * DEUX TABLES POUR UNE PARTIE JOUEE. Le mode, la carte, la duree, le nombre de
  * joueurs et l'heure de fin sont les memes pour tous les joueurs d'une partie: ils
@@ -31,6 +31,7 @@ import { sql } from 'drizzle-orm';
 import {
   boolean,
   check,
+  date,
   foreignKey,
   index,
   integer,
@@ -390,5 +391,47 @@ export const faitsDePartie = pgTable(
     check('faits_de_partie_identifiant', sql`${table.fait} ~ '^[a-z][a-zA-Z0-9]*$'`),
     check('faits_de_partie_longueur', sql`char_length(${table.fait}) <= 40`),
     check('faits_de_partie_valeur_positive', sql`${table.valeur} > 0`),
+  ],
+);
+
+/**
+ * Les defis releves (etape 3.10): une ligne par compte, par semaine et par defi releve.
+ *
+ * LES DEFIS DE LA SEMAINE NE SONT PAS ICI. Ils se tirent de la semaine seule, par le
+ * paquet partage (defisDeLaSemaine): seul ce qu'un compte a releve s'ecrit.
+ *
+ * LA CLE (compte, semaine, defi) EMPECHE DE TOUCHER DEUX FOIS UNE RECOMPENSE. L'XP versee
+ * s'ecrit avec le defi: une recompense peut changer, l'historique dit ce qui a ete verse.
+ * L'identifiant du defi est un texte, controle par sa forme seulement, comme celui d'un
+ * succes: en ajouter un ne demande pas de migration, et la lecture ignore un defi retire.
+ *
+ * LA PARTIE EST CELLE QUI L'A RELEVE. C'est par elle qu'un reessai d'enregistrement
+ * retrouve les defis deja verses, et que le pli des succes compte leur XP avec elle.
+ * Supprimer un compte supprime ses defis; la partie ne se supprime pas tant qu'elle a
+ * des resultats.
+ */
+export const defisReleves = pgTable(
+  'defis_releves',
+  {
+    compteId: uuid('compte_id')
+      .notNull()
+      .references(() => comptes.id, { onDelete: 'cascade' }),
+    /** Le lundi de la semaine, a l'heure de Paris. */
+    semaine: date('semaine', { mode: 'string' }).notNull(),
+    defi: text('defi').notNull(),
+    xp: integer('xp').notNull(),
+    releveLe: horodatage('releve_le').notNull(),
+    partieId: uuid('partie_id').references(() => parties.id, { onDelete: 'set null' }),
+  },
+  (table) => [
+    primaryKey({
+      name: 'defis_releves_compte_semaine_defi',
+      columns: [table.compteId, table.semaine, table.defi],
+    }),
+    index('defis_releves_par_partie').on(table.partieId),
+    check('defis_releves_identifiant', sql`${table.defi} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`),
+    check('defis_releves_longueur', sql`char_length(${table.defi}) <= 40`),
+    check('defis_releves_xp_positive', sql`${table.xp} >= 0`),
+    check('defis_releves_un_lundi', sql`extract(isodow from ${table.semaine}) = 1`),
   ],
 );

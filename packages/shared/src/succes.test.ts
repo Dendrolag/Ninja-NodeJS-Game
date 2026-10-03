@@ -32,6 +32,7 @@ function partie(surcharge: Partial<PartieDuParcours> = {}): PartieDuParcours {
     carte: 'map1',
     modeMiroir: false,
     nombreJoueurs: 1,
+    dureeS: 180,
     placement: 1,
     captures: 0,
     botsNoirsDetruits: 0,
@@ -557,6 +558,17 @@ describe('les regles du pli', () => {
     expect(parcoursDe([partie({ xpGagnee: 60 }), partie({ xpGagnee: 40 })]).mesures.xpTotale).toBe(
       100,
     );
+  });
+
+  it("compte l'XP des defis releves avec celle des parties (etape 3.10)", () => {
+    const { mesures, premieres } = parcoursDe([
+      partie({ xpGagnee: 700 }),
+      partie({ xpGagnee: 100, xpDesDefis: 200 }),
+    ]);
+
+    expect(mesures.xpTotale).toBe(1000);
+    // Le niveau 5 s'atteint a 1 000 XP: sans l'XP du defi, le compte aurait le niveau sans le succes.
+    expect(premieres.get('recrue')).toBe(1);
   });
 });
 

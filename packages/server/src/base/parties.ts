@@ -4,10 +4,14 @@
  *
  * TOUT S'ECRIT ENSEMBLE, OU RIEN. Une seule transaction pour la partie, le resultat
  * de chaque compte, les faits releves pendant la partie (etape 3.8), l'ajout de ses
- * gains a sa progression et, depuis l'etape 3.7, les succes qu'il a atteints
+ * gains a sa progression, depuis l'etape 3.10 les defis de la semaine qu'il releve et
+ * leur XP (base/defis.ts) et, depuis l'etape 3.7, les succes qu'il a atteints
  * (base/succes.ts): si l'un est refuse, rien n'est ecrit. Une partie a moitie
  * enregistree fausserait les statistiques du profil, et un gain applique sans son
  * resultat ne s'expliquerait plus.
+ *
+ * LES DEFIS AVANT LES SUCCES. L'XP d'un defi compte dans l'XP totale des succes de
+ * niveau: les succes se plient sur l'historique qui la porte deja.
  *
  * LES GAINS S'AJOUTENT, ILS NE REMPLACENT PAS (etape 3.3). La progression de chaque
  * compte est verrouillee, lue, puis augmentee dans la meme transaction. Deux parties
@@ -26,15 +30,23 @@
  * Aucun joueur n'enregistre une partie lui-meme.
  */
 
-import type { CarteEnregistree, FaitsDePartie, Mode, SuccesDeFin } from '@neon-ninja/shared';
+import type {
+  CarteEnregistree,
+  DefisDeFin,
+  FaitsDePartie,
+  Mode,
+  SuccesDeFin,
+} from '@neon-ninja/shared';
 import { JOUEURS_POUR_UNE_VICTOIRE } from '@neon-ninja/shared';
 import { desc, eq, inArray, sql } from 'drizzle-orm';
 
 import { succesDeFin } from '../comptes/succes.js';
 import type { BaseDeDonnees } from './connexion.js';
+import { releverLesDefis, xpDesDefisDeLaPartie } from './defis.js';
 import type { ValeursProgression } from './progression.js';
 import { faitsDePartie, parties, progressions, resultats } from './schema.js';
-import { attribuerLesSucces } from './succes.js';
+import type { PartieDatee } from './succes.js';
+import { attribuerLesSucces, historiquesDesComptes } from './succes.js';
 
 /** Une transaction ouverte sur la base. */
 type Transaction = Parameters<Parameters<BaseDeDonnees['transaction']>[0]>[0];
@@ -93,14 +105,19 @@ export interface ProgressionAppliquee {
   readonly compteId: string;
   /** La progression lue, verrouillee, juste avant l'ajout des gains. */
   readonly avant: ValeursProgression;
-  /** La progression rendue par la base apres l'ajout des gains. */
+  /**
+   * La progression rendue par la base apres l'ajout des gains, XP des defis comprise
+   * (etape 3.10).
+   */
   readonly apres: ValeursProgression;
   /** Les succes que la partie a donnes au compte, et le plus proche (etape 3.7). */
   readonly succes: SuccesDeFin;
+  /** Les defis que la partie a releves pour le compte, et ceux de sa semaine (etape 3.10). */
+  readonly defis: DefisDeFin;
 }
 
-/** L'evolution de la progression d'un compte, avant l'attribution de ses succes. */
-type GainsAppliques = Omit<ProgressionAppliquee, 'succes'>;
+/** L'evolution de la progression d'un compte, avant ses defis et ses succes. */
+type GainsAppliques = Omit<ProgressionAppliquee, 'succes' | 'defis'>;
 
 /** Une partie enregistree, et ce que ses comptes y ont gagne. */
 export interface PartieEnregistree {
@@ -157,10 +174,11 @@ export async function enregistrerPartie(
 
       return {
         partieId: partie.id,
-        progressions: await avecLesSucces(
+        progressions: await avecLesDefisEtLesSucces(
           transaction,
           partie.id,
           await progressionsDejaAppliquees(transaction, partie.id, lignes),
+          false,
         ),
       };
     }
@@ -204,29 +222,64 @@ export async function enregistrerPartie(
 
     return {
       partieId: enregistree.id,
-      progressions: await avecLesSucces(transaction, enregistree.id, progressionsAppliquees),
+      progressions: await avecLesDefisEtLesSucces(
+        transaction,
+        enregistree.id,
+        progressionsAppliquees,
+        true,
+      ),
     };
   });
 }
 
 /**
- * Attribue leurs succes aux comptes de la partie, dans la transaction qui l'enregistre,
- * et joint a chaque progression ce que la partie leur a donne (etape 3.7).
+ * Releve les defis puis attribue les succes des comptes de la partie, dans la
+ * transaction qui l'enregistre, et joint a chaque progression ce que la partie leur a
+ * donne (etapes 3.7 et 3.10).
  *
- * Au reessai d'une partie deja enregistree, l'attribution n'inscrit rien de plus: les
+ * L'historique se lit une fois. L'XP des defis que la partie releve s'ajoute a la
+ * progression, puis a la partie dans l'historique, avant le pli des succes.
+ *
+ * Au reessai d'une partie deja enregistree, rien ne s'inscrit de plus: les defis et les
  * succes annonces sont relus par leur partie d'origine, et ce sont les memes.
+ *
+ * @param inscrire Faux au reessai.
  */
-async function avecLesSucces(
+async function avecLesDefisEtLesSucces(
   transaction: Transaction,
   partieId: string,
   gains: readonly GainsAppliques[],
+  inscrire: boolean,
 ): Promise<ProgressionAppliquee[]> {
+  const compteIds = gains.map((appliquee) => appliquee.compteId);
+  const historiques = await historiquesDesComptes(transaction, compteIds);
+  const defis = await releverLesDefis(transaction, partieId, historiques, inscrire);
+  const avecLeursDefis: (GainsAppliques & { readonly defis: DefisDeFin })[] = [];
+
+  for (const appliquee of gains) {
+    const sesDefis = defis.get(appliquee.compteId);
+
+    if (sesDefis === undefined) {
+      throw new Error(`Aucun defi releve pour le compte ${appliquee.compteId}.`);
+    }
+
+    avecLeursDefis.push({
+      ...appliquee,
+      apres:
+        sesDefis.xpVersee === 0
+          ? appliquee.apres
+          : await verserLXpDesDefis(transaction, appliquee.compteId, sesDefis.xpVersee),
+      defis: sesDefis.fin,
+    });
+  }
+
   const attribues = await attribuerLesSucces(
     transaction,
-    gains.map((appliquee) => appliquee.compteId),
+    compteIds,
+    avecLXpDesDefis(historiques, partieId, defis),
   );
 
-  return gains.map((appliquee) => {
+  return avecLeursDefis.map((appliquee) => {
     const compte = attribues.get(appliquee.compteId);
 
     if (compte === undefined) {
@@ -235,6 +288,57 @@ async function avecLesSucces(
 
     return { ...appliquee, succes: succesDeFin(partieId, compte.mesures, compte.succes) };
   });
+}
+
+/**
+ * L'historique, ou la partie qui vient de se jouer porte l'XP des defis qu'elle a
+ * releves. Au reessai, la lecture la portait deja: la valeur est la meme.
+ */
+function avecLXpDesDefis(
+  historiques: ReadonlyMap<string, readonly PartieDatee[]>,
+  partieId: string,
+  defis: ReadonlyMap<string, { readonly fin: DefisDeFin }>,
+): ReadonlyMap<string, readonly PartieDatee[]> {
+  return new Map(
+    [...historiques].map(([compteId, historique]) => {
+      const xp = (defis.get(compteId)?.fin.releves ?? []).reduce(
+        (total, releve) => total + releve.xp,
+        0,
+      );
+
+      return [
+        compteId,
+        historique.map((datee) =>
+          datee.partieId !== partieId || xp === 0
+            ? datee
+            : { ...datee, partie: { ...datee.partie, xpDesDefis: xp } },
+        ),
+      ];
+    }),
+  );
+}
+
+/** Ajoute l'XP des defis releves a la progression d'un compte, deja verrouillee. */
+async function verserLXpDesDefis(
+  transaction: Transaction,
+  compteId: string,
+  xp: number,
+): Promise<ValeursProgression> {
+  const [apres] = await transaction
+    .update(progressions)
+    .set({ xpTotale: sql`${progressions.xpTotale} + ${xp}`, misAJourLe: sql`now()` })
+    .where(eq(progressions.compteId, compteId))
+    .returning({
+      xpTotale: progressions.xpTotale,
+      pieces: progressions.pieces,
+      pointsLigue: progressions.pointsLigue,
+    });
+
+  if (apres === undefined) {
+    throw new Error(`La base n'a rendu aucune progression pour le compte ${compteId}.`);
+  }
+
+  return apres;
 }
 
 /**
@@ -280,7 +384,7 @@ function progressionDe(
  * Ce qu'un enregistrement precedent de cette partie a applique a chacun de ses comptes.
  *
  * L'apres est la progression d'aujourd'hui; l'avant s'en deduit en retirant les gains
- * ecrits dans le resultat. C'est exact tant qu'aucune autre partie de ces comptes ne
+ * ecrits dans le resultat, et l'XP des defis que la partie a releves (etape 3.10). C'est exact tant qu'aucune autre partie de ces comptes ne
  * s'est enregistree entre les deux essais, qui ne sont separes que de quelques secondes.
  */
 async function progressionsDejaAppliquees(
@@ -302,6 +406,7 @@ async function progressionsDejaAppliquees(
     .from(resultats)
     .where(eq(resultats.partieId, partieId));
   const gains = new Map(enregistres.map(({ compteId, ...gain }) => [compteId, gain] as const));
+  const xpDesDefis = await xpDesDefisDeLaPartie(transaction, partieId);
   const actuelles = await verrouillerLesProgressions(
     transaction,
     lignes.map((ligne) => ligne.compteId),
@@ -320,7 +425,7 @@ async function progressionsDejaAppliquees(
     return {
       compteId: ligne.compteId,
       avant: {
-        xpTotale: apres.xpTotale - gain.xpGagnee,
+        xpTotale: apres.xpTotale - gain.xpGagnee - (xpDesDefis.get(ligne.compteId) ?? 0),
         pieces: apres.pieces - gain.piecesGagnees,
         pointsLigue: apres.pointsLigue - gain.variationPointsLigue,
       },

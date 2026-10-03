@@ -23,6 +23,7 @@
 
 import type {
   CodeDeSecoursEmis,
+  DefisDeLaSemaine,
   DemandeChangementMotDePasse,
   DemandeCodeDeSecours,
   DemandeConnexion,
@@ -40,7 +41,13 @@ import type {
   SessionOuverte,
   TitreDuCompte,
 } from '@neon-ninja/shared';
-import { PREFIXE_JETON_HTTP, ROUTES_COMPTES, SUCCES, adresseDeLaFiche } from '@neon-ninja/shared';
+import {
+  PREFIXE_JETON_HTTP,
+  ROUTES_COMPTES,
+  SUCCES,
+  adresseDeLaFiche,
+  avancementsDeLaSemaine,
+} from '@neon-ninja/shared';
 
 /** La reponse a une requete des comptes. */
 export type ReponseDesComptes<T> =
@@ -77,6 +84,8 @@ export interface ApiComptes {
   joueur(jeton: string, pseudo: string): Promise<ReponseDesComptes<FicheJoueur>>;
   /** Les amis du compte de cette session (etape 3.6). */
   amis(jeton: string): Promise<ReponseDesComptes<ListeDAmis>>;
+  /** Les defis de la semaine en cours, et ou en est le compte de cette session (etape 3.10). */
+  defis(jeton: string): Promise<ReponseDesComptes<DefisDeLaSemaine>>;
   /**
    * Fait un geste d'amitie du compte de cette session (etape 3.6). Un geste que les
    * regles refusent l'est en 409, un pseudo sans compte en 404.
@@ -209,6 +218,8 @@ export function creerApiComptesHttp(options: OptionsApiComptesHttp = {}): ApiCom
       demander(adresseDeLaFiche(pseudo), { method: 'GET', headers: entetesDuJeton(jeton) }, true),
     amis: (jeton) =>
       demander(ROUTES_COMPTES.amis, { method: 'GET', headers: entetesDuJeton(jeton) }, true),
+    defis: (jeton) =>
+      demander(ROUTES_COMPTES.defis, { method: 'GET', headers: entetesDuJeton(jeton) }, true),
     gesteDAmitie: (jeton, demande) =>
       demander(ROUTES_COMPTES.amis, envoiJson(demande, jeton), true),
     titre: (jeton, demande) => demander(ROUTES_COMPTES.titre, envoiJson(demande, jeton), true),
@@ -362,6 +373,20 @@ export function ficheDEssai(pseudo: string): FicheJoueur {
   };
 }
 
+/**
+ * Les defis d'une semaine pour un compte qui n'y a pas encore joue, pour les tests (etape
+ * 3.10): la semaine du 5 octobre 2026, qui finit le 12 a 0 h, heure de Paris.
+ */
+export function defisDEssai(): DefisDeLaSemaine {
+  const semaine = '2026-10-05';
+
+  return {
+    semaine,
+    finLe: '2026-10-11T22:00:00.000Z',
+    defis: avancementsDeLaSemaine(semaine, [], new Map()),
+  };
+}
+
 /** La liste d'un compte qui n'a ni ami ni demande, pour les tests (etape 3.6). */
 export const LISTE_D_AMIS_VIDE: ListeDAmis = { amis: [], recues: [], envoyees: [], bloques: [] };
 
@@ -407,6 +432,7 @@ export function creerApiComptesFactice(): ApiComptesFactice {
     profil: async () => ({ acceptee: true, valeur: profilDEssai(dernierPseudo) }),
     joueur: async (_jeton, pseudo) => ({ acceptee: true, valeur: ficheDEssai(pseudo) }),
     amis: async () => ({ acceptee: true, valeur: LISTE_D_AMIS_VIDE }),
+    defis: async () => ({ acceptee: true, valeur: defisDEssai() }),
     gesteDAmitie: async (_jeton, demande) => ({
       acceptee: true,
       valeur: {
@@ -451,6 +477,10 @@ export function creerApiComptesFactice(): ApiComptesFactice {
     amis: (jeton) => {
       appels.push({ nom: 'amis', argument: jeton });
       return reponses.amis(jeton);
+    },
+    defis: (jeton) => {
+      appels.push({ nom: 'defis', argument: jeton });
+      return reponses.defis(jeton);
     },
     gesteDAmitie: (jeton, demande) => {
       appels.push({ nom: 'gesteDAmitie', argument: { jeton, demande } });

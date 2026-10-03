@@ -81,6 +81,11 @@ export const ROUTES_COMPTES = {
    * succes n'est pas obtenu.
    */
   titre: `${RACINE_API_COMPTES}/titre`,
+  /**
+   * GET, jeton en en-tete (etape 3.10). 200 et DefisDeLaSemaine: les defis de la semaine
+   * en cours et l'avancee du compte; 401 sans session valide.
+   */
+  defis: `${RACINE_API_COMPTES}/defis`,
 } as const;
 
 /**

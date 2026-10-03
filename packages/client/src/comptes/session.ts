@@ -97,6 +97,11 @@ export interface CommandesDeSession {
   /** Lit le profil du compte. Sans effet pour un invite, ou pendant qu'une lecture attend. */
   chargerLeProfil(): void;
   /**
+   * Lit les defis de la semaine du compte (etape 3.10). Sans effet pour un invite, ou
+   * pendant qu'une lecture attend.
+   */
+  chargerLesDefis(): void;
+  /**
    * Choisit un nouveau mot de passe avec le code de secours, puis rouvre le lien avec
    * la session obtenue (etape 3.4).
    */
@@ -213,6 +218,43 @@ export function brancherLaSession(options: OptionsSession): CommandesDeSession {
   };
 
   /**
+   * Les defis de la semaine (etape 3.10). Un refus ne se montre pas: l'accueil se passe
+   * de son bloc. Une session expiree se traite comme a la lecture du profil.
+   */
+  const chargerLesDefis = (): void => {
+    const jeton = coffre.lire();
+
+    if (
+      api === undefined ||
+      jeton === undefined ||
+      magasin.etat.session.nature !== 'compte' ||
+      magasin.etat.defis.statut === 'chargement'
+    ) {
+      return;
+    }
+
+    magasin.appliquer({ type: 'defisDemandes' });
+
+    void api.defis(jeton).then((reponse) => {
+      if (coffre.lire() !== jeton) {
+        return;
+      }
+
+      if (reponse.acceptee) {
+        magasin.appliquer({ type: 'defisRecus', defis: reponse.valeur });
+        return;
+      }
+
+      if (reponse.statut === STATUT_SESSION_ABSENTE && horsPartie()) {
+        perdreLaSession();
+        return;
+      }
+
+      magasin.appliquer({ type: 'defisRefuses', motif: motifDe(reponse.erreurs) });
+    });
+  };
+
+  /**
    * Sur signal du serveur (etape 2.8): la liste se relit, et la fiche ouverte aussi, sans
    * rien dire si sa relecture echoue.
    */
@@ -231,10 +273,11 @@ export function brancherLaSession(options: OptionsSession): CommandesDeSession {
     }
   };
 
-  /** On joue desormais avec ce compte: l'etat le sait, et ses amis se lisent. */
+  /** On joue desormais avec ce compte: l'etat le sait, et ses amis et ses defis se lisent. */
   const devenirCompte = (progression: MaProgression): void => {
     magasin.appliquer({ type: 'sessionDeCompte', progression });
     chargerLesAmis();
+    chargerLesDefis();
   };
 
   /** Le demarrage: verifier la session gardee, puis ouvrir. */
@@ -562,6 +605,7 @@ export function brancherLaSession(options: OptionsSession): CommandesDeSession {
     },
 
     chargerLesAmis,
+    chargerLesDefis,
 
     relireLesAmis,
 
