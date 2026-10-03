@@ -23,15 +23,29 @@ function nomDeLaParticipation(doc: Document, participation: Participation): HTML
     return creer(doc, 'strong', { texte: participation.nom });
   }
 
+  return lienSur(doc, participation.nom, participation.adresse);
+}
+
+/** Un lien qui s'ouvre dans un nouvel onglet, sans transmettre la page d'origine. */
+function lienSur(doc: Document, texte: string, adresse: string): HTMLElement {
   return creer(doc, 'a', {
     classe: 'credits-lien',
-    texte: participation.nom,
+    texte,
     attributs: {
-      href: participation.adresse,
+      href: adresse,
       target: '_blank',
       rel: 'noopener noreferrer',
     },
   });
+}
+
+/** La licence d'une participation, en lien vers son texte, et le point final (etape 8.9). */
+function licenceDeLaParticipation(doc: Document, participation: Participation): Node[] {
+  const licence = participation.licence;
+
+  return licence === undefined
+    ? []
+    : [lienSur(doc, licence.nom, licence.adresse), doc.createTextNode('.')];
 }
 
 /**
@@ -53,6 +67,7 @@ export function monterCredits(doc: Document, credits: Credits = CREDITS): Fenetr
         doc.createTextNode(AVANT_LE_NOM),
         nomDeLaParticipation(doc, participation),
         doc.createTextNode(apresLeNom(participation)),
+        ...licenceDeLaParticipation(doc, participation),
       ),
     ),
   );

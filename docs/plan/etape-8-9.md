@@ -100,6 +100,17 @@ Conditions de ROADMAP réunies, plus:
 2. Les douze critères de la compétence tenus, mesure à l'appui.
 3. La couverture de `packages/sim` ne baisse pas.
 
+## Réconciliation pendant l'étape (3 octobre 2026)
+
+1. **La collision livrée laissait des poches closes**, et elle entre retouchée. Le test de connexité, étendu à la Station, a trouvé des places tenables au pied du toit, coupées du reste: le trait de mur qui sépare le toit du quai ne fait que cinq pixels, et le moteur, qui juge une place en regardant dix-sept points du disque d'un ninja écartés de huit pixels au plus, accepte une place à cheval sur lui. Une apparition pouvait y tomber et enfermer un ninja. Tout mur plus fin que neuf pixels est épaissi de deux pixels de chaque côté: 2 596 pixels de mur ajoutés, le long du bord du toit, invisibles à l'œil. Au pixel près, la carte est alors d'un seul tenant dans les deux sens. La collision est enregistrée en noir et blanc purs, le seuil du jeu appliqué.
+2. **Le même défaut touche Tokyo depuis le jeu d'origine**: onze poches au pixel près, neuf dans le miroir, de 2 à 103 pixels; aucune sur Spirit & Time ni sur le Quartier. Il vient du moteur, pas d'une image: il devient l'étape `8.10` (règle 7), planifiée au ROADMAP. La compétence `conception-de-cartes` exige désormais des murs de neuf pixels au moins.
+3. **Mesure après retouche**: 50,9 pour cent de sol, 47,0 pour cent tenable, soit 1,43 million de pixels carrés, un seul morceau, dixième le plus serré à 34 pixels de dégagement, passage médian à 142, traversée en 12,2 secondes, détour 1,07. Le plafond reste 190: 7 540 pixels carrés par faux ninja. Banc: 0,72 ms par battement à 190, contre 0,67 pour Tokyo au même nombre.
+4. **La course du vaisseau se tire une fois par partie, dans la boucle de rendu**, qui la garde tant que la graine, la carte et la durée ne changent pas; la scène la lit au temps écoulé, et le rendu la place avec la caméra, comme le lointain de l'étape 8.8. Aucun état global.
+5. **Les crédits apprennent la licence.** Une participation peut porter une licence, nommée et liée: « Avec l'aimable participation de 2-Minute Tabletop pour la carte Station lunaire, sous licence CC BY-NC 4.0. », le nom renvoyant à la page de l'auteur, la licence à son texte. Ce que la licence a changé dans les images est dit dans `assets/README.md`.
+6. **Le texte de la note 1.6 et la ligne des crédits sont soumis au porteur du projet**, comme les réglages du vaisseau (taille, vitesse, altitude, ombre, effacement), choisis au jugé et à juger en jouant.
+7. **Défaut de documentation corrigé en route** (règle 7): au ROADMAP, les lignes « Tests requis » et « Résultat » de l'étape 8.8 étaient rangées sous l'entrée 8.9.
+8. **Captures** dans `docs/design/etape-8-9/`: une partie de jour, le vaisseau qui arrive puis survole notre ninja en s'effaçant; une partie de nuit, le vaisseau arrivé par un autre chemin; et le rendu de jour et de nuit des scénarios de bout en bout.
+
 ## Rituel de fin de session
 
 Écrire `docs/handoffs/etape-8-9-handoff.md`. Commiter, pousser, vérifier la CI et la mise en ligne.

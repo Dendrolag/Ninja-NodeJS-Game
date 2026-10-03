@@ -749,6 +749,22 @@ export type EvadeVu =
   | { readonly quoi: 'enfui' };
 
 /**
+ * La partie commence (etape 8.9 pour ce qu'elle porte).
+ *
+ * Elle part a tous les joueurs au lancement, et a qui entre ou revient dans une partie en
+ * cours: chacun recoit la meme.
+ */
+export interface LancementDePartie {
+  /**
+   * La graine du decor: de quoi tirer, a l'identique sur toutes les pages de la partie, ce
+   * qui anime le decor sans rien decider du jeu. Le vaisseau qui survole la Station lunaire
+   * en tire sa course. Elle change a chaque lancement. Ce n'est pas la graine du moteur,
+   * qui ne sort jamais du serveur.
+   */
+  readonly graineDuDecor: number;
+}
+
+/**
  * La partie vient d'etre suspendue.
  *
  * Elle dit QUI l'a suspendue, pour que le bandeau puisse le nommer. Ce n'est pas
@@ -1090,7 +1106,7 @@ export interface EvenementsServeurVersClient {
   partieReprise: () => void;
 
   /** La partie commence. Remplace gameStarting. */
-  partieLancee: () => void;
+  partieLancee: (lancement: LancementDePartie) => void;
 
   /** La partie est finie. Remplace gameOver. */
   partieTerminee: (fin: FinDePartie) => void;

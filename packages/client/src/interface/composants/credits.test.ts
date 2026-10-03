@@ -47,14 +47,32 @@ describe('la fenetre des credits', () => {
     expect(lignes).toEqual([
       'Neon Ninja est une création originale de Dendrolag.',
       'Avec l’aimable participation de Bribz pour la carte Tokyo et les ninjas.',
+      'Avec l’aimable participation de 2-Minute Tabletop pour la carte Station lunaire, sous licence CC BY-NC 4.0.',
     ]);
   });
 
   it('ne fait pas du nom un lien, tant qu aucune adresse n est donnee', () => {
     monter();
 
-    expect(fenetre.corps.querySelector('a')).toBeNull();
+    const bribz = [...fenetre.corps.querySelectorAll('p')][1];
+
+    expect(bribz?.querySelector('a')).toBeNull();
     expect(obligatoire(fenetre.corps, 'strong').textContent).toBe('Bribz');
+  });
+
+  it('renvoie a l auteur de la Station lunaire et a sa licence (etape 8.9)', () => {
+    monter();
+
+    const liens = [...fenetre.corps.querySelectorAll('a')].map((lien) => [
+      lien.textContent,
+      lien.getAttribute('href'),
+      lien.rel,
+    ]);
+
+    expect(liens).toEqual([
+      ['2-Minute Tabletop', 'https://www.patreon.com/2minutetabletop', 'noopener noreferrer'],
+      ['CC BY-NC 4.0', 'https://creativecommons.org/licenses/by-nc/4.0/', 'noopener noreferrer'],
+    ]);
   });
 
   it('fait d un nom avec adresse un lien vers elle, dans un nouvel onglet, sans rien transmettre', () => {

@@ -359,8 +359,8 @@ export function creerClient(options: OptionsClient): Client {
   );
 
   ecouter(
-    reseau.sur('partieLancee', () => {
-      magasin.appliquer({ type: 'partieLancee' });
+    reseau.sur('partieLancee', (lancement) => {
+      magasin.appliquer({ type: 'partieLancee', graineDuDecor: lancement.graineDuDecor });
     }),
   );
 

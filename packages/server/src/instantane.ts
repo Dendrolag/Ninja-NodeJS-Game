@@ -36,6 +36,7 @@ import type {
   EvadeVu,
   FumeeVue,
   InfosSalon,
+  LancementDePartie,
   InstantanePartie,
   JoueurDuSalon,
   JoueurTrancheVu,
@@ -323,6 +324,15 @@ function ligneClassement(ligne: LigneScore): LigneClassement {
 /** Le classement d'une partie, tel qu'il part sur le reseau. */
 export function classementDe(etat: EtatPartie): readonly LigneClassement[] {
   return calculerScores(etat).map(ligneClassement);
+}
+
+/**
+ * Le lancement d'une partie, tel qu'il part sur le reseau (etape 8.9): la graine de son
+ * decor. Il ne part que d'une partie lancee, qui en a toujours une; le zero d'une room
+ * jamais lancee n'est la que pour le type.
+ */
+export function lancementDe(room: GameRoom): LancementDePartie {
+  return { graineDuDecor: room.graineDuDecor ?? 0 };
 }
 
 /**

@@ -33,6 +33,7 @@ import type {
   EntiteVue,
   Mode,
   Orientation,
+  Position,
   TypeBonus,
   Visee,
 } from '@neon-ninja/shared';
@@ -87,6 +88,8 @@ import { opaciteDeLocalisation, reperesDeLocalisation } from './localisation.js'
 import { minesDeLaScene } from './mines.js';
 import { marquesDuBlackNinja } from './blackNinja.js';
 import { adresseAuxYeuxRouges, adresseDImage, adresseRayee } from './textures.js';
+import type { EtatDuVaisseau, Trajectoire } from './vaisseau.js';
+import { ecouleDansLaPartie, etatDuVaisseau } from './vaisseau.js';
 import type { ZoneScene } from './zones.js';
 import { ecouleDepuisLOuverture, mineDeZoneVivante, zoneQuiGonfle, zoneVivante } from './zones.js';
 
@@ -217,6 +220,20 @@ export interface Scene {
    * d'une scene vide; le rendu l'ignore sur une carte sans pluie.
    */
   readonly imageDePluie?: number;
+  /**
+   * Le vaisseau qui survole la Station lunaire (etape 8.9), par-dessus tout sauf les
+   * reperes, et son ombre au sol. Absent sur une carte sans vaisseau, et d'une scene vide.
+   */
+  readonly vaisseau?: VaisseauScene;
+}
+
+/**
+ * Le vaisseau a cette image: son point au sol et son cap (vaisseau.ts), et notre ninja, a
+ * sa position affichee, au-dessus duquel il s'efface. Sa place a l'ecran depend de la
+ * camera, que le rendu connait: il la calcule avec placeAffichee.
+ */
+export interface VaisseauScene extends EtatDuVaisseau {
+  readonly moi?: Position;
 }
 
 /** Une scene vide, celle d'un ecran sans partie en cours. */
@@ -300,6 +317,7 @@ function adresseDeNinja(direction: Direction, image: number): string {
  * @param maintenant Instant local, lu sur l'horloge du client.
  * @param localisation Le reperage de notre personnage en cours, s'il y en a un.
  * @param niveauDeSang Le sang que le joueur veut voir, dans le mode Massacre.
+ * @param trajectoire La course du vaisseau de la partie, sur une carte qui en a un.
  */
 export function construireScene(
   etat: EtatClient,
@@ -307,6 +325,7 @@ export function construireScene(
   maintenant: number,
   localisation?: Localisation,
   niveauDeSang: NiveauDeSang = 'normal',
+  trajectoire?: Trajectoire,
 ): Scene {
   if (lissee === undefined) {
     return SCENE_VIDE;
@@ -557,7 +576,26 @@ export function construireScene(
     sang: massacre.sang,
     secousse: massacre.secousse,
     imageDePluie: imageDePluie(maintenant),
+    ...(trajectoire === undefined
+      ? {}
+      : { vaisseau: vaisseauDeLaScene(etat, lissee, trajectoire) }),
   };
+}
+
+/**
+ * Le vaisseau a cette image, au temps de jeu lisse: tous les joueurs de la partie le voient
+ * au meme endroit (vaisseau.ts).
+ */
+function vaisseauDeLaScene(
+  etat: EtatClient,
+  lissee: VueLissee,
+  trajectoire: Trajectoire,
+): VaisseauScene {
+  const ecoule = ecouleDansLaPartie(trajectoire.cle.dureeMs, lissee.tempsRestantMs);
+  const vaisseau = etatDuVaisseau(trajectoire, ecoule);
+  const moi = lissee.entites.find(({ entite }) => entite.id === etat.moi);
+
+  return moi === undefined ? vaisseau : { ...vaisseau, moi: { x: moi.x, y: moi.y } };
 }
 
 /**

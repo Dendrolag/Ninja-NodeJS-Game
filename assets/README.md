@@ -28,6 +28,15 @@ Les six sons de la fumée et des mines, fournis par le porteur du projet à l'é
 - l'avant-plan, qui n'était pas réduit à une palette, est seulement réduit;
 - la collision, livrée en noir sur transparent, est posée sur du blanc, puis moyennée par zone: le jeu ignore l'opacité, et telle quelle toute la carte aurait été un mur. La vignette est ramenée à 120 sur 120.
 
+**Le décor de `cartes/station/`, la Station lunaire, est l'œuvre de 2-Minute Tabletop** (https://www.patreon.com/2minutetabletop), sous licence Creative Commons BY-NC 4.0 (https://creativecommons.org/licenses/by-nc/4.0/): livré par le porteur du projet à l'étape 8.9, le 3 octobre 2026. La licence oblige à nommer l'auteur et à renvoyer à la licence, ce que font les crédits du jeu, à dire ce qui a été changé, ce que fait ce paragraphe, et interdit tout usage commercial. Les images sont à la taille de la carte, 2000 sur 1524:
+
+- `background.png`, le fond de jour, et `background-night.png`, le fond de nuit, tels que livrés (`background-day.png` et `background-night.png`);
+- `spaceship.png`, le vaisseau qui survole la carte, tel que livré: l'arrière en haut, l'avant en bas;
+- `collision.png`, en noir et blanc, **ses murs trop fins épaissis**: le trait livré entre le toit et le quai ne faisait que cinq pixels, et le moteur, qui regarde le disque d'un ninja par points écartés de huit pixels au plus, jugeait tenables des places à cheval sur lui, au pied du toit, coupées du reste de la carte (étape 8.10). Tout mur plus fin que neuf pixels a été épaissi de deux pixels de chaque côté, soit 2 596 pixels de mur ajoutés, le long du bord du toit, invisibles à l'œil. La mesure des passages n'en bouge pas (dixième le plus serré à 34 pixels de dégagement, avant comme après);
+- `preview.png`, la vignette, découpée au centre du fond de jour en carré de 1524 de côté, puis réduite à 120 sur 120.
+
+Pas d'avant-plan: seul le vaisseau passe devant les ninjas.
+
 Exception plus large, **la carte `cartes/quartier/`**: elle ne vient de nulle part. Ses quatre images sont produites par un programme du dépôt, `docs/mesures/dessiner-le-quartier.mjs`, à l'étape 8.2. C'est la première carte dessinée pour ce jeu-ci, et la seule qui se refait d'une commande:
 
 ```bash
@@ -38,13 +47,13 @@ Ne pas retoucher ses images à la main: le programme les réécrirait. La géom�
 
 ## Arborescence
 
-| Dossier                      | Contenu                                                                                                                                                                                         | Qui le lit                                               |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| `cartes/<carte>/`            | `background.png`, `collision.png`, `foreground.png`, `rain.png` pour map1 (Tokyo), `background-parallax.png` pour map3 (Spirit & Time). Une seule orientation: le miroir se calcule (étape 8.3) | `collision.png` par le serveur, les autres par le client |
-| `cartes/<carte>/preview.png` | La vignette de la carte, montrée dans les réglages du salon                                                                                                                                     | Le client                                                |
-| `ninja/`                     | Les dix-sept sprites du personnage: huit directions à deux images, plus l'immobilité                                                                                                            | Le client                                                |
-| `objets/`                    | Les icônes des objets: six images du jeu d'origine, et les six du Tactique en SVG (étape 7.7), reprises aussi dans l'aide                                                                       | Le client                                                |
-| `sons/`                      | Les sons de jeu, le clic des menus, la musique des menus et celle de la partie                                                                                                                  | Le client                                                |
+| Dossier                      | Contenu                                                                                                                                                                                                                                                                                      | Qui le lit                                               |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `cartes/<carte>/`            | `background.png`, `collision.png`, `foreground.png` (sauf la Station lunaire), `rain.png` pour map1 (Tokyo), `background-parallax.png` pour map3 (Spirit & Time), `background-night.png` et `spaceship.png` pour la Station lunaire. Une seule orientation: le miroir se calcule (étape 8.3) | `collision.png` par le serveur, les autres par le client |
+| `cartes/<carte>/preview.png` | La vignette de la carte, montrée dans les réglages du salon                                                                                                                                                                                                                                  | Le client                                                |
+| `ninja/`                     | Les dix-sept sprites du personnage: huit directions à deux images, plus l'immobilité                                                                                                                                                                                                         | Le client                                                |
+| `objets/`                    | Les icônes des objets: six images du jeu d'origine, et les six du Tactique en SVG (étape 7.7), reprises aussi dans l'aide                                                                                                                                                                    | Le client                                                |
+| `sons/`                      | Les sons de jeu, le clic des menus, la musique des menus et celle de la partie                                                                                                                                                                                                               | Le client                                                |
 
 Les chemins ne se recopient nulle part: ils se fabriquent dans `packages/shared/src/ressources.ts`, qui est le seul endroit à connaître cette arborescence. Un test y vérifie que chaque fichier annoncé existe.
 
@@ -56,7 +65,7 @@ Contrairement au code et à la documentation. Ce sont des noms de contenu, pas d
 
 Alors que la carte mesure 2000x1500. Les images du jeu d'origine faisaient toutes cette taille. Ce n'est pas une erreur: le jeu d'origine **redimensionne** ces images aux dimensions de la carte au chargement, sans conserver les proportions. Le décodage du terrain (`packages/server/src/terrain.ts`) et l'affichage (`packages/client/src/rendu/`) reproduisent tous les deux ce redimensionnement, sans quoi les murs ne seraient pas là où le décor les montre.
 
-Le Quartier, lui, est dessiné à ses dimensions exactes, 2400x1800, et Spirit & Time l'est depuis l'étape 8.8, 2400x1760. Le redimensionnement du serveur et l'étirement du client s'y appliquent aussi, et n'y changent rien. C'est ce qu'il faudra demander à un graphiste: dessiner à la taille de la carte évite le seul piège vraiment coûteux de la commande.
+Le Quartier, lui, est dessiné à ses dimensions exactes, 2400x1800, Spirit & Time l'est depuis l'étape 8.8, 2400x1760, et la Station lunaire depuis sa livraison, 2000x1524. Le redimensionnement du serveur et l'étirement du client s'y appliquent aussi, et n'y changent rien. C'est ce qu'il faudra demander à un graphiste: dessiner à la taille de la carte évite le seul piège vraiment coûteux de la commande.
 
 ## map2 a disparu: Tokyo est une seule carte
 

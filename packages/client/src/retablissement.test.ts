@@ -481,7 +481,7 @@ describe('a la fin de la partie, un lien perdu se retablit', () => {
     const { reseau, client, demandesDEntree, entrerAuSalon } = monter();
 
     entrerAuSalon();
-    reseau.recevoir('partieLancee');
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
     reseau.recevoir('partieTerminee', { classement: [] });
     reseau.simulerDeconnexion();
 
@@ -504,7 +504,7 @@ describe('apres le delai de retour en partie', () => {
     const { reseau, minuterie, client, avancer, entrerAuSalon } = monter();
 
     entrerAuSalon();
-    reseau.recevoir('partieLancee');
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
     reseau.simulerDeconnexion();
     expect(client.etat.connexion).toBe('retour');
 

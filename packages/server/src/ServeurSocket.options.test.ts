@@ -203,6 +203,23 @@ describe('la pluie, reglage de Tokyo (etape 7.6)', () => {
   });
 });
 
+describe('la nuit, reglage de la Station lunaire (etape 8.9)', () => {
+  it('se joue de jour par defaut, se regle de nuit au salon, et la partie lancee la garde', async () => {
+    const hote = await connecterUnClient();
+    const salon = await creer(hote, partie('station'));
+
+    expect(salon.reglages.nuit).toBe(false);
+
+    const reglee = prochain(hote, 'salon');
+    hote.emit('reglages', { ...salon.reglages, nuit: true });
+    expect((await reglee).reglages.nuit).toBe(true);
+
+    await lancer(hote);
+
+    expect(roomDe(salon.idRoom).reglages.nuit).toBe(true);
+  });
+});
+
 describe('plus de 150 faux ninjas, jusqu au plafond de la carte (etape 7.6)', () => {
   /** Lance une partie peuplee au plafond de cette carte, et rend sa room. */
   async function partieAuPlafond(carte: IdentifiantCarte, faux: number): Promise<GameRoom> {
@@ -217,6 +234,7 @@ describe('plus de 150 faux ninjas, jusqu au plafond de la carte (etape 7.6)', ()
     ['map1', 300],
     ['map3', 360],
     ['quartier', 340],
+    ['station', 190],
   ] as const)('peuple %s de %i faux ninjas, tous hors des murs', async (carte, faux) => {
     const room = await partieAuPlafond(carte, faux);
     const bots = Object.values(room.etat.bots).filter((bot) => bot.type === 'bot');

@@ -32,12 +32,15 @@ import {
   SONS_DE_PAS,
   SONS_EN_BOUCLE,
   cheminApercuCarte,
+  cheminAvantPlan,
   cheminCarte,
   cheminNinja,
   cheminObjet,
+  cheminFondDeNuit,
   cheminLointain,
   cheminPluie,
   cheminSon,
+  cheminVaisseau,
   tousLesNinjas,
   tousLesObjets,
 } from './ressources.js';
@@ -101,6 +104,49 @@ describe('cheminLointain', () => {
     expect(dimensionsPng(cheminLointain('map3') as string)).toEqual(
       dimensionsPng(cheminCarte('map3', 'background')),
     );
+  });
+});
+
+describe('cheminAvantPlan', () => {
+  it('donne l avant-plan des cartes qui en ont un', () => {
+    expect(cheminAvantPlan('map1')).toBe('cartes/map1/foreground.png');
+    expect(cheminAvantPlan('map3')).toBe('cartes/map3/foreground.png');
+    expect(cheminAvantPlan('quartier')).toBe('cartes/quartier/foreground.png');
+  });
+
+  it('ne donne rien pour la Station lunaire, que seul le vaisseau survole (etape 8.9)', () => {
+    expect(cheminAvantPlan('station')).toBeUndefined();
+  });
+});
+
+describe('cheminFondDeNuit', () => {
+  it('donne le fond de nuit de la seule carte qui en a un (etape 8.9)', () => {
+    expect(cheminFondDeNuit('station')).toBe('cartes/station/background-night.png');
+  });
+
+  it('ne donne rien pour les autres cartes', () => {
+    expect(cheminFondDeNuit('map1')).toBeUndefined();
+    expect(cheminFondDeNuit('map3')).toBeUndefined();
+    expect(cheminFondDeNuit('quartier')).toBeUndefined();
+  });
+
+  it('a la taille du fond de jour, qui a celle de la carte', () => {
+    const jour = dimensionsPng(cheminCarte('station', 'background'));
+
+    expect(dimensionsPng(cheminFondDeNuit('station') as string)).toEqual(jour);
+    expect(jour).toEqual(CARTES.station);
+  });
+});
+
+describe('cheminVaisseau', () => {
+  it('donne le vaisseau de la seule carte qui en a un (etape 8.9)', () => {
+    expect(cheminVaisseau('station')).toBe('cartes/station/spaceship.png');
+  });
+
+  it('ne donne rien pour les autres cartes', () => {
+    expect(cheminVaisseau('map1')).toBeUndefined();
+    expect(cheminVaisseau('map3')).toBeUndefined();
+    expect(cheminVaisseau('quartier')).toBeUndefined();
   });
 });
 
@@ -180,18 +226,24 @@ describe('les ressources annoncees existent sur le disque', () => {
   /** Verifie qu'un chemin relatif designe un fichier reellement present. */
   const present = (relatif: string): boolean => existsSync(join(RACINE_DISQUE, relatif));
 
-  it('pour les cartes, leurs trois couches, la pluie et le lointain', () => {
+  it('pour les cartes, leurs couches, et chacune de leurs couches facultatives', () => {
     const manquants: string[] = [];
 
     for (const carte of Object.keys(CARTES)) {
-      for (const couche of ['background', 'collision', 'foreground'] as const) {
+      for (const couche of ['background', 'collision'] as const) {
         const chemin = cheminCarte(carte, couche);
         if (!present(chemin)) {
           manquants.push(chemin);
         }
       }
 
-      for (const optionnelle of [cheminPluie(carte), cheminLointain(carte)]) {
+      for (const optionnelle of [
+        cheminAvantPlan(carte),
+        cheminPluie(carte),
+        cheminLointain(carte),
+        cheminFondDeNuit(carte),
+        cheminVaisseau(carte),
+      ]) {
         if (optionnelle !== undefined && !present(optionnelle)) {
           manquants.push(optionnelle);
         }

@@ -60,6 +60,8 @@ import { construireScene } from './scene.js';
 import type { SangAuSol, SuiviDesPas } from './traces.js';
 import { AUCUN_PAS, TRACES, avancerLesPas } from './traces.js';
 import { creerJugeDeStabilite } from './stabilite.js';
+import type { Trajectoire } from './vaisseau.js';
+import { trajectoireDeLaPartie } from './vaisseau.js';
 
 /** Ce qu'il faut pour faire tourner une partie a l'ecran. */
 export interface OptionsBoucle {
@@ -181,6 +183,8 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
   const sangAuSol = new Map<string, SangAuSol>();
   /** Le micro-arret d'un coup de katana qui tranche, s'il y en a un en cours. */
   let microArret: MicroArret | undefined;
+  /** La course du vaisseau de la Station lunaire, tiree une fois par partie (etape 8.9). */
+  let trajectoire: Trajectoire | undefined;
 
   const uneImage = (instant: number): void => {
     const etat = options.client.etat;
@@ -241,7 +245,15 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
         : suivre(camera, cible, taille, options.carte, dtMs);
 
     const niveauDeSang = options.niveauDeSang?.() ?? 'normal';
-    const scene = construireScene(etat, lissee, maintenant, localisation, niveauDeSang);
+    trajectoire = trajectoireDeLaPartie(etat, trajectoire);
+    const scene = construireScene(
+      etat,
+      lissee,
+      maintenant,
+      localisation,
+      niveauDeSang,
+      trajectoire,
+    );
     options.rendu.dessiner(scene, camera);
     // Vision floue et Vision negative troublent le terrain, pas le HUD (etape 7.7).
     options.rendu.filtrer(filtreDesMalus(etat, maintenant));

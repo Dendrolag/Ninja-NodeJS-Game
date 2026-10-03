@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
+import { noteDeLaVersion } from '../../packages/client/dist/interface/modeles/notesDeVersion.js';
 import { NUMERO_DE_VERSION, versionMineure } from '../../packages/shared/dist/index.js';
 import { releverLesErreurs } from './harnais/parcours.js';
 import type { ServeurDeJeu } from './harnais/serveur-de-jeu.js';
@@ -16,6 +17,9 @@ import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
  */
 
 const TITRE = `Nouveautés de la version ${versionMineure(NUMERO_DE_VERSION)}`;
+
+/** La note servie: c'est elle qui doit s'ouvrir, avec ses sections et ses intitules. */
+const NOTE = noteDeLaVersion(NUMERO_DE_VERSION);
 
 let jeu: ServeurDeJeu;
 
@@ -47,9 +51,10 @@ test('la note s ouvre a un joueur qui revient, une fois, et se rouvre par le num
   await page.reload();
 
   await expect(note).toBeVisible();
-  await expect(note).toContainText('Objets, poche et mines');
-  await expect(note).toContainText('La poche.');
-  await expect(note).toContainText('L’Évadé');
+  for (const section of NOTE?.sections ?? []) {
+    await expect(note).toContainText(section.titre);
+    await expect(note).toContainText(section.puces[0]?.intitule ?? section.puces[0]?.texte ?? '');
+  }
   // La capture attend la fin de l'animation d'apparition, qui fait glisser la fenetre.
   await note.evaluate((cadre) => Promise.all(cadre.getAnimations().map((a) => a.finished)));
   await page.screenshot({ path: info.outputPath(`note-de-version-${info.project.name}.png`) });

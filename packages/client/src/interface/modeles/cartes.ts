@@ -15,7 +15,7 @@
  */
 
 import type { CarteEnregistree, Equipe, Mode, ReglagesPartie } from '@neon-ninja/shared';
-import { cheminPluie } from '@neon-ninja/shared';
+import { cheminFondDeNuit, cheminPluie } from '@neon-ninja/shared';
 
 /** Ce que le joueur lit d'une carte. */
 export interface PresentationCarte {
@@ -35,7 +35,8 @@ export interface PresentationCarte {
  * map2, l'ancienne Tokyo sans pluie, ne se joue plus: elle n'apparait que dans
  * l'historique d'un profil, sous le meme nom que map1.
  *
- * Seule Tokyo a un decor definitif, realise par Bribz (credits, etape 4.7). Spirit &
+ * Deux cartes ont un decor definitif: Tokyo, realisee par Bribz (credits, etape 4.7),
+ * et la Station lunaire de l'etape 8.9, dessinee par 2-Minute Tabletop. Spirit &
  * Time a pris a l'etape 8.8 le decor livre par le porteur du projet, un toit-terrasse
  * au-dessus d'une ville, qu'il garde provisoire pour l'instant (decision du 2 octobre
  * 2026). Le Quartier est la carte de travail de l'etape 8.2: un plan au trait, sans
@@ -49,6 +50,7 @@ export const PRESENTATION_CARTES: Readonly<Record<CarteEnregistree, Presentation
   map2: { nom: 'Tokyo', ambiance: 'Néon · Nuit', prototype: false },
   map3: { nom: 'Spirit & Time', ambiance: 'Vide · Infini', prototype: true },
   quartier: { nom: 'Quartier', ambiance: 'Plan au trait', prototype: true },
+  station: { nom: 'Station lunaire', ambiance: 'Lune · Jour ou nuit', prototype: false },
 };
 
 /**
@@ -121,12 +123,14 @@ export function nomDeCarte(carte: CarteEnregistree, modeMiroir: boolean): string
 
 /**
  * La carte d'une partie a venir, telle que le salon la recapitule: son nom, miroir
- * compris, et « Pluie » quand la pluie tombera (etape 7.6). Sur une carte sans pluie,
- * le reglage est sans effet et ne se dit pas.
+ * compris, « Pluie » quand la pluie tombera (etape 7.6), et « Nuit » quand la carte se
+ * jouera de nuit (etape 8.9). Sur une carte sans pluie ou sans nuit, le reglage est sans
+ * effet et ne se dit pas.
  */
 export function carteDeLaPartie(reglages: ReglagesPartie): string {
   const nom = nomDeCarte(reglages.carte, reglages.modeMiroir);
   const pleut = reglages.pluie && cheminPluie(reglages.carte) !== undefined;
+  const deNuit = reglages.nuit && cheminFondDeNuit(reglages.carte) !== undefined;
 
-  return pleut ? `${nom} · Pluie` : nom;
+  return [nom, ...(pleut ? ['Pluie'] : []), ...(deNuit ? ['Nuit'] : [])].join(' · ');
 }

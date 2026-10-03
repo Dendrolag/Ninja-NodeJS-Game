@@ -60,7 +60,7 @@ const JUSQU_AU_JEU: readonly Action[] = [
   { type: 'entreeDemandee', pseudo: 'Alice' },
   { type: 'placeAttribuee', joueur: 'moi' },
   { type: 'entreeAcceptee', salon: salon() },
-  { type: 'partieLancee' },
+  { type: 'partieLancee', graineDuDecor: 1 },
 ];
 
 describe('le lien et l entree en partie', () => {
@@ -239,6 +239,13 @@ describe('le flux d etat', () => {
     expect(apresPerime).toBe(avant);
   });
 
+  it('retient la graine du decor de la partie lancee, et celle de la suivante (etape 8.9)', () => {
+    expect(apres(JUSQU_AU_JEU).graineDuDecor).toBe(1);
+    expect(
+      apres([...JUSQU_AU_JEU, { type: 'partieLancee', graineDuDecor: 77 }]).graineDuDecor,
+    ).toBe(77);
+  });
+
   it('oublie la vue quand une nouvelle partie est lancee', () => {
     // Le numero de battement repart de zero a la partie suivante. Sans cet
     // oubli, la reconstruction prendrait toute la nouvelle partie pour des
@@ -247,7 +254,7 @@ describe('le flux d etat', () => {
       ...JUSQU_AU_JEU,
       { type: 'etat', trame: trame({ tick: 300 }) },
       { type: 'partieTerminee', fin: { classement: [] } },
-      { type: 'partieLancee' },
+      { type: 'partieLancee', graineDuDecor: 1 },
       { type: 'etat', trame: trame({ tick: 1, tempsRestantMs: 180_000 }) },
     ]);
 
@@ -476,7 +483,7 @@ describe('le cycle de la partie', () => {
     const etat = apres([
       { type: 'entreeAcceptee', salon: salon() },
       { type: 'compteARebours', compte: { secondesRestantes: 0, annulable: false } },
-      { type: 'partieLancee' },
+      { type: 'partieLancee', graineDuDecor: 1 },
     ]);
 
     expect(etat.compteARebours).toBeUndefined();

@@ -47,6 +47,12 @@ export interface VueLissee {
   /** Le dernier battement recu: c'est lui qui fait foi pour tout sauf les positions. */
   readonly vue: VuePartie;
   readonly entites: readonly EntiteLissee[];
+  /**
+   * Le temps de jeu restant, lisse comme les positions entre les deux derniers battements
+   * (etape 8.9): ce qui avance avec le temps de la partie, le vaisseau de la Station lunaire,
+   * glisse au lieu d'avancer par a-coups a chaque battement.
+   */
+  readonly tempsRestantMs: number;
 }
 
 /**
@@ -145,7 +151,9 @@ export class TamponDeLissage {
       return undefined;
     }
 
-    if (this.precedente === undefined) {
+    const precedente = this.precedente;
+
+    if (precedente === undefined) {
       return {
         vue: courante,
         entites: courante.entites.map((entite) => ({
@@ -154,6 +162,7 @@ export class TamponDeLissage {
           y: entite.y,
           enMouvement: false,
         })),
+        tempsRestantMs: courante.tempsRestantMs,
       };
     }
 
@@ -168,6 +177,9 @@ export class TamponDeLissage {
       entites: courante.entites.map((entite) =>
         lisserUneEntite(entite, positions.get(entite.id), avancement),
       ),
+      tempsRestantMs:
+        precedente.tempsRestantMs +
+        (courante.tempsRestantMs - precedente.tempsRestantMs) * avancement,
     };
   }
 }

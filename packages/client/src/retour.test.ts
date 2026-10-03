@@ -85,7 +85,7 @@ function monter(coffreDeRetour: CoffreDeJeton = creerCoffreDeJeton()) {
   /** Le client entre, et la partie commence. */
   const entrerEnPartie = (): void => {
     entrerAuSalon();
-    reseau.recevoir('partieLancee');
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
   };
 
   client.ouvrir();
@@ -342,7 +342,7 @@ describe('le retour d une page rechargee', () => {
 
     reseau.recevoir('placeAttribuee', { joueur: 'j-alice', jetonDeRetour: JETON_NEUF });
     repondreAuRetour({ valide: true, valeur: salon('enCours') });
-    reseau.recevoir('partieLancee');
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
 
     expect(client.etat.ecran).toBe('jeu');
     expect(client.etat.connexion).toBe('connecte');

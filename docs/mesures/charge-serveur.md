@@ -1009,3 +1009,20 @@ Spirit & Time change de terrain: un toit-terrasse de 2400 sur 1760, ceint de mur
 - Tokyo à 300 coûte aujourd'hui 1,12 ms, contre 1,02 à l'étape 7.6: c'est le jeu qui a grandi depuis (mines, Évadé, mines de zone), pas la carte.
 
 Le rendu ajoute une image de 2400 sur 1760, le lointain, sous le fond: une texture de 17 Mo de mémoire graphique, et deux multiplications par image pour la placer. Les trois couches de la carte réduite pèsent ensemble moins que les deux de 3000 sur 2200 livrées.
+
+## 25. Mesure de l'étape 8.9: la Station lunaire (3 octobre 2026)
+
+Une quatrième carte, de 2000 sur 1524: 1,43 million de pixels carrés tenables, le plafond de faux ninjas à 190, la densité des trois autres cartes.
+
+`pnpm charge --banc --carte station --bots-banc 190`, puis le même banc sur Tokyo à 190 et 300, au même commit, sur la machine de mesure (AMD Ryzen 7 3800X, Node 24). Douze joueurs, Horde, un processus neuf par ligne; résultats bruts de la Station dans `charge-serveur-8-9-station.json`.
+
+| Carte           | Bots | Moteur | Projection | Codage | Total | Total p99 | Octets par message | Parties par cœur |
+| --------------- | ---: | -----: | ---------: | -----: | ----: | --------: | -----------------: | ---------------: |
+| Tokyo           |  190 |  0,537 |      0,064 |  0,071 | 0,671 |     1,338 |                532 |               52 |
+| Station lunaire |  190 |  0,585 |      0,062 |  0,071 | 0,718 |     1,510 |                552 |               48 |
+| Tokyo           |  300 |  0,867 |      0,081 |  0,094 | 1,042 |     1,725 |                782 |               33 |
+
+- **À nombre égal, la Station coûte ce que coûte Tokyo**, à 7 pour cent près: ce sont les entités qui comptent, pas les murs (section 17).
+- **À son plafond, 0,72 ms par battement**, la carte la moins chère du jeu, parce que la plus petite.
+
+Le vaisseau ne coûte rien au serveur, qui ne tire qu'une graine par lancement. À la page, il ajoute deux sprites, le vaisseau et son ombre, placés à chaque image par quelques multiplications, et une texture d'ombre fabriquée une fois.

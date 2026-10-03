@@ -372,6 +372,12 @@ describe('validerReglages', () => {
     ).toEqual(['objetsDePoche.mine.tauxApparitionPourCent']);
   });
 
+  it('joue de jour par defaut, et accepte la nuit (etape 8.9)', () => {
+    expect(valeurAcceptee(validerReglages({})).nuit).toBe(false);
+    expect(valeurAcceptee(validerReglages({ nuit: true })).nuit).toBe(true);
+    expect(champsRefuses(validerReglages({ nuit: 'oui' }))).toEqual(['nuit']);
+  });
+
   it('fait tomber la pluie par defaut, et accepte de la couper (etape 7.6)', () => {
     expect(valeurAcceptee(validerReglages({})).pluie).toBe(true);
     expect(valeurAcceptee(validerReglages({ pluie: false })).pluie).toBe(false);

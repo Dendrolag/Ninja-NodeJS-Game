@@ -74,6 +74,8 @@ const TERRAINS = [
   { carte: 'map3', nom: 'Spirit & Time', miroir: true },
   { carte: 'quartier', nom: 'Quartier', miroir: false },
   { carte: 'quartier', nom: 'Quartier', miroir: true },
+  { carte: 'station', nom: 'Station lunaire', miroir: false },
+  { carte: 'station', nom: 'Station lunaire', miroir: true },
 ];
 
 /** Un pixel de la carte est-il un mur ? Meme lecture de bits que packages/sim. */

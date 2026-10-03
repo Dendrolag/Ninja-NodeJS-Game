@@ -99,11 +99,16 @@ export const VITESSES = {
  * qui compare le chemin reel au vol d'oiseau, vaut 1,24 la ou les deux autres valent
  * 1,08 et 1,07. Son identifiant n'est pas un numero, parce que map1 et map3 sont des
  * noms de fichiers herites du jeu d'origine et non une numerotation a poursuivre.
+ *
+ * `station` est la Station lunaire de l'etape 8.9: le toit d'une station posee sur la
+ * Lune, dessine par 2-Minute Tabletop, de jour ou de nuit (ReglagesPartie.nuit), qu'un
+ * vaisseau survole. Ses images sont a la taille de la carte.
  */
 export const CARTES = {
   map1: { largeur: 2000, hauteur: 1500 },
   map3: { largeur: 2400, hauteur: 1760 },
   quartier: { largeur: 2400, hauteur: 1800 },
+  station: { largeur: 2000, hauteur: 1524 },
 } as const;
 
 /** Identifiant d'une carte jouable. */
@@ -117,7 +122,7 @@ export type IdentifiantCarte = keyof typeof CARTES;
  * enumeration PostgreSQL rendrait illisibles les parties deja jouees: une carte
  * retiree du jeu reste donc ici (etape 7.6, map2 fondue dans map1).
  */
-export const CARTES_ENREGISTREES = ['map1', 'map2', 'map3', 'quartier'] as const;
+export const CARTES_ENREGISTREES = ['map1', 'map2', 'map3', 'quartier', 'station'] as const;
 
 /** La carte d'une partie enregistree: jouable, ou retiree du jeu depuis. */
 export type CarteEnregistree = (typeof CARTES_ENREGISTREES)[number];
@@ -134,12 +139,16 @@ export type CarteEnregistree = (typeof CARTES_ENREGISTREES)[number];
  * decision du porteur du projet du 2 octobre 2026): sa surface tenable tombe de 5,66 a
  * 2,73 millions de pixels carres, et 360 faux ninjas lui redonnent la densite de Tokyo
  * et du Quartier, 7 580 pixels carres chacun. Mesure au banc: section 24 de
- * docs/mesures/charge-serveur.md.
+ * docs/mesures/charge-serveur.md. *
+ * La Station lunaire (etape 8.9) a 1,43 million de pixels carres tenables: 190 faux
+ * ninjas lui donnent la meme densite, 7 540 pixels carres chacun. Mesure au banc:
+ * section 25 du meme document.
  */
 export const PLAFONDS_DE_FAUX_NINJAS: Readonly<Record<IdentifiantCarte, number>> = {
   map1: 300,
   map3: 360,
   quartier: 340,
+  station: 190,
 };
 
 /** Dimensions d'une carte, en pixels. */

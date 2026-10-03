@@ -73,7 +73,7 @@ describe('le lien perdu hors partie', () => {
   it('depuis le jeu, la place est perdue: accueil, avec l avis, sans rien de la partie', () => {
     const etat = apres([
       ...AU_SALON,
-      { type: 'partieLancee' },
+      { type: 'partieLancee', graineDuDecor: 1 },
       { type: 'lienPerduEnPartie' },
       { type: 'lienPerdu', avis: 'Place perdue.' },
     ]);
@@ -154,7 +154,7 @@ describe('le lien qui ne revient pas', () => {
   it('garde la fin et son classement', () => {
     const etat = apres([
       ...AU_SALON,
-      { type: 'partieLancee' },
+      { type: 'partieLancee', graineDuDecor: 1 },
       { type: 'partieTerminee', fin: { classement: [] } },
       { type: 'lienPerdu' },
       { type: 'connexionPerdue' },
@@ -184,8 +184,12 @@ describe('le lien refuse', () => {
   it('quitte le salon, le jeu et la fin pour l accueil, avec le motif', () => {
     for (const jusque of [
       AU_SALON,
-      [...AU_SALON, { type: 'partieLancee' }],
-      [...AU_SALON, { type: 'partieLancee' }, { type: 'partieTerminee', fin: { classement: [] } }],
+      [...AU_SALON, { type: 'partieLancee', graineDuDecor: 1 }],
+      [
+        ...AU_SALON,
+        { type: 'partieLancee', graineDuDecor: 1 },
+        { type: 'partieTerminee', fin: { classement: [] } },
+      ],
     ] as const satisfies readonly (readonly Action[])[]) {
       const etat = apres([...jusque, { type: 'connexionRefusee', motif: 'Refus.' }]);
 

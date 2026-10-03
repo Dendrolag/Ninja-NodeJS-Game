@@ -241,6 +241,11 @@ export interface OptionsGameRoom {
    */
   readonly chronometre?: ChronometreDuBattement;
   /**
+   * Comment tirer la graine du decor, a chaque lancement (etape 8.9). Un tirage au hasard
+   * par defaut; les tests fournissent le leur.
+   */
+  readonly tirerGraineDuDecor?: () => number;
+  /**
    * Appele apres chaque battement, une fois l'etat avance.
    *
    * C'est le seul lien de la room vers le monde exterieur, et il va dans le bon
@@ -275,6 +280,7 @@ export class GameRoom {
   private readonly horloge: Horloge;
   private readonly cadenceMs: number;
   private readonly chronometre: ChronometreDuBattement | undefined;
+  private readonly tirerGraineDuDecor: () => number;
   private readonly surBattement: ((room: GameRoom) => void) | undefined;
   private readonly surFinDePartie: ((room: GameRoom) => void) | undefined;
 
@@ -285,6 +291,9 @@ export class GameRoom {
   private partie: EtatPartie;
 
   private statutCourant: StatutRoom = 'salon';
+
+  /** La graine du decor de la partie lancee; aucune avant le premier lancement. */
+  private graineDuDecorCourante: number | undefined;
 
   /**
    * Ordre d'arrivee des joueurs.
@@ -400,6 +409,7 @@ export class GameRoom {
     this.horloge = options.horloge ?? horlogeSysteme;
     this.cadenceMs = options.cadenceMs ?? CADENCE_BATTEMENT_MS;
     this.chronometre = options.chronometre;
+    this.tirerGraineDuDecor = options.tirerGraineDuDecor ?? graineDuDecorAuHasard;
     this.surBattement = options.surBattement;
     this.surFinDePartie = options.surFinDePartie;
     this.terrain = options.terrain;
@@ -410,6 +420,19 @@ export class GameRoom {
   /** Ou en est la room. */
   get statut(): StatutRoom {
     return this.statutCourant;
+  }
+
+  /**
+   * La graine du decor de la partie lancee (etape 8.9); aucune avant le premier lancement.
+   *
+   * ELLE NE DIT RIEN DU JEU. Le moteur ne la lit pas: elle ne sert qu'a la page, pour que
+   * tous les joueurs d'une partie voient le meme decor anime, le vaisseau de la Station
+   * lunaire. La graine de la partie, elle, ne sort jamais du serveur: elle permettrait de
+   * predire le jeu. Une graine neuve a chaque lancement, pour que deux parties du meme
+   * salon ne se ressemblent pas.
+   */
+  get graineDuDecor(): number | undefined {
+    return this.graineDuDecorCourante;
   }
 
   /** L'etat de la partie. Une donnee a lire, jamais a modifier. */
@@ -769,6 +792,7 @@ export class GameRoom {
     }
 
     this.partie = lancerLaPartie(peuplerDeBots(this.partie));
+    this.graineDuDecorCourante = this.tirerGraineDuDecor();
     this.statutCourant = 'enCours';
     this.demarrerLaBoucle();
   }
@@ -1227,6 +1251,14 @@ export class GameRoom {
       this.chronometre?.enregistrer(maintenant, ecart, this.horloge.maintenant() - maintenant);
     }, this.cadenceMs);
   }
+}
+
+/**
+ * Tirage par defaut de la graine du decor: un entier sur 32 bits. Du hasard non maitrise,
+ * a sa place: la graine ne decide rien du jeu, elle doit seulement changer a chaque partie.
+ */
+function graineDuDecorAuHasard(): number {
+  return Math.floor(Math.random() * 0x100000000);
 }
 
 /** Un refus, redige pour etre montre au joueur. */

@@ -50,9 +50,12 @@ import {
   IMAGES_DE_PLUIE,
   IMAGES_PAR_OBJET,
   RACINE_RESSOURCES,
+  cheminAvantPlan,
   cheminCarte,
+  cheminFondDeNuit,
   cheminLointain,
   cheminPluie,
+  cheminVaisseau,
   tousLesNinjas,
   tousLesObjets,
 } from '@neon-ninja/shared';
@@ -79,6 +82,7 @@ import {
   LUEUR,
   MARGE_HORS_CHAMP_PX,
   PLUIE,
+  VAISSEAU,
 } from './apparence.js';
 import type { Camera, ZoneVisible } from './camera.js';
 import { dansLaZone, versEcran, zoneVisible } from './camera.js';
@@ -87,6 +91,7 @@ import { orienterLeDecor } from './miroir.js';
 import { decalageDuLointain, positionDuLointain } from './parallaxe.js';
 import { rayerLeCorps, rougirLesYeux, separerLesCalques } from './recoloration.js';
 import type { FormeDeSang } from './sang.js';
+import { opaciteDuVaisseau, placeAffichee, placeDeLOmbre, rotationDuSprite } from './vaisseau.js';
 import {
   adresseAuxYeuxRouges,
   adresseDImage,
@@ -148,32 +153,95 @@ export async function prechargerLesSprites(): Promise<void> {
 
 /**
  * Precharge tout ce qu'une partie affichera: les images des personnages et des objets,
- * et le decor de sa carte, lointain compris.
+ * et le decor de sa carte, lointain, nuit et vaisseau compris.
  *
  * APPELE DES LE COMPTE A REBOURS DU SALON (recette de l'etape 5.4). Le decor d'une
  * carte pese pres de trois megaoctets: telecharge au lancement meme, il se chargeait
  * pendant que la partie tournait deja. Le montage de l'ecran de jeu retrouve ensuite
  * ces textures deja chargees.
  */
-export async function prechargerLaPartie(carte: string, pluie: boolean): Promise<void> {
-  const adresse = (couche: 'background' | 'foreground'): string =>
-    `${RACINE_RESSOURCES}/${cheminCarte(carte, couche)}`;
+export async function prechargerLaPartie(
+  carte: string,
+  pluie: boolean,
+  nuit: boolean,
+): Promise<void> {
   const dimensions = CARTES[carte as IdentifiantCarte] as DimensionsCarte | undefined;
 
   await Promise.all([
     prechargerLesSprites(),
-    Assets.load<Texture>(adresse('background')),
-    Assets.load<Texture>(adresse('foreground')),
-    imageDuLointain(carte),
+    imageDuFond(carte, nuit),
+    image(cheminAvantPlan(carte)),
+    image(cheminLointain(carte)),
+    imagesDuVaisseau(carte, nuit),
     dimensions === undefined ? [] : imagesDePluie(carte, pluie, dimensions),
   ]);
 }
 
-/** L'image du lointain d'une carte (etape 8.8); aucune pour une carte qui n'en a pas. */
-async function imageDuLointain(carte: string): Promise<Texture | undefined> {
-  const chemin = cheminLointain(carte);
-
+/** L'image de ce chemin, s'il y en a un: aucune pour une couche que la carte n'a pas. */
+async function image(chemin: string | undefined): Promise<Texture | undefined> {
   return chemin === undefined ? undefined : Assets.load<Texture>(`${RACINE_RESSOURCES}/${chemin}`);
+}
+
+/**
+ * Le fond d'une carte: celui de nuit quand la partie se joue de nuit sur une carte qui en a
+ * un (etape 8.9), le fond ordinaire sinon.
+ */
+async function imageDuFond(carte: string, nuit: boolean): Promise<Texture> {
+  const deNuit = nuit ? cheminFondDeNuit(carte) : undefined;
+
+  return Assets.load<Texture>(`${RACINE_RESSOURCES}/${deNuit ?? cheminCarte(carte, 'background')}`);
+}
+
+/** Le vaisseau d'une carte et son ombre (etape 8.9). */
+interface ImagesDuVaisseau {
+  readonly vaisseau: Texture;
+  /** Son ombre: aucune de nuit. */
+  readonly ombre: Texture | undefined;
+}
+
+/**
+ * Le vaisseau d'une carte, et son ombre de jour; rien pour une carte sans vaisseau.
+ *
+ * L'OMBRE EST FABRIQUEE UNE FOIS, sur un canevas: la silhouette du vaisseau, noire, au
+ * bord adouci. Elle tourne et se deplace avec lui sans rien recalculer. Un navigateur qui
+ * ne sait pas flouter un canevas donne une ombre au bord net, rien de plus.
+ */
+async function imagesDuVaisseau(
+  carte: string,
+  nuit: boolean,
+): Promise<ImagesDuVaisseau | undefined> {
+  const chemin = cheminVaisseau(carte);
+  const vaisseau = await image(chemin);
+
+  if (chemin === undefined || vaisseau === undefined) {
+    return undefined;
+  }
+
+  return { vaisseau, ombre: nuit ? undefined : ombreDe(`${chemin}#ombre`, vaisseau) };
+}
+
+/** La silhouette noire et adoucie de cette image, rangee sous ce nom. */
+function ombreDe(nom: string, texture: Texture): Texture {
+  if (Assets.cache.has(nom)) {
+    return Assets.get<Texture>(nom);
+  }
+
+  const marge = VAISSEAU.flouDeLOmbrePx * 2;
+  const largeur = texture.source.pixelWidth + 2 * marge;
+  const hauteur = texture.source.pixelHeight + 2 * marge;
+  const contexte = contexteDeCanevas(largeur, hauteur);
+
+  contexte.filter = `blur(${String(VAISSEAU.flouDeLOmbrePx)}px)`;
+  contexte.drawImage(texture.source.resource as CanvasImageSource, marge, marge);
+  contexte.filter = 'none';
+  contexte.globalCompositeOperation = 'source-in';
+  contexte.fillStyle = '#000000';
+  contexte.fillRect(0, 0, largeur, hauteur);
+
+  const ombre = Texture.from(contexte.canvas);
+  Assets.cache.set(nom, ombre);
+
+  return ombre;
 }
 
 /**
@@ -331,6 +399,8 @@ export interface OptionsRendu {
   readonly modeMiroir: boolean;
   /** La pluie tombe-t-elle, sur une carte qui en a une (reglage de la partie, etape 7.6). */
   readonly pluie: boolean;
+  /** La partie se joue-t-elle de nuit, sur une carte qui en a une (etape 8.9). */
+  readonly nuit: boolean;
   /** Poser ou non la lueur neon. Utile au banc de mesure, qui compare. */
   readonly lueur?: boolean;
   /**
@@ -497,8 +567,17 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   sol.scale.set(1 / RESOLUTION_DU_SOL);
   let texteDuSol: RenderTexture | undefined;
   const imprimees = new Set<string>();
-  decor.addChild(lointain, fond, sol, pluie);
-  premierPlan.addChild(dessus);
+  // L'ombre du vaisseau de la Station lunaire, au sol et sous les personnages (etape 8.9); le
+  // vaisseau lui-meme, au premier plan. Caches sur une carte qui n'en a pas.
+  const ombre = new Sprite();
+  ombre.anchor.set(0.5);
+  ombre.alpha = VAISSEAU.opaciteDeLOmbre;
+  ombre.visible = false;
+  const vaisseau = new Sprite();
+  vaisseau.anchor.set(0.5);
+  vaisseau.visible = false;
+  decor.addChild(lointain, fond, sol, pluie, ombre);
+  premierPlan.addChild(dessus, vaisseau);
 
   const imprimer = (taches: readonly SangAImprimer[]): void => {
     const nouvelles = taches.filter((tache) => !imprimees.has(tache.id));
@@ -529,6 +608,10 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
     pinceau.destroy();
   };
 
+  /** Le vaisseau et son ombre ont-ils leur image, une fois le decor charge. */
+  let avecVaisseau = false;
+  let avecOmbre = false;
+
   /** Le trait qui marque les limites du terrain, dessine une seule fois. */
   const limites = new Graphics();
   limites.rect(0, 0, options.carte.largeur, options.carte.hauteur).stroke({
@@ -542,18 +625,34 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
     application,
 
     async chargerLeDecor() {
-      const adresse = (couche: 'background' | 'foreground'): string =>
-        `${RACINE_RESSOURCES}/${cheminCarte(options.identifiantCarte, couche)}`;
-
-      const [texteFond, texteDessus, texteLointain, images] = await Promise.all([
-        Assets.load<Texture>(adresse('background')),
-        Assets.load<Texture>(adresse('foreground')),
-        imageDuLointain(options.identifiantCarte),
-        imagesDePluie(options.identifiantCarte, options.pluie, options.carte),
+      const carte = options.identifiantCarte;
+      const [texteFond, texteDessus, texteLointain, imagesVaisseau, images] = await Promise.all([
+        imageDuFond(carte, options.nuit),
+        image(cheminAvantPlan(carte)),
+        image(cheminLointain(carte)),
+        imagesDuVaisseau(carte, options.nuit),
+        imagesDePluie(carte, options.pluie, options.carte),
       ]);
 
       fond.texture = texteFond;
-      dessus.texture = texteDessus;
+      // Une carte sans avant-plan, la Station lunaire (etape 8.9), garde un sprite cache.
+      dessus.visible = texteDessus !== undefined;
+
+      if (texteDessus !== undefined) {
+        dessus.texture = texteDessus;
+      }
+
+      if (imagesVaisseau !== undefined) {
+        vaisseau.texture = imagesVaisseau.vaisseau;
+        // De nuit, il est assombri pour ne pas briller sur un decor eteint, et sans ombre.
+        vaisseau.tint = options.nuit ? VAISSEAU.teinteDeNuit : 0xffffff;
+        avecVaisseau = true;
+
+        if (imagesVaisseau.ombre !== undefined) {
+          ombre.texture = imagesVaisseau.ombre;
+          avecOmbre = true;
+        }
+      }
 
       if (texteLointain !== undefined) {
         lointain.texture = texteLointain;
@@ -581,10 +680,10 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       // decor les montre. Spirit & Time (etape 8.8) et le Quartier sont dessines
       // a leur taille: l'etirement n'y change rien.
       // En miroir, le decor se retourne ici, et lui seul (etape 8.3, rendu/miroir.ts).
-      for (const image of [fond, dessus]) {
-        image.width = options.carte.largeur;
-        image.height = options.carte.hauteur;
-        orienterLeDecor(image, options.carte.largeur, options.modeMiroir);
+      for (const couche of [fond, dessus]) {
+        couche.width = options.carte.largeur;
+        couche.height = options.carte.hauteur;
+        orienterLeDecor(couche, options.carte.largeur, options.modeMiroir);
       }
     },
 
@@ -633,6 +732,14 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       }
       const champ = zoneVisible(camera, ecran, MARGE_HORS_CHAMP_PX);
 
+      placerLeVaisseau(
+        avecVaisseau ? vaisseau : undefined,
+        avecOmbre ? ombre : undefined,
+        scene,
+        camera,
+        options.modeMiroir,
+      );
+
       dessinerLesZones(zones, scene.zones, champ);
       dessinerLesDisques(disques, scene.disques, champ);
       dessinerLesCones(disques, scene.cones);
@@ -660,6 +767,50 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       badges.clear();
     },
   };
+}
+
+/**
+ * Place le vaisseau de la Station lunaire et son ombre (etape 8.9), tels que vaisseau.ts
+ * les calcule: le vaisseau a son altitude, vu par cette camera, et l'ombre au sol. Les deux
+ * se cachent quand la scene n'a pas de vaisseau. Un sprite absent est une couche que la
+ * carte n'a pas: le vaisseau sur une autre carte, l'ombre de nuit.
+ */
+function placerLeVaisseau(
+  vaisseau: Sprite | undefined,
+  ombre: Sprite | undefined,
+  scene: Scene,
+  camera: Camera,
+  modeMiroir: boolean,
+): void {
+  const decrit = scene.vaisseau;
+
+  if (vaisseau === undefined) {
+    return;
+  }
+
+  vaisseau.visible = decrit !== undefined;
+
+  if (ombre !== undefined) {
+    ombre.visible = decrit !== undefined;
+  }
+
+  if (decrit === undefined) {
+    return;
+  }
+
+  const rotation = rotationDuSprite(decrit.cap);
+  const place = placeAffichee(decrit, camera);
+  vaisseau.position.set(place.x, place.y);
+  vaisseau.scale.set(place.echelle);
+  vaisseau.rotation = rotation;
+  vaisseau.alpha = opaciteDuVaisseau(place, decrit.moi);
+
+  if (ombre !== undefined) {
+    const auSol = placeDeLOmbre(decrit, modeMiroir);
+    ombre.position.set(auSol.x, auSol.y);
+    ombre.scale.set(VAISSEAU.echelle);
+    ombre.rotation = rotation;
+  }
 }
 
 /**

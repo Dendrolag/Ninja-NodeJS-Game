@@ -329,6 +329,9 @@ describe('les vraies cartes du jeu', () => {
  *
  * Ses empreintes ont change a l'etape 8.8: la carte a pris le decor livre par le
  * porteur du projet, reduit a 2400 sur 1760.
+ *
+ * Celles de la Station lunaire (etape 8.9) sont relevees sur son image, murs trop fins
+ * epaissis (assets/README.md). Elle n'a jamais eu de miroir dessine.
  */
 describe('les murs de chaque carte, figes', () => {
   const chargeur = new ChargeurDeTerrain(racineRessources());
@@ -346,6 +349,10 @@ describe('les murs de chaque carte, figes', () => {
       normal: '026fa8f87fc252fa759680379f20dd26eab96cbc83f7b1e61a8992ec7f8c6543',
       miroir: '4570ba7ecb389fbe71d38ede65f1622d211c6444581b9c618a4e5079502499db',
     },
+    station: {
+      normal: '90cee70d884fb972c8b9058da989d830f1d2f5995b4c1cf77d1d357fa4b9e2a9',
+      miroir: '462b734f013eee33562897d3e035a8d70998045cd795b09199755fecdb71a443',
+    },
   };
 
   /** L'empreinte des murs d'un terrain, bit a bit. */
@@ -359,26 +366,29 @@ describe('les murs de chaque carte, figes', () => {
     });
   }
 
-  it('Spirit & Time en miroir est sa carte normale retournee, mur pour mur', () => {
-    // Le test de l'etape 8.3 verifiait que le miroir differait de moins d'un pour mille:
-    // l'ancienne carte etait symetrique. La nouvelle ne l'est plus (le dome est decale,
-    // les murs traces a la main): on verifie directement le retournement, pixel a pixel.
-    // L'image a la taille de la carte, l'etirement ne change rien.
-    const normal = chargeur.charger({ carte: 'map3', modeMiroir: false });
-    const miroir = chargeur.charger({ carte: 'map3', modeMiroir: true });
-    let ecarts = 0;
+  // Le test de l'etape 8.3 verifiait que le miroir de Spirit & Time differait de moins d'un
+  // pour mille: l'ancienne carte etait symetrique. La nouvelle ne l'est plus (le dome est
+  // decale, les murs traces a la main), ni la Station lunaire (le quai est sous le toit,
+  // a droite): on verifie directement le retournement, pixel a pixel. Leurs images ont la
+  // taille de la carte, l'etirement ne change rien.
+  for (const carte of ['map3', 'station'] as const) {
+    it(`${carte} en miroir est sa carte normale retournee, mur pour mur`, () => {
+      const normal = chargeur.charger({ carte, modeMiroir: false });
+      const miroir = chargeur.charger({ carte, modeMiroir: true });
+      let ecarts = 0;
 
-    for (let y = 0; y < normal.hauteur; y += 1) {
-      for (let x = 0; x < normal.largeur; x += 1) {
-        if (estMur(normal, x, y) !== estMur(miroir, normal.largeur - 1 - x, y)) {
-          ecarts += 1;
+      for (let y = 0; y < normal.hauteur; y += 1) {
+        for (let x = 0; x < normal.largeur; x += 1) {
+          if (estMur(normal, x, y) !== estMur(miroir, normal.largeur - 1 - x, y)) {
+            ecarts += 1;
+          }
         }
       }
-    }
 
-    expect(ecarts).toBe(0);
-    expect(empreinte('map3', true)).not.toBe(empreinte('map3', false));
-  });
+      expect(ecarts).toBe(0);
+      expect(empreinte(carte, true)).not.toBe(empreinte(carte, false));
+    });
+  }
 });
 
 /**
@@ -386,8 +396,12 @@ describe('les murs de chaque carte, figes', () => {
  * jeu-ci: un programme du depot la produit (docs/mesures/dessiner-le-quartier.mjs).
  * Ce test garde l'invariant qui la rendrait injouable si elle etait redessinee de
  * travers, et que l'oeil ne voit pas sur l'image.
+ *
+ * La Station lunaire (etape 8.9) y passe aussi: son quai ne tient au toit que par les
+ * passages des monte-charges, et une collision relivree qui les fermerait ferait du quai
+ * une prison.
  */
-describe('la carte de travail Quartier', () => {
+describe('les cartes a passages etroits', () => {
   const chargeur = new ChargeurDeTerrain(racineRessources());
 
   /** Les huit voisines d'une case, diagonales comprises. */
@@ -402,9 +416,14 @@ describe('la carte de travail Quartier', () => {
     [-1, -1],
   ] as const;
 
-  for (const modeMiroir of [false, true]) {
-    it(`n enferme personne ${modeMiroir ? 'en miroir' : 'en normal'}`, () => {
-      const terrain = chargeur.charger({ carte: 'quartier', modeMiroir });
+  for (const [carte, modeMiroir] of [
+    ['quartier', false],
+    ['quartier', true],
+    ['station', false],
+    ['station', true],
+  ] as const) {
+    it(`${carte} n enferme personne ${modeMiroir ? 'en miroir' : 'en normal'}`, () => {
+      const terrain = chargeur.charger({ carte, modeMiroir });
 
       // UNE COUR DONT L'UNIQUE OUVERTURE DONNE SUR LE BORD DE LA CARTE EST UN
       // PIEGE: le dehors est un mur, la cour devient un morceau a part, et un

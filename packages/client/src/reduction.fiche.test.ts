@@ -105,7 +105,9 @@ describe('la fiche d un joueur', () => {
   });
 
   it('se ferme quand l ecran change: la partie qui se lance, la fin, la sortie', () => {
-    expect(apres([...FICHE_DE_BOB_DEMANDEE, { type: 'partieLancee' }]).fiche).toEqual(FICHE_FERMEE);
+    expect(
+      apres([...FICHE_DE_BOB_DEMANDEE, { type: 'partieLancee', graineDuDecor: 1 }]).fiche,
+    ).toEqual(FICHE_FERMEE);
     expect(apres([...FICHE_DE_BOB_DEMANDEE, { type: 'sortie' }]).fiche).toEqual(FICHE_FERMEE);
   });
 

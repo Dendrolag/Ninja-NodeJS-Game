@@ -1,5 +1,5 @@
 {
-  "genereLe": "2026-10-02",
+  "genereLe": "2026-10-03",
   "outil": "docs/mesures/mesurer-les-cartes.mjs",
   "reglages": {
     "rayonEntitePx": 16,
@@ -189,6 +189,66 @@
       "parcoursCourtS": 3.7,
       "parcoursLongS": 14.9,
       "detourMedian": 1.24
+    },
+    {
+      "carte": "station",
+      "nom": "Station lunaire",
+      "miroir": false,
+      "dimensions": {
+        "largeur": 2000,
+        "hauteur": 1524
+      },
+      "surfaceMpx": 3.05,
+      "partDeSolPct": 50.9,
+      "partTenablePct": 47,
+      "morceaux": 1,
+      "partDuPrincipalPct": 100,
+      "airesIsoleesPx": 0,
+      "plusGrosMorceauIsolePx": 0,
+      "partDeLaBandeDApparitionPct": 100,
+      "degagementPx": {
+        "p10": 34,
+        "median": 142,
+        "p90": 343.3,
+        "maximum": 430
+      },
+      "traverseePx": 1828,
+      "traverseeS": 12.2,
+      "parcoursTypiquePx": 681,
+      "parcoursTypiqueS": 4.5,
+      "parcoursCourtS": 1.7,
+      "parcoursLongS": 8.1,
+      "detourMedian": 1.07
+    },
+    {
+      "carte": "station",
+      "nom": "Station lunaire",
+      "miroir": true,
+      "dimensions": {
+        "largeur": 2000,
+        "hauteur": 1524
+      },
+      "surfaceMpx": 3.05,
+      "partDeSolPct": 50.9,
+      "partTenablePct": 47,
+      "morceaux": 1,
+      "partDuPrincipalPct": 100,
+      "airesIsoleesPx": 0,
+      "plusGrosMorceauIsolePx": 0,
+      "partDeLaBandeDApparitionPct": 100,
+      "degagementPx": {
+        "p10": 34,
+        "median": 142,
+        "p90": 343.3,
+        "maximum": 430
+      },
+      "traverseePx": 1828,
+      "traverseeS": 12.2,
+      "parcoursTypiquePx": 701,
+      "parcoursTypiqueS": 4.7,
+      "parcoursCourtS": 1.7,
+      "parcoursLongS": 8.2,
+      "detourMedian": 1.07
     }
   ]
 }

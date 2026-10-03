@@ -90,7 +90,7 @@ beforeEach(async () => {
   reseau.simulerConnexion();
   client.rejoindre(undefined);
   reseau.dernier('rejoindre')?.[1]({ valide: true, valeur: SALON });
-  reseau.recevoir('partieLancee');
+  reseau.recevoir('partieLancee', { graineDuDecor: 1 });
   reseau.recevoir('partieTerminee', { classement: CLASSEMENT });
 
   ecran = monterFin(contexteDEssai(client));
@@ -173,7 +173,7 @@ describe('la progression sur l ecran de fin', () => {
 
   it('oublie le recapitulatif a la partie suivante', () => {
     reseau.recevoir('progressionDeFin', RECAPITULATIF);
-    reseau.recevoir('partieLancee');
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
 
     expect(client.etat.progressionDeFin).toBeUndefined();
   });

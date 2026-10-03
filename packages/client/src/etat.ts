@@ -465,6 +465,12 @@ export interface EtatClient {
    * a besoin pour dire qui a suspendu.
    */
   readonly pausePar: string | undefined;
+  /**
+   * La graine du decor de la partie en cours, recue a son lancement (etape 8.9): toutes les
+   * pages de la partie en tirent le meme vaisseau sur la Station lunaire. Aucune avant le
+   * premier lancement.
+   */
+  readonly graineDuDecor: number | undefined;
   /** Le classement definitif, une fois la partie finie. */
   readonly fin: FinDePartie | undefined;
   /**
@@ -535,6 +541,7 @@ export const ETAT_INITIAL: EtatClient = {
   messages: [],
   journal: [],
   pausePar: undefined,
+  graineDuDecor: undefined,
   fin: undefined,
   progressionDeFin: undefined,
   refus: undefined,

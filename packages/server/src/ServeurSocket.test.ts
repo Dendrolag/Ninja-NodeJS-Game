@@ -28,6 +28,7 @@ import type {
   EvenementsServeurVersClient,
   InfosSalon,
   InstantanePartie,
+  LancementDePartie,
   PartiePublique,
   ResultatValidation,
 } from '@neon-ninja/shared';
@@ -236,8 +237,11 @@ async function suspendre(hote: ClientTypee): Promise<void> {
   await annonce;
 }
 
-/** Lance la partie pour de bon: decompte complet, puis premier battement. */
-async function lancerLaPartie(hote: ClientTypee): Promise<void> {
+/**
+ * Lance la partie pour de bon: decompte complet, puis premier battement. Rend ce que le
+ * lancement a apporte, la graine du decor (etape 8.9).
+ */
+async function lancerLaPartie(hote: ClientTypee): Promise<LancementDePartie> {
   const decompte = prochain(hote, 'compteARebours');
   const lancee = prochain(hote, 'partieLancee');
 
@@ -247,7 +251,7 @@ async function lancerLaPartie(hote: ClientTypee): Promise<void> {
   await decompte;
 
   horloge.avancerDe(5000);
-  await lancee;
+  return lancee;
 }
 
 /** Ce qu'un client reconstruit du flux d'etat, trame apres trame. */
@@ -380,12 +384,23 @@ describe('entree en partie', () => {
     const retardataire = await connecterUnClient();
 
     const idRoom = await entrer(hote, 'Alice');
-    await lancerLaPartie(hote);
+    const lancement = await lancerLaPartie(hote);
 
     const lancee = prochain(retardataire, 'partieLancee');
     await entrer(retardataire, 'Bob', idRoom);
 
-    await expect(lancee).resolves.toBeUndefined();
+    // Avec la graine du decor de la partie: il voit le meme vaisseau que l'hote (etape 8.9).
+    await expect(lancee).resolves.toEqual(lancement);
+  });
+
+  it('donne au lancement la graine du decor de la partie (etape 8.9)', async () => {
+    const hote = await connecterUnClient();
+
+    const idRoom = await entrer(hote, 'Alice');
+    const lancement = await lancerLaPartie(hote);
+
+    expect(lancement).toEqual({ graineDuDecor: expect.any(Number) });
+    expect(lancement.graineDuDecor).toBe(serveur.jeu.rooms.room(idRoom)?.graineDuDecor);
   });
 });
 

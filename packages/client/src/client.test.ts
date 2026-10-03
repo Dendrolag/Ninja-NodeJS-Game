@@ -77,7 +77,7 @@ function entrerEtLancer(): void {
   reseau.simulerConnexion();
   client.rejoindre('Alice');
   repondreALEntree({ valide: true, valeur: salon() });
-  reseau.recevoir('partieLancee');
+  reseau.recevoir('partieLancee', { graineDuDecor: 1 });
 }
 
 beforeEach(() => {
@@ -396,9 +396,19 @@ describe('abonnement', () => {
 
     const avant = appels;
     desabonner();
-    reseau.recevoir('partieLancee');
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
 
     expect(appels).toBe(avant);
+  });
+});
+
+describe('la graine du decor (etape 8.9)', () => {
+  it('retient celle que le lancement apporte', () => {
+    entrerEtLancer();
+
+    reseau.recevoir('partieLancee', { graineDuDecor: 4_242 });
+
+    expect(client.etat.graineDuDecor).toBe(4_242);
   });
 });
 
@@ -413,7 +423,7 @@ describe('la poche et la fumee (etape 7.10)', () => {
     expect(client.etat.poche).toBeUndefined();
 
     reseau.recevoir('poche', { nature: 'fumee' });
-    reseau.recevoir('partieLancee');
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
     expect(client.etat.poche).toBeUndefined();
   });
 

@@ -14,6 +14,7 @@
 
 import type { EntiteVue, InfosSalon, ObjetVu, Orientation, ZoneVue } from '@neon-ninja/shared';
 import {
+  CARTES,
   OBJETS,
   RACINE_RESSOURCES,
   REGLAGES_PAR_DEFAUT,
@@ -37,6 +38,7 @@ import {
   AURA_DU_BLACK_NINJA,
 } from './apparence.js';
 import { adresseDImage, adresseRayee } from './textures.js';
+import { creerTrajectoire, etatDuVaisseau } from './vaisseau.js';
 
 /** Un joueur pose a un endroit, avec le minimum de champs. */
 function joueur(id: string, x: number, y: number, couleur = '#FF0000'): EntiteVue {
@@ -85,6 +87,7 @@ function lissee(partie: VuePartie): VueLissee {
       y: entite.y,
       enMouvement: false,
     })),
+    tempsRestantMs: partie.tempsRestantMs,
   };
 }
 
@@ -96,6 +99,25 @@ function etatEnJeu(moi: string, effets: readonly EffetActif[] = []): EtatClient 
 describe('construireScene', () => {
   it('rend une scene vide tant qu aucun battement n est arrive', () => {
     expect(construireScene(etatEnJeu('moi'), undefined, 0)).toBe(SCENE_VIDE);
+  });
+
+  it('porte le vaisseau de la Station lunaire, au temps de la partie, et notre ninja (etape 8.9)', () => {
+    const trajectoire = creerTrajectoire(5, CARTES.station, 180_000);
+    const partie = { ...vue([joueur('moi', 300, 400)]), tempsRestantMs: 90_000 };
+    const scene = construireScene(
+      etatEnJeu('moi'),
+      lissee(partie),
+      0,
+      undefined,
+      'normal',
+      trajectoire,
+    );
+
+    expect(scene.vaisseau).toEqual({
+      ...etatDuVaisseau(trajectoire, 90_000),
+      moi: { x: 300, y: 400 },
+    });
+    expect(construireScene(etatEnJeu('moi'), lissee(partie), 0).vaisseau).toBeUndefined();
   });
 
   it('affiche exactement autant d entites que l etat en contient', () => {
@@ -136,6 +158,7 @@ describe('construireScene', () => {
     const glissee: VueLissee = {
       vue: partie,
       entites: [{ entite: partie.entites[0] as EntiteVue, x: 42, y: 84, enMouvement: true }],
+      tempsRestantMs: partie.tempsRestantMs,
     };
 
     const scene = construireScene(etatEnJeu('moi'), glissee, 0);
@@ -151,6 +174,7 @@ describe('construireScene', () => {
     const enMarche: VueLissee = {
       vue: partie,
       entites: [{ entite: partie.entites[0] as EntiteVue, x: 100, y: 100, enMouvement: true }],
+      tempsRestantMs: partie.tempsRestantMs,
     };
     const texture = (etatDeLaVue: VueLissee, instant: number): string | undefined =>
       construireScene(etatEnJeu('moi'), etatDeLaVue, instant).entites[0]?.texture;

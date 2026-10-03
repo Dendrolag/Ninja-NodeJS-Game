@@ -70,7 +70,7 @@ describe('transitions d ecran', () => {
   });
 
   it('mene au jeu quand la partie est lancee', () => {
-    expect(ecranSuivant('salon', { type: 'partieLancee' })).toBe('jeu');
+    expect(ecranSuivant('salon', { type: 'partieLancee', graineDuDecor: 1 })).toBe('jeu');
   });
 
   it('mene a la fin quand la partie se termine', () => {

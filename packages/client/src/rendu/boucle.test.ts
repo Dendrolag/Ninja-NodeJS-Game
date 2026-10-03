@@ -179,7 +179,7 @@ beforeEach(() => {
 
 describe('lancerLaBoucle', () => {
   it('dessine a chaque image autant d entites que l etat en contient', () => {
-    reseau.recevoir('partieLancee');
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
     reseau.recevoir('etat', trame(1, [joueur('moi', 100, 100), joueur('autre', 300, 300)]));
 
     uneImage();
@@ -188,7 +188,7 @@ describe('lancerLaBoucle', () => {
   });
 
   it('lit l etat a chaque image, sans attendre un nouveau message', () => {
-    reseau.recevoir('partieLancee');
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
     reseau.recevoir('etat', trame(1, [joueur('moi', 100, 100)]));
 
     uneImage();
@@ -210,7 +210,7 @@ describe('lancerLaBoucle', () => {
   });
 
   it('fait entendre le depart de la partie', () => {
-    reseau.recevoir('partieLancee');
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
 
     uneImage();
 
@@ -218,7 +218,7 @@ describe('lancerLaBoucle', () => {
   });
 
   it('joue le son d un fait recu une fois, et ne le rejoue pas a l image suivante', () => {
-    reseau.recevoir('partieLancee');
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
     uneImage();
 
     reseau.recevoir('captureReussie', { victimePseudo: 'Bob', botsGagnes: 4, capturesTotal: 1 });
@@ -233,7 +233,7 @@ describe('lancerLaBoucle', () => {
     // longueur ne bouge plus, et la boucle, qui lisait ce qui depassait l'ancienne
     // longueur, ne voyait plus rien arriver. En Massacre, ou chaque coup de katana
     // est un fait, tous les sons se taisaient au bout de cinquante coups.
-    reseau.recevoir('partieLancee');
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
     uneImage();
 
     for (let fait = 0; fait < 60; fait += 1) {
@@ -255,7 +255,7 @@ describe('lancerLaBoucle', () => {
   });
 
   it('demarre la boucle sonore d un bonus et l arrete quand il expire', () => {
-    reseau.recevoir('partieLancee');
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
     reseau.recevoir('bonusActive', { nature: 'vitesse', dureeMs: 200 });
 
     uneImage();
@@ -287,7 +287,7 @@ describe('les fleches qui designent notre personnage', () => {
   }
 
   beforeEach(() => {
-    reseau.recevoir('partieLancee');
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
     reseau.recevoir('etat', trame(1, [joueur('moi', 100, 100)]));
   });
 
@@ -412,7 +412,7 @@ describe('les points flottants', () => {
       },
     });
 
-    reseau.recevoir('partieLancee');
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
     reseau.recevoir(
       'etat',
       trame(1, [
@@ -509,7 +509,7 @@ describe('l annonce d un affichage stable', () => {
   });
 
   it('annonce une seule fois, une fois la partie dessinee a une cadence fluide', () => {
-    reseau.recevoir('partieLancee');
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
     reseau.recevoir('etat', trame(1, [joueur('moi', 1_000, 750)]));
 
     // Assez d'images fluides, a 60 Hz, pour que le juge se prononce, et d'autres encore
@@ -621,7 +621,7 @@ describe('le fusil du traqueur (Chasse, etape 5.5)', () => {
       boucleChasse.uneImage(instantChasse);
     };
 
-    reseauChasse.recevoir('partieLancee');
+    reseauChasse.recevoir('partieLancee', { graineDuDecor: 1 });
     image(50);
     reseauChasse.recevoir('tirDeCapture', {
       tireur: 'moi',

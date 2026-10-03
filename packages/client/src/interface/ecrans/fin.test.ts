@@ -76,7 +76,7 @@ beforeEach(() => {
   reseau.recevoir('placeAttribuee', { joueur: 'moi', jetonDeRetour: 'M'.repeat(43) });
   client.rejoindre('Alice');
   reseau.dernier('rejoindre')?.[1]({ valide: true, valeur: SALON });
-  reseau.recevoir('partieLancee');
+  reseau.recevoir('partieLancee', { graineDuDecor: 1 });
   reseau.recevoir('partieTerminee', { classement: CLASSEMENT });
 
   ecran = monterFin(contexteDEssai(client));

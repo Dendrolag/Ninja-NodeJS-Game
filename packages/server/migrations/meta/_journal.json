@@ -85,6 +85,13 @@
       "when": 1790579188195,
       "tag": "0011_faits_de_partie",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791021028250,
+      "tag": "0012_carte_station",
+      "breakpoints": true
     }
   ]
 }

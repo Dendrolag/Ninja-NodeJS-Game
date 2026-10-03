@@ -156,7 +156,7 @@ describe('l accueil', () => {
   });
 
   it('annonce les cinq modes, et plus seulement le Classique (etape 5.5)', () => {
-    expect(obligatoire(hote, '.surtitre').textContent).toBe('5 modes · 3 cartes');
+    expect(obligatoire(hote, '.surtitre').textContent).toBe('5 modes · 4 cartes');
   });
 
   it('dit en pied de page de quand date la version servie (etape 8.4)', () => {
@@ -266,7 +266,7 @@ describe('la navigation entre les ecrans', () => {
 
   it('monte le jeu au lancement, le demonte a la fin, et change de musique', () => {
     entrerDansLeSalon();
-    reseau.recevoir('partieLancee');
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
 
     expect(ecranAffiche()).toBe('jeu');
     expect(jeu.montages).toBe(1);
@@ -283,7 +283,7 @@ describe('la navigation entre les ecrans', () => {
 
   it('revient a l accueil depuis la fin, en quittant la partie', () => {
     entrerDansLeSalon();
-    reseau.recevoir('partieLancee');
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
     reseau.recevoir('partieTerminee', { classement: CLASSEMENT });
 
     boutonObligatoire(hote, 'Accueil').click();
@@ -296,7 +296,7 @@ describe('la navigation entre les ecrans', () => {
 
   it('rejoue en quittant la partie finie puis en redemandant a entrer, sous le meme pseudo', () => {
     entrerDansLeSalon();
-    reseau.recevoir('partieLancee');
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
     reseau.recevoir('partieTerminee', { classement: CLASSEMENT });
     const avant = reseau.emis.length;
 
@@ -375,7 +375,7 @@ describe('la navigation entre les ecrans', () => {
 
   it('n empile jamais deux ecrans', () => {
     entrerDansLeSalon();
-    reseau.recevoir('partieLancee');
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
     reseau.recevoir('partieTerminee', { classement: CLASSEMENT });
     boutonObligatoire(hote, 'Accueil').click();
 

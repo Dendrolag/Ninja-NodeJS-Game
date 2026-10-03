@@ -168,6 +168,28 @@ describe('le panneau de reglages', () => {
     expect(estCache(pluie())).toBe(false);
   });
 
+  it('ne propose la nuit que sur la Station lunaire, decochee par defaut (etape 8.9)', () => {
+    const nuit = (): Element => champ('nuit').closest('label') as Element;
+
+    expect(champ('nuit').checked).toBe(false);
+    expect(estCache(nuit())).toBe(true);
+
+    cocher(obligatoire<HTMLInputElement>(panneau.racine, 'input[value="station"]'), true);
+    expect(estCache(nuit())).toBe(false);
+
+    cocher(obligatoire<HTMLInputElement>(panneau.racine, 'input[value="map1"]'), true);
+    expect(estCache(nuit())).toBe(true);
+  });
+
+  it('enregistre une partie de nuit sur la Station lunaire', () => {
+    cocher(obligatoire<HTMLInputElement>(panneau.racine, 'input[value="station"]'), true);
+    cocher(champ('nuit'), true);
+
+    boutonObligatoire(panneau.racine, 'Enregistrer').click();
+
+    expect(enregistres).toEqual([completerReglages({ carte: 'station', nuit: true })]);
+  });
+
   it('enregistre une partie sans pluie', () => {
     cocher(champ('pluie'), false);
 

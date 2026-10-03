@@ -856,6 +856,7 @@ export function validerReglages(brut: unknown): ResultatValidation<ReglagesParti
   poser(retenus, 'carte', identifiantDeCarte(source, erreurs));
   poser(retenus, 'modeMiroir', booleen(source, 'modeMiroir', erreurs));
   poser(retenus, 'pluie', booleen(source, 'pluie', erreurs));
+  poser(retenus, 'nuit', booleen(source, 'nuit', erreurs));
   poser(retenus, 'evade', booleen(source, 'evade', erreurs));
   poser(
     retenus,

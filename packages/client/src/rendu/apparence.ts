@@ -616,6 +616,60 @@ export const LOINTAIN = {
 } as const;
 
 /**
+ * Le vaisseau qui survole la Station lunaire (etape 8.9), et son ombre.
+ *
+ * Sa course se calcule dans vaisseau.ts; ce sont ici ses reglages, a juger en jouant. Les
+ * distances sont en pixels de carte, les durees en millisecondes.
+ */
+export const VAISSEAU = {
+  /** La taille affichee, en part de l'image livree (683 sur 769): 478 sur 538 au sol. */
+  echelle: 0.7,
+  /**
+   * Son altitude, en part de son ecart a la camera: il se dessine ecarte d'autant du centre
+   * de l'ecran, et grandi d'autant, comme ce qui est plus pres de l'oeil. C'est ce qui le
+   * separe de son ombre quand la camera bouge.
+   */
+  altitude: 0.15,
+  /** Sa vitesse pendant le survol, a peu pres: le nombre de points de passage s'y adapte. */
+  vitesseDeSurvolPxParS: 20,
+  /** La duree de l'arrivee et celle du depart, au plus. */
+  dureeDeManoeuvreMs: 20_000,
+  /** La part de la partie que chaque manoeuvre prend au plus, sur une partie courte. */
+  partMaximaleDeManoeuvre: 0.2,
+  /**
+   * Jusqu'ou hors de la carte il entre et sort: plus que sa demi-diagonale affichee,
+   * altitude comprise, pour n'etre vu ni naitre ni disparaitre.
+   */
+  margeHorsCartePx: 450,
+  /** Ou ses points de passage se tirent: le milieu de la carte, la station. */
+  zoneDeSurvol: { minimum: 0.2, maximum: 0.8 },
+  /** L'ecart minimum entre deux points de passage, pour une course sans lacet. */
+  ecartMinimumPx: 300,
+  /** Combien de points de courbe entre deux points de passage. */
+  finesseDeLaCourbe: 24,
+  /**
+   * Le decalage de son ombre au sol: le soleil vient d'en haut a gauche, comme le dit
+   * l'ombre de la station dans le decor de jour. En miroir, il change de cote avec le decor.
+   */
+  soleil: { x: 110, y: 80 },
+  /** L'opacite de l'ombre, de jour. De nuit, il n'y en a pas. */
+  opaciteDeLOmbre: 0.35,
+  /** Le flou du bord de l'ombre, en pixels de l'image livree. */
+  flouDeLOmbrePx: 6,
+  /** La teinte du vaisseau de nuit: assombri, pour ne pas briller sur un decor eteint. */
+  teinteDeNuit: 0x8a93b0,
+  /**
+   * Son opacite quand il passe au-dessus de notre ninja: assez pour qu'on s'y voie toujours
+   * (critere 11 de la competence des cartes). Il cache les autres, pas nous.
+   */
+  opaciteAuDessusDeNous: 0.4,
+  /** Le rayon, autour de son centre affiche, ou il s'efface au-dessus de nous. */
+  rayonDEffacementPx: 230,
+  /** La bande ou il passe de transparent a opaque, au bord de ce rayon. */
+  fonduPx: 80,
+} as const;
+
+/**
  * Le cone du mode Tactique (etape 7.1): notre visee, et l'eclair d'un tir.
  *
  * Valeurs de la version 0.9.0 du jeu d'origine (drawCaptureRange): un violet pale,

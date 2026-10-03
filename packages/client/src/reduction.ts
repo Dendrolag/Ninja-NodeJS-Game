@@ -592,6 +592,7 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
         fin: undefined,
         progressionDeFin: undefined,
         pausePar: undefined,
+        graineDuDecor: action.graineDuDecor,
       };
 
     // UNE TRAME QUI N'APPREND RIEN REND L'ETAT LUI-MEME, et pas une copie

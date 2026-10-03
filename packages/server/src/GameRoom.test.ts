@@ -69,6 +69,50 @@ function partieLancee(
   return cadre;
 }
 
+describe('GameRoom, la graine du decor (etape 8.9)', () => {
+  it('n en a pas avant le lancement, et tire la sienne au lancement', () => {
+    const tirages: number[] = [];
+    const room = new GameRoom({
+      id: 'room-decor',
+      graine: 42,
+      reglages: REGLAGES,
+      cadenceMs: BATTEMENT_MS,
+      horloge: creerHorlogeManuelle(),
+      tirerGraineDuDecor: () => {
+        tirages.push(tirages.length);
+        return 4_242;
+      },
+    });
+
+    room.accueillir(session('alice', 'Alice'));
+    expect(room.graineDuDecor).toBeUndefined();
+    expect(tirages).toEqual([]);
+
+    room.lancer();
+
+    expect(room.graineDuDecor).toBe(4_242);
+    expect(tirages).toHaveLength(1);
+    room.arreter();
+  });
+
+  it('la tire au hasard par defaut, un entier sur 32 bits, autre d une partie a l autre', () => {
+    const graines = new Set<number>();
+
+    for (let partie = 0; partie < 5; partie += 1) {
+      const { room } = partieLancee();
+      const graine = room.graineDuDecor ?? -1;
+
+      expect(Number.isInteger(graine)).toBe(true);
+      expect(graine).toBeGreaterThanOrEqual(0);
+      expect(graine).toBeLessThan(0x100000000);
+      graines.add(graine);
+      room.arreter();
+    }
+
+    expect(graines.size).toBe(5);
+  });
+});
+
 describe('GameRoom, cycle de vie du salon', () => {
   it('nait vide, dans son salon, sans hote et sans bot', () => {
     const { room } = roomDeTest();

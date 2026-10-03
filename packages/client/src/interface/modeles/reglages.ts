@@ -19,7 +19,8 @@
  * attributs min et max d'un champ ne peuvent pas diverger de ce que le serveur
  * accepte. Depuis l'etape 7.6, le nombre de faux ninjas a en plus le plafond de la
  * carte choisie (PLAFONDS_DE_FAUX_NINJAS), et la pluie n'a de sens que sur une carte
- * qui en a une: voir bornesSurLaCarte et champUtileSurLaCarte.
+ * qui en a une, comme la nuit depuis l'etape 8.9: voir bornesSurLaCarte et
+ * champUtileSurLaCarte.
  */
 
 import type {
@@ -42,6 +43,7 @@ import {
   TYPES_MALUS_TACTIQUES,
   TYPES_OBJETS_DE_POCHE,
   TYPES_ZONE,
+  cheminFondDeNuit,
   cheminPluie,
   validerReglages,
 } from '@neon-ninja/shared';
@@ -118,6 +120,9 @@ const CHEMIN_FAUX_NINJAS = 'nombreBotsInitial';
 /** Le chemin de la pluie, qui n'a de sens que sur une carte qui en a une (etape 7.6). */
 const CHEMIN_PLUIE = 'pluie';
 
+/** Le chemin de la nuit, qui n'a de sens que sur une carte qui a un fond de nuit (etape 8.9). */
+const CHEMIN_NUIT = 'nuit';
+
 /** Cette valeur de formulaire designe-t-elle une carte jouable ? */
 function estUneCarte(carte: string): carte is IdentifiantCarte {
   return Object.hasOwn(CARTES, carte);
@@ -147,9 +152,15 @@ export function bornesSurLaCarte(
  * La pluie ne tombe que sur une carte qui a une planche de pluie, Tokyo: ailleurs,
  * l'interrupteur se cache (decision du porteur du projet du 18 septembre 2026). Sa
  * valeur est gardee, sans effet, pour revenir telle quelle si l'hote revient a Tokyo.
+ * La nuit de meme, sur la seule carte qui a un fond de nuit, la Station lunaire
+ * (etape 8.9).
  */
 export function champUtileSurLaCarte(chemin: string, carte: string): boolean {
-  return chemin !== CHEMIN_PLUIE || cheminPluie(carte) !== undefined;
+  if (chemin === CHEMIN_PLUIE) {
+    return cheminPluie(carte) !== undefined;
+  }
+
+  return chemin !== CHEMIN_NUIT || cheminFondDeNuit(carte) !== undefined;
 }
 
 /** Un entier en secondes. */
@@ -193,6 +204,7 @@ export const GROUPES_REGLAGES: readonly GroupeReglages[] = [
         champs: [
           { nature: 'carte', chemin: 'carte', libelle: 'Carte' },
           interrupteur(CHEMIN_PLUIE, 'Pluie'),
+          interrupteur(CHEMIN_NUIT, 'Nuit'),
           interrupteur('modeMiroir', 'Mode miroir'),
           // L'Evade apparait une fois, au hasard, et donne un x2 a qui l'attrape (etape 7.9).
           interrupteur('evade', 'L’Évadé'),

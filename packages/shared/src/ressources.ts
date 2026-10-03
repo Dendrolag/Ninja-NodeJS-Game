@@ -17,8 +17,8 @@
  *
  * L'ARBORESCENCE, ecrite une fois pour toutes:
  *
- *   assets/cartes/<carte>/<background|collision|foreground>.png, rain.png
- *     et background-parallax.png
+ *   assets/cartes/<carte>/<background|collision|foreground>.png, rain.png,
+ *     background-parallax.png, background-night.png et spaceship.png
  *   assets/ninja/<direction>_<1|2>.png, et idle.png
  *   assets/objets/<icone>.png
  *   assets/sons/<son>.<mp3|wav>
@@ -64,6 +64,38 @@ export type CoucheCarte =
  */
 export function cheminCarte(carte: string, couche: CoucheCarte): string {
   return `cartes/${carte}/${couche}.png`;
+}
+
+/**
+ * Chemin relatif de l'avant-plan d'une carte, s'il en existe un.
+ *
+ * Toutes les cartes en ont un, sauf la Station lunaire (etape 8.9): rien n'y passe
+ * devant les ninjas que le vaisseau qui la survole (cheminVaisseau). Rendre l'absence
+ * explicite evite de charger une image vide de la taille de la carte.
+ */
+export function cheminAvantPlan(carte: string): string | undefined {
+  return carte === 'station' ? undefined : cheminCarte(carte, 'foreground');
+}
+
+/**
+ * Chemin relatif du fond de nuit d'une carte, s'il en existe un (etape 8.9).
+ *
+ * Seule la Station lunaire en a un: le meme decor, de nuit, qui remplace le fond quand
+ * la partie se joue de nuit (ReglagesPartie.nuit). Les murs ne changent pas.
+ */
+export function cheminFondDeNuit(carte: string): string | undefined {
+  return carte === 'station' ? `cartes/${carte}/background-night.png` : undefined;
+}
+
+/**
+ * Chemin relatif du vaisseau qui survole une carte, s'il en existe un (etape 8.9).
+ *
+ * Seule la Station lunaire en a un. L'image le montre vu de dessus, l'arriere en haut
+ * et l'avant en bas; sa course est calculee par packages/client/src/rendu/vaisseau.ts.
+ * Il ne touche pas aux murs: il vole.
+ */
+export function cheminVaisseau(carte: string): string | undefined {
+  return carte === 'station' ? `cartes/${carte}/spaceship.png` : undefined;
 }
 
 /**

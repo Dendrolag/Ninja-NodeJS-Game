@@ -282,7 +282,7 @@ describe('la fiche d un joueur, au salon', () => {
     boutonObligatoire(hote, 'Bob, voir sa fiche').click();
     await laisserRepondre();
 
-    reseau.recevoir('partieLancee');
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
 
     expect(client.etat.fiche).toEqual({ statut: 'fermee' });
     expect(estCache(fenetre())).toBe(true);
@@ -298,7 +298,7 @@ describe('la fiche d un joueur, au salon', () => {
 describe('la fiche d un joueur, a la fin', () => {
   it('s ouvre depuis le classement, pour les joueurs du salon qui ont un compte', async () => {
     await entrerAuSalon(true);
-    reseau.recevoir('partieLancee');
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
     reseau.recevoir('partieTerminee', {
       classement: [ligne('bob', 'Bob', 40), ligne('moi', 'Alice', 30), ligne('eve', 'Eve', 5)],
     });
@@ -315,7 +315,7 @@ describe('la fiche d un joueur, a la fin', () => {
 
   it('n offre aucune fiche a un invite', async () => {
     await entrerAuSalon(false);
-    reseau.recevoir('partieLancee');
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
     reseau.recevoir('partieTerminee', {
       classement: [ligne('bob', 'Bob', 40), ligne('moi', 'Alice', 30)],
     });

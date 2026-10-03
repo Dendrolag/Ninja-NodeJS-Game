@@ -256,6 +256,20 @@ describe('modeleSalon', () => {
     expect(carte({ carte: 'map3', pluie: true })).toBe('Spirit & Time');
   });
 
+  it('ne dit la nuit que sur une carte qui en a une (etape 8.9)', () => {
+    const carte = (reglages: ReglagesPartiels): string | undefined =>
+      modeleSalon(
+        etat(salon('bob', { reglages: completerReglages(reglages) })),
+      )?.recapitulatif.find((ligne) => ligne.libelle === 'Carte')?.valeur;
+
+    expect(carte({ carte: 'station' })).toBe('Station lunaire');
+    expect(carte({ carte: 'station', nuit: true })).toBe('Station lunaire · Nuit');
+    expect(carte({ carte: 'station', nuit: true, modeMiroir: true })).toBe(
+      'Station lunaire · Miroir · Nuit',
+    );
+    expect(carte({ nuit: true, pluie: false })).toBe('Tokyo');
+  });
+
   it('dit la visibilite et les places libres d une partie publique, sans code', () => {
     const modele = modeleSalon(etat(salon('bob')));
 

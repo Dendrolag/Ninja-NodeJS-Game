@@ -45,23 +45,25 @@ describe('vitesses', () => {
 });
 
 describe('cartes', () => {
-  it('porte les trois cartes jouables, avec leurs dimensions reelles', () => {
+  it('porte les quatre cartes jouables, avec leurs dimensions reelles', () => {
     // Le defaut X5 du legacy renvoyait 2000x1500 meme sur map3. Ici chaque carte
     // porte ses vraies dimensions, et le moteur ne travaille que sur celles-la.
     // Le Quartier s'est ajoute a l'etape 8.2: c'est la carte de travail, la seule
     // dessinee pour ce jeu-ci et non heritee du jeu d'origine. Spirit & Time est passee
-    // de 3000x2000 a 2400x1760 avec son nouveau decor, a l'etape 8.8.
+    // de 3000x2000 a 2400x1760 avec son nouveau decor, a l'etape 8.8. La Station lunaire
+    // s'est ajoutee a l'etape 8.9, a la taille de ses images.
     expect(CARTES).toEqual({
       map1: { largeur: 2000, hauteur: 1500 },
       map3: { largeur: 2400, hauteur: 1760 },
       quartier: { largeur: 2400, hauteur: 1800 },
+      station: { largeur: 2000, hauteur: 1524 },
     });
   });
 
   it('garde map2 parmi les cartes enregistrees, sans la rendre jouable (etape 7.6)', () => {
     // L'enumeration de la base en est tiree: perdre map2 rendrait illisibles les
     // parties jouees sur l'ancienne Tokyo sans pluie.
-    expect(CARTES_ENREGISTREES).toEqual(['map1', 'map2', 'map3', 'quartier']);
+    expect(CARTES_ENREGISTREES).toEqual(['map1', 'map2', 'map3', 'quartier', 'station']);
     expect(Object.hasOwn(CARTES, 'map2')).toBe(false);
   });
 
@@ -77,8 +79,9 @@ describe('cartes', () => {
     // & Time, la meme densite a peu pres. Le Quartier suit la meme densite, appliquee a
     // sa surface reellement tenable, mesuree a l'etape 8.2: 2,60 Mpx a 133 faux ninjas
     // par Mpx donnent 345, arrondis a 340. Spirit & Time, reduite a l'etape 8.8, a 2,73
-    // Mpx tenables: 360 (decision du 2 octobre 2026).
-    expect(PLAFONDS_DE_FAUX_NINJAS).toEqual({ map1: 300, map3: 360, quartier: 340 });
+    // Mpx tenables: 360 (decision du 2 octobre 2026). La Station lunaire, 1,43 Mpx
+    // tenables a l'etape 8.9: 190, la meme densite.
+    expect(PLAFONDS_DE_FAUX_NINJAS).toEqual({ map1: 300, map3: 360, quartier: 340, station: 190 });
     expect(Math.max(...Object.values(PLAFONDS_DE_FAUX_NINJAS))).toBe(
       BORNES_REGLAGES.nombreBotsInitial.maximum,
     );

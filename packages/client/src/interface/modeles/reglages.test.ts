@@ -164,6 +164,14 @@ describe('le formulaire sur la carte choisie (etape 7.6)', () => {
     expect(champUtileSurLaCarte('modeMiroir', 'map3')).toBe(true);
   });
 
+  it('ne propose la nuit que sur la Station lunaire (etape 8.9)', () => {
+    expect(champUtileSurLaCarte('nuit', 'station')).toBe(true);
+    expect(champUtileSurLaCarte('nuit', 'map1')).toBe(false);
+    expect(champUtileSurLaCarte('nuit', 'map3')).toBe(false);
+    expect(champUtileSurLaCarte('nuit', 'quartier')).toBe(false);
+    expect(champUtileSurLaCarte('pluie', 'station')).toBe(false);
+  });
+
   it('signale sur son champ un nombre de faux ninjas au-dela du plafond de Tokyo', () => {
     const verdict = verifierLesValeurs(valeursAvec('nombreBotsInitial', '350'));
 

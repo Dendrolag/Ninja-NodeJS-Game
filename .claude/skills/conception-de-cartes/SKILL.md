@@ -17,9 +17,11 @@ Un dossier `assets/cartes/<carte>/`, avec ses images **dans un seul sens**. Le m
 | ------------------------- | ------------------------------------------------------------------------------------------------- | ----------- |
 | `collision.png`           | Les murs. La seule image qui décide de quelque chose                                              | Oui         |
 | `background.png`          | Le décor, sous les personnages                                                                    | Oui         |
-| `foreground.png`          | L'avant-plan, au-dessus des personnages                                                           | Oui         |
+| `foreground.png`          | L'avant-plan, au-dessus des personnages. La Station lunaire n'en a pas (étape 8.9)                | Presque     |
 | `rain.png`                | La pluie, une bande qui défile. Seule Tokyo en a une                                              | Non         |
 | `background-parallax.png` | Le lointain, sous le fond, qui glisse moins vite que lui (étape 8.8). Seule Spirit & Time en a un | Non         |
+| `background-night.png`    | Le fond de nuit, qui remplace le fond quand l'hôte choisit la nuit (étape 8.9). Seule la Station  | Non         |
+| `spaceship.png`           | Le vaisseau qui survole la carte, au-dessus de tout (étape 8.9). Seule la Station en a un         | Non         |
 | `preview.png`             | La vignette, 120 sur 120, montrée dans les réglages                                               | Oui         |
 
 Les chemins se fabriquent à un seul endroit, `packages/shared/src/ressources.ts`, où un test vérifie que chaque fichier annoncé existe.
@@ -35,6 +37,7 @@ Trois conséquences, à dire à quiconque dessine une carte.
 1. **La résolution du mur est le pixel.** Un trait d'un pixel de large est un mur infranchissable: le moteur balaie les trajets pixel par pixel. Un décor fin et détaillé produit des murs fins et détaillés, dans lesquels un ninja de 32 pixels de diamètre ne passe pas.
 2. **L'anticrénelage compte.** Un bord adouci produit une bande de gris, dont la moitié sombre devient du mur. Le mur réel est donc plus gros que le trait dessiné, de la moitié de l'adoucissement. Pour une carte de travail, dessiner sans adoucissement.
 3. **Collision et décor doivent se superposer exactement.** Rien ne le vérifie: un mur décalé de dix pixels donne un ninja qui bute sur du vide, et aucune erreur nulle part.
+4. **Un mur plus fin que neuf pixels peut être chevauché** (étape 8.9). Le moteur ne regarde pas tout le disque d'un ninja: dix-sept points, écartés de huit pixels au plus (`positionTenable`). Un trait plus fin peut passer entre deux points, et la place à cheval sur lui est jugée tenable. Au pied d'un tel trait naissent des poches de quelques pixels, coupées du reste, où une apparition peut tomber et enfermer un ninja pour la partie. Tokyo en a onze depuis le jeu d'origine; la Station lunaire en avait sous le bord de son toit, fermées en épaississant ses traits à neuf pixels. Le moteur sera corrigé à l'étape 8.10; d'ici là, **un mur se trace à neuf pixels au moins**, et une carte se vérifie au pixel près, pas seulement au pas de quatre pixels de la mesure.
 
 ### Le piège de l'étirement
 
@@ -108,20 +111,22 @@ Ce que chaque nombre veut dire:
 
 ### Les trois cartes de référence
 
-| Mesure              | Tokyo (2000x1500) | Spirit & Time (2400x1760) | Quartier (2400x1800) |
-| ------------------- | ----------------: | ------------------------: | -------------------: |
-| Part tenable        |            75,3 % |                    64,6 % |               59,6 % |
-| Dégagement médian   |             64 px |                    226 px |                60 px |
-| Traversée           |            18,0 s |                    16,2 s |               21,3 s |
-| **Détour médian**   |          **1,08** |                  **1,06** |             **1,24** |
-| Plafond de PNJ      |               300 |                       360 |                  340 |
-| Part vue d'un écran |              48 % |                      34 % |                 33 % |
+| Mesure              | Tokyo (2000x1500) | Spirit & Time (2400x1760) | Quartier (2400x1800) | Station (2000x1524) |
+| ------------------- | ----------------: | ------------------------: | -------------------: | ------------------: |
+| Part tenable        |            75,3 % |                    64,6 % |               59,6 % |              47,0 % |
+| Dégagement médian   |             64 px |                    226 px |                60 px |              142 px |
+| Traversée           |            18,0 s |                    16,2 s |               21,3 s |              12,2 s |
+| **Détour médian**   |          **1,08** |                  **1,06** |             **1,24** |            **1,07** |
+| Plafond de PNJ      |               300 |                       360 |                  340 |                 190 |
+| Part vue d'un écran |              48 % |                      34 % |                 33 % |                47 % |
 
 **Les deux cartes héritées sont des terrains ouverts**: un détour de 1,07 à 1,08 veut dire qu'il n'y a ni couloir, ni détour à subir, ni raccourci à connaître. Les murs de Tokyo sont du mobilier qu'on contourne, pas une structure qui organise.
 
 **Le Quartier est le premier terrain du jeu où le chemin se choisit** (étape 8.2, 20 septembre 2026): quatre colonnes et trois lignes d'îlots, des rues de 120 pixels, deux artères traversantes, et sept îlots sur huit bâtis en ceinture de 65 pixels autour d'une cour ouverte par une seule porte.
 
 Note: le détour de l'ancienne Spirit & Time se lisait 1,06 à l'étape 8.1, avec vingt-quatre points de départ tirés, et 1,07 avec quatre-vingts. L'outil en tire quatre-vingts depuis l'étape 8.2, parce que vingt-quatre laissaient le détour bouger de cinq centièmes selon le tirage.
+
+**La Station lunaire (étape 8.9) est la plus petite carte du jeu**: le toit d'une station et son quai, dessinés par 2-Minute Tabletop, la Lune autour en mur. Terrain ouvert (1,07), traversée tout juste au seuil de 12 secondes. Le quai ne tient au toit que par deux monte-charges, d'où son test de connexité. Elle se joue de jour ou de nuit, et un vaisseau la survole, avec son ombre en parallaxe de jour.
 
 **Spirit & Time a changé de terrain à l'étape 8.8**: le décor livré par le porteur du projet, un toit-terrasse ceint de murs au-dessus d'une ville, réduit de 20 pour cent pour que les ninjas n'y paraissent pas trop petits. L'ancienne était un champ de 3000 sur 2000, tenable à 94,4 pour cent, plafonnée à 500 PNJ. La nouvelle reste un terrain ouvert (1,06), mais bordé de murs: tout son tenable est hors de la bande d'apparition.
 
@@ -165,6 +170,8 @@ Trois modes sur cinq profitent d'une carte plus structurée que les nôtres, deu
 4. `PRESENTATION_CARTES` (`packages/client/src/interface/modeles/cartes.ts`): nom et ambiance. L'oublier est une erreur de compilation, à dessein.
 5. `cheminPluie` (`packages/shared/src/ressources.ts`), si la carte a une pluie.
 6. `cheminLointain`, au même endroit, si la carte a un lointain. Son amplitude (`LOINTAIN`, `packages/client/src/rendu/apparence.ts`) se règle sur la marge que le terrain laisse autour de ce qu'il cache, mesurée par `parallaxe.test.ts`.
+7. `cheminAvantPlan`, `cheminFondDeNuit` et `cheminVaisseau`, au même endroit (étape 8.9): une carte sans avant-plan, une carte qui a une nuit (le réglage `nuit` ne se propose alors que sur elle), une carte qu'un vaisseau survole. Les réglages du vaisseau, sa vitesse, son altitude, son ombre, sont dans `VAISSEAU` (`apparence.ts`), sa course dans `packages/client/src/rendu/vaisseau.ts`, tirée de la graine du décor que le serveur donne à chaque lancement.
+8. Le test de connexité de `packages/server/src/terrain.test.ts` (« les cartes à passages étroits »), si la carte a des passages étroits ou des parties qui ne tiennent au reste que par eux.
 
 ## 8. Décisions déjà prises, à ne pas rouvrir
 
@@ -187,7 +194,8 @@ Décision plus ancienne, toujours valable: **le miroir est un réglage de carte,
 3. **Le moteur ne connaît pas de ligne de vue**: tout ce qui est à l'écran se voit, même derrière un mur. Une carte pensée pour cacher ne cachera que ce que la caméra ne montre pas.
 4. **Les murs ne coûtent rien au serveur.** À nombre égal de PNJ, Tokyo et Spirit & Time se mesurent à quelques centièmes de milliseconde près. Ce qui coûte est le nombre d'entités, pas la surface ni les murs.
 5. **Le socle tient environ 12 Mpx et 1 000 PNJ** sans rien changer. Au-delà, ce sont les quatre plafonds de `docs/mesures/etude-grandes-cartes.md` qui reprennent la main.
-6. **Générer une image de collision avec un modèle d'image est le mauvais instrument.** L'anticrénelage y épaissit chaque mur de façon incontrôlée, et on rate par construction les critères 4 et 8. Une collision se trace, elle ne se génère pas.
+6. **Un mur de moins de neuf pixels peut enfermer un ninja** (section 2, point 4), jusqu'à l'étape 8.10.
+7. **Générer une image de collision avec un modèle d'image est le mauvais instrument.** L'anticrénelage y épaissit chaque mur de façon incontrôlée, et on rate par construction les critères 4 et 8. Une collision se trace, elle ne se génère pas.
 
 ## Pour commander un décor à un graphiste
 

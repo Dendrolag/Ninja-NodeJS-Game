@@ -221,8 +221,8 @@ export type Action =
   | { readonly type: 'compteARebours'; readonly compte: EtatCompteARebours }
   /** Le compte a rebours a ete annule. */
   | { readonly type: 'demarrageAnnule' }
-  /** La partie commence. */
-  | { readonly type: 'partieLancee' }
+  /** La partie commence, avec la graine de son decor (etape 8.9). */
+  | { readonly type: 'partieLancee'; readonly graineDuDecor: number }
   /** Une trame du flux d'etat vient d'arriver: une image complete ou un delta. */
   | { readonly type: 'etat'; readonly trame: TrameDEtat }
   /** La partie vient d'etre suspendue par l'hote. */

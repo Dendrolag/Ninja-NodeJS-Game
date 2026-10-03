@@ -170,6 +170,12 @@ export interface ReglagesPartie {
    */
   readonly pluie: boolean;
   /**
+   * La carte se joue-t-elle de nuit (etape 8.9). Un reglage d'affichage, que le moteur
+   * ignore, sur le modele de la pluie: seule la Station lunaire a un fond de nuit
+   * (cheminFondDeNuit), et le reglage est sans effet ailleurs. Le jour par defaut.
+   */
+  readonly nuit: boolean;
+  /**
    * L'Evade apparait-il dans la partie (etape 7.9). Actif par defaut; la Chasse le retire
    * (imposerLesReglagesDuMode), et le moteur ne le fait apparaitre que dans les modes de
    * MODES_AVEC_EVADE.
@@ -221,6 +227,7 @@ export const REGLAGES_PAR_DEFAUT: ReglagesPartie = {
   carte: 'map1',
   modeMiroir: false,
   pluie: true,
+  nuit: false,
   evade: true,
   nombreBotsInitial: 50,
   bonus: {

@@ -193,6 +193,7 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
       identifiantCarte: reglages.carte,
       modeMiroir: reglages.modeMiroir,
       pluie: reglages.pluie,
+      nuit: reglages.nuit,
       ...(variantes === undefined
         ? {}
         : {
@@ -272,6 +273,7 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
           `mode ${mode ?? '?'}`,
           `${String(reglages.nombreBotsInitial)} PNJ au départ`,
           reglages.pluie ? 'pluie' : 'sans pluie',
+          reglages.nuit ? 'nuit' : 'jour',
           `${String(client.etat.partie?.entites.length ?? 0)} entités à cet instant`,
         ].join(', '),
     });

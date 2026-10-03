@@ -18,7 +18,7 @@ describe('les credits', () => {
   });
 
   it('remercient Bribz pour Tokyo et les ninjas, dans la phrase arretee', () => {
-    expect(CREDITS.participations).toHaveLength(1);
+    expect(CREDITS.participations).toHaveLength(2);
 
     const [bribz] = CREDITS.participations;
 
@@ -29,7 +29,21 @@ describe('les credits', () => {
   });
 
   it('ne renvoient vers aucune page tant que Bribz n y a pas consenti', () => {
-    expect(CREDITS.participations.every((p) => p.adresse === undefined)).toBe(true);
+    expect(CREDITS.participations[0]?.adresse).toBeUndefined();
+  });
+
+  it('nomment 2-Minute Tabletop pour la Station lunaire, avec sa licence (etape 8.9)', () => {
+    const auteur = CREDITS.participations[1];
+
+    expect(auteur).toEqual({
+      nom: '2-Minute Tabletop',
+      apport: 'la carte Station lunaire',
+      adresse: 'https://www.patreon.com/2minutetabletop',
+      licence: { nom: 'CC BY-NC 4.0', adresse: 'https://creativecommons.org/licenses/by-nc/4.0/' },
+    });
+    expect(auteur === undefined ? '' : apresLeNom(auteur)).toBe(
+      ' pour la carte Station lunaire, sous licence ',
+    );
   });
 });
 

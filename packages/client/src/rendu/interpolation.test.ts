@@ -29,10 +29,10 @@ function joueur(id: string, x: number, y: number): EntiteVue {
 }
 
 /** Une vue de partie a un battement donne. */
-function vue(tick: number, entites: readonly EntiteVue[]): VuePartie {
+function vue(tick: number, entites: readonly EntiteVue[], tempsRestantMs = 60_000): VuePartie {
   return {
     tick,
-    tempsRestantMs: 60_000,
+    tempsRestantMs,
     enPause: false,
     entites,
     objets: [],
@@ -65,6 +65,19 @@ describe('TamponDeLissage', () => {
 
     expect(rendue?.entites[0]?.x).toBeCloseTo(50);
     expect(rendue?.entites[0]?.y).toBeCloseTo(25);
+  });
+
+  it('lisse aussi le temps restant, qui ne descend plus par a-coups (etape 8.9)', () => {
+    const tampon = new TamponDeLissage();
+    tampon.observer(vue(1, [], 60_000), 1_000);
+    expect(tampon.vueLissee(1_020)?.tempsRestantMs).toBe(60_000);
+
+    tampon.observer(vue(2, [], 59_950), 1_050);
+
+    expect(tampon.vueLissee(1_050)?.tempsRestantMs).toBe(60_000);
+    expect(tampon.vueLissee(1_075)?.tempsRestantMs).toBeCloseTo(59_975);
+    // Au bout de l'intervalle, le dernier temps recu, et pas au-dela.
+    expect(tampon.vueLissee(1_200)?.tempsRestantMs).toBe(59_950);
   });
 
   it('part de la position precedente au moment exact de l arrivee', () => {

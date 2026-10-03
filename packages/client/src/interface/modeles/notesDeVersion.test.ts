@@ -56,4 +56,16 @@ describe('les notes de version', () => {
     ]);
     expect(note?.sections[1]?.puces[0]?.texte).toContain('double son score jusqu’à la fin');
   });
+
+  it('annoncent la Station lunaire en version 1.6 (etape 8.9)', () => {
+    const note = noteDeLaVersion('1.6.0');
+
+    expect(note?.titre).toBe('Nouveautés de la version 1.6');
+    expect(note?.sections.map((section) => section.titre)).toEqual(['La Station lunaire']);
+    expect(note?.sections[0]?.puces.map((puce) => puce.intitule)).toEqual([
+      'Une nouvelle carte.',
+      'De jour ou de nuit.',
+      'Un vaisseau.',
+    ]);
+  });
 });

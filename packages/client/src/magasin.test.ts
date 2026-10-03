@@ -105,7 +105,7 @@ describe('magasin', () => {
     let appels = 0;
 
     magasin.appliquer({ type: 'connexionEtablie' });
-    magasin.appliquer({ type: 'partieLancee' });
+    magasin.appliquer({ type: 'partieLancee', graineDuDecor: 1 });
     magasin.appliquer({ type: 'etat', trame: trame(5) });
 
     magasin.abonner(() => (appels += 1));

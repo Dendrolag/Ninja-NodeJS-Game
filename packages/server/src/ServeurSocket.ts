@@ -122,6 +122,7 @@ import {
   classementDe,
   instantaneDe,
   joueurDuSalon,
+  lancementDe,
   notificationsDe,
   partiePubliqueDe,
   salonDe,
@@ -766,7 +767,7 @@ export class ServeurSocket {
 
     this.annoncerLaPlace(socket, place);
     repondre({ valide: true, valeur: salonDe(room) });
-    socket.emit('partieLancee');
+    socket.emit('partieLancee', lancementDe(room));
     this.fluxDe(room).attendreUneImage(socket.id);
 
     if (room.hote !== hoteAvant) {
@@ -1264,7 +1265,7 @@ export class ServeurSocket {
     }
 
     room.lancer();
-    this.io.to(room.id).emit('partieLancee');
+    this.io.to(room.id).emit('partieLancee', lancementDe(room));
     this.amis?.partieChangee(room.id);
   }
 
@@ -1662,7 +1663,7 @@ export class ServeurSocket {
     // recevoir au prochain battement une image complete: les deltas de la salle
     // supposent une partie qu'il n'a pas.
     if (room.statut === 'enCours') {
-      socket.emit('partieLancee');
+      socket.emit('partieLancee', lancementDe(room));
       this.fluxDe(room).attendreUneImage(socket.id);
     }
 

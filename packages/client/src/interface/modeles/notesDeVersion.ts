@@ -12,6 +12,9 @@
  * LE TEXTE DE LA NOTE 1.5 est celui arrete avec le porteur du projet le 2 octobre
  * 2026. Le nouveau decor de Spirit & Time n'y figure pas, il garde son badge
  * « Prototype », et les modes n'y sont pas nommes.
+ *
+ * LA NOTE 1.6 annonce la Station lunaire (etape 8.9). Son texte est soumis au porteur du
+ * projet.
  */
 
 import { versionMineure } from '@neon-ninja/shared';
@@ -73,6 +76,31 @@ export const NOTES_DE_VERSION: readonly NoteDeVersion[] = [
           {
             texte:
               'Un ninja rayé rouge et blanc surgit une fois par partie. Il court plus vite que vous et repart au bout de 45 secondes. Qui l’attrape double son score jusqu’à la fin… à moins de se faire capturer à son tour.',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    version: '1.6',
+    titre: 'Nouveautés de la version 1.6',
+    sections: [
+      {
+        titre: 'La Station lunaire',
+        puces: [
+          {
+            intitule: 'Une nouvelle carte.',
+            texte:
+              'Le toit d’une station posée sur la Lune, avec son quai en contrebas et deux monte-charges pour passer de l’un à l’autre.',
+          },
+          {
+            intitule: 'De jour ou de nuit.',
+            texte: 'L’hôte choisit l’éclairage dans les réglages de la partie.',
+          },
+          {
+            intitule: 'Un vaisseau.',
+            texte:
+              'Il arrive au début de la partie, survole lentement la station et repart à la fin, jamais par le même chemin. Il cache ce qui passe dessous… sauf vous.',
           },
         ],
       },
