@@ -120,6 +120,7 @@ export type {
 export type {
   BonusActive,
   BotNoirDetruit,
+  BotNoirToucheVu,
   BotVu,
   CaptureParBotNoirSubie,
   CaptureReussie,

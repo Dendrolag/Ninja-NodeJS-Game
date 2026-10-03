@@ -68,6 +68,7 @@ import {
   ALPHA_INVISIBLE,
   APPARENCE_EVADE,
   APPARENCE_FUMEE,
+  APPARENCE_IMPACT_BOT_NOIR,
   APPARENCE_KATANA,
   APPARENCE_OBJET,
   APPARENCE_TIR,
@@ -215,6 +216,8 @@ export interface Scene {
   readonly mines: IndicateurScene;
   /** Les explosions des mines, par-dessus les personnages et sous les toits (etape 7.11). */
   readonly explosions: readonly DisqueScene[];
+  /** Les impacts de tir sur les bots noirs, par-dessus les personnages (revision du 3 octobre 2026 de l'etape 7.1). */
+  readonly impacts: readonly DisqueScene[];
   /**
    * L'image de la planche de pluie a montrer, sur une carte qui en a une. Absente
    * d'une scene vide; le rendu l'ignore sur une carte sans pluie.
@@ -249,6 +252,7 @@ export const SCENE_VIDE: Scene = {
   fumees: [],
   mines: AUCUN_INDICATEUR,
   explosions: [],
+  impacts: [],
   sang: [],
   secousse: { x: 0, y: 0 },
 };
@@ -573,6 +577,7 @@ export function construireScene(
     fumees: nuagesDeFumee(etat, lissee, maintenant),
     mines: mines.sol,
     explosions: mines.explosions,
+    impacts: impactsSurLesBotsNoirs(etat, lissee, maintenant),
     sang: massacre.sang,
     secousse: massacre.secousse,
     imageDePluie: imageDePluie(maintenant),
@@ -695,6 +700,68 @@ function tirsRecents(
   });
 
   return cones;
+}
+
+/**
+ * Les impacts de tir sur les bots noirs du moment (revision du 3 octobre 2026 de l'etape 7.1): un eclat blanc et un anneau
+ * qui s'elargit, centres sur le bot noir touche.
+ *
+ * L'impact suit le bot noir tant que celui-ci est sur la carte, puisqu'il continue d'avancer;
+ * s'il vient de tomber, ou n'est pas dans la vue, l'impact reste ou le coup a porte.
+ */
+function impactsSurLesBotsNoirs(
+  etat: EtatClient,
+  lissee: VueLissee,
+  maintenant: number,
+): readonly DisqueScene[] {
+  const forme = APPARENCE_IMPACT_BOT_NOIR;
+  const disques: DisqueScene[] = [];
+
+  etat.journal.forEach((fait, rang) => {
+    if (fait.nature !== 'botNoirTouche') {
+      return;
+    }
+
+    const progression = (maintenant - fait.instant) / forme.dureeMs;
+
+    if (progression < 0 || progression >= 1) {
+      return;
+    }
+
+    const { botNoir, coups } = fait.charge;
+    const suivi = lissee.entites.find(({ entite }) => entite.id === botNoir);
+    const x = suivi?.x ?? fait.charge.x;
+    const y = suivi?.y ?? fait.charge.y;
+    const opacite = 1 - progression;
+    const fin = forme.rayonFin * (1 + forme.gainParCoup * (coups - 1));
+    const rayon = forme.rayonDepart + (fin - forme.rayonDepart) * progression;
+    const id = `impact:${String(rang)}`;
+
+    disques.push(
+      {
+        id: `${id}:eclat`,
+        x,
+        y,
+        rayon: forme.rayonDepart + (rayon - forme.rayonDepart) * 0.5,
+        remplissage: { couleur: forme.eclat, alpha: opacite * 0.7 },
+        contour: undefined,
+      },
+      {
+        id: `${id}:anneau`,
+        x,
+        y,
+        rayon,
+        remplissage: undefined,
+        contour: {
+          couleur: forme.anneau,
+          alpha: opacite,
+          epaisseur: forme.epaisseurAnneau,
+        },
+      },
+    );
+  });
+
+  return disques;
 }
 
 /**

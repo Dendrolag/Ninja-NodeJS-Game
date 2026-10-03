@@ -112,6 +112,29 @@ describe('le mode Tactique dans la projection', () => {
       captures: 0,
     });
   });
+
+  it('previent chaque joueur du coup, avec le bot touche et le compte de ses coups', () => {
+    let etat = partieTactiqueADeux();
+    etat = ajouterBot(etat, { id: 'noir', type: 'botNoir', position: { x: 540, y: 500 } });
+
+    const apres = tick(
+      etat,
+      { alice: { deplacement: { x: 0, y: 0 }, enMouvement: false, capturer: true } },
+      50,
+    );
+    const coups = notificationsDe(apres).filter(
+      (notification) => notification.nom === 'botNoirTouche',
+    );
+
+    expect(coups.map((coup) => coup.pour)).toEqual(['alice', 'bob']);
+    expect(coups[0]?.charge).toEqual({
+      botNoir: 'noir',
+      x: apres.bots['noir']?.position.x,
+      y: apres.bots['noir']?.position.y,
+      coups: 1,
+      coupsRequis: TACTIQUE.COUPS_POUR_VAINCRE_UN_BOT_NOIR,
+    });
+  });
 });
 
 describe('le mode Chasse dans la projection', () => {

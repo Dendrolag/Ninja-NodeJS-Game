@@ -236,6 +236,8 @@ export const TACTIQUE = {
   RECHARGE_MS: 5000,
   /** Orientation d'un joueur qui ne s'est pas encore deplace. */
   ORIENTATION_DE_DEPART: 'est',
+  /** Tirs qu'il faut a un bot noir pour tomber (revision du 3 octobre 2026 de l'etape 7.1): un tir ne le capture pas. */
+  COUPS_POUR_VAINCRE_UN_BOT_NOIR: 3,
 } as const satisfies {
   readonly ORIENTATION_DE_DEPART: Orientation;
   readonly [reglage: string]: number | Orientation;

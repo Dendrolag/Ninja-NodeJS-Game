@@ -22,6 +22,7 @@
 import type {
   BonusActive,
   BotNoirDetruit,
+  BotNoirToucheVu,
   CaptureParBotNoirSubie,
   CaptureReussie,
   CaptureSubie,
@@ -63,6 +64,8 @@ export interface ChargesDeFait {
   captureParBotNoir: CaptureParBotNoirSubie;
   /** Ce joueur, invincible, vient de detruire un bot noir. */
   botNoirDetruit: BotNoirDetruit;
+  /** Un tir du Tactique vient de toucher un bot noir sans le vaincre. */
+  botNoirTouche: BotNoirToucheVu;
   /** Ce joueur vient de ramasser un bonus. */
   bonusActive: BonusActive;
   /** Ce joueur vient de ramasser un malus, dont il est le seul epargne. */

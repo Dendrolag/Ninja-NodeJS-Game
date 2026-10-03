@@ -693,6 +693,24 @@ export const APPARENCE_TIR = {
 } as const;
 
 /**
+ * L'impact d'un tir sur un bot noir, dans le mode Tactique (revision du 3 octobre 2026 de l'etape 7.1): un eclat blanc au
+ * coeur et un anneau qui s'elargit en s'effacant, pour confirmer que le tir a porte sans
+ * que le bot noir ne tombe. Le deuxieme coup, qui le laisse a un tir de la fin, est plus
+ * large et plus vif que le premier.
+ */
+export const APPARENCE_IMPACT_BOT_NOIR = {
+  dureeMs: 420,
+  eclat: 0xffffff,
+  anneau: 0xff3b3b,
+  /** Rayon de l'anneau au depart et a la fin, en pixels, pour le premier coup. */
+  rayonDepart: 10,
+  rayonFin: 34,
+  /** Ce que chaque coup de plus ajoute au rayon final, en proportion. */
+  gainParCoup: 0.35,
+  epaisseurAnneau: 3,
+} as const;
+
+/**
  * Le katana du mode Massacre (etape 7.4): la visee, la trainee du coup, l'eclat des morts,
  * les cadavres, le sang discret et la secousse de la camera.
  *

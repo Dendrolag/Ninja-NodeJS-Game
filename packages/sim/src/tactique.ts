@@ -15,6 +15,11 @@
  * captures de joueur vaut ici comme ailleurs. Un tir qui capture coute une charge;
  * un tir sans effet ne coute rien. Les charges reviennent une par une.
  *
+ * LES BOTS NOIRS (revision du 3 octobre 2026 de l'etape 7.1). Un tir ne les capture pas, il les touche: le troisieme
+ * tir recu les vainc, quel que soit le tireur, et lui rapporte les quinze points d'un bot
+ * noir detruit. Chaque tir qui touche laisse un evenement, pour que l'ecran confirme qu'il
+ * a porte, et coute une charge comme une capture.
+ *
  * CE QUE LE PORTAGE CHANGE, ET POURQUOI:
  *
  *   - Le tir se resout DANS LE BATTEMENT, pas a la reception du message. La v0.9.0
@@ -48,7 +53,7 @@ import type {
 } from '@neon-ninja/shared';
 import { CONES_DES_VISEES as CONES_VISES, TACTIQUE, entier } from '@neon-ninja/shared';
 
-import { capturerBot, capturerJoueur } from './capture.js';
+import { abattreUnBotNoir, capturerBot, capturerJoueur } from './capture.js';
 import { attraperLEvade, evadeSurLaCarte } from './evade.js';
 import type { DureesRestantes } from './effets.js';
 import { fairePasserLeTemps } from './effets.js';
@@ -267,11 +272,11 @@ export function vieillirLesEffets(
  * protection d'apparition, invincibilite, delai entre deux captures de joueur,
  * couleur deja portee. Les joueurs d'abord, puis les bots, comme dans la v0.9.0: les
  * bots d'une victime passent au tireur avant que le cone ne repeigne les autres. Les
- * bots noirs ne sont pas des cibles. L'Evade en est une, la derniere (etape 7.9).
+ * bots noirs ne se capturent pas, ils encaissent des coups (toucherUnBotNoir). L'Evade en est une, la derniere (etape 7.9).
  *
  * Sans charge, le tir n'a pas lieu. Avec une charge, il a lieu et laisse un evenement
  * au journal, meme s'il ne capture rien; il ne coute la charge que s'il capture
- * quelque chose, et relance alors l'attente de la prochaine.
+ * quelque chose ou touche un bot noir, et relance alors l'attente de la prochaine.
  *
  * Les objets du Tactique (etape 7.7) changent trois choses: le cone est celui de la visee
  * du tireur; pendant une Rafale un tir ne coute rien, et part meme sans charge; sous Tir
@@ -279,6 +284,80 @@ export function vieillirLesEffets(
  */
 export function tirer(etat: EtatPartie, tireurId: IdentifiantEntite): EtatPartie {
   return unTir(etat, tireurId).etat;
+}
+
+/**
+ * Un tir touche un bot noir: un coup de plus, et le dernier le vainc.
+ *
+ * Le bot noir qui tombe est retire par abattreUnBotNoir, qui credite le tireur comme la
+ * destruction par un invincible. Les autres coups laissent un evenement botNoirTouche,
+ * que le serveur relaie a tous les joueurs pour l'effet visuel.
+ */
+function toucherUnBotNoir(
+  etat: EtatPartie,
+  tireurId: IdentifiantEntite,
+  botNoirId: IdentifiantEntite,
+): EtatPartie {
+  const botNoir = etat.bots[botNoirId];
+
+  if (botNoir === undefined) {
+    return etat;
+  }
+
+  const coups = (etat.coupsSurBotsNoirs?.[botNoirId] ?? 0) + 1;
+  const coupsRequis = TACTIQUE.COUPS_POUR_VAINCRE_UN_BOT_NOIR;
+
+  if (coups >= coupsRequis) {
+    return abattreUnBotNoir(
+      { ...etat, coupsSurBotsNoirs: sansCeBotNoir(etat.coupsSurBotsNoirs, botNoirId) },
+      tireurId,
+      botNoirId,
+    );
+  }
+
+  return {
+    ...etat,
+    coupsSurBotsNoirs: { ...etat.coupsSurBotsNoirs, [botNoirId]: coups },
+    evenements: [
+      ...etat.evenements,
+      {
+        type: 'botNoirTouche',
+        joueur: tireurId,
+        botNoir: botNoirId,
+        position: botNoir.position,
+        coups,
+        coupsRequis,
+      },
+    ],
+  };
+}
+
+/** Le compte des coups, moins un bot noir. */
+function sansCeBotNoir(
+  coups: EtatPartie['coupsSurBotsNoirs'],
+  botNoirId: IdentifiantEntite,
+): Readonly<Record<IdentifiantEntite, number>> {
+  return Object.fromEntries(Object.entries(coups ?? {}).filter(([id]) => id !== botNoirId));
+}
+
+/**
+ * Efface le compte des bots noirs qui ne sont plus sur la carte (detruits par une mine ou
+ * par un invincible), pour que le compte ne grossisse pas pendant la partie. Sans compte
+ * a nettoyer, l'etat est rendu tel quel.
+ */
+function oublierLesBotsNoirsDisparus(etat: EtatPartie): EtatPartie {
+  const coups = etat.coupsSurBotsNoirs;
+
+  if (coups === undefined || Object.keys(coups).every((id) => etat.bots[id] !== undefined)) {
+    return etat;
+  }
+
+  return {
+    ...etat,
+    coupsSurBotsNoirs: Object.fromEntries(
+      Object.entries(coups).filter(([id]) => etat.bots[id] !== undefined),
+    ),
+  };
 }
 
 /** Ce qu'un tir laisse derriere lui. */
@@ -304,6 +383,7 @@ function unTir(etat: EtatPartie, tireurId: IdentifiantEntite): Tir {
   const victimes: IdentifiantEntite[] = [];
   let courant = etat;
   let captures = 0;
+  let touches = 0;
 
   for (const cible of Object.values(etat.joueurs)) {
     if (cible.id !== tireurId && dansLeCone(position, orientation, cible.position, cone)) {
@@ -328,6 +408,14 @@ function unTir(etat: EtatPartie, tireurId: IdentifiantEntite): Tir {
     }
   }
 
+  // Les bots noirs ne se capturent pas: chaque tir qui les atteint en touche un coup.
+  for (const bot of Object.values(etat.bots)) {
+    if (bot.type === 'botNoir' && dansLeCone(position, orientation, bot.position, cone)) {
+      courant = toucherUnBotNoir(courant, tireurId, bot.id);
+      touches += 1;
+    }
+  }
+
   // L'Evade pris dans le cone est attrape, et compte comme une capture: le tir coute une
   // charge, comme pour un PNJ (etape 7.9, micro-decision 7 de la fiche).
   const evade = evadeSurLaCarte(etat);
@@ -338,7 +426,7 @@ function unTir(etat: EtatPartie, tireurId: IdentifiantEntite): Tir {
   }
 
   const armeApres =
-    captures > 0 && tirPayant(arme)
+    (captures > 0 || touches > 0) && tirPayant(arme)
       ? { ...arme, charges: arme.charges - 1, avantProchaineChargeMs: TACTIQUE.RECHARGE_MS }
       : arme;
 
@@ -375,6 +463,7 @@ function unTir(etat: EtatPartie, tireurId: IdentifiantEntite): Tir {
  * battement: un joueur arrete, ou bloque contre un mur, garde son orientation.
  */
 export function agirEnTactique(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPartie {
+  const depart = oublierLesBotsNoirsDisparus(etat);
   const table: Record<IdentifiantEntite, EtatTactiqueDuJoueur> = {};
 
   for (const joueur of Object.values(etat.joueurs)) {
@@ -391,7 +480,7 @@ export function agirEnTactique(etat: EtatPartie, entrees: Entrees, dtMs: number)
 
   const tirage = ordreDesTirs(etat, entrees);
   const capturesDuBattement = new Set<IdentifiantEntite>();
-  let courant: EtatPartie = { ...etat, tactique: table, alea: tirage.alea };
+  let courant: EtatPartie = { ...depart, tactique: table, alea: tirage.alea };
 
   for (const tireurId of tirage.ordre) {
     // Capture par un tir precedent, le joueur vient d'etre deplace: le tir qu'il

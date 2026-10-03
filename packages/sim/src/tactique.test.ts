@@ -204,17 +204,116 @@ describe('tirer', () => {
     ]);
   });
 
-  it('ne vise pas les bots noirs', () => {
-    const depart = ajouterBot(situation(), {
-      id: 'noir',
-      type: 'botNoir',
-      position: { x: 550, y: 500 },
+  describe('bots noirs', () => {
+    const avecBotNoir = (etat: EtatPartie, id = 'noir', x = 550): EtatPartie =>
+      ajouterBot(etat, { id, type: 'botNoir', position: { x, y: 500 } });
+
+    const touches = (etat: EtatPartie): readonly { coups: number; coupsRequis: number }[] =>
+      etat.evenements.flatMap((evenement) =>
+        evenement.type === 'botNoirTouche'
+          ? [{ coups: evenement.coups, coupsRequis: evenement.coupsRequis }]
+          : [],
+      );
+
+    it('ne capture pas un bot noir: le premier tir le touche, il reste en place', () => {
+      const depart = avecBotNoir(situation());
+
+      const apres = tirer(depart, 'tireur');
+
+      expect(apres.bots['noir']).toEqual(depart.bots['noir']);
+      expect(apres.coupsSurBotsNoirs).toEqual({ noir: 1 });
+      expect(touches(apres)).toEqual([
+        { coups: 1, coupsRequis: TACTIQUE.COUPS_POUR_VAINCRE_UN_BOT_NOIR },
+      ]);
+      expect(apres.evenements).toContainEqual({
+        type: 'botNoirTouche',
+        joueur: 'tireur',
+        botNoir: 'noir',
+        position: { x: 550, y: 500 },
+        coups: 1,
+        coupsRequis: 3,
+      });
     });
 
-    const apres = tirer(depart, 'tireur');
+    it('coute une charge, comme une capture, et laisse le captures du tir a zero', () => {
+      const apres = tirer(avecBotNoir(situation()), 'tireur');
 
-    expect(apres.bots['noir']).toEqual(depart.bots['noir']);
-    expect(etatTactiqueDe(apres, 'tireur').charges).toBe(TACTIQUE.CHARGES_MAXIMUM);
+      expect(etatTactiqueDe(apres, 'tireur').charges).toBe(TACTIQUE.CHARGES_MAXIMUM - 1);
+      expect(tirsAuJournal(apres)[0]?.captures).toBe(0);
+    });
+
+    it('tombe au troisieme tir, et rapporte ses quinze points au tireur', () => {
+      let etat = avecBotNoir(situation());
+
+      etat = tirer(etat, 'tireur');
+      etat = { ...etat, evenements: [] };
+      etat = tirer(etat, 'tireur');
+
+      expect(touches(etat)).toEqual([{ coups: 2, coupsRequis: 3 }]);
+      expect(etat.bots['noir']).toBeDefined();
+
+      etat = { ...etat, evenements: [] };
+      etat = tirer(etat, 'tireur');
+
+      expect(etat.bots['noir']).toBeUndefined();
+      expect(etat.coupsSurBotsNoirs).toEqual({});
+      expect(touches(etat)).toEqual([]);
+      expect(etat.joueurs['tireur']?.botsNoirsDetruits).toBe(1);
+      expect(etat.evenements).toContainEqual(
+        expect.objectContaining({ type: 'botNoirDetruit', joueur: 'tireur', botNoir: 'noir' }),
+      );
+    });
+
+    it('compte les tirs de tous les joueurs ensemble, et le dernier en a le benefice', () => {
+      let etat = avecJoueur(situation(), 'autre', VERT, { x: 520, y: 450 });
+      etat = avecBotNoir(etat, 'noir', 550);
+
+      etat = tirer(etat, 'tireur');
+      etat = tirer(etat, 'tireur');
+      etat = tirer(etat, 'autre');
+      // L'autre joueur regarde vers l'est depuis (520, 450): le bot noir est hors de son cone.
+      expect(etat.bots['noir']).toBeDefined();
+
+      etat = armer(etat, 'autre', { orientation: 'sud_est' });
+      etat = tirer(etat, 'autre');
+
+      expect(etat.bots['noir']).toBeUndefined();
+      expect(etat.joueurs['autre']?.botsNoirsDetruits).toBe(1);
+      expect(etat.joueurs['tireur']?.botsNoirsDetruits).toBe(0);
+    });
+
+    it('touche chaque bot noir du cone d un seul coup, sans toucher les autres', () => {
+      let etat = avecBotNoir(situation(), 'a', 540);
+      etat = avecBotNoir(etat, 'b', 580);
+      etat = avecBotNoir(etat, 'loin', 900);
+
+      etat = tirer(etat, 'tireur');
+
+      expect(etat.coupsSurBotsNoirs).toEqual({ a: 1, b: 1 });
+      expect(etatTactiqueDe(etat, 'tireur').charges).toBe(TACTIQUE.CHARGES_MAXIMUM - 1);
+    });
+
+    it('ne perd pas le compte entre deux battements, et oublie un bot noir disparu', () => {
+      let etat = avecBotNoir(situation());
+
+      etat = tirer(etat, 'tireur');
+      etat = agirEnTactique(etat, {}, BATTEMENT_MS);
+
+      expect(etat.coupsSurBotsNoirs).toEqual({ noir: 1 });
+
+      const { noir: _disparu, ...sans } = etat.bots;
+      etat = agirEnTactique({ ...etat, bots: sans }, {}, BATTEMENT_MS);
+
+      expect(etat.coupsSurBotsNoirs).toEqual({});
+    });
+
+    it('part dans le battement: un tir demande touche le bot noir', () => {
+      const depart = avecBotNoir(situation());
+
+      const apres = agirEnTactique(depart, tirs('tireur'), BATTEMENT_MS);
+
+      expect(apres.coupsSurBotsNoirs).toEqual({ noir: 1 });
+    });
   });
 
   it('capture un joueur du cone, qui cede tous ses bots d un coup', () => {

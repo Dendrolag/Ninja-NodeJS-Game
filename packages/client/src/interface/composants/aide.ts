@@ -138,6 +138,7 @@ const REGLES_DES_MODES: Readonly<Record<Mode, readonly string[]>> = {
   tactique: [
     'Toucher ne capture plus. Espace ou le bouton Capturer prend tout ce qui se trouve dans le cône, à courte distance devant vous.',
     `Vous avez ${String(TACTIQUE.CHARGES_MAXIMUM)} charges, que l’arc sous votre ninja montre. Un tir qui prend quelque chose en coûte une, qui revient en ${String(TACTIQUE.RECHARGE_MS / 1000)} secondes. Un tir dans le vide ne coûte rien.`,
+    `Un Black Ninja ne se capture pas. Il encaisse ${String(TACTIQUE.COUPS_POUR_VAINCRE_UN_BOT_NOIR)} tirs, un éclat confirme chaque coup, et le dernier le détruit pour ${String(SCORE.POINTS_PAR_BOT_NOIR)} points.`,
     'La vue est plus proche que dans les autres modes, et la minimap ne montre que les joueurs autour de vous. Six objets propres au mode changent votre arme ou celle des autres.',
   ],
   equipes: [
@@ -171,7 +172,7 @@ export function monterAide(doc: Document): Fenetre {
           'Des joueurs et des centaines de PNJ, ces ninjas sans joueur, se partagent la carte. Chaque mode en fait autre chose. Le meilleur score à la fin de la partie l’emporte.',
       }),
       creer(doc, 'p', {
-        texte: `Les Black Ninjas débarquent en cours de partie et chassent les joueurs. S’ils vous attrapent, vous perdez une partie de votre score. Invincible, vous les détruisez en les touchant et chacun rapporte ${String(SCORE.POINTS_PAR_BOT_NOIR)} points. En Massacre, seul le katana en vient à bout.`,
+        texte: `Les Black Ninjas débarquent en cours de partie et chassent les joueurs. S’ils vous attrapent, vous perdez une partie de votre score. Invincible, vous les détruisez en les touchant et chacun rapporte ${String(SCORE.POINTS_PAR_BOT_NOIR)} points. En Massacre, seul le katana en vient à bout. En Tactique, trois tirs suffisent.`,
       }),
     ),
     // L'Evade (etape 7.9), dans tous les modes sauf la Chasse.

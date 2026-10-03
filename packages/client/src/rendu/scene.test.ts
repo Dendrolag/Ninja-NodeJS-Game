@@ -34,6 +34,7 @@ import { SCENE_VIDE, construireScene, couleurEnNombre, nuage } from './scene.js'
 import {
   APPARENCE_EVADE,
   APPARENCE_FUMEE,
+  APPARENCE_IMPACT_BOT_NOIR,
   APPARENCE_ZONE,
   AURA_DU_BLACK_NINJA,
 } from './apparence.js';
@@ -711,6 +712,54 @@ describe("l'Evade dans la scene (etape 7.9)", () => {
     const scene = construireScene(etatEnJeu('moi'), lissee(vue([joueur('moi', 0, 0)])), 0);
 
     expect(scene.marques).toEqual([]);
+  });
+});
+
+describe('les impacts de tir sur un bot noir (revision du 3 octobre 2026)', () => {
+  /** Un coup porte a ce bot noir, a cet instant. */
+  function coup(coups: number, instant: number): FaitDeJeu {
+    return fait(
+      'botNoirTouche',
+      { botNoir: 'noir', x: 100, y: 100, coups, coupsRequis: 3 },
+      instant,
+    );
+  }
+
+  it('dessine un eclat et un anneau pendant sa duree seulement', () => {
+    const partie = lissee(vue([joueur('moi', 300, 300), bot('noir', 120, 130, 'botNoir')]));
+    const etat = { ...etatEnJeu('moi'), journal: [coup(1, 1000)] };
+
+    const pendant = construireScene(etat, partie, 1100);
+    expect(pendant.impacts.map((disque) => disque.id.split(':')[2])).toEqual(['eclat', 'anneau']);
+    expect(pendant.impacts[1]?.contour?.couleur).toBe(APPARENCE_IMPACT_BOT_NOIR.anneau);
+
+    expect(construireScene(etat, partie, 1000 + APPARENCE_IMPACT_BOT_NOIR.dureeMs).impacts).toEqual(
+      [],
+    );
+    expect(construireScene(etat, partie, 999).impacts).toEqual([]);
+  });
+
+  it('suit le bot noir, et reste ou le coup a porte quand il n est plus la', () => {
+    const etat = { ...etatEnJeu('moi'), journal: [coup(1, 1000)] };
+
+    const avecLeBot = construireScene(
+      etat,
+      lissee(vue([joueur('moi', 300, 300), bot('noir', 120, 130, 'botNoir')])),
+      1100,
+    );
+    expect([avecLeBot.impacts[0]?.x, avecLeBot.impacts[0]?.y]).toEqual([120, 130]);
+
+    const sansLeBot = construireScene(etat, lissee(vue([joueur('moi', 300, 300)])), 1100);
+    expect([sansLeBot.impacts[0]?.x, sansLeBot.impacts[0]?.y]).toEqual([100, 100]);
+  });
+
+  it('elargit plus l anneau du deuxieme coup que celui du premier', () => {
+    const partie = lissee(vue([joueur('moi', 300, 300), bot('noir', 120, 130, 'botNoir')]));
+    const anneau = (coups: number): number =>
+      construireScene({ ...etatEnJeu('moi'), journal: [coup(coups, 1000)] }, partie, 1300)
+        .impacts[1]?.rayon ?? 0;
+
+    expect(anneau(2)).toBeGreaterThan(anneau(1));
   });
 });
 

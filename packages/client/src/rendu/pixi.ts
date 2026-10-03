@@ -748,8 +748,9 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       majPersonnages(spritesEntites, entites, scene.entites, champ, numeroDImage, calquesParImage);
       dessinerLIndicateur(indicateur, scene.indicateur, champ);
       dessinerLesMarques(marques, textesDesMarques, badges, scene.marques);
-      // Les explosions des mines passent avec les nuages, par-dessus les personnages.
-      dessinerLesDisques(fumees, [...scene.fumees, ...scene.explosions], champ);
+      // Les explosions des mines et les impacts de tir passent avec les nuages, par-dessus les
+      // personnages.
+      dessinerLesDisques(fumees, [...scene.fumees, ...scene.explosions, ...scene.impacts], champ);
       dessinerLesReperes(reperes, scene.reperes);
     },
 

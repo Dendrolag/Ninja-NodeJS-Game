@@ -25,6 +25,7 @@
 import type {
   BonusActive,
   BotNoirDetruit,
+  BotNoirToucheVu,
   CaptureParBotNoirSubie,
   CaptureReussie,
   CaptureSubie,
@@ -434,6 +435,11 @@ export type Notification =
       readonly pour: IdentifiantEntite;
       readonly charge: BotNoirDetruit;
     }
+  | {
+      readonly nom: 'botNoirTouche';
+      readonly pour: IdentifiantEntite;
+      readonly charge: BotNoirToucheVu;
+    }
   | { readonly nom: 'bonusActive'; readonly pour: IdentifiantEntite; readonly charge: BonusActive }
   | {
       readonly nom: 'malusRamasse';
@@ -584,6 +590,20 @@ function notificationsDUnFait(
           },
         },
       ];
+
+    case 'botNoirTouche':
+      // Un coup se voit de toute la partie: chaque joueur present en est prevenu.
+      return Object.keys(etat.joueurs).map((pour): Notification => ({
+        nom: 'botNoirTouche',
+        pour,
+        charge: {
+          botNoir: evenement.botNoir,
+          x: evenement.position.x,
+          y: evenement.position.y,
+          coups: evenement.coups,
+          coupsRequis: evenement.coupsRequis,
+        },
+      }));
 
     case 'bonusRamasse':
       return [

@@ -475,6 +475,22 @@ export interface BotNoirDetruit {
   readonly y: number;
 }
 
+/**
+ * Un tir du mode Tactique vient de toucher un bot noir sans le vaincre (revision du 3 octobre 2026 de l'etape 7.1).
+ * Adresse a tous les joueurs: chacun voit le coup porter, comme il voit l'eclair du tir.
+ */
+export interface BotNoirToucheVu {
+  /** Identifiant du bot noir touche: l'effet le suit tant qu'il dure. */
+  readonly botNoir: string;
+  /** Ou le bot noir se trouvait quand il a ete touche. */
+  readonly x: number;
+  readonly y: number;
+  /** Les tirs qu'il a recus, celui-ci compris. */
+  readonly coups: number;
+  /** Les tirs qu'il faut en tout pour le vaincre. */
+  readonly coupsRequis: number;
+}
+
 /** Un joueur vient de ramasser un bonus. Adresse a lui seul. */
 export interface BonusActive {
   /** Un bonus du jeu d'origine, ou un des trois du Tactique (etape 7.7). */
@@ -1140,6 +1156,9 @@ export interface EvenementsServeurVersClient {
 
   /** Ce joueur vient de detruire un bot noir. */
   botNoirDetruit: (destruction: BotNoirDetruit) => void;
+
+  /** Un tir vient de toucher un bot noir sans le vaincre, dans le Tactique (revision du 3 octobre 2026 de l'etape 7.1). */
+  botNoirTouche: (touche: BotNoirToucheVu) => void;
 
   /** Ce joueur vient de ramasser un bonus. Remplace activateBonus. */
   bonusActive: (bonus: BonusActive) => void;

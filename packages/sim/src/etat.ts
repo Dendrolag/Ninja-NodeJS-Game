@@ -370,6 +370,25 @@ export interface DestructionDeBotNoir {
 }
 
 /**
+ * Un tir du mode Tactique vient de toucher un bot noir sans le vaincre (revision du 3 octobre 2026 de l'etape 7.1).
+ *
+ * Il faut plusieurs tirs pour en venir a bout: le dernier laisse un evenement de
+ * destruction (DestructionDeBotNoir), les precedents celui-ci, pour que l'ecran confirme
+ * que le tir a porte.
+ */
+export interface BotNoirTouche {
+  readonly type: 'botNoirTouche';
+  readonly joueur: IdentifiantEntite;
+  readonly botNoir: IdentifiantEntite;
+  /** Ou le bot noir se trouvait quand il a ete touche. */
+  readonly position: Position;
+  /** Les tirs qu'il a recus, celui-ci compris. */
+  readonly coups: number;
+  /** Les tirs qu'il faut en tout pour le vaincre. */
+  readonly coupsRequis: number;
+}
+
+/**
  * Un fait notable survenu pendant un battement.
  *
  * C'est ce que le moteur laisse a la couche qui l'appelle: le serveur en fait des
@@ -384,6 +403,7 @@ export type EvenementPartie =
   | CaptureDeJoueur
   | CaptureParBotNoir
   | DestructionDeBotNoir
+  | BotNoirTouche
   | BonusRamasse
   | MalusRamasse
   | TirDeCapture
@@ -847,6 +867,14 @@ export interface EtatPartie {
    * de depart (voir etatTactiqueDe dans tactique.ts).
    */
   readonly tactique?: Readonly<Record<IdentifiantEntite, EtatTactiqueDuJoueur>>;
+  /**
+   * Les tirs que chaque bot noir a deja recus, dans une partie Tactique (revision du 3 octobre 2026 de l'etape 7.1).
+   *
+   * ABSENT D'UNE PARTIE D'UN AUTRE MODE, et d'une partie Tactique ou aucun bot noir n'a
+   * ete touche, comme l'etat tactique: seuls les bots noirs deja touches y figurent, et
+   * un bot noir detruit en sort. Voir toucherUnBotNoir dans tactique.ts.
+   */
+  readonly coupsSurBotsNoirs?: Readonly<Record<IdentifiantEntite, number>>;
   /**
    * Les roles d'une partie Chasse: ses traqueurs, leurs vies et leur arme, et le parcours
    * de ses proies (etape 7.3).

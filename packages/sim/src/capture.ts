@@ -319,13 +319,32 @@ export function detruireBotNoir(
   botNoirId: IdentifiantEntite,
 ): EtatPartie {
   const joueur = etat.joueurs[joueurId];
-  const botNoir = etat.bots[botNoirId];
 
-  if (joueur === undefined || botNoir === undefined || botNoir.type !== 'botNoir') {
+  if (joueur === undefined || !estInvincible(joueur)) {
     return etat;
   }
 
-  if (!estInvincible(joueur)) {
+  return abattreUnBotNoir(etat, joueurId, botNoirId);
+}
+
+/**
+ * Retire un bot noir de la partie et en credite le joueur, sans condition sur le joueur.
+ *
+ * C'est le corps de detruireBotNoir, que le tir du mode Tactique atteint par un autre
+ * chemin (revision du 3 octobre 2026 de l'etape 7.1): trois tirs suffisent, invincible ou non. Le joueur gagne les memes
+ * quinze points, comptes par son nombre de bots noirs detruits.
+ *
+ * Renvoie l'etat inchange si le joueur ou le bot noir a disparu.
+ */
+export function abattreUnBotNoir(
+  etat: EtatPartie,
+  joueurId: IdentifiantEntite,
+  botNoirId: IdentifiantEntite,
+): EtatPartie {
+  const joueur = etat.joueurs[joueurId];
+  const botNoir = etat.bots[botNoirId];
+
+  if (joueur === undefined || botNoir === undefined || botNoir.type !== 'botNoir') {
     return etat;
   }
 

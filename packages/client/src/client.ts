@@ -441,6 +441,12 @@ export function creerClient(options: OptionsClient): Client {
   );
 
   ecouter(
+    reseau.sur('botNoirTouche', (charge) => {
+      magasin.appliquer({ type: 'fait', fait: fait('botNoirTouche', charge, maintenant()) });
+    }),
+  );
+
+  ecouter(
     reseau.sur('tirDeCapture', (charge) => {
       magasin.appliquer({ type: 'fait', fait: fait('tirDeCapture', charge, maintenant()) });
     }),

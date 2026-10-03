@@ -1912,6 +1912,10 @@ function envoyer(socket: SocketTypee, notification: Notification): void {
       socket.emit('botNoirDetruit', notification.charge);
       return;
 
+    case 'botNoirTouche':
+      socket.emit('botNoirTouche', notification.charge);
+      return;
+
     case 'bonusActive':
       socket.emit('bonusActive', notification.charge);
       return;

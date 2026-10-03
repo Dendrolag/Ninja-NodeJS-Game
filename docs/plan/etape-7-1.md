@@ -46,6 +46,8 @@ Relevé dans le code, pas dans sa documentation:
 3. **Visée: la dernière orientation.** Un joueur garde la direction de son dernier déplacement, et vise de ce côté même immobile.
 4. **Tactile: un bouton dédié**, fixe en bas à droite, qui porte l'état des charges. La manette ne peut pas naître sur lui.
 
+**Révision du 3 octobre 2026, demandée par le porteur du projet.** Les bots noirs ne sont plus intouchables au tir (point 3 de la v0.9.0, non porté tel quel). Un tir ne les capture pas, il les touche. Le troisième tir qu'un Black Ninja reçoit le détruit et rapporte ses 15 points au tireur, invincible ou non, et chaque coup montre un éclat blanc et un anneau rouge. Détail au journal de `docs/design/README.md`.
+
 Écartés par ces décisions: le contact qui capture encore les bots, le contact et le cône cumulés, le tir raté payant, les réglages du cône par l'hôte, le tir refusé à l'arrêt, le tap d'un second doigt.
 
 ## Décisions prises par cette fiche
