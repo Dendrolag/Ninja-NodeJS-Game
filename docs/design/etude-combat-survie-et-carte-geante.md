@@ -83,16 +83,36 @@ La seconde façon donne au joueur la même sensation, monter sur un toit, descen
 
 ### 2.6 L'hébergement
 
-Les mesures du socle sont faites sur un Ryzen 7 de développement. En production, l'offre gratuite de Render tient les parties actuelles à moins d'une milliseconde par battement (étape 8.6). Une partie géante de 60 joueurs est d'un autre ordre:
+**Précision du 3 octobre 2026: le porteur du projet veut rester sur un hébergement gratuit pour l'instant, et toutes ces idées servent un seul but, une Battle Royale.** La question devient: quelle Battle Royale tient sur un hébergement gratuit, et lequel ?
 
-- **Le calcul**: même avec la grille, quelques milliers de PNJ et 60 joueurs coûtent plusieurs millisecondes par battement sur le Ryzen. Sur la part de processeur d'une offre gratuite, c'est à mesurer, probablement trop.
-- **La bande passante**: sans filtrage, 60 joueurs qui reçoivent chacun plusieurs Ko vingt fois par seconde écrivent des dizaines de Mbit/s, soit une dizaine de Go par heure de partie. L'offre gratuite plafonne le trafic sortant par mois (montant à vérifier sur la page des tarifs de Render au moment de décider). Le filtrage par zone d'intérêt divise ce chiffre par cinq à dix.
+**Ce que donne l'offre gratuite de Render**, sur laquelle tourne le serveur de jeu: 512 Mo de mémoire, un dixième de processeur, 750 heures par mois, et une bande passante sortante comprise dans l'espace de travail. Selon une revue de la plateforme (jwatte.com, « Render.com in Mid-2026 »), cette bande passante comprise est passée de 100 à **5 Go par mois** le 1er août 2026; la documentation de Render ne donne pas le chiffre, qui est **à vérifier dans le tableau de bord de l'espace de travail**. Une fois la bande passante épuisée, Render facture le surplus, ou, sans moyen de paiement enregistré, **suspend le service jusqu'à la fin du mois** (documentation « Deploy for Free »).
 
-Conclusion: **une carte géante jouée à 60 suppose une offre payante**, de l'ordre de quelques dizaines d'euros par mois, à chiffrer avec une mesure réelle (chantier 1 de l'étude du 16 septembre).
+Ce que pèse le jeu sur ce fil, la page et les images étant servies par Vercel:
+
+| Partie                                                             | Débit sortant | Par heure de jeu | Heures par mois dans 5 Go |
+| ------------------------------------------------------------------ | ------------: | ---------------: | ------------------------: |
+| Horde pleine d'aujourd'hui, 12 joueurs, 464 octets par message     |     111 Ko/s |          0,4 Go |                       12 |
+| Battle Royale de 30 joueurs, filtrage par zone d'intérêt, 600 octets |     360 Ko/s |          1,3 Go |                         4 |
+| Battle Royale de 30 joueurs sans filtrage, 2 000 entités            |     2,1 Mo/s |          7,6 Go |               40 minutes |
+
+Le calcul et la mémoire ferment la porte eux aussi: un dixième de processeur laisse environ 5 ms par battement pour tout le serveur, toutes parties comprises, quand une partie de 1 500 entités en coûterait plusieurs même avec la grille; et 512 Mo ne tiennent pas le calcul des places d'une carte de plus de 5 000 sur 5 000 environ (section 2.3).
+
+**Sur l'offre gratuite de Render, la Battle Royale ne tient donc pas.** Et le chiffre de 5 Go, s'il se confirme, menace le jeu actuel lui-même: une douzaine d'heures de parties pleines par mois suffiraient à suspendre le serveur.
+
+**Une offre gratuite d'un autre ordre existe: Oracle Cloud « Always Free ».** Une machine virtuelle Arm (Ampere A1), 10 To de trafic sortant par mois, et une région à Francfort. La puissance comprise était de 4 cœurs et 24 Go; une source la dit réduite à 2 cœurs et 12 Go depuis juin 2026, à vérifier. Même réduite, c'est vingt fois le processeur et vingt fois la mémoire de Render, et deux mille fois sa bande passante: une Battle Royale de 30 à 50 joueurs y tient, une fois la grille et le filtrage faits. Le prix est ailleurs:
+
+- **Une carte bancaire** est demandée à l'inscription, pour vérifier l'identité, sans débit sur l'offre gratuite.
+- **Une machine à tenir soi-même**: système, mises à jour, certificat du domaine, redémarrage. Render faisait tout cela.
+- **La mise en ligne change**: `deploiement/` appelle aujourd'hui l'interface de Render; il faudrait pousser vers la machine, par exemple une image Docker lancée par SSH depuis la CI.
+- **Les machines A1 gratuites manquent parfois** dans une région, et Oracle récupère une instance gratuite restée inactive. Un serveur de jeu qui tourne n'est pas inactif.
+
+Conclusion: **gratuit, la Battle Royale passe par un changement d'hébergeur du serveur de jeu**, Oracle Always Free, la page restant sur Vercel et la base sur Neon. Sans ce changement, elle attend une offre payante.
 
 ### 2.7 Ce qu'il faudrait trancher
 
 La taille visée (10 000 sur 10 000 est-il un minimum ou une image ?), le nombre de joueurs par partie, le nombre de PNJ, le mode qui l'emploie, et le budget d'hébergement. Une piste intermédiaire, à considérer: **4 000 sur 4 000**, 16 Mpx, quatre Tokyo. Elle tient sans tuiles sur la plupart des appareils récents à condition de découper le décor, sans filtrage réseau jusqu'à 1 000 PNJ, avec la grille seule côté moteur, et accueille 24 à 30 joueurs.
+
+**Avec l'hébergement gratuit, la taille se règle d'elle-même.** Sur une machine Oracle Always Free, sans payer, le bon point de départ est une carte de **4 000 à 6 000 pixels de côté**, de 5 à 11 Tokyo, pour **30 à 50 joueurs** et 1 000 à 2 000 PNJ, avec la grille, le filtrage par zone d'intérêt et les données de carte livrées. C'est l'échelle des Battle Royale jouées dans un navigateur: une carte d'une quinzaine d'écrans de large, qu'une zone resserre. 10 000 sur 10 000 reste possible plus tard, sur la même machine, une fois la mesure faite: le socle n'aura pas à changer, seulement le contenu. Sur Render gratuit, aucune taille ne convient (section 2.6).
 
 ## 3. La poche qui cumule
 
@@ -298,8 +318,9 @@ Chaque étape se fait comme les étapes 7.9 à 7.12: règles tranchées avec le 
 
 | Ordre | Étape (provisoire) | Contenu                                                                                                       |
 | ----: | ------------------ | ------------------------------------------------------------------------------------------------------------- |
-|     1 | 5.9 La mesure en grand  | Le banc à 2 000, 5 000 et 10 000 PNJ sur une grande carte sans mur, et la mémoire au démarrage (section 2.3) |
-|     2 | 5.10 La grille du moteur | Contacts, cible du Black Ninja, fuite, apparition par partition spatiale; empreinte identique             |
+|     0 | 5.9 Le serveur de jeu sur Oracle Always Free | Une machine gratuite, la mise en ligne par la CI, la bascule depuis Render, `docs/deploiement.md` réécrit |
+|     1 | 5.10 La mesure en grand  | Le banc à 2 000, 5 000 et 10 000 PNJ sur une grande carte sans mur, et la mémoire au démarrage (section 2.3) |
+|     2 | 5.11 La grille du moteur | Contacts, cible du Black Ninja, fuite, apparition par partition spatiale; empreinte identique             |
 |     3 | 8.12 Les données de carte livrées | Places tenables et morceaux calculés à la livraison, plus au démarrage                         |
 |     4 | 4.10 La carte en tuiles   | Le chargeur d'une carte faite d'un jeu de tuiles, la collision qui s'en dérive, le dessin par blocs visibles |
 |     5 | 2.9 Le filtrage par zone d'intérêt | Chacun ne reçoit que ce qui l'entoure                                                         |
@@ -315,5 +336,5 @@ Les étapes 1 à 3 de la voie B profitent aussi au jeu actuel: la grille rend mo
 3. **La vie**: d'accord pour la réserver à un mode (Battle Royale, ou une variante du Massacre) ?
 4. **Le camouflage**: se fondre parmi les PNJ, ou prendre la couleur d'un autre joueur ?
 5. **Le gibier**: dans quels modes, et que rapporte-t-il ?
-6. **La carte géante**: quelle taille, combien de joueurs, quel budget d'hébergement ? Ou d'abord la piste de 4 000 sur 4 000 ?
+6. **L'hébergement et la taille**: d'accord pour déplacer le serveur de jeu sur Oracle Always Free, condition d'une Battle Royale gratuite (section 2.6) ? Et une carte de 4 000 à 6 000 de côté pour 30 à 50 joueurs comme première cible (section 2.7) ?
 7. **Les niveaux**: d'accord pour des régions reliées par des passages plutôt que des étages superposés ?
