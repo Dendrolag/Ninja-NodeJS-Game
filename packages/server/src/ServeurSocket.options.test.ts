@@ -58,11 +58,12 @@ let horloge: HorlogeManuelle;
 let port: number;
 const clients: ClientTypee[] = [];
 
+// Toutes les cartes, avant le premier test: un terrain decode au milieu d'un test
+// retarderait les reponses du serveur au-dela du delai d'attente. La Station lunaire
+// manquait ici depuis l'etape 8.9.
 beforeAll(() => {
-  for (const carte of ['map1', 'map3', 'quartier'] as const) {
-    terrains.charger({ carte, modeMiroir: false });
-  }
-});
+  terrains.prechargerTout();
+}, 60_000);
 
 beforeEach(async () => {
   horloge = creerHorlogeManuelle();

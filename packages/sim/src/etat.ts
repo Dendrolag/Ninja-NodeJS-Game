@@ -75,7 +75,7 @@ import {
 } from '@neon-ninja/shared';
 
 import type { CarteCollisions } from './collisions.js';
-import { carteSansMur, positionTenable } from './collisions.js';
+import { carteSansMur, dansLeMorceauPrincipal, positionTenable } from './collisions.js';
 import type { Couleur } from './couleurs.js';
 import { couleurUnique } from './couleurs.js';
 import type { DureesRestantes } from './effets.js';
@@ -1097,6 +1097,12 @@ export function identifiantSuivant(
  * le terrain lui-meme n'a presque aucune place libre dans la bande ou l'on tire.
  * Tant que la carte a la place, les tirages sont exactement ceux d'avant.
  *
+ * JAMAIS DANS UNE POCHE CLOSE (etape 8.10). Une place tenable ne suffit plus: elle doit
+ * appartenir au morceau principal de la carte (dansLeMorceauPrincipal, collisions.ts). Le
+ * jeu d'origine pouvait faire naitre un ninja au pied d'un mur fin, dans une poche coupee
+ * du reste, ou il passait la partie. Un tirage qui tombe hors d'une poche est accepte comme
+ * avant, si bien qu'une partie qui n'y tombait jamais rejoue a l'identique.
+ *
  * @param alea Generateur a graine. Le tirage le fait avancer.
  * @param terrain Le terrain, qui porte aussi les dimensions de la carte.
  * @param occupees Positions deja prises, a eviter d'une distance de securite.
@@ -1128,13 +1134,22 @@ export function positionDApparition(
       generateur = tirageY.alea;
 
       const candidate = { x: tirageX.valeur, y: tirageY.valeur };
-      if (positionTenable(terrain, candidate, rayon) && aLEcartDe(candidate, occupees, ecart)) {
+      if (placeDApparition(terrain, candidate, rayon) && aLEcartDe(candidate, occupees, ecart)) {
         return { valeur: candidate, alea: generateur };
       }
     }
   }
 
   return { valeur: positionDeSecours(terrain, occupees, rayon), alea: generateur };
+}
+
+/**
+ * Une entite peut-elle apparaitre ici ? Elle doit y tenir, et dans le morceau principal
+ * de la carte (etape 8.10): jamais dans une poche close au pied d'un mur fin, d'ou elle ne
+ * sortirait plus de la partie.
+ */
+function placeDApparition(terrain: CarteCollisions, position: Position, rayon: number): boolean {
+  return positionTenable(terrain, position, rayon) && dansLeMorceauPrincipal(terrain, position);
 }
 
 /**
@@ -1176,7 +1191,7 @@ function positionDeSecours(
         };
 
         if (
-          positionTenable(terrain, candidate, rayon) &&
+          placeDApparition(terrain, candidate, rayon) &&
           (!exigeLEcart || aLEcartDe(candidate, occupees))
         ) {
           return candidate;

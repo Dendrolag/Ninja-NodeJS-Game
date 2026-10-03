@@ -37,6 +37,7 @@ export {
   carteDepuisPixels,
   carteSansMur,
   creerCarteCollisions,
+  dansLeMorceauPrincipal,
   estMur,
   positionTenable,
   trajetTenable,

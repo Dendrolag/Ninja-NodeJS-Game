@@ -70,8 +70,11 @@ export interface ServeurDeJeu {
 
 /** Demarre le serveur de jeu sur un port libre. */
 export async function demarrerLeJeu(options: OptionsDuJeu = {}): Promise<ServeurDeJeu> {
+  // Comme le vrai serveur: les murs de toutes les cartes avant le premier joueur.
+  const terrains = new ChargeurDeTerrain();
+  terrains.prechargerTout();
   const montage: OptionsServeur = {
-    terrains: new ChargeurDeTerrain(),
+    terrains,
     fichiers: { client: DOSSIER_WEB, ressources: racineRessources() },
     ...(options.comptes === undefined ? {} : { comptes: options.comptes }),
   };

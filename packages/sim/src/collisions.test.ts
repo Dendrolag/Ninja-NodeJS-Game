@@ -13,7 +13,9 @@ import {
   carteDepuisPixels,
   carteSansMur,
   creerCarteCollisions,
+  dansLeMorceauPrincipal,
   estMur,
+  pointsTenables,
   positionTenable,
   trajetTenable,
 } from './collisions.js';
@@ -207,6 +209,98 @@ describe('trajetTenable', () => {
 
     expect(trajetTenable(pilier, { x: 20, y: 20 }, arrivee)).toBe(false);
     expect(trajetTenable(pilier, { x: 80, y: 120 }, arrivee)).toBe(true);
+  });
+});
+
+describe('dansLeMorceauPrincipal', () => {
+  /**
+   * Une carte de 300 sur 150 coupee par un trait de mur d'un pixel, a l'abscisse 200. Le
+   * morceau de gauche est le plus grand. Au pied du trait, des places a cheval sur lui
+   * tiennent (aucun des dix-sept points du disque ne tombe sur le trait), mais on ne peut
+   * pas y aller: ce sont les poches de l'etape 8.10.
+   */
+  const COUPEE = creerCarteCollisions({ largeur: 300, hauteur: 150 }, (x) => x === 200);
+
+  it('n a rien a restreindre sur une carte sans mur', () => {
+    expect(SANS_MUR.morceauPrincipal).toBeUndefined();
+    expect(dansLeMorceauPrincipal(SANS_MUR, { x: 100.5, y: 75.5 })).toBe(true);
+  });
+
+  it('refuse une place qui ne tient pas', () => {
+    expect(dansLeMorceauPrincipal(COUPEE, { x: 200.5, y: 75 })).toBe(false);
+    expect(dansLeMorceauPrincipal(AVEC_MUR, { x: 120, y: 75 })).toBe(false);
+  });
+
+  it('accepte une place du plus grand morceau, a coordonnees reelles', () => {
+    expect(dansLeMorceauPrincipal(COUPEE, { x: 100.37, y: 75.81 })).toBe(true);
+    expect(dansLeMorceauPrincipal(COUPEE, { x: 183.9, y: 16.2 })).toBe(true);
+  });
+
+  it('refuse une place tenable de l autre morceau', () => {
+    expect(positionTenable(COUPEE, { x: 250, y: 75 })).toBe(true);
+    expect(dansLeMorceauPrincipal(COUPEE, { x: 250, y: 75 })).toBe(false);
+  });
+
+  it('refuse une place a cheval sur le trait, qu on ne peut pas atteindre', () => {
+    // A 190, le disque deborde sur le trait de 200, mais aucun de ses points n'y tombe: la
+    // place tient. Pour y venir depuis la gauche, il faudrait passer par 184, ou le bord du
+    // disque touche le trait. C'est exactement une poche close au pied d'un mur fin.
+    const aCheval = { x: 190, y: 75 };
+
+    expect(positionTenable(COUPEE, aCheval)).toBe(true);
+    expect(positionTenable(COUPEE, { x: 184, y: 75 })).toBe(false);
+    expect(dansLeMorceauPrincipal(COUPEE, aCheval)).toBe(false);
+  });
+
+  it('garde le premier morceau dans l ordre de lecture a egalite', () => {
+    // 301 de large, trait a 150: deux morceaux de meme taille, de 16 a 133 et de 167 a 284.
+    const symetrique = creerCarteCollisions({ largeur: 301, hauteur: 100 }, (x) => x === 150);
+
+    expect(dansLeMorceauPrincipal(symetrique, { x: 50, y: 50 })).toBe(true);
+    expect(positionTenable(symetrique, { x: 250, y: 50 })).toBe(true);
+    expect(dansLeMorceauPrincipal(symetrique, { x: 250, y: 50 })).toBe(false);
+  });
+
+  it('juge chaque point entier exactement comme positionTenable', () => {
+    // Le morceau se calcule sur une copie des murs, avec des decalages precalcules, pour
+    // aller vite. Des pixels de mur semes partout, bords et premieres colonnes compris, ou
+    // la virgule flottante a ses caprices: le verdict doit rester celui du moteur.
+    const semee = creerCarteCollisions(
+      { largeur: 240, hauteur: 160 },
+      (x, y) => (x * 7 + y * 13) % 151 === 0,
+    );
+    const tenables = pointsTenables(semee);
+    let ecarts = 0;
+    let places = 0;
+
+    for (let y = 0; y < semee.hauteur; y += 1) {
+      for (let x = 0; x < semee.largeur; x += 1) {
+        const attendu = positionTenable(semee, { x, y });
+        places += attendu ? 1 : 0;
+        if (attendu !== (tenables[y * semee.largeur + x] === 1)) {
+          ecarts += 1;
+        }
+      }
+    }
+
+    expect(places).toBeGreaterThan(1000);
+    expect(ecarts).toBe(0);
+  });
+
+  it('n a aucune place quand rien ne tient', () => {
+    const pleine = creerCarteCollisions({ largeur: 50, hauteur: 50 }, () => true);
+
+    expect(pleine.morceauPrincipal?.every((octet) => octet === 0)).toBe(true);
+    expect(dansLeMorceauPrincipal(pleine, { x: 25, y: 25 })).toBe(false);
+  });
+
+  it('se calcule aussi sur une carte lue depuis une image', () => {
+    const image = carteDepuisPixels(
+      pixels(300, 150, (x) => (x === 200 ? [0, 0, 0] : [255, 255, 255])),
+      { largeur: 300, hauteur: 150 },
+    );
+
+    expect(image.morceauPrincipal).toEqual(COUPEE.morceauPrincipal);
   });
 });
 

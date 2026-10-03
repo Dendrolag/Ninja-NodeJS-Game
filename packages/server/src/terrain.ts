@@ -288,6 +288,22 @@ export class ChargeurDeTerrain implements SourceDeTerrain {
     return terrain;
   }
 
+  /**
+   * Decode d'avance les terrains de toutes les cartes, dans les deux sens.
+   *
+   * Decoder une carte et calculer son morceau principal (etape 8.10) prend un quart de
+   * seconde, pendant lequel le serveur ne fait rien d'autre: au premier lancement d'une
+   * carte, toutes les parties en cours s'arreteraient d'autant. Le serveur paie donc ce
+   * prix au demarrage, une fois, avant d'accueillir quiconque.
+   */
+  prechargerTout(): void {
+    for (const carte of Object.keys(CARTES) as IdentifiantCarte[]) {
+      for (const modeMiroir of [false, true]) {
+        this.charger({ carte, modeMiroir });
+      }
+    }
+  }
+
   /** Combien de terrains sont deja decodes. Sert aux tests et a la mesure. */
   get tailleDuCache(): number {
     return this.cache.size;

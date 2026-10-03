@@ -36,7 +36,7 @@ Trois règles qui en découlent, et qui comptent plus que tout le reste.
 
 1. **Pas d'adoucissement des bords.** Un contour flouté crée une bande de gris, dont la moitié devient du mur: le mur réel serait plus épais que dessiné. Tracer net, sans anticrénelage.
 2. **Aucun détail parasite.** Un trait d'un seul pixel est un mur infranchissable. Pas de texture, pas de grain, pas d'ombre portée dans cette image: uniquement les formes pleines des obstacles.
-   **Et aucun mur plus fin que neuf pixels**: le jeu peut en laisser un personnage à cheval, coincé d'un côté (étape 8.9).
+   **Et aucun mur plus fin que neuf pixels**: un personnage peut se tenir à cheval dessus, et les places à son pied deviennent du sol où personne ne peut aller (étapes 8.9 et 8.10).
 3. **Elle doit se superposer au décor au pixel près.** Un mur décalé donne un joueur qui bute sur du vide. Rien ne le détecte automatiquement.
 4. **Opaque partout, sans transparence.** Le jeu ne lit que la couleur: un sol « transparent » posé sur du noir reste noir, donc un mur. Livrer du noir et du blanc pleins (étape 8.8: une collision livrée en noir sur transparent faisait de toute la carte un mur).
 

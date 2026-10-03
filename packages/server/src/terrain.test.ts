@@ -19,8 +19,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import type { IdentifiantCarte } from '@neon-ninja/shared';
-import { CARTES, REGLAGES_PAR_DEFAUT, cheminCarte } from '@neon-ninja/shared';
-import { carteSansMur, estMur, positionTenable } from '@neon-ninja/sim';
+import { CARTES, REGLAGES_PAR_DEFAUT, cheminCarte, creerAlea } from '@neon-ninja/shared';
+import {
+  carteSansMur,
+  dansLeMorceauPrincipal,
+  estMur,
+  positionDApparition,
+  positionTenable,
+} from '@neon-ninja/sim';
 import { PNG } from 'pngjs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -217,6 +223,27 @@ describe('ChargeurDeTerrain', () => {
     expect(second).toBe(premier);
     expect(chargeur.tailleDuCache).toBe(1);
   });
+
+  it('precharge toutes les cartes, dans les deux sens', () => {
+    // Etape 8.10: le serveur decode tout au demarrage, pour qu'aucune partie en cours ne
+    // s'arrete le temps de decoder la carte d'une autre.
+    const racine = mkdtempSync(join(tmpdir(), 'neon-terrain-'));
+    const cartes = Object.keys(CARTES) as IdentifiantCarte[];
+
+    for (const carte of cartes) {
+      const chemin = cheminCarte(carte, 'collision');
+      mkdirSync(join(racine, chemin, '..'), { recursive: true });
+      writeFileSync(
+        join(racine, chemin),
+        imagePng(20, 15, (x) => x < 10),
+      );
+    }
+
+    const chargeur = new ChargeurDeTerrain(racine);
+    chargeur.prechargerTout();
+
+    expect(chargeur.tailleDuCache).toBe(cartes.length * 2);
+  }, 60_000);
 
   it('tire la carte et son miroir d une seule image', () => {
     // Etape 8.3: plus de seconde image. Le mur est a gauche sur l'image, donc a
@@ -490,6 +517,64 @@ describe('les cartes a passages etroits', () => {
       expect(atteintes).toBe(total);
     });
   }
+});
+
+describe('les poches closes des vraies cartes (etape 8.10)', () => {
+  const chargeur = new ChargeurDeTerrain(racineRessources());
+
+  /**
+   * Les points entiers ou une entite tient, mais hors du morceau principal: les poches. Le
+   * morceau principal n'est fait que de points tenables: la difference les compte.
+   */
+  function placesEnPoche(cle: CleDeTerrain): number {
+    const terrain = chargeur.charger(cle);
+    let tenables = 0;
+    let dansLeMorceau = 0;
+
+    for (let y = 0; y < terrain.hauteur; y += 1) {
+      for (let x = 0; x < terrain.largeur; x += 1) {
+        if (positionTenable(terrain, { x, y })) {
+          tenables += 1;
+        }
+      }
+    }
+
+    for (const octet of terrain.morceauPrincipal ?? []) {
+      for (let bit = octet; bit !== 0; bit &= bit - 1) {
+        dansLeMorceau += 1;
+      }
+    }
+
+    return tenables - dansLeMorceau;
+  }
+
+  for (const modeMiroir of [false, true]) {
+    it(`Tokyo garde ses poches hors du morceau principal ${modeMiroir ? 'en miroir' : 'en normal'}`, () => {
+      // Mesure de l'etape 8.10: seize poches en normal, quinze en miroir, au pied des murs
+      // fins, de une a cent six places. Elles y sont depuis le jeu d'origine.
+      const enPoche = placesEnPoche({ carte: 'map1', modeMiroir });
+
+      expect(enPoche).toBeGreaterThan(150);
+      expect(enPoche).toBeLessThan(250);
+    });
+
+    for (const carte of ['map3', 'quartier', 'station'] as const) {
+      it(`${carte} n a aucune poche ${modeMiroir ? 'en miroir' : 'en normal'}`, () => {
+        expect(placesEnPoche({ carte, modeMiroir })).toBe(0);
+      });
+    }
+  }
+
+  it('aucune apparition ne tombe dans une poche de Tokyo', () => {
+    const terrain = chargeur.charger({ carte: 'map1', modeMiroir: false });
+    let alea = creerAlea(810);
+
+    for (let index = 0; index < 1000; index += 1) {
+      const tirage = positionDApparition(alea, terrain);
+      expect(dansLeMorceauPrincipal(terrain, tirage.valeur)).toBe(true);
+      alea = tirage.alea;
+    }
+  });
 });
 
 describe('le serveur demande le terrain de la carte jouee', () => {

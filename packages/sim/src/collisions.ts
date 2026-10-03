@@ -76,6 +76,12 @@ export interface CarteCollisions {
   readonly largeur: number;
   readonly hauteur: number;
   readonly murs: Uint8Array;
+  /**
+   * Le morceau principal de la carte (etape 8.10), un bit par point entier, ecrit a la
+   * construction comme murs. Absent sur une carte sans mur, d'un seul tenant par
+   * construction. Il se lit par dansLeMorceauPrincipal.
+   */
+  readonly morceauPrincipal?: Uint8Array;
 }
 
 /** Nombre d'octets necessaires pour stocker un bit par pixel. */
@@ -96,10 +102,10 @@ function caseSure(tableau: ArrayLike<number>, index: number): number {
   return tableau[index] as number;
 }
 
-/** Allume le bit du pixel d'indice donne: ce pixel devient un mur. */
-function marquerMur(murs: Uint8Array, index: number): void {
+/** Allume le bit du pixel d'indice donne: un mur dans murs, un point du morceau dans morceauPrincipal. */
+function allumerBit(bits: Uint8Array, index: number): void {
   const octet = index >> 3;
-  murs[octet] = caseSure(murs, octet) | (1 << (index & 7));
+  bits[octet] = caseSure(bits, octet) | (1 << (index & 7));
 }
 
 /** Verifie que des dimensions de carte ont un sens avant de construire quoi que ce soit. */
@@ -129,17 +135,19 @@ export function creerCarteCollisions(
   const { largeur, hauteur } = dimensions;
   const murs = new Uint8Array(tailleEnOctets(largeur, hauteur));
 
-  if (estUnMur !== undefined) {
-    for (let y = 0; y < hauteur; y += 1) {
-      for (let x = 0; x < largeur; x += 1) {
-        if (estUnMur(x, y)) {
-          marquerMur(murs, y * largeur + x);
-        }
+  if (estUnMur === undefined) {
+    return { largeur, hauteur, murs };
+  }
+
+  for (let y = 0; y < hauteur; y += 1) {
+    for (let x = 0; x < largeur; x += 1) {
+      if (estUnMur(x, y)) {
+        allumerBit(murs, y * largeur + x);
       }
     }
   }
 
-  return { largeur, hauteur, murs };
+  return avecMorceauPrincipal({ largeur, hauteur, murs });
 }
 
 /** Une carte entierement praticable, bornee par ses seuls bords. */
@@ -181,11 +189,11 @@ export function carteDepuisPixels(
     const bleu = caseSure(donnees, depart + 2);
 
     if ((rouge + vert + bleu) / 3 < SEUIL_MUR_LUMINOSITE) {
-      marquerMur(murs, index);
+      allumerBit(murs, index);
     }
   }
 
-  return { largeur, hauteur, murs };
+  return avecMorceauPrincipal({ largeur, hauteur, murs });
 }
 
 /**
@@ -293,4 +301,250 @@ export function trajetTenable(
   }
 
   return true;
+}
+
+/**
+ * LE MORCEAU PRINCIPAL D'UNE CARTE (etape 8.10).
+ *
+ * positionTenable ne regarde que dix-sept points du disque d'une entite, ecartes de huit
+ * pixels au plus. Un trait de mur plus fin que neuf pixels peut passer entre deux d'entre
+ * eux: la place a cheval sur lui est jugee bonne. Au pied d'un tel trait naissent des
+ * places tenables coupees du reste de la carte, des poches. Le jeu d'origine en avait onze
+ * sur Tokyo, et une apparition pouvait y tomber: le ninja y restait toute la partie.
+ *
+ * On ne touche pas a positionTenable, qui regle la facon dont les ninjas frolent les murs
+ * depuis deux ans. On calcule plutot, une fois pour toutes a la construction de la carte,
+ * le plus grand morceau d'un seul tenant, et les apparitions s'y tiennent.
+ *
+ * Le calcul porte sur les points entiers de la carte. Deux points voisins par un cote sont
+ * relies: aller de l'un a l'autre est un pas d'un pixel, que trajetTenable accepte des que
+ * l'arrivee tient. Tout le morceau est donc atteignable a coup sur. Les diagonales ne
+ * comptent pas: elles pourraient relier une poche par un coin que le moteur refuse, et
+ * aucune carte du jeu n'en a besoin pour rester d'un seul tenant (mesure de l'etape 8.10).
+ *
+ * Le morceau est celui d'une entite de taille ordinaire, RAYON_ENTITE: c'est la taille de
+ * tout ce qui apparait.
+ */
+
+/** Les quatre points entiers qui entourent une position a coordonnees reelles. */
+const COINS_D_UNE_CASE: readonly (readonly [number, number])[] = [
+  [0, 0],
+  [1, 0],
+  [0, 1],
+  [1, 1],
+];
+
+/** Une carte et son morceau principal, calcule une fois. */
+function avecMorceauPrincipal(carte: CarteCollisions): CarteCollisions {
+  return { ...carte, morceauPrincipal: calculerMorceauPrincipal(carte) };
+}
+
+/**
+ * Les seize decalages du contour d'une entite ordinaire, exactement ceux de positionTenable
+ * (meme produit, meme somme en virgule flottante).
+ */
+const DECALAGES_DU_CONTOUR: readonly Vecteur[] = CONTOUR_UNITAIRE.flatMap((direction) => [
+  { x: direction.x * RAYON_ENTITE, y: direction.y * RAYON_ENTITE },
+  {
+    x: direction.x * (RAYON_ENTITE * FACTEUR_RAYON_INTERIEUR),
+    y: direction.y * (RAYON_ENTITE * FACTEUR_RAYON_INTERIEUR),
+  },
+]);
+
+/**
+ * Le plus grand decalage du contour, en pixels: seize, le long des axes. Un point plus
+ * proche du bord n'est jamais tenable, son contour sortant de la carte.
+ */
+const PORTEE_DU_CONTOUR = Math.round(RAYON_ENTITE);
+
+/**
+ * Abscisse a partir de laquelle les decalages du contour, arrondis au pixel, ne changent
+ * plus. En dessous, la virgule flottante peut faire tomber un decalage presque nul (le
+ * contour vers le haut, a un milliardieme de pixel pres) d'un cote ou de l'autre d'une
+ * colonne: ces premieres colonnes ont chacune leurs decalages.
+ */
+const ABSCISSE_DES_DECALAGES_FIXES = 64;
+
+/**
+ * Les seize decalages du contour en indices du tableau des murs, pour un point d'abscisse
+ * donnee: positionTenable lit la case Math.floor(x + dx), Math.floor(y + dy), et ces
+ * indices la designent sans refaire le calcul.
+ */
+function decalagesEnIndices(x: number, largeur: number): Int32Array {
+  const y = ABSCISSE_DES_DECALAGES_FIXES;
+  return Int32Array.from(
+    DECALAGES_DU_CONTOUR,
+    (decalage) => (Math.floor(y + decalage.y) - y) * largeur + (Math.floor(x + decalage.x) - x),
+  );
+}
+
+/**
+ * Un octet par point entier: 1 si une entite ordinaire y tient.
+ *
+ * Le meme verdict que positionTenable, point par point, mais sur une copie des murs a un
+ * octet par pixel et des decalages precalcules: juger les trois a quatre millions de points
+ * d'une carte reste ainsi l'affaire de quelques dizaines de millisecondes, sans bloquer
+ * le serveur qui la charge.
+ *
+ * Exportee pour ses tests seulement, qui la comparent a positionTenable; le paquet ne
+ * l'expose pas.
+ */
+export function pointsTenables(carte: CarteCollisions): Uint8Array {
+  const { largeur, hauteur } = carte;
+  const total = largeur * hauteur;
+  const murs = new Uint8Array(total);
+  const tenables = new Uint8Array(total);
+
+  for (let index = 0; index < total; index += 1) {
+    murs[index] = (caseSure(carte.murs, index >> 3) >> (index & 7)) & 1;
+  }
+
+  const fixes = decalagesEnIndices(ABSCISSE_DES_DECALAGES_FIXES, largeur);
+  const premieres = Array.from({ length: ABSCISSE_DES_DECALAGES_FIXES }, (_, x) =>
+    decalagesEnIndices(x, largeur),
+  );
+
+  for (let y = PORTEE_DU_CONTOUR; y < hauteur - PORTEE_DU_CONTOUR; y += 1) {
+    for (let x = PORTEE_DU_CONTOUR; x < largeur - PORTEE_DU_CONTOUR; x += 1) {
+      const index = y * largeur + x;
+      const decalages = x < ABSCISSE_DES_DECALAGES_FIXES ? (premieres[x] ?? fixes) : fixes;
+
+      if (caseSure(murs, index) === 0 && contourLibre(murs, index, decalages)) {
+        tenables[index] = 1;
+      }
+    }
+  }
+
+  return tenables;
+}
+
+/** Aucun des seize points du contour ne tombe sur un mur. */
+function contourLibre(murs: Uint8Array, index: number, decalages: Int32Array): boolean {
+  for (let rang = 0; rang < decalages.length; rang += 1) {
+    if (caseSure(murs, index + caseSure(decalages, rang)) === 1) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Parcourt le morceau d'un seul tenant qui contient un point, en marquant ses points dans
+ * vus. Rend le nombre de points du morceau, ranges en tete de file.
+ *
+ * Aucun test de bord: un point tenable est a seize pixels au moins du bord de la carte
+ * (PORTEE_DU_CONTOUR), si bien que ses quatre voisins sont toujours dans la carte, et sur
+ * sa ligne pour ceux de gauche et de droite.
+ *
+ * @param file Tableau de travail, de la taille de la carte, prete pour eviter d'en
+ *        allouer un a chaque morceau.
+ */
+function parcourirMorceau(
+  tenables: Uint8Array,
+  largeur: number,
+  depart: number,
+  vus: Uint8Array,
+  file: Int32Array,
+): number {
+  const voisins = Int32Array.of(1, -1, largeur, -largeur);
+  let lecture = 0;
+  let ecriture = 1;
+  file[0] = depart;
+  vus[depart] = 1;
+
+  while (lecture < ecriture) {
+    const point = caseSure(file, lecture);
+    lecture += 1;
+
+    for (let rang = 0; rang < voisins.length; rang += 1) {
+      const voisin = point + caseSure(voisins, rang);
+
+      if (caseSure(tenables, voisin) === 1 && caseSure(vus, voisin) === 0) {
+        vus[voisin] = 1;
+        file[ecriture] = voisin;
+        ecriture += 1;
+      }
+    }
+  }
+
+  return ecriture;
+}
+
+/**
+ * Le plus grand morceau d'un seul tenant de la carte, un bit par point entier. A egalite,
+ * le premier rencontre dans l'ordre de lecture, pour que le calcul reste deterministe.
+ * Vide quand aucun point ne tient.
+ */
+function calculerMorceauPrincipal(carte: CarteCollisions): Uint8Array {
+  const { largeur, hauteur } = carte;
+  const tenables = pointsTenables(carte);
+  const file = new Int32Array(tenables.length);
+  const vus = new Uint8Array(tenables.length);
+  let meilleurDepart = -1;
+  let meilleureTaille = 0;
+
+  for (let point = 0; point < tenables.length; point += 1) {
+    if (caseSure(tenables, point) === 1 && caseSure(vus, point) === 0) {
+      const taille = parcourirMorceau(tenables, largeur, point, vus, file);
+
+      if (taille > meilleureTaille) {
+        meilleureTaille = taille;
+        meilleurDepart = point;
+      }
+    }
+  }
+
+  const morceau = new Uint8Array(tailleEnOctets(largeur, hauteur));
+
+  if (meilleurDepart >= 0) {
+    const retenus = new Uint8Array(tenables.length);
+    const taille = parcourirMorceau(tenables, largeur, meilleurDepart, retenus, file);
+
+    for (let rang = 0; rang < taille; rang += 1) {
+      allumerBit(morceau, caseSure(file, rang));
+    }
+  }
+
+  return morceau;
+}
+
+/**
+ * Ce point entier est-il dans le morceau principal ? Il n'est demande que pour les coins
+ * d'une place qui tient, a seize pixels au moins du bord: il est toujours dans la carte.
+ */
+function pointDuMorceau(
+  carte: CarteCollisions,
+  morceau: Uint8Array,
+  x: number,
+  y: number,
+): boolean {
+  const index = y * carte.largeur + x;
+  return (caseSure(morceau, index >> 3) & (1 << (index & 7))) !== 0;
+}
+
+/**
+ * Une entite ordinaire posee ici est-elle dans le morceau principal de la carte ?
+ *
+ * Vrai si elle tient, et si un trajet tenable la mene a l'un des quatre points entiers qui
+ * l'entourent, pris dans le morceau. Sur une carte sans morceau calcule, une carte sans
+ * mur, il suffit qu'elle tienne.
+ */
+export function dansLeMorceauPrincipal(carte: CarteCollisions, position: Position): boolean {
+  if (!positionTenable(carte, position)) {
+    return false;
+  }
+
+  const morceau = carte.morceauPrincipal;
+  if (morceau === undefined) {
+    return true;
+  }
+
+  const x = Math.floor(position.x);
+  const y = Math.floor(position.y);
+
+  return COINS_D_UNE_CASE.some(([dx, dy]) => {
+    const coin = { x: x + dx, y: y + dy };
+    return pointDuMorceau(carte, morceau, coin.x, coin.y) && trajetTenable(carte, position, coin);
+  });
 }

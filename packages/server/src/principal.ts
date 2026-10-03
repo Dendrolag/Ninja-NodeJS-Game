@@ -154,6 +154,8 @@ function dossiersServis(): DossiersServis | undefined {
 const fichiers = dossiersServis();
 const version = versionDuJeu(process.env['VERSION_DU_JEU']);
 const base = baseDesComptes(process.env['DATABASE_URL']);
+const terrains = new ChargeurDeTerrain();
+terrains.prechargerTout();
 
 // C'est ici, et seulement ici, que le serveur decide de lire les images de
 // collision des cartes, de servir la page et de brancher les comptes. Un serveur
@@ -161,7 +163,7 @@ const base = baseDesComptes(process.env['DATABASE_URL']);
 // demande pas.
 const serveur = await demarrerServeur(portDemande(process.env['PORT']), {
   originesAutorisees: originesAutorisees(process.env['ORIGINES_AUTORISEES']),
-  terrains: new ChargeurDeTerrain(),
+  terrains,
   mandatairesDeConfiance: mandatairesDeConfiance(process.env['MANDATAIRES_DE_CONFIANCE']),
   ...(fichiers === undefined ? {} : { fichiers }),
   ...(version === undefined ? {} : { version }),

@@ -18,7 +18,13 @@ import {
 } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
-import { carteSansMur, creerCarteCollisions, estMur } from './collisions.js';
+import {
+  carteSansMur,
+  creerCarteCollisions,
+  dansLeMorceauPrincipal,
+  estMur,
+  positionTenable,
+} from './collisions.js';
 import { AUCUN_BONUS, AUCUN_MALUS } from './effets.js';
 import type { EtatPartie, Joueur } from './etat.js';
 import {
@@ -216,6 +222,46 @@ describe('positionDApparition', () => {
       ).length;
       expect(dansLeQuart).toBeGreaterThan(90);
     }
+  });
+
+  it('ne fait jamais apparaitre une entite hors du morceau principal', () => {
+    // ETAPE 8.10. Un trait de mur d'un pixel, a l'abscisse 1600, coupe la carte en deux.
+    // Le morceau de droite tient, mais il est coupe du reste: une entite qui y nait y
+    // passe la partie. Sans le morceau principal, le meme tirage y tombe.
+    const terrain = creerCarteCollisions(CARTES.map1, (x) => x === 1600);
+    const { morceauPrincipal: _ignore, ...sansMorceau } = terrain;
+    let alea = creerAlea(2026);
+    let aDroiteSansMorceau = 0;
+
+    for (let index = 0; index < 200; index += 1) {
+      const tirage = positionDApparition(alea, terrain);
+      expect(tirage.valeur.x).toBeLessThan(1600);
+      expect(dansLeMorceauPrincipal(terrain, tirage.valeur)).toBe(true);
+
+      if (positionDApparition(alea, sansMorceau).valeur.x > 1600) {
+        aDroiteSansMorceau += 1;
+      }
+      alea = tirage.alea;
+    }
+
+    expect(aDroiteSansMorceau).toBeGreaterThan(0);
+  });
+
+  it('cherche aussi en spirale hors des poches', () => {
+    // Le seul sol est une bande en bas de la carte, hors de la bande ou l'on tire, et une
+    // piece close a cinquante pixels a droite du centre, le premier point de la spirale.
+    // Trop petite pour que le hasard y tombe, elle tient pourtant une entite: la spirale
+    // l'aurait rendue. Elle passe outre et descend jusqu'a la bande.
+    const terrain = creerCarteCollisions(
+      CARTES.map1,
+      (x, y) => y < 1420 && Math.hypot(x - 1050, y - 750) > 20,
+    );
+    expect(positionTenable(terrain, { x: 1050, y: 750 })).toBe(true);
+
+    const tirage = positionDApparition(creerAlea(3), terrain);
+
+    expect(tirage.valeur.y).toBeGreaterThan(1420);
+    expect(dansLeMorceauPrincipal(terrain, tirage.valeur)).toBe(true);
   });
 
   it('trouve une place en spirale quand tous les tirages echouent', () => {

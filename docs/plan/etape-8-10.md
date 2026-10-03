@@ -59,6 +59,14 @@ Le moteur juge qu'un ninja tient à une place en regardant dix-sept points de so
 3. Couverture de packages/sim maintenue.
 4. CI verte, handoff écrit et commité.
 
+## Réconciliation pendant l'étape (3 octobre 2026)
+
+1. **Le calcul a été réécrit pour aller vite.** Juger chaque point par `positionTenable` puis relier les points coûtait 300 ms par carte, et sous la mesure de couverture un test du serveur dépassait son délai d'attente. Les points se jugent désormais sur une copie des murs à un octet par pixel, avec les seize décalages du contour précalculés en indices, et le parcours se fait sans test de bord: 50 à 150 ms par carte. Un test compare ce jugement à `positionTenable` point par point; il échoue si l'on oublie que, dans les 64 premières colonnes, la virgule flottante décale d'une colonne le point du contour tourné vers le haut.
+2. **Le serveur précharge toutes les cartes au démarrage** (`ChargeurDeTerrain.prechargerTout`), dans les deux sens, comme le harnais de bout en bout. Sans cela, le premier lancement d'une carte arrêterait toutes les parties en cours le temps du calcul. Deux secondes de plus au démarrage, six mégaoctets de mémoire.
+3. **Défaut trouvé et corrigé** (règle 7): le test du réglage de nuit (`ServeurSocket.options.test.ts`) préchargeait trois cartes sur quatre, la Station oubliée depuis l'étape 8.9; il décodait donc la Station au milieu d'un test. Il précharge maintenant tout.
+4. **Un pilier de dix pixels se chevauche aussi.** Une tentative de test sur des piliers carrés de dix pixels a trouvé des poches à leurs abords: comme un trait fin, un obstacle trop petit passe entre les points du disque. C'est le même défaut, couvert par la même correction.
+5. **Les parties de référence rejouent à l'octet** (`tests/charge/empreinte.ts`): aucune de leurs apparitions ne tombait dans une poche.
+
 ## Rituel de fin de session
 
 Handoff depuis `docs/handoffs/_TEMPLATE.md`, ROADMAP à jour, commit et poussée, CI suivie jusqu'à la mise en ligne.
