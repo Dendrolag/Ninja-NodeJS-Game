@@ -38,7 +38,7 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
 - Ajoutés: partagé (semaine, tirage sur cinq cents semaines, cycles, avancée de chaque genre, parties qui ne comptent pas, XP des défis dans les succès de niveau); serveur (fait `bonusRamasses`, récapitulatif, route); base contre Neon (contraintes, relevé unique avec son XP, plusieurs défis d'une partie, réessai, semaine à l'heure de Paris, parties qui ne comptent pas, succès de niveau, semaine en cours); client (session, modèle, accueil, fin); bout en bout (accueil et fin d'un compte).
 - Résultat: 3 655 tests au vert, base comprise; scénario de bout en bout du compte au vert.
 - Couverture de packages/sim et shared: 99,79 pour cent des instructions; `defis.ts` à 100. packages/sim n'est pas touché.
-- État de la CI: à vérifier après la poussée.
+- État de la CI: verte sur `95d5f77` (exécution 37140372312): types, linter et tests, bout en bout, mise en ligne. Le serveur de production répond sur ce commit (`/sante`).
 
 ## Décisions et écarts au plan
 
@@ -54,7 +54,7 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
 
 ## Prochaine action exacte
 
-Vérifier la CI de la poussée de l'étape 3.10. Puis, à la demande du porteur du projet faite pendant l'étape: remplacer l'avant-plan de Spirit & Time (`assets/cartes/map3/foreground.png`) par le fichier qu'il fournit.
+À la demande du porteur du projet faite pendant l'étape: remplacer l'avant-plan de Spirit & Time (`assets/cartes/map3/foreground.png`) par le fichier qu'il fournit.
 
 ## Étape suivante
 
