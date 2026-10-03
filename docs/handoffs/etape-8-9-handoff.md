@@ -39,11 +39,11 @@ Aucune modification de `legacy/`, de `tests/caracterisation/` ni de `packages/si
 ## Tests
 
 - Ajoutés: chemins et fichiers de la carte; réglage de nuit (validation, formulaire, récapitulatif, salon réel); graine du décor (room, socket, retardataire, réduction, client); course du vaisseau (même graine même chemin, vingt graines vingt chemins, quatre côtés d'entrée, hors de vue avant et après, au-dessus pendant le survol, vitesse de survol, ralentissement et accélération sans saut, pas de saut d'une image à l'autre, cap selon la course, partie courte, partie sans durée); parallaxe, ombre et miroir, rotation, opacité; temps lissé; scène; crédits et licence; note 1.6. Serveur: empreintes des murs, miroir retourné, connexité, 190 faux ninjas tenables. Bout en bout (`rendu-station.spec.ts`, ordinateur et téléphone): la nuit assombrit le fond, le vaisseau se dessine où la scène le place de jour et de nuit, son ombre tombe de jour et pas de nuit, il recule de 115 pixels d'écran quand le sol en recule 100.
-- Résultat: 3 450 tests unitaires et d'intégration au vert en local, types, linter et formatage compris; tests de la base sautés en local, joués par la CI. Bout en bout: `rendu-station` 10 sur 10; les scénarios voisins (crédits, note de version, navigation, parcours solo, rendus, lien, retour, multijoueur), voir l'état de la CI.
+- Résultat: 3 452 tests unitaires et d'intégration au vert en local, types, linter et formatage compris; tests de la base sautés en local, joués par la CI. Bout en bout: `rendu-station` 10 sur 10 en local, et toute la suite au vert en CI.
 - Banc de charge: 0,72 ms par battement à 190 faux ninjas sur la Station, 0,67 pour Tokyo au même nombre (section 25).
 - Couverture de packages/sim: inchangée, il n'est pas touché.
 - Empreintes des parties de référence: inchangées par construction, elles se jouent sur Tokyo et le moteur n'est pas touché.
-- État de la CI: voir le commit de fin d'étape.
+- État de la CI: verte sur `2939c29` (exécution 37116531076): types, linter et tests, bout en bout, mise en ligne. Le serveur de production répond sur ce commit (`/sante`).
 
 ## Décisions et écarts au plan
 
