@@ -54,8 +54,8 @@ Détail dans la section « Réconciliation » de la fiche. En bref: libellé de 
 
 ## Prochaine action exacte
 
-Aucune étape planifiée ne reste ouverte. Attendre la prochaine demande du porteur du projet. Au porteur du projet: relire la note 1.5 en ligne (numéro du pied de l'accueil), et jouer une partie sur Spirit & Time (dette de l'étape 8.8).
+Exécuter l'étape `8.9`, une carte nouvelle, décidée par le porteur du projet le 3 octobre 2026. Sa fiche n'existe pas encore: la rédiger au début de l'étape selon le cas de repli du PROTOCOLE, en chargeant la compétence `conception-de-cartes`, et demander au porteur du projet ce qu'il livre (décor, collision, lointain éventuel, nom, plafond de faux ninjas). Au porteur du projet, en parallèle: relire la note 1.5 en ligne, et jouer une partie sur Spirit & Time (dette de l'étape 8.8).
 
 ## Étape suivante
 
-Fiche à lire: aucune, à rédiger à la prochaine demande.
+Fiche à lire: `docs/plan/etape-8-9.md`, à rédiger au début de l'étape.
