@@ -108,6 +108,24 @@ Le calcul et la mémoire ferment la porte eux aussi: un dixième de processeur l
 
 Conclusion: **gratuit, la Battle Royale passe par un changement d'hébergeur du serveur de jeu**, Oracle Always Free, la page restant sur Vercel et la base sur Neon. Sans ce changement, elle attend une offre payante.
 
+### 2.6 bis Ce que change le passage à Oracle, et ce qu'il ne change pas
+
+Question du porteur du projet, le 3 octobre 2026: le changement de serveur a-t-il d'autres effets ?
+
+**Pour les joueurs: rien de moins, deux choses de mieux.** La page reste sur Vercel, à la même adresse, la base reste sur Neon, les comptes, les succès et les défis ne bougent pas. Le serveur reste à Francfort, la latence est la même. Ce qui s'améliore: plus de mise en veille, donc plus d'attente de 15 secondes à une minute au premier joueur de la journée; et un serveur vingt fois plus puissant, qui ne risque plus la suspension pour bande passante épuisée. Une mise en ligne coupe toujours les parties en cours, comme aujourd'hui.
+
+**Pour le code du jeu: rien.** Aucun fichier de `packages/` ne dépend de Render: le serveur lit son port, ses origines et sa base dans l'environnement, comme partout. Seuls changent la mise en ligne (`deploiement/deployer.ts`, qui appelle l'interface de Render), sa CI, et `docs/deploiement.md`. Le maintien en éveil de la page (`eveil.ts`) devient inutile, sans gêner. Le nombre de mandataires de confiance change (un seul relais au lieu de trois) et se remesure par la procédure de `docs/deploiement.md`.
+
+**Pour le porteur du projet: quatre gestes, une seule fois.** Créer le compte Oracle, que Claude ne peut pas créer à sa place; choisir **Francfort comme région d'origine** à l'inscription, parce que les ressources gratuites ne vivent que dans cette région et qu'elle ne se change plus ensuite; créer la machine, guidé pas à pas; ajouter chez Hostinger une entrée DNS pour une adresse du serveur, par exemple `serveur.ninja.dendrolag.fr`.
+
+**Deux vrais compromis, à accepter ou non.**
+
+1. **La récupération des machines inactives.** Oracle reprend une machine gratuite jugée inactive sur sept jours: moins de 20 pour cent de processeur au 95e centile, de réseau, et de mémoire pour les machines Arm (documentation « Always Free Resources »). Un serveur de jeu qui attend ses joueurs la plupart du temps entre exactement dans ce cas. La parade est de passer le compte en « Pay As You Go »: les ressources gratuites restent gratuites et ne sont plus récupérées, mais la facturation est ouverte. Tout ce qui dépasse l'offre gratuite serait facturé. Une alerte de budget à un euro, et une configuration qui n'utilise que des ressources marquées « Always Free », tiennent ce risque à zéro dans les faits. La parade sans facturation, une charge artificielle pour paraître occupé, est à écarter: elle joue contre les règles d'Oracle.
+2. **Une machine à tenir.** Render s'occupait du système, des certificats, des redémarrages et des journaux. Sur Oracle, tout cela s'automatise une fois: mises à jour de sécurité automatiques, certificat renouvelé seul (Caddy et Let's Encrypt), redémarrage du serveur s'il tombe, mise en ligne par la CI comme aujourd'hui, avec l'ancien serveur gardé tant que le nouveau n'a pas répondu sur `/sante`. Il reste une machine dont le porteur du projet est responsable, et un fournisseur qui peut changer ses conditions, comme Render vient de le faire.
+
+**Le filet de sécurité.** La page joindrait le serveur par une adresse à nous, `serveur.ninja.dendrolag.fr`, et non plus par `neon-ninja.onrender.com`. Le service Render est gardé, suspendu, en secours. Si Oracle pose un jour problème, revenir à Render tient en une entrée DNS et une mise en ligne, sans toucher au jeu.
+
+
 ### 2.7 Ce qu'il faudrait trancher
 
 La taille visée (10 000 sur 10 000 est-il un minimum ou une image ?), le nombre de joueurs par partie, le nombre de PNJ, le mode qui l'emploie, et le budget d'hébergement. Une piste intermédiaire, à considérer: **4 000 sur 4 000**, 16 Mpx, quatre Tokyo. Elle tient sans tuiles sur la plupart des appareils récents à condition de découper le décor, sans filtrage réseau jusqu'à 1 000 PNJ, avec la grille seule côté moteur, et accueille 24 à 30 joueurs.
