@@ -39,7 +39,7 @@ Aucune modification de `legacy/` ni de `tests/caracterisation/`.
 - Résultat: 3 602 tests au vert sous la mesure de couverture; types, linter et formatage des fichiers touchés au vert. Tests de la base sautés en local, joués par la CI.
 - Couverture de packages/sim et shared: 99,75 pour cent des instructions; `etat.ts` à 100; `collisions.ts` entièrement couvert après le retrait d'une garde de bord inatteignable.
 - Empreintes des quatre parties de référence (`tests/charge/empreinte.ts`): identiques avant et après, à l'octet. Aucune de leurs apparitions ne tombait dans une poche.
-- État de la CI: voir le commit de suivi de ce handoff.
+- État de la CI: verte sur `0ef62ce` (exécution 37130114776): types, linter et tests, bout en bout, mise en ligne. Le serveur de production répond sur ce commit (`/sante`).
 
 ## Décisions et écarts au plan
 
