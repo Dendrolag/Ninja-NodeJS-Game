@@ -40,7 +40,7 @@ Aucune modification de `legacy/`, de `tests/caracterisation/`, de `packages/sim`
 - Ajoutés: format du numéro, version mineure, date courte indépendante du fuseau, libellé avec et sans commit ou date, infobulle; note de la version servie exigée, une note par version, pas de texte vide, texte de la 1.5; décision de la note (revient, lue, nouveau joueur, sans note); souvenir sur stockage en mémoire, refusé, absent; fenêtre (titre, sections, puces, trois façons de fermer); application (ouverture et focus, pas de retour après fermeture, retour tant qu'elle n'est pas fermée, réouverture par le pied et focus rendu, nouveau joueur, sans stockage, invitation, hors de l'accueil). Bout en bout, bureau et mobile: un habitué la lit, la ferme, elle ne revient pas au rechargement, le numéro la rouvre, Echap la ferme; un joueur neuf ne la voit pas, ni au rechargement.
 - Résultat: 3 527 tests unitaires et d'intégration au vert en local, types, linter et formatage compris; tests de la base sautés en local. Bout en bout: note, crédits, navigation, parcours solo, lien, retour et compte au vert dans les deux cadrages.
 - Couverture de packages/sim: inchangée, il n'est pas touché.
-- État de la CI: voir la section ajoutée après la poussée.
+- État de la CI: verte sur `4d7dff8` (exécution 37107064848): types, linter et tests, bout en bout, mise en ligne. Vérifié sur la page en ligne: le pied de https://ninja.dendrolag.fr dit `V1.5.0 · 03/10/2026 · 4d7dff8`, c'est un bouton, et son infobulle dit « Version du 3 octobre 2026, 09h39 · commit 4d7dff8… ».
 
 ## Décisions et écarts au plan
 
