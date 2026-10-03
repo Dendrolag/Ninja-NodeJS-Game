@@ -92,9 +92,13 @@ export { origineValide, politiqueDeContenu } from './page.js';
 export {
   LIBELLE_DE_DEVELOPPEMENT,
   MOTIF_VERSION_DIFFERENTE,
+  NUMERO_DE_VERSION,
+  dateCourteDeVersion,
   dateDeVersion,
+  infobulleDeVersion,
   libelleDeVersion,
   versionAcceptee,
+  versionMineure,
 } from './version.js';
 
 export type { Consommation, SeauAJetons } from './debit.js';

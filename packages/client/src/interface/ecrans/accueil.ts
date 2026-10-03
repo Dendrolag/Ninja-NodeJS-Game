@@ -28,6 +28,8 @@ import { CARTES, MODES } from '@neon-ninja/shared';
 import type { EtatClient } from '../../etat.js';
 import { monterChampPseudo } from '../composants/champPseudo.js';
 import { monterCredits } from '../composants/credits.js';
+import type { Fenetre } from '../composants/fenetre.js';
+import { monterNoteDeVersion } from '../composants/noteDeVersion.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import { GLYPHES_DES_MODES, icone } from '../icones.js';
 import { modeleAccueil } from '../modeles/accueil.js';
@@ -38,6 +40,38 @@ import type { ContexteEcran, EcranAffiche } from './types.js';
 /** Le lien est-il en train de s'etablir, de sorte que le joueur n'a qu'a attendre. */
 function lienEnAttente(lien: EtatDuLien): boolean {
   return lien === 'enCours' || lien === 'reveil' || lien === 'retablissement' || lien === 'retour';
+}
+
+/**
+ * Le numero de version du pied: un bouton qui rouvre la note de sa version (etape
+ * 4.9), ou un simple texte s'il n'y en a pas. L'infobulle garde la date complete et
+ * l'empreinte entiere du commit.
+ */
+function ligneDeVersion(
+  doc: Document,
+  contexte: ContexteEcran,
+  note: Fenetre | undefined,
+): HTMLElement {
+  const element =
+    note === undefined
+      ? creer(doc, 'span', { classe: 'accueil-version', texte: contexte.libelleDeVersion })
+      : bouton(
+          doc,
+          { classe: 'accueil-version accueil-pied-bouton', texte: contexte.libelleDeVersion },
+          () => {
+            note.ouvrir();
+          },
+        );
+
+  if (note !== undefined) {
+    element.setAttribute('aria-haspopup', 'dialog');
+  }
+
+  if (contexte.infobulleDeVersion !== undefined) {
+    element.title = contexte.infobulleDeVersion;
+  }
+
+  return element;
 }
 
 /** Monte l'ecran d'accueil. */
@@ -118,6 +152,17 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
   );
 
   const credits = monterCredits(doc);
+
+  // La note de version (etape 4.9): retenue lue des qu'elle se ferme, quelle qu'en
+  // soit la facon.
+  const souvenir = contexte.souvenirDeVersion;
+  const note: Fenetre | undefined =
+    souvenir?.note === undefined
+      ? undefined
+      : monterNoteDeVersion(doc, souvenir.note, () => {
+          souvenir.marquerLue();
+        });
+  const version = ligneDeVersion(doc, contexte, note);
 
   const formulaire = creer(
     doc,
@@ -221,29 +266,29 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
     // la production est restee trois commits en arriere sans que rien ne le signale:
     // il fallait interroger la route de sante du serveur pour s'en apercevoir.
     // L'empreinte complete est dans l'infobulle, pour qui a le depot sous la main.
-    // A cote, les credits (etape 4.7), a la place qu'un joueur connait pour eux.
+    // Le numero rouvre la note de sa version (etape 4.9). A cote, les credits
+    // (etape 4.7), a la place qu'un joueur connait pour eux.
     creer(
       doc,
       'footer',
       { classe: 'accueil-pied' },
-      creer(doc, 'span', {
-        classe: 'accueil-version',
-        texte: contexte.libelleDeVersion,
-        ...(contexte.version === undefined
-          ? {}
-          : { attributs: { title: `Commit ${contexte.version}` } }),
-      }),
+      version,
       creer(doc, 'span', {
         classe: 'accueil-pied-separateur',
         texte: '·',
         attributs: { 'aria-hidden': 'true' },
       }),
-      bouton(doc, { classe: 'accueil-credits', texte: 'Crédits' }, () => {
+      bouton(doc, { classe: 'accueil-credits accueil-pied-bouton', texte: 'Crédits' }, () => {
         credits.ouvrir();
       }),
     ),
     credits.racine,
+    ...(note === undefined ? [] : [note.racine]),
   );
+
+  // Un joueur qui revient et n'a pas lu cette version la lit en arrivant, au premier
+  // affichage: l'ecran est alors dans la page, et la fenetre peut prendre le focus.
+  let noteAOuvrir = note !== undefined && souvenir?.aMontrer === true;
 
   let etatCourant: EtatClient | undefined;
 
@@ -273,6 +318,16 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
 
     afficher(etat) {
       etatCourant = etat;
+
+      // Pas par-dessus une invitation: le joueur vient rejoindre une partie, la note
+      // attendra son prochain passage par l'accueil.
+      if (noteAOuvrir) {
+        noteAOuvrir = false;
+
+        if (etat.invitation === undefined) {
+          note?.ouvrir();
+        }
+      }
       const modele = modeleAccueil(etat, etat.pseudoSaisi);
 
       champPseudo.afficher(etat, modele.pseudoRequis, modele.erreur);
@@ -312,6 +367,7 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
       formulaire.removeEventListener('submit', surEnvoi);
       champPseudo.demonter();
       credits.demonter();
+      note?.demonter();
       racine.remove();
     },
   };

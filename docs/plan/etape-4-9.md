@@ -82,6 +82,17 @@ Conditions de ROADMAP réunies, plus:
 1. Le pied de l'accueil dit `V1.5.0 · jj/mm/aaaa · empreinte` en production, vérifié sur la page en ligne.
 2. Captures de la note, sur ordinateur et sur téléphone.
 
+## Réconciliation (3 octobre 2026, à l'exécution)
+
+1. **Le libellé de développement**: `V1.5.0 · développement`, comme proposé. Sans date, une page de production dit `V1.5.0 · 8f2a8df`.
+2. **L'infobulle** garde la date complète, heure comprise, et l'empreinte entière: « Version du 2 octobre 2026, 22h47 · commit … ».
+3. **Le critère du nouveau joueur**: aucune version vue, et aucune des clés `neon-ninja.session`, `neon-ninja.son`, `neon-ninja.sang` dans le stockage. Il est lu une fois, au montage de l'application. Conséquence assumée: un invité d'avant l'étape qui n'a jamais rien réglé est pris pour un nouveau joueur, et ne lira que les notes suivantes.
+4. **Stockage indisponible**: la note ne s'ouvre pas d'elle-même (elle reviendrait à chaque visite), mais le numéro du pied la rouvre.
+5. **Pas par-dessus une invitation**: un joueur arrivé par un lien d'invitation vient rejoindre une partie; la note attend son prochain passage par l'accueil. Ajouté à l'exécution, dans l'esprit du point 5.
+6. **La note est retenue lue à sa fermeture**, quelle qu'en soit la façon (bouton « Compris », croix, Echap, clic à côté). Rechargée sans être fermée, elle revient.
+7. **Les notes vivent dans le client** (`interface/modeles/notesDeVersion.ts`), le numéro dans `packages/shared`. Un correctif rouvre la note de sa version mineure.
+8. Le texte de la note n'a pas été reconfirmé: le porteur du projet n'était pas joignable pendant l'étape, et la fiche ne le demandait pas comme blocage.
+
 ## Rituel de fin de session
 
 Écrire `docs/handoffs/etape-4-9-handoff.md`. Commiter, pousser, vérifier la CI et la mise en ligne.

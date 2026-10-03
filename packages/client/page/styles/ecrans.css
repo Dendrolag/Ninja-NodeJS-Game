@@ -595,7 +595,8 @@
  * DISCRET VEUT DIRE DISCRET. Pas de panneau, pas de bordure, pas de fond: une ligne
  * de texte faible, en police de donnees parce que c'est une donnee, centree sous la
  * liste des modes. Elle se lit quand on la cherche et ne prend l'oeil de personne.
- * Le bouton des credits a la meme voix: souligne, sans rien d'un bouton d'action.
+ * Ses deux boutons, le numero qui rouvre la note de version (etape 4.9) et les
+ * credits, ont la meme voix: soulignes, sans rien d'un bouton d'action.
  */
 .accueil-pied {
   display: flex;
@@ -612,7 +613,7 @@
 }
 
 /* Une zone de toucher plus haute que la ligne, sans la grossir. */
-.accueil-credits {
+.accueil-pied-bouton {
   margin: -8px 0;
   padding: 8px 4px;
   border: 0;
@@ -626,11 +627,11 @@
   transition: color var(--transition);
 }
 
-.accueil-credits:hover {
+.accueil-pied-bouton:hover {
   color: var(--texte-secondaire);
 }
 
-.accueil-credits:focus-visible {
+.accueil-pied-bouton:focus-visible {
   border-radius: 4px;
   outline: 2px solid var(--cyan);
   outline-offset: -2px;
@@ -1208,6 +1209,43 @@
 
 .fenetre-aide {
   width: min(660px, 100%);
+}
+
+/*
+ * La note de version (etape 4.9): un titre par groupe de nouveautes, et une liste a
+ * puces de couleur, chaque intitule en gras devant son texte.
+ */
+.fenetre-note {
+  width: min(520px, 100%);
+}
+
+.note-section {
+  display: grid;
+  gap: 8px;
+}
+
+.note-section h3 {
+  color: var(--cyan);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.note-liste {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--texte-secondaire);
+  line-height: 1.55;
+}
+
+.note-liste li::marker {
+  color: var(--cyan);
+}
+
+.note-liste strong {
+  color: var(--texte);
+  font-weight: 600;
 }
 
 /* Les credits (etape 4.7): deux lignes, une fenetre a leur mesure. */

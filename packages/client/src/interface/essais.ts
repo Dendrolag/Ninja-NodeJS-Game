@@ -176,3 +176,43 @@ export function obligatoire<T extends Element = HTMLElement>(
 
   return trouve;
 }
+
+/** Un stockage de navigateur, en memoire. */
+export function stockageEnMemoire(): Storage {
+  const valeurs = new Map<string, string>();
+
+  return {
+    get length() {
+      return valeurs.size;
+    },
+    clear: () => {
+      valeurs.clear();
+    },
+    getItem: (cle) => valeurs.get(cle) ?? null,
+    key: (index) => [...valeurs.keys()][index] ?? null,
+    removeItem: (cle) => {
+      valeurs.delete(cle);
+    },
+    setItem: (cle, valeur) => {
+      valeurs.set(cle, valeur);
+    },
+  };
+}
+
+/** Un stockage qui leve a chaque acces, comme un navigateur qui refuse les donnees de site. */
+export function stockageRefuse(): Storage {
+  const refuser = (): never => {
+    throw new Error('SecurityError');
+  };
+
+  return {
+    get length() {
+      return refuser();
+    },
+    clear: refuser,
+    getItem: refuser,
+    key: refuser,
+    removeItem: refuser,
+    setItem: refuser,
+  };
+}

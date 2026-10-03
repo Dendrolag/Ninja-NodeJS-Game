@@ -71,8 +71,33 @@ const MOIS = [
 /** Les six champs d'une date ISO 8601, sans le fuseau: 2026-09-20T19:44:10+02:00. */
 const CHAMPS_ISO = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/;
 
+/**
+ * Le numero de version du jeu (etape 4.9), le seul endroit ou il s'ecrit.
+ *
+ * IL PART DE 1.5.0, le numero donne par le porteur du projet le 2 octobre 2026. Le
+ * commit dit de quelle construction il s'agit; le numero dit ce que le joueur a
+ * entre les mains.
+ *
+ * LA REGLE D'AVANCEMENT. Le numero se fixe a la main, ici, a la fin d'une etape qui
+ * le justifie:
+ * - le deuxieme chiffre (1.X.0) avance pour une nouveaute majeure, et s'accompagne
+ *   toujours d'une note de version, que les joueurs liront une fois: un test exige
+ *   que la note existe;
+ * - le troisieme chiffre (1.5.X) avance pour une correction ou un reglage, sans note.
+ * Une etape qui ne change rien de ce que voit le joueur ne le touche pas.
+ */
+export const NUMERO_DE_VERSION = '1.5.0';
+
+/**
+ * La version mineure d'un numero, celle qui porte une note: « 1.5 » pour « 1.5.3 ».
+ * Un correctif ne change rien aux nouveautes annoncees.
+ */
+export function versionMineure(numero: string): string {
+  return numero.split('.').slice(0, 2).join('.');
+}
+
 /** Ce que la page affiche quand elle n'a pas ete empaquetee pour une mise en ligne. */
-export const LIBELLE_DE_DEVELOPPEMENT = 'Version de développement';
+export const LIBELLE_DE_DEVELOPPEMENT = `V${NUMERO_DE_VERSION} · développement`;
 
 /** Nombre de caracteres de l'empreinte du commit montres au joueur. */
 export const LONGUEUR_EMPREINTE_COURTE = 7;
@@ -110,13 +135,40 @@ export function dateDeVersion(horodatage: string): string | undefined {
 }
 
 /**
- * Ce que le joueur lit en pied d'accueil pour savoir sur quelle version il est.
+ * La date d'un commit en jj/mm/aaaa, ou rien si la chaine n'en est pas une.
+ *
+ * Comme dateDeVersion, elle lit les champs tels qu'ils sont ecrits, sans convertir:
+ * la meme version porte la meme date pour tous les joueurs.
+ */
+export function dateCourteDeVersion(horodatage: string): string | undefined {
+  const champs = CHAMPS_ISO.exec(horodatage);
+
+  if (champs === null) {
+    return undefined;
+  }
+
+  const [, annee = '', mois = '', jour = ''] = champs;
+  const numeroDuMois = Number(mois);
+
+  if (numeroDuMois < 1 || numeroDuMois > MOIS.length) {
+    return undefined;
+  }
+
+  return `${jour}/${mois}/${annee}`;
+}
+
+/**
+ * Ce que le joueur lit en pied d'accueil pour savoir sur quelle version il est:
+ * « V1.5.0 · 02/10/2026 · 8f2a8df ».
  *
  * POURQUOI CETTE LIGNE EXISTE (etape 8.4). La version du jeu est le commit, et le
  * commit ne se lit pas. Le 20 septembre 2026, la production est restee trois commits
  * en arriere sans que rien ne le signale: il a fallu interroger la route de sante du
- * serveur pour s'en apercevoir. Une date en toutes lettres et sept caracteres
- * d'empreinte suffisent a repondre a la question « de quand date ce que je vois ».
+ * serveur pour s'en apercevoir. La date et sept caracteres d'empreinte suffisent a
+ * repondre a la question « de quand date ce que je vois ».
+ *
+ * LE NUMERO EN TETE (etape 4.9), puis une date courte: « jjmmaa », demande d'abord,
+ * a ete ecarte, ambigu (021026). L'heure est dans l'infobulle (infobulleDeVersion).
  *
  * @param version    L'empreinte complete du commit, absente en developpement.
  * @param horodatage La date du commit en ISO 8601, absente si git n'a rien su en dire.
@@ -128,7 +180,24 @@ export function libelleDeVersion(version?: string, horodatage?: string): string 
 
   const empreinte = version.slice(0, LONGUEUR_EMPREINTE_COURTE);
   const date =
+    horodatage === undefined || horodatage === '' ? undefined : dateCourteDeVersion(horodatage);
+
+  return date === undefined
+    ? `V${NUMERO_DE_VERSION} · ${empreinte}`
+    : `V${NUMERO_DE_VERSION} · ${date} · ${empreinte}`;
+}
+
+/**
+ * L'infobulle du pied d'accueil: la date complete et l'empreinte entiere, pour qui
+ * a le depot sous la main. Rien en developpement, ou aucun commit n'est servi.
+ */
+export function infobulleDeVersion(version?: string, horodatage?: string): string | undefined {
+  if (version === undefined || version === '') {
+    return undefined;
+  }
+
+  const date =
     horodatage === undefined || horodatage === '' ? undefined : dateDeVersion(horodatage);
 
-  return date === undefined ? `Version ${empreinte}` : `Version du ${date} · ${empreinte}`;
+  return date === undefined ? `Commit ${version}` : `Version du ${date} · commit ${version}`;
 }

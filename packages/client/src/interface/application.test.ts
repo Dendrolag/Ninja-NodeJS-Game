@@ -13,7 +13,11 @@
  */
 
 import type { InfosSalon, LigneClassement, ReglagesPartie } from '@neon-ninja/shared';
-import { LIBELLE_DE_DEVELOPPEMENT, REGLAGES_PAR_DEFAUT } from '@neon-ninja/shared';
+import {
+  LIBELLE_DE_DEVELOPPEMENT,
+  NUMERO_DE_VERSION,
+  REGLAGES_PAR_DEFAUT,
+} from '@neon-ninja/shared';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Client } from '../client.js';
@@ -161,7 +165,7 @@ describe('l accueil', () => {
     expect(obligatoire(hote, '.accueil-version').textContent).toBe(LIBELLE_DE_DEVELOPPEMENT);
   });
 
-  it('porte la date du commit, et son empreinte entiere en infobulle (etape 8.4)', () => {
+  it('porte le numero, la date du commit, et son empreinte entiere en infobulle (etapes 8.4 et 4.9)', () => {
     const page = document.createElement('div');
     document.body.append(page);
 
@@ -177,10 +181,12 @@ describe('l accueil', () => {
 
     const pied = obligatoire(page, '.accueil-version');
 
-    expect(pied.textContent).toBe('Version du 20 septembre 2026, 19h44 · ee18151');
+    expect(pied.textContent).toBe(`V${NUMERO_DE_VERSION} · 20/09/2026 · ee18151`);
     // L'empreinte entiere ne se lit pas en pied de page, mais elle reste a portee de
-    // souris: c'est elle qu'on colle dans un « git show ».
-    expect(pied.getAttribute('title')).toBe('Commit ee181518d887796fb7dd012e7e91e6a88740e2ed');
+    // souris: c'est elle qu'on colle dans un « git show ». L'heure aussi.
+    expect(pied.getAttribute('title')).toBe(
+      'Version du 20 septembre 2026, 19h44 · commit ee181518d887796fb7dd012e7e91e6a88740e2ed',
+    );
 
     autre.demonter();
     page.remove();

@@ -45,7 +45,7 @@ Vrai pour toutes les étapes, à ne pas redemander ni rappeler dans un prompt.
 3. Réconcilier avant d'exécuter. Une fiche est un plan, pas un contrat figé. Si l'état du dépôt ou des décisions antérieures divergent des hypothèses de la fiche, mettre la fiche à jour et noter l'écart dans le handoff de fin.
 4. Exécuter. Rester strictement dans le périmètre de l'étape. Ne jamais tirer en avant du travail des étapes suivantes.
 5. Vérifier. Contrôler la définition de terminé de la fiche et la définition commune de ROADMAP.md. Tous les tests au vert, CI verte, aucune régression de caractérisation.
-6. Fin. Écrire le handoff depuis docs/handoffs/_TEMPLATE.md, renseigner la prochaine action exacte pointant vers l'étape suivante, commiter. Puis repartir d'un contexte neuf (/clear) pour l'étape suivante.
+6. Fin. Décider du numéro de version (étape 4.9): une nouveauté majeure pour le joueur avance le deuxième chiffre de `NUMERO_DE_VERSION` (`packages/shared/src/version.ts`) et demande une note dans `packages/client/src/interface/modeles/notesDeVersion.ts`, dont le texte se soumet au porteur du projet; une correction ou un réglage visible avance le troisième chiffre, sans note; une étape invisible au joueur n'y touche pas. écrire le handoff depuis docs/handoffs/_TEMPLATE.md, renseigner la prochaine action exacte pointant vers l'étape suivante, commiter. Puis repartir d'un contexte neuf (/clear) pour l'étape suivante.
 
 ## Ordre d'exécution et porte avant la phase 2
 

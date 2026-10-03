@@ -26,7 +26,7 @@
  */
 
 import type { PisteMusicale, ReglagesPartie } from '@neon-ninja/shared';
-import { libelleDeVersion } from '@neon-ninja/shared';
+import { NUMERO_DE_VERSION, infobulleDeVersion, libelleDeVersion } from '@neon-ninja/shared';
 
 import { annoncesDuChangement } from '../annonces.js';
 import type { Client } from '../client.js';
@@ -55,6 +55,8 @@ import { monterParties } from './ecrans/parties.js';
 import { monterProfil } from './ecrans/profil.js';
 import { monterSalon } from './ecrans/salon.js';
 import type { ContexteEcran, EcranAffiche, MonteurEcran } from './ecrans/types.js';
+import type { NoteDeVersion } from './modeles/notesDeVersion.js';
+import { lireLeSouvenirDeVersion } from './souvenirDeVersion.js';
 
 /** Ce qu'il faut pour monter l'application. */
 export interface OptionsApplication {
@@ -71,7 +73,10 @@ export interface OptionsApplication {
   readonly prechargerLeJeu?: (reglages: ReglagesPartie) => void;
   readonly sons?: LecteurDeSons;
   readonly horloge?: HorlogeClient;
-  /** Le stockage du navigateur, pour retenir les reglages du son. */
+  /**
+   * Le stockage du navigateur, pour retenir les reglages du son et la derniere note
+   * de version lue (etape 4.9).
+   */
   readonly stockage?: Storage;
   /** Recharger la page. Celui du navigateur par defaut. */
   readonly recharger?: () => void;
@@ -82,6 +87,11 @@ export interface OptionsApplication {
    */
   readonly version?: string;
   readonly horodatage?: string;
+  /**
+   * Les notes de version, celles du jeu par defaut (etape 4.9). Les tests en passent
+   * d'autres pour eprouver une version sans note.
+   */
+  readonly notesDeVersion?: readonly NoteDeVersion[];
 }
 
 /** L'application montee. */
@@ -217,6 +227,7 @@ export function monterApplication(options: OptionsApplication): Application {
   // l'application prend sa place.
   options.hote.replaceChildren(racine);
 
+  const infobulle = infobulleDeVersion(options.version, options.horodatage);
   const contexte: ContexteEcran = {
     document: doc,
     client,
@@ -231,7 +242,14 @@ export function monterApplication(options: OptionsApplication): Application {
     niveauDeSang: () => panneauSon.sang,
     recharger,
     libelleDeVersion: libelleDeVersion(options.version, options.horodatage),
-    ...(options.version === undefined ? {} : { version: options.version }),
+    ...(infobulle === undefined ? {} : { infobulleDeVersion: infobulle }),
+    // Lu une fois, ici: un nouveau joueur qui regle le son pendant sa visite ne
+    // devient pas, a son retour sur l'accueil, un joueur qui revient (etape 4.9).
+    souvenirDeVersion: lireLeSouvenirDeVersion(
+      options.stockage,
+      NUMERO_DE_VERSION,
+      options.notesDeVersion,
+    ),
   };
 
   /** Monte un ecran, l'installe dans la page, et lance sa musique. */

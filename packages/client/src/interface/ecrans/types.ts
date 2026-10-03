@@ -13,6 +13,7 @@ import type { EtatClient } from '../../etat.js';
 import type { HorlogeClient } from '../../horloge.js';
 import type { LecteurDeSons } from '../../sons/lecteur.js';
 import type { NiveauDeSang } from '../preferences.js';
+import type { SouvenirDeVersion } from '../souvenirDeVersion.js';
 
 /** Ce que l'application donne a chaque ecran. */
 export interface ContexteEcran {
@@ -34,10 +35,15 @@ export interface ContexteEcran {
    */
   readonly libelleDeVersion: string;
   /**
-   * L'empreinte complete du commit, pour l'infobulle du pied. Absente en
-   * developpement, ou la page n'est construite d'aucun commit.
+   * L'infobulle du pied: la date complete et l'empreinte entiere du commit. Absente
+   * en developpement, ou la page n'est construite d'aucun commit.
    */
-  readonly version?: string;
+  readonly infobulleDeVersion?: string;
+  /**
+   * La note de la version servie, et ce que ce navigateur en a deja lu (etape 4.9).
+   * Absent, l'accueil ne montre aucune note.
+   */
+  readonly souvenirDeVersion?: SouvenirDeVersion;
 }
 
 /** Un ecran monte. */

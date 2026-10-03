@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { NUMERO_DE_VERSION } from '../../packages/shared/dist/index.js';
 import { releverLesErreurs } from './harnais/parcours.js';
 import type { ServeurDeJeu } from './harnais/serveur-de-jeu.js';
 import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
@@ -32,7 +33,7 @@ test('les credits s ouvrent depuis le pied de l accueil', async ({ page, hasTouc
   const bouton = pied.getByRole('button', { name: 'Crédits' });
   const credits = page.getByRole('dialog', { name: 'Crédits' });
 
-  await expect(pied).toContainText('Version');
+  await expect(pied).toContainText(`V${NUMERO_DE_VERSION}`);
   await expect(credits).toBeHidden();
 
   // Au clavier: le bouton prend le focus, la touche Entree l'ouvre, Echap la ferme.
