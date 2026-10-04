@@ -68,6 +68,7 @@ function pageDesCouleurs(): string {
       fumees: [],
       mines: { disques: [], parts: [], traits: [] },
       explosions: [],
+      impacts: [],
       entites: [ninja('joueur-vert', 980, 0x00ff00), ninja('bot-blanc', 1020, 0xffffff)],
     },
     { x: 1000, y: 750, echelle: 4 },
@@ -137,6 +138,7 @@ function pageDuHalo(): string {
     fumees: [],
     mines: { disques: [], parts: [], traits: [] },
     explosions: [],
+    impacts: [],
     entites: [
       ninja('jaune', 970, 0xffff00),
       ninja('blanc', 1000, 0xffffff),
@@ -239,6 +241,7 @@ function pageDuBord(): string {
     fumees: [],
     mines: { disques: [], parts: [], traits: [] },
     explosions: [],
+    impacts: [],
     entites,
   });
   const ninja = { id: 'vert', texture: IMAGE, x: 1000, y: 750, taille: 32, teinte: 0x00ff00, alpha: 1 };

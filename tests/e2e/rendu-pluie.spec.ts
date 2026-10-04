@@ -55,6 +55,7 @@ function pageDeLaPluie(carte: string, pluie: boolean): string {
     fumees: [],
     mines: { disques: [], parts: [], traits: [] },
     explosions: [],
+    impacts: [],
     sang: [],
     secousse: { x: 0, y: 0 },
   };

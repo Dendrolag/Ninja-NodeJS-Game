@@ -42,6 +42,7 @@ const PAGE_DU_MIROIR = `<!doctype html>
     fumees: [],
     mines: { disques: [], parts: [], traits: [] },
     explosions: [],
+    impacts: [],
     sang: [],
     secousse: { x: 0, y: 0 },
     imageDePluie: 1,
