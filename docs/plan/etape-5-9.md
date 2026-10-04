@@ -28,7 +28,7 @@ Ce qui resterait payant après ces trois couches: un trafic sortant au-delà de 
 
 Claude ne crée pas de compte et ne saisit aucune donnée de carte bancaire. À faire avant la session, ou pendant, guidé:
 
-1. Créer le compte Oracle Cloud Free Tier, avec **Francfort (Germany Central) comme région d'origine**. La carte bancaire sert à vérifier l'identité: une autorisation temporaire, levée par la banque sous trois à cinq jours, sans débit.
+1. Créer le compte Oracle Cloud Free Tier, avec **Francfort (Germany Central) comme région d'origine**. Paris a été considéré et écarté le 4 octobre 2026: depuis le poste du porteur du projet, un aller-retour vers Paris prend 20 ms et vers Francfort 28 ms, soit 8 ms gagnés, peu au regard des irrégularités de plus de 100 ms du réseau mobile (audit 8.5); mais la base Neon est à Francfort, à un aller-retour d'environ 10 ms de Paris pour chaque requête, et Francfort compte trois domaines de disponibilité contre un seul à Paris, donc plus de chances d'y trouver une machine A1 gratuite libre. La carte bancaire sert à vérifier l'identité: une autorisation temporaire, levée par la banque sous trois à cinq jours, sans débit.
 2. Créer une paire de clés SSH pour la machine, et donner à la session la clé publique.
 3. Ajouter chez Hostinger une entrée DNS de type A, par exemple `serveur.ninja.dendrolag.fr`, vers l'adresse publique de la machine, quand la session la donne.
 
