@@ -50,7 +50,8 @@ function arene(dimensions: DimensionsCarte): CarteCollisions {
 
 /**
  * Une partie de deux minutes ou seule la fumee apparait, a chaque tentative: ni autre
- * objet, ni zone, ni Black Ninja, ni Evade.
+ * objet, ni zone, ni Black Ninja, ni Evade. Ni mine: active par defaut depuis
+ * l'etape 7.11, elle se ramassait parfois sur le chemin de la fumee.
  */
 function partie(mode: Mode = 'classique'): DemandeCreation['configuration'] {
   return {
@@ -72,7 +73,10 @@ function partie(mode: Mode = 'classique'): DemandeCreation['configuration'] {
       malus: { actifs: false },
       zones: { actives: false },
       botsNoirs: { actifs: false },
-      objetsDePoche: { fumee: { actif: true, tauxApparitionPourCent: 100 } },
+      objetsDePoche: {
+        fumee: { actif: true, tauxApparitionPourCent: 100 },
+        mine: { actif: false },
+      },
     },
   };
 }
@@ -334,10 +338,14 @@ describe('la poche et la fumee, a travers le reseau', () => {
     expect(nuage.depart).toEqual({ x: depart?.x, y: depart?.y });
     expect(room.etat.joueurs[alice]?.position).toEqual(nuage.arrivee);
 
-    // Alice apprend que sa poche est vide; Bob n'a jamais rien recu.
+    // Alice apprend que sa poche est vide; Bob n'a rien recu de la sienne. Il ne
+    // recoit que sa propre poche, s'il est tombe sur une fumee la ou il se tient:
+    // elles apparaissent toutes les deux secondes, et rien ne les tient loin de lui.
     await jusquA(() => pochesDeLHote.length === 2);
     expect(pochesDeLHote).toEqual([{ nature: 'fumee' }, {}]);
-    expect(pochesDeLInvite).toEqual([]);
+    const pocheDeBob = room.etat.joueurs[invite.id as string]?.poche;
+    await jusquA(() => pochesDeLInvite.length === (pocheDeBob === undefined ? 0 : 1));
+    expect(pochesDeLInvite).toEqual(pocheDeBob === undefined ? [] : [{ nature: pocheDeBob }]);
   });
 
   it('ignore une demande sur une poche vide, sans rien envoyer', async () => {
