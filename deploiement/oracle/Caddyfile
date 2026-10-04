@@ -1,0 +1,15 @@
+# Caddy, devant le serveur de jeu sur la machine Oracle (etape 5.9).
+#
+# Il obtient et renouvelle seul le certificat du nom ci-dessous, redirige http vers
+# https, et passe les requetes, WebSocket compris, au serveur de jeu en service.
+# Quel serveur: le fichier importe, que « neon-ninja basculer » reecrit a chaque
+# mise en ligne, puis fait relire par Caddy.
+#
+# Caddy remplace l'en-tete X-Forwarded-For par la seule adresse de celui qui se
+# connecte: le serveur de jeu croit donc un seul mandataire
+# (MANDATAIRES_DE_CONFIANCE=1).
+
+serveur.ninja.dendrolag.fr {
+	encode zstd gzip
+	import /etc/caddy/amont.caddy
+}

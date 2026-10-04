@@ -179,3 +179,69 @@ jobs:
       - name: Mettre en ligne la page et le serveur de jeu
         if: ${{ steps.dernier.outputs.a-mettre-en-ligne == 'oui' }}
         run: node --disable-warning=ExperimentalWarning deploiement/deployer.ts
+
+  # L'essai du serveur de jeu sur la machine Oracle (etape 5.9), a cote de la
+  # production, qui reste sur Render. Il ne bloque rien: s'il echoue, la mise en
+  # ligne de la production part quand meme, et l'execution reste verte. Le
+  # deroulement est dans deploiement/oracle.ts, l'exploitation dans
+  # docs/deploiement.md.
+  essai-oracle:
+    name: Essai sur Oracle
+    runs-on: ubuntu-latest
+    needs: [verification, bout-en-bout]
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+    continue-on-error: true
+    concurrency:
+      group: essai-oracle
+      cancel-in-progress: false
+    env:
+      # La cle SSH de la CI, qui ne peut que lancer les commandes de la machine.
+      ORACLE_SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
+      ORACLE_HOTE: serveur.ninja.dendrolag.fr
+      VERSION_DU_JEU: ${{ github.sha }}
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Verifier que ce commit est le dernier de la branche
+        id: dernier
+        run: |
+          dernier="$(git ls-remote origin refs/heads/master | cut -f1)"
+          if [ -z "$ORACLE_SSH_KEY" ]; then
+            echo "Pas de cle ORACLE_SSH_KEY: pas d'essai sur Oracle."
+            echo "a-mettre-en-ligne=non" >> "$GITHUB_OUTPUT"
+          elif [ "$dernier" = "$GITHUB_SHA" ]; then
+            echo "a-mettre-en-ligne=oui" >> "$GITHUB_OUTPUT"
+          else
+            echo "Un commit plus recent ($dernier) est sur la branche: celui-ci ne se met pas en ligne."
+            echo "a-mettre-en-ligne=non" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Installer pnpm
+        if: ${{ steps.dernier.outputs.a-mettre-en-ligne == 'oui' }}
+        uses: pnpm/action-setup@v6
+
+      - name: Installer Node
+        if: ${{ steps.dernier.outputs.a-mettre-en-ligne == 'oui' }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Installer les dependances
+        if: ${{ steps.dernier.outputs.a-mettre-en-ligne == 'oui' }}
+        run: pnpm install --frozen-lockfile
+
+      - name: Compiler les paquets
+        if: ${{ steps.dernier.outputs.a-mettre-en-ligne == 'oui' }}
+        run: pnpm exec tsc --build
+
+      - name: Mettre en ligne sur la machine Oracle
+        if: ${{ steps.dernier.outputs.a-mettre-en-ligne == 'oui' }}
+        run: |
+          cle="$RUNNER_TEMP/cle-oracle"
+          printf '%s\n' "$ORACLE_SSH_KEY" > "$cle"
+          chmod 600 "$cle"
+          ORACLE_CLE="$cle" node --disable-warning=ExperimentalWarning deploiement/oracle.ts

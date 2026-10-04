@@ -9,6 +9,7 @@ Mis en place à l'étape 5.3, le 14 septembre 2026. Ce document dit ce qui tourn
 | Page du jeu    | Vercel, projet `neon-ninja-jeu` (`prj_x2NAYxrQy1D88sjkjGRewy96hbua`)   | https://ninja.dendrolag.fr           |
 | Serveur de jeu | Render, service « Neon Ninja » (`srv-csrnm30gph6c73b9jmt0`), Francfort | https://neon-ninja.onrender.com      |
 | Base           | Neon, projet `neon-ninja`, branche `production` (principale), pooler   | Dans `DATABASE_URL`, jamais en clair |
+| Essai          | Machine Oracle gratuite, Francfort (étape 5.9), page et serveur        | https://serveur.ninja.dendrolag.fr   |
 
 - **Vercel** : équipe `team_v9SkLK1zKjpRjtkmzq8Q9TM7` (« dendrolag's projects »). Le projet n'est relié à aucun dépôt : seule la mise en ligne ci-dessous y envoie une page.
 - **Domaine** : `ninja.dendrolag.fr`, rattaché au projet Vercel le 15 septembre 2026. La zone DNS de `dendrolag.fr` est chez Hostinger (hPanel, serveurs `ns1` et `ns2.dns-parking.com`) : une seule entrée pour ce nom, un CNAME `ninja` vers `a3d44510bf05d743.vercel-dns-017.com`, la cible que Vercel recommande pour ce projet. Aucune entrée A ne doit coexister avec lui. Vercel émet et renouvelle le certificat. L'adresse https://neon-ninja-jeu.vercel.app reste en service, mais renvoie depuis l'étape 5.6 à `ninja.dendrolag.fr` par une redirection permanente (308), chemin compris, pour que les moteurs de recherche ne retiennent qu'une adresse. La règle est écrite dans la configuration que la mise en ligne envoie à Vercel (`packages/client/scripts/sortieVercel.ts`). Les adresses propres à chaque déploiement ne sont pas redirigées.
@@ -110,6 +111,96 @@ Entre le joueur et le serveur, Render place trois mandataires : deux relais qui 
 Mesuré le 14 septembre 2026 : avec 10 mandataires de confiance et un en-tête inventé de neuf adresses numérotées, le serveur a rendu la troisième, et sans en-tête l'adresse publique de la machine de mesure. Avec 0, le serveur voyait `::1` ; avec 1, une adresse interne de Render : tous les joueurs auraient partagé la même limite de tentatives de connexion. Avec plus de 3, un joueur pourrait s'inventer une adresse.
 
 Pour le vérifier après un changement d'hébergement : interroger `/sante` depuis une machine dont on connaît l'adresse publique, avec et sans en-tête `X-Forwarded-For` inventé. L'adresse rendue doit être l'adresse publique dans les deux cas : jamais celle d'un mandataire, jamais l'adresse inventée.
+
+Sur la machine Oracle de l'essai (étape 5.9), un seul mandataire, Caddy, qui remplace l'en-tête par l'adresse de celui qui se connecte : `MANDATAIRES_DE_CONFIANCE` y vaut **1**. Mesuré le 4 octobre 2026 par la même procédure : l'adresse publique du poste de mesure, avec et sans en-tête inventé.
+
+## L'essai sur Oracle (étape 5.9)
+
+Mis en place le 4 octobre 2026, à côté de la production et sans la toucher : **Render reste la production**, la page publique joint toujours `neon-ninja.onrender.com`. L'essai dit si une machine Oracle gratuite peut porter le jeu, et plus tard une Battle Royale (`docs/plan/etape-5-9.md`). La bascule de la production se décidera sur ses mesures, dans une étape à part.
+
+### Ce qui tourne où, pour l'essai
+
+- **La machine** : Oracle Cloud, offre gratuite (« Always Free »), région Francfort, location `Dendrolag`. Une `VM.Standard.A1.Flex` (processeur Arm, 4 cœurs, 24 Go), Ubuntu 24.04 Minimal pour Arm, disque de 47 Go, adresse publique `92.5.46.188`. L'adresse est « éphémère » : gratuite, elle se garde tant que la machine existe, mais une machine supprimée et recréée en reçoit une autre ; il faut alors corriger le DNS et `deploiement/oracle/hote-connu`.
+- **Le nom** : `serveur.ninja.dendrolag.fr`, une entrée A chez Hostinger vers l'adresse de la machine. Caddy, sur la machine, obtient et renouvelle seul son certificat.
+- **La page** : servie par le serveur de jeu lui-même, à la même adresse. Une page Vercel non promue aurait demandé un compte Vercel à chaque joueur (le projet protège toute adresse autre que son domaine public), et son adresse aurait changé à chaque commit.
+- **La base** : la branche Neon `essai-oracle` (`br-misty-forest-b2pxtlgf`), copiée de la production le 4 octobre 2026. Rien de l'essai ne s'écrit dans les vraies données : un compte créé pendant l'essai n'existe pas en production.
+
+Sur la machine :
+
+| Quoi                           | Où                                                                                   |
+| ------------------------------ | ------------------------------------------------------------------------------------ |
+| Le serveur de jeu              | Un conteneur Docker, `neon-ninja-bleu` ou `neon-ninja-vert`, port local 3001 ou 3002 |
+| Caddy                          | Service du système, `/etc/caddy/Caddyfile`, qui importe `/etc/caddy/amont.caddy`     |
+| Les variables du serveur       | `/etc/neon-ninja/environnement`, lisible du seul compte de mise en ligne             |
+| Les commandes de mise en ligne | `/usr/local/bin/neon-ninja`, copie de `deploiement/oracle/neon-ninja.sh`             |
+| L'emplacement en service       | `/var/lib/neon-ninja/actif`                                                          |
+
+Variables du serveur : `DATABASE_URL` (la branche `essai-oracle`, par le pooler, un secret), `ORIGINES_AUTORISEES=https://serveur.ninja.dendrolag.fr`, `MANDATAIRES_DE_CONFIANCE=1`, `SERVIR_LA_PAGE=oui`. `PORT` et `VERSION_DU_JEU` sont posées au démarrage du conteneur.
+
+### Le garde-fou contre les factures
+
+Posé le 4 octobre 2026, avant la machine, en trois couches :
+
+1. **Aucune facturation ouverte.** Le compte reste en offre gratuite : Oracle refuse ce qui dépasse, il ne le facture pas. **Ne jamais cliquer sur « Upgrade »** dans la console : ce bouton ouvre la facturation (« Pay As You Go »).
+2. **Une politique de quotas**, `garde-fou-gratuit`, sur toute la location (_Governance & Administration_, _Quota Policies_) :
+
+   ```
+   zero compute-core quotas in tenancy
+   zero compute-memory quotas in tenancy
+   zero block-storage quotas in tenancy
+   set compute-core quota /*standard-a1*/ to 4 in tenancy
+   set compute-memory quota /*standard-a1*/ to 24 in tenancy
+   set block-storage quota total-storage-gb to 200 in tenancy
+   ```
+
+   Seule une machine A1 dans les limites gratuites peut se créer. Les noms génériques (`/*standard-a1*/`) sont nécessaires : une première version qui ne rouvrait que `standard-a1-core-count` a fait refuser la machine, la mise à zéro couvrant aussi des quotas « régionaux » (`standard-a1-core-regional-count`) que la documentation d'Oracle ne cite pas. Le refus prouve que les quotas sont actifs.
+
+3. **Un budget d'un euro par mois**, avec deux alertes par courriel : dépense réelle au premier centime, dépense prévue au-delà d'un euro.
+
+Ce qui resterait payant une fois la facturation ouverte : un trafic sortant au-delà de 10 To par mois.
+
+### Mise en ligne de l'essai
+
+Le job « Essai sur Oracle » de la CI part après les deux jobs de vérification, pour une poussée sur `master`, à côté de la mise en ligne de la production. **Il ne bloque rien** : s'il échoue, la production part quand même, et l'exécution reste verte. Il lance `deploiement/oracle.ts`, qui :
+
+0. lit la version en ligne sur `https://serveur.ninja.dendrolag.fr/sante`, et s'arrête si ce commit y est déjà, ou si rien de ce qui compose le jeu n'a changé, selon la même règle que la production ;
+1. envoie à la machine les sources du commit (paquets, ressources, fichier de construction), qui en construit l'image Docker, page comprise : deux minutes environ ;
+2. démarre le nouveau serveur dans l'emplacement libre, bleu ou vert, pendant que l'ancien sert toujours, et attend qu'il rende sa version sur `/sante`, jusqu'à trois minutes ;
+3. fait basculer Caddy vers lui ;
+4. vérifie l'adresse publique : la version sur `/sante`, la page, sa politique de sécurité ouverte à son seul hébergement, et `app.js` du commit ;
+5. arrête l'ancien serveur, et retire les images qui ne servent plus.
+
+Si le nouveau serveur ne répond pas en 2, il est arrêté, et l'ancien n'a jamais cessé de servir. Si l'adresse publique ne suit pas en 4, Caddy revient à l'ancien. Comme sur Render, une mise en ligne coupe les parties en cours sur l'essai.
+
+**La CI n'a sur la machine que les commandes de `neon-ninja`.** Sa clé SSH, le secret `ORACLE_SSH_KEY` du dépôt, y est enregistrée avec cette commande imposée : ni terminal, ni autre programme. L'identité de la machine est épinglée dans `deploiement/oracle/hote-connu` : une machine qui en changerait est refusée.
+
+À la main, depuis la racine du dépôt compilé, pour un commit déjà poussé :
+
+```bash
+VERSION_DU_JEU=<commit> ORACLE_HOTE=serveur.ninja.dendrolag.fr ORACLE_CLE=<fichier de la clé de la CI> node --disable-warning=ExperimentalWarning deploiement/oracle.ts
+```
+
+### Administrer la machine
+
+Par SSH, avec la clé d'administration du poste du porteur du projet (`~/.ssh/neon_ninja_oracle`, créée le 4 octobre 2026) :
+
+```bash
+ssh -i ~/.ssh/neon_ninja_oracle ubuntu@serveur.ninja.dendrolag.fr
+```
+
+- **Journaux du serveur** : `sudo -u deploiement neon-ninja journal bleu`, ou `vert`, selon `cat /var/lib/neon-ninja/actif`.
+- **Mises à jour du système** : automatiques pour la sécurité, avec un redémarrage à 4h30 (heure de la machine, UTC) quand une mise à jour l'exige. Le serveur repart seul, Docker relançant le conteneur.
+- **Changer l'installation** (pare-feu, Caddy, commandes) : modifier `deploiement/oracle/`, recopier le dossier sur la machine, puis relancer `sudo bash installer.sh <clé publique de la CI>`, sans effet de bord à la relance.
+- **Changer une variable du serveur** : modifier `/etc/neon-ninja/environnement`, puis relancer une mise en ligne. Comme sur Render, une variable ne s'applique qu'au démarrage suivant.
+
+### Revenir en arrière, ou arrêter l'essai
+
+- **Une version fautive** : comme pour la production, annuler le commit et pousser. En urgence, sur la machine : `sudo -u deploiement neon-ninja basculer <ancien emplacement>` s'il tourne encore, sinon une mise en ligne à la main d'un commit sain.
+- **Arrêter l'essai** : dans la console Oracle, arrêter l'instance (_Stop_), ou la supprimer (_Terminate_), ce qui libère tout. Retirer ensuite l'entrée DNS `serveur.ninja`, le secret `ORACLE_SSH_KEY` et la branche Neon `essai-oracle`. La production n'en dépend en rien.
+
+### Ce qu'Oracle peut reprendre
+
+Une machine gratuite jugée inactive sur sept jours est récupérée par Oracle : moins de 20 pour cent de processeur au 95e centile, de réseau et de mémoire. L'essai doit dire si cela arrive à une machine qui attend des joueurs. À surveiller : l'état de l'instance dans la console, et les courriels d'Oracle.
 
 ## Ressources de la version d'origine
 

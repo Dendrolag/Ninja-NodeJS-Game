@@ -114,6 +114,25 @@ export async function empaqueterLeClient(options: OptionsEmpaquetage = {}): Prom
   await cp(join(DOSSIER_PAGE, 'icones'), join(DOSSIER_WEB, 'icones'), { recursive: true });
 }
 
+/**
+ * Les options d'un empaquetage lance directement, lues dans l'environnement.
+ *
+ * Sans variable, la page n'a pas de version: c'est celle de « pnpm build ». Le
+ * serveur de l'essai sur Oracle (etape 5.9), qui sert lui-meme sa page, l'empaquete
+ * avec VERSION_DU_JEU et HORODATAGE_DU_JEU, sans quoi il la refuserait.
+ */
+export function optionsDeLEnvironnement(
+  environnement: Readonly<Record<string, string | undefined>>,
+): OptionsEmpaquetage {
+  const version = environnement['VERSION_DU_JEU']?.trim() ?? '';
+  const horodatage = environnement['HORODATAGE_DU_JEU']?.trim() ?? '';
+
+  return {
+    ...(version === '' ? {} : { version }),
+    ...(horodatage === '' ? {} : { horodatage }),
+  };
+}
+
 // Lance directement (« node scripts/empaqueter.ts »), le script empaquete; importe
 // par le harnais de bout en bout ou par la sortie Vercel, il se contente d'exposer
 // la fonction.
@@ -121,5 +140,5 @@ const lanceDirectement =
   process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (lanceDirectement) {
-  await empaqueterLeClient();
+  await empaqueterLeClient(optionsDeLEnvironnement(process.env));
 }

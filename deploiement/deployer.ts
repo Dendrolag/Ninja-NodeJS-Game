@@ -256,7 +256,7 @@ async function verifierAvecPatience(
 }
 
 /** Lit la page publique et son code, sans cache. */
-async function lireLaPage(pageDuJeu: string): Promise<PageLue> {
+export async function lireLaPage(pageDuJeu: string): Promise<PageLue> {
   const page = await fetch(`${pageDuJeu}/`, { cache: 'no-store' });
   const code = await fetch(`${pageDuJeu}/app.js`, { cache: 'no-store' });
 
@@ -290,7 +290,7 @@ async function lireLaVersionEnLigne(serveurDeJeu: string): Promise<string | unde
  * plusieurs heures, et c'est le code servi que la ligne doit decrire, pas le moment
  * ou il est parti.
  */
-async function dateDuCommit(commit: string): Promise<string | undefined> {
+export async function dateDuCommit(commit: string): Promise<string | undefined> {
   return new Promise((resoudre) => {
     execFile('git', ['show', '-s', '--format=%cI', commit], (erreur, sortie) => {
       const date = sortie.trim();
@@ -333,7 +333,7 @@ async function fichiersChanges(
  * ligne ne compose le jeu: une mise en ligne coupe les parties en cours. Dans le
  * doute (serveur muet, historique incomplet), il part.
  */
-async function raisonDeNePasMettreEnLigne(
+export async function raisonDeNePasMettreEnLigne(
   serveurDeJeu: string,
   version: string,
 ): Promise<string | undefined> {

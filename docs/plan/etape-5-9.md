@@ -72,6 +72,17 @@ Claude ne crée pas de compte et ne saisit aucune donnée de carte bancaire. À 
 
 Le point 5 dépasse une session: l'étape peut se clore sur les points 1 à 4 et 6, avec un handoff partiel, et se reprendre pour le constat des sept jours.
 
+## Réconciliation (4 octobre 2026)
+
+Ce que l'exécution a changé au plan:
+
+1. **La page d'essai est servie par le serveur Oracle lui-même**, à `https://serveur.ninja.dendrolag.fr`, et non par une page Vercel non promue (décision 2). Le projet Vercel protège toute adresse autre que son domaine public (`ssoProtection: all_except_custom_domains`): la page non promue n'aurait pu se jouer qu'avec un compte Vercel, et son adresse aurait changé à chaque commit, donc aussi `ORIGINES_AUTORISEES`. Servie par le serveur, elle n'a qu'une origine, et sa politique de sécurité ne l'ouvre qu'à son hébergement. Le test requis devient: la page de l'essai ne joint que son propre hébergement (`problemesDeLaPage` sans serveur nommé). Le projet Vercel n'est pas touché par l'essai.
+2. **L'image se construit sur la machine**, à partir d'une archive du commit envoyée par SSH: la machine est Arm, les machines de GitHub non, et la machine n'a besoin d'aucun accès au dépôt.
+3. **Deux emplacements, bleu et vert**: le nouveau serveur démarre à côté de l'ancien, Caddy ne bascule qu'une fois qu'il a répondu, et revient à l'ancien si l'adresse publique ne suit pas. C'est ce qui tient « la conservation de l'ancien serveur tant que le nouveau n'a pas répondu ».
+4. **Les quotas**: la mise à zéro de la famille `compute-core` coupe aussi des quotas « régionaux » (`standard-a1-core-regional-count`) que la documentation ne cite pas; la politique rouvre la machine A1 par des noms génériques (`/*standard-a1*/`). Texte exact dans `docs/deploiement.md`.
+5. **L'image du système** est Ubuntu 24.04 Minimal pour Arm (`aarch64`): l'Ubuntu complète proposée par défaut est pour Intel et AMD, et la console ne montre la machine A1 qu'avec une image Arm.
+6. **La machine a reçu sa 4 cœurs et 24 Go**: la réduction annoncée pour juin 2026 ne s'est pas vue à la création.
+
 ## Rituel de fin de session
 
 Écrire `docs/handoffs/etape-5-9-handoff.md`, commiter, pousser, vérifier la CI et la mise en ligne. Poser au porteur du projet la question de la bascule, avec les mesures.

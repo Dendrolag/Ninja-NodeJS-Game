@@ -253,4 +253,21 @@ describe('problemesDeLaPage', () => {
       ),
     ).toHaveLength(1);
   });
+
+  // L'essai sur Oracle (etape 5.9): le serveur de jeu sert lui-meme sa page.
+  it('ouvre une page servie par le serveur de jeu a son seul hebergement', () => {
+    const servie: PageLue = {
+      ...PAGE_CONFORME,
+      politique: politiqueDeContenu(),
+      code: `var a=f("","${VERSION}");`,
+    };
+
+    expect(problemesDeLaPage(servie, undefined, VERSION)).toEqual([]);
+    expect(
+      problemesDeLaPage({ ...servie, politique: politiqueDeContenu(SERVEUR) }, undefined, VERSION),
+    ).toHaveLength(1);
+    expect(
+      problemesDeLaPage({ ...servie, code: 'var a=f("","ancienne");' }, undefined, VERSION),
+    ).toHaveLength(1);
+  });
 });

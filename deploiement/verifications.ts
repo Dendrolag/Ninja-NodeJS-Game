@@ -193,11 +193,15 @@ export interface PageLue {
  * la version et l'adresse du serveur, ecrites par l'empaqueteur. Les y trouver
  * prouve que l'adresse publique sert bien la page de ce commit.
  *
+ * @param serveurDeJeu L'origine du serveur de jeu que la page doit joindre, et elle
+ *                     seule. Absente, la page est servie par le serveur de jeu
+ *                     lui-meme, comme sur la machine de l'essai Oracle (etape 5.9):
+ *                     elle ne doit joindre que son hebergement.
  * @returns Les problemes, aucun si la page est celle de ce commit.
  */
 export function problemesDeLaPage(
   page: PageLue,
-  serveurDeJeu: string,
+  serveurDeJeu: string | undefined,
   version: string,
 ): readonly string[] {
   const problemes: string[] = [];
@@ -214,7 +218,10 @@ export function problemesDeLaPage(
 
   if (page.statutDuCode !== 200) {
     problemes.push(`app.js repond ${String(page.statutDuCode)}, attendu 200.`);
-  } else if (!page.code.includes(version) || !page.code.includes(serveurDeJeu)) {
+  } else if (
+    !page.code.includes(version) ||
+    (serveurDeJeu !== undefined && !page.code.includes(serveurDeJeu))
+  ) {
     problemes.push("app.js n'est pas celui de ce commit, ou ne vise pas ce serveur de jeu.");
   }
 
