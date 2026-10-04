@@ -97,7 +97,7 @@ Ce que pèse le jeu sur ce fil, la page et les images étant servies par Vercel:
 
 Le calcul et la mémoire ferment la porte eux aussi: un dixième de processeur laisse environ 5 ms par battement pour tout le serveur, toutes parties comprises, quand une partie de 1 500 entités en coûterait plusieurs même avec la grille; et 512 Mo ne tiennent pas le calcul des places d'une carte de plus de 5 000 sur 5 000 environ (section 2.3).
 
-**Sur l'offre gratuite de Render, la Battle Royale ne tient donc pas.** Et le chiffre de 5 Go, s'il se confirme, menace le jeu actuel lui-même: une douzaine d'heures de parties pleines par mois suffiraient à suspendre le serveur.
+**Sur l'offre gratuite de Render, la Battle Royale ne tient donc pas.** Le chiffre de 5 Go, s'il se confirme, ne menace pas le jeu actuel: l'interface de Render donne, le 4 octobre 2026, 90 Mo sortants en septembre et 14 Mo du 1er au 4 octobre, 2 pour cent de 5 Go. Il faudrait une douzaine d'heures de parties pleines par mois pour l'atteindre.
 
 **Une offre gratuite d'un autre ordre existe: Oracle Cloud « Always Free ».** Une machine virtuelle Arm (Ampere A1), 10 To de trafic sortant par mois, et une région à Francfort. La puissance comprise était de 4 cœurs et 24 Go; une source la dit réduite à 2 cœurs et 12 Go depuis juin 2026, à vérifier. Même réduite, c'est vingt fois le processeur et vingt fois la mémoire de Render, et deux mille fois sa bande passante: une Battle Royale de 30 à 50 joueurs y tient, une fois la grille et le filtrage faits. Le prix est ailleurs:
 
