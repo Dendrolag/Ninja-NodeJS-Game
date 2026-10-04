@@ -271,7 +271,8 @@ describe('la navigation entre les ecrans', () => {
     expect(ecranAffiche()).toBe('jeu');
     expect(jeu.montages).toBe(1);
     expect(sons.joues).toContain('partieLancee');
-    expect(sons.musiques.at(-1)).toBe('jeu');
+    // La graine 1 designe la deuxieme musique de partie, la meme pour tous les joueurs.
+    expect(sons.musiques.at(-1)).toBe('infiltration');
 
     reseau.recevoir('partieTerminee', { classement: CLASSEMENT });
 

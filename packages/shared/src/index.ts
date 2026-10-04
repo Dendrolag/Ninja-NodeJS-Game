@@ -295,12 +295,13 @@ export {
 
 export type { Position, Vecteur } from './geometrie.js';
 
-export type { CoucheCarte, NomDeSon, PisteMusicale } from './ressources.js';
+export type { CoucheCarte, MusiqueDePartie, NomDeSon, PisteMusicale } from './ressources.js';
 export {
   COTE_IMAGE_OBJET_PX,
   IMAGES_DE_MARCHE,
   IMAGES_PAR_OBJET,
   MUSIQUES,
+  MUSIQUES_DE_PARTIE,
   RACINE_RESSOURCES,
   SONS,
   SONS_DE_PAS,
@@ -316,6 +317,7 @@ export {
   IMAGES_DE_PLUIE,
   cheminSon,
   cheminVaisseau,
+  musiqueDeLaPartie,
   tousLesNinjas,
   tousLesObjets,
 } from './ressources.js';

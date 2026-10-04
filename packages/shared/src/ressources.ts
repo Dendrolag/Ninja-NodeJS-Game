@@ -346,7 +346,7 @@ export const SONS_DE_PAS = [
 ] as const;
 
 /**
- * Les deux musiques du jeu, nommees par le moment ou elles jouent.
+ * Les musiques du jeu: celle des menus, et les trois de la partie.
  *
  * Le jeu d'origine en declarait une troisieme, pour la fin de partie, dont le
  * fichier n'a jamais existe (defaut X32 de l'audit): elle n'est pas reprise. La
@@ -356,12 +356,46 @@ export const SONS_DE_PAS = [
 export const MUSIQUES = {
   /** L'accueil, le salon et la fin de partie. Ajoutee a l'etape 4.3. */
   menu: 'menu-music.mp3',
-  /** La partie en cours. */
-  jeu: 'game-music-2.mp3',
+  /**
+   * Les trois musiques de partie, fournies par le porteur du projet le 4 octobre 2026
+   * a la place de la musique unique du jeu d'origine (game-music-2.mp3).
+   */
+  tokyoGarden: 'tokyo-garden.mp3',
+  infiltration: 'infiltration.mp3',
+  tokyoByNight: 'tokyo-by-night.mp3',
 } as const;
 
 /** Le nom d'une musique. */
 export type PisteMusicale = keyof typeof MUSIQUES;
+
+/** Les musiques qui peuvent accompagner une partie, dans l'ordre du tirage. */
+export const MUSIQUES_DE_PARTIE = [
+  'tokyoGarden',
+  'infiltration',
+  'tokyoByNight',
+] as const satisfies readonly PisteMusicale[];
+
+/** Le nom d'une musique de partie. */
+export type MusiqueDePartie = (typeof MUSIQUES_DE_PARTIE)[number];
+
+/**
+ * La musique d'une partie, tiree de la graine du decor (decision du 4 octobre 2026).
+ *
+ * TIREE PAR PARTIE, PAS ATTACHEE A UNE CARTE NI A UN MODE. Trois morceaux pour quatre
+ * cartes et cinq modes: une musique par carte en aurait fait entendre toujours la meme a
+ * qui joue toujours la meme carte. Le tirage change de morceau d'une partie a l'autre.
+ *
+ * LA MEME POUR TOUS LES JOUEURS. La graine du decor est tiree par le serveur au lancement
+ * et envoyee a toutes les pages de la partie (etape 8.9): chacune en deduit le meme
+ * morceau, sans que le client tire quoi que ce soit au sort ni qu'un message de plus
+ * voyage. Sans graine connue, le premier morceau.
+ */
+export function musiqueDeLaPartie(graine: number | undefined): MusiqueDePartie {
+  const nombre = MUSIQUES_DE_PARTIE.length;
+  const rang = graine === undefined ? 0 : ((Math.trunc(graine) % nombre) + nombre) % nombre;
+
+  return MUSIQUES_DE_PARTIE[rang] ?? MUSIQUES_DE_PARTIE[0];
+}
 
 /** Chemin relatif d'un fichier de son, depuis la racine des ressources. */
 export function cheminSon(fichier: string): string {

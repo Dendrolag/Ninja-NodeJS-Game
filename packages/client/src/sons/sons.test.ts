@@ -437,6 +437,22 @@ describe('creerLecteurDeSons', () => {
       expect(gainDe('/assets/sons/menu-music.mp3')?.gain.value).toBe(0.1);
     });
 
+    it('joue les musiques de partie a la moitie du volume de la musique', () => {
+      const { lecteur, gainDe } = lecteurWebAudio();
+
+      lecteur.reglerLeVolumeDeLaMusique(0.8);
+      lecteur.demarrerLaMusique('infiltration');
+
+      expect(gainDe('/assets/sons/infiltration.mp3')?.gain.value).toBeCloseTo(0.4);
+
+      lecteur.reglerLeVolumeDeLaMusique(0.6);
+      expect(gainDe('/assets/sons/infiltration.mp3')?.gain.value).toBeCloseTo(0.3);
+
+      // Revenue aux menus, la musique reprend le volume choisi, sans moitie.
+      lecteur.demarrerLaMusique('menu');
+      expect(gainDe('/assets/sons/menu-music.mp3')?.gain.value).toBeCloseTo(0.6);
+    });
+
     it('fait suivre aux boucles de bonus le volume des effets', () => {
       const { lecteur, gainDe } = lecteurWebAudio();
 

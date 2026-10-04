@@ -26,12 +26,18 @@
  */
 
 import type { PisteMusicale, ReglagesPartie } from '@neon-ninja/shared';
-import { NUMERO_DE_VERSION, infobulleDeVersion, libelleDeVersion } from '@neon-ninja/shared';
+import {
+  NUMERO_DE_VERSION,
+  infobulleDeVersion,
+  libelleDeVersion,
+  musiqueDeLaPartie,
+} from '@neon-ninja/shared';
 
 import { annoncesDuChangement } from '../annonces.js';
 import type { Client } from '../client.js';
 import type { Ecran } from '../ecrans.js';
 import { estUnEcranDeMenu } from '../ecrans.js';
+import type { EtatClient } from '../etat.js';
 import type { HorlogeClient } from '../horloge.js';
 import { horlogeNavigateur } from '../horloge.js';
 import { sonsDuChangement } from '../sons/declencheurs.js';
@@ -124,9 +130,12 @@ const LIBELLES_ECRAN: Readonly<Record<Ecran, string>> = {
   fin: 'Résultats',
 };
 
-/** La musique d'un ecran: celle de la partie en jeu, celle des menus partout ailleurs. */
-function musiqueDe(ecran: Ecran): PisteMusicale {
-  return ecran === 'jeu' ? 'jeu' : 'menu';
+/**
+ * La musique de l'ecran affiche: celle que la graine de la partie designe en jeu, celle
+ * des menus partout ailleurs.
+ */
+function musiqueDe(etat: EtatClient): PisteMusicale {
+  return etat.ecran === 'jeu' ? musiqueDeLaPartie(etat.graineDuDecor) : 'menu';
 }
 
 /** Monte l'application dans la page, sur l'ecran que l'etat du client designe. */
@@ -144,7 +153,7 @@ export function monterApplication(options: OptionsApplication): Application {
     // Retablir le son relance la musique que la coupure avait arretee.
     surChangement: (preferences) => {
       if (!preferences.coupe) {
-        sons?.demarrerLaMusique(musiqueDe(ecranCourant));
+        sons?.demarrerLaMusique(musiqueDe(client.etat));
       }
     },
   });
@@ -262,7 +271,7 @@ export function monterApplication(options: OptionsApplication): Application {
     // La feuille de style laisse la place de la navigation sur les ecrans de menu.
     racine.dataset['menu'] = String(estUnEcranDeMenu(nom));
     ecrireTexte(libelle, LIBELLES_ECRAN[nom]);
-    sons?.demarrerLaMusique(musiqueDe(nom));
+    sons?.demarrerLaMusique(musiqueDe(client.etat));
 
     return ecran;
   };
@@ -332,7 +341,7 @@ export function monterApplication(options: OptionsApplication): Application {
   // l'utilisateur. La musique demandee au montage a donc ete refusee: on la
   // redemande au premier geste, une seule fois.
   const deverrouillerLeSon = (): void => {
-    sons?.demarrerLaMusique(musiqueDe(ecranCourant));
+    sons?.demarrerLaMusique(musiqueDe(client.etat));
     doc.removeEventListener('pointerdown', deverrouillerLeSon);
     doc.removeEventListener('keydown', deverrouillerLeSon);
   };

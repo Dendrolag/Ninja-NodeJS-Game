@@ -22,6 +22,10 @@ De même, les deux sons du fusil du mode Tactique, `sons/shotgun-wave.mp3` (chac
 
 Les six sons de la fumée et des mines, fournis par le porteur du projet à l'étape 8.8, le 2 octobre 2026, à la place des sons du jeu qui en tenaient lieu depuis les étapes 7.10 à 7.12: `sons/bonus-escape-nuage.mp3` (la fumée), `sons/mine-pose.mp3` (une mine posée), `sons/activation-mine.mp3` (une mine ou une mine de zone armée), `sons/explosion-mine.mp3` (une mine qui saute) et `sons/explosion-mine-zone.mp3` (une zone qui s'ouvre).
 
+Les trois musiques de partie, fournies par le porteur du projet le 4 octobre 2026, à la place de la musique unique du jeu d'origine (`sons/game-music-2.mp3`, retirée): `sons/tokyo-garden.mp3`, `sons/infiltration.mp3` et `sons/tokyo-by-night.mp3`. Chaque partie en tire une de sa graine de décor, la même pour tous ses joueurs, et la joue à la moitié du volume de la musique, pour laisser passer les bruitages. La musique des menus ne change pas.
+
+L'icône de la mine, `objets/mine.svg`, redessinée le même jour: une mine à pointes avec son reflet, à la manière du Démineur. L'ancienne, deux cercles et un point, était la cible qui disait aussi le mode Tactique et le bouton de localisation.
+
 **Le décor de `cartes/map3/`, Spirit & Time, ne vient plus du jeu d'origine** depuis l'étape 8.8: un toit-terrasse au-dessus d'une ville, livré par le porteur du projet à 3000 sur 2200, avec sa collision, son lointain (`background-parallax.png`) et sa vignette. À sa demande, la carte a été réduite de 20 pour cent, pour que les ninjas n'y paraissent pas trop petits: les images sont à 2400 sur 1760. Trois transformations, faites une fois:
 
 - le fond et le lointain, réduits, sont ramenés pixel par pixel à la couleur la plus proche de leur palette d'origine (450 couleurs): même style, même poids que les fichiers livrés;

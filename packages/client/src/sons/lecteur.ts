@@ -38,6 +38,7 @@
 import type { NomDeSon, PisteMusicale, TypeBonus } from '@neon-ninja/shared';
 import {
   MUSIQUES,
+  MUSIQUES_DE_PARTIE,
   RACINE_RESSOURCES,
   SONS,
   SONS_DE_PAS,
@@ -112,6 +113,18 @@ const INTERVALLE_PAS_MS = { normal: 250, presse: 200 } as const;
  * avant, les effets coupes a zero laissaient les boucles tourner.
  */
 const VOLUME_BOUCLE = 0.2;
+
+/**
+ * Volume d'une musique de partie, en part du volume de la musique (decision du porteur
+ * du projet du 4 octobre 2026): elle accompagne le jeu, elle ne couvre pas ses bruitages.
+ * La musique des menus, elle, joue au volume choisi.
+ */
+const VOLUME_MUSIQUE_DE_PARTIE = 0.5;
+
+/** La part du volume de la musique a laquelle joue une piste. */
+function partDuVolume(piste: PisteMusicale | undefined): number {
+  return MUSIQUES_DE_PARTIE.some((musique) => musique === piste) ? VOLUME_MUSIQUE_DE_PARTIE : 1;
+}
 
 /** Le contexte Web Audio du navigateur, s'il en a un. */
 function contexteDuNavigateur(): AudioContext | undefined {
@@ -277,6 +290,8 @@ export function creerLecteurDeSons(options: OptionsLecteur = {}): LecteurDeSons 
         arreter(musique);
         musique = musiques.get(piste) ?? nouvelleMusique(piste);
         pisteEnCours = piste;
+        // Une seule musique joue a la fois: le canal prend le volume de celle-ci.
+        canalMusique.regler(volumeMusique * partDuVolume(piste));
       }
 
       if (musique === undefined) {
@@ -310,7 +325,7 @@ export function creerLecteurDeSons(options: OptionsLecteur = {}): LecteurDeSons 
 
     reglerLeVolumeDeLaMusique(volume) {
       volumeMusique = borner(volume);
-      canalMusique.regler(volumeMusique);
+      canalMusique.regler(volumeMusique * partDuVolume(pisteEnCours));
     },
 
     deverrouiller() {

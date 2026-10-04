@@ -88,6 +88,28 @@ const GLYPHES = {
       { cercle: [12, 12, 1.4], plein: true },
     ],
   },
+  // Le 4 octobre 2026, la cible ne sert plus qu'aux defis: elle disait a la fois le mode
+  // Tactique, le bouton qui localise son ninja, et ressemblait a l'icone de la mine. Deux
+  // glyphes la remplacent, dans le meme style.
+  // Le mode Tactique: un cone de tir pointe vers le haut, et sa gerbe de plombs.
+  cone: {
+    formes: [
+      { trace: 'M2.1 11.1L12 21l9.9-9.9' },
+      { trace: 'M2.1 11.1A14 14 0 0 1 21.9 11.1' },
+      { cercle: [12, 10.5, 1.1], plein: true },
+      { cercle: [7.6, 12.6, 1.1], plein: true },
+      { cercle: [16.4, 12.6, 1.1], plein: true },
+    ],
+  },
+  // Localiser son ninja: l'epingle des cartes, comprise partout.
+  epingle: {
+    formes: [
+      {
+        trace: 'M12 21.5C9 18.5 5.5 14.6 5.5 10a6.5 6.5 0 0 1 13 0c0 4.6-3.5 8.5-6.5 11.5z',
+      },
+      { cercle: [12, 10, 2.3] },
+    ],
+  },
   shield: { formes: [{ trace: 'M12 3l8 3v6c0 5-4 7.7-8 9-4-1.3-8-4-8-9V6z' }] },
   viseur: {
     formes: [
@@ -188,7 +210,7 @@ export type Glyphe = keyof typeof GLYPHES;
  */
 export const GLYPHES_DES_MODES: Readonly<Record<Mode, Glyphe>> = {
   classique: 'ninja',
-  tactique: 'target',
+  tactique: 'cone',
   equipes: 'shield',
   chasse: 'viseur',
   massacre: 'katana',

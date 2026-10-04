@@ -27,6 +27,7 @@ import {
 import {
   IMAGES_DE_PLUIE,
   MUSIQUES,
+  MUSIQUES_DE_PARTIE,
   RACINE_RESSOURCES,
   SONS,
   SONS_DE_PAS,
@@ -41,6 +42,7 @@ import {
   cheminPluie,
   cheminSon,
   cheminVaisseau,
+  musiqueDeLaPartie,
   tousLesNinjas,
   tousLesObjets,
 } from './ressources.js';
@@ -199,8 +201,41 @@ describe('cheminObjet', () => {
 describe('cheminSon', () => {
   it('range les sons dans leur dossier', () => {
     expect(cheminSon(SONS.bonusRamasse)).toBe('sons/collect-bonus.wav');
-    expect(cheminSon(MUSIQUES.jeu)).toBe('sons/game-music-2.mp3');
+    expect(cheminSon(MUSIQUES.tokyoGarden)).toBe('sons/tokyo-garden.mp3');
     expect(cheminSon(MUSIQUES.menu)).toBe('sons/menu-music.mp3');
+  });
+});
+
+describe('musiqueDeLaPartie', () => {
+  it('fait tourner les trois musiques de partie selon la graine', () => {
+    expect(MUSIQUES_DE_PARTIE.map((_, graine) => musiqueDeLaPartie(graine))).toEqual([
+      'tokyoGarden',
+      'infiltration',
+      'tokyoByNight',
+    ]);
+    expect(musiqueDeLaPartie(3)).toBe('tokyoGarden');
+  });
+
+  it('donne la meme musique a toutes les pages d une meme graine', () => {
+    expect(musiqueDeLaPartie(0xfffffffe)).toBe(musiqueDeLaPartie(0xfffffffe));
+    expect(MUSIQUES_DE_PARTIE).toContain(musiqueDeLaPartie(0xffffffff));
+  });
+
+  it('ne joue jamais la musique des menus, meme sans graine ou d une graine negative', () => {
+    expect(musiqueDeLaPartie(undefined)).toBe('tokyoGarden');
+    expect(musiqueDeLaPartie(-1)).toBe('tokyoByNight');
+    expect(musiqueDeLaPartie(2.7)).toBe('tokyoByNight');
+  });
+
+  it('se repartit a parts egales sur un grand nombre de parties', () => {
+    const comptes = new Map<string, number>();
+
+    for (let graine = 0; graine < 3000; graine += 1) {
+      const piste = musiqueDeLaPartie(graine * 7919);
+      comptes.set(piste, (comptes.get(piste) ?? 0) + 1);
+    }
+
+    expect([...comptes.values()]).toEqual([1000, 1000, 1000]);
   });
 });
 

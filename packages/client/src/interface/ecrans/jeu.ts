@@ -138,7 +138,7 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
     }),
     bouton(
       doc,
-      { classe: 'bouton-icone jeu-localiser', icone: 'target', etiquette: 'Localiser mon ninja' },
+      { classe: 'bouton-icone jeu-localiser', icone: 'epingle', etiquette: 'Localiser mon ninja' },
       () => {
         controles.demanderLaLocalisation();
       },
