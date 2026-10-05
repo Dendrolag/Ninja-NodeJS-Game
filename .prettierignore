@@ -7,6 +7,7 @@ dist/
 coverage/
 playwright-report/
 test-results/
+blob-report/
 pnpm-lock.yaml
 
 # Migrations ecrites par drizzle-kit: la CI verifie qu'elles sont exactement

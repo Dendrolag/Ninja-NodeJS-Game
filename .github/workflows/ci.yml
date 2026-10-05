@@ -5,8 +5,12 @@
 # protection de branche (decision du 15 septembre 2026): c'est la mise en ligne,
 # et non la poussee, qui attend que le filet soit passe.
 #
-# Ordre volontaire, du plus rapide au plus lent, pour echouer tot:
-# formatage, types, linter, tests unitaires, puis bout en bout.
+# Trois familles de jobs partent ensemble (etape 5.14): la verification (formatage,
+# types, linter, tests unitaires et de la base), les scenarios de bout en bout
+# repartis sur dix machines, et le banc de mesure du rendu sur la sienne. La mise
+# en ligne attend qu'ils soient tous verts. Les lancer en serie coutait 26 minutes
+# par poussee; un commit rouge ne coute plus que des minutes de machines, gratuites
+# pour un depot public.
 
 name: CI
 
@@ -74,11 +78,25 @@ jobs:
       - name: Tests unitaires et d'integration
         run: pnpm test
 
+  # Les scenarios des projets bureau et mobile, repartis en parts egales en nombre
+  # de scenarios sur autant de machines qu'il y a de parts. Chaque machine n'en joue
+  # qu'un a la fois (workers dans playwright.config.ts): sans carte graphique, deux
+  # parties en parallele se privent de processeur. Joues en serie, ils prenaient
+  # 19 minutes; la plus longue des dix parts en prend un peu plus de trois.
+  #
+  # Ajouter une part ne demande que d'allonger la liste: le total vient du nombre
+  # de jobs de la matrice. Playwright repartit par nombre de scenarios, pas par
+  # duree, et les scenarios courts se suivent dans l'ordre des fichiers: c'est
+  # pourquoi les parts sont nombreuses plutot que justement dosees.
   bout-en-bout:
-    name: Bout en bout
+    name: Bout en bout (${{ matrix.part }})
     runs-on: ubuntu-latest
-    # Inutile de lancer les navigateurs si la verification rapide a deja echoue.
-    needs: verification
+    strategy:
+      # Les autres parts vont au bout quand l'une echoue: le rapport fusionne dit
+      # alors tout ce qui est rouge, pas seulement le premier echec.
+      fail-fast: false
+      matrix:
+        part: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     steps:
       - name: Recuperer le depot
         uses: actions/checkout@v7
@@ -98,12 +116,91 @@ jobs:
       - name: Installer les navigateurs Playwright
         run: pnpm exec playwright install --with-deps chromium
 
+      # Le projet banc n'est pas nomme: il a son propre job, ci-dessous.
       - name: Scenarios de bout en bout
-        run: pnpm test:e2e
+        run: pnpm test:e2e --project bureau --project mobile --shard ${{ matrix.part }}/${{ strategy.job-total }}
 
-      - name: Conserver le rapport en cas d'echec
+      - name: Conserver le rapport de cette part
         uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
+        with:
+          name: rapport-bout-en-bout-${{ matrix.part }}
+          path: blob-report/
+          retention-days: 1
+
+  # Le banc de mesure du rendu, seul sur sa machine. Il mesure le moteur de rendu, et
+  # ne doit partager le processeur avec aucune partie: en local, il attend la fin des
+  # autres scenarios (dependencies dans playwright.config.ts); ici, sa machine est a
+  # lui, et --no-deps lui evite de rejouer tous les autres avant lui.
+  banc:
+    name: Banc de mesure du rendu
+    runs-on: ubuntu-latest
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v7
+
+      - name: Installer pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Installer Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Installer les dependances
+        run: pnpm install --frozen-lockfile
+
+      - name: Installer les navigateurs Playwright
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Banc de mesure du rendu
+        run: pnpm test:e2e --project banc --no-deps
+
+      - name: Conserver le rapport du banc
+        uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: rapport-bout-en-bout-banc
+          path: blob-report/
+          retention-days: 1
+
+  # Les rapports des parts et du banc, fusionnes en un seul rapport de Playwright,
+  # conserve sept jours, que les scenarios aient echoue ou non. La mise en ligne ne
+  # l'attend pas.
+  rapport:
+    name: Rapport de bout en bout
+    runs-on: ubuntu-latest
+    needs: [bout-en-bout, banc]
+    if: ${{ !cancelled() }}
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v7
+
+      - name: Installer pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Installer Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Installer les dependances
+        run: pnpm install --frozen-lockfile
+
+      - name: Recuperer les rapports des parts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: rapport-bout-en-bout-*
+          path: rapports-des-parts
+          merge-multiple: true
+
+      - name: Fusionner les rapports
+        run: pnpm exec playwright merge-reports --reporter html ./rapports-des-parts
+
+      - name: Conserver le rapport
+        uses: actions/upload-artifact@v7
         with:
           name: rapport-playwright
           path: playwright-report/
@@ -112,14 +209,15 @@ jobs:
   # La mise en ligne (etapes 5.3 et 5.13): la page sur Vercel, le serveur de jeu de
   # la production, puis le secours. La production est le serveur que joint la page
   # publique, Oracle ou Render; la bascule de l'un a l'autre est dans bascule.yml.
-  # Seulement apres les deux jobs verts, et seulement pour une poussee sur master,
+  # Seulement apres la verification, toutes les parts du bout en bout et le banc
+  # verts, et seulement pour une poussee sur master,
   # la branche de la production depuis l'etape 6.1. Le deroulement et ses
   # verifications sont dans deploiement/miseEnLigne.ts, l'exploitation dans
   # docs/deploiement.md.
   mise-en-ligne:
     name: Mise en ligne
     runs-on: ubuntu-latest
-    needs: [verification, bout-en-bout]
+    needs: [verification, bout-en-bout, banc]
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
     # Une seule mise en ligne ou bascule a la fois, jamais interrompue par la suivante.
     concurrency:

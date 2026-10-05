@@ -136,7 +136,10 @@ export default defineConfig({
   // la fragilite relevee a l'etape 5.4. Sans ce scenario, 26 sur 26 a quatre; avec
   // lui, a trois, 26 sur 26 deux fois, en 2,6 et 2,8 minutes.
   workers: process.env['CI'] ? 1 : 3,
-  reporter: process.env['CI'] ? [['github'], ['html', { open: 'never' }]] : [['list']],
+  // En integration continue, les scenarios sont repartis sur plusieurs machines
+  // (etape 5.14): chacune ecrit un rapport brut, et un dernier job les fusionne en
+  // un seul rapport HTML (.github/workflows/ci.yml).
+  reporter: process.env['CI'] ? [['github'], ['blob']] : [['list']],
   use: {
     trace: 'on-first-retry',
     // Sans limite, une action qui ne trouve jamais son element attend jusqu'au
@@ -197,7 +200,8 @@ export default defineConfig({
       // quarantaine de secondes. Joue en parallele d'eux, le banc partageait le
       // processeur et mesurait aussi leur charge: en integration continue, notre
       // code a couru 8,04 ms par image a 500 sprites, au-dela de son seuil, contre
-      // 3,01 a 3,46 ms aux etapes 4.2 et 4.3.
+      // 3,01 a 3,46 ms aux etapes 4.2 et 4.3. En integration continue, depuis
+      // l'etape 5.14, il a une machine a lui et s'y lance sans ces dependances.
       dependencies: ['bureau', 'mobile'],
       // Une mesure ne se rejoue pas: un banc qui echoue a la premiere tentative
       // et passe a la seconde ne dit rien, sinon que la machine etait occupee.
