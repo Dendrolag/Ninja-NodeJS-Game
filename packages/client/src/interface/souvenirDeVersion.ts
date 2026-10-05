@@ -22,7 +22,7 @@ import { versionMineure } from '@neon-ninja/shared';
 
 import { CLE_JETON } from '../comptes/coffre.js';
 import type { NoteDeVersion } from './modeles/notesDeVersion.js';
-import { noteDeLaVersion } from './modeles/notesDeVersion.js';
+import { noteDeLaVersion, notesParues } from './modeles/notesDeVersion.js';
 import { CLE_PREFERENCE_SANG, CLE_PREFERENCES_SON } from './preferences.js';
 
 /** La cle sous laquelle la derniere version mineure vue est rangee. */
@@ -72,8 +72,13 @@ export function decisionDeLaNote(
 
 /** Le souvenir de la note, pour la page en cours. */
 export interface SouvenirDeVersion {
-  /** La note de la version servie, que le pied de l'accueil rouvre. */
+  /** La note de la version servie, celle dont on decide l'ouverture. */
   readonly note: NoteDeVersion | undefined;
+  /**
+   * Les notes parues jusqu'a la version servie, la plus recente en tete: ce que la
+   * fenetre des nouveautes fait defiler, et que le pied de l'accueil rouvre.
+   */
+  readonly historique: readonly NoteDeVersion[];
   /** La note doit-elle s'ouvrir d'elle-meme a l'accueil. */
   readonly aMontrer: boolean;
   /** Retient la note comme lue: elle ne s'ouvrira plus d'elle-meme. */
@@ -125,6 +130,7 @@ export function lireLeSouvenirDeVersion(
 
   return {
     note,
+    historique: notesParues(numero, notes),
     get aMontrer() {
       return aMontrer;
     },

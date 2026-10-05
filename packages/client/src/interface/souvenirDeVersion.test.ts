@@ -17,9 +17,13 @@ import { CLE_VERSION_VUE, decisionDeLaNote, lireLeSouvenirDeVersion } from './so
 /** Une note d'essai, pour la version 2.3. */
 const NOTE_2_3: NoteDeVersion = {
   version: '2.3',
-  titre: 'Nouveautés de la version 2.3',
-  sections: [{ titre: 'Tout', puces: [{ texte: 'Du neuf.' }] }],
+  titre: 'Du neuf',
+  puces: [{ texte: 'Du neuf.' }],
 };
+
+/** La note de la version d'avant, et celle d'une version a venir. */
+const NOTE_2_2: NoteDeVersion = { ...NOTE_2_3, version: '2.2' };
+const NOTE_2_5: NoteDeVersion = { ...NOTE_2_3, version: '2.5' };
 
 /** Un stockage ou un joueur est deja passe, sous cette cle. */
 function stockageDUnHabitue(cle: string = CLE_PREFERENCES_SON): Storage {
@@ -115,10 +119,21 @@ describe('lireLeSouvenirDeVersion', () => {
     }).not.toThrow();
   });
 
-  it('n a rien a montrer pour une version sans note', () => {
+  it('n a rien a montrer pour une version sans note, mais garde les notes d avant', () => {
     const souvenir = lireLeSouvenirDeVersion(stockageDUnHabitue(), '2.4.0', [NOTE_2_3]);
 
     expect(souvenir.note).toBeUndefined();
     expect(souvenir.aMontrer).toBe(false);
+    expect(souvenir.historique).toEqual([NOTE_2_3]);
+  });
+
+  it('garde tout l historique paru, la note servie en tete', () => {
+    const souvenir = lireLeSouvenirDeVersion(stockageDUnHabitue(), '2.3.1', [
+      NOTE_2_2,
+      NOTE_2_3,
+      NOTE_2_5,
+    ]);
+
+    expect(souvenir.historique).toEqual([NOTE_2_3, NOTE_2_2]);
   });
 });

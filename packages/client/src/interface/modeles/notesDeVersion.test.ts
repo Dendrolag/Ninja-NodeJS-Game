@@ -3,13 +3,20 @@
  *
  * Ce qu'ils protegent: la regle d'avancement du numero. Une version mineure
  * s'accompagne toujours d'une note: avancer le numero sans l'ecrire fait echouer
- * ce fichier. Et le texte de la note 1.5, arrete avec le porteur du projet.
+ * ce fichier. L'historique que la fenetre des nouveautes fait defiler. Et les textes
+ * arretes avec le porteur du projet le 5 octobre 2026.
  */
 
 import { NUMERO_DE_VERSION, versionMineure } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
-import { NOTES_DE_VERSION, noteDeLaVersion } from './notesDeVersion.js';
+import type { NoteDeVersion } from './notesDeVersion.js';
+import { NOTES_DE_VERSION, noteDeLaVersion, notesParues } from './notesDeVersion.js';
+
+/** Une note d'essai, sans autre texte que son numero. */
+function noteDEssai(version: string): NoteDeVersion {
+  return { version, titre: version, puces: [{ texte: 'Du neuf.' }] };
+}
 
 describe('les notes de version', () => {
   it('ont une note pour la version mineure servie: un numero mineur ne va pas sans sa note', () => {
@@ -23,49 +30,51 @@ describe('les notes de version', () => {
     expect(versions.every((version) => /^\d+\.\d+$/.test(version))).toBe(true);
   });
 
-  it('ne laissent ni section vide ni texte vide', () => {
+  it('ne laissent ni note vide ni texte vide', () => {
     for (const note of NOTES_DE_VERSION) {
       expect(note.titre).not.toBe('');
-      expect(note.sections.length).toBeGreaterThan(0);
-
-      for (const section of note.sections) {
-        expect(section.puces.length).toBeGreaterThan(0);
-        expect(section.puces.every((puce) => puce.texte.trim() !== '')).toBe(true);
-      }
+      expect(note.puces.length).toBeGreaterThan(0);
+      expect(note.puces.every((puce) => puce.texte.trim() !== '')).toBe(true);
     }
   });
 
   it('donnent a un correctif la note de sa version mineure, et rien a une version sans note', () => {
-    expect(noteDeLaVersion('1.5.0')?.titre).toBe('Nouveautés de la version 1.5');
-    expect(noteDeLaVersion('1.5.4')?.titre).toBe('Nouveautés de la version 1.5');
+    expect(noteDeLaVersion('1.5.0')?.titre).toBe('Coups fourrés');
+    expect(noteDeLaVersion('1.5.4')?.titre).toBe('Coups fourrés');
     expect(noteDeLaVersion('0.9.0')).toBeUndefined();
   });
 
-  it('disent de la version 1.5 le texte arrete avec le porteur du projet', () => {
-    const note = noteDeLaVersion('1.5.0');
-
-    expect(note?.sections.map((section) => section.titre)).toEqual([
-      'Objets, poche et mines',
-      'L’Évadé',
-    ]);
-    expect(note?.sections[0]?.puces.map((puce) => puce.intitule)).toEqual([
+  it('disent les textes arretes avec le porteur du projet', () => {
+    expect(noteDeLaVersion('1.5.0')?.puces.map((puce) => puce.intitule)).toEqual([
       'La poche.',
       'La fumée.',
       'La mine.',
       'Les mines de zone.',
+      'L’Évadé.',
     ]);
-    expect(note?.sections[1]?.puces[0]?.texte).toContain('double son score jusqu’à la fin');
-  });
-
-  it('annoncent la Station lunaire en version 1.6 (etape 8.9)', () => {
-    const note = noteDeLaVersion('1.6.0');
-
-    expect(note?.titre).toBe('Nouveautés de la version 1.6');
-    expect(note?.sections.map((section) => section.titre)).toEqual(['La Station lunaire']);
-    expect(note?.sections[0]?.puces.map((puce) => puce.intitule)).toEqual([
-      'Une nouvelle carte.',
-      'De jour ou de nuit.',
+    expect(noteDeLaVersion('1.6.0')?.titre).toBe('On a marché sur la Lune');
+    expect(noteDeLaVersion('1.6.0')?.puces.map((puce) => puce.intitule)).toEqual([
+      'La Station lunaire.',
+      'Jour ou nuit.',
       'Un vaisseau.',
     ]);
+    expect(noteDeLaVersion('1.7.0')?.titre).toBe('Le lundi, c’est défis');
+  });
+});
+
+describe('notesParues', () => {
+  it('rend tout l historique jusqu a la version servie, la plus recente en tete', () => {
+    expect(notesParues('1.7.2').map((note) => note.version)).toEqual(['1.7', '1.6', '1.5']);
+  });
+
+  it('ne rend pas les notes d une version a venir', () => {
+    expect(notesParues('1.6.0').map((note) => note.version)).toEqual(['1.6', '1.5']);
+    expect(notesParues('1.4.0')).toEqual([]);
+  });
+
+  it('range 1.10 apres 1.9, et 2.0 apres les deux', () => {
+    const notes = ['1.9', '2.0', '1.10'].map(noteDEssai);
+
+    expect(notesParues('2.0.0', notes).map((note) => note.version)).toEqual(['2.0', '1.10', '1.9']);
   });
 });

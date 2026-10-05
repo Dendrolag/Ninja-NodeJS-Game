@@ -33,7 +33,7 @@ import { monterChampPseudo } from '../composants/champPseudo.js';
 import { monterCredits } from '../composants/credits.js';
 import { listeDeDefis } from '../composants/defis.js';
 import type { Fenetre } from '../composants/fenetre.js';
-import { monterNoteDeVersion } from '../composants/noteDeVersion.js';
+import { monterNouveautes } from '../composants/noteDeVersion.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import { GLYPHES_DES_MODES, icone } from '../icones.js';
 import { modeleAccueil } from '../modeles/accueil.js';
@@ -48,8 +48,8 @@ function lienEnAttente(lien: EtatDuLien): boolean {
 }
 
 /**
- * Le numero de version du pied: un bouton qui rouvre la note de sa version (etape
- * 4.9), ou un simple texte s'il n'y en a pas. L'infobulle garde la date complete et
+ * Le numero de version du pied: un bouton qui rouvre les nouveautes (etape 4.9), ou
+ * un simple texte s'il n'y a aucune note. L'infobulle garde la date complete et
  * l'empreinte entiere du commit.
  */
 function ligneDeVersion(
@@ -184,13 +184,13 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
   );
   let defisDessines: string | undefined;
 
-  // La note de version (etape 4.9): retenue lue des qu'elle se ferme, quelle qu'en
-  // soit la facon.
+  // Les nouveautes (etape 4.9), tout l'historique des notes: retenues lues des
+  // qu'elles se ferment, quelle qu'en soit la facon.
   const souvenir = contexte.souvenirDeVersion;
   const note: Fenetre | undefined =
-    souvenir?.note === undefined
+    souvenir === undefined || souvenir.historique.length === 0
       ? undefined
-      : monterNoteDeVersion(doc, souvenir.note, () => {
+      : monterNouveautes(doc, souvenir.historique, () => {
           souvenir.marquerLue();
         });
   const version = ligneDeVersion(doc, contexte, note);

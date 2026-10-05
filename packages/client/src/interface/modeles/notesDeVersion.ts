@@ -6,15 +6,14 @@
  * numero, dans packages/shared/src/version.ts). Un correctif garde la note de sa
  * version mineure: 1.5.2 rouvre la note 1.5.
  *
- * CE SONT DES DONNEES, que la fenetre de la note se contente d'afficher. Ajouter la
- * note 1.6, c'est ajouter une entree a cette liste, sans toucher a la fenetre.
+ * CE SONT DES DONNEES, que la fenetre des nouveautes se contente d'afficher. Ajouter la
+ * note 1.8, c'est ajouter une entree a cette liste, sans toucher a la fenetre.
  *
- * LE TEXTE DE LA NOTE 1.5 est celui arrete avec le porteur du projet le 2 octobre
- * 2026. Le nouveau decor de Spirit & Time n'y figure pas, il garde son badge
- * « Prototype », et les modes n'y sont pas nommes.
- *
- * LA NOTE 1.6 annonce la Station lunaire (etape 8.9). Son texte est soumis au porteur du
- * projet.
+ * LE TON, arrete avec le porteur du projet le 5 octobre 2026: une note annonce, elle
+ * n'explique pas. Une ligne par nouveaute, un ton un peu decale, et le plaisir de la
+ * decouverte laisse au joueur: les regles exactes sont dans l'aide. Chaque note porte
+ * un titre a elle, que la fenetre ecrit derriere son numero. Les textes des notes 1.5
+ * a 1.7 sont ceux de ce jour-la.
  */
 
 import { versionMineure } from '@neon-ninja/shared';
@@ -25,114 +24,78 @@ export interface PuceDeNote {
   readonly texte: string;
 }
 
-/** Un groupe de nouveautes, sous son titre. */
-export interface SectionDeNote {
-  readonly titre: string;
-  readonly puces: readonly PuceDeNote[];
-}
-
 /** La note d'une version mineure. */
 export interface NoteDeVersion {
   /** La version mineure annoncee, « 1.5 ». */
   readonly version: string;
+  /** Son titre, « Coups fourrés », que la fenetre ecrit « 1.5 · Coups fourrés ». */
   readonly titre: string;
-  readonly sections: readonly SectionDeNote[];
+  readonly puces: readonly PuceDeNote[];
 }
 
 /** Toutes les notes, de la plus ancienne a la plus recente. */
 export const NOTES_DE_VERSION: readonly NoteDeVersion[] = [
   {
     version: '1.5',
-    titre: 'Nouveautés de la version 1.5',
-    sections: [
+    titre: 'Coups fourrés',
+    puces: [
       {
-        titre: 'Objets, poche et mines',
-        puces: [
-          {
-            intitule: 'La poche.',
-            texte:
-              'Elle garde un objet ramassé jusqu’à ce que vous vous en serviez, avec la touche E ou le bouton de poche sur téléphone.',
-          },
-          {
-            intitule: 'La fumée.',
-            texte:
-              'Vous disparaissez dans un nuage et réapparaissez loin de toute menace. De quoi semer un poursuivant et tromper l’adversaire.',
-          },
-          {
-            intitule: 'La mine.',
-            texte:
-              'Posez-la sous vos pieds. Un adversaire qui marche dessus l’arme et elle saute une seconde et demie plus tard, en lui coûtant une partie de ses ninjas. Elle détruit aussi un Black Ninja.',
-          },
-          {
-            intitule: 'Les mines de zone.',
-            texte:
-              'Les zones à effet ne surgissent plus seules. Elles dorment sous des mines visibles de tous et s’ouvrent quand quelqu’un marche dessus. À vous de choisir le bon moment.',
-          },
-        ],
+        intitule: 'La poche.',
+        texte:
+          'Ramassez un objet et utilisez-le quand vous le voulez avec la touche E, ou le bouton sur smartphone.',
       },
       {
-        titre: 'L’Évadé',
-        puces: [
-          {
-            texte:
-              'Un ninja rayé rouge et blanc surgit une fois par partie. Il court plus vite que vous et repart au bout de 45 secondes. Qui l’attrape double son score jusqu’à la fin… à moins de se faire capturer à son tour.',
-          },
-        ],
+        intitule: 'La fumée.',
+        texte: 'Pouf. Un bon ninja sait disparaître au bon moment.',
+      },
+      {
+        intitule: 'La mine.',
+        texte:
+          'Posez-la, éloignez-vous, attendez. Un bon ninja sait tout faire péter au bon moment.',
+      },
+      {
+        intitule: 'Les mines de zone.',
+        texte: 'Activez des zones avec différents effets, soyez stratégique !',
+      },
+      {
+        intitule: 'L’Évadé.',
+        texte: 'Un ninja au style particulier cherche à vous échapper, attrapez-le pour voir…',
       },
     ],
   },
   {
     version: '1.6',
-    titre: 'Nouveautés de la version 1.6',
-    sections: [
+    titre: 'On a marché sur la Lune',
+    puces: [
       {
-        titre: 'La Station lunaire',
-        puces: [
-          {
-            intitule: 'Une nouvelle carte.',
-            texte:
-              'Le toit d’une station posée sur la Lune, avec son quai en contrebas et deux monte-charges pour passer de l’un à l’autre.',
-          },
-          {
-            intitule: 'De jour ou de nuit.',
-            texte: 'L’hôte choisit l’éclairage dans les réglages de la partie.',
-          },
-          {
-            intitule: 'Un vaisseau.',
-            texte:
-              'Il arrive au début de la partie, survole lentement la station et repart à la fin, jamais par le même chemin. Il cache ce qui passe dessous… sauf vous.',
-          },
-        ],
+        intitule: 'La Station lunaire.',
+        texte: 'Une nouvelle carte en zone réduite pour un concentré d’action.',
+      },
+      {
+        intitule: 'Jour ou nuit.',
+        texte: 'Deux ambiances au choix.',
+      },
+      {
+        intitule: 'Un vaisseau.',
+        texte: 'Utilisez à bon escient le vaisseau pour vous camoufler de vos adversaires.',
       },
     ],
   },
   {
     version: '1.7',
-    titre: 'Nouveautés de la version 1.7',
-    sections: [
+    titre: 'Le lundi, c’est défis',
+    puces: [
       {
-        titre: 'Les défis de la semaine',
-        puces: [
-          {
-            intitule: 'Trois défis chaque semaine.',
-            texte:
-              'Les mêmes pour tous les joueurs, renouvelés chaque lundi. Un pour jouer, un pour agir et un exploit, à suivre depuis l’accueil.',
-          },
-          {
-            intitule: 'De l’XP en plus.',
-            texte:
-              'Chaque défi relevé rapporte de 300 à 500 XP, soit jusqu’à 1 200 XP par semaine en plus de vos parties.',
-          },
-          {
-            intitule: 'Jamais les mêmes.',
-            texte:
-              'Un défi ne revient pas la semaine suivante, et les modes et les cartes à l’honneur changent d’une semaine à l’autre.',
-          },
-          {
-            texte:
-              'Réservés aux joueurs connectés. Seules comptent les parties jouées jusqu’au bout et réglées sur trois minutes au moins.',
-          },
-        ],
+        intitule: 'Trois défis par semaine.',
+        texte: 'Les mêmes pour tout le monde, renouvelés chaque lundi.',
+      },
+      {
+        intitule: 'De l’XP en rab.',
+        texte: 'Jusqu’à 1 200 de plus par semaine. De quoi laisser vos amis derrière.',
+      },
+      {
+        texte:
+          'Pour les joueurs connectés, sur des parties d’au moins trois minutes jouées jusqu’au bout.',
       },
     ],
   },
@@ -146,4 +109,37 @@ export function noteDeLaVersion(
   const mineure = versionMineure(numero);
 
   return notes.find((note) => note.version === mineure);
+}
+
+/**
+ * Les notes parues jusqu'a ce numero, la plus recente en tete: l'historique que la
+ * fenetre des nouveautes fait defiler. Une note d'une version a venir n'y est pas.
+ */
+export function notesParues(
+  numero: string,
+  notes: readonly NoteDeVersion[] = NOTES_DE_VERSION,
+): readonly NoteDeVersion[] {
+  const courante = chiffres(versionMineure(numero));
+
+  return notes
+    .filter((note) => comparer(chiffres(note.version), courante) <= 0)
+    .sort((a, b) => comparer(chiffres(b.version), chiffres(a.version)));
+}
+
+/** Les chiffres d'une version, « 1.10 » donnant [1, 10]: 1.10 vient apres 1.9. */
+function chiffres(version: string): readonly number[] {
+  return version.split('.').map(Number);
+}
+
+/** Negatif si a precede b, nul si elles sont egales, positif sinon. */
+function comparer(a: readonly number[], b: readonly number[]): number {
+  for (let rang = 0; rang < Math.max(a.length, b.length); rang += 1) {
+    const ecart = (a[rang] ?? 0) - (b[rang] ?? 0);
+
+    if (ecart !== 0) {
+      return ecart;
+    }
+  }
+
+  return 0;
 }

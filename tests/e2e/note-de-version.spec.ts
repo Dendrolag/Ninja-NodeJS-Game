@@ -1,14 +1,14 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
-import { noteDeLaVersion } from '../../packages/client/dist/interface/modeles/notesDeVersion.js';
-import { NUMERO_DE_VERSION, versionMineure } from '../../packages/shared/dist/index.js';
+import { notesParues } from '../../packages/client/dist/interface/modeles/notesDeVersion.js';
+import { NUMERO_DE_VERSION } from '../../packages/shared/dist/index.js';
 import { releverLesErreurs } from './harnais/parcours.js';
 import type { ServeurDeJeu } from './harnais/serveur-de-jeu.js';
 import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
 
 /**
- * La note de version (etape 4.9), sur la vraie page et le vrai serveur.
+ * Les nouveautes (etape 4.9), sur la vraie page et le vrai serveur.
  *
  * Un joueur qui revient, venu avant que les notes existent, la lit a l'accueil; il la
  * ferme, elle ne revient pas au rechargement, et le numero du pied la rouvre. Un
@@ -16,10 +16,10 @@ import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
  * capture de la note ouverte dans chacun.
  */
 
-const TITRE = `Nouveautés de la version ${versionMineure(NUMERO_DE_VERSION)}`;
+const TITRE = 'Nouveautés';
 
-/** La note servie: c'est elle qui doit s'ouvrir, avec ses sections et ses intitules. */
-const NOTE = noteDeLaVersion(NUMERO_DE_VERSION);
+/** Les notes parues: toutes s'affichent, la plus recente en tete. */
+const NOTES = notesParues(NUMERO_DE_VERSION);
 
 let jeu: ServeurDeJeu;
 
@@ -51,15 +51,14 @@ test('la note s ouvre a un joueur qui revient, une fois, et se rouvre par le num
   await page.reload();
 
   await expect(note).toBeVisible();
-  for (const section of NOTE?.sections ?? []) {
-    await expect(note).toContainText(section.titre);
-    await expect(note).toContainText(section.puces[0]?.intitule ?? section.puces[0]?.texte ?? '');
-  }
+  await expect(note.getByRole('heading', { level: 3 })).toHaveText(
+    NOTES.map((parue) => `${parue.version} · ${parue.titre}`),
+  );
   // La capture attend la fin de l'animation d'apparition, qui fait glisser la fenetre.
   await note.evaluate((cadre) => Promise.all(cadre.getAnimations().map((a) => a.finished)));
   await page.screenshot({ path: info.outputPath(`note-de-version-${info.project.name}.png`) });
 
-  await note.getByRole('button', { name: 'Compris' }).click();
+  await note.getByRole('button', { name: 'À l’attaque' }).click();
   await expect(note).toBeHidden();
 
   // Fermee, elle ne revient pas.

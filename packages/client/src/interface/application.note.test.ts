@@ -8,7 +8,7 @@
  * invitation, ni ailleurs qu'a l'accueil.
  */
 
-import { NUMERO_DE_VERSION, versionMineure } from '@neon-ninja/shared';
+import { NUMERO_DE_VERSION } from '@neon-ninja/shared';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { creerClient } from '../client.js';
@@ -27,7 +27,7 @@ import {
 import { CLE_PREFERENCES_SON } from './preferences.js';
 import { CLE_VERSION_VUE } from './souvenirDeVersion.js';
 
-const TITRE = `Nouveautés de la version ${versionMineure(NUMERO_DE_VERSION)}`;
+const TITRE = 'Nouveautés';
 
 let application: Application | undefined;
 
@@ -83,7 +83,7 @@ describe('la note de version', () => {
     expect(note(hote).getAttribute('aria-label')).toBe(TITRE);
     expect(document.activeElement).toBe(note(hote));
 
-    boutonObligatoire(note(hote), 'Compris').click();
+    boutonObligatoire(note(hote), 'À l’attaque').click();
 
     expect(estCache(note(hote))).toBe(true);
     expect(stockage.getItem(CLE_VERSION_VUE)).not.toBeNull();
