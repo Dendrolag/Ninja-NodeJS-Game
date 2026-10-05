@@ -143,8 +143,24 @@ jobs:
       - name: Installer les dependances
         run: pnpm install --frozen-lockfile
 
+      # Chromium et les paquets systeme qu'il demande, par apt. D'ordinaire 25 a 36
+      # secondes; mais une installation sur 72, a l'etape 5.14, est restee 17 minutes
+      # sur un miroir d'Ubuntu qui ne debitait plus, et onze machines par execution
+      # multiplient ce risque par onze. Au-dela de deux minutes, elle est arretee et
+      # reprise une fois: une connexion neuve au miroir repart d'ordinaire a pleine
+      # vitesse. dpkg --configure -a acheve un paquet laisse a moitie installe.
       - name: Installer les navigateurs Playwright
+        id: navigateurs
+        timeout-minutes: 2
+        continue-on-error: true
         run: pnpm exec playwright install --with-deps chromium
+
+      - name: Installer les navigateurs Playwright, second essai
+        if: ${{ steps.navigateurs.outcome != 'success' }}
+        timeout-minutes: 5
+        run: |
+          sudo dpkg --configure -a
+          pnpm exec playwright install --with-deps chromium
 
       # Le projet banc n'est pas nomme: il a son propre job, ci-dessous.
       - name: Scenarios de bout en bout
@@ -181,8 +197,24 @@ jobs:
       - name: Installer les dependances
         run: pnpm install --frozen-lockfile
 
+      # Chromium et les paquets systeme qu'il demande, par apt. D'ordinaire 25 a 36
+      # secondes; mais une installation sur 72, a l'etape 5.14, est restee 17 minutes
+      # sur un miroir d'Ubuntu qui ne debitait plus, et onze machines par execution
+      # multiplient ce risque par onze. Au-dela de deux minutes, elle est arretee et
+      # reprise une fois: une connexion neuve au miroir repart d'ordinaire a pleine
+      # vitesse. dpkg --configure -a acheve un paquet laisse a moitie installe.
       - name: Installer les navigateurs Playwright
+        id: navigateurs
+        timeout-minutes: 2
+        continue-on-error: true
         run: pnpm exec playwright install --with-deps chromium
+
+      - name: Installer les navigateurs Playwright, second essai
+        if: ${{ steps.navigateurs.outcome != 'success' }}
+        timeout-minutes: 5
+        run: |
+          sudo dpkg --configure -a
+          pnpm exec playwright install --with-deps chromium
 
       - name: Banc de mesure du rendu
         run: pnpm test:e2e --project banc --no-deps
