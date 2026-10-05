@@ -5,14 +5,21 @@
  * que celle du serveur de developpement, ouverte au seul serveur de jeu nomme; les
  * polices se gardent, le reste se revalide; ni les cartes de sources ni les images
  * de collision ne partent en ligne; l'alias de Vercel renvoie a l'adresse canonique
- * (etape 5.6).
+ * (etape 5.6); deux pages pour deux serveurs de jeu n'ont pas les memes octets,
+ * pour qu'un navigateur ne garde pas la politique de l'une avec le code de l'autre
+ * (etape 5.13).
  */
 
 import { politiqueDeContenu } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
 import { ADRESSE_CANONIQUE, ALIAS_VERCEL } from './adresses.ts';
-import { configurationVercel, fichierDeLaPagePublie, ressourcePubliee } from './sortieVercel.ts';
+import {
+  configurationVercel,
+  fichierDeLaPagePublie,
+  pageMarqueeDuServeur,
+  ressourcePubliee,
+} from './sortieVercel.ts';
 
 const SERVEUR = 'https://neon-ninja.onrender.com';
 
@@ -89,5 +96,25 @@ describe('ce qui part en ligne', () => {
     expect(ressourcePubliee('/assets/cartes')).toBe(true);
     expect(ressourcePubliee('/assets/cartes/map1/collision.png')).toBe(false);
     expect(ressourcePubliee('/assets/README.md')).toBe(false);
+  });
+});
+
+describe('pageMarqueeDuServeur', () => {
+  const PAGE = '<html><head><title>Neon Ninja</title></head><body></body></html>';
+
+  it('inscrit le serveur de jeu dans l en-tete de la page', () => {
+    expect(pageMarqueeDuServeur(PAGE, SERVEUR)).toBe(
+      '<html><head><title>Neon Ninja</title>  <meta name="serveur-de-jeu" content="https://neon-ninja.onrender.com" />\n  </head><body></body></html>',
+    );
+  });
+
+  it('rend deux pages differentes pour deux serveurs', () => {
+    expect(pageMarqueeDuServeur(PAGE, SERVEUR)).not.toBe(
+      pageMarqueeDuServeur(PAGE, 'https://serveur.ninja.dendrolag.fr'),
+    );
+  });
+
+  it('refuse une page sans en-tete', () => {
+    expect(() => pageMarqueeDuServeur('<p>page</p>', SERVEUR)).toThrow('</head>');
   });
 });

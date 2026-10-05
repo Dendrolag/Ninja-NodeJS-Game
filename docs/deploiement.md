@@ -122,7 +122,9 @@ Avant de rien changer, elle refuse, en le disant :
 - **un serveur qui n'est pas au commit de la page en ligne** : il refuserait les joueurs (« Rechargez la page », sans fin). C'est le cas d'un secours resté en retard après une mise en ligne qui l'a signalé. Le remède : relancer la dernière mise en ligne, qui le remet à jour. Si c'est justement la production qui ne répond plus, la mise en ligne s'arrête sur elle avant d'arriver au secours : mettre alors le secours au commit de la page par son tableau de bord (Render : _Manual Deploy_, _Deploy a specific commit_, le commit étant celui du pied de l'accueil), puis basculer ;
 - **des sources d'un autre commit** que celui du serveur, à la main seulement : le workflow extrait le bon de lui-même.
 
-Après la promotion, elle vérifie que l'adresse publique sert la nouvelle page : politique de sécurité ouverte au seul serveur choisi, `app.js` du commit.
+Après la promotion, elle vérifie que l'adresse publique sert la nouvelle page : politique de sécurité ouverte au seul serveur choisi, page marquée de ce serveur, `app.js` du commit.
+
+**Pourquoi la page porte la marque de son serveur** (`<meta name="serveur-de-jeu">`, posée par `packages/client/scripts/sortieVercel.ts`). Un navigateur qui a la page en cache demande à Vercel si elle a changé ; à octets égaux, Vercel répond qu'elle n'a pas changé, sans renvoyer ses en-têtes, et le navigateur garde sa politique de sécurité. La page ne différant d'un serveur à l'autre que par cet en-tête, la première bascule vers Oracle, le 5 octobre 2026, a laissé un navigateur avec l'ancienne politique, qui interdisait au nouveau code de joindre Oracle : « le serveur de jeu démarre », sans fin. La marque fait différer la page dès que le serveur diffère.
 
 ### Quel serveur sert, en ce moment
 

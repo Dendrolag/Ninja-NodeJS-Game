@@ -28,6 +28,7 @@ const SERVEUR = 'https://neon-ninja.onrender.com';
 /** La page publique d'un deploiement reussi. */
 const PAGE_CONFORME: PageLue = {
   statutDeLaPage: 200,
+  html: `<head><meta name="serveur-de-jeu" content="${SERVEUR}" /></head>`,
   politique: politiqueDeContenu(SERVEUR),
   statutDuCode: 200,
   code: `var a=f("${SERVEUR}","${VERSION}");`,
@@ -227,6 +228,16 @@ describe('problemesDeLaPage', () => {
     expect(
       problemesDeLaPage({ ...PAGE_CONFORME, statutDuCode: 404, code: '' }, SERVEUR, VERSION),
     ).toEqual(['app.js repond 404, attendu 200.']);
+  });
+
+  // Etape 5.13: sans elle, un navigateur garde la politique de la page d'avant.
+  it('releve une page qui ne porte pas la marque de son serveur', () => {
+    expect(
+      problemesDeLaPage({ ...PAGE_CONFORME, html: '<head></head>' }, SERVEUR, VERSION),
+    ).toEqual(['La page ne porte pas la marque de son serveur de jeu.']);
+    expect(
+      problemesDeLaPage(PAGE_CONFORME, 'https://serveur.ninja.dendrolag.fr', VERSION),
+    ).toContain('La page ne porte pas la marque de son serveur de jeu.');
   });
 
   it('releve une politique absente, ou ouverte a un autre serveur', () => {

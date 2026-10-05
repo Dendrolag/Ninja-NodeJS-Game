@@ -65,6 +65,7 @@ export async function lireLaPage(pageDuJeu: string): Promise<PageLue> {
 
   return {
     statutDeLaPage: page.status,
+    html: await page.text(),
     politique: page.headers.get('content-security-policy'),
     statutDuCode: code.status,
     code: await code.text(),

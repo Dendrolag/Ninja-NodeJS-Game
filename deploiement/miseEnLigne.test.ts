@@ -29,6 +29,7 @@ const ORIGINES: Readonly<Record<NomDuServeur, string>> = {
 function page(serveur: NomDuServeur, version: string): PageLue {
   return {
     statutDeLaPage: 200,
+    html: `<head><meta name="serveur-de-jeu" content="${ORIGINES[serveur]}" /></head>`,
     politique: politiqueDeContenu(ORIGINES[serveur]),
     statutDuCode: 200,
     code: `var a=f("${ORIGINES[serveur]}","${version}");`,

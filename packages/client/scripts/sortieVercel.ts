@@ -29,7 +29,7 @@
  * « tsc --build ».
  */
 
-import { cp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -146,6 +146,31 @@ export function ressourcePubliee(chemin: string): boolean {
   return nom !== 'collision.png' && extname(nom) !== '.md';
 }
 
+/**
+ * La page, marquee du serveur de jeu qu'elle joint (etape 5.13).
+ *
+ * UNE PAGE EN CACHE GARDE SA POLITIQUE DE SECURITE. Le navigateur qui a la page
+ * demande a Vercel si elle a change; si ses octets sont les memes, Vercel repond
+ * qu'elle n'a pas change (304), sans renvoyer ses en-tetes, et le navigateur garde
+ * ceux qu'il avait. Or la page ne differait d'un serveur de jeu a l'autre que par sa
+ * politique de securite: apres une bascule, un joueur revenu sur le site gardait
+ * l'ancienne, qui interdisait au nouveau code de joindre le nouveau serveur, et
+ * restait devant « le serveur de jeu demarre » (constate le 5 octobre 2026). La
+ * marque fait differer la page des que le serveur differe.
+ *
+ * @throws Si la page n'a pas d'en-tete ou elle s'inscrive.
+ */
+export function pageMarqueeDuServeur(html: string, serveurDeJeu: string): string {
+  if (!html.includes('</head>')) {
+    throw new Error("La page n'a pas de </head> ou inscrire son serveur de jeu.");
+  }
+
+  return html.replace(
+    '</head>',
+    `  <meta name="serveur-de-jeu" content="${serveurDeJeu}" />\n  </head>`,
+  );
+}
+
 /** Empaquete la page pour cette mise en ligne, et ecrit la sortie Vercel en repartant de zero. */
 export async function preparerLaSortieVercel(options: OptionsSortieVercel): Promise<void> {
   // La configuration d'abord: une origine mal ecrite arrete tout avant l'empaquetage.
@@ -160,6 +185,8 @@ export async function preparerLaSortieVercel(options: OptionsSortieVercel): Prom
     recursive: true,
     filter: (source) => fichierDeLaPagePublie(source),
   });
+  const page = join(statique, 'index.html');
+  await writeFile(page, pageMarqueeDuServeur(await readFile(page, 'utf8'), options.serveurDeJeu));
   await cp(DOSSIER_RESSOURCES, join(statique, RACINE_RESSOURCES.slice(1)), {
     recursive: true,
     filter: (source) => ressourcePubliee(source),

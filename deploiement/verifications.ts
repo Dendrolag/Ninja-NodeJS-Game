@@ -178,6 +178,8 @@ export function problemesDeSante(corps: unknown, version: string): readonly stri
 export interface PageLue {
   /** Le code HTTP de la page. */
   readonly statutDeLaPage: number;
+  /** Le HTML de la page. */
+  readonly html: string;
   /** L'en-tete Content-Security-Policy de la page, s'il y en a un. */
   readonly politique: string | null;
   /** Le code HTTP de app.js. */
@@ -206,6 +208,12 @@ export function problemesDeLaPage(
 
   if (page.statutDeLaPage !== 200) {
     problemes.push(`La page repond ${String(page.statutDeLaPage)}, attendu 200.`);
+  }
+
+  // Une page qui ne nomme pas son serveur garderait, dans le cache d'un navigateur,
+  // la politique de securite de la page d'avant (etape 5.13).
+  if (page.statutDeLaPage === 200 && !page.html.includes(`content="${serveurDeJeu}"`)) {
+    problemes.push('La page ne porte pas la marque de son serveur de jeu.');
   }
 
   if (page.politique !== politiqueDeContenu(serveurDeJeu)) {
