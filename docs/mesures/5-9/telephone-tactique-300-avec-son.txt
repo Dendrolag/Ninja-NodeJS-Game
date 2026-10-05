@@ -1,0 +1,92 @@
+Relevé de performance Neon Ninja (étape 8.5)
+
+Relevé copié le: 2026-10-05T04:59:16.979Z
+Page: 413a3808a666f3450d8bb9d5ff49c569df812229
+Variantes: aucune
+Navigateur: Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/157.0 Mobile/15E148 Safari/604.1
+Écran: 393 × 852, densité 3
+Fenêtre: 393 × 651
+Processeurs logiques: 4
+Partie: carte map1, mode tactique, 300 PNJ au départ, pluie, jour, 0 entités à cet instant
+Rendu: webgl 2, densité 2, canevas 786 × 1558
+Carte graphique: Apple GPU
+
+== Images
+Durée mesurée: 132,3 s, 1257 images, 9,5 par seconde
+Cadence du navigateur estimée: 58 Hz (écart médian 17,1 ms)
+Écart entre deux images: moyenne 105,35, médiane 17,1, p90 340,1, p99 585,1, max 906,0 ms
+Images d'au moins 25 ms: 519, 50 ms: 449, 100 ms: 416, 250 ms: 194
+Interruptions (page cachée): 0
+Écran de préparation levé à 0,73 s; images d'au moins 50 ms ensuite: 448
+
+== Où va le temps, par image
+Notre code: moyenne 23,38, médiane 1,1, p90 128,1, p99 276,1, max 390,0 ms
+  dont saisie, sons, lissage, scène et transmission à PixiJS: moyenne 11,23, médiane 1,1, p90 10,1, p99 176,1, max 305,0 ms
+  dont HUD: moyenne 0,14, médiane 0,1, p90 1,0, p99 1,0, max 1,0 ms
+PixiJS: moyenne 0,66, médiane 1,1, p90 1,1, p99 3,1, max 24,0 ms
+Hors de nos chronomètres, en moyenne: 81,30 ms (l'attente de l'écran, puis le navigateur, la carte graphique, le ramasse-miettes)
+
+== Réseau
+Instantanés reçus: 2650, 20,0 par seconde, battements sautés: 0
+Écart entre deux instantanés: moyenne 49,89, médiane 0,1, p90 191,1, p99 573,1, max 1233,0 ms
+Instantanés d'au moins 100 ms: 399
+Images tenues, le lissage attendant le réseau: 172 (13,7 %)
+
+== Déroulé, par fenêtre de 5 s
+début s | images/s | plus longue ms | ≥ 50 ms | notre code ms | PixiJS ms | instantanés/s | écart max ms | personnages
+0 | 38,2 | 295,0 | 10 | 1,63 | 0,86 | 20,2 | 446 | 53
+5 | 32,4 | 336,0 | 13 | 2,29 | 0,44 | 20,0 | 335 | 35
+10 | 8,4 | 675,0 | 14 | 28,90 | 0,45 | 19,6 | 652 | 35
+15 | 16,0 | 790,0 | 20 | 7,85 | 0,42 | 20,8 | 527 | 37
+20 | 17,6 | 370,0 | 18 | 9,49 | 0,59 | 18,2 | 368 | 40
+25 | 14,4 | 539,0 | 19 | 5,14 | 0,56 | 21,8 | 490 | 30
+30 | 8,8 | 379,0 | 20 | 16,59 | 0,68 | 19,2 | 681 | 50
+35 | 3,2 | 462,0 | 16 | 61,75 | 0,94 | 19,0 | 577 | 49
+40 | 5,6 | 481,0 | 21 | 41,86 | 0,75 | 20,6 | 625 | 46
+45 | 4,0 | 791,0 | 17 | 63,45 | 0,65 | 20,2 | 691 | 51
+50 | 5,0 | 762,0 | 19 | 35,56 | 0,80 | 20,8 | 560 | 44
+55 | 3,0 | 638,0 | 15 | 96,60 | 0,73 | 19,8 | 1119 | 39
+60 | 3,4 | 612,0 | 16 | 91,18 | 0,76 | 19,8 | 752 | 42
+65 | 5,4 | 400,0 | 23 | 41,11 | 0,70 | 20,6 | 584 | 46
+70 | 4,0 | 552,0 | 18 | 72,95 | 0,70 | 19,4 | 647 | 48
+75 | 3,4 | 630,0 | 17 | 106,94 | 0,59 | 20,6 | 945 | 42
+80 | 3,0 | 523,0 | 14 | 124,40 | 1,07 | 16,8 | 613 | 54
+85 | 5,6 | 849,0 | 17 | 41,79 | 0,61 | 22,2 | 1040 | 47
+90 | 4,4 | 413,0 | 21 | 59,50 | 1,23 | 20,0 | 501 | 46
+95 | 3,4 | 638,0 | 13 | 114,88 | 1,12 | 20,8 | 1233 | 43
+100 | 3,2 | 622,0 | 16 | 88,94 | 1,31 | 20,0 | 695 | 47
+105 | 26,6 | 406,0 | 13 | 5,40 | 0,50 | 18,4 | 372 | 46
+110 | 8,0 | 505,0 | 20 | 25,27 | 0,75 | 20,8 | 543 | 45
+115 | 11,8 | 400,0 | 19 | 9,78 | 0,58 | 19,6 | 376 | 46
+120 | 3,2 | 574,0 | 15 | 99,88 | 1,06 | 19,0 | 676 | 39
+125 | 4,0 | 906,0 | 17 | 63,40 | 1,20 | 21,4 | 716 | 42
+130 | 11,7 | 505,0 | 8 | 12,33 | 0,56 | 22,0 | 670 | 35
+
+== Les 20 pires images, d'au moins 25 ms
+à s | écart ms | notre code ms, image précédente | PixiJS ms | instantanés reçus pendant
+126,55 | 906,0 | 373,00 | 1,00 | 14
+85,95 | 849,0 | 238,00 | 1,00 | 0
+46,79 | 791,0 | 390,00 | 1,00 | 14
+18,91 | 790,0 | 191,00 | 1,00 | 4
+54,57 | 762,0 | 323,00 | 3,00 | 11
+52,37 | 708,0 | 168,00 | 1,00 | 3
+14,55 | 675,0 | 334,00 | 0,00 | 11
+96,98 | 638,0 | 146,00 | 2,00 | 6
+57,78 | 638,0 | 131,00 | 1,00 | 0
+79,13 | 630,0 | 232,00 | 1,00 | 0
+104,79 | 622,0 | 368,00 | 0,00 | 13
+63,08 | 612,0 | 149,00 | 1,00 | 0
+97,56 | 585,0 | 215,00 | 1,00 | 0
+76,64 | 577,0 | 194,00 | 1,00 | 8
+124,69 | 574,0 | 161,00 | 1,00 | 6
+98,54 | 554,0 | 162,00 | 3,00 | 0
+72,68 | 552,0 | 342,00 | 0,00 | 11
+122,11 | 549,0 | 320,00 | 0,00 | 11
+100,50 | 547,0 | 196,00 | 1,00 | 0
+71,77 | 541,0 | 125,00 | 0,00 | 6
+
+== Serveur, battements de toutes ses parties
+Fenêtre: les 300 dernières secondes, 2651 battements (lu il y a 1 s)
+Écart entre deux battements d'une partie, 50 ms visés: médiane 50,0, p90 50,5, p99 51,2, max 52,1 ms
+Battements d'au moins 100 ms: 0
+Durée d'un battement (moteur, codage, envoi): médiane 1,9, p90 2,0, p99 2,7, max 12,3 ms

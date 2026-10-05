@@ -1,0 +1,42 @@
+Relevé de performance Neon Ninja (étape 8.5)
+
+Relevé copié le: 2026-10-05T06:50:14.511Z
+Page: 413a3808a666f3450d8bb9d5ff49c569df812229
+Variantes: sans son
+Navigateur: Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/157.0 Mobile/15E148 Safari/604.1
+Écran: 393 × 852, densité 3
+Fenêtre: 393 × 651
+Processeurs logiques: 4
+Partie: carte map1, mode tactique, 300 PNJ au départ, pluie, jour, 307 entités à cet instant
+Rendu: webgl 2, densité 2, canevas 786 × 1558
+Carte graphique: Apple GPU
+
+== Images
+Durée mesurée: 179,9 s, 10776 images, 59,9 par seconde
+Cadence du navigateur estimée: 58 Hz (écart médian 17,1 ms)
+Écart entre deux images: moyenne 16,69, médiane 17,1, p90 17,1, p99 23,1, max 132,0 ms
+Images d'au moins 25 ms: 35, 50 ms: 1, 100 ms: 1, 250 ms: 0
+Interruptions (page cachée): 0
+Écran de préparation levé à 0,67 s; images d'au moins 50 ms ensuite: 0
+
+== Où va le temps, par image
+Notre code: moyenne 0,46, médiane 0,1, p90 1,1, p99 1,1, max 5,0 ms
+  dont saisie, sons, lissage, scène et transmission à PixiJS: moyenne 0,35, médiane 0,1, p90 1,1, p99 1,1, max 4,0 ms
+  dont HUD: moyenne 0,10, médiane 0,1, p90 0,1, p99 1,0, max 1,0 ms
+PixiJS: moyenne 0,54, médiane 1,1, p90 1,1, p99 1,1, max 20,0 ms
+Hors de nos chronomètres, en moyenne: 15,69 ms (l'attente de l'écran, puis le navigateur, la carte graphique, le ramasse-miettes)
+
+== Réseau
+Instantanés reçus: 3600, 20,0 par seconde, battements sautés: 0
+Écart entre deux instantanés: moyenne 49,96, médiane 50,1, p90 80,1, p99 144,1, max 375,0 ms
+Instantanés d'au moins 100 ms: 201
+Images tenues, le lissage attendant le réseau: 2176 (20,2 %)
+
+== Déroulé, par fenêtre de 5 s
+Toutes les fenêtres de 5 s entre 58,2 et 60,0 images par seconde, notre code entre 0,39 et 0,57 ms, 20 instantanés par seconde (relevé complet tronqué ici pour la lisibilité).
+
+== Serveur, battements de toutes ses parties
+Fenêtre: les 300 dernières secondes, 3600 battements (lu il y a 3 s)
+Écart entre deux battements d'une partie, 50 ms visés: médiane 50,0, p90 50,7, p99 51,3, max 53,1 ms
+Battements d'au moins 100 ms: 0
+Durée d'un battement (moteur, codage, envoi): médiane 2,0, p90 2,5, p99 2,8, max 17,4 ms

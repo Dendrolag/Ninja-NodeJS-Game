@@ -1026,3 +1026,49 @@ Une quatrième carte, de 2000 sur 1524: 1,43 million de pixels carrés tenables,
 - **À son plafond, 0,72 ms par battement**, la carte la moins chère du jeu, parce que la plus petite.
 
 Le vaisseau ne coûte rien au serveur, qui ne tire qu'une graine par lancement. À la page, il ajoute deux sprites, le vaisseau et son ombre, placés à chaque image par quelques multiplications, et une texture d'ombre fabriquée une fois.
+
+## 26. Mesure de l'étape 5.9: la machine Oracle de l'essai (4 et 5 octobre 2026)
+
+La machine de l'essai: Oracle Always Free, `VM.Standard.A1.Flex`, processeur Arm Neoverse-N1, 4 cœurs, 24 Go, Ubuntu 24.04, Node 24.21.0 dans le conteneur `node:24-bookworm-slim`. Commit `413a380`, celui qui y était en ligne, joué sur la machine même, serveur de l'essai au repos. Résultats bruts dans `5-9/`.
+
+### 26.1 Le banc du battement
+
+`pnpm charge --banc --bots-banc 190,300`, Horde, Tokyo, douze joueurs, un processus neuf par ligne. Même commande au même commit sur la machine de mesure (AMD Ryzen 7 3800X, Windows, Node 24.16.0).
+
+| Machine       | Bots | Moteur | Projection | Codage | Total | Total p99 | Parties par cœur |
+| ------------- | ---: | -----: | ---------: | -----: | ----: | --------: | ---------------: |
+| Poste (Ryzen) |  190 |  0,529 |      0,062 |  0,069 | 0,659 |     1,247 |               53 |
+| Oracle (Arm)  |  190 |  0,965 |      0,123 |  0,120 | 1,208 |     2,181 |               28 |
+| Poste (Ryzen) |  300 |  0,867 |      0,081 |  0,091 | 1,039 |     1,578 |               33 |
+| Oracle (Arm)  |  300 |  1,472 |      0,157 |  0,154 | 1,783 |     2,587 |               19 |
+
+**Un cœur de la machine Oracle vaut un peu plus de la moitié d'un cœur du poste** (1,7 fois plus lent). Elle en a quatre, entiers. L'offre gratuite de Render en donne un dixième d'un, partagé.
+
+### 26.2 La charge du serveur complet
+
+`pnpm charge --reseau --bots 150 --rooms 8,16,24,32`, parties pleines de 150 bots et 12 joueurs, un seul processus de serveur, clients sur un autre processus de la même machine, 20 secondes par palier.
+
+| Parties | Battement moyen (p99) | Écart p99 | Fréquence min | Processeur | Par partie | Mémoire | Octets par message | Débit sortant | Verdict  |
+| ------: | --------------------: | --------: | ------------: | ---------: | ---------: | ------: | -----------------: | ------------: | -------- |
+|       8 |           1,25 (1,68) |      53,1 |       20,0 Hz |       29 % |       1,84 |  271 Mo |                446 |    6,9 Mbit/s | tenu     |
+|      16 |           1,37 (1,93) |      52,8 |       20,0 Hz |       62 % |       1,94 |  283 Mo |                448 |   13,8 Mbit/s | tenu     |
+|      24 |           1,33 (1,86) |      53,9 |       20,0 Hz |       87 % |       1,82 |  286 Mo |                446 |   20,7 Mbit/s | tenu     |
+|      32 |           1,29 (1,84) |      83,2 |       18,3 Hz |      104 % |       1,76 |  285 Mo |                467 |   26,6 Mbit/s | non tenu |
+
+- **Un processus tient 24 parties pleines**, 288 joueurs, et sature à 32 sur son seul cœur, comme le prédit le budget de la section 7. Les trois autres cœurs restent libres: plusieurs processus en tiendraient davantage.
+- **La mémoire reste sous 300 Mo** à 32 parties, sur 24 Go.
+- **La bande passante est loin de la limite**: 24 parties pleines jouées sans arrêt tout le mois écriraient environ 6,7 To, sous les 10 To sortants gratuits. Une partie pleine seule, environ 280 Go par mois.
+
+### 26.3 La régularité du battement, comparée à Render
+
+Le même iPhone, une partie Tactique à un joueur, 300 faux ninjas, avec pluie. Le champ `battement` de `/sante`, lu par le relevé de la page sur les cinq dernières minutes. Render: le 25 septembre 2026 (`releves-8-6/02-iphone-tactique-300.txt`). Oracle: le 5 octobre (`5-9/telephone-tactique-300-avec-son.txt` et `-sans-son.txt`).
+
+| Serveur          | Écart médian | Écart p99 | Écart max | Battements de 100 ms ou plus | Durée médiane | Durée p99 | Durée max |
+| ---------------- | -----------: | --------: | --------: | ---------------------------: | ------------: | --------: | --------: |
+| Render           |         50,0 |      52,2 |     205,4 |                            3 |           2,0 |       6,4 |      97,6 |
+| Oracle, partie 1 |         50,0 |      51,2 |      52,1 |                            0 |           1,9 |       2,7 |      12,3 |
+| Oracle, partie 2 |         50,0 |      51,3 |      53,1 |                            0 |           2,0 |       2,8 |      17,4 |
+
+- **Oracle bat plus régulièrement que Render**: aucun battement en retard, un pire écart de 53 ms contre 205, une durée au centile 99 deux fois plus courte. Sur Render, les pointes viennent du dixième de processeur partagé.
+- La durée médiane est la même: c'est le coût du jeu, pas de la machine, à un joueur.
+- **Ce que le joueur a ressenti n'en dépend pas**: la première partie a ramé sur l'iPhone, la seconde non, avec le même serveur. La différence est le son, côté page (étape 5.12).

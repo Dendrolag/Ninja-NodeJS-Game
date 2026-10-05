@@ -1,0 +1,297 @@
+{
+  "date": "2026-10-04T20:19:59.178Z",
+  "commit": "413a380",
+  "machine": {
+    "processeur": "Neoverse-N1",
+    "coeursLogiques": 4,
+    "memoireGo": 23,
+    "systeme": "Linux 6.17.0-1020-oracle",
+    "node": "v24.21.0"
+  },
+  "mode": "classique",
+  "carte": "map1",
+  "reseau": [
+    {
+      "bots": [150],
+      "paliers": [
+        {
+          "rooms": 8,
+          "joueursParRoom": 12,
+          "bots": [150],
+          "clients": 96,
+          "dureeMesureS": 19.999097419,
+          "battementMs": {
+            "nombre": 3200,
+            "moyenne": 1.2517102959375013,
+            "p50": 1.2332440000027418,
+            "p95": 1.492324999999255,
+            "p99": 1.6770849999993516,
+            "minimum": 0.9362430000001041,
+            "maximum": 3.714291999996931
+          },
+          "intervalleMs": {
+            "nombre": 3192,
+            "moyenne": 50.00115615726821,
+            "p50": 50.02520200000072,
+            "p95": 52.13608799999929,
+            "p99": 53.077212000000145,
+            "minimum": 45.900588999997126,
+            "maximum": 54.52437700000155
+          },
+          "frequenceParPartieHz": {
+            "nombre": 8,
+            "moyenne": 20.000902621734465,
+            "p50": 20.00090262173446,
+            "p95": 20.00090262173446,
+            "p99": 20.00090262173446,
+            "minimum": 20.00090262173446,
+            "maximum": 20.00090262173446
+          },
+          "retardBoucleMs": {
+            "p50": 1.071103,
+            "p99": 4.024319,
+            "maximum": 6.279167
+          },
+          "utilisationBouclePourCent": 26.197550777112077,
+          "ramasseMiettes": {
+            "pauses": 26,
+            "partDuTempsPourCent": 0.14236788995890545,
+            "plusLongueMs": 3.806972000747919
+          },
+          "processeurServeurPourCent": 29.499111266867313,
+          "processeurParPartieMs": 1.84361125,
+          "memoireRssMo": 271.37890625,
+          "tasUtiliseMo": 64.88600158691406,
+          "octetsParMessage": 446.3734375,
+          "messagesParClientHz": 20.00090262173446,
+          "debitParClientKoS": 8.967983883259732,
+          "debitSortantMbitS": 6.887411622343474,
+          "intentionsParSeconde": 91.55413175098948,
+          "intervalleReceptionMs": {
+            "nombre": 38304,
+            "moyenne": 50.00163638836695,
+            "p50": 50.024162000001525,
+            "p95": 52.1765290000003,
+            "p99": 53.148691999998846,
+            "minimum": 44.51466399999845,
+            "maximum": 54.846456999999646
+          },
+          "processeurClientsPourCent": [14.219184640037438],
+          "deconnexions": 0,
+          "verdict": {
+            "tenue": true,
+            "motifs": []
+          }
+        },
+        {
+          "rooms": 16,
+          "joueursParRoom": 12,
+          "bots": [150],
+          "clients": 192,
+          "dureeMesureS": 20.000657271000005,
+          "battementMs": {
+            "nombre": 6400,
+            "moyenne": 1.3651307017187722,
+            "p50": 1.2389640000001236,
+            "p95": 1.7608460000010382,
+            "p99": 1.9345659999999043,
+            "minimum": 0.9465230000005249,
+            "maximum": 4.432733999998163
+          },
+          "intervalleMs": {
+            "nombre": 6384,
+            "moyenne": 50.001461948778434,
+            "p50": 50.00416100000075,
+            "p95": 51.975046999999904,
+            "p99": 52.807489999999234,
+            "minimum": 42.32709600000089,
+            "maximum": 58.373028000001796
+          },
+          "frequenceParPartieHz": {
+            "nombre": 16,
+            "moyenne": 19.999342750599546,
+            "p50": 19.999342750599542,
+            "p95": 19.999342750599542,
+            "p99": 19.999342750599542,
+            "minimum": 19.999342750599542,
+            "maximum": 19.999342750599542
+          },
+          "retardBoucleMs": {
+            "p50": 1.071103,
+            "p99": 4.984831,
+            "maximum": 11.517951
+          },
+          "utilisationBouclePourCent": 55.61469738694588,
+          "ramasseMiettes": {
+            "pauses": 57,
+            "partDuTempsPourCent": 0.4471927137067242,
+            "plusLongueMs": 4.154612999409437
+          },
+          "processeurServeurPourCent": 62.120033515172565,
+          "processeurParPartieMs": 1.94131484375,
+          "memoireRssMo": 282.77734375,
+          "tasUtiliseMo": 69.53870391845703,
+          "octetsParMessage": 448.42243399468833,
+          "messagesParClientHz": 20.002467647904325,
+          "debitParClientKoS": 9.012058779672357,
+          "debitSortantMbitS": 13.842522285576738,
+          "intentionsParSeconde": 183.2439779523683,
+          "intervalleReceptionMs": {
+            "nombre": 76620,
+            "moyenne": 50.003102779482845,
+            "p50": 49.99584099999993,
+            "p95": 52.03008799999952,
+            "p99": 53.06225099999938,
+            "minimum": 41.68961400000262,
+            "maximum": 58.864668999998685
+          },
+          "processeurClientsPourCent": [27.069390579367138],
+          "deconnexions": 0,
+          "verdict": {
+            "tenue": true,
+            "motifs": []
+          }
+        },
+        {
+          "rooms": 24,
+          "joueursParRoom": 12,
+          "bots": [150],
+          "clients": 288,
+          "dureeMesureS": 20.003329428,
+          "battementMs": {
+            "nombre": 9600,
+            "moyenne": 1.3326684773958273,
+            "p50": 1.1955639999978303,
+            "p95": 1.709366000002774,
+            "p99": 1.8638059999975667,
+            "minimum": 0.966723000001366,
+            "maximum": 3.648612000000867
+          },
+          "intervalleMs": {
+            "nombre": 9576,
+            "moyenne": 50.00467268264409,
+            "p50": 50.02368000000206,
+            "p95": 52.02120600000126,
+            "p99": 53.85489299999972,
+            "minimum": 32.392822999998316,
+            "maximum": 73.18407399999705
+          },
+          "frequenceParPartieHz": {
+            "nombre": 24,
+            "moyenne": 19.996671126162298,
+            "p50": 19.996671126162287,
+            "p95": 19.996671126162287,
+            "p99": 19.996671126162287,
+            "minimum": 19.996671126162287,
+            "maximum": 19.996671126162287
+          },
+          "retardBoucleMs": {
+            "p50": 1.522687,
+            "p99": 5.791743,
+            "maximum": 28.983295
+          },
+          "utilisationBouclePourCent": 80.74377693054096,
+          "ramasseMiettes": {
+            "pauses": 76,
+            "partDuTempsPourCent": 0.685669640572599,
+            "plusLongueMs": 5.541338000446558
+          },
+          "processeurServeurPourCent": 87.48635102466403,
+          "processeurParPartieMs": 1.8229357291666668,
+          "memoireRssMo": 285.94140625,
+          "tasUtiliseMo": 79.2275619506836,
+          "octetsParMessage": 446.27476304551607,
+          "messagesParClientHz": 19.99875411273793,
+          "debitParClientKoS": 8.964339291110356,
+          "debitSortantMbitS": 20.65383772671826,
+          "intentionsParSeconde": 273.1045359055614,
+          "intervalleReceptionMs": {
+            "nombre": 114924,
+            "moyenne": 50.005769142824825,
+            "p50": 50.02332100000058,
+            "p95": 52.064846000001126,
+            "p99": 53.98841199999879,
+            "minimum": 32.28078299999834,
+            "maximum": 73.24043399999937
+          },
+          "processeurClientsPourCent": [39.75071002526739],
+          "deconnexions": 0,
+          "verdict": {
+            "tenue": true,
+            "motifs": []
+          }
+        },
+        {
+          "rooms": 32,
+          "joueursParRoom": 12,
+          "bots": [150],
+          "clients": 384,
+          "dureeMesureS": 20.043158124,
+          "battementMs": {
+            "nombre": 11827,
+            "moyenne": 1.2872306638200992,
+            "p50": 1.1568440000010014,
+            "p95": 1.7126860000025772,
+            "p99": 1.8449660000005679,
+            "minimum": 0.9274829999994836,
+            "maximum": 3.5874519999997574
+          },
+          "intervalleMs": {
+            "nombre": 11795,
+            "moyenne": 54.22451490326433,
+            "p50": 50.5980410000011,
+            "p95": 70.33122400000138,
+            "p99": 83.18290399999387,
+            "minimum": 12.48511999999755,
+            "maximum": 108.80046500000026
+          },
+          "frequenceParPartieHz": {
+            "nombre": 32,
+            "moyenne": 18.439895934236155,
+            "p50": 18.460164696149157,
+            "p95": 18.609841707199017,
+            "p99": 18.609841707199017,
+            "minimum": 18.3104876850993,
+            "maximum": 18.609841707199017
+          },
+          "retardBoucleMs": {
+            "p50": 2.662399,
+            "p99": 46.727167,
+            "maximum": 65.961983
+          },
+          "utilisationBouclePourCent": 96.33556714429835,
+          "ramasseMiettes": {
+            "pauses": 92,
+            "partDuTempsPourCent": 1.01114206526911,
+            "plusLongueMs": 5.893099000677466
+          },
+          "processeurServeurPourCent": 103.9668941944231,
+          "processeurParPartieMs": 1.7619217891265748,
+          "memoireRssMo": 284.7109375,
+          "tasUtiliseMo": 65.71479797363281,
+          "octetsParMessage": 467.44927291173485,
+          "messagesParClientHz": 18.441455069767926,
+          "debitParClientKoS": 8.660568856851604,
+          "debitSortantMbitS": 26.605267528248127,
+          "intentionsParSeconde": 364.8626606025373,
+          "intervalleReceptionMs": {
+            "nombre": 141552,
+            "moyenne": 54.22532858805289,
+            "p50": 50.60236099999747,
+            "p95": 70.3656630000005,
+            "p99": 83.17206400000214,
+            "minimum": 12.30735900000218,
+            "maximum": 108.77706599999874
+          },
+          "processeurClientsPourCent": [47.613492260051984],
+          "deconnexions": 0,
+          "verdict": {
+            "tenue": false,
+            "motifs": ["frequence 18.3 Hz sous le plancher de 19.0 Hz"]
+          }
+        }
+      ],
+      "partiesTenues": 24
+    }
+  ]
+}
