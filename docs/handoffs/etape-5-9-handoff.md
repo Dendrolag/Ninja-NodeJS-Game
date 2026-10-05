@@ -63,8 +63,8 @@ Détail dans la section « Réconciliation » de la fiche.
 
 ## Prochaine action exacte
 
-Exécuter l'étape `5.12`, le son qui fait ramer l'iPhone: rédiger sa fiche selon le cas de repli du PROTOCOLE, à partir de son entrée dans `docs/plan/ROADMAP.md` (phase 5) et des relevés `docs/mesures/5-9/telephone-tactique-300-*.txt`. En parallèle, quand le porteur du projet l'aura jouée, consigner ici la partie à plusieurs avec un compte (point 3). Vers le 10 novembre 2026, vérifier que la machine Oracle tourne toujours (`curl https://serveur.ninja.dendrolag.fr/sante`, état de l'instance dans la console) et clore la 5.9.
+Exécuter l'étape `5.13`, la production sur Oracle avec Render en secours, décidée par le porteur du projet le 5 octobre 2026 après les mesures: lire `docs/plan/etape-5-13.md`. Puis l'étape `5.12`, le son qui fait ramer l'iPhone. La partie à plusieurs avec un compte (point 3) se joue désormais en production, après la bascule, et compte pour les deux étapes. Vers le 10 novembre 2026, vérifier que la machine Oracle tourne toujours (`curl https://serveur.ninja.dendrolag.fr/sante`, état de l'instance dans la console) et clore la 5.9.
 
 ## Étape suivante
 
-Fiche à lire: aucune encore; l'entrée `5.12` de `docs/plan/ROADMAP.md`, section 4, phase 5.
+Fiche à lire: docs/plan/etape-5-13.md
