@@ -1,0 +1,84 @@
+# La bascule de la page publique d'un serveur de jeu a l'autre (etape 5.13).
+#
+# Lancee a la main: onglet Actions du depot, « Bascule », « Run workflow », puis le
+# serveur que la page doit joindre. Cela marche depuis un telephone. La bascule ne
+# touche a aucun serveur: elle remplace la page publique par celle du meme commit,
+# empaquetee pour le serveur choisi, apres avoir verifie qu'il sert ce commit. Le
+# deroulement et ses refus sont dans deploiement/miseEnLigne.ts, quand et comment
+# s'en servir dans docs/deploiement.md.
+#
+# La mise en ligne suivante suit la bascule: elle met d'abord en ligne le serveur
+# que joint la page.
+
+name: Bascule
+
+on:
+  workflow_dispatch:
+    inputs:
+      vers:
+        description: 'Le serveur de jeu que la page publique doit joindre'
+        type: choice
+        options: [render, oracle]
+        required: true
+
+env:
+  NODE_VERSION: '24'
+
+jobs:
+  bascule:
+    name: Bascule vers ${{ inputs.vers }}
+    runs-on: ubuntu-latest
+    # Le meme groupe que la mise en ligne de ci.yml: jamais une bascule pendant une
+    # mise en ligne, ni l'inverse.
+    concurrency:
+      group: mise-en-ligne
+      cancel-in-progress: false
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: team_v9SkLK1zKjpRjtkmzq8Q9TM7
+      VERCEL_PROJECT_ID: prj_x2NAYxrQy1D88sjkjGRewy96hbua
+      ORACLE_HOTE: serveur.ninja.dendrolag.fr
+      SERVEUR_RENDER: https://neon-ninja.onrender.com
+      PAGE_DU_JEU: https://ninja.dendrolag.fr
+      CIBLE: ${{ inputs.vers }}
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # La page s'empaquette a partir des sources du commit que sert le serveur
+      # choisi. Render gratuit dort peut-etre: jusqu'a une minute et demie pour
+      # se reveiller. La bascule reverifie tout avant de promouvoir.
+      - name: Extraire le commit que sert le serveur choisi
+        run: |
+          case "$CIBLE" in
+            oracle) origine="https://$ORACLE_HOTE" ;;
+            render) origine="$SERVEUR_RENDER" ;;
+            *) echo "Serveur inconnu: $CIBLE"; exit 1 ;;
+          esac
+          version="$(curl --silent --show-error --fail --max-time 90 "$origine/sante" | jq -r '.version // empty')"
+          if [ -z "$version" ]; then
+            echo "$CIBLE ne dit pas sa version sur /sante: il ne repond pas. Rien n'a change."
+            exit 1
+          fi
+          echo "$CIBLE sert le commit $version."
+          git checkout --detach "$version"
+
+      - name: Installer pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Installer Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Installer les dependances
+        run: pnpm install --frozen-lockfile
+
+      - name: Compiler les paquets
+        run: pnpm exec tsc --build
+
+      - name: Basculer la page publique
+        run: node --disable-warning=ExperimentalWarning deploiement/basculer.ts

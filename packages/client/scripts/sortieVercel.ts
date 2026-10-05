@@ -9,6 +9,9 @@
  * le joueur devant un ecran blanc pendant le reveil. Vercel sert la page depuis son
  * reseau de diffusion, compressee, et tout de suite: la page dit alors elle-meme
  * qu'elle attend le serveur. Decision du 14 septembre 2026, au journal de conception.
+ * Depuis l'etape 5.13, la production tourne sur une machine Oracle qui ne dort pas,
+ * et la page reste sur Vercel: c'est elle qui choisit le serveur de jeu, Oracle ou
+ * Render en secours, et une bascule de l'un a l'autre ne change qu'elle.
  *
  * LE FORMAT EST CELUI DE VERCEL (Build Output API, version 3), dans .vercel/output
  * a la racine du depot:
@@ -20,7 +23,7 @@
  *                 serveur de developpement
  *
  * La mise en ligne elle-meme (« vercel deploy --prebuilt ») est l'affaire de
- * deploiement/deployer.ts.
+ * deploiement/vercel.ts.
  *
  * Ce script lit le paquet partage dans sa compilation: le lancer apres
  * « tsc --build ».

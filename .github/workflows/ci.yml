@@ -109,35 +109,41 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
-  # La mise en ligne (etape 5.3): la page sur Vercel, le serveur de jeu sur Render.
+  # La mise en ligne (etapes 5.3 et 5.13): la page sur Vercel, le serveur de jeu de
+  # la production, puis le secours. La production est le serveur que joint la page
+  # publique, Oracle ou Render; la bascule de l'un a l'autre est dans bascule.yml.
   # Seulement apres les deux jobs verts, et seulement pour une poussee sur master,
   # la branche de la production depuis l'etape 6.1. Le deroulement et ses
-  # verifications sont dans deploiement/deployer.ts, l'exploitation dans
+  # verifications sont dans deploiement/miseEnLigne.ts, l'exploitation dans
   # docs/deploiement.md.
   mise-en-ligne:
     name: Mise en ligne
     runs-on: ubuntu-latest
     needs: [verification, bout-en-bout]
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
-    # Une seule mise en ligne a la fois, jamais interrompue par la suivante.
+    # Une seule mise en ligne ou bascule a la fois, jamais interrompue par la suivante.
     concurrency:
       group: mise-en-ligne
       cancel-in-progress: false
     env:
-      # Les deux secrets du depot.
+      # Les trois secrets du depot. La cle SSH de la CI ne peut que lancer les
+      # commandes de la machine Oracle.
       RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      ORACLE_SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
       # Ce qui suit n'a rien de secret: ce sont des identifiants et des adresses
       # publiques.
       RENDER_SERVICE_ID: srv-csrnm30gph6c73b9jmt0
       VERCEL_ORG_ID: team_v9SkLK1zKjpRjtkmzq8Q9TM7
       VERCEL_PROJECT_ID: prj_x2NAYxrQy1D88sjkjGRewy96hbua
-      SERVEUR_DE_JEU: https://neon-ninja.onrender.com
+      ORACLE_HOTE: serveur.ninja.dendrolag.fr
+      SERVEUR_RENDER: https://neon-ninja.onrender.com
       PAGE_DU_JEU: https://ninja.dendrolag.fr
       VERSION_DU_JEU: ${{ github.sha }}
     steps:
       # Tout l'historique: la mise en ligne compare ce commit a celui qui est en ligne,
-      # et ne part pas si rien de ce qui compose le jeu n'a change entre les deux.
+      # et ne part pas si rien de ce qui compose le jeu n'a change entre les deux. La
+      # machine Oracle recoit aussi les sources d'un commit par git archive.
       - name: Recuperer le depot
         uses: actions/checkout@v7
         with:
@@ -176,72 +182,10 @@ jobs:
         if: ${{ steps.dernier.outputs.a-mettre-en-ligne == 'oui' }}
         run: pnpm exec tsc --build
 
-      - name: Mettre en ligne la page et le serveur de jeu
-        if: ${{ steps.dernier.outputs.a-mettre-en-ligne == 'oui' }}
-        run: node --disable-warning=ExperimentalWarning deploiement/deployer.ts
-
-  # L'essai du serveur de jeu sur la machine Oracle (etape 5.9), a cote de la
-  # production, qui reste sur Render. Il ne bloque rien: s'il echoue, la mise en
-  # ligne de la production part quand meme, et l'execution reste verte. Le
-  # deroulement est dans deploiement/oracle.ts, l'exploitation dans
-  # docs/deploiement.md.
-  essai-oracle:
-    name: Essai sur Oracle
-    runs-on: ubuntu-latest
-    needs: [verification, bout-en-bout]
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
-    continue-on-error: true
-    concurrency:
-      group: essai-oracle
-      cancel-in-progress: false
-    env:
-      # La cle SSH de la CI, qui ne peut que lancer les commandes de la machine.
-      ORACLE_SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
-      ORACLE_HOTE: serveur.ninja.dendrolag.fr
-      VERSION_DU_JEU: ${{ github.sha }}
-    steps:
-      - name: Recuperer le depot
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - name: Verifier que ce commit est le dernier de la branche
-        id: dernier
-        run: |
-          dernier="$(git ls-remote origin refs/heads/master | cut -f1)"
-          if [ -z "$ORACLE_SSH_KEY" ]; then
-            echo "Pas de cle ORACLE_SSH_KEY: pas d'essai sur Oracle."
-            echo "a-mettre-en-ligne=non" >> "$GITHUB_OUTPUT"
-          elif [ "$dernier" = "$GITHUB_SHA" ]; then
-            echo "a-mettre-en-ligne=oui" >> "$GITHUB_OUTPUT"
-          else
-            echo "Un commit plus recent ($dernier) est sur la branche: celui-ci ne se met pas en ligne."
-            echo "a-mettre-en-ligne=non" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Installer pnpm
-        if: ${{ steps.dernier.outputs.a-mettre-en-ligne == 'oui' }}
-        uses: pnpm/action-setup@v6
-
-      - name: Installer Node
-        if: ${{ steps.dernier.outputs.a-mettre-en-ligne == 'oui' }}
-        uses: actions/setup-node@v7
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-
-      - name: Installer les dependances
-        if: ${{ steps.dernier.outputs.a-mettre-en-ligne == 'oui' }}
-        run: pnpm install --frozen-lockfile
-
-      - name: Compiler les paquets
-        if: ${{ steps.dernier.outputs.a-mettre-en-ligne == 'oui' }}
-        run: pnpm exec tsc --build
-
-      - name: Mettre en ligne sur la machine Oracle
+      - name: Mettre en ligne la page et les serveurs de jeu
         if: ${{ steps.dernier.outputs.a-mettre-en-ligne == 'oui' }}
         run: |
           cle="$RUNNER_TEMP/cle-oracle"
           printf '%s\n' "$ORACLE_SSH_KEY" > "$cle"
           chmod 600 "$cle"
-          ORACLE_CLE="$cle" node --disable-warning=ExperimentalWarning deploiement/oracle.ts
+          ORACLE_CLE="$cle" node --disable-warning=ExperimentalWarning deploiement/deployer.ts

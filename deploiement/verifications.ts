@@ -2,7 +2,7 @@
  * Ce que le deploiement verifie de ce qu'il vient de mettre en ligne (etape 5.3).
  *
  * FONCTIONS PURES. Elles lisent ce que les hebergeurs et les services en ligne ont
- * repondu, et disent ce qui ne va pas; deployer.ts pose les questions et s'arrete
+ * repondu, et disent ce qui ne va pas; miseEnLigne.ts pose les questions et s'arrete
  * au premier probleme. Rien ici ne touche au reseau: tout se teste.
  *
  * Le paquet partage est lu dans sa compilation, comme le fait le harnais de charge:
@@ -194,14 +194,12 @@ export interface PageLue {
  * prouve que l'adresse publique sert bien la page de ce commit.
  *
  * @param serveurDeJeu L'origine du serveur de jeu que la page doit joindre, et elle
- *                     seule. Absente, la page est servie par le serveur de jeu
- *                     lui-meme, comme sur la machine de l'essai Oracle (etape 5.9):
- *                     elle ne doit joindre que son hebergement.
+ *                     seule.
  * @returns Les problemes, aucun si la page est celle de ce commit.
  */
 export function problemesDeLaPage(
   page: PageLue,
-  serveurDeJeu: string | undefined,
+  serveurDeJeu: string,
   version: string,
 ): readonly string[] {
   const problemes: string[] = [];
@@ -218,12 +216,30 @@ export function problemesDeLaPage(
 
   if (page.statutDuCode !== 200) {
     problemes.push(`app.js repond ${String(page.statutDuCode)}, attendu 200.`);
-  } else if (
-    !page.code.includes(version) ||
-    (serveurDeJeu !== undefined && !page.code.includes(serveurDeJeu))
-  ) {
+  } else if (!page.code.includes(version) || !page.code.includes(serveurDeJeu)) {
     problemes.push("app.js n'est pas celui de ce commit, ou ne vise pas ce serveur de jeu.");
   }
 
   return problemes;
+}
+
+/**
+ * Le serveur de jeu que joint la page publique, d'apres sa politique de securite
+ * (etape 5.13).
+ *
+ * C'EST LA PAGE PUBLIQUE QUI DIT OU EST LA PRODUCTION. Elle n'ouvre qu'a un serveur
+ * de jeu: celui-la est la production, l'autre le secours. Une bascule change la page,
+ * et la mise en ligne suivante suit la bascule sans autre reglage.
+ *
+ * @param politique L'en-tete Content-Security-Policy de la page publique.
+ * @param origines  L'origine de chaque serveur de jeu, par son nom.
+ * @returns Le nom du serveur joint, ou rien si la page n'ouvre a aucun d'eux seul.
+ */
+export function serveurJointParLaPage<Nom extends string>(
+  politique: string | null,
+  origines: Readonly<Record<Nom, string>>,
+): Nom | undefined {
+  return (Object.keys(origines) as Nom[]).find(
+    (nom) => politique === politiqueDeContenu(origines[nom]),
+  );
 }

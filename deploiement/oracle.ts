@@ -1,22 +1,19 @@
 /**
- * La mise en ligne d'essai: le serveur de jeu sur la machine Oracle (etape 5.9).
+ * Le serveur de jeu sur la machine Oracle (etape 5.9, production depuis l'etape
+ * 5.13).
  *
- * LANCE PAR LA CI, a cote de la mise en ligne de la production et sans la bloquer
- * (.github/workflows/ci.yml, job « Essai sur Oracle »). Render reste la production:
- * rien de ce que voient les joueurs de ninja.dendrolag.fr ne passe par ici.
- *
- * LA MACHINE SERT ELLE-MEME LA PAGE DE L'ESSAI, a l'adresse du serveur. Une page
- * Vercel non promue n'aurait pu se jouer qu'avec un compte Vercel (le projet protege
- * toute adresse autre que son domaine public), et son adresse aurait change a
- * chaque commit.
+ * LANCE PAR LA MISE EN LIGNE (deploiement/deployer.ts), comme serveur de la
+ * production ou comme secours, selon le serveur que joint la page publique. La
+ * machine ne sert plus de page depuis l'etape 5.13: la seule page publique est
+ * celle de Vercel.
  *
  * L'ENCHAINEMENT, EN BLEU ET VERT. Le serveur en service tourne dans un
  * emplacement; celui de ce commit demarre dans l'autre:
  *   1. les sources du commit sont envoyees a la machine, qui en construit l'image;
- *   2. le nouveau serveur demarre dans l'emplacement libre, migre la base de
- *      l'essai, et doit rendre sa version sur /sante, sur la machine;
+ *   2. le nouveau serveur demarre dans l'emplacement libre, migre la base, et doit
+ *      rendre sa version sur /sante, sur la machine;
  *   3. Caddy bascule vers lui;
- *   4. l'adresse publique doit rendre la version et la page du commit;
+ *   4. l'adresse publique doit rendre la version du commit;
  *   5. l'ancien serveur s'arrete, les images inutiles sont retirees.
  * Si le nouveau ne repond pas en 2, il est arrete et l'ancien n'a jamais cesse de
  * servir. Si l'adresse publique ne suit pas en 4, Caddy revient a l'ancien.
@@ -30,11 +27,11 @@ import { spawn } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import type { Readable } from 'node:stream';
 import { setTimeout as patienter } from 'node:timers/promises';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 
-import { dateDuCommit, lireLaPage, raisonDeNePasMettreEnLigne } from './deployer.ts';
-import type { PageLue } from './verifications.ts';
-import { problemesDeLaPage, problemesDeSante } from './verifications.ts';
+import type { Rythme } from './patience.ts';
+import { problemesApresPatience } from './patience.ts';
+import { problemesDeSante } from './verifications.ts';
 
 /** Les deux emplacements de la machine. */
 export type Emplacement = 'bleu' | 'vert';
@@ -42,7 +39,7 @@ export type Emplacement = 'bleu' | 'vert';
 /** Ce que la mise en ligne demande a la machine: les commandes de neon-ninja.sh. */
 export interface MachineOracle {
   /** Envoie les sources du commit, et en construit l'image. */
-  construire(version: string, horodatage: string | undefined): Promise<void>;
+  construire(version: string): Promise<void>;
   /** L'emplacement que Caddy sert, ou rien avant la premiere mise en ligne. */
   actif(): Promise<Emplacement | undefined>;
   demarrer(emplacement: Emplacement, version: string): Promise<void>;
@@ -57,19 +54,11 @@ export interface MachineOracle {
   nettoyer(): Promise<void>;
 }
 
-/** Combien de fois reposer une question, et a quel intervalle. */
-export interface Rythme {
-  readonly essais: number;
-  readonly intervalleMs: number;
-}
-
 /** Ce dont la mise en ligne a besoin du monde exterieur. */
 export interface DependancesOracle {
   readonly machine: MachineOracle;
   /** La reponse de /sante a l'adresse publique. */
   lireLaSantePublique(): Promise<unknown>;
-  /** La page et son code a l'adresse publique. */
-  lireLaPagePublique(): Promise<PageLue>;
   attendre(ms: number): Promise<void>;
   ecrire(texte: string): void;
 }
@@ -84,8 +73,8 @@ export const RYTHME_DU_DEMARRAGE: Rythme = { essais: 60, intervalleMs: 3_000 };
 export const RYTHME_DE_L_ADRESSE_PUBLIQUE: Rythme = { essais: 12, intervalleMs: 5_000 };
 
 /**
- * Ce que la machine recoit du commit: de quoi installer, compiler et empaqueter,
- * et rien d'autre. Ni la documentation, ni les tests, ni legacy/.
+ * Ce que la machine recoit du commit: de quoi installer et compiler le serveur, et
+ * rien d'autre. Ni la documentation, ni les tests, ni legacy/.
  */
 export const SOURCES_DE_L_IMAGE: readonly string[] = [
   'package.json',
@@ -110,56 +99,9 @@ export function emplacementLibre(actif: Emplacement | undefined): Emplacement {
   return actif === 'bleu' ? 'vert' : 'bleu';
 }
 
-/**
- * Repose une verification jusqu'a ce qu'elle ne trouve plus rien, au rythme dit.
- *
- * @returns Les problemes du dernier essai, aucun si la verification a fini par passer.
- */
-export async function problemesApresPatience(
-  quoi: string,
-  verification: () => Promise<readonly string[]>,
-  rythme: Rythme,
-  attendre: (ms: number) => Promise<void>,
-): Promise<readonly string[]> {
-  let problemes: readonly string[] = [];
-
-  for (let essai = 1; essai <= rythme.essais; essai += 1) {
-    try {
-      problemes = await verification();
-    } catch (erreur) {
-      problemes = [
-        `${quoi} ne repond pas: ${erreur instanceof Error ? erreur.message : String(erreur)}`,
-      ];
-    }
-
-    if (problemes.length === 0) {
-      return [];
-    }
-
-    if (essai < rythme.essais) {
-      await attendre(rythme.intervalleMs);
-    }
-  }
-
-  return problemes;
-}
-
-/** Ce qui ne va pas a l'adresse publique: la version du serveur, puis la page. */
-async function problemesALAdressePublique(
-  dependances: DependancesOracle,
-  version: string,
-): Promise<readonly string[]> {
-  const sante = problemesDeSante(await dependances.lireLaSantePublique(), version);
-
-  return sante.length > 0
-    ? sante
-    : problemesDeLaPage(await dependances.lireLaPagePublique(), undefined, version);
-}
-
 /** Met ce commit en ligne sur la machine Oracle, en bleu et vert. */
 export async function mettreEnLigneSurOracle(
   version: string,
-  horodatage: string | undefined,
   dependances: DependancesOracle,
   rythmes: { readonly demarrage: Rythme; readonly adressePublique: Rythme } = {
     demarrage: RYTHME_DU_DEMARRAGE,
@@ -169,7 +111,7 @@ export async function mettreEnLigneSurOracle(
   const { machine, ecrire } = dependances;
 
   ecrire(`\n== Construction de l'image du commit ${version} sur la machine\n`);
-  await machine.construire(version, horodatage);
+  await machine.construire(version);
 
   const ancien = await machine.actif();
   const nouveau = emplacementLibre(ancien);
@@ -198,7 +140,7 @@ export async function mettreEnLigneSurOracle(
 
   const enPublic = await problemesApresPatience(
     "L'adresse publique",
-    async () => problemesALAdressePublique(dependances, version),
+    async () => problemesDeSante(await dependances.lireLaSantePublique(), version),
     rythmes.adressePublique,
     async (ms) => dependances.attendre(ms),
   );
@@ -317,7 +259,7 @@ export function machineParSsh(acces: AccesSsh): MachineOracle {
   ): Promise<string> => lancer('ssh', argumentsSsh(acces, commande), entree, afficher);
 
   return {
-    async construire(version, horodatage) {
+    async construire(version) {
       const archive = spawn(
         'git',
         ['archive', '--format=tar', version, '--', ...SOURCES_DE_L_IMAGE],
@@ -336,11 +278,7 @@ export function machineParSsh(acces: AccesSsh): MachineOracle {
         });
       });
 
-      await demander(
-        ['construire', version, ...(horodatage === undefined ? [] : [horodatage])],
-        archive.stdout,
-        true,
-      );
+      await demander(['construire', version], archive.stdout, true);
       await fin;
     },
     async actif() {
@@ -367,53 +305,34 @@ export function machineParSsh(acces: AccesSsh): MachineOracle {
   };
 }
 
-/** Lit une variable d'environnement obligatoire. */
-function variable(nom: string): string {
-  const valeur = process.env[nom]?.trim();
-
-  if (valeur === undefined || valeur === '') {
-    throw new Error(`${nom} doit etre definie pour mettre en ligne sur Oracle.`);
-  }
-
-  return valeur;
+/** Ou trouver la machine de la production. */
+export interface MachineDeLaProduction {
+  /** Le nom de la machine, par exemple serveur.ninja.dendrolag.fr. */
+  readonly hote: string;
+  /** Le fichier de la cle privee de la CI. Jamais affiche. */
+  readonly cle: string;
 }
 
-// Lance directement (« node deploiement/oracle.ts »), le script lit sa
-// configuration dans l'environnement: VERSION_DU_JEU, ORACLE_HOTE et ORACLE_CLE,
-// le fichier de la cle privee de la CI.
-const lanceDirectement =
-  process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
+/**
+ * La mise en ligne d'un commit sur la machine Oracle, jointe par SSH avec la cle de
+ * la CI, telle que la mise en ligne de la production l'appelle.
+ */
+export function miseEnLigneOracle(
+  acces: MachineDeLaProduction,
+): (version: string) => Promise<void> {
+  const origine = `https://${acces.hote}`;
 
-if (lanceDirectement) {
-  try {
-    const version = variable('VERSION_DU_JEU');
-    const hote = variable('ORACLE_HOTE');
-    const origine = `https://${hote}`;
-
-    process.stdout.write('\n== Faut-il mettre en ligne sur Oracle\n');
-    const raison = await raisonDeNePasMettreEnLigne(origine, version);
-
-    if (raison === undefined) {
-      await mettreEnLigneSurOracle(version, await dateDuCommit(version), {
-        machine: machineParSsh({
-          hote,
-          utilisateur: 'deploiement',
-          cle: variable('ORACLE_CLE'),
-          hotesConnus: join(dirname(fileURLToPath(import.meta.url)), 'oracle', 'hote-connu'),
-        }),
-        lireLaSantePublique: async () =>
-          (await fetch(`${origine}/sante`, { cache: 'no-store' })).json() as Promise<unknown>,
-        lireLaPagePublique: async () => lireLaPage(origine),
-        attendre: async (ms) => patienter(ms),
-        ecrire: (texte) => process.stdout.write(texte),
-      });
-    } else {
-      process.stdout.write(`\n== Rien a mettre en ligne sur Oracle: ${raison}\n`);
-    }
-  } catch (erreur) {
-    process.stderr.write(
-      `\nMise en ligne d'essai arretee: ${erreur instanceof Error ? erreur.message : String(erreur)}\n`,
-    );
-    process.exitCode = 1;
-  }
+  return async (version) =>
+    mettreEnLigneSurOracle(version, {
+      machine: machineParSsh({
+        hote: acces.hote,
+        utilisateur: 'deploiement',
+        cle: acces.cle,
+        hotesConnus: join(dirname(fileURLToPath(import.meta.url)), 'oracle', 'hote-connu'),
+      }),
+      lireLaSantePublique: async () =>
+        (await fetch(`${origine}/sante`, { cache: 'no-store' })).json() as Promise<unknown>,
+      attendre: async (ms) => patienter(ms),
+      ecrire: (texte) => process.stdout.write(texte),
+    });
 }

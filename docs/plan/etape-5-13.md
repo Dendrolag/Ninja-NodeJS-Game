@@ -56,3 +56,19 @@ Décision du porteur du projet du 5 octobre 2026, à la lecture des mesures de l
 ## Rituel de fin de session
 
 Écrire `docs/handoffs/etape-5-13-handoff.md`, commiter, pousser, vérifier la CI et la mise en ligne. Version: invisible au joueur, sauf la fin de la mise en veille; à décider par la session (troisième chiffre au plus, sans note).
+
+## Réconciliation (5 octobre 2026, session de l'étape)
+
+Écarts au plan, décidés en exécutant.
+
+1. **La production suit la page publique** (précise la décision 3). Écrite à la lettre, la mise en ligne mettait toujours Oracle en premier : après un retour vers Render, la poussée suivante aurait remis la page sur Oracle, ou, Oracle mort, bloqué toute mise en ligne. La mise en ligne lit donc d'abord la page publique : le serveur auquel elle ouvre est la production, mis en ligne avant la promotion ; l'autre est le secours, mis à jour après, sans bloquer. Aucun réglage en plus : la bascule change la page, et c'est tout. Avec Oracle en production, l'enchaînement est exactement celui de la décision 3.
+2. **Le secours se remet à jour même quand rien n'est mis en ligne.** Relancer une mise en ligne suffit donc à rattraper un secours en retard.
+3. **La bascule vit dans son propre workflow**, `.github/workflows/bascule.yml`, et non dans `ci.yml` : un déclenchement manuel de `ci.yml` relancerait tous ses jobs. Elle partage avec la mise en ligne le groupe de concurrence `mise-en-ligne` : jamais l'une pendant l'autre. Elle extrait le commit que sert le serveur choisi avant de compiler, puisque la page s'empaquette à partir des sources.
+4. **Le code de `deploiement/`** est découpé : l'enchaînement testable dans `miseEnLigne.ts` (mise en ligne et bascule), Vercel dans `vercel.ts`, Render dans `render.ts`, la lecture de git et des routes de santé dans `monde.ts`, la patience dans `patience.ts`, et deux points d'entrée, `deployer.ts` et `basculer.ts`. `oracle.ts` perd son point d'entrée : le job « Essai sur Oracle » disparaît.
+5. **L'image Oracle ne construit plus de page**, et `neon-ninja construire` ne prend plus de date, qui ne servait qu'à elle. La vérification de l'adresse publique d'Oracle ne lit plus que `/sante`.
+6. **L'ordre de la bascule (décision 5)** devient, la page joignant encore Render au départ :
+   1. sur la machine, par la clé d'administration : `/etc/neon-ninja/environnement` reçoit la base de production et les variables de production, et les commandes `neon-ninja` sont réinstallées ;
+   2. le commit de l'étape est poussé : la mise en ligne met Render en ligne (production), promeut la page pour Render, puis met Oracle à jour en secours, ce qui le redémarre sur la base de production ;
+   3. **aller vers Oracle** par la bascule ; puis **retour vers Render**, puis **aller vers Oracle** de nouveau, par la commande, chacun vérifié (point 3 de la définition de terminé) ;
+   4. une partie à plusieurs avec un compte, jouée en production par le porteur du projet, et sa progression lue dans la base.
+7. **La suppression de la branche Neon `essai-oracle`** (décision 6) revient au porteur du projet, depuis la console Neon : une suppression définitive de données ne se fait pas par la session.

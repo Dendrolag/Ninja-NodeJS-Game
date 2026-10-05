@@ -18,6 +18,7 @@ import {
   issueDuDeploiement,
   problemesDeLaPage,
   problemesDeSante,
+  serveurJointParLaPage,
   versionEnLigne,
 } from './verifications.ts';
 
@@ -253,21 +254,25 @@ describe('problemesDeLaPage', () => {
       ),
     ).toHaveLength(1);
   });
+});
 
-  // L'essai sur Oracle (etape 5.9): le serveur de jeu sert lui-meme sa page.
-  it('ouvre une page servie par le serveur de jeu a son seul hebergement', () => {
-    const servie: PageLue = {
-      ...PAGE_CONFORME,
-      politique: politiqueDeContenu(),
-      code: `var a=f("","${VERSION}");`,
-    };
+// Etape 5.13: la page publique dit lequel des deux serveurs est la production.
+describe('serveurJointParLaPage', () => {
+  const ORIGINES = {
+    oracle: 'https://serveur.ninja.dendrolag.fr',
+    render: 'https://neon-ninja.onrender.com',
+  } as const;
 
-    expect(problemesDeLaPage(servie, undefined, VERSION)).toEqual([]);
+  it('nomme le serveur auquel la politique de securite ouvre la page', () => {
+    expect(serveurJointParLaPage(politiqueDeContenu(ORIGINES.oracle), ORIGINES)).toBe('oracle');
+    expect(serveurJointParLaPage(politiqueDeContenu(ORIGINES.render), ORIGINES)).toBe('render');
+  });
+
+  it('ne nomme rien pour une page sans politique, ou ouverte a un autre serveur', () => {
+    expect(serveurJointParLaPage(null, ORIGINES)).toBeUndefined();
+    expect(serveurJointParLaPage(politiqueDeContenu(), ORIGINES)).toBeUndefined();
     expect(
-      problemesDeLaPage({ ...servie, politique: politiqueDeContenu(SERVEUR) }, undefined, VERSION),
-    ).toHaveLength(1);
-    expect(
-      problemesDeLaPage({ ...servie, code: 'var a=f("","ancienne");' }, undefined, VERSION),
-    ).toHaveLength(1);
+      serveurJointParLaPage(politiqueDeContenu('https://autre.onrender.com'), ORIGINES),
+    ).toBeUndefined();
   });
 });

@@ -14,7 +14,7 @@
 # suivant demarre dans l'autre, et Caddy ne bascule vers lui qu'une fois qu'il a
 # repondu. Si le nouveau ne repond pas, l'ancien n'a pas cesse de servir.
 #
-#   construire <commit> [date]   construit l'image du commit, dont l'archive arrive
+#   construire <commit>          construit l'image du commit, dont l'archive arrive
 #                                sur l'entree standard
 #   actif                        dit l'emplacement que Caddy sert, ou rien
 #   demarrer <emplacement> <commit>
@@ -63,8 +63,6 @@ port_de() {
 
 construire() {
   commit_valide "${1:-}"
-  local date="${2:-}"
-  [[ -z "$date" || "$date" =~ ^[0-9T:+-]+Z?$ ]] || echouer "date invalide: « $date »."
 
   local dossier
   dossier="$(mktemp -d "$ETAT/construction.XXXXXX")"
@@ -73,7 +71,6 @@ construire() {
   docker build --network host \
     --file "$dossier/deploiement/oracle/Dockerfile" \
     --build-arg "VERSION_DU_JEU=$1" \
-    --build-arg "HORODATAGE_DU_JEU=$date" \
     --tag "neon-ninja:$1" \
     "$dossier"
 }

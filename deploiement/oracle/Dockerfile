@@ -3,12 +3,10 @@
 # Elle se construit SUR LA MACHINE, a partir des sources du commit que la CI lui
 # envoie (deploiement/oracle.ts): la machine est un processeur Arm, et la construire
 # la evite d'emuler Arm sur les machines de GitHub. Le contexte de construction est
-# l'archive du commit, sans historique git: la version et sa date arrivent donc en
-# arguments.
+# l'archive du commit, sans historique git: la version arrive donc en argument.
 #
-# Le serveur sert lui-meme la page de l'essai (SERVIR_LA_PAGE), empaquetee pour ce
-# commit: elle porte sa version, sans quoi le serveur la refuserait, et ne joint que
-# son propre hebergement.
+# Le serveur ne sert pas de page (etape 5.13): la seule page publique est celle de
+# Vercel. /etc/neon-ninja/environnement le redit, et l'emporte sur l'image.
 
 FROM node:24-bookworm-slim
 
@@ -27,13 +25,10 @@ RUN --mount=type=cache,id=pnpm,target=/root/.cache/pnpm \
     && pnpm exec tsc --build
 
 ARG VERSION_DU_JEU
-ARG HORODATAGE_DU_JEU=
-RUN test -n "$VERSION_DU_JEU" \
-    && VERSION_DU_JEU="$VERSION_DU_JEU" HORODATAGE_DU_JEU="$HORODATAGE_DU_JEU" \
-       pnpm --filter @neon-ninja/client empaqueter
+RUN test -n "$VERSION_DU_JEU"
 
 ENV NODE_ENV=production \
-    SERVIR_LA_PAGE=oui \
+    SERVIR_LA_PAGE=non \
     VERSION_DU_JEU=$VERSION_DU_JEU
 
 # Le serveur ne tourne pas en administrateur.
