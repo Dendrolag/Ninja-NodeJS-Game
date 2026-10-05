@@ -45,6 +45,7 @@ import { construireHud } from '../hud/modele.js';
 import { pointsDuChangement, texteDesPoints } from '../pointsFlottants.js';
 import { bonusDOrigineEnCours, filtreDesMalus, moiDansLaPartie } from '../selecteurs.js';
 import { rechargeApresLeTir, sonDuFait, sonsDuChangement } from '../sons/declencheurs.js';
+import { placeDuFait } from '../sons/espace.js';
 import type { LecteurDeSons } from '../sons/lecteur.js';
 import { DUREES_LOCALISATION, HAUTEUR_DE_VUE_PX } from './apparence.js';
 import type { Camera } from './camera.js';
@@ -400,11 +401,15 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
       sons.jouer(nom);
     }
 
+    // D'ou l'on ecoute les sons situes sur la carte (etape 4.11): de notre personnage, ou a
+    // defaut du centre de ce que montre l'ecran, la camera de l'image precedente.
+    const auditeur = moiDansLaPartie(etat) ?? camera;
+
     for (const fait of faitsNouveaux) {
       const nom = sonDuFait(fait, etat.moi, etat.salon?.mode);
 
       if (nom !== undefined) {
-        sons.jouer(nom);
+        sons.jouer(nom, placeDuFait(fait, etat.moi, auditeur));
       }
 
       rechargePrevue = rechargeApresLeTir(fait, etat.moi, etat.salon?.mode) ?? rechargePrevue;

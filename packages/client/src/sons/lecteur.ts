@@ -40,6 +40,11 @@
  * Sans Web Audio (les tests, un tres vieux navigateur), le lecteur joue les effets par
  * des elements audio et regle le volume des elements, comme avant.
  *
+ * LES SONS SITUES SUR LA CARTE (etape 4.11) baissent avec la distance et se placent a
+ * gauche ou a droite. Le lecteur ne calcule rien: il recoit la place du son (espace.ts)
+ * et l'applique, par un gain et un panoramique propres a la lecture, places avant le gain
+ * des effets. Sans Web Audio, par le volume de l'element seul.
+ *
  * L'AUTORISATION DU NAVIGATEUR. Aucun navigateur ne laisse une page emettre du
  * son avant que l'utilisateur n'ait interagi avec elle. Le lecteur ne se bat pas
  * contre cette regle: il tente, et il ignore le refus. Un son perdu au tout debut
@@ -57,10 +62,18 @@ import {
   cheminSon,
 } from '@neon-ninja/shared';
 
+import type { PlaceDuSon } from './espace.js';
+
 /** Ce qu'un lecteur de sons sait faire. */
 export interface LecteurDeSons {
-  /** Joue un son ponctuel. */
-  jouer(nom: NomDeSon): void;
+  /**
+   * Joue un son ponctuel.
+   *
+   * @param place Pour un son situe sur la carte, son volume et son cote vus de notre
+   *              place (etape 4.11). Sans place, a plein et au centre. Un son de volume
+   *              nul ne joue pas, et ne coupe donc pas sa lecture precedente.
+   */
+  jouer(nom: NomDeSon, place?: PlaceDuSon): void;
   /** Joue un bruit de pas, en respectant l'intervalle entre deux foulees. */
   jouerUnPas(maintenant: number, presse: boolean): void;
   /** Demarre la boucle sonore d'un bonus, si elle ne tourne pas deja. */
@@ -242,7 +255,7 @@ function adresseDuSon(fichier: string): string {
 /** Ce qui joue les effets, par des tampons decodes ou par des elements audio. */
 interface Effets {
   /** Joue un effet depuis son debut, en coupant sa lecture precedente. */
-  jouer(voix: string): void;
+  jouer(voix: string, place?: PlaceDuSon): void;
   /** Demarre une boucle, si elle ne tourne pas deja. */
   demarrer(voix: string): void;
   /** Arrete un effet en cours. */
@@ -281,7 +294,7 @@ function effetsParTampons(
   const lectures = new Map<string, AudioBufferSourceNode>();
   let chargementLance = false;
 
-  const lancer = (voix: string): void => {
+  const lancer = (voix: string, place?: PlaceDuSon): void => {
     const effet = effets.get(voix);
     const tampon = effet === undefined ? undefined : tampons.get(effet.fichier);
 
@@ -295,7 +308,8 @@ function effetsParTampons(
     const source = contexte.createBufferSource();
     source.buffer = tampon;
     source.loop = effet.boucle;
-    source.connect(effet.boucle ? gainBoucles : gainSons);
+    const canal = effet.boucle ? gainBoucles : gainSons;
+    source.connect(place === undefined ? canal : placer(contexte, place, canal));
     source.start();
     lectures.set(voix, source);
   };
@@ -310,9 +324,9 @@ function effetsParTampons(
   };
 
   return {
-    jouer(voix) {
+    jouer(voix, place) {
       arreter(voix);
-      lancer(voix);
+      lancer(voix, place);
     },
 
     demarrer(voix) {
@@ -367,6 +381,29 @@ function effetsParTampons(
   };
 }
 
+/**
+ * Les noeuds qui donnent a une lecture sa place sur la carte (etape 4.11): un gain pour la
+ * distance, puis un panoramique pour le cote, branches sur le canal des effets. Un
+ * navigateur sans panoramique stereo garde la distance seule.
+ *
+ * @returns Le noeud sur lequel brancher la source.
+ */
+function placer(contexte: AudioContext, place: PlaceDuSon, canal: AudioNode): AudioNode {
+  const distance = contexte.createGain();
+  distance.gain.value = place.volume;
+
+  if (typeof contexte.createStereoPanner !== 'function') {
+    distance.connect(canal);
+    return distance;
+  }
+
+  const cote = contexte.createStereoPanner();
+  cote.pan.value = place.cote;
+  distance.connect(cote);
+  cote.connect(canal);
+  return distance;
+}
+
 /** Les effets joues par des elements audio, faute de Web Audio. */
 function effetsParElements(
   fabriquer: (adresse: string) => HTMLAudioElement,
@@ -375,17 +412,29 @@ function effetsParElements(
   const sons = canalDElements(volumes.sons);
   const boucles = canalDElements(volumes.boucles);
   const elements = new Map<string, HTMLAudioElement>();
+  const ponctuels = new Set<HTMLAudioElement>();
 
   for (const effet of EFFETS) {
     const audio = fabriquer(adresseDuSon(effet.fichier));
     audio.loop = effet.boucle;
     (effet.boucle ? boucles : sons).brancher(audio);
     elements.set(effet.voix, audio);
+
+    if (!effet.boucle) {
+      ponctuels.add(audio);
+    }
   }
 
   return {
-    jouer(voix) {
-      relancer(elements.get(voix));
+    jouer(voix, place) {
+      const audio = elements.get(voix);
+
+      // Un element n'a pas de cote: un son situe n'y garde que sa distance (etape 4.11).
+      if (audio !== undefined && ponctuels.has(audio)) {
+        sons.attenuer(audio, place?.volume ?? 1);
+      }
+
+      relancer(audio);
     },
 
     demarrer(voix) {
@@ -430,20 +479,31 @@ interface Canal {
   regler(volume: number): void;
 }
 
+/** Un canal d'elements, dont chacun peut jouer plus bas que le canal. */
+interface CanalDElements extends Canal {
+  /** Fait jouer cet element a cette part du volume du canal (un son situe, etape 4.11). */
+  attenuer(audio: HTMLAudioElement, part: number): void;
+}
+
 /** Un canal qui regle le volume de ses elements, faute de Web Audio. */
-function canalDElements(volume: number): Canal {
-  const elements: HTMLAudioElement[] = [];
+function canalDElements(volume: number): CanalDElements {
+  /** Chaque element, et la part du volume du canal a laquelle il joue. */
+  const elements = new Map<HTMLAudioElement, number>();
   let courant = volume;
   return {
     brancher(audio) {
       audio.volume = courant;
-      elements.push(audio);
+      elements.set(audio, 1);
     },
     regler(nouveau) {
       courant = nouveau;
-      for (const audio of elements) {
-        audio.volume = nouveau;
+      for (const [audio, part] of elements) {
+        audio.volume = nouveau * part;
       }
+    },
+    attenuer(audio, part) {
+      elements.set(audio, part);
+      audio.volume = courant * part;
     },
   };
 }
@@ -524,9 +584,9 @@ export function creerLecteurDeSons(options: OptionsLecteur = {}): LecteurDeSons 
   };
 
   return {
-    jouer(nom) {
-      if (!coupe) {
-        effets.jouer(voixDuSon(nom));
+    jouer(nom, place) {
+      if (!coupe && (place === undefined || place.volume > 0)) {
+        effets.jouer(voixDuSon(nom), place);
       }
     },
 

@@ -361,6 +361,22 @@ describe('creerLecteurDeSons', () => {
     expect([...audios.values()].every((audio) => audio.lectures === 0)).toBe(true);
   });
 
+  it('baisse sans Web Audio le volume d un son situe, sans toucher aux autres (etape 4.11)', () => {
+    const { lecteur, audios } = lecteurDEssai();
+    const adresse = `/assets/sons/${SONS.mineExplosee}`;
+    lecteur.reglerLeVolumeDesSons(0.8);
+
+    lecteur.jouer('mineExplosee', { volume: 0.5, cote: 0.4 });
+    expect(audios.get(adresse)?.volume).toBeCloseTo(0.4);
+    expect(audios.get(`/assets/sons/${SONS.fumee}`)?.volume).toBeCloseTo(0.8);
+
+    lecteur.reglerLeVolumeDesSons(0.6);
+    expect(audios.get(adresse)?.volume).toBeCloseTo(0.3);
+
+    lecteur.jouer('mineExplosee');
+    expect(audios.get(adresse)?.volume).toBeCloseTo(0.6);
+  });
+
   describe('avec Web Audio (etapes 5.5 et 5.12)', () => {
     // Sous iOS, tous les navigateurs sont WebKit, qui ignore le volume d'un element
     // audio: les curseurs ne faisaient rien. Le son passe donc par des noeuds de gain.
@@ -371,6 +387,14 @@ describe('creerLecteurDeSons', () => {
     interface GainDEssai {
       gain: { value: number };
       branches: unknown[];
+      /** Le noeud sur lequel il est branche. */
+      vers?: unknown;
+    }
+
+    /** Un panoramique stereo d'essai (etape 4.11). */
+    interface PanoramiqueDEssai {
+      pan: { value: number };
+      vers?: unknown;
     }
 
     /** Une source de tampon d'essai, qui note sa vie. */
@@ -386,21 +410,35 @@ describe('creerLecteurDeSons', () => {
     function contexteDEssai() {
       const gains: GainDEssai[] = [];
       const sources: SourceDEssai[] = [];
+      const panoramiques: PanoramiqueDEssai[] = [];
       const contexte = {
         state: 'suspended' as AudioContextState,
         destination: {},
         reprises: 0,
         gains,
         sources,
+        panoramiques,
         createGain() {
-          const noeud = {
+          const noeud: GainDEssai & { connect(cible: unknown): unknown } = {
             gain: { value: 1 },
             branches: [] as unknown[],
             connect(cible: unknown) {
+              noeud.vers = cible;
               return cible;
             },
           };
           gains.push(noeud);
+          return noeud;
+        },
+        createStereoPanner(): PanoramiqueDEssai {
+          const noeud: PanoramiqueDEssai & { connect(cible: unknown): unknown } = {
+            pan: { value: 0 },
+            connect(cible: unknown) {
+              noeud.vers = cible;
+              return cible;
+            },
+          };
+          panoramiques.push(noeud);
           return noeud;
         },
         createMediaElementSource(element: HTMLMediaElement) {
@@ -449,9 +487,21 @@ describe('creerLecteurDeSons', () => {
     }
 
     function lecteurWebAudio(
-      options: { readonly manquants?: readonly string[]; readonly musique?: boolean } = {},
+      options: {
+        readonly manquants?: readonly string[];
+        readonly musique?: boolean;
+        /** Un navigateur qui a Web Audio sans le panoramique stereo. */
+        readonly sansPanoramique?: boolean;
+      } = {},
     ) {
-      const contexte = contexteDEssai();
+      const contexte: Omit<ReturnType<typeof contexteDEssai>, 'createStereoPanner'> & {
+        createStereoPanner?: () => PanoramiqueDEssai;
+      } = contexteDEssai();
+
+      if (options.sansPanoramique === true) {
+        delete contexte.createStereoPanner;
+      }
+
       const audios = new Map<string, HTMLAudioElement & { lectures: number }>();
       const charges: string[] = [];
       const lecteur = creerLecteurDeSons({
@@ -500,6 +550,70 @@ describe('creerLecteurDeSons', () => {
       const [source] = lectures('collect-bonus.wav');
       expect(source?.loop).toBe(false);
       expect(source?.branchee?.gain.value).toBe(0.25);
+    });
+
+    describe('les sons situes sur la carte (etape 4.11)', () => {
+      it('passent par un gain et un panoramique propres a la lecture, puis par le gain des effets', async () => {
+        const { lecteur, lectures, contexte, debloquer } = lecteurWebAudio();
+        await debloquer();
+        lecteur.reglerLeVolumeDesSons(0.5);
+
+        lecteur.jouer('mineExplosee', { volume: 0.25, cote: -0.6 });
+
+        const distance = lectures(SONS.mineExplosee)[0]?.branchee;
+        const cote = contexte.panoramiques[0];
+        expect(distance?.gain.value).toBe(0.25);
+        expect(distance?.vers).toBe(cote);
+        expect(cote?.pan.value).toBe(-0.6);
+        expect((cote?.vers as GainDEssai | undefined)?.gain.value).toBe(0.5);
+      });
+
+      it('donnent a chaque lecture sa propre place', async () => {
+        const { lecteur, lectures, debloquer } = lecteurWebAudio();
+        await debloquer();
+
+        lecteur.jouer('mineArmee', { volume: 0.9, cote: 0 });
+        lecteur.jouer('mineArmee', { volume: 0.1, cote: 0.8 });
+
+        expect(lectures(SONS.mineArmee).map((source) => source.branchee?.gain.value)).toEqual([
+          0.9, 0.1,
+        ]);
+      });
+
+      it('se taisent hors de portee, sans couper le meme son joue plus pres', async () => {
+        const { lecteur, lectures, debloquer } = lecteurWebAudio();
+        await debloquer();
+
+        lecteur.jouer('mineExplosee', { volume: 0.8, cote: 0 });
+        lecteur.jouer('mineExplosee', { volume: 0, cote: 0.8 });
+
+        const explosions = lectures(SONS.mineExplosee);
+        expect(explosions).toHaveLength(1);
+        expect(explosions[0]?.arretee).toBe(false);
+      });
+
+      it('gardent la distance seule dans un navigateur sans panoramique stereo', async () => {
+        const { lecteur, lectures, debloquer } = lecteurWebAudio({ sansPanoramique: true });
+        await debloquer();
+        lecteur.reglerLeVolumeDesSons(0.5);
+
+        lecteur.jouer('fumee', { volume: 0.3, cote: 0.5 });
+
+        const distance = lectures(SONS.fumee)[0]?.branchee;
+        expect(distance?.gain.value).toBe(0.3);
+        expect((distance?.vers as GainDEssai | undefined)?.gain.value).toBe(0.5);
+      });
+
+      it('laissent les sons sans place jouer comme avant, sur le gain des effets', async () => {
+        const { lecteur, lectures, contexte, debloquer } = lecteurWebAudio();
+        await debloquer();
+        lecteur.reglerLeVolumeDesSons(0.5);
+
+        lecteur.jouer('mineExplosee');
+
+        expect(lectures(SONS.mineExplosee)[0]?.branchee?.gain.value).toBe(0.5);
+        expect(contexte.panoramiques).toEqual([]);
+      });
     });
 
     it('coupe la lecture precedente d un effet qu on relance: une voix par effet', async () => {

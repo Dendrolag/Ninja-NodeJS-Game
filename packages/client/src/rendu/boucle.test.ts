@@ -23,6 +23,8 @@ import type { HorlogeClientManuelle } from '../horloge.js';
 import { creerHorlogeClientManuelle } from '../horloge.js';
 import type { ReseauFactice } from '../reseau.js';
 import { creerReseauFactice } from '../reseau.js';
+import type { PlaceDuSon } from '../sons/espace.js';
+import { placeDuSon } from '../sons/espace.js';
 import type { LecteurDeSons } from '../sons/lecteur.js';
 import { STABILITE } from './apparence.js';
 import type { Boucle } from './boucle.js';
@@ -99,17 +101,22 @@ function renduDEssai(): Rendu & { scenes: Scene[]; imprimes: SangAImprimer[]; fi
 /** Un lecteur de sons muet qui retient ce qu'on lui demande. */
 function sonsDEssai(): LecteurDeSons & {
   joues: NomDeSon[];
+  /** La place donnee a chaque son joue, dans l'ordre (etape 4.11). */
+  places: (PlaceDuSon | undefined)[];
   boucles: Set<TypeBonus>;
   arrets: number;
 } {
   const joues: NomDeSon[] = [];
+  const places: (PlaceDuSon | undefined)[] = [];
   const boucles = new Set<TypeBonus>();
   const lecteur = {
     joues,
+    places,
     boucles,
     arrets: 0,
-    jouer: (nom: NomDeSon) => {
+    jouer: (nom: NomDeSon, place?: PlaceDuSon) => {
       joues.push(nom);
+      places.push(place);
     },
     jouerUnPas: () => undefined,
     demarrerLaBoucle: (bonus: TypeBonus) => {
@@ -282,6 +289,51 @@ describe('lancerLaBoucle', () => {
     boucle.arreter();
 
     expect(sons.arrets).toBe(1);
+  });
+});
+
+describe('les sons situes sur la carte (etape 4.11)', () => {
+  const MINE = { mine: 'm', poseur: 'bob', par: 'bob', x: 1_400, y: 300 };
+
+  /** La place donnee au dernier son de ce nom. */
+  function placeDe(nom: NomDeSon): PlaceDuSon | undefined {
+    return sons.places[sons.joues.lastIndexOf(nom)];
+  }
+
+  it('s entendent depuis notre personnage', () => {
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
+    reseau.recevoir('etat', trame(1, [joueur('moi', 900, 300)]));
+    uneImage();
+
+    reseau.recevoir('mineArmee', MINE);
+    uneImage();
+
+    expect(placeDe('mineArmee')).toEqual(placeDuSon(MINE, { x: 900, y: 300 }));
+    expect(placeDe('mineArmee')?.cote).toBeGreaterThan(0);
+  });
+
+  it('s entendent depuis le centre de l ecran quand nous ne sommes pas dans la partie', () => {
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
+    reseau.recevoir('etat', trame(1, [joueur('autre', 300, 300)]));
+    uneImage();
+
+    reseau.recevoir('mineArmee', MINE);
+    uneImage();
+
+    // Sans nous, la camera regarde le centre de la carte (2 000 sur 1 500).
+    expect(placeDe('mineArmee')).toEqual(placeDuSon(MINE, { x: 1_000, y: 750 }));
+  });
+
+  it('laissent sans place les sons qui ne concernent que nous', () => {
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
+    reseau.recevoir('etat', trame(1, [joueur('moi', 900, 300)]));
+    uneImage();
+
+    reseau.recevoir('captureReussie', { victimePseudo: 'Bob', botsGagnes: 4, capturesTotal: 1 });
+    uneImage();
+
+    expect(sons.joues).toContain('joueurCapture');
+    expect(placeDe('joueurCapture')).toBeUndefined();
   });
 });
 
