@@ -4,6 +4,8 @@ import { decrireLesVariantes, lireLaDemande } from './demande.js';
 import { Histogramme } from './histogramme.js';
 import { Releve } from './releve.js';
 import { texteDuServeur } from './serveur.js';
+import { texteDuSon } from './son.js';
+import type { EtatDuLecteur } from '../sons/lecteur.js';
 
 describe('les battements du serveur dans le relevé (étape 8.6)', () => {
   it('écrit le résumé que le serveur a rendu', () => {
@@ -40,6 +42,40 @@ describe('les battements du serveur dans le relevé (étape 8.6)', () => {
   });
 });
 
+describe('l état du son dans le relevé (étape 5.12)', () => {
+  const tel = lireLaDemande('?diagnostic=1')!;
+  const joue: EtatDuLecteur = {
+    coupe: false,
+    volumeSons: 0.5,
+    volumeMusique: 0.3,
+    musique: true,
+    voie: { nature: 'web audio', contexte: 'running', prets: 30, fichiers: 31 },
+  };
+
+  it('dit que le son joue, à quel volume, et par où passent ses effets', () => {
+    expect(texteDuSon(tel, joue)).toBe(
+      'joue, effets 50 %, musique 30 %, effets par Web Audio (contexte running, 30 fichiers prêts sur 31)',
+    );
+    expect(texteDuSon(tel, { ...joue, voie: { nature: 'elements' } })).toBe(
+      'joue, effets 50 %, musique 30 %, effets par éléments audio',
+    );
+  });
+
+  it('dit que le son est coupé par le panneau', () => {
+    expect(texteDuSon(tel, { ...joue, coupe: true })).toBe('coupé par le panneau du son');
+  });
+
+  it('dit ce que les variantes ont retiré', () => {
+    expect(texteDuSon(lireLaDemande('?diagnostic=1&son=0')!, undefined)).toBe(
+      'retiré par la variante',
+    );
+    expect(texteDuSon(tel, { ...joue, musique: false })).toContain(
+      'musique retirée par la variante',
+    );
+    expect(texteDuSon(tel, undefined)).toBe('aucun lecteur');
+  });
+});
+
 describe('la demande du relevé', () => {
   it('ne rend rien sans le paramètre, ni avec une autre valeur', () => {
     expect(lireLaDemande('')).toBeUndefined();
@@ -55,7 +91,7 @@ describe('la demande du relevé', () => {
   it('rend le jeu tel quel avec le seul paramètre', () => {
     const variantes = lireLaDemande('?diagnostic=1');
 
-    expect(variantes).toEqual({ son: true, lueur: true, hud: true, flou: true });
+    expect(variantes).toEqual({ son: true, musique: true, lueur: true, hud: true, flou: true });
     expect(decrireLesVariantes(variantes!)).toBe('aucune');
   });
 
@@ -69,6 +105,7 @@ describe('la demande du relevé', () => {
       densite: 1,
       cadence: 60,
       son: false,
+      musique: true,
       lueur: false,
       hud: false,
       flou: false,
@@ -78,9 +115,18 @@ describe('la demande du relevé', () => {
     );
   });
 
+  it('retire la musique seule, et ne le redit pas quand tout le son est retiré (étape 5.12)', () => {
+    const sansMusique = lireLaDemande('?diagnostic=1&musique=0');
+
+    expect(sansMusique).toMatchObject({ son: true, musique: false });
+    expect(decrireLesVariantes(sansMusique!)).toBe('sans musique');
+    expect(decrireLesVariantes(lireLaDemande('?diagnostic=1&son=0&musique=0')!)).toBe('sans son');
+  });
+
   it('laisse le réglage du jeu pour une valeur illisible ou hors bornes', () => {
     expect(lireLaDemande('?diagnostic=1&rendu=canvas&densite=12&cadence=abc')).toEqual({
       son: true,
+      musique: true,
       lueur: true,
       hud: true,
       flou: true,

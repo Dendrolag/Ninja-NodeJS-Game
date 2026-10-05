@@ -49,6 +49,13 @@ export function sonsDEssai(): SonsDEssai {
     reglerLeVolumeDeLaMusique: () => undefined,
     couperLeSon: () => undefined,
     deverrouiller: () => undefined,
+    etat: () => ({
+      coupe: false,
+      volumeSons: 1,
+      volumeMusique: 1,
+      musique: true,
+      voie: { nature: 'elements' },
+    }),
   };
 }
 

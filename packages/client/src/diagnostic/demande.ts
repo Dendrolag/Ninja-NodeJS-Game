@@ -15,6 +15,7 @@
  *     &densite=1                    la densité de rendu, de 0,5 à 4
  *     &cadence=60                   la cadence plafonnée, de 10 à 240 images par seconde
  *     &son=0                        sans aucun son ni musique
+ *     &musique=0                    sans la musique, les effets gardés (étape 5.12)
  *     &lueur=0                      sans le filtre de lueur des repères
  *     &hud=0                        sans le HUD ni les points gagnés
  *     &flou=0                       sans les fonds floutés de l'interface
@@ -30,6 +31,8 @@ export interface Variantes {
   readonly cadence?: number;
   /** Le son joue-t-il. */
   readonly son: boolean;
+  /** La musique joue-t-elle, quand le son joue. */
+  readonly musique: boolean;
   /** Le filtre de lueur est-il posé. */
   readonly lueur: boolean;
   /** Le HUD est-il affiché. */
@@ -65,6 +68,7 @@ export function lireLaDemande(recherche: string): Variantes | undefined {
     ...(densite === undefined ? {} : { densite }),
     ...(cadence === undefined ? {} : { cadence }),
     son: parametres.get('son') !== '0',
+    musique: parametres.get('musique') !== '0',
     lueur: parametres.get('lueur') !== '0',
     hud: parametres.get('hud') !== '0',
     flou: parametres.get('flou') !== '0',
@@ -78,6 +82,7 @@ export function decrireLesVariantes(variantes: Variantes): string {
     variantes.densite === undefined ? undefined : `densité ${String(variantes.densite)}`,
     variantes.cadence === undefined ? undefined : `cadence ${String(variantes.cadence)}`,
     variantes.son ? undefined : 'sans son',
+    variantes.musique || !variantes.son ? undefined : 'sans musique',
     variantes.lueur ? undefined : 'sans lueur',
     variantes.hud ? undefined : 'sans HUD',
     variantes.flou ? undefined : 'sans flou',

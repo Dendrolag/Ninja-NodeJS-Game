@@ -24,10 +24,21 @@
  *
  * LE VOLUME PASSE PAR WEB AUDIO (etape 5.5). Sous iOS, tous les navigateurs sont
  * WebKit, qui ignore le volume d'un element audio: les curseurs ne faisaient rien
- * sur un iPhone. Chaque element est donc branche sur un noeud de gain, un pour les
- * effets, un pour les boucles de bonus, un pour la musique, et c'est le gain qui
- * regle le volume. Sans Web Audio (les tests, un tres vieux navigateur), le
- * lecteur regle le volume des elements, comme avant.
+ * sur un iPhone. Le son passe donc par des noeuds de gain, un pour les effets, un
+ * pour les boucles de bonus, un pour la musique, et c'est le gain qui regle le
+ * volume.
+ *
+ * LES EFFETS SONT DES TAMPONS DECODES, PAS DES ELEMENTS AUDIO (etape 5.12). Jusque-la,
+ * chaque effet etait un element audio branche sur Web Audio, relance en le ramenant au
+ * debut. Sous WebKit, un element audio est un lecteur multimedia complet, et le
+ * ramener au debut se paie sur le fil de la page: sur un iPhone, en Tactique, les pas
+ * et les tirs faisaient tomber la page de 60 a moins de 10 images par seconde. Chaque
+ * fichier d'effet est donc decode une fois en tampon, et chaque lecture est une source
+ * neuve, qui ne coute presque rien. La musique, longue et lue d'une traite, reste un
+ * element audio: la decoder occuperait des dizaines de megaoctets.
+ *
+ * Sans Web Audio (les tests, un tres vieux navigateur), le lecteur joue les effets par
+ * des elements audio et regle le volume des elements, comme avant.
  *
  * L'AUTORISATION DU NAVIGATEUR. Aucun navigateur ne laisse une page emettre du
  * son avant que l'utilisateur n'ait interagi avec elle. Le lecteur ne se bat pas
@@ -77,9 +88,39 @@ export interface LecteurDeSons {
    * Debloque le son, a appeler sur un geste du joueur.
    *
    * Un contexte Web Audio nait suspendu, et le navigateur ne le laisse repartir que
-   * pendant un geste (un toucher, une touche). Sans effet s'il tourne deja.
+   * pendant un geste (un toucher, une touche). Sans effet s'il tourne deja. Le premier
+   * appel lance aussi le chargement des effets (etape 5.12).
    */
   deverrouiller(): void;
+  /** Ou en est le son, pour le releve de performance (etape 5.12). */
+  etat(): EtatDuLecteur;
+}
+
+/** Ou en est le son: ce que le releve de performance en ecrit (etape 5.12). */
+export interface EtatDuLecteur {
+  /** Tout le son est coupe, par le panneau du son. */
+  readonly coupe: boolean;
+  /** Volume des effets, de zero a un. */
+  readonly volumeSons: number;
+  /** Volume de la musique, de zero a un. */
+  readonly volumeMusique: number;
+  /** La musique peut-elle jouer: non sous la variante du releve qui la retire. */
+  readonly musique: boolean;
+  /**
+   * Par ou passent les effets, et ou en est leur chargement. Sans Web Audio, ce sont des
+   * elements audio, qui se chargent seuls.
+   */
+  readonly voie:
+    | { readonly nature: 'elements' }
+    | {
+        readonly nature: 'web audio';
+        /** L'etat du contexte: « running » quand il joue. */
+        readonly contexte: string;
+        /** Les fichiers d'effets decodes, prets a jouer. */
+        readonly prets: number;
+        /** Les fichiers d'effets en tout. */
+        readonly fichiers: number;
+      };
 }
 
 /** Ce qu'il faut pour construire un lecteur de sons. */
@@ -88,6 +129,11 @@ export interface OptionsLecteur {
   readonly volumeSons?: number;
   /** Volume de la musique, de zero a un. */
   readonly volumeMusique?: number;
+  /**
+   * La musique peut-elle jouer. Faux sous la variante `musique=0` du releve, qui la
+   * retire seule, pour departager la musique et les effets (etape 5.12).
+   */
+  readonly musique?: boolean;
   /**
    * Comment fabriquer un element audio a partir d'une adresse.
    *
@@ -102,6 +148,12 @@ export interface OptionsLecteur {
    * existe.
    */
   readonly creerContexte?: () => AudioContext | undefined;
+  /**
+   * Comment lire le contenu d'un fichier d'effet, pour le decoder (etape 5.12).
+   *
+   * Injectable pour les tests. En production, une requete du navigateur.
+   */
+  readonly chargerFichier?: (adresse: string) => Promise<ArrayBuffer>;
 }
 
 /** Intervalle entre deux bruits de pas, en millisecondes. Valeurs du jeu d'origine. */
@@ -131,34 +183,278 @@ function contexteDuNavigateur(): AudioContext | undefined {
   return typeof AudioContext === 'undefined' ? undefined : new AudioContext();
 }
 
+/** Le contenu d'un fichier, lu par le navigateur. */
+async function fichierDuNavigateur(adresse: string): Promise<ArrayBuffer> {
+  const reponse = await fetch(adresse);
+
+  if (!reponse.ok) {
+    throw new Error(`${adresse}: ${String(reponse.status)}`);
+  }
+
+  return reponse.arrayBuffer();
+}
+
+/**
+ * Un effet sonore: un fichier, et la voix qui le joue.
+ *
+ * Une voix ne joue qu'une lecture a la fois: relancer un effet coupe sa lecture
+ * precedente, comme le faisait l'element audio qu'on ramenait au debut.
+ */
+interface Effet {
+  readonly voix: string;
+  readonly fichier: string;
+  /** Une boucle de bonus: elle tourne jusqu'a ce qu'on l'arrete, sur son propre canal. */
+  readonly boucle: boolean;
+}
+
+/** Tous les effets du jeu: les sons ponctuels, les pas et les boucles de bonus. */
+const EFFETS: readonly Effet[] = [
+  ...Object.entries(SONS).map(([nom, fichier]) => ({
+    voix: voixDuSon(nom as NomDeSon),
+    fichier,
+    boucle: false,
+  })),
+  ...SONS_DE_PAS.map((fichier, rang) => ({ voix: voixDuPas(rang), fichier, boucle: false })),
+  ...(Object.entries(SONS_EN_BOUCLE) as [TypeBonus, string][]).map(([bonus, fichier]) => ({
+    voix: voixDeLaBoucle(bonus),
+    fichier,
+    boucle: true,
+  })),
+];
+
+function voixDuSon(nom: NomDeSon): string {
+  return `son:${nom}`;
+}
+
+function voixDuPas(rang: number): string {
+  return `pas:${String(rang)}`;
+}
+
+function voixDeLaBoucle(bonus: TypeBonus): string {
+  return `boucle:${bonus}`;
+}
+
+/** L'adresse d'un fichier de son. */
+function adresseDuSon(fichier: string): string {
+  return `${RACINE_RESSOURCES}/${cheminSon(fichier)}`;
+}
+
+/** Ce qui joue les effets, par des tampons decodes ou par des elements audio. */
+interface Effets {
+  /** Joue un effet depuis son debut, en coupant sa lecture precedente. */
+  jouer(voix: string): void;
+  /** Demarre une boucle, si elle ne tourne pas deja. */
+  demarrer(voix: string): void;
+  /** Arrete un effet en cours. */
+  arreter(voix: string): void;
+  /** Arrete tous les effets en cours. */
+  toutArreter(): void;
+  /** Change le volume des effets ponctuels et des pas. */
+  reglerLesSons(volume: number): void;
+  /** Change le volume des boucles de bonus. */
+  reglerLesBoucles(volume: number): void;
+  /** Lance le chargement des effets, au premier deblocage. */
+  charger(): void;
+  /** Ou en sont les effets, pour le releve. */
+  voie(): EtatDuLecteur['voie'];
+}
+
+/**
+ * Les effets joues par des tampons decodes, sur Web Audio (etape 5.12).
+ *
+ * Une lecture est une source de tampon neuve, branchee sur le gain de son canal: le
+ * navigateur la cree et la lance sans rien chercher dans un fichier. Un effet dont le
+ * fichier n'est pas encore decode, ou n'a pas pu l'etre, se tait.
+ */
+function effetsParTampons(
+  contexte: AudioContext,
+  volumes: { readonly sons: number; readonly boucles: number },
+  chargerFichier: (adresse: string) => Promise<ArrayBuffer>,
+): Effets {
+  const gainSons = gainBranche(contexte, volumes.sons);
+  const gainBoucles = gainBranche(contexte, volumes.boucles);
+  const effets = new Map(EFFETS.map((effet) => [effet.voix, effet]));
+  const fichiers = [...new Set(EFFETS.map((effet) => effet.fichier))];
+  /** Les fichiers decodes, par nom de fichier. */
+  const tampons = new Map<string, AudioBuffer>();
+  /** La lecture en cours de chaque voix. */
+  const lectures = new Map<string, AudioBufferSourceNode>();
+  let chargementLance = false;
+
+  const lancer = (voix: string): void => {
+    const effet = effets.get(voix);
+    const tampon = effet === undefined ? undefined : tampons.get(effet.fichier);
+
+    // Un contexte suspendu garderait la lecture pour sa reprise: tous les effets
+    // demandes d'ici la partiraient alors ensemble. Un effet qui ne peut pas jouer
+    // maintenant se tait.
+    if (effet === undefined || tampon === undefined || contexte.state !== 'running') {
+      return;
+    }
+
+    const source = contexte.createBufferSource();
+    source.buffer = tampon;
+    source.loop = effet.boucle;
+    source.connect(effet.boucle ? gainBoucles : gainSons);
+    source.start();
+    lectures.set(voix, source);
+  };
+
+  const arreter = (voix: string): void => {
+    const source = lectures.get(voix);
+
+    if (source !== undefined) {
+      lectures.delete(voix);
+      source.stop();
+    }
+  };
+
+  return {
+    jouer(voix) {
+      arreter(voix);
+      lancer(voix);
+    },
+
+    demarrer(voix) {
+      if (!lectures.has(voix)) {
+        lancer(voix);
+      }
+    },
+
+    arreter,
+
+    toutArreter() {
+      for (const voix of [...lectures.keys()]) {
+        arreter(voix);
+      }
+    },
+
+    reglerLesSons(volume) {
+      gainSons.gain.value = volume;
+    },
+
+    reglerLesBoucles(volume) {
+      gainBoucles.gain.value = volume;
+    },
+
+    charger() {
+      if (chargementLance) {
+        return;
+      }
+
+      chargementLance = true;
+
+      // Chaque fichier pour son compte: un fichier qui manque ou ne se decode pas ne
+      // fait taire que ses effets.
+      for (const fichier of fichiers) {
+        chargerFichier(adresseDuSon(fichier))
+          .then(async (contenu) => contexte.decodeAudioData(contenu))
+          .then((tampon) => {
+            tampons.set(fichier, tampon);
+          })
+          .catch(() => undefined);
+      }
+    },
+
+    voie() {
+      return {
+        nature: 'web audio',
+        contexte: contexte.state,
+        prets: tampons.size,
+        fichiers: fichiers.length,
+      };
+    },
+  };
+}
+
+/** Les effets joues par des elements audio, faute de Web Audio. */
+function effetsParElements(
+  fabriquer: (adresse: string) => HTMLAudioElement,
+  volumes: { readonly sons: number; readonly boucles: number },
+): Effets {
+  const sons = canalDElements(volumes.sons);
+  const boucles = canalDElements(volumes.boucles);
+  const elements = new Map<string, HTMLAudioElement>();
+
+  for (const effet of EFFETS) {
+    const audio = fabriquer(adresseDuSon(effet.fichier));
+    audio.loop = effet.boucle;
+    (effet.boucle ? boucles : sons).brancher(audio);
+    elements.set(effet.voix, audio);
+  }
+
+  return {
+    jouer(voix) {
+      relancer(elements.get(voix));
+    },
+
+    demarrer(voix) {
+      const audio = elements.get(voix);
+
+      if (audio?.paused === true) {
+        void audio.play().catch(() => undefined);
+      }
+    },
+
+    arreter(voix) {
+      arreterLElement(elements.get(voix));
+    },
+
+    toutArreter() {
+      for (const audio of elements.values()) {
+        arreterLElement(audio);
+      }
+    },
+
+    reglerLesSons: sons.regler,
+    reglerLesBoucles: boucles.regler,
+
+    // Un element audio se charge de lui-meme.
+    charger: () => undefined,
+
+    voie: () => ({ nature: 'elements' }),
+  };
+}
+
+/** Un noeud de gain branche sur le haut-parleur. */
+function gainBranche(contexte: AudioContext, volume: number): GainNode {
+  const gain = contexte.createGain();
+  gain.gain.value = volume;
+  gain.connect(contexte.destination);
+  return gain;
+}
+
 /** Un canal de volume: un noeud de gain, ou a defaut le volume des elements. */
 interface Canal {
   brancher(audio: HTMLAudioElement): void;
   regler(volume: number): void;
 }
 
-/** Cree un canal de volume, sur le contexte s'il y en a un. */
-function creerCanal(contexte: AudioContext | undefined, volume: number): Canal {
+/** Un canal qui regle le volume de ses elements, faute de Web Audio. */
+function canalDElements(volume: number): Canal {
+  const elements: HTMLAudioElement[] = [];
+  let courant = volume;
+  return {
+    brancher(audio) {
+      audio.volume = courant;
+      elements.push(audio);
+    },
+    regler(nouveau) {
+      courant = nouveau;
+      for (const audio of elements) {
+        audio.volume = nouveau;
+      }
+    },
+  };
+}
+
+/** Le canal de la musique, sur le contexte s'il y en a un. */
+function canalDeMusique(contexte: AudioContext | undefined, volume: number): Canal {
   if (contexte === undefined) {
-    const elements: HTMLAudioElement[] = [];
-    let courant = volume;
-    return {
-      brancher(audio) {
-        audio.volume = courant;
-        elements.push(audio);
-      },
-      regler(nouveau) {
-        courant = nouveau;
-        for (const audio of elements) {
-          audio.volume = nouveau;
-        }
-      },
-    };
+    return canalDElements(volume);
   }
 
-  const gain = contexte.createGain();
-  gain.gain.value = volume;
-  gain.connect(contexte.destination);
+  const gain = gainBranche(contexte, volume);
 
   return {
     brancher(audio) {
@@ -170,10 +466,35 @@ function creerCanal(contexte: AudioContext | undefined, volume: number): Canal {
   };
 }
 
+/**
+ * Relance un element depuis son debut, en ignorant un refus du navigateur.
+ *
+ * play rend une promesse rejetee tant que l'utilisateur n'a pas interagi avec
+ * la page. Ce n'est pas une panne, c'est la regle: on n'en fait pas un incident.
+ */
+function relancer(audio: HTMLAudioElement | undefined): void {
+  if (audio === undefined) {
+    return;
+  }
+
+  audio.currentTime = 0;
+  void audio.play().catch(() => undefined);
+}
+
+function arreterLElement(audio: HTMLAudioElement | undefined): void {
+  if (audio === undefined) {
+    return;
+  }
+
+  audio.pause();
+  audio.currentTime = 0;
+}
+
 /** Cree un lecteur de sons. */
 export function creerLecteurDeSons(options: OptionsLecteur = {}): LecteurDeSons {
   const fabriquer = options.creerAudio ?? ((adresse: string) => new Audio(adresse));
   const contexte = (options.creerContexte ?? contexteDuNavigateur)();
+  const musiquePermise = options.musique ?? true;
 
   let volumeSons = options.volumeSons ?? 0.9;
   let volumeMusique = options.volumeMusique ?? 0.7;
@@ -182,76 +503,31 @@ export function creerLecteurDeSons(options: OptionsLecteur = {}): LecteurDeSons 
   /** Compteur des pas, pour alterner les quatre bruits sans tirer au sort. */
   let numeroDePas = 0;
 
-  const ponctuels = new Map<NomDeSon, HTMLAudioElement>();
-  const pas: HTMLAudioElement[] = [];
-  const boucles = new Map<TypeBonus, HTMLAudioElement>();
   /** Les musiques deja fabriquees, pour ne pas recharger un fichier a chaque ecran. */
   const musiques = new Map<PisteMusicale, HTMLAudioElement>();
   let musique: HTMLAudioElement | undefined;
   let pisteEnCours: PisteMusicale | undefined;
 
-  /** Fabrique un element audio pour un fichier de ressource. */
-  const audioDe = (fichier: string): HTMLAudioElement =>
-    fabriquer(`${RACINE_RESSOURCES}/${cheminSon(fichier)}`);
-
-  const canalSons = creerCanal(contexte, volumeSons);
-  const canalBoucles = creerCanal(contexte, volumeSons * VOLUME_BOUCLE);
-  const canalMusique = creerCanal(contexte, volumeMusique);
-
-  for (const [nom, fichier] of Object.entries(SONS) as [NomDeSon, string][]) {
-    const audio = audioDe(fichier);
-    canalSons.brancher(audio);
-    ponctuels.set(nom, audio);
-  }
-
-  for (const fichier of SONS_DE_PAS) {
-    const audio = audioDe(fichier);
-    canalSons.brancher(audio);
-    pas.push(audio);
-  }
-
-  for (const [bonus, fichier] of Object.entries(SONS_EN_BOUCLE) as [TypeBonus, string][]) {
-    const audio = audioDe(fichier);
-    audio.loop = true;
-    canalBoucles.brancher(audio);
-    boucles.set(bonus, audio);
-  }
+  const volumes = { sons: volumeSons, boucles: volumeSons * VOLUME_BOUCLE };
+  const effets =
+    contexte === undefined
+      ? effetsParElements(fabriquer, volumes)
+      : effetsParTampons(contexte, volumes, options.chargerFichier ?? fichierDuNavigateur);
+  const canalMusique = canalDeMusique(contexte, volumeMusique);
 
   /** Fabrique l'element d'une musique, branche sur son canal, une fois pour toutes. */
   const nouvelleMusique = (piste: PisteMusicale): HTMLAudioElement => {
-    const audio = audioDe(MUSIQUES[piste]);
+    const audio = fabriquer(adresseDuSon(MUSIQUES[piste]));
     canalMusique.brancher(audio);
     musiques.set(piste, audio);
     return audio;
   };
 
-  /**
-   * Lance la lecture en ignorant un refus du navigateur.
-   *
-   * play rend une promesse rejetee tant que l'utilisateur n'a pas interagi avec
-   * la page. Ce n'est pas une panne, c'est la regle: on n'en fait pas un incident.
-   */
-  const lancer = (audio: HTMLAudioElement | undefined): void => {
-    if (audio === undefined || coupe) {
-      return;
-    }
-
-    audio.currentTime = 0;
-    void audio.play().catch(() => undefined);
-  };
-
-  const arreter = (audio: HTMLAudioElement | undefined): void => {
-    if (audio === undefined) {
-      return;
-    }
-
-    audio.pause();
-    audio.currentTime = 0;
-  };
-
   return {
     jouer(nom) {
-      lancer(ponctuels.get(nom));
+      if (!coupe) {
+        effets.jouer(voixDuSon(nom));
+      }
     },
 
     jouerUnPas(maintenant, presse) {
@@ -265,29 +541,32 @@ export function creerLecteurDeSons(options: OptionsLecteur = {}): LecteurDeSons 
       // Les quatre bruits tournent dans l'ordre plutot qu'au hasard: le resultat
       // s'entend pareil, et le client ne tire aucun nombre au sort, ce qui le
       // rend reproductible d'un essai a l'autre.
-      numeroDePas = (numeroDePas + 1) % pas.length;
-      lancer(pas[numeroDePas]);
+      numeroDePas = (numeroDePas + 1) % SONS_DE_PAS.length;
+
+      if (!coupe) {
+        effets.jouer(voixDuPas(numeroDePas));
+      }
     },
 
     demarrerLaBoucle(bonus) {
-      const audio = boucles.get(bonus);
-
-      if (audio === undefined || coupe || !audio.paused) {
-        return;
+      if (!coupe) {
+        effets.demarrer(voixDeLaBoucle(bonus));
       }
-
-      void audio.play().catch(() => undefined);
     },
 
     arreterLaBoucle(bonus) {
-      arreter(boucles.get(bonus));
+      effets.arreter(voixDeLaBoucle(bonus));
     },
 
     demarrerLaMusique(piste) {
+      if (!musiquePermise) {
+        return;
+      }
+
       // Changer de piste arrete la precedente; redemander la meme la laisse
       // continuer, sans la reprendre du debut.
       if (pisteEnCours !== piste) {
-        arreter(musique);
+        arreterLElement(musique);
         musique = musiques.get(piste) ?? nouvelleMusique(piste);
         pisteEnCours = piste;
         // Une seule musique joue a la fois: le canal prend le volume de celle-ci.
@@ -306,21 +585,18 @@ export function creerLecteurDeSons(options: OptionsLecteur = {}): LecteurDeSons 
     },
 
     arreterLaMusique() {
-      arreter(musique);
+      arreterLElement(musique);
     },
 
     toutArreter() {
-      for (const audio of [...ponctuels.values(), ...pas, ...boucles.values()]) {
-        arreter(audio);
-      }
-
-      arreter(musique);
+      effets.toutArreter();
+      arreterLElement(musique);
     },
 
     reglerLeVolumeDesSons(volume) {
       volumeSons = borner(volume);
-      canalSons.regler(volumeSons);
-      canalBoucles.regler(volumeSons * VOLUME_BOUCLE);
+      effets.reglerLesSons(volumeSons);
+      effets.reglerLesBoucles(volumeSons * VOLUME_BOUCLE);
     },
 
     reglerLeVolumeDeLaMusique(volume) {
@@ -332,6 +608,8 @@ export function creerLecteurDeSons(options: OptionsLecteur = {}): LecteurDeSons 
       if (contexte?.state === 'suspended') {
         void contexte.resume().catch(() => undefined);
       }
+
+      effets.charger();
     },
 
     couperLeSon(couper) {
@@ -340,6 +618,16 @@ export function creerLecteurDeSons(options: OptionsLecteur = {}): LecteurDeSons 
       if (coupe) {
         this.toutArreter();
       }
+    },
+
+    etat() {
+      return {
+        coupe,
+        volumeSons,
+        volumeMusique,
+        musique: musiquePermise,
+        voie: effets.voie(),
+      };
     },
   };
 }

@@ -30,10 +30,12 @@ import { UPDATE_PRIORITY } from 'pixi.js';
 
 import type { Client } from '../client.js';
 import type { SondeDImage } from '../rendu/boucle.js';
+import type { EtatDuLecteur } from '../sons/lecteur.js';
 import type { Variantes } from './demande.js';
 import { decrireLesVariantes } from './demande.js';
 import { Releve, nombre } from './releve.js';
 import { texteDuServeur } from './serveur.js';
+import { texteDuSon } from './son.js';
 
 /** Le relevé ouvert dans la page. */
 export interface Diagnostic {
@@ -82,6 +84,8 @@ export function creerDiagnostic(options: {
   readonly version?: string;
   /** L'origine du serveur de jeu. Absente: celle de la page (étape 8.6). */
   readonly serveur?: string;
+  /** L'état du son, lu à la copie (étape 5.12). Absent: la page n'a pas de lecteur. */
+  readonly son?: () => EtatDuLecteur;
 }): Diagnostic {
   const doc = options.document;
   const releve = new Releve();
@@ -111,6 +115,7 @@ export function creerDiagnostic(options: {
     ['Relevé copié le', new Date().toISOString()],
     ['Page', options.version ?? 'développement'],
     ['Variantes', decrireLesVariantes(options.variantes)],
+    ['Son', texteDuSon(options.variantes, options.son?.())],
     ...appareil(doc),
     ...(partie?.entete() ?? [['Partie', 'aucune suivie']]),
   ];

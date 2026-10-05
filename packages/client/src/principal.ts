@@ -130,6 +130,14 @@ brancherLAdresseDInvitation(client, globalThis);
 // Le releve de performance, seulement si l'adresse le demande (etape 8.5): sans
 // `?diagnostic=1`, il n'existe pas.
 const variantes = lireLaDemande(globalThis.location.search);
+
+// Sans son, la variante du releve qui le retire: aucun lecteur n'est cree. Sans musique,
+// celle qui retire la musique seule (etape 5.12).
+const sons =
+  variantes?.son === false
+    ? undefined
+    : creerLecteurDeSons({ musique: variantes?.musique ?? true });
+
 const diagnostic =
   variantes === undefined
     ? undefined
@@ -138,10 +146,9 @@ const diagnostic =
         variantes,
         ...(configuration.version === undefined ? {} : { version: configuration.version }),
         ...(configuration.url === undefined ? {} : { serveur: configuration.url }),
+        // Le releve dit si le son jouait (etape 5.12).
+        ...(sons === undefined ? {} : { son: () => sons.etat() }),
       });
-
-// Sans son, la variante du releve qui le retire: aucun lecteur n'est cree.
-const sons = variantes?.son === false ? undefined : creerLecteurDeSons();
 
 if (sons !== undefined) {
   debloquerLeSon(sons);

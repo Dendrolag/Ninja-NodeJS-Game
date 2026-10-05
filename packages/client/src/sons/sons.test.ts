@@ -8,7 +8,7 @@
  */
 
 import type { Mode, NomDeSon } from '@neon-ninja/shared';
-import { CHASSE, REGLAGES_PAR_DEFAUT, SONS } from '@neon-ninja/shared';
+import { CHASSE, REGLAGES_PAR_DEFAUT, SONS, SONS_DE_PAS } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
 import type { EtatClient } from '../etat.js';
@@ -361,18 +361,37 @@ describe('creerLecteurDeSons', () => {
     expect([...audios.values()].every((audio) => audio.lectures === 0)).toBe(true);
   });
 
-  describe('avec Web Audio (etape 5.5)', () => {
+  describe('avec Web Audio (etapes 5.5 et 5.12)', () => {
     // Sous iOS, tous les navigateurs sont WebKit, qui ignore le volume d'un element
     // audio: les curseurs ne faisaient rien. Le son passe donc par des noeuds de gain.
+    // Et un element audio relance a chaque pas ou a chaque tir faisait ramer l'iPhone
+    // (etape 5.12): les effets sont des tampons decodes, la musique seule reste un element.
 
-    /** Un contexte audio d'essai, qui note ses noeuds de gain et ce qui s'y branche. */
+    /** Un noeud de gain d'essai. */
+    interface GainDEssai {
+      gain: { value: number };
+      branches: unknown[];
+    }
+
+    /** Une source de tampon d'essai, qui note sa vie. */
+    interface SourceDEssai {
+      buffer: { fichier: string } | null;
+      loop: boolean;
+      branchee?: GainDEssai;
+      lancee: boolean;
+      arretee: boolean;
+    }
+
+    /** Un contexte audio d'essai, qui note ses noeuds et ce qui s'y branche. */
     function contexteDEssai() {
-      const gains: { gain: { value: number }; branches: unknown[] }[] = [];
+      const gains: GainDEssai[] = [];
+      const sources: SourceDEssai[] = [];
       const contexte = {
         state: 'suspended' as AudioContextState,
         destination: {},
         reprises: 0,
         gains,
+        sources,
         createGain() {
           const noeud = {
             gain: { value: 1 },
@@ -386,11 +405,39 @@ describe('creerLecteurDeSons', () => {
         },
         createMediaElementSource(element: HTMLMediaElement) {
           return {
-            connect(cible: { branches: unknown[] }) {
+            connect(cible: GainDEssai) {
               cible.branches.push(element);
               return cible;
             },
           };
+        },
+        createBufferSource() {
+          const source: SourceDEssai & {
+            connect(cible: GainDEssai): GainDEssai;
+            start(): void;
+            stop(): void;
+          } = {
+            buffer: null,
+            loop: false,
+            lancee: false,
+            arretee: false,
+            connect(cible) {
+              source.branchee = cible;
+              return cible;
+            },
+            start() {
+              source.lancee = true;
+            },
+            stop() {
+              source.arretee = true;
+            },
+          };
+          sources.push(source);
+          return source;
+        },
+        // Le tampon d'essai retient le fichier dont il vient.
+        decodeAudioData(contenu: { fichier: string }) {
+          return Promise.resolve({ fichier: contenu.fichier });
         },
         resume() {
           contexte.reprises += 1;
@@ -401,9 +448,12 @@ describe('creerLecteurDeSons', () => {
       return contexte;
     }
 
-    function lecteurWebAudio() {
+    function lecteurWebAudio(
+      options: { readonly manquants?: readonly string[]; readonly musique?: boolean } = {},
+    ) {
       const contexte = contexteDEssai();
       const audios = new Map<string, HTMLAudioElement & { lectures: number }>();
+      const charges: string[] = [];
       const lecteur = creerLecteurDeSons({
         creerAudio: (adresse) => {
           const audio = audioDEssai();
@@ -411,21 +461,157 @@ describe('creerLecteurDeSons', () => {
           return audio;
         },
         creerContexte: () => contexte as unknown as AudioContext,
+        chargerFichier: (adresse) => {
+          charges.push(adresse);
+          const fichier = adresse.slice(adresse.lastIndexOf('/') + 1);
+          return (options.manquants ?? []).includes(fichier)
+            ? Promise.reject(new Error('introuvable'))
+            : Promise.resolve({ fichier } as unknown as ArrayBuffer);
+        },
+        ...(options.musique === undefined ? {} : { musique: options.musique }),
       });
       /** Le noeud de gain par lequel passe l'element de cette adresse. */
       const gainDe = (adresse: string) =>
         contexte.gains.find((noeud) => noeud.branches.includes(audios.get(adresse)));
-      return { lecteur, contexte, audios, gainDe };
+      /** Les sources lancees pour ce fichier. */
+      const lectures = (fichier: string) =>
+        contexte.sources.filter((source) => source.buffer?.fichier === fichier && source.lancee);
+      /** Debloque le son, et attend le decodage des effets. */
+      const debloquer = async () => {
+        lecteur.deverrouiller();
+        await new Promise((resolu) => setTimeout(resolu, 0));
+      };
+      return { lecteur, contexte, audios, charges, gainDe, lectures, debloquer };
     }
 
-    it('regle le volume des effets par un noeud de gain', () => {
-      const { lecteur, audios, gainDe } = lecteurWebAudio();
+    it('ne fabrique aucun element audio pour les effets', () => {
+      const { audios } = lecteurWebAudio();
+
+      expect(audios.size).toBe(0);
+    });
+
+    it('joue un effet par une source de tampon, sur le gain des effets', async () => {
+      const { lecteur, lectures, debloquer } = lecteurWebAudio();
+      await debloquer();
 
       lecteur.reglerLeVolumeDesSons(0.25);
+      lecteur.jouer('bonusRamasse');
 
-      expect(gainDe('/assets/sons/collect-bonus.wav')?.gain.value).toBe(0.25);
-      // L'element reste a plein volume: c'est le gain qui decide.
-      expect(audios.get('/assets/sons/collect-bonus.wav')?.volume).toBe(1);
+      const [source] = lectures('collect-bonus.wav');
+      expect(source?.loop).toBe(false);
+      expect(source?.branchee?.gain.value).toBe(0.25);
+    });
+
+    it('coupe la lecture precedente d un effet qu on relance: une voix par effet', async () => {
+      const { lecteur, lectures, debloquer } = lecteurWebAudio();
+      await debloquer();
+
+      lecteur.jouer('tirFusil');
+      lecteur.jouer('tirFusil');
+      lecteur.jouer('rechargeFusil');
+
+      const tirs = lectures('shotgun-wave.mp3');
+      expect(tirs.map((source) => source.arretee)).toEqual([true, false]);
+      expect(lectures('shotgun-reload.mp3')[0]?.arretee).toBe(false);
+    });
+
+    it('fait tourner les pas sur des tampons, eux aussi', async () => {
+      const { lecteur, contexte, debloquer } = lecteurWebAudio();
+      await debloquer();
+
+      lecteur.jouerUnPas(1_000, false);
+      lecteur.jouerUnPas(1_300, false);
+
+      expect(contexte.sources.map((source) => source.buffer?.fichier)).toEqual([
+        SONS_DE_PAS[1],
+        SONS_DE_PAS[2],
+      ]);
+    });
+
+    it('ne charge les effets qu au premier deblocage, et une seule fois', async () => {
+      const { lecteur, charges, debloquer } = lecteurWebAudio();
+
+      expect(charges).toEqual([]);
+
+      await debloquer();
+      const premiers = charges.length;
+      lecteur.deverrouiller();
+
+      expect(premiers).toBeGreaterThan(0);
+      expect(charges).toHaveLength(premiers);
+      expect(new Set(charges).size).toBe(premiers);
+      expect(charges).toContain('/assets/sons/collect-bonus.wav');
+      // La musique se charge par son element, pas avec les effets.
+      expect(charges).not.toContain('/assets/sons/menu-music.mp3');
+    });
+
+    it('tait un effet pas encore decode, sans erreur', () => {
+      const { lecteur, contexte } = lecteurWebAudio();
+      contexte.state = 'running';
+
+      expect(() => {
+        lecteur.jouer('bonusRamasse');
+      }).not.toThrow();
+      expect(contexte.sources).toEqual([]);
+    });
+
+    it('tait un effet demande contexte suspendu, au lieu de le garder pour la reprise', async () => {
+      const { lecteur, contexte, debloquer } = lecteurWebAudio();
+      await debloquer();
+      contexte.state = 'suspended';
+
+      lecteur.jouer('bonusRamasse');
+
+      expect(contexte.sources).toEqual([]);
+    });
+
+    it('ne laisse pas un fichier manquant faire taire les autres', async () => {
+      const { lecteur, lectures, debloquer } = lecteurWebAudio({
+        manquants: ['collect-bonus.wav'],
+      });
+      await debloquer();
+
+      lecteur.jouer('bonusRamasse');
+      lecteur.jouer('malusRamasse');
+
+      expect(lectures('collect-bonus.wav')).toEqual([]);
+      expect(lectures('collect-malus.wav')).toHaveLength(1);
+    });
+
+    it('fait tourner une boucle de bonus une seule fois, sur son canal, jusqu a l arret', async () => {
+      const { lecteur, lectures, debloquer } = lecteurWebAudio();
+      await debloquer();
+
+      lecteur.reglerLeVolumeDesSons(0.5);
+      lecteur.demarrerLaBoucle('vitesse');
+      lecteur.demarrerLaBoucle('vitesse');
+
+      const boucles = lectures('speed-active.mp3');
+      expect(boucles).toHaveLength(1);
+      expect(boucles[0]?.loop).toBe(true);
+      // Les boucles suivent le volume des effets, a un cinquieme (etape 5.5).
+      expect(boucles[0]?.branchee?.gain.value).toBeCloseTo(0.1);
+
+      lecteur.arreterLaBoucle('vitesse');
+      expect(boucles[0]?.arretee).toBe(true);
+
+      lecteur.demarrerLaBoucle('vitesse');
+      expect(lectures('speed-active.mp3')).toHaveLength(2);
+    });
+
+    it('arrete tous les effets en cours quand on coupe le son, et n en joue plus', async () => {
+      const { lecteur, contexte, debloquer } = lecteurWebAudio();
+      await debloquer();
+
+      lecteur.jouer('capture');
+      lecteur.demarrerLaBoucle('invincibilite');
+      lecteur.couperLeSon(true);
+      lecteur.jouer('capture');
+      lecteur.jouerUnPas(5_000, false);
+      lecteur.demarrerLaBoucle('vitesse');
+
+      expect(contexte.sources).toHaveLength(2);
+      expect(contexte.sources.every((source) => source.arretee)).toBe(true);
     });
 
     it('regle le volume de la musique par son propre noeud de gain', () => {
@@ -453,12 +639,13 @@ describe('creerLecteurDeSons', () => {
       expect(gainDe('/assets/sons/menu-music.mp3')?.gain.value).toBeCloseTo(0.6);
     });
 
-    it('fait suivre aux boucles de bonus le volume des effets', () => {
-      const { lecteur, gainDe } = lecteurWebAudio();
+    it('ne fait jouer aucune musique sous la variante qui la retire', () => {
+      const { lecteur, audios } = lecteurWebAudio({ musique: false });
 
-      lecteur.reglerLeVolumeDesSons(0.5);
+      lecteur.demarrerLaMusique('menu');
 
-      expect(gainDe('/assets/sons/speed-active.mp3')?.gain.value).toBeCloseTo(0.1);
+      expect(audios.size).toBe(0);
+      expect(lecteur.etat().musique).toBe(false);
     });
 
     it('se debloque au geste du joueur', () => {
@@ -470,6 +657,34 @@ describe('creerLecteurDeSons', () => {
       expect(contexte.state).toBe('running');
       expect(contexte.reprises).toBe(1);
     });
+
+    it('dit au releve ou en est le son', async () => {
+      const { lecteur, debloquer } = lecteurWebAudio({ manquants: ['capture.wav'] });
+
+      expect(lecteur.etat()).toMatchObject({
+        coupe: false,
+        musique: true,
+        voie: { nature: 'web audio', contexte: 'suspended', prets: 0 },
+      });
+
+      await debloquer();
+      lecteur.reglerLeVolumeDesSons(0.4);
+      lecteur.reglerLeVolumeDeLaMusique(0.2);
+      lecteur.couperLeSon(true);
+      const etat = lecteur.etat();
+
+      expect(etat).toMatchObject({ coupe: true, volumeSons: 0.4, volumeMusique: 0.2 });
+      expect(etat.voie).toMatchObject({ nature: 'web audio', contexte: 'running' });
+      // Un fichier manquant: tous les autres sont prets.
+      const voie = etat.voie as { prets: number; fichiers: number };
+      expect(voie.fichiers - voie.prets).toBe(1);
+    });
+  });
+
+  it('dit au releve que les effets passent par des elements, faute de Web Audio', () => {
+    const { lecteur } = lecteurDEssai();
+
+    expect(lecteur.etat().voie).toEqual({ nature: 'elements' });
   });
 
   it('borne le volume entre zero et un', () => {

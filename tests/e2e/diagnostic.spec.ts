@@ -89,6 +89,10 @@ test('avec le paramètre, le relevé suit la partie et se copie', async ({ page,
 
   expect(releve).toContain('Relevé de performance Neon Ninja');
   expect(releve).toContain('Variantes: aucune');
+  // Le releve dit si le son jouait (etape 5.12), et les effets sont tous decodes.
+  expect(releve).toMatch(
+    /Son: joue, effets \d+ %, musique \d+ %, effets par Web Audio \(contexte running, (\d+) fichiers prêts sur \1\)/u,
+  );
   expect(releve).toMatch(/Partie: carte \w+, mode classique, 50 PNJ au départ/u);
   expect(releve).toMatch(/Rendu: webgl/u);
   expect(releve).toMatch(/Instantanés reçus: [1-9]/u);
@@ -122,6 +126,7 @@ test('une variante de l adresse change le rendu, et le relevé la nomme', async 
   const releve = await copierLeReleve(page);
 
   expect(releve).toContain('Variantes: densité 1, cadence 20, sans son, sans HUD');
+  expect(releve).toContain('Son: retiré par la variante');
   expect(releve).toMatch(/Rendu: webgl.*, densité 1,/u);
 
   // Plafonnée à vingt images par seconde, la cadence mesurée ne la dépasse pas.
