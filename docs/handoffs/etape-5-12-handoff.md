@@ -2,7 +2,7 @@
 
 Date: 5 octobre 2026
 Auteur: session Claude Code
-Statut: partielle (points 1 et 2 de la définition de terminé faits; le point 3, le relevé sur l'iPhone, attend le porteur du projet)
+Statut: terminée
 
 ## Objectif de l'étape
 
@@ -15,6 +15,7 @@ Que le son ne fasse plus ramer la page sur iPhone, et que le relevé dise dans q
 - **Le relevé dit l'état du son** (`diagnostic/son.ts`): ligne « Son » de l'en-tête, « retiré par la variante », « coupé par le panneau du son », ou « joue, effets 50 %, musique 30 %, effets par Web Audio (contexte running, 30 fichiers prêts sur 30) ».
 - **Une variante `&musique=0`** retire la musique seule, pour départager effets et musique si l'iPhone ramait encore.
 - **Version 1.7.1**: une correction visible sur iPhone, sans note.
+- **Le relevé sur l'iPhone**, pris par le porteur du projet après la mise en ligne, son compris, dans les conditions du relevé de départ (Tactique à 300 PNJ, pluie): 59,9 images par seconde au lieu de 9,5, notre code à 0,46 ms par image en moyenne au lieu de 23,4, et une seule image d'au moins 50 ms après la préparation au lieu de 448. Les mêmes chiffres que sans le son le matin. Rangé dans `docs/mesures/5-12/`.
 - **Défaut de documentation corrigé** (règle 7): l'audit 8.5 donnait l'hypothèse « le son » pour écartée, sur des relevés sans doute pris son coupé. La ligne le dit désormais.
 
 ## Fichiers créés ou modifiés
@@ -29,30 +30,32 @@ Que le son ne fasse plus ramer la page sur iPhone, et que le relevé dise dans q
 - `tests/e2e/diagnostic.spec.ts`: le relevé dit que le son joue et que tous les effets sont décodés, ou qu'il est retiré.
 - `packages/shared/src/version.ts`: 1.7.1.
 - `docs/mesures/audit-saccades-telephone.md`: la variante `musique`, la ligne « Son » du relevé, l'hypothèse 9 revue.
-- `docs/plan/ROADMAP.md`: l'entrée 5.12 et le journal des décisions.
+- `docs/plan/ROADMAP.md`: l'entrée 5.12, l'entrée 4.11 et le journal des décisions.
+- `docs/mesures/5-12/telephone-tactique-300-avec-son.txt` (créé): le relevé de clôture.
 
 ## Tests
 
 - Ajoutés: avec Web Audio, aucun élément pour les effets, la source branchée sur le bon gain, une voix par effet, les pas sur tampons, le chargement au premier déblocage et une seule fois, le silence d'un effet pas décodé ou contexte suspendu, un fichier manquant qui ne fait taire que lui, les boucles (une seule, sur leur canal, arrêtées), la coupure, la musique sans la variante, l'état rendu au relevé; sans Web Audio, la voie des éléments. Le relevé: la ligne « Son » dans ses cas, la variante `musique`. De bout en bout, dans Chromium: tous les effets se décodent et le contexte tourne.
 - Résultat: 3 569 tests unitaires au vert; types et linter au vert. Bout en bout: 94 sur 95 au premier passage. Le banc « tient les plafonds de faux ninjas au processeur ralenti six fois » échoue en local, comme au 25 septembre (handoff 8.6): il mesure du temps processeur sur un poste chargé par une autre conversation, ne joue aucun son, et la CI ne l'exige pas. `poche.spec.ts` a échoué une fois sur quatre passages (personnage d'essai bloqué en route), sans lien avec le son.
 - Couverture de packages/sim: inchangée, rien n'y a été touché.
-- État de la CI: voir le commit qui suit ce handoff.
+- État de la CI: verte sur `04e6e51`, mise en ligne comprise (Render sert `04e6e51`).
 
 ## Décisions et écarts au plan
 
-- **Pas de reproduction sur le poste.** Le WebKit de Playwright sous Windows n'a pas d'`AudioContext`, et Chromium ne montre rien: la correction s'appuie sur les relevés et sur l'usage établi de Web Audio pour les bruitages. La preuve sera le relevé sur l'iPhone.
+- **Pas de reproduction sur le poste.** Le WebKit de Playwright sous Windows n'a pas d'`AudioContext`, et Chromium ne montre rien: la correction s'appuie sur les relevés et sur l'usage établi de Web Audio pour les bruitages. Le relevé sur l'iPhone l'a confirmée.
+- **Décisions du porteur du projet à la clôture**: les Black Ninjas gardent l'armement des mines de zone (règle de l'étape 7.12, qui était à l'essai), et les sons situés sur la carte se spatialiseront, en volume et en gauche-droite, à l'étape `4.11`.
 - **Le chargement des effets attend le premier geste**: la page ne paie pas leurs 3,7 Mo à l'ouverture, et le son ne peut de toute façon pas jouer avant.
 - **Les effets décodés occupent de la mémoire** (une vingtaine de mégaoctets, surtout les boucles d'invincibilité et de vitesse, et les deux jingles en WAV). Acceptable sur un téléphone récent; à surveiller si un téléphone d'entrée de gamme fermait la page.
 
 ## Problèmes connus et dette
 
-- Le relevé sur l'iPhone, son compris (définition de terminé, point 3).
+- Le serveur de Render a eu 11 battements d'au moins 100 ms en cinq minutes pendant le relevé de clôture (pire 303 ms, un battement lui-même de 302 ms), contre aucun sur Oracle le matin: déjà connu de l'étape 5.9, dont l'essai doit décider de la bascule.
 - Le dépôt contenait en début de session des fichiers du client modifiés par une autre session, par leurs seules fins de ligne (aucune différence de contenu), et son handoff `docs/handoffs/textes-du-jeu-handoff.md`, qu'elle a commité pendant cette session (`4cc6637`). Les fichiers du client sont laissés tels quels, non commités ici.
 
 ## Prochaine action exacte
 
-Demander au porteur du projet un relevé sur l'iPhone, son compris: `https://ninja.dendrolag.fr/?diagnostic=1`, Tactique à 300 PNJ avec pluie, deux à trois minutes, le son réglé comme d'habitude (le relevé doit dire « Son: joue »). Le ranger dans `docs/mesures/5-12/`. S'il revient vers 60 images par seconde, clore l'étape. S'il rame encore, refaire un relevé avec `&musique=0`: s'il est fluide, c'est la musique, qui passe encore par un élément audio.
+Exécuter l'étape `4.11`, des sons situés sur la carte: rédiger sa fiche selon le cas de repli du PROTOCOLE, à partir de son entrée dans `docs/plan/ROADMAP.md` (phase 4) et des décisions du 5 octobre 2026 (section 5). Le lecteur à modifier est `packages/client/src/sons/lecteur.ts`, ses déclencheurs `packages/client/src/sons/declencheurs.ts`.
 
 ## Étape suivante
 
-Aucune planifiée: la choisir avec le porteur du projet (section 5 du ROADMAP). L'étape 5.9 attend sa partie à plusieurs avec un compte, et vers le 10 novembre 2026 la vérification de la machine Oracle.
+Fiche à lire: aucune encore; l'entrée `4.11` de `docs/plan/ROADMAP.md`, section 4, phase 4. En parallèle, l'étape 5.9 attend sa partie à plusieurs avec un compte, et vers le 10 novembre 2026 la vérification de la machine Oracle.

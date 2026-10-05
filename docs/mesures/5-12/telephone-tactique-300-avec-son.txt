@@ -1,0 +1,43 @@
+Relevé de performance Neon Ninja (étape 8.5)
+
+Relevé copié le: 2026-10-05T10:51:31.558Z
+Page: 04e6e51532c2e1a084a5a02fca619927421f78ee
+Variantes: aucune
+Son: joue, effets 50 %, musique 100 %, effets par Web Audio (contexte running, 30 fichiers prêts sur 30)
+Navigateur: Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/157.0 Mobile/15E148 Safari/604.1
+Écran: 393 × 852, densité 3
+Fenêtre: 393 × 779
+Processeurs logiques: 4
+Partie: carte map1, mode tactique, 300 PNJ au départ, pluie, jour, 306 entités à cet instant
+Rendu: webgl 2, densité 2, canevas 786 × 1558
+Carte graphique: Apple GPU
+
+== Images
+Durée mesurée: 179,9 s, 10778 images, 59,9 par seconde
+Cadence du navigateur estimée: 58 Hz (écart médian 17,1 ms)
+Écart entre deux images: moyenne 16,69, médiane 17,1, p90 17,1, p99 21,1, max 132,0 ms
+Images d'au moins 25 ms: 22, 50 ms: 2, 100 ms: 1, 250 ms: 0
+Interruptions (page cachée): 0
+Écran de préparation levé à 0,65 s; images d'au moins 50 ms ensuite: 1
+
+== Où va le temps, par image
+Notre code: moyenne 0,46, médiane 0,1, p90 1,1, p99 1,1, max 4,0 ms
+  dont saisie, sons, lissage, scène et transmission à PixiJS: moyenne 0,36, médiane 0,1, p90 1,1, p99 1,1, max 3,0 ms
+  dont HUD: moyenne 0,08, médiane 0,1, p90 0,1, p99 1,0, max 1,0 ms
+PixiJS: moyenne 0,52, médiane 1,1, p90 1,1, p99 1,1, max 20,0 ms
+Hors de nos chronomètres, en moyenne: 15,72 ms (l'attente de l'écran, puis le navigateur, la carte graphique, le ramasse-miettes)
+
+== Réseau
+Instantanés reçus: 3574, 19,9 par seconde, battements sautés: 0
+Écart entre deux instantanés: moyenne 50,33, médiane 49,1, p90 86,1, p99 188,1, max 432,0 ms
+Instantanés d'au moins 100 ms: 276
+Images tenues, le lissage attendant le réseau: 2877 (26,7 %)
+
+== Déroulé, par fenêtre de 5 s
+Toutes les fenêtres de 5 s entre 58,2 et 60,0 images par seconde, notre code entre 0,37 et 0,61 ms, 19 à 20,6 instantanés par seconde (relevé complet tronqué ici pour la lisibilité). Seule la première fenêtre a deux images d'au moins 50 ms, à 0,13 et 1,38 s, pendant la préparation.
+
+== Serveur, battements de toutes ses parties
+Fenêtre: les 300 dernières secondes, 3574 battements (lu il y a 3 s)
+Écart entre deux battements d'une partie, 50 ms visés: médiane 50,0, p90 51,3, p99 53,2, max 302,8 ms
+Battements d'au moins 100 ms: 11
+Durée d'un battement (moteur, codage, envoi): médiane 2,2, p90 3,1, p99 7,5, max 302,5 ms
