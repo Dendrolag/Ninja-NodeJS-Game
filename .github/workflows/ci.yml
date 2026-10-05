@@ -78,7 +78,8 @@ jobs:
   # depuis l'etape 5.14. Chaque requete y fait l'aller et retour entre les machines
   # de GitHub et Neon: ils passent leur temps a attendre le reseau, pas le
   # processeur. Huit fichiers a la fois au lieu de trois (le defaut de Vitest sur
-  # quatre processeurs) les ramenent a la duree du plus long, amis.test.ts.
+  # quatre processeurs) les ramenent a la duree du plus long, amis.test.ts: deux
+  # minutes et demie pour le job, contre cinq dans la verification a trois a la fois.
   base:
     name: Tests de la base
     runs-on: ubuntu-latest
@@ -110,7 +111,8 @@ jobs:
   # de scenarios sur autant de machines qu'il y a de parts. Chaque machine n'en joue
   # qu'un a la fois (workers dans playwright.config.ts): sans carte graphique, deux
   # parties en parallele se privent de processeur. Joues en serie, ils prenaient
-  # 19 minutes; la plus longue des dix parts en prend un peu plus de trois.
+  # 19 minutes; la plus longue des dix parts, la premiere, en prend trois et demie,
+  # et son job quatre et demie, installation comprise (mesure de l'etape 5.14).
   #
   # Ajouter une part ne demande que d'allonger la liste: le total vient du nombre
   # de jobs de la matrice. Playwright repartit par nombre de scenarios, pas par
