@@ -5,9 +5,9 @@
 # protection de branche (decision du 15 septembre 2026): c'est la mise en ligne,
 # et non la poussee, qui attend que le filet soit passe.
 #
-# Trois familles de jobs partent ensemble (etape 5.14): la verification (formatage,
-# types, linter, tests unitaires et de la base), les scenarios de bout en bout
-# repartis sur dix machines, et le banc de mesure du rendu sur la sienne. La mise
+# Quatre familles de jobs partent ensemble (etape 5.14): la verification (formatage,
+# types, linter, tests unitaires), les tests de la base, les scenarios de bout en
+# bout repartis sur dix machines, et le banc de mesure du rendu sur sa machine. La mise
 # en ligne attend qu'ils soient tous verts. Les lancer en serie coutait 26 minutes
 # par poussee; un commit rouge ne coute plus que des minutes de machines, gratuites
 # pour un depot public.
@@ -36,11 +36,6 @@ jobs:
   verification:
     name: Types, linter et tests
     runs-on: ubuntu-latest
-    # Les tests de la base creent leur propre branche Neon, puis la suppriment.
-    # Sans ces secrets, ils font echouer la CI plutot que d'etre sautes.
-    env:
-      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-      NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
     steps:
       - name: Recuperer le depot
         uses: actions/checkout@v7
@@ -75,8 +70,41 @@ jobs:
       - name: Linter (dont l'invariant de purete de packages/sim)
         run: pnpm lint
 
-      - name: Tests unitaires et d'integration
-        run: pnpm test
+      # Les tests de la base ont leur propre job, ci-dessous.
+      - name: Tests unitaires
+        run: pnpm test --project unitaires
+
+  # Les tests d'integration de la base (projet base de vitest.workspace.ts), a part
+  # depuis l'etape 5.14. Chaque requete y fait l'aller et retour entre les machines
+  # de GitHub et Neon: ils passent leur temps a attendre le reseau, pas le
+  # processeur. Huit fichiers a la fois au lieu de trois (le defaut de Vitest sur
+  # quatre processeurs) les ramenent a la duree du plus long, amis.test.ts.
+  base:
+    name: Tests de la base
+    runs-on: ubuntu-latest
+    # Ils creent leur propre branche Neon, puis la suppriment. Sans ces secrets,
+    # ils font echouer la CI plutot que d'etre sautes.
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+      NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v7
+
+      - name: Installer pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Installer Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Installer les dependances
+        run: pnpm install --frozen-lockfile
+
+      - name: Tests de la base
+        run: pnpm test --project base --maxWorkers=8 --minWorkers=1
 
   # Les scenarios des projets bureau et mobile, repartis en parts egales en nombre
   # de scenarios sur autant de machines qu'il y a de parts. Chaque machine n'en joue
@@ -209,15 +237,15 @@ jobs:
   # La mise en ligne (etapes 5.3 et 5.13): la page sur Vercel, le serveur de jeu de
   # la production, puis le secours. La production est le serveur que joint la page
   # publique, Oracle ou Render; la bascule de l'un a l'autre est dans bascule.yml.
-  # Seulement apres la verification, toutes les parts du bout en bout et le banc
-  # verts, et seulement pour une poussee sur master,
+  # Seulement apres la verification, les tests de la base, toutes les parts du
+  # bout en bout et le banc verts, et seulement pour une poussee sur master,
   # la branche de la production depuis l'etape 6.1. Le deroulement et ses
   # verifications sont dans deploiement/miseEnLigne.ts, l'exploitation dans
   # docs/deploiement.md.
   mise-en-ligne:
     name: Mise en ligne
     runs-on: ubuntu-latest
-    needs: [verification, bout-en-bout, banc]
+    needs: [verification, base, bout-en-bout, banc]
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
     # Une seule mise en ligne ou bascule a la fois, jamais interrompue par la suivante.
     concurrency:
