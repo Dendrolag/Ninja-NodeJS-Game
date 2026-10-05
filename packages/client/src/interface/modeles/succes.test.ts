@@ -90,7 +90,7 @@ describe('succesDuProfilAffiches', () => {
     expect(tous.find((succes) => succes.id === 'premier-pas')).toEqual({
       id: 'premier-pas',
       nom: 'Premier pas',
-      description: 'Jouer une partie.',
+      description: 'Jouer une partie. Voilà, c’est fait.',
       palier: 'decouverte',
       obtenu: true,
       date: `Obtenu le ${formaterJour('2026-09-20T18:30:00.000Z')}`,
@@ -171,7 +171,7 @@ describe('les secrets', () => {
 
     expect(pasDeChance(lus)).toMatchObject({
       nom: 'Pas de chance',
-      description: 'Être pris trois fois par un Black Ninja dans une même partie.',
+      description: 'Être pris trois fois par un Black Ninja dans la même partie. Ça arrive.',
       obtenu: true,
     });
   });

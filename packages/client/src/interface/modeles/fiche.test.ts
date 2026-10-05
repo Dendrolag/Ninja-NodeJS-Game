@@ -123,7 +123,7 @@ describe('modeleFiche', () => {
         {
           id: 'premier-pas',
           nom: 'Premier pas',
-          description: 'Jouer une partie.',
+          description: 'Jouer une partie. Voilà, c’est fait.',
           palier: 'decouverte',
           nomDuPalier: 'Découverte',
           rarete: 'moins de 1 % des joueurs',

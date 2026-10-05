@@ -314,7 +314,7 @@ const DEFINITIONS = [
   {
     id: 'premier-pas',
     nom: 'Premier pas',
-    description: 'Jouer une partie.',
+    description: 'Jouer une partie. Voilà, c’est fait.',
     palier: 'decouverte',
     secret: false,
     mesure: 'partiesJouees',
@@ -369,7 +369,7 @@ const DEFINITIONS = [
   {
     id: 'cadeau-empoisonne',
     nom: 'Cadeau empoisonné',
-    description: 'Ramasser un malus, qui frappe les autres joueurs.',
+    description: 'Ramasser un malus. Plaisir d’offrir…',
     palier: 'decouverte',
     secret: false,
     mesure: 'malusRamasses',
@@ -489,7 +489,7 @@ const DEFINITIONS = [
   {
     id: 'revanche',
     nom: 'Revanche',
-    description: 'Prendre, moins de 30 secondes après, le joueur qui vient de vous prendre.',
+    description: 'Reprendre dans les 30 secondes celui qui vient de vous prendre.',
     palier: 'habitue',
     secret: false,
     mesure: 'revanches',
@@ -516,7 +516,7 @@ const DEFINITIONS = [
   {
     id: 'pas-de-chance',
     nom: 'Pas de chance',
-    description: 'Être pris trois fois par un Black Ninja dans une même partie.',
+    description: 'Être pris trois fois par un Black Ninja dans la même partie. Ça arrive.',
     palier: 'habitue',
     secret: true,
     mesure: 'malchance',
@@ -525,7 +525,7 @@ const DEFINITIONS = [
   {
     id: 'arroseur-arrose',
     nom: 'Arroseur arrosé',
-    description: 'Être pris par un joueur moins de 3 secondes après en avoir pris un.',
+    description: 'Être pris moins de 3 secondes après avoir pris quelqu’un.',
     palier: 'habitue',
     secret: true,
     mesure: 'arroseursArroses',
@@ -687,7 +687,7 @@ const DEFINITIONS = [
   {
     id: 'sur-le-fil',
     nom: 'Sur le fil',
-    description: 'Prendre un joueur dans la dernière seconde d’une partie.',
+    description: 'Prendre un joueur dans la dernière seconde.',
     palier: 'expert',
     secret: true,
     mesure: 'prisesSurLeFil',

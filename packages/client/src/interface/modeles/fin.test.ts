@@ -198,7 +198,7 @@ describe('la progression de fin', () => {
         {
           id: 'premier-pas',
           nom: 'Premier pas',
-          description: 'Jouer une partie.',
+          description: 'Jouer une partie. Voilà, c’est fait.',
           palier: 'decouverte',
           nomDuPalier: 'Découverte',
         },
