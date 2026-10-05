@@ -341,7 +341,7 @@ Chaque étape se fait comme les étapes 7.9 à 7.12: règles tranchées avec le 
 |     2 | 5.11 La grille du moteur | Contacts, cible du Black Ninja, fuite, apparition par partition spatiale; empreinte identique             |
 |     3 | 8.12 Les données de carte livrées | Places tenables et morceaux calculés à la livraison, plus au démarrage                         |
 |     4 | 4.10 La carte en tuiles   | Le chargeur d'une carte faite d'un jeu de tuiles, la collision qui s'en dérive, le dessin par blocs visibles |
-|     5 | 2.9 Le filtrage par zone d'intérêt | Chacun ne reçoit que ce qui l'entoure                                                         |
+|     5 | 2.9 Le filtrage par zone d'intérêt | Chacun ne reçoit que ce qui l'entoure. Planifiée le 5 octobre comme « le flux par destinataire », qui en est le socle (ROADMAP, phase 2) |
 |     6 | 8.13 La carte géante      | Le contenu, mesuré au banc et sur l'hébergement visé                                                 |
 |     7 | 7.19 La Battle Royale     | Le mode: une vie, la zone, les armes ramassées, le gibier, 30 à 60 joueurs                             |
 
