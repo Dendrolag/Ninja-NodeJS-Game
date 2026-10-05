@@ -175,7 +175,7 @@ Mise en place le 4 octobre 2026 pour un essai (étape 5.9, `docs/plan/etape-5-9.
 - **La machine** : Oracle Cloud, offre gratuite (« Always Free »), région Francfort, location `Dendrolag`. Une `VM.Standard.A1.Flex` (processeur Arm, 4 cœurs, 24 Go), Ubuntu 24.04 Minimal pour Arm, disque de 47 Go, adresse publique `92.5.46.188`. L'adresse est « éphémère » : gratuite, elle se garde tant que la machine existe, mais une machine supprimée et recréée en reçoit une autre ; il faut alors corriger le DNS et `deploiement/oracle/hote-connu`.
 - **Le nom** : `serveur.ninja.dendrolag.fr`, une entrée A chez Hostinger vers l'adresse de la machine. Caddy, sur la machine, obtient et renouvelle seul son certificat.
 - **La page** : la machine n'en sert plus depuis l'étape 5.13. Pendant l'essai, elle servait la sienne ; la seule page publique est désormais celle de Vercel, qui joint la machine.
-- **La base** : la branche `production`, comme Render. La branche d'essai `essai-oracle`, copiée de la production le 4 octobre 2026, est supprimée après la bascule : un compte créé pendant l'essai n'existe pas en production.
+- **La base** : la branche `production`, comme Render. La branche d'essai `essai-oracle`, copiée de la production le 4 octobre 2026, ne sert plus depuis la bascule, et se supprime depuis la console Neon : un compte créé pendant l'essai n'existe pas en production.
 
 Sur la machine :
 
