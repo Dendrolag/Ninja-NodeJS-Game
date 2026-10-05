@@ -47,7 +47,7 @@ Que le son ne fasse plus ramer la page sur iPhone, et que le relevé dise dans q
 ## Problèmes connus et dette
 
 - Le relevé sur l'iPhone, son compris (définition de terminé, point 3).
-- Le dépôt contenait en début de session des fichiers du client modifiés par une autre session, par leurs seules fins de ligne (aucune différence de contenu), et son handoff non suivi `docs/handoffs/textes-du-jeu-handoff.md`. Laissés tels quels, non commités ici.
+- Le dépôt contenait en début de session des fichiers du client modifiés par une autre session, par leurs seules fins de ligne (aucune différence de contenu), et son handoff `docs/handoffs/textes-du-jeu-handoff.md`, qu'elle a commité pendant cette session (`4cc6637`). Les fichiers du client sont laissés tels quels, non commités ici.
 
 ## Prochaine action exacte
 
