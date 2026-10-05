@@ -36,7 +36,7 @@ Qu'un son qui a lieu à un endroit de la carte baisse avec la distance à notre 
 - Ajoutés: la loi (plein volume de près, silence à la portée, le quart à 800 pixels, décroissance sans remontée, côtés, borne, aplomb), le lieu de chaque fait (mines, mines de zone, fumée par son bout le plus proche, notre fumée et les sons non situés sans lieu), le lecteur (gain et panoramique propres à la lecture branchés sur le gain des effets, une place par lecture, silence hors de portée sans couper la lecture plus proche, sans panoramique, sans place, sans Web Audio), la boucle (écoute depuis notre personnage, depuis le centre de l'écran sans nous, sons non situés sans place).
 - Résultat: 3 731 tests Vitest au vert (suite complète); types (les trois configurations) et linter au vert. Bout en bout en local: `diagnostic`, `mine`, `mine-de-zone` et `poche`, 9 sur 9.
 - Couverture de packages/sim: inchangée, rien n'y a été touché.
-- État de la CI: voir le commit de l'étape; renseigné ci-dessous après la poussée.
+- État de la CI: verte sur `70a9a9e` (types, linter et tests, bout en bout, essai sur Oracle, mise en ligne).
 
 ## Décisions et écarts au plan
 
