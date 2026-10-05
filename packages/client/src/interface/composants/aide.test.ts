@@ -33,3 +33,32 @@ describe('les objets de l aide', () => {
     }
   });
 });
+
+describe('les textes de l aide', () => {
+  /** Le texte visible de l'aide, espaces ramenes a un seul. */
+  function texteDeLAide(): string {
+    return (monterAide(document).corps.textContent ?? '').replace(/\s+/gu, ' ');
+  }
+
+  it('ecrivent en lettres les petits nombres tires des constantes', () => {
+    const texte = texteDeLAide();
+
+    expect(texte).toContain('Cinq charges, une revient toutes les cinq secondes.');
+    expect(texte).toContain('Un Black Ninja encaisse trois tirs avant de tomber.');
+    expect(texte).toContain('et à la troisième ils sont éliminés.');
+    expect(texte).toContain('Leurs charges mettent dix secondes à revenir.');
+    expect(texte).toContain('la zone s’ouvre trois secondes plus tard.');
+    expect(texte).not.toMatch(/undefined|NaN/u);
+  });
+
+  it('laissent l Evade a decouvrir, et donnent une section aux Black Ninjas', () => {
+    const titres = [...monterAide(document).corps.querySelectorAll('h3')].map(
+      (h3) => h3.textContent,
+    );
+    const texte = texteDeLAide();
+
+    expect(titres.slice(0, 3)).toEqual(['Le principe', 'Les Black Ninjas', 'L’Évadé']);
+    expect(texte).toContain('peut-être vaudrait-il le coup de l’attraper…');
+    expect(texte).not.toContain('x2');
+  });
+});

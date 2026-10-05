@@ -1,12 +1,15 @@
 /**
  * L'aide: comment jouer, et avec quelles touches.
  *
- * LES TEXTES SONT CEUX DE L'ETAPE 4.5, arretes avec le porteur du projet le 19
- * septembre 2026: un ton court et un peu decale pour les bonus et les malus, et le
- * texte de chaque mode que lisent aussi l'accueil et la creation. Sous ce texte, les
- * regles exactes, chiffrees depuis les constantes du contrat: c'est ici qu'un joueur
- * comprend pourquoi son score est retombe. Le joueur lit « PNJ » la ou le jeu
- * d'origine disait « faux ninjas ».
+ * LES TEXTES ONT ETE REVUS AVEC LE PORTEUR DU PROJET LE 5 OCTOBRE 2026: plus courts,
+ * un ton decale, et le plaisir de la decouverte laisse au joueur. L'aide dit ce qu'il
+ * faut pour jouer, pas tout: l'Evade, les Black Ninjas et les effets de la mine selon
+ * le mode se decouvrent en partie. Sous le texte de chaque mode, que lisent aussi
+ * l'accueil et la creation, ses regles, chiffrees depuis les constantes du contrat.
+ * Le joueur lit « PNJ » la ou le jeu d'origine disait « faux ninjas ».
+ *
+ * LES PETITS NOMBRES S'ECRIVENT EN LETTRES (« cinq charges »), toujours tires des
+ * constantes: un reglage change, le texte suit.
  *
  * L'AIDE S'ORGANISE PAR MODE. Un principe commun, puis une section par mode, dans
  * l'ordre du contrat: un mode ajoute sans ses regles est une erreur de compilation.
@@ -31,9 +34,9 @@ import {
   IMAGES_PAR_OBJET,
   COMBO,
   MASSACRE,
+  MINES_DE_ZONE,
   MODES,
   OBJETS_TACTIQUES,
-  SCORE,
   TACTIQUE,
 } from '@neon-ninja/shared';
 
@@ -48,6 +51,43 @@ import { NOMS_DES_MODES, TEXTES_DES_MODES } from '../modeles/cartes.js';
 import type { Fenetre } from './fenetre.js';
 import { monterFenetre } from './fenetre.js';
 
+/** Un nombre a virgule, a la francaise. */
+function nombreFr(valeur: number): string {
+  return String(valeur).replace('.', ',');
+}
+
+/** Les nombres de un a dix, en lettres. */
+const EN_LETTRES = ['un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'dix'];
+
+/** Les rangs de un a dix, en lettres. */
+const RANGS_EN_LETTRES = [
+  'première',
+  'deuxième',
+  'troisième',
+  'quatrième',
+  'cinquième',
+  'sixième',
+  'septième',
+  'huitième',
+  'neuvième',
+  'dixième',
+];
+
+/** Un petit nombre en lettres, « cinq »; en chiffres au-dela de dix. */
+function enLettres(valeur: number): string {
+  return EN_LETTRES[valeur - 1] ?? String(valeur);
+}
+
+/** Un rang en lettres, au feminin, « troisième »; « 12e » au-dela de dix. */
+function rangEnLettres(valeur: number): string {
+  return RANGS_EN_LETTRES[valeur - 1] ?? `${String(valeur)}e`;
+}
+
+/** Le texte avec une majuscule en tete. */
+function majuscule(texte: string): string {
+  return texte.charAt(0).toUpperCase() + texte.slice(1);
+}
+
 /** Ce que fait chaque bonus (etape 4.5). */
 const EFFETS_BONUS: Readonly<Record<TypeBonus, string>> = {
   vitesse: 'Pour ceux qui trouvaient le jeu trop lent.',
@@ -57,9 +97,8 @@ const EFFETS_BONUS: Readonly<Record<TypeBonus, string>> = {
 
 /** Ce que fait chaque objet de poche (etape 7.10). */
 const EFFETS_POCHE: Readonly<Record<ObjetDePoche, string>> = {
-  fumee:
-    'Gardez-la pour le bon moment. Un nuage, et vous reparaissez loin de là, à l’abri des autres. Personne ne sait que vous l’avez.',
-  mine: 'Posez-la sous vos pieds : les autres n’en voient qu’un reflet. Un adversaire ou un Black Ninja qui passe dessus l’arme, et elle saute une seconde et demie plus tard, dans un grand rayon. En Horde, en Tactique et en Équipes, elle coûte 15 % de leurs ninjas aux adversaires touchés. En Massacre, elle tue. En Chasse, une proie y perd 15 % de ses points, un traqueur a son arme enrayée 3 secondes. Elle détruit les Black Ninjas, jamais vous ni vos coéquipiers. Trois au plus sur la carte.',
+  fumee: 'Un nuage, et vous voilà loin, à l’abri. Personne ne sait que vous en avez une.',
+  mine: 'Posez-la, les autres n’en voient qu’un reflet. Qu’un adversaire ou un Black Ninja marche dessus et elle saute peu après. Jamais sur vous ni sur vos coéquipiers. Trois au plus sur la carte.',
 };
 
 /** Ce que fait chaque malus (etape 4.5). */
@@ -71,22 +110,17 @@ const EFFETS_MALUS: Readonly<Record<TypeMalus, string>> = {
 
 /** Ce que fait chaque bonus du Tactique (etape 7.7). */
 const EFFETS_BONUS_TACTIQUES: Readonly<Record<TypeBonusTactique, string>> = {
-  rafale: 'Tirez sans compter, aucun tir ne coûte de charge.',
-  rechargeRapide: `Une charge revient en ${nombreFr(OBJETS_TACTIQUES.RECHARGE_RAPIDE_MS / 1000)} seconde.`,
+  rafale: 'Tirez sans compter.',
+  rechargeRapide: `Vos charges reviennent en ${nombreFr(OBJETS_TACTIQUES.RECHARGE_RAPIDE_MS / 1000)} seconde.`,
   viseeLarge: 'Votre cône s’ouvre et porte plus loin.',
 };
 
 /** Ce que fait chaque malus du Tactique (etape 7.7). */
 const EFFETS_MALUS_TACTIQUES: Readonly<Record<TypeMalusTactique, string>> = {
-  tirUnique: 'Les autres n’ont plus qu’une charge en main, le reste attend la fin.',
-  rechargeLente: `Leurs charges reviennent en ${String(OBJETS_TACTIQUES.RECHARGE_LENTE_MS / 1000)} secondes.`,
+  tirUnique: 'Les autres n’ont plus qu’une charge.',
+  rechargeLente: `Leurs charges mettent ${enLettres(OBJETS_TACTIQUES.RECHARGE_LENTE_MS / 1000)} secondes à revenir.`,
   viseeEtroite: 'Leur cône se resserre et porte moins loin.',
 };
-
-/** Un nombre a virgule, a la francaise. */
-function nombreFr(valeur: number): string {
-  return String(valeur).replace('.', ',');
-}
 
 /**
  * La couleur de la mine de zone qui cache chaque zone (etape 7.12), qui est celle de la zone
@@ -100,8 +134,7 @@ const COULEURS_ZONES: Readonly<Record<TypeZone, string>> = {
 };
 
 /** Comment une zone s'ouvre, depuis l'etape 7.12. */
-const MINES_DE_ZONE_AIDE =
-  'Les zones ne naissent plus seules : la carte pose des mines de zone, visibles de tous, de la couleur de la zone qu’elles cachent. Un joueur ou un Black Ninja qui marche dessus l’arme, et la zone s’ouvre 3 secondes plus tard, là où était la mine. À vous de choisir où l’ouvrir.';
+const MINES_DE_ZONE_AIDE = `Les zones dorment sous des mines visibles de tous, de leur couleur. Marchez dessus et la zone s’ouvre ${enLettres(MINES_DE_ZONE.DELAI_AVANT_OUVERTURE_MS / 1000)} secondes plus tard. À vous de choisir où.`;
 
 /** Ce que fait chaque zone. Textes du jeu d'origine. */
 const EFFETS_ZONES: Readonly<Record<TypeZone, string>> = {
@@ -121,7 +154,7 @@ const COMMANDES: readonly (readonly [string, string])[] = [
   ['Q, A ou flèche gauche', 'Aller à gauche'],
   ['D ou flèche droite', 'Aller à droite'],
   ['F', 'Localiser votre ninja'],
-  ['E', 'Vous servir de ce que vous avez en poche : la fumée, ou poser la mine'],
+  ['E', 'Sortir l’objet de la poche'],
   ['Espace', 'Capturer en Tactique et en Chasse, trancher en Massacre'],
   ['Pouce sur l’écran', 'Se déplacer, sur téléphone et tablette'],
   ['Bouton Capturer ou Katana', 'La même chose qu’Espace, sur téléphone et tablette'],
@@ -131,29 +164,29 @@ const COMMANDES: readonly (readonly [string, string])[] = [
 /** Les regles exactes de chaque mode, sous son texte de presentation. */
 const REGLES_DES_MODES: Readonly<Record<Mode, readonly string[]>> = {
   classique: [
-    'Touchez un PNJ pour le rallier à votre couleur. Touchez un autre joueur pour le capturer et il vous cède d’un coup tous les ninjas de sa couleur.',
-    'Votre score, ce sont les ninjas que vous gardez. Se faire capturer le fait retomber, seul compte ce que vous tenez à la fin.',
-    `Ralliez les PNJ à moins de ${String(COMBO.FENETRE_MS / 1000)} secondes d’intervalle et votre combo monte d’un cran tous les ${String(COMBO.COUPS_PAR_CRAN)} ninjas, jusqu’à x${String(COMBO.MULTIPLICATEUR_MAXIMUM)}. Chaque ninja rapporte alors une prime, le multiplicateur moins un. La prime compte dans votre score et se perd avec vos ninjas si l’on vous capture.`,
+    'Touchez un PNJ pour le rallier, un joueur pour lui prendre tous ses ninjas.',
+    'Votre score, c’est ce que vous tenez. Capturé, il retombe à zéro.',
+    `Ralliez vite et le combo grimpe jusqu’à x${String(COMBO.MULTIPLICATEUR_MAXIMUM)}. Ses points partent avec vos ninjas si l’on vous capture.`,
   ],
   tactique: [
-    'Toucher ne capture plus. Espace ou le bouton Capturer prend tout ce qui se trouve dans le cône, à courte distance devant vous.',
-    `Vous avez ${String(TACTIQUE.CHARGES_MAXIMUM)} charges, que l’arc sous votre ninja montre. Un tir qui prend quelque chose en coûte une, qui revient en ${String(TACTIQUE.RECHARGE_MS / 1000)} secondes. Un tir dans le vide ne coûte rien.`,
-    `Un Black Ninja ne se capture pas. Il encaisse ${String(TACTIQUE.COUPS_POUR_VAINCRE_UN_BOT_NOIR)} tirs, un éclat confirme chaque coup, et le dernier le détruit pour ${String(SCORE.POINTS_PAR_BOT_NOIR)} points.`,
-    'La vue est plus proche que dans les autres modes, et la minimap ne montre que les joueurs autour de vous. Six objets propres au mode changent votre arme ou celle des autres.',
+    'Toucher ne suffit plus. Espace ou le bouton Capturer prend tout ce qui est dans le cône devant vous.',
+    `${majuscule(enLettres(TACTIQUE.CHARGES_MAXIMUM))} charges, une revient toutes les ${enLettres(TACTIQUE.RECHARGE_MS / 1000)} secondes. Un tir dans le vide ne coûte rien.`,
+    `Un Black Ninja encaisse ${enLettres(TACTIQUE.COUPS_POUR_VAINCRE_UN_BOT_NOIR)} tirs avant de tomber.`,
+    'Vue plus serrée, minimap limitée, et six objets rien que pour ce mode.',
   ],
   equipes: [
-    'Les PNJ que vous touchez rejoignent votre équipe. Son score est la somme de ses ninjas et des points de Black Ninjas de ses membres.',
-    'Capturer un adversaire vous donne sa part des ninjas de son équipe.',
+    'Vos PNJ rejoignent votre équipe, qui marque tout ce qu’elle tient.',
+    'Capturez un adversaire pour lui prendre sa part.',
   ],
   chasse: [
-    `Des traqueurs sont tirés au sort. Ils tirent devant eux avec Espace ou le bouton Capturer, et le tir prend ce qui est le plus proche. Une proie devient traqueur à son tour, un PNJ coûte une vie. À la ${String(CHASSE.VIES_DES_TRAQUEURS)}e, le traqueur est éliminé.`,
-    `Une proie marque un point tous les ${String(CHASSE.PIXELS_PAR_POINT)} pixels parcourus. Cachée et immobile, elle ne marque rien. Un traqueur marque ${String(CHASSE.POINTS_PAR_CAPTURE)} points par capture et ${String(CHASSE.POINTS_PAR_VIE)} par vie qui lui reste.`,
-    'Pas de Black Ninjas dans ce mode.',
+    `Les traqueurs, tirés au sort, tirent avec Espace ou le bouton Capturer. Une proie touchée devient traqueur. Un PNJ touché leur coûte une vie, et à la ${rangEnLettres(CHASSE.VIES_DES_TRAQUEURS)} ils sont éliminés.`,
+    `Les proies marquent en bougeant. Les traqueurs marquent ${String(CHASSE.POINTS_PAR_CAPTURE)} points par prise et ${String(CHASSE.POINTS_PAR_VIE)} par vie restante.`,
+    'Pas de Black Ninjas ici.',
   ],
   massacre: [
-    `On ne capture plus. Espace ou le bouton Katana tranche tout ce qui se trouve devant vous. Un PNJ vaut ${String(MASSACRE.POINTS_PAR_BOT)} points, un Black Ninja ${String(MASSACRE.POINTS_PAR_BOT_NOIR)}, fois votre multiplicateur.`,
-    `Enchaînez les morts à moins de ${String(COMBO.FENETRE_MS / 1000)} secondes d’intervalle et le multiplicateur monte d’un cran toutes les ${String(COMBO.COUPS_PAR_CRAN)} morts, jusqu’à x${String(COMBO.MULTIPLICATEUR_MAXIMUM)}. Un joueur tranché perd son combo et la moitié de ses points, qui vont à son tueur.`,
-    `Carte nettoyée avant la fin ? ${String(MASSACRE.POINTS_PAR_SECONDE_RESTANTE)} points par seconde restante. Le sang se règle dans le panneau du son.`,
+    `On ne capture plus, on tranche, avec Espace ou le bouton Katana. Un PNJ vaut ${String(MASSACRE.POINTS_PAR_BOT)} points, un Black Ninja ${String(MASSACRE.POINTS_PAR_BOT_NOIR)}, multipliés par votre combo.`,
+    `Enchaînez et le combo grimpe jusqu’à x${String(COMBO.MULTIPLICATEUR_MAXIMUM)}. Tranché, vous perdez votre combo et la moitié de vos points, au profit de votre tueur.`,
+    `Carte nettoyée avant la fin\u00a0? ${String(MASSACRE.POINTS_PAR_SECONDE_RESTANTE)} points par seconde restante.`,
   ],
 };
 
@@ -169,10 +202,21 @@ export function monterAide(doc: Document): Fenetre {
       creer(doc, 'h3', { texte: 'Le principe' }),
       creer(doc, 'p', {
         texte:
-          'Des joueurs et des centaines de PNJ, ces ninjas sans joueur, se partagent la carte. Chaque mode en fait autre chose. Le meilleur score à la fin de la partie l’emporte.',
+          'Quelques joueurs, des centaines de PNJ (des ninjas sans joueur derrière) et un seul gagnant, le meilleur score à la fin.',
       }),
       creer(doc, 'p', {
-        texte: `Les Black Ninjas débarquent en cours de partie et chassent les joueurs. S’ils vous attrapent, vous perdez une partie de votre score. Invincible, vous les détruisez en les touchant et chacun rapporte ${String(SCORE.POINTS_PAR_BOT_NOIR)} points. En Massacre, seul le katana en vient à bout. En Tactique, trois tirs suffisent.`,
+        texte:
+          'Vous incarnez un ninja parmi des dizaines voire des centaines d’autres. Cachez-vous des autres joueurs, identifiez-les et capturez-les ou éliminez-les.',
+      }),
+    ),
+    creer(
+      doc,
+      'section',
+      { classe: 'aide-section' },
+      creer(doc, 'h3', { texte: 'Les Black Ninjas' }),
+      creer(doc, 'p', {
+        texte:
+          'Ils débarquent en cours de partie et cherchent les vrais joueurs. S’ils vous attrapent, adieu la moitié de vos points. Trouvez un moyen de les éliminer.',
       }),
     ),
     // L'Evade (etape 7.9), dans tous les modes sauf la Chasse.
@@ -183,11 +227,7 @@ export function monterAide(doc: Document): Fenetre {
       creer(doc, 'h3', { texte: 'L’Évadé' }),
       creer(doc, 'p', {
         texte:
-          'Une fois par partie, un ninja rayé rouge et blanc se glisse parmi les PNJ. Il file plus vite que vous et s’enfuit au bout de 45 secondes : coincez-le, à plusieurs ou avec un Boost. Qui l’attrape, ou l’élimine en Massacre, voit tout son score compter double jusqu’à la fin, et toute son équipe en Équipes.',
-      }),
-      creer(doc, 'p', {
-        texte:
-          'Tout le monde voit qui porte le x2. Capturez-le pour le lui prendre. Un Black Ninja qui l’attrape le détruit. Pas d’Évadé en Chasse.',
+          'Un ninja au style particulier cherche à échapper aux vrais ninjas, peut-être vaudrait-il le coup de l’attraper…',
       }),
     ),
     ...MODES.map((mode) =>
@@ -206,7 +246,7 @@ export function monterAide(doc: Document): Fenetre {
       'À garder en poche',
       Object.entries(EFFETS_POCHE) as [ObjetDePoche, string][],
       true,
-      'Votre poche ne tient qu’un objet, jusqu’à ce que vous vous en serviez. Pleine, vous passez sur le suivant sans le prendre. Se faire prendre la vide.',
+      'Un seul objet à la fois, à sortir quand vous voulez. Pleine, vous ne pouvez rien prendre de plus. Capturé, vous la perdez.',
     ),
     liste(
       doc,
@@ -223,7 +263,7 @@ export function monterAide(doc: Document): Fenetre {
         ...(Object.entries(EFFETS_MALUS_TACTIQUES) as [TypeMalusTactique, string][]),
       ],
       true,
-      'Les trois premiers sont des bonus, les trois suivants des malus qui frappent les autres. Un bonus et le malus contraire s’annulent tant que les deux durent.',
+      'Trois bonus pour vous, trois malus pour les autres. Un bonus et son contraire s’annulent.',
     ),
     creer(
       doc,

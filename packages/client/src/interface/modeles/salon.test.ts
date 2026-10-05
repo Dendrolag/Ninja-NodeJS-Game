@@ -13,6 +13,7 @@ import { describe, expect, it } from 'vitest';
 import { progressionDEssai } from '../../comptes/api.js';
 import type { EtatClient } from '../../etat.js';
 import { ETAT_INITIAL } from '../../etat.js';
+import { CAPTURES_DES_MODES } from './cartes.js';
 import { initiales, modeleSalon } from './salon.js';
 
 /** Les membres du salon, avec l'hote designe. */
@@ -58,8 +59,8 @@ describe('modeleSalon', () => {
     const classique = modeleSalon(etat(salon('bob')));
     const tactique = modeleSalon(etat({ ...salon('bob'), mode: 'tactique' }));
 
-    expect(classique?.regle).toContain('en touchant');
-    expect(tactique?.regle).toContain('cône');
+    expect(classique?.regle).toBe(CAPTURES_DES_MODES.classique);
+    expect(tactique?.regle).toBe(CAPTURES_DES_MODES.tactique);
   });
 
   it('nomme le salon d apres son hote et marque l hote et nous-memes', () => {

@@ -98,20 +98,20 @@ export const TEXTES_DES_MODES: Readonly<Record<Mode, string>> = {
 /**
  * Comment on capture dans chaque mode: ce que le salon rappelle avant le lancement,
  * pour qu'un joueur arrive par la partie rapide sache a quoi il joue. Ce rappel reste
- * pratique, touches, charges et vies comprises. Depuis l'etape 4.5, le joueur lit
- * « PNJ » la ou il lisait « faux ninjas ».
+ * pratique, touches et charges comprises. Depuis l'etape 4.5, le joueur lit « PNJ » la
+ * ou il lisait « faux ninjas ». Textes raccourcis avec le porteur du projet le 5
+ * octobre 2026.
  */
 export const CAPTURES_DES_MODES: Readonly<Record<Mode, string>> = {
   classique:
-    'On capture en touchant. Un PNJ rejoint votre couleur, un joueur vous cède tous les siens. Enchaînez les PNJ pour monter votre combo.',
+    'Touchez un PNJ pour le rallier, un joueur pour lui prendre tous les siens. Enchaînez pour le combo.',
   tactique:
-    'On capture à distance. Espace ou le bouton Capturer prend tout ce qui est dans le cône devant vous. Cinq charges, dont une revient toutes les cinq secondes.',
-  equipes:
-    'On capture en touchant, en équipe. Un PNJ passe à la couleur de votre équipe, un adversaire vous cède sa part des ninjas de son équipe.',
+    'Espace ou le bouton Capturer prend tout ce qui est devant vous. Cinq charges, une revient toutes les cinq secondes.',
+  equipes: 'Touchez un PNJ pour votre équipe, un adversaire pour lui prendre sa part.',
   chasse:
-    'Les traqueurs tirent devant eux avec Espace ou le bouton Capturer. Une proie touchée devient traqueur, un PNJ leur coûte une vie sur trois. Les proies marquent en bougeant.',
+    'Traqueurs, tirez avec Espace ou le bouton Capturer. Proies, bougez pour marquer et ne vous faites pas prendre.',
   massacre:
-    'On ne capture plus. Espace ou le bouton Katana tranche tout ce qui est devant vous, PNJ comme joueurs. Enchaînez les morts pour multiplier les points.',
+    'Espace ou le bouton Katana tranche tout ce qui est devant vous. Enchaînez pour multiplier les points.',
 };
 
 /** Le nom d'une carte tel qu'on l'affiche, mode miroir compris. */

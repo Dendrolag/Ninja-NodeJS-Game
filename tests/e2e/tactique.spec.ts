@@ -109,7 +109,7 @@ test('creer une partie Tactique, s approcher d un faux ninja et le prendre par u
 
   // -- La creation et le salon -------------------------------------------------
   await creerUnePartieTactique(page);
-  await expect(page.locator('.salon-regle')).toContainText('cône');
+  await expect(page.locator('.salon-regle')).toContainText('Cinq charges');
   await regler(page, PARTIE_TACTIQUE);
   await lancer(page);
 
