@@ -51,18 +51,17 @@ Détail dans la section « Réconciliation » de la fiche.
 - **La production suit la page** au lieu d'Oracle toujours en premier: sans cela, la poussée suivante annulait un retour vers Render, ou bloquait toute mise en ligne Oracle mort.
 - **La bascule a son propre workflow**, un déclenchement manuel de `ci.yml` relançant tous ses jobs.
 - **La première mise en ligne de l'étape s'est faite avec Render en production** (la page le joignait encore), Oracle mis à jour en secours sur la base de production; la bascule vers Oracle a été la bascule de la production.
-- **La branche Neon `essai-oracle`** est à supprimer par le porteur du projet depuis la console Neon: une suppression définitive de données ne se fait pas par la session.
+- **La branche Neon `essai-oracle`** a été supprimée par le porteur du projet depuis la console Neon, le 5 octobre 2026: une suppression définitive de données ne se fait pas par la session.
 
 ## Problèmes connus et dette
 
-- **La branche Neon `essai-oracle` existe encore** (`br-misty-forest-b2pxtlgf`): plus rien ne l'utilise, le porteur du projet la supprime depuis la console Neon (projet `neon-ninja`, Branches, `essai-oracle`, Delete).
 - **Les accès de la session à la machine de production sont refusés** par le garde-fou de Claude Code (lecture comme écriture par SSH): toute manipulation de la machine passe par le porteur du projet, avec les commandes de `docs/deploiement.md`.
 - **La récupération par Oracle** reste inconnue avant la fin de l'essai gratuit, vers le 3 novembre 2026 (étape 5.9). Si elle arrive: basculer vers Render.
 - **Le secours Render dort**: après une bascule vers lui, le premier joueur attend 15 à 60 secondes.
 
 ## Prochaine action exacte
 
-Rappeler au porteur du projet la suppression de la branche Neon `essai-oracle` si elle existe encore. Puis exécuter l'étape `5.14`, une CI plus courte: lire `docs/plan/etape-5-14.md`. Vers le 10 novembre 2026, vérifier que la machine Oracle tourne toujours et clore la 5.9.
+Exécuter l'étape `5.14`, une CI plus courte: lire `docs/plan/etape-5-14.md`. Vers le 10 novembre 2026, vérifier que la machine Oracle tourne toujours et clore la 5.9.
 
 ## Étape suivante
 
