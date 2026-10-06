@@ -15,21 +15,23 @@ Qu'une poussée sur `master` parte en ligne en 10 à 12 minutes au lieu de 26, s
 - **Le banc de mesure du rendu sur sa propre machine**, sans rejouer ses dépendances (`--no-deps`).
 - **Un seul rapport de Playwright**: chaque part écrit un rapport brut, le job « Rapport de bout en bout » les fusionne dans l'artefact `rapport-playwright`, conservé sept jours, échec ou non.
 - **Plus rien n'attend la vérification**: tous les jobs de tests partent ensemble, la mise en ligne les attend tous.
+- **L'installation des navigateurs bornée à deux minutes, puis reprise une fois**: à l'exécution 37382833235, une part est restée 17 minutes à installer les paquets système de Chromium sur un miroir d'Ubuntu qui ne débitait plus (une installation sur 72 relevées). La reprise a été éprouvée sur une branche d'essai, supprimée depuis.
 - **Les tests de la base dans leur propre job**, huit fichiers à la fois au lieu de trois: ils attendent le réseau entre GitHub et Neon, pas le processeur (57 s en local près de Neon, 734 s cumulés sur GitHub). Job de 2 min 33 à 3 min 08, contre 5 min de tests dans la vérification.
 
 Durées après, de la poussée à la mise en ligne:
 
-| Exécution   | Commit    | Tests verts | En ligne     | Remarque                                                        |
-| ----------- | --------- | ----------- | ------------ | --------------------------------------------------------------- |
-| 37380514396 | `747f54a` | 4 min 44    | **8 min 54** | Mise en ligne 4 min 07                                          |
-| 37381765111 | `0ff90ce` | 4 min 23    | **7 min 20** | Mise en ligne 2 min 55                                          |
-| (ce commit) | handoff   | voir CI     | sans objet   | Commit de documentation: rien à mettre en ligne, par conception |
+| Exécution   | Commit    | Tests verts | En ligne     | Remarque                                                                                            |
+| ----------- | --------- | ----------- | ------------ | --------------------------------------------------------------------------------------------------- |
+| 37380514396 | `747f54a` | 4 min 44    | **8 min 54** | Mise en ligne 4 min 07                                                                              |
+| 37381765111 | `0ff90ce` | 4 min 23    | **7 min 20** | Mise en ligne 2 min 55                                                                              |
+| 37382833235 | `4aa1abb` | 19 min 07   | sans objet   | Documentation, rien à mettre en ligne; une installation bloquée sur un miroir d'Ubuntu (ci-dessous) |
+| 37386069264 | `6bda154` | 4 min 41    | **8 min 47** | Mise en ligne 4 min 03, avec la reprise de l'installation                                           |
 
 Le chemin le plus long est désormais la plus longue part du bout en bout, la première ou la troisième (4 min 19 à 4 min 39, dont 3 min 37 de scénarios au plus), puis la mise en ligne elle-même (3 à 4 minutes, hors périmètre).
 
 ## Fichiers créés ou modifiés
 
-- `.github/workflows/ci.yml`: jobs « Tests de la base », « Bout en bout (1 à 10) », « Banc de mesure du rendu », « Rapport de bout en bout »; la vérification ne joue plus que les tests unitaires; la mise en ligne attend la vérification, la base, les dix parts et le banc.
+- `.github/workflows/ci.yml`: jobs « Tests de la base », « Bout en bout (1 à 10) », « Banc de mesure du rendu », « Rapport de bout en bout »; l'installation des navigateurs bornée et reprise; la vérification ne joue plus que les tests unitaires; la mise en ligne attend la vérification, la base, les dix parts et le banc.
 - `playwright.config.ts`: rapport brut (`blob`) en CI au lieu du rapport HTML; commentaire du banc.
 - `eslint.config.js`, `.prettierignore`: le dossier `blob-report` ignoré.
 - `docs/deploiement.md`: ce qu'attend la mise en ligne.
@@ -40,9 +42,9 @@ Aucune modification de `legacy/`, de `tests/caracterisation/`, de `packages/` ni
 ## Tests
 
 - Ajoutés: aucun; l'étape ne change que la façon de les lancer. Vérifié en local que les dix parts et le banc couvrent les 95 scénarios, ni plus ni moins (92 + 3), et que la fusion des rapports bruts donne un rapport HTML complet.
-- Résultat: 3 615 tests unitaires au vert, 138 tests de la base au vert, 95 scénarios au vert à chaque exécution, sans échec intermittent.
+- Résultat: 3 615 tests unitaires au vert, 138 tests de la base au vert, 95 scénarios au vert à chaque exécution, tous du premier coup, sans échec intermittent nouveau.
 - Couverture de packages/sim: inchangée, non touché.
-- État de la CI: verte sur `747f54a` (37380514396) et `0ff90ce` (37381765111), mises en ligne comprises; production (Oracle) et secours (Render) servent `0ff90ce`.
+- État de la CI: verte sur `747f54a` (37380514396), `0ff90ce` (37381765111), `4aa1abb` (37382833235) et `6bda154` (37386069264), mises en ligne comprises; production (Oracle) et secours (Render) servent `6bda154`. GitHub a livré deux fois la poussée de `6bda154`: la seconde exécution (37386068053), verte aussi, a trouvé le commit déjà en ligne.
 
 ## Décisions et écarts au plan
 
@@ -50,8 +52,8 @@ Détail dans la section « Réconciliation » de la fiche.
 
 - **Dix parts réparties par nombre** plutôt que six réparties par durée: rien à entretenir quand un scénario s'ajoute; les machines sont gratuites pour un dépôt public.
 - **Les tests de la base à part, huit fichiers à la fois**, plutôt que regrouper leurs requêtes ou découper `amis.test.ts`: suffisant à ce jour, sans toucher aux tests.
-- **Le cache des navigateurs de Playwright** n'est pas posé: une vingtaine de secondes par part, pour un gain marginal.
-- **Le troisième relevé est un commit de documentation**, qui ne se met jamais en ligne (étape 5.4): la définition de terminé demande trois relevés d'une poussée de code; deux ont été mesurés de bout en bout, le troisième mesure les tests seuls. Créer un commit de code pour le seul relevé n'aurait rien vérifié de plus que les deux premiers.
+- **Le cache des navigateurs de Playwright** n'est pas posé: une vingtaine de secondes par part, pour un gain marginal. **L'image Docker de Playwright**, qui éviterait apt, non plus: elle change l'environnement du banc et des scénarios, et son numéro doit suivre Playwright à la main.
+- **Trois relevés d'une poussée de code mise en ligne**: 8 min 54, 7 min 20 et 8 min 47. Le commit de documentation intercalé (`4aa1abb`) ne se met jamais en ligne (étape 5.4); c'est lui qui a révélé l'installation bloquée, corrigée par `6bda154`.
 
 ## Problèmes connus et dette
 
