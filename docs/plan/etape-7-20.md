@@ -134,10 +134,10 @@ Micro-décisions au sens du PROTOCOLE. Chacune se consigne au journal de `docs/d
 ## Hors périmètre
 
 - Les mini-jeux, la carte plein écran, les tâches visuelles, la barre des tâches en réglage (étape 7.21).
-- Les sabotages et l'aide des fantômes (étape 7.22).
+- Les sabotages, l'aide des fantômes et leur malédiction (étape 7.22).
 - Les pas des autres joueurs (étape 7.23).
 - Les tâches longues (étape 7.24).
-- Les égouts, le déguisement, les ninjas égarés, la hantise, les traces de sang du tueur (étape 7.25).
+- Les égouts, le déguisement, les ninjas égarés, les traces de sang du tueur (étape 7.25).
 - L'occlusion de la vue par les murs, les autres cartes, la partie rapide qui mène à ce mode.
 - Toute modification des règles des autres modes, de `legacy/` ou de `tests/caracterisation/`.
 
