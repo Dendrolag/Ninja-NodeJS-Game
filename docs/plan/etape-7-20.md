@@ -14,7 +14,7 @@ Rédigée le 6 octobre 2026, à la suite de l'étude `docs/design/etude-mode-amo
 
 Lire CLAUDE.md, le dernier handoff (2.9, ou le handoff partiel de cette étape), cette fiche, `.claude/rules/sim-purity.md`, les sections 3 à 13 et 20 de l'étude, la fiche 7.3 et la fiche 2.9. Charger la compétence `conception-de-cartes` avant de poser les stations sur Tokyo.
 
-**Puis poser au porteur du projet les valeurs de la section « À confirmer au début de l'étape »**, en une seule fois, avec les propositions comme réponses par défaut. Ne rien construire avant sa réponse.
+Les valeurs chiffrées ont été confirmées par le porteur du projet le 6 octobre 2026 (section « Valeurs confirmées »).
 
 ## Décisions du porteur du projet
 
@@ -31,27 +31,27 @@ Du 5 octobre 2026 (la demande) et du 6 octobre 2026 (section 20 de l'étude):
 9. **Les tueurs voient les stations des proies et ne peuvent pas faire leurs tâches.**
 10. **Les PNJ: une foule neutre d'abord**, la foule qui sert au jeu (déguisement, ninjas égarés) plus tard.
 
-## À confirmer au début de l'étape
+## Valeurs confirmées par le porteur du projet, 6 octobre 2026
 
-Valeurs proposées par l'étude, que le porteur du projet n'a pas encore vues une par une. Les poser, puis reporter les réponses dans la section « Décisions du porteur du projet ».
+Posées au début de l'étape, avec les propositions de l'étude comme réponses par défaut. Les précisions en italique sont des micro-décisions de la session, qui traduisent une réponse ouverte en valeur; toutes se révisent après une partie d'essai.
 
-| Sujet                   | Proposition                                                                                                        |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Joueurs                 | 5 pour lancer, 12 au plus                                                                                          |
-| Tueurs                  | 1 de 5 à 6 joueurs, 1 à 2 de 7 à 8, 1 à 3 de 9 à 12. Par défaut: 1, 2, 2                                           |
-| Tâches par proie        | 2 à 8, 5 par défaut                                                                                                |
-| Rayon de vision         | Proie 260 px, tueur 380 px, en trois paliers par rôle au choix de l'hôte. Fantôme: toute la carte                  |
-| Meurtre                 | Portée 70 px, recharge 25 s (réglable de 10 à 60), 10 s au début de chaque tour                                    |
-| Signalement             | À 100 px d'un cadavre en vue                                                                                       |
-| Gong d'urgence          | Un par joueur et par partie, au centre de Tokyo, pas dans les 15 premières secondes d'un tour                      |
-| Réunion                 | Discussion 45 s, vote 45 s, chacun réglable de 15 à 120 s. Éjection affichée 5 s                                   |
-| Tour à durée maximale   | Aucune (par défaut), 2, 3 ou 5 minutes                                                                             |
-| Confirmer les éjections | Oui par défaut: « X était un tueur » ou « X n'était pas un tueur »                                                 |
-| Votes anonymes          | Non par défaut                                                                                                     |
-| Terme de la partie      | Pas de chronomètre affiché. Un terme de sécurité de 60 minutes de jeu, réunions non comptées: les tueurs y gagnent |
-| Foule neutre            | 40 PNJ sur Tokyo (0 à 80), d'un gris réservé                                                                       |
-| Tâche provisoire        | Rester 5 s dans le disque de la station, bouton d'action tenu                                                      |
-| Points et place en fin  | Vainqueurs d'abord. Points: 10 par tâche faite, 30 par meurtre, 20 par vote contre un tueur éjecté                 |
+| Sujet                   | Valeur retenue                                                                                                                                                                                                                                       |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Joueurs                 | 5 pour lancer, 12 au plus. À revoir selon la taille des cartes à venir                                                                                                                                                                               |
+| Tueurs                  | 1 de 5 à 6 joueurs, 1 à 2 de 7 à 8, 1 à 3 de 9 à 12. Par défaut: 1, 2, 2                                                                                                                                                                             |
+| Tâches par proie        | 3 à 8, 5 par défaut. Deux réglerait la partie trop vite                                                                                                                                                                                              |
+| Rayon de vision         | À essayer: le tueur semblait trop bien servi. _Trois paliers par rôle: proie 200, 260 (défaut) ou 320 px; tueur 260, 320 (défaut) ou 380 px._ Fantôme: toute la carte                                                                                |
+| Meurtre                 | Le tueur doit être collé à sa victime: _la portée est le contact, comme une capture_. Un meurtre à la fois par tueur. Recharge 25 s (réglable de 10 à 60), 10 s au début de chaque tour                                                              |
+| Signalement             | À 100 px d'un cadavre en vue. À tester                                                                                                                                                                                                               |
+| Gong d'urgence          | Un par joueur et par partie, au centre de Tokyo, pas dans les 15 premières secondes d'un tour                                                                                                                                                        |
+| Réunion                 | Discussion 45 s, vote 45 s, chacun réglable de 15 à 120 s. Éjection affichée 5 s                                                                                                                                                                     |
+| Confirmer les éjections | **Jamais.** Le doute reste jusqu'au dernier tueur: une éjection ne dit pas le rôle de l'éjecté. Seule l'éjection du dernier tueur se voit, puisqu'elle finit la partie. Pas de réglage                                                               |
+| Votes anonymes          | Non par défaut                                                                                                                                                                                                                                       |
+| Tour à durée maximale   | Aucune, 2, 3 ou 5 minutes. **3 minutes par défaut**                                                                                                                                                                                                  |
+| Terme de la partie      | **Aucun.** La partie ne finit que par la victoire d'un camp                                                                                                                                                                                          |
+| Foule neutre            | 40 PNJ sur Tokyo (0 à 80), d'un gris réservé. Le comportement des PNJ dans ce mode se révisera plus tard                                                                                                                                             |
+| Tâche provisoire        | Rester dans le disque de la station, bouton d'action tenu. _Une durée tirée à la graine entre 5 et 10 s pour chaque tâche de chaque liste_                                                                                                           |
+| Points et place en fin  | Le camp vainqueur d'abord, puis un sous-classement aux points, par des faits de jeu. _Tâche faite 10, cadavre signalé 15, vote contre un tueur éjecté 20, meurtre 30, tueur trouvé dès la première réunion 25, deux meurtres dès le premier tour 25_ |
 
 ## Décisions prises par cette fiche
 
@@ -63,10 +63,10 @@ Micro-décisions au sens du PROTOCOLE. Chacune se consigne au journal de `docs/d
 4. **Les phases sont une machine à états du moteur.** Pendant la révélation, la réunion et l'éjection, personne ne bouge, rien ne se ramasse, et le temps de jeu de la partie ne s'écoule pas, mais le compte à rebours de la phase avance. Ce n'est pas la pause de l'étape 1.7, qui fige tout. À la fin d'une éjection, les vivants sont replacés autour du gong, les cadavres retirés, et un tour commence.
 5. **Le meurtre** se joue dans `agir`, par la demande de capture existante (`capturer`): un tueur vivant, en phase de jeu, la recharge écoulée, prend la proie vivante la plus proche dans sa portée. À distance égale, l'ordre de l'état départage. La proie devient fantôme sur place, et un cadavre à sa couleur y reste. Les tueurs du battement passent dans un ordre tiré au sort, comme les tirs du Tactique. Aucun meurtre sur un tueur, un fantôme ou pendant une autre phase.
 6. **Une seule demande d'action, contextuelle**, ajoutée aux entrées du moteur (`EntreeJoueur.agir` ou nom à choisir à l'exécution): selon ce qui est à portée, dans cet ordre, signaler un cadavre, sonner le gong, faire la tâche de la station. La touche E, celle de la poche, la porte: la poche n'a pas d'objet dans ce mode. Le vote est une autre entrée, qui nomme un joueur ou « passer ».
-7. **La tâche provisoire**: une proie, vivante ou fantôme, qui tient l'action dans le disque d'une station de sa liste pendant 5 secondes fait la tâche. Sortir du disque ou lâcher l'action remet le compteur à zéro. Le moteur seul compte le temps: la page n'envoie que l'action tenue. Un tueur peut tenir l'action à une station, pour faire semblant: rien ne compte. Aux étapes suivantes, le mini-jeu remplace le maintien, et le moteur garde la présence et une durée minimale.
+7. **La tâche provisoire**: une proie, vivante ou fantôme, qui tient l'action dans le disque d'une station de sa liste pendant la durée de cette tâche (5 à 10 secondes) fait la tâche. Sortir du disque ou lâcher l'action remet le compteur à zéro. Le moteur seul compte le temps: la page n'envoie que l'action tenue. Un tueur peut tenir l'action à une station, pour faire semblant: rien ne compte. Aux étapes suivantes, le mini-jeu remplace le maintien, et le moteur garde la présence et une durée minimale.
 8. **Les stations de Tokyo** sont des données de la carte, à côté de ses dimensions: une place, un rayon (50 pixels), et les tâches qui lui vont (une seule, la provisoire, à cette étape). Les places partent de la section 10 de l'étude, se vérifient avec la commande de la compétence `conception-de-cartes` (chacune dans le morceau principal de l'étape 8.10, hors des murs), et se retournent avec le miroir (étape 8.3). Le gong a sa place. Les autres cartes n'ont pas de stations: le mode ne se propose que sur Tokyo.
 9. **Les fantômes** bougent comme les vivants, ne touchent rien, ne ramassent rien, et traversent les murs. Ce dernier point est un ajout au jeu de règles d'un mode (qui traverse les murs), qui rend « personne » dans les autres modes, sans coût. Un fantôme ne signale pas, ne sonne pas le gong et ne vote pas.
-10. **Les conditions de victoire** (`estDecidee`): toutes les tâches de toutes les proies faites, fantômes compris, ou tous les tueurs éjectés ou partis, et les proies gagnent. Les tueurs vivants au moins aussi nombreux que les proies vivantes, ou le terme de sécurité atteint, et les tueurs gagnent. Le camp vainqueur se lit dans l'état.
+10. **Les conditions de victoire** (`estDecidee`): toutes les tâches de toutes les proies faites, fantômes compris, ou tous les tueurs éjectés ou partis, et les proies gagnent. Les tueurs vivants au moins aussi nombreux que les proies vivantes, et les tueurs gagnent. Aucun terme: rien d'autre ne finit la partie. Le camp vainqueur se lit dans l'état.
 11. **Les contacts ne produisent rien**: ni capture, ni contagion, ni Évadé. Les réglages imposés par le mode (`imposerLesReglagesDuMode`) retirent les Black Ninjas, l'Évadé, les bonus, les malus, les zones, les mines de zone et les objets de poche.
 12. **La foule neutre**: des PNJ d'une couleur grise réservée à ce mode, qu'aucun joueur ne reçoit, et qui n'est pas une couleur de la palette. Ils errent comme partout.
 13. **Douze couleurs nommées pour les joueurs.** La palette en compte six, et au-delà les couleurs sont tirées (étape 5.8). Ce mode a besoin de douze couleurs distinctes, lisibles sur Tokyo, avec un nom pour chacune (« Rose », « Cyan »...), montré au salon, en réunion et à la fin. Si la palette du jeu doit grandir, c'est pour ce mode seul.
