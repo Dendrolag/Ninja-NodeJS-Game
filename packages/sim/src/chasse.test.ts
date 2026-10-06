@@ -532,6 +532,57 @@ describe('les contacts de la Chasse', () => {
 
     expect(resoudreContacts(etat, detecterContacts(etat), regleChasse)).toBe(etat);
   });
+
+  it('ne laissent pas un ninja a la couleur d une proie repeindre un autre ninja (etape 2.9)', () => {
+    const depart = chasseAvec();
+    const couleur = joueurDe(depart, 'proie').couleur;
+    let etat = ajouterBot(depart, { id: 'sosie', couleur, position: { x: 2000, y: 300 } });
+    etat = avecNinja(etat, 'voisin', { x: 2005, y: 305 });
+
+    const resolu = resoudreContacts(etat, detecterContacts(etat), regleChasse);
+
+    expect(resolu.bots.voisin?.couleur).toBe('#123456');
+  });
+});
+
+describe('les sosies des proies (etape 2.9)', () => {
+  /** Une Chasse a quatre joueurs, peuplee de PNJ, pas encore lancee. */
+  function peuplee(): EtatPartie {
+    let etat = partie();
+    for (const [rang, id] of ['a', 'b', 'c', 'd'].entries()) {
+      etat = avecJoueur(etat, id, { x: 300 + rang * 400, y: 300 });
+    }
+
+    return peuplerDeBots(etat, 60);
+  }
+
+  it('fait naitre chaque PNJ de la couleur d un joueur present', () => {
+    const etat = peuplee();
+    const couleursDesJoueurs = Object.values(etat.joueurs).map((joueur) => joueur.couleur);
+    const couleursDesPnj = Object.values(etat.bots).map((bot) => bot.couleur);
+
+    expect(couleursDesPnj.every((couleur) => couleursDesJoueurs.includes(couleur))).toBe(true);
+    expect(new Set(couleursDesPnj)).toEqual(new Set(couleursDesJoueurs));
+  });
+
+  it('peuple la carte de la meme facon a graine egale', () => {
+    expect(peuplee().bots).toEqual(peuplee().bots);
+  });
+
+  it('laisse a chaque proie ses sosies apres le tirage des traqueurs', () => {
+    const etat = lancerLaChasse(peuplee());
+    const proies = Object.values(etat.joueurs).filter((joueur) => !estTraqueur(etat, joueur.id));
+
+    for (const proie of proies) {
+      expect(Object.values(etat.bots).some((bot) => bot.couleur === proie.couleur)).toBe(true);
+    }
+  });
+
+  it('ne donne a aucun joueur de ninja porte, malgre les couleurs', () => {
+    const etat = lancerLaChasse(peuplee());
+
+    expect(calculerScores(etat).every((ligne) => ligne.botsPortes === 0)).toBe(true);
+  });
 });
 
 describe('le malus en Chasse', () => {
@@ -624,16 +675,19 @@ describe('le monde de la Chasse', () => {
     expect(faireApparaitreLesBotsNoirs(etat)).toBe(etat);
   });
 
-  it('pose ses ninjas d une couleur quelconque, jamais celle des traqueurs', () => {
-    // Le tirage qui l'exclut est prouve dans couleurs.test.ts, sur une graine qui tombe
-    // exactement dessus; ici, les ninjas d'une vraie Chasse lancee.
+  it('pose ses ninjas aux couleurs des joueurs, jamais celle des traqueurs', () => {
+    // Le serveur peuple la carte avant de lancer la Chasse; peuplee apres, les ninjas ne
+    // prennent toujours pas la couleur des traqueurs (etape 2.9).
     const salon = ajouterJoueur(ajouterJoueur(partie(), { id: 'a', pseudo: 'A' }), {
       id: 'b',
       pseudo: 'B',
     });
 
-    for (const bot of Object.values(peuplerDeBots(lancerLaChasse(salon), 200).bots)) {
-      expect(bot.couleur).not.toBe(COULEUR_DES_TRAQUEURS);
+    const lancee = lancerLaChasse(salon);
+    const proie = Object.values(lancee.joueurs).find((joueur) => !estTraqueur(lancee, joueur.id));
+
+    for (const bot of Object.values(peuplerDeBots(lancee, 200).bots)) {
+      expect(bot.couleur).toBe(proie?.couleur);
     }
   });
 });

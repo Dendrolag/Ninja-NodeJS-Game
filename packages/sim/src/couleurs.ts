@@ -134,3 +134,26 @@ export function couleurDeBot(alea: Alea, couleursExclues: readonly Couleur[]): T
     ...couleursExclues,
   ]);
 }
+
+/**
+ * Tire la couleur d'un PNJ de la Chasse: celle d'un joueur present, au hasard (etape 2.9).
+ *
+ * Decision du porteur du projet du 6 octobre 2026. Une proie garde sa couleur, et un PNJ
+ * ordinaire ne nait jamais d'une couleur de joueur: chaque proie etait donc seule de sa
+ * couleur sur la carte, et sa couleur la trahissait, a l'oeil comme dans le flux d'etat. Ici,
+ * chaque proie a des sosies exacts parmi les PNJ.
+ *
+ * La couleur des traqueurs reste reservee a leur role (etape 7.3): un PNJ peuple apres le
+ * tirage des traqueurs ne la prend pas. Sans autre couleur de joueur, ce qu'un etat de test
+ * peut connaitre, il prend celle d'un PNJ ordinaire.
+ *
+ * @param couleursDesJoueurs Les couleurs des joueurs presents.
+ */
+export function couleurDeSosie(
+  alea: Alea,
+  couleursDesJoueurs: readonly Couleur[],
+): Tirage<Couleur> {
+  const modeles = couleursDesJoueurs.filter((couleur) => couleur !== COULEUR_DES_TRAQUEURS);
+
+  return modeles.length === 0 ? couleurDeBot(alea, couleursDesJoueurs) : element(alea, modeles);
+}

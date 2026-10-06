@@ -468,9 +468,10 @@ describe('flux d etat et notifications', () => {
         chezLeRetardataire.partie.tick === chezLHote.partie?.tick,
     );
 
-    // Il a recu le delta de son premier battement, qu'il n'a pas pu appliquer,
-    // puis son image, puis les deltas suivants.
-    expect(chezLeRetardataire.trames).toBe(4);
+    // Il a recu l'image de son premier battement, puis les deltas suivants. Depuis
+    // l'etape 2.9, le delta de ce battement, qu'il ne pouvait pas appliquer, ne lui part
+    // plus.
+    expect(chezLeRetardataire.trames).toBe(3);
     expect(chezLeRetardataire.partie).toEqual(chezLHote.partie);
     expect(
       chezLeRetardataire.partie?.entites.filter((entite) => entite.type === 'joueur'),

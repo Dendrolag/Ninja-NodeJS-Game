@@ -106,8 +106,20 @@ export { creerHorlogeManuelle, horlogeSysteme } from './horloge.js';
 export type { OptionsCompteARebours } from './compteARebours.js';
 export { CompteARebours, SEUIL_ANNULATION_S } from './compteARebours.js';
 
-export type { ImagesAttendues } from './fluxDEtat.js';
-export { BATTEMENTS_ENTRE_DEUX_IMAGES, FluxDEtat } from './fluxDEtat.js';
+export type { EnvoiDeTrame, ImagesAttendues } from './fluxDEtat.js';
+export { BATTEMENTS_ENTRE_DEUX_IMAGES, FluxDEtat, FluxParVue } from './fluxDEtat.js';
+
+export type { Alias, CleDeVue } from './vues.js';
+export {
+  OCTETS_DU_SECRET,
+  VUE_COMMUNE,
+  VUE_DES_TRAQUEURS,
+  aliasDesNinjas,
+  cleDeVue,
+  notificationDansLaVue,
+  vuePour,
+  vuesDe,
+} from './vues.js';
 
 export type { Notification } from './instantane.js';
 export {

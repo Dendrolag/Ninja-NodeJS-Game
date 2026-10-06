@@ -77,8 +77,9 @@ export interface LigneScore {
  *
  * EN CHASSE, LES NINJAS NE FONT PAS LE SCORE (etape 7.3): une proie marque en parcourant
  * la carte, un traqueur en capturant et en gardant ses vies (pointsEnChasse). Les ninjas y
- * sont un camouflage, et aucun joueur ne les repeint; les champs qui les decrivent restent
- * lus comme ailleurs, et valent zero.
+ * sont un camouflage, et aucun joueur ne les repeint. Depuis l'etape 2.9, ils naissent aux
+ * couleurs des joueurs (couleurDeSosie) sans leur appartenir: un joueur de la Chasse ne
+ * porte donc aucun ninja, quelle que soit la couleur des ninjas de la carte.
  *
  * EN MASSACRE NON PLUS (etape 7.4): les bots tues disparaissent, et les points se rangent
  * dans l'etat, avec les vols et les pertes (pointsEnMassacre).
@@ -87,9 +88,12 @@ export interface LigneScore {
  * equipe. Le stock ne change pas: il se deduit comme avant, puis se multiplie.
  */
 export function scoreDe(etat: EtatPartie, joueur: Joueur): LigneScore {
-  const botsPortes = Object.values(etat.bots).filter(
-    (bot) => bot.type === 'bot' && bot.couleur === joueur.couleur,
-  ).length;
+  const botsPortes =
+    etat.mode === 'chasse'
+      ? 0
+      : Object.values(etat.bots).filter(
+          (bot) => bot.type === 'bot' && bot.couleur === joueur.couleur,
+        ).length;
   const pointsBotsNoirs = joueur.botsNoirsDetruits * SCORE.POINTS_PAR_BOT_NOIR;
   const multiplicateur = multiplicateurDuScore(etat, joueur);
 

@@ -24,10 +24,18 @@
  *
  * AUCUN ETAT GLOBAL: un flux par partie, cree par la couche reseau et oublie avec
  * la partie.
+ *
+ * DEPUIS L'ETAPE 2.9, UNE TRAME PAR VUE. Le serveur decide ce que chaque joueur recoit
+ * (vues.ts). FluxDEtat, plus bas, reste le flux d'une seule vue, avec ses trois regles;
+ * FluxParVue en tient un par vue, et la regle 1 devient: une trame par battement pour
+ * tous ceux qui partagent une vue. Hors Chasse, tout le monde partage la vue commune:
+ * c'est la trame unique d'avant.
  */
 
 import type { InstantanePartie } from '@neon-ninja/shared';
 import { encoderDelta, encoderImage } from '@neon-ninja/shared';
+
+import type { CleDeVue } from './vues.js';
 
 /**
  * Tous les combien de battements une image repart a toute la salle.
@@ -37,6 +45,15 @@ import { encoderDelta, encoderImage } from '@neon-ninja/shared';
  * docs/mesures/charge-serveur.md, section 12).
  */
 export const BATTEMENTS_ENTRE_DEUX_IMAGES = 100;
+
+/** Refuse une cadence d'images qui n'est pas un nombre entier de battements, un au moins. */
+function verifierLaCadence(battementsEntreDeuxImages: number): void {
+  if (!Number.isInteger(battementsEntreDeuxImages) || battementsEntreDeuxImages < 1) {
+    throw new Error(
+      `Une image doit repartir au moins tous les ${String(battementsEntreDeuxImages)} battements.`,
+    );
+  }
+}
 
 /** Les nouveaux venus d'un battement, et l'image a leur envoyer. */
 export interface ImagesAttendues {
@@ -62,11 +79,7 @@ export class FluxDEtat {
    * @param battementsEntreDeuxImages Cadence des images envoyees a toute la salle.
    */
   constructor(private readonly battementsEntreDeuxImages = BATTEMENTS_ENTRE_DEUX_IMAGES) {
-    if (!Number.isInteger(battementsEntreDeuxImages) || battementsEntreDeuxImages < 1) {
-      throw new Error(
-        `Une image doit repartir au moins tous les ${String(battementsEntreDeuxImages)} battements.`,
-      );
-    }
+    verifierLaCadence(battementsEntreDeuxImages);
   }
 
   /**
@@ -123,5 +136,144 @@ export class FluxDEtat {
     this.nouveauxVenus.clear();
 
     return { destinataires, image };
+  }
+}
+
+/** Une trame a envoyer, et les connexions qui la recoivent. */
+export interface EnvoiDeTrame {
+  readonly destinataires: readonly string[];
+  readonly trame: Uint8Array;
+}
+
+/**
+ * Le flux d'etat d'une partie, vue par vue (etape 2.9).
+ *
+ * UNE REFERENCE DE DELTA PAR VUE. Chaque vue a son FluxDEtat: une image au premier
+ * battement, une image reguliere, un delta sinon, code une fois pour tous ceux qui la
+ * recoivent.
+ *
+ * UNE IMAGE, ET PAS LE DELTA, A QUI CHANGE DE VUE. Deux vues d'un meme battement portent le
+ * meme numero: un client qui recevrait le delta de sa nouvelle vue l'appliquerait sur
+ * l'ancienne, faute de pouvoir les distinguer, et dessinerait un etat faux. Qui entre, change
+ * de vue, ou attend une image recoit donc l'image de sa vue, seule. Une proie infectee passe
+ * ainsi de la vue commune a celle des traqueurs.
+ *
+ * UNE VUE QUE PERSONNE NE RECOIT EST OUBLIEE: elle repartira d'une image.
+ */
+export class FluxParVue {
+  /** Le flux de chaque vue recue au dernier battement. */
+  private readonly flux = new Map<CleDeVue, FluxDEtat>();
+
+  /** La vue de chaque connexion au dernier battement. */
+  private vuesDesConnexions: ReadonlyMap<string, CleDeVue> = new Map();
+
+  /** Les connexions qui doivent recevoir une image, quoi qu'elles aient recu avant. */
+  private readonly enAttente = new Set<string>();
+
+  /**
+   * @param battementsEntreDeuxImages Cadence des images envoyees a tous ceux d'une vue.
+   */
+  constructor(private readonly battementsEntreDeuxImages = BATTEMENTS_ENTRE_DEUX_IMAGES) {
+    verifierLaCadence(battementsEntreDeuxImages);
+  }
+
+  /**
+   * Retient qu'une connexion vient d'entrer, ou de revenir, dans la partie en cours: elle
+   * recevra l'image de sa vue au prochain battement.
+   */
+  attendreUneImage(idConnexion: string): void {
+    this.enAttente.add(idConnexion);
+  }
+
+  /**
+   * Les trames d'un battement, et a qui les envoyer.
+   *
+   * A appeler une fois par battement, avec toutes les connexions de la partie.
+   *
+   * @param vues La vue de chaque cle, pour ce battement.
+   * @param destinataires La cle de chaque connexion de la partie.
+   * @throws Error si une connexion attend une vue qui n'est pas fournie.
+   */
+  envoisDuBattement(
+    vues: ReadonlyMap<CleDeVue, InstantanePartie>,
+    destinataires: ReadonlyMap<string, CleDeVue>,
+  ): readonly EnvoiDeTrame[] {
+    const trames = this.coderLesVues(vues, new Set(destinataires.values()));
+    const aJour = new Map<CleDeVue, string[]>();
+    const envois: EnvoiDeTrame[] = [];
+
+    for (const [idConnexion, cle] of destinataires) {
+      if (this.vuesDesConnexions.get(idConnexion) === cle && !this.enAttente.has(idConnexion)) {
+        aJour.set(cle, [...(aJour.get(cle) ?? []), idConnexion]);
+      } else {
+        this.enAttente.delete(idConnexion);
+        this.fluxDeLaVue(cle).attendreUneImage(idConnexion);
+      }
+    }
+
+    for (const [cle, trame] of trames) {
+      const suivent = aJour.get(cle) ?? [];
+      const images = this.fluxDeLaVue(cle).imagesAttendues();
+
+      // Une image partie a tous ceux de la vue sert aussi aux nouveaux: un seul envoi.
+      if (images !== undefined && images.image === trame) {
+        envois.push({ destinataires: [...suivent, ...images.destinataires], trame });
+        continue;
+      }
+
+      if (suivent.length > 0) {
+        envois.push({ destinataires: suivent, trame });
+      }
+
+      if (images !== undefined) {
+        envois.push({ destinataires: images.destinataires, trame: images.image });
+      }
+    }
+
+    this.vuesDesConnexions = new Map(destinataires);
+
+    return envois;
+  }
+
+  /**
+   * Code la trame de chaque vue recue, et oublie les vues que plus personne ne recoit.
+   */
+  private coderLesVues(
+    vues: ReadonlyMap<CleDeVue, InstantanePartie>,
+    recues: ReadonlySet<CleDeVue>,
+  ): ReadonlyMap<CleDeVue, Uint8Array> {
+    for (const cle of [...this.flux.keys()]) {
+      if (!recues.has(cle)) {
+        this.flux.delete(cle);
+      }
+    }
+
+    const trames = new Map<CleDeVue, Uint8Array>();
+
+    for (const cle of recues) {
+      const vue = vues.get(cle);
+
+      if (vue === undefined) {
+        throw new Error(`La vue « ${cle} » est attendue, et n'a pas ete fournie.`);
+      }
+
+      trames.set(cle, this.fluxDeLaVue(cle).trameDuBattement(vue));
+    }
+
+    return trames;
+  }
+
+  /** Le flux d'une vue, cree a son premier besoin. */
+  private fluxDeLaVue(cle: CleDeVue): FluxDEtat {
+    const existant = this.flux.get(cle);
+
+    if (existant !== undefined) {
+      return existant;
+    }
+
+    const flux = new FluxDEtat(this.battementsEntreDeuxImages);
+    this.flux.set(cle, flux);
+
+    return flux;
   }
 }

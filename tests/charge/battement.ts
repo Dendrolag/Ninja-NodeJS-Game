@@ -12,11 +12,12 @@
  *
  *   - LE MOTEUR: tick(), deplacements, bots, zones, objets, contacts. C'est la
  *     que vivraient une grille spatiale ou un niveau de detail d'IA (etape 5.2).
- *   - LA PROJECTION: instantaneDe et notificationsDe, de l'etat du moteur vers ce
- *     qui part sur le reseau.
+ *   - LA PROJECTION: les vues et les notifications, de l'etat du moteur vers ce
+ *     qui part sur le reseau. Depuis l'etape 2.9, une vue par cle (vuesDe), et chaque
+ *     notification telle que la vue de son destinataire la montre.
  *   - LE CODAGE: la trame binaire du flux d'etat (etape 2.3), image ou delta,
- *     codee par le meme FluxDEtat que la couche reseau. Jusqu'a l'etape 2.3,
- *     c'etait la serialisation JSON de l'instantane.
+ *     codee par le meme FluxParVue que la couche reseau: une par vue. Jusqu'a
+ *     l'etape 2.3, c'etait la serialisation JSON de l'instantane.
  *
  * LA TAILLE DU MESSAGE EST CELLE DU FIL. Socket.IO envoie une trame binaire en deux
  * paquets: un en-tete en texte, `451-["etat",{"_placeholder":true,"num":0}]`, ou
@@ -59,13 +60,19 @@ import { deflateRawSync } from 'node:zlib';
 import type { CarteCollisions } from '../../packages/sim/dist/index.js';
 import type { Alea, IdentifiantCarte, Mode } from '../../packages/shared/dist/index.js';
 import { MINES, creerAlea, entier, nombre } from '../../packages/shared/dist/index.js';
+import type { CleDeVue } from '../../packages/server/dist/index.js';
 import {
   CADENCE_BATTEMENT_MS,
-  FluxDEtat,
+  FluxParVue,
   GameRoom,
+  OCTETS_DU_SECRET,
+  VUE_COMMUNE,
+  aliasDesNinjas,
+  cleDeVue,
   creerHorlogeManuelle,
-  instantaneDe,
+  notificationDansLaVue,
   notificationsDe,
+  vuesDe,
 } from '../../packages/server/dist/index.js';
 
 import type { Resume } from './statistiques.ts';
@@ -178,6 +185,22 @@ interface MesureDUnBattement {
 }
 
 /**
+ * La taille moyenne de la trame que recoit un joueur: hors Chasse, la trame unique; en
+ * Chasse, celle de sa vue (etape 2.9).
+ */
+function octetsParMessage(
+  envois: readonly { readonly destinataires: readonly string[]; readonly trame: Uint8Array }[],
+): number {
+  const recus = envois.reduce((somme, envoi) => somme + envoi.destinataires.length, 0);
+  const octets = envois.reduce(
+    (somme, envoi) => somme + envoi.trame.byteLength * envoi.destinataires.length,
+    0,
+  );
+
+  return octets / recus;
+}
+
+/**
  * Joue une partie et mesure chacun de ses battements.
  *
  * La duree de la partie est reglee pour couvrir exactement les battements joues.
@@ -190,24 +213,46 @@ export function mesurerLeBattement(options: OptionsBancBattement): ResultatBancB
   let alea = creerAlea(options.graine ^ 0x5bd1e995);
   const avantChangement = new Map<string, number>();
 
-  // Le flux de la partie, comme la couche reseau en tient un par partie.
-  const flux = new FluxDEtat();
+  // Le flux de la partie et les alias de ses ninjas, comme la couche reseau en tient un par
+  // partie (etape 2.9). Un secret fixe: le banc reste deterministe, a l'octet pres.
+  const flux = new FluxParVue();
+  const alias = aliasDesNinjas(new Uint8Array(OCTETS_DU_SECRET).fill(1));
 
   // Ce que le rappel de battement a releve. La room l'appelle a l'interieur de
   // avancer(): la boucle ci-dessous le lit juste apres.
   let mesure: MesureDUnBattement | undefined;
   const surBattement = (partie: GameRoom): void => {
+    // La projection, vue par vue, comme ServeurSocket.diffuserLeBattement: chaque joueur
+    // est un destinataire, sous son propre identifiant.
     const debutProjection = performance.now();
-    const instantane = instantaneDe(partie.etat);
-    notificationsDe(partie.etat);
+    const destinataires = new Map<string, CleDeVue>(
+      Object.keys(partie.etat.joueurs).map((id) => [id, cleDeVue(partie.etat, id)]),
+    );
+    const vues = vuesDe(partie.etat, new Set(destinataires.values()), alias);
+    for (const notification of notificationsDe(partie.etat)) {
+      notificationDansLaVue(
+        notification,
+        partie.etat,
+        cleDeVue(partie.etat, notification.pour),
+        alias,
+      );
+    }
     const finProjection = performance.now();
-    const trame = flux.trameDuBattement(instantane);
+    const envois = flux.envoisDuBattement(vues, destinataires);
     const finCodage = performance.now();
+
+    // La vue de reference, pour les entites et la comparaison au JSON: la commune s'il y en
+    // a une, comme hors Chasse.
+    const instantane = vues.get(VUE_COMMUNE) ?? [...vues.values()][0];
+    const trame = envois[0]?.trame;
+    if (instantane === undefined || trame === undefined) {
+      throw new Error('Le banc joue au moins un joueur: une vue et une trame sont attendues.');
+    }
 
     mesure = {
       projectionMs: finProjection - debutProjection,
       serialisationMs: finCodage - finProjection,
-      octets: trame.byteLength + OCTETS_D_ENVELOPPE,
+      octets: octetsParMessage(envois) + OCTETS_D_ENVELOPPE,
       octetsCompresses: undefined,
       octetsJson: undefined,
       entites: instantane.entites.length,

@@ -57,6 +57,8 @@
  * le meme processus sans se voir, ce dont les tests profitent largement.
  */
 
+import { randomBytes } from 'node:crypto';
+
 import type {
   CompteDeSession,
   DemandeChat,
@@ -112,7 +114,7 @@ import {
   finPourLesComptes,
   progressionEnregistree,
 } from './finDePartie.js';
-import { FluxDEtat } from './fluxDEtat.js';
+import { FluxParVue } from './fluxDEtat.js';
 import type { GameRoom } from './GameRoom.js';
 import type { ResumeDuBattement } from '@neon-ninja/shared';
 import type { Horloge } from './horloge.js';
@@ -120,7 +122,6 @@ import { horlogeSysteme } from './horloge.js';
 import type { Notification } from './instantane.js';
 import {
   classementDe,
-  instantaneDe,
   joueurDuSalon,
   lancementDe,
   notificationsDe,
@@ -133,6 +134,14 @@ import type { OptionsCreationRoom } from './RoomManager.js';
 import { RoomManager } from './RoomManager.js';
 import type { SourceDeTerrain } from './terrain.js';
 import { SANS_TERRAIN } from './terrain.js';
+import type { Alias, CleDeVue } from './vues.js';
+import {
+  OCTETS_DU_SECRET,
+  aliasDesNinjas,
+  cleDeVue,
+  notificationDansLaVue,
+  vuesDe,
+} from './vues.js';
 
 /**
  * Ce que le serveur attache a une connexion lors de son ouverture.
@@ -165,6 +174,14 @@ export type SocketTypee = Socket<
   DefaultEventsMap,
   DonneesDeConnexion
 >;
+
+/** Ce que la couche reseau garde d'une partie pour lui envoyer son etat (etape 2.9). */
+interface DiffusionDUnePartie {
+  /** Le flux d'etat, vue par vue. */
+  readonly flux: FluxParVue;
+  /** Les alias de ses ninjas, sous un secret tire pour elle. */
+  readonly alias: Alias;
+}
 
 /** Ce sous quoi une connexion entre en partie: la session, moins l'identifiant de connexion. */
 interface IdentiteDEntree {
@@ -268,12 +285,13 @@ export class ServeurSocket {
   private readonly decomptes = new Map<string, CompteARebours>();
 
   /**
-   * Le flux d'etat de chaque partie qui a battu (etape 2.3).
+   * Ce qu'il faut pour envoyer son etat a chaque partie qui a battu: son flux, vue par vue
+   * (etapes 2.3 et 2.9), et les alias de ses ninjas.
    *
    * Range par partie, et non par identifiant: une partie detruite emporte son flux,
    * sans qu'aucun chemin de destruction n'ait a penser a l'oublier.
    */
-  private readonly flux = new WeakMap<GameRoom, FluxDEtat>();
+  private readonly diffusions = new WeakMap<GameRoom, DiffusionDUnePartie>();
 
   /** D'ou viennent les murs, partage par toutes les parties de ce serveur. */
   private readonly terrains: SourceDeTerrain;
@@ -768,7 +786,7 @@ export class ServeurSocket {
     this.annoncerLaPlace(socket, place);
     repondre({ valide: true, valeur: salonDe(room) });
     socket.emit('partieLancee', lancementDe(room));
-    this.fluxDe(room).attendreUneImage(socket.id);
+    this.diffusionDe(room).flux.attendreUneImage(socket.id);
 
     if (room.hote !== hoteAvant) {
       this.diffuserLeSalon(room);
@@ -1272,33 +1290,42 @@ export class ServeurSocket {
   /**
    * Diffuse l'etat d'une partie apres un battement.
    *
-   * La trame du flux d'etat part a la salle entiere, en un seul message identique
-   * pour tous: une image ou un delta (fluxDEtat.ts). Qui vient d'entrer dans la
-   * partie, ou d'y revenir, recoit ensuite sa propre image, du meme battement. Les
-   * notifications, elles, sont adressees: chacune ne va qu'a la connexion qui joue
-   * le joueur qu'elle concerne. Un joueur qui a quitte la partie entre-temps, ou
-   * dont le lien est tombe, n'a pas de connexion, et son message est simplement omis.
+   * Chaque joueur recoit la vue que la partie lui doit (vues.ts, etape 2.9): ceux qui
+   * partagent une vue recoivent la meme trame, codee une fois, une image ou un delta
+   * (fluxDEtat.ts). Hors Chasse, tout le monde partage la vue commune: une seule trame.
+   * Qui vient d'entrer dans la partie, d'y revenir ou de changer de vue recoit l'image de
+   * la sienne. Les notifications, elles, sont adressees: chacune ne va qu'a la connexion qui
+   * joue le joueur qu'elle concerne, telle que sa vue la montre. Un joueur qui a quitte la
+   * partie entre-temps, ou dont le lien est tombe, n'a pas de connexion, et son message est
+   * simplement omis.
    */
   private diffuserLeBattement(room: GameRoom): void {
-    const flux = this.fluxDe(room);
+    const { flux, alias } = this.diffusionDe(room);
+    const etat = room.etat;
+    const destinataires = new Map<string, CleDeVue>();
 
-    this.io.to(room.id).emit('etat', flux.trameDuBattement(instantaneDe(room.etat)));
+    for (const id of Object.keys(etat.joueurs)) {
+      const connexion = this.connexionDuJoueur(id);
 
-    const images = flux.imagesAttendues();
-
-    for (const idConnexion of images?.destinataires ?? []) {
-      const destinataire = this.connexions.get(idConnexion);
-
-      if (images !== undefined && destinataire?.idRoom === room.id) {
-        destinataire.socket.emit('etat', images.image);
+      if (connexion?.idRoom === room.id) {
+        destinataires.set(connexion.socket.id, cleDeVue(etat, id));
       }
     }
 
-    for (const notification of notificationsDe(room.etat)) {
+    const vues = vuesDe(etat, new Set(destinataires.values()), alias);
+
+    for (const envoi of flux.envoisDuBattement(vues, destinataires)) {
+      this.io.to([...envoi.destinataires]).emit('etat', envoi.trame);
+    }
+
+    for (const notification of notificationsDe(etat)) {
       const destinataire = this.connexionDuJoueur(notification.pour);
 
       if (destinataire?.idRoom === room.id) {
-        envoyer(destinataire.socket, notification);
+        envoyer(
+          destinataire.socket,
+          notificationDansLaVue(notification, etat, cleDeVue(etat, notification.pour), alias),
+        );
       }
     }
 
@@ -1326,18 +1353,24 @@ export class ServeurSocket {
     }
   }
 
-  /** Le flux d'etat d'une partie, cree a son premier besoin. */
-  private fluxDe(room: GameRoom): FluxDEtat {
-    const existant = this.flux.get(room);
+  /**
+   * Le flux d'etat d'une partie et les alias de ses ninjas, crees a leur premier besoin. Le
+   * secret des alias est tire au hasard pour cette partie, et ne la quitte pas.
+   */
+  private diffusionDe(room: GameRoom): DiffusionDUnePartie {
+    const existante = this.diffusions.get(room);
 
-    if (existant !== undefined) {
-      return existant;
+    if (existante !== undefined) {
+      return existante;
     }
 
-    const flux = new FluxDEtat();
-    this.flux.set(room, flux);
+    const diffusion = {
+      flux: new FluxParVue(),
+      alias: aliasDesNinjas(randomBytes(OCTETS_DU_SECRET)),
+    };
+    this.diffusions.set(room, diffusion);
 
-    return flux;
+    return diffusion;
   }
 
   /** Annonce la fin d'une partie et son classement definitif. */
@@ -1664,7 +1697,7 @@ export class ServeurSocket {
     // supposent une partie qu'il n'a pas.
     if (room.statut === 'enCours') {
       socket.emit('partieLancee', lancementDe(room));
-      this.fluxDe(room).attendreUneImage(socket.id);
+      this.diffusionDe(room).flux.attendreUneImage(socket.id);
     }
 
     return true;

@@ -51,7 +51,7 @@ import type { Position, Vecteur } from '@neon-ninja/shared';
 import { BOTS, BOTS_NOIRS, COULEUR_BOT_NEUTRE, DUREES, VITESSES, reel } from '@neon-ninja/shared';
 
 import { trajetTenable } from './collisions.js';
-import { couleurDeBot } from './couleurs.js';
+import { couleurDeBot, couleurDeSosie } from './couleurs.js';
 import { resoudreDeplacement } from './deplacement.js';
 import { perdreLeDoubleur } from './evade.js';
 import { sansPoche } from './poche.js';
@@ -186,7 +186,8 @@ function poser(etat: EtatPartie, bot: Bot): EtatPartie {
  *
  * Chaque bot nait d'une couleur tiree au sort, comme dans le legacy, et qui n'est
  * celle d'aucun joueur: il ne compte pour personne tant qu'on ne l'a pas touche.
- * Voir couleurDeBot.
+ * Voir couleurDeBot. En Chasse, ou les ninjas ne comptent pour personne, il nait au
+ * contraire de la couleur d'un joueur present, pour cacher les proies (couleurDeSosie).
  *
  * Cette fonction n'est pas appelee par creerEtatInitial: c'est le serveur qui
  * decide du moment ou une partie se peuple, au lancement et non a la creation du
@@ -258,7 +259,12 @@ function ajouterUnBot(etat: EtatPartie, type: 'bot' | 'botNoir'): EtatPartie {
     return ajouterBot(numerote, { id: identifiant.valeur, type });
   }
 
-  const teinte = couleurDeBot(numerote.alea, couleursUtilisees(numerote));
+  // En Chasse, un PNJ prend la couleur d'un joueur, pour que les proies aient des sosies
+  // (etape 2.9).
+  const teinte =
+    numerote.mode === 'chasse'
+      ? couleurDeSosie(numerote.alea, couleursUtilisees(numerote))
+      : couleurDeBot(numerote.alea, couleursUtilisees(numerote));
 
   return ajouterBot(
     { ...numerote, alea: teinte.alea },

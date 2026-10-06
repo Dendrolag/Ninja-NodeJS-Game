@@ -1,8 +1,8 @@
 /**
  * Tests d'integration du mode Chasse a travers la couche reseau (etape 7.3), avec de vrais
  * clients Socket.IO: la condition de lancement, l'entree refusee dans une chasse lancee,
- * une chasse jouee jusqu'a l'infection de la derniere proie par un tir, qui la termine, et
- * la vie perdue annoncee au traqueur.
+ * une chasse jouee jusqu'a l'infection de la derniere proie par un tir, qui la termine, la
+ * vie perdue annoncee au traqueur, et, depuis l'etape 2.9, ce que chacun recoit du flux.
  *
  * Meme cadre que ServeurSocket.equipes.test.ts: un vrai serveur sur un vrai port, une
  * horloge manuelle pour le temps du JEU, et des attentes explicites pour celui du RESEAU.
@@ -11,12 +11,21 @@
 
 import type {
   DemandeCreation,
+  EntiteVue,
   EvenementsClientVersServeur,
   EvenementsServeurVersClient,
   InfosSalon,
+  InstantanePartie,
   ResultatValidation,
 } from '@neon-ninja/shared';
-import { CARTES, CHASSE, COULEUR_DES_TRAQUEURS, DUREES } from '@neon-ninja/shared';
+import {
+  CARTES,
+  CHASSE,
+  COULEUR_DES_TRAQUEURS,
+  DUREES,
+  appliquerTrame,
+  quantifierInstantane,
+} from '@neon-ninja/shared';
 import { carteSansMur, estTraqueur } from '@neon-ninja/sim';
 import type { Socket as SocketClient } from 'socket.io-client';
 import { io as connecter } from 'socket.io-client';
@@ -25,6 +34,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameRoom } from './GameRoom.js';
 import type { HorlogeManuelle } from './horloge.js';
 import { creerHorlogeManuelle } from './horloge.js';
+import { instantaneDe } from './instantane.js';
 import type { ServeurMonte } from './serveur.js';
 import { demarrerServeur } from './serveur.js';
 
@@ -435,5 +445,113 @@ describe('une partie Chasse, a travers le reseau', () => {
     await jusquA(() => chezLeTraqueur.length === 1);
     expect(chezLeTraqueur[0]).toEqual({ viesRestantes: 2 });
     expect(chezLaProie).toEqual([]);
+  });
+});
+
+/** La partie qu'un client reconstruit a partir des trames recues, comme la page. */
+function suivreLeFlux(client: ClientTypee): { partie: InstantanePartie | undefined } {
+  const suivi: { partie: InstantanePartie | undefined } = { partie: undefined };
+
+  client.on('etat', (trame) => {
+    suivi.partie = appliquerTrame(suivi.partie, trame) ?? suivi.partie;
+  });
+
+  return suivi;
+}
+
+/** Les identifiants des entites de cette nature dans une partie reconstruite. */
+function idsDes(partie: InstantanePartie | undefined, type: EntiteVue['type']): string[] {
+  return (partie?.entites ?? []).filter((entite) => entite.type === type).map((e) => e.id);
+}
+
+describe('ce que chacun recoit d une Chasse (etape 2.9)', () => {
+  it('ne livre a un traqueur ni le type, ni l identifiant, ni le pseudo d une proie', async () => {
+    const { hote, invite, salon } = await salonAAlice();
+    const room = roomDe(salon.idRoom);
+    const chezLHote = suivreLeFlux(hote);
+    const chezLInvite = suivreLeFlux(invite);
+    await lancer(hote);
+    horloge.avancerDe(500);
+    await jusquA(
+      () =>
+        chezLHote.partie?.tick === room.etat.tick && chezLInvite.partie?.tick === room.etat.tick,
+    );
+
+    const traqueurId = Object.keys(room.etat.joueurs).find((id) => estTraqueur(room.etat, id));
+    const proie = Object.values(room.etat.joueurs).find((joueur) => joueur.id !== traqueurId);
+    if (traqueurId === undefined || proie === undefined) {
+      throw new Error('Un traqueur et une proie devraient etre tires.');
+    }
+    const [chezLeTraqueur, chezLaProie] =
+      hote.id === traqueurId ? [chezLHote, chezLInvite] : [chezLInvite, chezLHote];
+    const entites = JSON.stringify(chezLeTraqueur.partie?.entites);
+
+    expect(idsDes(chezLeTraqueur.partie, 'joueur')).toEqual([traqueurId]);
+    expect(idsDes(chezLeTraqueur.partie, 'bot')).toHaveLength(
+      Object.keys(room.etat.bots).length + 1,
+    );
+    for (const indice of [proie.id, proie.pseudo, ...Object.keys(room.etat.bots)]) {
+      expect(entites).not.toContain(indice);
+    }
+
+    // La proie, elle, recoit la vue commune: elle se voit, et voit le traqueur.
+    expect(chezLaProie.partie).toEqual(quantifierInstantane(instantaneDe(room.etat)));
+  });
+
+  it('fait passer une proie infectee a la vue des traqueurs, sans etat faux', async () => {
+    const { hote, invite, salon } = await salonAAlice();
+    const carole = await connecterUnClient();
+    await entrer(carole, 'Carole', salon.idRoom);
+    const room = roomDe(salon.idRoom);
+    const clients = new Map([hote, invite, carole].map((client) => [client.id ?? '', client]));
+    const flux = new Map([...clients].map(([id, client]) => [id, suivreLeFlux(client)]));
+    await lancer(hote);
+
+    const traqueurId = Object.keys(room.etat.joueurs).find((id) => estTraqueur(room.etat, id));
+    const [cibleId, temoinId] = Object.keys(room.etat.joueurs).filter((id) => id !== traqueurId);
+    if (traqueurId === undefined || cibleId === undefined || temoinId === undefined) {
+      throw new Error('Un traqueur et deux proies devraient etre tires.');
+    }
+    horloge.avancerDe(Math.max(CHASSE.DELAI_NOUVEAU_TRAQUEUR_MS, DUREES.PROTECTION_SPAWN_MS) + 50);
+
+    // La room fait marcher le traqueur droit sur sa cible, et tirer une fois colle a elle:
+    // aucun faux ninja ne peut alors etre plus proche dans son cone.
+    for (let ecoule = 0; ecoule < 40_000 && !estTraqueur(room.etat, cibleId); ecoule += 50) {
+      const lui = room.etat.joueurs[traqueurId];
+      const cible = room.etat.joueurs[cibleId];
+      if (lui === undefined || cible === undefined) {
+        throw new Error('Le traqueur et sa cible devraient etre sur la carte.');
+      }
+      const ecart = Math.hypot(
+        cible.position.x - lui.position.x,
+        cible.position.y - lui.position.y,
+      );
+
+      room.enregistrerIntention(traqueurId, {
+        deplacement: {
+          x: (cible.position.x - lui.position.x) / Math.max(ecart, 1),
+          y: (cible.position.y - lui.position.y) / Math.max(ecart, 1),
+        },
+        enMouvement: ecart > 12,
+      });
+      if (ecart <= 12) {
+        room.demanderUnTir(traqueurId);
+      }
+      horloge.avancerDe(50);
+    }
+    expect(estTraqueur(room.etat, cibleId)).toBe(true);
+
+    horloge.avancerDe(250);
+    await jusquA(() => [...flux.values()].every((suivi) => suivi.partie?.tick === room.etat.tick));
+
+    // Les deux traqueurs recoivent la meme vue, et l'infectee la reconstruit exactement.
+    const chezLeTraqueur = flux.get(traqueurId)?.partie;
+    const chezLInfectee = flux.get(cibleId)?.partie;
+    expect(chezLInfectee).toEqual(chezLeTraqueur);
+    expect(idsDes(chezLInfectee, 'joueur').sort()).toEqual([traqueurId, cibleId].sort());
+    expect(JSON.stringify(chezLInfectee?.entites)).not.toContain(temoinId);
+
+    // La derniere proie garde la vue commune.
+    expect(flux.get(temoinId)?.partie).toEqual(quantifierInstantane(instantaneDe(room.etat)));
   });
 });

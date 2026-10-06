@@ -128,12 +128,16 @@ function horsDePortee(ecart: number): boolean {
  * Le reste est commun a tous les modes et ne se redecide pas: l'ordre de
  * resolution, les entites disparues ou deplacees en cours de route, et la
  * contagion entre bots, qui est une regle du monde et non une facon de capturer.
+ * Seule la Chasse s'en passe (etape 2.9), parce que ses ninjas y portent les couleurs
+ * des joueurs sans leur appartenir.
  */
 interface ReglesDeContact {
   /** Deux joueurs se touchent. */
   readonly entreJoueurs: (etat: EtatPartie, premier: Joueur, second: Joueur) => Resolution;
   /** Un joueur touche un bot ou un bot noir. */
   readonly joueurEtBot: (etat: EtatPartie, joueur: Joueur, bot: Bot) => EtatPartie;
+  /** Deux bots qui se touchent ne se repeignent pas. Absent: ils se repeignent. */
+  readonly sansContagion?: true;
 }
 
 /**
@@ -216,12 +220,16 @@ export const regleEquipes: RegleDeResolution = regleDeContacts({
  *
  * Un traqueur capture en tirant (chasse.ts), pas en touchant. Toucher un ninja ne fait rien
  * non plus: les ninjas servent de camouflage et ne comptent pour personne, et il n'y a pas
- * de bots noirs a detruire. Seule la contagion entre bots reste, commune a tous les modes;
- * aucun bot ne portant la couleur d'un joueur, elle n'a rien a transmettre.
+ * de bots noirs a detruire.
+ *
+ * LA CONTAGION ENTRE BOTS EST COUPEE (etape 2.9). Depuis que chaque ninja de la Chasse nait
+ * de la couleur d'un joueur, pour que les proies aient des sosies (couleurDeSosie), elle
+ * repeindrait les troupeaux, et une proie pourrait finir seule de sa couleur.
  */
 export const regleChasse: RegleDeResolution = regleDeContacts({
   entreJoueurs: (etat) => sansEffet(etat),
   joueurEtBot: (etat) => etat,
+  sansContagion: true,
 });
 
 /**
@@ -321,7 +329,9 @@ function resoudreUnContact(
   // bot noir n'a pas de couleur a donner, pas plus qu'un bot blanc. Voir les
   // defauts X30 et X20 de l'audit. La regle vit la-bas plutot qu'ici pour qu'un
   // mode de jeu qui ecrirait sa propre regle de resolution ne puisse pas l'oublier.
-  return sansEffet(capturerBot(etat, premierId, secondId));
+  return regles.sansContagion === true
+    ? sansEffet(etat)
+    : sansEffet(capturerBot(etat, premierId, secondId));
 }
 
 /**

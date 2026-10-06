@@ -17,7 +17,7 @@ import {
 } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
-import { couleurAleatoire, couleurDeBot, couleurUnique } from './couleurs.js';
+import { couleurAleatoire, couleurDeBot, couleurDeSosie, couleurUnique } from './couleurs.js';
 
 describe('couleurAleatoire', () => {
   it('produit une couleur hexadecimale a six chiffres', () => {
@@ -141,6 +141,39 @@ describe('couleurDeBot', () => {
 
   it('donne la meme couleur pour la meme graine', () => {
     expect(couleurDeBot(creerAlea(40), []).valeur).toBe(couleurDeBot(creerAlea(40), []).valeur);
+  });
+});
+
+// Decision du porteur du projet du 6 octobre 2026: en Chasse, chaque proie a des sosies.
+describe('couleurDeSosie (etape 2.9)', () => {
+  it('tire la couleur d un des joueurs, et chacune finit par sortir', () => {
+    const joueurs = ['#FF0000', '#3D7DFF', '#ABCDEF'];
+    let alea = creerAlea(5);
+    const sorties = new Set<string>();
+
+    for (let tirage = 0; tirage < 40; tirage += 1) {
+      const resultat = couleurDeSosie(alea, joueurs);
+      expect(joueurs).toContain(resultat.valeur);
+      sorties.add(resultat.valeur);
+      alea = resultat.alea;
+    }
+
+    expect(sorties).toEqual(new Set(joueurs));
+  });
+
+  it('ne prend jamais la couleur des traqueurs, reservee a leur role', () => {
+    for (let graine = 0; graine < 50; graine += 1) {
+      expect(couleurDeSosie(creerAlea(graine), [COULEUR_DES_TRAQUEURS, '#ABCDEF']).valeur).toBe(
+        '#ABCDEF',
+      );
+    }
+  });
+
+  it('se rabat sur la couleur d un PNJ ordinaire sans autre joueur', () => {
+    expect(couleurDeSosie(creerAlea(40), []).valeur).toBe(couleurDeBot(creerAlea(40), []).valeur);
+    expect(couleurDeSosie(creerAlea(40), [COULEUR_DES_TRAQUEURS]).valeur).toBe(
+      couleurDeBot(creerAlea(40), [COULEUR_DES_TRAQUEURS]).valeur,
+    );
   });
 });
 
