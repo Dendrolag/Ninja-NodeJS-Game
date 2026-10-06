@@ -343,7 +343,12 @@ export const LIMITES_DEBIT = {
    * de plus par seconde ne sert a rien. Une rafale de deux absorbe un double appui.
    */
   poche: { parSeconde: 2, rafale: 2 } satisfies LimiteDebit,
-  /** Tout le reste: rejoindre, quitter, lancer, se declarer pret. */
+  /**
+   * Le bouton d'action d'Among Ninjas (etape 7.20), enfonce puis lache: deux messages par
+   * appui. Cinq appuis par seconde suffisent a tout ce qu'un doigt fait.
+   */
+  action: { parSeconde: 10, rafale: 10 } satisfies LimiteDebit,
+  /** Tout le reste: rejoindre, quitter, lancer, se declarer pret, voter. */
   autresActions: { parSeconde: 5, rafale: 10 } satisfies LimiteDebit,
 } as const;
 

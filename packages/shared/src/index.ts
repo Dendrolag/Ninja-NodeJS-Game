@@ -10,7 +10,15 @@
 
 export type { Alea, Tirage } from './alea.js';
 
-export type { CouleurNommee, LieuxDuMode, PalierDeVision, RoleAmong } from './among.js';
+export type {
+  CampAmong,
+  CouleurNommee,
+  LieuxDuMode,
+  MotifDeReunion,
+  PalierDeVision,
+  PhaseAmong,
+  RoleAmong,
+} from './among.js';
 export {
   AMONG,
   CARTE_DU_MODE_AMONG,
@@ -20,6 +28,7 @@ export {
   DUREES_DE_TOUR_S,
   LIEUX_DES_CARTES,
   PALIERS_DE_VISION,
+  PHASES_AMONG,
   POINTS_AMONG,
   RAYONS_DE_VISION,
   lieuxDuMode,
@@ -129,11 +138,21 @@ export type {
   DemandeInvitation,
   DemandeRejoindre,
   DemandeRetour,
+  DemandeVote,
   IntentionDeplacement,
   MessageChat,
   SessionJoueur,
 } from './entrees.js';
 
+export type {
+  AmongVu,
+  BilanAmong,
+  EtatPriveAmong,
+  FinAmong,
+  MeurtreVu,
+  ReunionVue,
+  TacheVue,
+} from './evenements.js';
 export type {
   BonusActive,
   BotNoirDetruit,
@@ -380,6 +399,7 @@ export {
   validerDemandeReinitialisation,
   validerDemandeRejoindre,
   validerDemandeRetour,
+  validerDemandeVote,
   validerEquipe,
   validerIntentionDeplacement,
   validerJeton,

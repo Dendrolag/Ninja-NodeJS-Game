@@ -60,6 +60,25 @@ export const AMONG = {
   FOULE_PAR_DEFAUT: 40,
 } as const;
 
+/**
+ * Ou en est une partie lancee.
+ *
+ *   - `revelation`: chacun decouvre son role, le monde est fige;
+ *   - `jeu`: on bouge, on tue, on fait ses taches;
+ *   - `discussion` puis `vote`: la reunion, le monde est fige;
+ *   - `ejection`: le resultat du vote s'affiche, le monde est fige.
+ */
+export const PHASES_AMONG = ['revelation', 'jeu', 'discussion', 'vote', 'ejection'] as const;
+
+/** Une phase d'une partie lancee. */
+export type PhaseAmong = (typeof PHASES_AMONG)[number];
+
+/** Pourquoi une reunion s'est ouverte: un cadavre signale, le gong, ou le terme du tour. */
+export type MotifDeReunion = 'cadavre' | 'gong' | 'temps';
+
+/** Un camp, celui qui gagne. */
+export type CampAmong = 'proies' | 'tueurs';
+
 /** Les paliers de vision qu'un hote choisit pour chaque role. */
 export const PALIERS_DE_VISION = ['reduite', 'normale', 'large'] as const;
 

@@ -76,6 +76,7 @@ import type {
   Visibilite,
 } from '@neon-ninja/shared';
 import {
+  AMONG,
   CAPACITES,
   CHASSE,
   COULEURS_DES_EQUIPES,
@@ -380,6 +381,18 @@ export class GameRoom {
    */
   private readonly pochesDemandees = new Set<IdentifiantEntite>();
 
+  /**
+   * Les joueurs qui tiennent le bouton d'action d'Among Ninjas (etape 7.20). UN ETAT, COMME LE
+   * DEPLACEMENT: il vaut jusqu'au message qui le lache, et ne s'efface pas a chaque battement.
+   */
+  private readonly actionsTenues = new Set<IdentifiantEntite>();
+
+  /**
+   * Les votes demandes depuis le battement precedent (etape 7.20): un joueur, ou null pour
+   * passer. Des gestes ponctuels, effaces a chaque battement, comme les tirs.
+   */
+  private readonly votesDemandes = new Map<IdentifiantEntite, IdentifiantEntite | null>();
+
   /** Ce que chaque joueur a fait de notable depuis le lancement (etape 3.8). */
   private releve: ReleveDesExploits = RELEVE_VIDE;
 
@@ -523,6 +536,11 @@ export class GameRoom {
       return refus('partie', 'Cette chasse a déjà commencé.');
     }
 
+    // On n'entre pas dans une partie Among Ninjas lancee (etape 7.20): les roles sont tires.
+    if (this.mode === 'among' && this.statutCourant === 'enCours') {
+      return refus('partie', 'Cette partie a déjà commencé.');
+    }
+
     if (this.partie.joueurs[session.id] !== undefined) {
       return refus('session', 'Cette connexion est déjà dans la partie.');
     }
@@ -582,6 +600,8 @@ export class GameRoom {
     delete this.intentions[id];
     this.tirsDemandes.delete(id);
     this.pochesDemandees.delete(id);
+    this.actionsTenues.delete(id);
+    this.votesDemandes.delete(id);
 
     if (this.hoteCourant === id) {
       this.hoteCourant = this.successeur();
@@ -615,6 +635,8 @@ export class GameRoom {
     delete this.intentions[id];
     this.tirsDemandes.delete(id);
     this.pochesDemandees.delete(id);
+    this.actionsTenues.delete(id);
+    this.votesDemandes.delete(id);
 
     if (this.hoteCourant === id) {
       this.hoteCourant = this.presentLePlusAncien() ?? id;
@@ -705,6 +727,14 @@ export class GameRoom {
 
     if (this.mode === 'chasse' && this.ordreDArrivee.length < CHASSE.JOUEURS_MINIMUM) {
       return refus('joueurs', 'Il faut au moins deux joueurs pour lancer une chasse.');
+    }
+
+    // Among Ninjas ne se lance qu'a cinq (etape 7.20): a quatre, un meurtre fait un duel.
+    if (this.mode === 'among' && this.ordreDArrivee.length < AMONG.JOUEURS_MINIMUM) {
+      return refus(
+        'joueurs',
+        `Il faut au moins ${String(AMONG.JOUEURS_MINIMUM)} joueurs pour lancer une partie Among Ninjas.`,
+      );
     }
 
     return { valide: true, valeur: true };
@@ -881,11 +911,84 @@ export class GameRoom {
   }
 
   /**
+   * Retient que ce joueur tient le bouton d'action d'Among Ninjas, ou l'a lache (etape 7.20).
+   * Ignore pour un joueur absent ou hors d'une partie en cours. La room ne sait pas ce que fait
+   * le bouton: c'est le moteur qui en juge, et qui l'ignore dans les autres modes.
+   */
+  tenirLAction(id: IdentifiantEntite, tenue: boolean): void {
+    if (!tenue) {
+      this.actionsTenues.delete(id);
+      return;
+    }
+
+    if (this.statutCourant === 'enCours' && this.partie.joueurs[id] !== undefined) {
+      this.actionsTenues.add(id);
+    }
+  }
+
+  /**
+   * Retient le vote d'un joueur pour le prochain battement (etape 7.20). Memes regles qu'un
+   * tir: ignore pour un joueur absent ou hors d'une partie en cours. Que le vote soit ouvert,
+   * et la cible vivante, le moteur en juge.
+   */
+  voter(id: IdentifiantEntite, cible: IdentifiantEntite | null): void {
+    if (this.statutCourant !== 'enCours' || this.partie.joueurs[id] === undefined) {
+      return;
+    }
+
+    this.votesDemandes.set(id, cible);
+  }
+
+  /**
+   * Qui lit un message de chat de ce joueur, dans une partie Among Ninjas lancee (etape 7.20).
+   *
+   *   - Un fantome parle aux fantomes, a tout moment: le canal des fantomes.
+   *   - Un vivant parle a tous, fantomes compris, mais seulement en reunion: pendant le jeu, le
+   *     chat des vivants est ferme.
+   *
+   * Undefined hors de ce cas: le message va a toute la partie, comme avant l'etape. Un refus
+   * quand le vivant parle hors de la reunion.
+   */
+  canalDuChat(
+    id: IdentifiantEntite,
+  ):
+    | { readonly destinataires: readonly IdentifiantEntite[]; readonly canal?: 'fantomes' }
+    | { readonly refus: string }
+    | undefined {
+    const among = this.partie.among;
+
+    if (this.mode !== 'among' || this.statutCourant !== 'enCours' || among === undefined) {
+      return undefined;
+    }
+
+    if (among.joueurs[id]?.fantome === true) {
+      return {
+        destinataires: Object.keys(among.joueurs).filter(
+          (autre) => among.joueurs[autre]?.fantome === true,
+        ),
+        canal: 'fantomes',
+      };
+    }
+
+    if (among.phase !== 'discussion' && among.phase !== 'vote') {
+      return { refus: 'Le chat ne s’ouvre qu’en réunion.' };
+    }
+
+    return { destinataires: Object.keys(this.partie.joueurs) };
+  }
+
+  /**
    * Les entrees du battement: les intentions conservees, et les tirs et les poches demandes
-   * depuis le precedent. Sans rien de demande, ce sont les intentions elles-memes.
+   * depuis le precedent, le bouton d'action tenu et les votes d'Among Ninjas. Sans rien de
+   * demande, ce sont les intentions elles-memes.
    */
   private entreesDuBattement(): Entrees {
-    if (this.tirsDemandes.size === 0 && this.pochesDemandees.size === 0) {
+    if (
+      this.tirsDemandes.size === 0 &&
+      this.pochesDemandees.size === 0 &&
+      this.actionsTenues.size === 0 &&
+      this.votesDemandes.size === 0
+    ) {
       return this.intentions;
     }
 
@@ -899,6 +1002,14 @@ export class GameRoom {
 
     for (const id of this.pochesDemandees) {
       entrees[id] = { ...(entrees[id] ?? immobile), utiliserLaPoche: true };
+    }
+
+    for (const id of this.actionsTenues) {
+      entrees[id] = { ...(entrees[id] ?? immobile), agir: true };
+    }
+
+    for (const [id, cible] of this.votesDemandes) {
+      entrees[id] = { ...(entrees[id] ?? immobile), voter: cible };
     }
 
     return entrees;
@@ -926,6 +1037,7 @@ export class GameRoom {
     this.partie = tick(this.partie, this.entreesDuBattement(), dtMs);
     this.tirsDemandes.clear();
     this.pochesDemandees.clear();
+    this.votesDemandes.clear();
     this.releve = releverLeBattement(this.releve, this.partie, this.cleDuJoueur);
 
     // Prevenir AVANT de constater la fin: le dernier battement d'une partie est
@@ -983,14 +1095,21 @@ export class GameRoom {
    * DANS UNE PARTIE MASSACRE (etape 7.4), on se place aussi aux points, mais le temps joue
    * reste celui reellement joue: une carte videe avant le terme rapporte deja son bonus de
    * points, et payer le reste en XP recompenserait deux fois la meme vitesse.
+   *
+   * DANS UNE PARTIE AMONG NINJAS (etape 7.20), le camp vainqueur passe devant, puis les points
+   * de faits de jeu: c'est l'ordre du classement lui-meme (calculerScores). Le temps joue est le
+   * temps de jeu ecoule, reunions non comptees: le mode n'a pas de duree.
    */
   bilan(): BilanDePartie {
     const classement = this.classement();
     const nombreJoueurs = classement.length + this.abandons.length;
+    // Among Ninjas n'a pas de duree (etape 7.20): le temps joue est le temps de jeu ecoule.
     const finDuJeuMs =
       this.mode === 'chasse'
         ? this.partie.dureeMs
-        : Math.min(this.partie.tempsEcouleMs, this.partie.dureeMs);
+        : this.mode === 'among'
+          ? this.partie.tempsEcouleMs
+          : Math.min(this.partie.tempsEcouleMs, this.partie.dureeMs);
     const equipes = this.mode === 'equipes' ? classementDesEquipes(classement) : undefined;
     const ordre = equipes === undefined ? classement : dansLOrdreDesEquipes(classement, equipes);
 

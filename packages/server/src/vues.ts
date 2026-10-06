@@ -27,6 +27,16 @@
  * joueur (couleurDeSosie, dans le moteur). Le classement reste le meme pour tous: il dit
  * qui joue et combien il a de points, pas ou il est.
  *
+ * DANS AMONG NINJAS (etape 7.20), UNE VUE PAR VIVANT, ET UNE POUR LES FANTOMES.
+ *
+ *   - Un vivant ne recoit que ce qui est dans le disque de sa vision (rayonDeVision, dans le
+ *     moteur): lui-meme, les vivants, la foule et les cadavres. Jamais un fantome. Sa propre
+ *     entite porte l'arme d'un tueur, qu'aucune autre vue ne montre.
+ *   - Les fantomes partagent une vue: toute la carte, fantomes compris.
+ *   - Un destinataire que l'etat ne connait pas ne voit rien.
+ *
+ * Le role n'est dans aucune vue: il part a son seul joueur (etatPriveDe, dans instantane.ts).
+ *
  * CE QUI RESTE, ET POURQUOI. Ce qu'un joueur a vu legitimement, il le garde: une proie
  * infectee, ou un traqueur sous Revelation, a vu ou etaient les proies, et les positions se
  * suivent d'un battement a l'autre. Changer les alias n'y ferait rien. Le flux ne lui en dit
@@ -40,10 +50,10 @@ import { createHmac } from 'node:crypto';
 
 import type { BotVu, EntiteVue, InstantanePartie, JoueurVu } from '@neon-ninja/shared';
 import type { EtatPartie, IdentifiantEntite } from '@neon-ninja/sim';
-import { bonusActif, estCache, estTraqueur } from '@neon-ninja/sim';
+import { bonusActif, estCache, estTraqueur, rayonDeVision } from '@neon-ninja/sim';
 
 import type { Notification } from './instantane.js';
-import { instantaneDe } from './instantane.js';
+import { armeDuTueur, instantaneDe } from './instantane.js';
 
 /**
  * Le nom d'une vue. Les destinataires qui partagent une cle recoivent la meme trame. Une
@@ -56,6 +66,15 @@ export const VUE_COMMUNE: CleDeVue = 'commune';
 
 /** La vue des traqueurs de la Chasse, ou les proies sont des PNJ. */
 export const VUE_DES_TRAQUEURS: CleDeVue = 'traqueurs';
+
+/** La vue des fantomes d'Among Ninjas (etape 7.20): toute la carte. */
+export const VUE_DES_FANTOMES: CleDeVue = 'fantomes';
+
+/** La vue d'un destinataire qu'une partie Among Ninjas ne connait pas: rien. */
+export const VUE_DE_PERSONNE: CleDeVue = 'personne';
+
+/** Le debut de la cle de la vue d'un vivant d'Among Ninjas, suivi de son identifiant. */
+const PREFIXE_D_UN_VIVANT = 'vivant:';
 
 /** L'alias d'un ninja dans la vue des traqueurs: toujours le meme pour un meme identifiant. */
 export type Alias = (id: IdentifiantEntite) => string;
@@ -126,6 +145,16 @@ function condense(secret: Uint8Array, id: IdentifiantEntite, essai: number): str
  * compris, et pour un identifiant que l'etat ne connait pas.
  */
 export function cleDeVue(etat: EtatPartie, destinataire: IdentifiantEntite): CleDeVue {
+  if (etat.among !== undefined) {
+    const joueur = etat.among.joueurs[destinataire];
+
+    if (joueur === undefined) {
+      return VUE_DE_PERSONNE;
+    }
+
+    return joueur.fantome ? VUE_DES_FANTOMES : `${PREFIXE_D_UN_VIVANT}${destinataire}`;
+  }
+
   if (etat.mode !== 'chasse' || etat.chasse === undefined) {
     return VUE_COMMUNE;
   }
@@ -158,11 +187,66 @@ export function vuesDe(
   for (const cle of cles) {
     if (!vues.has(cle)) {
       commune ??= instantaneDe(etat);
-      vues.set(cle, cle === VUE_COMMUNE ? commune : vueDesTraqueurs(etat, commune, alias));
+      vues.set(cle, vueDeCle(etat, commune, cle, alias));
     }
   }
 
   return vues;
+}
+
+/** La vue de cette cle, tiree de la vue commune du meme battement. */
+function vueDeCle(
+  etat: EtatPartie,
+  commune: InstantanePartie,
+  cle: CleDeVue,
+  alias: Alias,
+): InstantanePartie {
+  if (cle === VUE_COMMUNE || cle === VUE_DES_FANTOMES) {
+    return commune;
+  }
+
+  if (cle === VUE_DES_TRAQUEURS) {
+    return vueDesTraqueurs(etat, commune, alias);
+  }
+
+  if (cle.startsWith(PREFIXE_D_UN_VIVANT)) {
+    return vueDUnVivant(etat, commune, cle.slice(PREFIXE_D_UN_VIVANT.length));
+  }
+
+  return { ...commune, entites: [] };
+}
+
+/**
+ * La vue d'un vivant d'Among Ninjas (etape 7.20): ce qui est dans le disque de sa vision, de
+ * centre a centre, sans aucun fantome. Sa propre entite porte son arme, s'il est tueur.
+ */
+function vueDUnVivant(
+  etat: EtatPartie,
+  commune: InstantanePartie,
+  id: IdentifiantEntite,
+): InstantanePartie {
+  const centre = etat.joueurs[id]?.position;
+
+  if (centre === undefined) {
+    return { ...commune, entites: [] };
+  }
+
+  const rayon = rayonDeVision(etat, id);
+  const arme = armeDuTueur(etat, id);
+  const entites: EntiteVue[] = [];
+
+  for (const entite of commune.entites) {
+    if (entite.id === id && entite.type === 'joueur') {
+      entites.push(arme === undefined ? entite : { ...entite, tactique: arme });
+    } else if (
+      !(entite.type === 'joueur' && entite.fantome === true) &&
+      Math.hypot(entite.x - centre.x, entite.y - centre.y) <= rayon
+    ) {
+      entites.push(entite);
+    }
+  }
+
+  return { ...commune, entites };
 }
 
 /** La vue de ce joueur, seule: ce que sa trame decrit. */
@@ -171,11 +255,7 @@ export function vuePour(
   destinataire: IdentifiantEntite,
   alias: Alias,
 ): InstantanePartie {
-  const commune = instantaneDe(etat);
-
-  return cleDeVue(etat, destinataire) === VUE_COMMUNE
-    ? commune
-    : vueDesTraqueurs(etat, commune, alias);
+  return vueDeCle(etat, instantaneDe(etat), cleDeVue(etat, destinataire), alias);
 }
 
 /**
@@ -260,7 +340,9 @@ export function notificationDansLaVue(
   cle: CleDeVue,
   alias: Alias,
 ): Notification {
-  if (cle === VUE_COMMUNE) {
+  // Seule la vue des traqueurs masque: les vues d'Among Ninjas (etape 7.20) recoivent leurs
+  // notifications telles quelles, deja adressees a qui doit les recevoir.
+  if (cle !== VUE_DES_TRAQUEURS) {
     return notification;
   }
 
@@ -279,6 +361,8 @@ export function notificationDansLaVue(
     case 'ralliement':
     case 'objetEmpoche':
     case 'minePosee':
+    case 'meurtre':
+    case 'reunion':
       // Rien qui designe une autre entite qu'un identifiant de mine ou un pseudo.
       return notification;
 

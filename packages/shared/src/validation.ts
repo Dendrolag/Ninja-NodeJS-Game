@@ -72,6 +72,7 @@ import type {
   DemandeInvitation,
   DemandeRejoindre,
   DemandeRetour,
+  DemandeVote,
   IntentionDeplacement,
   MessageChat,
   SessionJoueur,
@@ -387,6 +388,32 @@ export function validerDemandeCreation(brut: unknown): ResultatValidation<Demand
  */
 export function validerEquipe(brut: unknown): ResultatValidation<Equipe> {
   return estUnDe(EQUIPES, brut) ? accepte(brut) : refuse('equipe', "Cette équipe n'existe pas.");
+}
+
+/** La longueur au plus d'un identifiant de joueur designe dans un vote: celui d'une connexion. */
+const LONGUEUR_D_UN_IDENTIFIANT = 64;
+
+/**
+ * Valide un vote d'Among Ninjas (etape 7.20): un identifiant de joueur, ou null pour passer.
+ * Que ce joueur soit vivant, et que le vote soit ouvert, le moteur en juge: ici, seule la
+ * forme compte.
+ */
+export function validerDemandeVote(brut: unknown): ResultatValidation<DemandeVote> {
+  const source = objetOuRien(brut);
+  if (source === undefined) {
+    return refuse('vote', 'Un vote doit être un objet.');
+  }
+
+  const cible = champ(source, 'cible');
+  if (cible === null) {
+    return accepte({ cible: null });
+  }
+
+  if (typeof cible !== 'string' || cible.length === 0 || cible.length > LONGUEUR_D_UN_IDENTIFIANT) {
+    return refuse('vote.cible', 'Un vote désigne un joueur, ou personne.');
+  }
+
+  return accepte({ cible });
 }
 
 /**

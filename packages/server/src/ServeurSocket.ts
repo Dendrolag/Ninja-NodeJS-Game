@@ -66,6 +66,7 @@ import type {
   DemandeInvitation,
   DemandeRejoindre,
   DemandeRetour,
+  DemandeVote,
   Equipe,
   ErreurValidation,
   EvenementsClientVersServeur,
@@ -74,6 +75,7 @@ import type {
   IntentionDeplacement,
   InvitationEnvoyee,
   LimiteDebit,
+  Mode,
   ObjetDePoche,
   PartiePublique,
   ProgressionDeFin,
@@ -93,6 +95,7 @@ import {
   validerDemandeInvitation,
   validerDemandeRejoindre,
   validerDemandeRetour,
+  validerDemandeVote,
   validerEquipe,
   validerIntentionDeplacement,
   validerJeton,
@@ -122,6 +125,8 @@ import { horlogeSysteme } from './horloge.js';
 import type { Notification } from './instantane.js';
 import {
   classementDe,
+  etatPriveDe,
+  finAmongDe,
   joueurDuSalon,
   lancementDe,
   notificationsDe,
@@ -231,6 +236,12 @@ interface Connexion {
    * la poche au battement suivant.
    */
   pocheAnnoncee: ObjetDePoche | undefined;
+  /**
+   * Ce que cette connexion a recu de l'etat prive de son joueur d'Among Ninjas (etape 7.20),
+   * tel qu'il a ete serialise. Vide au depart, comme la poche: une connexion revenue apres une
+   * coupure recoit son role au battement suivant.
+   */
+  amongAnnonce: string | undefined;
 }
 
 /** La reponse a une demande d'entree, de creation ou de retour. */
@@ -525,6 +536,7 @@ export class ServeurSocket {
         autresActions: seauNeuf(LIMITES_DEBIT.autresActions),
         capture: seauNeuf(LIMITES_DEBIT.capture),
         poche: seauNeuf(LIMITES_DEBIT.poche),
+        action: seauNeuf(LIMITES_DEBIT.action),
       },
       derniereFois: {
         deplacement: maintenant,
@@ -533,8 +545,10 @@ export class ServeurSocket {
         autresActions: maintenant,
         capture: maintenant,
         poche: maintenant,
+        action: maintenant,
       },
       pocheAnnoncee: undefined,
+      amongAnnonce: undefined,
     });
 
     socket.on('rejoindre', (demande, accuse) => {
@@ -560,6 +574,12 @@ export class ServeurSocket {
     });
     socket.on('utiliserLaPoche', () => {
       this.surUtiliserLaPoche(socket);
+    });
+    socket.on('agir', (tenue) => {
+      this.surAgir(socket, tenue);
+    });
+    socket.on('voter', (demande) => {
+      this.surVoter(socket, demande);
     });
     socket.on('changerDEquipe', (equipe) => {
       this.surChangerDEquipe(socket, equipe);
@@ -1063,7 +1083,61 @@ export class ServeurSocket {
     room.demanderLaPoche(connexion.session.id);
   }
 
-  /** Message de chat, signe par la session et diffuse a la seule partie. */
+  /**
+   * Le bouton d'action d'Among Ninjas, tenu ou lache (etape 7.20). Un etat, comme le
+   * deplacement. Un message mal forme, en trop ou hors d'une partie en cours est ignore en
+   * silence. Lacher passe toujours: un bouton reste enfonce serait pire qu'un message de trop.
+   */
+  private surAgir(socket: SocketTypee, tenue: boolean): void {
+    const connexion = this.connexions.get(socket.id);
+
+    if (connexion?.session === undefined || connexion.idRoom === undefined) {
+      return;
+    }
+
+    if (typeof (tenue as unknown) !== 'boolean') {
+      return;
+    }
+
+    const room = this.rooms.room(connexion.idRoom);
+    if (room === undefined || (tenue && !this.autorise(connexion, 'action'))) {
+      return;
+    }
+
+    room.tenirLAction(connexion.session.id, tenue);
+  }
+
+  /**
+   * Un vote d'Among Ninjas (etape 7.20). Valide dans sa forme, limite en debit, puis confie a
+   * la room: que le vote soit ouvert, et la cible vivante, le moteur en juge.
+   */
+  private surVoter(socket: SocketTypee, demande: DemandeVote): void {
+    const connexion = this.connexions.get(socket.id);
+
+    if (connexion?.session === undefined || connexion.idRoom === undefined) {
+      return;
+    }
+
+    if (!this.autorise(connexion, 'autresActions')) {
+      return;
+    }
+
+    const verdict = validerDemandeVote(demande as unknown);
+    const room = this.rooms.room(connexion.idRoom);
+
+    if (!verdict.valide || room?.statut !== 'enCours') {
+      return;
+    }
+
+    room.voter(connexion.session.id, verdict.valeur.cible);
+  }
+
+  /**
+   * Message de chat, signe par la session et diffuse a la seule partie.
+   *
+   * Dans une partie Among Ninjas lancee (etape 7.20), la room dit qui le lit: les fantomes
+   * entre eux, les vivants a tous en reunion seulement. Un message de fantome porte son canal.
+   */
   private surChat(socket: SocketTypee, demande: DemandeChat): void {
     const connexion = this.connexions.get(socket.id);
 
@@ -1085,7 +1159,29 @@ export class ServeurSocket {
       return;
     }
 
-    this.io.to(connexion.idRoom).emit('chat', verdict.valeur);
+    const room = this.rooms.room(connexion.idRoom);
+    const canal = room?.canalDuChat(connexion.session.id);
+
+    if (canal === undefined) {
+      this.io.to(connexion.idRoom).emit('chat', verdict.valeur);
+      return;
+    }
+
+    if ('refus' in canal) {
+      socket.emit('refus', { action: 'chat', erreurs: [{ champ: 'chat', motif: canal.refus }] });
+      return;
+    }
+
+    const message =
+      canal.canal === undefined ? verdict.valeur : { ...verdict.valeur, canal: canal.canal };
+
+    for (const id of canal.destinataires) {
+      const destinataire = this.connexionDuJoueur(id);
+
+      if (destinataire?.idRoom === room?.id) {
+        destinataire?.socket.emit('chat', message);
+      }
+    }
   }
 
   /**
@@ -1152,7 +1248,7 @@ export class ServeurSocket {
     // Les reglages peuvent changer de carte, donc de murs. Le terrain se
     // recharge avec eux: sans cela, la partie garderait les murs de la carte
     // precedente sous le decor de la nouvelle.
-    room.changerReglages(verdict.valeur, this.terrainDe(verdict.valeur));
+    room.changerReglages(verdict.valeur, this.terrainDe(room.mode, verdict.valeur));
     this.diffuserLeSalon(room);
   }
 
@@ -1284,6 +1380,9 @@ export class ServeurSocket {
 
     room.lancer();
     this.io.to(room.id).emit('partieLancee', lancementDe(room));
+    // Dans Among Ninjas, chacun apprend son role des le lancement, pour la revelation (etape
+    // 7.20), sans attendre le premier battement.
+    this.annoncerLesEtatsPrives(room);
     this.amis?.partieChangee(room.id);
   }
 
@@ -1330,6 +1429,34 @@ export class ServeurSocket {
     }
 
     this.annoncerLesPoches(room);
+    this.annoncerLesEtatsPrives(room);
+  }
+
+  /**
+   * Dit a chaque joueur d'Among Ninjas ce qu'il sait de lui-meme, a lui seul, quand cela
+   * change (etape 7.20): son role, ses complices, s'il est fantome, ses stations et sa liste.
+   * Comme la poche, rien de cela ne voyage dans le flux d'etat.
+   */
+  private annoncerLesEtatsPrives(room: GameRoom): void {
+    if (room.etat.among === undefined) {
+      return;
+    }
+
+    for (const id of Object.keys(room.etat.joueurs)) {
+      const connexion = this.connexionDuJoueur(id);
+      const prive = etatPriveDe(room.etat, id);
+
+      if (connexion?.idRoom !== room.id || prive === undefined) {
+        continue;
+      }
+
+      const serialise = JSON.stringify(prive);
+
+      if (connexion.amongAnnonce !== serialise) {
+        connexion.amongAnnonce = serialise;
+        connexion.socket.emit('amongNinjas', prive);
+      }
+    }
   }
 
   /**
@@ -1375,7 +1502,13 @@ export class ServeurSocket {
 
   /** Annonce la fin d'une partie et son classement definitif. */
   private diffuserLaFin(room: GameRoom): void {
-    this.io.to(room.id).emit('partieTerminee', { classement: classementDe(room.etat) });
+    // Among Ninjas revele a la fin le camp vainqueur et tous les roles (etape 7.20).
+    const among = finAmongDe(room.etat);
+
+    this.io.to(room.id).emit('partieTerminee', {
+      classement: classementDe(room.etat),
+      ...(among === undefined ? {} : { among }),
+    });
     this.amis?.partieChangee(room.id);
   }
 
@@ -1871,7 +2004,8 @@ export class ServeurSocket {
   ouvrirUneRoom(
     options: Omit<OptionsCreationRoom, 'surBattement' | 'surFinDePartie'> = {},
   ): GameRoom {
-    const terrain = options.terrain ?? this.terrainDe(options.reglages);
+    const terrain =
+      options.terrain ?? this.terrainDe(options.mode ?? 'classique', options.reglages);
 
     return this.rooms.creer({
       ...options,
@@ -1899,9 +2033,16 @@ export class ServeurSocket {
    * C'est aussi ce qui permet aux tests d'integration de tourner sans jamais
    * toucher au disque: leur chargeur pointe vers un dossier qui n'existe pas, et
    * ils jouent sur une carte sans mur, ce qui est exactement ce qu'ils veulent.
+   *
+   * LA CARTE EST CELLE QUE LE MODE IMPOSE, pas forcement celle que l'hote a demandee: Among
+   * Ninjas se joue sur Tokyo (etape 7.20), et un terrain d'une autre carte n'irait pas a son
+   * etat.
    */
-  private terrainDe(reglages: ReglagesPartiels | undefined): CarteCollisions | undefined {
-    const complets = completerReglages(reglages);
+  private terrainDe(
+    mode: Mode,
+    reglages: ReglagesPartiels | undefined,
+  ): CarteCollisions | undefined {
+    const complets = imposerLesReglagesDuMode(mode, completerReglages(reglages));
 
     try {
       return this.terrains.charger({
@@ -2012,6 +2153,20 @@ function envoyer(socket: SocketTypee, notification: Notification): void {
     case 'mineDeZone':
       socket.emit('mineDeZone', notification.charge);
       return;
+
+    case 'meurtre':
+      socket.emit('meurtre', notification.charge);
+      return;
+
+    case 'reunion':
+      socket.emit('reunion', notification.charge);
+      return;
+
+    default: {
+      // Une notification sans envoi partirait en silence nulle part: le compilateur la refuse.
+      const oubliee: never = notification;
+      throw new Error(`Notification sans envoi: ${JSON.stringify(oubliee)}`);
+    }
   }
 }
 

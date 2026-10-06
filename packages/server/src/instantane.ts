@@ -23,6 +23,7 @@
  */
 
 import type {
+  AmongVu,
   BonusActive,
   BotNoirDetruit,
   BotNoirToucheVu,
@@ -34,7 +35,9 @@ import type {
   CompteDuSalon,
   CoupDeKatanaVu,
   EntiteVue,
+  EtatPriveAmong,
   EvadeVu,
+  FinAmong,
   FumeeVue,
   InfosSalon,
   LancementDePartie,
@@ -44,6 +47,7 @@ import type {
   LigneClassement,
   MalusRamasseParMoi,
   MalusSubi,
+  MeurtreVu,
   MineArmeeVue,
   MineDeZoneFaitVue,
   MineExploseeVue,
@@ -52,6 +56,7 @@ import type {
   ObjetVu,
   PartiePublique,
   RalliementVu,
+  ReunionVue,
   TactiqueVue,
   TirDeCaptureVu,
   VieDeTraqueurPerdueVue,
@@ -59,6 +64,7 @@ import type {
 } from '@neon-ninja/shared';
 import type {
   Bot,
+  EtatAmong,
   EtatPartie,
   EtatTactiqueDuJoueur,
   EvenementPartie,
@@ -68,9 +74,10 @@ import type {
   ObjetRamassable,
   ZoneSpeciale,
 } from '@neon-ninja/sim';
-import { COULEUR_BOT_NEUTRE, EVADE } from '@neon-ninja/shared';
+import { AMONG_PAR_DEFAUT, COULEUR_BOT_NEUTRE, EVADE, TACTIQUE } from '@neon-ninja/shared';
 import {
   REGLES_DES_MODES,
+  avancementDesTaches,
   bonusActif,
   calculerScores,
   etatTactiqueDe,
@@ -78,6 +85,7 @@ import {
   evaluerFinDePartie,
   guerrierDe,
   porteLeDoubleur,
+  rayonDeVision,
   toutesLesEntites,
 } from '@neon-ninja/sim';
 
@@ -94,6 +102,10 @@ import type { GameRoom } from './GameRoom.js';
  * passe donc par une notification qui lui est adressee.
  */
 export function instantaneDe(etat: EtatPartie): InstantanePartie {
+  if (etat.among !== undefined) {
+    return instantaneAmong(etat, etat.among);
+  }
+
   return {
     tick: etat.tick,
     tempsRestantMs: evaluerFinDePartie(etat).tempsRestantMs,
@@ -107,6 +119,163 @@ export function instantaneDe(etat: EtatPartie): InstantanePartie {
     objets: Object.values(etat.objets).map(objetVu),
     zones: Object.values(etat.zones).map(zoneVue),
     classement: calculerScores(etat).map(ligneClassement),
+  };
+}
+
+/**
+ * L'instantane d'une partie Among Ninjas lancee (etape 7.20): TOUT CE QUE LE MOTEUR SAIT DE
+ * LA CARTE, fantomes et cadavres compris. Il ne part jamais tel quel a un vivant: c'est la
+ * vue des fantomes, et les vues des vivants en sont tirees (vues.ts).
+ *
+ * Le classement n'y dit que les pseudos et les couleurs: ni points, ni captures, que les faits
+ * de jeu trahiraient. Le role n'y est nulle part, ni l'arme d'un tueur, qui n'entre que dans
+ * sa propre vue.
+ */
+function instantaneAmong(etat: EtatPartie, among: EtatAmong): InstantanePartie {
+  const entites: EntiteVue[] = toutesLesEntites(etat).map((entite) =>
+    entite.type === 'joueur' && among.joueurs[entite.id]?.fantome === true
+      ? { ...entiteVue(etat, entite), fantome: true as const }
+      : entiteVue(etat, entite),
+  );
+
+  for (const [id, cadavre] of Object.entries(among.cadavres)) {
+    entites.push({
+      type: 'cadavre',
+      id,
+      x: cadavre.position.x,
+      y: cadavre.position.y,
+      couleur: cadavre.couleur,
+      direction: 'immobile',
+    });
+  }
+
+  return {
+    tick: etat.tick,
+    tempsRestantMs: 0,
+    enPause: etat.enPause,
+    entites,
+    objets: Object.values(etat.objets).map(objetVu),
+    zones: Object.values(etat.zones).map(zoneVue),
+    classement: Object.values(etat.joueurs).map((joueur) => ({
+      id: joueur.id,
+      pseudo: joueur.pseudo,
+      couleur: joueur.couleur,
+      points: 0,
+      botsPortes: 0,
+      pointsBotsNoirs: 0,
+      captures: 0,
+      botsNoirsDetruits: 0,
+    })),
+    among: amongVu(etat, among),
+  };
+}
+
+/** Ou en est une partie Among Ninjas, tel que tout joueur le sait. */
+function amongVu(etat: EtatPartie, among: EtatAmong): AmongVu {
+  const dureeDuTourMs = (etat.reglages.among ?? AMONG_PAR_DEFAUT).dureeDuTourS * 1000;
+  const { faites, total } = avancementDesTaches(among);
+  let restantMs = among.phaseRestanteMs;
+
+  if (among.phase === 'jeu') {
+    restantMs = dureeDuTourMs > 0 ? Math.max(dureeDuTourMs - among.tourEcouleMs, 0) : 0;
+  }
+
+  return { phase: among.phase, restantMs, tachesFaites: faites, tachesTotal: total };
+}
+
+/**
+ * L'arme d'un tueur vivant d'Among Ninjas (etape 7.20), telle qu'elle part dans SA SEULE vue:
+ * une charge si son meurtre est pret, zero sinon, et l'attente avant le prochain. Rien pour
+ * une proie, ni pour un tueur fantome, qui ne tue plus.
+ */
+export function armeDuTueur(etat: EtatPartie, id: IdentifiantEntite): TactiqueVue | undefined {
+  const tueur = etat.among?.joueurs[id];
+  const joueur = etat.joueurs[id];
+
+  if (tueur?.role !== 'tueur' || tueur.fantome || joueur === undefined) {
+    return undefined;
+  }
+
+  return {
+    orientation:
+      joueur.direction === 'immobile' ? TACTIQUE.ORIENTATION_DE_DEPART : joueur.direction,
+    charges: tueur.rechargeMs > 0 ? 0 : 1,
+    avantProchaineChargeMs: tueur.rechargeMs,
+  };
+}
+
+/**
+ * Ce que ce joueur d'Among Ninjas sait de lui-meme (etape 7.20): son role, ses complices
+ * s'il est tueur, s'il est fantome, ses stations et sa liste. Il part a lui seul, quand cela
+ * change. Undefined avant le lancement, ou pour un joueur que le mode ne connait pas.
+ */
+export function etatPriveDe(etat: EtatPartie, id: IdentifiantEntite): EtatPriveAmong | undefined {
+  const among = etat.among;
+  const joueur = among?.joueurs[id];
+
+  if (among === undefined || joueur === undefined) {
+    return undefined;
+  }
+
+  const complices =
+    joueur.role === 'tueur'
+      ? Object.keys(among.joueurs).filter(
+          (autre) => autre !== id && among.joueurs[autre]?.role === 'tueur',
+        )
+      : [];
+  // Une proie ne recoit que les stations de sa liste, dans l'ordre de sa liste: savoir quelles
+  // stations sont actives lui dirait ou vont les autres. Un tueur les voit toutes.
+  const stations =
+    joueur.role === 'tueur'
+      ? among.stations
+      : joueur.taches.map((tache) => among.stations[tache.station] ?? among.gong);
+
+  return {
+    role: joueur.role,
+    complices,
+    fantome: joueur.fantome,
+    gong: among.gong,
+    stations,
+    taches: joueur.taches.map((tache, rang) => ({
+      station: rang,
+      dureeMs: tache.dureeMs,
+      faite: tache.faite,
+    })),
+    ...(joueur.tacheEnCours === undefined ? {} : { tacheEnCours: joueur.tacheEnCours.indice }),
+    gongUtilise: joueur.gongUtilise,
+  };
+}
+
+/**
+ * La fin d'une partie Among Ninjas (etape 7.20): le camp vainqueur, et le role et les faits de
+ * chacun, dans l'ordre du classement. Undefined si la partie n'est pas decidee.
+ */
+export function finAmongDe(etat: EtatPartie): FinAmong | undefined {
+  const among = etat.among;
+
+  if (among?.vainqueur === undefined) {
+    return undefined;
+  }
+
+  return {
+    vainqueur: among.vainqueur,
+    joueurs: calculerScores(etat).flatMap((ligne) => {
+      const joueur = among.joueurs[ligne.id];
+
+      return joueur === undefined
+        ? []
+        : [
+            {
+              id: ligne.id,
+              role: joueur.role,
+              fantome: joueur.fantome,
+              taches: joueur.faits.taches,
+              meurtres: joueur.faits.meurtres,
+              signalements: joueur.faits.signalements,
+              bonsVotes: joueur.faits.bonsVotes,
+            },
+          ];
+    }),
   };
 }
 
@@ -503,7 +672,9 @@ export type Notification =
       readonly nom: 'mineDeZone';
       readonly pour: IdentifiantEntite;
       readonly charge: MineDeZoneFaitVue;
-    };
+    }
+  | { readonly nom: 'meurtre'; readonly pour: IdentifiantEntite; readonly charge: MeurtreVu }
+  | { readonly nom: 'reunion'; readonly pour: IdentifiantEntite; readonly charge: ReunionVue };
 
 /**
  * Traduit les faits d'un battement en notifications adressees.
@@ -760,7 +931,71 @@ function notificationsDUnFait(
         x: evenement.position.x,
         y: evenement.position.y,
       });
+
+    // Among Ninjas (etape 7.20).
+    case 'meurtre':
+      return meurtreVu(etat, evenement);
+
+    case 'reunionOuverte':
+      return aTous(etat, 'reunion', {
+        quoi: 'ouverte',
+        numero: evenement.numero,
+        ...(evenement.par === undefined ? {} : { par: evenement.par }),
+        motif: evenement.motif,
+        ...(evenement.cadavre === undefined ? {} : { cadavre: evenement.cadavre }),
+        morts: evenement.morts,
+      });
+
+    case 'voteOuvert':
+      return aTous(etat, 'reunion', { quoi: 'voteOuvert' });
+
+    case 'aVote':
+      return aTous(etat, 'reunion', { quoi: 'aVote', votant: evenement.votant });
+
+    case 'resultatDuVote':
+      // Aux votes anonymes, le decompte seul: qui a vote pour qui reste secret.
+      return aTous(etat, 'reunion', {
+        quoi: 'resultat',
+        ...(evenement.ejecte === undefined ? {} : { ejecte: evenement.ejecte }),
+        ...(etat.reglages.among?.votesAnonymes === true ? {} : { votes: evenement.votes }),
+        decompte: evenement.decompte.map((option) => ({ ...option })),
+      });
+
+    // Un tour qui commence se lit dans la phase du flux, une tache faite dans l'etat prive.
+    case 'tourCommence':
+    case 'tacheFaite':
+      return [];
   }
+}
+
+/**
+ * Un meurtre, adresse au tueur, a la victime, qui apprend qui l'a tuee, et aux vivants qui
+ * voient l'endroit: ceux-la ont vu le coup (micro-decision 19 de la fiche). Les autres
+ * n'apprennent rien; ils trouveront le cadavre. Un fantome n'en sait rien de plus que les
+ * autres: il le verra dans sa vue, qui montre tout.
+ */
+function meurtreVu(
+  etat: EtatPartie,
+  evenement: Extract<EvenementPartie, { type: 'meurtre' }>,
+): readonly Notification[] {
+  const { position } = evenement;
+  const charge: MeurtreVu = {
+    tueur: evenement.tueur,
+    victime: evenement.victime,
+    x: position.x,
+    y: position.y,
+  };
+
+  return Object.values(etat.joueurs)
+    .filter(
+      (joueur) =>
+        joueur.id === evenement.tueur ||
+        joueur.id === evenement.victime ||
+        (etat.among?.joueurs[joueur.id]?.fantome === false &&
+          Math.hypot(joueur.position.x - position.x, joueur.position.y - position.y) <=
+            rayonDeVision(etat, joueur.id)),
+    )
+    .map((joueur): Notification => ({ nom: 'meurtre', pour: joueur.id, charge }));
 }
 
 /**
@@ -806,7 +1041,14 @@ function ceQuArriveAuDoubleur(
 /** La meme notification, pour chaque joueur present. */
 function aTous<
   N extends
-    'coupDeKatana' | 'carteVidee' | 'evade' | 'fumee' | 'mineArmee' | 'mineExplosee' | 'mineDeZone',
+    | 'coupDeKatana'
+    | 'carteVidee'
+    | 'evade'
+    | 'fumee'
+    | 'mineArmee'
+    | 'mineExplosee'
+    | 'mineDeZone'
+    | 'reunion',
 >(
   etat: EtatPartie,
   nom: N,

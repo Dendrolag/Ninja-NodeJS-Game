@@ -6,23 +6,19 @@
  * EtatPartie.among, et son journal ne porte aucun de ces evenements.
  */
 
-import type { Couleur, Position, RoleAmong } from '@neon-ninja/shared';
+import type {
+  CampAmong,
+  Couleur,
+  MotifDeReunion,
+  PhaseAmong,
+  Position,
+  RoleAmong,
+} from '@neon-ninja/shared';
+
+export type { CampAmong, MotifDeReunion, PhaseAmong };
 
 /** Un identifiant d'entite, comme dans etat.ts. */
 type Identifiant = string;
-
-/**
- * Ou en est la partie.
- *
- *   - `revelation`: chacun decouvre son role, le monde est fige;
- *   - `jeu`: on bouge, on tue, on fait ses taches;
- *   - `discussion` puis `vote`: la reunion, le monde est fige;
- *   - `ejection`: le resultat du vote s'affiche, le monde est fige.
- */
-export type PhaseAmong = 'revelation' | 'jeu' | 'discussion' | 'vote' | 'ejection';
-
-/** Pourquoi une reunion s'est ouverte. */
-export type MotifDeReunion = 'cadavre' | 'gong' | 'temps';
 
 /** Une tache de la liste d'une proie: une station, et le temps qu'il faut y rester. */
 export interface TacheAmong {
@@ -104,9 +100,6 @@ export interface EjectionAmong {
   readonly votes: Readonly<Record<Identifiant, VoteAmong>>;
   readonly decompte: readonly VoixAmong[];
 }
-
-/** Le camp vainqueur. */
-export type CampAmong = 'proies' | 'tueurs';
 
 /** Ce que retient une partie Among Ninjas. Voir EtatPartie.among. */
 export interface EtatAmong {

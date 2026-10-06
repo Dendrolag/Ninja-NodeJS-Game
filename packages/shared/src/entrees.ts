@@ -218,6 +218,14 @@ export interface DemandeChat {
 }
 
 /**
+ * Un vote, pendant une reunion d'Among Ninjas (etape 7.20): pour un joueur, ou null pour
+ * passer. Qui vote, la session le dit.
+ */
+export interface DemandeVote {
+  readonly cible: string | null;
+}
+
+/**
  * Un message de chat pret a etre diffuse.
  *
  * L'auteur et le pseudo viennent de la session, le texte vient du joueur. Ce
@@ -237,4 +245,10 @@ export interface MessageChat {
   readonly pseudo: string;
   /** Ce que le joueur a ecrit, normalise et borne. */
   readonly texte: string;
+  /**
+   * Le canal des fantomes d'Among Ninjas (etape 7.20): un message ecrit par un fantome, que
+   * seuls les fantomes lisent. Absent pour tout autre message. Le serveur le pose, jamais le
+   * client.
+   */
+  readonly canal?: 'fantomes';
 }

@@ -44,6 +44,8 @@
  * l'appelant decide de traiter.
  */
 
+import type { PhaseAmong } from './among.js';
+import { PHASES_AMONG } from './among.js';
 import type { Couleur, Direction, NatureObjet, Orientation, TypeZone } from './constantes.js';
 import {
   DIRECTIONS,
@@ -55,6 +57,7 @@ import {
   TYPES_ZONE,
 } from './constantes.js';
 import type {
+  AmongVu,
   BotVu,
   EntiteVue,
   InstantanePartie,
@@ -346,9 +349,18 @@ function depuisUtf8(octets: Uint8Array, debut: number, fin: number): string {
 /**
  * Les natures d'entite, dans l'ordre de leur code. L'Evade (etape 7.9) est ajoute a la fin:
  * les trois premieres gardent leur code, et une partie sans lui s'ecrit a l'octet comme avant.
- * La mine posee (etape 7.11) le suit, pour la meme raison, puis la mine de zone (etape 7.12).
+ * La mine posee (etape 7.11) le suit, pour la meme raison, puis la mine de zone (etape 7.12),
+ * puis le cadavre d'Among Ninjas (etape 7.20).
  */
-const TYPES_ENTITE = ['joueur', 'bot', 'botNoir', 'evade', 'mine', 'mineDeZone'] as const;
+const TYPES_ENTITE = [
+  'joueur',
+  'bot',
+  'botNoir',
+  'evade',
+  'mine',
+  'mineDeZone',
+  'cadavre',
+] as const;
 
 /** Les categories d'objet, dans l'ordre de leur code. */
 const CATEGORIES_OBJET = ['bonus', 'malus'] as const;
@@ -465,6 +477,19 @@ export function quantifierInstantane(instantane: InstantanePartie): InstantanePa
     objets: instantane.objets.map(objetArrondi),
     zones: instantane.zones.map(zoneArrondie),
     classement: instantane.classement.map(ligneArrondie),
+    ...(instantane.among === undefined ? {} : { among: amongArrondi(instantane.among) }),
+  };
+}
+
+/** Ou en est une partie Among Ninjas, tel que cela voyage: des entiers positifs. */
+function amongArrondi(among: AmongVu): AmongVu {
+  codeDans(PHASES_AMONG, among.phase, 'phase');
+
+  return {
+    phase: among.phase,
+    restantMs: positifArrondi(among.restantMs, 'restantMs'),
+    tachesFaites: positifArrondi(among.tachesFaites, 'tachesFaites'),
+    tachesTotal: positifArrondi(among.tachesTotal, 'tachesTotal'),
   };
 }
 
@@ -489,6 +514,7 @@ function entiteArrondie(entite: EntiteVue): EntiteVue {
       protege: entite.protege,
       ...(entite.tactique === undefined ? {} : { tactique: tactiqueArrondie(entite.tactique) }),
       ...(entite.doubleur === true ? { doubleur: true as const } : {}),
+      ...(entite.fantome === true ? { fantome: true as const } : {}),
     };
   }
 
@@ -640,8 +666,8 @@ function lireCode<T>(lecteur: Lecteur, liste: readonly T[]): T {
 
 /**
  * Les indicateurs d'un joueur, sur un octet: 1 invincible, 2 protege, 4 quand il porte
- * l'etat du mode Tactique, et 8 quand il porte le x2 de l'Evade (etape 7.9). Un joueur
- * sans x2 garde l'octet d'avant.
+ * l'etat du mode Tactique, 8 quand il porte le x2 de l'Evade (etape 7.9), et 16 pour un
+ * fantome d'Among Ninjas (etape 7.20). Un joueur sans x2 ni fantome garde l'octet d'avant.
  *
  * La poche d'un joueur (etape 7.10) n'y est pas, et ne doit jamais y venir: ce flux part a
  * toute la partie, et la poche ne regarde que son porteur.
@@ -651,7 +677,8 @@ function drapeauxDuJoueur(joueur: JoueurVu): number {
     (joueur.invincible ? 1 : 0) |
     (joueur.protege ? 2 : 0) |
     (joueur.tactique === undefined ? 0 : 4) |
-    (joueur.doubleur === true ? 8 : 0)
+    (joueur.doubleur === true ? 8 : 0) |
+    (joueur.fantome === true ? 16 : 0)
   );
 }
 
@@ -661,12 +688,13 @@ interface DrapeauxDuJoueur {
   readonly protege: boolean;
   readonly avecTactique: boolean;
   readonly doubleur?: true;
+  readonly fantome?: true;
 }
 
 function lireDrapeauxDuJoueur(lecteur: Lecteur): DrapeauxDuJoueur {
   const drapeaux = lecteur.octet();
 
-  if (drapeaux > 15) {
+  if (drapeaux > 31) {
     throw new ErreurDeTrame("les indicateurs d'un joueur y sont inconnus");
   }
 
@@ -675,6 +703,7 @@ function lireDrapeauxDuJoueur(lecteur: Lecteur): DrapeauxDuJoueur {
     protege: (drapeaux & 2) !== 0,
     avecTactique: (drapeaux & 4) !== 0,
     ...((drapeaux & 8) !== 0 ? { doubleur: true as const } : {}),
+    ...((drapeaux & 16) !== 0 ? { fantome: true as const } : {}),
   };
 }
 
@@ -956,6 +985,7 @@ const ENTITES: Genre<EntiteVue> = {
             protege: ancienne.protege,
             avecTactique: ancienne.tactique !== undefined,
             ...(ancienne.doubleur === true ? { doubleur: true as const } : {}),
+            ...(ancienne.fantome === true ? { fantome: true as const } : {}),
           };
 
     if (!avecTactique) {
@@ -1402,7 +1432,13 @@ function encoder(
     ecrivain.entier(partie.tempsRestantMs - Math.round(reference.tempsRestantMs));
   }
 
-  ecrivain.octet(partie.enPause ? 1 : 0);
+  // Les indicateurs de la partie: 1 en pause, 2 quand le bloc d'Among Ninjas suit (etape
+  // 7.20). Une partie d'un autre mode garde l'octet d'avant.
+  ecrivain.octet((partie.enPause ? 1 : 0) | (partie.among === undefined ? 0 : 2));
+
+  if (partie.among !== undefined) {
+    ecrireAmong(ecrivain, partie.among);
+  }
 
   ecrireListe(ecrivain, ENTITES, reference?.entites ?? [], partie.entites);
   ecrireListe(ecrivain, OBJETS, reference?.objets ?? [], partie.objets);
@@ -1410,6 +1446,26 @@ function encoder(
   ecrireListe(ecrivain, CLASSEMENT, reference?.classement ?? [], partie.classement);
 
   return { octets: ecrivain.resultat(), reference: partie };
+}
+
+/**
+ * Le bloc d'Among Ninjas, entier a chaque trame: la phase sur un octet, puis trois entiers.
+ * Quelques octets, qui ne valent pas un delta.
+ */
+function ecrireAmong(ecrivain: Ecrivain, among: AmongVu): void {
+  ecrireCode(ecrivain, PHASES_AMONG, among.phase, 'phase');
+  ecrivain.entierPositif(among.restantMs);
+  ecrivain.entierPositif(among.tachesFaites);
+  ecrivain.entierPositif(among.tachesTotal);
+}
+
+function lireAmong(lecteur: Lecteur): AmongVu {
+  return {
+    phase: lireCode<PhaseAmong>(lecteur, PHASES_AMONG),
+    restantMs: lecteur.entierPositif(),
+    tachesFaites: lecteur.entierPositif(),
+    tachesTotal: lecteur.entierPositif(),
+  };
 }
 
 /** Des octets, quelle que soit la forme sous laquelle le reseau les a rendus. */
@@ -1478,18 +1534,20 @@ export function appliquerTrame(
 
   const drapeaux = lecteur.octet();
 
-  if (drapeaux > 1) {
+  if (drapeaux > 3) {
     throw new ErreurDeTrame('ses indicateurs sont inconnus');
   }
 
+  const among = (drapeaux & 2) === 0 ? undefined : lireAmong(lecteur);
   const partie: InstantanePartie = {
     tick: enTete.tick,
     tempsRestantMs,
-    enPause: drapeaux === 1,
+    enPause: (drapeaux & 1) !== 0,
     entites: lireListe(lecteur, ENTITES, base?.entites ?? []),
     objets: lireListe(lecteur, OBJETS, base?.objets ?? []),
     zones: lireListe(lecteur, ZONES, base?.zones ?? []),
     classement: lireListe(lecteur, CLASSEMENT, base?.classement ?? []),
+    ...(among === undefined ? {} : { among }),
   };
 
   if (lecteur.restant !== 0) {

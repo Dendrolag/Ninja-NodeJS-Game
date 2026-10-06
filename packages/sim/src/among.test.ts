@@ -27,6 +27,7 @@ import {
   fantomesEnAmong,
   mondeFigeEnAmong,
   pointsEnAmong,
+  rayonDeVision,
 } from './among.js';
 import { peuplerDeBots } from './bots.js';
 import { creerCarteCollisions } from './collisions.js';
@@ -773,6 +774,21 @@ describe('les points', () => {
     const classement = calculerScores(decide).map((ligne) => ligne.id);
     expect(classement.slice(0, proies.length).sort()).toEqual([...proies].sort());
     expect(classement.at(-1)).toBe(tueur);
+  });
+});
+
+describe('la vision', () => {
+  it('voit selon le role et le palier, et tout en fantome', () => {
+    const etat = enJeu(5, { among: { visionProie: 'reduite', visionTueur: 'large' } });
+    const { tueur, proie } = unTueurEtUneProie(etat);
+
+    expect(rayonDeVision(etat, proie)).toBe(200);
+    expect(rayonDeVision(etat, tueur)).toBe(380);
+    expect(rayonDeVision(avecRole(etat, proie, { fantome: true }), proie)).toBe(
+      Number.POSITIVE_INFINITY,
+    );
+    expect(rayonDeVision(etat, 'inconnu')).toBe(0);
+    expect(rayonDeVision(enJeu(), unTueurEtUneProie(enJeu()).tueur)).toBe(320);
   });
 });
 

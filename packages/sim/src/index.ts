@@ -111,6 +111,7 @@ export {
   lancerAmong,
   mondeFigeEnAmong,
   pointsEnAmong,
+  rayonDeVision,
   tuer,
 } from './among.js';
 

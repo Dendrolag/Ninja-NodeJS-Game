@@ -1032,3 +1032,84 @@ describe('la mine de zone (etape 7.12)', () => {
     expect(() => appliquerTrame(reference, avecJoueur.octets)).toThrow(/une mine de zone/);
   });
 });
+
+describe('Among Ninjas (etape 7.20)', () => {
+  /** Un cadavre, tel que le serveur l'envoie: une entite immobile, a la couleur de sa victime. */
+  const cadavre = (x: number, y: number): EntiteVue => ({
+    id: 'cadavre-4',
+    type: 'cadavre',
+    x,
+    y,
+    couleur: '#FF8C1A',
+    direction: 'immobile',
+  });
+
+  it('fait voyager la phase, un cadavre et un fantome, image puis deltas', () => {
+    const parties = [
+      instantane({
+        tick: 1,
+        entites: [joueur('a', 100, 100), joueur('b', 140, 100)],
+        among: { phase: 'jeu', restantMs: 170_000.4, tachesFaites: 0, tachesTotal: 20 },
+      }),
+      instantane({
+        tick: 2,
+        entites: [
+          joueur('a', 101, 100),
+          joueur('b', 140, 100, { fantome: true }),
+          cadavre(140, 100),
+        ],
+        among: { phase: 'jeu', restantMs: 169_950, tachesFaites: 1, tachesTotal: 20 },
+      }),
+      instantane({
+        tick: 3,
+        entites: [
+          joueur('a', 101, 100),
+          joueur('b', 150, 100, { fantome: true }),
+          cadavre(140, 100),
+        ],
+        among: { phase: 'discussion', restantMs: 45_000, tachesFaites: 1, tachesTotal: 20 },
+      }),
+      instantane({ tick: 4, entites: [joueur('a', 101, 100), joueur('b', 150, 100)] }),
+    ];
+    let reference = encoderImage(parties[0] as InstantanePartie).reference;
+    expect(appliquerTrame(undefined, encoderImage(parties[0] as InstantanePartie).octets)).toEqual(
+      quantifierInstantane(parties[0] as InstantanePartie),
+    );
+
+    for (const suivante of parties.slice(1)) {
+      const trame = encoderDelta(reference, suivante);
+
+      expect(appliquerTrame(reference, trame.octets)).toEqual(quantifierInstantane(suivante));
+      reference = trame.reference;
+    }
+  });
+
+  it('laisse a l octet pres une partie d un autre mode, et tient le fantome dans l octet des indicateurs', () => {
+    const vivant = encoderImage(instantane({ entites: [joueur('a', 10, 10)] })).octets;
+    const fantome = encoderImage(
+      instantane({ entites: [joueur('a', 10, 10, { fantome: true })] }),
+    ).octets;
+
+    expect(fantome.length).toBe(vivant.length);
+    expect(fantome).not.toEqual(vivant);
+    expect(quantifierInstantane(instantane())).not.toHaveProperty('among');
+  });
+
+  it('refuse une phase inconnue', () => {
+    const partie = instantane({
+      among: { phase: 'sieste' as 'jeu', restantMs: 0, tachesFaites: 0, tachesTotal: 0 },
+    });
+
+    expect(() => encoderImage(partie)).toThrow(/phase/u);
+  });
+
+  it('refuse des indicateurs de partie inconnus', () => {
+    const octets = encoderImage(instantane()).octets.slice();
+    // Premier octet: version et nature; puis le battement et le temps restant, sur un octet
+    // et trois; puis les indicateurs.
+    const rang = octets.length - 5;
+    octets[rang] = 4;
+
+    expect(() => appliquerTrame(undefined, octets)).toThrow(ErreurDeTrame);
+  });
+});

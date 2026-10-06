@@ -28,6 +28,7 @@ import {
   AMONG,
   AMONG_PAR_DEFAUT,
   POINTS_AMONG,
+  RAYONS_DE_VISION,
   entier,
   lieuxDuMode,
   tueursMaximum,
@@ -111,6 +112,29 @@ export function mondeFigeEnAmong(etat: EtatPartie): boolean {
   const among = etat.among;
 
   return among !== undefined && (among.phase !== 'jeu' || among.vainqueur !== undefined);
+}
+
+/**
+ * Jusqu'ou ce joueur voit, en pixels, de son centre: selon son role et le palier que l'hote a
+ * regle pour lui. Un fantome voit toute la carte. Zero pour un joueur que le mode ne connait
+ * pas: il ne voit rien.
+ */
+export function rayonDeVision(etat: EtatPartie, id: IdentifiantEntite): number {
+  const joueur = etat.among?.joueurs[id];
+
+  if (joueur === undefined) {
+    return 0;
+  }
+
+  if (joueur.fantome) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const reglages = reglagesDe(etat);
+
+  return RAYONS_DE_VISION[joueur.role][
+    joueur.role === 'proie' ? reglages.visionProie : reglages.visionTueur
+  ];
 }
 
 /** La partie est-elle decidee: un camp a gagne. */

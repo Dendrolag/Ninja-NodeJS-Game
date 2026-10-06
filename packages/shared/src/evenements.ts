@@ -44,6 +44,7 @@
  * par une notification qui lui est adressee, exactement comme dans le legacy.
  */
 
+import type { CampAmong, MotifDeReunion, PhaseAmong, RoleAmong } from './among.js';
 import type {
   Couleur,
   Direction,
@@ -59,12 +60,14 @@ import type {
   TypeZone,
   Visibilite,
 } from './constantes.js';
+import type { Position } from './geometrie.js';
 import type {
   DemandeChat,
   DemandeCreation,
   DemandeInvitation,
   DemandeRejoindre,
   DemandeRetour,
+  DemandeVote,
   IntentionDeplacement,
   MessageChat,
 } from './entrees.js';
@@ -114,6 +117,11 @@ export interface JoueurVu extends EntiteVueCommune {
    * la cible (decision 8 du porteur du projet). Absent sinon.
    */
   readonly doubleur?: true;
+  /**
+   * Un fantome d'Among Ninjas (etape 7.20). Seule la vue des fantomes en montre: un vivant
+   * ne recoit jamais un fantome.
+   */
+  readonly fantome?: true;
   // Ce que le joueur a en poche (etape 7.10) n'est pas ici, et ne doit jamais y venir: le flux
   // d'etat part a toute la partie, et la poche ne regarde que son porteur (decision du
   // porteur du projet du 28 septembre 2026, « ca trahirait trop les joueurs qui en
@@ -144,8 +152,11 @@ export interface TactiqueVue {
 
 /** Un bot ordinaire ou un bot noir, tel que tout le monde le voit. */
 export interface BotVu extends EntiteVueCommune {
-  /** Un faux ninja, un Black Ninja, ou l'Evade (etape 7.9), qui voyage comme eux. */
-  readonly type: 'bot' | 'botNoir' | 'evade';
+  /**
+   * Un faux ninja, un Black Ninja, l'Evade (etape 7.9), ou un cadavre d'Among Ninjas (etape
+   * 7.20), a la couleur de sa victime, qui ne bouge pas.
+   */
+  readonly type: 'bot' | 'botNoir' | 'evade' | 'cadavre';
 }
 
 /**
@@ -275,6 +286,24 @@ export interface InstantanePartie {
   readonly zones: readonly ZoneVue[];
   /** Le classement, du meilleur au moins bon. */
   readonly classement: readonly LigneClassement[];
+  /** Ou en est une partie Among Ninjas lancee (etape 7.20). Absent ailleurs. */
+  readonly among?: AmongVu;
+}
+
+/**
+ * Ce que tout joueur d'une partie Among Ninjas lancee sait d'elle (etape 7.20): la phase, ce
+ * qu'il en reste, et la barre commune des taches. Ni role, ni mort: ceux-la ne voyagent pas
+ * ici.
+ */
+export interface AmongVu {
+  readonly phase: PhaseAmong;
+  /**
+   * Ce qu'il reste de la phase, en millisecondes. Pendant le jeu, ce qu'il reste du tour s'il
+   * a une duree maximale, zero sinon.
+   */
+  readonly restantMs: number;
+  readonly tachesFaites: number;
+  readonly tachesTotal: number;
 }
 
 // --------------------------------------------------------------------------
@@ -801,7 +830,92 @@ export interface PartieEnPause {
  */
 export interface FinDePartie {
   readonly classement: readonly LigneClassement[];
+  /** La fin d'une partie Among Ninjas (etape 7.20): le camp vainqueur, et tous les roles. */
+  readonly among?: FinAmong;
 }
+
+/** La fin d'une partie Among Ninjas: tout se revele. */
+export interface FinAmong {
+  readonly vainqueur: CampAmong;
+  readonly joueurs: readonly BilanAmong[];
+}
+
+/** Ce que chacun a fait dans une partie Among Ninjas, montre a la fin. */
+export interface BilanAmong {
+  readonly id: string;
+  readonly role: RoleAmong;
+  readonly fantome: boolean;
+  readonly taches: number;
+  readonly meurtres: number;
+  readonly signalements: number;
+  readonly bonsVotes: number;
+}
+
+/**
+ * Ce que ce joueur d'Among Ninjas sait de lui-meme (etape 7.20), a lui seul, a chaque
+ * changement et a son retour apres une coupure. Rien de cela ne voyage dans le flux d'etat.
+ */
+export interface EtatPriveAmong {
+  readonly role: RoleAmong;
+  /** Pour un tueur, les autres tueurs. Vide pour une proie: elle ne sait rien. */
+  readonly complices: readonly string[];
+  readonly fantome: boolean;
+  /** Le point de reunion, ou sonne le gong. */
+  readonly gong: Position;
+  /**
+   * Les stations qui le regardent: celles de sa liste pour une proie, toutes les stations
+   * actives pour un tueur, qui les voit sans pouvoir y faire de tache.
+   */
+  readonly stations: readonly Position[];
+  /** Sa liste, pour une proie: une station de la liste ci-dessus, sa duree, faite ou non. */
+  readonly taches: readonly TacheVue[];
+  /** Le rang dans sa liste de la tache qu'il fait en ce moment. */
+  readonly tacheEnCours?: number;
+  readonly gongUtilise: boolean;
+}
+
+/** Une tache de la liste d'une proie. */
+export interface TacheVue {
+  /** Le rang de sa station dans EtatPriveAmong.stations. */
+  readonly station: number;
+  readonly dureeMs: number;
+  readonly faite: boolean;
+}
+
+/**
+ * Un meurtre, adresse au tueur, a la victime, et aux vivants qui voient l'endroit (etape
+ * 7.20). Les autres ne savent rien: ils trouveront le cadavre.
+ */
+export interface MeurtreVu {
+  readonly tueur: string;
+  readonly victime: string;
+  readonly x: number;
+  readonly y: number;
+}
+
+/**
+ * Ce qui se passe en reunion, a tous (etape 7.20). Le resultat ne dit jamais le role de
+ * l'ejecte (decision du porteur du projet du 6 octobre 2026). Dans une partie aux votes
+ * anonymes, il ne dit pas qui a vote pour qui, seulement le decompte.
+ */
+export type ReunionVue =
+  | {
+      readonly quoi: 'ouverte';
+      readonly numero: number;
+      readonly par?: string;
+      readonly motif: MotifDeReunion;
+      readonly cadavre?: string;
+      /** Tous les morts, cadavre trouve ou non. */
+      readonly morts: readonly string[];
+    }
+  | { readonly quoi: 'voteOuvert' }
+  | { readonly quoi: 'aVote'; readonly votant: string }
+  | {
+      readonly quoi: 'resultat';
+      readonly ejecte?: string;
+      readonly votes?: Readonly<Record<string, string | null>>;
+      readonly decompte: readonly { readonly cible: string | null; readonly voix: number }[];
+    };
 
 /**
  * La progression d'un compte a un instant: avant ou apres une partie.
@@ -990,6 +1104,15 @@ export interface EvenementsClientVersServeur {
    * fois plus n'avance pas dix fois plus vite (faille S2 du legacy).
    */
   deplacer: (intention: IntentionDeplacement) => void;
+
+  /**
+   * Le bouton d'action d'Among Ninjas (etape 7.20), tenu ou lache. Un etat, comme le
+   * deplacement: il vaut jusqu'au message suivant.
+   */
+  agir: (tenue: boolean) => void;
+
+  /** Un vote, pendant une reunion d'Among Ninjas (etape 7.20). */
+  voter: (demande: DemandeVote) => void;
 
   /**
    * Tirer, dans le mode Tactique (etape 7.1). Remplace startCapture et endCapture de la
@@ -1199,6 +1322,15 @@ export interface EvenementsServeurVersClient {
 
   /** Ce que ce joueur a en poche, a lui seul, a chaque changement (etape 7.10). */
   poche: (poche: PocheVue) => void;
+
+  /** Ce que ce joueur d'Among Ninjas sait de lui-meme, a lui seul (etape 7.20). */
+  amongNinjas: (etat: EtatPriveAmong) => void;
+
+  /** Un meurtre, au tueur, a la victime et aux temoins (etape 7.20). */
+  meurtre: (meurtre: MeurtreVu) => void;
+
+  /** Ce qui se passe en reunion, a tous (etape 7.20). */
+  reunion: (reunion: ReunionVue) => void;
 
   /** Un joueur de la partie vient de s'enfuir dans un nuage de fumee (etape 7.10). A tous. */
   fumee: (fumee: FumeeVue) => void;
