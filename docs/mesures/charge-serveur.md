@@ -1072,3 +1072,40 @@ Le même iPhone, une partie Tactique à un joueur, 300 faux ninjas, avec pluie. 
 - **Oracle bat plus régulièrement que Render**: aucun battement en retard, un pire écart de 53 ms contre 205, une durée au centile 99 deux fois plus courte. Sur Render, les pointes viennent du dixième de processeur partagé.
 - La durée médiane est la même: c'est le coût du jeu, pas de la machine, à un joueur.
 - **Ce que le joueur a ressenti n'en dépend pas**: la première partie a ramé sur l'iPhone, la seconde non, avec le même serveur. La différence est le son, côté page (étape 5.12).
+
+## 27. Mesure de l'étape 2.9: le flux par destinataire (6 octobre 2026)
+
+Chiffres bruts: `docs/mesures/charge-serveur-2-9-chasse-avant.json`, `charge-serveur-2-9-chasse.json` et `charge-serveur-2-9-classique.json`, écrits par le harnais au second tour. Même machine qu'aux sections 2 et 11 à 15 (Ryzen 7 3800X, Node 24).
+
+### 27.1 L'essentiel
+
+- **Une partie Chasse coûte 14 pour cent de plus par battement**: 0,498 ms au lieu de 0,437 à 150 bots et 10 joueurs, soit 70 parties pleines par cœur au banc au lieu de 80. Le moteur ne bouge pas; la projection construit deux vues au lieu d'une (+0,018 ms), et le codage code deux trames au lieu d'une (+0,052 ms). C'est le prix attendu: la vue commune des proies, et celle des traqueurs.
+- **Un message pèse le même poids**: 431 octets à 150 bots contre 433. Chaque joueur reçoit une trame, celle de sa vue; les alias des ninjas, plus longs que leurs identifiants, ne partent qu'avec les images.
+- **Le Classique n'a pas bougé**: même taille de message à l'octet, même coût au bruit près, et l'empreinte du jeu et du flux des quatre parties de `tests/charge/empreinte.ts` est identique avant et après l'étape. Hors Chasse, tout le monde partage la vue commune: une trame, comme avant.
+
+### 27.2 Méthode
+
+`pnpm charge --banc --joueurs 10 --bots-banc 50,150,300`, avec et sans `--mode chasse`, sur le code d'avant l'étape puis sur celui d'après, deux tours en alternance, sur la même compilation à chaque fois. Le banc mesure désormais la projection et le codage comme la couche réseau les fait: chaque joueur est un destinataire, avec sa vue (`vuesDe`), ses notifications passées par sa vue, et les trames codées par `FluxParVue`. La taille d'un message est la moyenne de ce que reçoit un joueur. Dix joueurs, la capacité de la Chasse: deux traqueurs et huit proies au lancement.
+
+Un premier passage, seul, donnait le Classique 10 à 20 pour cent plus lent après l'étape, alors que son code de jeu n'a pas changé: le bruit de la machine. C'est ce qui a fait choisir l'alternance.
+
+### 27.3 Le banc
+
+Moyenne des deux tours. Durées en millisecondes par battement, tailles en octets par message sur le fil, images comprises.
+
+| Bots | Mode             | Moteur | Projection | Codage | Total | Octets par message | Parties par cœur |
+| ---: | ---------------- | -----: | ---------: | -----: | ----: | -----------------: | ---------------: |
+|   50 | Chasse, avant    |  0,109 |      0,021 |  0,032 | 0,162 |                213 |              217 |
+|   50 | Chasse, après    |  0,104 |      0,026 |  0,062 | 0,191 |                214 |              183 |
+|  150 | Chasse, avant    |  0,318 |      0,045 |  0,074 | 0,437 |                433 |               80 |
+|  150 | Chasse, après    |  0,309 |      0,063 |  0,126 | 0,498 |                431 |               70 |
+|  300 | Chasse, avant    |  0,903 |      0,092 |  0,129 | 1,123 |                753 |               31 |
+|  300 | Chasse, après    |  0,909 |      0,131 |  0,260 | 1,299 |                765 |               27 |
+|  150 | Classique, avant |  0,367 |      0,053 |  0,064 | 0,483 |                438 |               72 |
+|  150 | Classique, après |  0,352 |      0,052 |  0,064 | 0,468 |                438 |               75 |
+
+### 27.4 Ce qui n'est pas mesuré
+
+- **Une Chasse sous Révélation**: un traqueur qui porte le bonus passe à la vue commune, ce qui ne fait jamais plus de deux vues.
+- **Le serveur complet**: une trame par vue part par un seul envoi de Socket.IO à tous ceux qui la partagent, comme avant pour la salle entière. Rien de nouveau à mesurer au fil.
+- **Un mode à une vue par joueur**, comme le serait Among Ninjas: douze trames par battement au lieu de deux. À mesurer avec ce mode, s'il se construit.

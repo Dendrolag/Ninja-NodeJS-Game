@@ -66,6 +66,17 @@ Conditions de ROADMAP réunies, plus:
 3. Le coût par battement d'une partie Chasse est mesuré et écrit.
 4. La couverture de `packages/sim` ne baisse pas.
 
+## Réconciliation (6 octobre 2026, fin d'étape)
+
+La fiche a été suivie. Écarts et précisions apparus à l'exécution:
+
+1. **Un sosie ne prend jamais la couleur des traqueurs.** Un test de l'étape 7.3 peuplait la carte après le tirage des traqueurs: la couleur réservée serait alors passée aux PNJ. Le serveur peuple avant de lancer, mais le tirage l'exclut quand même, pour que l'ordre ne compte pas (`couleurDeSosie`).
+2. **Un nouveau venu ne reçoit plus le delta qu'il ignorait.** Avant l'étape, qui entrait dans une partie en cours recevait le delta du battement, inapplicable, puis son image. Désormais l'image seule: c'est la règle qui protège un changement de vue, et elle vaut pour une entrée. Le test réseau qui comptait ses trames passe de quatre à trois.
+3. **La mesure s'est faite en alternance**, avant puis après, deux tours: un premier passage seul donnait le Classique, inchangé, 10 à 20 pour cent plus lent, par le seul bruit de la machine.
+4. **Le banc mesure les vues comme la couche réseau**: `tests/charge/battement.ts` passe par `vuesDe`, les notifications par leur vue, et `FluxParVue`. L'outil d'empreinte garde la vue commune, qui décrit le jeu: ses empreintes sont identiques avant et après.
+
+Définition de terminé: les quatre conditions sont réunies (tests du serveur, empreinte, section 27 de `docs/mesures/charge-serveur.md`, couverture de `packages/sim` à 99,79 pour cent des instructions).
+
 ## Rituel de fin de session
 
 Écrire `docs/handoffs/etape-2-9-handoff.md`. Consigner les décisions au journal de `docs/design/README.md`, mettre à jour le ROADMAP (étape terminée), l'étude Among Ninjas (le socle existe), la fiche 7.3 si besoin, et `CLAUDE.md` (comportement à préserver 11, la couleur des PNJ). Version: la couleur des PNJ de la Chasse se voit, le troisième chiffre avance. Prochaine action exacte: l'étape qui suit 2.9 dans la section 3 du ROADMAP. Commiter.

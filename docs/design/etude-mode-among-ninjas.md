@@ -57,6 +57,8 @@ Trois constats conditionnent tout le reste:
 
 ## 3. Le point dur: garder les secrets
 
+**Mise à jour du 6 octobre 2026: le socle existe.** L'étape 2.9 a construit le flux par destinataire décrit en 3.3 et corrigé le défaut de la Chasse décrit en 3.2 (fiche `docs/plan/etape-2-9.md`). Une vue se nomme par une clé (`cleDeVue`, `packages/server/src/vues.ts`), et ceux qui la partagent reçoivent la même trame, avec sa propre référence de delta (`FluxParVue`). Ce mode n'aura qu'à donner une clé à chaque joueur et à dire sa vue: rayon de vision, fantômes, cadavres. La couleur trahissait aussi les proies de la Chasse: ses PNJ naissent désormais aux couleurs des joueurs. Coût mesuré pour deux vues: section 27 de `docs/mesures/charge-serveur.md`. Le texte ci-dessous est celui de l'étude.
+
 ### 3.1 Ce qu'un client modifié lirait aujourd'hui
 
 Le flux d'état part en une seule trame, codée une fois pour toute la salle. Le client choisit ensuite quoi dessiner. Pour la zone d'invisibilité, c'est déjà le cas: le serveur envoie les joueurs cachés, la page les efface (`rendu/scene.ts`, `dansUneZoneInvisible`). Ça ne gêne pas un mode où l'invisibilité est un petit avantage. Dans un mode de déduction, chaque information volée finit la partie:

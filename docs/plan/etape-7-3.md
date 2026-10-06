@@ -33,7 +33,7 @@ Première série, toujours valable:
 3. **Les premiers traqueurs sont tirés au sort** au lancement, **un par tranche de cinq joueurs**, arrondi au-dessus.
 4. **Dix joueurs au plus**, **deux pour lancer**.
 5. **Un nouveau traqueur ne capture qu'au bout de trois secondes**; les proies ont trois secondes d'avance au lancement.
-6. **Les ninjas servent de camouflage** et ne comptent pour personne; **pas de Black Ninjas**; bonus et malus en jeu, **un malus frappe l'autre camp**.
+6. **Les ninjas servent de camouflage** et ne comptent pour personne; **pas de Black Ninjas**; bonus et malus en jeu, **un malus frappe l'autre camp**. Révision du 6 octobre 2026 (étape 2.9), sur décision du porteur du projet: les ninjas naissent aux couleurs des joueurs, pour que chaque proie ait des sosies, et ne se transmettent plus leur couleur.
 7. **Les traqueurs portent une couleur commune**, le rose-rouge `#FF2E7E`; les proies gardent la leur.
 8. **Si les traqueurs quittent tous la partie**, une proie tirée au sort devient traqueur, et la partie continue.
 9. **On n'entre pas dans une Chasse lancée**; le retour après une coupure reste permis.
