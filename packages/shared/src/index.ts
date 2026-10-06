@@ -9,6 +9,23 @@
  */
 
 export type { Alea, Tirage } from './alea.js';
+
+export type { CouleurNommee, LieuxDuMode, PalierDeVision, RoleAmong } from './among.js';
+export {
+  AMONG,
+  CARTE_DU_MODE_AMONG,
+  COULEURS_DES_JOUEURS_AMONG,
+  COULEURS_NOMMEES,
+  COULEUR_DE_LA_FOULE,
+  DUREES_DE_TOUR_S,
+  LIEUX_DES_CARTES,
+  PALIERS_DE_VISION,
+  POINTS_AMONG,
+  RAYONS_DE_VISION,
+  lieuxDuMode,
+  nomDeCouleur,
+  tueursMaximum,
+} from './among.js';
 export { creerAlea, element, entier, nombre, reel } from './alea.js';
 
 export type { Intervalle, LimiteDebit } from './bornes.js';
@@ -331,12 +348,14 @@ export type {
   ReglagesBotsNoirs,
   ReglagesMalus,
   ReglagesObjetsDePoche,
+  ReglagesAmong,
   ReglagesObjetsTactiques,
   ReglagesPartie,
   ReglagesPartiels,
   ReglagesZones,
 } from './reglages.js';
 export {
+  AMONG_PAR_DEFAUT,
   OBJETS_TACTIQUES_PAR_DEFAUT,
   REGLAGES_PAR_DEFAUT,
   completerReglages,

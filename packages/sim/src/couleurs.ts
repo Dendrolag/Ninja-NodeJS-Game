@@ -66,9 +66,15 @@ export function couleurAleatoire(alea: Alea): Tirage<Couleur> {
  * @param couleursExclues Couleurs a ne pas attribuer: celles des autres joueurs,
  *                        et, lors d'une reapparition, celle de l'attaquant et
  *                        celle que la victime portait.
+ * @param palette La palette ou puiser d'abord: celle des six couleurs du jeu, ou les douze
+ *                couleurs nommees d'Among Ninjas (etape 7.20).
  */
-export function couleurUnique(alea: Alea, couleursExclues: readonly Couleur[]): Tirage<Couleur> {
-  const libres = COULEURS_JOUEURS.filter((couleur) => !couleursExclues.includes(couleur));
+export function couleurUnique(
+  alea: Alea,
+  couleursExclues: readonly Couleur[],
+  palette: readonly Couleur[] = COULEURS_JOUEURS,
+): Tirage<Couleur> {
+  const libres = palette.filter((couleur) => !couleursExclues.includes(couleur));
 
   if (libres.length > 0) {
     return element(alea, libres);

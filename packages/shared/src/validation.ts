@@ -31,6 +31,7 @@
  * d'entrer, l'autre empeche de nuire si quelque chose entrait quand meme.
  */
 
+import { DUREES_DE_TOUR_S, PALIERS_DE_VISION } from './among.js';
 import type { Intervalle } from './bornes.js';
 import {
   BORNES_CHAT,
@@ -869,6 +870,7 @@ export function validerReglages(brut: unknown): ResultatValidation<ReglagesParti
   poser(retenus, 'botsNoirs', groupeBotsNoirs(source, erreurs));
   poser(retenus, 'objetsDePoche', groupeObjetsDePoche(source, erreurs));
   poser(retenus, 'objetsTactiques', groupeObjetsTactiques(source, erreurs));
+  poser(retenus, 'among', groupeAmong(source, erreurs));
 
   if (erreurs.length > 0) {
     return { valide: false, erreurs };
@@ -1110,6 +1112,66 @@ function groupeObjetsTactiques(
   const retenu: Enregistrement = {};
   poser(retenu, 'bonus', siRempli(bonus));
   poser(retenu, 'malus', siRempli(malus));
+
+  return siRempli(retenu);
+}
+
+/**
+ * Reglages du mode Among Ninjas (etape 7.20): des entiers bornes, la duree d'un tour prise
+ * dans sa liste, deux paliers de vision et un interrupteur.
+ */
+function groupeAmong(
+  source: Enregistrement,
+  erreurs: ErreurValidation[],
+): Enregistrement | undefined {
+  const brut = groupe(source, 'among', 'among', erreurs);
+  if (brut === undefined) {
+    return undefined;
+  }
+
+  const bornes = BORNES_REGLAGES.among;
+  const retenu: Enregistrement = {};
+
+  for (const cle of [
+    'tueurs',
+    'tachesParProie',
+    'rechargeMeurtreS',
+    'discussionS',
+    'voteS',
+    'foule',
+  ] as const) {
+    poser(retenu, cle, entier(brut, cle, bornes[cle], erreurs, 'among'));
+  }
+
+  const duree = champ(brut, 'dureeDuTourS');
+  if (duree !== undefined) {
+    if ((DUREES_DE_TOUR_S as readonly unknown[]).includes(duree)) {
+      poser(retenu, 'dureeDuTourS', duree);
+    } else {
+      erreurs.push({
+        champ: 'among.dureeDuTourS',
+        motif: `La durée d'un tour doit valoir ${DUREES_DE_TOUR_S.join(', ')} secondes.`,
+      });
+    }
+  }
+
+  for (const cle of ['visionProie', 'visionTueur'] as const) {
+    const palier = champ(brut, cle);
+    if (palier === undefined) {
+      continue;
+    }
+
+    if (estUnDe(PALIERS_DE_VISION, palier)) {
+      poser(retenu, cle, palier);
+    } else {
+      erreurs.push({
+        champ: `among.${cle}`,
+        motif: `La vision doit valoir ${PALIERS_DE_VISION.join(', ')}.`,
+      });
+    }
+  }
+
+  poser(retenu, 'votesAnonymes', booleen(brut, 'votesAnonymes', erreurs, 'among'));
 
   return siRempli(retenu);
 }

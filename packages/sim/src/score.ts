@@ -24,6 +24,7 @@
 
 import { SCORE } from '@neon-ninja/shared';
 
+import { estDuCampVainqueur, pointsEnAmong } from './among.js';
 import { pointsEnChasse } from './chasse.js';
 import type { Couleur } from './couleurs.js';
 import type { EtatPartie, HistoriqueCapture, IdentifiantEntite, Joueur } from './etat.js';
@@ -89,7 +90,7 @@ export interface LigneScore {
  */
 export function scoreDe(etat: EtatPartie, joueur: Joueur): LigneScore {
   const botsPortes =
-    etat.mode === 'chasse'
+    etat.mode === 'chasse' || etat.mode === 'among'
       ? 0
       : Object.values(etat.bots).filter(
           (bot) => bot.type === 'bot' && bot.couleur === joueur.couleur,
@@ -126,6 +127,8 @@ function pointsDe(etat: EtatPartie, joueur: Joueur, pointsDeBots: number): numbe
       return pointsEnChasse(etat, joueur);
     case 'massacre':
       return pointsEnMassacre(etat, joueur);
+    case 'among':
+      return pointsEnAmong(etat, joueur);
     default:
       return pointsDeBots;
   }
@@ -137,14 +140,21 @@ function pointsDe(etat: EtatPartie, joueur: Joueur, pointsDeBots: number): numbe
  * On departage d'abord au score, puis au nombre de captures. A egalite parfaite,
  * le tri de JavaScript etant stable, l'ordre d'arrivee dans la partie fait office
  * de troisieme critere. C'est deja ce que faisait le legacy, qui n'avait pas non
- * plus de troisieme critere.
+ * plus de troisieme critere. Dans Among Ninjas (etape 7.20), le camp vainqueur passe
+ * devant tous les autres, quels que soient les points.
  *
  * Cette fonction ne modifie rien: elle lit l'etat et en tire un tableau.
  */
 export function calculerScores(etat: EtatPartie): readonly LigneScore[] {
+  // Dans Among Ninjas (etape 7.20), le camp vainqueur passe devant, puis les points.
+  const camp = (id: string): number => (estDuCampVainqueur(etat, id) ? 1 : 0);
+
   return Object.values(etat.joueurs)
     .map((joueur) => scoreDe(etat, joueur))
     .sort(
-      (premier, second) => second.points - premier.points || second.captures - premier.captures,
+      (premier, second) =>
+        camp(second.id) - camp(premier.id) ||
+        second.points - premier.points ||
+        second.captures - premier.captures,
     );
 }

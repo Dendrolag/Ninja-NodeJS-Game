@@ -64,6 +64,7 @@ import {
   APPARITION,
   BOTS,
   CARTES,
+  COULEURS_DES_JOUEURS_AMONG,
   COULEUR_BOT_NEUTRE,
   COULEUR_BOT_NOIR,
   DUREES,
@@ -75,6 +76,7 @@ import {
 } from '@neon-ninja/shared';
 
 import type { CarteCollisions } from './collisions.js';
+import type { EtatAmong, EvenementAmong } from './etatAmong.js';
 import { carteSansMur, dansLeMorceauPrincipal, positionTenable } from './collisions.js';
 import type { Couleur } from './couleurs.js';
 import { couleurUnique } from './couleurs.js';
@@ -424,7 +426,8 @@ export type EvenementPartie =
   | MineExplosee
   | MineDeZonePosee
   | MineDeZoneArmee
-  | ZoneOuverte;
+  | ZoneOuverte
+  | EvenementAmong;
 
 /**
  * Un joueur a mis un objet dans sa poche (etape 7.10). Il ne l'a pas encore utilise: le
@@ -902,6 +905,14 @@ export interface EtatPartie {
    */
   readonly horde?: EtatDeHorde;
   /**
+   * Les roles, les phases, les cadavres et les taches d'une partie Among Ninjas (etape
+   * 7.20).
+   *
+   * ABSENT D'UNE PARTIE D'UN AUTRE MODE, et d'une partie Among Ninjas au salon: c'est le
+   * lancement qui le pose (voir among.ts), comme pour la Chasse.
+   */
+  readonly among?: EtatAmong;
+  /**
    * L'Evade et son x2 (etape 7.9).
    *
    * ABSENT QUAND IL N'A PAS DE RAISON D'ETRE: reglage coupe, Chasse, ou partie au salon.
@@ -1247,7 +1258,12 @@ export function ajouterJoueur(etat: EtatPartie, options: OptionsAjoutJoueur): Et
 
   let couleur = options.couleur;
   if (couleur === undefined) {
-    const tirage = couleurUnique(alea, couleursUtilisees(etat));
+    // Among Ninjas a ses douze couleurs nommees (etape 7.20): toute accusation passe par
+    // une couleur.
+    const tirage =
+      etat.mode === 'among'
+        ? couleurUnique(alea, couleursUtilisees(etat), COULEURS_DES_JOUEURS_AMONG)
+        : couleurUnique(alea, couleursUtilisees(etat));
     couleur = tirage.valeur;
     alea = tirage.alea;
   }
@@ -1304,6 +1320,11 @@ export function retirerJoueur(etat: EtatPartie, id: IdentifiantEntite): EtatPart
     return retirerJoueur(avecLesMines(etat, sansLesMinesDe(mines, id)), id);
   }
 
+  // Un joueur d'Among Ninjas qui s'en va quitte les tables du mode (etape 7.20).
+  if (etat.among?.joueurs[id] !== undefined) {
+    return retirerJoueur({ ...etat, among: sansLeJoueurAmong(etat.among, id) }, id);
+  }
+
   // Un joueur de la Chasse qui s'en va quitte aussi ses tables (etape 7.3): elles ne
   // connaissent que des joueurs presents. Les autres modes n'ont pas ces tables.
   if (etat.chasse === undefined) {
@@ -1316,6 +1337,38 @@ export function retirerJoueur(etat: EtatPartie, id: IdentifiantEntite): EtatPart
   delete parcours[id];
 
   return { ...etat, joueurs, chasse: { ...etat.chasse, traqueurs, parcours } };
+}
+
+/**
+ * Les tables d'Among Ninjas sans ce joueur (etape 7.20). Les taches qu'une proie a faites
+ * restent faites et comptent au total; ses taches restantes en sortent (etude, section 4.2).
+ * Son vote disparait, et un vote pour lui devient un « passer ». Son cadavre, s'il en a un,
+ * reste au sol.
+ */
+function sansLeJoueurAmong(among: EtatAmong, id: IdentifiantEntite): EtatAmong {
+  const parti = among.joueurs[id];
+  const joueurs = { ...among.joueurs };
+  delete joueurs[id];
+  const faites = parti?.taches.filter((tache) => tache.faite).length ?? 0;
+  const reunion = among.reunion;
+
+  return {
+    ...among,
+    joueurs,
+    tachesDesPartis: among.tachesDesPartis + faites,
+    ...(reunion === undefined
+      ? {}
+      : {
+          reunion: {
+            ...reunion,
+            votes: Object.fromEntries(
+              Object.entries(reunion.votes)
+                .filter(([votant]) => votant !== id)
+                .map(([votant, cible]) => [votant, cible === id ? null : cible]),
+            ),
+          },
+        }),
+  };
 }
 
 /** Les mines posees, moins celles de ce joueur. */

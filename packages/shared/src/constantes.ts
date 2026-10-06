@@ -176,11 +176,13 @@ export interface DimensionsCarte {
  *   - Le Massacre ne capture plus: un coup de katana tue les bots et les joueurs qu'il
  *     balaie, et les morts enchainees font monter les points (etape 7.4). Voir MASSACRE
  *     plus bas.
+ *   - Among Ninjas oppose des tueurs anonymes a des proies qui font des taches; un cadavre
+ *     signale ouvre une reunion et un vote (etape 7.20). Voir AMONG, dans among.ts.
  *
  * Ajouter un mode demande aussi une migration de la base, dont l'enumeration des
  * modes est tiree de cette liste.
  */
-export const MODES = ['classique', 'tactique', 'equipes', 'chasse', 'massacre'] as const;
+export const MODES = ['classique', 'tactique', 'equipes', 'chasse', 'massacre', 'among'] as const;
 
 /** Un mode de jeu. */
 export type Mode = (typeof MODES)[number];
@@ -208,6 +210,8 @@ export type Mode = (typeof MODES)[number];
  * la maquette: decision du porteur du projet du 16 septembre 2026 (etape 7.3). Le Massacre
  * en accueille huit: la carte se vide, et a douze chacun tuerait trop peu de bots pour que
  * les combos existent (decision du porteur du projet du 16 septembre 2026, etape 7.4).
+ * Among Ninjas en accueille douze, et en demande cinq pour se lancer (etape 7.20): le genre
+ * se joue bien de sept a dix.
  */
 export const CAPACITES: Readonly<Record<Mode, number>> = {
   classique: 12,
@@ -215,6 +219,7 @@ export const CAPACITES: Readonly<Record<Mode, number>> = {
   equipes: 12,
   chasse: 10,
   massacre: 8,
+  among: 12,
 };
 
 /**

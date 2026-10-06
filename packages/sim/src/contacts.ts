@@ -233,6 +233,19 @@ export const regleChasse: RegleDeResolution = regleDeContacts({
 });
 
 /**
+ * La regle du mode Among Ninjas: toucher ne produit rien (etape 7.20).
+ *
+ * On y tue par la demande de capture (among.ts), pas en touchant, et la foule neutre ne se
+ * capture pas. La contagion est coupee: tous les PNJ portent le gris de la foule, et aucune
+ * couleur de joueur ne doit s'y transmettre.
+ */
+export const regleAmong: RegleDeResolution = regleDeContacts({
+  entreJoueurs: (etat) => sansEffet(etat),
+  joueurEtBot: (etat) => etat,
+  sansContagion: true,
+});
+
+/**
  * La regle du mode Massacre: toucher ne produit rien (etape 7.4).
  *
  * On y tue d'un coup de katana (massacre.ts), pas en touchant. Toucher un bot ne le repeint

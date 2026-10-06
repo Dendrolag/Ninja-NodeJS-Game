@@ -55,7 +55,15 @@
  */
 
 import type { IntentionDeplacement, Vecteur } from '@neon-ninja/shared';
-import { VITESSES } from '@neon-ninja/shared';
+import { RAYON_ENTITE, VITESSES } from '@neon-ninja/shared';
+
+import {
+  agirEnAmong,
+  amongDecide,
+  fantomesEnAmong,
+  lancerAmong,
+  mondeFigeEnAmong,
+} from './among.js';
 
 import type { PerteFaceAuBotNoir } from './bots.js';
 import { avancerLesBots, perteClassique } from './bots.js';
@@ -71,6 +79,7 @@ import type { RegleDeResolution } from './contacts.js';
 import {
   attraperLEvadeAuContact,
   detecterContacts,
+  regleAmong,
   regleChasse,
   regleEquipes,
   regleHorde,
@@ -126,6 +135,18 @@ export interface EntreeJoueur extends IntentionDeplacement {
    * intention, jamais un etat: ce que contient la poche, seul le moteur le sait.
    */
   readonly utiliserLaPoche?: true;
+  /**
+   * Le joueur tient le bouton d'action, dans Among Ninjas (etape 7.20). A L'INVERSE DU TIR,
+   * C'EST UN ETAT TENU: il vaut tant que le joueur garde le bouton enfonce, comme le
+   * deplacement. A l'appui, un vivant signale un cadavre ou sonne le gong; tenu, il fait sa
+   * tache. Ignore dans les autres modes.
+   */
+  readonly agir?: true;
+  /**
+   * Le vote du joueur pendant une reunion d'Among Ninjas (etape 7.20): un joueur, ou null
+   * pour passer. Ponctuel, comme le tir. Ignore hors du vote et dans les autres modes.
+   */
+  readonly voter?: IdentifiantEntite | null;
 }
 
 /**
@@ -191,6 +212,22 @@ export interface JeuDeRegles {
     etat: EtatPartie,
     horsJeu: ReadonlySet<IdentifiantEntite>,
   ) => EtatPartie;
+  /**
+   * Le monde est-il fige (etape 7.20) ? Jamais dans les autres modes. Dans Among Ninjas,
+   * pendant la revelation et les reunions: personne ne bouge, rien ne vieillit, le temps de
+   * jeu ne s'ecoule pas, et seul le mode avance, pour ses minuteries et ses votes.
+   */
+  readonly mondeFige: (etat: EtatPartie) => boolean;
+  /**
+   * Les joueurs qui traversent les murs (etape 7.20), sans sortir de la carte. Personne dans
+   * les autres modes; les fantomes d'Among Ninjas.
+   */
+  readonly passeMuraille: (etat: EtatPartie) => ReadonlySet<IdentifiantEntite>;
+  /**
+   * Le mode se passe-t-il de terme (etape 7.20) ? Non dans les autres modes, que le temps
+   * finit. Among Ninjas ne finit que par la victoire d'un camp.
+   */
+  readonly sansTerme: boolean;
 }
 
 /**
@@ -226,6 +263,10 @@ export interface JeuDeRegles {
  * L'etape 7.9 l'a elargi une quatrieme fois: l'Evade s'attrape au contact en Horde et en
  * Equipes, et le releve des contacts ne voit que des entites. Les trois autres modes n'y
  * font rien.
+ *
+ * L'etape 7.20 l'a elargi une cinquieme fois, pour Among Ninjas: un monde qui se fige le temps
+ * d'une reunion, des fantomes qui traversent les murs, et une partie sans terme. Les cinq
+ * autres modes repondent non, personne et non, sans rien tirer ni rien calculer.
  */
 export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>> = {
   classique: {
@@ -237,6 +278,9 @@ export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>>
     estDecidee: jamaisAvantLeTerme,
     horsJeu: personneHorsJeu,
     attraperLEvade: attraperLEvadeAuContact,
+    mondeFige: jamaisFige,
+    passeMuraille: personneHorsJeu,
+    sansTerme: false,
   },
   tactique: {
     agir: agirEnTactique,
@@ -247,6 +291,9 @@ export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>>
     estDecidee: jamaisAvantLeTerme,
     horsJeu: personneHorsJeu,
     attraperLEvade: sansEvadeAuContact,
+    mondeFige: jamaisFige,
+    passeMuraille: personneHorsJeu,
+    sansTerme: false,
   },
   equipes: {
     agir: sansAction,
@@ -257,6 +304,9 @@ export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>>
     estDecidee: jamaisAvantLeTerme,
     horsJeu: personneHorsJeu,
     attraperLEvade: attraperLEvadeAuContact,
+    mondeFige: jamaisFige,
+    passeMuraille: personneHorsJeu,
+    sansTerme: false,
   },
   chasse: {
     agir: agirEnChasse,
@@ -268,6 +318,9 @@ export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>>
     estDecidee: chasseDecidee,
     horsJeu: horsJeuEnChasse,
     attraperLEvade: sansEvadeAuContact,
+    mondeFige: jamaisFige,
+    passeMuraille: personneHorsJeu,
+    sansTerme: false,
   },
   massacre: {
     agir: agirEnMassacre,
@@ -278,6 +331,23 @@ export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>>
     estDecidee: massacreDecide,
     horsJeu: personneHorsJeu,
     attraperLEvade: sansEvadeAuContact,
+    mondeFige: jamaisFige,
+    passeMuraille: personneHorsJeu,
+    sansTerme: false,
+  },
+  among: {
+    agir: agirEnAmong,
+    resoudreContacts: regleAmong,
+    // Sans bots noirs ni malus, ces deux questions ne se posent pas: celles du Classique.
+    perteFaceAuBotNoir: perteClassique,
+    victimeDuMalus: malusClassique,
+    lancer: lancerAmong,
+    estDecidee: amongDecide,
+    horsJeu: personneHorsJeu,
+    attraperLEvade: sansEvadeAuContact,
+    mondeFige: mondeFigeEnAmong,
+    passeMuraille: fantomesEnAmong,
+    sansTerme: true,
   },
 };
 
@@ -314,11 +384,20 @@ export function tick(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPart
   }
 
   const regles = REGLES_DES_MODES[etat.mode];
+
+  // Un monde fige (une reunion d'Among Ninjas, etape 7.20) ne fait que ce que le mode y fait.
+  if (regles.mondeFige(etat)) {
+    return regles.agir({ ...etat, tick: etat.tick + 1, evenements: [] }, entrees, dtMs);
+  }
+
   const horsJeu = regles.horsJeu(etat);
+  const passeMuraille = regles.passeMuraille(etat);
   const joueurs: Record<IdentifiantEntite, Joueur> = {};
   for (const [id, joueur] of Object.entries(etat.joueurs)) {
     // Un joueur hors jeu (un traqueur elimine, en Chasse) ne bouge plus.
-    joueurs[id] = horsJeu.has(id) ? joueur : avancerJoueur(etat, joueur, entrees[id], dtMs);
+    joueurs[id] = horsJeu.has(id)
+      ? joueur
+      : avancerJoueur(etat, joueur, entrees[id], dtMs, passeMuraille.has(id));
   }
 
   // Le journal repart vide: il decrit ce battement-ci, pas l'histoire de la
@@ -358,6 +437,11 @@ function sansPreparation(etat: EtatPartie): EtatPartie {
 /** Un mode ou le contact n'attrape pas l'Evade: l'etat est rendu tel quel. */
 function sansEvadeAuContact(etat: EtatPartie): EtatPartie {
   return etat;
+}
+
+/** Un mode dont le monde ne se fige jamais. */
+function jamaisFige(): boolean {
+  return false;
 }
 
 /** Un mode que seul le temps decide. */
@@ -421,10 +505,17 @@ function battementSuspendu(etat: EtatPartie): EtatPartie {
  * lui, reste celui du reglage.
  */
 export function evaluerFinDePartie(etat: EtatPartie): EvaluationFinDePartie {
+  const regles = REGLES_DES_MODES[etat.mode];
+
+  // Un mode sans terme (Among Ninjas, etape 7.20) n'a pas de temps restant a dire.
+  if (regles.sansTerme) {
+    return { terminee: regles.estDecidee(etat), tempsRestantMs: 0 };
+  }
+
   const restant = etat.dureeMs - etat.tempsEcouleMs;
 
   return {
-    terminee: restant <= 0 || REGLES_DES_MODES[etat.mode].estDecidee(etat),
+    terminee: restant <= 0 || regles.estDecidee(etat),
     tempsRestantMs: Math.max(restant, 0),
   };
 }
@@ -442,8 +533,9 @@ function avancerJoueur(
   joueur: Joueur,
   entree: EntreeJoueur | undefined,
   dtMs: number,
+  passeMuraille: boolean,
 ): Joueur {
-  const deplace = deplacerJoueur(etat, joueur, entree, dtMs);
+  const deplace = deplacerJoueur(etat, joueur, entree, dtMs, passeMuraille);
 
   return {
     ...deplace,
@@ -490,6 +582,7 @@ function deplacerJoueur(
   joueur: Joueur,
   entree: EntreeJoueur | undefined,
   dtMs: number,
+  passeMuraille: boolean,
 ): Joueur {
   if (entree === undefined || !entree.enMouvement || !intentionExploitable(entree.deplacement)) {
     return joueur;
@@ -497,7 +590,10 @@ function deplacerJoueur(
 
   const distance = (VITESSES.JOUEUR_PX_PAR_SECONDE * multiplicateurDeVitesse(joueur) * dtMs) / 1000;
   const pas = aLaLongueur(voulu(joueur, entree.deplacement), distance);
-  const position = resoudreDeplacement(etat.terrain, joueur.position, pas);
+  // Un fantome d'Among Ninjas traverse les murs, sans sortir de la carte (etape 7.20).
+  const position = passeMuraille
+    ? dansLaCarte(etat, { x: joueur.position.x + pas.x, y: joueur.position.y + pas.y })
+    : resoudreDeplacement(etat.terrain, joueur.position, pas);
 
   const effectif = { x: position.x - joueur.position.x, y: position.y - joueur.position.y };
 
@@ -548,6 +644,17 @@ function multiplicateurDeVitesse(joueur: Joueur): number {
   const multiplicateur = bonusActif(joueur, 'vitesse') ? VITESSES.MULTIPLICATEUR_BONUS : 1;
 
   return Math.min(multiplicateur, VITESSES.MULTIPLICATEUR_MAXIMUM);
+}
+
+/**
+ * Une position ramenee dans la carte, a un rayon d'entite de ses bords: la ou s'arrete un
+ * joueur qui longe le bord, murs ou non.
+ */
+function dansLaCarte(etat: EtatPartie, position: Vecteur): Vecteur {
+  return {
+    x: Math.min(Math.max(position.x, RAYON_ENTITE), etat.carte.largeur - RAYON_ENTITE),
+    y: Math.min(Math.max(position.y, RAYON_ENTITE), etat.carte.hauteur - RAYON_ENTITE),
+  };
 }
 
 /**

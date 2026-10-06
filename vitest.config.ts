@@ -41,6 +41,7 @@ export default defineConfig({
         '**/geometrie.ts',
         '**/entrees.ts',
         '**/evenements.ts',
+        '**/etatAmong.ts',
       ],
     },
   },

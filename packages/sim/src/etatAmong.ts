@@ -1,0 +1,192 @@
+/**
+ * Ce que retient une partie Among Ninjas (etape 7.20), et ce que son journal raconte.
+ *
+ * Les types seuls: les regles sont dans among.ts. Ils vivent a part de etat.ts, deja long,
+ * et n'ont de sens que pour ce mode: une partie d'un autre mode n'a pas le champ
+ * EtatPartie.among, et son journal ne porte aucun de ces evenements.
+ */
+
+import type { Couleur, Position, RoleAmong } from '@neon-ninja/shared';
+
+/** Un identifiant d'entite, comme dans etat.ts. */
+type Identifiant = string;
+
+/**
+ * Ou en est la partie.
+ *
+ *   - `revelation`: chacun decouvre son role, le monde est fige;
+ *   - `jeu`: on bouge, on tue, on fait ses taches;
+ *   - `discussion` puis `vote`: la reunion, le monde est fige;
+ *   - `ejection`: le resultat du vote s'affiche, le monde est fige.
+ */
+export type PhaseAmong = 'revelation' | 'jeu' | 'discussion' | 'vote' | 'ejection';
+
+/** Pourquoi une reunion s'est ouverte. */
+export type MotifDeReunion = 'cadavre' | 'gong' | 'temps';
+
+/** Une tache de la liste d'une proie: une station, et le temps qu'il faut y rester. */
+export interface TacheAmong {
+  /** Le rang de la station parmi les stations actives de la partie (EtatAmong.stations). */
+  readonly station: number;
+  readonly dureeMs: number;
+  readonly faite: boolean;
+}
+
+/** Les faits de jeu d'un joueur, qui font ses points de fin (POINTS_AMONG). */
+export interface FaitsAmong {
+  readonly taches: number;
+  readonly signalements: number;
+  readonly meurtres: number;
+  /** Les votes contre un tueur que ce vote a ejecte. */
+  readonly bonsVotes: number;
+  /** Les meurtres du premier tour. */
+  readonly meurtresAuPremierTour: number;
+  /** Les bons votes de la premiere reunion. */
+  readonly tueursTrouvesALaPremiereReunion: number;
+}
+
+/** Ce que le mode retient d'un joueur. */
+export interface JoueurAmong {
+  readonly role: RoleAmong;
+  /** Tue, ou ejecte: il joue en fantome, invisible des vivants. */
+  readonly fantome: boolean;
+  /** Pour un tueur: le temps avant de pouvoir tuer de nouveau. Zero pour une proie. */
+  readonly rechargeMs: number;
+  /** Il a sonne son gong, le seul de sa partie. */
+  readonly gongUtilise: boolean;
+  /**
+   * Il tenait le bouton d'action au battement precedent. Signaler et sonner se font a
+   * l'appui, pas tant qu'on tient: un joueur qui garde le bouton enfonce en arrivant pres du
+   * gong ne le sonne pas sans le vouloir.
+   */
+  readonly actionTenue: boolean;
+  /** Sa liste de taches. Vide pour un tueur. */
+  readonly taches: readonly TacheAmong[];
+  /** La tache qu'il est en train de faire: son rang dans sa liste, et le temps deja passe. */
+  readonly tacheEnCours?: { readonly indice: number; readonly ecouleMs: number };
+  readonly faits: FaitsAmong;
+}
+
+/** Un cadavre, au sol jusqu'a la fin de la reunion qui suit. */
+export interface CadavreAmong {
+  readonly victime: Identifiant;
+  readonly position: Position;
+  readonly couleur: Couleur;
+}
+
+/** Un vote: pour un joueur, ou null pour passer. */
+export type VoteAmong = Identifiant | null;
+
+/** La reunion en cours. */
+export interface ReunionAmong {
+  /** Son rang dans la partie, a partir de un. */
+  readonly numero: number;
+  /** Qui l'a ouverte. Absent pour la reunion que le terme du tour impose. */
+  readonly par?: Identifiant;
+  readonly motif: MotifDeReunion;
+  /** La victime dont on a trouve le cadavre, pour un signalement. */
+  readonly cadavre?: Identifiant;
+  /** Les votes deja exprimes, par votant. */
+  readonly votes: Readonly<Record<Identifiant, VoteAmong>>;
+}
+
+/** Les voix d'une option du vote. */
+export interface VoixAmong {
+  /** Un joueur, ou null pour « passer ». */
+  readonly cible: VoteAmong;
+  readonly voix: number;
+}
+
+/** Le resultat du dernier vote, affiche pendant l'ejection. */
+export interface EjectionAmong {
+  /** L'ejecte. Absent si personne ne l'est: egalite, ou « passer » en tete. */
+  readonly ejecte?: Identifiant;
+  readonly votes: Readonly<Record<Identifiant, VoteAmong>>;
+  readonly decompte: readonly VoixAmong[];
+}
+
+/** Le camp vainqueur. */
+export type CampAmong = 'proies' | 'tueurs';
+
+/** Ce que retient une partie Among Ninjas. Voir EtatPartie.among. */
+export interface EtatAmong {
+  readonly phase: PhaseAmong;
+  /** Ce qu'il reste de la phase, sauf pendant le jeu, ou c'est le tour qui compte. */
+  readonly phaseRestanteMs: number;
+  /** Le tour en cours, a partir de un. Zero pendant la revelation. */
+  readonly tour: number;
+  /** Le temps de jeu ecoule depuis le debut du tour. */
+  readonly tourEcouleMs: number;
+  /** Combien de reunions se sont ouvertes. */
+  readonly reunions: number;
+  readonly joueurs: Readonly<Record<Identifiant, JoueurAmong>>;
+  readonly cadavres: Readonly<Record<Identifiant, CadavreAmong>>;
+  /** Les stations actives de la partie, tirees au lancement, deja retournees en miroir. */
+  readonly stations: readonly Position[];
+  /** Le point de reunion, ou sonne le gong. */
+  readonly gong: Position;
+  readonly reunion?: ReunionAmong;
+  readonly ejection?: EjectionAmong;
+  /**
+   * Les taches faites par des proies parties: elles restent faites, et comptent au total.
+   * Les taches restantes d'une proie qui part sortent du total (etude, section 4.2).
+   */
+  readonly tachesDesPartis: number;
+  /** Le camp vainqueur, des que la partie est decidee. */
+  readonly vainqueur?: CampAmong;
+}
+
+/** Un tueur a tue une proie. */
+export interface Meurtre {
+  readonly type: 'meurtre';
+  readonly tueur: Identifiant;
+  readonly victime: Identifiant;
+  readonly position: Position;
+}
+
+/** Une reunion s'est ouverte. */
+export interface ReunionOuverte {
+  readonly type: 'reunionOuverte';
+  readonly numero: number;
+  readonly par?: Identifiant;
+  readonly motif: MotifDeReunion;
+  readonly cadavre?: Identifiant;
+  /** Tous les fantomes, cadavre trouve ou non, comme dans Among Us. */
+  readonly morts: readonly Identifiant[];
+}
+
+/** La discussion est finie: le vote s'ouvre. */
+export interface VoteOuvert {
+  readonly type: 'voteOuvert';
+}
+
+/** Un vivant a vote. Pour qui, le resultat le dira. */
+export interface AVote {
+  readonly type: 'aVote';
+  readonly votant: Identifiant;
+}
+
+/** Le vote est clos. */
+export interface ResultatDuVote {
+  readonly type: 'resultatDuVote';
+  readonly ejecte?: Identifiant;
+  readonly votes: Readonly<Record<Identifiant, VoteAmong>>;
+  readonly decompte: readonly VoixAmong[];
+}
+
+/** Un tour commence: les vivants sont autour du point de reunion. */
+export interface TourCommence {
+  readonly type: 'tourCommence';
+  readonly tour: number;
+}
+
+/** Une proie a fini une tache. */
+export interface TacheFaite {
+  readonly type: 'tacheFaite';
+  readonly joueur: Identifiant;
+  readonly station: number;
+}
+
+/** Les evenements du mode, ajoutes au journal d'un battement. */
+export type EvenementAmong =
+  Meurtre | ReunionOuverte | VoteOuvert | AVote | ResultatDuVote | TourCommence | TacheFaite;

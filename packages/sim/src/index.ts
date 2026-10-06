@@ -76,6 +76,44 @@ export {
   remplacer,
 } from './effets.js';
 
+export type {
+  AVote,
+  CadavreAmong,
+  CampAmong,
+  EjectionAmong,
+  EtatAmong,
+  EvenementAmong,
+  FaitsAmong,
+  JoueurAmong,
+  Meurtre,
+  MotifDeReunion,
+  PhaseAmong,
+  ResultatDuVote,
+  ReunionAmong,
+  ReunionOuverte,
+  TacheAmong,
+  TacheFaite,
+  TourCommence,
+  VoixAmong,
+  VoteAmong,
+  VoteOuvert,
+} from './etatAmong.js';
+export {
+  agirEnAmong,
+  amongDecide,
+  avancementDesTaches,
+  campVainqueur,
+  estDuCampVainqueur,
+  estFantome,
+  estTueur,
+  estVivant,
+  fantomesEnAmong,
+  lancerAmong,
+  mondeFigeEnAmong,
+  pointsEnAmong,
+  tuer,
+} from './among.js';
+
 export {
   PERSONNE_HORS_JEU,
   agirEnChasse,

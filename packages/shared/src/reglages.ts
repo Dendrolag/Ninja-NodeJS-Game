@@ -30,6 +30,8 @@
  * le groupe: c'est le role de completerReglages.
  */
 
+import type { PalierDeVision } from './among.js';
+import { AMONG, CARTE_DU_MODE_AMONG } from './among.js';
 import type {
   IdentifiantCarte,
   Mode,
@@ -154,6 +156,50 @@ export interface ReglageObjetDePoche {
 /** Reglages des objets de poche, un par nature (etape 7.10). */
 export type ReglagesObjetsDePoche = Readonly<Record<ObjetDePoche, ReglageObjetDePoche>>;
 
+/**
+ * Reglages du mode Among Ninjas (etape 7.20), que l'hote regle au salon. Valeurs confirmees
+ * par le porteur du projet le 6 octobre 2026.
+ */
+export interface ReglagesAmong {
+  /**
+   * Combien de tueurs l'hote veut. Le moteur le ramene au lancement a ce que le nombre de
+   * joueurs admet (tueursMaximum): un de cinq a six, deux de sept a huit, trois au-dela.
+   */
+  readonly tueurs: number;
+  /** Les taches de chaque proie. */
+  readonly tachesParProie: number;
+  /** Ce qu'un tueur attend entre deux meurtres, en secondes. */
+  readonly rechargeMeurtreS: number;
+  /** La duree maximale d'un tour, en secondes, l'une de DUREES_DE_TOUR_S. Zero: aucune. */
+  readonly dureeDuTourS: number;
+  /** La discussion d'une reunion, en secondes. */
+  readonly discussionS: number;
+  /** Le vote d'une reunion, en secondes. */
+  readonly voteS: number;
+  /** Les votes se montrent-ils sans dire qui a vote pour qui. */
+  readonly votesAnonymes: boolean;
+  /** Le palier de vision des proies. */
+  readonly visionProie: PalierDeVision;
+  /** Le palier de vision des tueurs. */
+  readonly visionTueur: PalierDeVision;
+  /** Les PNJ de la foule neutre, de 0 a 80: ils remplacent le nombre de PNJ des autres modes. */
+  readonly foule: number;
+}
+
+/** Les reglages du mode Among Ninjas quand l'hote ne change rien. */
+export const AMONG_PAR_DEFAUT: ReglagesAmong = {
+  tueurs: 2,
+  tachesParProie: 5,
+  rechargeMeurtreS: 25,
+  dureeDuTourS: 180,
+  discussionS: 45,
+  voteS: 45,
+  votesAnonymes: false,
+  visionProie: 'normale',
+  visionTueur: 'normale',
+  foule: AMONG.FOULE_PAR_DEFAUT,
+};
+
 /** Reglages d'une partie, figes au lancement. */
 export interface ReglagesPartie {
   /** Duree de la partie, en secondes. */
@@ -201,6 +247,11 @@ export interface ReglagesPartie {
    * moteur les retire d'une partie d'un autre mode (imposerLesReglagesDuMode).
    */
   readonly objetsTactiques?: ReglagesObjetsTactiques;
+  /**
+   * Les reglages du mode Among Ninjas (etape 7.20). Presents au salon quel que soit le mode,
+   * comme les objets du Tactique; le moteur les retire d'une partie d'un autre mode.
+   */
+  readonly among?: ReglagesAmong;
 }
 
 /**
@@ -271,6 +322,7 @@ export const REGLAGES_PAR_DEFAUT: ReglagesPartie = {
     mine: { actif: true, tauxApparitionPourCent: 15 },
   },
   objetsTactiques: OBJETS_TACTIQUES_PAR_DEFAUT,
+  among: AMONG_PAR_DEFAUT,
 };
 
 /**
@@ -313,10 +365,19 @@ export function completerReglages(partiels?: ReglagesPartiels): ReglagesPartie {
  *   - Seul le Tactique a ses objets (etape 7.7): les autres modes en perdent le groupe, et
  *     leur etat reste identique a l'octet a ce qu'il etait avant eux. Le Tactique le
  *     retrouve s'il manquait.
+ *   - Seul Among Ninjas a ses reglages (etape 7.20): les autres modes en perdent le groupe,
+ *     comme celui des objets du Tactique. Among Ninjas impose Tokyo, retire les Black Ninjas,
+ *     l'Evade, les bonus, les malus, les zones et les objets de poche, qui frappent au hasard
+ *     et brouillent la deduction, et prend le nombre de PNJ de sa foule.
  *   - Pour le reste, les autres modes n'imposent rien: leurs reglages sont rendus tels
  *     quels, ce qui laisse leurs parties identiques a ce qu'elles etaient.
  */
 export function imposerLesReglagesDuMode(mode: Mode, reglages: ReglagesPartie): ReglagesPartie {
+  if (mode !== 'among' && reglages.among !== undefined) {
+    const { among: _retires, ...sansAmong } = reglages;
+    return imposerLesReglagesDuMode(mode, sansAmong);
+  }
+
   if (mode === 'tactique') {
     return reglages.objetsTactiques === undefined
       ? { ...reglages, objetsTactiques: OBJETS_TACTIQUES_PAR_DEFAUT }
@@ -332,6 +393,10 @@ export function imposerLesReglagesDuMode(mode: Mode, reglages: ReglagesPartie): 
     return { ...reglages, evade: false, botsNoirs: { ...reglages.botsNoirs, actifs: false } };
   }
 
+  if (mode === 'among') {
+    return reglagesDAmong(reglages);
+  }
+
   if (mode === 'massacre' && reglages.zones.types.chaos) {
     return {
       ...reglages,
@@ -340,6 +405,39 @@ export function imposerLesReglagesDuMode(mode: Mode, reglages: ReglagesPartie): 
   }
 
   return reglages;
+}
+
+/**
+ * Les reglages d'une partie Among Ninjas: ceux de l'hote, moins tout ce que le mode retire.
+ * Les objets du Tactique sont deja retires a ce point.
+ */
+function reglagesDAmong(reglages: ReglagesPartie): ReglagesPartie {
+  const among = reglages.among ?? AMONG_PAR_DEFAUT;
+  const sansBonus = Object.fromEntries(
+    Object.entries(reglages.bonus.types).map(([nature, bonus]) => [
+      nature,
+      { ...bonus, actif: false },
+    ]),
+  ) as ReglagesBonus['types'];
+  const sansObjetsDePoche = Object.fromEntries(
+    Object.entries(reglages.objetsDePoche).map(([nature, objet]) => [
+      nature,
+      { ...objet, actif: false },
+    ]),
+  ) as ReglagesObjetsDePoche;
+
+  return {
+    ...reglages,
+    carte: CARTE_DU_MODE_AMONG,
+    evade: false,
+    nombreBotsInitial: among.foule,
+    bonus: { ...reglages.bonus, types: sansBonus },
+    malus: { ...reglages.malus, actifs: false },
+    zones: { ...reglages.zones, actives: false },
+    botsNoirs: { ...reglages.botsNoirs, actifs: false },
+    objetsDePoche: sansObjetsDePoche,
+    among,
+  };
 }
 
 /**

@@ -48,7 +48,15 @@
  */
 
 import type { Position, Vecteur } from '@neon-ninja/shared';
-import { BOTS, BOTS_NOIRS, COULEUR_BOT_NEUTRE, DUREES, VITESSES, reel } from '@neon-ninja/shared';
+import {
+  BOTS,
+  BOTS_NOIRS,
+  COULEUR_BOT_NEUTRE,
+  COULEUR_DE_LA_FOULE,
+  DUREES,
+  VITESSES,
+  reel,
+} from '@neon-ninja/shared';
 
 import { trajetTenable } from './collisions.js';
 import { couleurDeBot, couleurDeSosie } from './couleurs.js';
@@ -257,6 +265,12 @@ function ajouterUnBot(etat: EtatPartie, type: 'bot' | 'botNoir'): EtatPartie {
 
   if (type === 'botNoir') {
     return ajouterBot(numerote, { id: identifiant.valeur, type });
+  }
+
+  // Dans Among Ninjas, la foule est grise, sans tirage (etape 7.20): toute accusation passe
+  // par une couleur, et la foule n'en prend aucune.
+  if (numerote.mode === 'among') {
+    return ajouterBot(numerote, { id: identifiant.valeur, type, couleur: COULEUR_DE_LA_FOULE });
   }
 
   // En Chasse, un PNJ prend la couleur d'un joueur, pour que les proies aient des sosies

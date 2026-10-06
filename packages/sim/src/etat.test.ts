@@ -63,8 +63,9 @@ describe('creerEtatInitial', () => {
 
   it('applique les reglages par defaut du legacy', () => {
     const etat = creerEtatInitial({ graine: 1 });
-    // Les objets du Tactique ne sont que dans une partie Tactique (etape 7.7).
-    const { objetsTactiques: _tactiques, ...horsTactique } = REGLAGES_PAR_DEFAUT;
+    // Les objets du Tactique ne sont que dans une partie Tactique (etape 7.7), et les reglages
+    // d'Among Ninjas dans une partie Among Ninjas (etape 7.20).
+    const { objetsTactiques: _tactiques, among: _among, ...horsTactique } = REGLAGES_PAR_DEFAUT;
 
     expect(etat.reglages).toEqual(horsTactique);
     expect(etat.dureeMs).toBe(180_000);

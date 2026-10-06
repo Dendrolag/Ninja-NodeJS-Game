@@ -107,9 +107,10 @@ describe('imposerLesReglagesDuMode', () => {
     expect(reglages.dureePartieS).toBe(60);
   });
 
-  it('rend tels quels, le meme objet, les reglages du Tactique', () => {
-    const reglages = completerReglages();
+  it('rend tels quels, le meme objet, les reglages du Tactique deja imposes', () => {
+    const reglages = imposerLesReglagesDuMode('tactique', completerReglages());
 
+    expect(reglages.objetsTactiques).toEqual(OBJETS_TACTIQUES_PAR_DEFAUT);
     expect(imposerLesReglagesDuMode('tactique', reglages)).toBe(reglages);
   });
 
@@ -121,8 +122,8 @@ describe('imposerLesReglagesDuMode', () => {
     );
   });
 
-  it('retire les objets du Tactique des autres modes, et rien d autre', () => {
-    const { objetsTactiques: _retires, ...attendus } = completerReglages();
+  it('retire les objets du Tactique et les reglages d Among Ninjas des autres modes, et rien d autre', () => {
+    const { objetsTactiques: _retires, among: _aussi, ...attendus } = completerReglages();
 
     for (const mode of ['classique', 'equipes'] as const) {
       const reglages = imposerLesReglagesDuMode(mode, completerReglages());
