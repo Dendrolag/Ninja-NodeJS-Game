@@ -360,13 +360,13 @@ Les numéros sont provisoires et suivent la carte thématique du ROADMAP. Les nu
 
 | Ordre | Étape (provisoire)                    | Contenu                                                                                                                                    | Dépend de |
 | ----: | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------- |
-|     1 | 2.9 Le flux par destinataire          | Planifiée le 5 octobre au titre de la règle 7. La vue par joueur, une trame et une référence de delta par joueur, mesure au banc. Corrige la Chasse. | Rien |
-|     2 | 7.20 Le socle du mode                 | Rôles, phases, meurtre, cadavre, signalement, gong, réunion au chat, vote, éjection, victoire, fantômes, vision par rayon. Une seule tâche provisoire (« maintenir le bouton 5 s ») pour jouer | 2.9 |
-|     3 | 7.21 Les tâches courtes et les stations | Les stations de Tokyo, le tirage par partie, la validation au serveur, les sept tâches courtes, la minimap et la carte plein écran     | 7.20      |
+|     1 | 2.9 Le flux par destinataire | Faite le 6 octobre 2026. Une vue par clé, une trame et une référence de delta par vue, mesure au banc. Corrige la Chasse. | Rien |
+|     2 | 7.20 Le socle du mode | Planifiée le 6 octobre 2026, fiche `docs/plan/etape-7-20.md`. Rôles, phases, tour à durée maximale, meurtre, cadavre, signalement, gong, réunion au chat, vote, éjection, victoire, fantômes, vision par rayon, foule neutre. Les stations de Tokyo, les listes par proie et leur validation au serveur, avec une seule tâche provisoire (« maintenir 5 s ») | 2.9 |
+|     3 | 7.21 Les tâches courtes et la carte | Les sept tâches courtes à la place de la tâche provisoire, la carte plein écran, les tâches visuelles et la barre des tâches en réglage | 7.20 |
 |     4 | 7.22 Les sabotages                    | Les trois nuisances, la zone d'invisibilité des tueurs, la panne de néons, la surchauffe, le sabotage depuis la carte                       | 7.21      |
 |     5 | 7.23 Les pas entendus                 | Les pas des vivants hors de vue, en direction arrondie, les PNJ et les fantômes muets                                                      | 2.9       |
 |     6 | 7.24 Les tâches longues               | Les quatre mini-jeux d'arcade                                                                                                              | 7.21      |
-|     7 | 7.25 L'appropriation                  | Ce que l'essai aura retenu: égouts, déguisement, ninjas égarés, gêne des fantômes, tâches de tueur                                          | 7.22      |
+|     7 | 7.25 L'appropriation                  | Ce que l'essai aura retenu: égouts, déguisement, ninjas égarés, traces de sang du tueur                                        | 7.22      |
 
 L'étape 7.20 est jouable seule, entre amis, sur Tokyo: c'est là qu'on saura si la formule prend avant d'investir dans les mini-jeux. Chaque étape se fait comme les étapes 7.9 à 7.12: règles tranchées avec le porteur du projet au début, rendus choisis sur planche, empreinte des parties de référence identique, mesure au banc, version mineure avec sa note.
 
@@ -379,3 +379,23 @@ L'étape 7.20 est jouable seule, entre amis, sur Tokyo: c'est là qu'on saura si
 5. **Les fantômes qui gênent**: une gêne que le tueur seul perçoit, une aide qui ne vise personne, ou les deux (section 12) ?
 6. **Le tour à durée maximale**: le garder comme réglage de l'hôte (section 4.1) ?
 7. **L'ordre**: d'accord pour `2.9` d'abord, puis le socle `7.20` joué entre amis avant les tâches ?
+
+## 20. Réponses du porteur du projet, 6 octobre 2026
+
+1. **Le nom reste « Among Ninjas » pour le moment.** Le risque de la section 17.4 est connu et accepté. Le nom se change en un seul endroit de la page s'il le faut.
+2. **Une liste de tâches par proie**, l'hôte réglant le nombre de tâches par proie.
+3. **Les « tâches spécifiques de sabotage » sont des actions de sabotage**, pas une seconde voie de victoire. Où elles se déclenchent (depuis la carte ou à des postes) se tranche au début de l'étape 7.22. Recommandation inchangée: depuis la carte, seule façon de tenir dans deux boutons sur téléphone.
+4. **Les PNJ: une foule neutre d'abord, une foule qui sert au jeu ensuite.** Le porteur du projet hésitait entre les deux. Recommandation retenue: les deux, dans cet ordre. L'étape 7.20 pose une foule neutre, grise, sans capture, sans contagion et sans bruit: c'est la seule qui ne demande aucune règle nouvelle. Le déguisement des tueurs et les ninjas égarés viennent à l'étape 7.25, une fois le socle joué. Une précision: la foule ne prend pas les couleurs des joueurs, à l'inverse des sosies de la Chasse (étape 2.9). En Chasse, le sosie cache la proie. Ici, toute accusation passe par une couleur (« j'ai vu Rose »): un sosie la rendrait douteuse, et le jeu de déduction avec.
+5. **La gêne des fantômes: les deux formes, dans cet ordre.** Le porteur du projet laisse le choix. Recommandation: l'aide qui ne vise personne d'abord, à l'étape 7.22 (un fantôme peut réparer la panne de néons, pas la surchauffe, qui perdrait sinon tout son danger en fin de partie, quand les fantômes sont nombreux). La hantise ensuite, à l'étape 7.25 et après une partie d'essai: elle demande un réglage fin, parce qu'un fantôme sait qui l'a tué et peut coller à son tueur toute la partie. Bornes proposées: une proie fantôme à 150 pixels d'un tueur ralentit de moitié la recharge de son katana, sans cumul entre fantômes, et seul le tueur en voit le signe. À l'étape 7.20, un fantôme fait ses tâches et parle aux fantômes, rien de plus.
+6. **Le tour à durée maximale est un réglage de l'hôte**, dès l'étape 7.20.
+7. **L'étape 2.9 est faite** (6 octobre 2026). **La suite est l'étape 7.20**, le socle du mode, dont la fiche est rédigée le même jour. Les valeurs chiffrées de cette étude (rayons, recharge, durées des réunions, nombre de joueurs) y sont des propositions, à confirmer avec le porteur du projet au début de l'étape.
+
+**Révision du 6 octobre 2026, point 5: la malédiction des fantômes remplace la hantise.** Proposition du porteur du projet: un fantôme déclenche un malus du jeu sur les tueurs, sans en viser un en particulier. C'est mieux que la hantise, qui visait un tueur et demandait des bornes. Analyse et règles proposées, à trancher au début de l'étape 7.22, où elle se construit avec les sabotages, dont elle est le miroir (les tueurs maudissent les proies, les proies mortes maudissent les tueurs):
+
+- **Ce qui ne fuit pas.** Le malus frappe tous les tueurs vivants à la fois. Le fantôme sait qui l'a tué, mais il n'a rien à choisir: son geste ne dit rien de ce qu'il sait. Le serveur n'apprend rien aux vivants non plus: un malus subi part au seul joueur frappé (notification `malusSubi`, adressée), et l'état d'un joueur dans le flux ne porte pas ses malus (`JoueurVu`).
+- **Ce qui fuit: les commandes inversées se voient.** Le flou et le négatif sont des filtres sur l'écran du tueur, que personne d'autre ne voit. Des commandes inversées, en revanche, se lisent dans la démarche: un ninja qui part à contre-sens pendant quelques secondes se désigne à toute proie qui le regarde. Le malus deviendrait un outil de révélation, et les fantômes décideraient de la partie. Recommandation: **le flou et le négatif seulement**. Les commandes inversées en option de l'hôte, si l'essai montre que les tueurs s'en sortent trop bien.
+- **Une recharge commune à tous les fantômes**, 45 secondes, et non une par fantôme. Sinon la malédiction grandit avec le nombre de morts, et une partie bien menée par les tueurs se retourne contre eux sans qu'ils y puissent rien. Durée du malus: 8 secondes. Ni dans les 15 premières secondes d'un tour, ni en réunion.
+- **Les proies fantômes seulement.** Un tueur fantôme sabote déjà.
+- **Le tueur maudit le sait**: il voit le filtre, et une annonce lui dit qu'un fantôme l'a maudit. Les vivants ne reçoivent aucune annonce.
+- **Sur téléphone**, le fantôme n'a pas de bouton de meurtre: son second bouton devient « Maudire ». Toujours deux boutons.
+- **L'aide qui ne vise personne reste**: un fantôme peut aussi réparer la panne de néons.

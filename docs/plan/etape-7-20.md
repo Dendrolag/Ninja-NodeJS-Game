@@ -1,185 +1,181 @@
-# Fiche étape 7.20 - Le socle du mode Among Ninjas
+# Fiche étape 7.20 - Among Ninjas, le socle du mode
 
-Brief de session. Objectif unique: un mode de déduction sociale jouable entre amis sur Tokyo. Des tueurs anonymes éliminent en secret des proies, qui font des tâches; un cadavre signalé ou le gong ouvre une réunion, où l'on discute puis vote pour éjecter un joueur; les morts jouent en fantôme; chacun ne voit que dans un rayon autour de lui. Une seule tâche provisoire, faite sur place, en attendant les stations et les mini-jeux de l'étape 7.21.
+Brief de session. Objectif unique: ajouter au jeu son sixième mode, Among Ninjas, dans une forme jouable entre amis sur Tokyo. Des tueurs anonymes éliminent en secret des proies, qui font des tâches à des stations de la carte, signalent les cadavres, se réunissent et votent pour éjecter les tueurs. Les morts jouent en fantôme. Chacun ne voit que ce qui l'entoure. Les vraies tâches (mini-jeux), les sabotages et les pas entendus viennent aux étapes suivantes: ici, une seule tâche provisoire.
 
 ## Origine de cette fiche
 
-Aucune fiche n'existait. Le mode est proposé par le porteur du projet le 5 octobre 2026 et étudié le même jour (`docs/design/etude-mode-among-ninjas.md`). Le ROADMAP conditionnait la suite aux sept questions de la section 19 de l'étude. Le 6 octobre 2026, le porteur du projet a demandé « Exécute l'étape 7.20 », ce qui tranche la question 7 (l'ordre), et a répondu au début de la session aux quatre questions qui touchent le socle. Les questions 3 (les tâches de sabotage) et 5 (la gêne des fantômes) concernent les étapes 7.22 et 7.25, et restent ouvertes.
+Rédigée le 6 octobre 2026, à la suite de l'étude `docs/design/etude-mode-among-ninjas.md` et des réponses du porteur du projet (section 20 de l'étude), dans la conversation de l'étude. Sources: l'étude, la section 3 du ROADMAP, la fiche 7.3 (la Chasse) prise comme modèle, la fiche et le handoff 2.9 (le flux par destinataire), et l'état du dépôt au commit qui suit `48c31f8`.
 
-Rédigée le 6 octobre 2026 selon le cas de repli du PROTOCOLE (boucle d'une étape, point 2), à partir de:
+**Aucune référence de comportement.** Ni la v0.8.6, ni la v0.9.0 n'ont ce mode: rien à caractériser. Les règles ci-dessous font foi, et les comportements à préserver de CLAUDE.md s'appliquent partout où elles ne disent pas le contraire.
 
-- l'étude du 5 octobre 2026, sections 4 à 8, 12, 13, 16 et 18;
-- les réponses du porteur du projet, ci-dessous;
-- la fiche 7.3 (la Chasse, des rôles tirés au sort), la fiche 7.4 (le Massacre, prise comme modèle de mode), la fiche 2.9 (le flux par destinataire);
-- l'état du dépôt au commit `48c31f8`, et le handoff 2.9.
-
-**Numéro**: 7.20, dans la phase 7, « Modes de jeu ». Elle suit l'étape 2.9, dont elle a besoin: chaque joueur y reçoit sa propre vue.
+**Numéro**: 7.20, dans la phase 7, « Modes de jeu ». Les numéros 7.13 à 7.19 sont réservés, provisoirement, par l'étude du 3 octobre.
 
 ## Rituel de début de session
 
-Lire CLAUDE.md, le handoff 2.9, l'étude Among Ninjas, cette fiche, les fiches 7.3, 7.4 et 2.9, et `.claude/rules/sim-purity.md`.
+Lire CLAUDE.md, le dernier handoff (2.9, ou le handoff partiel de cette étape), cette fiche, `.claude/rules/sim-purity.md`, les sections 3 à 13 et 20 de l'étude, la fiche 7.3 et la fiche 2.9. Charger la compétence `conception-de-cartes` avant de poser les stations sur Tokyo.
 
-## Ce qu'est le jeu aujourd'hui
+**Puis poser au porteur du projet les valeurs de la section « À confirmer au début de l'étape »**, en une seule fois, avec les propositions comme réponses par défaut. Ne rien construire avant sa réponse.
 
-- **Cinq modes**: la Horde (`classique`), le Tactique, les Équipes, la Chasse et le Massacre. Un mode se branche sur le moteur par son jeu de règles (`REGLES_DES_MODES`, `packages/sim/src/moteur.ts`): agir sur les entrées, résoudre les contacts, préparer le lancement, dire si la partie est décidée, dire qui est hors jeu.
-- **La Chasse tire ses rôles à la graine au lancement**, refuse l'entrée dans une partie lancée, et lit sa fin avant le terme.
-- **Le flux par destinataire existe** (étape 2.9): `cleDeVue` dit la vue de chacun, `vuesDe` les construit, `FluxParVue` tient une référence de delta par vue. Hors Chasse, tout le monde partage la vue commune.
-- **Ce qui ne regarde qu'un joueur part à lui seul**: les notifications adressées, et la poche (étape 7.10), annoncée à son porteur quand elle change.
-- **Le chat n'existe qu'au salon** dans la page. Le serveur diffuse un message à toute la partie, quel que soit son statut.
-- **Le katana du Massacre** a un geste, un son, un ninja couché et du sang (`rendu/katana.ts`, `rendu/sang.ts`).
-- **Toute partie finit au terme de sa durée** (`evaluerFinDePartie`), réglée de 30 à 600 secondes. La Chasse et le Massacre peuvent aussi être décidés avant.
-- **Six couleurs de joueur** (`COULEURS_JOUEURS`); au-delà, les couleurs sont tirées. Le pseudo d'un joueur n'est pas dessiné sur la carte.
+## Décisions du porteur du projet
 
-## Décisions du porteur du projet, 6 octobre 2026
+Du 5 octobre 2026 (la demande) et du 6 octobre 2026 (section 20 de l'étude):
 
-1. **L'ordre**: le flux par destinataire (2.9) d'abord, fait; puis ce socle, joué entre amis avant les tâches.
-2. **Le nom**: « Among Ninjas ». Écarté: un nom en français (« Traîtres », « Infiltrés »). Le risque de marque noté par l'étude (section 17.4) reste à vérifier si le jeu grandit.
-3. **Les tâches**: une liste par proie, l'hôte réglant le nombre de tâches par proie (2 à 8, 5 par défaut). Écartée: une réserve commune.
-4. **Les PNJ**: une foule qui sert au jeu. Ce socle pose la foule neutre (étude, section 8, option 2); le déguisement des tueurs en PNJ et la tâche des ninjas égarés viennent avec l'appropriation (étape 7.25).
-5. **Le tour à durée maximale**: gardé, comme réglage de l'hôte (aucune, 2, 3 ou 5 minutes). À son terme, la réunion se tient d'office.
+1. **Le nom est « Among Ninjas »**, pour le moment.
+2. **Des tueurs anonymes, tirés au sort. L'hôte en choisit le nombre selon le nombre de joueurs.** Des proies.
+3. **Des tours de jeu**, qui finissent par un cadavre signalé (ou le gong d'urgence), suivis d'une délibération et d'un vote.
+4. **Un tour à durée maximale, réglage de l'hôte**: à son terme, la réunion se tient d'office.
+5. **Une liste de tâches par proie**, l'hôte réglant le nombre de tâches par proie.
+6. **Les morts jouent en fantôme**, invisibles des vivants, et finissent leurs tâches.
+7. **Une vision réduite**, d'un rayon différent pour les tueurs et les proies.
+8. **Les tâches sont à des places fixes de la carte**, et changent d'une partie à l'autre. Tokyo pour l'essai.
+9. **Les tueurs voient les stations des proies et ne peuvent pas faire leurs tâches.**
+10. **Les PNJ: une foule neutre d'abord**, la foule qui sert au jeu (déguisement, ninjas égarés) plus tard.
+
+## À confirmer au début de l'étape
+
+Valeurs proposées par l'étude, que le porteur du projet n'a pas encore vues une par une. Les poser, puis reporter les réponses dans la section « Décisions du porteur du projet ».
+
+| Sujet                   | Proposition                                                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Joueurs                 | 5 pour lancer, 12 au plus                                                                                          |
+| Tueurs                  | 1 de 5 à 6 joueurs, 1 à 2 de 7 à 8, 1 à 3 de 9 à 12. Par défaut: 1, 2, 2                                           |
+| Tâches par proie        | 2 à 8, 5 par défaut                                                                                                |
+| Rayon de vision         | Proie 260 px, tueur 380 px, en trois paliers par rôle au choix de l'hôte. Fantôme: toute la carte                  |
+| Meurtre                 | Portée 70 px, recharge 25 s (réglable de 10 à 60), 10 s au début de chaque tour                                    |
+| Signalement             | À 100 px d'un cadavre en vue                                                                                       |
+| Gong d'urgence          | Un par joueur et par partie, au centre de Tokyo, pas dans les 15 premières secondes d'un tour                      |
+| Réunion                 | Discussion 45 s, vote 45 s, chacun réglable de 15 à 120 s. Éjection affichée 5 s                                   |
+| Tour à durée maximale   | Aucune (par défaut), 2, 3 ou 5 minutes                                                                             |
+| Confirmer les éjections | Oui par défaut: « X était un tueur » ou « X n'était pas un tueur »                                                 |
+| Votes anonymes          | Non par défaut                                                                                                     |
+| Terme de la partie      | Pas de chronomètre affiché. Un terme de sécurité de 60 minutes de jeu, réunions non comptées: les tueurs y gagnent |
+| Foule neutre            | 40 PNJ sur Tokyo (0 à 80), d'un gris réservé                                                                       |
+| Tâche provisoire        | Rester 5 s dans le disque de la station, bouton d'action tenu                                                      |
+| Points et place en fin  | Vainqueurs d'abord. Points: 10 par tâche faite, 30 par meurtre, 20 par vote contre un tueur éjecté                 |
 
 ## Décisions prises par cette fiche
 
-Micro-décisions au sens du PROTOCOLE, tirées des recommandations de l'étude quand elle en fait. Chacune se consigne au journal de `docs/design/README.md` quand elle est construite, et se révise en exécutant si le dépôt le demande.
+Micro-décisions au sens du PROTOCOLE. Chacune se consigne au journal de `docs/design/README.md` quand elle est construite, et se révise en exécutant si le dépôt le demande.
 
-### Le mode et le salon
+1. **Identifiant `among`**, ajouté à `MODES` (`packages/shared/src/constantes.ts`), avec sa capacité (`CAPACITES`) et une migration de l'énumération `mode_de_jeu` (`pnpm base:generer`).
+2. **L'état du mode vit dans un champ facultatif**, `EtatPartie.among`, comme `chasse` ou `massacre`. Il porte: le rôle de chaque joueur (proie ou tueur), vivant ou fantôme, la phase (`revelation`, `jeu`, `reunion`, `ejection`) et son compte à rebours, le temps écoulé du tour, la recharge du katana de chaque tueur, les cadavres (position, couleur, victime), les gongs utilisés, les votes de la réunion en cours, le résultat de la dernière éjection, les stations actives de la partie, la liste de tâches de chaque proie et la tâche en cours (station, temps passé). Une partie d'un autre mode n'a pas ce champ.
+3. **Le tirage se fait à la graine, au lancement** (`lancer`): les tueurs, puis les stations actives, puis la liste de chaque proie, dans cet ordre. Aucun tirage dans les autres modes: l'empreinte des parties de référence en est le garde-fou.
+4. **Les phases sont une machine à états du moteur.** Pendant la révélation, la réunion et l'éjection, personne ne bouge, rien ne se ramasse, et le temps de jeu de la partie ne s'écoule pas, mais le compte à rebours de la phase avance. Ce n'est pas la pause de l'étape 1.7, qui fige tout. À la fin d'une éjection, les vivants sont replacés autour du gong, les cadavres retirés, et un tour commence.
+5. **Le meurtre** se joue dans `agir`, par la demande de capture existante (`capturer`): un tueur vivant, en phase de jeu, la recharge écoulée, prend la proie vivante la plus proche dans sa portée. À distance égale, l'ordre de l'état départage. La proie devient fantôme sur place, et un cadavre à sa couleur y reste. Les tueurs du battement passent dans un ordre tiré au sort, comme les tirs du Tactique. Aucun meurtre sur un tueur, un fantôme ou pendant une autre phase.
+6. **Une seule demande d'action, contextuelle**, ajoutée aux entrées du moteur (`EntreeJoueur.agir` ou nom à choisir à l'exécution): selon ce qui est à portée, dans cet ordre, signaler un cadavre, sonner le gong, faire la tâche de la station. La touche E, celle de la poche, la porte: la poche n'a pas d'objet dans ce mode. Le vote est une autre entrée, qui nomme un joueur ou « passer ».
+7. **La tâche provisoire**: une proie, vivante ou fantôme, qui tient l'action dans le disque d'une station de sa liste pendant 5 secondes fait la tâche. Sortir du disque ou lâcher l'action remet le compteur à zéro. Le moteur seul compte le temps: la page n'envoie que l'action tenue. Un tueur peut tenir l'action à une station, pour faire semblant: rien ne compte. Aux étapes suivantes, le mini-jeu remplace le maintien, et le moteur garde la présence et une durée minimale.
+8. **Les stations de Tokyo** sont des données de la carte, à côté de ses dimensions: une place, un rayon (50 pixels), et les tâches qui lui vont (une seule, la provisoire, à cette étape). Les places partent de la section 10 de l'étude, se vérifient avec la commande de la compétence `conception-de-cartes` (chacune dans le morceau principal de l'étape 8.10, hors des murs), et se retournent avec le miroir (étape 8.3). Le gong a sa place. Les autres cartes n'ont pas de stations: le mode ne se propose que sur Tokyo.
+9. **Les fantômes** bougent comme les vivants, ne touchent rien, ne ramassent rien, et traversent les murs. Ce dernier point est un ajout au jeu de règles d'un mode (qui traverse les murs), qui rend « personne » dans les autres modes, sans coût. Un fantôme ne signale pas, ne sonne pas le gong et ne vote pas.
+10. **Les conditions de victoire** (`estDecidee`): toutes les tâches de toutes les proies faites, fantômes compris, ou tous les tueurs éjectés ou partis, et les proies gagnent. Les tueurs vivants au moins aussi nombreux que les proies vivantes, ou le terme de sécurité atteint, et les tueurs gagnent. Le camp vainqueur se lit dans l'état.
+11. **Les contacts ne produisent rien**: ni capture, ni contagion, ni Évadé. Les réglages imposés par le mode (`imposerLesReglagesDuMode`) retirent les Black Ninjas, l'Évadé, les bonus, les malus, les zones, les mines de zone et les objets de poche.
+12. **La foule neutre**: des PNJ d'une couleur grise réservée à ce mode, qu'aucun joueur ne reçoit, et qui n'est pas une couleur de la palette. Ils errent comme partout.
+13. **Douze couleurs nommées pour les joueurs.** La palette en compte six, et au-delà les couleurs sont tirées (étape 5.8). Ce mode a besoin de douze couleurs distinctes, lisibles sur Tokyo, avec un nom pour chacune (« Rose », « Cyan »...), montré au salon, en réunion et à la fin. Si la palette du jeu doit grandir, c'est pour ce mode seul.
+14. **Un joueur qui part**: une proie retire ses tâches restantes du total. Un tueur qui ne revient pas dans les trente secondes de la reconnexion (étape 2.5) compte comme éjecté. S'il ne reste aucun tueur, les proies gagnent.
+15. **On n'entre pas dans une partie lancée**: « Cette partie a déjà commencé. » Le retour après une coupure reste permis.
 
-1. **Identifiant `amongNinjas`**, nom affiché « Among Ninjas ». Capacité de douze joueurs, **cinq au minimum pour lancer**. On n'entre pas dans une partie lancée, comme en Chasse; le retour d'un joueur dont le lien est tombé reste permis.
-2. **Tokyo imposée**: le mode impose la carte `map1` (`imposerLesReglagesDuMode`), la seule où les rayons et le point de réunion ont été pensés. Le miroir et la pluie restent au choix de l'hôte: le point de réunion se retourne avec la carte.
-3. **Ce que le mode retire**: les bots noirs, l'Évadé, les bonus, les malus, les zones, les objets de poche. Tout ce qui frappe au hasard brouille la déduction (étude, section 8).
-4. **Les réglages du mode** forment un groupe facultatif, comme les objets du Tactique: nombre de tueurs (1 à 3, 2 par défaut), tâches par proie (2 à 8, 5), recharge du meurtre (10 à 60 secondes, 25), durée maximale d'un tour (aucune, 120, 180 ou 300 secondes, 180 par défaut), discussion (15 à 120 secondes, 45), vote (15 à 120 secondes, 45), votes anonymes (non par défaut), confirmer les éjections (oui par défaut). La durée de partie ne s'applique pas à ce mode, et le salon la cache.
-5. **Le nombre de tueurs se borne au nombre de joueurs** au lancement: un de cinq à six joueurs, deux au plus de sept à huit, trois au plus au-delà (étude, section 5). Un réglage plus haut est ramené à la borne.
+### Les vues (serveur)
 
-### Les rôles et les phases
+16. **Une vue par joueur vivant, une vue des fantômes.** `cleDeVue` (`packages/server/src/vues.ts`) donne à chaque vivant sa propre clé, et une clé commune aux fantômes. `FluxParVue` code une trame par clé, comme l'a prévu l'étape 2.9.
+17. **La vue d'un vivant** ne contient que ce qui est dans son rayon (lui-même, les vivants, les PNJ, les cadavres), jamais un fantôme. Les rôles n'y sont jamais. Le classement en cours de partie ne dit ni rôle, ni vivant ou mort: la liste des joueurs, avec leur couleur et leur pseudo. Un tueur reçoit à part, comme la poche, la liste de ses complices.
+18. **La vue des fantômes** contient tout, rôles compris.
+19. **Les notifications passent par la vue.** Un meurtre part au tueur, à la victime et aux vivants qui voient l'endroit, sans dire l'auteur à ceux qui ne le voient pas. Un signalement, le gong, l'ouverture d'une réunion, les votes et l'éjection partent à tous. La révélation du rôle part à chacun, seul.
+20. **Un test vérifie qu'aucune trame ni notification adressée à un vivant ne contient de rôle**, ni la position d'un fantôme, ni rien hors de son rayon.
 
-6. **Les rôles se tirent à la graine au lancement**, parmi les joueurs dans leur ordre dans l'état, comme les traqueurs de la Chasse. Les tueurs se connaissent.
-7. **Les phases**: révélation (5 secondes), jeu, discussion, vote, éjection (5 secondes), puis de nouveau le jeu. **Hors du jeu, le monde est figé**: personne ne bouge, les PNJ non plus, aucune recharge n'avance; seules les minuteries de la phase descendent. Le temps de la partie, lui, avance toujours: c'est du temps joué.
-8. **Aucun chronomètre de partie**: la partie finit par une victoire, et seulement ainsi. Une pause de l'hôte fige tout, phases comprises, comme ailleurs.
-9. **Le tour à durée maximale** (décision 5) se compte du début du tour; à son terme, une réunion s'ouvre, motif « le temps ».
+### Le chat
 
-### Le meurtre, le cadavre, les fantômes
+21. **Deux canaux.** Les vivants ne peuvent parler qu'en réunion, entre eux. Les fantômes parlent entre eux à tout moment, et lisent les vivants. Un vivant ne lit jamais un fantôme. Le serveur route chaque message selon le canal de son auteur, au moment où il l'écrit.
 
-10. **Le meurtre**: le bouton de capture, réservé à un tueur vivant pendant le jeu. Il prend la proie vivante la plus proche à 70 pixels au plus, de centre à centre; à distance égale, l'ordre de l'état départage. Rien si sa recharge n'est pas finie. Recharge réglée (25 secondes par défaut), et 10 secondes au début de chaque tour. Un tueur ne tue ni un tueur, ni un fantôme.
-11. **Le cadavre** reste à la place de la victime, à sa couleur, jusqu'à la fin de la réunion suivante.
-12. **La victime devient un fantôme** sur place. Un fantôme va à la même vitesse, traverse les murs sans quitter la carte, et n'est vu que des fantômes. Une proie fantôme finit ses tâches; un tueur fantôme (éjecté) ne tue plus. Un fantôme ne signale pas, ne sonne pas le gong et ne vote pas.
+### La page
 
-### Le bouton d'action: signaler, sonner, faire une tâche
-
-13. **Le bouton d'action est celui de la poche** (touche E, bouton de poche au tactile), qui n'a pas d'objet dans ce mode. Il fait, dans cet ordre: signaler un cadavre à 100 pixels au plus; sonner le gong à 100 pixels au plus du point de réunion; commencer une tâche.
-14. **Signaler**: un vivant, proie ou tueur. Un tueur peut signaler sa propre victime.
-15. **Le gong**: un vivant, une fois par partie, pas dans les 15 premières secondes d'un tour. **Le point de réunion** est le passage piéton central de Tokyo, (1145, 630) (étude, section 10), retourné en miroir.
-16. **La tâche provisoire**: une proie qui a encore des tâches en commence une là où elle est; elle la finit en restant **5 secondes sans bouger**. Bouger ou une réunion l'interrompt, et elle repart de zéro. Un tueur qui presse le bouton ne commence rien: il fait semblant en restant immobile. Personne ne voit la tâche d'un autre.
-17. **Le compte des tâches**: chaque proie reçoit le nombre réglé au lancement. La barre commune (faites sur total) se voit de tous. Une proie qui quitte la partie retire ses tâches restantes du total (étude, section 4.2).
-
-### La réunion
-
-18. **Ouverte** par un signalement, le gong ou le terme du tour. Toute tâche en cours s'interrompt. Chacun apprend qui l'a ouverte, pourquoi, quel cadavre a été trouvé, et qui est mort: tous les fantômes, trouvés ou non, comme dans Among Us.
-19. **La discussion**, puis **le vote**. Pendant le vote, chaque vivant vote une fois pour un vivant, lui-même compris, ou passe; un vote ne se reprend pas. Le vote finit quand tous les vivants ont voté, ou à son terme. La majorité relative éjecte; une égalité, ou « passer » en tête, n'éjecte personne. Un vivant qui n'a pas voté ne compte pas.
-20. **L'éjection**: « X a été éjecté », suivi, si l'hôte confirme les éjections, de « X était un tueur » ou « X n'était pas un tueur ». Les votes se montrent un par un, sauf si l'hôte les a voulus anonymes: on ne voit alors que le décompte. L'éjecté devient un fantôme, sans cadavre.
-21. **Le retour au jeu**: les vivants sont replacés en cercle autour du point de réunion, les fantômes restent où ils sont, les cadavres disparaissent, la recharge des tueurs repart à 10 secondes, et le tour recommence.
-
-### La victoire
-
-22. **Les proies gagnent** quand toutes les tâches sont faites, fantômes compris, ou quand il ne reste plus aucun tueur vivant, éjecté ou parti. **Les tueurs gagnent** quand ils sont au moins aussi nombreux que les proies vivantes. Un meurtre ou une tâche décide sur-le-champ; une éjection décide à la fin de son écran, pour qu'on le voie.
-23. **Le classement de fin est par camp**: les vainqueurs à la première place, les perdants à la suivante. Aucun point: le mode ne fait pas de score, et un meilleur score de profil n'en dépend pas. Le détail par joueur (rôle, tâches faites, meurtres, bons votes) se montre à la fin. Le temps joué est le temps réellement joué.
-
-### La vue de chacun et ce qui part au réseau
-
-24. **Chaque joueur a sa vue.** Un vivant voit, dans un disque centré sur lui, les vivants, les PNJ et les cadavres: **260 pixels pour une proie, 380 pour un tueur** (étude, section 7.1). Il ne voit jamais les fantômes. Les fantômes partagent une vue: toute la carte, fantômes compris. Un destinataire inconnu ne voit rien. La vision ne tient pas compte des murs (étude, section 7.2).
-25. **Le rôle n'est jamais dans le flux d'état.** Il part à son seul joueur, comme la poche, dans un message privé qui dit aussi s'il est fantôme, ses tâches restantes, sa tâche en cours et s'il a encore son gong. La recharge du meurtre passe par l'état d'arme du joueur, dans sa seule vue, comme le katana du Massacre.
-26. **Le classement du flux ne dit que les pseudos et les couleurs** dans ce mode: ni points, ni captures, ni qui est mort.
-27. **La phase voyage dans le flux**: son nom, le temps qu'il lui reste, et la barre commune des tâches. Le cadavre est une entité nouvelle, le fantôme un indicateur du joueur, ajoutés en fin de codage: une partie des autres modes s'écrit à l'octet comme avant.
-28. **Ce que la réunion dit à tous** part en notifications à tous: son ouverture, chaque vote exprimé (qui a voté, pas pour qui), le résultat. **Le meurtre** part au tueur, à la victime, qui apprend qui l'a tuée, et aux vivants dont le disque couvre l'endroit.
-29. **Le chat en partie**: pendant la discussion et le vote, les vivants parlent aux vivants, et les fantômes les lisent; les fantômes parlent entre eux à tout moment, sans que les vivants les lisent. Pendant le jeu, le chat des vivants est fermé. Le serveur choisit les destinataires de chaque message.
-
-### La foule et les couleurs
-
-30. **La foule**: des PNJ d'un gris uniforme, qui errent, ne se capturent pas, ne transmettent aucune couleur et marchent sans bruit. Leur nombre est le réglage de l'hôte.
-31. **Douze couleurs nommées** pour les joueurs de ce mode, distinctes du gris de la foule, et **le pseudo au-dessus de chaque joueur en vue**: toute accusation passe par « j'ai vu Orange ».
-
-### Le rendu
-
-32. **Le rendu se choisit sur planche** au milieu de l'étape (`docs/design/etape-7-20/`): la révélation du rôle, le cercle de vision, le cadavre, le fantôme, l'écran de réunion et de vote, l'éjection, la fin. Les sons sont provisoires, pris dans ceux du jeu.
+22. **Le cercle de vision**: un masque sombre sur l'écran, percé d'un disque au bord adouci, en filtre PixiJS. Le décor reste visible, assombri.
+23. **Deux boutons sur téléphone, pas un de plus**: l'action contextuelle, et le meurtre pour un tueur (le bouton de capture). Au clavier: E et la touche de capture.
+24. **La minimap** montre notre position et nos stations à faire. Un tueur y voit les stations des proies. Jamais les autres joueurs. La carte plein écran vient à l'étape 7.21.
+25. **L'écran de réunion** recouvre le jeu: les joueurs avec leur couleur, leur nom et leur état (vivant, fantôme, a voté), le chat, le compte à rebours, le vote. Puis l'éjection.
 
 ## Périmètre
 
-### Lot A. Le contrat (`packages/shared`)
+### Lot A. Le moteur
 
-1. **Le mode**, sa capacité, ses valeurs (`AMONG_NINJAS`: rayons, portées, durées, point de réunion), ses réglages et leurs bornes, leur validation, les réglages imposés (micro-décisions 1 à 4).
-2. **Les douze couleurs nommées** et le gris de la foule (micro-décisions 30 et 31).
-3. **Le flux**: l'entité cadavre, l'indicateur fantôme, le bloc de phase; codage et aller-retour.
-4. **Les messages**: le vote (du joueur au serveur), l'état privé, les notifications de réunion et de meurtre, le canal du chat, la fin de partie par camp.
+1. Le mode dans le contrat (`MODES`, capacité, couleur grise réservée, réglages du mode et leur validation, réglages imposés).
+2. L'état du mode, le tirage au lancement, les phases et leurs comptes à rebours, le tour à durée maximale.
+3. Le meurtre, le cadavre, le signalement, le gong, la réunion, le vote, l'éjection, le replacement.
+4. Les stations de Tokyo (données), la tâche provisoire, les listes par proie.
+5. Les fantômes, et la question « qui traverse les murs » au jeu de règles.
+6. Les conditions de victoire, les départs.
+7. Les événements du moteur: meurtre, signalement, gong, réunion ouverte, vote, éjection, tâche faite, victoire.
+8. L'empreinte des quatre parties de référence identique avant et après.
 
-### Lot B. Le moteur (`packages/sim`)
+### Lot B. Le serveur
 
-1. **L'état du mode**, le lancement et le tirage des rôles.
-2. **Les phases** et le monde figé; le moteur sans chronomètre pour ce mode.
-3. **Le meurtre**, le cadavre, les fantômes et leur déplacement sans murs.
-4. **Le bouton d'action**: signaler, le gong, la tâche provisoire.
-5. **La réunion**, le vote, l'éjection, le retour au jeu.
-6. **La victoire**, le départ d'un joueur, la foule, les couleurs, le score nul.
+1. `GameRoom`: capacité, cinq joueurs pour lancer avec la raison, entrée refusée, départs, bilan par camp (décision « Points et place en fin »).
+2. Les vues par joueur et des fantômes, les notifications par vue, la révélation et les complices à part.
+3. Les demandes: l'action contextuelle, le vote, validées par les schémas (étape 1.6) et limitées en débit.
+4. Le chat en deux canaux.
+5. La base: la migration de l'énumération, une partie Among Ninjas enregistrée. Le relevé des exploits (étape 3.8) ne doit pas casser: aucun succès nouveau à cette étape.
+6. Tests à travers le vrai serveur: une partie jouée jusqu'à un meurtre, un signalement, une réunion, un vote qui éjecte un tueur et la victoire des proies.
 
-### Lot C. Le serveur
+### Lot C. La page
 
-1. **La room**: la condition de lancement, le refus d'entrer, le vote retenu pour le battement, le bilan par camp, le chat par canal.
-2. **Les vues**: une clé par joueur, le disque de vision, la vue des fantômes, le classement neutre, l'arme du tueur dans sa seule vue.
-3. **Le réseau**: le message de vote, l'état privé annoncé à chacun, les notifications, la fin par camp.
-4. **La base**: la migration de l'énumération des modes; le résultat par camp dans le bilan.
-5. **Tests à travers le vrai serveur**: une partie à cinq, du lancement à la victoire, où aucune trame ni notification ne trahit un rôle, un fantôme ou une position hors du disque.
+1. Création: la tuile du mode, sur Tokyo seulement. Salon: les réglages du mode, « Lancer » suspendu à cinq joueurs, le nombre de tueurs borné par le nombre de joueurs, le total des tâches affiché.
+2. La révélation du rôle, le cercle de vision, le cadavre, le bouton d'action et son libellé selon le contexte, le bouton de meurtre et sa recharge, la tâche provisoire et sa jauge.
+3. Les fantômes: le fantôme vu par un fantôme, translucide, et la vue entière.
+4. L'écran de réunion, le vote, l'éjection, le chat des fantômes.
+5. La minimap du mode, la barre des tâches restantes.
+6. La fin: le camp vainqueur au titre, puis le classement.
+7. L'aide: quelques lignes sur le mode. Rendus provisoires, à soumettre sur planche au porteur du projet (révélation, cercle, cadavre, réunion, éjection) comme aux étapes 7.9 à 7.12.
 
-### Lot D. La page
+### Lot D. Bout en bout, mesure et documentation
 
-1. **La planche**, puis le rendu retenu (micro-décision 32).
-2. **La création et le salon**: le mode, ses réglages, la condition des cinq joueurs.
-3. **En partie**: la révélation, le masque de vision, les pseudos, le cadavre, le fantôme, le bouton d'action et son libellé, le bouton de meurtre et sa recharge, la barre des tâches, la phase et son temps, la minimap réduite à soi.
-4. **La réunion**: les joueurs, vivants et morts, le chat, le vote, le décompte, l'éjection.
-5. **Le chat des fantômes** pendant le jeu.
-6. **La fin**: le camp vainqueur, les rôles révélés, le détail par joueur.
-7. **L'aide** et les textes du mode.
-
-### Lot E. Mesure et documentation
-
-1. **Empreinte**: les parties de référence des autres modes, identiques à l'octet à celles du handoff 2.9.
-2. **Banc de charge**: une partie Among Ninjas de douze joueurs, douze vues par battement, consignée dans `docs/mesures/charge-serveur.md`.
-3. **Version**: une nouveauté majeure, le deuxième chiffre avance, avec une note soumise au porteur du projet.
-4. **Documentation**: le journal de conception, le ROADMAP, l'étude, CLAUDE.md (comportements 1, 2 et 4: une précision datée pour ce mode).
+1. Scénario `tests/e2e/among.spec.ts`: cinq joueurs dans un salon, la partie se lance, chacun voit son rôle, une proie fait sa tâche, un meurtre, un signalement, la réunion, un vote. Au bureau. Le téléphone pour un des joueurs si le temps de la CI le permet (étape 5.14: dix parts).
+2. Banc: `pnpm charge --banc --mode among`, à douze joueurs, soit douze vues, comparé au Classique. Nouvelle section de `docs/mesures/charge-serveur.md`.
+3. CLAUDE.md, comportements à préserver 1, 2 et 4: leur précision pour ce mode (pas de score en stock, pas de capture, pas de malus). Journal de conception, ROADMAP, étude.
+4. Version mineure (1.8.0) et sa note, dont le texte se soumet au porteur du projet.
 
 ## Hors périmètre
 
-- Les stations, les sept tâches courtes, la minimap des stations et la carte plein écran (étape 7.21).
-- Les sabotages, la panne de néons, la surchauffe (étape 7.22).
-- Les pas entendus (étape 7.23); les mini-jeux d'arcade (étape 7.24).
-- Le déguisement en PNJ, les ninjas égarés, les égouts, les traces de sang, la gêne des fantômes (étape 7.25).
-- Des rayons de vision réglables par l'hôte; l'occlusion par les murs.
-- Les défis et les succès propres au mode.
-- Toute modification de `legacy/` ou de `tests/caracterisation/`.
+- Les mini-jeux, la carte plein écran, les tâches visuelles, la barre des tâches en réglage (étape 7.21).
+- Les sabotages, l'aide des fantômes et leur malédiction (étape 7.22).
+- Les pas des autres joueurs (étape 7.23).
+- Les tâches longues (étape 7.24).
+- Les égouts, le déguisement, les ninjas égarés, les traces de sang du tueur (étape 7.25).
+- L'occlusion de la vue par les murs, les autres cartes, la partie rapide qui mène à ce mode.
+- Toute modification des règles des autres modes, de `legacy/` ou de `tests/caracterisation/`.
 
 ## Tests requis
 
-- **Contrat (TU)**: les bornes et la validation des réglages; les réglages imposés; le codage du cadavre, du fantôme et du bloc de phase, l'aller-retour, et une partie d'un autre mode qui s'écrit à l'octet comme avant; la validation du vote.
-- **Moteur (TU)**: le tirage des rôles et sa borne; les phases et leurs durées, le monde figé; le meurtre (portée, recharge, la plus proche, ni tueur ni fantôme); le cadavre; le fantôme qui traverse les murs; signaler, le gong (une fois, pas dans les 15 premières secondes), la tâche (immobile 5 secondes, interrompue en bougeant ou par une réunion, rien pour un tueur); le vote (une fois, vivants seulement, majorité, égalité, passer); l'éjection et sa confirmation; le retour au jeu; chaque condition de victoire; le départ d'un tueur et d'une proie; la foule grise, sans contagion; aucune fin au terme d'une durée; le tour à durée maximale.
-- **Serveur (TU et TI)**: la clé de chacun; un vivant ne reçoit rien hors de son disque ni aucun fantôme; un fantôme voit tout; le rôle n'est dans aucune trame; l'arme seulement dans la vue du tueur; le classement neutre; les notifications de meurtre aux seuls témoins; le chat par canal; le bilan par camp; une partie complète à cinq.
-- **Client (TU)**: les modèles de la révélation, de la réunion, du vote, de la fin; le libellé du bouton d'action; les réglages au formulaire.
-- **Bout en bout**: une partie Among Ninjas à cinq navigateurs, jusqu'à une réunion et un vote; les scénarios existants.
+- **Contrat (TU)**: le mode, sa capacité, la validation de ses réglages (tueurs bornés par les joueurs, tâches, durées), les réglages imposés.
+- **Lancement (TU)**: nombre de tueurs, stations et listes tirées, reproductibles à graine égale. Aucun tirage dans les autres modes.
+- **Phases (TU)**: révélation, jeu, réunion, éjection, retour. Personne ne bouge hors du jeu. Le temps de partie gelé en réunion. Le tour à durée maximale qui ouvre la réunion.
+- **Meurtre (TU)**: la plus proche dans la portée. La recharge, celle du début de tour. Rien sur un tueur, un fantôme, hors phase de jeu. Le cadavre. L'ordre des tueurs reproductible.
+- **Signalement et gong (TU)**: portée, cadavre en vue, un gong par joueur, les quinze premières secondes, un fantôme qui ne peut pas.
+- **Vote (TU)**: majorité relative, égalité, passer, un fantôme qui ne vote pas, un vote hors réunion ignoré, l'éjection d'un tueur et d'une proie.
+- **Tâches (TU)**: cinq secondes dans le disque, remise à zéro en sortant ou en lâchant, une station hors de la liste, un tueur qui fait semblant, un fantôme qui finit sa liste.
+- **Fantômes (TU)**: traversent les murs, ne touchent rien. Les autres modes inchangés.
+- **Victoire (TU)**: chacune des quatre conditions, les départs d'une proie et d'un tueur.
+- **Vues (TU)**: la vue d'un vivant ne contient que son rayon, ni fantôme ni rôle. Celle des fantômes, tout. Les notifications d'un meurtre selon le témoin. Aucune fuite de rôle, vérifiée sur une partie entière.
+- **Serveur (TI)**: lancement à cinq, entrée refusée, une partie jouée jusqu'à la victoire des proies par le vote, le chat en deux canaux, la partie enregistrée.
+- **Page (TU)**: création, salon, révélation, boutons et libellés, réunion, fin, minimap.
+- **Bout en bout**: le scénario du lot D.
 
 ## Définition de terminé
 
 Conditions de ROADMAP réunies, plus:
 
-1. Une partie Among Ninjas se crée, se lance à cinq et se joue jusqu'à la victoire d'un camp depuis la page, au clavier et au tactile.
-2. Aucune trame ni notification reçue par un vivant ne contient de rôle, de fantôme ou d'entité hors de son disque, vérifié par les tests du serveur.
-3. Le rendu correspond à la planche retenue, vérifié dans le navigateur de Claude Code, avec une capture d'écran.
-4. L'empreinte des parties de référence des autres modes est identique à celle du handoff 2.9.
-5. La couverture de `packages/sim` ne baisse pas.
+1. Une partie Among Ninjas se crée, se prépare au salon, se joue et s'enregistre depuis la page, au bureau et sur téléphone, sur Tokyo, en normal et en miroir.
+2. **Aucune trame ni notification adressée à un vivant ne dit un rôle, la position d'un fantôme ou ce qui est hors de son rayon**, vérifié par les tests du serveur.
+3. **Les cinq autres modes n'ont pas changé**: tests existants inchangés, empreinte des quatre parties de référence identique.
+4. Le coût d'une partie à douze vues est mesuré et écrit.
+5. La couverture de `packages/sim` ne baisse pas (99,79 pour cent au handoff 2.9).
 
 ## Points de vigilance
 
-1. **Le secret avant tout**: chaque donnée nouvelle se demande « à qui part-elle ? ». Un test le vérifie pour le rôle, les fantômes et les positions.
-2. **Douze vues par battement**: mesurer au banc, la Chasse en coûtait 14 pour cent de plus avec deux.
-3. **Les autres modes ne bougent pas**: champs du moteur facultatifs, codes ajoutés en fin de liste, empreinte comparée.
-4. **Le nombre de joueurs**: cinq au minimum, donc les tests du serveur et le bout en bout en simulent cinq.
-5. **La reconnexion** (étape 2.5): un joueur qui revient retrouve son rôle par le message privé, annoncé de nouveau.
+1. **L'étape est la plus grosse du projet.** La couper en sessions par lots, avec un handoff partiel à chaque coupure, plutôt que de la forcer. Les lots A et B se testent sans page.
+2. **Les tirages ne se font que dans ce mode.** Toute nouvelle question au jeu de règles rend « personne » ou « rien » ailleurs, sans coût ni tirage.
+3. **Les phases touchent le déplacement et le ramassage de tous les modes**: comme le hors-jeu de la Chasse, elles passent par une question du jeu de règles, pas par un test du mode dans le moteur.
+4. **Le rôle ne doit fuir par aucun canal**: trame, notification, classement, chat, salon, fin anticipée d'un joueur, ordre des listes, identifiants. Un tueur dont l'écran diffère (son bouton de meurtre) ne doit rien laisser passer dans ce que reçoivent les autres.
+5. **Douze vues à vingt battements par seconde**: le coût est mesuré au lot D, mais la projection d'une vue doit rester linéaire dans le nombre d'entités dès le lot B.
+6. **Les stations doivent être atteignables** et à bonne distance les unes des autres: la commande de mesure de la compétence le vérifie, en normal et en miroir.
 
 ## Rituel de fin de session
 
-Écrire `docs/handoffs/etape-7-20-handoff.md`. Consigner les décisions au journal de `docs/design/README.md`, mettre à jour le ROADMAP (étape faite, ordre des suivantes), l'étude Among Ninjas (questions tranchées), CLAUDE.md (comportements à préserver 1, 2 et 4). Version: le deuxième chiffre avance, la note se soumet au porteur du projet. Prochaine action exacte: l'étape qui suit dans la section 3 du ROADMAP. Commiter.
+Écrire `docs/handoffs/etape-7-20-handoff.md`: les décisions confirmées en début d'étape, les écarts à cette fiche (section « Réconciliation » à ajouter ici), les chiffres du banc, l'état de la CI. Consigner les décisions au journal de `docs/design/README.md`, mettre à jour le ROADMAP et l'étude. Prochaine action exacte: l'étape 7.21, dont la fiche se rédige au début de l'étape selon le cas de repli du PROTOCOLE. Commiter.
