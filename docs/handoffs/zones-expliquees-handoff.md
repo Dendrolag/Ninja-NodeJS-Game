@@ -2,7 +2,7 @@
 
 Date: 9 octobre 2026
 Auteur: session Claude Code
-Statut: terminée, en attente de l'essai du porteur du projet avant la mise en ligne
+Statut: terminée, essayée en local et validée par le porteur du projet, mise en ligne
 
 Travail hors plan, demandé par le porteur du projet en parallèle de l'étape 7.20, à la suite d'un retour de joueurs: on ne comprend pas ce que font les zones ouvertes par les mines de zone. Fait dans le worktree `.claude/worktrees/optimisations`, sur la branche `zones-expliquees`, partie du commit `6204636` (les optimisations du même jour, déjà en ligne). **Rien n'est poussé sur `master`**: le porteur du projet veut l'essayer en local avant.
 
@@ -53,7 +53,7 @@ Rien de connu. À juger en jouant: la portée de la bulle (250 pixels), le seuil
 
 ## Prochaine action exacte
 
-Après l'essai en local du porteur du projet: fusionner `zones-expliquees` dans `master` (en avance rapide sur `origin/master` s'il n'a pas bougé), pousser, suivre la CI jusqu'à la mise en ligne.
+Rien pour ce travail: validé et poussé sur `master` en avance rapide. La session de l'étape 7.20 fusionne `master` dans son `master` local avant de pousser, et donne au mode `among` ses colonnes de fin (handoff `optimisations-9-octobre-handoff.md`).
 
 ## Étape suivante
 
