@@ -69,6 +69,8 @@ export type EcranAmong =
       readonly ejecte: JoueurAmongVu | undefined;
       readonly joueurs: readonly JoueurAmongVu[];
       readonly traits: readonly TraitDeVote[];
+      /** Les voix pour passer, que « Passer » porte comme une place. */
+      readonly voixPourPasser: number;
     };
 
 /** Le temps d'une phase, en secondes arrondies vers le haut: « 0:42 ». */
@@ -188,6 +190,7 @@ export function ecranAmong(etat: EtatClient): EcranAmong {
         resultat.votes === undefined
           ? []
           : Object.entries(resultat.votes).map(([de, vers]) => ({ de, vers })),
+      voixPourPasser: passer,
     };
   }
 

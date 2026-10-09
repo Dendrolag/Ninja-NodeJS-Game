@@ -5,9 +5,14 @@
  *
  * LA TABLE RONDE (rendu B de la planche, a ameliorer): les joueurs en cercle autour du gong.
  * Pendant le vote, un vivant touche un joueur vivant pour voter contre lui, ou « Passer ». A
- * l'ejection, chaque vote devient un trait courbe de la couleur du votant, qui finit par une
- * pointe sur le joueur vise; plusieurs traits vers le meme joueur s'y empilent. Sans votes
+ * l'ejection, chaque vote devient un trait courbe de la couleur du votant, qui part du bord de
+ * sa place et finit par une fleche au bord de la place visee, ou de « Passer ». Sans votes
  * nommes (votes anonymes), seul le nombre de voix s'affiche.
+ *
+ * Les traits se calculent en pixels, sur la place reelle de chaque carte a l'ecran, et ne se
+ * redessinent que si les votes ou la taille de la table changent: redessines a chaque image,
+ * leur animation repartait de zero sans fin, et l'on n'en voyait que des bouts (retour
+ * d'essai du porteur du projet, 9 octobre 2026).
  *
  * L'EGOUT (rendu B, a affiner): a l'ejection, l'ejecte s'enfonce dans une bouche d'egout
  * neon, sous la table.
@@ -41,8 +46,133 @@ function placeAutourDeLaTable(rang: number, nombre: number): { x: number; y: num
   return { x: 50 + Math.cos(angle) * 40, y: 50 + Math.sin(angle) * 36 };
 }
 
-/** La place de « Passer », sous la table. */
-const PLACE_DE_PASSER = { x: 50, y: 97 };
+/** Un point, en pixels, dans le repere de la table. */
+export interface Point {
+  readonly x: number;
+  readonly y: number;
+}
+
+/** Une carte a l'ecran: son centre et sa demi-largeur et demi-hauteur, en pixels. */
+export interface Boite {
+  readonly x: number;
+  readonly y: number;
+  readonly demiLargeur: number;
+  readonly demiHauteur: number;
+}
+
+/** Le dessin d'un vote: la courbe, et le triangle de la fleche. */
+export interface DessinDeVote {
+  readonly chemin: string;
+  readonly fleche: string;
+}
+
+/** L'espace laisse entre la pointe d'une fleche et la carte qu'elle vise, en pixels. */
+const ECART_DE_LA_FLECHE = 4;
+/** La longueur et la demi-largeur d'une fleche, en pixels. */
+const LONGUEUR_DE_LA_FLECHE = 11;
+const DEMI_LARGEUR_DE_LA_FLECHE = 6;
+
+/** Le point du bord d'une boite dans la direction d'un autre point, plus un ecart. */
+function bordVers(boite: Boite, vers: Point, ecart: number): Point {
+  const dx = vers.x - boite.x;
+  const dy = vers.y - boite.y;
+  const longueur = Math.hypot(dx, dy);
+
+  if (longueur === 0) {
+    return { x: boite.x, y: boite.y };
+  }
+
+  // La demi-diagonale touchee la premiere, horizontale ou verticale.
+  const echelle = Math.min(
+    dx === 0 ? Infinity : boite.demiLargeur / Math.abs(dx),
+    dy === 0 ? Infinity : boite.demiHauteur / Math.abs(dy),
+  );
+
+  return {
+    x: boite.x + dx * echelle + (dx / longueur) * ecart,
+    y: boite.y + dy * echelle + (dy / longueur) * ecart,
+  };
+}
+
+/** Un nombre en pixels, arrondi au dixieme, pour un attribut SVG. */
+function px(valeur: number): string {
+  return String(Math.round(valeur * 10) / 10);
+}
+
+/** Le triangle d'une fleche dont la pointe est en `pointe`, venue de la direction `depuis`. */
+function triangle(pointe: Point, depuis: Point): { base: Point; points: string } {
+  const dx = pointe.x - depuis.x;
+  const dy = pointe.y - depuis.y;
+  const longueur = Math.hypot(dx, dy) || 1;
+  const ux = dx / longueur;
+  const uy = dy / longueur;
+  const base = {
+    x: pointe.x - ux * LONGUEUR_DE_LA_FLECHE,
+    y: pointe.y - uy * LONGUEUR_DE_LA_FLECHE,
+  };
+  const gauche = {
+    x: base.x - uy * DEMI_LARGEUR_DE_LA_FLECHE,
+    y: base.y + ux * DEMI_LARGEUR_DE_LA_FLECHE,
+  };
+  const droite = {
+    x: base.x + uy * DEMI_LARGEUR_DE_LA_FLECHE,
+    y: base.y - ux * DEMI_LARGEUR_DE_LA_FLECHE,
+  };
+
+  return {
+    base,
+    points: [pointe, gauche, droite].map((point) => `${px(point.x)},${px(point.y)}`).join(' '),
+  };
+}
+
+/**
+ * Le dessin d'un vote, de la carte du votant a celle qu'il vise, en pixels. La courbe se
+ * creuse vers le centre de la table, pour que les traits ne passent pas tous par le meme
+ * chemin droit; elle part du bord du votant et s'arrete avant le bord vise, ou la fleche la
+ * termine, hors de la carte qui la cacherait. Un vote contre soi-meme fait une boucle
+ * au-dessus de sa carte.
+ */
+export function dessinDeVote(de: Boite, vers: Boite, centre: Point): DessinDeVote {
+  if (de.x === vers.x && de.y === vers.y) {
+    const haut = de.y - de.demiHauteur;
+    const depart = { x: de.x + de.demiLargeur * 0.4, y: haut };
+    const pointe = { x: de.x - de.demiLargeur * 0.4, y: haut - ECART_DE_LA_FLECHE };
+    const controleA = { x: de.x + de.demiLargeur, y: haut - 44 };
+    const controleB = { x: de.x - de.demiLargeur, y: haut - 44 };
+    const fleche = triangle(pointe, controleB);
+
+    return {
+      chemin: `M ${px(depart.x)} ${px(depart.y)} C ${px(controleA.x)} ${px(controleA.y)} ${px(controleB.x)} ${px(controleB.y)} ${px(fleche.base.x)} ${px(fleche.base.y)}`,
+      fleche: fleche.points,
+    };
+  }
+
+  const milieu = { x: (de.x + vers.x) / 2, y: (de.y + vers.y) / 2 };
+  const controle = {
+    x: centre.x + (milieu.x - centre.x) * 0.3,
+    y: centre.y + (milieu.y - centre.y) * 0.3,
+  };
+  const depart = bordVers(de, controle, 0);
+  const pointe = bordVers(vers, controle, ECART_DE_LA_FLECHE);
+  const fleche = triangle(pointe, controle);
+
+  return {
+    chemin: `M ${px(depart.x)} ${px(depart.y)} Q ${px(controle.x)} ${px(controle.y)} ${px(fleche.base.x)} ${px(fleche.base.y)}`,
+    fleche: fleche.points,
+  };
+}
+
+/** La boite d'un element a l'ecran, dans le repere d'une origine. */
+function boiteDans(element: Element, origine: DOMRect): Boite {
+  const rect = element.getBoundingClientRect();
+
+  return {
+    x: rect.left - origine.left + rect.width / 2,
+    y: rect.top - origine.top + rect.height / 2,
+    demiLargeur: rect.width / 2,
+    demiHauteur: rect.height / 2,
+  };
+}
 
 /** Les messages du chat, tels que le composant de chat les montre; un fantome est marque. */
 function messagesDuChat(etat: EtatClient): readonly MessageDuChat[] {
@@ -78,8 +208,6 @@ export function monterEcransAmong(doc: Document, client: Client): EcransAmong {
   const table = creer(doc, 'div', { classe: 'among-table' });
   const traits = doc.createElementNS(SVG, 'svg');
   traits.setAttribute('class', 'among-traits');
-  traits.setAttribute('viewBox', '0 0 100 100');
-  traits.setAttribute('preserveAspectRatio', 'none');
   traits.setAttribute('aria-hidden', 'true');
   const gong = creer(doc, 'div', { classe: 'among-gong', texte: 'GONG' });
   table.append(traits, gong);
@@ -90,6 +218,8 @@ export function monterEcransAmong(doc: Document, client: Client): EcransAmong {
       client.voter(null);
     },
   );
+  const voixPasser = creer(doc, 'span', { classe: 'among-place-voix' });
+  passer.append(voixPasser);
   const chat = monterChat(doc, client, 'Réunion');
   chat.racine.classList.add('among-chat');
 
@@ -121,6 +251,8 @@ export function monterEcransAmong(doc: Document, client: Client): EcransAmong {
   let ejectePose: string | undefined;
   /** Ce qui est affiche, pour ne refaire la rangee qu'a son changement. */
   let rangeeAffichee = '';
+  /** Les traits dessines et la taille de la table, pour ne les refaire qu'a leur changement. */
+  let traitsDessines = '';
 
   const afficherLaRangee = (ecran: Extract<EcranAmong, { ecran: 'revelation' }>): void => {
     ecrireTexte(titreRevelation, ecran.titre);
@@ -153,6 +285,7 @@ export function monterEcransAmong(doc: Document, client: Client): EcransAmong {
     joueurs: readonly JoueurAmongVu[],
     peutVoter: boolean,
     monVote: string | null | undefined,
+    voixPourPasser: number,
   ): void => {
     const presents = new Set<string>();
 
@@ -200,55 +333,61 @@ export function monterEcransAmong(doc: Document, client: Client): EcransAmong {
       }
     }
 
-    montrer(passer, peutVoter || monVote === null);
+    // A l'ejection, « Passer » reste en place s'il a recu des voix: les traits y arrivent.
+    montrer(passer, peutVoter || monVote === null || voixPourPasser > 0);
     passer.disabled = !peutVoter;
     passer.classList.toggle('choisi', monVote === null);
+    ecrireTexte(voixPasser, voixPourPasser > 0 ? String(voixPourPasser) : '');
+    montrer(voixPasser, voixPourPasser > 0);
   };
 
   const dessinerLesTraits = (
     joueurs: readonly JoueurAmongVu[],
     liste: readonly TraitDeVote[],
   ): void => {
+    const origine = table.getBoundingClientRect();
+    const cle = [
+      `${px(origine.width)}x${px(origine.height)}`,
+      ...joueurs.map((joueur) => joueur.id),
+      ...liste.map((trait) => `${trait.de}>${trait.vers ?? ''}`),
+    ].join('|');
+
+    // Redessiner a chaque image relancerait l'animation des traits sans fin.
+    if (cle === traitsDessines) {
+      return;
+    }
+
+    traitsDessines = cle;
     traits.replaceChildren();
-    const rangDe = new Map(joueurs.map((joueur, rang) => [joueur.id, rang]));
-    const arrivees = new Map<string, number>();
+    traits.setAttribute('viewBox', `0 0 ${px(origine.width)} ${px(origine.height)}`);
+    const centre = { x: origine.width / 2, y: origine.height / 2 };
 
-    for (const trait of liste) {
-      const depart = rangDe.get(trait.de);
+    liste.forEach((trait, rang) => {
       const votant = joueurs.find((joueur) => joueur.id === trait.de);
+      const depart = places.get(trait.de)?.element;
+      const arrivee = trait.vers === null ? passer : places.get(trait.vers)?.element;
 
-      if (depart === undefined || votant === undefined) {
-        continue;
+      if (votant === undefined || depart === undefined || arrivee?.hidden !== false) {
+        return;
       }
 
-      const de = placeAutourDeLaTable(depart, joueurs.length);
-      const rangVise = trait.vers === null ? undefined : rangDe.get(trait.vers);
-      const vers =
-        rangVise === undefined ? PLACE_DE_PASSER : placeAutourDeLaTable(rangVise, joueurs.length);
-      // Les traits vers un meme joueur arrivent un peu decales: on les compte.
-      const cle = trait.vers ?? 'passer';
-      const deja = arrivees.get(cle) ?? 0;
-      arrivees.set(cle, deja + 1);
-      const decalage = (deja - 1) * 1.6;
-      const controle = {
-        x: 50 + (de.x + vers.x - 100) * 0.15,
-        y: 50 + (de.y + vers.y - 100) * 0.15,
-      };
+      const dessin = dessinDeVote(boiteDans(depart, origine), boiteDans(arrivee, origine), centre);
+      // Les traits partent l'un apres l'autre, pour qu'on les suive des yeux; la fleche se
+      // montre quand son trait l'atteint (0,6 s apres son depart, comme le dit jeu.css).
+      const retard = rang * 0.12;
       const chemin = doc.createElementNS(SVG, 'path');
-      chemin.setAttribute(
-        'd',
-        `M ${String(de.x)} ${String(de.y)} Q ${String(controle.x)} ${String(controle.y)} ${String(vers.x + decalage)} ${String(vers.y + decalage)}`,
-      );
+      chemin.setAttribute('d', dessin.chemin);
+      chemin.setAttribute('pathLength', '1');
       chemin.setAttribute('class', 'among-trait');
       chemin.setAttribute('stroke', votant.couleur);
-      const pointe = doc.createElementNS(SVG, 'circle');
-      pointe.setAttribute('cx', String(vers.x + decalage));
-      pointe.setAttribute('cy', String(vers.y + decalage));
-      pointe.setAttribute('r', '1.4');
-      pointe.setAttribute('fill', votant.couleur);
-      pointe.setAttribute('class', 'among-trait-pointe');
-      traits.append(chemin, pointe);
-    }
+      chemin.style.animationDelay = `${String(retard)}s`;
+      const fleche = doc.createElementNS(SVG, 'polygon');
+      fleche.setAttribute('points', dessin.fleche);
+      fleche.setAttribute('class', 'among-trait-fleche');
+      fleche.setAttribute('fill', votant.couleur);
+      fleche.style.animationDelay = `${String(retard + 0.6)}s`;
+      traits.append(chemin, fleche);
+    });
   };
 
   const afficherLEgout = (ecran: Extract<EcranAmong, { ecran: 'ejection' }>): void => {
@@ -286,7 +425,7 @@ export function monterEcransAmong(doc: Document, client: Client): EcransAmong {
         ecrireTexte(titreReunion, ecran.titre);
         ecrireTexte(phase, `${ecran.phase === 'vote' ? 'Vote' : 'Discussion'} · ${ecran.temps}`);
         reunion.dataset['phase'] = ecran.phase;
-        afficherLaTable(ecran.joueurs, ecran.peutVoter, ecran.monVote);
+        afficherLaTable(ecran.joueurs, ecran.peutVoter, ecran.monVote, 0);
         dessinerLesTraits(ecran.joueurs, []);
         montrer(egout, false);
         montrer(chat.racine, true);
@@ -296,7 +435,7 @@ export function monterEcransAmong(doc: Document, client: Client): EcransAmong {
         ecrireTexte(titreReunion, 'Résultat du vote');
         ecrireTexte(phase, '');
         reunion.dataset['phase'] = 'ejection';
-        afficherLaTable(ecran.joueurs, false, undefined);
+        afficherLaTable(ecran.joueurs, false, undefined, ecran.voixPourPasser);
         dessinerLesTraits(ecran.joueurs, ecran.traits);
         montrer(egout, true);
         montrer(chat.racine, false);
