@@ -34,6 +34,7 @@ import {
   SONS_EN_BOUCLE,
   cheminApercuCarte,
   cheminAvantPlan,
+  cheminAvantPlanDeNuit,
   cheminCarte,
   cheminNinja,
   cheminObjet,
@@ -122,8 +123,9 @@ describe('cheminAvantPlan', () => {
 });
 
 describe('cheminFondDeNuit', () => {
-  it('donne le fond de nuit de la seule carte qui en a un (etape 8.9)', () => {
+  it('donne le fond de nuit des cartes qui en ont un (etapes 8.9 et 8.11)', () => {
     expect(cheminFondDeNuit('station')).toBe('cartes/station/background-night.png');
+    expect(cheminFondDeNuit('prison')).toBe('cartes/prison/background-night.png');
   });
 
   it('ne donne rien pour les autres cartes', () => {
@@ -137,6 +139,41 @@ describe('cheminFondDeNuit', () => {
 
     expect(dimensionsPng(cheminFondDeNuit('station') as string)).toEqual(jour);
     expect(jour).toEqual(CARTES.station);
+  });
+});
+
+describe('cheminAvantPlanDeNuit', () => {
+  it('donne l avant-plan de nuit de la seule carte qui en a un (etape 8.11)', () => {
+    expect(cheminAvantPlanDeNuit('prison')).toBe('cartes/prison/foreground-night.png');
+  });
+
+  it('ne donne rien pour les autres cartes, Station lunaire comprise', () => {
+    expect(cheminAvantPlanDeNuit('map1')).toBeUndefined();
+    expect(cheminAvantPlanDeNuit('map3')).toBeUndefined();
+    expect(cheminAvantPlanDeNuit('quartier')).toBeUndefined();
+    expect(cheminAvantPlanDeNuit('station')).toBeUndefined();
+  });
+});
+
+describe('les images de Prison Island (etape 8.11)', () => {
+  it('ont toutes la taille du fond de jour, de jour comme de nuit', () => {
+    const jour = dimensionsPng(cheminCarte('prison', 'background'));
+
+    expect(dimensionsPng(cheminFondDeNuit('prison') as string)).toEqual(jour);
+    expect(dimensionsPng(cheminAvantPlan('prison') as string)).toEqual(jour);
+    expect(dimensionsPng(cheminAvantPlanDeNuit('prison') as string)).toEqual(jour);
+  });
+
+  it('ont les proportions de la carte, qui les agrandit de 30 pour cent sans les deformer', () => {
+    // Le decor est livre a 1838 sur 1337, la carte en mesure 2390 sur 1738: les portes
+    // du dessin livre etaient plus etroites qu'un ninja. L'agrandissement est le meme sur
+    // les deux axes, a un pixel pres, pour que le decor reste sur les murs.
+    const jour = dimensionsPng(cheminCarte('prison', 'background'));
+    const echelleX = CARTES.prison.largeur / jour.largeur;
+    const echelleY = CARTES.prison.hauteur / jour.hauteur;
+
+    expect(Math.abs(echelleX - echelleY) * jour.largeur).toBeLessThan(1);
+    expect(dimensionsPng(cheminCarte('prison', 'collision'))).toEqual(CARTES.prison);
   });
 });
 
@@ -277,6 +314,7 @@ describe('les ressources annoncees existent sur le disque', () => {
         cheminPluie(carte),
         cheminLointain(carte),
         cheminFondDeNuit(carte),
+        cheminAvantPlanDeNuit(carte),
         cheminVaisseau(carte),
       ]) {
         if (optionnelle !== undefined && !present(optionnelle)) {

@@ -51,6 +51,7 @@ import {
   IMAGES_PAR_OBJET,
   RACINE_RESSOURCES,
   cheminAvantPlan,
+  cheminAvantPlanDeNuit,
   cheminCarte,
   cheminFondDeNuit,
   cheminLointain,
@@ -170,7 +171,7 @@ export async function prechargerLaPartie(
   await Promise.all([
     prechargerLesSprites(),
     imageDuFond(carte, nuit),
-    image(cheminAvantPlan(carte)),
+    imageDeLAvantPlan(carte, nuit),
     image(cheminLointain(carte)),
     imagesDuVaisseau(carte, nuit),
     dimensions === undefined ? [] : imagesDePluie(carte, pluie, dimensions),
@@ -190,6 +191,17 @@ async function imageDuFond(carte: string, nuit: boolean): Promise<Texture> {
   const deNuit = nuit ? cheminFondDeNuit(carte) : undefined;
 
   return Assets.load<Texture>(`${RACINE_RESSOURCES}/${deNuit ?? cheminCarte(carte, 'background')}`);
+}
+
+/**
+ * L'avant-plan d'une carte: celui de nuit quand la partie se joue de nuit sur une carte qui
+ * en a un (Prison Island, etape 8.11), l'avant-plan ordinaire sinon, et aucun sur une carte
+ * qui n'en a pas.
+ */
+async function imageDeLAvantPlan(carte: string, nuit: boolean): Promise<Texture | undefined> {
+  const deNuit = nuit ? cheminAvantPlanDeNuit(carte) : undefined;
+
+  return image(deNuit ?? cheminAvantPlan(carte));
 }
 
 /** Le vaisseau d'une carte et son ombre (etape 8.9). */
@@ -628,7 +640,7 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       const carte = options.identifiantCarte;
       const [texteFond, texteDessus, texteLointain, imagesVaisseau, images] = await Promise.all([
         imageDuFond(carte, options.nuit),
-        image(cheminAvantPlan(carte)),
+        imageDeLAvantPlan(carte, options.nuit),
         image(cheminLointain(carte)),
         imagesDuVaisseau(carte, options.nuit),
         imagesDePluie(carte, options.pluie, options.carte),

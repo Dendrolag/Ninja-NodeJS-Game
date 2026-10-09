@@ -236,6 +236,7 @@ describe('plus de 150 faux ninjas, jusqu au plafond de la carte (etape 7.6)', ()
     ['map3', 360],
     ['quartier', 340],
     ['station', 190],
+    ['prison', 125],
   ] as const)('peuple %s de %i faux ninjas, tous hors des murs', async (carte, faux) => {
     const room = await partieAuPlafond(carte, faux);
     const bots = Object.values(room.etat.bots).filter((bot) => bot.type === 'bot');

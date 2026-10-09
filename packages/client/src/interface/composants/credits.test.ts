@@ -47,7 +47,7 @@ describe('la fenetre des credits', () => {
     expect(lignes).toEqual([
       'Neon Ninja est une création originale de Dendrolag.',
       'Avec l’aimable participation de Bribz pour la carte Tokyo et les ninjas.',
-      'Avec l’aimable participation de 2-Minute Tabletop pour la carte Station lunaire, sous licence CC BY-NC 4.0.',
+      'Avec l’aimable participation de 2-Minute Tabletop pour les cartes Station lunaire et Prison Island, sous licence CC BY-NC 4.0.',
     ]);
   });
 

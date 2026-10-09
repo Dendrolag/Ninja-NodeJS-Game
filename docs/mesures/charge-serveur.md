@@ -1109,3 +1109,19 @@ Moyenne des deux tours. Durées en millisecondes par battement, tailles en octet
 - **Une Chasse sous Révélation**: un traqueur qui porte le bonus passe à la vue commune, ce qui ne fait jamais plus de deux vues.
 - **Le serveur complet**: une trame par vue part par un seul envoi de Socket.IO à tous ceux qui la partagent, comme avant pour la salle entière. Rien de nouveau à mesurer au fil.
 - **Un mode à une vue par joueur**, comme le serait Among Ninjas: douze trames par battement au lieu de deux. À mesurer avec ce mode, s'il se construit.
+
+## 28. Mesure de l'étape 8.11: Prison Island (9 octobre 2026)
+
+Une cinquième carte, de 2390 sur 1738: 0,94 million de pixels carrés tenables, le plafond de faux ninjas à 125, la densité des quatre autres cartes. La plus grande surface après le Quartier, mais la moins tenable du jeu (22,7 pour cent): la mer est un mur.
+
+`pnpm charge --banc --carte prison --bots-banc 125`, puis le même banc sur Tokyo à 125, au même commit, sur la machine de mesure (AMD Ryzen 7 3800X, Node 24). Douze joueurs, Horde, un processus neuf par ligne; résultats bruts de Prison Island dans `charge-serveur-8-11-prison.json`.
+
+| Carte         | Bots | Moteur | Projection | Codage | Total | Total p99 | Octets par message | Parties par cœur |
+| ------------- | ---: | -----: | ---------: | -----: | ----: | --------: | -----------------: | ---------------: |
+| Tokyo         |  125 |  0,277 |      0,044 |  0,057 | 0,378 |     0,910 |                393 |               92 |
+| Prison Island |  125 |  0,295 |      0,043 |  0,062 | 0,401 |     0,892 |                370 |               87 |
+
+- **À nombre égal, Prison Island coûte ce que coûte Tokyo**, à 6 pour cent près: ses couloirs et ses cellules ne coûtent rien, ce sont les entités qui comptent (section 17).
+- **À son plafond, 0,40 ms par battement**, la carte la moins chère du jeu, parce que la moins peuplée.
+
+Le rendu de la nuit ne coûte rien de plus que celui du jour: l'avant-plan de nuit remplace celui du jour, il ne s'y ajoute pas.

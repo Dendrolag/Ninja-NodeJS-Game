@@ -1,5 +1,5 @@
 {
-  "genereLe": "2026-10-03",
+  "genereLe": "2026-10-09",
   "outil": "docs/mesures/mesurer-les-cartes.mjs",
   "reglages": {
     "rayonEntitePx": 16,
@@ -249,6 +249,66 @@
       "parcoursCourtS": 1.7,
       "parcoursLongS": 8.2,
       "detourMedian": 1.07
+    },
+    {
+      "carte": "prison",
+      "nom": "Prison Island",
+      "miroir": false,
+      "dimensions": {
+        "largeur": 2390,
+        "hauteur": 1738
+      },
+      "surfaceMpx": 4.15,
+      "partDeSolPct": 34.6,
+      "partTenablePct": 22.7,
+      "morceaux": 1,
+      "partDuPrincipalPct": 100,
+      "airesIsoleesPx": 0,
+      "plusGrosMorceauIsolePx": 0,
+      "partDeLaBandeDApparitionPct": 100,
+      "degagementPx": {
+        "p10": 19,
+        "median": 35,
+        "p90": 88,
+        "maximum": 208.6
+      },
+      "traverseePx": 3467,
+      "traverseeS": 23.1,
+      "parcoursTypiquePx": 1103,
+      "parcoursTypiqueS": 7.4,
+      "parcoursCourtS": 2.4,
+      "parcoursLongS": 13.3,
+      "detourMedian": 1.32
+    },
+    {
+      "carte": "prison",
+      "nom": "Prison Island",
+      "miroir": true,
+      "dimensions": {
+        "largeur": 2390,
+        "hauteur": 1738
+      },
+      "surfaceMpx": 4.15,
+      "partDeSolPct": 34.6,
+      "partTenablePct": 22.7,
+      "morceaux": 1,
+      "partDuPrincipalPct": 100,
+      "airesIsoleesPx": 0,
+      "plusGrosMorceauIsolePx": 0,
+      "partDeLaBandeDApparitionPct": 100,
+      "degagementPx": {
+        "p10": 19,
+        "median": 35,
+        "p90": 88,
+        "maximum": 208.6
+      },
+      "traverseePx": 3438,
+      "traverseeS": 22.9,
+      "parcoursTypiquePx": 1220,
+      "parcoursTypiqueS": 8.1,
+      "parcoursCourtS": 2.4,
+      "parcoursLongS": 14.3,
+      "detourMedian": 1.33
     }
   ]
 }

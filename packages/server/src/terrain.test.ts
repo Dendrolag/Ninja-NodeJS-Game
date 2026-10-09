@@ -359,6 +359,9 @@ describe('les vraies cartes du jeu', () => {
  *
  * Celles de la Station lunaire (etape 8.9) sont relevees sur son image, murs trop fins
  * epaissis (assets/README.md). Elle n'a jamais eu de miroir dessine.
+ *
+ * Celles de Prison Island (etape 8.11) aussi: sa collision est livree agrandie a la
+ * taille de la carte, retouchee (assets/README.md).
  */
 describe('les murs de chaque carte, figes', () => {
   const chargeur = new ChargeurDeTerrain(racineRessources());
@@ -380,6 +383,10 @@ describe('les murs de chaque carte, figes', () => {
       normal: '90cee70d884fb972c8b9058da989d830f1d2f5995b4c1cf77d1d357fa4b9e2a9',
       miroir: '462b734f013eee33562897d3e035a8d70998045cd795b09199755fecdb71a443',
     },
+    prison: {
+      normal: '14a6cf78ca001b5f6f06a22c9b265506e0e4ceb3ac4b80fa1734c823cb2358a3',
+      miroir: 'ed79e5d2cfab91f9b83e5fc3cf80ea57859dedd23268ec37b1513bf3ae285e63',
+    },
   };
 
   /** L'empreinte des murs d'un terrain, bit a bit. */
@@ -396,9 +403,9 @@ describe('les murs de chaque carte, figes', () => {
   // Le test de l'etape 8.3 verifiait que le miroir de Spirit & Time differait de moins d'un
   // pour mille: l'ancienne carte etait symetrique. La nouvelle ne l'est plus (le dome est
   // decale, les murs traces a la main), ni la Station lunaire (le quai est sous le toit,
-  // a droite): on verifie directement le retournement, pixel a pixel. Leurs images ont la
-  // taille de la carte, l'etirement ne change rien.
-  for (const carte of ['map3', 'station'] as const) {
+  // a droite), ni Prison Island: on verifie directement le retournement, pixel a pixel.
+  // Leurs images de collision ont la taille de la carte, l'etirement ne change rien.
+  for (const carte of ['map3', 'station', 'prison'] as const) {
     it(`${carte} en miroir est sa carte normale retournee, mur pour mur`, () => {
       const normal = chargeur.charger({ carte, modeMiroir: false });
       const miroir = chargeur.charger({ carte, modeMiroir: true });
@@ -427,6 +434,10 @@ describe('les murs de chaque carte, figes', () => {
  * La Station lunaire (etape 8.9) y passe aussi: son quai ne tient au toit que par les
  * passages des monte-charges, et une collision relivree qui les fermerait ferait du quai
  * une prison.
+ *
+ * Prison Island (etape 8.11) aussi, et pour de bon: ses cellules, sa tour ronde et la
+ * plage du bateau ne tiennent au reste que par des portes. Livree a 1838 sur 1337, elle
+ * en avait vingt et un morceaux, toutes portes plus etroites qu'un ninja.
  */
 describe('les cartes a passages etroits', () => {
   const chargeur = new ChargeurDeTerrain(racineRessources());
@@ -448,6 +459,8 @@ describe('les cartes a passages etroits', () => {
     ['quartier', true],
     ['station', false],
     ['station', true],
+    ['prison', false],
+    ['prison', true],
   ] as const) {
     it(`${carte} n enferme personne ${modeMiroir ? 'en miroir' : 'en normal'}`, () => {
       const terrain = chargeur.charger({ carte, modeMiroir });
@@ -558,7 +571,7 @@ describe('les poches closes des vraies cartes (etape 8.10)', () => {
       expect(enPoche).toBeLessThan(250);
     });
 
-    for (const carte of ['map3', 'quartier', 'station'] as const) {
+    for (const carte of ['map3', 'quartier', 'station', 'prison'] as const) {
       it(`${carte} n a aucune poche ${modeMiroir ? 'en miroir' : 'en normal'}`, () => {
         expect(placesEnPoche({ carte, modeMiroir })).toBe(0);
       });
