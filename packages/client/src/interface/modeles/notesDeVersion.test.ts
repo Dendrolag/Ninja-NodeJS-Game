@@ -59,6 +59,12 @@ describe('les notes de version', () => {
       'Un vaisseau.',
     ]);
     expect(noteDeLaVersion('1.7.0')?.titre).toBe('Le lundi, c’est défis');
+    expect(noteDeLaVersion('1.8.0')?.titre).toBe('Derrière les barreaux');
+    expect(noteDeLaVersion('1.8.0')?.puces.map((puce) => puce.intitule)).toEqual([
+      'Prison Island.',
+      'Jour ou nuit.',
+      'Des cachettes.',
+    ]);
   });
 });
 

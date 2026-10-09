@@ -265,6 +265,7 @@ describe('modeleSalon', () => {
 
     expect(carte({ carte: 'station' })).toBe('Station lunaire');
     expect(carte({ carte: 'station', nuit: true })).toBe('Station lunaire · Nuit');
+    expect(carte({ carte: 'prison', nuit: true })).toBe('Prison Island · Nuit');
     expect(carte({ carte: 'station', nuit: true, modeMiroir: true })).toBe(
       'Station lunaire · Miroir · Nuit',
     );

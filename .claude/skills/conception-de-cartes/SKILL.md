@@ -20,7 +20,8 @@ Un dossier `assets/cartes/<carte>/`, avec ses images **dans un seul sens**. Le m
 | `foreground.png`          | L'avant-plan, au-dessus des personnages. La Station lunaire n'en a pas (étape 8.9)                | Presque     |
 | `rain.png`                | La pluie, une bande qui défile. Seule Tokyo en a une                                              | Non         |
 | `background-parallax.png` | Le lointain, sous le fond, qui glisse moins vite que lui (étape 8.8). Seule Spirit & Time en a un | Non         |
-| `background-night.png`    | Le fond de nuit, qui remplace le fond quand l'hôte choisit la nuit (étape 8.9). Seule la Station  | Non         |
+| `background-night.png`    | Le fond de nuit, qui remplace le fond quand l'hôte choisit la nuit (étape 8.9). Station et Prison | Non         |
+| `foreground-night.png`    | L'avant-plan de nuit, qui remplace l'avant-plan la nuit (étape 8.11). Seule Prison Island en a un | Non         |
 | `spaceship.png`           | Le vaisseau qui survole la carte, au-dessus de tout (étape 8.9). Seule la Station en a un         | Non         |
 | `preview.png`             | La vignette, 120 sur 120, montrée dans les réglages                                               | Oui         |
 
@@ -109,16 +110,16 @@ Ce que chaque nombre veut dire:
 - `traverseeS` et `parcoursTypiqueS`: à la vitesse du jeu, du point le plus loin à son opposé, et entre deux apparitions tirées au sort.
 - `detourMedian`: chemin réel divisé par le vol d'oiseau. **C'est la mesure de la structure.**
 
-### Les trois cartes de référence
+### Les cartes du jeu
 
-| Mesure              | Tokyo (2000x1500) | Spirit & Time (2400x1760) | Quartier (2400x1800) | Station (2000x1524) |
-| ------------------- | ----------------: | ------------------------: | -------------------: | ------------------: |
-| Part tenable        |            75,3 % |                    64,6 % |               59,6 % |              47,0 % |
-| Dégagement médian   |             64 px |                    226 px |                60 px |              142 px |
-| Traversée           |            18,0 s |                    16,2 s |               21,3 s |              12,2 s |
-| **Détour médian**   |          **1,08** |                  **1,06** |             **1,24** |            **1,07** |
-| Plafond de PNJ      |               300 |                       360 |                  340 |                 190 |
-| Part vue d'un écran |              48 % |                      34 % |                 33 % |                47 % |
+| Mesure              | Tokyo (2000x1500) | Spirit & Time (2400x1760) | Quartier (2400x1800) | Station (2000x1524) | Prison (2390x1738) |
+| ------------------- | ----------------: | ------------------------: | -------------------: | ------------------: | -----------------: |
+| Part tenable        |            75,3 % |                    64,6 % |               59,6 % |              47,0 % |             22,7 % |
+| Dégagement médian   |             64 px |                    226 px |                60 px |              142 px |              35 px |
+| Traversée           |            18,0 s |                    16,2 s |               21,3 s |              12,2 s |             23,1 s |
+| **Détour médian**   |          **1,08** |                  **1,06** |             **1,24** |            **1,07** |           **1,32** |
+| Plafond de PNJ      |               300 |                       360 |                  340 |                 190 |                125 |
+| Part vue d'un écran |              48 % |                      34 % |                 33 % |                47 % |               35 % |
 
 **Les deux cartes héritées sont des terrains ouverts**: un détour de 1,07 à 1,08 veut dire qu'il n'y a ni couloir, ni détour à subir, ni raccourci à connaître. Les murs de Tokyo sont du mobilier qu'on contourne, pas une structure qui organise.
 
@@ -127,6 +128,8 @@ Ce que chaque nombre veut dire:
 Note: le détour de l'ancienne Spirit & Time se lisait 1,06 à l'étape 8.1, avec vingt-quatre points de départ tirés, et 1,07 avec quatre-vingts. L'outil en tire quatre-vingts depuis l'étape 8.2, parce que vingt-quatre laissaient le détour bouger de cinq centièmes selon le tirage.
 
 **La Station lunaire (étape 8.9) est la plus petite carte du jeu**: le toit d'une station et son quai, dessinés par 2-Minute Tabletop, la Lune autour en mur. Terrain ouvert (1,07), traversée tout juste au seuil de 12 secondes. Le quai ne tient au toit que par deux monte-charges, d'où son test de connexité. Elle se joue de jour ou de nuit, et un vaisseau la survole, avec son ombre en parallaxe de jour.
+
+**Prison Island (étape 8.11) est la carte la plus structurée du jeu**: une prison bâtie sur un îlot, dessinée par 2-Minute Tabletop, la mer autour en mur. Détour de 1,32, couloirs de 70 pixels, cellules à une porte, d'où la plus faible part tenable du jeu. Livrée à 1838 sur 1337, elle n'était pas jouable: un plan de jeu de rôle compte un carreau par personnage, et ses portes, d'un carreau, laissaient moins que les 32 pixels d'un ninja. Agrandie de 30 pour cent, elle tient. Elle se joue de jour ou de nuit, et son avant-plan (tables, lits) change avec le fond.
 
 **Spirit & Time a changé de terrain à l'étape 8.8**: le décor livré par le porteur du projet, un toit-terrasse ceint de murs au-dessus d'une ville, réduit de 20 pour cent pour que les ninjas n'y paraissent pas trop petits. L'ancienne était un champ de 3000 sur 2000, tenable à 94,4 pour cent, plafonnée à 500 PNJ. La nouvelle reste un terrain ouvert (1,06), mais bordé de murs: tout son tenable est hors de la bande d'apparition.
 
@@ -170,7 +173,7 @@ Trois modes sur cinq profitent d'une carte plus structurée que les nôtres, deu
 4. `PRESENTATION_CARTES` (`packages/client/src/interface/modeles/cartes.ts`): nom et ambiance. L'oublier est une erreur de compilation, à dessein.
 5. `cheminPluie` (`packages/shared/src/ressources.ts`), si la carte a une pluie.
 6. `cheminLointain`, au même endroit, si la carte a un lointain. Son amplitude (`LOINTAIN`, `packages/client/src/rendu/apparence.ts`) se règle sur la marge que le terrain laisse autour de ce qu'il cache, mesurée par `parallaxe.test.ts`.
-7. `cheminAvantPlan`, `cheminFondDeNuit` et `cheminVaisseau`, au même endroit (étape 8.9): une carte sans avant-plan, une carte qui a une nuit (le réglage `nuit` ne se propose alors que sur elle), une carte qu'un vaisseau survole. Les réglages du vaisseau, sa vitesse, son altitude, son ombre, sont dans `VAISSEAU` (`apparence.ts`), sa course dans `packages/client/src/rendu/vaisseau.ts`, tirée de la graine du décor que le serveur donne à chaque lancement.
+7. `cheminAvantPlan`, `cheminFondDeNuit` et `cheminVaisseau`, au même endroit (étape 8.9): une carte sans avant-plan, une carte qui a une nuit (le réglage `nuit` ne se propose alors que sur elle), une carte qu'un vaisseau survole. `cheminAvantPlanDeNuit` (étape 8.11), une carte dont l'avant-plan change aussi la nuit. Les réglages du vaisseau, sa vitesse, son altitude, son ombre, sont dans `VAISSEAU` (`apparence.ts`), sa course dans `packages/client/src/rendu/vaisseau.ts`, tirée de la graine du décor que le serveur donne à chaque lancement.
 8. Le test de connexité de `packages/server/src/terrain.test.ts` (« les cartes à passages étroits »), si la carte a des passages étroits ou des parties qui ne tiennent au reste que par eux.
 
 ## 8. Décisions déjà prises, à ne pas rouvrir
@@ -196,6 +199,8 @@ Décision plus ancienne, toujours valable: **le miroir est un réglage de carte,
 5. **Le socle tient environ 12 Mpx et 1 000 PNJ** sans rien changer. Au-delà, ce sont les quatre plafonds de `docs/mesures/etude-grandes-cartes.md` qui reprennent la main.
 6. **Un mur de moins de neuf pixels se chevauche** (section 2, point 4). Depuis l'étape 8.10, les poches qu'il crée n'enferment plus personne: aucune apparition n'y tombe. Il reste un défaut de dessin, du sol perdu.
 7. **Générer une image de collision avec un modèle d'image est le mauvais instrument.** L'anticrénelage y épaissit chaque mur de façon incontrôlée, et on rate par construction les critères 4 et 8. Une collision se trace, elle ne se génère pas.
+8. **Un plan de jeu de rôle livré tel quel est trop petit** (étape 8.11). Il compte un carreau par personnage, quarante pixels environ, et ses portes d'un carreau, une fois les pierres du mur dessinées, laissent moins que les 32 pixels d'un ninja. Mesurer d'abord à la taille livrée: si les morceaux se comptent par dizaines, agrandir la carte (Prison Island, 30 pour cent), la même échelle sur les deux axes, et la collision au plus proche voisin.
+9. **Un mur dessiné à la main a un bord rugueux, et chaque creux de ce bord peut faire une poche** (étape 8.11). Le moteur juge une place en dix-sept points: entre deux pierres saillantes, une place isolée devient tenable. Prison Island en avait plus de deux cents, d'une à six places. Combler les creux plus étroits qu'un disque de quatre pixels de rayon (fermeture: dilater les murs, puis les éroder d'autant) en a fermé presque toutes; les dernières se ferment pixel par pixel, en noircissant un point de leur contour collé à un mur. `placesEnPoche` doit tomber à zéro dans les deux sens: le miroir arrondit autrement, et a ses propres poches.
 
 ## Pour commander un décor à un graphiste
 

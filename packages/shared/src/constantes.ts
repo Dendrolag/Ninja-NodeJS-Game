@@ -103,12 +103,18 @@ export const VITESSES = {
  * `station` est la Station lunaire de l'etape 8.9: le toit d'une station posee sur la
  * Lune, dessine par 2-Minute Tabletop, de jour ou de nuit (ReglagesPartie.nuit), qu'un
  * vaisseau survole. Ses images sont a la taille de la carte.
+ *
+ * `prison` est Prison Island de l'etape 8.11: une prison batie sur un ilot battu par
+ * la mer, de jour ou de nuit, avec son avant-plan de jour et son avant-plan de nuit.
+ * Ses images sont a la taille de la carte, telles que le porteur du projet les a
+ * livrees.
  */
 export const CARTES = {
   map1: { largeur: 2000, hauteur: 1500 },
   map3: { largeur: 2400, hauteur: 1760 },
   quartier: { largeur: 2400, hauteur: 1800 },
   station: { largeur: 2000, hauteur: 1524 },
+  prison: { largeur: 2390, hauteur: 1738 },
 } as const;
 
 /** Identifiant d'une carte jouable. */
@@ -122,7 +128,14 @@ export type IdentifiantCarte = keyof typeof CARTES;
  * enumeration PostgreSQL rendrait illisibles les parties deja jouees: une carte
  * retiree du jeu reste donc ici (etape 7.6, map2 fondue dans map1).
  */
-export const CARTES_ENREGISTREES = ['map1', 'map2', 'map3', 'quartier', 'station'] as const;
+export const CARTES_ENREGISTREES = [
+  'map1',
+  'map2',
+  'map3',
+  'quartier',
+  'station',
+  'prison',
+] as const;
 
 /** La carte d'une partie enregistree: jouable, ou retiree du jeu depuis. */
 export type CarteEnregistree = (typeof CARTES_ENREGISTREES)[number];
@@ -143,12 +156,16 @@ export type CarteEnregistree = (typeof CARTES_ENREGISTREES)[number];
  * La Station lunaire (etape 8.9) a 1,43 million de pixels carres tenables: 190 faux
  * ninjas lui donnent la meme densite, 7 540 pixels carres chacun. Mesure au banc:
  * section 25 du meme document.
+ *
+ * Prison Island (etape 8.11) a 0,94 million de pixels carres tenables: 125 faux ninjas,
+ * 7 540 pixels carres chacun. Mesure au banc: section 28 du meme document.
  */
 export const PLAFONDS_DE_FAUX_NINJAS: Readonly<Record<IdentifiantCarte, number>> = {
   map1: 300,
   map3: 360,
   quartier: 340,
   station: 190,
+  prison: 125,
 };
 
 /** Dimensions d'une carte, en pixels. */

@@ -1,5 +1,5 @@
 {
-  "id": "e5a4d656-2728-4ec9-9b13-715d0284020c",
+  "id": "2adc754c-a51c-48be-9a5b-3ce347f58cf0",
   "prevId": "7e86c92e-fcee-448b-8700-05fe40ea27d7",
   "version": "7",
   "dialect": "postgresql",
@@ -1104,7 +1104,8 @@
         "map2",
         "map3",
         "quartier",
-        "station"
+        "station",
+        "prison"
       ]
     },
     "public.mode_de_jeu": {
@@ -1115,8 +1116,7 @@
         "tactique",
         "equipes",
         "chasse",
-        "massacre",
-        "among"
+        "massacre"
       ]
     }
   },

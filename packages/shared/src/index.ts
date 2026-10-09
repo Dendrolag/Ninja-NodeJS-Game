@@ -344,6 +344,7 @@ export {
   SONS_EN_BOUCLE,
   cheminApercuCarte,
   cheminAvantPlan,
+  cheminAvantPlanDeNuit,
   cheminCarte,
   cheminFondDeNuit,
   cheminLointain,

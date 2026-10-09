@@ -7,13 +7,13 @@
  * version mineure: 1.5.2 rouvre la note 1.5.
  *
  * CE SONT DES DONNEES, que la fenetre des nouveautes se contente d'afficher. Ajouter la
- * note 1.8, c'est ajouter une entree a cette liste, sans toucher a la fenetre.
+ * note 1.9, c'est ajouter une entree a cette liste, sans toucher a la fenetre.
  *
  * LE TON, arrete avec le porteur du projet le 5 octobre 2026: une note annonce, elle
  * n'explique pas. Une ligne par nouveaute, un ton un peu decale, et le plaisir de la
  * decouverte laisse au joueur: les regles exactes sont dans l'aide. Chaque note porte
  * un titre a elle, que la fenetre ecrit derriere son numero. Les textes des notes 1.5
- * a 1.7 sont ceux de ce jour-la.
+ * a 1.7 sont ceux de ce jour-la. Celui de la note 1.8 est de l'etape 8.11, sur le meme ton.
  */
 
 import { versionMineure } from '@neon-ninja/shared';
@@ -96,6 +96,24 @@ export const NOTES_DE_VERSION: readonly NoteDeVersion[] = [
       {
         texte:
           'Pour les joueurs connectés, sur des parties d’au moins trois minutes jouées jusqu’au bout.',
+      },
+    ],
+  },
+  {
+    version: '1.8',
+    titre: 'Derrière les barreaux',
+    puces: [
+      {
+        intitule: 'Prison Island.',
+        texte: 'Une nouvelle carte, une prison bâtie sur un îlot perdu en mer.',
+      },
+      {
+        intitule: 'Jour ou nuit.',
+        texte: 'Deux ambiances au choix, comme sur la Station lunaire.',
+      },
+      {
+        intitule: 'Des cachettes.',
+        texte: 'Tables et lits cachent les ninjas qui se glissent dessous.',
       },
     ],
   },

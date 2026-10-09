@@ -76,6 +76,8 @@ const TERRAINS = [
   { carte: 'quartier', nom: 'Quartier', miroir: true },
   { carte: 'station', nom: 'Station lunaire', miroir: false },
   { carte: 'station', nom: 'Station lunaire', miroir: true },
+  { carte: 'prison', nom: 'Prison Island', miroir: false },
+  { carte: 'prison', nom: 'Prison Island', miroir: true },
 ];
 
 /** Un pixel de la carte est-il un mur ? Meme lecture de bits que packages/sim. */
