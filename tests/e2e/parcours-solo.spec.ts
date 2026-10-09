@@ -76,6 +76,9 @@ test('capturer un faux ninja, puis retrouver son score au classement final', asy
 
   // Le bouton de capture n'appartient qu'au mode Tactique (etape 7.1).
   await expect(page.locator('.hud-capture')).toHaveCount(0);
+  // Le radar ne se montre que pendant notre Revelation (9 octobre 2026), sur ordinateur
+  // comme sur telephone: sans lui, le camouflage tient.
+  await expect(page.locator('.hud-radar')).toBeHidden();
   const commande = hasTouch ? await commandeAuPouce(page) : commandeAuClavier(page);
 
   if (hasTouch) {
