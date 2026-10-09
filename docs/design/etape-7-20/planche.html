@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Planche Among Ninjas</title>
+    <style>
+      :root {
+        --fond: #0b1020;
+        --carte: #1b2440;
+        --cadre: #26304f;
+        --texte: #e8ecf6;
+        --pale: #aeb6cc;
+        --rouge: #ff3a5c;
+        --cyan: #2ee6ff;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 22px 24px 18px;
+        width: 1400px;
+        background: var(--fond);
+        color: var(--texte);
+        font: 13px/1.35 'DejaVu Sans', 'Segoe UI', sans-serif;
+      }
+      h1 {
+        margin: 0 0 6px;
+        font-size: 22px;
+      }
+      .intro {
+        margin: 0 0 14px;
+        color: var(--texte);
+      }
+      .rangee {
+        display: grid;
+        grid-template-columns: 170px 1fr 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .legende {
+        text-align: right;
+        padding-top: 70px;
+        color: var(--pale);
+      }
+      .legende b {
+        display: block;
+        color: var(--texte);
+        font-size: 14px;
+      }
+      .case {
+        background: var(--cadre);
+        border-radius: 8px;
+        padding: 7px 7px 6px;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-radius: 4px;
+        background: #121a33;
+      }
+      .titre {
+        text-align: center;
+        font-weight: bold;
+        margin-top: 5px;
+      }
+      .detail {
+        text-align: center;
+        color: var(--texte);
+        opacity: 0.85;
+        min-height: 34px;
+      }
+      .pied {
+        color: var(--pale);
+        margin-top: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Among Ninjas, le socle: les rendus à choisir</h1>
+    <p class="intro">
+      Dessiné en code sur les sprites et le décor de Tokyo. Trois propositions par rangée, A, B ou C; on peut aussi
+      mélanger (« B, mais avec... »). Tout est provisoire: le socle sert à savoir si la formule prend, avant les
+      mini-jeux. Les couleurs des joueurs sont les douze couleurs nommées du mode; la foule est grise.
+    </p>
+
+    <div class="rangee">
+      <div class="legende"><b>1. La révélation</b>5 secondes au lancement, le monde figé. Chacun voit son seul rôle.</div>
+      <div class="case"><canvas id="r1a" width="760" height="420"></canvas><div class="titre">A. La carte de rôle</div><div class="detail">Un mot en grand, une phrase qui dit le but, rien d'autre. Le tueur lit ses complices dessous</div></div>
+      <div class="case"><canvas id="r1b" width="760" height="420"></canvas><div class="titre">B. Le ninja en scène</div><div class="detail">Notre ninja au centre, à sa couleur et sous son nom, le rôle en néon derrière lui</div></div>
+      <div class="case"><canvas id="r1c" width="760" height="420"></canvas><div class="titre">C. La rangée des joueurs</div><div class="detail">Tous les joueurs en rang. Une proie les voit tous pareils; un tueur voit les siens en rouge</div></div>
+    </div>
+
+    <div class="rangee">
+      <div class="legende"><b>2. Le cercle de vision</b>Proie, rayon de 260 pixels, à l'échelle de la carte. Hors du disque, le serveur n'envoie personne</div>
+      <div class="case"><canvas id="r2a" width="760" height="420"></canvas><div class="titre">A. Le disque net</div><div class="detail">Noir à 85 pour cent hors du disque, bord adouci sur 20 px. On voit à peine le décor</div></div>
+      <div class="case"><canvas id="r2b" width="760" height="420"></canvas><div class="titre">B. La vignette</div><div class="detail">Le noir monte en douceur sur 90 px; le décor reste lisible, assombri de moitié</div></div>
+      <div class="case"><canvas id="r2c" width="760" height="420"></canvas><div class="titre">C. Le néon éteint</div><div class="detail">Hors du disque, le décor perd ses couleurs et s'assombrit; un fin liseré marque le bord</div></div>
+    </div>
+
+    <div class="rangee">
+      <div class="legende"><b>3. Le cadavre</b>Au sol jusqu'à la fin de la réunion, à la couleur de la victime. Grossi 3 fois, puis à l'échelle</div>
+      <div class="case"><canvas id="r3a" width="760" height="420"></canvas><div class="titre">A. Le ninja couché</div><div class="detail">Le corps du Massacre, couché et assombri, dans sa flaque de sang</div></div>
+      <div class="case"><canvas id="r3b" width="760" height="420"></canvas><div class="titre">B. Couché, et marqué</div><div class="detail">Le même, avec une croix néon blanche qui pulse: on le repère de loin dans la pénombre</div></div>
+      <div class="case"><canvas id="r3c" width="760" height="420"></canvas><div class="titre">C. Coupé en deux</div><div class="detail">Le clin d'œil à Among Us: le haut et le bas du ninja séparés, du sang entre les deux</div></div>
+    </div>
+
+    <div class="rangee">
+      <div class="legende"><b>4. Le fantôme</b>Vu des seuls fantômes. Il traverse les murs</div>
+      <div class="case"><canvas id="r4a" width="760" height="420"></canvas><div class="titre">A. Le voile</div><div class="detail">Le ninja à 40 pour cent d'opacité, à sa couleur, qui flotte doucement</div></div>
+      <div class="case"><canvas id="r4b" width="760" height="420"></canvas><div class="titre">B. L'esprit</div><div class="detail">Blanc bleuté, translucide, un halo; sa couleur ne reste qu'au contour</div></div>
+      <div class="case"><canvas id="r4c" width="760" height="420"></canvas><div class="titre">C. Le contour</div><div class="detail">Seul le contour du ninja, en trait néon à sa couleur, vide au-dedans</div></div>
+    </div>
+
+    <div class="rangee">
+      <div class="legende"><b>5. La réunion</b>Discussion puis vote, par-dessus la carte figée. Ici, le vote, à sept joueurs dont deux morts</div>
+      <div class="case"><canvas id="r5a" width="760" height="420"></canvas><div class="titre">A. Les vignettes et le chat</div><div class="detail">Les joueurs en grille à gauche, le chat à droite. On vote en touchant une vignette</div></div>
+      <div class="case"><canvas id="r5b" width="760" height="420"></canvas><div class="titre">B. La table ronde</div><div class="detail">Les joueurs en cercle autour du gong, le chat dessous. Les votes deviennent des traits</div></div>
+      <div class="case"><canvas id="r5c" width="760" height="420"></canvas><div class="titre">C. La liste</div><div class="detail">Une colonne, pensée pour le téléphone: une ligne par joueur, le chat en bas</div></div>
+    </div>
+
+    <div class="rangee">
+      <div class="legende"><b>6. L'éjection</b>5 secondes, sans jamais dire le rôle de l'éjecté</div>
+      <div class="case"><canvas id="r6a" width="760" height="420"></canvas><div class="titre">A. Le vide</div><div class="detail">Fond noir étoilé, le ninja tourne et s'éloigne, le texte s'écrit lettre à lettre</div></div>
+      <div class="case"><canvas id="r6b" width="760" height="420"></canvas><div class="titre">B. L'égout</div><div class="detail">Sur la carte figée, le ninja tombe dans une bouche d'égout néon qui se referme</div></div>
+      <div class="case"><canvas id="r6c" width="760" height="420"></canvas><div class="titre">C. Le bandeau</div><div class="detail">Un bandeau sobre sur la carte figée, le décompte des voix, puis le jeu reprend</div></div>
+    </div>
+
+    <p class="pied">
+      Rien n'y dit le rôle de l'éjecté, ni qui est mort hors de la réunion: c'est le secret du mode. Les rendus de la
+      minimap, du bouton d'action et de la fin de partie suivront la planche retenue, sans planche à part.
+    </p>
+
+    <script>
+      const RACINE = '../../../assets/';
+      const charger = (chemin) =>
+        new Promise((ok) => {
+          const image = new Image();
+          image.onload = () => ok(image);
+          image.onerror = () => ok(null);
+          image.src = RACINE + chemin;
+        });
+
+      const NOMMEES = [
+        ['#FF3030', 'Rouge'],
+        ['#3D7DFF', 'Bleu'],
+        ['#1FBF4C', 'Vert'],
+        ['#FFE81A', 'Jaune'],
+        ['#FF8C1A', 'Orange'],
+        ['#9A55FF', 'Violet'],
+        ['#FF5FD2', 'Rose'],
+      ];
+      const FOULE = '#7F8A99';
+
+      /** Le ninja recolore: la part rouge prend la couleur voulue, comme la page du jeu. */
+      function ninja(image, couleur, options = {}) {
+        const toile = document.createElement('canvas');
+        toile.width = image.width;
+        toile.height = image.height;
+        const ctx = toile.getContext('2d');
+        ctx.drawImage(image, 0, 0);
+        const donnees = ctx.getImageData(0, 0, toile.width, toile.height);
+        const p = donnees.data;
+        const c = parseInt(couleur.slice(1), 16);
+        const [cr, cg, cb] = [(c >> 16) & 255, (c >> 8) & 255, c & 255];
+        for (let i = 0; i < p.length; i += 4) {
+          const [r, g, b, a] = [p[i], p[i + 1], p[i + 2], p[i + 3]];
+          if (a === 0) continue;
+          const exces = r - Math.max(g, b);
+          const part = Math.abs(g - b) > 40 || exces < 40 ? 0 : Math.min(1, exces / 255);
+          if (options.esprit) {
+            const l = (r + g + b) / 3;
+            p[i] = 200 + l * 0.2;
+            p[i + 1] = 225 + l * 0.1;
+            p[i + 2] = 255;
+            continue;
+          }
+          if (part > 0) {
+            const fond = (r - part * 255) / Math.max(1 - part, 0.01);
+            p[i] = cr * part + fond * (1 - part);
+            p[i + 1] = cg * part + g * (1 - part);
+            p[i + 2] = cb * part + b * (1 - part);
+          }
+          if (options.sombre) {
+            p[i] *= options.sombre;
+            p[i + 1] *= options.sombre;
+            p[i + 2] *= options.sombre;
+          }
+        }
+        ctx.putImageData(donnees, 0, 0);
+        return toile;
+      }
+
+      function dessinerNinja(ctx, image, couleur, x, y, taille, options = {}) {
+        const sprite = ninja(image, couleur, options);
+        ctx.save();
+        ctx.translate(x, y);
+        if (options.rotation) ctx.rotate(options.rotation);
+        ctx.globalAlpha = options.alpha ?? 1;
+        if (options.halo) {
+          ctx.shadowColor = options.halo;
+          ctx.shadowBlur = taille * 0.5;
+        }
+        if (options.moitie) {
+          const h = taille / 2;
+          ctx.drawImage(sprite, 0, 0, sprite.width, sprite.height / 2, -taille / 2 - 4, -h - 2, taille, h);
+          ctx.drawImage(sprite, 0, sprite.height / 2, sprite.width, sprite.height / 2, -taille / 2 + 6, 6, taille, h);
+        } else {
+          ctx.drawImage(sprite, -taille / 2, -taille / 2, taille, taille);
+        }
+        ctx.restore();
+      }
+
+      function texte(ctx, chaine, x, y, taille, couleur, options = {}) {
+        ctx.save();
+        ctx.font = `${options.gras ? 'bold ' : ''}${taille}px 'DejaVu Sans', sans-serif`;
+        ctx.fillStyle = couleur;
+        ctx.textAlign = options.align ?? 'center';
+        ctx.textBaseline = 'middle';
+        if (options.halo) {
+          ctx.shadowColor = options.halo;
+          ctx.shadowBlur = options.flou ?? 18;
+        }
+        ctx.fillText(chaine, x, y);
+        ctx.restore();
+      }
+
+      function sang(ctx, x, y, echelle, graine) {
+        let s = graine;
+        const alea = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
+        ctx.save();
+        ctx.fillStyle = 'rgba(150, 0, 18, 0.85)';
+        for (let i = 0; i < 9; i++) {
+          ctx.beginPath();
+          ctx.ellipse(
+            x + (alea() - 0.5) * 40 * echelle,
+            y + (alea() - 0.5) * 22 * echelle,
+            (6 + alea() * 14) * echelle,
+            (4 + alea() * 8) * echelle,
+            alea() * Math.PI,
+            0,
+            Math.PI * 2,
+          );
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      function decor(ctx, fond, cx, cy, echelle, largeur, hauteur) {
+        if (!fond) {
+          ctx.fillStyle = '#1a2240';
+          ctx.fillRect(0, 0, largeur, hauteur);
+          return;
+        }
+        // Le fond de Tokyo est etire de 3000x2000 a 2000x1500: 1,5 et 1,333 pixel d'image par pixel de carte.
+        const sx = (cx - largeur / 2 / echelle) * 1.5;
+        const sy = (cy - hauteur / 2 / echelle) * (2000 / 1500);
+        ctx.drawImage(fond, sx, sy, (largeur / echelle) * 1.5, (hauteur / echelle) * (2000 / 1500), 0, 0, largeur, hauteur);
+      }
+
+      function foule(ctx, image, points, taille) {
+        for (const [x, y] of points) dessinerNinja(ctx, image, FOULE, x, y, taille);
+      }
+
+      (async () => {
+        const [idle, est, ouest, fond] = await Promise.all([
+          charger('ninja/idle.png'),
+          charger('ninja/east_1.png'),
+          charger('ninja/west_1.png'),
+          charger('cartes/map1/background.png'),
+        ]);
+        const W = 760;
+        const H = 420;
+        const ctxDe = (id) => document.getElementById(id).getContext('2d');
+
+        // --- 1. La revelation
+        {
+          let ctx = ctxDe('r1a');
+          ctx.fillStyle = '#090d1a';
+          ctx.fillRect(0, 0, W, H);
+          // Moitie gauche: une proie; moitie droite: un tueur.
+          texte(ctx, 'PROIE', W * 0.25, 120, 54, '#2ee6ff', { gras: true, halo: '#2ee6ff' });
+          texte(ctx, 'Fais tes tâches.', W * 0.25, 190, 22, '#e8ecf6');
+          texte(ctx, 'Trouve les tueurs.', W * 0.25, 222, 22, '#e8ecf6');
+          texte(ctx, '1 tueur parmi vous', W * 0.25, 300, 18, '#aeb6cc');
+          ctx.fillStyle = '#26304f';
+          ctx.fillRect(W / 2 - 1, 30, 2, H - 60);
+          texte(ctx, 'TUEUR', W * 0.75, 120, 54, '#ff3a5c', { gras: true, halo: '#ff3a5c' });
+          texte(ctx, 'Élimine les proies', W * 0.75, 190, 22, '#e8ecf6');
+          texte(ctx, 'sans te faire voir.', W * 0.75, 222, 22, '#e8ecf6');
+          texte(ctx, 'Avec toi: Violet', W * 0.75, 300, 18, '#9A55FF');
+
+          ctx = ctxDe('r1b');
+          ctx.fillStyle = '#090d1a';
+          ctx.fillRect(0, 0, W, H);
+          texte(ctx, 'TUEUR', W / 2, 150, 150, 'rgba(255,58,92,0.22)', { gras: true, halo: '#ff3a5c', flou: 40 });
+          dessinerNinja(ctx, idle, '#FF8C1A', W / 2, 180, 170);
+          texte(ctx, 'Orange', W / 2, 300, 30, '#FF8C1A', { gras: true });
+          texte(ctx, 'Tu es un tueur. Ton complice: Violet', W / 2, 345, 20, '#e8ecf6');
+
+          ctx = ctxDe('r1c');
+          ctx.fillStyle = '#090d1a';
+          ctx.fillRect(0, 0, W, H);
+          texte(ctx, 'Tu es un TUEUR', W / 2, 60, 34, '#ff3a5c', { gras: true, halo: '#ff3a5c' });
+          NOMMEES.forEach(([couleur, nom], i) => {
+            const x = 70 + i * 103;
+            const tueur = nom === 'Orange' || nom === 'Violet';
+            if (tueur) {
+              ctx.save();
+              ctx.fillStyle = 'rgba(255,58,92,0.2)';
+              ctx.strokeStyle = '#ff3a5c';
+              ctx.lineWidth = 3;
+              ctx.beginPath();
+              ctx.roundRect(x - 44, 140, 88, 170, 10);
+              ctx.fill();
+              ctx.stroke();
+              ctx.restore();
+            }
+            dessinerNinja(ctx, idle, couleur, x, 210, 84);
+            texte(ctx, nom, x, 285, 17, couleur, { gras: true });
+          });
+          texte(ctx, 'Une proie voit la même rangée, sans aucun cadre', W / 2, 370, 17, '#aeb6cc');
+        }
+
+        // --- 2. Le cercle de vision (echelle 0,6: 260 px de carte font 156 px)
+        {
+          const echelle = 0.55;
+          const centre = [1145, 560];
+          const rayon = 260 * echelle;
+          const placer = (ctx) => {
+            decor(ctx, fond, centre[0], centre[1], echelle, W, H);
+            foule(ctx, idle, [[200, 120], [600, 300], [470, 330], [270, 290]], 32 * echelle * 1.6);
+            dessinerNinja(ctx, idle, '#1FBF4C', W / 2 + 70, H / 2 - 40, 32 * echelle * 1.6);
+            dessinerNinja(ctx, idle, '#3D7DFF', W / 2, H / 2, 32 * echelle * 1.6);
+          };
+
+          let ctx = ctxDe('r2a');
+          placer(ctx);
+          let g = ctx.createRadialGradient(W / 2, H / 2, rayon - 20, W / 2, H / 2, rayon);
+          g.addColorStop(0, 'rgba(0,0,0,0)');
+          g.addColorStop(1, 'rgba(3,5,12,0.85)');
+          ctx.fillStyle = g;
+          ctx.fillRect(0, 0, W, H);
+
+          ctx = ctxDe('r2b');
+          placer(ctx);
+          g = ctx.createRadialGradient(W / 2, H / 2, rayon - 90, W / 2, H / 2, rayon);
+          g.addColorStop(0, 'rgba(0,0,0,0)');
+          g.addColorStop(1, 'rgba(3,5,12,0.55)');
+          ctx.fillStyle = g;
+          ctx.fillRect(0, 0, W, H);
+
+          ctx = ctxDe('r2c');
+          placer(ctx);
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(0, 0, W, H);
+          ctx.arc(W / 2, H / 2, rayon, 0, Math.PI * 2, true);
+          ctx.clip('evenodd');
+          ctx.filter = 'grayscale(1) brightness(0.45)';
+          decor(ctx, fond, centre[0], centre[1], echelle, W, H);
+          ctx.restore();
+          ctx.strokeStyle = 'rgba(46,230,255,0.6)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(W / 2, H / 2, rayon, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        // --- 3. Le cadavre: grossi a gauche, a l'echelle a droite
+        {
+          const variantes = ['r3a', 'r3b', 'r3c'];
+          variantes.forEach((id, rang) => {
+            const ctx = ctxDe(id);
+            decor(ctx, fond, 1000, 1250, 1, W, H);
+            ctx.fillStyle = 'rgba(5,8,18,0.35)';
+            ctx.fillRect(0, 0, W, H);
+            for (const [cx, cy, taille] of [
+              [210, 210, 140],
+              [560, 230, 32],
+            ]) {
+              const echelle = taille / 32;
+              sang(ctx, cx, cy + taille * 0.1, echelle, 7);
+              if (rang === 2) {
+                dessinerNinja(ctx, idle, '#FF8C1A', cx, cy, taille, { moitie: true, sombre: 0.75 });
+              } else {
+                dessinerNinja(ctx, idle, '#FF8C1A', cx, cy, taille, { rotation: Math.PI / 2, sombre: 0.7 });
+              }
+              if (rang === 1) {
+                ctx.save();
+                ctx.strokeStyle = '#ffffff';
+                ctx.shadowColor = '#ffffff';
+                ctx.shadowBlur = 12;
+                ctx.lineWidth = Math.max(2, taille / 18);
+                const d = taille * 0.28;
+                const yy = cy - taille * 0.75;
+                ctx.beginPath();
+                ctx.moveTo(cx - d, yy - d);
+                ctx.lineTo(cx + d, yy + d);
+                ctx.moveTo(cx + d, yy - d);
+                ctx.lineTo(cx - d, yy + d);
+                ctx.stroke();
+                ctx.restore();
+              }
+            }
+            dessinerNinja(ctx, est, '#3D7DFF', 640, 220, 32);
+            texte(ctx, 'grossi 3 fois', 210, 380, 15, '#aeb6cc');
+            texte(ctx, 'à l’échelle, une proie arrive', 600, 380, 15, '#aeb6cc');
+          });
+        }
+
+        // --- 4. Le fantome
+        {
+          ['r4a', 'r4b', 'r4c'].forEach((id, rang) => {
+            const ctx = ctxDe(id);
+            decor(ctx, fond, 1700, 1150, 1, W, H);
+            ctx.fillStyle = 'rgba(5,8,18,0.25)';
+            ctx.fillRect(0, 0, W, H);
+            for (const [cx, cy, taille] of [
+              [210, 200, 140],
+              [560, 220, 32],
+            ]) {
+              if (rang === 0) dessinerNinja(ctx, idle, '#FF5FD2', cx, cy, taille, { alpha: 0.4 });
+              if (rang === 1) dessinerNinja(ctx, idle, '#FF5FD2', cx, cy, taille, { alpha: 0.55, esprit: true, halo: '#bfe9ff' });
+              if (rang === 2) {
+                const sprite = ninja(idle, '#FF5FD2');
+                const toile = document.createElement('canvas');
+                toile.width = sprite.width;
+                toile.height = sprite.height;
+                const t = toile.getContext('2d');
+                t.drawImage(sprite, 0, 0);
+                t.globalCompositeOperation = 'source-in';
+                t.fillStyle = '#FF5FD2';
+                t.fillRect(0, 0, toile.width, toile.height);
+                ctx.save();
+                ctx.shadowColor = '#FF5FD2';
+                ctx.shadowBlur = taille / 6;
+                const e = Math.max(1, taille / 40);
+                for (const [dx, dy] of [[-e, 0], [e, 0], [0, -e], [0, e]]) {
+                  ctx.drawImage(toile, cx - taille / 2 + dx, cy - taille / 2 + dy, taille, taille);
+                }
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.shadowBlur = 0;
+                ctx.drawImage(toile, cx - taille / 2, cy - taille / 2, taille, taille);
+                ctx.restore();
+              }
+            }
+            dessinerNinja(ctx, ouest, '#FFE81A', 640, 250, 32);
+            texte(ctx, 'grossi 3 fois', 210, 380, 15, '#aeb6cc');
+            texte(ctx, 'à l’échelle, près d’un vivant', 600, 380, 15, '#aeb6cc');
+          });
+        }
+
+        // --- 5. La reunion
+        {
+          const joueurs = [
+            ['#FF3030', 'Rouge', 'Remi', 'vivant', 'a voté'],
+            ['#3D7DFF', 'Bleu', 'Lea', 'vivant', ''],
+            ['#1FBF4C', 'Vert', 'Tom', 'mort', ''],
+            ['#FFE81A', 'Jaune', 'Ines', 'vivant', 'a voté'],
+            ['#FF8C1A', 'Orange', 'Max', 'vivant', ''],
+            ['#9A55FF', 'Violet', 'Sam', 'mort', ''],
+            ['#FF5FD2', 'Rose', 'Zoe', 'vivant', 'a voté'],
+          ];
+          const fondReunion = (ctx) => {
+            decor(ctx, fond, 1145, 630, 0.5, W, H);
+            ctx.fillStyle = 'rgba(6,9,20,0.86)';
+            ctx.fillRect(0, 0, W, H);
+            texte(ctx, 'Réunion · cadavre de Vert signalé par Rouge', 20, 24, 17, '#e8ecf6', { align: 'left', gras: true });
+            texte(ctx, 'Vote · 0:32', W - 20, 24, 17, '#ffe81a', { align: 'right', gras: true });
+          };
+          const vignette = (ctx, x, y, l, h, [couleur, nom, pseudo, etat, vote]) => {
+            ctx.save();
+            ctx.globalAlpha = etat === 'mort' ? 0.45 : 1;
+            ctx.fillStyle = '#1b2440';
+            ctx.strokeStyle = couleur;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(x, y, l, h, 8);
+            ctx.fill();
+            ctx.stroke();
+            dessinerNinja(ctx, idle, couleur, x + h / 2 + 2, y + h / 2, h * 0.8);
+            texte(ctx, pseudo, x + h + 8, y + h / 2 - 9, 15, '#e8ecf6', { align: 'left', gras: true });
+            texte(ctx, nom, x + h + 8, y + h / 2 + 10, 13, couleur, { align: 'left' });
+            ctx.restore();
+            if (etat === 'mort') texte(ctx, '✕', x + l - 18, y + h / 2, 22, '#ff3a5c', { gras: true });
+            if (vote) texte(ctx, 'a voté', x + l - 34, y + h / 2, 12, '#ffe81a', { gras: true });
+          };
+          const chat = (ctx, x, y, l, h) => {
+            ctx.fillStyle = '#121a33';
+            ctx.beginPath();
+            ctx.roundRect(x, y, l, h, 8);
+            ctx.fill();
+            const lignes = [
+              ['Rouge', '#FF3030', 'Vert était au salon'],
+              ['Jaune', '#FFE81A', 'Orange y allait'],
+              ['Orange', '#FF8C1A', 'Non, j’étais au jardin'],
+              ['Rose', '#FF5FD2', 'Je passe'],
+            ];
+            lignes.forEach(([nom, couleur, msg], i) => {
+              if (y + 22 + i * 22 > y + h - 30) return;
+              texte(ctx, nom, x + 10, y + 18 + i * 22, 13, couleur, { align: 'left', gras: true });
+              texte(ctx, msg, x + 74, y + 18 + i * 22, 13, '#e8ecf6', { align: 'left' });
+            });
+            ctx.fillStyle = '#26304f';
+            ctx.beginPath();
+            ctx.roundRect(x + 8, y + h - 30, l - 16, 22, 6);
+            ctx.fill();
+            texte(ctx, 'Écrire…', x + 18, y + h - 19, 12, '#aeb6cc', { align: 'left' });
+          };
+
+          let ctx = ctxDe('r5a');
+          fondReunion(ctx);
+          joueurs.forEach((j, i) => vignette(ctx, 16 + (i % 2) * 222, 48 + Math.floor(i / 2) * 64, 212, 54, j));
+          ctx.save();
+          ctx.strokeStyle = '#aeb6cc';
+          ctx.setLineDash([5, 4]);
+          ctx.strokeRect(16, 48 + 4 * 64, 212, 40);
+          ctx.restore();
+          texte(ctx, 'Passer', 122, 48 + 4 * 64 + 20, 15, '#aeb6cc', { gras: true });
+          chat(ctx, 470, 48, 274, 356);
+
+          ctx = ctxDe('r5b');
+          fondReunion(ctx);
+          const cx = W / 2;
+          const cy = 175;
+          ctx.save();
+          ctx.strokeStyle = '#2ee6ff';
+          ctx.shadowColor = '#2ee6ff';
+          ctx.shadowBlur = 14;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(cx, cy, 34, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+          texte(ctx, 'GONG', cx, cy, 13, '#2ee6ff', { gras: true });
+          const places = joueurs.map((_, i) => {
+            const a = -Math.PI / 2 + (i * 2 * Math.PI) / joueurs.length;
+            return [cx + Math.cos(a) * 200, cy + Math.sin(a) * 112];
+          });
+          ctx.save();
+          ctx.strokeStyle = 'rgba(255,232,26,0.75)';
+          ctx.lineWidth = 2;
+          for (const [de, vers] of [[0, 4], [3, 4], [6, 1]]) {
+            ctx.beginPath();
+            ctx.moveTo(...places[de]);
+            ctx.lineTo(...places[vers]);
+            ctx.stroke();
+          }
+          ctx.restore();
+          joueurs.forEach(([couleur, nom, pseudo, etat], i) => {
+            const [x, y] = places[i];
+            dessinerNinja(ctx, idle, couleur, x, y - 6, 46, { alpha: etat === 'mort' ? 0.35 : 1 });
+            texte(ctx, pseudo, x, y + 24, 13, etat === 'mort' ? '#6b7390' : couleur, { gras: true });
+          });
+          chat(ctx, 16, 318, W - 32, 92);
+
+          ctx = ctxDe('r5c');
+          fondReunion(ctx);
+          const largeur = 330;
+          joueurs.forEach((j, i) => vignette(ctx, (W - largeur) / 2 - 150, 46 + i * 37, largeur, 33, j));
+          texte(ctx, 'Passer', (W - largeur) / 2 - 150 + largeur / 2, 46 + 7 * 37 + 14, 14, '#aeb6cc', { gras: true });
+          chat(ctx, (W - largeur) / 2 + largeur - 130, 46, 300, 300);
+        }
+
+        // --- 6. L'ejection
+        {
+          let ctx = ctxDe('r6a');
+          ctx.fillStyle = '#03040b';
+          ctx.fillRect(0, 0, W, H);
+          let s = 3;
+          const alea = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
+          for (let i = 0; i < 140; i++) {
+            ctx.fillStyle = `rgba(255,255,255,${0.2 + alea() * 0.6})`;
+            ctx.fillRect(alea() * W, alea() * H, 1.5, 1.5);
+          }
+          dessinerNinja(ctx, idle, '#FF8C1A', 520, 150, 80, { rotation: 0.9 });
+          texte(ctx, 'Max (Orange) a été éjecté.', W / 2, 270, 28, '#e8ecf6', { gras: true });
+          texte(ctx, '4 voix contre lui, 2 ont passé', W / 2, 315, 18, '#aeb6cc');
+
+          ctx = ctxDe('r6b');
+          decor(ctx, fond, 1265, 700, 1, W, H);
+          ctx.fillStyle = 'rgba(5,8,18,0.45)';
+          ctx.fillRect(0, 0, W, H);
+          ctx.save();
+          ctx.fillStyle = '#05060c';
+          ctx.strokeStyle = '#2ee6ff';
+          ctx.shadowColor = '#2ee6ff';
+          ctx.shadowBlur = 16;
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.ellipse(W / 2, 220, 90, 34, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(0, 0, W, 220);
+          ctx.ellipse(W / 2, 220, 90, 34, 0, 0, Math.PI);
+          ctx.clip();
+          dessinerNinja(ctx, idle, '#FF8C1A', W / 2, 205, 70);
+          ctx.restore();
+          texte(ctx, 'Max (Orange) a été éjecté.', W / 2, 320, 26, '#e8ecf6', { gras: true, halo: '#000000' });
+          texte(ctx, '4 voix · 2 ont passé', W / 2, 360, 17, '#e8ecf6', { halo: '#000000' });
+
+          ctx = ctxDe('r6c');
+          decor(ctx, fond, 1145, 630, 0.6, W, H);
+          ctx.fillStyle = 'rgba(5,8,18,0.35)';
+          ctx.fillRect(0, 0, W, H);
+          ctx.fillStyle = 'rgba(11,16,32,0.92)';
+          ctx.fillRect(0, 150, W, 120);
+          ctx.fillStyle = '#ffe81a';
+          ctx.fillRect(0, 150, W, 3);
+          ctx.fillRect(0, 267, W, 3);
+          texte(ctx, 'Max (Orange) a été éjecté.', W / 2, 192, 26, '#e8ecf6', { gras: true });
+          texte(ctx, 'Max 4 · Lea 1 · passer 2', W / 2, 232, 18, '#aeb6cc');
+        }
+        document.body.dataset.pret = 'oui';
+      })();
+    </script>
+  </body>
+</html>

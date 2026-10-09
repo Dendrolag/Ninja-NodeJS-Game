@@ -53,6 +53,18 @@ Posées au début de l'étape, avec les propositions de l'étude comme réponses
 | Tâche provisoire        | Rester dans le disque de la station, bouton d'action tenu. _Une durée tirée à la graine entre 5 et 10 s pour chaque tâche de chaque liste_                                                                                                           |
 | Points et place en fin  | Le camp vainqueur d'abord, puis un sous-classement aux points, par des faits de jeu. _Tâche faite 10, cadavre signalé 15, vote contre un tueur éjecté 20, meurtre 30, tueur trouvé dès la première réunion 25, deux meurtres dès le premier tour 25_ |
 
+## Rendus choisis par le porteur du projet sur planche
+
+Planche `docs/design/etape-7-20/1-planche.png` (source `planche.html`, à côté), six rangées de trois propositions. Réponses du porteur du projet:
+
+1. **Le mot « Assassin » remplace « Tueur »** partout où le joueur le lit: plus dans le thème des ninjas. Le code garde `tueur` pour nommer le rôle, la page dit « Assassin ».
+2. **La révélation: C**, la rangée de tous les joueurs; un assassin voit les siens encadrés de rouge, une proie voit la même rangée sans aucun cadre.
+3. **Le cercle de vision: un mélange**: le disque net de A, et hors du disque le décor assombri de moitié et sans couleur.
+4. **Le cadavre: C**, le ninja coupé en deux dans son sang, pour commencer. Des images propres aux cadavres pourront venir plus tard, pour des rendus variés.
+5. **Le fantôme: entre A et B**: le ninja translucide à sa couleur, avec un halo pâle. Les fantômes ne se voient qu'entre eux.
+6. **La réunion: B**, la table ronde autour du gong, le chat dessous, à améliorer, notamment le rendu des votes.
+7. **L'éjection: B**, la bouche d'égout néon, à affiner pour coller à l'univers du jeu.
+
 ## Décisions prises par cette fiche
 
 Micro-décisions au sens du PROTOCOLE. Chacune se consigne au journal de `docs/design/README.md` quand elle est construite, et se révise en exécutant si le dépôt le demande.
