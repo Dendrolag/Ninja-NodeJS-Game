@@ -122,7 +122,7 @@ test('creer une partie Massacre, la lancer seul et trancher un faux ninja', asyn
   await expect(page.locator('.hud-restants-libelle')).toHaveText('120 ninjas restants');
 
   if (!hasTouch) {
-    await expect(page.locator('.jeu-rappel')).toContainText('Espace pour trancher');
+    await expect(bouton.locator('.hud-bouton-touche')).toHaveText('Espace');
   }
 
   const pouce = hasTouch ? await commandeAuPouce(page) : undefined;

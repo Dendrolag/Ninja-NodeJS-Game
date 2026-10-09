@@ -365,3 +365,22 @@ describe('le HUD reduit du 9 octobre 2026', () => {
     expect(horsPodium).toEqual([false, false, false, true, false]);
   });
 });
+
+describe('le radar, pendant notre Revelation seulement', () => {
+  it('se cache sans points, et se montre avec', () => {
+    const { hote, monte } = surcouche();
+    const radar = hote.querySelector<HTMLElement>('.hud-radar');
+
+    expect(radar?.hidden).toBe(true);
+
+    monte.afficher({
+      ...hud([]),
+      radar: [{ id: 'moi', x: 0, y: 0, couleur: '#00FFFF', moi: true, auBord: false }],
+    });
+    expect(radar?.hidden).toBe(false);
+
+    monte.afficher({ ...hud([]), radar: undefined });
+    expect(radar?.hidden).toBe(true);
+    expect(hote.querySelectorAll('.hud-point')).toHaveLength(0);
+  });
+});

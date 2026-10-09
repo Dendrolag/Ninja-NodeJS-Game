@@ -46,7 +46,12 @@ import {
 import type { EtatClient } from '../etat.js';
 import { NOMS_DES_EQUIPES } from '../interface/modeles/cartes.js';
 import { APPARENCE_OBJET, adresseDeLIcone } from '../rendu/apparence.js';
-import { effetsEnCours, moiDansLaPartie, resteDeLEffet } from '../selecteurs.js';
+import {
+  bonusDOrigineEnCours,
+  effetsEnCours,
+  moiDansLaPartie,
+  resteDeLEffet,
+} from '../selecteurs.js';
 
 /** Sous cette duree restante, le temps s'affiche en alerte. */
 export const SEUIL_URGENCE_MS = 30_000;
@@ -187,7 +192,8 @@ export interface Hud {
   readonly effets: readonly EffetHud[];
   /** Ce que nous avons en poche. Absent: la poche est vide (etape 7.10). */
   readonly poche: PocheHud | undefined;
-  readonly radar: readonly PointRadar[];
+  /** Les joueurs sur le radar. Absent: pas de radar, hors de notre Revelation. */
+  readonly radar: readonly PointRadar[] | undefined;
   /** Nos charges. Absentes hors du mode Tactique, ou tant qu'on n'est pas sur la carte. */
   readonly charges: ChargesHud | undefined;
   /** Notre role. Absent hors du mode Chasse, ou tant qu'on n'est pas au classement. */
@@ -214,7 +220,7 @@ export const HUD_VIDE: Hud = {
   classement: [],
   effets: [],
   poche: undefined,
-  radar: [],
+  radar: undefined,
   charges: undefined,
   chasse: undefined,
   combo: undefined,
@@ -261,7 +267,7 @@ export function construireHud(etat: EtatClient, maintenant: number): Hud {
     classement: classementHud(partie.classement, etat.moi, mode, doubleursDe(etat)),
     effets: effetsHud(etat, maintenant),
     poche: pocheHud(etat.poche),
-    radar: radarHud(etat, mode),
+    radar: radarHud(etat, mode, maintenant),
     charges: chargesHud(etat, mode),
     chasse: chasseHud(etat, mode),
     combo: comboHud(etat, mode, maintenant),
@@ -496,6 +502,12 @@ function effetsHud(etat: EtatClient, maintenant: number): readonly EffetHud[] {
  * Les points du radar (9 octobre 2026, a la place de la minimap, a la demande du porteur du
  * projet): les joueurs autour de nous, nous au centre.
  *
+ * IL NE SE MONTRE QUE PENDANT NOTRE REVELATION (meme jour, apres essai du porteur du projet):
+ * toujours affiche, il defaisait le camouflage, qui fait l'interet du jeu. La Revelation, elle,
+ * devoile deja les vrais joueurs par un halo; le radar dit ou chercher ceux qui sont hors de
+ * l'ecran. Il montre donc tous les joueurs que le serveur nous envoie, camps de la Chasse
+ * compris, comme les halos: un traqueur sous Revelation recoit les proies (etape 2.9).
+ *
  * ON N'Y MET QUE LES JOUEURS, pas les bots. Une carte couverte de cent points
  * blancs ne dit rien; les joueurs, eux, sont ce que l'on cherche du regard. Le
  * jeu d'origine n'avait pas de minimap du tout: elle vient des maquettes.
@@ -504,24 +516,20 @@ function effetsHud(etat: EtatClient, maintenant: number): readonly EffetHud[] {
  * cote chercher. Sans nous sur la carte, le radar part du milieu de la carte, et sa portee
  * la couvre toute.
  *
- * EN CHASSE, ON N'Y MET QUE SON CAMP (etape 7.3, decision du porteur du projet du 16
- * septembre 2026). Les proies se cachent parmi les faux ninjas: un radar qui les
- * montrerait aux traqueurs defairait le camouflage. Chacun voit donc les siens, et une
- * proie infectee decouvre ses nouveaux allies. Notre camp se lit a notre couleur dans le
- * classement, ou figure aussi un traqueur elimine, qui n'est plus sur la carte.
- *
  * EN TACTIQUE, ON N'Y MET QUE LES JOUEURS PROCHES (etape 7.7, decision du porteur du projet
  * du 19 septembre 2026): la vue plus proche ne cacherait rien si le radar montrait tout le
- * monde, meme sur son bord. Comme en Chasse, c'est un filtre d'affichage, le flux reste
- * complet.
+ * monde, meme sur son bord. C'est un filtre d'affichage, le flux reste complet.
  */
-function radarHud(etat: EtatClient, mode: Mode | undefined): readonly PointRadar[] {
-  const joueurs = (etat.partie?.entites ?? []).filter((entite) => entite.type === 'joueur');
-  const notre = etat.partie?.classement.find((ligne) => ligne.id === etat.moi);
-  const visibles =
-    mode === 'chasse' && notre !== undefined
-      ? joueurs.filter((entite) => campDeCouleur(entite.couleur) === campDeCouleur(notre.couleur))
-      : joueurs;
+function radarHud(
+  etat: EtatClient,
+  mode: Mode | undefined,
+  maintenant: number,
+): readonly PointRadar[] | undefined {
+  if (!bonusDOrigineEnCours(etat, maintenant).includes('revelation')) {
+    return undefined;
+  }
+
+  const visibles = (etat.partie?.entites ?? []).filter((entite) => entite.type === 'joueur');
   const moi = moiDansLaPartie(etat);
   const carte = CARTES[(etat.salon?.reglages ?? REGLAGES_PAR_DEFAUT).carte];
   const centre = moi ?? { x: carte.largeur / 2, y: carte.hauteur / 2 };

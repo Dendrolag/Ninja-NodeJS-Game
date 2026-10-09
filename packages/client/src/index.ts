@@ -239,7 +239,7 @@ export { creerLecteurDeSons } from './sons/lecteur.js';
 export type { Annonce, TonAnnonce } from './annonces.js';
 export { annonceDuFait, annonceDuRefus, annoncesDuChangement } from './annonces.js';
 export type { GenreDePoints, PointsGagnes } from './pointsFlottants.js';
-export { pointsDuChangement, texteDesPoints } from './pointsFlottants.js';
+export { pointsDuChangement, texteDesPoints, texteDuGain } from './pointsFlottants.js';
 
 export type { Application, OptionsApplication } from './interface/application.js';
 export { monterApplication } from './interface/application.js';

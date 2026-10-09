@@ -6,7 +6,8 @@
  * celui de la localisation, le compteur de combo et la minimap s'empilaient a droite les uns
  * sur les autres, jusque sur le bouton « Quitter ». Le HUD complet est donc monte, avec tout
  * ce qu'une partie peut montrer a la fois, puis le navigateur dit ou il pose chaque bloc:
- * aucun ne doit en chevaucher un autre, et tous doivent tenir dans l'ecran. Joue sur des
+ * aucun ne doit en chevaucher un autre, et tous doivent tenir dans l'ecran, le grand titre
+ * d'un bonus et le palier d'un combo flottant sur notre ninja compris. Joue sur des
  * telephones tenus a l'horizontale et a la verticale, et sur ordinateur.
  *
  * La page monte la vraie surcouche et les vrais boutons de la barre, avec la vraie feuille
@@ -38,6 +39,8 @@ function pageDuHud(): string {
 <script type="module">
   import { monterSurcouche } from '/paquets/client/hud/surcouche.js';
   import { bouton, creer } from '/paquets/client/interface/dom.js';
+  import { monterPointsFlottants } from '/paquets/client/hud/pointsFlottants.js';
+  import { monterFilDAnnonces } from '/paquets/client/interface/composants/annonces.js';
 
   const ecran = document.querySelector('.ecran-jeu');
   const compteurs = creer(document, 'div', { classe: 'jeu-compteurs' });
@@ -92,6 +95,24 @@ function pageDuHud(): string {
     arme: 'charges',
   });
 
+  // Un bonus ramasse en plein combo: son grand titre, puis le palier sur notre ninja, au
+  // centre de l'ecran, ou la camera le garde.
+  const fil = monterFilDAnnonces(document);
+  document.querySelector('.application').append(fil.racine);
+  fil.ajouter({
+    texte: 'Bonus : Boost',
+    ton: 'succes',
+    grandTitre: {
+      surtitre: 'Bonus', titre: 'Boost', ligne: 'Vitesse x1,7 pendant 10 s',
+      couleur: 0x00ff00, icone: '/assets/objets/speed.png', brouille: false,
+    },
+  });
+  const zone = document.querySelector('.zone-hud');
+  monterPointsFlottants({ hote: zone, document, cible: () => null }).montrer({
+    texte: 'Combo x5', genre: 'combo', niveau: 5,
+    x: zone.clientWidth / 2, y: zone.clientHeight / 2,
+  });
+
   window.pret = true;
 </script>`;
 }
@@ -107,6 +128,9 @@ const BLOCS = {
   localiser: '.hud-localiser',
   capture: '.hud-capture',
   effets: '.hud-effets',
+  palier: '.point-flottant-combo',
+  // Le grand titre d'un bonus, par ses lignes: son cadre, lui, prend toute la largeur.
+  titre: '.grand-titre > *',
 } as const;
 
 /** Un rectangle mesure par le navigateur. */
@@ -210,7 +234,17 @@ for (const appareil of APPAREILS) {
 
     // Le bouton de la poche ne se montre que sur un ecran tactile.
     expect(boites['poche'] ?? [], detail).toHaveLength(appareil.tactile ? 1 : 0);
-    for (const nom of ['classement', 'temps', 'barre', 'radar', 'combo', 'localiser', 'capture']) {
+    for (const nom of [
+      'classement',
+      'temps',
+      'barre',
+      'radar',
+      'combo',
+      'localiser',
+      'capture',
+      'palier',
+      'titre',
+    ]) {
       expect(boites[nom]?.length ?? 0, `${nom} doit etre affiche ${detail}`).toBeGreaterThan(0);
     }
 

@@ -98,8 +98,10 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
   retour.hidden = true;
   const classement = element(doc, 'ol', 'hud-classement', racine);
   const effets = element(doc, 'ul', 'hud-effets', racine);
+  // Le radar ne se montre que pendant notre Revelation.
   const radar = element(doc, 'div', 'hud-radar', racine);
   radar.setAttribute('aria-hidden', 'true');
+  radar.hidden = true;
   element(doc, 'div', 'hud-radar-balayage', radar);
   const disque = element(doc, 'div', 'hud-radar-disque', radar);
   // Sous le radar, a droite: le role en Chasse, ou le combo en Massacre et en Horde.
@@ -156,7 +158,8 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
       majClassement(doc, classement, lignes, hud.classement);
       majEffets(doc, effets, cartesDEffets, hud.effets);
       poche.afficher(hud.poche);
-      majRadar(doc, disque, points, hud.radar);
+      radar.hidden = hud.radar === undefined;
+      majRadar(doc, disque, points, hud.radar ?? []);
       // En Chasse, les charges d'un traqueur sont ses vies (etape 7.3); en Massacre, le
       // bouton porte le katana (etape 7.4).
       capture?.afficher(hud.charges, hud.arme);

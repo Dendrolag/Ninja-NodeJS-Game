@@ -694,8 +694,13 @@
  * 34 pour cent, sa derniere ligne passait sur notre ninja, au centre de l'ecran.
  */
 @media (pointer: coarse), (max-width: 640px) {
+  /*
+   * Jamais sur la barre du haut: sur un telephone tenu a l'horizontale, 25 pour cent d'une
+   * hauteur de 320 pixels posaient son disque sur le temps restant (9 octobre 2026). Son
+   * milieu reste au moins a la moitie de sa hauteur sous la barre.
+   */
   .grands-titres {
-    top: 25%;
+    top: max(25%, calc(env(safe-area-inset-top, 0px) + 92px));
   }
 
   .grand-titre {

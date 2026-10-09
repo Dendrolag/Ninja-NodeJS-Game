@@ -130,30 +130,6 @@
   transform: none;
 }
 
-.jeu-rappel {
-  /*
-   * Jamais sous le temps restant, centre en haut: le rappel tient dans la moitie droite de
-   * la barre, moins les boutons et la moitie du temps, et passe a la ligne au besoin. Avec
-   * la poche (etapes 7.10 et 7.11), il touchait le temps a 1280 pixels de large.
-   */
-  max-width: calc(50vw - 260px);
-  color: var(--texte-tertiaire);
-  font-family: var(--police-donnees);
-  font-size: 11px;
-  line-height: 1.3;
-  text-align: right;
-}
-
-/*
- * Le rappel des touches prend de la place: sous cette largeur, il lui faudrait plus de trois
- * lignes. Les touches restent decrites dans l'aide, et sous les boutons d'action.
- */
-@media (max-width: 1200px), (pointer: coarse) {
-  .jeu-rappel {
-    display: none;
-  }
-}
-
 /* Le compteur des ninjas qui restent, en Massacre, separe des boutons par un filet. */
 .jeu-compteurs:empty,
 .jeu-compteurs:not(:has(> :not([hidden]))) {
@@ -443,6 +419,73 @@
     0 0 12px rgba(255, 61, 240, 0.9);
 }
 
+/*
+ * Le palier d'un combo (9 octobre 2026, a la demande du porteur du projet): « Combo x3 »
+ * au-dessus de notre ninja, dans le style du compteur de combo, penche, colore, sans fond,
+ * aux couleurs du meme cran. Sous notre ninja quand un grand titre occupe deja la place.
+ */
+.point-flottant-combo {
+  --couleur-combo: #3fe8ff;
+
+  padding-right: 6px;
+  background: linear-gradient(
+    180deg,
+    #fff 8%,
+    var(--couleur-combo) 52%,
+    color-mix(in srgb, var(--couleur-combo) 55%, #1b2bff) 100%
+  );
+  background-clip: text;
+  color: transparent;
+  font-size: 34px;
+  font-style: italic;
+  text-shadow: none;
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--couleur-combo) 70%, transparent))
+    drop-shadow(0 2px 2px rgba(0, 0, 0, 0.6));
+  translate: -50% calc(-100% - 40px);
+}
+
+.point-flottant-combo.dessous {
+  translate: -50% 40px;
+}
+
+.point-flottant-combo[data-niveau='3'] {
+  --couleur-combo: #4dff7a;
+}
+
+.point-flottant-combo[data-niveau='4'] {
+  --couleur-combo: #ffd23f;
+}
+
+.point-flottant-combo[data-niveau='5'] {
+  --couleur-combo: #ff3df0;
+}
+
+.point-flottant.palier {
+  animation: palier-du-combo 1.3s ease-out forwards;
+}
+
+@keyframes palier-du-combo {
+  0% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+
+  15% {
+    opacity: 1;
+    transform: none;
+  }
+
+  70% {
+    opacity: 1;
+    transform: translateY(-10px);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-22px);
+  }
+}
+
 .point-flottant.monte {
   animation: point-monte 0.5s ease-out forwards;
 }
@@ -597,7 +640,8 @@
  * Le radar (9 octobre 2026, a la place de la minimap, a la demande du porteur du projet):
  * petit, en haut a droite sous la barre, nous au centre, les joueurs autour, et ceux qui sont
  * hors de portee sur son bord. Deux cercles de distance, une croix, et un balayage qui tourne
- * sous les points.
+ * sous les points. Seulement pendant notre Revelation: toujours affiche, il defaisait le
+ * camouflage.
  */
 .hud-radar {
   position: absolute;
@@ -636,6 +680,12 @@
     ),
     linear-gradient(rgba(45, 230, 224, 0.12), rgba(45, 230, 224, 0.12)) center / 1px 100% no-repeat,
     linear-gradient(rgba(45, 230, 224, 0.12), rgba(45, 230, 224, 0.12)) center / 100% 1px no-repeat;
+}
+
+/* Sans radar, hors de notre Revelation, le role et le combo montent a sa place. */
+.hud-radar[hidden] ~ .hud-chasse,
+.hud-radar[hidden] ~ .hud-combo {
+  top: calc(var(--debut-barre) + var(--hauteur-barre) + 8px);
 }
 
 @keyframes radar-balayage {
@@ -1148,6 +1198,10 @@
 
   .hud-combo-multiplicateur {
     font-size: calc(28px + 4px * var(--taille-combo));
+  }
+
+  .point-flottant-combo {
+    font-size: 26px;
   }
 
   /*

@@ -29,7 +29,7 @@ import type {
   NatureObjet,
   Refus,
 } from '@neon-ninja/shared';
-import { OBJETS_TACTIQUES, VITESSES, multiplicateurDuCombo } from '@neon-ninja/shared';
+import { OBJETS_TACTIQUES, VITESSES } from '@neon-ninja/shared';
 
 import type { EtatClient } from './etat.js';
 import type { FaitDeJeu } from './faits.js';
@@ -172,11 +172,13 @@ function ninjas(nombre: number): string {
  * EN CHASSE (etape 7.3), une capture est une infection: la proie attrapee devient
  * traqueur, et aucun ninja ne change de main. Les phrases le disent.
  *
- * EN HORDE (etape 7.5), nos ralliements ne s'annoncent qu'a un nouveau palier de combo.
+ * LES PALIERS DE COMBO NE S'ANNONCENT PLUS ICI (9 octobre 2026, a la demande du porteur du
+ * projet): ils flottent au-dessus de notre ninja, avec les points (src/pointsFlottants.ts).
+ * Nos ralliements de la Horde (etape 7.5) et nos coups de katana du Massacre (etape 7.4)
+ * n'ont donc plus de phrase.
  *
- * EN MASSACRE (etape 7.4), un coup de katana ne s'annonce que lorsqu'il fait passer notre
- * multiplicateur a un nouveau palier; un joueur tue ne s'annonce qu'au tueur et a sa
- * victime; la carte videe s'annonce a tous, avec son bonus.
+ * EN MASSACRE (etape 7.4), un joueur tue ne s'annonce qu'au tueur et a sa victime; la carte
+ * videe s'annonce a tous, avec son bonus.
  *
  * @param mode Le mode de la partie, quand on le connait.
  * @param moi  Notre identifiant, quand on le connait.
@@ -187,10 +189,8 @@ export function annonceDuFait(fait: FaitDeJeu, mode?: Mode, moi?: string): Annon
       return undefined;
 
     case 'coupDeKatana':
-      return annonceDuCoup(fait.charge, moi);
-
     case 'ralliement':
-      return annonceDuRalliement(fait.charge);
+      return undefined;
 
     case 'joueurTranche':
       return annonceDeLaMiseAMort(fait.charge, moi);
@@ -407,36 +407,6 @@ function titreDeLEvade(
       raye: true,
     },
   };
-}
-
-/**
- * Un coup de katana ne s'annonce que chez celui qui l'a donne, et seulement quand ses morts
- * font passer le multiplicateur a un nouveau palier: « Combo x3 ».
- */
-function annonceDuCoup(
-  coup: Extract<FaitDeJeu, { nature: 'coupDeKatana' }>['charge'],
-  moi: string | undefined,
-): Annonce | undefined {
-  const avant = multiplicateurDuCombo(coup.combo - coup.morts.length);
-
-  return coup.frappeur === moi && coup.morts.length > 0 && coup.multiplicateur > avant
-    ? { texte: `Combo x${String(coup.multiplicateur)} !`, ton: 'succes' }
-    : undefined;
-}
-
-/**
- * Nos ralliements de la Horde (etape 7.5) ne s'annoncent que lorsqu'ils font passer notre
- * multiplicateur a un nouveau palier, comme les coups du Massacre. Ils ne sont envoyes qu'a
- * nous.
- */
-function annonceDuRalliement(
-  ralliement: Extract<FaitDeJeu, { nature: 'ralliement' }>['charge'],
-): Annonce | undefined {
-  const avant = multiplicateurDuCombo(ralliement.combo - ralliement.ninjas.length);
-
-  return ralliement.multiplicateur > avant
-    ? { texte: `Combo x${String(ralliement.multiplicateur)} !`, ton: 'succes' }
-    : undefined;
 }
 
 /**

@@ -218,6 +218,26 @@ describe('construireHud', () => {
   });
 
   describe('radar', () => {
+    /** Notre Revelation en cours: le radar ne se montre que pendant elle. */
+    const sousRevelation: Partial<EtatClient> = {
+      effets: [
+        {
+          categorie: 'bonus',
+          nature: 'revelation',
+          surMoi: true,
+          finPrevueA: 10_000,
+          dureeMs: 10_000,
+        },
+      ],
+    };
+
+    it('ne se montre pas hors de notre Revelation: il defairait le camouflage', () => {
+      const partie = vue({ entites: [joueur('moi', 10, 10), joueur('autre', 20, 20)] });
+
+      expect(construireHud(etatEnJeu(partie), 0).radar).toBeUndefined();
+      expect(construireHud(etatEnJeu(partie, sousRevelation), 10_000).radar).toBeUndefined();
+    });
+
     it('ne montre que les joueurs, pas les bots', () => {
       // Cent points blancs ne disent rien; les joueurs sont ce que l'on cherche.
       const partie = vue({
@@ -228,16 +248,16 @@ describe('construireHud', () => {
         ],
       });
 
-      const hud = construireHud(etatEnJeu(partie), 0);
+      const hud = construireHud(etatEnJeu(partie, sousRevelation), 0);
 
-      expect(hud.radar.map((point) => point.id)).toEqual(['moi', 'autre']);
+      expect(hud.radar?.map((point) => point.id)).toEqual(['moi', 'autre']);
     });
 
     it('marque notre point, pour qu on se retrouve', () => {
       const partie = vue({ entites: [joueur('moi', 10, 10), joueur('autre', 20, 20)] });
-      const hud = construireHud(etatEnJeu(partie), 0);
+      const hud = construireHud(etatEnJeu(partie, sousRevelation), 0);
 
-      expect(hud.radar.map((point) => point.moi)).toEqual([true, false]);
+      expect(hud.radar?.map((point) => point.moi)).toEqual([true, false]);
     });
 
     it('nous met au centre, et les autres autour, en part de sa portee', () => {
@@ -247,7 +267,7 @@ describe('construireHud', () => {
           joueur('autre', 1_000 + PORTEE_DU_RADAR_PX / 2, 1_000 - PORTEE_DU_RADAR_PX / 4),
         ],
       });
-      const hud = construireHud(etatEnJeu(partie), 0);
+      const hud = construireHud(etatEnJeu(partie, sousRevelation), 0);
 
       expect(hud.radar).toEqual([
         { id: 'moi', x: 0, y: 0, couleur: '#00FF00', moi: true, auBord: false },
@@ -262,7 +282,7 @@ describe('construireHud', () => {
           joueur('autre', 3 * PORTEE_DU_RADAR_PX, 4 * PORTEE_DU_RADAR_PX),
         ],
       });
-      const autre = construireHud(etatEnJeu(partie), 0).radar[1];
+      const autre = construireHud(etatEnJeu(partie, sousRevelation), 0).radar?.[1];
 
       expect(autre?.auBord).toBe(true);
       expect(autre?.x).toBeCloseTo(0.6);
@@ -272,7 +292,7 @@ describe('construireHud', () => {
     it('sans nous sur la carte, part de son milieu et la montre toute', () => {
       // La carte par defaut fait 2000 sur 1500: son coin est a 1250 pixels du milieu.
       const partie = vue({ entites: [joueur('autre', 0, 0)] });
-      const hud = construireHud(etatEnJeu(partie), 0);
+      const hud = construireHud(etatEnJeu(partie, sousRevelation), 0);
 
       expect(hud.radar).toEqual([
         { id: 'autre', x: -0.8, y: -0.6, couleur: '#00FF00', moi: false, auBord: false },

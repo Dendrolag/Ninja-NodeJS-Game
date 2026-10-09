@@ -12,11 +12,12 @@ import { COMBO, MASSACRE } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
 import { annonceDuFait } from './annonces.js';
+import type { FaitDeJeu } from './faits.js';
 import { fait } from './faits.js';
 import { construireHud } from './hud/modele.js';
 import { NIVEAU_DE_SANG_PAR_DEFAUT, lireNiveauDeSang } from './interface/preferences.js';
 import { coup, etatDeMassacre, miseAMort } from './massacre.essais.js';
-import { pointsDuChangement } from './pointsFlottants.js';
+import { pointsDuChangement, texteDuGain } from './pointsFlottants.js';
 import { APPARENCE_KATANA } from './rendu/apparence.js';
 import { imageDuMassacre, instantAffiche, suivreLeMicroArret } from './rendu/katana.js';
 import { eclaboussure, empreinte, graineDe } from './rendu/sang.js';
@@ -100,21 +101,22 @@ describe('le HUD d une partie Massacre', () => {
 });
 
 describe('les annonces, les sons et les points du Massacre', () => {
-  it('annonce un nouveau palier de combo, a celui qui frappe seulement', () => {
-    const palier = coup(0, {
-      combo: 5,
-      multiplicateur: 2,
-      morts: [{ id: 'b1', x: 0, y: 0, noir: false, points: 20, couleur: '#FFFFFF' }],
-    });
+  it('fait flotter un nouveau palier de combo sur celui qui frappe, sans bulle', () => {
+    const mort = { id: 'b1', x: 0, y: 0, noir: false, points: 20, couleur: '#FFFFFF' };
+    const palier = coup(0, { combo: 5, multiplicateur: 2, morts: [mort] });
+    const paliers = (journal: readonly FaitDeJeu[]) =>
+      pointsDuChangement(etatDeMassacre(), etatDeMassacre({ journal })).filter(
+        (point) => point.genre === 'combo',
+      );
 
-    expect(annonceDuFait(palier, 'massacre', 'alice')).toEqual({
-      texte: 'Combo x2 !',
-      ton: 'succes',
-    });
-    expect(annonceDuFait(palier, 'massacre', 'bob')).toBeUndefined();
-    expect(annonceDuFait(coup(0, { combo: 6, multiplicateur: 2 }), 'massacre', 'alice')).toBe(
-      undefined,
-    );
+    expect(annonceDuFait(palier, 'massacre', 'alice')).toBeUndefined();
+    // Sur notre ninja, pose en 100, 100.
+    expect(paliers([palier])).toEqual([{ valeur: 2, genre: 'combo', niveau: 2, x: 100, y: 100 }]);
+    expect(
+      paliers([coup(0, { frappeur: 'bob', combo: 5, multiplicateur: 2, morts: [mort] })]),
+    ).toEqual([]);
+    expect(paliers([coup(0, { combo: 6, multiplicateur: 2, morts: [mort] })])).toEqual([]);
+    expect(texteDuGain({ valeur: 2, genre: 'combo' })).toBe('Combo x2');
   });
 
   it('annonce un joueur tue a son tueur et a sa victime, et la carte videe a tous', () => {

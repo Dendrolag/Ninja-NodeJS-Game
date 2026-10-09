@@ -116,7 +116,7 @@ describe('les points, l annonce et le son d un ralliement', () => {
     expect(pointsDuChangement(avant, repeinte)).toEqual([]);
   });
 
-  it('annonce un nouveau palier de combo, et rien d autre', () => {
+  it('fait flotter un nouveau palier de combo sur notre ninja, sans bulle', () => {
     const palier = ralliement(0, {
       ninjas: [
         { x: 0, y: 0, multiplicateur: 1 },
@@ -125,12 +125,12 @@ describe('les points, l annonce et le son d un ralliement', () => {
       combo: 5,
       multiplicateur: 2,
     });
+    const paliers = (fait_: FaitDeJeu) =>
+      pointsDuChangement(horde(), horde([fait_])).filter((point) => point.genre === 'combo');
 
-    expect(annonceDuFait(palier, 'classique', 'alice')).toEqual({
-      texte: 'Combo x2 !',
-      ton: 'succes',
-    });
-    expect(annonceDuFait(ralliement(0, { combo: 6, multiplicateur: 2 }))).toBeUndefined();
+    expect(annonceDuFait(palier, 'classique', 'alice')).toBeUndefined();
+    expect(paliers(palier)).toEqual([{ valeur: 2, genre: 'combo', niveau: 2, x: 100, y: 100 }]);
+    expect(paliers(ralliement(0, { combo: 6, multiplicateur: 2 }))).toEqual([]);
   });
 
   it('fait entendre le son d un faux ninja rallie', () => {

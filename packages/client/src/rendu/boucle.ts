@@ -42,7 +42,7 @@ import type { NiveauDeSang } from '../interface/preferences.js';
 import type { AfficheurDePoints } from '../hud/pointsFlottants.js';
 import type { Surcouche } from '../hud/surcouche.js';
 import { construireHud } from '../hud/modele.js';
-import { pointsDuChangement, texteDesPoints } from '../pointsFlottants.js';
+import { pointsDuChangement, texteDuGain } from '../pointsFlottants.js';
 import { bonusDOrigineEnCours, filtreDesMalus, moiDansLaPartie } from '../selecteurs.js';
 import { rechargeApresLeTir, sonDuFait, sonsDuChangement } from '../sons/declencheurs.js';
 import { placeDuFait } from '../sons/espace.js';
@@ -284,7 +284,7 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
     if (afficheur !== undefined) {
       for (const gain of pointsDuChangement(precedent, etat)) {
         afficheur.montrer({
-          texte: texteDesPoints(gain.valeur),
+          texte: texteDuGain(gain),
           genre: gain.genre,
           niveau: gain.niveau,
           ...versEcran(gain, camera, taille),

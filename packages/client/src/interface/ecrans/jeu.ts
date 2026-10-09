@@ -43,7 +43,6 @@ import { lancerLaBoucle } from '../../rendu/boucle.js';
 import { monterRendu, prechargerLesSprites } from '../../rendu/pixi.js';
 import { jeSuisHote } from '../../selecteurs.js';
 import { monterFenetre } from '../composants/fenetre.js';
-import { toucheDeLaPoche } from '../modeles/touches.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import type { ContexteEcran, EcranAffiche } from './types.js';
 
@@ -124,24 +123,12 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
 
   // Les boutons de la barre ne montrent que leur pictogramme, leur nom reste lu par les
   // lecteurs d'ecran (9 octobre 2026). La localisation est descendue avec la capture, en bas
-  // a droite, dans la surcouche.
+  // a droite, dans la surcouche. Le rappel des touches a quitte la barre le meme jour: chaque
+  // bouton d'action porte la sienne, et l'aide les decrit toutes.
   const actions = creer(
     doc,
     'div',
     { classe: 'jeu-actions' },
-    creer(doc, 'span', {
-      classe: 'jeu-rappel',
-      texte:
-        (mode === 'chasse'
-          ? 'ZQSD ou flèches · Espace pour tirer, en traqueur · F pour vous localiser'
-          : mode === 'massacre'
-            ? 'ZQSD ou flèches · Espace pour trancher · F pour vous localiser'
-            : tactique
-              ? 'ZQSD ou flèches · Espace pour capturer · F pour vous localiser'
-              : 'ZQSD ou flèches · F pour vous localiser') +
-        // La touche de la poche, quand un objet de poche est en jeu (etapes 7.10 et 7.11).
-        toucheDeLaPoche(reglages.objetsDePoche),
-    }),
     compteurs,
     bouton(doc, { classe: 'bouton-icone', icone: 'son', etiquette: 'Son' }, contexte.ouvrirSon),
     pause,

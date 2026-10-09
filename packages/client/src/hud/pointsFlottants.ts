@@ -10,6 +10,11 @@
  * annoncee par le navigateur, declenche la suite: aucune minuterie a tenir ni a
  * annuler. La distance a parcourir se mesure au moment de filer, pas avant: le
  * classement a pu bouger pendant la montee.
+ *
+ * LE PALIER D'UN COMBO NE FILE PAS (9 octobre 2026): il nait au-dessus de notre ninja, monte
+ * un peu et s'efface. Si un grand titre de bonus ou de malus occupe deja cette hauteur, ce
+ * qui arrive sur un telephone tenu a l'horizontale, ou le titre descend pres du ninja, il se
+ * pose sous notre ninja: les deux ne se couvrent jamais.
  */
 
 import type { GenreDePoints } from '../pointsFlottants.js';
@@ -53,7 +58,9 @@ export function monterPointsFlottants(options: OptionsPointsFlottants): Afficheu
   return {
     montrer(point) {
       const element = doc.createElement('div');
-      element.className = `point-flottant point-flottant-${point.genre} monte`;
+      const palier = point.genre === 'combo';
+      element.className = `point-flottant point-flottant-${point.genre} ${palier ? 'palier' : 'monte'}`;
+      element.classList.toggle('dessous', palier && grandTitreAuDessus(doc, options.hote, point.y));
       // Le niveau du combo (etape 7.5): du blanc au magenta, de plus en plus grand.
       element.dataset['niveau'] = String(point.niveau);
       // textContent, et pas innerHTML: le texte ne doit jamais devenir du balisage.
@@ -62,7 +69,7 @@ export function monterPointsFlottants(options: OptionsPointsFlottants): Afficheu
       element.style.top = `${String(point.y)}px`;
 
       element.addEventListener('animationend', () => {
-        if (element.classList.contains('monte')) {
+        if (!palier && element.classList.contains('monte')) {
           filerVersLeScore(element, point, options);
         } else {
           element.remove();
@@ -76,6 +83,28 @@ export function monterPointsFlottants(options: OptionsPointsFlottants): Afficheu
       calque.remove();
     },
   };
+}
+
+/**
+ * La hauteur qu'occupe le palier d'un combo au-dessus du centre de notre ninja, en pixels: son
+ * ecart, sa taille et sa montee, au plus grand cran.
+ */
+const HAUTEUR_DU_PALIER_PX = 120;
+
+/**
+ * Un grand titre (une annonce de bonus ou de malus, interface/composants/annonces.ts) occupe
+ * deja la hauteur ou naitrait le palier d'un combo, au-dessus de ce point.
+ */
+function grandTitreAuDessus(doc: Document, hote: HTMLElement, y: number): boolean {
+  const repere = hote.getBoundingClientRect();
+  const bas = repere.top + y;
+  const haut = bas - HAUTEUR_DU_PALIER_PX;
+
+  return Array.from(doc.querySelectorAll('.grand-titre')).some((titre) => {
+    const boite = titre.getBoundingClientRect();
+
+    return boite.bottom > haut && boite.top < bas;
+  });
 }
 
 /**

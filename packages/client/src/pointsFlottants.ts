@@ -21,13 +21,18 @@
  * annonce avec le multiplicateur du combo: le point y vaut ce multiplicateur, et monte en
  * couleur et en taille avec lui, comme les morts du Massacre.
  *
+ * LES PALIERS DE COMBO (9 octobre 2026, a la demande du porteur du projet) flottent au-dessus
+ * de notre ninja, « Combo x3 », quand un ralliement de la Horde ou un coup de katana du
+ * Massacre fait monter notre multiplicateur d'un cran. Avant, une bulle les annoncait en haut
+ * de l'ecran.
+ *
  * FONCTIONS PURES, COMME LES ANNONCES. On leur donne deux etats successifs, elles
  * rendent les points a montrer, en coordonnees de carte. Les placer a l'ecran et
  * les animer est le travail de la boucle et de hud/pointsFlottants.ts.
  */
 
 import type { EntiteVue } from '@neon-ninja/shared';
-import { MASSACRE } from '@neon-ninja/shared';
+import { MASSACRE, multiplicateurDuCombo } from '@neon-ninja/shared';
 
 import type { EtatClient } from './etat.js';
 import type { FaitDeJeu } from './faits.js';
@@ -43,7 +48,9 @@ export type GenreDePoints =
   /** Un joueur capture. */
   | 'joueur'
   /** Des ninjas qu'une mine vient de nous faire perdre, en Horde (etape 7.11). */
-  | 'perte';
+  | 'perte'
+  /** Notre combo passe un palier: sa valeur est le nouveau multiplicateur. */
+  | 'combo';
 
 /** Des points a montrer, a un endroit de la carte. */
 export interface PointsGagnes {
@@ -61,6 +68,11 @@ export interface PointsGagnes {
 /** Le texte d'un gain: avec son signe, sauf zero, comme dans le jeu d'origine. */
 export function texteDesPoints(valeur: number): string {
   return valeur > 0 ? `+${String(valeur)}` : String(valeur);
+}
+
+/** Le texte a montrer pour des points: le palier d'un combo, ou le gain lui-meme. */
+export function texteDuGain(gain: Pick<PointsGagnes, 'valeur' | 'genre'>): string {
+  return gain.genre === 'combo' ? `Combo x${String(gain.valeur)}` : texteDesPoints(gain.valeur);
 }
 
 /** Tous les points a montrer en passant d'un etat au suivant. */
@@ -115,6 +127,13 @@ function pointsDesFaits(avant: EtatClient, apres: EtatClient): readonly PointsGa
       }
     }
 
+    const palier = palierDuFait(fait, apres.moi);
+    const moi = (apres.partie ?? avant.partie)?.entites.find((entite) => entite.id === apres.moi);
+
+    if (palier !== undefined && moi !== undefined) {
+      points.push({ valeur: palier, genre: 'combo', niveau: palier, x: moi.x, y: moi.y });
+    }
+
     if (fait.nature === 'joueurTranche' && fait.charge.attaquant === apres.moi) {
       const { pointsVoles: valeur, x, y } = fait.charge;
       points.push({ valeur, genre: 'joueur', niveau: 1, x, y });
@@ -148,6 +167,29 @@ function pointsDesFaits(avant: EtatClient, apres: EtatClient): readonly PointsGa
   }
 
   return points;
+}
+
+/**
+ * Le nouveau multiplicateur, quand ce fait fait monter notre combo d'un cran: un ralliement de
+ * la Horde, qui n'est envoye qu'a nous, ou notre coup de katana qui a tue. Rien sinon.
+ */
+function palierDuFait(fait: FaitDeJeu, moi: string | undefined): number | undefined {
+  const coups =
+    fait.nature === 'ralliement'
+      ? { charge: fait.charge, gagnes: fait.charge.ninjas.length }
+      : fait.nature === 'coupDeKatana' && fait.charge.frappeur === moi
+        ? { charge: fait.charge, gagnes: fait.charge.morts.length }
+        : undefined;
+
+  if (coups === undefined || coups.gagnes === 0) {
+    return undefined;
+  }
+
+  const { multiplicateur } = coups.charge;
+  const avant = multiplicateurDuCombo(coups.charge.combo - coups.gagnes);
+
+  // Le premier palier est x2: un combo a x1 n'en a franchi aucun.
+  return multiplicateur >= 2 && multiplicateur > avant ? multiplicateur : undefined;
 }
 
 /**

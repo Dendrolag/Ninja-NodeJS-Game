@@ -123,7 +123,7 @@ test('creer une partie Tactique, s approcher d un faux ninja et le prendre par u
   await expect(bouton.locator('.hud-charge')).toHaveCount(5);
 
   if (!hasTouch) {
-    await expect(page.locator('.jeu-rappel')).toContainText('Espace pour capturer');
+    await expect(bouton.locator('.hud-bouton-touche')).toHaveText('Espace');
   }
 
   const pouce = hasTouch ? await commandeAuPouce(page) : undefined;

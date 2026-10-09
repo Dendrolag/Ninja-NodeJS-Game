@@ -21,6 +21,16 @@ Sur un Samsung A56 tenu à l'horizontale, la barre du haut prenait trop de place
 - Effets en cours, sur écran tactile ou étroit (demande du porteur du projet en cours de session): plus de cartes, une pastille ronde de 40 pixels par effet, le pictogramme dans son disque et ce qu'il reste de l'effet en anneau autour, qui se vide comme la jauge; un malus garde son pointillé en contour, le nom et les secondes restent lus par les lecteurs d'écran. Sur écran tactile, la pastille de la poche ne se montre pas, son bouton suffit. Sur ordinateur, les cartes restent.
 - Version 1.7.5, sans note.
 
+## Retours du porteur du projet, même jour (version 1.7.6)
+
+Après essai de la 1.7.5:
+
+- Le rappel des touches de la barre (« ZQSD ou flèches · Espace pour trancher… ») est retiré, avec son module `interface/modeles/touches.ts`: chaque bouton d'action porte sa touche, l'aide les décrit toutes.
+- Le palier d'un combo ne s'annonce plus par une bulle en haut de l'écran: « Combo x3 » flotte au-dessus de notre ninja, dans le style du compteur (penché, coloré au cran, sans fond), monte un peu et s'efface. Quand un grand titre de bonus ou de malus occupe déjà cette hauteur, il se pose sous le ninja. Le palier est calculé avec les points flottants (`palierDuFait` dans `src/pointsFlottants.ts`, genre `combo`), placé par `hud/pointsFlottants.ts`.
+- Le radar ne se montre plus que pendant notre Révélation: toujours affiché, il défaisait le camouflage. Il montre alors tous les joueurs reçus, comme les halos de la scène, Chasse comprise; le Tactique garde sa portée de 900 pixels. Sans lui, le combo et le rôle de la Chasse remontent sous la barre.
+- Trouvé en route par le scénario de disposition: sur un téléphone de 320 pixels de haut tenu à l'horizontale, le grand titre d'un bonus posait son disque sur le temps restant. Son milieu reste désormais au moins à 92 pixels du haut (`composants.css`).
+- Fichiers: `annonces.ts`, `pointsFlottants.ts`, `hud/pointsFlottants.ts`, `hud/modele.ts`, `hud/surcouche.ts`, `rendu/boucle.ts`, `index.ts`, `interface/ecrans/jeu.ts`, `jeu.css`, `composants.css`, `version.ts`; tests `massacre.test.ts`, `horde.test.ts`, `rendu/boucle.test.ts`, `hud/pointsFlottants.test.ts`, `hud/surcouche.test.ts`, `hud/modele*.test.ts`, bout en bout `hud-reduit.spec.ts` (grand titre et palier mesurés), `tactique.spec.ts` et `massacre.spec.ts` (la touche sur le bouton au lieu du rappel).
+
 ## Fichiers créés ou modifiés
 
 - `packages/client/src/hud/modele.ts`: `radar` (`PointRadar`, `PORTEE_DU_RADAR_PX`, `PORTEE_DU_RADAR_TACTIQUE_PX`) remplace `minimap` et `portee`; `restants` sort de `ComboHud`; le combo n'existe qu'à partir de x2.

@@ -42,10 +42,22 @@ function salon(mode: InfosSalon['mode']): InfosSalon {
   };
 }
 
-/** Nous au milieu de la carte, un voisin, un joueur au bord du rayon, un autre au loin. */
+/**
+ * Nous au milieu de la carte, un voisin, un joueur au bord du rayon, un autre au loin, sous
+ * notre Revelation, sans laquelle il n'y a pas de radar.
+ */
 function etat(mode: InfosSalon['mode']): EtatClient {
   return {
     ...ETAT_INITIAL,
+    effets: [
+      {
+        categorie: 'bonus',
+        nature: 'revelation',
+        surMoi: true,
+        finPrevueA: 10_000,
+        dureeMs: 10_000,
+      },
+    ],
     ecran: 'jeu',
     moi: 'moi',
     salon: salon(mode),
@@ -70,16 +82,16 @@ describe('le radar d une partie Tactique', () => {
   it('ne montre que les joueurs a portee, nous compris, et rien sur son bord', () => {
     const hud = construireHud(etat('tactique'), 0);
 
-    expect(hud.radar.map((point) => point.id)).toEqual(['moi', 'voisin', 'bord']);
-    expect(hud.radar.map((point) => point.auBord)).toEqual([false, false, false]);
-    expect(hud.radar.find((point) => point.id === 'bord')).toMatchObject({ x: 0, y: 1 });
+    expect(hud.radar?.map((point) => point.id)).toEqual(['moi', 'voisin', 'bord']);
+    expect(hud.radar?.map((point) => point.auBord)).toEqual([false, false, false]);
+    expect(hud.radar?.find((point) => point.id === 'bord')).toMatchObject({ x: 0, y: 1 });
   });
 
   it('montre tout le monde dans les autres modes, au bord au-dela de sa portee', () => {
     const hud = construireHud(etat('classique'), 0);
 
-    expect(hud.radar.map((point) => point.id)).toEqual(['moi', 'voisin', 'bord', 'loin']);
-    expect(hud.radar.find((point) => point.id === 'loin')).toMatchObject({
+    expect(hud.radar?.map((point) => point.id)).toEqual(['moi', 'voisin', 'bord', 'loin']);
+    expect(hud.radar?.find((point) => point.id === 'loin')).toMatchObject({
       x: 1,
       y: 0,
       auBord: true,

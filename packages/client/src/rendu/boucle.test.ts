@@ -496,9 +496,11 @@ describe('les points flottants', () => {
     uneImage();
     uneImage();
 
+    // Le second ninja fait passer le combo a x2: le palier flotte sur notre ninja.
     expect(montres.map((point) => [point.texte, point.genre, point.niveau])).toEqual([
       ['+1', 'bot', 1],
       ['+2', 'bot', 2],
+      ['Combo x2', 'combo', 2],
     ]);
     // Soixante pixels de carte separent les deux ninjas: la camera les convertit.
     expect((montres[1]?.x ?? 0) - (montres[0]?.x ?? 0)).toBeCloseTo(

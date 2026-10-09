@@ -118,3 +118,47 @@ describe('monterPointsFlottants', () => {
     expect(points()).toHaveLength(0);
   });
 });
+
+describe('le palier d un combo (9 octobre 2026)', () => {
+  /** Un palier x3 sur notre ninja, au centre de l'hote. */
+  const palier = { texte: 'Combo x3', genre: 'combo', niveau: 3, x: 640, y: 360 } as const;
+
+  it('nait au-dessus de notre ninja, a la couleur de son cran, et s efface sans filer', () => {
+    afficheur.montrer(palier);
+
+    const [point] = points();
+
+    expect(point?.className).toBe('point-flottant point-flottant-combo palier');
+    expect(point?.dataset['niveau']).toBe('3');
+    expect(point?.textContent).toBe('Combo x3');
+
+    finirLAnimation(point);
+
+    expect(points()).toEqual([]);
+  });
+
+  it('se pose sous notre ninja quand un grand titre occupe deja sa place', () => {
+    const titre = document.createElement('div');
+    titre.className = 'grand-titre';
+    // Le bas du titre descend a 300 pixels, au-dessus de notre ninja pose a 365.
+    titre.getBoundingClientRect = () => rectangle(300, 200, 680, 100);
+    document.body.append(titre);
+
+    afficheur.montrer(palier);
+
+    expect(points()[0]?.classList.contains('dessous')).toBe(true);
+    titre.remove();
+  });
+
+  it('reste au-dessus quand le grand titre est plus haut que sa place', () => {
+    const titre = document.createElement('div');
+    titre.className = 'grand-titre';
+    titre.getBoundingClientRect = () => rectangle(300, 40, 680, 100);
+    document.body.append(titre);
+
+    afficheur.montrer(palier);
+
+    expect(points()[0]?.classList.contains('dessous')).toBe(false);
+    titre.remove();
+  });
+});
