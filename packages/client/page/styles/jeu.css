@@ -363,6 +363,146 @@
   pointer-events: none;
 }
 
+/*
+ * Les bulles des zones (9 octobre 2026): ce que fait une zone, dit pres de sa mine, a
+ * l'entree, et le masque de notre ninja cache. Chaque bulle a un point d'ancrage, deplace a
+ * chaque image sur la mine ou sur notre ninja, et la bulle se pose au-dessus. Le calque passe
+ * sous le HUD.
+ */
+.bulles-de-zone {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.bulle-de-zone-ancre {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+}
+
+.bulle-de-zone {
+  position: absolute;
+  bottom: 30px;
+  left: 0;
+  padding: 4px 10px 5px;
+  border: 1.5px solid var(--couleur-zone);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--couleur-zone) 22%, rgba(7, 12, 20, 0.88));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--couleur-zone) 45%, transparent);
+  color: #fff;
+  font-family: var(--police-titre);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+  translate: -50% 0;
+}
+
+/* La bulle d'une mine pointe vers elle, et apparait en douceur. */
+.bulle-de-zone-mine {
+  animation: bulle-de-zone-apparition 0.25s ease-out;
+}
+
+.bulle-de-zone-mine::after {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  border-right: 1.5px solid var(--couleur-zone);
+  border-bottom: 1.5px solid var(--couleur-zone);
+  background: inherit;
+  content: '';
+  rotate: 45deg;
+  translate: -50% 0;
+}
+
+/*
+ * La phrase d'une zone ou l'on entre: au-dessus de notre ninja, un peu plus grande que celle
+ * d'une mine, penchee, puis effacee. Elle garde le fond sombre de la bulle: sans lui, elle se
+ * perdait dans le motif de la zone, qui a sa couleur.
+ */
+.bulle-de-zone-entree {
+  bottom: 52px;
+  padding: 5px 12px 6px;
+  font-size: 16px;
+  transform: skewX(-8deg);
+  animation: bulle-de-zone-entree 2.5s ease-out forwards;
+}
+
+/* Le masque de notre ninja cache: un pictogramme seul, juste au-dessus de sa tete. */
+.bulle-de-zone-masque {
+  display: grid;
+  bottom: 24px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 50%;
+  place-items: center;
+}
+
+@keyframes bulle-de-zone-apparition {
+  from {
+    opacity: 0;
+    translate: -50% 6px;
+  }
+}
+
+@keyframes bulle-de-zone-entree {
+  0% {
+    opacity: 0;
+    translate: -50% 8px;
+  }
+
+  12%,
+  75% {
+    opacity: 1;
+    translate: -50% 0;
+  }
+
+  100% {
+    opacity: 0;
+    translate: -50% -10px;
+  }
+}
+
+@media (pointer: coarse), (max-width: 700px) {
+  .bulle-de-zone {
+    font-size: 12px;
+  }
+
+  .bulle-de-zone-entree {
+    font-size: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bulle-de-zone-mine {
+    animation: none;
+  }
+
+  .bulle-de-zone-entree {
+    animation-name: bulle-de-zone-entree-sans-mouvement;
+  }
+}
+
+@keyframes bulle-de-zone-entree-sans-mouvement {
+  0%,
+  100% {
+    opacity: 0;
+  }
+
+  10%,
+  80% {
+    opacity: 1;
+  }
+}
+
 .point-flottant {
   position: absolute;
   color: #fff;
@@ -588,6 +728,12 @@
   background-position: 0 0;
   background-repeat: no-repeat;
   background-size: 200% 100%;
+}
+
+/* Le pictogramme d'une zone est une image seule, pas une planche de deux (9 octobre 2026). */
+.hud-effet-zone .hud-effet-pictogramme {
+  background-position: center;
+  background-size: contain;
 }
 
 .hud-effet-nom {

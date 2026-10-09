@@ -28,6 +28,7 @@ import type {
   Mode,
   NatureObjet,
   ObjetDePoche,
+  TypeZone,
 } from '@neon-ninja/shared';
 import {
   CARTES,
@@ -47,7 +48,9 @@ import type { EtatClient } from '../etat.js';
 import type { AmongHud } from './among.js';
 import { amongHud, rechargeDuMeurtreMs, tempsAmong } from './among.js';
 import { NOMS_DES_EQUIPES } from '../interface/modeles/cartes.js';
-import { APPARENCE_OBJET, adresseDeLIcone } from '../rendu/apparence.js';
+import { APPARENCE_OBJET, APPARENCE_ZONE, adresseDeLIcone } from '../rendu/apparence.js';
+import { adresseDuPictogrammeDeZone } from '../rendu/zones.js';
+import { zonesQuiCouvrent } from '../zonesExpliquees.js';
 import {
   bonusDOrigineEnCours,
   effetsEnCours,
@@ -78,10 +81,13 @@ export interface LigneHud {
   readonly doubleur: boolean;
 }
 
-/** Un effet en cours sur nous, avec ce qu'il en reste. */
+/**
+ * Un effet en cours sur nous, avec ce qu'il en reste: un bonus, un malus, ou, depuis le 9
+ * octobre 2026, la zone ou nous nous tenons, tant que nous y sommes.
+ */
 export interface EffetHud {
-  readonly nature: NatureObjet;
-  readonly categorie: 'bonus' | 'malus';
+  readonly nature: NatureObjet | TypeZone;
+  readonly categorie: 'bonus' | 'malus' | 'zone';
   readonly libelle: string;
   readonly couleur: number;
   /** Ce qu'il reste, en millisecondes. */
@@ -252,8 +258,15 @@ export function formaterDuree(millisecondes: number): string {
  *
  * @param etat       L'etat du client.
  * @param maintenant Instant local, lu sur l'horloge du client.
+ * @param dureesDesZones La duree de chaque zone ouverte a sa premiere vue (guideDesZones.ts),
+ *                   pour la jauge de son effet. Absente, la jauge part de la duree maximale
+ *                   reglee.
  */
-export function construireHud(etat: EtatClient, maintenant: number): Hud {
+export function construireHud(
+  etat: EtatClient,
+  maintenant: number,
+  dureesDesZones?: ReadonlyMap<string, number>,
+): Hud {
   const partie = etat.partie;
 
   if (partie === undefined) {
@@ -277,7 +290,9 @@ export function construireHud(etat: EtatClient, maintenant: number): Hud {
     // Dans Among Ninjas, le classement ne dirait rien: tous a zero, et la reunion montre les
     // joueurs.
     classement: among ? [] : classementHud(partie.classement, etat.moi, mode, doubleursDe(etat)),
-    effets: effetsHud(etat, maintenant),
+    effets: [...effetsHud(etat, maintenant), ...zonesHud(etat, dureesDesZones)].sort(
+      (gauche, droite) => gauche.resteMs - droite.resteMs,
+    ),
     poche: pocheHud(etat.poche),
     radar: radarHud(etat, mode, maintenant),
     charges: chargesHud(etat, mode),
@@ -509,6 +524,46 @@ function effetsHud(etat: EtatClient, maintenant: number): readonly EffetHud[] {
       };
     })
     .sort((gauche, droite) => gauche.resteMs - droite.resteMs);
+}
+
+/**
+ * Les zones ou nous nous tenons, en effets en cours (9 octobre 2026, a la demande du porteur
+ * du projet): on ne comprenait pas ce que faisaient les zones. La carte d'une zone a sa
+ * couleur, son pictogramme, celui que porte son bord sur la carte, et ce qu'il lui reste; elle
+ * disparait quand on en sort. Une zone n'est ni un bonus ni un malus: elle agit sur tous ceux
+ * qui s'y trouvent.
+ */
+function zonesHud(
+  etat: EtatClient,
+  dureesDesZones: ReadonlyMap<string, number> | undefined,
+): readonly EffetHud[] {
+  const partie = etat.partie;
+  const moi = moiDansLaPartie(etat);
+
+  if (partie === undefined || moi === undefined) {
+    return [];
+  }
+
+  const dureeMaximumMs = (etat.salon?.reglages ?? REGLAGES_PAR_DEFAUT).zones.dureeMaximumS * 1000;
+
+  return zonesQuiCouvrent(partie.zones, moi).map((zone) => {
+    const resteMs = zone.dureeRestanteMs;
+    const dureeMs = Math.max(dureesDesZones?.get(zone.id) ?? dureeMaximumMs, resteMs);
+    const apparence = APPARENCE_ZONE[zone.type];
+
+    return {
+      nature: zone.type,
+      categorie: 'zone',
+      libelle: apparence.libelle,
+      couleur: apparence.couleur,
+      resteMs,
+      resteS: Math.ceil(resteMs / 1000),
+      part: dureeMs > 0 ? Math.min(Math.max(resteMs / dureeMs, 0), 1) : 0,
+      finProche: resteMs <= SEUIL_FIN_PROCHE_MS,
+      auxAutres: false,
+      icone: adresseDuPictogrammeDeZone(zone.type),
+    };
+  });
 }
 
 /**

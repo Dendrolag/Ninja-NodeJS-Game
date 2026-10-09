@@ -86,7 +86,7 @@ const CHAMPS_ISO = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/;
  * - le troisieme chiffre (1.5.X) avance pour une correction ou un reglage, sans note.
  * Une etape qui ne change rien de ce que voit le joueur ne le touche pas.
  */
-export const NUMERO_DE_VERSION = '1.8.1';
+export const NUMERO_DE_VERSION = '1.8.2';
 
 /**
  * La version mineure d'un numero, celle qui porte une note: « 1.5 » pour « 1.5.3 ».
