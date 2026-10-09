@@ -36,6 +36,7 @@ import { Controles } from '../../controles/controles.js';
 import { brancherTactile } from '../../controles/tactile.js';
 import type { Diagnostic } from '../../diagnostic/diagnostic.js';
 import { pilotageParPixi } from '../../diagnostic/diagnostic.js';
+import { monterBullesDeZone } from '../../hud/bullesDeZone.js';
 import { monterPointsFlottants } from '../../hud/pointsFlottants.js';
 import { monterSurcouche } from '../../hud/surcouche.js';
 import { HAUTEUR_DE_VUE_TACTIQUE_PX } from '../../rendu/apparence.js';
@@ -243,6 +244,12 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
       pointsFlottants.demonter();
     });
 
+    // Ce que font les zones, dit sur le terrain, sous le HUD (9 octobre 2026).
+    const bullesDeZone = monterBullesDeZone({ hote: zoneHud, document: doc });
+    aRetirer.push(() => {
+      bullesDeZone.demonter();
+    });
+
     aRetirer.push(
       brancherClavier(controles, { cible: doc, fenetre: navigateur ?? doc, capture: tactique }),
     );
@@ -282,7 +289,10 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
       controles,
       horloge: contexte.horloge,
       carte,
-      ...(hud ? { surcouche, pointsFlottants } : {}),
+      ...(hud ? { surcouche, pointsFlottants, bullesDeZone } : {}),
+      ...(contexte.souvenirDesZones === undefined
+        ? {}
+        : { souvenirDesZones: contexte.souvenirDesZones }),
       ...(suivi === undefined ? {} : { sonde: suivi.sonde }),
       ...(variantes?.cadence === undefined
         ? {}

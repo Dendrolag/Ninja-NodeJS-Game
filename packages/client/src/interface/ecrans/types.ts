@@ -14,6 +14,7 @@ import type { HorlogeClient } from '../../horloge.js';
 import type { LecteurDeSons } from '../../sons/lecteur.js';
 import type { NiveauDeSang } from '../preferences.js';
 import type { SouvenirDeVersion } from '../souvenirDeVersion.js';
+import type { SouvenirDesZones } from '../souvenirDesZones.js';
 
 /** Ce que l'application donne a chaque ecran. */
 export interface ContexteEcran {
@@ -44,6 +45,11 @@ export interface ContexteEcran {
    * Absent, l'accueil ne montre aucune note.
    */
   readonly souvenirDeVersion?: SouvenirDeVersion;
+  /**
+   * Combien de fois ce navigateur a deja lu l'effet de chaque zone (9 octobre 2026). Absent,
+   * le jeu le retient en memoire, le temps de la partie.
+   */
+  readonly souvenirDesZones?: SouvenirDesZones;
 }
 
 /** Un ecran monte. */

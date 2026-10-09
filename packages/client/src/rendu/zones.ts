@@ -325,6 +325,23 @@ export function pictogramme(
   };
 }
 
+/**
+ * Le pictogramme d'une nature de zone en image, pour l'interface (9 octobre 2026): la carte de
+ * l'effet d'une zone ou l'on se tient. C'est le dessin que porte le bord de la zone sur la
+ * carte, trace en noir sur fond transparent, pose par la page sur un disque a sa couleur.
+ * Une image SVG ecrite ici, sans fichier a charger.
+ */
+export function adresseDuPictogrammeDeZone(type: TypeZone): string {
+  const lignes = dessinDuPictogramme(type)
+    .map((ligne) => `<polyline points="${ligne.map((valeur) => valeur.toFixed(3)).join(' ')}"/>`)
+    .join('');
+  const image =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1.25 -1.25 2.5 2.5" fill="none" ' +
+    `stroke="#111111" stroke-width="0.24" stroke-linecap="round" stroke-linejoin="round">${lignes}</svg>`;
+
+  return `data:image/svg+xml,${encodeURIComponent(image)}`;
+}
+
 /** Le dessin d'un pictogramme, en lignes brisees, dans un carre de cote deux centre en zero. */
 function dessinDuPictogramme(type: TypeZone): readonly (readonly number[])[] {
   switch (type) {

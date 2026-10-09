@@ -13,6 +13,7 @@ import { fait } from '../faits.js';
 import { APPARENCE_MINE_DE_ZONE, APPARENCE_ZONE, APPARENCE_ZONES } from './apparence.js';
 import type { ZoneScene } from './zones.js';
 import {
+  adresseDuPictogrammeDeZone,
   bruit,
   clignotement,
   ecouleDepuisLOuverture,
@@ -249,5 +250,20 @@ describe('le hasard du rendu', () => {
     expect(bruit('zone-3', 7, 1)).toBe(bruit('zone-3', 7, 1));
     expect(tirages.every((valeur) => valeur >= 0 && valeur < 1)).toBe(true);
     expect(new Set(tirages).size).toBeGreaterThan(190);
+  });
+});
+
+describe('le pictogramme d une zone en image (9 octobre 2026)', () => {
+  it('est une image SVG ecrite sur place, differente pour chaque nature', () => {
+    const adresses = TYPES_ZONE.map(adresseDuPictogrammeDeZone);
+
+    for (const adresse of adresses) {
+      const image = decodeURIComponent(adresse.replace('data:image/svg+xml,', ''));
+
+      expect(adresse.startsWith('data:image/svg+xml,')).toBe(true);
+      expect(image).toContain('<polyline points="');
+      expect(image).not.toContain('NaN');
+    }
+    expect(new Set(adresses).size).toBe(TYPES_ZONE.length);
   });
 });

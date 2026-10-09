@@ -39,10 +39,15 @@ import type { FaitDeJeu } from '../faits.js';
 import { faitsArrives } from '../faits.js';
 import type { HorlogeClient } from '../horloge.js';
 import type { NiveauDeSang } from '../interface/preferences.js';
+import type { GuideDesZones } from '../guideDesZones.js';
+import { creerGuideDesZones } from '../guideDesZones.js';
+import type { AfficheurDeBulles } from '../hud/bullesDeZone.js';
 import type { AfficheurDePoints } from '../hud/pointsFlottants.js';
+import type { SouvenirDesZones } from '../interface/souvenirDesZones.js';
+import { creerSouvenirDesZones } from '../interface/souvenirDesZones.js';
 import type { Surcouche } from '../hud/surcouche.js';
 import { construireHud } from '../hud/modele.js';
-import { pointsDuChangement, texteDuGain } from '../pointsFlottants.js';
+import { pointsDuChangement, texteDesPoints, texteDuGain } from '../pointsFlottants.js';
 import { bonusDOrigineEnCours, filtreDesMalus, moiDansLaPartie } from '../selecteurs.js';
 import { rechargeApresLeTir, sonDuFait, sonsDuChangement } from '../sons/declencheurs.js';
 import { placeDuFait } from '../sons/espace.js';
@@ -79,6 +84,13 @@ export interface OptionsBoucle {
   readonly sons?: LecteurDeSons;
   /** L'affichage des points gagnes. Absent, les gains ne se voient qu'au classement. */
   readonly pointsFlottants?: Pick<AfficheurDePoints, 'montrer'>;
+  /**
+   * Les bulles qui disent ce que font les zones (9 octobre 2026). Absentes, rien ne les
+   * explique sur le terrain, et la jauge d'une zone part de sa duree maximale reglee.
+   */
+  readonly bullesDeZone?: Pick<AfficheurDeBulles, 'afficher'>;
+  /** Combien de fois chaque zone a deja ete expliquee. En memoire, le temps de la page, par defaut. */
+  readonly souvenirDesZones?: SouvenirDesZones;
   /**
    * Appele une fois, quand la partie est dessinee a une cadence fluide (stabilite.ts):
    * l'ecran de jeu leve alors son ecran de preparation.
@@ -186,6 +198,11 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
   let microArret: MicroArret | undefined;
   /** La course du vaisseau de la Station lunaire, tiree une fois par partie (etape 8.9). */
   let trajectoire: Trajectoire | undefined;
+  /** Ce qu'il faut dire des zones et des mines de zone, tant que leurs bulles s'affichent. */
+  const guide: GuideDesZones | undefined =
+    options.bullesDeZone === undefined
+      ? undefined
+      : creerGuideDesZones(options.souvenirDesZones ?? creerSouvenirDesZones());
 
   const uneImage = (instant: number): void => {
     const etat = options.client.etat;
@@ -265,9 +282,31 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
       marcherDansLeSang(scene.sang, lissee, maintenant);
     }
 
+    // 5 ter. Ce que font les zones: les bulles des mines et des entrees, le masque de notre
+    //    ninja cache, et les ninjas que le chaos vient de nous prendre (9 octobre 2026).
+    const zones = guide?.image(etat, precedent, lissee, maintenant);
+
+    if (zones !== undefined) {
+      const vue = camera;
+      options.bullesDeZone?.afficher(
+        zones.bulles.map((bulle) => ({ ...bulle, ...versEcran(bulle, vue, taille) })),
+      );
+
+      const perte = zones.perteParLeChaos;
+
+      if (perte !== undefined) {
+        options.pointsFlottants?.montrer({
+          texte: `${texteDesPoints(-perte.ninjas)} ${perte.ninjas > 1 ? 'ninjas' : 'ninja'}`,
+          genre: 'perte',
+          niveau: 1,
+          ...versEcran(perte, camera, taille),
+        });
+      }
+    }
+
     const sonde = options.sonde;
     const apresLeRendu = sonde === undefined ? 0 : options.horloge.maintenant();
-    options.surcouche?.afficher(construireHud(etat, maintenant));
+    options.surcouche?.afficher(construireHud(etat, maintenant, zones?.dureesDesZones));
     const apresLeHud = sonde === undefined ? 0 : options.horloge.maintenant();
 
     // Les premieres images dessinees preparent le decor et la lueur, et rament: on

@@ -63,6 +63,7 @@ import { monterSalon } from './ecrans/salon.js';
 import type { ContexteEcran, EcranAffiche, MonteurEcran } from './ecrans/types.js';
 import type { NoteDeVersion } from './modeles/notesDeVersion.js';
 import { lireLeSouvenirDeVersion } from './souvenirDeVersion.js';
+import { creerSouvenirDesZones } from './souvenirDesZones.js';
 
 /** Ce qu'il faut pour monter l'application. */
 export interface OptionsApplication {
@@ -259,6 +260,8 @@ export function monterApplication(options: OptionsApplication): Application {
       NUMERO_DE_VERSION,
       options.notesDeVersion,
     ),
+    // Les zones deja expliquees (9 octobre 2026): un souvenir pour toute la visite.
+    souvenirDesZones: creerSouvenirDesZones(options.stockage),
   };
 
   /** Monte un ecran, l'installe dans la page, et lance sa musique. */

@@ -7,12 +7,15 @@
  * bonus d'une troisieme source: les trois pouvaient se contredire.
  */
 
-import type { EntiteVue, LigneClassement } from '@neon-ninja/shared';
+import type { EntiteVue, LigneClassement, ZoneVue } from '@neon-ninja/shared';
+import { REGLAGES_PAR_DEFAUT } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
 import type { EffetActif, EtatClient } from '../etat.js';
 import { ETAT_INITIAL } from '../etat.js';
 import type { VuePartie } from '../reconstruction.js';
+import { APPARENCE_ZONE } from '../rendu/apparence.js';
+import { adresseDuPictogrammeDeZone } from '../rendu/zones.js';
 import {
   HUD_VIDE,
   PORTEE_DU_RADAR_PX,
@@ -159,6 +162,54 @@ describe('construireHud', () => {
       const hud = construireHud(etatEnJeu(vue(), { effets }), 0);
 
       expect(hud.effets.map((effet) => effet.nature)).toEqual(['invincibilite', 'flou', 'vitesse']);
+    });
+
+    describe('la zone ou nous nous tenons (9 octobre 2026)', () => {
+      const chaos: ZoneVue = {
+        id: 'z1',
+        type: 'chaos',
+        x: 100,
+        y: 100,
+        rayon: 220,
+        dureeRestanteMs: 6_000,
+      };
+
+      it('devient un effet, a sa couleur et avec son pictogramme, classe avec les autres', () => {
+        const partie = vue({ entites: [joueur('moi', 150, 100)], zones: [chaos] });
+        const hud = construireHud(etatEnJeu(partie, { effets }), 0, new Map([['z1', 12_000]]));
+        const zone = hud.effets.find((effet) => effet.categorie === 'zone');
+
+        expect(hud.effets.map((effet) => effet.nature)).toEqual([
+          'invincibilite',
+          'flou',
+          'chaos',
+          'vitesse',
+        ]);
+        expect(zone).toMatchObject({
+          nature: 'chaos',
+          libelle: 'Zone de chaos',
+          couleur: APPARENCE_ZONE.chaos.couleur,
+          resteS: 6,
+          part: 0.5,
+          finProche: false,
+          auxAutres: false,
+        });
+        expect(zone?.icone).toBe(adresseDuPictogrammeDeZone('chaos'));
+      });
+
+      it('mesure sa jauge sur la duree maximale reglee, faute de duree vue', () => {
+        const partie = vue({ entites: [joueur('moi', 150, 100)], zones: [chaos] });
+        const hud = construireHud(etatEnJeu(partie), 0);
+        const dureeMaximumMs = REGLAGES_PAR_DEFAUT.zones.dureeMaximumS * 1000;
+
+        expect(hud.effets[0]?.part).toBeCloseTo(Math.min(6_000 / dureeMaximumMs, 1));
+      });
+
+      it('disparait quand nous sortons de la zone', () => {
+        const partie = vue({ entites: [joueur('moi', 900, 900)], zones: [chaos] });
+
+        expect(construireHud(etatEnJeu(partie), 0).effets).toEqual([]);
+      });
     });
 
     it('dit la part qui reste de chaque effet, pour sa jauge (etape 4.6)', () => {
