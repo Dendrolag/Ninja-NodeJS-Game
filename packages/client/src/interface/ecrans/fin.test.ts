@@ -9,7 +9,7 @@
  * reprise des ecrans du jalon 3.
  */
 
-import type { InfosSalon, LigneClassement } from '@neon-ninja/shared';
+import type { InfosSalon, LigneClassement, StatistiquesDUnJoueur } from '@neon-ninja/shared';
 import { REGLAGES_PAR_DEFAUT } from '@neon-ninja/shared';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -62,6 +62,21 @@ const SALON: InfosSalon = {
   reglages: REGLAGES_PAR_DEFAUT,
 };
 
+/** Les statistiques de la Horde, telles que le serveur les envoie avec le classement. */
+const STATISTIQUES: Readonly<Record<string, StatistiquesDUnJoueur>> = Object.fromEntries(
+  CLASSEMENT.map((recue, index) => [
+    recue.id,
+    {
+      ninjas: recue.botsPortes,
+      captures: recue.captures,
+      ninjasRallies: 10 - index,
+      ...(index === 0 ? { meilleurCombo: 3 } : {}),
+      botsNoirsDetruits: recue.botsNoirsDetruits,
+      evade: index === 1 ? 1 : 0,
+    },
+  ]),
+);
+
 let reseau: ReseauFactice;
 let client: Client;
 let ecran: EcranAffiche;
@@ -77,7 +92,7 @@ beforeEach(() => {
   client.rejoindre('Alice');
   reseau.dernier('rejoindre')?.[1]({ valide: true, valeur: SALON });
   reseau.recevoir('partieLancee', { graineDuDecor: 1 });
-  reseau.recevoir('partieTerminee', { classement: CLASSEMENT });
+  reseau.recevoir('partieTerminee', { classement: CLASSEMENT, statistiques: STATISTIQUES });
 
   ecran = monterFin(contexteDEssai(client));
   document.body.append(ecran.racine);
@@ -102,9 +117,33 @@ describe('l ecran de fin', () => {
         String(recue.points),
         String(recue.botsPortes),
         String(recue.captures),
+        String(10 - index),
+        index === 0 ? 'x3' : '—',
         String(recue.botsNoirsDetruits),
+        index === 1 ? 'Oui' : '—',
       ]),
     );
+  });
+
+  it('nomme les colonnes du mode, et dit en infobulle ce que chacune compte', () => {
+    const entetes = [...document.querySelectorAll<HTMLElement>('thead th')];
+
+    expect(entetes.map((entete) => entete.textContent)).toEqual([
+      'Rang',
+      'Joueur',
+      'Points',
+      'Ninjas',
+      'Captures',
+      'Ralliés',
+      'Combo',
+      'Black Ninjas',
+      'Évadé',
+    ]);
+    expect(entetes.at(-1)?.title).toBe('A attrapé l’Évadé');
+  });
+
+  it('ne pose plus le badge du x2 de l Evade a cote des pseudos', () => {
+    expect(document.querySelector('.doubleur')).toBeNull();
   });
 
   it('dit notre place et marque notre ligne', () => {

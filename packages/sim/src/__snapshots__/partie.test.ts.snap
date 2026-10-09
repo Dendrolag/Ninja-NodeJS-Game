@@ -16,33 +16,34 @@ exports[`partie complete > produit l instantane de reference apres une minute de
   "classement": [
     {
       "botsNoirsDetruits": 0,
-      "botsPortes": 5,
+      "botsPortes": 3,
+      "captures": 0,
+      "id": "alice",
+      "points": 3,
+    },
+    {
+      "botsNoirsDetruits": 0,
+      "botsPortes": 3,
       "captures": 0,
       "id": "bob",
-      "points": 5,
+      "points": 3,
     },
     {
       "botsNoirsDetruits": 0,
       "botsPortes": 2,
-      "captures": 0,
-      "id": "alice",
-      "points": 2,
-    },
-    {
-      "botsNoirsDetruits": 0,
-      "botsPortes": 0,
       "captures": 1,
       "id": "chloe",
-      "points": 0,
+      "points": 2,
     },
   ],
   "compteurIdentifiants": 47,
   "evenements": {
+    "bonusRamasse": 2,
     "captureJoueur": 1,
     "captureParBotNoir": 3,
     "mineDeZoneArmee": 1,
     "mineDeZonePosee": 4,
-    "ralliement": 10,
+    "ralliement": 12,
     "zoneOuverte": 1,
   },
   "objetsPoses": 3,
@@ -57,8 +58,8 @@ exports[`partie complete > produit l instantane de reference apres une minute de
       "y": 514.34,
     },
     "chloe": {
-      "x": 701.38,
-      "y": 942.17,
+      "x": 644.54,
+      "y": 1020.4,
     },
   },
   "tempsEcouleMs": 60000,
@@ -114,6 +115,7 @@ exports[`partie complete > produit l instantane de reference d une partie avec l
     "present": true,
   },
   "evenements": {
+    "bonusRamasse": 1,
     "captureJoueur": 1,
     "captureParBotNoir": 2,
     "evadeApparu": 1,
@@ -144,31 +146,31 @@ exports[`partie complete > produit l instantane de reference d une partie avec l
 
 exports[`partie complete > produit l instantane de reference d une partie avec la fumee (etape 7.10) 1`] = `
 {
-  "alea": 2761880000,
+  "alea": 1377902566,
   "bots": {
     "noirs": 2,
     "ordinaires": 30,
     "total": 32,
   },
   "capturesParBotNoirSubies": {
-    "alice": 0,
+    "alice": 1,
     "bob": 0,
-    "chloe": 2,
+    "chloe": 0,
   },
   "classement": [
     {
       "botsNoirsDetruits": 0,
-      "botsPortes": 3,
+      "botsPortes": 5,
       "captures": 0,
       "id": "bob",
-      "points": 3,
+      "points": 5,
     },
     {
       "botsNoirsDetruits": 0,
-      "botsPortes": 1,
+      "botsPortes": 4,
       "captures": 1,
       "id": "chloe",
-      "points": 1,
+      "points": 4,
     },
     {
       "botsNoirsDetruits": 0,
@@ -178,14 +180,16 @@ exports[`partie complete > produit l instantane de reference d une partie avec l
       "points": 1,
     },
   ],
-  "compteurIdentifiants": 52,
+  "compteurIdentifiants": 54,
   "evenements": {
     "captureJoueur": 1,
-    "captureParBotNoir": 2,
-    "fumee": 1,
-    "mineDeZonePosee": 3,
-    "objetEmpoche": 1,
-    "ralliement": 8,
+    "captureParBotNoir": 1,
+    "fumee": 3,
+    "mineDeZoneArmee": 1,
+    "mineDeZonePosee": 4,
+    "objetEmpoche": 3,
+    "ralliement": 13,
+    "zoneOuverte": 1,
   },
   "objetsPoses": 1,
   "partieTerminee": true,
@@ -196,21 +200,23 @@ exports[`partie complete > produit l instantane de reference d une partie avec l
   },
   "positions": {
     "alice": {
-      "x": 1470.28,
-      "y": 469.09,
+      "x": 1761.1,
+      "y": 1146.79,
     },
     "bob": {
-      "x": 1200,
-      "y": 900,
+      "x": 1611.76,
+      "y": 132.28,
     },
     "chloe": {
-      "x": 352.93,
-      "y": 817.84,
+      "x": 554.3,
+      "y": 73.08,
     },
   },
   "tempsEcouleMs": 60000,
   "tick": 1200,
-  "zonesActives": [],
+  "zonesActives": [
+    "invisibilite",
+  ],
 }
 `;
 

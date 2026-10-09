@@ -264,6 +264,30 @@ describe('sa fuite', () => {
     expect(positionDeLEvade(jouer(avec, 10))).toEqual(positionDeLEvade(jouer(sans, 10)));
   });
 
+  it('ne voit pas un joueur cache par une zone d invisibilite, et ne le fuit pas', () => {
+    const zone = {
+      id: 'zone-1',
+      type: 'invisibilite' as const,
+      centre: { x: 800, y: 700 },
+      rayon: 60,
+      dureeRestanteMs: 10_000,
+    };
+    const seul = { ...avecLEvade(partie(), { x: 1000, y: 700 }), zones: { 'zone-1': zone } };
+    const avecUnJoueurCache = {
+      ...avecLEvade(avecJoueur(partie(), 'alice', { x: 800, y: 700 }), { x: 1000, y: 700 }),
+      zones: { 'zone-1': zone },
+    };
+    const avecUnJoueurVisible = avecLEvade(avecJoueur(partie(), 'alice', { x: 800, y: 700 }), {
+      x: 1000,
+      y: 700,
+    });
+
+    expect(positionDeLEvade(jouer(avecUnJoueurCache, 10))).toEqual(
+      positionDeLEvade(jouer(seul, 10)),
+    );
+    expect(positionDeLEvade(jouer(avecUnJoueurVisible, 10)).x).toBeGreaterThan(1050);
+  });
+
   it('est ignore par les PNJ: aucun ne le repeint, il n en repeint aucun', () => {
     const etat = ajouterBot(avecLEvade(partie(), { x: 1000, y: 700 }), {
       id: 'bot-1',

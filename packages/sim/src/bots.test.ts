@@ -31,7 +31,7 @@ import { describe, expect, it } from 'vitest';
 import { avancerLesBots, faireApparaitreLesBotsNoirs, peuplerDeBots } from './bots.js';
 import type { CarteCollisions } from './collisions.js';
 import { creerCarteCollisions } from './collisions.js';
-import type { Bot, BotNoir, BotOrdinaire, EtatPartie, Joueur } from './etat.js';
+import type { Bot, BotNoir, BotOrdinaire, EtatPartie, Joueur, ZoneSpeciale } from './etat.js';
 import { ajouterBot, ajouterJoueur, creerEtatInitial } from './etat.js';
 
 const ROUGE = '#FF0000';
@@ -462,6 +462,81 @@ describe('choix de la proie d un bot noir', () => {
     depart = avecJoueur(depart, 'a', { x: 600, y: 500 });
 
     expect(botNoirDe(avancerLesBots(depart, 0), 'bn').cible).toBeUndefined();
+  });
+});
+
+describe('une zone d invisibilite cache aux bots noirs ce qui s y tient', () => {
+  /** Pose une zone d'invisibilite de cent pixels de rayon autour de ce centre. */
+  function avecZoneDInvisibilite(etat: EtatPartie, centre: Position): EtatPartie {
+    const zone: ZoneSpeciale = {
+      id: 'z1',
+      type: 'invisibilite',
+      centre,
+      rayon: 100,
+      dureeRestanteMs: JAMAIS_MS,
+    };
+
+    return { ...etat, zones: { ...etat.zones, [zone.id]: zone } };
+  }
+
+  it('ne choisit pas un joueur cache, et prend le joueur visible plus loin', () => {
+    let depart = avecBotNoir(partie(), 'bn', { x: 500, y: 500 });
+    depart = avecJoueur(depart, 'cache', { x: 560, y: 500 });
+    depart = avecJoueur(depart, 'visible', { x: 500, y: 620 }, BLEU);
+    depart = avecZoneDInvisibilite(depart, { x: 600, y: 500 });
+
+    expect(botNoirDe(avancerLesBots(depart, 0), 'bn').cible).toBe('visible');
+  });
+
+  it('ne choisit pas un bot cache', () => {
+    let depart = avecBotNoir(partie(), 'bn', { x: 500, y: 500 });
+    depart = avecBot(depart, 'b1', { x: 600, y: 500 }, { couleur: ROUGE });
+    depart = avecZoneDInvisibilite(depart, { x: 600, y: 500 });
+
+    expect(botNoirDe(avancerLesBots(depart, 0), 'bn').cible).toBeUndefined();
+  });
+
+  it('lache la proie qui entre dans la zone, et ne la prend pas', () => {
+    let depart = avecJoueur(partie(), 'a', { x: 510, y: 500 });
+    depart = avecBotNoir(
+      depart,
+      'bn',
+      { x: 500, y: 500 },
+      { cible: 'a', avantRechercheDeCibleMs: 500 },
+    );
+    depart = avecZoneDInvisibilite(depart, { x: 560, y: 500 });
+
+    const apres = avancerLesBots(depart, 1);
+
+    expect(botNoirDe(apres, 'bn').cible).toBeUndefined();
+    expect(joueurDe(apres, 'a').capturesParBotNoirSubies).toBe(0);
+  });
+
+  it('voit de nouveau le joueur qui sort de la zone', () => {
+    let depart = avecBotNoir(partie(), 'bn', { x: 500, y: 500 });
+    depart = avecJoueur(depart, 'a', { x: 560, y: 500 });
+    depart = avecZoneDInvisibilite(depart, { x: 800, y: 500 });
+
+    expect(botNoirDe(avancerLesBots(depart, 0), 'bn').cible).toBe('a');
+  });
+
+  it('ignore les autres zones: seule l invisibilite cache', () => {
+    let depart = avecBotNoir(partie(), 'bn', { x: 500, y: 500 });
+    depart = avecJoueur(depart, 'a', { x: 560, y: 500 });
+    depart = {
+      ...depart,
+      zones: {
+        z1: {
+          id: 'z1',
+          type: 'chaos',
+          centre: { x: 560, y: 500 },
+          rayon: 100,
+          dureeRestanteMs: JAMAIS_MS,
+        },
+      },
+    };
+
+    expect(botNoirDe(avancerLesBots(depart, 0), 'bn').cible).toBe('a');
   });
 });
 

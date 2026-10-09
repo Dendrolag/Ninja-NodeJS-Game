@@ -8,13 +8,20 @@
  * sur la page construite dans ecrans/fin.test.ts et ecrans/fin.progression.test.ts.
  */
 
-import type { LigneClassement, MaProgression, ProgressionEnregistree } from '@neon-ninja/shared';
+import type {
+  LigneClassement,
+  MaProgression,
+  Mode,
+  ProgressionEnregistree,
+  ReglagesPartie,
+  StatistiquesDUnJoueur,
+} from '@neon-ninja/shared';
 import { REGLAGES_PAR_DEFAUT } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
 import type { EtatClient } from '../../etat.js';
 import { ETAT_INITIAL } from '../../etat.js';
-import { modeleFin } from './fin.js';
+import { SANS_OBJET, ecrireUneStatistique, modeleFin } from './fin.js';
 import { formaterNombre } from './progression.js';
 
 /** Une ligne de classement. */
@@ -65,21 +72,11 @@ describe('modeleFin', () => {
   it('reprend le classement recu, dans son ordre et avec ses nombres', () => {
     const modele = modeleFin(etat(CLASSEMENT));
 
-    expect(
-      modele?.lignes.map(({ rang, pseudo, points, botsPortes, captures }) => ({
-        rang,
-        pseudo,
-        points,
-        botsPortes,
-        captures,
-      })),
-    ).toEqual(
+    expect(modele?.lignes.map(({ rang, pseudo, points }) => ({ rang, pseudo, points }))).toEqual(
       CLASSEMENT.map((recue, index) => ({
         rang: index + 1,
         pseudo: recue.pseudo,
         points: recue.points,
-        botsPortes: recue.botsPortes,
-        captures: recue.captures,
       })),
     );
   });
@@ -321,18 +318,130 @@ describe('la progression de fin', () => {
   });
 });
 
-describe("le x2 de l'Evade au classement final (etape 7.9)", () => {
-  it('marque la ligne de qui a fini avec le x2', () => {
-    const classement = [
-      { ...ligne('alice', 'Alice', 60), doubleur: true as const },
-      ligne('moi', 'Moi', 20),
-    ];
-    const lignes = modeleFin(etat(classement))?.lignes ?? [];
+describe('les statistiques du classement final, selon le mode (9 octobre 2026)', () => {
+  /** La partie finie dans ce mode, avec ces reglages et ces statistiques. */
+  function finie(
+    mode: Mode,
+    statistiques: Readonly<Record<string, StatistiquesDUnJoueur>> | undefined,
+    reglages: ReglagesPartie = REGLAGES_PAR_DEFAUT,
+  ): EtatClient {
+    const base = etat([ligne('alice', 'Alice', 60), ligne('moi', 'Moi', 20)]);
 
-    expect(lignes.map((une) => [une.id, une.doubleur])).toEqual([
-      ['alice', true],
-      ['moi', false],
+    return {
+      ...base,
+      salon: base.salon === undefined ? undefined : { ...base.salon, mode, reglages },
+      fin: {
+        classement: base.fin?.classement ?? [],
+        ...(statistiques === undefined ? {} : { statistiques }),
+      },
+    };
+  }
+
+  it('montre en Horde les ninjas, les captures, les ralliés, le combo, les Black Ninjas et l Evade', () => {
+    const modele = modeleFin(
+      finie('classique', {
+        alice: {
+          ninjas: 12,
+          captures: 3,
+          ninjasRallies: 9,
+          meilleurCombo: 4,
+          botsNoirsDetruits: 1,
+          evade: 1,
+        },
+        moi: { ninjas: 4, captures: 0, ninjasRallies: 2, botsNoirsDetruits: 0, evade: 0 },
+      }),
+    );
+
+    expect(modele?.colonnes.map((colonne) => colonne.entete)).toEqual([
+      'Ninjas',
+      'Captures',
+      'Ralliés',
+      'Combo',
+      'Black Ninjas',
+      'Évadé',
     ]);
+    expect(modele?.lignes.map((une) => une.statistiques)).toEqual([
+      ['12', '3', '9', 'x4', '1', 'Oui'],
+      ['4', '0', '2', '—', '0', '—'],
+    ]);
+  });
+
+  it('montre en Massacre les PNJ et les joueurs massacres, les Black Ninjas, le combo et l Evade', () => {
+    const modele = modeleFin(
+      finie('massacre', {
+        alice: { ninjasTues: 40, joueursTues: 2, botsNoirsDetruits: 1, meilleurCombo: 5, evade: 0 },
+        moi: { ninjasTues: 7, joueursTues: 0, botsNoirsDetruits: 0, evade: 1 },
+      }),
+    );
+
+    expect(modele?.colonnes.map((colonne) => [colonne.entete, colonne.description])).toEqual([
+      ['PNJ', 'PNJ massacrés'],
+      ['Joueurs', 'Joueurs massacrés'],
+      ['Black Ninjas', 'Black Ninjas détruits'],
+      ['Combo', 'Plus haut combo'],
+      ['Évadé', 'A attrapé l’Évadé'],
+    ]);
+    expect(modele?.lignes.map((une) => une.statistiques)).toEqual([
+      ['40', '2', '1', 'x5', '—'],
+      ['7', '0', '0', '—', 'Oui'],
+    ]);
+  });
+
+  it('retire les colonnes des Black Ninjas et de l Evade quand l hote les a coupes', () => {
+    const reglages: ReglagesPartie = {
+      ...REGLAGES_PAR_DEFAUT,
+      evade: false,
+      botsNoirs: { ...REGLAGES_PAR_DEFAUT.botsNoirs, actifs: false },
+    };
+    const modele = modeleFin(finie('tactique', {}, reglages));
+
+    expect(modele?.colonnes.map((colonne) => colonne.id)).toEqual([
+      'ninjas',
+      'captures',
+      'meilleurTir',
+    ]);
+  });
+
+  it('ne montre plus le x2 de l Evade a cote du pseudo: il n est que dans sa colonne', () => {
+    const base = finie('classique', { alice: { evade: 1 } });
+    const modele = modeleFin({
+      ...base,
+      fin: {
+        ...(base.fin ?? { classement: [] }),
+        classement: [{ ...ligne('alice', 'Alice', 60), doubleur: true }],
+      },
+    });
+
+    expect(modele?.lignes[0]).not.toHaveProperty('doubleur');
+    expect(modele?.podium[0]).not.toHaveProperty('doubleur');
+    expect(modele?.lignes[0]?.statistiques.at(-1)).toBe('Oui');
+  });
+
+  it('montre des tirets quand le serveur n a pas envoye de statistiques', () => {
+    const modele = modeleFin(finie('classique', undefined));
+
+    expect(modele?.lignes[0]?.statistiques).toEqual(['—', '—', '—', '—', '—', '—']);
+  });
+
+  it('n invente aucune colonne sans salon: le mode n est pas connu', () => {
+    const modele = modeleFin({ ...finie('classique', {}), salon: undefined });
+
+    expect(modele?.colonnes).toEqual([]);
+    expect(modele?.lignes[0]?.statistiques).toEqual([]);
+  });
+});
+
+describe('ecrireUneStatistique', () => {
+  it('ecrit chaque format, et un tiret pour ce qui est sans objet', () => {
+    expect(ecrireUneStatistique(1234, 'nombre')).toBe(formaterNombre(1234));
+    expect(ecrireUneStatistique(0, 'nombre')).toBe('0');
+    expect(ecrireUneStatistique(undefined, 'nombre')).toBe(SANS_OBJET);
+    expect(ecrireUneStatistique(3, 'multiplicateur')).toBe('x3');
+    expect(ecrireUneStatistique(1, 'multiplicateur')).toBe(SANS_OBJET);
+    expect(ecrireUneStatistique(125_000, 'duree')).toBe('2:05');
+    expect(ecrireUneStatistique(undefined, 'duree')).toBe(SANS_OBJET);
+    expect(ecrireUneStatistique(1, 'drapeau')).toBe('Oui');
+    expect(ecrireUneStatistique(0, 'drapeau')).toBe(SANS_OBJET);
   });
 });
 

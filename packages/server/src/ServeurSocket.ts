@@ -1500,13 +1500,14 @@ export class ServeurSocket {
     return diffusion;
   }
 
-  /** Annonce la fin d'une partie et son classement definitif. */
+  /** Annonce la fin d'une partie, son classement definitif et les statistiques de chacun. */
   private diffuserLaFin(room: GameRoom): void {
     // Among Ninjas revele a la fin le camp vainqueur et tous les roles (etape 7.20).
     const among = finAmongDe(room.etat);
 
     this.io.to(room.id).emit('partieTerminee', {
       classement: classementDe(room.etat),
+      statistiques: room.statistiques(),
       ...(among === undefined ? {} : { among }),
     });
     this.amis?.partieChangee(room.id);

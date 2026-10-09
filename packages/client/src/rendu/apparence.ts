@@ -18,7 +18,7 @@
  */
 
 import type { NatureObjet, TypeBonus, TypeZone } from '@neon-ninja/shared';
-import { RACINE_RESSOURCES, cheminObjet } from '@neon-ninja/shared';
+import { OBJETS, RACINE_RESSOURCES, cheminObjet } from '@neon-ninja/shared';
 
 /** Une couleur d'affichage et son opacite, separees pour PixiJS qui les veut ainsi. */
 export interface Teinte {
@@ -566,8 +566,8 @@ export const DUREES_LOCALISATION = {
   fonduMs: 500,
 } as const;
 
-/** Rayon du halo pose sous un objet ramassable. */
-export const RAYON_HALO_OBJET = 22;
+/** Rayon du halo pose sous un objet ramassable: c'est aussi sa zone de ramassage (OBJETS). */
+export const RAYON_HALO_OBJET = OBJETS.RAYON_DU_DISQUE_PX;
 
 /** Taille d'affichage de l'icone d'un objet ramassable. */
 export const TAILLE_OBJET = 30;
