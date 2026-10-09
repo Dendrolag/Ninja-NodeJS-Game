@@ -38,8 +38,13 @@ export interface Chat {
  */
 const SESSION_DE_VERIFICATION = { id: '', pseudo: '' };
 
-/** Monte le chat. */
-export function monterChat(doc: Document, client: Client): Chat {
+/**
+ * Monte le chat.
+ *
+ * @param titre Son titre: le chat du salon, ou, dans Among Ninjas, celui de la reunion et celui
+ *              des fantomes (etape 7.20).
+ */
+export function monterChat(doc: Document, client: Client, titre = 'Chat du salon'): Chat {
   const liste = creer(doc, 'ol', { classe: 'chat-messages', attributs: { 'aria-live': 'polite' } });
   const saisie = creer(doc, 'input', {
     classe: 'champ-texte',
@@ -72,7 +77,7 @@ export function monterChat(doc: Document, client: Client): Chat {
       'header',
       { classe: 'chat-entete' },
       icone(doc, 'chat'),
-      creer(doc, 'h2', { texte: 'Chat du salon' }),
+      creer(doc, 'h2', { texte: titre }),
     ),
     liste,
     formulaire,

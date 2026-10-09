@@ -801,3 +801,14 @@ export const HAUTEUR_DE_VUE_TACTIQUE_PX = 500;
  * hauteur garde les proportions d'origine.
  */
 export const CADRAGE_MOBILE = { largeur: 360, hauteur: 271 } as const;
+
+/**
+ * Le cercle de vision d'Among Ninjas (etape 7.20, planche docs/design/etape-7-20/): hors du
+ * disque, le decor sans couleur, sous un voile noir qui l'assombrit de moitie. Et la taille du pseudo au-dessus de
+ * chaque joueur en vue, en pixels de carte.
+ */
+export const VISION_AMONG = {
+  /** L'opacite du voile noir pose sur le decor sans couleur: la moitie. */
+  voile: 0.5,
+  taillePseudo: 13,
+} as const;

@@ -88,6 +88,8 @@ export interface LigneFin {
    * salon: le classement seul ne dit pas s'il avait un compte.
    */
   readonly aUneFiche: boolean;
+  /** Son role, revele a la fin d'une partie Among Ninjas (etape 7.20): « Assassin », « Proie ». */
+  readonly role?: string;
 }
 
 /** Une equipe au classement final d'une partie Equipes, telle qu'on l'affiche (etape 7.2). */
@@ -207,7 +209,7 @@ export function modeleFin(etat: EtatClient): ModeleFin | undefined {
       mienne === undefined
         ? undefined
         : { nombre: mienne.rang, suffixe: mienne.rang === 1 ? 're' : 'e' },
-    message: messageDeFin(mienne?.rang),
+    message: etat.fin?.among === undefined ? messageDeFin(mienne?.rang) : messageAmong(etat),
     // L'ordre des marches est celui d'un vrai podium: le premier au centre.
     podium: [lignes[1], lignes[0], lignes[2]].filter(
       (ligne): ligne is LigneFin => ligne !== undefined,
@@ -399,7 +401,31 @@ function ligneFin(
     statistiques: colonnes.map((colonne) => valeurEcrite(statistiques, colonne.id)),
     moi: ligne.id === etat.moi,
     aUneFiche: auSalon?.compte !== undefined && etat.session.nature === 'compte',
+    ...roleRevele(etat, ligne.id),
   };
+}
+
+/** Le role d'un joueur, revele a la fin d'une partie Among Ninjas (etape 7.20). */
+function roleRevele(etat: EtatClient, id: string): { readonly role?: string } {
+  const role = etat.fin?.among?.joueurs.find((joueur) => joueur.id === id)?.role;
+
+  return role === undefined ? {} : { role: role === 'tueur' ? 'Assassin' : 'Proie' };
+}
+
+/**
+ * Le mot de la fin d'une partie Among Ninjas (etape 7.20): le camp vainqueur, et si c'est le
+ * notre. Le classement met ce camp devant, puis les points des faits de jeu.
+ */
+function messageAmong(etat: EtatClient): string {
+  const fin = etat.fin?.among;
+  const notre = fin?.joueurs.find((joueur) => joueur.id === etat.moi)?.role;
+  const camp = fin?.vainqueur === 'tueurs' ? 'Les assassins l’emportent' : 'Les proies l’emportent';
+
+  if (notre === undefined) {
+    return camp;
+  }
+
+  return `${(notre === 'tueur') === (fin?.vainqueur === 'tueurs') ? 'Victoire !' : 'Défaite.'} ${camp}`;
 }
 
 /** Le tiret d'une statistique sans objet. */

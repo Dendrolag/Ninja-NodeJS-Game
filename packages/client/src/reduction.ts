@@ -672,7 +672,7 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
 
     // Ce que nous savons de nous-memes dans Among Ninjas, que le serveur ne dit qu'a nous.
     case 'amongNinjas':
-      return { ...etat, ecran, among: avecLEtatPrive(etat.among, action.prive) };
+      return { ...etat, ecran, among: avecLEtatPrive(etat.among, action.prive, action.instant) };
 
     case 'monVote':
       return { ...etat, ecran, among: avecMonVote(etat.among, action.cible) };

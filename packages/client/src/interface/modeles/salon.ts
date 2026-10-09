@@ -20,8 +20,9 @@
  * de Black Ninjas: le recapitulatif n'en parle pas.
  */
 
-import type { Couleur, Equipe, Mode, ReglagesPartie } from '@neon-ninja/shared';
+import type { Couleur, Equipe, Mode, PalierDeVision, ReglagesPartie } from '@neon-ninja/shared';
 import {
+  AMONG_PAR_DEFAUT,
   CHASSE,
   COULEURS_DES_EQUIPES,
   EQUIPES,
@@ -304,6 +305,43 @@ function consigne(
     : `En attente de ${pseudoHote}, qui lancera la partie.`;
 }
 
+/** Les noms des paliers de vision, tels que le salon les ecrit. */
+const PALIERS_AFFICHES: Readonly<Record<PalierDeVision, string>> = {
+  reduite: 'réduite',
+  normale: 'normale',
+  large: 'large',
+};
+
+/**
+ * Le recapitulatif d'une partie Among Ninjas (etape 7.20): la carte et les reglages du mode. Ni
+ * duree de partie, ni Black Ninjas, ni bonus, malus ou zones: le mode les retire.
+ */
+function recapitulatifAmong(reglages: ReglagesPartie): readonly LigneRecapitulatif[] {
+  const among = reglages.among ?? AMONG_PAR_DEFAUT;
+
+  return [
+    { libelle: 'Carte', valeur: carteDeLaPartie(reglages) },
+    { libelle: 'Assassins', valeur: `${String(among.tueurs)} au plus, selon les joueurs` },
+    { libelle: 'Tâches par proie', valeur: String(among.tachesParProie) },
+    { libelle: 'Recharge du meurtre', valeur: `${String(among.rechargeMeurtreS)} s` },
+    {
+      libelle: 'Tour',
+      valeur:
+        among.dureeDuTourS === 0 ? 'Sans limite' : `${String(among.dureeDuTourS / 60)} min au plus`,
+    },
+    {
+      libelle: 'Réunion',
+      valeur: `Discussion ${String(among.discussionS)} s · vote ${String(among.voteS)} s`,
+    },
+    { libelle: 'Votes', valeur: among.votesAnonymes ? 'Anonymes' : 'Nommés' },
+    {
+      libelle: 'Vision',
+      valeur: `Proies ${PALIERS_AFFICHES[among.visionProie]} · assassins ${PALIERS_AFFICHES[among.visionTueur]}`,
+    },
+    { libelle: 'Foule', valeur: `${String(among.foule)} PNJ` },
+  ];
+}
+
 /**
  * Le recapitulatif des reglages, lisible par tous.
  *
@@ -315,6 +353,10 @@ function consigne(
  * figurent pas. Seul le Tactique a ses objets (etape 7.7): la ligne n'apparait que la.
  */
 function recapitulatif(reglages: ReglagesPartie, mode: Mode): readonly LigneRecapitulatif[] {
+  if (mode === 'among') {
+    return recapitulatifAmong(reglages);
+  }
+
   const bonusActifs = TYPES_BONUS.filter((nature) => reglages.bonus.types[nature].actif).length;
   const malusActifs = TYPES_MALUS.filter((nature) => reglages.malus.types[nature].actif).length;
   const zonesActives = TYPES_ZONE.filter((nature) => reglages.zones.types[nature]).length;

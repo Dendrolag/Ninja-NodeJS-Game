@@ -246,7 +246,7 @@ export type Action =
   /** Ce que nous avons en poche vient de changer (etape 7.10). Absent: la poche est vide. */
   | { readonly type: 'poche'; readonly poche: ObjetDePoche | undefined }
   /** Ce que nous savons de nous-memes dans Among Ninjas vient de changer (etape 7.20). */
-  | { readonly type: 'amongNinjas'; readonly prive: EtatPriveAmong }
+  | { readonly type: 'amongNinjas'; readonly prive: EtatPriveAmong; readonly instant: number }
   /** Nous venons de voter, pendant une reunion d'Among Ninjas (etape 7.20). */
   | { readonly type: 'monVote'; readonly cible: string | null }
   /** Une demande du joueur a ete refusee. */

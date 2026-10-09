@@ -173,7 +173,7 @@ export function monterFormulaireReglages(options: OptionsFormulaireReglages): Fo
     for (const champ of tousLesChamps()) {
       const elements = saisies.get(champ.chemin) ?? [];
 
-      if (champ.nature === 'carte') {
+      if (champ.nature === 'carte' || champ.nature === 'choix') {
         valeurs[champ.chemin] = elements.find((element) => element.checked)?.value ?? '';
       } else if (champ.nature === 'interrupteur') {
         valeurs[champ.chemin] = elements[0]?.checked === true;
@@ -190,7 +190,7 @@ export function monterFormulaireReglages(options: OptionsFormulaireReglages): Fo
       const valeur = valeurs[champ.chemin];
 
       for (const element of saisies.get(champ.chemin) ?? []) {
-        if (champ.nature === 'carte') {
+        if (champ.nature === 'carte' || champ.nature === 'choix') {
           element.checked = element.value === valeur;
         } else if (champ.nature === 'interrupteur') {
           element.checked = valeur === true;
@@ -497,6 +497,45 @@ function champEnElement(
         'div',
         { classe: 'champ-carte', attributs: { role: 'radiogroup', 'aria-label': champ.libelle } },
         ...choix.map(({ element }) => element),
+        motif,
+      );
+    }
+
+    // Une liste fermee, en boutons radio cote a cote (etape 7.20).
+    case 'choix': {
+      const options = champ.options.map((option) => {
+        const saisie = creer(doc, 'input', {
+          attributs: {
+            type: 'radio',
+            name: `choix-${champ.chemin}`,
+            value: option.valeur,
+            'data-chemin': champ.chemin,
+          },
+        });
+
+        return {
+          saisie,
+          element: creer(
+            doc,
+            'label',
+            { classe: 'choix-option' },
+            saisie,
+            creer(doc, 'span', { texte: option.libelle }),
+          ),
+        };
+      });
+
+      saisies.set(
+        champ.chemin,
+        options.map(({ saisie }) => saisie),
+      );
+
+      return creer(
+        doc,
+        'div',
+        { classe: 'champ-choix', attributs: { role: 'radiogroup', 'aria-label': champ.libelle } },
+        creer(doc, 'span', { classe: 'champ-libelle', texte: champ.libelle }),
+        creer(doc, 'span', { classe: 'choix-options' }, ...options.map(({ element }) => element)),
         motif,
       );
     }

@@ -39,14 +39,39 @@ export interface AmongClient {
    * Un mort que personne n'a encore trouve n'y est pas, sauf pour qui l'a vu.
    */
   readonly morts: readonly string[];
+  /**
+   * L'instant local ou le serveur nous a dit notre tache commencee: la jauge en part. Absent
+   * hors d'une tache en cours.
+   */
+  readonly tacheDebuteeA?: number;
 }
 
 /** Rien de connu: le debut d'une partie. */
 export const AMONG_INCONNU: AmongClient = { prive: undefined, reunion: undefined, morts: [] };
 
-/** Ce que nous savons de nous-memes vient de changer. */
-export function avecLEtatPrive(among: AmongClient, prive: EtatPriveAmong): AmongClient {
-  return { ...among, prive };
+/**
+ * Ce que nous savons de nous-memes vient de changer, a cet instant local. Une tache qui
+ * commence, ou qui change, part de cet instant; une tache lachee n'a plus d'instant.
+ */
+export function avecLEtatPrive(
+  among: AmongClient,
+  prive: EtatPriveAmong,
+  instant: number,
+): AmongClient {
+  const { tacheDebuteeA: _ancienne, ...sansTache } = among;
+
+  if (prive.tacheEnCours === undefined) {
+    return { ...sansTache, prive };
+  }
+
+  const memeTache =
+    among.prive?.tacheEnCours === prive.tacheEnCours && among.tacheDebuteeA !== undefined;
+
+  return {
+    ...sansTache,
+    prive,
+    tacheDebuteeA: memeTache ? (among.tacheDebuteeA as number) : instant,
+  };
 }
 
 /** Ce qui se passe en reunion, a ajouter a ce que la page sait. */

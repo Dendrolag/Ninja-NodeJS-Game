@@ -65,6 +65,7 @@ import type { Container as ConteneurPixi } from 'pixi.js';
 import {
   Application,
   Assets,
+  ColorMatrixFilter,
   Container,
   Graphics,
   Rectangle,
@@ -84,6 +85,7 @@ import {
   MARGE_HORS_CHAMP_PX,
   PLUIE,
   VAISSEAU,
+  VISION_AMONG,
 } from './apparence.js';
 import type { Camera, ZoneVisible } from './camera.js';
 import { dansLaZone, versEcran, zoneVisible } from './camera.js';
@@ -95,6 +97,7 @@ import type { FormeDeSang } from './sang.js';
 import { opaciteDuVaisseau, placeAffichee, placeDeLOmbre, rotationDuSprite } from './vaisseau.js';
 import {
   adresseAuxYeuxRouges,
+  adresseCoupee,
   adresseDImage,
   adresseDesDetails,
   adresseDuCorps,
@@ -346,6 +349,23 @@ function rangerLesCalques(adresse: string, texture: Texture): void {
   Assets.cache.set(adresseDuCorps(raye), textureDePixels(rayures, largeur, hauteur));
   Assets.cache.set(adresseDesDetails(raye), details);
 
+  // Le haut et le bas du meme ninja, l'autre moitie transparente: les deux moities d'un cadavre
+  // d'Among Ninjas (etape 7.20).
+  for (const moitie of ['haut', 'bas'] as const) {
+    const coupee = adresseCoupee(adresse, moitie);
+    const garder = (ligne: number): boolean =>
+      moitie === 'haut' ? ligne < hauteur / 2 : ligne >= hauteur / 2;
+
+    Assets.cache.set(
+      adresseDuCorps(coupee),
+      textureDePixels(moitieDe(calques.corps, largeur, garder), largeur, hauteur),
+    );
+    Assets.cache.set(
+      adresseDesDetails(coupee),
+      textureDePixels(moitieDe(calques.details, largeur, garder), largeur, hauteur),
+    );
+  }
+
   // Le meme ninja, les yeux rougis: le Black Ninja (etape 5.8). Son corps est celui de l'image
   // d'origine, que le rendu teint en noir.
   const yeuxRouges = adresseAuxYeuxRouges(adresse);
@@ -355,6 +375,23 @@ function rangerLesCalques(adresse: string, texture: Texture): void {
     adresseDesDetails(yeuxRouges),
     textureDePixels(rougirLesYeux(calques.details, YEUX_DU_BLACK_NINJA.couleur), largeur, hauteur),
   );
+}
+
+/** Les pixels d'une image dont seules les lignes gardees restent; les autres, transparents. */
+function moitieDe(
+  pixels: Uint8ClampedArray,
+  largeur: number,
+  garder: (ligne: number) => boolean,
+): Uint8ClampedArray {
+  const moitie = Uint8ClampedArray.from(pixels);
+
+  for (let index = 0; index < moitie.length; index += 4) {
+    if (!garder(Math.floor(index / 4 / largeur))) {
+      moitie[index + 3] = 0;
+    }
+  }
+
+  return moitie;
 }
 
 /** Range chaque image d'une planche d'objet comme une texture, qui partage l'image chargee. */
@@ -519,6 +556,29 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   // Les nuages de fumee, au meme niveau: ils cachent le ninja qui part (etape 7.10).
   const fumees = new Graphics();
   const premierPlan = new Container();
+  // Hors du cercle de vision d'Among Ninjas, le decor eteint: une copie du fond et de l'avant-
+  // plan, sans couleur et assombrie de moitie, percee d'un disque (etape 7.20). Cachee ailleurs.
+  const eteint = new Container();
+  const fondEteint = new Sprite();
+  const dessusEteint = new Sprite();
+  const disqueDeVision = new Graphics();
+  const filtreEteint = new ColorMatrixFilter();
+  filtreEteint.desaturate();
+
+  // Le filtre se pose sur chaque image, pas sur le conteneur masque: sur le conteneur, il se
+  // bornait au cadre du disque, et le decor restait en couleur au-dela.
+  fondEteint.filters = [filtreEteint];
+  dessusEteint.filters = [filtreEteint];
+  // Un voile noir par-dessus la copie, pour l'assombrir de moitie (VISION_AMONG).
+  const voile = new Graphics()
+    .rect(0, 0, options.carte.largeur, options.carte.hauteur)
+    .fill({ color: 0x000000, alpha: VISION_AMONG.voile });
+  eteint.addChild(fondEteint, dessusEteint, voile);
+  // Le masque est la carte percee du disque: le decor eteint se montre partout, sauf dedans.
+  eteint.mask = disqueDeVision;
+  eteint.visible = false;
+  // Les pseudos des joueurs d'Among Ninjas, par-dessus le decor eteint (etape 7.20).
+  const libelles = new Container();
   const reperes = new Graphics();
   /** Le numero de l'image en cours: il marque les personnages que la scene nomme encore. */
   let numeroDImage = 0;
@@ -535,6 +595,9 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
     textesDesMarques,
     fumees,
     premierPlan,
+    eteint,
+    disqueDeVision,
+    libelles,
     reperes,
   );
   application.stage.addChild(monde);
@@ -559,6 +622,7 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   const calquesParImage = new Map<string, Calques>();
   const spritesObjets = new Map<string, Sprite>();
   const badges = new Map<string, Text>();
+  const textesDesLibelles = new Map<string, Text>();
 
   const fond = new Sprite();
   const dessus = new Sprite();
@@ -692,7 +756,14 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       // decor les montre. Spirit & Time (etape 8.8) et le Quartier sont dessines
       // a leur taille: l'etirement n'y change rien.
       // En miroir, le decor se retourne ici, et lui seul (etape 8.3, rendu/miroir.ts).
-      for (const couche of [fond, dessus]) {
+      fondEteint.texture = texteFond;
+      dessusEteint.visible = texteDessus !== undefined;
+
+      if (texteDessus !== undefined) {
+        dessusEteint.texture = texteDessus;
+      }
+
+      for (const couche of [fond, dessus, fondEteint, dessusEteint]) {
         couche.width = options.carte.largeur;
         couche.height = options.carte.hauteur;
         orienterLeDecor(couche, options.carte.largeur, options.modeMiroir);
@@ -763,6 +834,8 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       // Les explosions des mines et les impacts de tir passent avec les nuages, par-dessus les
       // personnages.
       dessinerLesDisques(fumees, [...scene.fumees, ...scene.explosions, ...scene.impacts], champ);
+      poserLaVision(eteint, disqueDeVision, scene.vision, options.carte);
+      dessinerLesLibelles(libelles, textesDesLibelles, scene.libelles ?? []);
       dessinerLesReperes(reperes, scene.reperes);
     },
 
@@ -778,8 +851,81 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       calquesParImage.clear();
       spritesObjets.clear();
       badges.clear();
+      textesDesLibelles.clear();
     },
   };
+}
+
+/**
+ * Le cercle de vision d'Among Ninjas (etape 7.20): le decor eteint se montre, perce d'un disque
+ * centre sur nous. Sans cercle, il se cache.
+ */
+function poserLaVision(
+  eteint: Container,
+  masque: Graphics,
+  vision: { readonly x: number; readonly y: number; readonly rayon: number } | undefined,
+  carte: DimensionsCarte,
+): void {
+  eteint.visible = vision !== undefined;
+  masque.clear();
+
+  if (vision !== undefined) {
+    masque
+      .rect(0, 0, carte.largeur, carte.hauteur)
+      .fill(0xffffff)
+      .circle(vision.x, vision.y, vision.rayon)
+      .cut();
+  }
+}
+
+/** Pose les pseudos au-dessus des joueurs, un texte par libelle, repris d'une image a l'autre. */
+function dessinerLesLibelles(
+  conteneur: Container,
+  textes: Map<string, Text>,
+  libelles: readonly {
+    readonly id: string;
+    readonly texte: string;
+    readonly x: number;
+    readonly y: number;
+    readonly couleur: number;
+  }[],
+): void {
+  const vus = new Set<string>();
+
+  for (const libelle of libelles) {
+    vus.add(libelle.id);
+    let texte = textes.get(libelle.id);
+
+    if (texte === undefined) {
+      texte = new Text({
+        text: libelle.texte,
+        style: {
+          fill: libelle.couleur,
+          fontSize: VISION_AMONG.taillePseudo,
+          fontFamily: POLICE_DES_LIBELLES,
+          fontWeight: '700',
+          stroke: { color: 0x000000, width: 3 },
+        },
+        resolution: 3,
+      });
+      texte.anchor.set(0.5);
+      conteneur.addChild(texte);
+      textes.set(libelle.id, texte);
+    }
+
+    if (texte.text !== libelle.texte) {
+      texte.text = libelle.texte;
+    }
+
+    texte.position.set(libelle.x, libelle.y);
+  }
+
+  for (const [id, texte] of textes) {
+    if (!vus.has(id)) {
+      texte.destroy();
+      textes.delete(id);
+    }
+  }
 }
 
 /**

@@ -18,7 +18,7 @@
  */
 
 import type { ConfigurationPartie, IdentifiantCarte, Mode, Visibilite } from '@neon-ninja/shared';
-import { CAPACITES, CARTES, MODES, validerDemandeCreation } from '@neon-ninja/shared';
+import { AMONG, CAPACITES, CARTES, MODES, validerDemandeCreation } from '@neon-ninja/shared';
 
 import type { EtatClient } from '../../etat.js';
 import { formaterDuree } from '../../hud/modele.js';
@@ -102,16 +102,31 @@ export function modeleCreation(etat: EtatClient, saisie: SaisieDeCreation): Mode
     titre: `${NOMS_DES_MODES[saisie.mode]} · ${carteSaisie(saisie.valeurs)}`,
     recapitulatif: [
       { libelle: 'Visibilité', valeur: VISIBILITES_AFFICHEES[saisie.visibilite] },
-      {
-        libelle: 'Durée',
-        valeur: fautes.has('dureePartieS')
-          ? '—'
-          : formaterDuree(Number(saisie.valeurs['dureePartieS']) * 1000),
-      },
-      {
-        libelle: 'PNJ',
-        valeur: fautes.has('nombreBotsInitial') ? '—' : String(saisie.valeurs['nombreBotsInitial']),
-      },
+      // Among Ninjas n'a ni duree de partie ni PNJ au depart: ses joueurs et sa foule (etape 7.20).
+      ...(saisie.mode === 'among'
+        ? [
+            { libelle: 'Joueurs', valeur: `${String(AMONG.JOUEURS_MINIMUM)} au moins` },
+            {
+              libelle: 'Foule',
+              valeur: fautes.has('among.foule')
+                ? '—'
+                : `${String(saisie.valeurs['among.foule'])} PNJ`,
+            },
+          ]
+        : [
+            {
+              libelle: 'Durée',
+              valeur: fautes.has('dureePartieS')
+                ? '—'
+                : formaterDuree(Number(saisie.valeurs['dureePartieS']) * 1000),
+            },
+            {
+              libelle: 'PNJ',
+              valeur: fautes.has('nombreBotsInitial')
+                ? '—'
+                : String(saisie.valeurs['nombreBotsInitial']),
+            },
+          ]),
       { libelle: 'Capacité', valeur: `${String(CAPACITES[saisie.mode])} joueurs` },
     ],
     pseudoRequis: pseudo.requis,

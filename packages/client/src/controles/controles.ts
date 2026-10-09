@@ -52,7 +52,13 @@ export class Controles {
 
   /** Une touche vient d'etre enfoncee. */
   enfoncer(touche: string): void {
-    this.enfoncees.add(nomDeTouche(touche));
+    const nom = nomDeTouche(touche);
+
+    if (nom === TOUCHE_POCHE) {
+      this.appuiEnAttente = true;
+    }
+
+    this.enfoncees.add(nom);
   }
 
   /** Une touche vient d'etre relachee. */
@@ -98,9 +104,19 @@ export class Controles {
   /** Ce qui a ete annonce du bouton d'action: tenu ou non. */
   private actionEmise = false;
 
+  /**
+   * Un appui pas encore annonce: une touche ou un doigt enfonce puis leve entre deux images
+   * compte quand meme pour une image. Sans cela, un appui bref se perdait.
+   */
+  private appuiEnAttente = false;
+
   /** Le doigt tient ou lache le bouton d'action d'Among Ninjas (etape 7.20). */
   tenirLAction(tenue: boolean): void {
     this.actionAuDoigt = tenue;
+
+    if (tenue) {
+      this.appuiEnAttente = true;
+    }
   }
 
   /**
@@ -116,7 +132,8 @@ export class Controles {
    * le deplacement, un etat qui ne part qu'a son changement.
    */
   actionAEmettre(): boolean | undefined {
-    const tenue = this.actionTenue();
+    const tenue = this.actionTenue() || this.appuiEnAttente;
+    this.appuiEnAttente = false;
 
     if (tenue === this.actionEmise) {
       return undefined;
@@ -244,5 +261,6 @@ export class Controles {
     this.tirDemande = false;
     this.pocheDemandee = false;
     this.actionEmise = false;
+    this.appuiEnAttente = false;
   }
 }

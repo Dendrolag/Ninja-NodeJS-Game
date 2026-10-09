@@ -43,6 +43,7 @@ import {
   TYPES_MALUS_TACTIQUES,
   TYPES_OBJETS_DE_POCHE,
   TYPES_ZONE,
+  DUREES_DE_TOUR_S,
   cheminFondDeNuit,
   cheminPluie,
   validerReglages,
@@ -66,6 +67,17 @@ export type ChampReglage =
       readonly unite: string;
       /** Present, le champ est un curseur de ce pas; absent, une saisie. */
       readonly pas?: number;
+    }
+  /**
+   * Une valeur prise dans une liste fermee (etape 7.20): la duree d'un tour, un palier de
+   * vision. Numerique quand le reglage est un nombre.
+   */
+  | {
+      readonly nature: 'choix';
+      readonly chemin: string;
+      readonly libelle: string;
+      readonly options: readonly { readonly valeur: string; readonly libelle: string }[];
+      readonly numerique: boolean;
     };
 
 /** Un groupe de champs sous un intertitre facultatif. */
@@ -107,6 +119,9 @@ const CHAMPS_ABSENTS: Readonly<Partial<Record<Mode, readonly string[]>>> = {
   massacre: ['zones.types.chaos'],
   // La Chasse n'a pas d'Evade (etape 7.9).
   chasse: ['evade'],
+  // Among Ninjas impose Tokyo, n'a ni duree de partie ni Evade, et regle sa foule a part
+  // (etape 7.20).
+  among: ['carte', 'evade', 'dureePartieS', 'nombreBotsInitial'],
 };
 
 /** Ce champ se regle-t-il dans ce mode ? */
@@ -188,6 +203,13 @@ const interrupteur = (chemin: string, libelle: string): ChampReglage => ({
   libelle,
 });
 
+/** Les paliers de vision, tels que l'hote les choisit. */
+const PALIERS = [
+  { valeur: 'reduite', libelle: 'Réduite' },
+  { valeur: 'normale', libelle: 'Normale' },
+  { valeur: 'large', libelle: 'Large' },
+] as const;
+
 /**
  * Tous les reglages de la partie, dans l'ordre ou l'hote les lit.
  *
@@ -228,9 +250,76 @@ export const GROUPES_REGLAGES: readonly GroupeReglages[] = [
       },
     ],
   },
+  // Among Ninjas (etape 7.20): valeurs confirmees par le porteur du projet le 6 octobre 2026.
+  {
+    titre: 'Among Ninjas',
+    presentEn: ['among'],
+    note: 'Se joue sur Tokyo, à cinq joueurs au moins. Le nombre d’assassins se ramène à ce que le nombre de joueurs permet : un jusqu’à six, deux jusqu’à huit, trois au-delà.',
+    sections: [
+      {
+        titre: undefined,
+        champs: [
+          {
+            nature: 'entier',
+            chemin: 'among.tueurs',
+            libelle: 'Assassins',
+            bornes: BORNES_REGLAGES.among.tueurs,
+            unite: '',
+          },
+          {
+            nature: 'entier',
+            chemin: 'among.tachesParProie',
+            libelle: 'Tâches par proie',
+            bornes: BORNES_REGLAGES.among.tachesParProie,
+            unite: '',
+          },
+          secondes(
+            'among.rechargeMeurtreS',
+            'Recharge du meurtre',
+            BORNES_REGLAGES.among.rechargeMeurtreS,
+          ),
+          {
+            nature: 'choix',
+            chemin: 'among.dureeDuTourS',
+            libelle: 'Durée maximale d’un tour',
+            options: DUREES_DE_TOUR_S.map((duree) => ({
+              valeur: String(duree),
+              libelle: duree === 0 ? 'Aucune' : `${String(duree / 60)} min`,
+            })),
+            numerique: true,
+          },
+          secondes('among.discussionS', 'Discussion', BORNES_REGLAGES.among.discussionS),
+          secondes('among.voteS', 'Vote', BORNES_REGLAGES.among.voteS),
+          interrupteur('among.votesAnonymes', 'Votes anonymes'),
+          {
+            nature: 'choix',
+            chemin: 'among.visionProie',
+            libelle: 'Vision des proies',
+            options: PALIERS,
+            numerique: false,
+          },
+          {
+            nature: 'choix',
+            chemin: 'among.visionTueur',
+            libelle: 'Vision des assassins',
+            options: PALIERS,
+            numerique: false,
+          },
+          {
+            nature: 'entier',
+            chemin: 'among.foule',
+            libelle: 'PNJ de la foule',
+            bornes: BORNES_REGLAGES.among.foule,
+            unite: '',
+            pas: 5,
+          },
+        ],
+      },
+    ],
+  },
   {
     titre: 'Black Ninjas',
-    absentEn: ['chasse'],
+    absentEn: ['chasse', 'among'],
     sections: [
       {
         titre: undefined,
@@ -266,6 +355,7 @@ export const GROUPES_REGLAGES: readonly GroupeReglages[] = [
   },
   {
     titre: 'Bonus',
+    absentEn: ['among'],
     sections: [
       {
         titre: undefined,
@@ -306,6 +396,7 @@ export const GROUPES_REGLAGES: readonly GroupeReglages[] = [
   },
   {
     titre: 'Malus',
+    absentEn: ['among'],
     sections: [
       {
         titre: undefined,
@@ -362,6 +453,7 @@ export const GROUPES_REGLAGES: readonly GroupeReglages[] = [
   // gardent leurs chemins et prennent le sens de la mine (micro-decision 1 de la fiche).
   {
     titre: 'Zones spéciales',
+    absentEn: ['among'],
     note: 'La carte pose des mines de zone, à la couleur de la zone qu’elles cachent : un joueur ou un Black Ninja qui passe dessus ouvre la zone 3 secondes plus tard.',
     sections: [
       {
@@ -491,6 +583,9 @@ function convertir(champ: ChampReglage, valeur: ValeurDeChamp): unknown {
 
       return texte === '' ? Number.NaN : Number(texte);
     }
+
+    case 'choix':
+      return champ.numerique ? Number(valeur) : String(valeur);
   }
 }
 

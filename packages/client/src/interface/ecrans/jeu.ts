@@ -42,6 +42,7 @@ import { HAUTEUR_DE_VUE_TACTIQUE_PX } from '../../rendu/apparence.js';
 import { lancerLaBoucle } from '../../rendu/boucle.js';
 import { monterRendu, prechargerLesSprites } from '../../rendu/pixi.js';
 import { jeSuisHote } from '../../selecteurs.js';
+import { monterEcransAmong } from '../composants/among.js';
 import { monterFenetre } from '../composants/fenetre.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import type { ContexteEcran, EcranAffiche } from './types.js';
@@ -64,7 +65,9 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
   // dans le Massacre (etape 7.4): le bouton ne se montre qu'a qui porte une arme, une proie
   // n'en a pas.
   const mode = client.etat.salon?.mode;
-  const tactique = mode === 'tactique' || mode === 'chasse' || mode === 'massacre';
+  // L'assassin d'Among Ninjas tue avec le meme bouton (etape 7.20); une proie n'en a pas.
+  const tactique =
+    mode === 'tactique' || mode === 'chasse' || mode === 'massacre' || mode === 'among';
 
   const controles = new Controles();
   controles.reinitialiser();
@@ -142,6 +145,9 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
     ),
   );
 
+  // Les ecrans d'Among Ninjas par-dessus la carte: revelation, reunion, ejection (etape 7.20).
+  const ecransAmong = mode === 'among' ? monterEcransAmong(doc, client) : undefined;
+
   const racine = creer(
     doc,
     'section',
@@ -151,6 +157,7 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
     zoneHud,
     chargement,
     actions,
+    ecransAmong?.racine,
     confirmation.racine,
   );
 
@@ -228,6 +235,14 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
       utiliserLaPoche: () => {
         controles.demanderLaPoche();
       },
+      // Le bouton d'action d'Among Ninjas, tenu au doigt (etape 7.20).
+      ...(mode === 'among'
+        ? {
+            agir: (tenue: boolean) => {
+              controles.tenirLAction(tenue);
+            },
+          }
+        : {}),
     });
     aRetirer.push(() => {
       surcouche.demonter();
@@ -349,6 +364,7 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
 
       montrer(pause, hote && !enPause);
       montrer(reprendre, hote && enPause);
+      ecransAmong?.afficher(etat);
     },
 
     demonter() {
@@ -359,6 +375,7 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
       }
 
       confirmation.demonter();
+      ecransAmong?.demonter();
       racine.remove();
     },
   };

@@ -984,6 +984,109 @@
 }
 
 /*
+ * Le bandeau d'Among Ninjas (etape 7.20), a la place du role de la Chasse: notre role, sa
+ * consigne, nos taches, la barre commune des taches, et la jauge de la tache en cours. Cyan
+ * pour une proie, rose pour un assassin, pale pour un fantome.
+ */
+.hud-among {
+  --couleur-camp: var(--cyan);
+
+  position: absolute;
+  top: calc(var(--debut-barre) + var(--hauteur-barre) + 8px);
+  right: var(--marge-de-droite);
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  width: 210px;
+  padding: 8px 14px;
+  border: 1px solid var(--couleur-camp);
+  border-radius: 14px;
+  background: var(--fond-verre);
+  backdrop-filter: blur(8px);
+  text-align: right;
+}
+
+.hud-among[data-camp='tueur'] {
+  --couleur-camp: var(--rose);
+}
+
+.hud-among.fantome {
+  --couleur-camp: #d8f0ff;
+
+  opacity: 0.85;
+}
+
+.hud-among-role {
+  color: var(--couleur-camp);
+  font-family: var(--police-titre);
+  font-size: 18px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hud-among-consigne,
+.hud-among-mes-taches {
+  color: var(--texte-secondaire);
+  font-size: 12px;
+}
+
+.hud-among-barre,
+.hud-among-jauge {
+  position: relative;
+  width: 100%;
+  height: 14px;
+  overflow: hidden;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.hud-among-jauge {
+  height: 6px;
+}
+
+.hud-among-barre-remplie,
+.hud-among-jauge-remplie {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--part, 0) * 100%);
+  background: linear-gradient(90deg, #1fbf4c, #a8ff3e);
+  transition: width 0.3s ease;
+}
+
+.hud-among-jauge-remplie {
+  background: var(--jaune, #ffe81a);
+  transition: none;
+}
+
+.hud-among-barre-texte {
+  position: relative;
+  display: block;
+  color: #fff;
+  font-family: var(--police-donnees);
+  font-size: 10px;
+  line-height: 14px;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+/* Le bouton d'action d'Among Ninjas, colore selon ce qu'il fera (etape 7.20). */
+.hud-action {
+  --couleur-bouton: #2ee6ff;
+}
+
+.hud-action[data-geste='signaler'] {
+  --couleur-bouton: #ff8c1a;
+}
+
+.hud-action[data-geste='gong'] {
+  --couleur-bouton: #ff4fd8;
+}
+
+.hud-action.vide {
+  filter: saturate(0.3) brightness(0.7);
+}
+
+/*
  * Le combo d'une partie Massacre (etape 7.4) ou Horde (etape 7.5), reduit a son
  * multiplicateur (9 octobre 2026, a la demande du porteur du projet): un « x2 » penche,
  * sans fond, a droite sous le radar, et un trait de vitesse dessous, la fenetre du combo qui
@@ -1192,6 +1295,15 @@
     padding: 6px 12px;
   }
 
+  .hud-among {
+    width: 170px;
+    padding: 6px 10px;
+  }
+
+  .hud-among-role {
+    font-size: 15px;
+  }
+
   .hud-chasse-role {
     font-size: 15px;
   }
@@ -1314,5 +1426,389 @@
 
   .application[data-ecran='jeu'] .annonces {
     top: calc(env(safe-area-inset-top, 0px) + 56px);
+  }
+}
+
+/*
+ * Les ecrans d'Among Ninjas, par-dessus la carte (etape 7.20, planche
+ * docs/design/etape-7-20/1-planche.png): la revelation en rangee de tous les joueurs, la reunion
+ * en table ronde autour du gong, les votes en traits colores, l'ejection dans une bouche
+ * d'egout neon. Ils ne recoivent les clics que la ou il y a quelque chose a toucher.
+ */
+.among-ecrans {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.avatar-ninja {
+  width: 48px;
+  height: 48px;
+  image-rendering: pixelated;
+}
+
+.among-revelation,
+.among-reunion {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  background: rgba(6, 9, 20, 0.88);
+  backdrop-filter: blur(3px);
+}
+
+.among-revelation {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 14px;
+  padding: 24px;
+  text-align: center;
+}
+
+.among-titre {
+  margin: 0;
+  color: var(--cyan);
+  font-family: var(--police-titre);
+  font-size: clamp(26px, 5vw, 44px);
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 18px var(--cyan);
+}
+
+.among-revelation.assassin .among-titre {
+  color: var(--rose);
+  text-shadow: 0 0 18px var(--rose);
+}
+
+.among-consigne {
+  margin: 0;
+  color: var(--texte-secondaire);
+  font-size: 16px;
+}
+
+.among-rangee {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.among-joueur {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 78px;
+  padding: 10px 8px;
+  border: 2px solid transparent;
+  border-radius: 12px;
+}
+
+.among-joueur .avatar-ninja {
+  width: 64px;
+  height: 64px;
+}
+
+.among-joueur.complice {
+  border-color: var(--rose);
+  background: rgba(255, 46, 126, 0.16);
+}
+
+.among-joueur-pseudo {
+  color: #fff;
+  font-weight: 600;
+}
+
+.among-joueur-couleur {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.among-reunion {
+  display: grid;
+  grid-template:
+    'entete entete' auto
+    'table chat' 1fr
+    'passer chat' auto
+    / minmax(0, 1.5fr) minmax(240px, 1fr);
+  gap: 10px 16px;
+  padding: 14px 18px;
+}
+
+.among-reunion-entete {
+  grid-area: entete;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.among-reunion-titre {
+  margin: 0;
+  color: #fff;
+  font-family: var(--police-titre);
+  font-size: 18px;
+}
+
+.among-reunion-phase {
+  color: #ffe81a;
+  font-family: var(--police-donnees);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.among-table {
+  grid-area: table;
+  position: relative;
+  min-height: 240px;
+}
+
+.among-gong {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border: 3px solid var(--cyan);
+  border-radius: 50%;
+  box-shadow: 0 0 16px var(--cyan);
+  color: var(--cyan);
+  font-family: var(--police-titre);
+  font-size: 12px;
+  font-weight: 700;
+  transform: translate(-50%, -50%);
+}
+
+.among-traits {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.among-trait {
+  fill: none;
+  stroke-width: 3px;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 400;
+  stroke-dashoffset: 400;
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.8));
+  animation: among-trait 0.9s ease-out forwards;
+}
+
+@keyframes among-trait {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.among-place {
+  --couleur-joueur: #fff;
+
+  position: absolute;
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  min-width: 74px;
+  padding: 6px 8px 4px;
+  border: 2px solid var(--couleur-joueur);
+  border-radius: 12px;
+  background: rgba(27, 36, 64, 0.92);
+  color: #fff;
+  font: inherit;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+}
+
+.among-place:disabled {
+  cursor: default;
+}
+
+.among-place.moi {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4);
+}
+
+.among-place.choisi {
+  box-shadow: 0 0 14px var(--couleur-joueur);
+  background: color-mix(in srgb, var(--couleur-joueur) 30%, #1b2440);
+}
+
+.among-place.mort {
+  opacity: 0.4;
+}
+
+.among-place.mort::after {
+  content: '✕';
+  position: absolute;
+  top: 2px;
+  right: 6px;
+  color: var(--rose);
+  font-weight: 700;
+}
+
+.among-place-pseudo {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.among-place-vote {
+  display: none;
+  color: #ffe81a;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.among-reunion[data-phase='vote'] .among-place.a-vote .among-place-vote {
+  display: block;
+}
+
+.among-place-voix {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  min-width: 22px;
+  padding: 1px 6px;
+  border-radius: 11px;
+  background: #ffe81a;
+  color: #000;
+  font-weight: 700;
+}
+
+.among-passer {
+  grid-area: passer;
+  justify-self: center;
+}
+
+.among-passer.choisi {
+  box-shadow: 0 0 12px #fff;
+}
+
+.among-chat {
+  grid-area: chat;
+  min-height: 0;
+}
+
+.among-egout {
+  grid-area: chat;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.among-egout-bouche {
+  position: relative;
+  width: 180px;
+  height: 64px;
+  margin-top: 90px;
+  border: 4px solid var(--cyan);
+  border-radius: 50%;
+  background: #05060c;
+  box-shadow:
+    0 0 18px var(--cyan),
+    inset 0 0 18px rgba(46, 230, 255, 0.4);
+}
+
+/* La chute: un cadre qui s'arrete au milieu de la bouche, d'ou le ninja disparait. */
+.among-egout-chute {
+  position: absolute;
+  bottom: 50%;
+  left: 50%;
+  width: 90px;
+  height: 120px;
+  overflow: hidden;
+  transform: translateX(-50%);
+}
+
+.among-egout-chute .avatar-ninja {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 80px;
+  height: 80px;
+  transform: translateX(-50%);
+}
+
+.among-egout-chute.tombe .avatar-ninja {
+  animation: among-chute 2.6s ease-in 0.6s forwards;
+}
+
+@keyframes among-chute {
+  15% {
+    transform: translateX(-50%) translateY(-14px) rotate(-8deg);
+  }
+
+  to {
+    transform: translateX(-50%) translateY(130%) rotate(20deg);
+  }
+}
+
+.among-egout-texte {
+  margin: 0;
+  color: #fff;
+  font-family: var(--police-titre);
+  font-size: 22px;
+}
+
+.among-egout-detail {
+  margin: 0;
+  color: var(--texte-secondaire);
+}
+
+.among-chat-fantomes {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  width: min(320px, 45vw);
+  max-height: 40vh;
+  pointer-events: auto;
+  opacity: 0.92;
+}
+
+/* Sur un ecran etroit, la reunion passe en colonne: la table, puis le chat. */
+@media (max-width: 760px) {
+  .among-reunion {
+    grid-template:
+      'entete' auto
+      'table' minmax(220px, 1fr)
+      'passer' auto
+      'chat' minmax(140px, 0.8fr)
+      / 1fr;
+    padding: 10px;
+  }
+
+  .among-place {
+    min-width: 60px;
+    padding: 4px 5px 3px;
+  }
+
+  .among-place .avatar-ninja {
+    width: 34px;
+    height: 34px;
+  }
+
+  .among-joueur .avatar-ninja {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .among-trait {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+
+  .among-egout-chute.tombe .avatar-ninja {
+    animation: none;
+    opacity: 0;
   }
 }

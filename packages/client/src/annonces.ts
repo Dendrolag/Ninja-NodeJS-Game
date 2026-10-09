@@ -307,6 +307,21 @@ export function annonceDuFait(fait: FaitDeJeu, mode?: Mode, moi?: string): Annon
     case 'mineExplosee':
       return annonceDeLExplosion(fait.charge, moi);
 
+    // Among Ninjas (etape 7.20): la victime l'apprend, un temoin aussi; l'assassin, rien. Le
+    // nom du coupable ne s'ecrit pas: la victime l'a vu, et un temoin doit le reconnaitre.
+    case 'meurtre':
+      if (fait.charge.victime === moi) {
+        return { texte: 'Vous avez été éliminé : vous jouez en fantôme', ton: 'alerte' };
+      }
+
+      return fait.charge.tueur === moi
+        ? undefined
+        : { texte: 'Un meurtre, sous vos yeux !', ton: 'alerte' };
+
+    // La reunion a son propre ecran, par-dessus la carte.
+    case 'reunion':
+      return undefined;
+
     case 'joueurArrive':
       return { texte: `${fait.charge.pseudo} a rejoint la partie`, ton: 'info' };
 

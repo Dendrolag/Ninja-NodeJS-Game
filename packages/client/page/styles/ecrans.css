@@ -1202,6 +1202,49 @@
   gap: 10px;
 }
 
+/* Une liste fermee, en boutons cote a cote (etape 7.20): la duree d'un tour, un palier. */
+.champ-choix {
+  display: grid;
+  gap: 6px;
+}
+
+.choix-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.choix-option {
+  position: relative;
+  cursor: pointer;
+}
+
+.choix-option input {
+  position: absolute;
+  opacity: 0;
+}
+
+.choix-option span {
+  display: inline-block;
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(6, 8, 14, 0.6);
+  font-size: 13px;
+}
+
+.choix-option input:checked + span {
+  border-color: var(--cyan);
+  background: rgba(45, 230, 224, 0.16);
+  color: #fff;
+}
+
+.choix-option input:focus-visible + span {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
 .champ-nombre {
   width: 104px;
   min-height: 40px;
@@ -3016,4 +3059,21 @@
 .fin-plus-proche {
   color: var(--texte-secondaire);
   font-size: 13px;
+}
+
+/* Le role revele a la fin d'une partie Among Ninjas (etape 7.20). */
+.fin-role {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border: 1px solid var(--cyan);
+  border-radius: 8px;
+  color: var(--cyan);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.fin-role.assassin {
+  border-color: var(--rose);
+  color: var(--rose);
 }

@@ -20,6 +20,7 @@
  */
 
 import type {
+  AmongVu,
   EntiteVue,
   InstantanePartie,
   LigneClassement,
@@ -53,6 +54,8 @@ export interface VuePartie {
   readonly zones: readonly ZoneVue[];
   /** Le classement, du meilleur au moins bon. */
   readonly classement: readonly LigneClassement[];
+  /** Ou en est une partie Among Ninjas: sa phase, son temps, la barre des taches (etape 7.20). */
+  readonly among?: AmongVu;
 }
 
 /**
@@ -108,6 +111,7 @@ function vueDe(partie: InstantanePartie): VuePartie {
     objets: partie.objets,
     zones: partie.zones,
     classement: partie.classement,
+    ...(partie.among === undefined ? {} : { among: partie.among }),
   };
 }
 

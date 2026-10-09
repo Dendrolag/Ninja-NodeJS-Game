@@ -88,6 +88,8 @@ import type { Localisation } from './localisation.js';
 import { opaciteDeLocalisation, reperesDeLocalisation } from './localisation.js';
 import { minesDeLaScene } from './mines.js';
 import { marquesDuBlackNinja } from './blackNinja.js';
+import type { LibelleScene, VisionScene } from './among.js';
+import { RIEN_D_AMONG, alphaAmong, imageDAmong } from './among.js';
 import { adresseAuxYeuxRouges, adresseDImage, adresseRayee } from './textures.js';
 import type { EtatDuVaisseau, Trajectoire } from './vaisseau.js';
 import { ecouleDansLaPartie, etatDuVaisseau } from './vaisseau.js';
@@ -228,6 +230,13 @@ export interface Scene {
    * reperes, et son ombre au sol. Absent sur une carte sans vaisseau, et d'une scene vide.
    */
   readonly vaisseau?: VaisseauScene;
+  /**
+   * Les pseudos poses au-dessus des joueurs, dans Among Ninjas (etape 7.20). Absents ailleurs:
+   * le champ est facultatif, pour que les autres modes ne paient rien.
+   */
+  readonly libelles?: readonly LibelleScene[];
+  /** Le cercle de vision d'un vivant d'Among Ninjas (etape 7.20). Absent ailleurs. */
+  readonly vision?: VisionScene;
 }
 
 /**
@@ -373,8 +382,8 @@ export function construireScene(
 
   for (const { entite, x, y, enMouvement } of lissee.entites) {
     // Une mine posee (etape 7.11) ou une mine de zone (etape 7.12) n'est pas un personnage:
-    // chacune a sa propre couche.
-    if (entite.type === 'mine' || entite.type === 'mineDeZone') {
+    // chacune a sa propre couche. Un cadavre d'Among Ninjas non plus (etape 7.20, among.ts).
+    if (entite.type === 'mine' || entite.type === 'mineDeZone' || entite.type === 'cadavre') {
       continue;
     }
 
@@ -387,7 +396,10 @@ export function construireScene(
       continue;
     }
 
-    const alpha = cachee && estMoi ? ALPHA_INVISIBLE : 1;
+    // Un fantome d'Among Ninjas est translucide (etape 7.20).
+    const alpha =
+      (cachee && estMoi ? ALPHA_INVISIBLE : 1) *
+      alphaAmong(entite.type === 'joueur' ? entite.fantome : undefined);
 
     // L'Evade (etape 7.9): raye rouge et blanc, dans un halo qui pulse. Son corps n'est pas
     // teinte: ses rayures sont un calque a part, calcule sur le meme sprite.
@@ -528,6 +540,10 @@ export function construireScene(
         );
 
   const massacre = imageDuMassacre(etat, maintenant, niveauDeSang);
+  const among =
+    etat.salon?.mode === 'among'
+      ? imageDAmong(etat, lissee, adresseDeNinja('immobile', 1))
+      : RIEN_D_AMONG;
   const mode = etat.salon?.mode;
   // Nos effets du Tactique changent notre cone et se lisent sur l'arc (etape 7.7).
   const effets =
@@ -565,12 +581,15 @@ export function construireScene(
   );
 
   return {
-    disques: [...disques, ...massacre.disques],
+    disques: [...among.disques, ...disques, ...massacre.disques],
     cones,
     zones,
     objets,
     // Les cadavres d'abord: les vivants passent par-dessus.
-    entites: massacre.cadavres.length === 0 ? entites : [...massacre.cadavres, ...entites],
+    entites:
+      massacre.cadavres.length === 0 && among.cadavres.length === 0
+        ? entites
+        : [...among.cadavres, ...massacre.cadavres, ...entites],
     reperes,
     indicateur,
     marques,
@@ -584,6 +603,8 @@ export function construireScene(
     ...(trajectoire === undefined
       ? {}
       : { vaisseau: vaisseauDeLaScene(etat, lissee, trajectoire) }),
+    ...(among.libelles.length === 0 ? {} : { libelles: among.libelles }),
+    ...(among.vision === undefined ? {} : { vision: among.vision }),
   };
 }
 
@@ -617,7 +638,13 @@ function maVisee(
   mode: Mode | undefined,
   visee: Visee,
 ): readonly ConeScene[] {
-  if (mien === undefined || mien.entite.type !== 'joueur' || mien.entite.tactique === undefined) {
+  // L'assassin d'Among Ninjas tue au contact, sans viser (etape 7.20): pas de cone.
+  if (
+    mien === undefined ||
+    mien.entite.type !== 'joueur' ||
+    mien.entite.tactique === undefined ||
+    mode === 'among'
+  ) {
     return [];
   }
 

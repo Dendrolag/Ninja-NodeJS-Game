@@ -390,6 +390,13 @@ export class GameRoom {
   private readonly actionsTenues = new Set<IdentifiantEntite>();
 
   /**
+   * Les joueurs qui ont appuye sur le bouton d'action depuis le battement precedent, meme s'ils
+   * l'ont deja lache: un appui bref, enfonce puis lache entre deux battements, compte pour un
+   * battement. Sans cela, il se perdrait, et un signalement ou un gong avec lui.
+   */
+  private readonly appuisRecents = new Set<IdentifiantEntite>();
+
+  /**
    * Les votes demandes depuis le battement precedent (etape 7.20): un joueur, ou null pour
    * passer. Des gestes ponctuels, effaces a chaque battement, comme les tirs.
    */
@@ -603,6 +610,7 @@ export class GameRoom {
     this.tirsDemandes.delete(id);
     this.pochesDemandees.delete(id);
     this.actionsTenues.delete(id);
+    this.appuisRecents.delete(id);
     this.votesDemandes.delete(id);
 
     if (this.hoteCourant === id) {
@@ -638,6 +646,7 @@ export class GameRoom {
     this.tirsDemandes.delete(id);
     this.pochesDemandees.delete(id);
     this.actionsTenues.delete(id);
+    this.appuisRecents.delete(id);
     this.votesDemandes.delete(id);
 
     if (this.hoteCourant === id) {
@@ -925,6 +934,7 @@ export class GameRoom {
 
     if (this.statutCourant === 'enCours' && this.partie.joueurs[id] !== undefined) {
       this.actionsTenues.add(id);
+      this.appuisRecents.add(id);
     }
   }
 
@@ -989,6 +999,7 @@ export class GameRoom {
       this.tirsDemandes.size === 0 &&
       this.pochesDemandees.size === 0 &&
       this.actionsTenues.size === 0 &&
+      this.appuisRecents.size === 0 &&
       this.votesDemandes.size === 0
     ) {
       return this.intentions;
@@ -1006,7 +1017,7 @@ export class GameRoom {
       entrees[id] = { ...(entrees[id] ?? immobile), utiliserLaPoche: true };
     }
 
-    for (const id of this.actionsTenues) {
+    for (const id of new Set([...this.actionsTenues, ...this.appuisRecents])) {
       entrees[id] = { ...(entrees[id] ?? immobile), agir: true };
     }
 
@@ -1040,6 +1051,7 @@ export class GameRoom {
     this.tirsDemandes.clear();
     this.pochesDemandees.clear();
     this.votesDemandes.clear();
+    this.appuisRecents.clear();
     this.releve = releverLeBattement(this.releve, this.partie, this.cleDuJoueur);
 
     // Prevenir AVANT de constater la fin: le dernier battement d'une partie est

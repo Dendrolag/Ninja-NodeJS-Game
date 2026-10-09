@@ -50,3 +50,12 @@ export function adresseRayee(adresse: string): string {
 export function adresseAuxYeuxRouges(adresse: string): string {
   return `${adresse}#yeux-rouges`;
 }
+
+/**
+ * Le nom de la texture d'une moitie d'image de ninja: le haut ou le bas seulement, l'autre
+ * moitie transparente. Deux moities ecartees font le cadavre d'Among Ninjas (etape 7.20, rendu
+ * C de la planche docs/design/etape-7-20/).
+ */
+export function adresseCoupee(adresse: string, moitie: 'haut' | 'bas'): string {
+  return `${adresse}#${moitie}`;
+}

@@ -542,7 +542,7 @@ export function creerClient(options: OptionsClient): Client {
   // dit qu'a nous; le meurtre et la reunion sont des faits.
   ecouter(
     reseau.sur('amongNinjas', (prive) => {
-      magasin.appliquer({ type: 'amongNinjas', prive });
+      magasin.appliquer({ type: 'amongNinjas', prive, instant: maintenant() });
     }),
   );
 

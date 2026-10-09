@@ -455,6 +455,13 @@ function rangee(doc: Document, ligne: LigneFin, client: Client): HTMLElement {
       ligne.aUneFiche
         ? boutonDeFiche(doc, ligne.pseudo, 'fin-pseudo', client)
         : creer(doc, 'span', { texte: ligne.pseudo }),
+      // Le role, revele a la fin d'une partie Among Ninjas (etape 7.20).
+      ligne.role === undefined
+        ? undefined
+        : creer(doc, 'span', {
+            classe: ligne.role === 'Assassin' ? 'fin-role assassin' : 'fin-role',
+            texte: ligne.role,
+          }),
     ),
     creer(doc, 'td', { classe: 'nombre points', texte: String(ligne.points) }),
     ...ligne.statistiques.map((texte) => creer(doc, 'td', { classe: 'nombre', texte })),

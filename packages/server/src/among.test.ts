@@ -398,6 +398,19 @@ describe('la room d une partie Among Ninjas', () => {
     expect(room.etat.among?.joueurs[id]?.actionTenue).toBe(false);
   });
 
+  it('compte un appui bref, enfonce puis lache entre deux battements', () => {
+    const room = roomLancee();
+    const id = 's-A';
+
+    room.tenirLAction(id, true);
+    room.tenirLAction(id, false);
+    room.avancer(50);
+    expect(room.etat.among?.joueurs[id]?.actionTenue).toBe(true);
+
+    room.avancer(50);
+    expect(room.etat.among?.joueurs[id]?.actionTenue).toBe(false);
+  });
+
   it('ouvre le chat des vivants en reunion seulement, et celui des fantomes a tout moment', () => {
     const room = roomLancee();
     const { tueur, proies } = camps(room.etat);

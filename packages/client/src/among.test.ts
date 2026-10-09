@@ -87,7 +87,7 @@ describe('la reunion vue de la page', () => {
 describe('le reducteur', () => {
   it('retient l etat prive, la reunion et notre vote, et oublie tout au lancement', () => {
     const etat = apres([
-      { type: 'amongNinjas', prive: PROIE },
+      { type: 'amongNinjas', prive: PROIE, instant: 0 },
       {
         type: 'fait',
         fait: fait(
@@ -126,5 +126,19 @@ describe('le bouton d action tenu', () => {
     controles.tenirLAction(true);
     controles.reinitialiser();
     expect(controles.actionAEmettre()).toBeUndefined();
+  });
+
+  it('annonce un appui bref, enfonce puis lache entre deux images', () => {
+    const controles = new Controles();
+
+    controles.enfoncer('e');
+    controles.relacher('e');
+    expect(controles.actionAEmettre()).toBe(true);
+    expect(controles.actionAEmettre()).toBe(false);
+
+    controles.tenirLAction(true);
+    controles.tenirLAction(false);
+    expect(controles.actionAEmettre()).toBe(true);
+    expect(controles.actionAEmettre()).toBe(false);
   });
 });

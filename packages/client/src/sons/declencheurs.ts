@@ -82,6 +82,19 @@ export function sonDuFait(fait: FaitDeJeu, moi?: string, mode?: Mode): NomDeSon 
     case 'carteVidee':
       return undefined;
 
+    // Among Ninjas (etape 7.20), sons provisoires pris dans ceux du jeu: le meurtre sonne comme
+    // un coup de katana chez ceux qui le recoivent; la reunion s'ouvre au son du dernier
+    // decompte, et son resultat a celui d'une capture subie.
+    case 'meurtre':
+      return 'katanaImpact';
+
+    case 'reunion':
+      return fait.charge.quoi === 'ouverte'
+        ? 'compteAReboursFinal'
+        : fait.charge.quoi === 'resultat'
+          ? 'joueurCaptureSubi'
+          : undefined;
+
     // L'Evade (etape 7.9): son apparition s'entend de tous, et sa capture chez qui l'a
     // attrape. Un vol ou une perte du x2 accompagne une capture, qui a deja son son.
     case 'evade':

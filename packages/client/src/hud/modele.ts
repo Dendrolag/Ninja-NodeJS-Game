@@ -44,6 +44,8 @@ import {
 } from '@neon-ninja/shared';
 
 import type { EtatClient } from '../etat.js';
+import type { AmongHud } from './among.js';
+import { amongHud, rechargeDuMeurtreMs, tempsAmong } from './among.js';
 import { NOMS_DES_EQUIPES } from '../interface/modeles/cartes.js';
 import { APPARENCE_OBJET, adresseDeLIcone } from '../rendu/apparence.js';
 import {
@@ -207,6 +209,8 @@ export interface Hud {
   readonly restants: RestantsHud | undefined;
   /** Ce que le bouton d'action porte, selon le mode. */
   readonly arme: ArmeHud;
+  /** Notre role, les taches et le bouton d'action d'Among Ninjas (etape 7.20). Absent ailleurs. */
+  readonly among: AmongHud | undefined;
 }
 
 /** Un HUD vide, celui d'un ecran hors partie. */
@@ -226,6 +230,7 @@ export const HUD_VIDE: Hud = {
   combo: undefined,
   restants: undefined,
   arme: 'charges',
+  among: undefined,
 };
 
 /**
@@ -256,15 +261,22 @@ export function construireHud(etat: EtatClient, maintenant: number): Hud {
   }
 
   const mode = etat.salon?.mode;
+  // Among Ninjas n'a pas de duree de partie: le temps est celui de la phase, ou rien en jeu
+  // sans duree de tour (etape 7.20).
+  const among = mode === 'among';
+  const tempsDeLaPhase = among ? tempsAmong(etat) : undefined;
+  const tempsRestantMs = among ? (tempsDeLaPhase ?? 0) : partie.tempsRestantMs;
 
   return {
-    temps: formaterDuree(partie.tempsRestantMs),
-    tempsRestantMs: partie.tempsRestantMs,
-    urgence: partie.tempsRestantMs <= SEUIL_URGENCE_MS,
+    temps: among && tempsDeLaPhase === undefined ? '' : formaterDuree(tempsRestantMs),
+    tempsRestantMs,
+    urgence: !among && partie.tempsRestantMs <= SEUIL_URGENCE_MS,
     enPause: partie.enPause,
     pausePar: etat.pausePar,
     retourEnCours: etat.connexion === 'retour',
-    classement: classementHud(partie.classement, etat.moi, mode, doubleursDe(etat)),
+    // Dans Among Ninjas, le classement ne dirait rien: tous a zero, et la reunion montre les
+    // joueurs.
+    classement: among ? [] : classementHud(partie.classement, etat.moi, mode, doubleursDe(etat)),
     effets: effetsHud(etat, maintenant),
     poche: pocheHud(etat.poche),
     radar: radarHud(etat, mode, maintenant),
@@ -272,7 +284,8 @@ export function construireHud(etat: EtatClient, maintenant: number): Hud {
     chasse: chasseHud(etat, mode),
     combo: comboHud(etat, mode, maintenant),
     restants: restantsHud(etat, mode),
-    arme: mode === 'chasse' ? 'vies' : mode === 'massacre' ? 'katana' : 'charges',
+    arme: mode === 'chasse' ? 'vies' : mode === 'massacre' || among ? 'katana' : 'charges',
+    among: amongHud(etat, maintenant),
   };
 }
 
@@ -618,6 +631,17 @@ function chargesHud(etat: EtatClient, mode: Mode | undefined): ChargesHud | unde
 
   if (mode === 'chasse') {
     return { disponibles: charges, maximum: CHASSE.VIES_DES_TRAQUEURS, recharge: 0 };
+  }
+
+  // L'assassin d'Among Ninjas (etape 7.20): un meurtre pret, ou sa recharge reglee.
+  if (mode === 'among') {
+    const recharge = rechargeDuMeurtreMs(etat);
+
+    return {
+      disponibles: charges,
+      maximum: 1,
+      recharge: charges > 0 ? 1 : Math.min(Math.max(1 - avantProchaineChargeMs / recharge, 0), 1),
+    };
   }
 
   // En Massacre (etape 7.4), une seule charge: le coup est pret, ou revient en 400 ms.

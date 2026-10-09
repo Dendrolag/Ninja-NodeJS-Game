@@ -78,6 +78,7 @@ describe('l ecran de creation', () => {
       'equipes',
       'chasse',
       'massacre',
+      'among',
     ]);
     expect(champ('input[name="mode"][value="classique"]').checked).toBe(true);
 

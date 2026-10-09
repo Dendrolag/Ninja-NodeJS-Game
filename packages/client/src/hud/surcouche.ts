@@ -33,6 +33,7 @@
 import type { EtatManette } from '../controles/tactile.js';
 import type { Glyphe } from '../interface/icones.js';
 import { icone } from '../interface/icones.js';
+import type { AmongHud } from './among.js';
 import type {
   ArmeHud,
   ChargesHud,
@@ -69,6 +70,11 @@ export interface OptionsSurcouche {
    * poche se montre, et aucun bouton n'est pose.
    */
   readonly utiliserLaPoche?: () => void;
+  /**
+   * Ce que fait le bouton d'action d'Among Ninjas (etape 7.20), tenu ou lache: signaler, sonner
+   * le gong, faire sa tache. Sans lui, ni bouton ni bandeau du mode.
+   */
+  readonly agir?: (tenue: boolean) => void;
 }
 
 /** Une surcouche montee, qui se met a jour et se demonte. */
@@ -107,6 +113,8 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
   // Sous le radar, a droite: le role en Chasse, ou le combo en Massacre et en Horde.
   const chasse = monterChasse(doc, racine);
   const combo = monterCombo(doc, racine);
+  // Le role et les taches d'Among Ninjas, au meme endroit que le role de la Chasse (etape 7.20).
+  const among = options.agir === undefined ? undefined : monterAmong(doc, racine);
   const restants = monterRestants(doc, options.compteurs ?? racine);
 
   const manette = element(doc, 'div', 'hud-manette', racine);
@@ -119,6 +127,7 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
   // Les boutons d'action, de gauche a droite: la poche, la localisation, la capture.
   const boutons = element(doc, 'div', 'hud-boutons', racine);
   const poche = monterPoche(doc, boutons, effets, options.utiliserLaPoche);
+  const action = options.agir === undefined ? undefined : monterAction(doc, boutons, options.agir);
   const localisation =
     options.localiser === undefined
       ? undefined
@@ -153,6 +162,8 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
       retour.hidden = !hud.retourEnCours;
 
       chasse.afficher(hud.chasse);
+      among?.afficher(hud.among);
+      action?.afficher(hud.among);
       combo.afficher(hud.combo);
       restants.afficher(hud.restants);
       majClassement(doc, classement, lignes, hud.classement);
@@ -180,6 +191,7 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
 
     demonter() {
       capture?.demonter();
+      action?.demonter();
       localisation?.demonter();
       poche.demonter();
       restants.demonter();
@@ -386,6 +398,120 @@ function monterCapture(doc: Document, parent: HTMLElement, capturer: () => void)
 
     demonter() {
       pose.demonter();
+    },
+  };
+}
+
+/** Une partie du HUD d'Among Ninjas, qui se met a jour et se retire. */
+interface PartieDuHudAmong {
+  afficher(among: AmongHud | undefined): void;
+  demonter(): void;
+}
+
+/**
+ * Le bandeau d'Among Ninjas (etape 7.20): notre role et sa consigne, nos taches pour une
+ * proie, la barre commune des taches, et la jauge de la tache en cours.
+ */
+function monterAmong(doc: Document, parent: HTMLElement): PartieDuHudAmong {
+  const bandeau = element(doc, 'div', 'hud-among', parent);
+  bandeau.setAttribute('role', 'status');
+  bandeau.hidden = true;
+  const role = element(doc, 'strong', 'hud-among-role', bandeau);
+  const consigne = element(doc, 'span', 'hud-among-consigne', bandeau);
+  const mesTaches = element(doc, 'span', 'hud-among-mes-taches', bandeau);
+  const barre = element(doc, 'div', 'hud-among-barre', bandeau);
+  const remplissage = element(doc, 'span', 'hud-among-barre-remplie', barre);
+  const texteDeLaBarre = element(doc, 'span', 'hud-among-barre-texte', barre);
+  const jauge = element(doc, 'div', 'hud-among-jauge', bandeau);
+  const jaugeRemplie = element(doc, 'span', 'hud-among-jauge-remplie', jauge);
+
+  return {
+    afficher(among) {
+      bandeau.hidden = among === undefined;
+
+      if (among === undefined) {
+        return;
+      }
+
+      bandeau.dataset['camp'] = among.camp;
+      bandeau.classList.toggle('fantome', among.fantome);
+      ecrire(role, among.role);
+      ecrire(consigne, among.consigne);
+      mesTaches.hidden = among.mesTaches === undefined;
+      ecrire(mesTaches, among.mesTaches === undefined ? '' : `Mes tâches ${among.mesTaches}`);
+      barre.hidden = among.taches === undefined;
+      remplissage.style.setProperty('--part', String(among.taches?.part ?? 0));
+      ecrire(texteDeLaBarre, among.taches?.texte ?? '');
+      jauge.hidden = among.progression === undefined;
+      jaugeRemplie.style.setProperty('--part', String(among.progression ?? 0));
+    },
+
+    demonter() {
+      bandeau.remove();
+    },
+  };
+}
+
+/** Ecrit ce texte, s'il a change. */
+function ecrire(cible: HTMLElement, texte: string): void {
+  if (cible.textContent !== texte) {
+    cible.textContent = texte;
+  }
+}
+
+/**
+ * Le bouton d'action d'Among Ninjas (etape 7.20), a gauche de la localisation. IL SE TIENT:
+ * le doigt pose le tient, le doigt leve, sorti ou interrompu le lache. Son nom dit ce qu'il
+ * fera: signaler, gong, tache. La touche E fait la meme chose au clavier.
+ */
+function monterAction(
+  doc: Document,
+  parent: HTMLElement,
+  agir: (tenue: boolean) => void,
+): PartieDuHudAmong {
+  const pose = monterBouton(doc, parent, {
+    classe: 'hud-action',
+    glyphe: 'epingle',
+    libelle: 'Action',
+    touche: 'E',
+    etiquette: 'Action',
+    surAppui: () => {
+      agir(true);
+    },
+  });
+  const { bouton, libelle } = pose;
+  bouton.hidden = true;
+  const lacher = (): void => {
+    agir(false);
+  };
+
+  for (const nom of ['pointerup', 'pointercancel', 'pointerleave'] as const) {
+    bouton.addEventListener(nom, lacher);
+  }
+
+  return {
+    afficher(among) {
+      bouton.hidden = among === undefined;
+
+      if (among === undefined) {
+        return;
+      }
+
+      bouton.dataset['geste'] = among.geste;
+      bouton.classList.toggle('vide', among.geste === 'aucun');
+      ecrire(libelle, among.libelleDuGeste);
+
+      if (bouton.getAttribute('aria-label') !== among.libelleDuGeste) {
+        bouton.setAttribute('aria-label', among.libelleDuGeste);
+      }
+    },
+
+    demonter() {
+      pose.demonter();
+
+      for (const nom of ['pointerup', 'pointercancel', 'pointerleave'] as const) {
+        bouton.removeEventListener(nom, lacher);
+      }
     },
   };
 }
