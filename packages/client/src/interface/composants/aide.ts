@@ -141,7 +141,8 @@ const EFFETS_ZONES: Readonly<Record<TypeZone, string>> = {
   chaos: 'Les ninjas qui la traversent changent de couleur au hasard.',
   repulsion: 'Repousse les ninjas loin des joueurs.',
   attraction: 'Attire les ninjas vers les joueurs.',
-  invisibilite: 'Les joueurs qui s’y cachent deviennent invisibles pour les autres.',
+  invisibilite:
+    'Ceux qui s’y cachent deviennent invisibles pour les autres joueurs, les Black Ninjas et l’Évadé.',
 };
 
 /**

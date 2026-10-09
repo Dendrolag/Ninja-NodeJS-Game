@@ -65,4 +65,32 @@ describe('la fin d une partie Chasse', () => {
       [3, 40],
     ]);
   });
+
+  it('montre la survie, les infections et les vies, un tiret pour ce qui est sans objet', () => {
+    const modele = modeleFin({
+      ...etat(),
+      fin: {
+        classement: CLASSEMENT,
+        statistiques: {
+          // Bob a tenu une minute et cinq secondes avant d'etre infecte.
+          bob: { survie: 65_000, infections: 2, vies: 3 },
+          // Moi, proie jusqu'au bout: pas de vies de traqueur.
+          moi: { survie: 180_000, infections: 0 },
+          // Eve, traqueuse des le debut: elle n'a jamais ete proie.
+          eve: { infections: 0, vies: 1 },
+        },
+      },
+    });
+
+    expect(modele?.colonnes.map((colonne) => [colonne.entete, colonne.description])).toEqual([
+      ['Survie', 'Temps tenu comme proie'],
+      ['Infections', 'Proies infectées'],
+      ['Vies', 'Vies restantes du traqueur'],
+    ]);
+    expect(modele?.lignes.map((une) => une.statistiques)).toEqual([
+      ['1:05', '2', '3'],
+      ['3:00', '0', '—'],
+      ['—', '0', '1'],
+    ]);
+  });
 });

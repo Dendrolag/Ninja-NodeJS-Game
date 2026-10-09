@@ -46,6 +46,8 @@ export function monterFin(contexte: ContexteEcran): EcranAffiche {
   const podium = creer(doc, 'div', { classe: 'podium' });
   // Dans une partie Equipes, les equipes prennent la place du podium (etape 7.2).
   const blocEquipes = creer(doc, 'div', { classe: 'fin-equipes' });
+  // Les intitules du tableau suivent le mode joue: ils s'ecrivent avec le classement.
+  const enteteTableau = creer(doc, 'tr');
   const corpsTableau = creer(doc, 'tbody');
   const progression = monterPanneauDeProgression(doc);
 
@@ -109,19 +111,7 @@ export function monterFin(contexte: ContexteEcran): EcranAffiche {
               doc,
               'table',
               { classe: 'tableau' },
-              creer(
-                doc,
-                'thead',
-                {},
-                creer(
-                  doc,
-                  'tr',
-                  {},
-                  ...['Rang', 'Joueur', 'Points', 'Ninjas', 'Captures', 'Black Ninjas'].map(
-                    (entete) => creer(doc, 'th', { texte: entete, attributs: { scope: 'col' } }),
-                  ),
-                ),
-              ),
+              creer(doc, 'thead', {}, enteteTableau),
               corpsTableau,
             ),
           ),
@@ -172,6 +162,18 @@ export function monterFin(contexte: ContexteEcran): EcranAffiche {
       ...(modele.equipes ?? []).map((equipe) => carteDEquipe(doc, equipe)),
     );
     montrer(blocEquipes, modele.equipes !== undefined);
+    enteteTableau.replaceChildren(
+      ...['Rang', 'Joueur', 'Points'].map((entete) =>
+        creer(doc, 'th', { texte: entete, attributs: { scope: 'col' } }),
+      ),
+      // L'intitule est court; l'infobulle dit ce que la colonne compte.
+      ...modele.colonnes.map((colonne) =>
+        creer(doc, 'th', {
+          texte: colonne.entete,
+          attributs: { scope: 'col', title: colonne.description },
+        }),
+      ),
+    );
     corpsTableau.replaceChildren(...modele.lignes.map((ligne) => rangee(doc, ligne, client)));
   };
 
@@ -207,9 +209,7 @@ function carteDEquipe(doc: Document, equipe: EquipeFin): HTMLElement {
     doc,
     'div',
     {
-      classe: ['fin-equipe', equipe.mienne ? 'mienne' : '', equipe.doubleur ? 'doubleur' : '']
-        .filter((classe) => classe !== '')
-        .join(' '),
+      classe: equipe.mienne ? 'fin-equipe mienne' : 'fin-equipe',
       attributs: { 'data-equipe': equipe.equipe },
     },
     creer(doc, 'span', { classe: 'fin-equipe-nom', texte: equipe.nom }),
@@ -414,13 +414,7 @@ function marche(doc: Document, ligne: LigneFin): HTMLElement {
     doc,
     'div',
     {
-      classe: [
-        'marche',
-        `marche-${String(ligne.rang)}`,
-        ligne.moi ? 'moi' : '',
-        // Le badge du x2 de l'Evade se pose par la feuille de style (etape 7.9).
-        ligne.doubleur ? 'doubleur' : '',
-      ]
+      classe: ['marche', `marche-${String(ligne.rang)}`, ligne.moi ? 'moi' : '']
         .filter((classe) => classe !== '')
         .join(' '),
       attributs: { 'data-rang': String(ligne.rang) },
@@ -449,15 +443,8 @@ function rangee(doc: Document, ligne: LigneFin, client: Client): HTMLElement {
     doc,
     'tr',
     {
-      // Le badge du x2 de l'Evade se pose par la feuille de style, hors du texte de la
-      // cellule (etape 7.9); le titre le dit a qui ne le voit pas.
-      classe: [ligne.moi ? 'moi' : '', ligne.doubleur ? 'doubleur' : '']
-        .filter((classe) => classe !== '')
-        .join(' '),
-      attributs: {
-        'data-joueur': ligne.id,
-        ...(ligne.doubleur ? { title: 'A fini avec le x2 de l’Évadé' } : {}),
-      },
+      ...(ligne.moi ? { classe: 'moi' } : {}),
+      attributs: { 'data-joueur': ligne.id },
     },
     creer(doc, 'td', { classe: 'rang', texte: String(ligne.rang) }),
     creer(
@@ -470,8 +457,6 @@ function rangee(doc: Document, ligne: LigneFin, client: Client): HTMLElement {
         : creer(doc, 'span', { texte: ligne.pseudo }),
     ),
     creer(doc, 'td', { classe: 'nombre points', texte: String(ligne.points) }),
-    creer(doc, 'td', { classe: 'nombre', texte: String(ligne.botsPortes) }),
-    creer(doc, 'td', { classe: 'nombre', texte: String(ligne.captures) }),
-    creer(doc, 'td', { classe: 'nombre', texte: String(ligne.botsNoirsDetruits) }),
+    ...ligne.statistiques.map((texte) => creer(doc, 'td', { classe: 'nombre', texte })),
   );
 }

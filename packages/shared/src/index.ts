@@ -406,6 +406,19 @@ export {
 } from './succes.js';
 
 export type {
+  DefinitionDeStatistique,
+  FormatDeStatistique,
+  StatistiqueDeFin,
+  StatistiquesDUnJoueur,
+} from './statistiquesDeFin.js';
+export {
+  DEFINITIONS_DES_STATISTIQUES,
+  STATISTIQUES_DE_FIN,
+  STATISTIQUES_PAR_MODE,
+  statistiquesDeLaPartie,
+} from './statistiquesDeFin.js';
+
+export type {
   AvancementDUnDefi,
   ComptageDeDefi,
   DefiReleve,

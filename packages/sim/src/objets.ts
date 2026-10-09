@@ -14,10 +14,11 @@
  *    CLAUDE.md. Ramasser un malus est donc une attaque, pas un accident. Qui sont
  *    « les autres » depend du mode: en Equipes, l'equipe adverse (etape 7.2).
  *
- * 2. Le ramassage n'est pas un contact entre entites. Il se joue a quinze pixels
- *    la ou deux entites se touchent a vingt, et il ne concerne que les joueurs:
- *    un bot passe sur un bonus sans le voir. C'est pour cela que ce fichier ne
- *    passe pas par le releve des contacts.
+ * 2. Le ramassage n'est pas un contact entre entites. Il se joue des que le corps
+ *    du joueur touche le disque colore dessine sous l'objet (OBJETS.SEUIL_RAMASSAGE_PX,
+ *    trente-huit pixels entre les centres depuis le 9 octobre 2026, quinze dans le
+ *    legacy), et il ne concerne que les joueurs: un bot passe sur un bonus sans le
+ *    voir. C'est pour cela que ce fichier ne passe pas par le releve des contacts.
  *
  * 3. Les apparitions ne sont plus des minuteries. Voir planification.ts, qui
  *    explique comment le defaut X1 de l'audit disparait par construction.

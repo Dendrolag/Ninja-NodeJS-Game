@@ -76,7 +76,6 @@ describe('la fin d une partie Equipes', () => {
         points: 45,
         captures: 3,
         mienne: true,
-        doubleur: false,
       },
       {
         equipe: 'magenta',
@@ -85,27 +84,43 @@ describe('la fin d une partie Equipes', () => {
         points: 20,
         captures: 0,
         mienne: false,
-        doubleur: false,
       },
     ]);
   });
 
   it('range les joueurs par equipe, chacun avec sa part et son rang d equipe', () => {
-    const modele = modeleFin(etat(CLASSEMENT));
+    // La part des ninjas de chacun, le serveur la calcule et l'envoie.
+    const modele = modeleFin({
+      ...etat(CLASSEMENT),
+      fin: {
+        classement: CLASSEMENT,
+        statistiques: {
+          moi: { ninjas: 15, captures: 2, botsNoirsDetruits: 1, evade: 0 },
+          carole: { ninjas: 15, captures: 1, botsNoirsDetruits: 0, evade: 1 },
+          bob: { ninjas: 20, captures: 0, botsNoirsDetruits: 0, evade: 0 },
+        },
+      },
+    });
 
+    expect(modele?.colonnes.map((colonne) => colonne.entete)).toEqual([
+      'Ninjas',
+      'Captures',
+      'Black Ninjas',
+      'Évadé',
+    ]);
     expect(
-      modele?.lignes.map(({ id, rang, points, botsPortes, moi }) => ({
+      modele?.lignes.map(({ id, rang, points, statistiques, moi }) => ({
         id,
         rang,
         points,
-        botsPortes,
+        statistiques,
         moi,
       })),
     ).toEqual([
       // Trente ninjas pour deux membres: une part de quinze, plus quinze points de Black Ninja.
-      { id: 'moi', rang: 1, points: 30, botsPortes: 15, moi: true },
-      { id: 'carole', rang: 1, points: 15, botsPortes: 15, moi: false },
-      { id: 'bob', rang: 3, points: 20, botsPortes: 20, moi: false },
+      { id: 'moi', rang: 1, points: 30, statistiques: ['15', '2', '1', '—'], moi: true },
+      { id: 'carole', rang: 1, points: 15, statistiques: ['15', '1', '0', 'Oui'], moi: false },
+      { id: 'bob', rang: 3, points: 20, statistiques: ['20', '0', '0', '—'], moi: false },
     ]);
   });
 

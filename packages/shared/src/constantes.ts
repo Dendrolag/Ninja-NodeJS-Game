@@ -195,7 +195,8 @@ export interface DimensionsCarte {
  *     plus bas.
  *
  * Ajouter un mode demande aussi une migration de la base, dont l'enumeration des
- * modes est tiree de cette liste.
+ * modes est tiree de cette liste, et les colonnes de son classement final
+ * (STATISTIQUES_PAR_MODE, statistiquesDeFin.ts), que le compilateur exige.
  */
 export const MODES = ['classique', 'tactique', 'equipes', 'chasse', 'massacre'] as const;
 
@@ -503,7 +504,8 @@ export type TypeZone = (typeof TYPES_ZONE)[number];
  *
  * Valeurs du legacy (classes Bonus :1347 et Malus :1401, identiques a la ligne
  * pres), sauf le seuil de clignotement, qui ne sert qu'a l'affichage et que le
- * moteur transmet sans s'en servir.
+ * moteur transmet sans s'en servir, et la distance de ramassage, elargie au disque
+ * colore le 9 octobre 2026.
  */
 export const OBJETS = {
   /** Duree pendant laquelle un objet reste pose avant de disparaitre. */
@@ -511,11 +513,18 @@ export const OBJETS = {
   /** En dessous de cette duree restante, le client fait clignoter l'objet. */
   SEUIL_CLIGNOTEMENT_MS: 3000,
   /**
-   * Distance de ramassage, en pixels. Plus courte que le seuil de contact entre
-   * entites, qui vaut vingt: un objet se ramasse en marchant dessus, pas en
-   * passant a cote.
+   * Rayon du disque colore que la page dessine sous l'objet, en pixels. C'est lui qui se
+   * ramasse, pas l'icone posee dessus (decision du porteur du projet du 9 octobre 2026).
    */
-  SEUIL_RAMASSAGE_PX: 15,
+  RAYON_DU_DISQUE_PX: 22,
+  /**
+   * Distance de ramassage, en pixels, du centre du joueur au centre de l'objet: le rayon du
+   * disque, plus le rayon du corps d'un joueur (RAYON_ENTITE, seize pixels, la moitie de son
+   * dessin). Le joueur ramasse l'objet des que son corps touche le disque. Elle valait quinze
+   * jusqu'au 9 octobre 2026, la valeur du legacy: il fallait marcher sur l'icone, alors que le
+   * disque, plus large, laissait croire qu'on y etait.
+   */
+  SEUIL_RAMASSAGE_PX: 38,
   /** Nombre maximal de malus poses en meme temps. Les bonus n'ont pas de plafond. */
   MALUS_SIMULTANES_MAXIMUM: 5,
   /**

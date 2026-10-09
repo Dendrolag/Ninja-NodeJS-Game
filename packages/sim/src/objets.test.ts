@@ -9,7 +9,7 @@
  */
 
 import type { ReglagesPartiels } from '@neon-ninja/shared';
-import { CARTES, OBJETS } from '@neon-ninja/shared';
+import { CARTES, OBJETS, RAYON_ENTITE } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
 import { creerCarteCollisions } from './collisions.js';
@@ -425,7 +425,7 @@ describe('ramassage', () => {
     expect(durees).toEqual({ controlesInverses: 10_000, flou: 12_000, negatif: 14_000 });
   });
 
-  it('ne ramasse rien a quinze pixels, et ramasse juste en dessous', () => {
+  it('ne ramasse rien au seuil de ramassage, et ramasse juste en dessous', () => {
     const poser = (distance: number): EtatPartie =>
       poserObjet(partieAvec([['alice', { x: 500, y: 500 }]]), {
         categorie: 'bonus',
@@ -435,6 +435,20 @@ describe('ramassage', () => {
 
     expect(objetsDe(ramasserLesObjets(poser(OBJETS.SEUIL_RAMASSAGE_PX)))).toHaveLength(1);
     expect(objetsDe(ramasserLesObjets(poser(OBJETS.SEUIL_RAMASSAGE_PX - 0.001)))).toHaveLength(0);
+  });
+
+  it('ramasse des que le corps du joueur touche le disque colore, pas seulement l icone', () => {
+    expect(OBJETS.SEUIL_RAMASSAGE_PX).toBe(OBJETS.RAYON_DU_DISQUE_PX + RAYON_ENTITE);
+
+    // A trente-six pixels, le corps est loin de l'icone, de quinze pixels de rayon, mais il
+    // touche le disque.
+    const aCote = poserObjet(partieAvec([['alice', { x: 500, y: 500 }]]), {
+      categorie: 'bonus',
+      nature: 'vitesse',
+      position: { x: 536, y: 500 },
+    });
+
+    expect(objetsDe(ramasserLesObjets(aCote))).toHaveLength(0);
   });
 
   it('ramasse plusieurs objets d un coup quand ils sont sous les pieds du joueur', () => {

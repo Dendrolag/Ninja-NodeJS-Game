@@ -16,7 +16,8 @@
  * CE N'EST NI UN PNJ NI UN BLACK NINJA. Il vit dans un champ a part de l'etat, et rien de ce
  * qui touche aux bots ne le concerne: il ne prend ni ne transmet de couleur, les PNJ le
  * traversent, les Black Ninjas l'ignorent, les zones ne le poussent pas (micro-decisions 1
- * et 6 de la fiche). On l'attrape comme on prend un PNJ dans chaque mode: au contact en
+ * et 6 de la fiche). Une zone d'invisibilite lui cache les joueurs qui s'y tiennent, comme
+ * aux Black Ninjas (9 octobre 2026). On l'attrape comme on prend un PNJ dans chaque mode: au contact en
  * Horde et en Equipes (attraperLEvadeAuContact, dans contacts.ts), par le tir en cone en Tactique
  * (tactique.ts), d'un coup de katana en Massacre (massacre.ts).
  *
@@ -43,6 +44,7 @@ import type {
   Joueur,
 } from './etat.js';
 import { identifiantSuivant, positionDApparition } from './etat.js';
+import { estCache } from './zones.js';
 
 /** Le temps, en millisecondes, entre deux changements de cap de l'Evade quand il erre. */
 const ERRANCE_MINIMUM_MS = 1000;
@@ -192,12 +194,18 @@ function bouger(etat: EtatPartie, evade: EvadeSurLaCarte, dtMs: number): Deplace
   };
 }
 
-/** Les joueurs dont il se sauve: ceux a moins du rayon de fuite. */
+/**
+ * Les joueurs dont il se sauve: ceux a moins du rayon de fuite. Il ne voit pas ceux qu'une
+ * zone d'invisibilite cache (decision du porteur du projet du 9 octobre 2026): on peut l'y
+ * attendre en embuscade.
+ */
 function menacesDe(etat: EtatPartie, position: Position): readonly Position[] {
   return Object.values(etat.joueurs)
     .map((joueur) => joueur.position)
     .filter(
-      (autre) => Math.hypot(autre.x - position.x, autre.y - position.y) < EVADE.RAYON_DE_FUITE_PX,
+      (autre) =>
+        Math.hypot(autre.x - position.x, autre.y - position.y) < EVADE.RAYON_DE_FUITE_PX &&
+        !estCache(etat, autre),
     );
 }
 

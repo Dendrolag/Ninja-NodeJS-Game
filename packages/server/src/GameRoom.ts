@@ -72,6 +72,7 @@ import type {
   ReglagesPartiels,
   ResultatValidation,
   SessionJoueur,
+  StatistiquesDUnJoueur,
   StatutPartie,
   Visibilite,
 } from '@neon-ninja/shared';
@@ -116,6 +117,7 @@ import type { ChronometreDuBattement } from './chronometreDuBattement.js';
 import { horlogeSysteme } from './horloge.js';
 import type { ReleveDesExploits } from './releveDesExploits.js';
 import { RELEVE_VIDE, faitsDeFin, releverLeBattement } from './releveDesExploits.js';
+import { statistiquesDeFin } from './statistiquesDeFin.js';
 
 /**
  * Cadence de la boucle d'une partie, en millisecondes.
@@ -1032,6 +1034,22 @@ export class GameRoom {
 
     invites.add(invite);
     this.invitesParInviteur.set(inviteur, invites);
+  }
+
+  /**
+   * Les statistiques de fin de chaque joueur present, selon le mode (9 octobre 2026): ce que
+   * le classement final montre a cote des points. A lire une fois la partie terminee, comme
+   * le bilan.
+   */
+  statistiques(): Readonly<Record<IdentifiantEntite, StatistiquesDUnJoueur>> {
+    const faits = faitsDeFin(this.releve, this.partie, this.cleDuJoueur);
+
+    return statistiquesDeFin(
+      this.partie,
+      this.classement(),
+      (id) => faits.get(this.cleDuJoueur(id)) ?? {},
+      this.entreesEnJeuMs,
+    );
   }
 
   /**

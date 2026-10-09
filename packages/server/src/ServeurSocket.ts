@@ -1373,9 +1373,12 @@ export class ServeurSocket {
     return diffusion;
   }
 
-  /** Annonce la fin d'une partie et son classement definitif. */
+  /** Annonce la fin d'une partie, son classement definitif et les statistiques de chacun. */
   private diffuserLaFin(room: GameRoom): void {
-    this.io.to(room.id).emit('partieTerminee', { classement: classementDe(room.etat) });
+    this.io.to(room.id).emit('partieTerminee', {
+      classement: classementDe(room.etat),
+      statistiques: room.statistiques(),
+    });
     this.amis?.partieChangee(room.id);
   }
 

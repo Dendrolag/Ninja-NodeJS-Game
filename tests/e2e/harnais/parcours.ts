@@ -17,11 +17,17 @@ import { expect } from '@playwright/test';
 import type { GameRoom } from '../../../packages/server/dist/index.js';
 import type { GeometrieDuCone, Joueur } from '../../../packages/sim/dist/index.js';
 import { dansLeCone, geometrieDuCone, trajetTenable } from '../../../packages/sim/dist/index.js';
-import type { ObjetDePoche, Position } from '../../../packages/shared/dist/index.js';
+import type {
+  FormatDeStatistique,
+  ObjetDePoche,
+  Position,
+} from '../../../packages/shared/dist/index.js';
 import {
+  DEFINITIONS_DES_STATISTIQUES,
   RAYON_ENTITE,
   TYPES_BONUS_TACTIQUES,
   VITESSES,
+  statistiquesDeLaPartie,
 } from '../../../packages/shared/dist/index.js';
 import type { Commande, Mission } from './pilote.js';
 
@@ -327,7 +333,8 @@ export async function attendreLaFin(page: Page): Promise<void> {
 /**
  * Le classement final tel que la page l'affiche, cellule par cellule.
  *
- * Rang, joueur, points, ninjas portes, captures, Black Ninjas detruits.
+ * Rang, joueur, points, puis les statistiques du mode (en Horde: ninjas portes, captures,
+ * ninjas rallies, plus haut combo, Black Ninjas detruits, Evade attrape).
  */
 export async function classementAffiche(page: Page): Promise<readonly (readonly string[])[]> {
   const rangees = page.locator('.fin-classement tbody tr');
@@ -361,19 +368,50 @@ export function joueurNomme(partie: GameRoom, pseudo: string): Joueur {
  * Le classement du serveur, dans la forme ou la page l'affiche.
  *
  * A lire une fois la partie terminee: la boucle est arretee, l'etat ne bouge plus,
- * et c'est de cet etat que le classement final envoye aux joueurs a ete tire.
+ * et c'est de cet etat que le classement final envoye aux joueurs a ete tire, avec les
+ * statistiques de chacun. Les colonnes sont celles du mode et des reglages de la partie.
  */
 export function classementDuServeur(partie: GameRoom): readonly (readonly string[])[] {
+  const colonnes = statistiquesDeLaPartie(partie.mode, partie.reglages);
+  const statistiques = partie.statistiques();
+
   return partie
     .classement()
     .map((ligne, index) => [
       String(index + 1),
       ligne.pseudo,
       String(ligne.points),
-      String(ligne.botsPortes),
-      String(ligne.captures),
-      String(ligne.botsNoirsDetruits),
+      ...colonnes.map((colonne) =>
+        statistiqueEcrite(
+          statistiques[ligne.id]?.[colonne],
+          DEFINITIONS_DES_STATISTIQUES[colonne].format,
+        ),
+      ),
     ]);
+}
+
+/**
+ * Une statistique comme la page l'ecrit, recalculee ici a la main pour servir d'etalon: un
+ * nombre tel quel, un combo en « x3 », une duree en minutes et secondes, un drapeau en
+ * « Oui », et un tiret pour ce qui n'a pas d'objet. Les nombres d'une partie d'essai restent
+ * sous mille: pas d'espace de milliers.
+ */
+function statistiqueEcrite(valeur: number | undefined, format: FormatDeStatistique): string {
+  switch (format) {
+    case 'nombre':
+      return valeur === undefined ? '—' : String(valeur);
+    case 'multiplicateur':
+      return valeur === undefined || valeur < 2 ? '—' : `x${String(valeur)}`;
+    case 'duree': {
+      if (valeur === undefined) {
+        return '—';
+      }
+      const secondes = Math.ceil(valeur / 1000);
+      return `${String(Math.floor(secondes / 60))}:${String(secondes % 60).padStart(2, '0')}`;
+    }
+    case 'drapeau':
+      return valeur !== undefined && valeur > 0 ? 'Oui' : '—';
+  }
 }
 
 /**

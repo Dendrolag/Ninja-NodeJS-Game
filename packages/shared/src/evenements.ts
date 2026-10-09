@@ -72,6 +72,7 @@ import type { DefisDeFin } from './defis.js';
 import type { TrameDEtat } from './flux.js';
 import type { IdentifiantPalier } from './progression.js';
 import type { ReglagesPartie, ReglagesPartiels } from './reglages.js';
+import type { StatistiquesDUnJoueur } from './statistiquesDeFin.js';
 import type { IdentifiantSucces, ProgressionDUnSucces } from './succes.js';
 import type { ErreurValidation, ResultatValidation } from './validation.js';
 
@@ -801,6 +802,12 @@ export interface PartieEnPause {
  */
 export interface FinDePartie {
   readonly classement: readonly LigneClassement[];
+  /**
+   * Les statistiques de chaque joueur du classement, par son identifiant: celles du mode
+   * joue (statistiquesDeFin.ts, depuis le 9 octobre 2026). Absentes d'un serveur plus ancien:
+   * la page ne montre alors que les points.
+   */
+  readonly statistiques?: Readonly<Record<string, StatistiquesDUnJoueur>>;
 }
 
 /**

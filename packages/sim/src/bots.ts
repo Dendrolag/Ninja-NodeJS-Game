@@ -28,6 +28,9 @@
  *     attrape perd une part de ses bots et reapparait ailleurs; un bot attrape
  *     redevient neutre.
  *   - Sans proie, il erre comme un bot ordinaire.
+ *   - Il ne voit rien de ce qui se tient dans une zone d'invisibilite, joueur ou bot:
+ *     il ne l'y choisit pas, et lache la proie qui s'y refugie (decision du porteur du
+ *     projet du 9 octobre 2026; le legacy ne cachait les joueurs qu'aux autres joueurs).
  *
  * CINQ DEFAUTS DE L'AUDIT SONT TRAITES ICI.
  *
@@ -65,6 +68,7 @@ import {
   positionDApparition,
   positionsOccupees,
 } from './etat.js';
+import { estCache } from './zones.js';
 
 /**
  * Un bot en cours de mise a jour, et l'etat dans lequel il evolue.
@@ -569,7 +573,10 @@ function choisirUneProie(etat: EtatPartie, bot: BotNoir, dtMs: number): Avanceme
   };
 }
 
-/** La proie garde-t-elle sa place ? Elle doit exister encore, et rester a portee. */
+/**
+ * La proie garde-t-elle sa place ? Elle doit exister encore, rester a portee, et rester
+ * visible: une proie entree dans une zone d'invisibilite est perdue de vue.
+ */
 function cibleEncoreValable(
   etat: EtatPartie,
   bot: BotNoir,
@@ -577,7 +584,7 @@ function cibleEncoreValable(
 ): IdentifiantEntite | undefined {
   const proie = proieDe(etat, cible);
 
-  if (proie === undefined) {
+  if (proie === undefined || estCache(etat, proie.position)) {
     return undefined;
   }
 
@@ -597,7 +604,8 @@ function proieDe(etat: EtatPartie, cible: IdentifiantEntite): Joueur | Bot | und
  * Portage de BlackBot.findNewTarget (legacy/server.js:1185). Un joueur prime
  * toujours sur un bot, et parmi les candidats de meme nature, le plus proche
  * l'emporte. Un joueur protege par son apparition ou par l'invincibilite n'est
- * pas une proie; un bot deja neutre non plus, il n'y a rien a y prendre.
+ * pas une proie; un bot deja neutre non plus, il n'y a rien a y prendre; ni rien de ce
+ * qu'une zone d'invisibilite cache.
  *
  * Les bots noirs s'ignorent entre eux, comme dans le legacy, ou ils vivaient dans
  * une table que la recherche de proie ne parcourait pas.
@@ -618,8 +626,10 @@ function laProieLaPlusInteressante(etat: EtatPartie, bot: BotNoir): IdentifiantE
       continue;
     }
 
+    // Les zones ne se consultent que pour un candidat a portee: la carte compte plus de
+    // cent PNJ, et chacun de ses Black Ninjas la parcourt a chaque recherche.
     const distance = distanceEntre(bot.position, autre.position);
-    if (distance < rayon && distance < meilleureDistance) {
+    if (distance < rayon && distance < meilleureDistance && !estCache(etat, autre.position)) {
       meilleureDistance = distance;
       meilleur = autre.id;
     }
@@ -636,7 +646,7 @@ function laProieLaPlusInteressante(etat: EtatPartie, bot: BotNoir): IdentifiantE
  * deux recherches ne regardait que l'invincibilite (:1161) et laissait donc un
  * bot noir se lancer aux trousses d'un joueur qui vient d'apparaitre, pour se
  * voir refuser la capture une fois arrive. La question est ici posee une seule
- * fois, de la facon complete.
+ * fois, de la facon complete. Un joueur dans une zone d'invisibilite n'est pas vu.
  */
 function leJoueurLePlusProcheAPortee(
   etat: EtatPartie,
@@ -652,7 +662,7 @@ function leJoueurLePlusProcheAPortee(
     }
 
     const distance = distanceEntre(bot.position, joueur.position);
-    if (distance < rayon && distance < meilleureDistance) {
+    if (distance < rayon && distance < meilleureDistance && !estCache(etat, joueur.position)) {
       meilleureDistance = distance;
       meilleur = joueur.id;
     }

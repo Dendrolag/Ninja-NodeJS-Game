@@ -14,10 +14,12 @@
  *     trouvent.
  *   - attraction: les bots de la zone sont attires par le joueur le plus proche,
  *     ou qu'il soit.
- *   - invisibilite: les joueurs qui s'y trouvent ne sont plus dessines. Aucun
- *     effet sur les regles du jeu, donc aucun effet dans le moteur; c'est le
- *     client qui le calcule a partir des zones qu'il recoit. Voir le defaut X22
- *     de l'audit.
+ *   - invisibilite: les joueurs qui s'y trouvent ne sont plus dessines chez les
+ *     autres joueurs, ce que le client calcule a partir des zones qu'il recoit
+ *     (defaut X22 de l'audit). Depuis le 9 octobre 2026, la zone cache aussi aux
+ *     Black Ninjas les joueurs et les bots qui s'y trouvent, et a l'Evade les
+ *     joueurs: c'est le seul effet qu'elle a dans le moteur, lu par bots.ts et
+ *     evade.ts au travers d'estCache. Elle ne pousse ni ne repeint rien.
  *
  * DEUX CHOSES QUE LE PORTAGE CHANGE, ET POURQUOI.
  *
@@ -81,7 +83,10 @@ export function zoneContient(zone: ZoneSpeciale, position: Position): boolean {
   return Math.hypot(position.x - zone.centre.x, position.y - zone.centre.y) <= zone.rayon;
 }
 
-/** Les zones d'invisibilite qui couvrent cette position. Le client s'en sert pour dessiner. */
+/**
+ * Une zone d'invisibilite couvre-t-elle cette position ? Le client s'en sert pour dessiner,
+ * les Black Ninjas et l'Evade pour ne pas voir ce qui s'y cache.
+ */
 export function estCache(etat: EtatPartie, position: Position): boolean {
   return Object.values(etat.zones).some(
     (zone) => zone.type === 'invisibilite' && zoneContient(zone, position),
@@ -385,7 +390,10 @@ export function appliquerLesEffetsDeZone(etat: EtatPartie, dtMs: number): EtatPa
   return courant;
 }
 
-/** Aiguille vers l'effet de la zone. L'invisibilite ne change rien a la simulation. */
+/**
+ * Aiguille vers l'effet de la zone. L'invisibilite n'agit sur rien a chaque battement: ce
+ * sont les Black Ninjas et l'Evade qui la consultent en cherchant qui voir (estCache).
+ */
 function appliquerUneZone(etat: EtatPartie, zone: ZoneSpeciale, dtMs: number): EtatPartie {
   switch (zone.type) {
     case 'chaos':
