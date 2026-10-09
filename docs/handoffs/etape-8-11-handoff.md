@@ -40,7 +40,7 @@ Aucune modification de `legacy/`, de `tests/caracterisation/` ni de `packages/si
 - Résultat: 3 689 tests unitaires et d'intégration au vert en local, types et linter compris; tests de la base sautés en local, joués par la CI. Bout en bout: `rendu-prison` 4 sur 4 (ordinateur et téléphone).
 - Couverture de packages/sim: inchangée, il n'est pas touché.
 - Empreintes des parties de référence: inchangées par construction, elles se jouent sur Tokyo et le moteur n'est pas touché.
-- État de la CI: voir le commit de fusion sur `master` (la branche ne déclenche pas la CI).
+- État de la CI: verte sur `2a46e82`, poussé en avance rapide sur `origin/master` (exécution 37919090631): types, linter et tests, base, bout en bout, banc du rendu, mise en ligne. Le porteur du projet a joué la carte en ligne et l'a validée le 9 octobre 2026.
 
 ## Décisions et écarts au plan
 
@@ -48,14 +48,14 @@ Détail dans la section « Réconciliation » de la fiche. Choisis par cette ses
 
 ## Problèmes connus et dette
 
-- **Deux migrations numéro 14**: `0014_mode_among` (étape 7.20, en local sur `master`) et `0014_carte_prison`. La seconde à partir sur `origin/master` se régénère en 15: après fusion, retirer la sienne et son instantané, relancer `pnpm base:generer`, renommer le fichier produit, puis vérifier que `pnpm test` passe sur la base.
+- **Deux migrations numéro 14**: `0014_mode_among` (étape 7.20, en local sur `master`) et `0014_carte_prison`. Prison Island est partie la première: celle de 7.20 se régénère en 15: après fusion, retirer la sienne et son instantané, relancer `pnpm base:generer`, renommer le fichier produit, puis vérifier que `pnpm test` passe sur la base.
 - **Licence CC BY-NC 4.0**, comme la Station lunaire: aucun usage commercial.
 - **À juger en jouant**: la taille des ninjas sur la carte agrandie, les couloirs d'un carreau, les cellules à une porte en Massacre (refuges), la part de carte que l'avant-plan cache.
 - Rien d'autre.
 
 ## Prochaine action exacte
 
-Fusionner `carte-prison` dans `master` en tenant compte de l'étape 7.20 (voir « Problèmes connus »), pousser, et vérifier la CI et `/sante`. Au porteur du projet: jouer Prison Island de jour et de nuit, relire la note 1.8.
+Reprendre l'étape 7.20. À son rebase sur `origin/master`, sa migration devient `0015_mode_among` et sa version 1.9.0 (voir « Problèmes connus »); la session 7.20 en a été prévenue.
 
 ## Étape suivante
 
