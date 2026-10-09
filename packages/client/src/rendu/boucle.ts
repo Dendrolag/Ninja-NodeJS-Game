@@ -206,9 +206,18 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
       options.client.capturer();
     }
 
-    // Et la poche, dans tous les modes (etape 7.10).
-    if (options.controles.prendreLaDemandeDePoche()) {
+    // Et la poche, dans tous les modes (etape 7.10), sauf Among Ninjas, ou la meme touche
+    // est le bouton d'action, tenu ou lache (etape 7.20).
+    const among = etat.salon?.mode === 'among';
+
+    if (options.controles.prendreLaDemandeDePoche() && !among) {
       options.client.utiliserLaPoche();
+    }
+
+    const action = options.controles.actionAEmettre();
+
+    if (action !== undefined && among) {
+      options.client.tenirLAction(action);
     }
 
     // 2. Les faits recus depuis l'image precedente.

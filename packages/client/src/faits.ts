@@ -34,12 +34,14 @@ import type {
   JoueurTrancheVu,
   MalusRamasseParMoi,
   MalusSubi,
+  MeurtreVu,
   MineArmeeVue,
   MineDeZoneFaitVue,
   MineExploseeVue,
   MinePoseeVue,
   ObjetEmpoche,
   RalliementVu,
+  ReunionVue,
   TirDeCaptureVu,
   VieDeTraqueurPerdueVue,
 } from '@neon-ninja/shared';
@@ -96,6 +98,13 @@ export interface ChargesDeFait {
   mineExplosee: MineExploseeVue;
   /** Une mine de zone vient d'etre posee, armee, ou de s'ouvrir (etape 7.12). A tous. */
   mineDeZone: MineDeZoneFaitVue;
+  /**
+   * Un meurtre d'Among Ninjas (etape 7.20), que nous avons commis, subi, ou vu dans notre
+   * disque de vision.
+   */
+  meurtre: MeurtreVu;
+  /** Ce qui se passe en reunion, dans Among Ninjas (etape 7.20). A tous. */
+  reunion: ReunionVue;
   /** Ce joueur vient de rallier des faux ninjas en les touchant, dans la Horde. */
   ralliement: RalliementVu;
   /** Quelqu'un vient d'entrer dans la partie. */

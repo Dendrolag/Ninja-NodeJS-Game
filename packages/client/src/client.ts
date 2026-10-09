@@ -146,6 +146,10 @@ export interface Client extends CommandesDeSession {
   capturer(): void;
   /** Se sert de ce qu'on a en poche (etape 7.10). Sur une poche vide, le serveur l'ignore. */
   utiliserLaPoche(): void;
+  /** Tient ou lache le bouton d'action d'Among Ninjas (etape 7.20). */
+  tenirLAction(tenue: boolean): void;
+  /** Vote pendant une reunion d'Among Ninjas (etape 7.20): un joueur, ou null pour passer. */
+  voter(cible: string | null): void;
   /** Passe dans une equipe, dans le salon d'une partie Equipes (etape 7.2). */
   changerDEquipe(equipe: Equipe): void;
   /** Parle dans le chat. */
@@ -534,6 +538,26 @@ export function creerClient(options: OptionsClient): Client {
     }),
   );
 
+  // Among Ninjas (etape 7.20): ce que nous savons de nous-memes est un etat, que le serveur ne
+  // dit qu'a nous; le meurtre et la reunion sont des faits.
+  ecouter(
+    reseau.sur('amongNinjas', (prive) => {
+      magasin.appliquer({ type: 'amongNinjas', prive });
+    }),
+  );
+
+  ecouter(
+    reseau.sur('meurtre', (charge) => {
+      magasin.appliquer({ type: 'fait', fait: fait('meurtre', charge, maintenant()) });
+    }),
+  );
+
+  ecouter(
+    reseau.sur('reunion', (charge) => {
+      magasin.appliquer({ type: 'fait', fait: fait('reunion', charge, maintenant()) });
+    }),
+  );
+
   // -- Les amis en direct (etape 2.8) ---------------------------------------
 
   ecouter(
@@ -698,6 +722,15 @@ export function creerClient(options: OptionsClient): Client {
 
     utiliserLaPoche: () => {
       reseau.emettre('utiliserLaPoche');
+    },
+
+    tenirLAction: (tenue) => {
+      reseau.emettre('agir', tenue);
+    },
+
+    voter: (cible) => {
+      reseau.emettre('voter', { cible });
+      magasin.appliquer({ type: 'monVote', cible });
     },
 
     changerDEquipe: (equipe) => {

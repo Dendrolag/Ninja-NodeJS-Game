@@ -60,7 +60,8 @@ export const PRESENTATION_CARTES: Readonly<Record<CarteEnregistree, Presentation
  *
  * Le mode est un jeu de regles enfichable (decision du 29 juin 2026), et le salon
  * le transporte depuis l'etape 2.4. Le Tactique s'est ajoute au Classique a l'etape
- * 7.1, les Equipes a l'etape 7.2, la Chasse a l'etape 7.3, le Massacre a l'etape 7.4. Le
+ * 7.1, les Equipes a l'etape 7.2, la Chasse a l'etape 7.3, le Massacre a l'etape 7.4, Among
+ * Ninjas a l'etape 7.20. Le
  * Classique s'appelle la Horde depuis l'etape 7.5, sur decision du porteur du projet; son
  * identifiant reste `classique`, pour que les parties et records enregistres restent lisibles.
  */
@@ -70,6 +71,7 @@ export const NOMS_DES_MODES: Readonly<Record<Mode, string>> = {
   equipes: 'Équipes',
   chasse: 'Chasse',
   massacre: 'Massacre',
+  among: 'Among Ninjas',
 };
 
 /** Le nom de chaque equipe du mode Equipes, tel que le joueur le lit (etape 7.2). */
@@ -95,6 +97,8 @@ export const TEXTES_DES_MODES: Readonly<Record<Mode, string>> = {
     'Cache-cache, version ninja. Les traqueurs cherchent les vrais joueurs dans la foule. Les proies prises changent de camp.',
   massacre:
     'Fini les couleurs, place au bain de sang. Tranchez tout au katana et enchaînez pour faire exploser le score.',
+  among:
+    'Des assassins se cachent parmi vous. Faites vos tâches, démasquez-les, et votez pour les éjecter avant qu’il ne soit trop tard.',
 };
 
 /**
@@ -114,6 +118,8 @@ export const CAPTURES_DES_MODES: Readonly<Record<Mode, string>> = {
     'Traqueurs, tirez avec Espace ou le bouton Capturer. Proies, bougez pour marquer et ne vous faites pas prendre.',
   massacre:
     'Espace ou le bouton Katana tranche tout ce qui est devant vous. Enchaînez pour multiplier les points.',
+  among:
+    'Assassins, Espace ou le bouton Katana tue au contact. Tous, E ou le bouton d’action signale un cadavre, sonne le gong ou fait une tâche.',
 };
 
 /** Le nom d'une carte tel qu'on l'affiche, mode miroir compris. */

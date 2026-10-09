@@ -48,6 +48,7 @@ import {
   refusDe,
 } from './etat.js';
 import type { FaitDeJeu } from './faits.js';
+import { AMONG_INCONNU, apresLaReunion, avecLEtatPrive, avecMonVote } from './among.js';
 import { reconstruire } from './reconstruction.js';
 
 /**
@@ -606,6 +607,8 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
         effets: [],
         // Le serveur redit la poche au premier battement, a l'entree comme au retour.
         poche: undefined,
+        // Et l'etat prive d'Among Ninjas des le lancement (etape 7.20).
+        among: AMONG_INCONNU,
         journal: [],
         fin: undefined,
         progressionDeFin: undefined,
@@ -657,11 +660,22 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
         ecran,
         journal: ajouter(etat.journal, action.fait, MAX_JOURNAL),
         effets: effetsApres(etat.effets, action.fait),
+        // Ce qui se passe en reunion d'Among Ninjas se retient aussi a part (etape 7.20).
+        ...(action.fait.nature === 'reunion'
+          ? { among: apresLaReunion(etat.among, action.fait.charge) }
+          : {}),
       };
 
     // Ce que nous avons en poche, que le serveur ne dit qu'a nous (etape 7.10).
     case 'poche':
       return { ...etat, ecran, poche: action.poche };
+
+    // Ce que nous savons de nous-memes dans Among Ninjas, que le serveur ne dit qu'a nous.
+    case 'amongNinjas':
+      return { ...etat, ecran, among: avecLEtatPrive(etat.among, action.prive) };
+
+    case 'monVote':
+      return { ...etat, ecran, among: avecMonVote(etat.among, action.cible) };
 
     case 'refus':
       return { ...etat, ecran, refus: action.refus };

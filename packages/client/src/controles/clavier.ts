@@ -87,6 +87,8 @@ export function brancherClavier(controles: Controles, options: OptionsClavier = 
     if (touche === TOUCHE_POCHE) {
       if (!clavier.repeat && !dansUnChampDeSaisie(clavier.target)) {
         controles.demanderLaPoche();
+        // Tenue, elle est aussi le bouton d'action d'Among Ninjas (etape 7.20).
+        controles.enfoncer(touche);
       }
       return;
     }

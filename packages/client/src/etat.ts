@@ -41,6 +41,8 @@ import type {
   RelationDAmitie,
 } from '@neon-ninja/shared';
 
+import type { AmongClient } from './among.js';
+import { AMONG_INCONNU } from './among.js';
 import type { Ecran } from './ecrans.js';
 import type { FaitDeJeu } from './faits.js';
 import type { Invitation } from './invitation.js';
@@ -471,6 +473,11 @@ export interface EtatClient {
    * changement. Personne d'autre ne le sait: il ne voyage pas dans le flux d'etat.
    */
   readonly poche: ObjetDePoche | undefined;
+  /**
+   * Ce que nous savons d'une partie Among Ninjas hors du flux d'etat (etape 7.20): notre role
+   * et nos taches, la reunion en cours, les morts connus. Vide dans les autres modes.
+   */
+  readonly among: AmongClient;
   /** Les messages de chat recus, du plus ancien au plus recent. */
   readonly messages: readonly MessageAffiche[];
   /** Les faits recents, du plus ancien au plus recent. */
@@ -557,6 +564,7 @@ export const ETAT_INITIAL: EtatClient = {
   partie: undefined,
   effets: [],
   poche: undefined,
+  among: AMONG_INCONNU,
   messages: [],
   journal: [],
   pausePar: undefined,

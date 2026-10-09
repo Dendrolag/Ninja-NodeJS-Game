@@ -222,6 +222,7 @@ export const GLYPHES_DES_MODES: Readonly<Record<Mode, Glyphe>> = {
   equipes: 'shield',
   chasse: 'viseur',
   massacre: 'katana',
+  among: 'masque',
 };
 
 /** L'espace de noms des elements SVG, sans lequel le document fabrique des elements HTML inertes. */

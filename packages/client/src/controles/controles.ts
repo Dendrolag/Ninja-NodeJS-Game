@@ -38,7 +38,7 @@ import {
   intentionDepuisManette,
   memeIntention,
 } from './intention.js';
-import { directionsDepuisTouches, nomDeTouche } from './touches.js';
+import { TOUCHE_POCHE, directionsDepuisTouches, nomDeTouche } from './touches.js';
 
 /** L'etat de saisie d'un joueur, et ce qu'il reste a annoncer. */
 export class Controles {
@@ -89,6 +89,42 @@ export class Controles {
   toutRelacher(): void {
     this.enfoncees.clear();
     this.relacherLaManette();
+    this.actionAuDoigt = false;
+  }
+
+  /** Le bouton d'action d'Among Ninjas est-il tenu au doigt (etape 7.20). */
+  private actionAuDoigt = false;
+
+  /** Ce qui a ete annonce du bouton d'action: tenu ou non. */
+  private actionEmise = false;
+
+  /** Le doigt tient ou lache le bouton d'action d'Among Ninjas (etape 7.20). */
+  tenirLAction(tenue: boolean): void {
+    this.actionAuDoigt = tenue;
+  }
+
+  /**
+   * Le bouton d'action est-il tenu: au doigt, ou par la touche E, la touche de la poche. Dans
+   * Among Ninjas, elle se tient pour faire sa tache (etape 7.20).
+   */
+  actionTenue(): boolean {
+    return this.actionAuDoigt || this.enfoncees.has(TOUCHE_POCHE);
+  }
+
+  /**
+   * Ce qu'il faut annoncer du bouton d'action maintenant, ou rien s'il n'a pas change: comme
+   * le deplacement, un etat qui ne part qu'a son changement.
+   */
+  actionAEmettre(): boolean | undefined {
+    const tenue = this.actionTenue();
+
+    if (tenue === this.actionEmise) {
+      return undefined;
+    }
+
+    this.actionEmise = tenue;
+
+    return tenue;
   }
 
   /** Les directions demandees en ce moment, clavier et manette confondus. */
@@ -207,5 +243,6 @@ export class Controles {
     this.localisationDemandee = false;
     this.tirDemande = false;
     this.pocheDemandee = false;
+    this.actionEmise = false;
   }
 }

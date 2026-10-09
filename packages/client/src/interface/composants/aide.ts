@@ -30,6 +30,7 @@ import type {
   TypeZone,
 } from '@neon-ninja/shared';
 import {
+  AMONG,
   CHASSE,
   IMAGES_PAR_OBJET,
   COMBO,
@@ -187,6 +188,12 @@ const REGLES_DES_MODES: Readonly<Record<Mode, readonly string[]>> = {
     `On ne capture plus, on tranche, avec Espace ou le bouton Katana. Un PNJ vaut ${String(MASSACRE.POINTS_PAR_BOT)} points, un Black Ninja ${String(MASSACRE.POINTS_PAR_BOT_NOIR)}, multipliés par votre combo.`,
     `Enchaînez et le combo grimpe jusqu’à x${String(COMBO.MULTIPLICATEUR_MAXIMUM)}. Tranché, vous perdez votre combo et la moitié de vos points, au profit de votre tueur.`,
     `Carte nettoyée avant la fin\u00a0? ${String(MASSACRE.POINTS_PAR_SECONDE_RESTANTE)} points par seconde restante.`,
+  ],
+  among: [
+    'Des assassins tirés au sort, que personne ne connaît, éliminent les proies au contact, avec Espace ou le bouton Katana.',
+    'Les proies font leurs tâches aux stations de la carte, en tenant E ou le bouton d’action. Toutes faites, elles gagnent.',
+    'Un cadavre signalé, ou le gong au centre de la carte, ouvre une réunion. On discute, puis on vote pour éjecter quelqu’un, sans savoir s’il était assassin.',
+    `Les morts jouent en fantôme, invisibles des vivants, et finissent leurs tâches. Chacun ne voit qu’autour de lui. Il faut ${String(AMONG.JOUEURS_MINIMUM)} joueurs au moins.`,
   ],
 };
 
