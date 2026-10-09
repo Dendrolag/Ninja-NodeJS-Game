@@ -29,12 +29,8 @@ describe('le HUD d une partie Massacre', () => {
 
     expect(hud.arme).toBe('katana');
     expect(hud.charges).toEqual({ disponibles: 1, maximum: 1, recharge: 1 });
-    expect(hud.combo).toEqual({
-      multiplicateur: 1,
-      compte: '',
-      fenetre: 0,
-      restants: '37 ninjas restants',
-    });
+    expect(hud.combo).toBeUndefined();
+    expect(hud.restants).toEqual({ nombre: 37, libelle: '37 ninjas restants' });
   });
 
   it('montre le katana qui revient apres un coup', () => {
@@ -51,21 +47,27 @@ describe('le HUD d une partie Massacre', () => {
     const journal = [coup(1000, { combo: 7, multiplicateur: 2 }), coup(1200, { morts: [] })];
     const hud = construireHud(etatDeMassacre({ journal }), 1500);
 
-    expect(hud.combo).toMatchObject({ multiplicateur: 2, compte: '7 morts', fenetre: 0.75 });
+    expect(hud.combo).toEqual({ multiplicateur: 2, compte: '7 morts', fenetre: 0.75 });
+  });
+
+  it('ne montre pas un combo encore a x1: il n apprend rien', () => {
+    const journal = [coup(1000, { combo: 3, multiplicateur: 1 })];
+
+    expect(construireHud(etatDeMassacre({ journal }), 1100).combo).toBeUndefined();
   });
 
   it('laisse tomber le combo apres sa fenetre, ou quand on se fait tuer', () => {
     const journal = [coup(1000, { combo: 7, multiplicateur: 2 })];
 
-    expect(construireHud(etatDeMassacre({ journal }), 1000 + COMBO.FENETRE_MS).combo).toMatchObject(
-      { multiplicateur: 1, compte: '' },
-    );
+    expect(
+      construireHud(etatDeMassacre({ journal }), 1000 + COMBO.FENETRE_MS).combo,
+    ).toBeUndefined();
     expect(
       construireHud(
         etatDeMassacre({ journal: [...journal, miseAMort(1100, { victime: 'alice' })] }),
         1200,
       ).combo,
-    ).toMatchObject({ multiplicateur: 1 });
+    ).toBeUndefined();
     expect(
       construireHud(
         etatDeMassacre({
@@ -73,23 +75,26 @@ describe('le HUD d une partie Massacre', () => {
         }),
         1200,
       ).combo,
-    ).toMatchObject({ multiplicateur: 1 });
+    ).toBeUndefined();
   });
 
   it('ignore les coups des autres, et accorde les ninjas restants', () => {
     const journal = [coup(1000, { frappeur: 'bob', combo: 9, multiplicateur: 2 })];
+    const hud = construireHud(etatDeMassacre({ journal, ninjas: 1 }), 1100);
 
-    expect(construireHud(etatDeMassacre({ journal, ninjas: 1 }), 1100).combo).toMatchObject({
-      multiplicateur: 1,
-      restants: '1 ninja restant',
+    expect(hud.combo).toBeUndefined();
+    expect(hud.restants).toEqual({ nombre: 1, libelle: '1 ninja restant' });
+    expect(construireHud(etatDeMassacre({ ninjas: 0 }), 0).restants).toEqual({
+      nombre: 0,
+      libelle: 'Carte nettoyée',
     });
-    expect(construireHud(etatDeMassacre({ ninjas: 0 }), 0).combo?.restants).toBe('Carte nettoyée');
   });
 
   it('ne montre rien du Massacre dans un autre mode', () => {
     const hud = construireHud(etatDeMassacre({ mode: 'tactique' }), 0);
 
     expect(hud.combo).toBeUndefined();
+    expect(hud.restants).toBeUndefined();
     expect(hud.arme).toBe('charges');
   });
 });

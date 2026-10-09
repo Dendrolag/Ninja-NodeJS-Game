@@ -1,8 +1,8 @@
 /**
  * Tests du HUD d'une partie Chasse (etape 7.3): notre role, les proies restantes, les vies
- * d'un traqueur sur le bouton de capture, et une minimap qui ne montre que notre camp.
+ * d'un traqueur sur le bouton de capture, et un radar qui ne montre que notre camp.
  *
- * Ce que ces tests protegent: le camouflage. Une minimap qui montrerait les proies aux
+ * Ce que ces tests protegent: le camouflage. Un radar qui montrerait les proies aux
  * traqueurs defairait la decision du porteur du projet.
  */
 
@@ -140,16 +140,16 @@ describe('le HUD d une partie Chasse', () => {
     );
   });
 
-  it('ne montre sur la minimap que notre camp, meme a un traqueur elimine', () => {
-    expect(construireHud(etat('bob'), 0).minimap.map((point) => point.id)).toEqual(['bob']);
-    expect(construireHud(etat('eve'), 0).minimap.map((point) => point.id)).toEqual(['eve', 'ana']);
-    expect(construireHud(etat('bob', 'chasse', ['eve', 'ana']), 0).minimap).toEqual([]);
+  it('ne montre sur le radar que notre camp, meme a un traqueur elimine', () => {
+    expect(construireHud(etat('bob'), 0).radar.map((point) => point.id)).toEqual(['bob']);
+    expect(construireHud(etat('eve'), 0).radar.map((point) => point.id)).toEqual(['eve', 'ana']);
+    expect(construireHud(etat('bob', 'chasse', ['eve', 'ana']), 0).radar).toEqual([]);
   });
 
-  it('ne dit rien de la Chasse dans un autre mode, ou tout le monde est sur la minimap', () => {
+  it('ne dit rien de la Chasse dans un autre mode, ou tout le monde est sur le radar', () => {
     const hud = construireHud(etat('eve', 'classique'), 0);
 
     expect(hud.chasse).toBeUndefined();
-    expect(hud.minimap).toHaveLength(3);
+    expect(hud.radar).toHaveLength(3);
   });
 });

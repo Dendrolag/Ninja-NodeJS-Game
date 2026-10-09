@@ -17,46 +17,53 @@
  *      defilement et la selection en cours.
  *   3. LA SURCOUCHE NE RECOIT PAS LES CLICS, sauf ce qui en a besoin. Sans cela,
  *      un panneau transparent poserait au joueur un mur invisible entre son doigt
- *      et le terrain. Seuls le bouton de capture du mode Tactique et celui de la poche
- *      (etape 7.10) les recoivent.
+ *      et le terrain. Seuls les boutons d'action les recoivent: la poche (etape
+ *      7.10), la localisation et la capture.
+ *
+ * LES BOUTONS D'ACTION SONT RANGES ENSEMBLE, en bas a droite, la capture la plus a droite,
+ * sous le pouce (9 octobre 2026, a la demande du porteur du projet): poses chacun a sa
+ * place, la capture, la localisation, la minimap et le combo se chevauchaient sur un
+ * telephone tenu a l'horizontale.
  *
  * LA MISE EN FORME N'EST PAS ICI. Les elements portent des classes; la feuille de
  * style arrive avec les ecrans de l'etape 4.3, qui decidera de l'apparence a
  * partir des maquettes. Ce fichier garantit la STRUCTURE et le CONTENU.
  */
 
-import type { DimensionsCarte } from '@neon-ninja/shared';
-
 import type { EtatManette } from '../controles/tactile.js';
+import type { Glyphe } from '../interface/icones.js';
+import { icone } from '../interface/icones.js';
 import type {
   ArmeHud,
   ChargesHud,
   ChasseHud,
+  ComboHud,
   EffetHud,
   Hud,
   LigneHud,
-  ComboHud,
   PocheHud,
-  PointMinimap,
-  PorteeMinimap,
+  PointRadar,
+  RestantsHud,
 } from './modele.js';
-
-/** Cote de la minimap, en pixels d'ecran. */
-export const COTE_MINIMAP = 160;
 
 /** Ce qu'il faut pour monter la surcouche. */
 export interface OptionsSurcouche {
   /** L'element qui contiendra le HUD. */
   readonly hote: HTMLElement;
-  /** Dimensions de la carte jouee, pour placer les points de la minimap. */
-  readonly carte: DimensionsCarte;
   /** Le document a utiliser. Celui de la page par defaut. */
   readonly document?: Document;
+  /**
+   * L'endroit de la barre du haut ou poser le compteur des ninjas qui restent, en Massacre.
+   * Sans lui, il est pose avec le reste du HUD.
+   */
+  readonly compteurs?: HTMLElement;
   /**
    * Ce que fait le bouton de capture: tirer (etape 7.1). A fournir dans une partie
    * Tactique seulement; sans lui, la surcouche ne pose ni bouton ni charges.
    */
   readonly capturer?: () => void;
+  /** Ce que fait le bouton de localisation: montrer ou est notre ninja. Sans lui, pas de bouton. */
+  readonly localiser?: () => void;
   /**
    * Ce que fait le bouton de la poche: s'en servir (etape 7.10). Sans lui, la carte de la
    * poche se montre, et aucun bouton n'est pose.
@@ -83,22 +90,22 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
   // les clics et les contacts.
   racine.style.pointerEvents = 'none';
 
-  const temps = element(doc, 'div', 'hud-temps', racine);
+  const temps = monterTemps(doc, racine);
   const pause = element(doc, 'div', 'hud-pause', racine);
   const retour = element(doc, 'div', 'hud-retour', racine);
   retour.setAttribute('role', 'status');
   retour.textContent = 'Connexion perdue. Retour dans la partie…';
   retour.hidden = true;
-  const chasse = monterChasse(doc, racine);
-  const combo = monterCombo(doc, racine);
   const classement = element(doc, 'ol', 'hud-classement', racine);
   const effets = element(doc, 'ul', 'hud-effets', racine);
-  const minimap = element(doc, 'div', 'hud-minimap', racine);
-  minimap.style.width = `${String(COTE_MINIMAP)}px`;
-  minimap.style.height = `${String(COTE_MINIMAP)}px`;
-  // Le disque que la minimap montre en Tactique (etape 7.7), cache ailleurs.
-  const portee = element(doc, 'div', 'hud-portee', minimap);
-  portee.hidden = true;
+  const radar = element(doc, 'div', 'hud-radar', racine);
+  radar.setAttribute('aria-hidden', 'true');
+  element(doc, 'div', 'hud-radar-balayage', radar);
+  const disque = element(doc, 'div', 'hud-radar-disque', radar);
+  // Sous le radar, a droite: le role en Chasse, ou le combo en Massacre et en Horde.
+  const chasse = monterChasse(doc, racine);
+  const combo = monterCombo(doc, racine);
+  const restants = monterRestants(doc, options.compteurs ?? racine);
 
   const manette = element(doc, 'div', 'hud-manette', racine);
   const pouce = element(doc, 'div', 'hud-manette-pouce', manette);
@@ -107,23 +114,35 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
   // qui ne se voyait pas faute de page pour afficher le HUD.
   manette.hidden = true;
 
+  // Les boutons d'action, de gauche a droite: la poche, la localisation, la capture.
+  const boutons = element(doc, 'div', 'hud-boutons', racine);
+  const poche = monterPoche(doc, boutons, effets, options.utiliserLaPoche);
+  const localisation =
+    options.localiser === undefined
+      ? undefined
+      : monterBouton(doc, boutons, {
+          classe: 'hud-localiser',
+          glyphe: 'epingle',
+          libelle: 'Localiser',
+          touche: 'F',
+          etiquette: 'Localiser mon ninja',
+          surAppui: options.localiser,
+        });
   const capture =
-    options.capturer === undefined ? undefined : monterCapture(doc, racine, options.capturer);
-  const poche = monterPoche(doc, racine, effets, options.utiliserLaPoche);
+    options.capturer === undefined ? undefined : monterCapture(doc, boutons, options.capturer);
 
   options.hote.append(racine);
 
   /** Les lignes du classement deja creees, retrouvees par identifiant. */
   const lignes = new Map<string, HTMLElement>();
-  /** Les points de la minimap deja crees. */
+  /** Les points du radar deja crees. */
   const points = new Map<string, HTMLElement>();
   /** Les cartes des effets deja creees (etape 4.6). */
   const cartesDEffets = new Map<string, HTMLElement>();
 
   return {
     afficher(hud: Hud) {
-      temps.textContent = hud.temps;
-      temps.classList.toggle('urgence', hud.urgence);
+      temps.afficher(hud.temps, hud.urgence);
 
       pause.textContent =
         hud.pausePar === undefined ? 'Partie suspendue' : `Partie suspendue par ${hud.pausePar}`;
@@ -133,11 +152,11 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
 
       chasse.afficher(hud.chasse);
       combo.afficher(hud.combo);
+      restants.afficher(hud.restants);
       majClassement(doc, classement, lignes, hud.classement);
       majEffets(doc, effets, cartesDEffets, hud.effets);
       poche.afficher(hud.poche);
-      majMinimap(doc, minimap, points, hud.minimap, options.carte);
-      majPortee(portee, hud.portee, options.carte);
+      majRadar(doc, disque, points, hud.radar);
       // En Chasse, les charges d'un traqueur sont ses vies (etape 7.3); en Massacre, le
       // bouton porte le katana (etape 7.4).
       capture?.afficher(hud.charges, hud.arme);
@@ -158,7 +177,9 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
 
     demonter() {
       capture?.demonter();
+      localisation?.demonter();
       poche.demonter();
+      restants.demonter();
       racine.remove();
       lignes.clear();
       points.clear();
@@ -176,6 +197,111 @@ function element(doc: Document, balise: string, classe: string, parent: Element)
   return cree as HTMLElement;
 }
 
+/** Le temps restant, en haut au centre. */
+interface TempsRestant {
+  afficher(temps: string, urgence: boolean): void;
+}
+
+/**
+ * Le temps restant: un chronometre et les minutes. Cache tant que rien n'est affiche, sans
+ * quoi un ecran sans partie montrerait un chronometre vide.
+ */
+function monterTemps(doc: Document, parent: HTMLElement): TempsRestant {
+  const temps = element(doc, 'div', 'hud-temps', parent);
+  temps.hidden = true;
+  temps.append(icone(doc, 'horloge'));
+  const valeur = element(doc, 'span', 'hud-temps-valeur', temps);
+
+  return {
+    afficher(texte, urgence) {
+      temps.hidden = texte === '';
+      if (valeur.textContent !== texte) {
+        valeur.textContent = texte;
+      }
+      temps.classList.toggle('urgence', urgence);
+    },
+  };
+}
+
+/** Ce qu'il faut pour poser un bouton d'action. */
+interface OptionsBoutonDAction {
+  readonly classe: string;
+  readonly glyphe: Glyphe;
+  /** Le nom ecrit sous le bouton. */
+  readonly libelle: string;
+  /** La touche qui fait la meme chose, rappelee a cote du nom sur ordinateur. */
+  readonly touche?: string;
+  /** Le nom lu par les lecteurs d'ecran. */
+  readonly etiquette: string;
+  readonly surAppui: () => void;
+}
+
+/** Un bouton d'action pose, avec ce qu'il faut pour le changer et le retirer. */
+interface BoutonDAction {
+  readonly bouton: HTMLButtonElement;
+  readonly libelle: HTMLElement;
+  /** Change son pictogramme. */
+  changerDeGlyphe(glyphe: Glyphe): void;
+  demonter(): void;
+}
+
+/**
+ * Pose un bouton d'action: un disque et son pictogramme, le nom dessous.
+ *
+ * IL REAGIT A L'APPUI, PAS AU CLIC. Un clic attend que le doigt se leve, et il
+ * n'arrive pas toujours quand un autre doigt tient la manette: sur telephone, le
+ * pouce gauche court et le pouce droit agit. Il n'est pas dans la zone de la
+ * manette, qui est le terrain: un doigt pose dessus ne la plante pas.
+ *
+ * Hors du parcours au clavier, et jamais en focus: un bouton qui a le focus garde la barre
+ * d'espace pour lui (controles/clavier.ts), et un clic de souris sur le bouton empecherait
+ * alors de tirer au clavier. Chaque geste a sa touche.
+ */
+function monterBouton(
+  doc: Document,
+  parent: HTMLElement,
+  options: OptionsBoutonDAction,
+): BoutonDAction {
+  const bouton = doc.createElement('button');
+  bouton.type = 'button';
+  bouton.className = `hud-bouton ${options.classe}`;
+  bouton.style.pointerEvents = 'auto';
+  bouton.tabIndex = -1;
+  bouton.setAttribute('aria-label', options.etiquette);
+  let pictogramme: SVGSVGElement = icone(doc, options.glyphe, 26);
+  bouton.append(pictogramme);
+  const libelle = element(doc, 'span', 'hud-bouton-libelle', bouton);
+  libelle.textContent = options.libelle;
+
+  if (options.touche !== undefined) {
+    element(doc, 'kbd', 'hud-bouton-touche', bouton).textContent = options.touche;
+  }
+
+  parent.append(bouton);
+
+  const surAppui = (evenement: Event): void => {
+    evenement.preventDefault();
+    options.surAppui();
+  };
+
+  bouton.addEventListener('pointerdown', surAppui);
+
+  return {
+    bouton,
+    libelle,
+
+    changerDeGlyphe(glyphe) {
+      const nouveau = icone(doc, glyphe, 26);
+      pictogramme.replaceWith(nouveau);
+      pictogramme = nouveau;
+    },
+
+    demonter() {
+      bouton.removeEventListener('pointerdown', surAppui);
+    },
+  };
+}
+
 /** Le bouton de capture, qui montre aussi nos charges. */
 interface BoutonDeCapture {
   /** Montre nos charges, ou, en Chasse, nos vies, ou, en Massacre, notre katana. */
@@ -185,49 +311,42 @@ interface BoutonDeCapture {
 
 /**
  * Pose le bouton de capture du mode Tactique (etape 7.1), et du traqueur de la Chasse
- * (etape 7.3), dont les points sont les vies.
+ * (etape 7.3), dont les points sont les vies, et le katana du Massacre (etape 7.4).
  *
- * IL REAGIT A L'APPUI, PAS AU CLIC. Un clic attend que le doigt se leve, et il
- * n'arrive pas toujours quand un autre doigt tient la manette: sur telephone, le
- * pouce gauche court et le pouce droit tire. Il n'est pas dans la zone de la
- * manette, qui est le terrain: un doigt pose dessus ne la plante pas.
- *
- * Un point par charge: plein pour une charge disponible, et celui de la charge qui
- * revient se remplit a mesure.
+ * Un point par charge, sur le bas du disque: plein pour une charge disponible, et celui de
+ * la charge qui revient se remplit a mesure.
  */
 function monterCapture(doc: Document, parent: HTMLElement, capturer: () => void): BoutonDeCapture {
-  const bouton = doc.createElement('button');
-  bouton.type = 'button';
-  bouton.className = 'hud-capture';
-  bouton.style.pointerEvents = 'auto';
-  // Hors du parcours au clavier, et jamais en focus: un bouton qui a le focus garde
-  // la barre d'espace pour lui (controles/clavier.ts), et un clic de souris sur le
-  // bouton empecherait alors de tirer au clavier.
-  bouton.tabIndex = -1;
+  const pose = monterBouton(doc, parent, {
+    classe: 'hud-capture',
+    glyphe: 'masque',
+    libelle: 'Capturer',
+    touche: 'Espace',
+    etiquette: 'Capturer',
+    surAppui: capturer,
+  });
+  const { bouton, libelle } = pose;
+  libelle.classList.add('hud-capture-libelle');
   bouton.hidden = true;
-  const libelle = element(doc, 'span', 'hud-capture-libelle', bouton);
-  libelle.textContent = 'Capturer';
   const jauge = element(doc, 'span', 'hud-charges', bouton);
-  parent.append(bouton);
-
-  const surAppui = (evenement: Event): void => {
-    evenement.preventDefault();
-    capturer();
-  };
-
-  bouton.addEventListener('pointerdown', surAppui);
 
   /** Les points deja poses, un par charge. */
   const points: HTMLElement[] = [];
   let etiquette = '';
+  let arme: ArmeHud = 'charges';
 
   return {
-    afficher(charges, arme) {
-      const enVies = arme === 'vies';
-      const nom = arme === 'katana' ? 'Katana' : 'Capturer';
+    afficher(charges, nouvelleArme) {
+      const enVies = nouvelleArme === 'vies';
+      const nom = nouvelleArme === 'katana' ? 'Katana' : 'Capturer';
       bouton.hidden = charges === undefined;
       jauge.classList.toggle('vies', enVies);
-      jauge.classList.toggle('katana', arme === 'katana');
+      jauge.classList.toggle('katana', nouvelleArme === 'katana');
+
+      if (nouvelleArme !== arme) {
+        arme = nouvelleArme;
+        pose.changerDeGlyphe(arme === 'katana' ? 'katana' : 'masque');
+      }
 
       if (libelle.textContent !== nom) {
         libelle.textContent = nom;
@@ -263,7 +382,7 @@ function monterCapture(doc: Document, parent: HTMLElement, capturer: () => void)
     },
 
     demonter() {
-      bouton.removeEventListener('pointerdown', surAppui);
+      pose.demonter();
     },
   };
 }
@@ -279,22 +398,22 @@ interface PocheAuHud {
  *
  * LA CARTE se range en tete des effets, sans jauge: la fumee dure tant qu'on la garde. Elle
  * porte la touche E, que la feuille de style cache sur un ecran tactile. LE BOUTON, un
- * disque de brume a gauche de la minimap, ne se montre que sur un ecran tactile, et
- * seulement quand la poche est pleine. Comme celui de capture, il reagit a l'appui, et il
+ * disque de brume a gauche des autres boutons d'action, ne se montre que sur un ecran
+ * tactile, et seulement quand la poche est pleine. Comme eux, il reagit a l'appui, et il
  * est hors du terrain: un doigt pose dessus ne plante pas la manette.
  */
 function monterPoche(
   doc: Document,
-  racine: HTMLElement,
+  boutons: HTMLElement,
   effets: HTMLElement,
   utiliser: (() => void) | undefined,
 ): PocheAuHud {
   // La carte n'est dans la liste des effets que tant que la poche est pleine.
   const carte = element(doc, 'li', 'hud-effet hud-effet-poche', effets);
   carte.remove();
-  const icone = element(doc, 'span', 'hud-effet-icone', carte);
-  icone.setAttribute('aria-hidden', 'true');
-  const pictogramme = element(doc, 'span', 'hud-effet-pictogramme', icone);
+  const pastille = element(doc, 'span', 'hud-effet-icone', carte);
+  pastille.setAttribute('aria-hidden', 'true');
+  const pictogramme = element(doc, 'span', 'hud-effet-pictogramme', pastille);
   const nom = element(doc, 'span', 'hud-effet-nom', carte);
   const libelle = element(doc, 'span', 'hud-effet-libelle', nom);
   element(doc, 'span', 'hud-effet-cible', nom).textContent = 'En poche';
@@ -303,6 +422,7 @@ function monterPoche(
 
   let bouton: HTMLButtonElement | undefined;
   let boutonIcone: HTMLElement | undefined;
+  let boutonLibelle: HTMLElement | undefined;
   const surAppui = (evenement: Event): void => {
     evenement.preventDefault();
     utiliser?.();
@@ -311,15 +431,16 @@ function monterPoche(
   if (utiliser !== undefined) {
     bouton = doc.createElement('button');
     bouton.type = 'button';
-    bouton.className = 'hud-poche';
+    bouton.className = 'hud-bouton hud-poche';
     bouton.style.pointerEvents = 'auto';
-    // Jamais en focus, pour la meme raison que le bouton de capture.
+    // Jamais en focus, pour la meme raison que les autres boutons d'action.
     bouton.tabIndex = -1;
     bouton.hidden = true;
     boutonIcone = element(doc, 'span', 'hud-poche-pictogramme', bouton);
     boutonIcone.setAttribute('aria-hidden', 'true');
+    boutonLibelle = element(doc, 'span', 'hud-bouton-libelle', bouton);
     bouton.addEventListener('pointerdown', surAppui);
-    racine.append(bouton);
+    boutons.append(bouton);
   }
 
   /** L'objet affiche, pour ne toucher au document que s'il change. */
@@ -351,9 +472,10 @@ function monterPoche(
       pictogramme.style.backgroundImage = `url("${poche.icone}")`;
       libelle.textContent = poche.libelle;
 
-      if (bouton !== undefined && boutonIcone !== undefined) {
+      if (bouton !== undefined && boutonIcone !== undefined && boutonLibelle !== undefined) {
         bouton.style.setProperty('--couleur-effet', couleur);
         boutonIcone.style.backgroundImage = `url("${poche.icone}")`;
+        boutonLibelle.textContent = poche.libelle;
         bouton.setAttribute('aria-label', `${poche.libelle} : s’en servir`);
       }
     },
@@ -364,29 +486,28 @@ function monterPoche(
   };
 }
 
-/** Le compteur de combo, dans une partie Massacre ou Horde. */
-interface CompteurDeCombo {
+/** Le multiplicateur de combo, dans une partie Massacre ou Horde. */
+interface IndicateurDeCombo {
   afficher(combo: ComboHud | undefined): void;
 }
 
 /**
- * Le compteur de combo d'une partie Massacre (etape 7.4) ou Horde (etape 7.5): le
- * multiplicateur en grand, les coups du combo, la fenetre qui s'epuise, et, en Massacre, les
- * ninjas qui restent. Cache hors de ces modes. Il prend la place du bandeau de role de la
- * Chasse, a droite sous les boutons.
+ * Le combo d'une partie Massacre (etape 7.4) ou Horde (etape 7.5), reduit a son
+ * multiplicateur (9 octobre 2026, a la demande du porteur du projet): un « x2 » flottant,
+ * sans fond, sous le radar, et un trait de vitesse dessous, la fenetre du combo qui
+ * s'epuise. Il saute a chaque cran. Le compte des coups reste lu par les lecteurs d'ecran.
  */
-function monterCombo(doc: Document, parent: HTMLElement): CompteurDeCombo {
-  const compteur = element(doc, 'div', 'hud-massacre', parent);
-  compteur.hidden = true;
-  const multiplicateur = element(doc, 'strong', 'hud-massacre-multiplicateur', compteur);
-  const coups = element(doc, 'span', 'hud-massacre-combo', compteur);
-  const fenetre = element(doc, 'span', 'hud-massacre-fenetre', compteur);
-  const restants = element(doc, 'span', 'hud-massacre-restants', compteur);
-  restants.setAttribute('role', 'status');
+function monterCombo(doc: Document, parent: HTMLElement): IndicateurDeCombo {
+  const indicateur = element(doc, 'div', 'hud-combo', parent);
+  indicateur.hidden = true;
+  const multiplicateur = element(doc, 'strong', 'hud-combo-multiplicateur', indicateur);
+  const fenetre = element(doc, 'span', 'hud-combo-fenetre', indicateur);
+  fenetre.setAttribute('aria-hidden', 'true');
+  const compte = element(doc, 'span', 'hud-combo-compte visuellement-cache', indicateur);
 
   return {
     afficher(combo) {
-      compteur.hidden = combo === undefined;
+      indicateur.hidden = combo === undefined;
 
       if (combo === undefined) {
         return;
@@ -395,13 +516,59 @@ function monterCombo(doc: Document, parent: HTMLElement): CompteurDeCombo {
       const texte = `x${String(combo.multiplicateur)}`;
       if (multiplicateur.textContent !== texte) {
         multiplicateur.textContent = texte;
+        // Le saut repart a chaque cran: retire, puis remis apres un calcul de la mise en page.
+        indicateur.classList.remove('saut');
+        void indicateur.offsetWidth;
+        indicateur.classList.add('saut');
       }
-      compteur.dataset['multiplicateur'] = String(combo.multiplicateur);
-      compteur.classList.toggle('en-combo', combo.fenetre > 0);
-      coups.textContent = combo.compte;
+      indicateur.dataset['multiplicateur'] = String(combo.multiplicateur);
       fenetre.style.setProperty('--fenetre', String(combo.fenetre));
-      restants.textContent = combo.restants;
-      restants.hidden = combo.restants === '';
+      if (compte.textContent !== combo.compte) {
+        compte.textContent = combo.compte;
+      }
+    },
+  };
+}
+
+/** Le compteur des ninjas qui restent, dans une partie Massacre. */
+interface CompteurDeRestants {
+  afficher(restants: RestantsHud | undefined): void;
+  demonter(): void;
+}
+
+/**
+ * Les ninjas qui restent a tuer en Massacre (etape 7.4), dans la barre du haut: une tete de
+ * ninja et leur nombre. La phrase entiere reste lue par les lecteurs d'ecran.
+ */
+function monterRestants(doc: Document, parent: HTMLElement): CompteurDeRestants {
+  const compteur = element(doc, 'div', 'hud-restants', parent);
+  compteur.setAttribute('role', 'status');
+  compteur.hidden = true;
+  compteur.append(icone(doc, 'masque'));
+  const nombre = element(doc, 'span', 'hud-restants-nombre', compteur);
+  nombre.setAttribute('aria-hidden', 'true');
+  const phrase = element(doc, 'span', 'hud-restants-libelle visuellement-cache', compteur);
+
+  return {
+    afficher(restants) {
+      compteur.hidden = restants === undefined;
+
+      if (restants === undefined) {
+        return;
+      }
+
+      const texte = String(restants.nombre);
+      if (nombre.textContent !== texte) {
+        nombre.textContent = texte;
+      }
+      if (phrase.textContent !== restants.libelle) {
+        phrase.textContent = restants.libelle;
+        compteur.title = restants.libelle;
+      }
+    },
+
+    demonter() {
+      compteur.remove();
     },
   };
 }
@@ -462,6 +629,8 @@ function majClassement(
     // L'ordre du classement change en cours de partie: on l'exprime par l'ordre
     // de mise en page plutot qu'en deplacant des elements dans le document.
     element_.style.order = String(ligne.rang);
+    // Hors du podium, une ligne autre que la notre: un ecran etroit ne la montre pas.
+    element_.classList.toggle('hors-podium', ligne.rang > 3 && !ligne.moi);
   }
 
   for (const [id, element_] of lignes) {
@@ -539,9 +708,9 @@ function creerCarte(
   carte.style.setProperty('--couleur-effet', `#${effet.couleur.toString(16).padStart(6, '0')}`);
   carte.classList.toggle('aux-autres', effet.auxAutres);
 
-  const icone = element(doc, 'span', 'hud-effet-icone', carte);
-  icone.setAttribute('aria-hidden', 'true');
-  element(doc, 'span', 'hud-effet-pictogramme', icone).style.backgroundImage =
+  const pastille = element(doc, 'span', 'hud-effet-icone', carte);
+  pastille.setAttribute('aria-hidden', 'true');
+  element(doc, 'span', 'hud-effet-pictogramme', pastille).style.backgroundImage =
     `url("${effet.icone}")`;
 
   const nom = element(doc, 'span', 'hud-effet-nom', carte);
@@ -559,33 +728,14 @@ function creerCarte(
 }
 
 /**
- * Pose sur la minimap le disque qu'elle montre, en Tactique (etape 7.7). La minimap est
- * carree et la carte ne l'est pas: le disque y devient une ellipse.
+ * Met les points du radar en accord avec le modele. Le modele les place par rapport au
+ * centre, en part de la portee: le disque en fait des pourcentages.
  */
-function majPortee(
-  portee: HTMLElement,
-  modele: PorteeMinimap | undefined,
-  carte: DimensionsCarte,
-): void {
-  portee.hidden = modele === undefined;
-
-  if (modele === undefined) {
-    return;
-  }
-
-  portee.style.left = `${String(((modele.x - modele.rayon) / carte.largeur) * 100)}%`;
-  portee.style.top = `${String(((modele.y - modele.rayon) / carte.hauteur) * 100)}%`;
-  portee.style.width = `${String(((2 * modele.rayon) / carte.largeur) * 100)}%`;
-  portee.style.height = `${String(((2 * modele.rayon) / carte.hauteur) * 100)}%`;
-}
-
-/** Met les points de la minimap en accord avec le modele. */
-function majMinimap(
+function majRadar(
   doc: Document,
-  minimap: HTMLElement,
+  disque: HTMLElement,
   points: Map<string, HTMLElement>,
-  modele: readonly PointMinimap[],
-  carte: DimensionsCarte,
+  modele: readonly PointRadar[],
 ): void {
   const vus = new Set<string>();
 
@@ -594,14 +744,15 @@ function majMinimap(
     let element_ = points.get(point.id);
 
     if (element_ === undefined) {
-      element_ = element(doc, 'div', 'hud-point', minimap);
+      element_ = element(doc, 'div', 'hud-point', disque);
       points.set(point.id, element_);
     }
 
-    element_.style.left = `${String((point.x / carte.largeur) * 100)}%`;
-    element_.style.top = `${String((point.y / carte.hauteur) * 100)}%`;
+    element_.style.left = `${String(50 + point.x * 50)}%`;
+    element_.style.top = `${String(50 + point.y * 50)}%`;
     element_.style.background = point.couleur;
     element_.classList.toggle('moi', point.moi);
+    element_.classList.toggle('au-bord', point.auBord);
   }
 
   for (const [id, element_] of points) {

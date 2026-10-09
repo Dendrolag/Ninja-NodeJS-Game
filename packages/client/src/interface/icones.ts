@@ -7,7 +7,7 @@
  * reutilisables, et c'est le cas: aucune police d'icones, aucun fichier a charger,
  * aucun emoji. Les glyphes absents de la maquette sont dessines dans le meme style:
  * pause, son, sonCoupe, fermer, user, sortir, viseur, katana, partager (etape
- * 2.7), et amis (etape 3.6).
+ * 2.7), amis (etape 3.6), horloge et masque (HUD reduit du 9 octobre 2026).
  *
  * SEULS LES GLYPHES UTILISES SONT REPRIS. La maquette en compte trente-cinq, dont
  * beaucoup servent des ecrans reportes (pass de saison, boutique, clans).
@@ -182,6 +182,20 @@ const GLYPHES = {
       { trace: 'M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4' },
       { trace: 'M9 16l-4-4 4-4' },
       { trace: 'M5 12h11' },
+    ],
+  },
+  // Le HUD reduit du 9 octobre 2026, dans le meme style. Le temps restant: un chronometre.
+  horloge: {
+    formes: [{ cercle: [12, 13.5, 7.5] }, { trace: 'M12 10v3.5l2.5 1.5' }, { trace: 'M9.5 3h5' }],
+  },
+  // Capturer, et les ninjas qui restent: une tete de ninja, son bandeau et ses yeux.
+  masque: {
+    formes: [
+      { cercle: [12, 12, 9] },
+      { trace: 'M3.6 9.5h16.8' },
+      { trace: 'M3.6 14.5h16.8' },
+      { trace: 'M7.5 11.5l2.5 1' },
+      { trace: 'M16.5 11.5l-2.5 1' },
     ],
   },
   // Etape 3.6: deux silhouettes, celle de devant reprise de user.

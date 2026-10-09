@@ -38,7 +38,7 @@ function hud(effets: readonly EffetHud[]): Hud {
 /** Une surcouche montee dans un hote neuf. */
 function surcouche() {
   const hote = document.createElement('div');
-  const monte = monterSurcouche({ hote, carte: { largeur: 2000, hauteur: 1500 } });
+  const monte = monterSurcouche({ hote });
 
   return { hote, monte };
 }
@@ -161,7 +161,6 @@ describe('la poche au HUD (etape 7.10)', () => {
     const appuis = { nombre: 0 };
     const monte = monterSurcouche({
       hote,
-      carte: { largeur: 2000, hauteur: 1500 },
       utiliserLaPoche: () => {
         appuis.nombre += 1;
       },
@@ -215,5 +214,154 @@ describe('la poche au HUD (etape 7.10)', () => {
 
     expect(hote.querySelector('.hud-poche')).toBeNull();
     expect(hote.querySelector('.hud-effet-poche')).not.toBeNull();
+  });
+});
+
+describe('le HUD reduit du 9 octobre 2026', () => {
+  it('cache le temps restant tant que rien n est affiche', () => {
+    const { hote, monte } = surcouche();
+    const temps = hote.querySelector<HTMLElement>('.hud-temps');
+
+    expect(temps?.hidden).toBe(true);
+
+    monte.afficher(hud([]));
+
+    expect(temps?.hidden).toBe(false);
+    expect(temps?.textContent).toBe('2:00');
+  });
+
+  it('range les boutons d action ensemble: la poche, la localisation, puis la capture', () => {
+    const hote = document.createElement('div');
+    const appuis: string[] = [];
+    monterSurcouche({
+      hote,
+      utiliserLaPoche: () => appuis.push('poche'),
+      localiser: () => appuis.push('localiser'),
+      capturer: () => appuis.push('capturer'),
+    });
+
+    const boutons = [...hote.querySelectorAll<HTMLButtonElement>('.hud-boutons > button')];
+
+    expect(boutons.map((bouton) => bouton.className)).toEqual([
+      'hud-bouton hud-poche',
+      'hud-bouton hud-localiser',
+      'hud-bouton hud-capture',
+    ]);
+    expect(boutons[1]?.getAttribute('aria-label')).toBe('Localiser mon ninja');
+    expect(boutons[1]?.querySelector('.hud-bouton-libelle')?.textContent).toBe('Localiser');
+
+    boutons[1]?.dispatchEvent(new Event('pointerdown'));
+    boutons[2]?.dispatchEvent(new Event('pointerdown'));
+
+    expect(appuis).toEqual(['localiser', 'capturer']);
+  });
+
+  it('change le pictogramme et le nom de la capture pour le katana', () => {
+    const hote = document.createElement('div');
+    const monte = monterSurcouche({ hote, capturer: () => undefined });
+
+    monte.afficher({
+      ...hud([]),
+      charges: { disponibles: 1, maximum: 1, recharge: 1 },
+      arme: 'katana',
+    });
+
+    const capture = hote.querySelector<HTMLButtonElement>('.hud-capture');
+
+    expect(capture?.hidden).toBe(false);
+    expect(capture?.querySelector('.hud-capture-libelle')?.textContent).toBe('Katana');
+    expect(capture?.querySelectorAll('svg')).toHaveLength(1);
+    expect(capture?.getAttribute('aria-label')).toBe('Katana, prêt');
+  });
+
+  it('montre le combo en un multiplicateur, et le compte aux lecteurs d ecran', () => {
+    const { hote, monte } = surcouche();
+    const combo = hote.querySelector<HTMLElement>('.hud-combo');
+
+    monte.afficher(hud([]));
+    expect(combo?.hidden).toBe(true);
+
+    monte.afficher({
+      ...hud([]),
+      combo: { multiplicateur: 3, compte: '12 ninjas', fenetre: 0.5 },
+    });
+
+    expect(combo?.hidden).toBe(false);
+    expect(combo?.dataset['multiplicateur']).toBe('3');
+    expect(combo?.querySelector('.hud-combo-multiplicateur')?.textContent).toBe('x3');
+    expect(combo?.querySelector('.hud-combo-compte')?.textContent).toBe('12 ninjas');
+    expect(
+      combo?.querySelector<HTMLElement>('.hud-combo-fenetre')?.style.getPropertyValue('--fenetre'),
+    ).toBe('0.5');
+  });
+
+  it('pose les ninjas restants dans la barre, et les retire au demontage', () => {
+    const hote = document.createElement('div');
+    const compteurs = document.createElement('div');
+    const monte = monterSurcouche({ hote, compteurs });
+
+    monte.afficher({ ...hud([]), restants: { nombre: 37, libelle: '37 ninjas restants' } });
+
+    const restants = compteurs.querySelector<HTMLElement>('.hud-restants');
+
+    expect(restants?.hidden).toBe(false);
+    expect(restants?.querySelector('.hud-restants-nombre')?.textContent).toBe('37');
+    expect(restants?.querySelector('.hud-restants-libelle')?.textContent).toBe(
+      '37 ninjas restants',
+    );
+
+    monte.demonter();
+
+    expect(compteurs.querySelector('.hud-restants')).toBeNull();
+  });
+
+  it('place les points du radar autour de son centre, et marque ceux du bord', () => {
+    const { hote, monte } = surcouche();
+
+    monte.afficher({
+      ...hud([]),
+      radar: [
+        { id: 'moi', x: 0, y: 0, couleur: '#00FFFF', moi: true, auBord: false },
+        { id: 'loin', x: 1, y: -0.5, couleur: '#FF0000', moi: false, auBord: true },
+      ],
+    });
+
+    const points = [...hote.querySelectorAll<HTMLElement>('.hud-radar-disque .hud-point')];
+
+    expect(points.map((point) => [point.style.left, point.style.top])).toEqual([
+      ['50%', '50%'],
+      ['100%', '25%'],
+    ]);
+    expect(points.map((point) => point.className)).toEqual(['hud-point moi', 'hud-point au-bord']);
+  });
+
+  it('marque les lignes du classement hors du podium, sauf la notre', () => {
+    const { hote, monte } = surcouche();
+    const ligneHud = (id: string, rang: number) => ({
+      id,
+      pseudo: id,
+      couleur: '#FF0000',
+      points: 10 - rang,
+      moi: id === 'moi',
+      rang,
+      doubleur: false,
+    });
+
+    monte.afficher({
+      ...hud([]),
+      classement: [
+        ligneHud('a', 1),
+        ligneHud('b', 2),
+        ligneHud('c', 3),
+        ligneHud('d', 4),
+        ligneHud('moi', 5),
+      ],
+    });
+
+    const horsPodium = [...hote.querySelectorAll('.hud-ligne')].map((ligne) =>
+      ligne.classList.contains('hors-podium'),
+    );
+
+    expect(horsPodium).toEqual([false, false, false, true, false]);
   });
 });

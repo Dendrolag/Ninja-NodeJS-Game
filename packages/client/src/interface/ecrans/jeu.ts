@@ -119,6 +119,12 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
     }),
   );
 
+  // La place du compteur des ninjas qui restent, en Massacre, que la surcouche y pose.
+  const compteurs = creer(doc, 'div', { classe: 'jeu-compteurs' });
+
+  // Les boutons de la barre ne montrent que leur pictogramme, leur nom reste lu par les
+  // lecteurs d'ecran (9 octobre 2026). La localisation est descendue avec la capture, en bas
+  // a droite, dans la surcouche.
   const actions = creer(
     doc,
     'div',
@@ -136,13 +142,7 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
         // La touche de la poche, quand un objet de poche est en jeu (etapes 7.10 et 7.11).
         toucheDeLaPoche(reglages.objetsDePoche),
     }),
-    bouton(
-      doc,
-      { classe: 'bouton-icone jeu-localiser', icone: 'epingle', etiquette: 'Localiser mon ninja' },
-      () => {
-        controles.demanderLaLocalisation();
-      },
-    ),
+    compteurs,
     bouton(doc, { classe: 'bouton-icone', icone: 'son', etiquette: 'Son' }, contexte.ouvrirSon),
     pause,
     reprendre,
@@ -225,8 +225,11 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
 
     const surcouche = monterSurcouche({
       hote: zoneHud,
-      carte,
       document: doc,
+      compteurs,
+      localiser: () => {
+        controles.demanderLaLocalisation();
+      },
       ...(tactique
         ? {
             capturer: () => {

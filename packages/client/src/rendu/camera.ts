@@ -168,8 +168,8 @@ export interface ZoneVisible {
 /**
  * Ce que la camera montre en ce moment.
  *
- * La minimap s'en sert pour dessiner le rectangle de vue, et le rendu, depuis
- * l'etape 5.7, pour ne pas mettre a jour les personnages hors champ. La marge
+ * Le rendu s'en sert, depuis l'etape 5.7, pour ne pas mettre a jour les personnages
+ * hors champ. La marge
  * evite qu'une entite a cheval sur le bord apparaisse d'un coup.
  */
 export function zoneVisible(camera: Camera, ecran: TailleEcran, marge = 0): ZoneVisible {

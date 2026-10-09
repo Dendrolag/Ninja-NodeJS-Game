@@ -5,7 +5,7 @@
  * minuscules. L'etape les agrandit: un grand titre au centre de l'ecran pour l'annonce
  * d'un objet, des cartes a jauge pour les effets, notre ligne du classement detachee.
  * Sur un ecran tactile, le HUD garde a peu pres ses tailles d'avant, pour ne pas couvrir
- * le terrain.
+ * le terrain, et depuis le 9 octobre 2026 les effets n'y sont plus que des pastilles rondes.
  *
  * La page monte la vraie surcouche et le vrai fil d'annonces, avec la vraie feuille de
  * style empaquetee, puis mesure ce que le navigateur en fait. Seul un vrai navigateur
@@ -34,7 +34,6 @@ function pageDuHud(): string {
 
   const surcouche = monterSurcouche({
     hote: document.querySelector('.zone-hud'),
-    carte: { largeur: 2000, hauteur: 1500 },
   });
   const effet = (nature, categorie, libelle, couleur, resteS) => ({
     nature, categorie, libelle, couleur, resteMs: resteS * 1000, resteS,
@@ -53,11 +52,11 @@ function pageDuHud(): string {
       id: 'j' + rang, pseudo, couleur: '#FF00FF', points: 20 - rang, moi: rang === 0, rang: rang + 1,
     })),
     effets: [effet('vitesse', 'bonus', 'Boost', 0x00ff00, 4), effet('flou', 'malus', 'Vision floue', 0x44aaff, 7)],
-    minimap: [],
-    portee: undefined,
+    radar: [],
     charges: undefined,
     chasse: undefined,
     combo: undefined,
+    restants: undefined,
     arme: 'charges',
   });
 
@@ -131,7 +130,7 @@ test('le HUD grandit sur ordinateur et reste compact sur ecran tactile', async (
   expect(mesures.couleurDuTitre, detail).toBe('rgb(0, 255, 0)');
 
   if (hasTouch) {
-    expect(mesures.largeurDeCarte, detail).toBeLessThanOrEqual(210);
+    expect(mesures.largeurDeCarte, detail).toBeLessThanOrEqual(44);
     expect(mesures.policeDuTitre, detail).toBeLessThanOrEqual(30);
     expect(mesures.policeDeNosPoints, detail).toBeLessThanOrEqual(16);
   } else {

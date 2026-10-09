@@ -216,11 +216,11 @@ export { brancherClavier } from './controles/clavier.js';
 export type { EtatManette, OptionsTactile } from './controles/tactile.js';
 export { MANETTE_AU_REPOS, RAYON_MANETTE, brancherTactile } from './controles/tactile.js';
 
-export type { EffetHud, Hud, LigneHud, PointMinimap } from './hud/modele.js';
+export type { EffetHud, Hud, LigneHud, PointRadar } from './hud/modele.js';
 export { HUD_VIDE, SEUIL_URGENCE_MS, construireHud, formaterDuree } from './hud/modele.js';
 
 export type { OptionsSurcouche, Surcouche } from './hud/surcouche.js';
-export { COTE_MINIMAP, monterSurcouche } from './hud/surcouche.js';
+export { monterSurcouche } from './hud/surcouche.js';
 
 export {
   SEUIL_TEMPS_PRESSE_MS,

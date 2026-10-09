@@ -8,7 +8,7 @@
  * Le classement et les recompenses d'une Chasse sont ceux du Classique, aux points: rien
  * d'autre n'est a partager.
  *
- * TOUT CE FICHIER EST PUR: le client l'appelle pour le HUD, la minimap et l'ecran de fin.
+ * TOUT CE FICHIER EST PUR: le client l'appelle pour le HUD, le radar et l'ecran de fin.
  */
 
 import type { Couleur } from './constantes.js';

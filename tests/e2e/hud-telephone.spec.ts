@@ -5,7 +5,8 @@
  * telephone: le classement, pose en haut a gauche, descendait sur le temps restant
  * des qu'il comptait plusieurs joueurs. Depuis l'etape 5.5, le temps et le classement
  * tiennent dans une meme barre en haut de l'ecran, le temps au centre: le classement
- * doit rester a sa gauche, sans le chevaucher, meme quand sa liste descend.
+ * doit rester a sa gauche, sans le chevaucher, meme quand sa liste descend. Depuis le HUD
+ * reduit du 9 octobre 2026, la liste se limite au podium et a notre ligne.
  *
  * La page monte la vraie surcouche du HUD avec la vraie feuille de style de la page
  * empaquetee, un classement de huit joueurs, puis mesure ou le navigateur pose les
@@ -32,7 +33,6 @@ function pageDuHud(): string {
 
   const surcouche = monterSurcouche({
     hote: document.querySelector('.zone-hud'),
-    carte: { largeur: 2000, hauteur: 1500 },
   });
   const pseudos = ['Alice', 'Bob', 'Chloe', 'David', 'Emma', 'Farid', 'Gaelle', 'Hugo'];
 
@@ -43,11 +43,13 @@ function pageDuHud(): string {
     enPause: false,
     pausePar: undefined,
     classement: pseudos.map((pseudo, rang) => ({
-      id: 'j' + rang, pseudo, couleur: '#FF00FF', points: 20 - rang, moi: rang === 0, rang: rang + 1,
+      id: 'j' + rang, pseudo, couleur: '#FF00FF', points: 20 - rang, moi: rang === 5, rang: rang + 1,
+      doubleur: false,
     })),
     effets: [],
-    minimap: [],
+    radar: [],
     charges: undefined,
+    arme: 'charges',
   });
 
   window.pret = true;
@@ -66,6 +68,8 @@ interface Boite {
 interface Disposition {
   readonly temps: Boite;
   readonly classement: Boite;
+  /** Les lignes affichees, nom par nom. */
+  readonly lignes: readonly string[];
 }
 
 let serveur: ServeurStatique;
@@ -85,7 +89,7 @@ const TELEPHONES = [
   { largeur: 412, hauteur: 915 },
 ] as const;
 
-test('sur telephone, le classement reste a gauche du temps restant', async ({ page }) => {
+test('sur telephone, le classement reduit reste a gauche du temps restant', async ({ page }) => {
   await page.goto(`${serveur.url}/hud.html`);
   await page.waitForFunction(() => (window as unknown as { pret?: boolean }).pret, null, {
     timeout: 30_000,
@@ -99,13 +103,17 @@ test('sur telephone, le classement reste a gauche du temps restant', async ({ pa
         const rect = (document.querySelector(selecteur) as HTMLElement).getBoundingClientRect();
         return { haut: rect.top, bas: rect.bottom, gauche: rect.left, droite: rect.right };
       };
-      return { temps: boite('.hud-temps'), classement: boite('.hud-classement') };
+      const lignes = Array.from(document.querySelectorAll<HTMLElement>('.hud-ligne'))
+        .filter((ligne) => ligne.offsetParent !== null)
+        .map((ligne) => ligne.querySelector('.hud-pseudo')?.textContent ?? '');
+      return { temps: boite('.hud-temps'), classement: boite('.hud-classement'), lignes };
     })) as Disposition;
     const detail = `${String(telephone.largeur)} px : ${JSON.stringify(disposition)}`;
 
-    expect(disposition.classement.bas, `le classement doit etre plein ${detail}`).toBeGreaterThan(
-      disposition.classement.haut + 150,
-    );
+    expect(
+      [...disposition.lignes].sort(),
+      `le classement doit se limiter au podium et a notre ligne ${detail}`,
+    ).toEqual(['Alice', 'Bob', 'Chloe', 'Farid']);
     expect(
       disposition.classement.droite,
       `le classement doit rester a gauche du temps restant ${detail}`,

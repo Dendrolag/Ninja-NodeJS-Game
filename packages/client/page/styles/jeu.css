@@ -54,11 +54,19 @@
  * droite. Avant, trois panneaux separes, plus opaques; sur telephone, le temps et
  * le classement tombaient sous les boutons. Le fond est leger, pour laisser le jeu
  * lisible dessous, et la camera descend sous la barre au bord de la carte.
+ *
+ * REDUITE LE 9 OCTOBRE 2026, a la demande du porteur du projet: sur un telephone tenu a
+ * l'horizontale, elle prenait un sixieme de la hauteur. Plus basse, des boutons reduits a
+ * leur pictogramme, et le temps restant dans une pastille, sans son intitule.
  */
 .ecran-jeu {
-  --hauteur-barre: 56px;
+  --hauteur-barre: 44px;
   --debut-barre: env(safe-area-inset-top, 0px);
   --fond-barre: rgba(7, 12, 20, 0.42);
+  --marge-du-bas: max(14px, env(safe-area-inset-bottom));
+  --marge-de-droite: max(14px, env(safe-area-inset-right));
+  /* Le cote du radar, en haut a droite sous la barre. */
+  --cote-radar: 112px;
 }
 
 .jeu-barre {
@@ -78,30 +86,48 @@
 .jeu-actions {
   position: absolute;
   top: var(--debut-barre);
-  right: max(12px, env(safe-area-inset-right));
+  right: max(10px, env(safe-area-inset-right));
   z-index: 5;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   height: var(--hauteur-barre);
 }
 
-.jeu-actions .bouton {
-  min-height: 38px;
-  padding: 0 14px;
-  font-size: 12.5px;
+/* Des pictogrammes seuls: le texte des boutons reste lu par les lecteurs d'ecran. */
+.jeu-actions .bouton span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.jeu-actions .bouton,
+.jeu-actions .bouton-icone {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-radius: 10px;
 }
 
 .jeu-actions .bouton-secondaire,
 .jeu-actions .bouton-icone {
-  min-height: 38px;
-  background: rgba(255, 255, 255, 0.06);
+  border-color: transparent;
+  background: transparent;
+  color: var(--texte);
 }
 
-/* A la hauteur des autres boutons de la barre. */
-.jeu-actions .bouton-icone:not(.jeu-localiser) {
-  width: 38px;
-  height: 38px;
+.jeu-actions .bouton-secondaire:hover,
+.jeu-actions .bouton-icone:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.jeu-actions .bouton:hover:not(:disabled) {
+  transform: none;
 }
 
 .jeu-rappel {
@@ -110,7 +136,7 @@
    * la barre, moins les boutons et la moitie du temps, et passe a la ligne au besoin. Avec
    * la poche (etapes 7.10 et 7.11), il touchait le temps a 1280 pixels de large.
    */
-  max-width: calc(50vw - 380px);
+  max-width: calc(50vw - 260px);
   color: var(--texte-tertiaire);
   font-family: var(--police-donnees);
   font-size: 11px;
@@ -120,62 +146,44 @@
 
 /*
  * Le rappel des touches prend de la place: sous cette largeur, il lui faudrait plus de trois
- * lignes. Les touches restent decrites dans l'aide.
+ * lignes. Les touches restent decrites dans l'aide, et sous les boutons d'action.
  */
-@media (max-width: 1200px) {
+@media (max-width: 1200px), (pointer: coarse) {
   .jeu-rappel {
     display: none;
   }
 }
 
-/*
- * Le bouton de localisation remplace la touche F sur les ecrans tactiles.
- *
- * SOUS LE POUCE, COMME DANS LE JEU D'ORIGINE (.mobile-action-button). Une petite
- * icone parmi celles du haut de l'ecran, il n'a pas ete trouve a la recette de
- * l'etape 5.4. Il est pose en bas a droite, juste au-dessus de la minimap: un rond
- * de soixante pixels, du violet d'origine. Place en fixe, il sort de la barre
- * d'actions sans la deranger.
- */
-.jeu-localiser {
+/* Le compteur des ninjas qui restent, en Massacre, separe des boutons par un filet. */
+.jeu-compteurs:empty,
+.jeu-compteurs:not(:has(> :not([hidden]))) {
   display: none;
 }
 
-.ecran-jeu {
-  /* Hauteur affichee de la minimap, pour empiler les boutons au-dessus d'elle. */
-  --hauteur-minimap: 160px;
-  --marge-du-bas: max(14px, env(safe-area-inset-bottom));
+.jeu-compteurs {
+  display: flex;
+  align-items: center;
+  margin-right: 4px;
+  padding-right: 10px;
+  border-right: 1px solid rgba(255, 255, 255, 0.18);
 }
 
-@media (pointer: coarse) {
-  .jeu-rappel {
-    display: none;
-  }
+.hud-restants {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--texte);
+  font-family: var(--police-donnees);
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
 
-  .jeu-actions .jeu-localiser {
-    position: fixed;
-    right: 14px;
-    bottom: calc(var(--marge-du-bas) + var(--hauteur-minimap) + 12px);
-    display: inline-grid;
-    place-items: center;
-    width: 60px;
-    min-width: 60px;
-    height: 60px;
-    padding: 0;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 50%;
-    background: rgba(204, 153, 255, 0.8);
-    color: #fff;
-  }
-
-  .jeu-actions .jeu-localiser svg {
-    width: 30px;
-    height: 30px;
-  }
-
-  .jeu-actions .jeu-localiser:active {
-    transform: scale(0.9);
-  }
+.hud-restants .icone {
+  width: 20px;
+  height: 20px;
+  color: var(--texte-secondaire);
 }
 
 /* -- HUD ----------------------------------------------------------------- */
@@ -185,42 +193,37 @@
   inset: 0;
 }
 
+/* Le temps restant, dans une pastille au centre de la barre: un chronometre et les minutes. */
 .hud-temps {
+  --hauteur-temps: calc(var(--hauteur-barre) - 10px);
+
   position: absolute;
-  top: var(--debut-barre);
+  top: calc(var(--debut-barre) + 5px);
   left: 50%;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  height: var(--hauteur-barre);
-  padding: 0 12px;
+  align-items: center;
+  gap: 6px;
+  height: var(--hauteur-temps);
+  padding: 0 14px 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(7, 12, 20, 0.55);
   color: var(--cyan);
   font-family: var(--police-titre);
-  font-size: 26px;
+  font-size: 22px;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   line-height: 1;
-  text-align: center;
   transform: translateX(-50%);
 }
 
-.hud-temps::before {
-  content: 'Temps restant';
-  display: block;
-  margin-bottom: 3px;
-  color: var(--texte-tertiaire);
-  font-family: var(--police-donnees);
-  font-size: 8.5px;
-  font-weight: 400;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-}
-
-.hud-temps:empty {
-  display: none;
+.hud-temps .icone {
+  width: 18px;
+  height: 18px;
 }
 
 .hud-temps.urgence {
+  border-color: rgba(255, 46, 126, 0.45);
   color: var(--rose);
   animation: pulsation 1s ease-in-out infinite;
 }
@@ -261,12 +264,12 @@
 }
 
 /*
- * Le classement commence dans la barre: seul, notre ligne y tient, centree. A
- * plusieurs, la liste descend sous la barre, sur le meme fond, que le degrade ne pose
- * que sous elle pour ne pas le doubler dedans.
+ * Le classement commence dans la barre: la premiere ligne y tient, centree. A plusieurs, la
+ * liste descend sous la barre, sur le meme fond, que le degrade ne pose que sous elle pour ne
+ * pas le doubler dedans. Sur un ecran etroit, elle se reduit au podium et a notre ligne.
  */
 .hud-classement {
-  --hauteur-ligne: 34px;
+  --hauteur-ligne: 32px;
 
   position: absolute;
   top: var(--debut-barre);
@@ -274,10 +277,10 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  width: 250px;
+  width: 230px;
   margin: 0;
   padding: calc((var(--hauteur-barre) - var(--hauteur-ligne)) / 2) 6px;
-  border-radius: 0 0 14px 14px;
+  border-radius: 0 0 12px 12px;
   background: linear-gradient(
     to bottom,
     transparent var(--hauteur-barre),
@@ -299,7 +302,7 @@
   height: var(--hauteur-ligne);
   padding: 0 8px;
   border-radius: 8px;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .hud-ligne::before {
@@ -313,14 +316,12 @@
 }
 
 /*
- * Notre ligne se detache (etape 4.6): plus haute, cadree, les points en gros. Sur les
- * ecrans tactiles et etroits, elle reprend la forme d'avant, plus bas.
+ * Notre ligne se detache (etape 4.6): cadree, les points en gros, separes du nom par un
+ * filet. Sur les ecrans tactiles et etroits, elle reprend des tailles plus petites, plus bas.
  */
 .hud-ligne.moi {
-  height: calc(var(--hauteur-ligne) + 10px);
-  border: 1px solid rgba(45, 230, 224, 0.5);
-  background: linear-gradient(90deg, rgba(45, 230, 224, 0.22), rgba(45, 230, 224, 0.06));
-  box-shadow: 0 0 14px rgba(45, 230, 224, 0.25);
+  border: 1px solid rgba(45, 230, 224, 0.4);
+  background: linear-gradient(90deg, rgba(45, 230, 224, 0.18), rgba(45, 230, 224, 0.04));
 }
 
 .hud-pseudo {
@@ -333,13 +334,13 @@
 
 .hud-ligne.moi .hud-pseudo {
   color: var(--cyan);
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 600;
 }
 
 .hud-points {
   font-family: var(--police-donnees);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -364,13 +365,12 @@
   text-shadow: none;
 }
 
-.hud-x2[hidden] {
-  display: none;
-}
-
 .hud-ligne.moi .hud-points {
+  padding-left: 10px;
+  border-left: 1px solid rgba(255, 255, 255, 0.22);
   color: #fff;
-  font-size: 24px;
+  font-size: 22px;
+  line-height: 1;
   text-shadow: 0 0 10px var(--cyan);
 }
 
@@ -593,43 +593,75 @@
   }
 }
 
-.hud-minimap {
+/*
+ * Le radar (9 octobre 2026, a la place de la minimap, a la demande du porteur du projet):
+ * petit, en haut a droite sous la barre, nous au centre, les joueurs autour, et ceux qui sont
+ * hors de portee sur son bord. Deux cercles de distance, une croix, et un balayage qui tourne
+ * sous les points.
+ */
+.hud-radar {
   position: absolute;
-  right: 14px;
-  bottom: max(14px, env(safe-area-inset-bottom));
-  overflow: hidden;
+  top: calc(var(--debut-barre) + var(--hauteur-barre) + 8px);
+  right: var(--marge-de-droite);
+  width: var(--cote-radar);
+  height: var(--cote-radar);
   border: 1px solid var(--bordure);
-  border-radius: 14px;
-  background-color: var(--fond-verre);
-  background-image:
-    linear-gradient(rgba(45, 230, 224, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(45, 230, 224, 0.07) 1px, transparent 1px);
-  background-size: 20px 20px;
+  border-radius: 18px;
+  background: var(--fond-verre);
   backdrop-filter: blur(8px);
 }
 
-/* Le disque que la minimap montre en Tactique (etape 7.7). */
-.hud-portee {
+.hud-radar-balayage,
+.hud-radar-disque {
   position: absolute;
-  border: 1px dashed rgba(204, 153, 255, 0.55);
+  inset: 8px;
   border-radius: 50%;
-  background: rgba(204, 153, 255, 0.06);
-  pointer-events: none;
 }
 
-.hud-portee[hidden] {
-  display: none;
+.hud-radar-balayage {
+  background: conic-gradient(rgba(45, 230, 224, 0.3), transparent 22%);
+  animation: radar-balayage 4s linear infinite;
+}
+
+.hud-radar-disque {
+  border: 1px solid rgba(45, 230, 224, 0.35);
+  background:
+    radial-gradient(
+      circle,
+      transparent 32%,
+      rgba(45, 230, 224, 0.2) 32.5% 33.5%,
+      transparent 34% 65%,
+      rgba(45, 230, 224, 0.2) 65.5% 66.5%,
+      transparent 67%
+    ),
+    linear-gradient(rgba(45, 230, 224, 0.12), rgba(45, 230, 224, 0.12)) center / 1px 100% no-repeat,
+    linear-gradient(rgba(45, 230, 224, 0.12), rgba(45, 230, 224, 0.12)) center / 100% 1px no-repeat;
+}
+
+@keyframes radar-balayage {
+  to {
+    transform: rotate(1turn);
+  }
 }
 
 .hud-point {
   position: absolute;
+  width: 7px;
+  height: 7px;
+  margin: -3.5px 0 0 -3.5px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(7, 12, 20, 0.7);
+}
+
+/* Hors de portee, sur le bord: un peu plus petit. */
+.hud-point.au-bord {
   width: 6px;
   height: 6px;
   margin: -3px 0 0 -3px;
-  border-radius: 50%;
 }
 
 .hud-point.moi {
+  z-index: 1;
   width: 10px;
   height: 10px;
   margin: -5px 0 0 -5px;
@@ -663,216 +695,129 @@
 }
 
 /*
- * Le bouton de capture du mode Tactique, au-dessus de la minimap. Il porte les
- * charges: un point par charge, et celui de la charge qui revient se remplit. Il
- * est hors du terrain: un doigt pose dessus ne plante pas la manette.
+ * Les boutons d'action (9 octobre 2026, a la demande du porteur du projet): ranges ensemble
+ * en bas a droite, des disques et leur nom dessous. La capture, la plus a droite et la plus
+ * grosse, tombe sous le pouce; la localisation a sa gauche, et la poche plus a gauche. Avant,
+ * poses chacun a sa place, ils se chevauchaient avec la minimap et le combo sur un telephone
+ * tenu a l'horizontale. Ils sont hors du terrain: un doigt pose dessus ne plante pas la
+ * manette. Sur ordinateur, la touche qui fait la meme chose est rappelee sur le disque.
  */
-.hud-capture {
+.hud-boutons {
   position: absolute;
-  right: 14px;
-  bottom: calc(var(--marge-du-bas) + var(--hauteur-minimap) + 12px);
-  display: grid;
-  justify-items: center;
-  gap: 6px;
-  min-width: 96px;
-  padding: 10px 14px;
-  border: 1px solid rgba(204, 153, 255, 0.45);
-  border-radius: 14px;
-  background: var(--fond-verre);
-  backdrop-filter: blur(8px);
-  color: inherit;
-  font-family: var(--police-titre);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  touch-action: none;
+  right: var(--marge-de-droite);
+  bottom: var(--marge-du-bas);
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
 }
 
-.hud-capture[hidden] {
-  display: none;
+.hud-bouton {
+  --taille-bouton: 54px;
+  --couleur-bouton: #7c5cff;
+
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--taille-bouton);
+  height: var(--taille-bouton);
+  /* La place du nom, sous le disque. */
+  margin-bottom: 20px;
+  padding: 0;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 35% 30%,
+    color-mix(in srgb, var(--couleur-bouton) 65%, #fff),
+    var(--couleur-bouton) 55%,
+    color-mix(in srgb, var(--couleur-bouton) 65%, #000)
+  );
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--couleur-bouton) 22%, transparent),
+    0 0 18px color-mix(in srgb, var(--couleur-bouton) 55%, transparent);
+  color: #fff;
+  cursor: pointer;
+  touch-action: none;
+  transition:
+    transform 0.08s ease,
+    filter 0.2s ease;
+}
+
+.hud-bouton:active {
+  transform: scale(0.92);
+}
+
+.hud-bouton .icone {
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45));
+}
+
+.hud-bouton-libelle {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 50%;
+  color: #fff;
+  font-family: var(--police-titre);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  transform: translateX(-50%);
+}
+
+/* La touche du clavier, en etiquette sur le haut du disque. Rien a rappeler sans clavier. */
+.hud-bouton-touche {
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  padding: 1px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  background: rgba(7, 12, 20, 0.9);
+  color: #fff;
+  font-family: var(--police-donnees);
+  font-size: 10px;
+  line-height: 14px;
+  transform: translateX(-50%);
+}
+
+/* La capture: plus grosse, rouge, ses charges sur le bas du disque. */
+.hud-capture {
+  --taille-bouton: 66px;
+  --couleur-bouton: #ff2e4a;
+
+  margin-bottom: 26px;
+}
+
+.hud-capture .hud-bouton-libelle {
+  top: calc(100% + 10px);
+}
+
+.hud-capture .icone {
+  width: 32px;
+  height: 32px;
 }
 
 .hud-capture.vide {
-  border-color: var(--bordure);
-  color: var(--texte-tertiaire);
-}
-
-/*
- * La poche (etape 7.10), rendus A des planches de docs/design/etape-7-10/: une carte en tete
- * des effets, sans jauge, qui porte la touche E; et, sur un ecran tactile seulement, un
- * disque de brume a gauche de la minimap. La carte quitte la liste et le bouton se cache
- * quand la poche est vide.
- */
-.hud-effet-poche {
-  order: -1;
-  padding-bottom: 9px;
-}
-
-.hud-poche[hidden] {
-  display: none;
-}
-
-.hud-poche-touche {
-  padding: 2px 9px;
-  border-radius: 6px;
-  background: var(--couleur-effet);
-  box-shadow: 0 0 8px var(--couleur-effet);
-  color: #0b1020;
-  font-family: var(--police-donnees);
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.hud-poche {
-  display: none;
+  filter: saturate(0.3) brightness(0.7);
 }
 
 .hud-charges {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
   display: flex;
-  gap: 5px;
-}
-
-/*
- * Le role dans une partie Chasse (etape 7.3), a droite sous les boutons: le haut du centre
- * appartient au temps restant et aux annonces.
- */
-.hud-chasse {
-  --couleur-camp: var(--cyan);
-
-  position: absolute;
-  top: calc(var(--debut-barre) + var(--hauteur-barre) + 8px);
-  right: 14px;
-  display: grid;
-  justify-items: end;
-  gap: 2px;
-  padding: 8px 16px;
-  border: 1px solid var(--couleur-camp);
-  border-radius: 14px;
-  background: var(--fond-verre);
-  backdrop-filter: blur(8px);
-  text-align: right;
-}
-
-.hud-chasse[hidden] {
-  display: none;
-}
-
-.hud-chasse[data-camp='traqueurs'] {
-  --couleur-camp: var(--rose);
-}
-
-.hud-chasse-role {
-  color: var(--couleur-camp);
-  font-family: var(--police-titre);
-  font-size: 18px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-/*
- * Le combo d'une partie Massacre (etape 7.4), a la place du role de la Chasse: le
- * multiplicateur en grand, qui rougit et grossit a mesure qu'il monte, et la fenetre du
- * combo qui s'epuise dessous.
- */
-.hud-massacre {
-  --couleur-combo: var(--texte-secondaire);
-
-  position: absolute;
-  top: calc(var(--debut-barre) + var(--hauteur-barre) + 8px);
-  right: 14px;
-  display: grid;
-  justify-items: end;
-  gap: 2px;
-  min-width: 132px;
-  padding: 8px 16px;
-  border: 1px solid var(--bordure);
-  border-radius: 14px;
-  background: var(--fond-verre);
-  backdrop-filter: blur(8px);
-  text-align: right;
-}
-
-.hud-massacre[hidden] {
-  display: none;
-}
-
-.hud-massacre.en-combo {
-  --couleur-combo: #ff5a5a;
-
-  border-color: var(--couleur-combo);
-}
-
-.hud-massacre[data-multiplicateur='3'],
-.hud-massacre[data-multiplicateur='4'] {
-  --couleur-combo: #ff2e4a;
-}
-
-.hud-massacre[data-multiplicateur='5'] {
-  --couleur-combo: #ff1030;
-}
-
-.hud-massacre-multiplicateur {
-  color: var(--couleur-combo);
-  font-family: var(--police-titre);
-  font-size: calc(18px + 3px * var(--taille-combo, 0));
-  letter-spacing: 0.04em;
-  text-shadow: 0 0 10px var(--couleur-combo);
-}
-
-.hud-massacre[data-multiplicateur='2'] {
-  --taille-combo: 1;
-}
-
-.hud-massacre[data-multiplicateur='3'] {
-  --taille-combo: 2;
-}
-
-.hud-massacre[data-multiplicateur='4'] {
-  --taille-combo: 3;
-}
-
-.hud-massacre[data-multiplicateur='5'] {
-  --taille-combo: 4;
-}
-
-.hud-massacre-combo,
-.hud-massacre-restants {
-  color: var(--texte-secondaire);
-  font-size: 12px;
-}
-
-.hud-massacre-fenetre {
-  width: 100%;
-  height: 3px;
-  border-radius: 2px;
-  background: linear-gradient(
-    to right,
-    var(--couleur-combo) calc(var(--fenetre, 0) * 100%),
-    transparent calc(var(--fenetre, 0) * 100%)
-  );
-}
-
-/* Le katana du Massacre (etape 7.4): une seule charge, le coup pret ou en garde. */
-.hud-charges.katana .hud-charge {
-  box-shadow: inset 0 0 0 1px rgba(255, 90, 90, 0.6);
-}
-
-.hud-charges.katana .hud-charge.pleine {
-  background: #ff5a5a;
-  box-shadow: 0 0 6px rgba(255, 90, 90, 0.8);
-}
-
-.hud-chasse-consigne,
-.hud-chasse-proies {
-  color: var(--texte-secondaire);
-  font-size: 12px;
+  gap: 4px;
+  padding: 3px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  background: rgba(7, 12, 20, 0.9);
+  transform: translateX(-50%);
 }
 
 .hud-charge {
   position: relative;
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   overflow: hidden;
   border-radius: 50%;
   box-shadow: inset 0 0 0 1px rgba(204, 153, 255, 0.6);
@@ -893,6 +838,16 @@
   box-shadow: 0 0 6px rgba(255, 46, 126, 0.8);
 }
 
+/* Le katana du Massacre (etape 7.4): une seule charge, le coup pret ou en garde. */
+.hud-charges.katana .hud-charge {
+  box-shadow: inset 0 0 0 1px rgba(255, 90, 90, 0.6);
+}
+
+.hud-charges.katana .hud-charge.pleine {
+  background: #ff5a5a;
+  box-shadow: 0 0 6px rgba(255, 90, 90, 0.8);
+}
+
 .hud-charge.en-recharge::after {
   content: '';
   position: absolute;
@@ -903,47 +858,182 @@
   background: rgba(204, 153, 255, 0.5);
 }
 
-@media (pointer: coarse) {
-  /* Au-dessus du bouton de localisation, qui occupe le dessus de la minimap. */
-  .hud-capture {
-    bottom: calc(var(--marge-du-bas) + var(--hauteur-minimap) + 84px);
-    min-width: 120px;
-    padding: 16px 18px;
-    font-size: 15px;
+/*
+ * La poche (etape 7.10), rendus A des planches de docs/design/etape-7-10/: une carte en tete
+ * des effets, sans jauge, qui porte la touche E; et, sur un ecran tactile seulement, un
+ * disque de brume a gauche des autres boutons d'action. La carte quitte la liste et le bouton
+ * se cache quand la poche est vide.
+ */
+.hud-effet-poche {
+  order: -1;
+  padding-bottom: 9px;
+}
+
+.hud-poche-touche {
+  padding: 2px 9px;
+  border-radius: 6px;
+  background: var(--couleur-effet);
+  box-shadow: 0 0 8px var(--couleur-effet);
+  color: #0b1020;
+  font-family: var(--police-donnees);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.hud-poche {
+  --couleur-bouton: var(--couleur-effet);
+
+  display: none;
+}
+
+.hud-poche-pictogramme {
+  width: 60%;
+  height: 60%;
+  background-position: 0 0;
+  background-repeat: no-repeat;
+  background-size: 200% 100%;
+}
+
+/*
+ * Le role dans une partie Chasse (etape 7.3), a droite sous le radar: le haut du centre
+ * appartient au temps restant et aux annonces.
+ */
+.hud-chasse {
+  --couleur-camp: var(--cyan);
+
+  position: absolute;
+  top: calc(var(--debut-barre) + var(--hauteur-barre) + var(--cote-radar) + 16px);
+  right: var(--marge-de-droite);
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  padding: 8px 16px;
+  border: 1px solid var(--couleur-camp);
+  border-radius: 14px;
+  background: var(--fond-verre);
+  backdrop-filter: blur(8px);
+  text-align: right;
+}
+
+.hud-chasse[data-camp='traqueurs'] {
+  --couleur-camp: var(--rose);
+}
+
+.hud-chasse-role {
+  color: var(--couleur-camp);
+  font-family: var(--police-titre);
+  font-size: 18px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hud-chasse-consigne,
+.hud-chasse-proies {
+  color: var(--texte-secondaire);
+  font-size: 12px;
+}
+
+/*
+ * Le combo d'une partie Massacre (etape 7.4) ou Horde (etape 7.5), reduit a son
+ * multiplicateur (9 octobre 2026, a la demande du porteur du projet): un « x2 » penche,
+ * sans fond, a droite sous le radar, et un trait de vitesse dessous, la fenetre du combo qui
+ * s'epuise. Il grossit a chaque cran, et prend les couleurs des points flottants du meme
+ * niveau, du froid vers le chaud. Il saute en arrivant et a chaque cran.
+ */
+.hud-combo {
+  --couleur-combo: #3fe8ff;
+  --taille-combo: 0;
+
+  position: absolute;
+  top: calc(var(--debut-barre) + var(--hauteur-barre) + var(--cote-radar) + 14px);
+  right: calc(var(--marge-de-droite) + 4px);
+  display: grid;
+  justify-items: end;
+  transform-origin: right center;
+  animation: combo-saut 0.35s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+.hud-combo.saut {
+  animation-name: combo-saut-cran;
+}
+
+.hud-combo[data-multiplicateur='3'] {
+  --couleur-combo: #4dff7a;
+  --taille-combo: 1;
+}
+
+.hud-combo[data-multiplicateur='4'] {
+  --couleur-combo: #ffd23f;
+  --taille-combo: 2;
+}
+
+.hud-combo[data-multiplicateur='5'] {
+  --couleur-combo: #ff3df0;
+  --taille-combo: 3;
+}
+
+.hud-combo-multiplicateur {
+  /* L'italique deborde a droite: la marge le garde entier. */
+  padding-right: 6px;
+  background: linear-gradient(
+    180deg,
+    #fff 8%,
+    var(--couleur-combo) 52%,
+    color-mix(in srgb, var(--couleur-combo) 55%, #1b2bff) 100%
+  );
+  background-clip: text;
+  color: transparent;
+  font-family: var(--police-titre);
+  font-size: calc(36px + 6px * var(--taille-combo));
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1;
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--couleur-combo) 70%, transparent))
+    drop-shadow(0 2px 2px rgba(0, 0, 0, 0.6));
+}
+
+.hud-combo-fenetre {
+  width: calc(var(--fenetre, 0) * 64px);
+  height: 4px;
+  margin-top: 3px;
+  border-radius: 2px;
+  background: linear-gradient(to left, var(--couleur-combo), transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--couleur-combo) 70%, transparent);
+  transform: skewX(-24deg);
+}
+
+@keyframes combo-saut {
+  from {
+    opacity: 0;
+    transform: scale(1.6);
   }
 
-  /* Pas de clavier: la touche E ne dit rien. Le bouton de la poche la remplace. */
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* La meme, sous un autre nom: changer de nom fait repartir l'animation a chaque cran. */
+@keyframes combo-saut-cran {
+  from {
+    transform: scale(1.5);
+  }
+
+  to {
+    transform: none;
+  }
+}
+
+@media (pointer: coarse) {
+  /* Pas de clavier: les touches ne disent rien. Le bouton de la poche remplace la touche E. */
+  .hud-bouton-touche,
   .hud-poche-touche {
     display: none;
   }
 
   .hud-poche {
-    position: absolute;
-    right: calc(14px + var(--hauteur-minimap) + 12px);
-    bottom: var(--marge-du-bas);
     display: grid;
-    place-items: center;
-    width: 72px;
-    height: 72px;
-    padding: 0;
-    border: 2px solid rgba(255, 255, 255, 0.35);
-    border-radius: 50%;
-    background: var(--couleur-effet);
-    box-shadow: 0 0 16px var(--couleur-effet);
-    cursor: pointer;
-    touch-action: none;
-  }
-
-  .hud-poche:active {
-    transform: scale(0.9);
-  }
-
-  .hud-poche-pictogramme {
-    width: 60%;
-    height: 60%;
-    background-position: 0 0;
-    background-repeat: no-repeat;
-    background-size: 200% 100%;
   }
 }
 
@@ -954,19 +1044,54 @@
  * le pointeur qui le reconnait; une fenetre etroite d'ordinateur prend les memes tailles.
  */
 @media (pointer: coarse), (max-width: 640px) {
-  .hud-classement {
-    --hauteur-ligne: 28px;
+  .ecran-jeu {
+    --hauteur-barre: 38px;
+    --cote-radar: 84px;
+  }
 
-    width: 220px;
+  .hud-temps {
+    gap: 5px;
+    padding: 0 12px 0 9px;
+    font-size: 18px;
+  }
+
+  .hud-temps .icone {
+    width: 15px;
+    height: 15px;
+  }
+
+  .jeu-actions .bouton,
+  .jeu-actions .bouton-icone {
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+    min-height: 30px;
+  }
+
+  .hud-restants {
+    font-size: 14px;
+  }
+
+  .hud-restants .icone {
+    width: 17px;
+    height: 17px;
+  }
+
+  .hud-classement {
+    --hauteur-ligne: 26px;
+
+    width: 190px;
   }
 
   .hud-ligne {
-    font-size: 13px;
+    gap: 6px;
+    padding: 0 6px;
+    font-size: 12px;
   }
 
-  .hud-ligne.moi {
-    height: var(--hauteur-ligne);
-    box-shadow: none;
+  .hud-ligne::before {
+    width: 7px;
+    height: 7px;
   }
 
   .hud-ligne.moi .hud-pseudo {
@@ -974,90 +1099,43 @@
   }
 
   .hud-points {
-    font-size: 12.5px;
+    font-size: 12px;
   }
 
   .hud-ligne.moi .hud-points {
+    padding-left: 8px;
     font-size: 15px;
   }
 
-  .hud-effets {
-    bottom: max(14px, env(safe-area-inset-bottom));
-    left: 14px;
-    gap: 6px;
+  .hud-ligne.hors-podium {
+    display: none;
   }
 
-  .hud-effet {
-    gap: 8px;
-    width: 200px;
-    padding: 5px 10px 8px 5px;
-    border-width: 1.5px;
-    border-radius: 12px;
+  .hud-radar {
+    border-radius: 14px;
   }
 
-  .hud-effet-icone {
-    width: 26px;
-    height: 26px;
+  .hud-radar-balayage,
+  .hud-radar-disque {
+    inset: 6px;
   }
 
-  .hud-effet-libelle {
-    font-size: 13px;
+  .hud-boutons {
+    gap: 14px;
   }
 
-  .hud-effet-cible {
-    font-size: 10px;
+  /* Pas sous 56 pixels: la taille d'un pouce (recette de l'etape 5.4). */
+  .hud-bouton {
+    --taille-bouton: 56px;
   }
 
-  .hud-effet-reste {
-    font-size: 16px;
+  .hud-capture {
+    --taille-bouton: 64px;
   }
 
-  .hud-effet-jauge {
-    height: 3px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hud-effet.fin-proche {
-    animation: none;
-  }
-}
-
-/* -- Petits ecrans ------------------------------------------------------- */
-
-@media (max-width: 640px) {
-  .ecran-jeu {
-    --hauteur-barre: 48px;
-  }
-
-  .hud-temps {
-    padding: 0 6px;
-    font-size: 19px;
-  }
-
-  .hud-temps::before {
-    margin-bottom: 2px;
-    font-size: 7px;
-    letter-spacing: 0.12em;
-  }
-
-  /* Dans la barre, a gauche du temps, qui garde le centre. */
-  .hud-classement {
-    --hauteur-ligne: 26px;
-
-    width: min(130px, calc(50% - 50px));
-    font-size: 12px;
-  }
-
-  .hud-ligne {
-    gap: 6px;
-    padding: 0 6px;
-    font-size: 12px;
-  }
-
-  .hud-minimap {
-    transform: scale(0.72);
-    transform-origin: bottom right;
+  .hud-capture .icone {
+    width: 28px;
+    height: 28px;
   }
 
   .hud-chasse {
@@ -1068,16 +1146,51 @@
     font-size: 15px;
   }
 
-  .hud-massacre {
-    padding: 6px 12px;
+  .hud-combo-multiplicateur {
+    font-size: calc(28px + 4px * var(--taille-combo));
   }
 
-  .ecran-jeu {
-    --hauteur-minimap: 116px;
+  /*
+   * Les effets en cours, en pastilles (9 octobre 2026, a la demande du porteur du projet):
+   * les cartes couvraient le bas de l'ecran. Il ne reste que le pictogramme dans son disque,
+   * et ce qu'il reste de l'effet en anneau autour, qui se vide comme la jauge de la carte.
+   * Un malus garde son pointille, en contour. Le nom et les secondes restent lus par les
+   * lecteurs d'ecran.
+   */
+  .hud-effets {
+    bottom: max(14px, env(safe-area-inset-bottom));
+    left: 14px;
+    gap: 8px;
   }
 
-  /* Le texte des boutons reste lu par les lecteurs d'ecran, sans prendre de place. */
-  .jeu-actions .bouton span {
+  .hud-effet {
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: conic-gradient(
+      var(--couleur-effet) calc(var(--part, 1) * 360deg),
+      rgba(255, 255, 255, 0.14) 0
+    );
+    box-shadow: 0 0 10px color-mix(in srgb, var(--couleur-effet) 45%, transparent);
+    backdrop-filter: none;
+  }
+
+  .hud-effet-malus {
+    outline: 1.5px dashed color-mix(in srgb, var(--couleur-effet) 80%, #fff);
+    outline-offset: 2px;
+  }
+
+  .hud-effet-icone {
+    width: 30px;
+    height: 30px;
+    box-shadow: 0 0 0 2px rgba(7, 12, 20, 0.9);
+  }
+
+  .hud-effet-nom,
+  .hud-effet-reste {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -1086,21 +1199,66 @@
     white-space: nowrap;
   }
 
-  .jeu-actions {
-    gap: 6px;
+  .hud-effet-jauge,
+  .hud-poche-touche {
+    display: none;
+  }
+}
+
+/* Sur un ecran tactile, le bouton de la poche la montre: sa pastille ferait doublon. */
+@media (pointer: coarse) {
+  .hud-effet-poche {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-effet.fin-proche,
+  .hud-radar-balayage,
+  .hud-combo {
+    animation: none;
+  }
+}
+
+/* -- Petits ecrans ------------------------------------------------------- */
+
+/*
+ * Un telephone tenu a la verticale: le temps reste au centre, le classement a sa gauche et
+ * les boutons a sa droite, sans se toucher, compteur des ninjas compris.
+ */
+@media (max-width: 640px) {
+  .hud-temps {
+    padding: 0 9px;
+    font-size: 17px;
   }
 
-  /* Pas le bouton de localisation, rond et pose sous le pouce. */
+  .hud-temps .icone,
+  .hud-restants .icone {
+    display: none;
+  }
+
+  .hud-classement {
+    width: min(130px, calc(50% - 60px));
+  }
+
+  .jeu-actions {
+    gap: 2px;
+  }
+
   .jeu-actions .bouton,
-  .jeu-actions .bouton-icone:not(.jeu-localiser) {
-    width: 36px;
-    min-width: 36px;
-    height: 36px;
-    min-height: 36px;
-    padding: 0;
+  .jeu-actions .bouton-icone {
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    min-height: 28px;
+  }
+
+  .jeu-compteurs {
+    margin-right: 2px;
+    padding-right: 6px;
   }
 
   .application[data-ecran='jeu'] .annonces {
-    top: calc(env(safe-area-inset-top, 0px) + 60px);
+    top: calc(env(safe-area-inset-top, 0px) + 56px);
   }
 }

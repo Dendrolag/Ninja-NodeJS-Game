@@ -172,7 +172,7 @@ const REGLES_DES_MODES: Readonly<Record<Mode, readonly string[]>> = {
     'Toucher ne suffit plus. Espace ou le bouton Capturer prend tout ce qui est dans le cône devant vous.',
     `${majuscule(enLettres(TACTIQUE.CHARGES_MAXIMUM))} charges, une revient toutes les ${enLettres(TACTIQUE.RECHARGE_MS / 1000)} secondes. Un tir dans le vide ne coûte rien.`,
     `Un Black Ninja encaisse ${enLettres(TACTIQUE.COUPS_POUR_VAINCRE_UN_BOT_NOIR)} tirs avant de tomber.`,
-    'Vue plus serrée, minimap limitée, et six objets rien que pour ce mode.',
+    'Vue plus serrée, radar limité, et six objets rien que pour ce mode.',
   ],
   equipes: [
     'Vos PNJ rejoignent votre équipe, qui marque tout ce qu’elle tient.',

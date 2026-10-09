@@ -100,6 +100,12 @@ const AMIS_EN_DIRECT = '**/amis-en-direct.spec.ts';
 const TITRE = '**/titre.spec.ts';
 
 /**
+ * Le HUD reduit du 9 octobre 2026, joue par le seul projet bureau: il fabrique lui-meme ses
+ * appareils, des telephones tenus a l'horizontale et a la verticale, et un ordinateur.
+ */
+const HUD_REDUIT = '**/hud-reduit.spec.ts';
+
+/**
  * Les exploits de partie (etape 3.8): deux comptes amis, une invitation et une partie
  * entiere, que le cadrage de l'ecran ne change pas.
  */
@@ -173,6 +179,7 @@ export default defineConfig({
         AMIS_EN_DIRECT,
         TITRE,
         EXPLOITS,
+        HUD_REDUIT,
       ],
     },
     // Le banc de mesure du rendu a son propre projet, et une seule execution:

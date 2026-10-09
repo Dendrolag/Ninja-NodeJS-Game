@@ -119,7 +119,7 @@ test('creer une partie Massacre, la lancer seul et trancher un faux ninja', asyn
   const bouton = page.locator('.hud-capture');
   await expect(bouton).toBeVisible();
   await expect(bouton.locator('.hud-capture-libelle')).toHaveText('Katana');
-  await expect(page.locator('.hud-massacre-restants')).toHaveText('120 ninjas restants');
+  await expect(page.locator('.hud-restants-libelle')).toHaveText('120 ninjas restants');
 
   if (!hasTouch) {
     await expect(page.locator('.jeu-rappel')).toContainText('Espace pour trancher');
@@ -152,7 +152,7 @@ test('creer une partie Massacre, la lancer seul et trancher un faux ninja', asyn
   });
 
   // Le compteur dit la mort et le combo, et la carte compte un ninja de moins au moins.
-  await expect(page.locator('.hud-massacre-restants')).not.toHaveText('120 ninjas restants');
+  await expect(page.locator('.hud-restants-libelle')).not.toHaveText('120 ninjas restants');
   await expect(page.locator('.hud-classement')).toContainText(String(pointsDAlice()));
 
   await informations.attach('partie', {

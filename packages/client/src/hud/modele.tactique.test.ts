@@ -1,9 +1,9 @@
 /**
- * Tests du HUD d'une partie Tactique (etape 7.7): une minimap qui ne montre que les joueurs
+ * Tests du HUD d'une partie Tactique (etape 7.7): un radar qui ne montre que les joueurs
  * proches.
  *
- * Ce que ces tests protegent: la vue plus proche du Tactique. Une minimap qui montrerait
- * tout le monde dirait ou chercher, et le zoom ne cacherait plus rien.
+ * Ce que ces tests protegent: la vue plus proche du Tactique. Un radar qui montrerait tout
+ * le monde, meme sur son bord, dirait ou chercher, et le zoom ne cacherait plus rien.
  */
 
 import type { EntiteVue, InfosSalon } from '@neon-ninja/shared';
@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { EtatClient } from '../etat.js';
 import { ETAT_INITIAL } from '../etat.js';
-import { RAYON_MINIMAP_TACTIQUE_PX, construireHud } from './modele.js';
+import { PORTEE_DU_RADAR_TACTIQUE_PX, construireHud } from './modele.js';
 
 /** Un joueur sur la carte, a cet endroit. */
 function joueur(id: string, x: number, y: number): EntiteVue {
@@ -56,7 +56,7 @@ function etat(mode: InfosSalon['mode']): EtatClient {
       entites: [
         joueur('moi', 1000, 1000),
         joueur('voisin', 1300, 1000),
-        joueur('bord', 1000, 1000 + RAYON_MINIMAP_TACTIQUE_PX),
+        joueur('bord', 1000, 1000 + PORTEE_DU_RADAR_TACTIQUE_PX),
         joueur('loin', 2500, 1000),
       ],
       objets: [],
@@ -66,18 +66,23 @@ function etat(mode: InfosSalon['mode']): EtatClient {
   };
 }
 
-describe('la minimap d une partie Tactique', () => {
-  it('ne montre que les joueurs a portee, nous compris', () => {
+describe('le radar d une partie Tactique', () => {
+  it('ne montre que les joueurs a portee, nous compris, et rien sur son bord', () => {
     const hud = construireHud(etat('tactique'), 0);
 
-    expect(hud.minimap.map((point) => point.id)).toEqual(['moi', 'voisin', 'bord']);
-    expect(hud.portee).toEqual({ x: 1000, y: 1000, rayon: RAYON_MINIMAP_TACTIQUE_PX });
+    expect(hud.radar.map((point) => point.id)).toEqual(['moi', 'voisin', 'bord']);
+    expect(hud.radar.map((point) => point.auBord)).toEqual([false, false, false]);
+    expect(hud.radar.find((point) => point.id === 'bord')).toMatchObject({ x: 0, y: 1 });
   });
 
-  it('montre tout le monde dans les autres modes, sans disque', () => {
+  it('montre tout le monde dans les autres modes, au bord au-dela de sa portee', () => {
     const hud = construireHud(etat('classique'), 0);
 
-    expect(hud.minimap).toHaveLength(4);
-    expect(hud.portee).toBeUndefined();
+    expect(hud.radar.map((point) => point.id)).toEqual(['moi', 'voisin', 'bord', 'loin']);
+    expect(hud.radar.find((point) => point.id === 'loin')).toMatchObject({
+      x: 1,
+      y: 0,
+      auBord: true,
+    });
   });
 });

@@ -42,24 +42,21 @@ describe('le HUD d une partie Horde', () => {
     expect(construireHud(horde(), 0).combo).toBeUndefined();
   });
 
-  it('montre le compteur pendant un combo, sans ninjas restants', () => {
-    expect(construireHud(horde([ralliement(1000)]), 1000).combo).toEqual({
-      multiplicateur: 1,
-      compte: '1 ninja',
-      fenetre: 1,
-      restants: '',
-    });
+  it('ne montre pas un combo encore a x1, ni de ninjas restants', () => {
+    const hud = construireHud(horde([ralliement(1000)]), 1000);
+
+    expect(hud.combo).toBeUndefined();
+    expect(hud.restants).toBeUndefined();
   });
 
   it('lit le combo dans notre dernier ralliement, et sa fenetre qui s epuise', () => {
     const journal = [ralliement(1000, { combo: 12, multiplicateur: 3 })];
 
-    expect(construireHud(horde(journal), 1500).combo).toMatchObject({
+    expect(construireHud(horde(journal), 1500).combo).toEqual({
       multiplicateur: 3,
       compte: '12 ninjas',
       fenetre: 0.75,
     });
-    expect(construireHud(horde([ralliement(1000)]), 1000).combo?.compte).toBe('1 ninja');
   });
 
   it('laisse tomber le combo apres sa fenetre, a la capture ou face a un Black Ninja', () => {

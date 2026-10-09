@@ -3,9 +3,9 @@
  *
  * FONCTION PURE, COMME LA SCENE. On lui donne l'etat et l'instant, elle rend la
  * description de ce qu'il faut afficher: le temps restant deja mis en forme, les
- * lignes du classement, les effets en cours avec leur reste, les points de la
- * minimap, dans le mode Tactique, nos charges, dans le mode Chasse, notre role, et, dans le
- * mode Massacre, notre combo.
+ * lignes du classement, les effets en cours avec leur reste, les points du radar, dans
+ * le mode Tactique, nos charges, dans le mode Chasse, notre role, et, dans les modes
+ * Massacre et Horde, notre combo.
  * Ecrire cela dans le document est le travail d'un autre fichier.
  *
  * POURQUOI CE DECOUPAGE ICI AUSSI. Le client d'origine avait quinze fonctions qui
@@ -30,10 +30,12 @@ import type {
   ObjetDePoche,
 } from '@neon-ninja/shared';
 import {
+  CARTES,
   CHASSE,
   COULEURS_DES_EQUIPES,
   COMBO,
   MASSACRE,
+  REGLAGES_PAR_DEFAUT,
   TACTIQUE,
   campDeCouleur,
   classementDesEquipes,
@@ -67,13 +69,6 @@ export interface LigneHud {
    * sont deja doubles, et un badge le dit (etape 7.9).
    */
   readonly doubleur: boolean;
-}
-
-/** Un disque de la carte, en pixels de carte: ce que la minimap du Tactique montre. */
-export interface PorteeMinimap {
-  readonly x: number;
-  readonly y: number;
-  readonly rayon: number;
 }
 
 /** Un effet en cours sur nous, avec ce qu'il en reste. */
@@ -112,14 +107,21 @@ export interface PocheHud {
   readonly icone: string;
 }
 
-/** Un point a poser sur la minimap, en coordonnees de carte. */
-export interface PointMinimap {
+/**
+ * Un joueur a poser sur le radar, place par rapport a son centre: nous, ou le milieu de la
+ * carte quand nous n'y sommes pas.
+ */
+export interface PointRadar {
   readonly id: string;
+  /** Son ecart au centre vers l'est, en part de la portee du radar: de moins un a un. */
   readonly x: number;
+  /** Son ecart au centre vers le sud, en part de la portee du radar: de moins un a un. */
   readonly y: number;
   readonly couleur: Couleur;
   /** Ce point est le notre: l'affichage le grossit. */
   readonly moi: boolean;
+  /** Il est plus loin que la portee: pose sur le bord du radar, dans sa direction. */
+  readonly auBord: boolean;
 }
 
 /** Nos charges, dans le mode Tactique (etape 7.1). */
@@ -144,19 +146,21 @@ export interface ChasseHud {
   readonly proies: string;
 }
 
-/**
- * Notre combo, dans une partie Massacre (etape 7.4) ou Horde (etape 7.5), et, en Massacre,
- * ce qu'il reste de ninjas a tuer.
- */
+/** Notre combo, dans une partie Massacre (etape 7.4) ou Horde (etape 7.5). */
 export interface ComboHud {
-  /** Le multiplicateur en cours: un sans combo. */
+  /** Le multiplicateur en cours, deux au moins. */
   readonly multiplicateur: number;
-  /** « 7 morts » en Massacre, « 7 ninjas » en Horde, ou rien sans combo. */
+  /** « 7 morts » en Massacre, « 7 ninjas » en Horde. */
   readonly compte: string;
-  /** Ce qu'il reste a la fenetre du combo, de zero a un. Zero: pas de combo. */
+  /** Ce qu'il reste a la fenetre du combo, de zero a un. */
   readonly fenetre: number;
-  /** « 37 ninjas restants », « 1 ninja restant » ou « Carte nettoyée »; rien en Horde. */
-  readonly restants: string;
+}
+
+/** Ce qu'il reste de ninjas a tuer, dans une partie Massacre (etape 7.4). */
+export interface RestantsHud {
+  readonly nombre: number;
+  /** « 37 ninjas restants », « 1 ninja restant » ou « Carte nettoyée ». */
+  readonly libelle: string;
 }
 
 /** Ce que porte le bouton d'action: des charges en Tactique, des vies en Chasse, un katana en Massacre. */
@@ -183,15 +187,18 @@ export interface Hud {
   readonly effets: readonly EffetHud[];
   /** Ce que nous avons en poche. Absent: la poche est vide (etape 7.10). */
   readonly poche: PocheHud | undefined;
-  readonly minimap: readonly PointMinimap[];
-  /** Le disque que la minimap montre, en Tactique (etape 7.7). Absent: toute la carte. */
-  readonly portee: PorteeMinimap | undefined;
+  readonly radar: readonly PointRadar[];
   /** Nos charges. Absentes hors du mode Tactique, ou tant qu'on n'est pas sur la carte. */
   readonly charges: ChargesHud | undefined;
   /** Notre role. Absent hors du mode Chasse, ou tant qu'on n'est pas au classement. */
   readonly chasse: ChasseHud | undefined;
-  /** Notre combo. Absent hors du Massacre et de la Horde, ou tant qu'on n'est pas au classement. */
+  /**
+   * Notre combo. Absent hors du Massacre et de la Horde, tant qu'on n'est pas au classement,
+   * ou sous le deuxieme cran: un « x1 » n'apprend rien.
+   */
   readonly combo: ComboHud | undefined;
+  /** Les ninjas qui restent a tuer. Absent hors du Massacre. */
+  readonly restants: RestantsHud | undefined;
   /** Ce que le bouton d'action porte, selon le mode. */
   readonly arme: ArmeHud;
 }
@@ -207,11 +214,11 @@ export const HUD_VIDE: Hud = {
   classement: [],
   effets: [],
   poche: undefined,
-  minimap: [],
-  portee: undefined,
+  radar: [],
   charges: undefined,
   chasse: undefined,
   combo: undefined,
+  restants: undefined,
   arme: 'charges',
 };
 
@@ -254,11 +261,11 @@ export function construireHud(etat: EtatClient, maintenant: number): Hud {
     classement: classementHud(partie.classement, etat.moi, mode, doubleursDe(etat)),
     effets: effetsHud(etat, maintenant),
     poche: pocheHud(etat.poche),
-    minimap: minimapHud(etat, mode),
-    portee: porteeDeLaMinimap(etat, mode),
+    radar: radarHud(etat, mode),
     charges: chargesHud(etat, mode),
     chasse: chasseHud(etat, mode),
     combo: comboHud(etat, mode, maintenant),
+    restants: restantsHud(etat, mode),
     arme: mode === 'chasse' ? 'vies' : mode === 'massacre' ? 'katana' : 'charges',
   };
 }
@@ -266,6 +273,10 @@ export function construireHud(etat: EtatClient, maintenant: number): Hud {
 /**
  * Notre combo, lu dans nos coups de katana en Massacre (etape 7.4), dans nos ralliements en
  * Horde (etape 7.5).
+ *
+ * IL NE SE MONTRE QU'A PARTIR DU DEUXIEME CRAN, dans les deux modes: un « x1 » n'apprend
+ * rien, ni hors de l'action (demande du porteur du projet, 19 septembre 2026), ni pendant
+ * (9 octobre 2026, avec le compteur reduit a son multiplicateur).
  *
  * Le flux d'etat ne porte pas le combo: il ne concerne que nous. Notre dernier coup qui a
  * tue, ou notre dernier ralliement, dit ou il en est, et la fenetre de deux secondes court
@@ -289,27 +300,36 @@ function comboHud(
 
   const combo = comboEnCours(etat, maintenant);
 
-  // En Horde, le compteur ne se montre que pendant un combo: hors de l'action, un « x1 »
-  // fixe n'apprend rien (demande du porteur du projet, 19 septembre 2026). Le Massacre le
-  // garde, pour les ninjas qui restent.
-  if (mode === 'classique' && combo === undefined) {
+  if (combo === undefined || combo.multiplicateur < 2) {
     return undefined;
   }
 
-  const unite = mode === 'massacre' ? 'mort' : 'ninja';
-  const restants = partie.entites.filter((entite) => entite.type === 'bot').length;
+  // Le deuxieme cran demande COMBO.COUPS_PAR_CRAN coups: le compte est toujours au pluriel.
+  const unite = mode === 'massacre' ? 'morts' : 'ninjas';
 
   return {
-    multiplicateur: combo?.multiplicateur ?? 1,
-    compte:
-      combo === undefined ? '' : `${String(combo.coups)} ${unite}${combo.coups > 1 ? 's' : ''}`,
-    fenetre: combo?.fenetre ?? 0,
-    restants:
-      mode === 'classique'
-        ? ''
-        : restants === 0
-          ? 'Carte nettoyée'
-          : `${String(restants)} ${restants > 1 ? 'ninjas restants' : 'ninja restant'}`,
+    multiplicateur: combo.multiplicateur,
+    compte: `${String(combo.coups)} ${unite}`,
+    fenetre: combo.fenetre,
+  };
+}
+
+/** Les ninjas qui restent a tuer, en Massacre (etape 7.4), tant qu'on est au classement. */
+function restantsHud(etat: EtatClient, mode: Mode | undefined): RestantsHud | undefined {
+  const partie = etat.partie;
+
+  if (mode !== 'massacre' || partie?.classement.some((ligne) => ligne.id === etat.moi) !== true) {
+    return undefined;
+  }
+
+  const nombre = partie.entites.filter((entite) => entite.type === 'bot').length;
+
+  return {
+    nombre,
+    libelle:
+      nombre === 0
+        ? 'Carte nettoyée'
+        : `${String(nombre)} ${nombre > 1 ? 'ninjas restants' : 'ninja restant'}`,
   };
 }
 
@@ -473,56 +493,69 @@ function effetsHud(etat: EtatClient, maintenant: number): readonly EffetHud[] {
 }
 
 /**
- * Les points de la minimap.
+ * Les points du radar (9 octobre 2026, a la place de la minimap, a la demande du porteur du
+ * projet): les joueurs autour de nous, nous au centre.
  *
  * ON N'Y MET QUE LES JOUEURS, pas les bots. Une carte couverte de cent points
  * blancs ne dit rien; les joueurs, eux, sont ce que l'on cherche du regard. Le
  * jeu d'origine n'avait pas de minimap du tout: elle vient des maquettes.
  *
+ * UN JOUEUR HORS DE PORTEE SE POSE SUR LE BORD, dans sa direction: on sait toujours de quel
+ * cote chercher. Sans nous sur la carte, le radar part du milieu de la carte, et sa portee
+ * la couvre toute.
+ *
  * EN CHASSE, ON N'Y MET QUE SON CAMP (etape 7.3, decision du porteur du projet du 16
- * septembre 2026). Les proies se cachent parmi les faux ninjas: une minimap qui les
+ * septembre 2026). Les proies se cachent parmi les faux ninjas: un radar qui les
  * montrerait aux traqueurs defairait le camouflage. Chacun voit donc les siens, et une
  * proie infectee decouvre ses nouveaux allies. Notre camp se lit a notre couleur dans le
  * classement, ou figure aussi un traqueur elimine, qui n'est plus sur la carte.
  *
  * EN TACTIQUE, ON N'Y MET QUE LES JOUEURS PROCHES (etape 7.7, decision du porteur du projet
- * du 19 septembre 2026): la vue plus proche ne cacherait rien si la minimap montrait tout
- * le monde. Comme en Chasse, c'est un filtre d'affichage, le flux reste complet.
+ * du 19 septembre 2026): la vue plus proche ne cacherait rien si le radar montrait tout le
+ * monde, meme sur son bord. Comme en Chasse, c'est un filtre d'affichage, le flux reste
+ * complet.
  */
-function minimapHud(etat: EtatClient, mode: Mode | undefined): readonly PointMinimap[] {
+function radarHud(etat: EtatClient, mode: Mode | undefined): readonly PointRadar[] {
   const joueurs = (etat.partie?.entites ?? []).filter((entite) => entite.type === 'joueur');
   const notre = etat.partie?.classement.find((ligne) => ligne.id === etat.moi);
-  const portee = porteeDeLaMinimap(etat, mode);
   const visibles =
     mode === 'chasse' && notre !== undefined
       ? joueurs.filter((entite) => campDeCouleur(entite.couleur) === campDeCouleur(notre.couleur))
-      : portee !== undefined
-        ? joueurs.filter(
-            (entite) => Math.hypot(entite.x - portee.x, entite.y - portee.y) <= portee.rayon,
-          )
-        : joueurs;
+      : joueurs;
+  const moi = moiDansLaPartie(etat);
+  const carte = CARTES[(etat.salon?.reglages ?? REGLAGES_PAR_DEFAUT).carte];
+  const centre = moi ?? { x: carte.largeur / 2, y: carte.hauteur / 2 };
+  const portee =
+    moi === undefined
+      ? Math.hypot(carte.largeur, carte.hauteur) / 2
+      : mode === 'tactique'
+        ? PORTEE_DU_RADAR_TACTIQUE_PX
+        : PORTEE_DU_RADAR_PX;
 
-  return visibles.map((entite) => ({
-    id: entite.id,
-    x: entite.x,
-    y: entite.y,
-    couleur: entite.couleur,
-    moi: entite.id === etat.moi,
-  }));
+  return visibles.flatMap((entite): PointRadar[] => {
+    const x = (entite.x - centre.x) / portee;
+    const y = (entite.y - centre.y) / portee;
+    const distance = Math.hypot(x, y);
+    const point = { id: entite.id, couleur: entite.couleur, moi: entite.id === etat.moi };
+
+    if (distance <= 1) {
+      return [{ ...point, x, y, auBord: false }];
+    }
+
+    return mode === 'tactique'
+      ? []
+      : [{ ...point, x: x / distance, y: y / distance, auBord: true }];
+  });
 }
-
-/** Jusqu'ou la minimap du Tactique montre les joueurs autour de nous, en pixels de carte. */
-export const RAYON_MINIMAP_TACTIQUE_PX = 900;
 
 /**
- * Le disque de la carte que la minimap montre, en Tactique: centre sur nous. Absent dans
- * les autres modes, ou tant que nous ne sommes pas sur la carte.
+ * La portee du radar, en pixels de carte: un peu plus que ce que l'ecran montre de haut
+ * (HAUTEUR_DE_VUE_PX, 900), pour voir venir.
  */
-function porteeDeLaMinimap(etat: EtatClient, mode: Mode | undefined): PorteeMinimap | undefined {
-  const moi = mode === 'tactique' ? moiDansLaPartie(etat) : undefined;
+export const PORTEE_DU_RADAR_PX = 1200;
 
-  return moi === undefined ? undefined : { x: moi.x, y: moi.y, rayon: RAYON_MINIMAP_TACTIQUE_PX };
-}
+/** La portee du radar en Tactique, ou rien ne se montre au-dela (etape 7.7). */
+export const PORTEE_DU_RADAR_TACTIQUE_PX = 900;
 
 /**
  * Notre role dans une partie Chasse, lu a notre couleur dans le classement (etape 7.3).

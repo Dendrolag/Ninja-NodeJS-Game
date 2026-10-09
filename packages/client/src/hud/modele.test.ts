@@ -13,7 +13,13 @@ import { describe, expect, it } from 'vitest';
 import type { EffetActif, EtatClient } from '../etat.js';
 import { ETAT_INITIAL } from '../etat.js';
 import type { VuePartie } from '../reconstruction.js';
-import { HUD_VIDE, SEUIL_URGENCE_MS, construireHud, formaterDuree } from './modele.js';
+import {
+  HUD_VIDE,
+  PORTEE_DU_RADAR_PX,
+  SEUIL_URGENCE_MS,
+  construireHud,
+  formaterDuree,
+} from './modele.js';
 
 /** Une ligne de classement, avec le minimum de champs. */
 function ligne(id: string, points: number, couleur = '#FF0000'): LigneClassement {
@@ -211,7 +217,7 @@ describe('construireHud', () => {
     });
   });
 
-  describe('minimap', () => {
+  describe('radar', () => {
     it('ne montre que les joueurs, pas les bots', () => {
       // Cent points blancs ne disent rien; les joueurs sont ce que l'on cherche.
       const partie = vue({
@@ -224,21 +230,53 @@ describe('construireHud', () => {
 
       const hud = construireHud(etatEnJeu(partie), 0);
 
-      expect(hud.minimap.map((point) => point.id)).toEqual(['moi', 'autre']);
+      expect(hud.radar.map((point) => point.id)).toEqual(['moi', 'autre']);
     });
 
     it('marque notre point, pour qu on se retrouve', () => {
       const partie = vue({ entites: [joueur('moi', 10, 10), joueur('autre', 20, 20)] });
       const hud = construireHud(etatEnJeu(partie), 0);
 
-      expect(hud.minimap.map((point) => point.moi)).toEqual([true, false]);
+      expect(hud.radar.map((point) => point.moi)).toEqual([true, false]);
     });
 
-    it('donne les positions en coordonnees de carte', () => {
-      const partie = vue({ entites: [joueur('moi', 1_234, 567)] });
+    it('nous met au centre, et les autres autour, en part de sa portee', () => {
+      const partie = vue({
+        entites: [
+          joueur('moi', 1_000, 1_000),
+          joueur('autre', 1_000 + PORTEE_DU_RADAR_PX / 2, 1_000 - PORTEE_DU_RADAR_PX / 4),
+        ],
+      });
       const hud = construireHud(etatEnJeu(partie), 0);
 
-      expect(hud.minimap[0]).toMatchObject({ x: 1_234, y: 567 });
+      expect(hud.radar).toEqual([
+        { id: 'moi', x: 0, y: 0, couleur: '#00FF00', moi: true, auBord: false },
+        { id: 'autre', x: 0.5, y: -0.25, couleur: '#00FF00', moi: false, auBord: false },
+      ]);
+    });
+
+    it('pose sur son bord, dans sa direction, un joueur hors de portee', () => {
+      const partie = vue({
+        entites: [
+          joueur('moi', 0, 0),
+          joueur('autre', 3 * PORTEE_DU_RADAR_PX, 4 * PORTEE_DU_RADAR_PX),
+        ],
+      });
+      const autre = construireHud(etatEnJeu(partie), 0).radar[1];
+
+      expect(autre?.auBord).toBe(true);
+      expect(autre?.x).toBeCloseTo(0.6);
+      expect(autre?.y).toBeCloseTo(0.8);
+    });
+
+    it('sans nous sur la carte, part de son milieu et la montre toute', () => {
+      // La carte par defaut fait 2000 sur 1500: son coin est a 1250 pixels du milieu.
+      const partie = vue({ entites: [joueur('autre', 0, 0)] });
+      const hud = construireHud(etatEnJeu(partie), 0);
+
+      expect(hud.radar).toEqual([
+        { id: 'autre', x: -0.8, y: -0.6, couleur: '#00FF00', moi: false, auBord: false },
+      ]);
     });
   });
 
