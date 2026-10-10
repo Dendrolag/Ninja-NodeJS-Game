@@ -1,0 +1,1084 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Planche Among Ninjas, les tâches</title>
+    <style>
+      :root {
+        --fond: #0b1020;
+        --cadre: #26304f;
+        --texte: #e8ecf6;
+        --pale: #aeb6cc;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 22px 24px 18px;
+        width: 1400px;
+        background: var(--fond);
+        color: var(--texte);
+        font: 13px/1.35 'DejaVu Sans', 'Segoe UI', sans-serif;
+      }
+      h1 {
+        margin: 0 0 6px;
+        font-size: 22px;
+      }
+      .intro {
+        margin: 0 0 14px;
+      }
+      .rangee {
+        display: grid;
+        grid-template-columns: 170px 1fr 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .legende {
+        text-align: right;
+        padding-top: 60px;
+        color: var(--pale);
+      }
+      .legende b {
+        display: block;
+        color: var(--texte);
+        font-size: 14px;
+      }
+      .case {
+        background: var(--cadre);
+        border-radius: 8px;
+        padding: 7px 7px 6px;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-radius: 4px;
+        background: #121a33;
+      }
+      .titre {
+        text-align: center;
+        font-weight: bold;
+        margin-top: 5px;
+      }
+      .detail {
+        text-align: center;
+        opacity: 0.85;
+        min-height: 34px;
+      }
+      .pied {
+        color: var(--pale);
+        margin-top: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Among Ninjas, les tâches courtes et la carte: les rendus à choisir</h1>
+    <p class="intro">
+      Dessiné en code sur les sprites et le décor de Tokyo. Trois propositions par rangée, A, B ou C; on peut aussi
+      mélanger (« B, mais avec... »). Les sept gestes se dessineront ensuite dans le cadre choisi, sur une seconde
+      planche, au bureau et sur téléphone.
+    </p>
+
+    <div class="rangee">
+      <div class="legende">
+        <b>1. Le cadre d'une tâche</b>Ici, aiguiser un katana à la pierre du jardin zen. On ne bouge pas, le jeu continue
+        autour
+      </div>
+      <div class="case">
+        <canvas id="r1a" width="760" height="420"></canvas>
+        <div class="titre">A. La fenêtre néon</div>
+        <div class="detail">Au centre de l'écran, le jeu visible tout autour, assombri. On voit venir quelqu'un</div>
+      </div>
+      <div class="case">
+        <canvas id="r1b" width="760" height="420"></canvas>
+        <div class="titre">B. Le plein écran</div>
+        <div class="detail">Le geste en grand, rien autour: plus confortable au doigt, mais on ne voit rien venir</div>
+      </div>
+      <div class="case">
+        <canvas id="r1c" width="760" height="420"></canvas>
+        <div class="titre">C. Le rouleau</div>
+        <div class="detail">Un makimono déroulé au centre, le jeu visible autour. Plus dans le thème des ninjas</div>
+      </div>
+    </div>
+
+    <div class="rangee">
+      <div class="legende">
+        <b>2. La carte plein écran</b>Touche M, ou la mini-carte touchée. Une proie, deux tâches faites sur cinq. Jamais
+        les autres joueurs
+      </div>
+      <div class="case">
+        <canvas id="r2a" width="760" height="420"></canvas>
+        <div class="titre">A. Le décor éteint</div>
+        <div class="detail">Tokyo assombri et sans couleur, nos stations en néon et leur nom, la liste à droite</div>
+      </div>
+      <div class="case">
+        <canvas id="r2b" width="760" height="420"></canvas>
+        <div class="titre">B. Le plan</div>
+        <div class="detail">Les seuls murs, tracés en néon sur fond nuit, chaque station marquée de l'icône de sa tâche</div>
+      </div>
+      <div class="case">
+        <canvas id="r2c" width="760" height="420"></canvas>
+        <div class="titre">C. Les repères numérotés</div>
+        <div class="detail">Le décor en clair, une épingle numérotée par station, la liste dessous, numérotée de même</div>
+      </div>
+    </div>
+
+    <div class="rangee">
+      <div class="legende">
+        <b>3. Les tâches visuelles</b>À la fin validée d'une vraie proie vivante, une seconde et demie. Grossi 1,5 fois.
+        À gauche le katana, à droite la fumée
+      </div>
+      <div class="case">
+        <canvas id="r3a" width="760" height="420"></canvas>
+        <div class="titre">A. Les vraies étincelles</div>
+        <div class="detail">Une gerbe jaune et orange sur la pierre, une bouffée grise au-dessus du distributeur</div>
+      </div>
+      <div class="case">
+        <canvas id="r3b" width="760" height="420"></canvas>
+        <div class="titre">B. Le néon</div>
+        <div class="detail">Les étincelles et la fumée en lueur néon, à la couleur des effets du jeu</div>
+      </div>
+      <div class="case">
+        <canvas id="r3c" width="760" height="420"></canvas>
+        <div class="titre">C. Le pictogramme</div>
+        <div class="detail">L'icône de la tâche monte au-dessus du ninja et s'efface: lisible de loin, moins diégétique</div>
+      </div>
+    </div>
+
+    <div class="rangee">
+      <div class="legende">
+        <b>4. La liste des tâches</b>Le coin haut droit de l'écran, à taille réelle. Aujourd'hui: « Mes tâches 2 sur 5 »
+        seulement
+      </div>
+      <div class="case">
+        <canvas id="r4a" width="760" height="420"></canvas>
+        <div class="titre">A. Dans la carte seulement</div>
+        <div class="detail">Le bandeau ne change pas: la liste se lit dans la carte plein écran</div>
+      </div>
+      <div class="case">
+        <canvas id="r4b" width="760" height="420"></canvas>
+        <div class="titre">B. Sous la mini-carte</div>
+        <div class="detail">La liste dans le bandeau, sous la mini-carte, en plus de la carte</div>
+      </div>
+      <div class="case">
+        <canvas id="r4c" width="760" height="420"></canvas>
+        <div class="titre">C. En haut à gauche</div>
+        <div class="detail">Comme dans Among Us: une liste à part, en haut à gauche, en plus de la carte</div>
+      </div>
+    </div>
+
+    <p class="pied">
+      Pour un assassin, la carte montre toutes les stations actives et leur tâche, en rouge, sans coche: il les voit
+      sans pouvoir les faire. Un assassin qui fait semblant ouvre le même cadre que la proie, sans effet visuel.
+    </p>
+
+    <script>
+      const RACINE = '../../../assets/';
+      const charger = (chemin) =>
+        new Promise((ok) => {
+          const image = new Image();
+          image.onload = () => ok(image);
+          image.onerror = () => ok(null);
+          image.src = RACINE + chemin;
+        });
+
+      const W = 760;
+      const H = 420;
+      const CYAN = '#2EE6FF';
+      const ROUGE = '#FF3A5C';
+      const MOI = '#FF5FD2';
+      const FOULE = '#7F8A99';
+
+      // Les cinq taches de notre proie, sur les stations de Tokyo (fiche 7.21).
+      const MES_TACHES = [
+        { x: 170, y: 180, station: 'Pierre du jardin zen', tache: 'Aiguiser un katana', icone: 'katana', faite: true },
+        { x: 700, y: 355, station: "Lavabos de l'arcade", tache: 'Nettoyer les lunettes', icone: 'lunettes' },
+        { x: 1335, y: 80, station: 'Camionnette du parking', tache: 'Recharger des munitions', icone: 'cartouche', faite: true },
+        { x: 1320, y: 1070, station: 'Tapis du salon', tache: 'Remplir de fumée', icone: 'fumee' },
+        { x: 1600, y: 1045, station: 'Bureaux de la salle violette', tache: 'Relier des couleurs', icone: 'fils' },
+      ];
+      const GONG = { x: 1145, y: 630 };
+      const NOUS = { x: 1080, y: 760 };
+
+      function graine(depart) {
+        let s = depart;
+        return () => (s = (s * 9301 + 49297) % 233280) / 233280;
+      }
+
+      /** Le ninja recolore: la part rouge prend la couleur voulue, comme la page du jeu. */
+      function ninja(image, couleur) {
+        const toile = document.createElement('canvas');
+        toile.width = image.width;
+        toile.height = image.height;
+        const ctx = toile.getContext('2d');
+        ctx.drawImage(image, 0, 0);
+        const donnees = ctx.getImageData(0, 0, toile.width, toile.height);
+        const p = donnees.data;
+        const c = parseInt(couleur.slice(1), 16);
+        const [cr, cg, cb] = [(c >> 16) & 255, (c >> 8) & 255, c & 255];
+        for (let i = 0; i < p.length; i += 4) {
+          const [r, g, b, a] = [p[i], p[i + 1], p[i + 2], p[i + 3]];
+          if (a === 0) continue;
+          const exces = r - Math.max(g, b);
+          const part = Math.abs(g - b) > 40 || exces < 40 ? 0 : Math.min(1, exces / 255);
+          if (part > 0) {
+            const fond = (r - part * 255) / Math.max(1 - part, 0.01);
+            p[i] = cr * part + fond * (1 - part);
+            p[i + 1] = cg * part + g * (1 - part);
+            p[i + 2] = cb * part + b * (1 - part);
+          }
+        }
+        ctx.putImageData(donnees, 0, 0);
+        return toile;
+      }
+
+      function dessinerNinja(ctx, image, couleur, x, y, taille) {
+        if (!image) return;
+        ctx.drawImage(ninja(image, couleur), x - taille / 2, y - taille / 2, taille, taille);
+      }
+
+      function texte(ctx, chaine, x, y, taille, couleur, options = {}) {
+        ctx.save();
+        ctx.font = `${options.gras ? 'bold ' : ''}${options.italique ? 'italic ' : ''}${taille}px ${
+          options.police ?? "'DejaVu Sans', sans-serif"
+        }`;
+        ctx.fillStyle = couleur;
+        ctx.textAlign = options.align ?? 'center';
+        ctx.textBaseline = 'middle';
+        if (options.halo) {
+          ctx.shadowColor = options.halo;
+          ctx.shadowBlur = options.flou ?? 14;
+        }
+        ctx.fillText(chaine, x, y);
+        ctx.restore();
+      }
+
+      function rectArrondi(ctx, x, y, l, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + l, y, x + l, y + h, r);
+        ctx.arcTo(x + l, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + l, y, r);
+        ctx.closePath();
+      }
+
+      /** Le decor de Tokyo, centre sur (cx, cy) en pixels de carte, a l'echelle donnee. */
+      function decor(ctx, fond, cx, cy, echelle, largeur = W, hauteur = H) {
+        if (!fond) {
+          ctx.fillStyle = '#1a2240';
+          ctx.fillRect(0, 0, largeur, hauteur);
+          return;
+        }
+        // Le fond de Tokyo est etire de 3000x2000 a 2000x1500.
+        const sx = (cx - largeur / 2 / echelle) * 1.5;
+        const sy = (cy - hauteur / 2 / echelle) * (2000 / 1500);
+        ctx.drawImage(fond, sx, sy, (largeur / echelle) * 1.5, (hauteur / echelle) * (2000 / 1500), 0, 0, largeur, hauteur);
+      }
+
+      /** Le cercle de vision retenu en 7.20: le disque net, hors du disque le decor assombri et sans couleur. */
+      function vision(ctx, x, y, rayon, largeur = W, hauteur = H) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 0, largeur, hauteur);
+        ctx.arc(x, y, rayon, 0, Math.PI * 2, true);
+        ctx.clip('evenodd');
+        ctx.globalCompositeOperation = 'saturation';
+        ctx.fillStyle = '#808080';
+        ctx.fillRect(0, 0, largeur, hauteur);
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(0, 0, largeur, hauteur);
+        ctx.restore();
+      }
+
+      /** Une scene de jeu: le decor, quelques ninjas, la station et le cercle de vision. */
+      function scene(ctx, images, cx, cy, echelle, options = {}) {
+        decor(ctx, images.fond, cx, cy, echelle);
+        const ecran = (x, y) => [W / 2 + (x - cx) * echelle, H / 2 + (y - cy) * echelle];
+        for (const [x, y, couleur] of options.ninjas ?? []) {
+          const [ex, ey] = ecran(x, y);
+          dessinerNinja(ctx, images.idle, couleur, ex, ey, 32 * echelle);
+        }
+        vision(ctx, W / 2, H / 2, (options.rayon ?? 260) * echelle);
+        return ecran;
+      }
+
+      // ------------------------------------------------------------------
+      // Le geste du katana, dessine dans un cadre de largeur l
+      // ------------------------------------------------------------------
+
+      function gesteKatana(ctx, x, y, l, h, style) {
+        const encre = style === 'rouleau';
+        // La pierre.
+        const pl = l * 0.62;
+        const ph = h * 0.2;
+        const px = x + (l - pl) / 2;
+        const py = y + h * 0.48;
+        ctx.save();
+        ctx.fillStyle = encre ? '#5b4a3a' : '#4a4f5c';
+        rectArrondi(ctx, px, py, pl, ph, 10);
+        ctx.fill();
+        ctx.fillStyle = encre ? '#7a6550' : '#6b7180';
+        rectArrondi(ctx, px + 6, py + 4, pl - 12, ph * 0.45, 8);
+        ctx.fill();
+        // Le support de bois.
+        ctx.fillStyle = encre ? '#3b2a1d' : '#2b2f3a';
+        ctx.fillRect(px - 10, py + ph - 4, pl + 20, 12);
+        // La lame, posee en travers, la garde a gauche.
+        const lx = px + l * 0.04;
+        const ly = py - 6;
+        const longueur = l * 0.6;
+        ctx.translate(lx, ly);
+        ctx.rotate(-0.08);
+        ctx.fillStyle = '#20232b';
+        rectArrondi(ctx, -l * 0.16, -7, l * 0.15, 14, 4);
+        ctx.fill();
+        ctx.strokeStyle = '#b8955a';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 6; i++) {
+          ctx.beginPath();
+          const ax = -l * 0.155 + i * (l * 0.025);
+          ctx.moveTo(ax, -7);
+          ctx.lineTo(ax + l * 0.0125, 7);
+          ctx.stroke();
+        }
+        ctx.fillStyle = '#c9a24a';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 6, 15, 0, 0, Math.PI * 2);
+        ctx.fill();
+        const lame = ctx.createLinearGradient(0, -6, 0, 6);
+        lame.addColorStop(0, '#f4f7fb');
+        lame.addColorStop(0.55, '#c3cad6');
+        lame.addColorStop(1, '#8a93a3');
+        ctx.fillStyle = lame;
+        ctx.beginPath();
+        ctx.moveTo(6, -5);
+        ctx.lineTo(longueur - 20, -6);
+        ctx.quadraticCurveTo(longueur, -6, longueur + 4, 4);
+        ctx.lineTo(6, 5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = 0; i <= 20; i++) {
+          const ax = 8 + ((longueur - 30) * i) / 20;
+          ctx.lineTo(ax, 1.5 + Math.sin(i * 1.3) * 1.2);
+        }
+        ctx.stroke();
+        ctx.restore();
+        // Le sens de la passe.
+        const fy = py + ph + h * 0.1;
+        ctx.save();
+        ctx.strokeStyle = encre ? '#8a1c1c' : CYAN;
+        ctx.fillStyle = ctx.strokeStyle;
+        ctx.lineWidth = 3;
+        ctx.setLineDash([10, 7]);
+        ctx.beginPath();
+        ctx.moveTo(px + 10, fy);
+        ctx.lineTo(px + pl - 24, fy);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(px + pl - 8, fy);
+        ctx.lineTo(px + pl - 26, fy - 9);
+        ctx.lineTo(px + pl - 26, fy + 9);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+        // Les passes faites: trois sur cinq.
+        const cy = y + h * 0.3;
+        for (let i = 0; i < 5; i++) {
+          const ax = x + l / 2 + (i - 2) * 26;
+          ctx.beginPath();
+          ctx.arc(ax, cy, 8, 0, Math.PI * 2);
+          if (i < 3) {
+            ctx.fillStyle = encre ? '#8a1c1c' : CYAN;
+            ctx.fill();
+          } else {
+            ctx.strokeStyle = encre ? '#8a6a4a' : 'rgba(46,230,255,0.5)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
+        }
+        // Une etincelle au contact.
+        const r = graine(7);
+        ctx.save();
+        ctx.strokeStyle = encre ? '#c25b16' : '#FFE07A';
+        ctx.lineWidth = 2;
+        const ex = px + pl * 0.62;
+        const ey = py - 2;
+        for (let i = 0; i < 7; i++) {
+          const angle = -Math.PI / 2 - 0.9 + r() * 1.8;
+          const d = 8 + r() * 16;
+          ctx.beginPath();
+          ctx.moveTo(ex + Math.cos(angle) * 4, ey + Math.sin(angle) * 4);
+          ctx.lineTo(ex + Math.cos(angle) * d, ey + Math.sin(angle) * d);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      function croix(ctx, x, y, couleur) {
+        ctx.save();
+        ctx.strokeStyle = couleur;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x - 8, y - 8);
+        ctx.lineTo(x + 8, y + 8);
+        ctx.moveTo(x + 8, y - 8);
+        ctx.lineTo(x - 8, y + 8);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // ------------------------------------------------------------------
+      // Les icones des taches
+      // ------------------------------------------------------------------
+
+      function icone(ctx, nom, x, y, t, couleur) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.strokeStyle = couleur;
+        ctx.fillStyle = couleur;
+        ctx.lineWidth = Math.max(1.5, t / 8);
+        ctx.lineCap = 'round';
+        const s = t / 2;
+        if (nom === 'katana') {
+          ctx.rotate(-Math.PI / 4);
+          ctx.beginPath();
+          ctx.moveTo(-s * 0.3, 0);
+          ctx.lineTo(s, 0);
+          ctx.stroke();
+          ctx.lineWidth *= 1.6;
+          ctx.beginPath();
+          ctx.moveTo(-s, 0);
+          ctx.lineTo(-s * 0.45, 0);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(-s * 0.38, -s * 0.32);
+          ctx.lineTo(-s * 0.38, s * 0.32);
+          ctx.stroke();
+        } else if (nom === 'lunettes') {
+          ctx.beginPath();
+          ctx.arc(-s * 0.5, s * 0.1, s * 0.38, 0, Math.PI * 2);
+          ctx.moveTo(s * 0.88, s * 0.1);
+          ctx.arc(s * 0.5, s * 0.1, s * 0.38, 0, Math.PI * 2);
+          ctx.moveTo(-s * 0.12, 0);
+          ctx.quadraticCurveTo(0, -s * 0.2, s * 0.12, 0);
+          ctx.stroke();
+        } else if (nom === 'cartouche') {
+          for (const dx of [-s * 0.45, 0, s * 0.45]) {
+            ctx.fillRect(dx - s * 0.14, -s * 0.3, s * 0.28, s * 0.85);
+            ctx.beginPath();
+            ctx.arc(dx, -s * 0.3, s * 0.14, Math.PI, 0);
+            ctx.fill();
+          }
+        } else if (nom === 'fumee') {
+          ctx.beginPath();
+          ctx.arc(-s * 0.35, s * 0.15, s * 0.38, 0, Math.PI * 2);
+          ctx.arc(s * 0.3, s * 0.2, s * 0.34, 0, Math.PI * 2);
+          ctx.arc(0, -s * 0.3, s * 0.4, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (nom === 'fils') {
+          const couleurs = ['#FF3030', '#3D7DFF', '#FFE81A'];
+          couleurs.forEach((c, i) => {
+            ctx.strokeStyle = c;
+            ctx.beginPath();
+            ctx.moveTo(-s, -s * 0.6 + i * s * 0.6);
+            ctx.bezierCurveTo(0, -s * 0.6 + i * s * 0.6, 0, s * 0.6 - i * s * 0.6, s, s * 0.6 - i * s * 0.6);
+            ctx.stroke();
+          });
+        }
+        ctx.restore();
+      }
+
+      // ------------------------------------------------------------------
+      // La carte entiere, en petit
+      // ------------------------------------------------------------------
+
+      function carteEntiere(ctx, images, x, y, echelle, style) {
+        const l = 2000 * echelle;
+        const h = 1500 * echelle;
+        if (style === 'plan') {
+          ctx.fillStyle = '#071027';
+          ctx.fillRect(x, y, l, h);
+          if (images.collision) {
+            // Les murs, lus sur la collision, traces en neon.
+            const toile = document.createElement('canvas');
+            toile.width = Math.round(l);
+            toile.height = Math.round(h);
+            const c = toile.getContext('2d');
+            c.drawImage(images.collision, 0, 0, toile.width, toile.height);
+            const d = c.getImageData(0, 0, toile.width, toile.height);
+            const mur = (i) => d.data[i] + d.data[i + 1] + d.data[i + 2] < 384;
+            const sortie = c.createImageData(toile.width, toile.height);
+            for (let py = 1; py < toile.height - 1; py++) {
+              for (let px = 1; px < toile.width - 1; px++) {
+                const i = (py * toile.width + px) * 4;
+                if (!mur(i)) continue;
+                const bord =
+                  !mur(i - 4) || !mur(i + 4) || !mur(i - toile.width * 4) || !mur(i + toile.width * 4);
+                sortie.data[i] = bord ? 46 : 20;
+                sortie.data[i + 1] = bord ? 230 : 40;
+                sortie.data[i + 2] = bord ? 255 : 70;
+                sortie.data[i + 3] = 255;
+              }
+            }
+            c.putImageData(sortie, 0, 0);
+            ctx.save();
+            ctx.shadowColor = CYAN;
+            ctx.shadowBlur = 6;
+            ctx.drawImage(toile, x, y);
+            ctx.restore();
+          }
+        } else if (images.fond) {
+          ctx.drawImage(images.fond, x, y, l, h);
+          if (style === 'eteint') {
+            ctx.save();
+            ctx.globalCompositeOperation = 'saturation';
+            ctx.fillStyle = '#808080';
+            ctx.fillRect(x, y, l, h);
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = 'rgba(5, 8, 20, 0.6)';
+            ctx.fillRect(x, y, l, h);
+            ctx.restore();
+          }
+        }
+        return (px, py) => [x + px * echelle, y + py * echelle];
+      }
+
+      function gongSur(ctx, x, y, t) {
+        ctx.save();
+        ctx.strokeStyle = '#FFC93D';
+        ctx.fillStyle = 'rgba(255, 201, 61, 0.25)';
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = '#FFC93D';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(x, y, t, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function nousSur(ctx, x, y) {
+        ctx.save();
+        ctx.fillStyle = MOI;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.shadowColor = MOI;
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(x, y, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x, y, 12, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255, 95, 210, 0.6)';
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function coche(ctx, x, y, t, couleur) {
+        ctx.save();
+        ctx.strokeStyle = couleur;
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x - t * 0.45, y);
+        ctx.lineTo(x - t * 0.1, y + t * 0.35);
+        ctx.lineTo(x + t * 0.5, y - t * 0.4);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      /** La liste de nos taches, dans un panneau. */
+      function liste(ctx, x, y, l, options = {}) {
+        const pas = options.pas ?? 46;
+        const taille = options.taille ?? 14;
+        const h = 36 + MES_TACHES.length * pas;
+        ctx.save();
+        ctx.fillStyle = options.fond ?? 'rgba(10, 16, 34, 0.92)';
+        rectArrondi(ctx, x, y, l, h, 8);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(46, 230, 255, 0.6)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
+        texte(ctx, 'Mes tâches 2 sur 5', x + 12, y + 18, taille + 1, CYAN, { gras: true, align: 'left' });
+        MES_TACHES.forEach((t, i) => {
+          const ly = y + 36 + i * pas + pas / 2 - 4;
+          const couleur = t.faite ? '#7d8aa6' : '#e8ecf6';
+          if (options.numeros) {
+            texte(ctx, String(i + 1), x + 18, ly, taille, t.faite ? '#7d8aa6' : CYAN, { gras: true });
+          } else if (t.faite) {
+            coche(ctx, x + 18, ly, 14, '#3ee07a');
+          } else {
+            ctx.save();
+            ctx.strokeStyle = CYAN;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x + 11, ly - 7, 14, 14);
+            ctx.restore();
+          }
+          texte(ctx, t.tache, x + 34, ly - (options.unaLigne ? 0 : 8), taille, couleur, {
+            align: 'left',
+            gras: !t.faite,
+          });
+          if (!options.unaLigne) {
+            texte(ctx, t.station, x + 34, ly + 10, taille - 2, t.faite ? '#5f6a82' : '#aeb6cc', { align: 'left' });
+          }
+        });
+        return h;
+      }
+
+      // ------------------------------------------------------------------
+      // Le bandeau du mode, tel qu'il est aujourd'hui (capture 8-minimap)
+      // ------------------------------------------------------------------
+
+      function bandeau(ctx, images, x, y, avecListe) {
+        const l = 210;
+        const minimapH = 1500 * ((l - 24) / 2000) + 4;
+        const listeH = avecListe ? 5 * 18 + 6 : 0;
+        const h = 128 + minimapH + listeH;
+        ctx.save();
+        ctx.fillStyle = 'rgba(8, 12, 24, 0.9)';
+        rectArrondi(ctx, x, y, l, h, 10);
+        ctx.fill();
+        ctx.strokeStyle = CYAN;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
+        texte(ctx, 'PROIE', x + l - 12, y + 22, 18, CYAN, { gras: true, align: 'right' });
+        texte(ctx, 'Faites vos tâches, trouvez les', x + l - 12, y + 48, 12, '#aeb6cc', { align: 'right' });
+        texte(ctx, 'assassins', x + l - 12, y + 64, 12, '#aeb6cc', { align: 'right' });
+        texte(ctx, 'Mes tâches 2 sur 5', x + l - 12, y + 86, 12, '#aeb6cc', { align: 'right' });
+        ctx.fillStyle = '#26304f';
+        rectArrondi(ctx, x + 12, y + 98, l - 24, 14, 4);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(46, 230, 255, 0.55)';
+        rectArrondi(ctx, x + 12, y + 98, (l - 24) * (9 / 20), 14, 4);
+        ctx.fill();
+        texte(ctx, 'Tâches 9/20', x + l / 2, y + 105, 10, '#ffffff', { gras: true });
+        const mx = x + 12;
+        const my = y + 120;
+        const echelle = (l - 24) / 2000;
+        const sur = carteEntiere(ctx, images, mx, my, echelle, 'eteint');
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.fillRect(mx, my, l - 24, 1500 * echelle);
+        for (const t of MES_TACHES.filter((t) => !t.faite)) {
+          const [sx, sy] = sur(t.x, t.y);
+          ctx.fillStyle = CYAN;
+          ctx.beginPath();
+          ctx.arc(sx, sy, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        const [gx, gy] = sur(GONG.x, GONG.y);
+        gongSur(ctx, gx, gy, 4);
+        const [nx, ny] = sur(NOUS.x, NOUS.y);
+        ctx.fillStyle = MOI;
+        ctx.beginPath();
+        ctx.arc(nx, ny, 4, 0, Math.PI * 2);
+        ctx.fill();
+        if (avecListe) {
+          let ly = my + 1500 * echelle + 13;
+          for (const t of MES_TACHES) {
+            if (t.faite) coche(ctx, mx + 6, ly, 10, '#3ee07a');
+            else {
+              ctx.strokeStyle = CYAN;
+              ctx.lineWidth = 1.5;
+              ctx.strokeRect(mx + 1, ly - 5, 10, 10);
+            }
+            texte(ctx, t.tache, mx + 18, ly, 11.5, t.faite ? '#6f7b94' : '#e8ecf6', { align: 'left' });
+            ly += 18;
+          }
+        }
+      }
+
+      (async () => {
+        const [idle, fond, collision] = await Promise.all([
+          charger('ninja/idle.png'),
+          charger('cartes/map1/background.png'),
+          charger('cartes/map1/collision.png'),
+        ]);
+        const images = { idle, fond, collision };
+        const ctxDe = (id) => document.getElementById(id).getContext('2d');
+        const PIERRE = { x: 170, y: 180 };
+        const ECHELLE_JEU = H / 450;
+
+        // --- 1. Le cadre d'une tache
+        {
+          // A. La fenetre neon.
+          let ctx = ctxDe('r1a');
+          scene(ctx, images, PIERRE.x + 40, PIERRE.y + 30, ECHELLE_JEU, {
+            ninjas: [
+              [PIERRE.x, PIERRE.y + 10, MOI],
+              [PIERRE.x + 210, PIERRE.y + 170, FOULE],
+              [PIERRE.x + 260, PIERRE.y - 60, '#1FBF4C'],
+            ],
+          });
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+          ctx.fillRect(0, 0, W, H);
+          let fx = 170;
+          let fy = 60;
+          let fl = 420;
+          let fh = 300;
+          ctx.save();
+          ctx.fillStyle = 'rgba(10, 16, 34, 0.95)';
+          rectArrondi(ctx, fx, fy, fl, fh, 14);
+          ctx.fill();
+          ctx.shadowColor = CYAN;
+          ctx.shadowBlur = 18;
+          ctx.strokeStyle = CYAN;
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+          ctx.restore();
+          texte(ctx, 'Aiguiser un katana', fx + 20, fy + 26, 20, CYAN, { gras: true, align: 'left', halo: CYAN, flou: 8 });
+          texte(ctx, 'Pierre du jardin zen', fx + 20, fy + 50, 13, '#aeb6cc', { align: 'left' });
+          croix(ctx, fx + fl - 24, fy + 26, '#e8ecf6');
+          gesteKatana(ctx, fx, fy + 40, fl, fh - 80, 'neon');
+          texte(ctx, 'Glissez la lame de la garde à la pointe   Clavier: flèche droite', fx + fl / 2, fy + fh - 20, 12, '#aeb6cc');
+
+          // B. Le plein ecran.
+          ctx = ctxDe('r1b');
+          ctx.fillStyle = '#0b1020';
+          ctx.fillRect(0, 0, W, H);
+          ctx.save();
+          ctx.strokeStyle = CYAN;
+          ctx.lineWidth = 3;
+          ctx.shadowColor = CYAN;
+          ctx.shadowBlur = 16;
+          rectArrondi(ctx, 10, 10, W - 20, H - 20, 12);
+          ctx.stroke();
+          ctx.restore();
+          texte(ctx, 'Aiguiser un katana', W / 2, 46, 28, CYAN, { gras: true, halo: CYAN, flou: 10 });
+          texte(ctx, 'Pierre du jardin zen', W / 2, 78, 15, '#aeb6cc');
+          croix(ctx, W - 44, 44, '#e8ecf6');
+          gesteKatana(ctx, 40, 70, W - 80, H - 140, 'neon');
+          texte(ctx, 'Glissez la lame de la garde à la pointe, cinq fois   Clavier: flèche droite', W / 2, H - 34, 14, '#aeb6cc');
+
+          // C. Le rouleau.
+          ctx = ctxDe('r1c');
+          scene(ctx, images, PIERRE.x + 40, PIERRE.y + 30, ECHELLE_JEU, {
+            ninjas: [
+              [PIERRE.x, PIERRE.y + 10, MOI],
+              [PIERRE.x + 210, PIERRE.y + 170, FOULE],
+              [PIERRE.x + 260, PIERRE.y - 60, '#1FBF4C'],
+            ],
+          });
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+          ctx.fillRect(0, 0, W, H);
+          fx = 165;
+          fy = 58;
+          fl = 430;
+          fh = 304;
+          const papier = ctx.createLinearGradient(fx, 0, fx + fl, 0);
+          papier.addColorStop(0, '#d9c49a');
+          papier.addColorStop(0.5, '#efe0bd');
+          papier.addColorStop(1, '#d9c49a');
+          ctx.fillStyle = papier;
+          ctx.fillRect(fx, fy, fl, fh);
+          for (const rx of [fx - 14, fx + fl - 4]) {
+            const bois = ctx.createLinearGradient(rx, 0, rx + 18, 0);
+            bois.addColorStop(0, '#2c1a0e');
+            bois.addColorStop(0.5, '#6b4423');
+            bois.addColorStop(1, '#2c1a0e');
+            ctx.fillStyle = bois;
+            rectArrondi(ctx, rx, fy - 12, 18, fh + 24, 6);
+            ctx.fill();
+          }
+          ctx.fillStyle = '#8a1c1c';
+          ctx.fillRect(fx + 20, fy + 14, 6, 34);
+          texte(ctx, 'Aiguiser un katana', fx + 36, fy + 24, 21, '#3a1a10', {
+            gras: true,
+            align: 'left',
+            police: "Georgia, 'DejaVu Serif', serif",
+          });
+          texte(ctx, 'Pierre du jardin zen', fx + 36, fy + 46, 13, '#6b4a2a', {
+            align: 'left',
+            italique: true,
+            police: "Georgia, 'DejaVu Serif', serif",
+          });
+          croix(ctx, fx + fl - 26, fy + 26, '#3a1a10');
+          gesteKatana(ctx, fx, fy + 40, fl, fh - 80, 'rouleau');
+          texte(ctx, 'Glissez la lame de la garde à la pointe   Clavier: flèche droite', fx + fl / 2, fy + fh - 20, 12, '#6b4a2a', {
+            police: "Georgia, 'DejaVu Serif', serif",
+          });
+        }
+
+        // --- 2. La carte plein ecran
+        {
+          const marques = (ctx, sur, style) => {
+            const [gx, gy] = sur(GONG.x, GONG.y);
+            gongSur(ctx, gx, gy, 9);
+            texte(ctx, 'Gong', gx, gy + 20, 12, '#FFC93D', { gras: true });
+            MES_TACHES.forEach((t, i) => {
+              const [sx, sy] = sur(t.x, t.y);
+              if (style === 'eteint') {
+                ctx.save();
+                ctx.strokeStyle = t.faite ? '#5f6a82' : CYAN;
+                ctx.fillStyle = t.faite ? 'rgba(95,106,130,0.25)' : 'rgba(46,230,255,0.22)';
+                ctx.lineWidth = 2.5;
+                if (!t.faite) {
+                  ctx.shadowColor = CYAN;
+                  ctx.shadowBlur = 10;
+                }
+                ctx.beginPath();
+                ctx.arc(sx, sy, 10, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+                if (t.faite) coche(ctx, sx, sy, 12, '#3ee07a');
+                const dessous = sy < 40 || t.icone === 'fumee';
+                const lx = Math.min(Math.max(sx, 66), 500);
+                texte(ctx, t.tache, lx, sy + (dessous ? 22 : -22), 12, t.faite ? '#7d8aa6' : '#ffffff', {
+                  gras: !t.faite,
+                  halo: '#000',
+                  flou: 4,
+                });
+              } else if (style === 'plan') {
+                ctx.save();
+                ctx.fillStyle = 'rgba(7, 16, 39, 0.9)';
+                ctx.strokeStyle = t.faite ? '#5f6a82' : CYAN;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(sx, sy, 14, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+                icone(ctx, t.icone, sx, sy, 16, t.faite ? '#5f6a82' : '#ffffff');
+                if (t.faite) coche(ctx, sx + 12, sy - 12, 10, '#3ee07a');
+              } else {
+                // Une epingle numerotee.
+                ctx.save();
+                ctx.fillStyle = t.faite ? '#5f6a82' : '#ff5f3a';
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(sx, sy - 16, 11, 0, Math.PI * 2);
+                ctx.moveTo(sx - 7, sy - 9);
+                ctx.lineTo(sx, sy);
+                ctx.lineTo(sx + 7, sy - 9);
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+                texte(ctx, String(i + 1), sx, sy - 16, 12, '#ffffff', { gras: true });
+              }
+            });
+            const [nx, ny] = sur(NOUS.x, NOUS.y);
+            nousSur(ctx, nx, ny);
+            texte(ctx, 'Vous', nx + 26, ny + 2, 12, MOI, { gras: true, halo: '#000', flou: 4 });
+          };
+
+          // A. Le decor eteint, la liste a droite.
+          let ctx = ctxDe('r2a');
+          ctx.fillStyle = '#05080f';
+          ctx.fillRect(0, 0, W, H);
+          let echelle = 0.28;
+          let sur = carteEntiere(ctx, images, 0, 0, echelle, 'eteint');
+          marques(ctx, sur, 'eteint');
+          liste(ctx, 570, 14, 182, { pas: 46, taille: 12 });
+          texte(ctx, 'M ou Échap pour fermer', 661, 400, 11, '#aeb6cc');
+
+          // B. Le plan.
+          ctx = ctxDe('r2b');
+          ctx.fillStyle = '#05080f';
+          ctx.fillRect(0, 0, W, H);
+          sur = carteEntiere(ctx, images, 0, 0, echelle, 'plan');
+          marques(ctx, sur, 'plan');
+          liste(ctx, 570, 14, 182, { pas: 46, taille: 12, fond: 'rgba(7, 16, 39, 0.95)' });
+          texte(ctx, 'M ou Échap pour fermer', 661, 400, 11, '#aeb6cc');
+
+          // C. Les reperes numerotes, la liste dessous.
+          ctx = ctxDe('r2c');
+          ctx.fillStyle = '#05080f';
+          ctx.fillRect(0, 0, W, H);
+          echelle = 0.21;
+          const ox = (W - 2000 * echelle) / 2;
+          sur = carteEntiere(ctx, images, ox, 4, echelle, 'clair');
+          marques(ctx, sur, 'epingle');
+          ctx.save();
+          ctx.fillStyle = 'rgba(10, 16, 34, 0.95)';
+          rectArrondi(ctx, 8, 326, W - 16, 88, 8);
+          ctx.fill();
+          ctx.restore();
+          MES_TACHES.forEach((t, i) => {
+            const colonne = i % 3;
+            const ligne = Math.floor(i / 3);
+            const lx = 22 + colonne * 246;
+            const ly = 346 + ligne * 36;
+            ctx.save();
+            ctx.fillStyle = t.faite ? '#5f6a82' : '#ff5f3a';
+            ctx.beginPath();
+            ctx.arc(lx + 8, ly, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+            texte(ctx, String(i + 1), lx + 8, ly, 11, '#fff', { gras: true });
+            texte(ctx, t.tache, lx + 24, ly - 7, 12, t.faite ? '#7d8aa6' : '#e8ecf6', { align: 'left', gras: !t.faite });
+            texte(ctx, t.station, lx + 24, ly + 8, 10.5, '#aeb6cc', { align: 'left' });
+          });
+        }
+
+        // --- 3. Les taches visuelles, en deux moities
+        {
+          const DISTRIBUTEUR = { x: 415, y: 490 };
+          const moitie = (ctx, gauche, lieu, effet) => {
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(gauche ? 0 : W / 2, 0, W / 2, H);
+            ctx.clip();
+            ctx.translate(gauche ? -W / 4 : W / 4, 0);
+            const echelle = 1.5;
+            const ecran = scene(ctx, images, lieu.x, lieu.y + 20, echelle, {
+              ninjas: [[lieu.x - 6, lieu.y + 22, MOI]],
+              rayon: 400,
+            });
+            const [ex, ey] = ecran(lieu.x, lieu.y);
+            effet(ctx, ex, ey - 10);
+            ctx.restore();
+          };
+          const separer = (ctx) => {
+            ctx.fillStyle = '#26304f';
+            ctx.fillRect(W / 2 - 2, 0, 4, H);
+          };
+          const etincelles = (ctx, x, y, couleurs, neon) => {
+            const r = graine(11);
+            ctx.save();
+            ctx.lineCap = 'round';
+            if (neon) {
+              ctx.shadowColor = couleurs[0];
+              ctx.shadowBlur = 14;
+            }
+            for (let i = 0; i < 26; i++) {
+              const angle = -Math.PI / 2 + (r() - 0.5) * 2.6;
+              const d0 = 6 + r() * 10;
+              const d1 = d0 + 18 + r() * 46;
+              ctx.strokeStyle = couleurs[Math.floor(r() * couleurs.length)];
+              ctx.lineWidth = 1.5 + r() * 2;
+              ctx.beginPath();
+              ctx.moveTo(x + Math.cos(angle) * d0, y + Math.sin(angle) * d0);
+              ctx.lineTo(x + Math.cos(angle) * d1, y + Math.sin(angle) * d1);
+              ctx.stroke();
+            }
+            ctx.restore();
+          };
+          const bouffee = (ctx, x, y, couleur, neon) => {
+            const r = graine(5);
+            ctx.save();
+            if (neon) {
+              ctx.shadowColor = couleur;
+              ctx.shadowBlur = 18;
+            }
+            for (let i = 0; i < 9; i++) {
+              const dx = (r() - 0.5) * 70;
+              const dy = -20 - r() * 60;
+              ctx.fillStyle = couleur;
+              ctx.globalAlpha = 0.35 + r() * 0.35;
+              ctx.beginPath();
+              ctx.arc(x + dx, y + dy, 16 + r() * 18, 0, Math.PI * 2);
+              ctx.fill();
+            }
+            ctx.restore();
+          };
+
+          let ctx = ctxDe('r3a');
+          moitie(ctx, true, PIERRE, (c, x, y) => etincelles(c, x, y, ['#FFE07A', '#FFB02E', '#FF7A1A', '#FFF6C8'], false));
+          moitie(ctx, false, DISTRIBUTEUR, (c, x, y) => bouffee(c, x, y, '#cfd4dc', false));
+          separer(ctx);
+
+          ctx = ctxDe('r3b');
+          moitie(ctx, true, PIERRE, (c, x, y) => etincelles(c, x, y, [CYAN, '#ffffff', '#9af4ff'], true));
+          moitie(ctx, false, DISTRIBUTEUR, (c, x, y) => {
+            bouffee(c, x, y, '#b98cff', true);
+            c.save();
+            c.strokeStyle = '#d9c2ff';
+            c.lineWidth = 3;
+            c.shadowColor = '#b98cff';
+            c.shadowBlur = 16;
+            c.beginPath();
+            c.ellipse(x, y - 50, 58, 20, 0, 0, Math.PI * 2);
+            c.stroke();
+            c.restore();
+          });
+          separer(ctx);
+
+          ctx = ctxDe('r3c');
+          const picto = (nom, couleur) => (c, x, y) => {
+            const py = y - 74;
+            c.save();
+            c.fillStyle = 'rgba(10, 16, 34, 0.85)';
+            c.strokeStyle = couleur;
+            c.lineWidth = 3;
+            c.shadowColor = couleur;
+            c.shadowBlur = 14;
+            c.beginPath();
+            c.arc(x, py, 26, 0, Math.PI * 2);
+            c.fill();
+            c.stroke();
+            c.restore();
+            icone(c, nom, x, py, 30, '#ffffff');
+            c.save();
+            c.strokeStyle = couleur;
+            c.globalAlpha = 0.6;
+            c.setLineDash([4, 6]);
+            c.lineWidth = 2;
+            c.beginPath();
+            c.moveTo(x, py + 30);
+            c.lineTo(x, y + 4);
+            c.stroke();
+            c.restore();
+          };
+          moitie(ctx, true, PIERRE, picto('katana', '#FFC93D'));
+          moitie(ctx, false, DISTRIBUTEUR, picto('fumee', '#FFC93D'));
+          separer(ctx);
+        }
+
+        // --- 4. La liste des taches: le coin haut droit d'un ecran de 1280 sur 720
+        {
+          const coin = (ctx) => {
+            // Le centre de l'ecran est a (640, 360): le coin montre x de 520 a 1280, y de 0 a 420.
+            const echelle = 720 / 450;
+            const cx = NOUS.x + (520 + W / 2 - 640) / echelle;
+            const cy = NOUS.y + (H / 2 - 360) / echelle;
+            decor(ctx, images.fond, cx, cy, echelle);
+            dessinerNinja(ctx, images.idle, MOI, 120, 360, 32 * echelle);
+            vision(ctx, 120, 360, 260 * echelle);
+            ctx.fillStyle = 'rgba(0,0,0,0.55)';
+            ctx.fillRect(0, 0, W, 44);
+          };
+
+          let ctx = ctxDe('r4a');
+          coin(ctx);
+          bandeau(ctx, images, W - 224, 52, false);
+
+          ctx = ctxDe('r4b');
+          coin(ctx);
+          bandeau(ctx, images, W - 224, 48, true);
+
+          ctx = ctxDe('r4c');
+          // Ici on montre le coin haut gauche: x de 0 a 760.
+          {
+            const echelle = 720 / 450;
+            const cx = NOUS.x + (W / 2 - 640) / echelle;
+            const cy = NOUS.y + (H / 2 - 360) / echelle;
+            decor(ctx, images.fond, cx, cy, echelle);
+            dessinerNinja(ctx, images.idle, MOI, 640, 360, 32 * echelle);
+            vision(ctx, 640, 360, 260 * echelle);
+            ctx.fillStyle = 'rgba(0,0,0,0.55)';
+            ctx.fillRect(0, 0, W, 44);
+            liste(ctx, 12, 54, 230, { pas: 40, taille: 13, fond: 'rgba(8, 12, 24, 0.78)' });
+            texte(ctx, '(le coin haut gauche; le bandeau à droite ne change pas)', W - 12, 400, 12, '#ffffff', {
+              align: 'right',
+              halo: '#000',
+              flou: 4,
+            });
+          }
+        }
+
+        document.body.dataset.pret = 'oui';
+      })();
+    </script>
+  </body>
+</html>
