@@ -33,7 +33,7 @@
 import type { EtatManette } from '../controles/tactile.js';
 import type { Glyphe } from '../interface/icones.js';
 import { icone } from '../interface/icones.js';
-import type { AmongHud } from './among.js';
+import type { AmongHud, MinimapAmong, PointDeMinimap } from './among.js';
 import type {
   ArmeHud,
   ChargesHud,
@@ -429,6 +429,7 @@ function monterAmong(doc: Document, parent: HTMLElement): PartieDuHudAmong {
   const texteDeLaBarre = element(doc, 'span', 'hud-among-barre-texte', barre);
   const jauge = element(doc, 'div', 'hud-among-jauge', bandeau);
   const jaugeRemplie = element(doc, 'span', 'hud-among-jauge-remplie', jauge);
+  const minimap = monterMinimapAmong(doc, bandeau);
 
   return {
     afficher(among) {
@@ -449,10 +450,71 @@ function monterAmong(doc: Document, parent: HTMLElement): PartieDuHudAmong {
       ecrire(texteDeLaBarre, among.taches?.texte ?? '');
       jauge.hidden = among.progression === undefined;
       jaugeRemplie.style.setProperty('--part', String(among.progression ?? 0));
+      minimap.afficher(among.minimap);
     },
 
     demonter() {
       bandeau.remove();
+    },
+  };
+}
+
+/** La mini-carte d'Among Ninjas, posee et mise a jour. */
+interface MinimapPosee {
+  afficher(minimap: MinimapAmong): void;
+}
+
+/**
+ * La mini-carte d'Among Ninjas (decision 24 de la fiche), sous le bandeau: toute la carte en
+ * petit, le gong, nos stations a faire ou toutes celles des proies pour un assassin, et nous.
+ * Jamais les autres joueurs. Les points se placent en part de la carte, par le style de chaque
+ * element: la politique de contenu de la page refuse les styles en ligne, pas le CSSOM.
+ */
+function monterMinimapAmong(doc: Document, parent: HTMLElement): MinimapPosee {
+  const carte = element(doc, 'div', 'hud-among-carte', parent);
+  carte.setAttribute('aria-hidden', 'true');
+  const fond = doc.createElement('img');
+  fond.className = 'hud-among-carte-fond';
+  fond.alt = '';
+  carte.append(fond);
+  const gong = element(doc, 'span', 'hud-among-carte-gong', carte);
+  const moi = element(doc, 'span', 'hud-among-carte-moi', carte);
+  /** Les points des stations deja poses. */
+  const stations: HTMLElement[] = [];
+
+  const placer = (point: HTMLElement, place: PointDeMinimap): void => {
+    point.style.left = `${String(place.x * 100)}%`;
+    point.style.top = `${String(place.y * 100)}%`;
+  };
+
+  return {
+    afficher(minimap) {
+      if (fond.getAttribute('src') !== minimap.fond) {
+        fond.setAttribute('src', minimap.fond);
+      }
+
+      carte.style.setProperty('--proportions', String(minimap.proportions));
+      carte.classList.toggle('miroir', minimap.miroir);
+      placer(gong, minimap.gong);
+      moi.hidden = minimap.moi === undefined;
+
+      if (minimap.moi !== undefined) {
+        placer(moi, minimap.moi);
+        moi.style.setProperty('--couleur-joueur', minimap.moi.couleur);
+      }
+
+      while (stations.length < minimap.stations.length) {
+        stations.push(element(doc, 'span', 'hud-among-carte-station', carte));
+      }
+
+      stations.forEach((point, rang) => {
+        const place = minimap.stations[rang];
+        point.hidden = place === undefined;
+
+        if (place !== undefined) {
+          placer(point, place);
+        }
+      });
     },
   };
 }

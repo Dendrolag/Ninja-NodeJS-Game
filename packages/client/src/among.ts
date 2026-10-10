@@ -9,7 +9,7 @@
  * Ce module ne fait que tenir ces deux sources a jour. Il est pur: le reducteur l'appelle.
  */
 
-import type { EtatPriveAmong, MeurtreVu, ReunionVue } from '@neon-ninja/shared';
+import type { EtatPriveAmong, MeurtreVu, Position, ReunionVue } from '@neon-ninja/shared';
 import { AMONG } from '@neon-ninja/shared';
 
 import type { EtatClient } from './etat.js';
@@ -148,6 +148,24 @@ function ajouterSansDoublon(
   const nouveaux = ajouts.filter((element) => !liste.includes(element));
 
   return nouveaux.length === 0 ? liste : [...liste, ...nouveaux];
+}
+
+/**
+ * Les stations que ce joueur doit voir, sur la carte et la mini-carte: celles des taches qui lui
+ * restent pour une proie, vivante ou fantome; toutes les stations actives pour un assassin, qui
+ * voit celles des proies (decision 9 de la fiche).
+ */
+export function stationsAMontrer(prive: EtatPriveAmong): readonly Position[] {
+  const rangs =
+    prive.role === 'tueur'
+      ? prive.stations.map((_place, rang) => rang)
+      : prive.taches.filter((tache) => !tache.faite).map((tache) => tache.station);
+
+  return rangs.flatMap((rang) => {
+    const place = prive.stations[rang];
+
+    return place === undefined ? [] : [place];
+  });
 }
 
 /**

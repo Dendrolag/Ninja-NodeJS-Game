@@ -12,8 +12,16 @@
  */
 
 import type { EntiteVue, PhaseAmong, Position } from '@neon-ninja/shared';
-import { AMONG, AMONG_PAR_DEFAUT } from '@neon-ninja/shared';
+import {
+  AMONG,
+  AMONG_PAR_DEFAUT,
+  CARTES,
+  RACINE_RESSOURCES,
+  REGLAGES_PAR_DEFAUT,
+  cheminCarte,
+} from '@neon-ninja/shared';
 
+import { stationsAMontrer } from '../among.js';
 import type { EtatClient } from '../etat.js';
 
 /** Ce que fera le bouton d'action si l'on appuie maintenant. */
@@ -38,6 +46,31 @@ export interface AmongHud {
   readonly libelleDuGeste: string;
   /** La tache en cours, de zero a un: ce que la jauge montre pendant qu'on tient le bouton. */
   readonly progression: number | undefined;
+  /** La mini-carte: ou l'on est, et ou aller. */
+  readonly minimap: MinimapAmong;
+}
+
+/** Un point de la mini-carte, en part de la carte: de zero a un sur chaque axe. */
+export interface PointDeMinimap {
+  readonly x: number;
+  readonly y: number;
+}
+
+/**
+ * La mini-carte d'Among Ninjas (decision 24 de la fiche): toute la carte, notre position, nos
+ * stations a faire, ou toutes les stations actives pour un assassin, et le gong. JAMAIS LES
+ * AUTRES JOUEURS: la vision reduite ferait sinon double emploi avec rien.
+ */
+export interface MinimapAmong {
+  /** L'adresse du fond de la carte, montre en petit. */
+  readonly fond: string;
+  /** La carte se joue en miroir: le fond se retourne, les lieux le sont deja. */
+  readonly miroir: boolean;
+  /** Largeur sur hauteur de la carte. */
+  readonly proportions: number;
+  readonly moi: (PointDeMinimap & { readonly couleur: string }) | undefined;
+  readonly stations: readonly PointDeMinimap[];
+  readonly gong: PointDeMinimap;
 }
 
 /** Le nom du bouton d'action, selon ce qu'il fera. */
@@ -88,6 +121,27 @@ export function amongHud(etat: EtatClient, maintenant: number): AmongHud | undef
     geste,
     libelleDuGeste: LIBELLES_DES_GESTES[geste],
     progression: progressionDeLaTache(etat, maintenant),
+    minimap: minimapDe(etat, moi),
+  };
+}
+
+/** La mini-carte, depuis notre etat prive et notre place sur la carte. */
+function minimapDe(etat: EtatClient, moi: EntiteVue | undefined): MinimapAmong {
+  const prive = etat.among.prive;
+  const reglages = etat.salon?.reglages ?? REGLAGES_PAR_DEFAUT;
+  const carte = CARTES[reglages.carte];
+  const enPart = (place: Position): PointDeMinimap => ({
+    x: place.x / carte.largeur,
+    y: place.y / carte.hauteur,
+  });
+
+  return {
+    fond: `${RACINE_RESSOURCES}/${cheminCarte(reglages.carte, 'background')}`,
+    miroir: reglages.modeMiroir,
+    proportions: carte.largeur / carte.hauteur,
+    moi: moi === undefined ? undefined : { ...enPart(moi), couleur: moi.couleur },
+    stations: prive === undefined ? [] : stationsAMontrer(prive).map(enPart),
+    gong: enPart(prive?.gong ?? { x: carte.largeur / 2, y: carte.hauteur / 2 }),
   };
 }
 

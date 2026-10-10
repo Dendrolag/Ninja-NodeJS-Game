@@ -1222,6 +1222,66 @@
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
+/*
+ * La mini-carte d'Among Ninjas (decision 24 de la fiche), sous le bandeau: la carte en petit et
+ * assombrie, le gong en anneau rose, nos stations en points cyan, et nous a notre couleur.
+ */
+.hud-among-carte {
+  position: relative;
+  width: 100%;
+  aspect-ratio: var(--proportions, 4 / 3);
+  margin-top: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: #05060c;
+}
+
+.hud-among-carte-fond {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  filter: grayscale(0.7) brightness(0.45);
+}
+
+.hud-among-carte.miroir .hud-among-carte-fond {
+  transform: scaleX(-1);
+}
+
+.hud-among-carte-gong,
+.hud-among-carte-station,
+.hud-among-carte-moi {
+  position: absolute;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.hud-among-carte-gong {
+  width: 10px;
+  height: 10px;
+  border: 2px solid #ff4fd8;
+  box-shadow: 0 0 6px #ff4fd8;
+}
+
+.hud-among-carte-station {
+  width: 7px;
+  height: 7px;
+  background: #2ee6ff;
+  box-shadow: 0 0 6px #2ee6ff;
+}
+
+.hud-among-carte-moi {
+  --couleur-joueur: #fff;
+
+  width: 9px;
+  height: 9px;
+  border: 2px solid #fff;
+  background: var(--couleur-joueur);
+  box-shadow: 0 0 6px var(--couleur-joueur);
+}
+
 /* Le bouton d'action d'Among Ninjas, colore selon ce qu'il fera (etape 7.20). */
 .hud-action {
   --couleur-bouton: #2ee6ff;
@@ -1451,6 +1511,12 @@
   .hud-among {
     width: 170px;
     padding: 6px 10px;
+  }
+
+  /* Plus petite sur telephone: le bandeau ne doit pas descendre jusqu'aux boutons. */
+  .hud-among-carte {
+    width: 120px;
+    justify-self: end;
   }
 
   .hud-among-role {

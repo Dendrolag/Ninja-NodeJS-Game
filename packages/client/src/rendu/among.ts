@@ -24,7 +24,7 @@
 import type { Couleur, DimensionsCarte } from '@neon-ninja/shared';
 import { AMONG, AMONG_PAR_DEFAUT, RAYONS_DE_VISION } from '@neon-ninja/shared';
 
-import { victimeAPortee } from '../among.js';
+import { stationsAMontrer, victimeAPortee } from '../among.js';
 import type { EtatClient } from '../etat.js';
 import type { VueLissee } from './interpolation.js';
 import type { DisqueScene, SpriteScene } from './scene.js';
@@ -207,30 +207,18 @@ function lieuxDuJoueur(etat: EtatClient): readonly DisqueScene[] {
   }
 
   const { station, gong } = APPARENCE_AMONG;
-  const rangs =
-    prive.role === 'tueur'
-      ? prive.stations.map((_place, rang) => rang)
-      : prive.taches.filter((tache) => !tache.faite).map((tache) => tache.station);
-  const lieux: DisqueScene[] = rangs.flatMap((rang) => {
-    const place = prive.stations[rang];
-
-    return place === undefined
-      ? []
-      : [
-          {
-            id: `station:${String(rang)}`,
-            x: place.x,
-            y: place.y,
-            rayon: AMONG.RAYON_D_UNE_STATION_PX,
-            remplissage: { couleur: station.couleur, alpha: station.alphaPlein },
-            contour: {
-              couleur: station.couleur,
-              alpha: station.alphaBord,
-              epaisseur: station.epaisseur,
-            },
-          },
-        ];
-  });
+  const lieux: DisqueScene[] = stationsAMontrer(prive).map((place) => ({
+    id: `station:${String(place.x)}:${String(place.y)}`,
+    x: place.x,
+    y: place.y,
+    rayon: AMONG.RAYON_D_UNE_STATION_PX,
+    remplissage: { couleur: station.couleur, alpha: station.alphaPlein },
+    contour: {
+      couleur: station.couleur,
+      alpha: station.alphaBord,
+      epaisseur: station.epaisseur,
+    },
+  }));
 
   lieux.push({
     id: 'gong',

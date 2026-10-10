@@ -75,6 +75,8 @@ Ajustements demandés par le porteur du projet le 10 octobre 2026, après son es
 13. **Le fantôme va plus vite**: 1,5 fois la vitesse commune, 225 pixels par seconde (`AMONG.MULTIPLICATEUR_DES_FANTOMES`). Il traverse toujours les murs, sans aucune collision, et ne s'arrête qu'au bord de la carte; vérifié sur le vrai Tokyo.
 14. **« TU SUBIS LE DÉCÈS »**: à la victime d'un meurtre, un grand texte rouge plein écran, sur un voile sombre, qui apparaît d'un coup, tient trois secondes puis s'efface, pour la surprise, en attendant animations et sons. La victime entend, provisoirement, le son d'une capture subie; l'assassin et les témoins, un coup de katana. Capture `docs/design/etape-7-20/7-deces.png`.
 
+Écart réparé le 10 octobre 2026: **la mini-carte de la décision 24 n'avait pas été construite.** Le seul HUD de ce genre, le radar, ne se montre que pendant le bonus Révélation, qui n'existe pas dans ce mode. Elle est posée sous le bandeau du mode: toute la carte en petit et assombrie, le gong, nos stations à faire (toutes les stations actives pour un assassin), et nous; jamais les autres joueurs. Plus petite sur téléphone, pour ne pas toucher les boutons. Captures `docs/design/etape-7-20/8-minimap-*.png`.
+
 ## Décisions prises par cette fiche
 
 Micro-décisions au sens du PROTOCOLE. Chacune se consigne au journal de `docs/design/README.md` quand elle est construite, et se révise en exécutant si le dépôt le demande.
