@@ -25,6 +25,7 @@ Du 5 et du 6 octobre 2026 (demande et section 20 de l'étude), et du 10 octobre 
 3. **Une minimap et une carte consultable** qui montrent les zones de tâches. Les assassins voient les tâches des proies et ne peuvent pas les faire.
 4. **Le mode ne se déploie qu'avec ses étapes suivantes**, sur accord du porteur du projet: `master` ne se pousse pas à la fin de cette étape. Avant toute poussée, la suite de bout en bout complète se rejoue.
 5. **Les sons des tâches** sont prévus dans cette fiche, pour que le porteur du projet les fournisse (section « Les sons »).
+6. **Des tâches qui varient**, demande du 10 octobre 2026, après la planche des gestes: que les tâches changent d'une partie à l'autre, et que les joueurs d'une même partie aient des tâches plus ou moins différentes. Dès cette étape, la tâche d'une station se tire pour chaque proie, et les listes se répartissent sur les stations (« Les tâches de chaque station »). Ensuite, d'autres tâches courtes, dans une étape à part (numéro provisoire 7.26), qui s'ajoutent aux mini-jeux de l'étape 7.24.
 
 ## Deux sujets ouverts à l'étape 7.20, à trancher en début d'étape
 
@@ -73,7 +74,7 @@ Chacune se joue à la souris, au doigt et au clavier (étude, section 9.4). La �
 
 ### Les tâches de chaque station
 
-Chaque station de Tokyo porte une ou deux tâches qui lui vont; au lancement, le moteur tire à la graine la tâche de chaque station active. Les stations qui n'avaient que des mini-jeux d'arcade dans l'étude reçoivent une tâche courte, et gagneront leurs mini-jeux à l'étape 7.24.
+Chaque station de Tokyo porte une ou deux tâches qui lui vont. Au lancement, le moteur tire à la graine la liste de chaque proie, puis, pour chaque tâche de la liste, sa nature parmi celles de sa station: deux proies à la même station peuvent avoir des tâches différentes (décision 6 du porteur du projet). Les stations qui n'avaient que des mini-jeux d'arcade dans l'étude reçoivent une tâche courte, et gagneront leurs mini-jeux à l'étape 7.24.
 
 | Station                           | Tâches courtes                               |
 | --------------------------------- | -------------------------------------------- |
@@ -93,6 +94,8 @@ Chaque station de Tokyo porte une ou deux tâches qui lui vont; au lancement, le
 
 Chaque station prend aussi un nom, montré sur la carte plein écran: « j'étais à la pierre du jardin zen » est un alibi. Deux tâches de même nature peuvent tomber dans une même liste.
 
+**Les listes se répartissent sur les stations actives**: chaque proie prend d'abord les stations que les listes déjà tirées ont le moins prises, à la graine entre égales. Deux proies se ressemblent donc le moins possible, et toutes les stations actives servent.
+
 ### Ce que garde le serveur
 
 Le geste se joue dans la page, que le serveur ne voit pas (étude, section 9.2). Il garde en main:
@@ -106,7 +109,7 @@ La tâche provisoire disparaît: plus de bouton tenu, plus de durée tirée de 5
 
 ### Les assassins qui font semblant
 
-Un assassin vivant qui appuie sur l'action à une station active ouvre le même écran, avec la tâche de cette station, sans effet: la page seule le joue, le serveur n'en est pas averti. Rien ne le distingue d'une proie pour qui le regarde: il s'arrête à la station comme elle. Un assassin fantôme ne fait pas semblant (inchangé depuis 7.20).
+Un assassin vivant qui appuie sur l'action à une station active ouvre le même écran, avec l'une des tâches de cette station, tirée par la page, toujours la même pour lui à cette station, sans effet: la page seule le joue, le serveur n'en est pas averti. Rien ne le distingue d'une proie pour qui le regarde: il s'arrête à la station comme elle. Un assassin fantôme ne fait pas semblant (inchangé depuis 7.20).
 
 ### Pendant une tâche
 
@@ -163,8 +166,8 @@ Rappel des sons de 7.20, toujours attendus: le meurtre (assassin et témoins, pr
 Micro-décisions au sens du PROTOCOLE, à réviser en exécutant si le dépôt le demande. Chacune se consigne au journal de `docs/design/README.md` quand elle est construite.
 
 1. **Les natures de tâche sont une liste du contrat** (`NATURES_DE_TACHE`, `packages/shared/src/among.ts`), avec la durée minimale de chacune. Les stations de `LIEUX_DES_CARTES` prennent un nom et leurs natures possibles.
-2. **Le tirage du lancement s'allonge d'un pas**: après les tueurs et les stations actives, la nature de chaque station active, puis les listes. Toujours dans ce mode seul: l'empreinte des quatre parties de référence ne bouge pas.
-3. **Une tâche de la liste porte sa nature** à la place de sa durée tirée. `TacheAmong.dureeMs` disparaît; l'état privé (`TacheVue`) dit la nature, et la nature de chaque station de `EtatPriveAmong.stations` pour un assassin.
+2. **Le tirage du lancement change**: après les tueurs et les stations actives, les listes, réparties sur les stations, puis la nature de chaque tâche de chaque liste. Toujours dans ce mode seul: l'empreinte des quatre parties de référence ne bouge pas.
+3. **Une tâche de la liste porte sa nature** à la place de sa durée tirée. `TacheAmong.dureeMs` disparaît; l'état privé (`TacheVue`) dit la nature. Un assassin lit les natures possibles de chaque station dans les lieux de la carte, du contrat.
 4. **Deux demandes nouvelles**, validées par les schémas (étape 1.6) et limitées en débit: « tâche finie » et « tâche fermée ». L'ouverture reste l'appui sur l'action (`agir`), la règle d'appui de 7.20 (signaler et sonner à l'appui) s'étendant à la tâche: on ouvre à l'appui, on ne tient plus.
 5. **Le moteur compte le temps de la tâche ouverte**, comme il le fait aujourd'hui, et juge la fin annoncée contre la durée minimale de sa nature. Une fin refusée ne ferme rien.
 6. **L'effet d'une tâche visuelle est un événement du moteur**, à la place de la station, routé par la vue comme un meurtre: aux vivants qui voient l'endroit, et aux fantômes.
@@ -199,7 +202,7 @@ Puis une seconde planche, les sept tâches dans le cadre choisi, au bureau et su
 ### Lot A. Le contrat et le moteur
 
 1. Les natures de tâche, leurs durées minimales, les noms et les natures des stations. Les deux réglages nouveaux (tâches visuelles, barre des tâches), leurs valeurs par défaut et leur validation.
-2. Le tirage de la nature des stations, la liste par nature.
+2. Les listes réparties sur les stations, la nature de chaque tâche tirée parmi celles de sa station.
 3. L'ouverture, la fin annoncée, la fermeture, l'annulation; la durée minimale; l'assassin dont rien ne compte.
 4. L'événement de la tâche visuelle. Le compte figé à chaque réunion.
 5. L'empreinte des quatre parties de référence identique avant et après.
@@ -231,6 +234,7 @@ Puis une seconde planche, les sept tâches dans le cadre choisi, au bureau et su
 ## Hors périmètre
 
 - Les tâches longues, les mini-jeux d'arcade (étape 7.24).
+- D'autres tâches courtes, pour varier davantage (étape à part, numéro provisoire 7.26).
 - Les sabotages, depuis la carte ou ailleurs, l'aide et la malédiction des fantômes (étape 7.22).
 - Les pas entendus (étape 7.23).
 - Les ninjas égarés, la ronde des néons, les égouts, le déguisement (étape 7.25).
@@ -240,7 +244,7 @@ Puis une seconde planche, les sept tâches dans le cadre choisi, au bureau et su
 ## Tests requis
 
 - **Contrat (TU)**: les natures et leurs durées, chaque station avec au moins une nature, les réglages et leur validation.
-- **Lancement (TU)**: la nature de chaque station tirée parmi les siennes, reproductible à graine égale; aucun tirage dans les autres modes.
+- **Lancement (TU)**: la nature de chaque tâche tirée parmi celles de sa station, les listes réparties sur les stations actives, reproductible à graine égale; aucun tirage dans les autres modes.
 - **Tâches (TU)**: ouverture à l'appui dans le disque, fin acceptée à la durée minimale et refusée avant, annulation en sortant, en réunion, à la mort; fermeture; la tâche d'un fantôme; un assassin dont rien ne compte; une station hors de la liste.
 - **Tâches visuelles (TU)**: l'événement à la fin validée d'une vraie proie vivante seulement, et seulement avec le réglage.
 - **Barre (TU)**: les trois réglages dans la vue d'un vivant, la vue des fantômes à jour.
