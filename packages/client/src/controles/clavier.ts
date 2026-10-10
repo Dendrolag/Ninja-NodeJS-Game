@@ -78,13 +78,20 @@ export function brancherClavier(controles: Controles, options: OptionsClavier = 
     const clavier = evenement as KeyboardEvent;
     const touche = nomDeTouche(clavier.key);
 
+    // Dans un champ de saisie, le chat par exemple, toute touche s'ecrit: ni deplacement, ni
+    // geste. Les lettres de ZQSD etaient interceptees, et ne s'ecrivaient plus dans le chat
+    // (retour d'essai du porteur du projet, 10 octobre 2026).
+    if (dansUnChampDeSaisie(clavier.target)) {
+      return;
+    }
+
     if (touche === TOUCHE_LOCALISER) {
       controles.demanderLaLocalisation();
       return;
     }
 
     if (touche === TOUCHE_CARTE && options.basculerLaCarte !== undefined) {
-      if (!clavier.repeat && !dansUnChampDeSaisie(clavier.target) && !controles.estFige()) {
+      if (!clavier.repeat && !controles.estFige()) {
         options.basculerLaCarte();
       }
       return;
@@ -95,10 +102,9 @@ export function brancherClavier(controles: Controles, options: OptionsClavier = 
       return;
     }
 
-    // La poche (etape 7.10), dans tous les modes. Maintenue, la touche ne sert qu'une fois;
-    // dans un champ de saisie, c'est une lettre, pas un geste.
+    // La poche (etape 7.10), dans tous les modes. Maintenue, la touche ne sert qu'une fois.
     if (touche === TOUCHE_POCHE) {
-      if (!clavier.repeat && !dansUnChampDeSaisie(clavier.target)) {
+      if (!clavier.repeat) {
         controles.demanderLaPoche();
         // Tenue, elle est aussi le bouton d'action d'Among Ninjas (etape 7.20).
         controles.enfoncer(touche);
@@ -111,8 +117,8 @@ export function brancherClavier(controles: Controles, options: OptionsClavier = 
     }
 
     // Les fleches font defiler la page: un joueur qui avance ne doit pas voir
-    // son ecran glisser sous lui. On n'intercepte que les touches du jeu, pour
-    // laisser le reste du clavier au chat et aux menus.
+    // son ecran glisser sous lui. On n'intercepte que les touches du jeu, hors des
+    // champs de saisie, pour laisser le reste du clavier au chat et aux menus.
     evenement.preventDefault();
     controles.enfoncer(touche);
   };

@@ -449,6 +449,24 @@ describe('la poche (etape 7.10)', () => {
     expect(controles.prendreLaDemandeDePoche()).toBe(false);
   });
 
+  it('laisse toutes les lettres et les fleches a un champ de saisie: on ecrit dans le chat', () => {
+    // Retour d'essai du porteur du projet, 10 octobre 2026: Z, Q, S, D, A et W ne
+    // s'ecrivaient plus dans le chat, interceptees comme des deplacements.
+    const controles = new Controles();
+    const cible = cibleDeClavier();
+    brancherClavier(controles, { cible, fenetre: cibleDEssai(), capture: true });
+
+    for (const tagName of ['INPUT', 'TEXTAREA']) {
+      for (const key of ['z', 'q', 's', 'd', 'a', 'w', 'f', ' ', 'ArrowUp', 'ArrowLeft']) {
+        expect(cible.envoyer('keydown', { key, target: { tagName } }), key).toBe(false);
+      }
+    }
+
+    expect(controles.intention().enMouvement).toBe(false);
+    expect(controles.prendreLaDemandeDeLocalisation()).toBe(false);
+    expect(controles.prendreLaDemandeDeTir()).toBe(false);
+  });
+
   it('fait d une rafale entre deux images une seule demande, oubliee a l entree en partie', () => {
     const controles = new Controles();
 

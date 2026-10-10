@@ -178,7 +178,7 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
       ? {}
       : {
           basculerLaCarte: () => {
-            carteAmong.basculer();
+            carteAmong.basculer(client.etat);
           },
         };
 

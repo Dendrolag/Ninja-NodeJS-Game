@@ -10,7 +10,13 @@
  * qu'on lui demande de dessiner, et les images sont jouees a la main.
  */
 
-import type { EntiteVue, InfosSalon, NomDeSon, TypeBonus } from '@neon-ninja/shared';
+import type {
+  EntiteVue,
+  InfosSalon,
+  InstantanePartie,
+  NomDeSon,
+  TypeBonus,
+} from '@neon-ninja/shared';
 import { REGLAGES_PAR_DEFAUT, encoderDelta, encoderImage } from '@neon-ninja/shared';
 import { beforeEach, describe, expect, it } from 'vitest';
 
@@ -49,7 +55,11 @@ function joueur(id: string, x: number, y: number): EntiteVue {
 }
 
 /** L'image d'une partie, avec les entites voulues, telle que le serveur l'envoie. */
-function trame(tick: number, entites: readonly EntiteVue[]): Uint8Array {
+function trame(
+  tick: number,
+  entites: readonly EntiteVue[],
+  among?: InstantanePartie['among'],
+): Uint8Array {
   return encoderImage({
     tick,
     tempsRestantMs: 120_000,
@@ -58,6 +68,7 @@ function trame(tick: number, entites: readonly EntiteVue[]): Uint8Array {
     objets: [],
     zones: [],
     classement: [],
+    ...(among === undefined ? {} : { among }),
   }).octets;
 }
 
@@ -426,6 +437,26 @@ describe('les fleches qui designent notre personnage', () => {
       depart: { x: 300, y: 300 },
       arrivee: { x: 900, y: 700 },
     });
+    uneImage();
+
+    expect(rendu.scenes.at(-1)?.reperes).toHaveLength(0);
+  });
+
+  it('ne reviennent pas en reunion d Among Ninjas, le monde fige', () => {
+    // Retour d'essai du porteur du projet, 10 octobre 2026: F montrait le repere sous
+    // l'ecran de la reunion.
+    laisserPasserLesFleches();
+    reseau.recevoir(
+      'etat',
+      trame(2, [joueur('moi', 100, 100)], {
+        phase: 'discussion',
+        restantMs: 30_000,
+        tachesFaites: 0,
+        tachesTotal: 10,
+      }),
+    );
+
+    controles.demanderLaLocalisation();
     uneImage();
 
     expect(rendu.scenes.at(-1)?.reperes).toHaveLength(0);

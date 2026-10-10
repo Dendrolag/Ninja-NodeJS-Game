@@ -20,6 +20,7 @@ import {
   nomDeCouleur,
   tueursMaximum,
 } from './among.js';
+import { BORNES_REGLAGES } from './bornes.js';
 import { CAPACITES, CARTES, COULEURS_JOUEURS, luminance } from './constantes.js';
 import { AMONG_PAR_DEFAUT, completerReglages, imposerLesReglagesDuMode } from './reglages.js';
 import { validerReglages } from './validation.js';
@@ -165,11 +166,22 @@ describe('les taches courtes', () => {
 });
 
 describe('la validation des reglages du mode', () => {
+  it('ne regle jamais plus de taches par proie que de natures de tache', () => {
+    // Une proie ne fait jamais deux fois la meme tache (retour d'essai du porteur du projet,
+    // 10 octobre 2026): une liste plus longue que les natures serait impossible.
+    expect(BORNES_REGLAGES.among.tachesParProie.maximum).toBe(NATURES_DE_TACHE.length);
+    expect(
+      validerReglages({
+        among: { ...AMONG_PAR_DEFAUT, tachesParProie: NATURES_DE_TACHE.length + 1 },
+      }).valide,
+    ).toBe(false);
+  });
+
   it('accepte des reglages dans leurs bornes', () => {
     const verdict = validerReglages({
       among: {
         tueurs: 3,
-        tachesParProie: 8,
+        tachesParProie: 7,
         rechargeMeurtreS: 10,
         dureeDuTourS: 0,
         discussionS: 120,

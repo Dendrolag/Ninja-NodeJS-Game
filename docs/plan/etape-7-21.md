@@ -92,7 +92,7 @@ Chaque station de Tokyo porte une ou deux tâches qui lui vont. Au lancement, le
 | Casiers de la salle violette      | Recharger des munitions, Ranger des mines    |
 | Bureaux de la salle violette      | Relier des couleurs                          |
 
-Chaque station prend aussi un nom, montré sur la carte plein écran: « j'étais à la pierre du jardin zen » est un alibi. Deux tâches de même nature peuvent tomber dans une même liste.
+Chaque station prend aussi un nom, montré sur la carte plein écran: « j'étais à la pierre du jardin zen » est un alibi. ~~Deux tâches de même nature peuvent tomber dans une même liste.~~ Corrigé à l'étape 7.22, sur retour d'essai du porteur du projet: une liste n'a jamais deux fois la même tâche (fiche `docs/plan/etape-7-22.md`, « Corrigé en début d'étape »).
 
 **Les listes se répartissent sur les stations actives**: chaque proie prend d'abord les stations que les listes déjà tirées ont le moins prises, à la graine entre égales. Deux proies se ressemblent donc le moins possible, et toutes les stations actives servent.
 

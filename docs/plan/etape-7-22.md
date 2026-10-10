@@ -41,6 +41,24 @@ Du 5 et du 6 octobre 2026 (demande, section 20 de l'étude et sa révision), et 
 3. **La surchauffe non réparée fait gagner les assassins**, comme recommandé.
 4. **Tout sous la 1.9.0**, dont la note dira aussi les sabotages.
 
+## Retours d'essai du porteur du projet, 10 octobre 2026
+
+Arrivés pendant la rédaction de cette fiche, après une partie en local des étapes 7.20 et 7.21.
+
+1. **Ne pas proposer deux tâches identiques à un joueur dans une partie.** Défaut de 7.21 (la fiche l'admettait: « deux tâches de même nature peuvent tomber dans une même liste »), corrigé au titre de la règle 7, voir « Corrigé en début d'étape ».
+2. **Les lettres de déplacement (Z, Q, S, D, A, W) ne s'écrivaient pas dans le chat.** Défaut, corrigé.
+3. **En réunion, M ouvrait la carte une demi-seconde, et F montrait le repère.** Défauts, corrigés.
+4. **Les fantômes infligent aux assassins des malus comme les assassins aux proies.** La malédiction change en conséquence (section « La malédiction des fantômes »).
+5. **L'exécution d'un joueur désigné par le vote le coupe en deux.** Un rendu nouveau, à choisir sur la planche (rangée 7). Il frappe tout exécuté, assassin ou non: une exécution ne dit jamais le rôle (décision du 6 octobre 2026, section 21 de l'étude), et une animation réservée aux assassins le dirait.
+
+## Corrigé en début d'étape
+
+Au titre de la règle 7, avant la construction des sabotages:
+
+1. **Des tâches toutes différentes dans une liste.** Le moteur tire les stations actives en gardant de quoi faire chaque nature à une station différente, puis chaque proie prend ses stations, des moins prises aux plus prises, chacune avec une nature que la liste n'a pas encore (un appariement, `apparier` dans `packages/sim/src/among.ts`). **L'hôte règle désormais 7 tâches par proie au plus, au lieu de 8**: il n'y a que sept gestes, et une liste de huit en répéterait un. La limite remontera avec les tâches de l'étape 7.26. Effet de bord mesuré: les listes se répartissent un peu moins également sur les stations, de 4 à 7 tâches par station au lieu de 5 ou 6 pour dix proies à cinq tâches, parce que trois stations ne proposent que « relier des couleurs », qu'une proie ne fait plus qu'une fois.
+2. **Le chat reçoit toutes ses lettres**: une touche frappée dans un champ de saisie ne commande plus rien (`controles/clavier.ts`).
+3. **La carte ne s'ouvre qu'en phase de jeu** (`carteAmong.ts`), **et le repère ne répond plus hors du jeu** (`rendu/boucle.ts`).
+
 ## Les règles et les valeurs
 
 Les propositions de l'étude, précisées par cette fiche. Toutes se révisent après une partie d'essai.
@@ -98,11 +116,11 @@ La demande parle d'une zone d'invisibilité réservée aux tueurs. Prise à la l
 Le miroir des sabotages: les assassins gênent les proies vivantes, les proies mortes gênent les assassins (révision du 6 octobre, section 20 de l'étude).
 
 - **Qui**: une proie fantôme. Jamais un assassin fantôme, qui sabote déjà.
-- **Qui elle frappe**: **tous les assassins vivants à la fois**. Le fantôme sait qui l'a tué, mais il n'a rien à choisir: son geste ne dit rien de ce qu'il sait.
-- **Quoi**: **le flou ou le négatif**, tiré à la graine, **8 secondes**. Pas les commandes inversées, qui se lisent dans la démarche et désigneraient les assassins.
+- **Qui elle frappe**: **tous les assassins vivants à la fois**. Le fantôme sait qui l'a tué, mais il n'a pas de victime à choisir: son geste ne dit rien de ce qu'il sait.
+- **Quoi**: **l'un des trois malus des nuisances, au choix du fantôme**, comme l'assassin choisit la sienne (retour d'essai 4): vision floue, vision négative ou commandes inversées, **8 secondes**. Le risque des commandes inversées est le même qu'à la réponse 2, dans l'autre sens: un ninja qui titube sans raison peut être un assassin maudit. Il se juge à la partie d'essai.
 - **Une recharge commune à tous les fantômes, 45 secondes**, et non une par fantôme: sinon la malédiction grandirait avec le nombre de morts. Ni dans les 15 premières secondes d'un tour, ni en réunion.
 - **L'assassin maudit le sait**: il voit le filtre, et une annonce lui dit qu'un fantôme l'a maudit. Les vivants ne reçoivent aucune annonce. Les fantômes voient la recharge commune repartir.
-- **Le geste**: au clavier, la touche du meurtre; sur téléphone, le second bouton, qui devient « Maudire ». Toujours deux boutons.
+- **Le geste**: depuis la carte plein écran, comme les sabotages. Une proie fantôme y trouve le panneau des malédictions: les trois malus, prêts ou grisés, et la recharge commune. Sur téléphone, la carte s'ouvre en touchant la mini-carte: toujours deux boutons.
 - Une proie fantôme garde l'aide qui ne vise personne: elle répare aussi la panne de néons.
 
 ### Ce que voit l'assassin sur la carte plein écran
@@ -132,7 +150,7 @@ Micro-décisions au sens du PROTOCOLE, à réviser en exécutant si le dépôt l
 
 1. **Les natures de sabotage sont une liste du contrat** (`NATURES_DE_SABOTAGE`, `packages/shared/src/among.ts`), avec leurs durées, la recharge commune et celle du début de tour, le rayon de la panne, le rayon du nuage. Les lieux du mode (`LIEUX_DES_CARTES`) gagnent le boîtier et les deux consoles, retournés avec le miroir, et vérifiés sur le vrai terrain par le test des lieux (`terrain.test.ts`). Sondés au début de l'étape: centres tenables, dans le morceau principal, disques praticables à 100, 68 et 91 pour cent.
 2. **Le sabotage en cours est un état du mode** (`EtatAmong.sabotage`): sa nature, ce qu'il en reste, sa station pour le nuage, et la réparation en cours. La recharge commune des sabotages et celle de la malédiction aussi. Tout avance par le battement, sans horloge.
-3. **Deux demandes nouvelles**, validées par les schémas (étape 1.6) et limitées en débit: « saboter » (la nature, et la station du nuage) et « maudire ». Le moteur refuse tout ce que la règle refuse: une proie qui sabote, un sabotage pendant un autre ou dans la recharge, un assassin qui maudit.
+3. **Deux demandes nouvelles**, validées par les schémas (étape 1.6) et limitées en débit: « saboter » (la nature, et la station du nuage) et « maudire » (le malus choisi). Le moteur refuse tout ce que la règle refuse: une proie qui sabote, un sabotage pendant un autre ou dans la recharge, un assassin qui maudit.
 4. **Réparer passe par le bouton d'action tenu** (`agir`), comme la tâche provisoire de 7.20: le boîtier et les consoles n'ont pas de geste dans la page. La règle d'appui de 7.20 reste: signaler, sonner, ouvrir une tâche se font à l'appui; réparer, en tenant. Dans le disque du boîtier ou d'une console, l'action tenue répare.
 5. **Les nuisances et la malédiction passent par les malus du moteur** (`effets.ts`), qui expirent seuls et partent au frappé par `malusSubi`. Les malus restent retirés des réglages du mode: ce sont des malus posés par le mode, pas des objets ramassables.
 6. **La panne passe par `rayonDeVision`**, que lisent déjà la vue de chaque vivant et la page: aucun autre chemin.
@@ -149,8 +167,9 @@ Après confirmation des règles, une planche `docs/design/etape-7-22/1-planche.p
 2. **La panne de néons** vue d'une proie: le disque réduit, le décor éteint, le boîtier.
 3. **La surchauffe**: l'alarme, le compte à rebours, les consoles sur le décor et sur la mini-carte.
 4. **Le nuage noir**, vu d'une proie et d'un assassin.
-5. **La malédiction**: le bouton « Maudire » du fantôme, l'annonce chez l'assassin maudit.
+5. **La malédiction**: le panneau des malédictions sur la carte d'une proie fantôme, l'annonce chez l'assassin maudit.
 6. **Le boîtier et les consoles dans le décor**, hors sabotage.
+7. **L'exécution qui coupe en deux** le joueur désigné par le vote (retour d'essai 5), à la place de l'égout de 7.20.
 
 Les captures dans le vrai jeu, au fil de la construction, à côté.
 
@@ -162,7 +181,7 @@ Les captures dans le vrai jeu, au fil de la construction, à côté.
 2. Le sabotage: qui, quand, la recharge commune, un seul à la fois, la fin à l'ouverture d'une réunion, le gong refusé pendant la surchauffe, le terme du tour qui l'attend.
 3. Les nuisances par les malus; la panne et `rayonDeVision`; le nuage; la surchauffe, ses consoles, sa victoire.
 4. La réparation tenue, au boîtier et aux consoles, et qui peut réparer quoi.
-5. La malédiction: qui, sa recharge commune, ses interdits, le tirage du malus.
+5. La malédiction: qui, sa recharge commune, ses interdits, le malus choisi.
 6. L'empreinte des quatre parties de référence identique avant et après.
 
 ### Lot B. Le serveur
@@ -177,8 +196,9 @@ Les captures dans le vrai jeu, au fil de la construction, à côté.
 2. La panne: le disque réduit, le boîtier marqué, la réparation et sa jauge.
 3. La surchauffe: l'alarme, le compte à rebours, les consoles et leur état.
 4. Le nuage, dessiné à qui le voit.
-5. La malédiction: la touche, le bouton « Maudire », la recharge, l'annonce chez le maudit.
-6. Les sons, provisoires. L'aide et les consoles du mode: les sabotages, la malédiction.
+5. La malédiction: le panneau des malédictions sur la carte d'une proie fantôme, la recharge, l'annonce chez le maudit.
+6. L'exécution coupée en deux, selon le rendu choisi.
+7. Les sons, provisoires. L'aide et les consoles du mode: les sabotages, la malédiction.
 
 ### Lot D. Bout en bout, mesure et documentation
 
@@ -204,10 +224,10 @@ Les captures dans le vrai jeu, au fil de la construction, à côté.
 - **Panne (TU)**: le rayon des proies vivantes et lui seul, la réparation tenue, remise à zéro en sortant ou en lâchant, qui peut réparer.
 - **Surchauffe (TU)**: la réparation à deux, une seconde ensemble, le fantôme qui ne compte pas, la victoire des assassins au terme.
 - **Nuage (TU)**: ce qu'une proie vivante en voit, dedans et dehors; ce qu'un assassin et un fantôme en voient.
-- **Malédiction (TU)**: qui, tous les assassins vivants, le tirage, la recharge commune, ses interdits.
+- **Malédiction (TU)**: qui, tous les assassins vivants, chacun des trois malus, la recharge commune, ses interdits.
 - **Vues (TU)**: aucun saboteur nommé, aucune recharge des assassins dans ce que reçoit une proie, aucun malus d'un autre joueur.
 - **Serveur (TI)**: le lot B, point 3.
-- **Page (TU)**: le panneau des sabotages (jamais pour une proie), le bouton « Maudire », la panne, la surchauffe, le nuage.
+- **Page (TU)**: le panneau des sabotages (jamais pour une proie), celui des malédictions (pour une proie fantôme seulement), la panne, la surchauffe, le nuage.
 - **Bout en bout**: le scénario du lot D.
 
 ## Définition de terminé
@@ -225,7 +245,7 @@ Conditions de ROADMAP réunies, plus:
 1. **Un sabotage ne doit désigner personne.** Ni le saboteur dans le flux, ni un assassin dans un nuage. Seule exception acceptée par le porteur du projet: les commandes inversées, qui épargnent les assassins (réponse 2), à juger en jouant.
 2. **La malédiction ne doit rien apprendre aux vivants**: ni annonce, ni changement visible dans ce qu'ils reçoivent.
 3. **Le cercle de vision dépasse l'écran** depuis le cadrage serré de 7.20 (gardé tel quel, décision du 10 octobre). La panne, à 110 pixels, tient dans l'écran: elle se juge à l'œil sur ordinateur et sur téléphone.
-4. **Le téléphone garde deux boutons**: le panneau des sabotages vit dans la carte, la malédiction prend le second bouton du fantôme.
+4. **Le téléphone garde deux boutons**: le panneau des sabotages vit dans la carte, la malédiction aussi.
 
 ## Rituel de fin de session
 

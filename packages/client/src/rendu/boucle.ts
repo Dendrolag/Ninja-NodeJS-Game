@@ -443,7 +443,12 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
       return;
     }
 
-    if (demandee && opaciteDeLocalisation(localisation, maintenant) === 0) {
+    // Hors de la phase de jeu d'Among Ninjas (revelation, reunion, execution), le monde est
+    // fige et l'ecran de la phase le recouvre: une demande y est ignoree (retour d'essai du
+    // porteur du projet, 10 octobre 2026).
+    const horsDuJeu = etat.partie?.among !== undefined && etat.partie.among.phase !== 'jeu';
+
+    if (demandee && !horsDuJeu && opaciteDeLocalisation(localisation, maintenant) === 0) {
       localisation = localiser(maintenant, DUREES_LOCALISATION.demandeeMs);
     }
   };

@@ -28,8 +28,12 @@ export interface OptionsCarteAmong {
 /** La carte, montee. */
 export interface CarteAmongMontee {
   readonly racine: HTMLElement;
-  /** L'ouvre si elle est fermee, la ferme sinon. */
-  basculer(): void;
+  /**
+   * L'ouvre si elle est fermee, la ferme sinon. Elle ne s'ouvre qu'en phase de jeu: en
+   * reunion, la touche M l'ouvrait une demi-seconde, le temps que l'affichage suivant la
+   * referme (retour d'essai du porteur du projet, 10 octobre 2026).
+   */
+  basculer(etat: EtatClient): void;
   fermer(): void;
   estOuverte(): boolean;
   /** La met en accord avec l'etat, si elle est ouverte. */
@@ -87,7 +91,7 @@ export function monterCarteAmong(options: OptionsCarteAmong): CarteAmongMontee {
       etiquette: 'Fermer la carte (M)',
     },
     () => {
-      basculer();
+      fermerLaCarte();
     },
   );
   const panneau = creer(
@@ -132,9 +136,11 @@ export function monterCarteAmong(options: OptionsCarteAmong): CarteAmongMontee {
     doc.removeEventListener('keydown', surTouche);
   }
 
-  function basculer(): void {
+  function basculer(etat: EtatClient): void {
     if (racine.hidden) {
-      ouvrir();
+      if (etat.partie?.among?.phase === 'jeu') {
+        ouvrir();
+      }
     } else {
       fermerLaCarte();
     }

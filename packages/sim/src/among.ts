@@ -29,11 +29,18 @@
  * en voit (packages/server/src/vues.ts).
  */
 
-import type { Alea, Position, ReglagesAmong, StationDuMode } from '@neon-ninja/shared';
+import type {
+  Alea,
+  NatureDeTache,
+  Position,
+  ReglagesAmong,
+  StationDuMode,
+} from '@neon-ninja/shared';
 import {
   AMONG,
   AMONG_PAR_DEFAUT,
   DUREES_MINIMALES_DES_TACHES_MS,
+  NATURES_DE_TACHE,
   POINTS_AMONG,
   RAYONS_DE_VISION,
   TACHES_VISUELLES,
@@ -161,11 +168,13 @@ export function amongDecide(etat: EtatPartie): boolean {
  *      nombre est celui du reglage, ramene a ce que le nombre de joueurs admet; le serveur
  *      ne lance pas a moins de cinq.
  *   2. Les stations actives sont tirees parmi celles de la carte: le nombre de taches par
- *      proie, plus quatre.
+ *      proie, plus quatre. Le tirage garde d'abord de quoi faire chacune des natures de tache
+ *      a une station differente, puis complete au hasard.
  *   3. Chaque proie recoit sa liste: autant de stations actives distinctes que de taches,
- *      prises d'abord parmi celles que les listes deja tirees ont le moins prises, puis, pour
- *      chacune, une tache tiree parmi celles de sa station (etape 7.21): deux proies se
- *      ressemblent le moins possible.
+ *      prises d'abord parmi celles que les listes deja tirees ont le moins prises (etape
+ *      7.21), et JAMAIS DEUX FOIS LA MEME TACHE (retour d'essai du porteur du projet, 10
+ *      octobre 2026): les natures de la liste sont tirees, distinctes, puis placees chacune a
+ *      une station qui la propose.
  *   4. Tout le monde est place autour du point de reunion, et la partie attend que chacun ait
  *      charge la carte avant la revelation.
  *
@@ -197,10 +206,22 @@ export function lancerAmong(etat: EtatPartie): EtatPartie {
     alea,
     lieux.stations.map((_station, rang) => rang),
   );
-  alea = tirageDesStations.alea;
-  const actives = tirageDesStations.liste
-    .slice(0, nombreDeStations)
-    .sort((un, autre) => un - autre);
+  const tirageDesNatures = melanger(tirageDesStations.alea, NATURES_DE_TACHE);
+  alea = tirageDesNatures.alea;
+  // De quoi faire chaque nature a une station differente, puis le reste du tirage.
+  const necessaires = new Set(
+    apparier(tirageDesNatures.liste, NATURES_DE_TACHE.length, (nature) =>
+      tirageDesStations.liste.filter((rang) =>
+        (lieux.stations[rang] as StationDuMode).natures.includes(nature),
+      ),
+    ).values(),
+  );
+  const actives = [
+    ...tirageDesStations.liste.filter((rang) => necessaires.has(rang)),
+    ...tirageDesStations.liste
+      .filter((rang) => !necessaires.has(rang))
+      .slice(0, Math.max(nombreDeStations - necessaires.size, 0)),
+  ].sort((un, autre) => un - autre);
   const stations = actives.map((rang) => lieux.stations[rang] as StationDuMode);
 
   const joueurs: Record<IdentifiantEntite, JoueurAmong> = {};
@@ -253,9 +274,16 @@ function joueurNeuf(role: JoueurAmong['role'], taches: readonly TacheAmong[]): J
 
 /**
  * La liste de taches d'une proie (etape 7.21): autant de stations actives distinctes que de
- * taches. Les stations sont melangees, puis rangees de la moins prise par les listes deja
- * tirees a la plus prise, le melange departageant les egales: les listes se repartissent sur
- * toutes les stations. Chaque tache tire ensuite son geste parmi ceux de sa station.
+ * taches, et autant de natures distinctes (retour d'essai du porteur du projet, 10 octobre
+ * 2026: jamais deux fois la meme tache). Les stations sont melangees, puis rangees de la moins
+ * prise par les listes deja tirees a la plus prise, le melange departageant les egales: les
+ * listes se repartissent sur toutes les stations. Chaque station prend, dans ce rang, une
+ * nature qu'elle propose et que la liste n'a pas encore, les natures dans un ordre tire pour
+ * cette proie; une station deja servie cede la sienne au besoin, si elle en a une autre.
+ *
+ * Les stations actives permettent toujours toutes les natures a la fois (lancerAmong), et
+ * l'hote ne regle pas plus de taches qu'il n'y a de natures (BORNES_REGLAGES): la liste est
+ * toujours complete.
  */
 function listeDeTaches(
   alea: Alea,
@@ -267,21 +295,67 @@ function listeDeTaches(
     alea,
     stations.map((_station, rang) => rang),
   );
-  let courant = melange.alea;
+  const natures = melanger(melange.alea, NATURES_DE_TACHE);
   // Le tri est stable: a prises egales, l'ordre du melange reste.
   const rangees = [...melange.liste].sort(
     (une, autre) => (prises[une] ?? 0) - (prises[autre] ?? 0),
   );
-  const taches: TacheAmong[] = [];
+  const appariement = apparier(rangees, nombre, (rang) =>
+    natures.liste.filter((nature) => (stations[rang] as StationDuMode).natures.includes(nature)),
+  );
+  const taches = rangees.flatMap((station) => {
+    const nature = appariement.get(station);
+    return nature === undefined ? [] : [{ station, nature, faite: false }];
+  });
 
-  for (const station of rangees.slice(0, nombre)) {
-    const natures = (stations[station] as StationDuMode).natures;
-    const tirage = entier(courant, natures.length);
-    courant = tirage.alea;
-    taches.push({ station, nature: natures[tirage.valeur] as TacheAmong['nature'], faite: false });
+  return { taches, alea: natures.alea };
+}
+
+/**
+ * Apparie des elements a des partenaires, un partenaire par element et un element par
+ * partenaire, jusqu'a en avoir apparie autant que voulu (appariement par chemins
+ * augmentants). Les elements sont servis dans leur ordre, chacun avec le premier de ses
+ * partenaires possibles qui soit libre, ou qu'un element deja servi peut lui ceder en prenant
+ * un autre des siens. Un element que rien ne permet de servir est passe.
+ *
+ * @returns Le partenaire de chaque element servi.
+ */
+function apparier<Element, Partenaire>(
+  elements: readonly Element[],
+  nombre: number,
+  partenairesDe: (element: Element) => readonly Partenaire[],
+): ReadonlyMap<Element, Partenaire> {
+  const servis = new Map<Element, Partenaire>();
+  const tenus = new Map<Partenaire, Element>();
+
+  const servir = (element: Element, vus: Set<Partenaire>): boolean => {
+    for (const partenaire of partenairesDe(element)) {
+      if (vus.has(partenaire)) {
+        continue;
+      }
+
+      vus.add(partenaire);
+      const tenant = tenus.get(partenaire);
+
+      if (tenant === undefined || servir(tenant, vus)) {
+        servis.set(element, partenaire);
+        tenus.set(partenaire, element);
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  for (const element of elements) {
+    if (servis.size === nombre) {
+      break;
+    }
+
+    servir(element, new Set());
   }
 
-  return { taches, alea: courant };
+  return servis;
 }
 
 /** Une liste melangee par le generateur a graine (melange de Fisher et Yates). */

@@ -18,6 +18,7 @@ import {
   COULEUR_DE_LA_FOULE,
   DUREES_MINIMALES_DES_TACHES_MS,
   LIEUX_DES_CARTES,
+  NATURES_DE_TACHE,
   POINTS_AMONG,
 } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
@@ -233,7 +234,7 @@ describe('le lancement', () => {
   });
 
   it('repartit les listes sur toutes les stations actives', () => {
-    for (const graine of [1, 2, 3, 4, 5]) {
+    for (const graine of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
       const etat = lancee(12, { among: { tueurs: 2, tachesParProie: 5 } }, graine);
       const prises = amongDe(etat).stations.map(() => 0);
 
@@ -243,14 +244,47 @@ describe('le lancement', () => {
         }
       }
 
-      // Dix proies, cinq taches chacune, neuf stations: cinq ou six prises par station.
-      expect(Math.max(...prises) - Math.min(...prises)).toBeLessThanOrEqual(1);
+      // Dix proies, cinq taches chacune, neuf stations: cinq ou six prises par station s'il
+      // n'y avait que les stations. Une proie ne fait jamais deux fois la meme tache: deux
+      // stations qui ne proposent que la meme se partagent ses listes, et l'ecart s'elargit un
+      // peu (de 4 a 7 prises sur ces graines). Toutes les stations servent.
+      expect(Math.min(...prises)).toBeGreaterThanOrEqual(4);
+      expect(Math.max(...prises) - Math.min(...prises)).toBeLessThanOrEqual(3);
+    }
+  });
+
+  it('ne donne jamais deux fois la meme tache a une proie', () => {
+    // Retour d'essai du porteur du projet, 10 octobre 2026. Toutes les longueurs de liste, et
+    // assez de graines pour tomber sur des stations actives qui couvrent mal les natures.
+    for (let taches = 3; taches <= NATURES_DE_TACHE.length; taches += 1) {
+      for (let graine = 1; graine <= 40; graine += 1) {
+        const etat = lancee(12, { among: { tueurs: 1, tachesParProie: taches } }, graine);
+
+        for (const id of camps(etat).proies) {
+          const liste = role(etat, id).taches;
+
+          expect(liste).toHaveLength(taches);
+          expect(new Set(liste.map((tache) => tache.nature)).size).toBe(taches);
+          expect(new Set(liste.map((tache) => tache.station)).size).toBe(taches);
+        }
+      }
+    }
+  });
+
+  it('garde des stations actives de quoi faire chaque nature a une station differente', () => {
+    for (let graine = 1; graine <= 40; graine += 1) {
+      const stations = amongDe(lancee(5, { among: { tachesParProie: 3 } }, graine)).stations;
+
+      expect(stations).toHaveLength(7);
+      expect(new Set(stations.flatMap((station) => station.natures)).size).toBe(
+        NATURES_DE_TACHE.length,
+      );
     }
   });
 
   it('tire la tache de chaque proie a une station: deux proies peuvent y faire autre chose', () => {
     const differentes = [1, 2, 3, 4, 5, 6, 7, 8].some((graine) => {
-      const etat = lancee(12, { among: { tueurs: 1, tachesParProie: 8 } }, graine);
+      const etat = lancee(12, { among: { tueurs: 1, tachesParProie: 7 } }, graine);
       const natures = new Map<number, Set<string>>();
 
       for (const id of camps(etat).proies) {

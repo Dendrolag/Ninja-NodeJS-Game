@@ -86,9 +86,9 @@ describe('la carte plein ecran', () => {
     const { carte, joues } = monter();
 
     expect(carte.estOuverte()).toBe(false);
-    carte.basculer();
+    carte.basculer(etat());
     expect(carte.estOuverte()).toBe(true);
-    carte.basculer();
+    carte.basculer(etat());
     expect(carte.estOuverte()).toBe(false);
     expect(joues).toEqual(['carteOuverte', 'carteOuverte']);
     carte.demonter();
@@ -96,7 +96,7 @@ describe('la carte plein ecran', () => {
 
   it('montre nos stations nommees, faites cochees, notre liste, et nous', () => {
     const { carte } = monter();
-    carte.basculer();
+    carte.basculer(etat());
     carte.afficher(etat());
 
     const reperes = [...carte.racine.querySelectorAll('.carte-among-repere')];
@@ -115,7 +115,7 @@ describe('la carte plein ecran', () => {
 
   it('ne montre jamais les autres joueurs', () => {
     const { carte } = monter();
-    carte.basculer();
+    carte.basculer(etat());
     carte.afficher(etat());
 
     expect(carte.racine.innerHTML).not.toContain('FF5FD2');
@@ -123,13 +123,25 @@ describe('la carte plein ecran', () => {
     carte.demonter();
   });
 
+  it('ne s ouvre pas hors du jeu, en reunion par exemple', () => {
+    const { carte, joues } = monter();
+
+    for (const phase of ['revelation', 'discussion', 'vote', 'ejection'] as const) {
+      carte.basculer(etat(phase));
+      expect(carte.estOuverte()).toBe(false);
+    }
+
+    expect(joues).toEqual([]);
+    carte.demonter();
+  });
+
   it('se ferme hors du jeu, et par Echap', () => {
     const { carte } = monter();
-    carte.basculer();
+    carte.basculer(etat());
     carte.afficher(etat('discussion'));
     expect(carte.estOuverte()).toBe(false);
 
-    carte.basculer();
+    carte.basculer(etat());
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     expect(carte.estOuverte()).toBe(false);
     carte.demonter();
@@ -137,7 +149,7 @@ describe('la carte plein ecran', () => {
 
   it('se ferme par sa croix', () => {
     const { carte } = monter();
-    carte.basculer();
+    carte.basculer(etat());
     carte.racine.querySelector<HTMLButtonElement>('.carte-among-fermer')?.click();
 
     expect(carte.estOuverte()).toBe(false);

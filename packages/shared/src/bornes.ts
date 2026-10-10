@@ -284,8 +284,12 @@ export const BORNES_REGLAGES = {
   among: {
     /** Le nombre de tueurs voulu; le lancement le borne au nombre de joueurs. */
     tueurs: { minimum: 1, maximum: 3 } satisfies Intervalle,
-    /** Deux taches reglerait la partie trop vite (decision du porteur du projet). */
-    tachesParProie: { minimum: 3, maximum: 8 } satisfies Intervalle,
+    /**
+     * Deux taches reglerait la partie trop vite (decision du porteur du projet). Pas plus que
+     * de natures de tache: une proie ne fait jamais deux fois la meme (retour d'essai du
+     * porteur du projet, 10 octobre 2026). Un test garde l'accord des deux nombres.
+     */
+    tachesParProie: { minimum: 3, maximum: 7 } satisfies Intervalle,
     rechargeMeurtreS: { minimum: 10, maximum: 60 } satisfies Intervalle,
     discussionS: { minimum: 15, maximum: 120 } satisfies Intervalle,
     voteS: { minimum: 15, maximum: 120 } satisfies Intervalle,
