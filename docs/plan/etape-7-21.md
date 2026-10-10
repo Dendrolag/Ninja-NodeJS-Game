@@ -14,7 +14,7 @@ Rédigée le 10 octobre 2026, au début de l'étape, selon le cas de repli du PR
 
 Lire CLAUDE.md, le dernier handoff (7.20, ou le handoff partiel de cette étape), cette fiche, `.claude/rules/sim-purity.md`, les sections 9, 10, 13 et 21 de l'étude, et la fiche 7.20.
 
-**Les règles et les valeurs ci-dessous sont des propositions**, à confirmer par le porteur du projet avant de construire (section « Valeurs à confirmer »). Les rendus se choisissent ensuite sur planche, comme à l'étape 7.20.
+**Les règles et les valeurs ci-dessous ont été soumises au porteur du projet le 10 octobre 2026** (section « Réponses du porteur du projet »). Les rendus se choisissent ensuite sur planche, comme à l'étape 7.20.
 
 ## Décisions du porteur du projet
 
@@ -36,13 +36,20 @@ Depuis le cadrage serré de 7.20 (le plus petit côté de l'écran montre 450 pi
 - **B. Desserrer le cadrage** pour que le plus grand cercle de la partie tienne: le plus petit côté montre le diamètre du cercle de l'assassin plus une marge, 720 pixels aux paliers par défaut. Les ninjas redeviennent plus petits, ce que le cadrage serré corrigeait.
 - **C. Un cadrage par rôle**, celui de son propre cercle plus une marge. Rien ne fuit vers les autres joueurs (seul notre écran change), mais un assassin voit ses ninjas plus petits que ses victimes ne les voient.
 
-**Recommandation: A.** Le porteur du projet a voulu le cadrage serré, et c'est la vision qu'il faut mettre à sa mesure. Le changement tient dans `RAYONS_DE_VISION` et ses tests.
+Recommandation de la fiche: A. **Réponse du porteur du projet, 10 octobre 2026: garder tel quel**, et juger à la prochaine partie d'essai. Les paliers de 7.20 ne changent pas à cette étape.
 
 ### Les sons à fournir
 
 Ceux de 7.20 (le meurtre, l'alerte de la victime, le gong, la réunion, l'exécution) attendent toujours, avec des sons du jeu en provisoire. Ceux des tâches sont listés à la section « Les sons ».
 
-## Valeurs à confirmer par le porteur du projet
+## Réponses du porteur du projet, 10 octobre 2026
+
+1. **Le cercle de vision: gardé tel quel**, à juger en jouant (section précédente).
+2. **Les tâches visuelles: activées par défaut.**
+3. **La version: tout sous la 1.9.0**, une seule note, qui annonce aussi les tâches.
+4. **Le reste des règles et des valeurs** (gestes, durées, tâches des stations, carte, barre): pas encore essayé, le porteur du projet jugera l'ensemble en une fois, en jouant. Les propositions ci-dessous se construisent donc telles quelles, et se révisent après cet essai.
+
+## Les règles et les valeurs
 
 Les propositions de l'étude, précisées par cette fiche. Toutes se révisent après une partie d'essai.
 
@@ -128,7 +135,7 @@ La barre commune (« Tâches 12/30 ») se montre **toujours** (défaut, comporte
 
 ### La version
 
-Une nouveauté majeure pour le joueur. Mais la 1.9.0 (le socle, étape 7.20) n'est pas en ligne, et sa note n'a pas encore été soumise. **Proposé: ne pas ouvrir de 1.10, et livrer le socle et les tâches ensemble sous la 1.9.0**, dont la note dira les tâches. Sinon, 1.10.0 et sa propre note.
+Une nouveauté majeure pour le joueur. Mais la 1.9.0 (le socle, étape 7.20) n'est pas en ligne, et sa note n'a pas encore été soumise. **Décidé: pas de 1.10, le socle et les tâches se livrent ensemble sous la 1.9.0**, dont la note dira les tâches.
 
 ## Les sons
 
@@ -184,8 +191,7 @@ Puis une seconde planche, les sept tâches dans le cadre choisi, au bureau et su
 2. Le tirage de la nature des stations, la liste par nature.
 3. L'ouverture, la fin annoncée, la fermeture, l'annulation; la durée minimale; l'assassin dont rien ne compte.
 4. L'événement de la tâche visuelle. Le compte figé à chaque réunion.
-5. Si le porteur du projet choisit l'option A: les paliers de vision resserrés.
-6. L'empreinte des quatre parties de référence identique avant et après.
+5. L'empreinte des quatre parties de référence identique avant et après.
 
 ### Lot B. Le serveur
 
@@ -208,7 +214,7 @@ Puis une seconde planche, les sept tâches dans le cadre choisi, au bureau et su
 1. Le scénario `tests/e2e/among.spec.ts`: la proie de la page fait une vraie tâche, au clavier, jusqu'à la victoire des proies. Une tâche jouée au doigt sur le projet téléphone, si le temps de la CI le permet.
 2. Banc: la mesure de 7.20 rejouée, pour vérifier que les tâches ne coûtent rien de visible (section 29 de `docs/mesures/charge-serveur.md`, complétée).
 3. Journal de conception, ROADMAP, étude (section 21 complétée), `assets/README.md` si des sons sont fournis.
-4. La version et la note, selon le choix du porteur du projet.
+4. La note de la 1.9.0 complétée des tâches, à soumettre au porteur du projet; le numéro reste 1.9.0.
 5. **Avant toute poussée**, sur accord du porteur du projet: la suite de bout en bout complète, bureau et téléphone, rejouée.
 
 ## Hors périmètre
