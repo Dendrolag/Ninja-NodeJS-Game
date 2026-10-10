@@ -149,6 +149,9 @@ jobs:
       # multiplient ce risque par onze. Au-dela de deux minutes, elle est arretee et
       # reprise une fois: une connexion neuve au miroir repart d'ordinaire a pleine
       # vitesse. dpkg --configure -a acheve un paquet laisse a moitie installe.
+      # L'essai arrete laisse son apt-get tourner, verrou de dpkg en main: le second
+      # essai echouait aussitot sur ce verrou (9 octobre 2026). Il arrete donc
+      # l'apt-get orphelin et attend que le verrou se libere avant de reprendre.
       - name: Installer les navigateurs Playwright
         id: navigateurs
         timeout-minutes: 2
@@ -159,6 +162,11 @@ jobs:
         if: ${{ steps.navigateurs.outcome != 'success' }}
         timeout-minutes: 5
         run: |
+          sudo pkill -f apt-get || true
+          for attente in $(seq 1 30); do
+            sudo fuser /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock > /dev/null 2>&1 || break
+            sleep 2
+          done
           sudo dpkg --configure -a
           pnpm exec playwright install --with-deps chromium
 
@@ -203,6 +211,9 @@ jobs:
       # multiplient ce risque par onze. Au-dela de deux minutes, elle est arretee et
       # reprise une fois: une connexion neuve au miroir repart d'ordinaire a pleine
       # vitesse. dpkg --configure -a acheve un paquet laisse a moitie installe.
+      # L'essai arrete laisse son apt-get tourner, verrou de dpkg en main: le second
+      # essai echouait aussitot sur ce verrou (9 octobre 2026). Il arrete donc
+      # l'apt-get orphelin et attend que le verrou se libere avant de reprendre.
       - name: Installer les navigateurs Playwright
         id: navigateurs
         timeout-minutes: 2
@@ -213,6 +224,11 @@ jobs:
         if: ${{ steps.navigateurs.outcome != 'success' }}
         timeout-minutes: 5
         run: |
+          sudo pkill -f apt-get || true
+          for attente in $(seq 1 30); do
+            sudo fuser /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock > /dev/null 2>&1 || break
+            sleep 2
+          done
           sudo dpkg --configure -a
           pnpm exec playwright install --with-deps chromium
 
