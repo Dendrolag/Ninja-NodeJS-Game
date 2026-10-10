@@ -60,7 +60,7 @@ import {
   tousLesNinjas,
   tousLesObjets,
 } from '@neon-ninja/shared';
-import { AdvancedBloomFilter } from 'pixi-filters';
+import { AdvancedBloomFilter, GlowFilter, OutlineFilter } from 'pixi-filters';
 import type { Container as ConteneurPixi } from 'pixi.js';
 import {
   Application,
@@ -87,6 +87,7 @@ import {
   VAISSEAU,
   VISION_AMONG,
 } from './apparence.js';
+import { APPARENCE_AMONG, cadreDuMasque } from './among.js';
 import type { Camera, ZoneVisible } from './camera.js';
 import { dansLaZone, versEcran, zoneVisible } from './camera.js';
 import type { IndicateurScene } from './charges.js';
@@ -870,8 +871,10 @@ function poserLaVision(
   masque.clear();
 
   if (vision !== undefined) {
+    // Plus grand que la carte: un disque qui deborde du bord y reste un trou (cadreDuMasque).
+    const cadre = cadreDuMasque(carte, vision);
     masque
-      .rect(0, 0, carte.largeur, carte.hauteur)
+      .rect(cadre.x, cadre.y, cadre.largeur, cadre.hauteur)
       .fill(0xffffff)
       .circle(vision.x, vision.y, vision.rayon)
       .cut();
@@ -1279,6 +1282,8 @@ interface Personnage {
   taille: number | undefined;
   /** La teinte posee sur le corps. */
   teinte: number | undefined;
+  /** La couleur du contour neon pose, celui d'un fantome d'Among Ninjas; aucune sinon. */
+  neon: number | undefined;
 }
 
 /**
@@ -1336,6 +1341,7 @@ function majPersonnages(
     personnage.racine.position.set(decrit.x, decrit.y);
     personnage.racine.rotation = decrit.rotation ?? 0;
     personnage.racine.alpha = decrit.alpha;
+    poserLeContourNeon(personnage, decrit.contourNeon);
   });
 
   for (const [id, personnage] of connus) {
@@ -1344,6 +1350,37 @@ function majPersonnages(
       connus.delete(id);
     }
   }
+}
+
+/**
+ * Le contour neon d'un fantome d'Among Ninjas (etape 7.20): un trait a sa couleur autour de sa
+ * silhouette, et une lueur de la meme couleur. Les filtres ne se refont qu'a un changement de
+ * couleur: un fantome les garde d'une image a l'autre. Seuls les fantomes en ont, et seuls les
+ * fantomes voient des fantomes: leur cout reste borne au nombre de morts.
+ */
+function poserLeContourNeon(personnage: Personnage, couleur: number | undefined): void {
+  if (couleur === personnage.neon) {
+    return;
+  }
+
+  personnage.neon = couleur;
+
+  if (couleur === undefined) {
+    personnage.racine.filters = [];
+    return;
+  }
+
+  const { epaisseur, lueur, portee } = APPARENCE_AMONG.contourFantome;
+  personnage.racine.filters = [
+    new OutlineFilter({ thickness: epaisseur, color: couleur, quality: 0.3 }),
+    new GlowFilter({
+      color: couleur,
+      distance: portee,
+      outerStrength: lueur,
+      innerStrength: 0,
+      quality: 0.3,
+    }),
+  ];
 }
 
 /** Un personnage neuf, sans texture, pose dans son calque. */
@@ -1356,6 +1393,7 @@ function nouveauPersonnage(parent: ConteneurPixi): Personnage {
     texture: undefined,
     taille: undefined,
     teinte: undefined,
+    neon: undefined,
   };
 
   personnage.details.anchor.set(0.5);

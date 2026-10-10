@@ -118,6 +118,11 @@ export interface SpriteScene {
   readonly alpha: number;
   /** Rotation, en radians: celle d'un cadavre couche du Massacre. Aucune par defaut. */
   readonly rotation?: number;
+  /**
+   * Un contour neon autour de la silhouette, de cette couleur: celui d'un fantome d'Among
+   * Ninjas (etape 7.20). Aucun par defaut.
+   */
+  readonly contourNeon?: number;
 }
 
 /** Un disque a dessiner sous ou autour de quelque chose. */
@@ -499,6 +504,10 @@ export function construireScene(
       taille: TAILLE_SPRITE,
       teinte: couleurEnNombre(teinteDe(entite, enMouvement)),
       alpha,
+      // Un fantome d'Among Ninjas a un contour neon a sa couleur (etape 7.20).
+      ...(entite.type === 'joueur' && entite.fantome === true
+        ? { contourNeon: couleurEnNombre(entite.couleur) }
+        : {}),
     });
   }
 

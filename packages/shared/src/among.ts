@@ -29,6 +29,11 @@ export const AMONG = {
    * manque, mais un joueur bloque ou deconnecte ne retient pas la partie au-dela.
    */
   ATTENTE_DU_CHARGEMENT_MAXIMUM_MS: 30_000,
+  /**
+   * Un fantome va plus vite que les vivants (demande du porteur du projet du 10 octobre 2026):
+   * 1,5 fois la vitesse commune, soit 225 pixels par seconde.
+   */
+  MULTIPLICATEUR_DES_FANTOMES: 1.5,
   /** La revelation du role, une fois tout le monde charge: le monde est fige pendant ce temps. */
   DUREE_REVELATION_MS: 5000,
   /** Le resultat d'un vote reste affiche ce temps, le monde fige. */

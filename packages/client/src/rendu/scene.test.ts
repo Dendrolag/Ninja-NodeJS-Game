@@ -98,6 +98,17 @@ function etatEnJeu(moi: string, effets: readonly EffetActif[] = []): EtatClient 
 }
 
 describe('construireScene', () => {
+  it('cerne un fantome d Among Ninjas d un contour neon a sa couleur, translucide (etape 7.20)', () => {
+    const fantome = { ...joueur('ombre', 300, 400, '#FF5FD2'), fantome: true } as EntiteVue;
+    const partie = vue([joueur('moi', 100, 100), fantome]);
+    const scene = construireScene(etatEnJeu('moi'), lissee(partie), 0);
+    const sprite = (id: string) => scene.entites.find((entite) => entite.id === id);
+
+    expect(sprite('ombre')).toMatchObject({ contourNeon: 0xff5fd2, alpha: 0.7 });
+    expect(sprite('moi')?.contourNeon).toBeUndefined();
+    expect(sprite('moi')?.alpha).toBe(1);
+  });
+
   it('rend une scene vide tant qu aucun battement n est arrive', () => {
     expect(construireScene(etatEnJeu('moi'), undefined, 0)).toBe(SCENE_VIDE);
   });

@@ -55,7 +55,7 @@
  */
 
 import type { IntentionDeplacement, Vecteur } from '@neon-ninja/shared';
-import { RAYON_ENTITE, VITESSES } from '@neon-ninja/shared';
+import { AMONG, RAYON_ENTITE, VITESSES } from '@neon-ninja/shared';
 
 import {
   agirEnAmong,
@@ -593,7 +593,10 @@ function deplacerJoueur(
     return joueur;
   }
 
-  const distance = (VITESSES.JOUEUR_PX_PAR_SECONDE * multiplicateurDeVitesse(joueur) * dtMs) / 1000;
+  // Un fantome d'Among Ninjas, le seul qui passe les murs, va aussi plus vite (etape 7.20).
+  const fantome = passeMuraille ? AMONG.MULTIPLICATEUR_DES_FANTOMES : 1;
+  const distance =
+    (VITESSES.JOUEUR_PX_PAR_SECONDE * multiplicateurDeVitesse(joueur) * fantome * dtMs) / 1000;
   const pas = aLaLongueur(voulu(joueur, entree.deplacement), distance);
   // Un fantome d'Among Ninjas traverse les murs, sans sortir de la carte (etape 7.20).
   const position = passeMuraille

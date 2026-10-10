@@ -71,6 +71,8 @@ Ajustements demandés par le porteur du projet le 10 octobre 2026, après son es
 9. **« Exécution » remplace « éjection »** partout où le joueur le lit, plus dans le thème des ninjas. Le code garde `ejection` et `ejecte`, comme il garde `tueur`.
 10. **Un cadrage plus serré, le même pour tous.** Le plus petit côté de l'écran montre 450 pixels de carte (`COTE_DE_VUE_AMONG_PX`), sur ordinateur comme sur téléphone, en paysage comme en portrait: un peu plus près que le Tactique (500 en hauteur sur ordinateur). Le téléphone perd son cadrage serré habituel (271 pixels de haut) dans ce mode.
 11. **La victime à portée en surbrillance, et le katana seulement face à elle.** Un assassin voit en légère surbrillance rouge la proie qu'il tuerait s'il frappait maintenant (la règle du moteur: katana prêt, proie vivante la plus proche à 32 pixels), et le bouton Katana est grisé et inactif sinon. Captures `docs/design/etape-7-20/2-katana-sans-victime.png` et `3-victime-a-portee.png`, rendu à juger en jouant.
+12. **Le fantôme: une légère transparence et un contour néon à sa couleur**, à la place du halo pâle du rendu entre A et B. Opacité 0,7, contour de 2 pixels et lueur (`OutlineFilter` et `GlowFilter`, posés sur le seul fantôme). Capture `docs/design/etape-7-20/6-fantome-agrandi.png`.
+13. **Le fantôme va plus vite**: 1,5 fois la vitesse commune, 225 pixels par seconde (`AMONG.MULTIPLICATEUR_DES_FANTOMES`). Il traverse toujours les murs, sans aucune collision, et ne s'arrête qu'au bord de la carte; vérifié sur le vrai Tokyo.
 
 ## Décisions prises par cette fiche
 

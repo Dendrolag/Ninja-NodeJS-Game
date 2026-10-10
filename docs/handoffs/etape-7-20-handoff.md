@@ -26,7 +26,9 @@ Session du 10 octobre:
   - la révélation attend que chacun ait chargé la carte: phase `chargement`, signal `carteChargee` de la page, 30 secondes au plus;
   - « exécution » remplace « éjection » dans la page;
   - un cadrage plus serré et commun à tous les appareils: le plus petit côté de l'écran montre 450 pixels de carte;
-  - la victime à portée d'un assassin en légère surbrillance rouge, et le Katana grisé et inactif sans elle (captures `docs/design/etape-7-20/2-*.png` et `3-*.png`).
+  - la victime à portée d'un assassin en légère surbrillance rouge, et le Katana grisé et inactif sans elle (captures `docs/design/etape-7-20/2-*.png` et `3-*.png`);
+  - le cercle de vision qui disparaissait au bord de la carte, corrigé: le masque déborde de la carte du rayon du disque (`cadreDuMasque`, capture `5-bord-gauche.png`);
+  - le fantôme légèrement transparent et cerné d'un contour néon à sa couleur, et 1,5 fois plus rapide, toujours à travers les murs (captures `6-*.png`). Captures du cadrage pour une proie et un assassin, ordinateur et téléphone: `4-zoom-*.png`.
 
 ## Décisions du porteur du projet pendant l'étape
 

@@ -8,8 +8,10 @@
  *   - LE CERCLE DE VISION, un melange: le disque net du rendu A, et hors du disque le decor
  *     assombri de moitie et sans couleur. Le rendu PixiJS le pose (pixi.ts); la scene ne dit
  *     que son centre et son rayon;
- *   - LE FANTOME, entre A et B: le ninja translucide a sa couleur, dans un halo pale. Seuls les
- *     fantomes en recoivent: la vue d'un vivant n'en contient aucun.
+ *   - LE FANTOME: le ninja legerement translucide, a sa couleur, cerne d'un contour neon de sa
+ *     couleur (demande du porteur du projet du 10 octobre 2026, a la place du halo pale du
+ *     rendu entre A et B). Seuls les fantomes en recoivent: la vue d'un vivant n'en contient
+ *     aucun.
  *
  * LES PSEUDOS NE S'AFFICHENT PAS SUR LA CARTE (decision du porteur du projet du 9 octobre 2026):
  * le doute sur qui est qui fait le jeu, et toute accusation passe par une couleur. Seul un
@@ -19,7 +21,7 @@
  * Ce module est pur: il lit l'etat du client et rend des formes a dessiner.
  */
 
-import type { Couleur } from '@neon-ninja/shared';
+import type { Couleur, DimensionsCarte } from '@neon-ninja/shared';
 import { AMONG, AMONG_PAR_DEFAUT, RAYONS_DE_VISION } from '@neon-ninja/shared';
 
 import { victimeAPortee } from '../among.js';
@@ -45,6 +47,34 @@ export interface VisionScene {
   readonly rayon: number;
 }
 
+/** Un rectangle, en coordonnees de carte. */
+export interface Cadre {
+  readonly x: number;
+  readonly y: number;
+  readonly largeur: number;
+  readonly hauteur: number;
+}
+
+/**
+ * Le rectangle du masque du decor eteint, que le disque de vision perce (pixi.ts): la carte,
+ * elargie de part et d'autre du rayon du disque, pour que le trou y tienne toujours en entier.
+ *
+ * Sur la carte seule, un disque qui debordait du bord ne se decoupait plus: le masque redevenait
+ * la carte pleine, et le decor eteint recouvrait tout, ninjas compris, des qu'on approchait d'un
+ * bord (retour d'essai du porteur du projet, 10 octobre 2026). Le decor eteint s'arrete de toute
+ * facon au bord de la carte: le masque peut deborder sans rien montrer de plus.
+ */
+export function cadreDuMasque(carte: DimensionsCarte, vision: VisionScene): Cadre {
+  const marge = vision.rayon + 1;
+
+  return {
+    x: -marge,
+    y: -marge,
+    largeur: carte.largeur + 2 * marge,
+    hauteur: carte.hauteur + 2 * marge,
+  };
+}
+
 /** Ce qu'Among Ninjas ajoute a une image. */
 export interface ImageDAmong {
   /** Au sol, sous les personnages: les stations, le gong, le sang des cadavres, les halos. */
@@ -65,10 +95,10 @@ export const RIEN_D_AMONG: ImageDAmong = {
 
 /** Les reglages de l'apparence, tenus ici pour se regler en jouant. */
 export const APPARENCE_AMONG = {
-  /** Opacite d'un fantome, entre le voile (0,4) et l'esprit (0,55) de la planche. */
-  alphaFantome: 0.5,
-  /** Le halo pale d'un fantome. */
-  haloFantome: { couleur: 0xd8f0ff, alpha: 0.22, rayon: 22 },
+  /** Opacite d'un fantome: une legere transparence (10 octobre 2026). */
+  alphaFantome: 0.7,
+  /** Le contour neon d'un fantome, a sa couleur (pixi.ts): son epaisseur et sa lueur. */
+  contourFantome: { epaisseur: 2, lueur: 2.5, portee: 10 },
   /** Ecart des deux moities d'un cadavre, en pixels de carte. */
   ecartDuCadavre: 5,
   /** Le sang sous un cadavre: quelques taches rouges. */
@@ -141,20 +171,6 @@ export function imageDAmong(etat: EtatClient, lissee: VueLissee, texture: string
         rayon,
         remplissage: { couleur, alpha: alphaPlein },
         contour: { couleur, alpha: alphaBord, epaisseur },
-      });
-    }
-
-    if (entite.fantome === true) {
-      disques.push({
-        id: `${entite.id}:halo-fantome`,
-        x,
-        y,
-        rayon: APPARENCE_AMONG.haloFantome.rayon,
-        remplissage: {
-          couleur: APPARENCE_AMONG.haloFantome.couleur,
-          alpha: APPARENCE_AMONG.haloFantome.alpha,
-        },
-        contour: undefined,
       });
     }
 

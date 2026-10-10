@@ -438,7 +438,7 @@ describe('le meurtre', () => {
 });
 
 describe('les fantomes', () => {
-  it('traversent les murs, que les vivants ne traversent pas, sans sortir de la carte', () => {
+  it('traversent les murs plus vite que les vivants, sans sortir de la carte', () => {
     const mur = creerCarteCollisions(CARTES.map1, (x) => x >= 600 && x < 640);
     let etat = creerEtatInitial({ graine: 7, mode: 'among', terrain: mur });
     for (let rang = 1; rang <= 5; rang += 1) {
@@ -459,7 +459,10 @@ describe('les fantomes', () => {
 
     const droite = { deplacement: { x: 1, y: 0 }, enMouvement: true };
     const apres = tick(etat, { j1: droite, j2: droite }, 1000);
-    expect(joueurDe(apres, 'j1').position.x).toBeCloseTo(710);
+    // Une seconde a 1,5 fois la vitesse commune: 225 pixels, a travers le mur.
+    expect(joueurDe(apres, 'j1').position.x).toBeCloseTo(
+      560 + 150 * AMONG.MULTIPLICATEUR_DES_FANTOMES,
+    );
     expect(joueurDe(apres, 'j2').position.x).toBeLessThan(600);
 
     const bord = tick(placer(apres, 'j1', { x: 1990, y: 400 }), { j1: droite }, 1000);
