@@ -14,7 +14,7 @@ Rédigée le 10 octobre 2026, au début de l'étape, selon le cas de repli du PR
 
 Lire CLAUDE.md, le dernier handoff (7.21, ou le handoff partiel de cette étape), cette fiche, `.claude/rules/sim-purity.md`, les sections 11, 12, 13 et 20 de l'étude, et les fiches 7.20 et 7.21.
 
-**Les règles et les valeurs ci-dessous sont soumises au porteur du projet le 10 octobre 2026**, avant toute construction. Les rendus se choisissent ensuite sur planche, comme aux étapes 7.20 et 7.21.
+**Les règles et les valeurs ci-dessous ont été soumises au porteur du projet le 10 octobre 2026**, avant toute construction (section « Réponses du porteur du projet »). Les rendus se choisissent ensuite sur planche, comme aux étapes 7.20 et 7.21.
 
 ## Décisions du porteur du projet
 
@@ -34,6 +34,13 @@ Du 5 et du 6 octobre 2026 (demande, section 20 de l'étude et sa révision), et 
 3. **La surchauffe non réparée.** L'étude (section 4.2) la fait gagner aux assassins, comme le réacteur d'Among Us. Mais le ROADMAP résume la décision du 6 octobre par « sans seconde voie de victoire pour les tueurs ». La décision visait les tâches de tueur; la fiche lit donc la surchauffe comme permise. Recommandé: **les assassins gagnent**, sans quoi elle n'a plus de danger. L'autre voie: chaque proie vivante perd la dernière tâche qu'elle a faite.
 4. **La version.** Comme à 7.21, la 1.9.0 n'est pas en ligne: **tout sous la 1.9.0**, dont la note dira les sabotages, ou une 1.10.0 à part.
 
+## Réponses du porteur du projet, 10 octobre 2026
+
+1. **Depuis la carte plein écran**, comme recommandé.
+2. **Les commandes inversées frappent les proies seulement**, comme les deux autres nuisances, contre la recommandation de la fiche. Le risque est connu: pendant dix secondes, un ninja qui marche droit peut être un assassin, à moins qu'il ne fasse semblant de tituber. Il se juge à la partie d'essai; s'il décide trop de parties, les deux autres voies restent (tous les vivants, ou retirer ce sabotage).
+3. **La surchauffe non réparée fait gagner les assassins**, comme recommandé.
+4. **Tout sous la 1.9.0**, dont la note dira aussi les sabotages.
+
 ## Les règles et les valeurs
 
 Les propositions de l'étude, précisées par cette fiche. Toutes se révisent après une partie d'essai.
@@ -41,7 +48,7 @@ Les propositions de l'étude, précisées par cette fiche. Toutes se révisent a
 ### Ce que les sabotages ont en commun
 
 - **Qui sabote**: un assassin, vivant ou fantôme (étude, section 12). Jamais une proie.
-- **D'où**: la carte plein écran (question 1). Elle porte, pour un assassin, un panneau des sabotages: chacun avec son nom, prêt ou grisé, et le temps qu'il reste avant le prochain.
+- **D'où**: la carte plein écran (réponse 1). Elle porte, pour un assassin, un panneau des sabotages: chacun avec son nom, prêt ou grisé, et le temps qu'il reste avant le prochain.
 - **Un seul sabotage à la fois**, pour toute la partie.
 - **Une recharge commune de 30 secondes** à tous les assassins, qui part de la fin du sabotage précédent. Elle repart à **15 secondes au début de chaque tour**, comme le gong.
 - **Aucun sabotage en réunion**, ni pendant la révélation ou l'exécution. **Une réunion qui s'ouvre finit le sabotage en cours**, quel qu'il soit, comme le signalement d'un cadavre pendant le réacteur d'Among Us.
@@ -51,11 +58,11 @@ Les propositions de l'étude, précisées par cette fiche. Toutes se révisent a
 
 ### Les trois nuisances
 
-| Sabotage            | Effet                                                                        | Durée |
-| ------------------- | ---------------------------------------------------------------------------- | ----: |
-| Vision floue        | Le flou du malus, sur l'écran de chaque proie vivante                        |  10 s |
-| Vision négative     | Le négatif du malus, sur l'écran de chaque proie vivante                     |  10 s |
-| Commandes inversées | Le malus du moteur, sur **tous les vivants, assassins compris** (question 2) |  10 s |
+| Sabotage            | Effet                                                    | Durée |
+| ------------------- | -------------------------------------------------------- | ----: |
+| Vision floue        | Le flou du malus, sur l'écran de chaque proie vivante    |  10 s |
+| Vision négative     | Le négatif du malus, sur l'écran de chaque proie vivante |  10 s |
+| Commandes inversées | Le malus du moteur, sur chaque proie vivante (réponse 2) |  10 s |
 
 - Elles passent par les malus du jeu, tels qu'ils sont dans le moteur et la page: le frappé le voit et reçoit l'annonce du malus, adressée à lui seul (`malusSubi`). Le flux ne porte les malus de personne.
 - **Les gestes d'une tâche ne s'inversent pas**: seul le déplacement s'inverse. Une tâche reste une tâche (l'étude posait la question).
@@ -83,7 +90,7 @@ La demande parle d'une zone d'invisibilité réservée aux tueurs. Prise à la l
 - **Effet**: les deux **consoles**, aux lampadaires nord-ouest et sud-est (étude, section 10: 485, 320 et 1860, 890), s'emballent. Il faut les tenir **en même temps**, une proie à chacune.
 - **Le délai**: **45 secondes**. Les consoles sont à 1 490 pixels l'une de l'autre, dix secondes de course.
 - **Réparer**: le bouton d'action tenu dans le disque de chaque console (50 pixels de rayon); dès que les deux sont tenues ensemble **une seconde**, la surchauffe est réparée. Un vivant peut tenir une console, assassin compris, pour la même raison que la panne. **Un fantôme ne peut pas** (décision 3).
-- **Non réparée**: les assassins gagnent (question 3).
+- **Non réparée**: les assassins gagnent (réponse 3).
 - **Tout le monde le sait**: une alarme à tous, le compte à rebours, les deux consoles marquées sur la mini-carte et la carte plein écran, et pour chacune, si quelqu'un la tient.
 
 ### La malédiction des fantômes
@@ -178,7 +185,7 @@ Les captures dans le vrai jeu, au fil de la construction, à côté.
 1. Le scénario `tests/e2e/among.spec.ts`: un assassin de la page sabote les néons depuis la carte, une proie répare au boîtier.
 2. Banc: la mesure de 7.21 rejouée (section 30 de `docs/mesures/charge-serveur.md`), avec un sabotage en cours pendant la mesure.
 3. Journal de conception, ROADMAP, étude (section 23), `assets/README.md` si des sons sont fournis.
-4. La note de version, selon la question 4, à soumettre au porteur du projet.
+4. La note de la 1.9.0 complétée des sabotages (réponse 4), à soumettre au porteur du projet; le numéro reste 1.9.0.
 5. **Avant toute poussée**, sur accord du porteur du projet: la suite de bout en bout complète, bureau et téléphone, rejouée.
 
 ## Hors périmètre
@@ -193,7 +200,7 @@ Les captures dans le vrai jeu, au fil de la construction, à côté.
 
 - **Contrat (TU)**: les natures et leurs valeurs, les lieux nouveaux et leur miroir, sur le vrai terrain.
 - **Sabotages (TU)**: qui peut saboter, la recharge commune et celle du début de tour, un seul à la fois, aucun hors du jeu, la fin à l'ouverture d'une réunion, le gong refusé pendant la surchauffe, le terme du tour qui attend.
-- **Nuisances (TU)**: qui est frappé, la durée, les fantômes épargnés, les commandes inversées sur tous les vivants.
+- **Nuisances (TU)**: qui est frappé, la durée, les fantômes et les assassins épargnés.
 - **Panne (TU)**: le rayon des proies vivantes et lui seul, la réparation tenue, remise à zéro en sortant ou en lâchant, qui peut réparer.
 - **Surchauffe (TU)**: la réparation à deux, une seconde ensemble, le fantôme qui ne compte pas, la victoire des assassins au terme.
 - **Nuage (TU)**: ce qu'une proie vivante en voit, dedans et dehors; ce qu'un assassin et un fantôme en voient.
@@ -215,7 +222,7 @@ Conditions de ROADMAP réunies, plus:
 
 ## Points de vigilance
 
-1. **Un sabotage ne doit désigner personne.** Ni le saboteur dans le flux, ni un assassin par un effet qui l'épargne aux yeux des autres (commandes inversées, nuage pris à la lettre).
+1. **Un sabotage ne doit désigner personne.** Ni le saboteur dans le flux, ni un assassin dans un nuage. Seule exception acceptée par le porteur du projet: les commandes inversées, qui épargnent les assassins (réponse 2), à juger en jouant.
 2. **La malédiction ne doit rien apprendre aux vivants**: ni annonce, ni changement visible dans ce qu'ils reçoivent.
 3. **Le cercle de vision dépasse l'écran** depuis le cadrage serré de 7.20 (gardé tel quel, décision du 10 octobre). La panne, à 110 pixels, tient dans l'écran: elle se juge à l'œil sur ordinateur et sur téléphone.
 4. **Le téléphone garde deux boutons**: le panneau des sabotages vit dans la carte, la malédiction prend le second bouton du fantôme.
