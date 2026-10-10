@@ -136,6 +136,7 @@ test('la page se presente sans le jeu, et sert ce que lisent les moteurs de rech
     'Équipes',
     'Chasse',
     'Massacre',
+    'Among Ninjas',
   ]);
   await sansJavaScript.close();
 

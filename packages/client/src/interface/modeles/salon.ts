@@ -17,11 +17,13 @@
  * chaque demande: le modele ne fait que le dire a l'avance.
  *
  * LA CHASSE (etape 7.3). Elle ne se lance pas a un seul joueur, et ses reglages n'ont pas
- * de Black Ninjas: le recapitulatif n'en parle pas.
+ * de Black Ninjas: le recapitulatif n'en parle pas. AMONG NINJAS (etape 7.20) ne se lance
+ * qu'a cinq.
  */
 
 import type { Couleur, Equipe, Mode, PalierDeVision, ReglagesPartie } from '@neon-ninja/shared';
 import {
+  AMONG,
   AMONG_PAR_DEFAUT,
   CHASSE,
   COULEURS_DES_EQUIPES,
@@ -200,6 +202,8 @@ export function modeleSalon(etat: EtatClient): ModeleSalon | undefined {
     equipes?.some((equipe) => equipe.joueurs.length === 0) === true,
     // Une Chasse ne se lance pas a un seul joueur (etape 7.3).
     salon.mode === 'chasse' && nombre < CHASSE.JOUEURS_MINIMUM,
+    // Une partie Among Ninjas ne se lance qu'a cinq (etape 7.20).
+    salon.mode === 'among' && nombre < AMONG.JOUEURS_MINIMUM,
   );
 
   return {
@@ -273,9 +277,18 @@ function equipesAffichees(
 }
 
 /** Ce qui empeche de lancer la partie, dit au joueur, ou rien. */
-function empechementDeLancer(equipeVide: boolean, chasseSolitaire: boolean): string | undefined {
+function empechementDeLancer(
+  equipeVide: boolean,
+  chasseSolitaire: boolean,
+  amongIncomplet: boolean,
+): string | undefined {
   if (equipeVide) {
     return 'Il faut au moins un joueur dans chaque équipe pour lancer la partie.';
+  }
+
+  if (amongIncomplet) {
+    // La phrase meme du refus du serveur (GameRoom.ts).
+    return `Il faut au moins ${String(AMONG.JOUEURS_MINIMUM)} joueurs pour lancer une partie Among Ninjas.`;
   }
 
   return chasseSolitaire ? 'Il faut au moins deux joueurs pour lancer une chasse.' : undefined;

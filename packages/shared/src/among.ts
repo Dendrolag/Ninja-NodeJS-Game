@@ -192,8 +192,14 @@ export interface LieuxDuMode {
  * mode lui impose sa carte.
  *
  * Les places partent de l'etude (section 10), lues sur le decor, et se verifient sur le
- * terrain reel, en normal et en miroir, par les tests du serveur (terrain.test.ts): chacune
- * tenable, dans le morceau principal de la carte. Le gong est le passage pieton central.
+ * terrain reel, en normal et en miroir, par les tests du serveur (terrain.test.ts): le centre
+ * de chacune tenable, dans le morceau principal de la carte, et la majeure partie de son disque
+ * praticable. Le gong est le passage pieton central.
+ *
+ * Une station se pose donc DEVANT son meuble, pas dessus: cinq d'entre elles avaient leur
+ * centre sur le meuble, dans un mur, et le joueur devait se tenir au bord du disque, jusqu'a
+ * 38 pixels sur 50 devant la table de la maison (10 octobre 2026, ecrit avec le scenario de
+ * bout en bout de l'etape 7.20).
  */
 export const LIEUX_DES_CARTES: Readonly<Partial<Record<IdentifiantCarte, LieuxDuMode>>> = {
   map1: {
@@ -201,16 +207,16 @@ export const LIEUX_DES_CARTES: Readonly<Partial<Record<IdentifiantCarte, LieuxDu
     stations: [
       // Bornes d'arcade, table de jeu et lavabos de la salle d'arcade.
       { x: 990, y: 190 },
-      { x: 770, y: 150 },
-      { x: 700, y: 340 },
+      { x: 740, y: 155 },
+      { x: 700, y: 355 },
       // La pierre du jardin zen, et le distributeur a son entree.
       { x: 170, y: 180 },
-      { x: 415, y: 450 },
+      { x: 415, y: 490 },
       // La camionnette du parking.
-      { x: 1320, y: 110 },
+      { x: 1335, y: 80 },
       // L'ordinateur et la table de la maison.
       { x: 1690, y: 110 },
-      { x: 1840, y: 165 },
+      { x: 1800, y: 150 },
       // La cuisine du restaurant.
       { x: 630, y: 1295 },
       // Le comptoir et le tapis du salon.

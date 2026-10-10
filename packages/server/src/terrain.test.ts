@@ -18,8 +18,16 @@ import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import type { IdentifiantCarte } from '@neon-ninja/shared';
-import { CARTES, REGLAGES_PAR_DEFAUT, cheminCarte, creerAlea } from '@neon-ninja/shared';
+import type { IdentifiantCarte, Position } from '@neon-ninja/shared';
+import {
+  AMONG,
+  CARTES,
+  LIEUX_DES_CARTES,
+  REGLAGES_PAR_DEFAUT,
+  cheminCarte,
+  creerAlea,
+  lieuxDuMode,
+} from '@neon-ninja/shared';
 import {
   carteSansMur,
   dansLeMorceauPrincipal,
@@ -653,4 +661,56 @@ describe('le serveur demande le terrain de la carte jouee', () => {
     avertissement.mockRestore();
     await serveur.fermer();
   });
+});
+
+/**
+ * Les lieux d'Among Ninjas sur le vrai terrain (etape 7.20). Le commentaire des lieux annoncait
+ * ce test, qui n'avait pas ete ecrit: cinq stations sur treize avaient leur centre sur leur
+ * meuble, dans un mur, et le joueur devait se tenir au bord du disque.
+ */
+describe('les lieux d Among Ninjas', () => {
+  /** La part du disque de cette station ou un ninja tient, dans le morceau principal. */
+  function partPraticable(terrain: ReturnType<ChargeurDeTerrain['charger']>, centre: Position) {
+    let praticables = 0;
+    let points = 0;
+
+    for (let dy = -AMONG.RAYON_D_UNE_STATION_PX; dy <= AMONG.RAYON_D_UNE_STATION_PX; dy += 2) {
+      for (let dx = -AMONG.RAYON_D_UNE_STATION_PX; dx <= AMONG.RAYON_D_UNE_STATION_PX; dx += 2) {
+        if (Math.hypot(dx, dy) > AMONG.RAYON_D_UNE_STATION_PX) {
+          continue;
+        }
+
+        const point = { x: centre.x + dx, y: centre.y + dy };
+        points += 1;
+
+        if (positionTenable(terrain, point) && dansLeMorceauPrincipal(terrain, point)) {
+          praticables += 1;
+        }
+      }
+    }
+
+    return praticables / points;
+  }
+
+  const chargeur = new ChargeurDeTerrain(racineRessources());
+  const cartes = Object.keys(LIEUX_DES_CARTES) as IdentifiantCarte[];
+
+  for (const carte of cartes) {
+    for (const miroir of [false, true]) {
+      it(`ont sur ${carte}${miroir ? ' en miroir' : ''} un centre tenable et un disque praticable`, () => {
+        const terrain = chargeur.charger({ carte, modeMiroir: miroir });
+        const lieux = lieuxDuMode(carte, miroir);
+
+        expect(lieux).toBeDefined();
+
+        for (const lieu of [lieux?.gong, ...(lieux?.stations ?? [])]) {
+          const centre = lieu as Position;
+
+          expect(positionTenable(terrain, centre), JSON.stringify(centre)).toBe(true);
+          expect(dansLeMorceauPrincipal(terrain, centre), JSON.stringify(centre)).toBe(true);
+          expect(partPraticable(terrain, centre), JSON.stringify(centre)).toBeGreaterThan(0.5);
+        }
+      });
+    }
+  }
 });
