@@ -31,7 +31,7 @@
  * d'entrer, l'autre empeche de nuire si quelque chose entrait quand meme.
  */
 
-import { DUREES_DE_TOUR_S, PALIERS_DE_VISION } from './among.js';
+import { BARRES_DES_TACHES, DUREES_DE_TOUR_S, PALIERS_DE_VISION } from './among.js';
 import type { Intervalle } from './bornes.js';
 import {
   BORNES_CHAT,
@@ -388,6 +388,16 @@ export function validerDemandeCreation(brut: unknown): ResultatValidation<Demand
  */
 export function validerEquipe(brut: unknown): ResultatValidation<Equipe> {
   return estUnDe(EQUIPES, brut) ? accepte(brut) : refuse('equipe', "Cette équipe n'existe pas.");
+}
+
+/**
+ * Valide ce que la page dit de sa tache ouverte d'Among Ninjas (etape 7.21): finie, ou fermee.
+ * Que la tache soit ouverte, et sa duree minimale passee, le moteur en juge.
+ */
+export function validerDemandeTache(brut: unknown): ResultatValidation<'finie' | 'fermee'> {
+  return brut === 'finie' || brut === 'fermee'
+    ? accepte(brut)
+    : refuse('tache', 'Une tâche se dit finie, ou fermée.');
 }
 
 /** La longueur au plus d'un identifiant de joueur designe dans un vote: celui d'une connexion. */
@@ -1145,7 +1155,8 @@ function groupeObjetsTactiques(
 
 /**
  * Reglages du mode Among Ninjas (etape 7.20): des entiers bornes, la duree d'un tour prise
- * dans sa liste, deux paliers de vision et un interrupteur.
+ * dans sa liste, deux paliers de vision, deux interrupteurs, et la barre des taches prise dans
+ * sa liste (etape 7.21).
  */
 function groupeAmong(
   source: Enregistrement,
@@ -1199,6 +1210,19 @@ function groupeAmong(
   }
 
   poser(retenu, 'votesAnonymes', booleen(brut, 'votesAnonymes', erreurs, 'among'));
+  poser(retenu, 'tachesVisuelles', booleen(brut, 'tachesVisuelles', erreurs, 'among'));
+
+  const barre = champ(brut, 'barreDesTaches');
+  if (barre !== undefined) {
+    if (estUnDe(BARRES_DES_TACHES, barre)) {
+      poser(retenu, 'barreDesTaches', barre);
+    } else {
+      erreurs.push({
+        champ: 'among.barreDesTaches',
+        motif: `La barre des tâches doit valoir ${BARRES_DES_TACHES.join(', ')}.`,
+      });
+    }
+  }
 
   return siRempli(retenu);
 }

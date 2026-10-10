@@ -1,7 +1,8 @@
 /**
- * Tests du mode Among Ninjas cote serveur (etape 7.20), sans reseau: les vues de chacun, ce
- * que chacun sait de lui-meme, les notifications du meurtre et de la reunion, la fin, et ce
- * que la room fait du bouton d'action, des votes, du chat et du bilan.
+ * Tests du mode Among Ninjas cote serveur (etape 7.20), sans reseau: les vues de chacun, la
+ * barre des taches selon le reglage (etape 7.21), ce que chacun sait de lui-meme, les
+ * notifications du meurtre, des taches visuelles et de la reunion, la fin, et ce que la room
+ * fait du bouton d'action, des taches annoncees, des votes, du chat et du bilan.
  *
  * Le secret est la regle de ce fichier: un vivant ne recoit rien hors de son disque, aucun
  * fantome, aucun role.
@@ -232,6 +233,39 @@ describe('les vues', () => {
     });
     expect(instantaneDe(enJeu({ among: { dureeDuTourS: 0 } })).among?.restantMs).toBe(0);
   });
+
+  it('montrent la barre aux vivants selon le reglage, et a jour aux fantomes', () => {
+    /** Une partie ou j1 a fait une tache depuis la derniere reunion, et j2 est un fantome. */
+    const partie = (barreDesTaches: string): EtatPartie => {
+      let etat = enJeu({ among: { foule: 0, barreDesTaches } });
+      const { proies } = camps(etat);
+      const [faiseuse, morte] = proies as [string, string];
+      etat = avecRole(etat, faiseuse, {
+        taches: (amongDe(etat).joueurs[faiseuse] as JoueurAmong).taches.map((tache, rang) => ({
+          ...tache,
+          faite: rang === 0,
+        })),
+      });
+      return avecRole(etat, morte, { fantome: true });
+    };
+    const barre = (etat: EtatPartie, id: string): unknown => {
+      const among = vuePour(etat, id, SANS_ALIAS).among;
+      return [among?.tachesFaites, among?.tachesTotal];
+    };
+
+    const toujours = partie('toujours');
+    const [vivante, morte] = camps(toujours).proies as [string, string];
+    expect(barre(toujours, vivante)).toEqual([1, 20]);
+
+    const reunions = partie('reunions');
+    expect(barre(reunions, vivante)).toEqual([0, 20]);
+    expect(barre(reunions, camps(reunions).tueur)).toEqual([0, 20]);
+    expect(barre(reunions, morte)).toEqual([1, 20]);
+
+    const jamais = partie('jamais');
+    expect(barre(jamais, vivante)).toEqual([0, 0]);
+    expect(barre(jamais, morte)).toEqual([1, 20]);
+  });
 });
 
 describe('ce que chacun sait de lui-meme', () => {
@@ -248,6 +282,11 @@ describe('ce que chacun sait de lui-meme', () => {
     expect(prive).toMatchObject({ role: 'proie', complices: [], fantome: false, tacheEnCours: 2 });
     expect(prive?.stations).toEqual(liste.map((tache) => among.stations[tache.station]));
     expect(prive?.taches.map((tache) => tache.station)).toEqual([0, 1, 2, 3, 4]);
+    expect(prive?.taches.map((tache) => tache.nature)).toEqual(liste.map((tache) => tache.nature));
+    for (const [rang, station] of (prive?.stations ?? []).entries()) {
+      expect(station.nom.length).toBeGreaterThan(0);
+      expect(station.natures).toContain(prive?.taches[rang]?.nature);
+    }
   });
 
   it('dit a un tueur ses complices et toutes les stations', () => {
@@ -288,6 +327,31 @@ describe('les notifications', () => {
     expect(destinataires).not.toContain(morte);
   });
 
+  it('montrent une tache visuelle aux seuls vivants qui voient la station, et aux fantomes', () => {
+    const { etat, tueur, proies } = scene();
+    const [proche, moyenne, lointaine, morte] = proies as [string, string, string, string];
+    const avecEtincelles: EtatPartie = {
+      ...etat,
+      evenements: [{ type: 'tacheVisuelle', nature: 'katana', position: { x: 1300, y: 700 } }],
+    };
+    const notifications = notificationsDe(avecEtincelles);
+
+    // Proie a 260 px, tueur a 320: la lointaine, a 300, ne voit pas la station.
+    expect(notifications.map((notification) => notification.pour).sort()).toEqual(
+      [moyenne, proche, tueur, morte].sort(),
+    );
+    expect(notifications.map((notification) => notification.pour)).not.toContain(lointaine);
+    for (const notification of notifications) {
+      expect(notification).toMatchObject({
+        nom: 'tacheVisuelle',
+        charge: { nature: 'katana', x: 1300, y: 700 },
+      });
+      expect(
+        notificationDansLaVue(notification, etat, cleDeVue(etat, notification.pour), SANS_ALIAS),
+      ).toBe(notification);
+    }
+  });
+
   it('disent a tous l ouverture de la reunion, les votes et le resultat', () => {
     const etat: EtatPartie = {
       ...enJeu(),
@@ -302,7 +366,7 @@ describe('les notifications', () => {
           decompte: [{ cible: 'j3', voix: 1 }],
         },
         { type: 'tourCommence', tour: 2 },
-        { type: 'tacheFaite', joueur: 'j1', station: 0 },
+        { type: 'tacheFaite', joueur: 'j1', station: 0, nature: 'katana' },
       ],
     };
     const notifications = notificationsDe(etat);
@@ -462,6 +526,27 @@ describe('la room d une partie Among Ninjas', () => {
     room.accueillir(invite('A'));
 
     expect(room.canalDuChat('s-A')).toBeUndefined();
+  });
+
+  it('ignore une tache annoncee par un inconnu, ou hors d une partie en cours', () => {
+    const room = roomLancee();
+    const avant = room.etat;
+
+    room.annoncerLaTache('inconnu', 'finie');
+    room.annoncerLaTache('s-A', 'fermee');
+    room.avancer(50);
+    expect(room.etat.among?.joueurs['s-A']).toEqual(avant.among?.joueurs['s-A']);
+
+    const salon = new GameRoom({
+      id: 'r',
+      graine: 5,
+      mode: 'among',
+      horloge: creerHorlogeManuelle(),
+    });
+    salon.accueillir(invite('A'));
+    expect(() => {
+      salon.annoncerLaTache('s-A', 'finie');
+    }).not.toThrow();
   });
 
   it('retient un vote pour un seul battement, et paye le temps de jeu ecoule au bilan', () => {

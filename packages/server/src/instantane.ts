@@ -48,6 +48,8 @@ import type {
   MalusRamasseParMoi,
   MalusSubi,
   MeurtreVu,
+  StationDuMode,
+  TacheVisuelleVue,
   MineArmeeVue,
   MineDeZoneFaitVue,
   MineExploseeVue,
@@ -228,7 +230,7 @@ export function etatPriveDe(etat: EtatPartie, id: IdentifiantEntite): EtatPriveA
   const stations =
     joueur.role === 'tueur'
       ? among.stations
-      : joueur.taches.map((tache) => among.stations[tache.station] ?? among.gong);
+      : joueur.taches.map((tache) => among.stations[tache.station] as StationDuMode);
 
   return {
     role: joueur.role,
@@ -238,7 +240,7 @@ export function etatPriveDe(etat: EtatPartie, id: IdentifiantEntite): EtatPriveA
     stations,
     taches: joueur.taches.map((tache, rang) => ({
       station: rang,
-      dureeMs: tache.dureeMs,
+      nature: tache.nature,
       faite: tache.faite,
     })),
     ...(joueur.tacheEnCours === undefined ? {} : { tacheEnCours: joueur.tacheEnCours.indice }),
@@ -674,6 +676,11 @@ export type Notification =
       readonly charge: MineDeZoneFaitVue;
     }
   | { readonly nom: 'meurtre'; readonly pour: IdentifiantEntite; readonly charge: MeurtreVu }
+  | {
+      readonly nom: 'tacheVisuelle';
+      readonly pour: IdentifiantEntite;
+      readonly charge: TacheVisuelleVue;
+    }
   | { readonly nom: 'reunion'; readonly pour: IdentifiantEntite; readonly charge: ReunionVue };
 
 /**
@@ -936,6 +943,9 @@ function notificationsDUnFait(
     case 'meurtre':
       return meurtreVu(etat, evenement);
 
+    case 'tacheVisuelle':
+      return tacheVisuelleVue(etat, evenement);
+
     case 'reunionOuverte':
       return aTous(etat, 'reunion', {
         quoi: 'ouverte',
@@ -996,6 +1006,27 @@ function meurtreVu(
             rayonDeVision(etat, joueur.id)),
     )
     .map((joueur): Notification => ({ nom: 'meurtre', pour: joueur.id, charge }));
+}
+
+/**
+ * La fin d'une tache visuelle (etape 7.21), adressee a ceux qui voient la station: les vivants
+ * dont elle est dans le disque, et les fantomes, qui voient tout. Les autres n'en savent rien:
+ * un vivant loin de la station ne doit pas apprendre qu'une vraie proie y etait.
+ */
+function tacheVisuelleVue(
+  etat: EtatPartie,
+  evenement: Extract<EvenementPartie, { type: 'tacheVisuelle' }>,
+): readonly Notification[] {
+  const { position } = evenement;
+  const charge: TacheVisuelleVue = { nature: evenement.nature, x: position.x, y: position.y };
+
+  return Object.values(etat.joueurs)
+    .filter(
+      (joueur) =>
+        Math.hypot(joueur.position.x - position.x, joueur.position.y - position.y) <=
+        rayonDeVision(etat, joueur.id),
+    )
+    .map((joueur): Notification => ({ nom: 'tacheVisuelle', pour: joueur.id, charge }));
 }
 
 /**

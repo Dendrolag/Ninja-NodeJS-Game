@@ -44,7 +44,14 @@
  * par une notification qui lui est adressee, exactement comme dans le legacy.
  */
 
-import type { CampAmong, MotifDeReunion, PhaseAmong, RoleAmong } from './among.js';
+import type {
+  CampAmong,
+  MotifDeReunion,
+  NatureDeTache,
+  PhaseAmong,
+  RoleAmong,
+  StationDuMode,
+} from './among.js';
 import type {
   Couleur,
   Direction,
@@ -871,9 +878,10 @@ export interface EtatPriveAmong {
   readonly gong: Position;
   /**
    * Les stations qui le regardent: celles de sa liste pour une proie, toutes les stations
-   * actives pour un tueur, qui les voit sans pouvoir y faire de tache.
+   * actives pour un tueur, qui les voit sans pouvoir y faire de tache. Chacune avec son nom et
+   * ses taches possibles (etape 7.21): un tueur fait semblant d'y faire l'une d'elles.
    */
-  readonly stations: readonly Position[];
+  readonly stations: readonly StationDuMode[];
   /** Sa liste, pour une proie: une station de la liste ci-dessus, sa duree, faite ou non. */
   readonly taches: readonly TacheVue[];
   /** Le rang dans sa liste de la tache qu'il fait en ce moment. */
@@ -885,7 +893,8 @@ export interface EtatPriveAmong {
 export interface TacheVue {
   /** Le rang de sa station dans EtatPriveAmong.stations. */
   readonly station: number;
-  readonly dureeMs: number;
+  /** Le geste qu'elle demande (etape 7.21). */
+  readonly nature: NatureDeTache;
   readonly faite: boolean;
 }
 
@@ -896,6 +905,17 @@ export interface TacheVue {
 export interface MeurtreVu {
   readonly tueur: string;
   readonly victime: string;
+  readonly x: number;
+  readonly y: number;
+}
+
+/**
+ * La fin d'une tache visuelle d'Among Ninjas (etape 7.21): des etincelles ou une bouffee de
+ * fumee, a la station, adressee aux vivants qui voient l'endroit et aux fantomes. Elle ne nomme
+ * personne: les temoins voient qui se tient a la station.
+ */
+export interface TacheVisuelleVue {
+  readonly nature: NatureDeTache;
   readonly x: number;
   readonly y: number;
 }
@@ -1122,6 +1142,11 @@ export interface EvenementsClientVersServeur {
    * de ce moment et dans les autres modes.
    */
   carteChargee: () => void;
+  /**
+   * La tache ouverte d'Among Ninjas (etape 7.21): son geste fini dans la page, ou la tache
+   * fermee. Le moteur juge une fin trop tot et l'ignore.
+   */
+  tache: (quoi: 'finie' | 'fermee') => void;
 
   /** Un vote, pendant une reunion d'Among Ninjas (etape 7.20). */
   voter: (demande: DemandeVote) => void;
@@ -1340,6 +1365,9 @@ export interface EvenementsServeurVersClient {
 
   /** Un meurtre, au tueur, a la victime et aux temoins (etape 7.20). */
   meurtre: (meurtre: MeurtreVu) => void;
+
+  /** La fin d'une tache visuelle, aux temoins et aux fantomes (etape 7.21). */
+  tacheVisuelle: (tache: TacheVisuelleVue) => void;
 
   /** Ce qui se passe en reunion, a tous (etape 7.20). */
   reunion: (reunion: ReunionVue) => void;

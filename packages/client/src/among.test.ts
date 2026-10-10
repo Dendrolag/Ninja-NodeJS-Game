@@ -25,8 +25,8 @@ const PROIE: EtatPriveAmong = {
   complices: [],
   fantome: false,
   gong: { x: 1145, y: 630 },
-  stations: [{ x: 990, y: 190 }],
-  taches: [{ station: 0, dureeMs: 6000, faite: false }],
+  stations: [{ x: 990, y: 190, nom: "Bornes d'arcade", natures: ['couleurs'] }],
+  taches: [{ station: 0, nature: 'couleurs', faite: false }],
   gongUtilise: false,
 };
 

@@ -210,6 +210,13 @@ const PALIERS = [
   { valeur: 'large', libelle: 'Large' },
 ] as const;
 
+/** Quand les vivants voient la barre commune des taches d'Among Ninjas (etape 7.21). */
+const BARRES = [
+  { valeur: 'toujours', libelle: 'Toujours' },
+  { valeur: 'reunions', libelle: 'En réunion' },
+  { valeur: 'jamais', libelle: 'Jamais' },
+] as const;
+
 /**
  * Tous les reglages de la partie, dans l'ordre ou l'hote les lit.
  *
@@ -291,6 +298,14 @@ export const GROUPES_REGLAGES: readonly GroupeReglages[] = [
           secondes('among.discussionS', 'Discussion', BORNES_REGLAGES.among.discussionS),
           secondes('among.voteS', 'Vote', BORNES_REGLAGES.among.voteS),
           interrupteur('among.votesAnonymes', 'Votes anonymes'),
+          interrupteur('among.tachesVisuelles', 'Tâches visuelles'),
+          {
+            nature: 'choix',
+            chemin: 'among.barreDesTaches',
+            libelle: 'Barre des tâches',
+            options: BARRES,
+            numerique: false,
+          },
           {
             nature: 'choix',
             chemin: 'among.visionProie',

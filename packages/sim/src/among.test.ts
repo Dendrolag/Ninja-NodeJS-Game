@@ -1,19 +1,22 @@
 /**
  * Tests du mode Among Ninjas (etape 7.20): le lancement et ses tirages, les phases et le
  * monde fige, le meurtre et le cadavre, les fantomes, le bouton d'action (signaler, sonner,
- * faire sa tache), la reunion et le vote, la victoire, les departs et les points.
+ * ouvrir sa tache), les taches courtes (etape 7.21), la reunion et le vote, la victoire, les
+ * departs et les points.
  *
  * Aucune version du jeu d'origine n'a ce mode, donc aucune caracterisation: les attentes sont
  * la fiche docs/plan/etape-7-20.md et les valeurs confirmees par le porteur du projet le 6
  * octobre 2026.
  */
 
-import type { Position, ReglagesPartiels } from '@neon-ninja/shared';
+import type { NatureDeTache, Position, ReglagesPartiels } from '@neon-ninja/shared';
 import {
   AMONG,
+  AMONG_PAR_DEFAUT,
   CARTES,
   COULEURS_DES_JOUEURS_AMONG,
   COULEUR_DE_LA_FOULE,
+  DUREES_MINIMALES_DES_TACHES_MS,
   LIEUX_DES_CARTES,
   POINTS_AMONG,
 } from '@neon-ninja/shared';
@@ -206,9 +209,10 @@ describe('le lancement', () => {
     }
   });
 
-  it('donne a chaque proie sa liste, de stations distinctes, de cinq a dix secondes', () => {
+  it('donne a chaque proie sa liste, de stations distinctes, chaque tache prise a sa station', () => {
     const etat = lancee(7, { among: { tachesParProie: 5 } });
     const { tueurs, proies } = camps(etat);
+    const stations = amongDe(etat).stations;
 
     for (const id of tueurs) {
       expect(role(etat, id).taches).toEqual([]);
@@ -221,14 +225,44 @@ describe('le lancement', () => {
 
       for (const tache of taches) {
         expect(tache.faite).toBe(false);
-        expect(tache.dureeMs % 1000).toBe(0);
-        expect(tache.dureeMs).toBeGreaterThanOrEqual(AMONG.DUREE_D_UNE_TACHE_MINIMUM_MS);
-        expect(tache.dureeMs).toBeLessThanOrEqual(AMONG.DUREE_D_UNE_TACHE_MAXIMUM_MS);
-        expect(tache.station).toBeLessThan(amongDe(etat).stations.length);
+        expect(stations[tache.station]?.natures).toContain(tache.nature);
       }
     }
 
     expect(avancementDesTaches(amongDe(etat))).toEqual({ faites: 0, total: 25 });
+  });
+
+  it('repartit les listes sur toutes les stations actives', () => {
+    for (const graine of [1, 2, 3, 4, 5]) {
+      const etat = lancee(12, { among: { tueurs: 2, tachesParProie: 5 } }, graine);
+      const prises = amongDe(etat).stations.map(() => 0);
+
+      for (const id of camps(etat).proies) {
+        for (const tache of role(etat, id).taches) {
+          prises[tache.station] = (prises[tache.station] ?? 0) + 1;
+        }
+      }
+
+      // Dix proies, cinq taches chacune, neuf stations: cinq ou six prises par station.
+      expect(Math.max(...prises) - Math.min(...prises)).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('tire la tache de chaque proie a une station: deux proies peuvent y faire autre chose', () => {
+    const differentes = [1, 2, 3, 4, 5, 6, 7, 8].some((graine) => {
+      const etat = lancee(12, { among: { tueurs: 1, tachesParProie: 8 } }, graine);
+      const natures = new Map<number, Set<string>>();
+
+      for (const id of camps(etat).proies) {
+        for (const tache of role(etat, id).taches) {
+          natures.set(tache.station, (natures.get(tache.station) ?? new Set()).add(tache.nature));
+        }
+      }
+
+      return [...natures.values()].some((vues) => vues.size > 1);
+    });
+
+    expect(differentes).toBe(true);
   });
 
   it('place tout le monde en cercle autour du point de reunion, et attend le chargement', () => {
@@ -547,65 +581,172 @@ describe('le bouton d action', () => {
 });
 
 describe('les taches', () => {
-  /** Une proie posee sur la station de sa premiere tache. */
-  function aSaStation(): { etat: EtatPartie; proie: string; dureeMs: number } {
+  /** Une proie posee sur la station de sa premiere tache, de cette nature si on la donne. */
+  function aSaStation(nature?: NatureDeTache): {
+    etat: EtatPartie;
+    proie: string;
+    station: Position;
+    minimum: number;
+  } {
     const etat = disperser(enJeu());
     const proie = camps(etat).proies[0] as string;
-    const tache = role(etat, proie).taches[0];
-    if (tache === undefined) {
+    const [premiere, ...autres] = role(etat, proie).taches;
+    if (premiere === undefined) {
       throw new Error('La proie devrait avoir une tache.');
     }
+    const tache = { ...premiere, nature: nature ?? premiere.nature };
     const station = amongDe(etat).stations[tache.station] as Position;
-    return { etat: placer(etat, proie, station), proie, dureeMs: tache.dureeMs };
+    return {
+      etat: placer(avecRole(etat, proie, { taches: [tache, ...autres] }), proie, station),
+      proie,
+      station: { x: station.x, y: station.y },
+      minimum: DUREES_MINIMALES_DES_TACHES_MS[tache.nature],
+    };
   }
 
-  it('se fait en tenant le bouton dans le disque de la station, le temps de la tache', () => {
-    const { etat, proie, dureeMs } = aSaStation();
-    const tenir = { [proie]: geste({ agir: true }) };
+  /** La proie appuie sur l'action: sa tache s'ouvre. */
+  function ouvrir(etat: EtatPartie, proie: string): EtatPartie {
+    return tick(etat, { [proie]: geste({ agir: true }) }, 50);
+  }
 
-    const enCours = tick(etat, tenir, dureeMs - 50);
-    expect(role(enCours, proie).tacheEnCours).toEqual({ indice: 0, ecouleMs: dureeMs - 50 });
-    expect(role(enCours, proie).taches[0]?.faite).toBe(false);
+  /** La page dit la tache finie, une fois sa duree minimale passee. */
+  function finir(etat: EtatPartie, proie: string, minimum: number): EtatPartie {
+    return tick(tick(etat, {}, minimum - 50), { [proie]: geste({ tache: 'finie' }) }, 50);
+  }
 
-    const faite = tick(enCours, tenir, 50);
+  it('s ouvre a l appui dans le disque de sa station, et se fait a la fin annoncee', () => {
+    const { etat, proie, minimum } = aSaStation();
+    const ouverte = ouvrir(etat, proie);
+
+    expect(role(ouverte, proie).tacheEnCours).toEqual({ indice: 0, ecouleMs: 0 });
+
+    const faite = finir(ouverte, proie, minimum);
     expect(role(faite, proie).taches[0]?.faite).toBe(true);
     expect(role(faite, proie).tacheEnCours).toBeUndefined();
     expect(role(faite, proie).faits.taches).toBe(1);
-    expect(evenements(faite, 'tacheFaite')).toHaveLength(1);
+    expect(evenements(faite, 'tacheFaite')).toEqual([
+      {
+        type: 'tacheFaite',
+        joueur: proie,
+        station: role(etat, proie).taches[0]?.station,
+        nature: role(etat, proie).taches[0]?.nature,
+      },
+    ]);
     expect(avancementDesTaches(amongDe(faite)).faites).toBe(1);
   });
 
-  it('repart de zero en lachant le bouton ou en quittant le disque', () => {
-    const { etat, proie, dureeMs } = aSaStation();
-    const tenir = { [proie]: geste({ agir: true }) };
-    const enCours = tick(etat, tenir, dureeMs - 50);
+  it('ignore une fin annoncee avant la duree minimale, sans fermer la tache', () => {
+    const { etat, proie, minimum } = aSaStation('sang');
+    const ouverte = tick(ouvrir(etat, proie), {}, minimum - 100);
+    const tot = tick(ouverte, { [proie]: geste({ tache: 'finie' }) }, 50);
 
-    expect(role(tick(enCours, {}, 50), proie).tacheEnCours).toBeUndefined();
+    expect(role(tot, proie).taches[0]?.faite).toBe(false);
+    expect(role(tot, proie).tacheEnCours).toEqual({ indice: 0, ecouleMs: minimum - 50 });
 
-    const station = joueurDe(enCours, proie).position;
-    const dehors = placer(enCours, proie, {
+    const ensuite = tick(tot, { [proie]: geste({ tache: 'finie' }) }, 50);
+    expect(role(ensuite, proie).taches[0]?.faite).toBe(true);
+  });
+
+  it('compte le temps a partir du battement qui suit l ouverture', () => {
+    const { etat, proie, minimum } = aSaStation('katana');
+    const ouverte = ouvrir(etat, proie);
+    const presque = tick(ouverte, { [proie]: geste({ tache: 'finie' }) }, minimum - 1);
+
+    expect(role(presque, proie).taches[0]?.faite).toBe(false);
+  });
+
+  it('s annule hors du disque, ou fermee par la page, et se refait en entier', () => {
+    const { etat, proie, station, minimum } = aSaStation();
+    const ouverte = tick(ouvrir(etat, proie), {}, minimum);
+
+    const fermee = tick(ouverte, { [proie]: geste({ tache: 'fermee' }) }, 50);
+    expect(role(fermee, proie).tacheEnCours).toBeUndefined();
+    expect(role(fermee, proie).taches[0]?.faite).toBe(false);
+
+    const dehors = placer(ouverte, proie, {
       x: station.x + AMONG.RAYON_D_UNE_STATION_PX + 1,
       y: station.y,
     });
-    expect(role(tick(dehors, tenir, 50), proie).tacheEnCours).toBeUndefined();
+    expect(role(tick(dehors, {}, 50), proie).tacheEnCours).toBeUndefined();
+
+    const rouverte = ouvrir(fermee, proie);
+    expect(role(rouverte, proie).tacheEnCours).toEqual({ indice: 0, ecouleMs: 0 });
   });
 
-  it('ne compte rien pour un tueur, qui fait semblant', () => {
+  it('ne s ouvre ni loin d une station, ni en gardant le bouton enfonce', () => {
+    const { etat, proie, station } = aSaStation();
+    const loin = placer(etat, proie, { x: station.x + 200, y: station.y });
+    expect(role(ouvrir(loin, proie), proie).tacheEnCours).toBeUndefined();
+
+    // Le bouton tenu en arrivant a la station n'ouvre rien: seul l'appui compte.
+    const tenu = tick(loin, { [proie]: geste({ agir: true }) }, 50);
+    const arrive = tick(placer(tenu, proie, station), { [proie]: geste({ agir: true }) }, 50);
+    expect(role(arrive, proie).tacheEnCours).toBeUndefined();
+  });
+
+  it('n ouvre rien pour un tueur, qui fait semblant, et ne compte jamais sa fin', () => {
     const etat = disperser(enJeu());
     const tueur = camps(etat).tueurs[0] as string;
     const station = amongDe(etat).stations[0] as Position;
-    const apres = tick(placer(etat, tueur, station), { [tueur]: geste({ agir: true }) }, 10_000);
+    const ouverte = ouvrir(placer(etat, tueur, station), tueur);
+    const apres = tick(ouverte, { [tueur]: geste({ tache: 'finie' }) }, 10_000);
 
     expect(role(apres, tueur).tacheEnCours).toBeUndefined();
     expect(avancementDesTaches(amongDe(apres)).faites).toBe(0);
   });
 
-  it('se finit aussi en fantome', () => {
-    const { etat, proie, dureeMs } = aSaStation();
+  it('se fait aussi en fantome', () => {
+    const { etat, proie, minimum } = aSaStation();
     const fantome = avecRole(etat, proie, { fantome: true });
 
-    const apres = tick(fantome, { [proie]: geste({ agir: true }) }, dureeMs);
-    expect(role(apres, proie).taches[0]?.faite).toBe(true);
+    expect(role(finir(ouvrir(fantome, proie), proie, minimum), proie).taches[0]?.faite).toBe(true);
+  });
+
+  it('montre la fin d un katana ou d une fumee a sa station, pour une proie vivante seulement', () => {
+    for (const nature of ['katana', 'fumee'] as const) {
+      const { etat, proie, station, minimum } = aSaStation(nature);
+      expect(evenements(finir(ouvrir(etat, proie), proie, minimum), 'tacheVisuelle')).toEqual([
+        { type: 'tacheVisuelle', nature, position: station },
+      ]);
+
+      const fantome = avecRole(etat, proie, { fantome: true });
+      expect(evenements(finir(ouvrir(fantome, proie), proie, minimum), 'tacheVisuelle')).toEqual(
+        [],
+      );
+    }
+
+    const lunettes = aSaStation('lunettes');
+    const faite = finir(ouvrir(lunettes.etat, lunettes.proie), lunettes.proie, lunettes.minimum);
+    expect(evenements(faite, 'tacheFaite')).toHaveLength(1);
+    expect(evenements(faite, 'tacheVisuelle')).toEqual([]);
+  });
+
+  it('ne montre aucune tache visuelle si l hote les a coupees', () => {
+    const { etat, proie, minimum } = aSaStation('katana');
+    const sans: EtatPartie = {
+      ...etat,
+      reglages: {
+        ...etat.reglages,
+        among: { ...AMONG_PAR_DEFAUT, ...etat.reglages.among, tachesVisuelles: false },
+      },
+    };
+
+    const faite = finir(ouvrir(sans, proie), proie, minimum);
+    expect(role(faite, proie).taches[0]?.faite).toBe(true);
+    expect(evenements(faite, 'tacheVisuelle')).toEqual([]);
+  });
+
+  it('retient le compte des taches faites a l ouverture de chaque reunion', () => {
+    const { etat, proie, minimum } = aSaStation();
+    expect(amongDe(etat).tachesALaDerniereReunion).toBe(0);
+
+    const faite = tick(finir(ouvrir(etat, proie), proie, minimum), {}, AMONG.DELAI_DU_GONG_MS);
+    expect(amongDe(faite).tachesALaDerniereReunion).toBe(0);
+
+    const sonneur = camps(faite).proies[1] as string;
+    const sonne = tick(placer(faite, sonneur, GONG), { [sonneur]: geste({ agir: true }) }, 50);
+    expect(amongDe(sonne).phase).toBe('discussion');
+    expect(amongDe(sonne).tachesALaDerniereReunion).toBe(1);
   });
 
   it('donne la victoire aux proies quand toutes sont faites', () => {

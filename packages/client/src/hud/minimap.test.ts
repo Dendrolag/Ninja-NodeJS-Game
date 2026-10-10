@@ -36,13 +36,13 @@ const PROIE: EtatPriveAmong = {
   fantome: false,
   gong: { x: 1000, y: 750 },
   stations: [
-    { x: 200, y: 150 },
-    { x: 1000, y: 300 },
-    { x: 1800, y: 1350 },
+    { x: 200, y: 150, nom: 'Pierre du jardin zen', natures: ['katana'] },
+    { x: 1000, y: 300, nom: "Bornes d'arcade", natures: ['couleurs'] },
+    { x: 1800, y: 1350, nom: 'Comptoir du salon', natures: ['mines'] },
   ],
   taches: [
-    { station: 0, dureeMs: 5000, faite: true },
-    { station: 2, dureeMs: 6000, faite: false },
+    { station: 0, nature: 'katana', faite: true },
+    { station: 2, nature: 'mines', faite: false },
   ],
   gongUtilise: false,
 };

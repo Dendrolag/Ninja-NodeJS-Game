@@ -30,7 +30,7 @@
  * le groupe: c'est le role de completerReglages.
  */
 
-import type { PalierDeVision } from './among.js';
+import type { BarreDesTaches, PalierDeVision } from './among.js';
 import { AMONG, CARTE_DU_MODE_AMONG } from './among.js';
 import type {
   IdentifiantCarte,
@@ -184,6 +184,14 @@ export interface ReglagesAmong {
   readonly visionTueur: PalierDeVision;
   /** Les PNJ de la foule neutre, de 0 a 80: ils remplacent le nombre de PNJ des autres modes. */
   readonly foule: number;
+  /**
+   * Les taches visuelles (etape 7.21): la fin d'une tache de katana ou de fumee se voit de pres,
+   * preuve qu'une vraie proie l'a faite. Activees par defaut (decision du porteur du projet du
+   * 10 octobre 2026).
+   */
+  readonly tachesVisuelles: boolean;
+  /** Quand les vivants voient la barre commune des taches (etape 7.21). */
+  readonly barreDesTaches: BarreDesTaches;
 }
 
 /** Les reglages du mode Among Ninjas quand l'hote ne change rien. */
@@ -198,6 +206,8 @@ export const AMONG_PAR_DEFAUT: ReglagesAmong = {
   visionProie: 'normale',
   visionTueur: 'normale',
   foule: AMONG.FOULE_PAR_DEFAUT,
+  tachesVisuelles: true,
+  barreDesTaches: 'toujours',
 };
 
 /** Reglages d'une partie, figes au lancement. */

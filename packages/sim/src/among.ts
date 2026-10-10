@@ -16,20 +16,27 @@
  * fantome sur place, et laisse un cadavre. Un fantome traverse les murs, n'est vu que des
  * fantomes, et une proie fantome finit ses taches.
  *
- * LE BOUTON D'ACTION est tenu ou non (EntreeJoueur.agir). A l'appui, un vivant signale un
- * cadavre proche, ou, a defaut, sonne le gong au point de reunion. Tenu, il fait la tache de
- * la station ou se tient une proie.
+ * LE BOUTON D'ACTION est tenu ou non (EntreeJoueur.agir), et seul l'appui compte. Un vivant
+ * signale un cadavre proche, ou, a defaut, sonne le gong au point de reunion; a defaut encore,
+ * une proie, vivante ou fantome, ouvre la tache de la station ou elle se tient.
+ *
+ * LES TACHES (etape 7.21) se jouent dans la page, que le moteur ne voit pas. Il garde la
+ * presence (sortir du disque annule la tache), une duree minimale par nature (une fin
+ * annoncee plus tot est ignoree), et le role (un tueur qui fait semblant n'ouvre rien: sa page
+ * seule joue le geste).
  *
  * LE SECRET n'est pas l'affaire du moteur: il sait tout, et le serveur decide ce que chacun
  * en voit (packages/server/src/vues.ts).
  */
 
-import type { Alea, Position, ReglagesAmong } from '@neon-ninja/shared';
+import type { Alea, Position, ReglagesAmong, StationDuMode } from '@neon-ninja/shared';
 import {
   AMONG,
   AMONG_PAR_DEFAUT,
+  DUREES_MINIMALES_DES_TACHES_MS,
   POINTS_AMONG,
   RAYONS_DE_VISION,
+  TACHES_VISUELLES,
   entier,
   lieuxDuMode,
   tueursMaximum,
@@ -156,7 +163,9 @@ export function amongDecide(etat: EtatPartie): boolean {
  *   2. Les stations actives sont tirees parmi celles de la carte: le nombre de taches par
  *      proie, plus quatre.
  *   3. Chaque proie recoit sa liste: autant de stations actives distinctes que de taches,
- *      chacune avec sa duree, de cinq a dix secondes.
+ *      prises d'abord parmi celles que les listes deja tirees ont le moins prises, puis, pour
+ *      chacune, une tache tiree parmi celles de sa station (etape 7.21): deux proies se
+ *      ressemblent le moins possible.
  *   4. Tout le monde est place autour du point de reunion, et la partie attend que chacun ait
  *      charge la carte avant la revelation.
  *
@@ -192,9 +201,10 @@ export function lancerAmong(etat: EtatPartie): EtatPartie {
   const actives = tirageDesStations.liste
     .slice(0, nombreDeStations)
     .sort((un, autre) => un - autre);
-  const stations = actives.map((rang) => lieux.stations[rang] as Position);
+  const stations = actives.map((rang) => lieux.stations[rang] as StationDuMode);
 
   const joueurs: Record<IdentifiantEntite, JoueurAmong> = {};
+  const prises = stations.map(() => 0);
 
   for (const id of ids) {
     if (tueurs.has(id)) {
@@ -202,8 +212,11 @@ export function lancerAmong(etat: EtatPartie): EtatPartie {
       continue;
     }
 
-    const liste = listeDeTaches(alea, stations.length, reglages.tachesParProie);
+    const liste = listeDeTaches(alea, stations, prises, reglages.tachesParProie);
     alea = liste.alea;
+    for (const tache of liste.taches) {
+      prises[tache.station] = (prises[tache.station] ?? 0) + 1;
+    }
     joueurs[id] = joueurNeuf('proie', liste.taches);
   }
 
@@ -219,6 +232,7 @@ export function lancerAmong(etat: EtatPartie): EtatPartie {
     stations,
     gong: lieux.gong,
     tachesDesPartis: 0,
+    tachesALaDerniereReunion: 0,
   };
 
   return replacerLesVivants({ ...etat, alea, among });
@@ -238,31 +252,33 @@ function joueurNeuf(role: JoueurAmong['role'], taches: readonly TacheAmong[]): J
 }
 
 /**
- * La liste de taches d'une proie: autant de stations distinctes que de taches, prises parmi
- * les actives, chacune avec sa duree en secondes entieres, de cinq a dix.
+ * La liste de taches d'une proie (etape 7.21): autant de stations actives distinctes que de
+ * taches. Les stations sont melangees, puis rangees de la moins prise par les listes deja
+ * tirees a la plus prise, le melange departageant les egales: les listes se repartissent sur
+ * toutes les stations. Chaque tache tire ensuite son geste parmi ceux de sa station.
  */
 function listeDeTaches(
   alea: Alea,
-  stations: number,
+  stations: readonly StationDuMode[],
+  prises: readonly number[],
   nombre: number,
 ): { readonly taches: readonly TacheAmong[]; readonly alea: Alea } {
   const melange = melanger(
     alea,
-    Array.from({ length: stations }, (_vide, rang) => rang),
+    stations.map((_station, rang) => rang),
   );
   let courant = melange.alea;
+  // Le tri est stable: a prises egales, l'ordre du melange reste.
+  const rangees = [...melange.liste].sort(
+    (une, autre) => (prises[une] ?? 0) - (prises[autre] ?? 0),
+  );
   const taches: TacheAmong[] = [];
-  const secondesPossibles =
-    (AMONG.DUREE_D_UNE_TACHE_MAXIMUM_MS - AMONG.DUREE_D_UNE_TACHE_MINIMUM_MS) / 1000 + 1;
 
-  for (const station of melange.liste.slice(0, nombre)) {
-    const tirage = entier(courant, secondesPossibles);
+  for (const station of rangees.slice(0, nombre)) {
+    const natures = (stations[station] as StationDuMode).natures;
+    const tirage = entier(courant, natures.length);
     courant = tirage.alea;
-    taches.push({
-      station,
-      dureeMs: AMONG.DUREE_D_UNE_TACHE_MINIMUM_MS + tirage.valeur * 1000,
-      faite: false,
-    });
+    taches.push({ station, nature: natures[tirage.valeur] as TacheAmong['nature'], faite: false });
   }
 
   return { taches, alea: courant };
@@ -473,9 +489,11 @@ function commencerUnTour(etat: EtatPartie): EtatPartie {
  * Un battement de jeu.
  *
  *   1. Le tour avance, et la recharge des tueurs.
- *   2. Les gestes du battement, dans un ordre tire au sort: un meurtre, un signalement, un
- *      gong. Une reunion ouverte arrete les gestes qui suivent.
- *   3. Les taches de ceux qui tiennent le bouton a une station.
+ *   2. Les taches deja ouvertes: le temps passe, la presence, la fin ou la fermeture
+ *      annoncees. Avant les gestes: une tache ouverte a ce battement ne compte son temps
+ *      qu'a partir du suivant.
+ *   3. Les gestes du battement, dans un ordre tire au sort: un meurtre, un signalement, un
+ *      gong, l'ouverture d'une tache. Une reunion ouverte arrete les gestes qui suivent.
  *   4. Le terme du tour, s'il est regle, ouvre une reunion.
  */
 function jouer(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPartie {
@@ -488,11 +506,11 @@ function jouer(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPartie {
         : joueur,
     ]),
   );
-  let courant = avecAmong(etat, {
-    ...among,
-    tourEcouleMs: among.tourEcouleMs + dtMs,
-    joueurs,
-  });
+  let courant = faireLesTaches(
+    avecAmong(etat, { ...among, tourEcouleMs: among.tourEcouleMs + dtMs, joueurs }),
+    entrees,
+    dtMs,
+  );
 
   const acteurs = Object.keys(etat.joueurs).filter(
     (id) => entrees[id]?.capturer === true || entrees[id]?.agir === true,
@@ -517,8 +535,6 @@ function jouer(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPartie {
   if (courant.among?.phase !== 'jeu') {
     return courant;
   }
-
-  courant = faireLesTaches(courant, entrees, dtMs);
 
   const dureeDuTourMs = reglagesDe(courant).dureeDuTourS * 1000;
   const apres = courant.among as EtatAmong;
@@ -609,20 +625,34 @@ export function tuer(etat: EtatPartie, tueurId: IdentifiantEntite): EtatPartie {
 }
 
 /**
- * Un vivant appuie sur le bouton d'action: il signale le cadavre le plus proche a sa portee,
- * ou, a defaut, sonne le gong s'il est au point de reunion et qu'il le peut. Un fantome ne
- * fait ni l'un ni l'autre: son bouton ne sert qu'aux taches.
+ * Un joueur appuie sur le bouton d'action. Un vivant signale le cadavre le plus proche a sa
+ * portee, ou, a defaut, sonne le gong s'il est au point de reunion et qu'il le peut. A defaut
+ * encore, ou pour un fantome, dont le bouton ne sert qu'aux taches, une proie ouvre la tache
+ * de la station ou elle se tient.
  */
 function appuyer(etat: EtatPartie, id: IdentifiantEntite): EtatPartie {
   const among = etat.among as EtatAmong;
   const joueur = among.joueurs[id];
   const corps = etat.joueurs[id];
 
-  if (joueur === undefined || corps === undefined || joueur.fantome) {
+  if (joueur === undefined || corps === undefined) {
     return etat;
   }
 
-  const trouve = cadavreLePlusProche(among, corps.position);
+  return joueur.fantome
+    ? ouvrirUneTache(etat, id, joueur, corps.position)
+    : signalerOuSonner(etat, id, joueur, corps.position);
+}
+
+/** Un vivant signale un cadavre, ou sonne le gong, ou, a defaut, ouvre sa tache. */
+function signalerOuSonner(
+  etat: EtatPartie,
+  id: IdentifiantEntite,
+  joueur: JoueurAmong,
+  position: Position,
+): EtatPartie {
+  const among = etat.among as EtatAmong;
+  const trouve = cadavreLePlusProche(among, position);
 
   if (trouve !== undefined) {
     return ouvrirUneReunion(
@@ -639,12 +669,34 @@ function appuyer(etat: EtatPartie, id: IdentifiantEntite): EtatPartie {
   if (
     !joueur.gongUtilise &&
     among.tourEcouleMs >= AMONG.DELAI_DU_GONG_MS &&
-    distanceEntre(corps.position, among.gong) <= AMONG.PORTEE_DU_GONG_PX
+    distanceEntre(position, among.gong) <= AMONG.PORTEE_DU_GONG_PX
   ) {
     return ouvrirUneReunion(avecJoueur(etat, id, { ...joueur, gongUtilise: true }), 'gong', id);
   }
 
-  return etat;
+  return ouvrirUneTache(etat, id, joueur, position);
+}
+
+/**
+ * Une proie ouvre la tache de la station ou elle se tient: une tache de sa liste, pas encore
+ * faite, dont le disque la contient. Rien si une tache est deja ouverte, ni pour un tueur, qui
+ * fait semblant sans que le moteur le sache.
+ */
+function ouvrirUneTache(
+  etat: EtatPartie,
+  id: IdentifiantEntite,
+  joueur: JoueurAmong,
+  position: Position,
+): EtatPartie {
+  if (joueur.role !== 'proie' || joueur.tacheEnCours !== undefined) {
+    return etat;
+  }
+
+  const indice = tacheALaPlace(etat.among as EtatAmong, joueur, position);
+
+  return indice < 0
+    ? etat
+    : avecJoueur(etat, id, { ...joueur, tacheEnCours: { indice, ecouleMs: 0 } });
 }
 
 /** Le cadavre le plus proche de cette place, a portee de signalement, ou rien. */
@@ -665,55 +717,67 @@ function cadavreLePlusProche(among: EtatAmong, position: Position): CadavreAmong
 }
 
 /**
- * Les taches du battement. Une proie, vivante ou fantome, qui tient le bouton dans le disque
- * d'une station de sa liste, pas encore faite, y avance d'autant; arrivee a la duree de la
- * tache, elle l'a faite. Lacher le bouton, ou se tenir hors du disque, remet le compteur a
- * zero. Un tueur qui tient le bouton a une station fait semblant: rien ne compte.
+ * Les taches ouvertes du battement (etape 7.21). Pour chaque proie, vivante ou fantome, qui a
+ * ouvert une tache:
+ *
+ *   - hors du disque de sa station, ou la page l'a dite fermee: la tache est annulee, a
+ *     rouvrir et refaire en entier;
+ *   - sinon le temps passe d'autant, et une fin annoncee la fait si la duree minimale de sa
+ *     nature est atteinte. Plus tot, la fin est ignoree et la tache reste ouverte.
+ *
+ * Une tache visuelle finie par une proie vivante se voit a sa station, si l'hote l'a voulu.
  */
 function faireLesTaches(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPartie {
   let courant = etat;
+  const among = etat.among as EtatAmong;
 
-  for (const [id, joueur] of Object.entries((etat.among as EtatAmong).joueurs)) {
+  for (const [id, joueur] of Object.entries(among.joueurs)) {
+    const ouverte = joueur.tacheEnCours;
     const corps = etat.joueurs[id];
 
-    if (joueur.role !== 'proie' || corps === undefined) {
+    if (ouverte === undefined || corps === undefined) {
       continue;
     }
 
-    const indice =
-      entrees[id]?.agir === true
-        ? tacheALaPlace(etat.among as EtatAmong, joueur, corps.position)
-        : -1;
+    const tache = joueur.taches[ouverte.indice] as TacheAmong;
+    const station = among.stations[tache.station] as StationDuMode;
+    const { tacheEnCours: _close, ...sansTache } = joueur;
 
-    if (indice < 0) {
-      if (joueur.tacheEnCours !== undefined) {
-        const { tacheEnCours: _lachee, ...sansTache } = joueur;
-        courant = avecJoueur(courant, id, sansTache);
-      }
+    if (
+      entrees[id]?.tache === 'fermee' ||
+      distanceEntre(corps.position, station) > AMONG.RAYON_D_UNE_STATION_PX
+    ) {
+      courant = avecJoueur(courant, id, sansTache);
       continue;
     }
 
-    const avant = joueur.tacheEnCours?.indice === indice ? joueur.tacheEnCours.ecouleMs : 0;
-    const ecouleMs = avant + dtMs;
-    const tache = joueur.taches[indice] as TacheAmong;
+    const ecouleMs = ouverte.ecouleMs + dtMs;
 
-    if (ecouleMs < tache.dureeMs) {
-      courant = avecJoueur(courant, id, { ...joueur, tacheEnCours: { indice, ecouleMs } });
+    if (entrees[id]?.tache !== 'finie' || ecouleMs < DUREES_MINIMALES_DES_TACHES_MS[tache.nature]) {
+      courant = avecJoueur(courant, id, { ...joueur, tacheEnCours: { ...ouverte, ecouleMs } });
       continue;
     }
-
-    const { tacheEnCours: _finie, ...sansTache } = joueur;
-    const taches = joueur.taches.map((autre, rang) =>
-      rang === indice ? { ...autre, faite: true } : autre,
-    );
 
     courant = journaliser(
       avecJoueur(courant, id, {
         ...sansTache,
-        taches,
+        taches: joueur.taches.map((autre, rang) =>
+          rang === ouverte.indice ? { ...autre, faite: true } : autre,
+        ),
         faits: { ...joueur.faits, taches: joueur.faits.taches + 1 },
       }),
-      { type: 'tacheFaite', joueur: id, station: tache.station },
+      { type: 'tacheFaite', joueur: id, station: tache.station, nature: tache.nature },
+      ...(reglagesDe(etat).tachesVisuelles &&
+      !joueur.fantome &&
+      TACHES_VISUELLES.includes(tache.nature)
+        ? [
+            {
+              type: 'tacheVisuelle' as const,
+              nature: tache.nature,
+              position: { x: station.x, y: station.y },
+            },
+          ]
+        : []),
     );
   }
 
@@ -742,7 +806,8 @@ function tacheALaPlace(among: EtatAmong, joueur: JoueurAmong, position: Position
 // --------------------------------------------------------------------------
 
 /**
- * Ouvre une reunion: la discussion commence, les taches en cours s'interrompent, et le
+ * Ouvre une reunion: la discussion commence, les taches en cours s'interrompent, la barre des
+ * taches se fige pour qui ne la voit qu'en reunion (etape 7.21), et le
  * journal dit qui l'a ouverte, pourquoi, et qui est mort.
  */
 function ouvrirUneReunion(
@@ -767,6 +832,7 @@ function ouvrirUneReunion(
       phase: 'discussion',
       phaseRestanteMs: reglagesDe(etat).discussionS * 1000,
       reunions: numero,
+      tachesALaDerniereReunion: avancementDesTaches(among).faites,
       joueurs,
       reunion: {
         numero,

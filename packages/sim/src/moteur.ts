@@ -152,6 +152,12 @@ export interface EntreeJoueur extends IntentionDeplacement {
    * Ponctuel, comme le tir. Ignore hors du chargement et dans les autres modes.
    */
   readonly carteChargee?: true;
+  /**
+   * La tache ouverte d'Among Ninjas (etape 7.21): la page dit son geste fini, ou la tache
+   * fermee. Ponctuel, comme le tir. Le moteur juge une fin trop tot et l'ignore. Ignore hors
+   * d'une tache ouverte et dans les autres modes.
+   */
+  readonly tache?: 'finie' | 'fermee';
 }
 
 /**

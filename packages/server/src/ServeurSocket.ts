@@ -95,6 +95,7 @@ import {
   validerDemandeInvitation,
   validerDemandeRejoindre,
   validerDemandeRetour,
+  validerDemandeTache,
   validerDemandeVote,
   validerEquipe,
   validerIntentionDeplacement,
@@ -580,6 +581,9 @@ export class ServeurSocket {
     });
     socket.on('carteChargee', () => {
       this.surCarteChargee(socket);
+    });
+    socket.on('tache', (quoi) => {
+      this.surTache(socket, quoi);
     });
     socket.on('voter', (demande) => {
       this.surVoter(socket, demande);
@@ -1126,6 +1130,32 @@ export class ServeurSocket {
     }
 
     this.rooms.room(connexion.idRoom)?.signalerLeChargement(connexion.session.id);
+  }
+
+  /**
+   * La tache ouverte d'Among Ninjas, finie ou fermee dans la page (etape 7.21). Valide dans sa
+   * forme, limitee en debit avec le bouton d'action, puis confiee a la room: que la tache soit
+   * ouverte, et sa duree minimale passee, le moteur en juge.
+   */
+  private surTache(socket: SocketTypee, quoi: 'finie' | 'fermee'): void {
+    const connexion = this.connexions.get(socket.id);
+
+    if (connexion?.session === undefined || connexion.idRoom === undefined) {
+      return;
+    }
+
+    if (!this.autorise(connexion, 'action')) {
+      return;
+    }
+
+    const verdict = validerDemandeTache(quoi as unknown);
+    const room = this.rooms.room(connexion.idRoom);
+
+    if (!verdict.valide || room?.statut !== 'enCours') {
+      return;
+    }
+
+    room.annoncerLaTache(connexion.session.id, verdict.valeur);
   }
 
   /**
@@ -2178,6 +2208,10 @@ function envoyer(socket: SocketTypee, notification: Notification): void {
 
     case 'meurtre':
       socket.emit('meurtre', notification.charge);
+      return;
+
+    case 'tacheVisuelle':
+      socket.emit('tacheVisuelle', notification.charge);
       return;
 
     case 'reunion':

@@ -48,7 +48,8 @@
 
 import { createHmac } from 'node:crypto';
 
-import type { BotVu, EntiteVue, InstantanePartie, JoueurVu } from '@neon-ninja/shared';
+import type { AmongVu, BotVu, EntiteVue, InstantanePartie, JoueurVu } from '@neon-ninja/shared';
+import { AMONG_PAR_DEFAUT } from '@neon-ninja/shared';
 import type { EtatPartie, IdentifiantEntite } from '@neon-ninja/sim';
 import { bonusActif, estCache, estTraqueur, rayonDeVision } from '@neon-ninja/sim';
 
@@ -246,7 +247,26 @@ function vueDUnVivant(
     }
   }
 
-  return { ...commune, entites };
+  return commune.among === undefined
+    ? { ...commune, entites }
+    : { ...commune, entites, among: barreDUnVivant(etat, commune.among) };
+}
+
+/**
+ * La barre commune des taches telle qu'un vivant la voit (etape 7.21), selon le reglage de
+ * l'hote: a jour; figee pendant le jeu au compte de la derniere reunion; ou absente, un total
+ * nul que la page ne montre pas. Le filtre se fait ici, pas dans la page: masquee a l'ecran
+ * seulement, elle se lirait dans la trame, et dirait qui fait vraiment une tache.
+ */
+function barreDUnVivant(etat: EtatPartie, among: AmongVu): AmongVu {
+  switch ((etat.reglages.among ?? AMONG_PAR_DEFAUT).barreDesTaches) {
+    case 'toujours':
+      return among;
+    case 'reunions':
+      return { ...among, tachesFaites: etat.among?.tachesALaDerniereReunion ?? 0 };
+    case 'jamais':
+      return { ...among, tachesFaites: 0, tachesTotal: 0 };
+  }
 }
 
 /** La vue de ce joueur, seule: ce que sa trame decrit. */
@@ -362,6 +382,7 @@ export function notificationDansLaVue(
     case 'objetEmpoche':
     case 'minePosee':
     case 'meurtre':
+    case 'tacheVisuelle':
     case 'reunion':
       // Rien qui designe une autre entite qu'un identifiant de mine ou un pseudo.
       return notification;

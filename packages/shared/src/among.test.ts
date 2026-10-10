@@ -1,17 +1,21 @@
 /**
  * Tests du contrat du mode Among Ninjas (etape 7.20): ses valeurs, ses lieux, ses couleurs,
- * ses reglages, leur validation et ce que le mode impose.
+ * ses taches courtes (etape 7.21), ses reglages, leur validation et ce que le mode impose.
  */
 
 import { describe, expect, it } from 'vitest';
 
 import {
   AMONG,
+  BARRES_DES_TACHES,
   CARTE_DU_MODE_AMONG,
   COULEURS_NOMMEES,
   COULEUR_DE_LA_FOULE,
+  DUREES_MINIMALES_DES_TACHES_MS,
   LIEUX_DES_CARTES,
+  NATURES_DE_TACHE,
   RAYONS_DE_VISION,
+  TACHES_VISUELLES,
   lieuxDuMode,
   nomDeCouleur,
   tueursMaximum,
@@ -83,9 +87,26 @@ describe('les lieux', () => {
       y: normal?.gong.y,
     });
     expect(miroir?.stations[0]).toEqual({
+      ...normal?.stations[0],
       x: CARTES.map1.largeur - (normal?.stations[0]?.x ?? 0),
-      y: normal?.stations[0]?.y,
     });
+  });
+
+  it('nomme chaque station, et lui donne au moins une tache, sans doublon', () => {
+    const stations = LIEUX_DES_CARTES.map1?.stations ?? [];
+
+    expect(new Set(stations.map((station) => station.nom)).size).toBe(stations.length);
+    for (const station of stations) {
+      expect(station.nom.length).toBeGreaterThan(0);
+      expect(station.natures.length).toBeGreaterThan(0);
+      expect(new Set(station.natures).size).toBe(station.natures.length);
+    }
+  });
+
+  it('fait faire chacune des sept taches courtes a une station au moins', () => {
+    const faites = new Set(LIEUX_DES_CARTES.map1?.stations.flatMap((station) => station.natures));
+
+    expect([...faites].sort()).toEqual([...NATURES_DE_TACHE].sort());
   });
 
   it('n en donne pas aux autres cartes', () => {
@@ -124,6 +145,25 @@ describe('les reglages imposes', () => {
   });
 });
 
+describe('les taches courtes', () => {
+  it('demandent de trois a trois secondes et demie au moins, chacune', () => {
+    for (const nature of NATURES_DE_TACHE) {
+      expect(DUREES_MINIMALES_DES_TACHES_MS[nature]).toBeGreaterThanOrEqual(3000);
+      expect(DUREES_MINIMALES_DES_TACHES_MS[nature]).toBeLessThanOrEqual(3500);
+    }
+  });
+
+  it('ne rendent visibles que le katana et la fumee', () => {
+    expect([...TACHES_VISUELLES].sort()).toEqual(['fumee', 'katana']);
+  });
+
+  it('montrent les taches visuelles et la barre a jour par defaut', () => {
+    expect(AMONG_PAR_DEFAUT.tachesVisuelles).toBe(true);
+    expect(AMONG_PAR_DEFAUT.barreDesTaches).toBe('toujours');
+    expect(BARRES_DES_TACHES).toEqual(['toujours', 'reunions', 'jamais']);
+  });
+});
+
 describe('la validation des reglages du mode', () => {
   it('accepte des reglages dans leurs bornes', () => {
     const verdict = validerReglages({
@@ -138,23 +178,36 @@ describe('la validation des reglages du mode', () => {
         visionProie: 'large',
         visionTueur: 'reduite',
         foule: 80,
+        tachesVisuelles: false,
+        barreDesTaches: 'reunions',
       },
     });
 
     expect(verdict.valide).toBe(true);
     expect(verdict.valide && verdict.valeur.among?.visionTueur).toBe('reduite');
+    expect(verdict.valide && verdict.valeur.among?.tachesVisuelles).toBe(false);
+    expect(verdict.valide && verdict.valeur.among?.barreDesTaches).toBe('reunions');
   });
 
   it('refuse deux taches par proie, une duree de tour hors liste et un palier inconnu', () => {
     const verdict = validerReglages({
-      among: { tachesParProie: 2, dureeDuTourS: 90, visionProie: 'immense', foule: 81 },
+      among: {
+        tachesParProie: 2,
+        dureeDuTourS: 90,
+        visionProie: 'immense',
+        foule: 81,
+        tachesVisuelles: 'oui',
+        barreDesTaches: 'parfois',
+      },
     });
 
     expect(verdict.valide).toBe(false);
     expect(!verdict.valide && verdict.erreurs.map((erreur) => erreur.champ).sort()).toEqual([
+      'among.barreDesTaches',
       'among.dureeDuTourS',
       'among.foule',
       'among.tachesParProie',
+      'among.tachesVisuelles',
       'among.visionProie',
     ]);
   });

@@ -16,6 +16,7 @@ import {
   AMONG,
   AMONG_PAR_DEFAUT,
   CARTES,
+  DUREES_MINIMALES_DES_TACHES_MS,
   RACINE_RESSOURCES,
   REGLAGES_PAR_DEFAUT,
   cheminCarte,
@@ -212,7 +213,8 @@ function progressionDeLaTache(etat: EtatClient, maintenant: number): number | un
     return undefined;
   }
 
-  const duree = prive.taches[indice]?.dureeMs ?? AMONG.DUREE_D_UNE_TACHE_MAXIMUM_MS;
+  const tache = prive.taches[indice];
+  const duree = tache === undefined ? 1 : DUREES_MINIMALES_DES_TACHES_MS[tache.nature];
 
   return Math.min(Math.max((maintenant - tacheDebuteeA) / duree, 0), 1);
 }

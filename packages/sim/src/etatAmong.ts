@@ -10,9 +10,11 @@ import type {
   CampAmong,
   Couleur,
   MotifDeReunion,
+  NatureDeTache,
   PhaseAmong,
   Position,
   RoleAmong,
+  StationDuMode,
 } from '@neon-ninja/shared';
 
 export type { CampAmong, MotifDeReunion, PhaseAmong };
@@ -20,11 +22,15 @@ export type { CampAmong, MotifDeReunion, PhaseAmong };
 /** Un identifiant d'entite, comme dans etat.ts. */
 type Identifiant = string;
 
-/** Une tache de la liste d'une proie: une station, et le temps qu'il faut y rester. */
+/**
+ * Une tache de la liste d'une proie: une station, et le geste qu'elle y fait (etape 7.21),
+ * tire pour elle parmi ceux de la station. Deux proies a la meme station n'ont donc pas
+ * forcement la meme tache.
+ */
 export interface TacheAmong {
   /** Le rang de la station parmi les stations actives de la partie (EtatAmong.stations). */
   readonly station: number;
-  readonly dureeMs: number;
+  readonly nature: NatureDeTache;
   readonly faite: boolean;
 }
 
@@ -58,7 +64,11 @@ export interface JoueurAmong {
   readonly actionTenue: boolean;
   /** Sa liste de taches. Vide pour un tueur. */
   readonly taches: readonly TacheAmong[];
-  /** La tache qu'il est en train de faire: son rang dans sa liste, et le temps deja passe. */
+  /**
+   * La tache qu'il a ouverte: son rang dans sa liste, et le temps passe depuis l'ouverture. La
+   * page joue le geste; le moteur ne compte que ce temps, et juge la fin annoncee contre la
+   * duree minimale de la nature de la tache (etape 7.21).
+   */
   readonly tacheEnCours?: { readonly indice: number; readonly ecouleMs: number };
   readonly faits: FaitsAmong;
 }
@@ -120,7 +130,7 @@ export interface EtatAmong {
   readonly joueurs: Readonly<Record<Identifiant, JoueurAmong>>;
   readonly cadavres: Readonly<Record<Identifiant, CadavreAmong>>;
   /** Les stations actives de la partie, tirees au lancement, deja retournees en miroir. */
-  readonly stations: readonly Position[];
+  readonly stations: readonly StationDuMode[];
   /** Le point de reunion, ou sonne le gong. */
   readonly gong: Position;
   readonly reunion?: ReunionAmong;
@@ -130,6 +140,11 @@ export interface EtatAmong {
    * Les taches restantes d'une proie qui part sortent du total (etude, section 4.2).
    */
   readonly tachesDesPartis: number;
+  /**
+   * Les taches faites a l'ouverture de la derniere reunion, zero avant la premiere: la barre
+   * commune que voient les vivants quand l'hote ne la montre qu'en reunion (etape 7.21).
+   */
+  readonly tachesALaDerniereReunion: number;
   /** Le camp vainqueur, des que la partie est decidee. */
   readonly vainqueur?: CampAmong;
 }
@@ -183,8 +198,27 @@ export interface TacheFaite {
   readonly type: 'tacheFaite';
   readonly joueur: Identifiant;
   readonly station: number;
+  readonly nature: NatureDeTache;
+}
+
+/**
+ * La fin d'une tache visuelle (etape 7.21): des etincelles ou une bouffee, a la station. Seule
+ * une vraie proie vivante la produit, et seulement si l'hote l'a voulu. L'evenement ne nomme
+ * pas la proie: les temoins la voient, ou non.
+ */
+export interface TacheVisuelle {
+  readonly type: 'tacheVisuelle';
+  readonly nature: NatureDeTache;
+  readonly position: Position;
 }
 
 /** Les evenements du mode, ajoutes au journal d'un battement. */
 export type EvenementAmong =
-  Meurtre | ReunionOuverte | VoteOuvert | AVote | ResultatDuVote | TourCommence | TacheFaite;
+  | Meurtre
+  | ReunionOuverte
+  | VoteOuvert
+  | AVote
+  | ResultatDuVote
+  | TourCommence
+  | TacheFaite
+  | TacheVisuelle;

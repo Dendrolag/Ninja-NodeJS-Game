@@ -408,6 +408,12 @@ export class GameRoom {
    */
   private readonly chargementsSignales = new Set<IdentifiantEntite>();
 
+  /**
+   * Ce que les pages ont dit de leur tache ouverte depuis le battement precedent (etape 7.21):
+   * finie, ou fermee. Des gestes ponctuels, effaces a chaque battement, comme les votes.
+   */
+  private readonly tachesAnnoncees = new Map<IdentifiantEntite, 'finie' | 'fermee'>();
+
   /** Ce que chaque joueur a fait de notable depuis le lancement (etape 3.8). */
   private releve: ReleveDesExploits = RELEVE_VIDE;
 
@@ -619,6 +625,7 @@ export class GameRoom {
     this.appuisRecents.delete(id);
     this.votesDemandes.delete(id);
     this.chargementsSignales.delete(id);
+    this.tachesAnnoncees.delete(id);
 
     if (this.hoteCourant === id) {
       this.hoteCourant = this.successeur();
@@ -656,6 +663,7 @@ export class GameRoom {
     this.appuisRecents.delete(id);
     this.votesDemandes.delete(id);
     this.chargementsSignales.delete(id);
+    this.tachesAnnoncees.delete(id);
 
     if (this.hoteCourant === id) {
       this.hoteCourant = this.presentLePlusAncien() ?? id;
@@ -973,6 +981,19 @@ export class GameRoom {
   }
 
   /**
+   * Retient ce que la page de ce joueur dit de sa tache ouverte (etape 7.21), pour le prochain
+   * battement. Ignore pour un joueur absent ou hors d'une partie en cours; que la tache soit
+   * ouverte, et sa duree minimale passee, le moteur en juge.
+   */
+  annoncerLaTache(id: IdentifiantEntite, quoi: 'finie' | 'fermee'): void {
+    if (this.statutCourant !== 'enCours' || this.partie.joueurs[id] === undefined) {
+      return;
+    }
+
+    this.tachesAnnoncees.set(id, quoi);
+  }
+
+  /**
    * Qui lit un message de chat de ce joueur, dans une partie Among Ninjas lancee (etape 7.20).
    *
    *   - Un fantome parle aux fantomes, a tout moment: le canal des fantomes.
@@ -1022,7 +1043,8 @@ export class GameRoom {
       this.actionsTenues.size === 0 &&
       this.appuisRecents.size === 0 &&
       this.votesDemandes.size === 0 &&
-      this.chargementsSignales.size === 0
+      this.chargementsSignales.size === 0 &&
+      this.tachesAnnoncees.size === 0
     ) {
       return this.intentions;
     }
@@ -1049,6 +1071,10 @@ export class GameRoom {
 
     for (const id of this.chargementsSignales) {
       entrees[id] = { ...(entrees[id] ?? immobile), carteChargee: true };
+    }
+
+    for (const [id, quoi] of this.tachesAnnoncees) {
+      entrees[id] = { ...(entrees[id] ?? immobile), tache: quoi };
     }
 
     return entrees;
@@ -1079,6 +1105,7 @@ export class GameRoom {
     this.votesDemandes.clear();
     this.appuisRecents.clear();
     this.chargementsSignales.clear();
+    this.tachesAnnoncees.clear();
     this.releve = releverLeBattement(this.releve, this.partie, this.cleDuJoueur);
 
     // Prevenir AVANT de constater la fin: le dernier battement d'une partie est

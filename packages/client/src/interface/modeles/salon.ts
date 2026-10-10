@@ -21,7 +21,14 @@
  * qu'a cinq.
  */
 
-import type { Couleur, Equipe, Mode, PalierDeVision, ReglagesPartie } from '@neon-ninja/shared';
+import type {
+  BarreDesTaches,
+  Couleur,
+  Equipe,
+  Mode,
+  PalierDeVision,
+  ReglagesPartie,
+} from '@neon-ninja/shared';
 import {
   AMONG,
   AMONG_PAR_DEFAUT,
@@ -325,6 +332,13 @@ const PALIERS_AFFICHES: Readonly<Record<PalierDeVision, string>> = {
   large: 'large',
 };
 
+/** La barre des taches, telle que le recapitulatif la dit (etape 7.21). */
+const BARRES_AFFICHEES: Readonly<Record<BarreDesTaches, string>> = {
+  toujours: 'toujours',
+  reunions: 'en réunion',
+  jamais: 'jamais',
+};
+
 /**
  * Le recapitulatif d'une partie Among Ninjas (etape 7.20): la carte et les reglages du mode. Ni
  * duree de partie, ni Black Ninjas, ni bonus, malus ou zones: le mode les retire.
@@ -347,6 +361,10 @@ function recapitulatifAmong(reglages: ReglagesPartie): readonly LigneRecapitulat
       valeur: `Discussion ${String(among.discussionS)} s · vote ${String(among.voteS)} s`,
     },
     { libelle: 'Votes', valeur: among.votesAnonymes ? 'Anonymes' : 'Nommés' },
+    {
+      libelle: 'Tâches',
+      valeur: `${among.tachesVisuelles ? 'Visuelles' : 'Invisibles'} · barre ${BARRES_AFFICHEES[among.barreDesTaches]}`,
+    },
     {
       libelle: 'Vision',
       valeur: `Proies ${PALIERS_AFFICHES[among.visionProie]} · assassins ${PALIERS_AFFICHES[among.visionTueur]}`,
