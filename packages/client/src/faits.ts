@@ -41,8 +41,10 @@ import type {
   TacheVisuelleVue,
   MinePoseeVue,
   ObjetEmpoche,
+  MaledictionVue,
   RalliementVu,
   ReunionVue,
+  SabotageVu,
   TirDeCaptureVu,
   VieDeTraqueurPerdueVue,
 } from '@neon-ninja/shared';
@@ -111,6 +113,13 @@ export interface ChargesDeFait {
   tacheVisuelle: TacheVisuelleVue;
   /** Ce qui se passe en reunion, dans Among Ninjas (etape 7.20). A tous. */
   reunion: ReunionVue;
+  /**
+   * Un sabotage d'Among Ninjas qui commence ou finit (etape 7.22): la panne et la surchauffe a
+   * tous, une nuisance et le nuage aux assassins et aux fantomes.
+   */
+  sabotage: SabotageVu;
+  /** Une malediction lancee par un fantome d'Among Ninjas (etape 7.22), aux fantomes. */
+  malediction: MaledictionVue;
   /** Ce joueur vient de rallier des faux ninjas en les touchant, dans la Horde. */
   ralliement: RalliementVu;
   /** Quelqu'un vient d'entrer dans la partie. */

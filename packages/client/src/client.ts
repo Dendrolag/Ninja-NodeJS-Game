@@ -29,10 +29,12 @@ import type {
   AuthentificationReseau,
   ConfigurationPartie,
   DemandeRejoindre,
+  DemandeSabotage,
   Equipe,
   InfosSalon,
   IntentionDeplacement,
   Mode,
+  Nuisance,
   ReglagesPartiels,
   ResultatValidation,
 } from '@neon-ninja/shared';
@@ -164,6 +166,10 @@ export interface Client extends CommandesDeSession {
   finirLaTache(): void;
   /** Ferme la tache ouverte, faite ou non (etape 7.21): une vraie tache se dit fermee au serveur. */
   fermerLaTache(): void;
+  /** Demande un sabotage, depuis la carte d'un assassin d'Among Ninjas (etape 7.22). */
+  saboter(demande: DemandeSabotage): void;
+  /** Maudit les assassins, depuis la carte d'une proie fantome d'Among Ninjas (etape 7.22). */
+  maudire(nature: Nuisance): void;
   /** Passe dans une equipe, dans le salon d'une partie Equipes (etape 7.2). */
   changerDEquipe(equipe: Equipe): void;
   /** Parle dans le chat. */
@@ -578,6 +584,18 @@ export function creerClient(options: OptionsClient): Client {
     }),
   );
 
+  ecouter(
+    reseau.sur('sabotage', (charge) => {
+      magasin.appliquer({ type: 'fait', fait: fait('sabotage', charge, maintenant()) });
+    }),
+  );
+
+  ecouter(
+    reseau.sur('malediction', (charge) => {
+      magasin.appliquer({ type: 'fait', fait: fait('malediction', charge, maintenant()) });
+    }),
+  );
+
   // -- Les amis en direct (etape 2.8) ---------------------------------------
 
   ecouter(
@@ -779,6 +797,14 @@ export function creerClient(options: OptionsClient): Client {
       }
 
       magasin.appliquer({ type: 'tacheFermee' });
+    },
+
+    saboter: (demande) => {
+      reseau.emettre('saboter', demande);
+    },
+
+    maudire: (nature) => {
+      reseau.emettre('maudire', nature);
     },
 
     changerDEquipe: (equipe) => {

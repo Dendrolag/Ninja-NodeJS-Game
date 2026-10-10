@@ -33,7 +33,7 @@
  *      son indicateur « pret » restait faux pour toujours.
  */
 
-import type { Mode, NomDeSon } from '@neon-ninja/shared';
+import type { Mode, NatureDeSabotage, NomDeSon } from '@neon-ninja/shared';
 import { CHASSE } from '@neon-ninja/shared';
 
 import type { EtatClient } from '../etat.js';
@@ -93,6 +93,14 @@ export function sonDuFait(fait: FaitDeJeu, moi?: string, mode?: Mode): NomDeSon 
     case 'tacheVisuelle':
       return fait.charge.nature === 'fumee' ? 'tacheBouffee' : 'tacheEtincelles';
 
+    // Les sabotages (etape 7.22): la panne et la surchauffe s'entendent de tous, une nuisance
+    // et le nuage des assassins et des fantomes; la malediction, des fantomes.
+    case 'sabotage':
+      return sonDUnSabotage(fait.charge.quoi, fait.charge.nature, fait.charge.repare);
+
+    case 'malediction':
+      return 'malediction';
+
     case 'reunion':
       return fait.charge.quoi === 'ouverte'
         ? 'compteAReboursFinal'
@@ -147,8 +155,11 @@ export function sonDuFait(fait: FaitDeJeu, moi?: string, mode?: Mode): NomDeSon 
           : undefined;
 
     case 'malusRamasse':
-    case 'malusSubi':
       return 'malusRamasse';
+
+    // Une malediction d'Among Ninjas (etape 7.22) a son son; un sabotage, celui du malus.
+    case 'malusSubi':
+      return fait.charge.origine === 'malediction' ? 'malediction' : 'malusRamasse';
 
     case 'captureReussie':
       return 'joueurCapture';
@@ -182,6 +193,35 @@ export const SEUIL_TEMPS_PRESSE_MS = 10_000;
  * dans deux des cinq chemins qui redemarraient une partie. Ici, il n'y a rien a
  * remettre a zero: la difference entre deux etats dit tout.
  */
+/**
+ * Le son d'un sabotage qui commence ou finit (etape 7.22): la panne et la surchauffe ont les
+ * leurs, et leur reparation; une nuisance ou le nuage lances, la confirmation entendue des
+ * assassins et des fantomes. Une nuisance qui s'eteint ne s'entend pas.
+ */
+function sonDUnSabotage(
+  quoi: 'lance' | 'fini',
+  nature: NatureDeSabotage,
+  repare: boolean | undefined,
+): NomDeSon | undefined {
+  if (nature === 'panne') {
+    return quoi === 'lance' ? 'panneDebut' : 'panneFin';
+  }
+
+  if (nature === 'surchauffe') {
+    return quoi === 'lance'
+      ? 'surchauffeAlarme'
+      : repare === true
+        ? 'surchauffeReparee'
+        : undefined;
+  }
+
+  if (quoi === 'fini') {
+    return undefined;
+  }
+
+  return nature === 'nuage' ? 'nuageTombe' : 'sabotageLance';
+}
+
 export function sonsDuChangement(precedent: EtatClient, courant: EtatClient): readonly NomDeSon[] {
   const sons: NomDeSon[] = [];
 

@@ -25,11 +25,13 @@ import type {
   MineExploseeVue,
   Mode,
   NatureBonus,
+  NatureDeSabotage,
   NatureMalus,
   NatureObjet,
+  Nuisance,
   Refus,
 } from '@neon-ninja/shared';
-import { OBJETS_TACTIQUES, VITESSES } from '@neon-ninja/shared';
+import { NUISANCES, OBJETS_TACTIQUES, VITESSES } from '@neon-ninja/shared';
 
 import type { EtatClient } from './etat.js';
 import type { FaitDeJeu } from './faits.js';
@@ -261,6 +263,13 @@ export function annonceDuFait(fait: FaitDeJeu, mode?: Mode, moi?: string): Annon
     }
 
     case 'malusSubi': {
+      // Un sabotage ou une malediction d'Among Ninjas (etape 7.22) n'a pas d'auteur.
+      const { nature, origine } = fait.charge;
+
+      if (origine !== undefined && estUnMalusDuJeu(nature)) {
+        return annonceDUnMalusSansAuteur(nature, origine);
+      }
+
       const texte = TEXTES_MALUS[fait.charge.nature].subi.replace(
         '{joueur}',
         fait.charge.parPseudo,
@@ -322,6 +331,16 @@ export function annonceDuFait(fait: FaitDeJeu, mode?: Mode, moi?: string): Annon
     case 'reunion':
       return undefined;
 
+    // Les sabotages et la malediction (etape 7.22).
+    case 'sabotage':
+      return annonceDUnSabotage(fait.charge.quoi, fait.charge.nature, fait.charge.repare);
+
+    case 'malediction':
+      return {
+        texte: `Malédiction lancée : ${NOMS_DES_SABOTAGES[fait.charge.nature].toLowerCase()}`,
+        ton: 'info',
+      };
+
     case 'joueurArrive':
       return { texte: `${fait.charge.pseudo} a rejoint la partie`, ton: 'info' };
 
@@ -331,6 +350,78 @@ export function annonceDuFait(fait: FaitDeJeu, mode?: Mode, moi?: string): Annon
         ton: 'info',
       };
   }
+}
+
+/** Le nom de chaque sabotage d'Among Ninjas (etape 7.22), tel que la page l'ecrit. */
+export const NOMS_DES_SABOTAGES: Readonly<Record<NatureDeSabotage, string>> = {
+  flou: 'Vision floue',
+  negatif: 'Vision négative',
+  controlesInverses: 'Commandes inversées',
+  nuage: 'Nuage noir',
+  panne: 'Panne de néons',
+  surchauffe: 'Surchauffe',
+};
+
+/** Ce malus est-il l'un des trois du jeu d'origine, les seuls qu'un sabotage inflige ? */
+function estUnMalusDuJeu(nature: NatureMalus): nature is Nuisance {
+  return (NUISANCES as readonly NatureMalus[]).includes(nature);
+}
+
+/** La couleur de la malediction (rendu 5A de la planche docs/design/etape-7-22/): un bleu pale. */
+const COULEUR_DE_LA_MALEDICTION = 0xb9e6ff;
+
+/**
+ * Le malus d'un sabotage ou d'une malediction d'Among Ninjas (etape 7.22), en grand titre
+ * brouille, comme un malus subi: sans auteur, puisque rien ne doit nommer le saboteur, ni le
+ * fantome. La malediction prend le bleu pale du spectre (rendu 5A).
+ */
+function annonceDUnMalusSansAuteur(nature: Nuisance, origine: 'sabotage' | 'malediction'): Annonce {
+  const nom = NOMS_DES_SABOTAGES[nature];
+
+  if (origine === 'sabotage') {
+    const texte = `Sabotage : ${nom.toLowerCase()}`;
+    return { texte, ton: 'alerte', grandTitre: grandTitre(nature, 'Sabotage', texte, true) };
+  }
+
+  const texte = `Un fantôme vous maudit : ${nom.toLowerCase()}`;
+
+  return {
+    texte,
+    ton: 'alerte',
+    grandTitre: {
+      ...grandTitre(nature, 'Un fantôme vous maudit', texte, true),
+      couleur: COULEUR_DE_LA_MALEDICTION,
+    },
+  };
+}
+
+/**
+ * Un sabotage qui commence ou finit (etape 7.22). La panne et la surchauffe s'annoncent a tous,
+ * et leur reparation; une nuisance et le nuage, aux seuls assassins et fantomes, ne s'annoncent
+ * qu'au lancement. Le bandeau d'alerte du HUD dit ensuite ce qu'il faut faire.
+ */
+function annonceDUnSabotage(
+  quoi: 'lance' | 'fini',
+  nature: NatureDeSabotage,
+  repare: boolean | undefined,
+): Annonce | undefined {
+  if (nature === 'panne') {
+    return quoi === 'lance'
+      ? { texte: 'Panne de néons : réparez le boîtier de la rue', ton: 'alerte' }
+      : { texte: 'Les néons sont revenus', ton: 'succes' };
+  }
+
+  if (nature === 'surchauffe') {
+    if (quoi === 'lance') {
+      return { texte: 'Surchauffe : tenez les deux consoles en même temps', ton: 'alerte' };
+    }
+
+    return repare === true ? { texte: 'Surchauffe évitée', ton: 'succes' } : undefined;
+  }
+
+  return quoi === 'lance'
+    ? { texte: `Sabotage lancé : ${NOMS_DES_SABOTAGES[nature].toLowerCase()}`, ton: 'info' }
+    : undefined;
 }
 
 /**

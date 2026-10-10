@@ -2307,50 +2307,119 @@
   text-align: center;
 }
 
-.among-egout-bouche {
+/*
+ * L'execution (etape 7.22, rendu 7C): le coup de katana du Massacre, en diagonale, et l'execute
+ * tombe en deux moities dans son sang. Le trait passe a 0,6 s, les moities se separent juste
+ * apres, la flaque s'etend sous elles.
+ */
+.among-execution {
   position: relative;
-  width: 180px;
-  height: 64px;
-  margin-top: 90px;
-  border: 4px solid var(--cyan);
+  width: 200px;
+  height: 150px;
+}
+
+.among-execution-moitie {
+  position: absolute;
+  bottom: 22px;
+  left: 50%;
+  width: 96px;
+  height: 96px;
+  margin-left: -48px;
+}
+
+.among-execution-moitie .avatar-ninja {
+  width: 100%;
+  height: 100%;
+}
+
+/* La coupe: de haut a droite vers bas a gauche, comme le trait de la lame. */
+.among-execution-moitie.haut {
+  clip-path: polygon(0 0, 100% 0, 100% 30%, 0 72%);
+}
+
+.among-execution-moitie.bas {
+  clip-path: polygon(0 72%, 100% 30%, 100% 100%, 0 100%);
+}
+
+.among-execution-lame {
+  position: absolute;
+  bottom: 70px;
+  left: 50%;
+  width: 150px;
+  height: 4px;
+  margin-left: -75px;
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: 0 0 14px #fff;
+  opacity: 0;
+  transform: rotate(-23deg) scaleX(0);
+}
+
+.among-execution-sang {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  width: 150px;
+  height: 40px;
+  margin-left: -75px;
   border-radius: 50%;
-  background: #05060c;
-  box-shadow:
-    0 0 18px var(--cyan),
-    inset 0 0 18px rgba(46, 230, 255, 0.4);
+  background: radial-gradient(ellipse at center, #a30016 0 55%, rgba(140, 0, 18, 0) 72%);
+  opacity: 0;
+  transform: scale(0.2);
 }
 
-/* La chute: un cadre qui s'arrete au milieu de la bouche, d'ou le ninja disparait. */
-.among-egout-chute {
-  position: absolute;
-  bottom: 50%;
-  left: 50%;
-  width: 90px;
-  height: 120px;
-  overflow: hidden;
-  transform: translateX(-50%);
+.among-execution.tranche .among-execution-lame {
+  animation: among-lame 0.35s ease-out 0.6s forwards;
 }
 
-.among-egout-chute .avatar-ninja {
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  width: 80px;
-  height: 80px;
-  transform: translateX(-50%);
+.among-execution.tranche .among-execution-moitie.haut {
+  animation: among-moitie-haute 1.4s ease-in 0.95s forwards;
 }
 
-.among-egout-chute.tombe .avatar-ninja {
-  animation: among-chute 2.6s ease-in 0.6s forwards;
+.among-execution.tranche .among-execution-moitie.bas {
+  animation: among-moitie-basse 1.4s ease-in 0.95s forwards;
 }
 
-@keyframes among-chute {
-  15% {
-    transform: translateX(-50%) translateY(-14px) rotate(-8deg);
+.among-execution.tranche .among-execution-sang {
+  animation: among-sang 1.6s ease-out 1s forwards;
+}
+
+@keyframes among-lame {
+  40% {
+    opacity: 1;
+    transform: rotate(-23deg) scaleX(1);
   }
 
   to {
-    transform: translateX(-50%) translateY(130%) rotate(20deg);
+    opacity: 0;
+    transform: rotate(-23deg) scaleX(1);
+  }
+}
+
+@keyframes among-moitie-haute {
+  30% {
+    transform: translate(-10px, -10px) rotate(-6deg);
+  }
+
+  to {
+    transform: translate(-34px, 22px) rotate(-78deg);
+  }
+}
+
+@keyframes among-moitie-basse {
+  30% {
+    transform: translate(6px, 2px) rotate(4deg);
+  }
+
+  to {
+    transform: translate(30px, 26px) rotate(64deg);
+  }
+}
+
+@keyframes among-sang {
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
@@ -2467,9 +2536,25 @@
     opacity: 1;
   }
 
-  .among-egout-chute.tombe .avatar-ninja {
+  /* Sans mouvement: les deux moities deja au sol, dans leur sang. */
+  .among-execution.tranche .among-execution-lame {
     animation: none;
-    opacity: 0;
+  }
+
+  .among-execution.tranche .among-execution-moitie.haut {
+    animation: none;
+    transform: translate(-34px, 22px) rotate(-78deg);
+  }
+
+  .among-execution.tranche .among-execution-moitie.bas {
+    animation: none;
+    transform: translate(30px, 26px) rotate(64deg);
+  }
+
+  .among-execution.tranche .among-execution-sang {
+    animation: none;
+    opacity: 1;
+    transform: none;
   }
 
   .among-deces.montre {
@@ -2485,5 +2570,210 @@
 
   100% {
     opacity: 0;
+  }
+}
+
+/*
+ * Les sabotages d'Among Ninjas (etape 7.22), rendus choisis sur la planche
+ * docs/design/etape-7-22/1-planche.png.
+ */
+
+/* 1A. Le panneau des sabotages, en colonne dans la carte; 5A, celui des maledictions. */
+.carte-among-sabotages {
+  --couleur-panneau: var(--rose);
+
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--couleur-panneau);
+  border-radius: 10px;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--couleur-panneau) 40%, transparent);
+  pointer-events: auto;
+}
+
+.carte-among-sabotages[data-genre='maledictions'] {
+  --couleur-panneau: #b9e6ff;
+
+  background: rgba(185, 230, 255, 0.08);
+}
+
+.carte-among-sabotages-titre {
+  margin: 0;
+  color: var(--couleur-panneau);
+  font-family: var(--police-titre);
+  font-size: 15px;
+  text-shadow: 0 0 6px var(--couleur-panneau);
+}
+
+.carte-among-sabotages-etat {
+  margin: 0;
+  color: var(--texte-secondaire);
+  font-size: 12px;
+}
+
+.carte-among-sabotages-boutons {
+  display: grid;
+  gap: 5px;
+}
+
+.carte-among-sabotage {
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--couleur-panneau) 55%, transparent);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--texte);
+  font: 600 13px var(--police-texte);
+  text-align: left;
+  cursor: pointer;
+}
+
+.carte-among-sabotage:hover:not(:disabled),
+.carte-among-sabotage:focus-visible {
+  background: color-mix(in srgb, var(--couleur-panneau) 22%, transparent);
+}
+
+.carte-among-sabotage:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.carte-among.choix-du-nuage .carte-among-sabotage[data-nature='nuage'] {
+  background: color-mix(in srgb, var(--couleur-panneau) 30%, transparent);
+}
+
+.carte-among-sabotages-aide {
+  margin: 0;
+  color: var(--couleur-panneau);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Le nuage attend sa station: les stations se touchent. */
+.carte-among.choix-du-nuage .carte-among-repere {
+  cursor: pointer;
+  pointer-events: auto;
+  animation: carte-among-choix 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes carte-among-choix {
+  to {
+    transform: translate(-50%, -50%) scale(1.25);
+  }
+}
+
+/* Les postes du sabotage en cours, sur la carte et la mini-carte. */
+.carte-among-postes {
+  position: absolute;
+  inset: 0;
+}
+
+.carte-among-poste,
+.hud-among-carte-poste {
+  position: absolute;
+  border: 2px solid #ff8c1a;
+  border-radius: 4px;
+  background: rgba(255, 140, 26, 0.3);
+  box-shadow: 0 0 8px #ff8c1a;
+  transform: translate(-50%, -50%);
+  animation: among-poste 0.8s ease-in-out infinite alternate;
+}
+
+.carte-among-poste {
+  width: 14px;
+  height: 14px;
+}
+
+.hud-among-carte-poste {
+  width: 8px;
+  height: 8px;
+}
+
+@keyframes among-poste {
+  to {
+    opacity: 0.4;
+  }
+}
+
+/* 2C. La panne: un bandeau en bas de l'ecran. */
+.hud-among-alerte {
+  position: absolute;
+  z-index: 4;
+  pointer-events: none;
+  text-align: center;
+}
+
+.hud-among-alerte[data-genre='panne'] {
+  bottom: calc(var(--marge-bas, 18px) + 96px);
+  left: 50%;
+  display: grid;
+  gap: 2px;
+  padding: 8px 18px;
+  border: 1.5px solid #ffe81a;
+  border-radius: 10px;
+  background: rgba(10, 16, 34, 0.88);
+  box-shadow: 0 0 12px rgba(255, 232, 26, 0.45);
+  transform: translateX(-50%);
+}
+
+.hud-among-alerte[data-genre='panne'] .hud-among-alerte-titre {
+  color: #ffe81a;
+  font: 700 16px var(--police-titre);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-shadow: 0 0 8px #ffe81a;
+}
+
+.hud-among-alerte-detail {
+  color: var(--texte);
+  font-size: 13px;
+}
+
+/* 3B. La surchauffe: l'ecran bat en rouge, un gros compte a rebours en haut. */
+.hud-among-alerte[data-genre='surchauffe'] {
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: calc(var(--debut-barre, 0px) + var(--hauteur-barre, 48px) + 8px);
+  box-shadow: inset 0 0 90px 30px rgba(255, 30, 40, 0.75);
+  animation: among-surchauffe 1s ease-in-out infinite alternate;
+}
+
+.hud-among-alerte-compte {
+  color: #ff2e3a;
+  font: 700 52px/1 var(--police-titre);
+  text-shadow: 0 0 18px #ff2e3a;
+}
+
+.hud-among-alerte[data-genre='surchauffe'] .hud-among-alerte-titre {
+  color: #ffd7da;
+  font: 700 15px var(--police-titre);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow: 0 0 4px #000;
+}
+
+.hud-among-alerte[data-genre='surchauffe'] .hud-among-alerte-detail {
+  color: #ffd7da;
+  text-shadow: 0 0 4px #000;
+}
+
+@keyframes among-surchauffe {
+  from {
+    box-shadow: inset 0 0 60px 10px rgba(255, 30, 40, 0.35);
+  }
+
+  to {
+    box-shadow: inset 0 0 110px 40px rgba(255, 30, 40, 0.8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-among-alerte[data-genre='surchauffe'],
+  .carte-among-poste,
+  .hud-among-carte-poste,
+  .carte-among.choix-du-nuage .carte-among-repere {
+    animation: none;
   }
 }

@@ -414,12 +414,18 @@ function roleRevele(etat: EtatClient, id: string): { readonly role?: string } {
 
 /**
  * Le mot de la fin d'une partie Among Ninjas (etape 7.20): le camp vainqueur, et si c'est le
- * notre. Le classement met ce camp devant, puis les points des faits de jeu.
+ * notre. Le classement met ce camp devant, puis les points des faits de jeu. Une surchauffe
+ * perdue le dit (etape 7.22).
  */
 function messageAmong(etat: EtatClient): string {
   const fin = etat.fin?.among;
   const notre = fin?.joueurs.find((joueur) => joueur.id === etat.moi)?.role;
-  const camp = fin?.vainqueur === 'tueurs' ? 'Les assassins l’emportent' : 'Les proies l’emportent';
+  const camp =
+    fin?.vainqueur === 'tueurs'
+      ? fin.parLaSurchauffe === true
+        ? 'La surchauffe a tout emporté : les assassins l’emportent'
+        : 'Les assassins l’emportent'
+      : 'Les proies l’emportent';
 
   if (notre === undefined) {
     return camp;

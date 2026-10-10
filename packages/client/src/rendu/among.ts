@@ -13,6 +13,19 @@
  *     rendu entre A et B). Seuls les fantomes en recoivent: la vue d'un vivant n'en contient
  *     aucun.
  *
+ * LES SABOTAGES (etape 7.22, rendus choisis sur la planche docs/design/etape-7-22/1-planche.png):
+ *
+ *   - LE BOITIER ET LES CONSOLES, rendu 6A: des objets neon dessines au sol, toujours la, cyan,
+ *     qui s'allument en orange (la panne) ou en rouge (la surchauffe) pendant leur sabotage,
+ *     avec le disque ou l'on se tient pour reparer;
+ *   - LE NUAGE NOIR, rendu 4A: des volutes de fumee noire sur la station, opaques pour une
+ *     proie vivante, que le serveur prive de ce qui s'y tient, et a demi pour les assassins et
+ *     les fantomes, qui y voient;
+ *   - LA PANNE, rendu 2C: le disque d'une proie vivante tombe a 110 pixels, le decor eteint
+ *     s'assombrit, et une fleche orange dit ou est le boitier, et a quelle distance;
+ *   - LA SURCHAUFFE, rendu 3B: deux fleches rouges vers les consoles. L'alarme et le compte a
+ *     rebours sont dans le HUD.
+ *
  * LES PSEUDOS NE S'AFFICHENT PAS SUR LA CARTE (decision du porteur du projet du 9 octobre 2026):
  * le doute sur qui est qui fait le jeu, et toute accusation passe par une couleur. Seul un
  * assassin lit le pseudo de ses complices. La revelation, la reunion, l'ejection et la fin, elles,
@@ -21,14 +34,16 @@
  * Ce module est pur: il lit l'etat du client et rend des formes a dessiner.
  */
 
-import type { Couleur, DimensionsCarte } from '@neon-ninja/shared';
-import { AMONG, AMONG_PAR_DEFAUT, RAYONS_DE_VISION } from '@neon-ninja/shared';
+import type { Couleur, DimensionsCarte, Position } from '@neon-ninja/shared';
+import { AMONG, AMONG_PAR_DEFAUT, RAYONS_DE_VISION, lieuxDuMode } from '@neon-ninja/shared';
 
 import { stationsAMontrer, victimeAPortee } from '../among.js';
 import type { EtatClient } from '../etat.js';
+import type { IndicateurScene } from './charges.js';
+import { AUCUN_INDICATEUR } from './charges.js';
 import type { VueLissee } from './interpolation.js';
-import type { DisqueScene, SpriteScene } from './scene.js';
-import { TAILLE_SPRITE } from './apparence.js';
+import type { DisqueScene, SpriteScene, TraitScene } from './scene.js';
+import { TAILLE_SPRITE, VISION_AMONG } from './apparence.js';
 import { adresseCoupee } from './textures.js';
 
 /** Un texte pose sur la carte, centre sur ce point: le pseudo d'un joueur. */
@@ -45,6 +60,8 @@ export interface VisionScene {
   readonly x: number;
   readonly y: number;
   readonly rayon: number;
+  /** L'opacite du voile noir sur le decor eteint: plus sombre pendant la panne (etape 7.22). */
+  readonly voile: number;
 }
 
 /** Un rectangle, en coordonnees de carte. */
@@ -83,6 +100,10 @@ export interface ImageDAmong {
   readonly cadavres: readonly SpriteScene[];
   readonly libelles: readonly LibelleScene[];
   readonly vision: VisionScene | undefined;
+  /** Au sol, sous les personnages: le boitier et les consoles des sabotages (etape 7.22). */
+  readonly postes: IndicateurScene;
+  /** Par-dessus tout: les fleches vers le boitier ou les consoles d'un sabotage (etape 7.22). */
+  readonly fleches: readonly TraitScene[];
 }
 
 /** Rien a ajouter: une image d'un autre mode. */
@@ -91,6 +112,8 @@ export const RIEN_D_AMONG: ImageDAmong = {
   cadavres: [],
   libelles: [],
   vision: undefined,
+  postes: AUCUN_INDICATEUR,
+  fleches: [],
 };
 
 /** Les reglages de l'apparence, tenus ici pour se regler en jouant. */
@@ -115,6 +138,35 @@ export const APPARENCE_AMONG = {
    * jouant.
    */
   victime: { couleur: 0xff3355, alphaPlein: 0.3, alphaBord: 0.9, epaisseur: 2, rayon: 24 },
+  /**
+   * Le boitier et les consoles (etape 7.22, rendu 6A): un trait neon cyan sur un socle sombre,
+   * orange pendant la panne, rouge pendant la surchauffe. Le disque ou l'on repare bat pendant
+   * le sabotage; une console tenue s'emplit.
+   */
+  poste: {
+    repos: 0x2ee6ff,
+    panne: 0xff8c1a,
+    surchauffe: 0xff2e3a,
+    alpha: 0.95,
+    epaisseur: 3,
+    socle: { couleur: 0x081020, alpha: 0.85, rayon: 24 },
+    /** Le battement du disque de reparation, en millisecondes, et son opacite au plus bas. */
+    battementMs: 900,
+    alphaMinimum: 0.35,
+    alphaTenue: 0.3,
+  },
+  /**
+   * Le nuage noir (rendu 4A): des volutes, toujours les memes pour une station. Opaque pour une
+   * proie vivante, a demi pour ceux qui y voient.
+   */
+  nuage: { couleur: 0x07040c, alphaOpaque: 0.93, alphaTranslucide: 0.45, volutes: 22 },
+  /**
+   * Les fleches vers un poste (rendus 2C et 3B), a cette distance de nous: dans l'ecran sur
+   * ordinateur comme sur telephone, le plus petit cote montrant 450 pixels de carte.
+   */
+  fleche: { rayon: 185, longueur: 22, epaisseur: 5, ecartDuTexte: 30 },
+  /** Le voile du decor eteint pendant la panne, pour une proie vivante (rendu 2C). */
+  voileEnPanne: 0.82,
 } as const;
 
 /** Une couleur du contrat en nombre. */
@@ -140,7 +192,12 @@ function graineDe(id: string): number {
  *
  * @param texture L'image d'un ninja de face, immobile: celle des cadavres.
  */
-export function imageDAmong(etat: EtatClient, lissee: VueLissee, texture: string): ImageDAmong {
+export function imageDAmong(
+  etat: EtatClient,
+  lissee: VueLissee,
+  texture: string,
+  maintenant: number,
+): ImageDAmong {
   if (etat.salon?.mode !== 'among') {
     return RIEN_D_AMONG;
   }
@@ -187,7 +244,269 @@ export function imageDAmong(etat: EtatClient, lissee: VueLissee, texture: string
     });
   }
 
-  return { disques, cadavres, libelles, vision: visionDe(etat, lissee) };
+  disques.push(...nuageNoir(etat));
+  const moi = lissee.entites.find(({ entite }) => entite.id === etat.moi);
+  const fleches = moi === undefined ? undefined : flechesVersLesPostes(etat, moi);
+
+  return {
+    disques,
+    cadavres,
+    libelles: fleches === undefined ? libelles : [...libelles, ...fleches.libelles],
+    vision: visionDe(etat, lissee),
+    postes: postesDesSabotages(etat, maintenant),
+    fleches: fleches?.traits ?? [],
+  };
+}
+
+/** Les postes des sabotages de la partie: le boitier et les deux consoles, en miroir s'il le faut. */
+function postesDeLaPartie(
+  etat: EtatClient,
+): { readonly boitier: Position; readonly consoles: readonly [Position, Position] } | undefined {
+  const reglages = etat.salon?.reglages;
+
+  return reglages === undefined ? undefined : lieuxDuMode(reglages.carte, reglages.modeMiroir);
+}
+
+/**
+ * Le boitier et les consoles, au sol (rendu 6A): un socle sombre, puis le trait neon de l'objet,
+ * cyan au repos. Pendant leur sabotage, ils passent a l'orange (la panne) ou au rouge (la
+ * surchauffe), et le disque ou l'on se tient pour reparer bat; une console tenue s'emplit.
+ */
+function postesDesSabotages(etat: EtatClient, maintenant: number): IndicateurScene {
+  const postes = postesDeLaPartie(etat);
+
+  if (postes === undefined || etat.among.prive === undefined) {
+    return AUCUN_INDICATEUR;
+  }
+
+  const { poste } = APPARENCE_AMONG;
+  const sabotage = etat.partie?.among?.sabotage;
+  const enPanne = sabotage?.nature === 'panne';
+  const enSurchauffe = sabotage?.nature === 'surchauffe';
+  const battement =
+    poste.alphaMinimum +
+    (1 - poste.alphaMinimum) *
+      (0.5 + 0.5 * Math.sin((maintenant / poste.battementMs) * Math.PI * 2));
+  const disques: DisqueScene[] = [];
+  const traits: TraitScene[] = [];
+
+  const poser = (
+    id: string,
+    place: Position,
+    couleur: number,
+    actif: boolean,
+    tenu: boolean,
+    dessin: (place: Position) => readonly (readonly number[])[],
+  ): void => {
+    disques.push({
+      id: `${id}:socle`,
+      x: place.x,
+      y: place.y,
+      rayon: poste.socle.rayon,
+      remplissage: { couleur: poste.socle.couleur, alpha: poste.socle.alpha },
+      contour: undefined,
+    });
+
+    if (actif) {
+      disques.push({
+        id: `${id}:disque`,
+        x: place.x,
+        y: place.y,
+        rayon: AMONG.RAYON_D_UN_POSTE_PX,
+        remplissage: tenu ? { couleur, alpha: poste.alphaTenue } : undefined,
+        contour: { couleur, alpha: battement, epaisseur: 2 },
+      });
+    }
+
+    dessin(place).forEach((points, rang) => {
+      traits.push({
+        id: `${id}:trait:${String(rang)}`,
+        points,
+        couleur,
+        alpha: poste.alpha,
+        epaisseur: poste.epaisseur,
+      });
+    });
+  };
+
+  poser(
+    'boitier',
+    postes.boitier,
+    enPanne ? poste.panne : poste.repos,
+    enPanne,
+    false,
+    dessinDuBoitier,
+  );
+  postes.consoles.forEach((console_, rang) => {
+    poser(
+      `console:${String(rang)}`,
+      console_,
+      enSurchauffe ? poste.surchauffe : poste.repos,
+      enSurchauffe,
+      sabotage?.consolesTenues[rang] === true,
+      dessinDUneConsole,
+    );
+  });
+
+  return { disques, parts: [], traits };
+}
+
+/** Le boitier de la rue: un coffret debout, et l'eclair au milieu. */
+function dessinDuBoitier({ x, y }: Position): readonly (readonly number[])[] {
+  return [
+    [x - 11, y - 16, x + 11, y - 16, x + 11, y + 16, x - 11, y + 16, x - 11, y - 16],
+    [
+      x + 3,
+      y - 10,
+      x - 5,
+      y + 2,
+      x + 1,
+      y + 2,
+      x - 3,
+      y + 10,
+      x + 5,
+      y - 2,
+      x - 1,
+      y - 2,
+      x + 3,
+      y - 10,
+    ],
+  ];
+}
+
+/** Une console: un ecran sur son pied, et la courbe qui s'y affole. */
+function dessinDUneConsole({ x, y }: Position): readonly (readonly number[])[] {
+  return [
+    [x - 16, y - 14, x + 16, y - 14, x + 16, y + 6, x - 16, y + 6, x - 16, y - 14],
+    [x, y + 6, x, y + 14],
+    [x - 9, y + 14, x + 9, y + 14],
+    [x - 10, y - 2, x - 4, y - 9, x + 2, y - 3, x + 9, y - 10],
+  ];
+}
+
+/**
+ * Le nuage noir (rendu 4A): des volutes sur la station, toujours les memes pour un meme nuage.
+ * Opaque pour une proie vivante: le serveur ne lui envoie rien de ce qui s'y tient. A demi pour
+ * un assassin ou un fantome, qui y voient.
+ */
+function nuageNoir(etat: EtatClient): readonly DisqueScene[] {
+  const nuage = etat.partie?.among?.nuage;
+  const prive = etat.among.prive;
+
+  if (nuage === undefined || prive === undefined) {
+    return [];
+  }
+
+  const { couleur, alphaOpaque, alphaTranslucide, volutes } = APPARENCE_AMONG.nuage;
+  const alpha = prive.role === 'tueur' || prive.fantome ? alphaTranslucide : alphaOpaque;
+  const rayon = AMONG.RAYON_DU_NUAGE_PX;
+  let graine = graineDe(`${String(nuage.x)}:${String(nuage.y)}`);
+  const tirer = (): number => {
+    graine = (graine * 9301 + 49297) % 233_280;
+    return graine / 233_280;
+  };
+  const disques: DisqueScene[] = [
+    {
+      id: 'nuage:coeur',
+      x: nuage.x,
+      y: nuage.y,
+      rayon: rayon * 0.72,
+      remplissage: { couleur, alpha },
+      contour: undefined,
+    },
+  ];
+
+  for (let rang = 0; rang < volutes; rang += 1) {
+    const angle = tirer() * Math.PI * 2;
+    const ecart = Math.sqrt(tirer()) * rayon * 0.62;
+    // Les volutes du bord sont plus legeres: le nuage s'efface sur son pourtour.
+    disques.push({
+      id: `nuage:volute:${String(rang)}`,
+      x: nuage.x + Math.cos(angle) * ecart,
+      y: nuage.y + Math.sin(angle) * ecart,
+      rayon: rayon * (0.22 + tirer() * 0.18),
+      remplissage: { couleur, alpha: alpha * (ecart > rayon * 0.4 ? 0.55 : 0.85) },
+      contour: undefined,
+    });
+  }
+
+  return disques;
+}
+
+/**
+ * Les fleches vers les postes d'un sabotage en cours (rendus 2C et 3B): le boitier pendant la
+ * panne, en orange, les deux consoles pendant la surchauffe, en rouge. Chacune a une distance
+ * fixe de nous, dans sa direction, avec ce qu'elle designe et a combien de pixels; aucune pour
+ * un poste deja tout pres.
+ */
+function flechesVersLesPostes(
+  etat: EtatClient,
+  moi: { readonly x: number; readonly y: number },
+): { readonly traits: readonly TraitScene[]; readonly libelles: readonly LibelleScene[] } {
+  const sabotage = etat.partie?.among?.sabotage;
+  const postes = postesDeLaPartie(etat);
+  const traits: TraitScene[] = [];
+  const libelles: LibelleScene[] = [];
+
+  if (postes === undefined || etat.partie?.among?.phase !== 'jeu') {
+    return { traits, libelles };
+  }
+
+  const cibles: readonly {
+    readonly nom: string;
+    readonly place: Position;
+    readonly couleur: number;
+  }[] =
+    sabotage?.nature === 'panne'
+      ? [{ nom: 'Boîtier', place: postes.boitier, couleur: APPARENCE_AMONG.poste.panne }]
+      : sabotage?.nature === 'surchauffe'
+        ? postes.consoles.map((place) => ({
+            nom: 'Console',
+            place,
+            couleur: APPARENCE_AMONG.poste.surchauffe,
+          }))
+        : [];
+  const { rayon, longueur, epaisseur, ecartDuTexte } = APPARENCE_AMONG.fleche;
+
+  cibles.forEach(({ nom, place, couleur }, rang) => {
+    const dx = place.x - moi.x;
+    const dy = place.y - moi.y;
+    const distance = Math.hypot(dx, dy);
+
+    if (distance <= rayon + longueur) {
+      return;
+    }
+
+    const ux = dx / distance;
+    const uy = dy / distance;
+    const pointe = { x: moi.x + ux * rayon, y: moi.y + uy * rayon };
+    const base = { x: pointe.x - ux * longueur, y: pointe.y - uy * longueur };
+    const ecart = longueur * 0.65;
+
+    traits.push({
+      id: `fleche:${String(rang)}`,
+      points: [
+        base.x - uy * ecart,
+        base.y + ux * ecart,
+        pointe.x,
+        pointe.y,
+        base.x + uy * ecart,
+        base.y - ux * ecart,
+      ],
+      couleur,
+      alpha: 1,
+      epaisseur,
+    });
+    libelles.push({
+      id: `fleche:${String(rang)}:${nom}`,
+      texte: `${nom} ${String(Math.round(distance))} px`,
+      x: moi.x + ux * (rayon - longueur - ecartDuTexte),
+      y: moi.y + uy * (rayon - longueur - ecartDuTexte),
+      couleur,
+    });
+  });
+
+  return { traits, libelles };
 }
 
 /** L'opacite d'un joueur d'Among Ninjas: translucide s'il est fantome. */
@@ -288,6 +607,8 @@ function moitiesDuCadavre(
 /**
  * Le cercle de vision d'un vivant: centre sur lui, du rayon de son role au palier regle.
  * Aucun pour un fantome, qui voit toute la carte, ni avant que la page sache notre role.
+ * Pendant la panne de neons (etape 7.22), une proie vivante ne voit plus qu'a 110 pixels, et le
+ * decor eteint s'assombrit (rendu 2C): le meme rayon que celui du serveur (rayonDeVision).
  */
 function visionDe(etat: EtatClient, lissee: VueLissee): VisionScene | undefined {
   const prive = etat.among.prive;
@@ -299,8 +620,17 @@ function visionDe(etat: EtatClient, lissee: VueLissee): VisionScene | undefined 
 
   const reglages = etat.salon?.reglages.among ?? AMONG_PAR_DEFAUT;
   const palier = prive.role === 'tueur' ? reglages.visionTueur : reglages.visionProie;
+  const rayon = RAYONS_DE_VISION[prive.role][palier];
+  const enPanne = prive.role === 'proie' && etat.partie?.among?.sabotage?.nature === 'panne';
 
-  return { x: moi.x, y: moi.y, rayon: RAYONS_DE_VISION[prive.role][palier] };
+  return enPanne
+    ? {
+        x: moi.x,
+        y: moi.y,
+        rayon: Math.min(rayon, AMONG.RAYON_DE_VISION_EN_PANNE_PX),
+        voile: APPARENCE_AMONG.voileEnPanne,
+      }
+    : { x: moi.x, y: moi.y, rayon, voile: VISION_AMONG.voile };
 }
 
 /**

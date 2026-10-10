@@ -10,11 +10,25 @@
  * deplacer en la lisant, au risque de ne pas voir venir un assassin. Elle se ferme d'elle-meme
  * hors de la phase de jeu, et quand une tache s'ouvre.
  *
+ * LES SABOTAGES (etape 7.22). Un assassin, vivant ou fantome, y trouve le panneau des sabotages,
+ * en colonne a droite (rendu 1A de la planche docs/design/etape-7-22/1-planche.png); une proie
+ * fantome, celui des maledictions (rendu 5A). Le nuage noir se pose ensuite sur une station,
+ * touchee ou choisie au clavier. Pendant la panne et la surchauffe, la carte marque le boitier
+ * ou les deux consoles.
+ *
  * Ce composant pose ce que le modele (hud/among.ts, carteAmongDe) decide, et rien d'autre.
  */
 
+import type { DemandeSabotage, NatureDeSabotage, Nuisance } from '@neon-ninja/shared';
+import { NUISANCES } from '@neon-ninja/shared';
+
 import type { EtatClient } from '../../etat.js';
-import type { CarteAmong, LigneDeTache, PointDeMinimap } from '../../hud/among.js';
+import type {
+  CarteAmong,
+  LigneDeTache,
+  PanneauDeLaCarte,
+  PointDeMinimap,
+} from '../../hud/among.js';
 import { carteAmongDe } from '../../hud/among.js';
 import type { LecteurDeSons } from '../../sons/lecteur.js';
 import { bouton, creer, ecrireTexte } from '../dom.js';
@@ -23,6 +37,10 @@ import { bouton, creer, ecrireTexte } from '../dom.js';
 export interface OptionsCarteAmong {
   readonly document: Document;
   readonly sons?: LecteurDeSons;
+  /** Demande un sabotage au serveur (etape 7.22). */
+  readonly saboter?: (demande: DemandeSabotage) => void;
+  /** Demande une malediction au serveur (etape 7.22). */
+  readonly maudire?: (nature: Nuisance) => void;
 }
 
 /** La carte, montee. */
@@ -53,6 +71,9 @@ function signature(carte: CarteAmong): string {
     carte.fond,
     String(carte.miroir),
     carte.titreDeLaListe,
+    carte.panneau === undefined
+      ? ''
+      : `${carte.panneau.genre}:${carte.panneau.boutons.map((b) => b.nature).join(',')}`,
     ...carte.reperes.map(
       (repere) =>
         `${String(repere.x)}:${String(repere.y)}:${repere.titre}:${repere.station}:${String(repere.faite)}`,
@@ -80,9 +101,88 @@ export function monterCarteAmong(options: OptionsCarteAmong): CarteAmongMontee {
     { classe: 'carte-among-moi' },
     creer(doc, 'span', { texte: 'Vous' }),
   );
-  const plan = creer(doc, 'div', { classe: 'carte-among-plan' }, fond, reperes, gong, moi);
+  const postes = creer(doc, 'div', { classe: 'carte-among-postes' });
+  const plan = creer(doc, 'div', { classe: 'carte-among-plan' }, fond, postes, reperes, gong, moi);
   const titreDeLaListe = creer(doc, 'h2', { classe: 'carte-among-titre' });
   const liste = creer(doc, 'ul', { classe: 'carte-among-liste' });
+  // Le panneau des sabotages ou des maledictions (etape 7.22).
+  const titreDuPanneau = creer(doc, 'h3', { classe: 'carte-among-sabotages-titre' });
+  const etatDuPanneau = creer(doc, 'p', { classe: 'carte-among-sabotages-etat' });
+  const boutons = creer(doc, 'div', { classe: 'carte-among-sabotages-boutons' });
+  const aideDuNuage = creer(doc, 'p', {
+    classe: 'carte-among-sabotages-aide',
+    texte: 'Touchez une station pour y poser le nuage',
+  });
+  aideDuNuage.hidden = true;
+  const sabotages = creer(
+    doc,
+    'section',
+    { classe: 'carte-among-sabotages' },
+    titreDuPanneau,
+    etatDuPanneau,
+    boutons,
+    aideDuNuage,
+  );
+  sabotages.hidden = true;
+  /** Le genre du panneau monte: sabotages ou maledictions. */
+  let genre: PanneauDeLaCarte['genre'] | undefined;
+  /** L'assassin a choisi le nuage, et doit encore toucher une station. */
+  let choixDuNuage = false;
+
+  const choisirLeNuage = (choisi: boolean): void => {
+    choixDuNuage = choisi;
+    aideDuNuage.hidden = !choisi;
+    racine.classList.toggle('choix-du-nuage', choisi);
+
+    for (const repere of reperes.querySelectorAll<HTMLElement>('.carte-among-repere')) {
+      repere.tabIndex = choisi ? 0 : -1;
+    }
+  };
+
+  // Un bouton du panneau: un sabotage, ou une malediction. Le nuage attend sa station.
+  boutons.addEventListener('click', (evenement) => {
+    const cible = (evenement.target as HTMLElement).closest<HTMLButtonElement>('button');
+    const nature = cible?.dataset['nature'] as NatureDeSabotage | undefined;
+
+    if (cible === null || cible === undefined || cible.disabled || nature === undefined) {
+      return;
+    }
+
+    if (genre === 'maledictions') {
+      if ((NUISANCES as readonly string[]).includes(nature)) {
+        options.maudire?.(nature as Nuisance);
+      }
+      return;
+    }
+
+    if (nature === 'nuage') {
+      choisirLeNuage(!choixDuNuage);
+      return;
+    }
+
+    choisirLeNuage(false);
+    options.saboter?.({ nature });
+  });
+
+  // Une station touchee, ou choisie au clavier, recoit le nuage.
+  const poserLeNuage = (evenement: Event): void => {
+    const repere = (evenement.target as HTMLElement).closest<HTMLElement>('.carte-among-repere');
+    const rang = Number(repere?.dataset['rang']);
+
+    if (!choixDuNuage || repere === null || !Number.isInteger(rang)) {
+      return;
+    }
+
+    choisirLeNuage(false);
+    options.saboter?.({ nature: 'nuage', station: rang });
+  };
+  reperes.addEventListener('click', poserLeNuage);
+  reperes.addEventListener('keydown', (evenement) => {
+    if (evenement.key === 'Enter' || evenement.key === ' ') {
+      evenement.preventDefault();
+      poserLeNuage(evenement);
+    }
+  });
   const fermer = bouton(
     doc,
     {
@@ -100,6 +200,7 @@ export function monterCarteAmong(options: OptionsCarteAmong): CarteAmongMontee {
     { classe: 'carte-among-panneau' },
     titreDeLaListe,
     liste,
+    sabotages,
     creer(doc, 'p', { classe: 'carte-among-aide', texte: 'M ou Échap pour fermer' }),
   );
   const racine = creer(
@@ -134,6 +235,7 @@ export function monterCarteAmong(options: OptionsCarteAmong): CarteAmongMontee {
     racine.hidden = true;
     options.sons?.jouer('carteOuverte');
     doc.removeEventListener('keydown', surTouche);
+    choisirLeNuage(false);
   }
 
   function basculer(etat: EtatClient): void {
@@ -165,7 +267,7 @@ export function monterCarteAmong(options: OptionsCarteAmong): CarteAmongMontee {
     racine.dataset['camp'] = carte.camp;
     placer(gong, carte.gong);
     reperes.replaceChildren(
-      ...carte.reperes.map((repere) => {
+      ...carte.reperes.map((repere, rang) => {
         const element = creer(
           doc,
           'span',
@@ -173,6 +275,10 @@ export function monterCarteAmong(options: OptionsCarteAmong): CarteAmongMontee {
           creer(doc, 'span', { classe: 'carte-among-repere-titre', texte: repere.titre }),
         );
         element.title = repere.station;
+        // Le rang de la station: un assassin y pose le nuage noir (etape 7.22).
+        element.dataset['rang'] = String(rang);
+        element.setAttribute('role', 'button');
+        element.tabIndex = choixDuNuage ? 0 : -1;
         placer(element, repere);
         return element;
       }),
@@ -180,6 +286,57 @@ export function monterCarteAmong(options: OptionsCarteAmong): CarteAmongMontee {
     ecrireTexte(titreDeLaListe, carte.titreDeLaListe);
     liste.replaceChildren(...carte.liste.map((ligne) => ligneDeListe(doc, ligne)));
     liste.hidden = carte.liste.length === 0;
+    genre = carte.panneau?.genre;
+    sabotages.hidden = carte.panneau === undefined;
+    sabotages.dataset['genre'] = carte.panneau?.genre ?? '';
+    boutons.replaceChildren(
+      ...(carte.panneau?.boutons ?? []).map((choix) => {
+        const element = bouton(doc, {
+          classe: 'carte-among-sabotage',
+          texte: choix.libelle,
+        });
+        element.dataset['nature'] = choix.nature;
+        return element;
+      }),
+    );
+  };
+
+  /** L'etat du panneau et de ses boutons, a chaque image: la recharge court. */
+  const afficherLePanneau = (panneau: PanneauDeLaCarte | undefined): void => {
+    if (panneau === undefined) {
+      return;
+    }
+
+    ecrireTexte(titreDuPanneau, panneau.titre);
+    ecrireTexte(etatDuPanneau, panneau.etat);
+
+    panneau.boutons.forEach((choix, rang) => {
+      const element = boutons.children[rang] as HTMLButtonElement | undefined;
+
+      if (element !== undefined && element.disabled === choix.pret) {
+        element.disabled = !choix.pret;
+      }
+    });
+
+    if (choixDuNuage && panneau.boutons.every((choix) => !choix.pret)) {
+      choisirLeNuage(false);
+    }
+  };
+
+  /** Les postes du sabotage en cours, marques sur le plan. */
+  const afficherLesPostes = (carte: CarteAmong): void => {
+    while (postes.children.length < carte.postes.length) {
+      postes.append(creer(doc, 'span', { classe: 'carte-among-poste' }));
+    }
+
+    [...postes.children].forEach((point, rang) => {
+      const place = carte.postes[rang];
+      (point as HTMLElement).hidden = place === undefined;
+
+      if (place !== undefined) {
+        placer(point as HTMLElement, place);
+      }
+    });
   };
 
   return {
@@ -205,6 +362,8 @@ export function monterCarteAmong(options: OptionsCarteAmong): CarteAmongMontee {
       }
 
       ecrire(carte);
+      afficherLePanneau(carte.panneau);
+      afficherLesPostes(carte);
       moi.hidden = carte.moi === undefined;
 
       if (carte.moi !== undefined) {

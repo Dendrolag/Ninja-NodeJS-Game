@@ -14,8 +14,10 @@
  * leur animation repartait de zero sans fin, et l'on n'en voyait que des bouts (retour
  * d'essai du porteur du projet, 9 octobre 2026).
  *
- * L'EGOUT (rendu B, a affiner): a l'ejection, l'ejecte s'enfonce dans une bouche d'egout
- * neon, sous la table.
+ * L'EXECUTION (rendu 7C de la planche docs/design/etape-7-22/1-planche.png, retour d'essai du
+ * porteur du projet du 10 octobre 2026, a la place de l'egout de l'etape 7.20): un coup de katana
+ * en diagonale, comme au Massacre, et l'execute tombe en deux moities dans son sang, sous la
+ * table. Pour tout execute, assassin ou non: une execution ne dit jamais le role.
  *
  * Le texte venu d'un joueur passe par textContent, jamais par du balisage.
  */
@@ -34,6 +36,23 @@ export interface EcransAmong {
   readonly racine: HTMLElement;
   afficher(etat: EtatClient): void;
   demonter(): void;
+}
+
+/**
+ * Ce que montre l'execution (rendu 7C): la flaque de sang, les deux moities du ninja a sa
+ * couleur, coupees en diagonale (la feuille de style les decoupe et les fait tomber), et le
+ * trait de la lame.
+ */
+function sceneDExecution(doc: Document, couleur: string): readonly HTMLElement[] {
+  const moitie = (cote: 'haut' | 'bas'): HTMLElement =>
+    creer(doc, 'div', { classe: `among-execution-moitie ${cote}` }, avatarDeNinja(doc, couleur));
+
+  return [
+    creer(doc, 'div', { classe: 'among-execution-sang' }),
+    moitie('bas'),
+    moitie('haut'),
+    creer(doc, 'div', { classe: 'among-execution-lame' }),
+  ];
 }
 
 /** L'espace de noms des elements SVG. */
@@ -223,17 +242,15 @@ export function monterEcransAmong(doc: Document, client: Client): EcransAmong {
   const chat = monterChat(doc, client, 'Réunion');
   chat.racine.classList.add('among-chat');
 
-  // L'ejection: la bouche d'egout, l'ejecte qui s'y enfonce, le texte.
+  // L'execution: le coup de katana, les deux moities dans leur sang, le texte.
   const egout = creer(doc, 'div', { classe: 'among-egout' });
-  const bouche = creer(doc, 'div', { classe: 'among-egout-bouche' });
-  const chute = creer(doc, 'div', { classe: 'among-egout-chute' });
-  bouche.append(chute);
+  const chute = creer(doc, 'div', { classe: 'among-execution' });
   const texteEjection = creer(doc, 'p', {
     classe: 'among-egout-texte',
     attributs: { role: 'status' },
   });
   const detailEjection = creer(doc, 'p', { classe: 'among-egout-detail' });
-  egout.append(bouche, texteEjection, detailEjection);
+  egout.append(chute, texteEjection, detailEjection);
 
   reunion.append(entete, table, passer, egout, chat.racine);
   reunion.hidden = true;
@@ -258,7 +275,7 @@ export function monterEcransAmong(doc: Document, client: Client): EcransAmong {
 
   /** Les places deja posees autour de la table, par joueur. */
   const places = new Map<string, { element: HTMLButtonElement; voix: HTMLElement }>();
-  /** L'ejecte deja pose dans l'egout. */
+  /** L'execute deja pose. */
   let ejectePose: string | undefined;
   /** Ce qui est affiche, pour ne refaire la rangee qu'a son changement. */
   let rangeeAffichee = '';
@@ -411,12 +428,12 @@ export function monterEcransAmong(doc: Document, client: Client): EcransAmong {
     if (id !== ejectePose) {
       ejectePose = id;
       chute.replaceChildren(
-        ...(ecran.ejecte === undefined ? [] : [avatarDeNinja(doc, ecran.ejecte.couleur)]),
+        ...(ecran.ejecte === undefined ? [] : sceneDExecution(doc, ecran.ejecte.couleur)),
       );
-      // Relance l'animation de la chute.
-      chute.classList.remove('tombe');
+      // Relance l'animation du coup.
+      chute.classList.remove('tranche');
       void chute.offsetWidth;
-      chute.classList.toggle('tombe', ecran.ejecte !== undefined);
+      chute.classList.toggle('tranche', ecran.ejecte !== undefined);
     }
   };
 

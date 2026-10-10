@@ -87,6 +87,7 @@ import {
   VAISSEAU,
   VISION_AMONG,
 } from './apparence.js';
+import type { VisionScene } from './among.js';
 import { APPARENCE_AMONG, cadreDuMasque } from './among.js';
 import type { Camera, ZoneVisible } from './camera.js';
 import { dansLaZone, versEcran, zoneVisible } from './camera.js';
@@ -570,10 +571,12 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   // bornait au cadre du disque, et le decor restait en couleur au-dela.
   fondEteint.filters = [filtreEteint];
   dessusEteint.filters = [filtreEteint];
-  // Un voile noir par-dessus la copie, pour l'assombrir de moitie (VISION_AMONG).
+  // Un voile noir par-dessus la copie, pour l'assombrir de moitie (VISION_AMONG), davantage
+  // pendant la panne de neons (etape 7.22): son opacite suit la scene.
   const voile = new Graphics()
     .rect(0, 0, options.carte.largeur, options.carte.hauteur)
-    .fill({ color: 0x000000, alpha: VISION_AMONG.voile });
+    .fill({ color: 0x000000 });
+  voile.alpha = VISION_AMONG.voile;
   eteint.addChild(fondEteint, dessusEteint, voile);
   // Le masque est la carte percee du disque: le decor eteint se montre partout, sauf dedans.
   eteint.mask = disqueDeVision;
@@ -835,9 +838,10 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       // Les explosions des mines et les impacts de tir passent avec les nuages, par-dessus les
       // personnages.
       dessinerLesDisques(fumees, [...scene.fumees, ...scene.explosions, ...scene.impacts], champ);
-      poserLaVision(eteint, disqueDeVision, scene.vision, options.carte);
+      poserLaVision(eteint, disqueDeVision, voile, scene.vision, options.carte);
       dessinerLesLibelles(libelles, textesDesLibelles, scene.libelles ?? []);
       dessinerLesReperes(reperes, scene.reperes);
+      tracerLesTraits(reperes, scene.fleches ?? []);
     },
 
     redimensionner(largeur: number, hauteur: number) {
@@ -864,13 +868,15 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
 function poserLaVision(
   eteint: Container,
   masque: Graphics,
-  vision: { readonly x: number; readonly y: number; readonly rayon: number } | undefined,
+  voile: Graphics,
+  vision: VisionScene | undefined,
   carte: DimensionsCarte,
 ): void {
   eteint.visible = vision !== undefined;
   masque.clear();
 
   if (vision !== undefined) {
+    voile.alpha = vision.voile;
     // Plus grand que la carte: un disque qui deborde du bord y reste un trou (cadreDuMasque).
     const cadre = cadreDuMasque(carte, vision);
     masque

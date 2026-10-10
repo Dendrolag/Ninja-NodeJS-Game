@@ -13,24 +13,72 @@
  *
  * LA CARTE ET LA MINI-CARTE NE MONTRENT JAMAIS LES AUTRES JOUEURS: la vision reduite ferait
  * sinon double emploi avec rien.
+ *
+ * LES SABOTAGES (etape 7.22). La carte d'un assassin porte le panneau des sabotages (rendu 1A),
+ * celle d'une proie fantome le panneau des maledictions (rendu 5A). Pendant la panne et la
+ * surchauffe, le HUD montre une alerte (rendus 2C et 3B), et le bouton d'action dit « Réparer »
+ * a qui peut reparer, au boitier ou a une console.
  */
 
-import type { EntiteVue, EtatPriveAmong, PhaseAmong, Position } from '@neon-ninja/shared';
+import type {
+  AmongVu,
+  EntiteVue,
+  EtatPriveAmong,
+  NatureDeSabotage,
+  PhaseAmong,
+  Position,
+} from '@neon-ninja/shared';
 import {
   AMONG,
   AMONG_PAR_DEFAUT,
   CARTES,
+  NATURES_DE_SABOTAGE,
+  NUISANCES,
   RACINE_RESSOURCES,
   REGLAGES_PAR_DEFAUT,
   cheminCarte,
+  lieuxDuMode,
 } from '@neon-ninja/shared';
 
 import { stationsAMontrer } from '../among.js';
+import { NOMS_DES_SABOTAGES } from '../annonces.js';
 import type { EtatClient } from '../etat.js';
 import { TITRES_DES_TACHES } from '../interface/modeles/gestes/index.js';
 
-/** Ce que fera le bouton d'action si l'on appuie maintenant. */
-export type GesteAmong = 'signaler' | 'gong' | 'tache' | 'aucun';
+/** Ce que fera le bouton d'action si l'on appuie maintenant. Reparer se fait en tenant. */
+export type GesteAmong = 'signaler' | 'gong' | 'reparer' | 'tache' | 'aucun';
+
+/**
+ * L'alerte d'un sabotage que tout le monde repare (etape 7.22): la panne, un bandeau en bas de
+ * l'ecran (rendu 2C); la surchauffe, l'ecran qui bat en rouge et un gros compte a rebours en
+ * haut (rendu 3B).
+ */
+export interface AlerteDeSabotage {
+  readonly genre: 'panne' | 'surchauffe';
+  readonly titre: string;
+  readonly detail: string;
+  /** Les secondes qui restent, pour la surchauffe. */
+  readonly compte: string | undefined;
+}
+
+/** Un bouton du panneau de la carte: un sabotage, ou une malediction. */
+export interface BoutonDuPanneau {
+  readonly nature: NatureDeSabotage;
+  readonly libelle: string;
+  readonly pret: boolean;
+}
+
+/**
+ * Le panneau de la carte plein ecran (etape 7.22): les six sabotages d'un assassin, vivant ou
+ * fantome (rendu 1A), ou les trois maledictions d'une proie fantome (rendu 5A).
+ */
+export interface PanneauDeLaCarte {
+  readonly genre: 'sabotages' | 'maledictions';
+  readonly titre: string;
+  /** « Prêt », « Prochain dans 12 s », ou « En cours : Panne de néons ». */
+  readonly etat: string;
+  readonly boutons: readonly BoutonDuPanneau[];
+}
 
 /** Une tache de notre liste, telle que la liste et la carte l'ecrivent. */
 export interface LigneDeTache {
@@ -62,6 +110,8 @@ export interface AmongHud {
   readonly libelleDuGeste: string;
   /** La mini-carte: ou l'on est, et ou aller. */
   readonly minimap: MinimapAmong;
+  /** L'alerte de la panne ou de la surchauffe en cours (etape 7.22). */
+  readonly alerte: AlerteDeSabotage | undefined;
 }
 
 /** Un point de la mini-carte, en part de la carte: de zero a un sur chaque axe. */
@@ -84,6 +134,8 @@ export interface MinimapAmong {
   readonly moi: (PointDeMinimap & { readonly couleur: string }) | undefined;
   readonly stations: readonly PointDeMinimap[];
   readonly gong: PointDeMinimap;
+  /** Les postes du sabotage en cours (etape 7.22): le boitier, ou les deux consoles. */
+  readonly postes: readonly PointDeMinimap[];
 }
 
 /** Un repere de la carte plein ecran: une station, son nom et sa tache. */
@@ -106,12 +158,15 @@ export interface CarteAmong extends Omit<MinimapAmong, 'stations'> {
   readonly liste: readonly LigneDeTache[];
   /** « Mes tâches 2 sur 5 », ou « Les tâches des proies » pour un assassin. */
   readonly titreDeLaListe: string;
+  /** Les sabotages d'un assassin, ou les maledictions d'une proie fantome (etape 7.22). */
+  readonly panneau: PanneauDeLaCarte | undefined;
 }
 
 /** Le nom du bouton d'action, selon ce qu'il fera. */
 const LIBELLES_DES_GESTES: Readonly<Record<GesteAmong, string>> = {
   signaler: 'Signaler',
   gong: 'Gong',
+  reparer: 'Réparer',
   tache: 'Tâche',
   aucun: 'Action',
 };
@@ -157,7 +212,53 @@ export function amongHud(etat: EtatClient): AmongHud | undefined {
     geste,
     libelleDuGeste: LIBELLES_DES_GESTES[geste],
     minimap: minimapDe(etat, moi),
+    alerte: commune?.phase === 'jeu' ? alerteDe(commune) : undefined,
   };
+}
+
+/** L'alerte de la panne ou de la surchauffe, d'apres ce que le flux dit du sabotage en cours. */
+function alerteDe(commune: AmongVu): AlerteDeSabotage | undefined {
+  const sabotage = commune.sabotage;
+
+  if (sabotage?.nature === 'panne') {
+    return {
+      genre: 'panne',
+      titre: 'Panne de néons',
+      detail: 'Réparez le boîtier de la rue',
+      compte: undefined,
+    };
+  }
+
+  if (sabotage?.nature === 'surchauffe') {
+    const tenues = sabotage.consolesTenues.filter(Boolean).length;
+
+    return {
+      genre: 'surchauffe',
+      titre: 'Surchauffe',
+      detail: `Consoles tenues : ${String(tenues)} sur 2`,
+      compte: String(Math.ceil(sabotage.restantMs / 1000)),
+    };
+  }
+
+  return undefined;
+}
+
+/** Les postes du sabotage en cours, en part de la carte: le boitier, ou les deux consoles. */
+function postesEnCours(etat: EtatClient, enPart: (place: Position) => PointDeMinimap) {
+  const reglages = etat.salon?.reglages;
+  const nature = etat.partie?.among?.sabotage?.nature;
+  const lieux =
+    reglages === undefined ? undefined : lieuxDuMode(reglages.carte, reglages.modeMiroir);
+
+  if (lieux === undefined) {
+    return [];
+  }
+
+  if (nature === 'panne') {
+    return [enPart(lieux.boitier)];
+  }
+
+  return nature === 'surchauffe' ? lieux.consoles.map(enPart) : [];
 }
 
 /** Notre liste de taches, pour une proie, dans son ordre: vide pour un assassin. */
@@ -191,6 +292,7 @@ function cadreDeLaCarte(
     proportions: carte.largeur / carte.hauteur,
     moi: moi === undefined ? undefined : { ...enPart(moi), couleur: moi.couleur },
     gong: enPart(prive?.gong ?? { x: carte.largeur / 2, y: carte.hauteur / 2 }),
+    postes: postesEnCours(etat, enPart),
   };
 }
 
@@ -244,7 +346,62 @@ export function carteAmongDe(etat: EtatClient): CarteAmong | undefined {
       prive.role === 'tueur'
         ? 'Les tâches des proies'
         : `Mes tâches ${String(faites)} sur ${String(liste.length)}`,
+    panneau: panneauDe(prive, etat.partie?.among),
   };
+}
+
+/**
+ * Le panneau de la carte (etape 7.22): les six sabotages d'un assassin, vivant ou fantome, ou
+ * les trois maledictions d'une proie fantome. Un bouton n'est pret qu'en jeu, sans sabotage en
+ * cours pour un assassin, et la recharge commune finie. Rien pour une proie vivante.
+ */
+function panneauDe(
+  prive: EtatPriveAmong,
+  commune: AmongVu | undefined,
+): PanneauDeLaCarte | undefined {
+  const enJeu = commune?.phase === 'jeu';
+
+  if (prive.role === 'tueur') {
+    const enCours = commune?.sabotage?.nature;
+    const rechargeMs = commune?.rechargeDesSabotagesMs ?? 0;
+    const pret = enJeu && enCours === undefined && rechargeMs === 0;
+
+    return {
+      genre: 'sabotages',
+      titre: 'Sabotages',
+      etat:
+        enCours === undefined
+          ? etatDUneRecharge(rechargeMs)
+          : `En cours : ${NOMS_DES_SABOTAGES[enCours]}`,
+      boutons: NATURES_DE_SABOTAGE.map((nature) => ({
+        nature,
+        libelle: NOMS_DES_SABOTAGES[nature],
+        pret,
+      })),
+    };
+  }
+
+  if (!prive.fantome) {
+    return undefined;
+  }
+
+  const rechargeMs = commune?.rechargeDeLaMaledictionMs ?? 0;
+
+  return {
+    genre: 'maledictions',
+    titre: 'Maudire les assassins',
+    etat: etatDUneRecharge(rechargeMs),
+    boutons: NUISANCES.map((nature) => ({
+      nature,
+      libelle: NOMS_DES_SABOTAGES[nature],
+      pret: enJeu && rechargeMs === 0,
+    })),
+  };
+}
+
+/** « Prêt », ou le temps qu'il reste, arrondi a la seconde superieure. */
+function etatDUneRecharge(rechargeMs: number): string {
+  return rechargeMs === 0 ? 'Prêt' : `Prochain dans ${String(Math.ceil(rechargeMs / 1000))} s`;
 }
 
 /** Ce que le role demande. */
@@ -288,7 +445,34 @@ function gesteAPortee(etat: EtatClient, moi: EntiteVue, entites: readonly Entite
     }
   }
 
+  if (posteAReparer(etat, prive, moi)) {
+    return 'reparer';
+  }
+
   return stationAPortee(prive, moi) === undefined ? 'aucun' : 'tache';
+}
+
+/**
+ * Sommes-nous a un poste que nous pouvons tenir pour reparer (etape 7.22): le boitier pendant la
+ * panne, pour une proie, vivante ou fantome, et pour un assassin vivant; une console pendant la
+ * surchauffe, pour un vivant. Les regles du moteur, que le serveur appliquera.
+ */
+function posteAReparer(etat: EtatClient, prive: EtatPriveAmong, moi: Position): boolean {
+  const reglages = etat.salon?.reglages;
+  const nature = etat.partie?.among?.sabotage?.nature;
+  const lieux =
+    reglages === undefined ? undefined : lieuxDuMode(reglages.carte, reglages.modeMiroir);
+  const pres = (poste: Position): boolean => distance(moi, poste) <= AMONG.RAYON_D_UN_POSTE_PX;
+
+  if (lieux === undefined) {
+    return false;
+  }
+
+  if (nature === 'panne') {
+    return (prive.role === 'proie' || !prive.fantome) && pres(lieux.boitier);
+  }
+
+  return nature === 'surchauffe' && !prive.fantome && lieux.consoles.some(pres);
 }
 
 /**
@@ -334,13 +518,17 @@ export function feinteAPortee(etat: EtatClient): number | undefined {
 }
 
 /**
- * Le gong est-il permis, d'apres le temps du tour: pas dans ses quinze premieres secondes.
- * Sans duree de tour, la page ne sait pas ou en est le tour: elle le propose, et le serveur
- * tranche.
+ * Le gong est-il permis, d'apres le temps du tour: pas dans ses quinze premieres secondes, ni
+ * pendant la surchauffe (etape 7.22). Sans duree de tour, la page ne sait pas ou en est le
+ * tour: elle le propose, et le serveur tranche.
  */
 function gongPermis(etat: EtatClient): boolean {
   const commune = etat.partie?.among;
   const dureeMs = (etat.salon?.reglages.among ?? AMONG_PAR_DEFAUT).dureeDuTourS * 1000;
+
+  if (commune?.sabotage?.nature === 'surchauffe') {
+    return false;
+  }
 
   return commune === undefined || dureeMs === 0
     ? true

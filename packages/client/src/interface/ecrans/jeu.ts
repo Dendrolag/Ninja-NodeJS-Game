@@ -154,7 +154,20 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
   // La carte plein ecran et la fenetre des taches courtes d'Among Ninjas (etape 7.21). Une tache
   // ouverte fige les commandes du jeu, et ferme la carte.
   const sons = contexte.sons === undefined ? {} : { sons: contexte.sons };
-  const carteAmong = mode === 'among' ? monterCarteAmong({ document: doc, ...sons }) : undefined;
+  // Depuis la carte, un assassin sabote et une proie fantome maudit (etape 7.22).
+  const carteAmong =
+    mode === 'among'
+      ? monterCarteAmong({
+          document: doc,
+          ...sons,
+          saboter: (demande) => {
+            client.saboter(demande);
+          },
+          maudire: (nature) => {
+            client.maudire(nature);
+          },
+        })
+      : undefined;
   const fenetreDeTache =
     mode === 'among'
       ? monterFenetreDeTache({

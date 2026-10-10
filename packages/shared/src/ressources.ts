@@ -364,6 +364,25 @@ export const SONS = {
   tacheBouffee: 'bonus-escape-nuage.mp3',
   /** La carte plein ecran s'ouvre ou se ferme. */
   carteOuverte: 'button-click.wav',
+  /*
+   * Les sabotages et la malediction d'Among Ninjas (etape 7.22). Des sons du jeu en attendant
+   * ceux du porteur du projet (fiche docs/plan/etape-7-22.md, « Les sons »). Aucun ne se joue
+   * chez le seul saboteur: il designerait qui sabote.
+   */
+  /** Une nuisance ou le nuage lances, entendus des assassins et des fantomes. */
+  sabotageLance: 'button-click.wav',
+  /** Le nuage noir tombe sur une station, entendu des assassins et des fantomes. */
+  nuageTombe: 'bonus-escape-nuage.mp3',
+  /** Les neons s'eteignent, entendu de tous. */
+  panneDebut: 'final-tick.wav',
+  /** Les neons reviennent, entendu de tous. */
+  panneFin: 'collect-bonus.wav',
+  /** L'alarme de la surchauffe, entendue de tous. */
+  surchauffeAlarme: 'final-tick.wav',
+  /** La surchauffe reparee, entendue de tous. */
+  surchauffeReparee: 'collect-bonus.wav',
+  /** Une malediction, chez les assassins maudits et les fantomes. */
+  malediction: 'collect-malus.wav',
 } as const;
 
 /** Nom d'un son ponctuel. */

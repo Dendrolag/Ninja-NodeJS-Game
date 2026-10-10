@@ -441,13 +441,31 @@ function monterAmong(
   const texteDeLaBarre = element(doc, 'span', 'hud-among-barre-texte', barre);
   const minimap = monterMinimapAmong(doc, bandeau, basculerLaCarte);
   const liste = element(doc, 'ul', 'hud-among-liste', bandeau);
+  // L'alerte de la panne ou de la surchauffe (etape 7.22, rendus 2C et 3B): un bandeau en bas de
+  // l'ecran pour la panne; pour la surchauffe, l'ecran entier qui bat en rouge, sans rien
+  // retenir du doigt, et le compte a rebours en haut.
+  const alerte = element(doc, 'div', 'hud-among-alerte', parent);
+  alerte.setAttribute('role', 'alert');
+  alerte.hidden = true;
+  const compte = element(doc, 'span', 'hud-among-alerte-compte', alerte);
+  const titreDeLAlerte = element(doc, 'strong', 'hud-among-alerte-titre', alerte);
+  const detail = element(doc, 'span', 'hud-among-alerte-detail', alerte);
 
   return {
     afficher(among) {
       bandeau.hidden = among === undefined;
+      alerte.hidden = among?.alerte === undefined;
 
       if (among === undefined) {
         return;
+      }
+
+      if (among.alerte !== undefined) {
+        alerte.dataset['genre'] = among.alerte.genre;
+        compte.hidden = among.alerte.compte === undefined;
+        ecrire(compte, among.alerte.compte ?? '');
+        ecrire(titreDeLAlerte, among.alerte.titre);
+        ecrire(detail, among.alerte.detail);
       }
 
       bandeau.dataset['camp'] = among.camp;
@@ -465,6 +483,7 @@ function monterAmong(
 
     demonter() {
       bandeau.remove();
+      alerte.remove();
     },
   };
 }
@@ -531,6 +550,8 @@ function monterMinimapAmong(
   const moi = element(doc, 'span', 'hud-among-carte-moi', carte);
   /** Les points des stations deja poses. */
   const stations: HTMLElement[] = [];
+  /** Les points des postes du sabotage en cours (etape 7.22). */
+  const postes: HTMLElement[] = [];
 
   const placer = (point: HTMLElement, place: PointDeMinimap): void => {
     point.style.left = `${String(place.x * 100)}%`;
@@ -559,6 +580,19 @@ function monterMinimapAmong(
 
       stations.forEach((point, rang) => {
         const place = minimap.stations[rang];
+        point.hidden = place === undefined;
+
+        if (place !== undefined) {
+          placer(point, place);
+        }
+      });
+
+      while (postes.length < minimap.postes.length) {
+        postes.push(element(doc, 'span', 'hud-among-carte-poste', carte));
+      }
+
+      postes.forEach((point, rang) => {
+        const place = minimap.postes[rang];
         point.hidden = place === undefined;
 
         if (place !== undefined) {

@@ -594,6 +594,12 @@ function commencerUnTour(etat: EtatPartie): EtatPartie {
         joueurs,
         cadavres: {},
         rechargeDesSabotagesMs: AMONG.RECHARGE_DES_SABOTAGES_DEBUT_DE_TOUR_MS,
+        // Pas de malediction dans les premieres secondes d'un tour (etape 7.22): la recharge
+        // le dit, et la page n'a qu'elle a lire.
+        rechargeDeLaMaledictionMs: Math.max(
+          among.rechargeDeLaMaledictionMs,
+          AMONG.DELAI_DE_LA_MALEDICTION_MS,
+        ),
       }),
     ),
     { type: 'tourCommence', tour },
@@ -1009,8 +1015,8 @@ function dureeDuSabotage(nature: NatureDeSabotage): number {
 
 /**
  * Une proie fantome maudit les assassins vivants: le malus de son choix, a tous a la fois. Rien
- * pour un autre joueur, pendant la recharge commune des fantomes, ou dans les premieres secondes
- * d'un tour.
+ * pour un autre joueur, ou pendant la recharge commune des fantomes, qui couvre aussi les
+ * premieres secondes d'un tour (commencerUnTour).
  */
 function maudire(etat: EtatPartie, id: IdentifiantEntite, nature: Nuisance): EtatPartie {
   const among = etat.among as EtatAmong;
@@ -1020,8 +1026,7 @@ function maudire(etat: EtatPartie, id: IdentifiantEntite, nature: Nuisance): Eta
     joueur?.role !== 'proie' ||
     !joueur.fantome ||
     !NUISANCES.includes(nature) ||
-    among.rechargeDeLaMaledictionMs > 0 ||
-    among.tourEcouleMs < AMONG.DELAI_DE_LA_MALEDICTION_MS
+    among.rechargeDeLaMaledictionMs > 0
   ) {
     return etat;
   }

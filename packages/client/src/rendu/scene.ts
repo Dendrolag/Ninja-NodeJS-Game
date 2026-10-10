@@ -242,6 +242,11 @@ export interface Scene {
   readonly libelles?: readonly LibelleScene[];
   /** Le cercle de vision d'un vivant d'Among Ninjas (etape 7.20). Absent ailleurs. */
   readonly vision?: VisionScene;
+  /**
+   * Les fleches vers les postes d'un sabotage d'Among Ninjas (etape 7.22), par-dessus tout,
+   * comme les reperes: le decor eteint ne doit pas les cacher. Absentes ailleurs.
+   */
+  readonly fleches?: readonly TraitScene[];
 }
 
 /**
@@ -551,7 +556,7 @@ export function construireScene(
   const massacre = imageDuMassacre(etat, maintenant, niveauDeSang);
   const among =
     etat.salon?.mode === 'among'
-      ? imageDAmong(etat, lissee, adresseDeNinja('immobile', 1))
+      ? imageDAmong(etat, lissee, adresseDeNinja('immobile', 1), maintenant)
       : RIEN_D_AMONG;
   const mode = etat.salon?.mode;
   // Nos effets du Tactique changent notre cone et se lisent sur l'arc (etape 7.7).
@@ -603,7 +608,16 @@ export function construireScene(
     indicateur,
     marques,
     fumees: nuagesDeFumee(etat, lissee, maintenant),
-    mines: mines.sol,
+    // Le sol sous les personnages: les mines, et dans Among Ninjas, qui n'en a pas, le boitier
+    // et les consoles des sabotages (etape 7.22).
+    mines:
+      among.postes.traits.length === 0
+        ? mines.sol
+        : {
+            disques: [...among.postes.disques, ...mines.sol.disques],
+            parts: mines.sol.parts,
+            traits: [...among.postes.traits, ...mines.sol.traits],
+          },
     explosions: mines.explosions,
     // Les etincelles et les bouffees des taches visuelles d'Among Ninjas (etape 7.21).
     impacts:
@@ -621,6 +635,7 @@ export function construireScene(
       : { vaisseau: vaisseauDeLaScene(etat, lissee, trajectoire) }),
     ...(among.libelles.length === 0 ? {} : { libelles: among.libelles }),
     ...(among.vision === undefined ? {} : { vision: among.vision }),
+    ...(among.fleches.length === 0 ? {} : { fleches: among.fleches }),
   };
 }
 

@@ -231,7 +231,7 @@ describe('les vues', () => {
       tachesFaites: 0,
       tachesTotal: 20,
       rechargeDesSabotagesMs: AMONG.RECHARGE_DES_SABOTAGES_DEBUT_DE_TOUR_MS,
-      rechargeDeLaMaledictionMs: 0,
+      rechargeDeLaMaledictionMs: AMONG.DELAI_DE_LA_MALEDICTION_MS,
     });
     expect(instantaneDe(enJeu({ among: { dureeDuTourS: 0 } })).among?.restantMs).toBe(0);
   });
