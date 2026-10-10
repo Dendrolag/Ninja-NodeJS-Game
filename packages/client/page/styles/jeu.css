@@ -1932,6 +1932,58 @@
   color: var(--texte-secondaire);
 }
 
+/*
+ * Le deces (10 octobre 2026): a la victime, un grand texte rouge plein ecran, sur un voile
+ * sombre, qui apparait d'un coup, tient, puis s'efface. Il ne bloque aucun geste.
+ */
+.among-deces {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: radial-gradient(circle, rgba(60, 0, 8, 0.55) 0%, rgba(10, 0, 2, 0.88) 75%);
+  color: #ff2e4c;
+  font-family: var(--police-titre);
+  font-size: clamp(40px, 9vw, 128px);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-shadow:
+    0 0 18px rgba(255, 46, 76, 0.9),
+    0 0 48px rgba(255, 46, 76, 0.6);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.among-deces.montre {
+  animation: among-deces 3.2s ease-out forwards;
+}
+
+@keyframes among-deces {
+  0% {
+    opacity: 0;
+    transform: scale(1.4);
+  }
+
+  6% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  75% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+}
+
 .among-chat-fantomes {
   position: absolute;
   bottom: 16px;
@@ -1983,6 +2035,21 @@
 
   .among-egout-chute.tombe .avatar-ninja {
     animation: none;
+    opacity: 0;
+  }
+
+  .among-deces.montre {
+    animation: among-deces-sobre 3.2s step-end forwards;
+  }
+}
+
+/* Sans mouvement: le texte se montre, puis disparait, sans grossir ni s'estomper. */
+@keyframes among-deces-sobre {
+  0% {
+    opacity: 1;
+  }
+
+  100% {
     opacity: 0;
   }
 }

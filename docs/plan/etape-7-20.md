@@ -73,6 +73,7 @@ Ajustements demandés par le porteur du projet le 10 octobre 2026, après son es
 11. **La victime à portée en surbrillance, et le katana seulement face à elle.** Un assassin voit en légère surbrillance rouge la proie qu'il tuerait s'il frappait maintenant (la règle du moteur: katana prêt, proie vivante la plus proche à 32 pixels), et le bouton Katana est grisé et inactif sinon. Captures `docs/design/etape-7-20/2-katana-sans-victime.png` et `3-victime-a-portee.png`, rendu à juger en jouant.
 12. **Le fantôme: une légère transparence et un contour néon à sa couleur**, à la place du halo pâle du rendu entre A et B. Opacité 0,7, contour de 2 pixels et lueur (`OutlineFilter` et `GlowFilter`, posés sur le seul fantôme). Capture `docs/design/etape-7-20/6-fantome-agrandi.png`.
 13. **Le fantôme va plus vite**: 1,5 fois la vitesse commune, 225 pixels par seconde (`AMONG.MULTIPLICATEUR_DES_FANTOMES`). Il traverse toujours les murs, sans aucune collision, et ne s'arrête qu'au bord de la carte; vérifié sur le vrai Tokyo.
+14. **« TU SUBIS LE DÉCÈS »**: à la victime d'un meurtre, un grand texte rouge plein écran, sur un voile sombre, qui apparaît d'un coup, tient trois secondes puis s'efface, pour la surprise, en attendant animations et sons. La victime entend, provisoirement, le son d'une capture subie; l'assassin et les témoins, un coup de katana. Capture `docs/design/etape-7-20/7-deces.png`.
 
 ## Décisions prises par cette fiche
 

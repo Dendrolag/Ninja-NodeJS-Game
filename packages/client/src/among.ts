@@ -9,7 +9,7 @@
  * Ce module ne fait que tenir ces deux sources a jour. Il est pur: le reducteur l'appelle.
  */
 
-import type { EtatPriveAmong, ReunionVue } from '@neon-ninja/shared';
+import type { EtatPriveAmong, MeurtreVu, ReunionVue } from '@neon-ninja/shared';
 import { AMONG } from '@neon-ninja/shared';
 
 import type { EtatClient } from './etat.js';
@@ -47,6 +47,11 @@ export interface AmongClient {
    * hors d'une tache en cours.
    */
   readonly tacheDebuteeA?: number;
+  /**
+   * L'instant local ou l'on nous a tues: le grand texte du deces s'affiche par-dessus tout
+   * (demande du porteur du projet du 10 octobre 2026). Absent tant qu'on est vivant.
+   */
+  readonly decesA?: number;
 }
 
 /** Rien de connu: le debut d'une partie. */
@@ -75,6 +80,16 @@ export function avecLEtatPrive(
     prive,
     tacheDebuteeA: memeTache ? (among.tacheDebuteeA as number) : instant,
   };
+}
+
+/** Un meurtre, a cet instant local: s'il nous a tues, le grand texte du deces s'affiche. */
+export function apresUnMeurtre(
+  among: AmongClient,
+  meurtre: MeurtreVu,
+  moi: string | undefined,
+  instant: number,
+): AmongClient {
+  return meurtre.victime === moi ? { ...among, decesA: instant } : among;
 }
 
 /** Ce qui se passe en reunion, a ajouter a ce que la page sait. */

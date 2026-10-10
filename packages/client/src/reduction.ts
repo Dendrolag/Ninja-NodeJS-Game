@@ -48,7 +48,13 @@ import {
   refusDe,
 } from './etat.js';
 import type { FaitDeJeu } from './faits.js';
-import { AMONG_INCONNU, apresLaReunion, avecLEtatPrive, avecMonVote } from './among.js';
+import {
+  AMONG_INCONNU,
+  apresLaReunion,
+  apresUnMeurtre,
+  avecLEtatPrive,
+  avecMonVote,
+} from './among.js';
 import { reconstruire } from './reconstruction.js';
 
 /**
@@ -663,6 +669,12 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
         // Ce qui se passe en reunion d'Among Ninjas se retient aussi a part (etape 7.20).
         ...(action.fait.nature === 'reunion'
           ? { among: apresLaReunion(etat.among, action.fait.charge) }
+          : {}),
+        // Notre mort, pour le grand texte du deces (10 octobre 2026).
+        ...(action.fait.nature === 'meurtre'
+          ? {
+              among: apresUnMeurtre(etat.among, action.fait.charge, etat.moi, action.fait.instant),
+            }
           : {}),
       };
 

@@ -238,12 +238,23 @@ export function monterEcransAmong(doc: Document, client: Client): EcransAmong {
   reunion.append(entete, table, passer, egout, chat.racine);
   reunion.hidden = true;
 
+  // Le deces (demande du porteur du projet du 10 octobre 2026): a la victime, un grand texte
+  // plein ecran, par-dessus tout, pour la surprise, en attendant animations et sons. Il
+  // apparait d'un coup, tient, puis s'efface: l'animation est en CSS (jeu.css), et ne bloque
+  // aucun geste.
+  const deces = creer(doc, 'div', {
+    classe: 'among-deces',
+    texte: 'TU SUBIS LE DÉCÈS',
+    attributs: { role: 'alert' },
+  });
+  deces.hidden = true;
+
   // Le chat des fantomes, pendant le jeu.
   const chatFantomes = monterChat(doc, client, 'Chat des fantômes');
   chatFantomes.racine.classList.add('among-chat-fantomes');
   chatFantomes.racine.hidden = true;
 
-  racine.append(revelation, reunion, chatFantomes.racine);
+  racine.append(revelation, reunion, chatFantomes.racine, deces);
 
   /** Les places deja posees autour de la table, par joueur. */
   const places = new Map<string, { element: HTMLButtonElement; voix: HTMLElement }>();
@@ -253,6 +264,8 @@ export function monterEcransAmong(doc: Document, client: Client): EcransAmong {
   let rangeeAffichee = '';
   /** Les traits dessines et la taille de la table, pour ne les refaire qu'a leur changement. */
   let traitsDessines = '';
+  /** L'instant du deces deja montre: le texte ne repart qu'a une nouvelle mort. */
+  let decesMontre: number | undefined;
 
   const afficherLaRangee = (ecran: Extract<EcranAmong, { ecran: 'revelation' }>): void => {
     ecrireTexte(titreRevelation, ecran.titre);
@@ -412,6 +425,16 @@ export function monterEcransAmong(doc: Document, client: Client): EcransAmong {
 
     afficher(etat) {
       const ecran = ecranAmong(etat);
+      const decesA = etat.salon?.mode === 'among' ? etat.among.decesA : undefined;
+
+      if (decesA !== decesMontre) {
+        decesMontre = decesA;
+        montrer(deces, decesA !== undefined);
+        // Relance l'animation, comme la chute dans l'egout.
+        deces.classList.remove('montre');
+        void deces.offsetWidth;
+        deces.classList.toggle('montre', decesA !== undefined);
+      }
 
       montrer(revelation, ecran.ecran === 'revelation' || ecran.ecran === 'chargement');
       montrer(reunion, ecran.ecran === 'reunion' || ecran.ecran === 'ejection');

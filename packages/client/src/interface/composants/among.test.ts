@@ -213,6 +213,29 @@ describe('le dessin d un vote', () => {
   });
 });
 
+describe('le deces', () => {
+  it('montre le grand texte a la victime, et le relance a une nouvelle mort seulement', () => {
+    const client = { voter: vi.fn() } as unknown as Client;
+    const ecrans = monterEcransAmong(document, client);
+    document.body.append(ecrans.racine);
+    const texte = ecrans.racine.querySelector<HTMLElement>('.among-deces');
+    const enJeu = (decesA?: number): EtatClient => {
+      const base = etat('discussion', REUNION);
+
+      return { ...base, among: { ...base.among, ...(decesA === undefined ? {} : { decesA }) } };
+    };
+
+    ecrans.afficher(enJeu());
+    expect(texte?.hidden).toBe(true);
+
+    ecrans.afficher(enJeu(1000));
+    expect(texte?.hidden).toBe(false);
+    expect(texte?.textContent).toBe('TU SUBIS LE DÉCÈS');
+    expect(texte?.classList.contains('montre')).toBe(true);
+    ecrans.demonter();
+  });
+});
+
 describe('les traits de l ejection', () => {
   /** Les ecrans montes dans le document, avec un client qui ne fait rien. */
   function monter(): ReturnType<typeof monterEcransAmong> {

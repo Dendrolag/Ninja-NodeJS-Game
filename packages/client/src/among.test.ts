@@ -104,6 +104,17 @@ describe('le reducteur', () => {
     expect(etat.journal).toHaveLength(1);
     expect(apres([{ type: 'partieLancee', graineDuDecor: 1 }], etat).among).toBe(AMONG_INCONNU);
   });
+
+  it('retient l instant de notre mort, pour le grand texte du deces, et pas celle d un autre', () => {
+    const depart = { ...ETAT_INITIAL, moi: 'moi' };
+    const meurtre = (victime: string, instant: number): Action => ({
+      type: 'fait',
+      fait: fait('meurtre', { tueur: 'x', victime, x: 0, y: 0 }, instant),
+    });
+
+    expect(apres([meurtre('autre', 5)], depart).among.decesA).toBeUndefined();
+    expect(apres([meurtre('moi', 7)], depart).among.decesA).toBe(7);
+  });
 });
 
 describe('le bouton d action tenu', () => {

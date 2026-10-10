@@ -82,11 +82,12 @@ export function sonDuFait(fait: FaitDeJeu, moi?: string, mode?: Mode): NomDeSon 
     case 'carteVidee':
       return undefined;
 
-    // Among Ninjas (etape 7.20), sons provisoires pris dans ceux du jeu: le meurtre sonne comme
-    // un coup de katana chez ceux qui le recoivent; la reunion s'ouvre au son du dernier
-    // decompte, et son resultat a celui d'une capture subie.
+    // Among Ninjas (etape 7.20), sons provisoires pris dans ceux du jeu, en attendant ceux du
+    // porteur du projet: le meurtre sonne comme un coup de katana chez l'assassin et les
+    // temoins, comme une capture subie chez la victime, en alerte; la reunion s'ouvre au son du
+    // dernier decompte, et son resultat a celui d'une capture subie.
     case 'meurtre':
-      return 'katanaImpact';
+      return fait.charge.victime === moi ? 'joueurCaptureSubi' : 'katanaImpact';
 
     case 'reunion':
       return fait.charge.quoi === 'ouverte'

@@ -33,6 +33,14 @@ function partie(tempsRestantMs: number): VuePartie {
 }
 
 describe('sonDuFait', () => {
+  it('alerte la victime d un meurtre, et fait entendre le katana aux autres (etape 7.20)', () => {
+    const meurtre = fait('meurtre', { tueur: 'tueur', victime: 'moi', x: 0, y: 0 }, 0);
+
+    expect(sonDuFait(meurtre, 'moi', 'among')).toBe('joueurCaptureSubi');
+    expect(sonDuFait(meurtre, 'tueur', 'among')).toBe('katanaImpact');
+    expect(sonDuFait(meurtre, 'temoin', 'among')).toBe('katanaImpact');
+  });
+
   it('fait entendre un ramassage de bonus', () => {
     const declenche = sonDuFait(fait('bonusActive', { nature: 'vitesse', dureeMs: 10_000 }, 0));
 
