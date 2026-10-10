@@ -63,11 +63,13 @@
 import type {
   ClassementDesEquipes,
   CompteDeSession,
+  DemandeSabotage,
   Devancement,
   Equipe,
   FaitDePartie,
   FaitsDePartie,
   Mode,
+  Nuisance,
   ReglagesPartie,
   ReglagesPartiels,
   ResultatValidation,
@@ -414,6 +416,13 @@ export class GameRoom {
    */
   private readonly tachesAnnoncees = new Map<IdentifiantEntite, 'finie' | 'fermee'>();
 
+  /**
+   * Les sabotages demandes depuis le battement precedent (etape 7.22), et les maledictions. Des
+   * gestes ponctuels, effaces a chaque battement, comme les votes.
+   */
+  private readonly sabotagesDemandes = new Map<IdentifiantEntite, DemandeSabotage>();
+  private readonly maledictionsDemandees = new Map<IdentifiantEntite, Nuisance>();
+
   /** Ce que chaque joueur a fait de notable depuis le lancement (etape 3.8). */
   private releve: ReleveDesExploits = RELEVE_VIDE;
 
@@ -626,6 +635,8 @@ export class GameRoom {
     this.votesDemandes.delete(id);
     this.chargementsSignales.delete(id);
     this.tachesAnnoncees.delete(id);
+    this.sabotagesDemandes.delete(id);
+    this.maledictionsDemandees.delete(id);
 
     if (this.hoteCourant === id) {
       this.hoteCourant = this.successeur();
@@ -664,6 +675,8 @@ export class GameRoom {
     this.votesDemandes.delete(id);
     this.chargementsSignales.delete(id);
     this.tachesAnnoncees.delete(id);
+    this.sabotagesDemandes.delete(id);
+    this.maledictionsDemandees.delete(id);
 
     if (this.hoteCourant === id) {
       this.hoteCourant = this.presentLePlusAncien() ?? id;
@@ -994,6 +1007,31 @@ export class GameRoom {
   }
 
   /**
+   * Retient le sabotage demande par ce joueur, pour le prochain battement (etape 7.22). Ignore
+   * pour un joueur absent ou hors d'une partie en cours; que ce soit un assassin, et le sabotage
+   * permis, le moteur en juge.
+   */
+  saboter(id: IdentifiantEntite, demande: DemandeSabotage): void {
+    if (this.statutCourant !== 'enCours' || this.partie.joueurs[id] === undefined) {
+      return;
+    }
+
+    this.sabotagesDemandes.set(id, demande);
+  }
+
+  /**
+   * Retient la malediction demandee par ce joueur, pour le prochain battement (etape 7.22).
+   * Memes regles qu'un sabotage: le moteur juge qu'il soit une proie fantome, et la recharge.
+   */
+  maudire(id: IdentifiantEntite, nature: Nuisance): void {
+    if (this.statutCourant !== 'enCours' || this.partie.joueurs[id] === undefined) {
+      return;
+    }
+
+    this.maledictionsDemandees.set(id, nature);
+  }
+
+  /**
    * Qui lit un message de chat de ce joueur, dans une partie Among Ninjas lancee (etape 7.20).
    *
    *   - Un fantome parle aux fantomes, a tout moment: le canal des fantomes.
@@ -1044,7 +1082,9 @@ export class GameRoom {
       this.appuisRecents.size === 0 &&
       this.votesDemandes.size === 0 &&
       this.chargementsSignales.size === 0 &&
-      this.tachesAnnoncees.size === 0
+      this.tachesAnnoncees.size === 0 &&
+      this.sabotagesDemandes.size === 0 &&
+      this.maledictionsDemandees.size === 0
     ) {
       return this.intentions;
     }
@@ -1077,6 +1117,14 @@ export class GameRoom {
       entrees[id] = { ...(entrees[id] ?? immobile), tache: quoi };
     }
 
+    for (const [id, demande] of this.sabotagesDemandes) {
+      entrees[id] = { ...(entrees[id] ?? immobile), saboter: demande };
+    }
+
+    for (const [id, nature] of this.maledictionsDemandees) {
+      entrees[id] = { ...(entrees[id] ?? immobile), maudire: nature };
+    }
+
     return entrees;
   }
 
@@ -1106,6 +1154,8 @@ export class GameRoom {
     this.appuisRecents.clear();
     this.chargementsSignales.clear();
     this.tachesAnnoncees.clear();
+    this.sabotagesDemandes.clear();
+    this.maledictionsDemandees.clear();
     this.releve = releverLeBattement(this.releve, this.partie, this.cleDuJoueur);
 
     // Prevenir AVANT de constater la fin: le dernier battement d'une partie est

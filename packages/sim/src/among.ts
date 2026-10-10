@@ -25,13 +25,23 @@
  * annoncee plus tot est ignoree), et le role (un tueur qui fait semblant n'ouvre rien: sa page
  * seule joue le geste).
  *
+ * LES SABOTAGES (etape 7.22) sont demandes par un assassin, vivant ou fantome, depuis sa carte:
+ * un seul a la fois, une recharge commune entre deux. Trois nuisances, les malus du jeu sur les
+ * proies vivantes; le nuage noir sur une station, que le serveur filtre dans la vue des proies
+ * vivantes; la panne de neons, qui reduit leur vision jusqu'a ce qu'on tienne le boitier; la
+ * surchauffe, deux consoles a tenir ensemble avant son terme, sans quoi les assassins gagnent.
+ * Une reunion finit le sabotage en cours. LA MALEDICTION, leur miroir: une proie fantome inflige
+ * a tous les assassins vivants l'un des trois malus, avec une recharge commune aux fantomes.
+ *
  * LE SECRET n'est pas l'affaire du moteur: il sait tout, et le serveur decide ce que chacun
  * en voit (packages/server/src/vues.ts).
  */
 
 import type {
   Alea,
+  NatureDeSabotage,
   NatureDeTache,
+  Nuisance,
   Position,
   ReglagesAmong,
   StationDuMode,
@@ -43,13 +53,16 @@ import {
   NATURES_DE_TACHE,
   POINTS_AMONG,
   RAYONS_DE_VISION,
+  NUISANCES,
   TACHES_VISUELLES,
   entier,
+  estUneNuisance,
   lieuxDuMode,
   tueursMaximum,
 } from '@neon-ninja/shared';
 
 import { positionTenable } from './collisions.js';
+import { AUCUN_MALUS, remplacer } from './effets.js';
 import type { EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
 import { identifiantSuivant } from './etat.js';
 import type {
@@ -61,6 +74,7 @@ import type {
   JoueurAmong,
   MotifDeReunion,
   ReunionAmong,
+  SabotageAmong,
   TacheAmong,
   VoixAmong,
   VoteAmong,
@@ -146,10 +160,32 @@ export function rayonDeVision(etat: EtatPartie, id: IdentifiantEntite): number {
   }
 
   const reglages = reglagesDe(etat);
+  const palier =
+    RAYONS_DE_VISION[joueur.role][
+      joueur.role === 'proie' ? reglages.visionProie : reglages.visionTueur
+    ];
 
-  return RAYONS_DE_VISION[joueur.role][
-    joueur.role === 'proie' ? reglages.visionProie : reglages.visionTueur
-  ];
+  // La panne de neons (etape 7.22) n'eteint que les proies vivantes.
+  return joueur.role === 'proie' && etat.among?.sabotage?.nature === 'panne'
+    ? Math.min(palier, AMONG.RAYON_DE_VISION_EN_PANNE_PX)
+    : palier;
+}
+
+/**
+ * Le centre du nuage noir en cours (etape 7.22), ou rien: le serveur en retire ce qui s'y tient
+ * de la vue des proies vivantes. Son rayon est AMONG.RAYON_DU_NUAGE_PX.
+ */
+export function nuageEnAmong(etat: EtatPartie): Position | undefined {
+  const among = etat.among;
+  const sabotage = among?.sabotage;
+
+  if (sabotage?.nature !== 'nuage' || sabotage.station === undefined) {
+    return undefined;
+  }
+
+  const station = among?.stations[sabotage.station];
+
+  return station === undefined ? undefined : { x: station.x, y: station.y };
 }
 
 /** La partie est-elle decidee: un camp a gagne. */
@@ -252,6 +288,10 @@ export function lancerAmong(etat: EtatPartie): EtatPartie {
     cadavres: {},
     stations,
     gong: lieux.gong,
+    boitier: lieux.boitier,
+    consoles: lieux.consoles,
+    rechargeDesSabotagesMs: 0,
+    rechargeDeLaMaledictionMs: 0,
     tachesDesPartis: 0,
     tachesALaDerniereReunion: 0,
   };
@@ -553,6 +593,7 @@ function commencerUnTour(etat: EtatPartie): EtatPartie {
         tourEcouleMs: 0,
         joueurs,
         cadavres: {},
+        rechargeDesSabotagesMs: AMONG.RECHARGE_DES_SABOTAGES_DEBUT_DE_TOUR_MS,
       }),
     ),
     { type: 'tourCommence', tour },
@@ -562,13 +603,16 @@ function commencerUnTour(etat: EtatPartie): EtatPartie {
 /**
  * Un battement de jeu.
  *
- *   1. Le tour avance, et la recharge des tueurs.
+ *   1. Le tour avance, et les recharges: celle des tueurs, des sabotages, de la malediction.
  *   2. Les taches deja ouvertes: le temps passe, la presence, la fin ou la fermeture
  *      annoncees. Avant les gestes: une tache ouverte a ce battement ne compte son temps
  *      qu'a partir du suivant.
- *   3. Les gestes du battement, dans un ordre tire au sort: un meurtre, un signalement, un
- *      gong, l'ouverture d'une tache. Une reunion ouverte arrete les gestes qui suivent.
- *   4. Le terme du tour, s'il est regle, ouvre une reunion.
+ *   3. Le sabotage en cours (etape 7.22): il s'eteint, se repare, ou la surchauffe est perdue.
+ *   4. Les gestes du battement, dans un ordre tire au sort: un meurtre, un signalement, un
+ *      gong, l'ouverture d'une tache, un sabotage, une malediction. Une reunion ouverte arrete
+ *      les gestes qui suivent.
+ *   5. Le terme du tour, s'il est regle, ouvre une reunion; il attend la fin d'une surchauffe,
+ *      qu'une reunion d'office annulerait.
  */
 function jouer(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPartie {
   const among = etat.among as EtatAmong;
@@ -581,14 +625,28 @@ function jouer(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPartie {
     ]),
   );
   let courant = faireLesTaches(
-    avecAmong(etat, { ...among, tourEcouleMs: among.tourEcouleMs + dtMs, joueurs }),
+    avecAmong(etat, {
+      ...among,
+      tourEcouleMs: among.tourEcouleMs + dtMs,
+      joueurs,
+      rechargeDesSabotagesMs: Math.max(among.rechargeDesSabotagesMs - dtMs, 0),
+      rechargeDeLaMaledictionMs: Math.max(among.rechargeDeLaMaledictionMs - dtMs, 0),
+    }),
     entrees,
     dtMs,
   );
+  courant = avancerLeSabotage(courant, entrees, dtMs);
 
-  const acteurs = Object.keys(etat.joueurs).filter(
-    (id) => entrees[id]?.capturer === true || entrees[id]?.agir === true,
-  );
+  const acteurs = Object.keys(etat.joueurs).filter((id) => {
+    const entree = entrees[id];
+
+    return (
+      entree?.capturer === true ||
+      entree?.agir === true ||
+      entree?.saboter !== undefined ||
+      entree?.maudire !== undefined
+    );
+  });
   const ordre = melanger(courant.alea, acteurs);
   courant = { ...courant, alea: ordre.alea };
 
@@ -604,6 +662,18 @@ function jouer(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPartie {
     if (entrees[id]?.agir === true && courant.among?.joueurs[id]?.actionTenue === false) {
       courant = appuyer(courant, id);
     }
+
+    const demande = entrees[id]?.saboter;
+
+    if (demande !== undefined) {
+      courant = saboter(courant, id, demande.nature, demande.station);
+    }
+
+    const malediction = entrees[id]?.maudire;
+
+    if (malediction !== undefined) {
+      courant = maudire(courant, id, malediction);
+    }
   }
 
   if (courant.among?.phase !== 'jeu') {
@@ -613,7 +683,9 @@ function jouer(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPartie {
   const dureeDuTourMs = reglagesDe(courant).dureeDuTourS * 1000;
   const apres = courant.among as EtatAmong;
 
-  return dureeDuTourMs > 0 && apres.tourEcouleMs >= dureeDuTourMs
+  return dureeDuTourMs > 0 &&
+    apres.tourEcouleMs >= dureeDuTourMs &&
+    apres.sabotage?.nature !== 'surchauffe'
     ? ouvrirUneReunion(courant, 'temps')
     : courant;
 }
@@ -737,8 +809,11 @@ function signalerOuSonner(
     );
   }
 
+  // Le gong ne sonne pas pendant la surchauffe (etape 7.22, etude section 4.3): il effacerait
+  // le seul sabotage qui peut faire gagner les assassins.
   if (
     !joueur.gongUtilise &&
+    among.sabotage?.nature !== 'surchauffe' &&
     among.tourEcouleMs >= AMONG.DELAI_DU_GONG_MS &&
     distanceEntre(position, among.gong) <= AMONG.PORTEE_DU_GONG_PX
   ) {
@@ -873,13 +948,251 @@ function tacheALaPlace(among: EtatAmong, joueur: JoueurAmong, position: Position
 }
 
 // --------------------------------------------------------------------------
+// Les sabotages et la malediction (etape 7.22)
+// --------------------------------------------------------------------------
+
+/**
+ * Un assassin, vivant ou fantome, demande un sabotage. Rien si un sabotage est deja en cours, si
+ * la recharge commune court, si le demandeur n'est pas un assassin, ou si la station du nuage
+ * n'est pas une station active. Une nuisance frappe aussitot les proies vivantes.
+ */
+function saboter(
+  etat: EtatPartie,
+  id: IdentifiantEntite,
+  nature: NatureDeSabotage,
+  station: number | undefined,
+): EtatPartie {
+  const among = etat.among as EtatAmong;
+
+  if (
+    among.joueurs[id]?.role !== 'tueur' ||
+    among.sabotage !== undefined ||
+    among.rechargeDesSabotagesMs > 0 ||
+    (nature === 'nuage' && (station === undefined || among.stations[station] === undefined))
+  ) {
+    return etat;
+  }
+
+  const sabotage: SabotageAmong = {
+    nature,
+    restantMs: dureeDuSabotage(nature),
+    ...(nature === 'nuage' && station !== undefined ? { station } : {}),
+    reparationMs: 0,
+    consolesTenues: [false, false],
+  };
+  const victimes = estUneNuisance(nature) ? vivantsDuRole(etat, 'proie') : [];
+
+  return journaliser(
+    infliger(
+      avecAmong(etat, { ...among, sabotage }),
+      victimes,
+      nature,
+      AMONG.DUREE_D_UNE_NUISANCE_MS,
+    ),
+    { type: 'sabotage', nature, victimes },
+  );
+}
+
+/** Combien dure un sabotage qui s'eteint seul. Zero pour la panne, qui attend sa reparation. */
+function dureeDuSabotage(nature: NatureDeSabotage): number {
+  switch (nature) {
+    case 'nuage':
+      return AMONG.DUREE_DU_NUAGE_MS;
+    case 'panne':
+      return 0;
+    case 'surchauffe':
+      return AMONG.DELAI_DE_LA_SURCHAUFFE_MS;
+    default:
+      return AMONG.DUREE_D_UNE_NUISANCE_MS;
+  }
+}
+
+/**
+ * Une proie fantome maudit les assassins vivants: le malus de son choix, a tous a la fois. Rien
+ * pour un autre joueur, pendant la recharge commune des fantomes, ou dans les premieres secondes
+ * d'un tour.
+ */
+function maudire(etat: EtatPartie, id: IdentifiantEntite, nature: Nuisance): EtatPartie {
+  const among = etat.among as EtatAmong;
+  const joueur = among.joueurs[id];
+
+  if (
+    joueur?.role !== 'proie' ||
+    !joueur.fantome ||
+    !NUISANCES.includes(nature) ||
+    among.rechargeDeLaMaledictionMs > 0 ||
+    among.tourEcouleMs < AMONG.DELAI_DE_LA_MALEDICTION_MS
+  ) {
+    return etat;
+  }
+
+  const victimes = vivantsDuRole(etat, 'tueur');
+
+  return journaliser(
+    infliger(
+      avecAmong(etat, {
+        ...among,
+        rechargeDeLaMaledictionMs: AMONG.RECHARGE_DE_LA_MALEDICTION_MS,
+      }),
+      victimes,
+      nature,
+      AMONG.DUREE_DE_LA_MALEDICTION_MS,
+    ),
+    { type: 'malediction', nature, victimes },
+  );
+}
+
+/** Les vivants de ce role presents dans la partie, dans l'ordre de l'etat. */
+function vivantsDuRole(etat: EtatPartie, role: JoueurAmong['role']): readonly IdentifiantEntite[] {
+  const among = etat.among as EtatAmong;
+
+  return Object.keys(etat.joueurs).filter((id) => {
+    const joueur = among.joueurs[id];
+    return joueur?.role === role && !joueur.fantome;
+  });
+}
+
+/**
+ * Inflige un malus du jeu a ces joueurs, par le moteur: il s'eteint seul, et les commandes
+ * inversees s'appliquent au deplacement. Comme un malus ramasse, la duree repart de zero.
+ * Rien pour un sabotage qui n'est pas un malus.
+ */
+function infliger(
+  etat: EtatPartie,
+  victimes: readonly IdentifiantEntite[],
+  nature: NatureDeSabotage,
+  dureeMs: number,
+): EtatPartie {
+  if (!estUneNuisance(nature)) {
+    return etat;
+  }
+
+  const joueurs = { ...etat.joueurs };
+
+  for (const id of victimes) {
+    const joueur = etat.joueurs[id] as Joueur;
+    joueurs[id] = {
+      ...joueur,
+      malusRestantsMs: remplacer(joueur.malusRestantsMs, nature, dureeMs),
+    };
+  }
+
+  return { ...etat, joueurs };
+}
+
+/**
+ * Le sabotage en cours, a ce battement.
+ *
+ *   - Une nuisance et le nuage s'eteignent a leur terme.
+ *   - La panne se repare quand quelqu'un tient le bouton d'action dans le disque du boitier,
+ *     sans s'arreter, le temps de la reparation: une proie, vivante ou fantome (l'aide qui ne
+ *     vise personne), ou un assassin vivant, qui bluffe et dont la reparation compte.
+ *   - La surchauffe se repare quand ses deux consoles sont tenues ensemble, par des vivants, le
+ *     temps de la reparation. A son terme, elle est perdue et reste en l'etat: les tueurs
+ *     gagnent (campVainqueur).
+ */
+function avancerLeSabotage(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPartie {
+  const among = etat.among as EtatAmong;
+  const sabotage = among.sabotage;
+
+  if (sabotage === undefined) {
+    return etat;
+  }
+
+  if (sabotage.nature === 'panne') {
+    const tenu = posteTenu(
+      etat,
+      entrees,
+      among.boitier,
+      (joueur) => joueur.role === 'proie' || !joueur.fantome,
+    );
+    const reparationMs = tenu ? sabotage.reparationMs + dtMs : 0;
+
+    return reparationMs >= AMONG.REPARATION_DE_LA_PANNE_MS
+      ? finirLeSabotage(etat, true)
+      : avecAmong(etat, { ...among, sabotage: { ...sabotage, reparationMs } });
+  }
+
+  if (sabotage.nature === 'surchauffe') {
+    const vivant = (joueur: JoueurAmong): boolean => !joueur.fantome;
+    const consolesTenues: [boolean, boolean] = [
+      posteTenu(etat, entrees, among.consoles[0], vivant),
+      posteTenu(etat, entrees, among.consoles[1], vivant),
+    ];
+    const reparationMs = consolesTenues[0] && consolesTenues[1] ? sabotage.reparationMs + dtMs : 0;
+
+    if (reparationMs >= AMONG.REPARATION_DE_LA_SURCHAUFFE_MS) {
+      return finirLeSabotage(etat, true);
+    }
+
+    return avecAmong(etat, {
+      ...among,
+      sabotage: {
+        ...sabotage,
+        restantMs: Math.max(sabotage.restantMs - dtMs, 0),
+        reparationMs,
+        consolesTenues,
+      },
+    });
+  }
+
+  const restantMs = sabotage.restantMs - dtMs;
+
+  return restantMs <= 0
+    ? finirLeSabotage(etat, false)
+    : avecAmong(etat, { ...among, sabotage: { ...sabotage, restantMs } });
+}
+
+/**
+ * Quelqu'un que ce critere admet tient-il le bouton d'action dans le disque de ce poste, a ce
+ * battement ?
+ */
+function posteTenu(
+  etat: EtatPartie,
+  entrees: Entrees,
+  poste: Position,
+  admis: (joueur: JoueurAmong) => boolean,
+): boolean {
+  const among = etat.among as EtatAmong;
+
+  return Object.values(etat.joueurs).some((corps) => {
+    const joueur = among.joueurs[corps.id];
+
+    return (
+      joueur !== undefined &&
+      entrees[corps.id]?.agir === true &&
+      admis(joueur) &&
+      distanceEntre(corps.position, poste) <= AMONG.RAYON_D_UN_POSTE_PX
+    );
+  });
+}
+
+/** Le sabotage en cours est fini: la recharge commune repart pleine. */
+function finirLeSabotage(etat: EtatPartie, repare: boolean): EtatPartie {
+  const among = etat.among as EtatAmong;
+  // Appelee seulement quand un sabotage est en cours.
+  const { nature } = among.sabotage as SabotageAmong;
+  const { sabotage: _fini, ...sansSabotage } = among;
+
+  return journaliser(
+    avecAmong(etat, {
+      ...sansSabotage,
+      rechargeDesSabotagesMs: AMONG.RECHARGE_DES_SABOTAGES_MS,
+    }),
+    { type: 'sabotageFini', nature, repare },
+  );
+}
+
+// --------------------------------------------------------------------------
 // La reunion
 // --------------------------------------------------------------------------
 
 /**
  * Ouvre une reunion: la discussion commence, les taches en cours s'interrompent, la barre des
  * taches se fige pour qui ne la voit qu'en reunion (etape 7.21), et le
- * journal dit qui l'a ouverte, pourquoi, et qui est mort.
+ * journal dit qui l'a ouverte, pourquoi, et qui est mort. Le sabotage en cours finit, et les
+ * malus de chacun avec lui (etape 7.22): le monde fige ne les ferait pas vieillir, et ils
+ * reprendraient apres la reunion, quand la page les croit eteints.
  */
 function ouvrirUneReunion(
   etat: EtatPartie,
@@ -896,23 +1209,33 @@ function ouvrirUneReunion(
     }),
   );
   const morts = Object.keys(etat.joueurs).filter((id) => among.joueurs[id]?.fantome === true);
+  const { sabotage: _fini, ...sansSabotage } = among;
+  const sansMalus = Object.fromEntries(
+    Object.entries(etat.joueurs).map(([id, corps]) => [
+      id,
+      { ...corps, malusRestantsMs: AUCUN_MALUS },
+    ]),
+  );
 
   return journaliser(
-    avecAmong(etat, {
-      ...among,
-      phase: 'discussion',
-      phaseRestanteMs: reglagesDe(etat).discussionS * 1000,
-      reunions: numero,
-      tachesALaDerniereReunion: avancementDesTaches(among).faites,
-      joueurs,
-      reunion: {
-        numero,
-        motif,
-        ...(par === undefined ? {} : { par }),
-        ...(cadavre === undefined ? {} : { cadavre }),
-        votes: {},
+    avecAmong(
+      { ...etat, joueurs: sansMalus },
+      {
+        ...sansSabotage,
+        phase: 'discussion',
+        phaseRestanteMs: reglagesDe(etat).discussionS * 1000,
+        reunions: numero,
+        tachesALaDerniereReunion: avancementDesTaches(among).faites,
+        joueurs,
+        reunion: {
+          numero,
+          motif,
+          ...(par === undefined ? {} : { par }),
+          ...(cadavre === undefined ? {} : { cadavre }),
+          votes: {},
+        },
       },
-    }),
+    ),
     {
       type: 'reunionOuverte',
       numero,
@@ -1058,6 +1381,7 @@ function finirLEjection(etat: EtatPartie): EtatPartie {
 /**
  * Le camp vainqueur, s'il y en a un.
  *
+ *   - Une surchauffe perdue (etape 7.22): les tueurs gagnent.
  *   - Plus aucun tueur vivant, ejecte ou parti: les proies gagnent.
  *   - Les tueurs vivants au moins aussi nombreux que les proies vivantes: les tueurs gagnent.
  *   - Toutes les taches faites, fantomes compris: les proies gagnent.
@@ -1069,6 +1393,10 @@ export function campVainqueur(etat: EtatPartie): CampAmong | undefined {
 
   if (among === undefined) {
     return undefined;
+  }
+
+  if (surchauffePerdue(among)) {
+    return 'tueurs';
   }
 
   let tueursVivants = 0;
@@ -1097,6 +1425,11 @@ export function campVainqueur(etat: EtatPartie): CampAmong | undefined {
   const { faites, total } = avancementDesTaches(among);
 
   return total > 0 && faites >= total ? 'proies' : undefined;
+}
+
+/** La surchauffe a-t-elle atteint son terme sans etre reparee (etape 7.22) ? */
+export function surchauffePerdue(among: EtatAmong): boolean {
+  return among.sabotage?.nature === 'surchauffe' && among.sabotage.restantMs === 0;
 }
 
 /** Inscrit le camp vainqueur, si la partie est decidee. Appelee avant qu'il le soit. */

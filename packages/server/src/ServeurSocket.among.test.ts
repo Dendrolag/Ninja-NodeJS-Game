@@ -542,3 +542,101 @@ describe('une partie Among Ninjas, a travers le reseau', () => {
     expect(etats.at(-1)?.taches[0]).toEqual({ station: 0, nature: tache.nature, faite: true });
   });
 });
+
+describe('les sabotages d Among Ninjas, a travers le reseau (etape 7.22)', () => {
+  /** Une partie de cinq en jeu, la recharge des sabotages et celle du meurtre passees. */
+  async function partieEnJeu(): Promise<{
+    readonly room: GameRoom;
+    readonly tueur: JoueurDeTest;
+    readonly proies: readonly JoueurDeTest[];
+  }> {
+    const { joueurs, salon } = await salonA(5);
+    const room = roomDe(salon.idRoom);
+    await lancer((joueurs[0] as JoueurDeTest).client);
+    await chargerLaCarte(joueurs, room);
+    horloge.avancerDe(AMONG.DUREE_REVELATION_MS + AMONG.RECHARGE_DES_SABOTAGES_DEBUT_DE_TOUR_MS);
+    const tueur = joueurs.find((joueur) => estTueur(room.etat, joueur.id)) as JoueurDeTest;
+
+    return { room, tueur, proies: joueurs.filter((joueur) => joueur !== tueur) };
+  }
+
+  it('sabote les neons depuis la carte, et une proie les repare au boitier', async () => {
+    const { room, tueur, proies } = await partieEnJeu();
+    const [proie] = proies as [JoueurDeTest];
+    const demandes = vi.spyOn(room, 'saboter');
+
+    // Une proie ne sabote pas, et une demande mal formee ne passe pas.
+    proie.client.emit('saboter', { nature: 'panne' });
+    (tueur.client.emit as (nom: string, valeur: unknown) => void)('saboter', { nature: 'grele' });
+    await jusquA(() => demandes.mock.calls.length === 1);
+    horloge.avancerDe(50);
+    expect(room.etat.among?.sabotage).toBeUndefined();
+
+    const sabotages = collecter(proie.client, 'sabotage');
+    tueur.client.emit('saboter', { nature: 'panne' });
+    await jusquA(() => demandes.mock.calls.length === 2);
+    horloge.avancerDe(50);
+    expect(room.etat.among?.sabotage?.nature).toBe('panne');
+    await jusquA(() => sabotages.length === 1);
+    expect(sabotages[0]).toEqual({ quoi: 'lance', nature: 'panne' });
+
+    const boitier = room.etat.among?.boitier as Position;
+    await marcherVers(room, proie, () => boitier, 20);
+    const actions = vi.spyOn(room, 'tenirLAction');
+    proie.client.emit('agir', true);
+    await jusquA(() => actions.mock.calls.length > 0);
+    horloge.avancerDe(AMONG.REPARATION_DE_LA_PANNE_MS + 50);
+    proie.client.emit('agir', false);
+
+    expect(room.etat.among?.sabotage).toBeUndefined();
+    await jusquA(() => sabotages.length === 2);
+    expect(sabotages[1]).toEqual({ quoi: 'fini', nature: 'panne', repare: true });
+  });
+
+  it('fait gagner les assassins quand la surchauffe n est pas reparee', async () => {
+    const { room, tueur, proies } = await partieEnJeu();
+    const demandes = vi.spyOn(room, 'saboter');
+    const fin = prochain((proies[0] as JoueurDeTest).client, 'partieTerminee');
+
+    tueur.client.emit('saboter', { nature: 'surchauffe' });
+    await jusquA(() => demandes.mock.calls.length === 1);
+    horloge.avancerDe(50);
+    expect(room.etat.among?.sabotage?.nature).toBe('surchauffe');
+    horloge.avancerDe(AMONG.DELAI_DE_LA_SURCHAUFFE_MS);
+
+    expect(room.statut).toBe('terminee');
+    const { among } = await fin;
+    expect(among).toMatchObject({ vainqueur: 'tueurs', parLaSurchauffe: true });
+  });
+
+  it('laisse une proie fantome maudire les assassins, sans rien dire aux vivants', async () => {
+    const { room, tueur, proies } = await partieEnJeu();
+    const [victime, vivante] = proies as [JoueurDeTest, JoueurDeTest];
+
+    await marcherVers(room, tueur, () => position(room, victime.id), 25);
+    const tirs = vi.spyOn(room, 'demanderUnTir');
+    tueur.client.emit('capturer');
+    await jusquA(() => tirs.mock.calls.length > 0);
+    horloge.avancerDe(50);
+    expect(room.etat.among?.joueurs[victime.id]?.fantome).toBe(true);
+
+    const subisParLeTueur = collecter(tueur.client, 'malusSubi');
+    const subisParLaVivante = collecter(vivante.client, 'malusSubi');
+    const dites = collecter(victime.client, 'malediction');
+    const demandes = vi.spyOn(room, 'maudire');
+    victime.client.emit('maudire', 'negatif');
+    await jusquA(() => demandes.mock.calls.length === 1);
+    horloge.avancerDe(50);
+
+    await jusquA(() => subisParLeTueur.length === 1 && dites.length === 1);
+    expect(subisParLeTueur[0]).toEqual({
+      nature: 'negatif',
+      dureeMs: AMONG.DUREE_DE_LA_MALEDICTION_MS,
+      parPseudo: '',
+      origine: 'malediction',
+    });
+    expect(dites[0]).toEqual({ nature: 'negatif' });
+    expect(subisParLaVivante).toEqual([]);
+    expect(room.etat.joueurs[tueur.id]?.malusRestantsMs.negatif).toBeGreaterThan(0);
+  });
+});

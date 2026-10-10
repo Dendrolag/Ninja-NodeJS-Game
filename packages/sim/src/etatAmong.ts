@@ -10,7 +10,9 @@ import type {
   CampAmong,
   Couleur,
   MotifDeReunion,
+  NatureDeSabotage,
   NatureDeTache,
+  Nuisance,
   PhaseAmong,
   Position,
   RoleAmong,
@@ -73,6 +75,29 @@ export interface JoueurAmong {
   readonly faits: FaitsAmong;
 }
 
+/**
+ * Le sabotage en cours (etape 7.22): un seul a la fois, pour toute la partie. Le saboteur n'y
+ * est pas: rien ne doit le designer.
+ */
+export interface SabotageAmong {
+  readonly nature: NatureDeSabotage;
+  /**
+   * Ce qu'il en reste: une nuisance et le nuage s'eteignent seuls, la surchauffe fait gagner les
+   * assassins a son terme. Zero pour la panne, qui dure jusqu'a sa reparation, et pour une
+   * surchauffe perdue.
+   */
+  readonly restantMs: number;
+  /** Le nuage: le rang de sa station parmi les stations actives. */
+  readonly station?: number;
+  /**
+   * La reparation: pour la panne, le temps que quelqu'un tient le boitier; pour la surchauffe,
+   * le temps que les deux consoles sont tenues ensemble. Retombe a zero des que cela cesse.
+   */
+  readonly reparationMs: number;
+  /** La surchauffe: chaque console est-elle tenue a ce battement. */
+  readonly consolesTenues: readonly [boolean, boolean];
+}
+
 /** Un cadavre, au sol jusqu'a la fin de la reunion qui suit. */
 export interface CadavreAmong {
   readonly victime: Identifiant;
@@ -133,6 +158,16 @@ export interface EtatAmong {
   readonly stations: readonly StationDuMode[];
   /** Le point de reunion, ou sonne le gong. */
   readonly gong: Position;
+  /** Le boitier ou l'on repare la panne de neons (etape 7.22), retourne en miroir. */
+  readonly boitier: Position;
+  /** Les deux consoles de la surchauffe (etape 7.22), retournees en miroir. */
+  readonly consoles: readonly [Position, Position];
+  /** Le sabotage en cours (etape 7.22). */
+  readonly sabotage?: SabotageAmong;
+  /** Le temps avant le prochain sabotage, commun a tous les assassins (etape 7.22). */
+  readonly rechargeDesSabotagesMs: number;
+  /** Le temps avant la prochaine malediction, commun a tous les fantomes (etape 7.22). */
+  readonly rechargeDeLaMaledictionMs: number;
   readonly reunion?: ReunionAmong;
   readonly ejection?: EjectionAmong;
   /**
@@ -212,6 +247,33 @@ export interface TacheVisuelle {
   readonly position: Position;
 }
 
+/**
+ * Un sabotage commence (etape 7.22). Il ne nomme pas le saboteur. Pour une nuisance, les proies
+ * vivantes qui la subissent.
+ */
+export interface SabotageLance {
+  readonly type: 'sabotage';
+  readonly nature: NatureDeSabotage;
+  readonly victimes: readonly Identifiant[];
+}
+
+/** Le sabotage en cours est fini: repare (la panne, la surchauffe), ou eteint de lui-meme. */
+export interface SabotageFini {
+  readonly type: 'sabotageFini';
+  readonly nature: NatureDeSabotage;
+  readonly repare: boolean;
+}
+
+/**
+ * Une proie fantome maudit les assassins vivants (etape 7.22). Elle n'est pas nommee: rien ne
+ * doit dire aux vivants qu'un fantome agit.
+ */
+export interface Malediction {
+  readonly type: 'malediction';
+  readonly nature: Nuisance;
+  readonly victimes: readonly Identifiant[];
+}
+
 /** Les evenements du mode, ajoutes au journal d'un battement. */
 export type EvenementAmong =
   | Meurtre
@@ -221,4 +283,7 @@ export type EvenementAmong =
   | ResultatDuVote
   | TourCommence
   | TacheFaite
-  | TacheVisuelle;
+  | TacheVisuelle
+  | SabotageLance
+  | SabotageFini
+  | Malediction;

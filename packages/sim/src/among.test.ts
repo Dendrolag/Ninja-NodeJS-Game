@@ -2,14 +2,21 @@
  * Tests du mode Among Ninjas (etape 7.20): le lancement et ses tirages, les phases et le
  * monde fige, le meurtre et le cadavre, les fantomes, le bouton d'action (signaler, sonner,
  * ouvrir sa tache), les taches courtes (etape 7.21), la reunion et le vote, la victoire, les
- * departs et les points.
+ * departs et les points, les sabotages et la malediction (etape 7.22).
  *
  * Aucune version du jeu d'origine n'a ce mode, donc aucune caracterisation: les attentes sont
  * la fiche docs/plan/etape-7-20.md et les valeurs confirmees par le porteur du projet le 6
  * octobre 2026.
  */
 
-import type { NatureDeTache, Position, ReglagesPartiels } from '@neon-ninja/shared';
+import type {
+  LieuxDuMode,
+  NatureDeSabotage,
+  NatureDeTache,
+  Position,
+  ReglagesPartiels,
+  StationDuMode,
+} from '@neon-ninja/shared';
 import {
   AMONG,
   AMONG_PAR_DEFAUT,
@@ -19,7 +26,9 @@ import {
   DUREES_MINIMALES_DES_TACHES_MS,
   LIEUX_DES_CARTES,
   NATURES_DE_TACHE,
+  NUISANCES,
   POINTS_AMONG,
+  RAYONS_DE_VISION,
 } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
@@ -30,8 +39,10 @@ import {
   estTueur,
   fantomesEnAmong,
   mondeFigeEnAmong,
+  nuageEnAmong,
   pointsEnAmong,
   rayonDeVision,
+  surchauffePerdue,
 } from './among.js';
 import { peuplerDeBots } from './bots.js';
 import { creerCarteCollisions } from './collisions.js';
@@ -1131,3 +1142,370 @@ function auVoteApres(etat: EtatPartie, sonneur = 'j1'): EtatPartie {
   const sonne = tick(pres, { [sonneur]: geste({ agir: true }) }, 50);
   return tick(sonne, {}, 45_000);
 }
+
+// --------------------------------------------------------------------------
+// Les sabotages et la malediction (etape 7.22)
+// --------------------------------------------------------------------------
+
+/** Les postes des sabotages de Tokyo, dans le sens normal. */
+const LIEUX_TOKYO = LIEUX_DES_CARTES.map1 as LieuxDuMode;
+
+/** Une partie en jeu, la recharge des sabotages du debut du tour passee, tout le monde disperse. */
+function pretASaboter(joueurs = 7, reglages: ReglagesPartiels = {}): EtatPartie {
+  return disperser(
+    tick(enJeu(joueurs, reglages), {}, AMONG.RECHARGE_DES_SABOTAGES_DEBUT_DE_TOUR_MS),
+  );
+}
+
+/** Un battement ou ce joueur demande ce sabotage. */
+function sabote(
+  etat: EtatPartie,
+  id: IdentifiantEntite,
+  nature: NatureDeSabotage,
+  station?: number,
+): EtatPartie {
+  return tick(
+    etat,
+    { [id]: geste({ saboter: { nature, ...(station === undefined ? {} : { station }) } }) },
+    50,
+  );
+}
+
+/** Ces joueurs tiennent le bouton d'action pendant ce temps, en un battement. */
+function tenir(etat: EtatPartie, ids: readonly IdentifiantEntite[], dtMs: number): EtatPartie {
+  return tick(etat, Object.fromEntries(ids.map((id) => [id, geste({ agir: true })])), dtMs);
+}
+
+describe('les sabotages (etape 7.22)', () => {
+  it('sont reserves aux assassins, vivants ou fantomes', () => {
+    const etat = pretASaboter();
+    const { tueurs, proies } = camps(etat);
+    const proie = proies[0] as string;
+
+    expect(amongDe(sabote(etat, proie, 'panne')).sabotage).toBeUndefined();
+    expect(amongDe(sabote(etat, tueurs[0] as string, 'panne')).sabotage?.nature).toBe('panne');
+
+    const fantome = avecRole(etat, tueurs[0] as string, { fantome: true });
+    expect(amongDe(sabote(fantome, tueurs[0] as string, 'panne')).sabotage?.nature).toBe('panne');
+  });
+
+  it('attendent quinze secondes au debut d un tour', () => {
+    const debut = disperser(enJeu(7));
+    const tueur = camps(debut).tueurs[0] as string;
+
+    expect(amongDe(debut).rechargeDesSabotagesMs).toBe(
+      AMONG.RECHARGE_DES_SABOTAGES_DEBUT_DE_TOUR_MS,
+    );
+    expect(amongDe(sabote(debut, tueur, 'flou')).sabotage).toBeUndefined();
+    expect(amongDe(sabote(pretASaboter(), tueur, 'flou')).sabotage?.nature).toBe('flou');
+  });
+
+  it('ne sont qu un a la fois, puis la recharge commune repart de la fin du precedent', () => {
+    const etat = pretASaboter();
+    const [premier, second] = camps(etat).tueurs as [string, string];
+    const encours = sabote(etat, premier, 'flou');
+
+    // Un second sabotage, d'un autre assassin, pendant le premier: refuse.
+    expect(amongDe(sabote(encours, second, 'panne')).sabotage?.nature).toBe('flou');
+
+    const fini = tick(encours, {}, AMONG.DUREE_D_UNE_NUISANCE_MS);
+    expect(amongDe(fini).sabotage).toBeUndefined();
+    expect(evenements(fini, 'sabotageFini')).toEqual([
+      { type: 'sabotageFini', nature: 'flou', repare: false },
+    ]);
+    expect(amongDe(fini).rechargeDesSabotagesMs).toBe(AMONG.RECHARGE_DES_SABOTAGES_MS);
+    expect(amongDe(sabote(fini, second, 'panne')).sabotage).toBeUndefined();
+
+    const pret = tick(fini, {}, AMONG.RECHARGE_DES_SABOTAGES_MS);
+    expect(amongDe(sabote(pret, second, 'panne')).sabotage?.nature).toBe('panne');
+  });
+
+  it('frappent les proies vivantes d une nuisance, sans nommer le saboteur', () => {
+    for (const nature of NUISANCES) {
+      const etat = pretASaboter();
+      const { tueurs, proies } = camps(etat);
+      const morte = proies[0] as string;
+      const avecUnFantome = avecRole(etat, morte, { fantome: true });
+      const apres = sabote(avecUnFantome, tueurs[0] as string, nature);
+      const vivantes = proies.filter((id) => id !== morte);
+
+      expect(evenements(apres, 'sabotage')).toEqual([
+        { type: 'sabotage', nature, victimes: vivantes },
+      ]);
+      for (const id of vivantes) {
+        expect(joueurDe(apres, id).malusRestantsMs[nature]).toBe(AMONG.DUREE_D_UNE_NUISANCE_MS);
+      }
+      for (const id of [...tueurs, morte]) {
+        expect(joueurDe(apres, id).malusRestantsMs[nature]).toBe(0);
+      }
+    }
+  });
+
+  it('font marcher une proie a l envers sous les commandes inversees', () => {
+    const etat = sabote(
+      pretASaboter(),
+      camps(pretASaboter()).tueurs[0] as string,
+      'controlesInverses',
+    );
+    const proie = camps(etat).proies[0] as string;
+    const avant = joueurDe(etat, proie).position;
+    const apres = tick(etat, { [proie]: { deplacement: { x: 1, y: 0 }, enMouvement: true } }, 100);
+
+    expect(joueurDe(apres, proie).position.x).toBeLessThan(avant.x);
+  });
+
+  it('posent le nuage noir sur une station active, vingt secondes', () => {
+    const etat = pretASaboter();
+    const tueur = camps(etat).tueurs[0] as string;
+
+    // Sans station, ou une station qui n'existe pas: refuse.
+    expect(amongDe(sabote(etat, tueur, 'nuage')).sabotage).toBeUndefined();
+    expect(amongDe(sabote(etat, tueur, 'nuage', 99)).sabotage).toBeUndefined();
+
+    const nuage = sabote(etat, tueur, 'nuage', 2);
+    const station = amongDe(nuage).stations[2] as StationDuMode;
+    expect(nuageEnAmong(nuage)).toEqual({ x: station.x, y: station.y });
+    expect(nuageEnAmong(etat)).toBeUndefined();
+    expect(evenements(nuage, 'sabotage')).toEqual([
+      { type: 'sabotage', nature: 'nuage', victimes: [] },
+    ]);
+
+    const fini = tick(nuage, {}, AMONG.DUREE_DU_NUAGE_MS);
+    expect(nuageEnAmong(fini)).toBeUndefined();
+  });
+});
+
+describe('la panne de neons (etape 7.22)', () => {
+  /** Une panne en cours, et les joueurs nommes. */
+  function enPanne(): { etat: EtatPartie; tueur: string; proie: string; autre: string } {
+    const etat = pretASaboter();
+    const { tueurs, proies } = camps(etat);
+    const tueur = tueurs[0] as string;
+
+    return {
+      etat: sabote(etat, tueur, 'panne'),
+      tueur,
+      proie: proies[0] as string,
+      autre: proies[1] as string,
+    };
+  }
+
+  it('reduit la vision des seules proies vivantes, jusqu a la reparation', () => {
+    const { etat, tueur, proie, autre } = enPanne();
+    const fantome = avecRole(etat, autre, { fantome: true });
+
+    expect(rayonDeVision(fantome, proie)).toBe(AMONG.RAYON_DE_VISION_EN_PANNE_PX);
+    expect(rayonDeVision(fantome, tueur)).toBe(RAYONS_DE_VISION.tueur.normale);
+    expect(rayonDeVision(fantome, autre)).toBe(Number.POSITIVE_INFINITY);
+    expect(amongDe(tick(etat, {}, 60_000)).sabotage?.nature).toBe('panne');
+  });
+
+  it('se repare en tenant le bouton d action trois secondes au boitier', () => {
+    const { etat, proie } = enPanne();
+    const au = placer(etat, proie, LIEUX_TOKYO.boitier);
+
+    const presque = tenir(au, [proie], AMONG.REPARATION_DE_LA_PANNE_MS - 50);
+    expect(amongDe(presque).sabotage?.reparationMs).toBe(AMONG.REPARATION_DE_LA_PANNE_MS - 50);
+
+    const reparee = tenir(presque, [proie], 50);
+    expect(amongDe(reparee).sabotage).toBeUndefined();
+    expect(evenements(reparee, 'sabotageFini')).toEqual([
+      { type: 'sabotageFini', nature: 'panne', repare: true },
+    ]);
+    expect(rayonDeVision(reparee, proie)).toBe(RAYONS_DE_VISION.proie.normale);
+  });
+
+  it('repart de zero si l on lache, ou si l on sort du disque', () => {
+    const { etat, proie } = enPanne();
+    const au = placer(etat, proie, LIEUX_TOKYO.boitier);
+    const lache = tick(tenir(au, [proie], 2000), {}, 50);
+    expect(amongDe(lache).sabotage?.reparationMs).toBe(0);
+
+    const loin = placer(etat, proie, {
+      x: LIEUX_TOKYO.boitier.x + AMONG.RAYON_D_UN_POSTE_PX + 5,
+      y: LIEUX_TOKYO.boitier.y,
+    });
+    expect(amongDe(tenir(loin, [proie], 2000)).sabotage?.reparationMs).toBe(0);
+  });
+
+  it('se repare par une proie fantome ou un assassin vivant, jamais un assassin fantome', () => {
+    const { etat, tueur, proie } = enPanne();
+    const repare = (courant: EtatPartie, id: string): boolean =>
+      amongDe(tenir(placer(courant, id, LIEUX_TOKYO.boitier), [id], 3000)).sabotage === undefined;
+
+    expect(repare(avecRole(etat, proie, { fantome: true }), proie)).toBe(true);
+    expect(repare(etat, tueur)).toBe(true);
+    expect(repare(avecRole(etat, tueur, { fantome: true }), tueur)).toBe(false);
+  });
+});
+
+describe('la surchauffe (etape 7.22)', () => {
+  /** Une surchauffe en cours, et deux proies. */
+  function enSurchauffe(): { etat: EtatPartie; une: string; autre: string } {
+    const etat = pretASaboter();
+    const { tueurs, proies } = camps(etat);
+
+    return {
+      etat: sabote(etat, tueurs[0] as string, 'surchauffe'),
+      une: proies[0] as string,
+      autre: proies[1] as string,
+    };
+  }
+
+  /** Les deux proies a leur console. */
+  function auxConsoles(etat: EtatPartie, une: string, autre: string): EtatPartie {
+    return placer(placer(etat, une, LIEUX_TOKYO.consoles[0]), autre, LIEUX_TOKYO.consoles[1]);
+  }
+
+  it('se repare quand les deux consoles sont tenues ensemble une seconde', () => {
+    const { etat, une, autre } = enSurchauffe();
+    const places = auxConsoles(etat, une, autre);
+
+    const une_seule = tenir(places, [une], 2000);
+    expect(amongDe(une_seule).sabotage?.consolesTenues).toEqual([true, false]);
+    expect(amongDe(une_seule).sabotage?.reparationMs).toBe(0);
+
+    const ensemble = tenir(places, [une, autre], AMONG.REPARATION_DE_LA_SURCHAUFFE_MS - 50);
+    expect(amongDe(ensemble).sabotage?.consolesTenues).toEqual([true, true]);
+
+    const reparee = tenir(ensemble, [une, autre], 50);
+    expect(amongDe(reparee).sabotage).toBeUndefined();
+    expect(evenements(reparee, 'sabotageFini')).toEqual([
+      { type: 'sabotageFini', nature: 'surchauffe', repare: true },
+    ]);
+  });
+
+  it('ne compte pas un fantome a une console', () => {
+    const { etat, une, autre } = enSurchauffe();
+    const places = avecRole(auxConsoles(etat, une, autre), autre, { fantome: true });
+
+    expect(amongDe(tenir(places, [une, autre], 2000)).sabotage?.consolesTenues).toEqual([
+      true,
+      false,
+    ]);
+  });
+
+  it('fait gagner les assassins a son terme', () => {
+    const { etat } = enSurchauffe();
+    const avant = tick(etat, {}, AMONG.DELAI_DE_LA_SURCHAUFFE_MS - 100);
+    expect(amongDe(avant).vainqueur).toBeUndefined();
+
+    const perdue = tick(avant, {}, 100);
+    expect(surchauffePerdue(amongDe(perdue))).toBe(true);
+    expect(amongDe(perdue).vainqueur).toBe('tueurs');
+    expect(campVainqueur(perdue)).toBe('tueurs');
+  });
+
+  it('retient le gong, et le terme du tour l attend', () => {
+    const { etat } = enSurchauffe();
+    const pres = placer(etat, 'j1', GONG);
+    expect(amongDe(tick(pres, { j1: geste({ agir: true }) }, 50)).phase).toBe('jeu');
+
+    // Un tour de 120 secondes a son terme pendant la surchauffe: pas de reunion d'office.
+    const court = pretASaboter(7, { among: { dureeDuTourS: 120 } });
+    const sabotee = sabote(
+      tick(court, {}, 120_000 - AMONG.RECHARGE_DES_SABOTAGES_DEBUT_DE_TOUR_MS - 1000),
+      camps(court).tueurs[0] as string,
+      'surchauffe',
+    );
+    expect(amongDe(tick(sabotee, {}, 2000)).phase).toBe('jeu');
+  });
+});
+
+describe('la reunion et les sabotages (etape 7.22)', () => {
+  it('finit le sabotage en cours, et efface les malus de chacun', () => {
+    const etat = pretASaboter();
+    const { tueurs, proies } = camps(etat);
+    const sabotee = sabote(etat, tueurs[0] as string, 'negatif');
+    const tueur = tueurs[1] as string;
+    const proie = proies[0] as string;
+    const place = joueurDe(sabotee, tueur).position;
+    const tue = tick(
+      placer(sabotee, proie, { x: place.x + 20, y: place.y }),
+      { [tueur]: geste({ capturer: true }) },
+      50,
+    );
+    const temoin = proies[1] as string;
+    const cadavre = Object.values(amongDe(tue).cadavres)[0]?.position as Position;
+    const reunion = tick(placer(tue, temoin, cadavre), { [temoin]: geste({ agir: true }) }, 50);
+
+    expect(amongDe(reunion).phase).toBe('discussion');
+    expect(amongDe(reunion).sabotage).toBeUndefined();
+    for (const id of Object.keys(reunion.joueurs)) {
+      expect(joueurDe(reunion, id).malusRestantsMs.negatif).toBe(0);
+    }
+  });
+
+  it('remet la recharge des sabotages a quinze secondes au tour suivant', () => {
+    const etat = pretASaboter();
+    const vote = auVoteApres(tick(etat, {}, AMONG.DELAI_DU_GONG_MS));
+    const tour = tick(tick(vote, {}, 45_000), {}, AMONG.DUREE_EJECTION_MS);
+
+    expect(amongDe(tour).tour).toBe(2);
+    expect(amongDe(tour).rechargeDesSabotagesMs).toBe(
+      AMONG.RECHARGE_DES_SABOTAGES_DEBUT_DE_TOUR_MS,
+    );
+  });
+});
+
+describe('la malediction des fantomes (etape 7.22)', () => {
+  /** Une partie en jeu, passe le delai de la malediction, une proie fantome. */
+  function maudissable(): { etat: EtatPartie; fantome: string } {
+    const etat = pretASaboter();
+    const fantome = camps(etat).proies[0] as string;
+
+    return {
+      etat: avecRole(tick(etat, {}, AMONG.DELAI_DE_LA_MALEDICTION_MS), fantome, { fantome: true }),
+      fantome,
+    };
+  }
+
+  it('frappe tous les assassins vivants du malus choisi, sans nommer le fantome', () => {
+    for (const nature of NUISANCES) {
+      const { etat, fantome } = maudissable();
+      const { tueurs, proies } = camps(etat);
+      const mort = avecRole(etat, tueurs[1] as string, { fantome: true });
+      const apres = tick(mort, { [fantome]: geste({ maudire: nature }) }, 50);
+
+      expect(evenements(apres, 'malediction')).toEqual([
+        { type: 'malediction', nature, victimes: [tueurs[0]] },
+      ]);
+      expect(joueurDe(apres, tueurs[0] as string).malusRestantsMs[nature]).toBe(
+        AMONG.DUREE_DE_LA_MALEDICTION_MS,
+      );
+      for (const id of [tueurs[1] as string, ...proies]) {
+        expect(joueurDe(apres, id).malusRestantsMs[nature]).toBe(0);
+      }
+      expect(amongDe(apres).rechargeDeLaMaledictionMs).toBe(AMONG.RECHARGE_DE_LA_MALEDICTION_MS);
+    }
+  });
+
+  it('n appartient qu aux proies fantomes, une fois par recharge commune', () => {
+    const { etat, fantome } = maudissable();
+    const { tueurs, proies } = camps(etat);
+    const maudit = (courant: EtatPartie, id: string): boolean =>
+      evenements(tick(courant, { [id]: geste({ maudire: 'flou' }) }, 50), 'malediction').length ===
+      1;
+
+    expect(maudit(etat, proies[1] as string)).toBe(false);
+    expect(
+      maudit(avecRole(etat, tueurs[0] as string, { fantome: true }), tueurs[0] as string),
+    ).toBe(false);
+
+    const apres = tick(etat, { [fantome]: geste({ maudire: 'flou' }) }, 50);
+    const autre = proies[1] as string;
+    const deux = avecRole(apres, autre, { fantome: true });
+    expect(maudit(deux, autre)).toBe(false);
+    expect(maudit(tick(deux, {}, AMONG.RECHARGE_DE_LA_MALEDICTION_MS), autre)).toBe(true);
+  });
+
+  it('attend les premieres secondes du tour', () => {
+    const etat = disperser(enJeu(7));
+    const fantome = camps(etat).proies[0] as string;
+    const tot = avecRole(etat, fantome, { fantome: true });
+
+    expect(
+      evenements(tick(tot, { [fantome]: geste({ maudire: 'negatif' }) }, 50), 'malediction'),
+    ).toHaveLength(0);
+  });
+});

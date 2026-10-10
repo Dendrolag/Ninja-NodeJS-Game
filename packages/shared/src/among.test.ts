@@ -1,6 +1,7 @@
 /**
  * Tests du contrat du mode Among Ninjas (etape 7.20): ses valeurs, ses lieux, ses couleurs,
- * ses taches courtes (etape 7.21), ses reglages, leur validation et ce que le mode impose.
+ * ses taches courtes (etape 7.21), ses sabotages (etape 7.22), ses reglages, leur validation et
+ * ce que le mode impose.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -13,17 +14,24 @@ import {
   COULEUR_DE_LA_FOULE,
   DUREES_MINIMALES_DES_TACHES_MS,
   LIEUX_DES_CARTES,
+  NATURES_DE_SABOTAGE,
   NATURES_DE_TACHE,
+  NUISANCES,
   RAYONS_DE_VISION,
   TACHES_VISUELLES,
+  estUneNuisance,
   lieuxDuMode,
   nomDeCouleur,
   tueursMaximum,
 } from './among.js';
 import { BORNES_REGLAGES } from './bornes.js';
-import { CAPACITES, CARTES, COULEURS_JOUEURS, luminance } from './constantes.js';
+import { CAPACITES, CARTES, COULEURS_JOUEURS, TYPES_MALUS, luminance } from './constantes.js';
 import { AMONG_PAR_DEFAUT, completerReglages, imposerLesReglagesDuMode } from './reglages.js';
-import { validerReglages } from './validation.js';
+import {
+  validerDemandeMalediction,
+  validerDemandeSabotage,
+  validerReglages,
+} from './validation.js';
 
 describe('les valeurs du mode', () => {
   it('accueille douze joueurs, et en demande cinq', () => {
@@ -71,7 +79,12 @@ describe('les lieux', () => {
 
     expect(lieux).toBe(LIEUX_DES_CARTES.map1);
     expect(lieux?.stations).toHaveLength(13);
-    for (const place of [lieux?.gong, ...(lieux?.stations ?? [])]) {
+    for (const place of [
+      lieux?.gong,
+      ...(lieux?.stations ?? []),
+      lieux?.boitier,
+      ...(lieux?.consoles ?? []),
+    ]) {
       expect(place?.x).toBeGreaterThan(0);
       expect(place?.x).toBeLessThan(CARTES.map1.largeur);
       expect(place?.y).toBeGreaterThan(0);
@@ -91,6 +104,28 @@ describe('les lieux', () => {
       ...normal?.stations[0],
       x: CARTES.map1.largeur - (normal?.stations[0]?.x ?? 0),
     });
+    // Les postes des sabotages (etape 7.22).
+    expect(miroir?.boitier).toEqual({
+      x: CARTES.map1.largeur - (normal?.boitier.x ?? 0),
+      y: normal?.boitier.y,
+    });
+    expect(miroir?.consoles[1]).toEqual({
+      x: CARTES.map1.largeur - (normal?.consoles[1].x ?? 0),
+      y: normal?.consoles[1].y,
+    });
+  });
+
+  it('dit les sabotages, dont trois nuisances qui sont les malus du jeu', () => {
+    expect(NATURES_DE_SABOTAGE).toEqual([
+      'flou',
+      'negatif',
+      'controlesInverses',
+      'nuage',
+      'panne',
+      'surchauffe',
+    ]);
+    expect(NATURES_DE_SABOTAGE.filter(estUneNuisance)).toEqual([...NUISANCES]);
+    expect([...NUISANCES].sort()).toEqual([...TYPES_MALUS].sort());
   });
 
   it('nomme chaque station, et lui donne au moins une tache, sans doublon', () => {
@@ -162,6 +197,48 @@ describe('les taches courtes', () => {
     expect(AMONG_PAR_DEFAUT.tachesVisuelles).toBe(true);
     expect(AMONG_PAR_DEFAUT.barreDesTaches).toBe('toujours');
     expect(BARRES_DES_TACHES).toEqual(['toujours', 'reunions', 'jamais']);
+  });
+});
+
+describe('la validation des sabotages et des maledictions (etape 7.22)', () => {
+  it('accepte un sabotage connu, et le nuage avec sa station', () => {
+    expect(validerDemandeSabotage({ nature: 'panne' })).toEqual({
+      valide: true,
+      valeur: { nature: 'panne' },
+    });
+    // Une station sans objet hors du nuage est oubliee.
+    expect(validerDemandeSabotage({ nature: 'flou', station: 3 })).toEqual({
+      valide: true,
+      valeur: { nature: 'flou' },
+    });
+    expect(validerDemandeSabotage({ nature: 'nuage', station: 3 })).toEqual({
+      valide: true,
+      valeur: { nature: 'nuage', station: 3 },
+    });
+  });
+
+  it('refuse un sabotage mal forme', () => {
+    for (const brut of [
+      null,
+      'panne',
+      { nature: 'grele' },
+      { nature: 'nuage' },
+      { nature: 'nuage', station: -1 },
+      { nature: 'nuage', station: 1.5 },
+      { nature: 'nuage', station: 64 },
+      { nature: 'nuage', station: '2' },
+    ]) {
+      expect(validerDemandeSabotage(brut).valide, JSON.stringify(brut)).toBe(false);
+    }
+  });
+
+  it('n accepte comme malediction que les trois nuisances', () => {
+    for (const nature of NUISANCES) {
+      expect(validerDemandeMalediction(nature)).toEqual({ valide: true, valeur: nature });
+    }
+    for (const brut of ['panne', 'nuage', '', null, { nature: 'flou' }]) {
+      expect(validerDemandeMalediction(brut).valide).toBe(false);
+    }
   });
 });
 

@@ -703,7 +703,13 @@ describe('les lieux d Among Ninjas', () => {
 
         expect(lieux).toBeDefined();
 
-        for (const lieu of [lieux?.gong, ...(lieux?.stations ?? [])]) {
+        // Le gong, les stations, et les postes des sabotages (etape 7.22).
+        for (const lieu of [
+          lieux?.gong,
+          ...(lieux?.stations ?? []),
+          lieux?.boitier,
+          ...(lieux?.consoles ?? []),
+        ]) {
           const centre = lieu as Position;
 
           expect(positionTenable(terrain, centre), JSON.stringify(centre)).toBe(true);

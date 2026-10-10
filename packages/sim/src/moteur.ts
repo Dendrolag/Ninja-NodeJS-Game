@@ -54,7 +54,7 @@
  * partir du battement suivant.
  */
 
-import type { IntentionDeplacement, Vecteur } from '@neon-ninja/shared';
+import type { IntentionDeplacement, NatureDeSabotage, Nuisance, Vecteur } from '@neon-ninja/shared';
 import { AMONG, RAYON_ENTITE, VITESSES } from '@neon-ninja/shared';
 
 import {
@@ -158,6 +158,17 @@ export interface EntreeJoueur extends IntentionDeplacement {
    * d'une tache ouverte et dans les autres modes.
    */
   readonly tache?: 'finie' | 'fermee';
+  /**
+   * Un sabotage demande par un assassin d'Among Ninjas (etape 7.22), depuis sa carte: sa nature,
+   * et pour le nuage noir, le rang de sa station parmi les stations actives. Ponctuel, comme le
+   * tir. Le moteur refuse ce que la regle refuse. Ignore dans les autres modes.
+   */
+  readonly saboter?: { readonly nature: NatureDeSabotage; readonly station?: number };
+  /**
+   * Une malediction demandee par une proie fantome d'Among Ninjas (etape 7.22): le malus choisi.
+   * Ponctuel, comme le tir. Ignore dans les autres modes.
+   */
+  readonly maudire?: Nuisance;
 }
 
 /**

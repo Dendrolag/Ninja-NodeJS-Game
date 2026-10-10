@@ -44,8 +44,8 @@
  * l'appelant decide de traiter.
  */
 
-import type { PhaseAmong } from './among.js';
-import { PHASES_AMONG } from './among.js';
+import type { NatureDeSabotage, PhaseAmong } from './among.js';
+import { NATURES_DE_SABOTAGE, PHASES_AMONG } from './among.js';
 import type { Couleur, Direction, NatureObjet, Orientation, TypeZone } from './constantes.js';
 import {
   DIRECTIONS,
@@ -485,11 +485,47 @@ export function quantifierInstantane(instantane: InstantanePartie): InstantanePa
 function amongArrondi(among: AmongVu): AmongVu {
   codeDans(PHASES_AMONG, among.phase, 'phase');
 
+  const { sabotage, nuage, rechargeDesSabotagesMs, rechargeDeLaMaledictionMs } = among;
+
+  if (sabotage !== undefined) {
+    codeDans(NATURES_DE_SABOTAGE, sabotage.nature, 'sabotage');
+  }
+
   return {
     phase: among.phase,
     restantMs: positifArrondi(among.restantMs, 'restantMs'),
     tachesFaites: positifArrondi(among.tachesFaites, 'tachesFaites'),
     tachesTotal: positifArrondi(among.tachesTotal, 'tachesTotal'),
+    ...(sabotage === undefined
+      ? {}
+      : {
+          sabotage: {
+            nature: sabotage.nature,
+            restantMs: positifArrondi(sabotage.restantMs, 'sabotage.restantMs'),
+            consolesTenues: [sabotage.consolesTenues[0], sabotage.consolesTenues[1]],
+          },
+        }),
+    ...(nuage === undefined
+      ? {}
+      : {
+          nuage: {
+            x: positifArrondi(nuage.x, 'nuage.x'),
+            y: positifArrondi(nuage.y, 'nuage.y'),
+          },
+        }),
+    ...(rechargeDesSabotagesMs === undefined
+      ? {}
+      : {
+          rechargeDesSabotagesMs: positifArrondi(rechargeDesSabotagesMs, 'rechargeDesSabotagesMs'),
+        }),
+    ...(rechargeDeLaMaledictionMs === undefined
+      ? {}
+      : {
+          rechargeDeLaMaledictionMs: positifArrondi(
+            rechargeDeLaMaledictionMs,
+            'rechargeDeLaMaledictionMs',
+          ),
+        }),
   };
 }
 
@@ -1451,21 +1487,85 @@ function encoder(
 /**
  * Le bloc d'Among Ninjas, entier a chaque trame: la phase sur un octet, puis trois entiers.
  * Quelques octets, qui ne valent pas un delta.
+ *
+ * Puis, depuis l'etape 7.22, un octet qui dit ce qui suit, chaque partie seulement si elle est
+ * la: 1 le sabotage en cours (sa nature, ce qu'il en reste, les consoles tenues sur un octet),
+ * 2 le nuage (deux entiers), 4 la recharge des sabotages, 8 celle de la malediction.
  */
 function ecrireAmong(ecrivain: Ecrivain, among: AmongVu): void {
   ecrireCode(ecrivain, PHASES_AMONG, among.phase, 'phase');
   ecrivain.entierPositif(among.restantMs);
   ecrivain.entierPositif(among.tachesFaites);
   ecrivain.entierPositif(among.tachesTotal);
+
+  const { sabotage, nuage, rechargeDesSabotagesMs, rechargeDeLaMaledictionMs } = among;
+
+  ecrivain.octet(
+    (sabotage === undefined ? 0 : 1) |
+      (nuage === undefined ? 0 : 2) |
+      (rechargeDesSabotagesMs === undefined ? 0 : 4) |
+      (rechargeDeLaMaledictionMs === undefined ? 0 : 8),
+  );
+
+  if (sabotage !== undefined) {
+    ecrireCode(ecrivain, NATURES_DE_SABOTAGE, sabotage.nature, 'sabotage');
+    ecrivain.entierPositif(sabotage.restantMs);
+    ecrivain.octet((sabotage.consolesTenues[0] ? 1 : 0) | (sabotage.consolesTenues[1] ? 2 : 0));
+  }
+
+  if (nuage !== undefined) {
+    ecrivain.entierPositif(nuage.x);
+    ecrivain.entierPositif(nuage.y);
+  }
+
+  if (rechargeDesSabotagesMs !== undefined) {
+    ecrivain.entierPositif(rechargeDesSabotagesMs);
+  }
+
+  if (rechargeDeLaMaledictionMs !== undefined) {
+    ecrivain.entierPositif(rechargeDeLaMaledictionMs);
+  }
 }
 
 function lireAmong(lecteur: Lecteur): AmongVu {
+  const phase = lireCode<PhaseAmong>(lecteur, PHASES_AMONG);
+  const restantMs = lecteur.entierPositif();
+  const tachesFaites = lecteur.entierPositif();
+  const tachesTotal = lecteur.entierPositif();
+  const presents = lecteur.octet();
+
+  if (presents > 15) {
+    throw new Error(`Bloc d'Among Ninjas illisible: indicateurs ${String(presents)}.`);
+  }
+
+  const sabotage =
+    (presents & 1) === 0
+      ? undefined
+      : {
+          nature: lireCode<NatureDeSabotage>(lecteur, NATURES_DE_SABOTAGE),
+          restantMs: lecteur.entierPositif(),
+          consolesTenues: consolesLues(lecteur.octet()),
+        };
+  const nuage =
+    (presents & 2) === 0 ? undefined : { x: lecteur.entierPositif(), y: lecteur.entierPositif() };
+  const rechargeDesSabotagesMs = (presents & 4) === 0 ? undefined : lecteur.entierPositif();
+  const rechargeDeLaMaledictionMs = (presents & 8) === 0 ? undefined : lecteur.entierPositif();
+
   return {
-    phase: lireCode<PhaseAmong>(lecteur, PHASES_AMONG),
-    restantMs: lecteur.entierPositif(),
-    tachesFaites: lecteur.entierPositif(),
-    tachesTotal: lecteur.entierPositif(),
+    phase,
+    restantMs,
+    tachesFaites,
+    tachesTotal,
+    ...(sabotage === undefined ? {} : { sabotage }),
+    ...(nuage === undefined ? {} : { nuage }),
+    ...(rechargeDesSabotagesMs === undefined ? {} : { rechargeDesSabotagesMs }),
+    ...(rechargeDeLaMaledictionMs === undefined ? {} : { rechargeDeLaMaledictionMs }),
   };
+}
+
+/** Les consoles tenues de la surchauffe, lues sur leur octet. */
+function consolesLues(octet: number): readonly [boolean, boolean] {
+  return [(octet & 1) !== 0, (octet & 2) !== 0];
 }
 
 /** Des octets, quelle que soit la forme sous laquelle le reseau les a rendus. */

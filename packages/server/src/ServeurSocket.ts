@@ -66,6 +66,7 @@ import type {
   DemandeInvitation,
   DemandeRejoindre,
   DemandeRetour,
+  DemandeSabotage,
   DemandeVote,
   Equipe,
   ErreurValidation,
@@ -83,6 +84,7 @@ import type {
   ResultatValidation,
   SeauAJetons,
   SessionJoueur,
+  Nuisance,
 } from '@neon-ninja/shared';
 import {
   LIMITES_DEBIT,
@@ -95,6 +97,8 @@ import {
   validerDemandeInvitation,
   validerDemandeRejoindre,
   validerDemandeRetour,
+  validerDemandeMalediction,
+  validerDemandeSabotage,
   validerDemandeTache,
   validerDemandeVote,
   validerEquipe,
@@ -584,6 +588,12 @@ export class ServeurSocket {
     });
     socket.on('tache', (quoi) => {
       this.surTache(socket, quoi);
+    });
+    socket.on('saboter', (demande) => {
+      this.surSaboter(socket, demande);
+    });
+    socket.on('maudire', (nature) => {
+      this.surMaudire(socket, nature);
     });
     socket.on('voter', (demande) => {
       this.surVoter(socket, demande);
@@ -1156,6 +1166,57 @@ export class ServeurSocket {
     }
 
     room.annoncerLaTache(connexion.session.id, verdict.valeur);
+  }
+
+  /**
+   * Un sabotage d'Among Ninjas (etape 7.22), demande depuis la carte. Valide dans sa forme,
+   * limite en debit avec les gestes rares, puis confie a la room: que le joueur soit un
+   * assassin, et le sabotage permis, le moteur en juge.
+   */
+  private surSaboter(socket: SocketTypee, demande: DemandeSabotage): void {
+    const connexion = this.connexions.get(socket.id);
+
+    if (connexion?.session === undefined || connexion.idRoom === undefined) {
+      return;
+    }
+
+    if (!this.autorise(connexion, 'autresActions')) {
+      return;
+    }
+
+    const verdict = validerDemandeSabotage(demande as unknown);
+    const room = this.rooms.room(connexion.idRoom);
+
+    if (!verdict.valide || room?.statut !== 'enCours') {
+      return;
+    }
+
+    room.saboter(connexion.session.id, verdict.valeur);
+  }
+
+  /**
+   * Une malediction d'Among Ninjas (etape 7.22). Memes regles qu'un sabotage: le moteur juge
+   * que le joueur soit une proie fantome, et la recharge commune.
+   */
+  private surMaudire(socket: SocketTypee, nature: Nuisance): void {
+    const connexion = this.connexions.get(socket.id);
+
+    if (connexion?.session === undefined || connexion.idRoom === undefined) {
+      return;
+    }
+
+    if (!this.autorise(connexion, 'autresActions')) {
+      return;
+    }
+
+    const verdict = validerDemandeMalediction(nature as unknown);
+    const room = this.rooms.room(connexion.idRoom);
+
+    if (!verdict.valide || room?.statut !== 'enCours') {
+      return;
+    }
+
+    room.maudire(connexion.session.id, verdict.valeur);
   }
 
   /**
@@ -2212,6 +2273,14 @@ function envoyer(socket: SocketTypee, notification: Notification): void {
 
     case 'tacheVisuelle':
       socket.emit('tacheVisuelle', notification.charge);
+      return;
+
+    case 'sabotage':
+      socket.emit('sabotage', notification.charge);
+      return;
+
+    case 'malediction':
+      socket.emit('malediction', notification.charge);
       return;
 
     case 'reunion':

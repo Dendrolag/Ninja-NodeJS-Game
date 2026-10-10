@@ -45,6 +45,7 @@ import type {
   JoueurDuSalon,
   JoueurTrancheVu,
   LigneClassement,
+  MaledictionVue,
   MalusRamasseParMoi,
   MalusSubi,
   MeurtreVu,
@@ -59,6 +60,7 @@ import type {
   PartiePublique,
   RalliementVu,
   ReunionVue,
+  SabotageVu,
   TactiqueVue,
   TirDeCaptureVu,
   VieDeTraqueurPerdueVue,
@@ -76,7 +78,14 @@ import type {
   ObjetRamassable,
   ZoneSpeciale,
 } from '@neon-ninja/sim';
-import { AMONG_PAR_DEFAUT, COULEUR_BOT_NEUTRE, EVADE, TACTIQUE } from '@neon-ninja/shared';
+import {
+  AMONG,
+  AMONG_PAR_DEFAUT,
+  COULEUR_BOT_NEUTRE,
+  EVADE,
+  TACTIQUE,
+  estUneNuisance,
+} from '@neon-ninja/shared';
 import {
   REGLES_DES_MODES,
   avancementDesTaches,
@@ -86,8 +95,10 @@ import {
   evadeSurLaCarte,
   evaluerFinDePartie,
   guerrierDe,
+  nuageEnAmong,
   porteLeDoubleur,
   rayonDeVision,
+  surchauffePerdue,
   toutesLesEntites,
 } from '@neon-ninja/sim';
 
@@ -182,7 +193,28 @@ function amongVu(etat: EtatPartie, among: EtatAmong): AmongVu {
     restantMs = dureeDuTourMs > 0 ? Math.max(dureeDuTourMs - among.tourEcouleMs, 0) : 0;
   }
 
-  return { phase: among.phase, restantMs, tachesFaites: faites, tachesTotal: total };
+  const nuage = nuageEnAmong(etat);
+
+  // Tout ce que le mode sait des sabotages (etape 7.22): la vue des fantomes le montre entier,
+  // celle d'un vivant le filtre (vues.ts).
+  return {
+    phase: among.phase,
+    restantMs,
+    tachesFaites: faites,
+    tachesTotal: total,
+    ...(among.sabotage === undefined
+      ? {}
+      : {
+          sabotage: {
+            nature: among.sabotage.nature,
+            restantMs: among.sabotage.restantMs,
+            consolesTenues: among.sabotage.consolesTenues,
+          },
+        }),
+    ...(nuage === undefined ? {} : { nuage }),
+    rechargeDesSabotagesMs: among.rechargeDesSabotagesMs,
+    rechargeDeLaMaledictionMs: among.rechargeDeLaMaledictionMs,
+  };
 }
 
 /**
@@ -261,6 +293,7 @@ export function finAmongDe(etat: EtatPartie): FinAmong | undefined {
 
   return {
     vainqueur: among.vainqueur,
+    ...(surchauffePerdue(among) ? { parLaSurchauffe: true as const } : {}),
     joueurs: calculerScores(etat).flatMap((ligne) => {
       const joueur = among.joueurs[ligne.id];
 
@@ -681,7 +714,13 @@ export type Notification =
       readonly pour: IdentifiantEntite;
       readonly charge: TacheVisuelleVue;
     }
-  | { readonly nom: 'reunion'; readonly pour: IdentifiantEntite; readonly charge: ReunionVue };
+  | { readonly nom: 'reunion'; readonly pour: IdentifiantEntite; readonly charge: ReunionVue }
+  | { readonly nom: 'sabotage'; readonly pour: IdentifiantEntite; readonly charge: SabotageVu }
+  | {
+      readonly nom: 'malediction';
+      readonly pour: IdentifiantEntite;
+      readonly charge: MaledictionVue;
+    };
 
 /**
  * Traduit les faits d'un battement en notifications adressees.
@@ -971,6 +1010,30 @@ function notificationsDUnFait(
         decompte: evenement.decompte.map((option) => ({ ...option })),
       });
 
+    // Les sabotages et la malediction (etape 7.22).
+    case 'sabotage':
+      return [
+        ...malusSansAuteur(evenement.nature, evenement.victimes, 'sabotage'),
+        ...aQuiDoitSavoir(etat, evenement.nature, { quoi: 'lance', nature: evenement.nature }),
+      ];
+
+    case 'sabotageFini':
+      return aQuiDoitSavoir(etat, evenement.nature, {
+        quoi: 'fini',
+        nature: evenement.nature,
+        repare: evenement.repare,
+      });
+
+    case 'malediction':
+      return [
+        ...malusSansAuteur(evenement.nature, evenement.victimes, 'malediction'),
+        ...auxFantomes(etat).map((pour): Notification => ({
+          nom: 'malediction',
+          pour,
+          charge: { nature: evenement.nature },
+        })),
+      ];
+
     // Un tour qui commence se lit dans la phase du flux, une tache faite dans l'etat prive.
     case 'tourCommence':
     case 'tacheFaite':
@@ -1006,6 +1069,55 @@ function meurtreVu(
             rayonDeVision(etat, joueur.id)),
     )
     .map((joueur): Notification => ({ nom: 'meurtre', pour: joueur.id, charge }));
+}
+
+/**
+ * Le malus d'un sabotage ou d'une malediction (etape 7.22), a chacun de ses frappes, comme un
+ * malus subi, mais sans auteur: ni le saboteur, ni le fantome ne sont nommes.
+ */
+function malusSansAuteur(
+  nature: SabotageVu['nature'],
+  victimes: readonly IdentifiantEntite[],
+  origine: 'sabotage' | 'malediction',
+): readonly Notification[] {
+  if (!estUneNuisance(nature)) {
+    return [];
+  }
+
+  const dureeMs =
+    origine === 'sabotage' ? AMONG.DUREE_D_UNE_NUISANCE_MS : AMONG.DUREE_DE_LA_MALEDICTION_MS;
+
+  return victimes.map((pour): Notification => ({
+    nom: 'malusSubi',
+    pour,
+    charge: { nature, dureeMs, parPseudo: '', origine },
+  }));
+}
+
+/**
+ * Qui apprend qu'un sabotage commence ou finit (etape 7.22): tout le monde pour la panne et la
+ * surchauffe, qui se reparent ensemble; les assassins et les fantomes seuls pour une nuisance
+ * et le nuage. Une proie apprend une nuisance par le malus qu'elle subit, et voit le nuage dans
+ * sa vue, si elle en est assez pres.
+ */
+function aQuiDoitSavoir(
+  etat: EtatPartie,
+  nature: SabotageVu['nature'],
+  charge: SabotageVu,
+): readonly Notification[] {
+  const tous = nature === 'panne' || nature === 'surchauffe';
+
+  return Object.keys(etat.joueurs)
+    .filter((id) => {
+      const joueur = etat.among?.joueurs[id];
+      return tous || joueur?.role === 'tueur' || joueur?.fantome === true;
+    })
+    .map((pour): Notification => ({ nom: 'sabotage', pour, charge }));
+}
+
+/** Les fantomes presents dans la partie, dans l'ordre de l'etat. */
+function auxFantomes(etat: EtatPartie): readonly IdentifiantEntite[] {
+  return Object.keys(etat.joueurs).filter((id) => etat.among?.joueurs[id]?.fantome === true);
 }
 
 /**

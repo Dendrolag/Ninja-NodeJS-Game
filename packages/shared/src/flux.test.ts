@@ -1095,6 +1095,83 @@ describe('Among Ninjas (etape 7.20)', () => {
     expect(quantifierInstantane(instantane())).not.toHaveProperty('among');
   });
 
+  it('fait voyager le sabotage, le nuage et les recharges (etape 7.22)', () => {
+    const parties = [
+      instantane({
+        tick: 1,
+        entites: [joueur('a', 100, 100)],
+        among: {
+          phase: 'jeu',
+          restantMs: 0,
+          tachesFaites: 2,
+          tachesTotal: 20,
+          sabotage: { nature: 'surchauffe', restantMs: 44_950.6, consolesTenues: [true, false] },
+          rechargeDesSabotagesMs: 0,
+          rechargeDeLaMaledictionMs: 12_000,
+        },
+      }),
+      instantane({
+        tick: 2,
+        entites: [joueur('a', 100, 100)],
+        among: {
+          phase: 'jeu',
+          restantMs: 0,
+          tachesFaites: 2,
+          tachesTotal: 20,
+          sabotage: { nature: 'nuage', restantMs: 19_000, consolesTenues: [false, false] },
+          nuage: { x: 1320.4, y: 1070 },
+        },
+      }),
+      instantane({
+        tick: 3,
+        entites: [joueur('a', 100, 100)],
+        among: { phase: 'jeu', restantMs: 0, tachesFaites: 2, tachesTotal: 20 },
+      }),
+    ];
+    let reference = encoderImage(parties[0] as InstantanePartie).reference;
+    expect(appliquerTrame(undefined, encoderImage(parties[0] as InstantanePartie).octets)).toEqual(
+      quantifierInstantane(parties[0] as InstantanePartie),
+    );
+    expect(quantifierInstantane(parties[0] as InstantanePartie).among?.sabotage?.restantMs).toBe(
+      44_951,
+    );
+
+    for (const suivante of parties.slice(1)) {
+      const trame = encoderDelta(reference, suivante);
+
+      expect(appliquerTrame(reference, trame.octets)).toEqual(quantifierInstantane(suivante));
+      reference = trame.reference;
+    }
+  });
+
+  it('refuse un sabotage inconnu', () => {
+    const partie = instantane({
+      among: {
+        phase: 'jeu',
+        restantMs: 0,
+        tachesFaites: 0,
+        tachesTotal: 0,
+        sabotage: { nature: 'grele' as 'panne', restantMs: 0, consolesTenues: [false, false] },
+      },
+    });
+
+    expect(() => encoderImage(partie)).toThrow(/sabotage/u);
+  });
+
+  it('refuse un bloc d Among Ninjas aux indicateurs inconnus', () => {
+    const bloc = { phase: 'jeu', restantMs: 0, tachesFaites: 0, tachesTotal: 0 } as const;
+    const octets = encoderImage(instantane({ among: bloc })).octets.slice();
+    // L'octet des indicateurs du bloc est le premier qui change quand une recharge s'y ajoute.
+    const avecRecharge = encoderImage(
+      instantane({ among: { ...bloc, rechargeDesSabotagesMs: 0 } }),
+    ).octets;
+    const rang = octets.findIndex((octet, place) => octet !== avecRecharge[place]);
+    expect(avecRecharge[rang]).toBe(4);
+    octets[rang] = 16;
+
+    expect(() => appliquerTrame(undefined, octets)).toThrow(/Among/u);
+  });
+
   it('refuse une phase inconnue', () => {
     const partie = instantane({
       among: { phase: 'sieste' as 'jeu', restantMs: 0, tachesFaites: 0, tachesTotal: 0 },

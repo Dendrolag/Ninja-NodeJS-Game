@@ -31,7 +31,14 @@
  * d'entrer, l'autre empeche de nuire si quelque chose entrait quand meme.
  */
 
-import { BARRES_DES_TACHES, DUREES_DE_TOUR_S, PALIERS_DE_VISION } from './among.js';
+import type { NatureDeSabotage, Nuisance } from './among.js';
+import {
+  BARRES_DES_TACHES,
+  DUREES_DE_TOUR_S,
+  NATURES_DE_SABOTAGE,
+  NUISANCES,
+  PALIERS_DE_VISION,
+} from './among.js';
 import type { Intervalle } from './bornes.js';
 import {
   BORNES_CHAT,
@@ -72,6 +79,7 @@ import type {
   DemandeInvitation,
   DemandeRejoindre,
   DemandeRetour,
+  DemandeSabotage,
   DemandeVote,
   IntentionDeplacement,
   MessageChat,
@@ -398,6 +406,49 @@ export function validerDemandeTache(brut: unknown): ResultatValidation<'finie' |
   return brut === 'finie' || brut === 'fermee'
     ? accepte(brut)
     : refuse('tache', 'Une tâche se dit finie, ou fermée.');
+}
+
+/** Le rang le plus grand d'une station qu'un sabotage peut viser: bien au-dela des treize de Tokyo. */
+const RANG_DE_STATION_MAXIMUM = 63;
+
+/**
+ * Valide un sabotage d'Among Ninjas (etape 7.22): une nature connue, et pour le nuage noir, le
+ * rang entier d'une station. Que le joueur soit un assassin, et le sabotage permis, le moteur en
+ * juge: ici, seule la forme compte.
+ */
+export function validerDemandeSabotage(brut: unknown): ResultatValidation<DemandeSabotage> {
+  const source = objetOuRien(brut);
+  if (source === undefined) {
+    return refuse('sabotage', 'Un sabotage doit être un objet.');
+  }
+
+  const nature = champ(source, 'nature');
+  if (!(NATURES_DE_SABOTAGE as readonly unknown[]).includes(nature)) {
+    return refuse('sabotage.nature', 'Ce sabotage n’existe pas.');
+  }
+
+  const station = champ(source, 'station');
+  if (nature !== 'nuage') {
+    return accepte({ nature: nature as NatureDeSabotage });
+  }
+
+  if (
+    typeof station !== 'number' ||
+    !Number.isInteger(station) ||
+    station < 0 ||
+    station > RANG_DE_STATION_MAXIMUM
+  ) {
+    return refuse('sabotage.station', 'Le nuage noir se pose sur une station.');
+  }
+
+  return accepte({ nature: 'nuage', station });
+}
+
+/** Valide une malediction d'Among Ninjas (etape 7.22): l'un des trois malus des nuisances. */
+export function validerDemandeMalediction(brut: unknown): ResultatValidation<Nuisance> {
+  return (NUISANCES as readonly unknown[]).includes(brut)
+    ? accepte(brut as Nuisance)
+    : refuse('malediction', 'Une malédiction est un flou, un négatif ou des commandes inversées.');
 }
 
 /** La longueur au plus d'un identifiant de joueur designe dans un vote: celui d'une connexion. */

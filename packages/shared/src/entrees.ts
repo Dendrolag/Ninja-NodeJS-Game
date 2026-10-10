@@ -30,6 +30,7 @@
  * parlent donc du meme contrat, ecrit une seule fois.
  */
 
+import type { NatureDeSabotage } from './among.js';
 import type { Mode, Visibilite } from './constantes.js';
 import type { Vecteur } from './geometrie.js';
 import type { ReglagesPartiels } from './reglages.js';
@@ -223,6 +224,16 @@ export interface DemandeChat {
  */
 export interface DemandeVote {
   readonly cible: string | null;
+}
+
+/**
+ * Un sabotage, demande par un assassin d'Among Ninjas depuis sa carte (etape 7.22): sa nature,
+ * et pour le nuage noir, le rang de sa station parmi celles que l'assassin voit. Qui sabote, la
+ * session le dit; que ce soit permis, le moteur en juge.
+ */
+export interface DemandeSabotage {
+  readonly nature: NatureDeSabotage;
+  readonly station?: number;
 }
 
 /**

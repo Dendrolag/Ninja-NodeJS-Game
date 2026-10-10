@@ -35,6 +35,12 @@
  *   - Les fantomes partagent une vue: toute la carte, fantomes compris.
  *   - Un destinataire que l'etat ne connait pas ne voit rien.
  *
+ * LES SABOTAGES (etape 7.22). Une proie vivante ne voit rien de ce qui se tient dans le nuage
+ * noir, hors d'elle-meme: le filtre est ici, comme le disque, sans quoi tout se lirait dans la
+ * trame. Elle ne sait du sabotage en cours que la panne et la surchauffe, que tout le monde
+ * repare, et ne voit le nuage que s'il touche son disque. Un assassin vivant sait tout des
+ * sabotages et leur recharge; seuls les fantomes savent celle de la malediction.
+ *
  * Le role n'est dans aucune vue: il part a son seul joueur (etatPriveDe, dans instantane.ts).
  *
  * CE QUI RESTE, ET POURQUOI. Ce qu'un joueur a vu legitimement, il le garde: une proie
@@ -48,10 +54,24 @@
 
 import { createHmac } from 'node:crypto';
 
-import type { AmongVu, BotVu, EntiteVue, InstantanePartie, JoueurVu } from '@neon-ninja/shared';
-import { AMONG_PAR_DEFAUT } from '@neon-ninja/shared';
+import type {
+  AmongVu,
+  BotVu,
+  EntiteVue,
+  InstantanePartie,
+  JoueurVu,
+  Position,
+} from '@neon-ninja/shared';
+import { AMONG, AMONG_PAR_DEFAUT } from '@neon-ninja/shared';
 import type { EtatPartie, IdentifiantEntite } from '@neon-ninja/sim';
-import { bonusActif, estCache, estTraqueur, rayonDeVision } from '@neon-ninja/sim';
+import {
+  bonusActif,
+  estCache,
+  estTraqueur,
+  estTueur,
+  nuageEnAmong,
+  rayonDeVision,
+} from '@neon-ninja/sim';
 
 import type { Notification } from './instantane.js';
 import { armeDuTueur, instantaneDe } from './instantane.js';
@@ -214,7 +234,17 @@ function vueDeCle(
     return vueDUnVivant(etat, commune, cle.slice(PREFIXE_D_UN_VIVANT.length));
   }
 
-  return { ...commune, entites: [] };
+  return vueDePersonne(commune);
+}
+
+/**
+ * Ce que voit un destinataire inconnu, ou un vivant qui n'est plus sur la carte: aucune entite,
+ * et du mode, ce qu'une proie sait sans rien voir (etape 7.22).
+ */
+function vueDePersonne(commune: InstantanePartie): InstantanePartie {
+  return commune.among === undefined
+    ? { ...commune, entites: [] }
+    : { ...commune, entites: [], among: sabotagesDUneProie(commune.among, false) };
 }
 
 /**
@@ -229,11 +259,14 @@ function vueDUnVivant(
   const centre = etat.joueurs[id]?.position;
 
   if (centre === undefined) {
-    return { ...commune, entites: [] };
+    return vueDePersonne(commune);
   }
 
   const rayon = rayonDeVision(etat, id);
   const arme = armeDuTueur(etat, id);
+  const tueur = estTueur(etat, id);
+  // Le nuage noir (etape 7.22): une proie vivante n'y voit personne, dedans comme dehors.
+  const nuage = tueur ? undefined : nuageEnAmong(etat);
   const entites: EntiteVue[] = [];
 
   for (const entite of commune.entites) {
@@ -241,15 +274,61 @@ function vueDUnVivant(
       entites.push(arme === undefined ? entite : { ...entite, tactique: arme });
     } else if (
       !(entite.type === 'joueur' && entite.fantome === true) &&
-      Math.hypot(entite.x - centre.x, entite.y - centre.y) <= rayon
+      distance(entite, centre) <= rayon &&
+      (nuage === undefined || distance(entite, nuage) > AMONG.RAYON_DU_NUAGE_PX)
     ) {
       entites.push(entite);
     }
   }
 
-  return commune.among === undefined
-    ? { ...commune, entites }
-    : { ...commune, entites, among: barreDUnVivant(etat, commune.among) };
+  if (commune.among === undefined) {
+    return { ...commune, entites };
+  }
+
+  const barre = barreDUnVivant(etat, commune.among);
+  const nuageEnVue =
+    commune.among.nuage !== undefined &&
+    distance(commune.among.nuage, centre) <= rayon + AMONG.RAYON_DU_NUAGE_PX;
+
+  return {
+    ...commune,
+    entites,
+    among: tueur ? sabotagesDUnAssassin(barre) : sabotagesDUneProie(barre, nuageEnVue),
+  };
+}
+
+/** La distance entre deux points, en pixels de carte. */
+function distance(un: Position, autre: Position): number {
+  return Math.hypot(un.x - autre.x, un.y - autre.y);
+}
+
+/** Ce qu'un assassin vivant sait des sabotages (etape 7.22): tout, sauf la malediction. */
+function sabotagesDUnAssassin(among: AmongVu): AmongVu {
+  const { rechargeDeLaMaledictionMs: _desFantomes, ...reste } = among;
+
+  return reste;
+}
+
+/**
+ * Ce qu'une proie vivante sait des sabotages (etape 7.22): la panne et la surchauffe, que tout
+ * le monde voit et repare; le nuage s'il touche son disque. Ni une nuisance en cours, qu'elle
+ * apprend par le malus subi, ni aucune recharge.
+ */
+function sabotagesDUneProie(among: AmongVu, nuageEnVue: boolean): AmongVu {
+  const {
+    sabotage,
+    nuage,
+    rechargeDesSabotagesMs: _desAssassins,
+    rechargeDeLaMaledictionMs: _desFantomes,
+    ...reste
+  } = among;
+  const connuDeTous = sabotage?.nature === 'panne' || sabotage?.nature === 'surchauffe';
+
+  return {
+    ...reste,
+    ...(sabotage !== undefined && connuDeTous ? { sabotage } : {}),
+    ...(nuage !== undefined && nuageEnVue ? { nuage } : {}),
+  };
 }
 
 /**
@@ -384,6 +463,8 @@ export function notificationDansLaVue(
     case 'meurtre':
     case 'tacheVisuelle':
     case 'reunion':
+    case 'sabotage':
+    case 'malediction':
       // Rien qui designe une autre entite qu'un identifiant de mine ou un pseudo.
       return notification;
 

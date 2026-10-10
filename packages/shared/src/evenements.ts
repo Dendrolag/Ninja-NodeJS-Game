@@ -47,7 +47,9 @@
 import type {
   CampAmong,
   MotifDeReunion,
+  NatureDeSabotage,
   NatureDeTache,
+  Nuisance,
   PhaseAmong,
   RoleAmong,
   StationDuMode,
@@ -74,6 +76,7 @@ import type {
   DemandeInvitation,
   DemandeRejoindre,
   DemandeRetour,
+  DemandeSabotage,
   DemandeVote,
   IntentionDeplacement,
   MessageChat,
@@ -312,6 +315,29 @@ export interface AmongVu {
   readonly restantMs: number;
   readonly tachesFaites: number;
   readonly tachesTotal: number;
+  /**
+   * Le sabotage en cours (etape 7.22), tel que ce joueur le sait: la panne et la surchauffe a
+   * tous; les nuisances et le nuage aux assassins et aux fantomes seulement. Jamais le saboteur.
+   */
+  readonly sabotage?: SabotageEnCoursVu;
+  /**
+   * Le centre du nuage noir (etape 7.22), a qui le voit: un assassin, un fantome, ou un vivant
+   * dont le disque de vision touche le nuage.
+   */
+  readonly nuage?: { readonly x: number; readonly y: number };
+  /** Le temps avant le prochain sabotage (etape 7.22): aux assassins et aux fantomes. */
+  readonly rechargeDesSabotagesMs?: number;
+  /** Le temps avant la prochaine malediction (etape 7.22): aux fantomes. */
+  readonly rechargeDeLaMaledictionMs?: number;
+}
+
+/** Le sabotage en cours d'une partie Among Ninjas (etape 7.22). */
+export interface SabotageEnCoursVu {
+  readonly nature: NatureDeSabotage;
+  /** Ce qu'il en reste, en millisecondes; zero pour la panne, qui attend sa reparation. */
+  readonly restantMs: number;
+  /** La surchauffe: chaque console est-elle tenue. */
+  readonly consolesTenues: readonly [boolean, boolean];
 }
 
 // --------------------------------------------------------------------------
@@ -656,8 +682,13 @@ export interface MalusSubi {
   /** Un malus du jeu d'origine, ou un des trois du Tactique (etape 7.7). */
   readonly nature: NatureMalus;
   readonly dureeMs: number;
-  /** Pseudo de celui qui l'a ramasse. */
+  /** Pseudo de celui qui l'a ramasse. Vide pour un sabotage ou une malediction. */
   readonly parPseudo: string;
+  /**
+   * D'ou vient le malus dans Among Ninjas (etape 7.22): le sabotage d'un assassin, ou la
+   * malediction d'un fantome. Personne n'y est nomme. Absent dans les autres modes.
+   */
+  readonly origine?: 'sabotage' | 'malediction';
 }
 
 /**
@@ -851,6 +882,8 @@ export interface FinDePartie {
 /** La fin d'une partie Among Ninjas: tout se revele. */
 export interface FinAmong {
   readonly vainqueur: CampAmong;
+  /** Les assassins ont gagne parce que la surchauffe n'a pas ete reparee (etape 7.22). */
+  readonly parLaSurchauffe?: true;
   readonly joueurs: readonly BilanAmong[];
 }
 
@@ -918,6 +951,22 @@ export interface TacheVisuelleVue {
   readonly nature: NatureDeTache;
   readonly x: number;
   readonly y: number;
+}
+
+/**
+ * Un sabotage qui commence ou finit dans Among Ninjas (etape 7.22). La panne et la surchauffe, a
+ * tous; une nuisance et le nuage, aux assassins et aux fantomes. Jamais le saboteur.
+ */
+export interface SabotageVu {
+  readonly quoi: 'lance' | 'fini';
+  readonly nature: NatureDeSabotage;
+  /** Pour une fin: repare (la panne, la surchauffe), ou eteint de lui-meme. */
+  readonly repare?: boolean;
+}
+
+/** Une malediction lancee par un fantome (etape 7.22), dite aux fantomes. */
+export interface MaledictionVue {
+  readonly nature: Nuisance;
 }
 
 /**
@@ -1147,6 +1196,10 @@ export interface EvenementsClientVersServeur {
    * fermee. Le moteur juge une fin trop tot et l'ignore.
    */
   tache: (quoi: 'finie' | 'fermee') => void;
+  /** Un sabotage demande par un assassin d'Among Ninjas, depuis sa carte (etape 7.22). */
+  saboter: (demande: DemandeSabotage) => void;
+  /** Une malediction demandee par une proie fantome d'Among Ninjas: le malus choisi (7.22). */
+  maudire: (nature: Nuisance) => void;
 
   /** Un vote, pendant une reunion d'Among Ninjas (etape 7.20). */
   voter: (demande: DemandeVote) => void;
@@ -1371,6 +1424,12 @@ export interface EvenementsServeurVersClient {
 
   /** Ce qui se passe en reunion, a tous (etape 7.20). */
   reunion: (reunion: ReunionVue) => void;
+
+  /** Un sabotage qui commence ou finit (etape 7.22), a qui doit le savoir. */
+  sabotage: (sabotage: SabotageVu) => void;
+
+  /** Une malediction lancee (etape 7.22), aux fantomes. */
+  malediction: (malediction: MaledictionVue) => void;
 
   /** Un joueur de la partie vient de s'enfuir dans un nuage de fumee (etape 7.10). A tous. */
   fumee: (fumee: FumeeVue) => void;

@@ -222,7 +222,7 @@ describe('les vues', () => {
     }
   });
 
-  it('portent la phase et la barre des taches', () => {
+  it('portent la phase et la barre des taches, et les recharges des sabotages (etape 7.22)', () => {
     const etat = enJeu();
 
     expect(instantaneDe(etat).among).toEqual({
@@ -230,6 +230,8 @@ describe('les vues', () => {
       restantMs: 180_000,
       tachesFaites: 0,
       tachesTotal: 20,
+      rechargeDesSabotagesMs: AMONG.RECHARGE_DES_SABOTAGES_DEBUT_DE_TOUR_MS,
+      rechargeDeLaMaledictionMs: 0,
     });
     expect(instantaneDe(enJeu({ among: { dureeDuTourS: 0 } })).among?.restantMs).toBe(0);
   });

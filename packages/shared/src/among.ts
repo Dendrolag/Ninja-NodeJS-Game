@@ -15,7 +15,7 @@
  * partagent.
  */
 
-import type { Couleur, IdentifiantCarte } from './constantes.js';
+import type { Couleur, IdentifiantCarte, TypeMalus } from './constantes.js';
 import { CARTES } from './constantes.js';
 import type { Position } from './geometrie.js';
 
@@ -66,6 +66,38 @@ export const AMONG = {
   FOULE_MAXIMUM: 80,
   /** La foule neutre par defaut. */
   FOULE_PAR_DEFAUT: 40,
+  /**
+   * Les sabotages (etape 7.22, fiche docs/plan/etape-7-22.md), valeurs soumises au porteur du
+   * projet le 10 octobre 2026. Un seul a la fois; entre deux, une recharge commune a tous les
+   * assassins, qui part de la fin du precedent.
+   */
+  RECHARGE_DES_SABOTAGES_MS: 30_000,
+  /** La recharge des sabotages au debut de chaque tour, comme le delai du gong. */
+  RECHARGE_DES_SABOTAGES_DEBUT_DE_TOUR_MS: 15_000,
+  /** Une nuisance (vision floue, negative, commandes inversees) sur les proies vivantes. */
+  DUREE_D_UNE_NUISANCE_MS: 10_000,
+  /** Le nuage noir sur une station: qui s'y tient n'est vu que des assassins et des fantomes. */
+  DUREE_DU_NUAGE_MS: 20_000,
+  RAYON_DU_NUAGE_PX: 150,
+  /** La panne de neons: le rayon de vision des proies vivantes, jusqu'a la reparation. */
+  RAYON_DE_VISION_EN_PANNE_PX: 110,
+  /** Ce qu'il faut tenir le bouton d'action au boitier pour reparer la panne. */
+  REPARATION_DE_LA_PANNE_MS: 3000,
+  /** La surchauffe: le delai avant la victoire des assassins. */
+  DELAI_DE_LA_SURCHAUFFE_MS: 45_000,
+  /** Ce qu'il faut tenir les deux consoles ensemble pour reparer la surchauffe. */
+  REPARATION_DE_LA_SURCHAUFFE_MS: 1000,
+  /** Le disque du boitier et de chaque console, comme celui d'une station. */
+  RAYON_D_UN_POSTE_PX: 50,
+  /**
+   * La malediction des fantomes (etape 7.22): une proie fantome inflige a tous les assassins
+   * vivants l'un des trois malus des nuisances, a son choix (retour d'essai du porteur du projet
+   * du 10 octobre 2026). Une recharge commune a tous les fantomes.
+   */
+  DUREE_DE_LA_MALEDICTION_MS: 8000,
+  RECHARGE_DE_LA_MALEDICTION_MS: 45_000,
+  /** Pas de malediction dans les premieres secondes d'un tour. */
+  DELAI_DE_LA_MALEDICTION_MS: 15_000,
 } as const;
 
 /**
@@ -100,6 +132,37 @@ export const PALIERS_DE_VISION = ['reduite', 'normale', 'large'] as const;
 
 /** Un palier de vision. */
 export type PalierDeVision = (typeof PALIERS_DE_VISION)[number];
+
+/**
+ * Les sabotages d'un assassin (etape 7.22). Les trois premiers, les nuisances, sont les malus du
+ * jeu, sur les proies vivantes. Puis le nuage noir sur une station, la panne de neons et la
+ * surchauffe, qui se repare a deux ou fait gagner les assassins.
+ */
+export const NATURES_DE_SABOTAGE = [
+  'flou',
+  'negatif',
+  'controlesInverses',
+  'nuage',
+  'panne',
+  'surchauffe',
+] as const;
+
+/** Un sabotage. */
+export type NatureDeSabotage = (typeof NATURES_DE_SABOTAGE)[number];
+
+/** Une nuisance: un sabotage qui est un malus du jeu. */
+export type Nuisance = NatureDeSabotage & TypeMalus;
+
+/**
+ * Les nuisances: les sabotages qui sont des malus du jeu. Ce sont aussi les trois maledictions
+ * qu'une proie fantome peut infliger aux assassins.
+ */
+export const NUISANCES: readonly Nuisance[] = ['flou', 'negatif', 'controlesInverses'];
+
+/** Ce sabotage est-il une nuisance, un malus du jeu ? */
+export function estUneNuisance(nature: NatureDeSabotage): nature is Nuisance {
+  return (NUISANCES as readonly NatureDeSabotage[]).includes(nature);
+}
 
 /** Les deux roles d'une partie. Un fantome garde le sien. */
 export type RoleAmong = 'proie' | 'tueur';
@@ -256,10 +319,16 @@ export interface StationDuMode extends Position {
   readonly natures: readonly NatureDeTache[];
 }
 
-/** Les lieux du mode sur une carte: le point de reunion, ou sonne le gong, et les stations. */
+/**
+ * Les lieux du mode sur une carte: le point de reunion, ou sonne le gong, les stations, et les
+ * postes des sabotages (etape 7.22): le boitier ou l'on repare la panne de neons, et les deux
+ * consoles de la surchauffe.
+ */
 export interface LieuxDuMode {
   readonly gong: Position;
   readonly stations: readonly StationDuMode[];
+  readonly boitier: Position;
+  readonly consoles: readonly [Position, Position];
 }
 
 /**
@@ -296,6 +365,14 @@ export const LIEUX_DES_CARTES: Readonly<Partial<Record<IdentifiantCarte, LieuxDu
       { x: 1760, y: 1240, nom: 'Casiers de la salle violette', natures: ['munitions', 'mines'] },
       { x: 1600, y: 1045, nom: 'Bureaux de la salle violette', natures: ['couleurs'] },
     ],
+    // Les postes des sabotages, lus par l'etude (section 10) et sondes sur le terrain au debut de
+    // l'etape 7.22: le boitier de la rue, et les lampadaires nord-ouest et sud-est, a 1 490
+    // pixels l'un de l'autre.
+    boitier: { x: 1330, y: 495 },
+    consoles: [
+      { x: 485, y: 320 },
+      { x: 1860, y: 890 },
+    ],
   },
 };
 
@@ -314,9 +391,12 @@ export function lieuxDuMode(carte: IdentifiantCarte, miroir: boolean): LieuxDuMo
   }
 
   const largeur = CARTES[carte].largeur;
+  const retourner = (place: Position): Position => ({ x: largeur - place.x, y: place.y });
 
   return {
-    gong: { x: largeur - lieux.gong.x, y: lieux.gong.y },
+    gong: retourner(lieux.gong),
     stations: lieux.stations.map((station) => ({ ...station, x: largeur - station.x })),
+    boitier: retourner(lieux.boitier),
+    consoles: [retourner(lieux.consoles[0]), retourner(lieux.consoles[1])],
   };
 }
