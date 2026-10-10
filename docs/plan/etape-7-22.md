@@ -159,6 +159,18 @@ Micro-décisions au sens du PROTOCOLE, à réviser en exécutant si le dépôt l
 9. **Ce que seuls les assassins savent** (la recharge commune, le sabotage prêt) **voyage dans leur état privé** (`EtatPriveAmong`); la recharge de la malédiction, dans celui des proies fantômes.
 10. **La victoire de la surchauffe** passe par la lecture de victoire existante (`decider`): un motif de plus, montré à la fin (« La surchauffe a tout emporté »).
 
+## Rendus choisis par le porteur du projet sur planche
+
+Planche `docs/design/etape-7-22/1-planche.png` (source `planche.html`, à côté). Réponses du porteur du projet, 10 octobre 2026:
+
+1. **Le panneau des sabotages: A**, la colonne à droite de la carte, un sabotage par ligne, prêt ou grisé, et le temps avant le prochain.
+2. **La panne de néons: C**, le décor éteint et très sombre hors du petit disque, l'annonce, et une flèche orange au bord de l'écran vers le boîtier avec sa distance.
+3. **La surchauffe: B**, les bords de l'écran qui battent en rouge, un gros compte à rebours en haut, et les flèches vers les deux consoles.
+4. **Le nuage noir: A**, des volutes de fumée noire opaques, bord flou.
+5. **La malédiction: A**, le panneau bleu pâle sur la carte du fantôme, « Un fantôme te maudit » au centre de l'écran du maudit.
+6. **Le boîtier et les consoles: A**, des objets néon dessinés, toujours là, qui s'allument en orange pendant leur sabotage.
+7. **L'exécution: C**, le coup de katana du Massacre, du sang, les deux moitiés au sol dans leur tache.
+
 ## Rendus à choisir sur planche
 
 Après confirmation des règles, une planche `docs/design/etape-7-22/1-planche.png` (source `planche.html` à côté), dessinée en code sur les sprites et le décor de Tokyo, comme en 7.20 et 7.21, trois propositions par rangée:
