@@ -152,6 +152,18 @@ export interface Client extends CommandesDeSession {
   signalerLeChargement(): void;
   /** Vote pendant une reunion d'Among Ninjas (etape 7.20): un joueur, ou null pour passer. */
   voter(cible: string | null): void;
+  /**
+   * Un assassin d'Among Ninjas fait semblant de faire la tache de cette station, un de ses rangs
+   * dans l'etat prive (etape 7.21). Rien ne part: la page seule le sait.
+   */
+  feindreUneTache(station: number): void;
+  /**
+   * Le geste de la tache ouverte est fini dans la page (etape 7.21). Une vraie tache s'annonce au
+   * serveur, qui en juge et la dira faite; une feinte se ferme.
+   */
+  finirLaTache(): void;
+  /** Ferme la tache ouverte, faite ou non (etape 7.21): une vraie tache se dit fermee au serveur. */
+  fermerLaTache(): void;
   /** Passe dans une equipe, dans le salon d'une partie Equipes (etape 7.2). */
   changerDEquipe(equipe: Equipe): void;
   /** Parle dans le chat. */
@@ -555,6 +567,12 @@ export function creerClient(options: OptionsClient): Client {
   );
 
   ecouter(
+    reseau.sur('tacheVisuelle', (charge) => {
+      magasin.appliquer({ type: 'fait', fait: fait('tacheVisuelle', charge, maintenant()) });
+    }),
+  );
+
+  ecouter(
     reseau.sur('reunion', (charge) => {
       magasin.appliquer({ type: 'fait', fait: fait('reunion', charge, maintenant()) });
     }),
@@ -737,6 +755,30 @@ export function creerClient(options: OptionsClient): Client {
     voter: (cible) => {
       reseau.emettre('voter', { cible });
       magasin.appliquer({ type: 'monVote', cible });
+    },
+
+    feindreUneTache: (station) => {
+      magasin.appliquer({ type: 'tacheFeinte', station, instant: maintenant() });
+    },
+
+    finirLaTache: () => {
+      const ouverte = magasin.etat.among.tacheOuverte;
+
+      if (ouverte?.feinte === true) {
+        magasin.appliquer({ type: 'tacheFermee' });
+      } else if (ouverte !== undefined) {
+        reseau.emettre('tache', 'finie');
+      }
+    },
+
+    fermerLaTache: () => {
+      const ouverte = magasin.etat.among.tacheOuverte;
+
+      if (ouverte?.feinte === false) {
+        reseau.emettre('tache', 'fermee');
+      }
+
+      magasin.appliquer({ type: 'tacheFermee' });
     },
 
     changerDEquipe: (equipe) => {

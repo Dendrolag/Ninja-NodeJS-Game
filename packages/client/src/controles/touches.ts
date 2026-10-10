@@ -53,6 +53,9 @@ export const TOUCHE_CAPTURER = ' ';
  */
 export const TOUCHE_POCHE = 'e';
 
+/** La touche qui ouvre et ferme la carte plein ecran d'Among Ninjas (etape 7.21). */
+export const TOUCHE_CARTE = 'm';
+
 /** Normalise le nom d'une touche tel que le navigateur le donne. */
 export function nomDeTouche(touche: string): string {
   return touche.toLowerCase();

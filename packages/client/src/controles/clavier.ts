@@ -16,6 +16,7 @@ import type { Controles } from './controles.js';
 import {
   TOUCHES_DU_JEU,
   TOUCHE_CAPTURER,
+  TOUCHE_CARTE,
   TOUCHE_LOCALISER,
   TOUCHE_POCHE,
   nomDeTouche,
@@ -38,6 +39,11 @@ export interface OptionsClavier {
    * defaut: en Classique, la touche reste au navigateur.
    */
   readonly capture?: boolean;
+  /**
+   * Ce que fait la touche M: ouvrir ou fermer la carte plein ecran d'Among Ninjas (etape 7.21).
+   * Sans lui, la touche reste au navigateur. Ni dans un champ de saisie, ni pendant une tache.
+   */
+  readonly basculerLaCarte?: () => void;
 }
 
 /** Les elements qui ont deja l'usage de la barre d'espace. */
@@ -74,6 +80,13 @@ export function brancherClavier(controles: Controles, options: OptionsClavier = 
 
     if (touche === TOUCHE_LOCALISER) {
       controles.demanderLaLocalisation();
+      return;
+    }
+
+    if (touche === TOUCHE_CARTE && options.basculerLaCarte !== undefined) {
+      if (!clavier.repeat && !dansUnChampDeSaisie(clavier.target) && !controles.estFige()) {
+        options.basculerLaCarte();
+      }
       return;
     }
 

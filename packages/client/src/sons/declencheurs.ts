@@ -89,6 +89,10 @@ export function sonDuFait(fait: FaitDeJeu, moi?: string, mode?: Mode): NomDeSon 
     case 'meurtre':
       return fait.charge.victime === moi ? 'joueurCaptureSubi' : 'katanaImpact';
 
+    // Une tache visuelle (etape 7.21), entendue de ceux qui la voient, a sa station.
+    case 'tacheVisuelle':
+      return fait.charge.nature === 'fumee' ? 'tacheBouffee' : 'tacheEtincelles';
+
     case 'reunion':
       return fait.charge.quoi === 'ouverte'
         ? 'compteAReboursFinal'

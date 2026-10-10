@@ -33,7 +33,7 @@
 import type { EtatManette } from '../controles/tactile.js';
 import type { Glyphe } from '../interface/icones.js';
 import { icone } from '../interface/icones.js';
-import type { AmongHud, MinimapAmong, PointDeMinimap } from './among.js';
+import type { AmongHud, LigneDeTache, MinimapAmong, PointDeMinimap } from './among.js';
 import type {
   ArmeHud,
   ChargesHud,
@@ -75,6 +75,11 @@ export interface OptionsSurcouche {
    * le gong, faire sa tache. Sans lui, ni bouton ni bandeau du mode.
    */
   readonly agir?: (tenue: boolean) => void;
+  /**
+   * Ce que fait la mini-carte d'Among Ninjas touchee: ouvrir ou fermer la carte plein ecran
+   * (etape 7.21). Sans lui, la mini-carte ne se touche pas.
+   */
+  readonly basculerLaCarte?: () => void;
 }
 
 /** Une surcouche montee, qui se met a jour et se demonte. */
@@ -114,7 +119,8 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
   const chasse = monterChasse(doc, racine);
   const combo = monterCombo(doc, racine);
   // Le role et les taches d'Among Ninjas, au meme endroit que le role de la Chasse (etape 7.20).
-  const among = options.agir === undefined ? undefined : monterAmong(doc, racine);
+  const among =
+    options.agir === undefined ? undefined : monterAmong(doc, racine, options.basculerLaCarte);
   const restants = monterRestants(doc, options.compteurs ?? racine);
 
   const manette = element(doc, 'div', 'hud-manette', racine);
@@ -415,9 +421,15 @@ interface PartieDuHudAmong {
 
 /**
  * Le bandeau d'Among Ninjas (etape 7.20): notre role et sa consigne, nos taches pour une
- * proie, la barre commune des taches, et la jauge de la tache en cours.
+ * proie, la barre commune des taches, la mini-carte, et sous elle notre liste (etape 7.21,
+ * rendu B au bureau; la feuille de style la cache sur telephone, rendu A, ou elle ne se lit
+ * que dans la carte plein ecran). Toucher la mini-carte ouvre la carte.
  */
-function monterAmong(doc: Document, parent: HTMLElement): PartieDuHudAmong {
+function monterAmong(
+  doc: Document,
+  parent: HTMLElement,
+  basculerLaCarte: (() => void) | undefined,
+): PartieDuHudAmong {
   const bandeau = element(doc, 'div', 'hud-among', parent);
   bandeau.setAttribute('role', 'status');
   bandeau.hidden = true;
@@ -427,9 +439,8 @@ function monterAmong(doc: Document, parent: HTMLElement): PartieDuHudAmong {
   const barre = element(doc, 'div', 'hud-among-barre', bandeau);
   const remplissage = element(doc, 'span', 'hud-among-barre-remplie', barre);
   const texteDeLaBarre = element(doc, 'span', 'hud-among-barre-texte', barre);
-  const jauge = element(doc, 'div', 'hud-among-jauge', bandeau);
-  const jaugeRemplie = element(doc, 'span', 'hud-among-jauge-remplie', jauge);
-  const minimap = monterMinimapAmong(doc, bandeau);
+  const minimap = monterMinimapAmong(doc, bandeau, basculerLaCarte);
+  const liste = element(doc, 'ul', 'hud-among-liste', bandeau);
 
   return {
     afficher(among) {
@@ -448,15 +459,41 @@ function monterAmong(doc: Document, parent: HTMLElement): PartieDuHudAmong {
       barre.hidden = among.taches === undefined;
       remplissage.style.setProperty('--part', String(among.taches?.part ?? 0));
       ecrire(texteDeLaBarre, among.taches?.texte ?? '');
-      jauge.hidden = among.progression === undefined;
-      jaugeRemplie.style.setProperty('--part', String(among.progression ?? 0));
       minimap.afficher(among.minimap);
+      afficherLaListe(doc, liste, among.liste);
     },
 
     demonter() {
       bandeau.remove();
     },
   };
+}
+
+/**
+ * Ecrit notre liste de taches dans cette liste: une ligne par tache, son nom et sa station,
+ * cochee une fois faite. Les lignes se reecrivent seulement si la liste a change.
+ */
+function afficherLaListe(doc: Document, liste: HTMLElement, lignes: readonly LigneDeTache[]): void {
+  const signature = lignes
+    .map((ligne) => `${ligne.titre}|${ligne.station}|${String(ligne.faite)}`)
+    .join(';');
+
+  liste.hidden = lignes.length === 0;
+
+  if (liste.dataset['signature'] === signature) {
+    return;
+  }
+
+  liste.dataset['signature'] = signature;
+  liste.replaceChildren(
+    ...lignes.map((ligne) => {
+      const item = doc.createElement('li');
+      item.className = ligne.faite ? 'hud-among-ligne faite' : 'hud-among-ligne';
+      item.textContent = ligne.titre;
+      item.title = ligne.station;
+      return item;
+    }),
+  );
 }
 
 /** La mini-carte d'Among Ninjas, posee et mise a jour. */
@@ -470,9 +507,22 @@ interface MinimapPosee {
  * Jamais les autres joueurs. Les points se placent en part de la carte, par le style de chaque
  * element: la politique de contenu de la page refuse les styles en ligne, pas le CSSOM.
  */
-function monterMinimapAmong(doc: Document, parent: HTMLElement): MinimapPosee {
+function monterMinimapAmong(
+  doc: Document,
+  parent: HTMLElement,
+  basculerLaCarte: (() => void) | undefined,
+): MinimapPosee {
   const carte = element(doc, 'div', 'hud-among-carte', parent);
-  carte.setAttribute('aria-hidden', 'true');
+
+  // Touchee, la mini-carte ouvre la carte plein ecran (etape 7.21): le telephone garde ses
+  // deux boutons. La touche M fait de meme au clavier.
+  if (basculerLaCarte === undefined) {
+    carte.setAttribute('aria-hidden', 'true');
+  } else {
+    carte.setAttribute('role', 'button');
+    carte.setAttribute('aria-label', 'Ouvrir la carte (M)');
+    carte.addEventListener('click', basculerLaCarte);
+  }
   const fond = doc.createElement('img');
   fond.className = 'hud-among-carte-fond';
   fond.alt = '';

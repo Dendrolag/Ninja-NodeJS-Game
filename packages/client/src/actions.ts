@@ -249,5 +249,11 @@ export type Action =
   | { readonly type: 'amongNinjas'; readonly prive: EtatPriveAmong; readonly instant: number }
   /** Nous venons de voter, pendant une reunion d'Among Ninjas (etape 7.20). */
   | { readonly type: 'monVote'; readonly cible: string | null }
+  /**
+   * Un assassin d'Among Ninjas fait semblant a cette station, a cet instant local (etape 7.21).
+   */
+  | { readonly type: 'tacheFeinte'; readonly station: number; readonly instant: number }
+  /** Nous fermons la fenetre de notre tache, faite ou non (etape 7.21). */
+  | { readonly type: 'tacheFermee' }
   /** Une demande du joueur a ete refusee. */
   | { readonly type: 'refus'; readonly refus: Refus };

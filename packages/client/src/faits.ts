@@ -38,6 +38,7 @@ import type {
   MineArmeeVue,
   MineDeZoneFaitVue,
   MineExploseeVue,
+  TacheVisuelleVue,
   MinePoseeVue,
   ObjetEmpoche,
   RalliementVu,
@@ -103,6 +104,11 @@ export interface ChargesDeFait {
    * disque de vision.
    */
   meurtre: MeurtreVu;
+  /**
+   * La fin d'une tache visuelle d'Among Ninjas (etape 7.21): des etincelles ou une bouffee, a une
+   * station de notre disque de vision.
+   */
+  tacheVisuelle: TacheVisuelleVue;
   /** Ce qui se passe en reunion, dans Among Ninjas (etape 7.20). A tous. */
   reunion: ReunionVue;
   /** Ce joueur vient de rallier des faux ninjas en les touchant, dans la Horde. */

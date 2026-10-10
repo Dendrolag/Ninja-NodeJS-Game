@@ -118,7 +118,7 @@ describe('le chargement', () => {
       titre: 'Préparation de la partie',
       consigne: 'En attente des autres joueurs…',
     });
-    expect(amongHud(attente, 0)).toBeUndefined();
+    expect(amongHud(attente)).toBeUndefined();
   });
 });
 

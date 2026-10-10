@@ -81,9 +81,11 @@ export function lieuDuSon(
   auditeur: Position,
 ): Position | undefined {
   switch (fait.nature) {
+    // Les mines, et les etincelles et la bouffee d'une tache visuelle d'Among Ninjas (7.21).
     case 'mineArmee':
     case 'mineExplosee':
     case 'mineDeZone':
+    case 'tacheVisuelle':
       return { x: fait.charge.x, y: fait.charge.y };
 
     case 'fumee': {

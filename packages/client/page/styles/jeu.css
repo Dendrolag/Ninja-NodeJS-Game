@@ -1138,8 +1138,8 @@
 
 /*
  * Le bandeau d'Among Ninjas (etape 7.20), a la place du role de la Chasse: notre role, sa
- * consigne, nos taches, la barre commune des taches, et la jauge de la tache en cours. Cyan
- * pour une proie, rose pour un assassin, pale pour un fantome.
+ * consigne, nos taches, la barre commune des taches, la mini-carte, et notre liste (etape
+ * 7.21). Cyan pour une proie, rose pour un assassin, pale pour un fantome.
  */
 .hud-among {
   --couleur-camp: var(--cyan);
@@ -1183,8 +1183,7 @@
   font-size: 12px;
 }
 
-.hud-among-barre,
-.hud-among-jauge {
+.hud-among-barre {
   position: relative;
   width: 100%;
   height: 14px;
@@ -1193,22 +1192,12 @@
   background: rgba(255, 255, 255, 0.12);
 }
 
-.hud-among-jauge {
-  height: 6px;
-}
-
-.hud-among-barre-remplie,
-.hud-among-jauge-remplie {
+.hud-among-barre-remplie {
   position: absolute;
   inset: 0 auto 0 0;
   width: calc(var(--part, 0) * 100%);
   background: linear-gradient(90deg, #1fbf4c, #a8ff3e);
   transition: width 0.3s ease;
-}
-
-.hud-among-jauge-remplie {
-  background: var(--jaune, #ffe81a);
-  transition: none;
 }
 
 .hud-among-barre-texte {
@@ -1280,6 +1269,385 @@
   border: 2px solid #fff;
   background: var(--couleur-joueur);
   box-shadow: 0 0 6px var(--couleur-joueur);
+}
+
+/*
+ * La mini-carte se touche pour ouvrir la carte plein ecran (etape 7.21): elle recoit le doigt,
+ * le reste du HUD le laisse passer.
+ */
+.hud-among-carte[role='button'] {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+/*
+ * Notre liste de taches, sous la mini-carte (etape 7.21, rendu 4B au bureau). Sur telephone,
+ * rendu 4A: elle ne se lit que dans la carte plein ecran, le bandeau restant petit.
+ */
+.hud-among-liste {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.hud-among-ligne {
+  position: relative;
+  padding-left: 16px;
+  color: #e8ecf6;
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+
+.hud-among-ligne::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 0;
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid var(--cyan);
+  border-radius: 2px;
+}
+
+.hud-among-ligne.faite {
+  color: var(--texte-secondaire);
+}
+
+.hud-among-ligne.faite::before {
+  content: '✓';
+  top: -1px;
+  width: auto;
+  height: auto;
+  border: 0;
+  color: #3ee07a;
+  font-size: 12px;
+}
+
+@media (pointer: coarse) {
+  .hud-among-liste {
+    display: none;
+  }
+}
+
+/*
+ * La fenetre d'une tache courte (etape 7.21, rendu 1A de la planche
+ * docs/design/etape-7-21/1-planche.png): une fenetre neon au centre, le jeu visible tout
+ * autour, assombri. Le geste se dessine dans le canevas, a quatre tiers.
+ */
+.tache-ecran {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+/* Pendant une tache, on ne bouge pas: les boutons du jeu s'eteignent, la manette se cache. */
+.ecran-jeu.tache-ouverte .hud-bouton {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.ecran-jeu.tache-ouverte .hud-manette {
+  display: none;
+}
+
+.tache-fenetre {
+  display: grid;
+  gap: 6px;
+  width: min(560px, 100%);
+  max-height: 100%;
+  padding: 12px 16px 10px;
+  border: 2px solid var(--cyan);
+  border-radius: 16px;
+  background: rgba(10, 16, 34, 0.95);
+  box-shadow: 0 0 22px rgba(45, 230, 224, 0.55);
+}
+
+.tache-fenetre.reussie {
+  border-color: #3ee07a;
+  box-shadow: 0 0 26px rgba(62, 224, 122, 0.7);
+}
+
+.tache-entete {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tache-titre {
+  margin: 0;
+  color: var(--cyan);
+  font-family: var(--police-titre);
+  font-size: 20px;
+  text-shadow: 0 0 8px var(--cyan);
+}
+
+.tache-station {
+  margin: 2px 0 0;
+  color: var(--texte-secondaire);
+  font-size: 13px;
+}
+
+.tache-geste {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  touch-action: none;
+  cursor: grab;
+}
+
+.tache-avancement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.tache-aide {
+  margin: 0;
+  color: var(--texte-secondaire);
+  font-size: 12.5px;
+  text-align: center;
+}
+
+/*
+ * La carte plein ecran (etape 7.21, rendu 2A): Tokyo assombri et sans couleur, nos stations en
+ * neon et le nom de leur tache, la liste a droite au bureau, dessous au telephone. Le jeu
+ * continue derriere: elle laisse passer le clavier et le doigt, sauf sur sa croix.
+ */
+.carte-among {
+  --couleur-camp: var(--cyan);
+
+  position: absolute;
+  inset: calc(var(--debut-barre) + var(--hauteur-barre) + 6px) 12px 12px;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 230px;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--couleur-camp);
+  border-radius: 14px;
+  background: rgba(5, 8, 15, 0.9);
+  pointer-events: none;
+}
+
+.carte-among[data-camp='tueur'] {
+  --couleur-camp: var(--rose);
+}
+
+.carte-among-plan {
+  position: relative;
+  width: 100%;
+  max-height: 100%;
+  aspect-ratio: var(--proportions, 4 / 3);
+  margin: auto;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.carte-among-fond {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  filter: grayscale(1) brightness(0.4);
+}
+
+.carte-among-plan.miroir .carte-among-fond {
+  transform: scaleX(-1);
+}
+
+.carte-among-repere,
+.carte-among-gong,
+.carte-among-moi {
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+
+.carte-among-repere {
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid var(--couleur-camp);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--couleur-camp) 22%, transparent);
+  box-shadow: 0 0 10px var(--couleur-camp);
+}
+
+.carte-among-repere.faite {
+  border-color: #5f6a82;
+  background: rgba(95, 106, 130, 0.3);
+  box-shadow: none;
+}
+
+.carte-among-repere.faite::after {
+  content: '✓';
+  position: absolute;
+  inset: -3px 0 0;
+  color: #3ee07a;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.carte-among-repere-titre,
+.carte-among-gong span,
+.carte-among-moi span {
+  position: absolute;
+  bottom: calc(100% + 3px);
+  left: 50%;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-shadow:
+    0 0 4px #000,
+    0 1px 2px #000;
+  transform: translateX(-50%);
+}
+
+.carte-among-repere.faite .carte-among-repere-titre {
+  color: #8a96ae;
+  font-weight: 400;
+}
+
+.carte-among-gong {
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid #ffc93d;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #ffc93d;
+}
+
+.carte-among-gong span {
+  top: calc(100% + 2px);
+  bottom: auto;
+  color: #ffc93d;
+}
+
+.carte-among-moi {
+  --couleur-joueur: #fff;
+
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--couleur-joueur);
+  box-shadow: 0 0 10px var(--couleur-joueur);
+}
+
+.carte-among-moi span {
+  bottom: auto;
+  left: calc(100% + 6px);
+  color: var(--couleur-joueur);
+  transform: translateY(-50%);
+}
+
+.carte-among-panneau {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  max-height: 100%;
+  overflow: auto;
+}
+
+.carte-among-titre {
+  margin: 0;
+  color: var(--couleur-camp);
+  font-family: var(--police-titre);
+  font-size: 16px;
+}
+
+.carte-among-liste {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.carte-among-ligne {
+  display: grid;
+  padding-left: 22px;
+  position: relative;
+  color: #e8ecf6;
+  font-size: 13px;
+}
+
+.carte-among-ligne span {
+  color: var(--texte-secondaire);
+  font-size: 11.5px;
+}
+
+.carte-among-ligne::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 0;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--cyan);
+  border-radius: 3px;
+}
+
+.carte-among-ligne.faite strong {
+  color: #8a96ae;
+  font-weight: 400;
+}
+
+.carte-among-ligne.faite::before {
+  content: '✓';
+  top: -2px;
+  width: auto;
+  height: auto;
+  border: 0;
+  color: #3ee07a;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.carte-among-aide {
+  margin: 0;
+  color: var(--texte-secondaire);
+  font-size: 11px;
+}
+
+.carte-among-fermer {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  pointer-events: auto;
+}
+
+/* Au telephone, la liste passe sous la carte, et l'aide du clavier disparait. */
+@media (pointer: coarse), (max-width: 700px) {
+  .carte-among {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    align-items: start;
+  }
+
+  .carte-among-panneau {
+    max-height: 34vh;
+  }
+
+  .carte-among-aide {
+    display: none;
+  }
+
+  .tache-titre {
+    font-size: 18px;
+  }
 }
 
 /* Le bouton d'action d'Among Ninjas, colore selon ce qu'il fera (etape 7.20). */

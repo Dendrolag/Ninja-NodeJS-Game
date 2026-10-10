@@ -13,6 +13,7 @@ import type { GameRoom } from '../../packages/server/dist/index.js';
 import type { EtatAmong } from '../../packages/sim/dist/index.js';
 import { positionTenable } from '../../packages/sim/dist/index.js';
 import { commandeAuClavier } from './harnais/commandes.js';
+import { faireLeGesteAuClavier } from './harnais/gestes.js';
 import {
   attendreLaFin,
   attendreLaPartie,
@@ -28,7 +29,7 @@ import type { ServeurDeJeu } from './harnais/serveur-de-jeu.js';
 import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
 
 /**
- * Le mode Among Ninjas de l'etape 7.20, joue de bout en bout.
+ * Le mode Among Ninjas des etapes 7.20 et 7.21, joue de bout en bout.
  *
  * Alice cree la partie sur un ordinateur, Bob la rejoint sur un autre. Il faut cinq joueurs:
  * Carole, David et Eve entrent par le reseau, comme de vrais clients Socket.IO, sans page.
@@ -42,8 +43,10 @@ import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
  *
  *   1. A quatre, le salon dit qu'il faut cinq joueurs; au cinquieme, « Lancer » apparait.
  *   2. En jeu, chaque page lit son role, celui que le serveur a tire.
- *   3. Une proie, dans sa page, va a une station de sa liste et tient E: la tache est faite,
- *      et la barre des taches le dit.
+ *   3. Une proie, dans sa page, va a une station de sa liste et appuie sur E: la fenetre de la
+ *      tache s'ouvre, elle en fait le geste au clavier, la tache est faite, la fenetre se ferme
+ *      et la liste le dit (etape 7.21).
+ *   3 bis. La carte plein ecran s'ouvre par M, montre nos taches, et se ferme par M.
  *   4. L'assassin, page ou client, va au contact d'une proie et la tue.
  *   5. La proie de la page trouve le cadavre et le signale par E: la reunion s'ouvre dans les
  *      deux pages, titree par ce signalement.
@@ -246,7 +249,7 @@ async function attendreQue(
 test('jouer une partie Among Ninjas a cinq, du salon a la victoire des proies', async ({
   browser,
 }) => {
-  // Deux chargements de carte, une tache, deux traversees de Tokyo, une reunion.
+  // Deux chargements de carte, une tache et son geste, deux traversees de Tokyo, une reunion.
   test.setTimeout(300_000);
 
   const ordinateurA = await browser.newContext(devices['Desktop Chrome']);
@@ -329,14 +332,29 @@ test('jouer une partie Among Ninjas a cinq, du salon a la victoire des proies', 
     const premiere = () => among(partie).joueurs[idTemoin]?.taches[0];
     const station = among(partie).stations[premiere()?.station ?? -1] as Position;
     await allerEtSArreter(partie, temoin, commandeAuClavier(pageDuTemoin), () => station, STATION);
-    await pageDuTemoin.keyboard.down('e');
+    await pageDuTemoin.keyboard.press('e');
+    await attendreQue(
+      () => among(partie).joueurs[idTemoin]?.tacheEnCours !== undefined,
+      () =>
+        `${temoin} ouvre sa tache: a ${JSON.stringify(joueurNomme(partie, temoin).position)}, station ${JSON.stringify(station)}, ${JSON.stringify(among(partie).joueurs[idTemoin])}`,
+    );
+    await expect(pageDuTemoin.locator('.tache-titre')).toBeVisible();
+    await faireLeGesteAuClavier(pageDuTemoin);
     await attendreQue(
       () => premiere()?.faite === true,
-      () =>
-        `${temoin} fait sa tache: a ${JSON.stringify(joueurNomme(partie, temoin).position)}, station ${JSON.stringify(station)}, ${JSON.stringify(among(partie).joueurs[idTemoin])}`,
+      () => `${temoin} fait sa tache: ${JSON.stringify(among(partie).joueurs[idTemoin])}`,
     );
-    await pageDuTemoin.keyboard.up('e');
+    await expect(pageDuTemoin.locator('.tache-fenetre')).toBeHidden();
     await expect(pageDuTemoin.locator('.hud-among-mes-taches')).toContainText('1 sur 3');
+    await expect(pageDuTemoin.locator('.hud-among-ligne.faite')).toHaveCount(1);
+
+    // -- La carte plein ecran, par M -------------------------------------------------
+    await pageDuTemoin.keyboard.press('m');
+    await expect(pageDuTemoin.locator('.carte-among')).toBeVisible();
+    await expect(pageDuTemoin.locator('.carte-among-repere')).toHaveCount(3);
+    await expect(pageDuTemoin.locator('.carte-among-ligne.faite')).toHaveCount(1);
+    await pageDuTemoin.keyboard.press('m');
+    await expect(pageDuTemoin.locator('.carte-among')).toBeHidden();
 
     // -- Le meurtre ---------------------------------------------------------------------
     const idVictime = joueurNomme(partie, victime).id;

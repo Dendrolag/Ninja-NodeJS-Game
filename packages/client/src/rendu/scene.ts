@@ -89,7 +89,7 @@ import { opaciteDeLocalisation, reperesDeLocalisation } from './localisation.js'
 import { minesDeLaScene } from './mines.js';
 import { marquesDuBlackNinja } from './blackNinja.js';
 import type { LibelleScene, VisionScene } from './among.js';
-import { RIEN_D_AMONG, alphaAmong, imageDAmong } from './among.js';
+import { RIEN_D_AMONG, alphaAmong, effetsDesTachesVisuelles, imageDAmong } from './among.js';
 import { adresseAuxYeuxRouges, adresseDImage, adresseRayee } from './textures.js';
 import type { EtatDuVaisseau, Trajectoire } from './vaisseau.js';
 import { ecouleDansLaPartie, etatDuVaisseau } from './vaisseau.js';
@@ -605,7 +605,14 @@ export function construireScene(
     fumees: nuagesDeFumee(etat, lissee, maintenant),
     mines: mines.sol,
     explosions: mines.explosions,
-    impacts: impactsSurLesBotsNoirs(etat, lissee, maintenant),
+    // Les etincelles et les bouffees des taches visuelles d'Among Ninjas (etape 7.21).
+    impacts:
+      mode === 'among'
+        ? [
+            ...impactsSurLesBotsNoirs(etat, lissee, maintenant),
+            ...effetsDesTachesVisuelles(etat.journal, maintenant),
+          ]
+        : impactsSurLesBotsNoirs(etat, lissee, maintenant),
     sang: massacre.sang,
     secousse: massacre.secousse,
     imageDePluie: imageDePluie(maintenant),

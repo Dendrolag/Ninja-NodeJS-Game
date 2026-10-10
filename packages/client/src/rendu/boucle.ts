@@ -46,6 +46,7 @@ import type { AfficheurDePoints } from '../hud/pointsFlottants.js';
 import type { SouvenirDesZones } from '../interface/souvenirDesZones.js';
 import { creerSouvenirDesZones } from '../interface/souvenirDesZones.js';
 import type { Surcouche } from '../hud/surcouche.js';
+import { feinteAPortee } from '../hud/among.js';
 import { construireHud } from '../hud/modele.js';
 import { pointsDuChangement, texteDesPoints, texteDuGain } from '../pointsFlottants.js';
 import { bonusDOrigineEnCours, filtreDesMalus, moiDansLaPartie } from '../selecteurs.js';
@@ -238,8 +239,17 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
 
     const action = options.controles.actionAEmettre();
 
-    if (action !== undefined && among) {
+    // Une tache que nous venons de fermer, et que le serveur tient encore pour ouverte, retient
+    // l'appui suivant: il n'y ouvrirait rien (etape 7.21).
+    if (action !== undefined && among && !(action && etat.among.fermetureEnAttente === true)) {
       options.client.tenirLAction(action);
+
+      // Un assassin qui appuie a une station fait semblant: sa page seule ouvre la tache.
+      const feinte = action ? feinteAPortee(etat) : undefined;
+
+      if (feinte !== undefined) {
+        options.client.feindreUneTache(feinte);
+      }
     }
 
     // 2. Les faits recus depuis l'image precedente.

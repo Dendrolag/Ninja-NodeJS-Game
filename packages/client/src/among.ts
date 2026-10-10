@@ -9,10 +9,18 @@
  * Ce module ne fait que tenir ces deux sources a jour. Il est pur: le reducteur l'appelle.
  */
 
-import type { EtatPriveAmong, MeurtreVu, Position, ReunionVue } from '@neon-ninja/shared';
+import type {
+  EtatPriveAmong,
+  MeurtreVu,
+  NatureDeTache,
+  Position,
+  ReunionVue,
+  StationDuMode,
+} from '@neon-ninja/shared';
 import { AMONG } from '@neon-ninja/shared';
 
 import type { EtatClient } from './etat.js';
+import { graineDuGeste } from './interface/modeles/gestes/index.js';
 
 /** Le resultat d'un vote, tel que la reunion le dit. */
 export type ResultatVu = Extract<ReunionVue, { readonly quoi: 'resultat' }>;
@@ -43,10 +51,16 @@ export interface AmongClient {
    */
   readonly morts: readonly string[];
   /**
-   * L'instant local ou le serveur nous a dit notre tache commencee: la jauge en part. Absent
-   * hors d'une tache en cours.
+   * La tache dont la fenetre est ouverte (etape 7.21): la notre, que le serveur nous a dite
+   * ouverte, ou celle qu'un assassin fait semblant de faire, que la page seule connait.
    */
-  readonly tacheDebuteeA?: number;
+  readonly tacheOuverte?: TacheOuverte;
+  /**
+   * Nous avons ferme notre tache, et le serveur ne l'a pas encore dite fermee: la page n'en
+   * rouvre pas d'autre d'ici la, sans quoi le serveur, qui la tient encore pour ouverte, ne
+   * rouvrirait rien.
+   */
+  readonly fermetureEnAttente?: true;
   /**
    * L'instant local ou l'on nous a tues: le grand texte du deces s'affiche par-dessus tout
    * (demande du porteur du projet du 10 octobre 2026). Absent tant qu'on est vivant.
@@ -54,32 +68,104 @@ export interface AmongClient {
   readonly decesA?: number;
 }
 
+/** Une tache dont la fenetre est ouverte (etape 7.21). */
+export interface TacheOuverte {
+  readonly nature: NatureDeTache;
+  readonly station: StationDuMode;
+  /** L'instant local de l'ouverture: la page n'annonce pas la fin avant la duree minimale. */
+  readonly depuis: number;
+  /** Un assassin fait semblant: la page seule la joue, sans rien dire au serveur. */
+  readonly feinte: boolean;
+}
+
 /** Rien de connu: le debut d'une partie. */
 export const AMONG_INCONNU: AmongClient = { prive: undefined, reunion: undefined, morts: [] };
 
 /**
- * Ce que nous savons de nous-memes vient de changer, a cet instant local. Une tache qui
- * commence, ou qui change, part de cet instant; une tache lachee n'a plus d'instant.
+ * Ce que nous savons de nous-memes vient de changer, a cet instant local (etape 7.21).
+ *
+ *   - Le serveur dit une tache ouverte qu'il ne disait pas: sa fenetre s'ouvre, de cet instant.
+ *   - Il ne dit plus de tache ouverte: notre fenetre se ferme (sortie du disque, reunion, mort,
+ *     tache faite), et une fermeture que nous attendions est faite.
+ *   - Un assassin devenu fantome cesse de faire semblant.
  */
 export function avecLEtatPrive(
   among: AmongClient,
   prive: EtatPriveAmong,
   instant: number,
 ): AmongClient {
-  const { tacheDebuteeA: _ancienne, ...sansTache } = among;
+  const { tacheOuverte, fermetureEnAttente: _attendue, ...sansTache } = among;
+  const indice = prive.tacheEnCours;
 
-  if (prive.tacheEnCours === undefined) {
-    return { ...sansTache, prive };
+  if (indice === undefined) {
+    return tacheOuverte?.feinte === true && !prive.fantome
+      ? { ...sansTache, prive, tacheOuverte }
+      : { ...sansTache, prive };
   }
 
-  const memeTache =
-    among.prive?.tacheEnCours === prive.tacheEnCours && among.tacheDebuteeA !== undefined;
+  const attente =
+    among.fermetureEnAttente === undefined ? {} : { fermetureEnAttente: true as const };
 
-  return {
-    ...sansTache,
-    prive,
-    tacheDebuteeA: memeTache ? (among.tacheDebuteeA as number) : instant,
-  };
+  if (among.prive?.tacheEnCours === indice) {
+    return {
+      ...sansTache,
+      ...attente,
+      prive,
+      ...(tacheOuverte === undefined ? {} : { tacheOuverte }),
+    };
+  }
+
+  const tache = prive.taches[indice];
+  const station = tache === undefined ? undefined : prive.stations[tache.station];
+
+  return tache === undefined || station === undefined
+    ? { ...sansTache, prive }
+    : {
+        ...sansTache,
+        prive,
+        tacheOuverte: { nature: tache.nature, station, depuis: instant, feinte: false },
+      };
+}
+
+/**
+ * Un assassin vivant fait semblant a cette station, a cet instant local (decisions de la fiche
+ * 7.21): la fenetre s'ouvre comme pour une proie, avec l'une des taches de la station, toujours
+ * la meme pour lui a cette station. Rien si une fenetre est deja ouverte, ou pour tout autre.
+ */
+export function avecUneFeinte(
+  among: AmongClient,
+  rang: number,
+  moi: string | undefined,
+  instant: number,
+): AmongClient {
+  const prive = among.prive;
+  const station = prive?.stations[rang];
+
+  if (
+    prive?.role !== 'tueur' ||
+    prive.fantome ||
+    station === undefined ||
+    among.tacheOuverte !== undefined
+  ) {
+    return among;
+  }
+
+  const choix = graineDuGeste(moi ?? '', station.nom, 'katana') % station.natures.length;
+  const nature = station.natures[choix] ?? (station.natures[0] as NatureDeTache);
+
+  return { ...among, tacheOuverte: { nature, station, depuis: instant, feinte: true } };
+}
+
+/**
+ * Nous fermons notre fenetre, la tache faite ou non. Pour une vraie tache encore ouverte au
+ * serveur, la page attend qu'il la dise fermee avant d'en rouvrir une.
+ */
+export function apresLaFermeture(among: AmongClient): AmongClient {
+  const { tacheOuverte, ...sansTache } = among;
+
+  return tacheOuverte?.feinte === false && among.prive?.tacheEnCours !== undefined
+    ? { ...sansTache, fermetureEnAttente: true }
+    : sansTache;
 }
 
 /** Un meurtre, a cet instant local: s'il nous a tues, le grand texte du deces s'affiche. */
@@ -95,9 +181,11 @@ export function apresUnMeurtre(
 /** Ce qui se passe en reunion, a ajouter a ce que la page sait. */
 export function apresLaReunion(among: AmongClient, reunion: ReunionVue): AmongClient {
   switch (reunion.quoi) {
+    // Une reunion ferme toute fenetre de tache: celle d'une proie, le serveur la dit fermee; celle
+    // d'un assassin qui faisait semblant, la page la ferme ici.
     case 'ouverte':
       return {
-        ...among,
+        ...(among.tacheOuverte?.feinte === true ? apresLaFermeture(among) : among),
         reunion: {
           numero: reunion.numero,
           ...(reunion.par === undefined ? {} : { par: reunion.par }),

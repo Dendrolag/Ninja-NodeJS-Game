@@ -336,6 +336,34 @@ export const SONS = {
   mineDeZoneArmee: 'activation-mine.mp3',
   /** Sa zone vient de s'ouvrir, entendu de tous. */
   zoneOuverte: 'explosion-mine-zone.mp3',
+  /*
+   * Les taches courtes d'Among Ninjas (etape 7.21), entendues du seul joueur qui fait la tache:
+   * entendues des autres, elles diraient qui fait vraiment une tache. Des sons du jeu en
+   * attendant ceux du porteur du projet (fiche docs/plan/etape-7-21.md, « Les sons »): il
+   * suffira de changer le fichier ici.
+   */
+  /** La fenetre d'une tache s'ouvre. */
+  tacheOuverte: 'button-click.wav',
+  /** Une tache est finie. */
+  tacheReussie: 'collect-bonus.wav',
+  /** Un essai rate: un fil sur le mauvais nom, une fumee hors de la bande. */
+  tacheRatee: 'collect-malus.wav',
+  /** Une passe de la lame sur la pierre. */
+  tachePasse: 'katana-swing.mp3',
+  /** Un fil branche sur son nom. */
+  tacheFil: 'button-click.wav',
+  /** Une mine rangee dans son alveole. */
+  tacheMine: 'mine-pose.mp3',
+  /** Une cartouche inseree. */
+  tacheCartouche: 'shotgun-reload.mp3',
+  /** Un bonus fumee rempli. */
+  tacheBonusRempli: 'bonus-escape-nuage.mp3',
+  /** Les etincelles d'une tache visuelle, entendues de ceux qui la voient. */
+  tacheEtincelles: 'katana-hit.mp3',
+  /** La bouffee d'une tache visuelle, entendue de ceux qui la voient. */
+  tacheBouffee: 'bonus-escape-nuage.mp3',
+  /** La carte plein ecran s'ouvre ou se ferme. */
+  carteOuverte: 'button-click.wav',
 } as const;
 
 /** Nom d'un son ponctuel. */

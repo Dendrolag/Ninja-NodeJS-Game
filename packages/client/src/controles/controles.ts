@@ -50,8 +50,39 @@ export class Controles {
   /** La derniere intention effectivement envoyee. */
   private derniereEmise: IntentionDeplacement = IMMOBILE;
 
+  /**
+   * Les commandes sont figees: une tache d'Among Ninjas est ouverte (etape 7.21). Le ninja ne
+   * bouge plus, ne tire plus, n'appuie plus sur rien: les touches et le doigt vont au geste de
+   * la tache, pas au jeu derriere.
+   */
+  private fige = false;
+
+  /**
+   * Fige ou libere les commandes. Figer relache tout: le ninja s'arrete, et le bouton d'action
+   * tenu pour ouvrir la tache se lache.
+   */
+  figer(fige: boolean): void {
+    this.fige = fige;
+
+    if (fige) {
+      this.toutRelacher();
+      this.appuiEnAttente = false;
+      this.tirDemande = false;
+      this.pocheDemandee = false;
+    }
+  }
+
+  /** Les commandes sont-elles figees. */
+  estFige(): boolean {
+    return this.fige;
+  }
+
   /** Une touche vient d'etre enfoncee. */
   enfoncer(touche: string): void {
+    if (this.fige) {
+      return;
+    }
+
     const nom = nomDeTouche(touche);
 
     if (nom === TOUCHE_POCHE) {
@@ -73,6 +104,10 @@ export class Controles {
    * @param rayon Rayon de la manette, en pixels.
    */
   deplacerLaManette(ecart: Vecteur, rayon: number): void {
+    if (this.fige) {
+      return;
+    }
+
     this.manetteActive = true;
     this.ecartManette = ecart;
     this.rayonManette = rayon;
@@ -112,6 +147,10 @@ export class Controles {
 
   /** Le doigt tient ou lache le bouton d'action d'Among Ninjas (etape 7.20). */
   tenirLAction(tenue: boolean): void {
+    if (this.fige && tenue) {
+      return;
+    }
+
     this.actionAuDoigt = tenue;
 
     if (tenue) {
@@ -211,6 +250,10 @@ export class Controles {
 
   /** Le joueur tire: barre d'espace, ou bouton de capture (mode Tactique). */
   demanderUnTir(): void {
+    if (this.fige) {
+      return;
+    }
+
     this.tirDemande = true;
   }
 
@@ -232,6 +275,10 @@ export class Controles {
 
   /** Le joueur se sert de sa poche: touche E, ou bouton de la poche sur un ecran tactile. */
   demanderLaPoche(): void {
+    if (this.fige) {
+      return;
+    }
+
     this.pocheDemandee = true;
   }
 
@@ -255,6 +302,7 @@ export class Controles {
    * partie precedente.
    */
   reinitialiser(): void {
+    this.fige = false;
     this.toutRelacher();
     this.derniereEmise = IMMOBILE;
     this.localisationDemandee = false;

@@ -306,7 +306,7 @@ export function construireHud(
     combo: comboHud(etat, mode, maintenant),
     restants: restantsHud(etat, mode),
     arme: mode === 'chasse' ? 'vies' : mode === 'massacre' || among ? 'katana' : 'charges',
-    among: amongHud(etat, maintenant),
+    among: amongHud(etat),
   };
 }
 

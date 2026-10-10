@@ -302,3 +302,85 @@ function visionDe(etat: EtatClient, lissee: VueLissee): VisionScene | undefined 
 
   return { x: moi.x, y: moi.y, rayon: RAYONS_DE_VISION[prive.role][palier] };
 }
+
+/**
+ * Les taches visuelles (etape 7.21, rendu 3A de la planche docs/design/etape-7-21/1-planche.png):
+ * une gerbe d'etincelles jaunes et orange sur la pierre pour le katana, une bouffee grise
+ * au-dessus de la station pour la fumee. Le serveur ne les adresse qu'a ceux qui voient la
+ * station; elles durent une seconde et demie.
+ */
+export const APPARENCE_DES_TACHES_VISUELLES = {
+  dureeMs: 1500,
+  etincelles: {
+    nombre: 18,
+    couleurs: [0xffe07a, 0xffb02e, 0xff7a1a, 0xfff6c8],
+    /** Jusqu'ou elles volent, et de combien elles retombent, en pixels de carte. */
+    portee: 46,
+    chute: 30,
+    rayon: 2.6,
+  },
+  bouffee: { nombre: 8, couleur: 0xcfd4dc, alpha: 0.7, rayonDepart: 8, rayonFin: 26, montee: 42 },
+} as const;
+
+/**
+ * Les etincelles et les bouffees des taches visuelles recentes, a cet instant: des disques
+ * par-dessus les personnages, dessines comme les impacts. Le dessin se tire du rang du fait et
+ * de chaque particule: le meme fait se dessine de meme chez tous ceux qui le voient.
+ */
+export function effetsDesTachesVisuelles(
+  journal: EtatClient['journal'],
+  maintenant: number,
+): readonly DisqueScene[] {
+  const { dureeMs, etincelles, bouffee } = APPARENCE_DES_TACHES_VISUELLES;
+  const disques: DisqueScene[] = [];
+
+  journal.forEach((fait, rang) => {
+    if (fait.nature !== 'tacheVisuelle') {
+      return;
+    }
+
+    const avancee = (maintenant - fait.instant) / dureeMs;
+
+    if (avancee < 0 || avancee >= 1) {
+      return;
+    }
+
+    const { x, y, nature } = fait.charge;
+    const id = `tacheVisuelle:${String(rang)}`;
+
+    if (nature === 'fumee') {
+      for (let bulle = 0; bulle < bouffee.nombre; bulle += 1) {
+        const angle = (bulle / bouffee.nombre) * Math.PI * 2;
+        disques.push({
+          id: `${id}:${String(bulle)}`,
+          x: x + Math.cos(angle) * 18 * avancee,
+          y: y - 12 - bouffee.montee * avancee + Math.sin(angle) * 8 * avancee,
+          rayon: bouffee.rayonDepart + (bouffee.rayonFin - bouffee.rayonDepart) * avancee,
+          remplissage: { couleur: bouffee.couleur, alpha: bouffee.alpha * (1 - avancee) },
+          contour: undefined,
+        });
+      }
+      return;
+    }
+
+    for (let etincelle = 0; etincelle < etincelles.nombre; etincelle += 1) {
+      // Une gerbe vers le haut, chaque etincelle a son angle et sa vitesse.
+      const angle = -Math.PI / 2 + (etincelle / (etincelles.nombre - 1) - 0.5) * 2.4;
+      const vitesse = 0.6 + ((etincelle * 7) % 5) / 10;
+      const couleur = etincelles.couleurs[etincelle % etincelles.couleurs.length] as number;
+      disques.push({
+        id: `${id}:${String(etincelle)}`,
+        x: x + Math.cos(angle) * etincelles.portee * vitesse * avancee,
+        y:
+          y +
+          Math.sin(angle) * etincelles.portee * vitesse * avancee +
+          etincelles.chute * avancee * avancee,
+        rayon: etincelles.rayon * (1 - avancee) + 0.8,
+        remplissage: { couleur, alpha: 1 - avancee },
+        contour: undefined,
+      });
+    }
+  });
+
+  return disques;
+}

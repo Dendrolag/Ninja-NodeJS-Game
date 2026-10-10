@@ -318,7 +318,9 @@ describe('creerLecteurDeSons', () => {
     const lecteur = creerLecteurDeSons({
       creerAudio: (adresse) => {
         const audio = audioDEssai();
-        audios.set(adresse, audio);
+        // Deux sons peuvent partager un fichier (le provisoire d'un son a fournir): le second
+        // garde le sien sous une autre cle, sans effacer le premier.
+        audios.set(audios.has(adresse) ? `${adresse}#${String(audios.size)}` : adresse, audio);
         return audio;
       },
     });

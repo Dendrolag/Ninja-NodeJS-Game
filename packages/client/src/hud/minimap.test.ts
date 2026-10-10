@@ -78,7 +78,7 @@ function etat(prive: EtatPriveAmong, miroir = false): EtatClient {
 
 describe('la mini-carte d Among Ninjas', () => {
   it('montre a une proie ses stations a faire, le gong et sa place, en part de la carte', () => {
-    const minimap = amongHud(etat(PROIE), 0)?.minimap;
+    const minimap = amongHud(etat(PROIE))?.minimap;
 
     expect(minimap?.stations).toEqual([{ x: 1800 / TOKYO.largeur, y: 1350 / TOKYO.hauteur }]);
     expect(minimap?.gong).toEqual({ x: 0.5, y: 0.5 });
@@ -92,11 +92,11 @@ describe('la mini-carte d Among Ninjas', () => {
   it('montre a un assassin toutes les stations actives, celles des proies', () => {
     const assassin: EtatPriveAmong = { ...PROIE, role: 'tueur', complices: [], taches: [] };
 
-    expect(amongHud(etat(assassin), 0)?.minimap.stations).toHaveLength(3);
+    expect(amongHud(etat(assassin))?.minimap.stations).toHaveLength(3);
   });
 
   it('retourne le fond en miroir, les lieux l etant deja', () => {
-    expect(amongHud(etat(PROIE, true), 0)?.minimap.miroir).toBe(true);
-    expect(amongHud(etat(PROIE), 0)?.minimap.miroir).toBe(false);
+    expect(amongHud(etat(PROIE, true))?.minimap.miroir).toBe(true);
+    expect(amongHud(etat(PROIE))?.minimap.miroir).toBe(false);
   });
 });

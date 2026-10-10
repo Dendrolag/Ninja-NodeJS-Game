@@ -44,6 +44,8 @@ import { lancerLaBoucle } from '../../rendu/boucle.js';
 import { monterRendu, prechargerLesSprites } from '../../rendu/pixi.js';
 import { jeSuisHote } from '../../selecteurs.js';
 import { monterEcransAmong } from '../composants/among.js';
+import { monterCarteAmong } from '../composants/carteAmong.js';
+import { monterFenetreDeTache } from '../composants/tache.js';
 import { monterFenetre } from '../composants/fenetre.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import type { ContexteEcran, EcranAffiche } from './types.js';
@@ -149,6 +151,37 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
   // Les ecrans d'Among Ninjas par-dessus la carte: revelation, reunion, ejection (etape 7.20).
   const ecransAmong = mode === 'among' ? monterEcransAmong(doc, client) : undefined;
 
+  // La carte plein ecran et la fenetre des taches courtes d'Among Ninjas (etape 7.21). Une tache
+  // ouverte fige les commandes du jeu, et ferme la carte.
+  const sons = contexte.sons === undefined ? {} : { sons: contexte.sons };
+  const carteAmong = mode === 'among' ? monterCarteAmong({ document: doc, ...sons }) : undefined;
+  const fenetreDeTache =
+    mode === 'among'
+      ? monterFenetreDeTache({
+          document: doc,
+          client,
+          horloge: contexte.horloge,
+          tactile: navigateur?.matchMedia('(pointer: coarse)').matches ?? false,
+          ...sons,
+          surOuverture: (ouverte) => {
+            controles.figer(ouverte);
+            // Les boutons du jeu s'eteignent et la manette se cache pendant la tache.
+            racine.classList.toggle('tache-ouverte', ouverte);
+            if (ouverte) {
+              carteAmong?.fermer();
+            }
+          },
+        })
+      : undefined;
+  const basculerLaCarte =
+    carteAmong === undefined
+      ? {}
+      : {
+          basculerLaCarte: () => {
+            carteAmong.basculer();
+          },
+        };
+
   const racine = creer(
     doc,
     'section',
@@ -159,6 +192,8 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
     chargement,
     actions,
     ecransAmong?.racine,
+    carteAmong?.racine,
+    fenetreDeTache?.racine,
     confirmation.racine,
   );
 
@@ -242,6 +277,7 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
             agir: (tenue: boolean) => {
               controles.tenirLAction(tenue);
             },
+            ...basculerLaCarte,
           }
         : {}),
     });
@@ -266,7 +302,12 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
     });
 
     aRetirer.push(
-      brancherClavier(controles, { cible: doc, fenetre: navigateur ?? doc, capture: tactique }),
+      brancherClavier(controles, {
+        cible: doc,
+        fenetre: navigateur ?? doc,
+        capture: tactique,
+        ...basculerLaCarte,
+      }),
     );
     aRetirer.push(
       brancherTactile(terrain, controles, {
@@ -382,6 +423,8 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
       montrer(pause, hote && !enPause);
       montrer(reprendre, hote && enPause);
       ecransAmong?.afficher(etat);
+      carteAmong?.afficher(etat);
+      fenetreDeTache?.afficher(etat);
     },
 
     demonter() {
@@ -393,6 +436,8 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
 
       confirmation.demonter();
       ecransAmong?.demonter();
+      carteAmong?.demonter();
+      fenetreDeTache?.demonter();
       racine.remove();
     },
   };

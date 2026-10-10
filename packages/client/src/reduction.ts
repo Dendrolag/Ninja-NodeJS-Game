@@ -50,10 +50,12 @@ import {
 import type { FaitDeJeu } from './faits.js';
 import {
   AMONG_INCONNU,
+  apresLaFermeture,
   apresLaReunion,
   apresUnMeurtre,
   avecLEtatPrive,
   avecMonVote,
+  avecUneFeinte,
 } from './among.js';
 import { reconstruire } from './reconstruction.js';
 
@@ -688,6 +690,16 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
 
     case 'monVote':
       return { ...etat, ecran, among: avecMonVote(etat.among, action.cible) };
+
+    case 'tacheFeinte':
+      return {
+        ...etat,
+        ecran,
+        among: avecUneFeinte(etat.among, action.station, etat.moi, action.instant),
+      };
+
+    case 'tacheFermee':
+      return { ...etat, ecran, among: apresLaFermeture(etat.among) };
 
     case 'refus':
       return { ...etat, ecran, refus: action.refus };
