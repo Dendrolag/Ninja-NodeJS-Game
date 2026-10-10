@@ -362,11 +362,12 @@ Les numéros sont provisoires et suivent la carte thématique du ROADMAP. Les nu
 | ----: | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------- |
 |     1 | 2.9 Le flux par destinataire | Faite le 6 octobre 2026. Une vue par clé, une trame et une référence de delta par vue, mesure au banc. Corrige la Chasse. | Rien |
 |     2 | 7.20 Le socle du mode | Faite le 10 octobre 2026, fiche `docs/plan/etape-7-20.md`. Rôles, phases, tour à durée maximale, meurtre, cadavre, signalement, gong, réunion au chat, vote, éjection, victoire, fantômes, vision par rayon, foule neutre. Les stations de Tokyo, les listes par proie et leur validation au serveur, avec une seule tâche provisoire (« maintenir 5 s ») | 2.9 |
-|     3 | 7.21 Les tâches courtes et la carte | Les sept tâches courtes à la place de la tâche provisoire, la carte plein écran, les tâches visuelles et la barre des tâches en réglage | 7.20 |
+|     3 | 7.21 Les tâches courtes et la carte | Faite le 10 octobre 2026, fiche `docs/plan/etape-7-21.md`. Les sept tâches courtes à la place de la tâche provisoire, la carte plein écran, les tâches visuelles et la barre des tâches en réglage | 7.20 |
 |     4 | 7.22 Les sabotages                    | Les trois nuisances, la zone d'invisibilité des tueurs, la panne de néons, la surchauffe, le sabotage depuis la carte                       | 7.21      |
 |     5 | 7.23 Les pas entendus                 | Les pas des vivants hors de vue, en direction arrondie, les PNJ et les fantômes muets                                                      | 2.9       |
 |     6 | 7.24 Les tâches longues               | Les quatre mini-jeux d'arcade                                                                                                              | 7.21      |
 |     7 | 7.25 L'appropriation                  | Ce que l'essai aura retenu: égouts, déguisement, ninjas égarés, traces de sang du tueur                                        | 7.22      |
+|     8 | 7.26 D'autres tâches courtes          | Demande du porteur du projet du 10 octobre 2026: plus de gestes, et plus de tâches par station, pour que les parties et les listes varient davantage | 7.21      |
 
 L'étape 7.20 est jouable seule, entre amis, sur Tokyo: c'est là qu'on saura si la formule prend avant d'investir dans les mini-jeux. Chaque étape se fait comme les étapes 7.9 à 7.12: règles tranchées avec le porteur du projet au début, rendus choisis sur planche, empreinte des parties de référence identique, mesure au banc, version mineure avec sa note.
 
@@ -413,3 +414,16 @@ L'étape 7.20 est faite: fiche `docs/plan/etape-7-20.md`, handoff `docs/handoffs
 
 La suite reste celle de la section 18: `7.21`, les tâches courtes et la carte.
 
+## 22. Les tâches courtes construites, 10 octobre 2026
+
+L'étape 7.21 est faite: fiche `docs/plan/etape-7-21.md`, handoff `docs/handoffs/etape-7-21-handoff.md`. Ce qui s'écarte de cette étude, ou la précise:
+
+- **La tâche se tire pour chaque proie**, parmi celles de sa station (section 9.5 précisée, demande du porteur du projet): deux proies à la même station n'y font pas forcément la même chose. Les listes se répartissent sur toutes les stations actives. Les stations des mini-jeux d'arcade ont reçu une tâche courte en attendant l'étape 7.24.
+- **Le serveur garde l'ouverture, la présence, la durée minimale et le rôle** (section 9.2): une fin annoncée trop tôt est ignorée, la tâche reste ouverte. La page n'annonce la fin qu'après la durée minimale, comptée de l'instant où elle a appris l'ouverture: un joueur honnête n'est jamais refusé.
+- **L'assassin fait semblant dans sa page seule** (section 9.3): rien ne part au serveur, et rien ne le distingue d'une proie pour qui le regarde.
+- **Les tâches visuelles sont le katana et la fumée**, à la fin validée de la tâche, une seconde et demie, adressées aux vivants qui voient la station et aux fantômes. Activées par défaut.
+- **La barre des tâches en réunion seulement** se fige au compte de l'ouverture de la dernière réunion; « jamais » envoie un total nul que la page ne montre pas.
+- **La carte plein écran** s'ouvre par M ou la mini-carte touchée: le téléphone garde ses deux boutons. Le jeu continue derrière.
+- **Rendus choisis sur planche**: `docs/design/etape-7-21/1-planche.png` et `2-gestes.png`; captures dans le vrai jeu à côté.
+
+La suite reste celle de la section 18: `7.22`, les sabotages, puis `7.26`, d'autres tâches courtes.

@@ -273,7 +273,17 @@ Conditions de ROADMAP réunies, plus:
 
 ## Réconciliation
 
-Écarts entre cette fiche et ce qui sera construit, relevés pendant l'étape.
+Écarts entre cette fiche et ce qui a été construit, relevés pendant l'étape (handoff `docs/handoffs/etape-7-21-handoff.md`).
+
+1. **La tâche se tire pour chaque proie**, et les listes se répartissent sur les stations (décision 6 du porteur du projet, prise après la planche des gestes): les micro-décisions 2 et 3 ont été réécrites en conséquence. Les natures possibles d'une station partent dans l'état privé avec son nom: un assassin y lit celles qu'il peut feindre.
+2. **Les tâches ouvertes avancent avant les gestes du battement**: une tâche ouverte à ce battement ne compte son temps qu'à partir du suivant, pour que la durée minimale se compte de l'ouverture même.
+3. **L'ouverture suit la règle d'appui de 7.20**: signaler, sonner, et à défaut ouvrir sa tâche. Une fermeture que la page attend encore du serveur retient l'appui suivant, sans quoi une tâche rouverte aussitôt ne se rouvrirait pas.
+4. **Un son de plus**, le bonus de fumée rempli (provisoire `bonus-escape-nuage.mp3`). Les douze sons sont nommés dans `packages/shared/src/ressources.ts`: il suffira d'y changer le fichier. Le frottement et le remplissage en boucle n'ont toujours pas de provisoire.
+5. **Les rythmes au plus vite**, mesurés par les tests: katana 3,25 s, lunettes 3,2 s, sang 3,6 s, couleurs 3,6 s, mines 3,6 s, munitions 3,6 s, fumée 3,15 s, tous au-dessus de leur durée minimale. La page attend en plus 150 millisecondes avant d'annoncer la fin, et la répète chaque seconde tant que la fenêtre reste ouverte.
+6. **Pendant une tâche, les boutons du jeu s'éteignent et la manette se cache**: la première capture sur téléphone montrait le bouton d'action allumé derrière la fenêtre.
+7. **Le tas de mines** se dessine deux par deux: empilées, elles formaient une tache illisible sur téléphone.
+8. **La barre « jamais »** envoie un total nul, que la page ne montre pas, plutôt qu'un champ absent: le format du flux ne change pas.
+9. **Le scénario de bout en bout** fait la tâche au clavier, en lisant la nature sur la fenêtre et l'avancement que lisent les lecteurs d'écran; le relier des couleurs y essaie les noms un à un. Une tâche au doigt n'y est pas: elle est vérifiée par les captures sur téléphone. Le banc n'ouvre aucune tâche.
 
 ## Rituel de fin de session
 

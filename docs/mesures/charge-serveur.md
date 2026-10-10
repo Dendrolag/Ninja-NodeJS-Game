@@ -1157,3 +1157,29 @@ Moyenne des deux tours. Durées en millisecondes par battement, tailles en octet
 - **Une réunion**: personne ne bouge et rien ne se tire, la partie coûte moins qu'en jeu.
 - **Les fantômes**: ils partagent une vue, et chaque mort retire une trame. Le cas mesuré, douze vivants, est le plus cher.
 - **Le serveur complet**: une trame par vue part par un envoi de Socket.IO, comme depuis l'étape 2.9. Rien de nouveau au fil.
+
+## 30. Mesure de l'étape 7.21: les tâches courtes d'Among Ninjas (10 octobre 2026)
+
+Chiffres bruts: `docs/mesures/charge-serveur-7-21-among.json` et `charge-serveur-7-21-classique.json`, écrits par le harnais au second tour. Même machine et même méthode qu'à la section 29: `pnpm charge --banc --mode among --carte map1 --bots-banc 40,80`, puis `--mode classique`, deux tours en alternance, au commit `fba467f`.
+
+### 30.1 L'essentiel
+
+- **Les tâches ne changent presque rien au coût d'une partie**: 0,208 ms par battement avec 40 PNJ, contre 0,197 à l'étape 7.20, et 0,286 avec 80 PNJ contre 0,279. La Horde de la même séance passe de 0,183 à 0,185: l'écart propre au mode est d'environ 0,01 ms, soit 167 parties pleines par cœur au lieu de 177. Le moteur parcourt à chaque battement les tâches ouvertes des douze joueurs, et la vue de chaque vivant recopie la barre des tâches selon le réglage de l'hôte.
+- **Le fil ne change pas**: 84 et 91 octets par message, comme à l'étape 7.20. La barre des tâches garde son format; une tâche visuelle part en notification, aux seuls témoins.
+- **Les autres modes n'ont pas changé**: l'empreinte du jeu et du flux des quatre parties de `tests/charge/empreinte.ts` est identique, à l'octet, avant et après les lots A et B.
+
+### 30.2 Le banc
+
+Moyenne des deux tours. Durées en millisecondes par battement, tailles en octets par message sur le fil, images comprises.
+
+| PNJ | Mode         | Moteur | Projection | Codage | Total | Total p99 | Octets par message | Entités par vue | Parties par cœur |
+| --: | ------------ | -----: | ---------: | -----: | ----: | --------: | -----------------: | --------------: | ---------------: |
+|  40 | Horde        |  0,125 |      0,026 |  0,036 | 0,185 |     0,500 |                209 |              55 |              189 |
+|  40 | Among Ninjas |  0,085 |      0,032 |  0,091 | 0,208 |     0,471 |                 84 |               8 |              168 |
+|  80 | Horde        |  0,179 |      0,031 |  0,045 | 0,254 |     0,645 |                293 |              96 |              138 |
+|  80 | Among Ninjas |  0,142 |      0,047 |  0,097 | 0,286 |     0,547 |                 91 |               8 |              123 |
+
+### 30.3 Ce qui n'est pas mesuré
+
+- **Une tâche ouverte**: les joueurs du banc marchent au hasard et n'ouvrent aucune tâche. Une tâche ouverte coûte, à chaque battement, une distance et une comparaison pour son joueur: rien que le banc puisse distinguer.
+- **Les gestes**: ils se jouent dans la page, que le serveur ne voit pas.

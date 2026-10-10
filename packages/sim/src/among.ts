@@ -631,13 +631,10 @@ export function tuer(etat: EtatPartie, tueurId: IdentifiantEntite): EtatPartie {
  * de la station ou elle se tient.
  */
 function appuyer(etat: EtatPartie, id: IdentifiantEntite): EtatPartie {
-  const among = etat.among as EtatAmong;
-  const joueur = among.joueurs[id];
-  const corps = etat.joueurs[id];
-
-  if (joueur === undefined || corps === undefined) {
-    return etat;
-  }
+  // Le battement n'appuie que pour un joueur de la partie que le mode connait: son bouton
+  // etait lache au battement precedent (jouer).
+  const joueur = (etat.among as EtatAmong).joueurs[id] as JoueurAmong;
+  const corps = etat.joueurs[id] as Joueur;
 
   return joueur.fantome
     ? ouvrirUneTache(etat, id, joueur, corps.position)
