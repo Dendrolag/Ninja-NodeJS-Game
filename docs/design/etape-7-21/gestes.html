@@ -1,0 +1,1006 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Planche Among Ninjas, les sept gestes</title>
+    <style>
+      :root {
+        --fond: #0b1020;
+        --cadre: #26304f;
+        --texte: #e8ecf6;
+        --pale: #aeb6cc;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 22px 24px 18px;
+        width: 1400px;
+        background: var(--fond);
+        color: var(--texte);
+        font: 13px/1.35 'DejaVu Sans', 'Segoe UI', sans-serif;
+      }
+      h1 {
+        margin: 0 0 6px;
+        font-size: 22px;
+      }
+      .intro {
+        margin: 0 0 14px;
+      }
+      .rangee {
+        display: grid;
+        grid-template-columns: 160px 1fr 187px 230px;
+        gap: 10px;
+        margin-bottom: 10px;
+        align-items: start;
+      }
+      .legende {
+        text-align: right;
+        padding-top: 50px;
+        color: var(--pale);
+      }
+      .legende b {
+        display: block;
+        color: var(--texte);
+        font-size: 15px;
+        margin-bottom: 4px;
+      }
+      .case {
+        background: var(--cadre);
+        border-radius: 8px;
+        padding: 6px;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-radius: 4px;
+        background: #121a33;
+      }
+      .notes {
+        background: var(--cadre);
+        border-radius: 8px;
+        padding: 10px 12px;
+        color: var(--texte);
+      }
+      .notes p {
+        margin: 0 0 8px;
+      }
+      .notes b {
+        color: #2ee6ff;
+      }
+      .entete {
+        display: grid;
+        grid-template-columns: 160px 1fr 187px 230px;
+        gap: 10px;
+        margin-bottom: 4px;
+        color: var(--pale);
+        font-weight: bold;
+        text-align: center;
+      }
+      .pied {
+        color: var(--pale);
+        margin-top: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Among Ninjas, les sept gestes dans la fenêtre néon</h1>
+    <p class="intro">
+      Le cadre retenu (1A), sur ordinateur et sur téléphone en portrait, chacun à la station d'une partie. Chaque geste est
+      montré en cours: ce qui est déjà fait, ce qui se fait, ce qui reste. Le jeu continue autour, et on ne bouge pas
+      tant que la fenêtre est ouverte.
+    </p>
+    <div class="entete"><div></div><div>Ordinateur</div><div>Téléphone</div><div>Le geste</div></div>
+    <div id="rangees"></div>
+    <p class="pied">
+      Pour tous: Échap ou la croix ferment la tâche, à refaire en entier. Un geste raté ne coûte que du temps. Le rythme
+      de chaque geste ne laisse jamais finir sous la durée minimale du serveur. Sur téléphone, le joystick se cache
+      pendant la tâche, et le bouton d'action s'éteint.
+    </p>
+
+    <script>
+      const RACINE = '../../../assets/';
+      const charger = (chemin) =>
+        new Promise((ok) => {
+          const image = new Image();
+          image.onload = () => ok(image);
+          image.onerror = () => ok(null);
+          image.src = RACINE + chemin;
+        });
+
+      const CYAN = '#2EE6FF';
+      const PALE = '#aeb6cc';
+      const MOI = '#FF5FD2';
+      const FOULE = '#7F8A99';
+
+      const GESTES = [
+        {
+          nature: 'katana',
+          titre: 'Aiguiser un katana',
+          station: 'Pierre du jardin zen',
+          lieu: { x: 170, y: 180 },
+          pointeur: 'Glisser la lame sur la pierre, de la garde à la pointe, cinq fois. Une passe à l\'envers ne compte pas.',
+          clavier: 'Flèche droite, cinq fois; chaque passe se joue en entier.',
+          durees: 'Visée 4 s, minimale 3 s.',
+          aide: 'Glissez la lame de la garde à la pointe',
+          aideClavier: 'Clavier: flèche droite',
+        },
+        {
+          nature: 'lunettes',
+          titre: 'Nettoyer les lunettes',
+          station: 'Table de la maison',
+          lieu: { x: 1800, y: 150 },
+          pointeur: 'Frotter chaque verre avec le chiffon jusqu\'à effacer les traces.',
+          clavier: 'Gauche et droite pour le verre, Espace tenu pour frotter.',
+          durees: 'Visée 4 s, minimale 3 s.',
+          aide: 'Frottez les deux verres',
+          aideClavier: 'Clavier: flèches, Espace tenu',
+        },
+        {
+          nature: 'sang',
+          titre: 'Nettoyer du sang',
+          station: 'Cuisine du restaurant',
+          lieu: { x: 630, y: 1295 },
+          pointeur: 'Frotter trois taches avec l\'éponge, le dessin du sang du Massacre.',
+          clavier: 'Flèches pour la tache, Espace tenu pour frotter.',
+          durees: 'Visée 5 s, minimale 3,5 s.',
+          aide: 'Frottez les trois taches',
+          aideClavier: 'Clavier: flèches, Espace tenu',
+        },
+        {
+          nature: 'couleurs',
+          titre: 'Relier des couleurs',
+          station: 'Ordinateur de la maison',
+          lieu: { x: 1690, y: 110 },
+          pointeur: 'Tirer quatre fils, chaque couleur vers son nom. La couleur porte aussi son nom: la tâche se lit sans distinguer les couleurs.',
+          clavier: 'Haut et bas pour le fil, Droite, haut et bas pour le nom, Espace.',
+          durees: 'Visée 5 s, minimale 3,5 s.',
+          aide: 'Reliez chaque couleur à son nom',
+          aideClavier: 'Clavier: flèches, Espace',
+        },
+        {
+          nature: 'mines',
+          titre: 'Ranger des mines',
+          station: 'Comptoir du salon',
+          lieu: { x: 1100, y: 1350 },
+          pointeur: 'Glisser quatre mines dans les alvéoles de la mallette.',
+          clavier: 'Flèches pour l\'alvéole, Espace pour y poser la mine suivante.',
+          durees: 'Visée 5 s, minimale 3,5 s.',
+          aide: 'Rangez les mines dans la mallette',
+          aideClavier: 'Clavier: flèches, Espace',
+        },
+        {
+          nature: 'munitions',
+          titre: 'Recharger des munitions',
+          station: 'Camionnette du parking',
+          lieu: { x: 1335, y: 80 },
+          pointeur: 'Glisser cinq cartouches dans le fusil du Tactique.',
+          clavier: 'Espace, cinq fois; chaque cartouche se joue en entier.',
+          durees: 'Visée 5 s, minimale 3,5 s.',
+          aide: 'Glissez les cartouches dans le fusil',
+          aideClavier: 'Clavier: Espace',
+        },
+        {
+          nature: 'fumee',
+          titre: 'Remplir de fumée',
+          station: 'Tapis du salon',
+          lieu: { x: 1320, y: 1070 },
+          pointeur: 'Maintenir appuyé, relâcher quand la jauge est dans la bande, pour chacun des trois bonus. Hors de la bande, le bonus se vide et se recommence.',
+          clavier: 'Espace tenu, relâché dans la bande.',
+          durees: 'Visée 4 s, minimale 3 s.',
+          aide: 'Maintenez, relâchez dans la bande',
+          aideClavier: 'Clavier: Espace tenu',
+        },
+      ];
+
+      function graine(depart) {
+        let s = depart;
+        return () => (s = (s * 9301 + 49297) % 233280) / 233280;
+      }
+
+      function ninja(image, couleur) {
+        const toile = document.createElement('canvas');
+        toile.width = image.width;
+        toile.height = image.height;
+        const ctx = toile.getContext('2d');
+        ctx.drawImage(image, 0, 0);
+        const donnees = ctx.getImageData(0, 0, toile.width, toile.height);
+        const p = donnees.data;
+        const c = parseInt(couleur.slice(1), 16);
+        const [cr, cg, cb] = [(c >> 16) & 255, (c >> 8) & 255, c & 255];
+        for (let i = 0; i < p.length; i += 4) {
+          const [r, g, b, a] = [p[i], p[i + 1], p[i + 2], p[i + 3]];
+          if (a === 0) continue;
+          const exces = r - Math.max(g, b);
+          const part = Math.abs(g - b) > 40 || exces < 40 ? 0 : Math.min(1, exces / 255);
+          if (part > 0) {
+            const fond = (r - part * 255) / Math.max(1 - part, 0.01);
+            p[i] = cr * part + fond * (1 - part);
+            p[i + 1] = cg * part + g * (1 - part);
+            p[i + 2] = cb * part + b * (1 - part);
+          }
+        }
+        ctx.putImageData(donnees, 0, 0);
+        return toile;
+      }
+
+      function texte(ctx, chaine, x, y, taille, couleur, options = {}) {
+        ctx.save();
+        ctx.font = `${options.gras ? 'bold ' : ''}${taille}px 'DejaVu Sans', sans-serif`;
+        ctx.fillStyle = couleur;
+        ctx.textAlign = options.align ?? 'center';
+        ctx.textBaseline = 'middle';
+        if (options.halo) {
+          ctx.shadowColor = options.halo;
+          ctx.shadowBlur = options.flou ?? 14;
+        }
+        ctx.fillText(chaine, x, y);
+        ctx.restore();
+      }
+
+      function rectArrondi(ctx, x, y, l, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + l, y, x + l, y + h, r);
+        ctx.arcTo(x + l, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + l, y, r);
+        ctx.closePath();
+      }
+
+      function decor(ctx, fond, cx, cy, echelle, largeur, hauteur) {
+        if (!fond) {
+          ctx.fillStyle = '#1a2240';
+          ctx.fillRect(0, 0, largeur, hauteur);
+          return;
+        }
+        const sx = (cx - largeur / 2 / echelle) * 1.5;
+        const sy = (cy - hauteur / 2 / echelle) * (2000 / 1500);
+        ctx.drawImage(fond, sx, sy, (largeur / echelle) * 1.5, (hauteur / echelle) * (2000 / 1500), 0, 0, largeur, hauteur);
+      }
+
+      function vision(ctx, x, y, rayon, largeur, hauteur) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 0, largeur, hauteur);
+        ctx.arc(x, y, rayon, 0, Math.PI * 2, true);
+        ctx.clip('evenodd');
+        ctx.globalCompositeOperation = 'saturation';
+        ctx.fillStyle = '#808080';
+        ctx.fillRect(0, 0, largeur, hauteur);
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(0, 0, largeur, hauteur);
+        ctx.restore();
+      }
+
+      function croix(ctx, x, y, couleur) {
+        ctx.save();
+        ctx.strokeStyle = couleur;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x - 8, y - 8);
+        ctx.lineTo(x + 8, y + 8);
+        ctx.moveTo(x + 8, y - 8);
+        ctx.lineTo(x - 8, y + 8);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      /** Les points de progression du geste: faits, puis restants. */
+      function progression(ctx, cx, y, faits, total) {
+        for (let i = 0; i < total; i++) {
+          const ax = cx + (i - (total - 1) / 2) * 24;
+          ctx.beginPath();
+          ctx.arc(ax, y, 7, 0, Math.PI * 2);
+          if (i < faits) {
+            ctx.fillStyle = CYAN;
+            ctx.fill();
+          } else {
+            ctx.strokeStyle = 'rgba(46,230,255,0.5)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
+        }
+      }
+
+      /** La souris, ou le doigt sur telephone. */
+      function pointeur(ctx, x, y, telephone) {
+        ctx.save();
+        if (telephone) {
+          ctx.fillStyle = 'rgba(255,255,255,0.35)';
+          ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(x, y, 17, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = '#ffffff';
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x, y + 20);
+          ctx.lineTo(x + 5, y + 15);
+          ctx.lineTo(x + 9, y + 23);
+          ctx.lineTo(x + 12, y + 21);
+          ctx.lineTo(x + 8, y + 14);
+          ctx.lineTo(x + 14, y + 14);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      function fleche(ctx, x0, y0, x1, y1, couleur) {
+        ctx.save();
+        ctx.strokeStyle = couleur;
+        ctx.fillStyle = couleur;
+        ctx.lineWidth = 3;
+        ctx.setLineDash([9, 6]);
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x1, y1);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        const a = Math.atan2(y1 - y0, x1 - x0);
+        ctx.beginPath();
+        ctx.moveTo(x1 + Math.cos(a) * 10, y1 + Math.sin(a) * 10);
+        ctx.lineTo(x1 + Math.cos(a + 2.5) * 12, y1 + Math.sin(a + 2.5) * 12);
+        ctx.lineTo(x1 + Math.cos(a - 2.5) * 12, y1 + Math.sin(a - 2.5) * 12);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // ------------------------------------------------------------------
+      // Les sept gestes, chacun dans le rectangle (x, y, l, h) du contenu
+      // ------------------------------------------------------------------
+
+      function katana(ctx, x, y, l, h, tel) {
+        progression(ctx, x + l / 2, y + 14, 3, 5);
+        const pl = l * 0.66;
+        const ph = Math.min(h * 0.2, 46);
+        const px = x + (l - pl) / 2;
+        const py = y + h * 0.5;
+        ctx.save();
+        ctx.fillStyle = '#4a4f5c';
+        rectArrondi(ctx, px, py, pl, ph, 10);
+        ctx.fill();
+        ctx.fillStyle = '#6b7180';
+        rectArrondi(ctx, px + 6, py + 4, pl - 12, ph * 0.45, 8);
+        ctx.fill();
+        ctx.fillStyle = '#2b2f3a';
+        ctx.fillRect(px - 10, py + ph - 4, pl + 20, 12);
+        const lx = px + pl * 0.18;
+        const ly = py - 6;
+        const longueur = pl * 0.8;
+        ctx.translate(lx, ly);
+        ctx.rotate(-0.08);
+        ctx.fillStyle = '#20232b';
+        rectArrondi(ctx, -pl * 0.24, -7, pl * 0.22, 14, 4);
+        ctx.fill();
+        ctx.strokeStyle = '#b8955a';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 6; i++) {
+          const ax = -pl * 0.23 + i * (pl * 0.036);
+          ctx.beginPath();
+          ctx.moveTo(ax, -7);
+          ctx.lineTo(ax + pl * 0.018, 7);
+          ctx.stroke();
+        }
+        ctx.fillStyle = '#c9a24a';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 6, 15, 0, 0, Math.PI * 2);
+        ctx.fill();
+        const lame = ctx.createLinearGradient(0, -6, 0, 6);
+        lame.addColorStop(0, '#f4f7fb');
+        lame.addColorStop(0.55, '#c3cad6');
+        lame.addColorStop(1, '#8a93a3');
+        ctx.fillStyle = lame;
+        ctx.beginPath();
+        ctx.moveTo(6, -5);
+        ctx.lineTo(longueur - 20, -6);
+        ctx.quadraticCurveTo(longueur, -6, longueur + 4, 4);
+        ctx.lineTo(6, 5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+        const r = graine(7);
+        ctx.save();
+        ctx.strokeStyle = '#FFE07A';
+        ctx.lineWidth = 2;
+        const ex = px + pl * 0.6;
+        for (let i = 0; i < 7; i++) {
+          const angle = -Math.PI / 2 - 0.9 + r() * 1.8;
+          const d = 8 + r() * 16;
+          ctx.beginPath();
+          ctx.moveTo(ex + Math.cos(angle) * 4, py - 4 + Math.sin(angle) * 4);
+          ctx.lineTo(ex + Math.cos(angle) * d, py - 4 + Math.sin(angle) * d);
+          ctx.stroke();
+        }
+        ctx.restore();
+        fleche(ctx, px + 10, py + ph + 26, px + pl - 18, py + ph + 26, CYAN);
+        pointeur(ctx, px + pl * 0.62, py - 10, tel);
+      }
+
+      function lunettes(ctx, x, y, l, h, tel) {
+        progression(ctx, x + l / 2, y + 14, 1, 2);
+        const cx = x + l / 2;
+        const cy = y + h * 0.52;
+        const rl = Math.min(l * 0.17, h * 0.26);
+        const ecart = rl * 1.2;
+        const verre = (vx, propre) => {
+          ctx.save();
+          ctx.beginPath();
+          ctx.ellipse(vx, cy, rl, rl * 0.82, 0, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(180, 220, 255, 0.22)';
+          ctx.fill();
+          ctx.clip();
+          if (!propre) {
+            const r = graine(3);
+            for (let i = 0; i < 9; i++) {
+              const ax = vx + (r() - 0.5) * rl * 1.6;
+              const ay = cy + (r() - 0.5) * rl * 1.3;
+              // Le haut du verre est deja essuye.
+              if (ay < cy - rl * 0.15) continue;
+              ctx.fillStyle = `rgba(150, 140, 120, ${0.45 + r() * 0.3})`;
+              ctx.beginPath();
+              ctx.ellipse(ax, ay, 6 + r() * 12, 4 + r() * 8, r() * 3, 0, Math.PI * 2);
+              ctx.fill();
+            }
+            ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+            ctx.lineWidth = 3;
+            for (let i = 0; i < 3; i++) {
+              ctx.beginPath();
+              ctx.arc(vx, cy - rl * 0.2, rl * (0.5 + i * 0.22), Math.PI * 1.1, Math.PI * 1.9);
+              ctx.stroke();
+            }
+          } else {
+            ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(vx - rl * 0.5, cy - rl * 0.2);
+            ctx.lineTo(vx - rl * 0.1, cy - rl * 0.55);
+            ctx.moveTo(vx - rl * 0.35, cy + rl * 0.05);
+            ctx.lineTo(vx + rl * 0.1, cy - rl * 0.4);
+            ctx.stroke();
+          }
+          ctx.restore();
+          ctx.save();
+          ctx.strokeStyle = '#d9dee8';
+          ctx.lineWidth = 6;
+          ctx.beginPath();
+          ctx.ellipse(vx, cy, rl, rl * 0.82, 0, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        };
+        verre(cx - ecart, true);
+        verre(cx + ecart, false);
+        ctx.save();
+        ctx.strokeStyle = '#d9dee8';
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(cx - ecart + rl * 0.9, cy - rl * 0.3);
+        ctx.quadraticCurveTo(cx, cy - rl * 0.6, cx + ecart - rl * 0.9, cy - rl * 0.3);
+        ctx.stroke();
+        ctx.restore();
+        // L'eclat du verre propre.
+        texte(ctx, '✓', cx - ecart, cy + rl + 22, 18, '#3ee07a', { gras: true });
+        // La jauge du verre en cours.
+        ctx.fillStyle = '#26304f';
+        rectArrondi(ctx, cx + ecart - rl, cy + rl + 14, rl * 2, 10, 4);
+        ctx.fill();
+        ctx.fillStyle = CYAN;
+        rectArrondi(ctx, cx + ecart - rl, cy + rl + 14, rl * 2 * 0.6, 10, 4);
+        ctx.fill();
+        // Le chiffon.
+        ctx.save();
+        ctx.translate(cx + ecart + rl * 0.25, cy + rl * 0.35);
+        ctx.rotate(-0.4);
+        ctx.fillStyle = '#5ad1e6';
+        rectArrondi(ctx, -26, -18, 52, 36, 8);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-18, -6);
+        ctx.lineTo(18, -10);
+        ctx.moveTo(-16, 6);
+        ctx.lineTo(16, 4);
+        ctx.stroke();
+        ctx.restore();
+        pointeur(ctx, cx + ecart + rl * 0.35, cy + rl * 0.3, tel);
+      }
+
+      function tache(ctx, x, y, echelle, depart, alpha) {
+        const r = graine(depart);
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = 'rgb(150, 0, 18)';
+        for (let i = 0; i < 9; i++) {
+          ctx.beginPath();
+          ctx.ellipse(
+            x + (r() - 0.5) * 40 * echelle,
+            y + (r() - 0.5) * 22 * echelle,
+            (6 + r() * 14) * echelle,
+            (4 + r() * 8) * echelle,
+            r() * Math.PI,
+            0,
+            Math.PI * 2,
+          );
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      function sang(ctx, x, y, l, h, tel) {
+        progression(ctx, x + l / 2, y + 14, 1, 3);
+        const sx = x + 14;
+        const sy = y + 34;
+        const sl = l - 28;
+        const sh = h - 46;
+        ctx.save();
+        ctx.fillStyle = '#9d968a';
+        ctx.fillRect(sx, sy, sl, sh);
+        ctx.strokeStyle = '#7f786d';
+        ctx.lineWidth = 2;
+        const pas = 46;
+        for (let ax = sx; ax <= sx + sl; ax += pas) {
+          ctx.beginPath();
+          ctx.moveTo(ax, sy);
+          ctx.lineTo(ax, sy + sh);
+          ctx.stroke();
+        }
+        for (let ay = sy; ay <= sy + sh; ay += pas) {
+          ctx.beginPath();
+          ctx.moveTo(sx, ay);
+          ctx.lineTo(sx + sl, ay);
+          ctx.stroke();
+        }
+        ctx.restore();
+        const e = tel ? 1.3 : 1.6;
+        const places = tel
+          ? [
+              [sx + sl * 0.3, sy + sh * 0.25],
+              [sx + sl * 0.68, sy + sh * 0.5],
+              [sx + sl * 0.32, sy + sh * 0.78],
+            ]
+          : [
+              [sx + sl * 0.2, sy + sh * 0.55],
+              [sx + sl * 0.5, sy + sh * 0.4],
+              [sx + sl * 0.8, sy + sh * 0.6],
+            ];
+        // La premiere tache, faite: un reflet mouille.
+        ctx.save();
+        ctx.fillStyle = 'rgba(255,255,255,0.18)';
+        ctx.beginPath();
+        ctx.ellipse(places[0][0], places[0][1], 30 * e, 16 * e, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        texte(ctx, '✓', places[0][0], places[0][1], 20, '#3ee07a', { gras: true });
+        // La deuxieme, a moitie frottee.
+        tache(ctx, places[1][0], places[1][1], e, 21, 0.45);
+        ctx.save();
+        ctx.strokeStyle = 'rgba(150, 0, 18, 0.35)';
+        ctx.lineWidth = 6;
+        for (let i = 0; i < 3; i++) {
+          ctx.beginPath();
+          ctx.arc(places[1][0] + 8, places[1][1] + 4, 14 + i * 10, Math.PI * 1.05, Math.PI * 1.8);
+          ctx.stroke();
+        }
+        ctx.restore();
+        // La troisieme, entiere.
+        tache(ctx, places[2][0], places[2][1], e, 33, 0.9);
+        // L'eponge.
+        ctx.save();
+        ctx.translate(places[1][0] + 18, places[1][1] - 6);
+        ctx.rotate(-0.25);
+        ctx.fillStyle = '#ffd23d';
+        rectArrondi(ctx, -28, -16, 56, 32, 8);
+        ctx.fill();
+        ctx.fillStyle = '#2f9e4f';
+        ctx.fillRect(-28, -16, 56, 8);
+        ctx.fillStyle = 'rgba(160, 120, 0, 0.6)';
+        for (const [hx, hy] of [
+          [-14, 4],
+          [2, 8],
+          [14, 2],
+          [-4, -1],
+        ]) {
+          ctx.beginPath();
+          ctx.arc(hx, hy, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+        pointeur(ctx, places[1][0] + 22, places[1][1] - 2, tel);
+      }
+
+      function couleurs(ctx, x, y, l, h, tel) {
+        progression(ctx, x + l / 2, y + 14, 2, 4);
+        const gauche = [
+          ['#FF3030', 'Rouge'],
+          ['#3D7DFF', 'Bleu'],
+          ['#FFE81A', 'Jaune'],
+          ['#1FBF4C', 'Vert'],
+        ];
+        const droite = ['Vert', 'Rouge', 'Bleu', 'Jaune'];
+        const haut = y + 46;
+        const pas = (h - 64) / 4;
+        const lx = x + 18;
+        const rx = x + l - 18;
+        const lp = tel ? 82 : 96;
+        const prise = (i) => [lx + lp, haut + i * pas + pas / 2];
+        const borne = (i) => [rx - lp, haut + i * pas + pas / 2];
+        gauche.forEach(([c, nom], i) => {
+          const [, py] = prise(i);
+          ctx.fillStyle = c;
+          rectArrondi(ctx, lx, py - 16, lp, 32, 6);
+          ctx.fill();
+          texte(ctx, nom, lx + lp / 2, py, 13, nom === 'Jaune' ? '#3a3000' : '#ffffff', { gras: true });
+        });
+        droite.forEach((nom, i) => {
+          const [, py] = borne(i);
+          ctx.save();
+          ctx.fillStyle = '#121a33';
+          ctx.strokeStyle = PALE;
+          ctx.lineWidth = 2;
+          rectArrondi(ctx, rx - lp, py - 16, lp, 32, 6);
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+          texte(ctx, nom, rx - lp / 2, py, 14, '#ffffff', { gras: true });
+        });
+        const fil = (de, vers, c) => {
+          ctx.save();
+          ctx.strokeStyle = c;
+          ctx.lineWidth = 7;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(de[0], de[1]);
+          const milieu = (de[0] + vers[0]) / 2;
+          ctx.bezierCurveTo(milieu, de[1], milieu, vers[1], vers[0], vers[1]);
+          ctx.stroke();
+          ctx.restore();
+        };
+        fil(prise(0), borne(1), '#FF3030');
+        fil(prise(1), borne(2), '#3D7DFF');
+        // Le fil jaune, en cours: il suit le pointeur.
+        const tire = [x + l * 0.58, haut + pas * 3.1];
+        fil(prise(2), tire, '#FFE81A');
+        ctx.fillStyle = '#FFE81A';
+        ctx.beginPath();
+        ctx.arc(tire[0], tire[1], 8, 0, Math.PI * 2);
+        ctx.fill();
+        pointeur(ctx, tire[0] + 2, tire[1] + 2, tel);
+      }
+
+      function mine(ctx, x, y, t) {
+        ctx.save();
+        ctx.strokeStyle = '#7d8596';
+        ctx.lineWidth = t * 0.16;
+        ctx.lineCap = 'round';
+        for (let i = 0; i < 8; i++) {
+          const a = (i * Math.PI) / 4;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x + Math.cos(a) * t * 0.62, y + Math.sin(a) * t * 0.62);
+          ctx.stroke();
+        }
+        ctx.fillStyle = '#2a2f3a';
+        ctx.strokeStyle = 'rgba(46,230,255,0.6)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, t * 0.42, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(x - t * 0.14, y - t * 0.14, t * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#FF3030';
+        ctx.beginPath();
+        ctx.arc(x + t * 0.12, y + t * 0.1, t * 0.06, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function mines(ctx, x, y, l, h, tel) {
+        progression(ctx, x + l / 2, y + 14, 2, 4);
+        const t = tel ? 40 : 46;
+        // La mallette, a droite (ou en bas sur telephone).
+        const ml = tel ? l - 40 : l * 0.46;
+        const mh = tel ? h * 0.42 : h - 70;
+        const mx = tel ? x + 20 : x + l - ml - 20;
+        const my = tel ? y + h - mh - 10 : y + 44;
+        ctx.save();
+        ctx.fillStyle = '#3a3f4c';
+        rectArrondi(ctx, mx - 8, my - 8, ml + 16, mh + 16, 10);
+        ctx.fill();
+        ctx.fillStyle = '#20242e';
+        rectArrondi(ctx, mx, my, ml, mh, 8);
+        ctx.fill();
+        ctx.restore();
+        const alveoles = [];
+        for (let ligne = 0; ligne < 2; ligne++) {
+          for (let colonne = 0; colonne < 2; colonne++) {
+            alveoles.push([mx + ml * (0.28 + colonne * 0.44), my + mh * (0.28 + ligne * 0.44)]);
+          }
+        }
+        alveoles.forEach(([ax, ay], i) => {
+          ctx.save();
+          ctx.fillStyle = '#0d1018';
+          ctx.strokeStyle = i === 2 ? CYAN : '#4a5060';
+          ctx.lineWidth = i === 2 ? 3 : 2;
+          if (i === 2) {
+            ctx.shadowColor = CYAN;
+            ctx.shadowBlur = 10;
+          }
+          ctx.beginPath();
+          ctx.arc(ax, ay, t * 0.62, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+          if (i < 2) mine(ctx, ax, ay, t);
+        });
+        // La mine qui reste, et celle qu'on porte.
+        const reste = tel ? [x + l * 0.25, y + 90] : [x + l * 0.14, y + h * 0.42];
+        mine(ctx, reste[0], reste[1], t);
+        const portee = tel ? [x + l * 0.55, y + 130] : [x + l * 0.36, y + h * 0.62];
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        ctx.beginPath();
+        ctx.ellipse(portee[0] + 6, portee[1] + 12, t * 0.4, t * 0.18, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        mine(ctx, portee[0], portee[1], t);
+        fleche(ctx, portee[0] + t * 0.5, portee[1] + (tel ? t * 0.5 : 0), alveoles[2][0] - t * 0.8, alveoles[2][1] - (tel ? t * 0.6 : 0), CYAN);
+        pointeur(ctx, portee[0] + 4, portee[1] + 4, tel);
+      }
+
+      function cartouche(ctx, x, y, t, angle = 0) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle);
+        ctx.fillStyle = '#c9312c';
+        rectArrondi(ctx, -t * 0.5, -t * 0.17, t * 0.78, t * 0.34, 3);
+        ctx.fill();
+        ctx.fillStyle = '#d9a83a';
+        ctx.fillRect(t * 0.22, -t * 0.19, t * 0.28, t * 0.38);
+        ctx.fillStyle = '#a77d22';
+        ctx.fillRect(t * 0.44, -t * 0.2, t * 0.06, t * 0.4);
+        ctx.restore();
+      }
+
+      function munitions(ctx, x, y, l, h, tel) {
+        progression(ctx, x + l / 2, y + 14, 3, 5);
+        const cy = y + h * (tel ? 0.36 : 0.42);
+        const gx = x + 16;
+        const gl = l - 32;
+        ctx.save();
+        // La crosse.
+        ctx.fillStyle = '#6b4423';
+        ctx.beginPath();
+        ctx.moveTo(gx, cy - 8);
+        ctx.lineTo(gx + gl * 0.22, cy - 14);
+        ctx.lineTo(gx + gl * 0.26, cy + 6);
+        ctx.lineTo(gx + gl * 0.06, cy + 30);
+        ctx.lineTo(gx, cy + 24);
+        ctx.closePath();
+        ctx.fill();
+        // La carcasse et le canon.
+        ctx.fillStyle = '#4a4f5c';
+        rectArrondi(ctx, gx + gl * 0.22, cy - 16, gl * 0.2, 30, 4);
+        ctx.fill();
+        ctx.fillStyle = '#2b2f3a';
+        ctx.fillRect(gx + gl * 0.42, cy - 13, gl * 0.58, 11);
+        // Le magasin tubulaire, et sa fenetre de chargement.
+        ctx.fillStyle = '#3a3f4c';
+        ctx.fillRect(gx + gl * 0.4, cy + 1, gl * 0.5, 12);
+        ctx.fillStyle = '#121a33';
+        ctx.fillRect(gx + gl * 0.28, cy + 8, gl * 0.1, 8);
+        ctx.restore();
+        // Les cartouches deja dans le tube, visibles par la fenetre du magasin.
+        for (let i = 0; i < 3; i++) {
+          ctx.save();
+          ctx.globalAlpha = 0.85;
+          cartouche(ctx, gx + gl * (0.5 + i * 0.12), cy + 7, 26);
+          ctx.restore();
+        }
+        // La cartouche qu'on glisse, et les deux qui restent.
+        const ex = gx + gl * 0.33;
+        const ey = cy + (tel ? 62 : 54);
+        cartouche(ctx, ex, ey, 38, -0.5);
+        fleche(ctx, ex + 4, ey - 18, gx + gl * 0.33, cy + 20, CYAN);
+        const restes = tel
+          ? [
+              [x + l * 0.35, y + h * 0.78],
+              [x + l * 0.65, y + h * 0.78],
+            ]
+          : [
+              [x + l * 0.72, y + h * 0.78],
+              [x + l * 0.86, y + h * 0.78],
+            ];
+        for (const [rx, ry] of restes) cartouche(ctx, rx, ry, 46, -Math.PI / 2);
+        pointeur(ctx, ex - 4, ey + 2, tel);
+      }
+
+      function nuage(ctx, x, y, s, couleur) {
+        ctx.fillStyle = couleur;
+        ctx.beginPath();
+        ctx.arc(x - s * 0.35, y + s * 0.12, s * 0.36, 0, Math.PI * 2);
+        ctx.arc(x + s * 0.32, y + s * 0.16, s * 0.32, 0, Math.PI * 2);
+        ctx.arc(x, y - s * 0.22, s * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      function fumee(ctx, x, y, l, h, tel) {
+        progression(ctx, x + l / 2, y + 14, 1, 3);
+        const cl = tel ? 64 : 70;
+        const ch = h - (tel ? 150 : 76);
+        const top = y + 40;
+        const pas = tel ? l / 3 : l * 0.24;
+        const premier = tel ? x + l / 6 : x + l * 0.2;
+        [1, 0.55, 0].forEach((remplie, i) => {
+          const bx = premier + i * pas;
+          ctx.save();
+          ctx.fillStyle = 'rgba(180, 220, 255, 0.1)';
+          ctx.strokeStyle = i === 1 ? CYAN : '#6b7180';
+          ctx.lineWidth = i === 1 ? 3 : 2;
+          if (i === 1) {
+            ctx.shadowColor = CYAN;
+            ctx.shadowBlur = 10;
+          }
+          rectArrondi(ctx, bx - cl / 2, top, cl, ch, 16);
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+          // La fumee dedans, jusqu'a sa hauteur.
+          if (remplie > 0) {
+            ctx.save();
+            rectArrondi(ctx, bx - cl / 2 + 4, top + 4, cl - 8, ch - 8, 13);
+            ctx.clip();
+            const niveau = top + ch - ch * remplie;
+            ctx.fillStyle = 'rgba(205, 210, 220, 0.75)';
+            ctx.fillRect(bx - cl / 2, niveau, cl, ch);
+            for (let k = 0; k < 4; k++) nuage(ctx, bx - 12 + k * 8, niveau + 4 + k * 3, 14, 'rgba(225, 228, 235, 0.9)');
+            ctx.restore();
+          }
+          if (i === 1) {
+            // La bande ou relacher, de 70 a 85 pour cent.
+            const b0 = top + ch - ch * 0.85;
+            const b1 = top + ch - ch * 0.7;
+            ctx.save();
+            ctx.fillStyle = 'rgba(62, 224, 122, 0.25)';
+            ctx.strokeStyle = '#3ee07a';
+            ctx.lineWidth = 2;
+            ctx.fillRect(bx - cl / 2 - 10, b0, cl + 20, b1 - b0);
+            ctx.strokeRect(bx - cl / 2 - 10, b0, cl + 20, b1 - b0);
+            ctx.restore();
+          }
+          if (remplie === 1) texte(ctx, '✓', bx, top + ch + 16, 18, '#3ee07a', { gras: true });
+        });
+        // Le bouton a maintenir.
+        const bx = tel ? x + l / 2 : x + l * 0.84;
+        const by = tel ? y + h - 46 : y + h * 0.55;
+        ctx.save();
+        ctx.fillStyle = 'rgba(46, 230, 255, 0.2)';
+        ctx.strokeStyle = CYAN;
+        ctx.lineWidth = 3;
+        ctx.shadowColor = CYAN;
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        ctx.arc(bx, by, 36, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+        texte(ctx, 'Tenir', bx, by, 14, '#ffffff', { gras: true });
+        pointeur(ctx, bx + (tel ? 0 : 4), by + (tel ? 0 : 4), tel);
+      }
+
+      const DESSINS = { katana, lunettes, sang, couleurs, mines, munitions, fumee };
+
+      /** La fenetre neon (1A), et le geste dedans. */
+      function fenetre(ctx, g, fx, fy, fl, fh, tel) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(10, 16, 34, 0.95)';
+        rectArrondi(ctx, fx, fy, fl, fh, 14);
+        ctx.fill();
+        ctx.shadowColor = CYAN;
+        ctx.shadowBlur = 18;
+        ctx.strokeStyle = CYAN;
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        ctx.restore();
+        texte(ctx, g.titre, fx + 18, fy + 24, tel ? 18 : 19, CYAN, { gras: true, align: 'left', halo: CYAN, flou: 8 });
+        texte(ctx, g.station, fx + 18, fy + 46, 12.5, PALE, { align: 'left' });
+        croix(ctx, fx + fl - 24, fy + 26, '#e8ecf6');
+        const pied = tel ? g.aide : `${g.aide}   ${g.aideClavier}`;
+        texte(ctx, pied, fx + fl / 2, fy + fh - 18, 12, PALE);
+        DESSINS[g.nature](ctx, fx + 8, fy + 56, fl - 16, fh - 56 - 34, tel);
+      }
+
+      function scene(ctx, images, g, largeur, hauteur, echelle) {
+        decor(ctx, images.fond, g.lieu.x, g.lieu.y, echelle, largeur, hauteur);
+        const r = graine(g.lieu.x);
+        const ecran = (x, y) => [largeur / 2 + (x - g.lieu.x) * echelle, hauteur / 2 + (y - g.lieu.y) * echelle];
+        const [nx, ny] = ecran(g.lieu.x, g.lieu.y + 14);
+        if (images.idle) {
+          ctx.drawImage(ninja(images.idle, MOI), nx - 16 * echelle, ny - 16 * echelle, 32 * echelle, 32 * echelle);
+          const [fx, fy] = ecran(g.lieu.x + 120 + r() * 80, g.lieu.y + 110 + r() * 60);
+          ctx.drawImage(ninja(images.idle, FOULE), fx - 16 * echelle, fy - 16 * echelle, 32 * echelle, 32 * echelle);
+        }
+        vision(ctx, nx, ny, 260 * echelle, largeur, hauteur);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+        ctx.fillRect(0, 0, largeur, hauteur);
+      }
+
+      function ordinateur(ctx, images, g) {
+        const W = 760;
+        const H = 420;
+        scene(ctx, images, g, W, H, H / 450);
+        // La barre du haut et le bandeau, assombris derriere la fenetre.
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.fillRect(0, 0, W, 26);
+        texte(ctx, '2:41', W / 2, 13, 14, CYAN, { gras: true });
+        ctx.save();
+        ctx.globalAlpha = 0.5;
+        ctx.fillStyle = 'rgba(8, 12, 24, 0.9)';
+        rectArrondi(ctx, W - 132, 32, 124, 150, 8);
+        ctx.fill();
+        ctx.strokeStyle = CYAN;
+        ctx.stroke();
+        ctx.restore();
+        texte(ctx, 'PROIE', W - 16, 46, 12, CYAN, { gras: true, align: 'right' });
+        fenetre(ctx, g, 160, 50, 440, 330, false);
+      }
+
+      function telephone(ctx, images, g) {
+        const W = 375;
+        const H = 812;
+        scene(ctx, images, g, W, H, W / 450);
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.fillRect(0, 0, W, 40);
+        texte(ctx, '2:41', W / 2, 20, 16, CYAN, { gras: true });
+        // Le bouton d'action, eteint pendant la tache; le joystick est cache.
+        ctx.save();
+        ctx.globalAlpha = 0.35;
+        ctx.fillStyle = '#7d8aa6';
+        ctx.beginPath();
+        ctx.arc(W - 56, H - 70, 34, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        texte(ctx, 'Action', W - 56, H - 70, 12, 'rgba(255,255,255,0.5)', { gras: true });
+        fenetre(ctx, g, 10, 150, W - 20, 500, true);
+      }
+
+      (async () => {
+        const [idle, fond] = await Promise.all([charger('ninja/idle.png'), charger('cartes/map1/background.png')]);
+        const images = { idle, fond };
+        const conteneur = document.getElementById('rangees');
+        GESTES.forEach((g, i) => {
+          const rangee = document.createElement('div');
+          rangee.className = 'rangee';
+          rangee.innerHTML = `
+            <div class="legende"><b>${i + 1}. ${g.titre}</b>${g.station}</div>
+            <div class="case"><canvas width="760" height="420"></canvas></div>
+            <div class="case"><canvas width="375" height="812"></canvas></div>
+            <div class="notes">
+              <p><b>Au pointeur.</b> ${g.pointeur}</p>
+              <p><b>Au clavier.</b> ${g.clavier}</p>
+              <p>${g.durees}</p>
+            </div>`;
+          conteneur.appendChild(rangee);
+          const [bureau, mobile] = rangee.querySelectorAll('canvas');
+          ordinateur(bureau.getContext('2d'), images, g);
+          telephone(mobile.getContext('2d'), images, g);
+        });
+        document.body.dataset.pret = 'oui';
+      })();
+    </script>
+  </body>
+</html>

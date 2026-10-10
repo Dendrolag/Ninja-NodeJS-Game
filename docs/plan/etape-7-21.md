@@ -172,7 +172,18 @@ Micro-décisions au sens du PROTOCOLE, à réviser en exécutant si le dépôt l
 8. **Les écrans de geste sont des composants de la page**, un par nature, avec leur modèle pur et ses tests, comme l'écran de réunion. Ils partagent un cadre commun: le titre de la tâche, sa station, la croix, le geste, et le pied qui dit la touche du clavier.
 9. **La carte plein écran** est un composant de la page, qui lit le même modèle que la mini-carte (`MinimapAmong`), agrandi des noms et de la liste des tâches.
 
-## Rendus à choisir sur planche
+## Rendus choisis par le porteur du projet sur planche
+
+Planche `docs/design/etape-7-21/1-planche.png` (source `planche.html`, à côté), quatre rangées de trois propositions. Réponses du porteur du projet, 10 octobre 2026:
+
+1. **Le cadre d'une tâche: A**, la fenêtre néon au centre de l'écran, le jeu visible tout autour, assombri.
+2. **La carte plein écran: A**, le décor éteint (assombri et sans couleur), nos stations en néon avec le nom de leur tâche, la liste à droite.
+3. **Les tâches visuelles: A**, de vraies étincelles jaunes et orange sur la pierre, une bouffée grise au-dessus de la station de fumée.
+4. **La liste des tâches: A sur téléphone, B sur ordinateur.** Sur téléphone, la liste ne se lit que dans la carte plein écran, et le bandeau ne change pas. Sur ordinateur, elle se lit aussi dans le bandeau, sous la mini-carte.
+
+Seconde planche: les sept gestes dans la fenêtre néon, sur ordinateur et sur téléphone en portrait, `docs/design/etape-7-21/2-gestes.png` (source `gestes.html`).
+
+## La planche proposée
 
 Après confirmation des règles, une planche `docs/design/etape-7-21/1-planche.png` (source `planche.html` à côté), dessinée en code sur les sprites et le décor de Tokyo, comme en 7.20:
 
