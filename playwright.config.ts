@@ -111,6 +111,12 @@ const HUD_REDUIT = '**/hud-reduit.spec.ts';
  */
 const EXPLOITS = '**/exploits.spec.ts';
 
+/**
+ * Among Ninjas (etape 7.20), joue par le seul projet bureau: deux pages d'ordinateur et trois
+ * clients sans page; la table de reunion sur telephone est verifiee par les tests de la page.
+ */
+const AMONG = '**/among.spec.ts';
+
 export default defineConfig({
   testDir: './tests/e2e',
   // Les paquets sont compiles une fois avant les scenarios: le banc de mesure du
@@ -180,6 +186,7 @@ export default defineConfig({
         TITRE,
         EXPLOITS,
         HUD_REDUIT,
+        AMONG,
       ],
     },
     // Le banc de mesure du rendu a son propre projet, et une seule execution:

@@ -281,6 +281,15 @@ export async function regler(page: Page, saisie: SaisieDeReglages): Promise<void
     const selecteur = `[data-chemin="${chemin}"]`;
     const champ = panneau.locator(selecteur);
 
+    // Une liste fermee (etape 7.20) se regle en cochant l'option de cette valeur, par son
+    // libelle, comme un interrupteur.
+    if (typeof valeur === 'string' && (await champ.first().getAttribute('type')) === 'radio') {
+      const option = page.locator(`${selecteur}[value="${valeur}"]`);
+      await panneau.locator('label', { has: option }).click();
+      await expect(panneau.locator(`${selecteur}[value="${valeur}"]`)).toBeChecked();
+      continue;
+    }
+
     if (typeof valeur === 'string') {
       await champ.fill(valeur);
       continue;

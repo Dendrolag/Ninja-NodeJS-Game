@@ -1125,3 +1125,35 @@ Une cinquième carte, de 2390 sur 1738: 0,94 million de pixels carrés tenables,
 - **À son plafond, 0,40 ms par battement**, la carte la moins chère du jeu, parce que la moins peuplée.
 
 Le rendu de la nuit ne coûte rien de plus que celui du jour: l'avant-plan de nuit remplace celui du jour, il ne s'y ajoute pas.
+
+## 29. Mesure de l'étape 7.20: Among Ninjas, une vue par joueur (10 octobre 2026)
+
+Chiffres bruts: `docs/mesures/charge-serveur-7-20-among.json` et `charge-serveur-7-20-classique.json`, écrits par le harnais au second tour. Même machine qu'aux sections 2 et 11 à 28 (AMD Ryzen 7 3800X, Node 24).
+
+### 29.1 L'essentiel
+
+- **Une partie Among Ninjas coûte à peine plus qu'une partie de Horde de même taille**: 0,197 ms par battement avec 40 PNJ et 12 joueurs, contre 0,183, soit 177 parties pleines par cœur au banc contre 191. Avec 80 PNJ, le plafond du mode: 0,279 ms contre 0,246, 125 parties par cœur contre 142.
+- **Le prix est le codage, comme l'annonçait la section 27.4**: douze trames par battement au lieu d'une (0,086 ms contre 0,035 avec 40 PNJ). Le moteur coûte moins qu'en Horde (0,080 ms contre 0,124): ni capture, ni contagion, ni Black Ninja, ni objet. La projection de douze vues bornées à leur disque reste linéaire (0,031 ms contre 0,025).
+- **Chaque joueur reçoit trois fois moins**: 84 à 90 octets par message, contre 209 à 293 en Horde. Sa vue ne contient que son disque, six à sept entités, au lieu de toutes.
+- **Les autres modes n'ont pas changé**: l'empreinte du jeu et du flux des quatre parties de `tests/charge/empreinte.ts` est identique, à l'octet, entre `origin/master` sans l'étape et le code de l'étape.
+
+### 29.2 Méthode
+
+`pnpm charge --banc --mode among --carte map1 --bots-banc 40,80`, puis la même commande avec `--mode classique`, deux tours en alternance, au même commit. Douze joueurs, la capacité du mode, sur Tokyo, la carte que le mode impose. En Among Ninjas, le nombre de bots du banc devient la foule du mode, bornée à 80 (`tests/charge/battement.ts`). Personne ne tue: douze vivants, douze vues et douze trames, le pire cas du mode. Un meurtre fait un fantôme, qui rejoint la vue commune des fantômes. La mesure tient dans le premier tour, après la révélation.
+
+### 29.3 Le banc
+
+Moyenne des deux tours. Durées en millisecondes par battement, tailles en octets par message sur le fil, images comprises.
+
+| PNJ | Mode         | Moteur | Projection | Codage | Total | Total p99 | Octets par message | Entités par vue | Parties par cœur |
+| --: | ------------ | -----: | ---------: | -----: | ----: | --------: | -----------------: | --------------: | ---------------: |
+|  40 | Horde        |  0,124 |      0,025 |  0,035 | 0,183 |     0,498 |                209 |              55 |              191 |
+|  40 | Among Ninjas |  0,080 |      0,031 |  0,086 | 0,197 |     0,416 |                 84 |               6 |              177 |
+|  80 | Horde        |  0,173 |      0,031 |  0,043 | 0,246 |     0,610 |                293 |              96 |              142 |
+|  80 | Among Ninjas |  0,138 |      0,045 |  0,096 | 0,279 |     0,519 |                 90 |               7 |              125 |
+
+### 29.4 Ce qui n'est pas mesuré
+
+- **Une réunion**: personne ne bouge et rien ne se tire, la partie coûte moins qu'en jeu.
+- **Les fantômes**: ils partagent une vue, et chaque mort retire une trame. Le cas mesuré, douze vivants, est le plus cher.
+- **Le serveur complet**: une trame par vue part par un envoi de Socket.IO, comme depuis l'étape 2.9. Rien de nouveau au fil.

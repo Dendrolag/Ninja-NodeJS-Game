@@ -13,7 +13,8 @@
  * n'explique pas. Une ligne par nouveaute, un ton un peu decale, et le plaisir de la
  * decouverte laisse au joueur: les regles exactes sont dans l'aide. Chaque note porte
  * un titre a elle, que la fenetre ecrit derriere son numero. Les textes des notes 1.5
- * a 1.7 sont ceux de ce jour-la. Celui de la note 1.8 est de l'etape 8.11, sur le meme ton.
+ * a 1.7 sont ceux de ce jour-la. Celui de la note 1.8 est de l'etape 8.11, celui de la note 1.9
+ * de l'etape 7.20, sur le meme ton.
  */
 
 import { versionMineure } from '@neon-ninja/shared';
@@ -114,6 +115,28 @@ export const NOTES_DE_VERSION: readonly NoteDeVersion[] = [
       {
         intitule: 'Des cachettes.',
         texte: 'Tables et lits cachent les ninjas qui se glissent dessous.',
+      },
+    ],
+  },
+  {
+    version: '1.9',
+    titre: 'Un traître parmi nous',
+    puces: [
+      {
+        intitule: 'Among Ninjas.',
+        texte: 'Un nouveau mode, à cinq ou plus. Des assassins se cachent parmi vous.',
+      },
+      {
+        intitule: 'Les tâches.',
+        texte: 'Faites-les toutes, et vite. Tout le monde n’a pas que ça à faire.',
+      },
+      {
+        intitule: 'La réunion.',
+        texte: 'Un corps, un coup de gong, et l’on vote. Pas toujours pour le bon.',
+      },
+      {
+        intitule: 'Les fantômes.',
+        texte: 'Mort ne veut pas dire inutile. Ni silencieux.',
       },
     ],
   },

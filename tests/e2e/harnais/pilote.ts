@@ -49,6 +49,14 @@
  * il fonce jusqu'a la distance d'affut, face a elle. Le pouce leve, il glisse encore le
  * temps que la page et le serveur l'apprennent; le pilote mesure cette glissade a chaque
  * arret, et leve le pouce d'autant plus tot.
+ *
+ * LE DEGAGEMENT (etape 7.20). Le clavier ne donne que huit directions: la ligne droite que
+ * le pilote a verifiee devient, une fois arrondie, une direction qui peut buter sur le coin
+ * d'un meuble. Le joueur reste alors colle, et le pilote, qui vise toujours le meme point,
+ * reste colle avec lui: un scenario Among Ninjas l'a vu une minute entiere contre une borne
+ * d'arcade de Tokyo. Un joueur immobile en route depuis une seconde tente donc une direction
+ * tournee de soixante degres, d'un cote puis de l'autre a chaque blocage, le temps de quitter
+ * le coin, puis reprend son chemin.
  */
 
 import type { Position, Vecteur } from '../../../packages/shared/dist/index.js';
@@ -94,6 +102,15 @@ const AFFUT_MS = 4_000;
 
 /** Sur quelle duree le message d'echec retrace les positions, en millisecondes. */
 const FENETRE_DE_PROGRES_MS = 2_000;
+
+/** Au-dela de ce temps immobile en route, le joueur est colle: le pilote le degage. */
+const BLOCAGE_MS = 1_000;
+
+/** Combien de temps dure un degagement, en millisecondes. */
+const DEGAGEMENT_MS = 400;
+
+/** De combien le degagement tourne la direction voulue: soixante degres. */
+const ANGLE_DE_DEGAGEMENT = Math.PI / 3;
 
 /** Les huit mailles voisines, en decalages de colonne et de ligne. */
 const VOISINES: readonly (readonly [number, number])[] = [
@@ -210,6 +227,10 @@ export async function accomplir(mission: Mission): Promise<void> {
   let viseePrecedente: Visee | undefined;
   /** Combien le joueur glisse apres le lever du pouce, mesure au dernier arret, en pixels. */
   let glissadePx = 0;
+  /** Depuis quand le joueur ne bouge plus, en route. */
+  let colleDepuis: number | undefined;
+  /** Combien de degagements ont ete tentes: leur sens alterne. */
+  let degagements = 0;
 
   try {
     while (!mission.accomplie()) {
@@ -263,14 +284,23 @@ export async function accomplir(mission: Mission): Promise<void> {
           break;
         }
 
-        case 'route':
+        case 'route': {
+          const immobile =
+            precedente !== undefined && memePosition(precedente.position, situation.position);
+          colleDepuis = immobile ? (colleDepuis ?? maintenant) : undefined;
+
           if (doitSArreter(mission, situation, precedente, viseePrecedente, visee, glissadePx)) {
             await mission.commande.relacher();
             phase = { nom: 'arret', depuis: maintenant, lacheEn: situation.position };
+          } else if (colleDepuis !== undefined && maintenant - colleDepuis >= BLOCAGE_MS) {
+            await degager(mission.commande, situation, visee, degagements % 2 === 0 ? 1 : -1);
+            degagements += 1;
+            colleDepuis = undefined;
           } else {
             await suivre(mission.commande, situation, visee);
           }
           break;
+        }
       }
 
       releves.push({ instant: maintenant, situation, visee, phase: phase.nom });
@@ -297,6 +327,27 @@ async function suivre(
     visee === undefined ? undefined : directionVers(situation.position, visee.point);
 
   await (direction === undefined ? commande.relacher() : commande.orienter(direction));
+}
+
+/**
+ * Degage un joueur colle: une direction tournee de soixante degres dans ce sens, tenue un
+ * instant. Sans point vise, il n'y a rien a degager.
+ */
+async function degager(
+  commande: Commande,
+  situation: Situation,
+  visee: Visee | undefined,
+  sens: 1 | -1,
+): Promise<void> {
+  const voulue = visee === undefined ? undefined : directionVers(situation.position, visee.point);
+
+  if (voulue === undefined) {
+    return;
+  }
+
+  const angle = Math.atan2(voulue.y, voulue.x) + sens * ANGLE_DE_DEGAGEMENT;
+  await commande.orienter({ x: Math.cos(angle), y: Math.sin(angle) });
+  await attendre(DEGAGEMENT_MS);
 }
 
 /**

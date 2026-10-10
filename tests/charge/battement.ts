@@ -50,6 +50,12 @@
  * des coups au hasard tuent des bots, sans vider la carte pendant la mesure. Le mode
  * accueille huit joueurs: le banc se lance avec --joueurs 8.
  *
+ * En Among Ninjas (etape 7.20), le mode impose Tokyo et regle sa foule par ses propres
+ * reglages: le nombre de bots du banc devient la foule. Personne ne tue: un meurtre ferait un
+ * fantome, qui partage la vue des fantomes. Douze vivants, douze vues, une trame chacun: le
+ * pire cas du mode. La mesure tient dans le premier tour, apres la revelation (5 secondes,
+ * moins que l'echauffement), et avant son terme (3 minutes par defaut).
+ *
  * AUCUN CODE DU JEU N'EST MODIFIE NI IMITE. La room est celle du serveur, lue dans
  * sa compilation, c'est-a-dire le code qui tourne en production. Seul le rappel
  * de battement, que la room offre a qui veut etre prevenu, est fourni ici.
@@ -351,6 +357,8 @@ function ouvrirLaPartie(
       carte: options.carte ?? 'map1',
       nombreBotsInitial: options.bots,
       dureePartieS,
+      // Among Ninjas tire sa foule de ses reglages, qui imposent le nombre de bots.
+      ...(options.mode === 'among' ? { among: { foule: options.bots } } : {}),
       ...(options.mines === true
         ? {
             bonus: { intervalleApparitionS: 2 },

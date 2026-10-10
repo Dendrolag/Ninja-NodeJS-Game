@@ -188,6 +188,17 @@ Conditions de ROADMAP réunies, plus:
 5. **Douze vues à vingt battements par seconde**: le coût est mesuré au lot D, mais la projection d'une vue doit rester linéaire dans le nombre d'entités dès le lot B.
 6. **Les stations doivent être atteignables** et à bonne distance les unes des autres: la commande de mesure de la compétence le vérifie, en normal et en miroir.
 
+## Réconciliation
+
+Écarts entre cette fiche et ce qui a été construit, relevés pendant l'étape (handoff `docs/handoffs/etape-7-20-handoff.md`).
+
+1. **Les phases** sont `revelation`, `jeu`, `discussion`, `vote` et `ejection`: la réunion de la décision 2 a deux phases.
+2. **Le bouton d'action est un état tenu** (`agir`), comme le déplacement; signaler et sonner se font à l'appui, la tâche en tenant.
+3. **Les stations se posent devant leur meuble.** Cinq des places de la décision 8 avaient leur centre dans un mur; elles ont été déplacées de 15 à 43 pixels, et un test de `packages/server/src/terrain.test.ts` vérifie chaque lieu sur le vrai terrain, en normal et en miroir.
+4. **Le scénario de bout en bout** joue deux pages d'ordinateur et trois clients Socket.IO sans page, et non cinq pages: cinq pages qui dessinent la carte à la fois priveraient de processeur la machine de l'intégration continue. Il va jusqu'à la victoire des proies. Le téléphone n'y est pas.
+5. **La version est 1.9.0**, et non 1.8.0: Prison Island (étape 8.11) a pris la 1.8.
+6. **Rendus**: « Assassin » dans la page, aucun pseudo sur la carte sauf entre assassins (décisions du porteur du projet, section « Rendus choisis » et handoff).
+
 ## Rituel de fin de session
 
 Écrire `docs/handoffs/etape-7-20-handoff.md`: les décisions confirmées en début d'étape, les écarts à cette fiche (section « Réconciliation » à ajouter ici), les chiffres du banc, l'état de la CI. Consigner les décisions au journal de `docs/design/README.md`, mettre à jour le ROADMAP et l'étude. Prochaine action exacte: l'étape 7.21, dont la fiche se rédige au début de l'étape selon le cas de repli du PROTOCOLE. Commiter.

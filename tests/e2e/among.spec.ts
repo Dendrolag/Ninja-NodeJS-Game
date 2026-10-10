@@ -1,0 +1,431 @@
+import type { Page } from '@playwright/test';
+import { devices, expect, test } from '@playwright/test';
+import type { Socket } from 'socket.io-client';
+import { io } from 'socket.io-client';
+
+import type {
+  EvenementsClientVersServeur,
+  EvenementsServeurVersClient,
+  Position,
+  Vecteur,
+} from '../../packages/shared/dist/index.js';
+import type { GameRoom } from '../../packages/server/dist/index.js';
+import type { EtatAmong } from '../../packages/sim/dist/index.js';
+import { positionTenable } from '../../packages/sim/dist/index.js';
+import { commandeAuClavier } from './harnais/commandes.js';
+import {
+  attendreLaFin,
+  attendreLaPartie,
+  entrer,
+  joueurNomme,
+  lancer,
+  regler,
+  releverLesErreurs,
+} from './harnais/parcours.js';
+import type { Commande } from './harnais/pilote.js';
+import { accomplir } from './harnais/pilote.js';
+import type { ServeurDeJeu } from './harnais/serveur-de-jeu.js';
+import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
+
+/**
+ * Le mode Among Ninjas de l'etape 7.20, joue de bout en bout.
+ *
+ * Alice cree la partie sur un ordinateur, Bob la rejoint sur un autre. Il faut cinq joueurs:
+ * Carole, David et Eve entrent par le reseau, comme de vrais clients Socket.IO, sans page.
+ * Cinq pages qui dessinent la carte a la fois, sur les deux processeurs de l'integration
+ * continue, s'y priveraient de processeur au point de perdre leur lien (configuration
+ * Playwright); trois clients sans page ne coutent presque rien. Ils ne trichent pas plus que
+ * le pilote: ils parlent au serveur par le meme reseau et les memes messages que la page, et
+ * le scenario n'ecrit jamais dans le serveur.
+ *
+ * CE QUI EST VERIFIE, DANS L'ORDRE DU PARCOURS.
+ *
+ *   1. A quatre, le salon dit qu'il faut cinq joueurs; au cinquieme, « Lancer » apparait.
+ *   2. En jeu, chaque page lit son role, celui que le serveur a tire.
+ *   3. Une proie, dans sa page, va a une station de sa liste et tient E: la tache est faite,
+ *      et la barre des taches le dit.
+ *   4. L'assassin, page ou client, va au contact d'une proie et la tue.
+ *   5. La proie de la page trouve le cadavre et le signale par E: la reunion s'ouvre dans les
+ *      deux pages, titree par ce signalement.
+ *   6. Le vote: les deux pages votent contre l'assassin en touchant sa place, les clients
+ *      aussi. L'ejection le dit, un trait par vote, sans dire son role.
+ *   7. L'assassin ejecte, les proies l'emportent: l'ecran de fin le dit.
+ *
+ * QUI EST ASSASSIN se tire au lancement, a la graine: le scenario lit le role de chacun dans
+ * le serveur et distribue les gestes en consequence. Un seul assassin a cinq.
+ *
+ * UN SEUL CADRAGE, le bureau: la table de reunion sur telephone est verifiee par les tests de
+ * la page; ce scenario verifie la partie.
+ */
+
+/** Une partie qui ne s'arrete pas d'elle-meme pendant le scenario, et des reunions courtes. */
+const PARTIE_AMONG = {
+  'among.dureeDuTourS': '300',
+  'among.discussionS': '15',
+  'among.voteS': '30',
+  'among.tachesParProie': '3',
+  'among.foule': '0',
+} as const;
+
+/** Les joueurs sans page, entres par le reseau. */
+const PSEUDOS_DU_RESEAU = ['Carole', 'David', 'Eve'] as const;
+
+/** Un client du jeu sans page: les contrats vus a l'envers de ceux du serveur. */
+type ClientDuReseau = Socket<EvenementsServeurVersClient, EvenementsClientVersServeur>;
+
+/**
+ * Ou s'arreter, en pixels: le pilote leve le pouce a la distance visee, et le joueur, qui glisse
+ * encore le temps que la page et le serveur l'apprennent, doit etre arrete en deca de la
+ * limite. Une station porte a 50 pixels, le signalement a 100.
+ */
+const STATION = { viseePx: 20, limitePx: 42 } as const;
+const CADAVRE = { viseePx: 50, limitePx: 90 } as const;
+
+/**
+ * La distance d'affut de l'assassin, en pixels: il s'arrete face a sa victime, sans la
+ * traverser, et frappe. Le meurtre porte a 32 pixels de centre a centre.
+ */
+const AFFUT_DU_MEURTRE_PX = 16;
+
+/** Les places autour d'un but que le pilote vise, a ce rayon, en pixels. */
+const RAYON_DES_PLACES_PX = 12;
+
+/** Le temps laisse a chaque geste, en millisecondes: les pages dessinent lentement en CI. */
+const DELAI_DU_GESTE_MS = 60_000;
+
+let jeu: ServeurDeJeu;
+const clients: ClientDuReseau[] = [];
+
+test.beforeEach(async () => {
+  jeu = await demarrerLeJeu();
+});
+
+test.afterEach(async () => {
+  for (const client of clients.splice(0)) {
+    client.disconnect();
+  }
+
+  await jeu.arreter();
+});
+
+/** L'etat du mode, lu dans le serveur. */
+function among(partie: GameRoom): EtatAmong {
+  const etat = partie.etat.among;
+
+  if (etat === undefined) {
+    throw new Error("La partie n'est pas une partie Among Ninjas.");
+  }
+
+  return etat;
+}
+
+/** La distance entre deux points. */
+function distance(a: Position, b: Position): number {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+/** Fait entrer un client sans page dans la partie publique, par son identifiant. */
+async function entrerParLeReseau(pseudo: string, idRoom: string): Promise<ClientDuReseau> {
+  const client: ClientDuReseau = io(jeu.url, { transports: ['websocket'], forceNew: true });
+  clients.push(client);
+
+  await new Promise<void>((resoudre, rejeter) => {
+    client.on('connect', () => {
+      client.emit('rejoindre', { pseudo, idRoom }, (reponse) => {
+        if (reponse.valide) {
+          resoudre();
+        } else {
+          rejeter(new Error(`${pseudo} refuse: ${JSON.stringify(reponse.erreurs)}`));
+        }
+      });
+    });
+  });
+
+  return client;
+}
+
+/** La commande d'un client sans page: la meme intention que celle qu'envoie la page. */
+function commandeDuReseau(client: ClientDuReseau): Commande {
+  return {
+    orienter: async (direction: Vecteur) => {
+      client.emit('deplacer', { deplacement: direction, enMouvement: true });
+      await Promise.resolve();
+    },
+    relacher: async () => {
+      client.emit('deplacer', { deplacement: { x: 0, y: 0 }, enMouvement: false });
+      await Promise.resolve();
+    },
+  };
+}
+
+/**
+ * Les places ou un ninja tient, autour d'un but, tous les quatre pixels. Le pilote cherche son
+ * chemin sur des mailles de huit pixels: un but colle a un mur, comme une station devant un
+ * comptoir, peut tomber dans une maille impraticable, ou il ne trouverait aucun chemin.
+ */
+function placesAutour(partie: GameRoom, but: Position): readonly Position[] {
+  const places: Position[] = [];
+
+  for (let dy = -RAYON_DES_PLACES_PX; dy <= RAYON_DES_PLACES_PX; dy += 4) {
+    for (let dx = -RAYON_DES_PLACES_PX; dx <= RAYON_DES_PLACES_PX; dx += 4) {
+      const place = { x: but.x + dx, y: but.y + dy };
+
+      if (
+        Math.hypot(dx, dy) <= RAYON_DES_PLACES_PX &&
+        positionTenable(partie.etat.terrain, place)
+      ) {
+        places.push(place);
+      }
+    }
+  }
+
+  return places.length === 0 ? [but] : places;
+}
+
+/**
+ * Pilote ce joueur jusqu'a ce but, et l'y arrete a sa portee. C'est l'affut du pilote, sans
+ * rien a guetter: le joueur s'arrete face au but, a la distance visee, en levant le pouce
+ * d'autant plus tot qu'il a glisse a l'arret precedent, puis repart s'il s'est arrete trop
+ * loin. Viser simplement le but le faisait passer au-dela quand la machine est chargee.
+ */
+async function allerEtSArreter(
+  partie: GameRoom,
+  pseudo: string,
+  commande: Commande,
+  but: () => Position,
+  portee: { readonly viseePx: number; readonly limitePx: number },
+): Promise<void> {
+  const ici = () => joueurNomme(partie, pseudo).position;
+  let avant = ici();
+
+  await accomplir({
+    nom: `${pseudo} va a ${JSON.stringify(but())}`,
+    commande,
+    delaiMs: DELAI_DU_GESTE_MS,
+    situation: () => ({
+      terrain: partie.etat.terrain,
+      position: ici(),
+      cibles: placesAutour(partie, but()),
+    }),
+    // Arrete, et a portee: le pilote relit la situation tous les dixiemes de seconde.
+    accomplie: () => {
+      const maintenant = ici();
+      const arrete = distance(maintenant, avant) < 0.5;
+      avant = maintenant;
+
+      return arrete && distance(maintenant, but()) <= portee.limitePx;
+    },
+    affut: { distancePx: portee.viseePx, guetter: async () => Promise.resolve() },
+  });
+}
+
+/** Le role que la page affiche dans son HUD. */
+async function roleAffiche(page: Page): Promise<string> {
+  const role = page.locator('.hud-among-role');
+  await expect(role).toHaveText(/^(Assassin|Proie)$/iu);
+
+  return ((await role.textContent()) ?? '').toLowerCase();
+}
+
+/**
+ * Attend qu'une condition lue dans le serveur soit vraie. En cas d'echec, ce qui est attendu
+ * peut se decrire a cet instant, avec ce que le serveur sait alors.
+ */
+async function attendreQue(
+  condition: () => boolean,
+  quoi: string | (() => string),
+  delaiMs = 15_000,
+): Promise<void> {
+  try {
+    await expect.poll(condition, { timeout: delaiMs }).toBe(true);
+  } catch (erreur) {
+    throw new Error(typeof quoi === 'string' ? quoi : quoi(), { cause: erreur });
+  }
+}
+
+test('jouer une partie Among Ninjas a cinq, du salon a la victoire des proies', async ({
+  browser,
+}) => {
+  // Deux chargements de carte, une tache, deux traversees de Tokyo, une reunion.
+  test.setTimeout(300_000);
+
+  const ordinateurA = await browser.newContext(devices['Desktop Chrome']);
+  const ordinateurB = await browser.newContext(devices['Desktop Chrome']);
+  const alice = await ordinateurA.newPage();
+  const bob = await ordinateurB.newPage();
+  const erreursDAlice = releverLesErreurs(alice);
+  const erreursDeBob = releverLesErreurs(bob);
+  const pages: Readonly<Record<string, Page>> = { Alice: alice, Bob: bob };
+  // Les demandes de capture que chaque page envoie vraiment: un meurtre qui echoue le dit.
+  const capturesEnvoyees = new Map<Page, number>();
+  for (const page of [alice, bob]) {
+    page.on('websocket', (ws) => {
+      ws.on('framesent', (trame) => {
+        if (typeof trame.payload === 'string' && trame.payload.includes('"capturer"')) {
+          capturesEnvoyees.set(page, (capturesEnvoyees.get(page) ?? 0) + 1);
+        }
+      });
+    });
+  }
+
+  try {
+    // -- Le salon: Alice cree, Bob et trois clients arrivent ----------------------
+    await alice.goto(jeu.url);
+    await alice.getByPlaceholder('Votre pseudo').fill('Alice');
+    await alice.getByRole('button', { name: 'Créer une partie' }).click();
+    await alice.locator('label.tuile-choix[data-mode="among"]').click();
+    await expect(alice.locator('.creation-recapitulatif h2')).toHaveText(/^Among Ninjas · /u);
+    await alice.getByRole('button', { name: 'Créer le salon' }).click();
+    await expect(alice.getByRole('heading', { name: 'Salon de Alice' })).toBeVisible();
+
+    await entrer(bob, jeu.url, 'Bob');
+    const partie = jeu.partie();
+    const carole = await entrerParLeReseau('Carole', partie.id);
+    const david = await entrerParLeReseau('David', partie.id);
+    await expect(alice.getByRole('button', { name: 'Lancer la partie' })).toBeHidden();
+    await expect(alice.locator('.salon-consigne')).toHaveText(
+      'Il faut au moins 5 joueurs pour lancer une partie Among Ninjas.',
+    );
+
+    const eve = await entrerParLeReseau('Eve', partie.id);
+    const reseau: Readonly<Record<string, ClientDuReseau>> = {
+      Carole: carole,
+      David: david,
+      Eve: eve,
+    };
+    await expect(alice.getByRole('button', { name: 'Lancer la partie' })).toBeVisible();
+
+    // -- Le lancement, et le role de chacun ---------------------------------------
+    await regler(alice, PARTIE_AMONG);
+    await lancer(alice);
+    await Promise.all([attendreLaPartie(alice), attendreLaPartie(bob)]);
+    expect(partie.mode).toBe('among');
+
+    const roleDe = (pseudo: string) => among(partie).joueurs[joueurNomme(partie, pseudo).id]?.role;
+    const tous = ['Alice', 'Bob', ...PSEUDOS_DU_RESEAU];
+    const assassins = tous.filter((pseudo) => roleDe(pseudo) === 'tueur');
+    expect(assassins).toHaveLength(1);
+    const assassin = assassins[0] as string;
+
+    for (const [pseudo, page] of Object.entries(pages)) {
+      expect(await roleAffiche(page)).toBe(roleDe(pseudo) === 'tueur' ? 'assassin' : 'proie');
+    }
+
+    // La proie d'une page fera la tache et le signalement; la victime est un client.
+    const temoin = roleDe('Alice') === 'proie' ? 'Alice' : 'Bob';
+    const pageDuTemoin = pages[temoin] as Page;
+    const victime = PSEUDOS_DU_RESEAU.find((pseudo) => roleDe(pseudo) === 'proie') as string;
+    await attendreQue(() => among(partie).phase === 'jeu', 'la revelation se termine');
+
+    // -- Une tache, faite dans la page ----------------------------------------------
+    const idTemoin = joueurNomme(partie, temoin).id;
+    const premiere = () => among(partie).joueurs[idTemoin]?.taches[0];
+    const station = among(partie).stations[premiere()?.station ?? -1] as Position;
+    await allerEtSArreter(partie, temoin, commandeAuClavier(pageDuTemoin), () => station, STATION);
+    await pageDuTemoin.keyboard.down('e');
+    await attendreQue(
+      () => premiere()?.faite === true,
+      () =>
+        `${temoin} fait sa tache: a ${JSON.stringify(joueurNomme(partie, temoin).position)}, station ${JSON.stringify(station)}, ${JSON.stringify(among(partie).joueurs[idTemoin])}`,
+    );
+    await pageDuTemoin.keyboard.up('e');
+    await expect(pageDuTemoin.locator('.hud-among-mes-taches')).toContainText('1 sur 3');
+
+    // -- Le meurtre ---------------------------------------------------------------------
+    const idVictime = joueurNomme(partie, victime).id;
+    const commandeDeLAssassin =
+      assassin in pages
+        ? commandeAuClavier(pages[assassin] as Page)
+        : commandeDuReseau(reseau[assassin] as ClientDuReseau);
+    const frapper = async (): Promise<void> => {
+      if (assassin in pages) {
+        await (pages[assassin] as Page).keyboard.press(' ');
+      } else {
+        (reseau[assassin] as ClientDuReseau).emit('capturer');
+      }
+    };
+    // L'affut du pilote: l'assassin s'arrete face a sa victime et frappe a chaque instant. Le
+    // katana se recharge dix secondes au debut du tour: il frappe jusqu'a ce qu'il porte.
+    const idAssassin = joueurNomme(partie, assassin).id;
+    const pageDeLAssassin = pages[assassin];
+    const etatDeLAssassin = async (): Promise<string> =>
+      `${JSON.stringify(among(partie).joueurs[idAssassin])}, captures envoyees ${String(pageDeLAssassin === undefined ? '-' : (capturesEnvoyees.get(pageDeLAssassin) ?? 0))}, focus ${
+        pageDeLAssassin === undefined
+          ? 'sans page'
+          : await pageDeLAssassin.evaluate(
+              () =>
+                `${document.activeElement?.tagName ?? ''}.${document.activeElement?.className ?? ''}`,
+            )
+      }`;
+    await accomplir({
+      nom: `${assassin} tue ${victime}`,
+      commande: commandeDeLAssassin,
+      delaiMs: DELAI_DU_GESTE_MS,
+      situation: () => ({
+        terrain: partie.etat.terrain,
+        position: joueurNomme(partie, assassin).position,
+        cibles: [joueurNomme(partie, victime).position],
+      }),
+      accomplie: () => among(partie).joueurs[idVictime]?.fantome === true,
+      affut: { distancePx: AFFUT_DU_MEURTRE_PX, guetter: frapper },
+    }).catch(async (erreur: unknown) => {
+      throw new Error(`Le meurtre echoue. Assassin: ${await etatDeLAssassin()}`, { cause: erreur });
+    });
+    // Un cadavre est range sous son propre identifiant, et nomme sa victime.
+    const cadavre = () =>
+      Object.values(among(partie).cadavres).find((corps) => corps.victime === idVictime)
+        ?.position as Position;
+
+    // -- Le signalement, et la reunion dans les deux pages -----------------------------
+    await allerEtSArreter(partie, temoin, commandeAuClavier(pageDuTemoin), cadavre, CADAVRE);
+    await pageDuTemoin.keyboard.press('e');
+    await attendreQue(() => among(partie).phase === 'discussion', `${temoin} signale le corps`);
+
+    for (const page of [alice, bob]) {
+      await expect(page.locator('.among-reunion')).toBeVisible();
+      await expect(page.locator('.among-reunion-titre')).toHaveText(
+        `${temoin} a trouvé le corps de ${victime}`,
+      );
+    }
+
+    // -- Le vote contre l'assassin -----------------------------------------------------
+    await attendreQue(() => among(partie).phase === 'vote', 'le vote s ouvre', 30_000);
+
+    for (const [pseudo, page] of Object.entries(pages)) {
+      if (pseudo === assassin) {
+        await page.getByRole('button', { name: 'Passer' }).click();
+      } else {
+        await page.locator(`.among-place[aria-label="${assassin}"]`).click();
+      }
+    }
+
+    for (const [pseudo, client] of Object.entries(reseau)) {
+      if (pseudo !== victime) {
+        client.emit('voter', { cible: pseudo === assassin ? null : idAssassin });
+      }
+    }
+
+    // -- L'ejection, puis la fin ---------------------------------------------------------
+    for (const page of [alice, bob]) {
+      await expect(page.locator('.among-egout-texte')).toHaveText(
+        new RegExp(`^${assassin} \\(.+\\) a été éjecté\\.$`, 'u'),
+      );
+      // Quatre vivants ont vote: quatre traits, dont celui de l'assassin vers « Passer ».
+      const votes = JSON.stringify(among(partie).ejection?.votes);
+      await expect(page.locator('.among-trait'), `votes retenus: ${votes}`).toHaveCount(4);
+      await expect(page.locator('.among-reunion')).not.toContainText(/assassin/iu);
+    }
+
+    await Promise.all([attendreLaFin(alice), attendreLaFin(bob)]);
+
+    for (const page of [alice, bob]) {
+      await expect(page.locator('.fin-titre')).toContainText('Les proies l’emportent');
+    }
+
+    expect(erreursDAlice).toEqual([]);
+    expect(erreursDeBob).toEqual([]);
+  } finally {
+    await ordinateurA.close();
+    await ordinateurB.close();
+  }
+});

@@ -361,7 +361,7 @@ Les numéros sont provisoires et suivent la carte thématique du ROADMAP. Les nu
 | Ordre | Étape (provisoire)                    | Contenu                                                                                                                                    | Dépend de |
 | ----: | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------- |
 |     1 | 2.9 Le flux par destinataire | Faite le 6 octobre 2026. Une vue par clé, une trame et une référence de delta par vue, mesure au banc. Corrige la Chasse. | Rien |
-|     2 | 7.20 Le socle du mode | Planifiée le 6 octobre 2026, fiche `docs/plan/etape-7-20.md`. Rôles, phases, tour à durée maximale, meurtre, cadavre, signalement, gong, réunion au chat, vote, éjection, victoire, fantômes, vision par rayon, foule neutre. Les stations de Tokyo, les listes par proie et leur validation au serveur, avec une seule tâche provisoire (« maintenir 5 s ») | 2.9 |
+|     2 | 7.20 Le socle du mode | Faite le 10 octobre 2026, fiche `docs/plan/etape-7-20.md`. Rôles, phases, tour à durée maximale, meurtre, cadavre, signalement, gong, réunion au chat, vote, éjection, victoire, fantômes, vision par rayon, foule neutre. Les stations de Tokyo, les listes par proie et leur validation au serveur, avec une seule tâche provisoire (« maintenir 5 s ») | 2.9 |
 |     3 | 7.21 Les tâches courtes et la carte | Les sept tâches courtes à la place de la tâche provisoire, la carte plein écran, les tâches visuelles et la barre des tâches en réglage | 7.20 |
 |     4 | 7.22 Les sabotages                    | Les trois nuisances, la zone d'invisibilité des tueurs, la panne de néons, la surchauffe, le sabotage depuis la carte                       | 7.21      |
 |     5 | 7.23 Les pas entendus                 | Les pas des vivants hors de vue, en direction arrondie, les PNJ et les fantômes muets                                                      | 2.9       |
@@ -399,3 +399,16 @@ L'étape 7.20 est jouable seule, entre amis, sur Tokyo: c'est là qu'on saura si
 - **Le tueur maudit le sait**: il voit le filtre, et une annonce lui dit qu'un fantôme l'a maudit. Les vivants ne reçoivent aucune annonce.
 - **Sur téléphone**, le fantôme n'a pas de bouton de meurtre: son second bouton devient « Maudire ». Toujours deux boutons.
 - **L'aide qui ne vise personne reste**: un fantôme peut aussi réparer la panne de néons.
+
+## 21. Le socle construit, 10 octobre 2026
+
+L'étape 7.20 est faite: fiche `docs/plan/etape-7-20.md`, handoff `docs/handoffs/etape-7-20-handoff.md`. Ce qui s'écarte de cette étude, ou la précise:
+
+- **Le mot du jeu est « Assassin »**, pas « Tueur », choisi sur planche par le porteur du projet; le code garde `tueur`.
+- **Aucun pseudo sur la carte**, sauf entre assassins (décision du 9 octobre): on désigne quelqu'un par sa couleur, qui a un nom (douze couleurs nommées).
+- **Une éjection ne dit jamais le rôle**, et la partie n'a pas de terme: elle ne finit que par la victoire d'un camp.
+- **Les stations se posent devant leur meuble, pas dessus.** Les places de la section 10, lues sur le décor, mettaient cinq stations sur treize au centre d'un comptoir, d'une table ou d'une camionnette, c'est-à-dire dans un mur. Un test vérifie désormais, sur le vrai terrain et en miroir, que le centre de chaque lieu est tenable et que la majeure partie de son disque est praticable.
+- **Le coût d'une vue par vivant** est mesuré: section 29 de `docs/mesures/charge-serveur.md`.
+
+La suite reste celle de la section 18: `7.21`, les tâches courtes et la carte.
+
