@@ -402,6 +402,12 @@ export class GameRoom {
    */
   private readonly votesDemandes = new Map<IdentifiantEntite, IdentifiantEntite | null>();
 
+  /**
+   * Les joueurs dont la page a dit avoir charge la carte depuis le battement precedent (etape
+   * 7.20). Des signaux ponctuels, effaces a chaque battement: le moteur les retient.
+   */
+  private readonly chargementsSignales = new Set<IdentifiantEntite>();
+
   /** Ce que chaque joueur a fait de notable depuis le lancement (etape 3.8). */
   private releve: ReleveDesExploits = RELEVE_VIDE;
 
@@ -612,6 +618,7 @@ export class GameRoom {
     this.actionsTenues.delete(id);
     this.appuisRecents.delete(id);
     this.votesDemandes.delete(id);
+    this.chargementsSignales.delete(id);
 
     if (this.hoteCourant === id) {
       this.hoteCourant = this.successeur();
@@ -648,6 +655,7 @@ export class GameRoom {
     this.actionsTenues.delete(id);
     this.appuisRecents.delete(id);
     this.votesDemandes.delete(id);
+    this.chargementsSignales.delete(id);
 
     if (this.hoteCourant === id) {
       this.hoteCourant = this.presentLePlusAncien() ?? id;
@@ -952,6 +960,19 @@ export class GameRoom {
   }
 
   /**
+   * Retient que la page de ce joueur a charge la carte (etape 7.20), pour le prochain battement.
+   * Ignore pour un joueur absent ou hors d'une partie en cours; hors du chargement d'Among
+   * Ninjas, le moteur l'ignore.
+   */
+  signalerLeChargement(id: IdentifiantEntite): void {
+    if (this.statutCourant !== 'enCours' || this.partie.joueurs[id] === undefined) {
+      return;
+    }
+
+    this.chargementsSignales.add(id);
+  }
+
+  /**
    * Qui lit un message de chat de ce joueur, dans une partie Among Ninjas lancee (etape 7.20).
    *
    *   - Un fantome parle aux fantomes, a tout moment: le canal des fantomes.
@@ -1000,7 +1021,8 @@ export class GameRoom {
       this.pochesDemandees.size === 0 &&
       this.actionsTenues.size === 0 &&
       this.appuisRecents.size === 0 &&
-      this.votesDemandes.size === 0
+      this.votesDemandes.size === 0 &&
+      this.chargementsSignales.size === 0
     ) {
       return this.intentions;
     }
@@ -1023,6 +1045,10 @@ export class GameRoom {
 
     for (const [id, cible] of this.votesDemandes) {
       entrees[id] = { ...(entrees[id] ?? immobile), voter: cible };
+    }
+
+    for (const id of this.chargementsSignales) {
+      entrees[id] = { ...(entrees[id] ?? immobile), carteChargee: true };
     }
 
     return entrees;
@@ -1052,6 +1078,7 @@ export class GameRoom {
     this.pochesDemandees.clear();
     this.votesDemandes.clear();
     this.appuisRecents.clear();
+    this.chargementsSignales.clear();
     this.releve = releverLeBattement(this.releve, this.partie, this.cleDuJoueur);
 
     // Prevenir AVANT de constater la fin: le dernier battement d'une partie est

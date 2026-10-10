@@ -413,9 +413,18 @@ export function monterEcransAmong(doc: Document, client: Client): EcransAmong {
     afficher(etat) {
       const ecran = ecranAmong(etat);
 
-      montrer(revelation, ecran.ecran === 'revelation');
+      montrer(revelation, ecran.ecran === 'revelation' || ecran.ecran === 'chargement');
       montrer(reunion, ecran.ecran === 'reunion' || ecran.ecran === 'ejection');
       montrer(chatFantomes.racine, chatDesFantomes(etat));
+
+      if (ecran.ecran === 'chargement') {
+        // Le meme ecran que la revelation, sans les joueurs: le role n'est pas encore dit.
+        ecrireTexte(titreRevelation, ecran.titre);
+        ecrireTexte(consigne, ecran.consigne);
+        revelation.classList.remove('assassin');
+        rangee.replaceChildren();
+        rangeeAffichee = '';
+      }
 
       if (ecran.ecran === 'revelation') {
         afficherLaRangee(ecran);

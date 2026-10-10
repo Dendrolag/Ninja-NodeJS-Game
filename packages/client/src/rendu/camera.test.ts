@@ -12,6 +12,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   APPARENCE_KATANA,
+  COTE_DE_VUE_AMONG_PX,
+  HAUTEUR_DE_VUE_PX,
   HAUTEUR_DE_VUE_TACTIQUE_PX,
   MARGE_HORS_CHAMP_PX,
   TAILLE_SPRITE,
@@ -52,6 +54,32 @@ describe('echellePour', () => {
 
     expect(echellePour(telephone, CARTE, true, HAUTEUR_DE_VUE_TACTIQUE_PX)).toBe(
       echellePour(telephone, CARTE, true),
+    );
+  });
+
+  it('montre en Among Ninjas la meme longueur de carte sur le plus petit cote, partout', () => {
+    const ordinateur = { largeur: 1920, hauteur: 1080 };
+    const paysage = { largeur: 915, hauteur: 412 };
+    const portrait = { largeur: 412, hauteur: 915 };
+
+    // Le plus petit cote de chaque ecran montre 450 pixels de carte, telephone compris.
+    for (const [ecran, mobile] of [
+      [ordinateur, false],
+      [paysage, true],
+      [portrait, true],
+    ] as const) {
+      const echelle = echellePour(ecran, CARTE, mobile, HAUTEUR_DE_VUE_PX, COTE_DE_VUE_AMONG_PX);
+
+      expect(Math.min(ecran.largeur, ecran.hauteur) / echelle).toBeCloseTo(450);
+    }
+
+    // Plus pres que le Tactique sur ordinateur.
+    expect(
+      echellePour(ordinateur, CARTE, false, HAUTEUR_DE_VUE_PX, COTE_DE_VUE_AMONG_PX),
+    ).toBeGreaterThan(echellePour(ordinateur, CARTE, false, HAUTEUR_DE_VUE_TACTIQUE_PX));
+    // Le meme grossissement apres une rotation du telephone.
+    expect(echellePour(paysage, CARTE, true, HAUTEUR_DE_VUE_PX, COTE_DE_VUE_AMONG_PX)).toBe(
+      echellePour(portrait, CARTE, true, HAUTEUR_DE_VUE_PX, COTE_DE_VUE_AMONG_PX),
     );
   });
 

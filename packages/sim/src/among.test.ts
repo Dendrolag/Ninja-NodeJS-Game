@@ -55,14 +55,26 @@ function salon(joueurs: number, reglages: ReglagesPartiels = {}, graine = 7): Et
   return etat;
 }
 
-/** Une partie lancee, en revelation. */
+/** Une partie lancee, qui attend que chacun ait charge la carte. */
 function lancee(joueurs = 5, reglages: ReglagesPartiels = {}, graine = 7): EtatPartie {
   return lancerLaPartie(salon(joueurs, reglages, graine));
 }
 
+/** Ces joueurs disent avoir charge la carte. */
+function charges(ids: readonly IdentifiantEntite[]): Entrees {
+  return Object.fromEntries(ids.map((id) => [id, { ...IMMOBILE, carteChargee: true as const }]));
+}
+
+/** Une partie lancee, chacun ayant charge la carte: la revelation commence. */
+function revelee(joueurs = 5, reglages: ReglagesPartiels = {}, graine = 7): EtatPartie {
+  const etat = lancee(joueurs, reglages, graine);
+
+  return tick(etat, charges(Object.keys(etat.joueurs)), 50);
+}
+
 /** Une partie lancee, la revelation passee: le premier tour commence. */
 function enJeu(joueurs = 5, reglages: ReglagesPartiels = {}, graine = 7): EtatPartie {
-  return tick(lancee(joueurs, reglages, graine), {}, AMONG.DUREE_REVELATION_MS);
+  return tick(revelee(joueurs, reglages, graine), {}, AMONG.DUREE_REVELATION_MS);
 }
 
 /** Les tables du mode, dont on sait qu'elles sont posees. */
@@ -219,12 +231,13 @@ describe('le lancement', () => {
     expect(avancementDesTaches(amongDe(etat))).toEqual({ faites: 0, total: 25 });
   });
 
-  it('place tout le monde en cercle autour du point de reunion, et commence par la revelation', () => {
+  it('place tout le monde en cercle autour du point de reunion, et attend le chargement', () => {
     const etat = lancee(6);
     const among = amongDe(etat);
 
-    expect(among.phase).toBe('revelation');
-    expect(among.phaseRestanteMs).toBe(AMONG.DUREE_REVELATION_MS);
+    expect(among.phase).toBe('chargement');
+    expect(among.phaseRestanteMs).toBe(AMONG.ATTENTE_DU_CHARGEMENT_MAXIMUM_MS);
+    expect(among.charges).toEqual([]);
     for (const joueur of Object.values(etat.joueurs)) {
       expect(Math.hypot(joueur.position.x - GONG.x, joueur.position.y - GONG.y)).toBeCloseTo(
         AMONG.RAYON_DU_CERCLE_DE_REUNION_PX,
@@ -258,9 +271,48 @@ describe('le lancement', () => {
   });
 });
 
+describe('le chargement', () => {
+  it('fige le monde et attend que chacun ait charge la carte, puis revele les roles', () => {
+    const etat = lancee();
+    const avant = joueurDe(etat, 'j1').position;
+    const marche = { j1: { deplacement: { x: 1, y: 0 }, enMouvement: true } };
+
+    // Trois sur cinq: on attend encore, le monde fige.
+    const partiel = tick(etat, { ...charges(['j2', 'j3']), ...marche }, 1000);
+    expect(amongDe(partiel).phase).toBe('chargement');
+    expect(amongDe(partiel).charges).toEqual(['j2', 'j3']);
+    expect(joueurDe(partiel, 'j1').position).toEqual(avant);
+    const encore = tick(partiel, charges(['j1']), 1000);
+    expect(amongDe(encore).charges).toEqual(['j1', 'j2', 'j3']);
+
+    // Les deux derniers: la revelation commence, entiere.
+    const revelation = tick(encore, charges(['j4', 'j5']), 50);
+    expect(amongDe(revelation).phase).toBe('revelation');
+    expect(amongDe(revelation).phaseRestanteMs).toBe(AMONG.DUREE_REVELATION_MS);
+    expect(amongDe(revelation).charges).toBeUndefined();
+  });
+
+  it('ne retient pas la partie au-dela de l attente maximale, ni pour un joueur parti', () => {
+    const etat = tick(lancee(), charges(['j1', 'j2', 'j3']), 50);
+
+    const bloque = tick(etat, {}, AMONG.ATTENTE_DU_CHARGEMENT_MAXIMUM_MS - 50);
+    expect(amongDe(bloque).phase).toBe('revelation');
+
+    // j4 et j5 partent: les trois autres ont charge, la revelation commence.
+    const sansEux = retirerJoueur(retirerJoueur(etat, 'j4'), 'j5');
+    expect(amongDe(tick(sansEux, {}, 50)).phase).toBe('revelation');
+  });
+
+  it('ignore le signal hors du chargement', () => {
+    const jeu = enJeu();
+
+    expect(amongDe(tick(jeu, charges(['j1']), 50)).charges).toBeUndefined();
+  });
+});
+
 describe('les phases', () => {
   it('fige le monde pendant la revelation, puis commence le premier tour', () => {
-    const etat = lancee();
+    const etat = revelee();
     const avant = joueurDe(etat, 'j1').position;
     const marche = { j1: { deplacement: { x: 1, y: 0 }, enMouvement: true } };
 
@@ -392,7 +444,9 @@ describe('les fantomes', () => {
     for (let rang = 1; rang <= 5; rang += 1) {
       etat = ajouterJoueur(etat, { id: `j${String(rang)}`, pseudo: `J${String(rang)}` });
     }
-    etat = tick(lancerLaPartie(etat), {}, AMONG.DUREE_REVELATION_MS);
+    etat = lancerLaPartie(etat);
+    etat = tick(etat, charges(Object.keys(etat.joueurs)), 50);
+    etat = tick(etat, {}, AMONG.DUREE_REVELATION_MS);
     etat = avecRole(
       placer(placer(etat, 'j1', { x: 560, y: 400 }), 'j2', { x: 560, y: 500 }),
       'j1',

@@ -106,6 +106,11 @@ export interface EtatAmong {
   readonly phase: PhaseAmong;
   /** Ce qu'il reste de la phase, sauf pendant le jeu, ou c'est le tour qui compte. */
   readonly phaseRestanteMs: number;
+  /**
+   * Les joueurs dont la page a charge la carte, dans l'ordre de l'etat. Pendant le chargement
+   * seulement: la revelation commence quand tous y sont.
+   */
+  readonly charges?: readonly Identifiant[];
   /** Le tour en cours, a partir de un. Zero pendant la revelation. */
   readonly tour: number;
   /** Le temps de jeu ecoule depuis le debut du tour. */

@@ -103,6 +103,11 @@ export interface OptionsBoucle {
    * defaut; plus courte en Tactique (etape 7.7).
    */
   readonly hauteurDeVue?: number;
+  /**
+   * Un cadrage commun a tous les appareils (etape 7.20): le plus petit cote de l'ecran montre
+   * autant de pixels de carte, telephone compris. Absent: le cadrage de chaque appareil.
+   */
+  readonly coteDeVueCommun?: number;
   /** Taille de la zone d'affichage, relue a chaque image. */
   readonly taille: () => { readonly largeur: number; readonly hauteur: number };
   /**
@@ -268,6 +273,7 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
             options.carte,
             options.mobile ?? false,
             options.hauteurDeVue ?? HAUTEUR_DE_VUE_PX,
+            options.coteDeVueCommun,
           )
         : suivre(camera, cible, taille, options.carte, dtMs);
 

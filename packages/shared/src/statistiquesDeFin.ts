@@ -131,7 +131,7 @@ export const DEFINITIONS_DES_STATISTIQUES: Readonly<
   signalements: { entete: 'Signalés', description: 'Cadavres signalés', format: 'nombre' },
   bonsVotes: {
     entete: 'Bons votes',
-    description: 'Votes contre un assassin éjecté',
+    description: 'Votes contre un assassin exécuté',
     format: 'nombre',
   },
 };

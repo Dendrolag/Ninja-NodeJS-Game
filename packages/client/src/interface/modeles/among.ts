@@ -9,6 +9,9 @@
  *
  * LE SECRET. Rien ici ne dit le role d'un autre joueur, sauf a un assassin, qui connait les
  * siens. Une ejection ne dit jamais le role de l'ejecte.
+ *
+ * LE MOT DU JOUEUR EST « EXECUTION » (decision du porteur du projet du 10 octobre 2026, plus
+ * dans le theme des ninjas), comme il est « Assassin »: le code garde `ejection` et `ejecte`.
  */
 
 import type { MotifDeReunion } from '@neon-ninja/shared';
@@ -44,6 +47,12 @@ export interface TraitDeVote {
 /** Ce que les ecrans du mode montrent a un instant donne. */
 export type EcranAmong =
   | { readonly ecran: 'aucun' }
+  | {
+      /** La revelation attend que chacun ait charge la carte (etape 7.20). */
+      readonly ecran: 'chargement';
+      readonly titre: string;
+      readonly consigne: string;
+    }
   | {
       readonly ecran: 'revelation';
       readonly assassin: boolean;
@@ -133,6 +142,14 @@ export function ecranAmong(etat: EtatClient): EcranAmong {
   const joueurs = joueursAmong(etat);
   const reunion = etat.among.reunion;
 
+  if (phase === 'chargement') {
+    return {
+      ecran: 'chargement',
+      titre: 'Préparation de la partie',
+      consigne: 'En attente des autres joueurs…',
+    };
+  }
+
   if (phase === 'revelation') {
     const assassin = prive.role === 'tueur';
 
@@ -181,8 +198,8 @@ export function ecranAmong(etat: EtatClient): EcranAmong {
       // Jamais le role de l'ejecte (decision du porteur du projet du 6 octobre 2026).
       texte:
         ejecte === undefined
-          ? 'Personne n’a été éjecté.'
-          : `${ejecte.pseudo} (${ejecte.nomCouleur}) a été éjecté.`,
+          ? 'Personne n’a été exécuté.'
+          : `${ejecte.pseudo} (${ejecte.nomCouleur}) a été exécuté.`,
       detail: [...voix, `passer ${String(passer)}`].join(' · '),
       ejecte,
       joueurs,

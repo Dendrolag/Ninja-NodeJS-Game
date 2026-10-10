@@ -997,6 +997,13 @@
   filter: saturate(0.3) brightness(0.7);
 }
 
+/* Le katana d'Among Ninjas, sans victime a portee (etape 7.20): grise, il ne se propose pas. */
+.hud-capture.inactif {
+  filter: grayscale(1) brightness(0.55);
+  opacity: 0.6;
+  cursor: default;
+}
+
 .hud-charges {
   position: absolute;
   bottom: -8px;

@@ -39,7 +39,7 @@ import { pilotageParPixi } from '../../diagnostic/diagnostic.js';
 import { monterBullesDeZone } from '../../hud/bullesDeZone.js';
 import { monterPointsFlottants } from '../../hud/pointsFlottants.js';
 import { monterSurcouche } from '../../hud/surcouche.js';
-import { HAUTEUR_DE_VUE_TACTIQUE_PX } from '../../rendu/apparence.js';
+import { COTE_DE_VUE_AMONG_PX, HAUTEUR_DE_VUE_TACTIQUE_PX } from '../../rendu/apparence.js';
 import { lancerLaBoucle } from '../../rendu/boucle.js';
 import { monterRendu, prechargerLesSprites } from '../../rendu/pixi.js';
 import { jeSuisHote } from '../../selecteurs.js';
@@ -315,12 +315,19 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
       surStabilite: () => {
         montrer(chargement, false);
         suivi?.leverLeRideau();
+        // La revelation d'Among Ninjas attend que chacun ait charge la carte (etape 7.20).
+        if (mode === 'among') {
+          client.signalerLeChargement();
+        }
       },
       ...(contexte.sons === undefined ? {} : { sons: contexte.sons }),
       niveauDeSang: contexte.niveauDeSang,
       mobile: navigateur?.matchMedia('(pointer: coarse)').matches ?? false,
       // Le Tactique regarde de plus pres, pour qu'il faille chercher ses cibles (etape 7.7).
       ...(mode === 'tactique' ? { hauteurDeVue: HAUTEUR_DE_VUE_TACTIQUE_PX } : {}),
+      // Among Ninjas regarde de plus pres encore, avec le meme cadrage sur tous les appareils
+      // (etape 7.20).
+      ...(mode === 'among' ? { coteDeVueCommun: COTE_DE_VUE_AMONG_PX } : {}),
       // La camera descend sous la barre du haut au bord de la carte (etape 5.5).
       taille: () => ({
         largeur: terrain.clientWidth,

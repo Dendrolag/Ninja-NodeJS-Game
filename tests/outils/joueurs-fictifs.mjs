@@ -88,6 +88,8 @@ function joueur(pseudo) {
   socket.on('amongNinjas', (etat) => {
     if (prive === undefined) {
       console.log(`${pseudo}: ${etat.role === 'tueur' ? 'assassin' : 'proie'}`);
+      // Pas de carte a charger: la revelation n'a pas a l'attendre.
+      socket.emit('carteChargee');
     }
     prive = etat;
   });

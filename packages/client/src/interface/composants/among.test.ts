@@ -16,6 +16,7 @@ import type { ReunionClient } from '../../among.js';
 import type { Client } from '../../client.js';
 import type { EtatClient } from '../../etat.js';
 import { ETAT_INITIAL } from '../../etat.js';
+import { amongHud } from '../../hud/among.js';
 import { ecranAmong } from '../modeles/among.js';
 import type { Boite } from './among.js';
 import { dessinDeVote, monterEcransAmong } from './among.js';
@@ -47,7 +48,7 @@ const PRIVE: EtatPriveAmong = {
 
 /** Un client dans une partie Among Ninjas a cinq, a cette phase, avec cette reunion. */
 function etat(
-  phase: 'discussion' | 'vote' | 'ejection',
+  phase: 'chargement' | 'discussion' | 'vote' | 'ejection',
   reunion: ReunionClient,
   prive: EtatPriveAmong = PRIVE,
 ): EtatClient {
@@ -108,6 +109,19 @@ const RESULTAT: ReunionClient = {
   },
 };
 
+describe('le chargement', () => {
+  it('fait attendre les autres joueurs, sans dire encore le role, ni a l ecran ni au bandeau', () => {
+    const attente = etat('chargement', REUNION);
+
+    expect(ecranAmong(attente)).toEqual({
+      ecran: 'chargement',
+      titre: 'Préparation de la partie',
+      consigne: 'En attente des autres joueurs…',
+    });
+    expect(amongHud(attente, 0)).toBeUndefined();
+  });
+});
+
 describe('le modele de la reunion', () => {
   it('titre la reunion par ce qui l a ouverte, et ne laisse voter qu un vivant au vote', () => {
     const discussion = ecranAmong(etat('discussion', REUNION));
@@ -129,7 +143,7 @@ describe('le modele de la reunion', () => {
 
     expect(ecran).toMatchObject({
       ecran: 'ejection',
-      texte: 'eve (Jaune) a été éjecté.',
+      texte: 'eve (Jaune) a été exécuté.',
       detail: 'eve 3 · passer 1',
       voixPourPasser: 1,
     });
@@ -151,7 +165,7 @@ describe('le modele de la reunion', () => {
 
     expect(ecran).toMatchObject({
       ecran: 'ejection',
-      texte: 'Personne n’a été éjecté.',
+      texte: 'Personne n’a été exécuté.',
       traits: [],
       voixPourPasser: 4,
     });

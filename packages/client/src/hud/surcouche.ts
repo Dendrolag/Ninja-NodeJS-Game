@@ -384,11 +384,16 @@ function monterCapture(doc: Document, parent: HTMLElement, capturer: () => void)
       });
 
       bouton.classList.toggle('vide', charges.disponibles === 0);
+      // Le katana d'Among Ninjas ne se propose que face a une victime a portee (7.20).
+      bouton.classList.toggle('inactif', charges.inactif === true);
+      bouton.disabled = charges.inactif === true;
 
       const nouvelle =
-        arme === 'katana'
-          ? `Katana, ${charges.disponibles > 0 ? 'prêt' : 'en garde'}`
-          : `Capturer, ${String(charges.disponibles)} ${enVies ? 'vies' : 'charges'} sur ${String(charges.maximum)}`;
+        charges.inactif === true
+          ? 'Katana, personne à portée'
+          : arme === 'katana'
+            ? `Katana, ${charges.disponibles > 0 ? 'prêt' : 'en garde'}`
+            : `Capturer, ${String(charges.disponibles)} ${enVies ? 'vies' : 'charges'} sur ${String(charges.maximum)}`;
 
       if (nouvelle !== etiquette) {
         etiquette = nouvelle;

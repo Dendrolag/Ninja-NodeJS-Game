@@ -22,6 +22,7 @@
 import type { Couleur } from '@neon-ninja/shared';
 import { AMONG, AMONG_PAR_DEFAUT, RAYONS_DE_VISION } from '@neon-ninja/shared';
 
+import { victimeAPortee } from '../among.js';
 import type { EtatClient } from '../etat.js';
 import type { VueLissee } from './interpolation.js';
 import type { DisqueScene, SpriteScene } from './scene.js';
@@ -78,6 +79,12 @@ export const APPARENCE_AMONG = {
   gong: { couleur: 0xff4fd8, alpha: 0.85, epaisseur: 4, rayon: 34 },
   /** La hauteur du pseudo au-dessus du centre du ninja. */
   hauteurDuPseudo: 30,
+  /**
+   * La victime qu'un assassin peut tuer maintenant (demande du porteur du projet du 10 octobre
+   * 2026): une legere surbrillance rouge sous elle, un disque pale et un anneau. A juger en
+   * jouant.
+   */
+  victime: { couleur: 0xff3355, alphaPlein: 0.3, alphaBord: 0.9, epaisseur: 2, rayon: 24 },
 } as const;
 
 /** Une couleur du contrat en nombre. */
@@ -109,6 +116,7 @@ export function imageDAmong(etat: EtatClient, lissee: VueLissee, texture: string
   }
 
   const disques: DisqueScene[] = [...lieuxDuJoueur(etat)];
+  const victime = victimeAPortee(etat);
   const complices = new Set(etat.among.prive?.role === 'tueur' ? etat.among.prive.complices : []);
   const cadavres: SpriteScene[] = [];
   const libelles: LibelleScene[] = [];
@@ -122,6 +130,18 @@ export function imageDAmong(etat: EtatClient, lissee: VueLissee, texture: string
 
     if (entite.type !== 'joueur') {
       continue;
+    }
+
+    if (entite.id === victime) {
+      const { couleur, alphaPlein, alphaBord, epaisseur, rayon } = APPARENCE_AMONG.victime;
+      disques.push({
+        id: `${entite.id}:victime`,
+        x,
+        y,
+        rayon,
+        remplissage: { couleur, alpha: alphaPlein },
+        contour: { couleur, alpha: alphaBord, epaisseur },
+      });
     }
 
     if (entite.fantome === true) {

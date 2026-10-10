@@ -23,7 +23,13 @@ import type { Position } from './geometrie.js';
 export const AMONG = {
   /** Il faut cinq joueurs pour lancer: a quatre, un seul meurtre reduit la partie a un duel. */
   JOUEURS_MINIMUM: 5,
-  /** La revelation du role, au lancement: le monde est fige pendant ce temps. */
+  /**
+   * L'attente du chargement de la carte, au lancement, au plus (demande du porteur du projet
+   * du 10 octobre 2026): la revelation attend que chacun ait charge, pour que personne ne la
+   * manque, mais un joueur bloque ou deconnecte ne retient pas la partie au-dela.
+   */
+  ATTENTE_DU_CHARGEMENT_MAXIMUM_MS: 30_000,
+  /** La revelation du role, une fois tout le monde charge: le monde est fige pendant ce temps. */
   DUREE_REVELATION_MS: 5000,
   /** Le resultat d'un vote reste affiche ce temps, le monde fige. */
   DUREE_EJECTION_MS: 5000,
@@ -63,12 +69,20 @@ export const AMONG = {
 /**
  * Ou en est une partie lancee.
  *
+ *   - `chargement`: la revelation attend que chacun ait charge la carte, le monde est fige;
  *   - `revelation`: chacun decouvre son role, le monde est fige;
  *   - `jeu`: on bouge, on tue, on fait ses taches;
  *   - `discussion` puis `vote`: la reunion, le monde est fige;
  *   - `ejection`: le resultat du vote s'affiche, le monde est fige.
  */
-export const PHASES_AMONG = ['revelation', 'jeu', 'discussion', 'vote', 'ejection'] as const;
+export const PHASES_AMONG = [
+  'chargement',
+  'revelation',
+  'jeu',
+  'discussion',
+  'vote',
+  'ejection',
+] as const;
 
 /** Une phase d'une partie lancee. */
 export type PhaseAmong = (typeof PHASES_AMONG)[number];

@@ -98,7 +98,7 @@ export const TEXTES_DES_MODES: Readonly<Record<Mode, string>> = {
   massacre:
     'Fini les couleurs, place au bain de sang. Tranchez tout au katana et enchaînez pour faire exploser le score.',
   among:
-    'Des assassins se cachent parmi vous. Faites vos tâches, démasquez-les, et votez pour les éjecter avant qu’il ne soit trop tard.',
+    'Des assassins se cachent parmi vous. Faites vos tâches, démasquez-les, et votez pour les exécuter avant qu’il ne soit trop tard.',
 };
 
 /**

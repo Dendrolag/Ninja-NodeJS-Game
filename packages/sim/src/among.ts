@@ -6,7 +6,8 @@
  * docs/plan/etape-7-20.md, tirees de l'etude du 5 octobre 2026 et confirmees par le porteur
  * du projet le 6 octobre 2026. Les nombres sont dans packages/shared (AMONG).
  *
- * LES PHASES. Une partie lancee passe par la revelation des roles, puis alterne le jeu et
+ * LES PHASES. Une partie lancee attend que chacun ait charge la carte (le chargement), passe par
+ * la revelation des roles, puis alterne le jeu et
  * les reunions (discussion, vote, ejection). Hors du jeu, le monde est fige: le moteur ne
  * deplace personne et n'avance que les minuteries de la phase (mondeFigeEnAmong, lu par le
  * moteur). Aucun chronometre de partie: seule une victoire la finit.
@@ -156,7 +157,8 @@ export function amongDecide(etat: EtatPartie): boolean {
  *      proie, plus quatre.
  *   3. Chaque proie recoit sa liste: autant de stations actives distinctes que de taches,
  *      chacune avec sa duree, de cinq a dix secondes.
- *   4. Tout le monde est place autour du point de reunion, et la revelation commence.
+ *   4. Tout le monde est place autour du point de reunion, et la partie attend que chacun ait
+ *      charge la carte avant la revelation.
  *
  * Tout tirage passe par le generateur a graine de l'etat: meme graine, meme partie.
  *
@@ -206,8 +208,9 @@ export function lancerAmong(etat: EtatPartie): EtatPartie {
   }
 
   const among: EtatAmong = {
-    phase: 'revelation',
-    phaseRestanteMs: AMONG.DUREE_REVELATION_MS,
+    phase: 'chargement',
+    phaseRestanteMs: AMONG.ATTENTE_DU_CHARGEMENT_MAXIMUM_MS,
+    charges: [],
     tour: 0,
     tourEcouleMs: 0,
     reunions: 0,
@@ -334,6 +337,9 @@ export function agirEnAmong(etat: EtatPartie, entrees: Entrees, dtMs: number): E
   let courant: EtatPartie;
 
   switch (among.phase) {
+    case 'chargement':
+      courant = attendreLeChargement(etat, entrees, dtMs);
+      break;
     case 'revelation':
       courant =
         among.phaseRestanteMs - dtMs <= 0
@@ -363,6 +369,32 @@ export function agirEnAmong(etat: EtatPartie, entrees: Entrees, dtMs: number): E
   courant = retenirLesBoutonsTenus(courant, entrees);
 
   return courant.among?.phase === 'ejection' ? courant : decider(courant);
+}
+
+/**
+ * Le chargement (demande du porteur du projet du 10 octobre 2026): la revelation attend que
+ * chaque joueur ait charge la carte, pour qu'aucun joueur lent ne la manque. Elle commence
+ * des que tous l'ont dit, ou a la fin de l'attente maximale: un joueur bloque ou deconnecte ne
+ * retient pas la partie. Un joueur parti ne compte plus.
+ */
+function attendreLeChargement(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPartie {
+  const among = etat.among as EtatAmong;
+  const ids = Object.keys(etat.joueurs);
+  const deja = new Set(among.charges ?? []);
+  const charges = ids.filter((id) => deja.has(id) || entrees[id]?.carteChargee === true);
+  const restante = among.phaseRestanteMs - dtMs;
+
+  if (charges.length === ids.length || restante <= 0) {
+    const { charges: _tous, ...sansCharges } = among;
+
+    return avecAmong(etat, {
+      ...sansCharges,
+      phase: 'revelation',
+      phaseRestanteMs: AMONG.DUREE_REVELATION_MS,
+    });
+  }
+
+  return avecAmong(etat, { ...among, phaseRestanteMs: restante, charges });
 }
 
 /** L'etat avec ces tables du mode. */

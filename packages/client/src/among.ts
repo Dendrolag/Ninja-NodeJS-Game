@@ -10,6 +10,9 @@
  */
 
 import type { EtatPriveAmong, ReunionVue } from '@neon-ninja/shared';
+import { AMONG } from '@neon-ninja/shared';
+
+import type { EtatClient } from './etat.js';
 
 /** Le resultat d'un vote, tel que la reunion le dit. */
 export type ResultatVu = Extract<ReunionVue, { readonly quoi: 'resultat' }>;
@@ -130,4 +133,59 @@ function ajouterSansDoublon(
   const nouveaux = ajouts.filter((element) => !liste.includes(element));
 
   return nouveaux.length === 0 ? liste : [...liste, ...nouveaux];
+}
+
+/**
+ * La proie qu'un assassin tuerait s'il frappait maintenant, ou rien (demande du porteur du
+ * projet du 10 octobre 2026): la page la met en surbrillance, et le bouton du katana ne
+ * s'active que pour elle.
+ *
+ * LA REGLE DU MOTEUR (tuer, packages/sim/src/among.ts): un assassin vivant, en phase de jeu, son
+ * katana pret, et la proie vivante la plus proche a sa portee; a distance egale, la premiere
+ * dans l'ordre. Les proies sont les joueurs de sa vue qui ne sont pas ses complices: un
+ * fantome n'est jamais dans la vue d'un vivant. La page juge sur les positions recues, le
+ * serveur tranche.
+ */
+export function victimeAPortee(etat: EtatClient): string | undefined {
+  const prive = etat.among.prive;
+  const partie = etat.partie;
+
+  if (
+    etat.salon?.mode !== 'among' ||
+    prive?.role !== 'tueur' ||
+    prive.fantome ||
+    partie?.among?.phase !== 'jeu'
+  ) {
+    return undefined;
+  }
+
+  const moi = partie.entites.find((entite) => entite.id === etat.moi);
+
+  if (moi?.type !== 'joueur' || (moi.tactique?.charges ?? 0) === 0) {
+    return undefined;
+  }
+
+  const complices = new Set(prive.complices);
+  let victime: string | undefined;
+  let retenue = Number.POSITIVE_INFINITY;
+
+  for (const entite of partie.entites) {
+    if (
+      entite.type !== 'joueur' ||
+      entite.id === moi.id ||
+      entite.fantome === true ||
+      complices.has(entite.id)
+    ) {
+      continue;
+    }
+
+    const distance = Math.hypot(entite.x - moi.x, entite.y - moi.y);
+
+    if (distance <= AMONG.PORTEE_DU_MEURTRE_PX && distance < retenue) {
+      victime = entite.id;
+      retenue = distance;
+    }
+  }
+
+  return victime;
 }

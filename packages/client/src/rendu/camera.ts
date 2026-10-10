@@ -51,13 +51,21 @@ export interface TailleEcran {
  *
  * La hauteur de vue sur ordinateur depend du mode: le Tactique regarde de plus pres
  * (HAUTEUR_DE_VUE_TACTIQUE_PX, etape 7.7).
+ *
+ * UN CADRAGE COMMUN, enfin, pour Among Ninjas (COTE_DE_VUE_AMONG_PX, etape 7.20): le plus
+ * petit cote de l'ecran montre autant de carte sur tous les appareils, telephone compris.
  */
 export function echellePour(
   ecran: TailleEcran,
   carte: DimensionsCarte,
   mobile: boolean,
   hauteurDeVue: number = HAUTEUR_DE_VUE_PX,
+  coteCommun?: number,
 ): number {
+  if (coteCommun !== undefined) {
+    return Math.min(ecran.largeur, ecran.hauteur) / coteCommun;
+  }
+
   if (mobile) {
     return Math.min(ecran.largeur / CADRAGE_MOBILE.largeur, ecran.hauteur / CADRAGE_MOBILE.hauteur);
   }
@@ -108,8 +116,9 @@ export function cameraSur(
   carte: DimensionsCarte,
   mobile: boolean,
   hauteurDeVue: number = HAUTEUR_DE_VUE_PX,
+  coteCommun?: number,
 ): Camera {
-  const echelle = echellePour(ecran, carte, mobile, hauteurDeVue);
+  const echelle = echellePour(ecran, carte, mobile, hauteurDeVue, coteCommun);
   const borne = borner(centre, ecran, { x: centre.x, y: centre.y, echelle }, carte);
 
   return { x: borne.x, y: borne.y, echelle };

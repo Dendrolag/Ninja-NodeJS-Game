@@ -52,7 +52,12 @@ const LIBELLES_DES_GESTES: Readonly<Record<GesteAmong, string>> = {
 export function amongHud(etat: EtatClient, maintenant: number): AmongHud | undefined {
   const prive = etat.among.prive;
 
-  if (etat.salon?.mode !== 'among' || prive === undefined) {
+  // Pendant le chargement, le role n'est pas encore revele: le bandeau attend la revelation.
+  if (
+    etat.salon?.mode !== 'among' ||
+    prive === undefined ||
+    etat.partie?.among?.phase === 'chargement'
+  ) {
     return undefined;
   }
 

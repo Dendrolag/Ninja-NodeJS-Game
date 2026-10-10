@@ -1117,6 +1117,11 @@ export interface EvenementsClientVersServeur {
    * deplacement: il vaut jusqu'au message suivant.
    */
   agir: (tenue: boolean) => void;
+  /**
+   * La page a charge la carte (etape 7.20): la revelation d'Among Ninjas l'attend. Ignore hors
+   * de ce moment et dans les autres modes.
+   */
+  carteChargee: () => void;
 
   /** Un vote, pendant une reunion d'Among Ninjas (etape 7.20). */
   voter: (demande: DemandeVote) => void;

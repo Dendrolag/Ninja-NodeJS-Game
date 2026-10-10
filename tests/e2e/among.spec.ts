@@ -298,6 +298,13 @@ test('jouer une partie Among Ninjas a cinq, du salon a la victoire des proies', 
     // -- Le lancement, et le role de chacun ---------------------------------------
     await regler(alice, PARTIE_AMONG);
     await lancer(alice);
+    // Les clients sans page disent avoir charge la carte, comme une page le fait des que la
+    // sienne s'affiche: la revelation attend tout le monde. Une fois la partie lancee, apres
+    // le compte a rebours: avant, le serveur ignore le signal.
+    await expect.poll(() => partie.etat.among?.phase, { timeout: 15_000 }).toBe('chargement');
+    for (const client of Object.values(reseau)) {
+      client.emit('carteChargee');
+    }
     await Promise.all([attendreLaPartie(alice), attendreLaPartie(bob)]);
     expect(partie.mode).toBe('among');
 
@@ -408,7 +415,7 @@ test('jouer une partie Among Ninjas a cinq, du salon a la victoire des proies', 
     // -- L'ejection, puis la fin ---------------------------------------------------------
     for (const page of [alice, bob]) {
       await expect(page.locator('.among-egout-texte')).toHaveText(
-        new RegExp(`^${assassin} \\(.+\\) a été éjecté\\.$`, 'u'),
+        new RegExp(`^${assassin} \\(.+\\) a été exécuté\\.$`, 'u'),
       );
       // Quatre vivants ont vote: quatre traits, dont celui de l'assassin vers « Passer ».
       const votes = JSON.stringify(among(partie).ejection?.votes);

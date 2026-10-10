@@ -2,7 +2,7 @@
 
 Date: 10 octobre 2026
 Auteur: session Claude Code
-Statut: terminée, sous réserve de la note de version 1.9 à valider par le porteur du projet avant de pousser
+Statut: terminée, non poussée: le déploiement attend les étapes suivantes, à commencer par les mini-jeux (7.21), sur décision du porteur du projet
 
 ## Objectif de l'étape
 
@@ -22,12 +22,17 @@ Session du 10 octobre:
 - **Retour d'essai du porteur du projet: les traits du vote** (`0eb1455`). Refaits à chaque image, leur animation repartait sans fin; leur pointe tombait sous la carte visée; ceux de « Passer » visaient un bouton caché. Ils se calculent en pixels sur la place réelle des cartes, une seule fois, partent du bord du votant et finissent par une flèche hors de la carte visée; un vote contre soi fait une boucle; « Passer » reste à l'éjection avec ses voix. Vérifié dans le navigateur avec six joueurs fictifs.
 - **Lot D**: scénario de bout en bout, banc à douze vues, empreinte, documentation, version 1.9.0 et sa note.
 - **Trois défauts trouvés en route** (règle 7), voir « Décisions et écarts ».
+- **Ajustements demandés par le porteur du projet après son essai** (fiche, décisions 8 à 11 des rendus):
+  - la révélation attend que chacun ait chargé la carte: phase `chargement`, signal `carteChargee` de la page, 30 secondes au plus;
+  - « exécution » remplace « éjection » dans la page;
+  - un cadrage plus serré et commun à tous les appareils: le plus petit côté de l'écran montre 450 pixels de carte;
+  - la victime à portée d'un assassin en légère surbrillance rouge, et le Katana grisé et inactif sans elle (captures `docs/design/etape-7-20/2-*.png` et `3-*.png`).
 
 ## Décisions du porteur du projet pendant l'étape
 
 - Valeurs (fiche, « Valeurs confirmées ») et rendus (fiche, « Rendus choisis »), inchangés.
 - 9 octobre: aucun pseudo sur la carte, sauf entre assassins.
-- 10 octobre: essai local « assez concluant », un seul retour, les traits du vote, traité.
+- 10 octobre: essai local « assez concluant », un retour, les traits du vote, traité. Puis quatre ajustements (ci-dessus), et la décision de ne déployer qu'après les étapes suivantes, à commencer par les mini-jeux.
 
 ## Fichiers créés ou modifiés pendant la session du 10 octobre
 
@@ -67,7 +72,8 @@ Consignés dans la section « Réconciliation » de la fiche. En plus:
 
 ## Problèmes connus et dette
 
-- **La révélation (5 s) peut passer pendant le chargement de la carte**: un joueur lent la manque. Son rôle reste écrit dans le HUD; un assassin perd la présentation de ses complices, mais leurs pseudos sont sur la carte. À trancher avec le porteur du projet: allonger la révélation, ou ne la lancer qu'une fois tout le monde chargé.
+- **Le cercle de vision dépasse l'écran** depuis le cadrage serré: 450 pixels de carte sur le petit côté, moins que le diamètre du cercle d'une proie (520) et d'un assassin (640). L'écart entre les paliers de vision ne se voit donc plus qu'en largeur. À juger en jouant: resserrer les paliers de vision, ou desserrer le cadrage.
+- **Un onglet en arrière-plan** ne dessine pas, donc ne signale pas son chargement: la révélation attend alors les 30 secondes du garde-fou.
 - **L'égout de l'éjection est à affiner**, demande du porteur du projet sur planche, non faite.
 - **La vision hors du disque**, peut-être trop claire: à juger en jouant.
 - **Sur téléphone, rien n'a été vérifié** en vrai: table ronde, chat, bouton d'action. Les tests de la page couvrent le modèle, pas le cadrage.
@@ -75,7 +81,7 @@ Consignés dans la section « Réconciliation » de la fiche. En plus:
 
 ## État de la CI
 
-Rien n'est poussé à l'heure d'écrire. À pousser après validation de la note 1.9 par le porteur du projet, avec la fusion de `852d826` (correctif de la CI arrivé sur `origin/master`).
+Rien n'est poussé: pousser `master` met en ligne, et le porteur du projet veut d'abord les étapes suivantes, à commencer par les mini-jeux. `master` local contient la fusion de `852d826` (correctif de la CI). La note 1.9 est rédigée, à soumettre au porteur du projet au moment de livrer. Suite de bout en bout complète: 103 scénarios au vert avant les ajustements; après eux, le scénario Among Ninjas trois fois au vert, et 3 866 tests unitaires.
 
 ## Comment essayer en local
 
@@ -86,7 +92,7 @@ Rien n'est poussé à l'heure d'écrire. À pousser après validation de la note
 
 ## Prochaine action exacte
 
-L'étape 7.21, les tâches courtes et la carte. Sa fiche se rédige au début de l'étape, selon le cas de repli du PROTOCOLE, à partir des sections 8 et 18 de `docs/design/etude-mode-among-ninjas.md`. Trancher d'abord avec le porteur du projet la révélation manquée par un joueur lent.
+L'étape 7.21, les tâches courtes et la carte, sans pousser `master` d'ici là. Sa fiche se rédige au début de l'étape, selon le cas de repli du PROTOCOLE, à partir des sections 8 et 18 de `docs/design/etude-mode-among-ninjas.md`.
 
 ## Étape suivante
 

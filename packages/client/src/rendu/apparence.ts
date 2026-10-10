@@ -793,6 +793,18 @@ export const HAUTEUR_DE_VUE_PX = 900;
 export const HAUTEUR_DE_VUE_TACTIQUE_PX = 500;
 
 /**
+ * Le cadrage d'Among Ninjas, en pixels de la carte (etape 7.20): le plus petit cote de
+ * l'ecran en montre autant, sur ordinateur comme sur telephone, a l'horizontale comme a la
+ * verticale. Demande du porteur du projet du 10 octobre 2026: plus pres que le Tactique, et
+ * tout le monde au meme niveau, alors que le telephone a d'ordinaire son cadrage serre.
+ *
+ * Le plus petit cote, et non la hauteur: un telephone tenu a la verticale verrait sinon une
+ * bande etroite. Et une longueur en pixels d'ecran qui ne change pas quand on tourne le
+ * telephone, si bien que le cadrage choisi au depart reste juste apres une rotation.
+ */
+export const COTE_DE_VUE_AMONG_PX = 450;
+
+/**
  * Largeur et hauteur de reference du cadrage mobile, plus serre.
  *
  * ECART VOULU AVEC LE JEU D'ORIGINE, qui montrait 600 par 451 pixels de carte

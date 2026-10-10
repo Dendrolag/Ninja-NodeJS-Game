@@ -216,6 +216,23 @@ async function salonA(nombre: number): Promise<{
 }
 
 /** Lance la partie de l'hote, decompte compris. */
+/**
+ * Chaque joueur dit avoir charge la carte, comme sa page le fait (etape 7.20), et la revelation
+ * commence: le serveur l'attendait.
+ */
+async function chargerLaCarte(joueurs: readonly JoueurDeTest[], room: GameRoom): Promise<void> {
+  for (const joueur of joueurs) {
+    joueur.client.emit('carteChargee');
+  }
+
+  await jusquA(() => {
+    horloge.avancerDe(50);
+
+    return room.etat.among?.phase !== 'chargement';
+  });
+  expect(room.etat.among?.phase).toBe('revelation');
+}
+
 async function lancer(hote: ClientTypee): Promise<void> {
   const lancee = prochain(hote, 'partieLancee');
   const decompte = prochain(hote, 'compteARebours');
@@ -343,6 +360,7 @@ describe('une partie Among Ninjas, a travers le reseau', () => {
     await lancer((joueurs[0] as JoueurDeTest).client);
     const flux = joueurs.map((joueur) => suivreLeFlux(joueur.client));
 
+    await chargerLaCarte(joueurs, room);
     horloge.avancerDe(AMONG.DUREE_REVELATION_MS + 500);
     await jusquA(() => flux.every((parties) => parties.length > 5));
 
@@ -385,7 +403,8 @@ describe('une partie Among Ninjas, a travers le reseau', () => {
     temoin.client.emit('chat', { texte: 'Qui est le tueur ?' });
     expect((await ferme).erreurs[0]?.motif).toBe('Le chat ne s’ouvre qu’en réunion.');
 
-    // La revelation, puis la recharge du debut du tour.
+    // Le chargement, la revelation, puis la recharge du debut du tour.
+    await chargerLaCarte(joueurs, room);
     horloge.avancerDe(AMONG.DUREE_REVELATION_MS + AMONG.RECHARGE_DEBUT_DE_TOUR_MS + 100);
 
     // Le meurtre, au contact.

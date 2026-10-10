@@ -408,6 +408,7 @@ L'étape 7.20 est faite: fiche `docs/plan/etape-7-20.md`, handoff `docs/handoffs
 - **Aucun pseudo sur la carte**, sauf entre assassins (décision du 9 octobre): on désigne quelqu'un par sa couleur, qui a un nom (douze couleurs nommées).
 - **Une éjection ne dit jamais le rôle**, et la partie n'a pas de terme: elle ne finit que par la victoire d'un camp.
 - **Les stations se posent devant leur meuble, pas dessus.** Les places de la section 10, lues sur le décor, mettaient cinq stations sur treize au centre d'un comptoir, d'une table ou d'une camionnette, c'est-à-dire dans un mur. Un test vérifie désormais, sur le vrai terrain et en miroir, que le centre de chaque lieu est tenable et que la majeure partie de son disque est praticable.
+- **Ajustements du 10 octobre**, après l'essai du porteur du projet: la révélation attend que chacun ait chargé la carte; « exécution » remplace « éjection »; un cadrage plus serré et le même sur tous les appareils; la victime à portée d'un assassin en surbrillance, et le katana grisé sans elle. Détail: fiche, décisions 8 à 11 des rendus.
 - **Le coût d'une vue par vivant** est mesuré: section 29 de `docs/mesures/charge-serveur.md`.
 
 La suite reste celle de la section 18: `7.21`, les tâches courtes et la carte.

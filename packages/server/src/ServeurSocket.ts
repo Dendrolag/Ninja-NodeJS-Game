@@ -578,6 +578,9 @@ export class ServeurSocket {
     socket.on('agir', (tenue) => {
       this.surAgir(socket, tenue);
     });
+    socket.on('carteChargee', () => {
+      this.surCarteChargee(socket);
+    });
     socket.on('voter', (demande) => {
       this.surVoter(socket, demande);
     });
@@ -1105,6 +1108,24 @@ export class ServeurSocket {
     }
 
     room.tenirLAction(connexion.session.id, tenue);
+  }
+
+  /**
+   * La page de ce joueur a charge la carte (etape 7.20): la revelation d'Among Ninjas l'attend.
+   * Le message ne porte rien; limite en debit avec les gestes rares, puis confie a la room.
+   */
+  private surCarteChargee(socket: SocketTypee): void {
+    const connexion = this.connexions.get(socket.id);
+
+    if (connexion?.session === undefined || connexion.idRoom === undefined) {
+      return;
+    }
+
+    if (!this.autorise(connexion, 'autresActions')) {
+      return;
+    }
+
+    this.rooms.room(connexion.idRoom)?.signalerLeChargement(connexion.session.id);
   }
 
   /**

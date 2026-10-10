@@ -148,6 +148,8 @@ export interface Client extends CommandesDeSession {
   utiliserLaPoche(): void;
   /** Tient ou lache le bouton d'action d'Among Ninjas (etape 7.20). */
   tenirLAction(tenue: boolean): void;
+  /** Dit au serveur que la carte est chargee: la revelation d'Among Ninjas l'attend (7.20). */
+  signalerLeChargement(): void;
   /** Vote pendant une reunion d'Among Ninjas (etape 7.20): un joueur, ou null pour passer. */
   voter(cible: string | null): void;
   /** Passe dans une equipe, dans le salon d'une partie Equipes (etape 7.2). */
@@ -726,6 +728,10 @@ export function creerClient(options: OptionsClient): Client {
 
     tenirLAction: (tenue) => {
       reseau.emettre('agir', tenue);
+    },
+
+    signalerLeChargement: () => {
+      reseau.emettre('carteChargee');
     },
 
     voter: (cible) => {

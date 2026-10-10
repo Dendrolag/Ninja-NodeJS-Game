@@ -191,9 +191,9 @@ const REGLES_DES_MODES: Readonly<Record<Mode, readonly string[]>> = {
     `Carte nettoyée avant la fin\u00a0? ${String(MASSACRE.POINTS_PAR_SECONDE_RESTANTE)} points par seconde restante.`,
   ],
   among: [
-    'Des assassins tirés au sort, que personne ne connaît, éliminent les proies au contact, avec Espace ou le bouton Katana.',
+    'Des assassins tirés au sort, que personne ne connaît, éliminent les proies au contact, avec Espace ou le bouton Katana. Une proie à portée s’éclaire de rouge, et le Katana s’allume.',
     'Les proies font leurs tâches aux stations de la carte, en tenant E ou le bouton d’action. Toutes faites, elles gagnent.',
-    'Un cadavre signalé, ou le gong au centre de la carte, ouvre une réunion. On discute, puis on vote pour éjecter quelqu’un, sans savoir s’il était assassin.',
+    'Un cadavre signalé, ou le gong au centre de la carte, ouvre une réunion. On discute, puis on vote pour exécuter quelqu’un, sans savoir s’il était assassin.',
     `Les morts jouent en fantôme, invisibles des vivants, et finissent leurs tâches. Chacun ne voit qu’autour de lui. Il faut ${String(AMONG.JOUEURS_MINIMUM)} joueurs au moins.`,
   ],
 };

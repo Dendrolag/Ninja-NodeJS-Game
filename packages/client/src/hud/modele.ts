@@ -44,6 +44,7 @@ import {
   proiesRestantes,
 } from '@neon-ninja/shared';
 
+import { victimeAPortee } from '../among.js';
 import type { EtatClient } from '../etat.js';
 import type { AmongHud } from './among.js';
 import { amongHud, rechargeDuMeurtreMs, tempsAmong } from './among.js';
@@ -146,6 +147,11 @@ export interface ChargesHud {
    * en cours.
    */
   readonly recharge: number;
+  /**
+   * Le bouton est grise: l'assassin d'Among Ninjas n'a personne a sa portee (demande du porteur
+   * du projet du 10 octobre 2026). Le katana ne se propose que face a une victime.
+   */
+  readonly inactif?: true;
 }
 
 /** Notre role dans une partie Chasse, et ce qu'il reste de proies (etape 7.3). */
@@ -696,6 +702,8 @@ function chargesHud(etat: EtatClient, mode: Mode | undefined): ChargesHud | unde
       disponibles: charges,
       maximum: 1,
       recharge: charges > 0 ? 1 : Math.min(Math.max(1 - avantProchaineChargeMs / recharge, 0), 1),
+      // Le katana ne se propose que face a une victime a portee, le katana pret.
+      ...(victimeAPortee(etat) === undefined ? { inactif: true as const } : {}),
     };
   }
 

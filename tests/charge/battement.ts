@@ -384,6 +384,11 @@ function ouvrirLaPartie(
 
   room.lancer();
 
+  // Among Ninjas attend que chacun ait charge la carte avant la revelation (etape 7.20).
+  for (const joueur of room.joueurs) {
+    room.signalerLeChargement(joueur.id);
+  }
+
   return room;
 }
 

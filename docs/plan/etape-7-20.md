@@ -65,6 +65,13 @@ Planche `docs/design/etape-7-20/1-planche.png` (source `planche.html`, à côté
 6. **La réunion: B**, la table ronde autour du gong, le chat dessous, à améliorer, notamment le rendu des votes.
 7. **L'éjection: B**, la bouche d'égout néon, à affiner pour coller à l'univers du jeu.
 
+Ajustements demandés par le porteur du projet le 10 octobre 2026, après son essai:
+
+8. **La révélation attend que tout le monde ait chargé la carte.** Une phase `chargement` la précède: chaque page signale qu'elle a chargé (`carteChargee`), et la révélation commence quand tous l'ont fait, ou au bout de 30 secondes (`AMONG.ATTENTE_DU_CHARGEMENT_MAXIMUM_MS`), pour qu'un joueur bloqué ou déconnecté ne retienne pas la partie. Pendant l'attente, la page dit « En attente des autres joueurs » et ne montre pas encore le rôle.
+9. **« Exécution » remplace « éjection »** partout où le joueur le lit, plus dans le thème des ninjas. Le code garde `ejection` et `ejecte`, comme il garde `tueur`.
+10. **Un cadrage plus serré, le même pour tous.** Le plus petit côté de l'écran montre 450 pixels de carte (`COTE_DE_VUE_AMONG_PX`), sur ordinateur comme sur téléphone, en paysage comme en portrait: un peu plus près que le Tactique (500 en hauteur sur ordinateur). Le téléphone perd son cadrage serré habituel (271 pixels de haut) dans ce mode.
+11. **La victime à portée en surbrillance, et le katana seulement face à elle.** Un assassin voit en légère surbrillance rouge la proie qu'il tuerait s'il frappait maintenant (la règle du moteur: katana prêt, proie vivante la plus proche à 32 pixels), et le bouton Katana est grisé et inactif sinon. Captures `docs/design/etape-7-20/2-katana-sans-victime.png` et `3-victime-a-portee.png`, rendu à juger en jouant.
+
 ## Décisions prises par cette fiche
 
 Micro-décisions au sens du PROTOCOLE. Chacune se consigne au journal de `docs/design/README.md` quand elle est construite, et se révise en exécutant si le dépôt le demande.

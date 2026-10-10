@@ -39,7 +39,15 @@ function enJeu(reglages: Record<string, unknown> = {}): EtatPartie {
   for (let rang = 1; rang <= 5; rang += 1) {
     etat = ajouterJoueur(etat, { id: `j${String(rang)}`, pseudo: `Joueur ${String(rang)}` });
   }
-  return tick(lancerLaPartie(etat), {}, AMONG.DUREE_REVELATION_MS);
+  const lancee = lancerLaPartie(etat);
+  const charges = Object.fromEntries(
+    Object.keys(lancee.joueurs).map((id) => [
+      id,
+      { deplacement: { x: 0, y: 0 }, enMouvement: false, carteChargee: true as const },
+    ]),
+  );
+
+  return tick(tick(lancee, charges, 50), {}, AMONG.DUREE_REVELATION_MS);
 }
 
 /** Les tables du mode, dont on sait qu'elles sont posees. */
@@ -361,6 +369,10 @@ describe('la room d une partie Among Ninjas', () => {
       room.accueillir(invite(pseudo));
     }
     room.lancer();
+    for (const joueur of room.joueurs) {
+      room.signalerLeChargement(joueur.id);
+    }
+    room.avancer(50);
     room.avancer(AMONG.DUREE_REVELATION_MS);
     return room;
   }

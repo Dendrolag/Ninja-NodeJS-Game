@@ -147,6 +147,11 @@ export interface EntreeJoueur extends IntentionDeplacement {
    * pour passer. Ponctuel, comme le tir. Ignore hors du vote et dans les autres modes.
    */
   readonly voter?: IdentifiantEntite | null;
+  /**
+   * La page du joueur a charge la carte (etape 7.20): la revelation d'Among Ninjas l'attend.
+   * Ponctuel, comme le tir. Ignore hors du chargement et dans les autres modes.
+   */
+  readonly carteChargee?: true;
 }
 
 /**
