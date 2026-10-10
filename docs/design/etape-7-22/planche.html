@@ -1,0 +1,1605 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Planche Among Ninjas, les sabotages</title>
+    <style>
+      :root {
+        --fond: #0b1020;
+        --cadre: #26304f;
+        --texte: #e8ecf6;
+        --pale: #aeb6cc;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 22px 24px 18px;
+        width: 1400px;
+        background: var(--fond);
+        color: var(--texte);
+        font: 13px/1.35 'DejaVu Sans', 'Segoe UI', sans-serif;
+      }
+      h1 {
+        margin: 0 0 6px;
+        font-size: 22px;
+      }
+      .intro {
+        margin: 0 0 14px;
+      }
+      .rangee {
+        display: grid;
+        grid-template-columns: 170px 1fr 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .legende {
+        text-align: right;
+        padding-top: 60px;
+        color: var(--pale);
+      }
+      .legende b {
+        display: block;
+        color: var(--texte);
+        font-size: 14px;
+      }
+      .case {
+        background: var(--cadre);
+        border-radius: 8px;
+        padding: 7px 7px 6px;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-radius: 4px;
+        background: #121a33;
+      }
+      .titre {
+        text-align: center;
+        font-weight: bold;
+        margin-top: 5px;
+      }
+      .detail {
+        text-align: center;
+        opacity: 0.85;
+        min-height: 34px;
+      }
+      .pied {
+        color: var(--pale);
+        margin-top: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Among Ninjas, les sabotages et la malédiction: les rendus à choisir</h1>
+    <p class="intro">
+      Dessiné en code sur les sprites et le décor de Tokyo. Trois propositions par rangée, A, B ou C; on peut aussi
+      mélanger (« B, mais avec... »). Règles: fiche <code>docs/plan/etape-7-22.md</code>. Rien de ce qui se voit ici ne
+      doit désigner un assassin: le saboteur ne se montre nulle part.
+    </p>
+
+    <div class="rangee">
+      <div class="legende">
+        <b>1. Le panneau des sabotages</b>Sur la carte plein écran d'un assassin (M, ou la mini-carte touchée). Ici la
+        recharge commune court encore pour la panne et la surchauffe
+      </div>
+      <div class="case">
+        <canvas id="r1a" width="760" height="420"></canvas>
+        <div class="titre">A. La colonne</div>
+        <div class="detail">À droite de la carte, à la place de la liste: un sabotage par ligne, son nom, prêt ou grisé</div>
+      </div>
+      <div class="case">
+        <canvas id="r1b" width="760" height="420"></canvas>
+        <div class="titre">B. Les gros boutons</div>
+        <div class="detail">Six boutons ronds sous la carte, faits pour le doigt; la recharge tourne autour de chacun</div>
+      </div>
+      <div class="case">
+        <canvas id="r1c" width="760" height="420"></canvas>
+        <div class="titre">C. Sur la carte même</div>
+        <div class="detail">Chaque sabotage là où il agit: la panne au boîtier, la surchauffe aux consoles, le nuage aux stations</div>
+      </div>
+    </div>
+
+    <div class="rangee">
+      <div class="legende">
+        <b>2. La panne de néons</b>Vue d'une proie: sa vision tombe à 110 pixels jusqu'à ce qu'on répare le boîtier de
+        la rue
+      </div>
+      <div class="case">
+        <canvas id="r2a" width="760" height="420"></canvas>
+        <div class="titre">A. Le noir complet</div>
+        <div class="detail">Hors du petit disque, plus rien: ni décor, ni couleur. Le plus angoissant</div>
+      </div>
+      <div class="case">
+        <canvas id="r2b" width="760" height="420"></canvas>
+        <div class="titre">B. Le décor éteint</div>
+        <div class="detail">Le décor se devine encore, sans couleur et très sombre: on sait où l'on est, on ne voit personne</div>
+      </div>
+      <div class="case">
+        <canvas id="r2c" width="760" height="420"></canvas>
+        <div class="titre">C. Le boîtier qui appelle</div>
+        <div class="detail">Comme B, plus une flèche orange au bord de l'écran vers le boîtier, et sa distance</div>
+      </div>
+    </div>
+
+    <div class="rangee">
+      <div class="legende">
+        <b>3. La surchauffe</b>À tous: deux consoles à tenir en même temps dans les 45 secondes, sinon les assassins
+        gagnent
+      </div>
+      <div class="case">
+        <canvas id="r3a" width="760" height="420"></canvas>
+        <div class="titre">A. Le bandeau d'alarme</div>
+        <div class="detail">Un bandeau rouge en haut, le compte à rebours, et deux flèches vers les consoles au bord de l'écran</div>
+      </div>
+      <div class="case">
+        <canvas id="r3b" width="760" height="420"></canvas>
+        <div class="titre">B. L'écran qui pulse</div>
+        <div class="detail">Les bords de l'écran battent en rouge, un gros compte à rebours au centre du haut</div>
+      </div>
+      <div class="case">
+        <canvas id="r3c" width="760" height="420"></canvas>
+        <div class="titre">C. Dans le bandeau du mode</div>
+        <div class="detail">Le compte à rebours et les consoles dans le bandeau et la mini-carte, l'écran de jeu reste net</div>
+      </div>
+    </div>
+
+    <div class="rangee">
+      <div class="legende">
+        <b>4. Le nuage noir</b>Sur une station, 20 secondes. Une proie n'y voit personne, dedans comme dehors; en
+        médaillon, ce que voit un assassin
+      </div>
+      <div class="case">
+        <canvas id="r4a" width="760" height="420"></canvas>
+        <div class="titre">A. La fumée noire</div>
+        <div class="detail">Des volutes opaques qui roulent sur la station, bord flou</div>
+      </div>
+      <div class="case">
+        <canvas id="r4b" width="760" height="420"></canvas>
+        <div class="titre">B. Le dôme d'encre</div>
+        <div class="detail">Un disque violet sombre au bord net, le motif de la zone d'invisibilité des autres modes</div>
+      </div>
+      <div class="case">
+        <canvas id="r4c" width="760" height="420"></canvas>
+        <div class="titre">C. Le trou dans les néons</div>
+        <div class="detail">Le décor s'éteint en noir dans le disque, son bord grésille comme un néon qui lâche</div>
+      </div>
+    </div>
+
+    <div class="rangee">
+      <div class="legende">
+        <b>5. La malédiction</b>À gauche, la carte d'une proie fantôme et ses trois malus; à droite, l'écran d'un
+        assassin maudit (ici, vision floue)
+      </div>
+      <div class="case">
+        <canvas id="r5a" width="760" height="420"></canvas>
+        <div class="titre">A. Le spectre</div>
+        <div class="detail">Un panneau bleu pâle, translucide; chez le maudit, « Un fantôme te maudit » au centre</div>
+      </div>
+      <div class="case">
+        <canvas id="r5b" width="760" height="420"></canvas>
+        <div class="titre">B. Les sceaux</div>
+        <div class="detail">Trois sceaux violets à briser; chez le maudit, le sceau du malus brisé et le texte</div>
+      </div>
+      <div class="case">
+        <canvas id="r5c" width="760" height="420"></canvas>
+        <div class="titre">C. Discret</div>
+        <div class="detail">Trois boutons simples; chez le maudit, une ligne en bas de l'écran, comme un malus subi</div>
+      </div>
+    </div>
+
+    <div class="rangee">
+      <div class="legende">
+        <b>6. Le boîtier et les consoles</b>Dans le décor, hors sabotage. Ici le boîtier de la rue; les deux consoles
+        prennent le même style
+      </div>
+      <div class="case">
+        <canvas id="r6a" width="760" height="420"></canvas>
+        <div class="titre">A. L'objet néon</div>
+        <div class="detail">Un boîtier dessiné, toujours là, qui s'allume en orange pendant la panne</div>
+      </div>
+      <div class="case">
+        <canvas id="r6b" width="760" height="420"></canvas>
+        <div class="titre">B. La marque au sol</div>
+        <div class="detail">Un disque au sol comme une station, orange, avec son pictogramme</div>
+      </div>
+      <div class="case">
+        <canvas id="r6c" width="760" height="420"></canvas>
+        <div class="titre">C. Seulement en sabotage</div>
+        <div class="detail">Rien hors sabotage (à gauche); pendant, le disque et l'icône apparaissent (à droite)</div>
+      </div>
+    </div>
+
+    <div class="rangee">
+      <div class="legende">
+        <b>7. L'exécution coupée en deux</b>Retour d'essai: le joueur désigné par le vote est tranché. Pour tout
+        exécuté, assassin ou non: le rôle ne se dit jamais
+      </div>
+      <div class="case">
+        <canvas id="r7a" width="760" height="420"></canvas>
+        <div class="titre">A. La lame, puis l'égout</div>
+        <div class="detail">Un trait de lame en diagonale, les deux moitiés glissent l'une sur l'autre et tombent dans l'égout</div>
+      </div>
+      <div class="case">
+        <canvas id="r7b" width="760" height="420"></canvas>
+        <div class="titre">B. La coupe néon</div>
+        <div class="detail">Une coupe nette à l'horizontale, la moitié haute s'envole, les deux s'éteignent en étincelles</div>
+      </div>
+      <div class="case">
+        <canvas id="r7c" width="760" height="420"></canvas>
+        <div class="titre">C. Le Massacre</div>
+        <div class="detail">Le coup de katana du Massacre, du sang, les deux moitiés au sol dans leur tache</div>
+      </div>
+    </div>
+    <p class="pied">
+      Planche des rendus de l'étape 7.22, à choisir avant toute construction. Les captures dans le vrai jeu viendront à
+      côté, au fil de la construction.
+    </p>
+
+    <script>
+      const RACINE = '../../../assets/';
+      const charger = (chemin) =>
+        new Promise((ok) => {
+          const image = new Image();
+          image.onload = () => ok(image);
+          image.onerror = () => ok(null);
+          image.src = RACINE + chemin;
+        });
+
+      const W = 760;
+      const H = 420;
+      const CYAN = '#2EE6FF';
+      const ROUGE = '#FF3A5C';
+      const MOI = '#FF5FD2';
+      const FOULE = '#7F8A99';
+
+      // Les cinq taches de notre proie, sur les stations de Tokyo (fiche 7.21).
+      const MES_TACHES = [
+        { x: 170, y: 180, station: 'Pierre du jardin zen', tache: 'Aiguiser un katana', icone: 'katana', faite: true },
+        { x: 700, y: 355, station: "Lavabos de l'arcade", tache: 'Nettoyer les lunettes', icone: 'lunettes' },
+        { x: 1335, y: 80, station: 'Camionnette du parking', tache: 'Recharger des munitions', icone: 'cartouche', faite: true },
+        { x: 1320, y: 1070, station: 'Tapis du salon', tache: 'Remplir de fumée', icone: 'fumee' },
+        { x: 1600, y: 1045, station: 'Bureaux de la salle violette', tache: 'Relier des couleurs', icone: 'fils' },
+      ];
+      const GONG = { x: 1145, y: 630 };
+      const NOUS = { x: 1080, y: 760 };
+
+      function graine(depart) {
+        let s = depart;
+        return () => (s = (s * 9301 + 49297) % 233280) / 233280;
+      }
+
+      /** Le ninja recolore: la part rouge prend la couleur voulue, comme la page du jeu. */
+      function ninja(image, couleur) {
+        const toile = document.createElement('canvas');
+        toile.width = image.width;
+        toile.height = image.height;
+        const ctx = toile.getContext('2d');
+        ctx.drawImage(image, 0, 0);
+        const donnees = ctx.getImageData(0, 0, toile.width, toile.height);
+        const p = donnees.data;
+        const c = parseInt(couleur.slice(1), 16);
+        const [cr, cg, cb] = [(c >> 16) & 255, (c >> 8) & 255, c & 255];
+        for (let i = 0; i < p.length; i += 4) {
+          const [r, g, b, a] = [p[i], p[i + 1], p[i + 2], p[i + 3]];
+          if (a === 0) continue;
+          const exces = r - Math.max(g, b);
+          const part = Math.abs(g - b) > 40 || exces < 40 ? 0 : Math.min(1, exces / 255);
+          if (part > 0) {
+            const fond = (r - part * 255) / Math.max(1 - part, 0.01);
+            p[i] = cr * part + fond * (1 - part);
+            p[i + 1] = cg * part + g * (1 - part);
+            p[i + 2] = cb * part + b * (1 - part);
+          }
+        }
+        ctx.putImageData(donnees, 0, 0);
+        return toile;
+      }
+
+      function dessinerNinja(ctx, image, couleur, x, y, taille) {
+        if (!image) return;
+        ctx.drawImage(ninja(image, couleur), x - taille / 2, y - taille / 2, taille, taille);
+      }
+
+      function texte(ctx, chaine, x, y, taille, couleur, options = {}) {
+        ctx.save();
+        ctx.font = `${options.gras ? 'bold ' : ''}${options.italique ? 'italic ' : ''}${taille}px ${
+          options.police ?? "'DejaVu Sans', sans-serif"
+        }`;
+        ctx.fillStyle = couleur;
+        ctx.textAlign = options.align ?? 'center';
+        ctx.textBaseline = 'middle';
+        if (options.halo) {
+          ctx.shadowColor = options.halo;
+          ctx.shadowBlur = options.flou ?? 14;
+        }
+        ctx.fillText(chaine, x, y);
+        ctx.restore();
+      }
+
+      function rectArrondi(ctx, x, y, l, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + l, y, x + l, y + h, r);
+        ctx.arcTo(x + l, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + l, y, r);
+        ctx.closePath();
+      }
+
+      /** Le decor de Tokyo, centre sur (cx, cy) en pixels de carte, a l'echelle donnee. */
+      function decor(ctx, fond, cx, cy, echelle, largeur = W, hauteur = H) {
+        if (!fond) {
+          ctx.fillStyle = '#1a2240';
+          ctx.fillRect(0, 0, largeur, hauteur);
+          return;
+        }
+        // Le fond de Tokyo est etire de 3000x2000 a 2000x1500.
+        const sx = (cx - largeur / 2 / echelle) * 1.5;
+        const sy = (cy - hauteur / 2 / echelle) * (2000 / 1500);
+        ctx.drawImage(fond, sx, sy, (largeur / echelle) * 1.5, (hauteur / echelle) * (2000 / 1500), 0, 0, largeur, hauteur);
+      }
+
+      /** Le cercle de vision retenu en 7.20: le disque net, hors du disque le decor assombri et sans couleur. */
+      function vision(ctx, x, y, rayon, largeur = W, hauteur = H) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 0, largeur, hauteur);
+        ctx.arc(x, y, rayon, 0, Math.PI * 2, true);
+        ctx.clip('evenodd');
+        ctx.globalCompositeOperation = 'saturation';
+        ctx.fillStyle = '#808080';
+        ctx.fillRect(0, 0, largeur, hauteur);
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(0, 0, largeur, hauteur);
+        ctx.restore();
+      }
+
+      /** Une scene de jeu: le decor, quelques ninjas, la station et le cercle de vision. */
+      function scene(ctx, images, cx, cy, echelle, options = {}) {
+        decor(ctx, images.fond, cx, cy, echelle);
+        const ecran = (x, y) => [W / 2 + (x - cx) * echelle, H / 2 + (y - cy) * echelle];
+        for (const [x, y, couleur] of options.ninjas ?? []) {
+          const [ex, ey] = ecran(x, y);
+          dessinerNinja(ctx, images.idle, couleur, ex, ey, 32 * echelle);
+        }
+        vision(ctx, W / 2, H / 2, (options.rayon ?? 260) * echelle);
+        return ecran;
+      }
+
+      function croix(ctx, x, y, couleur) {
+        ctx.save();
+        ctx.strokeStyle = couleur;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x - 8, y - 8);
+        ctx.lineTo(x + 8, y + 8);
+        ctx.moveTo(x + 8, y - 8);
+        ctx.lineTo(x - 8, y + 8);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // ------------------------------------------------------------------
+      // Les icones des taches
+      // ------------------------------------------------------------------
+
+      function icone(ctx, nom, x, y, t, couleur) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.strokeStyle = couleur;
+        ctx.fillStyle = couleur;
+        ctx.lineWidth = Math.max(1.5, t / 8);
+        ctx.lineCap = 'round';
+        const s = t / 2;
+        if (nom === 'katana') {
+          ctx.rotate(-Math.PI / 4);
+          ctx.beginPath();
+          ctx.moveTo(-s * 0.3, 0);
+          ctx.lineTo(s, 0);
+          ctx.stroke();
+          ctx.lineWidth *= 1.6;
+          ctx.beginPath();
+          ctx.moveTo(-s, 0);
+          ctx.lineTo(-s * 0.45, 0);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(-s * 0.38, -s * 0.32);
+          ctx.lineTo(-s * 0.38, s * 0.32);
+          ctx.stroke();
+        } else if (nom === 'lunettes') {
+          ctx.beginPath();
+          ctx.arc(-s * 0.5, s * 0.1, s * 0.38, 0, Math.PI * 2);
+          ctx.moveTo(s * 0.88, s * 0.1);
+          ctx.arc(s * 0.5, s * 0.1, s * 0.38, 0, Math.PI * 2);
+          ctx.moveTo(-s * 0.12, 0);
+          ctx.quadraticCurveTo(0, -s * 0.2, s * 0.12, 0);
+          ctx.stroke();
+        } else if (nom === 'cartouche') {
+          for (const dx of [-s * 0.45, 0, s * 0.45]) {
+            ctx.fillRect(dx - s * 0.14, -s * 0.3, s * 0.28, s * 0.85);
+            ctx.beginPath();
+            ctx.arc(dx, -s * 0.3, s * 0.14, Math.PI, 0);
+            ctx.fill();
+          }
+        } else if (nom === 'fumee') {
+          ctx.beginPath();
+          ctx.arc(-s * 0.35, s * 0.15, s * 0.38, 0, Math.PI * 2);
+          ctx.arc(s * 0.3, s * 0.2, s * 0.34, 0, Math.PI * 2);
+          ctx.arc(0, -s * 0.3, s * 0.4, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (nom === 'fils') {
+          const couleurs = ['#FF3030', '#3D7DFF', '#FFE81A'];
+          couleurs.forEach((c, i) => {
+            ctx.strokeStyle = c;
+            ctx.beginPath();
+            ctx.moveTo(-s, -s * 0.6 + i * s * 0.6);
+            ctx.bezierCurveTo(0, -s * 0.6 + i * s * 0.6, 0, s * 0.6 - i * s * 0.6, s, s * 0.6 - i * s * 0.6);
+            ctx.stroke();
+          });
+        }
+        ctx.restore();
+      }
+
+      // ------------------------------------------------------------------
+      // La carte entiere, en petit
+      // ------------------------------------------------------------------
+
+      function carteEntiere(ctx, images, x, y, echelle, style) {
+        const l = 2000 * echelle;
+        const h = 1500 * echelle;
+        if (style === 'plan') {
+          ctx.fillStyle = '#071027';
+          ctx.fillRect(x, y, l, h);
+          if (images.collision) {
+            // Les murs, lus sur la collision, traces en neon.
+            const toile = document.createElement('canvas');
+            toile.width = Math.round(l);
+            toile.height = Math.round(h);
+            const c = toile.getContext('2d');
+            c.drawImage(images.collision, 0, 0, toile.width, toile.height);
+            const d = c.getImageData(0, 0, toile.width, toile.height);
+            const mur = (i) => d.data[i] + d.data[i + 1] + d.data[i + 2] < 384;
+            const sortie = c.createImageData(toile.width, toile.height);
+            for (let py = 1; py < toile.height - 1; py++) {
+              for (let px = 1; px < toile.width - 1; px++) {
+                const i = (py * toile.width + px) * 4;
+                if (!mur(i)) continue;
+                const bord =
+                  !mur(i - 4) || !mur(i + 4) || !mur(i - toile.width * 4) || !mur(i + toile.width * 4);
+                sortie.data[i] = bord ? 46 : 20;
+                sortie.data[i + 1] = bord ? 230 : 40;
+                sortie.data[i + 2] = bord ? 255 : 70;
+                sortie.data[i + 3] = 255;
+              }
+            }
+            c.putImageData(sortie, 0, 0);
+            ctx.save();
+            ctx.shadowColor = CYAN;
+            ctx.shadowBlur = 6;
+            ctx.drawImage(toile, x, y);
+            ctx.restore();
+          }
+        } else if (images.fond) {
+          ctx.drawImage(images.fond, x, y, l, h);
+          if (style === 'eteint') {
+            ctx.save();
+            ctx.globalCompositeOperation = 'saturation';
+            ctx.fillStyle = '#808080';
+            ctx.fillRect(x, y, l, h);
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = 'rgba(5, 8, 20, 0.6)';
+            ctx.fillRect(x, y, l, h);
+            ctx.restore();
+          }
+        }
+        return (px, py) => [x + px * echelle, y + py * echelle];
+      }
+
+      function gongSur(ctx, x, y, t) {
+        ctx.save();
+        ctx.strokeStyle = '#FFC93D';
+        ctx.fillStyle = 'rgba(255, 201, 61, 0.25)';
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = '#FFC93D';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(x, y, t, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function nousSur(ctx, x, y) {
+        ctx.save();
+        ctx.fillStyle = MOI;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.shadowColor = MOI;
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(x, y, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x, y, 12, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255, 95, 210, 0.6)';
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function coche(ctx, x, y, t, couleur) {
+        ctx.save();
+        ctx.strokeStyle = couleur;
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x - t * 0.45, y);
+        ctx.lineTo(x - t * 0.1, y + t * 0.35);
+        ctx.lineTo(x + t * 0.5, y - t * 0.4);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      /** La liste de nos taches, dans un panneau. */
+      function liste(ctx, x, y, l, options = {}) {
+        const pas = options.pas ?? 46;
+        const taille = options.taille ?? 14;
+        const h = 36 + MES_TACHES.length * pas;
+        ctx.save();
+        ctx.fillStyle = options.fond ?? 'rgba(10, 16, 34, 0.92)';
+        rectArrondi(ctx, x, y, l, h, 8);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(46, 230, 255, 0.6)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
+        texte(ctx, 'Mes tâches 2 sur 5', x + 12, y + 18, taille + 1, CYAN, { gras: true, align: 'left' });
+        MES_TACHES.forEach((t, i) => {
+          const ly = y + 36 + i * pas + pas / 2 - 4;
+          const couleur = t.faite ? '#7d8aa6' : '#e8ecf6';
+          if (options.numeros) {
+            texte(ctx, String(i + 1), x + 18, ly, taille, t.faite ? '#7d8aa6' : CYAN, { gras: true });
+          } else if (t.faite) {
+            coche(ctx, x + 18, ly, 14, '#3ee07a');
+          } else {
+            ctx.save();
+            ctx.strokeStyle = CYAN;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x + 11, ly - 7, 14, 14);
+            ctx.restore();
+          }
+          texte(ctx, t.tache, x + 34, ly - (options.unaLigne ? 0 : 8), taille, couleur, {
+            align: 'left',
+            gras: !t.faite,
+          });
+          if (!options.unaLigne) {
+            texte(ctx, t.station, x + 34, ly + 10, taille - 2, t.faite ? '#5f6a82' : '#aeb6cc', { align: 'left' });
+          }
+        });
+        return h;
+      }
+
+      // ------------------------------------------------------------------
+      // Le bandeau du mode, tel qu'il est aujourd'hui (capture 8-minimap)
+      // ------------------------------------------------------------------
+
+      function bandeau(ctx, images, x, y, avecListe) {
+        const l = 210;
+        const minimapH = 1500 * ((l - 24) / 2000) + 4;
+        const listeH = avecListe ? 5 * 18 + 6 : 0;
+        const h = 128 + minimapH + listeH;
+        ctx.save();
+        ctx.fillStyle = 'rgba(8, 12, 24, 0.9)';
+        rectArrondi(ctx, x, y, l, h, 10);
+        ctx.fill();
+        ctx.strokeStyle = CYAN;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
+        texte(ctx, 'PROIE', x + l - 12, y + 22, 18, CYAN, { gras: true, align: 'right' });
+        texte(ctx, 'Faites vos tâches, trouvez les', x + l - 12, y + 48, 12, '#aeb6cc', { align: 'right' });
+        texte(ctx, 'assassins', x + l - 12, y + 64, 12, '#aeb6cc', { align: 'right' });
+        texte(ctx, 'Mes tâches 2 sur 5', x + l - 12, y + 86, 12, '#aeb6cc', { align: 'right' });
+        ctx.fillStyle = '#26304f';
+        rectArrondi(ctx, x + 12, y + 98, l - 24, 14, 4);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(46, 230, 255, 0.55)';
+        rectArrondi(ctx, x + 12, y + 98, (l - 24) * (9 / 20), 14, 4);
+        ctx.fill();
+        texte(ctx, 'Tâches 9/20', x + l / 2, y + 105, 10, '#ffffff', { gras: true });
+        const mx = x + 12;
+        const my = y + 120;
+        const echelle = (l - 24) / 2000;
+        const sur = carteEntiere(ctx, images, mx, my, echelle, 'eteint');
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.fillRect(mx, my, l - 24, 1500 * echelle);
+        for (const t of MES_TACHES.filter((t) => !t.faite)) {
+          const [sx, sy] = sur(t.x, t.y);
+          ctx.fillStyle = CYAN;
+          ctx.beginPath();
+          ctx.arc(sx, sy, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        const [gx, gy] = sur(GONG.x, GONG.y);
+        gongSur(ctx, gx, gy, 4);
+        const [nx, ny] = sur(NOUS.x, NOUS.y);
+        ctx.fillStyle = MOI;
+        ctx.beginPath();
+        ctx.arc(nx, ny, 4, 0, Math.PI * 2);
+        ctx.fill();
+        if (avecListe) {
+          let ly = my + 1500 * echelle + 13;
+          for (const t of MES_TACHES) {
+            if (t.faite) coche(ctx, mx + 6, ly, 10, '#3ee07a');
+            else {
+              ctx.strokeStyle = CYAN;
+              ctx.lineWidth = 1.5;
+              ctx.strokeRect(mx + 1, ly - 5, 10, 10);
+            }
+            texte(ctx, t.tache, mx + 18, ly, 11.5, t.faite ? '#6f7b94' : '#e8ecf6', { align: 'left' });
+            ly += 18;
+          }
+        }
+      }
+
+
+      // ------------------------------------------------------------------
+      // Etape 7.22: les sabotages
+      // ------------------------------------------------------------------
+
+      const ORANGE = '#FF8C1A';
+      const ALARME = '#FF2E3A';
+      const SPECTRE = '#B9E6FF';
+      const VIOLET = '#9A55FF';
+      const BOITIER = { x: 1330, y: 495 };
+      const CONSOLES = [
+        { x: 485, y: 320 },
+        { x: 1860, y: 890 },
+      ];
+      const STATIONS_ACTIVES = [
+        { x: 990, y: 190, nom: "Bornes d'arcade" },
+        { x: 700, y: 355, nom: "Lavabos de l'arcade" },
+        { x: 170, y: 180, nom: 'Pierre du jardin zen' },
+        { x: 1335, y: 80, nom: 'Camionnette du parking' },
+        { x: 630, y: 1295, nom: 'Cuisine du restaurant' },
+        { x: 1320, y: 1070, nom: 'Tapis du salon' },
+        { x: 1600, y: 1045, nom: 'Bureaux de la salle violette' },
+        { x: 1760, y: 1240, nom: 'Casiers de la salle violette' },
+        { x: 415, y: 490, nom: 'Distributeur du jardin' },
+      ];
+      const SABOTAGES = [
+        { nom: 'Vision floue', icone: 'flou', pret: true },
+        { nom: 'Vision négative', icone: 'negatif', pret: true },
+        { nom: 'Commandes inversées', icone: 'inverse', pret: true },
+        { nom: 'Nuage noir', icone: 'nuage', pret: true },
+        { nom: 'Panne de néons', icone: 'panne', pret: false },
+        { nom: 'Surchauffe', icone: 'surchauffe', pret: false },
+      ];
+
+      // Le ninja recolore coute cher: une toile par couleur suffit.
+      const ninjasColores = new Map();
+      function ninjaColore(image, couleur) {
+        const cle = couleur;
+        if (!ninjasColores.has(cle)) ninjasColores.set(cle, ninja(image, couleur));
+        return ninjasColores.get(cle);
+      }
+      function poserNinja(ctx, image, couleur, x, y, taille, alpha = 1) {
+        if (!image) return;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.drawImage(ninjaColore(image, couleur), x - taille / 2, y - taille / 2, taille, taille);
+        ctx.restore();
+      }
+
+      /** Les icones des sabotages, dessinees: les malus reprennent les images du jeu. */
+      function iconeSabotage(ctx, images, nom, x, y, t, couleur) {
+        const image = { flou: images.blur, negatif: images.negative, inverse: images.reverse }[nom];
+        if (image) {
+          // Les pictogrammes du jeu sont noirs: teints de la couleur voulue sur fond sombre.
+          const toile = document.createElement('canvas');
+          toile.width = image.width;
+          toile.height = image.height;
+          const c = toile.getContext('2d');
+          c.drawImage(image, 0, 0);
+          c.globalCompositeOperation = 'source-in';
+          c.fillStyle = couleur;
+          c.fillRect(0, 0, toile.width, toile.height);
+          const r = image.height / image.width;
+          ctx.drawImage(toile, x - t / 2, y - (t * r) / 2, t, t * r);
+          return;
+        }
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.strokeStyle = couleur;
+        ctx.fillStyle = couleur;
+        ctx.lineWidth = Math.max(2, t / 12);
+        ctx.lineJoin = 'round';
+        const s = t / 2;
+        if (nom === 'nuage') {
+          ctx.fillStyle = '#20122e';
+          ctx.beginPath();
+          ctx.arc(-s * 0.4, s * 0.1, s * 0.42, 0, Math.PI * 2);
+          ctx.arc(s * 0.35, s * 0.15, s * 0.38, 0, Math.PI * 2);
+          ctx.arc(0, -s * 0.25, s * 0.45, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = couleur;
+          ctx.stroke();
+        } else if (nom === 'panne') {
+          ctx.beginPath();
+          ctx.moveTo(s * 0.15, -s * 0.9);
+          ctx.lineTo(-s * 0.45, s * 0.1);
+          ctx.lineTo(0, s * 0.1);
+          ctx.lineTo(-s * 0.15, s * 0.9);
+          ctx.lineTo(s * 0.45, -s * 0.15);
+          ctx.lineTo(0, -s * 0.15);
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = '#000';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(-s * 0.8, s * 0.8);
+          ctx.lineTo(s * 0.8, -s * 0.8);
+          ctx.stroke();
+        } else if (nom === 'surchauffe') {
+          ctx.beginPath();
+          ctx.moveTo(0, -s * 0.9);
+          ctx.bezierCurveTo(s * 0.7, -s * 0.2, s * 0.7, s * 0.8, 0, s * 0.85);
+          ctx.bezierCurveTo(-s * 0.7, s * 0.8, -s * 0.7, -s * 0.1, -s * 0.2, -s * 0.35);
+          ctx.bezierCurveTo(-s * 0.1, 0, s * 0.05, -s * 0.4, 0, -s * 0.9);
+          ctx.fill();
+          ctx.fillStyle = '#ffe28a';
+          ctx.beginPath();
+          ctx.ellipse(0, s * 0.45, s * 0.22, s * 0.32, 0, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (nom === 'boitier') {
+          rectArrondi(ctx, -s * 0.65, -s * 0.85, s * 1.3, s * 1.7, s * 0.15);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(s * 0.1, -s * 0.55);
+          ctx.lineTo(-s * 0.25, s * 0.05);
+          ctx.lineTo(s * 0.05, s * 0.05);
+          ctx.lineTo(-s * 0.1, s * 0.55);
+          ctx.lineTo(s * 0.3, -s * 0.1);
+          ctx.lineTo(0, -s * 0.1);
+          ctx.closePath();
+          ctx.fill();
+        } else if (nom === 'console') {
+          rectArrondi(ctx, -s * 0.8, -s * 0.55, s * 1.6, s * 1.0, s * 0.12);
+          ctx.stroke();
+          ctx.fillRect(-s * 0.15, s * 0.45, s * 0.3, s * 0.3);
+          ctx.fillRect(-s * 0.5, s * 0.72, s, s * 0.16);
+          ctx.beginPath();
+          ctx.moveTo(-s * 0.5, s * 0.1);
+          ctx.lineTo(-s * 0.2, -s * 0.25);
+          ctx.lineTo(s * 0.1, 0);
+          ctx.lineTo(s * 0.5, -s * 0.3);
+          ctx.stroke();
+        } else if (nom === 'fantome') {
+          ctx.beginPath();
+          ctx.arc(0, -s * 0.2, s * 0.6, Math.PI, 0);
+          ctx.lineTo(s * 0.6, s * 0.75);
+          ctx.lineTo(s * 0.3, s * 0.5);
+          ctx.lineTo(0, s * 0.75);
+          ctx.lineTo(-s * 0.3, s * 0.5);
+          ctx.lineTo(-s * 0.6, s * 0.75);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = '#0b1020';
+          ctx.beginPath();
+          ctx.arc(-s * 0.22, -s * 0.2, s * 0.1, 0, Math.PI * 2);
+          ctx.arc(s * 0.22, -s * 0.2, s * 0.1, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      /** Un panneau sombre au bord neon. */
+      function panneau(ctx, x, y, l, h, couleur, fond = 'rgba(10, 16, 34, 0.93)') {
+        ctx.save();
+        ctx.fillStyle = fond;
+        rectArrondi(ctx, x, y, l, h, 10);
+        ctx.fill();
+        ctx.strokeStyle = couleur;
+        ctx.lineWidth = 1.6;
+        ctx.shadowColor = couleur;
+        ctx.shadowBlur = 8;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      /** La carte plein ecran d'un assassin: le decor eteint, les stations actives en rouge, et nous. */
+      function carteDAssassin(ctx, images, x, y, echelle) {
+        const sur = carteEntiere(ctx, images, x, y, echelle, 'eteint');
+        for (const station of STATIONS_ACTIVES) {
+          const [sx, sy] = sur(station.x, station.y);
+          ctx.save();
+          ctx.fillStyle = ROUGE;
+          ctx.shadowColor = ROUGE;
+          ctx.shadowBlur = 6;
+          ctx.beginPath();
+          ctx.arc(sx, sy, 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+        const [gx, gy] = sur(GONG.x, GONG.y);
+        gongSur(ctx, gx, gy, 6);
+        const [nx, ny] = sur(NOUS.x, NOUS.y);
+        nousSur(ctx, nx, ny);
+        return sur;
+      }
+
+      /** Une scene de jeu: le decor, des ninjas, et le cercle de vision (rayon en pixels de carte). */
+      function sceneDeJeu(ctx, images, cx, cy, options = {}) {
+        const echelle = options.echelle ?? H / 450;
+        const largeur = options.largeur ?? W;
+        const hauteur = options.hauteur ?? H;
+        decor(ctx, images.fond, cx, cy, echelle, largeur, hauteur);
+        const ecran = (px, py) => [largeur / 2 + (px - cx) * echelle, hauteur / 2 + (py - cy) * echelle];
+        for (const [px, py, couleur] of options.ninjas ?? []) {
+          const [ex, ey] = ecran(px, py);
+          poserNinja(ctx, images.idle, couleur, ex, ey, 32 * echelle);
+        }
+        if (options.rayon !== undefined) {
+          vision(ctx, largeur / 2, hauteur / 2, options.rayon * echelle, largeur, hauteur);
+        }
+        return ecran;
+      }
+
+      /** Une annonce au centre du haut de l'ecran. */
+      function annonce(ctx, chaine, couleur, y = 46, taille = 22) {
+        ctx.save();
+        ctx.font = `bold ${taille}px 'DejaVu Sans', sans-serif`;
+        const l = ctx.measureText(chaine).width + 40;
+        ctx.restore();
+        panneau(ctx, W / 2 - l / 2, y - 22, l, 44, couleur);
+        texte(ctx, chaine, W / 2, y, taille, couleur, { gras: true, halo: couleur, flou: 8 });
+      }
+
+      /** Une fleche au bord de l'ecran vers un point hors de l'ecran, et sa distance. */
+      function flecheDeBord(ctx, depuis, vers, couleur, libelle) {
+        const angle = Math.atan2(vers[1] - depuis[1], vers[0] - depuis[0]);
+        const marge = 34;
+        const dx = Math.cos(angle);
+        const dy = Math.sin(angle);
+        const tx = dx === 0 ? Infinity : ((dx > 0 ? W - marge : marge) - W / 2) / dx;
+        const ty = dy === 0 ? Infinity : ((dy > 0 ? H - marge : marge) - H / 2) / dy;
+        const t = Math.min(tx, ty);
+        const x = W / 2 + dx * t;
+        const y = H / 2 + dy * t;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle);
+        ctx.fillStyle = couleur;
+        ctx.shadowColor = couleur;
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.moveTo(16, 0);
+        ctx.lineTo(-10, -12);
+        ctx.lineTo(-4, 0);
+        ctx.lineTo(-10, 12);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+        const lx = Math.min(Math.max(x - dx * 44, 50), W - 50);
+        const ly = Math.min(Math.max(y - dy * 30, 20), H - 20);
+        texte(ctx, libelle, lx, ly, 13, couleur, { gras: true, halo: '#000', flou: 4 });
+      }
+
+      /** Le bord de l'ecran qui bat en rouge. */
+      function vignette(ctx, couleur, force) {
+        const degrade = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, W * 0.62);
+        degrade.addColorStop(0, 'rgba(0,0,0,0)');
+        degrade.addColorStop(1, couleur.replace('A', String(force)));
+        ctx.fillStyle = degrade;
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      /** Une jauge de recharge circulaire autour d'un bouton. */
+      function anneau(ctx, x, y, r, part, couleur) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = couleur;
+        ctx.shadowColor = couleur;
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * part);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      /** Volutes de fumee noire, reproductibles. */
+      function volutes(ctx, x, y, rayon, graineDepart, opacite = 0.92) {
+        const hasard = graine(graineDepart);
+        ctx.save();
+        ctx.filter = 'blur(6px)';
+        for (let i = 0; i < 26; i += 1) {
+          const a = hasard() * Math.PI * 2;
+          const d = Math.sqrt(hasard()) * rayon * 0.78;
+          const r = rayon * (0.25 + hasard() * 0.25);
+          const g = ctx.createRadialGradient(x + Math.cos(a) * d, y + Math.sin(a) * d, 0, x + Math.cos(a) * d, y + Math.sin(a) * d, r);
+          g.addColorStop(0, `rgba(8, 4, 14, ${opacite})`);
+          g.addColorStop(0.7, `rgba(14, 8, 22, ${opacite * 0.85})`);
+          g.addColorStop(1, 'rgba(14, 8, 22, 0)');
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+        ctx.save();
+        ctx.fillStyle = `rgba(6, 3, 10, ${opacite})`;
+        ctx.beginPath();
+        ctx.arc(x, y, rayon * 0.72, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      /** Le medaillon: ce que voit un assassin au meme endroit. */
+      function medaillon(ctx, images, dessin) {
+        const l = 250;
+        const h = 150;
+        const x = W - l - 12;
+        const y = H - h - 12;
+        const toile = document.createElement('canvas');
+        toile.width = l;
+        toile.height = h;
+        dessin(toile.getContext('2d'), l, h);
+        ctx.save();
+        rectArrondi(ctx, x, y, l, h, 8);
+        ctx.clip();
+        ctx.drawImage(toile, x, y);
+        ctx.restore();
+        ctx.save();
+        ctx.strokeStyle = ROUGE;
+        ctx.lineWidth = 2;
+        rectArrondi(ctx, x, y, l, h, 8);
+        ctx.stroke();
+        ctx.restore();
+        texte(ctx, "Vu d'un assassin", x + 10, y + 14, 12, ROUGE, { gras: true, align: 'left', halo: '#000', flou: 4 });
+      }
+
+      /** Une moitie de ninja: la part d'un cote d'une coupe passant par son centre, deplacee. */
+      function moitie(ctx, image, couleur, x, y, taille, angleCoupe, cote, glisse, tourne, alpha = 1) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.translate(x, y);
+        // Le glissement suit la coupe, dans un sens pour chaque moitie.
+        ctx.translate(Math.cos(angleCoupe) * glisse * cote, Math.sin(angleCoupe) * glisse * cote);
+        ctx.rotate(tourne * cote);
+        ctx.beginPath();
+        const n = { x: -Math.sin(angleCoupe) * cote, y: Math.cos(angleCoupe) * cote };
+        const g = taille * 2;
+        ctx.moveTo(Math.cos(angleCoupe) * g, Math.sin(angleCoupe) * g);
+        ctx.lineTo(Math.cos(angleCoupe) * g + n.x * g, Math.sin(angleCoupe) * g + n.y * g);
+        ctx.lineTo(-Math.cos(angleCoupe) * g + n.x * g, -Math.sin(angleCoupe) * g + n.y * g);
+        ctx.lineTo(-Math.cos(angleCoupe) * g, -Math.sin(angleCoupe) * g);
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(ninjaColore(image, couleur), -taille / 2, -taille / 2, taille, taille);
+        ctx.restore();
+      }
+
+      /** Le fond de l'ecran d'execution: la reunion assombrie, le texte. */
+      function fondDExecution(ctx) {
+        const degrade = ctx.createLinearGradient(0, 0, 0, H);
+        degrade.addColorStop(0, '#0a0f22');
+        degrade.addColorStop(1, '#05070f');
+        ctx.fillStyle = degrade;
+        ctx.fillRect(0, 0, W, H);
+        texte(ctx, 'Max (Orange) a été exécuté.', W / 2, 44, 24, '#e8ecf6', { gras: true });
+        texte(ctx, 'Trois images de l’animation, de gauche à droite', W / 2, H - 18, 12, '#7d8aa6');
+      }
+
+      /** La bouche d'egout de l'execution, comme en 7.20. */
+      function bouche(ctx, x, y, l) {
+        ctx.save();
+        ctx.fillStyle = '#020306';
+        ctx.strokeStyle = CYAN;
+        ctx.shadowColor = CYAN;
+        ctx.shadowBlur = 10;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(x, y, l / 2, l / 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      /** Le trait de la lame. */
+      function trait(ctx, x, y, angle, longueur, couleur) {
+        ctx.save();
+        ctx.strokeStyle = couleur;
+        ctx.shadowColor = couleur;
+        ctx.shadowBlur = 16;
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x - Math.cos(angle) * longueur, y - Math.sin(angle) * longueur);
+        ctx.lineTo(x + Math.cos(angle) * longueur, y + Math.sin(angle) * longueur);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function tache(ctx, x, y, r, graineDepart) {
+        const hasard = graine(graineDepart);
+        ctx.save();
+        ctx.fillStyle = 'rgba(150, 0, 18, 0.9)';
+        ctx.beginPath();
+        ctx.ellipse(x, y, r, r * 0.42, 0, 0, Math.PI * 2);
+        ctx.fill();
+        for (let i = 0; i < 9; i += 1) {
+          const a = hasard() * Math.PI * 2;
+          const d = r * (0.8 + hasard() * 0.7);
+          ctx.beginPath();
+          ctx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d * 0.45, 2 + hasard() * 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      (async () => {
+        const [idle, fond, collision, blur, negative, reverse] = await Promise.all([
+          charger('ninja/idle.png'),
+          charger('cartes/map1/background.png'),
+          charger('cartes/map1/collision.png'),
+          charger('objets/blur.png'),
+          charger('objets/negative.png'),
+          charger('objets/reverse.png'),
+        ]);
+        const images = { idle, fond, collision, blur, negative, reverse };
+        const ctxDe = (id) => document.getElementById(id).getContext('2d');
+        const E = H / 450;
+
+        // --- 1. Le panneau des sabotages
+        {
+          // A. La colonne.
+          let ctx = ctxDe('r1a');
+          ctx.fillStyle = '#05070f';
+          ctx.fillRect(0, 0, W, H);
+          carteDAssassin(ctx, images, 12, 30, 0.255);
+          texte(ctx, 'Carte', 14, 16, 13, '#aeb6cc', { align: 'left' });
+          panneau(ctx, 538, 14, 212, 392, ROUGE);
+          texte(ctx, 'Sabotages', 552, 36, 17, ROUGE, { gras: true, align: 'left', halo: ROUGE, flou: 6 });
+          texte(ctx, 'Prochain dans 12 s', 552, 58, 12, '#aeb6cc', { align: 'left' });
+          SABOTAGES.forEach((s, i) => {
+            const y = 92 + i * 50;
+            ctx.save();
+            ctx.globalAlpha = s.pret ? 1 : 0.38;
+            ctx.fillStyle = i === 3 ? 'rgba(255, 58, 92, 0.18)' : 'rgba(255,255,255,0.04)';
+            rectArrondi(ctx, 548, y - 20, 192, 40, 7);
+            ctx.fill();
+            iconeSabotage(ctx, images, s.icone, 570, y, 26, ROUGE);
+            texte(ctx, s.nom, 592, y, 13.5, '#e8ecf6', { align: 'left', gras: s.pret });
+            ctx.restore();
+          });
+          texte(ctx, 'Nuage: touchez une station', 644, 390, 11.5, ROUGE, { gras: true });
+
+          // B. Les gros boutons.
+          ctx = ctxDe('r1b');
+          ctx.fillStyle = '#05070f';
+          ctx.fillRect(0, 0, W, H);
+          carteDAssassin(ctx, images, (W - 2000 * 0.2) / 2, 10, 0.2);
+          panneau(ctx, 20, 318, W - 40, 92, ROUGE);
+          SABOTAGES.forEach((s, i) => {
+            const x = 80 + i * 120;
+            const y = 352;
+            ctx.save();
+            ctx.globalAlpha = s.pret ? 1 : 0.45;
+            ctx.fillStyle = '#121a33';
+            ctx.beginPath();
+            ctx.arc(x, y, 24, 0, Math.PI * 2);
+            ctx.fill();
+            iconeSabotage(ctx, images, s.icone, x, y, 28, ROUGE);
+            ctx.restore();
+            anneau(ctx, x, y, 27, s.pret ? 1 : 0.6, ROUGE);
+            texte(ctx, s.nom, x, y + 42, 11.5, s.pret ? '#e8ecf6' : '#6f7b94', { gras: s.pret });
+          });
+
+          // C. Sur la carte meme.
+          ctx = ctxDe('r1c');
+          ctx.fillStyle = '#05070f';
+          ctx.fillRect(0, 0, W, H);
+          const ech = 0.27;
+          const ox = 16;
+          const oy = 8;
+          const sur = carteDAssassin(ctx, images, ox, oy, ech);
+          for (const station of STATIONS_ACTIVES) {
+            const [sx, sy] = sur(station.x, station.y);
+            iconeSabotage(ctx, images, 'nuage', sx + 10, sy - 10, 16, ROUGE);
+          }
+          ctx.save();
+          ctx.globalAlpha = 0.45;
+          const [bx, by] = sur(BOITIER.x, BOITIER.y);
+          iconeSabotage(ctx, images, 'panne', bx, by, 26, '#FFE81A');
+          for (const c of CONSOLES) {
+            const [cx2, cy2] = sur(c.x, c.y);
+            iconeSabotage(ctx, images, 'surchauffe', cx2, cy2, 24, ALARME);
+          }
+          ctx.restore();
+          texte(ctx, '12 s', bx + 22, by, 12, '#aeb6cc', { align: 'left', gras: true });
+          panneau(ctx, 568, 14, 180, 196, ROUGE);
+          texte(ctx, 'Nuisances', 582, 36, 15, ROUGE, { gras: true, align: 'left' });
+          SABOTAGES.slice(0, 3).forEach((s, i) => {
+            const y = 74 + i * 46;
+            iconeSabotage(ctx, images, s.icone, 598, y, 28, ROUGE);
+            texte(ctx, s.nom, 620, y, 12.5, '#e8ecf6', { align: 'left', gras: true });
+          });
+          texte(ctx, 'Le reste se touche sur la carte', 658, 232, 11, '#aeb6cc');
+        }
+
+        // --- 2. La panne de neons
+        {
+          const centre = { x: 1180, y: 760 };
+          const autres = [
+            [1240, 790, FOULE],
+            [1010, 700, '#1FBF4C'],
+            [1330, 640, FOULE],
+          ];
+          const nous = [centre.x, centre.y, MOI];
+          // A. Le noir complet.
+          let ctx = ctxDe('r2a');
+          sceneDeJeu(ctx, images, centre.x, centre.y, { ninjas: [nous, autres[0]] });
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(0, 0, W, H);
+          ctx.arc(W / 2, H / 2, 110 * E, 0, Math.PI * 2, true);
+          ctx.clip('evenodd');
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.96)';
+          ctx.fillRect(0, 0, W, H);
+          ctx.restore();
+          annonce(ctx, 'PANNE DE NÉONS', '#FFE81A', 36, 18);
+
+          // B. Le decor eteint.
+          ctx = ctxDe('r2b');
+          sceneDeJeu(ctx, images, centre.x, centre.y, { ninjas: [nous, autres[0]], rayon: 110 });
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(0, 0, W, H);
+          ctx.arc(W / 2, H / 2, 110 * E, 0, Math.PI * 2, true);
+          ctx.clip('evenodd');
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+          ctx.fillRect(0, 0, W, H);
+          ctx.restore();
+          annonce(ctx, 'PANNE DE NÉONS', '#FFE81A', 36, 18);
+
+          // C. Le boitier qui appelle.
+          ctx = ctxDe('r2c');
+          sceneDeJeu(ctx, images, centre.x, centre.y, { ninjas: [nous, autres[0]], rayon: 110 });
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(0, 0, W, H);
+          ctx.arc(W / 2, H / 2, 110 * E, 0, Math.PI * 2, true);
+          ctx.clip('evenodd');
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+          ctx.fillRect(0, 0, W, H);
+          ctx.restore();
+          annonce(ctx, 'PANNE DE NÉONS: réparez le boîtier', '#FFE81A', H - 36, 16);
+          const d = Math.round(Math.hypot(BOITIER.x - centre.x, BOITIER.y - centre.y));
+          flecheDeBord(
+            ctx,
+            [W / 2, H / 2],
+            [W / 2 + (BOITIER.x - centre.x), H / 2 + (BOITIER.y - centre.y)],
+            ORANGE,
+            `Boîtier, ${d} px`,
+          );
+        }
+
+        // --- 3. La surchauffe
+        {
+          const centre = { x: 1000, y: 620 };
+          const nous = [centre.x, centre.y, MOI];
+          const dessinerBase = (ctx) =>
+            sceneDeJeu(ctx, images, centre.x, centre.y, {
+              ninjas: [nous, [1090, 680, '#3D7DFF'], [880, 560, FOULE]],
+              rayon: 260,
+            });
+          const versConsoles = (ctx) => {
+            for (const c of CONSOLES) {
+              const d = Math.round(Math.hypot(c.x - centre.x, c.y - centre.y));
+              flecheDeBord(ctx, [W / 2, H / 2], [W / 2 + (c.x - centre.x), H / 2 + (c.y - centre.y)], ALARME, `${d} px`);
+            }
+          };
+          // A. Le bandeau d'alarme.
+          let ctx = ctxDe('r3a');
+          dessinerBase(ctx);
+          ctx.fillStyle = 'rgba(180, 10, 24, 0.85)';
+          ctx.fillRect(0, 0, W, 48);
+          texte(ctx, 'SURCHAUFFE', 20, 24, 20, '#ffffff', { gras: true, align: 'left' });
+          texte(ctx, 'Tenez les deux consoles ensemble', W / 2, 24, 13, '#ffd7da');
+          texte(ctx, '0:32', W - 20, 24, 24, '#ffffff', { gras: true, align: 'right' });
+          versConsoles(ctx);
+          texte(ctx, 'Consoles tenues: 1 sur 2', W / 2, 64, 12, '#ffd7da', { gras: true, halo: '#000', flou: 4 });
+
+          // B. L'ecran qui pulse.
+          ctx = ctxDe('r3b');
+          dessinerBase(ctx);
+          vignette(ctx, 'rgba(255, 30, 40, A)', 0.75);
+          texte(ctx, '32', W / 2, 52, 52, ALARME, { gras: true, halo: ALARME, flou: 18 });
+          texte(ctx, 'SURCHAUFFE', W / 2, 92, 15, '#ffd7da', { gras: true, halo: '#000', flou: 4 });
+          versConsoles(ctx);
+
+          // C. Dans le bandeau du mode.
+          ctx = ctxDe('r3c');
+          dessinerBase(ctx);
+          vignette(ctx, 'rgba(255, 30, 40, A)', 0.25);
+          bandeau(ctx, images, W - 222, 10, false);
+          // Le compte a rebours et les consoles, par-dessus le bandeau.
+          ctx.fillStyle = 'rgba(180, 10, 24, 0.92)';
+          rectArrondi(ctx, W - 222, 10, 210, 92, 10);
+          ctx.fill();
+          texte(ctx, 'SURCHAUFFE', W - 117, 32, 17, '#ffffff', { gras: true });
+          texte(ctx, '0:32', W - 117, 62, 26, '#ffffff', { gras: true });
+          texte(ctx, 'Consoles tenues: 1 sur 2', W - 117, 88, 11.5, '#ffd7da');
+          const mx = W - 210;
+          const my = 130;
+          const ech = 186 / 2000;
+          for (const [i, c] of CONSOLES.entries()) {
+            ctx.save();
+            ctx.fillStyle = ALARME;
+            ctx.shadowColor = ALARME;
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.arc(mx + c.x * ech, my + c.y * ech, i === 0 ? 6 : 4.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+        }
+
+        // --- 4. Le nuage noir
+        {
+          const station = { x: 1320, y: 1070 };
+          const centre = { x: 1200, y: 1000 };
+          const dedans = [
+            [1300, 1060, '#FFE81A'],
+            [1360, 1110, FOULE],
+          ];
+          const dehors = [
+            [centre.x, centre.y, MOI],
+            [1110, 950, FOULE],
+          ];
+          const vueAssassin = (style) => (c, l, h) => {
+            const e = 0.55;
+            decor(c, images.fond, station.x - 40, station.y - 10, e, l, h);
+            const ecr = (px, py) => [l / 2 + (px - (station.x - 40)) * e, h / 2 + (py - (station.y - 10)) * e];
+            const [sx, sy] = ecr(station.x, station.y);
+            c.save();
+            c.globalAlpha = 0.45;
+            style(c, sx, sy, 150 * e);
+            c.restore();
+            for (const [px, py, couleur] of [...dedans, [1240, 1030, '#FF3030']]) {
+              const [ex, ey] = ecr(px, py);
+              poserNinja(c, images.idle, couleur, ex, ey, 32 * e);
+            }
+          };
+          const styles = {
+            a: (c, x, y, r) => volutes(c, x, y, r, 7),
+            b: (c, x, y, r) => {
+              c.save();
+              c.fillStyle = 'rgba(30, 10, 48, 0.94)';
+              c.beginPath();
+              c.arc(x, y, r, 0, Math.PI * 2);
+              c.fill();
+              c.clip();
+              c.strokeStyle = 'rgba(154, 85, 255, 0.35)';
+              c.lineWidth = 3;
+              for (let k = -r * 2; k < r * 2; k += 14) {
+                c.beginPath();
+                c.moveTo(x + k, y - r);
+                c.lineTo(x + k + r, y + r);
+                c.stroke();
+              }
+              c.restore();
+              c.save();
+              c.strokeStyle = VIOLET;
+              c.lineWidth = 3;
+              c.shadowColor = VIOLET;
+              c.shadowBlur = 14;
+              c.beginPath();
+              c.arc(x, y, r, 0, Math.PI * 2);
+              c.stroke();
+              c.restore();
+            },
+            c: (c, x, y, r) => {
+              c.save();
+              c.fillStyle = 'rgba(0, 0, 0, 0.97)';
+              c.beginPath();
+              c.arc(x, y, r, 0, Math.PI * 2);
+              c.fill();
+              const hasard = graine(11);
+              c.strokeStyle = CYAN;
+              c.shadowColor = CYAN;
+              c.shadowBlur = 10;
+              c.lineWidth = 2.5;
+              for (let k = 0; k < 18; k += 1) {
+                const a0 = (k / 18) * Math.PI * 2;
+                if (hasard() < 0.35) continue;
+                c.globalAlpha = 0.4 + hasard() * 0.6;
+                c.beginPath();
+                c.arc(x, y, r, a0, a0 + 0.25);
+                c.stroke();
+              }
+              c.restore();
+            },
+          };
+          for (const cle of ['a', 'b', 'c']) {
+            const ctx = ctxDe(`r4${cle}`);
+            const ecran = sceneDeJeu(ctx, images, centre.x, centre.y, { ninjas: dehors, rayon: 260 });
+            const [sx, sy] = ecran(station.x, station.y);
+            styles[cle](ctx, sx, sy, 150 * E);
+            medaillon(ctx, images, vueAssassin(styles[cle]));
+          }
+        }
+
+        // --- 5. La malediction
+        {
+          const ghostMap = (ctx, couleur) => {
+            ctx.fillStyle = '#05070f';
+            ctx.fillRect(0, 0, W, H);
+            const sur = carteEntiere(ctx, images, 10, 40, 0.17, 'eteint');
+            texte(ctx, 'Carte d’une proie fantôme', 12, 18, 13, couleur, { gras: true, align: 'left' });
+            const [nx, ny] = sur(900, 900);
+            ctx.save();
+            ctx.globalAlpha = 0.7;
+            iconeSabotage(ctx, images, 'fantome', nx, ny, 18, SPECTRE);
+            ctx.restore();
+          };
+          const ecranMaudit = (ctx, x, l, ann) => {
+            const toile = document.createElement('canvas');
+            toile.width = l;
+            toile.height = H;
+            const c = toile.getContext('2d');
+            sceneDeJeu(c, images, 700, 640, {
+              ninjas: [
+                [700, 640, '#FF3030'],
+                [760, 690, '#3D7DFF'],
+              ],
+              rayon: 320,
+              largeur: l,
+              hauteur: H,
+            });
+            ctx.save();
+            ctx.filter = 'blur(4px)';
+            ctx.drawImage(toile, x, 0);
+            ctx.restore();
+            ctx.strokeStyle = '#26304f';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, H);
+            ctx.stroke();
+            texte(ctx, 'Écran de l’assassin maudit', x + 10, 18, 12, '#ffffff', { gras: true, align: 'left', halo: '#000', flou: 4 });
+            ann(x, l);
+          };
+          const MALUS = SABOTAGES.slice(0, 3);
+          // A. Le spectre.
+          let ctx = ctxDe('r5a');
+          ghostMap(ctx, SPECTRE);
+          panneau(ctx, 18, 300, 330, 108, SPECTRE, 'rgba(185, 230, 255, 0.12)');
+          texte(ctx, 'Maudire les assassins', 32, 318, 14, SPECTRE, { gras: true, align: 'left' });
+          MALUS.forEach((m, i) => {
+            const x = 70 + i * 104;
+            iconeSabotage(ctx, images, m.icone, x, 356, 32, SPECTRE);
+            texte(ctx, m.nom, x, 392, 10.5, '#e8ecf6');
+          });
+          ecranMaudit(ctx, 360, 400, (x, l) => {
+            panneau(ctx, x + 40, H / 2 - 30, l - 80, 60, SPECTRE, 'rgba(10, 16, 34, 0.85)');
+            texte(ctx, 'Un fantôme te maudit', x + l / 2, H / 2 - 6, 19, SPECTRE, { gras: true, halo: SPECTRE, flou: 10 });
+            texte(ctx, 'Vision floue, 8 s', x + l / 2, H / 2 + 16, 12, '#e8ecf6');
+          });
+
+          // B. Les sceaux.
+          ctx = ctxDe('r5b');
+          ghostMap(ctx, VIOLET);
+          panneau(ctx, 18, 300, 330, 108, VIOLET);
+          texte(ctx, 'Briser un sceau', 32, 318, 14, VIOLET, { gras: true, align: 'left' });
+          MALUS.forEach((m, i) => {
+            const x = 70 + i * 104;
+            ctx.save();
+            ctx.strokeStyle = VIOLET;
+            ctx.lineWidth = 2;
+            ctx.shadowColor = VIOLET;
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            for (let k = 0; k < 6; k += 1) {
+              const a = (k / 6) * Math.PI * 2 - Math.PI / 2;
+              ctx.lineTo(x + Math.cos(a) * 22, 356 + Math.sin(a) * 22);
+            }
+            ctx.closePath();
+            ctx.stroke();
+            ctx.restore();
+            iconeSabotage(ctx, images, m.icone, x, 356, 24, VIOLET);
+            texte(ctx, m.nom, x, 392, 10.5, '#e8ecf6');
+          });
+          ecranMaudit(ctx, 360, 400, (x, l) => {
+            const cx = x + l / 2;
+            ctx.save();
+            ctx.strokeStyle = VIOLET;
+            ctx.lineWidth = 3;
+            ctx.shadowColor = VIOLET;
+            ctx.shadowBlur = 16;
+            for (const dx of [-6, 6]) {
+              ctx.beginPath();
+              for (let k = 0; k < 6; k += 1) {
+                const a = (k / 6) * Math.PI * 2 - Math.PI / 2;
+                if ((dx < 0 && Math.cos(a) > 0.01) || (dx > 0 && Math.cos(a) < -0.01)) continue;
+                ctx.lineTo(cx + dx + Math.cos(a) * 46, 170 + Math.sin(a) * 46);
+              }
+              ctx.stroke();
+            }
+            ctx.restore();
+            iconeSabotage(ctx, images, 'flou', cx, 170, 38, VIOLET);
+            texte(ctx, 'Un fantôme a brisé un sceau', cx, 246, 17, VIOLET, { gras: true, halo: '#000', flou: 6 });
+            texte(ctx, 'Vision floue, 8 s', cx, 270, 12, '#e8ecf6', { halo: '#000', flou: 4 });
+          });
+
+          // C. Discret.
+          ctx = ctxDe('r5c');
+          ghostMap(ctx, '#aeb6cc');
+          panneau(ctx, 18, 300, 330, 108, '#5f6a82');
+          texte(ctx, 'Malédiction, prête', 32, 318, 14, '#e8ecf6', { gras: true, align: 'left' });
+          MALUS.forEach((m, i) => {
+            const x = 18 + 14 + i * 104;
+            ctx.fillStyle = '#26304f';
+            rectArrondi(ctx, x, 336, 96, 60, 8);
+            ctx.fill();
+            iconeSabotage(ctx, images, m.icone, x + 48, 356, 22, '#e8ecf6');
+            texte(ctx, m.nom, x + 48, 384, 10, '#e8ecf6');
+          });
+          ecranMaudit(ctx, 360, 400, (x, l) => {
+            panneau(ctx, x + 70, H - 60, l - 140, 36, '#44aaff', 'rgba(10, 16, 34, 0.85)');
+            texte(ctx, 'Malédiction: vision floue, 8 s', x + l / 2, H - 42, 13, '#e8ecf6', { gras: true });
+          });
+        }
+
+        // --- 6. Le boitier et les consoles
+        {
+          const centre = { x: BOITIER.x - 60, y: BOITIER.y + 50 };
+          const ninjas = [[centre.x - 40, centre.y + 30, MOI]];
+          // A. L'objet neon.
+          let ctx = ctxDe('r6a');
+          let ecran = sceneDeJeu(ctx, images, centre.x, centre.y, { ninjas, rayon: 260 });
+          let [bx, by] = ecran(BOITIER.x, BOITIER.y);
+          ctx.save();
+          ctx.shadowColor = CYAN;
+          ctx.shadowBlur = 14;
+          ctx.fillStyle = 'rgba(8, 16, 30, 0.9)';
+          rectArrondi(ctx, bx - 18, by - 26, 36, 52, 5);
+          ctx.fill();
+          iconeSabotage(ctx, images, 'boitier', bx, by, 44, CYAN);
+          ctx.restore();
+          texte(ctx, 'Boîtier de la rue', bx, by + 42, 12, CYAN, { gras: true, halo: '#000', flou: 4 });
+          // Le meme pendant la panne, en petit.
+          ctx.save();
+          ctx.shadowColor = ORANGE;
+          ctx.shadowBlur = 18;
+          iconeSabotage(ctx, images, 'boitier', W - 60, 60, 44, ORANGE);
+          ctx.restore();
+          texte(ctx, 'En panne', W - 60, 98, 12, ORANGE, { gras: true });
+
+          // B. La marque au sol.
+          ctx = ctxDe('r6b');
+          ecran = sceneDeJeu(ctx, images, centre.x, centre.y, { ninjas, rayon: 260 });
+          [bx, by] = ecran(BOITIER.x, BOITIER.y);
+          ctx.save();
+          ctx.strokeStyle = ORANGE;
+          ctx.fillStyle = 'rgba(255, 140, 26, 0.16)';
+          ctx.lineWidth = 2.5;
+          ctx.setLineDash([8, 6]);
+          ctx.shadowColor = ORANGE;
+          ctx.shadowBlur = 10;
+          ctx.beginPath();
+          ctx.arc(bx, by, 50 * E, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+          iconeSabotage(ctx, images, 'boitier', bx, by, 30, ORANGE);
+          texte(ctx, 'Boîtier de la rue', bx, by + 66, 12, ORANGE, { gras: true, halo: '#000', flou: 4 });
+
+          // C. Seulement en sabotage: avant, puis pendant.
+          ctx = ctxDe('r6c');
+          ecran = sceneDeJeu(ctx, images, centre.x, centre.y, { ninjas, rayon: 260 });
+          [bx, by] = ecran(BOITIER.x, BOITIER.y);
+          ctx.fillStyle = '#26304f';
+          ctx.fillRect(W / 2 - 1, 0, 2, H);
+          texte(ctx, 'Hors sabotage', W / 4, 20, 13, '#ffffff', { gras: true, halo: '#000', flou: 4 });
+          texte(ctx, 'Pendant la panne', (W * 3) / 4, 20, 13, ORANGE, { gras: true, halo: '#000', flou: 4 });
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(W / 2, 0, W / 2, H);
+          ctx.clip();
+          ctx.strokeStyle = ORANGE;
+          ctx.lineWidth = 3;
+          ctx.shadowColor = ORANGE;
+          ctx.shadowBlur = 16;
+          ctx.beginPath();
+          ctx.arc(bx, by, 50 * E, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(W / 2, 0, W / 2, H);
+          ctx.clip();
+          iconeSabotage(ctx, images, 'boitier', bx, by, 32, ORANGE);
+          ctx.restore();
+        }
+
+        // --- 7. L'execution coupee en deux
+        {
+          const couleur = '#FF8C1A';
+          const T = 110;
+          const xs = [130, 380, 630];
+          const y = 205;
+          // A. La lame, puis l'egout.
+          let ctx = ctxDe('r7a');
+          fondDExecution(ctx);
+          let angle = -Math.PI / 4;
+          xs.forEach((x, i) => bouche(ctx, x, y + 92, 150));
+          poserNinja(ctx, idle, couleur, xs[0], y, T);
+          trait(ctx, xs[0], y, angle, 80, '#ffffff');
+          moitie(ctx, idle, couleur, xs[1], y, T, angle, 1, 16, 0.08);
+          moitie(ctx, idle, couleur, xs[1], y, T, angle, -1, 16, 0.08);
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(xs[2] - 120, 0, 240, y + 92);
+          ctx.clip();
+          moitie(ctx, idle, couleur, xs[2] - 10, y + 70, T, angle, 1, 20, 0.5, 0.9);
+          moitie(ctx, idle, couleur, xs[2] + 14, y + 58, T, angle, -1, 22, 0.35, 0.9);
+          ctx.restore();
+
+          // B. La coupe neon.
+          ctx = ctxDe('r7b');
+          fondDExecution(ctx);
+          angle = 0;
+          poserNinja(ctx, idle, couleur, xs[0], y, T);
+          trait(ctx, xs[0], y + 4, angle, 90, CYAN);
+          ctx.save();
+          ctx.translate(0, -26);
+          moitie(ctx, idle, couleur, xs[1] + 12, y, T, angle, -1, 0, 0.12);
+          ctx.restore();
+          moitie(ctx, idle, couleur, xs[1], y, T, angle, 1, 0, 0);
+          trait(ctx, xs[1], y - 12, angle, 60, 'rgba(46, 230, 255, 0.6)');
+          ctx.save();
+          ctx.translate(0, -60);
+          moitie(ctx, idle, couleur, xs[2] + 30, y, T, angle, -1, 0, 0.4, 0.35);
+          ctx.restore();
+          moitie(ctx, idle, couleur, xs[2], y, T, angle, 1, 0, 0, 0.35);
+          const hasard = graine(5);
+          ctx.save();
+          ctx.fillStyle = CYAN;
+          ctx.shadowColor = CYAN;
+          ctx.shadowBlur = 8;
+          for (let k = 0; k < 40; k += 1) {
+            ctx.globalAlpha = 0.3 + hasard() * 0.7;
+            ctx.beginPath();
+            ctx.arc(xs[2] - 60 + hasard() * 130, y - 80 + hasard() * 130, 1 + hasard() * 2.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+
+          // C. Le Massacre.
+          ctx = ctxDe('r7c');
+          fondDExecution(ctx);
+          angle = -Math.PI / 5;
+          poserNinja(ctx, idle, couleur, xs[0], y, T);
+          trait(ctx, xs[0], y, angle, 80, '#ffffff');
+          tache(ctx, xs[1], y + 46, 28, 3);
+          moitie(ctx, idle, couleur, xs[1], y, T, angle, 1, 12, 0.1);
+          moitie(ctx, idle, couleur, xs[1], y, T, angle, -1, 12, 0.1);
+          tache(ctx, xs[2], y + 50, 62, 4);
+          moitie(ctx, idle, couleur, xs[2] - 30, y + 34, T, angle, 1, 8, 1.2);
+          moitie(ctx, idle, couleur, xs[2] + 30, y + 40, T, angle, -1, 8, -0.9);
+        }
+
+        document.body.dataset.pret = 'oui';
+      })();
+    </script>
+  </body>
+</html>
