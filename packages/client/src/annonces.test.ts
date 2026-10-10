@@ -478,3 +478,75 @@ describe('les annonces de la mine (etape 7.11)', () => {
     });
   });
 });
+
+describe('les sabotages et la malediction d Among Ninjas (etape 7.22)', () => {
+  it('disent la panne a tous, et la reparation de la panne et de la surchauffe', () => {
+    const sabotage = (quoi: 'lance' | 'fini', nature: 'panne' | 'surchauffe', repare?: boolean) =>
+      annonceDuFait(
+        fait('sabotage', { quoi, nature, ...(repare === undefined ? {} : { repare }) }, 0),
+      );
+
+    expect(sabotage('lance', 'panne')).toEqual({
+      texte: 'Panne de néons : réparez le boîtier de la rue',
+      ton: 'alerte',
+    });
+    expect(sabotage('fini', 'panne', true)).toEqual({
+      texte: 'Les néons sont revenus',
+      ton: 'succes',
+    });
+    // L'alerte du HUD dit la surchauffe: une bulle au meme endroit cacherait son compte.
+    expect(sabotage('lance', 'surchauffe')).toBeUndefined();
+    expect(sabotage('fini', 'surchauffe', true)).toEqual({
+      texte: 'Surchauffe évitée',
+      ton: 'succes',
+    });
+    // Une surchauffe perdue finit la partie: la fin le dit.
+    expect(sabotage('fini', 'surchauffe', false)).toBeUndefined();
+  });
+
+  it('confirment une nuisance ou le nuage au lancement, et taisent leur fin', () => {
+    expect(annonceDuFait(fait('sabotage', { quoi: 'lance', nature: 'nuage' }, 0))).toEqual({
+      texte: 'Sabotage lancé : nuage noir',
+      ton: 'info',
+    });
+    expect(
+      annonceDuFait(fait('sabotage', { quoi: 'fini', nature: 'flou', repare: false }, 0)),
+    ).toBeUndefined();
+  });
+
+  it('frappent une proie d un malus sans auteur, en grand titre brouille', () => {
+    const annonce = annonceDuFait(
+      fait(
+        'malusSubi',
+        { nature: 'negatif', dureeMs: 10_000, parPseudo: '', origine: 'sabotage' },
+        0,
+      ),
+    );
+
+    expect(annonce?.texte).toBe('Sabotage : vision négative');
+    expect(annonce?.grandTitre).toMatchObject({ surtitre: 'Sabotage', brouille: true });
+  });
+
+  it('disent au maudit qu un fantome l a maudit, en bleu pale, sans le nommer', () => {
+    const annonce = annonceDuFait(
+      fait(
+        'malusSubi',
+        { nature: 'controlesInverses', dureeMs: 8_000, parPseudo: '', origine: 'malediction' },
+        0,
+      ),
+    );
+
+    expect(annonce?.texte).toBe('Un fantôme vous maudit : commandes inversées');
+    expect(annonce?.grandTitre).toMatchObject({
+      surtitre: 'Un fantôme vous maudit',
+      couleur: 0xb9e6ff,
+    });
+  });
+
+  it('disent aux fantomes la malediction lancee', () => {
+    expect(annonceDuFait(fait('malediction', { nature: 'flou' }, 0))).toEqual({
+      texte: 'Malédiction lancée : vision floue',
+      ton: 'info',
+    });
+  });
+});

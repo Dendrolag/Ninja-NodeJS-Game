@@ -81,7 +81,10 @@ export interface Cadre {
  * bord (retour d'essai du porteur du projet, 10 octobre 2026). Le decor eteint s'arrete de toute
  * facon au bord de la carte: le masque peut deborder sans rien montrer de plus.
  */
-export function cadreDuMasque(carte: DimensionsCarte, vision: VisionScene): Cadre {
+export function cadreDuMasque(
+  carte: DimensionsCarte,
+  vision: Pick<VisionScene, 'x' | 'y' | 'rayon'>,
+): Cadre {
   const marge = vision.rayon + 1;
 
   return {
@@ -162,9 +165,13 @@ export const APPARENCE_AMONG = {
   nuage: { couleur: 0x07040c, alphaOpaque: 0.93, alphaTranslucide: 0.45, volutes: 22 },
   /**
    * Les fleches vers un poste (rendus 2C et 3B), a cette distance de nous: dans l'ecran sur
-   * ordinateur comme sur telephone, le plus petit cote montrant 450 pixels de carte.
+   * ordinateur comme sur telephone, le plus petit cote montrant 450 pixels de carte. Le texte se
+   * pose en deca de la fleche, assez loin pour que ni la fleche ne le couvre ni le bord de
+   * l'ecran ne le coupe: un ecart, plus la moitie de sa largeur estimee (une lettre de sa taille
+   * vaut environ 0,56 fois sa hauteur) sur un trajet horizontal, et sa demi-hauteur sur un
+   * trajet vertical.
    */
-  fleche: { rayon: 185, longueur: 22, epaisseur: 5, ecartDuTexte: 30 },
+  fleche: { rayon: 185, longueur: 22, epaisseur: 5, ecartDuTexte: 12, largeurDUneLettre: 0.56 },
   /** Le voile du decor eteint pendant la panne, pour une proie vivante (rendu 2C). */
   voileEnPanne: 0.82,
 } as const;
@@ -466,7 +473,7 @@ function flechesVersLesPostes(
             couleur: APPARENCE_AMONG.poste.surchauffe,
           }))
         : [];
-  const { rayon, longueur, epaisseur, ecartDuTexte } = APPARENCE_AMONG.fleche;
+  const { rayon, longueur, epaisseur, ecartDuTexte, largeurDUneLettre } = APPARENCE_AMONG.fleche;
 
   cibles.forEach(({ nom, place, couleur }, rang) => {
     const dx = place.x - moi.x;
@@ -497,11 +504,19 @@ function flechesVersLesPostes(
       alpha: 1,
       epaisseur,
     });
+    const texte = `${nom} ${String(Math.round(distance))} px`;
+    const taille = VISION_AMONG.taillePseudo;
+    const enDeca =
+      rayon -
+      longueur -
+      ecartDuTexte -
+      (Math.abs(ux) * (texte.length * taille * largeurDUneLettre)) / 2 -
+      Math.abs(uy) * (taille / 2);
     libelles.push({
       id: `fleche:${String(rang)}:${nom}`,
-      texte: `${nom} ${String(Math.round(distance))} px`,
-      x: moi.x + ux * (rayon - longueur - ecartDuTexte),
-      y: moi.y + uy * (rayon - longueur - ecartDuTexte),
+      texte,
+      x: moi.x + ux * enDeca,
+      y: moi.y + uy * enDeca,
       couleur,
     });
   });

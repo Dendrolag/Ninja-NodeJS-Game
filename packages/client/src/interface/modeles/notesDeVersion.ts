@@ -140,8 +140,12 @@ export const NOTES_DE_VERSION: readonly NoteDeVersion[] = [
         texte: 'Un corps, un coup de gong, et l’on vote. Pas toujours pour le bon.',
       },
       {
+        intitule: 'Les sabotages.',
+        texte: 'Néons coupés, nuage noir, surchauffe. Réparez vite, ou les assassins gagnent.',
+      },
+      {
         intitule: 'Les fantômes.',
-        texte: 'Mort ne veut pas dire inutile. Ni silencieux.',
+        texte: 'Mort ne veut pas dire inutile. Ni silencieux. Ni sans rancune.',
       },
     ],
   },

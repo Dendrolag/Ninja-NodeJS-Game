@@ -262,3 +262,19 @@ Conditions de ROADMAP réunies, plus:
 ## Rituel de fin de session
 
 Écrire `docs/handoffs/etape-7-22-handoff.md`: les décisions confirmées en début d'étape, les écarts à cette fiche (section « Réconciliation », à créer), les chiffres du banc, l'état de la CI et de `master` (non poussé). Consigner les décisions au journal de `docs/design/README.md`, mettre à jour le ROADMAP et l'étude. Prochaine action exacte: l'étape suivante de la section 3 du ROADMAP. Commiter.
+
+## Réconciliation
+
+Écarts au plan constatés en exécutant, le 10 octobre 2026.
+
+1. **Les recharges voyagent dans le bloc du mode de chaque vue** (`AmongVu.rechargeDesSabotagesMs`, `rechargeDeLaMaledictionMs`), et non dans l'état privé (décision 9): elles changent à chaque battement, et l'état privé ne part qu'à ses changements. Seules les vues des assassins et des fantômes portent celle des sabotages, seule celle des fantômes celle de la malédiction: une proie vivante ne reçoit ni l'une ni l'autre, vérifié par les tests des vues.
+2. **La recharge de la malédiction remonte à 15 secondes au début de chaque tour**, ce qui revient à « ni dans les 15 premières secondes d'un tour ».
+3. **« Un fantôme vous maudit »**, au vouvoiement du jeu, là où la planche disait « te ».
+4. **Le son du nuage ne s'entend que des assassins et des fantômes**, avec la notification du sabotage qui leur est seule adressée, et non de qui voit la station: une proie qui l'entendrait saurait qu'un sabotage vient d'être lancé près d'elle sans le voir.
+5. **L'alarme de la surchauffe se joue une fois**, à son lancement, et non en boucle: la boucle attend le son du porteur du projet.
+6. **Les flèches vers les postes se posent à 185 pixels autour du joueur**, et non au bord exact de l'écran: cette distance tient dans l'écran au bureau comme sur téléphone.
+7. **Après les captures dans le vrai jeu**: la bulle qui annonçait la surchauffe cachait son compte à rebours, posé au même endroit; elle ne s'affiche plus, et l'alerte dit « Tenez les deux consoles ensemble ». Sur téléphone, l'alerte de la surchauffe passait sous le bandeau du mode: elle se pose à sa gauche. Le texte des flèches était couvert par la flèche, et coupé par le bord de l'écran sur téléphone: il se pose en deçà, selon sa largeur. Chaque console tenue s'emplit désormais sur la mini-carte et la carte, comme la fiche le demandait.
+8. **Le scénario de bout en bout fixe sa graine** (4): le tirage des rôles suit la graine et l'ordre d'arrivée, et c'est ainsi une page, Alice, qui tire l'assassin et sabote. Le serveur accepte pour cela une option `genererGraine`, que seul le harnais fournit (`demarrerLeJeu({ graine })`); si le tirage change, le scénario le dit.
+9. **Au banc, le premier assassin pose le nuage noir** dès que la règle le permet, sur la première station: c'est le sabotage qui coûte au serveur, la vue de chaque proie vivante y perdant ce qui s'y tient. La panne, elle, allège les vues. Le banc compte les battements mesurés pendant un sabotage.
+10. **En route (règle 7)**: un import inutilisé laissé par le correctif des retours d'essai faisait échouer le linter, et deux tests existants ne compilaient plus après le lot C (le masque du cercle de vision, l'image d'Among Ninjas qui prend l'instant); corrigés.
+11. **Les postes se marquent en orange** sur la mini-carte et la carte, panne comme surchauffe; dans le décor, les consoles prennent le rouge de la surchauffe. Gardé tel quel: un poste à réparer a la même marque partout.

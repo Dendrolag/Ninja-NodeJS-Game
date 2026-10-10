@@ -1183,3 +1183,30 @@ Moyenne des deux tours. Durées en millisecondes par battement, tailles en octet
 
 - **Une tâche ouverte**: les joueurs du banc marchent au hasard et n'ouvrent aucune tâche. Une tâche ouverte coûte, à chaque battement, une distance et une comparaison pour son joueur: rien que le banc puisse distinguer.
 - **Les gestes**: ils se jouent dans la page, que le serveur ne voit pas.
+
+## 31. Mesure de l'étape 7.22: les sabotages d'Among Ninjas (10 octobre 2026)
+
+Chiffres bruts: `docs/mesures/charge-serveur-7-22-among.json` et `charge-serveur-7-22-classique.json`, écrits par le harnais au second tour. Même machine et même méthode qu'à la section 30: `pnpm charge --banc --mode among --carte map1 --bots-banc 40,80`, puis `--mode classique`, deux tours en alternance, sur les lots A à C de l'étape (commit `5f91b37` et la suite de l'étape, non encore commitée au moment de la mesure).
+
+### 31.1 L'essentiel
+
+- **Un sabotage en cours pendant la mesure.** Depuis cette étape, le premier assassin du banc pose le nuage noir sur la première station dès que la règle le permet: c'est le sabotage qui coûte au serveur, la vue de chaque proie vivante y perdant ce qui s'y tient. Cinq secondes de révélation, quinze de recharge, vingt de nuage, trente de recharge: le nuage couvre 400 des 1 200 battements mesurés, un tiers (`battementsSabotes` dans les fichiers bruts).
+- **Les sabotages coûtent peu**: 0,215 ms par battement avec 40 PNJ, contre 0,208 à l'étape 7.21, et 0,293 avec 80 PNJ contre 0,286, soit 162 parties pleines par cœur au lieu de 168. La Horde de la même séance passe de 0,185 à 0,182: l'écart propre au mode est d'environ 0,01 ms, la projection surtout (0,038 contre 0,032), qui filtre le nuage dans chaque vue de proie et recopie le sabotage public et les recharges.
+- **Le fil gagne 3 octets par message**: 87 et 94, contre 84 et 91. Le bloc du mode porte désormais un octet d'indicateurs, et, selon la vue, le sabotage en cours, le centre du nuage et les recharges.
+- **Les autres modes n'ont pas changé**: l'empreinte du jeu et du flux des quatre parties de `tests/charge/empreinte.ts` est identique, à l'octet, avant et après les lots A et B. Depuis, le moteur n'a changé que dans le code propre au mode (`packages/sim/src/among.ts`), que ces quatre parties, des Hordes, ne jouent pas.
+
+### 31.2 Le banc
+
+Moyenne des deux tours. Durées en millisecondes par battement, tailles en octets par message sur le fil, images comprises.
+
+| PNJ | Mode         | Moteur | Projection | Codage | Total | Total p99 | Octets par message | Entités par vue | Parties par cœur |
+| --: | ------------ | -----: | ---------: | -----: | ----: | --------: | -----------------: | --------------: | ---------------: |
+|  40 | Horde        |  0,123 |      0,025 |  0,034 | 0,182 |     0,496 |                209 |              55 |              192 |
+|  40 | Among Ninjas |  0,084 |      0,038 |  0,093 | 0,215 |     0,511 |                 87 |               8 |              162 |
+|  80 | Horde        |  0,175 |      0,030 |  0,043 | 0,248 |     0,660 |                293 |              96 |              141 |
+|  80 | Among Ninjas |  0,143 |      0,053 |  0,098 | 0,293 |     0,563 |                 94 |               8 |              119 |
+
+### 31.3 Ce qui n'est pas mesuré
+
+- **La panne et la surchauffe**: elles ne coûtent qu'une distance par joueur et par battement pour le boîtier ou les consoles. La panne allège même les vues, le rayon des proies tombant à 110 pixels.
+- **La malédiction**: le banc ne tue personne, il n'a donc pas de fantôme. Elle passe par les malus du moteur, comme un malus ramassé.

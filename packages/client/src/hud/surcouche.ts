@@ -594,6 +594,7 @@ function monterMinimapAmong(
       postes.forEach((point, rang) => {
         const place = minimap.postes[rang];
         point.hidden = place === undefined;
+        point.classList.toggle('tenu', place?.tenu === true);
 
         if (place !== undefined) {
           placer(point, place);

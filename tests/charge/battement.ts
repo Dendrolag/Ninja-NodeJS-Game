@@ -178,6 +178,11 @@ export interface ResultatBancBattement {
    * exactement la meme somme. Un test s'en sert pour verifier la reproductibilite.
    */
   readonly octetsTotal: number;
+  /**
+   * Les battements mesures pendant un sabotage d'Among Ninjas (etape 7.22): le nuage noir que
+   * le premier assassin pose des que la regle le permet. Zero dans les autres modes.
+   */
+  readonly battementsSabotes: number;
 }
 
 /** Ce qu'un battement mesure laisse derriere lui. */
@@ -281,9 +286,11 @@ export function mesurerLeBattement(options: OptionsBancBattement): ResultatBancB
   const compresses: number[] = [];
   const json: number[] = [];
   let entites = 0;
+  let battementsSabotes = 0;
 
   for (let battement = 0; battement < joues; battement += 1) {
     alea = orienterLesJoueurs(room, alea, avantChangement, options.mines === true);
+    poserLeNuage(room);
 
     mesure = undefined;
     const debut = performance.now();
@@ -296,6 +303,10 @@ export function mesurerLeBattement(options: OptionsBancBattement): ResultatBancB
 
     if (battement < options.echauffement) {
       continue;
+    }
+
+    if (room.etat.among?.sabotage !== undefined) {
+      battementsSabotes += 1;
     }
 
     const releve: MesureDUnBattement = mesure;
@@ -333,7 +344,33 @@ export function mesurerLeBattement(options: OptionsBancBattement): ResultatBancB
     octetsJsonParMessage: resumer(json),
     entitesParMessage: entites / Math.max(options.battements, 1),
     octetsTotal: octets.reduce((somme, valeur) => somme + valeur, 0),
+    battementsSabotes,
   };
+}
+
+/**
+ * Le banc d'Among Ninjas (etape 7.22): le premier assassin pose le nuage noir sur la premiere
+ * station des que la regle le permet. C'est le sabotage qui coute au serveur: la vue de chaque
+ * proie vivante y perd ce qui s'y tient. Aucun tirage: la partie reste la meme d'une execution
+ * a l'autre. Rien dans les autres modes.
+ */
+function poserLeNuage(room: GameRoom): void {
+  const among = room.etat.among;
+
+  if (
+    among === undefined ||
+    among.phase !== 'jeu' ||
+    among.sabotage !== undefined ||
+    among.rechargeDesSabotagesMs > 0
+  ) {
+    return;
+  }
+
+  const assassin = Object.entries(among.joueurs).find(([, joueur]) => joueur.role === 'tueur');
+
+  if (assassin !== undefined) {
+    room.saboter(assassin[0], { nature: 'nuage', station: 0 });
+  }
 }
 
 /**

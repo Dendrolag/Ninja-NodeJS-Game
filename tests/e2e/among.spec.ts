@@ -29,7 +29,7 @@ import type { ServeurDeJeu } from './harnais/serveur-de-jeu.js';
 import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
 
 /**
- * Le mode Among Ninjas des etapes 7.20 et 7.21, joue de bout en bout.
+ * Le mode Among Ninjas des etapes 7.20 a 7.22, joue de bout en bout.
  *
  * Alice cree la partie sur un ordinateur, Bob la rejoint sur un autre. Il faut cinq joueurs:
  * Carole, David et Eve entrent par le reseau, comme de vrais clients Socket.IO, sans page.
@@ -47,7 +47,9 @@ import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
  *      tache s'ouvre, elle en fait le geste au clavier, la tache est faite, la fenetre se ferme
  *      et la liste le dit (etape 7.21).
  *   3 bis. La carte plein ecran s'ouvre par M, montre nos taches, et se ferme par M.
- *   4. L'assassin, page ou client, va au contact d'une proie et la tue.
+ *   3 ter. L'assassin de la page coupe les neons depuis sa carte; la proie de la page voit
+ *      l'alerte, va au boitier de la rue et le repare en tenant E (etape 7.22).
+ *   4. L'assassin va au contact d'une proie et la tue.
  *   5. La proie de la page trouve le cadavre et le signale par E: la reunion s'ouvre dans les
  *      deux pages, titree par ce signalement.
  *   6. Le vote: les deux pages votent contre l'assassin en touchant sa place, les clients
@@ -55,7 +57,8 @@ import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
  *   7. L'assassin ejecte, les proies l'emportent: l'ecran de fin le dit.
  *
  * QUI EST ASSASSIN se tire au lancement, a la graine: le scenario lit le role de chacun dans
- * le serveur et distribue les gestes en consequence. Un seul assassin a cinq.
+ * le serveur et distribue les gestes en consequence. Un seul assassin a cinq. Depuis l'etape
+ * 7.22, la graine est fixee (GRAINE), pour que l'assassin soit une page et sabote.
  *
  * UN SEUL CADRAGE, le bureau: la table de reunion sur telephone est verifiee par les tests de
  * la page; ce scenario verifie la partie.
@@ -96,11 +99,18 @@ const RAYON_DES_PLACES_PX = 12;
 /** Le temps laisse a chaque geste, en millisecondes: les pages dessinent lentement en CI. */
 const DELAI_DU_GESTE_MS = 60_000;
 
+/**
+ * La graine des parties du scenario (etape 7.22). Le tirage des roles suit la graine et l'ordre
+ * d'arrivee: avec celle-ci, Alice, la premiere arrivee, tire l'assassin, et c'est une page qui
+ * sabote. Si le tirage change, le scenario le dit, et une autre graine se cherche.
+ */
+const GRAINE = 4;
+
 let jeu: ServeurDeJeu;
 const clients: ClientDuReseau[] = [];
 
 test.beforeEach(async () => {
-  jeu = await demarrerLeJeu();
+  jeu = await demarrerLeJeu({ graine: GRAINE });
 });
 
 test.afterEach(async () => {
@@ -355,6 +365,33 @@ test('jouer une partie Among Ninjas a cinq, du salon a la victoire des proies', 
     await expect(pageDuTemoin.locator('.carte-among-ligne.faite')).toHaveCount(1);
     await pageDuTemoin.keyboard.press('m');
     await expect(pageDuTemoin.locator('.carte-among')).toBeHidden();
+
+    // -- La panne de neons: l'assassin sabote depuis sa carte, la proie repare (7.22) ------
+    expect(assassin, `la graine ${String(GRAINE)} donne l assassin a Alice`).toBe('Alice');
+    await alice.keyboard.press('m');
+    const panne = alice.locator('.carte-among-sabotage[data-nature="panne"]');
+    // La recharge commune des sabotages court quinze secondes au debut du tour.
+    await expect(panne).toBeEnabled({ timeout: 30_000 });
+    await panne.click();
+    await alice.keyboard.press('m');
+    await attendreQue(() => among(partie).sabotage?.nature === 'panne', 'Alice coupe les neons');
+    await expect(pageDuTemoin.locator('.hud-among-alerte[data-genre="panne"]')).toBeVisible();
+    await allerEtSArreter(
+      partie,
+      temoin,
+      commandeAuClavier(pageDuTemoin),
+      () => among(partie).boitier,
+      STATION,
+    );
+    await expect(pageDuTemoin.locator('.hud-action')).toHaveAttribute('data-geste', 'reparer');
+    await pageDuTemoin.keyboard.down('e');
+    await attendreQue(
+      () => among(partie).sabotage === undefined,
+      `${temoin} repare le boitier`,
+      10_000,
+    );
+    await pageDuTemoin.keyboard.up('e');
+    await expect(pageDuTemoin.locator('.hud-among-alerte')).toBeHidden();
 
     // -- Le meurtre ---------------------------------------------------------------------
     const idVictime = joueurNomme(partie, victime).id;

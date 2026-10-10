@@ -41,6 +41,11 @@ import {
 export interface OptionsDuJeu {
   /** Des comptes, pour les scenarios qui en ont besoin. */
   readonly comptes?: ServiceDeComptes;
+  /**
+   * La graine de chaque partie, pour un scenario qui doit savoir d'avance qui tient quel role
+   * (etape 7.22). Au hasard sans elle.
+   */
+  readonly graine?: number;
 }
 
 /** Un serveur de jeu en marche. */
@@ -73,10 +78,12 @@ export async function demarrerLeJeu(options: OptionsDuJeu = {}): Promise<Serveur
   // Comme le vrai serveur: les murs de toutes les cartes avant le premier joueur.
   const terrains = new ChargeurDeTerrain();
   terrains.prechargerTout();
+  const graineFixee = options.graine;
   const montage: OptionsServeur = {
     terrains,
     fichiers: { client: DOSSIER_WEB, ressources: racineRessources() },
     ...(options.comptes === undefined ? {} : { comptes: options.comptes }),
+    ...(graineFixee === undefined ? {} : { genererGraine: () => graineFixee }),
   };
 
   let serveur: ServeurMonte | undefined = await demarrerServeur(0, montage);

@@ -282,3 +282,45 @@ describe('les traits de l ejection', () => {
     ecrans.demonter();
   });
 });
+
+describe('l execution (etape 7.22, rendu 7C)', () => {
+  it('coupe l execute en deux dans son sang, sans dire son role', () => {
+    const client = { voter: vi.fn() } as unknown as Client;
+    const ecrans = monterEcransAmong(document, client);
+    document.body.append(ecrans.racine);
+    ecrans.afficher(etat('ejection', RESULTAT));
+
+    const execution = ecrans.racine.querySelector<HTMLElement>('.among-execution');
+
+    expect(execution?.classList.contains('tranche')).toBe(true);
+    expect(execution?.querySelectorAll('.among-execution-sang')).toHaveLength(1);
+    expect(execution?.querySelectorAll('.among-execution-lame')).toHaveLength(1);
+    expect(
+      Array.from(execution?.querySelectorAll('.among-execution-moitie') ?? []).map(
+        (moitie) => moitie.className,
+      ),
+    ).toEqual(['among-execution-moitie bas', 'among-execution-moitie haut']);
+    expect(execution?.querySelectorAll('.among-execution-moitie canvas.avatar-ninja')).toHaveLength(
+      2,
+    );
+    expect(ecrans.racine.querySelector('.among-egout')?.textContent).not.toMatch(/assassin/i);
+    ecrans.demonter();
+  });
+
+  it('ne coupe personne quand le vote n execute personne', () => {
+    const client = { voter: vi.fn() } as unknown as Client;
+    const ecrans = monterEcransAmong(document, client);
+    document.body.append(ecrans.racine);
+    const personne: ReunionClient = {
+      ...RESULTAT,
+      resultat: { quoi: 'resultat', votes: {}, decompte: [{ cible: null, voix: 4 }] },
+    };
+    ecrans.afficher(etat('ejection', personne));
+
+    const execution = ecrans.racine.querySelector<HTMLElement>('.among-execution');
+
+    expect(execution?.classList.contains('tranche')).toBe(false);
+    expect(execution?.querySelectorAll('.among-execution-moitie')).toHaveLength(0);
+    ecrans.demonter();
+  });
+});

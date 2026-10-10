@@ -28,6 +28,7 @@ import { routesDesComptes } from './comptes/routes.js';
 import type { ActiviteDuServeur, DossiersServis } from './fichiers.js';
 import { applicationWeb } from './fichiers.js';
 import type { Horloge } from './horloge.js';
+import { RoomManager } from './RoomManager.js';
 import type { DonneesDeConnexion, ServeurTypee } from './ServeurSocket.js';
 import { ServeurSocket } from './ServeurSocket.js';
 import type { SourceDeTerrain } from './terrain.js';
@@ -123,6 +124,12 @@ export interface OptionsServeur {
    * developpement et dans les tests. Voir version.ts dans le paquet partage.
    */
   readonly version?: string;
+  /**
+   * Comment tirer la graine de chaque partie. Au hasard par defaut (RoomManager). Un scenario
+   * de bout en bout fixe la sienne pour savoir d'avance qui tient quel role (etape 7.22): le
+   * tirage d'Among Ninjas suit la graine et l'ordre d'arrivee des joueurs.
+   */
+  readonly genererGraine?: () => number;
 }
 
 /** Un serveur monte, pret a ecouter. */
@@ -205,6 +212,14 @@ export function creerServeur(options: OptionsServeur = {}): ServeurMonte {
   const jeu = new ServeurSocket({
     io,
     ...(options.horloge === undefined ? {} : { horloge: options.horloge }),
+    ...(options.genererGraine === undefined
+      ? {}
+      : {
+          rooms: new RoomManager({
+            ...(options.horloge === undefined ? {} : { horloge: options.horloge }),
+            genererGraine: options.genererGraine,
+          }),
+        }),
     ...(options.terrains === undefined ? {} : { terrains: options.terrains }),
     ...(options.comptes === undefined ? {} : { comptes: options.comptes }),
     ...(options.version === undefined ? {} : { version: options.version }),

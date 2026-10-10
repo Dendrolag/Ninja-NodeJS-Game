@@ -9,6 +9,7 @@
 
 import { describe, expect, it } from 'vitest';
 
+import type { AmongHud } from './among.js';
 import type { EffetHud, Hud } from './modele.js';
 import { HUD_VIDE } from './modele.js';
 import { monterSurcouche } from './surcouche.js';
@@ -382,5 +383,99 @@ describe('le radar, pendant notre Revelation seulement', () => {
     monte.afficher({ ...hud([]), radar: undefined });
     expect(radar?.hidden).toBe(true);
     expect(hote.querySelectorAll('.hud-point')).toHaveLength(0);
+  });
+});
+
+describe('l alerte d un sabotage d Among Ninjas (etape 7.22)', () => {
+  /** Le HUD d'une proie, pendant ce sabotage, avec ces postes. */
+  function hudAmong(alerte: AmongHud['alerte'], postes: AmongHud['minimap']['postes'] = []): Hud {
+    const among: AmongHud = {
+      role: 'Proie',
+      camp: 'proie',
+      fantome: false,
+      consigne: 'Faites vos tâches',
+      phase: 'jeu',
+      taches: undefined,
+      mesTaches: undefined,
+      liste: [],
+      geste: 'reparer',
+      libelleDuGeste: 'Réparer',
+      minimap: {
+        fond: '/assets/cartes/map1.png',
+        miroir: false,
+        proportions: 4 / 3,
+        moi: undefined,
+        stations: [],
+        gong: { x: 0.5, y: 0.5 },
+        postes,
+      },
+      alerte,
+    };
+
+    return { ...hud([]), among };
+  }
+
+  /** Une surcouche d'Among Ninjas montee dans un hote neuf. */
+  function surcoucheAmong() {
+    const hote = document.createElement('div');
+    const monte = monterSurcouche({ hote, agir: () => undefined });
+
+    return { hote, monte };
+  }
+
+  it('montre la surchauffe, son compte a rebours, et les consoles tenues sur la mini-carte', () => {
+    const { hote, monte } = surcoucheAmong();
+
+    monte.afficher(
+      hudAmong(
+        {
+          genre: 'surchauffe',
+          titre: 'Surchauffe',
+          detail: 'Tenez les deux consoles ensemble : 1 sur 2',
+          compte: '12',
+        },
+        [
+          { x: 0.2, y: 0.2, tenu: true },
+          { x: 0.9, y: 0.6, tenu: false },
+        ],
+      ),
+    );
+
+    const alerte = hote.querySelector<HTMLElement>('.hud-among-alerte');
+    const postes = Array.from(hote.querySelectorAll<HTMLElement>('.hud-among-carte-poste'));
+
+    expect(alerte?.hidden).toBe(false);
+    expect(alerte?.dataset['genre']).toBe('surchauffe');
+    expect(alerte?.querySelector('.hud-among-alerte-compte')?.textContent).toBe('12');
+    expect(alerte?.querySelector('.hud-among-alerte-detail')?.textContent).toBe(
+      'Tenez les deux consoles ensemble : 1 sur 2',
+    );
+    expect(postes.map((poste) => poste.classList.contains('tenu'))).toEqual([true, false]);
+    expect(hote.querySelector<HTMLElement>('.hud-action')?.dataset['geste']).toBe('reparer');
+    expect(hote.querySelector('.hud-action')?.getAttribute('aria-label')).toBe('Réparer');
+  });
+
+  it('montre la panne sans compte a rebours, puis cache l alerte et les postes une fois reparee', () => {
+    const { hote, monte } = surcoucheAmong();
+
+    monte.afficher(
+      hudAmong(
+        {
+          genre: 'panne',
+          titre: 'Panne de néons',
+          detail: 'Réparez le boîtier de la rue',
+          compte: undefined,
+        },
+        [{ x: 0.66, y: 0.33, tenu: false }],
+      ),
+    );
+    const alerte = hote.querySelector<HTMLElement>('.hud-among-alerte');
+
+    expect(alerte?.dataset['genre']).toBe('panne');
+    expect(alerte?.querySelector<HTMLElement>('.hud-among-alerte-compte')?.hidden).toBe(true);
+
+    monte.afficher(hudAmong(undefined));
+    expect(alerte?.hidden).toBe(true);
+    expect(hote.querySelector<HTMLElement>('.hud-among-carte-poste')?.hidden).toBe(true);
   });
 });

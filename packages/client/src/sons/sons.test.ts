@@ -7,7 +7,7 @@
  * de sa table; aucun test ne pouvait le dire, et personne ne l'a remarque.
  */
 
-import type { Mode, NomDeSon } from '@neon-ninja/shared';
+import type { Mode, NatureDeSabotage, NomDeSon } from '@neon-ninja/shared';
 import { CHASSE, REGLAGES_PAR_DEFAUT, SONS, SONS_DE_PAS } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
@@ -894,5 +894,48 @@ describe('les sons de la mine de zone (etape 7.12)', () => {
     expect(sonDuFait(faitDe('armee'), 'moi')).toBe('mineDeZoneArmee');
     expect(sonDuFait(faitDe('ouverte'), 'moi')).toBe('zoneOuverte');
     expect([SONS.mineDeZoneArmee, SONS.zoneOuverte]).toHaveLength(2);
+  });
+});
+
+describe('les sons des sabotages d Among Ninjas (etape 7.22)', () => {
+  /** Le son d'un sabotage qui commence ou finit. */
+  const son = (quoi: 'lance' | 'fini', nature: NatureDeSabotage, repare?: boolean) =>
+    sonDuFait(fait('sabotage', { quoi, nature, ...(repare === undefined ? {} : { repare }) }, 0));
+
+  it('font entendre la panne, la surchauffe et leur reparation', () => {
+    expect(son('lance', 'panne')).toBe('panneDebut');
+    expect(son('fini', 'panne', true)).toBe('panneFin');
+    expect(son('lance', 'surchauffe')).toBe('surchauffeAlarme');
+    expect(son('fini', 'surchauffe', true)).toBe('surchauffeReparee');
+    expect(son('fini', 'surchauffe', false)).toBeUndefined();
+  });
+
+  it('confirment une nuisance et le nuage, et taisent leur fin', () => {
+    expect(son('lance', 'flou')).toBe('sabotageLance');
+    expect(son('lance', 'nuage')).toBe('nuageTombe');
+    expect(son('fini', 'nuage', false)).toBeUndefined();
+  });
+
+  it('distinguent la malediction du malus d un sabotage', () => {
+    const malus = (origine: 'sabotage' | 'malediction') =>
+      sonDuFait(fait('malusSubi', { nature: 'flou', dureeMs: 8_000, parPseudo: '', origine }, 0));
+
+    expect(malus('malediction')).toBe('malediction');
+    expect(malus('sabotage')).toBe('malusRamasse');
+    expect(sonDuFait(fait('malediction', { nature: 'negatif' }, 0))).toBe('malediction');
+  });
+
+  it('existent tous dans la table des sons', () => {
+    const noms: readonly NomDeSon[] = [
+      'sabotageLance',
+      'nuageTombe',
+      'panneDebut',
+      'panneFin',
+      'surchauffeAlarme',
+      'surchauffeReparee',
+      'malediction',
+    ];
+
+    expect(noms.every((nom) => SONS[nom].length > 0)).toBe(true);
   });
 });

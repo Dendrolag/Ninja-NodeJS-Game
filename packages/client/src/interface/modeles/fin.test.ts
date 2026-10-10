@@ -495,3 +495,43 @@ describe('la fiche des joueurs au classement final (etape 3.5)', () => {
     expect(lignes.some((une) => une.aUneFiche)).toBe(false);
   });
 });
+
+describe('la fin d Among Ninjas par la surchauffe (etape 7.22)', () => {
+  /** La fin d'une partie gagnee par les assassins, nous parmi eux ou parmi les proies. */
+  function finAmong(role: 'proie' | 'tueur', parLaSurchauffe: boolean): EtatClient {
+    const bilan = (id: string, de: 'proie' | 'tueur') => ({
+      id,
+      role: de,
+      fantome: false,
+      taches: 0,
+      meurtres: 0,
+      signalements: 0,
+      bonsVotes: 0,
+    });
+
+    return {
+      ...etat(CLASSEMENT),
+      fin: {
+        classement: CLASSEMENT,
+        among: {
+          vainqueur: 'tueurs',
+          ...(parLaSurchauffe ? { parLaSurchauffe: true as const } : {}),
+          joueurs: [bilan('moi', role), bilan('alice', role === 'tueur' ? 'proie' : 'tueur')],
+        },
+      },
+    };
+  }
+
+  it('dit que la surchauffe a tout emporte, a chaque camp', () => {
+    expect(modeleFin(finAmong('tueur', true))?.message).toBe(
+      'Victoire ! La surchauffe a tout emporté : les assassins l’emportent',
+    );
+    expect(modeleFin(finAmong('proie', true))?.message).toBe(
+      'Défaite. La surchauffe a tout emporté : les assassins l’emportent',
+    );
+  });
+
+  it('ne le dit pas d une victoire des assassins par les meurtres', () => {
+    expect(modeleFin(finAmong('proie', false))?.message).toBe('Défaite. Les assassins l’emportent');
+  });
+});

@@ -399,6 +399,10 @@ function annonceDUnMalusSansAuteur(nature: Nuisance, origine: 'sabotage' | 'male
  * Un sabotage qui commence ou finit (etape 7.22). La panne et la surchauffe s'annoncent a tous,
  * et leur reparation; une nuisance et le nuage, aux seuls assassins et fantomes, ne s'annoncent
  * qu'au lancement. Le bandeau d'alerte du HUD dit ensuite ce qu'il faut faire.
+ *
+ * LA SURCHAUFFE NE S'ANNONCE PAS EN BULLE A SON LANCEMENT: son alerte, en haut de l'ecran, dit
+ * deja quoi faire, et la bulle, posee au meme endroit, cachait le compte a rebours (captures du
+ * 10 octobre 2026).
  */
 function annonceDUnSabotage(
   quoi: 'lance' | 'fini',
@@ -412,11 +416,9 @@ function annonceDUnSabotage(
   }
 
   if (nature === 'surchauffe') {
-    if (quoi === 'lance') {
-      return { texte: 'Surchauffe : tenez les deux consoles en même temps', ton: 'alerte' };
-    }
-
-    return repare === true ? { texte: 'Surchauffe évitée', ton: 'succes' } : undefined;
+    return quoi === 'fini' && repare === true
+      ? { texte: 'Surchauffe évitée', ton: 'succes' }
+      : undefined;
   }
 
   return quoi === 'lance'

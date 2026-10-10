@@ -135,7 +135,12 @@ export interface MinimapAmong {
   readonly stations: readonly PointDeMinimap[];
   readonly gong: PointDeMinimap;
   /** Les postes du sabotage en cours (etape 7.22): le boitier, ou les deux consoles. */
-  readonly postes: readonly PointDeMinimap[];
+  readonly postes: readonly PosteDeMinimap[];
+}
+
+/** Un poste d'un sabotage sur la mini-carte et la carte: une console dit si on la tient. */
+export interface PosteDeMinimap extends PointDeMinimap {
+  readonly tenu: boolean;
 }
 
 /** Un repere de la carte plein ecran: une station, son nom et sa tache. */
@@ -235,7 +240,7 @@ function alerteDe(commune: AmongVu): AlerteDeSabotage | undefined {
     return {
       genre: 'surchauffe',
       titre: 'Surchauffe',
-      detail: `Consoles tenues : ${String(tenues)} sur 2`,
+      detail: `Tenez les deux consoles ensemble : ${String(tenues)} sur 2`,
       compte: String(Math.ceil(sabotage.restantMs / 1000)),
     };
   }
@@ -243,10 +248,16 @@ function alerteDe(commune: AmongVu): AlerteDeSabotage | undefined {
   return undefined;
 }
 
-/** Les postes du sabotage en cours, en part de la carte: le boitier, ou les deux consoles. */
-function postesEnCours(etat: EtatClient, enPart: (place: Position) => PointDeMinimap) {
+/**
+ * Les postes du sabotage en cours, en part de la carte: le boitier, ou les deux consoles, chacune
+ * avec ce que le flux dit d'elle: tenue ou non.
+ */
+function postesEnCours(
+  etat: EtatClient,
+  enPart: (place: Position) => PointDeMinimap,
+): readonly PosteDeMinimap[] {
   const reglages = etat.salon?.reglages;
-  const nature = etat.partie?.among?.sabotage?.nature;
+  const sabotage = etat.partie?.among?.sabotage;
   const lieux =
     reglages === undefined ? undefined : lieuxDuMode(reglages.carte, reglages.modeMiroir);
 
@@ -254,11 +265,16 @@ function postesEnCours(etat: EtatClient, enPart: (place: Position) => PointDeMin
     return [];
   }
 
-  if (nature === 'panne') {
-    return [enPart(lieux.boitier)];
+  if (sabotage?.nature === 'panne') {
+    return [{ ...enPart(lieux.boitier), tenu: false }];
   }
 
-  return nature === 'surchauffe' ? lieux.consoles.map(enPart) : [];
+  return sabotage?.nature === 'surchauffe'
+    ? lieux.consoles.map((place, rang) => ({
+        ...enPart(place),
+        tenu: sabotage.consolesTenues[rang] === true,
+      }))
+    : [];
 }
 
 /** Notre liste de taches, pour une proie, dans son ordre: vide pour un assassin. */

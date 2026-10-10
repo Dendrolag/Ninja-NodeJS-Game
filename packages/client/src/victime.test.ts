@@ -143,7 +143,7 @@ describe('la victime a portee', () => {
       tempsRestantMs: 0,
     });
     const halo = (vue: EtatClient) =>
-      imageDAmong(vue, lissee(vue), 'ninja.png').disques.filter((disque) =>
+      imageDAmong(vue, lissee(vue), 'ninja.png', 0).disques.filter((disque) =>
         disque.id.endsWith(':victime'),
       );
 

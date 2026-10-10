@@ -323,7 +323,7 @@ export function monterCarteAmong(options: OptionsCarteAmong): CarteAmongMontee {
     }
   };
 
-  /** Les postes du sabotage en cours, marques sur le plan. */
+  /** Les postes du sabotage en cours, marques sur le plan: une console tenue s'emplit. */
   const afficherLesPostes = (carte: CarteAmong): void => {
     while (postes.children.length < carte.postes.length) {
       postes.append(creer(doc, 'span', { classe: 'carte-among-poste' }));
@@ -332,6 +332,7 @@ export function monterCarteAmong(options: OptionsCarteAmong): CarteAmongMontee {
     [...postes.children].forEach((point, rang) => {
       const place = carte.postes[rang];
       (point as HTMLElement).hidden = place === undefined;
+      point.classList.toggle('tenu', place?.tenu === true);
 
       if (place !== undefined) {
         placer(point as HTMLElement, place);

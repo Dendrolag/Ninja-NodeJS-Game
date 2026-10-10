@@ -118,4 +118,14 @@ describe('mesurerLeBattement', () => {
     expect(seconde.octetsTotal).toBe(premiere.octetsTotal);
     expect(premiere.octetsTotal).not.toBe(classique.octetsTotal);
   });
+
+  it('pose le nuage d Among Ninjas des que la regle le permet, et seulement la (etape 7.22)', () => {
+    // Cinq secondes de revelation, puis quinze de recharge: le nuage tombe a vingt secondes,
+    // et dure vingt secondes. Mesure de la vingt et unieme a la vingt-sixieme.
+    const among = { bots: 10, joueurs: 6, battements: 100, echauffement: 420, graine: 7 };
+    const resultat = mesurerLeBattement({ ...among, mode: 'among', terrain });
+
+    expect(resultat.battementsSabotes).toBe(among.battements);
+    expect(mesurerLeBattement({ ...courte, terrain }).battementsSabotes).toBe(0);
+  });
 });

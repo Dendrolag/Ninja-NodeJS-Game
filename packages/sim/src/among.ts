@@ -40,7 +40,6 @@
 import type {
   Alea,
   NatureDeSabotage,
-  NatureDeTache,
   Nuisance,
   Position,
   ReglagesAmong,

@@ -2689,6 +2689,13 @@
   height: 8px;
 }
 
+/* Une console tenue pendant la surchauffe s'emplit, et ne bat plus. */
+.carte-among-poste.tenu,
+.hud-among-carte-poste.tenu {
+  background: #ff8c1a;
+  animation: none;
+}
+
 @keyframes among-poste {
   to {
     opacity: 0.4;
@@ -2757,6 +2764,21 @@
 .hud-among-alerte[data-genre='surchauffe'] .hud-among-alerte-detail {
   color: #ffd7da;
   text-shadow: 0 0 4px #000;
+}
+
+/* Sur un ecran etroit, le bandeau du mode tient le haut a droite: l'alerte se pose a sa
+   gauche, au lieu de passer dessous (captures du 10 octobre 2026). */
+@media (max-width: 700px) {
+  .hud-among-alerte[data-genre='surchauffe'] {
+    align-items: flex-start;
+    padding-left: 16px;
+    text-align: left;
+  }
+
+  .hud-among-alerte[data-genre='surchauffe'] .hud-among-alerte-detail {
+    max-width: calc(100% - 270px);
+    min-width: 120px;
+  }
 }
 
 @keyframes among-surchauffe {
