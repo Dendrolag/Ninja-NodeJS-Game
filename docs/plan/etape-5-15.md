@@ -1,246 +1,246 @@
-# Fiche étape 5.15 - Surveiller le jeu en production, sans le ralentir
+# Fiche étape 5.15 - La fluidité des parties, surveillée en direct
 
-Brief de session. Objectif unique: **un tableau de bord gratuit qui montre la santé et l'usage du jeu en production**, pour voir venir les optimisations avant que les joueurs ne les ressentent, savoir qui joue à quoi, et suivre l'adoption du jeu quand il sera partagé sur les réseaux sociaux. Sans alourdir la page, sans ralentir le serveur, et sans pisteur.
+Brief de session. Objectif unique: **voir en direct, dans un tableau de bord gratuit, si les parties en production sont fluides, être prévenu dans les minutes qui suivent une latence, une saccade ou une baisse de performance, et avoir de quoi la corriger**: où elle naît (le serveur, le réseau ou la page), sur quels appareils, dans quel mode, sur quelle carte, à quelle charge, depuis quelle version. Sans alourdir la page, sans ralentir le serveur, sans pisteur.
 
 ## Origine de cette fiche
 
-Demande du porteur du projet du 11 octobre 2026: « prévoir un outil de monitoring et de tableau de bord gratuit pour surveiller les performances du jeu et anticiper les optimisations, mais aussi avoir les statistiques d'utilisation et diverses métriques (Grafana ?). Attention à ne pas alourdir le jeu ni porter atteinte à ses performances. »
+Demandes du porteur du projet du 11 octobre 2026:
 
-Rédigée le même jour selon le cas de repli du PROTOCOLE, à partir de l'état du dépôt au commit `437c511`, de `docs/deploiement.md`, de la fiche 8.6 et des offres gratuites relevées ce jour-là sur grafana.com/pricing et neon.com/pricing. Le porteur du projet a répondu aux cinq questions le même jour: « Grafana Cloud juste pour moi, et je veux tout mesurer pour m'assurer des bonnes performances du jeu et suivre l'évolution de l'adoption du jeu quand je commencerai à le partager sur les réseaux. » Toutes les mesures proposées sont donc retenues, et la fiche gagne la provenance des visiteurs et le parcours de la visite au retour (« 4. L'adoption »). L'étape demande encore de lui trois gestes hors du dépôt (« Ce que le porteur du projet fait lui-même »).
+1. « Prévoir un outil de monitoring et de tableau de bord gratuit pour surveiller les performances du jeu et anticiper les optimisations, mais aussi avoir les statistiques d'utilisation et diverses métriques (Grafana ?). Attention à ne pas alourdir le jeu ni porter atteinte à ses performances. »
+2. Réponses aux questions de la première version de cette fiche: « Grafana Cloud juste pour moi, et je veux tout mesurer pour m'assurer des bonnes performances du jeu et suivre l'évolution de l'adoption du jeu quand je commencerai à le partager sur les réseaux. »
+3. Puis la priorité: « Le plus important à surveiller dans un premier temps, c'est la fluidité des parties, identifier instantanément les latences, saccades ou baisses de performances indésirables, et avoir les données suffisantes pour pouvoir corriger efficacement. »
+
+La fiche d'origine a donc été coupée en deux: **celle-ci installe la surveillance et la consacre à la fluidité**; l'usage et l'adoption sont l'étape `5.16` (`docs/plan/etape-5-16.md`), qui s'appuie sur ce que celle-ci installe.
+
+Rédigée selon le cas de repli du PROTOCOLE, à partir de l'état du dépôt au commit `437c511`, de `docs/deploiement.md`, des fiches et audits 8.5 et 8.6, et des offres gratuites relevées le 11 octobre 2026 sur grafana.com/pricing et neon.com/pricing.
 
 ## Ce qu'on sait en entrant
 
-### Ce qui se mesure déjà
+### Les leçons des audits 8.5, 8.6 et 5.12
 
-- **`/sante`** (étapes 5.3 et 8.6): version en ligne, nombre de parties, de joueurs et de connexions, et le résumé du battement sur cinq minutes (`ChronometreDuBattement`, un tableau tournant de taille fixe, sans allocation pendant le jeu, résumé calculé à la demande seulement). C'est le bon modèle: le battement paie trois écritures dans un tableau, la lecture paie le reste.
-- **`?diagnostic=1`** (étape 8.5): un relevé de la cadence et des durées d'image dans la page, qui n'existe que si l'adresse le demande. Instrument de séance, pas de surveillance: rien ne remonte.
-- **`pnpm base:mesurer`** (étape 3.7): rétention et calibration, lues dans la base, à la main. Aucun relevé fait à ce jour.
-- **Le banc de charge** (`pnpm charge`, étapes 5.1 et 5.2) et **l'empreinte des parties**: la référence pour prouver qu'un ajout ne change ni le coût du battement ni le jeu.
+- **Une saccade a trois origines possibles, et il faut les séparer pour la corriger.** Sur l'iPhone du porteur du projet, le dessin était fluide mais les instantanés arrivaient irrégulièrement (8.5): le réseau, pas la page. Plus tard, le son faisait tomber la page à 9,5 images par seconde (5.12): la page, pas le réseau. Le serveur, lui, peut peiner sur une offre dont la puissance n'est pas garantie (8.6).
+- **Une moyenne cache une saccade.** « 55 images par seconde » ne dit rien d'une image de 200 ms perdue parmi cent autres. Il faut des répartitions (neuvième décile, centile 99) et le compte des images lentes (`packages/client/src/diagnostic/histogramme.ts`).
+- **Un instrument ne doit pas fabriquer ce qu'il mesure**: rien d'alloué pendant la partie, rien d'écrit dans le document à chaque image (`diagnostic.ts`, `releve.ts`).
 
-### Ce qui manque
+### Ce qui se mesure déjà, et ce qui manque
 
-- **Rien ne garde l'historique.** `/sante` dit l'instant présent: un pic de la nuit est perdu au matin.
-- **Rien n'alerte.** Ni une production qui ne répond plus, ni une mise en ligne sautée (`docs/deploiement.md`, « Rien ne surveille cela automatiquement à ce jour »), ni un battement qui se dégrade.
-- **Les parties d'invités ne laissent aucune trace.** `ServeurSocket.ts` n'enregistre une fin de partie que si au moins un compte y a joué (`fin.resultats.length === 0`, ligne 1642 au commit `437c511`). La table `parties` ne dit donc pas combien on joue.
-- **On ne sait pas comment tourne la page chez les joueurs.** Les audits 8.5 et 5.12 ont reposé sur le téléphone du porteur du projet.
-- **Les journaux** ne se lisent que par SSH sur la machine Oracle, et se perdent à chaque redémarrage du conteneur.
-- **La machine Oracle peut être reprise** si elle reste sous 20 pour cent de processeur au 95e centile sur sept jours (`docs/deploiement.md`, « Ce qu'Oracle peut reprendre »). Personne ne regarde ce chiffre.
+| Origine | Ce qui existe                                                                                                                                                                         | Ce qui manque                                                                                                                                                                             |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Serveur | `ChronometreDuBattement` (8.6): écart et durée de chaque battement, résumés sur cinq minutes par `/sante`                                                                             | L'historique, le détail par mode et par charge, la part de chaque phase du battement (moteur, vues, codage, envoi), le ramasse-miettes, la boucle d'événements                            |
+| Réseau  | Le relevé `?diagnostic=1` (8.5) compte les instantanés reçus, l'écart entre deux, et les images où le lissage attendait le suivant                                                    | Ces chiffres chez tous les joueurs; le délai aller et retour, que la page ne mesure pas; ce qui reste en file d'envoi côté serveur; le transport (WebSocket ou repli en requêtes longues) |
+| Page    | Le même relevé sépare, image par image, notre code, PixiJS et le reste (navigateur, carte graphique, ramasse-miettes). La boucle accepte une sonde (`SondeDImage`, `rendu/boucle.ts`) | Tout cela chez tous les joueurs, pas seulement sur l'appareil du porteur du projet quand il ajoute `?diagnostic=1`                                                                        |
+
+Et rien ne garde l'historique, rien n'alerte, rien ne relie une saccade à son contexte. Les journaux ne se lisent que par SSH, et se perdent à chaque redémarrage du conteneur.
 
 ### Les contraintes
 
-- **Gratuit**, comme tout l'hébergement.
-- **La base Neon gratuite a 100 heures de calcul par mois** (CU-heures, relevé du 11 octobre 2026), s'endort après 5 minutes sans requête et ne se réveille qu'à la suivante. Un tableau de bord qui interroge la base toutes les minutes la tiendrait éveillée en permanence et brûlerait ce budget. **La base ne doit être lue qu'à la demande, et écrite rarement.**
-- **La page n'ouvre qu'à son serveur de jeu** (politique de sécurité, `connect-src`). Un script d'analyse tiers demanderait d'élargir cette politique, d'ajouter du poids à la page et, avec un cookie, un bandeau de consentement.
+- **Gratuit**, comme tout l'hébergement. Grafana Cloud gratuit, relevé du 11 octobre 2026: 10 000 séries de métriques actives, 50 Go de journaux par mois, 14 jours de rétention, 3 utilisateurs, 100 000 vérifications de disponibilité par mois, alertes comprises, sans carte bancaire.
+- **La page n'ouvre qu'à son serveur de jeu** (politique de sécurité). Aucun script tiers, aucun cookie.
 - **`packages/sim` reste pur.** Rien de cette étape n'y entre.
+- **La base Neon n'est pas touchée** par cette étape (100 heures de calcul par mois en offre gratuite).
 
-## L'offre retenue: Grafana Cloud, en offre gratuite
-
-Relevé du 11 octobre 2026: 10 000 séries de métriques actives, 50 Go de journaux par mois, 14 jours de rétention, 3 utilisateurs, 100 000 vérifications de disponibilité par mois, alertes comprises, sans carte bancaire.
-
-### Pourquoi lui
-
-| Option                                                             | Pour                                                                                                                                        | Contre                                                                                                                                                                           |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Grafana Cloud gratuit** (recommandée)                            | Hébergé ailleurs: survit à une panne de la machine Oracle. Rien à administrer. Alertes, vérifications de disponibilité et journaux compris. | 14 jours de rétention: l'historique long vient de la base (décision 6). Trois utilisateurs.                                                                                      |
-| Prometheus et Grafana sur la machine Oracle                        | Rétention sans limite, tout chez nous.                                                                                                      | Sur la machine du jeu: lui prend de la mémoire et du processeur, meurt avec elle, et c'est justement quand elle tombe qu'on veut voir. Un site de plus à exposer et à sécuriser. |
-| Analyse dans la page (Vercel Analytics, Umami, PostHog, Plausible) | Visites et pages vues sans effort.                                                                                                          | Un script de plus dans la page, une politique de sécurité élargie, souvent un cookie et son bandeau. Ne voit pas le jeu: ni parties, ni modes, ni battement.                     |
-| Sentry gratuit                                                     | Erreurs de la page détaillées.                                                                                                              | Une bibliothèque de plusieurs dizaines de kilo-octets dans la page. Les erreurs remonteront par le serveur (lot C).                                                              |
-
-### Le principe: tout se compte dans le serveur, rien ne part de lui
+## Le principe
 
 ```
- Page du joueur ──(arrivée, fin de partie)──> Serveur de jeu ──> /metriques, sur 127.0.0.1 seulement
-                                                      │                     ^
-                                                      │                     │ lu toutes les 30 s
-                                                      │              Agent Grafana Alloy (même machine,
-                                                      │              processus à part, bridé)
-                                                      │                     │ envoie
-                                                      v                     v
-                                             Base Neon (une ligne      Grafana Cloud: métriques,
-                                             par partie terminée)      journaux, alertes, tableaux
-                                                      ^                     │
-                                                      └──── lue à la demande (statistiques longues)
- Vérifications de disponibilité de Grafana (Francfort) ──> /sante de la production et la page publique
+ Page du joueur ──(toutes les 10 s pendant la partie: un bulletin)──> Serveur de jeu
+                                                                         │  compte, journalise les épisodes
+                                                                         v
+                                          /metriques sur 127.0.0.1    journal (sortie standard du conteneur)
+                                                  ^                         ^
+                                                  │ lus toutes les 15 s      │ suivi en continu
+                                          Agent Grafana Alloy (même machine, processus à part, bridé)
+                                                                         │ envoie
+                                                                         v
+                                 Grafana Cloud: métriques, journaux, tableau « Fluidité », alertes
+ Vérifications de disponibilité de Grafana (Francfort) ──> /sante de la production et page publique
 ```
 
-1. **Le serveur de jeu compte, il n'envoie rien.** Il ne fait aucun appel réseau pour la surveillance. Un agent, sur la même machine mais dans son propre processus, vient lire ses compteurs. Si Grafana Cloud tombe, ou l'agent, le jeu ne le sait pas.
-2. **Dans le battement, seulement des opérations de coût fixe**: ajouter un à un compteur, ranger une durée dans un seau d'histogramme dont les bornes sont fixées d'avance. Ni allocation, ni chaîne construite, ni tri. Le reste se calcule quand l'agent lit, deux fois par minute.
-3. **La page n'envoie que deux messages de plus**, sur la connexion qu'elle ouvre déjà en arrivant: un à l'arrivée (provenance, temps de chargement), un à la fin de chaque partie (son résumé). Aucun script tiers, aucun cookie, aucune adresse de plus dans la politique de sécurité.
+1. **Le serveur compte et écrit dans son journal, il n'envoie rien.** Aucun appel réseau pour la surveillance. L'agent, dans son propre processus, lit ses compteurs et suit son journal. Si Grafana Cloud tombe, ou l'agent, le jeu ne le sait pas.
+2. **Dans le battement et dans chaque image, seulement des opérations de coût fixe**: lire l'horloge, ajouter un à un compteur, ranger une durée dans une case fixée d'avance. Ni allocation, ni chaîne construite, ni tri.
+3. **La page envoie un bulletin toutes les dix secondes pendant une partie**, sur la connexion qu'elle a déjà: une centaine d'octets, à comparer aux vingt instantanés par seconde qu'elle reçoit. Rien hors partie.
+4. **Les métriques disent qu'il y a un problème; les journaux disent lequel.** Les métriques n'ont que des étiquettes bornées (mode, carte, appareil, navigateur); le détail d'un épisode, partie et contexte compris, va dans le journal, avec un débit plafonné.
+
+## Ce que l'on mesure
+
+### Le serveur
+
+- **Le battement**, par mode: écart réel entre deux battements (doit rester à 50 ms), durée (doit rester loin sous 50 ms), battements en retard (écart d'au moins 100 ms).
+- **Chaque phase du battement**: le moteur, les vues par destinataire, le codage, l'envoi. Quatre lectures d'horloge de plus par battement. C'est ce qui dira quoi optimiser.
+- **La charge qui va avec**: PNJ, joueurs et entités par partie, pour tracer la durée du battement en fonction de la charge, par mode et par carte. **C'est la courbe qui annonce une optimisation avant qu'elle ne se ressente.**
+- **Le processus**: pauses du ramasse-miettes (`PerformanceObserver` de `node:perf_hooks`, entrées `gc`), retard de la boucle d'événements (`monitorEventLoopDelay`), mémoire, processeur.
+- **La machine**, par l'agent: processeur, mémoire, réseau, et le vol de processeur par l'hôte, signe d'une machine partagée qui peine.
+
+### Le réseau
+
+- **Côté serveur**: octets envoyés par seconde et taille des trames, par mode; ce qui attend dans la file d'envoi de chaque connexion au moment d'envoyer (un joueur dont la file grossit reçoit en retard); le transport de chaque connexion, WebSocket ou requêtes longues, ces dernières étant une cause de saccades à elles seules; les reconnexions.
+- **Côté page, dans le bulletin**: l'écart entre deux instantanés reçus, en répartition; les images où le lissage attendait l'instantané suivant (l'à-coup que voit le joueur); le délai aller et retour, mesuré par un accusé de réception de Socket.IO toutes les cinq secondes, jamais à chaque image.
+
+### La page
+
+Dans le bulletin, par les mêmes points de mesure que le relevé 8.5, sans son panneau:
+
+- la durée d'image en répartition, et le compte des images d'au moins 50 ms et d'au moins 100 ms;
+- la part de notre code, de PixiJS et du reste dans les images lentes;
+- les entités dessinées, le son actif ou non, l'onglet visible ou non (un onglet caché ralentit sa boucle: ses images ne comptent pas comme des saccades);
+- une fois par partie: appareil (téléphone ou ordinateur), famille de navigateur, moteur de rendu, définition de l'écran, nombre de cœurs et mémoire annoncés quand le navigateur les donne, version de la page;
+- les erreurs de la page, comptées par nature.
+
+### Les épisodes
+
+Quand un seuil est franchi, l'épisode s'écrit dans le journal, avec son contexte, pour qu'on puisse le corriger sans le reproduire:
+
+- **côté serveur**: un battement d'au moins 100 ms d'écart ou de 25 ms de durée, avec ses quatre phases, la partie, son mode, sa carte, ses PNJ et ses joueurs, la dernière pause du ramasse-miettes et le retard de la boucle d'événements;
+- **côté page**: un bulletin avec une image d'au moins 100 ms ou un instantané en retard d'au moins 250 ms, avec le détail de la pire image (notre code, PixiJS, le reste), l'appareil, le navigateur, les entités dessinées, le son, et ce que le serveur sait de la partie à cet instant.
+
+Débit plafonné: un épisode par joueur et par minute, soixante par minute en tout. Le reste est seulement compté.
+
+**Le bulletin de chaque partie**: toutes les dix secondes, une ligne du journal par partie en cours (mode, carte, joueurs, PNJ, battement, pire joueur de la partie). Le tableau en tire la liste des parties en cours, chacune avec son verdict.
+
+## Ce que montre le tableau « Fluidité »
+
+Rafraîchi toutes les quinze secondes. Lisible sans connaître Prometheus.
+
+1. **Le verdict, en haut**: les parties sont-elles fluides en ce moment, et sinon, **où naît la saccade**: serveur (battements en retard), réseau (instantanés en retard alors que le serveur bat à l'heure), page (images lentes alors que les instantanés arrivent à l'heure). C'est la méthode de lecture de 8.5 et 8.6, appliquée en continu.
+2. **Les parties en cours**, une ligne chacune, avec leur verdict et leur pire joueur.
+3. **Les joueurs chez eux**, par appareil et par navigateur: images par seconde, neuvième décile et centile 99 de la durée d'image, part des images lentes, délai aller et retour, instantanés en retard.
+4. **Le serveur**: battement et ses phases, durée du battement en fonction de la charge, par mode et par carte, ramasse-miettes, boucle d'événements, mémoire, machine.
+5. **Avant et après chaque mise en ligne**: chaque version est marquée sur les courbes (la version passe dans les métriques), et un panneau compare les mêmes chiffres version par version. **Une baisse de performance indésirable se voit à la mise en ligne qui l'a apportée.**
+6. **Les derniers épisodes**, en table, chacun avec tout son contexte, filtrables par origine, mode, carte, appareil et version.
+
+Le relevé `?diagnostic=1` reste l'instrument de séance, pour creuser sur un appareil précis.
+
+## Les alertes, par courriel au porteur du projet
+
+Métriques lues toutes les 15 secondes, règles évaluées toutes les minutes: **un problème qui dure se signale en deux à trois minutes**. Une saccade isolée ne déclenche rien, elle se lit dans les épisodes; une dégradation qui dure, si.
+
+| Alerte                                   | Quand                                                                                                                                     |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| La production ne répond plus             | `/sante` sans réponse deux minutes de suite                                                                                               |
+| La page publique ne répond plus          | `https://ninja.dendrolag.fr` sans réponse deux minutes de suite                                                                           |
+| Le serveur peine                         | plus de 1 pour cent de battements en retard sur 5 minutes, avec au moins une partie                                                       |
+| Le battement s'alourdit                  | centile 99 de la durée du battement au-dessus de 25 ms sur 5 minutes                                                                      |
+| Le réseau hoquette                       | plus de 5 pour cent d'instantanés en retard chez au moins deux joueurs, serveur à l'heure                                                 |
+| La page rame                             | plus de 5 pour cent d'images lentes sur une famille d'appareils, sur 10 minutes                                                           |
+| Une version a dégradé la fluidité        | une heure après une mise en ligne, images lentes ou durée du battement en hausse de moitié sur la version précédente, à charge comparable |
+| La mémoire grimpe                        | mémoire du serveur au-dessus de 1 Go, ou en hausse continue sur six heures                                                                |
+| La production est en retard sur `master` | le commit de `/sante` n'est pas le dernier commit qui touche le jeu, une heure après la poussée                                           |
+
+Les seuils sont des points de départ: la session les règle sur ce que montre une semaine de production, et le porteur du projet les ajuste ensuite.
+
+La dernière ligne demande une vérification que Grafana ne sait pas faire seul: un workflow GitHub planifié, toutes les heures, qui compare `/sante` à la tête de `master` avec la règle de la mise en ligne (`deploiement/miseEnLigne.ts`: un commit de documentation ne compte pas) et échoue en le disant. GitHub prévient par courriel d'un workflow planifié en échec.
 
 ## Décisions prises par cette fiche
 
 Micro-décisions techniques, internes à l'étape (PROTOCOLE, « Ce qui ne nécessite pas de solliciter l'humain »).
 
-1. **Un petit module de métriques à nous**, `packages/server/src/metriques/`: compteurs, jauges, histogrammes à seaux fixes, et leur écriture au format texte de Prometheus. Une centaine de lignes, testées, sans dépendance. Pas `prom-client`: ses histogrammes allouent à l'observation selon les étiquettes, et ses métriques par défaut en mesurent beaucoup plus qu'il n'en faut. Chaque combinaison d'étiquettes est créée une fois, à l'avance, jamais dans le battement.
-2. **`/metriques` n'est jamais public.** Le serveur l'écoute sur un second port, attaché à `127.0.0.1`, seulement si `PORT_DES_METRIQUES` est posé. Caddy ne le relaie pas. Absent, comme sur Render, en développement et dans les tests: aucun port, aucun compteur lu.
-3. **Les étiquettes sont bornées**: le mode, la carte, la classe d'appareil (téléphone ou ordinateur), jamais un pseudo, un compte, une partie ni une adresse. Budget: **moins de 2 000 séries**, machine comprise, sur les 10 000 offertes.
-4. **L'agent est Grafana Alloy**, en service du système sur la machine Oracle, bridé par systemd (`CPUQuota=25%`, `MemoryMax=300M`). Il lit `/metriques` toutes les 30 secondes, les métriques de la machine (processeur, mémoire, disque, réseau) par son exportateur intégré, et les journaux des conteneurs `neon-ninja-*`. Sa configuration vit dans `deploiement/oracle/` et s'installe par `installer.sh`, comme Caddy.
-5. **Les tableaux de bord et les alertes vivent dans le dépôt**, en JSON, dans `deploiement/grafana/`, et s'importent par un script sans effet de bord à la relance. Un tableau modifié dans l'interface se réexporte dans le dépôt.
-6. **L'historique long vient de la base**, pas des métriques (14 jours seulement): une ligne par partie terminée, invités compris (réponse 2), et un total par jour des arrivées et de leur provenance (« 4. L'adoption »). Grafana la lit par sa source PostgreSQL, sous un rôle en lecture seule, **seulement quand quelqu'un ouvre le tableau**: aucune alerte ne repose sur la base, pour ne jamais la réveiller seule.
-7. **Render, en secours, n'est pas surveillé en continu.** Une vérification toutes les quelques minutes le tiendrait éveillé et consommerait ses 750 heures gratuites. Une vérification par jour suffit à savoir qu'il démarre.
-
-## Ce que montre le tableau de bord
-
-Quatre tableaux, chacun lisible sans connaître Prometheus.
-
-### 1. La santé, en ce moment et sur 14 jours
-
-- Production en ligne ou non (vérification de `/sante` toutes les minutes depuis Francfort), et sa version.
-- **Le battement**: écart réel entre deux battements (doit rester à 50 ms) et durée d'un battement (doit rester loin sous 50 ms), en médiane, neuvième décile et centile 99, et le nombre de battements en retard. Par mode.
-- **Le coût par partie**: durée du battement rapportée au nombre de PNJ et de joueurs. C'est la courbe qui dit à l'avance quand un mode ou une carte approche de la limite: **la courbe qui sert à anticiper les optimisations**.
-- **Le poids du flux**: octets envoyés par seconde, par mode, et taille moyenne d'une trame.
-- Le processus: mémoire, ramasse-miettes, retard de la boucle d'événements de Node, processeur.
-- La machine: processeur, mémoire, disque, réseau. **Avec le 95e centile du processeur sur sept jours, face au seuil de 20 pour cent** sous lequel Oracle peut reprendre la machine.
-
-### 2. Les joueurs, chez eux
-
-Du résumé de fin de partie (réponse 3) et du message d'arrivée, par classe d'appareil et par mode:
-
-- images par seconde, en médiane et au dixième centile des parties;
-- part des images d'au moins 50 ms;
-- délai aller et retour avec le serveur;
-- temps de chargement de la page, jusqu'à l'écran d'accueil utilisable;
-- erreurs de la page, comptées par nature (lot C).
-
-### 3. L'usage
-
-- En direct: parties en cours par mode, joueurs connectés, parties publiques et privées.
-- Sur 14 jours, par les métriques: parties lancées et terminées par mode et par carte, joueurs par partie, durée des parties, abandons et reconnexions, inscriptions et connexions aux comptes, joueurs invités et joueurs avec compte.
-- Au-delà, par la base: les mêmes chiffres par jour et par semaine depuis la mise en ligne de l'étape, et la rétention des comptes de `pnpm base:mesurer`, en requêtes du tableau.
-- Les heures et les jours où l'on joue, pour savoir quand publier et quand ne pas mettre en ligne.
-
-### 4. L'adoption
-
-Ce que le porteur du projet regardera après chaque publication sur les réseaux.
-
-- **Visiteurs distincts par jour** (réponse 4), sans cookie ni stockage dans le navigateur: le serveur garde en mémoire, le temps d'une journée, l'empreinte de l'adresse et du navigateur salée d'un secret tiré chaque jour et jamais écrit, et n'en publie que le nombre. Les empreintes et le secret meurent à minuit et à chaque redémarrage; un redémarrage dans la journée peut compter deux fois un visiteur, ce qui se lit dans le tableau à côté des mises en ligne.
-- **La provenance de chaque arrivée**, dans une liste fermée: X, Instagram, TikTok, Facebook, Reddit, Discord, YouTube, LinkedIn, Twitch, moteur de recherche, lien d'invitation d'un ami, accès direct, autre. Elle se lit d'abord dans le paramètre `utm_source` de l'adresse, ensuite dans le site d'où vient le visiteur (`document.referrer`), réduit à sa catégorie dans la page même: ni l'adresse complète ni le paramètre brut ne quittent la page. **À savoir pour publier**: les applications d'Instagram, de TikTok et souvent de X ne disent pas d'où vient le visiteur. Un lien partagé doit donc porter sa source, par exemple `https://ninja.dendrolag.fr/?utm_source=tiktok`; la redirection de l'ancienne adresse Vercel garde le paramètre. `docs/deploiement.md` donnera la liste des liens à utiliser.
-- **Le parcours**, par provenance et par jour: arrivées, puis visiteurs qui ont joué au moins une partie, puis comptes créés, puis comptes revenus sept jours après. C'est lui qui dira si une publication amène des joueurs ou seulement des curieux.
-- **Sur la durée**: un total par jour des arrivées, par provenance et par appareil, écrit en base une fois par jour et à l'arrêt du serveur, pour garder l'adoption au-delà des 14 jours de Grafana. Avec la ligne par partie et les comptes, le tableau montre l'adoption depuis la mise en ligne de l'étape, semaine par semaine.
-
-### Les alertes, par courriel au porteur du projet
-
-| Alerte                                   | Quand                                                                                           |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| La production ne répond plus             | `/sante` sans réponse deux minutes de suite                                                     |
-| La page publique ne répond plus          | `https://ninja.dendrolag.fr` sans réponse deux minutes de suite                                 |
-| Le serveur peine                         | plus de 1 pour cent de battements en retard sur 10 minutes, avec au moins une partie            |
-| La mémoire grimpe                        | mémoire du serveur au-dessus de 1 Go, ou en hausse continue sur six heures                      |
-| La production est en retard sur `master` | le commit de `/sante` n'est pas le dernier commit qui touche le jeu, une heure après la poussée |
-| Oracle pourrait reprendre la machine     | 95e centile du processeur sur six jours sous 20 pour cent                                       |
-
-La dernière ligne demande une vérification que Grafana ne sait pas faire seul: un workflow GitHub planifié, toutes les heures, qui compare `/sante` à la tête de `master` avec la même règle que la mise en ligne (`deploiement/miseEnLigne.ts`: un commit de documentation ne compte pas) et échoue en le disant. GitHub prévient par courriel d'un workflow planifié en échec.
+1. **Grafana Cloud gratuit, pour le porteur du projet seul** (sa réponse du 11 octobre 2026). Hébergé ailleurs: une panne de la machine Oracle ne rend pas aveugle.
+2. **Un petit module de métriques à nous**, `packages/server/src/metriques/`: compteurs, jauges, histogrammes à cases fixes, écriture au format texte de Prometheus. Sans dépendance. Pas `prom-client`, dont les histogrammes allouent à l'observation selon les étiquettes. Chaque combinaison d'étiquettes est créée une fois, à l'avance, jamais dans le battement. `ChronometreDuBattement` et `/sante` restent tels quels: la page et la mise en ligne les lisent.
+3. **`/metriques` n'est jamais public.** Le serveur l'écoute sur un second port, attaché à `127.0.0.1`, seulement si `PORT_DES_METRIQUES` est posé. Caddy ne le relaie pas. Absent, comme sur Render, en développement et dans les tests: aucun port.
+4. **La page mesure par la sonde de la boucle**, comme le relevé 8.5, avec des histogrammes à quelques cases et des compteurs remis à zéro à chaque bulletin. Le relevé détaillé et son panneau restent réservés à `?diagnostic=1`. La forme du bulletin et sa vérification vivent dans `packages/shared`: le serveur ne croit pas le réseau, et un bulletin mal formé, trop fréquent ou trop gros est ignoré et compté.
+5. **Étiquettes bornées**: mode, carte, appareil, famille de navigateur (une liste fermée), version. Jamais un pseudo, un compte, une partie ni une adresse en étiquette: ils vont dans le journal. Budget: **moins de 5 000 séries**, machine comprise, sur les 10 000 offertes.
+6. **Le journal du serveur s'écrit en lignes JSON** sur la sortie standard, que l'agent suit et envoie à Grafana. Débit plafonné (« Les épisodes »).
+7. **L'agent est Grafana Alloy**, service du système sur la machine Oracle, bridé par systemd (`CPUQuota=25%`, `MemoryMax=300M`). Il lit `/metriques` toutes les 15 secondes, les métriques de la machine, et les journaux des conteneurs `neon-ninja-*`. Sa configuration vit dans `deploiement/oracle/` et s'installe par `installer.sh`, comme Caddy.
+8. **Les tableaux et les alertes vivent dans le dépôt**, en JSON, dans `deploiement/grafana/`, importés par un script sans effet de bord à la relance.
+9. **Render, en secours, n'est vérifié qu'une fois par jour**: une vérification fréquente le tiendrait éveillé et consommerait ses 750 heures gratuites.
 
 ## Le budget de performance, et comment on le prouve
 
-| Quoi                       | Plafond                                                             | Mesuré par                                                          |
-| -------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| Durée du battement         | aucune hausse au-delà de l'écart entre deux séries du banc          | `pnpm charge --banc`, avant et après, trois séries chacun           |
-| Le jeu                     | inchangé                                                            | empreinte des parties de référence, identique                       |
-| Lecture de `/metriques`    | sous 5 ms avec 24 parties pleines                                   | banc, en lisant la route pendant la charge                          |
-| Mémoire du serveur         | moins de 5 Mo de plus                                               | banc                                                                |
-| Page                       | aucune hausse de la durée d'image, moins de 2 Ko compressés de plus | banc du rendu de la CI, avant et après; taille de `app.js`          |
-| Agent Alloy sur la machine | moins de 5 pour cent d'un cœur en moyenne, moins de 300 Mo          | ses propres métriques, sur 24 heures                                |
-| Base Neon                  | aucune requête sans tableau ouvert                                  | tableau de consommation de Neon, une semaine après la mise en ligne |
-| Séries actives             | moins de 2 000                                                      | page d'usage de Grafana Cloud                                       |
-
-## Questions soumises au porteur du projet, et ses réponses du 11 octobre 2026
-
-**Réponse: Grafana Cloud, pour lui seul, et tout mesurer.** Les cinq recommandations sont retenues: 1 Grafana Cloud; 2 une ligne par partie, invités compris; 3 le relevé de la page chez tous les joueurs; 4 les visiteurs distincts par jour; 5 le porteur du projet seul. Le texte des questions est gardé ci-dessous pour mémoire.
-
-1. **Grafana Cloud gratuit, hébergé ailleurs, ou un Grafana installé sur la machine Oracle ?** Recommandation: Grafana Cloud, pour qu'une panne de la machine ne rende pas aveugle, et pour n'ajouter au serveur du jeu qu'un agent bridé. Le prix: 14 jours d'historique pour les métriques, compensé par la base pour l'usage.
-2. **Une ligne en base pour chaque partie terminée, invités compris ?** Mode, carte, durée, nombre de joueurs, dont invités et comptes, dont téléphones, partie publique ou privée, heure de fin. Rien de personnel. Recommandation: oui, c'est le seul historique de l'usage au-delà de 14 jours. Le prix: une partie de seuls invités réveille la base, quelques minutes de calcul, là où elle n'en réveillait aucune. À l'usage actuel, une à deux heures de calcul par mois sur cent. Variante plus sobre: un total par jour, écrit une fois par jour et à l'arrêt du serveur.
-3. **Un relevé de performance discret chez tous les joueurs ?** À chaque image, la page range sa durée dans un des douze seaux d'un histogramme fixe (une lecture d'horloge et une addition), puis envoie le résumé à la fin de la partie: cadence, part des images lentes, délai avec le serveur, téléphone ou ordinateur. Recommandation: oui, c'est la seule façon de savoir comment le jeu tourne sur les appareils des autres. Le banc du rendu prouvera que rien ne change. Sans lui, le tableau 2 se limite à ce que voit le serveur.
-4. **Compter les visiteurs distincts par jour ?** Sans cookie: le serveur garde en mémoire, le temps d'une journée, l'empreinte de l'adresse et du navigateur salée d'un secret tiré chaque jour et jamais écrit, et n'en publie que le nombre. C'est la méthode de Plausible, sans consentement à demander. Recommandation: oui, faute de quoi « combien de gens viennent » se lit seulement en joueurs connectés. À trancher par le porteur du projet, qui répond du site.
-5. **Qui voit le tableau de bord ?** L'offre gratuite compte trois utilisateurs. Recommandation: le porteur du projet seul, sans tableau public. Un tableau public des parties en cours se ferait dans une étape à part, dans la page du jeu.
+| Quoi                       | Plafond                                                             | Mesuré par                                                 |
+| -------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Durée du battement         | aucune hausse au-delà de l'écart entre deux séries du banc          | `pnpm charge --banc`, avant et après, trois séries chacun  |
+| Le jeu                     | inchangé                                                            | empreinte des parties de référence, identique              |
+| Lecture de `/metriques`    | sous 5 ms avec 24 parties pleines                                   | banc, en lisant la route pendant la charge                 |
+| Mémoire du serveur         | moins de 5 Mo de plus                                               | banc                                                       |
+| Page                       | aucune hausse de la durée d'image, moins de 3 Ko compressés de plus | banc du rendu de la CI, avant et après; taille de `app.js` |
+| Bulletins reçus            | moins de 1 pour cent des octets échangés pendant une partie         | banc, `--reseau`                                           |
+| Agent Alloy sur la machine | moins de 5 pour cent d'un cœur en moyenne, moins de 300 Mo          | ses propres métriques, sur 24 heures                       |
+| Séries actives             | moins de 5 000                                                      | page d'usage de Grafana Cloud                              |
 
 ## Ce que le porteur du projet fait lui-même
 
 La session ne crée pas de compte, ne saisit aucun secret et n'a pas d'accès SSH à la production (mémoire du projet, « Machine Oracle par le porteur »).
 
-1. **Créer le compte Grafana Cloud** gratuit, avec une pile en Europe (Francfort si proposé), puis un jeton d'accès limité à l'écriture des métriques et des journaux, et un second, limité à l'import des tableaux.
+1. **Créer le compte Grafana Cloud** gratuit, avec une pile en Europe (Francfort si proposé), puis un jeton d'accès limité à l'écriture des métriques et des journaux, et un second, limité à l'import des tableaux et des alertes.
 2. **Sur la machine Oracle**, recopier `deploiement/oracle/` et relancer `installer.sh`, qui installe Alloy; poser le jeton d'écriture dans `/etc/neon-ninja/alloy`, lisible du seul service, et `PORT_DES_METRIQUES` dans `/etc/neon-ninja/environnement`. La session lui donne les commandes PowerShell exactes.
-3. **Dans Neon**, créer le rôle en lecture seule que lira Grafana (la session peut le faire par l'API de Neon avec `NEON_API_KEY`, si le porteur du projet le préfère), puis renseigner la source PostgreSQL dans Grafana.
+3. **Jouer une partie en production**, sur ordinateur et sur téléphone, pour la définition de terminé.
 
 ## Périmètre
 
-### Lot A. Le serveur compte
+### Lot A. Le serveur mesure
 
-- Les visiteurs distincts du jour: l'empreinte salée en mémoire, le secret du jour tiré par `node:crypto` et jamais écrit, tout oublié à minuit, heure de Paris. Seul le nombre sort.
+- `packages/server/src/metriques/`: registre, compteur, jauge, histogramme à cases fixes, écriture au format texte, et leurs tests.
+- Les mesures du serveur et du réseau ci-dessus, branchées sans rien changer à ce que fait le jeu: au même endroit que `ChronometreDuBattement.enregistrer` pour le battement, dans la boucle des envois pour les phases, les octets et la file d'envoi.
+- Le second port, `PORT_DES_METRIQUES`, sur `127.0.0.1`.
+- Le journal en lignes JSON, les épisodes du serveur et le bulletin de chaque partie, avec leur débit plafonné.
 
-- `packages/server/src/metriques/`: registre, compteur, jauge, histogramme à seaux fixes, écriture au format texte, et leurs tests.
-- Le branchement, sans rien changer à ce que fait le jeu: le battement (écart, durée, par mode, au même endroit que `ChronometreDuBattement.enregistrer`), les octets envoyés, les parties lancées, terminées et abandonnées, les joueurs, les connexions et reconnexions, les comptes (inscriptions, connexions, échecs), les refus du contrôle de version, la boucle d'événements (`monitorEventLoopDelay` de `node:perf_hooks`), la mémoire et le ramasse-miettes.
-- Le second port, `PORT_DES_METRIQUES`, sur `127.0.0.1`, et ses tests: absent, rien n'écoute; posé, la route répond, et seulement là.
-- `/sante` reste ce qu'il est: la page et la mise en ligne le lisent.
+### Lot B. La page rend compte
 
-### Lot B. L'historique en base
+- La sonde de surveillance branchée sur la boucle, ses histogrammes à quelques cases, l'accusé de réception toutes les cinq secondes, le bulletin toutes les dix secondes pendant une partie, la description de l'appareil une fois par partie, les erreurs de la page.
+- La forme du bulletin et sa vérification dans `packages/shared`; sa réception, son ajout aux métriques, et ses épisodes, côté serveur.
 
-- La table, sa migration, compatible avec la version précédente du serveur (`docs/deploiement.md`, « Migrations de la base »), et son écriture à la fin de chaque partie, hors du battement, comme l'enregistrement actuel. Une écriture qui échoue ne touche ni la partie ni l'enregistrement des comptes.
-- Le total par jour des arrivées, par provenance et par appareil, écrit une fois par jour et à l'arrêt du serveur (`fermer()`), ajouté au total déjà écrit pour ce jour.
-- La catégorie de provenance d'un compte, retenue à son inscription (une colonne de `comptes`, vide pour les comptes existants), pour suivre le retour à sept jours par provenance.
-- Les requêtes des tableaux, testées sur une branche Neon de test.
-
-### Lot C. La page rend compte
-
-- L'histogramme des durées d'image dans la boucle de rendu, et le délai avec le serveur, que la page ne mesure pas encore: un aller et retour daté toutes les quelques secondes sur la connexion existante (l'accusé de réception de Socket.IO), jamais à chaque image.
-- Le résumé de fin de partie, sa forme et sa vérification dans `packages/shared` (la page ne croit pas le réseau, le serveur non plus), son envoi, et son ajout aux métriques côté serveur. Un résumé mal formé est ignoré et compté.
-- Les erreurs de la page (`error`, `unhandledrejection`), comptées par nature et limitées à quelques-unes par partie, par le même chemin.
-- Le message d'arrivée: la catégorie de provenance, calculée dans la page par une fonction pure de `packages/shared` (liste fermée), la classe d'appareil et le temps de chargement. La page joint aussi la catégorie à une demande d'inscription. Le serveur l'ajoute aux arrivées, aux visiteurs distincts et au parcours, et retient la catégorie le temps de la connexion seulement, pour savoir si elle mène à une partie.
-
-### Lot D. L'agent, Grafana et les alertes
+### Lot C. L'agent, Grafana et les alertes
 
 - La configuration d'Alloy et son installation dans `deploiement/oracle/`.
-- Les quatre tableaux de bord (santé, joueurs chez eux, usage, adoption) et les alertes dans `deploiement/grafana/`, et le script qui les importe.
+- Le tableau « Fluidité » et les alertes dans `deploiement/grafana/`, et le script qui les importe.
 - Le workflow planifié qui compare la production à `master`.
-- Les vérifications de disponibilité dans Grafana: production et page toutes les minutes, Render une fois par jour.
+- Les vérifications de disponibilité: production et page toutes les minutes, Render une fois par jour.
 
-### Lot E. Mesure et documentation
+### Lot D. Mesure et documentation
 
-- Le budget de performance ci-dessus, relevé et consigné dans `docs/mesures/charge-serveur.md`, nouvelle section.
-- `docs/deploiement.md`, section « Surveillance »: où est le tableau de bord, ce que dit chaque tableau, que faire à chaque alerte. Retirer « Rien ne surveille cela automatiquement à ce jour ».
-- `docs/deploiement.md`, aussi: les liens à partager sur chaque réseau, avec leur `utm_source`.
+- Le budget de performance, relevé et consigné dans `docs/mesures/charge-serveur.md`, nouvelle section.
+- `docs/deploiement.md`, section « Surveillance »: où est le tableau, comment lire le verdict, que faire à chaque alerte, comment retrouver le contexte d'un épisode. Retirer « Rien ne surveille cela automatiquement à ce jour ».
 - `CLAUDE.md`: la variable `PORT_DES_METRIQUES`, et une ligne à l'index.
 
 ## Hors périmètre
 
 - Toute modification de `packages/sim`.
+- L'usage et l'adoption: étape `5.16`.
 - Un script d'analyse tiers dans la page, un cookie, une politique de sécurité élargie.
 - Le traçage distribué et le profilage continu: rien ne le justifie à un seul serveur.
-- La surveillance continue de Render.
-- Un tableau public dans la page du jeu.
-- Changer une optimisation du jeu à partir de ce que montrera le tableau: chacune deviendra une étape, mesurée.
+- Corriger ce que montrera le tableau: chaque correction devient une étape, mesurée.
 
 ## Tests requis
 
-- TU du module de métriques: compteur, jauge, seaux d'histogramme, format texte, aucune allocation à l'observation (compteur d'objets ou mesure de tas sur un grand nombre d'observations).
-- TI du serveur: `/metriques` absent sans `PORT_DES_METRIQUES`; présent sur `127.0.0.1` seulement; jamais sur le port public; ses chiffres suivent une partie jouée par de vrais clients Socket.IO (une partie lancée, un joueur, des battements, des octets).
-- Tests de la base pour la table de l'historique et les requêtes des tableaux.
-- TU de la forme du résumé de fin de partie et de son refus; TU de l'histogramme de la page.
-- TU de la catégorie de provenance: chaque réseau par `utm_source` et par site d'origine, majuscules et sous-domaines (`m.facebook.com`, `l.instagram.com`, `t.co`), un paramètre inconnu rangé dans « autre », jamais la valeur brute.
-- TU des visiteurs distincts: deux arrivées du même visiteur comptent une fois, deux visiteurs deux fois, le compte repart à minuit, aucune empreinte n'est lisible de l'extérieur.
+- TU du module de métriques: compteur, jauge, cases d'histogramme, format texte, aucune allocation à l'observation (mesure du tas sur un grand nombre d'observations).
+- TU de la sonde de surveillance de la page: histogrammes, remise à zéro par bulletin, onglet caché exclu, aucune allocation par image.
+- TU de la forme du bulletin et de ses refus (mal formé, trop fréquent, trop gros).
+- TU du plafond des épisodes.
+- TI du serveur: `/metriques` absent sans `PORT_DES_METRIQUES`, présent sur `127.0.0.1` seulement, jamais sur le port public; ses chiffres suivent une partie jouée par de vrais clients Socket.IO (battements, phases, octets, bulletins); un battement lent forcé produit un épisode dans le journal.
 - TU du workflow de comparaison à `master`, par la règle déjà testée de `miseEnLigne.ts`.
-- Bout en bout: une arrivée par `?utm_source=tiktok` est comptée sous TikTok, une partie jouée envoie son résumé, et le jeu ne change pas; suite complète au vert.
+- Bout en bout: une partie jouée envoie ses bulletins et le jeu ne change pas; suite complète au vert.
 - Le budget de performance, chiffré avant et après.
 
 ## Définition de terminé
 
-1. Le tableau de bord montre, en production, une partie jouée par le porteur du projet: le battement, le flux, les joueurs, la machine, le résumé de sa page, sa ligne en base, et son arrivée par un lien `utm_source` dans le tableau de l'adoption.
-2. Chaque alerte a été déclenchée une fois pour de vrai ou par une règle de test, et le courriel reçu.
-3. Le budget de performance est tenu, chiffres consignés.
-4. Empreinte des parties de référence identique, couverture de `packages/sim` inchangée.
-5. CI verte, mise en ligne faite, `docs/deploiement.md` à jour.
+1. Le tableau « Fluidité » montre en direct une partie jouée en production par le porteur du projet, sur ordinateur et sur téléphone: verdict, battement et ses phases, joueurs chez eux, parties en cours.
+2. **Une saccade provoquée de chaque origine est reconnue par le verdict et retrouvée dans les épisodes avec son contexte**: le serveur (battement ralenti à dessein sur un serveur d'essai), le réseau (lien bridé dans les outils du navigateur), la page (processeur ralenti dans les outils du navigateur).
+3. Chaque alerte a été déclenchée une fois, pour de vrai ou par une règle de test, et le courriel reçu.
+4. Le budget de performance est tenu, chiffres consignés.
+5. Empreinte des parties de référence identique, couverture de `packages/sim` inchangée.
+6. CI verte, mise en ligne faite, `docs/deploiement.md` à jour.
 
 ## Points de vigilance
 
 - **Ne jamais mettre d'identifiant en étiquette**: une étiquette par partie ou par joueur ferait exploser le nombre de séries, donc l'offre gratuite, et ferait fuir des données personnelles.
-- **Le serveur redémarre à chaque mise en ligne**: ses compteurs repartent de zéro. C'est prévu par Prometheus (`rate` et `increase` savent les remises à zéro), mais pas par un compteur lu à la main. Les tableaux n'utilisent que ces fonctions.
-- **Bleu et vert**: deux conteneurs se succèdent à chaque mise en ligne. L'agent lit l'emplacement en service (`/var/lib/neon-ninja/actif`) ou les deux ports, et les métriques portent l'emplacement en étiquette, pour ne pas mêler les deux pendant la bascule.
-- **La base ne doit pas devenir une source d'alerte**: une alerte qui l'interroge la réveillerait toutes les minutes.
+- **Le serveur redémarre à chaque mise en ligne**: ses compteurs repartent de zéro. Les tableaux n'utilisent que `rate` et `increase`, qui le savent.
+- **Bleu et vert**: deux conteneurs se succèdent à chaque mise en ligne. Les métriques portent l'emplacement en étiquette, pour ne pas mêler les deux pendant la bascule.
+- **Un onglet caché, un téléphone qui se verrouille** ralentissent la boucle sans que le joueur ne voie rien: ces images ne comptent pas comme des saccades.
+- **Le bulletin d'une page d'une autre version** est refusé comme le reste: le contrôle de version de la connexion s'applique.
 - **Le jeton d'écriture de Grafana est un secret**: jamais dans le dépôt, jamais dans la page.
 
 ## Rituel de fin de session
 
-Handoff depuis `docs/handoffs/_TEMPLATE.md`. Étape invisible au joueur, relevé de la page compris: pas de changement de `NUMERO_DE_VERSION`.
+Handoff depuis `docs/handoffs/_TEMPLATE.md`. Étape invisible au joueur: pas de changement de `NUMERO_DE_VERSION`.
+
+## Questions soumises au porteur du projet, et ses réponses du 11 octobre 2026
+
+Posées par la première version de cette fiche. **Réponse: Grafana Cloud, pour lui seul, et tout mesurer**, puis la fluidité d'abord. Les questions 2 et 4 relèvent désormais de l'étape `5.16`.
+
+1. **Grafana Cloud gratuit, hébergé ailleurs, ou un Grafana installé sur la machine Oracle ?** Retenu: Grafana Cloud.
+2. **Une ligne en base pour chaque partie terminée, invités compris ?** Retenu (étape `5.16`).
+3. **Un relevé de performance discret chez tous les joueurs ?** Retenu, et renforcé par la priorité donnée à la fluidité: un bulletin toutes les dix secondes plutôt qu'un résumé en fin de partie, pour voir une dégradation pendant qu'elle a lieu.
+4. **Compter les visiteurs distincts par jour, sans cookie ?** Retenu (étape `5.16`).
+5. **Qui voit le tableau de bord ?** Retenu: le porteur du projet seul.
 
 ## Réconciliation
 
