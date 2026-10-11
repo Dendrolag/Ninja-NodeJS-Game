@@ -119,7 +119,11 @@ Micro-décisions au sens du PROTOCOLE, à réviser en exécutant si le dépôt l
 4. **Les mini-jeux sont des modèles purs de la page**, un par nature, dans `packages/client/src/interface/modeles/gestes/`, avec les mêmes commandes que les gestes (pointeur, touche, temps), leurs échos et leurs tests. La fenêtre, son dessin et son annonce de fin servent tels quels; seul le dessin de chaque mini-jeu s'ajoute.
 5. **Le moteur ne connaît que la nature et sa durée minimale**: aucune règle des mini-jeux n'entre dans `packages/sim`.
 
-## Rendus
+## Rendus choisis par le porteur du projet sur planche
+
+Planche `docs/design/etape-7-24/1-planche.png` (source `planche.html`, à côté). Réponse du porteur du projet, 11 octobre 2026: **B pour les quatre mini-jeux**, le néon au trait, comme le reste du jeu: 1B, 2B, 3B et 4B. La rangée 5 (l'échec, l'écran gagné qui attend, les caisses et le serpent au doigt), dessinée en néon, vaut donc telle quelle.
+
+## La planche proposée
 
 Après confirmation des règles, une planche `docs/design/etape-7-24/1-planche.png` (source `planche.html` à côté), dessinée en code dans la fenêtre néon, sur ordinateur et sur téléphone en portrait:
 

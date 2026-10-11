@@ -1,0 +1,1082 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Planche Among Ninjas, les mini-jeux</title>
+    <style>
+      :root {
+        --fond: #0b1020;
+        --cadre: #26304f;
+        --texte: #e8ecf6;
+        --pale: #aeb6cc;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 22px 24px 18px;
+        width: 1640px;
+        background: var(--fond);
+        color: var(--texte);
+        font: 13px/1.35 'DejaVu Sans', 'Segoe UI', sans-serif;
+      }
+      h1 {
+        margin: 0 0 6px;
+        font-size: 22px;
+      }
+      .intro {
+        margin: 0 0 14px;
+      }
+      .rangee,
+      .entete {
+        display: grid;
+        grid-template-columns: 150px 1fr 1fr 1fr 230px;
+        gap: 10px;
+        margin-bottom: 10px;
+        align-items: start;
+      }
+      .rangee.etats {
+        grid-template-columns: 150px 1fr 1fr 0.62fr 0.62fr 230px;
+      }
+      .entete {
+        margin-bottom: 4px;
+        color: var(--pale);
+        font-weight: bold;
+        text-align: center;
+      }
+      .legende {
+        text-align: right;
+        padding-top: 50px;
+        color: var(--pale);
+      }
+      .legende b {
+        display: block;
+        color: var(--texte);
+        font-size: 15px;
+        margin-bottom: 4px;
+      }
+      .case {
+        background: var(--cadre);
+        border-radius: 8px;
+        padding: 6px;
+      }
+      .case span {
+        display: block;
+        color: var(--pale);
+        font-weight: bold;
+        margin: 0 0 4px 2px;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-radius: 4px;
+        background: #121a33;
+      }
+      .notes {
+        background: var(--cadre);
+        border-radius: 8px;
+        padding: 10px 12px;
+      }
+      .notes p {
+        margin: 0 0 8px;
+      }
+      .notes b {
+        color: #2ee6ff;
+      }
+      .pied {
+        color: var(--pale);
+        margin-top: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Among Ninjas, les quatre mini-jeux (étape 7.24)</h1>
+    <p class="intro">
+      Chaque mini-jeu dans la fenêtre néon des tâches courtes (1A de l'étape 7.21), en cours de partie. Trois dessins à
+      choisir, un par mini-jeu ou le même pour les quatre: <b>A</b> des pixels d'arcade, sur un écran à lignes;
+      <b>B</b> du néon au trait, comme le reste du jeu; <b>C</b> des objets dessinés, comme les gestes. La dernière
+      rangée montre l'échec, l'écran gagné qui attend la durée minimale, et les commandes au doigt.
+    </p>
+    <div class="entete"><div></div><div>A. Pixels d'arcade</div><div>B. Néon au trait</div><div>C. Objets dessinés</div><div>Le mini-jeu</div></div>
+    <div id="rangees"></div>
+    <p class="pied">
+      Pour tous: Échap ou la croix ferment la tâche, à refaire en entier. Un échec recommence le mini-jeu sur place. Le
+      rythme de chaque mini-jeu ne laisse jamais finir sous la durée minimale du serveur, 12 secondes; on ne bouge pas
+      tant que la fenêtre est ouverte, et le jeu continue autour.
+    </p>
+
+    <script>
+      const RACINE = '../../../assets/';
+      const charger = (chemin) =>
+        new Promise((ok) => {
+          const image = new Image();
+          image.onload = () => ok(image);
+          image.onerror = () => ok(null);
+          image.src = RACINE + chemin;
+        });
+
+      const CYAN = '#2EE6FF';
+      const PALE = '#aeb6cc';
+      const MOI = '#FF5FD2';
+      const JAUNE = '#FFD84A';
+      const VERT = '#5CFF8A';
+      const ROUGE = '#FF4D5E';
+      const ORANGE = '#FF9F3A';
+
+      const JEUX = [
+        {
+          nature: 'caisses',
+          titre: 'Empiler des caisses',
+          station: "Bornes d'arcade",
+          pointeur: 'Quatre boutons sous la grille: gauche, tourner, droite, descendre. Trois pièces annoncées, deux lignes à compléter.',
+          clavier: 'Gauche et droite, Haut pour tourner, Bas pour descendre.',
+          durees: 'Visée 20 s, minimale 12 s. Grille de 6 sur 10, plus petite que celle des jeux de blocs connus.',
+          aide: 'Complétez deux lignes',
+          aideClavier: 'Clavier : flèches',
+        },
+        {
+          nature: 'serpent',
+          titre: 'Nourrir le serpent',
+          station: 'Ordinateur de la maison',
+          pointeur: 'Glisser dans la direction voulue, n\'importe où dans la fenêtre. Cinq fruits; se mordre ou toucher le bord recommence.',
+          clavier: 'Flèches.',
+          durees: 'Visée 20 s, minimale 12 s. Grille de 12 sur 9, chaque fruit loin de la tête.',
+          aide: 'Mangez cinq fruits',
+          aideClavier: 'Clavier : flèches',
+        },
+        {
+          nature: 'envahisseurs',
+          titre: 'Repousser les Black Ninjas',
+          station: 'Bureaux de la salle violette',
+          pointeur: 'Le ninja suit la souris ou le doigt le long du bas, et lance ses shurikens seul. Huit Black Ninjas; s\'ils touchent le sol, on recommence.',
+          clavier: 'Gauche et droite; il lance seul.',
+          durees: 'Visée 20 s, minimale 12 s.',
+          aide: 'Abattez les huit Black Ninjas',
+          aideClavier: 'Clavier : gauche, droite',
+        },
+        {
+          nature: 'bataille',
+          titre: 'Bataille navale',
+          station: "Table de jeu de l'arcade",
+          pointeur: 'Toucher une case. Deux bateaux, de trois et deux cases, sur 6 sur 6; à court de tirs, la grille se retire et une autre vient.',
+          clavier: 'Flèches pour la case, Espace pour tirer.',
+          durees: 'Visée 25 s, minimale 12 s. Le nombre de tirs (16 ici) se règle par simulation: neuf réussites sur dix pour un joueur méthodique.',
+          aide: 'Coulez les deux bateaux',
+          aideClavier: 'Clavier : flèches, Espace',
+        },
+      ];
+
+      // ------------------------------------------------------------------
+      // Outils de dessin
+      // ------------------------------------------------------------------
+
+      function texte(ctx, chaine, x, y, taille, couleur, options = {}) {
+        ctx.save();
+        ctx.font = `${options.gras ? 'bold ' : ''}${taille}px ${options.police ?? "'DejaVu Sans', sans-serif"}`;
+        ctx.fillStyle = couleur;
+        ctx.textAlign = options.align ?? 'center';
+        ctx.textBaseline = 'middle';
+        if (options.halo) {
+          ctx.shadowColor = options.halo;
+          ctx.shadowBlur = options.flou ?? 14;
+        }
+        ctx.fillText(chaine, x, y);
+        ctx.restore();
+      }
+
+      function rectArrondi(ctx, x, y, l, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + l, y, x + l, y + h, r);
+        ctx.arcTo(x + l, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + l, y, r);
+        ctx.closePath();
+      }
+
+      function croix(ctx, x, y, couleur) {
+        ctx.save();
+        ctx.strokeStyle = couleur;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x - 8, y - 8);
+        ctx.lineTo(x + 8, y + 8);
+        ctx.moveTo(x + 8, y - 8);
+        ctx.lineTo(x - 8, y + 8);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function progression(ctx, cx, y, faits, total) {
+        const pas = total > 6 ? 18 : 24;
+        for (let i = 0; i < total; i++) {
+          const ax = cx + (i - (total - 1) / 2) * pas;
+          ctx.beginPath();
+          ctx.arc(ax, y, total > 6 ? 6 : 7, 0, Math.PI * 2);
+          if (i < faits) {
+            ctx.fillStyle = CYAN;
+            ctx.fill();
+          } else {
+            ctx.strokeStyle = 'rgba(46,230,255,0.5)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
+        }
+      }
+
+      function pointeur(ctx, x, y, telephone) {
+        ctx.save();
+        if (telephone) {
+          ctx.fillStyle = 'rgba(255,255,255,0.35)';
+          ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(x, y, 17, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = '#ffffff';
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x, y + 20);
+          ctx.lineTo(x + 5, y + 15);
+          ctx.lineTo(x + 9, y + 23);
+          ctx.lineTo(x + 12, y + 21);
+          ctx.lineTo(x + 8, y + 14);
+          ctx.lineTo(x + 14, y + 14);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      function fleche(ctx, x0, y0, x1, y1, couleur) {
+        ctx.save();
+        ctx.strokeStyle = couleur;
+        ctx.fillStyle = couleur;
+        ctx.lineWidth = 3;
+        ctx.setLineDash([9, 6]);
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x1, y1);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        const a = Math.atan2(y1 - y0, x1 - x0);
+        ctx.beginPath();
+        ctx.moveTo(x1 + Math.cos(a) * 10, y1 + Math.sin(a) * 10);
+        ctx.lineTo(x1 + Math.cos(a + 2.5) * 12, y1 + Math.sin(a + 2.5) * 12);
+        ctx.lineTo(x1 + Math.cos(a - 2.5) * 12, y1 + Math.sin(a - 2.5) * 12);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      /** Les lignes d'un vieil ecran, sur le rectangle donne (style A). */
+      function lignesDEcran(ctx, x, y, l, h) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.22)';
+        for (let ly = y; ly < y + h; ly += 3) {
+          ctx.fillRect(x, ly, l, 1);
+        }
+        ctx.restore();
+      }
+
+      /** Un fond de plateau, selon le style. */
+      function plateau(ctx, x, y, l, h, style) {
+        ctx.save();
+        if (style === 'A') {
+          ctx.fillStyle = '#05060c';
+          ctx.fillRect(x, y, l, h);
+          ctx.strokeStyle = '#d8dde8';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(x - 1.5, y - 1.5, l + 3, h + 3);
+        } else if (style === 'B') {
+          ctx.fillStyle = 'rgba(46,230,255,0.04)';
+          ctx.fillRect(x, y, l, h);
+          ctx.shadowColor = CYAN;
+          ctx.shadowBlur = 10;
+          ctx.strokeStyle = CYAN;
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(x, y, l, h);
+        } else {
+          ctx.fillStyle = '#1d1712';
+          ctx.fillRect(x, y, l, h);
+          ctx.strokeStyle = '#6b4a2a';
+          ctx.lineWidth = 4;
+          ctx.strokeRect(x - 2, y - 2, l + 4, h + 4);
+        }
+        ctx.restore();
+      }
+
+      /** Une grille fine dans le plateau. */
+      function quadrillage(ctx, x, y, colonnes, lignes, c, couleur) {
+        ctx.save();
+        ctx.strokeStyle = couleur;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = 1; i < colonnes; i++) {
+          ctx.moveTo(x + i * c + 0.5, y);
+          ctx.lineTo(x + i * c + 0.5, y + lignes * c);
+        }
+        for (let j = 1; j < lignes; j++) {
+          ctx.moveTo(x, y + j * c + 0.5);
+          ctx.lineTo(x + colonnes * c, y + j * c + 0.5);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // ------------------------------------------------------------------
+      // 1. Empiler des caisses
+      // ------------------------------------------------------------------
+
+      const GRILLE_CAISSES = [
+        '......',
+        '......',
+        '..PP..',
+        '...PP.',
+        '......',
+        '......',
+        '#....#',
+        '##..##',
+        '###.##',
+        '##.###',
+      ];
+      const OMBRE_CAISSES = [
+        [2, 7],
+        [3, 7],
+        [3, 8],
+        [2, 6],
+      ];
+
+      function caisse(ctx, x, y, c, style, sorte) {
+        ctx.save();
+        if (style === 'A') {
+          const couleur = sorte === 'P' ? MOI : '#4f6db0';
+          ctx.fillStyle = couleur;
+          ctx.fillRect(x, y, c, c);
+          ctx.fillStyle = 'rgba(255,255,255,0.45)';
+          ctx.fillRect(x, y, c, 3);
+          ctx.fillRect(x, y, 3, c);
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.fillRect(x, y + c - 3, c, 3);
+          ctx.fillRect(x + c - 3, y, 3, c);
+        } else if (style === 'B') {
+          const couleur = sorte === 'P' ? MOI : '#5a7ab0';
+          ctx.fillStyle = sorte === 'P' ? 'rgba(255,95,210,0.18)' : 'rgba(90,122,176,0.18)';
+          ctx.fillRect(x + 2, y + 2, c - 4, c - 4);
+          if (sorte === 'P') {
+            ctx.shadowColor = MOI;
+            ctx.shadowBlur = 10;
+          }
+          ctx.strokeStyle = couleur;
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x + 2.5, y + 2.5, c - 5, c - 5);
+        } else {
+          const bois = sorte === 'P' ? '#c99456' : '#8a5a2b';
+          const fonce = sorte === 'P' ? '#8a5f2c' : '#5a3818';
+          ctx.fillStyle = bois;
+          ctx.fillRect(x + 1, y + 1, c - 2, c - 2);
+          ctx.strokeStyle = fonce;
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x + 2, y + 2, c - 4, c - 4);
+          ctx.beginPath();
+          ctx.moveTo(x + 3, y + 3);
+          ctx.lineTo(x + c - 3, y + c - 3);
+          ctx.moveTo(x + c - 3, y + 3);
+          ctx.lineTo(x + 3, y + c - 3);
+          ctx.stroke();
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(x + 2, y + c / 2);
+          ctx.lineTo(x + c - 2, y + c / 2);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      function boutons(ctx, cx, y, largeur, hauteur, style) {
+        const signes = ['◀', '↻', '▶', '▼'];
+        const n = signes.length;
+        const ecart = 8;
+        const l = (largeur - ecart * (n - 1)) / n;
+        signes.forEach((signe, i) => {
+          const bx = cx - largeur / 2 + i * (l + ecart);
+          ctx.save();
+          if (style === 'C') {
+            ctx.fillStyle = '#3a2a1c';
+            rectArrondi(ctx, bx, y, l, hauteur, 8);
+            ctx.fill();
+            ctx.strokeStyle = '#8a5a2b';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          } else {
+            ctx.fillStyle = style === 'A' ? '#1b2238' : 'rgba(46,230,255,0.08)';
+            rectArrondi(ctx, bx, y, l, hauteur, style === 'A' ? 2 : 8);
+            ctx.fill();
+            ctx.strokeStyle = style === 'A' ? '#d8dde8' : CYAN;
+            ctx.lineWidth = 2;
+            if (style === 'B') {
+              ctx.shadowColor = CYAN;
+              ctx.shadowBlur = 8;
+            }
+            ctx.stroke();
+          }
+          ctx.restore();
+          texte(ctx, signe, bx + l / 2, y + hauteur / 2 + 1, Math.min(hauteur * 0.55, 22), style === 'C' ? '#f0d9b5' : '#e8ecf6', {
+            gras: true,
+          });
+        });
+      }
+
+      function caisses(ctx, x, y, l, h, style, tel) {
+        progression(ctx, x + l / 2, y + 12, 0, 2);
+        const hb = tel ? 58 : 32;
+        const zone = h - 30 - hb - 10;
+        const c = Math.floor(Math.min(zone / 10, (tel ? l * 0.62 : l * 0.4) / 6));
+        const gl = 6 * c;
+        const gh = 10 * c;
+        const gx = Math.round(x + l / 2 - gl / 2 - (tel ? 34 : 50));
+        const gy = y + 28;
+        plateau(ctx, gx, gy, gl, gh, style);
+        quadrillage(ctx, gx, gy, 6, 10, c, style === 'C' ? 'rgba(107,74,42,0.35)' : 'rgba(46,230,255,0.08)');
+        // L'ombre de l'atterrissage, la ou la piece tombera.
+        ctx.save();
+        ctx.setLineDash([4, 3]);
+        ctx.strokeStyle = style === 'C' ? 'rgba(240,217,181,0.6)' : 'rgba(255,95,210,0.7)';
+        ctx.lineWidth = 1.5;
+        for (const [cx, cy] of OMBRE_CAISSES) {
+          ctx.strokeRect(gx + cx * c + 3, gy + cy * c + 3, c - 6, c - 6);
+        }
+        ctx.restore();
+        GRILLE_CAISSES.forEach((ligne, j) => {
+          [...ligne].forEach((case_, i) => {
+            if (case_ !== '.') caisse(ctx, gx + i * c, gy + j * c, c, style, case_);
+          });
+        });
+        if (style === 'A') lignesDEcran(ctx, gx, gy, gl, gh);
+        // La suivante, et le compte des pieces.
+        const px = gx + gl + 16;
+        const pc = Math.round(c * 0.7);
+        texte(ctx, 'Suivante', px, gy + 8, 11.5, PALE, { align: 'left' });
+        const formes = [
+          [0, 0],
+          [0, 1],
+          [0, 2],
+          [1, 2],
+        ];
+        ctx.save();
+        for (const [i, j] of formes) caisse(ctx, px + 6 + i * pc, gy + 22 + j * pc, pc, style, 'P');
+        ctx.restore();
+        texte(ctx, 'Pièce 2 / 3', px, gy + 22 + 3 * pc + 22, 12, PALE, { align: 'left' });
+        texte(ctx, 'Lignes 0 / 2', px, gy + 22 + 3 * pc + 42, 12, PALE, { align: 'left' });
+        boutons(ctx, x + l / 2, gy + gh + 10, tel ? l - 20 : Math.min(l - 40, 300), hb, style);
+        if (tel) pointeur(ctx, x + l / 2 - (l - 20) / 8 + 4, gy + gh + 10 + hb / 2, true);
+        else pointeur(ctx, x + l / 2 + 16, gy + gh + 22, false);
+      }
+
+      // ------------------------------------------------------------------
+      // 2. Nourrir le serpent
+      // ------------------------------------------------------------------
+
+      const SERPENT = [
+        [7, 4],
+        [6, 4],
+        [5, 4],
+        [5, 5],
+        [4, 5],
+        [3, 5],
+        [3, 6],
+      ];
+      const FRUIT = [9, 2];
+
+      function serpent(ctx, x, y, l, h, style, tel) {
+        progression(ctx, x + l / 2, y + 12, 2, 5);
+        const c = Math.floor(Math.min((h - 34) / 9, (l - 24) / 12));
+        const gl = 12 * c;
+        const gh = 9 * c;
+        const gx = Math.round(x + l / 2 - gl / 2);
+        const gy = y + 28;
+        plateau(ctx, gx, gy, gl, gh, style === 'C' ? 'C' : style);
+        const centre = ([i, j]) => [gx + i * c + c / 2, gy + j * c + c / 2];
+        if (style === 'A') {
+          ctx.save();
+          ctx.fillStyle = ROUGE;
+          const [fx, fy] = [gx + FRUIT[0] * c, gy + FRUIT[1] * c];
+          const p = c / 5;
+          ctx.fillRect(fx + p, fy + 2 * p, 3 * p, 2 * p);
+          ctx.fillRect(fx + 2 * p, fy + p, p, 4 * p);
+          ctx.fillStyle = VERT;
+          ctx.fillRect(fx + 2 * p, fy, p, p);
+          SERPENT.forEach(([i, j], k) => {
+            ctx.fillStyle = k === 0 ? '#9dff6a' : '#3fd14a';
+            ctx.fillRect(gx + i * c + 1, gy + j * c + 1, c - 2, c - 2);
+          });
+          ctx.fillStyle = '#05060c';
+          ctx.fillRect(gx + 7 * c + c * 0.6, gy + 4 * c + c * 0.25, c * 0.2, c * 0.2);
+          ctx.restore();
+          lignesDEcran(ctx, gx, gy, gl, gh);
+        } else if (style === 'B') {
+          quadrillage(ctx, gx, gy, 12, 9, c, 'rgba(46,230,255,0.07)');
+          ctx.save();
+          ctx.shadowColor = JAUNE;
+          ctx.shadowBlur = 16;
+          ctx.fillStyle = JAUNE;
+          const [fx, fy] = centre(FRUIT);
+          ctx.beginPath();
+          ctx.arc(fx, fy, c * 0.28, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+          ctx.save();
+          ctx.shadowColor = VERT;
+          ctx.shadowBlur = 14;
+          ctx.strokeStyle = VERT;
+          ctx.lineWidth = c * 0.5;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.beginPath();
+          SERPENT.forEach((case_, k) => {
+            const [px, py] = centre(case_);
+            if (k === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          });
+          ctx.stroke();
+          ctx.restore();
+          const [tx, ty] = centre(SERPENT[0]);
+          ctx.fillStyle = '#0b1020';
+          ctx.beginPath();
+          ctx.arc(tx + c * 0.1, ty - c * 0.1, c * 0.07, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          // Un tatami sous un dragon de jade, qui mange des peches.
+          ctx.save();
+          for (let j = 0; j < 9; j++) {
+            ctx.fillStyle = j % 2 ? '#3c4a2a' : '#44522f';
+            ctx.fillRect(gx, gy + j * c, gl, c);
+          }
+          ctx.restore();
+          const [fx, fy] = centre(FRUIT);
+          ctx.save();
+          const peche = ctx.createRadialGradient(fx - c * 0.1, fy - c * 0.1, 2, fx, fy, c * 0.4);
+          peche.addColorStop(0, '#ffd0b0');
+          peche.addColorStop(1, '#f07a6a');
+          ctx.fillStyle = peche;
+          ctx.beginPath();
+          ctx.arc(fx, fy + 2, c * 0.36, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#4caf50';
+          ctx.beginPath();
+          ctx.ellipse(fx + c * 0.15, fy - c * 0.3, c * 0.18, c * 0.08, -0.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+          for (let k = SERPENT.length - 1; k >= 0; k--) {
+            const [px, py] = centre(SERPENT[k]);
+            const r = k === 0 ? c * 0.48 : c * (0.44 - k * 0.025);
+            const ecaille = ctx.createRadialGradient(px - r * 0.3, py - r * 0.3, 1, px, py, r);
+            ecaille.addColorStop(0, '#9ee6a8');
+            ecaille.addColorStop(1, '#1f7a45');
+            ctx.fillStyle = ecaille;
+            ctx.beginPath();
+            ctx.arc(px, py, r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#c9a24a';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+          }
+          const [tx, ty] = centre(SERPENT[0]);
+          ctx.fillStyle = ORANGE;
+          ctx.beginPath();
+          ctx.moveTo(tx - c * 0.2, ty - c * 0.4);
+          ctx.lineTo(tx - c * 0.05, ty - c * 0.75);
+          ctx.lineTo(tx + c * 0.1, ty - c * 0.38);
+          ctx.fill();
+          ctx.fillStyle = '#fff6c0';
+          ctx.beginPath();
+          ctx.arc(tx + c * 0.18, ty - c * 0.12, c * 0.1, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#111';
+          ctx.beginPath();
+          ctx.arc(tx + c * 0.2, ty - c * 0.12, c * 0.05, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        if (tel) {
+          fleche(ctx, gx + gl * 0.35, gy + gh + 30, gx + gl * 0.7, gy + gh + 30, 'rgba(255,255,255,0.8)');
+          pointeur(ctx, gx + gl * 0.35, gy + gh + 30, true);
+          texte(ctx, 'Glissez', gx + gl * 0.52, gy + gh + 56, 12, PALE);
+        }
+      }
+
+      // ------------------------------------------------------------------
+      // 3. Repousser les Black Ninjas
+      // ------------------------------------------------------------------
+
+      const TOMBES = [1, 4, 6];
+      const PIXELS_NINJA = [
+        '..XXXX..',
+        '.XXXXXX.',
+        'XRRRRRRX',
+        'XXEXXEXX',
+        '.XXXXXX.',
+        'X.XXXX.X',
+        '.X.XX.X.',
+        'X......X',
+      ];
+
+      function ninjaPixel(ctx, x, y, t, corps, bandeau, yeux) {
+        PIXELS_NINJA.forEach((ligne, j) => {
+          [...ligne].forEach((p, i) => {
+            if (p === '.') return;
+            ctx.fillStyle = p === 'R' ? bandeau : p === 'E' ? yeux : corps;
+            ctx.fillRect(x + i * t, y + j * t, t, t);
+          });
+        });
+      }
+
+      function teinte(image, couleur) {
+        const toile = document.createElement('canvas');
+        toile.width = image.width;
+        toile.height = image.height;
+        const ctx = toile.getContext('2d');
+        ctx.drawImage(image, 0, 0);
+        const donnees = ctx.getImageData(0, 0, toile.width, toile.height);
+        const p = donnees.data;
+        const c = parseInt(couleur.slice(1), 16);
+        const [cr, cg, cb] = [(c >> 16) & 255, (c >> 8) & 255, c & 255];
+        for (let i = 0; i < p.length; i += 4) {
+          const [r, g, b, a] = [p[i], p[i + 1], p[i + 2], p[i + 3]];
+          if (a === 0) continue;
+          const exces = r - Math.max(g, b);
+          const part = Math.abs(g - b) > 40 || exces < 40 ? 0 : Math.min(1, exces / 255);
+          if (part > 0) {
+            const fond = (r - part * 255) / Math.max(1 - part, 0.01);
+            p[i] = cr * part + fond * (1 - part);
+            p[i + 1] = cg * part + g * (1 - part);
+            p[i + 2] = cb * part + b * (1 - part);
+          }
+        }
+        ctx.putImageData(donnees, 0, 0);
+        return toile;
+      }
+
+      function shuriken(ctx, x, y, r, style) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(0.4);
+        ctx.beginPath();
+        for (let k = 0; k < 8; k++) {
+          const a = (k * Math.PI) / 4;
+          const rr = k % 2 ? r * 0.35 : r;
+          ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+        }
+        ctx.closePath();
+        if (style === 'B') {
+          ctx.shadowColor = JAUNE;
+          ctx.shadowBlur = 10;
+          ctx.strokeStyle = JAUNE;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = style === 'A' ? JAUNE : '#cfd6e0';
+          ctx.fill();
+          if (style === 'C') {
+            ctx.strokeStyle = '#5b6372';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          }
+        }
+        ctx.restore();
+      }
+
+      function envahisseurs(ctx, x, y, l, h, style, tel, images) {
+        progression(ctx, x + l / 2, y + 12, 3, 8);
+        const gx = x + 12;
+        const gy = y + 26;
+        const gl = l - 24;
+        const gh = h - 30 - (tel ? 40 : 0);
+        if (style === 'A') {
+          ctx.fillStyle = '#0d1430';
+          ctx.fillRect(gx, gy, gl, gh);
+        } else if (style === 'B') {
+          plateau(ctx, gx, gy, gl, gh, 'B');
+        } else {
+          const ciel = ctx.createLinearGradient(0, gy, 0, gy + gh);
+          ciel.addColorStop(0, '#1b1440');
+          ciel.addColorStop(1, '#3a1d3a');
+          ctx.fillStyle = ciel;
+          ctx.fillRect(gx, gy, gl, gh);
+          ctx.fillStyle = '#2a2230';
+          ctx.fillRect(gx, gy + gh - 18, gl, 18);
+          ctx.fillStyle = '#ffe7a8';
+          ctx.beginPath();
+          ctx.arc(gx + gl - 40, gy + 30, 14, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        const pasX = gl / 9.5;
+        const t = Math.max(3, Math.floor(pasX / 12));
+        const ty = gy + gh * 0.22;
+        for (let i = 0; i < 8; i++) {
+          if (TOMBES.includes(i)) continue;
+          const cx = gx + pasX * (i + 1) + 6;
+          if (style === 'A') {
+            ninjaPixel(ctx, cx - 4 * t, ty - 4 * t, t, '#1a1a1a', '#8a8f9a', ROUGE);
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+            ctx.strokeRect(cx - 4 * t - 0.5, ty - 4 * t - 0.5, 8 * t + 1, 8 * t + 1);
+            ctx.restore();
+          } else if (style === 'B') {
+            ctx.save();
+            ctx.shadowColor = ROUGE;
+            ctx.shadowBlur = 10;
+            ctx.strokeStyle = ROUGE;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(cx, ty, pasX * 0.32, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(cx - pasX * 0.32, ty - 2);
+            ctx.lineTo(cx + pasX * 0.32, ty - 2);
+            ctx.stroke();
+            ctx.fillStyle = ROUGE;
+            ctx.fillRect(cx - pasX * 0.16, ty + 2, pasX * 0.1, 3);
+            ctx.fillRect(cx + pasX * 0.06, ty + 2, pasX * 0.1, 3);
+            ctx.restore();
+          } else if (images.noir) {
+            const s = pasX * 0.85;
+            ctx.drawImage(images.noir, cx - s / 2, ty - s / 2, s, s);
+          }
+        }
+        // Un abattu qui s'efface, la ou le shuriken vient de toucher.
+        const ex = gx + pasX * 7 + 6;
+        ctx.save();
+        ctx.globalAlpha = 0.7;
+        for (let k = 0; k < 8; k++) {
+          const a = (k * Math.PI) / 4;
+          ctx.strokeStyle = style === 'C' ? '#ffd38a' : JAUNE;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(ex + Math.cos(a) * 6, ty + Math.sin(a) * 6);
+          ctx.lineTo(ex + Math.cos(a) * 14, ty + Math.sin(a) * 14);
+          ctx.stroke();
+        }
+        ctx.restore();
+        // Le ninja du joueur, en bas, et son shuriken en vol.
+        const jx = gx + gl * 0.36;
+        const jy = gy + gh - 24;
+        if (style === 'A') {
+          ninjaPixel(ctx, jx - 4 * t, jy - 4 * t, t, MOI, '#ffffff', '#ffffff');
+        } else if (style === 'B') {
+          ctx.save();
+          ctx.shadowColor = MOI;
+          ctx.shadowBlur = 12;
+          ctx.strokeStyle = MOI;
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.arc(jx, jy, pasX * 0.34, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        } else if (images.moi) {
+          const s = pasX * 0.95;
+          ctx.drawImage(images.moi, jx - s / 2, jy - s / 2, s, s);
+        }
+        shuriken(ctx, jx + 4, jy - gh * 0.33, 7, style);
+        if (style === 'A') lignesDEcran(ctx, gx, gy, gl, gh);
+        if (tel) {
+          pointeur(ctx, jx + 10, gy + gh + 20, true);
+          fleche(ctx, jx - 40, gy + gh + 20, jx + 70, gy + gh + 20, 'rgba(255,255,255,0.6)');
+        } else {
+          pointeur(ctx, jx + 2, jy + 8, false);
+        }
+      }
+
+      // ------------------------------------------------------------------
+      // 4. Bataille navale
+      // ------------------------------------------------------------------
+
+      const RATES = [
+        [0, 1],
+        [2, 4],
+        [4, 0],
+        [5, 5],
+        [3, 1],
+      ];
+      const COULE = [
+        [1, 2],
+        [1, 3],
+        [1, 4],
+      ];
+      const TOUCHES = [[4, 3]];
+      const VISEE = [3, 3];
+
+      function bataille(ctx, x, y, l, h, style, tel) {
+        progression(ctx, x + l / 2, y + 12, 1, 2);
+        const c = Math.floor(Math.min((h - 46) / 6.4, (tel ? l - 40 : l * 0.55) / 6.4));
+        const gl = 6 * c;
+        const gx = Math.round(x + (tel ? l / 2 - gl / 2 + 8 : l * 0.12 + 18));
+        const gy = y + 34;
+        // Les reperes, lettres et chiffres.
+        for (let i = 0; i < 6; i++) {
+          texte(ctx, 'ABCDEF'[i], gx + i * c + c / 2, gy - 9, 11, PALE);
+          texte(ctx, String(i + 1), gx - 11, gy + i * c + c / 2, 11, PALE);
+        }
+        if (style === 'A') {
+          for (let j = 0; j < 6; j++)
+            for (let i = 0; i < 6; i++) {
+              ctx.fillStyle = (i + j) % 2 ? '#123a8a' : '#1647a6';
+              ctx.fillRect(gx + i * c, gy + j * c, c, c);
+            }
+        } else if (style === 'B') {
+          plateau(ctx, gx, gy, gl, gl, 'B');
+          quadrillage(ctx, gx, gy, 6, 6, c, 'rgba(46,230,255,0.35)');
+        } else {
+          const mer = ctx.createLinearGradient(0, gy, 0, gy + gl);
+          mer.addColorStop(0, '#1b5e86');
+          mer.addColorStop(1, '#123f63');
+          ctx.fillStyle = mer;
+          ctx.fillRect(gx, gy, gl, gl);
+          ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+          ctx.lineWidth = 1;
+          for (let j = 0; j < 6; j++)
+            for (let i = 0; i < 6; i++) {
+              const wx = gx + i * c + c * 0.25;
+              const wy = gy + j * c + c * 0.7;
+              ctx.beginPath();
+              ctx.moveTo(wx, wy);
+              ctx.quadraticCurveTo(wx + c * 0.12, wy - 4, wx + c * 0.25, wy);
+              ctx.quadraticCurveTo(wx + c * 0.37, wy + 4, wx + c * 0.5, wy);
+              ctx.stroke();
+            }
+          quadrillage(ctx, gx, gy, 6, 6, c, 'rgba(0,0,0,0.35)');
+          ctx.strokeStyle = '#6b4a2a';
+          ctx.lineWidth = 4;
+          ctx.strokeRect(gx - 2, gy - 2, gl + 4, gl + 4);
+        }
+        // Le bateau coule, revele.
+        const [bi, bj] = COULE[0];
+        ctx.save();
+        if (style === 'A') {
+          ctx.fillStyle = '#8a8f9a';
+          ctx.fillRect(gx + bi * c + 3, gy + bj * c + 3, c - 6, 3 * c - 6);
+        } else if (style === 'B') {
+          ctx.shadowColor = MOI;
+          ctx.shadowBlur = 10;
+          ctx.strokeStyle = MOI;
+          ctx.lineWidth = 2;
+          rectArrondi(ctx, gx + bi * c + 4, gy + bj * c + 4, c - 8, 3 * c - 8, (c - 8) / 2);
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = '#7a4a22';
+          ctx.beginPath();
+          ctx.moveTo(gx + bi * c + c / 2, gy + bj * c + 2);
+          ctx.lineTo(gx + bi * c + c - 5, gy + bj * c + c * 0.7);
+          ctx.lineTo(gx + bi * c + c - 5, gy + (bj + 3) * c - 6);
+          ctx.lineTo(gx + bi * c + 5, gy + (bj + 3) * c - 6);
+          ctx.lineTo(gx + bi * c + 5, gy + bj * c + c * 0.7);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = '#e8d2a6';
+          ctx.fillRect(gx + bi * c + c * 0.28, gy + (bj + 1) * c, c * 0.44, c * 0.9);
+        }
+        ctx.restore();
+        const marque = ([i, j], touche) => {
+          const [mx, my] = [gx + i * c + c / 2, gy + j * c + c / 2];
+          ctx.save();
+          if (style === 'A') {
+            const p = c / 6;
+            if (touche) {
+              ctx.fillStyle = ORANGE;
+              ctx.fillRect(mx - 2 * p, my - p, 4 * p, 3 * p);
+              ctx.fillStyle = ROUGE;
+              ctx.fillRect(mx - p, my - 2 * p, 2 * p, 2 * p);
+            } else {
+              ctx.fillStyle = '#e8ecf6';
+              ctx.fillRect(mx - p, my - p, p, p);
+              ctx.fillRect(mx + p, my, p, p);
+              ctx.fillRect(mx - 2 * p, my + p, p, p);
+            }
+          } else if (style === 'B') {
+            if (touche) {
+              ctx.shadowColor = MOI;
+              ctx.shadowBlur = 10;
+              croix(ctx, mx, my, MOI);
+            } else {
+              ctx.strokeStyle = 'rgba(46,230,255,0.8)';
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.arc(mx, my, c * 0.16, 0, Math.PI * 2);
+              ctx.stroke();
+            }
+          } else {
+            ctx.fillStyle = touche ? '#d8282f' : '#f4f4f4';
+            ctx.beginPath();
+            ctx.arc(mx, my, c * 0.17, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.beginPath();
+            ctx.arc(mx + 2, my + 2, c * 0.08, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+        };
+        RATES.forEach((p) => marque(p, false));
+        COULE.forEach((p) => marque(p, true));
+        TOUCHES.forEach((p) => marque(p, true));
+        if (style === 'A') lignesDEcran(ctx, gx, gy, gl, gl);
+        // La case visee.
+        ctx.save();
+        ctx.strokeStyle = JAUNE;
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = JAUNE;
+        ctx.shadowBlur = style === 'B' ? 10 : 0;
+        ctx.strokeRect(gx + VISEE[0] * c + 2, gy + VISEE[1] * c + 2, c - 4, c - 4);
+        ctx.restore();
+        const sx = tel ? x + l / 2 : gx + gl + 24;
+        const sy = tel ? gy + gl + 26 : gy + 20;
+        const align = tel ? 'center' : 'left';
+        texte(ctx, 'Tirs 8 / 16', sx, sy, 13, '#e8ecf6', { gras: true, align });
+        texte(ctx, 'Bateaux coulés 1 / 2', sx, sy + 20, 12, PALE, { align });
+        if (!tel) {
+          texte(ctx, '■ touché', sx, sy + 50, 11.5, style === 'C' ? '#ff6b6b' : style === 'A' ? ORANGE : MOI, { align });
+          texte(ctx, '○ à l\'eau', sx, sy + 68, 11.5, PALE, { align });
+        }
+        pointeur(ctx, gx + VISEE[0] * c + c / 2 + (tel ? 0 : 4), gy + VISEE[1] * c + c / 2 + (tel ? 0 : 4), tel);
+      }
+
+      const DESSINS = { caisses, serpent, envahisseurs, bataille };
+
+      // ------------------------------------------------------------------
+      // La fenetre et les rangees
+      // ------------------------------------------------------------------
+
+      function fenetre(ctx, g, fx, fy, fl, fh, tel) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(10, 16, 34, 0.96)';
+        rectArrondi(ctx, fx, fy, fl, fh, 14);
+        ctx.fill();
+        ctx.shadowColor = CYAN;
+        ctx.shadowBlur = 18;
+        ctx.strokeStyle = CYAN;
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        ctx.restore();
+        texte(ctx, g.titre, fx + 18, fy + 24, tel ? 17 : 19, CYAN, { gras: true, align: 'left', halo: CYAN, flou: 8 });
+        texte(ctx, g.station, fx + 18, fy + 46, 12.5, PALE, { align: 'left' });
+        croix(ctx, fx + fl - 24, fy + 26, '#e8ecf6');
+        const pied = tel ? g.aide : `${g.aide}   ${g.aideClavier}`;
+        texte(ctx, pied, fx + fl / 2, fy + fh - 18, 12, PALE);
+        return { x: fx + 8, y: fy + 56, l: fl - 16, h: fh - 56 - 34 };
+      }
+
+      function fondDeJeu(ctx, largeur, hauteur) {
+        const fond = ctx.createLinearGradient(0, 0, largeur, hauteur);
+        fond.addColorStop(0, '#1a2240');
+        fond.addColorStop(1, '#0d1328');
+        ctx.fillStyle = fond;
+        ctx.fillRect(0, 0, largeur, hauteur);
+      }
+
+      function bureau(ctx, g, style, images) {
+        fondDeJeu(ctx, 460, 350);
+        const r = fenetre(ctx, g, 10, 10, 440, 330, false);
+        DESSINS[g.nature](ctx, r.x, r.y, r.l, r.h, style, false, images);
+      }
+
+      function mobile(ctx, g, style, images) {
+        fondDeJeu(ctx, 375, 560);
+        const r = fenetre(ctx, g, 10, 10, 355, 540, true);
+        DESSINS[g.nature](ctx, r.x, r.y, r.l, r.h, style, true, images);
+      }
+
+      /** L'echec du serpent: le serpent rougit, et la partie neuve s'annonce. */
+      function echec(ctx, images) {
+        const g = JEUX[1];
+        fondDeJeu(ctx, 460, 350);
+        const r = fenetre(ctx, g, 10, 10, 440, 330, false);
+        serpent(ctx, r.x, r.y, r.l, r.h, 'B', false, images);
+        ctx.save();
+        ctx.fillStyle = 'rgba(255,77,94,0.18)';
+        ctx.fillRect(r.x, r.y + 26, r.l, r.h - 26);
+        ctx.restore();
+        texte(ctx, 'Raté !', r.x + r.l / 2, r.y + r.h / 2 - 8, 30, ROUGE, { gras: true, halo: ROUGE });
+        texte(ctx, 'Une partie neuve dans un instant', r.x + r.l / 2, r.y + r.h / 2 + 24, 13, '#e8ecf6');
+      }
+
+      /** La bataille gagnee en peu de tirs: l'ecran attend la duree minimale. */
+      function gagne(ctx, images) {
+        const g = JEUX[3];
+        fondDeJeu(ctx, 460, 350);
+        const r = fenetre(ctx, g, 10, 10, 440, 330, false);
+        bataille(ctx, r.x, r.y, r.l, r.h, 'B', false, images);
+        ctx.save();
+        ctx.fillStyle = 'rgba(10,16,34,0.78)';
+        ctx.fillRect(r.x, r.y + 26, r.l, r.h - 26);
+        ctx.restore();
+        progression(ctx, r.x + r.l / 2, r.y + 12, 2, 2);
+        texte(ctx, 'Coulés !', r.x + r.l / 2, r.y + r.h / 2 - 24, 30, CYAN, { gras: true, halo: CYAN });
+        texte(ctx, 'Enregistrement du score', r.x + r.l / 2, r.y + r.h / 2 + 8, 13, '#e8ecf6');
+        const bl = 220;
+        const bx = r.x + r.l / 2 - bl / 2;
+        const by = r.y + r.h / 2 + 28;
+        ctx.save();
+        ctx.strokeStyle = CYAN;
+        ctx.lineWidth = 1.5;
+        rectArrondi(ctx, bx, by, bl, 12, 6);
+        ctx.stroke();
+        ctx.fillStyle = CYAN;
+        ctx.shadowColor = CYAN;
+        ctx.shadowBlur = 8;
+        rectArrondi(ctx, bx + 2, by + 2, (bl - 4) * 0.62, 8, 4);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      (async () => {
+        const [idle] = await Promise.all([charger('ninja/idle.png')]);
+        const images = idle ? { moi: teinte(idle, MOI), noir: teinte(idle, '#1b1b1b') } : {};
+        const conteneur = document.getElementById('rangees');
+        JEUX.forEach((g, i) => {
+          const rangee = document.createElement('div');
+          rangee.className = 'rangee';
+          rangee.innerHTML = `
+            <div class="legende"><b>${i + 1}. ${g.titre}</b>${g.station}</div>
+            <div class="case"><span>${i + 1}A</span><canvas width="460" height="350"></canvas></div>
+            <div class="case"><span>${i + 1}B</span><canvas width="460" height="350"></canvas></div>
+            <div class="case"><span>${i + 1}C</span><canvas width="460" height="350"></canvas></div>
+            <div class="notes">
+              <p><b>Au pointeur.</b> ${g.pointeur}</p>
+              <p><b>Au clavier.</b> ${g.clavier}</p>
+              <p>${g.durees}</p>
+            </div>`;
+          conteneur.appendChild(rangee);
+          const toiles = rangee.querySelectorAll('canvas');
+          ['A', 'B', 'C'].forEach((style, k) => bureau(toiles[k].getContext('2d'), g, style, images));
+        });
+
+        const etats = document.createElement('div');
+        etats.className = 'rangee etats';
+        etats.innerHTML = `
+          <div class="legende"><b>5. Échec, attente, doigt</b>En néon (B), pour l'exemple</div>
+          <div class="case"><span>L'échec</span><canvas width="460" height="350"></canvas></div>
+          <div class="case"><span>L'écran gagné</span><canvas width="460" height="350"></canvas></div>
+          <div class="case"><span>Caisses au doigt</span><canvas width="375" height="560"></canvas></div>
+          <div class="case"><span>Serpent au doigt</span><canvas width="375" height="560"></canvas></div>
+          <div class="notes">
+            <p><b>L'échec.</b> Une seconde de « Raté ! », puis une partie neuve, dans la même fenêtre. La durée minimale se compte toujours de l'ouverture.</p>
+            <p><b>L'écran gagné.</b> Fini avant la durée minimale (une bataille navale chanceuse), la fenêtre garde l'écran gagné jusqu'à elle, puis la tâche est validée.</p>
+            <p><b>Au doigt.</b> Téléphone en portrait: les boutons des caisses en grand, le serpent au glissé; le joystick est caché pendant la tâche.</p>
+          </div>`;
+        conteneur.appendChild(etats);
+        const [t1, t2, t3, t4] = etats.querySelectorAll('canvas');
+        echec(t1.getContext('2d'), images);
+        gagne(t2.getContext('2d'), images);
+        mobile(t3.getContext('2d'), JEUX[0], 'B', images);
+        mobile(t4.getContext('2d'), JEUX[1], 'B', images);
+        document.body.dataset.pret = 'oui';
+      })();
+    </script>
+  </body>
+</html>
