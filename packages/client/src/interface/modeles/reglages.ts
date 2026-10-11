@@ -280,6 +280,13 @@ export const GROUPES_REGLAGES: readonly GroupeReglages[] = [
             bornes: BORNES_REGLAGES.among.tachesParProie,
             unite: '',
           },
+          {
+            nature: 'entier',
+            chemin: 'among.tachesLongues',
+            libelle: 'Dont mini-jeux',
+            bornes: BORNES_REGLAGES.among.tachesLongues,
+            unite: '',
+          },
           secondes(
             'among.rechargeMeurtreS',
             'Recharge du meurtre',

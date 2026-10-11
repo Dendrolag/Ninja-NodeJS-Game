@@ -51,8 +51,26 @@ export type CommandeDeGeste =
  * cartouche inseree, un bonus rempli, un essai rate. Le frottement et le remplissage, qui
  * durent, n'ont pas d'echo: leurs sons en boucle restent a fournir (fiche, section « Les
  * sons »).
+ *
+ * Les mini-jeux des taches longues (etape 7.24) en ajoutent: une caisse posee, une ligne
+ * effacee, un fruit mange, un shuriken lance, un Black Ninja abattu, un tir a l'eau, un tir qui
+ * touche, et une partie perdue, avant la partie neuve.
  */
-export type EchoDeGeste = 'passe' | 'fil' | 'mine' | 'cartouche' | 'remplie' | 'ratee';
+export type EchoDeGeste =
+  | 'passe'
+  | 'fil'
+  | 'mine'
+  | 'cartouche'
+  | 'remplie'
+  | 'ratee'
+  | 'posee'
+  | 'ligne'
+  | 'fruit'
+  | 'lancer'
+  | 'abattu'
+  | 'eau'
+  | 'touche'
+  | 'perdue';
 
 /** Ce que tout geste porte: ses echos, dans l'ordre. */
 export interface BaseDeGeste {

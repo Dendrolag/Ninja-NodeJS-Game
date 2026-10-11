@@ -4,8 +4,12 @@
  * FINIT JAMAIS SOUS LA DUREE MINIMALE DU SERVEUR, qui le refuserait.
  */
 
-import type { NatureDeTache } from '@neon-ninja/shared';
-import { DUREES_MINIMALES_DES_TACHES_MS, NATURES_DE_TACHE } from '@neon-ninja/shared';
+import type { NatureCourte } from '@neon-ninja/shared';
+import {
+  DUREES_MINIMALES_DES_TACHES_MS,
+  NATURES_COURTES,
+  NATURES_DE_TACHE,
+} from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
 import type { CommandeDeGeste, EtatDeGeste } from './index.js';
@@ -109,7 +113,7 @@ function frotterAuPointeur(etat: EtatDeGeste, maintenant: number): readonly Comm
 /** Les strategies les plus rapides, au pointeur et au clavier, nature par nature. */
 const AU_PLUS_VITE: Readonly<
   Record<
-    NatureDeTache,
+    NatureCourte,
     readonly ((etat: EtatDeGeste, maintenant: number) => readonly CommandeDeGeste[])[]
   >
 > = {
@@ -162,7 +166,7 @@ const AU_PLUS_VITE: Readonly<
 };
 
 describe('le rythme des gestes', () => {
-  for (const nature of NATURES_DE_TACHE) {
+  for (const nature of NATURES_COURTES) {
     it(`ne laisse pas finir « ${TITRES_DES_TACHES[nature]} » sous sa duree minimale`, () => {
       for (const strategie of AU_PLUS_VITE[nature]) {
         const fin = instantDeFin(creerGeste(nature, 7), strategie);

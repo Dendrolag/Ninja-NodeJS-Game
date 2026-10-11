@@ -168,6 +168,11 @@ export interface ReglagesAmong {
   readonly tueurs: number;
   /** Les taches de chaque proie. */
   readonly tachesParProie: number;
+  /**
+   * Combien des taches de chaque proie sont longues, des mini-jeux (etape 7.24, reponse 1 du
+   * porteur du projet, 11 octobre 2026): de 0 a 2, comptees dans les taches par proie.
+   */
+  readonly tachesLongues: number;
   /** Ce qu'un tueur attend entre deux meurtres, en secondes. */
   readonly rechargeMeurtreS: number;
   /** La duree maximale d'un tour, en secondes, l'une de DUREES_DE_TOUR_S. Zero: aucune. */
@@ -198,6 +203,7 @@ export interface ReglagesAmong {
 export const AMONG_PAR_DEFAUT: ReglagesAmong = {
   tueurs: 2,
   tachesParProie: 5,
+  tachesLongues: 1,
   rechargeMeurtreS: 25,
   dureeDuTourS: 180,
   discussionS: 45,

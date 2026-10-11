@@ -18,8 +18,8 @@
  * prend pour elle les fleches, Espace et Echap.
  */
 
-import type { NomDeSon } from '@neon-ninja/shared';
-import { DUREES_MINIMALES_DES_TACHES_MS } from '@neon-ninja/shared';
+import type { NatureDeTache, NomDeSon } from '@neon-ninja/shared';
+import { DUREES_MINIMALES_DES_TACHES_MS, estUneTacheLongue } from '@neon-ninja/shared';
 
 import type { TacheOuverte } from '../../among.js';
 import type { Client } from '../../client.js';
@@ -41,6 +41,7 @@ import {
   graineDuGeste,
 } from '../modeles/gestes/index.js';
 import { dessinerLeGeste } from './dessinsDesGestes.js';
+import { dessinerLAttente } from './dessinsDesMiniJeux.js';
 
 /** La marge prise au-dessus de la duree minimale avant d'annoncer la tache finie. */
 export const MARGE_DE_L_ANNONCE_MS = 150;
@@ -56,6 +57,14 @@ const SONS_DES_ECHOS: Readonly<Record<EchoDeGeste, NomDeSon>> = {
   cartouche: 'tacheCartouche',
   remplie: 'tacheBonusRempli',
   ratee: 'tacheRatee',
+  posee: 'tacheCaissePosee',
+  ligne: 'tacheLigne',
+  fruit: 'tacheFruit',
+  lancer: 'tacheLancer',
+  abattu: 'tacheAbattu',
+  eau: 'tacheALEau',
+  touche: 'tacheTouche',
+  perdue: 'tachePerdue',
 };
 
 /** Ce qu'il faut a la fenetre. */
@@ -69,8 +78,16 @@ export interface OptionsFenetreDeTache {
   readonly surOuverture?: (ouverte: boolean) => void;
   /** Sur un ecran tactile, l'aide ne dit pas le clavier. */
   readonly tactile?: boolean;
-  /** Ce qui dessine le geste: le canevas, par defaut. Remplacable dans les tests. */
-  readonly peindre?: (toile: HTMLCanvasElement, geste: EtatDeGeste, maintenant: number) => void;
+  /**
+   * Ce qui dessine le geste: le canevas, par defaut. Remplacable dans les tests. L'attente, de
+   * zero a un, dit ou en est l'ecran gagne d'un mini-jeu fini avant la duree minimale.
+   */
+  readonly peindre?: (
+    toile: HTMLCanvasElement,
+    geste: EtatDeGeste,
+    maintenant: number,
+    attente?: number,
+  ) => void;
   /** Ce qui rappelle a chaque image: requestAnimationFrame, par defaut. */
   readonly planifier?: (rappel: () => void) => () => void;
 }
@@ -110,6 +127,7 @@ function peindreSurLeCanevas(
   toile: HTMLCanvasElement,
   geste: EtatDeGeste,
   maintenant: number,
+  attente?: number,
 ): void {
   const ctx = toile.getContext('2d');
 
@@ -129,6 +147,34 @@ function peindreSurLeCanevas(
   const echelle = largeur / LARGEUR_DU_GESTE;
   ctx.setTransform(echelle, 0, 0, echelle, 0, 0);
   dessinerLeGeste(ctx, geste, maintenant);
+
+  if (attente !== undefined && estUneTacheLongue(geste.nature)) {
+    dessinerLAttente(ctx, geste.nature, attente);
+  }
+}
+
+/** L'instant ou la page peut annoncer la tache finie: la duree minimale, et une marge. */
+function annoncePermise(depuis: number, nature: NatureDeTache): number {
+  return depuis + DUREES_MINIMALES_DES_TACHES_MS[nature] + MARGE_DE_L_ANNONCE_MS;
+}
+
+/**
+ * Ou en est l'attente d'un mini-jeu fini avant la duree minimale, de zero a un; rien pour une
+ * tache courte, pas encore finie, ou finie apres (rangee 5 de la planche de l'etape 7.24).
+ */
+export function partDeLAttente(
+  nature: NatureDeTache,
+  depuis: number,
+  finiA: number | undefined,
+  maintenant: number,
+): number | undefined {
+  const permis = annoncePermise(depuis, nature);
+
+  if (!estUneTacheLongue(nature) || finiA === undefined || finiA >= permis) {
+    return undefined;
+  }
+
+  return Math.min((maintenant - finiA) / (permis - finiA), 1);
 }
 
 /** Le rappel a chaque image du navigateur. */
@@ -228,9 +274,6 @@ export function monterFenetreDeTache(options: OptionsFenetreDeTache): FenetreDeT
 
     const maintenant = options.horloge.maintenant();
     commander({ type: 'temps' });
-    peindre(toile, affichee.geste, maintenant);
-    const { faits, total } = avancementDuGeste(affichee.geste);
-    ecrireTexte(avancement, `${String(faits)} sur ${String(total)}`);
 
     if (affichee.finiA === undefined && gesteFini(affichee.geste, maintenant)) {
       affichee.finiA = maintenant;
@@ -238,15 +281,25 @@ export function monterFenetreDeTache(options: OptionsFenetreDeTache): FenetreDeT
       fenetre.classList.add('reussie');
     }
 
+    const attente = partDeLAttente(
+      affichee.ouverte.nature,
+      affichee.ouverte.depuis,
+      affichee.finiA,
+      maintenant,
+    );
+    peindre(toile, affichee.geste, maintenant, attente);
+    const { faits, total } = avancementDuGeste(affichee.geste);
+    ecrireTexte(
+      avancement,
+      attente === undefined ? `${String(faits)} sur ${String(total)}` : 'Enregistrement du score',
+    );
+
     annoncerSiPermis(affichee, maintenant);
     arreterLImage = planifier(uneImage);
   };
 
   const annoncerSiPermis = (tache: TacheAffichee, maintenant: number): void => {
-    const permis =
-      tache.ouverte.depuis +
-      DUREES_MINIMALES_DES_TACHES_MS[tache.ouverte.nature] +
-      MARGE_DE_L_ANNONCE_MS;
+    const permis = annoncePermise(tache.ouverte.depuis, tache.ouverte.nature);
 
     if (
       tache.finiA === undefined ||

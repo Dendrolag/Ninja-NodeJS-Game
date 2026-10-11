@@ -26,8 +26,10 @@ import {
   AMONG,
   CARTES,
   DUREES_MINIMALES_DES_TACHES_MS,
+  NATURES_COURTES,
   RAYONS_DE_VISION,
   appliquerTrame,
+  estUneTacheLongue,
 } from '@neon-ninja/shared';
 import { carteSansMur, estTueur } from '@neon-ninja/sim';
 import type { Socket as SocketClient } from 'socket.io-client';
@@ -540,6 +542,50 @@ describe('une partie Among Ninjas, a travers le reseau', () => {
     expect(room.etat.among?.joueurs[proie.id]?.taches[0]?.faite).toBe(true);
     await jusquA(() => etats.some((etat) => etat.taches[0]?.faite === true));
     expect(etats.at(-1)?.taches[0]).toEqual({ station: 0, nature: tache.nature, faite: true });
+  });
+
+  it('fait un mini-jeu: refuse sa fin au temps d une tache courte, l accepte a la sienne', async () => {
+    // Etape 7.24: une tache longue par liste, par defaut.
+    const { joueurs, salon } = await salonA(5);
+    const room = roomDe(salon.idRoom);
+    await lancer((joueurs[0] as JoueurDeTest).client);
+    await chargerLaCarte(joueurs, room);
+    horloge.avancerDe(AMONG.DUREE_REVELATION_MS + 100);
+
+    const proie = joueurs.find((joueur) => !estTueur(room.etat, joueur.id)) as JoueurDeTest;
+    const among = room.etat.among;
+    const taches = among?.joueurs[proie.id]?.taches ?? [];
+    const indice = taches.findIndex((tache) => estUneTacheLongue(tache.nature));
+    const tache = taches[indice];
+    const station = tache === undefined ? undefined : among?.stations[tache.station];
+    if (tache === undefined || station === undefined) {
+      throw new Error('La proie devrait avoir un mini-jeu a une station.');
+    }
+    expect(taches.filter((une) => estUneTacheLongue(une.nature))).toHaveLength(1);
+
+    await marcherVers(room, proie, () => station, 20);
+    const actions = vi.spyOn(room, 'tenirLAction');
+    proie.client.emit('agir', true);
+    await jusquA(() => actions.mock.calls.length > 0);
+    horloge.avancerDe(50);
+    proie.client.emit('agir', false);
+    await jusquA(() => actions.mock.calls.length > 1);
+    expect(room.etat.among?.joueurs[proie.id]?.tacheEnCours?.indice).toBe(indice);
+
+    // Le temps de la plus longue des taches courtes ne suffit pas a un mini-jeu.
+    const annonces = vi.spyOn(room, 'annoncerLaTache');
+    horloge.avancerDe(Math.max(...NATURES_COURTES.map((n) => DUREES_MINIMALES_DES_TACHES_MS[n])));
+    proie.client.emit('tache', 'finie');
+    await jusquA(() => annonces.mock.calls.length === 1);
+    horloge.avancerDe(50);
+    expect(room.etat.among?.joueurs[proie.id]?.taches[indice]?.faite).toBe(false);
+    expect(room.etat.among?.joueurs[proie.id]?.tacheEnCours?.indice).toBe(indice);
+
+    horloge.avancerDe(DUREES_MINIMALES_DES_TACHES_MS[tache.nature]);
+    proie.client.emit('tache', 'finie');
+    await jusquA(() => annonces.mock.calls.length === 2);
+    horloge.avancerDe(50);
+    expect(room.etat.among?.joueurs[proie.id]?.taches[indice]?.faite).toBe(true);
   });
 });
 

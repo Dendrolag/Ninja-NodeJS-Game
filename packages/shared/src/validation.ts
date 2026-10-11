@@ -1224,6 +1224,7 @@ function groupeAmong(
   for (const cle of [
     'tueurs',
     'tachesParProie',
+    'tachesLongues',
     'rechargeMeurtreS',
     'discussionS',
     'voteS',

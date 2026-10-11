@@ -27,6 +27,7 @@ import type {
   Equipe,
   Mode,
   PalierDeVision,
+  ReglagesAmong,
   ReglagesPartie,
 } from '@neon-ninja/shared';
 import {
@@ -339,6 +340,17 @@ const BARRES_AFFICHEES: Readonly<Record<BarreDesTaches, string>> = {
   jamais: 'jamais',
 };
 
+/** Les taches de chaque proie, et combien sont des mini-jeux (etape 7.24). */
+function tachesParProie(among: ReglagesAmong): string {
+  const nombre = String(among.tachesParProie);
+
+  if (among.tachesLongues === 0) {
+    return `${nombre}, sans mini-jeu`;
+  }
+
+  return `${nombre}, dont ${String(among.tachesLongues)} ${among.tachesLongues > 1 ? 'mini-jeux' : 'mini-jeu'}`;
+}
+
 /**
  * Le recapitulatif d'une partie Among Ninjas (etape 7.20): la carte et les reglages du mode. Ni
  * duree de partie, ni Black Ninjas, ni bonus, malus ou zones: le mode les retire.
@@ -349,7 +361,7 @@ function recapitulatifAmong(reglages: ReglagesPartie): readonly LigneRecapitulat
   return [
     { libelle: 'Carte', valeur: carteDeLaPartie(reglages) },
     { libelle: 'Assassins', valeur: `${String(among.tueurs)} au plus, selon les joueurs` },
-    { libelle: 'Tâches par proie', valeur: String(among.tachesParProie) },
+    { libelle: 'Tâches par proie', valeur: tachesParProie(among) },
     { libelle: 'Recharge du meurtre', valeur: `${String(among.rechargeMeurtreS)} s` },
     {
       libelle: 'Tour',

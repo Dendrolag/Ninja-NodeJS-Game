@@ -1,6 +1,6 @@
 /**
  * Tests du contrat du mode Among Ninjas (etape 7.20): ses valeurs, ses lieux, ses couleurs,
- * ses taches courtes (etape 7.21), ses sabotages (etape 7.22), ses pas entendus (etape 7.23), ses
+ * ses taches courtes (etape 7.21) et longues (etape 7.24), ses sabotages (etape 7.22), ses pas entendus (etape 7.23), ses
  * reglages, leur validation et ce que le mode impose.
  */
 
@@ -14,8 +14,10 @@ import {
   COULEUR_DE_LA_FOULE,
   DUREES_MINIMALES_DES_TACHES_MS,
   LIEUX_DES_CARTES,
+  NATURES_COURTES,
   NATURES_DE_SABOTAGE,
   NATURES_DE_TACHE,
+  NATURES_LONGUES,
   NUISANCES,
   PALIERS_DES_PAS_PX,
   RAYONS_DE_VISION,
@@ -23,6 +25,7 @@ import {
   TACHES_VISUELLES,
   ecartDUnPas,
   estUneNuisance,
+  estUneTacheLongue,
   lieuxDuMode,
   nomDeCouleur,
   pasEntendu,
@@ -143,10 +146,25 @@ describe('les lieux', () => {
     }
   });
 
-  it('fait faire chacune des sept taches courtes a une station au moins', () => {
+  it('fait faire chacune des onze taches a une station au moins', () => {
     const faites = new Set(LIEUX_DES_CARTES.map1?.stations.flatMap((station) => station.natures));
 
     expect([...faites].sort()).toEqual([...NATURES_DE_TACHE].sort());
+  });
+
+  it('donne a chaque station une tache courte, au moins', () => {
+    // Une liste sans tache longue doit pouvoir passer par n importe quelle station active.
+    for (const station of LIEUX_DES_CARTES.map1?.stations ?? []) {
+      expect(station.natures.some((nature) => !estUneTacheLongue(nature))).toBe(true);
+    }
+  });
+
+  it('fait jouer chaque mini-jeu a deux stations au moins (reponse 2 du porteur du projet)', () => {
+    const stations = LIEUX_DES_CARTES.map1?.stations ?? [];
+
+    for (const nature of NATURES_LONGUES) {
+      expect(stations.filter((station) => station.natures.includes(nature)).length).toBe(2);
+    }
   });
 
   it('n en donne pas aux autres cartes', () => {
@@ -187,10 +205,16 @@ describe('les reglages imposes', () => {
 
 describe('les taches courtes', () => {
   it('demandent de trois a trois secondes et demie au moins, chacune', () => {
-    for (const nature of NATURES_DE_TACHE) {
+    for (const nature of NATURES_COURTES) {
       expect(DUREES_MINIMALES_DES_TACHES_MS[nature]).toBeGreaterThanOrEqual(3000);
       expect(DUREES_MINIMALES_DES_TACHES_MS[nature]).toBeLessThanOrEqual(3500);
     }
+  });
+
+  it('sont les sept premieres taches, les mini-jeux les quatre dernieres', () => {
+    expect(NATURES_DE_TACHE).toEqual([...NATURES_COURTES, ...NATURES_LONGUES]);
+    expect(NATURES_DE_TACHE.filter(estUneTacheLongue)).toEqual([...NATURES_LONGUES]);
+    expect(NATURES_COURTES.some(estUneTacheLongue)).toBe(false);
   });
 
   it('ne rendent visibles que le katana et la fumee', () => {
@@ -247,15 +271,27 @@ describe('la validation des sabotages et des maledictions (etape 7.22)', () => {
 });
 
 describe('la validation des reglages du mode', () => {
-  it('ne regle jamais plus de taches par proie que de natures de tache', () => {
+  it('ne regle jamais plus de taches par proie que de taches courtes', () => {
     // Une proie ne fait jamais deux fois la meme tache (retour d'essai du porteur du projet,
-    // 10 octobre 2026): une liste plus longue que les natures serait impossible.
-    expect(BORNES_REGLAGES.among.tachesParProie.maximum).toBe(NATURES_DE_TACHE.length);
+    // 10 octobre 2026), et une liste sans tache longue n'a que des courtes.
+    expect(BORNES_REGLAGES.among.tachesParProie.maximum).toBe(NATURES_COURTES.length);
     expect(
       validerReglages({
-        among: { ...AMONG_PAR_DEFAUT, tachesParProie: NATURES_DE_TACHE.length + 1 },
+        among: { ...AMONG_PAR_DEFAUT, tachesParProie: NATURES_COURTES.length + 1 },
       }).valide,
     ).toBe(false);
+  });
+
+  it('laisse toujours a une liste de quoi porter ses taches longues', () => {
+    const longues = BORNES_REGLAGES.among.tachesLongues.maximum;
+    const stations = LIEUX_DES_CARTES.map1?.stations ?? [];
+
+    expect(longues).toBeLessThanOrEqual(BORNES_REGLAGES.among.tachesParProie.minimum);
+    expect(longues).toBeLessThanOrEqual(NATURES_LONGUES.length);
+    expect(
+      stations.filter((station) => station.natures.some(estUneTacheLongue)).length,
+    ).toBeGreaterThanOrEqual(longues);
+    expect(AMONG_PAR_DEFAUT.tachesLongues).toBe(1);
   });
 
   it('accepte des reglages dans leurs bornes', () => {
@@ -263,6 +299,7 @@ describe('la validation des reglages du mode', () => {
       among: {
         tueurs: 3,
         tachesParProie: 7,
+        tachesLongues: 2,
         rechargeMeurtreS: 10,
         dureeDuTourS: 0,
         discussionS: 120,
@@ -286,6 +323,7 @@ describe('la validation des reglages du mode', () => {
     const verdict = validerReglages({
       among: {
         tachesParProie: 2,
+        tachesLongues: 3,
         dureeDuTourS: 90,
         visionProie: 'immense',
         foule: 81,
@@ -299,6 +337,7 @@ describe('la validation des reglages du mode', () => {
       'among.barreDesTaches',
       'among.dureeDuTourS',
       'among.foule',
+      'among.tachesLongues',
       'among.tachesParProie',
       'among.tachesVisuelles',
       'among.visionProie',

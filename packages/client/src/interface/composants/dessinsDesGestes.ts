@@ -1,6 +1,7 @@
 /**
  * Le dessin des sept gestes des taches courtes d'Among Ninjas (etape 7.21), dans le canevas de
- * la fenetre de la tache. Rendu choisi par le porteur du projet sur les planches
+ * la fenetre de la tache; les mini-jeux des taches longues (etape 7.24) ont leur fichier,
+ * dessinsDesMiniJeux.ts. Rendu choisi par le porteur du projet sur les planches
  * docs/design/etape-7-21/1-planche.png (la fenetre neon, 1A) et 2-gestes.png (les gestes).
  *
  * Chaque dessin lit l'etat du geste (modeles/gestes) et l'instant local, et ne decide rien: les
@@ -50,6 +51,8 @@ import {
 import type { EtatMunitions } from '../modeles/gestes/munitions.js';
 import type { EtatSang } from '../modeles/gestes/sang.js';
 
+import { dessinerUnMiniJeu } from './dessinsDesMiniJeux.js';
+
 /** Les couleurs du dessin, celles de la fenetre neon. */
 const CYAN = '#2EE6FF';
 const CYAN_PALE = 'rgba(46, 230, 255, 0.5)';
@@ -92,6 +95,12 @@ export function dessinerLeGeste(
       return;
     case 'fumee':
       fumee(ctx, geste, maintenant);
+      return;
+    case 'caisses':
+    case 'serpent':
+    case 'envahisseurs':
+    case 'bataille':
+      dessinerUnMiniJeu(ctx, geste, maintenant);
       return;
   }
 }

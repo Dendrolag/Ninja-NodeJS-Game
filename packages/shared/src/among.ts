@@ -234,9 +234,9 @@ export type RoleAmong = 'proie' | 'tueur';
 
 /**
  * Les taches courtes (etape 7.21, fiche docs/plan/etape-7-21.md): sept gestes de quatre a cinq
- * secondes, joues dans la page. Le moteur n'en connait que la nature et la duree minimale.
+ * secondes, joues dans la page.
  */
-export const NATURES_DE_TACHE = [
+export const NATURES_COURTES = [
   'katana',
   'lunettes',
   'sang',
@@ -246,14 +246,40 @@ export const NATURES_DE_TACHE = [
   'fumee',
 ] as const;
 
-/** La nature d'une tache: le geste qu'elle demande. */
+/**
+ * Les taches longues (etape 7.24, fiche docs/plan/etape-7-24.md): quatre mini-jeux d'arcade de
+ * quinze a vingt-cinq secondes, joues dans la page, pendant lesquels la proie reste immobile et
+ * vulnerable. Leurs noms sont a nous, pas ceux des jeux dont ils s'inspirent (reponse 4 du
+ * porteur du projet, 11 octobre 2026): des caisses a empiler, un serpent, des Black Ninjas a
+ * repousser, une bataille navale.
+ */
+export const NATURES_LONGUES = ['caisses', 'serpent', 'envahisseurs', 'bataille'] as const;
+
+/**
+ * Toutes les taches, courtes puis longues. Le moteur n'en connait que la nature et la duree
+ * minimale: les gestes et les mini-jeux vivent dans la page.
+ */
+export const NATURES_DE_TACHE = [...NATURES_COURTES, ...NATURES_LONGUES] as const;
+
+/** La nature d'une tache: le geste ou le mini-jeu qu'elle demande. */
 export type NatureDeTache = (typeof NATURES_DE_TACHE)[number];
+
+/** La nature d'une tache courte. */
+export type NatureCourte = (typeof NATURES_COURTES)[number];
+
+/** La nature d'une tache longue. */
+export type NatureLongue = (typeof NATURES_LONGUES)[number];
+
+/** Cette tache est-elle un mini-jeu, une tache longue. */
+export function estUneTacheLongue(nature: NatureDeTache): nature is NatureLongue {
+  return (NATURES_LONGUES as readonly NatureDeTache[]).includes(nature);
+}
 
 /**
  * Le temps qu'il faut au moins entre l'ouverture d'une tache et sa fin, par nature (etude,
  * section 9.2): un client qui annonce sa tache finie plus tot est refuse. Un tricheur peut
  * sauter le geste, pas aller plus vite qu'un bon joueur. La page regle le rythme de chaque
- * geste pour qu'un joueur rapide et honnete finisse juste au-dessus.
+ * geste et de chaque mini-jeu pour qu'un joueur rapide et honnete finisse juste au-dessus.
  */
 export const DUREES_MINIMALES_DES_TACHES_MS: Readonly<Record<NatureDeTache, number>> = {
   katana: 3000,
@@ -263,6 +289,10 @@ export const DUREES_MINIMALES_DES_TACHES_MS: Readonly<Record<NatureDeTache, numb
   mines: 3500,
   munitions: 3500,
   fumee: 3000,
+  caisses: 12_000,
+  serpent: 12_000,
+  envahisseurs: 12_000,
+  bataille: 12_000,
 };
 
 /**
@@ -413,22 +443,33 @@ export interface LieuxDuMode {
 export const LIEUX_DES_CARTES: Readonly<Partial<Record<IdentifiantCarte, LieuxDuMode>>> = {
   map1: {
     gong: { x: 1145, y: 630 },
-    // Les bornes d'arcade n'ont que des mini-jeux dans l'etude: le cablage d'une borne les
-    // occupe en attendant l'etape 7.24, comme le rangement des mines la table de jeu.
+    // Chaque mini-jeu se joue a deux stations, dans deux quartiers, pour que les assassins ne
+    // sachent pas ou guetter (reponse 2 du porteur du projet, 11 octobre 2026); chacune de ces
+    // stations garde sa tache courte.
     stations: [
-      { x: 990, y: 190, nom: "Bornes d'arcade", natures: ['couleurs'] },
-      { x: 740, y: 155, nom: "Table de jeu de l'arcade", natures: ['mines'] },
+      {
+        x: 990,
+        y: 190,
+        nom: "Bornes d'arcade",
+        natures: ['couleurs', 'caisses', 'serpent', 'envahisseurs'],
+      },
+      { x: 740, y: 155, nom: "Table de jeu de l'arcade", natures: ['mines', 'bataille'] },
       { x: 700, y: 355, nom: "Lavabos de l'arcade", natures: ['lunettes', 'sang'] },
       { x: 170, y: 180, nom: 'Pierre du jardin zen', natures: ['katana'] },
       { x: 415, y: 490, nom: 'Distributeur du jardin', natures: ['fumee'] },
       { x: 1335, y: 80, nom: 'Camionnette du parking', natures: ['munitions'] },
-      { x: 1690, y: 110, nom: 'Ordinateur de la maison', natures: ['couleurs'] },
-      { x: 1800, y: 150, nom: 'Table de la maison', natures: ['lunettes'] },
+      { x: 1690, y: 110, nom: 'Ordinateur de la maison', natures: ['couleurs', 'serpent'] },
+      { x: 1800, y: 150, nom: 'Table de la maison', natures: ['lunettes', 'bataille'] },
       { x: 630, y: 1295, nom: 'Cuisine du restaurant', natures: ['sang', 'katana'] },
       { x: 1100, y: 1350, nom: 'Comptoir du salon', natures: ['mines'] },
       { x: 1320, y: 1070, nom: 'Tapis du salon', natures: ['fumee'] },
       { x: 1760, y: 1240, nom: 'Casiers de la salle violette', natures: ['munitions', 'mines'] },
-      { x: 1600, y: 1045, nom: 'Bureaux de la salle violette', natures: ['couleurs'] },
+      {
+        x: 1600,
+        y: 1045,
+        nom: 'Bureaux de la salle violette',
+        natures: ['couleurs', 'caisses', 'envahisseurs'],
+      },
     ],
     // Les postes des sabotages, lus par l'etude (section 10) et sondes sur le terrain au debut de
     // l'etape 7.22: le boitier de la rue, et les lampadaires nord-ouest et sud-est, a 1 490

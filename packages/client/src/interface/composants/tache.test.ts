@@ -3,7 +3,8 @@
 /**
  * Tests de la fenetre d'une tache courte d'Among Ninjas (etape 7.21): elle s'ouvre et se ferme
  * sur ce que dit l'etat, fige le jeu pendant ce temps, recoit le clavier, fait entendre les
- * gestes, et n'annonce la tache finie qu'apres sa duree minimale.
+ * gestes, et n'annonce la tache finie qu'apres sa duree minimale. Un mini-jeu des taches
+ * longues (etape 7.24) fini plus tot garde son ecran gagne jusqu'a elle.
  */
 
 import type { EtatPriveAmong, NomDeSon } from '@neon-ninja/shared';
@@ -15,7 +16,14 @@ import type { EtatClient } from '../../etat.js';
 import { ETAT_INITIAL } from '../../etat.js';
 import { creerHorlogeClientManuelle } from '../../horloge.js';
 import type { LecteurDeSons } from '../../sons/lecteur.js';
-import { MARGE_DE_L_ANNONCE_MS, monterFenetreDeTache, toucheDuGeste } from './tache.js';
+import { TIR_MS, placerLesBateaux } from '../modeles/gestes/bataille.js';
+import { graineDuGeste } from '../modeles/gestes/index.js';
+import {
+  MARGE_DE_L_ANNONCE_MS,
+  monterFenetreDeTache,
+  partDeLAttente,
+  toucheDuGeste,
+} from './tache.js';
 
 const STATION = { x: 1335, y: 80, nom: 'Camionnette du parking', natures: ['munitions'] } as const;
 
@@ -60,6 +68,7 @@ function monter() {
   const ouvertures: boolean[] = [];
   const annonces: string[] = [];
   const peints: number[] = [];
+  const attentes: (number | undefined)[] = [];
   const sons = { jouer: (nom: NomDeSon) => joues.push(nom) } as unknown as LecteurDeSons;
   const fenetre = monterFenetreDeTache({
     document,
@@ -70,7 +79,10 @@ function monter() {
     horloge,
     sons,
     surOuverture: (ouverte) => ouvertures.push(ouverte),
-    peindre: (_toile, _geste, maintenant) => peints.push(maintenant),
+    peindre: (_toile, _geste, maintenant, attente) => {
+      peints.push(maintenant);
+      attentes.push(attente);
+    },
     planifier: (rappel) => {
       rappels.push(rappel);
       return () => {
@@ -92,7 +104,18 @@ function monter() {
   /** Une tache ouverte a cet instant, compte du depart de l'horloge. */
   const ouverte = (depuis = 0): TacheOuverte => ({ ...OUVERTE, depuis: depart + depuis });
 
-  return { fenetre, depart, joues, ouvertures, annonces, peints, rappels, image, ouverte };
+  return {
+    fenetre,
+    depart,
+    joues,
+    ouvertures,
+    annonces,
+    peints,
+    attentes,
+    rappels,
+    image,
+    ouverte,
+  };
 }
 
 /** Une touche du clavier, enfoncee ou relachee, sur le document. */
@@ -236,6 +259,59 @@ describe('la fenetre d une tache', () => {
     });
 
     expect(fenetre.racine.hidden).toBe(true);
+    fenetre.demonter();
+  });
+});
+
+describe('un mini-jeu fini avant sa duree minimale (etape 7.24)', () => {
+  it('ne dit rien d une tache courte, ni d un mini-jeu fini apres', () => {
+    expect(partDeLAttente('munitions', 0, 1000, 1500)).toBeUndefined();
+    expect(partDeLAttente('bataille', 0, undefined, 1500)).toBeUndefined();
+    const permis = DUREES_MINIMALES_DES_TACHES_MS.bataille + MARGE_DE_L_ANNONCE_MS;
+    expect(partDeLAttente('bataille', 0, permis, permis + 10)).toBeUndefined();
+    expect(partDeLAttente('bataille', 0, 2000, 2000 + (permis - 2000) / 2)).toBeCloseTo(0.5);
+    expect(partDeLAttente('bataille', 0, 2000, permis + 500)).toBe(1);
+  });
+
+  it('garde l ecran gagne de la bataille navale jusqu a la duree minimale, puis l annonce', () => {
+    const { fenetre, annonces, attentes, image, ouverte } = monter();
+    const table = {
+      x: 740,
+      y: 155,
+      nom: "Table de jeu de l'arcade",
+      natures: ['bataille'],
+    } as const;
+    fenetre.afficher(etat({ ...ouverte(), nature: 'bataille', station: table }));
+
+    // Les bateaux de cette ouverture, tires de la meme graine que la fenetre; on vise au clavier
+    // depuis la case du milieu, et l'on tire sur chaque case d'un bateau, sans un rate.
+    const bateaux = placerLesBateaux(graineDuGeste('moi', table.nom, 'bataille'));
+    let visee: readonly [number, number] = [2, 2];
+    let instant = 0;
+    image(instant);
+    for (const [colonne, ligne] of bateaux.flat()) {
+      while (visee[0] !== colonne) {
+        touche(visee[0] < colonne ? 'ArrowRight' : 'ArrowLeft');
+        visee = [visee[0] + (visee[0] < colonne ? 1 : -1), visee[1]];
+      }
+      while (visee[1] !== ligne) {
+        touche(visee[1] < ligne ? 'ArrowDown' : 'ArrowUp');
+        visee = [visee[0], visee[1] + (visee[1] < ligne ? 1 : -1)];
+      }
+      touche(' ');
+      instant += TIR_MS;
+      image(instant);
+    }
+
+    expect(fenetre.racine.querySelector('.tache-avancement')?.textContent).toBe(
+      'Enregistrement du score',
+    );
+    expect(attentes.at(-1)).toBeGreaterThanOrEqual(0);
+    expect(attentes.at(-1)).toBeLessThan(1);
+    expect(annonces).toEqual([]);
+
+    image(DUREES_MINIMALES_DES_TACHES_MS.bataille + MARGE_DE_L_ANNONCE_MS);
+    expect(annonces).toEqual(['finie']);
     fenetre.demonter();
   });
 });

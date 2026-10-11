@@ -132,6 +132,10 @@ export const NOTES_DE_VERSION: readonly NoteDeVersion[] = [
           'Aiguiser, frotter, brancher, ranger : sept petits gestes. Les assassins font semblant.',
       },
       {
+        intitule: 'Les mini-jeux.',
+        texte: 'Caisses, serpent, Black Ninjas, bataille navale. Vingt secondes à découvert.',
+      },
+      {
         intitule: 'La carte.',
         texte: 'Touche M. Elle dit où aller, jamais qui vous y attend.',
       },

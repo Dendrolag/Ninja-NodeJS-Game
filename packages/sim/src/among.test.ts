@@ -25,10 +25,11 @@ import {
   COULEUR_DE_LA_FOULE,
   DUREES_MINIMALES_DES_TACHES_MS,
   LIEUX_DES_CARTES,
-  NATURES_DE_TACHE,
+  NATURES_COURTES,
   NUISANCES,
   POINTS_AMONG,
   RAYONS_DE_VISION,
+  estUneTacheLongue,
 } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
@@ -264,33 +265,66 @@ describe('le lancement', () => {
     }
   });
 
-  it('ne donne jamais deux fois la meme tache a une proie', () => {
-    // Retour d'essai du porteur du projet, 10 octobre 2026. Toutes les longueurs de liste, et
-    // assez de graines pour tomber sur des stations actives qui couvrent mal les natures.
-    for (let taches = 3; taches <= NATURES_DE_TACHE.length; taches += 1) {
-      for (let graine = 1; graine <= 40; graine += 1) {
-        const etat = lancee(12, { among: { tueurs: 1, tachesParProie: taches } }, graine);
+  it('ne donne jamais deux fois la meme tache a une proie, et autant de longues que reglees', () => {
+    // Retour d'essai du porteur du projet, 10 octobre 2026. Toutes les longueurs de liste, tous
+    // les nombres de taches longues (etape 7.24), en normal et en miroir, et assez de graines
+    // pour tomber sur des stations actives qui couvrent mal les natures.
+    for (let taches = 3; taches <= NATURES_COURTES.length; taches += 1) {
+      for (let longues = 0; longues <= 2; longues += 1) {
+        for (let graine = 1; graine <= 30; graine += 1) {
+          const etat = lancee(
+            12,
+            {
+              modeMiroir: graine % 2 === 0,
+              among: { tueurs: 1, tachesParProie: taches, tachesLongues: longues },
+            },
+            graine,
+          );
 
-        for (const id of camps(etat).proies) {
-          const liste = role(etat, id).taches;
+          for (const id of camps(etat).proies) {
+            const liste = role(etat, id).taches;
 
-          expect(liste).toHaveLength(taches);
-          expect(new Set(liste.map((tache) => tache.nature)).size).toBe(taches);
-          expect(new Set(liste.map((tache) => tache.station)).size).toBe(taches);
+            expect(liste).toHaveLength(taches);
+            expect(new Set(liste.map((tache) => tache.nature)).size).toBe(taches);
+            expect(new Set(liste.map((tache) => tache.station)).size).toBe(taches);
+            expect(liste.filter((tache) => estUneTacheLongue(tache.nature))).toHaveLength(longues);
+          }
         }
       }
     }
   });
 
-  it('garde des stations actives de quoi faire chaque nature a une station differente', () => {
+  it('garde des stations actives de quoi faire les taches courtes et les longues demandees', () => {
     for (let graine = 1; graine <= 40; graine += 1) {
-      const stations = amongDe(lancee(5, { among: { tachesParProie: 3 } }, graine)).stations;
+      for (const longues of [0, 2]) {
+        const stations = amongDe(
+          lancee(5, { among: { tachesParProie: 3, tachesLongues: longues } }, graine),
+        ).stations;
+        const natures = new Set(stations.flatMap((station) => station.natures));
 
-      expect(stations).toHaveLength(7);
-      expect(new Set(stations.flatMap((station) => station.natures)).size).toBe(
-        NATURES_DE_TACHE.length,
-      );
+        // Trois taches plus quatre, ou sept courtes et les longues a des stations distinctes.
+        expect(stations).toHaveLength(Math.max(7, NATURES_COURTES.length + longues));
+        for (const nature of NATURES_COURTES) {
+          expect(natures.has(nature)).toBe(true);
+        }
+        expect(
+          stations.filter((station) => station.natures.some(estUneTacheLongue)).length,
+        ).toBeGreaterThanOrEqual(longues);
+      }
     }
+  });
+
+  it('fait varier les mini-jeux d une proie a l autre', () => {
+    const etat = lancee(12, { among: { tueurs: 1, tachesLongues: 1 } }, 4);
+    const longues = new Set(
+      camps(etat).proies.flatMap((id) =>
+        role(etat, id)
+          .taches.filter((tache) => estUneTacheLongue(tache.nature))
+          .map((tache) => tache.nature),
+      ),
+    );
+
+    expect(longues.size).toBeGreaterThan(1);
   });
 
   it('tire la tache de chaque proie a une station: deux proies peuvent y faire autre chose', () => {

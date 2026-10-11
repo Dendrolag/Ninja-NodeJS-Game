@@ -44,6 +44,7 @@
 import type {
   Alea,
   NatureDeSabotage,
+  NatureDeTache,
   Nuisance,
   Position,
   ReglagesAmong,
@@ -53,7 +54,8 @@ import {
   AMONG,
   AMONG_PAR_DEFAUT,
   DUREES_MINIMALES_DES_TACHES_MS,
-  NATURES_DE_TACHE,
+  NATURES_COURTES,
+  NATURES_LONGUES,
   POINTS_AMONG,
   RAYONS_DE_VISION,
   NUISANCES,
@@ -209,13 +211,14 @@ export function amongDecide(etat: EtatPartie): boolean {
  *      nombre est celui du reglage, ramene a ce que le nombre de joueurs admet; le serveur
  *      ne lance pas a moins de cinq.
  *   2. Les stations actives sont tirees parmi celles de la carte: le nombre de taches par
- *      proie, plus quatre. Le tirage garde d'abord de quoi faire chacune des natures de tache
- *      a une station differente, puis complete au hasard.
+ *      proie, plus quatre. Le tirage garde d'abord de quoi faire chacune des taches courtes a
+ *      une station differente, puis autant de taches longues distinctes que le reglage en
+ *      demande, a des stations encore differentes (etape 7.24), puis complete au hasard.
  *   3. Chaque proie recoit sa liste: autant de stations actives distinctes que de taches,
  *      prises d'abord parmi celles que les listes deja tirees ont le moins prises (etape
  *      7.21), et JAMAIS DEUX FOIS LA MEME TACHE (retour d'essai du porteur du projet, 10
  *      octobre 2026): les natures de la liste sont tirees, distinctes, puis placees chacune a
- *      une station qui la propose.
+ *      une station qui la propose. Le reglage dit combien sont longues (etape 7.24).
  *   4. Tout le monde est place autour du point de reunion, et la partie attend que chacun ait
  *      charge la carte avant la revelation.
  *
@@ -247,16 +250,24 @@ export function lancerAmong(etat: EtatPartie): EtatPartie {
     alea,
     lieux.stations.map((_station, rang) => rang),
   );
-  const tirageDesNatures = melanger(tirageDesStations.alea, NATURES_DE_TACHE);
-  alea = tirageDesNatures.alea;
-  // De quoi faire chaque nature a une station differente, puis le reste du tirage.
-  const necessaires = new Set(
-    apparier(tirageDesNatures.liste, NATURES_DE_TACHE.length, (nature) =>
-      tirageDesStations.liste.filter((rang) =>
-        (lieux.stations[rang] as StationDuMode).natures.includes(nature),
-      ),
-    ).values(),
+  const tirageDesCourtes = melanger(tirageDesStations.alea, NATURES_COURTES);
+  const tirageDesLongues = melanger(tirageDesCourtes.alea, NATURES_LONGUES);
+  alea = tirageDesLongues.alea;
+  const proposent = (nature: NatureDeTache): readonly number[] =>
+    tirageDesStations.liste.filter((rang) =>
+      (lieux.stations[rang] as StationDuMode).natures.includes(nature),
+    );
+  // De quoi faire chaque tache courte a une station differente, puis les taches longues
+  // demandees a d'autres encore, puis le reste du tirage. Une liste qui place ses taches
+  // longues a des stations des courtes leur en laisse assez: elle a autant de taches courtes
+  // de moins (listeDeTaches).
+  const pourLesCourtes = new Set(
+    apparier(tirageDesCourtes.liste, NATURES_COURTES.length, proposent).values(),
   );
+  const pourLesLongues = apparier(tirageDesLongues.liste, reglages.tachesLongues, (nature) =>
+    proposent(nature).filter((rang) => !pourLesCourtes.has(rang)),
+  );
+  const necessaires = new Set([...pourLesCourtes, ...pourLesLongues.values()]);
   const actives = [
     ...tirageDesStations.liste.filter((rang) => necessaires.has(rang)),
     ...tirageDesStations.liste
@@ -274,7 +285,13 @@ export function lancerAmong(etat: EtatPartie): EtatPartie {
       continue;
     }
 
-    const liste = listeDeTaches(alea, stations, prises, reglages.tachesParProie);
+    const liste = listeDeTaches(
+      alea,
+      stations,
+      prises,
+      reglages.tachesParProie,
+      reglages.tachesLongues,
+    );
     alea = liste.alea;
     for (const tache of liste.taches) {
       prises[tache.station] = (prises[tache.station] ?? 0) + 1;
@@ -320,40 +337,52 @@ function joueurNeuf(role: JoueurAmong['role'], taches: readonly TacheAmong[]): J
 /**
  * La liste de taches d'une proie (etape 7.21): autant de stations actives distinctes que de
  * taches, et autant de natures distinctes (retour d'essai du porteur du projet, 10 octobre
- * 2026: jamais deux fois la meme tache). Les stations sont melangees, puis rangees de la moins
- * prise par les listes deja tirees a la plus prise, le melange departageant les egales: les
- * listes se repartissent sur toutes les stations. Chaque station prend, dans ce rang, une
- * nature qu'elle propose et que la liste n'a pas encore, les natures dans un ordre tire pour
- * cette proie; une station deja servie cede la sienne au besoin, si elle en a une autre.
+ * 2026: jamais deux fois la meme tache), dont le nombre regle de taches longues (etape 7.24).
+ * Les stations sont melangees, puis rangees de la moins prise par les listes deja tirees a la
+ * plus prise, le melange departageant les egales: les listes se repartissent sur toutes les
+ * stations. Les taches longues se placent d'abord, puis les courtes aux stations restantes:
+ * chaque station prend, dans ce rang, une nature qu'elle propose et que la liste n'a pas
+ * encore, les natures dans un ordre tire pour cette proie; une station deja servie cede la
+ * sienne au besoin, si elle en a une autre.
  *
- * Les stations actives permettent toujours toutes les natures a la fois (lancerAmong), et
- * l'hote ne regle pas plus de taches qu'il n'y a de natures (BORNES_REGLAGES): la liste est
- * toujours complete.
+ * Les stations actives permettent toujours toutes les taches courtes a la fois, et les taches
+ * longues demandees a d'autres stations (lancerAmong); l'hote ne regle pas plus de taches qu'il
+ * n'y a de taches courtes (BORNES_REGLAGES). Chaque tache longue placee ote au plus une station
+ * aux courtes, et la liste demande une courte de moins: elle est toujours complete.
  */
 function listeDeTaches(
   alea: Alea,
   stations: readonly StationDuMode[],
   prises: readonly number[],
   nombre: number,
+  longues: number,
 ): { readonly taches: readonly TacheAmong[]; readonly alea: Alea } {
   const melange = melanger(
     alea,
     stations.map((_station, rang) => rang),
   );
-  const natures = melanger(melange.alea, NATURES_DE_TACHE);
+  const courtes = melanger(melange.alea, NATURES_COURTES);
+  const tireesLongues = melanger(courtes.alea, NATURES_LONGUES);
   // Le tri est stable: a prises egales, l'ordre du melange reste.
   const rangees = [...melange.liste].sort(
     (une, autre) => (prises[une] ?? 0) - (prises[autre] ?? 0),
   );
-  const appariement = apparier(rangees, nombre, (rang) =>
-    natures.liste.filter((nature) => (stations[rang] as StationDuMode).natures.includes(nature)),
+  const proposees =
+    (natures: readonly NatureDeTache[]) =>
+    (rang: number): readonly NatureDeTache[] =>
+      natures.filter((nature) => (stations[rang] as StationDuMode).natures.includes(nature));
+  const pourLesLongues = apparier(rangees, longues, proposees(tireesLongues.liste));
+  const pourLesCourtes = apparier(
+    rangees.filter((rang) => !pourLesLongues.has(rang)),
+    nombre - longues,
+    proposees(courtes.liste),
   );
   const taches = rangees.flatMap((station) => {
-    const nature = appariement.get(station);
+    const nature = pourLesLongues.get(station) ?? pourLesCourtes.get(station);
     return nature === undefined ? [] : [{ station, nature, faite: false }];
   });
 
-  return { taches, alea: natures.alea };
+  return { taches, alea: tireesLongues.alea };
 }
 
 /**

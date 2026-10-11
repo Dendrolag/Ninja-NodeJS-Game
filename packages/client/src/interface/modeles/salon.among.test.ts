@@ -83,4 +83,18 @@ describe('le salon d une partie Among Ninjas', () => {
     expect(ligne(parDefaut)).toBe('Visuelles · barre toujours');
     expect(ligne(regle)).toBe('Invisibles · barre en réunion');
   });
+
+  it('dit combien de mini-jeux comptent les taches de chaque proie (etape 7.24)', () => {
+    const avec = (tachesLongues: number) =>
+      modeleSalon(
+        etat({
+          ...salon(membres(4)),
+          reglages: { ...REGLAGES_PAR_DEFAUT, among: { ...AMONG_PAR_DEFAUT, tachesLongues } },
+        }),
+      )?.recapitulatif.find((recap) => recap.libelle === 'Tâches par proie')?.valeur;
+
+    expect(avec(1)).toBe('5, dont 1 mini-jeu');
+    expect(avec(2)).toBe('5, dont 2 mini-jeux');
+    expect(avec(0)).toBe('5, sans mini-jeu');
+  });
 });

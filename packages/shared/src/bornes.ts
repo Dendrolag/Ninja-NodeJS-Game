@@ -286,10 +286,17 @@ export const BORNES_REGLAGES = {
     tueurs: { minimum: 1, maximum: 3 } satisfies Intervalle,
     /**
      * Deux taches reglerait la partie trop vite (decision du porteur du projet). Pas plus que
-     * de natures de tache: une proie ne fait jamais deux fois la meme (retour d'essai du
-     * porteur du projet, 10 octobre 2026). Un test garde l'accord des deux nombres.
+     * de taches courtes: une proie ne fait jamais deux fois la meme (retour d'essai du porteur
+     * du projet, 10 octobre 2026), et une liste sans tache longue n'a que des courtes. Un test
+     * garde l'accord des deux nombres.
      */
     tachesParProie: { minimum: 3, maximum: 7 } satisfies Intervalle,
+    /**
+     * Les taches longues de chaque liste (etape 7.24): jamais plus que le minimum des taches par
+     * proie, pour qu'une liste ait toujours de quoi les porter, ni que de stations distinctes
+     * qui les proposent. Un test garde l'accord.
+     */
+    tachesLongues: { minimum: 0, maximum: 2 } satisfies Intervalle,
     rechargeMeurtreS: { minimum: 10, maximum: 60 } satisfies Intervalle,
     discussionS: { minimum: 15, maximum: 120 } satisfies Intervalle,
     voteS: { minimum: 15, maximum: 120 } satisfies Intervalle,

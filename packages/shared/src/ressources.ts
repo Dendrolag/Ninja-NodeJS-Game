@@ -362,6 +362,27 @@ export const SONS = {
   tacheEtincelles: 'katana-hit.mp3',
   /** La bouffee d'une tache visuelle, entendue de ceux qui la voient. */
   tacheBouffee: 'bonus-escape-nuage.mp3',
+  /*
+   * Les taches longues, les mini-jeux (etape 7.24), entendues du seul joueur qui joue, comme les
+   * courtes. Des sons du jeu en attendant ceux du porteur du projet (fiche
+   * docs/plan/etape-7-24.md, « Les sons »).
+   */
+  /** Une caisse se pose. */
+  tacheCaissePosee: 'button-click.wav',
+  /** Une ligne de caisses s'efface. */
+  tacheLigne: 'collect-bonus.wav',
+  /** Le serpent mange un fruit. */
+  tacheFruit: 'bot-convert.mp3',
+  /** Notre ninja lance un shuriken. */
+  tacheLancer: 'katana-swing.mp3',
+  /** Un Black Ninja abattu. */
+  tacheAbattu: 'blackbot-destroy.mp3',
+  /** Un tir de la bataille navale tombe a l'eau. */
+  tacheALEau: 'shotgun-wave.mp3',
+  /** Un tir de la bataille navale touche un bateau. */
+  tacheTouche: 'explosion-mine.mp3',
+  /** Un mini-jeu perdu, avant la partie neuve. */
+  tachePerdue: 'collect-malus.wav',
   /** La carte plein ecran s'ouvre ou se ferme. */
   carteOuverte: 'button-click.wav',
   /*
