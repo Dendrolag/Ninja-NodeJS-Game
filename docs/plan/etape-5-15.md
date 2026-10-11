@@ -1,12 +1,12 @@
 # Fiche étape 5.15 - Surveiller le jeu en production, sans le ralentir
 
-Brief de session. Objectif unique: **un tableau de bord gratuit qui montre la santé et l'usage du jeu en production**, pour voir venir les optimisations avant que les joueurs ne les ressentent, et savoir qui joue à quoi. Sans alourdir la page, sans ralentir le serveur, et sans pisteur.
+Brief de session. Objectif unique: **un tableau de bord gratuit qui montre la santé et l'usage du jeu en production**, pour voir venir les optimisations avant que les joueurs ne les ressentent, savoir qui joue à quoi, et suivre l'adoption du jeu quand il sera partagé sur les réseaux sociaux. Sans alourdir la page, sans ralentir le serveur, et sans pisteur.
 
 ## Origine de cette fiche
 
 Demande du porteur du projet du 11 octobre 2026: « prévoir un outil de monitoring et de tableau de bord gratuit pour surveiller les performances du jeu et anticiper les optimisations, mais aussi avoir les statistiques d'utilisation et diverses métriques (Grafana ?). Attention à ne pas alourdir le jeu ni porter atteinte à ses performances. »
 
-Rédigée le même jour selon le cas de repli du PROTOCOLE, à partir de l'état du dépôt au commit `437c511`, de `docs/deploiement.md`, de la fiche 8.6 et des offres gratuites relevées ce jour-là sur grafana.com/pricing et neon.com/pricing. **Elle n'est pas encore à exécuter**: cinq questions attendent le porteur du projet (plus bas), et l'étape demande de lui trois gestes hors du dépôt (« Ce que le porteur du projet fait lui-même »).
+Rédigée le même jour selon le cas de repli du PROTOCOLE, à partir de l'état du dépôt au commit `437c511`, de `docs/deploiement.md`, de la fiche 8.6 et des offres gratuites relevées ce jour-là sur grafana.com/pricing et neon.com/pricing. Le porteur du projet a répondu aux cinq questions le même jour: « Grafana Cloud juste pour moi, et je veux tout mesurer pour m'assurer des bonnes performances du jeu et suivre l'évolution de l'adoption du jeu quand je commencerai à le partager sur les réseaux. » Toutes les mesures proposées sont donc retenues, et la fiche gagne la provenance des visiteurs et le parcours de la visite au retour (« 4. L'adoption »). L'étape demande encore de lui trois gestes hors du dépôt (« Ce que le porteur du projet fait lui-même »).
 
 ## Ce qu'on sait en entrant
 
@@ -49,7 +49,7 @@ Relevé du 11 octobre 2026: 10 000 séries de métriques actives, 50 Go de journ
 ### Le principe: tout se compte dans le serveur, rien ne part de lui
 
 ```
- Page du joueur ──(fin de partie: un résumé)──> Serveur de jeu ──> /metriques, sur 127.0.0.1 seulement
+ Page du joueur ──(arrivée, fin de partie)──> Serveur de jeu ──> /metriques, sur 127.0.0.1 seulement
                                                       │                     ^
                                                       │                     │ lu toutes les 30 s
                                                       │              Agent Grafana Alloy (même machine,
@@ -65,7 +65,7 @@ Relevé du 11 octobre 2026: 10 000 séries de métriques actives, 50 Go de journ
 
 1. **Le serveur de jeu compte, il n'envoie rien.** Il ne fait aucun appel réseau pour la surveillance. Un agent, sur la même machine mais dans son propre processus, vient lire ses compteurs. Si Grafana Cloud tombe, ou l'agent, le jeu ne le sait pas.
 2. **Dans le battement, seulement des opérations de coût fixe**: ajouter un à un compteur, ranger une durée dans un seau d'histogramme dont les bornes sont fixées d'avance. Ni allocation, ni chaîne construite, ni tri. Le reste se calcule quand l'agent lit, deux fois par minute.
-3. **La page n'envoie qu'un message de plus par partie**, à la fin, sur la connexion qu'elle a déjà. Aucun script tiers, aucun cookie, aucune adresse de plus dans la politique de sécurité.
+3. **La page n'envoie que deux messages de plus**, sur la connexion qu'elle ouvre déjà en arrivant: un à l'arrivée (provenance, temps de chargement), un à la fin de chaque partie (son résumé). Aucun script tiers, aucun cookie, aucune adresse de plus dans la politique de sécurité.
 
 ## Décisions prises par cette fiche
 
@@ -76,12 +76,12 @@ Micro-décisions techniques, internes à l'étape (PROTOCOLE, « Ce qui ne néce
 3. **Les étiquettes sont bornées**: le mode, la carte, la classe d'appareil (téléphone ou ordinateur), jamais un pseudo, un compte, une partie ni une adresse. Budget: **moins de 2 000 séries**, machine comprise, sur les 10 000 offertes.
 4. **L'agent est Grafana Alloy**, en service du système sur la machine Oracle, bridé par systemd (`CPUQuota=25%`, `MemoryMax=300M`). Il lit `/metriques` toutes les 30 secondes, les métriques de la machine (processeur, mémoire, disque, réseau) par son exportateur intégré, et les journaux des conteneurs `neon-ninja-*`. Sa configuration vit dans `deploiement/oracle/` et s'installe par `installer.sh`, comme Caddy.
 5. **Les tableaux de bord et les alertes vivent dans le dépôt**, en JSON, dans `deploiement/grafana/`, et s'importent par un script sans effet de bord à la relance. Un tableau modifié dans l'interface se réexporte dans le dépôt.
-6. **L'historique long vient de la base**, pas des métriques (14 jours seulement): une ligne par partie terminée, invités compris (question 2). Grafana la lit par sa source PostgreSQL, sous un rôle en lecture seule, **seulement quand quelqu'un ouvre le tableau**: aucune alerte ne repose sur la base, pour ne jamais la réveiller seule.
+6. **L'historique long vient de la base**, pas des métriques (14 jours seulement): une ligne par partie terminée, invités compris (réponse 2), et un total par jour des arrivées et de leur provenance (« 4. L'adoption »). Grafana la lit par sa source PostgreSQL, sous un rôle en lecture seule, **seulement quand quelqu'un ouvre le tableau**: aucune alerte ne repose sur la base, pour ne jamais la réveiller seule.
 7. **Render, en secours, n'est pas surveillé en continu.** Une vérification toutes les quelques minutes le tiendrait éveillé et consommerait ses 750 heures gratuites. Une vérification par jour suffit à savoir qu'il démarre.
 
 ## Ce que montre le tableau de bord
 
-Trois tableaux, chacun lisible sans connaître Prometheus.
+Quatre tableaux, chacun lisible sans connaître Prometheus.
 
 ### 1. La santé, en ce moment et sur 14 jours
 
@@ -94,11 +94,12 @@ Trois tableaux, chacun lisible sans connaître Prometheus.
 
 ### 2. Les joueurs, chez eux
 
-Du résumé de fin de partie (question 3), par classe d'appareil et par mode:
+Du résumé de fin de partie (réponse 3) et du message d'arrivée, par classe d'appareil et par mode:
 
 - images par seconde, en médiane et au dixième centile des parties;
 - part des images d'au moins 50 ms;
 - délai aller et retour avec le serveur;
+- temps de chargement de la page, jusqu'à l'écran d'accueil utilisable;
 - erreurs de la page, comptées par nature (lot C).
 
 ### 3. L'usage
@@ -106,7 +107,16 @@ Du résumé de fin de partie (question 3), par classe d'appareil et par mode:
 - En direct: parties en cours par mode, joueurs connectés, parties publiques et privées.
 - Sur 14 jours, par les métriques: parties lancées et terminées par mode et par carte, joueurs par partie, durée des parties, abandons et reconnexions, inscriptions et connexions aux comptes, joueurs invités et joueurs avec compte.
 - Au-delà, par la base: les mêmes chiffres par jour et par semaine depuis la mise en ligne de l'étape, et la rétention des comptes de `pnpm base:mesurer`, en requêtes du tableau.
-- Visiteurs distincts par jour, si le porteur du projet le veut (question 4).
+- Les heures et les jours où l'on joue, pour savoir quand publier et quand ne pas mettre en ligne.
+
+### 4. L'adoption
+
+Ce que le porteur du projet regardera après chaque publication sur les réseaux.
+
+- **Visiteurs distincts par jour** (réponse 4), sans cookie ni stockage dans le navigateur: le serveur garde en mémoire, le temps d'une journée, l'empreinte de l'adresse et du navigateur salée d'un secret tiré chaque jour et jamais écrit, et n'en publie que le nombre. Les empreintes et le secret meurent à minuit et à chaque redémarrage; un redémarrage dans la journée peut compter deux fois un visiteur, ce qui se lit dans le tableau à côté des mises en ligne.
+- **La provenance de chaque arrivée**, dans une liste fermée: X, Instagram, TikTok, Facebook, Reddit, Discord, YouTube, LinkedIn, Twitch, moteur de recherche, lien d'invitation d'un ami, accès direct, autre. Elle se lit d'abord dans le paramètre `utm_source` de l'adresse, ensuite dans le site d'où vient le visiteur (`document.referrer`), réduit à sa catégorie dans la page même: ni l'adresse complète ni le paramètre brut ne quittent la page. **À savoir pour publier**: les applications d'Instagram, de TikTok et souvent de X ne disent pas d'où vient le visiteur. Un lien partagé doit donc porter sa source, par exemple `https://ninja.dendrolag.fr/?utm_source=tiktok`; la redirection de l'ancienne adresse Vercel garde le paramètre. `docs/deploiement.md` donnera la liste des liens à utiliser.
+- **Le parcours**, par provenance et par jour: arrivées, puis visiteurs qui ont joué au moins une partie, puis comptes créés, puis comptes revenus sept jours après. C'est lui qui dira si une publication amène des joueurs ou seulement des curieux.
+- **Sur la durée**: un total par jour des arrivées, par provenance et par appareil, écrit en base une fois par jour et à l'arrêt du serveur, pour garder l'adoption au-delà des 14 jours de Grafana. Avec la ligne par partie et les comptes, le tableau montre l'adoption depuis la mise en ligne de l'étape, semaine par semaine.
 
 ### Les alertes, par courriel au porteur du projet
 
@@ -134,7 +144,9 @@ La dernière ligne demande une vérification que Grafana ne sait pas faire seul:
 | Base Neon                  | aucune requête sans tableau ouvert                                  | tableau de consommation de Neon, une semaine après la mise en ligne |
 | Séries actives             | moins de 2 000                                                      | page d'usage de Grafana Cloud                                       |
 
-## Questions au porteur du projet
+## Questions soumises au porteur du projet, et ses réponses du 11 octobre 2026
+
+**Réponse: Grafana Cloud, pour lui seul, et tout mesurer.** Les cinq recommandations sont retenues: 1 Grafana Cloud; 2 une ligne par partie, invités compris; 3 le relevé de la page chez tous les joueurs; 4 les visiteurs distincts par jour; 5 le porteur du projet seul. Le texte des questions est gardé ci-dessous pour mémoire.
 
 1. **Grafana Cloud gratuit, hébergé ailleurs, ou un Grafana installé sur la machine Oracle ?** Recommandation: Grafana Cloud, pour qu'une panne de la machine ne rende pas aveugle, et pour n'ajouter au serveur du jeu qu'un agent bridé. Le prix: 14 jours d'historique pour les métriques, compensé par la base pour l'usage.
 2. **Une ligne en base pour chaque partie terminée, invités compris ?** Mode, carte, durée, nombre de joueurs, dont invités et comptes, dont téléphones, partie publique ou privée, heure de fin. Rien de personnel. Recommandation: oui, c'est le seul historique de l'usage au-delà de 14 jours. Le prix: une partie de seuls invités réveille la base, quelques minutes de calcul, là où elle n'en réveillait aucune. À l'usage actuel, une à deux heures de calcul par mois sur cent. Variante plus sobre: un total par jour, écrit une fois par jour et à l'arrêt du serveur.
@@ -154,6 +166,8 @@ La session ne crée pas de compte, ne saisit aucun secret et n'a pas d'accès SS
 
 ### Lot A. Le serveur compte
 
+- Les visiteurs distincts du jour: l'empreinte salée en mémoire, le secret du jour tiré par `node:crypto` et jamais écrit, tout oublié à minuit, heure de Paris. Seul le nombre sort.
+
 - `packages/server/src/metriques/`: registre, compteur, jauge, histogramme à seaux fixes, écriture au format texte, et leurs tests.
 - Le branchement, sans rien changer à ce que fait le jeu: le battement (écart, durée, par mode, au même endroit que `ChronometreDuBattement.enregistrer`), les octets envoyés, les parties lancées, terminées et abandonnées, les joueurs, les connexions et reconnexions, les comptes (inscriptions, connexions, échecs), les refus du contrôle de version, la boucle d'événements (`monitorEventLoopDelay` de `node:perf_hooks`), la mémoire et le ramasse-miettes.
 - Le second port, `PORT_DES_METRIQUES`, sur `127.0.0.1`, et ses tests: absent, rien n'écoute; posé, la route répond, et seulement là.
@@ -161,23 +175,22 @@ La session ne crée pas de compte, ne saisit aucun secret et n'a pas d'accès SS
 
 ### Lot B. L'historique en base
 
-Selon la réponse à la question 2.
-
 - La table, sa migration, compatible avec la version précédente du serveur (`docs/deploiement.md`, « Migrations de la base »), et son écriture à la fin de chaque partie, hors du battement, comme l'enregistrement actuel. Une écriture qui échoue ne touche ni la partie ni l'enregistrement des comptes.
+- Le total par jour des arrivées, par provenance et par appareil, écrit une fois par jour et à l'arrêt du serveur (`fermer()`), ajouté au total déjà écrit pour ce jour.
+- La catégorie de provenance d'un compte, retenue à son inscription (une colonne de `comptes`, vide pour les comptes existants), pour suivre le retour à sept jours par provenance.
 - Les requêtes des tableaux, testées sur une branche Neon de test.
 
 ### Lot C. La page rend compte
 
-Selon la réponse à la question 3.
-
 - L'histogramme des durées d'image dans la boucle de rendu, et le délai avec le serveur, que la page ne mesure pas encore: un aller et retour daté toutes les quelques secondes sur la connexion existante (l'accusé de réception de Socket.IO), jamais à chaque image.
 - Le résumé de fin de partie, sa forme et sa vérification dans `packages/shared` (la page ne croit pas le réseau, le serveur non plus), son envoi, et son ajout aux métriques côté serveur. Un résumé mal formé est ignoré et compté.
 - Les erreurs de la page (`error`, `unhandledrejection`), comptées par nature et limitées à quelques-unes par partie, par le même chemin.
+- Le message d'arrivée: la catégorie de provenance, calculée dans la page par une fonction pure de `packages/shared` (liste fermée), la classe d'appareil et le temps de chargement. La page joint aussi la catégorie à une demande d'inscription. Le serveur l'ajoute aux arrivées, aux visiteurs distincts et au parcours, et retient la catégorie le temps de la connexion seulement, pour savoir si elle mène à une partie.
 
 ### Lot D. L'agent, Grafana et les alertes
 
 - La configuration d'Alloy et son installation dans `deploiement/oracle/`.
-- Les trois tableaux de bord et les alertes dans `deploiement/grafana/`, et le script qui les importe.
+- Les quatre tableaux de bord (santé, joueurs chez eux, usage, adoption) et les alertes dans `deploiement/grafana/`, et le script qui les importe.
 - Le workflow planifié qui compare la production à `master`.
 - Les vérifications de disponibilité dans Grafana: production et page toutes les minutes, Render une fois par jour.
 
@@ -185,6 +198,7 @@ Selon la réponse à la question 3.
 
 - Le budget de performance ci-dessus, relevé et consigné dans `docs/mesures/charge-serveur.md`, nouvelle section.
 - `docs/deploiement.md`, section « Surveillance »: où est le tableau de bord, ce que dit chaque tableau, que faire à chaque alerte. Retirer « Rien ne surveille cela automatiquement à ce jour ».
+- `docs/deploiement.md`, aussi: les liens à partager sur chaque réseau, avec leur `utm_source`.
 - `CLAUDE.md`: la variable `PORT_DES_METRIQUES`, et une ligne à l'index.
 
 ## Hors périmètre
@@ -202,13 +216,15 @@ Selon la réponse à la question 3.
 - TI du serveur: `/metriques` absent sans `PORT_DES_METRIQUES`; présent sur `127.0.0.1` seulement; jamais sur le port public; ses chiffres suivent une partie jouée par de vrais clients Socket.IO (une partie lancée, un joueur, des battements, des octets).
 - Tests de la base pour la table de l'historique et les requêtes des tableaux.
 - TU de la forme du résumé de fin de partie et de son refus; TU de l'histogramme de la page.
+- TU de la catégorie de provenance: chaque réseau par `utm_source` et par site d'origine, majuscules et sous-domaines (`m.facebook.com`, `l.instagram.com`, `t.co`), un paramètre inconnu rangé dans « autre », jamais la valeur brute.
+- TU des visiteurs distincts: deux arrivées du même visiteur comptent une fois, deux visiteurs deux fois, le compte repart à minuit, aucune empreinte n'est lisible de l'extérieur.
 - TU du workflow de comparaison à `master`, par la règle déjà testée de `miseEnLigne.ts`.
-- Bout en bout: une partie jouée envoie son résumé, et le jeu ne change pas; suite complète au vert.
+- Bout en bout: une arrivée par `?utm_source=tiktok` est comptée sous TikTok, une partie jouée envoie son résumé, et le jeu ne change pas; suite complète au vert.
 - Le budget de performance, chiffré avant et après.
 
 ## Définition de terminé
 
-1. Le tableau de bord montre, en production, une partie jouée par le porteur du projet: le battement, le flux, les joueurs, la machine, et, selon ses réponses, le résumé de sa page et sa ligne en base.
+1. Le tableau de bord montre, en production, une partie jouée par le porteur du projet: le battement, le flux, les joueurs, la machine, le résumé de sa page, sa ligne en base, et son arrivée par un lien `utm_source` dans le tableau de l'adoption.
 2. Chaque alerte a été déclenchée une fois pour de vrai ou par une règle de test, et le courriel reçu.
 3. Le budget de performance est tenu, chiffres consignés.
 4. Empreinte des parties de référence identique, couverture de `packages/sim` inchangée.
@@ -224,7 +240,7 @@ Selon la réponse à la question 3.
 
 ## Rituel de fin de session
 
-Handoff depuis `docs/handoffs/_TEMPLATE.md`. Étape invisible au joueur, sauf le relevé de la page s'il est retenu, qui ne se voit pas non plus: pas de changement de `NUMERO_DE_VERSION`.
+Handoff depuis `docs/handoffs/_TEMPLATE.md`. Étape invisible au joueur, relevé de la page compris: pas de changement de `NUMERO_DE_VERSION`.
 
 ## Réconciliation
 
