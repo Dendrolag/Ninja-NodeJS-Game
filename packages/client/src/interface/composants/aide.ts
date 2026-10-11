@@ -195,6 +195,7 @@ const REGLES_DES_MODES: Readonly<Record<Mode, readonly string[]>> = {
     'Les proies font leurs tâches aux stations de la carte : E ou le bouton d’action ouvre la tâche, un petit geste la finit. Toutes faites, elles gagnent. Les assassins font semblant.',
     'La touche M, ou la mini-carte touchée, ouvre la carte : vos stations et vos tâches. Le jeu continue pendant ce temps.',
     'Les assassins sabotent depuis la carte : vision brouillée des proies, nuage noir sur une station, panne de néons (réparez le boîtier de la rue, E tenu trois secondes), surchauffe (deux consoles à tenir ensemble, sinon les assassins gagnent).',
+    'On entend les pas des vivants même hors de vue, assez pour savoir de quel côté ils viennent. Les PNJ et les fantômes ne font aucun bruit.',
     'Un cadavre signalé, ou le gong au centre de la carte, ouvre une réunion. On discute, puis on vote pour exécuter quelqu’un, sans savoir s’il était assassin.',
     `Les morts jouent en fantôme, invisibles des vivants, et finissent leurs tâches. Depuis leur carte, ils maudissent les assassins et réparent la panne. Chacun ne voit qu’autour de lui. Il faut ${String(AMONG.JOUEURS_MINIMUM)} joueurs au moins.`,
   ],

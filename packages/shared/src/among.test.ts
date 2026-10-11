@@ -1,7 +1,7 @@
 /**
  * Tests du contrat du mode Among Ninjas (etape 7.20): ses valeurs, ses lieux, ses couleurs,
- * ses taches courtes (etape 7.21), ses sabotages (etape 7.22), ses reglages, leur validation et
- * ce que le mode impose.
+ * ses taches courtes (etape 7.21), ses sabotages (etape 7.22), ses pas entendus (etape 7.23), ses
+ * reglages, leur validation et ce que le mode impose.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -17,11 +17,15 @@ import {
   NATURES_DE_SABOTAGE,
   NATURES_DE_TACHE,
   NUISANCES,
+  PALIERS_DES_PAS_PX,
   RAYONS_DE_VISION,
+  SECTEURS_DES_PAS,
   TACHES_VISUELLES,
+  ecartDUnPas,
   estUneNuisance,
   lieuxDuMode,
   nomDeCouleur,
+  pasEntendu,
   tueursMaximum,
 } from './among.js';
 import { BORNES_REGLAGES } from './bornes.js';
@@ -303,5 +307,55 @@ describe('la validation des reglages du mode', () => {
 
   it('refuse un groupe qui n est pas un objet', () => {
     expect(validerReglages({ among: 3 }).valide).toBe(false);
+  });
+});
+
+describe('les pas entendus (etape 7.23)', () => {
+  it('portent plus loin que toute vision d un vivant, a la cadence de nos pas', () => {
+    const plusLarge = Math.max(...Object.values(RAYONS_DE_VISION).flatMap(Object.values));
+
+    expect(AMONG.PORTEE_DES_PAS_PX).toBeGreaterThan(plusLarge);
+    expect(PALIERS_DES_PAS_PX.at(-1)).toBe(AMONG.PORTEE_DES_PAS_PX);
+    // 150 pixels par seconde, un pas toutes les 250 millisecondes.
+    expect((AMONG.FOULEE_PX / 150) * 1000).toBe(250);
+  });
+
+  it('arrondissent la direction a huit secteurs, l est d abord, le sud au deuxieme', () => {
+    expect(SECTEURS_DES_PAS).toBe(8);
+    expect(pasEntendu({ x: 300, y: 0 })?.secteur).toBe(0);
+    expect(pasEntendu({ x: 200, y: 200 })?.secteur).toBe(1);
+    expect(pasEntendu({ x: 0, y: 300 })?.secteur).toBe(2);
+    expect(pasEntendu({ x: -300, y: 0 })?.secteur).toBe(4);
+    expect(pasEntendu({ x: 0, y: -300 })?.secteur).toBe(6);
+    expect(pasEntendu({ x: 200, y: -200 })?.secteur).toBe(7);
+    // Juste sous le bord de deux secteurs, a 22 degres: encore l est.
+    expect(pasEntendu({ x: 300, y: 300 * Math.tan((22 * Math.PI) / 180) })?.secteur).toBe(0);
+    expect(pasEntendu({ x: 300, y: 300 * Math.tan((23 * Math.PI) / 180) })?.secteur).toBe(1);
+    expect(pasEntendu({ x: 300, y: -1 })?.secteur).toBe(0);
+  });
+
+  it('rangent la distance en trois paliers, bornes comprises, et rien au-dela de la portee', () => {
+    expect(pasEntendu({ x: 170, y: 0 })?.palier).toBe(0);
+    expect(pasEntendu({ x: 171, y: 0 })?.palier).toBe(1);
+    expect(pasEntendu({ x: 335, y: 0 })?.palier).toBe(1);
+    expect(pasEntendu({ x: 336, y: 0 })?.palier).toBe(2);
+    expect(pasEntendu({ x: 300, y: 400 })?.palier).toBe(2);
+    expect(pasEntendu({ x: 300, y: 401 })).toBeUndefined();
+  });
+
+  it('se replacent pour la page au milieu de leur secteur et de leur palier', () => {
+    const proche = ecartDUnPas({ secteur: 0, palier: 0 });
+    const loinAuSud = ecartDUnPas({ secteur: 2, palier: 2 });
+
+    expect(proche.x).toBeCloseTo(85);
+    expect(proche.y).toBeCloseTo(0);
+    expect(loinAuSud.x).toBeCloseTo(0);
+    expect(loinAuSud.y).toBeCloseTo(417.5);
+
+    for (let secteur = 0; secteur < SECTEURS_DES_PAS; secteur += 1) {
+      for (let palier = 0; palier < PALIERS_DES_PAS_PX.length; palier += 1) {
+        expect(pasEntendu(ecartDUnPas({ secteur, palier }))).toEqual({ secteur, palier });
+      }
+    }
   });
 });

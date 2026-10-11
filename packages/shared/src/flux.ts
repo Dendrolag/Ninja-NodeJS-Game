@@ -44,8 +44,13 @@
  * l'appelant decide de traiter.
  */
 
-import type { NatureDeSabotage, PhaseAmong } from './among.js';
-import { NATURES_DE_SABOTAGE, PHASES_AMONG } from './among.js';
+import type { NatureDeSabotage, PasEntendu, PhaseAmong } from './among.js';
+import {
+  NATURES_DE_SABOTAGE,
+  PALIERS_DES_PAS_PX,
+  PHASES_AMONG,
+  SECTEURS_DES_PAS,
+} from './among.js';
 import type { Couleur, Direction, NatureObjet, Orientation, TypeZone } from './constantes.js';
 import {
   DIRECTIONS,
@@ -485,11 +490,13 @@ export function quantifierInstantane(instantane: InstantanePartie): InstantanePa
 function amongArrondi(among: AmongVu): AmongVu {
   codeDans(PHASES_AMONG, among.phase, 'phase');
 
-  const { sabotage, nuage, rechargeDesSabotagesMs, rechargeDeLaMaledictionMs } = among;
+  const { sabotage, nuage, rechargeDesSabotagesMs, rechargeDeLaMaledictionMs, pas } = among;
 
   if (sabotage !== undefined) {
     codeDans(NATURES_DE_SABOTAGE, sabotage.nature, 'sabotage');
   }
+
+  pas?.forEach(codeDUnPas);
 
   return {
     phase: among.phase,
@@ -526,7 +533,42 @@ function amongArrondi(among: AmongVu): AmongVu {
             'rechargeDeLaMaledictionMs',
           ),
         }),
+    ...(pas === undefined ? {} : { pas: pas.map(({ secteur, palier }) => ({ secteur, palier })) }),
   };
+}
+
+/**
+ * Le code d'un pas entendu (etape 7.23), sur un octet: son secteur, puis son palier. Un pas hors
+ * des secteurs ou des paliers ne se code pas.
+ */
+function codeDUnPas(pas: PasEntendu): number {
+  const paliers = PALIERS_DES_PAS_PX.length;
+
+  if (
+    !Number.isInteger(pas.secteur) ||
+    !Number.isInteger(pas.palier) ||
+    pas.secteur < 0 ||
+    pas.secteur >= SECTEURS_DES_PAS ||
+    pas.palier < 0 ||
+    pas.palier >= paliers
+  ) {
+    throw new Error(
+      `Le flux d'etat ne connait pas le pas ${String(pas.secteur)}, ${String(pas.palier)}.`,
+    );
+  }
+
+  return pas.secteur * paliers + pas.palier;
+}
+
+/** Le pas entendu d'un code lu dans une trame (etape 7.23). */
+function pasDuCode(code: number): PasEntendu {
+  const paliers = PALIERS_DES_PAS_PX.length;
+
+  if (code >= SECTEURS_DES_PAS * paliers) {
+    throw new ErreurDeTrame(`elle porte un pas inconnu, ${String(code)}`);
+  }
+
+  return { secteur: Math.floor(code / paliers), palier: code % paliers };
 }
 
 function entiteArrondie(entite: EntiteVue): EntiteVue {
@@ -1490,7 +1532,8 @@ function encoder(
  *
  * Puis, depuis l'etape 7.22, un octet qui dit ce qui suit, chaque partie seulement si elle est
  * la: 1 le sabotage en cours (sa nature, ce qu'il en reste, les consoles tenues sur un octet),
- * 2 le nuage (deux entiers), 4 la recharge des sabotages, 8 celle de la malediction.
+ * 2 le nuage (deux entiers), 4 la recharge des sabotages, 8 celle de la malediction. Et depuis
+ * l'etape 7.23, 16 les pas entendus: leur nombre, puis un octet par pas.
  */
 function ecrireAmong(ecrivain: Ecrivain, among: AmongVu): void {
   ecrireCode(ecrivain, PHASES_AMONG, among.phase, 'phase');
@@ -1498,13 +1541,14 @@ function ecrireAmong(ecrivain: Ecrivain, among: AmongVu): void {
   ecrivain.entierPositif(among.tachesFaites);
   ecrivain.entierPositif(among.tachesTotal);
 
-  const { sabotage, nuage, rechargeDesSabotagesMs, rechargeDeLaMaledictionMs } = among;
+  const { sabotage, nuage, rechargeDesSabotagesMs, rechargeDeLaMaledictionMs, pas } = among;
 
   ecrivain.octet(
     (sabotage === undefined ? 0 : 1) |
       (nuage === undefined ? 0 : 2) |
       (rechargeDesSabotagesMs === undefined ? 0 : 4) |
-      (rechargeDeLaMaledictionMs === undefined ? 0 : 8),
+      (rechargeDeLaMaledictionMs === undefined ? 0 : 8) |
+      (pas === undefined ? 0 : 16),
   );
 
   if (sabotage !== undefined) {
@@ -1525,6 +1569,14 @@ function ecrireAmong(ecrivain: Ecrivain, among: AmongVu): void {
   if (rechargeDeLaMaledictionMs !== undefined) {
     ecrivain.entierPositif(rechargeDeLaMaledictionMs);
   }
+
+  if (pas !== undefined) {
+    ecrivain.entierPositif(pas.length);
+
+    for (const un of pas) {
+      ecrivain.octet(codeDUnPas(un));
+    }
+  }
 }
 
 function lireAmong(lecteur: Lecteur): AmongVu {
@@ -1534,7 +1586,7 @@ function lireAmong(lecteur: Lecteur): AmongVu {
   const tachesTotal = lecteur.entierPositif();
   const presents = lecteur.octet();
 
-  if (presents > 15) {
+  if (presents > 31) {
     throw new Error(`Bloc d'Among Ninjas illisible: indicateurs ${String(presents)}.`);
   }
 
@@ -1550,6 +1602,7 @@ function lireAmong(lecteur: Lecteur): AmongVu {
     (presents & 2) === 0 ? undefined : { x: lecteur.entierPositif(), y: lecteur.entierPositif() };
   const rechargeDesSabotagesMs = (presents & 4) === 0 ? undefined : lecteur.entierPositif();
   const rechargeDeLaMaledictionMs = (presents & 8) === 0 ? undefined : lecteur.entierPositif();
+  const pas = (presents & 16) === 0 ? undefined : lirePas(lecteur);
 
   return {
     phase,
@@ -1560,7 +1613,19 @@ function lireAmong(lecteur: Lecteur): AmongVu {
     ...(nuage === undefined ? {} : { nuage }),
     ...(rechargeDesSabotagesMs === undefined ? {} : { rechargeDesSabotagesMs }),
     ...(rechargeDeLaMaledictionMs === undefined ? {} : { rechargeDeLaMaledictionMs }),
+    ...(pas === undefined ? {} : { pas }),
   };
+}
+
+/** Les pas entendus (etape 7.23): leur nombre, puis un octet chacun. */
+function lirePas(lecteur: Lecteur): PasEntendu[] {
+  const nombre = lecteur.entierPositif();
+
+  if (nombre > SECTEURS_DES_PAS * PALIERS_DES_PAS_PX.length) {
+    throw new ErreurDeTrame(`elle porte ${String(nombre)} pas, plus qu'il n'y a de places`);
+  }
+
+  return Array.from({ length: nombre }, () => pasDuCode(lecteur.octet()));
 }
 
 /** Les consoles tenues de la surchauffe, lues sur leur octet. */

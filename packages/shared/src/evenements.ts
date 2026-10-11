@@ -50,6 +50,7 @@ import type {
   NatureDeSabotage,
   NatureDeTache,
   Nuisance,
+  PasEntendu,
   PhaseAmong,
   RoleAmong,
   StationDuMode,
@@ -329,6 +330,13 @@ export interface AmongVu {
   readonly rechargeDesSabotagesMs?: number;
   /** Le temps avant la prochaine malediction (etape 7.22): aux fantomes. */
   readonly rechargeDeLaMaledictionMs?: number;
+  /**
+   * Les pas que ce vivant entend sans voir qui les fait (etape 7.23), dans ce battement: une
+   * direction arrondie et une distance en palier, jamais une position ni un marcheur. Au plus un
+   * par secteur et par palier, ranges dans leur ordre. Absent quand il n'en entend aucun, et
+   * toujours pour un fantome.
+   */
+  readonly pas?: readonly PasEntendu[];
 }
 
 /** Le sabotage en cours d'une partie Among Ninjas (etape 7.22). */

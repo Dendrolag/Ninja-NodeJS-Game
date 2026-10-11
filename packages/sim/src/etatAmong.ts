@@ -73,6 +73,17 @@ export interface JoueurAmong {
    */
   readonly tacheEnCours?: { readonly indice: number; readonly ecouleMs: number };
   readonly faits: FaitsAmong;
+  /** Sa marche (etape 7.23), absente avant son premier battement de jeu. */
+  readonly foulee?: FouleeAmong;
+}
+
+/**
+ * La marche d'un vivant, d'ou se tirent ses pas (etape 7.23): ou il etait au dernier battement
+ * de jeu, et ce qu'il a parcouru depuis son dernier pas. Un pas a chaque AMONG.FOULEE_PX.
+ */
+export interface FouleeAmong {
+  readonly position: Position;
+  readonly parcourusPx: number;
 }
 
 /**
@@ -182,6 +193,11 @@ export interface EtatAmong {
   readonly tachesALaDerniereReunion: number;
   /** Le camp vainqueur, des que la partie est decidee. */
   readonly vainqueur?: CampAmong;
+  /**
+   * Les vivants qui viennent de faire un pas (etape 7.23), dans l'ordre de l'etat: ce battement
+   * de jeu seulement. Absent quand personne n'en a fait. Le serveur en tire ce que chacun entend.
+   */
+  readonly pasDuBattement?: readonly Identifiant[];
 }
 
 /** Un tueur a tue une proie. */

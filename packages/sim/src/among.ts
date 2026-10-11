@@ -33,6 +33,10 @@
  * Une reunion finit le sabotage en cours. LA MALEDICTION, leur miroir: une proie fantome inflige
  * a tous les assassins vivants l'un des trois malus, avec une recharge commune aux fantomes.
  *
+ * LES PAS (etape 7.23): un vivant qui marche fait un pas a chaque foulee parcourue, d'apres son
+ * deplacement reel. Le moteur dit qui vient d'en faire un (EtatAmong.pasDuBattement); ce que
+ * chacun en entend est l'affaire du serveur.
+ *
  * LE SECRET n'est pas l'affaire du moteur: il sait tout, et le serveur decide ce que chacun
  * en voit (packages/server/src/vues.ts).
  */
@@ -54,6 +58,7 @@ import {
   RAYONS_DE_VISION,
   NUISANCES,
   TACHES_VISUELLES,
+  VITESSES,
   entier,
   estUneNuisance,
   lieuxDuMode,
@@ -70,6 +75,7 @@ import type {
   EtatAmong,
   EvenementAmong,
   FaitsAmong,
+  FouleeAmong,
   JoueurAmong,
   MotifDeReunion,
   ReunionAmong,
@@ -457,11 +463,13 @@ function replacerLesVivants(etat: EtatPartie): EtatPartie {
  * la victoire se lit, sauf pendant l'ejection, dont le resultat doit d'abord s'afficher.
  */
 export function agirEnAmong(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPartie {
-  const among = etat.among;
-
-  if (among === undefined || among.vainqueur !== undefined) {
+  if (etat.among === undefined || etat.among.vainqueur !== undefined) {
     return etat;
   }
+
+  // Les pas ne valent que pour le battement qui les a faits (etape 7.23).
+  const { pasDuBattement: _duBattementPrecedent, ...among } = etat.among;
+  etat = avecAmong(etat, among);
 
   let courant: EtatPartie;
 
@@ -608,6 +616,7 @@ function commencerUnTour(etat: EtatPartie): EtatPartie {
 /**
  * Un battement de jeu.
  *
+ *   0. Les pas des vivants (etape 7.23), d'apres le deplacement que le moteur vient de faire.
  *   1. Le tour avance, et les recharges: celle des tueurs, des sabotages, de la malediction.
  *   2. Les taches deja ouvertes: le temps passe, la presence, la fin ou la fermeture
  *      annoncees. Avant les gestes: une tache ouverte a ce battement ne compte son temps
@@ -620,7 +629,7 @@ function commencerUnTour(etat: EtatPartie): EtatPartie {
  *      qu'une reunion d'office annulerait.
  */
 function jouer(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPartie {
-  const among = etat.among as EtatAmong;
+  const among = compterLesPas(etat, dtMs);
   const joueurs = Object.fromEntries(
     Object.entries(among.joueurs).map(([id, joueur]) => [
       id,
@@ -693,6 +702,62 @@ function jouer(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPartie {
     apres.sabotage?.nature !== 'surchauffe'
     ? ouvrirUneReunion(courant, 'temps')
     : courant;
+}
+
+/**
+ * Combien de fois la distance qu'un vivant parcourt en un battement un deplacement peut faire
+ * avant de compter pour un saut. Le double: une marche ne l'atteint jamais, un replacement si.
+ */
+const MARGE_D_UN_SAUT = 2;
+
+/**
+ * Les pas du battement (etape 7.23): chaque vivant ajoute a sa marche le chemin fait depuis le
+ * battement precedent, et fait un pas des qu'elle atteint une foulee. Le chemin est celui du
+ * deplacement reel, si bien qu'un joueur bloque contre un mur ne fait pas de bruit. Un saut plus
+ * long qu'un battement ne le permet (le replacement autour du point de reunion) n'est pas une
+ * marche: il remet la marche a zero. Un fantome ne fait aucun pas, et un PNJ n'a pas de marche.
+ *
+ * @returns Les tables du mode, chaque vivant a sa nouvelle marche, et les pas du battement.
+ */
+function compterLesPas(etat: EtatPartie, dtMs: number): EtatAmong {
+  const among = etat.among as EtatAmong;
+  const sautPx = ((VITESSES.JOUEUR_PX_PAR_SECONDE * dtMs) / 1000) * MARGE_D_UN_SAUT;
+  const joueurs: Record<IdentifiantEntite, JoueurAmong> = { ...among.joueurs };
+  const pas: IdentifiantEntite[] = [];
+
+  for (const [id, joueur] of Object.entries(among.joueurs)) {
+    const position = etat.joueurs[id]?.position;
+
+    if (position === undefined || joueur.fantome) {
+      continue;
+    }
+
+    const foulee = marcher(joueur.foulee, position, sautPx);
+
+    if (foulee.parcourusPx >= AMONG.FOULEE_PX) {
+      pas.push(id);
+    }
+
+    joueurs[id] = {
+      ...joueur,
+      foulee: { position, parcourusPx: foulee.parcourusPx % AMONG.FOULEE_PX },
+    };
+  }
+
+  const { pasDuBattement: _aucun, ...reste } = among;
+
+  return pas.length === 0 ? { ...reste, joueurs } : { ...reste, joueurs, pasDuBattement: pas };
+}
+
+/** La marche d'un vivant arrive a cette position: le chemin s'ajoute, sauf pour un saut. */
+function marcher(foulee: FouleeAmong | undefined, position: Position, sautPx: number): FouleeAmong {
+  if (foulee === undefined) {
+    return { position, parcourusPx: 0 };
+  }
+
+  const chemin = Math.hypot(position.x - foulee.position.x, position.y - foulee.position.y);
+
+  return { position, parcourusPx: chemin > sautPx ? 0 : foulee.parcourusPx + chemin };
 }
 
 /**

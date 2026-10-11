@@ -38,6 +38,7 @@ export function sonsDEssai(): SonsDEssai {
       joues.push(nom);
     },
     jouerUnPas: () => undefined,
+    jouerUnPasDAutrui: () => undefined,
     demarrerLaBoucle: () => undefined,
     arreterLaBoucle: () => undefined,
     demarrerLaMusique: (piste) => {

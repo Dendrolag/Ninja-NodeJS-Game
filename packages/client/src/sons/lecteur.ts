@@ -76,6 +76,12 @@ export interface LecteurDeSons {
   jouer(nom: NomDeSon, place?: PlaceDuSon): void;
   /** Joue un bruit de pas, en respectant l'intervalle entre deux foulees. */
   jouerUnPas(maintenant: number, presse: boolean): void;
+  /**
+   * Joue le pas d'un autre joueur (Among Ninjas, etape 7.23), a sa place: sur des voix a part
+   * des notres, qu'il ne coupe pas. Sa cadence est l'affaire de qui l'appelle (pasEntendus.ts).
+   * Un pas de volume nul ne joue pas.
+   */
+  jouerUnPasDAutrui(place: PlaceDuSon): void;
   /** Demarre la boucle sonore d'un bonus, si elle ne tourne pas deja. */
   demarrerLaBoucle(bonus: TypeBonus): void;
   /** Arrete la boucle sonore d'un bonus. */
@@ -228,6 +234,11 @@ const EFFETS: readonly Effet[] = [
     boucle: false,
   })),
   ...SONS_DE_PAS.map((fichier, rang) => ({ voix: voixDuPas(rang), fichier, boucle: false })),
+  ...SONS_DE_PAS.map((fichier, rang) => ({
+    voix: voixDuPasDAutrui(rang),
+    fichier,
+    boucle: false,
+  })),
   ...(Object.entries(SONS_EN_BOUCLE) as [TypeBonus, string][]).map(([bonus, fichier]) => ({
     voix: voixDeLaBoucle(bonus),
     fichier,
@@ -241,6 +252,11 @@ function voixDuSon(nom: NomDeSon): string {
 
 function voixDuPas(rang: number): string {
   return `pas:${String(rang)}`;
+}
+
+/** Les pas des autres ont leurs voix: un pas voisin ne coupe pas le notre. */
+function voixDuPasDAutrui(rang: number): string {
+  return `pasDAutrui:${String(rang)}`;
 }
 
 function voixDeLaBoucle(bonus: TypeBonus): string {
@@ -562,6 +578,8 @@ export function creerLecteurDeSons(options: OptionsLecteur = {}): LecteurDeSons 
   let dernierPas = 0;
   /** Compteur des pas, pour alterner les quatre bruits sans tirer au sort. */
   let numeroDePas = 0;
+  /** Le meme, pour les pas des autres. */
+  let numeroDePasDAutrui = 0;
 
   /** Les musiques deja fabriquees, pour ne pas recharger un fichier a chaque ecran. */
   const musiques = new Map<PisteMusicale, HTMLAudioElement>();
@@ -605,6 +623,14 @@ export function creerLecteurDeSons(options: OptionsLecteur = {}): LecteurDeSons 
 
       if (!coupe) {
         effets.jouer(voixDuPas(numeroDePas));
+      }
+    },
+
+    jouerUnPasDAutrui(place) {
+      numeroDePasDAutrui = (numeroDePasDAutrui + 1) % SONS_DE_PAS.length;
+
+      if (!coupe && place.volume > 0) {
+        effets.jouer(voixDuPasDAutrui(numeroDePasDAutrui), place);
       }
     },
 

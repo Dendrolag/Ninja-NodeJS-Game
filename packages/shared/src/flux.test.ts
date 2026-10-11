@@ -1144,6 +1144,65 @@ describe('Among Ninjas (etape 7.20)', () => {
     }
   });
 
+  it('fait voyager les pas entendus, un octet chacun (etape 7.23)', () => {
+    const bloc = { phase: 'jeu', restantMs: 0, tachesFaites: 0, tachesTotal: 0 } as const;
+    const pas = [
+      { secteur: 0, palier: 0 },
+      { secteur: 2, palier: 1 },
+      { secteur: 7, palier: 2 },
+    ];
+    const parties = [
+      instantane({ tick: 1, entites: [joueur('a', 100, 100)], among: { ...bloc, pas } }),
+      instantane({ tick: 2, entites: [joueur('a', 100, 100)], among: bloc }),
+      instantane({ tick: 3, entites: [joueur('a', 100, 100)], among: { ...bloc, pas: [] } }),
+    ];
+    let reference = encoderImage(parties[0] as InstantanePartie).reference;
+
+    expect(appliquerTrame(undefined, encoderImage(parties[0] as InstantanePartie).octets)).toEqual(
+      quantifierInstantane(parties[0] as InstantanePartie),
+    );
+
+    for (const suivante of parties.slice(1)) {
+      const trame = encoderDelta(reference, suivante);
+
+      expect(appliquerTrame(reference, trame.octets)).toEqual(quantifierInstantane(suivante));
+      reference = trame.reference;
+    }
+
+    // Trois pas: leur nombre et trois octets de plus qu'un bloc sans pas.
+    const sans = encoderImage(instantane({ among: bloc })).octets.length;
+    expect(encoderImage(instantane({ among: { ...bloc, pas } })).octets.length).toBe(sans + 4);
+  });
+
+  it('refuse un pas hors des secteurs ou des paliers', () => {
+    const bloc = { phase: 'jeu', restantMs: 0, tachesFaites: 0, tachesTotal: 0 } as const;
+
+    for (const pas of [
+      { secteur: 8, palier: 0 },
+      { secteur: 0, palier: 3 },
+      { secteur: -1, palier: 0 },
+      { secteur: 1.5, palier: 0 },
+    ]) {
+      expect(() => encoderImage(instantane({ among: { ...bloc, pas: [pas] } }))).toThrow(/pas/u);
+    }
+  });
+
+  it('refuse une trame qui porte un pas inconnu, ou trop de pas', () => {
+    const bloc = { phase: 'jeu', restantMs: 0, tachesFaites: 0, tachesTotal: 0 } as const;
+    const unPas = encoderImage(
+      instantane({ among: { ...bloc, pas: [{ secteur: 7, palier: 2 }] } }),
+    ).octets;
+    // Le dernier pas est le dernier octet du bloc, juste avant la fin: son code vaut 23.
+    const rang = unPas.lastIndexOf(23);
+    const inconnu = unPas.slice();
+    inconnu[rang] = 24;
+    const tropNombreux = unPas.slice();
+    tropNombreux[rang - 1] = 25;
+
+    expect(() => appliquerTrame(undefined, inconnu)).toThrow(ErreurDeTrame);
+    expect(() => appliquerTrame(undefined, tropNombreux)).toThrow(ErreurDeTrame);
+  });
+
   it('refuse un sabotage inconnu', () => {
     const partie = instantane({
       among: {
@@ -1167,7 +1226,8 @@ describe('Among Ninjas (etape 7.20)', () => {
     ).octets;
     const rang = octets.findIndex((octet, place) => octet !== avecRecharge[place]);
     expect(avecRecharge[rang]).toBe(4);
-    octets[rang] = 16;
+    // 16 dit les pas entendus (etape 7.23): 32 n'est rien.
+    octets[rang] = 32;
 
     expect(() => appliquerTrame(undefined, octets)).toThrow(/Among/u);
   });

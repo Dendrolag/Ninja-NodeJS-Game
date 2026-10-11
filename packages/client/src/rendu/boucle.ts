@@ -53,9 +53,12 @@ import { bonusDOrigineEnCours, filtreDesMalus, moiDansLaPartie } from '../select
 import { rechargeApresLeTir, sonDuFait, sonsDuChangement } from '../sons/declencheurs.js';
 import { placeDuFait } from '../sons/espace.js';
 import type { LecteurDeSons } from '../sons/lecteur.js';
+import type { NinjaAffiche } from '../sons/pasEntendus.js';
+import { pasDesMarcheurs, placeDUnPasEntendu } from '../sons/pasEntendus.js';
 import { DUREES_LOCALISATION, HAUTEUR_DE_VUE_PX } from './apparence.js';
 import type { Camera } from './camera.js';
 import { cameraSur, suivre, versEcran } from './camera.js';
+import type { EntiteLissee } from './interpolation.js';
 import { TamponDeLissage } from './interpolation.js';
 import type { Localisation } from './localisation.js';
 import { localiser, opaciteDeLocalisation } from './localisation.js';
@@ -171,6 +174,21 @@ export function faitQuiNousDeplace(
   }
 }
 
+/** Un ninja lisse, tel que l'oreille le voit (etape 7.23). */
+function ninjaAffiche({ entite, x, y, enMouvement }: EntiteLissee): NinjaAffiche {
+  return {
+    id: entite.id,
+    x,
+    y,
+    joueur: entite.type === 'joueur',
+    fantome: entite.type === 'joueur' && entite.fantome === true,
+    enMouvement,
+  };
+}
+
+/** Aucun marcheur suivi. */
+const AUCUN_MARCHEUR: ReadonlyMap<string, number> = new Map();
+
 /** Lance la boucle de rendu. */
 export function lancerLaBoucle(options: OptionsBoucle): Boucle {
   const demander = options.demanderUneImage ?? ((suite) => requestAnimationFrame(suite));
@@ -204,6 +222,8 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
   let microArret: MicroArret | undefined;
   /** La course du vaisseau de la Station lunaire, tiree une fois par partie (etape 8.9). */
   let trajectoire: Trajectoire | undefined;
+  /** Le dernier pas de chaque vivant qu'on voit marcher, dans Among Ninjas (etape 7.23). */
+  let derniersPasVus = AUCUN_MARCHEUR;
   /** Ce qu'il faut dire des zones et des mines de zone, tant que leurs bulles s'affichent. */
   const guide: GuideDesZones | undefined =
     options.bullesDeZone === undefined
@@ -365,6 +385,26 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
       options.sons?.jouerUnPas(maintenant, false);
     }
 
+    // 7 bis. Les pas des autres vivants qu'on voit marcher, dans Among Ninjas (etape 7.23): a
+    //    leur place, a la cadence des notres. Ceux qu'on entend sans les voir viennent du
+    //    serveur (faireEntendre).
+    if (etat.partie?.among?.phase === 'jeu' && lissee !== undefined && monEntite !== undefined) {
+      const pas = pasDesMarcheurs(
+        derniersPasVus,
+        lissee.entites.map(ninjaAffiche),
+        etat.moi,
+        monEntite,
+        maintenant,
+      );
+      derniersPasVus = pas.derniers;
+
+      for (const place of pas.places) {
+        options.sons?.jouerUnPasDAutrui(place);
+      }
+    } else {
+      derniersPasVus = AUCUN_MARCHEUR;
+    }
+
     sonde?.image({
       instant,
       renduMs: apresLeRendu - maintenant,
@@ -482,6 +522,16 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
       }
 
       rechargePrevue = rechargeApresLeTir(fait, etat.moi, etat.salon?.mode) ?? rechargePrevue;
+    }
+
+    // Les pas qu'on entend sans voir qui les fait (Among Ninjas, etape 7.23), une fois par
+    // trame: une trame qui arrive entre deux images remplace la precedente, et ses pas avec.
+    const pasEntendus = etat.partie?.among?.pas;
+
+    if (pasEntendus !== undefined && etat.partie !== precedent.partie) {
+      for (const pas of pasEntendus) {
+        sons.jouerUnPasDAutrui(placeDUnPasEntendu(pas));
+      }
     }
 
     // Le fusil du traqueur se recharge quand il peut tirer de nouveau (Chasse, etape 5.5).

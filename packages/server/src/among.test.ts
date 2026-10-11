@@ -537,7 +537,12 @@ describe('la room d une partie Among Ninjas', () => {
     room.annoncerLaTache('inconnu', 'finie');
     room.annoncerLaTache('s-A', 'fermee');
     room.avancer(50);
-    expect(room.etat.among?.joueurs['s-A']).toEqual(avant.among?.joueurs['s-A']);
+    // Rien n'a change de ce que le mode retient de lui, hors sa marche, qui suit chaque
+    // battement de jeu (etape 7.23).
+    expect({ ...room.etat.among?.joueurs['s-A'], foulee: undefined }).toEqual({
+      ...avant.among?.joueurs['s-A'],
+      foulee: undefined,
+    });
 
     const salon = new GameRoom({
       id: 'r',

@@ -41,6 +41,12 @@
  * repare, et ne voit le nuage que s'il touche son disque. Un assassin vivant sait tout des
  * sabotages et leur recharge; seuls les fantomes savent celle de la malediction.
  *
+ * LES PAS (etape 7.23). Un vivant entend, dans le bloc du mode, les pas des vivants qu'il ne
+ * voit pas, a portee: une direction arrondie et une distance en palier, au plus un par secteur et
+ * par palier, ranges dans leur ordre. Ni position, ni marcheur, ni nombre exact, ni l'ordre de
+ * l'etat, qui suit les arrivees. Ceux qu'il voit, la page les entend d'apres leur mouvement.
+ * Les fantomes voient tout: ils n'en recoivent aucun.
+ *
  * Le role n'est dans aucune vue: il part a son seul joueur (etatPriveDe, dans instantane.ts).
  *
  * CE QUI RESTE, ET POURQUOI. Ce qu'un joueur a vu legitimement, il le garde: une proie
@@ -60,9 +66,10 @@ import type {
   EntiteVue,
   InstantanePartie,
   JoueurVu,
+  PasEntendu,
   Position,
 } from '@neon-ninja/shared';
-import { AMONG, AMONG_PAR_DEFAUT } from '@neon-ninja/shared';
+import { AMONG, AMONG_PAR_DEFAUT, PALIERS_DES_PAS_PX, pasEntendu } from '@neon-ninja/shared';
 import type { EtatPartie, IdentifiantEntite } from '@neon-ninja/sim';
 import {
   bonusActif,
@@ -289,12 +296,63 @@ function vueDUnVivant(
   const nuageEnVue =
     commune.among.nuage !== undefined &&
     distance(commune.among.nuage, centre) <= rayon + AMONG.RAYON_DU_NUAGE_PX;
+  const sabotages = tueur ? sabotagesDUnAssassin(barre) : sabotagesDUneProie(barre, nuageEnVue);
+  const pas = pasHorsDeVue(etat, id, centre, entites);
 
   return {
     ...commune,
     entites,
-    among: tueur ? sabotagesDUnAssassin(barre) : sabotagesDUneProie(barre, nuageEnVue),
+    among: pas.length === 0 ? sabotages : { ...sabotages, pas },
   };
+}
+
+/**
+ * Les pas que ce vivant entend sans voir qui les fait (etape 7.23): ceux des autres vivants a
+ * portee qui ne sont pas dans sa vue, hors de son disque ou dans le nuage. Un par secteur et par
+ * palier, ranges dans leur ordre.
+ *
+ * @param vues Les entites de sa vue: un marcheur qu'il voit s'entend dans la page.
+ */
+function pasHorsDeVue(
+  etat: EtatPartie,
+  id: IdentifiantEntite,
+  centre: Position,
+  vues: readonly EntiteVue[],
+): PasEntendu[] {
+  const marcheurs = etat.among?.pasDuBattement;
+
+  if (marcheurs === undefined) {
+    return [];
+  }
+
+  const codes = new Set<number>();
+
+  for (const marcheur of marcheurs) {
+    const position = etat.joueurs[marcheur]?.position;
+
+    // Tue dans le battement de son pas, il est deja fantome: muet.
+    if (
+      marcheur === id ||
+      position === undefined ||
+      etat.among?.joueurs[marcheur]?.fantome !== false ||
+      vues.some((entite) => entite.type === 'joueur' && entite.id === marcheur)
+    ) {
+      continue;
+    }
+
+    const pas = pasEntendu({ x: position.x - centre.x, y: position.y - centre.y });
+
+    if (pas !== undefined) {
+      codes.add(pas.secteur * PALIERS_DES_PAS_PX.length + pas.palier);
+    }
+  }
+
+  return [...codes]
+    .sort((un, autre) => un - autre)
+    .map((code) => ({
+      secteur: Math.floor(code / PALIERS_DES_PAS_PX.length),
+      palier: code % PALIERS_DES_PAS_PX.length,
+    }));
 }
 
 /** La distance entre deux points, en pixels de carte. */

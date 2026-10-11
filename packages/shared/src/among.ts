@@ -98,7 +98,72 @@ export const AMONG = {
   RECHARGE_DE_LA_MALEDICTION_MS: 45_000,
   /** Pas de malediction dans les premieres secondes d'un tour. */
   DELAI_DE_LA_MALEDICTION_MS: 15_000,
+  /**
+   * Les pas entendus (etape 7.23, fiche docs/plan/etape-7-23.md), valeurs soumises au porteur du
+   * projet le 11 octobre 2026. Un vivant qui marche fait un pas a chaque foulee parcourue: a la
+   * vitesse commune de 150 pixels par seconde, toutes les 250 millisecondes, la cadence de nos
+   * propres pas.
+   */
+  FOULEE_PX: 37.5,
+  /** On entend les pas d'un vivant jusqu'a cette distance, de centre a centre. */
+  PORTEE_DES_PAS_PX: 500,
 } as const;
+
+/**
+ * Les paliers de distance d'un pas entendu hors de vue (etape 7.23): proche, moyen, loin, par
+ * leur borne haute, en pixels. Le dernier est la portee des pas.
+ */
+export const PALIERS_DES_PAS_PX = [170, 335, AMONG.PORTEE_DES_PAS_PX] as const;
+
+/**
+ * Combien de secteurs de direction pour un pas entendu hors de vue: huit, de 45 degres chacun.
+ * Le secteur zero est l'est, et ils tournent dans le sens des aiguilles d'une montre a l'ecran,
+ * ou l'axe vertical descend: le secteur deux est le sud.
+ */
+export const SECTEURS_DES_PAS = 8;
+
+/**
+ * Un pas entendu hors de vue (etape 7.23): d'ou il vient, arrondi, et a quelle distance, en
+ * palier. Ni position, ni marcheur: assez pour l'oreille, trop peu pour un radar.
+ */
+export interface PasEntendu {
+  /** La direction, de zero a SECTEURS_DES_PAS moins un. */
+  readonly secteur: number;
+  /** La distance: le rang de son palier dans PALIERS_DES_PAS_PX. */
+  readonly palier: number;
+}
+
+/**
+ * Le pas qu'on entend d'un marcheur a cet ecart de soi (de soi vers lui), ou rien s'il est hors
+ * de portee. Un ecart nul, qui n'arrive pas, est a l'est.
+ */
+export function pasEntendu(ecart: Position): PasEntendu | undefined {
+  const distance = Math.hypot(ecart.x, ecart.y);
+  const palier = PALIERS_DES_PAS_PX.findIndex((borne) => distance <= borne);
+
+  if (palier < 0) {
+    return undefined;
+  }
+
+  const angle = Math.atan2(ecart.y, ecart.x);
+  const secteur =
+    (Math.round(angle / ((2 * Math.PI) / SECTEURS_DES_PAS)) + SECTEURS_DES_PAS) % SECTEURS_DES_PAS;
+
+  return { secteur, palier };
+}
+
+/**
+ * L'ecart que la page prete a un pas entendu hors de vue, pour le placer: au milieu de son
+ * secteur, et au milieu de son palier.
+ */
+export function ecartDUnPas(pas: PasEntendu): Position {
+  const basse = pas.palier === 0 ? 0 : (PALIERS_DES_PAS_PX[pas.palier - 1] ?? 0);
+  const haute = PALIERS_DES_PAS_PX[pas.palier] ?? AMONG.PORTEE_DES_PAS_PX;
+  const distance = (basse + haute) / 2;
+  const angle = (pas.secteur * 2 * Math.PI) / SECTEURS_DES_PAS;
+
+  return { x: Math.cos(angle) * distance, y: Math.sin(angle) * distance };
+}
 
 /**
  * Ou en est une partie lancee.

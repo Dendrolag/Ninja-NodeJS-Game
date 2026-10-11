@@ -640,3 +640,34 @@ describe('les sabotages d Among Ninjas, a travers le reseau (etape 7.22)', () =>
     expect(room.etat.joueurs[tueur.id]?.malusRestantsMs.negatif).toBeGreaterThan(0);
   });
 });
+
+describe('les pas entendus d Among Ninjas, a travers le reseau (etape 7.23)', () => {
+  it('fait entendre a une proie un assassin qui s eloigne hors de sa vue, sans le situer', async () => {
+    const { joueurs, salon } = await salonA(5);
+    const room = roomDe(salon.idRoom);
+    await lancer((joueurs[0] as JoueurDeTest).client);
+    await chargerLaCarte(joueurs, room);
+    horloge.avancerDe(AMONG.DUREE_REVELATION_MS + 500);
+    const tueur = joueurs.find((joueur) => estTueur(room.etat, joueur.id)) as JoueurDeTest;
+    const proie = joueurs.find((joueur) => joueur !== tueur) as JoueurDeTest;
+    const entendu = suivreLeFlux(proie.client);
+    const parLeTueur = suivreLeFlux(tueur.client);
+    const ici = position(room, proie.id);
+
+    // L'assassin part a 400 pixels a l'est de la proie, dont la vision normale va a 260.
+    await marcherVers(room, tueur, () => ({ x: ici.x + 400, y: ici.y }), 5);
+    horloge.avancerDe(100);
+    await jusquA(() => entendu.length > 40 && parLeTueur.length > 40);
+
+    const avecDesPas = entendu.filter((partie) => partie.among?.pas !== undefined);
+    expect(avecDesPas.length).toBeGreaterThan(0);
+    // Les derniers pas viennent de l'est, au palier lointain.
+    expect(avecDesPas.at(-1)?.among?.pas).toEqual([{ secteur: 0, palier: 2 }]);
+    for (const partie of avecDesPas) {
+      expect(partie.entites.map((entite) => entite.id)).not.toContain(tueur.id);
+      expect(JSON.stringify(partie.among?.pas)).not.toMatch(/x|y|id/u);
+    }
+    // Personne d'autre ne marchait: l'assassin n'entend rien.
+    expect(parLeTueur.every((partie) => partie.among?.pas === undefined)).toBe(true);
+  });
+});

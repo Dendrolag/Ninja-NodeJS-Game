@@ -84,6 +84,7 @@ export type {
   EtatAmong,
   EvenementAmong,
   FaitsAmong,
+  FouleeAmong,
   JoueurAmong,
   Malediction,
   Meurtre,

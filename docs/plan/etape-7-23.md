@@ -57,9 +57,9 @@ Toutes se révisent après une partie d'essai.
 
 ## Les sons
 
-| Son à fournir            | Qui l'entend                     | Provisoire proposé                   |
-| ------------------------ | -------------------------------- | ------------------------------------ |
-| Le pas d'un autre vivant | Les vivants et fantômes à portée | `footstep1.mp3` à `footstep4.mp3`    |
+| Son à fournir            | Qui l'entend                     | Provisoire proposé                |
+| ------------------------ | -------------------------------- | --------------------------------- |
+| Le pas d'un autre vivant | Les vivants et fantômes à portée | `footstep1.mp3` à `footstep4.mp3` |
 
 Le porteur du projet peut fournir un bruit de pas propre aux autres (mp3, court, sans silence en tête), plus sourd que les nôtres, pour qu'on ne confonde pas un pas voisin avec le sien.
 

@@ -652,6 +652,33 @@ describe('creerLecteurDeSons', () => {
       ]);
     });
 
+    it('joue les pas d autrui a leur place, sur leurs voix, sans couper les notres (etape 7.23)', async () => {
+      const { lecteur, contexte, lectures, debloquer } = lecteurWebAudio();
+      await debloquer();
+
+      lecteur.jouerUnPas(1_000, false);
+      lecteur.jouerUnPasDAutrui({ volume: 0.3, cote: 0.4 });
+      lecteur.jouerUnPasDAutrui({ volume: 0.2, cote: -0.4 });
+      // Hors de portee, il se tait, et ne compte pas.
+      lecteur.jouerUnPasDAutrui({ volume: 0, cote: 0 });
+
+      expect(contexte.sources.map((source) => source.buffer?.fichier)).toEqual([
+        SONS_DE_PAS[1],
+        SONS_DE_PAS[1],
+        SONS_DE_PAS[2],
+      ]);
+      expect(contexte.sources.every((source) => source.arretee === false)).toBe(true);
+      expect(lectures(SONS_DE_PAS[1] as string)[1]?.branchee?.gain.value).toBe(0.3);
+      expect(contexte.panoramiques.map((panoramique) => panoramique.pan.value)).toEqual([
+        0.4, -0.4,
+      ]);
+
+      lecteur.couperLeSon(true);
+      lecteur.jouerUnPasDAutrui({ volume: 0.5, cote: 0 });
+
+      expect(contexte.sources).toHaveLength(3);
+    });
+
     it('ne charge les effets qu au premier deblocage, et une seule fois', async () => {
       const { lecteur, charges, debloquer } = lecteurWebAudio();
 

@@ -32,6 +32,7 @@ import { creerReseauFactice } from '../reseau.js';
 import type { PlaceDuSon } from '../sons/espace.js';
 import { placeDuSon } from '../sons/espace.js';
 import type { LecteurDeSons } from '../sons/lecteur.js';
+import { placeDUnPasEntendu } from '../sons/pasEntendus.js';
 import { STABILITE } from './apparence.js';
 import type { Boucle } from './boucle.js';
 import { faitQuiNousDeplace, lancerLaBoucle } from './boucle.js';
@@ -116,20 +117,27 @@ function sonsDEssai(): LecteurDeSons & {
   places: (PlaceDuSon | undefined)[];
   boucles: Set<TypeBonus>;
   arrets: number;
+  /** La place de chaque pas d'autrui joue (etape 7.23). */
+  autrui: PlaceDuSon[];
 } {
   const joues: NomDeSon[] = [];
   const places: (PlaceDuSon | undefined)[] = [];
   const boucles = new Set<TypeBonus>();
+  const autrui: PlaceDuSon[] = [];
   const lecteur = {
     joues,
     places,
     boucles,
+    autrui,
     arrets: 0,
     jouer: (nom: NomDeSon, place?: PlaceDuSon) => {
       joues.push(nom);
       places.push(place);
     },
     jouerUnPas: () => undefined,
+    jouerUnPasDAutrui: (place: PlaceDuSon) => {
+      autrui.push(place);
+    },
     demarrerLaBoucle: (bonus: TypeBonus) => {
       boucles.add(bonus);
     },
@@ -345,6 +353,95 @@ describe('les sons situes sur la carte (etape 4.11)', () => {
 
     expect(sons.joues).toContain('joueurCapture');
     expect(placeDe('joueurCapture')).toBeUndefined();
+  });
+});
+
+describe('les pas des autres, dans Among Ninjas (etape 7.23)', () => {
+  const EN_JEU = { phase: 'jeu', restantMs: 0, tachesFaites: 0, tachesTotal: 10 } as const;
+
+  /** Un PNJ de la foule, pose a un endroit. */
+  function pnj(id: string, x: number, y: number): EntiteVue {
+    return { type: 'bot', id, x, y, couleur: '#7F8A99', direction: 'sud' };
+  }
+
+  /**
+   * Fait marcher ces ninjas vers l'est, 7,5 pixels par battement, une trame et une image par
+   * battement, pendant une seconde.
+   */
+  function marcher(
+    entites: (decalage: number) => readonly EntiteVue[],
+    among: InstantanePartie['among'],
+  ): void {
+    for (let tick = 1; tick <= 20; tick += 1) {
+      reseau.recevoir('etat', trame(tick, entites(tick * 7.5), among));
+      uneImage();
+    }
+  }
+
+  beforeEach(() => {
+    reseau.recevoir('partieLancee', { graineDuDecor: 1 });
+  });
+
+  it('font entendre une fois par trame les pas qu on ne voit pas, a leur place', () => {
+    const pas = [
+      { secteur: 0, palier: 1 },
+      { secteur: 4, palier: 2 },
+    ];
+    reseau.recevoir('etat', trame(1, [joueur('moi', 900, 300)], { ...EN_JEU, pas }));
+    uneImage();
+    uneImage();
+
+    expect(sons.autrui).toEqual(pas.map(placeDUnPasEntendu));
+    expect(sons.autrui[0]?.cote).toBeGreaterThan(0);
+    expect(sons.autrui[1]?.cote).toBeLessThan(0);
+
+    reseau.recevoir('etat', trame(2, [joueur('moi', 900, 300)], EN_JEU));
+    uneImage();
+
+    expect(sons.autrui).toHaveLength(2);
+  });
+
+  it('font entendre un vivant qu on voit marcher, a la cadence de nos pas', () => {
+    marcher(
+      (decalage) => [joueur('moi', 900, 300), joueur('autre', 1_000 + decalage, 300)],
+      EN_JEU,
+    );
+
+    // Une seconde de marche, un pas toutes les 250 millisecondes, a droite.
+    expect(sons.autrui.length).toBeGreaterThanOrEqual(3);
+    expect(sons.autrui.length).toBeLessThanOrEqual(4);
+    expect(sons.autrui.every((place) => place.cote > 0 && place.volume > 0)).toBe(true);
+  });
+
+  it('taisent les PNJ, les fantomes, et nous-memes', () => {
+    marcher(
+      (decalage) => [
+        { ...joueur('moi', 900 + decalage, 300) },
+        pnj('pnj-1', 1_000 + decalage, 300),
+        { ...joueur('ombre', 800 + decalage, 300), fantome: true },
+      ],
+      EN_JEU,
+    );
+
+    expect(sons.autrui).toEqual([]);
+  });
+
+  it('se taisent hors de la phase de jeu', () => {
+    marcher((decalage) => [joueur('moi', 900, 300), joueur('autre', 1_000 + decalage, 300)], {
+      ...EN_JEU,
+      phase: 'discussion',
+    });
+
+    expect(sons.autrui).toEqual([]);
+  });
+
+  it('se taisent dans les autres modes', () => {
+    marcher(
+      (decalage) => [joueur('moi', 900, 300), joueur('autre', 1_000 + decalage, 300)],
+      undefined,
+    );
+
+    expect(sons.autrui).toEqual([]);
   });
 });
 
