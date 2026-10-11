@@ -365,7 +365,7 @@ Les numéros sont provisoires et suivent la carte thématique du ROADMAP. Les nu
 |     3 | 7.21 Les tâches courtes et la carte | Faite le 10 octobre 2026, fiche `docs/plan/etape-7-21.md`. Les sept tâches courtes à la place de la tâche provisoire, la carte plein écran, les tâches visuelles et la barre des tâches en réglage | 7.20 |
 |     4 | 7.22 Les sabotages | Faite le 10 octobre 2026, fiche `docs/plan/etape-7-22.md`. Les trois nuisances, un nuage où seuls les assassins voient, la panne de néons, la surchauffe, le sabotage depuis la carte, et la malédiction des fantômes | 7.21 |
 |     5 | 7.23 Les pas entendus | Faite le 11 octobre 2026, fiche `docs/plan/etape-7-23.md`. Les pas des vivants hors de vue, en direction arrondie et en palier, les PNJ et les fantômes muets | 2.9 |
-|     6 | 7.24 Les tâches longues               | Les quatre mini-jeux d'arcade                                                                                                              | 7.21      |
+|     6 | 7.24 Les tâches longues               | Faite le 11 octobre 2026, fiche `docs/plan/etape-7-24.md`. Les quatre mini-jeux d'arcade                                                                                                              | 7.21      |
 |     7 | 7.25 L'appropriation                  | Ce que l'essai aura retenu: égouts, déguisement, ninjas égarés, traces de sang du tueur                                        | 7.22      |
 |     8 | 7.26 D'autres tâches courtes          | Demande du porteur du projet du 10 octobre 2026: plus de gestes, et plus de tâches par station, pour que les parties et les listes varient davantage | 7.21      |
 
@@ -452,3 +452,16 @@ L'étape 7.23 est faite: fiche `docs/plan/etape-7-23.md`, handoff `docs/handoffs
 - **Au son seul**, sans marque à l'écran.
 
 La suite reste celle de la section 18: `7.24`, les tâches longues.
+
+## 25. Les tâches longues construites, 11 octobre 2026
+
+L'étape 7.24 est faite: fiche `docs/plan/etape-7-24.md`, handoff `docs/handoffs/etape-7-24-handoff.md`. Ce qui s'écarte de la section 9.4, ou la précise:
+
+- **Des noms à nous**: « Empiler des caisses », « Nourrir le serpent », « Repousser les Black Ninjas », « Bataille navale ». Tetris et Space Invaders sont des marques, et l'aspect de Tetris a été défendu en justice.
+- **Quatre caisses à poser, pas trois**, pour tenir la durée; **vingt tirs à la bataille navale, pas douze**, qui n'en laissaient réussir que deux sur dix.
+- **Les Black Ninjas ripostent**, sans quoi un joueur immobile gagnait seul.
+- **Une durée minimale de douze secondes** pour chacun; le plus rapide qui finit plus tôt voit l'écran gagné attendre.
+- **Chaque mini-jeu à deux stations**, et un réglage de l'hôte pour leur nombre par liste, de 0 à 2.
+- **Le rendu néon au trait** pour les quatre, choisi sur planche.
+
+La suite est celle de la section 3 du ROADMAP.

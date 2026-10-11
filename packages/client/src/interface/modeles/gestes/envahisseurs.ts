@@ -9,8 +9,13 @@
  * huitieme part a 12 secondes, la duree minimale du serveur, et doit encore voler. Chaque rate
  * coute une cadence.
  *
- * UN ECHEC (la rangee touche le sol) laisse l'ecran perdu une seconde, puis une partie neuve.
- * La partie n'a rien de tire au sort: la rangee part toujours de la meme place.
+ * LES BLACK NINJAS RIPOSTENT. Toutes les RIPOSTE_MS, le Black Ninja debout le plus proche lance
+ * un shuriken vers la place de notre ninja: il faut bouger. Sans riposte, un joueur immobile au
+ * milieu gagnait seul, la rangee passant et repassant au-dessus de ses shurikens.
+ *
+ * UN ECHEC (la rangee touche le sol, ou une riposte touche notre ninja) laisse l'ecran perdu une
+ * seconde, puis une partie neuve. Rien n'est tire au sort: la rangee part toujours de la meme
+ * place, et la riposte vise.
  */
 
 import type { AvancementDuGeste, BaseDeGeste, CommandeDeGeste } from './commun.js';
@@ -42,6 +47,14 @@ export const PREMIER_TIR_MS = 800;
 export const CADENCE_MS = 1600;
 export const VITESSE_DU_SHURIKEN = 320;
 
+/** Les ripostes: la premiere, l'ecart entre deux, leur vitesse en unites par seconde. */
+export const PREMIERE_RIPOSTE_MS = 2000;
+export const RIPOSTE_MS = 1800;
+export const VITESSE_DE_LA_RIPOSTE = 150;
+
+/** Une riposte touche notre ninja a cette distance de son centre. */
+export const PORTEE_DE_LA_RIPOSTE = RAYON_DU_NINJA + 3;
+
 /** Ce que dure l'ecran perdu. */
 export const PERTE_MS = 1000;
 
@@ -52,6 +65,14 @@ const PAS_MS = 16;
 export interface Shuriken {
   readonly x: number;
   readonly y: number;
+}
+
+/** Une riposte en vol: sa place, et sa vitesse en unites par seconde. */
+export interface Riposte {
+  readonly x: number;
+  readonly y: number;
+  readonly vx: number;
+  readonly vy: number;
 }
 
 /** Ou en est la partie. */
@@ -73,6 +94,8 @@ export interface EtatEnvahisseurs extends BaseDeGeste {
   readonly clavier: -1 | 0 | 1;
   readonly prochainTir: number;
   readonly shuriken?: Shuriken;
+  readonly prochaineRiposte: number;
+  readonly ripostes: readonly Riposte[];
   /** Le dernier Black Ninja abattu, pour son eclat. */
   readonly abattu?: { readonly x: number; readonly y: number; readonly instant: number };
   /** La partie perdue, jusqu'a cet instant. */
@@ -94,6 +117,8 @@ function partieNeuve(): Omit<EtatEnvahisseurs, 'echos'> {
     ninjaX: LARGEUR_DU_GESTE / 2,
     clavier: 0,
     prochainTir: PREMIER_TIR_MS,
+    prochaineRiposte: PREMIERE_RIPOSTE_MS,
+    ripostes: [],
   };
 }
 
@@ -176,18 +201,69 @@ function unPas(etat: EtatEnvahisseurs, dt: number, instant: number): EtatEnvahis
     );
   }
 
-  if (courant.debout.some(Boolean) && rangeeY + RAYON_D_UN_ENVAHISSEUR >= SOL) {
+  courant = riposter(courant, secondes, instant);
+  const ninja = courant.ninjaX;
+  const touche = courant.ripostes.some(
+    (riposte) => Math.hypot(riposte.x - ninja, riposte.y - LIGNE_DU_NINJA) <= PORTEE_DE_LA_RIPOSTE,
+  );
+
+  if (touche || (courant.debout.some(Boolean) && rangeeY + RAYON_D_UN_ENVAHISSEUR >= SOL)) {
     const { shuriken: _arrete, ...sansShuriken } = courant;
-    return avecEcho({ ...sansShuriken, perdueJusqua: instant + PERTE_MS }, 'perdue');
+    return avecEcho({ ...sansShuriken, ripostes: [], perdueJusqua: instant + PERTE_MS }, 'perdue');
   }
 
   return courant;
 }
 
+/** Les ripostes volent; a sa cadence, le Black Ninja le plus proche en lance une, visee. */
+function riposter(etat: EtatEnvahisseurs, secondes: number, instant: number): EtatEnvahisseurs {
+  const ripostes = etat.ripostes
+    .map((riposte) => ({
+      ...riposte,
+      x: riposte.x + riposte.vx * secondes,
+      y: riposte.y + riposte.vy * secondes,
+    }))
+    .filter((riposte) => riposte.y < LIGNE_DU_NINJA + RAYON_DU_NINJA * 2);
+  const rangs = etat.debout.flatMap((debout, rang) => (debout ? [rang] : []));
+
+  if (instant < etat.prochaineRiposte || rangs.length === 0) {
+    return { ...etat, ripostes };
+  }
+
+  const ecart = (rang: number): number => Math.abs(centreDUnEnvahisseur(etat, rang) - etat.ninjaX);
+  const lanceur = rangs.reduce((meilleur, rang) =>
+    ecart(rang) < ecart(meilleur) ? rang : meilleur,
+  );
+  const x = centreDUnEnvahisseur(etat, lanceur);
+  const y = etat.rangeeY + RAYON_D_UN_ENVAHISSEUR;
+  const dx = etat.ninjaX - x;
+  const dy = LIGNE_DU_NINJA - y;
+  const longueur = Math.max(Math.hypot(dx, dy), 1);
+
+  return {
+    ...etat,
+    ripostes: [
+      ...ripostes,
+      {
+        x,
+        y,
+        vx: (dx / longueur) * VITESSE_DE_LA_RIPOSTE,
+        vy: (dy / longueur) * VITESSE_DE_LA_RIPOSTE,
+      },
+    ],
+    prochaineRiposte: etat.prochaineRiposte + RIPOSTE_MS,
+  };
+}
+
 /** Le temps passe jusqu'a maintenant, par petits pas. */
 function avancer(etat: EtatEnvahisseurs, maintenant: number): EtatEnvahisseurs {
   if (etat.instant === undefined) {
-    return { ...etat, instant: maintenant, prochainTir: maintenant + PREMIER_TIR_MS };
+    return {
+      ...etat,
+      instant: maintenant,
+      prochainTir: maintenant + PREMIER_TIR_MS,
+      prochaineRiposte: maintenant + PREMIERE_RIPOSTE_MS,
+    };
   }
 
   let courant = etat;
@@ -205,6 +281,7 @@ function avancer(etat: EtatEnvahisseurs, maintenant: number): EtatEnvahisseurs {
         ninjaX: courant.ninjaX,
         clavier: courant.clavier,
         prochainTir: debut + PREMIER_TIR_MS,
+        prochaineRiposte: debut + PREMIERE_RIPOSTE_MS,
       };
       instant = debut;
       continue;

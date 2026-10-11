@@ -33,8 +33,9 @@ import {
   placerLesBateaux,
 } from './bataille.js';
 import type { CommandeDeGeste, EtatDeGeste } from './index.js';
+import { LARGEUR_DU_GESTE } from './commun.js';
 import { appliquerGeste, avancementDuGeste, gesteFini } from './index.js';
-import type { EtatEnvahisseurs } from './envahisseurs.js';
+import type { EtatEnvahisseurs, Riposte } from './envahisseurs.js';
 import {
   CADENCE_MS,
   DEPART_DE_LA_RANGEE,
@@ -369,8 +370,19 @@ describe('nourrir le serpent', () => {
 // Repousser les Black Ninjas
 // --------------------------------------------------------------------------
 
-/** Vise au pointeur le premier Black Ninja debout, la ou il sera quand le shuriken arrivera. */
+/**
+ * Vise au pointeur le premier Black Ninja debout, la ou il sera quand le shuriken arrivera, et
+ * s'ecarte d'une riposte qui vient sur lui.
+ */
 function viserAuPointeur(etat: EtatEnvahisseurs): readonly CommandeDeGeste[] {
+  const arriveeDe = (riposte: Riposte): number =>
+    riposte.x + riposte.vx * ((LIGNE_DU_NINJA - riposte.y) / riposte.vy);
+  const menace = etat.ripostes.find((riposte) => Math.abs(arriveeDe(riposte) - etat.ninjaX) < 40);
+  if (menace !== undefined) {
+    const arrivee = arriveeDe(menace);
+    const cote = arrivee < LARGEUR_DU_GESTE / 2 ? 1 : -1;
+    return [pointeur('deplace', arrivee + cote * 60, 280)];
+  }
   const rang = etat.debout.indexOf(true);
   if (rang < 0) {
     return [];
@@ -412,12 +424,19 @@ describe('repousser les Black Ninjas', () => {
     expect(fin).toBeLessThan(30_000);
   });
 
-  it('abat un Black Ninja touche, et lance seul', () => {
+  it('lance seul, et perd immobile: les Black Ninjas ripostent sur lui', () => {
     const fin = attendre(creerEnvahisseurs(), 0, 6000);
 
-    expect(fin.echos.filter((echo) => echo === 'lancer').length).toBeGreaterThanOrEqual(3);
-    expect(fin.echos).toContain('abattu');
+    expect(fin.echos.filter((echo) => echo === 'lancer').length).toBeGreaterThanOrEqual(2);
+    expect(fin.echos).toContain('perdue');
     expect(avancementDuGeste(fin).total).toBe(ENVAHISSEURS);
+
+    // Sans jamais bouger, on ne gagne jamais.
+    let immobile = creerEnvahisseurs();
+    for (let maintenant = 0; maintenant <= 60_000; maintenant += IMAGE_MS) {
+      immobile = appliquerGeste(immobile, { type: 'temps' }, maintenant) as EtatEnvahisseurs;
+      expect(gesteFini(immobile, maintenant)).toBe(false);
+    }
   });
 
   it('perd quand la rangee touche le sol, puis repart d une rangee neuve', () => {

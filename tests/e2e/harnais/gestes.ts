@@ -1,6 +1,12 @@
 import type { Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 
+import {
+  TIR_MS,
+  placerLesBateaux,
+} from '../../../packages/client/dist/interface/modeles/gestes/bataille.js';
+import { graineDuGeste } from '../../../packages/client/dist/interface/modeles/gestes/index.js';
+
 /**
  * Faire au clavier, dans une page, le geste d'une tache courte d'Among Ninjas (etape 7.21).
  *
@@ -97,4 +103,30 @@ export async function faireLeGesteAuClavier(page: Page, jusqua?: number): Promis
   }
 
   throw new Error(`Le geste ${String(nature)} ne se finit pas.`);
+}
+
+/**
+ * Joue au clavier la bataille navale de la fenetre ouverte (etape 7.24), sans un tir rate: les
+ * bateaux se tirent dans la page d'une graine qui ne doit rien au hasard (le joueur, la station,
+ * la tache), que le scenario refait. Il vise chaque case des bateaux depuis la case du milieu,
+ * et attend l'animation de chaque tir, comme un joueur qui saurait ou tirer.
+ */
+export async function jouerLaBatailleAuClavier(page: Page, joueur: string): Promise<void> {
+  const fenetre = page.locator('.tache-fenetre');
+  await expect(fenetre).toHaveAttribute('data-nature', 'bataille');
+  const station = (await page.locator('.tache-station').textContent()) ?? '';
+  const bateaux = placerLesBateaux(graineDuGeste(joueur, station, 'bataille'));
+  let colonne = 2;
+  let ligne = 2;
+
+  for (const [cible, rang] of bateaux.flat()) {
+    for (; colonne !== cible; colonne += colonne < cible ? 1 : -1) {
+      await page.keyboard.press(colonne < cible ? 'ArrowRight' : 'ArrowLeft');
+    }
+    for (; ligne !== rang; ligne += ligne < rang ? 1 : -1) {
+      await page.keyboard.press(ligne < rang ? 'ArrowDown' : 'ArrowUp');
+    }
+    await page.keyboard.press(' ');
+    await page.waitForTimeout(TIR_MS + 300);
+  }
 }

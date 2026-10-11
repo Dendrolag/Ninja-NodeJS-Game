@@ -11,12 +11,12 @@ import type {
   Position,
   Vecteur,
 } from '../../packages/shared/dist/index.js';
-import { appliquerTrame } from '../../packages/shared/dist/index.js';
+import { appliquerTrame, estUneTacheLongue } from '../../packages/shared/dist/index.js';
 import type { GameRoom } from '../../packages/server/dist/index.js';
 import type { EtatAmong } from '../../packages/sim/dist/index.js';
 import { positionTenable } from '../../packages/sim/dist/index.js';
 import { commandeAuClavier } from './harnais/commandes.js';
-import { faireLeGesteAuClavier } from './harnais/gestes.js';
+import { faireLeGesteAuClavier, jouerLaBatailleAuClavier } from './harnais/gestes.js';
 import {
   attendreLaFin,
   attendreLaPartie,
@@ -32,7 +32,7 @@ import type { ServeurDeJeu } from './harnais/serveur-de-jeu.js';
 import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
 
 /**
- * Le mode Among Ninjas des etapes 7.20 a 7.23, joue de bout en bout.
+ * Le mode Among Ninjas des etapes 7.20 a 7.24, joue de bout en bout.
  *
  * Alice cree la partie sur un ordinateur, Bob la rejoint sur un autre. Il faut cinq joueurs:
  * Carole, David et Eve entrent par le reseau, comme de vrais clients Socket.IO, sans page.
@@ -50,6 +50,8 @@ import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
  *      tache s'ouvre, elle en fait le geste au clavier, la tache est faite, la fenetre se ferme
  *      et la liste le dit (etape 7.21).
  *   3 bis. La carte plein ecran s'ouvre par M, montre nos taches, et se ferme par M.
+ *   3 bis bis. La meme proie joue sa tache longue, une bataille navale, au clavier, jusqu'a la
+ *      tache faite (etape 7.24).
  *   3 ter. L'assassin de la page coupe les neons depuis sa carte; la proie de la page voit
  *      l'alerte, va au boitier de la rue et le repare en tenant E (etape 7.22).
  *   3 quater. Une proie du reseau s'eloigne de la proie de la page, qui recoit ses pas hors de
@@ -388,7 +390,11 @@ test('jouer une partie Among Ninjas a cinq, du salon a la victoire des proies', 
 
     // -- Une tache, faite dans la page ----------------------------------------------
     const idTemoin = joueurNomme(partie, temoin).id;
-    const premiere = () => among(partie).joueurs[idTemoin]?.taches[0];
+    // Sa premiere tache courte: la tache longue de sa liste vient ensuite (etape 7.24).
+    const rangDeLaCourte = (among(partie).joueurs[idTemoin]?.taches ?? []).findIndex(
+      (tache) => !estUneTacheLongue(tache.nature),
+    );
+    const premiere = () => among(partie).joueurs[idTemoin]?.taches[rangDeLaCourte];
     const station = among(partie).stations[premiere()?.station ?? -1] as Position;
     await allerEtSArreter(partie, temoin, commandeAuClavier(pageDuTemoin), () => station, STATION);
     await pageDuTemoin.keyboard.press('e');
@@ -414,6 +420,33 @@ test('jouer une partie Among Ninjas a cinq, du salon a la victoire des proies', 
     await expect(pageDuTemoin.locator('.carte-among-ligne.faite')).toHaveCount(1);
     await pageDuTemoin.keyboard.press('m');
     await expect(pageDuTemoin.locator('.carte-among')).toBeHidden();
+
+    // -- Un mini-jeu, la tache longue de la liste, joue au clavier (7.24) ----------------
+    const rangDuMiniJeu = (among(partie).joueurs[idTemoin]?.taches ?? []).findIndex((tache) =>
+      estUneTacheLongue(tache.nature),
+    );
+    const miniJeu = () => among(partie).joueurs[idTemoin]?.taches[rangDuMiniJeu];
+    expect(miniJeu()?.nature, `la graine ${String(GRAINE)} donne la bataille navale`).toBe(
+      'bataille',
+    );
+    const borne = among(partie).stations[miniJeu()?.station ?? -1] as Position;
+    await allerEtSArreter(partie, temoin, commandeAuClavier(pageDuTemoin), () => borne, STATION);
+    await pageDuTemoin.keyboard.press('e');
+    await attendreQue(
+      () => among(partie).joueurs[idTemoin]?.tacheEnCours?.indice === rangDuMiniJeu,
+      `${temoin} ouvre son mini-jeu`,
+    );
+    await expect(pageDuTemoin.locator('.tache-titre')).toHaveText('Bataille navale');
+    await jouerLaBatailleAuClavier(pageDuTemoin, idTemoin);
+    // Coulee sans un rate: si c'est avant la duree minimale, l'ecran gagne attend (tests de la
+    // page); la tache est faite au plus tard a la duree minimale, et la fenetre se ferme.
+    await attendreQue(
+      () => miniJeu()?.faite === true,
+      () => `${temoin} finit son mini-jeu: ${JSON.stringify(among(partie).joueurs[idTemoin])}`,
+      30_000,
+    );
+    await expect(pageDuTemoin.locator('.tache-fenetre')).toBeHidden();
+    await expect(pageDuTemoin.locator('.hud-among-mes-taches')).toContainText('2 sur 3');
 
     // -- La panne de neons: l'assassin sabote depuis sa carte, la proie repare (7.22) ------
     expect(assassin, `la graine ${String(GRAINE)} donne l assassin a Alice`).toBe('Alice');

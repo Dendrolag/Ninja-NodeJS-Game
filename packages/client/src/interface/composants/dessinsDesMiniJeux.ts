@@ -470,8 +470,14 @@ function blackNinja(ctx: CanvasRenderingContext2D, x: number, y: number): void {
   ctx.restore();
 }
 
-/** Un shuriken au trait, qui tourne. */
-function shuriken(ctx: CanvasRenderingContext2D, x: number, y: number, angle: number): void {
+/** Un shuriken au trait, qui tourne: jaune, le notre; rouge, une riposte. */
+function shuriken(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  angle: number,
+  couleur: string,
+): void {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(angle);
@@ -482,9 +488,9 @@ function shuriken(ctx: CanvasRenderingContext2D, x: number, y: number, angle: nu
     ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
   }
   ctx.closePath();
-  ctx.shadowColor = JAUNE;
+  ctx.shadowColor = couleur;
   ctx.shadowBlur = 10;
-  ctx.strokeStyle = JAUNE;
+  ctx.strokeStyle = couleur;
   ctx.lineWidth = 2;
   ctx.stroke();
   ctx.restore();
@@ -533,7 +539,10 @@ function envahisseurs(
   }
 
   if (etat.shuriken !== undefined) {
-    shuriken(ctx, etat.shuriken.x, etat.shuriken.y, maintenant / 60);
+    shuriken(ctx, etat.shuriken.x, etat.shuriken.y, maintenant / 60, JAUNE);
+  }
+  for (const riposte of etat.ripostes) {
+    shuriken(ctx, riposte.x, riposte.y, -maintenant / 60, ROUGE);
   }
 
   // Notre ninja: un cercle rose et son bandeau.
@@ -635,7 +644,7 @@ function bataille(ctx: CanvasRenderingContext2D, etat: EtatBataille, maintenant:
   ctx.strokeRect(x + etat.visee[0] * cote + 3, y + etat.visee[1] * cote + 3, cote - 6, cote - 6);
   ctx.restore();
 
-  const panneau = x + cote6 + 26;
+  const panneau = x + cote6 + 22;
   const coules = etat.bateaux.filter((bateau) => bateauCoule(etat, bateau)).length;
   texte(
     ctx,
@@ -660,6 +669,7 @@ function bataille(ctx: CanvasRenderingContext2D, etat: EtatBataille, maintenant:
       align: 'left',
     },
   );
-  texte(ctx, 'Les bateaux', panneau, y + 76, 12, PALE, { align: 'left' });
-  texte(ctx, 'ne se touchent pas', panneau, y + 92, 12, PALE, { align: 'left' });
+  texte(ctx, 'Les bateaux', panneau, y + 76, 11, PALE, { align: 'left' });
+  texte(ctx, 'ne se touchent', panneau, y + 91, 11, PALE, { align: 'left' });
+  texte(ctx, 'pas', panneau, y + 106, 11, PALE, { align: 'left' });
 }

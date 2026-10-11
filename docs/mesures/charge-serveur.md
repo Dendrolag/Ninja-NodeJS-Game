@@ -1237,3 +1237,25 @@ Moyenne des deux tours. Durées en millisecondes par battement, tailles en octet
 
 - **Les pas des fantômes**: il n'y en a pas, et le banc ne tue personne.
 - **La page**: elle joue les pas qu'on voit d'après le mouvement lissé, une distance par ninja affiché et par image, sans rien de plus sur le fil.
+
+## 33. Mesure de l'étape 7.24: les tâches longues d'Among Ninjas (11 octobre 2026)
+
+Chiffres bruts: `docs/mesures/charge-serveur-7-24-among.json` et `charge-serveur-7-24-classique.json`, écrits par le harnais au second tour. Même machine et même méthode qu'à la section 32: `pnpm charge --banc --mode among --carte map1 --bots-banc 40,80`, puis `--mode classique`, deux tours en alternance, sur les lots A à C de l'étape (commit `7704644`).
+
+### 33.1 L'essentiel
+
+- **Les mini-jeux ne coûtent rien au serveur**: ils se jouent dans la page, et le moteur ne voit qu'une tâche ouverte, puis finie. Le tirage nouveau des listes ne joue qu'au lancement. Le banc n'ouvre aucune tâche, comme aux étapes 7.21 à 7.23.
+- **Among Ninjas**: 0,228 ms par battement avec 40 PNJ (0,232 à l'étape 7.23), 0,321 avec 80 (0,314); la Horde de la même séance, 0,181 (0,190) et 0,248 (0,246). Les écarts sont ceux d'une séance à l'autre.
+- **Le fil ne change pas**: 87 et 94 octets par message, comme à 7.23.
+- **Les autres modes n'ont pas changé**: l'empreinte du jeu et du flux des quatre parties de `tests/charge/empreinte.ts` est identique, à l'octet, avant et après l'étape.
+
+### 33.2 Le banc
+
+Moyenne des deux tours. Durées en millisecondes par battement, tailles en octets par message sur le fil, images comprises.
+
+| PNJ | Mode         | Moteur | Projection | Codage | Total | Total p99 | Octets par message | Entités par vue | Parties par cœur |
+| --: | ------------ | -----: | ---------: | -----: | ----: | --------: | -----------------: | --------------: | ---------------: |
+|  40 | Horde        |  0,122 |      0,025 |  0,035 | 0,181 |     0,504 |                209 |              55 |              193 |
+|  40 | Among Ninjas |  0,088 |      0,047 |  0,094 | 0,228 |     0,478 |                 87 |               9 |              153 |
+|  80 | Horde        |  0,175 |      0,031 |  0,043 | 0,248 |     0,632 |                293 |              96 |              140 |
+|  80 | Among Ninjas |  0,153 |      0,064 |  0,105 | 0,321 |     0,681 |                 94 |               7 |              108 |

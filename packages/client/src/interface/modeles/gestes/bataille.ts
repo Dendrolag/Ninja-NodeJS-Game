@@ -31,7 +31,7 @@ import type { Case } from './caisses.js';
 export const COTE_DE_LA_MER = 6;
 
 /** La mer dans l'espace du geste: son coin haut gauche et le cote d'une case. */
-export const MER = { x: 62, y: 56, cote: 36 } as const;
+export const MER = { x: 50, y: 56, cote: 36 } as const;
 
 /** Les longueurs des bateaux. */
 export const BATEAUX = [3, 2] as const;

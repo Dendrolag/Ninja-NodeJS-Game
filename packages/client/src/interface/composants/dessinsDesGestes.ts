@@ -72,7 +72,10 @@ export function dessinerLeGeste(
 ): void {
   ctx.clearRect(0, 0, LARGEUR_DU_GESTE, HAUTEUR_DU_GESTE);
   const { faits, total } = avancementDuGeste(geste);
-  progression(ctx, faits, total);
+  // La grille des caisses monte jusqu'en haut: elle ecrit ses lignes a cote d'elle.
+  if (geste.nature !== 'caisses') {
+    progression(ctx, faits, total);
+  }
 
   switch (geste.nature) {
     case 'katana':
