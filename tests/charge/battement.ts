@@ -183,6 +183,11 @@ export interface ResultatBancBattement {
    * le premier assassin pose des que la regle le permet. Zero dans les autres modes.
    */
   readonly battementsSabotes: number;
+  /**
+   * Les pas faits par les vivants d'Among Ninjas pendant les battements mesures (etape 7.23): ce
+   * que la projection fait entendre a chacun. Zero dans les autres modes.
+   */
+  readonly pasFaits: number;
 }
 
 /** Ce qu'un battement mesure laisse derriere lui. */
@@ -287,6 +292,7 @@ export function mesurerLeBattement(options: OptionsBancBattement): ResultatBancB
   const json: number[] = [];
   let entites = 0;
   let battementsSabotes = 0;
+  let pasFaits = 0;
 
   for (let battement = 0; battement < joues; battement += 1) {
     alea = orienterLesJoueurs(room, alea, avantChangement, options.mines === true);
@@ -308,6 +314,8 @@ export function mesurerLeBattement(options: OptionsBancBattement): ResultatBancB
     if (room.etat.among?.sabotage !== undefined) {
       battementsSabotes += 1;
     }
+
+    pasFaits += room.etat.among?.pasDuBattement?.length ?? 0;
 
     const releve: MesureDUnBattement = mesure;
     const horsMoteur = releve.projectionMs + releve.serialisationMs;
@@ -345,6 +353,7 @@ export function mesurerLeBattement(options: OptionsBancBattement): ResultatBancB
     entitesParMessage: entites / Math.max(options.battements, 1),
     octetsTotal: octets.reduce((somme, valeur) => somme + valeur, 0),
     battementsSabotes,
+    pasFaits,
   };
 }
 

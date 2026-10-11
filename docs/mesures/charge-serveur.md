@@ -1210,3 +1210,30 @@ Moyenne des deux tours. Durées en millisecondes par battement, tailles en octet
 
 - **La panne et la surchauffe**: elles ne coûtent qu'une distance par joueur et par battement pour le boîtier ou les consoles. La panne allège même les vues, le rayon des proies tombant à 110 pixels.
 - **La malédiction**: le banc ne tue personne, il n'a donc pas de fantôme. Elle passe par les malus du moteur, comme un malus ramassé.
+
+## 32. Mesure de l'étape 7.23: les pas entendus d'Among Ninjas (11 octobre 2026)
+
+Chiffres bruts: `docs/mesures/charge-serveur-7-23-among.json` et `charge-serveur-7-23-classique.json`, écrits par le harnais au second tour. Même machine et même méthode qu'à la section 31: `pnpm charge --banc --mode among --carte map1 --bots-banc 40,80`, puis `--mode classique`, deux tours en alternance, sur les lots A à C de l'étape (commit `3223246`).
+
+### 32.1 L'essentiel
+
+- **Les pas sont dans la mesure.** Les douze joueurs du banc marchent au hasard: ils font 2 372 pas pendant les 1 200 battements mesurés, deux par battement (`pasFaits` dans les fichiers bruts, nouveau). Le nuage noir couvre toujours 400 battements.
+- **Les pas coûtent peu**: 0,232 ms par battement avec 40 PNJ, contre 0,215 à l'étape 7.22, et 0,314 avec 80 PNJ contre 0,293, soit 150 parties pleines par cœur au lieu de 162. La Horde de la même séance passe de 0,182 à 0,190, et de 0,248 à 0,246: la séance est un peu plus lente, et l'écart propre au mode est d'environ 0,01 ms, dans la projection (0,047 contre 0,038), qui cherche pour chaque vivant les pas qu'il entend sans les voir.
+- **Le fil ne grossit presque pas**: 87 et 94 octets par message, comme à 7.22. Un pas entendu coûte un octet, et la plupart des trames n'en portent aucun.
+- **Les autres modes n'ont pas changé**: l'empreinte du jeu et du flux des quatre parties de `tests/charge/empreinte.ts` est identique, à l'octet, avant et après l'étape.
+
+### 32.2 Le banc
+
+Moyenne des deux tours. Durées en millisecondes par battement, tailles en octets par message sur le fil, images comprises.
+
+| PNJ | Mode         | Moteur | Projection | Codage | Total | Total p99 | Octets par message | Entités par vue | Parties par cœur |
+| --: | ------------ | -----: | ---------: | -----: | ----: | --------: | -----------------: | --------------: | ---------------: |
+|  40 | Horde        |  0,129 |      0,026 |  0,036 | 0,190 |     0,546 |                209 |              55 |              184 |
+|  40 | Among Ninjas |  0,091 |      0,047 |  0,093 | 0,232 |     0,500 |                 87 |               8 |              150 |
+|  80 | Horde        |  0,173 |      0,030 |  0,043 | 0,246 |     0,606 |                293 |              96 |              142 |
+|  80 | Among Ninjas |  0,151 |      0,063 |  0,101 | 0,314 |     0,623 |                 94 |               8 |              111 |
+
+### 32.3 Ce qui n'est pas mesuré
+
+- **Les pas des fantômes**: il n'y en a pas, et le banc ne tue personne.
+- **La page**: elle joue les pas qu'on voit d'après le mouvement lissé, une distance par ninja affiché et par image, sans rien de plus sur le fil.

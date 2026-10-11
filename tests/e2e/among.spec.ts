@@ -6,9 +6,12 @@ import { io } from 'socket.io-client';
 import type {
   EvenementsClientVersServeur,
   EvenementsServeurVersClient,
+  InstantanePartie,
+  PasEntendu,
   Position,
   Vecteur,
 } from '../../packages/shared/dist/index.js';
+import { appliquerTrame } from '../../packages/shared/dist/index.js';
 import type { GameRoom } from '../../packages/server/dist/index.js';
 import type { EtatAmong } from '../../packages/sim/dist/index.js';
 import { positionTenable } from '../../packages/sim/dist/index.js';
@@ -29,7 +32,7 @@ import type { ServeurDeJeu } from './harnais/serveur-de-jeu.js';
 import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
 
 /**
- * Le mode Among Ninjas des etapes 7.20 a 7.22, joue de bout en bout.
+ * Le mode Among Ninjas des etapes 7.20 a 7.23, joue de bout en bout.
  *
  * Alice cree la partie sur un ordinateur, Bob la rejoint sur un autre. Il faut cinq joueurs:
  * Carole, David et Eve entrent par le reseau, comme de vrais clients Socket.IO, sans page.
@@ -49,6 +52,8 @@ import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
  *   3 bis. La carte plein ecran s'ouvre par M, montre nos taches, et se ferme par M.
  *   3 ter. L'assassin de la page coupe les neons depuis sa carte; la proie de la page voit
  *      l'alerte, va au boitier de la rue et le repare en tenant E (etape 7.22).
+ *   3 quater. Une proie du reseau s'eloigne de la proie de la page, qui recoit ses pas hors de
+ *      vue, sans jamais la voir dans les trames qui les portent (etape 7.23).
  *   4. L'assassin va au contact d'une proie et la tue.
  *   5. La proie de la page trouve le cadavre et le signale par E: la reunion s'ouvre dans les
  *      deux pages, titree par ce signalement.
@@ -130,6 +135,46 @@ function among(partie: GameRoom): EtatAmong {
   }
 
   return etat;
+}
+
+/** Ce qu'une page a entendu dans une trame: les pas, et les entites qu'elle voyait alors. */
+interface PasDUneTrame {
+  readonly pas: readonly PasEntendu[];
+  readonly vus: readonly string[];
+}
+
+/**
+ * Relit les trames d'etat que recoit une page, comme elle (etape 7.23), et garde celles qui
+ * portent des pas entendus. Seules les trames d'etat voyagent en binaire; une trame qui ne se
+ * relit pas, faute de reference, attend l'image suivante.
+ */
+function ecouterLesPas(page: Page): PasDUneTrame[] {
+  const entendus: PasDUneTrame[] = [];
+
+  page.on('websocket', (ws) => {
+    let detenue: InstantanePartie | undefined;
+
+    ws.on('framereceived', (trame) => {
+      if (typeof trame.payload === 'string') {
+        return;
+      }
+
+      try {
+        detenue = appliquerTrame(detenue, trame.payload) ?? detenue;
+      } catch {
+        detenue = undefined;
+        return;
+      }
+
+      const pas = detenue?.among?.pas;
+
+      if (pas !== undefined) {
+        entendus.push({ pas, vus: detenue?.entites.map((entite) => entite.id) ?? [] });
+      }
+    });
+  });
+
+  return entendus;
 }
 
 /** La distance entre deux points. */
@@ -269,6 +314,10 @@ test('jouer une partie Among Ninjas a cinq, du salon a la victoire des proies', 
   const erreursDAlice = releverLesErreurs(alice);
   const erreursDeBob = releverLesErreurs(bob);
   const pages: Readonly<Record<string, Page>> = { Alice: alice, Bob: bob };
+  const pasEntendus = new Map<Page, PasDUneTrame[]>([
+    [alice, ecouterLesPas(alice)],
+    [bob, ecouterLesPas(bob)],
+  ]);
   // Les demandes de capture que chaque page envoie vraiment: un meurtre qui echoue le dit.
   const capturesEnvoyees = new Map<Page, number>();
   for (const page of [alice, bob]) {
@@ -392,6 +441,33 @@ test('jouer une partie Among Ninjas a cinq, du salon a la victoire des proies', 
     );
     await pageDuTemoin.keyboard.up('e');
     await expect(pageDuTemoin.locator('.hud-among-alerte')).toBeHidden();
+
+    // -- Les pas entendus: une proie du reseau s'eloigne du temoin, au boitier (7.23) ------
+    // Elle part du point de reunion, en vue du temoin, vers une station a 700 pixels de lui a
+    // peu pres: elle traverse l'anneau ou on l'entend sans la voir, de 260 a 500 pixels.
+    const marcheur = PSEUDOS_DU_RESEAU.find(
+      (pseudo) => pseudo !== victime && roleDe(pseudo) === 'proie',
+    ) as string;
+    const idMarcheur = joueurNomme(partie, marcheur).id;
+    const ecoute = joueurNomme(partie, temoin).position;
+    const auLoin = [...among(partie).stations].sort(
+      (une, autre) =>
+        Math.abs(distance(une, ecoute) - 700) - Math.abs(distance(autre, ecoute) - 700),
+    )[0] as Position;
+    const entendusParLeTemoin = pasEntendus.get(pageDuTemoin) ?? [];
+    const dejaEntendus = entendusParLeTemoin.length;
+    await allerEtSArreter(
+      partie,
+      marcheur,
+      commandeDuReseau(reseau[marcheur] as ClientDuReseau),
+      () => auLoin,
+      STATION,
+    );
+    const pendantLaMarche = entendusParLeTemoin.slice(dejaEntendus);
+    expect(pendantLaMarche.length, `${temoin} entend ${marcheur} s eloigner`).toBeGreaterThan(0);
+    for (const trame of pendantLaMarche) {
+      expect(trame.vus).not.toContain(idMarcheur);
+    }
 
     // -- Le meurtre ---------------------------------------------------------------------
     const idVictime = joueurNomme(partie, victime).id;

@@ -128,4 +128,11 @@ describe('mesurerLeBattement', () => {
     expect(resultat.battementsSabotes).toBe(among.battements);
     expect(mesurerLeBattement({ ...courte, terrain }).battementsSabotes).toBe(0);
   });
+
+  it('compte les pas des vivants d Among Ninjas, et aucun ailleurs (etape 7.23)', () => {
+    const among = { bots: 10, joueurs: 6, battements: 100, echauffement: 200, graine: 7 };
+
+    expect(mesurerLeBattement({ ...among, mode: 'among', terrain }).pasFaits).toBeGreaterThan(0);
+    expect(mesurerLeBattement({ ...courte, terrain }).pasFaits).toBe(0);
+  });
 });

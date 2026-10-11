@@ -364,7 +364,7 @@ Les numéros sont provisoires et suivent la carte thématique du ROADMAP. Les nu
 |     2 | 7.20 Le socle du mode | Faite le 10 octobre 2026, fiche `docs/plan/etape-7-20.md`. Rôles, phases, tour à durée maximale, meurtre, cadavre, signalement, gong, réunion au chat, vote, éjection, victoire, fantômes, vision par rayon, foule neutre. Les stations de Tokyo, les listes par proie et leur validation au serveur, avec une seule tâche provisoire (« maintenir 5 s ») | 2.9 |
 |     3 | 7.21 Les tâches courtes et la carte | Faite le 10 octobre 2026, fiche `docs/plan/etape-7-21.md`. Les sept tâches courtes à la place de la tâche provisoire, la carte plein écran, les tâches visuelles et la barre des tâches en réglage | 7.20 |
 |     4 | 7.22 Les sabotages | Faite le 10 octobre 2026, fiche `docs/plan/etape-7-22.md`. Les trois nuisances, un nuage où seuls les assassins voient, la panne de néons, la surchauffe, le sabotage depuis la carte, et la malédiction des fantômes | 7.21 |
-|     5 | 7.23 Les pas entendus                 | Les pas des vivants hors de vue, en direction arrondie, les PNJ et les fantômes muets                                                      | 2.9       |
+|     5 | 7.23 Les pas entendus | Faite le 11 octobre 2026, fiche `docs/plan/etape-7-23.md`. Les pas des vivants hors de vue, en direction arrondie et en palier, les PNJ et les fantômes muets | 2.9 |
 |     6 | 7.24 Les tâches longues               | Les quatre mini-jeux d'arcade                                                                                                              | 7.21      |
 |     7 | 7.25 L'appropriation                  | Ce que l'essai aura retenu: égouts, déguisement, ninjas égarés, traces de sang du tueur                                        | 7.22      |
 |     8 | 7.26 D'autres tâches courtes          | Demande du porteur du projet du 10 octobre 2026: plus de gestes, et plus de tâches par station, pour que les parties et les listes varient davantage | 7.21      |
@@ -440,3 +440,15 @@ L'étape 7.22 est faite: fiche `docs/plan/etape-7-22.md`, handoff `docs/handoffs
 - **Rendus choisis sur planche**: `docs/design/etape-7-22/1-planche.png`; captures dans le vrai jeu à côté.
 
 La suite reste celle de la section 18: `7.23`, les pas entendus.
+
+## 24. Les pas entendus construits, 11 octobre 2026
+
+L'étape 7.23 est faite: fiche `docs/plan/etape-7-23.md`, handoff `docs/handoffs/etape-7-23-handoff.md`. Ce qui précise la section 7.4:
+
+- **Un pas par foulée de 37,5 pixels**, d'après le déplacement réel du vivant, à la cadence de nos propres pas. Les PNJ et les fantômes sont muets.
+- **Les distances en trois paliers** sont 170, 335 et 500 pixels; les directions, huit secteurs de 45 degrés. Au plus un pas par secteur et par palier à chaque battement, rangés dans leur ordre: la trame ne dit ni qui marche, ni combien ils sont.
+- **Ceux qu'on voit s'entendent à leur place exacte**, joués par la page d'après leur mouvement: la trame n'en porte rien de plus.
+- **Le nuage noir n'étouffe rien**, et les fantômes, qui voient tout, ne reçoivent aucun pas hors de vue (réponses du porteur du projet du 11 octobre 2026).
+- **Au son seul**, sans marque à l'écran.
+
+La suite reste celle de la section 18: `7.24`, les tâches longues.

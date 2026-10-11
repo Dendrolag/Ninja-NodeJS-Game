@@ -140,3 +140,16 @@ Conditions de ROADMAP réunies, plus:
 ## Rituel de fin de session
 
 Écrire `docs/handoffs/etape-7-23-handoff.md`: les décisions confirmées en début d'étape, les écarts à cette fiche (section « Réconciliation », à créer), les chiffres du banc, l'état de la CI et de `master` (non poussé). Consigner les décisions au journal de `docs/design/README.md`, mettre à jour le ROADMAP et l'étude. Prochaine action exacte: l'étape suivante de la section 3 du ROADMAP. Commiter.
+
+## Réconciliation
+
+Écarts au plan constatés en exécutant, le 11 octobre 2026.
+
+1. **Un marcheur tué dans le battement de son pas est muet**: le moteur compte les pas avant les gestes du battement, et la vue d'un vivant écarte un marcheur déjà fantôme. Sinon, le dernier pas d'une victime arrivait avec sa mort.
+2. **Une trame qui arrive entre deux images remplace la précédente, et ses pas avec**: la page joue les pas hors de vue de la trame qu'elle affiche, une fois. Un pas perdu ainsi, rare, ne s'entend pas; un marcheur en fait quatre par seconde.
+3. **Le volume d'un pas d'autrui** va de la moitié de nos propres pas, jusqu'à 100 pixels, au dixième à la portée, en ligne droite (`OREILLE_DES_PAS`, `packages/client/src/sons/pasEntendus.ts`), et non selon la courbe des sons situés de l'étape 4.11, qui rendait un pas lointain inaudible. Son côté suit la direction seule: un pas à l'est s'entend à droite de près comme de loin.
+4. **Le banc compte les pas faits pendant la mesure** (`pasFaits`, à côté de `battementsSabotes`), pour que la mesure prouve qu'elle les exerce.
+5. **Le scénario de bout en bout relit les trames de la page** (`ecouterLesPas`, `tests/e2e/among.spec.ts`): une proie du réseau s'éloigne de la proie de la page, au boîtier, vers une station à 700 pixels environ; la page reçoit des pas, et ne voit jamais le marcheur dans les trames qui les portent. Le son lui-même se vérifie dans les tests de la page.
+6. **Vérifié dans le vrai jeu par instrumentation**: dans le volet du navigateur, le son était coupé par une préférence enregistrée, et le contexte audio restait suspendu. Le son rétabli le temps de la mesure, puis recoupé, la page a joué 12 pas d'autrui situés en 15 secondes, à gauche comme à droite, avec quatre joueurs fictifs qui marchaient.
+7. **En route (règle 7)**: un test du serveur comparait tout ce que le mode retient d'un joueur avant et après un battement, et la marche change désormais à chaque battement de jeu; il compare le reste (`packages/server/src/among.test.ts`).
+8. **À soumettre au porteur du projet**: la note de la 1.9.0 dit des fantômes « Ni silencieux ». Leurs pas, eux, ne s'entendent pas. Le texte est le sien; il dira s'il le garde.
