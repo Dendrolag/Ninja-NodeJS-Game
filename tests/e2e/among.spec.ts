@@ -309,8 +309,14 @@ test('jouer une partie Among Ninjas a cinq, du salon a la victoire des proies', 
   // Deux chargements de carte, une tache et son geste, deux traversees de Tokyo, une reunion.
   test.setTimeout(300_000);
 
-  const ordinateurA = await browser.newContext(devices['Desktop Chrome']);
-  const ordinateurB = await browser.newContext(devices['Desktop Chrome']);
+  // Des fenetres plus petites que celles d'un ordinateur ordinaire, mais au-dela du dernier seuil
+  // de mise en page (960 pixels): Among Ninjas montre la meme part de la carte a toutes les
+  // tailles, et deux pages qui dessinent sans carte graphique, comme en CI, y passent tout leur
+  // temps a peindre des pixels. A 1280 sur 720, la page du temoin n'y dessinait qu'une image par
+  // seconde, et chaque touche mettait deux secondes a passer (etape 5.15, premiere CI du mode).
+  const ordinateur = { ...devices['Desktop Chrome'], viewport: { width: 1000, height: 560 } };
+  const ordinateurA = await browser.newContext(ordinateur);
+  const ordinateurB = await browser.newContext(ordinateur);
   const alice = await ordinateurA.newPage();
   const bob = await ordinateurB.newPage();
   const erreursDAlice = releverLesErreurs(alice);

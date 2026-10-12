@@ -1286,6 +1286,21 @@ Durée d'un battement complet d'une partie, côté serveur, en millisecondes; pr
 
 Les 24 parties sont tenues dans les six séries: 20 battements par seconde au moins pour chaque partie, écart p99 entre deux battements de 53 à 56 ms.
 
-### 34.3 Ce qui reste à mesurer en production
+### 34.3 La première CI d'Among Ninjas, et le dessin du cercle de vision
+
+La première poussée des étapes 7.20 à 7.24 a montré, sur les machines de la CI (quatre cœurs, sans carte graphique), une page Among Ninjas qui dessinait une image par seconde: chaque touche du scénario mettait deux secondes à passer (trace de la CI), et son pilote ne s'arrêtait jamais à portée d'une station. Mesuré en local, sans carte graphique et processeur des pages ralenti quatre fois, une image moyenne sur vingt:
+
+| Version                                                               | Image moyenne |
+| --------------------------------------------------------------------- | ------------: |
+| Horde, même conditions (repère)                                       |         64 ms |
+| Among Ninjas, avant                                                   |        272 ms |
+| Among Ninjas, sans le filtre qui retire la couleur (essai)            |        245 ms |
+| Among Ninjas, sans la couche éteinte (essai)                          |        112 ms |
+| Among Ninjas, copie éteinte cuite une fois                            |        179 ms |
+| Among Ninjas, copie cuite et mini-carte qui n'écrit que ce qui change |        165 ms |
+
+Le profil de la page le confirmait: presque tout le temps hors du code, à peindre des pixels. La couche éteinte du cercle de vision redessinait à chaque image deux copies de la carte, chacune passée par le filtre, puis un voile noir sur toute la carte. Elle se cuit désormais une fois dans une texture, à la finesse de l'image du décor, et le voile devient une teinte, identique (`rendu/among.ts`, `teinteDuVoile`; captures avant et après identiques). La mini-carte réécrivait ses styles à chaque image. Le scénario de bout en bout ouvre en plus ses deux pages en 1000 sur 560, au-dessus du dernier seuil de mise en page: Among Ninjas montre la même part de la carte à toutes les tailles. Le scénario en dessin logiciel passe de 3,3 à 2,0 minutes.
+
+### 34.4 Ce qui reste à mesurer en production
 
 L'agent Alloy sur la machine Oracle (moins de 5 pour cent d'un cœur et moins de 300 Mo sur 24 heures, ses propres métriques dans le tableau) et les séries actives réelles (page « Usage » de Grafana Cloud) se relèvent une fois l'agent installé, sur une semaine de production.

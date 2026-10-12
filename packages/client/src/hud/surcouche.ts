@@ -553,9 +553,13 @@ function monterMinimapAmong(
   /** Les points des postes du sabotage en cours (etape 7.22). */
   const postes: HTMLElement[] = [];
 
+  // RIEN NE S'ECRIT S'IL NE CHANGE PAS (etape 5.15). La mini-carte se met a jour a chaque image;
+  // reecrire a chaque fois les memes styles faisait repeindre au navigateur l'image de toute la
+  // carte qu'elle contient: 14 ms par image sans carte graphique.
+  const poserLeStyle = poseurDeStyles();
   const placer = (point: HTMLElement, place: PointDeMinimap): void => {
-    point.style.left = `${String(place.x * 100)}%`;
-    point.style.top = `${String(place.y * 100)}%`;
+    poserLeStyle(point, 'left', `${String(place.x * 100)}%`);
+    poserLeStyle(point, 'top', `${String(place.y * 100)}%`);
   };
 
   return {
@@ -564,14 +568,14 @@ function monterMinimapAmong(
         fond.setAttribute('src', minimap.fond);
       }
 
-      carte.style.setProperty('--proportions', String(minimap.proportions));
-      carte.classList.toggle('miroir', minimap.miroir);
+      poserLeStyle(carte, '--proportions', String(minimap.proportions));
+      basculer(carte, 'miroir', minimap.miroir);
       placer(gong, minimap.gong);
-      moi.hidden = minimap.moi === undefined;
+      cacher(moi, minimap.moi === undefined);
 
       if (minimap.moi !== undefined) {
         placer(moi, minimap.moi);
-        moi.style.setProperty('--couleur-joueur', minimap.moi.couleur);
+        poserLeStyle(moi, '--couleur-joueur', minimap.moi.couleur);
       }
 
       while (stations.length < minimap.stations.length) {
@@ -580,7 +584,7 @@ function monterMinimapAmong(
 
       stations.forEach((point, rang) => {
         const place = minimap.stations[rang];
-        point.hidden = place === undefined;
+        cacher(point, place === undefined);
 
         if (place !== undefined) {
           placer(point, place);
@@ -593,8 +597,8 @@ function monterMinimapAmong(
 
       postes.forEach((point, rang) => {
         const place = minimap.postes[rang];
-        point.hidden = place === undefined;
-        point.classList.toggle('tenu', place?.tenu === true);
+        cacher(point, place === undefined);
+        basculer(point, 'tenu', place?.tenu === true);
 
         if (place !== undefined) {
           placer(point, place);
@@ -602,6 +606,43 @@ function monterMinimapAmong(
       });
     },
   };
+}
+
+/**
+ * Un poseur de styles qui n'ecrit une propriete que si elle change. Il retient les dernieres
+ * valeurs posees: le navigateur relit une valeur sous sa propre forme (« 33.3333% » pour
+ * « 33.33333333333333% »), qu'on ne peut donc pas comparer a la sienne.
+ */
+function poseurDeStyles(): (cible: HTMLElement, propriete: string, valeur: string) => void {
+  const poses = new Map<HTMLElement, Map<string, string>>();
+
+  return (cible, propriete, valeur) => {
+    let deCible = poses.get(cible);
+
+    if (deCible === undefined) {
+      deCible = new Map();
+      poses.set(cible, deCible);
+    }
+
+    if (deCible.get(propriete) !== valeur) {
+      deCible.set(propriete, valeur);
+      cible.style.setProperty(propriete, valeur);
+    }
+  };
+}
+
+/** Ajoute ou retire cette classe, si cela change quelque chose. */
+function basculer(cible: HTMLElement, classe: string, presente: boolean): void {
+  if (cible.classList.contains(classe) !== presente) {
+    cible.classList.toggle(classe, presente);
+  }
+}
+
+/** Cache ou montre cet element, si cela change. */
+function cacher(cible: HTMLElement, cache: boolean): void {
+  if (cible.hidden !== cache) {
+    cible.hidden = cache;
+  }
 }
 
 /** Ecrit ce texte, s'il a change. */

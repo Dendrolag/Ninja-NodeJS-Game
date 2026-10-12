@@ -73,6 +73,17 @@ export interface Cadre {
 }
 
 /**
+ * La teinte qui assombrit le decor eteint comme le ferait un voile noir de cette opacite: un
+ * gris de 1 - opacite, que la texture multiplie. Elle remplace le voile noir de
+ * l'etape 7.20, que la copie cuite du decor rendait inutile (etape 5.15).
+ */
+export function teinteDuVoile(opacite: number): number {
+  const niveau = Math.round(255 * (1 - Math.min(Math.max(opacite, 0), 1)));
+
+  return (niveau << 16) | (niveau << 8) | niveau;
+}
+
+/**
  * Le rectangle du masque du decor eteint, que le disque de vision perce (pixi.ts): la carte,
  * elargie de part et d'autre du rayon du disque, pour que le trou y tienne toujours en entier.
  *

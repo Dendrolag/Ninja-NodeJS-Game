@@ -88,7 +88,7 @@ import {
   VISION_AMONG,
 } from './apparence.js';
 import type { VisionScene } from './among.js';
-import { APPARENCE_AMONG, cadreDuMasque } from './among.js';
+import { APPARENCE_AMONG, cadreDuMasque, teinteDuVoile } from './among.js';
 import type { Camera, ZoneVisible } from './camera.js';
 import { dansLaZone, versEcran, zoneVisible } from './camera.js';
 import type { IndicateurScene } from './charges.js';
@@ -560,27 +560,68 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   const premierPlan = new Container();
   // Hors du cercle de vision d'Among Ninjas, le decor eteint: une copie du fond et de l'avant-
   // plan, sans couleur et assombrie de moitie, percee d'un disque (etape 7.20). Cachee ailleurs.
+  //
+  // LA COPIE SE CUIT UNE FOIS (etape 5.15). Dessiner a chaque image deux copies de la carte,
+  // chacune passee par le filtre qui retire la couleur, puis un voile noir sur toute la carte,
+  // coutait 60 pour cent de l'image sans carte graphique: 160 ms sur 272, et des parties a
+  // une image toutes les deux secondes sur les machines de la CI. La copie sans couleur se
+  // dessine donc une seule fois dans une texture, au premier cercle de vision et a chaque
+  // changement de decor, et l'image ne montre plus que cette texture, masquee.
   const eteint = new Container();
   const fondEteint = new Sprite();
   const dessusEteint = new Sprite();
+  const copieEteinte = new Container();
+  const decorEteint = new Sprite();
+  let decorEteintAJour = false;
   const disqueDeVision = new Graphics();
   const filtreEteint = new ColorMatrixFilter();
   filtreEteint.desaturate();
 
-  // Le filtre se pose sur chaque image, pas sur le conteneur masque: sur le conteneur, il se
-  // bornait au cadre du disque, et le decor restait en couleur au-dela.
+  // Le filtre se pose sur chaque image, pas sur le conteneur: le decor reste sans couleur
+  // jusqu'au bord de la carte.
   fondEteint.filters = [filtreEteint];
   dessusEteint.filters = [filtreEteint];
-  // Un voile noir par-dessus la copie, pour l'assombrir de moitie (VISION_AMONG), davantage
-  // pendant la panne de neons (etape 7.22): son opacite suit la scene.
-  const voile = new Graphics()
-    .rect(0, 0, options.carte.largeur, options.carte.hauteur)
-    .fill({ color: 0x000000 });
-  voile.alpha = VISION_AMONG.voile;
-  eteint.addChild(fondEteint, dessusEteint, voile);
+  copieEteinte.addChild(fondEteint, dessusEteint);
+  // Le voile noir qui assombrissait la copie de moitie (VISION_AMONG), davantage pendant la
+  // panne de neons (etape 7.22), est une teinte de la texture: un noir d'opacite a par-dessus
+  // une couleur, ou cette couleur multipliee par 1 - a, c'est la meme chose.
+  decorEteint.tint = teinteDuVoile(VISION_AMONG.voile);
+  eteint.addChild(decorEteint);
   // Le masque est la carte percee du disque: le decor eteint se montre partout, sauf dedans.
   eteint.mask = disqueDeVision;
   eteint.visible = false;
+
+  /**
+   * Cuit la copie sans couleur du decor dans la texture du decor eteint, a la finesse de l'image
+   * du decor: celle de Tokyo est une fois et demie plus fine que la carte, et la camera d'Among
+   * Ninjas l'agrandit. Retirer la couleur puis assombrir sont lineaires: cuire avant d'agrandir
+   * donne la meme image qu'avant, a l'arrondi pres.
+   */
+  const cuireLeDecorEteint = (): void => {
+    const finesse = Math.min(
+      Math.max(
+        fondEteint.texture.width / options.carte.largeur,
+        dessusEteint.visible ? dessusEteint.texture.width / options.carte.largeur : 1,
+        1,
+      ),
+      2,
+    );
+    const texture = RenderTexture.create({
+      width: options.carte.largeur,
+      height: options.carte.hauteur,
+      resolution: finesse,
+    });
+    application.renderer.render({ container: copieEteinte, target: texture, clear: true });
+
+    const ancienne = decorEteint.texture;
+    decorEteint.texture = texture;
+
+    if (ancienne !== Texture.EMPTY) {
+      ancienne.destroy(true);
+    }
+
+    decorEteintAJour = true;
+  };
   // Les pseudos des joueurs d'Among Ninjas, par-dessus le decor eteint (etape 7.20).
   const libelles = new Container();
   const reperes = new Graphics();
@@ -772,6 +813,9 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
         couche.height = options.carte.hauteur;
         orienterLeDecor(couche, options.carte.largeur, options.modeMiroir);
       }
+
+      // Le decor a change: sa copie eteinte se recuira au prochain cercle de vision.
+      decorEteintAJour = false;
     },
 
     imprimer,
@@ -838,7 +882,11 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       // Les explosions des mines et les impacts de tir passent avec les nuages, par-dessus les
       // personnages.
       dessinerLesDisques(fumees, [...scene.fumees, ...scene.explosions, ...scene.impacts], champ);
-      poserLaVision(eteint, disqueDeVision, voile, scene.vision, options.carte);
+      if (scene.vision !== undefined && !decorEteintAJour) {
+        cuireLeDecorEteint();
+      }
+
+      poserLaVision(eteint, disqueDeVision, decorEteint, scene.vision, options.carte);
       dessinerLesLibelles(libelles, textesDesLibelles, scene.libelles ?? []);
       dessinerLesReperes(reperes, scene.reperes);
       tracerLesTraits(reperes, scene.fleches ?? []);
@@ -850,6 +898,11 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
 
     detruire() {
       texteDuSol?.destroy(true);
+
+      if (decorEteint.texture !== Texture.EMPTY) {
+        decorEteint.texture.destroy(true);
+      }
+
       imprimees.clear();
       application.destroy(true, { children: true });
       spritesEntites.clear();
@@ -868,7 +921,7 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
 function poserLaVision(
   eteint: Container,
   masque: Graphics,
-  voile: Graphics,
+  decorEteint: Sprite,
   vision: VisionScene | undefined,
   carte: DimensionsCarte,
 ): void {
@@ -876,7 +929,7 @@ function poserLaVision(
   masque.clear();
 
   if (vision !== undefined) {
-    voile.alpha = vision.voile;
+    decorEteint.tint = teinteDuVoile(vision.voile);
     // Plus grand que la carte: un disque qui deborde du bord y reste un trou (cadreDuMasque).
     const cadre = cadreDuMasque(carte, vision);
     masque

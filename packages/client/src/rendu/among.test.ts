@@ -8,7 +8,7 @@
 import { CARTES } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
-import { cadreDuMasque } from './among.js';
+import { cadreDuMasque, teinteDuVoile } from './among.js';
 
 const TOKYO = CARTES.map1;
 
@@ -42,5 +42,20 @@ describe('le masque du cercle de vision', () => {
     expect(cadre.y).toBeLessThanOrEqual(0);
     expect(cadre.x + cadre.largeur).toBeGreaterThanOrEqual(TOKYO.largeur);
     expect(cadre.y + cadre.hauteur).toBeGreaterThanOrEqual(TOKYO.hauteur);
+  });
+});
+
+describe('la teinte du decor eteint (etape 5.15)', () => {
+  it('assombrit comme un voile noir de la meme opacite', () => {
+    // Un noir d'opacite a sur une couleur c donne c * (1 - a): la teinte grise 1 - a.
+    expect(teinteDuVoile(0.5)).toBe(0x808080);
+    expect(teinteDuVoile(0)).toBe(0xffffff);
+    expect(teinteDuVoile(1)).toBe(0x000000);
+    expect(teinteDuVoile(0.75)).toBe(0x404040);
+  });
+
+  it('borne une opacite hors de zero a un', () => {
+    expect(teinteDuVoile(-0.2)).toBe(0xffffff);
+    expect(teinteDuVoile(1.4)).toBe(0x000000);
   });
 });
