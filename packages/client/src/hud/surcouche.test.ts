@@ -126,6 +126,34 @@ describe('les cartes des effets', () => {
   });
 });
 
+describe('la couleur au classement', () => {
+  it('ne pose la couleur que sur les lignes qui la donnent', () => {
+    const { hote, monte } = surcouche();
+    const ligneHud = (id: string, couleur: string | undefined) => ({
+      id,
+      pseudo: id,
+      couleur,
+      points: 10,
+      moi: id === 'moi',
+      rang: id === 'moi' ? 1 : 2,
+      doubleur: false,
+    });
+
+    monte.afficher({
+      ...hud([]),
+      classement: [ligneHud('moi', '#0000FF'), ligneHud('bob', undefined)],
+    });
+
+    const lignes = [...hote.querySelectorAll<HTMLElement>('.hud-ligne')];
+
+    expect(lignes.map((ligne) => ligne.style.getPropertyValue('--couleur-joueur'))).toEqual([
+      '#0000FF',
+      '',
+    ]);
+    expect(lignes.map((ligne) => ligne.classList.contains('sans-couleur'))).toEqual([false, true]);
+  });
+});
+
 describe("le badge du x2 de l'Evade (etape 7.9)", () => {
   it('montre le badge sur la ligne de qui le porte, et le cache ailleurs', () => {
     const { hote, monte } = surcouche();

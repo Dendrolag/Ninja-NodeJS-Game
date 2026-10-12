@@ -78,7 +78,7 @@ describe('le classement du HUD en Equipes', () => {
       {
         id: 'equipe-magenta',
         pseudo: 'Équipe Magenta',
-        couleur: MAGENTA,
+        couleur: undefined,
         points: 40,
         moi: false,
         rang: 1,
@@ -94,6 +94,12 @@ describe('le classement du HUD en Equipes', () => {
         doubleur: false,
       },
     ]);
+  });
+
+  it('ne montre que la couleur de notre equipe', () => {
+    const classement = construireHud(etat(CLASSEMENT, 'equipes'), 0).classement;
+
+    expect(classement.map((ligneHud) => ligneHud.couleur)).toEqual([undefined, CYAN]);
   });
 
   it('garde le classement des joueurs dans les autres modes', () => {

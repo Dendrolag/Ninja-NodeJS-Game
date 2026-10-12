@@ -946,7 +946,14 @@ function majClassement(
     (element_.querySelector('.hud-points') as HTMLElement).textContent = String(ligne.points);
     // Le badge du x2 de l'Evade, a cote du nom (etape 7.9).
     (element_.querySelector('.hud-x2') as HTMLElement).hidden = !ligne.doubleur;
-    element_.style.setProperty('--couleur-joueur', ligne.couleur);
+    // Une ligne sans couleur garde la place de son point, vide, pour que les noms restent
+    // alignes.
+    if (ligne.couleur === undefined) {
+      element_.style.removeProperty('--couleur-joueur');
+    } else {
+      element_.style.setProperty('--couleur-joueur', ligne.couleur);
+    }
+    element_.classList.toggle('sans-couleur', ligne.couleur === undefined);
     element_.classList.toggle('moi', ligne.moi);
     // L'ordre du classement change en cours de partie: on l'exprime par l'ordre
     // de mise en page plutot qu'en deplacant des elements dans le document.

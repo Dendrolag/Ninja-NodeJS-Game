@@ -163,6 +163,29 @@ describe('le HUD d une partie Chasse', () => {
     expect(construireHud(revele, 0).radar?.map((point) => point.id)).toEqual(['bob', 'eve', 'ana']);
   });
 
+  it('cache la couleur des proies au classement, a tous, sauf la sienne', () => {
+    const couleurs = (moi: string) =>
+      construireHud(etat(moi), 0).classement.map((ligneHud) => ligneHud.couleur);
+
+    expect(couleurs('bob')).toEqual([COULEUR_DES_TRAQUEURS, undefined, undefined]);
+    expect(couleurs('eve')).toEqual([undefined, '#FF0000', undefined]);
+  });
+
+  it('montre a un traqueur la couleur des autres traqueurs, son equipe', () => {
+    const base = etat('bob');
+    const avecDeuxTraqueurs = {
+      ...base,
+      partie: {
+        ...base.partie!,
+        classement: [...CLASSEMENT, ligne('zoe', COULEUR_DES_TRAQUEURS, 3)],
+      },
+    };
+
+    expect(
+      construireHud(avecDeuxTraqueurs, 0).classement.map((ligneHud) => ligneHud.couleur),
+    ).toEqual([COULEUR_DES_TRAQUEURS, undefined, undefined, COULEUR_DES_TRAQUEURS]);
+  });
+
   it('ne dit rien de la Chasse dans un autre mode', () => {
     expect(construireHud(etat('eve', 'classique'), 0).chasse).toBeUndefined();
   });

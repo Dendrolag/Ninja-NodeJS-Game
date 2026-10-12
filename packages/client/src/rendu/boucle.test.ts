@@ -357,7 +357,7 @@ describe('les sons situes sur la carte (etape 4.11)', () => {
   });
 });
 
-describe('les pas des autres, dans Among Ninjas (etape 7.23)', () => {
+describe('les pas des autres (etape 7.23)', () => {
   const EN_JEU = { phase: 'jeu', restantMs: 0, tachesFaites: 0, tachesTotal: 10 } as const;
 
   /** Un PNJ de la foule, pose a un endroit. */
@@ -436,13 +436,20 @@ describe('les pas des autres, dans Among Ninjas (etape 7.23)', () => {
     expect(sons.autrui).toEqual([]);
   });
 
-  it('se taisent dans les autres modes', () => {
+  it('s entendent aussi dans les autres modes, quand on voit marcher un joueur', () => {
     marcher(
-      (decalage) => [joueur('moi', 900, 300), joueur('autre', 1_000 + decalage, 300)],
+      (decalage) => [
+        joueur('moi', 900, 300),
+        joueur('autre', 1_000 + decalage, 300),
+        pnj('bot-1', 800 + decalage, 300),
+      ],
       undefined,
     );
 
-    expect(sons.autrui).toEqual([]);
+    // Les pas du joueur seul, a droite: le bot, a gauche, reste muet.
+    expect(sons.autrui.length).toBeGreaterThanOrEqual(3);
+    expect(sons.autrui.length).toBeLessThanOrEqual(4);
+    expect(sons.autrui.every((place) => place.cote > 0 && place.volume > 0)).toBe(true);
   });
 });
 

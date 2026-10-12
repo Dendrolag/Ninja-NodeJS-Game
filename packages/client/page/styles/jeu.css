@@ -291,6 +291,11 @@
   box-shadow: 0 0 6px var(--couleur-joueur);
 }
 
+/* La couleur d'un adversaire ne s'affiche pas: elle trahirait son camouflage. */
+.hud-ligne.sans-couleur::before {
+  visibility: hidden;
+}
+
 /*
  * Notre ligne se detache (etape 4.6): cadree, les points en gros, separes du nom par un
  * filet. Sur les ecrans tactiles et etroits, elle reprend des tailles plus petites, plus bas.

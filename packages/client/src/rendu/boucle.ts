@@ -385,10 +385,17 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
       options.sons?.jouerUnPas(maintenant, false);
     }
 
-    // 7 bis. Les pas des autres vivants qu'on voit marcher, dans Among Ninjas (etape 7.23): a
-    //    leur place, a la cadence des notres. Ceux qu'on entend sans les voir viennent du
-    //    serveur (faireEntendre).
-    if (etat.partie?.among?.phase === 'jeu' && lissee !== undefined && monEntite !== undefined) {
+    // 7 bis. Les pas des autres vivants qu'on voit marcher: a leur place, a la cadence des
+    //    notres. Nes dans Among Ninjas (etape 7.23), ils s'entendent dans tous les modes depuis
+    //    le 12 octobre 2026; dans Among Ninjas, seulement pendant la phase de jeu. Ceux qu'on
+    //    entend sans les voir, propres a Among Ninjas, viennent du serveur (faireEntendre).
+    const phaseAmong = etat.partie?.among?.phase;
+
+    if (
+      (phaseAmong === undefined || phaseAmong === 'jeu') &&
+      lissee !== undefined &&
+      monEntite !== undefined
+    ) {
       const pas = pasDesMarcheurs(
         derniersPasVus,
         lissee.entites.map(ninjaAffiche),

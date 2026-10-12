@@ -1,12 +1,14 @@
 /**
- * Les pas des autres, dans Among Ninjas (etape 7.23): ou on les entend, et quand.
+ * Les pas des autres (etape 7.23): ou on les entend, et quand. Nes dans Among Ninjas, les pas
+ * qu'on voit s'entendent dans tous les modes depuis le 12 octobre 2026; ceux qu'on n'entend
+ * que restent propres a Among Ninjas, le seul mode qui cache des joueurs.
  *
  * FONCTIONS PURES, TESTABLES SANS HAUT-PARLEUR, comme espace.ts. Les jouer est le travail
  * de lecteur.ts.
  *
  * DEUX SORTES DE PAS.
  *
- *   - Ceux qu'on n'entend que: le serveur les envoie dans le bloc du mode, en direction
+ *   - Ceux qu'on n'entend que (Among Ninjas): le serveur les envoie dans le bloc du mode, en direction
  *     arrondie et en palier (AmongVu.pas), sans position ni marcheur. Ils se placent au milieu
  *     de leur secteur et de leur palier (ecartDUnPas), une fois par trame.
  *   - Ceux qu'on voit: un vivant affiche qui marche fait ses pas a sa place exacte, a la cadence

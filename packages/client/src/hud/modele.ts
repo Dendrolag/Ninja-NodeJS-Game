@@ -69,7 +69,12 @@ export const SEUIL_FIN_PROCHE_MS = 3_000;
 export interface LigneHud {
   readonly id: string;
   readonly pseudo: string;
-  readonly couleur: Couleur;
+  /**
+   * Sa couleur, seulement sur notre ligne et sur celles de notre equipe. Celle des autres
+   * n'est pas donnee: elle dirait quel ninja chercher sur la carte, et gacherait le
+   * camouflage parmi les PNJ.
+   */
+  readonly couleur: Couleur | undefined;
   readonly points: number;
   /** Cette ligne est la notre: l'affichage la met en avant. */
   readonly moi: boolean;
@@ -455,15 +460,43 @@ function classementHud(
     return classementDesEquipesHud(classement, moi, doubleurs);
   }
 
+  const notre = classement.find((ligne) => ligne.id === moi);
+
   return classement.map((ligne, index) => ({
     id: ligne.id,
     pseudo: ligne.pseudo,
-    couleur: ligne.couleur,
+    couleur: memeEquipe(ligne, notre, mode) ? ligne.couleur : undefined,
     points: ligne.points,
     moi: ligne.id === moi,
     rang: index + 1,
     doubleur: doubleurs.has(ligne.id),
   }));
+}
+
+/**
+ * Cette ligne est la notre, ou celle d'un coequipier: sa couleur peut s'afficher.
+ *
+ * Hors des Equipes, la seule equipe est celle des traqueurs en Chasse, qui portent tous la
+ * meme couleur. Les proies, elles, se cachent chacune pour soi.
+ */
+function memeEquipe(
+  ligne: LigneClassement,
+  notre: LigneClassement | undefined,
+  mode: Mode | undefined,
+): boolean {
+  if (notre === undefined) {
+    return false;
+  }
+
+  if (ligne.id === notre.id) {
+    return true;
+  }
+
+  return (
+    mode === 'chasse' &&
+    campDeCouleur(notre.couleur) === 'traqueurs' &&
+    campDeCouleur(ligne.couleur) === 'traqueurs'
+  );
 }
 
 /** Le classement des equipes, la gagnante d'abord, la notre marquee (etape 7.2). */
@@ -481,7 +514,8 @@ function classementDesEquipesHud(
   return classementDesEquipes(lignes).equipes.map((ligne, index) => ({
     id: `equipe-${ligne.equipe}`,
     pseudo: `Équipe ${NOMS_DES_EQUIPES[ligne.equipe]}`,
-    couleur: COULEURS_DES_EQUIPES[ligne.equipe],
+    // Comme pour les joueurs, seule la couleur de notre equipe s'affiche.
+    couleur: ligne.equipe === notre ? COULEURS_DES_EQUIPES[ligne.equipe] : undefined,
     points: ligne.points,
     moi: ligne.equipe === notre,
     rang: index + 1,

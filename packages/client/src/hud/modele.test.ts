@@ -117,6 +117,20 @@ describe('construireHud', () => {
     expect(hud.classement.map((entree) => entree.moi)).toEqual([false, true]);
   });
 
+  it('ne donne que notre couleur, pas celle des autres joueurs', () => {
+    // La couleur d'un adversaire au classement dirait quel ninja chercher parmi les PNJ.
+    const partie = vue({ classement: [ligne('autre', 12, '#FF0000'), ligne('moi', 7, '#0000FF')] });
+    const hud = construireHud(etatEnJeu(partie), 0);
+
+    expect(hud.classement.map((entree) => entree.couleur)).toEqual([undefined, '#0000FF']);
+  });
+
+  it('ne donne aucune couleur a qui n est pas au classement', () => {
+    const partie = vue({ classement: [ligne('autre', 12)] });
+
+    expect(construireHud(etatEnJeu(partie), 0).classement[0]?.couleur).toBeUndefined();
+  });
+
   it('affiche le score recu, sans le recalculer', () => {
     // Le score est un stock detenu par le moteur. Le HUD le montre; il ne
     // l'additionne pas, ne le retient pas et ne le corrige pas.
