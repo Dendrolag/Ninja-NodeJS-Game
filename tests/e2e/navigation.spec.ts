@@ -136,7 +136,8 @@ test('la page se presente sans le jeu, et sert ce que lisent les moteurs de rech
     'Équipes',
     'Chasse',
     'Massacre',
-    'Among Ninjas',
+    // Le mode encore en essai porte la mention « Beta » (12 octobre 2026).
+    'Among Ninjas Beta',
   ]);
   await sansJavaScript.close();
 

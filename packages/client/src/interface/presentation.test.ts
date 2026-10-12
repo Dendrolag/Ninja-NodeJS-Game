@@ -9,6 +9,7 @@
  * Tactique.
  */
 
+import type { Mode } from '@neon-ninja/shared';
 import { MODES } from '@neon-ninja/shared';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -21,7 +22,7 @@ import type { Application } from './application.js';
 import { monterApplication } from './application.js';
 import { monterAide } from './composants/aide.js';
 import { jeuDEssai, obligatoire } from './essais.js';
-import { NOMS_DES_MODES, TEXTES_DES_MODES } from './modeles/cartes.js';
+import { MODES_EN_BETA, NOMS_DES_MODES, TEXTES_DES_MODES } from './modeles/cartes.js';
 
 let hote: HTMLElement;
 let reseau: ReseauFactice;
@@ -68,14 +69,21 @@ describe('l accueil', () => {
   it('montre une carte par mode, avec son nom et son texte', () => {
     const cartes = [...hote.querySelectorAll('.accueil-modes .carte-mode')];
 
-    expect(cartes.map((carte) => texte(obligatoire(carte, 'h2')))).toEqual(
-      MODES.map((mode) => NOMS_DES_MODES[mode]),
+    expect(cartes.map((carte) => texte(obligatoire(carte, 'h2')))).toEqual(MODES.map(titreAttendu));
+    // Seul Among Ninjas porte la mention « Beta » (12 octobre 2026).
+    expect(cartes.map((carte) => carte.querySelector('.mode-beta') !== null)).toEqual(
+      MODES.map((mode) => mode === 'among'),
     );
     expect(cartes.map((carte) => texte(obligatoire(carte, 'p')))).toEqual(
       MODES.map((mode) => TEXTES_DES_MODES[mode]),
     );
   });
 });
+
+/** Le titre d'une carte de mode: son nom, et la mention « Beta » d'un mode en essai. */
+function titreAttendu(mode: Mode): string {
+  return MODES_EN_BETA.includes(mode) ? `${NOMS_DES_MODES[mode]} Beta` : NOMS_DES_MODES[mode];
+}
 
 describe('la creation', () => {
   it('presente chaque mode avec le meme texte que l accueil', () => {
@@ -94,7 +102,7 @@ describe('l aide', () => {
 
     for (const mode of MODES) {
       const section = obligatoire(aide.racine, `.aide-mode[data-mode="${mode}"]`);
-      expect(texte(obligatoire(section, 'h3'))).toBe(NOMS_DES_MODES[mode]);
+      expect(texte(obligatoire(section, 'h3'))).toBe(titreAttendu(mode));
       expect(texte(obligatoire(section, '.aide-accroche'))).toBe(TEXTES_DES_MODES[mode]);
       expect(section.querySelectorAll('p').length).toBeGreaterThan(1);
     }

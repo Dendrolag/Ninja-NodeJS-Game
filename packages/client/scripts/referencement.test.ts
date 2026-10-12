@@ -17,7 +17,11 @@ import { fileURLToPath } from 'node:url';
 import { MODES } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
-import { NOMS_DES_MODES, TEXTES_DES_MODES } from '../src/interface/modeles/cartes.js';
+import {
+  MODES_EN_BETA,
+  NOMS_DES_MODES,
+  TEXTES_DES_MODES,
+} from '../src/interface/modeles/cartes.js';
 import { ADRESSE_CANONIQUE } from './adresses.ts';
 
 const RACINE_PAQUET = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -142,7 +146,13 @@ describe('la presentation statique', () => {
       (carte) => [texteLu(carte.querySelector('h2')), texteLu(carte.querySelector('p'))],
     );
 
-    expect(modes).toEqual(MODES.map((mode) => [NOMS_DES_MODES[mode], TEXTES_DES_MODES[mode]]));
+    // Un mode en essai porte la mention « Beta », comme sa carte dans le jeu (12 octobre 2026).
+    expect(modes).toEqual(
+      MODES.map((mode) => [
+        MODES_EN_BETA.includes(mode) ? `${NOMS_DES_MODES[mode]} Beta` : NOMS_DES_MODES[mode],
+        TEXTES_DES_MODES[mode],
+      ]),
+    );
   });
 
   it('dit qu il faut JavaScript a qui ne l a pas', () => {

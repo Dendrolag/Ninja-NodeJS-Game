@@ -17,11 +17,12 @@ import type { Mode, Visibilite } from '@neon-ninja/shared';
 
 import type { EtatClient } from '../../etat.js';
 import { monterChampPseudo } from '../composants/champPseudo.js';
+import { nomDuMode } from '../composants/nomDuMode.js';
 import { monterFormulaireReglages } from '../composants/reglages.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import type { Glyphe } from '../icones.js';
 import { GLYPHES_DES_MODES, icone } from '../icones.js';
-import { NOMS_DES_MODES, TEXTES_DES_MODES } from '../modeles/cartes.js';
+import { TEXTES_DES_MODES } from '../modeles/cartes.js';
 import { MODES_PROPOSES, MODE_PAR_DEFAUT, modeleCreation } from '../modeles/creation.js';
 import type { LigneRecapitulatif } from '../modeles/salon.js';
 import type { ContexteEcran, EcranAffiche } from './types.js';
@@ -82,7 +83,7 @@ export function monterCreation(contexte: ContexteEcran): EcranAffiche {
       { classe: 'tuile tuile-choix', attributs: { 'data-mode': valeur } },
       saisie,
       icone(doc, GLYPHES_DES_MODES[valeur], 22),
-      creer(doc, 'strong', { texte: NOMS_DES_MODES[valeur] }),
+      nomDuMode(doc, 'strong', valeur),
       creer(doc, 'span', { texte: TEXTES_DES_MODES[valeur] }),
     );
   });

@@ -3063,7 +3063,7 @@
 
 /* Le role revele a la fin d'une partie Among Ninjas (etape 7.20). */
 .fin-role {
-  margin-left: 8px;
+  margin-left: 4px;
   padding: 1px 8px;
   border: 1px solid var(--cyan);
   border-radius: 8px;
@@ -3076,4 +3076,20 @@
 .fin-role.assassin {
   border-color: var(--rose);
   color: var(--rose);
+}
+
+/* La mention « Beta » d'un mode encore en essai, sur sa carte (12 octobre 2026). */
+.mode-beta {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 2px 6px;
+  border: 1px solid var(--bordure-survol);
+  border-radius: 6px;
+  color: var(--texte-secondaire);
+  font-family: var(--police-donnees);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  vertical-align: middle;
 }

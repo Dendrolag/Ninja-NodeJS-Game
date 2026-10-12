@@ -48,9 +48,10 @@ import {
   adresseDeLIcone,
 } from '../../rendu/apparence.js';
 import { creer } from '../dom.js';
-import { NOMS_DES_MODES, TEXTES_DES_MODES } from '../modeles/cartes.js';
+import { TEXTES_DES_MODES } from '../modeles/cartes.js';
 import type { Fenetre } from './fenetre.js';
 import { monterFenetre } from './fenetre.js';
+import { nomDuMode } from './nomDuMode.js';
 
 /** Un nombre a virgule, a la francaise. */
 function nombreFr(valeur: number): string {
@@ -246,7 +247,7 @@ export function monterAide(doc: Document): Fenetre {
         doc,
         'section',
         { classe: 'aide-section aide-mode', attributs: { 'data-mode': mode } },
-        creer(doc, 'h3', { texte: NOMS_DES_MODES[mode] }),
+        nomDuMode(doc, 'h3', mode),
         creer(doc, 'p', { classe: 'aide-accroche', texte: TEXTES_DES_MODES[mode] }),
         ...REGLES_DES_MODES[mode].map((regle) => creer(doc, 'p', { texte: regle })),
       ),

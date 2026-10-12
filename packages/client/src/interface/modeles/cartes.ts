@@ -74,6 +74,12 @@ export const NOMS_DES_MODES: Readonly<Record<Mode, string>> = {
   among: 'Among Ninjas',
 };
 
+/**
+ * Les modes encore en essai: leur carte porte la mention « Beta » (demande du porteur du projet
+ * du 12 octobre 2026). Leur nom, lui, ne change pas.
+ */
+export const MODES_EN_BETA: readonly Mode[] = ['among'];
+
 /** Le nom de chaque equipe du mode Equipes, tel que le joueur le lit (etape 7.2). */
 export const NOMS_DES_EQUIPES: Readonly<Record<Equipe, string>> = {
   cyan: 'Cyan',

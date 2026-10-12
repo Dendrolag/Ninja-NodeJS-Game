@@ -34,11 +34,12 @@ import { monterCredits } from '../composants/credits.js';
 import { listeDeDefis } from '../composants/defis.js';
 import type { Fenetre } from '../composants/fenetre.js';
 import { monterNouveautes } from '../composants/noteDeVersion.js';
+import { nomDuMode } from '../composants/nomDuMode.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
 import { GLYPHES_DES_MODES, icone } from '../icones.js';
 import { modeleAccueil } from '../modeles/accueil.js';
 import { modeleDesDefis } from '../modeles/defis.js';
-import { NOMS_DES_MODES, TEXTES_DES_MODES } from '../modeles/cartes.js';
+import { TEXTES_DES_MODES } from '../modeles/cartes.js';
 import type { EtatDuLien } from '../modeles/lien.js';
 import type { ContexteEcran, EcranAffiche } from './types.js';
 
@@ -289,7 +290,7 @@ export function monterAccueil(contexte: ContexteEcran): EcranAffiche {
           'li',
           { classe: 'panneau carte-mode' },
           icone(doc, GLYPHES_DES_MODES[mode], 22),
-          creer(doc, 'h2', { texte: NOMS_DES_MODES[mode] }),
+          nomDuMode(doc, 'h2', mode),
           creer(doc, 'p', { texte: TEXTES_DES_MODES[mode] }),
         ),
       ),
