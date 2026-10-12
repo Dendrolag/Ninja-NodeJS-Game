@@ -2,7 +2,7 @@
 
 Date: 12 octobre 2026
 Auteur: session Claude Code
-Statut: partielle. Le code, les tests, la configuration et la documentation sont faits et commités en local; restent les gestes du porteur du projet, la mise en ligne et les essais en production de la définition de terminé.
+Statut: partielle. Code, tests, configuration et documentation faits, mis en ligne le 12 octobre 2026 (`58c74a5`), avec Among Ninjas (7.20 à 7.24); agent Alloy et import Grafana faits par le porteur du projet. Restent les essais en production de la définition de terminé.
 
 ## Objectif de l'étape
 
@@ -32,9 +32,15 @@ Voir en direct, dans un tableau Grafana Cloud gratuit, si les parties en product
 
 Douze écarts, consignés dans la section « Réconciliation » de la fiche. Les principaux: `PORT_DES_METRIQUES` posée par emplacement par `neon-ninja.sh` (deux conteneurs sur le réseau de la machine), tableau et alertes en TypeScript, bulletin en tableau de nombres, rien avant l'écran de préparation, deux alertes de version et deux de mémoire, Render vérifié par le workflow une fois par jour, la saccade du serveur provoquée par le test d'intégration et non en production.
 
+## La première CI d'Among Ninjas, et ce qu'elle a corrigé
+
+La poussée de `master` (43 commits, accord du porteur du projet) a d'abord échoué: le scénario Among Ninjas, qui n'avait jamais tourné en CI, ne s'arrêtait jamais à portée d'une station. La trace de la CI montrait chaque touche à deux secondes, et la page à une image par seconde, sans carte graphique. Rien n'était parti en ligne. Correctifs, commit `f120197`: la copie éteinte du cercle de vision se cuit une fois au lieu d'être filtrée à chaque image, la mini-carte n'écrit que ce qui change (272 ms par image, puis 165, en dessin logiciel; section 34.3 des mesures), et le scénario ouvre ses pages en 1000 sur 560. Deux tests d'allocation de cette étape, sensibles au bruit de la suite complète, ont été affermis (`b3a7f67`). La seconde CI est verte, mise en ligne comprise, Render au même commit.
+
+Dans la même poussée, à la demande du porteur du projet: trois sons d'Among Ninjas (`58c74a5`, journal de conception du 12 octobre 2026), le gong des réunions, le son de la proie tuée, et l'alarme qui tourne pendant toute la surchauffe.
+
 ## Problèmes connus et dette
 
-- **Rien n'est poussé.** `master` local porte les étapes 7.20 à 7.24 (Among Ninjas), qui attendent l'accord du porteur du projet pour partir en ligne, puis cette étape. Pousser met tout en ligne. Voir « Prochaine action exacte ».
+- **L'alarme de la surchauffe est au volume des boucles de bonus** (un cinquième des effets): à juger par le porteur du projet en jouant.
 - **La configuration d'Alloy n'a pas été validée par Alloy lui-même**: aucun Alloy sur le poste. L'installation la relit; une erreur se lit dans `sudo journalctl -u alloy -n 50`.
 - **Les seuils des alertes sont des points de départ**, à régler sur une semaine de production.
 - **Les requêtes de disponibilité** lisent `probe_all_success_sum` et `probe_all_success_count` des vérifications de Grafana: si la pile les nomme autrement, l'alerte reste muette (« OK » sans données). À vérifier dans Explore une fois les vérifications posées.
@@ -69,11 +75,11 @@ Dans l'ordre, une fois le compte Grafana Cloud créé (guide donné dans la conv
 
 ## État de la CI et de master
 
-Commit local de l'étape, non poussé, comme les étapes 7.20 à 7.24 qui le précèdent: la CI n'a pas tourné. Tout ce qu'elle joue l'a été en local (« Tests »).
+`master` poussé jusqu'à `58c74a5`, CI verte (exécution 38264706970), mis en ligne sur Oracle, Render au même commit, page publique en service.
 
 ## Prochaine action exacte
 
-Demander au porteur du projet s'il accepte la mise en ligne de `master` (Among Ninjas, étapes 7.20 à 7.24, et cette étape), puis pousser et suivre la CI jusqu'à la mise en ligne; ensuite, ses gestes faits, vérifier dans Grafana que le tableau montre une partie jouée, relever les séries actives et l'agent sur 24 heures, et compléter la section 34.3 des mesures.
+Le porteur du projet joue une partie en production, sur ordinateur et sur téléphone; la session suivante vérifie dans Grafana que le tableau la montre (verdict, battement et ses phases, joueurs chez eux, ligne de la partie), que `neon_demarrage_secondes` porte la version `58c74a5` (preuve que la route des métriques est ouverte), relève les séries actives et l'agent sur 24 heures (section 34.4 des mesures), fait déclencher chaque alerte une fois, provoque une saccade réseau et une saccade page, puis clôt l'étape.
 
 ## Étape suivante
 
