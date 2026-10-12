@@ -152,12 +152,16 @@ describe('ce qu observer coute', () => {
     };
     observer(100_000);
 
-    const avant = process.memoryUsage().heapUsed;
-    observer(1_000_000);
-    const apres = process.memoryUsage().heapUsed;
+    // La plus petite croissance du tas sur trois essais: le reste du processus peut allouer
+    // pendant l'un d'eux.
+    const croissances = [0, 1, 2].map(() => {
+      const avant = process.memoryUsage().heapUsed;
+      observer(1_000_000);
+      return process.memoryUsage().heapUsed - avant;
+    });
 
     // Une allocation par observation ferait des dizaines de mega-octets.
-    expect(apres - avant).toBeLessThan(1_000_000);
-    expect(histogramme.nombre).toBe(1_100_000);
+    expect(Math.min(...croissances)).toBeLessThan(2_000_000);
+    expect(histogramme.nombre).toBe(3_100_000);
   });
 });

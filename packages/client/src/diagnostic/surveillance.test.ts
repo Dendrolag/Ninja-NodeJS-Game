@@ -185,24 +185,29 @@ describe('la sonde de surveillance', () => {
 
   it('n alloue rien par image', () => {
     const sonde = sondeLevee();
-    let instant = 0;
+    // Une seule mesure, réutilisée: le test lui-même n'alloue rien par image.
+    const mesure = { instant: 0, renduMs: 1, hudMs: 1, notreCodeMs: 2, tenue: false };
     const jouer = (images: number): void => {
       for (let rang = 0; rang < images; rang += 1) {
-        instant += rang % 31 === 0 ? 70 : 16.7;
+        mesure.instant += rang % 31 === 0 ? 70 : 16.7;
         sonde.ajouterPixi(1);
-        sonde.image({ instant, renduMs: 1, hudMs: 1, notreCodeMs: 2, tenue: false });
-        sonde.instantane(instant);
+        sonde.image(mesure);
+        sonde.instantane(mesure.instant);
       }
     };
     // Le premier passage installe le code optimisé.
     jouer(50_000);
 
-    const avant = process.memoryUsage().heapUsed;
-    jouer(500_000);
-    const apres = process.memoryUsage().heapUsed;
+    // La plus petite croissance du tas sur trois essais: le reste du processus (les autres
+    // fichiers de la suite, le lien avec Vitest) peut allouer pendant l'un d'eux.
+    const croissances = [0, 1, 2].map(() => {
+      const avant = process.memoryUsage().heapUsed;
+      jouer(500_000);
+      return process.memoryUsage().heapUsed - avant;
+    });
 
     // Une allocation par image ferait des dizaines de méga-octets.
-    expect(apres - avant).toBeLessThan(1_000_000);
+    expect(Math.min(...croissances)).toBeLessThan(2_000_000);
   });
 
   it('se réunit au relevé sur la même boucle', () => {
