@@ -482,7 +482,7 @@ function rendu(application: Application): [string, string][] {
 }
 
 /** Le nombre de personnages affichés dans ce calque. */
-function compterLesVisibles(calque: Container | null): number {
+export function compterLesVisibles(calque: Container | null): number {
   if (calque === null || calque.destroyed) {
     return 0;
   }

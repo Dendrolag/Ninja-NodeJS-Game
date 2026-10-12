@@ -444,6 +444,34 @@ export type { Repartition, ResumeDuBattement } from './sante.js';
 export { lireLeResumeDuBattement } from './sante.js';
 
 export type {
+  BulletinDePage,
+  DescriptionDeLAppareil,
+  GenreDAppareil,
+  MoteurDeRendu,
+  Navigateur,
+} from './surveillance.js';
+export {
+  ALLERS_RETOURS_PAR_BULLETIN,
+  APPAREILS,
+  CASES_ALLER_RETOUR_MS,
+  CASES_DUREE_D_IMAGE_MS,
+  CASES_ECART_INSTANTANES_MS,
+  ECART_MINIMAL_DES_BULLETINS_MS,
+  INTERVALLE_DE_LA_SONDE_MS,
+  INTERVALLE_DU_BULLETIN_MS,
+  MOTEURS_DE_RENDU,
+  NAVIGATEURS,
+  SEUIL_IMAGE_LENTE_MS,
+  SEUIL_IMAGE_TRES_LENTE_MS,
+  SEUIL_INSTANTANE_EN_RETARD_MS,
+  SEUIL_INSTANTANE_TRES_EN_RETARD_MS,
+  TAILLE_MAXIMALE_DU_BULLETIN,
+  coderLeBulletin,
+  lireLeBulletin,
+  validerLAppareil,
+} from './surveillance.js';
+
+export type {
   AmiDansLaPartie,
   DefinitionDeSucces,
   FaitDePartie,

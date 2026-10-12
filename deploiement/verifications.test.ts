@@ -62,6 +62,7 @@ describe('fichiersQuiChangentLeJeu', () => {
         '.claude/launch.json',
         'packages/client/src/rendu/scene.test.ts',
         'deploiement/verifications.test.ts',
+        'deploiement/grafana/tableau.ts',
       ]),
     ).toEqual([]);
   });

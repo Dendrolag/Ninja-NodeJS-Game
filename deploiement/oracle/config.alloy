@@ -1,0 +1,151 @@
+// L'agent Grafana Alloy de la machine Oracle (etape 5.15), installe par installer.sh en
+// /etc/alloy/config.alloy.
+//
+// IL LIT, IL N'EST PAS LU. Toutes les quinze secondes, il lit les metriques du serveur de
+// jeu sur sa route locale; toutes les minutes, celles de la machine et les siennes. Il suit
+// le journal des conteneurs du jeu. Il envoie le tout a Grafana Cloud. Le serveur de jeu,
+// lui, n'envoie rien: si l'agent ou Grafana tombent, le jeu ne le sait pas.
+//
+// BLEU ET VERT. Deux serveurs se succedent a chaque mise en ligne, chacun sur son port
+// (neon-ninja.sh): la route des metriques de l'emplacement bleu est sur 3101, celle du vert
+// sur 3102. L'agent lit les deux, et l'emplacement devient une etiquette: les deux ne se
+// melent pas pendant la bascule. Celui qui ne tourne pas ne repond pas, ce qui est normal.
+//
+// LES SECRETS NE SONT PAS ICI. Les adresses de la pile Grafana Cloud et le jeton d'ecriture
+// sont dans /etc/neon-ninja/alloy, lu par systemd au demarrage du service
+// (alloy-neon-ninja.conf), jamais dans le depot.
+
+// ---------------------------------------------------------------------------
+// Les metriques
+// ---------------------------------------------------------------------------
+
+prometheus.scrape "jeu" {
+  targets = [
+    {"__address__" = "127.0.0.1:3101", "emplacement" = "bleu"},
+    {"__address__" = "127.0.0.1:3102", "emplacement" = "vert"},
+  ]
+  job_name        = "neon-ninja"
+  metrics_path    = "/metriques"
+  scrape_interval = "15s"
+  scrape_timeout  = "5s"
+  forward_to      = [prometheus.remote_write.grafana.receiver]
+}
+
+// La machine: processeur (dont le vol par l'hote, « steal »), memoire, charge, reseau,
+// disque, et la pression des ressources. Rien d'autre, pour garder peu de series.
+prometheus.exporter.unix "machine" {
+  set_collectors = ["cpu", "meminfo", "loadavg", "netdev", "filesystem", "pressure", "uname"]
+
+  filesystem {
+    mount_points_exclude = "^/(dev|proc|run|sys|snap|boot/efi|var/lib/docker/.+)($|/)"
+  }
+
+  netdev {
+    device_include = "^(ens|enp|eth).*"
+  }
+}
+
+prometheus.scrape "machine" {
+  targets         = prometheus.exporter.unix.machine.targets
+  job_name        = "machine"
+  scrape_interval = "60s"
+  forward_to      = [prometheus.remote_write.grafana.receiver]
+}
+
+// L'agent lui-meme: son processeur et sa memoire, pour verifier qu'il tient son budget
+// (moins de 5 pour cent d'un coeur, moins de 300 Mo).
+prometheus.exporter.self "agent" { }
+
+prometheus.scrape "agent" {
+  targets         = prometheus.exporter.self.agent.targets
+  job_name        = "alloy"
+  scrape_interval = "60s"
+  forward_to      = [prometheus.relabel.agent.receiver]
+}
+
+prometheus.relabel "agent" {
+  forward_to = [prometheus.remote_write.grafana.receiver]
+
+  rule {
+    source_labels = ["__name__"]
+    regex         = "alloy_resources_.*|alloy_build_info"
+    action        = "keep"
+  }
+}
+
+prometheus.remote_write "grafana" {
+  endpoint {
+    url = sys.env("GRAFANA_PROMETHEUS_URL")
+
+    basic_auth {
+      username = sys.env("GRAFANA_PROMETHEUS_UTILISATEUR")
+      password = sys.env("GRAFANA_JETON")
+    }
+  }
+
+  external_labels = {
+    machine = "oracle",
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Le journal
+// ---------------------------------------------------------------------------
+
+// Les conteneurs du jeu, neon-ninja-bleu et neon-ninja-vert, par l'API de Docker: leurs
+// journaux sont gardes par le pilote « local », que seule l'API sait lire.
+discovery.docker "jeu" {
+  host = "unix:///var/run/docker.sock"
+
+  filter {
+    name   = "name"
+    values = ["neon-ninja-"]
+  }
+}
+
+discovery.relabel "jeu" {
+  targets = discovery.docker.jeu.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/neon-ninja-(bleu|vert)"
+    target_label  = "emplacement"
+  }
+}
+
+loki.source.docker "jeu" {
+  host             = "unix:///var/run/docker.sock"
+  targets          = discovery.relabel.jeu.output
+  labels           = {job = "neon-ninja"}
+  refresh_interval = "10s"
+  forward_to       = [loki.process.jeu.receiver]
+}
+
+// Une ligne JSON du serveur (un episode, la ligne d'une partie) gagne deux etiquettes, sa
+// nature et son origine: deux listes fermees. Tout le reste se lit dans la ligne elle-meme.
+loki.process "jeu" {
+  forward_to = [loki.write.grafana.receiver]
+
+  stage.json {
+    expressions = {type = "type", origine = "origine"}
+  }
+
+  stage.labels {
+    values = {type = "", origine = ""}
+  }
+}
+
+loki.write "grafana" {
+  endpoint {
+    url = sys.env("GRAFANA_LOKI_URL")
+
+    basic_auth {
+      username = sys.env("GRAFANA_LOKI_UTILISATEUR")
+      password = sys.env("GRAFANA_JETON")
+    }
+  }
+
+  external_labels = {
+    machine = "oracle",
+  }
+}

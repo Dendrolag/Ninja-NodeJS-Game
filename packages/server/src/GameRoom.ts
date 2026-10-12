@@ -246,6 +246,11 @@ export interface OptionsGameRoom {
    */
   readonly chronometre?: ChronometreDuBattement;
   /**
+   * Qui observe chaque battement pour la surveillance de la production (etape 5.15): son
+   * ecart, sa duree et celle du moteur. Sans lui, la boucle ne lit aucune horloge de plus.
+   */
+  readonly observateur?: ObservateurDuBattement;
+  /**
    * Comment tirer la graine du decor, a chaque lancement (etape 8.9). Un tirage au hasard
    * par defaut; les tests fournissent le leur.
    */
@@ -263,6 +268,27 @@ export interface OptionsGameRoom {
   readonly surBattement?: (room: GameRoom) => void;
   /** Appele une fois, au battement ou la partie se termine. */
   readonly surFinDePartie?: (room: GameRoom) => void;
+}
+
+/**
+ * Ce qui observe chaque battement d'une partie, pour la surveillance de la production
+ * (etape 5.15). Des nombres, et pas un objet: le battement n'alloue rien pour elle.
+ */
+export interface ObservateurDuBattement {
+  /**
+   * @param room La partie qui vient de battre.
+   * @param instant L'instant ou le battement a commence, sur l'horloge du serveur.
+   * @param ecartMs L'ecart reel depuis le battement precedent de la partie.
+   * @param dureeMs Tout le battement: le moteur, puis la diffusion.
+   * @param moteurMs Le moteur seul, et le releve des exploits.
+   */
+  battement(
+    room: GameRoom,
+    instant: number,
+    ecartMs: number,
+    dureeMs: number,
+    moteurMs: number,
+  ): void;
 }
 
 /** Une partie en cours ou en attente, avec son salon et sa boucle. */
@@ -285,6 +311,10 @@ export class GameRoom {
   private readonly horloge: Horloge;
   private readonly cadenceMs: number;
   private readonly chronometre: ChronometreDuBattement | undefined;
+  private readonly observateur: ObservateurDuBattement | undefined;
+
+  /** Le temps du moteur au dernier battement, en millisecondes, lu par l'observateur. */
+  private dureeDuMoteurMs = 0;
   private readonly tirerGraineDuDecor: () => number;
   private readonly surBattement: ((room: GameRoom) => void) | undefined;
   private readonly surFinDePartie: ((room: GameRoom) => void) | undefined;
@@ -452,6 +482,7 @@ export class GameRoom {
     this.horloge = options.horloge ?? horlogeSysteme;
     this.cadenceMs = options.cadenceMs ?? CADENCE_BATTEMENT_MS;
     this.chronometre = options.chronometre;
+    this.observateur = options.observateur;
     this.tirerGraineDuDecor = options.tirerGraineDuDecor ?? graineDuDecorAuHasard;
     this.surBattement = options.surBattement;
     this.surFinDePartie = options.surFinDePartie;
@@ -1147,6 +1178,7 @@ export class GameRoom {
       );
     }
 
+    const avantLeMoteur = this.observateur === undefined ? 0 : this.horloge.maintenant();
     this.partie = tick(this.partie, this.entreesDuBattement(), dtMs);
     this.tirsDemandes.clear();
     this.pochesDemandees.clear();
@@ -1157,6 +1189,10 @@ export class GameRoom {
     this.sabotagesDemandes.clear();
     this.maledictionsDemandees.clear();
     this.releve = releverLeBattement(this.releve, this.partie, this.cleDuJoueur);
+
+    if (this.observateur !== undefined) {
+      this.dureeDuMoteurMs = this.horloge.maintenant() - avantLeMoteur;
+    }
 
     // Prevenir AVANT de constater la fin: le dernier battement d'une partie est
     // un battement comme les autres, et ce qui s'y est passe doit partir comme le
@@ -1501,7 +1537,9 @@ export class GameRoom {
       this.avancer(ecoule);
 
       // L'ecart reel, non borne, et tout le battement, envoi compris (etape 8.6).
-      this.chronometre?.enregistrer(maintenant, ecart, this.horloge.maintenant() - maintenant);
+      const duree = this.horloge.maintenant() - maintenant;
+      this.chronometre?.enregistrer(maintenant, ecart, duree);
+      this.observateur?.battement(this, maintenant, ecart, duree, this.dureeDuMoteurMs);
     }, this.cadenceMs);
   }
 }

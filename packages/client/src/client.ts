@@ -27,9 +27,11 @@
 
 import type {
   AuthentificationReseau,
+  BulletinDePage,
   ConfigurationPartie,
   DemandeRejoindre,
   DemandeSabotage,
+  DescriptionDeLAppareil,
   Equipe,
   InfosSalon,
   IntentionDeplacement,
@@ -38,6 +40,7 @@ import type {
   ReglagesPartiels,
   ResultatValidation,
 } from '@neon-ninja/shared';
+import { coderLeBulletin } from '@neon-ninja/shared';
 
 import type { ApiComptes } from './comptes/api.js';
 import type { CoffreDeJeton } from './comptes/coffre.js';
@@ -152,6 +155,18 @@ export interface Client extends CommandesDeSession {
   tenirLAction(tenue: boolean): void;
   /** Dit au serveur que la carte est chargee: la revelation d'Among Ninjas l'attend (7.20). */
   signalerLeChargement(): void;
+  /**
+   * Envoie le bulletin de fluidite de la page (etape 5.15), code pour le fil. Sans lien, il est
+   * perdu, comme toute commande: le suivant dira la suite.
+   */
+  envoyerUnBulletin(bulletin: BulletinDePage): void;
+  /** Dit au serveur l'appareil de la page (etape 5.15), une fois par partie. */
+  decrireLAppareil(description: DescriptionDeLAppareil): void;
+  /**
+   * Mesure l'aller et retour jusqu'au serveur (etape 5.15): le rappel est appele a l'accuse,
+   * et jamais si le lien tombe entre-temps.
+   */
+  sonder(surAccuse: () => void): void;
   /** Vote pendant une reunion d'Among Ninjas (etape 7.20): un joueur, ou null pour passer. */
   voter(cible: string | null): void;
   /**
@@ -768,6 +783,18 @@ export function creerClient(options: OptionsClient): Client {
 
     signalerLeChargement: () => {
       reseau.emettre('carteChargee');
+    },
+
+    envoyerUnBulletin: (bulletin) => {
+      reseau.emettre('bulletin', coderLeBulletin(bulletin));
+    },
+
+    decrireLAppareil: (description) => {
+      reseau.emettre('appareil', description);
+    },
+
+    sonder: (surAccuse) => {
+      reseau.emettre('sonde', surAccuse);
     },
 
     voter: (cible) => {

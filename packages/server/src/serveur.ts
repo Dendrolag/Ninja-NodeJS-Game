@@ -31,6 +31,9 @@ import type { Horloge } from './horloge.js';
 import { RoomManager } from './RoomManager.js';
 import type { DonneesDeConnexion, ServeurTypee } from './ServeurSocket.js';
 import { ServeurSocket } from './ServeurSocket.js';
+import type { ServeurDesMetriques } from './surveillance/routeDesMetriques.js';
+import { ouvrirLaRouteDesMetriques } from './surveillance/routeDesMetriques.js';
+import type { SurveillanceDuJeu } from './surveillance/surveillanceDuJeu.js';
 import type { SourceDeTerrain } from './terrain.js';
 
 /** Port par defaut du serveur de jeu. */
@@ -130,6 +133,17 @@ export interface OptionsServeur {
    * tirage d'Among Ninjas suit la graine et l'ordre d'arrivee des joueurs.
    */
   readonly genererGraine?: () => number;
+  /**
+   * La surveillance de la production (etape 5.15). Absente par defaut: rien n'est mesure de
+   * plus, et aucun port de metriques n'est ouvert. principal.ts la cree quand
+   * PORT_DES_METRIQUES est pose.
+   */
+  readonly surveillance?: SurveillanceDuJeu;
+  /**
+   * Le port de la route /metriques, sur 127.0.0.1 seulement (etape 5.15). Lu seulement avec
+   * la surveillance. Zero laisse le systeme choisir, pour les tests.
+   */
+  readonly portDesMetriques?: number;
 }
 
 /** Un serveur monte, pret a ecouter. */
@@ -140,6 +154,8 @@ export interface ServeurMonte {
   readonly io: ServeurTypee;
   /** La couche jeu: ses parties, ses connexions. */
   readonly jeu: ServeurSocket;
+  /** La route des metriques, quand elle est ouverte (etape 5.15). */
+  readonly metriques?: ServeurDesMetriques;
   /**
    * Arrete tout: les parties, puis les enregistrements de fin de partie en cours,
    * Socket.IO, et le serveur HTTP.
@@ -217,12 +233,14 @@ export function creerServeur(options: OptionsServeur = {}): ServeurMonte {
       : {
           rooms: new RoomManager({
             ...(options.horloge === undefined ? {} : { horloge: options.horloge }),
+            ...(options.surveillance === undefined ? {} : { observateur: options.surveillance }),
             genererGraine: options.genererGraine,
           }),
         }),
     ...(options.terrains === undefined ? {} : { terrains: options.terrains }),
     ...(options.comptes === undefined ? {} : { comptes: options.comptes }),
     ...(options.version === undefined ? {} : { version: options.version }),
+    ...(options.surveillance === undefined ? {} : { surveillance: options.surveillance }),
   });
 
   return {
@@ -230,6 +248,7 @@ export function creerServeur(options: OptionsServeur = {}): ServeurMonte {
     io,
     jeu,
     fermer: async () => {
+      options.surveillance?.arreter();
       jeu.fermer();
       // Plus aucune partie ne peut se terminer; celles qui viennent de le faire
       // finissent d'ecrire leurs resultats avant que la base ne soit refermee.
@@ -299,5 +318,21 @@ export async function demarrerServeur(
     });
   });
 
-  return serveur;
+  const surveillance = options.surveillance;
+
+  if (surveillance === undefined || options.portDesMetriques === undefined) {
+    return serveur;
+  }
+
+  // La route des metriques n'ecoute que l'interface locale, sur son propre port (etape 5.15).
+  const metriques = await ouvrirLaRouteDesMetriques(options.portDesMetriques, surveillance);
+  surveillance.demarrer();
+
+  return {
+    ...serveur,
+    metriques,
+    fermer: async () => {
+      await Promise.all([serveur.fermer(), metriques.fermer()]);
+    },
+  };
 }

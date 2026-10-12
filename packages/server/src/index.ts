@@ -143,6 +143,12 @@ export { PORT_PAR_DEFAUT, creerServeur, demarrerServeur } from './serveur.js';
 
 export type { ActiviteDuServeur, DossiersServis, ReponseDeSante } from './fichiers.js';
 export { ChronometreDuBattement } from './chronometreDuBattement.js';
+export type { ObservateurDuBattement } from './GameRoom.js';
+export type { Journal, JournalEnMemoire } from './surveillance/journal.js';
+export { creerJournalEnMemoire } from './surveillance/journal.js';
+export type { ServeurDesMetriques } from './surveillance/routeDesMetriques.js';
+export type { OptionsSurveillance } from './surveillance/surveillanceDuJeu.js';
+export { SurveillanceDuJeu } from './surveillance/surveillanceDuJeu.js';
 export { MESSAGE_DE_SANTE, POLITIQUE_DE_CONTENU, applicationWeb } from './fichiers.js';
 
 export type { BaseDeDonnees, BaseOuverte, OptionsBase } from './base/connexion.js';

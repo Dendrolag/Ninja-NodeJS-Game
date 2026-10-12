@@ -87,6 +87,7 @@ import type { TrameDEtat } from './flux.js';
 import type { IdentifiantPalier } from './progression.js';
 import type { ReglagesPartie, ReglagesPartiels } from './reglages.js';
 import type { StatistiquesDUnJoueur } from './statistiquesDeFin.js';
+import type { DescriptionDeLAppareil } from './surveillance.js';
 import type { IdentifiantSucces, ProgressionDUnSucces } from './succes.js';
 import type { ErreurValidation, ResultatValidation } from './validation.js';
 
@@ -1285,6 +1286,25 @@ export interface EvenementsClientVersServeur {
     demande: DemandeInvitation,
     accuse: (reponse: ResultatValidation<InvitationEnvoyee>) => void,
   ) => void;
+
+  /**
+   * Le bulletin de fluidite de la page (etape 5.15): toutes les dix secondes pendant une
+   * partie, ce que le joueur a vecu, code en tableau de nombres (surveillance.ts).
+   *
+   * UNE EXCEPTION ASSUMEE A LA REGLE DE CETTE LISTE: ce n'est pas une intention, mais il ne
+   * change rien au jeu. Le serveur le compte et l'ecrit dans son journal, sans en tirer
+   * aucune decision, et ignore celui qui est mal forme, trop frequent ou trop gros.
+   */
+  bulletin: (bulletin: readonly number[]) => void;
+
+  /** Ce que la page dit de l'appareil (etape 5.15), une fois par partie. Ne change rien au jeu. */
+  appareil: (description: DescriptionDeLAppareil) => void;
+
+  /**
+   * Mesurer l'aller et retour jusqu'au serveur (etape 5.15), toutes les cinq secondes pendant
+   * une partie: le serveur accuse reception aussitot, sans rien dire.
+   */
+  sonde: (accuse: () => void) => void;
 }
 
 /**

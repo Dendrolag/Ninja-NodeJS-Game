@@ -244,4 +244,17 @@ Posées par la première version de cette fiche. **Réponse: Grafana Cloud, pour
 
 ## Réconciliation
 
-À remplir par la session de l'étape.
+Écarts au plan constatés en exécutant, le 12 octobre 2026.
+
+1. **`PORT_DES_METRIQUES` est posée par `neon-ninja.sh`, pas dans `/etc/neon-ninja/environnement`.** Les deux emplacements partagent le réseau de la machine, et tournent ensemble pendant une bascule: un même port les ferait se heurter. Chaque emplacement prend le sien, cent ports après celui du jeu (3101 pour le bleu, 3102 pour le vert), et l'agent lit les deux, l'emplacement en étiquette. Un geste de moins pour le porteur du projet.
+2. **Le tableau et les alertes sont décrits en TypeScript** (`deploiement/grafana/tableau.ts`, `alertes.ts`, `requetes.ts`), et non en JSON brut: ils partagent les seuils et les formules, et un test vérifie qu'ils ne lisent que des métriques que le serveur écrit. `importer.ts` les envoie à Grafana, sans effet de bord à la relance.
+3. **Le bulletin voyage en tableau de nombres**, une centaine d'octets, et non en objet JSON, qui triplerait sa taille. L'appareil se décrit à part, au début de la partie puis une fois par minute: une page revenue après une coupure ouvre une nouvelle connexion, que le serveur ne connaît pas encore.
+4. **Rien ne se compte avant le lever de l'écran de préparation.** Les premières images d'une partie préparent le décor et rament toujours (recette de l'étape 5.4): elles auraient fait un épisode à chaque lancement.
+5. **La version est une étiquette de toutes les séries**, et non une série à part: constante pour un processus, elle ne multiplie rien, et chaque mise en ligne se lit sur chaque courbe. Le journal la porte aussi, ligne par ligne.
+6. **La durée du battement porte le mode, la carte et une tranche de charge** (0-50, 51-150, 151-300, 301-600, plus de 600 PNJ). Ses séries naissent à la première rencontre, au premier battement d'une partie puis toutes les dix secondes, jamais à chaque battement.
+7. **« Le réseau hoquette chez au moins deux joueurs » est approché**: aucune métrique ne porte le joueur (décision 5 de la fiche). L'alerte part sur la part de tous les instantanés en retard, serveur à l'heure, avec au moins deux joueurs en partie; le joueur et son appareil sont dans les épisodes et la ligne de chaque partie.
+8. **« Une version a dégradé la fluidité » fait deux alertes**, la page et le battement, et compare la première heure d'une version aux sept jours précédents: une requête ne sait pas désigner « la version précédente ». La mémoire aussi en fait deux, haute et en hausse.
+9. **Render est vérifié par le workflow « Production a jour », une fois par jour**, et non par une vérification de Grafana: le workflow lit sa version, donc vérifie à la fois qu'il répond et qu'il est à jour, sans entamer les 100 000 vérifications gratuites du mois. Les deux vérifications de Grafana, production et page, partent d'une seule sonde, Francfort: deux sondes dépasseraient ce plafond.
+10. **La saccade du serveur ne se provoque pas en production**: rien dans le jeu ne ralentit le battement à dessein, et en ajouter un serait une porte de plus. Le test d'intégration `ServeurSocket.surveillance.test.ts` force un battement lent et en lit l'épisode; le réseau et la page se provoquent dans les outils du navigateur.
+11. **`deploiement/grafana/` ne déclenche pas de mise en ligne** (`verifications.ts`): le serveur ne le lit pas, et le réimporter suffit.
+12. **Le harnais de charge gagne `--surveillance`**: le serveur surveillé comme en production, ses clients qui envoient leurs bulletins, et la route `/metriques` lue toutes les quinze secondes pendant la mesure.

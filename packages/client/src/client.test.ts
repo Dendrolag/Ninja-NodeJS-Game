@@ -13,7 +13,7 @@
  */
 
 import type { InfosSalon, InstantanePartie, ResultatValidation } from '@neon-ninja/shared';
-import { encoderImage } from '@neon-ninja/shared';
+import { coderLeBulletin, encoderImage, lireLeBulletin } from '@neon-ninja/shared';
 import { REGLAGES_PAR_DEFAUT } from '@neon-ninja/shared';
 import { beforeEach, describe, expect, it } from 'vitest';
 
@@ -215,6 +215,54 @@ describe('les commandes du joueur', () => {
 
     expect(client.etat.ecran).toBe('accueil');
     expect(client.etat.salon).toBeUndefined();
+  });
+});
+
+describe('la surveillance de la production (etape 5.15)', () => {
+  it('envoie le bulletin code pour le fil, l appareil, et la sonde avec son accuse', () => {
+    reseau.simulerConnexion();
+    const bulletin = {
+      images: {
+        cases: [0, 10, 0, 0, 0, 0, 0, 0],
+        sommeMs: 167,
+        lentes: 0,
+        tresLentes: 0,
+        cachees: 0,
+        tenues: 0,
+      },
+      lentes: { notreCodeMs: 0, pixiMs: 0, resteMs: 0 },
+      pire: { dureeMs: 17, notreCodeMs: 1, pixiMs: 1 },
+      instantanes: { cases: [0, 3, 0, 0, 0, 0, 0, 0], sommeMs: 150, enRetard: 0, ecartMaxMs: 51 },
+      allersRetoursMs: [33],
+      entites: 12,
+      son: false,
+      erreurs: { script: 0, promesse: 0 },
+    };
+    const appareil = {
+      appareil: 'ordinateur',
+      navigateur: 'chrome',
+      moteur: 'webgl',
+      largeur: 1920,
+      hauteur: 1080,
+      densite: 1,
+    } as const;
+    let accuses = 0;
+
+    client.envoyerUnBulletin(bulletin);
+    client.decrireLAppareil(appareil);
+    client.sonder(() => {
+      accuses += 1;
+    });
+
+    const code = reseau.dernier('bulletin')?.[0];
+    expect(code).toEqual(coderLeBulletin(bulletin));
+    expect(lireLeBulletin(code).valide).toBe(true);
+    expect(reseau.dernier('appareil')?.[0]).toEqual(appareil);
+
+    const accuse = reseau.dernier('sonde')?.[0];
+    expect(typeof accuse).toBe('function');
+    (accuse as () => void)();
+    expect(accuses).toBe(1);
   });
 });
 

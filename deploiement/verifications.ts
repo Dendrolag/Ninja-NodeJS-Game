@@ -50,8 +50,17 @@ export function versionEnLigne(corps: unknown): string | undefined {
   return typeof version === 'string' && version !== '' ? version : undefined;
 }
 
-/** Les dossiers dont rien ne part en ligne. */
-const DOSSIERS_HORS_DU_JEU: readonly string[] = ['docs/', 'tests/', 'legacy/', '.claude/'];
+/**
+ * Les dossiers dont rien ne part en ligne. Les tableaux et les alertes de Grafana
+ * (etape 5.15) s'importent a la main dans Grafana Cloud: le serveur ne les lit pas.
+ */
+const DOSSIERS_HORS_DU_JEU: readonly string[] = [
+  'docs/',
+  'tests/',
+  'legacy/',
+  '.claude/',
+  'deploiement/grafana/',
+];
 
 /** Les fins de nom des fichiers qui ne partent jamais en ligne: la documentation et les tests. */
 const FICHIERS_HORS_DU_JEU: readonly string[] = ['.md', '.test.ts', '.spec.ts'];

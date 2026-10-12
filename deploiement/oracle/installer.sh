@@ -8,9 +8,11 @@
 #   sudo bash installer.sh <fichier de la cle publique de la CI>
 #
 # Ce qu'il pose: le pare-feu de la machine, les mises a jour de securite
-# automatiques, Docker, Caddy, le compte « deploiement » de la CI et ses commandes.
+# automatiques, Docker, Caddy, le compte « deploiement » de la CI et ses commandes, et
+# l'agent Grafana Alloy de la surveillance (etape 5.15), bride.
 # Ce qu'il ne pose pas: le fichier /etc/neon-ninja/environnement, qui porte
-# l'adresse de la base, un secret ecrit a part (docs/deploiement.md).
+# l'adresse de la base, ni /etc/neon-ninja/alloy, qui porte le jeton d'ecriture de
+# Grafana Cloud: deux secrets ecrits a part (docs/deploiement.md).
 
 set -euo pipefail
 
@@ -40,7 +42,7 @@ done
 echo "== Logiciels"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -q
-apt-get install -y -q docker.io docker-buildx caddy curl unattended-upgrades
+apt-get install -y -q docker.io docker-buildx caddy curl gnupg unattended-upgrades
 
 echo "== Mises a jour de securite automatiques, redemarrage a 4h30 (heure de la machine) si besoin"
 cat >/etc/apt/apt.conf.d/52neon-ninja <<'FIN'
@@ -92,5 +94,35 @@ chown "$COMPTE:caddy" /etc/caddy/amont.caddy
 chmod 664 /etc/caddy/amont.caddy
 systemctl enable caddy >/dev/null
 systemctl reload-or-restart caddy
+
+echo "== Agent Grafana Alloy (etape 5.15)"
+# Le depot de paquets de Grafana, une fois.
+if [[ ! -f /etc/apt/sources.list.d/grafana.list ]]; then
+  install -d -m 755 /etc/apt/keyrings
+  curl -fsSL https://apt.grafana.com/gpg.key | gpg --dearmor --yes -o /etc/apt/keyrings/grafana.gpg
+  echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" \
+    >/etc/apt/sources.list.d/grafana.list
+  apt-get update -q
+fi
+apt-get install -y -q alloy
+install -m 644 "$ICI/config.alloy" /etc/alloy/config.alloy
+install -d -m 755 /etc/systemd/system/alloy.service.d
+install -m 644 "$ICI/alloy-neon-ninja.conf" /etc/systemd/system/alloy.service.d/neon-ninja.conf
+# L'agent lit les journaux des conteneurs par l'API de Docker. Son interface web ne sert que
+# la machine elle-meme.
+usermod -aG docker alloy
+if ! grep -q 'listen-addr=127.0.0.1' /etc/default/alloy 2>/dev/null; then
+  sed -i 's|^CUSTOM_ARGS=.*|CUSTOM_ARGS="--server.http.listen-addr=127.0.0.1:12345 --disable-reporting"|' /etc/default/alloy
+fi
+systemctl daemon-reload
+if [[ -f /etc/neon-ninja/alloy ]]; then
+  chown root:root /etc/neon-ninja/alloy
+  chmod 600 /etc/neon-ninja/alloy
+  systemctl enable alloy >/dev/null
+  systemctl restart alloy
+else
+  systemctl disable --now alloy >/dev/null 2>&1 || true
+  echo "   /etc/neon-ninja/alloy manque encore: l'agent ne demarre pas (docs/deploiement.md)."
+fi
 
 echo "== Installation terminee"

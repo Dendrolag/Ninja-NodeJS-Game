@@ -152,9 +152,75 @@ Les serveurs et la page doivent toujours être du même commit, sans quoi le ser
 - **Journaux** : sur la machine Oracle, `sudo -u deploiement neon-ninja journal <emplacement>` (« Administrer la machine ») ; tableau de bord Render, onglet Logs du service ; la CI, jobs « Mise en ligne » et « Bascule ».
 - **Mise en veille, sur Render seulement** : la machine Oracle ne dort jamais. En offre gratuite, le serveur Render s'endort après quinze minutes sans trafic, et se réveille à la visite suivante : quinze secondes mesurées le 14 septembre 2026, jusqu'à une minute selon Render. Pendant ce temps, la page dit que le serveur démarre et réessaie d'elle-même, toutes les trois secondes pendant une minute et demie. Une partie en cours le garde éveillé. Depuis l'étape 5.5, une page ouverte et visible le garde éveillé aussi : elle demande `/sante` toutes les dix minutes (`packages/client/src/eveil.ts`), faute de quoi le serveur s'endormait sous un joueur resté sur les menus, le WebSocket du jeu ne comptant pas comme du trafic entrant. Un onglet caché se tait. Au pire, le service tourne tout le mois : 744 heures au plus, dans les 750 heures gratuites de l'espace Render, qui n'a plus d'autre service depuis l'étape 6.1. En secours, personne ne le joint : il dort, et chaque mise en ligne le réveille une fois. Depuis l'étape 8.10, le serveur décode les murs de toutes les cartes avant d'ouvrir son port, ce qui ajoute deux secondes environ au démarrage et au réveil.
 - **Heures gratuites** : 750 heures par mois pour tout l'espace de travail Render, dont le serveur de jeu est le seul service depuis l'étape 6.1.
-- **Une mise en ligne peut être sautée sans que rien ne le signale.** Chaque exécution vérifie que son commit est encore le dernier de `master` avant de mettre en ligne, pour ne jamais écraser du neuf par du vieux. Trois poussées en vingt minutes, le 20 septembre 2026, ont donc sauté deux mises en ligne de suite, chaque exécution restant verte, et la production est restée trois commits en arrière. **Le réflexe** : après une série de poussées rapprochées, comparer le pied de l'accueil à la tête de `master`. Si la production est en retard et que rien n'est en cours, relancer la dernière exécution suffit. Rien ne surveille cela automatiquement à ce jour.
+- **Une mise en ligne peut être sautée sans que rien ne le signale.** Chaque exécution vérifie que son commit est encore le dernier de `master` avant de mettre en ligne, pour ne jamais écraser du neuf par du vieux. Trois poussées en vingt minutes, le 20 septembre 2026, ont donc sauté deux mises en ligne de suite, chaque exécution restant verte, et la production est restée trois commits en arrière. **Le réflexe** : après une série de poussées rapprochées, comparer le pied de l'accueil à la tête de `master`. Si la production est en retard et que rien n'est en cours, relancer la dernière exécution suffit. Depuis l'étape 5.15, le workflow « Production a jour » le vérifie toutes les heures (« La fluidité en direct », plus bas).
 - **Un démarrage retenu par la base** (2 octobre 2026, étape 8.8) : une mise en ligne est restée quinze minutes dans `migrer.js`, sans un mot, jusqu'à ce que Render l'abandonne (`update_failed`, « Port scan timeout »), puis redémarre l'ancienne version. La connexion à la base n'avait pas de délai. Depuis, une connexion qui ne s'ouvre pas en vingt secondes échoue, et les migrations se reprennent trois fois en le disant dans les journaux. Les journaux de Render se lisent aussi par son API avec `RENDER_API_KEY` (`GET /v1/logs`, propriétaire et service du tableau ci-dessus). Si cela recommence, relancer l'exécution suffit tant que la base répond.
 - **Échéances** : le jeton Vercel expire le 14 septembre 2027. Le renouveler avant : nouveau jeton, puis variable `VERCEL_TOKEN` de la machine de développement et secret GitHub du même nom.
+
+### La fluidité en direct, sur Grafana Cloud
+
+Mise en place à l'étape 5.15 (`docs/plan/etape-5-15.md`). Le tableau **« Neon Ninja: fluidite »**, dans le dossier « Neon Ninja » du Grafana Cloud du porteur du projet (`https://<pile>.grafana.net`, offre gratuite, pour lui seul), montre en direct si les parties sont fluides, et sinon où naît la saccade. Des alertes préviennent par courriel en deux à trois minutes.
+
+**Ce qui tourne.**
+
+- **Le serveur compte, il n'envoie rien.** Avec `PORT_DES_METRIQUES` posée, il compte ses battements et leurs phases, ses octets, ses files d'envoi, son ramasse-miettes, et ce que les pages lui disent, puis écrit le tout sur une route `/metriques` qui n'écoute que `127.0.0.1` : 3101 pour l'emplacement bleu, 3102 pour le vert (`neon-ninja.sh` la pose au démarrage du conteneur). Caddy ne la relaie pas. Sans la variable, comme sur Render, rien de plus n'est mesuré et aucun port n'est ouvert.
+- **Chaque page envoie un bulletin toutes les dix secondes** pendant une partie, sur le lien qu'elle a déjà : ses images, les instantanés reçus, l'aller et retour mesuré toutes les cinq secondes, une centaine d'octets. Une fois par minute, elle décrit son appareil (téléphone, tablette ou ordinateur, famille de navigateur, moteur de rendu). Ni cookie, ni script tiers. Le relevé `?diagnostic=1` reste l'instrument de séance, pour creuser sur un appareil précis.
+- **Le journal du serveur**, sur sa sortie standard, porte des lignes JSON : un **épisode** pour chaque battement d'au moins 100 ms d'écart ou de 25 ms de durée, et pour chaque page qui a vu une image d'au moins 100 ms ou un instantané en retard d'au moins 250 ms, avec tout son contexte ; et toutes les dix secondes une **ligne par partie en cours**, avec son verdict. Au plus un épisode par partie ou par joueur et par minute, soixante par minute en tout ; le reste est seulement compté.
+- **L'agent Grafana Alloy**, service du système sur la machine Oracle, lit `/metriques` toutes les quinze secondes, les métriques de la machine et les siennes chaque minute, suit le journal des conteneurs `neon-ninja-*`, et envoie le tout à Grafana Cloud. Bridé par systemd : un quart de cœur et 300 Mo au plus. S'il tombe, ou Grafana, le jeu ne le sait pas.
+- **Des vérifications de disponibilité** de Grafana, depuis Francfort, toutes les minutes : `/sante` de la production et la page publique.
+- **Le workflow « Production a jour »** de GitHub, toutes les heures : un commit qui touche le jeu ne doit pas attendre plus d'une heure de partir en ligne (un commit de documentation ne compte pas). Une fois par jour, il vérifie aussi que le secours Render est à la même version ; le réveiller plus souvent userait ses heures gratuites. En échec, GitHub prévient par courriel.
+
+**Comment lire le tableau**, de haut en bas :
+
+1. **Le verdict** : « Fluide », ou « Saccades: le serveur », « le réseau », « la page », sur les cinq dernières minutes. Le serveur est mis en cause si plus de 1 % de ses battements partent en retard ; sinon le réseau, si plus de 5 % des instantanés arrivent en retard chez les joueurs ; sinon la page, si plus de 5 % des images durent au moins 50 ms. C'est la méthode des audits 8.5 et 8.6 : chaque origine masque les suivantes.
+2. **Les parties en cours**, une ligne chacune, avec son verdict et son pire joueur.
+3. **Les joueurs chez eux**, par appareil et par navigateur : durée d'image (neuvième décile et centile 99, une saccade se voit au centile 99), images lentes, images par seconde, aller et retour, instantanés en retard, et où passe le temps des images lentes (notre code, PixiJS, le reste). Un « reste » qui domine désigne le navigateur ou l'appareil, pas notre code.
+4. **Le serveur** : écart et durée du battement par mode, ses quatre phases (moteur, vues, codage, envoi), la durée selon la charge en PNJ (la courbe qui annonce une optimisation avant qu'elle ne se ressente) et selon la carte, le ramasse-miettes, la boucle d'événements, le réseau, la file d'envoi, la mémoire, la machine (dont le vol de processeur par l'hôte), l'agent.
+5. **Avant et après chaque mise en ligne** : chaque version est marquée d'un trait violet sur les courbes, et un tableau compare les mêmes chiffres version par version, sur la période choisie en haut à droite.
+6. **Les derniers épisodes**, filtrables en haut du tableau par origine, mode, carte, appareil et version. Déplier une ligne montre tout son contexte.
+
+**Retrouver le contexte d'un épisode** : dans le panneau des épisodes, déplier la ligne. Un épisode du serveur donne la partie, son mode, sa carte, ses PNJ et ses joueurs, l'écart et la durée du battement, ses quatre phases, la dernière pause du ramasse-miettes et le retard de la boucle d'événements. Un épisode d'une page donne le joueur, son appareil, la pire image (notre code, PixiJS), les images lentes et les instantanés en retard des dix secondes, les allers et retours, les personnages dessinés, le son, et ce que le serveur savait de la partie à cet instant. Pour tout voir d'une partie, chercher son identifiant (`room-12`) dans **Explore**, source du journal : `{job="neon-ninja"} |= "room-12"`.
+
+**Que faire à chaque alerte.** Les seuils sont des points de départ : les régler sur ce que montre une semaine de production, dans `deploiement/grafana/alertes.ts`, puis réimporter.
+
+- **La production ne répond plus** : ouvrir https://serveur.ninja.dendrolag.fr/sante. Si rien ne répond, la machine ou Caddy sont tombés : regarder la console Oracle, puis la machine (« Administrer la machine »). Si cela dure, basculer vers Render (« Basculer d'un serveur à l'autre »).
+- **La page publique ne répond plus** : ouvrir https://ninja.dendrolag.fr, puis l'état de Vercel. Rien à faire de notre côté si Vercel est en panne ; sinon, promouvoir le dernier déploiement sain dans Vercel.
+- **Le serveur peine** : le panneau des phases dit laquelle a grandi ; les épisodes du serveur disent quelle partie, à quelle charge, et si une pause du ramasse-miettes tombait dessus. Une machine qui peine (vol de processeur par l'hôte qui monte) n'est pas notre code.
+- **Le battement s'alourdit** : la durée selon la charge et par carte dit où ; comparer à la version précédente (« Version par version »). Une optimisation devient une étape, mesurée au banc.
+- **Le réseau hoquette** : le serveur bat à l'heure, mais les instantanés arrivent en retard. Regarder la file d'envoi (un joueur dont la file grossit reçoit en retard), le transport des connexions (des requêtes longues saccadent à elles seules), et les appareils touchés : si un seul joueur ou un seul opérateur, c'est son chemin, pas le serveur.
+- **La page rame** : la famille d'appareils en cause est dans l'alerte. Les épisodes des pages disent si c'est notre code, PixiJS ou le reste, avec le son, les personnages dessinés et l'appareil. Reproduire avec `?diagnostic=1` sur un appareil de la même famille.
+- **Une version a dégradé la page, ou alourdi le battement** : une heure après une mise en ligne, la part d'images lentes ou la durée du battement à charge comparable a augmenté de moitié sur les sept jours précédents. « Version par version » situe la baisse ; le plus sûr est de revenir en arrière (« Retour arrière ») le temps de comprendre.
+- **La mémoire du serveur est haute, ou grimpe** : au-delà de 1 Go, ou en hausse sans relâche depuis six heures, une fuite est probable. Le panneau de la mémoire dit si c'est le tas. Une mise en ligne redémarre le serveur et soulage, sans corriger : la correction est une étape.
+- **Le workflow « Production a jour » échoue** : son message dit quel commit attend. Relancer la dernière exécution de la CI sur `master` (« Une mise en ligne peut être sautée », plus haut). Si c'est le secours qui est en retard, relancer la mise en ligne remet Render à jour.
+
+**Mettre en place, ou réinstaller**, gestes du porteur du projet :
+
+1. **Le compte Grafana Cloud**, gratuit, sans carte bancaire, avec une pile en Europe. Le compte démarre par quatorze jours d'essai de l'offre Pro, puis repasse seul en offre gratuite (10 000 séries, 50 Go de journaux par mois, 14 jours de conservation) : ne pas ajouter de carte. Noter, dans « My Account », les adresses d'envoi de Prometheus (« Remote Write Endpoint » et son identifiant numérique) et de Loki (adresse et identifiant).
+2. **Un jeton d'écriture** : grafana.com, « Access Policies », une politique `neon-ninja-alloy` limitée à `metrics:write` et `logs:write`, et son jeton.
+3. **Sur la machine Oracle**, le fichier `/etc/neon-ninja/alloy`, lisible du seul administrateur :
+
+   ```
+   GRAFANA_PROMETHEUS_URL=https://prometheus-prod-XX-prod-eu-west-X.grafana.net/api/prom/push
+   GRAFANA_PROMETHEUS_UTILISATEUR=<identifiant numérique de Prometheus>
+   GRAFANA_LOKI_URL=https://logs-prod-XXX.grafana.net/loki/api/v1/push
+   GRAFANA_LOKI_UTILISATEUR=<identifiant numérique de Loki>
+   GRAFANA_JETON=<jeton d'écriture>
+   ```
+
+   puis recopier `deploiement/oracle/` et relancer `installer.sh` (« Administrer la machine »), qui installe Alloy, son bridage et sa configuration, et le démarre. La route des métriques n'existe qu'au démarrage suivant d'un serveur de jeu d'une version qui la connaît (étape 5.15 et après), par les commandes `neon-ninja` que l'installation vient de poser : la prochaine mise en ligne, ou un redémarrage à la main.
+
+4. **Un compte de service** dans le Grafana de la pile, « Administration », « Service accounts », rôle Admin, et son jeton ; puis, depuis la racine du dépôt :
+
+   ```bash
+   GRAFANA_URL=https://<pile>.grafana.net GRAFANA_JETON_IMPORT=<jeton> COURRIEL_DES_ALERTES=<courriel> node deploiement/grafana/importer.ts
+   ```
+
+   Il pose le dossier, le tableau, les alertes évaluées chaque minute, le courriel et la politique qui y envoie toutes les alertes. Avec `GRAFANA_SM_URL` et `GRAFANA_SM_JETON` (« Testing & synthetics », « Synthetics », « Config »), il pose aussi les deux vérifications de disponibilité, depuis Francfort. Sans eux, les créer à la main : type HTTP, cible `https://serveur.ninja.dendrolag.fr/sante` (nom de tâche `production`) et `https://ninja.dendrolag.fr/` (nom `page`), toutes les minutes, sonde de Francfort seule (deux sondes dépasseraient les 100 000 vérifications gratuites du mois). Les noms comptent : les alertes les lisent. Le relancer après chaque changement de `deploiement/grafana/` ne double rien.
+
+5. **Essayer chaque alerte une fois** : dans « Alerting », « Contact points », bouton « Test » du point « Porteur du projet » pour le courriel ; puis, pour chaque règle, baisser son seuil le temps qu'elle se déclenche, ou provoquer la saccade (« Les épisodes », ci-dessous), et remettre le seuil.
+
+**Provoquer une saccade de chaque origine**, pour vérifier que le verdict la reconnaît : le serveur, par le test d'intégration `packages/server/src/ServeurSocket.surveillance.test.ts`, qui force un battement lent et en lit l'épisode (rien dans le jeu ne permet de ralentir à dessein le serveur de production) ; le réseau, en bridant le lien dans les outils du navigateur (« Network », « Slow 3G ») pendant une partie ; la page, en ralentissant le processeur dans les outils du navigateur (« Performance », « CPU: 6x slowdown »).
+
+**Ce que coûte la surveillance** : mesuré au banc, `docs/mesures/charge-serveur.md`, section 34. Les séries actives se lisent dans Grafana Cloud, page « Usage » de la pile : moins de 5 000 visées.
 
 ## Mandataires
 
@@ -179,15 +245,17 @@ Mise en place le 4 octobre 2026 pour un essai (étape 5.9, `docs/plan/etape-5-9.
 
 Sur la machine :
 
-| Quoi                           | Où                                                                                   |
-| ------------------------------ | ------------------------------------------------------------------------------------ |
-| Le serveur de jeu              | Un conteneur Docker, `neon-ninja-bleu` ou `neon-ninja-vert`, port local 3001 ou 3002 |
-| Caddy                          | Service du système, `/etc/caddy/Caddyfile`, qui importe `/etc/caddy/amont.caddy`     |
-| Les variables du serveur       | `/etc/neon-ninja/environnement`, lisible du seul compte de mise en ligne             |
-| Les commandes de mise en ligne | `/usr/local/bin/neon-ninja`, copie de `deploiement/oracle/neon-ninja.sh`             |
-| L'emplacement en service       | `/var/lib/neon-ninja/actif`                                                          |
+| Quoi                           | Où                                                                                    |
+| ------------------------------ | ------------------------------------------------------------------------------------- |
+| Le serveur de jeu              | Un conteneur Docker, `neon-ninja-bleu` ou `neon-ninja-vert`, port local 3001 ou 3002  |
+| Caddy                          | Service du système, `/etc/caddy/Caddyfile`, qui importe `/etc/caddy/amont.caddy`      |
+| Les variables du serveur       | `/etc/neon-ninja/environnement`, lisible du seul compte de mise en ligne              |
+| Les commandes de mise en ligne | `/usr/local/bin/neon-ninja`, copie de `deploiement/oracle/neon-ninja.sh`              |
+| L'emplacement en service       | `/var/lib/neon-ninja/actif`                                                           |
+| L'agent de la surveillance     | Service du système `alloy`, `/etc/alloy/config.alloy`, bridé par systemd (étape 5.15) |
+| Les secrets de l'agent         | `/etc/neon-ninja/alloy`, lisible du seul administrateur                               |
 
-Variables du serveur : `DATABASE_URL` (la branche `production`, par le pooler, un secret), `ORIGINES_AUTORISEES=https://neon-ninja-jeu.vercel.app,https://ninja.dendrolag.fr`, `MANDATAIRES_DE_CONFIANCE=1`, `SERVIR_LA_PAGE=non`. `PORT` et `VERSION_DU_JEU` sont posées au démarrage du conteneur.
+Variables du serveur : `DATABASE_URL` (la branche `production`, par le pooler, un secret), `ORIGINES_AUTORISEES=https://neon-ninja-jeu.vercel.app,https://ninja.dendrolag.fr`, `MANDATAIRES_DE_CONFIANCE=1`, `SERVIR_LA_PAGE=non`. `PORT`, `PORT_DES_METRIQUES` (cent ports plus loin, sur `127.0.0.1`, étape 5.15) et `VERSION_DU_JEU` sont posées au démarrage du conteneur.
 
 ### Le garde-fou contre les factures
 

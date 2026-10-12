@@ -40,7 +40,13 @@ import type {
   InfosSalon,
   ResultatValidation,
 } from '../../packages/shared/dist/index.js';
-import { creerAlea, entier, nombre } from '../../packages/shared/dist/index.js';
+import {
+  INTERVALLE_DU_BULLETIN_MS,
+  coderLeBulletin,
+  creerAlea,
+  entier,
+  nombre,
+} from '../../packages/shared/dist/index.js';
 
 import type { Resume } from './statistiques.ts';
 import { resumer } from './statistiques.ts';
@@ -81,6 +87,8 @@ export type OrdreAuxClients =
       readonly bots: readonly number[];
       readonly dureePartieS: number;
       readonly graine: number;
+      /** Chaque joueur envoie un bulletin de fluidite toutes les dix secondes (etape 5.15). */
+      readonly bulletins: boolean;
     }
   | { readonly type: 'lancer' }
   | { readonly type: 'mesurer' }
@@ -99,6 +107,8 @@ export interface RapportDesClients {
   readonly octetsAutres: number;
   /** Intentions de deplacement emises. */
   readonly intentions: number;
+  /** Octets des bulletins de fluidite emis (etape 5.15), sur le fil. */
+  readonly octetsBulletins: number;
   /** Ecart entre deux instantanes recus par un meme client, en millisecondes. */
   readonly intervalleReceptionMs: Resume;
   /** Temps processeur consomme par ce processus, en pour cent d'un coeur. */
@@ -156,6 +166,7 @@ interface Compteurs {
   octetsEtat: number;
   octetsAutres: number;
   intentions: number;
+  octetsBulletins: number;
   intervalles: number[];
   deconnexions: number;
 }
@@ -169,6 +180,7 @@ function compteursNeufs(): Compteurs {
     octetsEtat: 0,
     octetsAutres: 0,
     intentions: 0,
+    octetsBulletins: 0,
     intervalles: [],
     deconnexions: 0,
   };
@@ -181,6 +193,8 @@ interface Etat {
   compteurs: Compteurs;
   mesureEnCours: boolean;
   arreterLesIntentions: (() => void) | undefined;
+  arreterLesBulletins: (() => void) | undefined;
+  bulletins: boolean;
   totalRooms: number;
 }
 
@@ -393,6 +407,65 @@ async function lancer(etat: Etat): Promise<void> {
   }
 
   etat.arreterLesIntentions = faireBougerLesJoueurs(etat);
+
+  if (etat.bulletins) {
+    etat.arreterLesBulletins = envoyerLesBulletins(etat);
+  }
+}
+
+/**
+ * Le bulletin d'une page fluide, a 60 images par seconde (etape 5.15): ce que chaque joueur
+ * d'une partie de production envoie toutes les dix secondes.
+ */
+const BULLETIN_TYPE = coderLeBulletin({
+  images: {
+    cases: [0, 598, 2, 0, 0, 0, 0, 0],
+    sommeMs: 10_003,
+    lentes: 0,
+    tresLentes: 0,
+    cachees: 0,
+    tenues: 3,
+  },
+  lentes: { notreCodeMs: 0, pixiMs: 0, resteMs: 0 },
+  pire: { dureeMs: 21.4, notreCodeMs: 2.3, pixiMs: 1.7 },
+  instantanes: { cases: [12, 181, 6, 1, 0, 0, 0, 0], sommeMs: 9_996, enRetard: 0, ecartMaxMs: 78 },
+  allersRetoursMs: [38, 41],
+  entites: 166,
+  son: true,
+  erreurs: { script: 0, promesse: 0 },
+});
+
+/** La taille d'un bulletin sur le fil: le paquet Socket.IO qui le porte. */
+const OCTETS_DU_BULLETIN = JSON.stringify(['bulletin', BULLETIN_TYPE]).length + 2;
+
+/**
+ * Envoie un bulletin par joueur toutes les dix secondes, etales sur l'intervalle comme ceux
+ * de vraies pages, lancees chacune a son heure.
+ */
+function envoyerLesBulletins(etat: Etat): () => void {
+  let rang = 0;
+  const pas = INTERVALLE_DU_BULLETIN_MS / Math.max(etat.clients.length, 1);
+  const minuterie = setInterval(
+    () => {
+      const client = etat.clients[rang % Math.max(etat.clients.length, 1)];
+      rang += 1;
+
+      if (client === undefined) {
+        return;
+      }
+
+      client.socket.emit('bulletin', BULLETIN_TYPE);
+
+      if (etat.mesureEnCours) {
+        etat.compteurs.octetsBulletins += OCTETS_DU_BULLETIN;
+      }
+    },
+    Math.max(pas, 1),
+  );
+
+  return () => {
+    clearInterval(minuterie);
+  };
 }
 
 /**
@@ -445,6 +518,7 @@ function rapport(etat: Etat): RapportDesClients {
     octetsEtat: compteurs.octetsEtat,
     octetsAutres: compteurs.octetsAutres,
     intentions: compteurs.intentions,
+    octetsBulletins: compteurs.octetsBulletins,
     intervalleReceptionMs: resumer(compteurs.intervalles),
     processeurPourCent: ((processeur.user + processeur.system) / 1000 / dureeMs) * 100,
     deconnexions: compteurs.deconnexions,
@@ -455,6 +529,7 @@ function rapport(etat: Etat): RapportDesClients {
 function fermer(etat: Etat): void {
   etat.mesureEnCours = false;
   etat.arreterLesIntentions?.();
+  etat.arreterLesBulletins?.();
 
   for (const client of etat.clients) {
     client.socket.disconnect();
@@ -469,6 +544,7 @@ async function obeir(etat: Etat, ordre: OrdreAuxClients): Promise<void> {
     case 'preparer':
       etat.alea = creerAlea(ordre.graine);
       etat.totalRooms = ordre.totalRooms;
+      etat.bulletins = ordre.bulletins;
 
       for (const rang of ordre.rooms) {
         await preparerUneRoom(etat, ordre, rang);
@@ -510,6 +586,8 @@ function demarrer(): void {
     compteurs: compteursNeufs(),
     mesureEnCours: false,
     arreterLesIntentions: undefined,
+    arreterLesBulletins: undefined,
+    bulletins: false,
     totalRooms: 0,
   };
 

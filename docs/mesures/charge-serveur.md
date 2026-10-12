@@ -1259,3 +1259,33 @@ Moyenne des deux tours. Durées en millisecondes par battement, tailles en octet
 |  40 | Among Ninjas |  0,088 |      0,047 |  0,094 | 0,228 |     0,478 |                 87 |               9 |              153 |
 |  80 | Horde        |  0,175 |      0,031 |  0,043 | 0,248 |     0,632 |                293 |              96 |              140 |
 |  80 | Among Ninjas |  0,153 |      0,064 |  0,105 | 0,321 |     0,681 |                 94 |               7 |              108 |
+
+## 34. Mesure de l'étape 5.15: ce que coûte la surveillance de la fluidité (12 octobre 2026)
+
+Chiffres bruts: `docs/mesures/charge-serveur-5-15-sans-<n>.json` et `charge-serveur-5-15-avec-<n>.json`, écrits par le harnais. Même machine qu'aux sections précédentes (AMD Ryzen 7 3800X, 16 cœurs logiques, Node 24.16). Le serveur complet, 24 parties pleines de 12 joueurs à 150 PNJ: `pnpm charge --reseau --rooms 24 --bots 150 --sans-arret`, sans puis avec `--surveillance` (le serveur surveillé comme en production, chaque client envoyant son bulletin toutes les dix secondes, `/metriques` lue toutes les quinze secondes), trois fois en alternance, chaque paire précédée du banc du moteur à 150 PNJ comme témoin de la vitesse de la machine.
+
+### 34.1 L'essentiel
+
+- **Le battement ne bouge pas**: 1,05 ms en moyenne sans surveillance, 1,07 avec (+1,6 %), quand deux séries sans surveillance s'écartent déjà de 3 %, et deux séries avec de 17 %. Le budget de la fiche (aucune hausse au-delà de l'écart entre deux séries) est tenu.
+- **La mémoire ne bouge pas**: 274 à 285 Mo des deux côtés.
+- **Les bulletins pèsent 0,13 % des octets échangés**, sous le 1 % du budget: une centaine d'octets toutes les dix secondes par joueur, contre neuf kilo-octets par seconde d'instantanés.
+- **Écrire `/metriques` coûte 0,86 ms en médiane** au serveur (2,8 ms au centile 99), dans le pire cas de 1 425 séries, toutes les combinaisons de mode, de carte, d'appareil et de navigateur: `node tests/charge/ecriture-des-metriques.ts`. Le harnais voit la lecture complète à 25 à 36 ms: c'est l'attente de la requête derrière les battements de 288 connexions, sur un fil occupé aux trois quarts, pas le coût de la route. Une lecture de l'agent toutes les quinze secondes prend donc moins d'une milliseconde de fil au serveur.
+- **La page**: la sonde coûte 26 nanosecondes par image (mesure directe sur sa compilation, deux millions d'images), sans rien allouer (test unitaire). `app.js` gagne 2,2 Ko en gzip, 1,5 Ko en brotli, sous les 3 Ko du budget. Le banc du rendu de la CI monte ses scènes sans la boucle de jeu: il ne passe pas par la sonde, et ne peut pas la voir.
+- **Les séries**: environ 420 pendant une charge d'un seul mode et d'une seule carte, 1 425 au pire. Avec la machine (une centaine) et l'agent, loin sous les 5 000 visées et les 10 000 gratuits.
+- **Une leçon de méthode**: la même charge, sans rien changer au code, donnait 0,73 à 0,79 ms le matin et 1,03 ms une heure plus tard, le banc du moteur ralentissant d'autant (0,52 puis 0,70 ms à 150 PNJ). La machine est partagée. Seule une mesure alternée, avec un témoin, sépare le coût d'un changement de l'humeur de la machine.
+
+### 34.2 Le serveur complet, en alternance
+
+Durée d'un battement complet d'une partie, côté serveur, en millisecondes; processeur du serveur en pour cent d'un cœur.
+
+| Paire | Témoin du moteur | Sans surveillance |  p99 | Processeur | Avec surveillance |  p99 | Processeur | Lecture de `/metriques` |
+| ----: | ---------------: | ----------------: | ---: | ---------: | ----------------: | ---: | ---------: | ----------------------: |
+|     1 |            0,587 |              1,03 | 1,74 |       74 % |              1,09 | 1,93 |       76 % |                 28,7 ms |
+|     2 |            0,600 |              1,06 | 1,90 |       77 % |              1,14 | 2,07 |       78 % |                 36,1 ms |
+|     3 |            0,562 |              1,06 | 1,79 |       67 % |              0,97 | 1,55 |       62 % |                 24,3 ms |
+
+Les 24 parties sont tenues dans les six séries: 20 battements par seconde au moins pour chaque partie, écart p99 entre deux battements de 53 à 56 ms.
+
+### 34.3 Ce qui reste à mesurer en production
+
+L'agent Alloy sur la machine Oracle (moins de 5 pour cent d'un cœur et moins de 300 Mo sur 24 heures, ses propres métriques dans le tableau) et les séries actives réelles (page « Usage » de Grafana Cloud) se relèvent une fois l'agent installé, sur une semaine de production.

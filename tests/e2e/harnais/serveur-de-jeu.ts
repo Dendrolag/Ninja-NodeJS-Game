@@ -30,6 +30,7 @@ import type {
   OptionsServeur,
   ServeurMonte,
   ServiceDeComptes,
+  SurveillanceDuJeu,
 } from '../../../packages/server/dist/index.js';
 import {
   ChargeurDeTerrain,
@@ -46,6 +47,11 @@ export interface OptionsDuJeu {
    * (etape 7.22). Au hasard sans elle.
    */
   readonly graine?: number;
+  /**
+   * La surveillance de la production (etape 5.15), pour le scenario qui verifie que les pages
+   * envoient leurs bulletins. Sa route des metriques ecoute sur un port libre de 127.0.0.1.
+   */
+  readonly surveillance?: SurveillanceDuJeu;
 }
 
 /** Un serveur de jeu en marche. */
@@ -84,6 +90,9 @@ export async function demarrerLeJeu(options: OptionsDuJeu = {}): Promise<Serveur
     fichiers: { client: DOSSIER_WEB, ressources: racineRessources() },
     ...(options.comptes === undefined ? {} : { comptes: options.comptes }),
     ...(graineFixee === undefined ? {} : { genererGraine: () => graineFixee }),
+    ...(options.surveillance === undefined
+      ? {}
+      : { surveillance: options.surveillance, portDesMetriques: 0 }),
   };
 
   let serveur: ServeurMonte | undefined = await demarrerServeur(0, montage);

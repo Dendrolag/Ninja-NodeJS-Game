@@ -39,6 +39,8 @@ import type { Horloge } from '../../packages/server/dist/index.js';
 import {
   CADENCE_BATTEMENT_MS,
   ChargeurDeTerrain,
+  SurveillanceDuJeu,
+  creerJournalEnMemoire,
   demarrerServeur,
   horlogeSysteme,
 } from '../../packages/server/dist/index.js';
@@ -78,6 +80,24 @@ export interface OptionsChargeReseau {
   readonly processusClients: number;
   /** Graine des intentions des clients simules. */
   readonly graine: number;
+  /**
+   * Le serveur est surveille comme en production (etape 5.15): ses metriques comptent, sa
+   * route /metriques est lue toutes les quinze secondes et chronometree, et chaque joueur
+   * envoie son bulletin toutes les dix secondes.
+   */
+  readonly surveillance?: boolean;
+}
+
+/** Ce que coute la surveillance pendant la mesure (etape 5.15). */
+export interface CoutDeLaSurveillance {
+  /** Le temps d'une lecture de /metriques, requete comprise, en millisecondes. */
+  readonly lectureMs: Resume;
+  /** La taille d'une lecture, en octets. */
+  readonly octetsParLecture: number;
+  /** Le nombre de series ecrites. */
+  readonly series: number;
+  /** La part des bulletins dans les octets echanges avec les clients, en pour cent. */
+  readonly partDesBulletinsPourCent: number;
 }
 
 /** Ce que la charge a mesure. Durees en millisecondes, tailles en octets. */
@@ -119,6 +139,8 @@ export interface ResultatChargeReseau {
   readonly processeurParPartieMs: number;
   readonly memoireRssMo: number;
   readonly tasUtiliseMo: number;
+  /** Ce que coute la surveillance, quand elle est en marche (etape 5.15). */
+  readonly surveillance?: CoutDeLaSurveillance;
   /** Taille moyenne d'un instantane recu, sur le fil. */
   readonly octetsParMessage: number;
   /** Instantanes recus par client et par seconde. */
@@ -289,7 +311,15 @@ export async function mesurerLaCharge(options: OptionsChargeReseau): Promise<Res
   // attende sa reponse pendant ce temps.
   terrains.charger({ carte: 'map1', modeMiroir: false });
 
-  const serveur = await demarrerServeur(0, { horloge: horlogeInstrumentee(releve), terrains });
+  const surveillance =
+    options.surveillance === true
+      ? new SurveillanceDuJeu({ journal: creerJournalEnMemoire(), version: 'charge' })
+      : undefined;
+  const serveur = await demarrerServeur(0, {
+    horloge: horlogeInstrumentee(releve),
+    terrains,
+    ...(surveillance === undefined ? {} : { surveillance, portDesMetriques: 0 }),
+  });
   const adresse = serveur.http.address();
 
   if (typeof adresse !== 'object' || adresse === null) {
@@ -318,6 +348,7 @@ export async function mesurerLaCharge(options: OptionsChargeReseau): Promise<Res
           bots: options.bots,
           dureePartieS,
           graine: options.graine + indice,
+          bulletins: options.surveillance === true,
         });
         await clients.attendre('prepare');
       }),
@@ -332,7 +363,13 @@ export async function mesurerLaCharge(options: OptionsChargeReseau): Promise<Res
 
     await patienter(options.echauffementS * 1000);
 
-    return await mesurerLaFenetre(options, releve, processus);
+    return await mesurerLaFenetre(
+      options,
+      releve,
+      processus,
+      serveur.metriques?.port,
+      surveillance,
+    );
   } finally {
     for (const clients of processus) {
       if (clients.enfant.connected) {
@@ -365,6 +402,8 @@ async function mesurerLaFenetre(
   options: OptionsChargeReseau,
   releve: Releve,
   processus: readonly ProcessusDeClients[],
+  portDesMetriques?: number,
+  surveillance?: SurveillanceDuJeu,
 ): Promise<ResultatChargeReseau> {
   // Une resolution d'une milliseconde: a dix, le retard mesure sur un serveur
   // presque au repos etait deja de douze millisecondes, c'est-a-dire surtout la
@@ -395,7 +434,28 @@ async function mesurerLaFenetre(
   releve.actif = true;
   retard.enable();
 
+  // La lecture de l'agent, toutes les quinze secondes, chronometree (etape 5.15).
+  const lectures: number[] = [];
+  let octetsParLecture = 0;
+  const lire = async (): Promise<void> => {
+    if (portDesMetriques === undefined) {
+      return;
+    }
+    const avant = performance.now();
+    const texte = await (
+      await fetch(`http://127.0.0.1:${String(portDesMetriques)}/metriques`)
+    ).text();
+    lectures.push(performance.now() - avant);
+    octetsParLecture = texte.length;
+  };
+  const lecturesEnCours: Promise<void>[] = [lire()];
+  const lecteur = setInterval(() => {
+    lecturesEnCours.push(lire());
+  }, 15_000);
+
   await patienter(options.dureeMesureS * 1000);
+  clearInterval(lecteur);
+  await Promise.all(lecturesEnCours);
 
   releve.actif = false;
   retard.disable();
@@ -424,6 +484,15 @@ async function mesurerLaFenetre(
     pausesRamasseMiettesMs: pauses,
     memoireRssMo: memoire.rss / 1024 / 1024,
     tasUtiliseMo: memoire.heapUsed / 1024 / 1024,
+    ...(surveillance === undefined
+      ? {}
+      : {
+          surveillance: {
+            lectures,
+            octetsParLecture,
+            series: surveillance.registre.nombreDeSeries,
+          },
+        }),
   });
 }
 
@@ -437,6 +506,12 @@ interface ReleveDuServeur {
   readonly pausesRamasseMiettesMs: readonly number[];
   readonly memoireRssMo: number;
   readonly tasUtiliseMo: number;
+  /** Les lectures de /metriques pendant la fenetre, quand le serveur est surveille. */
+  readonly surveillance?: {
+    readonly lectures: readonly number[];
+    readonly octetsParLecture: number;
+    readonly series: number;
+  };
 }
 
 /** Rassemble les releves du serveur et des clients en un resultat. */
@@ -458,6 +533,7 @@ export function assembler(
   const octetsEtat = rapports.reduce((total, rapport) => total + rapport.octetsEtat, 0);
   const octetsAutres = rapports.reduce((total, rapport) => total + rapport.octetsAutres, 0);
   const intentions = rapports.reduce((total, rapport) => total + rapport.intentions, 0);
+  const octetsBulletins = rapports.reduce((total, rapport) => total + rapport.octetsBulletins, 0);
   const deconnexions = rapports.reduce((total, rapport) => total + rapport.deconnexions, 0);
 
   const octetsParMessage = messages === 0 ? 0 : octetsEtat / messages;
@@ -494,6 +570,17 @@ export function assembler(
     processeurParPartieMs: durees.length === 0 ? 0 : serveur.processeurMs / durees.length,
     memoireRssMo: serveur.memoireRssMo,
     tasUtiliseMo: serveur.tasUtiliseMo,
+    ...(serveur.surveillance === undefined
+      ? {}
+      : {
+          surveillance: {
+            lectureMs: resumer([...serveur.surveillance.lectures]),
+            octetsParLecture: serveur.surveillance.octetsParLecture,
+            series: serveur.surveillance.series,
+            partDesBulletinsPourCent:
+              (100 * octetsBulletins) / Math.max(octetsEtat + octetsAutres + octetsBulletins, 1),
+          },
+        }),
     octetsParMessage,
     messagesParClientHz,
     debitParClientKoS,

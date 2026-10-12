@@ -27,13 +27,14 @@ import { ouvrirBase } from './base/connexion.js';
 import { Authentification } from './comptes/Authentification.js';
 import type { DossiersServis } from './fichiers.js';
 import { PORT_PAR_DEFAUT, demarrerServeur } from './serveur.js';
+import { SurveillanceDuJeu } from './surveillance/surveillanceDuJeu.js';
 import { ChargeurDeTerrain, racineRessources } from './terrain.js';
 
 /** Plus grand nombre de mandataires qu'on accepte de croire. Au-dela, c'est une erreur de saisie. */
 const MANDATAIRES_MAXIMUM = 10;
 
 /** Lit un port depuis l'environnement, en refusant ce qui n'en est pas un. */
-function portDemande(brut: string | undefined): number {
+function portDemande(brut: string | undefined, nom = 'PORT'): number {
   if (brut === undefined) {
     return PORT_PAR_DEFAUT;
   }
@@ -41,10 +42,21 @@ function portDemande(brut: string | undefined): number {
   const port = Number(brut);
 
   if (!Number.isInteger(port) || port < 0 || port > 65535) {
-    throw new Error(`PORT doit etre un numero de port valide, recu « ${brut} ».`);
+    throw new Error(`${nom} doit etre un numero de port valide, recu « ${brut} ».`);
   }
 
   return port;
+}
+
+/**
+ * Le port de la route /metriques (etape 5.15), ou rien: sans PORT_DES_METRIQUES, le serveur
+ * ne surveille rien de plus et n'ouvre aucun second port. Sur la machine Oracle, chaque
+ * emplacement a le sien (deploiement/oracle/neon-ninja.sh).
+ */
+function portDesMetriques(brut: string | undefined): number | undefined {
+  return brut === undefined || brut.trim() === ''
+    ? undefined
+    : portDemande(brut.trim(), 'PORT_DES_METRIQUES');
 }
 
 /** Lit la liste des origines autorisees, separees par des virgules. */
@@ -156,6 +168,13 @@ const version = versionDuJeu(process.env['VERSION_DU_JEU']);
 const base = baseDesComptes(process.env['DATABASE_URL']);
 const terrains = new ChargeurDeTerrain();
 terrains.prechargerTout();
+const metriques = portDesMetriques(process.env['PORT_DES_METRIQUES']);
+// La surveillance de la production (etape 5.15): elle ecrit ses episodes sur la sortie
+// standard, que l'agent de la machine suit, et ses compteurs sur la route locale.
+const surveillance =
+  metriques === undefined
+    ? undefined
+    : new SurveillanceDuJeu(version === undefined ? {} : { version });
 
 // C'est ici, et seulement ici, que le serveur decide de lire les images de
 // collision des cartes, de servir la page et de brancher les comptes. Un serveur
@@ -168,6 +187,9 @@ const serveur = await demarrerServeur(portDemande(process.env['PORT']), {
   ...(fichiers === undefined ? {} : { fichiers }),
   ...(version === undefined ? {} : { version }),
   ...(base === undefined ? {} : { comptes: new Authentification({ db: base.db }) }),
+  ...(surveillance === undefined || metriques === undefined
+    ? {}
+    : { surveillance, portDesMetriques: metriques }),
 });
 
 const adresse = serveur.http.address();
@@ -179,6 +201,13 @@ console.log(
     ? `Neon Ninja: serveur de jeu a l'ecoute sur le port ${port}, sans la page, version ${version ?? 'de developpement'}.`
     : `Neon Ninja: serveur a l'ecoute sur le port ${port}, jeu sur http://localhost:${port}/`,
 );
+
+if (serveur.metriques !== undefined) {
+  // eslint-disable-next-line no-console
+  console.log(
+    `Neon Ninja: metriques sur http://127.0.0.1:${String(serveur.metriques.port)}/metriques`,
+  );
+}
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, () => {

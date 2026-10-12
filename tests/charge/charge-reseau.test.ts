@@ -68,6 +68,7 @@ describe('assembler', () => {
     octetsEtat: 1_600_000,
     octetsAutres: 400,
     intentions: 4,
+    octetsBulletins: 0,
     intervalleReceptionMs: resumer([50, 50, 51]),
     processeurPourCent: 12,
     deconnexions: 0,

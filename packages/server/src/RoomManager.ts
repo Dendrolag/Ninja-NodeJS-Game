@@ -33,7 +33,7 @@ import type {
 import { BORNES_CODE_INVITATION } from '@neon-ninja/shared';
 import type { CarteCollisions } from '@neon-ninja/sim';
 
-import type { JoueurDeRoom, OptionsGameRoom } from './GameRoom.js';
+import type { JoueurDeRoom, ObservateurDuBattement, OptionsGameRoom } from './GameRoom.js';
 import { ChronometreDuBattement } from './chronometreDuBattement.js';
 import { GameRoom } from './GameRoom.js';
 import type { Horloge } from './horloge.js';
@@ -71,6 +71,8 @@ export interface OptionsRoomManager {
    * pas a garantir. Les tests fournissent leur propre tirage.
    */
   readonly tirerCode?: () => string;
+  /** Qui observe les battements de toutes les parties (etape 5.15). Personne par defaut. */
+  readonly observateur?: ObservateurDuBattement;
 }
 
 /** Ce qu'il faut pour ouvrir une partie. */
@@ -110,6 +112,7 @@ export class RoomManager {
   private readonly cadenceMs: number | undefined;
   private readonly genererGraine: () => number;
   private readonly tirerCode: () => string;
+  private readonly observateur: ObservateurDuBattement | undefined;
 
   /**
    * Numero de la prochaine room.
@@ -131,6 +134,7 @@ export class RoomManager {
     this.cadenceMs = options.cadenceMs;
     this.genererGraine = options.genererGraine ?? graineAuHasard;
     this.tirerCode = options.tirerCode ?? codeAuHasard;
+    this.observateur = options.observateur;
   }
 
   /** Le nombre de parties ouvertes. */
@@ -174,6 +178,7 @@ export class RoomManager {
       ...(this.horloge === undefined ? {} : { horloge: this.horloge }),
       ...(this.cadenceMs === undefined ? {} : { cadenceMs: this.cadenceMs }),
       chronometre: this.chronometre,
+      ...(this.observateur === undefined ? {} : { observateur: this.observateur }),
     };
 
     const room = new GameRoom(parametres);

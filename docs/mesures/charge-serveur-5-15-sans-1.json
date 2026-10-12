@@ -1,0 +1,93 @@
+{
+  "date": "2026-10-12T07:52:05.386Z",
+  "commit": "9eedb2f",
+  "machine": {
+    "processeur": "AMD Ryzen 7 3800X 8-Core Processor",
+    "coeursLogiques": 16,
+    "memoireGo": 32,
+    "systeme": "Windows_NT 10.0.26300",
+    "node": "v24.16.0"
+  },
+  "mode": "classique",
+  "carte": "map1",
+  "reseau": [
+    {
+      "bots": [150],
+      "paliers": [
+        {
+          "rooms": 24,
+          "joueursParRoom": 12,
+          "bots": [150],
+          "clients": 288,
+          "dureeMesureS": 20.002114800000005,
+          "battementMs": {
+            "nombre": 9600,
+            "moyenne": 1.0303166562500152,
+            "p50": 0.9831999999987602,
+            "p95": 1.388199999997596,
+            "p99": 1.7353000000002794,
+            "minimum": 0.6730999999999767,
+            "maximum": 4.028600000001461
+          },
+          "intervalleMs": {
+            "nombre": 9576,
+            "moyenne": 49.99893461779444,
+            "p50": 50.00920000000042,
+            "p95": 52.275799999999435,
+            "p99": 53.45119999999952,
+            "minimum": 40.92150000000038,
+            "maximum": 59.69180000000051
+          },
+          "frequenceParPartieHz": {
+            "nombre": 24,
+            "moyenne": 19.997885423595292,
+            "p50": 19.997885423595303,
+            "p95": 19.997885423595303,
+            "p99": 19.997885423595303,
+            "minimum": 19.997885423595303,
+            "maximum": 19.997885423595303
+          },
+          "retardBoucleMs": {
+            "p50": 1.256447,
+            "p99": 5.910527,
+            "maximum": 11.108351
+          },
+          "utilisationBouclePourCent": 63.56263077349826,
+          "ramasseMiettes": {
+            "pauses": 76,
+            "partDuTempsPourCent": 0.6150689639819932,
+            "plusLongueMs": 1.9914000034332275
+          },
+          "processeurServeurPourCent": 73.73720302815178,
+          "processeurParPartieMs": 1.5363541666666667,
+          "memoireRssMo": 283.62890625,
+          "tasUtiliseMo": 76.70822143554688,
+          "octetsParMessage": 446.5711905009895,
+          "messagesParClientHz": 19.999968536660262,
+          "debitParClientKoS": 8.971314914827571,
+          "debitSortantMbitS": 20.669909563762726,
+          "intentionsParSeconde": 272.8711466049579,
+          "intervalleReceptionMs": {
+            "nombre": 114924,
+            "moyenne": 49.99916743326017,
+            "p50": 50.033299999999144,
+            "p95": 52.78809999999976,
+            "p99": 54.33130000000165,
+            "minimum": 40.36599999999817,
+            "maximum": 59.982599999999366
+          },
+          "processeurClientsPourCent": [
+            5.938765004123567, 6.403699952854071, 6.478730849020331, 8.513175839247046,
+            4.219098758314237, 5.393835093434871, 4.2191126995037305
+          ],
+          "deconnexions": 0,
+          "verdict": {
+            "tenue": true,
+            "motifs": []
+          }
+        }
+      ],
+      "partiesTenues": 24
+    }
+  ]
+}

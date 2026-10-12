@@ -117,6 +117,8 @@ interface Plan {
   readonly carte: IdentifiantCarte;
   /** Les joueurs du banc posent des mines (etape 7.11, --mines). */
   readonly mines: boolean;
+  /** La charge reseau tourne sur un serveur surveille comme en production (etape 5.15). */
+  readonly surveillance: boolean;
 }
 
 /** Une ligne du banc, avec le budget qui en decoule. */
@@ -215,6 +217,7 @@ function lirePlan(argumentsRecus: readonly string[]): Plan {
       mode: { type: 'string' },
       carte: { type: 'string' },
       mines: { type: 'boolean', default: false },
+      surveillance: { type: 'boolean', default: false },
     },
   });
 
@@ -244,6 +247,7 @@ function lirePlan(argumentsRecus: readonly string[]): Plan {
     mode: modeDe(options.mode),
     carte: carteDe(options.carte),
     mines: options.mines,
+    surveillance: options.surveillance,
   };
 }
 
@@ -437,6 +441,7 @@ async function jouerLeReseau(plan: Plan): Promise<SerieReseau[]> {
         dureeMesureS: plan.dureeMesureS,
         processusClients: plan.processus,
         graine: GRAINE,
+        surveillance: plan.surveillance,
       });
       paliers.push(palier);
 
@@ -472,6 +477,13 @@ function ligneReseau(palier: ResultatChargeReseau): string {
     `${n(palier.debitSortantMbitS, 1)} Mbit/s sortants,`,
     `clients ${palier.processeurClientsPourCent.map((pourCent) => n(pourCent, 0)).join('/')} %:`,
     palier.verdict.tenue ? 'TENU' : `NON TENU (${palier.verdict.motifs.join('; ')})`,
+    ...(palier.surveillance === undefined
+      ? []
+      : [
+          `\n        surveillance: /metriques ${n(palier.surveillance.lectureMs.moyenne)} ms (max ${n(palier.surveillance.lectureMs.maximum)}),`,
+          `${String(palier.surveillance.series)} series, ${n(palier.surveillance.octetsParLecture / 1024, 0)} Ko par lecture,`,
+          `bulletins ${n(palier.surveillance.partDesBulletinsPourCent, 2)} % des octets`,
+        ]),
   ].join(' ');
 }
 

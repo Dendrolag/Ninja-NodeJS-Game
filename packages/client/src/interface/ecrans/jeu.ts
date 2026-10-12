@@ -36,9 +36,12 @@ import { Controles } from '../../controles/controles.js';
 import { brancherTactile } from '../../controles/tactile.js';
 import type { Diagnostic } from '../../diagnostic/diagnostic.js';
 import { pilotageParPixi } from '../../diagnostic/diagnostic.js';
+import { sondesReunies } from '../../diagnostic/surveillance.js';
+import { surveillerLaPartie } from '../../diagnostic/surveillancePage.js';
 import { monterBullesDeZone } from '../../hud/bullesDeZone.js';
 import { monterPointsFlottants } from '../../hud/pointsFlottants.js';
 import { monterSurcouche } from '../../hud/surcouche.js';
+import type { EtatDuLecteur } from '../../sons/lecteur.js';
 import { COTE_DE_VUE_AMONG_PX, HAUTEUR_DE_VUE_TACTIQUE_PX } from '../../rendu/apparence.js';
 import { lancerLaBoucle } from '../../rendu/boucle.js';
 import { monterRendu, prechargerLesSprites } from '../../rendu/pixi.js';
@@ -350,6 +353,26 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
       });
     }
 
+    // La surveillance de la production, dans toutes les parties (etape 5.15): un bulletin
+    // toutes les dix secondes au serveur de jeu, rien d'autre.
+    const surveillance =
+      navigateur === null
+        ? undefined
+        : surveillerLaPartie({
+            application: rendu.application,
+            client,
+            fenetre: navigateur,
+            son: () => sonAudible(contexte.sons?.etat()),
+          });
+
+    if (surveillance !== undefined) {
+      aRetirer.push(() => {
+        surveillance.arreter();
+      });
+    }
+
+    const sondes = [suivi?.sonde, surveillance?.sonde].filter((sonde) => sonde !== undefined);
+
     // Sans HUD, la variante du releve qui le retire (etape 8.5).
     const hud = variantes?.hud ?? true;
     const boucle = lancerLaBoucle({
@@ -362,13 +385,14 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
       ...(contexte.souvenirDesZones === undefined
         ? {}
         : { souvenirDesZones: contexte.souvenirDesZones }),
-      ...(suivi === undefined ? {} : { sonde: suivi.sonde }),
+      ...(sondes.length === 0 ? {} : { sonde: sondesReunies(...sondes) }),
       ...(variantes?.cadence === undefined
         ? {}
         : pilotageParPixi(rendu.application, variantes.cadence)),
       surStabilite: () => {
         montrer(chargement, false);
         suivi?.leverLeRideau();
+        surveillance?.leverLeRideau();
         // La revelation d'Among Ninjas attend que chacun ait charge la carte (etape 7.20).
         if (mode === 'among') {
           client.signalerLeChargement();
@@ -454,4 +478,13 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
       racine.remove();
     },
   };
+}
+
+/** Le son est-il audible: ni coupe, ni a zero. Sans lecteur, non. */
+function sonAudible(etat: EtatDuLecteur | undefined): boolean {
+  return (
+    etat !== undefined &&
+    !etat.coupe &&
+    (etat.volumeSons > 0 || (etat.musique && etat.volumeMusique > 0))
+  );
 }

@@ -88,13 +88,15 @@ demarrer() {
   docker rm --force "neon-ninja-$1" >/dev/null 2>&1 || true
   # Le reseau de la machine: le serveur ecoute sur son port local, que le pare-feu
   # ne laisse pas sortir. Il redemarre seul s'il tombe, et au redemarrage de la
-  # machine.
+  # machine. Sa route des metriques (etape 5.15) ecoute sur 127.0.0.1 seulement, cent
+  # ports plus loin: 3101 pour le bleu, 3102 pour le vert, que l'agent Alloy lit.
   docker run --detach \
     --name "neon-ninja-$1" \
     --network host \
     --restart unless-stopped \
     --env-file "$ENVIRONNEMENT" \
     --env "PORT=$port" \
+    --env "PORT_DES_METRIQUES=$((port + 100))" \
     --env "VERSION_DU_JEU=$2" \
     "neon-ninja:$2" >/dev/null
 }

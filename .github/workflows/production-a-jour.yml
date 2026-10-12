@@ -1,0 +1,60 @@
+# La production est-elle a jour (etape 5.15).
+#
+# Toutes les heures, compare la version que sert la production a master: un commit qui
+# touche le jeu ne doit pas attendre plus d'une heure de partir en ligne (la regle de la
+# mise en ligne: un commit de documentation ne compte pas). Une fois par jour, verifie aussi
+# que le secours, sur Render, est a la meme version; le reveiller plus souvent userait ses
+# heures gratuites. En echec, GitHub previent par courriel. Le detail est dans
+# deploiement/productionAJour.ts, que faire dans docs/deploiement.md, section
+# « Surveillance ».
+
+name: Production a jour
+
+on:
+  schedule:
+    - cron: '23 * * * *'
+    - cron: '53 5 * * *'
+  workflow_dispatch:
+    inputs:
+      secours:
+        description: 'Verifier aussi le secours (Render, le reveille)'
+        type: boolean
+        default: false
+
+env:
+  NODE_VERSION: '24'
+
+jobs:
+  verifier:
+    name: Production a jour
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PAGE_DU_JEU: https://ninja.dendrolag.fr
+      ORACLE_HOTE: serveur.ninja.dendrolag.fr
+      SERVEUR_RENDER: https://neon-ninja.onrender.com
+      VERIFIER_LE_SECOURS: ${{ (github.event.schedule == '53 5 * * *' || inputs.secours) && 'oui' || 'non' }}
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Installer pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Installer Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Installer les dependances
+        run: pnpm install --frozen-lockfile
+
+      # La regle de la mise en ligne lit le paquet partage compile.
+      - name: Compiler le paquet partage
+        run: pnpm exec tsc --build packages/shared
+
+      - name: Comparer la production a master
+        run: node --disable-warning=ExperimentalWarning deploiement/productionAJour.ts

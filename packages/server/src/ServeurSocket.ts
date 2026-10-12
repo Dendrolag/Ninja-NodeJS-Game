@@ -142,6 +142,7 @@ import type { Place } from './places.js';
 import { RegistreDesPlaces } from './places.js';
 import type { OptionsCreationRoom } from './RoomManager.js';
 import { RoomManager } from './RoomManager.js';
+import type { JoueurDuBulletin, SurveillanceDuJeu } from './surveillance/surveillanceDuJeu.js';
 import type { SourceDeTerrain } from './terrain.js';
 import { SANS_TERRAIN } from './terrain.js';
 import type { Alias, CleDeVue } from './vues.js';
@@ -282,6 +283,12 @@ export interface OptionsServeurSocket {
    * controle.
    */
   readonly version?: string;
+  /**
+   * La surveillance de la production (etape 5.15): elle compte les battements et leurs
+   * phases, et recoit les bulletins des pages. Absente, rien n'est mesure de plus, et les
+   * bulletins sont ignores.
+   */
+  readonly surveillance?: SurveillanceDuJeu;
 }
 
 /** La couche reseau d'un serveur de jeu. */
@@ -333,17 +340,32 @@ export class ServeurSocket {
   /** La version du jeu que ce serveur fait tourner, s'il en a une. */
   private readonly version: string | undefined;
 
+  /** La surveillance de la production, s'il y en a une (etape 5.15). */
+  private readonly surveillance: SurveillanceDuJeu | undefined;
+
   /** Retire l'ecoute des sessions fermees, posee aupres de l'annuaire (etape 3.4). */
   private readonly arreterLEcouteDesSessions: (() => void) | undefined;
 
   constructor(options: OptionsServeurSocket) {
     this.io = options.io;
     this.horloge = options.horloge ?? horlogeSysteme;
-    this.rooms = options.rooms ?? new RoomManager({ horloge: this.horloge });
+    this.surveillance = options.surveillance;
+    this.rooms =
+      options.rooms ??
+      new RoomManager({
+        horloge: this.horloge,
+        ...(this.surveillance === undefined ? {} : { observateur: this.surveillance }),
+      });
     this.places = new RegistreDesPlaces({ horloge: this.horloge });
     this.terrains = options.terrains ?? SANS_TERRAIN;
     this.comptes = options.comptes;
     this.version = options.version;
+
+    this.surveillance?.brancher({
+      parties: () => this.rooms.toutesLesRooms,
+      transports: () =>
+        [...this.connexions.values()].map(({ socket }) => socket.conn.transport.name),
+    });
 
     this.arreterLEcouteDesSessions = this.comptes?.surSessionsFermees((compteId) => {
       void this.couperLesSessionsFermees(compteId);
@@ -622,6 +644,17 @@ export class ServeurSocket {
     socket.on('inviter', (demande, accuse) => {
       this.surInviter(socket, demande, accuse);
     });
+    // La surveillance de la production (etape 5.15): ce que la page dit de sa partie, et
+    // l'accuse qui lui mesure l'aller et retour.
+    socket.on('bulletin', (bulletin) => {
+      this.surveillance?.recevoirUnBulletin(socket.id, this.joueurEnPartie(socket), bulletin);
+    });
+    socket.on('appareil', (description) => {
+      this.surveillance?.recevoirLAppareil(socket.id, description);
+    });
+    socket.on('sonde', (accuse) => {
+      this.surSonde(socket, accuse);
+    });
     socket.on('disconnect', () => {
       this.surDeconnexion(socket);
     });
@@ -824,6 +857,7 @@ export class ServeurSocket {
     repondre({ valide: true, valeur: salonDe(room) });
     socket.emit('partieLancee', lancementDe(room));
     this.diffusionDe(room).flux.attendreUneImage(socket.id);
+    this.surveillance?.reconnexion();
 
     if (room.hote !== hoteAvant) {
       this.diffuserLeSalon(room);
@@ -921,6 +955,7 @@ export class ServeurSocket {
     const connexion = this.connexions.get(socket.id);
     this.connexions.delete(socket.id);
     this.amis?.connexionFermee(socket.id);
+    this.surveillance?.connexionFermee(socket.id);
 
     if (connexion?.idRoom === undefined || connexion.session === undefined) {
       return;
@@ -1511,6 +1546,8 @@ export class ServeurSocket {
    * simplement omis.
    */
   private diffuserLeBattement(room: GameRoom): void {
+    const surveillance = this.surveillance;
+    const debut = surveillance === undefined ? 0 : this.horloge.maintenant();
     const { flux, alias } = this.diffusionDe(room);
     const etat = room.etat;
     const destinataires = new Map<string, CleDeVue>();
@@ -1520,13 +1557,22 @@ export class ServeurSocket {
 
       if (connexion?.idRoom === room.id) {
         destinataires.set(connexion.socket.id, cleDeVue(etat, id));
+        // Ce qui attend encore d'etre envoye a ce joueur, avant d'y ajouter ce battement.
+        surveillance?.fileDEnvoi(connexion.socket);
       }
     }
 
     const vues = vuesDe(etat, new Set(destinataires.values()), alias);
+    const apresLesVues = surveillance === undefined ? 0 : this.horloge.maintenant();
+    const envois = flux.envoisDuBattement(vues, destinataires);
+    const apresLeCodage = surveillance === undefined ? 0 : this.horloge.maintenant();
+    let octets = 0;
+    let plusGrandeTrame = 0;
 
-    for (const envoi of flux.envoisDuBattement(vues, destinataires)) {
+    for (const envoi of envois) {
       this.io.to([...envoi.destinataires]).emit('etat', envoi.trame);
+      octets += envoi.trame.byteLength * envoi.destinataires.length;
+      plusGrandeTrame = Math.max(plusGrandeTrame, envoi.trame.byteLength);
     }
 
     for (const notification of notificationsDe(etat)) {
@@ -1542,6 +1588,44 @@ export class ServeurSocket {
 
     this.annoncerLesPoches(room);
     this.annoncerLesEtatsPrives(room);
+
+    surveillance?.diffusion(
+      room,
+      apresLesVues - debut,
+      apresLeCodage - apresLesVues,
+      this.horloge.maintenant() - apresLeCodage,
+      octets,
+      envois.length,
+      plusGrandeTrame,
+    );
+  }
+
+  /**
+   * La sonde de l'aller et retour (etape 5.15): l'accuse part aussitot, sans rien. Limitee
+   * comme les autres actions: une page n'en demande qu'une toutes les cinq secondes.
+   */
+  private surSonde(socket: SocketTypee, accuse: unknown): void {
+    const connexion = this.connexions.get(socket.id);
+
+    if (
+      connexion === undefined ||
+      typeof accuse !== 'function' ||
+      !this.autorise(connexion, 'autresActions')
+    ) {
+      return;
+    }
+
+    (accuse as () => void)();
+  }
+
+  /** La partie et le pseudo d'une connexion, pour son bulletin (etape 5.15). */
+  private joueurEnPartie(socket: SocketTypee): JoueurDuBulletin | undefined {
+    const connexion = this.connexions.get(socket.id);
+    const room = connexion?.idRoom === undefined ? undefined : this.rooms.room(connexion.idRoom);
+
+    return room === undefined || connexion?.session === undefined
+      ? undefined
+      : { room, pseudo: connexion.session.pseudo };
   }
 
   /**
