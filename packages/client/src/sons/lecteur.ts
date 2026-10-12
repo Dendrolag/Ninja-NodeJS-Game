@@ -51,7 +51,7 @@
  * d'une partie ne vaut pas une gestion d'erreur bruyante.
  */
 
-import type { NomDeSon, PisteMusicale, TypeBonus } from '@neon-ninja/shared';
+import type { NomDeBoucle, NomDeSon, PisteMusicale } from '@neon-ninja/shared';
 import {
   MUSIQUES,
   MUSIQUES_DE_PARTIE,
@@ -83,9 +83,9 @@ export interface LecteurDeSons {
    */
   jouerUnPasDAutrui(place: PlaceDuSon): void;
   /** Demarre la boucle sonore d'un bonus, si elle ne tourne pas deja. */
-  demarrerLaBoucle(bonus: TypeBonus): void;
+  demarrerLaBoucle(boucle: NomDeBoucle): void;
   /** Arrete la boucle sonore d'un bonus. */
-  arreterLaBoucle(bonus: TypeBonus): void;
+  arreterLaBoucle(boucle: NomDeBoucle): void;
   /**
    * Fait jouer une musique, et arrete l'autre.
    *
@@ -239,7 +239,7 @@ const EFFETS: readonly Effet[] = [
     fichier,
     boucle: false,
   })),
-  ...(Object.entries(SONS_EN_BOUCLE) as [TypeBonus, string][]).map(([bonus, fichier]) => ({
+  ...(Object.entries(SONS_EN_BOUCLE) as [NomDeBoucle, string][]).map(([bonus, fichier]) => ({
     voix: voixDeLaBoucle(bonus),
     fichier,
     boucle: true,
@@ -259,7 +259,7 @@ function voixDuPasDAutrui(rang: number): string {
   return `pasDAutrui:${String(rang)}`;
 }
 
-function voixDeLaBoucle(bonus: TypeBonus): string {
+function voixDeLaBoucle(bonus: NomDeBoucle): string {
   return `boucle:${bonus}`;
 }
 

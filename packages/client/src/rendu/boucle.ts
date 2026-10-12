@@ -545,8 +545,13 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
     // qui a demarre quoi. On lit les effets EN COURS a cet instant, et non la
     // liste du magasin: celui-ci ne retire un effet expire qu'a l'arrivee du
     // suivant, et la boucle sonore d'un bonus fini tournerait sinon jusque-la.
-    // Seuls les bonus du jeu d'origine ont un son en boucle (etape 7.7).
+    // Seuls les bonus du jeu d'origine ont un son en boucle (etape 7.7). L'alarme de la
+    // surchauffe d'Among Ninjas tourne tout le long de l'alerte (12 octobre 2026).
     const actives = new Set<string>(bonusDOrigineEnCours(etat, maintenant));
+
+    if (surchauffeEnCours(etat)) {
+      actives.add('alarmeDeSurchauffe');
+    }
 
     for (const nature of actives) {
       if (!bouclesEnCours.has(nature)) {
@@ -587,4 +592,11 @@ export function lancerLaBoucle(options: OptionsBoucle): Boucle {
       options.sons?.toutArreter();
     },
   };
+}
+
+/** Une surchauffe d'Among Ninjas est-elle en cours: son alarme tourne tant qu'elle dure. */
+export function surchauffeEnCours(etat: EtatClient): boolean {
+  const among = etat.partie?.among;
+
+  return among?.phase === 'jeu' && among.sabotage?.nature === 'surchauffe';
 }

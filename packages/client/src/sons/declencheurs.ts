@@ -82,12 +82,11 @@ export function sonDuFait(fait: FaitDeJeu, moi?: string, mode?: Mode): NomDeSon 
     case 'carteVidee':
       return undefined;
 
-    // Among Ninjas (etape 7.20), sons provisoires pris dans ceux du jeu, en attendant ceux du
-    // porteur du projet: le meurtre sonne comme un coup de katana chez l'assassin et les
-    // temoins, comme une capture subie chez la victime, en alerte; la reunion s'ouvre au son du
-    // dernier decompte, et son resultat a celui d'une capture subie.
+    // Among Ninjas (etape 7.20): le meurtre sonne comme un coup de katana chez l'assassin et les
+    // temoins; la proie tuee entend le son du porteur du projet (12 octobre 2026). La reunion
+    // s'ouvre au gong, et son resultat sonne comme une capture subie.
     case 'meurtre':
-      return fait.charge.victime === moi ? 'joueurCaptureSubi' : 'katanaImpact';
+      return fait.charge.victime === moi ? 'meurtreSubi' : 'katanaImpact';
 
     // Une tache visuelle (etape 7.21), entendue de ceux qui la voient, a sa station.
     case 'tacheVisuelle':
@@ -103,7 +102,7 @@ export function sonDuFait(fait: FaitDeJeu, moi?: string, mode?: Mode): NomDeSon 
 
     case 'reunion':
       return fait.charge.quoi === 'ouverte'
-        ? 'compteAReboursFinal'
+        ? 'gongDeReunion'
         : fait.charge.quoi === 'resultat'
           ? 'joueurCaptureSubi'
           : undefined;
@@ -207,12 +206,10 @@ function sonDUnSabotage(
     return quoi === 'lance' ? 'panneDebut' : 'panneFin';
   }
 
+  // L'alarme de la surchauffe tourne en boucle tout le long de l'alerte (rendu/boucle.ts): son
+  // debut n'a pas d'autre son.
   if (nature === 'surchauffe') {
-    return quoi === 'lance'
-      ? 'surchauffeAlarme'
-      : repare === true
-        ? 'surchauffeReparee'
-        : undefined;
+    return quoi === 'fini' && repare === true ? 'surchauffeReparee' : undefined;
   }
 
   if (quoi === 'fini') {

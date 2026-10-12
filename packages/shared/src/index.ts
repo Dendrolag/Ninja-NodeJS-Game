@@ -358,7 +358,13 @@ export {
 
 export type { Position, Vecteur } from './geometrie.js';
 
-export type { CoucheCarte, MusiqueDePartie, NomDeSon, PisteMusicale } from './ressources.js';
+export type {
+  CoucheCarte,
+  MusiqueDePartie,
+  NomDeBoucle,
+  NomDeSon,
+  PisteMusicale,
+} from './ressources.js';
 export {
   COTE_IMAGE_OBJET_PX,
   IMAGES_DE_MARCHE,

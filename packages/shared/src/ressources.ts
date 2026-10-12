@@ -398,27 +398,40 @@ export const SONS = {
   panneDebut: 'final-tick.wav',
   /** Les neons reviennent, entendu de tous. */
   panneFin: 'collect-bonus.wav',
-  /** L'alarme de la surchauffe, entendue de tous. */
-  surchauffeAlarme: 'final-tick.wav',
   /** La surchauffe reparee, entendue de tous. */
   surchauffeReparee: 'collect-bonus.wav',
   /** Une malediction, chez les assassins maudits et les fantomes. */
   malediction: 'collect-malus.wav',
+  /*
+   * Les sons du porteur du projet pour Among Ninjas (12 octobre 2026), reserves au mode.
+   */
+  /** Le gong d'une reunion qui s'ouvre, entendu de tous. */
+  gongDeReunion: 'gong.mp3',
+  /** La proie tuee par un assassin, entendue d'elle seule. */
+  meurtreSubi: 'killed-by-assassin.mp3',
 } as const;
 
 /** Nom d'un son ponctuel. */
 export type NomDeSon = keyof typeof SONS;
 
 /**
- * Les sons qui tournent en boucle tant qu'un bonus dure.
+ * Ce qui tourne en boucle: un bonus tant qu'il dure, et l'alarme d'Among Ninjas tant que dure
+ * la surchauffe (12 octobre 2026).
+ */
+export type NomDeBoucle = TypeBonus | 'alarmeDeSurchauffe';
+
+/**
+ * Les sons qui tournent en boucle tant qu'un bonus dure, ou une alerte.
  *
  * Ils sont separes des sons ponctuels parce qu'ils se demarrent et s'arretent,
  * la ou les autres se declenchent et se terminent seuls.
  */
-export const SONS_EN_BOUCLE: Readonly<Record<TypeBonus, string>> = {
+export const SONS_EN_BOUCLE: Readonly<Record<NomDeBoucle, string>> = {
   vitesse: 'speed-active.mp3',
   invincibilite: 'invincibility-active.mp3',
   revelation: 'reveal-active.mp3',
+  // L'alarme de la surchauffe d'Among Ninjas, entendue de tous tout le long de l'alerte.
+  alarmeDeSurchauffe: 'alarm-alert.mp3',
 };
 
 /** Les quatre bruits de pas, tires au sort a chaque foulee. */

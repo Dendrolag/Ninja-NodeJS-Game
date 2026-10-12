@@ -21,6 +21,7 @@ import { REGLAGES_PAR_DEFAUT, encoderDelta, encoderImage } from '@neon-ninja/sha
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { Client } from '../client.js';
+import type { EtatClient } from '../etat.js';
 import { creerClient } from '../client.js';
 import { Controles } from '../controles/controles.js';
 import { fait } from '../faits.js';
@@ -35,7 +36,7 @@ import type { LecteurDeSons } from '../sons/lecteur.js';
 import { placeDUnPasEntendu } from '../sons/pasEntendus.js';
 import { STABILITE } from './apparence.js';
 import type { Boucle } from './boucle.js';
-import { faitQuiNousDeplace, lancerLaBoucle } from './boucle.js';
+import { faitQuiNousDeplace, lancerLaBoucle, surchauffeEnCours } from './boucle.js';
 import { echellePour } from './camera.js';
 import type { Rendu, SangAImprimer } from './pixi.js';
 import type { Scene } from './scene.js';
@@ -829,5 +830,23 @@ describe('le fusil du traqueur (Chasse, etape 5.5)', () => {
 
     expect(sonsChasse.joues.filter((nom) => nom === 'rechargeFusil')).toHaveLength(1);
     boucleChasse.arreter();
+  });
+});
+
+describe('l alarme de la surchauffe (12 octobre 2026)', () => {
+  /** Un etat client reduit a ce que la condition lit. */
+  const etat = (among: unknown): EtatClient =>
+    ({ partie: among === undefined ? undefined : { among } }) as unknown as EtatClient;
+
+  it('tourne pendant une surchauffe en jeu, et seulement alors', () => {
+    expect(surchauffeEnCours(etat({ phase: 'jeu', sabotage: { nature: 'surchauffe' } }))).toBe(
+      true,
+    );
+    expect(surchauffeEnCours(etat({ phase: 'jeu', sabotage: { nature: 'panne' } }))).toBe(false);
+    expect(surchauffeEnCours(etat({ phase: 'jeu' }))).toBe(false);
+    expect(surchauffeEnCours(etat({ phase: 'reunion', sabotage: { nature: 'surchauffe' } }))).toBe(
+      false,
+    );
+    expect(surchauffeEnCours(etat(undefined))).toBe(false);
   });
 });

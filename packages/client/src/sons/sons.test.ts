@@ -33,12 +33,21 @@ function partie(tempsRestantMs: number): VuePartie {
 }
 
 describe('sonDuFait', () => {
-  it('alerte la victime d un meurtre, et fait entendre le katana aux autres (etape 7.20)', () => {
+  it('fait entendre a la victime d un meurtre son propre son, et le katana aux autres', () => {
     const meurtre = fait('meurtre', { tueur: 'tueur', victime: 'moi', x: 0, y: 0 }, 0);
 
-    expect(sonDuFait(meurtre, 'moi', 'among')).toBe('joueurCaptureSubi');
+    // Le son du porteur du projet (12 octobre 2026), a la seule proie tuee.
+    expect(sonDuFait(meurtre, 'moi', 'among')).toBe('meurtreSubi');
+    expect(SONS.meurtreSubi).toBe('killed-by-assassin.mp3');
     expect(sonDuFait(meurtre, 'tueur', 'among')).toBe('katanaImpact');
     expect(sonDuFait(meurtre, 'temoin', 'among')).toBe('katanaImpact');
+  });
+
+  it('ouvre une reunion au gong (12 octobre 2026)', () => {
+    const ouverte = fait('reunion', { quoi: 'ouverte', numero: 1, motif: 'gong', morts: [] }, 0);
+
+    expect(sonDuFait(ouverte, 'moi', 'among')).toBe('gongDeReunion');
+    expect(SONS.gongDeReunion).toBe('gong.mp3');
   });
 
   it('fait entendre un ramassage de bonus', () => {
@@ -750,6 +759,19 @@ describe('creerLecteurDeSons', () => {
       expect(lectures('speed-active.mp3')).toHaveLength(2);
     });
 
+    it('fait tourner l alarme de la surchauffe en boucle, jusqu a l arret', async () => {
+      const { lecteur, lectures, debloquer } = lecteurWebAudio();
+      await debloquer();
+
+      lecteur.demarrerLaBoucle('alarmeDeSurchauffe');
+      const alarmes = lectures('alarm-alert.mp3');
+      expect(alarmes).toHaveLength(1);
+      expect(alarmes[0]?.loop).toBe(true);
+
+      lecteur.arreterLaBoucle('alarmeDeSurchauffe');
+      expect(alarmes[0]?.arretee).toBe(true);
+    });
+
     it('arrete tous les effets en cours quand on coupe le son, et n en joue plus', async () => {
       const { lecteur, contexte, debloquer } = lecteurWebAudio();
       await debloquer();
@@ -932,7 +954,9 @@ describe('les sons des sabotages d Among Ninjas (etape 7.22)', () => {
   it('font entendre la panne, la surchauffe et leur reparation', () => {
     expect(son('lance', 'panne')).toBe('panneDebut');
     expect(son('fini', 'panne', true)).toBe('panneFin');
-    expect(son('lance', 'surchauffe')).toBe('surchauffeAlarme');
+    // L'alarme de la surchauffe tourne en boucle tout le long de l'alerte: son debut n'a pas
+    // d'autre son (12 octobre 2026).
+    expect(son('lance', 'surchauffe')).toBeUndefined();
     expect(son('fini', 'surchauffe', true)).toBe('surchauffeReparee');
     expect(son('fini', 'surchauffe', false)).toBeUndefined();
   });
@@ -958,8 +982,9 @@ describe('les sons des sabotages d Among Ninjas (etape 7.22)', () => {
       'nuageTombe',
       'panneDebut',
       'panneFin',
-      'surchauffeAlarme',
       'surchauffeReparee',
+      'gongDeReunion',
+      'meurtreSubi',
       'malediction',
     ];
 
