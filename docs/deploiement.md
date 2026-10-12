@@ -208,13 +208,13 @@ Mise en place à l'étape 5.15 (`docs/plan/etape-5-15.md`). Le tableau **« Neon
 
    puis recopier `deploiement/oracle/` et relancer `installer.sh` (« Administrer la machine »), qui installe Alloy, son bridage et sa configuration, et le démarre. La route des métriques n'existe qu'au démarrage suivant d'un serveur de jeu d'une version qui la connaît (étape 5.15 et après), par les commandes `neon-ninja` que l'installation vient de poser : la prochaine mise en ligne, ou un redémarrage à la main.
 
-4. **Un compte de service** dans le Grafana de la pile, « Administration », « Service accounts », rôle Admin, et son jeton ; puis, depuis la racine du dépôt :
+4. **Un compte de service** dans le Grafana de la pile, « Administration », « Service accounts », rôle **Admin**, et son jeton (`glsa_…`) ; sous un autre rôle, l'import s'arrête dès la lecture des sources de données (« Permissions needed: datasources:read », rencontré le 12 octobre 2026). Puis, depuis la racine du dépôt :
 
    ```bash
    GRAFANA_URL=https://<pile>.grafana.net GRAFANA_JETON_IMPORT=<jeton> COURRIEL_DES_ALERTES=<courriel> node deploiement/grafana/importer.ts
    ```
 
-   Il pose le dossier, le tableau, les alertes évaluées chaque minute, le courriel et la politique qui y envoie toutes les alertes. Avec `GRAFANA_SM_URL` et `GRAFANA_SM_JETON` (« Testing & synthetics », « Synthetics », « Config »), il pose aussi les deux vérifications de disponibilité, depuis Francfort. Sans eux, les créer à la main : type HTTP, cible `https://serveur.ninja.dendrolag.fr/sante` (nom de tâche `production`) et `https://ninja.dendrolag.fr/` (nom `page`), toutes les minutes, sonde de Francfort seule (deux sondes dépasseraient les 100 000 vérifications gratuites du mois). Les noms comptent : les alertes les lisent. Le relancer après chaque changement de `deploiement/grafana/` ne double rien.
+   Il pose le dossier, le tableau, les alertes évaluées chaque minute, le courriel et la politique qui y envoie toutes les alertes. Avec `GRAFANA_SM_URL` et `GRAFANA_SM_JETON` (« Testing & synthetics », « Synthetics », « Config », pour le jeton ; l'adresse est celle de l'API web, `https://synthetic-monitoring-api-eu-west-2.grafana.net` pour notre pile, et non l'adresse `synthetic-monitoring-grpc-…:443` que montre la page, réservée aux sondes), il pose aussi les deux vérifications de disponibilité, depuis Francfort. Sans eux, les créer à la main : type HTTP, cible `https://serveur.ninja.dendrolag.fr/sante` (nom de tâche `production`) et `https://ninja.dendrolag.fr/` (nom `page`), toutes les minutes, sonde de Francfort seule (deux sondes dépasseraient les 100 000 vérifications gratuites du mois). Les noms comptent : les alertes les lisent. Le relancer après chaque changement de `deploiement/grafana/` ne double rien.
 
 5. **Essayer chaque alerte une fois** : dans « Alerting », « Contact points », bouton « Test » du point « Porteur du projet » pour le courriel ; puis, pour chaque règle, baisser son seuil le temps qu'elle se déclenche, ou provoquer la saccade (« Les épisodes », ci-dessous), et remettre le seuil.
 

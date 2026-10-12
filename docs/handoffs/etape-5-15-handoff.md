@@ -42,6 +42,8 @@ Douze écarts, consignés dans la section « Réconciliation » de la fiche. Les
 
 ## Ce que le porteur du projet fait lui-même
 
+**Fait le 12 octobre 2026**: le compte Grafana Cloud (pile en `eu-west-2`), l'agent Alloy installé et actif sur la machine Oracle, l'import du tableau, des dix alertes, du courriel et des deux vérifications de disponibilité (sortie de l'import sans erreur). Reste le point 3 ci-dessous.
+
 Dans l'ordre, une fois le compte Grafana Cloud créé (guide donné dans la conversation, repris dans `docs/deploiement.md`, « Mettre en place »):
 
 1. Écrire, hors du dépôt, `$HOME\alloy.env` (bloc d'exemple dans `docs/deploiement.md`), puis, dans PowerShell à la racine du dépôt:
