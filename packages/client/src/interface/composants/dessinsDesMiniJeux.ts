@@ -42,8 +42,10 @@ import {
   BORD_GAUCHE,
   LIGNE_DU_NINJA,
   RAYON_DU_NINJA,
+  CLIGNOTEMENT_MS,
   RAYON_D_UN_ENVAHISSEUR,
   SOL,
+  VIES,
   centreDUnEnvahisseur,
 } from '../modeles/gestes/envahisseurs.js';
 import type { EtatSerpent } from '../modeles/gestes/serpent.js';
@@ -172,13 +174,17 @@ function texte(
   ctx.restore();
 }
 
-/** Le cadre lumineux d'une aire de jeu, et son fond a peine teinte. */
+/**
+ * Le cadre lumineux d'une aire de jeu, et son fond a peine teinte. Un cadre en pointilles dit
+ * des bords qui se traversent.
+ */
 function plateau(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   largeur: number,
   hauteur: number,
+  traversable = false,
 ): void {
   ctx.save();
   ctx.fillStyle = 'rgba(46, 230, 255, 0.04)';
@@ -187,6 +193,9 @@ function plateau(
   ctx.shadowBlur = 10;
   ctx.strokeStyle = CYAN;
   ctx.lineWidth = 1.5;
+  if (traversable) {
+    ctx.setLineDash([8, 6]);
+  }
   ctx.strokeRect(x, y, largeur, hauteur);
   ctx.restore();
 }
@@ -399,7 +408,9 @@ function caisses(ctx: CanvasRenderingContext2D, etat: EtatCaisses, maintenant: n
 
 function serpent(ctx: CanvasRenderingContext2D, etat: EtatSerpent): void {
   const { x, y, cote } = TERRAIN;
-  plateau(ctx, x, y, COLONNES_DU_SERPENT * cote, LIGNES_DU_SERPENT * cote);
+  const largeur = COLONNES_DU_SERPENT * cote;
+  const hauteur = LIGNES_DU_SERPENT * cote;
+  plateau(ctx, x, y, largeur, hauteur, true);
   quadrillage(ctx, x, y, COLONNES_DU_SERPENT, LIGNES_DU_SERPENT, cote, 'rgba(46, 230, 255, 0.07)');
   const centre = ([c, l]: readonly [number, number]): [number, number] => [
     x + (c + 0.5) * cote,
@@ -426,14 +437,28 @@ function serpent(ctx: CanvasRenderingContext2D, etat: EtatSerpent): void {
   ctx.lineWidth = cote * 0.5;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
+  // Le corps passe d'un bord a l'autre: le trait sort par un bord et rentre par l'autre.
+  ctx.beginPath();
+  ctx.rect(x, y, largeur, hauteur);
+  ctx.clip();
   ctx.beginPath();
   etat.corps.forEach((case_, rang) => {
     const [px, py] = centre(case_);
-    if (rang === 0) {
+    const avant = etat.corps[rang - 1];
+    if (avant === undefined) {
       ctx.moveTo(px, py);
-    } else {
-      ctx.lineTo(px, py);
+      return;
     }
+    const replier = (ecart: number, longueur: number): number =>
+      ecart > 1 ? ecart - longueur : ecart < -1 ? ecart + longueur : ecart;
+    const dc = replier(case_[0] - avant[0], COLONNES_DU_SERPENT);
+    const dl = replier(case_[1] - avant[1], LIGNES_DU_SERPENT);
+    const [ax, ay] = centre(avant);
+    if (dc !== case_[0] - avant[0] || dl !== case_[1] - avant[1]) {
+      ctx.lineTo(ax + dc * cote, ay + dl * cote);
+      ctx.moveTo(px - dc * cote, py - dl * cote);
+    }
+    ctx.lineTo(px, py);
   });
   ctx.stroke();
   ctx.restore();
@@ -543,6 +568,27 @@ function envahisseurs(
   }
   for (const riposte of etat.ripostes) {
     shuriken(ctx, riposte.x, riposte.y, -maintenant / 60, ROUGE);
+  }
+
+  // Les vies, en haut a gauche: pleines, puis perdues.
+  for (let vie = 0; vie < VIES; vie += 1) {
+    ctx.save();
+    ctx.strokeStyle = vie < etat.vies ? ROSE : 'rgba(255, 95, 210, 0.25)';
+    ctx.fillStyle = 'rgba(255, 95, 210, 0.35)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(BORD_GAUCHE + 16 + vie * 20, 48, 6, 0, Math.PI * 2);
+    if (vie < etat.vies) {
+      ctx.fill();
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Touche par une riposte, notre ninja clignote un instant.
+  const touche = etat.toucheA !== undefined && maintenant - etat.toucheA < CLIGNOTEMENT_MS;
+  if (touche && Math.floor(maintenant / 100) % 2 === 0) {
+    return;
   }
 
   // Notre ninja: un cercle rose et son bandeau.

@@ -45,6 +45,7 @@ import {
   RAYON_DU_NINJA,
   RAYON_D_UN_ENVAHISSEUR,
   SOL,
+  VIES,
   VITESSE_DE_LA_RANGEE,
   VITESSE_DU_SHURIKEN,
   centreDUnEnvahisseur,
@@ -56,6 +57,7 @@ import {
   ELOIGNEMENT_DU_FRUIT,
   LIGNES_DU_SERPENT,
   creerSerpent,
+  distanceDuSerpent,
 } from './serpent.js';
 
 /** Le pas d'une image, en millisecondes. */
@@ -287,10 +289,12 @@ function versLeFruit(etat: EtatSerpent): Direction | undefined {
       return venues.get(cle(ici));
     }
     for (const [direction, [dc, dl]] of pas) {
-      const la: Case = [ici[0] + dc, ici[1] + dl];
-      const dedans =
-        la[0] >= 0 && la[0] < COLONNES_DU_SERPENT && la[1] >= 0 && la[1] < LIGNES_DU_SERPENT;
-      if (dedans && !vus.has(cle(la)) && !corps.has(cle(la))) {
+      // Les bords se traversent.
+      const la: Case = [
+        (ici[0] + dc + COLONNES_DU_SERPENT) % COLONNES_DU_SERPENT,
+        (ici[1] + dl + LIGNES_DU_SERPENT) % LIGNES_DU_SERPENT,
+      ];
+      if (!vus.has(cle(la)) && !corps.has(cle(la))) {
         vus.add(cle(la));
         venues.set(cle(la), venues.get(cle(ici)) ?? direction);
         file.push(la);
@@ -328,8 +332,7 @@ describe('nourrir le serpent', () => {
       );
       if (etat.manges > avant && etat.manges < 5) {
         const tete = etat.corps[0] ?? [0, 0];
-        const ecart = Math.abs(etat.fruit[0] - tete[0]) + Math.abs(etat.fruit[1] - tete[1]);
-        expect(ecart).toBeGreaterThanOrEqual(ELOIGNEMENT_DU_FRUIT);
+        expect(distanceDuSerpent(etat.fruit, tete)).toBeGreaterThanOrEqual(ELOIGNEMENT_DU_FRUIT);
         expect(etat.corps.some(([c, l]) => c === etat.fruit[0] && l === etat.fruit[1])).toBe(false);
       }
       maintenant += IMAGE_MS;
@@ -340,13 +343,35 @@ describe('nourrir le serpent', () => {
     expect(etat.corps).toHaveLength(8);
   });
 
-  it('perd au bord, puis repart d une partie neuve', () => {
-    // Tout droit vers la droite: la tete part de la colonne 4, et sort au huitieme pas.
-    let etat = attendre(creerSerpent(2), 0, 2400);
+  it('traverse les bords: sorti a droite, il rentre a gauche', () => {
+    // Tout droit vers la droite: la tete part de la colonne 4 et passe le bord au huitieme pas.
+    const etat = attendre(creerSerpent(2), 0, 3200);
 
-    expect(etat.echos).toContain('perdue');
-    expect(etat.perdueJusqua).toBeDefined();
-    etat = attendre(etat, 2400, (etat.perdueJusqua ?? 0) + 20);
+    expect(etat.echos).not.toContain('perdue');
+    expect(etat.corps[0]?.[0]).toBeLessThan(4);
+    expect(etat.corps[0]?.[1]).toBe(4);
+    expect(distanceDuSerpent([0, 0], [11, 8])).toBe(2);
+  });
+
+  it('perd en se mordant, puis repart d une partie neuve', () => {
+    // Un serpent de cinq cases qui revient sur lui-meme.
+    const enBoucle: EtatSerpent = {
+      ...creerSerpent(2),
+      corps: [
+        [4, 4],
+        [4, 5],
+        [5, 5],
+        [5, 4],
+        [5, 3],
+      ],
+      direction: 'haut',
+      virages: ['droite'],
+      prochainPas: 100,
+    };
+    let etat = attendre(enBoucle, 0, 120);
+
+    expect(etat.echos).toEqual(['perdue']);
+    etat = attendre(etat, 120, (etat.perdueJusqua ?? 0) + 20);
     expect(etat.graine).toBe(3);
     expect(etat.manges).toBe(0);
     expect(etat.corps[0]).toEqual([4, 4]);
@@ -424,10 +449,11 @@ describe('repousser les Black Ninjas', () => {
     expect(fin).toBeLessThan(30_000);
   });
 
-  it('lance seul, et perd immobile: les Black Ninjas ripostent sur lui', () => {
-    const fin = attendre(creerEnvahisseurs(), 0, 6000);
+  it('lance seul, et perd immobile ses trois vies: les Black Ninjas ripostent sur lui', () => {
+    const fin = attendre(creerEnvahisseurs(), 0, 12_000);
 
     expect(fin.echos.filter((echo) => echo === 'lancer').length).toBeGreaterThanOrEqual(2);
+    expect(fin.echos.filter((echo) => echo === 'touche')).toHaveLength(VIES - 1);
     expect(fin.echos).toContain('perdue');
     expect(avancementDuGeste(fin).total).toBe(ENVAHISSEURS);
 
@@ -437,6 +463,20 @@ describe('repousser les Black Ninjas', () => {
       immobile = appliquerGeste(immobile, { type: 'temps' }, maintenant) as EtatEnvahisseurs;
       expect(gesteFini(immobile, maintenant)).toBe(false);
     }
+  });
+
+  it('perd une vie a la premiere riposte qui touche, et efface les ripostes en vol', () => {
+    const visee = {
+      ...appliquerGeste(creerEnvahisseurs(), { type: 'temps' }, 0),
+      ripostes: [{ x: 200, y: LIGNE_DU_NINJA - 30, vx: 0, vy: 150 }],
+    } as EtatEnvahisseurs;
+    const touchee = attendre(visee, 0, 300);
+
+    expect(touchee.vies).toBe(VIES - 1);
+    expect(touchee.echos).toContain('touche');
+    expect(touchee.echos).not.toContain('perdue');
+    expect(touchee.ripostes).toEqual([]);
+    expect(touchee.perdueJusqua).toBeUndefined();
   });
 
   it('perd quand la rangee touche le sol, puis repart d une rangee neuve', () => {
@@ -453,6 +493,7 @@ describe('repousser les Black Ninjas', () => {
     expect(neuve.perdueJusqua).toBeUndefined();
     expect(neuve.debout.every(Boolean)).toBe(true);
     expect(neuve.rangeeY).toBe(DEPART_DE_LA_RANGEE);
+    expect(neuve.vies).toBe(VIES);
   });
 });
 
@@ -541,7 +582,7 @@ describe('la bataille navale', () => {
     }
   });
 
-  it('se gagne neuf fois sur dix en vingt tirs, pour un joueur methodique', () => {
+  it('se gagne presque toujours, pour un joueur methodique', () => {
     let gagnees = 0;
     const essais = 300;
 
@@ -560,7 +601,8 @@ describe('la bataille navale', () => {
       }
     }
 
-    expect(gagnees / essais).toBeGreaterThanOrEqual(0.88);
+    // 99 fois sur 100 en simulation: un joueur moins methodique echoue rarement.
+    expect(gagnees / essais).toBeGreaterThanOrEqual(0.97);
   });
 
   it('attend l animation d un tir, ignore une case deja tiree, et vise au clavier', () => {

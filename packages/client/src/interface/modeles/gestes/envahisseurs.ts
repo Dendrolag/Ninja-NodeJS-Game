@@ -13,8 +13,11 @@
  * un shuriken vers la place de notre ninja: il faut bouger. Sans riposte, un joueur immobile au
  * milieu gagnait seul, la rangee passant et repassant au-dessus de ses shurikens.
  *
- * UN ECHEC (la rangee touche le sol, ou une riposte touche notre ninja) laisse l'ecran perdu une
- * seconde, puis une partie neuve. Rien n'est tire au sort: la rangee part toujours de la meme
+ * TROIS VIES (demande du porteur du projet, essai du 11 octobre 2026). Une riposte qui touche
+ * notre ninja lui en coute une, et efface les ripostes en vol: il a le temps de se remettre.
+ *
+ * UN ECHEC (la rangee touche le sol, ou la troisieme riposte qui touche) laisse l'ecran perdu
+ * une seconde, puis une partie neuve, avec ses trois vies. Rien n'est tire au sort: la rangee part toujours de la meme
  * place, et la riposte vise.
  */
 
@@ -54,6 +57,10 @@ export const VITESSE_DE_LA_RIPOSTE = 150;
 
 /** Une riposte touche notre ninja a cette distance de son centre. */
 export const PORTEE_DE_LA_RIPOSTE = RAYON_DU_NINJA + 3;
+
+/** Les vies de notre ninja, et ce que dure son clignotement quand une riposte le touche. */
+export const VIES = 3;
+export const CLIGNOTEMENT_MS = 600;
 
 /** Ce que dure l'ecran perdu. */
 export const PERTE_MS = 1000;
@@ -96,6 +103,9 @@ export interface EtatEnvahisseurs extends BaseDeGeste {
   readonly shuriken?: Shuriken;
   readonly prochaineRiposte: number;
   readonly ripostes: readonly Riposte[];
+  /** Les vies qui restent, et l'instant ou une riposte a touche pour la derniere fois. */
+  readonly vies: number;
+  readonly toucheA?: number;
   /** Le dernier Black Ninja abattu, pour son eclat. */
   readonly abattu?: { readonly x: number; readonly y: number; readonly instant: number };
   /** La partie perdue, jusqu'a cet instant. */
@@ -119,6 +129,7 @@ function partieNeuve(): Omit<EtatEnvahisseurs, 'echos'> {
     prochainTir: PREMIER_TIR_MS,
     prochaineRiposte: PREMIERE_RIPOSTE_MS,
     ripostes: [],
+    vies: VIES,
   };
 }
 
@@ -206,6 +217,19 @@ function unPas(etat: EtatEnvahisseurs, dt: number, instant: number): EtatEnvahis
   const touche = courant.ripostes.some(
     (riposte) => Math.hypot(riposte.x - ninja, riposte.y - LIGNE_DU_NINJA) <= PORTEE_DE_LA_RIPOSTE,
   );
+
+  if (touche && courant.vies > 1) {
+    return avecEcho(
+      {
+        ...courant,
+        vies: courant.vies - 1,
+        toucheA: instant,
+        ripostes: [],
+        prochaineRiposte: Math.max(courant.prochaineRiposte, instant + RIPOSTE_MS),
+      },
+      'touche',
+    );
+  }
 
   if (touche || (courant.debout.some(Boolean) && rangeeY + RAYON_D_UN_ENVAHISSEUR >= SOL)) {
     const { shuriken: _arrete, ...sansShuriken } = courant;

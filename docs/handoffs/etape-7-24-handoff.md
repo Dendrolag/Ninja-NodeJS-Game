@@ -19,6 +19,12 @@ Ajouter aux listes des proies d'Among Ninjas des tâches longues, quatre mini-je
   - La page: les quatre mini-jeux, modèles purs (`modeles/gestes/caisses.ts`, `serpent.ts`, `envahisseurs.ts`, `bataille.ts`), leur dessin néon (`composants/dessinsDesMiniJeux.ts`), l'écran gagné qui attend la durée minimale (`tache.ts`), le réglage au salon, l'aide et la note de la 1.9.
 - **Lot D** (ce commit): les Black Ninjas qui ripostent (voir plus bas), deux retouches de dessin après les captures, le scénario de bout en bout, le banc, la documentation.
 
+## Retours d'essai, 12 octobre 2026
+
+Retours d'essai du porteur du projet, 12 octobre 2026: l'ensemble lui convient, avec trois demandes, pour qu'on échoue peu. **Trois vies aux Black Ninjas**: une riposte qui touche en coûte une et efface les ripostes en vol; la troisième fait recommencer. **Une bataille navale plus petite**, la plus difficile des quatre: une mer de 5 sur 5, où un joueur méthodique coule les deux bateaux en 18 tirs 99 fois sur 100, en 12 en moyenne (simulation). **Un serpent qui traverse les bords**: sorti d'un côté, il rentre de l'autre, et ne perd plus qu'en se mordant; pour garder ses douze secondes, il avance d'une case toutes les 300 millisecondes, et chaque fruit tombe à huit cases au moins de la tête, par le plus court à travers les bords (12,6 secondes au plus vite). Le cadre du serpent est en pointillés, et son aide le dit. Fichiers: `modeles/gestes/envahisseurs.ts`, `serpent.ts`, `bataille.ts`, `index.ts` (l'aide du serpent), `composants/dessinsDesMiniJeux.ts` (les vies, le clignotement, le trait du serpent qui passe le bord, le cadre en pointillés), `minijeux.test.ts`. Le porteur du projet a gardé les ripostes, les quatre caisses et le reste.
+
+**En route (règle 7), le pilote des scénarios.** Au premier passage après ces retours, le scénario a échoué une fois sur trois: à portée de vue de la table de jeu de l'arcade, le pilote alternait l'arrêt et une ruée en ligne droite qui frôlait un coin de meuble, sans avancer, et son dégagement à 60 degrés ne servait qu'en route. Une ruée qui n'a pas fait bouger le joueur déclenche désormais le même dégagement (`tests/e2e/harnais/pilote.ts`).
+
 ## Fichiers créés ou modifiés
 
 - `packages/shared/src/among.ts`, `index.ts`, `reglages.ts`, `bornes.ts`, `validation.ts`, `ressources.ts`: natures, stations, réglage, sons.
@@ -44,7 +50,7 @@ Section 33 de `docs/mesures/charge-serveur.md`. 0,228 ms par battement avec 40 P
 
 ## Décisions et écarts au plan
 
-Consignés dans la section « Réconciliation » de la fiche. Trois écarts mesurés, **à soumettre au porteur du projet**:
+Consignés dans la section « Réconciliation » de la fiche. Trois écarts mesurés, soumis au porteur du projet, qui les a gardés à l'essai du 12 octobre 2026 (le nombre de tirs a changé avec la mer, ci-dessus):
 
 1. **Quatre caisses à poser, pas trois**: trois se posaient en six secondes. Au plus vite, de 11 à 14 secondes.
 2. **Vingt tirs à la bataille navale**: à douze (l'étude), un joueur méthodique ne réussit que deux fois sur dix; à vingt, neuf fois sur dix.

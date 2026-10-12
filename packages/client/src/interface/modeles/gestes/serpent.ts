@@ -1,15 +1,17 @@
 /**
  * Nourrir le serpent (etape 7.24, rendu 2B de la planche docs/design/etape-7-24/1-planche.png):
- * un serpent sur une grille de 12 sur 9 mange cinq fruits, sans se mordre ni toucher le bord.
- * Il grandit d'une case par fruit. Au clavier, les fleches; au pointeur, glisser dans la
- * direction voulue, n'importe ou dans la fenetre.
+ * un serpent sur une grille de 12 sur 9 mange cinq fruits, sans se mordre. Les bords se
+ * traversent: sorti d'un cote, il rentre de l'autre (demande du porteur du projet, essai du 11
+ * octobre 2026, pour qu'on echoue peu). Il grandit d'une case par fruit. Au clavier, les
+ * fleches; au pointeur, glisser dans la direction voulue, n'importe ou dans la fenetre.
  *
  * LE RYTHME. Le serpent part apres DEPART_MS et avance d'une case toutes les PAS_MS. Chaque
- * fruit tombe a ELOIGNEMENT_DU_FRUIT cases au moins de la tete (en lignes et colonnes): cinq
- * fruits font au moins 50 pas, 13,1 secondes au plus vite, au-dessus des 12 du serveur.
+ * fruit tombe a ELOIGNEMENT_DU_FRUIT cases au moins de la tete, en lignes et colonnes, par le
+ * plus court, a travers les bords: cinq fruits font au moins 40 pas, 12,6 secondes au plus
+ * vite, au-dessus des 12 du serveur.
  *
- * UN ECHEC (un bord, ou le serpent qui se mord) laisse l'ecran perdu une seconde, puis une
- * partie neuve, d'une autre graine.
+ * UN ECHEC (le serpent qui se mord) laisse l'ecran perdu une seconde, puis une partie neuve,
+ * d'une autre graine.
  */
 
 import type { AvancementDuGeste, BaseDeGeste, CommandeDeGeste, PointDuGeste } from './commun.js';
@@ -27,11 +29,14 @@ export const TERRAIN = { x: 50, y: 44, cote: 25 } as const;
 export const FRUITS_A_MANGER = 5;
 
 /** Le serpent avance d'une case toutes les PAS_MS, apres DEPART_MS. */
-export const PAS_MS = 250;
+export const PAS_MS = 300;
 export const DEPART_MS = 600;
 
-/** Un fruit tombe a cette distance au moins de la tete, en cases, lignes et colonnes ajoutees. */
-export const ELOIGNEMENT_DU_FRUIT = 10;
+/**
+ * Un fruit tombe a cette distance au moins de la tete, en cases, lignes et colonnes ajoutees, par
+ * le plus court a travers les bords. La plus grande distance du terrain est 10 (6 plus 4).
+ */
+export const ELOIGNEMENT_DU_FRUIT = 8;
 
 /** Ce qu'il faut glisser, en unites, pour tourner. */
 export const GLISSE_MINIMALE = 22;
@@ -82,6 +87,28 @@ function meme(une: Case, autre: Case): boolean {
   return une[0] === autre[0] && une[1] === autre[1];
 }
 
+/** L'ecart le plus court sur un axe qui se referme, de cette longueur. */
+function ecartCirculaire(un: number, autre: number, longueur: number): number {
+  const ecart = Math.abs(un - autre) % longueur;
+  return Math.min(ecart, longueur - ecart);
+}
+
+/** Le nombre de pas de l'une a l'autre case, par le plus court, a travers les bords. */
+export function distanceDuSerpent(une: Case, autre: Case): number {
+  return (
+    ecartCirculaire(une[0], autre[0], COLONNES_DU_SERPENT) +
+    ecartCirculaire(une[1], autre[1], LIGNES_DU_SERPENT)
+  );
+}
+
+/** Une case ramenee dans le terrain: sortie d'un cote, elle rentre de l'autre. */
+function dansLeTerrain([colonne, ligne]: Case): Case {
+  return [
+    (colonne + COLONNES_DU_SERPENT) % COLONNES_DU_SERPENT,
+    (ligne + LIGNES_DU_SERPENT) % LIGNES_DU_SERPENT,
+  ];
+}
+
 /** Le fruit suivant: loin de la tete, hors du corps, tire de la graine et du rang du fruit. */
 export function fruitSuivant(graine: number, manges: number, corps: readonly Case[]): Case {
   const tete = corps[0] ?? [0, 0];
@@ -95,8 +122,7 @@ export function fruitSuivant(graine: number, manges: number, corps: readonly Cas
     }
   }
 
-  const ecart = ([colonne, ligne]: Case): number =>
-    Math.abs(colonne - tete[0]) + Math.abs(ligne - tete[1]);
+  const ecart = (case_: Case): number => distanceDuSerpent(case_, tete);
   const loin = libres.filter((case_) => ecart(case_) >= ELOIGNEMENT_DU_FRUIT);
   // Sans case assez loin, la plus loin: le serpent n'en est jamais la, mais rien ne casse.
   const choix =
@@ -136,17 +162,12 @@ function unPas(etat: EtatSerpent, instant: number): EtatSerpent {
   const direction = virage ?? etat.direction;
   const tete = etat.corps[0] ?? [0, 0];
   const [dc, dl] = PAS[direction];
-  const suivante: Case = [tete[0] + dc, tete[1] + dl];
+  const suivante = dansLeTerrain([tete[0] + dc, tete[1] + dl]);
   const mange = meme(suivante, etat.fruit);
   // Sans fruit, la queue part en meme temps: on peut entrer dans sa case.
   const restant = mange ? etat.corps : etat.corps.slice(0, -1);
-  const dehors =
-    suivante[0] < 0 ||
-    suivante[0] >= COLONNES_DU_SERPENT ||
-    suivante[1] < 0 ||
-    suivante[1] >= LIGNES_DU_SERPENT;
 
-  if (dehors || restant.some((case_) => meme(case_, suivante))) {
+  if (restant.some((case_) => meme(case_, suivante))) {
     return avecEcho({ ...etat, virages: [], perdueJusqua: instant + PERTE_MS }, 'perdue');
   }
 

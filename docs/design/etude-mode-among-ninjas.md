@@ -458,7 +458,8 @@ La suite reste celle de la section 18: `7.24`, les tâches longues.
 L'étape 7.24 est faite: fiche `docs/plan/etape-7-24.md`, handoff `docs/handoffs/etape-7-24-handoff.md`. Ce qui s'écarte de la section 9.4, ou la précise:
 
 - **Des noms à nous**: « Empiler des caisses », « Nourrir le serpent », « Repousser les Black Ninjas », « Bataille navale ». Tetris et Space Invaders sont des marques, et l'aspect de Tetris a été défendu en justice.
-- **Quatre caisses à poser, pas trois**, pour tenir la durée; **vingt tirs à la bataille navale, pas douze**, qui n'en laissaient réussir que deux sur dix.
+- **Quatre caisses à poser, pas trois**, pour tenir la durée; **une mer de 5 sur 5 en 18 tirs**, après l'essai du porteur du projet (sur 6 sur 6, les douze tirs de l'étude ne laissaient réussir que deux fois sur dix).
+- **Trois vies aux Black Ninjas, un serpent qui traverse les bords**: après l'essai, pour qu'on échoue peu.
 - **Les Black Ninjas ripostent**, sans quoi un joueur immobile gagnait seul.
 - **Une durée minimale de douze secondes** pour chacun; le plus rapide qui finit plus tôt voit l'écran gagné attendre.
 - **Chaque mini-jeu à deux stations**, et un réglage de l'hôte pour leur nombre par liste, de 0 à 2.

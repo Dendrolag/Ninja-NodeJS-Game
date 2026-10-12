@@ -1,13 +1,15 @@
 /**
  * Bataille navale (etape 7.24, rendu 4B de la planche docs/design/etape-7-24/1-planche.png):
- * deux bateaux caches, de trois et deux cases, sur une mer de 6 sur 6, a couler en TIRS_PERMIS
+ * deux bateaux caches, de trois et deux cases, sur une mer de 5 sur 5, a couler en TIRS_PERMIS
  * tirs au plus. Les bateaux ne se touchent pas, meme en diagonale. Au pointeur, toucher une
  * case; au clavier, les fleches pour la case visee, Espace pour tirer.
  *
- * LE NOMBRE DE TIRS se regle par simulation (fiche, « Les quatre mini-jeux »): un joueur
- * methodique, qui cherche une case sur deux, puis suit un bateau touche, coule les deux en 20
- * tirs neuf fois sur dix, en 15 et demi en moyenne. Les douze tirs de l'etude n'en laissaient
- * reussir que deux sur dix.
+ * LA MER ET LE NOMBRE DE TIRS se reglent par simulation (fiche, « Les quatre mini-jeux »). Sur
+ * 6 sur 6, il fallait 20 tirs pour qu'un joueur methodique gagne neuf fois sur dix, et le
+ * porteur du projet l'a trouvee la plus difficile des quatre (essai du 11 octobre 2026). Sur
+ * 5 sur 5, un joueur methodique, qui cherche une case sur deux puis suit un bateau touche,
+ * coule les deux en 18 tirs 99 fois sur 100, en 12 en moyenne: un joueur moins methodique
+ * echoue rarement.
  *
  * LE RYTHME. Chaque tir joue son animation pendant TIR_MS, et le suivant attend. La chance peut
  * couler les deux bateaux en cinq tirs, sous la duree minimale du serveur: la fenetre garde
@@ -28,16 +30,16 @@ import { avecEcho, tireur } from './commun.js';
 import type { Case } from './caisses.js';
 
 /** La mer, en cases de cote. */
-export const COTE_DE_LA_MER = 6;
+export const COTE_DE_LA_MER = 5;
 
 /** La mer dans l'espace du geste: son coin haut gauche et le cote d'une case. */
-export const MER = { x: 50, y: 56, cote: 36 } as const;
+export const MER = { x: 56, y: 56, cote: 42 } as const;
 
 /** Les longueurs des bateaux. */
 export const BATEAUX = [3, 2] as const;
 
 /** Les tirs permis pour les couler. */
-export const TIRS_PERMIS = 20;
+export const TIRS_PERMIS = 18;
 
 /** L'animation d'un tir, pendant laquelle on ne tire pas. */
 export const TIR_MS = 700;
@@ -108,8 +110,8 @@ export function placerLesBateaux(graine: number): readonly (readonly Case[])[] {
       [2, 0],
     ],
     [
-      [4, 4],
-      [4, 5],
+      [3, 3],
+      [3, 4],
     ],
   ];
 }

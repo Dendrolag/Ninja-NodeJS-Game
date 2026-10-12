@@ -106,7 +106,10 @@ export const AIDES_DES_TACHES: Readonly<
   munitions: { pointeur: 'Glissez les cartouches dans le fusil', clavier: 'Clavier : Espace' },
   fumee: { pointeur: 'Maintenez, relâchez dans la bande', clavier: 'Clavier : Espace tenu' },
   caisses: { pointeur: 'Complétez deux lignes', clavier: 'Clavier : flèches' },
-  serpent: { pointeur: 'Glissez pour tourner, mangez cinq fruits', clavier: 'Clavier : flèches' },
+  serpent: {
+    pointeur: 'Glissez pour tourner, les bords se traversent',
+    clavier: 'Clavier : flèches',
+  },
   envahisseurs: {
     pointeur: 'Votre ninja suit le pointeur et lance seul',
     clavier: 'Clavier : gauche, droite',

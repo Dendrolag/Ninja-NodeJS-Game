@@ -106,6 +106,9 @@ const FENETRE_DE_PROGRES_MS = 2_000;
 /** Au-dela de ce temps immobile en route, le joueur est colle: le pilote le degage. */
 const BLOCAGE_MS = 1_000;
 
+/** En deca de ce deplacement pendant une ruee, en pixels, le joueur est colle. */
+const DEPLACEMENT_MINIMAL_PX = 2;
+
 /** Combien de temps dure un degagement, en millisecondes. */
 const DEGAGEMENT_MS = 400;
 
@@ -198,7 +201,12 @@ type Phase =
       readonly lacheEn: Position;
       readonly immobileDepuis?: number;
     }
-  | { readonly nom: 'ruee'; readonly jusqua: number };
+  | {
+      readonly nom: 'ruee';
+      readonly jusqua: number;
+      /** Ou le joueur etait quand la ruee a commence: une ruee qui n'avance pas est collee. */
+      readonly depart?: Position;
+    };
 
 /** Ce que le pilote a lu et decide a un instant, pour expliquer un echec. */
 interface Releve {
@@ -249,6 +257,16 @@ export async function accomplir(mission: Mission): Promise<void> {
       switch (phase.nom) {
         case 'ruee':
           if (maintenant >= phase.jusqua) {
+            // Une ruee en ligne droite qui frole un coin de meuble n'avance pas: le joueur,
+            // a l'arret puis en ruee sans fin, est colle comme en route (etape 7.24, a la
+            // table de jeu de l'arcade). Le pilote le degage.
+            const collee =
+              phase.depart !== undefined &&
+              distanceEntre(phase.depart, situation.position) < DEPLACEMENT_MINIMAL_PX;
+            if (collee) {
+              await degager(mission.commande, situation, visee, degagements % 2 === 0 ? 1 : -1);
+              degagements += 1;
+            }
             phase = { nom: 'route' };
           }
           break;
@@ -279,7 +297,8 @@ export async function accomplir(mission: Mission): Promise<void> {
           if (arrete || maintenant - phase.depuis > ARRET_MAXIMUM_MS) {
             const retenuePx =
               mission.affut === undefined ? undefined : mission.affut.distancePx + glissadePx;
-            phase = await ruer(mission.commande, situation, visee, retenuePx);
+            const ruee = await ruer(mission.commande, situation, visee, retenuePx);
+            phase = ruee.nom === 'ruee' ? { ...ruee, depart: situation.position } : ruee;
           }
           break;
         }
