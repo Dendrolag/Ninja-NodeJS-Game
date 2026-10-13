@@ -27,10 +27,12 @@
  *     rebours sont dans le HUD.
  *
  * LES OBJETS DU DECOR (demande du porteur du projet du 13 octobre 2026): sur une carte qui en a,
- * le pavillon du gong et le generateur du boitier remplacent l'anneau et le dessin neon. Ils sont
- * toujours la, poses dans le decor par le rendu (objetsDuDecorAmong), eteints avec lui hors du
- * cercle de vision. Seul celui dont on se servirait en appuyant sur le bouton d'action s'eclaire,
- * pour qui peut s'en servir; le generateur bat en orange pendant la panne.
+ * le pavillon du gong, le generateur du boitier et la pierre du jardin zen remplacent l'anneau,
+ * le dessin neon et le disque de la station. Ils sont toujours la, poses dans le decor par le
+ * rendu (objetsDuDecorAmong), eteints avec lui hors du cercle de vision. Seul celui dont on se
+ * servirait en appuyant sur le bouton d'action s'eclaire, pour qui peut s'en servir; le
+ * generateur bat en orange pendant la panne, et une station en cyan pour qui a a y faire, comme
+ * son disque se serait montre.
  *
  * LES PSEUDOS NE S'AFFICHENT PAS SUR LA CARTE (decision du porteur du projet du 9 octobre 2026):
  * le doute sur qui est qui fait le jeu, et toute accusation passe par une couleur. Seul un
@@ -54,6 +56,7 @@ import {
   RAYONS_DE_VISION,
   cheminObjetDuDecor,
   lieuxDuMode,
+  placeDUnObjet,
 } from '@neon-ninja/shared';
 
 import { stationsAMontrer, victimeAPortee } from '../among.js';
@@ -164,19 +167,32 @@ export function objetsDuDecorAmong(
     return [];
   }
 
-  return lieux.objets.map((objet) => {
-    const place = lieux[objet.lieu];
+  return lieux.objets.flatMap((objet) => {
+    const place = placeDUnObjet(lieux, objet.lieu);
 
-    return {
-      id: `objet:${objet.lieu}`,
-      lieu: objet.lieu,
-      texture: `${RACINE_RESSOURCES}/${cheminObjetDuDecor(carte, objet.image)}`,
-      x: place.x,
-      y: place.y,
-      largeur: objet.largeur,
-      hauteur: objet.hauteur,
-    };
+    if (place === undefined) {
+      return [];
+    }
+
+    return [
+      {
+        id: `objet:${typeof objet.lieu === 'string' ? objet.lieu : `station:${objet.lieu.station}`}`,
+        lieu: objet.lieu,
+        texture: `${RACINE_RESSOURCES}/${cheminObjetDuDecor(carte, objet.image)}`,
+        x: place.x,
+        y: place.y,
+        largeur: objet.largeur,
+        hauteur: objet.hauteur,
+      },
+    ];
   });
+}
+
+/** L'objet du decor pose sur cette place, s'il y en a un: une station habillee. */
+function objetSur(objets: readonly ObjetDuDecorPose[], place: Position): boolean {
+  return objets.some(
+    (objet) => typeof objet.lieu !== 'string' && objet.x === place.x && objet.y === place.y,
+  );
 }
 
 /** Ce qu'Among Ninjas ajoute a une image. */
@@ -216,13 +232,17 @@ export const APPARENCE_AMONG = {
   ecartDuCadavre: 5,
   /** Le sang sous un cadavre: quelques taches rouges. */
   sang: { couleur: 0x8c0012, alpha: 0.85 },
-  /** Une station: un disque cyan, plein pale et bord net. */
+  /**
+   * Une station: un disque cyan, plein pale et bord net. Une station habillee d'un objet du decor
+   * n'a pas de disque: l'objet bat en cyan quand on a a y faire, et s'eclaire a portee.
+   */
   station: { couleur: 0x2ee6ff, alphaPlein: 0.12, alphaBord: 0.75, epaisseur: 3 },
   /** Le gong: un anneau magenta au point de reunion, sur une carte sans objet du gong. */
   gong: { couleur: 0xff4fd8, alpha: 0.85, epaisseur: 4, rayon: 34 },
   /**
    * L'objet du decor dont on se servirait (13 octobre 2026): un contour neon autour de sa
-   * silhouette, et sa lueur. Le gong s'eclaire en magenta, le generateur a la couleur de la panne.
+   * silhouette, et sa lueur. Le gong s'eclaire en magenta, le generateur a la couleur de la panne,
+   * une station en cyan.
    */
   surbrillance: { epaisseur: 3, lueur: 3, portee: 12 },
   /** La hauteur du pseudo au-dessus du centre du ninja. */
@@ -379,7 +399,8 @@ function battementDesPostes(maintenant: number): number {
 
 /**
  * Les objets du decor qui s'eclairent, pour nous seulement: celui dont on se servirait en
- * appuyant sur le bouton d'action, le gong pour le sonner, le generateur pour reparer la panne.
+ * appuyant sur le bouton d'action, le gong pour le sonner, le generateur pour reparer la panne,
+ * une station pour y ouvrir sa tache.
  * Pendant la panne, le generateur bat en orange pour tous ceux qui ont un role, comme le disque
  * qu'il remplace; il s'eclaire franchement quand on peut le reparer.
  */
@@ -395,8 +416,28 @@ function surbrillancesDesObjets(
   const geste = gesteDuBouton(etat);
   const enPanne = etat.partie?.among?.sabotage?.nature === 'panne';
   const surbrillances: SurbrillanceScene[] = [];
+  const aFaire = stationsAMontrer(etat.among.prive);
+  const moi = etat.partie?.entites.find((entite) => entite.id === etat.moi);
 
   for (const objet of objets) {
+    if (typeof objet.lieu !== 'string') {
+      // Une station habillee: elle bat la ou son disque se serait montre, et s'eclaire quand le
+      // bouton y ouvrirait la tache.
+      if (aFaire.some((place) => place.x === objet.x && place.y === objet.y)) {
+        const aPortee =
+          geste === 'tache' &&
+          moi !== undefined &&
+          Math.hypot(moi.x - objet.x, moi.y - objet.y) <= AMONG.RAYON_D_UNE_STATION_PX;
+
+        surbrillances.push({
+          ...objet,
+          couleur: APPARENCE_AMONG.station.couleur,
+          alpha: aPortee ? 1 : battementDesPostes(maintenant),
+        });
+      }
+      continue;
+    }
+
     if (objet.lieu === 'gong' && geste === 'gong') {
       surbrillances.push({ ...objet, couleur: APPARENCE_AMONG.gong.couleur, alpha: 1 });
     }
@@ -698,18 +739,20 @@ function lieuxDuJoueur(
   }
 
   const { station, gong } = APPARENCE_AMONG;
-  const lieux: DisqueScene[] = stationsAMontrer(prive).map((place) => ({
-    id: `station:${String(place.x)}:${String(place.y)}`,
-    x: place.x,
-    y: place.y,
-    rayon: AMONG.RAYON_D_UNE_STATION_PX,
-    remplissage: { couleur: station.couleur, alpha: station.alphaPlein },
-    contour: {
-      couleur: station.couleur,
-      alpha: station.alphaBord,
-      epaisseur: station.epaisseur,
-    },
-  }));
+  const lieux: DisqueScene[] = stationsAMontrer(prive)
+    .filter((place) => !objetSur(objets, place))
+    .map((place) => ({
+      id: `station:${String(place.x)}:${String(place.y)}`,
+      x: place.x,
+      y: place.y,
+      rayon: AMONG.RAYON_D_UNE_STATION_PX,
+      remplissage: { couleur: station.couleur, alpha: station.alphaPlein },
+      contour: {
+        couleur: station.couleur,
+        alpha: station.alphaBord,
+        epaisseur: station.epaisseur,
+      },
+    }));
 
   if (objets.some((objet) => objet.lieu === 'gong')) {
     return lieux;

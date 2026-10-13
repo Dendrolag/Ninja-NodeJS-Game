@@ -14,6 +14,7 @@ export type {
   BarreDesTaches,
   CampAmong,
   CouleurNommee,
+  LieuDUnObjet,
   LieuxDuMode,
   MotifDeReunion,
   NatureDeSabotage,
@@ -56,6 +57,7 @@ export {
   lieuxDuMode,
   nomDeCouleur,
   pasEntendu,
+  placeDUnObjet,
   tueursMaximum,
 } from './among.js';
 export { creerAlea, element, entier, nombre, reel } from './alea.js';

@@ -75,6 +75,8 @@ export default tseslint.config(
       'blob-report/**',
       'packages/client/web/**',
       '.vercel/**',
+      // Les copies de travail des autres sessions, chacune verifiee chez elle.
+      '.claude/worktrees/**',
     ],
   },
 

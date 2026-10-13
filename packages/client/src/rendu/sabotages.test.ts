@@ -5,8 +5,9 @@
  * noir, opaque pour une proie vivante et a demi pour qui y voit (rendu 4A); les fleches vers les
  * postes, avec leur distance (rendus 2C et 3B).
  *
- * Et les objets du decor qui remplacent l'anneau du gong et le dessin du boitier sur Tokyo
- * (13 octobre 2026): toujours la, eclaires pour qui peut s'en servir.
+ * Et les objets du decor qui remplacent l'anneau du gong, le dessin du boitier et le disque de la
+ * pierre du jardin zen sur Tokyo (13 octobre 2026): toujours la, eclaires pour qui peut s'en
+ * servir.
  */
 
 import type { AmongVu, EntiteVue, EtatPriveAmong, SabotageEnCoursVu } from '@neon-ninja/shared';
@@ -192,8 +193,29 @@ describe('les objets du decor', () => {
   /** La surbrillance de l'objet de ce lieu, s'il s'eclaire. */
   const eclaire = (client: EtatClient, lieu: 'gong' | 'boitier', maintenant = 0) =>
     image(client, maintenant).surbrillances.find((objet) => objet.lieu === lieu);
+  const PIERRE =
+    LIEUX.stations.find((station) => station.nom === 'Pierre du jardin zen') ??
+    expect.fail('Tokyo a sa pierre du jardin zen');
+  const AUTRE = LIEUX.stations[0] ?? expect.fail('Tokyo a ses stations');
+  /** Une proie qui a une tache a la pierre et une autre ailleurs, a cette place. */
+  const aLaPierre = (ici: { readonly x: number; readonly y: number }, faite = false) =>
+    etat(
+      {
+        ...PROIE,
+        stations: [PIERRE, AUTRE],
+        taches: [
+          { station: 0, nature: 'katana', faite },
+          { station: 1, nature: 'couleurs', faite: false },
+        ],
+      },
+      ici,
+    );
+  const pierreEclairee = (client: EtatClient, maintenant = 0) =>
+    image(client, maintenant).surbrillances.find(
+      (objet) => objet.id === 'objet:station:Pierre du jardin zen',
+    );
 
-  it('habillent le gong et le boitier de Tokyo, a leur place et a leur image', () => {
+  it('habillent le gong, le boitier et la pierre de Tokyo, a leur place et a leur image', () => {
     expect(objetsDuDecorAmong('map1', false)).toEqual([
       expect.objectContaining({
         lieu: 'gong',
@@ -207,15 +229,24 @@ describe('les objets du decor', () => {
         x: LIEUX.boitier.x,
         y: LIEUX.boitier.y,
       }),
+      expect.objectContaining({
+        lieu: { station: 'Pierre du jardin zen' },
+        texture: '/assets/among/map1/pierre-jardin.png',
+        x: PIERRE.x,
+        y: PIERRE.y,
+      }),
     ]);
   });
 
   it('suivent leur lieu en miroir', () => {
     const miroir = lieuxDuMode('map1', true) ?? expect.fail('Tokyo a ses lieux');
 
+    const pierre = miroir.stations.find((station) => station.nom === PIERRE.nom);
+
     expect(objetsDuDecorAmong('map1', true).map(({ x, y }) => ({ x, y }))).toEqual([
       miroir.gong,
       miroir.boitier,
+      { x: pierre?.x, y: pierre?.y },
     ]);
   });
 
@@ -244,6 +275,25 @@ describe('les objets du decor', () => {
     expect(alpha(0)).not.toBe(alpha(APPARENCE_AMONG.poste.battementMs / 4));
     expect(eclaire(etat(PROIE, LIEUX.boitier, { sabotage: PANNE }), 'boitier')?.alpha).toBe(1);
     expect(eclaire(etat(PROIE, LIEUX.boitier), 'boitier')).toBeUndefined();
+  });
+
+  it('remplacent le disque de la pierre, et laissent le leur aux autres stations', () => {
+    const disques = image(aLaPierre(ICI)).disques.map((rond) => rond.id);
+
+    expect(disques).not.toContain(`station:${String(PIERRE.x)}:${String(PIERRE.y)}`);
+    expect(disques).toContain(`station:${String(AUTRE.x)}:${String(AUTRE.y)}`);
+  });
+
+  it('font battre la pierre en cyan quand on a a y faire, et l eclairent a portee', () => {
+    const loin = aLaPierre(ICI);
+    const alpha = (maintenant: number) => pierreEclairee(loin, maintenant)?.alpha;
+
+    expect(pierreEclairee(loin)?.couleur).toBe(APPARENCE_AMONG.station.couleur);
+    expect(alpha(0)).not.toBe(alpha(APPARENCE_AMONG.poste.battementMs / 4));
+    expect(pierreEclairee(aLaPierre(PIERRE))?.alpha).toBe(1);
+    // Sa tache faite, la pierre ne dit plus rien, de loin comme de pres.
+    expect(pierreEclairee(aLaPierre(ICI, true))).toBeUndefined();
+    expect(pierreEclairee(aLaPierre(PIERRE, true))).toBeUndefined();
   });
 
   it('ne s eclairent pas avant que la page sache notre role, ni hors de la phase de jeu', () => {

@@ -414,6 +414,9 @@ export interface StationDuMode extends Position {
   readonly natures: readonly NatureDeTache[];
 }
 
+/** Le lieu qu'habille un objet du decor: le gong, le boitier, ou une station, dite par son nom. */
+export type LieuDUnObjet = 'gong' | 'boitier' | { readonly station: string };
+
 /**
  * Un objet du decor du mode (demande du porteur du projet du 13 octobre 2026): une image posee
  * sur un lieu, a la place du cercle qui le marquait, toujours la pendant une partie d'Among
@@ -422,8 +425,8 @@ export interface StationDuMode extends Position {
  * dite ici, en pixels de carte, choisie a cote des ninjas de 32 pixels.
  */
 export interface ObjetDuDecor {
-  /** Le lieu qu'il habille, centre sur sa place. */
-  readonly lieu: 'gong' | 'boitier';
+  /** Le lieu qu'il habille, centre sur sa place: le gong, le boitier, ou une station, par son nom. */
+  readonly lieu: LieuDUnObjet;
   /** Le nom de son image, sans extension. */
   readonly image: string;
   readonly largeur: number;
@@ -497,14 +500,33 @@ export const LIEUX_DES_CARTES: Readonly<Partial<Record<IdentifiantCarte, LieuxDu
       { x: 485, y: 320 },
       { x: 1860, y: 890 },
     ],
-    // Le pavillon du gong sur le passage pieton, et le generateur sur le carton de la rue, aux
-    // proportions de leurs images (249 sur 288, et 192 sur 91).
+    // Le pavillon du gong sur le passage pieton, le generateur sur le carton de la rue, et la
+    // pierre au milieu du jardin zen, aux proportions de leurs images (249 sur 288, 192 sur 91,
+    // et 192 sur 192). La pierre tient dans le disque de sa station, de 100 pixels.
     objets: [
       { lieu: 'gong', image: 'gong', largeur: 97, hauteur: 112 },
       { lieu: 'boitier', image: 'generator', largeur: 72, hauteur: 34 },
+      {
+        lieu: { station: 'Pierre du jardin zen' },
+        image: 'pierre-jardin',
+        largeur: 96,
+        hauteur: 96,
+      },
     ],
   },
 };
+
+/**
+ * La place d'un objet du decor parmi les lieux du mode: celle du gong, du boitier, ou de la
+ * station qui porte son nom. Undefined pour une station inconnue.
+ */
+export function placeDUnObjet(lieux: LieuxDuMode, lieu: LieuDUnObjet): Position | undefined {
+  if (typeof lieu === 'string') {
+    return lieux[lieu];
+  }
+
+  return lieux.stations.find((station) => station.nom === lieu.station);
+}
 
 /** La carte que le mode impose (micro-decision 8 de la fiche): Tokyo, pour l'essai. */
 export const CARTE_DU_MODE_AMONG: IdentifiantCarte = 'map1';

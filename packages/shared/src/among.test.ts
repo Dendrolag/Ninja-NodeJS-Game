@@ -29,6 +29,7 @@ import {
   lieuxDuMode,
   nomDeCouleur,
   pasEntendu,
+  placeDUnObjet,
   tueursMaximum,
 } from './among.js';
 import { BORNES_REGLAGES } from './bornes.js';
@@ -165,6 +166,25 @@ describe('les lieux', () => {
     for (const nature of NATURES_LONGUES) {
       expect(stations.filter((station) => station.natures.includes(nature)).length).toBe(2);
     }
+  });
+
+  it('pose chaque objet du decor sur un lieu de sa carte, en normal comme en miroir', () => {
+    for (const miroir of [false, true]) {
+      const lieux = lieuxDuMode('map1', miroir) ?? expect.fail('Tokyo a ses lieux');
+
+      expect(lieux.objets.length).toBeGreaterThan(0);
+      for (const objet of lieux.objets) {
+        expect(placeDUnObjet(lieux, objet.lieu), objet.image).toBeDefined();
+      }
+    }
+    // La pierre du jardin zen habille sa station.
+    const lieux = lieuxDuMode('map1', false) ?? expect.fail('Tokyo a ses lieux');
+
+    expect(placeDUnObjet(lieux, { station: 'Pierre du jardin zen' })).toMatchObject({
+      x: 170,
+      y: 180,
+    });
+    expect(placeDUnObjet(lieux, { station: 'Nulle part' })).toBeUndefined();
   });
 
   it('n en donne pas aux autres cartes', () => {
