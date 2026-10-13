@@ -12,7 +12,7 @@ Rédigée le 13 octobre 2026, à la demande du porteur du projet, avant l'exécu
 
 ## Rituel de début de session
 
-Lire CLAUDE.md, le dernier handoff, cette fiche, `.claude/rules/sim-purity.md`, les fiches 7.21 et 7.22, et `packages/sim/src/among.ts` (fonctions `avancerLeSabotage`, `posteTenu`, `faireLesTaches`, `ouvrirUneTache`). Si les questions ci-dessous n'ont pas encore de réponse, les poser avant toute construction.
+Lire CLAUDE.md, le dernier handoff, cette fiche, `.claude/rules/sim-purity.md`, les fiches 7.21 et 7.22, et `packages/sim/src/among.ts` (fonctions `avancerLeSabotage`, `posteTenu`, `faireLesTaches`, `ouvrirUneTache`). Les questions de cette fiche ont leurs réponses (section « Réponses du porteur du projet »): la construction peut commencer, par la planche des rendus.
 
 ## Décisions du porteur du projet, 13 octobre 2026
 
@@ -53,6 +53,16 @@ Les joueurs découvrent la réparation de la partie à la première alerte, qui 
 3. **Les deux clés, une purge faite puis abandonnée.** Recommandé: **la console reste purgée** jusqu'à la fin de la surchauffe; un autre vivant peut y tourner la clé. Sinon, un meurtre à la console fait tout recommencer, dans les 45 secondes.
 4. **La version.** Recommandé: **1.10.0, avec une note**, puisque les réparations changent la façon de jouer le mode. Texte proposé, sur le ton des notes: « **Les réparations.** Les néons ne se rallument plus d'un claquement de doigts. Retroussez vos manches. » L'autre voie: 1.9.4, sans note.
 5. **L'image de la console.** Recommandé: **l'étape se fait sans**, les consoles gardent leur dessin néon, et l'image se pose quand elle arrive, comme le générateur (`assets/among/map1/console.png`, livrée au moins deux fois plus grande qu'affichée).
+
+## Réponses du porteur du projet, 13 octobre 2026
+
+Les cinq recommandations sont retenues.
+
+1. **Un interrupteur hors de son tour ne fait rien**, et la console dit « à l'autre console ».
+2. **Les interrupteurs coupés le restent** jusqu'à la fin de la surchauffe, si un joueur part ou meurt.
+3. **Une console purgée le reste** jusqu'à la fin de la surchauffe; un autre vivant peut y tourner la clé.
+4. **Version 1.10.0, avec une note**, au texte proposé.
+5. **L'étape se fait sans l'image de la console**, qui se posera quand elle arrivera.
 
 ## Le contrat et le moteur
 
