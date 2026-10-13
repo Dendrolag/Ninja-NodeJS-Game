@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { LIEUX_DES_CARTES } from './among.js';
 import {
   CARTES,
   TYPES_BONUS,
@@ -38,6 +39,7 @@ import {
   cheminCarte,
   cheminNinja,
   cheminObjet,
+  cheminObjetDuDecor,
   cheminFondDeNuit,
   cheminLointain,
   cheminPluie,
@@ -352,6 +354,32 @@ describe('les ressources annoncees existent sur le disque', () => {
     ];
 
     expect(attendus.filter((chemin) => !present(chemin))).toEqual([]);
+  });
+});
+
+describe('cheminObjetDuDecor', () => {
+  it('range les objets d Among Ninjas par carte, hors du dossier de la carte', () => {
+    expect(cheminObjetDuDecor('map1', 'gong')).toBe('among/map1/gong.png');
+  });
+
+  it('chaque objet annonce existe, et se pose aux proportions de son image', () => {
+    const objets = Object.entries(LIEUX_DES_CARTES).flatMap(([carte, lieux]) =>
+      (lieux?.objets ?? []).map((objet) => ({
+        chemin: cheminObjetDuDecor(carte, objet.image),
+        objet,
+      })),
+    );
+
+    expect(objets.length).toBeGreaterThan(0);
+
+    for (const { chemin, objet } of objets) {
+      expect(existsSync(join(RACINE_DISQUE, chemin)), chemin).toBe(true);
+      const { largeur, hauteur } = dimensionsPng(chemin);
+      // Un pixel d'arrondi pres sur la taille posee: l'image ne doit pas etre deformee.
+      expect(Math.abs(objet.largeur - (objet.hauteur * largeur) / hauteur), chemin).toBeLessThan(1);
+      // Livree plus grande qu'affichee, pour rester nette au zoom et sur telephone.
+      expect(largeur, chemin).toBeGreaterThanOrEqual(objet.largeur * 2);
+    }
   });
 });
 

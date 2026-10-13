@@ -415,15 +415,33 @@ export interface StationDuMode extends Position {
 }
 
 /**
+ * Un objet du decor du mode (demande du porteur du projet du 13 octobre 2026): une image posee
+ * sur un lieu, a la place du cercle qui le marquait, toujours la pendant une partie d'Among
+ * Ninjas. Il s'eclaire pour qui peut s'en servir. L'image est rangee avec sa carte
+ * (cheminObjetDuDecor), plus grande qu'affichee pour rester nette: elle se pose a la taille
+ * dite ici, en pixels de carte, choisie a cote des ninjas de 32 pixels.
+ */
+export interface ObjetDuDecor {
+  /** Le lieu qu'il habille, centre sur sa place. */
+  readonly lieu: 'gong' | 'boitier';
+  /** Le nom de son image, sans extension. */
+  readonly image: string;
+  readonly largeur: number;
+  readonly hauteur: number;
+}
+
+/**
  * Les lieux du mode sur une carte: le point de reunion, ou sonne le gong, les stations, et les
  * postes des sabotages (etape 7.22): le boitier ou l'on repare la panne de neons, et les deux
- * consoles de la surchauffe.
+ * consoles de la surchauffe. Et les objets qui en habillent certains: un lieu sans objet garde
+ * son dessin neon.
  */
 export interface LieuxDuMode {
   readonly gong: Position;
   readonly stations: readonly StationDuMode[];
   readonly boitier: Position;
   readonly consoles: readonly [Position, Position];
+  readonly objets: readonly ObjetDuDecor[];
 }
 
 /**
@@ -479,6 +497,12 @@ export const LIEUX_DES_CARTES: Readonly<Partial<Record<IdentifiantCarte, LieuxDu
       { x: 485, y: 320 },
       { x: 1860, y: 890 },
     ],
+    // Le pavillon du gong sur le passage pieton, et le generateur sur le carton de la rue, aux
+    // proportions de leurs images (249 sur 288, et 192 sur 91).
+    objets: [
+      { lieu: 'gong', image: 'gong', largeur: 97, hauteur: 112 },
+      { lieu: 'boitier', image: 'generator', largeur: 72, hauteur: 34 },
+    ],
   },
 };
 
@@ -504,5 +528,7 @@ export function lieuxDuMode(carte: IdentifiantCarte, miroir: boolean): LieuxDuMo
     stations: lieux.stations.map((station) => ({ ...station, x: largeur - station.x })),
     boitier: retourner(lieux.boitier),
     consoles: [retourner(lieux.consoles[0]), retourner(lieux.consoles[1])],
+    // Un objet suit son lieu; son image se retourne avec le decor, dans la page.
+    objets: lieux.objets,
   };
 }

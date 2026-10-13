@@ -42,6 +42,7 @@ import { monterBullesDeZone } from '../../hud/bullesDeZone.js';
 import { monterPointsFlottants } from '../../hud/pointsFlottants.js';
 import { monterSurcouche } from '../../hud/surcouche.js';
 import type { EtatDuLecteur } from '../../sons/lecteur.js';
+import { objetsDuDecorAmong } from '../../rendu/among.js';
 import { COTE_DE_VUE_AMONG_PX, HAUTEUR_DE_VUE_TACTIQUE_PX } from '../../rendu/apparence.js';
 import { lancerLaBoucle } from '../../rendu/boucle.js';
 import { monterRendu, prechargerLesSprites } from '../../rendu/pixi.js';
@@ -240,6 +241,10 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
       modeMiroir: reglages.modeMiroir,
       pluie: reglages.pluie,
       nuit: reglages.nuit,
+      // Le gong et le generateur d'Among Ninjas, poses dans le decor (13 octobre 2026).
+      ...(mode === 'among'
+        ? { objetsDuDecor: objetsDuDecorAmong(reglages.carte, reglages.modeMiroir) }
+        : {}),
       ...(variantes === undefined
         ? {}
         : {

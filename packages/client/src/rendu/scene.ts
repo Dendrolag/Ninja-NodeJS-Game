@@ -88,7 +88,7 @@ import type { Localisation } from './localisation.js';
 import { opaciteDeLocalisation, reperesDeLocalisation } from './localisation.js';
 import { minesDeLaScene } from './mines.js';
 import { marquesDuBlackNinja } from './blackNinja.js';
-import type { LibelleScene, VisionScene } from './among.js';
+import type { LibelleScene, SurbrillanceScene, VisionScene } from './among.js';
 import { RIEN_D_AMONG, alphaAmong, effetsDesTachesVisuelles, imageDAmong } from './among.js';
 import { adresseAuxYeuxRouges, adresseDImage, adresseRayee } from './textures.js';
 import type { EtatDuVaisseau, Trajectoire } from './vaisseau.js';
@@ -247,6 +247,11 @@ export interface Scene {
    * comme les reperes: le decor eteint ne doit pas les cacher. Absentes ailleurs.
    */
   readonly fleches?: readonly TraitScene[];
+  /**
+   * Les objets du decor d'Among Ninjas qui s'eclairent (13 octobre 2026), sur l'objet pose dans
+   * le decor et sous les personnages. Absents ailleurs.
+   */
+  readonly surbrillances?: readonly SurbrillanceScene[];
 }
 
 /**
@@ -636,6 +641,7 @@ export function construireScene(
     ...(among.libelles.length === 0 ? {} : { libelles: among.libelles }),
     ...(among.vision === undefined ? {} : { vision: among.vision }),
     ...(among.fleches.length === 0 ? {} : { fleches: among.fleches }),
+    ...(among.surbrillances.length === 0 ? {} : { surbrillances: among.surbrillances }),
   };
 }
 

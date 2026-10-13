@@ -87,7 +87,7 @@ import {
   VAISSEAU,
   VISION_AMONG,
 } from './apparence.js';
-import type { VisionScene } from './among.js';
+import type { ObjetDuDecorPose, SurbrillanceScene, VisionScene } from './among.js';
 import { APPARENCE_AMONG, cadreDuMasque, teinteDuVoile } from './among.js';
 import type { Camera, ZoneVisible } from './camera.js';
 import { dansLaZone, versEcran, zoneVisible } from './camera.js';
@@ -170,6 +170,7 @@ export async function prechargerLaPartie(
   carte: string,
   pluie: boolean,
   nuit: boolean,
+  objets: readonly ObjetDuDecorPose[] = [],
 ): Promise<void> {
   const dimensions = CARTES[carte as IdentifiantCarte] as DimensionsCarte | undefined;
 
@@ -180,7 +181,13 @@ export async function prechargerLaPartie(
     image(cheminLointain(carte)),
     imagesDuVaisseau(carte, nuit),
     dimensions === undefined ? [] : imagesDePluie(carte, pluie, dimensions),
+    imagesDesObjets(objets),
   ]);
+}
+
+/** Les images des objets du decor d'Among Ninjas (13 octobre 2026). */
+async function imagesDesObjets(objets: readonly ObjetDuDecorPose[]): Promise<readonly Texture[]> {
+  return Promise.all(objets.map(async (objet) => Assets.load<Texture>(objet.texture)));
 }
 
 /** L'image de ce chemin, s'il y en a un: aucune pour une couche que la carte n'a pas. */
@@ -467,6 +474,11 @@ export interface OptionsRendu {
   /** Largeur et hauteur du canevas. Celles de l'hote par defaut. */
   readonly largeur?: number;
   readonly hauteur?: number;
+  /**
+   * Les objets du decor d'Among Ninjas (13 octobre 2026), poses dans le decor au chargement.
+   * Aucun dans les autres modes.
+   */
+  readonly objetsDuDecor?: readonly ObjetDuDecorPose[];
 }
 
 /** Du sang a imprimer au sol: une eclaboussure du Massacre, ou une empreinte de pas. */
@@ -545,6 +557,8 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   const disques = new Graphics();
   // Les mines posees, au sol, sur les halos et sous les objets (etape 7.11).
   const mines = new Graphics();
+  // Les objets du decor d'Among Ninjas qui s'eclairent, sur l'objet pose dans le decor.
+  const surbrillances = new Container();
   const objets = new Container();
   // Les personnages se dessinent dans l'ordre de la scene, que leur rang fixe (etape 5.7).
   // Le nom permet au banc de mesure de compter ceux qui sont affiches.
@@ -581,7 +595,10 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   // jusqu'au bord de la carte.
   fondEteint.filters = [filtreEteint];
   dessusEteint.filters = [filtreEteint];
-  copieEteinte.addChild(fondEteint, dessusEteint);
+  // Les objets du decor d'Among Ninjas s'eteignent avec lui: ils en font partie.
+  const objetsEteints = new Container();
+  objetsEteints.filters = [filtreEteint];
+  copieEteinte.addChild(fondEteint, objetsEteints, dessusEteint);
   // Le voile noir qui assombrissait la copie de moitie (VISION_AMONG), davantage pendant la
   // panne de neons (etape 7.22), est une teinte de la texture: un noir d'opacite a par-dessus
   // une couleur, ou cette couleur multipliee par 1 - a, c'est la meme chose.
@@ -633,6 +650,7 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
     zones,
     disques,
     mines,
+    surbrillances,
     objets,
     entites,
     indicateur,
@@ -668,6 +686,7 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   const spritesObjets = new Map<string, Sprite>();
   const badges = new Map<string, Text>();
   const textesDesLibelles = new Map<string, Text>();
+  const spritesSurbrillances = new Map<string, Surbrillance>();
 
   const fond = new Sprite();
   const dessus = new Sprite();
@@ -697,7 +716,9 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   const vaisseau = new Sprite();
   vaisseau.anchor.set(0.5);
   vaisseau.visible = false;
-  decor.addChild(lointain, fond, sol, pluie, ombre);
+  // Les objets du decor d'Among Ninjas, sur le fond et sous la pluie.
+  const objetsDuDecor = new Container();
+  decor.addChild(lointain, fond, sol, objetsDuDecor, pluie, ombre);
   premierPlan.addChild(dessus, vaisseau);
 
   const imprimer = (taches: readonly SangAImprimer[]): void => {
@@ -747,13 +768,16 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
 
     async chargerLeDecor() {
       const carte = options.identifiantCarte;
-      const [texteFond, texteDessus, texteLointain, imagesVaisseau, images] = await Promise.all([
-        imageDuFond(carte, options.nuit),
-        imageDeLAvantPlan(carte, options.nuit),
-        image(cheminLointain(carte)),
-        imagesDuVaisseau(carte, options.nuit),
-        imagesDePluie(carte, options.pluie, options.carte),
-      ]);
+      const objetsAPoser = options.objetsDuDecor ?? [];
+      const [texteFond, texteDessus, texteLointain, imagesVaisseau, images, texturesDesObjets] =
+        await Promise.all([
+          imageDuFond(carte, options.nuit),
+          imageDeLAvantPlan(carte, options.nuit),
+          image(cheminLointain(carte)),
+          imagesDuVaisseau(carte, options.nuit),
+          imagesDePluie(carte, options.pluie, options.carte),
+          imagesDesObjets(objetsAPoser),
+        ]);
 
       fond.texture = texteFond;
       // Une carte sans avant-plan, la Station lunaire (etape 8.9), garde un sprite cache.
@@ -813,6 +837,22 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
         couche.height = options.carte.hauteur;
         orienterLeDecor(couche, options.carte.largeur, options.modeMiroir);
       }
+
+      // Chaque objet du decor deux fois: dans le decor, et dans sa copie eteinte.
+      objetsDuDecor.removeChildren().forEach((ancien) => {
+        ancien.destroy();
+      });
+      objetsEteints.removeChildren().forEach((ancien) => {
+        ancien.destroy();
+      });
+      objetsAPoser.forEach((objet, rang) => {
+        const texture = texturesDesObjets[rang];
+
+        if (texture !== undefined) {
+          objetsDuDecor.addChild(objetPose(objet, texture, options.modeMiroir));
+          objetsEteints.addChild(objetPose(objet, texture, options.modeMiroir));
+        }
+      });
 
       // Le decor a change: sa copie eteinte se recuira au prochain cercle de vision.
       decorEteintAJour = false;
@@ -875,6 +915,7 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       dessinerLesDisques(disques, scene.disques, champ);
       dessinerLesCones(disques, scene.cones);
       dessinerLIndicateur(mines, scene.mines, champ);
+      eclairerLesObjets(surbrillances, spritesSurbrillances, scene.surbrillances ?? [], options);
       majSprites(spritesObjets, objets, scene.objets);
       majPersonnages(spritesEntites, entites, scene.entites, champ, numeroDImage, calquesParImage);
       dessinerLIndicateur(indicateur, scene.indicateur, champ);
@@ -910,8 +951,100 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       spritesObjets.clear();
       badges.clear();
       textesDesLibelles.clear();
+      spritesSurbrillances.clear();
     },
   };
+}
+
+/**
+ * Un objet du decor d'Among Ninjas pose a sa place et a sa taille, retourne en miroir avec le
+ * decor (etape 8.3): sa place l'est deja, son image pas encore.
+ */
+function objetPose(objet: ObjetDuDecorPose, texture: Texture, miroir: boolean): Sprite {
+  const sprite = new Sprite(texture);
+  sprite.anchor.set(0.5);
+  sprite.position.set(objet.x, objet.y);
+  sprite.width = objet.largeur;
+  sprite.height = objet.hauteur;
+
+  if (miroir) {
+    sprite.scale.x = -Math.abs(sprite.scale.x);
+  }
+
+  return sprite;
+}
+
+/** Un objet du decor eclaire: son contour, et la couleur pour laquelle ses filtres sont faits. */
+interface Surbrillance {
+  readonly sprite: Sprite;
+  readonly couleur: number;
+}
+
+/**
+ * Eclaire les objets du decor que la scene designe (13 octobre 2026): un contour neon autour de
+ * la silhouette de l'objet, sans l'objet lui-meme, deja dans le decor, et sa lueur. Les filtres ne
+ * se refont qu'a un changement de couleur; l'opacite, qui bat pendant la panne, a chaque image.
+ */
+function eclairerLesObjets(
+  conteneur: Container,
+  connues: Map<string, Surbrillance>,
+  liste: readonly SurbrillanceScene[],
+  options: Pick<OptionsRendu, 'modeMiroir'>,
+): void {
+  const vues = new Set<string>();
+  const oublier = (surbrillance: Surbrillance): void => {
+    for (const filtre of surbrillance.sprite.filters ?? []) {
+      filtre.destroy();
+    }
+    surbrillance.sprite.destroy();
+  };
+
+  for (const decrite of liste) {
+    const texture = Assets.get<Texture>(decrite.texture);
+
+    if (texture === undefined) {
+      continue;
+    }
+
+    vues.add(decrite.id);
+    let connue = connues.get(decrite.id);
+
+    if (connue === undefined || connue.couleur !== decrite.couleur) {
+      if (connue !== undefined) {
+        oublier(connue);
+      }
+
+      const { epaisseur, lueur, portee } = APPARENCE_AMONG.surbrillance;
+      const sprite = objetPose(decrite, texture, options.modeMiroir);
+      sprite.filters = [
+        new OutlineFilter({
+          thickness: epaisseur,
+          color: decrite.couleur,
+          quality: 0.3,
+          knockout: true,
+        }),
+        new GlowFilter({
+          color: decrite.couleur,
+          distance: portee,
+          outerStrength: lueur,
+          innerStrength: 0,
+          quality: 0.3,
+        }),
+      ];
+      conteneur.addChild(sprite);
+      connue = { sprite, couleur: decrite.couleur };
+      connues.set(decrite.id, connue);
+    }
+
+    connue.sprite.alpha = decrite.alpha;
+  }
+
+  for (const [id, connue] of connues) {
+    if (!vues.has(id)) {
+      oublier(connue);
+      connues.delete(id);
+    }
+  }
 }
 
 /**

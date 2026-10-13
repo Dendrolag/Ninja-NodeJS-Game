@@ -191,10 +191,7 @@ export function amongHud(etat: EtatClient): AmongHud | undefined {
 
   const partie = etat.partie;
   const moi = partie?.entites.find((entite) => entite.id === etat.moi);
-  const geste =
-    moi === undefined || partie?.among?.phase !== 'jeu'
-      ? 'aucun'
-      : gesteAPortee(etat, moi, partie.entites);
+  const geste = gesteDuBouton(etat);
   const faites = prive.taches.filter((tache) => tache.faite).length;
   const commune = partie?.among;
 
@@ -427,6 +424,19 @@ function consigneDe(role: 'proie' | 'tueur', fantome: boolean): string {
   }
 
   return role === 'tueur' ? 'Éliminez sans être vu' : 'Faites vos tâches, trouvez les assassins';
+}
+
+/**
+ * Ce que ferait le bouton d'action maintenant: rien hors de la phase de jeu. Le rendu s'en sert
+ * aussi pour eclairer l'objet du decor dont on se servirait (13 octobre 2026).
+ */
+export function gesteDuBouton(etat: EtatClient): GesteAmong {
+  const partie = etat.partie;
+  const moi = partie?.entites.find((entite) => entite.id === etat.moi);
+
+  return moi === undefined || partie?.among?.phase !== 'jeu'
+    ? 'aucun'
+    : gesteAPortee(etat, moi, partie.entites);
 }
 
 /**

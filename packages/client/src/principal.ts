@@ -33,6 +33,7 @@ import { lireLaDemande } from './diagnostic/demande.js';
 import { horlogeNavigateur } from './horloge.js';
 import { monterApplication } from './interface/application.js';
 import { monterJeu } from './interface/ecrans/jeu.js';
+import { objetsDuDecorAmong } from './rendu/among.js';
 import { prechargerLaPartie } from './rendu/pixi.js';
 import { creerReseauSocketIo } from './reseauSocketIo.js';
 import type { LecteurDeSons } from './sons/lecteur.js';
@@ -162,8 +163,14 @@ monterApplication({
   monterLeJeu: diagnostic === undefined ? monterJeu : (contexte) => monterJeu(contexte, diagnostic),
   // Un prechargement qui echoue n'a rien de grave: l'ecran de jeu recharge lui-meme
   // ce qui lui manque, et dit s'il n'y parvient pas.
-  prechargerLeJeu: (reglages) => {
-    prechargerLaPartie(reglages.carte, reglages.pluie, reglages.nuit).catch(() => undefined);
+  // Les objets du decor d'Among Ninjas aussi, dans ce mode (13 octobre 2026).
+  prechargerLeJeu: (reglages, mode) => {
+    prechargerLaPartie(
+      reglages.carte,
+      reglages.pluie,
+      reglages.nuit,
+      mode === 'among' ? objetsDuDecorAmong(reglages.carte, reglages.modeMiroir) : [],
+    ).catch(() => undefined);
   },
   ...(stockage === undefined ? {} : { stockage }),
   // Le pied de l'accueil dit de quand date la page qu'on a sous les yeux (etape 8.4).

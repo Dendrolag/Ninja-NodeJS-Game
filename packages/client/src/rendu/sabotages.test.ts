@@ -4,6 +4,9 @@
  * les consoles au sol, cyan au repos, orange ou rouge pendant leur sabotage (rendu 6A); le nuage
  * noir, opaque pour une proie vivante et a demi pour qui y voit (rendu 4A); les fleches vers les
  * postes, avec leur distance (rendus 2C et 3B).
+ *
+ * Et les objets du decor qui remplacent l'anneau du gong et le dessin du boitier sur Tokyo
+ * (13 octobre 2026): toujours la, eclaires pour qui peut s'en servir.
  */
 
 import type { AmongVu, EntiteVue, EtatPriveAmong, SabotageEnCoursVu } from '@neon-ninja/shared';
@@ -12,7 +15,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { EtatClient } from '../etat.js';
 import { ETAT_INITIAL } from '../etat.js';
-import { APPARENCE_AMONG, imageDAmong } from './among.js';
+import { APPARENCE_AMONG, imageDAmong, objetsDuDecorAmong } from './among.js';
 import { VISION_AMONG } from './apparence.js';
 import type { VueLissee } from './interpolation.js';
 
@@ -141,21 +144,26 @@ describe('le boitier et les consoles', () => {
   it('sont toujours la, cyan, sans disque de reparation hors de leur sabotage', () => {
     const client = etat(PROIE, ICI);
 
-    expect(new Set(couleurs(client, 'boitier'))).toEqual(new Set([APPARENCE_AMONG.poste.repos]));
     expect(new Set(couleurs(client, 'console:1'))).toEqual(new Set([APPARENCE_AMONG.poste.repos]));
-    expect(disque(client, 'boitier')).toBeUndefined();
-    expect(image(client).postes.disques.find((rond) => rond.id === 'boitier:socle')).toMatchObject({
-      x: LIEUX.boitier.x,
-      y: LIEUX.boitier.y,
-    });
+    expect(disque(client, 'console:1')).toBeUndefined();
+    expect(
+      image(client).postes.disques.find((rond) => rond.id === 'console:0:socle'),
+    ).toMatchObject({ x: LIEUX.consoles[0].x, y: LIEUX.consoles[0].y });
   });
 
-  it('passent le boitier a l orange pendant la panne, avec son disque de reparation', () => {
-    const client = etat(PROIE, ICI, { sabotage: PANNE });
+  it('laissent le boitier de Tokyo a son generateur: ni socle, ni trait, ni disque', () => {
+    for (const sabotage of [undefined, PANNE]) {
+      const client = etat(PROIE, ICI, sabotage === undefined ? {} : { sabotage });
 
-    expect(new Set(couleurs(client, 'boitier'))).toEqual(new Set([APPARENCE_AMONG.poste.panne]));
-    expect(disque(client, 'boitier')?.rayon).toBe(AMONG.RAYON_D_UN_POSTE_PX);
-    expect(disque(client, 'console:0')).toBeUndefined();
+      expect(couleurs(client, 'boitier')).toEqual([]);
+      expect(image(client).postes.disques.filter((rond) => rond.id.startsWith('boitier:'))).toEqual(
+        [],
+      );
+    }
+  });
+
+  it('ne dessinent pas de disque de reparation aux consoles pendant la panne', () => {
+    expect(disque(etat(PROIE, ICI, { sabotage: PANNE }), 'console:0')).toBeUndefined();
   });
 
   it('passent les consoles au rouge pendant la surchauffe, et emplissent celle qui est tenue', () => {
@@ -171,12 +179,80 @@ describe('le boitier et les consoles', () => {
   });
 
   it('font battre le disque de reparation', () => {
-    const client = etat(PROIE, ICI, { sabotage: PANNE });
+    const client = etat(PROIE, ICI, { sabotage: SURCHAUFFE });
     const alpha = (maintenant: number) =>
-      image(client, maintenant).postes.disques.find((rond) => rond.id === 'boitier:disque')?.contour
-        ?.alpha;
+      image(client, maintenant).postes.disques.find((rond) => rond.id === 'console:0:disque')
+        ?.contour?.alpha;
 
     expect(alpha(0)).not.toBe(alpha(APPARENCE_AMONG.poste.battementMs / 4));
+  });
+});
+
+describe('les objets du decor', () => {
+  /** La surbrillance de l'objet de ce lieu, s'il s'eclaire. */
+  const eclaire = (client: EtatClient, lieu: 'gong' | 'boitier', maintenant = 0) =>
+    image(client, maintenant).surbrillances.find((objet) => objet.lieu === lieu);
+
+  it('habillent le gong et le boitier de Tokyo, a leur place et a leur image', () => {
+    expect(objetsDuDecorAmong('map1', false)).toEqual([
+      expect.objectContaining({
+        lieu: 'gong',
+        texture: '/assets/among/map1/gong.png',
+        x: LIEUX.gong.x,
+        y: LIEUX.gong.y,
+      }),
+      expect.objectContaining({
+        lieu: 'boitier',
+        texture: '/assets/among/map1/generator.png',
+        x: LIEUX.boitier.x,
+        y: LIEUX.boitier.y,
+      }),
+    ]);
+  });
+
+  it('suivent leur lieu en miroir', () => {
+    const miroir = lieuxDuMode('map1', true) ?? expect.fail('Tokyo a ses lieux');
+
+    expect(objetsDuDecorAmong('map1', true).map(({ x, y }) => ({ x, y }))).toEqual([
+      miroir.gong,
+      miroir.boitier,
+    ]);
+  });
+
+  it('remplacent l anneau du gong', () => {
+    expect(image(etat(PROIE, ICI)).disques.find((rond) => rond.id === 'gong')).toBeUndefined();
+  });
+
+  it('eclairent le gong en magenta pour qui peut le sonner, et pour lui seul', () => {
+    expect(eclaire(etat(PROIE, LIEUX.gong), 'gong')).toMatchObject({
+      couleur: APPARENCE_AMONG.gong.couleur,
+      alpha: 1,
+    });
+    expect(eclaire(etat(ASSASSIN, LIEUX.gong), 'gong')).toBeDefined();
+    // Trop loin, deja sonne, mort, ou pendant la surchauffe, ou le gong ne sonne pas.
+    expect(eclaire(etat(PROIE, ICI), 'gong')).toBeUndefined();
+    expect(eclaire(etat({ ...PROIE, gongUtilise: true }, LIEUX.gong), 'gong')).toBeUndefined();
+    expect(eclaire(etat(FANTOME, LIEUX.gong), 'gong')).toBeUndefined();
+    expect(eclaire(etat(PROIE, LIEUX.gong, { sabotage: SURCHAUFFE }), 'gong')).toBeUndefined();
+  });
+
+  it('font battre le generateur en orange pendant la panne, et l eclairent a portee', () => {
+    const loin = etat(PROIE, ICI, { sabotage: PANNE });
+    const alpha = (maintenant: number) => eclaire(loin, 'boitier', maintenant)?.alpha;
+
+    expect(eclaire(loin, 'boitier')?.couleur).toBe(APPARENCE_AMONG.poste.panne);
+    expect(alpha(0)).not.toBe(alpha(APPARENCE_AMONG.poste.battementMs / 4));
+    expect(eclaire(etat(PROIE, LIEUX.boitier, { sabotage: PANNE }), 'boitier')?.alpha).toBe(1);
+    expect(eclaire(etat(PROIE, LIEUX.boitier), 'boitier')).toBeUndefined();
+  });
+
+  it('ne s eclairent pas avant que la page sache notre role, ni hors de la phase de jeu', () => {
+    const sansRole = etat(PROIE, LIEUX.gong);
+
+    expect(
+      image({ ...sansRole, among: { ...sansRole.among, prive: undefined } }).surbrillances,
+    ).toEqual([]);
+    expect(eclaire(etat(PROIE, LIEUX.gong, { phase: 'discussion' }), 'gong')).toBeUndefined();
   });
 });
 

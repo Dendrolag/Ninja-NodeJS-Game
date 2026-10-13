@@ -22,6 +22,7 @@
  *     spaceship.png
  *   assets/ninja/<direction>_<1|2>.png, et idle.png
  *   assets/objets/<icone>.png
+ *   assets/among/<carte>/<objet>.png, les objets du decor d'Among Ninjas
  *   assets/sons/<son>.<mp3|wav>
  *
  * Les noms de fichiers sont ceux du jeu d'origine, en anglais. Ce sont des noms
@@ -262,6 +263,16 @@ export const COTE_IMAGE_OBJET_PX = 50;
 /** Toutes les icones d'objet a charger. */
 export function tousLesObjets(): readonly string[] {
   return Object.values(ICONE_OBJET).map((icone) => `objets/${icone}`);
+}
+
+/**
+ * Chemin relatif d'un objet du decor d'Among Ninjas (13 octobre 2026): le gong, le generateur.
+ *
+ * Ranges par carte, puisque chaque carte du mode aura les siens, mais hors du dossier de la
+ * carte: celui-ci ne porte que ses couches, sans sous-dossier (etape 8.3).
+ */
+export function cheminObjetDuDecor(carte: string, image: string): string {
+  return `among/${carte}/${image}.png`;
 }
 
 /**

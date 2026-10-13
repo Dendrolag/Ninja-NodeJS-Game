@@ -26,6 +26,12 @@
  *   - LA SURCHAUFFE, rendu 3B: deux fleches rouges vers les consoles. L'alarme et le compte a
  *     rebours sont dans le HUD.
  *
+ * LES OBJETS DU DECOR (demande du porteur du projet du 13 octobre 2026): sur une carte qui en a,
+ * le pavillon du gong et le generateur du boitier remplacent l'anneau et le dessin neon. Ils sont
+ * toujours la, poses dans le decor par le rendu (objetsDuDecorAmong), eteints avec lui hors du
+ * cercle de vision. Seul celui dont on se servirait en appuyant sur le bouton d'action s'eclaire,
+ * pour qui peut s'en servir; le generateur bat en orange pendant la panne.
+ *
  * LES PSEUDOS NE S'AFFICHENT PAS SUR LA CARTE (decision du porteur du projet du 9 octobre 2026):
  * le doute sur qui est qui fait le jeu, et toute accusation passe par une couleur. Seul un
  * assassin lit le pseudo de ses complices. La revelation, la reunion, l'ejection et la fin, elles,
@@ -34,11 +40,25 @@
  * Ce module est pur: il lit l'etat du client et rend des formes a dessiner.
  */
 
-import type { Couleur, DimensionsCarte, Position } from '@neon-ninja/shared';
-import { AMONG, AMONG_PAR_DEFAUT, RAYONS_DE_VISION, lieuxDuMode } from '@neon-ninja/shared';
+import type {
+  Couleur,
+  DimensionsCarte,
+  IdentifiantCarte,
+  ObjetDuDecor,
+  Position,
+} from '@neon-ninja/shared';
+import {
+  AMONG,
+  AMONG_PAR_DEFAUT,
+  RACINE_RESSOURCES,
+  RAYONS_DE_VISION,
+  cheminObjetDuDecor,
+  lieuxDuMode,
+} from '@neon-ninja/shared';
 
 import { stationsAMontrer, victimeAPortee } from '../among.js';
 import type { EtatClient } from '../etat.js';
+import { gesteDuBouton } from '../hud/among.js';
 import type { IndicateurScene } from './charges.js';
 import { AUCUN_INDICATEUR } from './charges.js';
 import type { VueLissee } from './interpolation.js';
@@ -106,6 +126,59 @@ export function cadreDuMasque(
   };
 }
 
+/**
+ * Un objet du decor pose sur la carte: son image, son centre et sa taille, en pixels de carte.
+ * Le rendu le dessine une fois dans le decor, et retourne son image en miroir avec lui.
+ */
+export interface ObjetDuDecorPose {
+  readonly id: string;
+  readonly lieu: ObjetDuDecor['lieu'];
+  /** Adresse complete de son image. */
+  readonly texture: string;
+  readonly x: number;
+  readonly y: number;
+  readonly largeur: number;
+  readonly hauteur: number;
+}
+
+/**
+ * Un objet du decor qui s'eclaire: un contour neon autour de sa silhouette, dessine par le rendu
+ * sur l'objet deja pose.
+ */
+export interface SurbrillanceScene extends ObjetDuDecorPose {
+  readonly couleur: number;
+  readonly alpha: number;
+}
+
+/**
+ * Les objets du decor d'Among Ninjas sur cette carte, a leur place, en miroir s'il le faut.
+ * Aucun sur une carte qui n'en a pas.
+ */
+export function objetsDuDecorAmong(
+  carte: IdentifiantCarte,
+  miroir: boolean,
+): readonly ObjetDuDecorPose[] {
+  const lieux = lieuxDuMode(carte, miroir);
+
+  if (lieux === undefined) {
+    return [];
+  }
+
+  return lieux.objets.map((objet) => {
+    const place = lieux[objet.lieu];
+
+    return {
+      id: `objet:${objet.lieu}`,
+      lieu: objet.lieu,
+      texture: `${RACINE_RESSOURCES}/${cheminObjetDuDecor(carte, objet.image)}`,
+      x: place.x,
+      y: place.y,
+      largeur: objet.largeur,
+      hauteur: objet.hauteur,
+    };
+  });
+}
+
 /** Ce qu'Among Ninjas ajoute a une image. */
 export interface ImageDAmong {
   /** Au sol, sous les personnages: les stations, le gong, le sang des cadavres, les halos. */
@@ -118,6 +191,8 @@ export interface ImageDAmong {
   readonly postes: IndicateurScene;
   /** Par-dessus tout: les fleches vers le boitier ou les consoles d'un sabotage (etape 7.22). */
   readonly fleches: readonly TraitScene[];
+  /** Les objets du decor qui s'eclairent (13 octobre 2026). */
+  readonly surbrillances: readonly SurbrillanceScene[];
 }
 
 /** Rien a ajouter: une image d'un autre mode. */
@@ -128,6 +203,7 @@ export const RIEN_D_AMONG: ImageDAmong = {
   vision: undefined,
   postes: AUCUN_INDICATEUR,
   fleches: [],
+  surbrillances: [],
 };
 
 /** Les reglages de l'apparence, tenus ici pour se regler en jouant. */
@@ -142,8 +218,13 @@ export const APPARENCE_AMONG = {
   sang: { couleur: 0x8c0012, alpha: 0.85 },
   /** Une station: un disque cyan, plein pale et bord net. */
   station: { couleur: 0x2ee6ff, alphaPlein: 0.12, alphaBord: 0.75, epaisseur: 3 },
-  /** Le gong: un anneau magenta au point de reunion. */
+  /** Le gong: un anneau magenta au point de reunion, sur une carte sans objet du gong. */
   gong: { couleur: 0xff4fd8, alpha: 0.85, epaisseur: 4, rayon: 34 },
+  /**
+   * L'objet du decor dont on se servirait (13 octobre 2026): un contour neon autour de sa
+   * silhouette, et sa lueur. Le gong s'eclaire en magenta, le generateur a la couleur de la panne.
+   */
+  surbrillance: { epaisseur: 3, lueur: 3, portee: 12 },
   /** La hauteur du pseudo au-dessus du centre du ninja. */
   hauteurDuPseudo: 30,
   /**
@@ -220,7 +301,8 @@ export function imageDAmong(
     return RIEN_D_AMONG;
   }
 
-  const disques: DisqueScene[] = [...lieuxDuJoueur(etat)];
+  const objets = objetsDeLaPartie(etat);
+  const disques: DisqueScene[] = [...lieuxDuJoueur(etat, objets)];
   const victime = victimeAPortee(etat);
   const complices = new Set(etat.among.prive?.role === 'tueur' ? etat.among.prive.complices : []);
   const cadavres: SpriteScene[] = [];
@@ -271,9 +353,65 @@ export function imageDAmong(
     cadavres,
     libelles: fleches === undefined ? libelles : [...libelles, ...fleches.libelles],
     vision: visionDe(etat, lissee),
-    postes: postesDesSabotages(etat, maintenant),
+    postes: postesDesSabotages(etat, maintenant, objets),
     fleches: fleches?.traits ?? [],
+    surbrillances: surbrillancesDesObjets(etat, objets, maintenant),
   };
+}
+
+/** Les objets du decor de la partie, d'apres ses reglages. */
+function objetsDeLaPartie(etat: EtatClient): readonly ObjetDuDecorPose[] {
+  const reglages = etat.salon?.reglages;
+
+  return reglages === undefined ? [] : objetsDuDecorAmong(reglages.carte, reglages.modeMiroir);
+}
+
+/** Le battement du disque de reparation et du generateur en panne, entre son minimum et 1. */
+function battementDesPostes(maintenant: number): number {
+  const { poste } = APPARENCE_AMONG;
+
+  return (
+    poste.alphaMinimum +
+    (1 - poste.alphaMinimum) *
+      (0.5 + 0.5 * Math.sin((maintenant / poste.battementMs) * Math.PI * 2))
+  );
+}
+
+/**
+ * Les objets du decor qui s'eclairent, pour nous seulement: celui dont on se servirait en
+ * appuyant sur le bouton d'action, le gong pour le sonner, le generateur pour reparer la panne.
+ * Pendant la panne, le generateur bat en orange pour tous ceux qui ont un role, comme le disque
+ * qu'il remplace; il s'eclaire franchement quand on peut le reparer.
+ */
+function surbrillancesDesObjets(
+  etat: EtatClient,
+  objets: readonly ObjetDuDecorPose[],
+  maintenant: number,
+): readonly SurbrillanceScene[] {
+  if (objets.length === 0 || etat.among.prive === undefined) {
+    return [];
+  }
+
+  const geste = gesteDuBouton(etat);
+  const enPanne = etat.partie?.among?.sabotage?.nature === 'panne';
+  const surbrillances: SurbrillanceScene[] = [];
+
+  for (const objet of objets) {
+    if (objet.lieu === 'gong' && geste === 'gong') {
+      surbrillances.push({ ...objet, couleur: APPARENCE_AMONG.gong.couleur, alpha: 1 });
+    }
+
+    if (objet.lieu === 'boitier' && enPanne) {
+      // Pendant la panne, on ne repare qu'au boitier: les consoles sont celles de la surchauffe.
+      surbrillances.push({
+        ...objet,
+        couleur: APPARENCE_AMONG.poste.panne,
+        alpha: geste === 'reparer' ? 1 : battementDesPostes(maintenant),
+      });
+    }
+  }
+
+  return surbrillances;
 }
 
 /** Les postes des sabotages de la partie: le boitier et les deux consoles, en miroir s'il le faut. */
@@ -290,7 +428,11 @@ function postesDeLaPartie(
  * cyan au repos. Pendant leur sabotage, ils passent a l'orange (la panne) ou au rouge (la
  * surchauffe), et le disque ou l'on se tient pour reparer bat; une console tenue s'emplit.
  */
-function postesDesSabotages(etat: EtatClient, maintenant: number): IndicateurScene {
+function postesDesSabotages(
+  etat: EtatClient,
+  maintenant: number,
+  objets: readonly ObjetDuDecorPose[],
+): IndicateurScene {
   const postes = postesDeLaPartie(etat);
 
   if (postes === undefined || etat.among.prive === undefined) {
@@ -301,10 +443,7 @@ function postesDesSabotages(etat: EtatClient, maintenant: number): IndicateurSce
   const sabotage = etat.partie?.among?.sabotage;
   const enPanne = sabotage?.nature === 'panne';
   const enSurchauffe = sabotage?.nature === 'surchauffe';
-  const battement =
-    poste.alphaMinimum +
-    (1 - poste.alphaMinimum) *
-      (0.5 + 0.5 * Math.sin((maintenant / poste.battementMs) * Math.PI * 2));
+  const battement = battementDesPostes(maintenant);
   const disques: DisqueScene[] = [];
   const traits: TraitScene[] = [];
 
@@ -347,14 +486,17 @@ function postesDesSabotages(etat: EtatClient, maintenant: number): IndicateurSce
     });
   };
 
-  poser(
-    'boitier',
-    postes.boitier,
-    enPanne ? poste.panne : poste.repos,
-    enPanne,
-    false,
-    dessinDuBoitier,
-  );
+  // Un boitier habille d'un objet du decor n'a plus de dessin: c'est l'objet qui s'eclaire.
+  if (!objets.some((objet) => objet.lieu === 'boitier')) {
+    poser(
+      'boitier',
+      postes.boitier,
+      enPanne ? poste.panne : poste.repos,
+      enPanne,
+      false,
+      dessinDuBoitier,
+    );
+  }
   postes.consoles.forEach((console_, rang) => {
     poser(
       `console:${String(rang)}`,
@@ -542,9 +684,13 @@ export function alphaAmong(fantome: boolean | undefined): number {
 
 /**
  * Les stations et le gong que ce joueur doit voir: les stations des taches qui lui restent
- * pour une proie, toutes les stations actives pour un assassin, et le gong pour tous.
+ * pour une proie, toutes les stations actives pour un assassin, et le gong pour tous, sauf
+ * sur une carte ou un objet du decor le montre deja.
  */
-function lieuxDuJoueur(etat: EtatClient): readonly DisqueScene[] {
+function lieuxDuJoueur(
+  etat: EtatClient,
+  objets: readonly ObjetDuDecorPose[],
+): readonly DisqueScene[] {
   const prive = etat.among.prive;
 
   if (prive === undefined) {
@@ -564,6 +710,10 @@ function lieuxDuJoueur(etat: EtatClient): readonly DisqueScene[] {
       epaisseur: station.epaisseur,
     },
   }));
+
+  if (objets.some((objet) => objet.lieu === 'gong')) {
+    return lieux;
+  }
 
   lieux.push({
     id: 'gong',

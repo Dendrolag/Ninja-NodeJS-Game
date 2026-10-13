@@ -25,7 +25,7 @@
  * navigation avec un ecran de jeu d'essai.
  */
 
-import type { PisteMusicale, ReglagesPartie } from '@neon-ninja/shared';
+import type { Mode, PisteMusicale, ReglagesPartie } from '@neon-ninja/shared';
 import {
   NUMERO_DE_VERSION,
   infobulleDeVersion,
@@ -77,7 +77,7 @@ export interface OptionsApplication {
    * (recette de l'etape 5.4): le decor de la carte ne se telecharge plus pendant que
    * la partie tourne. Absent, rien n'est precharge.
    */
-  readonly prechargerLeJeu?: (reglages: ReglagesPartie) => void;
+  readonly prechargerLeJeu?: (reglages: ReglagesPartie, mode: Mode) => void;
   readonly sons?: LecteurDeSons;
   readonly horloge?: HorlogeClient;
   /**
@@ -325,7 +325,7 @@ export function monterApplication(options: OptionsApplication): Application {
       etat.compteARebours !== undefined &&
       etat.salon !== undefined
     ) {
-      options.prechargerLeJeu?.(etat.salon.reglages);
+      options.prechargerLeJeu?.(etat.salon.reglages, etat.salon.mode);
     }
 
     precedent = etat;
