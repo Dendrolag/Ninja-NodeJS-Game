@@ -6,6 +6,8 @@ import {
   placerLesBateaux,
 } from '../../../packages/client/dist/interface/modeles/gestes/bataille.js';
 import {
+  CRAN_DE_MOLETTE,
+  TENUE_DE_LA_FREQUENCE_MS,
   VITESSE_DU_CADRAN,
   creerFrequence,
 } from '../../../packages/client/dist/interface/modeles/gestes/frequence.js';
@@ -147,7 +149,7 @@ async function avancementDeLaReparation(page: Page): Promise<{ faits: number; to
 
 /**
  * Repare la panne de neons au clavier, dans la fenetre de la reparation ouverte au boitier
- * (etape 7.27), comme un joueur patient: la reparation que la partie a tiree se lit sur la
+ * (etape 7.27), comme un joueur patient, la frequence a la molette: la reparation que la partie a tiree se lit sur la
  * fenetre (data-etape). Les fusibles grilles et la frequence de depart se tirent dans la page
  * d'une graine qui ne doit rien au hasard (le joueur, le poste, le geste), que le scenario refait.
  */
@@ -197,16 +199,25 @@ export async function reparerLaPanneAuClavier(page: Page, joueur: string): Promi
     }
 
     case 'frequence': {
-      // La fleche tenue le temps que le cadran arrive sur la cible, a sa vitesse, puis lachee:
-      // la courbe se tient alors d'elle-meme dans la tolerance.
+      // La molette, cran par cran: chaque cran demande au cadran exactement CRAN_DE_MOLETTE,
+      // quelle que soit la cadence de la page. Une fleche tenue dependait du temps que la page
+      // met a lire ses touches, trop lente en integration continue pour la tolerance. Le cadran
+      // rejoint ensuite la consigne a sa vitesse, et tient l'accord de lui-meme.
       const { cible, valeur } = creerFrequence(
         graineDeLaReparation(joueur, 'boitier', 'frequence'),
       );
-      const touche = cible > valeur ? 'ArrowRight' : 'ArrowLeft';
-      await page.keyboard.down(touche);
-      await page.waitForTimeout((Math.abs(cible - valeur) / VITESSE_DU_CADRAN) * 1000);
-      await page.keyboard.up(touche);
-      await page.waitForTimeout(1300);
+      const crans = Math.round((cible - valeur) / CRAN_DE_MOLETTE);
+      const cadre = await page.locator('.reparation-geste').boundingBox();
+      if (cadre !== null) {
+        await page.mouse.move(cadre.x + cadre.width / 2, cadre.y + cadre.height / 2);
+      }
+      for (let cran = 0; cran < Math.abs(crans); cran += 1) {
+        // Vers le haut, la molette tourne le cadran vers les hautes frequences.
+        await page.mouse.wheel(0, crans > 0 ? -100 : 100);
+      }
+      await page.waitForTimeout(
+        (Math.abs(cible - valeur) / VITESSE_DU_CADRAN) * 1000 + TENUE_DE_LA_FREQUENCE_MS + 500,
+      );
       return;
     }
 

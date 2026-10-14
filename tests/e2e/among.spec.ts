@@ -57,8 +57,9 @@ import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
  *   3 bis bis. La meme proie joue sa tache longue, une bataille navale, au clavier, jusqu'a la
  *      tache faite (etape 7.24).
  *   3 ter. L'assassin de la page coupe les neons depuis sa carte; la proie de la page voit
- *      l'alerte, va au generateur de la rue, y ouvre la reparation par E, et joue au clavier
- *      la reparation que la partie a tiree (etapes 7.22 et 7.27).
+ *      l'alerte, va au generateur de la rue, y ouvre la reparation par E, et joue la
+ *      reparation que la partie a tiree, au clavier, la frequence a la molette (etapes 7.22 et
+ *      7.27).
  *   3 quater. Une proie du reseau s'eloigne de la proie de la page, qui recoit ses pas hors de
  *      vue, sans jamais la voir dans les trames qui les portent (etape 7.23).
  *   4. L'assassin va au contact d'une proie et la tue.
