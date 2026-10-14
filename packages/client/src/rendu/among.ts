@@ -27,12 +27,12 @@
  *     rebours sont dans le HUD.
  *
  * LES OBJETS DU DECOR (demande du porteur du projet du 13 octobre 2026): sur une carte qui en a,
- * le pavillon du gong, le generateur du boitier et la pierre du jardin zen remplacent l'anneau,
- * le dessin neon et le disque de la station. Ils sont toujours la, poses dans le decor par le
+ * le pavillon du gong, le generateur du boitier, la pierre du jardin zen et les deux consoles
+ * remplacent l'anneau, les dessins neon et le disque de la station. Ils sont toujours la, poses dans le decor par le
  * rendu (objetsDuDecorAmong), eteints avec lui hors du cercle de vision. Seul celui dont on se
  * servirait en appuyant sur le bouton d'action s'eclaire, pour qui peut s'en servir; le
- * generateur bat en orange pendant la panne, et une station en cyan pour qui a a y faire, comme
- * son disque se serait montre.
+ * generateur bat en orange pendant la panne, les consoles en rouge pendant la surchauffe, et une
+ * station en cyan pour qui a a y faire, comme son disque se serait montre.
  *
  * LES PSEUDOS NE S'AFFICHENT PAS SUR LA CARTE (decision du porteur du projet du 9 octobre 2026):
  * le doute sur qui est qui fait le jeu, et toute accusation passe par une couleur. Seul un
@@ -55,6 +55,7 @@ import {
   RACINE_RESSOURCES,
   RAYONS_DE_VISION,
   cheminObjetDuDecor,
+  cleDUnLieu,
   lieuxDuMode,
   placeDUnObjet,
 } from '@neon-ninja/shared';
@@ -176,7 +177,7 @@ export function objetsDuDecorAmong(
 
     return [
       {
-        id: `objet:${typeof objet.lieu === 'string' ? objet.lieu : `station:${objet.lieu.station}`}`,
+        id: `objet:${cleDUnLieu(objet.lieu)}`,
         lieu: objet.lieu,
         texture: `${RACINE_RESSOURCES}/${cheminObjetDuDecor(carte, objet.image)}`,
         x: place.x,
@@ -191,7 +192,11 @@ export function objetsDuDecorAmong(
 /** L'objet du decor pose sur cette place, s'il y en a un: une station habillee. */
 function objetSur(objets: readonly ObjetDuDecorPose[], place: Position): boolean {
   return objets.some(
-    (objet) => typeof objet.lieu !== 'string' && objet.x === place.x && objet.y === place.y,
+    (objet) =>
+      typeof objet.lieu !== 'string' &&
+      'station' in objet.lieu &&
+      objet.x === place.x &&
+      objet.y === place.y,
   );
 }
 
@@ -414,12 +419,33 @@ function surbrillancesDesObjets(
   }
 
   const geste = gesteDuBouton(etat);
-  const enPanne = etat.partie?.among?.sabotage?.nature === 'panne';
+  const sabotage = etat.partie?.among?.sabotage;
+  const enPanne = sabotage?.nature === 'panne';
   const surbrillances: SurbrillanceScene[] = [];
   const aFaire = stationsAMontrer(etat.among.prive);
   const moi = etat.partie?.entites.find((entite) => entite.id === etat.moi);
 
   for (const objet of objets) {
+    if (typeof objet.lieu !== 'string' && 'console' in objet.lieu) {
+      // Une console habillee (14 octobre 2026): elle bat en rouge pendant la surchauffe, comme le
+      // disque de reparation qu'elle remplace, et s'eclaire franchement a portee de reparation
+      // ou sa cle tenue.
+      if (sabotage?.nature === 'surchauffe') {
+        const aPortee =
+          geste === 'reparer' &&
+          moi !== undefined &&
+          Math.hypot(moi.x - objet.x, moi.y - objet.y) <= AMONG.RAYON_D_UN_POSTE_PX;
+        const tenue = sabotage.consolesTenues[objet.lieu.console];
+
+        surbrillances.push({
+          ...objet,
+          couleur: APPARENCE_AMONG.poste.surchauffe,
+          alpha: aPortee || tenue ? 1 : battementDesPostes(maintenant),
+        });
+      }
+      continue;
+    }
+
     if (typeof objet.lieu !== 'string') {
       // Une station habillee: elle bat la ou son disque se serait montre, et s'eclaire quand le
       // bouton y ouvrirait la tache.
@@ -539,6 +565,16 @@ function postesDesSabotages(
     );
   }
   postes.consoles.forEach((console_, rang) => {
+    // Une console habillee d'un objet du decor n'a plus de dessin, comme le boitier.
+    if (
+      objets.some(
+        (objet) =>
+          typeof objet.lieu !== 'string' && 'console' in objet.lieu && objet.lieu.console === rang,
+      )
+    ) {
+      return;
+    }
+
     poser(
       `console:${String(rang)}`,
       console_,

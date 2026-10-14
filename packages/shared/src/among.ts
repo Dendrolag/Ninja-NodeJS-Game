@@ -470,8 +470,12 @@ export interface StationDuMode extends Position {
   readonly natures: readonly NatureDeTache[];
 }
 
-/** Le lieu qu'habille un objet du decor: le gong, le boitier, ou une station, dite par son nom. */
-export type LieuDUnObjet = 'gong' | 'boitier' | { readonly station: string };
+/**
+ * Le lieu qu'habille un objet du decor: le gong, le boitier, une station, dite par son nom, ou
+ * une console de la surchauffe, par son rang.
+ */
+export type LieuDUnObjet =
+  'gong' | 'boitier' | { readonly station: string } | { readonly console: 0 | 1 };
 
 /**
  * Un objet du decor du mode (demande du porteur du projet du 13 octobre 2026): une image posee
@@ -481,7 +485,7 @@ export type LieuDUnObjet = 'gong' | 'boitier' | { readonly station: string };
  * dite ici, en pixels de carte, choisie a cote des ninjas de 32 pixels.
  */
 export interface ObjetDuDecor {
-  /** Le lieu qu'il habille, centre sur sa place: le gong, le boitier, ou une station, par son nom. */
+  /** Le lieu qu'il habille, centre sur sa place. */
   readonly lieu: LieuDUnObjet;
   /** Le nom de son image, sans extension. */
   readonly image: string;
@@ -549,16 +553,19 @@ export const LIEUX_DES_CARTES: Readonly<Partial<Record<IdentifiantCarte, LieuxDu
       },
     ],
     // Les postes des sabotages, lus par l'etude (section 10) et sondes sur le terrain au debut de
-    // l'etape 7.22: le boitier de la rue, et les lampadaires nord-ouest et sud-est, a 1 490
-    // pixels l'un de l'autre.
+    // l'etape 7.22: le boitier de la rue, et les consoles au pied des lampadaires nord-ouest et
+    // sud-est. Les consoles etaient sur les lampadaires; leur image posee (14 octobre 2026),
+    // elles s'ecartent du lampadaire, dessine au premier plan et qui la traversait: sous lui au
+    // nord-ouest, a sa gauche au sud-est, a 1 415 pixels l'une de l'autre.
     boitier: { x: 1330, y: 495 },
     consoles: [
-      { x: 485, y: 320 },
-      { x: 1860, y: 890 },
+      { x: 485, y: 355 },
+      { x: 1795, y: 890 },
     ],
-    // Le pavillon du gong sur le passage pieton, le generateur sur le carton de la rue, et la
-    // pierre au milieu du jardin zen, aux proportions de leurs images (249 sur 288, 192 sur 91,
-    // et 192 sur 192). La pierre tient dans le disque de sa station, de 100 pixels.
+    // Le pavillon du gong sur le passage pieton, le generateur sur le carton de la rue, la
+    // pierre au milieu du jardin zen, et la console sur chacun des deux lampadaires, aux
+    // proportions de leurs images (249 sur 288, 192 sur 91, 192 sur 192, et 300 sur 267). La
+    // pierre tient dans le disque de sa station, de 100 pixels.
     objets: [
       { lieu: 'gong', image: 'gong', largeur: 97, hauteur: 112 },
       { lieu: 'boitier', image: 'generator', largeur: 72, hauteur: 34 },
@@ -568,20 +575,35 @@ export const LIEUX_DES_CARTES: Readonly<Partial<Record<IdentifiantCarte, LieuxDu
         largeur: 96,
         hauteur: 96,
       },
+      { lieu: { console: 0 }, image: 'console', largeur: 72, hauteur: 64 },
+      { lieu: { console: 1 }, image: 'console', largeur: 72, hauteur: 64 },
     ],
   },
 };
 
 /**
- * La place d'un objet du decor parmi les lieux du mode: celle du gong, du boitier, ou de la
- * station qui porte son nom. Undefined pour une station inconnue.
+ * La place d'un objet du decor parmi les lieux du mode: celle du gong, du boitier, de la
+ * station qui porte son nom, ou de la console de ce rang. Undefined pour une station inconnue.
  */
 export function placeDUnObjet(lieux: LieuxDuMode, lieu: LieuDUnObjet): Position | undefined {
   if (typeof lieu === 'string') {
     return lieux[lieu];
   }
 
+  if ('console' in lieu) {
+    return lieux.consoles[lieu.console];
+  }
+
   return lieux.stations.find((station) => station.nom === lieu.station);
+}
+
+/** Ce qui distingue le lieu d'un objet des autres: « gong », « station:<nom> », « console:0 ». */
+export function cleDUnLieu(lieu: LieuDUnObjet): string {
+  if (typeof lieu === 'string') {
+    return lieu;
+  }
+
+  return 'console' in lieu ? `console:${String(lieu.console)}` : `station:${lieu.station}`;
 }
 
 /** La carte que le mode impose (micro-decision 8 de la fiche): Tokyo, pour l'essai. */

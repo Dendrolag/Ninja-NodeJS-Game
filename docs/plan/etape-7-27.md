@@ -121,7 +121,7 @@ Conditions de ROADMAP réunies, plus:
 ## Points de vigilance
 
 1. **Le rythme et la durée minimale sont liés**, comme pour les gestes de 7.21: un joueur rapide refusé par le serveur serait un défaut. Un test le garde, geste par geste.
-2. **La surchauffe dure 45 secondes**, trajet compris: les consoles sont à 1 490 pixels l'une de l'autre. Le relais, le plus long, doit se faire à deux en une quinzaine de secondes une fois sur place.
+2. **La surchauffe dure 45 secondes**, trajet compris: les consoles sont à 1 490 pixels l'une de l'autre (1 415 depuis le 14 octobre 2026, quand leur image les a écartées des lampadaires). Le relais, le plus long, doit se faire à deux en une quinzaine de secondes une fois sur place.
 3. **Aucune touche d'un geste ne doit faire bouger le ninja derrière**, comme pour les tâches.
 4. **Dans le noir de la panne**, la fenêtre ne doit pas cacher plus que celle d'une tâche: le réparateur reste vulnérable, c'est voulu, mais il doit voir arriver quelqu'un autant qu'à une station.
 5. **Le pilote des scénarios** tient la touche E au boîtier aujourd'hui (`among.spec.ts`, section « La panne de néons »): à remplacer, sans quoi le scénario échoue.

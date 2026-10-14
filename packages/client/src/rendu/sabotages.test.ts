@@ -150,50 +150,16 @@ describe('le boitier et les consoles', () => {
   const disque = (client: EtatClient, poste: string) =>
     image(client).postes.disques.find((rond) => rond.id === `${poste}:disque`);
 
-  it('sont toujours la, cyan, sans disque de reparation hors de leur sabotage', () => {
-    const client = etat(PROIE, ICI);
-
-    expect(new Set(couleurs(client, 'console:1'))).toEqual(new Set([APPARENCE_AMONG.poste.repos]));
-    expect(disque(client, 'console:1')).toBeUndefined();
-    expect(
-      image(client).postes.disques.find((rond) => rond.id === 'console:0:socle'),
-    ).toMatchObject({ x: LIEUX.consoles[0].x, y: LIEUX.consoles[0].y });
-  });
-
-  it('laissent le boitier de Tokyo a son generateur: ni socle, ni trait, ni disque', () => {
-    for (const sabotage of [undefined, PANNE]) {
+  it('laissent le boitier et les consoles de Tokyo a leurs objets: ni socle, ni trait, ni disque', () => {
+    for (const sabotage of [undefined, PANNE, SURCHAUFFE]) {
       const client = etat(PROIE, ICI, sabotage === undefined ? {} : { sabotage });
 
-      expect(couleurs(client, 'boitier')).toEqual([]);
-      expect(image(client).postes.disques.filter((rond) => rond.id.startsWith('boitier:'))).toEqual(
-        [],
-      );
+      for (const poste of ['boitier', 'console:0', 'console:1']) {
+        expect(couleurs(client, poste)).toEqual([]);
+        expect(disque(client, poste)).toBeUndefined();
+      }
+      expect(image(client).postes.disques).toEqual([]);
     }
-  });
-
-  it('ne dessinent pas de disque de reparation aux consoles pendant la panne', () => {
-    expect(disque(etat(PROIE, ICI, { sabotage: PANNE }), 'console:0')).toBeUndefined();
-  });
-
-  it('passent les consoles au rouge pendant la surchauffe, et emplissent celle qui est tenue', () => {
-    const client = etat(PROIE, ICI, { sabotage: SURCHAUFFE });
-
-    expect(new Set(couleurs(client, 'console:0'))).toEqual(
-      new Set([APPARENCE_AMONG.poste.surchauffe]),
-    );
-    expect(disque(client, 'console:0')?.remplissage).toBeUndefined();
-    expect(disque(client, 'console:1')?.remplissage?.couleur).toBe(
-      APPARENCE_AMONG.poste.surchauffe,
-    );
-  });
-
-  it('font battre le disque de reparation', () => {
-    const client = etat(PROIE, ICI, { sabotage: SURCHAUFFE });
-    const alpha = (maintenant: number) =>
-      image(client, maintenant).postes.disques.find((rond) => rond.id === 'console:0:disque')
-        ?.contour?.alpha;
-
-    expect(alpha(0)).not.toBe(alpha(APPARENCE_AMONG.poste.battementMs / 4));
   });
 });
 
@@ -223,7 +189,7 @@ describe('les objets du decor', () => {
       (objet) => objet.id === 'objet:station:Pierre du jardin zen',
     );
 
-  it('habillent le gong, le boitier et la pierre de Tokyo, a leur place et a leur image', () => {
+  it('habillent le gong, le boitier, la pierre et les consoles de Tokyo, a leur place', () => {
     expect(objetsDuDecorAmong('map1', false)).toEqual([
       expect.objectContaining({
         lieu: 'gong',
@@ -243,6 +209,18 @@ describe('les objets du decor', () => {
         x: PIERRE.x,
         y: PIERRE.y,
       }),
+      expect.objectContaining({
+        id: 'objet:console:0',
+        texture: '/assets/among/map1/console.png',
+        x: LIEUX.consoles[0].x,
+        y: LIEUX.consoles[0].y,
+      }),
+      expect.objectContaining({
+        id: 'objet:console:1',
+        texture: '/assets/among/map1/console.png',
+        x: LIEUX.consoles[1].x,
+        y: LIEUX.consoles[1].y,
+      }),
     ]);
   });
 
@@ -255,6 +233,8 @@ describe('les objets du decor', () => {
       miroir.gong,
       miroir.boitier,
       { x: pierre?.x, y: pierre?.y },
+      miroir.consoles[0],
+      miroir.consoles[1],
     ]);
   });
 
@@ -273,6 +253,25 @@ describe('les objets du decor', () => {
     expect(eclaire(etat({ ...PROIE, gongUtilise: true }, LIEUX.gong), 'gong')).toBeUndefined();
     expect(eclaire(etat(FANTOME, LIEUX.gong), 'gong')).toBeUndefined();
     expect(eclaire(etat(PROIE, LIEUX.gong, { sabotage: SURCHAUFFE }), 'gong')).toBeUndefined();
+  });
+
+  it('font battre les consoles en rouge pendant la surchauffe, pleines a portee ou cle tenue', () => {
+    const console0 = (client: EtatClient, maintenant = 0) =>
+      image(client, maintenant).surbrillances.find((objet) => objet.id === 'objet:console:0');
+    const console1 = (client: EtatClient) =>
+      image(client).surbrillances.find((objet) => objet.id === 'objet:console:1');
+    const loin = etat(PROIE, ICI, { sabotage: SURCHAUFFE });
+
+    expect(console0(loin)?.couleur).toBe(APPARENCE_AMONG.poste.surchauffe);
+    expect(console0(loin)?.alpha).not.toBe(
+      console0(loin, APPARENCE_AMONG.poste.battementMs / 4)?.alpha,
+    );
+    // La seconde console a sa cle tenue (SURCHAUFFE): pleine.
+    expect(console1(loin)?.alpha).toBe(1);
+    expect(console0(etat(PROIE, LIEUX.consoles[0], { sabotage: SURCHAUFFE }))?.alpha).toBe(1);
+    // Ni hors de la surchauffe, ni pendant la panne.
+    expect(console0(etat(PROIE, ICI))).toBeUndefined();
+    expect(console0(etat(PROIE, LIEUX.consoles[0], { sabotage: PANNE }))).toBeUndefined();
   });
 
   it('font battre le generateur en orange pendant la panne, et l eclairent a portee', () => {

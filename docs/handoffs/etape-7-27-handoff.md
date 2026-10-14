@@ -67,7 +67,7 @@ Voir « Réconciliation ». Aucune autre.
 ## Problèmes connus et dette
 
 - Le titre de la note 1.10 est à confirmer par le porteur du projet.
-- L'image de la console n'est pas livrée: les consoles gardent leur dessin néon (réponse 5).
+- L'image de la console, livrée le 14 octobre 2026 après l'étape, habille les deux consoles (version 1.10.1); les consoles s'écartent de leur lampadaire, qui la traversait (`docs/design/README.md`, journal du 14 octobre).
 - Les sons sont provisoires.
 - La CI de `e557325` (la fiche, avant cette session) a échoué sur deux tests de la base, `tests/base/succes.test.ts` et `profil.test.ts`, au délai de 30 secondes, et ont passé au commit suivant: une lenteur passagère de Neon, sans lien avec le code. À surveiller si elle revient.
 - La relance du générateur se juge au temps de la page: sur une page qui fige plus d'une seconde et demie pendant qu'on tire, le moteur tousse, comme la fumée déborde dans la tâche du même nom. On retire.

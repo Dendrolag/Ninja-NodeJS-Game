@@ -60,6 +60,7 @@ export {
   RAYONS_DE_VISION,
   SECTEURS_DES_PAS,
   TACHES_VISUELLES,
+  cleDUnLieu,
   ecartDUnPas,
   estUneNuisance,
   estUneTacheLongue,

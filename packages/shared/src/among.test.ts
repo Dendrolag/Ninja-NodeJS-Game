@@ -28,6 +28,7 @@ import {
   REPARATIONS_DE_LA_SURCHAUFFE,
   SECTEURS_DES_PAS,
   TACHES_VISUELLES,
+  cleDUnLieu,
   ecartDUnPas,
   estUneNuisance,
   estUneTacheLongue,
@@ -191,6 +192,11 @@ describe('les lieux', () => {
       y: 180,
     });
     expect(placeDUnObjet(lieux, { station: 'Nulle part' })).toBeUndefined();
+    // Les consoles, par leur rang.
+    expect(placeDUnObjet(lieux, { console: 1 })).toEqual(lieux.consoles[1]);
+    expect(cleDUnLieu({ console: 1 })).toBe('console:1');
+    expect(cleDUnLieu({ station: 'Pierre du jardin zen' })).toBe('station:Pierre du jardin zen');
+    expect(cleDUnLieu('gong')).toBe('gong');
   });
 
   it('n en donne pas aux autres cartes', () => {
