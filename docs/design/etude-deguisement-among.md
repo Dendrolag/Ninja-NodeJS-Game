@@ -1,7 +1,7 @@
 # Étude - Se déguiser en PNJ dans Among Ninjas
 
 Date: 14 octobre 2026
-Statut: étude seulement, rien n'est décidé. Les questions au porteur du projet sont en section 6.
+Statut: tranchée le 14 octobre 2026, devenue l'étape 7.28 (fiche `docs/plan/etape-7-28.md`). Réponses du porteur du projet aux questions de la section 6: vingt secondes pour les deux camps, automatique pour l'assassin au meurtre d'un PNJ, au choix de la proie une fois l'habit ramassé; un assassin déguisé qui tue reprend sa couleur sur-le-champ; tuer un PNJ coûte la recharge d'un vrai meurtre; une proie déguisée qui ouvre une tâche perd son déguisement; le cadavre d'un PNJ n'est qu'un indice visuel, qu'on ne signale pas; les deux moitiés ensemble.
 
 ## 1. La demande
 
