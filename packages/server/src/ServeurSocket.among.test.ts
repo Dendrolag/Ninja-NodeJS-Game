@@ -5,7 +5,8 @@
  * hors de son disque, aucun fantome, aucun role), puis une partie jouee jusqu'au bout: un
  * meurtre, un signalement, le chat par canal, un vote qui ejecte le tueur, et la victoire des
  * proies. Et une tache courte (etape 7.21): ouverte a l'appui, une fin trop tot refusee, puis
- * faite.
+ * faite. Et les cinq reparations de la panne et de la surchauffe (etape 7.27), chacune jouee
+ * jusqu'au bout, a une graine qui la tire.
  *
  * Meme cadre que ServeurSocket.chasse.test.ts: un vrai serveur sur un vrai port, une horloge
  * manuelle pour le temps du JEU, et des attentes explicites pour celui du RESEAU. Le terrain
@@ -25,6 +26,7 @@ import type {
 import {
   AMONG,
   CARTES,
+  DUREES_MINIMALES_DES_REPARATIONS_MS,
   DUREES_MINIMALES_DES_TACHES_MS,
   NATURES_COURTES,
   RAYONS_DE_VISION,
@@ -55,6 +57,18 @@ const PARTIE_AMONG: DemandeCreation['configuration'] = {
   reglages: { carte: 'map3', among: { foule: 0 } },
 };
 
+/**
+ * Des graines qui tirent chaque reparation (etape 7.27), pour cinq joueurs et les reglages de
+ * PARTIE_AMONG. Le test verifie la reparation tiree avant de la jouer.
+ */
+const GRAINES_DE_LA_PANNE = [
+  [3, 'lanceur'],
+  [2, 'fusibles'],
+  [1, 'frequence'],
+] as const;
+const GRAINE_DES_CLES = 4;
+const GRAINE_DU_RELAIS = 1;
+
 /** Les pseudos des cinq joueurs, l'hote en premier. */
 const PSEUDOS = ['Alice', 'Bob', 'Carole', 'David', 'Eve'] as const;
 
@@ -62,12 +76,16 @@ let serveur: ServeurMonte;
 let horloge: HorlogeManuelle;
 let port: number;
 const clients: ClientTypee[] = [];
+/** La graine des parties du test, quand il en veut une: au hasard sinon, comme en production. */
+let graineVoulue: number | undefined;
 
 beforeEach(async () => {
   horloge = creerHorlogeManuelle();
+  graineVoulue = undefined;
   serveur = await demarrerServeur(0, {
     horloge,
     terrains: { charger: ({ carte }) => carteSansMur(CARTES[carte]) },
+    genererGraine: () => graineVoulue ?? Math.floor(Math.random() * 2 ** 32),
   });
 
   const adresse = serveur.http.address();
@@ -624,15 +642,21 @@ describe('les sabotages d Among Ninjas, a travers le reseau (etape 7.22)', () =>
     horloge.avancerDe(50);
     expect(room.etat.among?.sabotage?.nature).toBe('panne');
     await jusquA(() => sabotages.length === 1);
-    expect(sabotages[0]).toEqual({ quoi: 'lance', nature: 'panne' });
+    // Le lancement nomme la reparation que la partie a tiree (etape 7.27).
+    expect(sabotages[0]).toEqual({
+      quoi: 'lance',
+      nature: 'panne',
+      reparation: room.etat.among?.reparations.panne,
+    });
 
     const boitier = room.etat.among?.boitier as Position;
     await marcherVers(room, proie, () => boitier, 20);
-    const actions = vi.spyOn(room, 'tenirLAction');
-    proie.client.emit('agir', true);
-    await jusquA(() => actions.mock.calls.length > 0);
-    horloge.avancerDe(AMONG.REPARATION_DE_LA_PANNE_MS + 50);
-    proie.client.emit('agir', false);
+    // Tenir le bouton ne repare plus rien (etape 7.27): il ouvre la reparation.
+    await ouvrirLaReparation(room, proie);
+    horloge.avancerDe(10_000);
+    expect(room.etat.among?.sabotage?.nature).toBe('panne');
+    await annoncerLaReparation(room, proie);
+    horloge.avancerDe(50);
 
     expect(room.etat.among?.sabotage).toBeUndefined();
     await jusquA(() => sabotages.length === 2);
@@ -684,6 +708,137 @@ describe('les sabotages d Among Ninjas, a travers le reseau (etape 7.22)', () =>
     expect(dites[0]).toEqual({ nature: 'negatif' });
     expect(subisParLaVivante).toEqual([]);
     expect(room.etat.joueurs[tueur.id]?.malusRestantsMs.negatif).toBeGreaterThan(0);
+  });
+});
+
+/** Ce joueur appuie sur le bouton d'action, la ou il se tient, puis le lache. */
+async function appuyerSurLAction(room: GameRoom, joueur: JoueurDeTest): Promise<void> {
+  const actions = vi.spyOn(room, 'tenirLAction');
+  const avant = actions.mock.calls.length;
+
+  joueur.client.emit('agir', true);
+  await jusquA(() => actions.mock.calls.length > avant);
+  horloge.avancerDe(50);
+  joueur.client.emit('agir', false);
+  await jusquA(() => actions.mock.calls.length > avant + 1);
+  horloge.avancerDe(50);
+}
+
+/** Ce joueur ouvre la reparation de son poste, et sa page l'apprend. */
+async function ouvrirLaReparation(room: GameRoom, joueur: JoueurDeTest): Promise<void> {
+  const prives = collecter(joueur.client, 'amongNinjas');
+
+  await appuyerSurLAction(room, joueur);
+  await jusquA(() => prives.some((prive) => prive.reparationEnCours !== undefined));
+}
+
+/** La page de ce joueur annonce sa reparation finie, et le serveur la retient. */
+async function annoncerLaReparation(room: GameRoom, joueur: JoueurDeTest): Promise<void> {
+  const annonces = vi.spyOn(room, 'annoncerLaReparation');
+  const avant = annonces.mock.calls.length;
+
+  joueur.client.emit('reparation', 'finie');
+  await jusquA(() => annonces.mock.calls.length > avant);
+}
+
+describe('les reparations d Among Ninjas, a travers le reseau (etape 7.27)', () => {
+  /**
+   * Une partie de cinq en jeu a cette graine, la recharge des sabotages passee, le sabotage
+   * demande par l'assassin, et sa reparation verifiee: celle que la graine tire.
+   */
+  async function sabotee(
+    graine: number,
+    nature: 'panne' | 'surchauffe',
+    reparation: string,
+  ): Promise<{ readonly room: GameRoom; readonly proies: readonly JoueurDeTest[] }> {
+    graineVoulue = graine;
+    const { joueurs, salon } = await salonA(5);
+    const room = roomDe(salon.idRoom);
+    await lancer((joueurs[0] as JoueurDeTest).client);
+    await chargerLaCarte(joueurs, room);
+    horloge.avancerDe(AMONG.DUREE_REVELATION_MS + AMONG.RECHARGE_DES_SABOTAGES_DEBUT_DE_TOUR_MS);
+    const tueur = joueurs.find((joueur) => estTueur(room.etat, joueur.id)) as JoueurDeTest;
+    const demandes = vi.spyOn(room, 'saboter');
+
+    expect(room.etat.among?.reparations[nature]).toBe(reparation);
+    tueur.client.emit('saboter', { nature });
+    await jusquA(() => demandes.mock.calls.length === 1);
+    horloge.avancerDe(50);
+    expect(room.etat.among?.sabotage?.nature).toBe(nature);
+
+    return { room, proies: joueurs.filter((joueur) => joueur !== tueur) };
+  }
+
+  for (const [graine, reparation] of GRAINES_DE_LA_PANNE) {
+    it(`repare la panne au boitier: ${reparation}`, async () => {
+      const { room, proies } = await sabotee(graine, 'panne', reparation);
+      const proie = proies[0] as JoueurDeTest;
+      const fin = collecter(proie.client, 'sabotage');
+
+      await marcherVers(room, proie, () => room.etat.among?.boitier as Position, 20);
+      await ouvrirLaReparation(room, proie);
+
+      // Trop tot: la panne reste.
+      horloge.avancerDe(DUREES_MINIMALES_DES_REPARATIONS_MS[reparation] - 500);
+      await annoncerLaReparation(room, proie);
+      horloge.avancerDe(50);
+      expect(room.etat.among?.sabotage?.nature).toBe('panne');
+
+      horloge.avancerDe(500);
+      await annoncerLaReparation(room, proie);
+      horloge.avancerDe(50);
+      expect(room.etat.among?.sabotage).toBeUndefined();
+      await jusquA(() => fin.some((message) => message.quoi === 'fini'));
+      expect(fin.filter((message) => message.quoi === 'fini')).toEqual([
+        { quoi: 'fini', nature: 'panne', repare: true },
+      ]);
+    });
+  }
+
+  it('repare la surchauffe des deux cles: les consoles purgees, les cles tournees ensemble', async () => {
+    const { room, proies } = await sabotee(GRAINE_DES_CLES, 'surchauffe', 'cles');
+    const [une, autre] = proies as [JoueurDeTest, JoueurDeTest];
+    const consoles = room.etat.among?.consoles as readonly [Position, Position];
+
+    await marcherVers(room, une, () => consoles[0], 20);
+    await ouvrirLaReparation(room, une);
+    await marcherVers(room, autre, () => consoles[1], 20);
+    await ouvrirLaReparation(room, autre);
+
+    horloge.avancerDe(DUREES_MINIMALES_DES_REPARATIONS_MS.purge);
+    await annoncerLaReparation(room, une);
+    await annoncerLaReparation(room, autre);
+    horloge.avancerDe(50);
+    expect(room.etat.among?.sabotage?.consolesPurgees).toEqual([true, true]);
+
+    const actions = vi.spyOn(room, 'tenirLAction');
+    une.client.emit('agir', true);
+    autre.client.emit('agir', true);
+    await jusquA(() => actions.mock.calls.length === 2);
+    horloge.avancerDe(AMONG.REPARATION_DE_LA_SURCHAUFFE_MS + 50);
+
+    expect(room.etat.among?.sabotage).toBeUndefined();
+    expect(room.statut).toBe('enCours');
+  });
+
+  it('repare la surchauffe au relais: quatre interrupteurs, d une console a l autre', async () => {
+    const { room, proies } = await sabotee(GRAINE_DU_RELAIS, 'surchauffe', 'relais');
+    const [une, autre] = proies as [JoueurDeTest, JoueurDeTest];
+    const consoles = room.etat.among?.consoles as readonly [Position, Position];
+
+    await marcherVers(room, une, () => consoles[0], 20);
+    await ouvrirLaReparation(room, une);
+    await marcherVers(room, autre, () => consoles[1], 20);
+    await ouvrirLaReparation(room, autre);
+
+    for (let rang = 0; rang < AMONG.INTERRUPTEURS_DU_RELAIS; rang += 1) {
+      horloge.avancerDe(DUREES_MINIMALES_DES_REPARATIONS_MS.interrupteur);
+      await annoncerLaReparation(room, rang % 2 === 0 ? une : autre);
+      horloge.avancerDe(50);
+    }
+
+    expect(room.etat.among?.sabotage).toBeUndefined();
+    expect(room.statut).toBe('enCours');
   });
 });
 

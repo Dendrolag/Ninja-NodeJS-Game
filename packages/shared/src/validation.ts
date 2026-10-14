@@ -408,6 +408,16 @@ export function validerDemandeTache(brut: unknown): ResultatValidation<'finie' |
     : refuse('tache', 'Une tâche se dit finie, ou fermée.');
 }
 
+/**
+ * Valide ce que la page dit de sa reparation ouverte d'Among Ninjas (etape 7.27): finie, ou
+ * fermee, comme une tache.
+ */
+export function validerDemandeReparation(brut: unknown): ResultatValidation<'finie' | 'fermee'> {
+  return brut === 'finie' || brut === 'fermee'
+    ? accepte(brut)
+    : refuse('reparation', 'Une réparation se dit finie, ou fermée.');
+}
+
 /** Le rang le plus grand d'une station qu'un sabotage peut viser: bien au-dela des treize de Tokyo. */
 const RANG_DE_STATION_MAXIMUM = 63;
 

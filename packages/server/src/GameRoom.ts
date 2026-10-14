@@ -447,6 +447,12 @@ export class GameRoom {
   private readonly tachesAnnoncees = new Map<IdentifiantEntite, 'finie' | 'fermee'>();
 
   /**
+   * Ce que les pages ont dit de leur reparation ouverte depuis le battement precedent (etape
+   * 7.27): finie, ou fermee, comme une tache.
+   */
+  private readonly reparationsAnnoncees = new Map<IdentifiantEntite, 'finie' | 'fermee'>();
+
+  /**
    * Les sabotages demandes depuis le battement precedent (etape 7.22), et les maledictions. Des
    * gestes ponctuels, effaces a chaque battement, comme les votes.
    */
@@ -666,6 +672,7 @@ export class GameRoom {
     this.votesDemandes.delete(id);
     this.chargementsSignales.delete(id);
     this.tachesAnnoncees.delete(id);
+    this.reparationsAnnoncees.delete(id);
     this.sabotagesDemandes.delete(id);
     this.maledictionsDemandees.delete(id);
 
@@ -706,6 +713,7 @@ export class GameRoom {
     this.votesDemandes.delete(id);
     this.chargementsSignales.delete(id);
     this.tachesAnnoncees.delete(id);
+    this.reparationsAnnoncees.delete(id);
     this.sabotagesDemandes.delete(id);
     this.maledictionsDemandees.delete(id);
 
@@ -1038,6 +1046,19 @@ export class GameRoom {
   }
 
   /**
+   * Retient ce que la page de ce joueur dit de sa reparation ouverte (etape 7.27), pour le
+   * prochain battement. Ignore pour un joueur absent ou hors d'une partie en cours; que la
+   * reparation soit ouverte, sa duree minimale passee et son tour venu, le moteur en juge.
+   */
+  annoncerLaReparation(id: IdentifiantEntite, quoi: 'finie' | 'fermee'): void {
+    if (this.statutCourant !== 'enCours' || this.partie.joueurs[id] === undefined) {
+      return;
+    }
+
+    this.reparationsAnnoncees.set(id, quoi);
+  }
+
+  /**
    * Retient le sabotage demande par ce joueur, pour le prochain battement (etape 7.22). Ignore
    * pour un joueur absent ou hors d'une partie en cours; que ce soit un assassin, et le sabotage
    * permis, le moteur en juge.
@@ -1114,6 +1135,7 @@ export class GameRoom {
       this.votesDemandes.size === 0 &&
       this.chargementsSignales.size === 0 &&
       this.tachesAnnoncees.size === 0 &&
+      this.reparationsAnnoncees.size === 0 &&
       this.sabotagesDemandes.size === 0 &&
       this.maledictionsDemandees.size === 0
     ) {
@@ -1146,6 +1168,10 @@ export class GameRoom {
 
     for (const [id, quoi] of this.tachesAnnoncees) {
       entrees[id] = { ...(entrees[id] ?? immobile), tache: quoi };
+    }
+
+    for (const [id, quoi] of this.reparationsAnnoncees) {
+      entrees[id] = { ...(entrees[id] ?? immobile), reparation: quoi };
     }
 
     for (const [id, demande] of this.sabotagesDemandes) {
@@ -1186,6 +1212,7 @@ export class GameRoom {
     this.appuisRecents.clear();
     this.chargementsSignales.clear();
     this.tachesAnnoncees.clear();
+    this.reparationsAnnoncees.clear();
     this.sabotagesDemandes.clear();
     this.maledictionsDemandees.clear();
     this.releve = releverLeBattement(this.releve, this.partie, this.cleDuJoueur);

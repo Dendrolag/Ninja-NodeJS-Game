@@ -49,6 +49,7 @@ import type {
   MalusRamasseParMoi,
   MalusSubi,
   MeurtreVu,
+  NatureDeReparation,
   StationDuMode,
   TacheVisuelleVue,
   MineArmeeVue,
@@ -209,12 +210,33 @@ function amongVu(etat: EtatPartie, among: EtatAmong): AmongVu {
             nature: among.sabotage.nature,
             restantMs: among.sabotage.restantMs,
             consolesTenues: among.sabotage.consolesTenues,
+            ...reparationDuSabotage(among),
+            consolesPurgees: among.sabotage.consolesPurgees,
+            interrupteursCoupes: among.sabotage.interrupteursCoupes,
+            ...(among.sabotage.prochaineConsole === undefined
+              ? {}
+              : { prochaineConsole: among.sabotage.prochaineConsole }),
           },
         }),
     ...(nuage === undefined ? {} : { nuage }),
     rechargeDesSabotagesMs: among.rechargeDesSabotagesMs,
     rechargeDeLaMaledictionMs: among.rechargeDeLaMaledictionMs,
   };
+}
+
+/**
+ * La reparation tiree pour le sabotage en cours (etape 7.27): celle de la panne ou de la
+ * surchauffe, que toute alerte nomme. Rien pour un autre sabotage.
+ */
+function reparationDuSabotage(among: EtatAmong): { readonly reparation?: NatureDeReparation } {
+  switch (among.sabotage?.nature) {
+    case 'panne':
+      return { reparation: among.reparations.panne };
+    case 'surchauffe':
+      return { reparation: among.reparations.surchauffe };
+    default:
+      return {};
+  }
 }
 
 /**
@@ -276,6 +298,9 @@ export function etatPriveDe(etat: EtatPartie, id: IdentifiantEntite): EtatPriveA
       faite: tache.faite,
     })),
     ...(joueur.tacheEnCours === undefined ? {} : { tacheEnCours: joueur.tacheEnCours.indice }),
+    ...(joueur.reparationEnCours === undefined
+      ? {}
+      : { reparationEnCours: joueur.reparationEnCours.poste }),
     gongUtilise: joueur.gongUtilise,
   };
 }
@@ -1014,7 +1039,11 @@ function notificationsDUnFait(
     case 'sabotage':
       return [
         ...malusSansAuteur(evenement.nature, evenement.victimes, 'sabotage'),
-        ...aQuiDoitSavoir(etat, evenement.nature, { quoi: 'lance', nature: evenement.nature }),
+        ...aQuiDoitSavoir(etat, evenement.nature, {
+          quoi: 'lance',
+          nature: evenement.nature,
+          ...(etat.among === undefined ? {} : reparationDuSabotage(etat.among)),
+        }),
       ];
 
     case 'sabotageFini':

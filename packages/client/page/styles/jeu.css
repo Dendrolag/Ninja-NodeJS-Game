@@ -1343,7 +1343,8 @@
  * docs/design/etape-7-21/1-planche.png): une fenetre neon au centre, le jeu visible tout
  * autour, assombri. Le geste se dessine dans le canevas, a quatre tiers.
  */
-.tache-ecran {
+.tache-ecran,
+.reparation-ecran {
   position: absolute;
   inset: 0;
   z-index: 6;
@@ -1363,7 +1364,8 @@
   display: none;
 }
 
-.tache-fenetre {
+.tache-fenetre,
+.reparation-fenetre {
   display: grid;
   gap: 6px;
   width: min(560px, 100%);
@@ -1375,19 +1377,22 @@
   box-shadow: 0 0 22px rgba(45, 230, 224, 0.55);
 }
 
-.tache-fenetre.reussie {
+.tache-fenetre.reussie,
+.reparation-fenetre.reussie {
   border-color: #3ee07a;
   box-shadow: 0 0 26px rgba(62, 224, 122, 0.7);
 }
 
-.tache-entete {
+.tache-entete,
+.reparation-entete {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
 }
 
-.tache-titre {
+.tache-titre,
+.reparation-titre {
   margin: 0;
   color: var(--cyan);
   font-family: var(--police-titre);
@@ -1395,13 +1400,15 @@
   text-shadow: 0 0 8px var(--cyan);
 }
 
-.tache-station {
+.tache-station,
+.reparation-poste {
   margin: 2px 0 0;
   color: var(--texte-secondaire);
   font-size: 13px;
 }
 
-.tache-geste {
+.tache-geste,
+.reparation-geste {
   display: block;
   width: 100%;
   aspect-ratio: 4 / 3;
@@ -1409,7 +1416,8 @@
   cursor: grab;
 }
 
-.tache-avancement {
+.tache-avancement,
+.reparation-avancement {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -1417,10 +1425,43 @@
   clip-path: inset(50%);
 }
 
-.tache-aide {
+.tache-aide,
+.reparation-aide {
   margin: 0;
   color: var(--texte-secondaire);
   font-size: 12.5px;
+  text-align: center;
+}
+
+/*
+ * La fenetre d'une reparation (etape 7.27): celle d'une tache, au bord orange pendant la panne et
+ * rouge pendant la surchauffe, avec une ligne pour l'autre console.
+ */
+.reparation-fenetre[data-sabotage='panne']:not(.reussie) {
+  border-color: #ff8c1a;
+  box-shadow: 0 0 22px rgba(255, 140, 26, 0.55);
+}
+
+.reparation-fenetre[data-sabotage='surchauffe']:not(.reussie) {
+  border-color: #ff2e3a;
+  box-shadow: 0 0 22px rgba(255, 46, 58, 0.55);
+}
+
+.reparation-fenetre[data-sabotage='panne'] .reparation-titre {
+  color: #ff8c1a;
+  text-shadow: 0 0 8px #ff8c1a;
+}
+
+.reparation-fenetre[data-sabotage='surchauffe'] .reparation-titre {
+  color: #ff5a64;
+  text-shadow: 0 0 8px #ff2e3a;
+}
+
+.reparation-statut {
+  margin: 0;
+  color: var(--texte);
+  font-size: 14px;
+  font-weight: 600;
   text-align: center;
 }
 
@@ -1650,7 +1691,8 @@
     display: none;
   }
 
-  .tache-titre {
+  .tache-titre,
+  .reparation-titre {
     font-size: 18px;
   }
 }

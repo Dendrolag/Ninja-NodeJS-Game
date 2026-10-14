@@ -5,7 +5,13 @@ import {
   TIR_MS,
   placerLesBateaux,
 } from '../../../packages/client/dist/interface/modeles/gestes/bataille.js';
+import {
+  VITESSE_DU_CADRAN,
+  creerFrequence,
+} from '../../../packages/client/dist/interface/modeles/gestes/frequence.js';
+import { creerFusibles } from '../../../packages/client/dist/interface/modeles/gestes/fusibles.js';
 import { graineDuGeste } from '../../../packages/client/dist/interface/modeles/gestes/index.js';
+import { graineDeLaReparation } from '../../../packages/client/dist/interface/modeles/gestes/reparations.js';
 
 /**
  * Faire au clavier, dans une page, le geste d'une tache courte d'Among Ninjas (etape 7.21).
@@ -128,5 +134,83 @@ export async function jouerLaBatailleAuClavier(page: Page, joueur: string): Prom
     }
     await page.keyboard.press(' ');
     await page.waitForTimeout(TIR_MS + 300);
+  }
+}
+
+/** Ou en est le geste de la reparation ouverte, lu dans sa fenetre (etape 7.27). */
+async function avancementDeLaReparation(page: Page): Promise<{ faits: number; total: number }> {
+  const texte = (await page.locator('.reparation-avancement').textContent()) ?? '';
+  const [faits, total] = texte.split(' sur ').map((nombre) => Number.parseInt(nombre, 10));
+
+  return { faits: faits ?? 0, total: total ?? 0 };
+}
+
+/**
+ * Repare la panne de neons au clavier, dans la fenetre de la reparation ouverte au boitier
+ * (etape 7.27), comme un joueur patient: la reparation que la partie a tiree se lit sur la
+ * fenetre (data-etape). Les fusibles grilles et la frequence de depart se tirent dans la page
+ * d'une graine qui ne doit rien au hasard (le joueur, le poste, le geste), que le scenario refait.
+ */
+export async function reparerLaPanneAuClavier(page: Page, joueur: string): Promise<void> {
+  const fenetre = page.locator('.reparation-fenetre');
+  await expect(fenetre).toBeVisible();
+  const geste = await fenetre.getAttribute('data-etape');
+
+  switch (geste) {
+    case 'lanceur':
+      // Le lanceur: Espace tenue jusqu'au vert, vers 77 pour cent; le moteur tousse s'il est
+      // rate, et l'on retire. Puis les trois disjoncteurs, par la fleche haut.
+      for (
+        let essai = 0;
+        essai < 5 && (await avancementDeLaReparation(page)).faits === 0;
+        essai += 1
+      ) {
+        await page.keyboard.down(' ');
+        await page.waitForTimeout(1150);
+        await page.keyboard.up(' ');
+        await page.waitForTimeout(800);
+      }
+      for (let disjoncteur = 0; disjoncteur < 3; disjoncteur += 1) {
+        await page.keyboard.press('ArrowUp');
+        await page.waitForTimeout(600);
+      }
+      return;
+
+    case 'fusibles': {
+      const { grilles } = creerFusibles(graineDeLaReparation(joueur, 'boitier', 'fusibles'));
+      for (const rang of grilles) {
+        // Retour en haut a gauche, puis jusqu'au fusible grille.
+        for (const touche of ['ArrowUp', 'ArrowLeft', 'ArrowLeft']) {
+          await page.keyboard.press(touche);
+        }
+        for (let colonne = 0; colonne < rang % 3; colonne += 1) {
+          await page.keyboard.press('ArrowRight');
+        }
+        if (rang >= 3) {
+          await page.keyboard.press('ArrowDown');
+        }
+        await page.keyboard.press(' ');
+        await page.waitForTimeout(800);
+      }
+      await page.keyboard.press('ArrowDown');
+      return;
+    }
+
+    case 'frequence': {
+      // La fleche tenue le temps que le cadran arrive sur la cible, a sa vitesse, puis lachee:
+      // la courbe se tient alors d'elle-meme dans la tolerance.
+      const { cible, valeur } = creerFrequence(
+        graineDeLaReparation(joueur, 'boitier', 'frequence'),
+      );
+      const touche = cible > valeur ? 'ArrowRight' : 'ArrowLeft';
+      await page.keyboard.down(touche);
+      await page.waitForTimeout((Math.abs(cible - valeur) / VITESSE_DU_CADRAN) * 1000);
+      await page.keyboard.up(touche);
+      await page.waitForTimeout(1300);
+      return;
+    }
+
+    default:
+      throw new Error(`Reparation de la panne inconnue: ${String(geste)}`);
   }
 }

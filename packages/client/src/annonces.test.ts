@@ -487,9 +487,19 @@ describe('les sabotages et la malediction d Among Ninjas (etape 7.22)', () => {
       );
 
     expect(sabotage('lance', 'panne')).toEqual({
-      texte: 'Panne de néons : réparez le boîtier de la rue',
+      texte: 'Panne de néons : réparez le générateur de la rue',
       ton: 'alerte',
     });
+    // La reparation tiree se nomme a la premiere alerte (etape 7.27).
+    for (const [reparation, consigne] of [
+      ['lanceur', 'relancez le générateur'],
+      ['fusibles', 'changez les fusibles'],
+      ['frequence', 'accordez la fréquence'],
+    ] as const) {
+      expect(
+        annonceDuFait(fait('sabotage', { quoi: 'lance', nature: 'panne', reparation }, 0))?.texte,
+      ).toBe(`Panne de néons : ${consigne}`);
+    }
     expect(sabotage('fini', 'panne', true)).toEqual({
       texte: 'Les néons sont revenus',
       ton: 'succes',

@@ -47,11 +47,13 @@
 import type {
   CampAmong,
   MotifDeReunion,
+  NatureDeReparation,
   NatureDeSabotage,
   NatureDeTache,
   Nuisance,
   PasEntendu,
   PhaseAmong,
+  PosteDeReparation,
   RoleAmong,
   StationDuMode,
 } from './among.js';
@@ -345,8 +347,22 @@ export interface SabotageEnCoursVu {
   readonly nature: NatureDeSabotage;
   /** Ce qu'il en reste, en millisecondes; zero pour la panne, qui attend sa reparation. */
   readonly restantMs: number;
-  /** La surchauffe: chaque console est-elle tenue. */
+  /** La surchauffe: chaque console a-t-elle sa cle tournee, a une console purgee. */
   readonly consolesTenues: readonly [boolean, boolean];
+  /**
+   * La reparation que la partie a tiree pour ce sabotage (etape 7.27): pour la panne et la
+   * surchauffe seulement. Toute l'alerte la nomme.
+   */
+  readonly reparation?: NatureDeReparation;
+  /** Les deux cles: chaque console est-elle purgee. */
+  readonly consolesPurgees: readonly [boolean, boolean];
+  /** Le relais: les interrupteurs deja coupes. */
+  readonly interrupteursCoupes: number;
+  /**
+   * Le relais: la console du prochain interrupteur. Absente avant le premier, qui se coupe a
+   * l'une ou l'autre.
+   */
+  readonly prochaineConsole?: 0 | 1;
 }
 
 // --------------------------------------------------------------------------
@@ -928,6 +944,11 @@ export interface EtatPriveAmong {
   readonly taches: readonly TacheVue[];
   /** Le rang dans sa liste de la tache qu'il fait en ce moment. */
   readonly tacheEnCours?: number;
+  /**
+   * Le poste ou il repare en ce moment (etape 7.27): le boitier de la panne, ou une console de
+   * la surchauffe. La fenetre de la reparation s'ouvre et se ferme sur ce qu'il dit.
+   */
+  readonly reparationEnCours?: PosteDeReparation;
   readonly gongUtilise: boolean;
 }
 
@@ -971,6 +992,11 @@ export interface SabotageVu {
   readonly nature: NatureDeSabotage;
   /** Pour une fin: repare (la panne, la surchauffe), ou eteint de lui-meme. */
   readonly repare?: boolean;
+  /**
+   * Au lancement de la panne et de la surchauffe, la reparation que la partie a tiree (etape
+   * 7.27): l'annonce la nomme.
+   */
+  readonly reparation?: NatureDeReparation;
 }
 
 /** Une malediction lancee par un fantome (etape 7.22), dite aux fantomes. */
@@ -1205,6 +1231,11 @@ export interface EvenementsClientVersServeur {
    * fermee. Le moteur juge une fin trop tot et l'ignore.
    */
   tache: (quoi: 'finie' | 'fermee') => void;
+  /**
+   * La reparation ouverte d'Among Ninjas (etape 7.27): son geste fini dans la page, ou la
+   * reparation fermee. Le moteur juge une fin trop tot, ou hors de son tour, et l'ignore.
+   */
+  reparation: (quoi: 'finie' | 'fermee') => void;
   /** Un sabotage demande par un assassin d'Among Ninjas, depuis sa carte (etape 7.22). */
   saboter: (demande: DemandeSabotage) => void;
   /** Une malediction demandee par une proie fantome d'Among Ninjas: le malus choisi (7.22). */

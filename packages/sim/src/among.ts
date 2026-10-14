@@ -28,9 +28,15 @@
  * LES SABOTAGES (etape 7.22) sont demandes par un assassin, vivant ou fantome, depuis sa carte:
  * un seul a la fois, une recharge commune entre deux. Trois nuisances, les malus du jeu sur les
  * proies vivantes; le nuage noir sur une station, que le serveur filtre dans la vue des proies
- * vivantes; la panne de neons, qui reduit leur vision jusqu'a ce qu'on tienne le boitier; la
- * surchauffe, deux consoles a tenir ensemble avant son terme, sans quoi les assassins gagnent.
- * Une reunion finit le sabotage en cours. LA MALEDICTION, leur miroir: une proie fantome inflige
+ * vivantes; la panne de neons, qui reduit leur vision jusqu'a ce qu'on la repare au boitier; la
+ * surchauffe, a reparer aux deux consoles avant son terme, sans quoi les assassins gagnent.
+ * Une reunion finit le sabotage en cours.
+ *
+ * LES REPARATIONS (etape 7.27) ne se font plus en tenant le bouton d'action: ce sont des gestes,
+ * joues dans la page comme une tache. Chaque partie tire au lancement une reparation de la panne
+ * (relancer le generateur, changer les fusibles, accorder la frequence) et une de la surchauffe
+ * (les deux cles, ou le relais). On en ouvre une par le bouton d'action a son poste; le moteur ne
+ * connait du geste que sa duree minimale, comme pour une tache. LA MALEDICTION, leur miroir: une proie fantome inflige
  * a tous les assassins vivants l'un des trois malus, avec une recharge commune aux fantomes.
  *
  * LES PAS (etape 7.23): un vivant qui marche fait un pas a chaque foulee parcourue, d'apres son
@@ -47,18 +53,22 @@ import type {
   NatureDeTache,
   Nuisance,
   Position,
+  PosteDeReparation,
   ReglagesAmong,
   StationDuMode,
 } from '@neon-ninja/shared';
 import {
   AMONG,
   AMONG_PAR_DEFAUT,
+  DUREES_MINIMALES_DES_REPARATIONS_MS,
   DUREES_MINIMALES_DES_TACHES_MS,
   NATURES_COURTES,
   NATURES_LONGUES,
   POINTS_AMONG,
   RAYONS_DE_VISION,
   NUISANCES,
+  REPARATIONS_DE_LA_PANNE,
+  REPARATIONS_DE_LA_SURCHAUFFE,
   TACHES_VISUELLES,
   VITESSES,
   entier,
@@ -219,7 +229,9 @@ export function amongDecide(etat: EtatPartie): boolean {
  *      7.21), et JAMAIS DEUX FOIS LA MEME TACHE (retour d'essai du porteur du projet, 10
  *      octobre 2026): les natures de la liste sont tirees, distinctes, puis placees chacune a
  *      une station qui la propose. Le reglage dit combien sont longues (etape 7.24).
- *   4. Tout le monde est place autour du point de reunion, et la partie attend que chacun ait
+ *   4. La reparation de la panne, puis celle de la surchauffe (etape 7.27), tirees apres tout
+ *      le reste: les roles, les stations et les listes d'une graine ne changent pas.
+ *   5. Tout le monde est place autour du point de reunion, et la partie attend que chacun ait
  *      charge la carte avant la revelation.
  *
  * Tout tirage passe par le generateur a graine de l'etat: meme graine, meme partie.
@@ -299,6 +311,10 @@ export function lancerAmong(etat: EtatPartie): EtatPartie {
     joueurs[id] = joueurNeuf('proie', liste.taches);
   }
 
+  const tirageDeLaPanne = entier(alea, REPARATIONS_DE_LA_PANNE.length);
+  const tirageDeLaSurchauffe = entier(tirageDeLaPanne.alea, REPARATIONS_DE_LA_SURCHAUFFE.length);
+  alea = tirageDeLaSurchauffe.alea;
+
   const among: EtatAmong = {
     phase: 'chargement',
     phaseRestanteMs: AMONG.ATTENTE_DU_CHARGEMENT_MAXIMUM_MS,
@@ -312,6 +328,10 @@ export function lancerAmong(etat: EtatPartie): EtatPartie {
     gong: lieux.gong,
     boitier: lieux.boitier,
     consoles: lieux.consoles,
+    reparations: {
+      panne: REPARATIONS_DE_LA_PANNE[tirageDeLaPanne.valeur] ?? 'lanceur',
+      surchauffe: REPARATIONS_DE_LA_SURCHAUFFE[tirageDeLaSurchauffe.valeur] ?? 'cles',
+    },
     rechargeDesSabotagesMs: 0,
     rechargeDeLaMaledictionMs: 0,
     tachesDesPartis: 0,
@@ -600,18 +620,17 @@ function retenirLesBoutonsTenus(etat: EtatPartie, entrees: Entrees): EtatPartie 
 
 /**
  * Un tour commence: les vivants autour du point de reunion, les cadavres retires, la recharge
- * des tueurs a dix secondes, les taches en cours interrompues.
+ * des tueurs a dix secondes, les taches et les reparations en cours interrompues.
  */
 function commencerUnTour(etat: EtatPartie): EtatPartie {
   const among = etat.among as EtatAmong;
   const tour = among.tour + 1;
   const joueurs = Object.fromEntries(
     Object.entries(among.joueurs).map(([id, joueur]) => {
-      const { tacheEnCours: _interrompue, ...sansTache } = joueur;
       return [
         id,
         {
-          ...sansTache,
+          ...sansRienDOuvert(joueur),
           rechargeMs: joueur.role === 'tueur' ? AMONG.RECHARGE_DEBUT_DE_TOUR_MS : 0,
         },
       ];
@@ -650,9 +669,11 @@ function commencerUnTour(etat: EtatPartie): EtatPartie {
  *   2. Les taches deja ouvertes: le temps passe, la presence, la fin ou la fermeture
  *      annoncees. Avant les gestes: une tache ouverte a ce battement ne compte son temps
  *      qu'a partir du suivant.
- *   3. Le sabotage en cours (etape 7.22): il s'eteint, se repare, ou la surchauffe est perdue.
+ *   3. Les reparations ouvertes (etape 7.27), comme les taches: le temps passe, la presence, la
+ *      fin annoncee. Puis le sabotage en cours (etape 7.22): il s'eteint, les deux cles le
+ *      reparent, ou la surchauffe est perdue.
  *   4. Les gestes du battement, dans un ordre tire au sort: un meurtre, un signalement, un
- *      gong, l'ouverture d'une tache, un sabotage, une malediction. Une reunion ouverte arrete
+ *      gong, l'ouverture d'une reparation ou d'une tache, un sabotage, une malediction. Une reunion ouverte arrete
  *      les gestes qui suivent.
  *   5. Le terme du tour, s'il est regle, ouvre une reunion; il attend la fin d'une surchauffe,
  *      qu'une reunion d'office annulerait.
@@ -678,6 +699,7 @@ function jouer(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPartie {
     entrees,
     dtMs,
   );
+  courant = faireLesReparations(courant, entrees, dtMs);
   courant = avancerLeSabotage(courant, entrees, dtMs);
 
   const acteurs = Object.keys(etat.joueurs).filter((id) => {
@@ -835,7 +857,6 @@ export function tuer(etat: EtatPartie, tueurId: IdentifiantEntite): EtatPartie {
   }
 
   const proie = among.joueurs[victime.id] as JoueurAmong;
-  const { tacheEnCours: _interrompue, ...sansTache } = proie;
   const identifiant = identifiantSuivant(etat, 'cadavre');
   const cadavre: CadavreAmong = {
     victime: victime.id,
@@ -860,7 +881,7 @@ export function tuer(etat: EtatPartie, tueurId: IdentifiantEntite): EtatPartie {
               meurtresAuPremierTour: tueur.faits.meurtresAuPremierTour + (among.tour === 1 ? 1 : 0),
             },
           },
-          [victime.id]: { ...sansTache, fantome: true },
+          [victime.id]: { ...sansRienDOuvert(proie), fantome: true },
         },
         cadavres: { ...among.cadavres, [identifiant.valeur]: cadavre },
       },
@@ -872,8 +893,11 @@ export function tuer(etat: EtatPartie, tueurId: IdentifiantEntite): EtatPartie {
 /**
  * Un joueur appuie sur le bouton d'action. Un vivant signale le cadavre le plus proche a sa
  * portee, ou, a defaut, sonne le gong s'il est au point de reunion et qu'il le peut. A defaut
- * encore, ou pour un fantome, dont le bouton ne sert qu'aux taches, une proie ouvre la tache
- * de la station ou elle se tient.
+ * encore, ou pour un fantome, dont le bouton ne sert qu'aux reparations et aux taches, il ouvre
+ * la reparation du poste ou il se tient (etape 7.27), ou une proie la tache de sa station.
+ *
+ * Pendant une reparation, le bouton ne fait rien d'autre: a une console purgee des deux cles, il
+ * tient la cle tournee, et ne doit ni signaler ni sonner.
  */
 function appuyer(etat: EtatPartie, id: IdentifiantEntite): EtatPartie {
   // Le battement n'appuie que pour un joueur de la partie que le mode connait: son bouton
@@ -881,12 +905,72 @@ function appuyer(etat: EtatPartie, id: IdentifiantEntite): EtatPartie {
   const joueur = (etat.among as EtatAmong).joueurs[id] as JoueurAmong;
   const corps = etat.joueurs[id] as Joueur;
 
+  if (joueur.reparationEnCours !== undefined) {
+    return etat;
+  }
+
   return joueur.fantome
-    ? ouvrirUneTache(etat, id, joueur, corps.position)
+    ? ouvrirUneReparationOuUneTache(etat, id, joueur, corps.position)
     : signalerOuSonner(etat, id, joueur, corps.position);
 }
 
-/** Un vivant signale un cadavre, ou sonne le gong, ou, a defaut, ouvre sa tache. */
+/** Ouvre la reparation du poste ou ce joueur se tient, ou, a defaut, sa tache. */
+function ouvrirUneReparationOuUneTache(
+  etat: EtatPartie,
+  id: IdentifiantEntite,
+  joueur: JoueurAmong,
+  position: Position,
+): EtatPartie {
+  const poste = posteAReparer(etat.among as EtatAmong, joueur, position);
+
+  return poste === undefined || joueur.tacheEnCours !== undefined
+    ? ouvrirUneTache(etat, id, joueur, position)
+    : avecJoueur(etat, id, { ...joueur, reparationEnCours: { poste, ecouleMs: 0 } });
+}
+
+/**
+ * Le poste ou ce joueur peut ouvrir une reparation, a cette place (etape 7.27), ou rien: le
+ * boitier pendant la panne, pour une proie, vivante ou fantome (l'aide qui ne vise personne), ou
+ * un assassin vivant, qui bluffe et dont la reparation compte; une console pendant la
+ * surchauffe, pour un vivant: un fantome lui oterait son danger.
+ */
+function posteAReparer(
+  among: EtatAmong,
+  joueur: JoueurAmong,
+  position: Position,
+): PosteDeReparation | undefined {
+  const pres = (poste: Position): boolean =>
+    distanceEntre(position, poste) <= AMONG.RAYON_D_UN_POSTE_PX;
+  const nature = among.sabotage?.nature;
+
+  if (nature === 'panne') {
+    return admisALaPanne(joueur) && pres(among.boitier) ? 'boitier' : undefined;
+  }
+
+  if (nature !== 'surchauffe' || joueur.fantome) {
+    return undefined;
+  }
+
+  if (pres(among.consoles[0])) {
+    return 0;
+  }
+
+  return pres(among.consoles[1]) ? 1 : undefined;
+}
+
+/** Ce joueur peut-il reparer la panne: une proie, vivante ou fantome, ou un assassin vivant. */
+function admisALaPanne(joueur: JoueurAmong): boolean {
+  return joueur.role === 'proie' || !joueur.fantome;
+}
+
+/** Ce joueur, sans rien d'ouvert: ni tache, ni reparation. */
+function sansRienDOuvert(joueur: JoueurAmong): JoueurAmong {
+  const { tacheEnCours: _tache, reparationEnCours: _reparation, ...libre } = joueur;
+
+  return libre;
+}
+
+/** Un vivant signale un cadavre, ou sonne le gong, ou, a defaut, ouvre une reparation ou sa tache. */
 function signalerOuSonner(
   etat: EtatPartie,
   id: IdentifiantEntite,
@@ -919,7 +1003,7 @@ function signalerOuSonner(
     return ouvrirUneReunion(avecJoueur(etat, id, { ...joueur, gongUtilise: true }), 'gong', id);
   }
 
-  return ouvrirUneTache(etat, id, joueur, position);
+  return ouvrirUneReparationOuUneTache(etat, id, joueur, position);
 }
 
 /**
@@ -1078,6 +1162,8 @@ function saboter(
     ...(nature === 'nuage' && station !== undefined ? { station } : {}),
     reparationMs: 0,
     consolesTenues: [false, false],
+    consolesPurgees: [false, false],
+    interrupteursCoupes: 0,
   };
   const victimes = estUneNuisance(nature) ? vivantsDuRole(etat, 'proie') : [];
 
@@ -1179,44 +1265,139 @@ function infliger(
 }
 
 /**
+ * Les reparations ouvertes du battement (etape 7.27). Pour chaque joueur qui en a ouvert une:
+ *
+ *   - le sabotage fini, hors du disque de son poste, ou la page l'a dite fermee: la reparation
+ *     se ferme, et son geste est a reprendre au debut;
+ *   - sinon le temps passe d'autant, et une fin annoncee compte si la duree minimale de son
+ *     geste est atteinte: la panne est reparee; une console des deux cles est purgee; un
+ *     interrupteur du relais est coupe, a son tour seulement. Plus tot, ou hors de son tour, la
+ *     fin est ignoree et la reparation reste ouverte.
+ *
+ * Une console purgee garde sa reparation ouverte: la cle s'y tourne ensuite. Un interrupteur
+ * coupe aussi: on attend l'autre console, puis l'on coupe le suivant.
+ */
+function faireLesReparations(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPartie {
+  let courant = etat;
+
+  for (const id of Object.keys((etat.among as EtatAmong).joueurs)) {
+    const among = courant.among as EtatAmong;
+    const joueur = among.joueurs[id];
+    const ouverte = joueur?.reparationEnCours;
+    const corps = courant.joueurs[id];
+
+    if (joueur === undefined || ouverte === undefined || corps === undefined) {
+      continue;
+    }
+
+    const poste = ouverte.poste === 'boitier' ? among.boitier : among.consoles[ouverte.poste];
+    const attendue = ouverte.poste === 'boitier' ? 'panne' : 'surchauffe';
+
+    if (
+      among.sabotage?.nature !== attendue ||
+      entrees[id]?.reparation === 'fermee' ||
+      distanceEntre(corps.position, poste) > AMONG.RAYON_D_UN_POSTE_PX
+    ) {
+      courant = avecJoueur(courant, id, sansRienDOuvert(joueur));
+      continue;
+    }
+
+    const avancee = { ...ouverte, ecouleMs: ouverte.ecouleMs + dtMs };
+    courant = avecJoueur(courant, id, { ...joueur, reparationEnCours: avancee });
+
+    if (entrees[id]?.reparation === 'finie') {
+      courant = finirUnGeste(courant, avancee.poste, avancee.ecouleMs);
+    }
+  }
+
+  return courant;
+}
+
+/**
+ * Un geste de reparation annonce fini a ce poste, ce temps apres son ouverture ou le dernier
+ * interrupteur: ce qu'il fait, s'il est permis. Le sabotage en cours est celui du poste.
+ */
+function finirUnGeste(etat: EtatPartie, poste: PosteDeReparation, ecouleMs: number): EtatPartie {
+  const among = etat.among as EtatAmong;
+  const sabotage = among.sabotage as SabotageAmong;
+
+  if (poste === 'boitier') {
+    return ecouleMs >= DUREES_MINIMALES_DES_REPARATIONS_MS[among.reparations.panne]
+      ? finirLeSabotage(etat, true)
+      : etat;
+  }
+
+  if (among.reparations.surchauffe === 'cles') {
+    if (sabotage.consolesPurgees[poste] || ecouleMs < DUREES_MINIMALES_DES_REPARATIONS_MS.purge) {
+      return etat;
+    }
+
+    const consolesPurgees: [boolean, boolean] = [...sabotage.consolesPurgees];
+    consolesPurgees[poste] = true;
+
+    return avecAmong(etat, { ...among, sabotage: { ...sabotage, consolesPurgees } });
+  }
+
+  // Le relais: le premier interrupteur a l'une ou l'autre console, puis l'on alterne. Hors de son
+  // tour, il ne se passe rien (reponse 1 du porteur du projet, 13 octobre 2026).
+  if (
+    (sabotage.prochaineConsole !== undefined && sabotage.prochaineConsole !== poste) ||
+    ecouleMs < DUREES_MINIMALES_DES_REPARATIONS_MS.interrupteur
+  ) {
+    return etat;
+  }
+
+  const interrupteursCoupes = sabotage.interrupteursCoupes + 1;
+
+  if (interrupteursCoupes >= AMONG.INTERRUPTEURS_DU_RELAIS) {
+    return finirLeSabotage(etat, true);
+  }
+
+  // Le geste suivant se compte du dernier interrupteur, aux deux consoles: une page qui attendait
+  // son tour ne coupe pas d'un coup des qu'il arrive.
+  const joueurs = Object.fromEntries(
+    Object.entries(among.joueurs).map(([id, joueur]) => [
+      id,
+      joueur.reparationEnCours === undefined
+        ? joueur
+        : { ...joueur, reparationEnCours: { ...joueur.reparationEnCours, ecouleMs: 0 } },
+    ]),
+  );
+
+  return avecAmong(etat, {
+    ...among,
+    joueurs,
+    sabotage: { ...sabotage, interrupteursCoupes, prochaineConsole: poste === 0 ? 1 : 0 },
+  });
+}
+
+/**
  * Le sabotage en cours, a ce battement.
  *
  *   - Une nuisance et le nuage s'eteignent a leur terme.
- *   - La panne se repare quand quelqu'un tient le bouton d'action dans le disque du boitier,
- *     sans s'arreter, le temps de la reparation: une proie, vivante ou fantome (l'aide qui ne
- *     vise personne), ou un assassin vivant, qui bluffe et dont la reparation compte.
- *   - La surchauffe se repare quand ses deux consoles sont tenues ensemble, par des vivants, le
- *     temps de la reparation. A son terme, elle est perdue et reste en l'etat: les tueurs
- *     gagnent (campVainqueur).
+ *   - La panne attend sa reparation, un geste fini au boitier (faireLesReparations).
+ *   - La surchauffe des deux cles se repare quand les deux cles sont tenues tournees ensemble,
+ *     par des vivants, chacune a sa console purgee, le temps de la reparation: le bouton
+ *     d'action tenu dans le disque de la console tient sa cle. Celle du relais se repare a son
+ *     dernier interrupteur (faireLesReparations). A son terme, la surchauffe est perdue et reste
+ *     en l'etat: les tueurs gagnent (campVainqueur).
  */
 function avancerLeSabotage(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPartie {
   const among = etat.among as EtatAmong;
   const sabotage = among.sabotage;
 
-  if (sabotage === undefined) {
+  if (sabotage === undefined || sabotage.nature === 'panne') {
     return etat;
-  }
-
-  if (sabotage.nature === 'panne') {
-    const tenu = posteTenu(
-      etat,
-      entrees,
-      among.boitier,
-      (joueur) => joueur.role === 'proie' || !joueur.fantome,
-    );
-    const reparationMs = tenu ? sabotage.reparationMs + dtMs : 0;
-
-    return reparationMs >= AMONG.REPARATION_DE_LA_PANNE_MS
-      ? finirLeSabotage(etat, true)
-      : avecAmong(etat, { ...among, sabotage: { ...sabotage, reparationMs } });
   }
 
   if (sabotage.nature === 'surchauffe') {
     const vivant = (joueur: JoueurAmong): boolean => !joueur.fantome;
-    const consolesTenues: [boolean, boolean] = [
-      posteTenu(etat, entrees, among.consoles[0], vivant),
-      posteTenu(etat, entrees, among.consoles[1], vivant),
-    ];
+    const cles = among.reparations.surchauffe === 'cles';
+    const tenue = (rang: 0 | 1): boolean =>
+      cles &&
+      sabotage.consolesPurgees[rang] &&
+      posteTenu(etat, entrees, among.consoles[rang], vivant);
+    const consolesTenues: [boolean, boolean] = [tenue(0), tenue(1)];
     const reparationMs = consolesTenues[0] && consolesTenues[1] ? sabotage.reparationMs + dtMs : 0;
 
     if (reparationMs >= AMONG.REPARATION_DE_LA_SURCHAUFFE_MS) {
@@ -1265,16 +1446,26 @@ function posteTenu(
   });
 }
 
-/** Le sabotage en cours est fini: la recharge commune repart pleine. */
+/**
+ * Le sabotage en cours est fini: la recharge commune repart pleine, et les reparations ouvertes
+ * se ferment (etape 7.27), reussies par un autre ou non.
+ */
 function finirLeSabotage(etat: EtatPartie, repare: boolean): EtatPartie {
   const among = etat.among as EtatAmong;
   // Appelee seulement quand un sabotage est en cours.
   const { nature } = among.sabotage as SabotageAmong;
   const { sabotage: _fini, ...sansSabotage } = among;
+  const joueurs = Object.fromEntries(
+    Object.entries(among.joueurs).map(([id, joueur]) => {
+      const { reparationEnCours: _fermee, ...sansReparation } = joueur;
+      return [id, sansReparation];
+    }),
+  );
 
   return journaliser(
     avecAmong(etat, {
       ...sansSabotage,
+      joueurs,
       rechargeDesSabotagesMs: AMONG.RECHARGE_DES_SABOTAGES_MS,
     }),
     { type: 'sabotageFini', nature, repare },
@@ -1286,7 +1477,8 @@ function finirLeSabotage(etat: EtatPartie, repare: boolean): EtatPartie {
 // --------------------------------------------------------------------------
 
 /**
- * Ouvre une reunion: la discussion commence, les taches en cours s'interrompent, la barre des
+ * Ouvre une reunion: la discussion commence, les taches et les reparations en cours
+ * s'interrompent, la barre des
  * taches se fige pour qui ne la voit qu'en reunion (etape 7.21), et le
  * journal dit qui l'a ouverte, pourquoi, et qui est mort. Le sabotage en cours finit, et les
  * malus de chacun avec lui (etape 7.22): le monde fige ne les ferait pas vieillir, et ils
@@ -1301,10 +1493,7 @@ function ouvrirUneReunion(
   const among = etat.among as EtatAmong;
   const numero = among.reunions + 1;
   const joueurs = Object.fromEntries(
-    Object.entries(among.joueurs).map(([id, joueur]) => {
-      const { tacheEnCours: _interrompue, ...sansTache } = joueur;
-      return [id, sansTache];
-    }),
+    Object.entries(among.joueurs).map(([id, joueur]) => [id, sansRienDOuvert(joueur)]),
   );
   const morts = Object.keys(etat.joueurs).filter((id) => among.joueurs[id]?.fantome === true);
   const { sabotage: _fini, ...sansSabotage } = among;

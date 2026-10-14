@@ -14,6 +14,7 @@ import type {
   MeurtreVu,
   NatureDeTache,
   Position,
+  PosteDeReparation,
   ReunionVue,
   StationDuMode,
 } from '@neon-ninja/shared';
@@ -62,6 +63,16 @@ export interface AmongClient {
    */
   readonly fermetureEnAttente?: true;
   /**
+   * La reparation dont la fenetre est ouverte (etape 7.27): celle que le serveur nous a dite
+   * ouverte, a son poste.
+   */
+  readonly reparationOuverte?: ReparationOuverte;
+  /**
+   * Nous avons ferme notre reparation, et le serveur ne l'a pas encore dite fermee: la fenetre ne
+   * se rouvre pas d'ici la, comme pour une tache.
+   */
+  readonly reparationFermeeEnAttente?: true;
+  /**
    * L'instant local ou l'on nous a tues: le grand texte du deces s'affiche par-dessus tout
    * (demande du porteur du projet du 10 octobre 2026). Absent tant qu'on est vivant.
    */
@@ -76,6 +87,13 @@ export interface TacheOuverte {
   readonly depuis: number;
   /** Un assassin fait semblant: la page seule la joue, sans rien dire au serveur. */
   readonly feinte: boolean;
+}
+
+/** Une reparation dont la fenetre est ouverte (etape 7.27). */
+export interface ReparationOuverte {
+  readonly poste: PosteDeReparation;
+  /** L'instant local de l'ouverture: la page n'annonce pas la fin avant la duree minimale. */
+  readonly depuis: number;
 }
 
 /** Rien de connu: le debut d'une partie. */
@@ -94,6 +112,11 @@ export function avecLEtatPrive(
   prive: EtatPriveAmong,
   instant: number,
 ): AmongClient {
+  return avecLaReparation(avecLaTache(among, prive, instant), among, prive, instant);
+}
+
+/** La tache ouverte, d'apres ce que le serveur dit de nous (etape 7.21). */
+function avecLaTache(among: AmongClient, prive: EtatPriveAmong, instant: number): AmongClient {
   const { tacheOuverte, fermetureEnAttente: _attendue, ...sansTache } = among;
   const indice = prive.tacheEnCours;
 
@@ -125,6 +148,52 @@ export function avecLEtatPrive(
         prive,
         tacheOuverte: { nature: tache.nature, station, depuis: instant, feinte: false },
       };
+}
+
+/**
+ * La reparation ouverte, d'apres ce que le serveur dit de nous (etape 7.27), sur le modele de la
+ * tache: une reparation qu'il dit ouverte a un autre poste ouvre sa fenetre de cet instant; une
+ * qu'il ne dit plus la ferme (sortie du disque, sabotage fini, reunion, mort), et une fermeture
+ * attendue est faite.
+ *
+ * @param avant Ce que la page savait avant ce nouvel etat prive.
+ */
+function avecLaReparation(
+  among: AmongClient,
+  avant: AmongClient,
+  prive: EtatPriveAmong,
+  instant: number,
+): AmongClient {
+  const { reparationOuverte, reparationFermeeEnAttente: _attendue, ...sansReparation } = among;
+  const poste = prive.reparationEnCours;
+
+  if (poste === undefined) {
+    return sansReparation;
+  }
+
+  if (avant.prive?.reparationEnCours === poste) {
+    return {
+      ...sansReparation,
+      ...(avant.reparationFermeeEnAttente === undefined
+        ? {}
+        : { reparationFermeeEnAttente: true as const }),
+      ...(reparationOuverte === undefined ? {} : { reparationOuverte }),
+    };
+  }
+
+  return { ...sansReparation, reparationOuverte: { poste, depuis: instant } };
+}
+
+/**
+ * Nous fermons la fenetre de notre reparation (etape 7.27). Tant que le serveur la tient pour
+ * ouverte, la page ne la rouvre pas.
+ */
+export function apresLaFermetureDeLaReparation(among: AmongClient): AmongClient {
+  const { reparationOuverte: _fermee, ...sansReparation } = among;
+
+  return among.prive?.reparationEnCours === undefined
+    ? sansReparation
+    : { ...sansReparation, reparationFermeeEnAttente: true };
 }
 
 /**

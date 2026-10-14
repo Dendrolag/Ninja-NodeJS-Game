@@ -81,12 +81,15 @@ export const AMONG = {
   RAYON_DU_NUAGE_PX: 150,
   /** La panne de neons: le rayon de vision des proies vivantes, jusqu'a la reparation. */
   RAYON_DE_VISION_EN_PANNE_PX: 110,
-  /** Ce qu'il faut tenir le bouton d'action au boitier pour reparer la panne. */
-  REPARATION_DE_LA_PANNE_MS: 3000,
   /** La surchauffe: le delai avant la victoire des assassins. */
   DELAI_DE_LA_SURCHAUFFE_MS: 45_000,
-  /** Ce qu'il faut tenir les deux consoles ensemble pour reparer la surchauffe. */
+  /**
+   * Les deux cles (etape 7.27): ce qu'il faut les tenir tournees ensemble, aux deux consoles
+   * purgees, pour reparer la surchauffe.
+   */
   REPARATION_DE_LA_SURCHAUFFE_MS: 1000,
+  /** Le relais (etape 7.27): les interrupteurs a couper, d'une console a l'autre. */
+  INTERRUPTEURS_DU_RELAIS: 4,
   /** Le disque du boitier et de chaque console, comme celui d'une station. */
   RAYON_D_UN_POSTE_PX: 50,
   /**
@@ -294,6 +297,59 @@ export const DUREES_MINIMALES_DES_TACHES_MS: Readonly<Record<NatureDeTache, numb
   envahisseurs: 12_000,
   bataille: 12_000,
 };
+
+/**
+ * Les reparations de la panne de neons (etape 7.27, fiche docs/plan/etape-7-27.md): relancer le
+ * generateur, changer les fusibles grilles, accorder la frequence. Chaque partie en tire une, au
+ * lancement, gardee toute la partie. Plus aucune ne se fait en tenant seulement le bouton
+ * d'action: c'est un geste, joue dans la fenetre des taches.
+ */
+export const REPARATIONS_DE_LA_PANNE = ['lanceur', 'fusibles', 'frequence'] as const;
+
+/** Une reparation de la panne de neons. */
+export type ReparationDeLaPanne = (typeof REPARATIONS_DE_LA_PANNE)[number];
+
+/**
+ * Les reparations de la surchauffe (etape 7.27): les deux cles, ou chaque console se purge puis
+ * se repare cle tournee, ensemble; et le relais, des interrupteurs coupes d'une console a l'autre.
+ * Chaque partie en tire une, comme pour la panne.
+ */
+export const REPARATIONS_DE_LA_SURCHAUFFE = ['cles', 'relais'] as const;
+
+/** Une reparation de la surchauffe. */
+export type ReparationDeLaSurchauffe = (typeof REPARATIONS_DE_LA_SURCHAUFFE)[number];
+
+/** Les cinq reparations, celles de la panne puis celles de la surchauffe. */
+export const NATURES_DE_REPARATION = [
+  ...REPARATIONS_DE_LA_PANNE,
+  ...REPARATIONS_DE_LA_SURCHAUFFE,
+] as const;
+
+/** Une reparation, de la panne ou de la surchauffe. */
+export type NatureDeReparation = (typeof NATURES_DE_REPARATION)[number];
+
+/**
+ * Les gestes d'une reparation, que la page joue et dont elle annonce la fin: chacune des trois
+ * reparations de la panne, la purge d'une console des deux cles, et un interrupteur du relais.
+ */
+export type GesteDeReparation = ReparationDeLaPanne | 'purge' | 'interrupteur';
+
+/**
+ * Le temps qu'il faut au moins a chaque geste d'une reparation (etape 7.27), compte par le
+ * serveur: de l'ouverture de la reparation, et, pour un interrupteur, du dernier interrupteur
+ * coupe. Une fin annoncee plus tot est ignoree. Les trois de la panne prennent les 3 secondes de
+ * l'ancienne reparation tenue.
+ */
+export const DUREES_MINIMALES_DES_REPARATIONS_MS: Readonly<Record<GesteDeReparation, number>> = {
+  lanceur: 3000,
+  fusibles: 3000,
+  frequence: 3000,
+  purge: 2000,
+  interrupteur: 600,
+};
+
+/** Le poste d'une reparation: le boitier de la panne, ou l'une des deux consoles, par son rang. */
+export type PosteDeReparation = 'boitier' | 0 | 1;
 
 /**
  * Les taches visuelles (etude, section 9.3): leur fin se voit de pres, des etincelles sur la

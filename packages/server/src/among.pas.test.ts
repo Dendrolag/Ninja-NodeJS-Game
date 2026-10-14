@@ -159,6 +159,8 @@ describe('les pas entendus dans les vues (etape 7.23)', () => {
           station,
           reparationMs: 0,
           consolesTenues: [false, false],
+          consolesPurgees: [false, false],
+          interrupteursCoupes: 0,
         },
       },
     };

@@ -16,7 +16,11 @@ import type { GameRoom } from '../../packages/server/dist/index.js';
 import type { EtatAmong } from '../../packages/sim/dist/index.js';
 import { positionTenable } from '../../packages/sim/dist/index.js';
 import { commandeAuClavier } from './harnais/commandes.js';
-import { faireLeGesteAuClavier, jouerLaBatailleAuClavier } from './harnais/gestes.js';
+import {
+  faireLeGesteAuClavier,
+  jouerLaBatailleAuClavier,
+  reparerLaPanneAuClavier,
+} from './harnais/gestes.js';
 import {
   attendreLaFin,
   attendreLaPartie,
@@ -53,7 +57,8 @@ import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
  *   3 bis bis. La meme proie joue sa tache longue, une bataille navale, au clavier, jusqu'a la
  *      tache faite (etape 7.24).
  *   3 ter. L'assassin de la page coupe les neons depuis sa carte; la proie de la page voit
- *      l'alerte, va au boitier de la rue et le repare en tenant E (etape 7.22).
+ *      l'alerte, va au generateur de la rue, y ouvre la reparation par E, et joue au clavier
+ *      la reparation que la partie a tiree (etapes 7.22 et 7.27).
  *   3 quater. Une proie du reseau s'eloigne de la proie de la page, qui recoit ses pas hors de
  *      vue, sans jamais la voir dans les trames qui les portent (etape 7.23).
  *   4. L'assassin va au contact d'une proie et la tue.
@@ -472,13 +477,24 @@ test('jouer une partie Among Ninjas a cinq, du salon a la victoire des proies', 
       STATION,
     );
     await expect(pageDuTemoin.locator('.hud-action')).toHaveAttribute('data-geste', 'reparer');
-    await pageDuTemoin.keyboard.down('e');
+    // Le bouton d'action ouvre la reparation: on ne repare plus en le tenant (etape 7.27).
+    await pageDuTemoin.keyboard.press('e');
+    await attendreQue(
+      () => among(partie).joueurs[idTemoin]?.reparationEnCours?.poste === 'boitier',
+      `${temoin} ouvre la reparation du generateur`,
+    );
+    await expect(pageDuTemoin.locator('.reparation-fenetre')).toHaveAttribute(
+      'data-etape',
+      among(partie).reparations.panne,
+    );
+    await reparerLaPanneAuClavier(pageDuTemoin, idTemoin);
     await attendreQue(
       () => among(partie).sabotage === undefined,
-      `${temoin} repare le boitier`,
-      10_000,
+      () =>
+        `${temoin} repare la panne (${among(partie).reparations.panne}): ${JSON.stringify(among(partie).joueurs[idTemoin]?.reparationEnCours)}`,
+      15_000,
     );
-    await pageDuTemoin.keyboard.up('e');
+    await expect(pageDuTemoin.locator('.reparation-fenetre')).toBeHidden();
     await expect(pageDuTemoin.locator('.hud-among-alerte')).toBeHidden();
 
     // -- Les pas entendus: une proie du reseau s'eloigne du temoin, au boitier (7.23) ------

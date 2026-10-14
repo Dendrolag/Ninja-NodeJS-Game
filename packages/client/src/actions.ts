@@ -255,5 +255,7 @@ export type Action =
   | { readonly type: 'tacheFeinte'; readonly station: number; readonly instant: number }
   /** Nous fermons la fenetre de notre tache, faite ou non (etape 7.21). */
   | { readonly type: 'tacheFermee' }
+  /** Nous fermons la fenetre de notre reparation, finie ou non (etape 7.27). */
+  | { readonly type: 'reparationFermee' }
   /** Une demande du joueur a ete refusee. */
   | { readonly type: 'refus'; readonly refus: Refus };

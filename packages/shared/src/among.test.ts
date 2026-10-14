@@ -1,7 +1,8 @@
 /**
  * Tests du contrat du mode Among Ninjas (etape 7.20): ses valeurs, ses lieux, ses couleurs,
- * ses taches courtes (etape 7.21) et longues (etape 7.24), ses sabotages (etape 7.22), ses pas entendus (etape 7.23), ses
- * reglages, leur validation et ce que le mode impose.
+ * ses taches courtes (etape 7.21) et longues (etape 7.24), ses sabotages (etape 7.22) et leurs
+ * reparations (etape 7.27), ses pas entendus (etape 7.23), ses reglages, leur validation et ce
+ * que le mode impose.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -12,15 +13,19 @@ import {
   CARTE_DU_MODE_AMONG,
   COULEURS_NOMMEES,
   COULEUR_DE_LA_FOULE,
+  DUREES_MINIMALES_DES_REPARATIONS_MS,
   DUREES_MINIMALES_DES_TACHES_MS,
   LIEUX_DES_CARTES,
   NATURES_COURTES,
+  NATURES_DE_REPARATION,
   NATURES_DE_SABOTAGE,
   NATURES_DE_TACHE,
   NATURES_LONGUES,
   NUISANCES,
   PALIERS_DES_PAS_PX,
   RAYONS_DE_VISION,
+  REPARATIONS_DE_LA_PANNE,
+  REPARATIONS_DE_LA_SURCHAUFFE,
   SECTEURS_DES_PAS,
   TACHES_VISUELLES,
   ecartDUnPas,
@@ -37,6 +42,7 @@ import { CAPACITES, CARTES, COULEURS_JOUEURS, TYPES_MALUS, luminance } from './c
 import { AMONG_PAR_DEFAUT, completerReglages, imposerLesReglagesDuMode } from './reglages.js';
 import {
   validerDemandeMalediction,
+  validerDemandeReparation,
   validerDemandeSabotage,
   validerReglages,
 } from './validation.js';
@@ -286,6 +292,39 @@ describe('la validation des sabotages et des maledictions (etape 7.22)', () => {
     }
     for (const brut of ['panne', 'nuage', '', null, { nature: 'flou' }]) {
       expect(validerDemandeMalediction(brut).valide).toBe(false);
+    }
+  });
+});
+
+describe('les reparations (etape 7.27)', () => {
+  it('repare la panne de trois facons, la surchauffe de deux', () => {
+    expect(REPARATIONS_DE_LA_PANNE).toEqual(['lanceur', 'fusibles', 'frequence']);
+    expect(REPARATIONS_DE_LA_SURCHAUFFE).toEqual(['cles', 'relais']);
+    expect(NATURES_DE_REPARATION).toEqual([
+      ...REPARATIONS_DE_LA_PANNE,
+      ...REPARATIONS_DE_LA_SURCHAUFFE,
+    ]);
+  });
+
+  it('demande trois secondes a la panne, deux a une purge, 0,6 a un interrupteur', () => {
+    for (const nature of REPARATIONS_DE_LA_PANNE) {
+      expect(DUREES_MINIMALES_DES_REPARATIONS_MS[nature]).toBe(3000);
+    }
+    expect(DUREES_MINIMALES_DES_REPARATIONS_MS.purge).toBe(2000);
+    expect(DUREES_MINIMALES_DES_REPARATIONS_MS.interrupteur).toBe(600);
+  });
+
+  it('tient les deux cles une seconde, et coupe quatre interrupteurs', () => {
+    expect(AMONG.REPARATION_DE_LA_SURCHAUFFE_MS).toBe(1000);
+    expect(AMONG.INTERRUPTEURS_DU_RELAIS).toBe(4);
+    expect(AMONG).not.toHaveProperty('REPARATION_DE_LA_PANNE_MS');
+  });
+
+  it('valide une reparation dite finie ou fermee, et rien d autre', () => {
+    expect(validerDemandeReparation('finie')).toEqual({ valide: true, valeur: 'finie' });
+    expect(validerDemandeReparation('fermee')).toEqual({ valide: true, valeur: 'fermee' });
+    for (const brut of ['tenue', '', null, 1, { quoi: 'finie' }]) {
+      expect(validerDemandeReparation(brut).valide, JSON.stringify(brut)).toBe(false);
     }
   });
 });

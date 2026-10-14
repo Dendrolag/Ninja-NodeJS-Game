@@ -34,11 +34,19 @@ const PROIE: EtatPriveAmong = {
 const ASSASSIN: EtatPriveAmong = { ...PROIE, role: 'tueur' };
 const FANTOME: EtatPriveAmong = { ...PROIE, fantome: true };
 
-const PANNE: SabotageEnCoursVu = { nature: 'panne', restantMs: 0, consolesTenues: [false, false] };
+const PANNE: SabotageEnCoursVu = {
+  nature: 'panne',
+  restantMs: 0,
+  consolesTenues: [false, false],
+  consolesPurgees: [false, false],
+  interrupteursCoupes: 0,
+};
 const SURCHAUFFE: SabotageEnCoursVu = {
   nature: 'surchauffe',
   restantMs: 20_000,
   consolesTenues: [false, true],
+  consolesPurgees: [true, true],
+  interrupteursCoupes: 0,
 };
 
 /** Nous, a cette place, dans une partie Among Ninjas, avec ce que le flux dit du mode. */

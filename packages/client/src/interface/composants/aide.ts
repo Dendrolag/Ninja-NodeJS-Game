@@ -195,10 +195,11 @@ const REGLES_DES_MODES: Readonly<Record<Mode, readonly string[]>> = {
     'Des assassins tirés au sort, que personne ne connaît, éliminent les proies au contact, avec Espace ou le bouton Katana. Une proie à portée s’éclaire de rouge, et le Katana s’allume.',
     'Les proies font leurs tâches aux stations de la carte : E ou le bouton d’action ouvre la tâche, un petit geste la finit, ou un mini-jeu d’arcade, plus long, pendant lequel on reste à découvert. Toutes faites, elles gagnent. Les assassins font semblant.',
     'La touche M, ou la mini-carte touchée, ouvre la carte : vos stations et vos tâches. Le jeu continue pendant ce temps.',
-    'Les assassins sabotent depuis la carte : vision brouillée des proies, nuage noir sur une station, panne de néons (réparez le boîtier de la rue, E tenu trois secondes), surchauffe (deux consoles à tenir ensemble, sinon les assassins gagnent).',
+    'Les assassins sabotent depuis la carte : vision brouillée des proies, nuage noir sur une station, panne de néons, surchauffe (à réparer aux deux consoles, sinon les assassins gagnent).',
+    'Chaque partie tire sa façon de réparer, par E au générateur ou à une console. La panne : relancer le générateur (lâcher le lanceur dans le vert, puis remonter les disjoncteurs qui clignotent), changer les fusibles grillés puis abaisser le levier, ou accorder la fréquence au cadran. La surchauffe : purger les deux consoles puis tourner les clés ensemble, ou couper quatre interrupteurs, d’une console à l’autre.',
     'On entend les pas des vivants même hors de vue, assez pour savoir de quel côté ils viennent. Les PNJ et les fantômes ne font aucun bruit.',
     'Un cadavre signalé, ou le gong au centre de la carte, ouvre une réunion. On discute, puis on vote pour exécuter quelqu’un, sans savoir s’il était assassin.',
-    `Les morts jouent en fantôme, invisibles des vivants, et finissent leurs tâches. Depuis leur carte, ils maudissent les assassins et réparent la panne. Chacun ne voit qu’autour de lui. Il faut ${String(AMONG.JOUEURS_MINIMUM)} joueurs au moins.`,
+    `Les morts jouent en fantôme, invisibles des vivants, et finissent leurs tâches. Ils maudissent les assassins depuis leur carte, et réparent aussi la panne. Chacun ne voit qu’autour de lui. Il faut ${String(AMONG.JOUEURS_MINIMUM)} joueurs au moins.`,
   ],
 };
 

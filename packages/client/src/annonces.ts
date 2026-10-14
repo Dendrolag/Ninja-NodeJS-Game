@@ -25,6 +25,7 @@ import type {
   MineExploseeVue,
   Mode,
   NatureBonus,
+  NatureDeReparation,
   NatureDeSabotage,
   NatureMalus,
   NatureObjet,
@@ -333,7 +334,12 @@ export function annonceDuFait(fait: FaitDeJeu, mode?: Mode, moi?: string): Annon
 
     // Les sabotages et la malediction (etape 7.22).
     case 'sabotage':
-      return annonceDUnSabotage(fait.charge.quoi, fait.charge.nature, fait.charge.repare);
+      return annonceDUnSabotage(
+        fait.charge.quoi,
+        fait.charge.nature,
+        fait.charge.repare,
+        fait.charge.reparation,
+      );
 
     case 'malediction':
       return {
@@ -396,6 +402,25 @@ function annonceDUnMalusSansAuteur(nature: Nuisance, origine: 'sabotage' | 'male
 }
 
 /**
+ * Ce qu'il faut faire pour reparer, selon la reparation que la partie a tiree (etape 7.27): la
+ * premiere alerte la nomme, le bandeau du HUD la repete.
+ */
+export const CONSIGNES_DES_REPARATIONS: Readonly<Record<NatureDeReparation, string>> = {
+  lanceur: 'relancez le générateur',
+  fusibles: 'changez les fusibles',
+  frequence: 'accordez la fréquence',
+  cles: 'purgez les deux consoles et tournez les clés ensemble',
+  relais: 'coupez les quatre interrupteurs, d’une console à l’autre',
+};
+
+/** La consigne d'une reparation, ou celle du poste quand elle n'est pas dite. */
+export function consigneDeLaReparation(reparation: NatureDeReparation | undefined): string {
+  return reparation === undefined
+    ? 'réparez le générateur de la rue'
+    : CONSIGNES_DES_REPARATIONS[reparation];
+}
+
+/**
  * Un sabotage qui commence ou finit (etape 7.22). La panne et la surchauffe s'annoncent a tous,
  * et leur reparation; une nuisance et le nuage, aux seuls assassins et fantomes, ne s'annoncent
  * qu'au lancement. Le bandeau d'alerte du HUD dit ensuite ce qu'il faut faire.
@@ -408,10 +433,11 @@ function annonceDUnSabotage(
   quoi: 'lance' | 'fini',
   nature: NatureDeSabotage,
   repare: boolean | undefined,
+  reparation: NatureDeReparation | undefined,
 ): Annonce | undefined {
   if (nature === 'panne') {
     return quoi === 'lance'
-      ? { texte: 'Panne de néons : réparez le boîtier de la rue', ton: 'alerte' }
+      ? { texte: `Panne de néons : ${consigneDeLaReparation(reparation)}`, ton: 'alerte' }
       : { texte: 'Les néons sont revenus', ton: 'succes' };
   }
 

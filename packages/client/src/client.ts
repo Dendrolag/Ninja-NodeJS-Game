@@ -181,6 +181,13 @@ export interface Client extends CommandesDeSession {
   finirLaTache(): void;
   /** Ferme la tache ouverte, faite ou non (etape 7.21): une vraie tache se dit fermee au serveur. */
   fermerLaTache(): void;
+  /**
+   * Le geste de la reparation ouverte est fini dans la page (etape 7.27): il s'annonce au
+   * serveur, qui en juge.
+   */
+  finirLaReparation(): void;
+  /** Ferme la reparation ouverte, finie ou non (etape 7.27), et le dit au serveur. */
+  fermerLaReparation(): void;
   /** Demande un sabotage, depuis la carte d'un assassin d'Among Ninjas (etape 7.22). */
   saboter(demande: DemandeSabotage): void;
   /** Maudit les assassins, depuis la carte d'une proie fantome d'Among Ninjas (etape 7.22). */
@@ -824,6 +831,20 @@ export function creerClient(options: OptionsClient): Client {
       }
 
       magasin.appliquer({ type: 'tacheFermee' });
+    },
+
+    finirLaReparation: () => {
+      if (magasin.etat.among.reparationOuverte !== undefined) {
+        reseau.emettre('reparation', 'finie');
+      }
+    },
+
+    fermerLaReparation: () => {
+      if (magasin.etat.among.reparationOuverte !== undefined) {
+        reseau.emettre('reparation', 'fermee');
+      }
+
+      magasin.appliquer({ type: 'reparationFermee' });
     },
 
     saboter: (demande) => {

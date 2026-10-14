@@ -27,6 +27,7 @@ import type {
   NatureDeSabotage,
   PhaseAmong,
   Position,
+  SabotageEnCoursVu,
 } from '@neon-ninja/shared';
 import {
   AMONG,
@@ -41,7 +42,7 @@ import {
 } from '@neon-ninja/shared';
 
 import { stationsAMontrer } from '../among.js';
-import { NOMS_DES_SABOTAGES } from '../annonces.js';
+import { NOMS_DES_SABOTAGES, consigneDeLaReparation } from '../annonces.js';
 import type { EtatClient } from '../etat.js';
 import { TITRES_DES_TACHES } from '../interface/modeles/gestes/index.js';
 
@@ -226,23 +227,45 @@ function alerteDe(commune: AmongVu): AlerteDeSabotage | undefined {
     return {
       genre: 'panne',
       titre: 'Panne de néons',
-      detail: 'Réparez le boîtier de la rue',
+      detail: majuscule(consigneDeLaReparation(sabotage.reparation)),
       compte: undefined,
     };
   }
 
   if (sabotage?.nature === 'surchauffe') {
-    const tenues = sabotage.consolesTenues.filter(Boolean).length;
-
     return {
       genre: 'surchauffe',
       titre: 'Surchauffe',
-      detail: `Tenez les deux consoles ensemble : ${String(tenues)} sur 2`,
+      detail: detailDeLaSurchauffe(sabotage),
       compte: String(Math.ceil(sabotage.restantMs / 1000)),
     };
   }
 
   return undefined;
+}
+
+/** Une phrase, sa premiere lettre en majuscule. */
+function majuscule(texte: string): string {
+  return texte.charAt(0).toUpperCase() + texte.slice(1);
+}
+
+/**
+ * Ce que le bandeau de la surchauffe dit de faire (etape 7.27), selon sa reparation, et ou elle
+ * en est: les cles tournees, ou les interrupteurs coupes.
+ */
+function detailDeLaSurchauffe(sabotage: SabotageEnCoursVu): string {
+  if (sabotage.reparation === 'relais') {
+    return `Coupez les interrupteurs, d’une console à l’autre : ${String(
+      sabotage.interrupteursCoupes,
+    )} sur ${String(AMONG.INTERRUPTEURS_DU_RELAIS)}`;
+  }
+
+  const purgees = sabotage.consolesPurgees.filter(Boolean).length;
+  const tournees = sabotage.consolesTenues.filter(Boolean).length;
+
+  return purgees < 2
+    ? `Purgez les deux consoles : ${String(purgees)} sur 2`
+    : `Tournez les clés ensemble : ${String(tournees)} sur 2`;
 }
 
 /**

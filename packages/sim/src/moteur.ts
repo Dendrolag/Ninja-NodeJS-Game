@@ -138,8 +138,9 @@ export interface EntreeJoueur extends IntentionDeplacement {
   /**
    * Le joueur tient le bouton d'action, dans Among Ninjas (etape 7.20). A L'INVERSE DU TIR,
    * C'EST UN ETAT TENU: il vaut tant que le joueur garde le bouton enfonce, comme le
-   * deplacement. A l'appui, un vivant signale un cadavre ou sonne le gong; tenu, il fait sa
-   * tache. Ignore dans les autres modes.
+   * deplacement. A l'appui, un vivant signale un cadavre ou sonne le gong, ou l'on ouvre une
+   * reparation ou sa tache; tenu a une console purgee, il tient la cle tournee (etape 7.27).
+   * Ignore dans les autres modes.
    */
   readonly agir?: true;
   /**
@@ -158,6 +159,12 @@ export interface EntreeJoueur extends IntentionDeplacement {
    * d'une tache ouverte et dans les autres modes.
    */
   readonly tache?: 'finie' | 'fermee';
+  /**
+   * La reparation ouverte d'Among Ninjas (etape 7.27): la page dit son geste fini, ou la
+   * reparation fermee. Ponctuel, comme le tir. Le moteur juge une fin trop tot, ou hors de son
+   * tour au relais, et l'ignore. Ignore hors d'une reparation ouverte et dans les autres modes.
+   */
+  readonly reparation?: 'finie' | 'fermee';
   /**
    * Un sabotage demande par un assassin d'Among Ninjas (etape 7.22), depuis sa carte: sa nature,
    * et pour le nuage noir, le rang de sa station parmi les stations actives. Ponctuel, comme le

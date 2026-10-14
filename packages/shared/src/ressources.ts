@@ -414,6 +414,29 @@ export const SONS = {
   /** Une malediction, chez les assassins maudits et les fantomes. */
   malediction: 'collect-malus.wav',
   /*
+   * Les reparations de la panne et de la surchauffe (etape 7.27), entendues du seul reparateur,
+   * comme les taches. Des sons du jeu en attendant ceux du porteur du projet (fiche
+   * docs/plan/etape-7-27.md, « Les sons »).
+   */
+  /** Le generateur tousse: un lancer rate. */
+  reparationTousse: 'collect-malus.wav',
+  /** Le generateur demarre. */
+  reparationDemarre: 'speed-active.mp3',
+  /** Un disjoncteur remonte. */
+  reparationDisjoncteur: 'button-click.wav',
+  /** Un fusible s'enclenche. */
+  reparationFusible: 'shotgun-reload.mp3',
+  /** Le levier general s'abaisse. */
+  reparationLevier: 'mine-pose.mp3',
+  /** L'oscilloscope s'accorde. */
+  reparationAccord: 'collect-bonus.wav',
+  /** Un coup de vanne de la purge. */
+  reparationVanne: 'bonus-escape-nuage.mp3',
+  /** Un interrupteur du relais claque. */
+  reparationDeclic: 'shotgun-reload.mp3',
+  /** La cle tourne. */
+  reparationCle: 'button-click.wav',
+  /*
    * Les sons du porteur du projet pour Among Ninjas (12 octobre 2026), reserves au mode.
    */
   /** Le gong d'une reunion qui s'ouvre, entendu de tous. */

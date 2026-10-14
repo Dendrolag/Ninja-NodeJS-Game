@@ -46,6 +46,8 @@
 
 import type { NatureDeSabotage, PasEntendu, PhaseAmong } from './among.js';
 import {
+  AMONG,
+  NATURES_DE_REPARATION,
   NATURES_DE_SABOTAGE,
   PALIERS_DES_PAS_PX,
   PHASES_AMONG,
@@ -71,6 +73,7 @@ import type {
   MineDeZoneVue,
   MineVue,
   ObjetVu,
+  SabotageEnCoursVu,
   TactiqueVue,
   ZoneVue,
 } from './evenements.js';
@@ -494,6 +497,7 @@ function amongArrondi(among: AmongVu): AmongVu {
 
   if (sabotage !== undefined) {
     codeDans(NATURES_DE_SABOTAGE, sabotage.nature, 'sabotage');
+    octetDeLaReparation(sabotage);
   }
 
   pas?.forEach(codeDUnPas);
@@ -510,6 +514,12 @@ function amongArrondi(among: AmongVu): AmongVu {
             nature: sabotage.nature,
             restantMs: positifArrondi(sabotage.restantMs, 'sabotage.restantMs'),
             consolesTenues: [sabotage.consolesTenues[0], sabotage.consolesTenues[1]],
+            ...(sabotage.reparation === undefined ? {} : { reparation: sabotage.reparation }),
+            consolesPurgees: [sabotage.consolesPurgees[0], sabotage.consolesPurgees[1]],
+            interrupteursCoupes: sabotage.interrupteursCoupes,
+            ...(sabotage.prochaineConsole === undefined
+              ? {}
+              : { prochaineConsole: sabotage.prochaineConsole }),
           },
         }),
     ...(nuage === undefined
@@ -1531,7 +1541,8 @@ function encoder(
  * Quelques octets, qui ne valent pas un delta.
  *
  * Puis, depuis l'etape 7.22, un octet qui dit ce qui suit, chaque partie seulement si elle est
- * la: 1 le sabotage en cours (sa nature, ce qu'il en reste, les consoles tenues sur un octet),
+ * la: 1 le sabotage en cours (sa nature, ce qu'il en reste, les consoles tenues sur un octet,
+ * puis, depuis l'etape 7.27, sa reparation sur un octet, octetDeLaReparation),
  * 2 le nuage (deux entiers), 4 la recharge des sabotages, 8 celle de la malediction. Et depuis
  * l'etape 7.23, 16 les pas entendus: leur nombre, puis un octet par pas.
  */
@@ -1555,6 +1566,7 @@ function ecrireAmong(ecrivain: Ecrivain, among: AmongVu): void {
     ecrireCode(ecrivain, NATURES_DE_SABOTAGE, sabotage.nature, 'sabotage');
     ecrivain.entierPositif(sabotage.restantMs);
     ecrivain.octet((sabotage.consolesTenues[0] ? 1 : 0) | (sabotage.consolesTenues[1] ? 2 : 0));
+    ecrivain.octet(octetDeLaReparation(sabotage));
   }
 
   if (nuage !== undefined) {
@@ -1597,6 +1609,7 @@ function lireAmong(lecteur: Lecteur): AmongVu {
           nature: lireCode<NatureDeSabotage>(lecteur, NATURES_DE_SABOTAGE),
           restantMs: lecteur.entierPositif(),
           consolesTenues: consolesLues(lecteur.octet()),
+          ...reparationLue(lecteur.octet()),
         };
   const nuage =
     (presents & 2) === 0 ? undefined : { x: lecteur.entierPositif(), y: lecteur.entierPositif() };
@@ -1631,6 +1644,61 @@ function lirePas(lecteur: Lecteur): PasEntendu[] {
 /** Les consoles tenues de la surchauffe, lues sur leur octet. */
 function consolesLues(octet: number): readonly [boolean, boolean] {
   return [(octet & 1) !== 0, (octet & 2) !== 0];
+}
+
+/**
+ * La reparation d'un sabotage (etape 7.27), sur un octet: sa nature dans les trois premiers bits
+ * (zero sans reparation, sinon son rang plus un), les consoles purgees dans les deux suivants,
+ * ou, pour le relais, les interrupteurs coupes sur trois bits, un bit qui dit la console du
+ * prochain connue, et un bit pour elle. Les cinq bits du haut suffisent: le relais finit a son
+ * quatrieme interrupteur.
+ */
+function octetDeLaReparation(sabotage: SabotageEnCoursVu): number {
+  const nature =
+    sabotage.reparation === undefined
+      ? 0
+      : codeDans(NATURES_DE_REPARATION, sabotage.reparation, 'reparation') + 1;
+  const coupes = sabotage.interrupteursCoupes;
+
+  if (!Number.isInteger(coupes) || coupes < 0 || coupes > AMONG.INTERRUPTEURS_DU_RELAIS) {
+    throw new Error(`Le flux d'etat ne connait pas interrupteursCoupes = ${String(coupes)}.`);
+  }
+
+  // Les cles purgees et le relais ne vont jamais ensemble: ils partagent leurs bits.
+  const suite =
+    sabotage.reparation === 'relais'
+      ? coupes |
+        (sabotage.prochaineConsole === undefined ? 0 : 8 | (sabotage.prochaineConsole << 4))
+      : (sabotage.consolesPurgees[0] ? 1 : 0) | (sabotage.consolesPurgees[1] ? 2 : 0);
+
+  return nature | (suite << 3);
+}
+
+/** La reparation d'un sabotage, lue de son octet. */
+function reparationLue(
+  octet: number,
+): Pick<
+  SabotageEnCoursVu,
+  'reparation' | 'consolesPurgees' | 'interrupteursCoupes' | 'prochaineConsole'
+> {
+  const code = octet & 7;
+  const suite = octet >> 3;
+  const reparation = code === 0 ? undefined : valeurDe(NATURES_DE_REPARATION, code - 1);
+
+  if (reparation !== 'relais') {
+    return {
+      ...(reparation === undefined ? {} : { reparation }),
+      consolesPurgees: [(suite & 1) !== 0, (suite & 2) !== 0],
+      interrupteursCoupes: 0,
+    };
+  }
+
+  return {
+    reparation,
+    consolesPurgees: [false, false],
+    interrupteursCoupes: suite & 7,
+    ...((suite & 8) === 0 ? {} : { prochaineConsole: ((suite >> 4) & 1) as 0 | 1 }),
+  };
 }
 
 /** Des octets, quelle que soit la forme sous laquelle le reseau les a rendus. */

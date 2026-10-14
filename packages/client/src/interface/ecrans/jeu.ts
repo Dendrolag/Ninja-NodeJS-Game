@@ -49,6 +49,7 @@ import { monterRendu, prechargerLesSprites } from '../../rendu/pixi.js';
 import { jeSuisHote } from '../../selecteurs.js';
 import { monterEcransAmong } from '../composants/among.js';
 import { monterCarteAmong } from '../composants/carteAmong.js';
+import { monterFenetreDeReparation } from '../composants/reparation.js';
 import { monterFenetreDeTache } from '../composants/tache.js';
 import { monterFenetre } from '../composants/fenetre.js';
 import { bouton, creer, ecrireTexte, montrer } from '../dom.js';
@@ -190,6 +191,24 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
           },
         })
       : undefined;
+  // La fenetre d'une reparation (etape 7.27): la meme que celle d'une tache, et le meme gel.
+  const fenetreDeReparation =
+    mode === 'among'
+      ? monterFenetreDeReparation({
+          document: doc,
+          client,
+          horloge: contexte.horloge,
+          tactile: navigateur?.matchMedia('(pointer: coarse)').matches ?? false,
+          ...sons,
+          surOuverture: (ouverte) => {
+            controles.figer(ouverte);
+            racine.classList.toggle('tache-ouverte', ouverte);
+            if (ouverte) {
+              carteAmong?.fermer();
+            }
+          },
+        })
+      : undefined;
   const basculerLaCarte =
     carteAmong === undefined
       ? {}
@@ -211,6 +230,7 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
     ecransAmong?.racine,
     carteAmong?.racine,
     fenetreDeTache?.racine,
+    fenetreDeReparation?.racine,
     confirmation.racine,
   );
 
@@ -467,6 +487,7 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
       ecransAmong?.afficher(etat);
       carteAmong?.afficher(etat);
       fenetreDeTache?.afficher(etat);
+      fenetreDeReparation?.afficher(etat);
     },
 
     demonter() {
@@ -480,6 +501,7 @@ export function monterJeu(contexte: ContexteEcran, diagnostic?: Diagnostic): Ecr
       ecransAmong?.demonter();
       carteAmong?.demonter();
       fenetreDeTache?.demonter();
+      fenetreDeReparation?.demonter();
       racine.remove();
     },
   };

@@ -2,7 +2,8 @@
  * Tests du mode Among Ninjas (etape 7.20): le lancement et ses tirages, les phases et le
  * monde fige, le meurtre et le cadavre, les fantomes, le bouton d'action (signaler, sonner,
  * ouvrir sa tache), les taches courtes (etape 7.21), la reunion et le vote, la victoire, les
- * departs et les points, les sabotages et la malediction (etape 7.22).
+ * departs et les points, les sabotages et la malediction (etape 7.22), et les reparations a la
+ * main de la panne et de la surchauffe (etape 7.27).
  *
  * Aucune version du jeu d'origine n'a ce mode, donc aucune caracterisation: les attentes sont
  * la fiche docs/plan/etape-7-20.md et les valeurs confirmees par le porteur du projet le 6
@@ -23,12 +24,15 @@ import {
   CARTES,
   COULEURS_DES_JOUEURS_AMONG,
   COULEUR_DE_LA_FOULE,
+  DUREES_MINIMALES_DES_REPARATIONS_MS,
   DUREES_MINIMALES_DES_TACHES_MS,
   LIEUX_DES_CARTES,
   NATURES_COURTES,
   NUISANCES,
   POINTS_AMONG,
   RAYONS_DE_VISION,
+  REPARATIONS_DE_LA_PANNE,
+  REPARATIONS_DE_LA_SURCHAUFFE,
   estUneTacheLongue,
 } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
@@ -49,7 +53,7 @@ import { peuplerDeBots } from './bots.js';
 import { creerCarteCollisions } from './collisions.js';
 import type { EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
 import { ajouterJoueur, creerEtatInitial, retirerJoueur } from './etat.js';
-import type { EtatAmong, EvenementAmong, JoueurAmong } from './etatAmong.js';
+import type { EtatAmong, EvenementAmong, JoueurAmong, ReparationsAmong } from './etatAmong.js';
 import type { EntreeJoueur, Entrees } from './moteur.js';
 import { REGLES_DES_MODES, evaluerFinDePartie, lancerLaPartie, tick } from './moteur.js';
 import { calculerScores } from './score.js';
@@ -1309,7 +1313,108 @@ describe('les sabotages (etape 7.22)', () => {
   });
 });
 
-describe('la panne de neons (etape 7.22)', () => {
+/** La partie avec ces reparations tirees (etape 7.27), quelle que soit sa graine. */
+function avecReparations(etat: EtatPartie, reparations: Partial<ReparationsAmong>): EtatPartie {
+  const among = amongDe(etat);
+  return { ...etat, among: { ...among, reparations: { ...among.reparations, ...reparations } } };
+}
+
+/** Un battement ou ces joueurs annoncent leur reparation finie, ou fermee. */
+function annoncer(
+  etat: EtatPartie,
+  ids: readonly IdentifiantEntite[],
+  quoi: 'finie' | 'fermee' = 'finie',
+  dtMs = 50,
+): EtatPartie {
+  return tick(etat, Object.fromEntries(ids.map((id) => [id, geste({ reparation: quoi })])), dtMs);
+}
+
+/** Un battement ou ce joueur appuie sur le bouton d'action, ou il se tient. */
+function appuyerIci(etat: EtatPartie, id: IdentifiantEntite): EtatPartie {
+  return tick(etat, { [id]: geste({ agir: true }) }, 50);
+}
+
+/** Un joueur a ce poste, qui appuie pour ouvrir sa reparation, puis lache le bouton. */
+function ouvrirAuPoste(etat: EtatPartie, id: IdentifiantEntite, poste: Position): EtatPartie {
+  return tick(appuyerIci(placer(etat, id, poste), id), {}, 50);
+}
+
+/**
+ * Les stations actives et les listes que la graine 4 donnait avant le tirage des reparations
+ * (etape 7.27): le scenario de bout en bout tient a cette graine.
+ */
+const STATIONS_DE_LA_GRAINE_4 = [
+  "Bornes d'arcade",
+  "Table de jeu de l'arcade",
+  "Lavabos de l'arcade",
+  'Distributeur du jardin',
+  'Camionnette du parking',
+  'Ordinateur de la maison',
+  'Table de la maison',
+  'Cuisine du restaurant',
+  'Comptoir du salon',
+];
+const LISTES_DE_LA_GRAINE_4 = {
+  j1: '',
+  j2: '8mines,0caisses,6lunettes,3fumee,7katana',
+  j3: '5serpent,1mines,2sang,4munitions,3fumee',
+  j4: '8mines,6bataille,0couleurs,4munitions,7katana',
+  j5: '2sang,5serpent,1mines,0couleurs,3fumee',
+};
+
+describe('le tirage des reparations (etape 7.27)', () => {
+  it('tire une reparation de chaque sabotage, toujours la meme a graine egale', () => {
+    const une = amongDe(lancee(5, {}, 11)).reparations;
+
+    expect(REPARATIONS_DE_LA_PANNE).toContain(une.panne);
+    expect(REPARATIONS_DE_LA_SURCHAUFFE).toContain(une.surchauffe);
+    expect(amongDe(lancee(5, {}, 11)).reparations).toEqual(une);
+  });
+
+  it('tire chacune des cinq sur un echantillon de graines', () => {
+    const tirees = new Set<string>();
+
+    for (let graine = 1; graine <= 40; graine += 1) {
+      const { panne, surchauffe } = amongDe(lancee(5, {}, graine)).reparations;
+      tirees.add(panne);
+      tirees.add(surchauffe);
+    }
+
+    expect([...tirees].sort()).toEqual(
+      [...REPARATIONS_DE_LA_PANNE, ...REPARATIONS_DE_LA_SURCHAUFFE].sort(),
+    );
+  });
+
+  it('se fait apres les roles, les stations et les listes, qui ne changent pas', () => {
+    // La graine 4 du scenario de bout en bout: le premier joueur y tire l'assassin.
+    const etat = lancee(5, {}, 4);
+    const among = amongDe(etat);
+
+    expect(camps(etat).tueurs).toEqual(['j1']);
+    expect(among.stations.map((station) => station.nom)).toEqual(STATIONS_DE_LA_GRAINE_4);
+    expect(
+      Object.fromEntries(
+        Object.entries(among.joueurs).map(([id, joueur]) => [
+          id,
+          joueur.taches.map((tache) => `${String(tache.station)}${tache.nature}`).join(','),
+        ]),
+      ),
+    ).toEqual(LISTES_DE_LA_GRAINE_4);
+  });
+
+  it('ne tire rien dans les autres modes', () => {
+    const classique = lancerLaPartie(
+      ajouterJoueur(creerEtatInitial({ graine: 7, mode: 'classique' }), {
+        id: 'j1',
+        pseudo: 'Joueur 1',
+      }),
+    );
+
+    expect(classique.among).toBeUndefined();
+  });
+});
+
+describe('la panne de neons (etapes 7.22 et 7.27)', () => {
   /** Une panne en cours, et les joueurs nommes. */
   function enPanne(): { etat: EtatPartie; tueur: string; proie: string; autre: string } {
     const etat = pretASaboter();
@@ -1317,7 +1422,7 @@ describe('la panne de neons (etape 7.22)', () => {
     const tueur = tueurs[0] as string;
 
     return {
-      etat: sabote(etat, tueur, 'panne'),
+      etat: avecReparations(sabote(etat, tueur, 'panne'), { panne: 'fusibles' }),
       tueur,
       proie: proies[0] as string,
       autre: proies[1] as string,
@@ -1334,90 +1439,162 @@ describe('la panne de neons (etape 7.22)', () => {
     expect(amongDe(tick(etat, {}, 60_000)).sabotage?.nature).toBe('panne');
   });
 
-  it('se repare en tenant le bouton d action trois secondes au boitier', () => {
+  it('ne se repare plus en tenant le bouton d action au boitier', () => {
     const { etat, proie } = enPanne();
-    const au = placer(etat, proie, LIEUX_TOKYO.boitier);
+    const tenu = tenir(placer(etat, proie, LIEUX_TOKYO.boitier), [proie], 10_000);
 
-    const presque = tenir(au, [proie], AMONG.REPARATION_DE_LA_PANNE_MS - 50);
-    expect(amongDe(presque).sabotage?.reparationMs).toBe(AMONG.REPARATION_DE_LA_PANNE_MS - 50);
+    expect(amongDe(tenu).sabotage?.nature).toBe('panne');
+    expect(role(tenu, proie).reparationEnCours).toEqual({ poste: 'boitier', ecouleMs: 0 });
+  });
 
-    const reparee = tenir(presque, [proie], 50);
+  it('s ouvre au boitier par le bouton d action, et nulle part ailleurs', () => {
+    const { etat, proie } = enPanne();
+
+    expect(role(ouvrirAuPoste(etat, proie, LIEUX_TOKYO.boitier), proie).reparationEnCours).toEqual({
+      poste: 'boitier',
+      ecouleMs: 50,
+    });
+    const loin = { x: LIEUX_TOKYO.boitier.x + AMONG.RAYON_D_UN_POSTE_PX + 5, y: 495 };
+    expect(role(ouvrirAuPoste(etat, proie, loin), proie).reparationEnCours).toBeUndefined();
+    // Une console n'est pas un poste de la panne.
+    expect(
+      role(ouvrirAuPoste(etat, proie, LIEUX_TOKYO.consoles[0]), proie).reparationEnCours,
+    ).toBeUndefined();
+    // Sans panne, le boitier n'ouvre rien.
+    expect(
+      role(ouvrirAuPoste(pretASaboter(), proie, LIEUX_TOKYO.boitier), proie).reparationEnCours,
+    ).toBeUndefined();
+  });
+
+  it('se repare par un geste fini a sa duree minimale, pas avant', () => {
+    const { etat, proie } = enPanne();
+    const ouverte = ouvrirAuPoste(etat, proie, LIEUX_TOKYO.boitier);
+    const minimum = DUREES_MINIMALES_DES_REPARATIONS_MS.fusibles;
+
+    const tot = annoncer(tick(ouverte, {}, minimum - 200), [proie]);
+    expect(amongDe(tot).sabotage?.nature).toBe('panne');
+    expect(role(tot, proie).reparationEnCours?.ecouleMs).toBe(minimum - 100);
+
+    const reparee = annoncer(tick(tot, {}, 50), [proie]);
     expect(amongDe(reparee).sabotage).toBeUndefined();
+    expect(role(reparee, proie).reparationEnCours).toBeUndefined();
     expect(evenements(reparee, 'sabotageFini')).toEqual([
       { type: 'sabotageFini', nature: 'panne', repare: true },
     ]);
     expect(rayonDeVision(reparee, proie)).toBe(RAYONS_DE_VISION.proie.normale);
   });
 
-  it('repart de zero si l on lache, ou si l on sort du disque', () => {
+  it('s annule hors du disque ou fenetre fermee, et se reprend au debut', () => {
     const { etat, proie } = enPanne();
-    const au = placer(etat, proie, LIEUX_TOKYO.boitier);
-    const lache = tick(tenir(au, [proie], 2000), {}, 50);
-    expect(amongDe(lache).sabotage?.reparationMs).toBe(0);
+    const ouverte = tick(ouvrirAuPoste(etat, proie, LIEUX_TOKYO.boitier), {}, 2000);
+    const fermee = annoncer(ouverte, [proie], 'fermee');
+    expect(role(fermee, proie).reparationEnCours).toBeUndefined();
 
-    const loin = placer(etat, proie, {
-      x: LIEUX_TOKYO.boitier.x + AMONG.RAYON_D_UN_POSTE_PX + 5,
-      y: LIEUX_TOKYO.boitier.y,
-    });
-    expect(amongDe(tenir(loin, [proie], 2000)).sabotage?.reparationMs).toBe(0);
+    const sortie = tick(
+      placer(ouverte, proie, { x: LIEUX_TOKYO.boitier.x, y: LIEUX_TOKYO.boitier.y + 60 }),
+      {},
+      50,
+    );
+    expect(role(sortie, proie).reparationEnCours).toBeUndefined();
+
+    // Rouverte, elle repart de zero: une fin aussitot est refusee.
+    const rouverte = annoncer(ouvrirAuPoste(fermee, proie, LIEUX_TOKYO.boitier), [proie]);
+    expect(amongDe(rouverte).sabotage?.nature).toBe('panne');
   });
 
   it('se repare par une proie fantome ou un assassin vivant, jamais un assassin fantome', () => {
     const { etat, tueur, proie } = enPanne();
-    const repare = (courant: EtatPartie, id: string): boolean =>
-      amongDe(tenir(placer(courant, id, LIEUX_TOKYO.boitier), [id], 3000)).sabotage === undefined;
+    const repare = (courant: EtatPartie, id: string): boolean => {
+      const ouverte = tick(ouvrirAuPoste(courant, id, LIEUX_TOKYO.boitier), {}, 3000);
+      return amongDe(annoncer(ouverte, [id])).sabotage === undefined;
+    };
 
     expect(repare(avecRole(etat, proie, { fantome: true }), proie)).toBe(true);
     expect(repare(etat, tueur)).toBe(true);
     expect(repare(avecRole(etat, tueur, { fantome: true }), tueur)).toBe(false);
   });
+
+  it('se repare a plusieurs a la fois: le premier qui finit, et l autre fenetre se ferme', () => {
+    const { etat, proie, autre } = enPanne();
+    const deux = tick(
+      tick(
+        appuyerIci(
+          appuyerIci(
+            placer(placer(etat, proie, LIEUX_TOKYO.boitier), autre, {
+              x: LIEUX_TOKYO.boitier.x + 20,
+              y: LIEUX_TOKYO.boitier.y,
+            }),
+            proie,
+          ),
+          autre,
+        ),
+        {},
+        50,
+      ),
+      {},
+      3000,
+    );
+
+    expect(role(deux, autre).reparationEnCours?.poste).toBe('boitier');
+    const reparee = annoncer(deux, [proie]);
+    expect(amongDe(reparee).sabotage).toBeUndefined();
+    expect(role(reparee, autre).reparationEnCours).toBeUndefined();
+  });
+
+  it('se ferme a la reunion, et le meurtre ferme celle de la victime', () => {
+    const { etat, tueur, proie } = enPanne();
+    const ouverte = ouvrirAuPoste(etat, proie, LIEUX_TOKYO.boitier);
+    const pret = avecRole(ouverte, tueur, { rechargeMs: 0 });
+    const tue = meurtre(placer(pret, tueur, { x: 1300, y: 495 }), tueur, proie);
+
+    expect(role(tue, proie).fantome).toBe(true);
+    expect(role(tue, proie).reparationEnCours).toBeUndefined();
+  });
+
+  it('tient le bouton pendant une reparation sans signaler ni sonner', () => {
+    const { etat, proie } = enPanne();
+    const ouverte = ouvrirAuPoste(etat, proie, LIEUX_TOKYO.boitier);
+    const avecCadavre: EtatPartie = {
+      ...ouverte,
+      among: {
+        ...amongDe(ouverte),
+        cadavres: {
+          c: { victime: 'j9', position: LIEUX_TOKYO.boitier, couleur: '#FF3030' },
+        },
+      },
+    };
+
+    expect(amongDe(appuyerIci(avecCadavre, proie)).phase).toBe('jeu');
+  });
 });
 
-describe('la surchauffe (etape 7.22)', () => {
-  /** Une surchauffe en cours, et deux proies. */
-  function enSurchauffe(): { etat: EtatPartie; une: string; autre: string } {
+describe('la surchauffe (etapes 7.22 et 7.27)', () => {
+  /** Une surchauffe en cours, reparee de cette facon, et deux proies. */
+  function enSurchauffe(surchauffe: ReparationsAmong['surchauffe'] = 'cles'): {
+    etat: EtatPartie;
+    une: string;
+    autre: string;
+    tueur: string;
+  } {
     const etat = pretASaboter();
     const { tueurs, proies } = camps(etat);
 
     return {
-      etat: sabote(etat, tueurs[0] as string, 'surchauffe'),
+      etat: avecReparations(sabote(etat, tueurs[0] as string, 'surchauffe'), { surchauffe }),
       une: proies[0] as string,
       autre: proies[1] as string,
+      tueur: tueurs[1] as string,
     };
   }
 
-  /** Les deux proies a leur console. */
+  /** Les deux proies a leur console, leur reparation ouverte. */
   function auxConsoles(etat: EtatPartie, une: string, autre: string): EtatPartie {
-    return placer(placer(etat, une, LIEUX_TOKYO.consoles[0]), autre, LIEUX_TOKYO.consoles[1]);
+    return ouvrirAuPoste(
+      ouvrirAuPoste(etat, une, LIEUX_TOKYO.consoles[0]),
+      autre,
+      LIEUX_TOKYO.consoles[1],
+    );
   }
-
-  it('se repare quand les deux consoles sont tenues ensemble une seconde', () => {
-    const { etat, une, autre } = enSurchauffe();
-    const places = auxConsoles(etat, une, autre);
-
-    const une_seule = tenir(places, [une], 2000);
-    expect(amongDe(une_seule).sabotage?.consolesTenues).toEqual([true, false]);
-    expect(amongDe(une_seule).sabotage?.reparationMs).toBe(0);
-
-    const ensemble = tenir(places, [une, autre], AMONG.REPARATION_DE_LA_SURCHAUFFE_MS - 50);
-    expect(amongDe(ensemble).sabotage?.consolesTenues).toEqual([true, true]);
-
-    const reparee = tenir(ensemble, [une, autre], 50);
-    expect(amongDe(reparee).sabotage).toBeUndefined();
-    expect(evenements(reparee, 'sabotageFini')).toEqual([
-      { type: 'sabotageFini', nature: 'surchauffe', repare: true },
-    ]);
-  });
-
-  it('ne compte pas un fantome a une console', () => {
-    const { etat, une, autre } = enSurchauffe();
-    const places = avecRole(auxConsoles(etat, une, autre), autre, { fantome: true });
-
-    expect(amongDe(tenir(places, [une, autre], 2000)).sabotage?.consolesTenues).toEqual([
-      true,
-      false,
-    ]);
-  });
 
   it('fait gagner les assassins a son terme', () => {
     const { etat } = enSurchauffe();
@@ -1443,6 +1620,181 @@ describe('la surchauffe (etape 7.22)', () => {
       'surchauffe',
     );
     expect(amongDe(tick(sabotee, {}, 2000)).phase).toBe('jeu');
+  });
+
+  it('ne s ouvre qu aux vivants, a une console', () => {
+    const { etat, une, tueur } = enSurchauffe();
+
+    expect(role(ouvrirAuPoste(etat, une, LIEUX_TOKYO.consoles[1]), une).reparationEnCours).toEqual({
+      poste: 1,
+      ecouleMs: 50,
+    });
+    // Un assassin vivant y repare aussi, comme il tenait une console.
+    expect(
+      role(ouvrirAuPoste(etat, tueur, LIEUX_TOKYO.consoles[0]), tueur).reparationEnCours?.poste,
+    ).toBe(0);
+    const fantome = avecRole(etat, une, { fantome: true });
+    expect(
+      role(ouvrirAuPoste(fantome, une, LIEUX_TOKYO.consoles[0]), une).reparationEnCours,
+    ).toBeUndefined();
+    // Le boitier n'est pas un poste de la surchauffe.
+    expect(
+      role(ouvrirAuPoste(etat, une, LIEUX_TOKYO.boitier), une).reparationEnCours,
+    ).toBeUndefined();
+  });
+
+  describe('les deux cles', () => {
+    it('purge une console par un geste de deux secondes au moins', () => {
+      const { etat, une, autre } = enSurchauffe('cles');
+      const places = auxConsoles(etat, une, autre);
+
+      const tot = annoncer(tick(places, {}, 1500), [une]);
+      expect(amongDe(tot).sabotage?.consolesPurgees).toEqual([false, false]);
+
+      const purgee = annoncer(tick(places, {}, DUREES_MINIMALES_DES_REPARATIONS_MS.purge), [une]);
+      expect(amongDe(purgee).sabotage?.consolesPurgees).toEqual([true, false]);
+      // La reparation reste ouverte: la cle s'y tourne ensuite.
+      expect(role(purgee, une).reparationEnCours?.poste).toBe(0);
+    });
+
+    it('ne compte pas une cle tenue sans purge', () => {
+      const { etat, une, autre } = enSurchauffe('cles');
+      const tenues = tenir(auxConsoles(etat, une, autre), [une, autre], 5000);
+
+      expect(amongDe(tenues).sabotage?.consolesTenues).toEqual([false, false]);
+      expect(amongDe(tenues).sabotage?.nature).toBe('surchauffe');
+    });
+
+    it('repare quand les deux cles sont tenues ensemble une seconde, aux consoles purgees', () => {
+      const { etat, une, autre } = enSurchauffe('cles');
+      const purgees = annoncer(tick(auxConsoles(etat, une, autre), {}, 2000), [une, autre]);
+      expect(amongDe(purgees).sabotage?.consolesPurgees).toEqual([true, true]);
+
+      const une_seule = tenir(purgees, [une], 2000);
+      expect(amongDe(une_seule).sabotage?.consolesTenues).toEqual([true, false]);
+      expect(amongDe(une_seule).sabotage?.reparationMs).toBe(0);
+
+      const ensemble = tenir(purgees, [une, autre], AMONG.REPARATION_DE_LA_SURCHAUFFE_MS - 50);
+      expect(amongDe(ensemble).sabotage?.consolesTenues).toEqual([true, true]);
+
+      const reparee = tenir(ensemble, [une, autre], 50);
+      expect(amongDe(reparee).sabotage).toBeUndefined();
+      expect(role(reparee, une).reparationEnCours).toBeUndefined();
+      expect(evenements(reparee, 'sabotageFini')).toEqual([
+        { type: 'sabotageFini', nature: 'surchauffe', repare: true },
+      ]);
+    });
+
+    it('garde une console purgee si son reparateur s en va: un autre y tourne la cle', () => {
+      const { etat, une, autre, tueur } = enSurchauffe('cles');
+      const purgees = annoncer(tick(auxConsoles(etat, une, autre), {}, 2000), [une, autre]);
+      const partie = placer(purgees, une, { x: 120, y: 820 });
+      const parti = tick(partie, {}, 50);
+      expect(amongDe(parti).sabotage?.consolesPurgees).toEqual([true, true]);
+      expect(role(parti, une).reparationEnCours).toBeUndefined();
+
+      const relaye = tenir(placer(parti, tueur, LIEUX_TOKYO.consoles[0]), [tueur, autre], 1000);
+      expect(amongDe(relaye).sabotage).toBeUndefined();
+    });
+
+    it('ne compte pas un fantome a une console purgee', () => {
+      const { etat, une, autre } = enSurchauffe('cles');
+      const purgees = annoncer(tick(auxConsoles(etat, une, autre), {}, 2000), [une, autre]);
+      const fantome = avecRole(purgees, autre, { fantome: true });
+
+      expect(amongDe(tenir(fantome, [une, autre], 2000)).sabotage?.consolesTenues).toEqual([
+        true,
+        false,
+      ]);
+    });
+  });
+
+  describe('le relais', () => {
+    it('coupe le premier interrupteur a l une ou l autre console, puis alterne', () => {
+      for (const [premiere, seconde] of [
+        ['une', 'autre'],
+        ['autre', 'une'],
+      ] as const) {
+        const noms = enSurchauffe('relais');
+        const places = tick(auxConsoles(noms.etat, noms.une, noms.autre), {}, 600);
+        const coupe = annoncer(places, [noms[premiere]]);
+        const sabotage = amongDe(coupe).sabotage;
+
+        expect(sabotage?.interrupteursCoupes).toBe(1);
+        expect(sabotage?.prochaineConsole).toBe(premiere === 'une' ? 1 : 0);
+
+        // La meme console, hors de son tour: rien (reponse 1 du porteur du projet).
+        const horsTour = annoncer(tick(coupe, {}, 1000), [noms[premiere]]);
+        expect(amongDe(horsTour).sabotage?.interrupteursCoupes).toBe(1);
+
+        const deux = annoncer(tick(coupe, {}, 600), [noms[seconde]]);
+        expect(amongDe(deux).sabotage?.interrupteursCoupes).toBe(2);
+      }
+    });
+
+    it('compte chaque interrupteur 0,6 seconde au moins, du precedent', () => {
+      const { etat, une, autre } = enSurchauffe('relais');
+      const places = tick(auxConsoles(etat, une, autre), {}, 5000);
+      const premier = annoncer(places, [une]);
+      // L'autre console attendait depuis cinq secondes: son interrupteur se compte du premier.
+      const tot = annoncer(premier, [autre]);
+      expect(amongDe(tot).sabotage?.interrupteursCoupes).toBe(1);
+
+      const aTemps = annoncer(tick(tot, {}, 550), [autre]);
+      expect(amongDe(aTemps).sabotage?.interrupteursCoupes).toBe(2);
+    });
+
+    it('repare la surchauffe a son quatrieme interrupteur', () => {
+      const { etat, une, autre } = enSurchauffe('relais');
+      let courant = auxConsoles(etat, une, autre);
+
+      for (let rang = 0; rang < AMONG.INTERRUPTEURS_DU_RELAIS; rang += 1) {
+        courant = annoncer(tick(courant, {}, 600), [rang % 2 === 0 ? une : autre]);
+      }
+
+      expect(amongDe(courant).sabotage).toBeUndefined();
+      expect(evenements(courant, 'sabotageFini')).toEqual([
+        { type: 'sabotageFini', nature: 'surchauffe', repare: true },
+      ]);
+    });
+
+    it('garde les interrupteurs coupes quand un reparateur meurt: un autre reprend', () => {
+      const { etat, une, autre, tueur } = enSurchauffe('relais');
+      const coupe = annoncer(tick(auxConsoles(etat, une, autre), {}, 600), [une]);
+      const assassin = camps(coupe).tueurs.find((id) => id !== tueur) as string;
+      const tue = meurtre(coupe, assassin, une);
+      expect(role(tue, une).fantome).toBe(true);
+      expect(role(tue, une).reparationEnCours).toBeUndefined();
+      const relais = tick(ouvrirAuPoste(tue, tueur, LIEUX_TOKYO.consoles[0]), {}, 600);
+
+      expect(amongDe(relais).sabotage?.interrupteursCoupes).toBe(1);
+      const deux = annoncer(relais, [autre]);
+      const trois = annoncer(tick(deux, {}, 600), [tueur]);
+      expect(amongDe(trois).sabotage?.interrupteursCoupes).toBe(3);
+    });
+
+    it('ne se tient pas: le bouton tenu ne coupe rien', () => {
+      const { etat, une, autre } = enSurchauffe('relais');
+      const tenus = tenir(auxConsoles(etat, une, autre), [une, autre], 10_000);
+
+      expect(amongDe(tenus).sabotage?.interrupteursCoupes).toBe(0);
+      expect(amongDe(tenus).sabotage?.consolesTenues).toEqual([false, false]);
+    });
+  });
+
+  it('ne se repare plus apres son terme', () => {
+    const { etat, une, autre } = enSurchauffe('relais');
+    let courant = auxConsoles(etat, une, autre);
+
+    for (let rang = 0; rang < AMONG.INTERRUPTEURS_DU_RELAIS - 1; rang += 1) {
+      courant = annoncer(tick(courant, {}, 600), [rang % 2 === 0 ? une : autre]);
+    }
+
+    const perdue = tick(courant, {}, AMONG.DELAI_DE_LA_SURCHAUFFE_MS);
+    expect(amongDe(perdue).vainqueur).toBe('tueurs');
+    const apres = annoncer(perdue, [autre]);
+    expect(amongDe(apres).sabotage?.interrupteursCoupes).toBe(3);
+    expect(amongDe(apres).vainqueur).toBe('tueurs');
   });
 });
 

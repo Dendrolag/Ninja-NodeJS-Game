@@ -14,7 +14,8 @@
  * decouverte laisse au joueur: les regles exactes sont dans l'aide. Chaque note porte
  * un titre a elle, que la fenetre ecrit derriere son numero. Les textes des notes 1.5
  * a 1.7 sont ceux de ce jour-la. Celui de la note 1.8 est de l'etape 8.11, celui de la note 1.9
- * des etapes 7.20 et 7.21, qui se livrent ensemble, sur le meme ton.
+ * des etapes 7.20 et 7.21, qui se livrent ensemble, sur le meme ton. Celui de la note 1.10 est
+ * de l'etape 7.27, accepte par le porteur du projet le 13 octobre 2026.
  */
 
 import { versionMineure } from '@neon-ninja/shared';
@@ -154,6 +155,16 @@ export const NOTES_DE_VERSION: readonly NoteDeVersion[] = [
       {
         intitule: 'Les fantômes.',
         texte: 'Mort ne veut pas dire inutile. Ni silencieux. Ni sans rancune.',
+      },
+    ],
+  },
+  {
+    version: '1.10',
+    titre: 'Les mains dans le cambouis',
+    puces: [
+      {
+        intitule: 'Les réparations.',
+        texte: 'Les néons ne se rallument plus d’un claquement de doigts. Retroussez vos manches.',
       },
     ],
   },

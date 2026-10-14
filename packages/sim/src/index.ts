@@ -90,6 +90,7 @@ export type {
   Meurtre,
   MotifDeReunion,
   PhaseAmong,
+  ReparationsAmong,
   ResultatDuVote,
   ReunionAmong,
   ReunionOuverte,

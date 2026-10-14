@@ -279,7 +279,13 @@ describe('le panneau des sabotages (etape 7.22)', () => {
     boutonDe(carte.racine, 'nuage').click();
     carte.afficher(
       etatDe(ASSASSIN, {
-        sabotage: { nature: 'panne', restantMs: 0, consolesTenues: [false, false] },
+        sabotage: {
+          nature: 'panne',
+          restantMs: 0,
+          consolesTenues: [false, false],
+          consolesPurgees: [false, false],
+          interrupteursCoupes: 0,
+        },
       }),
     );
     carte.racine.querySelector<HTMLElement>('.carte-among-repere')?.click();
@@ -300,7 +306,13 @@ describe('le panneau des sabotages (etape 7.22)', () => {
   it('marque le boitier pendant la panne', () => {
     const { carte } = ouverte(
       etatDe(PROIE, {
-        sabotage: { nature: 'panne', restantMs: 0, consolesTenues: [false, false] },
+        sabotage: {
+          nature: 'panne',
+          restantMs: 0,
+          consolesTenues: [false, false],
+          consolesPurgees: [false, false],
+          interrupteursCoupes: 0,
+        },
       }),
     );
     const postes = Array.from(carte.racine.querySelectorAll<HTMLElement>('.carte-among-poste'));

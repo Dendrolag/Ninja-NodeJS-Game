@@ -51,6 +51,7 @@ import type { FaitDeJeu } from './faits.js';
 import {
   AMONG_INCONNU,
   apresLaFermeture,
+  apresLaFermetureDeLaReparation,
   apresLaReunion,
   apresUnMeurtre,
   avecLEtatPrive,
@@ -700,6 +701,9 @@ function etatSuivant(etat: EtatClient, action: Action): EtatClient {
 
     case 'tacheFermee':
       return { ...etat, ecran, among: apresLaFermeture(etat.among) };
+
+    case 'reparationFermee':
+      return { ...etat, ecran, among: apresLaFermetureDeLaReparation(etat.among) };
 
     case 'refus':
       return { ...etat, ecran, refus: action.refus };

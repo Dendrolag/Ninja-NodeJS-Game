@@ -15,6 +15,9 @@ import type {
   Nuisance,
   PhaseAmong,
   Position,
+  PosteDeReparation,
+  ReparationDeLaPanne,
+  ReparationDeLaSurchauffe,
   RoleAmong,
   StationDuMode,
 } from '@neon-ninja/shared';
@@ -72,6 +75,12 @@ export interface JoueurAmong {
    * duree minimale de la nature de la tache (etape 7.21).
    */
   readonly tacheEnCours?: { readonly indice: number; readonly ecouleMs: number };
+  /**
+   * La reparation qu'il a ouverte (etape 7.27): son poste, et le temps passe depuis l'ouverture,
+   * ou, au relais, depuis le dernier interrupteur coupe. Comme pour une tache, la page joue le
+   * geste et le moteur juge la fin annoncee contre sa duree minimale.
+   */
+  readonly reparationEnCours?: { readonly poste: PosteDeReparation; readonly ecouleMs: number };
   readonly faits: FaitsAmong;
   /** Sa marche (etape 7.23), absente avant son premier battement de jeu. */
   readonly foulee?: FouleeAmong;
@@ -101,12 +110,33 @@ export interface SabotageAmong {
   /** Le nuage: le rang de sa station parmi les stations actives. */
   readonly station?: number;
   /**
-   * La reparation: pour la panne, le temps que quelqu'un tient le boitier; pour la surchauffe,
-   * le temps que les deux consoles sont tenues ensemble. Retombe a zero des que cela cesse.
+   * Les deux cles (etape 7.27): le temps que les deux cles sont tenues tournees ensemble.
+   * Retombe a zero des que cela cesse. Zero pour toute autre reparation.
    */
   readonly reparationMs: number;
-  /** La surchauffe: chaque console est-elle tenue a ce battement. */
+  /** Les deux cles: chaque console a-t-elle sa cle tenue tournee, a ce battement. */
   readonly consolesTenues: readonly [boolean, boolean];
+  /**
+   * Les deux cles: chaque console est-elle purgee. Une console purgee le reste jusqu'a la fin de
+   * la surchauffe (reponse 3 du porteur du projet, 13 octobre 2026).
+   */
+  readonly consolesPurgees: readonly [boolean, boolean];
+  /**
+   * Le relais: les interrupteurs coupes. Ils le restent jusqu'a la fin de la surchauffe, meme si
+   * qui les a coupes part ou meurt (reponse 2).
+   */
+  readonly interrupteursCoupes: number;
+  /** Le relais: la console du prochain interrupteur, absente avant le premier. */
+  readonly prochaineConsole?: 0 | 1;
+}
+
+/**
+ * Les reparations que la partie a tirees au lancement (etape 7.27), gardees toute la partie: une
+ * pour la panne, une pour la surchauffe.
+ */
+export interface ReparationsAmong {
+  readonly panne: ReparationDeLaPanne;
+  readonly surchauffe: ReparationDeLaSurchauffe;
 }
 
 /** Un cadavre, au sol jusqu'a la fin de la reunion qui suit. */
@@ -175,6 +205,8 @@ export interface EtatAmong {
   readonly consoles: readonly [Position, Position];
   /** Le sabotage en cours (etape 7.22). */
   readonly sabotage?: SabotageAmong;
+  /** Les reparations de la panne et de la surchauffe, tirees au lancement (etape 7.27). */
+  readonly reparations: ReparationsAmong;
   /** Le temps avant le prochain sabotage, commun a tous les assassins (etape 7.22). */
   readonly rechargeDesSabotagesMs: number;
   /** Le temps avant la prochaine malediction, commun a tous les fantomes (etape 7.22). */

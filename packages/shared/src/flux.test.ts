@@ -1105,7 +1105,14 @@ describe('Among Ninjas (etape 7.20)', () => {
           restantMs: 0,
           tachesFaites: 2,
           tachesTotal: 20,
-          sabotage: { nature: 'surchauffe', restantMs: 44_950.6, consolesTenues: [true, false] },
+          sabotage: {
+            nature: 'surchauffe',
+            restantMs: 44_950.6,
+            consolesTenues: [true, false],
+            reparation: 'cles',
+            consolesPurgees: [true, false],
+            interrupteursCoupes: 0,
+          },
           rechargeDesSabotagesMs: 0,
           rechargeDeLaMaledictionMs: 12_000,
         },
@@ -1118,7 +1125,13 @@ describe('Among Ninjas (etape 7.20)', () => {
           restantMs: 0,
           tachesFaites: 2,
           tachesTotal: 20,
-          sabotage: { nature: 'nuage', restantMs: 19_000, consolesTenues: [false, false] },
+          sabotage: {
+            nature: 'nuage',
+            restantMs: 19_000,
+            consolesTenues: [false, false],
+            consolesPurgees: [false, false],
+            interrupteursCoupes: 0,
+          },
           nuage: { x: 1320.4, y: 1070 },
         },
       }),
@@ -1142,6 +1155,60 @@ describe('Among Ninjas (etape 7.20)', () => {
       expect(appliquerTrame(reference, trame.octets)).toEqual(quantifierInstantane(suivante));
       reference = trame.reference;
     }
+  });
+
+  it('fait voyager la reparation de chaque sabotage, sur un octet (etape 7.27)', () => {
+    const bloc = { phase: 'jeu', restantMs: 0, tachesFaites: 0, tachesTotal: 0 } as const;
+    const sabotages = [
+      { nature: 'panne', reparation: 'lanceur' },
+      { nature: 'panne', reparation: 'fusibles' },
+      { nature: 'panne', reparation: 'frequence' },
+      { nature: 'surchauffe', reparation: 'cles', consolesPurgees: [false, true] },
+      { nature: 'surchauffe', reparation: 'relais' },
+      { nature: 'surchauffe', reparation: 'relais', interrupteursCoupes: 1, prochaineConsole: 1 },
+      { nature: 'surchauffe', reparation: 'relais', interrupteursCoupes: 3, prochaineConsole: 0 },
+      { nature: 'flou' },
+    ] as const;
+
+    for (const sabotage of sabotages) {
+      const partie = instantane({
+        among: {
+          ...bloc,
+          sabotage: {
+            restantMs: 1000,
+            consolesTenues: [false, false],
+            consolesPurgees: [false, false],
+            interrupteursCoupes: 0,
+            ...sabotage,
+          },
+        },
+      });
+
+      expect(appliquerTrame(undefined, encoderImage(partie).octets)).toEqual(
+        quantifierInstantane(partie),
+      );
+    }
+  });
+
+  it('refuse plus d interrupteurs coupes que le relais n en a', () => {
+    const partie = instantane({
+      among: {
+        phase: 'jeu',
+        restantMs: 0,
+        tachesFaites: 0,
+        tachesTotal: 0,
+        sabotage: {
+          nature: 'surchauffe',
+          restantMs: 0,
+          consolesTenues: [false, false],
+          reparation: 'relais',
+          consolesPurgees: [false, false],
+          interrupteursCoupes: 5,
+        },
+      },
+    });
+
+    expect(() => encoderImage(partie)).toThrow(/interrupteursCoupes/u);
   });
 
   it('fait voyager les pas entendus, un octet chacun (etape 7.23)', () => {
@@ -1210,7 +1277,13 @@ describe('Among Ninjas (etape 7.20)', () => {
         restantMs: 0,
         tachesFaites: 0,
         tachesTotal: 0,
-        sabotage: { nature: 'grele' as 'panne', restantMs: 0, consolesTenues: [false, false] },
+        sabotage: {
+          nature: 'grele' as 'panne',
+          restantMs: 0,
+          consolesTenues: [false, false],
+          consolesPurgees: [false, false],
+          interrupteursCoupes: 0,
+        },
       },
     });
 

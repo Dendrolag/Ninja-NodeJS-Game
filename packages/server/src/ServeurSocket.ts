@@ -99,6 +99,7 @@ import {
   validerDemandeRetour,
   validerDemandeMalediction,
   validerDemandeSabotage,
+  validerDemandeReparation,
   validerDemandeTache,
   validerDemandeVote,
   validerEquipe,
@@ -610,6 +611,9 @@ export class ServeurSocket {
     });
     socket.on('tache', (quoi) => {
       this.surTache(socket, quoi);
+    });
+    socket.on('reparation', (quoi) => {
+      this.surReparation(socket, quoi);
     });
     socket.on('saboter', (demande) => {
       this.surSaboter(socket, demande);
@@ -1201,6 +1205,32 @@ export class ServeurSocket {
     }
 
     room.annoncerLaTache(connexion.session.id, verdict.valeur);
+  }
+
+  /**
+   * La reparation ouverte d'Among Ninjas, finie ou fermee dans la page (etape 7.27). Comme une
+   * tache: validee dans sa forme, limitee en debit avec le bouton d'action, puis confiee a la
+   * room, et le moteur en juge.
+   */
+  private surReparation(socket: SocketTypee, quoi: 'finie' | 'fermee'): void {
+    const connexion = this.connexions.get(socket.id);
+
+    if (connexion?.session === undefined || connexion.idRoom === undefined) {
+      return;
+    }
+
+    if (!this.autorise(connexion, 'action')) {
+      return;
+    }
+
+    const verdict = validerDemandeReparation(quoi as unknown);
+    const room = this.rooms.room(connexion.idRoom);
+
+    if (!verdict.valide || room?.statut !== 'enCours') {
+      return;
+    }
+
+    room.annoncerLaReparation(connexion.session.id, verdict.valeur);
   }
 
   /**

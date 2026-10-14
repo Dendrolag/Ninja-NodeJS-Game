@@ -44,14 +44,24 @@ const PROIE_FANTOME: EtatPriveAmong = { ...PROIE, fantome: true };
 const ASSASSIN: EtatPriveAmong = { ...PROIE, role: 'tueur', complices: ['bob'], taches: [] };
 const ASSASSIN_FANTOME: EtatPriveAmong = { ...ASSASSIN, fantome: true };
 
-/** La panne de neons en cours. */
-const PANNE: SabotageEnCoursVu = { nature: 'panne', restantMs: 0, consolesTenues: [false, false] };
+/** La panne de neons en cours, a reparer en changeant les fusibles. */
+const PANNE: SabotageEnCoursVu = {
+  nature: 'panne',
+  restantMs: 0,
+  consolesTenues: [false, false],
+  reparation: 'fusibles',
+  consolesPurgees: [false, false],
+  interrupteursCoupes: 0,
+};
 
-/** La surchauffe en cours, la premiere console tenue. */
+/** La surchauffe en cours, aux deux cles: les deux consoles purgees, la premiere cle tournee. */
 const SURCHAUFFE: SabotageEnCoursVu = {
   nature: 'surchauffe',
   restantMs: 31_200,
   consolesTenues: [true, false],
+  reparation: 'cles',
+  consolesPurgees: [true, true],
+  interrupteursCoupes: 0,
 };
 
 /** Nous, a cette place, dans une partie a cette phase, avec ce que le flux dit du mode. */
@@ -96,18 +106,46 @@ describe('l alerte d un sabotage', () => {
     expect(amongHud(etat(PROIE, AILLEURS, { sabotage: PANNE }))?.alerte).toEqual({
       genre: 'panne',
       titre: 'Panne de néons',
-      detail: 'Réparez le boîtier de la rue',
+      detail: 'Changez les fusibles',
       compte: undefined,
     });
+    // Chaque reparation de la panne se nomme (etape 7.27).
+    for (const [reparation, detail] of [
+      ['lanceur', 'Relancez le générateur'],
+      ['frequence', 'Accordez la fréquence'],
+    ] as const) {
+      expect(
+        amongHud(etat(PROIE, AILLEURS, { sabotage: { ...PANNE, reparation } }))?.alerte?.detail,
+      ).toBe(detail);
+    }
   });
 
-  it('dit la surchauffe, son compte a rebours a la seconde superieure et les consoles tenues', () => {
+  it('dit la surchauffe, son compte a rebours a la seconde superieure et les cles tournees', () => {
     expect(amongHud(etat(ASSASSIN, AILLEURS, { sabotage: SURCHAUFFE }))?.alerte).toEqual({
       genre: 'surchauffe',
       titre: 'Surchauffe',
-      detail: 'Tenez les deux consoles ensemble : 1 sur 2',
+      detail: 'Tournez les clés ensemble : 1 sur 2',
       compte: '32',
     });
+  });
+
+  it('dit les consoles a purger, puis le relais et ses interrupteurs (etape 7.27)', () => {
+    const detail = (sabotage: SabotageEnCoursVu) =>
+      amongHud(etat(PROIE, AILLEURS, { sabotage }))?.alerte?.detail;
+
+    expect(
+      detail({ ...SURCHAUFFE, consolesTenues: [false, false], consolesPurgees: [true, false] }),
+    ).toBe('Purgez les deux consoles : 1 sur 2');
+    expect(
+      detail({
+        ...SURCHAUFFE,
+        consolesTenues: [false, false],
+        consolesPurgees: [false, false],
+        reparation: 'relais',
+        interrupteursCoupes: 3,
+        prochaineConsole: 0,
+      }),
+    ).toBe('Coupez les interrupteurs, d’une console à l’autre : 3 sur 4');
   });
 
   it('ne dit rien d une nuisance ni du nuage, ni hors du jeu', () => {

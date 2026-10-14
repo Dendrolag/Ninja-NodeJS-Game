@@ -171,11 +171,53 @@ describe('les sabotages dans les vues', () => {
     expect(vuePour(surchauffe, proie, SANS_ALIAS).among?.sabotage).toMatchObject({
       nature: 'surchauffe',
       consolesTenues: [false, false],
+      consolesPurgees: [false, false],
+      interrupteursCoupes: 0,
     });
 
     const flou = sabote(etat, 'flou');
     expect(vuePour(flou, proie, SANS_ALIAS).among?.sabotage).toBeUndefined();
     expect(vuePour(flou, tueur, SANS_ALIAS).among?.sabotage?.nature).toBe('flou');
+  });
+
+  it('nomment la reparation tiree de la panne et de la surchauffe, a tous (etape 7.27)', () => {
+    const etat = enJeu();
+    const proie = camps(etat).proies[0] as string;
+    const { reparations } = amongDe(etat);
+
+    expect(vuePour(sabote(etat, 'panne'), proie, SANS_ALIAS).among?.sabotage?.reparation).toBe(
+      reparations.panne,
+    );
+    expect(vuePour(sabote(etat, 'surchauffe'), proie, SANS_ALIAS).among?.sabotage?.reparation).toBe(
+      reparations.surchauffe,
+    );
+    expect(
+      vuePour(sabote(etat, 'flou'), camps(etat).tueur, SANS_ALIAS).among?.sabotage,
+    ).not.toHaveProperty('reparation');
+  });
+
+  it('disent le relais en cours: les interrupteurs coupes et la console du prochain', () => {
+    const etat = sabote(enJeu(), 'surchauffe');
+    const among = amongDe(etat);
+    const relais: EtatPartie = {
+      ...etat,
+      among: {
+        ...among,
+        reparations: { ...among.reparations, surchauffe: 'relais' },
+        sabotage: {
+          ...(among.sabotage as NonNullable<typeof among.sabotage>),
+          interrupteursCoupes: 2,
+          prochaineConsole: 1,
+        },
+      },
+    };
+    const proie = camps(etat).proies[0] as string;
+
+    expect(vuePour(relais, proie, SANS_ALIAS).among?.sabotage).toMatchObject({
+      reparation: 'relais',
+      interrupteursCoupes: 2,
+      prochaineConsole: 1,
+    });
   });
 
   it('donnent la recharge aux assassins et aux fantomes, la malediction aux seuls fantomes', () => {
@@ -240,14 +282,22 @@ describe('les notifications des sabotages', () => {
   it('disent la panne a tous, et sa reparation', () => {
     const etat = sabote(enJeu(), 'panne');
     expect(adressees(notificationsDe(etat), 'sabotage')).toHaveLength(5);
+    // Le lancement nomme la reparation tiree (etape 7.27).
+    expect(notificationsDe(etat).find((n) => n.nom === 'sabotage')?.charge).toEqual({
+      quoi: 'lance',
+      nature: 'panne',
+      reparation: amongDe(etat).reparations.panne,
+    });
 
     const proie = camps(etat).proies[0] as string;
     const boitier = (LIEUX_DES_CARTES.map1 as { boitier: { x: number; y: number } }).boitier;
     const au = placer(etat, proie, boitier.x, boitier.y);
+    const immobile = { deplacement: { x: 0, y: 0 }, enMouvement: false } as const;
+    const ouverte = tick(au, { [proie]: { ...immobile, agir: true } }, 50);
     const reparee = tick(
-      au,
-      { [proie]: { deplacement: { x: 0, y: 0 }, enMouvement: false, agir: true } },
-      AMONG.REPARATION_DE_LA_PANNE_MS,
+      tick(ouverte, {}, 3000),
+      { [proie]: { ...immobile, reparation: 'finie' } },
+      50,
     );
     const fins = notificationsDe(reparee).filter((n) => n.nom === 'sabotage');
 
