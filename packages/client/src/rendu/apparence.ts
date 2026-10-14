@@ -622,8 +622,11 @@ export const LOINTAIN = {
  * distances sont en pixels de carte, les durees en millisecondes.
  */
 export const VAISSEAU = {
-  /** La taille affichee, en part de l'image livree (683 sur 769): 478 sur 538 au sol. */
-  echelle: 0.7,
+  /**
+   * La taille affichee, en part de l'image livree (683 sur 769): 430 sur 484 au sol. Reduite
+   * de 10 pour cent le 14 octobre 2026, a la demande du porteur du projet (0,7 avant).
+   */
+  echelle: 0.63,
   /**
    * Son altitude, en part de son ecart a la camera: il se dessine ecarte d'autant du centre
    * de l'ecran, et grandi d'autant, comme ce qui est plus pres de l'oeil. C'est ce qui le
@@ -663,8 +666,8 @@ export const VAISSEAU = {
    * (critere 11 de la competence des cartes). Il cache les autres, pas nous.
    */
   opaciteAuDessusDeNous: 0.4,
-  /** Le rayon, autour de son centre affiche, ou il s'efface au-dessus de nous. */
-  rayonDEffacementPx: 230,
+  /** Le rayon, autour de son centre affiche, ou il s'efface au-dessus de nous: reduit avec lui. */
+  rayonDEffacementPx: 207,
   /** La bande ou il passe de transparent a opaque, au bord de ce rayon. */
   fonduPx: 80,
 } as const;
