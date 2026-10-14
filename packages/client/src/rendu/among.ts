@@ -21,8 +21,8 @@
  *   - LE NUAGE NOIR, rendu 4A: des volutes de fumee noire sur la station, opaques pour une
  *     proie vivante, que le serveur prive de ce qui s'y tient, et a demi pour les assassins et
  *     les fantomes, qui y voient;
- *   - LA PANNE, rendu 2C: le disque d'une proie vivante tombe a 110 pixels, le decor eteint
- *     s'assombrit, et une fleche orange dit ou est le boitier, et a quelle distance;
+ *   - LA PANNE, rendu 2C: le disque d'une proie vivante tombe a 110 pixels, tout est noir
+ *     autour de lui, et une fleche orange dit ou est le boitier, et a quelle distance;
  *   - LA SURCHAUFFE, rendu 3B: deux fleches rouges vers les consoles. L'alarme et le compte a
  *     rebours sont dans le HUD.
  *
@@ -289,8 +289,12 @@ export const APPARENCE_AMONG = {
    * trajet vertical.
    */
   fleche: { rayon: 185, longueur: 22, epaisseur: 5, ecartDuTexte: 12, largeurDUneLettre: 0.56 },
-  /** Le voile du decor eteint pendant la panne, pour une proie vivante (rendu 2C). */
-  voileEnPanne: 0.82,
+  /**
+   * Le voile du decor eteint pendant la panne, pour une proie vivante (rendu 2C): entier, un
+   * noir complet autour du cercle, pour la pression (demande du porteur du projet du 14 octobre
+   * 2026, a la place de 0,82, ou le decor se devinait encore).
+   */
+  voileEnPanne: 1,
 } as const;
 
 /** Une couleur du contrat en nombre. */

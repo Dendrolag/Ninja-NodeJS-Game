@@ -603,7 +603,10 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   // panne de neons (etape 7.22), est une teinte de la texture: un noir d'opacite a par-dessus
   // une couleur, ou cette couleur multipliee par 1 - a, c'est la meme chose.
   decorEteint.tint = teinteDuVoile(VISION_AMONG.voile);
-  eteint.addChild(decorEteint);
+  // Le noir hors des bords de la carte, quand le voile est entier (la panne de neons, demande
+  // du porteur du projet du 14 octobre 2026): sans lui, la couleur du fond s'y verrait.
+  const horsCarte = new Graphics();
+  eteint.addChild(horsCarte, decorEteint);
   // Le masque est la carte percee du disque: le decor eteint se montre partout, sauf dedans.
   eteint.mask = disqueDeVision;
   eteint.visible = false;
@@ -927,7 +930,11 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
         cuireLeDecorEteint();
       }
 
-      poserLaVision(eteint, disqueDeVision, decorEteint, scene.vision, options.carte);
+      poserLaVision(
+        { eteint, masque: disqueDeVision, decorEteint, horsCarte },
+        scene.vision,
+        options.carte,
+      );
       dessinerLesLibelles(libelles, textesDesLibelles, scene.libelles ?? []);
       dessinerLesReperes(reperes, scene.reperes);
       tracerLesTraits(reperes, scene.fleches ?? []);
@@ -1052,19 +1059,40 @@ function eclairerLesObjets(
  * centre sur nous. Sans cercle, il se cache.
  */
 function poserLaVision(
-  eteint: Container,
-  masque: Graphics,
-  decorEteint: Sprite,
+  calques: {
+    readonly eteint: Container;
+    readonly masque: Graphics;
+    readonly decorEteint: Sprite;
+    readonly horsCarte: Graphics;
+  },
   vision: VisionScene | undefined,
   carte: DimensionsCarte,
 ): void {
+  const { eteint, masque, decorEteint, horsCarte } = calques;
   eteint.visible = vision !== undefined;
   masque.clear();
+  horsCarte.clear();
 
   if (vision !== undefined) {
     decorEteint.tint = teinteDuVoile(vision.voile);
     // Plus grand que la carte: un disque qui deborde du bord y reste un trou (cadreDuMasque).
-    const cadre = cadreDuMasque(carte, vision);
+    // Sous un voile entier, le noir couvre aussi l'ecran au-dela du bord, ou que soit la camera:
+    // le masque s'etend avec lui, sans quoi il le couperait.
+    const marge = Math.max(carte.largeur, carte.hauteur);
+    const cadre =
+      vision.voile >= 1
+        ? {
+            x: -marge,
+            y: -marge,
+            largeur: carte.largeur + 2 * marge,
+            hauteur: carte.hauteur + 2 * marge,
+          }
+        : cadreDuMasque(carte, vision);
+
+    if (vision.voile >= 1) {
+      horsCarte.rect(cadre.x, cadre.y, cadre.largeur, cadre.hauteur).fill(0x000000);
+    }
+
     masque
       .rect(cadre.x, cadre.y, cadre.largeur, cadre.hauteur)
       .fill(0xffffff)
