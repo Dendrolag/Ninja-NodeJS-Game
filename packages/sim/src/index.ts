@@ -43,7 +43,7 @@ export {
   trajetTenable,
 } from './collisions.js';
 
-export type { Contact, RegleDeResolution } from './contacts.js';
+export type { Contact, PasDuBattement, RegleDeResolution } from './contacts.js';
 export {
   SEUIL_CONTACT_PX,
   attraperLEvadeAuContact,

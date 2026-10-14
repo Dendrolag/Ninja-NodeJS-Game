@@ -422,11 +422,20 @@ export function tick(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPart
   const horsJeu = regles.horsJeu(etat);
   const passeMuraille = regles.passeMuraille(etat);
   const joueurs: Record<IdentifiantEntite, Joueur> = {};
+  // Le pas de chacun, releve ici et pas plus tard: une poche ou une mine peut encore
+  // deplacer un joueur dans ce battement, sans qu'il soit alle vers personne. C'est ce
+  // pas qui dit qui va vers l'autre quand deux joueurs se touchent (contacts.ts).
+  const pas: Record<IdentifiantEntite, Vecteur> = {};
   for (const [id, joueur] of Object.entries(etat.joueurs)) {
     // Un joueur hors jeu (un traqueur elimine, en Chasse) ne bouge plus.
-    joueurs[id] = horsJeu.has(id)
+    const avance = horsJeu.has(id)
       ? joueur
       : avancerJoueur(etat, joueur, entrees[id], dtMs, passeMuraille.has(id));
+    joueurs[id] = avance;
+    pas[id] = {
+      x: avance.position.x - joueur.position.x,
+      y: avance.position.y - joueur.position.y,
+    };
   }
 
   // Le journal repart vide: il decrit ce battement-ci, pas l'histoire de la
@@ -447,7 +456,7 @@ export function tick(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPart
   const objets = faireApparaitreLesObjets(fairePasserLeTempsSurLesObjets(zones, dtMs), dtMs);
   const actions = regles.agir(objets, entrees, dtMs);
   const mines = avancerLesMines(actions, dtMs, regles, regles.horsJeu(actions));
-  const contacts = resoudreContacts(mines, detecterContacts(mines), regles.resoudreContacts);
+  const contacts = resoudreContacts(mines, detecterContacts(mines), regles.resoudreContacts, pas);
   const evade = regles.attraperLEvade(contacts, regles.horsJeu(contacts));
 
   return ramasserLesObjets(evade, regles.victimeDuMalus, regles.horsJeu(evade));

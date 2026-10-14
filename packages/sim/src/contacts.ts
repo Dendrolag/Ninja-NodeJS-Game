@@ -24,7 +24,17 @@
  * regle doit donc trancher elle-meme, et elle le fait ainsi:
  *
  *   1. Si un seul des deux a le droit de capturer l'autre, c'est lui.
- *   2. Si les deux l'ont, le generateur a graine tire au sort.
+ *   2. Si les deux l'ont, celui qui va vers l'autre capture: celui dont le pas de
+ *      ce battement le rapproche le plus de l'autre (approcheDe).
+ *   3. S'ils s'en rapprochent autant, le generateur a graine tire au sort.
+ *
+ * LA REGLE 2 DATE DU 14 OCTOBRE 2026, a la demande du porteur du projet. Avant
+ * elle, le duel se jouait toujours au tirage: un joueur immobile qu'un autre
+ * venait toucher le capturait une fois sur deux, ce qui se lisait en jeu comme
+ * « c'est celui qui attend qui gagne ». Le pas compare est celui que le joueur a
+ * reellement fait, murs compris, et non la touche qu'il enfonce: un joueur coince
+ * contre un mur ne va vers personne. Un face-a-face a la meme vitesse reste un
+ * tirage, et le plus rapide des deux, sous bonus de vitesse, l'emporte.
  *
  * Le tirage au sort remplace la loterie du reseau par une loterie equitable et
  * reproductible: a graine egale, la meme partie se rejoue a l'identique. Une
@@ -32,6 +42,7 @@
  * aurait donne un avantage permanent au meme joueur pendant trois minutes.
  */
 
+import type { Vecteur } from '@neon-ninja/shared';
 import { entier } from '@neon-ninja/shared';
 
 import {
@@ -53,6 +64,24 @@ import { rallierUnBot, viderLaReserve } from './horde.js';
  */
 export const SEUIL_CONTACT_PX = 20;
 
+/**
+ * En dessous de cet ecart, en pixels, deux joueurs se rapprochent autant l'un de
+ * l'autre et le duel se tire au sort. Le dixieme de pixel est le seuil sous lequel le
+ * moteur tient deja une entite pour immobile (direction.ts): il absorbe les arrondis
+ * d'un face-a-face parfait sans donner la capture a l'un des deux par hasard de calcul.
+ */
+export const ECART_D_APPROCHE_PX = 0.1;
+
+/**
+ * Le pas de chaque joueur pendant ce battement: de combien il s'est deplace, en
+ * pixels. Le moteur le releve juste apres avoir deplace les joueurs (moteur.ts). Un
+ * joueur absent de la table n'a pas bouge.
+ */
+export type PasDuBattement = Readonly<Record<IdentifiantEntite, Vecteur>>;
+
+/** Personne n'a bouge: la table des pas par defaut, hors du moteur. */
+const AUCUN_PAS: PasDuBattement = {};
+
 /** Deux entites qui se touchent, et de combien elles sont proches. */
 export interface Contact {
   readonly premier: IdentifiantEntite;
@@ -67,7 +96,11 @@ export interface Contact {
  * Chaque mode en fournit une dans son jeu de regles (REGLES_DES_MODES, moteur.ts):
  * regleClassique, regleTactique, regleEquipes et regleChasse ci-dessous.
  */
-export type RegleDeResolution = (etat: EtatPartie, contacts: readonly Contact[]) => EtatPartie;
+export type RegleDeResolution = (
+  etat: EtatPartie,
+  contacts: readonly Contact[],
+  pas?: PasDuBattement,
+) => EtatPartie;
 
 /**
  * Releve tous les contacts de la partie.
@@ -132,8 +165,13 @@ function horsDePortee(ecart: number): boolean {
  * des joueurs sans leur appartenir.
  */
 interface ReglesDeContact {
-  /** Deux joueurs se touchent. */
-  readonly entreJoueurs: (etat: EtatPartie, premier: Joueur, second: Joueur) => Resolution;
+  /** Deux joueurs se touchent. Le pas de chacun dit lequel est alle vers l'autre. */
+  readonly entreJoueurs: (
+    etat: EtatPartie,
+    premier: Joueur,
+    second: Joueur,
+    pas: PasDuBattement,
+  ) => Resolution;
   /** Un joueur touche un bot ou un bot noir. */
   readonly joueurEtBot: (etat: EtatPartie, joueur: Joueur, bot: Bot) => EtatPartie;
   /** Deux bots qui se touchent ne se repeignent pas. Absent: ils se repeignent. */
@@ -151,7 +189,7 @@ interface ReglesDeContact {
  * pourrait capturer a son tour un joueur qu'elle ne touche plus.
  */
 function regleDeContacts(regles: ReglesDeContact): RegleDeResolution {
-  return (etat, contacts) => {
+  return (etat, contacts, pas = AUCUN_PAS) => {
     let courant = etat;
     const replacees = new Set<IdentifiantEntite>();
 
@@ -160,7 +198,7 @@ function regleDeContacts(regles: ReglesDeContact): RegleDeResolution {
         continue;
       }
 
-      const resolution = resoudreUnContact(courant, contact.premier, contact.second, regles);
+      const resolution = resoudreUnContact(courant, contact.premier, contact.second, regles, pas);
       courant = resolution.etat;
 
       if (resolution.replacee !== undefined) {
@@ -278,14 +316,16 @@ export const regleTactique: RegleDeResolution = regleDeContacts({
  * Applique les consequences des contacts releves.
  *
  * Par defaut, la regle du mode Classique. Passer une autre regle en troisieme
- * argument suffit a changer la facon dont le jeu resout ses contacts.
+ * argument suffit a changer la facon dont le jeu resout ses contacts. Le quatrieme
+ * dit de combien chaque joueur vient de se deplacer: sans lui, personne n'a bouge.
  */
 export function resoudreContacts(
   etat: EtatPartie,
   contacts: readonly Contact[],
   regle: RegleDeResolution = regleClassique,
+  pas: PasDuBattement = AUCUN_PAS,
 ): EtatPartie {
-  return regle(etat, contacts);
+  return regle(etat, contacts, pas);
 }
 
 /** Ce qu'un contact resolu laisse derriere lui. */
@@ -314,6 +354,7 @@ function resoudreUnContact(
   premierId: IdentifiantEntite,
   secondId: IdentifiantEntite,
   regles: ReglesDeContact,
+  pas: PasDuBattement,
 ): Resolution {
   const premier = entiteDe(etat, premierId);
   const second = entiteDe(etat, secondId);
@@ -326,7 +367,7 @@ function resoudreUnContact(
 
   if (premier.type === 'joueur') {
     return second.type === 'joueur'
-      ? regles.entreJoueurs(etat, premier, second)
+      ? regles.entreJoueurs(etat, premier, second, pas)
       : sansEffet(regles.joueurEtBot(etat, premier, second));
   }
 
@@ -366,14 +407,15 @@ type CaptureDUnJoueur = (
 ) => EtatPartie;
 
 /**
- * Deux joueurs se touchent, en Classique et en Equipes: l'un capture l'autre, ou rien
- * ne se passe. Le mode dit seulement ce que produit la capture.
+ * Deux joueurs se touchent, en Classique, en Horde et en Equipes: l'un capture l'autre,
+ * ou rien ne se passe. Le mode dit seulement ce que produit la capture.
  *
- * Quand les deux ont le droit de capturer, le generateur a graine tranche. Voir
+ * Quand les deux ont le droit de capturer, celui qui va vers l'autre l'emporte, et le
+ * generateur a graine tranche entre deux joueurs qui s'en rapprochent autant. Voir
  * l'explication en tete de fichier.
  */
 function duelDeJoueurs(capturer: CaptureDUnJoueur): ReglesDeContact['entreJoueurs'] {
-  return (etat, premier, second) => {
+  return (etat, premier, second, pas) => {
     const premierPeut = captureAutorisee(premier, second);
     const secondPeut = captureAutorisee(second, premier);
 
@@ -386,12 +428,19 @@ function duelDeJoueurs(capturer: CaptureDUnJoueur): ReglesDeContact['entreJoueur
     let victime = second;
 
     if (premierPeut && secondPeut) {
-      const tirage = entier(etat.alea, 2);
-      courant = { ...etat, alea: tirage.alea };
+      const avance = approcheDe(premier, second, pas) - approcheDe(second, premier, pas);
 
-      if (tirage.valeur === 1) {
+      if (avance <= -ECART_D_APPROCHE_PX) {
         attaquant = second;
         victime = premier;
+      } else if (avance < ECART_D_APPROCHE_PX) {
+        const tirage = entier(etat.alea, 2);
+        courant = { ...etat, alea: tirage.alea };
+
+        if (tirage.valeur === 1) {
+          attaquant = second;
+          victime = premier;
+        }
       }
     } else if (secondPeut) {
       attaquant = second;
@@ -400,6 +449,28 @@ function duelDeJoueurs(capturer: CaptureDUnJoueur): ReglesDeContact['entreJoueur
 
     return { etat: capturer(courant, attaquant.id, victime.id), replacee: victime.id };
   };
+}
+
+/**
+ * De combien le pas de ce battement a rapproche un joueur d'un autre, en pixels.
+ *
+ * C'est la part de son pas dirigee vers l'autre: positive s'il va vers lui, nulle s'il
+ * n'a pas bouge ou passe a cote, negative s'il s'en eloigne. Deux joueurs exactement
+ * superposes n'ont pas de direction l'un vers l'autre: aucun ne s'en rapproche.
+ */
+function approcheDe(joueur: Joueur, autre: Joueur, pas: PasDuBattement): number {
+  const sonPas = pas[joueur.id];
+  const versLAutre = {
+    x: autre.position.x - joueur.position.x,
+    y: autre.position.y - joueur.position.y,
+  };
+  const distance = Math.hypot(versLAutre.x, versLAutre.y);
+
+  if (sonPas === undefined || distance === 0) {
+    return 0;
+  }
+
+  return (sonPas.x * versLAutre.x + sonPas.y * versLAutre.y) / distance;
 }
 
 /**

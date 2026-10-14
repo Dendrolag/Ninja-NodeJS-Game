@@ -403,6 +403,108 @@ describe('regleClassique, duel entre deux joueurs', () => {
     expect(vainqueurs).toEqual(new Set(['j1', 'j2']));
   });
 
+  it('donne la capture a celui qui va vers l autre, quelle que soit la graine', () => {
+    // Le cas signale par le porteur du projet le 14 octobre 2026: un joueur immobile
+    // que l'autre vient toucher ne gagne plus le duel une fois sur deux.
+    for (let graine = 1; graine <= 20; graine += 1) {
+      const etat = joueursPrets(graine, [
+        ['j1', ROUGE, { x: 500, y: 500 }],
+        ['j2', BLEU, { x: 505, y: 500 }],
+      ]);
+
+      const j1VaVersJ2 = resoudreContacts(etat, detecterContacts(etat), regleClassique, {
+        j1: { x: 7.5, y: 0 },
+      });
+      const j2VaVersJ1 = resoudreContacts(etat, detecterContacts(etat), regleClassique, {
+        j2: { x: -7.5, y: 0 },
+      });
+
+      expect(j1VaVersJ2.joueurs['j1']?.captures).toBe(1);
+      expect(j2VaVersJ1.joueurs['j2']?.captures).toBe(1);
+    }
+  });
+
+  it('donne la capture a celui qui poursuit, pas a celui qui fuit', () => {
+    // j1 rattrape j2 par derriere: tous deux vont vers l'est, j2 s'eloigne de j1.
+    const etat = joueursPrets(3, [
+      ['j1', ROUGE, { x: 500, y: 500 }],
+      ['j2', BLEU, { x: 510, y: 500 }],
+    ]);
+
+    const apres = resoudreContacts(etat, detecterContacts(etat), regleClassique, {
+      j1: { x: 12.75, y: 0 },
+      j2: { x: 7.5, y: 0 },
+    });
+
+    expect(apres.joueurs['j1']?.captures).toBe(1);
+    expect(apres.joueurs['j2']?.captures).toBe(0);
+  });
+
+  it('donne la capture a celui qui va droit sur l autre plutot qu a celui qui passe a cote', () => {
+    // Meme vitesse, mais j2 traverse en biais: la part de son pas dirigee vers j1 est
+    // plus petite que celle de j1, qui fonce droit sur lui.
+    const etat = joueursPrets(3, [
+      ['j1', ROUGE, { x: 500, y: 500 }],
+      ['j2', BLEU, { x: 510, y: 500 }],
+    ]);
+
+    const apres = resoudreContacts(etat, detecterContacts(etat), regleClassique, {
+      j1: { x: 7.5, y: 0 },
+      j2: { x: 0, y: 7.5 },
+    });
+
+    expect(apres.joueurs['j1']?.captures).toBe(1);
+  });
+
+  it('tire encore au sort un face-a-face a la meme vitesse', () => {
+    const vainqueurs = new Set<string>();
+    for (let graine = 1; graine <= 20; graine += 1) {
+      const etat = joueursPrets(graine, [
+        ['j1', ROUGE, { x: 500, y: 500 }],
+        ['j2', BLEU, { x: 505, y: 500 }],
+      ]);
+      const apres = resoudreContacts(etat, detecterContacts(etat), regleClassique, {
+        j1: { x: 7.5, y: 0 },
+        j2: { x: -7.5, y: 0 },
+      });
+      vainqueurs.add(apres.joueurs['j1']?.captures === 1 ? 'j1' : 'j2');
+    }
+
+    expect(vainqueurs).toEqual(new Set(['j1', 'j2']));
+  });
+
+  it('tire au sort entre deux joueurs exactement superposes', () => {
+    // Aucune direction de l'un vers l'autre: aucun pas ne peut s'en rapprocher.
+    const vainqueurs = new Set<string>();
+    for (let graine = 1; graine <= 20; graine += 1) {
+      const etat = joueursPrets(graine, [
+        ['j1', ROUGE, { x: 500, y: 500 }],
+        ['j2', BLEU, { x: 500, y: 500 }],
+      ]);
+      const apres = resoudreContacts(etat, detecterContacts(etat), regleClassique, {
+        j1: { x: 7.5, y: 0 },
+      });
+      vainqueurs.add(apres.joueurs['j1']?.captures === 1 ? 'j1' : 'j2');
+    }
+
+    expect(vainqueurs).toEqual(new Set(['j1', 'j2']));
+  });
+
+  it('laisse capturer le seul qui en a le droit, meme s il n a pas bouge', () => {
+    // La regle 1 passe avant le pas: j1 fonce sur j2, mais son delai court encore.
+    let etat = joueursPrets(1, [
+      ['j1', ROUGE, { x: 500, y: 500 }],
+      ['j2', BLEU, { x: 505, y: 500 }],
+    ]);
+    etat = reglerJoueur(etat, 'j1', { tempsDepuisDerniereCaptureMs: 0 });
+
+    const apres = resoudreContacts(etat, detecterContacts(etat), regleClassique, {
+      j1: { x: 7.5, y: 0 },
+    });
+
+    expect(apres.joueurs['j2']?.captures).toBe(1);
+  });
+
   it('rejoue le meme duel a l identique pour la meme graine', () => {
     const resultat = (): unknown => {
       const apres = resoudre(

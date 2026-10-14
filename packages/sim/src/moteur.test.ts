@@ -568,8 +568,8 @@ describe('captures dans le battement', () => {
    *
    * Quand un test a besoin de savoir qui l'emporte, il impose l'attaquant: son
    * adversaire garde alors son delai entre captures, ce qui le met hors jeu pour
-   * ce battement. Sans cela le duel se joue au tirage au sort, ce qui est
-   * justement le sujet du dernier test du groupe.
+   * ce battement. Sans cela, entre deux joueurs qui ne bougent pas, le duel se joue
+   * au tirage au sort, ce qui est justement le sujet du dernier test du groupe.
    */
   function duel(
     distance: number,
@@ -647,6 +647,42 @@ describe('captures dans le battement', () => {
     const apres = tick(etat, {}, BATTEMENT_MS);
 
     expect(apres.bots['b1']?.couleur).toBe('#FF0000');
+  });
+
+  it('donne la capture, en Horde, au joueur qui vient toucher un joueur immobile', () => {
+    // Le battement releve lui-meme le pas de chacun: j1 avance vers j2, qui attend.
+    for (let graine = 1; graine <= 20; graine += 1) {
+      const apres = tick(duel(25, { graine }), vers({ x: 1, y: 0 }), BATTEMENT_MS);
+
+      expect(apres.mode).toBe('classique');
+      expect(apres.evenements).toHaveLength(1);
+      expect(apres.evenements[0]).toMatchObject({
+        type: 'captureJoueur',
+        attaquant: 'j1',
+        victime: 'j2',
+      });
+    }
+  });
+
+  it('ne compte pas pour un pas vers l autre le deplacement d un joueur coince', () => {
+    // j1 pousse contre le bord gauche de la carte et ne bouge pas: il ne va vers
+    // personne, et le duel avec j2, immobile lui aussi, reste un tirage.
+    const vainqueurs = new Set<string>();
+    for (let graine = 1; graine <= 20; graine += 1) {
+      let etat = duel(10, { graine });
+      etat = {
+        ...etat,
+        joueurs: {
+          ...etat.joueurs,
+          j1: { ...joueurDe(etat, 'j1'), position: { x: RAYON_ENTITE, y: 500 } },
+          j2: { ...joueurDe(etat, 'j2'), position: { x: RAYON_ENTITE + 10, y: 500 } },
+        },
+      };
+      const apres = tick(etat, vers({ x: -1, y: 0 }), BATTEMENT_MS);
+      vainqueurs.add(joueurDe(apres, 'j1').captures === 1 ? 'j1' : 'j2');
+    }
+
+    expect(vainqueurs).toEqual(new Set(['j1', 'j2']));
   });
 
   it('reste deterministe malgre le tirage au sort du duel', () => {

@@ -503,7 +503,7 @@ export function agirEnTactique(etat: EtatPartie, entrees: Entrees, dtMs: number)
  *
  * Le premier tir peut capturer le second tireur: l'ordre decide donc de l'issue d'un
  * tir croise. Il est tire au sort par le generateur a graine, pour la raison qui fait
- * tirer au sort les duels de contacts.ts: « le premier arrive dans la partie tire le
+ * tirer au sort les duels ex aequo de contacts.ts: « le premier arrive dans la partie tire le
  * premier » donnerait au meme joueur un avantage pendant toute la partie. Un seul
  * tireur ne consomme aucun tirage. Exportee pour les tirs des traqueurs de la Chasse
  * (etape 7.3), qui suivent la meme regle.

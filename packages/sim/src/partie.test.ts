@@ -50,6 +50,10 @@ const BATTEMENT_MS = 50;
  *
  * LES FAUX NINJAS NAISSENT D'AUTRES COULEURS DEPUIS L'ETAPE 5.8, jamais trop sombres: toutes
  * les references ont change de nouveau, comme voulu.
+ *
+ * LE DUEL ENTRE DEUX JOUEURS SE GAGNE EN ALLANT VERS L'AUTRE DEPUIS LE 14 OCTOBRE 2026, et
+ * non plus au tirage (contacts.ts): les cinq references ont change, comme voulu. Verifie le
+ * jour meme, elles redeviennent identiques quand le moteur ne transmet aucun pas.
  */
 const REGLAGES: ReglagesPartiels = {
   dureePartieS: 60,
