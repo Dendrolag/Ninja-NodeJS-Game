@@ -58,7 +58,7 @@ Faits de sons du jeu, à remplacer par ceux du porteur du projet (il suffit de c
 - Résultat: les 4 285 tests unitaires et d'intégration passent (projet `unitaires`; ceux de la base sont sautés en local, sans les clés de Neon). Types du code, des tests et du bout en bout, et linter: sans erreur. Le scénario `tests/e2e/among.spec.ts` passe, la panne réparée au clavier. Les trois réparations de la panne jouées au clavier dans la vraie fenêtre, dans un navigateur, par le harnais.
 - Empreinte des parties de référence (`tests/charge/empreinte.ts`): identique, jeu et flux, avant et après l'étape.
 - Couverture de packages/sim: 99,84 pour cent des instructions, comme au handoff 7.24.
-- État de la CI: voir le commit qui suit celui de l'étape.
+- État de la CI: verte sur `8c071f0` (types, linter et tests, base, bout en bout, banc du rendu), mise en ligne faite: la production rend ce commit (`/sante`, 14 octobre 2026). La pierre du jardin zen (`8e0dd7c`) est en ligne depuis la veille.
 
 ## Décisions et écarts au plan
 
@@ -69,6 +69,7 @@ Voir « Réconciliation ». Aucune autre.
 - Le titre de la note 1.10 est à confirmer par le porteur du projet.
 - L'image de la console n'est pas livrée: les consoles gardent leur dessin néon (réponse 5).
 - Les sons sont provisoires.
+- La CI de `e557325` (la fiche, avant cette session) a échoué sur deux tests de la base, `tests/base/succes.test.ts` et `profil.test.ts`, au délai de 30 secondes, et ont passé au commit suivant: une lenteur passagère de Neon, sans lien avec le code. À surveiller si elle revient.
 - La relance du générateur se juge au temps de la page: sur une page qui fige plus d'une seconde et demie pendant qu'on tire, le moteur tousse, comme la fumée déborde dans la tâche du même nom. On retire.
 
 ## Prochaine action exacte
