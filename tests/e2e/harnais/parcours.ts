@@ -730,7 +730,8 @@ function fauxNinjasAPrendre(partie: GameRoom, joueur: Joueur): readonly Joueur['
  * Mission: ce joueur va au contact d'un autre, jusqu'a ce que l'objectif soit atteint.
  *
  * Qui capture qui n'est pas decide ici: quand les deux en ont le droit, le moteur
- * tire au sort. L'objectif est donc fourni par le scenario, qui lira ensuite le
+ * le donne a celui qui va vers l'autre, et tire au sort entre deux joueurs qui s'en
+ * rapprochent autant. L'objectif est donc fourni par le scenario, qui lira ensuite le
  * resultat dans le serveur.
  */
 export function allerAuContact(

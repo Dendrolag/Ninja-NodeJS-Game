@@ -120,15 +120,16 @@ function pageDeLaStation(nuit: boolean): string {
   const solDecale = await pixelsDe(vide, 1200, 760);
   const dessusDecale = await pixelsDe(avecVaisseau, 1200, 760);
 
-  // De cap sud, la coque du vaisseau couvre a l'ecran une bande etroite, de 355 a 445 en
-  // largeur sous les ailes. Son ombre, poussee vers la droite et le bas, la deborde: le
-  // rectangle de 455 a 490 en largeur, de 240 a 330 en hauteur, n'a que l'ombre.
+  // De cap sud, l'aile droite du vaisseau s'arrete a l'ecran vers 498 en largeur, et son
+  // reacteur bleu vers 243 en hauteur. Son ombre, poussee vers la droite et le bas, les
+  // deborde: le rectangle de 505 a 540 en largeur, de 255 a 315 en hauteur, n'a que l'ombre.
+  // Deplace le 14 octobre 2026 pour le nouveau vaisseau, dont l'aile couvrait l'ancien.
   window.station = {
     fond: luminosite(sol, 0, 0, 800, 450),
     vaisseau: ecarts(sol, dessus),
     vaisseauDecale: ecarts(solDecale, dessusDecale),
-    bandeSansVaisseau: luminosite(sol, 455, 240, 490, 330),
-    bandeAvecVaisseau: luminosite(dessus, 455, 240, 490, 330),
+    bandeSansVaisseau: luminosite(sol, 505, 255, 540, 315),
+    bandeAvecVaisseau: luminosite(dessus, 505, 255, 540, 315),
   };
   rendu.dessiner(avecVaisseau, { x: 1000, y: 760, echelle: 0.5 });
   rendu.application.render();

@@ -42,9 +42,11 @@ import { demarrerLeJeu } from './harnais/serveur-de-jeu.js';
  *      cellule par cellule.
  *
  * LE SERVEUR EST L'ARBITRE. Quand deux joueurs se touchent et ont chacun le droit
- * de capturer, le moteur tire au sort le vainqueur. Le scenario ne le decide donc
- * pas: il le lit dans l'etat du serveur, puis verifie que chaque page raconte la
- * meme histoire que lui.
+ * de capturer, le moteur donne la capture a celui qui va vers l'autre, et tire au
+ * sort entre deux joueurs qui s'en rapprochent autant (14 octobre 2026). Bob, qui
+ * vient a Alice, capture donc en general, mais un battement ou ni l'un ni l'autre ne
+ * bouge reste un tirage. Le scenario ne le decide pas: il le lit dans l'etat du
+ * serveur, puis verifie que chaque page raconte la meme histoire que lui.
  *
  * UN SEUL POURSUIVANT. Chacun capture d'abord un faux ninja, puis Bob va jusqu'a
  * Alice, qui l'attend sur place. Deux joueurs qui se cherchent l'un l'autre peuvent
