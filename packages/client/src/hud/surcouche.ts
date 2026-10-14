@@ -546,6 +546,15 @@ function monterMinimapAmong(
   fond.className = 'hud-among-carte-fond';
   fond.alt = '';
   carte.append(fond);
+
+  // La touche M, ecrite dans un coin de la mini-carte (demande du porteur du projet du
+  // 14 octobre 2026): rien ne disait au clavier comment ouvrir la carte. Cachee sur un ecran
+  // tactile, ou l'on touche la mini-carte.
+  if (basculerLaCarte !== undefined) {
+    const touche = element(doc, 'kbd', 'hud-among-carte-touche', carte);
+    touche.textContent = 'M';
+    touche.setAttribute('aria-hidden', 'true');
+  }
   const gong = element(doc, 'span', 'hud-among-carte-gong', carte);
   const moi = element(doc, 'span', 'hud-among-carte-moi', carte);
   /** Les points des stations deja poses. */

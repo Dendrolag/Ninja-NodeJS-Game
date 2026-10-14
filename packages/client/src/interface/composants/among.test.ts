@@ -323,4 +323,41 @@ describe('l execution (etape 7.22, rendu 7C)', () => {
     expect(execution?.querySelectorAll('.among-execution-moitie')).toHaveLength(0);
     ecrans.demonter();
   });
+
+  it('ne remontre pas le dernier execute quand un vote suivant n execute personne', () => {
+    // Retour d'essai du porteur du projet, 14 octobre 2026: l'execute d'un vote precedent
+    // restait coupe en deux sous la table, aux votes suivants sans execute.
+    const client = { voter: vi.fn() } as unknown as Client;
+    const ecrans = monterEcransAmong(document, client);
+    document.body.append(ecrans.racine);
+    const personne: ReunionClient = {
+      ...RESULTAT,
+      numero: 2,
+      resultat: { quoi: 'resultat', votes: {}, decompte: [{ cible: null, voix: 4 }] },
+    };
+    ecrans.afficher(etat('ejection', RESULTAT));
+    ecrans.afficher(etat('discussion', { ...REUNION, numero: 2 }));
+    ecrans.afficher(etat('ejection', personne));
+
+    const execution = ecrans.racine.querySelector<HTMLElement>('.among-execution');
+
+    expect(execution?.classList.contains('tranche')).toBe(false);
+    expect(execution?.querySelectorAll('.among-execution-moitie')).toHaveLength(0);
+    ecrans.demonter();
+  });
+});
+
+describe('le gong de la table', () => {
+  it('montre l image du gong de la carte, au centre de la table', () => {
+    const client = { voter: vi.fn() } as unknown as Client;
+    const ecrans = monterEcransAmong(document, client);
+    document.body.append(ecrans.racine);
+    ecrans.afficher(etat('discussion', REUNION));
+
+    const gong = ecrans.racine.querySelector<HTMLElement>('.among-gong');
+
+    expect(gong?.classList.contains('en-image')).toBe(true);
+    expect(gong?.querySelector('img')?.getAttribute('src')).toBe('/assets/among/map1/gong.png');
+    ecrans.demonter();
+  });
 });

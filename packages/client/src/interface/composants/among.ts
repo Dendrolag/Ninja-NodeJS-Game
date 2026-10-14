@@ -22,6 +22,9 @@
  * Le texte venu d'un joueur passe par textContent, jamais par du balisage.
  */
 
+import type { IdentifiantCarte } from '@neon-ninja/shared';
+import { LIEUX_DES_CARTES, RACINE_RESSOURCES, cheminObjetDuDecor } from '@neon-ninja/shared';
+
 import type { Client } from '../../client.js';
 import type { EtatClient } from '../../etat.js';
 import { avatarDeNinja } from '../avatarNinja.js';
@@ -229,7 +232,10 @@ export function monterEcransAmong(doc: Document, client: Client): EcransAmong {
   traits.setAttribute('class', 'among-traits');
   traits.setAttribute('aria-hidden', 'true');
   const gong = creer(doc, 'div', { classe: 'among-gong', texte: 'GONG' });
-  table.append(traits, gong);
+  // Le gong sous les traits, que son image ne cache pas.
+  table.append(gong, traits);
+  /** La carte dont le gong est pose au centre de la table. */
+  let carteDuGong: IdentifiantCarte | undefined;
   const passer = bouton(
     doc,
     { classe: 'bouton bouton-secondaire among-passer', texte: 'Passer' },
@@ -275,8 +281,13 @@ export function monterEcransAmong(doc: Document, client: Client): EcransAmong {
 
   /** Les places deja posees autour de la table, par joueur. */
   const places = new Map<string, { element: HTMLButtonElement; voix: HTMLElement }>();
-  /** L'execute deja pose. */
-  let ejectePose: string | undefined;
+  /**
+   * L'execute deja pose: null pour un vote qui n'execute personne, undefined avant tout
+   * resultat. Les deux se distinguent: sans quoi, apres une execution, un vote sans execute ne
+   * reposait rien et l'on revoyait le dernier execute coupe en deux (retour d'essai du porteur
+   * du projet, 14 octobre 2026).
+   */
+  let ejectePose: string | null | undefined;
   /** Ce qui est affiche, pour ne refaire la rangee qu'a son changement. */
   let rangeeAffichee = '';
   /** Les traits dessines et la taille de la table, pour ne les refaire qu'a leur changement. */
@@ -420,10 +431,40 @@ export function monterEcransAmong(doc: Document, client: Client): EcransAmong {
     });
   };
 
+  /**
+   * Le gong au centre de la table: l'image de celui de la carte (demande du porteur du projet du
+   * 14 octobre 2026), ou le mot pour une carte qui n'en a pas. Posee a un changement de carte.
+   */
+  const poserLeGong = (carte: IdentifiantCarte | undefined): void => {
+    if (carte === carteDuGong) {
+      return;
+    }
+
+    carteDuGong = carte;
+    const image =
+      carte === undefined
+        ? undefined
+        : LIEUX_DES_CARTES[carte]?.objets.find((objet) => objet.lieu === 'gong')?.image;
+    gong.classList.toggle('en-image', image !== undefined);
+
+    if (carte === undefined || image === undefined) {
+      gong.replaceChildren('GONG');
+
+      return;
+    }
+
+    gong.replaceChildren(
+      creer(doc, 'img', {
+        classe: 'among-gong-image',
+        attributs: { src: `${RACINE_RESSOURCES}/${cheminObjetDuDecor(carte, image)}`, alt: 'Gong' },
+      }),
+    );
+  };
+
   const afficherLEgout = (ecran: Extract<EcranAmong, { ecran: 'ejection' }>): void => {
     ecrireTexte(texteEjection, ecran.texte);
     ecrireTexte(detailEjection, ecran.detail);
-    const id = ecran.ejecte?.id;
+    const id = ecran.ejecte?.id ?? null;
 
     if (id !== ejectePose) {
       ejectePose = id;
@@ -468,6 +509,10 @@ export function monterEcransAmong(doc: Document, client: Client): EcransAmong {
 
       if (ecran.ecran === 'revelation') {
         afficherLaRangee(ecran);
+      }
+
+      if (ecran.ecran === 'reunion' || ecran.ecran === 'ejection') {
+        poserLeGong(etat.salon?.reglages.carte);
       }
 
       if (ecran.ecran === 'reunion') {

@@ -1285,6 +1285,23 @@
   pointer-events: auto;
 }
 
+/* La touche qui ouvre la carte, dans le coin haut droit de la mini-carte, au-dessus des points. */
+.hud-among-carte-touche {
+  position: absolute;
+  z-index: 1;
+  top: 4px;
+  right: 4px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: #2ee6ff;
+  box-shadow: 0 0 6px #2ee6ff;
+  color: #0b1020;
+  font-family: var(--police-donnees);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
 /*
  * Notre liste de taches, sous la mini-carte (etape 7.21, rendu 4B au bureau). Sur telephone,
  * rendu 4A: elle ne se lit que dans la carte plein ecran, le bandeau restant petit.
@@ -1809,7 +1826,8 @@
 @media (pointer: coarse) {
   /* Pas de clavier: les touches ne disent rien. Le bouton de la poche remplace la touche E. */
   .hud-bouton-touche,
-  .hud-poche-touche {
+  .hud-poche-touche,
+  .hud-among-carte-touche {
     display: none;
   }
 
@@ -2215,6 +2233,22 @@
   font-size: 12px;
   font-weight: 700;
   transform: translate(-50%, -50%);
+}
+
+/* Le gong de la carte, en image: ni cercle ni lueur, le pavillon dessine suffit. */
+.among-gong.en-image {
+  width: 104px;
+  height: 120px;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.among-gong-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--cyan) 45%, transparent));
 }
 
 .among-traits {

@@ -506,4 +506,19 @@ describe('l alerte d un sabotage d Among Ninjas (etape 7.22)', () => {
     expect(alerte?.hidden).toBe(true);
     expect(hote.querySelector<HTMLElement>('.hud-among-carte-poste')?.hidden).toBe(true);
   });
+
+  it('ecrit la touche M sur la mini-carte qui ouvre la carte, et rien sans carte a ouvrir', () => {
+    // Demande du porteur du projet, 14 octobre 2026: rien ne disait comment ouvrir la carte.
+    const avec = document.createElement('div');
+    monterSurcouche({
+      hote: avec,
+      agir: () => undefined,
+      basculerLaCarte: () => undefined,
+    }).afficher(hudAmong(undefined));
+    const { hote: sans, monte } = surcoucheAmong();
+    monte.afficher(hudAmong(undefined));
+
+    expect(avec.querySelector('.hud-among-carte .hud-among-carte-touche')?.textContent).toBe('M');
+    expect(sans.querySelector('.hud-among-carte-touche')).toBeNull();
+  });
 });
