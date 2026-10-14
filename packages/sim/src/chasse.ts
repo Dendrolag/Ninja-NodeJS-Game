@@ -21,7 +21,7 @@
  *     le devient; a la suite d'une elimination, la partie est decidee.
  *   - Une proie marque en parcourant la carte, un traqueur en capturant et en gardant ses
  *     vies.
- *   - Un malus frappe l'autre camp.
+ *   - Un malus frappe l'autre camp. Seul un traqueur ramasse un malus ou la revelation.
  *
  * Les ninjas de la carte servent de camouflage: toucher ne fait rien, et il n'y a pas de
  * bots noirs, que les reglages imposes par le mode retirent (imposerLesReglagesDuMode,
@@ -41,7 +41,7 @@ import type {
   TraqueurEnChasse,
 } from './etat.js';
 import type { Entrees } from './moteur.js';
-import type { VictimeDuMalus } from './objets.js';
+import type { DroitDeRamasser, VictimeDuMalus } from './objets.js';
 import { dansLeCone, ordreDesTirs } from './tactique.js';
 
 /** Aucun joueur hors jeu: la reponse des modes qui n'eliminent personne. */
@@ -493,6 +493,19 @@ export function amputerLeParcours(
  */
 export const malusEnChasse: VictimeDuMalus = (ramasseur, autre) =>
   (ramasseur.couleur === COULEUR_DES_TRAQUEURS) !== (autre.couleur === COULEUR_DES_TRAQUEURS);
+
+/**
+ * Qui ramasse quoi, en Chasse (decision du porteur du projet du 14 octobre 2026, etude
+ * docs/design/etude-traqueur-chasse.md): les malus et la revelation ne se ramassent que par un
+ * traqueur. Les proies, plus nombreuses, retournaient surtout les malus contre lui; la
+ * revelation lui dit ou regarder. La vitesse, l'invincibilite et les objets de poche restent a
+ * tous. Une proie qui passe sur un objet interdit ne declenche rien: il reste sur la carte.
+ *
+ * Le camp se lit a la couleur, comme pour le malus.
+ */
+export const ramassageEnChasse: DroitDeRamasser = (ramasseur, objet) =>
+  ramasseur.couleur === COULEUR_DES_TRAQUEURS ||
+  (objet.categorie !== 'malus' && objet.nature !== 'revelation');
 
 /**
  * Les points d'un joueur en Chasse (decisions 14 et 15 du porteur du projet).

@@ -74,6 +74,7 @@ import {
   horsJeuEnChasse,
   lancerLaChasse,
   malusEnChasse,
+  ramassageEnChasse,
 } from './chasse.js';
 import type { RegleDeResolution } from './contacts.js';
 import {
@@ -96,11 +97,12 @@ import { agirEnHorde, lancerLaHorde } from './horde.js';
 import type { EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
 import { agirEnMassacre, lancerLeMassacre, massacreDecide, perteEnMassacre } from './massacre.js';
 import { COMPTEUR_CAPTURE_PRET, bonusActif, malusActif } from './etat.js';
-import type { VictimeDuMalus } from './objets.js';
+import type { DroitDeRamasser, VictimeDuMalus } from './objets.js';
 import {
   faireApparaitreLesObjets,
   fairePasserLeTempsSurLesObjets,
   malusClassique,
+  toutSeRamasse,
   ramasserLesObjets,
 } from './objets.js';
 import { avancerLesMines } from './mines.js';
@@ -218,6 +220,11 @@ export interface JeuDeRegles {
    */
   readonly victimeDuMalus: VictimeDuMalus;
   /**
+   * Qui a le droit de ramasser quoi: tout le monde tout, sauf en Chasse, ou les malus et la
+   * revelation sont aux traqueurs (14 octobre 2026).
+   */
+  readonly droitDeRamasser: DroitDeRamasser;
+  /**
    * Ce que le mode fait de l'etat au lancement de la partie, une fois les bots poses. Rien
    * dans les autres modes, sans aucun tirage; la Chasse y tire ses premiers traqueurs.
    */
@@ -303,6 +310,7 @@ export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>>
     resoudreContacts: regleHorde,
     perteFaceAuBotNoir: perteClassique,
     victimeDuMalus: malusClassique,
+    droitDeRamasser: toutSeRamasse,
     lancer: lancerLaHorde,
     estDecidee: jamaisAvantLeTerme,
     horsJeu: personneHorsJeu,
@@ -316,6 +324,7 @@ export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>>
     resoudreContacts: regleTactique,
     perteFaceAuBotNoir: perteClassique,
     victimeDuMalus: malusClassique,
+    droitDeRamasser: toutSeRamasse,
     lancer: sansPreparation,
     estDecidee: jamaisAvantLeTerme,
     horsJeu: personneHorsJeu,
@@ -329,6 +338,7 @@ export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>>
     resoudreContacts: regleEquipes,
     perteFaceAuBotNoir: perteEnEquipe,
     victimeDuMalus: malusEnEquipe,
+    droitDeRamasser: toutSeRamasse,
     lancer: sansPreparation,
     estDecidee: jamaisAvantLeTerme,
     horsJeu: personneHorsJeu,
@@ -343,6 +353,7 @@ export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>>
     // Sans bots noirs, la question ne se pose pas: celle du Classique, qui ne sert pas.
     perteFaceAuBotNoir: perteClassique,
     victimeDuMalus: malusEnChasse,
+    droitDeRamasser: ramassageEnChasse,
     lancer: lancerLaChasse,
     estDecidee: chasseDecidee,
     horsJeu: horsJeuEnChasse,
@@ -356,6 +367,7 @@ export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>>
     resoudreContacts: regleMassacre,
     perteFaceAuBotNoir: perteEnMassacre,
     victimeDuMalus: malusClassique,
+    droitDeRamasser: toutSeRamasse,
     lancer: lancerLeMassacre,
     estDecidee: massacreDecide,
     horsJeu: personneHorsJeu,
@@ -370,6 +382,7 @@ export const REGLES_DES_MODES: Readonly<Record<EtatPartie['mode'], JeuDeRegles>>
     // Sans bots noirs ni malus, ces deux questions ne se posent pas: celles du Classique.
     perteFaceAuBotNoir: perteClassique,
     victimeDuMalus: malusClassique,
+    droitDeRamasser: toutSeRamasse,
     lancer: lancerAmong,
     estDecidee: amongDecide,
     horsJeu: personneHorsJeu,
@@ -459,7 +472,12 @@ export function tick(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPart
   const contacts = resoudreContacts(mines, detecterContacts(mines), regles.resoudreContacts, pas);
   const evade = regles.attraperLEvade(contacts, regles.horsJeu(contacts));
 
-  return ramasserLesObjets(evade, regles.victimeDuMalus, regles.horsJeu(evade));
+  return ramasserLesObjets(
+    evade,
+    regles.victimeDuMalus,
+    regles.horsJeu(evade),
+    regles.droitDeRamasser,
+  );
 }
 
 /** Un mode qui n'agit pas sur les entrees: l'etat est rendu tel quel. */

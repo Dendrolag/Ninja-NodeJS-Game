@@ -184,6 +184,7 @@ const REGLES_DES_MODES: Readonly<Record<Mode, readonly string[]>> = {
   chasse: [
     `Les traqueurs, tirés au sort, tirent avec Espace ou le bouton Capturer. Une proie touchée devient traqueur. Un PNJ touché leur coûte une vie, et à la ${rangEnLettres(CHASSE.VIES_DES_TRAQUEURS)} ils sont éliminés.`,
     `Les proies marquent en bougeant. Les traqueurs marquent ${String(CHASSE.POINTS_PAR_CAPTURE)} points par prise et ${String(CHASSE.POINTS_PAR_VIE)} par vie restante.`,
+    'Les malus et la Révélation sont aux traqueurs : une proie passe dessus sans les prendre.',
     'Pas de Black Ninjas ici.',
   ],
   massacre: [

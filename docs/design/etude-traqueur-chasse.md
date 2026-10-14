@@ -1,7 +1,7 @@
 # Étude - Rendre le rôle du traqueur moins difficile, en Chasse
 
 Date: 14 octobre 2026
-Statut: étude seulement, rien n'est décidé. Les questions au porteur du projet sont en section 5.
+Statut: tranchée le 14 octobre 2026. Le porteur du projet a retenu la recommandation (section 4): les malus et la révélation ne se ramassent que par un traqueur, la vitesse et l'invincibilité restent à tous, et une proie qui passe sur un objet interdit ne déclenche rien. Les nombres (question 4) ne bougent pas, en attendant un essai. Fait en version 1.9.8.
 
 ## 1. La demande
 

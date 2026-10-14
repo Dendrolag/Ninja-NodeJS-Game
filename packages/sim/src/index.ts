@@ -133,6 +133,7 @@ export {
   infecter,
   lancerLaChasse,
   malusEnChasse,
+  ramassageEnChasse,
   peutTirer,
   pointsEnChasse,
   tirerEnChasse,
@@ -267,7 +268,7 @@ export {
   toutesLesEntites,
 } from './etat.js';
 
-export type { OptionsPoseObjet, VictimeDuMalus } from './objets.js';
+export type { DroitDeRamasser, OptionsPoseObjet, VictimeDuMalus } from './objets.js';
 export {
   faireApparaitreLesObjets,
   fairePasserLeTempsSurLesObjets,
@@ -277,6 +278,7 @@ export {
   ramasser,
   ramasserLesObjets,
   retirerObjet,
+  toutSeRamasse,
 } from './objets.js';
 
 export { mettreEnPause, reprendre } from './pause.js';

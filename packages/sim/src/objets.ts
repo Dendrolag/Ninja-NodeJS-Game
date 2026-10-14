@@ -304,18 +304,31 @@ export type VictimeDuMalus = (ramasseur: Joueur, autre: Joueur) => boolean;
 export const malusClassique: VictimeDuMalus = () => true;
 
 /**
+ * Ce joueur a-t-il le droit de ramasser cet objet ?
+ *
+ * C'est une decision du mode de jeu (JeuDeRegles, dans moteur.ts). Un joueur qui n'en a pas
+ * le droit passe sur l'objet sans rien declencher: l'objet reste sur la carte.
+ */
+export type DroitDeRamasser = (ramasseur: Joueur, objet: ObjetRamassable) => boolean;
+
+/** Tous les modes sauf la Chasse: chacun ramasse tout. */
+export const toutSeRamasse: DroitDeRamasser = () => true;
+
+/**
  * Ramasse tous les objets sur lesquels un joueur se trouve.
  *
  * Les joueurs sont parcourus dans leur ordre d'arrivee, et chacun peut ramasser
  * plusieurs objets d'un coup s'il en couvre plusieurs, comme dans le legacy.
  *
  * Qui subit un malus depend du mode: le moteur passe la regle de son jeu de regles, et
- * celle du Classique vaut par defaut (etape 7.2).
+ * celle du Classique vaut par defaut (etape 7.2). Qui a le droit de ramasser quoi aussi: tout
+ * le monde tout, sauf en Chasse (14 octobre 2026).
  */
 export function ramasserLesObjets(
   etat: EtatPartie,
   victime: VictimeDuMalus = malusClassique,
   horsJeu: ReadonlySet<IdentifiantEntite> = new Set(),
+  droit: DroitDeRamasser = toutSeRamasse,
 ): EtatPartie {
   let courant = etat;
 
@@ -328,7 +341,7 @@ export function ramasserLesObjets(
     }
 
     for (const objet of Object.values(courant.objets)) {
-      if (aPortee(joueur.position, objet.position)) {
+      if (aPortee(joueur.position, objet.position) && droit(joueur, objet)) {
         courant = ramasser(
           courant,
           joueur.id,

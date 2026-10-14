@@ -25,6 +25,7 @@ import {
   malusEnChasse,
   peutTirer,
   pointsEnChasse,
+  ramassageEnChasse,
   tirerEnChasse,
   traqueurEnJeu,
 } from './chasse.js';
@@ -595,6 +596,87 @@ describe('le malus en Chasse', () => {
   });
 });
 
+describe('le ramassage en Chasse (14 octobre 2026)', () => {
+  /** La Chasse de chasseAvec, avec cet objet sous la proie et le meme sous le traqueur. */
+  function objetsSousChacun(
+    objet:
+      | { categorie: 'bonus'; nature: 'vitesse' | 'invincibilite' | 'revelation' }
+      | {
+          categorie: 'malus';
+          nature: 'flou';
+        },
+  ): EtatPartie {
+    let etat = chasseAvec();
+    etat = poserObjet(etat, { ...objet, position: { x: 1500, y: 1000 } });
+    return poserObjet(etat, { ...objet, position: { x: 500, y: 500 } });
+  }
+
+  /** Ramasse comme le moteur le fait en Chasse. */
+  function ramasserEnChasse(etat: EtatPartie): EtatPartie {
+    return ramasserLesObjets(etat, malusEnChasse, horsJeuEnChasse(etat), ramassageEnChasse);
+  }
+
+  it('laisse un malus sous une proie, sans rien declencher, et le donne au traqueur', () => {
+    const avant = objetsSousChacun({ categorie: 'malus', nature: 'flou' });
+    const apres = ramasserEnChasse(avant);
+
+    // Seul celui du traqueur est pris: il frappe les proies, et le sien reste au sol.
+    expect(Object.values(apres.objets).map((objet) => objet.position)).toEqual([
+      { x: 1500, y: 1000 },
+    ]);
+    expect(joueurDe(apres, 'proie').malusRestantsMs.flou).toBeGreaterThan(0);
+    expect(joueurDe(apres, 'loin').malusRestantsMs.flou).toBeGreaterThan(0);
+    expect(joueurDe(apres, 'traqueur').malusRestantsMs.flou).toBe(0);
+  });
+
+  it('ne laisse la revelation qu au traqueur', () => {
+    const apres = ramasserEnChasse(objetsSousChacun({ categorie: 'bonus', nature: 'revelation' }));
+
+    expect(joueurDe(apres, 'traqueur').bonusRestantsMs.revelation).toBeGreaterThan(0);
+    expect(joueurDe(apres, 'proie').bonusRestantsMs.revelation).toBe(0);
+    expect(Object.keys(apres.objets)).toHaveLength(1);
+  });
+
+  it('laisse la vitesse et l invincibilite a tous', () => {
+    for (const nature of ['vitesse', 'invincibilite'] as const) {
+      const apres = ramasserEnChasse(objetsSousChacun({ categorie: 'bonus', nature }));
+
+      expect(joueurDe(apres, 'traqueur').bonusRestantsMs[nature]).toBeGreaterThan(0);
+      expect(joueurDe(apres, 'proie').bonusRestantsMs[nature]).toBeGreaterThan(0);
+      expect(Object.keys(apres.objets)).toHaveLength(0);
+    }
+  });
+
+  it('est la regle du moteur en Chasse seulement: ailleurs, chacun ramasse tout', () => {
+    const malus = objetsSousChacun({ categorie: 'malus', nature: 'flou' });
+    const etat = chasseAvec();
+
+    expect(
+      REGLES_DES_MODES.chasse.droitDeRamasser(
+        joueurDe(etat, 'proie'),
+        Object.values(malus.objets)[0]!,
+      ),
+    ).toBe(false);
+    for (const mode of ['classique', 'tactique', 'equipes', 'massacre', 'among'] as const) {
+      expect(
+        REGLES_DES_MODES[mode].droitDeRamasser(
+          joueurDe(etat, 'proie'),
+          Object.values(malus.objets)[0]!,
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it('se joue dans le moteur: une proie qui marche sur un malus le laisse au sol', () => {
+    let etat = chasseAvec();
+    etat = poserObjet(etat, { categorie: 'malus', nature: 'flou', position: { x: 1500, y: 1000 } });
+    const apres = tick(etat, {}, 50);
+
+    expect(Object.keys(apres.objets)).toHaveLength(1);
+    expect(joueurDe(apres, 'traqueur').malusRestantsMs.flou).toBe(0);
+  });
+});
+
 describe('les points en Chasse', () => {
   it('donnent a une proie un point par tranche de cent pixels parcourus', () => {
     const depart = chasseAvec();
@@ -698,6 +780,7 @@ describe('le jeu de regles Chasse dans le moteur', () => {
       agir: agirEnChasse,
       resoudreContacts: regleChasse,
       victimeDuMalus: malusEnChasse,
+      droitDeRamasser: ramassageEnChasse,
       lancer: lancerLaChasse,
       estDecidee: chasseDecidee,
       horsJeu: horsJeuEnChasse,
