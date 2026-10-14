@@ -182,7 +182,8 @@ describe('se connecter et s inscrire', () => {
 
     await laisserRepondre();
 
-    expect(requetes()).toEqual(['connecter', 'moi', 'amis', 'defis']);
+    // Les defis se lisent des l'arrivee sur l'accueil, avant les amis.
+    expect(requetes()).toEqual(['connecter', 'moi', 'defis', 'amis']);
     expect(coffre.lire()).toBe(JETON_DESSAI);
     expect(client.etat.session.nature).toBe('compte');
     expect(client.etat.demandeDeCompte.enCours).toBe(false);
@@ -195,7 +196,7 @@ describe('se connecter et s inscrire', () => {
     client.sInscrire({ pseudo: 'Bob', motDePasse: 'correct cheval' });
     await laisserRepondre();
 
-    expect(requetes()).toEqual(['inscrire', 'moi', 'amis', 'defis']);
+    expect(requetes()).toEqual(['inscrire', 'moi', 'defis', 'amis']);
     expect(
       client.etat.session.nature === 'compte' ? client.etat.session.progression.pseudo : '',
     ).toBe('Bob');

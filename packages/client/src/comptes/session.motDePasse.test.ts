@@ -133,8 +133,9 @@ describe('la reinitialisation', () => {
 
     await laisserRepondre();
 
-    // La session ouverte lit aussi ses amis (etape 3.6) et ses defis (etape 3.10).
-    expect(requetes()).toEqual(['reinitialiser', 'moi', 'amis', 'defis']);
+    // La session ouverte lit aussi ses defis (etape 3.10), des l'arrivee sur l'accueil, et ses
+    // amis (etape 3.6).
+    expect(requetes()).toEqual(['reinitialiser', 'moi', 'defis', 'amis']);
     expect(api.appels[0]?.argument).toEqual(DEMANDE);
     expect(coffre.lire()).toBe(JETON_DESSAI);
     expect(client.etat.session.nature).toBe('compte');

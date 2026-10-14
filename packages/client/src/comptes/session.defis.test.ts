@@ -12,6 +12,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { Client } from '../client.js';
 import { creerClient } from '../client.js';
 import { creerHorlogeClientManuelle } from '../horloge.js';
+import { salonEnCours } from '../massacre.essais.js';
 import type { ReseauFactice } from '../reseau.js';
 import { creerReseauFactice } from '../reseau.js';
 import type { ApiComptesFactice } from './api.js';
@@ -79,6 +80,19 @@ describe('les defis d un compte', () => {
     reseau.recevoir('progressionDeFin', recapitulatif);
 
     expect(client.etat.defis).toEqual({ statut: 'inconnu' });
+  });
+
+  it('se relisent en sortant d une partie, qui efface l etat', () => {
+    // Retour du porteur du projet, 14 octobre 2026: de retour a l'accueil apres une partie,
+    // les defis n'apparaissaient qu'au rechargement de la page.
+    client.rejoindre('Alice');
+    reseau.dernier('rejoindre')?.[1]({ valide: true, valeur: salonEnCours('classique') });
+    expect(client.etat.ecran).toBe('jeu');
+
+    client.quitter();
+
+    expect(client.etat.ecran).toBe('accueil');
+    expect(lecturesDesDefis()).toBe(2);
   });
 
   it('ne disent rien d un refus: le bloc de l accueil reste absent', async () => {

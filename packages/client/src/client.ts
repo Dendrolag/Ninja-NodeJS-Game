@@ -364,6 +364,22 @@ export function creerClient(options: OptionsClient): Client {
     ecouter,
   });
 
+  // Les defis de la semaine se relisent a chaque arrivee sur l'accueil, par quelque chemin
+  // que ce soit (etape 3.10). Ils ne se relisaient qu'a la navigation: en sortant d'une
+  // partie, qui efface l'etat et donc les defis, l'accueil s'affichait sans eux jusqu'a la
+  // navigation suivante ou au rechargement (retour du porteur du projet, 14 octobre 2026).
+  let ecranPrecedent = magasin.etat.ecran;
+  ecouter(
+    magasin.abonner((etat) => {
+      const arrivee = etat.ecran === 'accueil' && ecranPrecedent !== 'accueil';
+      ecranPrecedent = etat.ecran;
+
+      if (arrivee) {
+        session.chargerLesDefis();
+      }
+    }),
+  );
+
   // -- Le salon -------------------------------------------------------------
 
   ecouter(
@@ -683,13 +699,11 @@ export function creerClient(options: OptionsClient): Client {
 
       // La liste des parties aussi: une photographie ancienne proposerait des
       // parties deja pleines ou lancees.
+      // Les defis de la semaine, eux, se relisent a toute arrivee sur l'accueil (plus haut).
       if (magasin.etat.ecran === 'profil') {
         session.chargerLeProfil();
       } else if (magasin.etat.ecran === 'parties') {
         listerParties();
-      } else if (magasin.etat.ecran === 'accueil') {
-        // Les defis de la semaine ont pu avancer depuis la derniere lecture (etape 3.10).
-        session.chargerLesDefis();
       }
 
       // Les amis se relisent a chaque navigation (etape 3.6): aucune demande recue n'est
