@@ -84,9 +84,12 @@ const CHAMPS_ISO = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/;
  *   toujours d'une note de version, que les joueurs liront une fois: un test exige
  *   que la note existe;
  * - le troisieme chiffre (1.5.X) avance pour une correction ou un reglage, sans note.
+ * Les petites evolutions du mode Among Ninjas restent en 1.9 et n'avancent que le troisieme
+ * chiffre, sans note (decision du porteur du projet du 14 octobre 2026): les reparations a la
+ * main de l'etape 7.27, parues un jour en 1.10.0 et 1.10.1, sont redevenues la 1.9.5.
  * Une etape qui ne change rien de ce que voit le joueur ne le touche pas.
  */
-export const NUMERO_DE_VERSION = '1.10.1';
+export const NUMERO_DE_VERSION = '1.9.5';
 
 /**
  * La version mineure d'un numero, celle qui porte une note: « 1.5 » pour « 1.5.3 ».

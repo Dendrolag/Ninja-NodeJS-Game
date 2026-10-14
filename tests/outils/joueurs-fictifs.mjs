@@ -3,14 +3,25 @@
 // (etape 7.20): il faut cinq joueurs pour lancer. Chacun marche au hasard; un assassin tente un
 // meurtre de temps en temps; en reunion, chacun vote, contre un joueur vivant ou pour passer.
 //
+// LES SABOTAGES ET LA MALEDICTION (14 octobre 2026, pour essayer les reparations en production):
+// un assassin, vivant ou fantome, demande un sabotage toutes les quelques secondes, et une proie
+// fantome maudit les assassins de meme. Le serveur refuse tant que la recharge commune court, ou
+// qu'un sabotage est en cours: le sabotage part donc des que la regle le permet. Chacun dit le
+// sien, et la reparation que la partie a tiree pour la panne et la surchauffe.
+//
 // A lancer contre un serveur local sans base (tests/outils/jeu-sans-base.mjs), une fois la
 // partie creee dans la page:
 //
-//   node tests/outils/joueurs-fictifs.mjs http://localhost:3000 <identifiant ou code> [nombre]
+//   node tests/outils/joueurs-fictifs.mjs http://localhost:3000 <identifiant ou code> [nombre] [sabotages]
 //
 // « auto » a la place de l'identifiant prend la premiere partie publique Among Ninjas au salon;
 // une partie privee se rejoint par son code. Sans nombre, quatre joueurs. Ctrl+C les fait tous
 // partir.
+//
+// Les sabotages, separes par des virgules, sont ceux que les assassins fictifs demandent, au
+// hasard parmi eux: tous par defaut (flou, negatif, controlesInverses, nuage, panne,
+// surchauffe), « panne,surchauffe » pour n'essayer que les reparations, « aucun » pour qu'ils
+// ne sabotent pas.
 //
 // EN PRODUCTION AUSSI (12 octobre 2026), pour essayer Among Ninjas sans quatre amis: creer une
 // partie PRIVEE dans la page, puis viser le serveur de jeu avec son code:
@@ -28,7 +39,8 @@ const { io } = createRequire(new URL('../../packages/server/package.json', impor
   'socket.io-client',
 );
 
-const [, , adresse = 'http://localhost:3000', partie, nombreDemande = '4'] = process.argv;
+const [, , adresse = 'http://localhost:3000', partie, nombreDemande = '4', sabotagesDemandes] =
+  process.argv;
 
 if (partie === undefined) {
   console.error(
@@ -52,6 +64,29 @@ const PSEUDOS = [
 ];
 const nombre = Math.min(Number(nombreDemande), PSEUDOS.length);
 const joueurs = [];
+
+/** Les sabotages que les assassins fictifs demandent, et les malus que les fantomes infligent. */
+const SABOTAGES = ['flou', 'negatif', 'controlesInverses', 'nuage', 'panne', 'surchauffe'];
+const MALEDICTIONS = ['flou', 'negatif', 'controlesInverses'];
+const sabotages =
+  sabotagesDemandes === undefined
+    ? SABOTAGES
+    : sabotagesDemandes === 'aucun'
+      ? []
+      : sabotagesDemandes.split(',').filter((nature) => SABOTAGES.includes(nature));
+
+if (sabotagesDemandes !== undefined && sabotagesDemandes !== 'aucun' && sabotages.length === 0) {
+  console.error(`Aucun sabotage connu dans « ${sabotagesDemandes} »: ${SABOTAGES.join(', ')}.`);
+  process.exit(1);
+}
+
+/** L'ecart entre deux demandes d'un meme joueur fictif, en millisecondes. */
+const CADENCE_DES_SABOTAGES_MS = 3000;
+
+/** Un element d'une liste, au hasard. */
+function auHasard(liste) {
+  return liste[Math.floor(Math.random() * liste.length)];
+}
 
 /** La version que sert le serveur, a presenter a chaque connexion; aucune en developpement. */
 async function versionDuServeur() {
@@ -170,11 +205,50 @@ function joueur(pseudo) {
     }
   }, 1200);
 
+  // Les sabotages d'un assassin, vivant ou fantome, et la malediction d'une proie fantome: une
+  // demande toutes les quelques secondes, que le serveur refuse tant que la regle l'interdit.
+  // Chacun se souvient de sa derniere demande, pour dire la sienne quand elle part.
+  let demande;
+  const sabotage = setInterval(
+    () => {
+      if (prive?.role === 'tueur' && sabotages.length > 0) {
+        const nature = auHasard(sabotages);
+        const station =
+          nature === 'nuage' ? Math.floor(Math.random() * prive.stations.length) : undefined;
+        demande = { nature, a: Date.now() };
+        socket.emit('saboter', station === undefined ? { nature } : { nature, station });
+      } else if (prive?.role === 'proie' && prive.fantome) {
+        demande = { nature: auHasard(MALEDICTIONS), a: Date.now() };
+        socket.emit('maudire', demande.nature);
+      }
+    },
+    CADENCE_DES_SABOTAGES_MS + Math.random() * 1000,
+  );
+
+  /** Ce joueur vient-il de demander ce qui vient de partir. */
+  const parLui = (nature) => demande?.nature === nature && Date.now() - demande.a < 1500;
+
+  socket.on('sabotage', (vu) => {
+    if (vu.quoi === 'lance' && prive?.role === 'tueur' && parLui(vu.nature)) {
+      demande = undefined;
+      console.log(
+        `${pseudo} sabote: ${vu.nature}${vu.reparation === undefined ? '' : ` (a reparer: ${vu.reparation})`}`,
+      );
+    }
+  });
+
+  socket.on('malediction', (vue) => {
+    if (prive?.role === 'proie' && prive.fantome && parLui(vue.nature)) {
+      demande = undefined;
+      console.log(`${pseudo}, fantome, maudit les assassins: ${vue.nature}`);
+    }
+  });
+
   socket.on('partieTerminee', () => {
     console.log(`${pseudo}: partie terminee.`);
   });
 
-  return { socket, marche };
+  return { socket, marche, sabotage };
 }
 
 for (let rang = 0; rang < nombre; rang += 1) {
@@ -182,8 +256,9 @@ for (let rang = 0; rang < nombre; rang += 1) {
 }
 
 process.on('SIGINT', () => {
-  for (const { socket, marche } of joueurs) {
+  for (const { socket, marche, sabotage } of joueurs) {
     clearInterval(marche);
+    clearInterval(sabotage);
     socket.disconnect();
   }
   process.exit(0);

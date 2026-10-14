@@ -22,7 +22,16 @@ Les cinq recommandations de la fiche, retenues le 13 octobre 2026 avant la const
 - **Planche** `docs/design/etape-7-27/1-planche.png`, dessinée par le vrai code de dessin, quatre moments de chaque geste.
 - **Vérifié dans un vrai navigateur**, dans de vraies parties à cinq, Alice au bureau (1280 sur 720), Bob sur téléphone en portrait (375 sur 812), l'assassin un client du réseau (captures dans `docs/design/etape-7-27/`): le générateur relancé au doigt sur le téléphone, les fusibles changés au doigt, la fréquence accordée au doigt en rond, et au clavier au bureau; les deux clés purgées au clavier et au doigt puis tournées ensemble; le relais coupé en alternance, au clavier et au doigt. Les trois réparations de la panne aussi au clavier, dans la vraie fenêtre. L'outil qui a joué ces parties n'est pas commité. Le tirage d'une graine en partie réelle diffère parfois du calcul fait à part avec le moteur seul (le salon règle plus que les cinq réglages du scénario): les graines se vérifient sur la partie.
 - **Le scénario de bout en bout** (`tests/e2e/among.spec.ts`) ouvre la réparation par E au générateur et joue au clavier celle que sa graine tire (la fréquence, à la graine 4); le harnais `tests/e2e/harnais/gestes.ts` sait les trois réparations de la panne.
-- **Version 1.10.0**, note « Les réparations », au texte accepté par le porteur du projet.
+- **Version 1.10.0**, note « Les réparations », au texte accepté par le porteur du projet. Ramenée en **1.9.5** le 14 octobre 2026: les petites évolutions d'Among Ninjas restent en 1.9 (décision du porteur du projet); la ligne de la note rejoint la note 1.9.
+
+## Après l'étape, 14 octobre 2026
+
+- **La console de la surchauffe** livrée par le porteur du projet habille les deux consoles, écartées de leur lampadaire (`02991f7`).
+- **La fréquence à la molette** dans le scénario de bout en bout: la flèche tenue échouait sur les pages lentes de la CI (`2b60972`).
+- **Les petites évolutions d'Among Ninjas restent en 1.9** (décision du porteur du projet): version 1.9.5, la note 1.10 retirée, sa ligne « Les réparations » dans la note 1.9; règle écrite dans `docs/plan/PROTOCOLE.md`.
+- **Les joueurs fictifs sabotent et maudissent** (`tests/outils/joueurs-fictifs.mjs`), pour essayer les réparations en production: un assassin fictif, vivant ou fantôme, demande un sabotage toutes les trois à quatre secondes, une proie fantôme maudit les assassins de même; le serveur refuse tant que la règle l'interdit, si bien que le sabotage part dès qu'il est permis. Un cinquième argument choisit les sabotages: `panne,surchauffe` pour n'essayer que les réparations, `aucun` pour s'en passer. Essayé contre un serveur local sans base: nuage, flou, panne, surchauffe, la réparation tirée dite, et la malédiction d'une proie fantôme. Par exemple, en production:
+
+  `node tests/outils/joueurs-fictifs.mjs https://serveur.ninja.dendrolag.fr <code> 4 panne,surchauffe`
 
 ## Sons provisoires
 
@@ -35,7 +44,7 @@ Faits de sons du jeu, à remplacer par ceux du porteur du projet (il suffit de c
 1. **La clé tenue.** La fiche dit « la clé tenue reste la touche d'action tenue ». C'est bien le bouton d'action, mais la fenêtre l'émet elle-même (Espace, E, ou le doigt sur la clé), les commandes du jeu étant figées pendant la réparation. Pour que tenir la clé ne signale pas un cadavre voisin, un appui pendant une réparation ne fait rien d'autre au moteur.
 2. **Le poste dans l'état privé.** La fiche plaçait la réparation ouverte dans les vues; elle va dans l'état privé (`reparationEnCours`), comme la tâche ouverte, et la part commune du sabotage dit la réparation tirée et où elle en est.
 3. **Les noms des consoles.** La fenêtre les appelle « Console 1 » et « Console 2 », le boîtier « Générateur de la rue »; l'annonce de la panne dit « réparez le générateur de la rue » quand la réparation n'est pas connue, ce qui n'arrive plus qu'à une page plus ancienne que le serveur.
-4. **Le titre de la note.** La fiche donnait le texte de la note, pas son titre: « Les mains dans le cambouis » est proposé par la session, **à confirmer par le porteur du projet**.
+4. **La version.** Parue en 1.10.0 avec une note (titre proposé par la session, « Les mains dans le cambouis »), puis ramenée en 1.9.5 le 14 octobre 2026 sur décision du porteur du projet: la ligne « Les réparations » rejoint la note 1.9, la note 1.10 disparaît.
 5. **Une ligne de l'aide corrigée en route (règle 7).** Elle disait que les fantômes réparent la panne « depuis leur carte »; ils la réparent au générateur, comme les vivants.
 6. **`pnpm lint` en local (règle 7).** Le linter lisait les copies de travail des autres sessions (`.claude/worktrees/`), et échouait sur leur `legacy/` et leur page empaquetée; elles sont ignorées du linter et du formateur (`8e0dd7c`).
 
@@ -58,7 +67,7 @@ Faits de sons du jeu, à remplacer par ceux du porteur du projet (il suffit de c
 - Résultat: les 4 285 tests unitaires et d'intégration passent (projet `unitaires`; ceux de la base sont sautés en local, sans les clés de Neon). Types du code, des tests et du bout en bout, et linter: sans erreur. Le scénario `tests/e2e/among.spec.ts` passe, la panne réparée au clavier. Les trois réparations de la panne jouées au clavier dans la vraie fenêtre, dans un navigateur, par le harnais.
 - Empreinte des parties de référence (`tests/charge/empreinte.ts`): identique, jeu et flux, avant et après l'étape.
 - Couverture de packages/sim: 99,84 pour cent des instructions, comme au handoff 7.24.
-- État de la CI: verte sur `8c071f0` (types, linter et tests, base, bout en bout, banc du rendu), mise en ligne faite: la production rend ce commit (`/sante`, 14 octobre 2026). La pierre du jardin zen (`8e0dd7c`) est en ligne depuis la veille.
+- État de la CI: verte sur `8c071f0` (types, linter et tests, base, bout en bout, banc du rendu), mise en ligne faite: la production (Oracle) et le secours (Render) rendent ce commit, puis `2b60972` (`/sante`, 14 octobre 2026). La pierre du jardin zen (`8e0dd7c`) est en ligne depuis la veille.
 
 ## Décisions et écarts au plan
 
@@ -66,15 +75,14 @@ Voir « Réconciliation ». Aucune autre.
 
 ## Problèmes connus et dette
 
-- Le titre de la note 1.10 est à confirmer par le porteur du projet.
-- L'image de la console, livrée le 14 octobre 2026 après l'étape, habille les deux consoles (version 1.10.1); les consoles s'écartent de leur lampadaire, qui la traversait (`docs/design/README.md`, journal du 14 octobre).
+- L'image de la console, livrée le 14 octobre 2026 après l'étape, habille les deux consoles (version 1.10.1, puis 1.9.5); les consoles s'écartent de leur lampadaire, qui la traversait (`docs/design/README.md`, journal du 14 octobre).
 - Les sons sont provisoires.
 - La CI de `e557325` (la fiche, avant cette session) a échoué sur deux tests de la base, `tests/base/succes.test.ts` et `profil.test.ts`, au délai de 30 secondes, et ont passé au commit suivant: une lenteur passagère de Neon, sans lien avec le code. À surveiller si elle revient.
 - La relance du générateur se juge au temps de la page: sur une page qui fige plus d'une seconde et demie pendant qu'on tire, le moteur tousse, comme la fumée déborde dans la tâche du même nom. On retire.
 
 ## Prochaine action exacte
 
-La main au porteur du projet: confirmer le titre de la note 1.10, puis choisir la suite, `7.26` (d'autres tâches courtes, faisable tout de suite), `7.25` (l'appropriation, après une partie d'essai), la clôture de `5.15` (une partie en production), ou les collisions des objets du décor.
+La main au porteur du projet, pour choisir la suite: `7.26` (d'autres tâches courtes, faisable tout de suite), `7.25` (l'appropriation, après une partie d'essai), la clôture de `5.15` (une partie en production), ou les collisions des objets du décor.
 
 ## Étape suivante
 
