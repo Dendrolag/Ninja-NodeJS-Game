@@ -1002,6 +1002,30 @@
   filter: saturate(0.3) brightness(0.7);
 }
 
+/*
+ * Le bouton « Habit » d'Among Ninjas (etape 7.28, rendus 4C et 5C): gris clair, comme l'habit sur
+ * la carte, et cerne pendant le deguisement d'un anneau qui se vide (--part, de un a zero).
+ */
+.hud-habit {
+  background: radial-gradient(circle at 35% 30%, #c3cad6, #5d6675);
+  box-shadow: 0 0 14px rgba(207, 214, 226, 0.55);
+}
+
+.hud-habit.deguise::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: conic-gradient(#e8ecf6 calc(var(--part, 0) * 360deg), rgba(255, 255, 255, 0.12) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+  pointer-events: none;
+}
+
+.hud-habit.inactif {
+  cursor: default;
+}
+
 /* Le katana d'Among Ninjas, sans victime a portee (etape 7.20): grise, il ne se propose pas. */
 .hud-capture.inactif {
   filter: grayscale(1) brightness(0.55);

@@ -269,6 +269,11 @@ export const APPARENCE_AMONG = {
   /** La hauteur du pseudo au-dessus du centre du ninja. */
   hauteurDuPseudo: 30,
   /**
+   * L'habit pose sur la carte (etape 7.28, rendu 2A): un kimono gris clair au trait neon, sur un
+   * disque pale qui bat. Sa demi-taille, en pixels de carte, a cote d'un ninja de 32.
+   */
+  habit: { couleur: 0xe8ecf6, rayon: 22, demiTaille: 14, battementMs: 1600, epaisseur: 2.5 },
+  /**
    * La victime qu'un assassin peut tuer maintenant (demande du porteur du projet du 10 octobre
    * 2026): une legere surbrillance rouge sous elle, un disque pale et un anneau. A juger en
    * jouant.
@@ -360,7 +365,8 @@ export function imageDAmong(
       continue;
     }
 
-    if (entite.type !== 'joueur') {
+    // La victime a portee: une proie, ou un PNJ (etape 7.28).
+    if (entite.type !== 'joueur' && entite.type !== 'bot') {
       continue;
     }
 
@@ -376,7 +382,7 @@ export function imageDAmong(
       });
     }
 
-    if (!complices.has(entite.id)) {
+    if (entite.type !== 'joueur' || !complices.has(entite.id)) {
       continue;
     }
 
@@ -392,6 +398,8 @@ export function imageDAmong(
   disques.push(...nuageNoir(etat));
   const moi = lissee.entites.find(({ entite }) => entite.id === etat.moi);
   const fleches = moi === undefined ? undefined : flechesVersLesPostes(etat, moi);
+  const habit = habitPose(lissee.vue.among?.habit, maintenant);
+  disques.push(...habit.disques);
 
   return {
     disques,
@@ -399,7 +407,7 @@ export function imageDAmong(
     libelles: fleches === undefined ? libelles : [...libelles, ...fleches.libelles],
     vision: visionDe(etat, lissee),
     postes: postesDesSabotages(etat, maintenant, objets),
-    fleches: fleches?.traits ?? [],
+    fleches: [...habit.traits, ...(fleches?.traits ?? [])],
     surbrillances: surbrillancesDesObjets(etat, objets, maintenant),
   };
 }
@@ -826,6 +834,76 @@ function lieuxDuJoueur(
   });
 
   return lieux;
+}
+
+/**
+ * L'habit pose sur la carte (etape 7.28, rendu 2A), a qui le voit: un kimono plie au trait neon
+ * gris clair, sur un disque pale qui bat doucement. Rien sans habit.
+ */
+export function habitPose(
+  habit: Position | undefined,
+  maintenant: number,
+): { readonly disques: readonly DisqueScene[]; readonly traits: readonly TraitScene[] } {
+  if (habit === undefined) {
+    return { disques: [], traits: [] };
+  }
+
+  const { couleur, rayon, demiTaille, battementMs, epaisseur } = APPARENCE_AMONG.habit;
+  const bat = 0.5 + 0.5 * Math.sin((maintenant / battementMs) * Math.PI * 2);
+  const t = demiTaille;
+  // Le kimono, en coordonnees du dessin de la planche: un T, le col en V, puis la ceinture.
+  const contour = [
+    [-0.35, -0.8],
+    [-1, -0.45],
+    [-0.8, -0.05],
+    [-0.5, -0.2],
+    [-0.5, 0.85],
+    [0.5, 0.85],
+    [0.5, -0.2],
+    [0.8, -0.05],
+    [1, -0.45],
+    [0.35, -0.8],
+    [0, -0.25],
+    [-0.35, -0.8],
+  ];
+  const aPlat = (points: readonly (readonly number[])[]): number[] =>
+    points.flatMap(([x = 0, y = 0]) => [habit.x + x * t, habit.y + y * t]);
+
+  return {
+    disques: [
+      {
+        id: 'habit:halo',
+        x: habit.x,
+        y: habit.y,
+        rayon,
+        remplissage: { couleur, alpha: 0.12 + 0.18 * bat },
+        contour: undefined,
+      },
+    ],
+    traits: [
+      { id: 'habit:corps', points: aPlat(contour), couleur, alpha: 0.85 + 0.15 * bat, epaisseur },
+      {
+        id: 'habit:col',
+        points: aPlat([
+          [-0.35, -0.8],
+          [0.15, 0.1],
+        ]),
+        couleur,
+        alpha: 0.85,
+        epaisseur,
+      },
+      {
+        id: 'habit:ceinture',
+        points: aPlat([
+          [-0.5, 0.2],
+          [0.5, 0.2],
+        ]),
+        couleur,
+        alpha: 0.85,
+        epaisseur: epaisseur + 1,
+      },
+    ],
+  };
 }
 
 /** Le sang sous un cadavre: quelques taches, toujours les memes pour un meme cadavre. */

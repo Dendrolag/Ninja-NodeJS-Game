@@ -195,6 +195,13 @@ function amongVu(etat: EtatPartie, among: EtatAmong): AmongVu {
   }
 
   const nuage = nuageEnAmong(etat);
+  // Les deguises (etape 7.28), tous: la vue des fantomes les montre, celle d'un vivant ne garde
+  // que ceux qu'il a le droit de reconnaitre (vues.ts).
+  const deguises = Object.keys(etat.joueurs).flatMap((id) => {
+    const restantMs = among.joueurs[id]?.deguisementMs;
+
+    return restantMs === undefined ? [] : [{ id, restantMs }];
+  });
 
   // Tout ce que le mode sait des sabotages (etape 7.22): la vue des fantomes le montre entier,
   // celle d'un vivant le filtre (vues.ts).
@@ -221,6 +228,8 @@ function amongVu(etat: EtatPartie, among: EtatAmong): AmongVu {
     ...(nuage === undefined ? {} : { nuage }),
     rechargeDesSabotagesMs: among.rechargeDesSabotagesMs,
     rechargeDeLaMaledictionMs: among.rechargeDeLaMaledictionMs,
+    ...(among.habit === undefined ? {} : { habit: { x: among.habit.x, y: among.habit.y } }),
+    ...(deguises.length === 0 ? {} : { deguises }),
   };
 }
 
@@ -302,6 +311,7 @@ export function etatPriveDe(etat: EtatPartie, id: IdentifiantEntite): EtatPriveA
       ? {}
       : { reparationEnCours: joueur.reparationEnCours.poste }),
     gongUtilise: joueur.gongUtilise,
+    ...(joueur.habit === true ? { habit: true as const } : {}),
   };
 }
 
@@ -1062,6 +1072,14 @@ function notificationsDUnFait(
           charge: { nature: evenement.nature },
         })),
       ];
+
+    // Le deguisement (etape 7.28) ne s'annonce a personne: le deguise le lit dans le bloc du mode,
+    // la proie son habit dans son etat prive, et les temoins voient ce qu'ils voient. Une
+    // notification dirait aux autres qui se deguise.
+    case 'pnjTue':
+    case 'habitPris':
+    case 'deguisement':
+      return [];
 
     // Un tour qui commence se lit dans la phase du flux, une tache faite dans l'etat prive.
     case 'tourCommence':

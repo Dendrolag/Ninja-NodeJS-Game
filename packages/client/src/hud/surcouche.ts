@@ -40,6 +40,7 @@ import type {
   ChasseHud,
   ComboHud,
   EffetHud,
+  HabitHud,
   Hud,
   LigneHud,
   PocheHud,
@@ -147,6 +148,12 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
         });
   const capture =
     options.capturer === undefined ? undefined : monterCapture(doc, boutons, options.capturer);
+  // Le bouton « Habit » d'Among Ninjas (etape 7.28), a la place du katana, que les proies n'ont
+  // pas: il revet l'habit par le meme geste que le tir.
+  const habit =
+    options.agir === undefined || options.capturer === undefined
+      ? undefined
+      : monterHabit(doc, boutons, options.capturer);
 
   options.hote.append(racine);
 
@@ -180,6 +187,7 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
       // En Chasse, les charges d'un traqueur sont ses vies (etape 7.3); en Massacre, le
       // bouton porte le katana (etape 7.4).
       capture?.afficher(hud.charges, hud.arme);
+      habit?.afficher(hud.habit);
     },
 
     afficherLaManette(etat: EtatManette) {
@@ -197,6 +205,7 @@ export function monterSurcouche(options: OptionsSurcouche): Surcouche {
 
     demonter() {
       capture?.demonter();
+      habit?.demonter();
       action?.demonter();
       localisation?.demonter();
       poche.demonter();
@@ -400,6 +409,67 @@ function monterCapture(doc: Document, parent: HTMLElement, capturer: () => void)
           : arme === 'katana'
             ? `Katana, ${charges.disponibles > 0 ? 'prêt' : 'en garde'}`
             : `Capturer, ${String(charges.disponibles)} ${enVies ? 'vies' : 'charges'} sur ${String(charges.maximum)}`;
+
+      if (nouvelle !== etiquette) {
+        etiquette = nouvelle;
+        bouton.setAttribute('aria-label', nouvelle);
+      }
+    },
+
+    demonter() {
+      pose.demonter();
+    },
+  };
+}
+
+/** Le bouton « Habit » d'Among Ninjas (etape 7.28). */
+interface BoutonDHabit {
+  afficher(habit: HabitHud | undefined): void;
+  demonter(): void;
+}
+
+/**
+ * Pose le bouton « Habit » d'Among Ninjas (etape 7.28, rendus 4C et 5C): cache tant qu'on n'a ni
+ * habit ni deguisement, il surgit au ramassage, revet l'habit a l'appui ou par Espace, et se vide
+ * en anneau pendant le deguisement, dont il dit les secondes.
+ */
+function monterHabit(doc: Document, parent: HTMLElement, revetir: () => void): BoutonDHabit {
+  const pose = monterBouton(doc, parent, {
+    classe: 'hud-habit',
+    glyphe: 'habit',
+    libelle: 'Habit',
+    touche: 'Espace',
+    etiquette: "Revêtir l'habit",
+    surAppui: revetir,
+  });
+  const { bouton, libelle } = pose;
+  bouton.hidden = true;
+  let etiquette = '';
+
+  return {
+    afficher(habit) {
+      bouton.hidden = habit === undefined;
+
+      if (habit === undefined) {
+        return;
+      }
+
+      const deguise = habit.deguise;
+      const texte = deguise === undefined ? 'Habit' : `${String(deguise.secondes)} s`;
+
+      if (libelle.textContent !== texte) {
+        libelle.textContent = texte;
+      }
+
+      bouton.classList.toggle('deguise', deguise !== undefined);
+      bouton.classList.toggle('inactif', !habit.actif);
+      bouton.disabled = !habit.actif;
+      bouton.style.setProperty('--part', String(deguise?.part ?? 0));
+
+      const nouvelle =
+        deguise === undefined
+          ? "Revêtir l'habit"
+          : `Déguisé, ${String(deguise.secondes)} secondes${habit.actif ? ", revêtir l'habit" : ''}`;
 
       if (nouvelle !== etiquette) {
         etiquette = nouvelle;

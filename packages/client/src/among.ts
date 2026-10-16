@@ -10,6 +10,7 @@
  */
 
 import type {
+  EntiteVue,
   EtatPriveAmong,
   MeurtreVu,
   NatureDeTache,
@@ -335,6 +336,9 @@ export function stationsAMontrer(prive: EtatPriveAmong): readonly Position[] {
  * dans l'ordre. Les proies sont les joueurs de sa vue qui ne sont pas ses complices: un
  * fantome n'est jamais dans la vue d'un vivant. La page juge sur les positions recues, le
  * serveur tranche.
+ *
+ * A defaut de proie, le PNJ le plus proche a portee (etape 7.28): le tuer deguise l'assassin. Une
+ * proie deguisee est un PNJ dans sa vue: le serveur la tuera, elle, si elle est la plus proche.
  */
 export function victimeAPortee(etat: EtatClient): string | undefined {
   const prive = etat.among.prive;
@@ -377,5 +381,22 @@ export function victimeAPortee(etat: EtatClient): string | undefined {
     }
   }
 
-  return victime;
+  return victime ?? pnjAPortee(partie.entites, moi);
+}
+
+/** Le PNJ le plus proche a portee du meurtre de cet assassin, ou rien (etape 7.28). */
+function pnjAPortee(entites: readonly EntiteVue[], moi: Position): string | undefined {
+  let pnj: string | undefined;
+  let retenue = Number.POSITIVE_INFINITY;
+
+  for (const entite of entites) {
+    const distance = Math.hypot(entite.x - moi.x, entite.y - moi.y);
+
+    if (entite.type === 'bot' && distance <= AMONG.PORTEE_DU_MEURTRE_PX && distance < retenue) {
+      pnj = entite.id;
+      retenue = distance;
+    }
+  }
+
+  return pnj;
 }

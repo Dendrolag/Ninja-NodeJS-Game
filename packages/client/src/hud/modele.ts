@@ -31,6 +31,7 @@ import type {
   TypeZone,
 } from '@neon-ninja/shared';
 import {
+  AMONG,
   CARTES,
   CHASSE,
   COULEURS_DES_EQUIPES,
@@ -159,6 +160,17 @@ export interface ChargesHud {
   readonly inactif?: true;
 }
 
+/**
+ * Le bouton « Habit » d'Among Ninjas (etape 7.28, rendus 4C et 5C): il n'est la que si nous portons
+ * un habit ou sommes deguises. Un anneau s'y vide pendant le deguisement.
+ */
+export interface HabitHud {
+  /** Le bouton revet l'habit: une proie vivante en porte un. Sinon, il ne fait que montrer. */
+  readonly actif: boolean;
+  /** Nous sommes deguises: ce qu'il en reste, de zero a un, et en secondes entamees. */
+  readonly deguise?: { readonly part: number; readonly secondes: number };
+}
+
 /** Notre role dans une partie Chasse, et ce qu'il reste de proies (etape 7.3). */
 export interface ChasseHud {
   readonly camp: CampDeChasse;
@@ -228,6 +240,8 @@ export interface Hud {
   readonly arme: ArmeHud;
   /** Notre role, les taches et le bouton d'action d'Among Ninjas (etape 7.20). Absent ailleurs. */
   readonly among: AmongHud | undefined;
+  /** Le bouton « Habit » d'Among Ninjas (etape 7.28). Absent sans habit ni deguisement. */
+  readonly habit: HabitHud | undefined;
 }
 
 /** Un HUD vide, celui d'un ecran hors partie. */
@@ -248,6 +262,7 @@ export const HUD_VIDE: Hud = {
   restants: undefined,
   arme: 'charges',
   among: undefined,
+  habit: undefined,
 };
 
 /**
@@ -312,6 +327,36 @@ export function construireHud(
     restants: restantsHud(etat, mode),
     arme: mode === 'chasse' ? 'vies' : mode === 'massacre' || among ? 'katana' : 'charges',
     among: amongHud(etat),
+    habit: among ? habitHud(etat) : undefined,
+  };
+}
+
+/**
+ * Le bouton « Habit » d'Among Ninjas (etape 7.28): une proie vivante qui porte un habit le revet
+ * par lui; un deguise, proie ou assassin, y lit ce qu'il lui reste. Rien sinon, ni pour un
+ * fantome, ni hors du jeu.
+ */
+export function habitHud(etat: EtatClient): HabitHud | undefined {
+  const prive = etat.among.prive;
+  const among = etat.partie?.among;
+
+  if (prive === undefined || prive.fantome || among?.phase !== 'jeu') {
+    return undefined;
+  }
+
+  const actif = prive.role === 'proie' && prive.habit === true;
+  const restantMs = among.deguises?.find((deguise) => deguise.id === etat.moi)?.restantMs;
+
+  if (restantMs === undefined) {
+    return actif ? { actif } : undefined;
+  }
+
+  return {
+    actif,
+    deguise: {
+      part: Math.min(Math.max(restantMs / AMONG.DUREE_DU_DEGUISEMENT_MS, 0), 1),
+      secondes: Math.ceil(restantMs / 1000),
+    },
   };
 }
 

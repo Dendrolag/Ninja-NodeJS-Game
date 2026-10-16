@@ -1304,3 +1304,25 @@ Le profil de la page le confirmait: presque tout le temps hors du code, à peind
 ### 34.4 Ce qui reste à mesurer en production
 
 L'agent Alloy sur la machine Oracle (moins de 5 pour cent d'un cœur et moins de 300 Mo sur 24 heures, ses propres métriques dans le tableau) et les séries actives réelles (page « Usage » de Grafana Cloud) se relèvent une fois l'agent installé, sur une semaine de production.
+
+## 35. Mesure de l'étape 7.28: le déguisement d'Among Ninjas (16 octobre 2026)
+
+Chiffres bruts: `docs/mesures/charge-serveur-7-28-among.json` et `charge-serveur-7-28-classique.json`, écrits par le harnais au second tour. Même machine et même méthode qu'à la section 33: `pnpm charge --banc --mode among --carte map1 --bots-banc 40,80`, puis `--mode classique`, deux tours en alternance, sur le code de l'étape posé sur le commit `e04c7ca`.
+
+### 35.1 L'essentiel
+
+- **Le prix est celui des alias de la foule.** Pour qu'aucune trame ne désigne un déguisé, chaque PNJ de la vue d'un vivant porte désormais un alias, et la foule s'y range dans l'ordre des alias. La projection, qui construit les douze vues, passe de 0,047 à 0,067 ms par battement avec 40 PNJ, et de 0,064 à 0,094 avec 80. Le moteur et le codage ne bougent pas au-delà des écarts d'une séance.
+- **Among Ninjas**: 0,265 ms par battement avec 40 PNJ (0,228 à l'étape 7.24), 0,374 avec 80 (0,321); la Horde de la même séance, 0,166 (0,181) et 0,297 (0,248). Un battement d'Among Ninjas reste sous le centième de son budget de 50 ms: 127 à 136 parties par cœur avec 40 PNJ.
+- **Le fil ne change pas**: 88 et 96 octets par message (87 et 94). L'habit pose quatre octets dans la vue d'une proie qui le voit, un déguisé une dizaine dans la sienne et celle de ses complices.
+- **Le banc ne se déguise pas**: personne n'y tue de PNJ ni n'y ramasse l'habit. Un déguisement ne coûte en lui-même qu'un alias de plus, dans les vues qui le voient: rien de mesurable à côté des alias de la foule, qui jouent à chaque battement.
+
+### 35.2 Le banc
+
+Moyenne des deux tours. Durées en millisecondes par battement, tailles en octets par message sur le fil, images comprises.
+
+| PNJ | Mode         | Moteur | Projection | Codage | Total | Total p99 | Octets par message | Entités par vue | Parties par cœur |
+| --: | ------------ | -----: | ---------: | -----: | ----: | --------: | -----------------: | --------------: | ---------------: |
+|  40 | Horde        |  0,110 |      0,022 |  0,035 | 0,166 |     0,480 |                205 |              55 |              211 |
+|  40 | Among Ninjas |  0,100 |      0,067 |  0,099 | 0,265 |     0,574 |                 88 |               7 |              132 |
+|  80 | Horde        |  0,214 |      0,035 |  0,048 | 0,297 |     0,729 |                295 |              95 |              118 |
+|  80 | Among Ninjas |  0,167 |      0,094 |  0,113 | 0,374 |     0,751 |                 96 |               8 |               93 |

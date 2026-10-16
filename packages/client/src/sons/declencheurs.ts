@@ -263,7 +263,43 @@ export function sonsDuChangement(precedent: EtatClient, courant: EtatClient): re
     sons.push('rechargeFusil');
   }
 
+  if (courant.salon?.mode === 'among') {
+    sons.push(...sonsDuDeguisement(precedent, courant));
+  }
+
   return sons;
+}
+
+/**
+ * Les sons du deguisement d'Among Ninjas (etape 7.28), pour nous seuls: l'habit ramasse, lu dans
+ * notre etat prive; le deguisement qui commence ou tombe, lu dans le bloc du mode, qui ne nomme que
+ * ceux que nous connaissons.
+ */
+function sonsDuDeguisement(precedent: EtatClient, courant: EtatClient): readonly NomDeSon[] {
+  const sons: NomDeSon[] = [];
+
+  if (precedent.among.prive?.habit !== true && courant.among.prive?.habit === true) {
+    sons.push('habitPris');
+  }
+
+  const etait = estDeguise(precedent);
+  const est = estDeguise(courant);
+
+  if (est && !etait) {
+    sons.push('deguisementRevetu');
+  }
+
+  // Une page qui quitte la partie ne l'entend pas tomber.
+  if (etait && !est && courant.partie !== undefined) {
+    sons.push('deguisementPerdu');
+  }
+
+  return sons;
+}
+
+/** Sommes-nous deguises, dans la derniere trame recue. */
+function estDeguise(etat: EtatClient): boolean {
+  return etat.partie?.among?.deguises?.some(({ id }) => id === etat.moi) === true;
 }
 
 /**

@@ -198,6 +198,14 @@ const GLYPHES = {
       { trace: 'M16.5 11.5l-2.5 1' },
     ],
   },
+  // L'habit d'Among Ninjas (etape 7.28, rendu 2A): un kimono plie, son col croise et sa ceinture.
+  habit: {
+    formes: [
+      { trace: 'M8.5 3.5L3 7l1.8 4.3L7.5 10v10.5h9V10l2.7 1.3L21 7l-5.5-3.5L12 9z' },
+      { trace: 'M8.5 3.5l4.5 8' },
+      { trace: 'M7.5 14h9' },
+    ],
+  },
   // Etape 3.6: deux silhouettes, celle de devant reprise de user.
   amis: {
     formes: [

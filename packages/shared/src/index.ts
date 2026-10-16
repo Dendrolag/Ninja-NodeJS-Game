@@ -183,6 +183,7 @@ export type {
 export type {
   AmongVu,
   BilanAmong,
+  DeguiseVu,
   EtatPriveAmong,
   FinAmong,
   MeurtreVu,

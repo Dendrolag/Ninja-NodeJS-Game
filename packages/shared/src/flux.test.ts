@@ -1241,6 +1241,47 @@ describe('Among Ninjas (etape 7.20)', () => {
     expect(encoderImage(instantane({ among: { ...bloc, pas } })).octets.length).toBe(sans + 4);
   });
 
+  it('fait voyager l habit et les deguises connus (etape 7.28)', () => {
+    const bloc = { phase: 'jeu', restantMs: 0, tachesFaites: 0, tachesTotal: 0 } as const;
+    const parties = [
+      instantane({
+        tick: 1,
+        entites: [joueur('a', 100, 100)],
+        among: {
+          ...bloc,
+          habit: { x: 812.4, y: 300 },
+          deguises: [{ id: 'a', restantMs: 19_950.6 }],
+        },
+      }),
+      instantane({
+        tick: 2,
+        entites: [joueur('a', 100, 100)],
+        among: {
+          ...bloc,
+          deguises: [
+            { id: 'a', restantMs: 19_900 },
+            { id: 'b', restantMs: 4000 },
+          ],
+        },
+      }),
+      instantane({ tick: 3, entites: [joueur('a', 100, 100)], among: bloc }),
+    ];
+    let reference = encoderImage(parties[0] as InstantanePartie).reference;
+
+    expect(appliquerTrame(undefined, encoderImage(parties[0] as InstantanePartie).octets)).toEqual(
+      quantifierInstantane(parties[0] as InstantanePartie),
+    );
+    expect(reference.among?.habit).toEqual({ x: 812, y: 300 });
+    expect(reference.among?.deguises).toEqual([{ id: 'a', restantMs: 19_951 }]);
+
+    for (const suivante of parties.slice(1)) {
+      const trame = encoderDelta(reference, suivante);
+
+      expect(appliquerTrame(reference, trame.octets)).toEqual(quantifierInstantane(suivante));
+      reference = trame.reference;
+    }
+  });
+
   it('refuse un pas hors des secteurs ou des paliers', () => {
     const bloc = { phase: 'jeu', restantMs: 0, tachesFaites: 0, tachesTotal: 0 } as const;
 
@@ -1299,8 +1340,9 @@ describe('Among Ninjas (etape 7.20)', () => {
     ).octets;
     const rang = octets.findIndex((octet, place) => octet !== avecRecharge[place]);
     expect(avecRecharge[rang]).toBe(4);
-    // 16 dit les pas entendus (etape 7.23): 32 n'est rien.
-    octets[rang] = 32;
+    // 16 dit les pas entendus (etape 7.23), 32 l'habit et 64 les deguises (etape 7.28): 128
+    // n'est rien.
+    octets[rang] = 128;
 
     expect(() => appliquerTrame(undefined, octets)).toThrow(/Among/u);
   });

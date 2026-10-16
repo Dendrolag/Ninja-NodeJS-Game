@@ -340,6 +340,24 @@ export interface AmongVu {
    * toujours pour un fantome.
    */
   readonly pas?: readonly PasEntendu[];
+  /**
+   * L'habit pose sur la carte (etape 7.28), a qui le voit: une proie vivante dont le disque de
+   * vision le touche, et les fantomes. Jamais un assassin: le serveur le lui retire.
+   */
+  readonly habit?: { readonly x: number; readonly y: number };
+  /**
+   * Les joueurs deguises en PNJ (etape 7.28) que ce joueur a le droit de connaitre, et ce qu'il
+   * leur reste: lui-meme, ses complices s'il est assassin, tous pour un fantome. Absent quand il
+   * n'en connait aucun. Pour tous les autres vivants, un deguise est un PNJ comme les autres,
+   * sous un alias: rien dans la trame ne le relie a un joueur.
+   */
+  readonly deguises?: readonly DeguiseVu[];
+}
+
+/** Un joueur deguise en PNJ (etape 7.28), et le temps qu'il lui reste. */
+export interface DeguiseVu {
+  readonly id: string;
+  readonly restantMs: number;
 }
 
 /** Le sabotage en cours d'une partie Among Ninjas (etape 7.22). */
@@ -950,6 +968,11 @@ export interface EtatPriveAmong {
    */
   readonly reparationEnCours?: PosteDeReparation;
   readonly gongUtilise: boolean;
+  /**
+   * Une proie porte un habit ramasse, pas encore revetu (etape 7.28): son bouton « Habit »
+   * apparait. Absent sinon. Elle seule le sait.
+   */
+  readonly habit?: true;
 }
 
 /** Une tache de la liste d'une proie. */

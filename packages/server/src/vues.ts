@@ -47,6 +47,15 @@
  * l'etat, qui suit les arrivees. Ceux qu'il voit, la page les entend d'apres leur mouvement.
  * Les fantomes voient tout: ils n'en recoivent aucun.
  *
+ * LE DEGUISEMENT (etape 7.28). Pour un vivant, un joueur deguise est un PNJ: le gris de la
+ * foule, sans pseudo. Comme les proies dans la vue des traqueurs de la Chasse, chaque PNJ d'une vue
+ * de vivant y porte un alias, deguises compris, et la foule s'y range apres les joueurs, dans
+ * l'ordre des alias: ni un identifiant, ni une place dans la liste ne designe un deguise. L'alias
+ * d'un deguise se tire de son identifiant et du rang de son deguisement: on ne le reconnait pas
+ * d'une fois sur l'autre. Seuls le voient tel qu'il est lui-meme, ses complices s'il est assassin,
+ * et les fantomes; le bloc du mode leur dit qui est deguise, et pour combien de temps. L'habit ne
+ * va qu'aux proies vivantes dont le disque le touche, et aux fantomes: jamais a un assassin.
+ *
  * Le role n'est dans aucune vue: il part a son seul joueur (etatPriveDe, dans instantane.ts).
  *
  * CE QUI RESTE, ET POURQUOI. Ce qu'un joueur a vu legitimement, il le garde: une proie
@@ -69,7 +78,13 @@ import type {
   PasEntendu,
   Position,
 } from '@neon-ninja/shared';
-import { AMONG, AMONG_PAR_DEFAUT, PALIERS_DES_PAS_PX, pasEntendu } from '@neon-ninja/shared';
+import {
+  AMONG,
+  AMONG_PAR_DEFAUT,
+  COULEUR_DE_LA_FOULE,
+  PALIERS_DES_PAS_PX,
+  pasEntendu,
+} from '@neon-ninja/shared';
 import type { EtatPartie, IdentifiantEntite } from '@neon-ninja/sim';
 import {
   bonusActif,
@@ -238,7 +253,7 @@ function vueDeCle(
   }
 
   if (cle.startsWith(PREFIXE_D_UN_VIVANT)) {
-    return vueDUnVivant(etat, commune, cle.slice(PREFIXE_D_UN_VIVANT.length));
+    return vueDUnVivant(etat, commune, cle.slice(PREFIXE_D_UN_VIVANT.length), alias);
   }
 
   return vueDePersonne(commune);
@@ -257,11 +272,15 @@ function vueDePersonne(commune: InstantanePartie): InstantanePartie {
 /**
  * La vue d'un vivant d'Among Ninjas (etape 7.20): ce qui est dans le disque de sa vision, de
  * centre a centre, sans aucun fantome. Sa propre entite porte son arme, s'il est tueur.
+ *
+ * La foule y passe sous alias, et s'y range apres le reste, dans l'ordre des alias: un deguise
+ * (etape 7.28) qu'il n'a pas le droit de reconnaitre y est un PNJ comme les autres.
  */
 function vueDUnVivant(
   etat: EtatPartie,
   commune: InstantanePartie,
   id: IdentifiantEntite,
+  alias: Alias,
 ): InstantanePartie {
   const centre = etat.joueurs[id]?.position;
 
@@ -274,7 +293,9 @@ function vueDUnVivant(
   const tueur = estTueur(etat, id);
   // Le nuage noir (etape 7.22): une proie vivante n'y voit personne, dedans comme dehors.
   const nuage = tueur ? undefined : nuageEnAmong(etat);
+  const connus = deguisesConnus(etat, id);
   const entites: EntiteVue[] = [];
+  const foule: BotVu[] = [];
 
   for (const entite of commune.entites) {
     if (entite.id === id && entite.type === 'joueur') {
@@ -284,9 +305,18 @@ function vueDUnVivant(
       distance(entite, centre) <= rayon &&
       (nuage === undefined || distance(entite, nuage) > AMONG.RAYON_DU_NUAGE_PX)
     ) {
-      entites.push(entite);
+      const pnj = commeUnPnj(etat, entite, connus, alias);
+
+      if (pnj === undefined) {
+        entites.push(entite);
+      } else {
+        foule.push(pnj);
+      }
     }
   }
+
+  foule.sort((un, autre) => (un.id < autre.id ? -1 : un.id > autre.id ? 1 : 0));
+  entites.push(...foule);
 
   if (commune.among === undefined) {
     return { ...commune, entites };
@@ -298,11 +328,67 @@ function vueDUnVivant(
     distance(commune.among.nuage, centre) <= rayon + AMONG.RAYON_DU_NUAGE_PX;
   const sabotages = tueur ? sabotagesDUnAssassin(barre) : sabotagesDUneProie(barre, nuageEnVue);
   const pas = pasHorsDeVue(etat, id, centre, entites);
+  const { habit, deguises, ...sansDeguisement } = sabotages;
+  const habitEnVue = !tueur && habit !== undefined && distance(habit, centre) <= rayon;
+  const sesDeguises = (deguises ?? []).filter((deguise) => connus.has(deguise.id));
 
   return {
     ...commune,
     entites,
-    among: pas.length === 0 ? sabotages : { ...sabotages, pas },
+    among: {
+      ...sansDeguisement,
+      ...(pas.length === 0 ? {} : { pas }),
+      ...(habitEnVue ? { habit } : {}),
+      ...(sesDeguises.length === 0 ? {} : { deguises: sesDeguises }),
+    },
+  };
+}
+
+/**
+ * Les deguises que ce vivant a le droit de reconnaitre (etape 7.28): lui-meme, et ses complices
+ * s'il est assassin. Il les voit tels qu'ils sont; tous les autres deguises sont des PNJ.
+ */
+function deguisesConnus(etat: EtatPartie, id: IdentifiantEntite): ReadonlySet<IdentifiantEntite> {
+  const joueurs = etat.among?.joueurs ?? {};
+  const assassin = joueurs[id]?.role === 'tueur';
+
+  return new Set(
+    Object.keys(joueurs).filter(
+      (autre) =>
+        joueurs[autre]?.deguisementMs !== undefined &&
+        (autre === id || (assassin && joueurs[autre]?.role === 'tueur')),
+    ),
+  );
+}
+
+/**
+ * Une entite de la vue d'un vivant telle qu'il la recoit si c'est un PNJ: un PNJ de la foule sous
+ * son alias, ou un deguise qu'il ne reconnait pas, au gris de la foule, sous l'alias de son
+ * deguisement. Undefined pour tout le reste, qu'il recoit tel quel.
+ */
+function commeUnPnj(
+  etat: EtatPartie,
+  entite: EntiteVue,
+  connus: ReadonlySet<IdentifiantEntite>,
+  alias: Alias,
+): BotVu | undefined {
+  if (entite.type === 'bot') {
+    return { ...entite, id: alias(entite.id) };
+  }
+
+  const joueur = entite.type === 'joueur' ? etat.among?.joueurs[entite.id] : undefined;
+
+  if (joueur?.deguisementMs === undefined || connus.has(entite.id)) {
+    return undefined;
+  }
+
+  return {
+    type: 'bot',
+    id: alias(`${entite.id}#${String(joueur.deguisements ?? 0)}`),
+    x: entite.x,
+    y: entite.y,
+    couleur: COULEUR_DE_LA_FOULE,
+    direction: entite.direction,
   };
 }
 

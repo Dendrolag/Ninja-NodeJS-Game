@@ -66,6 +66,7 @@ import {
 import type {
   AmongVu,
   BotVu,
+  DeguiseVu,
   EntiteVue,
   InstantanePartie,
   JoueurVu,
@@ -493,7 +494,15 @@ export function quantifierInstantane(instantane: InstantanePartie): InstantanePa
 function amongArrondi(among: AmongVu): AmongVu {
   codeDans(PHASES_AMONG, among.phase, 'phase');
 
-  const { sabotage, nuage, rechargeDesSabotagesMs, rechargeDeLaMaledictionMs, pas } = among;
+  const {
+    sabotage,
+    nuage,
+    rechargeDesSabotagesMs,
+    rechargeDeLaMaledictionMs,
+    pas,
+    habit,
+    deguises,
+  } = among;
 
   if (sabotage !== undefined) {
     codeDans(NATURES_DE_SABOTAGE, sabotage.nature, 'sabotage');
@@ -544,6 +553,22 @@ function amongArrondi(among: AmongVu): AmongVu {
           ),
         }),
     ...(pas === undefined ? {} : { pas: pas.map(({ secteur, palier }) => ({ secteur, palier })) }),
+    ...(habit === undefined
+      ? {}
+      : {
+          habit: {
+            x: positifArrondi(habit.x, 'habit.x'),
+            y: positifArrondi(habit.y, 'habit.y'),
+          },
+        }),
+    ...(deguises === undefined
+      ? {}
+      : {
+          deguises: deguises.map(({ id, restantMs }) => ({
+            id,
+            restantMs: positifArrondi(restantMs, 'deguise.restantMs'),
+          })),
+        }),
   };
 }
 
@@ -1544,7 +1569,9 @@ function encoder(
  * la: 1 le sabotage en cours (sa nature, ce qu'il en reste, les consoles tenues sur un octet,
  * puis, depuis l'etape 7.27, sa reparation sur un octet, octetDeLaReparation),
  * 2 le nuage (deux entiers), 4 la recharge des sabotages, 8 celle de la malediction. Et depuis
- * l'etape 7.23, 16 les pas entendus: leur nombre, puis un octet par pas.
+ * l'etape 7.23, 16 les pas entendus: leur nombre, puis un octet par pas. Et depuis l'etape 7.28,
+ * 32 l'habit pose (deux entiers), 64 les deguises connus: leur nombre, puis pour chacun son
+ * identifiant et ce qu'il lui reste.
  */
 function ecrireAmong(ecrivain: Ecrivain, among: AmongVu): void {
   ecrireCode(ecrivain, PHASES_AMONG, among.phase, 'phase');
@@ -1552,14 +1579,24 @@ function ecrireAmong(ecrivain: Ecrivain, among: AmongVu): void {
   ecrivain.entierPositif(among.tachesFaites);
   ecrivain.entierPositif(among.tachesTotal);
 
-  const { sabotage, nuage, rechargeDesSabotagesMs, rechargeDeLaMaledictionMs, pas } = among;
+  const {
+    sabotage,
+    nuage,
+    rechargeDesSabotagesMs,
+    rechargeDeLaMaledictionMs,
+    pas,
+    habit,
+    deguises,
+  } = among;
 
   ecrivain.octet(
     (sabotage === undefined ? 0 : 1) |
       (nuage === undefined ? 0 : 2) |
       (rechargeDesSabotagesMs === undefined ? 0 : 4) |
       (rechargeDeLaMaledictionMs === undefined ? 0 : 8) |
-      (pas === undefined ? 0 : 16),
+      (pas === undefined ? 0 : 16) |
+      (habit === undefined ? 0 : 32) |
+      (deguises === undefined ? 0 : 64),
   );
 
   if (sabotage !== undefined) {
@@ -1589,6 +1626,20 @@ function ecrireAmong(ecrivain: Ecrivain, among: AmongVu): void {
       ecrivain.octet(codeDUnPas(un));
     }
   }
+
+  if (habit !== undefined) {
+    ecrivain.entierPositif(habit.x);
+    ecrivain.entierPositif(habit.y);
+  }
+
+  if (deguises !== undefined) {
+    ecrivain.entierPositif(deguises.length);
+
+    for (const { id, restantMs } of deguises) {
+      ecrivain.texte(id);
+      ecrivain.entierPositif(restantMs);
+    }
+  }
 }
 
 function lireAmong(lecteur: Lecteur): AmongVu {
@@ -1598,7 +1649,7 @@ function lireAmong(lecteur: Lecteur): AmongVu {
   const tachesTotal = lecteur.entierPositif();
   const presents = lecteur.octet();
 
-  if (presents > 31) {
+  if (presents > 127) {
     throw new Error(`Bloc d'Among Ninjas illisible: indicateurs ${String(presents)}.`);
   }
 
@@ -1616,6 +1667,9 @@ function lireAmong(lecteur: Lecteur): AmongVu {
   const rechargeDesSabotagesMs = (presents & 4) === 0 ? undefined : lecteur.entierPositif();
   const rechargeDeLaMaledictionMs = (presents & 8) === 0 ? undefined : lecteur.entierPositif();
   const pas = (presents & 16) === 0 ? undefined : lirePas(lecteur);
+  const habit =
+    (presents & 32) === 0 ? undefined : { x: lecteur.entierPositif(), y: lecteur.entierPositif() };
+  const deguises = (presents & 64) === 0 ? undefined : lireDeguises(lecteur);
 
   return {
     phase,
@@ -1627,7 +1681,26 @@ function lireAmong(lecteur: Lecteur): AmongVu {
     ...(rechargeDesSabotagesMs === undefined ? {} : { rechargeDesSabotagesMs }),
     ...(rechargeDeLaMaledictionMs === undefined ? {} : { rechargeDeLaMaledictionMs }),
     ...(pas === undefined ? {} : { pas }),
+    ...(habit === undefined ? {} : { habit }),
+    ...(deguises === undefined ? {} : { deguises }),
   };
+}
+
+/** Le plus de deguises qu'une trame peut nommer: un par joueur d'une partie pleine. */
+const DEGUISES_AU_PLUS = 12;
+
+/** Les deguises connus (etape 7.28): leur nombre, puis l'identifiant et le temps de chacun. */
+function lireDeguises(lecteur: Lecteur): DeguiseVu[] {
+  const nombre = lecteur.entierPositif();
+
+  if (nombre > DEGUISES_AU_PLUS) {
+    throw new ErreurDeTrame(`elle porte ${String(nombre)} deguises, plus qu'une partie n'en a`);
+  }
+
+  return Array.from({ length: nombre }, () => ({
+    id: lecteur.texte(),
+    restantMs: lecteur.entierPositif(),
+  }));
 }
 
 /** Les pas entendus (etape 7.23): leur nombre, puis un octet chacun. */

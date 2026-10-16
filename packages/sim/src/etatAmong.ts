@@ -84,6 +84,18 @@ export interface JoueurAmong {
   readonly faits: FaitsAmong;
   /** Sa marche (etape 7.23), absente avant son premier battement de jeu. */
   readonly foulee?: FouleeAmong;
+  /**
+   * Ce qu'il lui reste de deguisement en PNJ (etape 7.28), en temps de jeu. Absent quand il ne
+   * l'est pas: pour tous les autres vivants, il a alors le gris des PNJ, sans pseudo.
+   */
+  readonly deguisementMs?: number;
+  /**
+   * Combien de deguisements il a commences dans la partie (etape 7.28). Le serveur en tire
+   * l'alias de chacun: d'un deguisement a l'autre, rien ne permet de reconnaitre le meme PNJ.
+   */
+  readonly deguisements?: number;
+  /** Une proie porte un habit ramasse, pas encore revetu (etape 7.28). */
+  readonly habit?: true;
 }
 
 /**
@@ -144,6 +156,11 @@ export interface CadavreAmong {
   readonly victime: Identifiant;
   readonly position: Position;
   readonly couleur: Couleur;
+  /**
+   * Le cadavre d'un PNJ tue par un assassin pour se deguiser (etape 7.28): un indice, qu'on ne
+   * signale pas (decision 5 du porteur du projet). Absent pour une proie.
+   */
+  readonly pnj?: true;
 }
 
 /** Un vote: pour un joueur, ou null pour passer. */
@@ -230,6 +247,13 @@ export interface EtatAmong {
    * de jeu seulement. Absent quand personne n'en a fait. Le serveur en tire ce que chacun entend.
    */
   readonly pasDuBattement?: readonly Identifiant[];
+  /**
+   * L'habit pose sur la carte (etape 7.28): un seul a la fois, que seules les proies vivantes
+   * voient. Absent une fois pris, jusqu'au suivant.
+   */
+  readonly habit?: Position;
+  /** Le temps de jeu avant que le prochain habit apparaisse, une fois le precedent pris. */
+  readonly habitDansMs?: number;
 }
 
 /** Un tueur a tue une proie. */
@@ -322,6 +346,30 @@ export interface Malediction {
   readonly victimes: readonly Identifiant[];
 }
 
+/**
+ * Un assassin a tue un PNJ (etape 7.28): il en prend l'apparence. Le serveur ne le dit qu'a lui;
+ * les temoins voient le cadavre gris, et un PNJ de plus.
+ */
+export interface PnjTue {
+  readonly type: 'pnjTue';
+  readonly tueur: Identifiant;
+  readonly pnj: Identifiant;
+  readonly position: Position;
+}
+
+/** Une proie a pris l'habit pose sur la carte (etape 7.28). */
+export interface HabitPris {
+  readonly type: 'habitPris';
+  readonly joueur: Identifiant;
+}
+
+/** Un deguisement commence, ou tombe (etape 7.28). */
+export interface DeguisementAmong {
+  readonly type: 'deguisement';
+  readonly joueur: Identifiant;
+  readonly quoi: 'debut' | 'fin';
+}
+
 /** Les evenements du mode, ajoutes au journal d'un battement. */
 export type EvenementAmong =
   | Meurtre
@@ -334,4 +382,7 @@ export type EvenementAmong =
   | TacheVisuelle
   | SabotageLance
   | SabotageFini
-  | Malediction;
+  | Malediction
+  | PnjTue
+  | HabitPris
+  | DeguisementAmong;

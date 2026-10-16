@@ -442,6 +442,16 @@ export const SONS = {
   /** La cle tourne. */
   reparationCle: 'button-click.wav',
   /*
+   * Le deguisement d'Among Ninjas (etape 7.28), entendu du seul joueur qu'il concerne: entendu
+   * des autres, il dirait qui se deguise. Des sons du jeu en attendant ceux du porteur du projet.
+   */
+  /** Une proie prend l'habit en passant dessus. */
+  habitPris: 'collect-bonus.wav',
+  /** Le deguisement commence: l'habit revetu, ou le PNJ tue par un assassin. */
+  deguisementRevetu: 'bonus-escape-nuage.mp3',
+  /** Le deguisement tombe: le temps est passe, une tache, un meurtre, une reunion. */
+  deguisementPerdu: 'collect-malus.wav',
+  /*
    * Les sons du porteur du projet pour Among Ninjas (12 octobre 2026), reserves au mode.
    */
   /** Le gong d'une reunion qui s'ouvre, entendu de tous. */

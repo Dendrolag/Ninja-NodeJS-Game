@@ -41,6 +41,7 @@ import {
   AUCUN_EFFET_TACTIQUE,
   CONES_DES_VISEES,
   COULEUR_BOT_NEUTRE,
+  COULEUR_DE_LA_FOULE,
   DIRECTIONS,
   IMAGES_DE_MARCHE,
   MASSACRE,
@@ -394,6 +395,9 @@ export function construireScene(
 
   const image = imageDeMarche(maintenant);
   const revelationActive = bonusActifs.has('revelation');
+  // Les deguises d'Among Ninjas que nous connaissons (etape 7.28): nous-memes, nos complices, ou
+  // tous pour un fantome. Le gris des PNJ, et un contour neon a leur couleur (rendu 3A).
+  const deguises = new Set((lissee.vue.among?.deguises ?? []).map(({ id }) => id));
 
   for (const { entite, x, y, enMouvement } of lissee.entites) {
     // Une mine posee (etape 7.11) ou une mine de zone (etape 7.12) n'est pas un personnage:
@@ -512,10 +516,13 @@ export function construireScene(
       x,
       y,
       taille: TAILLE_SPRITE,
-      teinte: couleurEnNombre(teinteDe(entite, enMouvement)),
+      teinte: couleurEnNombre(
+        deguises.has(entite.id) ? COULEUR_DE_LA_FOULE : teinteDe(entite, enMouvement),
+      ),
       alpha,
-      // Un fantome d'Among Ninjas a un contour neon a sa couleur (etape 7.20).
-      ...(entite.type === 'joueur' && entite.fantome === true
+      // Un fantome d'Among Ninjas a un contour neon a sa couleur (etape 7.20), comme un deguise
+      // que nous connaissons (etape 7.28).
+      ...(entite.type === 'joueur' && (entite.fantome === true || deguises.has(entite.id))
         ? { contourNeon: couleurEnNombre(entite.couleur) }
         : {}),
     });

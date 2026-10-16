@@ -43,6 +43,14 @@
  * deplacement reel. Le moteur dit qui vient d'en faire un (EtatAmong.pasDuBattement); ce que
  * chacun en entend est l'affaire du serveur.
  *
+ * LE DEGUISEMENT (etape 7.28): vingt secondes avec le gris des PNJ, sans pseudo. Un assassin le
+ * prend en tuant un PNJ, au prix de la recharge d'un vrai meurtre, et le perd en tuant une proie.
+ * Une proie le prend en revetant l'habit qu'elle a ramasse, quand elle veut, par le tir (Espace,
+ * ou le bouton « Habit »), et le perd en ouvrant une tache. Une reunion le fait tomber pour tous.
+ * Un seul habit sur la carte a la fois, que seules les proies vivantes voient; le suivant apparait
+ * 45 secondes de jeu apres. Le cadavre d'un PNJ ne se signale pas. La foule se reforme au debut de
+ * chaque tour. Le moteur sait qui est deguise; ce que chacun en voit est l'affaire du serveur.
+ *
  * LE SECRET n'est pas l'affaire du moteur: il sait tout, et le serveur decide ce que chacun
  * en voit (packages/server/src/vues.ts).
  */
@@ -77,10 +85,11 @@ import {
   tueursMaximum,
 } from '@neon-ninja/shared';
 
+import { peuplerDeBots } from './bots.js';
 import { positionTenable } from './collisions.js';
 import { AUCUN_MALUS, remplacer } from './effets.js';
-import type { EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
-import { identifiantSuivant } from './etat.js';
+import type { Bot, EtatPartie, IdentifiantEntite, Joueur } from './etat.js';
+import { identifiantSuivant, positionDApparition, retirerBot } from './etat.js';
 import type {
   CadavreAmong,
   CampAmong,
@@ -233,7 +242,8 @@ export function amongDecide(etat: EtatPartie): boolean {
  *      le reste: les roles, les stations et les listes d'une graine ne changent pas.
  *   5. La place de chaque station active dont le meuble est plusieurs fois sur la carte (16
  *      octobre 2026), tiree apres les reparations, pour la meme raison.
- *   6. Tout le monde est place autour du point de reunion, et la partie attend que chacun ait
+ *   6. La place du premier habit (etape 7.28), tiree en dernier.
+ *   7. Tout le monde est place autour du point de reunion, et la partie attend que chacun ait
  *      charge la carte avant la revelation.
  *
  * Tout tirage passe par le generateur a graine de l'etat: meme graine, meme partie.
@@ -316,7 +326,8 @@ export function lancerAmong(etat: EtatPartie): EtatPartie {
   const tirageDeLaPanne = entier(alea, REPARATIONS_DE_LA_PANNE.length);
   const tirageDeLaSurchauffe = entier(tirageDeLaPanne.alea, REPARATIONS_DE_LA_SURCHAUFFE.length);
   const placees = placerLesStations(tirageDeLaSurchauffe.alea, stations);
-  alea = placees.alea;
+  const premierHabit = placeDUnHabit(placees.alea, etat, lieux.gong, placees.stations);
+  alea = premierHabit.alea;
 
   const among: EtatAmong = {
     phase: 'chargement',
@@ -339,6 +350,7 @@ export function lancerAmong(etat: EtatPartie): EtatPartie {
     rechargeDeLaMaledictionMs: 0,
     tachesDesPartis: 0,
     tachesALaDerniereReunion: 0,
+    habit: premierHabit.valeur,
   };
 
   return replacerLesVivants({ ...etat, alea, among });
@@ -369,6 +381,34 @@ function placerLesStations(
   });
 
   return { stations: placees, alea: courant };
+}
+
+/** Combien de tirages pour trouver a l'habit une place loin du gong et des stations. */
+const TIRAGES_DE_L_HABIT = 40;
+
+/**
+ * La place d'un habit (etape 7.28): une place d'apparition (tenable, dans le morceau principal
+ * de la carte), loin du gong et des stations. Faute d'en trouver une, la derniere tiree: la regle
+ * de distance est un souhait, comme la distance de securite des apparitions.
+ */
+function placeDUnHabit(
+  alea: Alea,
+  etat: EtatPartie,
+  gong: Position,
+  stations: readonly Position[],
+): { readonly valeur: Position; readonly alea: Alea } {
+  const loin = (place: Position): boolean =>
+    distanceEntre(place, gong) >= AMONG.ECART_DE_L_HABIT_AU_GONG_PX &&
+    stations.every(
+      (station) => distanceEntre(place, station) >= AMONG.ECART_DE_L_HABIT_AUX_STATIONS_PX,
+    );
+  let tirage = positionDApparition(alea, etat.terrain);
+
+  for (let essai = 1; essai < TIRAGES_DE_L_HABIT && !loin(tirage.valeur); essai += 1) {
+    tirage = positionDApparition(tirage.alea, etat.terrain);
+  }
+
+  return tirage;
 }
 
 /** Un joueur au depart de la partie. */
@@ -650,7 +690,8 @@ function retenirLesBoutonsTenus(etat: EtatPartie, entrees: Entrees): EtatPartie 
 
 /**
  * Un tour commence: les vivants autour du point de reunion, les cadavres retires, la recharge
- * des tueurs a dix secondes, les taches et les reparations en cours interrompues.
+ * des tueurs a dix secondes, les taches et les reparations en cours interrompues. La foule se
+ * reforme (etape 7.28): les PNJ que les assassins ont tues pour se deguiser reviennent, ailleurs.
  */
 function commencerUnTour(etat: EtatPartie): EtatPartie {
   const among = etat.among as EtatAmong;
@@ -669,26 +710,36 @@ function commencerUnTour(etat: EtatPartie): EtatPartie {
   const { reunion: _close, ejection: _affichee, ...sansReunion } = among;
 
   return journaliser(
-    replacerLesVivants(
-      avecAmong(etat, {
-        ...sansReunion,
-        phase: 'jeu',
-        phaseRestanteMs: 0,
-        tour,
-        tourEcouleMs: 0,
-        joueurs,
-        cadavres: {},
-        rechargeDesSabotagesMs: AMONG.RECHARGE_DES_SABOTAGES_DEBUT_DE_TOUR_MS,
-        // Pas de malediction dans les premieres secondes d'un tour (etape 7.22): la recharge
-        // le dit, et la page n'a qu'elle a lire.
-        rechargeDeLaMaledictionMs: Math.max(
-          among.rechargeDeLaMaledictionMs,
-          AMONG.DELAI_DE_LA_MALEDICTION_MS,
-        ),
-      }),
+    reformerLaFoule(
+      replacerLesVivants(
+        avecAmong(etat, {
+          ...sansReunion,
+          phase: 'jeu',
+          phaseRestanteMs: 0,
+          tour,
+          tourEcouleMs: 0,
+          joueurs,
+          cadavres: {},
+          rechargeDesSabotagesMs: AMONG.RECHARGE_DES_SABOTAGES_DEBUT_DE_TOUR_MS,
+          // Pas de malediction dans les premieres secondes d'un tour (etape 7.22): la recharge
+          // le dit, et la page n'a qu'elle a lire.
+          rechargeDeLaMaledictionMs: Math.max(
+            among.rechargeDeLaMaledictionMs,
+            AMONG.DELAI_DE_LA_MALEDICTION_MS,
+          ),
+        }),
+      ),
     ),
     { type: 'tourCommence', tour },
   );
+}
+
+/** La foule a son nombre regle (etape 7.28): les PNJ tues sont remplaces, a de nouvelles places. */
+function reformerLaFoule(etat: EtatPartie): EtatPartie {
+  const presents = Object.values(etat.bots).filter((bot) => bot.type === 'bot').length;
+  const manquants = etat.reglages.nombreBotsInitial - presents;
+
+  return manquants > 0 ? peuplerDeBots(etat, manquants) : etat;
 }
 
 /**
@@ -701,8 +752,10 @@ function commencerUnTour(etat: EtatPartie): EtatPartie {
  *      qu'a partir du suivant.
  *   3. Les reparations ouvertes (etape 7.27), comme les taches: le temps passe, la presence, la
  *      fin annoncee. Puis le sabotage en cours (etape 7.22): il s'eteint, les deux cles le
- *      reparent, ou la surchauffe est perdue.
- *   4. Les gestes du battement, dans un ordre tire au sort: un meurtre, un signalement, un
+ *      reparent, ou la surchauffe est perdue. Puis les deguisements s'usent, et l'habit se prend
+ *      ou revient (etape 7.28).
+ *   4. Les gestes du battement, dans un ordre tire au sort: un meurtre, l'habit revetu, un
+ *      signalement, un
  *      gong, l'ouverture d'une reparation ou d'une tache, un sabotage, une malediction. Une reunion ouverte arrete
  *      les gestes qui suivent.
  *   5. Le terme du tour, s'il est regle, ouvre une reunion; il attend la fin d'une surchauffe,
@@ -731,6 +784,8 @@ function jouer(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPartie {
   );
   courant = faireLesReparations(courant, entrees, dtMs);
   courant = avancerLeSabotage(courant, entrees, dtMs);
+  courant = avancerLesDeguisements(courant, dtMs);
+  courant = avancerLHabit(courant, dtMs);
 
   const acteurs = Object.keys(etat.joueurs).filter((id) => {
     const entree = entrees[id];
@@ -751,7 +806,7 @@ function jouer(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatPartie {
     }
 
     if (entrees[id]?.capturer === true) {
-      courant = tuer(courant, id);
+      courant = estTueur(courant, id) ? tuer(courant, id) : revetirLHabit(courant, id);
     }
 
     if (entrees[id]?.agir === true && courant.among?.joueurs[id]?.actionTenue === false) {
@@ -797,6 +852,8 @@ const MARGE_D_UN_SAUT = 2;
  * deplacement reel, si bien qu'un joueur bloque contre un mur ne fait pas de bruit. Un saut plus
  * long qu'un battement ne le permet (le replacement autour du point de reunion) n'est pas une
  * marche: il remet la marche a zero. Un fantome ne fait aucun pas, et un PNJ n'a pas de marche.
+ * Un deguise marche sans bruit, comme un PNJ (etape 7.28, reponse 7): sa marche se tient, sans
+ * pas.
  *
  * @returns Les tables du mode, chaque vivant a sa nouvelle marche, et les pas du battement.
  */
@@ -815,7 +872,7 @@ function compterLesPas(etat: EtatPartie, dtMs: number): EtatAmong {
 
     const foulee = marcher(joueur.foulee, position, sautPx);
 
-    if (foulee.parcourusPx >= AMONG.FOULEE_PX) {
+    if (foulee.parcourusPx >= AMONG.FOULEE_PX && joueur.deguisementMs === undefined) {
       pas.push(id);
     }
 
@@ -845,6 +902,10 @@ function marcher(foulee: FouleeAmong | undefined, position: Position, sautPx: nu
  * Un tueur tente un meurtre: la proie vivante la plus proche, a sa portee, au contact. A
  * distance egale, l'ordre de l'etat departage. Rien si sa recharge n'est pas finie, s'il est
  * fantome, ou si personne n'est a portee: le geste ne coute alors rien.
+ *
+ * A defaut de proie, le PNJ le plus proche a portee (etape 7.28): l'assassin en prend
+ * l'apparence. Un assassin deguise qui tue une proie reprend sa couleur sur-le-champ
+ * (decision 2): sans cela, il tuerait sans jamais pouvoir etre nomme.
  */
 export function tuer(etat: EtatPartie, tueurId: IdentifiantEntite): EtatPartie {
   const among = etat.among;
@@ -883,10 +944,11 @@ export function tuer(etat: EtatPartie, tueurId: IdentifiantEntite): EtatPartie {
   }
 
   if (victime === undefined) {
-    return etat;
+    return tuerUnPnj(etat, tueurId, tueur, corps.position);
   }
 
   const proie = among.joueurs[victime.id] as JoueurAmong;
+  const demasque = tueur.deguisementMs !== undefined;
   const identifiant = identifiantSuivant(etat, 'cadavre');
   const cadavre: CadavreAmong = {
     victime: victime.id,
@@ -903,7 +965,7 @@ export function tuer(etat: EtatPartie, tueurId: IdentifiantEntite): EtatPartie {
         joueurs: {
           ...among.joueurs,
           [tueurId]: {
-            ...tueur,
+            ...sansDeguisement(tueur),
             rechargeMs: reglagesDe(etat).rechargeMeurtreS * 1000,
             faits: {
               ...tueur.faits,
@@ -911,13 +973,202 @@ export function tuer(etat: EtatPartie, tueurId: IdentifiantEntite): EtatPartie {
               meurtresAuPremierTour: tueur.faits.meurtresAuPremierTour + (among.tour === 1 ? 1 : 0),
             },
           },
-          [victime.id]: { ...sansRienDOuvert(proie), fantome: true },
+          // Morte, elle perd son deguisement et l'habit qu'elle portait (fiche, « La proie »).
+          [victime.id]: { ...sansHabit(sansDeguisement(sansRienDOuvert(proie))), fantome: true },
         },
         cadavres: { ...among.cadavres, [identifiant.valeur]: cadavre },
       },
     },
     { type: 'meurtre', tueur: tueurId, victime: victime.id, position: victime.position },
+    ...(demasque ? [{ type: 'deguisement' as const, joueur: tueurId, quoi: 'fin' as const }] : []),
   );
+}
+
+/**
+ * Un assassin tue le PNJ le plus proche a sa portee (etape 7.28), faute de proie: le PNJ tombe en
+ * cadavre gris, qu'on ne signale pas, et l'assassin en prend l'apparence pour vingt secondes, sans
+ * cumul s'il l'avait deja. C'est la recharge d'un vrai meurtre (decision 3), et aucun point. Rien
+ * si aucun PNJ n'est a portee.
+ */
+function tuerUnPnj(
+  etat: EtatPartie,
+  tueurId: IdentifiantEntite,
+  tueur: JoueurAmong,
+  position: Position,
+): EtatPartie {
+  let pnj: Bot | undefined;
+  let distanceRetenue = Number.POSITIVE_INFINITY;
+
+  for (const bot of Object.values(etat.bots)) {
+    const distance = distanceEntre(position, bot.position);
+
+    if (
+      bot.type === 'bot' &&
+      distance <= AMONG.PORTEE_DU_MEURTRE_PX &&
+      distance < distanceRetenue
+    ) {
+      pnj = bot;
+      distanceRetenue = distance;
+    }
+  }
+
+  if (pnj === undefined) {
+    return etat;
+  }
+
+  const identifiant = identifiantSuivant(etat, 'cadavre');
+  const sansLui = retirerBot({ ...etat, compteurIdentifiants: identifiant.compteur }, pnj.id);
+  const among = sansLui.among as EtatAmong;
+  const deja = tueur.deguisementMs !== undefined;
+
+  return journaliser(
+    avecAmong(sansLui, {
+      ...among,
+      joueurs: {
+        ...among.joueurs,
+        [tueurId]: {
+          ...tueur,
+          rechargeMs: reglagesDe(etat).rechargeMeurtreS * 1000,
+          deguisementMs: AMONG.DUREE_DU_DEGUISEMENT_MS,
+          deguisements: (tueur.deguisements ?? 0) + (deja ? 0 : 1),
+        },
+      },
+      cadavres: {
+        ...among.cadavres,
+        [identifiant.valeur]: {
+          victime: pnj.id,
+          position: pnj.position,
+          couleur: pnj.couleur,
+          pnj: true,
+        },
+      },
+    }),
+    { type: 'pnjTue', tueur: tueurId, pnj: pnj.id, position: pnj.position },
+    ...(deja ? [] : [{ type: 'deguisement' as const, joueur: tueurId, quoi: 'debut' as const }]),
+  );
+}
+
+/**
+ * Une proie vivante revet l'habit qu'elle porte (etape 7.28): vingt secondes de deguisement,
+ * sans cumul. Rien sans habit, ni pour un fantome.
+ */
+function revetirLHabit(etat: EtatPartie, id: IdentifiantEntite): EtatPartie {
+  const among = etat.among as EtatAmong;
+  const joueur = among.joueurs[id];
+
+  if (joueur?.role !== 'proie' || joueur.fantome || joueur.habit !== true) {
+    return etat;
+  }
+
+  const deja = joueur.deguisementMs !== undefined;
+
+  return journaliser(
+    avecJoueur(etat, id, {
+      ...sansHabit(joueur),
+      deguisementMs: AMONG.DUREE_DU_DEGUISEMENT_MS,
+      deguisements: (joueur.deguisements ?? 0) + (deja ? 0 : 1),
+    }),
+    ...(deja ? [] : [{ type: 'deguisement' as const, joueur: id, quoi: 'debut' as const }]),
+  );
+}
+
+/** Les deguisements s'usent avec le temps de jeu, et tombent a leur terme (etape 7.28). */
+function avancerLesDeguisements(etat: EtatPartie, dtMs: number): EtatPartie {
+  const among = etat.among as EtatAmong;
+  const finis: IdentifiantEntite[] = [];
+  let change = false;
+  const joueurs: Record<IdentifiantEntite, JoueurAmong> = { ...among.joueurs };
+
+  for (const [id, joueur] of Object.entries(among.joueurs)) {
+    if (joueur.deguisementMs === undefined) {
+      continue;
+    }
+
+    change = true;
+    const reste = joueur.deguisementMs - dtMs;
+
+    if (reste > 0) {
+      joueurs[id] = { ...joueur, deguisementMs: reste };
+    } else {
+      joueurs[id] = sansDeguisement(joueur);
+      finis.push(id);
+    }
+  }
+
+  return change
+    ? journaliser(
+        avecAmong(etat, { ...among, joueurs }),
+        ...finis.map((joueur) => ({ type: 'deguisement' as const, joueur, quoi: 'fin' as const })),
+      )
+    : etat;
+}
+
+/**
+ * L'habit du battement (etape 7.28). Pose, la premiere proie vivante sans habit qui passe dessus le
+ * prend, dans l'ordre de l'etat; le suivant apparaitra 45 secondes de jeu plus tard, ailleurs.
+ * Pris, son attente s'ecoule, puis il se pose.
+ */
+function avancerLHabit(etat: EtatPartie, dtMs: number): EtatPartie {
+  const among = etat.among as EtatAmong;
+  const habit = among.habit;
+
+  if (habit === undefined) {
+    const reste = (among.habitDansMs ?? 0) - dtMs;
+
+    if (reste > 0) {
+      return avecAmong(etat, { ...among, habitDansMs: reste });
+    }
+
+    const { habitDansMs: _ecoule, ...sansAttente } = among;
+    const place = placeDUnHabit(etat.alea, etat, among.gong, among.stations);
+
+    return { ...avecAmong(etat, { ...sansAttente, habit: place.valeur }), alea: place.alea };
+  }
+
+  const preneur = Object.keys(etat.joueurs).find((id) => {
+    const joueur = among.joueurs[id];
+    const corps = etat.joueurs[id];
+
+    return (
+      joueur?.role === 'proie' &&
+      !joueur.fantome &&
+      joueur.habit !== true &&
+      corps !== undefined &&
+      distanceEntre(corps.position, habit) <= AMONG.PORTEE_DE_L_HABIT_PX
+    );
+  });
+
+  if (preneur === undefined) {
+    return etat;
+  }
+
+  const { habit: _pris, ...sansHabitPose } = among;
+
+  return journaliser(
+    avecAmong(etat, {
+      ...sansHabitPose,
+      habitDansMs: AMONG.REAPPARITION_DE_L_HABIT_MS,
+      joueurs: {
+        ...among.joueurs,
+        [preneur]: { ...(among.joueurs[preneur] as JoueurAmong), habit: true },
+      },
+    }),
+    { type: 'habitPris', joueur: preneur },
+  );
+}
+
+/** Ce joueur, sans deguisement. */
+function sansDeguisement(joueur: JoueurAmong): JoueurAmong {
+  const { deguisementMs: _tombe, ...sans } = joueur;
+
+  return sans;
+}
+
+/** Ce joueur, sans l'habit qu'il portait. */
+function sansHabit(joueur: JoueurAmong): JoueurAmong {
+  const { habit: _quitte, ...sans } = joueur;
+
+  return sans;
 }
 
 /**
@@ -1053,9 +1304,19 @@ function ouvrirUneTache(
 
   const indice = tacheALaPlace(etat.among as EtatAmong, joueur, position);
 
-  return indice < 0
-    ? etat
-    : avecJoueur(etat, id, { ...joueur, tacheEnCours: { indice, ecouleMs: 0 } });
+  if (indice < 0) {
+    return etat;
+  }
+
+  // Une proie deguisee qui ouvre une tache perd son deguisement (etape 7.28, decision 4).
+  const ouverte = avecJoueur(etat, id, {
+    ...sansDeguisement(joueur),
+    tacheEnCours: { indice, ecouleMs: 0 },
+  });
+
+  return joueur.deguisementMs === undefined
+    ? ouverte
+    : journaliser(ouverte, { type: 'deguisement', joueur: id, quoi: 'fin' });
 }
 
 /** Le cadavre le plus proche de cette place, a portee de signalement, ou rien. */
@@ -1066,7 +1327,12 @@ function cadavreLePlusProche(among: EtatAmong, position: Position): CadavreAmong
   for (const cadavre of Object.values(among.cadavres)) {
     const distance = distanceEntre(position, cadavre.position);
 
-    if (distance <= AMONG.PORTEE_DU_SIGNALEMENT_PX && distance < distanceRetenue) {
+    // Le cadavre d'un PNJ n'est qu'un indice (etape 7.28, decision 5): le bouton l'ignore.
+    if (
+      cadavre.pnj !== true &&
+      distance <= AMONG.PORTEE_DU_SIGNALEMENT_PX &&
+      distance < distanceRetenue
+    ) {
       retenu = cadavre;
       distanceRetenue = distance;
     }
@@ -1523,7 +1789,14 @@ function ouvrirUneReunion(
   const among = etat.among as EtatAmong;
   const numero = among.reunions + 1;
   const joueurs = Object.fromEntries(
-    Object.entries(among.joueurs).map(([id, joueur]) => [id, sansRienDOuvert(joueur)]),
+    Object.entries(among.joueurs).map(([id, joueur]) => [
+      id,
+      // On y parle par couleurs: les deguisements tombent (etape 7.28).
+      sansDeguisement(sansRienDOuvert(joueur)),
+    ]),
+  );
+  const demasques = Object.keys(among.joueurs).filter(
+    (id) => among.joueurs[id]?.deguisementMs !== undefined,
   );
   const morts = Object.keys(etat.joueurs).filter((id) => among.joueurs[id]?.fantome === true);
   const { sabotage: _fini, ...sansSabotage } = among;
@@ -1553,6 +1826,7 @@ function ouvrirUneReunion(
         },
       },
     ),
+    ...demasques.map((joueur) => ({ type: 'deguisement' as const, joueur, quoi: 'fin' as const })),
     {
       type: 'reunionOuverte',
       numero,

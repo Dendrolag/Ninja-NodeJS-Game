@@ -110,6 +110,24 @@ export const AMONG = {
   FOULEE_PX: 37.5,
   /** On entend les pas d'un vivant jusqu'a cette distance, de centre a centre. */
   PORTEE_DES_PAS_PX: 500,
+  /**
+   * Le deguisement en PNJ (etape 7.28, fiche docs/plan/etape-7-28.md), decisions du porteur du
+   * projet du 14 octobre 2026: vingt secondes pour les deux camps, sans cumul.
+   */
+  DUREE_DU_DEGUISEMENT_MS: 20_000,
+  /** Un habit pris, le suivant apparait ailleurs ce temps de jeu plus tard. */
+  REAPPARITION_DE_L_HABIT_MS: 45_000,
+  /**
+   * Une proie prend l'habit en passant dessus: son centre a cette distance au plus de celui de
+   * l'habit, le rayon d'un ninja (16 pixels) et un peu plus que celui de l'habit dessine.
+   */
+  PORTEE_DE_L_HABIT_PX: 28,
+  /**
+   * L'habit se pose loin du gong et des stations (fiche, « La proie »): la ou l'on ne passe pas
+   * forcement, et ou personne ne le trouve en faisant sa tache.
+   */
+  ECART_DE_L_HABIT_AU_GONG_PX: 250,
+  ECART_DE_L_HABIT_AUX_STATIONS_PX: 120,
 } as const;
 
 /**

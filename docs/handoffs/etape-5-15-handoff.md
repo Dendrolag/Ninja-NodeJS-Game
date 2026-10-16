@@ -77,6 +77,10 @@ Dans l'ordre, une fois le compte Grafana Cloud créé (guide donné dans la conv
 
 `master` poussé jusqu'à `58c74a5`, CI verte (exécution 38264706970), mis en ligne sur Oracle, Render au même commit, page publique en service.
 
+## Après l'étape, 16 octobre 2026
+
+Le porteur du projet signale plusieurs parties en production, à plusieurs joueurs, qui ont bien fonctionné. La partie en production de la prochaine action est donc jouée; reste à la session suivante de vérifier dans Grafana ce que le tableau en a retenu, puis le reste de la liste ci-dessous.
+
 ## Prochaine action exacte
 
 Le porteur du projet joue une partie en production, sur ordinateur et sur téléphone (Among Ninjas se lance seul avec quatre joueurs fictifs: une partie privée créée dans la page, puis `node tests/outils/joueurs-fictifs.mjs https://serveur.ninja.dendrolag.fr <code> 4`, qui présente désormais la version du serveur); la session suivante vérifie dans Grafana que le tableau la montre (verdict, battement et ses phases, joueurs chez eux, ligne de la partie), que `neon_demarrage_secondes` porte la version `58c74a5` (preuve que la route des métriques est ouverte), relève les séries actives et l'agent sur 24 heures (section 34.4 des mesures), fait déclencher chaque alerte une fois, provoque une saccade réseau et une saccade page, puis clôt l'étape.

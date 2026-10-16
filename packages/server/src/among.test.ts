@@ -27,7 +27,7 @@ import {
   vuesDe,
 } from './vues.js';
 
-/** Un alias qui ne sert jamais: aucune vue d'Among Ninjas ne masque. */
+/** Un alias qui garde les identifiants lisibles: la foule passe sous alias dans les vues des vivants (etape 7.28), et ces tests la reconnaissent ainsi. Les alias eux-memes se testent dans among.deguisement.test.ts. */
 const SANS_ALIAS = (id: string): string => id;
 
 /** Une partie de cinq, nommes j1 a j5, la revelation passee. */
@@ -232,6 +232,8 @@ describe('les vues', () => {
       tachesTotal: 20,
       rechargeDesSabotagesMs: AMONG.RECHARGE_DES_SABOTAGES_DEBUT_DE_TOUR_MS,
       rechargeDeLaMaledictionMs: AMONG.DELAI_DE_LA_MALEDICTION_MS,
+      // L'habit pose des le lancement (etape 7.28).
+      habit: amongDe(etat).habit,
     });
     expect(instantaneDe(enJeu({ among: { dureeDuTourS: 0 } })).among?.restantMs).toBe(0);
   });
