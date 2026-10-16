@@ -61,6 +61,13 @@ Recommandations à soumettre au porteur du projet avec la planche, avant toute c
 6. **La version.** Recommandé: **1.9.9, sans note**, les petites évolutions d'Among Ninjas restant en 1.9 (décision du 14 octobre 2026). Le déguisement change la façon de jouer: si le porteur du projet veut une note, la règle lui demande d'en décider.
 7. **Les pas d'un déguisé.** Un PNJ est muet (étape 7.23), et les pas d'un joueur qu'on voit s'entendent à sa place exacte: un déguisé qui marche serait reconnu à l'oreille dès qu'on le voit. Recommandé: **un déguisé marche sans bruit**, comme un PNJ, sans quoi le déguisement ne tromperait personne de près. L'autre voie, qu'il s'entende, en fait un camouflage de loin seulement.
 
+## Réconciliation au début de l'étape, 16 octobre 2026
+
+Lecture de `vues.ts`, `instantane.ts` et `among.ts` au commit `fc3d9a8`. Deux points que la fiche ne disait pas, aucun ne demande de décision:
+
+1. **Les PNJ doivent passer sous alias dans la vue d'un vivant.** Aujourd'hui, un vivant reçoit chaque PNJ sous son identifiant du moteur (`bot-12`) et chaque joueur sous le sien. Un déguisé envoyé comme un PNJ garderait un identifiant de joueur, ou en prendrait un nouveau à son entrée dans la foule: dans les deux cas, un client qui lit ses trames le trouverait. Comme les proies dans la vue des traqueurs de la Chasse (étape 2.9), les PNJ et les déguisés d'une vue de vivant prennent donc un alias tiré du secret de la partie, rangés par alias, et le cadavre d'un PNJ ne dit pas qui il était. L'alias d'un déguisé est tiré à chaque déguisement, pour qu'on ne le reconnaisse pas d'une fois sur l'autre. Ce qui se voit à l'écran ne change pas: un témoin qui voit un assassin devenir gris le sait, c'est le jeu.
+2. **Le cadavre d'une proie déguisée est à sa vraie couleur.** Le déguisement est un affichage, la couleur du joueur ne change pas dans l'état: tuée déguisée, la proie tombe à sa couleur, et l'on sait qui est mort.
+
 ## Ce qu'il faut faire
 
 1. **La planche des rendus** (`docs/design/etape-7-28/`): le cadavre gris d'un PNJ, l'habit posé sur la carte, le bandeau d'un joueur déguisé et son temps, le bouton « Habit » sur téléphone. Deux ou trois propositions chacun, dessinées par le vrai code.

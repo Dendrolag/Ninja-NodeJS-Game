@@ -1,0 +1,860 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Planche du déguisement</title>
+    <style>
+      :root {
+        --fond: #0b1020;
+        --cadre: #26304f;
+        --texte: #e8ecf6;
+        --pale: #aeb6cc;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 22px 24px 18px;
+        width: 1400px;
+        background: var(--fond);
+        color: var(--texte);
+        font: 13px/1.35 'DejaVu Sans', 'Segoe UI', sans-serif;
+      }
+      h1 {
+        margin: 0 0 6px;
+        font-size: 22px;
+      }
+      .intro {
+        margin: 0 0 14px;
+      }
+      .rangee {
+        display: grid;
+        grid-template-columns: 170px 1fr 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .legende {
+        text-align: right;
+        padding-top: 60px;
+        color: var(--pale);
+      }
+      .legende b {
+        display: block;
+        color: var(--texte);
+        font-size: 14px;
+      }
+      .case {
+        background: var(--cadre);
+        border-radius: 8px;
+        padding: 7px 7px 6px;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-radius: 4px;
+        background: #121a33;
+      }
+      .titre {
+        text-align: center;
+        font-weight: bold;
+        margin-top: 5px;
+      }
+      .detail {
+        text-align: center;
+        opacity: 0.85;
+        min-height: 34px;
+      }
+      .pied {
+        color: var(--pale);
+        margin-top: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Among Ninjas, le déguisement en PNJ: les rendus à choisir</h1>
+    <p class="intro">
+      Dessiné en code sur les sprites et le décor de Tokyo. Trois propositions par rangée, A, B ou C; on peut aussi
+      mélanger. Pour tous les autres vivants, un déguisé est un PNJ comme les autres, gris et sans pseudo: rien à choisir
+      là. Le joueur déguisé est ici Orange, la foule est grise.
+    </p>
+
+    <div class="rangee">
+      <div class="legende">
+        <b>1. Le cadavre d'un PNJ</b>Un indice, qu'on ne signale pas. Grossi 3 fois, à côté du cadavre d'un joueur
+        d'aujourd'hui, puis à l'échelle
+      </div>
+      <div class="case">
+        <canvas id="r1a" width="760" height="420"></canvas>
+        <div class="titre">A. Comme un joueur, en gris</div>
+        <div class="detail">Coupé en deux dans son sang: on croit d'abord à un meurtre, puis on voit le gris</div>
+      </div>
+      <div class="case">
+        <canvas id="r1b" width="760" height="420"></canvas>
+        <div class="titre">B. Couché, entier</div>
+        <div class="detail">Le PNJ tombé sur le flanc, sans coupure ni sang: rien à signaler, mais quelqu'un est passé</div>
+      </div>
+      <div class="case">
+        <canvas id="r1c" width="760" height="420"></canvas>
+        <div class="titre">C. Coupé en deux, sans sang</div>
+        <div class="detail">Le coup du katana se lit, à demi effacé: la marque d'un assassin, pas un mort à pleurer</div>
+      </div>
+    </div>
+
+    <div class="rangee">
+      <div class="legende">
+        <b>2. L'habit sur la carte</b>Vu des seules proies vivantes, dans leur cercle. Grossi 3 fois en médaillon
+      </div>
+      <div class="case">
+        <canvas id="r2a" width="760" height="420"></canvas>
+        <div class="titre">A. Le kimono plié</div>
+        <div class="detail">Un habit gris au trait néon, posé au sol, qui bat doucement</div>
+      </div>
+      <div class="case">
+        <canvas id="r2b" width="760" height="420"></canvas>
+        <div class="titre">B. La silhouette vide</div>
+        <div class="detail">Un ninja gris en pointillé, couché au sol: une peau à enfiler</div>
+      </div>
+      <div class="case">
+        <canvas id="r2c" width="760" height="420"></canvas>
+        <div class="titre">C. Le jeton</div>
+        <div class="detail">Un disque sombre cerclé de gris clair, le kimono dedans, comme un objet à ramasser</div>
+      </div>
+    </div>
+
+    <div class="rangee">
+      <div class="legende">
+        <b>3. Le déguisé, tel qu'il se voit</b>Les autres le voient gris, sans rien de plus. Lui doit savoir qu'il l'est,
+        et se retrouver dans la foule
+      </div>
+      <div class="case">
+        <canvas id="r3a" width="760" height="420"></canvas>
+        <div class="titre">A. Gris, liseré à sa couleur</div>
+        <div class="detail">Le gris des PNJ, et un fin contour orange que lui seul voit</div>
+      </div>
+      <div class="case">
+        <canvas id="r3b" width="760" height="420"></canvas>
+        <div class="titre">B. Gris, sa couleur au sol</div>
+        <div class="detail">Le gris des PNJ, posé sur un disque pâle et un anneau orange</div>
+      </div>
+      <div class="case">
+        <canvas id="r3c" width="760" height="420"></canvas>
+        <div class="titre">C. Un voile gris</div>
+        <div class="detail">Sa couleur sous un voile gris à moitié transparent, comme un habit enfilé</div>
+      </div>
+    </div>
+
+    <div class="rangee">
+      <div class="legende">
+        <b>4. Au bureau: l'habit et le temps</b>À gauche, l'habit ramassé, pas encore revêtu. À droite, déguisé, 14
+        secondes restantes
+      </div>
+      <div class="case">
+        <canvas id="r4a" width="760" height="420"></canvas>
+        <div class="titre">A. Une ligne du bandeau</div>
+        <div class="detail">Sous le rôle: « Habit, Espace pour le revêtir », puis « Déguisé, 14 s »</div>
+      </div>
+      <div class="case">
+        <canvas id="r4b" width="760" height="420"></canvas>
+        <div class="titre">B. Une carte à jauge</div>
+        <div class="detail">La carte des effets en cours (étape 4.6), sous le bandeau, dont la jauge se vide</div>
+      </div>
+      <div class="case">
+        <canvas id="r4c" width="760" height="420"></canvas>
+        <div class="titre">C. Le bouton, au bureau aussi</div>
+        <div class="detail">Un bouton « Habit » à la place du Katana, touche Espace, et un anneau qui se vide</div>
+      </div>
+    </div>
+
+    <div class="rangee">
+      <div class="legende">
+        <b>5. Sur téléphone: le bouton « Habit »</b>À la place du Katana. Trois moments: pas d'habit, l'habit ramassé,
+        déguisé 14 secondes
+      </div>
+      <div class="case">
+        <canvas id="r5a" width="760" height="420"></canvas>
+        <div class="titre">A. Le kimono, grisé puis allumé</div>
+        <div class="detail">Grisé sans habit, comme le katana sans victime; allumé une fois ramassé; un anneau ensuite</div>
+      </div>
+      <div class="case">
+        <canvas id="r5b" width="760" height="420"></canvas>
+        <div class="titre">B. Le mot, puis les secondes</div>
+        <div class="detail">« HABIT » écrit dans le bouton, puis le compte des secondes pendant le déguisement</div>
+      </div>
+      <div class="case">
+        <canvas id="r5c" width="760" height="420"></canvas>
+        <div class="titre">C. Un bouton qui apparaît</div>
+        <div class="detail">Rien tant qu'on n'a pas d'habit; le bouton surgit au ramassage, puis se vide en anneau</div>
+      </div>
+    </div>
+
+    <p class="pied">
+      Planche de l'étape 7.28 (fiche docs/plan/etape-7-28.md). Sons provisoires à part: prendre l'habit, le revêtir, le
+      perdre.
+    </p>
+
+    <script>
+      const RACINE = '../../../assets/';
+      const charger = (chemin) =>
+        new Promise((ok) => {
+          const image = new Image();
+          image.onload = () => ok(image);
+          image.onerror = () => ok(null);
+          image.src = RACINE + chemin;
+        });
+
+      const FOULE = '#7F8A99';
+      const ORANGE = '#FF8C1A';
+      const W = 760;
+      const H = 420;
+      const ctxDe = (id) => document.getElementById(id).getContext('2d');
+
+      /** Le ninja recolore: la part rouge prend la couleur voulue, comme la page du jeu. */
+      function ninja(image, couleur) {
+        const toile = document.createElement('canvas');
+        toile.width = image.width;
+        toile.height = image.height;
+        const ctx = toile.getContext('2d');
+        ctx.drawImage(image, 0, 0);
+        const donnees = ctx.getImageData(0, 0, toile.width, toile.height);
+        const p = donnees.data;
+        const c = parseInt(couleur.slice(1), 16);
+        const [cr, cg, cb] = [(c >> 16) & 255, (c >> 8) & 255, c & 255];
+        for (let i = 0; i < p.length; i += 4) {
+          const [r, g, b, a] = [p[i], p[i + 1], p[i + 2], p[i + 3]];
+          if (a === 0) continue;
+          const exces = r - Math.max(g, b);
+          const part = Math.abs(g - b) > 40 || exces < 40 ? 0 : Math.min(1, exces / 255);
+          if (part > 0) {
+            const fond = (r - part * 255) / Math.max(1 - part, 0.01);
+            p[i] = cr * part + fond * (1 - part);
+            p[i + 1] = cg * part + g * (1 - part);
+            p[i + 2] = cb * part + b * (1 - part);
+          }
+        }
+        ctx.putImageData(donnees, 0, 0);
+        return toile;
+      }
+
+      const caches = new Map();
+      function sprite(image, couleur) {
+        const cle = image.src + couleur;
+        if (!caches.has(cle)) caches.set(cle, ninja(image, couleur));
+        return caches.get(cle);
+      }
+
+      function dessinerNinja(ctx, image, couleur, x, y, taille, options = {}) {
+        const s = sprite(image, couleur);
+        ctx.save();
+        ctx.translate(x, y);
+        if (options.rotation) ctx.rotate(options.rotation);
+        ctx.globalAlpha = options.alpha ?? 1;
+        if (options.halo) {
+          ctx.shadowColor = options.halo;
+          ctx.shadowBlur = options.flou ?? taille * 0.25;
+        }
+        if (options.moitie === 'haut') {
+          ctx.drawImage(s, 0, 0, s.width, s.height / 2, -taille / 2, -taille / 2, taille, taille / 2);
+        } else if (options.moitie === 'bas') {
+          ctx.drawImage(s, 0, s.height / 2, s.width, s.height / 2, -taille / 2, 0, taille, taille / 2);
+        } else {
+          ctx.drawImage(s, -taille / 2, -taille / 2, taille, taille);
+        }
+        ctx.restore();
+      }
+
+      /** Le contour d'un sprite a une couleur: le sprite en aplat, decale tout autour. */
+      function contour(ctx, image, couleur, x, y, taille, epaisseur) {
+        const s = sprite(image, couleur);
+        const toile = document.createElement('canvas');
+        toile.width = s.width;
+        toile.height = s.height;
+        const c = toile.getContext('2d');
+        c.drawImage(s, 0, 0);
+        c.globalCompositeOperation = 'source-in';
+        c.fillStyle = couleur;
+        c.fillRect(0, 0, toile.width, toile.height);
+        ctx.save();
+        ctx.shadowColor = couleur;
+        ctx.shadowBlur = epaisseur * 3;
+        for (let a = 0; a < 16; a++) {
+          const dx = Math.cos((a / 16) * Math.PI * 2) * epaisseur;
+          const dy = Math.sin((a / 16) * Math.PI * 2) * epaisseur;
+          ctx.drawImage(toile, x - taille / 2 + dx, y - taille / 2 + dy, taille, taille);
+        }
+        ctx.restore();
+      }
+
+      function texte(ctx, chaine, x, y, taille, couleur, options = {}) {
+        ctx.save();
+        ctx.font = `${options.gras ? 'bold ' : ''}${taille}px 'DejaVu Sans', sans-serif`;
+        ctx.fillStyle = couleur;
+        ctx.textAlign = options.align ?? 'center';
+        ctx.textBaseline = 'middle';
+        if (options.halo) {
+          ctx.shadowColor = options.halo;
+          ctx.shadowBlur = options.flou ?? 14;
+        }
+        ctx.fillText(chaine, x, y);
+        ctx.restore();
+      }
+
+      /** Le sang sous un cadavre: les memes taches que la page (sangDuCadavre). */
+      function sang(ctx, x, y, echelle, graine) {
+        let s = graine;
+        const alea = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
+        ctx.save();
+        ctx.fillStyle = 'rgba(140, 0, 18, 0.85)';
+        for (let i = 0; i < 5; i++) {
+          ctx.beginPath();
+          ctx.arc(x + (alea() - 0.5) * 30 * echelle, y + (4 + (alea() - 0.5) * 16) * echelle, (5 + alea() * 8) * echelle, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      /** Un cadavre coupe en deux, comme la page (moitiesDuCadavre): ecart de 5, rotations 0,25 et -0,3. */
+      function cadavreCoupe(ctx, image, couleur, x, y, echelle, options = {}) {
+        const taille = 32 * echelle;
+        const ecart = 5 * echelle;
+        if (options.sang !== false) sang(ctx, x, y, echelle, options.graine ?? 7);
+        dessinerNinja(ctx, image, couleur, x + ecart, y + ecart, taille, { moitie: 'bas', rotation: 0.25, alpha: options.alpha });
+        dessinerNinja(ctx, image, couleur, x - ecart, y - ecart, taille, { moitie: 'haut', rotation: -0.3, alpha: options.alpha });
+      }
+
+      /** Un PNJ couche sur le flanc, entier, un peu assombri. */
+      function cadavreCouche(ctx, image, x, y, echelle) {
+        ctx.save();
+        ctx.filter = 'brightness(0.8)';
+        dessinerNinja(ctx, image, FOULE, x, y, 32 * echelle, { rotation: Math.PI / 2 });
+        ctx.restore();
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.beginPath();
+        ctx.ellipse(x, y + 12 * echelle, 16 * echelle, 4 * echelle, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function decor(ctx, fond, cx, cy, echelle) {
+        if (!fond) {
+          ctx.fillStyle = '#1a2240';
+          ctx.fillRect(0, 0, W, H);
+          return;
+        }
+        // Le fond de Tokyo est etire de 3000x2000 a 2000x1500.
+        const sx = (cx - W / 2 / echelle) * 1.5;
+        const sy = (cy - H / 2 / echelle) * (2000 / 1500);
+        ctx.drawImage(fond, sx, sy, (W / echelle) * 1.5, (H / echelle) * (2000 / 1500), 0, 0, W, H);
+      }
+
+      /** Le cercle de vision d'une proie (rendu de l'etape 7.20): sombre au-dela, teinte bleutee dedans. */
+      function vision(ctx, x, y, rayon) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(40, 80, 220, 0.22)';
+        ctx.beginPath();
+        ctx.arc(x, y, rayon, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.72)';
+        ctx.beginPath();
+        ctx.rect(0, 0, W, H);
+        ctx.arc(x, y, rayon, 0, Math.PI * 2, true);
+        ctx.fill('evenodd');
+        ctx.restore();
+      }
+
+      function medaillon(ctx, x, y, r, dessin) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = '#10162c';
+        ctx.fill();
+        ctx.clip();
+        dessin();
+        ctx.restore();
+        ctx.save();
+        ctx.strokeStyle = '#aeb6cc';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      /** Le kimono au trait: un T, un col en V, une ceinture. */
+      function kimono(ctx, x, y, taille, couleur, options = {}) {
+        const t = taille / 2;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.strokeStyle = couleur;
+        ctx.fillStyle = options.plein ?? 'rgba(127,138,153,0.55)';
+        ctx.lineWidth = Math.max(1.5, taille / 14);
+        ctx.lineJoin = 'round';
+        if (options.halo) {
+          ctx.shadowColor = options.halo;
+          ctx.shadowBlur = options.flou ?? taille / 3;
+        }
+        ctx.beginPath();
+        ctx.moveTo(-t * 0.35, -t * 0.8);
+        ctx.lineTo(-t, -t * 0.45);
+        ctx.lineTo(-t * 0.8, -t * 0.05);
+        ctx.lineTo(-t * 0.5, -t * 0.2);
+        ctx.lineTo(-t * 0.5, t * 0.85);
+        ctx.lineTo(t * 0.5, t * 0.85);
+        ctx.lineTo(t * 0.5, -t * 0.2);
+        ctx.lineTo(t * 0.8, -t * 0.05);
+        ctx.lineTo(t, -t * 0.45);
+        ctx.lineTo(t * 0.35, -t * 0.8);
+        ctx.lineTo(0, -t * 0.25);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.moveTo(-t * 0.35, -t * 0.8);
+        ctx.lineTo(t * 0.15, t * 0.1);
+        ctx.moveTo(t * 0.35, -t * 0.8);
+        ctx.lineTo(0, -t * 0.25);
+        ctx.stroke();
+        ctx.fillStyle = couleur;
+        ctx.fillRect(-t * 0.5, t * 0.12, t, t * 0.16);
+        ctx.restore();
+      }
+
+      /** Le bandeau du role, en haut a droite, comme la page (proie). */
+      function bandeau(ctx, x, y, largeur, lignes) {
+        const hauteur = 96 + lignes.length * 30;
+        ctx.save();
+        ctx.fillStyle = 'rgba(10, 12, 24, 0.92)';
+        ctx.strokeStyle = '#2ee6ff';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.roundRect(x, y, largeur, hauteur, 12);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+        texte(ctx, 'PROIE', x + largeur - 16, y + 24, 22, '#2ee6ff', { gras: true, align: 'right', halo: '#2ee6ff', flou: 8 });
+        texte(ctx, 'Faites vos tâches', x + largeur - 16, y + 52, 14, '#c9d0e4', { align: 'right' });
+        ctx.save();
+        ctx.fillStyle = '#26304f';
+        ctx.beginPath();
+        ctx.roundRect(x + 12, y + 66, largeur - 24, 20, 10);
+        ctx.fill();
+        ctx.restore();
+        texte(ctx, 'Tâches 3/12', x + largeur / 2, y + 76, 13, '#e8ecf6');
+        lignes.forEach((ligne, rang) => ligne(x, y + 98 + rang * 30, largeur));
+        return hauteur;
+      }
+
+      /** Un bouton rond de la page, avec son libelle et sa touche au bureau. */
+      function bouton(ctx, x, y, r, options) {
+        ctx.save();
+        if (options.inactif) ctx.globalAlpha = 0.55;
+        const g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
+        g.addColorStop(0, options.clair);
+        g.addColorStop(1, options.sombre);
+        ctx.fillStyle = g;
+        if (options.halo) {
+          ctx.shadowColor = options.halo;
+          ctx.shadowBlur = r * 0.6;
+        }
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = options.bord ?? 'rgba(255,255,255,0.18)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+        if (options.icone) options.icone(x, y, r);
+        if (options.libelle) texte(ctx, options.libelle, x, y + r + 18, Math.max(12, r * 0.42), options.inactif ? '#7d8599' : '#e8ecf6', { gras: true });
+        if (options.touche) {
+          ctx.save();
+          ctx.fillStyle = '#0b0f1c';
+          ctx.beginPath();
+          ctx.roundRect(x - 12, y - r - 12, 24, 16, 4);
+          ctx.fill();
+          ctx.restore();
+          texte(ctx, options.touche, x, y - r - 4, 10, '#e8ecf6', { gras: true });
+        }
+      }
+
+      /** Un anneau de temps qui se vide, autour d'un bouton ou d'un ninja. */
+      function anneau(ctx, x, y, r, part, couleur, epaisseur = 5) {
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+        ctx.lineWidth = epaisseur;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = couleur;
+        ctx.shadowColor = couleur;
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + part * Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      const ACTION = { clair: '#8fc7c9', sombre: '#3e6f74' };
+      const LOCALISER = { clair: '#a98bff', sombre: '#5a2fd6', halo: '#7c4dff' };
+      const HABIT = { clair: '#c3cad6', sombre: '#5d6675', halo: '#cfd6e2' };
+      const ETEINT = { clair: '#4a5163', sombre: '#232836', inactif: true };
+
+      function iconeEpingle(ctx) {
+        return (x, y, r) => {
+          ctx.save();
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = r * 0.09;
+          ctx.beginPath();
+          ctx.arc(x, y - r * 0.12, r * 0.24, Math.PI, 0);
+          ctx.lineTo(x, y + r * 0.42);
+          ctx.closePath();
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x, y - r * 0.12, r * 0.08, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        };
+      }
+
+      (async () => {
+        const [idle, est, ouest, sud, fond] = await Promise.all([
+          charger('ninja/idle.png'),
+          charger('ninja/east_1.png'),
+          charger('ninja/west_1.png'),
+          charger('ninja/south_1.png'),
+          charger('cartes/map1/background.png'),
+        ]);
+
+        // --- 1. Le cadavre d'un PNJ
+        {
+          const variantes = {
+            r1a: (ctx, x, y, e) => cadavreCoupe(ctx, idle, FOULE, x, y, e, { graine: 11 }),
+            r1b: (ctx, x, y, e) => cadavreCouche(ctx, idle, x, y, e),
+            r1c: (ctx, x, y, e) => cadavreCoupe(ctx, idle, FOULE, x, y, e, { sang: false, alpha: 0.75 }),
+          };
+          for (const [id, pnj] of Object.entries(variantes)) {
+            const ctx = ctxDe(id);
+            decor(ctx, fond, 1000, 760, 1.6);
+            ctx.fillStyle = 'rgba(0,0,0,0.35)';
+            ctx.fillRect(0, 0, W, H);
+            // Grossi 3 fois: un joueur d'aujourd'hui, puis le PNJ.
+            cadavreCoupe(ctx, idle, ORANGE, 170, 150, 3, { graine: 7 });
+            texte(ctx, "Orange, aujourd'hui", 170, 255, 16, '#e8ecf6');
+            pnj(ctx, 470, 150, 3);
+            texte(ctx, 'Un PNJ', 470, 255, 16, '#e8ecf6', { gras: true });
+            // A l'echelle de la carte, dans la foule.
+            ctx.fillStyle = 'rgba(0,0,0,0.35)';
+            ctx.fillRect(0, 290, W, H - 290);
+            texte(ctx, "À l'échelle", 60, 355, 13, '#aeb6cc');
+            for (const [x, y, image] of [[150, 330, est], [300, 385, idle], [560, 340, ouest], [680, 390, sud]]) {
+              dessinerNinja(ctx, image, FOULE, x, y, 32 * 1.4);
+            }
+            dessinerNinja(ctx, idle, '#1FBF4C', 470, 390, 32 * 1.4);
+            cadavreCoupe(ctx, idle, ORANGE, 230, 355, 1.4, { graine: 7 });
+            pnj(ctx, 400, 345, 1.4);
+          }
+        }
+
+        // --- 2. L'habit sur la carte
+        {
+          const echelle = 1.1;
+          const proie = [W / 2 - 40, H / 2 + 30];
+          const habit = [W / 2 + 95, H / 2 - 45];
+          const variantes = {
+            r2a: (ctx, x, y, e, t) => {
+              ctx.save();
+              ctx.globalAlpha = 0.25 + 0.15 * Math.sin(t);
+              ctx.fillStyle = '#e8ecf6';
+              ctx.beginPath();
+              ctx.arc(x, y, 22 * e, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.restore();
+              kimono(ctx, x, y, 30 * e, '#e8ecf6', { halo: '#ffffff' });
+            },
+            r2b: (ctx, x, y, e) => {
+              ctx.save();
+              ctx.globalAlpha = 0.4;
+              dessinerNinja(ctx, idle, FOULE, x, y, 32 * e, { rotation: Math.PI / 2 });
+              ctx.restore();
+              ctx.save();
+              ctx.setLineDash([5 * e * 0.6, 4 * e * 0.6]);
+              ctx.strokeStyle = '#e8ecf6';
+              ctx.lineWidth = 2;
+              ctx.shadowColor = '#ffffff';
+              ctx.shadowBlur = 8;
+              ctx.beginPath();
+              ctx.ellipse(x, y, 20 * e, 15 * e, 0, 0, Math.PI * 2);
+              ctx.stroke();
+              ctx.restore();
+            },
+            r2c: (ctx, x, y, e) => {
+              ctx.save();
+              ctx.fillStyle = '#141a2c';
+              ctx.shadowColor = '#cfd6e2';
+              ctx.shadowBlur = 10;
+              ctx.beginPath();
+              ctx.arc(x, y, 17 * e, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.shadowBlur = 0;
+              ctx.strokeStyle = '#cfd6e2';
+              ctx.lineWidth = 2.5 * Math.max(1, e / 2);
+              ctx.stroke();
+              ctx.restore();
+              kimono(ctx, x, y, 20 * e, '#e8ecf6');
+            },
+          };
+          for (const [id, dessin] of Object.entries(variantes)) {
+            const ctx = ctxDe(id);
+            decor(ctx, fond, 860, 620, echelle);
+            for (const [x, y, image] of [[150, 110, est], [560, 330, ouest], [330, 120, sud], [610, 150, idle]]) {
+              dessinerNinja(ctx, image, FOULE, x, y, 32 * echelle);
+            }
+            dessin(ctx, habit[0], habit[1], echelle, 1.2);
+            dessinerNinja(ctx, est, '#1FBF4C', proie[0], proie[1], 32 * echelle);
+            vision(ctx, proie[0], proie[1], 260 * echelle);
+            medaillon(ctx, 92, 92, 70, () => {
+              ctx.fillStyle = '#2a3150';
+              ctx.fillRect(0, 0, W, H);
+              dessin(ctx, 92, 92, 3, 1.2);
+            });
+            texte(ctx, 'Vu des proies seules', W - 14, H - 16, 13, '#aeb6cc', { align: 'right' });
+          }
+        }
+
+        // --- 3. Le deguise, tel qu'il se voit
+        {
+          const echelle = 1.5;
+          const moi = [W / 2, H / 2 + 10];
+          const variantes = {
+            r3a: (ctx, x, y, taille) => {
+              contour(ctx, idle, ORANGE, x, y, taille, 2.2);
+              dessinerNinja(ctx, idle, FOULE, x, y, taille);
+            },
+            r3b: (ctx, x, y, taille) => {
+              ctx.save();
+              ctx.fillStyle = 'rgba(255,140,26,0.18)';
+              ctx.strokeStyle = ORANGE;
+              ctx.lineWidth = 3;
+              ctx.shadowColor = ORANGE;
+              ctx.shadowBlur = 8;
+              ctx.beginPath();
+              ctx.ellipse(x, y + taille * 0.38, taille * 0.62, taille * 0.24, 0, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.stroke();
+              ctx.restore();
+              dessinerNinja(ctx, idle, FOULE, x, y, taille);
+            },
+            r3c: (ctx, x, y, taille) => {
+              dessinerNinja(ctx, idle, ORANGE, x, y, taille);
+              dessinerNinja(ctx, idle, FOULE, x, y, taille, { alpha: 0.62 });
+            },
+          };
+          for (const [id, soi] of Object.entries(variantes)) {
+            const ctx = ctxDe(id);
+            decor(ctx, fond, 1180, 560, echelle);
+            const autour = [
+              [moi[0] - 150, moi[1] - 70, est],
+              [moi[0] + 120, moi[1] - 90, ouest],
+              [moi[0] - 90, moi[1] + 95, sud],
+              [moi[0] + 170, moi[1] + 60, idle],
+              [moi[0] + 40, moi[1] - 140, sud],
+            ];
+            for (const [x, y, image] of autour) dessinerNinja(ctx, image, FOULE, x, y, 32 * echelle);
+            dessinerNinja(ctx, ouest, '#9A55FF', moi[0] - 230, moi[1] + 20, 32 * echelle);
+            texte(ctx, 'Violet', moi[0] - 230, moi[1] - 12, 13, '#ffffff', { gras: true });
+            soi(ctx, moi[0], moi[1], 32 * echelle);
+            vision(ctx, moi[0], moi[1], 200 * echelle);
+            // Medaillon grossi.
+            medaillon(ctx, W - 92, 92, 70, () => {
+              ctx.fillStyle = '#2a3150';
+              ctx.fillRect(0, 0, W, H);
+              soi(ctx, W - 92, 92, 96);
+            });
+            texte(ctx, 'Pour les autres: un PNJ gris', W - 14, H - 16, 13, '#aeb6cc', { align: 'right' });
+          }
+        }
+
+        // --- 4. Au bureau: l'habit et le temps
+        {
+          const scene = (ctx, x0) => {
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(x0, 0, W / 2, H);
+            ctx.clip();
+            ctx.translate(x0, 0);
+            decor(ctx, fond, 1300, 900, 1.2);
+            ctx.restore();
+          };
+          const ligneHabit = (ctx) => (x, y, l) => {
+            kimono(ctx, x + 26, y + 10, 18, '#e8ecf6');
+            texte(ctx, 'Habit', x + 44, y + 10, 14, '#e8ecf6', { gras: true, align: 'left' });
+            texte(ctx, 'Espace', x + l - 16, y + 10, 12, '#aeb6cc', { align: 'right' });
+          };
+          const ligneDeguise = (ctx) => (x, y, l) => {
+            ctx.save();
+            ctx.fillStyle = 'rgba(127,138,153,0.35)';
+            ctx.beginPath();
+            ctx.roundRect(x + 12, y - 2, l - 24, 24, 12);
+            ctx.fill();
+            ctx.restore();
+            kimono(ctx, x + 30, y + 10, 18, '#e8ecf6');
+            texte(ctx, 'Déguisé', x + 48, y + 10, 14, '#e8ecf6', { gras: true, align: 'left' });
+            texte(ctx, '14 s', x + l - 22, y + 10, 14, '#e8ecf6', { gras: true, align: 'right' });
+          };
+          const boutonsBureau = (ctx, x, troisieme) => {
+            bouton(ctx, x + 60, 360, 24, { ...ACTION, libelle: 'Action', touche: 'E' });
+            bouton(ctx, x + 125, 360, 24, { ...LOCALISER, libelle: 'Localiser', touche: 'F' });
+            if (troisieme) troisieme(x + 190, 360, 24);
+          };
+          const deux = (id, gauche, droite) => {
+            const ctx = ctxDe(id);
+            scene(ctx, 0);
+            scene(ctx, W / 2);
+            ctx.fillStyle = '#0b1020';
+            ctx.fillRect(W / 2 - 2, 0, 4, H);
+            texte(ctx, 'Habit ramassé', W / 4, 18, 13, '#aeb6cc');
+            texte(ctx, 'Déguisé, 14 s', (3 * W) / 4, 18, 13, '#aeb6cc');
+            gauche(ctx, 0);
+            droite(ctx, W / 2);
+          };
+
+          deux(
+            'r4a',
+            (ctx, x) => {
+              bandeau(ctx, x + 120, 34, 250, [ligneHabit(ctx)]);
+              boutonsBureau(ctx, x + 100);
+            },
+            (ctx, x) => {
+              bandeau(ctx, x + 120, 34, 250, [ligneDeguise(ctx)]);
+              boutonsBureau(ctx, x + 100);
+            },
+          );
+
+          const carteAJauge = (ctx, x, y, l, part, libelle, droite) => {
+            ctx.save();
+            ctx.fillStyle = 'rgba(10, 12, 24, 0.9)';
+            ctx.strokeStyle = '#cfd6e2';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(x, y, l, 52, 10);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+            kimono(ctx, x + 26, y + 22, 24, '#e8ecf6', { halo: '#ffffff', flou: 6 });
+            texte(ctx, libelle, x + 48, y + 20, 15, '#e8ecf6', { gras: true, align: 'left' });
+            texte(ctx, droite, x + l - 12, y + 20, 13, '#c9d0e4', { align: 'right' });
+            ctx.save();
+            ctx.fillStyle = '#26304f';
+            ctx.fillRect(x + 48, y + 36, l - 60, 6);
+            ctx.fillStyle = '#cfd6e2';
+            ctx.shadowColor = '#ffffff';
+            ctx.shadowBlur = 6;
+            ctx.fillRect(x + 48, y + 36, (l - 60) * part, 6);
+            ctx.restore();
+          };
+          deux(
+            'r4b',
+            (ctx, x) => {
+              const h = bandeau(ctx, x + 120, 34, 250, []);
+              carteAJauge(ctx, x + 150, 34 + h + 10, 220, 1, 'Habit', 'Espace');
+              boutonsBureau(ctx, x + 100);
+            },
+            (ctx, x) => {
+              const h = bandeau(ctx, x + 120, 34, 250, []);
+              carteAJauge(ctx, x + 150, 34 + h + 10, 220, 0.7, 'Déguisé', '14 s');
+              boutonsBureau(ctx, x + 100);
+            },
+          );
+
+          const iconeHabit = (ctx) => (x, y, r) => kimono(ctx, x, y, r * 1.05, '#ffffff', { plein: 'rgba(255,255,255,0.15)' });
+          deux(
+            'r4c',
+            (ctx, x) => {
+              bandeau(ctx, x + 120, 34, 250, []);
+              boutonsBureau(ctx, x + 100, (bx, by, r) =>
+                bouton(ctx, bx, by, r, { ...HABIT, libelle: 'Habit', touche: 'Espace', icone: iconeHabit(ctx) }),
+              );
+            },
+            (ctx, x) => {
+              bandeau(ctx, x + 120, 34, 250, []);
+              boutonsBureau(ctx, x + 100, (bx, by, r) => {
+                bouton(ctx, bx, by, r, { ...HABIT, halo: undefined, libelle: '14 s', touche: 'Espace', icone: iconeHabit(ctx) });
+                anneau(ctx, bx, by, r + 4, 0.7, '#e8ecf6', 4);
+              });
+            },
+          );
+        }
+
+        // --- 5. Sur telephone: le bouton « Habit »
+        {
+          const moments = ["Pas d'habit", 'Habit ramassé', 'Déguisé, 14 s'];
+          const iconeHabit = (ctx, couleur = '#ffffff') => (x, y, r) =>
+            kimono(ctx, x, y, r * 1.05, couleur, { plein: 'rgba(255,255,255,0.15)' });
+          const rangee = (ctx, y, troisieme) => {
+            bouton(ctx, 70, y, 34, { ...ACTION, libelle: 'Action', icone: iconeEpingle(ctx) });
+            bouton(ctx, 160, y, 34, { ...LOCALISER, libelle: 'Localiser', icone: iconeEpingle(ctx) });
+            troisieme(250, y, 34);
+          };
+          const trois = (id, dessins) => {
+            const ctx = ctxDe(id);
+            decor(ctx, fond, 1450, 980, 1.3);
+            ctx.fillStyle = 'rgba(0,0,0,0.45)';
+            ctx.fillRect(0, 0, W, H);
+            moments.forEach((moment, rang) => {
+              const y = 70 + rang * 128;
+              ctx.save();
+              ctx.translate(380, 0);
+              texte(ctx, moment, -20, y, 15, '#e8ecf6', { gras: true, align: 'right' });
+              rangee(ctx, y, (x, yy, r) => dessins[rang](ctx, x, yy, r));
+              ctx.restore();
+            });
+          };
+
+          trois('r5a', [
+            (ctx, x, y, r) => bouton(ctx, x, y, r, { ...ETEINT, libelle: 'Habit', icone: iconeHabit(ctx, '#9aa1b2') }),
+            (ctx, x, y, r) => bouton(ctx, x, y, r, { ...HABIT, libelle: 'Habit', icone: iconeHabit(ctx) }),
+            (ctx, x, y, r) => {
+              bouton(ctx, x, y, r, { ...HABIT, halo: undefined, libelle: 'Habit', icone: iconeHabit(ctx) });
+              anneau(ctx, x, y, r + 5, 0.7, '#e8ecf6');
+            },
+          ]);
+
+          const mot = (ctx, chaine, taille) => (x, y) => texte(ctx, chaine, x, y, taille, '#ffffff', { gras: true });
+          trois('r5b', [
+            (ctx, x, y, r) => bouton(ctx, x, y, r, { ...ETEINT, icone: mot(ctx, 'HABIT', 13) }),
+            (ctx, x, y, r) => bouton(ctx, x, y, r, { ...HABIT, icone: mot(ctx, 'HABIT', 13) }),
+            (ctx, x, y, r) => bouton(ctx, x, y, r, { ...HABIT, halo: undefined, icone: mot(ctx, '14', 26) }),
+          ]);
+
+          trois('r5c', [
+            (ctx, x, y, r) => {
+              ctx.save();
+              ctx.setLineDash([4, 6]);
+              ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.arc(x, y, r, 0, Math.PI * 2);
+              ctx.stroke();
+              ctx.restore();
+              texte(ctx, '(rien)', x, y + r + 18, 13, '#7d8599');
+            },
+            (ctx, x, y, r) => {
+              bouton(ctx, x, y, r + 4, { ...HABIT, libelle: 'Habit', icone: iconeHabit(ctx) });
+              texte(ctx, 'surgit', x + r + 30, y, 12, '#aeb6cc');
+            },
+            (ctx, x, y, r) => {
+              bouton(ctx, x, y, r, { ...HABIT, halo: undefined, libelle: '14 s', icone: iconeHabit(ctx) });
+              anneau(ctx, x, y, r + 5, 0.7, '#e8ecf6');
+            },
+          ]);
+        }
+
+        document.body.dataset.pret = 'oui';
+      })();
+    </script>
+  </body>
+</html>
