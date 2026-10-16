@@ -69,7 +69,12 @@ function monter() {
   const annonces: string[] = [];
   const peints: number[] = [];
   const attentes: (number | undefined)[] = [];
-  const sons = { jouer: (nom: NomDeSon) => joues.push(nom) } as unknown as LecteurDeSons;
+  const fonds: (HTMLImageElement | undefined)[] = [];
+  const arretes: NomDeSon[] = [];
+  const sons = {
+    jouer: (nom: NomDeSon) => joues.push(nom),
+    arreter: (nom: NomDeSon) => arretes.push(nom),
+  } as unknown as LecteurDeSons;
   const fenetre = monterFenetreDeTache({
     document,
     client: {
@@ -79,9 +84,10 @@ function monter() {
     horloge,
     sons,
     surOuverture: (ouverte) => ouvertures.push(ouverte),
-    peindre: (_toile, _geste, maintenant, attente) => {
+    peindre: (_toile, _geste, maintenant, attente, fond) => {
       peints.push(maintenant);
       attentes.push(attente);
+      fonds.push(fond);
     },
     planifier: (rappel) => {
       rappels.push(rappel);
@@ -108,10 +114,12 @@ function monter() {
     fenetre,
     depart,
     joues,
+    arretes,
     ouvertures,
     annonces,
     peints,
     attentes,
+    fonds,
     rappels,
     image,
     ouverte,
@@ -181,6 +189,45 @@ describe('la fenetre d une tache', () => {
     expect(fenetre.racine.querySelector('.tache-fenetre')?.classList.contains('reussie')).toBe(
       true,
     );
+    fenetre.demonter();
+  });
+
+  it('fait entendre la recharge de la fumee tant que la jauge monte, et la coupe au relacher', () => {
+    const { fenetre, joues, arretes, image, ouverte } = monter();
+    fenetre.afficher(etat({ ...ouverte(), nature: 'fumee' }));
+
+    image(0);
+    touche(' ');
+    image(400);
+    expect(joues.filter((nom) => nom === 'tacheRechargeFumee')).toHaveLength(1);
+    expect(arretes).toEqual([]);
+
+    touche(' ', 'keyup');
+    expect(arretes).toEqual(['tacheRechargeFumee']);
+
+    // Une jauge tenue quand la fenetre se ferme se tait avec elle.
+    image(1000);
+    touche(' ');
+    touche('Escape');
+    expect(joues.filter((nom) => nom === 'tacheRechargeFumee')).toHaveLength(2);
+    expect(arretes).toEqual(['tacheRechargeFumee', 'tacheRechargeFumee']);
+    fenetre.demonter();
+  });
+
+  it('peint le tapis du salon sous le sang a sa station, et nulle part ailleurs', () => {
+    const { fenetre, fonds, image, ouverte } = monter();
+    const tapis = { x: 1320, y: 1070, nom: 'Tapis du salon', natures: ['sang'] as const };
+
+    fenetre.afficher(
+      etat({ ...ouverte(), nature: 'sang', station: { ...tapis, fondDesTaches: 'tapis-hotel' } }),
+    );
+    image(100);
+    expect(fonds.at(-1)?.src).toContain('among/map1/tapis-hotel.png');
+
+    fenetre.afficher(etat());
+    fenetre.afficher(etat({ ...ouverte(1000), nature: 'sang', station: tapis }));
+    image(1200);
+    expect(fonds.at(-1)).toBeUndefined();
     fenetre.demonter();
   });
 

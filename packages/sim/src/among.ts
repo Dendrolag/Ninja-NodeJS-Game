@@ -231,7 +231,9 @@ export function amongDecide(etat: EtatPartie): boolean {
  *      une station qui la propose. Le reglage dit combien sont longues (etape 7.24).
  *   4. La reparation de la panne, puis celle de la surchauffe (etape 7.27), tirees apres tout
  *      le reste: les roles, les stations et les listes d'une graine ne changent pas.
- *   5. Tout le monde est place autour du point de reunion, et la partie attend que chacun ait
+ *   5. La place de chaque station active dont le meuble est plusieurs fois sur la carte (16
+ *      octobre 2026), tiree apres les reparations, pour la meme raison.
+ *   6. Tout le monde est place autour du point de reunion, et la partie attend que chacun ait
  *      charge la carte avant la revelation.
  *
  * Tout tirage passe par le generateur a graine de l'etat: meme graine, meme partie.
@@ -313,7 +315,8 @@ export function lancerAmong(etat: EtatPartie): EtatPartie {
 
   const tirageDeLaPanne = entier(alea, REPARATIONS_DE_LA_PANNE.length);
   const tirageDeLaSurchauffe = entier(tirageDeLaPanne.alea, REPARATIONS_DE_LA_SURCHAUFFE.length);
-  alea = tirageDeLaSurchauffe.alea;
+  const placees = placerLesStations(tirageDeLaSurchauffe.alea, stations);
+  alea = placees.alea;
 
   const among: EtatAmong = {
     phase: 'chargement',
@@ -324,7 +327,7 @@ export function lancerAmong(etat: EtatPartie): EtatPartie {
     reunions: 0,
     joueurs,
     cadavres: {},
-    stations,
+    stations: placees.stations,
     gong: lieux.gong,
     boitier: lieux.boitier,
     consoles: lieux.consoles,
@@ -339,6 +342,33 @@ export function lancerAmong(etat: EtatPartie): EtatPartie {
   };
 
   return replacerLesVivants({ ...etat, alea, among });
+}
+
+/**
+ * La place de chaque station pour cette partie (16 octobre 2026): tiree parmi ses places quand
+ * son meuble est plusieurs fois sur la carte, dans l'ordre des stations. Une station placee ne
+ * garde pas ses places: la partie n'a plus qu'elle.
+ */
+function placerLesStations(
+  alea: Alea,
+  stations: readonly StationDuMode[],
+): { readonly stations: readonly StationDuMode[]; readonly alea: Alea } {
+  let courant = alea;
+  const placees = stations.map((station) => {
+    const { places, ...sansPlaces } = station;
+
+    if (places === undefined || places.length < 2) {
+      return sansPlaces;
+    }
+
+    const tirage = entier(courant, places.length);
+    courant = tirage.alea;
+    const place = places[tirage.valeur] as Position;
+
+    return { ...sansPlaces, x: place.x, y: place.y };
+  });
+
+  return { stations: placees, alea: courant };
 }
 
 /** Un joueur au depart de la partie. */

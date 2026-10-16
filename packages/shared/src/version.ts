@@ -89,7 +89,7 @@ const CHAMPS_ISO = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/;
  * main de l'etape 7.27, parues un jour en 1.10.0 et 1.10.1, sont redevenues la 1.9.5.
  * Une etape qui ne change rien de ce que voit le joueur ne le touche pas.
  */
-export const NUMERO_DE_VERSION = '1.9.8';
+export const NUMERO_DE_VERSION = '1.9.9';
 
 /**
  * La version mineure d'un numero, celle qui porte une note: « 1.5 » pour « 1.5.3 ».

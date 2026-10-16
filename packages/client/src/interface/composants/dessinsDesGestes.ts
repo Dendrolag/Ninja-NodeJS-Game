@@ -69,6 +69,7 @@ export function dessinerLeGeste(
   ctx: CanvasRenderingContext2D,
   geste: EtatDeGeste,
   maintenant: number,
+  fond?: FondDesTaches,
 ): void {
   ctx.clearRect(0, 0, LARGEUR_DU_GESTE, HAUTEUR_DU_GESTE);
   const { faits, total } = avancementDuGeste(geste);
@@ -85,7 +86,7 @@ export function dessinerLeGeste(
       lunettes(ctx, geste);
       return;
     case 'sang':
-      sang(ctx, geste);
+      sang(ctx, geste, fond);
       return;
     case 'couleurs':
       couleurs(ctx, geste, maintenant);
@@ -416,8 +417,42 @@ function jaugeOuCoche(
   ctx.fill();
 }
 
-function sang(ctx: CanvasRenderingContext2D, etat: EtatSang): void {
-  // Le carrelage.
+/**
+ * L'image d'un objet du decor peinte au fond d'une tache (16 octobre 2026): le tapis du salon sous
+ * le sang. Elle ne sert qu'une fois chargee.
+ */
+export type FondDesTaches = HTMLImageElement;
+
+/** Le fond est-il pret a peindre. */
+function fondPret(fond: FondDesTaches | undefined): fond is FondDesTaches {
+  return fond !== undefined && fond.complete && fond.naturalWidth > 0;
+}
+
+function sang(ctx: CanvasRenderingContext2D, etat: EtatSang, fond?: FondDesTaches): void {
+  if (fondPret(fond)) {
+    // Le sol de la station (16 octobre 2026): le tapis du salon, pris en entier dans la largeur,
+    // et coupe en haut et en bas a la hauteur du sol de la tache.
+    const hauteurPrise = (fond.naturalWidth * 255) / 380;
+    ctx.drawImage(
+      fond,
+      0,
+      (fond.naturalHeight - hauteurPrise) / 2,
+      fond.naturalWidth,
+      hauteurPrise,
+      10,
+      40,
+      380,
+      255,
+    );
+  } else {
+    carrelage(ctx);
+  }
+
+  tachesDeSang(ctx, etat);
+}
+
+/** Le carrelage, le sol par defaut des taches de sang. */
+function carrelage(ctx: CanvasRenderingContext2D): void {
   ctx.fillStyle = '#9D968A';
   ctx.fillRect(10, 40, 380, 255);
   ctx.strokeStyle = '#7F786D';
@@ -434,7 +469,10 @@ function sang(ctx: CanvasRenderingContext2D, etat: EtatSang): void {
     ctx.lineTo(390, y);
     ctx.stroke();
   }
+}
 
+/** Les taches de sang, l'eponge et le choix du clavier. */
+function tachesDeSang(ctx: CanvasRenderingContext2D, etat: EtatSang): void {
   etat.zones.forEach((tache, rang) => {
     const sale = etat.sale[rang] ?? 0;
 

@@ -703,10 +703,11 @@ describe('les lieux d Among Ninjas', () => {
 
         expect(lieux).toBeDefined();
 
-        // Le gong, les stations, et les postes des sabotages (etape 7.22).
+        // Le gong, les stations a chacune de leurs places (16 octobre 2026), et les postes des
+        // sabotages (etape 7.22).
         for (const lieu of [
           lieux?.gong,
-          ...(lieux?.stations ?? []),
+          ...(lieux?.stations ?? []).flatMap((station) => station.places ?? [station]),
           lieux?.boitier,
           ...(lieux?.consoles ?? []),
         ]) {

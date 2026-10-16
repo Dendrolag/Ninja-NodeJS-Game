@@ -37,6 +37,7 @@ export function sonsDEssai(): SonsDEssai {
     jouer: (nom) => {
       joues.push(nom);
     },
+    arreter: () => undefined,
     jouerUnPas: () => undefined,
     jouerUnPasDAutrui: () => undefined,
     demarrerLaBoucle: () => undefined,

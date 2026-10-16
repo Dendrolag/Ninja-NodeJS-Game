@@ -143,6 +143,14 @@ export interface ObjetDuDecorPose {
   readonly y: number;
   readonly largeur: number;
   readonly hauteur: number;
+  /**
+   * La place de la station qu'il sert, pour une station habillee: la sienne, ou celle devant
+   * lui pour un meuble du decor (16 octobre 2026). Il ne s'eclaire que si la partie a mis la
+   * station la.
+   */
+  readonly pour?: Position;
+  /** Son image se pose retournee de gauche a droite, en plus du miroir de la carte. */
+  readonly retourne?: boolean;
 }
 
 /**
@@ -169,21 +177,30 @@ export function objetsDuDecorAmong(
   }
 
   return lieux.objets.flatMap((objet) => {
-    const place = placeDUnObjet(lieux, objet.lieu);
+    const lieu = placeDUnObjet(lieux, objet.lieu);
+    const place = objet.place ?? lieu;
 
-    if (place === undefined) {
+    if (lieu === undefined || place === undefined) {
       return [];
     }
 
+    const station = typeof objet.lieu !== 'string' && 'station' in objet.lieu;
+    // Un meuble present plusieurs fois sur la carte a un objet par exemplaire, chacun devant sa
+    // place de la station.
+    const devant =
+      objet.devant === undefined ? '' : `:${String(objet.devant.x)}:${String(objet.devant.y)}`;
+
     return [
       {
-        id: `objet:${cleDUnLieu(objet.lieu)}`,
+        id: `objet:${cleDUnLieu(objet.lieu)}${devant}`,
         lieu: objet.lieu,
         texture: `${RACINE_RESSOURCES}/${cheminObjetDuDecor(carte, objet.image)}`,
         x: place.x,
         y: place.y,
         largeur: objet.largeur,
         hauteur: objet.hauteur,
+        ...(station ? { pour: objet.devant ?? lieu } : {}),
+        ...(objet.retourne === true ? { retourne: true } : {}),
       },
     ];
   });
@@ -191,13 +208,12 @@ export function objetsDuDecorAmong(
 
 /** L'objet du decor pose sur cette place, s'il y en a un: une station habillee. */
 function objetSur(objets: readonly ObjetDuDecorPose[], place: Position): boolean {
-  return objets.some(
-    (objet) =>
-      typeof objet.lieu !== 'string' &&
-      'station' in objet.lieu &&
-      objet.x === place.x &&
-      objet.y === place.y,
-  );
+  return objets.some((objet) => servirIci(objet, place));
+}
+
+/** Cet objet habille-t-il la station tenue a cette place. */
+function servirIci(objet: ObjetDuDecorPose, place: Position): boolean {
+  return objet.pour !== undefined && objet.pour.x === place.x && objet.pour.y === place.y;
 }
 
 /** Ce qu'Among Ninjas ajoute a une image. */
@@ -453,11 +469,13 @@ function surbrillancesDesObjets(
     if (typeof objet.lieu !== 'string') {
       // Une station habillee: elle bat la ou son disque se serait montre, et s'eclaire quand le
       // bouton y ouvrirait la tache.
-      if (aFaire.some((place) => place.x === objet.x && place.y === objet.y)) {
+      const pour = objet.pour;
+
+      if (pour !== undefined && aFaire.some((place) => servirIci(objet, place))) {
         const aPortee =
           geste === 'tache' &&
           moi !== undefined &&
-          Math.hypot(moi.x - objet.x, moi.y - objet.y) <= AMONG.RAYON_D_UNE_STATION_PX;
+          Math.hypot(moi.x - pour.x, moi.y - pour.y) <= AMONG.RAYON_D_UNE_STATION_PX;
 
         surbrillances.push({
           ...objet,

@@ -34,6 +34,7 @@ import {
   REPARATIONS_DE_LA_PANNE,
   REPARATIONS_DE_LA_SURCHAUFFE,
   estUneTacheLongue,
+  lieuxDuMode,
 } from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
@@ -217,12 +218,52 @@ describe('le lancement', () => {
 
   it('active autant de stations que de taches par proie, plus quatre', () => {
     const among = amongDe(lancee(5, { among: { tachesParProie: 6 } }));
-    const toutes = (LIEUX_DES_CARTES.map1 as { stations: readonly Position[] }).stations;
+    const toutes = (LIEUX_DES_CARTES.map1 as LieuxDuMode).stations;
 
     expect(among.stations).toHaveLength(10);
-    expect(new Set(among.stations).size).toBe(10);
+    expect(new Set(among.stations.map((station) => station.nom)).size).toBe(10);
     for (const station of among.stations) {
-      expect(toutes).toContainEqual(station);
+      const lieu = toutes.find((autre) => autre.nom === station.nom);
+      const { places, ...sansPlaces } = lieu as StationDuMode;
+
+      // A l'une de ses places, sans plus la liste (16 octobre 2026).
+      expect(station.places).toBeUndefined();
+      expect({ ...station, x: sansPlaces.x, y: sansPlaces.y }).toEqual(sansPlaces);
+      expect(places ?? [{ x: sansPlaces.x, y: sansPlaces.y }]).toContainEqual({
+        x: station.x,
+        y: station.y,
+      });
+    }
+  });
+
+  it('tire la place d une station dont le meuble se repete, et toutes ses places servent', () => {
+    const vues = new Map<string, Set<string>>();
+
+    for (let graine = 1; graine <= 120; graine += 1) {
+      for (const station of amongDe(lancee(5, { among: { tachesParProie: 7 } }, graine)).stations) {
+        const deja = vues.get(station.nom) ?? new Set<string>();
+        deja.add(`${String(station.x)},${String(station.y)}`);
+        vues.set(station.nom, deja);
+      }
+    }
+
+    for (const station of (LIEUX_DES_CARTES.map1 as LieuxDuMode).stations) {
+      expect(vues.get(station.nom)?.size, station.nom).toBe(station.places?.length ?? 1);
+    }
+    // Meme graine, memes places.
+    expect(amongDe(lancee(5, {}, 9)).stations).toEqual(amongDe(lancee(5, {}, 9)).stations);
+  });
+
+  it('retourne en miroir les places d une station et la place qu elle tire', () => {
+    const etat = lancee(5, { modeMiroir: true, among: { tachesParProie: 7 } }, 3);
+    const miroir = lieuxDuMode('map1', true) as LieuxDuMode;
+
+    for (const station of amongDe(etat).stations) {
+      const lieu = miroir.stations.find((autre) => autre.nom === station.nom) as StationDuMode;
+      expect(lieu.places ?? [{ x: lieu.x, y: lieu.y }]).toContainEqual({
+        x: station.x,
+        y: station.y,
+      });
     }
   });
 
@@ -1341,25 +1382,26 @@ function ouvrirAuPoste(etat: EtatPartie, id: IdentifiantEntite, poste: Position)
 
 /**
  * Les stations actives et les listes que la graine 4 donnait avant le tirage des reparations
- * (etape 7.27): le scenario de bout en bout tient a cette graine.
+ * (etape 7.27): le scenario de bout en bout tient a cette graine. Le Tapis du salon y prend la
+ * place de l'Entree de l'hotel depuis qu'il porte le sang au lieu de la fumee (16 octobre 2026).
  */
 const STATIONS_DE_LA_GRAINE_4 = [
-  "Bornes d'arcade",
-  "Table de jeu de l'arcade",
+  "Bornes roses de l'arcade",
+  "Bornes rouges de l'arcade",
   "Lavabos de l'arcade",
   'Distributeur du jardin',
-  'Camionnette du parking',
+  'Véhicules du parking',
   'Ordinateur de la maison',
-  'Table de la maison',
+  'Meubles de la maison',
   'Cuisine du restaurant',
-  'Comptoir du salon',
+  'Tapis du salon',
 ];
 const LISTES_DE_LA_GRAINE_4 = {
   j1: '',
-  j2: '8mines,0caisses,6lunettes,3fumee,7katana',
+  j2: '8sang,0caisses,6lunettes,3fumee,7katana',
   j3: '5serpent,1mines,2sang,4munitions,3fumee',
-  j4: '8mines,6bataille,0couleurs,4munitions,7katana',
-  j5: '2sang,5serpent,1mines,0couleurs,3fumee',
+  j4: '8sang,6bataille,0couleurs,4munitions,1mines',
+  j5: '2sang,5serpent,7katana,0couleurs,3fumee',
 };
 
 describe('le tirage des reparations (etape 7.27)', () => {

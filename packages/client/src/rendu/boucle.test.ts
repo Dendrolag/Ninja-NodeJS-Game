@@ -135,6 +135,7 @@ function sonsDEssai(): LecteurDeSons & {
       joues.push(nom);
       places.push(place);
     },
+    arreter: () => undefined,
     jouerUnPas: () => undefined,
     jouerUnPasDAutrui: (place: PlaceDuSon) => {
       autrui.push(place);

@@ -355,8 +355,8 @@ export const SONS = {
    */
   /** La fenetre d'une tache s'ouvre. */
   tacheOuverte: 'button-click.wav',
-  /** Une tache est finie. */
-  tacheReussie: 'collect-bonus.wav',
+  /** Une tache est finie, courte ou longue: le son du porteur du projet (16 octobre 2026). */
+  tacheReussie: 'validation-tache.mp3',
   /** Un essai rate: un fil sur le mauvais nom, une fumee hors de la bande. */
   tacheRatee: 'collect-malus.wav',
   /** Une passe de la lame sur la pierre. */
@@ -367,6 +367,11 @@ export const SONS = {
   tacheMine: 'mine-pose.mp3',
   /** Une cartouche inseree. */
   tacheCartouche: 'shotgun-reload.mp3',
+  /**
+   * La fumee qui monte dans un bonus, tant qu'on tient (son du porteur du projet, 16 octobre
+   * 2026): six secondes et demie, coupees au relacher. Une jauge ne tient que 1,5 seconde.
+   */
+  tacheRechargeFumee: 'recharge-fumee.mp3',
   /** Un bonus fumee rempli. */
   tacheBonusRempli: 'bonus-escape-nuage.mp3',
   /** Les etincelles d'une tache visuelle, entendues de ceux qui la voient. */

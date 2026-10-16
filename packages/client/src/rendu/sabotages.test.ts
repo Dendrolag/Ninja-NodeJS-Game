@@ -170,7 +170,15 @@ describe('les objets du decor', () => {
   const PIERRE =
     LIEUX.stations.find((station) => station.nom === 'Pierre du jardin zen') ??
     expect.fail('Tokyo a sa pierre du jardin zen');
-  const AUTRE = LIEUX.stations[0] ?? expect.fail('Tokyo a ses stations');
+  const AUTRE =
+    LIEUX.stations.find((station) => station.nom === "Lavabos de l'arcade") ??
+    expect.fail('Tokyo a ses lavabos');
+  /** Les objets poses sur leur lieu, hors des meubles decoupes du fond (16 octobre 2026). */
+  const surLeurLieu = (miroir: boolean) =>
+    objetsDuDecorAmong('map1', miroir).filter(
+      (objet) =>
+        !objet.id.includes('station:') || objet.id === 'objet:station:Pierre du jardin zen',
+    );
   /** Une proie qui a une tache a la pierre et une autre ailleurs, a cette place. */
   const aLaPierre = (ici: { readonly x: number; readonly y: number }, faite = false) =>
     etat(
@@ -190,7 +198,7 @@ describe('les objets du decor', () => {
     );
 
   it('habillent le gong, le boitier, la pierre et les consoles de Tokyo, a leur place', () => {
-    expect(objetsDuDecorAmong('map1', false)).toEqual([
+    expect(surLeurLieu(false)).toEqual([
       expect.objectContaining({
         lieu: 'gong',
         texture: '/assets/among/map1/gong.png',
@@ -229,13 +237,55 @@ describe('les objets du decor', () => {
 
     const pierre = miroir.stations.find((station) => station.nom === PIERRE.nom);
 
-    expect(objetsDuDecorAmong('map1', true).map(({ x, y }) => ({ x, y }))).toEqual([
+    expect(surLeurLieu(true).map(({ x, y }) => ({ x, y }))).toEqual([
       miroir.gong,
       miroir.boitier,
       { x: pierre?.x, y: pierre?.y },
       miroir.consoles[0],
       miroir.consoles[1],
     ]);
+  });
+
+  it('posent chaque meuble decoupe a sa place, devant chacune des places de sa station', () => {
+    const meubles = objetsDuDecorAmong('map1', false).filter(
+      (objet) => objet.pour !== undefined && objet.id !== 'objet:station:Pierre du jardin zen',
+    );
+    const roses =
+      LIEUX.stations.find((station) => station.nom === "Bornes roses de l'arcade") ??
+      expect.fail('Tokyo a ses bornes roses');
+
+    expect(meubles).toHaveLength(32);
+    expect(new Set(meubles.map((objet) => objet.id)).size).toBe(32);
+    expect(
+      meubles
+        .filter((objet) => objet.lieu !== 'gong' && 'station' in (objet.lieu as object))
+        .filter((objet) => (objet.lieu as { station: string }).station === roses.nom)
+        .map((objet) => objet.pour),
+    ).toEqual(expect.arrayContaining([...(roses.places ?? [])]));
+    // Un meuble qui regarde de l'autre cote se pose retourne.
+    expect(meubles.some((objet) => objet.retourne === true)).toBe(true);
+  });
+
+  it('n eclairent que le meuble devant la place que la partie a tiree', () => {
+    const roses =
+      LIEUX.stations.find((station) => station.nom === "Bornes roses de l'arcade") ??
+      expect.fail('Tokyo a ses bornes roses');
+    const tiree = roses.places?.[4] ?? expect.fail('les bornes roses ont des places');
+    const { places: _toutes, ...station } = { ...roses, x: tiree.x, y: tiree.y };
+    const client = etat(
+      { ...PROIE, stations: [station], taches: [{ station: 0, nature: 'couleurs', faite: false }] },
+      tiree,
+    );
+    const eclairees = image(client).surbrillances.filter((objet) =>
+      objet.id.startsWith('objet:station:Bornes roses'),
+    );
+
+    expect(eclairees.map((objet) => objet.pour)).toEqual([tiree]);
+    expect(eclairees[0]?.alpha).toBe(1);
+    // Son disque ne se montre pas: le meuble le remplace.
+    expect(image(client).disques.map((rond) => rond.id)).not.toContain(
+      `station:${String(tiree.x)}:${String(tiree.y)}`,
+    );
   });
 
   it('remplacent l anneau du gong', () => {

@@ -74,6 +74,11 @@ export interface LecteurDeSons {
    *              nul ne joue pas, et ne coupe donc pas sa lecture precedente.
    */
   jouer(nom: NomDeSon, place?: PlaceDuSon): void;
+  /**
+   * Arrete un son ponctuel en cours, s'il joue encore: la recharge de la fumee d'Among Ninjas se
+   * coupe au relacher (16 octobre 2026). Sans effet sur un son fini.
+   */
+  arreter(nom: NomDeSon): void;
   /** Joue un bruit de pas, en respectant l'intervalle entre deux foulees. */
   jouerUnPas(maintenant: number, presse: boolean): void;
   /**
@@ -606,6 +611,10 @@ export function creerLecteurDeSons(options: OptionsLecteur = {}): LecteurDeSons 
       if (!coupe && (place === undefined || place.volume > 0)) {
         effets.jouer(voixDuSon(nom), place);
       }
+    },
+
+    arreter(nom) {
+      effets.arreter(voixDuSon(nom));
     },
 
     jouerUnPas(maintenant, presse) {

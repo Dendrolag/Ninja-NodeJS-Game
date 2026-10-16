@@ -772,6 +772,21 @@ describe('creerLecteurDeSons', () => {
       expect(alarmes[0]?.arretee).toBe(true);
     });
 
+    it('arrete un son ponctuel en cours a la demande: la recharge de la fumee', async () => {
+      const { lecteur, lectures, debloquer } = lecteurWebAudio();
+      await debloquer();
+
+      lecteur.jouer('tacheRechargeFumee');
+      const recharges = lectures('recharge-fumee.mp3');
+      expect(recharges).toHaveLength(1);
+      expect(recharges[0]?.loop).toBe(false);
+
+      lecteur.arreter('tacheRechargeFumee');
+      expect(recharges[0]?.arretee).toBe(true);
+      // Sans lecture en cours, l'arret ne fait rien.
+      lecteur.arreter('tacheRechargeFumee');
+    });
+
     it('arrete tous les effets en cours quand on coupe le son, et n en joue plus', async () => {
       const { lecteur, contexte, debloquer } = lecteurWebAudio();
       await debloquer();

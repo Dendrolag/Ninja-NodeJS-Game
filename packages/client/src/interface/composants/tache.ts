@@ -18,8 +18,13 @@
  * prend pour elle les fleches, Espace et Echap.
  */
 
-import type { NatureDeTache, NomDeSon } from '@neon-ninja/shared';
-import { DUREES_MINIMALES_DES_TACHES_MS, estUneTacheLongue } from '@neon-ninja/shared';
+import type { IdentifiantCarte, NatureDeTache, NomDeSon } from '@neon-ninja/shared';
+import {
+  DUREES_MINIMALES_DES_TACHES_MS,
+  RACINE_RESSOURCES,
+  cheminObjetDuDecor,
+  estUneTacheLongue,
+} from '@neon-ninja/shared';
 
 import type { TacheOuverte } from '../../among.js';
 import type { Client } from '../../client.js';
@@ -40,6 +45,7 @@ import {
   gesteFini,
   graineDuGeste,
 } from '../modeles/gestes/index.js';
+import type { FondDesTaches } from './dessinsDesGestes.js';
 import { dessinerLeGeste } from './dessinsDesGestes.js';
 import { dessinerLAttente } from './dessinsDesMiniJeux.js';
 
@@ -87,6 +93,7 @@ export interface OptionsFenetreDeTache {
     geste: EtatDeGeste,
     maintenant: number,
     attente?: number,
+    fond?: FondDesTaches,
   ) => void;
   /** Ce qui rappelle a chaque image: requestAnimationFrame, par defaut. */
   readonly planifier?: (rappel: () => void) => () => void;
@@ -128,6 +135,7 @@ function peindreSurLeCanevas(
   geste: EtatDeGeste,
   maintenant: number,
   attente?: number,
+  fond?: FondDesTaches,
 ): void {
   const ctx = toile.getContext('2d');
 
@@ -146,7 +154,7 @@ function peindreSurLeCanevas(
 
   const echelle = largeur / LARGEUR_DU_GESTE;
   ctx.setTransform(echelle, 0, 0, echelle, 0, 0);
-  dessinerLeGeste(ctx, geste, maintenant);
+  dessinerLeGeste(ctx, geste, maintenant, fond);
 
   if (attente !== undefined && estUneTacheLongue(geste.nature)) {
     dessinerLAttente(ctx, geste.nature, attente);
@@ -205,6 +213,22 @@ interface TacheAffichee {
   finiA?: number;
   /** La derniere annonce de la fin. */
   annonceA?: number;
+  /** La recharge de la fumee s'entend: la jauge monte (16 octobre 2026). */
+  recharge?: boolean;
+  /** L'image du decor au fond de la tache, si sa station en a une (16 octobre 2026). */
+  readonly fond?: FondDesTaches;
+}
+
+/** La jauge d'un bonus fumee monte-t-elle: le bouton est tenu. */
+function fumeeQuiMonte(geste: EtatDeGeste): boolean {
+  return geste.nature === 'fumee' && geste.tenuDepuis !== undefined;
+}
+
+/** L'image d'un objet du decor de cette carte, qui se charge pour le fond d'une tache. */
+function imageDuFond(doc: Document, carte: IdentifiantCarte, image: string): FondDesTaches {
+  const fond = doc.createElement('img');
+  fond.src = `${RACINE_RESSOURCES}/${cheminObjetDuDecor(carte, image)}`;
+  return fond;
 }
 
 /** Monte la fenetre, cachee. */
@@ -262,6 +286,19 @@ export function monterFenetreDeTache(options: OptionsFenetreDeTache): FenetreDeT
     }
 
     tache.entendus = tache.geste.echos.length;
+
+    // La recharge de la fumee s'entend tant que la jauge monte, et se coupe au relacher.
+    const monte = fumeeQuiMonte(tache.geste);
+
+    if (monte !== (tache.recharge === true)) {
+      tache.recharge = monte;
+
+      if (monte) {
+        options.sons?.jouer('tacheRechargeFumee');
+      } else {
+        options.sons?.arreter('tacheRechargeFumee');
+      }
+    }
   };
 
   /** Une image: le temps passe, le dessin, la fin et son annonce. */
@@ -287,7 +324,7 @@ export function monterFenetreDeTache(options: OptionsFenetreDeTache): FenetreDeT
       affichee.finiA,
       maintenant,
     );
-    peindre(toile, affichee.geste, maintenant, attente);
+    peindre(toile, affichee.geste, maintenant, attente, affichee.fond);
     const { faits, total } = avancementDuGeste(affichee.geste);
     ecrireTexte(
       avancement,
@@ -313,12 +350,14 @@ export function monterFenetreDeTache(options: OptionsFenetreDeTache): FenetreDeT
     options.client.finirLaTache();
   };
 
-  const ouvrir = (ouverte: TacheOuverte, moi: string): void => {
+  const ouvrir = (ouverte: TacheOuverte, moi: string, carte: IdentifiantCarte): void => {
+    const image = ouverte.station.fondDesTaches;
     affichee = {
       cle: cleDeLOuverture(ouverte),
       ouverte,
       geste: creerGeste(ouverte.nature, graineDuGeste(moi, ouverte.station.nom, ouverte.nature)),
       entendus: 0,
+      ...(image === undefined ? {} : { fond: imageDuFond(doc, carte, image) }),
     };
     ecrireTexte(titre, TITRES_DES_TACHES[ouverte.nature]);
     ecrireTexte(station, ouverte.station.nom);
@@ -341,6 +380,10 @@ export function monterFenetreDeTache(options: OptionsFenetreDeTache): FenetreDeT
   const cacher = (): void => {
     if (affichee === undefined) {
       return;
+    }
+
+    if (affichee.recharge === true) {
+      options.sons?.arreter('tacheRechargeFumee');
     }
 
     affichee = undefined;
@@ -429,7 +472,7 @@ export function monterFenetreDeTache(options: OptionsFenetreDeTache): FenetreDeT
       }
 
       if (affichee?.cle !== cleDeLOuverture(ouverte)) {
-        ouvrir(ouverte, etat.moi ?? '');
+        ouvrir(ouverte, etat.moi ?? '', etat.salon.reglages.carte);
       }
     },
 

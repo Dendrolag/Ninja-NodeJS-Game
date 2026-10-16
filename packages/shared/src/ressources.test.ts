@@ -17,6 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { LIEUX_DES_CARTES } from './among.js';
+import type { IdentifiantCarte } from './constantes.js';
 import {
   CARTES,
   TYPES_BONUS,
@@ -365,6 +366,7 @@ describe('cheminObjetDuDecor', () => {
   it('chaque objet annonce existe, et se pose aux proportions de son image', () => {
     const objets = Object.entries(LIEUX_DES_CARTES).flatMap(([carte, lieux]) =>
       (lieux?.objets ?? []).map((objet) => ({
+        carte: carte as IdentifiantCarte,
         chemin: cheminObjetDuDecor(carte, objet.image),
         objet,
       })),
@@ -372,9 +374,26 @@ describe('cheminObjetDuDecor', () => {
 
     expect(objets.length).toBeGreaterThan(0);
 
-    for (const { chemin, objet } of objets) {
+    for (const { carte, chemin, objet } of objets) {
       expect(existsSync(join(RACINE_DISQUE, chemin)), chemin).toBe(true);
       const { largeur, hauteur } = dimensionsPng(chemin);
+
+      if (objet.decoupe === true) {
+        // Une decoupe du fond (16 octobre 2026) s'etire comme lui, a un centieme de pixel pres:
+        // c'est ce qui la superpose au decor.
+        const fond = dimensionsPng(cheminCarte(carte, 'background'));
+        expect(objet.largeur, chemin).toBeCloseTo(
+          (largeur * CARTES[carte].largeur) / fond.largeur,
+          1,
+        );
+        expect(objet.hauteur, chemin).toBeCloseTo(
+          (hauteur * CARTES[carte].hauteur) / fond.hauteur,
+          1,
+        );
+        expect(objet.place, chemin).toBeDefined();
+        continue;
+      }
+
       // Un pixel d'arrondi pres sur la taille posee: l'image ne doit pas etre deformee.
       expect(Math.abs(objet.largeur - (objet.hauteur * largeur) / hauteur), chemin).toBeLessThan(1);
       // Livree plus grande qu'affichee, pour rester nette au zoom et sur telephone.

@@ -115,10 +115,25 @@ describe('les lieux', () => {
       x: CARTES.map1.largeur - (normal?.gong.x ?? 0),
       y: normal?.gong.y,
     });
+    const retourner = (place: { x: number; y: number }) => ({
+      x: CARTES.map1.largeur - place.x,
+      y: place.y,
+    });
     expect(miroir?.stations[0]).toEqual({
       ...normal?.stations[0],
       x: CARTES.map1.largeur - (normal?.stations[0]?.x ?? 0),
+      // Les places d'une station dont le meuble se repete (16 octobre 2026).
+      places: normal?.stations[0]?.places?.map(retourner),
     });
+    // Un meuble du decor: sa place propre et celle de sa station.
+    const meuble = normal?.objets.findIndex((objet) => objet.decoupe === true) ?? -1;
+    expect(meuble).toBeGreaterThanOrEqual(0);
+    expect(miroir?.objets[meuble]?.place).toEqual(
+      retourner(normal?.objets[meuble]?.place ?? { x: 0, y: 0 }),
+    );
+    expect(miroir?.objets[meuble]?.devant).toEqual(
+      retourner(normal?.objets[meuble]?.devant ?? { x: 0, y: 0 }),
+    );
     // Les postes des sabotages (etape 7.22).
     expect(miroir?.boitier).toEqual({
       x: CARTES.map1.largeur - (normal?.boitier.x ?? 0),

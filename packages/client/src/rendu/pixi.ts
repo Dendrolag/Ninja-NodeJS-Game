@@ -974,7 +974,9 @@ function objetPose(objet: ObjetDuDecorPose, texture: Texture, miroir: boolean): 
   sprite.width = objet.largeur;
   sprite.height = objet.hauteur;
 
-  if (miroir) {
+  // Un meuble qui regarde de l'autre cote se retourne, et le miroir de la carte le retourne
+  // encore: les deux s'annulent.
+  if (miroir !== (objet.retourne === true)) {
     sprite.scale.x = -Math.abs(sprite.scale.x);
   }
 
