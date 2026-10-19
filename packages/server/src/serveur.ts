@@ -28,6 +28,7 @@ import { routesDesComptes } from './comptes/routes.js';
 import type { ActiviteDuServeur, DossiersServis } from './fichiers.js';
 import { applicationWeb } from './fichiers.js';
 import type { Horloge } from './horloge.js';
+import { ecouterSurUnPortPermis } from './portsPermis.js';
 import { RoomManager } from './RoomManager.js';
 import type { DonneesDeConnexion, ServeurTypee } from './ServeurSocket.js';
 import { ServeurSocket } from './ServeurSocket.js';
@@ -304,7 +305,7 @@ function activiteDe(
  * Monte un serveur et le fait ecouter.
  *
  * @param port Port d'ecoute. Zero demande au systeme d'en choisir un libre, ce
- *             dont les tests se servent.
+ *             dont les tests se servent, et jamais un port que fetch refuse.
  */
 export async function demarrerServeur(
   port: number = PORT_PAR_DEFAUT,
@@ -312,11 +313,7 @@ export async function demarrerServeur(
 ): Promise<ServeurMonte> {
   const serveur = creerServeur(options);
 
-  await new Promise<void>((resoudre) => {
-    serveur.http.listen(port, () => {
-      resoudre();
-    });
-  });
+  await ecouterSurUnPortPermis(serveur.http, port);
 
   const surveillance = options.surveillance;
 

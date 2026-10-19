@@ -12,6 +12,8 @@
 import { createServer } from 'node:http';
 import type { Server } from 'node:http';
 
+import { ecouterSurUnPortPermis } from '../portsPermis.js';
+
 /** L'adresse ou ecoute la route: l'interface locale, et elle seule. */
 export const ADRESSE_DES_METRIQUES = '127.0.0.1';
 
@@ -31,7 +33,7 @@ export interface ServeurDesMetriques {
  * Ouvre la route /metriques sur ce port de l'interface locale.
  *
  * @param port Le port; zero laisse le systeme en choisir un libre, ce dont les tests se
- *             servent.
+ *             servent, et jamais un port que fetch refuse.
  */
 export async function ouvrirLaRouteDesMetriques(
   port: number,
@@ -51,18 +53,10 @@ export async function ouvrirLaRouteDesMetriques(
     reponse.end(source.ecrire());
   });
 
-  await new Promise<void>((resoudre, rejeter) => {
-    serveur.once('error', rejeter);
-    serveur.listen(port, ADRESSE_DES_METRIQUES, () => {
-      serveur.off('error', rejeter);
-      resoudre();
-    });
-  });
-
-  const adresse = serveur.address();
+  const obtenu = await ecouterSurUnPortPermis(serveur, port, { hote: ADRESSE_DES_METRIQUES });
 
   return {
-    port: typeof adresse === 'object' && adresse !== null ? adresse.port : port,
+    port: obtenu,
     fermer: async () =>
       new Promise<void>((resoudre) => {
         serveur.close(() => {

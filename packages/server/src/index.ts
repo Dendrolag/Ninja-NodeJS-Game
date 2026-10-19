@@ -140,6 +140,8 @@ export { ServeurSocket } from './ServeurSocket.js';
 
 export type { OptionsServeur, ServeurMonte } from './serveur.js';
 export { PORT_PAR_DEFAUT, creerServeur, demarrerServeur } from './serveur.js';
+export type { OptionsDEcoute } from './portsPermis.js';
+export { PORTS_REFUSES, ecouterSurUnPortPermis } from './portsPermis.js';
 
 export type { ActiviteDuServeur, DossiersServis, ReponseDeSante } from './fichiers.js';
 export { ChronometreDuBattement } from './chronometreDuBattement.js';

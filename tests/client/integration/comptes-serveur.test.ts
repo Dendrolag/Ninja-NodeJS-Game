@@ -28,7 +28,7 @@ import {
   creerReseauSocketIo,
 } from '@neon-ninja/client';
 import type { ServeurMonte } from '@neon-ninja/server';
-import { creerHorlogeManuelle, demarrerServeur } from '@neon-ninja/server';
+import { creerHorlogeManuelle, demarrerServeur, ecouterSurUnPortPermis } from '@neon-ninja/server';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { ComptesEnMemoire } from '../../outils/comptes-en-memoire.js';
@@ -262,7 +262,7 @@ describe('les comptes, du client au serveur', () => {
       socket.destroy();
     });
     autresServeurs.push(muet);
-    await new Promise<void>((resoudre) => muet.listen(0, resoudre));
+    await ecouterSurUnPortPermis(muet, 0);
 
     // Le temps du reveil passe a la main: le test n'attend pas une minute et demie.
     const horloge = creerHorlogeClientManuelle();

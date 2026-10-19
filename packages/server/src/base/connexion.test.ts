@@ -5,10 +5,12 @@
  */
 
 import { createServer } from 'node:net';
-import type { AddressInfo, Socket } from 'node:net';
+import type { Socket } from 'node:net';
 
 import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
+
+import { ecouterSurUnPortPermis } from '../portsPermis.js';
 
 import { adresseChiffree, adresseDirecte, adressePooler, ouvrirBase } from './connexion.js';
 
@@ -72,8 +74,7 @@ describe('ouvrirBase', () => {
     // retenu une mise en ligne quinze minutes, le 2 octobre 2026.
     const prises: Socket[] = [];
     const muet = createServer((prise) => prises.push(prise));
-    await new Promise<void>((pret) => muet.listen(0, '127.0.0.1', pret));
-    const { port } = muet.address() as AddressInfo;
+    const port = await ecouterSurUnPortPermis(muet, 0, { hote: '127.0.0.1' });
     const base = ouvrirBase(`postgresql://personne:rien@127.0.0.1:${String(port)}/aucune`, {
       delaiDeConnexionMs: 200,
     });

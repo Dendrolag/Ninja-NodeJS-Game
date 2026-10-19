@@ -50,7 +50,7 @@ Aucune modification de `legacy/`, de `tests/caracterisation/` ni de `packages/si
 
 ## Problèmes connus et dette
 
-- **Test instable sur cette machine, hors de la carte**: Windows y attribue les ports éphémères dès 1024 (`netsh int ipv4 show dynamicport tcp`), si bien qu'un serveur de test monté sur le port 0 tombe parfois sur un port que `fetch` refuse (« bad port », par exemple 6000). Trente-cinq fichiers de test montent un serveur ainsi. La CI, sous Linux, tire ses ports au-delà de 32768 et n'est pas touchée. Proposé en session séparée.
+- **Test instable sur cette machine, hors de la carte**: Windows y attribue les ports éphémères dès 1024 (`netsh int ipv4 show dynamicport tcp`), si bien qu'un serveur de test monté sur le port 0 tombe parfois sur un port que `fetch` refuse (« bad port », par exemple 6000). Trente-cinq fichiers de test montent un serveur ainsi. La CI, sous Linux, tire ses ports au-delà de 32768 et n'est pas touchée. Proposé en session séparée, et corrigé le jour même: `ecouterSurUnPortPermis` (`packages/server/src/portsPermis.ts`) retire le port tant qu'il est refusé, et `demarrerServeur` s'en sert.
 - **Un joueur qui a vu la note 1.10 de l'étape 7.27** (retirée le 14 octobre) et n'est jamais revenu depuis garde « 1.10 » en souvenir: il ne verra pas la note du Labyrinthe. Cas marginal, assumé.
 
 ## Prochaine action exacte

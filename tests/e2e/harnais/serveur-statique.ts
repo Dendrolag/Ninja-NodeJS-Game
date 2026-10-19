@@ -25,6 +25,9 @@ import type { Server } from 'node:http';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// La source, pas la compilation: compiler.ts lit ce fichier avant de compiler le serveur.
+import { ecouterSurUnPortPermis } from '../../../packages/server/src/portsPermis.js';
+
 /** Racine du depot, retrouvee depuis ce fichier. */
 export const RACINE_DEPOT = resolve(fileURLToPath(import.meta.url), '..', '..', '..', '..');
 
@@ -109,20 +112,11 @@ export async function demarrerServeurStatique(
     createReadStream(fichier).pipe(reponse);
   });
 
-  await new Promise<void>((resoudreAttente) => {
-    serveur.listen(0, '127.0.0.1', () => {
-      resoudreAttente();
-    });
-  });
-
-  const adresse = serveur.address();
-
-  if (typeof adresse !== 'object' || adresse === null) {
-    throw new Error("Le serveur de fichiers n'a pas d'adresse.");
-  }
+  // Chromium refuse les memes ports que fetch: le port tire n'en est jamais un.
+  const port = await ecouterSurUnPortPermis(serveur, 0, { hote: '127.0.0.1' });
 
   return {
-    url: `http://127.0.0.1:${String(adresse.port)}`,
+    url: `http://127.0.0.1:${String(port)}`,
     arreter: async () =>
       new Promise<void>((termine) => {
         serveur.close(() => {
