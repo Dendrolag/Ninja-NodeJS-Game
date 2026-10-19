@@ -32,17 +32,17 @@ describe('les credits', () => {
     expect(CREDITS.participations[0]?.adresse).toBeUndefined();
   });
 
-  it('nomment 2-Minute Tabletop pour ses deux cartes, avec sa licence (etapes 8.9 et 8.11)', () => {
+  it('nomment 2-Minute Tabletop pour ses trois cartes, avec sa licence', () => {
     const auteur = CREDITS.participations[1];
 
     expect(auteur).toEqual({
       nom: '2-Minute Tabletop',
-      apport: 'les cartes Station lunaire et Prison Island',
+      apport: 'les cartes Station lunaire, Prison Island et Labyrinthe',
       adresse: 'https://www.patreon.com/2minutetabletop',
       licence: { nom: 'CC BY-NC 4.0', adresse: 'https://creativecommons.org/licenses/by-nc/4.0/' },
     });
     expect(auteur === undefined ? '' : apresLeNom(auteur)).toBe(
-      ' pour les cartes Station lunaire et Prison Island, sous licence ',
+      ' pour les cartes Station lunaire, Prison Island et Labyrinthe, sous licence ',
     );
   });
 });

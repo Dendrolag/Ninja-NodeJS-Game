@@ -113,6 +113,13 @@
       "when": 1791542521061,
       "tag": "0015_mode_among",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792407324467,
+      "tag": "0016_carte_labyrinthe",
+      "breakpoints": true
     }
   ]
 }

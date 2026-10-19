@@ -233,9 +233,9 @@ export interface ReglagesPartie {
   readonly pluie: boolean;
   /**
    * La carte se joue-t-elle de nuit (etape 8.9). Un reglage d'affichage, que le moteur
-   * ignore, sur le modele de la pluie: seules la Station lunaire et Prison Island (etape
-   * 8.11) ont un fond de nuit (cheminFondDeNuit), et le reglage est sans effet ailleurs.
-   * Le jour par defaut.
+   * ignore, sur le modele de la pluie: seuls la Station lunaire, Prison Island (etape
+   * 8.11) et le Labyrinthe (etape 8.12) ont un fond de nuit (cheminFondDeNuit), et
+   * le reglage est sans effet ailleurs. Le jour par defaut.
    */
   readonly nuit: boolean;
   /**

@@ -126,9 +126,10 @@ describe('cheminAvantPlan', () => {
 });
 
 describe('cheminFondDeNuit', () => {
-  it('donne le fond de nuit des cartes qui en ont un (etapes 8.9 et 8.11)', () => {
+  it('donne le fond de nuit des cartes qui en ont un (etapes 8.9, 8.11 et 8.12)', () => {
     expect(cheminFondDeNuit('station')).toBe('cartes/station/background-night.png');
     expect(cheminFondDeNuit('prison')).toBe('cartes/prison/background-night.png');
+    expect(cheminFondDeNuit('labyrinthe')).toBe('cartes/labyrinthe/background-night.png');
   });
 
   it('ne donne rien pour les autres cartes', () => {
@@ -146,8 +147,9 @@ describe('cheminFondDeNuit', () => {
 });
 
 describe('cheminAvantPlanDeNuit', () => {
-  it('donne l avant-plan de nuit de la seule carte qui en a un (etape 8.11)', () => {
+  it('donne l avant-plan de nuit des cartes qui en ont un (etapes 8.11 et 8.12)', () => {
     expect(cheminAvantPlanDeNuit('prison')).toBe('cartes/prison/foreground-night.png');
+    expect(cheminAvantPlanDeNuit('labyrinthe')).toBe('cartes/labyrinthe/foreground-night.png');
   });
 
   it('ne donne rien pour les autres cartes, Station lunaire comprise', () => {
@@ -177,6 +179,27 @@ describe('les images de Prison Island (etape 8.11)', () => {
 
     expect(Math.abs(echelleX - echelleY) * jour.largeur).toBeLessThan(1);
     expect(dimensionsPng(cheminCarte('prison', 'collision'))).toEqual(CARTES.prison);
+  });
+});
+
+describe('les images du Labyrinthe (etape 8.12)', () => {
+  it('ont toutes la taille du fond de jour, de jour comme de nuit', () => {
+    const jour = dimensionsPng(cheminCarte('labyrinthe', 'background'));
+
+    expect(dimensionsPng(cheminFondDeNuit('labyrinthe') as string)).toEqual(jour);
+    expect(dimensionsPng(cheminAvantPlan('labyrinthe') as string)).toEqual(jour);
+    expect(dimensionsPng(cheminAvantPlanDeNuit('labyrinthe') as string)).toEqual(jour);
+  });
+
+  it('ont les proportions de la carte, qui les agrandit de moitie sans les deformer', () => {
+    // Le decor mesure 1600 sur 1164, la carte 2400 sur 1746: a la taille du decor, les
+    // allees entre les haies laissaient a peine passer un ninja. Le meme agrandissement
+    // sur les deux axes, pour que les haies restent sur les murs.
+    const jour = dimensionsPng(cheminCarte('labyrinthe', 'background'));
+
+    expect(CARTES.labyrinthe.largeur / jour.largeur).toBe(1.5);
+    expect(CARTES.labyrinthe.hauteur / jour.hauteur).toBe(1.5);
+    expect(dimensionsPng(cheminCarte('labyrinthe', 'collision'))).toEqual(CARTES.labyrinthe);
   });
 });
 

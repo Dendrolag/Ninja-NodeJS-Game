@@ -1326,3 +1326,20 @@ Moyenne des deux tours. Durées en millisecondes par battement, tailles en octet
 |  40 | Among Ninjas |  0,100 |      0,067 |  0,099 | 0,265 |     0,574 |                 88 |               7 |              132 |
 |  80 | Horde        |  0,214 |      0,035 |  0,048 | 0,297 |     0,729 |                295 |              95 |              118 |
 |  80 | Among Ninjas |  0,167 |      0,094 |  0,113 | 0,374 |     0,751 |                 96 |               8 |               93 |
+
+## 36. Mesure de l'étape 8.12: le Labyrinthe (19 octobre 2026)
+
+Une sixième carte, de 2400 sur 1746: 2,57 millions de pixels carrés tenables, autant que le Quartier, et le même plafond de 340 faux ninjas, 7 560 pixels carrés chacun.
+
+`pnpm charge --banc --carte labyrinthe --bots-banc 340`, puis le même banc sur le Quartier à 340 en témoin, puis le Labyrinthe une seconde fois, au même commit, sur la machine de mesure (AMD Ryzen 7 3800X, Node 24). Douze joueurs, Horde, un processus neuf par ligne; résultats bruts du premier passage dans `charge-serveur-8-12-labyrinthe.json`.
+
+| Carte                   | Bots | Moteur | Projection | Codage | Total | Total p99 | Octets par message | Parties par cœur |
+| ----------------------- | ---: | -----: | ---------: | -----: | ----: | --------: | -----------------: | ---------------: |
+| Labyrinthe, 1er passage |  340 |  1,386 |      0,144 |  0,159 | 1,689 |     2,918 |                843 |               20 |
+| Quartier (témoin)       |  340 |  1,654 |      0,140 |  0,131 | 1,924 |     3,652 |                862 |               18 |
+| Labyrinthe, 2e passage  |  340 |  1,256 |      0,120 |  0,139 | 1,515 |     2,633 |                843 |               23 |
+
+- **À plafond égal, le Labyrinthe coûte un peu moins que le Quartier**, de 12 à 21 pour cent selon le passage: ses allées et ses haies ne coûtent rien, ce sont les entités qui comptent (section 17).
+- **À son plafond, 1,5 à 1,7 ms par battement**, le trentième du budget de 50 ms.
+
+Le rendu de la nuit ne coûte rien de plus que celui du jour: l'avant-plan de nuit remplace celui du jour, il ne s'y ajoute pas.

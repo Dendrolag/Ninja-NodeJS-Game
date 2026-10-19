@@ -35,10 +35,9 @@ export interface PresentationCarte {
  * map2, l'ancienne Tokyo sans pluie, ne se joue plus: elle n'apparait que dans
  * l'historique d'un profil, sous le meme nom que map1.
  *
- * Trois cartes ont un decor definitif: Tokyo, realisee par Bribz (credits, etape 4.7), la
- * Station lunaire de l'etape 8.9 et Prison Island de l'etape 8.11, dessinees par 2-Minute
- * Tabletop. Spirit &
- * Time a pris a l'etape 8.8 le decor livre par le porteur du projet, un toit-terrasse
+ * Quatre cartes ont un decor definitif: Tokyo, realisee par Bribz (credits, etape 4.7), la
+ * Station lunaire de l'etape 8.9, Prison Island de l'etape 8.11 et le Labyrinthe de l'etape
+ * 8.12, dessinees par 2-Minute Tabletop. Spirit & Time a pris a l'etape 8.8 le decor livre par le porteur du projet, un toit-terrasse
  * au-dessus d'une ville, qu'il garde provisoire pour l'instant (decision du 2 octobre
  * 2026). Le Quartier est la carte de travail de l'etape 8.2: un plan au trait, sans
  * decor, pose en jeu pour savoir si une carte structuree vaut mieux qu'un terrain
@@ -53,6 +52,7 @@ export const PRESENTATION_CARTES: Readonly<Record<CarteEnregistree, Presentation
   quartier: { nom: 'Quartier', ambiance: 'Plan au trait', prototype: true },
   station: { nom: 'Station lunaire', ambiance: 'Lune · Jour ou nuit', prototype: false },
   prison: { nom: 'Prison Island', ambiance: 'Îlot · Jour ou nuit', prototype: false },
+  labyrinthe: { nom: 'Labyrinthe', ambiance: 'Jardin · Jour ou nuit', prototype: false },
 };
 
 /**

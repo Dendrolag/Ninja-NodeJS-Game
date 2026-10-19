@@ -79,14 +79,21 @@ export function cheminAvantPlan(carte: string): string | undefined {
   return carte === 'station' ? undefined : cheminCarte(carte, 'foreground');
 }
 
-/** Les cartes qui se jouent aussi de nuit: la Station lunaire (etape 8.9), Prison Island (8.11). */
-const CARTES_DE_NUIT: ReadonlySet<string> = new Set(['station', 'prison']);
+/**
+ * Les cartes qui se jouent aussi de nuit: la Station lunaire (etape 8.9), Prison Island
+ * (8.11) et le Labyrinthe (etape 8.12).
+ */
+const CARTES_DE_NUIT: ReadonlySet<string> = new Set(['station', 'prison', 'labyrinthe']);
+
+/** Les cartes dont l'avant-plan change aussi la nuit: Prison Island et le Labyrinthe. */
+const AVANT_PLANS_DE_NUIT: ReadonlySet<string> = new Set(['prison', 'labyrinthe']);
 
 /**
  * Chemin relatif du fond de nuit d'une carte, s'il en existe un (etape 8.9).
  *
- * La Station lunaire et Prison Island en ont un: le meme decor, de nuit, qui remplace le
- * fond quand la partie se joue de nuit (ReglagesPartie.nuit). Les murs ne changent pas.
+ * La Station lunaire, Prison Island et le Labyrinthe en ont un: le meme decor, de nuit,
+ * qui remplace le fond quand la partie se joue de nuit (ReglagesPartie.nuit). Les murs ne
+ * changent pas.
  */
 export function cheminFondDeNuit(carte: string): string | undefined {
   return CARTES_DE_NUIT.has(carte) ? `cartes/${carte}/background-night.png` : undefined;
@@ -95,13 +102,13 @@ export function cheminFondDeNuit(carte: string): string | undefined {
 /**
  * Chemin relatif de l'avant-plan de nuit d'une carte, s'il en existe un (etape 8.11).
  *
- * Seule Prison Island en a un: ses tables, ses lits et ses grilles, qui passent devant
- * les ninjas, sont eclaires comme le fond de nuit. Sans lui, un avant-plan de jour
- * poserait des meubles en plein soleil sur une carte eteinte. La Station lunaire n'a pas
- * d'avant-plan du tout, ni de jour ni de nuit.
+ * Prison Island en a un: ses tables, ses lits et ses grilles, qui passent devant les
+ * ninjas, sont eclaires comme le fond de nuit. Sans lui, un avant-plan de jour poserait
+ * des meubles en plein soleil sur une carte eteinte. Le Labyrinthe aussi, pour ses haies
+ * et ses arbres. La Station lunaire n'a pas d'avant-plan du tout, ni de jour ni de nuit.
  */
 export function cheminAvantPlanDeNuit(carte: string): string | undefined {
-  return carte === 'prison' ? `cartes/${carte}/foreground-night.png` : undefined;
+  return AVANT_PLANS_DE_NUIT.has(carte) ? `cartes/${carte}/foreground-night.png` : undefined;
 }
 
 /**

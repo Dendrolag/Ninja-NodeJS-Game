@@ -167,8 +167,8 @@ export function bornesSurLaCarte(
  * La pluie ne tombe que sur une carte qui a une planche de pluie, Tokyo: ailleurs,
  * l'interrupteur se cache (decision du porteur du projet du 18 septembre 2026). Sa
  * valeur est gardee, sans effet, pour revenir telle quelle si l'hote revient a Tokyo.
- * La nuit de meme, sur les cartes qui ont un fond de nuit, la Station lunaire (etape 8.9)
- * et Prison Island (etape 8.11).
+ * La nuit de meme, sur les cartes qui ont un fond de nuit, la Station lunaire (etape 8.9),
+ * Prison Island (etape 8.11) et le Labyrinthe (etape 8.12).
  */
 export function champUtileSurLaCarte(chemin: string, carte: string): boolean {
   if (chemin === CHEMIN_PLUIE) {

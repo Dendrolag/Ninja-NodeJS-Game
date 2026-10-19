@@ -7,7 +7,7 @@
  * version mineure: 1.5.2 rouvre la note 1.5.
  *
  * CE SONT DES DONNEES, que la fenetre des nouveautes se contente d'afficher. Ajouter la
- * note 1.9, c'est ajouter une entree a cette liste, sans toucher a la fenetre.
+ * note 1.11, c'est ajouter une entree a cette liste, sans toucher a la fenetre.
  *
  * LE TON, arrete avec le porteur du projet le 5 octobre 2026: une note annonce, elle
  * n'explique pas. Une ligne par nouveaute, un ton un peu decale, et le plaisir de la
@@ -17,7 +17,7 @@
  * des etapes 7.20 et 7.21, qui se livrent ensemble, sur le meme ton. Sa ligne « Les
  * reparations » est de l'etape 7.27, acceptee par le porteur du projet le 13 octobre 2026:
  * parue un jour dans une note 1.10, retiree quand les petites evolutions d'Among Ninjas sont
- * restees en 1.9 (14 octobre 2026).
+ * restees en 1.9 (14 octobre 2026). La note 1.10 est celle du Labyrinthe, etape 8.12.
  */
 
 import { versionMineure } from '@neon-ninja/shared';
@@ -161,6 +161,24 @@ export const NOTES_DE_VERSION: readonly NoteDeVersion[] = [
       {
         intitule: 'Les fantômes.',
         texte: 'Mort ne veut pas dire inutile. Ni silencieux. Ni sans rancune.',
+      },
+    ],
+  },
+  {
+    version: '1.10',
+    titre: 'Perdus dans les haies',
+    puces: [
+      {
+        intitule: 'Le Labyrinthe.',
+        texte: 'Une nouvelle carte, un dédale de haies au fond d’un jardin.',
+      },
+      {
+        intitule: 'Jour ou nuit.',
+        texte: 'Au soleil ou sous la lune, on s’y perd tout autant.',
+      },
+      {
+        intitule: 'Des arches.',
+        texte: 'Certaines haies se traversent. Encore faut-il savoir lesquelles.',
       },
     ],
   },

@@ -156,7 +156,7 @@ describe('l accueil', () => {
   });
 
   it('annonce les six modes, et plus seulement le Classique (etape 5.5)', () => {
-    expect(obligatoire(hote, '.surtitre').textContent).toBe('6 modes · 5 cartes');
+    expect(obligatoire(hote, '.surtitre').textContent).toBe('6 modes · 6 cartes');
   });
 
   it('dit en pied de page de quand date la version servie (etape 8.4)', () => {

@@ -65,6 +65,12 @@ describe('les notes de version', () => {
       'Jour ou nuit.',
       'Des cachettes.',
     ]);
+    expect(noteDeLaVersion('1.10.0')?.titre).toBe('Perdus dans les haies');
+    expect(noteDeLaVersion('1.10.0')?.puces.map((puce) => puce.intitule)).toEqual([
+      'Le Labyrinthe.',
+      'Jour ou nuit.',
+      'Des arches.',
+    ]);
   });
 });
 

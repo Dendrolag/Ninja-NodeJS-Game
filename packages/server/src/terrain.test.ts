@@ -369,7 +369,8 @@ describe('les vraies cartes du jeu', () => {
  * epaissis (assets/README.md). Elle n'a jamais eu de miroir dessine.
  *
  * Celles de Prison Island (etape 8.11) aussi: sa collision est livree agrandie a la
- * taille de la carte, retouchee (assets/README.md).
+ * taille de la carte, retouchee (assets/README.md). Celles du Labyrinthe (etape
+ * 8.12) de meme.
  */
 describe('les murs de chaque carte, figes', () => {
   const chargeur = new ChargeurDeTerrain(racineRessources());
@@ -395,6 +396,10 @@ describe('les murs de chaque carte, figes', () => {
       normal: '14a6cf78ca001b5f6f06a22c9b265506e0e4ceb3ac4b80fa1734c823cb2358a3',
       miroir: 'ed79e5d2cfab91f9b83e5fc3cf80ea57859dedd23268ec37b1513bf3ae285e63',
     },
+    labyrinthe: {
+      normal: '32171aed26d103b071cabb080eb281f0fe552471375fa589855da0f1de84c949',
+      miroir: '51b0277dc004297c586f0810bad7f26edf7d54b200589e6cb38ca7dedcdda575',
+    },
   };
 
   /** L'empreinte des murs d'un terrain, bit a bit. */
@@ -411,9 +416,10 @@ describe('les murs de chaque carte, figes', () => {
   // Le test de l'etape 8.3 verifiait que le miroir de Spirit & Time differait de moins d'un
   // pour mille: l'ancienne carte etait symetrique. La nouvelle ne l'est plus (le dome est
   // decale, les murs traces a la main), ni la Station lunaire (le quai est sous le toit,
-  // a droite), ni Prison Island: on verifie directement le retournement, pixel a pixel.
-  // Leurs images de collision ont la taille de la carte, l'etirement ne change rien.
-  for (const carte of ['map3', 'station', 'prison'] as const) {
+  // a droite), ni Prison Island, ni le Labyrinthe: on verifie directement le retournement,
+  // pixel a pixel. Leurs images de collision ont la taille de la carte, l'etirement ne
+  // change rien.
+  for (const carte of ['map3', 'station', 'prison', 'labyrinthe'] as const) {
     it(`${carte} en miroir est sa carte normale retournee, mur pour mur`, () => {
       const normal = chargeur.charger({ carte, modeMiroir: false });
       const miroir = chargeur.charger({ carte, modeMiroir: true });
@@ -446,6 +452,10 @@ describe('les murs de chaque carte, figes', () => {
  * Prison Island (etape 8.11) aussi, et pour de bon: ses cellules, sa tour ronde et la
  * plage du bateau ne tiennent au reste que par des portes. Livree a 1838 sur 1337, elle
  * en avait vingt et un morceaux, toutes portes plus etroites qu'un ninja.
+ *
+ * Le Labyrinthe (etape 8.12) aussi, puisque c'en est un: ses allees ne tiennent les
+ * unes aux autres que par des trouees et des arches de haie. Sa collision livree en avait
+ * une cour fermee par un mur pose sur le pave, qu'elle rouvre.
  */
 describe('les cartes a passages etroits', () => {
   const chargeur = new ChargeurDeTerrain(racineRessources());
@@ -469,6 +479,8 @@ describe('les cartes a passages etroits', () => {
     ['station', true],
     ['prison', false],
     ['prison', true],
+    ['labyrinthe', false],
+    ['labyrinthe', true],
   ] as const) {
     it(`${carte} n enferme personne ${modeMiroir ? 'en miroir' : 'en normal'}`, () => {
       const terrain = chargeur.charger({ carte, modeMiroir });
@@ -579,7 +591,7 @@ describe('les poches closes des vraies cartes (etape 8.10)', () => {
       expect(enPoche).toBeLessThan(250);
     });
 
-    for (const carte of ['map3', 'quartier', 'station', 'prison'] as const) {
+    for (const carte of ['map3', 'quartier', 'station', 'prison', 'labyrinthe'] as const) {
       it(`${carte} n a aucune poche ${modeMiroir ? 'en miroir' : 'en normal'}`, () => {
         expect(placesEnPoche({ carte, modeMiroir })).toBe(0);
       });

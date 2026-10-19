@@ -5,10 +5,11 @@
  * a realise le decor de la carte Tokyo et les ninjas; le journal du jeu d'origine le
  * disait deja (« by Bribz »), mais rien ne le disait au joueur.
  *
- * La Station lunaire (etape 8.9) et Prison Island (etape 8.11) sont dessinees par 2-Minute
- * Tabletop, sous licence Creative Commons BY-NC 4.0, qui oblige a nommer l'auteur, a
- * renvoyer a la licence et a dire ce qui a ete change (assets/README.md). La licence
- * l'autorise: le nom renvoie a sa page. Une seule ligne pour ses deux cartes.
+ * La Station lunaire (etape 8.9), Prison Island (etape 8.11) et le Labyrinthe (etape
+ * 8.12) sont dessines par 2-Minute Tabletop, sous licence Creative Commons BY-NC 4.0, qui
+ * oblige a nommer l'auteur, a renvoyer a la licence et a dire ce qui a ete change
+ * (assets/README.md). La licence l'autorise: le nom renvoie a sa page. Une seule ligne
+ * pour ses trois cartes.
  *
  * CE SONT DES DONNEES, que la fenetre des credits se contente d'afficher. Le jour ou
  * Bribz donnera son accord pour un lien vers sa page, il suffira de renseigner
@@ -48,7 +49,7 @@ export const CREDITS: Credits = {
     { nom: 'Bribz', apport: 'la carte Tokyo et les ninjas' },
     {
       nom: '2-Minute Tabletop',
-      apport: 'les cartes Station lunaire et Prison Island',
+      apport: 'les cartes Station lunaire, Prison Island et Labyrinthe',
       adresse: 'https://www.patreon.com/2minutetabletop',
       licence: { nom: 'CC BY-NC 4.0', adresse: 'https://creativecommons.org/licenses/by-nc/4.0/' },
     },

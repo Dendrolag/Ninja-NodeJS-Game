@@ -13,17 +13,17 @@ Tout ce qui suit est vérifié dans le dépôt, pas supposé. Le raisonnement co
 
 Un dossier `assets/cartes/<carte>/`, avec ses images **dans un seul sens**. Le miroir se calcule depuis l'étape 8.3: le serveur retourne la collision, la page retourne le décor. Une carte se livre donc une fois, et un dossier `mirror/` n'a plus de sens (un test l'interdit).
 
-| Fichier                   | Rôle                                                                                              | Obligatoire |
-| ------------------------- | ------------------------------------------------------------------------------------------------- | ----------- |
-| `collision.png`           | Les murs. La seule image qui décide de quelque chose                                              | Oui         |
-| `background.png`          | Le décor, sous les personnages                                                                    | Oui         |
-| `foreground.png`          | L'avant-plan, au-dessus des personnages. La Station lunaire n'en a pas (étape 8.9)                | Presque     |
-| `rain.png`                | La pluie, une bande qui défile. Seule Tokyo en a une                                              | Non         |
-| `background-parallax.png` | Le lointain, sous le fond, qui glisse moins vite que lui (étape 8.8). Seule Spirit & Time en a un | Non         |
-| `background-night.png`    | Le fond de nuit, qui remplace le fond quand l'hôte choisit la nuit (étape 8.9). Station et Prison | Non         |
-| `foreground-night.png`    | L'avant-plan de nuit, qui remplace l'avant-plan la nuit (étape 8.11). Seule Prison Island en a un | Non         |
-| `spaceship.png`           | Le vaisseau qui survole la carte, au-dessus de tout (étape 8.9). Seule la Station en a un         | Non         |
-| `preview.png`             | La vignette, 120 sur 120, montrée dans les réglages                                               | Oui         |
+| Fichier                   | Rôle                                                                                                          | Obligatoire |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------- | ----------- |
+| `collision.png`           | Les murs. La seule image qui décide de quelque chose                                                          | Oui         |
+| `background.png`          | Le décor, sous les personnages                                                                                | Oui         |
+| `foreground.png`          | L'avant-plan, au-dessus des personnages. La Station lunaire n'en a pas (étape 8.9)                            | Presque     |
+| `rain.png`                | La pluie, une bande qui défile. Seule Tokyo en a une                                                          | Non         |
+| `background-parallax.png` | Le lointain, sous le fond, qui glisse moins vite que lui (étape 8.8). Seule Spirit & Time en a un             | Non         |
+| `background-night.png`    | Le fond de nuit, qui remplace le fond quand l'hôte choisit la nuit (étape 8.9). Station, Prison et Labyrinthe | Non         |
+| `foreground-night.png`    | L'avant-plan de nuit, qui remplace l'avant-plan la nuit (étape 8.11). Prison Island et le Labyrinthe          | Non         |
+| `spaceship.png`           | Le vaisseau qui survole la carte, au-dessus de tout (étape 8.9). Seule la Station en a un                     | Non         |
+| `preview.png`             | La vignette, 120 sur 120, montrée dans les réglages                                                           | Oui         |
 
 Les chemins se fabriquent à un seul endroit, `packages/shared/src/ressources.ts`, où un test vérifie que chaque fichier annoncé existe.
 
@@ -112,14 +112,14 @@ Ce que chaque nombre veut dire:
 
 ### Les cartes du jeu
 
-| Mesure              | Tokyo (2000x1500) | Spirit & Time (2400x1760) | Quartier (2400x1800) | Station (2000x1524) | Prison (2390x1738) |
-| ------------------- | ----------------: | ------------------------: | -------------------: | ------------------: | -----------------: |
-| Part tenable        |            75,3 % |                    64,6 % |               59,6 % |              47,0 % |             22,7 % |
-| Dégagement médian   |             64 px |                    226 px |                60 px |              142 px |              35 px |
-| Traversée           |            18,0 s |                    16,2 s |               21,3 s |              12,2 s |             23,1 s |
-| **Détour médian**   |          **1,08** |                  **1,06** |             **1,24** |            **1,07** |           **1,32** |
-| Plafond de PNJ      |               300 |                       360 |                  340 |                 190 |                125 |
-| Part vue d'un écran |              48 % |                      34 % |                 33 % |                47 % |               35 % |
+| Mesure              | Tokyo (2000x1500) | Spirit & Time (2400x1760) | Quartier (2400x1800) | Station (2000x1524) | Prison (2390x1738) | Labyrinthe (2400x1746) |
+| ------------------- | ----------------: | ------------------------: | -------------------: | ------------------: | -----------------: | ---------------------: |
+| Part tenable        |            75,3 % |                    64,6 % |               59,6 % |              47,0 % |             22,7 % |                 61,4 % |
+| Dégagement médian   |             64 px |                    226 px |                60 px |              142 px |              35 px |                  38 px |
+| Traversée           |            18,0 s |                    16,2 s |               21,3 s |              12,2 s |             23,1 s |                 24,5 s |
+| **Détour médian**   |          **1,08** |                  **1,06** |             **1,24** |            **1,07** |           **1,32** |               **1,33** |
+| Plafond de PNJ      |               300 |                       360 |                  340 |                 190 |                125 |                    340 |
+| Part vue d'un écran |              48 % |                      34 % |                 33 % |                47 % |               35 % |                   34 % |
 
 **Les deux cartes héritées sont des terrains ouverts**: un détour de 1,07 à 1,08 veut dire qu'il n'y a ni couloir, ni détour à subir, ni raccourci à connaître. Les murs de Tokyo sont du mobilier qu'on contourne, pas une structure qui organise.
 
@@ -129,7 +129,9 @@ Note: le détour de l'ancienne Spirit & Time se lisait 1,06 à l'étape 8.1, ave
 
 **La Station lunaire (étape 8.9) est la plus petite carte du jeu**: le toit d'une station et son quai, dessinés par 2-Minute Tabletop, la Lune autour en mur. Terrain ouvert (1,07), traversée tout juste au seuil de 12 secondes. Le quai ne tient au toit que par deux monte-charges, d'où son test de connexité. Elle se joue de jour ou de nuit, et un vaisseau la survole, avec son ombre en parallaxe de jour.
 
-**Prison Island (étape 8.11) est la carte la plus structurée du jeu**: une prison bâtie sur un îlot, dessinée par 2-Minute Tabletop, la mer autour en mur. Détour de 1,32, couloirs de 70 pixels, cellules à une porte, d'où la plus faible part tenable du jeu. Livrée à 1838 sur 1337, elle n'était pas jouable: un plan de jeu de rôle compte un carreau par personnage, et ses portes, d'un carreau, laissaient moins que les 32 pixels d'un ninja. Agrandie de 30 pour cent, elle tient. Elle se joue de jour ou de nuit, et son avant-plan (tables, lits) change avec le fond.
+**Prison Island (étape 8.11) est, avec le Labyrinthe, la carte la plus structurée du jeu**: une prison bâtie sur un îlot, dessinée par 2-Minute Tabletop, la mer autour en mur. Détour de 1,32, couloirs de 70 pixels, cellules à une porte, d'où la plus faible part tenable du jeu. Livrée à 1838 sur 1337, elle n'était pas jouable: un plan de jeu de rôle compte un carreau par personnage, et ses portes, d'un carreau, laissaient moins que les 32 pixels d'un ninja. Agrandie de 30 pour cent, elle tient. Elle se joue de jour ou de nuit, et son avant-plan (tables, lits) change avec le fond.
+
+**Le Labyrinthe (étape 8.12) est un dédale de haies**, dessiné par 2-Minute Tabletop: le premier terrain du jeu pensé comme un labyrinthe, détour de 1,33 dans le sens normal et 1,35 en miroir, à égalité avec Prison Island pour la carte la plus structurée, mais avec trois fois sa part tenable (61,4 pour cent): des allées de 76 pixels au médian, et le jardin autour, où l'on contourne le dédale par l'extérieur. Ses murs sont plus minces que ses haies, à dessein: l'avant-plan couvre le ninja qui les frôle, et les arches de haie se traversent. Elle se joue de jour ou de nuit, et son avant-plan change avec le fond.
 
 **Spirit & Time a changé de terrain à l'étape 8.8**: le décor livré par le porteur du projet, un toit-terrasse ceint de murs au-dessus d'une ville, réduit de 20 pour cent pour que les ninjas n'y paraissent pas trop petits. L'ancienne était un champ de 3000 sur 2000, tenable à 94,4 pour cent, plafonnée à 500 PNJ. La nouvelle reste un terrain ouvert (1,06), mais bordé de murs: tout son tenable est hors de la bande d'apparition.
 
@@ -201,6 +203,8 @@ Décision plus ancienne, toujours valable: **le miroir est un réglage de carte,
 7. **Générer une image de collision avec un modèle d'image est le mauvais instrument.** L'anticrénelage y épaissit chaque mur de façon incontrôlée, et on rate par construction les critères 4 et 8. Une collision se trace, elle ne se génère pas.
 8. **Un plan de jeu de rôle livré tel quel est trop petit** (étape 8.11). Il compte un carreau par personnage, quarante pixels environ, et ses portes d'un carreau, une fois les pierres du mur dessinées, laissent moins que les 32 pixels d'un ninja. Mesurer d'abord à la taille livrée: si les morceaux se comptent par dizaines, agrandir la carte (Prison Island, 30 pour cent), la même échelle sur les deux axes, et la collision au plus proche voisin.
 9. **Un mur dessiné à la main a un bord rugueux, et chaque creux de ce bord peut faire une poche** (étape 8.11). Le moteur juge une place en dix-sept points: entre deux pierres saillantes, une place isolée devient tenable. Prison Island en avait plus de deux cents, d'une à six places. Combler les creux plus étroits qu'un disque de quatre pixels de rayon (fermeture: dilater les murs, puis les éroder d'autant) en a fermé presque toutes; les dernières se ferment pixel par pixel, en noircissant un point de leur contour collé à un mur. `placesEnPoche` doit tomber à zéro dans les deux sens: le miroir arrondit autrement, et a ses propres poches.
+10. **Une collision tracée à la main peut poser un mur sur le sol dessiné** (étape 8.12). Le Labyrinthe en avait un, qui fermait une cour et en faisait une poche de cinq mille places. Pour le voir: superposer la collision au décor et à l'avant-plan, et chercher les murs qui ne tombent sur aucun obstacle dessiné. L'inverse aussi: un obstacle dessiné sans mur dessous se traverse, ce qui est voulu pour une arche, et un défaut pour une haie trouée entre deux murs.
+11. **Un mur peut être plus mince que l'obstacle dessiné, si l'avant-plan le couvre** (étape 8.12). Le ninja qui frôle une haie du Labyrinthe passe à moitié dessous, caché par l'avant-plan: les allées paraissent plus larges qu'elles ne sont dessinées, et rien ne se voit du mur. Sans avant-plan au-dessus, le même mur se vivrait comme un ninja qui marche dans la haie.
 
 ## Pour commander un décor à un graphiste
 

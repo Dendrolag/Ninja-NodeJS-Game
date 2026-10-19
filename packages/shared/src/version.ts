@@ -87,9 +87,11 @@ const CHAMPS_ISO = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/;
  * Les petites evolutions du mode Among Ninjas restent en 1.9 et n'avancent que le troisieme
  * chiffre, sans note (decision du porteur du projet du 14 octobre 2026): les reparations a la
  * main de l'etape 7.27, parues un jour en 1.10.0 et 1.10.1, sont redevenues la 1.9.5.
+ * La 1.10.0 est revenue pour de bon avec le Labyrinthe, une carte nouvelle (etape 8.12),
+ * et les evolutions d'Among Ninjas qui la suivent avancent le troisieme chiffre.
  * Une etape qui ne change rien de ce que voit le joueur ne le touche pas.
  */
-export const NUMERO_DE_VERSION = '1.9.12';
+export const NUMERO_DE_VERSION = '1.10.0';
 
 /**
  * La version mineure d'un numero, celle qui porte une note: « 1.5 » pour « 1.5.3 ».

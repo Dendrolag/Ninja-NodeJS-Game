@@ -108,6 +108,11 @@ export const VITESSES = {
  * la mer, de jour ou de nuit, avec son avant-plan de jour et son avant-plan de nuit.
  * Ses images sont a la taille de la carte, telles que le porteur du projet les a
  * livrees.
+ *
+ * `labyrinthe` est le Labyrinthe de l'etape 8.12: un dedale de haies dans un jardin,
+ * dessine par 2-Minute Tabletop, de jour ou de nuit, avec ses haies en avant-plan. Son
+ * decor mesure 1600 sur 1164, et la carte l'agrandit de moitie, la meme echelle sur les
+ * deux axes, pour que ses allees laissent passer les ninjas.
  */
 export const CARTES = {
   map1: { largeur: 2000, hauteur: 1500 },
@@ -115,6 +120,7 @@ export const CARTES = {
   quartier: { largeur: 2400, hauteur: 1800 },
   station: { largeur: 2000, hauteur: 1524 },
   prison: { largeur: 2390, hauteur: 1738 },
+  labyrinthe: { largeur: 2400, hauteur: 1746 },
 } as const;
 
 /** Identifiant d'une carte jouable. */
@@ -135,6 +141,7 @@ export const CARTES_ENREGISTREES = [
   'quartier',
   'station',
   'prison',
+  'labyrinthe',
 ] as const;
 
 /** La carte d'une partie enregistree: jouable, ou retiree du jeu depuis. */
@@ -159,6 +166,10 @@ export type CarteEnregistree = (typeof CARTES_ENREGISTREES)[number];
  *
  * Prison Island (etape 8.11) a 0,94 million de pixels carres tenables: 125 faux ninjas,
  * 7 540 pixels carres chacun. Mesure au banc: section 28 du meme document.
+ *
+ * Le Labyrinthe (etape 8.12) a 2,57 millions de pixels carres tenables, autant que
+ * le Quartier: 340 faux ninjas, 7 560 pixels carres chacun. Mesure au banc: section 36
+ * du meme document.
  */
 export const PLAFONDS_DE_FAUX_NINJAS: Readonly<Record<IdentifiantCarte, number>> = {
   map1: 300,
@@ -166,6 +177,7 @@ export const PLAFONDS_DE_FAUX_NINJAS: Readonly<Record<IdentifiantCarte, number>>
   quartier: 340,
   station: 190,
   prison: 125,
+  labyrinthe: 340,
 };
 
 /** Dimensions d'une carte, en pixels. */

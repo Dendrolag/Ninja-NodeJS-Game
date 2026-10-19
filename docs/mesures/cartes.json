@@ -1,5 +1,5 @@
 {
-  "genereLe": "2026-10-09",
+  "genereLe": "2026-10-19",
   "outil": "docs/mesures/mesurer-les-cartes.mjs",
   "reglages": {
     "rayonEntitePx": 16,
@@ -309,6 +309,66 @@
       "parcoursCourtS": 2.4,
       "parcoursLongS": 14.3,
       "detourMedian": 1.33
+    },
+    {
+      "carte": "labyrinthe",
+      "nom": "Labyrinthe",
+      "miroir": false,
+      "dimensions": {
+        "largeur": 2400,
+        "hauteur": 1746
+      },
+      "surfaceMpx": 4.19,
+      "partDeSolPct": 81.4,
+      "partTenablePct": 61.4,
+      "morceaux": 1,
+      "partDuPrincipalPct": 100,
+      "airesIsoleesPx": 0,
+      "plusGrosMorceauIsolePx": 0,
+      "partDeLaBandeDApparitionPct": 75.4,
+      "degagementPx": {
+        "p10": 20,
+        "median": 38.2,
+        "p90": 94,
+        "maximum": 235.7
+      },
+      "traverseePx": 3668,
+      "traverseeS": 24.5,
+      "parcoursTypiquePx": 1681,
+      "parcoursTypiqueS": 11.2,
+      "parcoursCourtS": 4,
+      "parcoursLongS": 18.2,
+      "detourMedian": 1.33
+    },
+    {
+      "carte": "labyrinthe",
+      "nom": "Labyrinthe",
+      "miroir": true,
+      "dimensions": {
+        "largeur": 2400,
+        "hauteur": 1746
+      },
+      "surfaceMpx": 4.19,
+      "partDeSolPct": 81.4,
+      "partTenablePct": 61.4,
+      "morceaux": 1,
+      "partDuPrincipalPct": 100,
+      "airesIsoleesPx": 0,
+      "plusGrosMorceauIsolePx": 0,
+      "partDeLaBandeDApparitionPct": 75.4,
+      "degagementPx": {
+        "p10": 20,
+        "median": 38.2,
+        "p90": 94,
+        "maximum": 235.7
+      },
+      "traverseePx": 3773,
+      "traverseeS": 25.2,
+      "parcoursTypiquePx": 1710,
+      "parcoursTypiqueS": 11.4,
+      "parcoursCourtS": 4.3,
+      "parcoursLongS": 18.3,
+      "detourMedian": 1.35
     }
   ]
 }
