@@ -72,6 +72,16 @@ Après une partie en production, quatre retours, traités le jour même (version
 
 Tests ajoutés: `packages/shared/src/among.meubles.test.ts` (la portée, les emprises de Tokyo et leur miroir, les durées), la tâche ouverte et gardée de l'autre côté d'un meuble (`packages/sim/src/among.deguisement.test.ts`), l'attente de la nouvelle version (`packages/client/src/nouvelleVersion.test.ts`). Les 4 361 tests unitaires et d'intégration passent; types et linter sans erreur; les scénarios du rendu, d'Among Ninjas et du lien passent (`lien.spec.ts` rejoué seul, fragile sous la charge comme au handoff 5.15).
 
+## Après l'étape: les retours du 19 octobre 2026
+
+Version 1.9.12. Trois retours du porteur du projet après une partie:
+
+- **Les meubles replacés au second plan, seul leur contour lumineux devant.** Les meubles devant l'avant-plan ne convenaient pas, le tapis et les futons notamment. Tous les objets du décor retournent dans le décor, sous l'avant-plan; seul leur éclairage, un contour lumineux sans remplissage, passe au premier plan, devant l'avant-plan et sous la pluie, pour dire qu'on peut s'en servir (`packages/client/src/rendu/pixi.ts`). La pluie reste au-dessus de tout. Le calque des meubles devant (`devant`) disparaît.
+- **Chaque tâche a ses meubles** (répartition validée par le porteur du projet): les mini-jeux aux bornes roses et rouges seulement, et les bornes n'ont que des mini-jeux; le sang au tapis et aux futons; la fumée aux deux distributeurs; les munitions et les mines aux véhicules, aux meubles de la maison, aux commodes et au meuble d'entrée de l'hôtel; le katana à la pierre et à la cuisine; les lunettes aux lavabos; les couleurs à l'ordinateur. L'entrée de l'hôtel devient deux stations, son meuble et son distributeur: quatorze stations. **Les mini-jeux ne sont plus dans deux quartiers** (réponse 2 du 11 octobre 2026, levée): ils sont tous dans l'arcade, à seize places tirées au sort. `packages/shared/src/among.ts`.
+- **L'habit, net et plein.** Dessiné au trait dans le calque des repères, il prenait leur lueur, qui le rendait flou, dans un carré, et transparent. C'est désormais une image pleine (`assets/among/habit.svg`, `CHEMIN_DE_L_HABIT`), un kimono gris clair cerné de blanc, posée avec les objets du jeu, sans filtre, sur son disque pâle qui bat (`rendu/among.ts`, `habitPose`; préchargée avec les sprites). Captures `docs/design/etape-7-28/7-*.png`.
+
+Le tirage change avec la répartition: les graines des tests des réparations à travers le réseau (4, 6, 1, 4 et 5), les listes épinglées de la graine 4, et la graine du scénario de bout en bout d'Among Ninjas, la 50: la 4 donnait des caisses à Bob, que le pilote ne sait pas empiler. La graine s'est cherchée sur le vrai serveur, cinq clients du réseau refaisant le parcours du scénario: le salon y consomme du hasard que le moteur seul ne voit pas, si bien que le calcul hors partie se trompait de rôles. Les 4 360 tests unitaires passent; les deux scénarios d'Among Ninjas aussi, le principal après un échec isolé, Bob arrêté à 55 pixels de la cuisine après avoir glissé, puis deux passages sur deux.
+
 ## Problèmes connus et dette
 
 - Les trois sons du déguisement sont provisoires, à remplacer par ceux du porteur du projet (`packages/shared/src/ressources.ts`).

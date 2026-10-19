@@ -14,7 +14,7 @@ import type { EtatClient } from './etat.js';
 import { ETAT_INITIAL } from './etat.js';
 import { HUD_VIDE, habitHud } from './hud/modele.js';
 import { monterSurcouche } from './hud/surcouche.js';
-import { APPARENCE_AMONG, habitPose, imageDAmong } from './rendu/among.js';
+import { ADRESSE_DE_L_HABIT, APPARENCE_AMONG, habitPose, imageDAmong } from './rendu/among.js';
 import type { VueLissee } from './rendu/interpolation.js';
 import { construireScene, couleurEnNombre } from './rendu/scene.js';
 import { sonsDuChangement } from './sons/declencheurs.js';
@@ -207,27 +207,37 @@ describe('le deguise que nous connaissons', () => {
 });
 
 describe('l habit sur la carte', () => {
-  it('se dessine en kimono au trait, sur un disque qui bat, la ou le flux le dit', () => {
+  it('se pose en image pleine, sans filtre, sur un disque qui bat, la ou le flux le dit', () => {
     const pose = habitPose({ x: 500, y: 400 }, 0);
     const plus = habitPose({ x: 500, y: 400 }, APPARENCE_AMONG.habit.battementMs / 4);
 
     expect(pose.disques).toEqual([expect.objectContaining({ id: 'habit:halo', x: 500, y: 400 })]);
-    expect(pose.traits.map((trait) => trait.id)).toEqual([
-      'habit:corps',
-      'habit:col',
-      'habit:ceinture',
+    // Une image opaque, avec les objets du jeu (19 octobre 2026): plus de trait dans le calque des
+    // reperes, dont la lueur la rendait floue et transparente.
+    expect(pose.objets).toEqual([
+      expect.objectContaining({
+        id: 'habit',
+        texture: ADRESSE_DE_L_HABIT,
+        x: 500,
+        y: 400,
+        alpha: 1,
+      }),
     ]);
+    expect(ADRESSE_DE_L_HABIT).toMatch(/among\/habit\.svg$/u);
     expect(pose.disques[0]?.remplissage?.alpha).not.toBe(plus.disques[0]?.remplissage?.alpha);
-    expect(habitPose(undefined, 0)).toEqual({ disques: [], traits: [] });
+    expect(habitPose(undefined, 0)).toEqual({ disques: [], objets: [] });
   });
 
-  it('entre dans l image d Among Ninjas quand la vue le porte', () => {
+  it('entre dans les objets de la scene quand la vue le porte, et rien dans les reperes', () => {
     const client = etat(PROIE, undefined, { habit: { x: 1050, y: 1000 } });
     const image = imageDAmong(client, lissee(client), 'ninja', 0);
+    const scene = construireScene(client, lissee(client), 0);
 
-    expect(image.fleches.some((trait) => trait.id === 'habit:corps')).toBe(true);
+    expect(image.objets.map((objet) => objet.id)).toEqual(['habit']);
+    expect(scene.objets.some((objet) => objet.id === 'habit')).toBe(true);
     expect(image.disques.some((disque) => disque.id === 'habit:halo')).toBe(true);
-    expect(imageDAmong(etat(PROIE), lissee(etat(PROIE)), 'ninja', 0).fleches).toEqual([]);
+    expect(image.fleches).toEqual([]);
+    expect(imageDAmong(etat(PROIE), lissee(etat(PROIE)), 'ninja', 0).objets).toEqual([]);
   });
 });
 

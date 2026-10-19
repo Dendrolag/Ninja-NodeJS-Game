@@ -55,6 +55,7 @@ import {
   RACINE_RESSOURCES,
   RAYONS_DE_VISION,
   aLaStation,
+  CHEMIN_DE_L_HABIT,
   cheminObjetDuDecor,
   cleDUnLieu,
   lieuxDuMode,
@@ -152,11 +153,6 @@ export interface ObjetDuDecorPose {
   readonly pour?: Position;
   /** Son image se pose retournee de gauche a droite, en plus du miroir de la carte. */
   readonly retourne?: boolean;
-  /**
-   * Un meuble decoupe du fond (16 octobre 2026): il se pose devant l'avant-plan, et sous la
-   * pluie, la ou les autres objets se posent sur le fond.
-   */
-  readonly devant?: true;
 }
 
 /**
@@ -207,7 +203,6 @@ export function objetsDuDecorAmong(
         hauteur: objet.hauteur,
         ...(station ? { pour: objet.devant ?? lieu } : {}),
         ...(objet.retourne === true ? { retourne: true } : {}),
-        ...(objet.decoupe === true ? { devant: true as const } : {}),
       },
     ];
   });
@@ -237,6 +232,8 @@ export interface ImageDAmong {
   readonly fleches: readonly TraitScene[];
   /** Les objets du decor qui s'eclairent (13 octobre 2026). */
   readonly surbrillances: readonly SurbrillanceScene[];
+  /** Au sol, avec les objets du jeu: l'habit pose (etape 7.28). */
+  readonly objets: readonly SpriteScene[];
 }
 
 /** Rien a ajouter: une image d'un autre mode. */
@@ -248,6 +245,7 @@ export const RIEN_D_AMONG: ImageDAmong = {
   postes: AUCUN_INDICATEUR,
   fleches: [],
   surbrillances: [],
+  objets: [],
 };
 
 /** Les reglages de l'apparence, tenus ici pour se regler en jouant. */
@@ -279,7 +277,7 @@ export const APPARENCE_AMONG = {
    * L'habit pose sur la carte (etape 7.28, rendu 2A): un kimono gris clair au trait neon, sur un
    * disque pale qui bat. Sa demi-taille, en pixels de carte, a cote d'un ninja de 32.
    */
-  habit: { couleur: 0xe8ecf6, rayon: 22, demiTaille: 14, battementMs: 1600, epaisseur: 2.5 },
+  habit: { couleur: 0xe8ecf6, rayon: 22, taille: 30, battementMs: 1600 },
   /**
    * La victime qu'un assassin peut tuer maintenant (demande du porteur du projet du 10 octobre
    * 2026): une legere surbrillance rouge sous elle, un disque pale et un anneau. A juger en
@@ -414,7 +412,8 @@ export function imageDAmong(
     libelles: fleches === undefined ? libelles : [...libelles, ...fleches.libelles],
     vision: visionDe(etat, lissee),
     postes: postesDesSabotages(etat, maintenant, objets),
-    fleches: [...habit.traits, ...(fleches?.traits ?? [])],
+    fleches: fleches?.traits ?? [],
+    objets: habit.objets,
     surbrillances: surbrillancesDesObjets(etat, objets, maintenant),
   };
 }
@@ -842,37 +841,21 @@ function lieuxDuJoueur(
 }
 
 /**
- * L'habit pose sur la carte (etape 7.28, rendu 2A), a qui le voit: un kimono plie au trait neon
- * gris clair, sur un disque pale qui bat doucement. Rien sans habit.
+ * L'habit pose sur la carte (etape 7.28, rendu 2A), a qui le voit: un kimono plie gris clair,
+ * plein et net, sur un disque pale qui bat doucement. Une image posee comme un objet du jeu, sans
+ * filtre (19 octobre 2026): dessine au trait dans le calque des reperes, il prenait leur lueur, qui
+ * le rendait flou et transparent. Rien sans habit.
  */
 export function habitPose(
   habit: Position | undefined,
   maintenant: number,
-): { readonly disques: readonly DisqueScene[]; readonly traits: readonly TraitScene[] } {
+): { readonly disques: readonly DisqueScene[]; readonly objets: readonly SpriteScene[] } {
   if (habit === undefined) {
-    return { disques: [], traits: [] };
+    return { disques: [], objets: [] };
   }
 
-  const { couleur, rayon, demiTaille, battementMs, epaisseur } = APPARENCE_AMONG.habit;
+  const { couleur, rayon, taille, battementMs } = APPARENCE_AMONG.habit;
   const bat = 0.5 + 0.5 * Math.sin((maintenant / battementMs) * Math.PI * 2);
-  const t = demiTaille;
-  // Le kimono, en coordonnees du dessin de la planche: un T, le col en V, puis la ceinture.
-  const contour = [
-    [-0.35, -0.8],
-    [-1, -0.45],
-    [-0.8, -0.05],
-    [-0.5, -0.2],
-    [-0.5, 0.85],
-    [0.5, 0.85],
-    [0.5, -0.2],
-    [0.8, -0.05],
-    [1, -0.45],
-    [0.35, -0.8],
-    [0, -0.25],
-    [-0.35, -0.8],
-  ];
-  const aPlat = (points: readonly (readonly number[])[]): number[] =>
-    points.flatMap(([x = 0, y = 0]) => [habit.x + x * t, habit.y + y * t]);
 
   return {
     disques: [
@@ -882,34 +865,25 @@ export function habitPose(
         y: habit.y,
         rayon,
         remplissage: { couleur, alpha: 0.12 + 0.18 * bat },
-        contour: undefined,
+        contour: { couleur, alpha: 0.5 + 0.3 * bat, epaisseur: 2 },
       },
     ],
-    traits: [
-      { id: 'habit:corps', points: aPlat(contour), couleur, alpha: 0.85 + 0.15 * bat, epaisseur },
+    objets: [
       {
-        id: 'habit:col',
-        points: aPlat([
-          [-0.35, -0.8],
-          [0.15, 0.1],
-        ]),
-        couleur,
-        alpha: 0.85,
-        epaisseur,
-      },
-      {
-        id: 'habit:ceinture',
-        points: aPlat([
-          [-0.5, 0.2],
-          [0.5, 0.2],
-        ]),
-        couleur,
-        alpha: 0.85,
-        epaisseur: epaisseur + 1,
+        id: 'habit',
+        texture: ADRESSE_DE_L_HABIT,
+        x: habit.x,
+        y: habit.y,
+        taille,
+        teinte: 0xffffff,
+        alpha: 1,
       },
     ],
   };
 }
+
+/** L'adresse de l'image de l'habit, prechargee avec les sprites (pixi.ts). */
+export const ADRESSE_DE_L_HABIT = `${RACINE_RESSOURCES}/${CHEMIN_DE_L_HABIT}`;
 
 /** Le sang sous un cadavre: quelques taches, toujours les memes pour un meme cadavre. */
 function sangDuCadavre(id: string, x: number, y: number): readonly DisqueScene[] {

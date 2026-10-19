@@ -68,6 +68,8 @@ Recommandations à soumettre au porteur du projet avec la planche, avant toute c
 - Une tâche s'ouvre de tout le tour de son meuble, à 30 pixels au plus.
 - L'habit reste caché, sans indication.
 
+Puis, le 19 octobre 2026: les meubles replacés au second plan, seul leur contour lumineux devant l'avant-plan; chaque tâche à ses meubles, les mini-jeux aux seules bornes; l'habit en image pleine et nette.
+
 Détail: handoff, « Après l'étape ».
 
 ## Réponses du porteur du projet, 16 octobre 2026

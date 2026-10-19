@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <!--
+    L'habit d'Among Ninjas (etape 7.28, rendu 2A), plein et net (retour du porteur du projet du
+    19 octobre 2026): un kimono plie gris clair, cerne de blanc, son col croise et sa ceinture.
+  -->
+  <path d="M42 13 L8 35 L18 61 L36 52 L36 118 L92 118 L92 52 L110 61 L120 35 L86 13 L64 48 Z"
+        fill="#B8C0CC" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round" />
+  <path d="M42 13 L72 70 M86 13 L64 48" fill="none" stroke="#FFFFFF" stroke-width="6"
+        stroke-linecap="round" stroke-linejoin="round" />
+  <rect x="36" y="74" width="56" height="11" fill="#5D6675" stroke="#FFFFFF" stroke-width="4" />
+</svg>

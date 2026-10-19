@@ -115,9 +115,12 @@ const DELAI_DU_GESTE_MS = 60_000;
 /**
  * La graine des parties du scenario (etape 7.22). Le tirage des roles suit la graine et l'ordre
  * d'arrivee: avec celle-ci, Alice, la premiere arrivee, tire l'assassin, et c'est une page qui
- * sabote. Si le tirage change, le scenario le dit, et une autre graine se cherche.
+ * sabote; et Bob, la proie de l'autre page, tire la bataille navale, le mini-jeu que le pilote
+ * joue au clavier. Si le tirage change, le scenario le dit, et une autre graine se cherche, sur
+ * le vrai serveur: le salon y consomme du hasard que le moteur seul ne voit pas. La 50 depuis le
+ * 19 octobre 2026, ou chaque tache a ses meubles et la 4 donnait des caisses a Bob.
  */
-const GRAINE = 4;
+const GRAINE = 50;
 
 let jeu: ServeurDeJeu;
 const clients: ClientDuReseau[] = [];

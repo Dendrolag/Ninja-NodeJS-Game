@@ -633,15 +633,16 @@ export interface LieuxDuMode {
 export const LIEUX_DES_CARTES: Readonly<Partial<Record<IdentifiantCarte, LieuxDuMode>>> = {
   map1: avecLesEmprises({
     gong: { x: 1145, y: 630 },
-    // Chaque mini-jeu se joue a deux stations, dans deux quartiers, pour que les assassins ne
-    // sachent pas ou guetter (reponse 2 du porteur du projet, 11 octobre 2026); chacune de ces
-    // stations garde sa tache courte.
+    // Chaque tache a les meubles qui lui vont (decision du porteur du projet du 19 octobre 2026):
+    // les mini-jeux aux bornes seulement, a seize places de l'arcade tirees au sort, au lieu de
+    // deux stations dans deux quartiers (reponse 2 du 11 octobre 2026); le sang au tapis et aux
+    // futons, la fumee aux distributeurs, les munitions et les mines aux vehicules et aux meubles.
     stations: [
       {
         x: 946,
         y: 84,
         nom: "Bornes roses de l'arcade",
-        natures: ['couleurs', 'caisses', 'serpent', 'envahisseurs'],
+        natures: ['caisses', 'serpent', 'envahisseurs', 'bataille'],
         places: [
           { x: 946, y: 84 },
           { x: 1039, y: 84 },
@@ -658,7 +659,7 @@ export const LIEUX_DES_CARTES: Readonly<Partial<Record<IdentifiantCarte, LieuxDu
         x: 1198,
         y: 69,
         nom: "Bornes rouges de l'arcade",
-        natures: ['mines', 'bataille'],
+        natures: ['caisses', 'serpent', 'envahisseurs', 'bataille'],
         places: [
           { x: 1198, y: 69 },
           { x: 644, y: 97 },
@@ -669,7 +670,7 @@ export const LIEUX_DES_CARTES: Readonly<Partial<Record<IdentifiantCarte, LieuxDu
           { x: 1201, y: 319 },
         ],
       },
-      { x: 700, y: 355, nom: "Lavabos de l'arcade", natures: ['lunettes', 'sang'] },
+      { x: 700, y: 355, nom: "Lavabos de l'arcade", natures: ['lunettes'] },
       { x: 170, y: 180, nom: 'Pierre du jardin zen', natures: ['katana'] },
       {
         x: 415,
@@ -681,35 +682,27 @@ export const LIEUX_DES_CARTES: Readonly<Partial<Record<IdentifiantCarte, LieuxDu
         x: 1369,
         y: 100,
         nom: 'Véhicules du parking',
-        natures: ['munitions'],
+        natures: ['munitions', 'mines'],
         places: [
           { x: 1369, y: 100 },
           { x: 1369, y: 316 },
           { x: 803, y: 1110 },
         ],
       },
-      { x: 1690, y: 110, nom: 'Ordinateur de la maison', natures: ['couleurs', 'serpent'] },
+      { x: 1690, y: 110, nom: 'Ordinateur de la maison', natures: ['couleurs'] },
       {
         x: 1898,
         y: 229,
         nom: 'Meubles de la maison',
-        natures: ['lunettes', 'bataille'],
+        natures: ['munitions', 'mines'],
         places: [
           { x: 1898, y: 229 },
           { x: 1731, y: 366 },
         ],
       },
-      { x: 630, y: 1295, nom: 'Cuisine du restaurant', natures: ['sang', 'katana'] },
-      {
-        x: 1429,
-        y: 991,
-        nom: "Entrée de l'hôtel",
-        natures: ['mines'],
-        places: [
-          { x: 1429, y: 991 },
-          { x: 1132, y: 1008 },
-        ],
-      },
+      { x: 630, y: 1295, nom: 'Cuisine du restaurant', natures: ['katana'] },
+      { x: 1132, y: 1008, nom: "Meuble d'entrée de l'hôtel", natures: ['munitions', 'mines'] },
+      { x: 1429, y: 991, nom: "Distributeur de l'hôtel", natures: ['fumee'] },
       {
         x: 1320,
         y: 1070,
@@ -734,7 +727,7 @@ export const LIEUX_DES_CARTES: Readonly<Partial<Record<IdentifiantCarte, LieuxDu
         x: 1623,
         y: 1042,
         nom: 'Futons de la salle violette',
-        natures: ['couleurs', 'caisses', 'envahisseurs'],
+        natures: ['sang'],
         places: [
           { x: 1623, y: 1042 },
           { x: 1624, y: 1190 },
@@ -975,7 +968,7 @@ export const LIEUX_DES_CARTES: Readonly<Partial<Record<IdentifiantCarte, LieuxDu
         decoupe: true,
       },
       {
-        lieu: { station: "Entrée de l'hôtel" },
+        lieu: { station: "Distributeur de l'hôtel" },
         image: 'distributeur-rouge-face',
         largeur: 29.33,
         hauteur: 50.25,
@@ -984,7 +977,7 @@ export const LIEUX_DES_CARTES: Readonly<Partial<Record<IdentifiantCarte, LieuxDu
         decoupe: true,
       },
       {
-        lieu: { station: "Entrée de l'hôtel" },
+        lieu: { station: "Meuble d'entrée de l'hôtel" },
         image: 'meuble-entree-hotel',
         largeur: 24.67,
         hauteur: 49.5,

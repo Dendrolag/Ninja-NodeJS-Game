@@ -7,6 +7,8 @@
 
 import { describe, expect, it } from 'vitest';
 
+import type { NatureDeTache } from './among.js';
+
 import {
   AMONG,
   BARRES_DES_TACHES,
@@ -89,11 +91,11 @@ describe('les couleurs', () => {
 });
 
 describe('les lieux', () => {
-  it('donne a Tokyo son gong et treize stations dans la carte', () => {
+  it('donne a Tokyo son gong et quatorze stations dans la carte', () => {
     const lieux = lieuxDuMode('map1', false);
 
     expect(lieux).toBe(LIEUX_DES_CARTES.map1);
-    expect(lieux?.stations).toHaveLength(13);
+    expect(lieux?.stations).toHaveLength(14);
     for (const place of [
       lieux?.gong,
       ...(lieux?.stations ?? []),
@@ -177,18 +179,35 @@ describe('les lieux', () => {
     expect([...faites].sort()).toEqual([...NATURES_DE_TACHE].sort());
   });
 
-  it('donne a chaque station une tache courte, au moins', () => {
-    // Une liste sans tache longue doit pouvoir passer par n importe quelle station active.
-    for (const station of LIEUX_DES_CARTES.map1?.stations ?? []) {
-      expect(station.natures.some((nature) => !estUneTacheLongue(nature))).toBe(true);
-    }
-  });
-
-  it('fait jouer chaque mini-jeu a deux stations au moins (reponse 2 du porteur du projet)', () => {
+  it('associe chaque tache a ses meubles (decision du porteur du projet du 19 octobre 2026)', () => {
     const stations = LIEUX_DES_CARTES.map1?.stations ?? [];
+    const de = (nature: NatureDeTache) =>
+      stations
+        .filter((station) => station.natures.includes(nature))
+        .map((station) => station.nom)
+        .sort();
 
+    // Les mini-jeux aux bornes seulement, et les bornes n'ont que des mini-jeux.
     for (const nature of NATURES_LONGUES) {
-      expect(stations.filter((station) => station.natures.includes(nature)).length).toBe(2);
+      expect(de(nature)).toEqual(["Bornes roses de l'arcade", "Bornes rouges de l'arcade"]);
+    }
+    for (const station of stations.filter((une) => une.nom.startsWith('Bornes'))) {
+      expect(station.natures.every(estUneTacheLongue)).toBe(true);
+    }
+    expect(de('sang')).toEqual(['Futons de la salle violette', 'Tapis du salon']);
+    expect(de('fumee')).toEqual(["Distributeur de l'hôtel", 'Distributeur du jardin']);
+    expect(de('munitions')).toEqual(de('mines'));
+    expect(de('munitions')).toEqual(
+      [
+        'Commodes de la salle violette',
+        "Meuble d'entrée de l'hôtel",
+        'Meubles de la maison',
+        'Véhicules du parking',
+      ].sort(),
+    );
+    // Chaque tache courte a une station au moins.
+    for (const nature of NATURES_COURTES) {
+      expect(de(nature).length, nature).toBeGreaterThan(0);
     }
   });
 

@@ -402,6 +402,7 @@ export {
   cheminNinja,
   cheminObjet,
   cheminObjetDuDecor,
+  CHEMIN_DE_L_HABIT,
   cheminPluie,
   IMAGES_DE_PLUIE,
   cheminSon,

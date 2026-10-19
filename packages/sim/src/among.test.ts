@@ -313,12 +313,19 @@ describe('le lancement', () => {
         }
       }
 
-      // Dix proies, cinq taches chacune, neuf stations: cinq ou six prises par station s'il
-      // n'y avait que les stations. Une proie ne fait jamais deux fois la meme tache: deux
-      // stations qui ne proposent que la meme se partagent ses listes, et l'ecart s'elargit un
-      // peu (de 4 a 7 prises sur ces graines). Toutes les stations servent.
-      expect(Math.min(...prises)).toBeGreaterThanOrEqual(4);
-      expect(Math.max(...prises) - Math.min(...prises)).toBeLessThanOrEqual(3);
+      // Depuis le 19 octobre 2026, chaque tache a ses meubles: une station qui propose seule
+      // une tache la recoit de toutes les listes qui l'ont, et deux stations qui proposent les
+      // memes taches se partagent leurs listes. Ce sont elles qui doivent etre equilibrees.
+      const parNatures = new Map<string, number[]>();
+      amongDe(etat).stations.forEach((station, rang) => {
+        const cle = [...station.natures].sort().join(',');
+        parNatures.set(cle, [...(parNatures.get(cle) ?? []), prises[rang] ?? 0]);
+      });
+      for (const [natures, groupe] of parNatures) {
+        if (groupe.length > 1) {
+          expect(Math.max(...groupe) - Math.min(...groupe), natures).toBeLessThanOrEqual(3);
+        }
+      }
     }
   });
 
@@ -722,6 +729,8 @@ describe('les taches', () => {
     etat: EtatPartie;
     proie: string;
     station: Position;
+    /** Sa station a un meuble, dont le tour l'ouvre aussi (16 octobre 2026). */
+    habillee: boolean;
     minimum: number;
   } {
     const etat = disperser(enJeu());
@@ -731,11 +740,12 @@ describe('les taches', () => {
       throw new Error('La proie devrait avoir une tache.');
     }
     const tache = { ...premiere, nature: nature ?? premiere.nature };
-    const station = amongDe(etat).stations[tache.station] as Position;
+    const station = amongDe(etat).stations[tache.station] as StationDuMode;
     return {
       etat: placer(avecRole(etat, proie, { taches: [tache, ...autres] }), proie, station),
       proie,
       station: { x: station.x, y: station.y },
+      habillee: station.emprise !== undefined,
       minimum: DUREES_MINIMALES_DES_TACHES_MS[tache.nature],
     };
   }
@@ -792,17 +802,22 @@ describe('les taches', () => {
   });
 
   it('s annule hors du disque, ou fermee par la page, et se refait en entier', () => {
-    const { etat, proie, station, minimum } = aSaStation();
+    const { etat, proie, station, habillee, minimum } = aSaStation();
     const ouverte = tick(ouvrir(etat, proie), {}, minimum);
 
     const fermee = tick(ouverte, { [proie]: geste({ tache: 'fermee' }) }, 50);
     expect(role(fermee, proie).tacheEnCours).toBeUndefined();
     expect(role(fermee, proie).taches[0]?.faite).toBe(false);
 
-    const dehors = placer(ouverte, proie, {
-      x: station.x + AMONG.RAYON_D_UNE_STATION_PX + 1,
-      y: station.y,
-    });
+    // Hors du disque; et, pour une station habillee d'un meuble, hors de son tour (16 octobre
+    // 2026).
+    const dehors = placer(
+      ouverte,
+      proie,
+      habillee
+        ? { x: station.x + 400, y: station.y }
+        : { x: station.x + AMONG.RAYON_D_UNE_STATION_PX + 1, y: station.y },
+    );
     expect(role(tick(dehors, {}, 50), proie).tacheEnCours).toBeUndefined();
 
     const rouverte = ouvrir(fermee, proie);
@@ -1393,27 +1408,28 @@ function ouvrirAuPoste(etat: EtatPartie, id: IdentifiantEntite, poste: Position)
 }
 
 /**
- * Les stations actives et les listes que la graine 4 donnait avant le tirage des reparations
- * (etape 7.27): le scenario de bout en bout tient a cette graine. Le Tapis du salon y prend la
- * place de l'Entree de l'hotel depuis qu'il porte le sang au lieu de la fumee (16 octobre 2026).
+ * Les stations actives et les listes que la graine 4, ou le premier joueur tire l'assassin,
+ * donnait avant le tirage des reparations
+ * (etape 7.27): le scenario de bout en bout tient a cette graine. Elles changent avec les taches
+ * de chaque meuble (16 et 19 octobre 2026): seuls les roles doivent rester, que le scenario lit.
  */
 const STATIONS_DE_LA_GRAINE_4 = [
   "Bornes roses de l'arcade",
   "Bornes rouges de l'arcade",
   "Lavabos de l'arcade",
   'Distributeur du jardin',
-  'Véhicules du parking',
   'Ordinateur de la maison',
   'Meubles de la maison',
   'Cuisine du restaurant',
+  "Meuble d'entrée de l'hôtel",
   'Tapis du salon',
 ];
 const LISTES_DE_LA_GRAINE_4 = {
   j1: '',
-  j2: '8sang,0caisses,6lunettes,3fumee,7katana',
-  j3: '5serpent,1mines,2sang,4munitions,3fumee',
-  j4: '8sang,6bataille,0couleurs,4munitions,1mines',
-  j5: '2sang,5serpent,7katana,0couleurs,3fumee',
+  j2: '2lunettes,3fumee,0caisses,7munitions,4couleurs',
+  j3: '1envahisseurs,6katana,5munitions,8sang,3fumee',
+  j4: '1serpent,4couleurs,7munitions,5mines,2lunettes',
+  j5: '6katana,0bataille,8sang,3fumee,5munitions',
 };
 
 describe('le tirage des reparations (etape 7.27)', () => {
@@ -1440,7 +1456,7 @@ describe('le tirage des reparations (etape 7.27)', () => {
   });
 
   it('se fait apres les roles, les stations et les listes, qui ne changent pas', () => {
-    // La graine 4 du scenario de bout en bout: le premier joueur y tire l'assassin.
+    // La graine 4: le premier joueur y tire l'assassin.
     const etat = lancee(5, {}, 4);
     const among = amongDe(etat);
 

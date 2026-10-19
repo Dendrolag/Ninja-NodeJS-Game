@@ -610,7 +610,7 @@ export function construireScene(
     disques: [...among.disques, ...disques, ...massacre.disques],
     cones,
     zones,
-    objets,
+    objets: among.objets.length === 0 ? objets : [...objets, ...among.objets],
     // Les cadavres d'abord: les vivants passent par-dessus.
     entites:
       massacre.cadavres.length === 0 && among.cadavres.length === 0

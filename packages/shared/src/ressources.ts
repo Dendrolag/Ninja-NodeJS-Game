@@ -276,6 +276,12 @@ export function cheminObjetDuDecor(carte: string, image: string): string {
 }
 
 /**
+ * Le kimono plie de l'habit d'Among Ninjas (etape 7.28, rendu 2A), plein et net (19 octobre
+ * 2026): le meme sur toutes les cartes du mode.
+ */
+export const CHEMIN_DE_L_HABIT = 'among/habit.svg';
+
+/**
  * Les sons du jeu, nommes par ce qu'ils SIGNIFIENT et non par leur fichier.
  *
  * C'est la correction d'un defaut du jeu d'origine. Son gestionnaire audio

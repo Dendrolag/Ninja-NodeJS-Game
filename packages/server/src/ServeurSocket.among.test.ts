@@ -62,12 +62,12 @@ const PARTIE_AMONG: DemandeCreation['configuration'] = {
  * PARTIE_AMONG. Le test verifie la reparation tiree avant de la jouer.
  */
 const GRAINES_DE_LA_PANNE = [
-  [3, 'lanceur'],
-  [2, 'fusibles'],
+  [4, 'lanceur'],
+  [6, 'fusibles'],
   [1, 'frequence'],
 ] as const;
 const GRAINE_DES_CLES = 4;
-const GRAINE_DU_RELAIS = 1;
+const GRAINE_DU_RELAIS = 5;
 
 /** Les pseudos des cinq joueurs, l'hote en premier. */
 const PSEUDOS = ['Alice', 'Bob', 'Carole', 'David', 'Eve'] as const;
