@@ -117,12 +117,14 @@ const DELAI_DU_GESTE_MS = 60_000;
  * d'arrivee: avec celle-ci, Alice, la premiere arrivee, tire l'assassin, et c'est une page qui
  * sabote; et Bob, la proie de l'autre page, tire la bataille navale, le mini-jeu que le pilote
  * joue au clavier. Si le tirage change, le scenario le dit, et une autre graine se cherche, sur
- * le vrai serveur: le salon y consomme du hasard que le moteur seul ne voit pas. La 189 depuis le
- * 19 octobre 2026, ou chaque tache a ses meubles et la 4 donnait des caisses a Bob: la fumee au
- * distributeur de l'hotel, puis une borne rouge de l'allee est de l'arcade. La 50 l'envoyait a la
- * cuisine, entre les tables, puis entre deux rangees de bornes, ou le pilote se coincait en CI.
+ * le vrai serveur: le salon y consomme du hasard que le moteur seul ne voit pas. La 54 depuis le
+ * 19 octobre 2026, ou chaque tache a ses meubles et la 4 donnait des caisses a Bob: relier des
+ * couleurs a l'ordinateur de la maison, puis une borne rouge de l'allee ouest de l'arcade. La 50
+ * l'envoyait a la cuisine, entre les tables, puis entre deux rangees de bornes, ou le pilote se
+ * coincait en CI; la 189, remplir de fumee, un geste au chronometre que les pages lentes de la CI
+ * ratent.
  */
-const GRAINE = 189;
+const GRAINE = 54;
 
 let jeu: ServeurDeJeu;
 const clients: ClientDuReseau[] = [];
