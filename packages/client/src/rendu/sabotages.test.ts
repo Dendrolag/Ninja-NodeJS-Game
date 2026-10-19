@@ -261,7 +261,7 @@ describe('les objets du decor', () => {
         .filter((objet) => objet.lieu !== 'gong' && 'station' in (objet.lieu as object))
         .filter((objet) => (objet.lieu as { station: string }).station === roses.nom)
         .map((objet) => objet.pour),
-    ).toEqual(expect.arrayContaining([...(roses.places ?? [])]));
+    ).toEqual(expect.arrayContaining((roses.places ?? []).map(({ x, y }) => ({ x, y }))));
     // Un meuble qui regarde de l'autre cote se pose retourne.
     expect(meubles.some((objet) => objet.retourne === true)).toBe(true);
   });
@@ -280,7 +280,7 @@ describe('les objets du decor', () => {
       objet.id.startsWith('objet:station:Bornes roses'),
     );
 
-    expect(eclairees.map((objet) => objet.pour)).toEqual([tiree]);
+    expect(eclairees.map((objet) => objet.pour)).toEqual([{ x: tiree.x, y: tiree.y }]);
     expect(eclairees[0]?.alpha).toBe(1);
     // Son disque ne se montre pas: le meuble le remplace.
     expect(image(client).disques.map((rond) => rond.id)).not.toContain(

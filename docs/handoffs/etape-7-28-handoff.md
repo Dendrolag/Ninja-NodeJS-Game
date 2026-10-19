@@ -60,6 +60,18 @@ La CI de `e04c7ca` a d'abord échoué sur le seul job « Rapport de bout en bout
 8. **Version 1.9.10 au lieu de 1.9.9**: les meubles, hors étape, ont pris la 1.9.9.
 9. **Le scénario de bout en bout ne fige aucun rôle**: la foule, peuplée avant le lancement, change le tirage d'une graine. L'assassin, page ou client du réseau, tue un PNJ, et une page proie témoigne.
 
+## Après l'étape: les retours du porteur du projet, 16 octobre 2026
+
+Après une partie en production, quatre retours, traités le jour même (version 1.9.11):
+
+- **Les meubles devant l'avant-plan, sous la pluie.** L'avant-plan de Tokyo redessine le haut de la plupart des meubles, et masquait leur éclairage. Les meubles découpés du fond se posent désormais au premier plan, devant l'avant-plan, avec leur éclairage; la copie éteinte du décor, hors du cercle de vision, suit le même ordre. **La pluie tombe désormais au-dessus de tout, dans tous les modes**, personnages compris (choix du porteur du projet; le jeu d'origine la posait sur le fond). Le gong, la pierre, le générateur et les consoles restent sous les personnages: on se tient dessus ou tout autour. Captures `docs/design/etape-7-28/6-calques-*.png`. Fichiers: `packages/client/src/rendu/pixi.ts`, `rendu/among.ts` (`devant`).
+- **Le bandeau « nouvelle version » qui insistait**, pendant la mise en ligne de `928b012`: la fenêtre entre le nouveau serveur et la promotion de la page. La page refusée pour sa version attend désormais que la nouvelle soit publiée, puis se recharge d'elle-même (`packages/client/src/nouvelleVersion.ts`, `version.json` écrit par `packages/client/scripts/empaqueter.ts`, texte dans `interface/modeles/lien.ts`; `docs/deploiement.md`, « Pendant la mise en ligne »).
+- **Une tâche s'ouvre de tout le tour de son meuble.** Une station habillée d'un meuble s'ouvre dans son disque, ou à 30 pixels au plus du rectangle du meuble (`aLaStation`, `AMONG.MARGE_D_UN_MEUBLE_PX`, dans `packages/shared/src/among.ts`), la même règle pour le moteur (ouverture et maintien de la tâche), le bouton E et l'éclairage du meuble. Le rectangle se tire des objets du décor (`avecLesEmprises`), la place tirée emporte celui de son meuble, et le miroir le retourne.
+- **Le déguisement de l'assassin dure sa recharge du meurtre, et cinq secondes de plus** (30 secondes à la recharge par défaut de 25), pour qu'il puisse frapper de nouveau, déguisé; celui d'une proie reste à vingt secondes (`dureeDuDeguisementMs`, `AMONG.MARGE_DU_DEGUISEMENT_DE_L_ASSASSIN_MS`). L'aide le dit.
+- **L'habit**: le porteur du projet ne l'a pas vu en jouant une proie. Il reste caché, sans indication, par sa décision: on ne le trouve qu'en passant à portée de vue.
+
+Tests ajoutés: `packages/shared/src/among.meubles.test.ts` (la portée, les emprises de Tokyo et leur miroir, les durées), la tâche ouverte et gardée de l'autre côté d'un meuble (`packages/sim/src/among.deguisement.test.ts`), l'attente de la nouvelle version (`packages/client/src/nouvelleVersion.test.ts`). Les 4 361 tests unitaires et d'intégration passent; types et linter sans erreur; les scénarios du rendu, d'Among Ninjas et du lien passent (`lien.spec.ts` rejoué seul, fragile sous la charge comme au handoff 5.15).
+
 ## Problèmes connus et dette
 
 - Les trois sons du déguisement sont provisoires, à remplacer par ceux du porteur du projet (`packages/shared/src/ressources.ts`).

@@ -9,6 +9,7 @@
  */
 
 import { MOTIF_VERSION_DIFFERENTE } from '@neon-ninja/shared';
+import { TEXTE_NOUVELLE_VERSION } from '../modeles/lien.js';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Client } from '../../client.js';
@@ -106,7 +107,7 @@ describe('la ligne d etat du lien', () => {
     reseau.simulerDeconnexion();
     reseau.simulerRefus(MOTIF_VERSION_DIFFERENTE);
 
-    expect(texte()).toBe(MOTIF_VERSION_DIFFERENTE);
+    expect(texte()).toBe(TEXTE_NOUVELLE_VERSION);
     expect(boutonNomme(ligne.racine, 'Réessayer')).toBeUndefined();
 
     boutonObligatoire(ligne.racine, 'Recharger la page').click();

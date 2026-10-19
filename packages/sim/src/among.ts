@@ -43,8 +43,9 @@
  * deplacement reel. Le moteur dit qui vient d'en faire un (EtatAmong.pasDuBattement); ce que
  * chacun en entend est l'affaire du serveur.
  *
- * LE DEGUISEMENT (etape 7.28): vingt secondes avec le gris des PNJ, sans pseudo. Un assassin le
- * prend en tuant un PNJ, au prix de la recharge d'un vrai meurtre, et le perd en tuant une proie.
+ * LE DEGUISEMENT (etape 7.28): le gris des PNJ, sans pseudo, vingt secondes pour une proie. Un assassin le
+ * prend en tuant un PNJ, au prix de la recharge d'un vrai meurtre, pour cette recharge et cinq
+ * secondes de plus (16 octobre 2026), et le perd en tuant une proie.
  * Une proie le prend en revetant l'habit qu'elle a ramasse, quand elle veut, par le tir (Espace,
  * ou le bouton « Habit »), et le perd en ouvrant une tache. Une reunion le fait tomber pour tous.
  * Un seul habit sur la carte a la fois, que seules les proies vivantes voient; le suivant apparait
@@ -63,6 +64,7 @@ import type {
   Position,
   PosteDeReparation,
   ReglagesAmong,
+  PlaceDUneStation,
   StationDuMode,
 } from '@neon-ninja/shared';
 import {
@@ -79,6 +81,8 @@ import {
   REPARATIONS_DE_LA_SURCHAUFFE,
   TACHES_VISUELLES,
   VITESSES,
+  aLaStation,
+  dureeDuDeguisementMs,
   entier,
   estUneNuisance,
   lieuxDuMode,
@@ -375,9 +379,16 @@ function placerLesStations(
 
     const tirage = entier(courant, places.length);
     courant = tirage.alea;
-    const place = places[tirage.valeur] as Position;
+    const { emprise: _deLaPremiere, ...sansEmprise } = sansPlaces;
+    const place = places[tirage.valeur] as PlaceDUneStation;
 
-    return { ...sansPlaces, x: place.x, y: place.y };
+    // La station emporte le meuble de sa place (16 octobre 2026).
+    return {
+      ...sansEmprise,
+      x: place.x,
+      y: place.y,
+      ...(place.emprise === undefined ? {} : { emprise: place.emprise }),
+    };
   });
 
   return { stations: placees, alea: courant };
@@ -1029,7 +1040,8 @@ function tuerUnPnj(
         [tueurId]: {
           ...tueur,
           rechargeMs: reglagesDe(etat).rechargeMeurtreS * 1000,
-          deguisementMs: AMONG.DUREE_DU_DEGUISEMENT_MS,
+          // Sa recharge et cinq secondes (16 octobre 2026): il peut frapper de nouveau, deguise.
+          deguisementMs: dureeDuDeguisementMs('tueur', reglagesDe(etat).rechargeMeurtreS),
           deguisements: (tueur.deguisements ?? 0) + (deja ? 0 : 1),
         },
       },
@@ -1368,10 +1380,7 @@ function faireLesTaches(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatP
     const station = among.stations[tache.station] as StationDuMode;
     const { tacheEnCours: _close, ...sansTache } = joueur;
 
-    if (
-      entrees[id]?.tache === 'fermee' ||
-      distanceEntre(corps.position, station) > AMONG.RAYON_D_UNE_STATION_PX
-    ) {
+    if (entrees[id]?.tache === 'fermee' || !aLaStation(station, corps.position)) {
       courant = avecJoueur(courant, id, sansTache);
       continue;
     }
@@ -1411,18 +1420,14 @@ function faireLesTaches(etat: EtatPartie, entrees: Entrees, dtMs: number): EtatP
 
 /**
  * Le rang, dans la liste de ce joueur, d'une tache pas encore faite dont la station contient
- * cette place; -1 s'il n'y en a pas. La premiere de la liste l'emporte si deux stations se
- * chevauchaient.
+ * cette place, son disque ou le tour de son meuble (aLaStation); -1 s'il n'y en a pas. La premiere
+ * de la liste l'emporte si deux stations se chevauchaient.
  */
 function tacheALaPlace(among: EtatAmong, joueur: JoueurAmong, position: Position): number {
   return joueur.taches.findIndex((tache) => {
     const station = among.stations[tache.station];
 
-    return (
-      !tache.faite &&
-      station !== undefined &&
-      distanceEntre(position, station) <= AMONG.RAYON_D_UNE_STATION_PX
-    );
+    return !tache.faite && station !== undefined && aLaStation(station, position);
   });
 }
 

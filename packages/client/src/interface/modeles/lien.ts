@@ -54,6 +54,14 @@ export const TEXTE_RETABLISSEMENT = 'Connexion perdue. Reconnexion…';
 /** Ce que dit un lien perdu que la page retablit, dans le salon, ou elle retournera. */
 export const TEXTE_RETABLISSEMENT_DU_SALON = 'Connexion perdue. Retour dans le salon…';
 
+/**
+ * Ce que dit une page refusee pour sa version (16 octobre 2026): elle attend que la nouvelle soit
+ * publiee, et se recharge d'elle-meme (nouvelleVersion.ts). Pendant une mise en ligne, recharger
+ * tout de suite rendait encore l'ancienne page.
+ */
+export const TEXTE_NOUVELLE_VERSION =
+  'Une nouvelle version du jeu arrive. La page se rechargera d’elle-même dès qu’elle sera en ligne.';
+
 /** Ce que dit un lien que la page n'a pas pu retablir. */
 export const TEXTE_LIEN_PERDU = 'La connexion au serveur a été perdue.';
 
@@ -86,7 +94,7 @@ export function modeleDuLien(etat: EtatClient): ModeleDuLien {
 
   return {
     lien,
-    texte: texteDuLien(lien, motif, etat.ecran),
+    texte: pagePerimee ? TEXTE_NOUVELLE_VERSION : texteDuLien(lien, motif, etat.ecran),
     motif,
     peutRecharger: pagePerimee,
     peutReessayer: lien === 'perdu' || (lien === 'refuse' && !pagePerimee),

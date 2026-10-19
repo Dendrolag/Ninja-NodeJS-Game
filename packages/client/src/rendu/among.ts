@@ -54,6 +54,7 @@ import {
   AMONG_PAR_DEFAUT,
   RACINE_RESSOURCES,
   RAYONS_DE_VISION,
+  aLaStation,
   cheminObjetDuDecor,
   cleDUnLieu,
   lieuxDuMode,
@@ -151,6 +152,11 @@ export interface ObjetDuDecorPose {
   readonly pour?: Position;
   /** Son image se pose retournee de gauche a droite, en plus du miroir de la carte. */
   readonly retourne?: boolean;
+  /**
+   * Un meuble decoupe du fond (16 octobre 2026): il se pose devant l'avant-plan, et sous la
+   * pluie, la ou les autres objets se posent sur le fond.
+   */
+  readonly devant?: true;
 }
 
 /**
@@ -201,6 +207,7 @@ export function objetsDuDecorAmong(
         hauteur: objet.hauteur,
         ...(station ? { pour: objet.devant ?? lieu } : {}),
         ...(objet.retourne === true ? { retourne: true } : {}),
+        ...(objet.decoupe === true ? { devant: true as const } : {}),
       },
     ];
   });
@@ -477,13 +484,11 @@ function surbrillancesDesObjets(
     if (typeof objet.lieu !== 'string') {
       // Une station habillee: elle bat la ou son disque se serait montre, et s'eclaire quand le
       // bouton y ouvrirait la tache.
-      const pour = objet.pour;
+      const station = aFaire.find((place) => servirIci(objet, place));
 
-      if (pour !== undefined && aFaire.some((place) => servirIci(objet, place))) {
-        const aPortee =
-          geste === 'tache' &&
-          moi !== undefined &&
-          Math.hypot(moi.x - pour.x, moi.y - pour.y) <= AMONG.RAYON_D_UNE_STATION_PX;
+      if (station !== undefined) {
+        // A portee de tout le tour du meuble, comme le moteur (aLaStation).
+        const aPortee = geste === 'tache' && moi !== undefined && aLaStation(station, moi);
 
         surbrillances.push({
           ...objet,

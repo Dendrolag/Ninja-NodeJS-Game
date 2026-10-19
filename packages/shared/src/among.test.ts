@@ -115,13 +115,15 @@ describe('les lieux', () => {
       x: CARTES.map1.largeur - (normal?.gong.x ?? 0),
       y: normal?.gong.y,
     });
-    const retourner = (place: { x: number; y: number }) => ({
+    const retourner = <T extends { x: number; y: number; emprise?: { x: number } }>(place: T) => ({
+      ...place,
       x: CARTES.map1.largeur - place.x,
-      y: place.y,
+      ...(place.emprise === undefined
+        ? {}
+        : { emprise: { ...place.emprise, x: CARTES.map1.largeur - place.emprise.x } }),
     });
     expect(miroir?.stations[0]).toEqual({
-      ...normal?.stations[0],
-      x: CARTES.map1.largeur - (normal?.stations[0]?.x ?? 0),
+      ...retourner(normal?.stations[0] ?? { x: 0, y: 0 }),
       // Les places d'une station dont le meuble se repete (16 octobre 2026).
       places: normal?.stations[0]?.places?.map(retourner),
     });

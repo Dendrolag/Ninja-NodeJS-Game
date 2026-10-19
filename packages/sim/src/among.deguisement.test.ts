@@ -8,7 +8,12 @@
  */
 
 import type { Position } from '@neon-ninja/shared';
-import { AMONG, COULEUR_DE_LA_FOULE } from '@neon-ninja/shared';
+import {
+  AMONG,
+  AMONG_PAR_DEFAUT,
+  COULEUR_DE_LA_FOULE,
+  dureeDuDeguisementMs,
+} from '@neon-ninja/shared';
 import { describe, expect, it } from 'vitest';
 
 import type { EtatPartie, IdentifiantEntite } from './etat.js';
@@ -19,6 +24,12 @@ import { lancerLaPartie, tick } from './moteur.js';
 
 /** Un battement du serveur. */
 const BATTEMENT_MS = 50;
+
+/**
+ * Le deguisement d'un assassin: la recharge du meurtre par defaut, et cinq secondes de plus
+ * (retour du porteur du projet du 16 octobre 2026).
+ */
+const DUREE_ASSASSIN_MS = dureeDuDeguisementMs('tueur', AMONG_PAR_DEFAUT.rechargeMeurtreS);
 
 /** Une entree sans deplacement, a completer d'un geste. */
 const IMMOBILE: EntreeJoueur = { deplacement: { x: 0, y: 0 }, enMouvement: false };
@@ -136,7 +147,7 @@ function assassinPresDUnPnj(): { readonly etat: EtatPartie; readonly tueur: stri
 }
 
 describe('l assassin qui tue un PNJ', () => {
-  it('le tue, laisse un cadavre gris, prend son apparence vingt secondes, et paie la recharge', () => {
+  it('le tue, laisse un cadavre gris, prend son apparence le temps de sa recharge et cinq secondes, et paie la recharge', () => {
     const { etat, tueur } = assassinPresDUnPnj();
     const apres = geste(etat, tueur, { capturer: true });
     const lui = role(apres, tueur);
@@ -145,7 +156,10 @@ describe('l assassin qui tue un PNJ', () => {
     expect(Object.values(amongDe(apres).cadavres)).toEqual([
       expect.objectContaining({ victime: 'pnj-a', couleur: COULEUR_DE_LA_FOULE, pnj: true }),
     ]);
-    expect(lui.deguisementMs).toBe(AMONG.DUREE_DU_DEGUISEMENT_MS);
+    expect(lui.deguisementMs).toBe(DUREE_ASSASSIN_MS);
+    expect(DUREE_ASSASSIN_MS).toBe(30_000);
+    // Deguise, il peut frapper de nouveau avant que le deguisement tombe.
+    expect(lui.rechargeMs).toBeLessThan(DUREE_ASSASSIN_MS);
     expect(lui.deguisements).toBe(1);
     expect(lui.rechargeMs).toBeGreaterThan(0);
     // Aucun point: ce n'est pas un meurtre.
@@ -192,7 +206,7 @@ describe('l assassin qui tue un PNJ', () => {
     expect(role(apres, tueur).deguisementMs).toBeUndefined();
   });
 
-  it('repart pour vingt secondes en tuant un autre PNJ deguise, sans cumul ni nouveau debut', () => {
+  it('repart pour tout son temps en tuant un autre PNJ deguise, sans cumul ni nouveau debut', () => {
     const { etat, tueur } = assassinPresDUnPnj();
     let apres = geste(etat, tueur, { capturer: true });
     apres = tick(apres, {}, 6000);
@@ -203,7 +217,7 @@ describe('l assassin qui tue un PNJ', () => {
     apres = geste(apres, tueur, { capturer: true });
 
     expect(apres.bots['pnj-c']).toBeUndefined();
-    expect(role(apres, tueur).deguisementMs).toBe(AMONG.DUREE_DU_DEGUISEMENT_MS);
+    expect(role(apres, tueur).deguisementMs).toBe(DUREE_ASSASSIN_MS);
     expect(role(apres, tueur).deguisements).toBe(1);
     expect(evenements(apres, 'deguisement')).toEqual([]);
   });
@@ -223,10 +237,10 @@ describe('l assassin qui tue un PNJ', () => {
     ]);
   });
 
-  it('perd son deguisement au bout de vingt secondes de jeu', () => {
+  it('perd son deguisement au bout de sa recharge et cinq secondes de jeu', () => {
     const { etat, tueur } = assassinPresDUnPnj();
     let apres = geste(etat, tueur, { capturer: true });
-    apres = tick(apres, {}, AMONG.DUREE_DU_DEGUISEMENT_MS - 100);
+    apres = tick(apres, {}, DUREE_ASSASSIN_MS - 100);
     expect(role(apres, tueur).deguisementMs).toBe(100);
 
     apres = tick(apres, {}, BATTEMENT_MS);
@@ -432,5 +446,40 @@ describe('l habit de la proie', () => {
 
     expect(amongDe(etat).tour).toBe(2);
     expect(role(etat, proie).habit).toBe(true);
+  });
+});
+
+describe('une station habillee d un meuble (16 octobre 2026)', () => {
+  /** Une proie dont la premiere tache est a une station posee devant un meuble, rue degagee. */
+  function devantUnMeuble(): { readonly etat: EtatPartie; readonly proie: string } {
+    let etat = eloigner(enJeu());
+    const proie = camps(etat).proies[0] as string;
+    const among = amongDe(etat);
+    const tache = role(etat, proie).taches[0];
+    const rang = tache?.station ?? 0;
+    const stations = [...among.stations];
+    stations[rang] = {
+      ...(stations[rang] as (typeof stations)[number]),
+      x: 600,
+      y: 760,
+      emprise: { x: 600, y: 700, largeur: 60, hauteur: 40 },
+    };
+    etat = { ...etat, among: { ...among, stations } };
+
+    return { etat, proie };
+  }
+
+  it('ouvre la tache de l autre cote du meuble, hors du disque, et la garde ouverte', () => {
+    const { etat, proie } = devantUnMeuble();
+    // Colle au haut du meuble: a cent pixels du centre de la station, a vingt du meuble.
+    let apres = geste(placer(etat, proie, { x: 600, y: 660 }), proie, { agir: true });
+
+    expect(role(apres, proie).tacheEnCours).toBeDefined();
+    apres = tick(apres, {}, 500);
+    expect(role(apres, proie).tacheEnCours).toBeDefined();
+
+    // Trop loin du meuble, la tache se ferme.
+    apres = tick(placer(apres, proie, { x: 600, y: 600 }), {}, BATTEMENT_MS);
+    expect(role(apres, proie).tacheEnCours).toBeUndefined();
   });
 });

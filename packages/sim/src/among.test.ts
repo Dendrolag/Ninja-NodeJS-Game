@@ -226,12 +226,19 @@ describe('le lancement', () => {
       const lieu = toutes.find((autre) => autre.nom === station.nom);
       const { places, ...sansPlaces } = lieu as StationDuMode;
 
-      // A l'une de ses places, sans plus la liste (16 octobre 2026).
+      // A l'une de ses places, avec le meuble de cette place, sans plus la liste (16 octobre
+      // 2026).
+      const { emprise: _premiere, ...sansEmprise } = sansPlaces;
+      const tiree = (places ?? [sansPlaces]).find(
+        (place) => place.x === station.x && place.y === station.y,
+      );
       expect(station.places).toBeUndefined();
-      expect({ ...station, x: sansPlaces.x, y: sansPlaces.y }).toEqual(sansPlaces);
-      expect(places ?? [{ x: sansPlaces.x, y: sansPlaces.y }]).toContainEqual({
-        x: station.x,
-        y: station.y,
+      expect(tiree).toBeDefined();
+      expect(station).toEqual({
+        ...sansEmprise,
+        x: tiree?.x,
+        y: tiree?.y,
+        ...(tiree?.emprise === undefined ? {} : { emprise: tiree.emprise }),
       });
     }
   });
@@ -260,10 +267,15 @@ describe('le lancement', () => {
 
     for (const station of amongDe(etat).stations) {
       const lieu = miroir.stations.find((autre) => autre.nom === station.nom) as StationDuMode;
-      expect(lieu.places ?? [{ x: lieu.x, y: lieu.y }]).toContainEqual({
+      expect((lieu.places ?? [lieu]).map(({ x, y }) => ({ x, y }))).toContainEqual({
         x: station.x,
         y: station.y,
       });
+      // Le meuble se retourne avec sa place.
+      const tiree = (lieu.places ?? [lieu]).find(
+        (place) => place.x === station.x && place.y === station.y,
+      );
+      expect(station.emprise).toEqual(tiree?.emprise);
     }
   });
 

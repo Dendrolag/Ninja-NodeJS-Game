@@ -37,6 +37,7 @@ import {
   NUISANCES,
   RACINE_RESSOURCES,
   REGLAGES_PAR_DEFAUT,
+  aLaStation,
   cheminCarte,
   lieuxDuMode,
 } from '@neon-ninja/shared';
@@ -527,6 +528,7 @@ function posteAReparer(etat: EtatClient, prive: EtatPriveAmong, moi: Position): 
 /**
  * Le rang, dans nos stations, de celle ou le bouton ouvrirait une tache: une station de nos
  * taches qui restent pour une proie, toute station active pour un assassin vivant. Rien sinon.
+ * La portee est celle du moteur: le disque, ou le tour du meuble (aLaStation).
  */
 function stationAPortee(prive: EtatPriveAmong, moi: Position): number | undefined {
   const rangs =
@@ -539,7 +541,7 @@ function stationAPortee(prive: EtatPriveAmong, moi: Position): number | undefine
   return rangs.find((rang) => {
     const station = prive.stations[rang];
 
-    return station !== undefined && distance(moi, station) <= AMONG.RAYON_D_UNE_STATION_PX;
+    return station !== undefined && aLaStation(station, moi);
   });
 }
 

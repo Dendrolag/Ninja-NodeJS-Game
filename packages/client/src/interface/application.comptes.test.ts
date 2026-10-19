@@ -10,6 +10,7 @@
 
 import type { InfosSalon } from '@neon-ninja/shared';
 import { MOTIF_VERSION_DIFFERENTE, REGLAGES_PAR_DEFAUT } from '@neon-ninja/shared';
+import { TEXTE_NOUVELLE_VERSION } from './modeles/lien.js';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Client } from '../client.js';
@@ -184,7 +185,8 @@ describe('l accueil et la session', () => {
     await laisserRepondre();
     reseau.simulerRefus(MOTIF_VERSION_DIFFERENTE);
 
-    expect(obligatoire(hote, '.accueil-lien').textContent).toBe(MOTIF_VERSION_DIFFERENTE);
+    // Elle attend la nouvelle version, et se rechargera d'elle-meme (16 octobre 2026).
+    expect(obligatoire(hote, '.accueil-lien').textContent).toBe(TEXTE_NOUVELLE_VERSION);
     expect(boutonNomme(hote, 'Recharger la page')).toBeDefined();
     expect(boutonNomme(hote, 'Réessayer')).toBeUndefined();
     expect(boutonNomme(hote, 'Continuer en invité')).toBeUndefined();

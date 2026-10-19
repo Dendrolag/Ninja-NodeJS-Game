@@ -112,9 +112,21 @@ export const AMONG = {
   PORTEE_DES_PAS_PX: 500,
   /**
    * Le deguisement en PNJ (etape 7.28, fiche docs/plan/etape-7-28.md), decisions du porteur du
-   * projet du 14 octobre 2026: vingt secondes pour les deux camps, sans cumul.
+   * projet du 14 octobre 2026: vingt secondes pour une proie, sans cumul.
    */
   DUREE_DU_DEGUISEMENT_MS: 20_000,
+  /**
+   * Celui d'un assassin dure sa recharge du meurtre, et ce temps de plus (retour du porteur du
+   * projet du 16 octobre 2026): sans cela, il tombait avant que l'assassin puisse frapper de
+   * nouveau, et ne lui servait a rien.
+   */
+  MARGE_DU_DEGUISEMENT_DE_L_ASSASSIN_MS: 5000,
+  /**
+   * Une station habillee d'un meuble s'ouvre de tout le tour du meuble (retour du porteur du
+   * projet du 16 octobre 2026), et pas seulement de son disque: a cette distance au plus du
+   * rectangle du meuble, du centre du ninja. Un ninja colle au meuble en est a son rayon, 16.
+   */
+  MARGE_D_UN_MEUBLE_PX: 30,
   /** Un habit pris, le suivant apparait ailleurs ce temps de jeu plus tard. */
   REAPPARITION_DE_L_HABIT_MS: 45_000,
   /**
@@ -487,17 +499,66 @@ export interface StationDuMode extends Position {
   readonly nom: string;
   readonly natures: readonly NatureDeTache[];
   /**
+   * Le rectangle du meuble qui l'habille (16 octobre 2026), quand elle en a un: on l'ouvre de son
+   * disque, ou de tout le tour du meuble (aLaStation). Tire de ses objets du decor, pas ecrit a
+   * la main (avecLesEmprises).
+   */
+  readonly emprise?: EmpriseDUnMeuble;
+  /**
    * Les places ou la station peut se tenir, quand son meuble est plusieurs fois sur la carte (16
    * octobre 2026, demande du porteur du projet): chaque partie en tire une, si bien qu'on ne la
    * trouve pas toujours au meme endroit. La place de la station (x, y) est la premiere. Absentes
    * d'une station qui ne bouge pas, et de la station tiree d'une partie lancee.
    */
-  readonly places?: readonly Position[];
+  readonly places?: readonly PlaceDUneStation[];
   /**
    * L'objet du decor peint au fond de la fenetre des taches de cette station (16 octobre 2026):
    * le tapis du salon, sous le sang a nettoyer. Le nom de son image (cheminObjetDuDecor).
    */
   readonly fondDesTaches?: string;
+}
+
+/** Le rectangle d'un meuble, en pixels de carte, par son centre. */
+export interface EmpriseDUnMeuble extends Position {
+  readonly largeur: number;
+  readonly hauteur: number;
+}
+
+/** Une place ou peut se tenir une station, et le meuble devant lequel elle est. */
+export interface PlaceDUneStation extends Position {
+  readonly emprise?: EmpriseDUnMeuble;
+}
+
+/**
+ * Ce ninja est-il a cette station, assez pres pour y ouvrir sa tache, et pour la garder ouverte:
+ * dans son disque, ou a MARGE_D_UN_MEUBLE_PX au plus du meuble qui l'habille (16 octobre 2026).
+ * La meme regle pour le moteur, qui juge, et la page, qui dit ce que fera le bouton.
+ */
+export function aLaStation(station: StationDuMode, position: Position): boolean {
+  if (Math.hypot(position.x - station.x, position.y - station.y) <= AMONG.RAYON_D_UNE_STATION_PX) {
+    return true;
+  }
+
+  const emprise = station.emprise;
+
+  if (emprise === undefined) {
+    return false;
+  }
+
+  const ecartX = Math.max(Math.abs(position.x - emprise.x) - emprise.largeur / 2, 0);
+  const ecartY = Math.max(Math.abs(position.y - emprise.y) - emprise.hauteur / 2, 0);
+
+  return Math.hypot(ecartX, ecartY) <= AMONG.MARGE_D_UN_MEUBLE_PX;
+}
+
+/**
+ * Ce que dure un deguisement (etape 7.28): vingt secondes pour une proie; pour un assassin, sa
+ * recharge du meurtre, reglee par l'hote, et cinq secondes de plus (16 octobre 2026).
+ */
+export function dureeDuDeguisementMs(role: RoleAmong, rechargeMeurtreS: number): number {
+  return role === 'tueur'
+    ? rechargeMeurtreS * 1000 + AMONG.MARGE_DU_DEGUISEMENT_DE_L_ASSASSIN_MS
+    : AMONG.DUREE_DU_DEGUISEMENT_MS;
 }
 
 /**
@@ -570,7 +631,7 @@ export interface LieuxDuMode {
  * bout en bout de l'etape 7.20).
  */
 export const LIEUX_DES_CARTES: Readonly<Partial<Record<IdentifiantCarte, LieuxDuMode>>> = {
-  map1: {
+  map1: avecLesEmprises({
     gong: { x: 1145, y: 630 },
     // Chaque mini-jeu se joue a deux stations, dans deux quartiers, pour que les assassins ne
     // sachent pas ou guetter (reponse 2 du porteur du projet, 11 octobre 2026); chacune de ces
@@ -1004,8 +1065,47 @@ export const LIEUX_DES_CARTES: Readonly<Partial<Record<IdentifiantCarte, LieuxDu
         decoupe: true,
       },
     ],
-  },
+  }),
 };
+
+/**
+ * Les lieux, chaque station et chacune de ses places avec le rectangle du meuble qui l'habille
+ * (16 octobre 2026): celui de l'objet du decor de la station pose a sa place propre, devant
+ * cette place. Un objet pose sur sa station, la pierre du jardin zen, a son rectangle centre sur
+ * elle. Une station sans objet n'a pas d'emprise: son disque suffit.
+ */
+function avecLesEmprises(lieux: LieuxDuMode): LieuxDuMode {
+  const empriseDevant = (nom: string, place: Position): EmpriseDUnMeuble | undefined => {
+    const objet = lieux.objets.find(
+      (candidat) =>
+        typeof candidat.lieu !== 'string' &&
+        'station' in candidat.lieu &&
+        candidat.lieu.station === nom &&
+        (candidat.devant ?? place).x === place.x &&
+        (candidat.devant ?? place).y === place.y,
+    );
+    const centre = objet?.place ?? place;
+
+    return objet === undefined
+      ? undefined
+      : { x: centre.x, y: centre.y, largeur: objet.largeur, hauteur: objet.hauteur };
+  };
+  const avecEmprise = <T extends Position>(place: T, nom: string): T => {
+    const emprise = empriseDevant(nom, place);
+
+    return emprise === undefined ? place : { ...place, emprise };
+  };
+
+  return {
+    ...lieux,
+    stations: lieux.stations.map((station) => ({
+      ...avecEmprise(station, station.nom),
+      ...(station.places === undefined
+        ? {}
+        : { places: station.places.map((place) => avecEmprise(place, station.nom)) }),
+    })),
+  };
+}
 
 /**
  * La place d'un objet du decor parmi les lieux du mode: celle du gong, du boitier, de la
@@ -1048,13 +1148,20 @@ export function lieuxDuMode(carte: IdentifiantCarte, miroir: boolean): LieuxDuMo
 
   const largeur = CARTES[carte].largeur;
   const retourner = (place: Position): Position => ({ x: largeur - place.x, y: place.y });
+  // Une place, et le meuble devant lequel elle est, retournes ensemble.
+  const retournerAvecEmprise = <T extends PlaceDUneStation>(place: T): T => ({
+    ...place,
+    x: largeur - place.x,
+    ...(place.emprise === undefined
+      ? {}
+      : { emprise: { ...place.emprise, x: largeur - place.emprise.x } }),
+  });
 
   return {
     gong: retourner(lieux.gong),
     stations: lieux.stations.map((station) => ({
-      ...station,
-      x: largeur - station.x,
-      ...(station.places === undefined ? {} : { places: station.places.map(retourner) }),
+      ...retournerAvecEmprise(station),
+      ...(station.places === undefined ? {} : { places: station.places.map(retournerAvecEmprise) }),
     })),
     boitier: retourner(lieux.boitier),
     consoles: [retourner(lieux.consoles[0]), retourner(lieux.consoles[1])],

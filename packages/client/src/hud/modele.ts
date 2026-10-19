@@ -24,6 +24,7 @@
 import type {
   CampDeChasse,
   Couleur,
+  EtatPriveAmong,
   LigneClassement,
   Mode,
   NatureObjet,
@@ -31,7 +32,7 @@ import type {
   TypeZone,
 } from '@neon-ninja/shared';
 import {
-  AMONG,
+  AMONG_PAR_DEFAUT,
   CARTES,
   CHASSE,
   COULEURS_DES_EQUIPES,
@@ -41,6 +42,7 @@ import {
   TACTIQUE,
   campDeCouleur,
   classementDesEquipes,
+  dureeDuDeguisementMs,
   equipeDeCouleur,
   proiesRestantes,
 } from '@neon-ninja/shared';
@@ -332,6 +334,17 @@ export function construireHud(
 }
 
 /**
+ * Ce que dure un deguisement pour ce role, a la recharge du meurtre de la partie: vingt secondes
+ * pour une proie, la recharge et cinq secondes pour un assassin (16 octobre 2026).
+ */
+function dureeDuDeguisement(etat: EtatClient, role: EtatPriveAmong['role']): number {
+  return dureeDuDeguisementMs(
+    role,
+    (etat.salon?.reglages.among ?? AMONG_PAR_DEFAUT).rechargeMeurtreS,
+  );
+}
+
+/**
  * Le bouton « Habit » d'Among Ninjas (etape 7.28): une proie vivante qui porte un habit le revet
  * par lui; un deguise, proie ou assassin, y lit ce qu'il lui reste. Rien sinon, ni pour un
  * fantome, ni hors du jeu.
@@ -354,7 +367,7 @@ export function habitHud(etat: EtatClient): HabitHud | undefined {
   return {
     actif,
     deguise: {
-      part: Math.min(Math.max(restantMs / AMONG.DUREE_DU_DEGUISEMENT_MS, 0), 1),
+      part: Math.min(Math.max(restantMs / dureeDuDeguisement(etat, prive.role), 0), 1),
       secondes: Math.ceil(restantMs / 1000),
     },
   };

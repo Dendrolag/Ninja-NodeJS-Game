@@ -313,7 +313,7 @@ function ajouterSansDoublon(
  * restent pour une proie, vivante ou fantome; toutes les stations actives pour un assassin, qui
  * voit celles des proies (decision 9 de la fiche).
  */
-export function stationsAMontrer(prive: EtatPriveAmong): readonly Position[] {
+export function stationsAMontrer(prive: EtatPriveAmong): readonly StationDuMode[] {
   const rangs =
     prive.role === 'tueur'
       ? prive.stations.map((_place, rang) => rang)

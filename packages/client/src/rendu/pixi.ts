@@ -557,8 +557,10 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   const disques = new Graphics();
   // Les mines posees, au sol, sur les halos et sous les objets (etape 7.11).
   const mines = new Graphics();
-  // Les objets du decor d'Among Ninjas qui s'eclairent, sur l'objet pose dans le decor.
+  // Les objets du decor d'Among Ninjas qui s'eclairent, sur l'objet pose dans le decor. Ceux des
+  // meubles, devant l'avant-plan comme eux (16 octobre 2026).
   const surbrillances = new Container();
+  const surbrillancesDevant = new Container();
   const objets = new Container();
   // Les personnages se dessinent dans l'ordre de la scene, que leur rang fixe (etape 5.7).
   // Le nom permet au banc de mesure de compter ceux qui sont affiches.
@@ -595,10 +597,13 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   // jusqu'au bord de la carte.
   fondEteint.filters = [filtreEteint];
   dessusEteint.filters = [filtreEteint];
-  // Les objets du decor d'Among Ninjas s'eteignent avec lui: ils en font partie.
+  // Les objets du decor d'Among Ninjas s'eteignent avec lui: ils en font partie, les meubles
+  // devant l'avant-plan comme dans le decor.
   const objetsEteints = new Container();
   objetsEteints.filters = [filtreEteint];
-  copieEteinte.addChild(fondEteint, objetsEteints, dessusEteint);
+  const meublesEteints = new Container();
+  meublesEteints.filters = [filtreEteint];
+  copieEteinte.addChild(fondEteint, objetsEteints, dessusEteint, meublesEteints);
   // Le voile noir qui assombrissait la copie de moitie (VISION_AMONG), davantage pendant la
   // panne de neons (etape 7.22), est une teinte de la texture: un noir d'opacite a par-dessus
   // une couleur, ou cette couleur multipliee par 1 - a, c'est la meme chose.
@@ -690,6 +695,7 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   const badges = new Map<string, Text>();
   const textesDesLibelles = new Map<string, Text>();
   const spritesSurbrillances = new Map<string, Surbrillance>();
+  const spritesSurbrillancesDevant = new Map<string, Surbrillance>();
 
   const fond = new Sprite();
   const dessus = new Sprite();
@@ -697,8 +703,10 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   // 8.8, rendu/parallaxe.ts). Cache sur une carte qui n'en a pas.
   const lointain = new Sprite();
   lointain.visible = false;
-  // La pluie tombe sur le fond et sous tout le reste, comme dans le jeu d'origine
-  // (MapManager.draw, legacy/js/MapManager.js:388). Cachee sur une carte sans pluie.
+  // La pluie tombe sur tout le reste, avant-plan et personnages compris (decision du porteur du
+  // projet du 16 octobre 2026). Le jeu d'origine la posait sur le fond et sous tout le reste
+  // (MapManager.draw, legacy/js/MapManager.js:388): les meubles d'Among Ninjas, devant
+  // l'avant-plan, auraient sinon ete secs. Cachee sur une carte sans pluie.
   const pluie = new Sprite();
   pluie.alpha = PLUIE.opacite;
   pluie.visible = false;
@@ -719,10 +727,12 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
   const vaisseau = new Sprite();
   vaisseau.anchor.set(0.5);
   vaisseau.visible = false;
-  // Les objets du decor d'Among Ninjas, sur le fond et sous la pluie.
+  // Les objets du decor d'Among Ninjas, sur le fond; les meubles decoupes du fond, devant
+  // l'avant-plan (16 octobre 2026); la pluie sur eux tous.
   const objetsDuDecor = new Container();
-  decor.addChild(lointain, fond, sol, objetsDuDecor, pluie, ombre);
-  premierPlan.addChild(dessus, vaisseau);
+  const meublesDevant = new Container();
+  decor.addChild(lointain, fond, sol, objetsDuDecor, ombre);
+  premierPlan.addChild(dessus, meublesDevant, surbrillancesDevant, pluie, vaisseau);
 
   const imprimer = (taches: readonly SangAImprimer[]): void => {
     const nouvelles = taches.filter((tache) => !imprimees.has(tache.id));
@@ -848,12 +858,22 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       objetsEteints.removeChildren().forEach((ancien) => {
         ancien.destroy();
       });
+      for (const calque of [meublesDevant, meublesEteints]) {
+        calque.removeChildren().forEach((ancien) => {
+          ancien.destroy();
+        });
+      }
       objetsAPoser.forEach((objet, rang) => {
         const texture = texturesDesObjets[rang];
 
         if (texture !== undefined) {
-          objetsDuDecor.addChild(objetPose(objet, texture, options.modeMiroir));
-          objetsEteints.addChild(objetPose(objet, texture, options.modeMiroir));
+          const devant = objet.devant === true;
+          (devant ? meublesDevant : objetsDuDecor).addChild(
+            objetPose(objet, texture, options.modeMiroir),
+          );
+          (devant ? meublesEteints : objetsEteints).addChild(
+            objetPose(objet, texture, options.modeMiroir),
+          );
         }
       });
 
@@ -918,7 +938,19 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       dessinerLesDisques(disques, scene.disques, champ);
       dessinerLesCones(disques, scene.cones);
       dessinerLIndicateur(mines, scene.mines, champ);
-      eclairerLesObjets(surbrillances, spritesSurbrillances, scene.surbrillances ?? [], options);
+      const eclaires = scene.surbrillances ?? [];
+      eclairerLesObjets(
+        surbrillances,
+        spritesSurbrillances,
+        eclaires.filter((objet) => objet.devant !== true),
+        options,
+      );
+      eclairerLesObjets(
+        surbrillancesDevant,
+        spritesSurbrillancesDevant,
+        eclaires.filter((objet) => objet.devant === true),
+        options,
+      );
       majSprites(spritesObjets, objets, scene.objets);
       majPersonnages(spritesEntites, entites, scene.entites, champ, numeroDImage, calquesParImage);
       dessinerLIndicateur(indicateur, scene.indicateur, champ);
@@ -959,6 +991,7 @@ export async function monterRendu(options: OptionsRendu): Promise<Rendu> {
       badges.clear();
       textesDesLibelles.clear();
       spritesSurbrillances.clear();
+      spritesSurbrillancesDevant.clear();
     },
   };
 }

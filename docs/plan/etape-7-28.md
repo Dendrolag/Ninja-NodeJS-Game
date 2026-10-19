@@ -61,6 +61,15 @@ Recommandations à soumettre au porteur du projet avec la planche, avant toute c
 6. **La version.** Recommandé: **1.9.9, sans note**, les petites évolutions d'Among Ninjas restant en 1.9 (décision du 14 octobre 2026). Le déguisement change la façon de jouer: si le porteur du projet veut une note, la règle lui demande d'en décider.
 7. **Les pas d'un déguisé.** Un PNJ est muet (étape 7.23), et les pas d'un joueur qu'on voit s'entendent à sa place exacte: un déguisé qui marche serait reconnu à l'oreille dès qu'on le voit. Recommandé: **un déguisé marche sans bruit**, comme un PNJ, sans quoi le déguisement ne tromperait personne de près. L'autre voie, qu'il s'entende, en fait un camouflage de loin seulement.
 
+## Retours du porteur du projet après l'étape, 16 octobre 2026
+
+- Le déguisement d'un assassin dure sa recharge du meurtre et cinq secondes de plus, et non plus vingt secondes: il tombait avant le meurtre suivant (la décision 1 ne vaut plus que pour la proie).
+- Les meubles se dessinent devant l'avant-plan; la pluie, au-dessus de tout, dans tous les modes.
+- Une tâche s'ouvre de tout le tour de son meuble, à 30 pixels au plus.
+- L'habit reste caché, sans indication.
+
+Détail: handoff, « Après l'étape ».
+
 ## Réponses du porteur du projet, 16 octobre 2026
 
 - **La planche** (`docs/design/etape-7-28/1-planche.png`): 1A, le cadavre d'un PNJ coupé en deux dans son sang, comme un joueur, en gris; 2A, l'habit est un kimono plié au trait néon, qui bat; 3A, le déguisé se voit gris, avec un fin contour à sa couleur que lui seul voit; 4C, au bureau, un bouton « Habit » à la place du Katana, touche Espace, cerné d'un anneau qui se vide pendant le déguisement; 5C, sur téléphone, ce bouton n'apparaît qu'une fois l'habit ramassé, et se vide en anneau. Au bureau comme sur téléphone, le bouton n'est donc là que si la proie porte un habit ou en est vêtue.

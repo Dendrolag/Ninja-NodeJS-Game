@@ -19,6 +19,8 @@
  *   icones/, favicon.ico les icones de la page, et l'image d'apercu d'un lien partage
  *   robots.txt          ce que les moteurs de recherche peuvent lire (etape 5.6)
  *   sitemap.xml         le plan du site, qui ne compte que la page d'accueil
+ *   version.json        le commit de la page, qu'une page refusee pour sa version lit pour
+ *                       savoir quand la nouvelle est publiee (16 octobre 2026)
  *
  * Les ressources du jeu (cartes, sprites, sons) n'y sont pas: elles restent dans
  * assets/, a la racine du depot. En developpement, le serveur les sert sous
@@ -40,7 +42,7 @@
  * Lance par « pnpm build », et avant les scenarios de bout en bout.
  */
 
-import { cp, rm } from 'node:fs/promises';
+import { cp, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -112,6 +114,11 @@ export async function empaqueterLeClient(options: OptionsEmpaquetage = {}): Prom
     await cp(join(DOSSIER_PAGE, fichier), join(DOSSIER_WEB, fichier));
   }
   await cp(join(DOSSIER_PAGE, 'icones'), join(DOSSIER_WEB, 'icones'), { recursive: true });
+  await writeFile(
+    join(DOSSIER_WEB, 'version.json'),
+    `${JSON.stringify({ version: options.version ?? '' })}
+`,
+  );
 }
 
 /**

@@ -112,9 +112,12 @@ describe('le bouton Habit, dans le modele', () => {
   });
 
   it('ne revet rien pour un assassin deguise, qui y lit seulement son temps', () => {
-    expect(habitHud(etat(ASSASSIN, undefined, { deguises: [DEGUISE] }))).toEqual({
+    // Le sien dure sa recharge et cinq secondes, trente par defaut (16 octobre 2026).
+    expect(
+      habitHud(etat(ASSASSIN, undefined, { deguises: [{ id: 'moi', restantMs: 15_000 }] })),
+    ).toEqual({
       actif: false,
-      deguise: { part: 0.7, secondes: 14 },
+      deguise: { part: 0.5, secondes: 15 },
     });
     // Un habit dans l'etat d'un assassin ne se revet pas: il ne peut pas en avoir.
     expect(habitHud(etat({ ...ASSASSIN, habit: true }))).toBeUndefined();

@@ -37,6 +37,7 @@ import { objetsDuDecorAmong } from './rendu/among.js';
 import { prechargerLaPartie } from './rendu/pixi.js';
 import { creerReseauSocketIo } from './reseauSocketIo.js';
 import type { LecteurDeSons } from './sons/lecteur.js';
+import { attendreLaNouvelleVersion, lireLaVersionPubliee } from './nouvelleVersion.js';
 import { creerLecteurDeSons } from './sons/lecteur.js';
 import { garderEveilleDansLeNavigateur } from './eveil.js';
 import { brancherLAdresseDInvitation, lireLInvitation } from './invitation.js';
@@ -176,6 +177,23 @@ monterApplication({
   // Le pied de l'accueil dit de quand date la page qu'on a sous les yeux (etape 8.4).
   ...(configuration.version === undefined ? {} : { version: configuration.version }),
   ...(configuration.horodatage === undefined ? {} : { horodatage: configuration.horodatage }),
+});
+
+// Refusee pour sa version pendant une mise en ligne, la page attend que la nouvelle soit
+// publiee, puis se recharge d'elle-meme (16 octobre 2026, nouvelleVersion.ts).
+attendreLaNouvelleVersion({
+  client,
+  versionDeLaPage: configuration.version,
+  lireLaVersionPubliee: async () => lireLaVersionPubliee(globalThis.location.href),
+  recharger: () => {
+    globalThis.location.reload();
+  },
+  planifier: (rappel, delaiMs) => {
+    const minuterie = globalThis.setTimeout(rappel, delaiMs);
+    return () => {
+      globalThis.clearTimeout(minuterie);
+    };
+  },
 });
 
 // Le lien s'ouvre une fois l'application montee: elle montre deja qu'il s'etablit.
