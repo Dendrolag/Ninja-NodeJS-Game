@@ -1,5 +1,5 @@
 {
-  "genereLe": "2026-10-20",
+  "genereLe": "2026-10-21",
   "outil": "docs/mesures/mesurer-les-cartes.mjs",
   "reglages": {
     "rayonEntitePx": 16,
@@ -259,26 +259,26 @@
         "hauteur": 1738
       },
       "surfaceMpx": 4.15,
-      "partDeSolPct": 35,
-      "partTenablePct": 24.1,
+      "partDeSolPct": 35.5,
+      "partTenablePct": 24.8,
       "morceaux": 1,
       "partDuPrincipalPct": 100,
       "airesIsoleesPx": 0,
       "plusGrosMorceauIsolePx": 0,
       "partDeLaBandeDApparitionPct": 100,
       "degagementPx": {
-        "p10": 19.2,
+        "p10": 19.3,
         "median": 37,
-        "p90": 88,
-        "maximum": 208.6
+        "p90": 88.1,
+        "maximum": 210.1
       },
-      "traverseePx": 3425,
-      "traverseeS": 22.8,
-      "parcoursTypiquePx": 1233,
-      "parcoursTypiqueS": 8.2,
-      "parcoursCourtS": 1.8,
-      "parcoursLongS": 14.6,
-      "detourMedian": 1.26
+      "traverseePx": 3412,
+      "traverseeS": 22.7,
+      "parcoursTypiquePx": 1212,
+      "parcoursTypiqueS": 8.1,
+      "parcoursCourtS": 2.4,
+      "parcoursLongS": 14.4,
+      "detourMedian": 1.29
     },
     {
       "carte": "prison",
@@ -289,26 +289,26 @@
         "hauteur": 1738
       },
       "surfaceMpx": 4.15,
-      "partDeSolPct": 35,
-      "partTenablePct": 24.1,
+      "partDeSolPct": 35.5,
+      "partTenablePct": 24.8,
       "morceaux": 1,
       "partDuPrincipalPct": 100,
       "airesIsoleesPx": 0,
       "plusGrosMorceauIsolePx": 0,
       "partDeLaBandeDApparitionPct": 100,
       "degagementPx": {
-        "p10": 19.2,
+        "p10": 19.3,
         "median": 37,
-        "p90": 88,
-        "maximum": 208.6
+        "p90": 88.1,
+        "maximum": 210.1
       },
-      "traverseePx": 3394,
-      "traverseeS": 22.6,
-      "parcoursTypiquePx": 1262,
-      "parcoursTypiqueS": 8.4,
-      "parcoursCourtS": 2.6,
-      "parcoursLongS": 14.2,
-      "detourMedian": 1.32
+      "traverseePx": 3409,
+      "traverseeS": 22.7,
+      "parcoursTypiquePx": 1281,
+      "parcoursTypiqueS": 8.5,
+      "parcoursCourtS": 2.8,
+      "parcoursLongS": 13.9,
+      "detourMedian": 1.31
     },
     {
       "carte": "labyrinthe",

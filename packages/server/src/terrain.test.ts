@@ -393,8 +393,8 @@ describe('les murs de chaque carte, figes', () => {
       miroir: '462b734f013eee33562897d3e035a8d70998045cd795b09199755fecdb71a443',
     },
     prison: {
-      normal: '42f2ea03a68278ef25416930bb25ca62d45ca9921c0c41a9fc3c3641da3ff26f',
-      miroir: 'dd4ceaf9f436a31921f82291ec4b97e1cb1e0523f7af917cd1fc03f7ed718b76',
+      normal: '73b8afd6f4af5bf1e2f3476a0f6b6c89ba7e25b250f7f254b63b91f909fa755b',
+      miroir: 'fed92d671392ff640e2149ab5feeddf969654004d70e3392ced073e886430ae3',
     },
     labyrinthe: {
       normal: '32171aed26d103b071cabb080eb281f0fe552471375fa589855da0f1de84c949',
