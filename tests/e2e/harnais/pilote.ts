@@ -90,6 +90,12 @@ import { positionTenable, trajetTenable } from '../../../packages/sim/dist/index
  */
 const MAILLE_PX = 8;
 
+/**
+ * Jusqu'a combien de mailles autour de la sienne le chemin d'un joueur hors de toute maille
+ * praticable peut partir.
+ */
+const RAYON_DES_DEPARTS = 4;
+
 /** Jusqu'ou, en suivant le chemin, le pilote cherche un point a viser en ligne droite. */
 const PORTEE_DE_VISEE_PX = 80;
 
@@ -135,6 +141,12 @@ const TENUE_MAXIMALE_DU_PAS_MS = 1_200;
 
 /** Sur quelle duree le message d'echec retrace les positions, en millisecondes. */
 const FENETRE_DE_PROGRES_MS = 2_000;
+
+/**
+ * Tous les combien le message d'echec garde une position sur toute la mission, en
+ * millisecondes: les deux dernieres secondes ne disent pas ou la minute s'est perdue.
+ */
+const PERIODE_DU_PARCOURS_MS = 5_000;
 
 /** Au-dela de ce temps immobile en route, le joueur est colle: le pilote le degage. */
 const BLOCAGE_MS = 1_000;
@@ -295,8 +307,11 @@ interface Releve {
  *         voyait a la fin, pour que l'echec se comprenne sans rejouer.
  */
 export async function accomplir(mission: Mission): Promise<void> {
-  const echeance = Date.now() + mission.delaiMs;
+  const debutDeMission = Date.now();
+  const echeance = debutDeMission + mission.delaiMs;
   const releves: Releve[] = [];
+  /** Une position toutes les cinq secondes, depuis le debut de la mission. */
+  const parcours: string[] = [];
   let grille: Grille | undefined;
   let phase: Phase = { nom: 'route' };
   let precedente: Situation | undefined;
@@ -319,7 +334,7 @@ export async function accomplir(mission: Mission): Promise<void> {
 
       if (maintenant > echeance) {
         throw new Error(
-          `Mission « ${mission.nom} » non accomplie en ${String(mission.delaiMs)} ms. ${bilan(releves)}`,
+          `Mission « ${mission.nom} » non accomplie en ${String(mission.delaiMs)} ms. ${bilan(releves)} Parcours: ${parcours.join(', ')}.`,
         );
       }
 
@@ -451,6 +466,12 @@ export async function accomplir(mission: Mission): Promise<void> {
       }
 
       releves.push({ instant: maintenant, situation, visee, phase: phase.nom });
+      if (maintenant - debutDeMission >= parcours.length * PERIODE_DU_PARCOURS_MS) {
+        const secondes = Math.round((maintenant - debutDeMission) / 1000);
+        parcours.push(
+          `${coordonnees(situation.position)} a ${String(secondes)} s en ${phase.nom}${visee?.parUnChemin === false ? ' sans chemin' : ''}`,
+        );
+      }
       while ((releves[0]?.instant ?? maintenant) < maintenant - FENETRE_DE_PROGRES_MS) {
         releves.shift();
       }
@@ -715,8 +736,16 @@ function pointSurLeChemin(grille: Grille, situation: Situation): Visee | undefin
   }
 
   const parent = new Int32Array(grille.colonnes * grille.lignes).fill(-1);
-  parent[debut] = debut;
-  const file = [debut];
+  const file = [...departsDuChemin(grille, situation, debut)];
+
+  for (const depart of file) {
+    parent[depart] = depart;
+    const cible = arrivees.get(depart);
+
+    if (cible !== undefined) {
+      return pointAViser(grille, situation, cheminVers(parent, debut, depart), cible);
+    }
+  }
 
   for (let tete = 0; tete < file.length; tete += 1) {
     const courante = file[tete] as number;
@@ -780,15 +809,70 @@ function maillesDArrivee(grille: Grille, cibles: readonly Position[]): Map<numbe
   return arrivees;
 }
 
-/** Les mailles du chemin, dans l'ordre de marche, depart exclu. */
+/**
+ * Les mailles d'ou part le chemin: celle du joueur, ou, si elle n'est pas praticable, les
+ * mailles praticables proches qu'il atteint en ligne droite.
+ *
+ * Un joueur tient parfois la ou le centre de sa maille ne tient pas: dans l'alcove sous la
+ * borne rouge ouest de l'arcade de Tokyo, entre deux murs. Partir de sa seule maille ne
+ * trouvait alors aucun chemin, et viser tout droit le renvoyait contre le mur, une minute
+ * durant, a trente pixels de sa station (CI du 21 octobre 2026).
+ */
+function departsDuChemin(grille: Grille, situation: Situation, debut: number): readonly number[] {
+  if (grille.praticable[debut] === 1) {
+    return [debut];
+  }
+
+  const colonne = debut % grille.colonnes;
+  const ligne = Math.floor(debut / grille.colonnes);
+  const proches: number[] = [];
+
+  for (let dl = -RAYON_DES_DEPARTS; dl <= RAYON_DES_DEPARTS; dl += 1) {
+    for (let dc = -RAYON_DES_DEPARTS; dc <= RAYON_DES_DEPARTS; dc += 1) {
+      const proche = indexPraticable(grille, colonne + dc, ligne + dl);
+
+      if (
+        proche !== undefined &&
+        atteignable(situation.terrain, situation.position, centreDeLIndex(grille, proche))
+      ) {
+        proches.push(proche);
+      }
+    }
+  }
+
+  return proches.length === 0 ? [debut] : proches;
+}
+
+/**
+ * Un point est-il atteignable d'ici: en ligne droite, ou en deux segments, l'un horizontal et
+ * l'autre vertical, comme le moteur fait glisser un joueur le long d'un mur. Dans l'alcove de
+ * la borne rouge, la ligne droite vers la maille praticable la plus proche frole le mur.
+ */
+function atteignable(terrain: CarteCollisions, depuis: Position, vers: Position): boolean {
+  const libre = (a: Position, b: Position) => trajetTenable(terrain, a, b, RAYON_ENTITE);
+
+  return [
+    { x: vers.x, y: depuis.y },
+    { x: depuis.x, y: vers.y },
+  ].some((coude) => libre(depuis, coude) && libre(coude, vers));
+}
+
+/**
+ * Les mailles du chemin, dans l'ordre de marche, la maille du joueur exclue. Le chemin
+ * remonte jusqu'a sa maille de depart, qui en fait partie quand ce n'est pas celle du joueur.
+ */
 function cheminVers(parent: Int32Array, debut: number, arrivee: number): readonly number[] {
   const chemin: number[] = [];
 
-  for (let maille = arrivee; maille !== debut; maille = parent[maille] as number) {
-    chemin.push(maille);
-  }
+  for (let maille = arrivee; ; maille = parent[maille] as number) {
+    if (maille !== debut) {
+      chemin.push(maille);
+    }
 
-  return chemin.reverse();
+    if (parent[maille] === maille) {
+      return chemin.reverse();
+    }
+  }
 }
 
 /**
