@@ -288,7 +288,7 @@ async function allerEtSArreter(
 
       return arrete && distance(maintenant, but()) <= portee.limitePx;
     },
-    affut: { distancePx: portee.viseePx, guetter: async () => Promise.resolve() },
+    halte: { distancePx: portee.viseePx },
   });
 }
 
