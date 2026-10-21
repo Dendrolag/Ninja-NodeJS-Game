@@ -292,6 +292,105 @@ async function allerEtSArreter(
   });
 }
 
+/** Ce que le compteur d'images laisse dans une page. */
+interface CompteurDImages {
+  readonly ouverture: number;
+  nombre: number;
+  /** Les instants des images de la derniere minute, en millisecondes de la page. */
+  readonly instants: number[];
+}
+
+/**
+ * Compte les images que dessine une page: un tour de requestAnimationFrame par image. Pose
+ * avant tout chargement, il ne depend de rien d'autre: la fonction est envoyee telle quelle
+ * dans la page.
+ *
+ * POURQUOI (21 octobre 2026). Le pilote est d'autant moins precis que la page dessine
+ * lentement: elle ne lit ses touches qu'a chaque image, et un pas y dure au moins une image.
+ * En integration continue, le scenario echouait comme si la page de Bob ne dessinait qu'une
+ * image par seconde. Le message d'echec dit desormais a quelle cadence tournait chaque page,
+ * pour distinguer un pilote en faute d'une page trop lente.
+ */
+function compterLesImages(): void {
+  const compteur: CompteurDImages = { ouverture: performance.now(), nombre: 0, instants: [] };
+  const image = (instant: number): void => {
+    compteur.nombre += 1;
+    compteur.instants.push(instant);
+    while ((compteur.instants[0] ?? instant) < instant - 60_000) {
+      compteur.instants.shift();
+    }
+    requestAnimationFrame(image);
+  };
+
+  Object.assign(globalThis, { compteurDImages: compteur });
+  requestAnimationFrame(image);
+}
+
+/** Combien de temps attendre la lecture du compteur d'une page, en millisecondes. */
+const LECTURE_DE_LA_CADENCE_MS = 5_000;
+
+/**
+ * La cadence d'une page: ses images par seconde sur les 5 et les 30 dernieres secondes et
+ * depuis son ouverture, et sa plus longue image. Une page figee ne fige pas le scenario: au
+ * bout de cinq secondes, sa cadence est dite illisible.
+ */
+async function cadenceDe(page: Page): Promise<string> {
+  const lecture = page
+    .evaluate(() => {
+      const compteur = (globalThis as { compteurDImages?: CompteurDImages }).compteurDImages;
+
+      if (compteur === undefined) {
+        return undefined;
+      }
+
+      const maintenant = performance.now();
+      const ouverteDepuis = maintenant - compteur.ouverture;
+      const parSeconde = (fenetreMs: number): number => {
+        const duree = Math.min(fenetreMs, ouverteDepuis);
+        const images = compteur.instants.filter((instant) => instant >= maintenant - duree);
+
+        return duree <= 0 ? 0 : images.length / (duree / 1000);
+      };
+      let plusLongueMs = maintenant - (compteur.instants.at(-1) ?? compteur.ouverture);
+
+      for (let rang = 1; rang < compteur.instants.length; rang += 1) {
+        plusLongueMs = Math.max(
+          plusLongueMs,
+          (compteur.instants[rang] as number) - (compteur.instants[rang - 1] as number),
+        );
+      }
+
+      return {
+        cinq: parSeconde(5_000),
+        trente: parSeconde(30_000),
+        depuisLOuverture: ouverteDepuis <= 0 ? 0 : compteur.nombre / (ouverteDepuis / 1000),
+        plusLongueMs,
+      };
+    })
+    .catch(() => undefined);
+  const delai = new Promise<undefined>((resoudre) => {
+    setTimeout(() => {
+      resoudre(undefined);
+    }, LECTURE_DE_LA_CADENCE_MS);
+  });
+  const mesure = await Promise.race([lecture, delai]);
+
+  if (mesure === undefined) {
+    return 'illisible';
+  }
+
+  return `${mesure.cinq.toFixed(1)} i/s sur 5 s, ${mesure.trente.toFixed(1)} sur 30 s, ${mesure.depuisLOuverture.toFixed(1)} depuis l'ouverture, plus longue image ${Math.round(mesure.plusLongueMs).toString()} ms`;
+}
+
+/** La cadence de chaque page, en une ligne. */
+async function cadences(pages: Readonly<Record<string, Page>>): Promise<string> {
+  const lues = await Promise.all(
+    Object.entries(pages).map(async ([pseudo, page]) => `${pseudo} ${await cadenceDe(page)}`),
+  );
+
+  return lues.join('; ');
+}
+
 /** Le role que la page affiche dans son HUD. */
 async function roleAffiche(page: Page): Promise<string> {
   const role = page.locator('.hud-among-role');
@@ -330,6 +429,8 @@ test('jouer une partie Among Ninjas a cinq, du salon a la victoire des proies', 
   const ordinateur = { ...devices['Desktop Chrome'], viewport: { width: 1000, height: 560 } };
   const ordinateurA = await browser.newContext(ordinateur);
   const ordinateurB = await browser.newContext(ordinateur);
+  await ordinateurA.addInitScript(compterLesImages);
+  await ordinateurB.addInitScript(compterLesImages);
   const alice = await ordinateurA.newPage();
   const bob = await ordinateurB.newPage();
   const erreursDAlice = releverLesErreurs(alice);
@@ -350,6 +451,12 @@ test('jouer une partie Among Ninjas a cinq, du salon a la victoire des proies', 
       });
     });
   }
+
+  // La cadence des pages a quelques etapes, pour le message d'echec et le rapport.
+  const cadencesNotees: string[] = [];
+  const noterLaCadence = async (etape: string): Promise<void> => {
+    cadencesNotees.push(`${etape}: ${await cadences(pages)}`);
+  };
 
   try {
     // -- Le salon: Alice cree, Bob et trois clients arrivent ----------------------
@@ -406,6 +513,7 @@ test('jouer une partie Among Ninjas a cinq, du salon a la victoire des proies', 
     const pageDuTemoin = pages[temoin] as Page;
     const victime = PSEUDOS_DU_RESEAU.find((pseudo) => roleDe(pseudo) === 'proie') as string;
     await attendreQue(() => among(partie).phase === 'jeu', 'la revelation se termine');
+    await noterLaCadence('apres la revelation');
 
     // -- Une tache, faite dans la page ----------------------------------------------
     const idTemoin = joueurNomme(partie, temoin).id;
@@ -430,6 +538,7 @@ test('jouer une partie Among Ninjas a cinq, du salon a la victoire des proies', 
     );
     await expect(pageDuTemoin.locator('.tache-fenetre')).toBeHidden();
     await expect(pageDuTemoin.locator('.hud-among-mes-taches')).toContainText('1 sur 3');
+    await noterLaCadence('premiere tache faite');
     await expect(pageDuTemoin.locator('.hud-among-ligne.faite')).toHaveCount(1);
 
     // -- La carte plein ecran, par M -------------------------------------------------
@@ -466,6 +575,7 @@ test('jouer une partie Among Ninjas a cinq, du salon a la victoire des proies', 
     );
     await expect(pageDuTemoin.locator('.tache-fenetre')).toBeHidden();
     await expect(pageDuTemoin.locator('.hud-among-mes-taches')).toContainText('2 sur 3');
+    await noterLaCadence('mini-jeu fait');
 
     // -- La panne de neons: l'assassin sabote depuis sa carte, la proie repare (7.22) ------
     expect(assassin, `la graine ${String(GRAINE)} donne l assassin a Alice`).toBe('Alice');
@@ -625,6 +735,14 @@ test('jouer une partie Among Ninjas a cinq, du salon a la victoire des proies', 
 
     expect(erreursDAlice).toEqual([]);
     expect(erreursDeBob).toEqual([]);
+    await noterLaCadence('fin');
+    test.info().annotations.push({
+      type: 'images par seconde',
+      description: cadencesNotees.join(' | '),
+    });
+  } catch (erreur) {
+    await noterLaCadence('a l echec');
+    throw new Error(`Images par seconde. ${cadencesNotees.join(' | ')}`, { cause: erreur });
   } finally {
     await ordinateurA.close();
     await ordinateurB.close();
