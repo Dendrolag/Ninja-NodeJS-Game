@@ -53,10 +53,20 @@
  * LA HALTE. Une mission peut aussi demander au joueur de s'arreter pres de sa cible, sans
  * la toucher ni guetter: devant une station, pres d'un cadavre. Il leve le pouce a la
  * distance de halte plus la glissade, comme a l'affut, mais ne fonce jamais a travers sa
- * cible: plus pres que sa glissade, il avance par impulsions, une touche enfoncee puis
- * relachee aussitot. Traverser, puis glisser cent cinquante pixels au-dela sur une page
- * lente, le faisait osciller autour d'une station jusqu'a la fin du delai, une ruee de
- * chaque cote, quatre secondes d'affut inutile entre deux (CI du 20 octobre 2026).
+ * cible: plus pres que sa glissade, il avance a petits pas. Traverser, puis glisser cent
+ * cinquante pixels au-dela sur une page lente, le faisait osciller autour d'une station
+ * jusqu'a la fin du delai, une ruee de chaque cote, quatre secondes d'affut inutile entre
+ * deux (CI du 20 octobre 2026).
+ *
+ * Un pas tient la touche le temps qu'une image la lise. La page ne lit ses touches qu'au
+ * debut d'une image: une touche relachee aussitot qu'enfoncee l'etait avant l'image suivante,
+ * et le joueur ne bougeait pas du tout (CI du 21 octobre 2026). Le pilote ignore la cadence
+ * de la page: il tient d'abord peu, puis deux fois plus a chaque pas qui n'a pas bouge.
+ *
+ * Le joueur en halte vise la place la plus proche qu'il voit en ligne droite, celle qui l'a
+ * fait s'arreter, meme quand le chemin calcule sur les mailles passe par une autre. Ne
+ * foncer que vers la cible du chemin le laissait sur place, arrete pour une place et repartant
+ * pour l'autre, une minute devant l'ordinateur de la maison (CI du 21 octobre 2026).
  *
  * LE DEGAGEMENT (etape 7.20). Le clavier ne donne que huit directions: la ligne droite que
  * le pilote a verifiee devient, une fois arrondie, une direction qui peut buter sur le coin
@@ -111,17 +121,40 @@ const AFFUT_MS = 4_000;
 /**
  * Combien de temps un joueur en halte doit rester immobile avant d'agir, en millisecondes.
  *
- * Une impulsion part avec le retard de la page: juste apres, le joueur n'a pas encore bouge,
- * et le croire arrete ferait partir une seconde impulsion par-dessus la premiere. Une page
- * qui dessine trois images par seconde a lu ses touches bien avant.
+ * Un pas part avec le retard de la page: juste apres, le joueur n'a pas encore bouge, et le
+ * croire arrete ferait partir un second pas par-dessus le premier. Une page qui dessine trois
+ * images par seconde a lu ses touches bien avant.
  */
 const REPOS_DE_HALTE_MS = 1_000;
+
+/** Combien de temps le premier pas d'une halte tient sa touche, en millisecondes. */
+const TENUE_DU_PREMIER_PAS_MS = 150;
+
+/** Le plus long qu'un pas tienne sa touche: une page qui dessine une image par seconde. */
+const TENUE_MAXIMALE_DU_PAS_MS = 1_200;
 
 /** Sur quelle duree le message d'echec retrace les positions, en millisecondes. */
 const FENETRE_DE_PROGRES_MS = 2_000;
 
 /** Au-dela de ce temps immobile en route, le joueur est colle: le pilote le degage. */
 const BLOCAGE_MS = 1_000;
+
+/**
+ * Au-dela de ce temps sans que le chemin raccourcisse, un joueur en halte pietine: le pilote
+ * le degage comme un joueur colle.
+ *
+ * Un joueur peut pietiner sans jamais s'arreter. A l'entree d'un couloir de douze pixels, a
+ * l'est de l'arcade de Tokyo, le clavier ne donne que plein ouest, qui bute sur un bord;
+ * chaque correction verticale, tenue le temps qu'une page lente la lise, le porte de l'autre
+ * cote de l'entree. Il oscille ainsi d'un bord a l'autre sans etre jamais immobile. Une
+ * diagonale, celle du degagement, le fait glisser le long du mur jusque dans le couloir. Les
+ * places d'une halte ne bougent pas: un chemin qui ne raccourcit plus y est un joueur qui
+ * pietine, pas une cible qui fuit.
+ */
+const SANS_PROGRES_MS = 2_500;
+
+/** De combien le chemin doit raccourcir pour compter comme un progres, en pixels. */
+const PROGRES_MINIMAL_PX = 2 * MAILLE_PX;
 
 /** En deca de ce deplacement pendant une ruee, en pixels, le joueur est colle. */
 const DEPLACEMENT_MINIMAL_PX = 2;
@@ -207,6 +240,8 @@ interface Visee {
   readonly parUnChemin: boolean;
   /** Le point vise est la cible elle-meme, en vue et a portee. */
   readonly surLaCible: boolean;
+  /** La longueur du chemin qui reste a faire, en pixels, quand il y en a un. */
+  readonly restePx?: number;
 }
 
 /**
@@ -223,10 +258,12 @@ type Phase =
       readonly nom: 'arret';
       readonly depuis: number;
       /**
-       * Ou le joueur etait quand le pouce s'est leve. Rien apres une impulsion de halte: ce
-       * qu'elle parcourt n'est pas la glissade d'un joueur lance.
+       * Ou le joueur etait quand le pouce s'est leve. Rien apres un pas de halte: ce qu'il
+       * parcourt n'est pas la glissade d'un joueur lance.
        */
       readonly lacheEn?: Position;
+      /** Ou le joueur etait quand son pas de halte a commence. */
+      readonly pasDepuis?: Position;
       readonly immobileDepuis?: number;
     }
   | {
@@ -270,6 +307,11 @@ export async function accomplir(mission: Mission): Promise<void> {
   let colleDepuis: number | undefined;
   /** Combien de degagements ont ete tentes: leur sens alterne. */
   let degagements = 0;
+  /** Combien de temps un pas de halte tient sa touche, en millisecondes. */
+  let tenueDuPasMs = TENUE_DU_PREMIER_PAS_MS;
+  /** Le chemin restant au dernier progres, en pixels, et l'instant de ce progres. */
+  let resteDeReference: number | undefined;
+  let progresDepuis = Date.now();
 
   try {
     while (!mission.accomplie()) {
@@ -306,16 +348,26 @@ export async function accomplir(mission: Mission): Promise<void> {
           const arrete =
             precedente !== undefined && memePosition(precedente.position, situation.position);
           let arret: PhaseDArret = phase;
-          const lache = arret.lacheEn === undefined ? {} : { lacheEn: arret.lacheEn };
+          const reperes = {
+            ...(arret.lacheEn === undefined ? {} : { lacheEn: arret.lacheEn }),
+            ...(arret.pasDepuis === undefined ? {} : { pasDepuis: arret.pasDepuis }),
+          };
 
           if (arrete && arret.immobileDepuis === undefined) {
             if (arret.lacheEn !== undefined) {
               glissadePx = distanceEntre(arret.lacheEn, situation.position);
             }
-            arret = { nom: 'arret', depuis: arret.depuis, ...lache, immobileDepuis: maintenant };
+            if (
+              arret.pasDepuis !== undefined &&
+              distanceEntre(arret.pasDepuis, situation.position) < DEPLACEMENT_MINIMAL_PX
+            ) {
+              // Le pas n'a pas bouge le joueur: aucune image n'a lu sa touche.
+              tenueDuPasMs = Math.min(tenueDuPasMs * 2, TENUE_MAXIMALE_DU_PAS_MS);
+            }
+            arret = { nom: 'arret', depuis: arret.depuis, ...reperes, immobileDepuis: maintenant };
           } else if (!arrete && mission.halte !== undefined && arret.immobileDepuis !== undefined) {
-            // En halte, le joueur qui repart n'etait pas au repos: son impulsion partait en retard.
-            arret = { nom: 'arret', depuis: arret.depuis, ...lache };
+            // En halte, le joueur qui repart n'etait pas au repos: son pas partait en retard.
+            arret = { nom: 'arret', depuis: arret.depuis, ...reperes };
           }
 
           phase = arret;
@@ -337,15 +389,21 @@ export async function accomplir(mission: Mission): Promise<void> {
           }
 
           if (arrete || maintenant - arret.depuis > ARRET_MAXIMUM_MS) {
-            const approche = mission.affut ?? mission.halte;
-            const retenuePx = approche === undefined ? undefined : approche.distancePx + glissadePx;
-            const ruee = await ruer(
-              mission.commande,
-              situation,
-              visee,
-              retenuePx,
-              mission.halte !== undefined,
-            );
+            const ruee =
+              mission.halte === undefined
+                ? await ruer(
+                    mission.commande,
+                    situation,
+                    visee,
+                    mission.affut === undefined ? undefined : mission.affut.distancePx + glissadePx,
+                  )
+                : await approcher(
+                    mission.commande,
+                    situation,
+                    visee,
+                    mission.halte.distancePx + glissadePx,
+                    tenueDuPasMs,
+                  );
             phase = ruee.nom === 'ruee' ? { ...ruee, depart: situation.position } : ruee;
           }
           break;
@@ -355,19 +413,41 @@ export async function accomplir(mission: Mission): Promise<void> {
           const immobile =
             precedente !== undefined && memePosition(precedente.position, situation.position);
           colleDepuis = immobile ? (colleDepuis ?? maintenant) : undefined;
+          const reste = visee?.restePx;
+
+          if (
+            reste !== undefined &&
+            (resteDeReference === undefined || reste <= resteDeReference - PROGRES_MINIMAL_PX)
+          ) {
+            resteDeReference = reste;
+            progresDepuis = maintenant;
+          }
+
+          const pietine =
+            mission.halte !== undefined && maintenant - progresDepuis >= SANS_PROGRES_MS;
 
           if (doitSArreter(mission, situation, precedente, viseePrecedente, visee, glissadePx)) {
             await mission.commande.relacher();
             phase = { nom: 'arret', depuis: maintenant, lacheEn: situation.position };
-          } else if (colleDepuis !== undefined && maintenant - colleDepuis >= BLOCAGE_MS) {
+          } else if (
+            (colleDepuis !== undefined && maintenant - colleDepuis >= BLOCAGE_MS) ||
+            pietine
+          ) {
             await degager(mission.commande, situation, visee, degagements % 2 === 0 ? 1 : -1);
             degagements += 1;
             colleDepuis = undefined;
+            progresDepuis = Date.now();
           } else {
             await suivre(mission.commande, situation, visee);
           }
           break;
         }
+      }
+
+      if (phase.nom !== 'route') {
+        // Le progres se mesure en route: une halte ou une ruee le remet a zero.
+        resteDeReference = undefined;
+        progresDepuis = maintenant;
       }
 
       releves.push({ instant: maintenant, situation, visee, phase: phase.nom });
@@ -394,12 +474,6 @@ async function suivre(
     visee === undefined ? undefined : directionVers(situation.position, visee.point);
 
   await (direction === undefined ? commande.relacher() : commande.orienter(direction));
-}
-
-/** Une touche enfoncee puis relachee aussitot: le plus petit pas que la page permette. */
-async function impulsion(commande: Commande, direction: Vecteur): Promise<void> {
-  await commande.orienter(direction);
-  await commande.relacher();
 }
 
 /**
@@ -435,18 +509,15 @@ async function degager(
  * qui dessine trois images par seconde: poser le pouce puis le glisser y prend deux
  * secondes (etape 8.7).
  *
- * @param retenuePx Pour un joueur qui guette ou fait halte: de combien s'arreter avant la
- *                  cible, glissade comprise. S'il est deja plus pres, celui qui guette fonce
- *                  a travers elle, pour se retourner a l'arret suivant; celui qui fait
- *                  halte avance d'une impulsion.
- * @param enHalte Le joueur fait halte: il ne traverse jamais sa cible.
+ * @param retenuePx Pour un joueur qui guette: de combien s'arreter avant la cible,
+ *                  glissade comprise. S'il est deja plus pres, il fonce a travers elle,
+ *                  pour se retourner a l'arret suivant.
  */
 async function ruer(
   commande: Commande,
   situation: Situation,
   visee: Visee | undefined,
   retenuePx: number | undefined,
-  enHalte: boolean,
 ): Promise<Phase> {
   const direction =
     visee?.surLaCible === true ? directionVers(situation.position, visee.point) : undefined;
@@ -455,23 +526,67 @@ async function ruer(
     return { nom: 'route' };
   }
 
-  const distance = distanceEntre(situation.position, visee.point);
-  const courte = retenuePx === undefined ? 0 : distance - retenuePx;
-
-  if (enHalte && courte <= 0) {
-    await impulsion(commande, direction);
-
-    return { nom: 'arret', depuis: Date.now() };
-  }
-
   await commande.orienter(direction);
 
+  const distance = distanceEntre(situation.position, visee.point);
+  const courte = retenuePx === undefined ? 0 : distance - retenuePx;
   const dureeMs =
     courte > 0
       ? (courte / VITESSES.JOUEUR_PX_PAR_SECONDE) * 1000
       : (distance / VITESSES.JOUEUR_PX_PAR_SECONDE) * 1000 + MARGE_DE_RUEE_MS;
 
   return { nom: 'ruee', jusqua: Date.now() + dureeMs };
+}
+
+/**
+ * Approche une cible, depuis l'arret, pour faire halte pres d'elle sans la traverser.
+ *
+ * Loin, une ruee qui s'arrete a la distance de halte plus la glissade, comme celle du joueur
+ * qui guette. Plus pres, un pas: la touche tenue un moment, puis relachee. La cible est la
+ * place la plus proche en ligne droite, celle qui a fait s'arreter le joueur; sans aucune en
+ * vue, le pilote reprend la route.
+ *
+ * @param retenuePx De combien s'arreter avant la cible, glissade comprise.
+ * @param tenueMs Combien de temps un pas tient sa touche.
+ */
+async function approcher(
+  commande: Commande,
+  situation: Situation,
+  visee: Visee | undefined,
+  retenuePx: number,
+  tenueMs: number,
+): Promise<Phase> {
+  const cible = visee?.surLaCible === true ? visee.point : cibleEnLigneDroite(situation);
+  const direction = cible === undefined ? undefined : directionVers(situation.position, cible);
+
+  if (cible === undefined || direction === undefined) {
+    return { nom: 'route' };
+  }
+
+  await commande.orienter(direction);
+
+  const courte = distanceEntre(situation.position, cible) - retenuePx;
+
+  if (courte > 0) {
+    return {
+      nom: 'ruee',
+      jusqua: Date.now() + (courte / VITESSES.JOUEUR_PX_PAR_SECONDE) * 1000,
+    };
+  }
+
+  await attendre(tenueMs);
+  await commande.relacher();
+
+  return { nom: 'arret', depuis: Date.now(), pasDepuis: situation.position };
+}
+
+/** La cible la plus proche qu'un joueur atteint en ligne droite, sans toucher de mur. */
+function cibleEnLigneDroite(situation: Situation): Position | undefined {
+  const enVue = situation.cibles.filter((cible) =>
+    trajetTenable(situation.terrain, situation.position, cible, RAYON_ENTITE),
+  );
+
+  return enVue.length === 0 ? undefined : laPlusProche(situation.position, enVue);
 }
 
 /**
@@ -596,7 +711,7 @@ function pointSurLeChemin(grille: Grille, situation: Situation): Visee | undefin
   const dejaLa = arrivees.get(debut);
 
   if (dejaLa !== undefined) {
-    return { point: dejaLa, parUnChemin: true, surLaCible: true };
+    return { point: dejaLa, parUnChemin: true, surLaCible: true, restePx: 0 };
   }
 
   const parent = new Int32Array(grille.colonnes * grille.lignes).fill(-1);
@@ -690,16 +805,17 @@ function pointAViser(
 ): Visee {
   const { terrain, position } = situation;
   const maillesAPortee = Math.floor(PORTEE_DE_VISEE_PX / MAILLE_PX);
+  const restePx = chemin.length * MAILLE_PX;
 
   if (chemin.length <= maillesAPortee && trajetTenable(terrain, position, cible, RAYON_ENTITE)) {
-    return { point: cible, parUnChemin: true, surLaCible: true };
+    return { point: cible, parUnChemin: true, surLaCible: true, restePx };
   }
 
   for (let rang = Math.min(chemin.length, maillesAPortee) - 1; rang > 0; rang -= 1) {
     const point = centreDeLIndex(grille, chemin[rang] as number);
 
     if (trajetTenable(terrain, position, point, RAYON_ENTITE)) {
-      return { point, parUnChemin: true, surLaCible: false };
+      return { point, parUnChemin: true, surLaCible: false, restePx };
     }
   }
 
@@ -707,6 +823,7 @@ function pointAViser(
     point: centreDeLIndex(grille, chemin[0] as number),
     parUnChemin: true,
     surLaCible: false,
+    restePx,
   };
 }
 
