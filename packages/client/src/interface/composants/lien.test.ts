@@ -86,7 +86,7 @@ describe('la ligne d etat du lien', () => {
     expect(estCache(ligne.racine)).toBe(true);
   });
 
-  it('dit la perte au bout de la minute et demie, et Réessayer relance les essais sans recharger', () => {
+  it('dit la perte au bout des trois minutes, et Réessayer relance les essais sans recharger', () => {
     reseau.simulerDeconnexion();
     horloge.avancerDe(DUREE_DU_RETABLISSEMENT_MS);
     minuterie.avancerDe(DUREE_DU_RETABLISSEMENT_MS);

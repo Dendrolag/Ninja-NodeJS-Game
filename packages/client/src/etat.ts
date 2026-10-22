@@ -64,7 +64,7 @@ export type EtatConnexion =
    * d'accueil, qui est monte a neuf au moment meme ou le lien tombe.
    *
    * Depuis l'etape 2.6, c'est une perte definitive: la page a essaye de retablir le
-   * lien pendant une minute et demie, et le joueur peut relancer les essais.
+   * lien pendant trois minutes, et le joueur peut relancer les essais.
    */
   | 'perdue'
   /**

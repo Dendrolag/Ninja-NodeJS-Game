@@ -3,7 +3,7 @@
  *
  * Ce qu'ils protegent: hors d'une partie en cours, une page qui perd son lien reste
  * sur son ecran et le rouvre d'elle-meme; elle reessaie toutes les trois secondes
- * pendant une minute et demie, puis le dit et laisse relancer; un refus du serveur
+ * pendant trois minutes, puis le dit et laisse relancer; un refus du serveur
  * arrete tout; dans le salon, elle y redemande sa place, par le bon acces et sous le
  * bon pseudo, et dit pourquoi si le salon n'est plus la; la place en partie perdue au
  * bout du delai de retour laisse le lien continuer de se retablir.
@@ -174,7 +174,7 @@ describe('hors d une partie, un lien perdu se retablit', () => {
     expect(client.etat.connexion).toBe('retablissement');
   });
 
-  it('reessaie toutes les trois secondes, sans que le reveil s en mele, puis le dit au bout d une minute et demie', () => {
+  it('reessaie toutes les trois secondes, sans que le reveil s en mele, puis le dit au bout de trois minutes', () => {
     const { reseau, minuterie, client, avancer } = monter();
 
     client.naviguer('profil');
@@ -448,7 +448,7 @@ describe('dans le salon, un lien perdu y ramene', () => {
     expect(client.etat.salon).toBeUndefined();
   });
 
-  it('oublie le salon au bout d une minute et demie sans lien, et le dit sur l accueil', () => {
+  it('oublie le salon au bout de trois minutes sans lien, et le dit sur l accueil', () => {
     const { reseau, client, avancer, entrerAuSalon } = monter();
 
     entrerAuSalon();
@@ -500,7 +500,7 @@ describe('a la fin de la partie, un lien perdu se retablit', () => {
 });
 
 describe('apres le delai de retour en partie', () => {
-  it('la place perdue ramene a l accueil, le dit, et le lien se retablit jusqu a la minute et demie', () => {
+  it('la place perdue ramene a l accueil, le dit, et le lien se retablit jusqu au bout des trois minutes', () => {
     const { reseau, minuterie, client, avancer, entrerAuSalon } = monter();
 
     entrerAuSalon();

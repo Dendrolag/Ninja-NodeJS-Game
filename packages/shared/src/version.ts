@@ -91,7 +91,7 @@ const CHAMPS_ISO = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/;
  * et les evolutions d'Among Ninjas qui la suivent avancent le troisieme chiffre.
  * Une etape qui ne change rien de ce que voit le joueur ne le touche pas.
  */
-export const NUMERO_DE_VERSION = '1.10.2';
+export const NUMERO_DE_VERSION = '1.10.3';
 
 /**
  * La version mineure d'un numero, celle qui porte une note: « 1.5 » pour « 1.5.3 ».

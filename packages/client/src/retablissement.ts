@@ -52,7 +52,7 @@ export const ATTENTE_ENTRE_DEUX_RETABLISSEMENTS_MS = ATTENTE_ENTRE_DEUX_ESSAIS_M
 
 /**
  * Combien de temps la page retablit le lien d'elle-meme, a compter de sa perte: la
- * duree du reveil du serveur, une minute et demie.
+ * duree du reveil du serveur, trois minutes.
  */
 export const DUREE_DU_RETABLISSEMENT_MS = DUREE_DU_REVEIL_MS;
 
@@ -142,7 +142,7 @@ export function brancherLeRetablissement(
     essayer();
   };
 
-  /** La minute et demie est ecoulee: la perte est definitive, et se dit. */
+  /** Les trois minutes sont ecoulees: la perte est definitive, et se dit. */
   const abandonner = (): void => {
     const dansLeSalon = magasin.etat.ecran === 'salon';
 

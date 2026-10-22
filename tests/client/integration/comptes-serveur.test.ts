@@ -264,7 +264,7 @@ describe('les comptes, du client au serveur', () => {
     autresServeurs.push(muet);
     await ecouterSurUnPortPermis(muet, 0);
 
-    // Le temps du reveil passe a la main: le test n'attend pas une minute et demie.
+    // Le temps du reveil passe a la main: le test n'attend pas trois minutes.
     const horloge = creerHorlogeClientManuelle();
     const minuterie = creerMinuterieManuelle();
     const client = creerClient({

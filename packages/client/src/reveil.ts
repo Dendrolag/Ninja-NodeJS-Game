@@ -33,10 +33,13 @@ export const ATTENTE_ENTRE_DEUX_ESSAIS_MS = 3000;
 /**
  * Combien de temps la page reessaie d'elle-meme, a compter du premier echec.
  *
- * Une minute et demie: la minute que l'hebergeur annonce pour un reveil, et une
- * marge. Au-dela, ce n'est plus un reveil, et le joueur doit l'apprendre.
+ * Trois minutes. Render annonce une minute pour un reveil, mais la verification
+ * quotidienne du secours l'a vu se reveiller en 74 a 93 secondes du 13 au 22 octobre
+ * 2026: la minute et demie d'avant ne suffisait plus toujours (decision du porteur du
+ * projet du 22 octobre 2026). Au-dela, ce n'est plus un reveil, et le joueur doit
+ * l'apprendre.
  */
-export const DUREE_DU_REVEIL_MS = 90_000;
+export const DUREE_DU_REVEIL_MS = 180_000;
 
 /** Ce qu'il faut pour brancher le reveil. */
 export interface OptionsReveil {

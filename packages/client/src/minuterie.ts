@@ -9,7 +9,7 @@
  *
  * POURQUOI INJECTEE. Pour la raison de l'horloge: un rappel qui lit la vraie
  * minuterie ne se teste qu'en attendant. Un test donne au client une minuterie
- * manuelle, et verifie en une milliseconde ce qui prendrait une minute et demie.
+ * manuelle, et verifie en une milliseconde ce qui prendrait trois minutes.
  */
 
 /** Ce qui annule un rappel planifie. Sans effet sur un rappel deja parti. */
