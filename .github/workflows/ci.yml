@@ -167,6 +167,15 @@ jobs:
             sudo fuser /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock > /dev/null 2>&1 || break
             sleep 2
           done
+          # Le miroir d'Ubuntu chez Azure, premier de la liste des machines, peut rester lent
+          # sans jamais tomber: apt ne passe au miroir suivant que sur une erreur. Le 22 octobre
+          # 2026, il a fait echouer trois relances de suite. Le second essai l'ecarte, s'il en
+          # reste un autre.
+          liste=/etc/apt/apt-mirrors.txt
+          if [ -f "$liste" ] && grep -qv 'azure\.archive\.ubuntu\.com' "$liste"; then
+            sudo sed -i '/azure\.archive\.ubuntu\.com/d' "$liste"
+          fi
+          cat "$liste" 2> /dev/null || true
           sudo dpkg --configure -a
           pnpm exec playwright install --with-deps chromium
 
@@ -229,6 +238,15 @@ jobs:
             sudo fuser /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock > /dev/null 2>&1 || break
             sleep 2
           done
+          # Le miroir d'Ubuntu chez Azure, premier de la liste des machines, peut rester lent
+          # sans jamais tomber: apt ne passe au miroir suivant que sur une erreur. Le 22 octobre
+          # 2026, il a fait echouer trois relances de suite. Le second essai l'ecarte, s'il en
+          # reste un autre.
+          liste=/etc/apt/apt-mirrors.txt
+          if [ -f "$liste" ] && grep -qv 'azure\.archive\.ubuntu\.com' "$liste"; then
+            sudo sed -i '/azure\.archive\.ubuntu\.com/d' "$liste"
+          fi
+          cat "$liste" 2> /dev/null || true
           sudo dpkg --configure -a
           pnpm exec playwright install --with-deps chromium
 
