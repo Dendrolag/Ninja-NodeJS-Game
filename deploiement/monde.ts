@@ -16,9 +16,12 @@ import { versionEnLigne } from './verifications.ts';
 
 /**
  * Le temps laisse a un serveur de jeu pour dire sa version. Render gratuit dort
- * peut-etre: il se reveille en quinze secondes, jusqu'a une minute selon Render.
+ * peut-etre: Render annonce une minute, mais les verifications quotidiennes du
+ * secours l'ont vu se reveiller en 74 a 93 secondes du 13 au 22 octobre 2026. Une
+ * minute et demie ne suffisait pas toujours: le secours, pourtant a jour, passait
+ * pour muet (20 et 22 octobre). Trois minutes laissent une marge.
  */
-const DELAI_DE_REVEIL_MS = 90_000;
+const DELAI_DE_REVEIL_MS = 180_000;
 
 /** Lance git, et rend ce qu'il ecrit, ou rien s'il echoue. */
 async function git(argumentsDeGit: readonly string[]): Promise<string | undefined> {
