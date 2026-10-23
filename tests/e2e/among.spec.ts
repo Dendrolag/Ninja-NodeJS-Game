@@ -426,7 +426,21 @@ test('jouer une partie Among Ninjas a cinq, du salon a la victoire des proies', 
   // tailles, et deux pages qui dessinent sans carte graphique, comme en CI, y passent tout leur
   // temps a peindre des pixels. A 1280 sur 720, la page du temoin n'y dessinait qu'une image par
   // seconde, et chaque touche mettait deux secondes a passer (etape 5.15, premiere CI du mode).
-  const ordinateur = { ...devices['Desktop Chrome'], viewport: { width: 1000, height: 560 } };
+  //
+  // Et une densite de pixels d'un demi (22 octobre 2026), celle d'un navigateur zoome a
+  // 50 pour cent: la mise en page reste en pixels CSS, mais la toile du jeu se dessine en
+  // quatre fois moins de pixels. Sans carte graphique, c'est le dessin des pixels qui coute:
+  // en local, la cadence passe de 8 a 20 images par seconde, et freiner le processeur n'y
+  // change presque rien. En CI, a densite 1, les pages tombaient a une ou deux images par
+  // seconde, et le pilote ne s'arretait plus a portee des stations; a densite 0,5, elles
+  // tournent a quatre a six images par seconde, et la part qui porte ce scenario dure huit
+  // minutes au lieu de quatorze. Ce scenario ne regarde aucun pixel: il lit le DOM et le
+  // serveur. Les autres scenarios, ceux du rendu compris, gardent leur densite.
+  const ordinateur = {
+    ...devices['Desktop Chrome'],
+    viewport: { width: 1000, height: 560 },
+    deviceScaleFactor: 0.5,
+  };
   const ordinateurA = await browser.newContext(ordinateur);
   const ordinateurB = await browser.newContext(ordinateur);
   await ordinateurA.addInitScript(compterLesImages);
