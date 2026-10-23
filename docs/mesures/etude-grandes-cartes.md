@@ -6,6 +6,8 @@ Question du porteur du projet, après l'étape 7.3: que coûterait une carte bea
 
 **Suite, 3 octobre 2026**: l'étude `docs/design/etude-combat-survie-et-carte-geante.md` reprend la question pour une carte de 10 000 sur 10 000 sur plusieurs niveaux. Elle ajoute un cinquième plafond, la mémoire du calcul des places tenables et du morceau principal au démarrage (étape 8.10), et propose une carte faite d'un jeu de tuiles réutilisables, dont la collision se dérive.
 
+**Suite, 23 octobre 2026**: le porteur du projet décide une Battle Royale sur une carte de 10 000 sur 10 000 au moins, servie par la machine Oracle de la production (étape 5.13). Les plafonds de ce document deviennent un plan, dans le ROADMAP: la mesure en grand (`5.10`, fiche `docs/plan/etape-5-10.md`), la grille du moteur (`5.11`), les données de carte livrées (`8.13`), la carte en tuiles (`4.10`), le filtrage par zone d'intérêt (`2.10`), puis la carte géante (`8.15`) et le mode (`7.19`). L'hébergement n'est plus un plafond.
+
 ## Verdict
 
 Le socle n'est pas remis en cause: le moteur pur, les jeux de règles par mode (une zone qui rétrécit tient dans `estDecidee` et `horsJeu`, ajoutés à l'étape 7.3), les rooms, le flux binaire en différentiel, le banc de charge et l'empreinte des parties. Mais quatre plafonds, sans effet aux tailles actuelles, cèdent en grand, et doivent être levés avant un tel mode.

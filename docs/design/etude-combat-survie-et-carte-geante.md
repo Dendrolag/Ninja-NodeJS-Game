@@ -1,6 +1,6 @@
 # Étude - Combat, survie et carte géante (3 octobre 2026)
 
-Neuf idées du porteur du projet, posées après l'étape 3.10. **Rien n'est décidé.** Ce document dit, pour chacune, ce que le jeu a déjà, ce qu'il faudrait construire, ce que ça touche et ce que ça coûte. Il propose ensuite un ordre de construction en étapes, à trancher. Les deux documents qui le précèdent restent la référence sur le très grand (`docs/mesures/etude-grandes-cartes.md`, 16 septembre) et sur la structure d'une carte (`docs/mesures/etude-structures-de-carte.md`, étape 8.1).
+Neuf idées du porteur du projet, posées après l'étape 3.10. **Décidé depuis**: le serveur de jeu sur Oracle Always Free (4 et 5 octobre 2026, étapes 5.9 et 5.13), puis, le 23 octobre 2026, une carte de 10 000 sur 10 000 au moins pour la Battle Royale et la voie B de la section 12 comme plan, renumérotée. Le reste n'est pas décidé. Ce document dit, pour chacune, ce que le jeu a déjà, ce qu'il faudrait construire, ce que ça touche et ce que ça coûte. Il propose ensuite un ordre de construction en étapes, à trancher. Les deux documents qui le précèdent restent la référence sur le très grand (`docs/mesures/etude-grandes-cartes.md`, 16 septembre) et sur la structure d'une carte (`docs/mesures/etude-structures-de-carte.md`, étape 8.1).
 
 Les idées, telles que posées:
 
@@ -131,6 +131,8 @@ Question du porteur du projet, le 3 octobre 2026: le changement de serveur a-t-i
 La taille visée (10 000 sur 10 000 est-il un minimum ou une image ?), le nombre de joueurs par partie, le nombre de PNJ, le mode qui l'emploie, et le budget d'hébergement. Une piste intermédiaire, à considérer: **4 000 sur 4 000**, 16 Mpx, quatre Tokyo. Elle tient sans tuiles sur la plupart des appareils récents à condition de découper le décor, sans filtrage réseau jusqu'à 1 000 PNJ, avec la grille seule côté moteur, et accueille 24 à 30 joueurs.
 
 **Avec l'hébergement gratuit, la taille se règle d'elle-même.** Sur une machine Oracle Always Free, sans payer, le bon point de départ est une carte de **4 000 à 6 000 pixels de côté**, de 5 à 11 Tokyo, pour **30 à 50 joueurs** et 1 000 à 2 000 PNJ, avec la grille, le filtrage par zone d'intérêt et les données de carte livrées. C'est l'échelle des Battle Royale jouées dans un navigateur: une carte d'une quinzaine d'écrans de large, qu'une zone resserre. 10 000 sur 10 000 reste possible plus tard, sur la même machine, une fois la mesure faite: le socle n'aura pas à changer, seulement le contenu. Sur Render gratuit, aucune taille ne convient (section 2.6).
+
+**Décision du 23 octobre 2026: 10 000 sur 10 000 au minimum.** Le porteur du projet écarte la première cible de 4 000 à 6 000 de côté. Conséquence: la foule ne peut sans doute pas garder la densité de Tokyo. À 9 000 PNJ, même un moteur devenu proportionnel au nombre d'entités coûterait de l'ordre de 37 ms par battement sur le poste et 63 sur un cœur Oracle, pour un budget de 50 (extrapolation de la section 17 de `docs/mesures/charge-serveur.md`). L'étape 5.10 le mesure avant toute construction (`docs/plan/etape-5-10.md`).
 
 ## 3. La poche qui cumule
 
@@ -316,7 +318,7 @@ Aucune construction propre, seulement des règles à écrire dans chaque étape 
 
 ## 12. Plan d'implémentation proposé
 
-Deux voies, indépendantes. La première enrichit le jeu actuel, sur les cartes actuelles, étape par étape, chacune jouable seule. La seconde prépare la carte géante, et ne se lance qu'une fois les questions de la section 2.7 tranchées. Les numéros sont provisoires; ils suivent la carte thématique du ROADMAP.
+Deux voies, indépendantes. La première enrichit le jeu actuel, sur les cartes actuelles, étape par étape, chacune jouable seule. La seconde prépare la carte géante, et ne se lance qu'une fois les questions de la section 2.7 tranchées. Les numéros sont ceux de la carte thématique du ROADMAP, posés le 23 octobre 2026: trois numéros provisoires de la première version de cette section avaient servi entre-temps (`2.9` au flux par destinataire, `8.11` à Prison Island, `8.12` au Labyrinthe), et la carte géante a suivi (`8.13` devenu `8.15`).
 
 ### Voie A - Les pièces, sur les cartes actuelles
 
@@ -328,7 +330,7 @@ Deux voies, indépendantes. La première enrichit le jeu actuel, sur les cartes 
 |     4 | 7.16 Le camouflage         | Se fondre parmi les PNJ, couleur apparente dans le flux, ses ninjas compris, Révélation comme contre     | 7.14      |
 |     5 | 7.17 Le shuriken           | Le projectile dans le moteur et le flux, la première arme ramassable, ses règles par mode                | 7.14      |
 |     6 | 7.18 Le gibier             | Une sorte de PNJ qu'on tue, qui fuit, lâche un objet, laisse un cadavre durable                          | 7.17 utile, pas nécessaire |
-|     7 | 8.11 Une carte à deux niveaux | Plusieurs morceaux reliés par des passages, une carte de travail de taille actuelle                  | Rien      |
+|     7 | 8.14 Une carte à deux niveaux | Plusieurs morceaux reliés par des passages, une carte de travail de taille actuelle                  | Rien      |
 
 Chaque étape se fait comme les étapes 7.9 à 7.12: règles tranchées avec le porteur du projet au début, rendus choisis sur planche, empreinte des parties de référence identique nouveauté coupée, mesure au banc, version mineure avec sa note.
 
@@ -336,13 +338,13 @@ Chaque étape se fait comme les étapes 7.9 à 7.12: règles tranchées avec le 
 
 | Ordre | Étape (provisoire) | Contenu                                                                                                       |
 | ----: | ------------------ | ------------------------------------------------------------------------------------------------------------- |
-|     0 | 5.9 Le serveur de jeu sur Oracle Always Free | Une machine gratuite, la mise en ligne par la CI, la bascule depuis Render, `docs/deploiement.md` réécrit |
-|     1 | 5.10 La mesure en grand  | Le banc à 2 000, 5 000 et 10 000 PNJ sur une grande carte sans mur, et la mémoire au démarrage (section 2.3) |
+|     0 | 5.9 Le serveur de jeu sur Oracle Always Free | Une machine gratuite, la mise en ligne par la CI, la bascule depuis Render, `docs/deploiement.md` réécrit. **Faite** (5.9 et 5.13, 5 octobre 2026) |
+|     1 | 5.10 La mesure en grand  | Le banc de 1 000 à 10 000 PNJ et de 12 à 60 joueurs sur une carte de 10 000 sur 10 000, réaliste et sans mur, et la mémoire au démarrage (section 2.3). Fiche `docs/plan/etape-5-10.md` |
 |     2 | 5.11 La grille du moteur | Contacts, cible du Black Ninja, fuite, apparition par partition spatiale; empreinte identique             |
-|     3 | 8.12 Les données de carte livrées | Places tenables et morceaux calculés à la livraison, plus au démarrage                         |
+|     3 | 8.13 Les données de carte livrées | Places tenables et morceaux calculés à la livraison, plus au démarrage                         |
 |     4 | 4.10 La carte en tuiles   | Le chargeur d'une carte faite d'un jeu de tuiles, la collision qui s'en dérive, le dessin par blocs visibles |
-|     5 | 2.9 Le filtrage par zone d'intérêt | Chacun ne reçoit que ce qui l'entoure. Planifiée le 5 octobre comme « le flux par destinataire », qui en est le socle (ROADMAP, phase 2) |
-|     6 | 8.13 La carte géante      | Le contenu, mesuré au banc et sur l'hébergement visé                                                 |
+|     5 | 2.10 Le filtrage par zone d'intérêt | Chacun ne reçoit que ce qui l'entoure, sur le socle du flux par destinataire (étape 2.9, faite le 6 octobre 2026) |
+|     6 | 8.15 La carte géante      | Le contenu, mesuré au banc et sur l'hébergement visé                                                 |
 |     7 | 7.19 La Battle Royale     | Le mode: une vie, la zone, les armes ramassées, le gibier, 30 à 60 joueurs                             |
 
 Les étapes 1 à 3 de la voie B profitent aussi au jeu actuel: la grille rend moins chères les cartes pleines, les données livrées accélèrent le démarrage. Elles peuvent se faire avant toute décision sur la taille.
@@ -354,5 +356,5 @@ Les étapes 1 à 3 de la voie B profitent aussi au jeu actuel: la grille rend mo
 3. **La vie**: d'accord pour la réserver à un mode (Battle Royale, ou une variante du Massacre) ?
 4. **Le camouflage**: se fondre parmi les PNJ, ou prendre la couleur d'un autre joueur ?
 5. **Le gibier**: dans quels modes, et que rapporte-t-il ?
-6. **L'hébergement et la taille**: d'accord pour déplacer le serveur de jeu sur Oracle Always Free, condition d'une Battle Royale gratuite (section 2.6) ? Et une carte de 4 000 à 6 000 de côté pour 30 à 50 joueurs comme première cible (section 2.7) ?
+6. **L'hébergement et la taille**: d'accord pour déplacer le serveur de jeu sur Oracle Always Free, condition d'une Battle Royale gratuite (section 2.6) ? Et une carte de 4 000 à 6 000 de côté pour 30 à 50 joueurs comme première cible (section 2.7) ? **Tranché**: Oracle les 4 et 5 octobre 2026, 10 000 sur 10 000 au minimum le 23 octobre 2026. Le nombre de joueurs reste ouvert, la mesure de l'étape 5.10 le chiffrera.
 7. **Les niveaux**: d'accord pour des régions reliées par des passages plutôt que des étages superposés ?
