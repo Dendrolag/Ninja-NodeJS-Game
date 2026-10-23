@@ -150,6 +150,7 @@ describe('le banc sur la carte de mesure (etape 5.10)', () => {
 
     expect(resultat.joueurs).toBe(30);
     expect(resultat.botsNoirs).toBe(1);
+    expect(resultat.lancementMs).toBeGreaterThan(0);
     expect(resultat.entitesParMessage).toBeGreaterThanOrEqual(grande.bots + grande.joueurs);
     expect(resultat.zoneDInteret).toBeUndefined();
   });

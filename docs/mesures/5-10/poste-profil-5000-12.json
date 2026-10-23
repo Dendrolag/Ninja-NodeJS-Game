@@ -1,0 +1,502 @@
+{
+  "date": "2026-10-23T10:32:09.731Z",
+  "commit": "5a8a76d",
+  "machine": {
+    "processeur": "AMD Ryzen 7 3800X 8-Core Processor",
+    "coeursLogiques": 16,
+    "memoireGo": 32,
+    "systeme": "Windows_NT 10.0.26300",
+    "node": "v24.16.0"
+  },
+  "mode": "classique",
+  "carte": "map1",
+  "terrainDeMesure": "realiste",
+  "joueurs": 12,
+  "banc": [
+    {
+      "bots": 5000,
+      "joueurs": 12,
+      "battements": 300,
+      "mode": "classique",
+      "moteurMs": {
+        "nombre": 300,
+        "moyenne": 252.4556063333336,
+        "p50": 265.24849999998696,
+        "p95": 304.12699999999313,
+        "p99": 341.8405999999959,
+        "minimum": 191.66250000000582,
+        "maximum": 392.7902999999933
+      },
+      "projectionMs": {
+        "nombre": 300,
+        "moyenne": 19.320790666666824,
+        "p50": 18.359299999996438,
+        "p95": 24.86149999999907,
+        "p99": 31.052700000000186,
+        "minimum": 16.72320000000036,
+        "maximum": 34.50040000000445
+      },
+      "serialisationMs": {
+        "nombre": 300,
+        "moyenne": 1.6265919999998246,
+        "p50": 1.4763999999995576,
+        "p95": 2.242499999993015,
+        "p99": 3.487200000003213,
+        "minimum": 1.3155000000042492,
+        "maximum": 7.166799999991781
+      },
+      "totalMs": {
+        "nombre": 300,
+        "moyenne": 273.4029890000003,
+        "p50": 286.3070000000007,
+        "p95": 326.26759999999194,
+        "p99": 366.85229999999865,
+        "minimum": 212.14600000000064,
+        "maximum": 419.34159999999974
+      },
+      "octetsParMessage": {
+        "nombre": 300,
+        "moyenne": 11070.886666666667,
+        "p50": 10017,
+        "p95": 12998,
+        "p99": 20649,
+        "minimum": 7006,
+        "maximum": 104796
+      },
+      "octetsCompressesParMessage": {
+        "nombre": 15,
+        "moyenne": 6675.733333333334,
+        "p50": 6139,
+        "p95": 16090,
+        "p99": 16090,
+        "minimum": 4586,
+        "maximum": 16090
+      },
+      "octetsJsonParMessage": {
+        "nombre": 15,
+        "moyenne": 588307.1333333333,
+        "p50": 590331,
+        "p95": 590624,
+        "p99": 590624,
+        "minimum": 584007,
+        "maximum": 590624
+      },
+      "entitesParMessage": 5045.03,
+      "octetsTotal": 3321266,
+      "battementsSabotes": 0,
+      "pasFaits": 0,
+      "botsNoirs": 50,
+      "lancementMs": 10963.6382,
+      "partiesParCoeur": 0,
+      "botsParCoeur": 0,
+      "debitParClientKoS": 221.41773333333333,
+      "profil": {
+        "totalMs": 125526.14600000021,
+        "fonctions": [
+          {
+            "nom": "detecterContacts contacts.js:80",
+            "ms": 85107.5129999992,
+            "pourCent": 67.800626173928
+          },
+          {
+            "nom": "ajouterBot etat.js:376",
+            "ms": 7553.121000000002,
+            "pourCent": 6.01716952259491
+          },
+          {
+            "nom": "scoreDe score.js:49",
+            "ms": 5546.191000000017,
+            "pourCent": 4.418355200676684
+          },
+          {
+            "nom": "parcourirMorceau collisions.js:343",
+            "ms": 3104.0280000000043,
+            "pourCent": 2.472813910816635
+          },
+          {
+            "nom": "trajetTenable collisions.js:213",
+            "ms": 3056.923999999995,
+            "pourCent": 2.435288660897778
+          },
+          {
+            "nom": "calculerMorceauPrincipal collisions.js:368",
+            "ms": 2829.6329999999957,
+            "pourCent": 2.254218017655056
+          },
+          {
+            "nom": "pointsTenables collisions.js:302",
+            "ms": 2823.300000000002,
+            "pourCent": 2.2491728535981634
+          },
+          {
+            "nom": "laProieLaPlusInteressante bots.js:467",
+            "ms": 2207.738,
+            "pourCent": 1.7587873684897455
+          },
+          {
+            "nom": "(anonyme) etat.js:186",
+            "ms": 1891.5310000000025,
+            "pourCent": 1.506882080168381
+          },
+          {
+            "nom": "avancerLesBots bots.js:93",
+            "ms": 1680.0000000000011,
+            "pourCent": 1.3383665901763593
+          },
+          {
+            "nom": "toutesLesEntites etat.js:434",
+            "ms": 980.0729999999995,
+            "pourCent": 0.7807719994844723
+          },
+          {
+            "nom": "positionDApparition etat.js:158",
+            "ms": 927.2980000000007,
+            "pourCent": 0.7387289656769985
+          },
+          {
+            "nom": "(garbage collector)",
+            "ms": 862.1470000000002,
+            "pourCent": 0.686826631321891
+          },
+          {
+            "nom": "(anonyme) score.js:52",
+            "ms": 841.098,
+            "pourCent": 0.6700580132524729
+          },
+          {
+            "nom": "creerCarteCollisions collisions.js:95",
+            "ms": 473.7570000000002,
+            "pourCent": 0.3774169884893936
+          },
+          {
+            "nom": "poser bots.js:116",
+            "ms": 409.35000000000025,
+            "pourCent": 0.32610735933850754
+          },
+          {
+            "nom": "basculerEntreMarcheEtPause bots.js:228",
+            "ms": 386.98899999999975,
+            "pourCent": 0.3082935406939038
+          },
+          {
+            "nom": "(anonyme) instantane.js:45",
+            "ms": 334.4110000000002,
+            "pourCent": 0.2664074463020633
+          },
+          {
+            "nom": "(anonyme) etat.js:449",
+            "ms": 292.3720000000001,
+            "pourCent": 0.23291721232323953
+          },
+          {
+            "nom": "get package_json_reader:79",
+            "ms": 281.00400000000013,
+            "pourCent": 0.2238609317297128
+          },
+          {
+            "nom": "capturerBot capture.js:176",
+            "ms": 254.13800000000006,
+            "pourCent": 0.2024582193418092
+          },
+          {
+            "nom": "entiteVue instantane.js:352",
+            "ms": 220.42999999999992,
+            "pourCent": 0.17560484968605627
+          },
+          {
+            "nom": "faireApparaitreLesBotsNoirs bots.js:159",
+            "ms": 220.25199999999995,
+            "pourCent": 0.17546304655924
+          },
+          {
+            "nom": "internalModuleStat",
+            "ms": 179.70999999999998,
+            "pourCent": 0.14316539280987697
+          },
+          {
+            "nom": "avancerDroitDevant bots.js:304",
+            "ms": 171.69700000000006,
+            "pourCent": 0.13678186216280372
+          },
+          {
+            "nom": "entiteArrondie flux.js:446",
+            "ms": 152.31099999999998,
+            "pourCent": 0.12133806768830434
+          },
+          {
+            "nom": "tick moteur.js:212",
+            "ms": 147.76099999999997,
+            "pourCent": 0.11771332483991002
+          },
+          {
+            "nom": "lstat",
+            "ms": 140.48400000000004,
+            "pourCent": 0.1119161262228188
+          },
+          {
+            "nom": "armerLesMinesDeZone zones.js:189",
+            "ms": 111.18500000000003,
+            "pourCent": 0.08857517221949907
+          },
+          {
+            "nom": "couleurArrondie flux.js:296",
+            "ms": 101.66400000000002,
+            "pourCent": 0.08099029822838649
+          },
+          {
+            "nom": "norme direction.js:59",
+            "ms": 80.93900000000001,
+            "pourCent": 0.0644797937156454
+          },
+          {
+            "nom": "redimensionner terrain.js:87",
+            "ms": 73.301,
+            "pourCent": 0.05839500561102217
+          },
+          {
+            "nom": "distanceEntre bots.js:652",
+            "ms": 73.106,
+            "pourCent": 0.05823965948894812
+          },
+          {
+            "nom": "RegExp: ^#[0-9A-Fa-f]{6}$",
+            "ms": 70.223,
+            "pourCent": 0.05594292682259191
+          },
+          {
+            "nom": "positionTenable collisions.js:177",
+            "ms": 68.39599999999999,
+            "pourCent": 0.05448745315577511
+          },
+          {
+            "nom": "surBattement battement.ts:282",
+            "ms": 66.86999999999999,
+            "pourCent": 0.05327177016969826
+          },
+          {
+            "nom": "determinerDirection direction.js:23",
+            "ms": 57.71199999999999,
+            "pourCent": 0.04597607895967737
+          },
+          {
+            "nom": "readPackageJSON",
+            "ms": 57.68600000000001,
+            "pourCent": 0.04595536614340084
+          },
+          {
+            "nom": "controlerLeBlocage bots.js:261",
+            "ms": 54.583000000000006,
+            "pourCent": 0.043483371185473914
+          },
+          {
+            "nom": "ajouterUnBot bots.js:181",
+            "ms": 53.346999999999994,
+            "pourCent": 0.042498715765558435
+          }
+        ],
+        "fichiers": [
+          {
+            "nom": "task_queues",
+            "ms": 123877.81100000025,
+            "pourCent": 98.68685923010815
+          },
+          {
+            "nom": "child_process",
+            "ms": 123380.80900000023,
+            "pourCent": 98.29092418722074
+          },
+          {
+            "nom": "node:events",
+            "ms": 123375.93900000023,
+            "pourCent": 98.28704451740279
+          },
+          {
+            "nom": "battement-isole.ts",
+            "ms": 123374.36000000023,
+            "pourCent": 98.28578661213739
+          },
+          {
+            "nom": "battement.ts",
+            "ms": 113903.4019999995,
+            "pourCent": 90.74077841918235
+          },
+          {
+            "nom": "GameRoom.js",
+            "ms": 113894.8159999995,
+            "pourCent": 90.73393840993039
+          },
+          {
+            "nom": "moteur.js",
+            "ms": 94938.72099999864,
+            "pourCent": 75.63262636932905
+          },
+          {
+            "nom": "contacts.js",
+            "ms": 85917.6829999993,
+            "pourCent": 68.44604549557282
+          },
+          {
+            "nom": "bots.js",
+            "ms": 19374.23300000001,
+            "pourCent": 15.43442033184065
+          },
+          {
+            "nom": "collisions.js",
+            "ms": 12382.190999999979,
+            "pourCent": 9.864232587846645
+          },
+          {
+            "nom": "etat.js",
+            "ms": 11795.68499999999,
+            "pourCent": 9.39699447157405
+          },
+          {
+            "nom": "terrainDeMesure.ts",
+            "ms": 9040.646000000002,
+            "pourCent": 7.20220152381639
+          },
+          {
+            "nom": "vues.js",
+            "ms": 7501.800000000012,
+            "pourCent": 5.976284813205369
+          },
+          {
+            "nom": "instantane.js",
+            "ms": 7495.5080000000125,
+            "pourCent": 5.971272311666447
+          },
+          {
+            "nom": "score.js",
+            "ms": 6403.627000000004,
+            "pourCent": 5.101428829018612
+          },
+          {
+            "nom": "loader",
+            "ms": 1235.8099999999984,
+            "pourCent": 0.9845040570272875
+          },
+          {
+            "nom": "module_job",
+            "ms": 1213.714999999999,
+            "pourCent": 0.9669021464261294
+          },
+          {
+            "nom": "(garbage collector)",
+            "ms": 862.1470000000002,
+            "pourCent": 0.686826631321891
+          },
+          {
+            "nom": "run_main_module",
+            "ms": 767.2669999999991,
+            "pourCent": 0.6112407848481206
+          },
+          {
+            "nom": "run_main",
+            "ms": 762.3969999999991,
+            "pourCent": 0.607361115030169
+          },
+          {
+            "nom": "node:diagnostics_channel",
+            "ms": 759.2409999999992,
+            "pourCent": 0.6048468977929091
+          },
+          {
+            "nom": "fluxDEtat.js",
+            "ms": 660.5450000000003,
+            "pourCent": 0.5262210472071684
+          },
+          {
+            "nom": "flux.js",
+            "ms": 651.2050000000003,
+            "pourCent": 0.5187803662832118
+          },
+          {
+            "nom": "translators",
+            "ms": 583.733,
+            "pourCent": 0.4650290147520334
+          },
+          {
+            "nom": "resolve",
+            "ms": 549.3939999999998,
+            "pourCent": 0.4376729609781845
+          },
+          {
+            "nom": "helpers",
+            "ms": 483.114,
+            "pourCent": 0.3848712124086078
+          },
+          {
+            "nom": "index.js",
+            "ms": 451.2310000000001,
+            "pourCent": 0.35947172312611214
+          },
+          {
+            "nom": "package_json_reader",
+            "ms": 442.4950000000001,
+            "pourCent": 0.35251221685719514
+          },
+          {
+            "nom": "terrain.js",
+            "ms": 430.312,
+            "pourCent": 0.34280666913807684
+          },
+          {
+            "nom": "node:fs",
+            "ms": 325.63800000000015,
+            "pourCent": 0.2594184641022912
+          },
+          {
+            "nom": "get_format",
+            "ms": 320.4940000000001,
+            "pourCent": 0.2553205130666559
+          },
+          {
+            "nom": "express.js",
+            "ms": 282.39,
+            "pourCent": 0.2249650841666082
+          },
+          {
+            "nom": "capture.js",
+            "ms": 266.6910000000001,
+            "pourCent": 0.21245852636947812
+          },
+          {
+            "nom": "parser-sync.js",
+            "ms": 147.27600000000004,
+            "pourCent": 0.11732695115167464
+          },
+          {
+            "nom": "png-sync.js",
+            "ms": 147.27600000000004,
+            "pourCent": 0.11732695115167464
+          },
+          {
+            "nom": "direction.js",
+            "ms": 140.25700000000003,
+            "pourCent": 0.111735287403789
+          },
+          {
+            "nom": "zones.js",
+            "ms": 136.084,
+            "pourCent": 0.10841088039140451
+          },
+          {
+            "nom": "urlencoded.js",
+            "ms": 88.81599999999999,
+            "pourCent": 0.0707549804006568
+          },
+          {
+            "nom": "stringify.js",
+            "ms": 84.17200000000001,
+            "pourCent": 0.06705535275495503
+          },
+          {
+            "nom": "realm",
+            "ms": 76.88499999999998,
+            "pourCent": 0.06125018767006504
+          }
+        ]
+      }
+    }
+  ]
+}

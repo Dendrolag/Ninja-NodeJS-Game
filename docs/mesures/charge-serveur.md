@@ -8,6 +8,8 @@ Document de référence de l'étape 5.1. Il consigne ce que coûte le serveur so
 
 **Mise à jour du 18 septembre 2026, étape 7.6.** La section 17 mesure les nouveaux plafonds de faux ninjas, 300 sur Tokyo et 500 sur Spirit & Time, au serveur et dans la page.
 
+**Mise à jour du 23 octobre 2026, étape 5.10.** La section 37 mesure une carte de 10 000 sur 10 000, de 1 000 à 10 000 PNJ et de 12 à 60 joueurs, et donne les cibles chiffrées des étapes de la Battle Royale.
+
 **Mise à jour du 19 septembre 2026, étape 5.7.** La section 18 mesure l'allègement du rendu dans la page, au processeur ralenti six fois, tout à l'écran et au cadrage d'un téléphone. Le serveur n'est pas touché.
 
 Chiffres bruts de cette mesure: `docs/mesures/charge-serveur-5-1.json`, écrit par le harnais lui-même.
@@ -249,6 +251,8 @@ pnpm charge --sortie docs/mesures/charge-serveur-5-2.json
 - `--rooms 8,16,24`, `--bots 150` ou `--bots 50,150` (répétable), `--joueurs 12`, `--duree-mesure 20`, `--echauffement 5`, `--processus 7` pour la charge du serveur; `--sans-arret` pour jouer tous les paliers même après un palier non tenu.
 - `--rapide` pour vérifier en une minute que le harnais fonctionne.
 - `--mode tactique` pour jouer le banc et les populations mêlées dans le mode Tactique (étape 7.1, section 13); le Classique par défaut.
+- `--carte map3` pour une autre carte que Tokyo; `--mines` pour des joueurs qui posent des mines (étape 7.11).
+- **La carte de 10 000 sur 10 000 (étape 5.10, section 37)**: `--carte-de-mesure realiste` (Tokyo répété) ou `vide` (sans mur) remplace la carte; sans `--bots-banc`, le banc y joue 1 000, 2 000, 5 000 et 10 000 PNJ. `--joueurs 60` y va au-delà de la capacité du mode. `--echauffement-banc 100` règle les battements joués avant de mesurer (200 par défaut), `--battements 300` ceux qui sont mesurés. `--zone-d-interet` estime le filtrage par zone d'intérêt, `--profil <dossier>` écrit et résume le profil du processeur de chaque ligne, `--demarrage` mesure le chargement d'une telle carte. Exemple: `pnpm charge --banc --carte-de-mesure realiste --joueurs 30 --battements 300 --echauffement-banc 100 --zone-d-interet`.
 
 Pour comparer deux mesures, garder la même machine et les mêmes options, puis rapprocher les deux fichiers JSON. Trois précautions, toutes tirées de l'étape 5.1:
 
@@ -259,7 +263,7 @@ Pour comparer deux mesures, garder la même machine et les mêmes options, puis 
 Deux outils ajoutés à l'étape 5.2:
 
 - **Prouver qu'une optimisation ne change rien au jeu**: `tests/charge/empreinte.ts` résume quatre parties déterministes, état du moteur, instantanés et notifications, à chaque battement. Les empreintes d'avant et d'après doivent être identiques (mode d'emploi en tête du fichier).
-- **Mesurer sous Linux**: pousser une branche `mesure-charge/<nom>` dont le dernier commit porte les lignes « Mesurer: » (les commits, joués sur la même machine) et « Options: » (celles de `pnpm charge`). Le workflow `.github/workflows/charge.yml` conserve les fichiers JSON en artefact. Supprimer la branche ensuite.
+- **Mesurer sous Linux**: pousser une branche `mesure-charge/<nom>` dont le dernier commit porte les lignes « Mesurer: » (les commits, joués sur la même machine) et « Options: » (celles de `pnpm charge`). Le workflow `.github/workflows/charge.yml` conserve les fichiers JSON en artefact. Supprimer la branche ensuite. Depuis l'étape 5.10, plusieurs lignes « Options: » jouent plusieurs mesures à la suite, sur la même machine, et une ligne « Machines: x64 arm » joue aussi le tout sur une machine Arm, proche de la machine Oracle.
 
 ## 11. Mesure de l'étape 5.2 (12 septembre 2026)
 
@@ -1343,3 +1347,134 @@ Une sixième carte, de 2400 sur 1746: 2,57 millions de pixels carrés tenables, 
 - **À son plafond, 1,5 à 1,7 ms par battement**, le trentième du budget de 50 ms.
 
 Le rendu de la nuit ne coûte rien de plus que celui du jour: l'avant-plan de nuit remplace celui du jour, il ne s'y ajoute pas.
+
+## 37. Mesure de l'étape 5.10: une carte de 10 000 sur 10 000 (23 octobre 2026)
+
+Ce que coûterait au jeu actuel, sans rien optimiser, une Battle Royale sur une carte de 10 000 sur 10 000 pixels, de 1 000 à 10 000 PNJ et de 12 à 60 joueurs. Commit `5a8a76d` (la machine de GitHub a mesuré `b07ab46`, le même code). Fiche: `docs/plan/etape-5-10.md`. Bruts dans `5-10/`: `poste-*.json` pour la machine de mesure, `github-x64/` et `github-arm/` pour les machines de GitHub.
+
+### 37.1 L'essentiel
+
+- **Le moteur est quadratique et la carte n'y change rien.** À foule égale, la carte de 10 000 coûte autant que Tokyo (1 000 PNJ: 10,2 ms contre 9,1), avec ou sans murs. Le battement quadruple quand la foule double: **259 ms à 5 000 PNJ, 1 072 ms à 10 000**, sur le poste, pour 50 de budget. Sur la machine Arm de GitHub, deux fois plus: 490 et 2 199 ms.
+- **Trois calculs croissent au carré**, et un quatrième en joueurs fois PNJ. Le relevé des contacts (83 pour cent du battement à 5 000 PNJ), la cible des Black Ninjas (leur nombre croît avec la foule), le lancement de la partie (chaque PNJ posé recopie et parcourt tous les autres: **61 secondes à 10 000 PNJ**, pendant lesquelles le serveur ne fait battre aucune autre partie), et le classement (`scoreDe` parcourt tous les PNJ pour chaque joueur: 23 pour cent du battement à 60 joueurs).
+- **Ce qui reste une fois ces quatre-là rendus proportionnels: environ 21 ms à 5 000 PNJ sur le poste**, l'intelligence des PNJ, leurs trajets contre les murs, la projection et le codage. Sur un cœur Arm, deux fois plus, au-delà des 35 ms utilisables d'un battement. La grille suffit à 2 000 ou 3 000 PNJ, pas à 9 000.
+- **Le réseau: le filtrage par zone d'intérêt divise le flux par vingt.** Sans lui, 1,8 Mbit/s par joueur à 5 000 PNJ, 108 Mbit/s par partie de 60 joueurs. Avec lui, 0,09 et 5,3.
+- **Le démarrage tient**: 24 secondes et 2,0 Go de pointe pour décoder la carte dans ses deux sens, sur le poste comme sur la machine Arm de GitHub.
+
+### 37.2 Méthode
+
+- **La carte de mesure** (`CARTE_DE_MESURE`, `packages/shared/src/constantes.ts`) n'est pas jouable: seul le banc la demande au moteur, avec un terrain fabriqué en mémoire. **Réaliste**: la collision de Tokyo répétée cinq fois en largeur et sept en hauteur, coupée à 10 000. **Sans mur**: le témoin de la foule seule. `tests/charge/terrainDeMesure.ts`.
+- **Horde**, un Black Ninja par centaine d'entités (de 10 à 101), qui entrent à la moitié de la partie. **300 battements mesurés après 100 d'échauffement**: à 10 000 PNJ, une ligne de 1 400 battements aurait duré vingt-cinq minutes. Le témoin, Tokyo à 300 PNJ et douze joueurs avec les réglages habituels, est joué avant chaque série et à la fin.
+- **Le filtrage estimé** (`tests/charge/zoneDInteret.ts`): chaque joueur reçoit la trame d'un flux à lui, réduite aux entités, objets et zones d'un rectangle de 2 400 sur 1 200 pixels centré sur lui (un écran 21:9 sur ordinateur, 2 133 sur 900 pixels de carte, et sa marge). Hors de la durée mesurée du battement.
+- **Trois machines.** Le poste (AMD Ryzen 7 3800X, Windows, Node 24.16.0). Les machines de GitHub, par `.github/workflows/charge.yml`: x64 (AMD EPYC 9V45, 4 cœurs) et Arm (`ubuntu-24.04-arm`, 4 cœurs, Node 24.21.0). La machine Oracle n'est pas encore mesurée (section 37.9).
+
+Commandes, sur le poste:
+
+```bash
+pnpm charge --banc --bots-banc 300
+pnpm charge --banc --carte-de-mesure realiste --joueurs 12 --battements 300 --echauffement-banc 100 --zone-d-interet
+pnpm charge --banc --carte-de-mesure realiste --bots-banc 5000 --battements 300 --echauffement-banc 100 --profil <dossier>
+pnpm charge --banc --carte-de-mesure realiste --battements 20 --echauffement-banc 1
+pnpm charge --demarrage
+```
+
+### 37.3 Le battement, sur le poste
+
+Terrain réaliste. Durées en millisecondes par battement, moyenne; débit pour vingt messages par seconde.
+
+| Joueurs |    PNJ |   Moteur | Projection | Codage |    Total | Total p99 | Octets par message | Mbit/s par joueur | Mbit/s par partie |
+| ------: | -----: | -------: | ---------: | -----: | -------: | --------: | -----------------: | ----------------: | ----------------: |
+|      12 |  1 000 |     9,45 |       0,41 |   0,32 |    10,18 |     15,75 |              2 307 |              0,37 |               4,4 |
+|      12 |  2 000 |    37,57 |       5,73 |   0,58 |    43,89 |     62,44 |              4 489 |              0,72 |               8,6 |
+|      12 |  5 000 |   240,21 |      17,19 |   1,44 |   258,85 |    355,62 |             11 071 |              1,77 |              21,3 |
+|      12 | 10 000 | 1 031,70 |      37,71 |   3,05 | 1 072,47 |  1 411,92 |             22 029 |              3,52 |              42,3 |
+|      30 |  1 000 |     9,90 |       0,81 |   0,35 |    11,06 |     19,64 |              2 370 |              0,38 |              11,4 |
+|      30 |  2 000 |    39,68 |      13,59 |   0,66 |    53,93 |     86,93 |              4 579 |              0,73 |              22,0 |
+|      30 |  5 000 |   245,41 |      38,98 |   1,46 |   285,84 |    380,84 |             11 160 |              1,79 |              53,6 |
+|      30 | 10 000 | 1 048,89 |      84,53 |   3,02 | 1 136,45 |  1 480,86 |             22 150 |              3,54 |             106,3 |
+|      60 |  1 000 |    10,92 |       1,41 |   0,35 |    12,69 |     25,73 |              2 486 |              0,40 |              23,9 |
+|      60 |  2 000 |    40,03 |      25,77 |   0,67 |    66,46 |     84,80 |              4 724 |              0,76 |              45,4 |
+|      60 |  5 000 |   248,43 |      74,19 |   1,46 |   324,08 |    410,71 |             11 277 |              1,80 |             108,3 |
+|      60 | 10 000 | 1 090,88 |     170,00 |   3,46 | 1 264,33 |  1 646,56 |             22 331 |              3,57 |             214,4 |
+
+- **Seule la ligne à 1 000 PNJ tient dans un battement**, et une seule partie par cœur. Dès 2 000, le battement dépasse les 35 ms utilisables (section 7).
+- **Le moteur ne dépend presque pas des joueurs**, la projection si: elle double quand les joueurs doublent. C'est le classement (section 37.5).
+- **Les murs ne coûtent rien.** Sans mur, à 12 joueurs: 9,90, 47,82, 267,12 et 1 060,11 ms, à 1 000, 2 000, 5 000 et 10 000 PNJ, autant que le terrain réaliste au bruit près (`poste-vide-*.json`).
+- **Le combat ne coûte rien de plus**: le Massacre à 5 000 PNJ et 12 joueurs, 259,33 ms, autant que la Horde (`poste-massacre-12.json`).
+- **Les neuf témoins** vont de 1,11 à 1,29 ms (médiane 1,14): la machine n'a pas dérivé pendant la séance.
+
+### 37.4 Les machines
+
+Total par battement, terrain réaliste, 12 joueurs.
+
+| Machine           | Témoin (Tokyo, 300) | 1 000 PNJ | 2 000 PNJ | 5 000 PNJ | 10 000 PNJ |
+| ----------------- | ------------------: | --------: | --------: | --------: | ---------: |
+| Poste (Ryzen)     |                1,14 |     10,18 |     43,89 |    258,85 |   1 072,47 |
+| GitHub x64 (EPYC) |                0,79 |      7,29 |     28,23 |    162,21 |     688,59 |
+| GitHub Arm        |                1,30 |     10,89 |     56,52 |    489,91 |   2 199,32 |
+
+- **Le témoin ne suffit pas à caler une machine Arm.** La machine Arm de GitHub est à 1,1 fois le poste sur le témoin, mais à 1,9 fois à 5 000 PNJ et 2,1 fois à 10 000: une grande foule ne tient plus dans les mémoires rapides du processeur, et l'Arm en souffre davantage. Le calage de la machine Oracle doit donc porter aussi sur une grande foule (section 37.9).
+- **La machine Oracle**: au témoin, 1,7 fois le poste à l'étape 5.9 (section 26), plus lente que la machine Arm de GitHub, d'une génération antérieure. À grande foule, de l'ordre de 2 à 3 fois le poste, en attendant sa mesure.
+
+### 37.5 Ce qui croît au carré: le profil
+
+`--profil`, à 5 000 PNJ, terrain réaliste, 12 puis 60 joueurs (`poste-profil-5000-12.json` et `-60.json`). Le profil couvre tout le processus; les parts ci-dessous sont rapportées au seul battement, lancement et fabrication du terrain retirés.
+
+| Ce qui coûte                                                | Fonction                                      | 12 joueurs | 60 joueurs | Croît comme           |
+| ----------------------------------------------------------- | --------------------------------------------- | ---------: | ---------: | --------------------- |
+| Le relevé des contacts, contagion des couleurs comprise     | `detecterContacts` (`contacts.ts`)            |       83 % |       68 % | entités au carré      |
+| Le classement                                               | `scoreDe` (`score.ts`)                        |        6 % |       23 % | joueurs fois PNJ      |
+| La cible des Black Ninjas                                   | `laProieLaPlusInteressante` (`bots.ts`)       |        2 % |        2 % | Black Ninjas fois PNJ |
+| Le reste: intelligence des PNJ, trajets, projection, codage | `avancerLesBots`, `trajetTenable`, `flux.ts`… |        8 % |        7 % | entités               |
+
+- **Le lancement**, hors battement: `ajouterBot` recopie la table de tous les PNJ à chaque PNJ posé, et l'apparition mesure l'écart à toutes les places prises. 0,22 s à 1 000 PNJ, 1,10 à 2 000, 9,93 à 5 000, **60,73 à 10 000** (`poste-lancement.json`). Le serveur fait battre toutes ses parties sur un seul fil: pendant ce temps, aucune ne bat.
+- **Le reste, environ 21 ms à 5 000 PNJ sur le poste**, soit 4,2 microsecondes par PNJ, à 12 comme à 60 joueurs. C'est ce que coûterait encore le battement si la grille rendait gratuits les trois premiers postes. Sur un cœur Arm, de l'ordre de 40 ms, au-delà des 35 utilisables.
+- **Le codage ne pèse pas**: 1,5 ms à 5 000 PNJ, sous un pour cent.
+
+### 37.6 Le réseau, avec et sans filtrage
+
+Le message que chaque joueur recevrait s'il ne voyait que son rectangle de 2 400 sur 1 200, terrain réaliste, poste. « Codage » est le filtrage et le codage des trames de tous les joueurs, par battement.
+
+| Joueurs |    PNJ | Entités reçues | Octets par message | Mbit/s par joueur | Mbit/s par partie | Sans filtrage, par partie | Codage ms |
+| ------: | -----: | -------------: | -----------------: | ----------------: | ----------------: | ------------------------: | --------: |
+|      12 |  5 000 |            130 |                464 |             0,074 |               0,9 |                      21,3 |      1,71 |
+|      12 | 10 000 |            258 |              1 012 |             0,162 |               1,9 |                      42,3 |      3,84 |
+|      30 |  5 000 |            136 |                505 |             0,081 |               2,4 |                      53,6 |      4,42 |
+|      30 | 10 000 |            272 |              1 106 |             0,177 |               5,3 |                     106,3 |      9,61 |
+|      60 |  5 000 |            134 |                547 |             0,088 |               5,3 |                     108,3 |      9,43 |
+|      60 | 10 000 |            271 |              1 161 |             0,186 |              11,1 |                     214,4 |     20,23 |
+
+- **Sans filtrage, la partie ne se joue pas sur un téléphone**: 1,8 Mbit/s à 5 000 PNJ, 3,6 à 10 000, en continu, soit 0,8 à 1,6 Go de données par heure. Et une partie de 60 joueurs à 5 000 PNJ écrirait 108 Mbit/s, 35 To par mois si elle tournait sans arrêt, trois fois les 10 To gratuits de la machine Oracle.
+- **Avec filtrage, un joueur reçoit ce qu'il reçoit sur Tokyo**: 130 à 270 entités, 0,07 à 0,19 Mbit/s. La partie de 60 joueurs écrit 5 à 11 Mbit/s.
+- **Le filtrage a un coût, au serveur**: 9,4 ms par battement à 60 joueurs et 5 000 PNJ, 20 à 10 000, parce que chaque joueur parcourt toute la foule pour trouver ses voisins, et que chaque trame se code à part. Avec la grille, le parcours devient celui des cases voisines.
+- **La page**: 130 à 270 entités à l'écran, moins que les 500 que le rendu tient depuis l'étape 5.7. Ce n'est pas la foule qui borne la page, c'est le décor de 10 000 sur 10 000 (étape `4.10`), que cette étape ne mesure pas.
+
+### 37.7 Le démarrage d'une carte de 10 000 sur 10 000
+
+`pnpm charge --demarrage`: l'image de collision du terrain réaliste écrite en PNG (0,5 Mo: Tokyo répété se compresse très bien), puis lue comme le serveur la lit au démarrage, par `terrainDepuisImage`, après les six cartes actuelles. Durées en secondes; pointe de mémoire du processus à la fin de l'étape, en Mo.
+
+| Étape                                        |        Poste |  GitHub x64 |   GitHub Arm |
+| -------------------------------------------- | -----------: | ----------: | -----------: |
+| Décodage du PNG seul, processus à part       |  2,2 / 1 366 | 1,3 / 1 768 |  2,2 / 1 759 |
+| Les six cartes actuelles, dans les deux sens |    3,6 / 366 |   2,3 / 506 |    3,7 / 465 |
+| La carte de mesure                           | 11,7 / 1 734 | 5,6 / 2 188 | 11,8 / 2 145 |
+| La carte de mesure en miroir                 | 12,2 / 1 984 | 6,0 / 2 223 | 12,5 / 2 179 |
+
+- **Le démarrage tient dans les trois minutes de la mise en ligne**: 28 secondes sur le poste et sur la machine Arm de GitHub pour tout ce que le serveur décode. Sur la machine Oracle, de l'ordre d'une minute.
+- **La mémoire aussi**: 2,2 Go de pointe, sur 24. Pendant une mise en ligne, l'ancien et le nouveau serveur tournent ensemble: 4,4 Go au pire.
+- **Le temps va au seuillage et au morceau principal**, pas au décodage: 9 à 10 secondes sur 12 par sens. Les livrer calculés (étape `8.13`) ramène le démarrage à quelques secondes et la pointe sous le gigaoctet.
+
+### 37.8 Les verdicts, plafond par plafond
+
+| Plafond     | Mesuré (poste)                                                      | Budget                                    | Ce qui le lève                        | Cible chiffrée                                                                                                                                                          |
+| ----------- | ------------------------------------------------------------------- | ----------------------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Moteur      | 259 ms à 5 000 PNJ, 1 072 à 10 000; contacts 83 %                   | 35 ms utilisables sur un cœur Oracle      | `5.11`, la grille                     | Contacts, cible des Black Ninjas, apparitions et classement proportionnels. À 2 000 PNJ et 60 joueurs, sous 10 ms sur le poste (66 aujourd'hui); à 5 000, sous 30 (324) |
+| Lancement   | 9,9 s à 5 000 PNJ, 61 s à 10 000, toutes les parties arrêtées       | un battement, 50 ms                       | `5.11`, des apparitions en un passage | Le lancement à 10 000 PNJ sous une seconde sur le poste                                                                                                                 |
+| Le reste    | 21 ms à 5 000 PNJ, environ 40 sur un cœur Arm                       | 35 ms utilisables                         | `5.18` si besoin                      | À mesurer après `5.11` sur la machine Oracle: si la population retenue dépasse 35 ms, alléger l'intelligence des PNJ loin de tout joueur                                |
+| Démarrage   | 24 s et 2,0 Go pour la carte, 28 s en tout                          | 3 minutes, 24 Go                          | tient; `8.13` l'allège                | Avec les données livrées, la carte géante chargée en moins de 5 secondes et 1 Go                                                                                        |
+| Réseau      | 1,8 Mbit/s par joueur et 108 par partie à 5 000 PNJ et 60 joueurs   | un téléphone en réseau mobile; 10 To/mois | `2.10`, le filtrage                   | Sous 0,1 Mbit/s par joueur à 5 000 PNJ; le filtrage et le codage de 60 joueurs sous 5 ms par battement sur le poste (9,4 estimés sans grille)                           |
+| Page        | 130 à 270 entités à l'écran avec filtrage                           | 500 entités (étape 5.7)                   | `4.10`, le décor en tuiles            | La foule tient; le décor reste à mesurer à `4.10`                                                                                                                       |
+| Hébergement | Une Battle Royale prend un cœur entier, et le serveur a un seul fil | 4 cœurs Oracle, toutes parties comprises  | `5.17`, une partie sur son propre fil | Une Battle Royale à son plafond sans qu'aucune autre partie du serveur ne perde un battement                                                                            |
+
+### 37.9 Ce qui reste à mesurer: la machine Oracle
+
+Une seule fois, par le porteur du projet, dans un conteneur à part borné à un cœur, à une heure sans partie: le témoin, la carte de mesure à 1 000, 2 000 et 5 000 PNJ, puis le démarrage. Commandes dans `docs/handoffs/etape-5-10-handoff.md`. Les fichiers `oracle-*.json` iront dans `5-10/`, et leur tableau ici.

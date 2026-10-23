@@ -31,6 +31,14 @@ Rédigée selon le cas de repli du PROTOCOLE, à partir de l'étude, de `docs/me
 7. **Trois machines, une seule commande.** Le poste de mesure, en alternant avec le témoin. Une machine Arm de GitHub, par le workflow de mesure (`.github/workflows/charge.yml`, branche `mesure-charge/`), étendu d'un job Arm. Et la machine Oracle, une fois, pour caler la machine Arm de GitHub sur elle par le témoin: le porteur du projet lance le banc dans un conteneur à part, borné à un cœur (`docker run --cpus 1`), à une heure sans partie en cours (`/sante` le dit), avec des commandes PowerShell 5.1 que la session rédige. La production garde ses trois autres cœurs.
 8. **Le démarrage se mesure dans un vrai serveur**: la durée et la pointe de mémoire du décodage d'une carte de 10 000 sur 10 000, de ses places tenables, de son morceau principal et de son miroir, comparées au délai de trois minutes de la mise en ligne et à la mémoire de la machine.
 
+## Réconciliation au début de l'étape (23 octobre 2026)
+
+- **Décision 2 tranchée pour la seconde façon: des dimensions fournies au moteur, pas un identifiant.** Un identifiant de plus dans `CARTES` entrait dans le type `IdentifiantCarte`, donc dans les plafonds de PNJ, la présentation des cartes de la page, le préchargement du serveur (qui irait chercher une image de 100 millions de pixels), l'énumération des cartes de la base et ses migrations: il aurait fallu l'en exclure partout. À la place, `CARTE_DE_MESURE` (`packages/shared/src/constantes.ts`), hors de `CARTES`, que seule l'option `carteDeMesure` de `creerEtatInitial` demande; la `GameRoom` la reçoit par ses réglages du banc, que le `RoomManager` ne transmet jamais. La garde du défaut X5 s'applique telle quelle: le terrain doit mesurer 10 000 sur 10 000. La carte géante de `8.15` aura son vrai identifiant, avec son image et sa place dans la base.
+- **L'option du nombre de joueurs existait déjà** (`--joueurs`), mais la `GameRoom` refusait le treizième: la capacité du mode. Les réglages du banc portent donc aussi une capacité.
+- **Le rectangle du filtrage estimé**: 2 400 sur 1 200 pixels autour du joueur, l'écran 21:9 sur ordinateur (2 133 sur 900 pixels de carte) et sa marge (`tests/charge/zoneDInteret.ts`).
+- **La machine Arm de GitHub existe** pour ce dépôt public (`ubuntu-24.04-arm`): vérifié par la première exécution du workflow.
+- **300 battements mesurés après 100 d'échauffement** sur la carte de mesure, au lieu de 1 200 après 200: à 10 000 PNJ, un battement coûte de l'ordre d'une seconde, et une ligne aurait duré vingt-cinq minutes. Le témoin garde les réglages habituels.
+
 ## Questions au porteur du projet
 
 À poser au début de l'étape. La mesure peut commencer sans les réponses, qui changent seulement les lignes du tableau.

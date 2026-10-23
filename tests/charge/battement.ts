@@ -223,6 +223,11 @@ export interface ResultatBancBattement {
   readonly botsNoirs: number;
   /** Ce que le filtrage par zone d'interet aurait donne. Absent sans zoneDInteret. */
   readonly zoneDInteret: EstimationZoneDInteret | undefined;
+  /**
+   * Duree du lancement de la partie, en millisecondes: la mise en place des faux ninjas et
+   * des joueurs, que le serveur fait d'un bloc, sur le fil de toutes ses parties (etape 5.10).
+   */
+  readonly lancementMs: number;
 }
 
 /** Ce qu'un battement mesure laisse derriere lui. */
@@ -320,7 +325,7 @@ export function mesurerLeBattement(options: OptionsBancBattement): ResultatBancB
     }
   };
 
-  const room = ouvrirLaPartie(options, joues, surBattement);
+  const { room, lancementMs } = ouvrirLaPartie(options, joues, surBattement);
 
   // Le filtrage estime: un flux par joueur, comme l'etape 2.10 en tiendra un, nourri a
   // chaque battement, echauffement compris, pour que ses deltas aient leur reference.
@@ -410,6 +415,7 @@ export function mesurerLeBattement(options: OptionsBancBattement): ResultatBancB
     battementsSabotes,
     pasFaits,
     botsNoirs: room.reglages.botsNoirs.actifs ? room.reglages.botsNoirs.nombre : 0,
+    lancementMs,
     zoneDInteret:
       options.zoneDInteret === true
         ? {
@@ -505,8 +511,11 @@ function ouvrirLaPartie(
   options: OptionsBancBattement,
   battements: number,
   surBattement: (room: GameRoom) => void,
-): GameRoom {
+): { readonly room: GameRoom; readonly lancementMs: number } {
   const dureePartieS = Math.ceil((battements * CADENCE_BATTEMENT_MS) / 1000) + 1;
+  // Le lancement compte la partie ouverte, peuplee et lancee: ou que le moteur pose ses
+  // faux ninjas, la mesure le couvre.
+  const debutDuLancement = performance.now();
 
   const room = new GameRoom({
     id: 'banc',
@@ -550,13 +559,14 @@ function ouvrirLaPartie(
   }
 
   room.lancer();
+  const lancementMs = performance.now() - debutDuLancement;
 
   // Among Ninjas attend que chacun ait charge la carte avant la revelation (etape 7.20).
   for (const joueur of room.joueurs) {
     room.signalerLeChargement(joueur.id);
   }
 
-  return room;
+  return { room, lancementMs };
 }
 
 /**

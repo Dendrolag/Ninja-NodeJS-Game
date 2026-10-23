@@ -1,0 +1,46 @@
+{
+  "date": "2026-10-23T10:12:37.844Z",
+  "commit": "b07ab46",
+  "machine": {
+    "processeur": "unknown",
+    "coeursLogiques": 4,
+    "memoireGo": 16,
+    "systeme": "Linux 6.17.0-1022-azure",
+    "node": "v24.21.0"
+  },
+  "mode": "classique",
+  "carte": "map1",
+  "joueurs": 12,
+  "demarrage": {
+    "largeur": 10000,
+    "hauteur": 10000,
+    "imageMo": 0.46531009674072266,
+    "ecriture": {
+      "etape": "ecriture de l image",
+      "dureeMs": 6939.588707,
+      "pointeMemoireMo": 1061.5234375
+    },
+    "decodage": {
+      "etape": "decodage du PNG",
+      "dureeMs": 2176.868453,
+      "pointeMemoireMo": 1758.640625
+    },
+    "chargement": [
+      {
+        "etape": "cartes actuelles",
+        "dureeMs": 3692.970273,
+        "pointeMemoireMo": 464.8359375
+      },
+      {
+        "etape": "carte de mesure",
+        "dureeMs": 11792.384358,
+        "pointeMemoireMo": 2145.07421875
+      },
+      {
+        "etape": "carte de mesure en miroir",
+        "dureeMs": 12489.646205,
+        "pointeMemoireMo": 2179.046875
+      }
+    ]
+  }
+}

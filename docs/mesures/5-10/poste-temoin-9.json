@@ -1,0 +1,93 @@
+{
+  "date": "2026-10-23T10:25:49.166Z",
+  "commit": "5a8a76d",
+  "machine": {
+    "processeur": "AMD Ryzen 7 3800X 8-Core Processor",
+    "coeursLogiques": 16,
+    "memoireGo": 32,
+    "systeme": "Windows_NT 10.0.26300",
+    "node": "v24.16.0"
+  },
+  "mode": "classique",
+  "carte": "map1",
+  "joueurs": 12,
+  "banc": [
+    {
+      "bots": 300,
+      "joueurs": 12,
+      "battements": 1200,
+      "mode": "classique",
+      "moteurMs": {
+        "nombre": 1200,
+        "moyenne": 0.931019916666669,
+        "p50": 0.8898000000003776,
+        "p95": 1.2456999999999425,
+        "p99": 1.554899999999634,
+        "minimum": 0.7678000000000793,
+        "maximum": 3.8189000000002125
+      },
+      "projectionMs": {
+        "nombre": 1200,
+        "moyenne": 0.09072049999999744,
+        "p50": 0.0866000000000895,
+        "p95": 0.12310000000024957,
+        "p99": 0.19039999999995416,
+        "minimum": 0.06610000000000582,
+        "maximum": 0.8541999999997643
+      },
+      "serialisationMs": {
+        "nombre": 1200,
+        "moyenne": 0.10770850000000015,
+        "p50": 0.10269999999991342,
+        "p95": 0.1532999999999447,
+        "p99": 0.264699999999948,
+        "minimum": 0.0806999999999789,
+        "maximum": 0.8423000000000229
+      },
+      "totalMs": {
+        "nombre": 1200,
+        "moyenne": 1.1294489166666666,
+        "p50": 1.0797999999999774,
+        "p95": 1.4945000000002437,
+        "p99": 1.8559000000000196,
+        "minimum": 0.9324000000001433,
+        "maximum": 4.106100000000424
+      },
+      "octetsParMessage": {
+        "nombre": 1200,
+        "moyenne": 778.8425,
+        "p50": 722,
+        "p95": 783,
+        "p99": 1293,
+        "minimum": 603,
+        "maximum": 6331
+      },
+      "octetsCompressesParMessage": {
+        "nombre": 60,
+        "moyenne": 569.9166666666666,
+        "p50": 538,
+        "p95": 989,
+        "p99": 1055,
+        "minimum": 466,
+        "maximum": 1055
+      },
+      "octetsJsonParMessage": {
+        "nombre": 60,
+        "moyenne": 39032.15,
+        "p50": 39107,
+        "p95": 39470,
+        "p99": 39598,
+        "minimum": 38449,
+        "maximum": 39598
+      },
+      "entitesParMessage": 315.00333333333333,
+      "octetsTotal": 934611,
+      "battementsSabotes": 0,
+      "pasFaits": 0,
+      "botsNoirs": 2,
+      "partiesParCoeur": 30,
+      "botsParCoeur": 9000,
+      "debitParClientKoS": 15.576849999999999
+    }
+  ]
+}

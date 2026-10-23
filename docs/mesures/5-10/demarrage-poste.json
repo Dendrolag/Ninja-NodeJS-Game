@@ -1,0 +1,46 @@
+{
+  "date": "2026-10-23T09:06:18.092Z",
+  "commit": "5466005",
+  "machine": {
+    "processeur": "AMD Ryzen 7 3800X 8-Core Processor",
+    "coeursLogiques": 16,
+    "memoireGo": 32,
+    "systeme": "Windows_NT 10.0.26300",
+    "node": "v24.16.0"
+  },
+  "mode": "classique",
+  "carte": "map1",
+  "joueurs": 12,
+  "demarrage": {
+    "largeur": 10000,
+    "hauteur": 10000,
+    "imageMo": 0.46531009674072266,
+    "ecriture": {
+      "etape": "ecriture de l image",
+      "dureeMs": 6592.853499999999,
+      "pointeMemoireMo": 985.28125
+    },
+    "decodage": {
+      "etape": "decodage du PNG",
+      "dureeMs": 2174.1036999999997,
+      "pointeMemoireMo": 1365.71875
+    },
+    "chargement": [
+      {
+        "etape": "cartes actuelles",
+        "dureeMs": 3567.7480000000005,
+        "pointeMemoireMo": 366.171875
+      },
+      {
+        "etape": "carte de mesure",
+        "dureeMs": 11645.9549,
+        "pointeMemoireMo": 1734.25
+      },
+      {
+        "etape": "carte de mesure en miroir",
+        "dureeMs": 12195.895199999999,
+        "pointeMemoireMo": 1984.2890625
+      }
+    ]
+  }
+}

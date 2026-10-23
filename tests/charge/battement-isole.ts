@@ -78,19 +78,24 @@ export async function mesurerEnProcessusNeuf(
   });
 
   return new Promise((resoudre, rejeter) => {
-    enfant.once('message', (reponse: ReponseDuBanc) => {
-      if (reponse.type === 'erreur') {
-        rejeter(new Error(`Processus de banc: ${reponse.message}`));
-        return;
-      }
+    let reponse: ReponseDuBanc | undefined;
 
-      resoudre(reponse.resultats);
+    enfant.once('message', (recue: ReponseDuBanc) => {
+      reponse = recue;
     });
 
-    // Une promesse deja tenue ignore ce rejet: il ne porte que sur un processus
-    // arrete sans avoir repondu.
+    // La reponse ne compte qu'une fois le processus sorti: c'est en sortant que le
+    // profileur ecrit son fichier, que charge.ts lit aussitot apres.
     enfant.once('exit', (code) => {
-      rejeter(new Error(`Le processus de banc s'est arrete sans repondre (code ${String(code)}).`));
+      if (reponse === undefined) {
+        rejeter(
+          new Error(`Le processus de banc s'est arrete sans repondre (code ${String(code)}).`),
+        );
+      } else if (reponse.type === 'erreur') {
+        rejeter(new Error(`Processus de banc: ${reponse.message}`));
+      } else {
+        resoudre(reponse.resultats);
+      }
     });
 
     enfant.send({ configurations });

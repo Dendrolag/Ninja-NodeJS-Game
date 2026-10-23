@@ -233,6 +233,7 @@ async function jouerLeBanc(plan: Plan): Promise<LigneDeBanc[]> {
           'parties/coeur',
           'bots/coeur',
           'noirs',
+          'lancement s',
           'zone ent.',
           'zone oct.',
           'zone Mbit/s',
@@ -254,6 +255,7 @@ async function jouerLeBanc(plan: Plan): Promise<LigneDeBanc[]> {
           String(ligne.partiesParCoeur),
           String(ligne.botsParCoeur),
           String(ligne.botsNoirs),
+          n(ligne.lancementMs / 1000, 2),
           ...(ligne.zoneDInteret === undefined
             ? ['-', '-', '-', '-']
             : [

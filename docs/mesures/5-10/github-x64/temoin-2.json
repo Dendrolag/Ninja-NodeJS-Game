@@ -1,0 +1,93 @@
+{
+  "date": "2026-10-23T09:17:54.111Z",
+  "commit": "b07ab46",
+  "machine": {
+    "processeur": "AMD EPYC 9V45 96-Core Processor",
+    "coeursLogiques": 4,
+    "memoireGo": 16,
+    "systeme": "Linux 6.17.0-1022-azure",
+    "node": "v24.21.0"
+  },
+  "mode": "classique",
+  "carte": "map1",
+  "joueurs": 12,
+  "banc": [
+    {
+      "bots": 300,
+      "joueurs": 12,
+      "battements": 1200,
+      "mode": "classique",
+      "moteurMs": {
+        "nombre": 1200,
+        "moyenne": 0.6526196349999999,
+        "p50": 0.6119629999998324,
+        "p95": 0.9040430000002289,
+        "p99": 1.1829729999999472,
+        "minimum": 0.5409060000001773,
+        "maximum": 2.680631000000176
+      },
+      "projectionMs": {
+        "nombre": 1200,
+        "moyenne": 0.06233127499999881,
+        "p50": 0.057407000000011976,
+        "p95": 0.09140800000000127,
+        "p99": 0.15319100000010621,
+        "minimum": 0.040541000000075655,
+        "maximum": 1.644900000000007
+      },
+      "serialisationMs": {
+        "nombre": 1200,
+        "moyenne": 0.06622839250000122,
+        "p50": 0.06028999999989537,
+        "p95": 0.10471799999982068,
+        "p99": 0.16059199999995144,
+        "minimum": 0.05072599999994054,
+        "maximum": 0.5341950000000679
+      },
+      "totalMs": {
+        "nombre": 1200,
+        "moyenne": 0.7811793024999999,
+        "p50": 0.7257640000000265,
+        "p95": 1.1150009999998929,
+        "p99": 1.419300000000021,
+        "minimum": 0.6524040000001605,
+        "maximum": 3.0794220000000223
+      },
+      "octetsParMessage": {
+        "nombre": 1200,
+        "moyenne": 778.8425,
+        "p50": 722,
+        "p95": 783,
+        "p99": 1293,
+        "minimum": 603,
+        "maximum": 6331
+      },
+      "octetsCompressesParMessage": {
+        "nombre": 60,
+        "moyenne": 569.9166666666666,
+        "p50": 538,
+        "p95": 989,
+        "p99": 1055,
+        "minimum": 466,
+        "maximum": 1055
+      },
+      "octetsJsonParMessage": {
+        "nombre": 60,
+        "moyenne": 39032.15,
+        "p50": 39107,
+        "p95": 39470,
+        "p99": 39598,
+        "minimum": 38449,
+        "maximum": 39598
+      },
+      "entitesParMessage": 315.00333333333333,
+      "octetsTotal": 934611,
+      "battementsSabotes": 0,
+      "pasFaits": 0,
+      "botsNoirs": 2,
+      "partiesParCoeur": 44,
+      "botsParCoeur": 13200,
+      "debitParClientKoS": 15.576849999999999
+    }
+  ]
+}

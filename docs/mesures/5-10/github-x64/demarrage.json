@@ -1,0 +1,46 @@
+{
+  "date": "2026-10-23T09:34:18.117Z",
+  "commit": "b07ab46",
+  "machine": {
+    "processeur": "AMD EPYC 9V45 96-Core Processor",
+    "coeursLogiques": 4,
+    "memoireGo": 16,
+    "systeme": "Linux 6.17.0-1022-azure",
+    "node": "v24.21.0"
+  },
+  "mode": "classique",
+  "carte": "map1",
+  "joueurs": 12,
+  "demarrage": {
+    "largeur": 10000,
+    "hauteur": 10000,
+    "imageMo": 0.46531009674072266,
+    "ecriture": {
+      "etape": "ecriture de l image",
+      "dureeMs": 4280.043666,
+      "pointeMemoireMo": 1026.14453125
+    },
+    "decodage": {
+      "etape": "decodage du PNG",
+      "dureeMs": 1325.102404,
+      "pointeMemoireMo": 1768.05859375
+    },
+    "chargement": [
+      {
+        "etape": "cartes actuelles",
+        "dureeMs": 2277.5079,
+        "pointeMemoireMo": 505.71875
+      },
+      {
+        "etape": "carte de mesure",
+        "dureeMs": 5621.365043,
+        "pointeMemoireMo": 2188.2265625
+      },
+      {
+        "etape": "carte de mesure en miroir",
+        "dureeMs": 6022.668917999999,
+        "pointeMemoireMo": 2223.03125
+      }
+    ]
+  }
+}
