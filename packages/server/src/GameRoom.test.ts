@@ -868,3 +868,34 @@ describe('GameRoom, pause de la partie', () => {
     }).toThrow(/statut salon/);
   });
 });
+
+describe('GameRoom, reglages du banc de charge (etape 5.10)', () => {
+  it('joue sur la carte de mesure et accueille plus de joueurs que son mode, a la demande du banc', () => {
+    const room = new GameRoom({
+      id: 'banc',
+      graine: 42,
+      reglages: REGLAGES,
+      horloge: creerHorlogeManuelle(),
+      banc: { carteDeMesure: true, capacite: 60 },
+    });
+
+    expect(room.etat.carte).toEqual({ largeur: 10_000, hauteur: 10_000 });
+    expect(room.capacite).toBe(60);
+
+    for (let rang = 1; rang <= 60; rang += 1) {
+      expect(room.accueillir(session(`j${String(rang)}`, `Joueur${String(rang)}`)).valide).toBe(
+        true,
+      );
+    }
+
+    expect(room.estPleine).toBe(true);
+    room.arreter();
+  });
+
+  it('garde la carte et la capacite de son mode sans le banc', () => {
+    const { room } = roomDeTest();
+
+    expect(room.etat.carte).toEqual(CARTES.map1);
+    expect(room.capacite).toBe(12);
+  });
+});

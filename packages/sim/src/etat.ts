@@ -64,6 +64,7 @@ import {
   APPARITION,
   BOTS,
   CARTES,
+  CARTE_DE_MESURE,
   COULEURS_DES_JOUEURS_AMONG,
   COULEUR_BOT_NEUTRE,
   COULEUR_BOT_NOIR,
@@ -1018,6 +1019,12 @@ export interface OptionsEtatInitial {
    * ses seuls bords: c'est le repli du legacy quand son image manquait.
    */
   readonly terrain?: CarteCollisions;
+  /**
+   * La partie se joue sur la carte de mesure, CARTE_DE_MESURE, et non sur la carte de ses
+   * reglages (etape 5.10). Le banc de charge seul la demande: aucun reglage de salon ne
+   * peut la choisir. Le terrain fourni doit alors mesurer 10 000 sur 10 000.
+   */
+  readonly carteDeMesure?: boolean;
 }
 
 /** Ce qu'il faut pour faire entrer un joueur dans la partie. */
@@ -1037,7 +1044,8 @@ export function creerEtatInitial(options: OptionsEtatInitial): EtatPartie {
     mode,
     completerReglages(options.reglages),
   );
-  const carte = CARTES[reglages.carte];
+  const nomDeLaCarte = options.carteDeMesure === true ? 'de mesure' : reglages.carte;
+  const carte = options.carteDeMesure === true ? CARTE_DE_MESURE : CARTES[reglages.carte];
   const terrain = options.terrain ?? carteSansMur(carte);
 
   // Un terrain aux mauvaises dimensions est une faute d'appelant, et c'est
@@ -1047,7 +1055,7 @@ export function creerEtatInitial(options: OptionsEtatInitial): EtatPartie {
   if (terrain.largeur !== carte.largeur || terrain.hauteur !== carte.hauteur) {
     throw new Error(
       `Le terrain fourni mesure ${terrain.largeur}x${terrain.hauteur}, ` +
-        `mais la carte ${reglages.carte} mesure ${carte.largeur}x${carte.hauteur}.`,
+        `mais la carte ${nomDeLaCarte} mesure ${carte.largeur}x${carte.hauteur}.`,
     );
   }
 

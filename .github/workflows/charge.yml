@@ -1,16 +1,14 @@
 # Mesure de charge sous Linux, a la demande.
 #
-# Le serveur de production tournera sous Linux, et les mesures de reference sont
+# Le serveur de production tourne sous Linux, et les mesures de reference sont
 # prises sous Windows (docs/mesures/charge-serveur.md). Ce workflow joue le harnais
 # de charge (pnpm charge) sur une machine d'integration Linux, pour un ou plusieurs
 # commits joues l'un apres l'autre SUR LA MEME MACHINE: c'est la seule facon de
 # comparer deux versions, la puissance d'une machine d'integration changeant d'une
 # execution a l'autre. Les resultats sont conserves comme artefact.
 #
-# COMMENT LE LANCER. GitHub n'accepte le lancement manuel (workflow_dispatch) que
-# pour un workflow present sur la branche par defaut, master, qui ne doit pas etre
-# touchee avant l'etape 6.1. Le workflow se lance donc en poussant une branche
-# temporaire mesure-charge/<nom>, dont le dernier commit porte deux lignes finales:
+# COMMENT LE LANCER. En poussant une branche temporaire mesure-charge/<nom>, dont le
+# dernier commit porte des lignes finales:
 #
 #   git switch -c mesure-charge/5-2
 #   git commit --allow-empty -m "Mesure de charge" \
@@ -20,8 +18,18 @@
 #
 # puis, une fois les mesures recuperees, supprimer la branche. Sans ligne
 # « Mesurer », le commit pousse lui-meme est mesure; sans ligne « Options », les
-# options par defaut ci-dessous s'appliquent. Le lancement manuel reste declare
-# pour le jour ou ce fichier sera sur master.
+# options par defaut ci-dessous s'appliquent. Ou par le lancement manuel
+# (workflow_dispatch), depuis l'onglet Actions, le fichier etant sur master depuis
+# l'etape 6.1.
+#
+# PLUSIEURS LIGNES « Options » (etape 5.10): chacune est une mesure, jouee dans
+# l'ordre, sur la meme machine, avec son propre fichier de resultats. C'est ce qui
+# permet d'alterner un temoin et une mesure dans la meme seance.
+#
+# LA MACHINE ARM (etape 5.10). Une ligne « Machines: x64 arm » joue aussi la mesure
+# sur une machine Arm de GitHub (ubuntu-24.04-arm, gratuite pour un depot public),
+# proche de la machine Oracle de production, qui est une Arm. Sans cette ligne, la
+# machine x64 seule. Chaque machine rend son propre artefact.
 #
 # Il ne bloque rien, et ne remplace pas la mesure de reference: une machine
 # d'integration est partagee, plus lente, et n'a que quatre coeurs, que le serveur
@@ -42,6 +50,10 @@ on:
         description: 'Options de pnpm charge (vide: les options par defaut)'
         required: false
         default: ''
+      machines:
+        description: 'Machines, separees par des espaces: x64, arm, ou les deux'
+        required: false
+        default: 'x64'
 
 permissions:
   contents: read
@@ -51,10 +63,50 @@ env:
   OPTIONS_PAR_DEFAUT: '--reseau --bots 150 --rooms 2,4,8,12,16 --sans-arret --processus 2 --duree-mesure 15'
 
 jobs:
-  charge:
-    name: Harnais de charge
+  # Lit les lignes du commit une fois, et en tire les machines a lancer.
+  plan:
+    name: Plan de mesure
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    outputs:
+      machines: ${{ steps.machines.outputs.liste }}
+    steps:
+      - name: Recuperer le dernier commit
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Choisir les machines
+        id: machines
+        env:
+          MACHINES: ${{ inputs.machines }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            MACHINES="$(git log -1 --format='%(trailers:key=Machines,valueonly,separator= )')"
+          fi
+          MACHINES="${MACHINES:-x64}"
+          liste="["
+          for machine in $MACHINES; do
+            case "$machine" in
+              x64) runner="ubuntu-latest" ;;
+              arm) runner="ubuntu-24.04-arm" ;;
+              *) echo "Machine inconnue: $machine (x64 ou arm)"; exit 1 ;;
+            esac
+            [ "$liste" = "[" ] || liste="$liste,"
+            liste="$liste{\"nom\":\"$machine\",\"runner\":\"$runner\"}"
+          done
+          liste="$liste]"
+          echo "Machines: $liste"
+          echo "liste=$liste" >> "$GITHUB_OUTPUT"
+
+  charge:
+    name: Harnais de charge (${{ matrix.machine.nom }})
+    needs: plan
+    runs-on: ${{ matrix.machine.runner }}
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        machine: ${{ fromJSON(needs.plan.outputs.machines) }}
     steps:
       - name: Recuperer le depot, historique compris
         uses: actions/checkout@v7
@@ -80,30 +132,36 @@ jobs:
         run: |
           if [ "$GITHUB_EVENT_NAME" = "push" ]; then
             COMMITS="$(git log -1 --format='%(trailers:key=Mesurer,valueonly,separator= )')"
-            OPTIONS="$(git log -1 --format='%(trailers:key=Options,valueonly,separator= )')"
+            OPTIONS="$(git log -1 --format='%(trailers:key=Options,valueonly,separator=%x0A)')"
           fi
           COMMITS="${COMMITS:-$GITHUB_SHA}"
           OPTIONS="${OPTIONS:-$OPTIONS_PAR_DEFAUT}"
           echo "Commits: $COMMITS"
-          echo "Options: $OPTIONS"
+          echo "Options:"
+          echo "$OPTIONS"
           echo "Coeurs: $(nproc)"
           mkdir -p "$RUNNER_TEMP/mesures"
 
           for commit in $COMMITS; do
             git checkout --quiet --force "$commit"
             court="$(git rev-parse --short HEAD)"
-            echo "::group::Commit $court"
             pnpm install --frozen-lockfile
-            # Les options sont volontairement decoupees en mots.
-            # shellcheck disable=SC2086
-            pnpm charge $OPTIONS --sortie "$RUNNER_TEMP/mesures/charge-$court.json"
-            echo "::endgroup::"
+            rang=0
+            while IFS= read -r options; do
+              [ -n "$options" ] || continue
+              rang=$((rang + 1))
+              echo "::group::Commit $court, mesure $rang: $options"
+              # Les options sont volontairement decoupees en mots.
+              # shellcheck disable=SC2086
+              pnpm charge $options --sortie "$RUNNER_TEMP/mesures/charge-$court-$rang.json"
+              echo "::endgroup::"
+            done <<< "$OPTIONS"
           done
 
       - name: Conserver les mesures
         uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
-          name: mesures-de-charge
+          name: mesures-de-charge-${{ matrix.machine.nom }}
           path: ${{ runner.temp }}/mesures/
           retention-days: 30

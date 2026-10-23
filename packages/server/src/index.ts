@@ -83,6 +83,7 @@ export type {
   JoueurDeRoom,
   JoueurDuBilan,
   OptionsGameRoom,
+  ReglagesDuBanc,
   StatutRoom,
 } from './GameRoom.js';
 export { CADENCE_BATTEMENT_MS, DT_MAXIMUM_MS, GameRoom } from './GameRoom.js';

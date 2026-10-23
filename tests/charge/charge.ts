@@ -13,6 +13,10 @@
  *      Chaque palier tourne dans un processus neuf. Voir charge-reseau.ts et
  *      charge-reseau-isolee.ts.
  *
+ * Une quatrieme, LE DEMARRAGE (--demarrage, etape 5.10), mesure ce que coute au serveur
+ * le chargement d'une carte de 10 000 sur 10 000. Voir demarrage.ts. Le banc et les
+ * populations melees se jouent aussi sur cette carte (--carte-de-mesure); voir plan.ts.
+ *
  * Sans aucune des trois options, les trois sont jouees. --rapide joue une version
  * courte de chacune, pour verifier que le harnais fonctionne. --sortie ecrit tous
  * les resultats dans un fichier JSON: c'est ce fichier que l'etape 5.2 comparera.
@@ -23,6 +27,9 @@
  *   pnpm charge --banc --bots-banc 150,300
  *   pnpm charge --banc --carte map3 --bots-banc 150,300,360
  *   pnpm charge --banc --mines --bots-banc 50,150,300
+ *   pnpm charge --banc --carte-de-mesure realiste --joueurs 30 --zone-d-interet
+ *   pnpm charge --banc --carte-de-mesure realiste --bots-banc 5000 --profil profils
+ *   pnpm charge --demarrage
  *   pnpm charge --reseau --bots 150 --bots 50,150 --rooms 8,16,32
  *   pnpm charge --sortie docs/mesures/charge-serveur-5-1.json
  *
@@ -31,19 +38,23 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { availableParallelism, cpus, release, totalmem, type as systeme } from 'node:os';
-import { dirname, resolve } from 'node:path';
-import { parseArgs } from 'node:util';
+import { dirname, join, resolve } from 'node:path';
 
 import type { IdentifiantCarte, Mode } from '../../packages/shared/dist/index.js';
-import { CARTES, MODES } from '../../packages/shared/dist/index.js';
 
 import type { ConfigurationDeBanc } from './battement-isole.ts';
 import { mesurerEnProcessusNeuf } from './battement-isole.ts';
 import type { ResultatBancBattement } from './battement.ts';
 import { mesurerLaChargeEnProcessusNeuf } from './charge-reseau-isolee.ts';
 import type { ResultatChargeReseau } from './charge-reseau.ts';
+import type { ResultatDemarrage } from './demarrage.ts';
+import { mesurerLeDemarrage } from './demarrage.ts';
+import type { Plan } from './plan.ts';
+import { lirePlan } from './plan.ts';
+import type { ProfilDuProcesseur, ResumeDuProfil } from './profil.ts';
+import { resumeEnTexte, resumerLeProfil } from './profil.ts';
 import {
   FREQUENCE_CIBLE_HZ,
   debitKoParSeconde,
@@ -60,72 +71,16 @@ const ECHAUFFEMENT_DES_MINES = 2400;
 /** Graine des parties du banc et des intentions des clients. */
 const GRAINE = 42;
 
-/** Ce qui est joue quand rien n'est precise. */
-const PAR_DEFAUT = {
-  botsBanc: [50, 100, 150, 200, 300, 500, 1000],
-  sequences: [
-    [50, 150],
-    [150, 50],
-    [150, 300],
-  ],
-  joueurs: 12,
-  // Une minute de jeu mesuree, apres dix secondes d'echauffement.
-  battements: 1200,
-  echauffement: 200,
-  rooms: [1, 2, 4, 8, 16, 24, 32, 48, 64, 96],
-  scenarios: [[150], [50, 150]],
-  dureeMesureS: 20,
-  echauffementS: 5,
-} as const;
-
-/** La version courte de --rapide. */
-const RAPIDE = {
-  botsBanc: [150],
-  sequences: [[50, 150]],
-  battements: 300,
-  echauffement: 100,
-  rooms: [1, 2],
-  scenarios: [[150]],
-  dureeMesureS: 5,
-  echauffementS: 2,
-} as const;
-
-/** Ce que la ligne de commande a demande. */
-interface Plan {
-  readonly banc: boolean;
-  readonly melange: boolean;
-  readonly reseau: boolean;
-  readonly botsBanc: readonly number[];
-  readonly sequences: readonly (readonly number[])[];
-  readonly joueurs: number;
-  readonly battements: number;
-  readonly echauffement: number;
-  readonly rooms: readonly number[];
-  readonly scenarios: readonly (readonly number[])[];
-  readonly dureeMesureS: number;
-  readonly echauffementS: number;
-  readonly processus: number;
-  readonly sansArret: boolean;
-  readonly sortie: string | undefined;
-  /** Le mode des parties du banc et des populations melees. Le Classique par defaut. */
-  readonly mode: Mode;
-  /**
-   * La carte des parties du banc et des populations melees, murs compris. Tokyo (map1)
-   * par defaut; --carte map3 mesure Spirit & Time, dont le plafond de faux ninjas est
-   * plus haut (etape 7.6): 360 depuis l'etape 8.8.
-   */
-  readonly carte: IdentifiantCarte;
-  /** Les joueurs du banc posent des mines (etape 7.11, --mines). */
-  readonly mines: boolean;
-  /** La charge reseau tourne sur un serveur surveille comme en production (etape 5.15). */
-  readonly surveillance: boolean;
-}
+/** Lignes du profil du processeur gardees dans le rapport, par fonction et par fichier. */
+const LIGNES_DU_PROFIL = 40;
 
 /** Une ligne du banc, avec le budget qui en decoule. */
 interface LigneDeBanc extends ResultatBancBattement {
   readonly partiesParCoeur: number;
   readonly botsParCoeur: number;
   readonly debitParClientKoS: number;
+  /** Le profil du processeur du processus de banc, si --profil l'a demande (etape 5.10). */
+  readonly profil?: ResumeDuProfil;
 }
 
 /** Une charge reseau jouee palier par palier. */
@@ -150,139 +105,16 @@ interface RapportDeCharge {
   /** Le mode et la carte des parties du banc et des populations melees. */
   readonly mode: Mode;
   readonly carte: IdentifiantCarte;
+  /** Le terrain de la carte de mesure de 10 000 sur 10 000, s'il remplace la carte (etape 5.10). */
+  readonly terrainDeMesure: string | undefined;
+  readonly joueurs: number;
   banc?: readonly LigneDeBanc[];
   melange?: readonly {
     readonly sequence: readonly number[];
     readonly resultats: readonly ResultatBancBattement[];
   }[];
   reseau?: readonly SerieReseau[];
-}
-
-/**
- * Lit une liste d'entiers positifs separes par des virgules.
- *
- * Les espaces sont acceptes aussi: sous PowerShell, « --rooms 8,16 » sans
- * guillemets devient un tableau, que pnpm transmet sous la forme « 8 16 ».
- */
-function entiers(texte: string | undefined, nom: string): number[] | undefined {
-  if (texte === undefined) {
-    return undefined;
-  }
-
-  const valeurs = texte
-    .trim()
-    .split(/[\s,]+/u)
-    .map((morceau) => Number(morceau));
-
-  if (valeurs.some((valeur) => !Number.isInteger(valeur) || valeur <= 0)) {
-    throw new Error(
-      `--${nom} attend des entiers positifs separes par des virgules, recu « ${texte} ».`,
-    );
-  }
-
-  return valeurs;
-}
-
-/** Lit un entier positif. */
-function entier(texte: string | undefined, nom: string): number | undefined {
-  const valeurs = entiers(texte, nom);
-
-  if (valeurs !== undefined && valeurs.length !== 1) {
-    throw new Error(`--${nom} attend un seul entier, recu « ${String(texte)} ».`);
-  }
-
-  return valeurs?.[0];
-}
-
-/** Traduit la ligne de commande en plan de mesure. */
-function lirePlan(argumentsRecus: readonly string[]): Plan {
-  const { values: options } = parseArgs({
-    args: [...argumentsRecus],
-    options: {
-      banc: { type: 'boolean', default: false },
-      melange: { type: 'boolean', default: false },
-      reseau: { type: 'boolean', default: false },
-      rapide: { type: 'boolean', default: false },
-      'bots-banc': { type: 'string' },
-      sequence: { type: 'string', multiple: true },
-      joueurs: { type: 'string' },
-      battements: { type: 'string' },
-      rooms: { type: 'string' },
-      bots: { type: 'string', multiple: true },
-      'duree-mesure': { type: 'string' },
-      echauffement: { type: 'string' },
-      processus: { type: 'string' },
-      'sans-arret': { type: 'boolean', default: false },
-      sortie: { type: 'string' },
-      mode: { type: 'string' },
-      carte: { type: 'string' },
-      mines: { type: 'boolean', default: false },
-      surveillance: { type: 'boolean', default: false },
-    },
-  });
-
-  const aucune = !options.banc && !options.melange && !options.reseau;
-  const base = options.rapide ? RAPIDE : PAR_DEFAUT;
-
-  return {
-    banc: aucune || options.banc,
-    melange: aucune || options.melange,
-    reseau: aucune || options.reseau,
-    botsBanc: entiers(options['bots-banc'], 'bots-banc') ?? base.botsBanc,
-    sequences: options.sequence?.map((texte) => entiers(texte, 'sequence') ?? []) ?? base.sequences,
-    joueurs: entier(options.joueurs, 'joueurs') ?? PAR_DEFAUT.joueurs,
-    battements: entier(options.battements, 'battements') ?? base.battements,
-    echauffement: base.echauffement,
-    rooms: entiers(options.rooms, 'rooms') ?? base.rooms,
-    scenarios: options.bots?.map((texte) => entiers(texte, 'bots') ?? []) ?? base.scenarios,
-    dureeMesureS: entier(options['duree-mesure'], 'duree-mesure') ?? base.dureeMesureS,
-    echauffementS: entier(options.echauffement, 'echauffement') ?? base.echauffementS,
-    // Les clients prennent la moitie des coeurs, moins un: le serveur mesure garde
-    // son fil, et le systeme le sien.
-    processus:
-      entier(options.processus, 'processus') ??
-      Math.max(Math.floor(availableParallelism() / 2) - 1, 1),
-    sansArret: options['sans-arret'],
-    sortie: options.sortie,
-    mode: modeDe(options.mode),
-    carte: carteDe(options.carte),
-    mines: options.mines,
-    surveillance: options.surveillance,
-  };
-}
-
-/** Lit la carte demandee, Tokyo (map1) s'il n'y en a pas. */
-function carteDe(texte: string | undefined): IdentifiantCarte {
-  if (texte === undefined) {
-    return 'map1';
-  }
-
-  const carte = (Object.keys(CARTES) as IdentifiantCarte[]).find(
-    (candidate) => candidate === texte,
-  );
-
-  if (carte === undefined) {
-    throw new Error(
-      `--carte attend l'une de ${Object.keys(CARTES).join(', ')}, recu « ${texte} ».`,
-    );
-  }
-
-  return carte;
-}
-
-/** Lit le mode demande, le Classique s'il n'y en a pas. */
-function modeDe(texte: string | undefined): Mode {
-  if (texte === undefined) {
-    return 'classique';
-  }
-
-  const mode = MODES.find((candidat) => candidat === texte);
-
-  if (mode === undefined) {
-    throw new Error(`--mode attend l'un de ${MODES.join(', ')}, recu « ${texte} ».`);
-  }
-
-  return mode;
+  demarrage?: ResultatDemarrage;
 }
 
 /** Formate un nombre avec un nombre fixe de decimales. */
@@ -315,6 +147,33 @@ function configuration(plan: Plan, bots: number): ConfigurationDeBanc {
     mode: plan.mode,
     carte: plan.carte,
     mines: plan.mines,
+    ...(plan.terrainDeMesure === undefined ? {} : { terrainDeMesure: plan.terrainDeMesure }),
+    zoneDInteret: plan.zoneDInteret,
+  };
+}
+
+/** Les profils deja ecrits dans le dossier du profil. */
+function profilsPresents(dossier: string): Set<string> {
+  mkdirSync(dossier, { recursive: true });
+  return new Set(readdirSync(dossier).filter((nom) => nom.endsWith('.cpuprofile')));
+}
+
+/** Le resume du profil qu'un processus de banc vient d'ecrire, s'il y en a un nouveau. */
+function nouveauProfil(dossier: string, avant: ReadonlySet<string>): ResumeDuProfil | undefined {
+  const nouveau = [...profilsPresents(dossier)].find((nom) => !avant.has(nom));
+
+  if (nouveau === undefined) {
+    return undefined;
+  }
+
+  const profil = JSON.parse(readFileSync(join(dossier, nouveau), 'utf8')) as ProfilDuProcesseur;
+  const resume = resumerLeProfil(profil);
+
+  // Les quarante lignes les plus lourdes suffisent au rapport: la suite pese sans rien dire.
+  return {
+    ...resume,
+    fonctions: resume.fonctions.slice(0, LIGNES_DU_PROFIL),
+    fichiers: resume.fichiers.slice(0, LIGNES_DU_PROFIL),
   };
 }
 
@@ -323,25 +182,40 @@ async function jouerLeBanc(plan: Plan): Promise<LigneDeBanc[]> {
   const lignes: LigneDeBanc[] = [];
 
   for (const bots of plan.botsBanc) {
-    const [resultat] = await mesurerEnProcessusNeuf([configuration(plan, bots)]);
+    const avant = plan.profil === undefined ? undefined : profilsPresents(plan.profil);
+    const [resultat] = await mesurerEnProcessusNeuf([configuration(plan, bots)], plan.profil);
 
     if (resultat === undefined) {
       throw new Error(`Le banc a ${String(bots)} bots n'a rendu aucun resultat.`);
     }
 
+    const profil =
+      plan.profil === undefined || avant === undefined
+        ? undefined
+        : nouveauProfil(plan.profil, avant);
     const parties = partiesParCoeur(resultat.totalMs.moyenne);
     lignes.push({
       ...resultat,
       partiesParCoeur: parties,
       botsParCoeur: parties * bots,
       debitParClientKoS: debitKoParSeconde(resultat.octetsParMessage.moyenne, FREQUENCE_CIBLE_HZ),
+      ...(profil === undefined ? {} : { profil }),
     });
+
+    if (profil !== undefined) {
+      console.log(`\n${String(bots)} bots. ${resumeEnTexte(profil, 15)}`);
+    }
   }
+
+  const carte =
+    plan.terrainDeMesure === undefined
+      ? `carte ${plan.carte} avec ses murs`
+      : `carte de mesure de 10 000 sur 10 000, terrain ${plan.terrainDeMesure}`;
 
   console.log(
     [
       '',
-      `Banc du battement: mode ${plan.mode}, ${String(plan.joueurs)} joueurs, ${String(plan.battements)} battements mesures, carte ${plan.carte} avec ses murs, un processus neuf par ligne`,
+      `Banc du battement: mode ${plan.mode}, ${String(plan.joueurs)} joueurs, ${String(plan.battements)} battements mesures, ${carte}, un processus neuf par ligne`,
       tableau(
         [
           'bots',
@@ -358,6 +232,11 @@ async function jouerLeBanc(plan: Plan): Promise<LigneDeBanc[]> {
           'Mbit/s',
           'parties/coeur',
           'bots/coeur',
+          'noirs',
+          'zone ent.',
+          'zone oct.',
+          'zone Mbit/s',
+          'zone ms',
         ],
         lignes.map((ligne) => [
           String(ligne.bots),
@@ -374,6 +253,23 @@ async function jouerLeBanc(plan: Plan): Promise<LigneDeBanc[]> {
           n(megabitsParSeconde(ligne.debitParClientKoS), 2),
           String(ligne.partiesParCoeur),
           String(ligne.botsParCoeur),
+          String(ligne.botsNoirs),
+          ...(ligne.zoneDInteret === undefined
+            ? ['-', '-', '-', '-']
+            : [
+                n(ligne.zoneDInteret.entitesParJoueur, 0),
+                n(ligne.zoneDInteret.octetsParMessage.moyenne, 0),
+                n(
+                  megabitsParSeconde(
+                    debitKoParSeconde(
+                      ligne.zoneDInteret.octetsParMessage.moyenne,
+                      FREQUENCE_CIBLE_HZ,
+                    ),
+                  ),
+                  3,
+                ),
+                n(ligne.zoneDInteret.codageMs.moyenne, 3),
+              ]),
         ]),
       ),
     ].join('\n'),
@@ -496,6 +392,29 @@ function commitCourant(): string {
   }
 }
 
+/** Mesure le demarrage d'une carte de 10 000 sur 10 000, et l'affiche. */
+async function jouerLeDemarrage(): Promise<ResultatDemarrage> {
+  const resultat = await mesurerLeDemarrage();
+  const etapes = [resultat.ecriture, resultat.decodage, ...resultat.chargement];
+
+  console.log(
+    [
+      '',
+      `Demarrage d'une carte de ${String(resultat.largeur)} sur ${String(resultat.hauteur)}: image de collision de ${n(resultat.imageMo, 1)} Mo, une ligne par etape, pointe de memoire du processus a sa fin`,
+      tableau(
+        ['etape', 'duree s', 'pointe Mo'],
+        etapes.map((etape) => [
+          etape.etape,
+          n(etape.dureeMs / 1000, 2),
+          n(etape.pointeMemoireMo, 0),
+        ]),
+      ),
+    ].join('\n'),
+  );
+
+  return resultat;
+}
+
 /** Joue le plan, affiche les resultats, et les ecrit si demande. */
 async function principal(): Promise<void> {
   const plan = lirePlan(process.argv.slice(2));
@@ -512,6 +431,8 @@ async function principal(): Promise<void> {
     },
     mode: plan.mode,
     carte: plan.carte,
+    terrainDeMesure: plan.terrainDeMesure,
+    joueurs: plan.joueurs,
   };
 
   console.log(
@@ -528,6 +449,10 @@ async function principal(): Promise<void> {
 
   if (plan.reseau) {
     rapport.reseau = await jouerLeReseau(plan);
+  }
+
+  if (plan.demarrage) {
+    rapport.demarrage = await jouerLeDemarrage();
   }
 
   if (plan.sortie !== undefined) {

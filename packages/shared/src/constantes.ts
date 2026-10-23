@@ -127,6 +127,18 @@ export const CARTES = {
 export type IdentifiantCarte = keyof typeof CARTES;
 
 /**
+ * Les dimensions de la carte de mesure (etape 5.10): 10 000 sur 10 000 pixels, la taille
+ * minimale de la Battle Royale decidee par le porteur du projet le 23 octobre 2026.
+ *
+ * CE N'EST PAS UNE CARTE JOUABLE, et c'est pour cela qu'elle n'est pas dans CARTES: elle
+ * n'a ni identifiant, ni decor, ni image de collision, ni place dans la base. Aucun
+ * reglage de salon ne peut la choisir. Seul le banc de charge la demande, au moteur
+ * (OptionsEtatInitial.carteDeMesure), avec un terrain fabrique en memoire a ces
+ * dimensions exactes: la garde du defaut X5 s'y applique comme a une vraie carte.
+ */
+export const CARTE_DE_MESURE: DimensionsCarte = { largeur: 10_000, hauteur: 10_000 };
+
+/**
  * Les cartes qu'une partie enregistree peut porter: les cartes jouables, et celles
  * qui ne se jouent plus.
  *

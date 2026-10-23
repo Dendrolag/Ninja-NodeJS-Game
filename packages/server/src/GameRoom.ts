@@ -268,6 +268,20 @@ export interface OptionsGameRoom {
   readonly surBattement?: (room: GameRoom) => void;
   /** Appele une fois, au battement ou la partie se termine. */
   readonly surFinDePartie?: (room: GameRoom) => void;
+  /**
+   * Ce que le banc de charge seul demande (etape 5.10), pour mesurer des parties que le jeu
+   * n'offre pas encore. Le RoomManager ne le transmet jamais: aucune partie jouee ne peut
+   * le recevoir.
+   */
+  readonly banc?: ReglagesDuBanc;
+}
+
+/** Ce que le banc de charge demande a une partie au-dela de ce que le jeu permet (etape 5.10). */
+export interface ReglagesDuBanc {
+  /** La partie se joue sur la carte de mesure de 10 000 sur 10 000 (CARTE_DE_MESURE). */
+  readonly carteDeMesure?: boolean;
+  /** Combien de joueurs la partie accueille, au lieu de la capacite de son mode. */
+  readonly capacite?: number;
 }
 
 /**
@@ -321,6 +335,9 @@ export class GameRoom {
 
   /** Terrain de la partie, conserve pour pouvoir refaire l'etat si les reglages changent. */
   private terrain: CarteCollisions | undefined;
+
+  /** Ce que le banc de charge a demande (etape 5.10). Rien dans une partie jouee. */
+  private readonly banc: ReglagesDuBanc;
 
   /** L'etat de la partie, tel que le dernier battement l'a laisse. */
   private partie: EtatPartie;
@@ -493,6 +510,7 @@ export class GameRoom {
     this.surBattement = options.surBattement;
     this.surFinDePartie = options.surFinDePartie;
     this.terrain = options.terrain;
+    this.banc = options.banc ?? {};
 
     this.partie = this.etatNeuf(options.reglages);
   }
@@ -525,9 +543,9 @@ export class GameRoom {
     return this.partie.reglages;
   }
 
-  /** Combien de joueurs la room accueille au plus. Une propriete de son mode. */
+  /** Combien de joueurs la room accueille au plus. Une propriete de son mode, hors banc. */
   get capacite(): number {
-    return CAPACITES[this.mode];
+    return this.banc.capacite ?? CAPACITES[this.mode];
   }
 
   /** La room a-t-elle atteint sa capacite. */
@@ -1411,6 +1429,7 @@ export class GameRoom {
       mode: this.mode,
       ...(reglages === undefined ? {} : { reglages }),
       ...(this.terrain === undefined ? {} : { terrain: this.terrain }),
+      ...(this.banc.carteDeMesure === true ? { carteDeMesure: true } : {}),
     };
 
     return creerEtatInitial(depart);

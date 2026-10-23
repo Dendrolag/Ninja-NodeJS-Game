@@ -14,16 +14,23 @@
  * l'ordre donne, et rend leurs resultats. Une suite d'une seule configuration est
  * une mesure isolee; une suite de plusieurs mesure justement cette degradation,
  * que subit un vrai serveur ou des parties de tailles differentes se cotoient.
+ *
+ * LE PROFIL (etape 5.10). Sur demande, le processus de banc tourne sous le profileur de
+ * Node (--cpu-prof), qui ecrit en sortant ou son temps est passe, fonction par fonction.
+ * profil.ts le resume.
  */
 
 import { fork } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import { ChargeurDeTerrain } from '../../packages/server/dist/index.js';
+import type { CarteCollisions } from '../../packages/sim/dist/index.js';
 import type { IdentifiantCarte, Mode } from '../../packages/shared/dist/index.js';
 
 import type { ResultatBancBattement } from './battement.ts';
 import { mesurerLeBattement } from './battement.ts';
+import type { TerrainDeMesure } from './terrainDeMesure.ts';
+import { terrainDeMesure } from './terrainDeMesure.ts';
 
 /** L'argument qui fait de ce module un processus de banc, quand il est lance seul. */
 const DRAPEAU_DU_BANC = '--banc-du-harnais';
@@ -40,6 +47,13 @@ export interface ConfigurationDeBanc {
   readonly mode?: Mode;
   /** Les joueurs posent des mines (etape 7.11). Voir OptionsBancBattement. */
   readonly mines?: boolean;
+  /**
+   * La partie se joue sur la carte de mesure de 10 000 sur 10 000, avec ce terrain (etape
+   * 5.10). La carte des reglages ne compte plus alors.
+   */
+  readonly terrainDeMesure?: TerrainDeMesure;
+  /** Le banc estime le filtrage par zone d'interet (etape 5.10). */
+  readonly zoneDInteret?: boolean;
 }
 
 /** Ce que le processus de banc repond. */
@@ -54,9 +68,12 @@ type ReponseDuBanc =
  */
 export async function mesurerEnProcessusNeuf(
   configurations: readonly ConfigurationDeBanc[],
+  dossierDuProfil?: string,
 ): Promise<readonly ResultatBancBattement[]> {
+  const profil =
+    dossierDuProfil === undefined ? [] : ['--cpu-prof', `--cpu-prof-dir=${dossierDuProfil}`];
   const enfant = fork(fileURLToPath(import.meta.url), [DRAPEAU_DU_BANC], {
-    execArgv: ['--disable-warning=ExperimentalWarning'],
+    execArgv: ['--disable-warning=ExperimentalWarning', ...profil],
     stdio: ['ignore', 'inherit', 'inherit', 'ipc'],
   });
 
@@ -83,12 +100,28 @@ export async function mesurerEnProcessusNeuf(
 /** Joue les configurations dans ce processus-ci, murs de la carte compris. */
 function jouer(configurations: readonly ConfigurationDeBanc[]): ResultatBancBattement[] {
   const terrains = new ChargeurDeTerrain();
+  const terrainsDeMesure = new Map<TerrainDeMesure, CarteCollisions>();
+
+  // Fabriquer cent millions de pixels prend quelques secondes: une fois par processus.
+  const deMesure = (nature: TerrainDeMesure): CarteCollisions => {
+    const deja = terrainsDeMesure.get(nature);
+    const terrain =
+      deja ?? terrainDeMesure(nature, terrains.charger({ carte: 'map1', modeMiroir: false }));
+    terrainsDeMesure.set(nature, terrain);
+    return terrain;
+  };
 
   return configurations.map((configuration) =>
-    mesurerLeBattement({
-      ...configuration,
-      terrain: terrains.charger({ carte: configuration.carte ?? 'map1', modeMiroir: false }),
-    }),
+    configuration.terrainDeMesure === undefined
+      ? mesurerLeBattement({
+          ...configuration,
+          terrain: terrains.charger({ carte: configuration.carte ?? 'map1', modeMiroir: false }),
+        })
+      : mesurerLeBattement({
+          ...configuration,
+          terrain: deMesure(configuration.terrainDeMesure),
+          carteDeMesure: true,
+        }),
   );
 }
 

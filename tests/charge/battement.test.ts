@@ -14,9 +14,11 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { ChargeurDeTerrain } from '../../packages/server/dist/index.js';
+import { CARTE_DE_MESURE } from '../../packages/shared/dist/index.js';
 import type { CarteCollisions } from '../../packages/sim/dist/index.js';
+import { carteSansMur } from '../../packages/sim/dist/index.js';
 
-import { mesurerLeBattement } from './battement.ts';
+import { botsNoirsDeLaMesure, mesurerLeBattement } from './battement.ts';
 import {
   CADENCE_MS,
   OCTETS_PAR_MESSAGE_DE_REFERENCE,
@@ -134,5 +136,62 @@ describe('mesurerLeBattement', () => {
 
     expect(mesurerLeBattement({ ...among, mode: 'among', terrain }).pasFaits).toBeGreaterThan(0);
     expect(mesurerLeBattement({ ...courte, terrain }).pasFaits).toBe(0);
+  });
+});
+
+describe('le banc sur la carte de mesure (etape 5.10)', () => {
+  // Le terrain sans mur: fabriquer Tokyo repete prend quelques secondes, et le banc le
+  // joue de la meme facon.
+  const vide = carteSansMur(CARTE_DE_MESURE);
+  const grande = { bots: 100, joueurs: 30, battements: 40, echauffement: 10, graine: 7 };
+
+  it('joue 10 000 sur 10 000, au-dela de la capacite du mode, un Black Ninja par centaine', () => {
+    const resultat = mesurerLeBattement({ ...grande, terrain: vide, carteDeMesure: true });
+
+    expect(resultat.joueurs).toBe(30);
+    expect(resultat.botsNoirs).toBe(1);
+    expect(resultat.entitesParMessage).toBeGreaterThanOrEqual(grande.bots + grande.joueurs);
+    expect(resultat.zoneDInteret).toBeUndefined();
+  });
+
+  it('refuse un terrain qui n a pas les dimensions de la carte de mesure', () => {
+    expect(() => mesurerLeBattement({ ...grande, terrain, carteDeMesure: true })).toThrow(
+      /carte de mesure/u,
+    );
+  });
+
+  it('estime le filtrage par zone d interet: moins d entites et moins d octets par joueur', () => {
+    const resultat = mesurerLeBattement({
+      ...grande,
+      terrain: vide,
+      carteDeMesure: true,
+      zoneDInteret: true,
+    });
+    const zone = resultat.zoneDInteret;
+
+    expect(zone?.octetsParMessage.nombre).toBe(grande.battements);
+    expect(zone?.entitesParJoueur).toBeGreaterThanOrEqual(1);
+    expect(zone?.entitesParJoueur).toBeLessThan(resultat.entitesParMessage);
+    expect(zone?.octetsParMessage.moyenne).toBeLessThan(resultat.octetsParMessage.moyenne);
+  });
+
+  it('ne change rien a la partie quand il estime le filtrage', () => {
+    const sans = mesurerLeBattement({ ...grande, terrain: vide, carteDeMesure: true });
+    const avec = mesurerLeBattement({
+      ...grande,
+      terrain: vide,
+      carteDeMesure: true,
+      zoneDInteret: true,
+    });
+
+    expect(avec.octetsTotal).toBe(sans.octetsTotal);
+  });
+});
+
+describe('botsNoirsDeLaMesure', () => {
+  it('compte un Black Ninja par centaine d entites, au moins un', () => {
+    expect(botsNoirsDeLaMesure(5000, 60)).toBe(51);
+    expect(botsNoirsDeLaMesure(1000, 12)).toBe(10);
+    expect(botsNoirsDeLaMesure(10, 2)).toBe(1);
   });
 });

@@ -10,6 +10,7 @@ import {
   APPARITION,
   BOTS,
   CARTES,
+  CARTE_DE_MESURE,
   COULEUR_BOT_NEUTRE,
   COULEUR_BOT_NOIR,
   DUREES,
@@ -113,6 +114,25 @@ describe('creerEtatInitial', () => {
     const terrain = carteSansMur(CARTES.map1);
 
     expect(() => creerEtatInitial({ graine: 1, reglages: { carte: 'map3' }, terrain })).toThrow();
+  });
+
+  it('joue la carte de mesure quand le banc la demande, et seulement alors', () => {
+    // Etape 5.10: 10 000 sur 10 000, quelle que soit la carte des reglages.
+    const etat = creerEtatInitial({ graine: 1, carteDeMesure: true });
+
+    expect(etat.carte).toEqual({ largeur: 10_000, hauteur: 10_000 });
+    expect(etat.terrain.largeur).toBe(CARTE_DE_MESURE.largeur);
+    expect(creerEtatInitial({ graine: 1, carteDeMesure: false }).carte).toEqual(CARTES.map1);
+  });
+
+  it('garde la protection du defaut X5 sur la carte de mesure', () => {
+    // Un terrain de Tokyo sur la carte de mesure, ou l'inverse: refuses tous les deux.
+    expect(() =>
+      creerEtatInitial({ graine: 1, carteDeMesure: true, terrain: carteSansMur(CARTES.map1) }),
+    ).toThrow(/la carte de mesure mesure 10000x10000/u);
+    expect(() => creerEtatInitial({ graine: 1, terrain: carteSansMur(CARTE_DE_MESURE) })).toThrow(
+      /la carte map1 mesure 2000x1500/u,
+    );
   });
 });
 

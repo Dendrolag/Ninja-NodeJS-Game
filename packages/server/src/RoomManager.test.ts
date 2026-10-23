@@ -8,12 +8,14 @@
  */
 
 import type { SessionJoueur } from '@neon-ninja/shared';
+import { CARTES } from '@neon-ninja/shared';
 import type { EtatPartie, IdentifiantEntite } from '@neon-ninja/sim';
 import { describe, expect, it } from 'vitest';
 
 import type { GameRoom } from './GameRoom.js';
 import type { HorlogeManuelle } from './horloge.js';
 import { creerHorlogeManuelle } from './horloge.js';
+import type { OptionsCreationRoom } from './RoomManager.js';
 import { RoomManager } from './RoomManager.js';
 
 /** Une partie courte et peu peuplee. */
@@ -320,5 +322,20 @@ describe('RoomManager, isolation entre plusieurs parties', () => {
 
     expect(second.room(room.id)).toBeUndefined();
     expect(second.nombreDeRooms).toBe(0);
+  });
+});
+
+describe('RoomManager, la carte de mesure du banc (etape 5.10)', () => {
+  it('ne transmet jamais les reglages du banc a une partie qu il ouvre', () => {
+    // Une demande forgee qui glisserait les reglages du banc: la partie ouverte garde la
+    // carte de ses reglages et la capacite de son mode.
+    const forgee = {
+      reglages: REGLAGES,
+      banc: { carteDeMesure: true, capacite: 60 },
+    } as OptionsCreationRoom;
+    const room = gestionnaireDeTest().gestionnaire.creer(forgee);
+
+    expect(room.etat.carte).toEqual(CARTES.map1);
+    expect(room.capacite).toBe(12);
   });
 });

@@ -22,7 +22,7 @@ import {
   BORNES_ROOM,
 } from './bornes.js';
 import type { SessionJoueur } from './entrees.js';
-import { MINES_DE_ZONE } from './constantes.js';
+import { CARTES, CARTE_DE_MESURE, MINES_DE_ZONE } from './constantes.js';
 import { REGLAGES_PAR_DEFAUT } from './reglages.js';
 import type { ResultatValidation } from './validation.js';
 import {
@@ -329,6 +329,16 @@ describe('validerReglages', () => {
   it('refuse map2, fondue dans Tokyo a l etape 7.6', () => {
     // Elle reste lisible dans les parties enregistrees, mais ne se joue plus.
     expect(champsRefuses(validerReglages({ carte: 'map2' }))).toEqual(['carte']);
+  });
+
+  it('ne laisse aucun salon choisir la carte de mesure du banc (etape 5.10)', () => {
+    // Elle n'a pas d'identifiant: ni un nom qui la designerait, ni un champ glisse dans les
+    // reglages ne la font jouer.
+    expect(champsRefuses(validerReglages({ carte: 'mesure' }))).toEqual(['carte']);
+    expect(valeurAcceptee(validerReglages({ carteDeMesure: true }))).not.toHaveProperty(
+      'carteDeMesure',
+    );
+    expect(Object.values(CARTES)).not.toContainEqual(CARTE_DE_MESURE);
   });
 
   it('met l Evade en jeu par defaut, et accepte de le couper (etape 7.9)', () => {

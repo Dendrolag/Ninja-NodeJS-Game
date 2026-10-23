@@ -56,6 +56,14 @@
  * pire cas du mode. La mesure tient dans le premier tour, apres la revelation (5 secondes,
  * moins que l'echauffement), et avant son terme (3 minutes par defaut).
  *
+ * LA CARTE DE MESURE (etape 5.10). Avec carteDeMesure, la partie se joue sur 10 000 sur
+ * 10 000 pixels, avec le terrain que l'appelant fabrique (terrainDeMesure.ts), et autant de
+ * joueurs que demande, au-dela de la capacite du mode. Les Black Ninjas y sont un par
+ * centaine d'entites, la proportion d'une partie reelle (deux pour trois cents faux ninjas
+ * par defaut, cinq au plus), pour que leur cout grandisse avec la foule comme il le ferait.
+ * Avec zoneDInteret, le banc estime en plus ce que chaque joueur recevrait s'il ne voyait
+ * que ce qui l'entoure (zoneDInteret.ts), hors de la duree mesuree du battement.
+ *
  * AUCUN CODE DU JEU N'EST MODIFIE NI IMITE. La room est celle du serveur, lue dans
  * sa compilation, c'est-a-dire le code qui tourne en production. Seul le rappel
  * de battement, que la room offre a qui veut etre prevenu, est fourni ici.
@@ -64,8 +72,13 @@
 import { deflateRawSync } from 'node:zlib';
 
 import type { CarteCollisions } from '../../packages/sim/dist/index.js';
-import type { Alea, IdentifiantCarte, Mode } from '../../packages/shared/dist/index.js';
-import { MINES, creerAlea, entier, nombre } from '../../packages/shared/dist/index.js';
+import type {
+  Alea,
+  IdentifiantCarte,
+  InstantanePartie,
+  Mode,
+} from '../../packages/shared/dist/index.js';
+import { CAPACITES, MINES, creerAlea, entier, nombre } from '../../packages/shared/dist/index.js';
 import type { CleDeVue } from '../../packages/server/dist/index.js';
 import {
   CADENCE_BATTEMENT_MS,
@@ -83,6 +96,7 @@ import {
 
 import type { Resume } from './statistiques.ts';
 import { resumer } from './statistiques.ts';
+import { vueFiltree } from './zoneDInteret.ts';
 
 /**
  * L'en-tete que Socket.IO envoie avant les octets d'une trame du flux d'etat: le
@@ -143,6 +157,23 @@ export interface OptionsBancBattement {
    * approche le pire cas, trois mines par joueur, moins celles que les autres font sauter.
    */
   readonly mines?: boolean;
+  /**
+   * La partie se joue sur la carte de mesure de 10 000 sur 10 000 (etape 5.10), avec un
+   * Black Ninja par centaine d'entites. Le terrain fourni doit en avoir les dimensions.
+   */
+  readonly carteDeMesure?: boolean;
+  /** Le banc estime le filtrage par zone d'interet (etape 5.10). */
+  readonly zoneDInteret?: boolean;
+}
+
+/** Ce que le filtrage par zone d'interet aurait donne (etape 5.10). */
+export interface EstimationZoneDInteret {
+  /** Entites que chaque joueur aurait recues, en moyenne par battement et par joueur. */
+  readonly entitesParJoueur: number;
+  /** Taille du message « etat » que chaque joueur aurait recu, enveloppe comprise. */
+  readonly octetsParMessage: Resume;
+  /** Duree du filtrage et du codage des trames de tous les joueurs, par battement. */
+  readonly codageMs: Resume;
 }
 
 /** Ce que le banc a mesure. Les durees sont en millisecondes, les tailles en octets. */
@@ -188,10 +219,16 @@ export interface ResultatBancBattement {
    * que la projection fait entendre a chacun. Zero dans les autres modes.
    */
   readonly pasFaits: number;
+  /** Les Black Ninjas qui entrent en jeu a la moitie de la partie. */
+  readonly botsNoirs: number;
+  /** Ce que le filtrage par zone d'interet aurait donne. Absent sans zoneDInteret. */
+  readonly zoneDInteret: EstimationZoneDInteret | undefined;
 }
 
 /** Ce qu'un battement mesure laisse derriere lui. */
 interface MesureDUnBattement {
+  vues: ReadonlyMap<CleDeVue, InstantanePartie>;
+  destinataires: ReadonlyMap<string, CleDeVue>;
   projectionMs: number;
   serialisationMs: number;
   octets: number;
@@ -266,6 +303,8 @@ export function mesurerLeBattement(options: OptionsBancBattement): ResultatBancB
     }
 
     mesure = {
+      vues,
+      destinataires,
       projectionMs: finProjection - debutProjection,
       serialisationMs: finCodage - finProjection,
       octets: octetsParMessage(envois) + OCTETS_D_ENVELOPPE,
@@ -282,6 +321,13 @@ export function mesurerLeBattement(options: OptionsBancBattement): ResultatBancB
   };
 
   const room = ouvrirLaPartie(options, joues, surBattement);
+
+  // Le filtrage estime: un flux par joueur, comme l'etape 2.10 en tiendra un, nourri a
+  // chaque battement, echauffement compris, pour que ses deltas aient leur reference.
+  const fluxFiltre = new FluxParVue();
+  const octetsFiltres: number[] = [];
+  const codageFiltre: number[] = [];
+  let entitesFiltrees = 0;
 
   const moteur: number[] = [];
   const projection: number[] = [];
@@ -307,8 +353,17 @@ export function mesurerLeBattement(options: OptionsBancBattement): ResultatBancB
       throw new Error(`Le battement ${String(battement)} n'a pas prevenu le banc.`);
     }
 
+    const filtre =
+      options.zoneDInteret === true ? estimerLeFiltrage(room, mesure, fluxFiltre) : undefined;
+
     if (battement < options.echauffement) {
       continue;
+    }
+
+    if (filtre !== undefined) {
+      octetsFiltres.push(filtre.octets);
+      codageFiltre.push(filtre.dureeMs);
+      entitesFiltrees += filtre.entites;
     }
 
     if (room.etat.among?.sabotage !== undefined) {
@@ -354,7 +409,65 @@ export function mesurerLeBattement(options: OptionsBancBattement): ResultatBancB
     octetsTotal: octets.reduce((somme, valeur) => somme + valeur, 0),
     battementsSabotes,
     pasFaits,
+    botsNoirs: room.reglages.botsNoirs.actifs ? room.reglages.botsNoirs.nombre : 0,
+    zoneDInteret:
+      options.zoneDInteret === true
+        ? {
+            entitesParJoueur: entitesFiltrees / Math.max(options.battements, 1),
+            octetsParMessage: resumer(octetsFiltres),
+            codageMs: resumer(codageFiltre),
+          }
+        : undefined,
   };
+}
+
+/**
+ * Ce qu'un battement aurait envoye avec le filtrage par zone d'interet: la vue de chaque
+ * joueur reduite a son rectangle, codee dans son propre flux.
+ *
+ * @returns La taille moyenne du message recu par un joueur, enveloppe comprise, les
+ *          entites qu'il aurait recues en moyenne, et la duree du filtrage et du codage.
+ */
+function estimerLeFiltrage(
+  room: GameRoom,
+  mesure: MesureDUnBattement,
+  flux: FluxParVue,
+): { readonly octets: number; readonly entites: number; readonly dureeMs: number } {
+  const debut = performance.now();
+  const vues = new Map<CleDeVue, InstantanePartie>();
+  const destinataires = new Map<string, CleDeVue>();
+  let entites = 0;
+
+  for (const [id, cle] of mesure.destinataires) {
+    const vue = mesure.vues.get(cle);
+    const joueur = room.etat.joueurs[id];
+
+    if (vue === undefined || joueur === undefined) {
+      continue;
+    }
+
+    const filtree = vueFiltree(vue, joueur.position);
+    vues.set(id, filtree);
+    destinataires.set(id, id);
+    entites += filtree.entites.length;
+  }
+
+  const envois = flux.envoisDuBattement(vues, destinataires);
+  const dureeMs = performance.now() - debut;
+
+  return {
+    octets: octetsParMessage(envois) + OCTETS_D_ENVELOPPE,
+    entites: entites / Math.max(destinataires.size, 1),
+    dureeMs,
+  };
+}
+
+/**
+ * Les Black Ninjas de la carte de mesure: un par centaine d'entites, au moins un (etape
+ * 5.10). Sur Tokyo, deux pour trois cents faux ninjas et douze joueurs par defaut.
+ */
+export function botsNoirsDeLaMesure(bots: number, joueurs: number): number {
+  return Math.max(1, Math.round((bots + joueurs) / 100));
 }
 
 /**
@@ -403,6 +516,9 @@ function ouvrirLaPartie(
       carte: options.carte ?? 'map1',
       nombreBotsInitial: options.bots,
       dureePartieS,
+      ...(options.carteDeMesure === true
+        ? { botsNoirs: { nombre: botsNoirsDeLaMesure(options.bots, options.joueurs) } }
+        : {}),
       // Among Ninjas tire sa foule de ses reglages, qui imposent le nombre de bots.
       ...(options.mode === 'among' ? { among: { foule: options.bots } } : {}),
       ...(options.mines === true
@@ -418,6 +534,11 @@ function ouvrirLaPartie(
     ...(options.terrain === undefined ? {} : { terrain: options.terrain }),
     horloge: creerHorlogeManuelle(),
     surBattement,
+    // Autant de joueurs que le banc en demande, 30 ou 60 au-dela des douze d'un mode.
+    banc: {
+      capacite: Math.max(options.joueurs, CAPACITES[options.mode ?? 'classique']),
+      carteDeMesure: options.carteDeMesure === true,
+    },
   });
 
   for (let rang = 1; rang <= options.joueurs; rang += 1) {
